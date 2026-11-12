@@ -154,6 +154,7 @@ process can import it.
 - Cross-plugin:
   - Imported by:
     - `apps/deploy/deployments`
+    - `apps/deploy/fixtures`
     - `apps/deploy/remote-deploy`
     - `framework/cli/deploy`
     - `framework/cli/release`

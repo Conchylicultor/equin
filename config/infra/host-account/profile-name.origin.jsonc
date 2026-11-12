@@ -1,0 +1,7 @@
+// @hash 0414ef13c2c7
+{
+  // The name equin shows for you. Leave empty to use your account's name.
+  "displayName": "",
+  // Off: nothing shows a person's name — your pages read “My pages” and the Claude accounts are numbered.
+  "showName": true
+}

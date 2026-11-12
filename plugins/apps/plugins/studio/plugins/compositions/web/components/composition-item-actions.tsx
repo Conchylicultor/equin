@@ -26,7 +26,7 @@ export const CompositionItemActions =
  * state — until the server answers, we do not know whether this delete is free or
  * destroys a live database.
  *
- * The two committed-source rows — main's and `base-exclusions` — get no button
+ * The committed-source rows — main's and the inherited exclusion sets — get no button
  * at all rather than a disabled one. A disabled control says "not right now";
  * deleting the composition the repo itself builds, or the row carrying the
  * exclusions every composition inherits, is not a thing that becomes available

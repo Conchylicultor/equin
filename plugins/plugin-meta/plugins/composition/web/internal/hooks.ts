@@ -129,7 +129,7 @@ export function useCompositionData(): CompositionDataResult {
  *
  * `excluded` is every plugin id outside the main composition's bundle.
  * `negatedTargets` is the subset a manifest negated BY NAME (in practice the
- * `base-exclusions` row every composition inherits), plus the host providers
+ * exclusion set it inherits, `all-exclusions` over `base-exclusions`), plus the host providers
  * (`EdgeGraph.hostProviders`), out by their own statement — the rest are ids the
  * removal cascade took because they descend from, or import, one of those. That
  * is exactly the distinction the explorer badge draws between *Not in the app*
@@ -145,10 +145,10 @@ export function useCompositionData(): CompositionDataResult {
  *
  * **Which config layer this reads.** The client reads the EFFECTIVE (layered)
  * config, while codegen reads the GIT layer. They coincide because a runtime
- * write to the two rows that govern this answer is refused: `save` throws for
- * `MAIN_COMPOSITION_ID` and `BASE_EXCLUSIONS_ID` (see `manifests.ts`), and the
- * surfaces render those controls inert. So no user layer can exist for either
- * row, and this badge cannot claim an exclusion the committed registries do not
+ * write to the rows that govern this answer is refused: `save` throws for
+ * `MAIN_COMPOSITION_ID` and the inherited exclusion sets (see `manifests.ts`),
+ * and the surfaces render those controls inert. So no user layer can exist for
+ * any of them, and this badge cannot claim an exclusion the committed registries do not
  * have.
  *
  * The `pending` arm is a state to render, not an absence to collapse: before the
@@ -204,8 +204,8 @@ function appExclusions(
     );
   }
 
-  // `flattenManifest` folds in the `base-exclusions` row unconditionally, which
-  // is where the negatives actually live — main's own row is still `["**"]`.
+  // `flattenManifest` folds in main's exclusion set (`all-exclusions`, which
+  // extends `base-exclusions`) unconditionally, which is where the negatives actually live — main's own row is still `["**"]`.
   const { bundle, negatedTargets } = resolveComposition(
     graph,
     flattenManifest(main, registry),

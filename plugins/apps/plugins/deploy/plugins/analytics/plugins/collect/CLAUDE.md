@@ -248,6 +248,10 @@ Without it the box knows only the sections someone reached.
     - `infra/retention.markCascadeBounded`
     - `network/live/change-feed.ExcludeFromChangeFeed`
   - DB schema: `plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/server/internal/tables.ts`
+  - Exports (types):
+    - `CollectContext`
+    - `CountryLookup`
+  - Exports (values): `recordCollect`
   - Register:
     - `defineJob('analytics.rollup')`
     - `defineJob('retention.analytics_visits')`
@@ -454,6 +458,7 @@ Without it the box knows only the sections someone reached.
   - Imported by:
     - `apps/deploy/analytics/dashboard`
     - `apps/deploy/analytics/sessions`
+    - `apps/deploy/fixtures`
     - `apps/deploy/site-messages/intake`
     - `apps/website/improve`
     - `apps/website/pages/apps`

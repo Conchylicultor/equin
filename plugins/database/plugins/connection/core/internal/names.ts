@@ -34,6 +34,11 @@ export const DB_POOL_NAMES = [
    * tries it before dropping a temp.
    */
   "fork-lease",
+  /**
+   * The PgBouncer admin console (`KILL` / `RESUME` around a database
+   * recreate, so the pooler never caches a login to the missing database).
+   */
+  "pgbouncer-admin",
   /** The change-feed LISTEN client. */
   "change-feed",
   /**

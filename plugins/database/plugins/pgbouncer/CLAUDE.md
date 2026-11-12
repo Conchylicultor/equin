@@ -77,6 +77,7 @@ The pre-relay `postgres/pgbouncer.log` is moved into that rotation (as the newes
 - Cross-plugin:
   - Imported by:
     - `database`
+    - `database/admin`
     - `database/query-deadline`
     - `infra/launcher`
     - `infra/paths/root-migration`

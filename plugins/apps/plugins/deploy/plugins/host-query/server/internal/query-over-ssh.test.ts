@@ -9,6 +9,7 @@ import {
   mapSshAnswer,
   queryOverSsh,
   type DeploymentTarget,
+  type ThisInstanceResponse,
 } from "./query-over-ssh";
 
 const TARGET: SshTarget = {
@@ -47,6 +48,10 @@ function fail(
     exitCode,
   };
 }
+
+const noInstance = async (): Promise<ThisInstanceResponse> => {
+  throw new Error("this instance must not be asked");
+};
 
 describe("hostQueryCurlArgv", () => {
   it("curls the install's gateway on loopback, the URL single-quoted", () => {
@@ -145,6 +150,7 @@ describe("queryOverSsh", () => {
           calls.push({ target, argv });
           return ok(JSON.stringify({ things: [] }));
         },
+        fetchThisInstance: noInstance,
       },
       "dep-1",
       PATH,
@@ -171,6 +177,7 @@ describe("queryOverSsh", () => {
             ran = true;
             return ok("");
           },
+          fetchThisInstance: noInstance,
         },
         "dep-1",
         PATH,
@@ -223,5 +230,75 @@ describe("maxAnswerBytes", () => {
     expect(
       mapSshAnswer(ok(wide), ThingsSchema, { maxAnswerBytes: 1_000 }).kind,
     ).toBe("unreadable-answer");
+  });
+});
+
+describe("queryOverSsh on a this-instance box", () => {
+  async function ask(
+    response: ThisInstanceResponse,
+    path = PATH,
+  ): Promise<{ result: unknown; paths: string[]; ssh: number }> {
+    const paths: string[] = [];
+    let ssh = 0;
+    const result = await queryOverSsh(
+      {
+        resolveDeployment: async () => ({ kind: "this-instance" }),
+        sshRun: async () => {
+          ssh++;
+          return ok("");
+        },
+        fetchThisInstance: async (p) => {
+          paths.push(p);
+          return response;
+        },
+      },
+      "dep-1",
+      path,
+      ThingsSchema,
+    );
+    return { result, paths, ssh };
+  }
+
+  it("parses the gateway's answer without opening SSH", async () => {
+    const { result, paths, ssh } = await ask({
+      kind: "response",
+      status: 200,
+      body: JSON.stringify({ things: ["a"] }),
+    });
+    expect(result).toEqual({ kind: "answer", value: { things: ["a"] } });
+    expect(paths).toEqual([PATH]);
+    expect(ssh).toBe(0);
+  });
+
+  it("maps an HTTP error to curl's 22", async () => {
+    const { result } = await ask({
+      kind: "response",
+      status: 404,
+      body: "nope",
+    });
+    expect(result).toEqual({
+      kind: "request-failed",
+      exitCode: 22,
+      stderr: "HTTP 404: nope",
+    });
+  });
+
+  it("maps a connection failure to curl's 7", async () => {
+    const { result } = await ask({ kind: "unreachable", message: "refused" });
+    expect(result).toEqual({
+      kind: "request-failed",
+      exitCode: 7,
+      stderr: "refused",
+    });
+  });
+
+  it("still refuses a path outside the host-only prefix", async () => {
+    let thrown: unknown;
+    try {
+      await ask({ kind: "response", status: 200, body: "{}" }, "/api/things");
+    } catch (err) {
+      thrown = err;
+    }
+    expect(String(thrown)).toMatch(/outside \/api\/host-only\//);
   });
 });

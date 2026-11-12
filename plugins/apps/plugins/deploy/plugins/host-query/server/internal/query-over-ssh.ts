@@ -5,7 +5,7 @@ import type {
 } from "@plugins/infra/plugins/ssh/server";
 import { HOST_ONLY_PREFIX } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/host-only/core";
 import { LOOPBACK_HOST } from "@plugins/apps/plugins/deploy/plugins/deployments/core";
-import type { HostQueryFailure } from "../../core";
+import { CURL_EXIT, type HostQueryFailure } from "../../core";
 
 /** curl's own deadline for the answer, well under the SSH session's. */
 export const CURL_MAX_SECONDS = 10;
@@ -116,9 +116,21 @@ export function mapSshAnswer<T>(
     };
   }
 
+  return parseAnswerBody(result.stdout, schema, opts);
+}
+
+/**
+ * An answer's body — refused unread when over `opts.maxAnswerBytes`, else
+ * parsed as JSON and then with `schema` — or named unreadable.
+ */
+export function parseAnswerBody<T>(
+  body: string,
+  schema: z.ZodType<T>,
+  opts: HostQueryOptions = {},
+): { kind: "answer"; value: T } | HostQueryFailure {
   if (
     opts.maxAnswerBytes !== undefined &&
-    utf8Length(result.stdout) > opts.maxAnswerBytes
+    utf8Length(body) > opts.maxAnswerBytes
   ) {
     return {
       kind: "unreadable-answer",
@@ -128,12 +140,12 @@ export function mapSshAnswer<T>(
 
   let json: unknown;
   try {
-    json = JSON.parse(result.stdout);
+    json = JSON.parse(body);
   } catch (err) {
     if (!(err instanceof SyntaxError)) throw err;
     return {
       kind: "unreadable-answer",
-      detail: `Not JSON (${err.message}): ${result.stdout.slice(0, ANSWER_HEAD_CHARS)}`,
+      detail: `Not JSON (${err.message}): ${body.slice(0, ANSWER_HEAD_CHARS)}`,
     };
   }
   const parsed = schema.safeParse(json);
@@ -154,12 +166,49 @@ export type DeploymentTarget =
   | { kind: "not-found" }
   | { kind: "no-ssh-key" }
   | { kind: "unverified" }
-  | { kind: "ready"; target: SshTarget; loopbackPort: number };
+  | { kind: "ready"; target: SshTarget; loopbackPort: number }
+  // A demo's stand-in: the box is this instance, asked through its own gateway.
+  | { kind: "this-instance" };
+
+/** What asking this instance's own gateway answered. */
+export type ThisInstanceResponse =
+  | { kind: "response"; status: number; body: string }
+  | { kind: "unreachable"; message: string };
 
 /** The two effects a query needs, injected so the mapping is testable without a box. */
 export interface QueryDeps {
   resolveDeployment: (deploymentId: string) => Promise<DeploymentTarget>;
   sshRun: (target: SshTarget, argv: string[]) => Promise<SshRunResult>;
+  /** GET `path` on this instance's own gateway (the `this-instance` arm). */
+  fetchThisInstance: (path: string) => Promise<ThisInstanceResponse>;
+}
+
+/** The `this-instance` arm: one gateway hop, mapped like the curl's exit codes. */
+export function mapThisInstanceAnswer<T>(
+  response: ThisInstanceResponse,
+  schema: z.ZodType<T>,
+  opts: HostQueryOptions = {},
+): { kind: "answer"; value: T } | HostQueryFailure {
+  if (response.kind === "unreachable") {
+    return {
+      kind: "request-failed",
+      exitCode: CURL_EXIT.couldNotConnect,
+      stderr: response.message,
+    };
+  }
+  if (response.status >= 400) {
+    return {
+      kind: "request-failed",
+      exitCode: CURL_EXIT.httpError,
+      stderr: `HTTP ${response.status}: ${response.body.slice(0, ANSWER_HEAD_CHARS)}`,
+    };
+  }
+  return parseAnswerBody(response.body, schema, opts);
+}
+
+/** Throws unless `path` is a host-only route the SSH arm would also accept. */
+function assertHostOnlyPath(path: string): void {
+  hostQueryCurlArgv(0, path);
 }
 
 export async function queryOverSsh<T>(
@@ -170,6 +219,14 @@ export async function queryOverSsh<T>(
   opts: HostQueryOptions = {},
 ): Promise<HostQueryAnswer<T>> {
   const resolved = await deps.resolveDeployment(deploymentId);
+  if (resolved.kind === "this-instance") {
+    assertHostOnlyPath(path);
+    return mapThisInstanceAnswer(
+      await deps.fetchThisInstance(path),
+      schema,
+      opts,
+    );
+  }
   if (resolved.kind !== "ready") return resolved;
   const argv = hostQueryCurlArgv(resolved.loopbackPort, path, opts);
   return mapSshAnswer(await deps.sshRun(resolved.target, argv), schema, opts);

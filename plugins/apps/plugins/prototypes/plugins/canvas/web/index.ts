@@ -65,6 +65,7 @@ export type {
 } from "./internal/canvas-model";
 export { layoutFrames, roomPerFrame } from "./internal/layout";
 export { useWindowSize } from "./internal/use-window-size";
+export { usePrototypeTitle } from "./internal/use-prototype-title";
 export type { FrameLayout, Room } from "./internal/layout";
 export { pageHeightOf, sameExtent } from "./internal/page-extent";
 export type { PageExtent } from "./internal/page-extent";

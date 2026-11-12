@@ -1,4 +1,4 @@
-// @hash a601fa7b0be3
+// @hash de475c019537
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -10,8 +10,8 @@
     "conversations.runtime-sdk:claude-code",
     "database.query-deadline:database",
     "debug.queue-health:job-queue",
-    "debug.sentinel:machine-watcher",
-    "infra.health:connection",
+    "debug.sentinel.health-row:machine-watcher",
+    "infra.health.connection-row:connection",
     "infra.host.io-health:host-io",
     "infra.launcher.gateway-drift:gateway",
     "infra.mcp.browser:agent-browser",

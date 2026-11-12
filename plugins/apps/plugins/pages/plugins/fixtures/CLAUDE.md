@@ -7,13 +7,16 @@ the app's; the data is never here (a demo owns its own pages — e.g.
 `research/2026-10-28-global-per-app-demo-seeds-v2.md` §2.
 
 - **`core`: `PageTreeFixture`** — the workspace's root pages in sidebar order,
-  each a `PageFixture` (caller-chosen `id`, `title`, optional `icon` (an `Emoji`), `tags`
+  each a `PageFixture` (caller-chosen `id`, `title`, optional `icon` (an `Emoji`), `expanded: false` (a plain row in its
+  parent rather than its content inline), `tags`
   `{ name, color }` and `starred`, `children` in document order) whose
-  children are content blocks (`text` / `heading-2` / `prompt` / `to-do`, each
-  with the caller's id), markdown runs (`{ type: "markdown", markdown }`: any
-  block type the editor registers, in the dialect `read_page` emits, parsed
-  with the server's `serverMarkdownContext` — their blocks get fresh ids) or
-  sub-pages, and an optional `cover`. Ids are the caller's, so a fixture can name its own pages in its
+  children are content blocks (`text` / `heading-2` / `prompt` / `to-do`, a
+  text or to-do holding blocks nested under it as its own `children`; or a
+  `place`, `{ providerId, placeId }`, which the page resolves itself), markdown
+  runs (`{ type: "markdown", markdown }`: any block type the editor registers,
+  in the dialect `read_page` emits, parsed with the server's
+  `serverMarkdownContext` — their blocks get fresh ids) or sub-pages, and an
+  optional `cover`. Ids are the caller's, so a fixture can name its own pages in its
   text (`pageLinkToken`) or from other data (the prompt block a task was
   launched from). `fixturePages(tree)` lists every page in document order.
 - **`server`: `writePageTree(tree)`** writes the whole forest in ONE

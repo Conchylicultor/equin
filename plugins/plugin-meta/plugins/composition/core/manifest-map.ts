@@ -3,6 +3,7 @@ import {
   type PluginId,
 } from "@plugins/framework/plugins/plugin-id/core";
 import type { CompositionManifest } from "@plugins/plugin-meta/plugins/closure/core";
+import { ALL_EXCLUSIONS_ID } from "@plugins/infra/plugins/namespace/core";
 import { compositionsConfig } from "./config";
 
 /**
@@ -25,6 +26,11 @@ export type CompositionManifestItem =
  * the wire shape — that the ids resolve to real plugins is the `composition-closure`
  * check's job. `extends` carries through verbatim (composition names, resolved by
  * `flattenManifest` before closure).
+ *
+ * `exclusions` is resolved here, once: an exclusion set's own row names itself
+ * (its set is its own chain — it never inherits another), and any other row's
+ * empty field is the default, `ALL_EXCLUSIONS_ID`. So the engine is always
+ * handed the set a row inherits, never an absence to interpret.
  */
 export function manifestItemToManifest(
   item: CompositionManifestItem,
@@ -38,5 +44,9 @@ export function manifestItemToManifest(
     entryPoints: item.entryPoints as PluginId[],
     selectedContributors: item.selectedContributors as PluginId[],
     extends: [...item.extends],
+    exclusions:
+      item.category === "exclusions"
+        ? item.name
+        : item.exclusions || ALL_EXCLUSIONS_ID,
   };
 }

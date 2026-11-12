@@ -19,7 +19,7 @@ import { folderIcon } from "./folder-copy";
 export function useShownPath(path: string): string {
   const home = useLive(hostHome);
   return foldResource(home, {
-    ready: (dir) => displayPath(path, dir),
+    ready: (dir) => displayPath(path, dir.dir),
     loading: () => path,
     error: () => path,
     unavailable: () => path,

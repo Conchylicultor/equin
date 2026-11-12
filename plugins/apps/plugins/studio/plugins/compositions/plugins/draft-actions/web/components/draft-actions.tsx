@@ -30,8 +30,8 @@ const saveIcon = symbol("save");
  * Delete / Clear. The pane's `:id` is the composition being edited, so Save is
  * always an in-place update.
  *
- * Delete is available for every composition except the two the repo itself owns
- * as committed source — main's row and `base-exclusions`. Those entries must
+ * Delete is available for every composition except the ones the repo itself owns
+ * as committed source — main's row and the inherited exclusion sets. Those entries must
  * exist, so the button is simply absent there (the config edit underneath
  * throws on them). It removes the row AND what the composition is serving: the
  * same `useDeleteComposition` the list row's Delete calls, so the two paths

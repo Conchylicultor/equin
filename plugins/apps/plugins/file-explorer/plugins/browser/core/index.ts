@@ -38,3 +38,4 @@ export {
   type ItemCount,
   type ListedFolder,
 } from "./internal/item-count";
+export { filesConfig } from "./internal/config";

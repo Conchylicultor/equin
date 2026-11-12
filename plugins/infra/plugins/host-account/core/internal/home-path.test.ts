@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { absolutePath, displayPath } from "./home-path";
+import { absolutePath, displayPath, tildifyText } from "./home-path";
 
 const HOME_ABS = "/h/me";
 
@@ -20,5 +20,16 @@ describe("home-relative paths", () => {
     expect(displayPath("/", "/")).toBe("~");
     expect(displayPath("~/a", "/")).toBe("~/a");
     expect(displayPath("relative", "/")).toBe("relative");
+  });
+});
+
+describe("tildifyText", () => {
+  test("collapses the home directory wherever a path segment starts with it", () => {
+    expect(tildifyText("wrote /h/me/notes/a.html and /h/me", HOME_ABS)).toBe(
+      "wrote ~/notes/a.html and ~",
+    );
+    expect(
+      tildifyText("cd /h/me; ls /h/meow /h/me-x /other/h/me", HOME_ABS),
+    ).toBe("cd ~; ls /h/meow /h/me-x /other/h/me");
   });
 });

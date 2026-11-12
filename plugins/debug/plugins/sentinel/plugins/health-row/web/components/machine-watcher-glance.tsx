@@ -7,7 +7,7 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { sentinelVitals } from "../../core";
+import { sentinelVitals } from "@plugins/debug/plugins/sentinel/core";
 import { VALUE_CLASS, STALE_CLASS } from "../internal/vitals-tone";
 import {
   vitalsView,

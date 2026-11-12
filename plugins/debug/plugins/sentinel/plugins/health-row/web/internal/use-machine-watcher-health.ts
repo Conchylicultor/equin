@@ -1,6 +1,6 @@
 import { useLive } from "@plugins/network/plugins/live/web";
 import type { HealthStatus } from "@plugins/shell/plugins/health-report/web";
-import { sentinelStatus } from "../../core";
+import { sentinelStatus } from "@plugins/debug/plugins/sentinel/core";
 import { machineWatcherVerdict } from "./machine-watcher-health";
 
 /**

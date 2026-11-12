@@ -4,6 +4,8 @@
 // Sonata's playhead parked at that bar's start. A second press from a fresh
 // preview, rewound to the start, lands on the SAME song id (the import is
 // idempotent by content) with no bar, so the library gains no duplicate.
+// Opening CONTINUES the preview: a paused preview opens Sonata paused (above);
+// a third press, from a preview left playing, lands on Sonata already playing.
 //
 // The file must be a 4/4 MIDI file with no pickup (bar N starts at beat
 // 4·(N−1), which is what the scrubber's aria-valuenow reports).
@@ -41,7 +43,7 @@ const r = report("midi file preview — open in Sonata");
  */
 async function openFromPreview(
   page: Page,
-  park: "mid" | "start",
+  park: "mid" | "start" | "playing",
 ): Promise<{ songId: string; bar: number | null; parkedBeat: number }> {
   await boot(page, pathUrl(PREVIEW_PATH), {
     marker: 'button[aria-label="Open in Sonata"]',
@@ -52,6 +54,18 @@ async function openFromPreview(
   await page.waitForTimeout(PLAY_MS);
   const after = Number(await slider.getAttribute("aria-valuenow"));
   r.ok("the preview plays on open", after > before, `${before} → ${after}`);
+  if (park === "playing") {
+    await snap(page, OUT, "preview-playing");
+    await page
+      .getByRole("button", { name: "Open in Sonata", exact: true })
+      .click();
+    await page.waitForURL(SONG_URL, { timeout: 30_000 });
+    return {
+      songId: SONG_URL.exec(new URL(page.url()).pathname)![1]!,
+      bar: null,
+      parkedBeat: before,
+    };
+  }
   await page.getByRole("button", { name: "Pause", exact: true }).click();
   // Park the playhead deterministically: a click on the scrubber.
   const box = await slider.boundingBox();
@@ -112,6 +126,17 @@ await withBrowser(async (h) => {
   const second = await openFromPreview(page, "start");
   r.eq("a second open reuses the same song", second.songId, first.songId);
   r.eq("opening at the start carries no bar", second.bar, null);
+
+  // Third open: from a preview that is still playing.
+  await openFromPreview(page, "playing");
+  await page
+    .getByRole("button", { name: "Pause", exact: true })
+    .waitFor({ state: "visible", timeout: 30_000 });
+  const s1 = Number(await slider.getAttribute("aria-valuenow"));
+  await page.waitForTimeout(1500);
+  const s2 = Number(await slider.getAttribute("aria-valuenow"));
+  r.ok("opened from a playing preview, Sonata plays", s2 > s1, `${s1} → ${s2}`);
+  await snap(page, OUT, "sonata-playing");
 });
 
 await r.finish();

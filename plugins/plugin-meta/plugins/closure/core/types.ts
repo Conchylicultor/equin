@@ -135,6 +135,15 @@ export interface CompositionManifest {
   /** Names of other compositions merged into this one, transitively. Optional;
    *  absent ⇒ `[]`. Cleared to `[]` once {@link flattenManifest} has merged them. */
   extends?: string[];
+  /**
+   * The name of the EXCLUSION SET this composition inherits: a negatives-only
+   * row whose entries (its own `extends` chain folded in) {@link flattenManifest}
+   * unions into this one. Absent ⇒ `ALL_EXCLUSIONS_ID` (`infra/namespace`), the
+   * strictest set, so a row that says nothing is protected by every exclusion
+   * the repo has written. An exclusion set names itself (the folded set is then
+   * just its own chain). Unknown names fold nothing, like an unknown `extends`.
+   */
+  exclusions?: string;
 }
 
 export type MembershipState =

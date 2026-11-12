@@ -22,6 +22,8 @@
           { "id": "name" },
           { "id": "kind", "slot": "line2" },
           { "id": "address", "slot": "line2" },
+          // Today's hours: a field only while the place-cards setting shows them.
+          { "id": "hours" },
           { "id": "note", "slot": "excerpt" },
           { "id": "tags" },
           { "id": "want", "hidden": true },
@@ -55,6 +57,7 @@
           { "id": "address", "slot": "line2" },
           { "id": "tags", "slot": "line2" },
           { "id": "status", "slot": "trail" },
+          { "id": "hours", "hidden": true },
           { "id": "glyph", "hidden": true },
           { "id": "kind", "hidden": true },
           { "id": "want", "hidden": true },

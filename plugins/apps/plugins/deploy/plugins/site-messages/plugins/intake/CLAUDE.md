@@ -122,6 +122,7 @@ Run with `./equin test plugins/apps/plugins/deploy/plugins/site-messages`.
     - `integrations/resend.sendEmail`
     - `network/live/change-feed.ExcludeFromChangeFeed`
   - DB schema: `plugins/apps/plugins/deploy/plugins/site-messages/plugins/intake/server/internal/tables.ts`
+  - Exports (values): `insertReceivedSiteMessage`
   - Register:
     - `defineJob('site-messages.notify')`
     - `defineJob('site-messages.confirm')`
@@ -173,6 +174,7 @@ Run with `./equin test plugins/apps/plugins/deploy/plugins/site-messages`.
     - `SpamReasonSchema`
 - Cross-plugin:
   - Imported by:
+    - `apps/deploy/fixtures`
     - `apps/deploy/site-messages/inbox`
     - `apps/website/landing/contact`
 - Deploy-secrets:

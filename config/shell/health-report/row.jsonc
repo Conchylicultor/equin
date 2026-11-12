@@ -1,4 +1,4 @@
-// @hash a601fa7b0be3
+// @hash de475c019537
 // @legend — how to write this file (rewritten by ./equin build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -17,13 +17,13 @@
     // "Can this app run an agent at all": the first thing a new user needs answered.
     "conversations.runtime-sdk:claude-code",
     // Can I reach the server ...
-    "infra.health:connection",
+    "infra.health.connection-row:connection",
     // ... and is the server reaching its database.
     "database.query-deadline:database",
     // The server's own work.
     "debug.queue-health:job-queue",
     // About the whole machine, not the server you are on.
-    "debug.sentinel:machine-watcher",
+    "debug.sentinel.health-row:machine-watcher",
     // The machine's disk and file system, as the host monitor outside the app sees them.
     "infra.host.io-health:host-io",
     // The socket is up and the server reaches its database, and yet a read can still fail.

@@ -4,8 +4,9 @@ The **composition manifest registry** — owns the named compositions of the rep
 as runtime-editable data. A composition is a `CompositionManifest`
 (`{ name, entryPoints, selectedContributors, extends? }`, **owned by and imported
 from** [`closure`](../closure/CLAUDE.md) — never redefined here) plus a
-`category` (organisation metadata only — `app | profile | subsystem | pack`,
-NOT consumed by the engine); this plugin is the *registry* that stores them, the
+`category` (organisation metadata only — `app | profile | subsystem | pack |
+exclusions`, NOT consumed by the engine; `exclusions` marks an exclusion set,
+read by `manifestItemToManifest` and the check); this plugin is the *registry* that stores them, the
 engine is the algorithm that resolves them. Sibling of `closure` / `plugin-tree`
 / `facets` under `plugin-meta`; ships `core` / `web` / `server` barrels.
 
@@ -107,45 +108,61 @@ default**: change it by editing the `core/config.ts` seeds and pushing.
 - `server/index.ts` registers the config (`ConfigV2.Register`); `web/index.ts`
   registers it on the client (`ConfigV2.WebRegister`).
 
-## `base-exclusions` — the one row that subtracts
+## Exclusion sets — the rows that subtract
 
-Every other row in this registry says what it INCLUDES. `base-exclusions` (id and
-name both `BASE_EXCLUSIONS_ID`, from `infra/namespace`) says what is **not in any
-app**, and every composition inherits it: `flattenManifest` folds this row into
-every manifest **unconditionally, not through `extends`**. An exclusion written
-once therefore holds for compositions that do not exist yet, instead of holding
-only for the rows whose author remembered to reference it — the property
-the old `disabled` flag in a `package.json` used to have.
+Every other row in this registry says what it INCLUDES. A row of category
+`exclusions` (an **exclusion set**) says what is **not in an app**, and every
+composition inherits exactly one: the set its `exclusions` field names, and
+when that is empty (the default) `all-exclusions` — the strictest. Folded by
+`flattenManifest` **unconditionally, not through `extends`**, so an exclusion
+written once holds for compositions that do not exist yet, instead of holding
+only for the rows whose author remembered to reference it — the property the
+old `disabled` flag in a `package.json` used to have.
 
-Three rules, all enforced by `composition-closure`:
+- **`base-exclusions`** (`BASE_EXCLUSIONS_ID`, `infra/namespace`) — what is in
+  no composition at all: `!review.plugin-changes.**` (the migration of the old
+  `disabled: true` flag; it resolves to the same twelve plugins that flag's
+  closure did — the plugin, its two sub-plugins, and the nine
+  `plugin-meta.facets.<f>.render-diff` adapters that import it) and the
+  build-only crawlable snapshot render.
+- **`all-exclusions`** (`ALL_EXCLUSIONS_ID`) — the default: `extends:
+  ["base-exclusions"]`, plus plugins that exist for one composition only —
+  the showcase film's Circle (`!apps.website.promo-film.circle`) and seed.
+  `promo-film` sets `exclusions: "base-exclusions"`, so it is the one
+  composition that ships them; main, the site, the demo and every future row
+  do not, without saying anything.
 
-- **The row exists exactly once.** `flattenManifest` resolves it BY NAME, so a
-  second row would silently shadow the first and a missing one would make every
-  inherited exclusion vanish without a word — the same reason main's row is pinned
-  to exactly one.
+`manifestItemToManifest` resolves the field once: a set names itself (its
+exclusions are its own chain), any other row's empty field becomes
+`all-exclusions`. The rules, all enforced by `composition-closure` through
+`checkExclusionSets` (`core/exclusion-sets.ts`):
+
+- **Both reserved sets exist exactly once, as sets.** `flattenManifest`
+  resolves a set BY NAME, so a second row would silently shadow the first and
+  a missing one would make its exclusions vanish without a word.
 - **Negatives only** — every `entryPoints` entry starts with `!`, and
-  `selectedContributors` is `[]`. A positive here would be a way to force a plugin
-  INTO every composition from a place nobody looks; that is `served-baseline`'s
-  job, done through `extends`, where the row that opted in shows it.
-- **`serve: "off"`**, and the id is reserved. The row resolves to an empty bundle,
-  so there is nothing a serve build could put behind a `base-exclusions`
-  namespace. `assertCompositionId` accepts it exactly as it accepts main's id;
-  `assertServableCompositionNamespace` refuses both.
+  `selectedContributors` is `[]`. A positive here would be a way to force a
+  plugin INTO every composition inheriting it from a place nobody looks; that
+  is `served-baseline`'s job, done through `extends`, where the row that opted
+  in shows it.
+- **A set `extends` only sets and reaches `base-exclusions`**, so no row can
+  choose its way out of the repo-wide removals; it names no `exclusions`,
+  `home`, `unlisted` or `excludes` of its own.
+- **`serve: "off"`**, and the ids are reserved. A set resolves to an empty
+  bundle, so there is nothing a serve build could put behind its namespace.
+  `assertCompositionId` accepts the reserved ids exactly as it accepts main's;
+  `assertServableCompositionNamespace` refuses them.
+- **A row's `exclusions` names a set**, and no row `extends` one — the choice
+  has one spelling.
 
 **Opting back in** is the engine's existing protection rule: a composition that
 names the plugin — as an entry positive or a selected contributor — wins over the
 inherited negative, and nothing cascades. Naming an *importer* of the excluded
 plugin is NOT an opt-out: the importer survives, drags the plugin back through its
 hard closure, and `resolveComposition` reports it in `unsatisfiedExclusions` with
-the import chain rather than guessing which of the two the author meant.
-
-The seed carries one negative, `!review.plugin-changes.**` — the migration of the
-the old `disabled: true` flag that used to live in
-`plugins/review/plugins/plugin-changes/package.json`. It resolves to the same
-twelve plugins that flag's closure did (the plugin, its two sub-plugins, and the
-nine `plugin-meta.facets.<f>.render-diff` adapters that import it), because a
-negative cascades to descendants and transitive importers exactly as the disabled
-closure did. One mechanism decides membership now, and it is this one.
+the import chain rather than guessing which of the two the author meant. A `**`
+row cannot name what it negates (a contradictory negative), so it keeps a plugin
+the default removes by choosing a narrower set.
 
 ## Override is forbidden — by construction
 
@@ -286,8 +303,9 @@ Beyond the registry, this plugin ships the **Studio closure data**:
   mirroring the `list` field renderer). Consumers go through this API so they
   never touch `config_v2` directly (collection-consumer separation).
 
-  `save` and `remove` **throw** for the two committed-source rows —
-  `isCommittedSourceComposition(id)`, i.e. main's and `base-exclusions`. Codegen
+  `save` and `remove` **throw** for the committed-source rows —
+  `isCommittedSourceComposition(id)`, i.e. main's and the two reserved
+  exclusion sets. Codegen
   resolves main's closure off the GIT layer to emit the registries and the docs,
   so a user-layer edit to either row could never move a generated file: it would
   be a stored change that means nothing. Every surface that offers those
@@ -297,7 +315,7 @@ Beyond the registry, this plugin ships the **Studio closure data**:
   user-facing refusal.
 - **`web/`** answers "what does the app actually ship?" with `useAppExclusions()`
   — it resolves the main composition IN THE BROWSER (`flattenManifest`
-  folds the base row's negatives in) and returns `{ kind: "pending" }` or
+  folds its exclusion set's negatives in) and returns `{ kind: "pending" }` or
   `{ kind: "ready", excluded, negatedTargets }`. `excluded` is every id outside
   main's bundle; `negatedTargets` is the subset a manifest negated by name, which
   is how the explorer badge tells *Not in the app* from *Not in the app
@@ -341,7 +359,7 @@ deliberately does not live there.
 
 `core/namespace.test.ts` pins the split between "may be called this" and "may be
 served under this", including the two ids where the answers differ
-(main, `base-exclusions`).
+(main, `base-exclusions`, `all-exclusions`).
 
 Run with `./equin test plugins/plugin-meta/plugins/composition`.
 
@@ -418,18 +436,21 @@ Run with `./equin test plugins/plugin-meta/plugins/composition`.
     - `framework/plugin-id.PluginId`
     - `framework/plugin-id.RUNTIME_FOLDERS`
     - `framework/slot-declaration.KEY_SPACES`
+    - `infra/namespace.ALL_EXCLUSIONS_ID`
     - `infra/namespace.BASE_EXCLUSIONS_ID`
     - `infra/namespace.MAIN_COMPOSITION_ID`
     - `infra/namespace.NAMESPACE_LABEL_RE`
     - `network/live.liveValue`
     - `packages/list-bound.wholeList`
     - `packages/list-bound.wholeRecord`
+    - `plugin-meta/closure/entry-pattern.parseEntryPattern`
   - Exports (types):
     - `CompositionData`
     - `CompositionHome`
     - `CompositionHomeError`
     - `CompositionManifestItem`
     - `CompositionUnlisted`
+    - `ExclusionSetsVerdict`
     - `ServeMode`
     - `ServeModeOption`
   - Exports (values):
@@ -438,6 +459,7 @@ Run with `./equin test plugins/plugin-meta/plugins/composition`.
     - `assertCompositionName`
     - `assertServableCompositionNamespace`
     - `autoRebuildIntervalMs`
+    - `checkExclusionSets`
     - `compositionData`
     - `compositionsConfig`
     - `isCommittedSourceComposition`

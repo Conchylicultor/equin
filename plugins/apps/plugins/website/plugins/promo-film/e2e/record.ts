@@ -6,7 +6,7 @@
 //   ./equin build --composition promo-film      # once
 //   ./equin promo-film seed                     # first launch + the story
 //   ./equin run plugins/apps/plugins/website/plugins/promo-film/e2e/record.ts \
-//     --composition promo-film [--only integrated,sonata,…]
+//     --composition promo-film [--only pages,sonata,…]
 //
 // Each segment is re-recordable alone (see this plugin's CLAUDE.md for which
 // need a fresh seed). A segment records ~0.5 s of real time per frame.

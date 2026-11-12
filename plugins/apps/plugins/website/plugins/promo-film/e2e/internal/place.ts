@@ -52,13 +52,18 @@ const lerp = (ks: readonly Knot[], x: number, xi: 0 | 1): number => {
 
 /**
  * Place recording `name` by `knots`; it shows over [first knot, last knot)
- * in film time. `cursor: false` draws no pointer.
+ * in film time. `cursor: false` draws no pointer; `{ fromRec }` draws it
+ * from that recording time on (a hand that enters part-way, at a cut).
  */
 export function place(
   m: AssetManifest,
   name: string,
   knots: readonly Knot[],
-  opts: { cursor?: boolean; keyGain?: number; clickGain?: number } = {},
+  opts: {
+    cursor?: boolean | { fromRec: number };
+    keyGain?: number;
+    clickGain?: number;
+  } = {},
 ): Placed {
   const seq = m.sequences[name];
   if (!seq?.input || !seq.fps)
@@ -98,18 +103,21 @@ export function place(
       frame: knots.map(([f, r]): Key => [f, r * fps + 1e-3]),
     }),
   ];
-  if (opts.cursor ?? true) {
-    const pts = input.cursor.filter(([t]) => inside(t));
+  const cursor = opts.cursor ?? true;
+  if (cursor !== false) {
+    const fromRec = cursor === true ? -Infinity : cursor.fromRec;
+    const shown = (t: number): boolean => inside(t) && t >= fromRec - 1e-6;
+    const pts = input.cursor.filter(([t]) => shown(t));
     const x: Key[] = pts.map(([t, cx]) => [film(t), cx]);
     const y: Key[] = pts.map(([t, , cy]) => [film(t), cy]);
     layers.push(
       shape(
         {
           kind: "cursor",
-          clicks: input.clicks.filter((c) => inside(c.t)).map((c) => film(c.t)),
+          clicks: input.clicks.filter((c) => shown(c.t)).map((c) => film(c.t)),
           size: 22,
         },
-        { start: from, end: to, x, y },
+        { start: cursor === true ? from : film(fromRec), end: to, x, y },
       ),
     );
   }
@@ -162,12 +170,4 @@ export function recMark(m: AssetManifest, name: string, mark: string): number {
   const mk = m.sequences[name]?.input?.marks[mark];
   if (!mk) throw new Error(`promo-film: ${name} has no mark "${mark}"`);
   return mk.t;
-}
-
-/** A recording's mark rect (capture px). */
-export function recRect(m: AssetManifest, name: string, mark: string): Rect {
-  const r = m.sequences[name]?.input?.marks[mark]?.rect;
-  if (!r)
-    throw new Error(`promo-film: ${name} has no mark "${mark}" with a rect`);
-  return r;
 }

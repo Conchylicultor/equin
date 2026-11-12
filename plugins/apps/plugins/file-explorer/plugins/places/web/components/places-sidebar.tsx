@@ -27,6 +27,9 @@ import {
   ResolvePlaces,
   type ResolvedPlaces,
 } from "@plugins/apps/plugins/file-explorer/plugins/shell/web";
+import { filesConfig } from "@plugins/apps/plugins/file-explorer/plugins/browser/core";
+import { useConfigResult } from "@plugins/config_v2/web";
+import { foldResource } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { pinRowKey, useFavorites } from "../internal/favorites";
 import type { PlaceRow } from "../internal/place-row";
 import { PlacesSlots } from "../slots";
@@ -221,16 +224,27 @@ function PlacesList({
   const folderTarget = useExplorerFolderTarget();
   // The index pane shows the home system's home.
   const homeFs = homeSystem.kind === "ready" ? homeSystem.fs : null;
+  // The index pane shows the configured start folder (`~` unless set).
+  const startFolder = foldResource(useConfigResult(filesConfig), {
+    ready: (c): string | null => c.startFolder,
+    loading: () => null,
+    error: (err) => {
+      throw err;
+    },
+  });
   // Its parts, so a fresh read of the same place keeps the memo below.
   const fs = routed?.fs ?? homeFs;
-  const dir = routed?.dir ?? "~";
+  const dir = routed?.dir ?? startFolder;
   const open = routed?.open ?? null;
   const readiness: ResourceReadiness =
-    pending || home.kind === "pending" || homeSystem.kind === "pending"
+    pending ||
+    home.kind === "pending" ||
+    homeSystem.kind === "pending" ||
+    dir === null
       ? { status: "loading" }
       : { status: "ready" };
   const activeId = useMemo(() => {
-    if (fs === null) return undefined;
+    if (fs === null || dir === null) return undefined;
     const location = { fs, dir, open };
     // What `~` is in the location's system: the account's home on the
     // computer's disk (not known yet: nothing is active), the root elsewhere.

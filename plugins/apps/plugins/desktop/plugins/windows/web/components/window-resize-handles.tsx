@@ -59,6 +59,10 @@ function Handle({
     (e: ReactPointerEvent<HTMLDivElement>) => {
       e.preventDefault();
       e.stopPropagation();
+      // Keep the pointer while it crosses the window's own content: an app
+      // surface is often an iframe, which would otherwise take every move
+      // (the window would stop resizing as the edge is pulled inward).
+      e.currentTarget.setPointerCapture(e.pointerId);
       // Suppress the box transition while resizing, so the edge tracks the cursor.
       desktop.beginInteraction(windowId);
       let lastX = e.clientX;

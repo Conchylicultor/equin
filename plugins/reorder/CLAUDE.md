@@ -146,6 +146,7 @@ Because the origin default is the materialized catalog, adding/removing a contri
     - `network/live/live-state.foldResource`
     - `network/live/live-state.mapResource`
     - `network/live/live-state.ResourceResult`
+    - `primitives/css/motion.Reveal`
     - `primitives/dom/layout-host.useHostFlowAxis`
     - `primitives/latest-ref.useLatestRef`
     - `reorder/node-types.useReorderNodeTypes`

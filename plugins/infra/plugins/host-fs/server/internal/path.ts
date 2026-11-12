@@ -6,8 +6,28 @@ import {
   type UserPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
+let installedHome: (() => string) | null = null;
+
+/**
+ * Install the getter for the folder `~` stands for (default: the account's
+ * home, `HOME_DIR`). An install point rather than an import because the owner
+ * of that answer (host-account, which reads a config) sits above host-fs in
+ * the import graph. Called once, at machine boot, by that owner.
+ */
+export function setHostHomeResolver(resolver: () => string): void {
+  installedHome = resolver;
+}
+
+/** The folder `~` stands for right now. */
+export function currentHostHome(): string {
+  return installedHome === null ? HOME_DIR : installedHome();
+}
+
 /** `~` and `~/…` → the user's home. Any other path is returned unchanged. */
-export function expandTilde(path: string, home: string = HOME_DIR): UserPath {
+export function expandTilde(
+  path: string,
+  home: string = currentHostHome(),
+): UserPath {
   if (path === "~") return asUserPath(home);
   if (path.startsWith("~/")) return asUserPath(resolve(home, path.slice(2)));
   return asUserPath(path);
@@ -25,7 +45,7 @@ export function expandTilde(path: string, home: string = HOME_DIR): UserPath {
  */
 export function resolveHostPath(
   raw: string | undefined,
-  home: string = HOME_DIR,
+  home: string = currentHostHome(),
 ): UserPath {
   if (raw === undefined || raw === "") return asUserPath(home);
   if (raw.includes("\0")) throw new HttpError(400, "Path contains a NUL byte");

@@ -18,11 +18,12 @@ import {
 import type { CompositionManifest } from "@plugins/plugin-meta/plugins/closure/core";
 import { parseEntryPattern } from "@plugins/plugin-meta/plugins/closure/plugins/entry-pattern/core";
 import {
-  BASE_EXCLUSIONS_ID,
+  ALL_EXCLUSIONS_ID,
   MAIN_COMPOSITION_ID,
 } from "@plugins/infra/plugins/namespace/core";
 import {
   assertCompositionId,
+  checkExclusionSets,
   isServed,
   manifestItemToManifest,
   resolveCompositionHome,
@@ -51,7 +52,7 @@ const fail = (message: string, hint?: string): CheckResult => ({
 const check: Check = {
   id: "composition-closure",
   description:
-    "Every declared composition is valid: unique name, all entry/contributor ids resolve, the reserved main and `base-exclusions` rows are well-formed, every declared exclusion actually took effect, no negative is dead everywhere, each selected contributor is a genuine load-bearing soft option (no redundant selections), every `excludes` bundle stays disjoint from the composition's hard closure (self-containment guard), and every deployable composition's `home` is an app its bundle holds.",
+    "Every declared composition is valid: unique name, all entry/contributor ids resolve, the reserved main row and the exclusion sets (`base-exclusions`, `all-exclusions`, every `exclusions` row) are well-formed and every row inherits one, every declared exclusion actually took effect, no negative is dead everywhere, each selected contributor is a genuine load-bearing soft option (no redundant selections), every `excludes` bundle stays disjoint from the composition's hard closure (self-containment guard), and every deployable composition's `home` is an app its bundle holds.",
   async run(ctx) {
     const repo = await ctx.repo();
     const root = repo.root;
@@ -148,61 +149,16 @@ const check: Check = {
       );
     }
 
-    // 0e. The global exclusions row is present exactly once. `base-exclusions` is
-    //     an ordinary manifest entry with one extraordinary property:
-    //     `flattenManifest` folds it into EVERY composition unconditionally,
-    //     rather than each composition opting in via `extends`. So it is the row
-    //     that decides what is in no app at all. Delete it and every exclusion the
-    //     repo has decided on silently comes back; duplicate it and which copy is
-    //     folded in depends on registry order — same reason main's row (0c) is
-    //     pinned to exactly one.
-    const baseRows = items.filter((i) => i.id === BASE_EXCLUSIONS_ID);
-    if (baseRows.length !== 1) {
-      return fail(
-        `expected exactly one composition with id "${BASE_EXCLUSIONS_ID}", found ${baseRows.length}`,
-        `"${BASE_EXCLUSIONS_ID}" is the global exclusions row — the negatives every composition inherits, and the one mechanism by which a plugin leaves the app. It must exist exactly once. Restore it in plugins/plugin-meta/plugins/composition/core/config.ts.`,
-      );
-    }
-    const baseRow = baseRows[0]!;
-
-    // 0f. The base row is never served. Its bundle is empty by construction (it
-    //     holds negatives only, so it seeds nothing), and its id is reserved the
-    //     same way main's is — `assertCompositionId` admits it as a legal id but
-    //     never as a servable namespace, so a stored mode is inert. As with 0d,
-    //     this rule is about the committed seed telling the truth: any mode but
-    //     `off` would describe provisioning `base-exclusions.localhost:9000` for
-    //     an app containing nothing.
-    if (baseRow.serve !== "off") {
-      return fail(
-        `composition "${BASE_EXCLUSIONS_ID}" has \`serve: "${baseRow.serve}"\``,
-        `"${BASE_EXCLUSIONS_ID}" carries only negatives, so its own bundle is empty — there is nothing to serve, and its id is not a servable namespace. Set it back to \`"off"\`.`,
-      );
-    }
-
-    // 0g. The base row may only EXCLUDE. Every entry point is a negative and
-    //     `selectedContributors` is empty.
-    //
-    //     This is the rule that keeps the row honest about its one asymmetry:
-    //     every other composition says what IT includes, and this one is folded
-    //     into everything. A positive here — an entry pattern without `!`, or a
-    //     selected contributor — would therefore force a plugin into EVERY
-    //     composition's bundle, forever, from a row whose whole documented
-    //     purpose is subtraction. Forcing plugins in is `served-baseline`'s job,
-    //     and it does it through `extends`, where the choice is visible on the row
-    //     that opted in. Here it would be invisible.
-    for (const entry of baseRow.entryPoints) {
-      if (parseEntryPattern(entry).negate) continue;
-      return fail(
-        `composition "${BASE_EXCLUSIONS_ID}" has a positive entry point "${entry}"`,
-        `"${BASE_EXCLUSIONS_ID}" is folded into every composition, so it may only EXCLUDE — every entry must be a negative (\`!<id>\` or \`!<id>.**\`). A positive here would silently force "${entry}" into every bundle in the repo; to force a plugin in, add it to the \`served-baseline\` pack and \`extends\` that from the compositions that want it.`,
-      );
-    }
-    if (baseRow.selectedContributors.length > 0) {
-      return fail(
-        `composition "${BASE_EXCLUSIONS_ID}" selects ${baseRow.selectedContributors.length} contributor(s): ${baseRow.selectedContributors.join(", ")}`,
-        `"${BASE_EXCLUSIONS_ID}" is folded into every composition, so a contributor selected here is selected everywhere — the same silent force-in a positive entry point would be. Keep \`selectedContributors\` empty; put shared opt-ins in the \`served-baseline\` pack, which compositions reference through \`extends\`.`,
-      );
-    }
+    // 0e. The exclusion sets (category `exclusions`): the two reserved ones
+    //     exist exactly once, every set is negatives-only, never served, extends
+    //     only sets and reaches `base-exclusions`; every other row inherits a
+    //     real set, through its `exclusions` field only. The rules and why each
+    //     holds: `checkExclusionSets` (plugin-meta/composition/core).
+    const sets = checkExclusionSets(items);
+    if (sets.kind === "error") return fail(sets.message, sets.hint);
+    const setNames = new Set(
+      items.filter((i) => i.category === "exclusions").map((i) => i.name),
+    );
 
     // 1. Unique names across all compositions (the config list does not de-dupe).
     const seenNames = new Set<string>();
@@ -221,8 +177,8 @@ const check: Check = {
     // pattern text, accumulated across every composition, and judged only once
     // every composition has been resolved (rule 3d, below the loop).
     //
-    // It cannot be judged per composition any more. Since `base-exclusions` is
-    // folded into every manifest, its negatives are evaluated against lean
+    // It cannot be judged per composition any more. Since an exclusion set is
+    // folded into every manifest that inherits it, its negatives are evaluated against lean
     // bundles that never reached the excluded plugin in the first place — where
     // trimming nothing is the CORRECT outcome, not a typo. A negative is dead
     // only if it trims nothing in every composition in the repo.
@@ -269,27 +225,31 @@ const check: Check = {
       // its contributors only become genuine soft options inside an app that
       // `extends` it, so it carries no bundle context to validate standalone.
       // Validity for those ids is enforced where the pack is folded in (below).
-      if (m.entryPoints.length === 0) continue;
+      //
+      // An exclusion set is judged where it is inherited, the same way: its
+      // own bundle is empty, and each negative is measured (3b) in every
+      // composition that folds it in.
+      if (m.entryPoints.length === 0 || setNames.has(m.name)) continue;
 
       // Non-pack: validate against the FLATTENED manifest (own + extended packs'
       // entries/contributors unioned), so a profile's `extends` packs are checked
       // in the app's real bundle context.
       const flat = flattenManifest(m, manifests);
       // The negatives this composition writes itself (its own row and its
-      // `extends` chain) — the inherited base row's are not, unless the chain
-      // writes them too. Naming a plugin the base row negates is the
+      // `extends` chain) — its inherited exclusion set's are not, unless the
+      // chain writes them too. Naming a plugin the set negates is the
       // documented way to take it back (`expandEntrySeeds`' opt-out), so only
       // an own negative can contradict a named positive (3b-b).
       const ownEntries = new Set(
         flattenManifest(
           m,
-          manifests.filter((x) => x.name !== BASE_EXCLUSIONS_ID),
+          manifests.filter((x) => !setNames.has(x.name)),
         ).entryPoints,
       );
 
       // 3b. Negative-pattern validity, evaluated on the FLATTENED manifest so a
-      //     negative from one composition (its `extends` chain, or the inherited
-      //     `base-exclusions` row) is judged against the positives unioned in
+      //     negative from one composition (its `extends` chain, or its
+      //     inherited exclusion set) is judged against the positives unioned in
       //     alongside it. A negative may only trim ids pulled in IMPLICITLY by
       //     some `.**` subtree glob. The two spellings that cannot mean anything
       //     — a negated root, and a negative on a locally named positive — are
@@ -330,8 +290,8 @@ const check: Check = {
         //     A negative can never cancel a named positive (positives are protected),
         //     so `!X` alongside `X` is a self-cancelling no-op — reject it loudly
         //     rather than silently keeping the positive. Only for a negative the
-        //     composition writes itself: one it inherits from the base row is
-        //     taken back by naming its base (the website names the report
+        //     composition writes itself: one it inherits from its exclusion set
+        //     is taken back by naming its base (the website names the report
         //     channel `base-exclusions` keeps out of every other composition).
         if (namedBases.has(p.base) && ownEntries.has(p.raw)) {
           return fail(
@@ -399,7 +359,7 @@ const check: Check = {
           });
           return fail(
             `composition "${m.name}"${on} declares ${comp.unsatisfiedExclusions.length} exclusion(s) that did NOT take effect:\n    ${lines.join("\n    ")}`,
-            `Each plugin above is excluded (by this composition's own negative, or by the inherited "${BASE_EXCLUSIONS_ID}" row) yet is still in the bundle, because something this composition NAMES imports it — and naming an importer is not a request for what it imports. Either exclude the importer at the head of the chain too, or drop the exclusion. To keep the plugin deliberately, name it here (as an entry positive or a selected contributor): that suppresses the inherited negative outright, and nothing cascades.`,
+            `Each plugin above is excluded (by this composition's own negative, or by the exclusion set it inherits — its \`exclusions\`, "${ALL_EXCLUSIONS_ID}" by default) yet is still in the bundle, because something this composition NAMES imports it — and naming an importer is not a request for what it imports. Either exclude the importer at the head of the chain too, or drop the exclusion. To keep the plugin deliberately, name it here (as an entry positive or a selected contributor): that suppresses the inherited negative outright, and nothing cascades.`,
           );
         }
 
@@ -458,14 +418,14 @@ const check: Check = {
     //     composition — a typo, or a leftover pointing at a plugin that no longer
     //     exists under that id. Judged here, after every composition has been
     //     resolved, because "trims nothing" is only evidence of a mistake when it
-    //     holds everywhere: the `base-exclusions` row's negatives are inherited by
+    //     holds everywhere: an exclusion set's negatives are inherited by
     //     lean compositions that never reached the excluded plugin, and trimming
     //     nothing there is correct.
     for (const [raw, trimmed] of negativeTrimmedSomewhere) {
       if (trimmed) continue;
       // Which row(s) actually wrote it — the file position to go and edit. A
       // pattern reaches a composition either by being authored on its row or by
-      // being folded in (`extends`, or the base row), so the authoring rows are
+      // being folded in (`extends`, or its exclusion set), so the authoring rows are
       // the ones whose own `entryPoints` carry the text.
       const authors = items
         .filter((i) => i.entryPoints.includes(raw))
@@ -499,7 +459,7 @@ const check: Check = {
     // `expandEntrySeeds` takes the whole flattened MANIFEST, not just its entry
     // points: its negative pass reads `selectedContributors` too, because a
     // locally selected plugin is a positive and positives suppress negatives. A
-    // containment therefore also sees the inherited `base-exclusions` negatives
+    // containment therefore also sees the inherited exclusion set's negatives
     // and shrinks by the same cascade — which keeps it agreeing with the engine
     // whose rule it mirrors, and errs permissive (a smaller declared territory)
     // rather than refusing over a plugin the target bundle does not ship.

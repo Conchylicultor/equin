@@ -609,7 +609,10 @@ export function installRenderer(comp: Composition): FilmPage {
       roll: val(cam.roll, t, 0),
     };
   };
-  const mb: MotionBlur | false = cam.motionBlur ?? {};
+  // Off unless asked for: CSS blur draws nothing under ~0.75 device px of
+  // radius and a full gaussian above it, so a speed-scaled blur snaps on and
+  // off mid-move (a one-frame crisp ↔ smeared jump, read as a shake).
+  const mb: MotionBlur | false = cam.motionBlur ?? false;
   // A camera key eased "step" is a cut: the camera jumps, it does not move.
   const cuts: number[] = [];
   for (const tr of [cam.focus, cam.zoom, cam.tiltX, cam.tiltY, cam.roll]) {

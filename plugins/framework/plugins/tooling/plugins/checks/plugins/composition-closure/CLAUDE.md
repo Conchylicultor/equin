@@ -84,21 +84,34 @@ leave it empty. Registry codegen resolves the same verdict and throws on it, so
 the web registry's `composition.home` (the `/` redirect target) is always one of
 the composition's own apps — never load order.
 
-## The global exclusions row
+## Exclusion sets
 
-`base-exclusions` (`BASE_EXCLUSIONS_ID`) is the one row that says what is in NO
-app. `flattenManifest` folds it into **every** manifest unconditionally — not via
-`extends` — so an exclusion written once holds for compositions that do not exist
-yet. Three shape rules mirror main's: present **exactly once**, `serve: "off"`,
-and **negatives only** — every entry point starts with `!` and
-`selectedContributors` is empty. That last one is the load-bearing rule: a
-positive on a row folded into everything would silently force a plugin into every
-bundle in the repo, which is `served-baseline`'s job and is done there through
-`extends`, visibly, on the row that opted in.
+A row of category `exclusions` is an **exclusion set**: `flattenManifest` folds
+one into every manifest — the set the row's `exclusions` field names, else
+`all-exclusions` (the strictest) — not via `extends`, so an exclusion written
+once holds for compositions that do not exist yet. The rules
+(`checkExclusionSets`, `plugin-meta/composition/core`, pinned by its
+`exclusion-sets.test.ts`):
 
-A composition takes an excluded plugin back by **naming** it — as an entry
-positive or a selected contributor — which suppresses the inherited negative
-outright.
+- `base-exclusions` (what is in no composition) and `all-exclusions` (the
+  default) each exist **exactly once**, as sets.
+- A set is **negatives only** — every entry point starts with `!`,
+  `selectedContributors` empty — never served, with no `home`, `unlisted`,
+  `excludes` or `exclusions` of its own. A positive on a row folded into others
+  would silently force a plugin into every bundle that inherits it, which is
+  `served-baseline`'s job, done through `extends` on the row that opted in.
+- A set `extends` only other sets and **reaches `base-exclusions`** through
+  them, so no row can choose its way out of the repo-wide removals.
+- Every other row's `exclusions`, when set, names a set (a non-set row or an
+  unknown name is refused), and no row `extends` a set — the choice has one
+  spelling.
+
+Sets are skipped by the per-composition loop (their bundle is empty); their
+negatives are measured where they are inherited. A composition takes an
+excluded plugin back by **naming** it — as an entry positive or a selected
+contributor — which suppresses the inherited negative outright; under `**`
+that is a contradictory negative, so a `**` row keeps a plugin by choosing a
+narrower set (`promo-film`: `base-exclusions`, which keeps Circle).
 
 ## Exclusions must actually take effect
 
@@ -123,7 +136,7 @@ down as its own negative (`!x`) to accept losing it. A root `**` reports none.
 ## Dead negatives are judged across ALL compositions
 
 A negative that trims nothing is a typo or a stale leftover — but only if it
-trims nothing **anywhere**. Since `base-exclusions` is inherited by lean
+trims nothing **anywhere**. Since an exclusion set is inherited by lean
 compositions that never reached the excluded plugin, trimming nothing *there* is
 the correct outcome. So the rule accumulates per pattern text across every
 composition and fails only when no composition trimmed anything, naming the rows

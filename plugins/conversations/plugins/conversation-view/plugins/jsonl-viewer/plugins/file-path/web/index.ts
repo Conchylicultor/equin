@@ -1,6 +1,7 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
-export { FilePath, toRelativePath } from "./components/file-path";
+export { FilePath } from "./components/file-path";
+export { toRelativePath } from "./components/shown-path";
 
 export default {
   collapsed: true,

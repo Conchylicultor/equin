@@ -7,6 +7,11 @@ import { join } from "node:path";
 import type { Locator, Page } from "playwright";
 import { pathUrl } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import type { AssetManifest } from "@plugins/media/plugins/film/e2e";
+import {
+  FILM_CLOCK_FILE,
+  FilmClockSchema,
+} from "@plugins/apps/plugins/website/plugins/promo-film/plugins/seed/core";
+import { promoFilmWorkspaceDir } from "@plugins/apps/plugins/website/plugins/promo-film/plugins/seed/data-dirs";
 
 export const W = 1280;
 export const H = 720;
@@ -28,6 +33,20 @@ export function newManifest(): AssetManifest {
     stripRects: {},
     audio: {},
   };
+}
+
+/**
+ * The film's "now" (epoch ms) — a weekday afternoon the last seed chose and
+ * stamped its story from (seed core's film-clock). Every recording's pages
+ * are pinned to it, so every segment shows the same day and hour.
+ */
+export function filmDate(): number {
+  const file = promoFilmWorkspaceDir.file(FILM_CLOCK_FILE);
+  if (!existsSync(file))
+    throw new Error(
+      `promo-film: no film clock at ${file} — run ./equin promo-film seed first`,
+    );
+  return FilmClockSchema.parse(JSON.parse(readFileSync(file, "utf8"))).now;
 }
 
 /** Open an app route and let it boot in real time (fetches, fonts, first paint). */
@@ -55,24 +74,39 @@ export async function visible(loc: Locator, timeout = 30_000): Promise<void> {
 
 /**
  * What a segment read off the page while recording that its frames do not
- * carry as data (e.g. the player's clock): `<name>.facts.json`.
+ * carry as data: `<name>.facts.json`.
  */
 export interface SegmentFacts {
-  /** integrated: Sonata's playhead (s) when the recording paused it. */
-  playheadAtEnd?: number;
-  /** integrated: Sonata's playhead (s) where the recording paused it — where `sonata` resumes. */
-  pausedAt?: number;
-  /** integrated: the song's route as it was left (its URL names the bar) — where `sonata` opens. */
-  songPath?: string;
+  /** The route it ends on (path, matrix params, query): where the next segment opens. */
+  endPath: string;
 }
 
-export function writeSegmentFacts(name: string, facts: SegmentFacts): void {
+/** Record where segment `name` ends, for the segment that continues it. */
+export function endHere(name: string, page: Page): void {
+  const u = new URL(page.url());
+  const facts: SegmentFacts = { endPath: `${u.pathname}${u.search}${u.hash}` };
   writeFileSync(join(REC_DIR, `${name}.facts.json`), JSON.stringify(facts));
 }
 
-export function readSegmentFacts(name: string): SegmentFacts {
-  const file = join(REC_DIR, `${name}.facts.json`);
-  if (!existsSync(file))
-    throw new Error(`promo-film: no facts for "${name}" — re-record it`);
-  return JSON.parse(readFileSync(file, "utf8")) as SegmentFacts;
+/**
+ * Where the segment after `name` starts, so the join is continuous: the route
+ * `name` ended on and its pointer's last position (its recording's own log).
+ */
+export function continueFrom(name: string): {
+  path: string;
+  cursor: { x: number; y: number };
+} {
+  const facts = join(REC_DIR, `${name}.facts.json`);
+  const log = join(REC_DIR, `${name}.json`);
+  if (!existsSync(facts) || !existsSync(log))
+    throw new Error(
+      `promo-film: "${name}" is not recorded — record it first (it ends where this segment starts)`,
+    );
+  const { endPath } = JSON.parse(readFileSync(facts, "utf8")) as SegmentFacts;
+  const seq = JSON.parse(readFileSync(log, "utf8")) as {
+    input: { cursor: Array<[number, number, number]> };
+  };
+  const last = seq.input.cursor[seq.input.cursor.length - 1];
+  if (!last) throw new Error(`promo-film: "${name}" logged no pointer`);
+  return { path: endPath, cursor: { x: last[1], y: last[2] } };
 }

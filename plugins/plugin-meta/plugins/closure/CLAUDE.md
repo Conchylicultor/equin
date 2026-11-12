@@ -57,22 +57,34 @@ flow inertly through `expandEntrySeeds`. **Every engine entry point
 operates on an already-flattened manifest** — callers flatten first; the core
 never re-walks `extends`.
 
-### The `base-exclusions` row every composition inherits
+### Exclusion sets every composition inherits
 
-`flattenManifest` also folds in the registry row named `BASE_EXCLUSIONS_ID`
-(`"base-exclusions"`, from `@plugins/infra/plugins/namespace/core`) —
-**unconditionally, not via `extends`**, and skipped only when the manifest being
-flattened IS that row. That is the point: an exclusion the repo has decided on
-holds for compositions that do not exist yet, rather than for the rows whose
-author remembered to reference it. It is the property the old `disabled` flag in a
-`package.json` used to have, now spelled in the vocabulary that already decides
-membership.
+`flattenManifest` also folds in the composition's **exclusion set** — the row
+`manifest.exclusions` names, and `ALL_EXCLUSIONS_ID` (`"all-exclusions"`, from
+`@plugins/infra/plugins/namespace/core`) when it names none — **unconditionally,
+not via `extends`**, visited like an `extends` reference (the set's own chain
+comes with it). That is the point: an exclusion the repo has decided on holds
+for compositions that do not exist yet, rather than for the rows whose author
+remembered to reference it, and the default is the STRICTEST set, so a row can
+only trade it for a narrower one by saying so. It is the property the old
+`disabled` flag in a `package.json` used to have, now spelled in the vocabulary
+that already decides membership.
 
-The row is an ordinary manifest entry — same grammar, same check, same Studio
-surface — carrying **only negatives** (`composition-closure` pins
-`selectedContributors: []` and every entry point starting with `!`; a positive
-there would be a way to force plugins INTO every composition invisibly). It is a
-legal composition id but never a servable namespace, exactly like main's.
+Two sets are reserved: `base-exclusions` (`BASE_EXCLUSIONS_ID` — what is in no
+composition at all: build-only code, the old disabled plugins) and
+`all-exclusions` (extends it, plus what exists for ONE composition only — the
+showcase film's Circle and seed, which `promo-film` keeps by naming
+`base-exclusions`). An exclusion set names itself as its exclusions
+(`manifestItemToManifest` does it for an `exclusions`-category row), so it
+flattens to its own chain. An unknown name folds nothing, inertly, like an
+unknown `extends`.
+
+A set is an ordinary manifest entry — same grammar, same check, same Studio
+surface — carrying **only negatives** (`composition-closure`: `selectedContributors:
+[]`, every entry point starts with `!`, `extends` only other sets and reaching
+`base-exclusions`, never served; a positive there would be a way to force
+plugins INTO every composition invisibly). Its id is a legal composition id but
+never a servable namespace, exactly like main's.
 
 Resolution therefore stays additive with one asymmetry, stated below: negatives
 subtract, and a local positive always wins over a negative from anywhere.
@@ -113,10 +125,10 @@ It runs identically at build time, in the `plugin-view.tree` /
 (`plugin-tree/faceted`) populates everything the engine consumes; a serving
 backend reads that tree as data (`plugin-tree/server`'s `getFacetsTreeCached`).
 
-The one runtime import outside this plugin is `BASE_EXCLUSIONS_ID` from
+The one runtime import outside this plugin is `ALL_EXCLUSIONS_ID` from
 `@plugins/infra/plugins/namespace/core`, which is a zero-import leaf for exactly
 this reason — build-time tooling, the CLI, the server and the browser all have to
-name that row, so it lives where every runtime can reach it.
+name the default set, so it lives where every runtime can reach it.
 
 ## Edge classification (`classifyEdges`)
 
@@ -227,7 +239,7 @@ negative pass, in three steps:
    names X explicitly, as an entry positive *or* as a selected contributor, is
    asking for X; that request suppresses the negative on X **entirely**, so
    nothing cascades from it either. This is how a composition takes back a plugin
-   the inherited base row negates.
+   an inherited exclusion set negates.
 3. **The cascade** — `removalClosure(targets, graph, kept)` with `kept =
    named ∪ selectedContributors`, then `seeds.delete(id)` for every member.
    Removing X necessarily removes X's descendants and everything that
@@ -333,7 +345,7 @@ plugin a positive ID pattern asked for (`x`, or inside `x.**`), named by no
 negative, that the cascade removed because it imports (or descends from) a
 negated target — with the hops from it to that target (`removalTrail`, BFS, so
 the chain is a shortest one). A root `**` asks for nothing in particular, so it
-yields none (the base row's cascade out of main is not a loss).
+yields none (an exclusion set's cascade out of main is not a loss).
 
 It exists because a negative written for one surface can take unrelated ones
 with it, and its author never sees the list: in the demo,
@@ -388,12 +400,14 @@ empty.
 
 The exclusion half is pinned there too: the cascade's DIRECTION (importers go, a
 dependency of the negated branch stays); the base row inherited with no `extends`
+(through the default set; a row naming `base-exclusions` keeps what the default
+removes, one naming none does not)
 (a composition seeding only `plugin-meta.facets.**` does not bundle
 `review.plugin-changes`); the opt-out in both spellings (entry positive, selected
 contributor) bundling it back with `unsatisfiedExclusions` empty; naming an
 *importer* NOT being an opt-out (a selected `render-diff` adapter yields a
 non-empty `unsatisfiedExclusions` carrying the import path); and the migration
-itself — the real-tree main composition (`["**"]` + the inherited base row) bundling
+itself — the real-tree main composition (`["**"]` + the inherited sets) bundling
 exactly every plugin minus the twelve the old `disabled` flag used to remove.
 
 `core/host-view.test.ts` pins the host model on a synthetic graph: desktop
@@ -416,7 +430,7 @@ Run with `./equin test plugins/plugin-meta/plugins/closure`.
     - `framework/plugin-id.PluginId`
     - `framework/plugin-id.RuntimeFolder`
     - `framework/plugin-id.SHIPPED_RUNTIME_FOLDERS`
-    - `infra/namespace.BASE_EXCLUSIONS_ID`
+    - `infra/namespace.ALL_EXCLUSIONS_ID`
     - `plugin-meta/closure/entry-pattern.parseEntryPattern`
     - `plugin-meta/facets.getFacet`
     - `plugin-meta/facets/contributions.contributionsFacetDef`

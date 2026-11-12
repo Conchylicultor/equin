@@ -22,7 +22,10 @@ import {
   SHIPPED_RUNTIME_FOLDERS,
   type RuntimeFolder,
 } from "@plugins/framework/plugins/plugin-id/core";
-import { BASE_EXCLUSIONS_ID } from "@plugins/infra/plugins/namespace/core";
+import {
+  ALL_EXCLUSIONS_ID,
+  BASE_EXCLUSIONS_ID,
+} from "@plugins/infra/plugins/namespace/core";
 import { getFacet } from "@plugins/plugin-meta/plugins/facets/core";
 import { crossRefsFacetDef } from "@plugins/plugin-meta/plugins/facets/plugins/cross-refs/core";
 import { classifyEdges } from "./classify-edges";
@@ -730,7 +733,7 @@ test("stopping at a kept id stays loud: a kept importer that drags a negated tar
   ]);
 });
 
-// ── Global exclusions: the base-exclusions row every composition inherits ──────
+// ── Exclusion sets: the base-exclusions row every composition inherits ────────
 
 /** The one negative the repo ships. It resolves to the plugin, its sub-plugins,
  *  and every facet's `render-diff` adapter (each imports it) — read off the real
@@ -743,7 +746,19 @@ const BASE_ROW: CompositionManifest = {
   entryPoints: ["!review.plugin-changes.**"],
   selectedContributors: [],
   extends: [],
+  exclusions: BASE_EXCLUSIONS_ID,
 };
+/** The default set, as the registry spells it: the base row and nothing of its
+ *  own here, so the real-tree expectations below are the base row's alone. */
+const ALL_ROW: CompositionManifest = {
+  name: ALL_EXCLUSIONS_ID,
+  hosts: ["desktop"],
+  entryPoints: [],
+  selectedContributors: [],
+  extends: [BASE_EXCLUSIONS_ID],
+  exclusions: ALL_EXCLUSIONS_ID,
+};
+const SETS = [BASE_ROW, ALL_ROW];
 const RENDER_DIFF_RE = /^plugin-meta\.facets\.[^.]+\.render-diff$/;
 
 /** Every facet's `render-diff` adapter in the real tree. */
@@ -853,7 +868,7 @@ test("the base-exclusions row is inherited with no `extends`", () => {
   };
   const comp = resolveComposition(
     graph,
-    flattenManifest(facetsOnly, [facetsOnly, BASE_ROW]),
+    flattenManifest(facetsOnly, [facetsOnly, ...SETS]),
   );
 
   expect(comp.bundle.has(PLUGIN_CHANGES)).toBe(false);
@@ -883,7 +898,7 @@ test("naming the excluded plugin as an entry positive opts back in", () => {
   };
   const comp = resolveComposition(
     graph,
-    flattenManifest(optIn, [optIn, BASE_ROW]),
+    flattenManifest(optIn, [optIn, ...SETS]),
   );
 
   expect(comp.bundle.has(PLUGIN_CHANGES)).toBe(true);
@@ -907,7 +922,7 @@ test("naming the excluded plugin as a selected contributor opts back in", () => 
   };
   const comp = resolveComposition(
     graph,
-    flattenManifest(optIn, [optIn, BASE_ROW]),
+    flattenManifest(optIn, [optIn, ...SETS]),
   );
 
   expect(comp.bundle.has(PLUGIN_CHANGES)).toBe(true);
@@ -930,7 +945,7 @@ test("naming an importer is NOT an opt-out: the contradiction is reported with i
   };
   const comp = resolveComposition(
     graph,
-    flattenManifest(viaImporter, [viaImporter, BASE_ROW]),
+    flattenManifest(viaImporter, [viaImporter, ...SETS]),
   );
 
   // The importer survives, so the excluded plugin is back in the bundle…
@@ -970,7 +985,7 @@ test("real-tree main: everything except plugin-changes, its render-diff importer
   };
   const comp = resolveComposition(
     graph,
-    flattenManifest(main, [main, BASE_ROW]),
+    flattenManifest(main, [main, ...SETS]),
   );
 
   const allIds = [...tree.byDir.values()].map((n) => String(n.id));
@@ -986,12 +1001,67 @@ test("real-tree main: everything except plugin-changes, its render-diff importer
   expect(comp.unsatisfiedExclusions).toEqual([]);
 });
 
-// The base row flattens against itself inertly — no infinite recursion, and it is
-// not made to inherit itself.
-test("flattenManifest does not fold the base row into itself", () => {
-  const flat = flattenManifest(BASE_ROW, [BASE_ROW]);
+// A set names itself as its exclusions: it flattens to its own chain, inertly
+// — no infinite recursion, and the base row inherits nothing wider.
+test("flattenManifest folds an exclusion set into itself inertly", () => {
+  const flat = flattenManifest(BASE_ROW, SETS);
   expect(flat.entryPoints).toEqual(["!review.plugin-changes.**"]);
   expect(flat.extends).toEqual([]);
+});
+
+// The default set and a row's choice of a narrower one, on synthetic rows: the
+// default carries a negative the base set does not.
+const STRICT_ROW: CompositionManifest = {
+  ...ALL_ROW,
+  entryPoints: ["!film.app"],
+};
+const STRICT_SETS = [BASE_ROW, STRICT_ROW];
+
+test("a row naming no exclusion set inherits the default, all-exclusions, with base-exclusions", () => {
+  const row: CompositionManifest = {
+    name: "anything",
+    hosts: ["desktop"],
+    entryPoints: ["**"],
+    selectedContributors: [],
+    extends: [],
+  };
+  const flat = flattenManifest(row, [row, ...STRICT_SETS]);
+  expect(flat.entryPoints).toEqual([
+    "**",
+    "!film.app",
+    "!review.plugin-changes.**",
+  ]);
+});
+
+test("a row naming base-exclusions keeps what the default set removes", () => {
+  const film: CompositionManifest = {
+    name: "film",
+    hosts: ["desktop"],
+    entryPoints: ["**"],
+    selectedContributors: [],
+    extends: [],
+    exclusions: BASE_EXCLUSIONS_ID,
+  };
+  const flat = flattenManifest(film, [film, ...STRICT_SETS]);
+  expect(flat.entryPoints).toEqual(["**", "!review.plugin-changes.**"]);
+  // …and so resolves to a bundle holding it, where the default row's does not.
+  const g = syntheticGraph(["film", "film.app", "other"], [], {
+    film: ["film.app"],
+  });
+  expect(resolveComposition(g, flat).bundle.has(asPluginId("film.app"))).toBe(
+    true,
+  );
+  const main: CompositionManifest = {
+    name: "main",
+    hosts: ["desktop"],
+    entryPoints: ["**"],
+    selectedContributors: [],
+    extends: [],
+  };
+  const strict = flattenManifest(main, [main, ...STRICT_SETS]);
+  expect(resolveComposition(g, strict).bundle.has(asPluginId("film.app"))).toBe(
+    false,
+  );
 });
 
 // `negatedTargets` is what the author ASSERTED must leave; the absent ids
@@ -1007,7 +1077,7 @@ test("negatedTargets carries the asserted targets, not the cascade", () => {
   };
   const comp = resolveComposition(
     graph,
-    flattenManifest(main, [main, BASE_ROW]),
+    flattenManifest(main, [main, ...SETS]),
   );
 
   // The pattern's own matches: the plugin and its sub-plugins — and the host

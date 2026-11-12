@@ -142,6 +142,7 @@ export const staticHosts: Record<string, StaticHost> = {
       "infra/plugins/background/plugins/catalog",
       "infra/plugins/endpoints",
       "infra/plugins/health",
+      "infra/plugins/health/plugins/connection-row",
       "infra/plugins/trash",
       "integrations/plugins/google-maps/plugins/browser-config",
       "layouts/plugins/full-pane",

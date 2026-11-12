@@ -232,6 +232,10 @@ export function WindowChrome({
     (e: ReactPointerEvent<HTMLDivElement>) => {
       if (e.button !== 0 || onControl(e)) return;
       e.preventDefault();
+      // Keep the pointer while it crosses a window's content: an app surface
+      // is often an iframe, which would otherwise take the moves and drop the
+      // drag (the window stays where it was).
+      e.currentTarget.setPointerCapture(e.pointerId);
       // Titlebar → tab container → surface backdrop: the backdrop is the drag +
       // snap-detection frame. Captured at pointer-down (stable for the drag).
       const container = e.currentTarget.parentElement;

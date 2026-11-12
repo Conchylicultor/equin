@@ -38,6 +38,18 @@ answer's in its result schema.
   read is undeclared: `no-db-backed-notify` follows the loader into it, so each
   serving plugin sanctions it in its own `exempt/index.ts`.
 
+### Stand-in box (demos)
+
+`markServerBoxIsThisInstance(serverId)` (table `deploy_host_stand_ins`, one row
+per server, cascades with it) marks a server whose box is THIS instance: a
+demo's server, whose host-only data (analytics, messages) the demo wrote into
+its own database. `hostOnlyQueryOverSsh` then fetches the route through this
+instance's own gateway (`namespaceUrl(runtimeNamespace(), path)`, owner
+principal, one hop, the same 10 s deadline) instead of SSH, and maps it onto
+the same failures: network error -> `request-failed` 7, HTTP >= 400 ->
+`request-failed` 22. No SSH key or pinned host key is needed. Used by
+`deploy/fixtures` (`box: "this-instance"`).
+
 `server/internal/query-over-ssh.ts` holds the argv, the mapping and the query
 with its two effects injected, tested without a box.
 
@@ -60,7 +72,7 @@ Run the tests with `./equin test plugins/apps/plugins/deploy/plugins/host-query`
 
 ## Plugin reference
 
-- Description: The deploy app's shared pieces for a section that reads its deployment's box over SSH: HostQueryFailureState renders every way the read can fail (no SSH key, unverified host, SSH failure, failed request, unreadable answer) in one vocabulary, and useDeploymentShips(deploymentId, pluginId) answers whether the deployment's composition closure includes a plugin (useShipsGate: the tab gate over it — shown unless the answer is no). hostOnlyQueryOverSsh(deploymentId, path, schema, { maxAnswerBytes? }): resolves a deployment's server and pinned SSH target, curls one host-only route of the install through its own gateway on the loopback port (two SSH sessions at most), refuses an answer over maxAnswerBytes unread (curl --max-filesize on the box, re-checked here), and answers the parsed answer, which of SSH, the request or the answer failed, or not-found.
+- Description: The deploy app's shared pieces for a section that reads its deployment's box over SSH: HostQueryFailureState renders every way the read can fail (no SSH key, unverified host, SSH failure, failed request, unreadable answer) in one vocabulary, and useDeploymentShips(deploymentId, pluginId) answers whether the deployment's composition closure includes a plugin (useShipsGate: the tab gate over it — shown unless the answer is no). hostOnlyQueryOverSsh(deploymentId, path, schema, { maxAnswerBytes? }): resolves a deployment's server and pinned SSH target, curls one host-only route of the install through its own gateway on the loopback port (two SSH sessions at most), refuses an answer over maxAnswerBytes unread (curl --max-filesize on the box, re-checked here), and answers the parsed answer, which of SSH, the request or the answer failed, or not-found. markServerBoxIsThisInstance(serverId) marks a demo's server whose box is this instance: its host-only routes are answered through this instance's own gateway, no SSH (the same answer cap applies).
 - Web:
   - Uses:
     - `network/live.LiveRowResult`
@@ -80,12 +92,17 @@ Run the tests with `./equin test plugins/apps/plugins/deploy/plugins/host-query`
   - Uses:
     - `apps/deploy/deployments._deployDeployments`
     - `apps/deploy/health.resolveServerSshTarget`
+    - `apps/deploy/servers._deployServers`
     - `database.db`
+    - `ids.idRef`
     - `infra/ssh.sshRun`
+  - DB schema: `plugins/apps/plugins/deploy/plugins/host-query/server/internal/tables.ts`
   - Exports (types):
     - `HostQueryAnswer`
     - `HostQueryOptions`
-  - Exports (values): `hostOnlyQueryOverSsh`
+  - Exports (values):
+    - `hostOnlyQueryOverSsh`
+    - `markServerBoxIsThisInstance`
 - Core:
   - Uses: `infra/ssh.SshFailureKindSchema`
   - Exports (types): `HostQueryFailure`
@@ -97,6 +114,7 @@ Run the tests with `./equin test plugins/apps/plugins/deploy/plugins/host-query`
   - Imported by:
     - `apps/deploy/analytics/dashboard`
     - `apps/deploy/analytics/sessions`
+    - `apps/deploy/fixtures`
     - `apps/deploy/site-messages/inbox`
     - `apps/deploy/site-reports/import`
 

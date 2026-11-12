@@ -23,6 +23,10 @@ import { SegmentedControl } from "@plugins/primitives/plugins/css/plugins/toggle
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { ResourceView } from "@plugins/network/plugins/live/plugins/live-state/web";
+import { useRevealedLater } from "@plugins/primitives/plugins/css/plugins/motion/web";
+import { useConfigResult } from "@plugins/config_v2/web";
+import { placeCardsConfig } from "../../core";
 import { symbol, type IconRef } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import type { MapBounds } from "@plugins/map/core";
@@ -41,6 +45,7 @@ import { scopePlaces } from "../internal/panel-scope";
 import { placeVisual } from "../internal/place-visual";
 import { PANEL_WIDTH } from "./card-frame";
 import { PlaceCover, PlaceGlyph, PlaceTile } from "./place-glyph";
+import { TodayHours } from "./place-facts";
 
 /**
  * The side panel's own surface: the active preset's places as a list or a
@@ -335,13 +340,32 @@ function PanelList(
   );
 }
 
+/** The panel's rows, once the place-cards setting is known. */
 function PanelRows(
   props: PlacesPanelProps & {
     layout: "list" | "gallery";
     shown: readonly Place[];
   },
 ): ReactNode {
-  const { tags, layout, shown, selectedId, onSelect, hover } = props;
+  const cards = useConfigResult(placeCardsConfig);
+  return (
+    <ResourceView resource={cards} fallback={<Loading variant="block" />}>
+      {(c) => <PanelRowsView {...props} showHours={c.showOpeningHours} />}
+    </ResourceView>
+  );
+}
+
+function PanelRowsView(
+  props: PlacesPanelProps & {
+    layout: "list" | "gallery";
+    shown: readonly Place[];
+    /** Today's opening hours on each card. */
+    showHours: boolean;
+  },
+): ReactNode {
+  const { tags, layout, shown, selectedId, onSelect, hover, showHours } = props;
+  // Turned on while the cards are drawn: the line eases in on each.
+  const hoursAppear = useRevealedLater(showHours);
   // The place's glyph is a field of the panel (a visual: the list's lead,
   // which wins over the cover thumbnail the gallery draws).
   const extraFields = useMemo(
@@ -370,8 +394,28 @@ function PanelRows(
         cell: (p) => <PlaceTile visual={placeVisual(p, tags)} />,
       },
       ...placeExtraFields(tags),
+      ...(showHours
+        ? [
+            {
+              id: "hours",
+              label: "Opening hours",
+              type: "text" as const,
+              header: false as const,
+              filterable: false,
+              sortable: false,
+              groupable: false,
+              value: (p: Place) => p.googlePlaceId ?? "",
+              cell: (p: Place) => (
+                <TodayHours
+                  googlePlaceId={p.googlePlaceId}
+                  reveal={hoursAppear}
+                />
+              ),
+            },
+          ]
+        : []),
     ],
-    [tags],
+    [tags, showHours, hoursAppear],
   );
   // A place's picture, as its gallery card's cover.
   const placeCover = useCallback(

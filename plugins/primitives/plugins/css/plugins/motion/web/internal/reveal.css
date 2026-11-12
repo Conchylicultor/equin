@@ -1,0 +1,49 @@
+/* Content that appears in an already-drawn surface: its slot eases open (the
+   siblings glide, nothing jumps by its height), it fades in, and a short wash
+   of the accent colour points at it, then fades. Plugin-local keyframes per
+   the theme rule. The class is on only while the reveal runs; at rest the
+   wrapper is `display: contents`. Driven by CSS animations only, so a page
+   clock that scrubs document animations (the film's) draws it frame by frame. */
+@keyframes reveal-open {
+  from {
+    grid-template-rows: 0fr;
+  }
+}
+
+@keyframes reveal-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes reveal-wash {
+  from {
+    background-color: color-mix(in oklab, var(--primary) 10%, transparent);
+  }
+  to {
+    background-color: transparent;
+  }
+}
+
+.reveal-in {
+  display: grid;
+  grid-template-rows: 1fr;
+  grid-template-columns: minmax(0, 1fr);
+  border-radius: var(--radius-md, 6px);
+  animation:
+    reveal-open 450ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    reveal-wash 1800ms ease-out 200ms both;
+}
+
+.reveal-in-body {
+  /* A flex column, like the stacks a slot's items sit in: the content is
+     blockified exactly as it is at rest (`display: contents` inside a flex
+     parent), so an inline child (a text span) does not gain the wrapper's
+     line box strut, a taller line height, while the reveal runs. */
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: clip;
+  animation: reveal-fade 450ms ease-out both;
+}

@@ -48,7 +48,11 @@ import { placeVisual } from "../internal/place-visual";
 import { pageItemPinData } from "../internal/page-item";
 import { PANEL_WIDTH } from "./card-frame";
 import { PlacePhotoWash } from "./place-glyph";
-import { RatingLine } from "./place-facts";
+import { RatingLine, TodayHours } from "./place-facts";
+import { ResourceView } from "@plugins/network/plugins/live/plugins/live-state/web";
+import { useConfigResult } from "@plugins/config_v2/web";
+import { useRevealedLater } from "@plugins/primitives/plugins/css/plugins/motion/web";
+import { placeCardsConfig } from "../../core";
 import { TagChip } from "./tag-chip";
 
 /**
@@ -274,17 +278,7 @@ function PanelList(
     overlay: Extract<PageOverlay, { kind: "page" }>;
   },
 ): ReactNode {
-  const {
-    overlay,
-    tags,
-    hover,
-    selectedBlockId,
-    onSelect,
-    onSave,
-    onSaveAll,
-    onFit,
-    onClose,
-  } = props;
+  const { overlay, onSaveAll, onFit, onClose } = props;
   const { page, items, unplaced } = overlay;
   const inAppLinkProps = useAppLinkProps();
   const fresh = items.filter((i) => i.saved === null);
@@ -338,29 +332,7 @@ function PanelList(
             No Google place on this page has a location yet.
           </Placeholder>
         ) : (
-          <PageOverlaySaveContext.Provider value={onSave}>
-            <DataView<PageOverlayItem>
-              storageKey={PAGE_OVERLAY_VIEW}
-              rows={items}
-              collection={pageOverlayItemKind}
-              rowKey={(i) => i.blockId}
-              views={["list"]}
-              pinnedView="list"
-              toolbar={LIST_TOOLBAR}
-              itemActions={PageOverlayItemActions}
-              viewOptions={{
-                list: {
-                  actionsAtRest: true,
-                  renderRow: (i: PageOverlayItem) => (
-                    <PageItemRow item={i} tags={tags} />
-                  ),
-                },
-              }}
-              onRowActivate={onSelect}
-              selectedRowId={selectedBlockId ?? undefined}
-              rowHover={hover}
-            />
-          </PageOverlaySaveContext.Provider>
+          <PageOverlayRows {...props} />
         )
       }
       footer={
@@ -387,6 +359,64 @@ function PanelList(
         </Line>
       }
     />
+  );
+}
+
+/** The page's places, once the place-cards setting (today's hours) is known. */
+function PageOverlayRows(
+  props: Omit<PageOverlayPanelProps, "overlay"> & {
+    overlay: Extract<PageOverlay, { kind: "page" }>;
+  },
+): ReactNode {
+  const cards = useConfigResult(placeCardsConfig);
+  return (
+    <ResourceView resource={cards} fallback={<Loading variant="block" />}>
+      {(c) => <PageOverlayRowsView {...props} showHours={c.showOpeningHours} />}
+    </ResourceView>
+  );
+}
+
+function PageOverlayRowsView({
+  overlay,
+  tags,
+  hover,
+  selectedBlockId,
+  onSelect,
+  onSave,
+  showHours,
+}: Omit<PageOverlayPanelProps, "overlay"> & {
+  overlay: Extract<PageOverlay, { kind: "page" }>;
+  /** Today's opening hours on each row. */
+  showHours: boolean;
+}): ReactNode {
+  const { items } = overlay;
+  // Turned on while the rows are drawn: the line eases in on each.
+  const revealHours = useRevealedLater(showHours);
+  const hours = showHours ? { reveal: revealHours } : null;
+  return (
+    <PageOverlaySaveContext.Provider value={onSave}>
+      <DataView<PageOverlayItem>
+        storageKey={PAGE_OVERLAY_VIEW}
+        rows={items}
+        collection={pageOverlayItemKind}
+        rowKey={(i) => i.blockId}
+        views={["list"]}
+        pinnedView="list"
+        toolbar={LIST_TOOLBAR}
+        itemActions={PageOverlayItemActions}
+        viewOptions={{
+          list: {
+            actionsAtRest: true,
+            renderRow: (i: PageOverlayItem) => (
+              <PageItemRow item={i} tags={tags} hours={hours} />
+            ),
+          },
+        }}
+        onRowActivate={onSelect}
+        selectedRowId={selectedBlockId ?? undefined}
+        rowHover={hover}
+      />
+    </PageOverlaySaveContext.Provider>
   );
 }
 
@@ -425,9 +455,12 @@ function SummaryKey({
 function PageItemRow({
   item,
   tags,
+  hours,
 }: {
   item: PageOverlayItem;
   tags: readonly PlaceTag[];
+  /** Today's opening hours under the row's facts (`reveal`: new to a drawn row, it eases in), or none. */
+  hours: { reveal: boolean } | null;
 }): ReactNode {
   const details = usePlaceDetails(item.googlePlaceId);
   const facts =
@@ -509,6 +542,12 @@ function PageItemRow({
                 {item.address}
               </Text>
             ) : null}
+            {hours === null ? null : (
+              <TodayHours
+                googlePlaceId={item.googlePlaceId}
+                reveal={hours.reveal}
+              />
+            )}
           </Stack>
         </Fill>
       </Line>

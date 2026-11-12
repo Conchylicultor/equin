@@ -1,11 +1,6 @@
 import { isBrowserRequest } from "@plugins/framework/plugins/principal/core";
-import { sql } from "drizzle-orm";
-import { _deployDeployments } from "@plugins/apps/plugins/deploy/plugins/deployments/server";
-import { db } from "@plugins/database/server";
 import { HttpError, implement } from "@plugins/infra/plugins/endpoints/server";
-import { setSecret } from "@plugins/infra/plugins/secrets/server";
 import { DEPLOY_SECRET_KEY_PATTERN } from "@plugins/apps/plugins/deploy/plugins/deploy-secrets/core";
-import { deploymentIdKind } from "@plugins/apps/plugins/deploy/plugins/deployments/core";
 import {
   adoptLocalDeploySecretValue,
   approveDeploySecret,
@@ -15,9 +10,8 @@ import {
 import { fingerprintKey } from "./fingerprint";
 import { readLocalValue } from "./local";
 import { approvalMessage, pendingSecrets } from "./plan";
-import { deploySecretsStatusServed } from "./served";
-import { DEPLOY_SECRETS_NAMESPACE, loadSecretPlan } from "./state";
-import { _deploySecretGrants } from "./tables";
+import { grantSecret, storeSecretValue } from "./approve";
+import { loadSecretPlan } from "./state";
 
 function assertSecretKey(key: string): void {
   if (!DEPLOY_SECRET_KEY_PATTERN.test(key)) {
@@ -28,33 +22,12 @@ function assertSecretKey(key: string): void {
   }
 }
 
-/**
- * The one write of a deploy secret's value — Set value and Use this
- * computer's value both land here. Every deployment's rows recompute (a grant
- * of the old value now names another one).
- */
-async function storeDeploySecretValue(
-  key: string,
-  value: string,
-): Promise<void> {
-  await setSecret({ namespace: DEPLOY_SECRETS_NAMESPACE, key }, value);
-  // A value's `notify()` with no params reaches only the `{}` tuple, and the
-  // store has no change feed — so every deployment's tuple is told by name
-  // (one row per install: bounded by the servers you deploy to).
-  const deployments = await db
-    .select({ id: _deployDeployments.id })
-    .from(_deployDeployments);
-  for (const d of deployments) {
-    deploySecretsStatusServed.notify({ deploymentId: d.id });
-  }
-}
-
 /** Store a value typed or pasted in the Set value dialog. */
 export const handleSetValue = implement(
   setDeploySecretValue,
   async ({ params, body }) => {
     assertSecretKey(params.key);
-    await storeDeploySecretValue(params.key, body.value);
+    await storeSecretValue(params.key, body.value);
   },
 );
 
@@ -84,7 +57,7 @@ export const handleAdoptLocalValue = implement(
         `This computer's value of ${params.key} changed since it was shown. Review it and try again.`,
       );
     }
-    await storeDeploySecretValue(params.key, local.value);
+    await storeSecretValue(params.key, local.value);
   },
 );
 
@@ -117,18 +90,7 @@ export const handleApprove = implement(
         `${body.key}'s value changed since it was shown. Review it and approve again.`,
       );
     }
-    await db
-      .insert(_deploySecretGrants)
-      .values({
-        deploymentId: deploymentIdKind.key(params.deploymentId),
-        key: body.key,
-        valueFingerprint: row.fingerprint,
-        approvedAt: new Date(),
-      })
-      .onConflictDoUpdate({
-        target: [_deploySecretGrants.deploymentId, _deploySecretGrants.key],
-        set: { valueFingerprint: row.fingerprint, approvedAt: sql`now()` },
-      });
+    await grantSecret(params.deploymentId, body.key, row.fingerprint);
   },
 );
 

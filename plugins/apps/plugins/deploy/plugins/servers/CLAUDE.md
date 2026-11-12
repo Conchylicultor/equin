@@ -179,6 +179,7 @@ plus `sshKey`.
     - `apps/deploy/deployments/runs-arm`
     - `apps/deploy/fixtures`
     - `apps/deploy/health`
+    - `apps/deploy/host-query`
     - `apps/deploy/ssh-setup`
     - `debug/read-set`
     - `framework/cli/deploy`

@@ -8,7 +8,7 @@ import type {
   DiskAlarm,
   SignalKey,
 } from "@plugins/debug/plugins/sentinel/plugins/status-file/core";
-import type { SentinelStatusValue } from "../../core";
+import type { SentinelStatusValue } from "@plugins/debug/plugins/sentinel/core";
 
 /** What a dead or missing watcher costs, said once so every critical row agrees. */
 const CONSEQUENCE = "builds are not held back when memory runs out";

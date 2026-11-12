@@ -8,6 +8,7 @@
 - Cross-plugin:
   - Imported by:
     - `debug/sentinel`
+    - `debug/sentinel/health-row`
     - `framework/cli/op-runtime`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `server/internal/json-file.ts`, `server/internal/status-file.ts`, `server/internal/vitals-file.ts` (debt)

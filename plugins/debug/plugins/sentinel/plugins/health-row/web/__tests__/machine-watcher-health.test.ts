@@ -10,7 +10,7 @@ import type {
   SentinelWatch,
   SignalKey,
 } from "@plugins/debug/plugins/sentinel/plugins/status-file/core";
-import type { SentinelStatusValue } from "../../core";
+import type { SentinelStatusValue } from "@plugins/debug/plugins/sentinel/core";
 import { machineWatcherVerdict } from "../internal/machine-watcher-health";
 
 const refetch = () => Promise.resolve();

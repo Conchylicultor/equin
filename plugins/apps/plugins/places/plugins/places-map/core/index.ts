@@ -12,3 +12,4 @@ export {
   withoutSidebarRules,
   type SidebarState,
 } from "./internal/sidebar-filter";
+export { placeCardsConfig } from "./internal/card-config";

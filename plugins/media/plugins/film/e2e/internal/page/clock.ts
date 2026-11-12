@@ -44,9 +44,20 @@ export interface FilmClockApi {
   virtual(): boolean;
 }
 
+/**
+ * The calendar a recorded page is pinned to (`installRecorderClock`'s
+ * `date`): it read `epoch` (ms) at the real instant `realAt` (ms), and runs
+ * on from there.
+ */
+export interface FilmDatePin {
+  epoch: number;
+  realAt: number;
+}
+
 declare global {
   interface Window {
     __filmClock?: FilmClockApi;
+    __filmDatePin?: FilmDatePin | null;
   }
 }
 
@@ -63,11 +74,21 @@ interface Timer {
   native: number | null;
 }
 
+/**
+ * The clock's hold on one animation: its playhead, advanced by virtual time
+ * while the app means it to run. The app's own play state is the intent —
+ * `pause()` / `play()` are the app's to call, the clock only ever pauses an
+ * animation to drive it.
+ */
 interface Scrub {
-  born: number;
+  /** Its playhead (ms of its own time) at virtual time `at`. */
+  pos: number;
+  at: number;
+  /** The `currentTime` read back after the clock last set it: a different one now is a seek by the app. */
+  readBack: number | null;
   done: boolean;
-  /** The app paused it itself before we saw it: left alone. */
-  foreign: boolean;
+  /** The app paused it (`pause()`, or it was paused when first seen): it stands where the app left it until the app plays it again. */
+  appPaused: boolean;
 }
 
 export function installClock(): void {
@@ -94,7 +115,11 @@ export function installClock(): void {
   /** True only inside start(): animations seen then were running before it. */
   let starting = false;
   const clock = (): number => (isVirtual ? vt : N.perfNow());
-  const dateBase = N.dateNow() - N.perfNow();
+  // Date at clock() = 0. Pinned: the pin's instant plus the real time since
+  // it was taken (so every load of the context runs on the same calendar).
+  const pin = window.__filmDatePin ?? null;
+  const dateBase =
+    (pin ? pin.epoch + (N.dateNow() - pin.realAt) : N.dateNow()) - N.perfNow();
   const dateNow = (): number => Math.floor(dateBase + clock());
 
   // ------------------------------------------------------------- time ----
@@ -260,32 +285,197 @@ export function installClock(): void {
 
   // ------------------------------------------------------- animations ----
   const scrubs = new WeakMap<Animation, Scrub>();
+  /**
+   * Every animation the clock paused and has not finished yet. A paused
+   * animation never finishes on its own, so only the clock can finish it —
+   * and `document.getAnimations()` cannot be trusted to keep handing it back:
+   * Blink drops an animation it judges past its end (within its time
+   * tolerance) when it does not fill forwards. Virtual time is a sum of
+   * frame steps (1000/60 ms each), so a transition born on one frame can sit
+   * at 149.99999999999 ms of 150 — at its end to Blink (transitionend fires,
+   * it leaves getAnimations), short of it to `elapsed >= end` — and stayed
+   * paused there forever, its `finished` promise never settling (a
+   * floating-action panel waiting on it never revealed; the Wish popover
+   * never drew). Held here, it is finished on the next sync.
+   */
+  const owned = new Set<Animation>();
+  // The clock pauses and plays with the native methods; the page's own calls
+  // go through the wrappers below, which are how the clock knows the app's
+  // intent (a paused animation is paused for the clock either way).
+  const nativePause = Animation.prototype.pause;
+  const nativePlay = Animation.prototype.play;
+  const isNum = (v: unknown): v is number => typeof v === "number";
+  const scrubOf = (a: Animation): Scrub => {
+    let s = scrubs.get(a);
+    if (!s) {
+      // Running before start(): keep its phase. Born while the clock stood
+      // still: it starts now, whatever real time passed since it was made.
+      // Paused when first seen: the app's (or its CSS's) pause, its phase kept.
+      const pre = starting && a.playState === "running";
+      const paused = a.playState === "paused";
+      s = {
+        pos: (pre || paused) && isNum(a.currentTime) ? a.currentTime : 0,
+        at: vt,
+        readBack: null,
+        done: false,
+        appPaused: paused,
+      };
+      scrubs.set(a, s);
+    }
+    return s;
+  };
+  /** Move a driven animation's playhead to the current virtual time; finish it at its end. */
+  const advance = (a: Animation, s: Scrub): void => {
+    if (!a.effect) return;
+    const rate = a.playbackRate;
+    // A seek by the app since the clock last set it: its playhead is that.
+    const cur = a.currentTime;
+    if (isNum(cur) && s.readBack !== null && Math.abs(cur - s.readBack) > 0.001)
+      s.pos = cur;
+    s.pos += (vt - s.at) * rate;
+    s.at = vt;
+    const end = Number(a.effect.getComputedTiming().endTime ?? Infinity);
+    // At its end within Blink's own time tolerance (1 µs) is at its end:
+    // finished on the frame Blink already draws it ended.
+    const atEnd =
+      rate < 0 ? s.pos <= 0.001 : Number.isFinite(end) && s.pos >= end - 0.001;
+    if (atEnd) {
+      // A paused animation never finishes on its own: finish it, so its
+      // `finished` promise, finish event and transitionend still come.
+      s.done = true;
+      owned.delete(a);
+      a.finish();
+    } else {
+      a.currentTime = s.pos;
+      s.readBack = isNum(a.currentTime) ? a.currentTime : null;
+    }
+  };
+  Animation.prototype.pause = function (this: Animation): void {
+    const s = scrubOf(this);
+    // Driven up to now, then left where the app paused it.
+    if (isVirtual && owned.has(this) && !s.done && !s.appPaused)
+      advance(this, s);
+    s.appPaused = true;
+    owned.delete(this);
+    nativePause.call(this);
+  };
+  Animation.prototype.play = function (this: Animation): void {
+    nativePlay.call(this);
+    // Real time: it runs as on any page; start() adopts it like any other.
+    if (!isVirtual) {
+      scrubs.delete(this);
+      return;
+    }
+    const s = scrubOf(this);
+    s.appPaused = false;
+    s.done = false;
+    // Resumed (or replayed) by the app: driven on virtual time from the
+    // playhead play() left it on (a pending play holds its time; a finished
+    // one rewinds) — never run on the real timeline while the recorder
+    // waits, which would play it out between two frames.
+    s.pos = isNum(this.currentTime) ? this.currentTime : 0;
+    s.at = vt;
+    s.readBack = null;
+    nativePause.call(this);
+    owned.add(this);
+  };
+  // `startTime =` is a play too: it clears the animation's hold time and runs
+  // it on its timeline from that instant. An app that dates its tween itself
+  // (the fold primitive: `el.animate(…)`, then `anim.startTime =
+  // performance.now()`, so a slow mount delays the motion instead of
+  // swallowing it) hands it a VIRTUAL instant — and the native setter runs
+  // it on the document timeline, whose time is real and far ahead: the
+  // animation is past its end before the next frame is captured (Sonata's
+  // Current key section snapped open and shut in the film; every fold did).
+  // So in virtual mode the clock takes it as the app means it: driven on
+  // virtual time with its playhead at (now − startTime) × rate, and read
+  // back in virtual time. The document timeline's own time reads virtual
+  // too, so a start time computed from it is on the same clock.
+  const startTimeDesc = Object.getOwnPropertyDescriptor(
+    Animation.prototype,
+    "startTime",
+  );
+  const onDocTimeline = (a: Animation): boolean =>
+    a.timeline === null || a.timeline === document.timeline;
+  if (startTimeDesc?.get && startTimeDesc.set) {
+    const nativeStartGet = startTimeDesc.get;
+    const nativeStartSet = startTimeDesc.set;
+    Object.defineProperty(Animation.prototype, "startTime", {
+      configurable: true,
+      enumerable: startTimeDesc.enumerable,
+      get(this: Animation): CSSNumberish | null {
+        const s = scrubs.get(this);
+        if (!isVirtual || !owned.has(this) || !s || s.appPaused || s.done)
+          return nativeStartGet.call(this) as CSSNumberish | null;
+        return s.at - s.pos / (this.playbackRate || 1);
+      },
+      set(this: Animation, value: CSSNumberish | null): void {
+        if (!isVirtual || !onDocTimeline(this) || !isNum(value)) {
+          nativeStartSet.call(this, value);
+          // Unset (a hold): the app's pause.
+          if (isVirtual && value === null) {
+            scrubOf(this).appPaused = true;
+            owned.delete(this);
+          }
+          return;
+        }
+        const s = scrubOf(this);
+        s.appPaused = false;
+        s.done = false;
+        s.pos = (vt - value) * this.playbackRate;
+        s.at = vt;
+        s.readBack = null;
+        if (this.playState !== "paused") nativePause.call(this);
+        owned.add(this);
+        this.currentTime = s.pos;
+        s.readBack = isNum(this.currentTime) ? this.currentTime : null;
+      },
+    });
+  }
+  const timelineTime = Object.getOwnPropertyDescriptor(
+    AnimationTimeline.prototype,
+    "currentTime",
+  );
+  if (timelineTime?.get) {
+    const nativeTimelineGet = timelineTime.get;
+    Object.defineProperty(AnimationTimeline.prototype, "currentTime", {
+      configurable: true,
+      enumerable: timelineTime.enumerable,
+      get(this: AnimationTimeline): CSSNumberish | null {
+        if (isVirtual && this === document.timeline) return vt;
+        return nativeTimelineGet.call(this) as CSSNumberish | null;
+      },
+    });
+  }
   const syncAnimations = (): void => {
-    for (const a of document.getAnimations()) {
-      let s = scrubs.get(a);
-      if (!s) {
-        const rate = a.playbackRate || 1;
-        // Running before start(): keep its phase. Born while the clock stood
-        // still: it starts now, whatever real time passed since it was made.
-        const pre = starting && a.playState === "running";
-        const ct = typeof a.currentTime === "number" ? a.currentTime : 0;
-        s = {
-          born: pre ? vt - ct / rate : vt,
-          done: false,
-          foreign: a.playState === "paused",
-        };
-        scrubs.set(a, s);
+    const seen = new Set(document.getAnimations());
+    for (const a of owned) {
+      // Cancelled (its element removed, its transition replaced) or finished
+      // by the app itself: no longer the clock's.
+      if (a.playState === "idle" || a.playState === "finished") owned.delete(a);
+      else seen.add(a);
+    }
+    for (const a of seen) {
+      // A scroll- or view-driven animation (`animation-timeline: scroll()` /
+      // `view()`) runs on progress, not time: its playhead is the scroll
+      // position, which the recording drives itself — setting it in ms
+      // throws. Only document-timeline animations are the clock's.
+      if (a.timeline !== null && a.timeline !== document.timeline) continue;
+      if (!a.effect) continue;
+      const s = scrubOf(a);
+      if (a.playState === "running" && (s.appPaused || s.done)) {
+        // Played again without play() (reverse(), a CSS play-state flip):
+        // the app's again, from where it is now.
+        s.appPaused = false;
+        s.done = false;
+        s.pos = isNum(a.currentTime) ? a.currentTime : 0;
+        s.at = vt;
+        s.readBack = null;
       }
-      if (s.done || s.foreign || !a.effect) continue;
-      if (a.playState !== "paused") a.pause();
-      const elapsed = (vt - s.born) * (a.playbackRate || 1);
-      const end = Number(a.effect.getComputedTiming().endTime ?? Infinity);
-      if (Number.isFinite(end) && elapsed >= end) {
-        // A paused animation never finishes on its own: finish it, so its
-        // `finished` promise, finish event and transitionend still come.
-        s.done = true;
-        a.finish();
-      } else a.currentTime = elapsed;
+      if (s.done || s.appPaused) continue;
+      if (a.playState !== "paused") nativePause.call(a);
+      owned.add(a);
+      advance(a, s);
     }
   };
 

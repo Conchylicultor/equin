@@ -1,24 +1,17 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Core } from "@plugins/framework/plugins/web-sdk/core";
-import { HealthReport } from "@plugins/shell/plugins/health-report/web";
 import { ReconnectWatcher } from "./components/reconnect-watcher";
 import { WedgeWatchdog } from "./components/wedge-watchdog";
-import { useConnectionHealth } from "./internal/use-connection-health";
 
 export { wedgeReportSink } from "./internal/wedge-report-sink";
 export type { WedgeReport } from "./internal/wedge-report-sink";
+export { PUSH_STALL_MS } from "./internal/push-stall";
 
 export default {
   description:
-    "Surfaces server restarts as a toast; exposes /api/health helpers; reports the server and central socket connection as the health report's Connection row.",
+    "Surfaces server restarts as a toast; exposes /api/health helpers; watches for a live-state channel that stopped delivering (PUSH_STALL_MS, the threshold its Connection row — the connection-row sub-plugin — shares).",
   contributions: [
     Core.Root({ component: ReconnectWatcher, scope: "page" }),
     Core.Root({ component: WedgeWatchdog, scope: "page" }),
-    HealthReport.Row({
-      kind: "status",
-      id: "connection",
-      title: "Connection",
-      useStatus: useConnectionHealth,
-    }),
   ],
 } satisfies PluginDefinition;

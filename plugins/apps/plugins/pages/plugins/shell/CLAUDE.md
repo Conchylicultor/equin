@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: App shell for Pages. Registers the /pages app entry — its brand the workspace (the user's initial tile as the launcher mark, and "<first name>'s pages" from the OS account) — defines the Pages.Sidebar slot, and contributes the app's own theme (Ink), which Pages selects.
+- Description: App shell for Pages. Registers the /pages app entry — its brand the workspace (the user's initial tile as the launcher mark, and "<first name>'s pages" from the user's profile name — "My pages" and the pages glyph when the user shows no name) — defines the Pages.Sidebar slot, and contributes the app's own theme (Ink), which Pages selects.
 - Web:
   - Slots: `Pages.Sidebar`
   - Slot contributors:
@@ -16,7 +16,7 @@
     - `ThemeEngine.Theme` "Ink"
   - Uses:
     - `apps-core.Apps`
-    - `infra/host-account.useHostAccount`
+    - `infra/host-account.useProfileName`
     - `layouts/miller.MillerColumns`
     - `network/live/live-state.ResourceErrorInline`
     - `primitives/app-shell.AppShellLayout`

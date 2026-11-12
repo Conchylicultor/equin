@@ -8,6 +8,7 @@ import {
   readFile,
   stat,
 } from "@plugins/packages/plugins/timed-fs/core";
+import { CIRCLE_PROTOTYPE } from "@plugins/apps/plugins/website/plugins/promo-film/plugins/circle/core";
 import { PLUGINS_DIR } from "@plugins/infra/plugins/paths/core";
 import { prototypesDir } from "@plugins/apps/plugins/prototypes/data-dirs";
 import { parsePrototypeTree } from "@plugins/apps/plugins/prototypes/plugins/fixtures/core";
@@ -67,4 +68,21 @@ async function readFolder(dir: AppPath): Promise<Record<string, string>> {
     if ((await stat(joinAppPath(dir, name))).isFile())
       files[name] = await readFile(joinAppPath(dir, name), "utf8");
   return files;
+}
+
+/**
+ * The Circle prototype's first version, as the agent that made it wrote it
+ * (the fixture's `steps/v1/index.html`): what the film's agent-run transcript
+ * shows being written.
+ */
+export async function circleFirstVersionHtml(): Promise<string> {
+  const proto = parsePrototypeTree(
+    (await readPrototypeFixtureDir(FIXTURE_DIR)).tree,
+  ).prototypes.find((p) => p.id === CIRCLE_PROTOTYPE);
+  const html = proto?.versions[0]?.files["index.html"];
+  if (html === undefined)
+    throw new Error(
+      `[promo-film seed] the fixture holds no first version of ${CIRCLE_PROTOTYPE}`,
+    );
+  return html;
 }

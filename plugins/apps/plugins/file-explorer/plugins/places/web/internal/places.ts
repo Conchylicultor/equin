@@ -57,6 +57,37 @@ function fixedPlace(
   };
 }
 
+const NO_PLACES: PlacesState = { kind: "ready", places: [] };
+
+/**
+ * Under a stand-in home folder the sidebar names nothing of the machine
+ * outside it: the places that live elsewhere (the checkout, the startup
+ * volume, the Trash) are not offered.
+ */
+function useIsStandInHome(): boolean {
+  const home = useHomeDir();
+  return home.kind === "ready" && home.standIn;
+}
+
+/** The Trash — `~/.Trash`, so outside a stand-in home folder only. */
+function useTrashPlace(): PlacesState {
+  const standIn = useIsStandInHome();
+  return standIn ? NO_PLACES : trashState;
+}
+const trashState: PlacesState = {
+  kind: "ready",
+  places: [
+    {
+      kind: "folder",
+      fs: "computer",
+      id: "trash",
+      label: "Trash",
+      path: "~/.Trash",
+      icon: trashIcon,
+    },
+  ],
+};
+
 /** The equin main checkout — its path is the server's to say. */
 function useRepoPlace(): PlacesState {
   const checkout = useLive(fileExplorerMainCheckout);
@@ -65,6 +96,7 @@ function useRepoPlace(): PlacesState {
   if (checkout.status === "unavailable" || home.kind === "unavailable") {
     return { kind: "unavailable" };
   }
+  if (home.kind === "ready" && home.standIn) return NO_PLACES;
   if (checkout.status === "error") {
     return {
       kind: "failed",
@@ -101,6 +133,8 @@ function useRepoPlace(): PlacesState {
  */
 function useStartupVolumePlace(): PlacesState {
   const volume = useLive(computerVolume, { path: "/" });
+  const standIn = useIsStandInHome();
+  if (standIn) return NO_PLACES;
   switch (volume.status) {
     case "loading":
       return { kind: "pending" };
@@ -214,6 +248,6 @@ export const placeContributions = [
   FileExplorer.Places({
     id: "trash",
     group: "locations",
-    usePlaces: fixedPlace("trash", "Trash", "~/.Trash", trashIcon),
+    usePlaces: useTrashPlace,
   }),
 ];

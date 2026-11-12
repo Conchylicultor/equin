@@ -52,9 +52,9 @@ export interface ManifestActions {
    * minted one when appending. The Studio list pane's "New" creates the row and
    * then navigates to `comp/:id`, so it needs the id the append just minted.
    *
-   * **Throws for the two committed-source rows** (main's and
-   * `base-exclusions`, per {@link isCommittedSourceComposition}).
-   * Those two rows decide what the repo's own app contains, and that decision
+   * **Throws for the committed-source rows** (main's and the inherited
+   * exclusion sets, per {@link isCommittedSourceComposition}).
+   * Those rows decide what the repo's own app contains, and that decision
    * is read from the GIT layer: codegen resolves main's closure — with the base
    * row's negatives folded in — off the committed config to emit the
    * registries and the docs. A user-layer edit to either row therefore cannot
@@ -80,9 +80,9 @@ export interface ManifestActions {
    * synchronous array edit its name promises, so no caller can trigger a data
    * wipe by editing a list.
    *
-   * **Throws for the two committed-source rows** (main's and
-   * `base-exclusions`, per {@link isCommittedSourceComposition}). Deleting
-   * either from the user config layer takes something the repo depends on out
+   * **Throws for the committed-source rows** (main's and the inherited
+   * exclusion sets, per {@link isCommittedSourceComposition}). Deleting
+   * one from the user config layer takes something the repo depends on out
    * of the registry — main's row is the app this repo builds, and the base row
    * carries the exclusions every composition inherits — and
    * `composition-closure` fails when the manifest does not carry exactly one of
@@ -165,6 +165,10 @@ export function useManifestActions(): ManifestActions {
           // draft yet — seed it empty; set it via config edit. The edit path above
           // preserves any existing `excludes` through the `...item` spread.
           excludes: [] as string[],
+          // The default exclusion set (`all-exclusions`); a narrower one is a
+          // config edit. Never read off the draft: a flattened draft carries
+          // the resolved name, which would pin the default by value.
+          exclusions: "",
           // New drafts are not served; pick a mode via the Studio control.
           serve: "off",
           // No home until one is picked in Studio — `composition-closure` refuses

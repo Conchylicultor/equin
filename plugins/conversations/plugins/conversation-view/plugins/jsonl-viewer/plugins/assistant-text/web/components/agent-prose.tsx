@@ -1,3 +1,4 @@
+import { useHomeDisplay } from "@plugins/infra/plugins/host-account/web";
 import { useRef, type ReactNode } from "react";
 import { ActiveDataMarkdown } from "@plugins/active-data/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -31,11 +32,12 @@ export function AgentProse(props: AgentProseProps) {
 }
 
 function Prose({ text, conversationId, messageId, leading }: AgentProseProps) {
+  const homeDisplay = useHomeDisplay();
   return (
     <Text as="div" variant="body">
       {leading}
       <ActiveDataMarkdown
-        text={text}
+        text={homeDisplay(text)}
         conversationId={conversationId}
         messageId={messageId}
       />

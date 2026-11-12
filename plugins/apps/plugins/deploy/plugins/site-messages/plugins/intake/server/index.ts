@@ -18,6 +18,9 @@ import {
 } from "./internal/routes";
 import { siteMessages } from "./internal/tables";
 
+// A demo's seed stores received messages through this.
+export { insertReceivedSiteMessage } from "./internal/received";
+
 export default {
   description:
     "Owns site_messages: the public POST /api/site-messages endpoint (body capped at 8 KB; honeypot, a send under three seconds or a bot user agent stored as spam and still answered sent; 3 per 10 minutes and 10 per day per salted IP hash, the IP never stored), the site-messages.notify job emailing each accepted message through Resend from the approved RESEND_API_KEY deploy secret (not-configured without one, at most 30 emails a day, the rest held and counted in the next), the site-messages.confirm job emailing the visitor a copy so they know it arrived (at most 30 a day and 3 a day per address), the 30-day spam sweep, and the host-only list the deploy app reads over SSH.",

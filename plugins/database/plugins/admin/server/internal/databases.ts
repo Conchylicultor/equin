@@ -3,6 +3,7 @@ import { NAMESPACE_RE } from "@plugins/infra/plugins/namespace/core";
 import { z } from "zod";
 import { getAdminPool } from "./pool";
 import { runDatabaseDdl } from "./database-ddl";
+import { withPoolerHeld } from "./pooler-hold";
 
 /**
  * Scratch databases the cluster mints for itself, as opposed to an app's.
@@ -99,6 +100,21 @@ export async function ensureDatabase(name: string): Promise<void> {
     }
     throw err;
   }
+}
+
+/**
+ * Drop `name` and create it empty — one step as every client of the pooler
+ * sees it: no login reaches the database while it is missing, so none can fail
+ * and leave PgBouncer refusing the recreated database from its cached error
+ * (see `withPoolerHeld`). A reset-to-empty must use this, never
+ * `dropDatabase` then `ensureDatabase`.
+ */
+export async function recreateDatabase(name: string): Promise<void> {
+  assertSafeName(name);
+  await withPoolerHeld(name, async () => {
+    await dropDatabase(name);
+    await ensureDatabase(name);
+  });
 }
 
 // On-disk size of `name` in bytes. For a sweep that is about to DROP a database

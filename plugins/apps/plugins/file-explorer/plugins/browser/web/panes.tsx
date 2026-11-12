@@ -13,15 +13,20 @@ import {
   type LinkTarget,
 } from "@plugins/primitives/plugins/link-gesture/core";
 import { fileExplorerApp } from "@plugins/apps/plugins/file-explorer/plugins/shell/core";
+import { useConfigResult } from "@plugins/config_v2/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
-import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
+import {
+  ResourceErrorInline,
+  foldResource,
+} from "@plugins/network/plugins/live/plugins/live-state/web";
 import {
   isBrowsableFileSystem,
   type BrowsableFileSystem,
 } from "@plugins/infra/plugins/paths/plugins/file-systems/core";
 import {
   baseName,
+  filesConfig,
   decodeOpenParam,
   encodeOpenParam,
   type ExplorerLocation,
@@ -335,14 +340,42 @@ function FilesHome(): ReactNode {
   }
 }
 
+/**
+ * Home: the configured start folder (`filesConfig`'s `startFolder`, `~`
+ * unless set), in the home system — forwarded to that folder's own address.
+ */
 function FilesHomeForward({ fs }: { fs: BrowsableFileSystem }): ReactNode {
+  const config = useConfigResult(filesConfig);
+  return foldResource(config, {
+    loading: () => <Loading variant="rows" />,
+    error: (error) => (
+      <ResourceErrorInline
+        variant="block"
+        subject="the Files start folder"
+        error={error}
+        refetch={config.refetch}
+      />
+    ),
+    ready: ({ startFolder }) => (
+      <FilesStartForward fs={fs} startFolder={startFolder} />
+    ),
+  });
+}
+
+function FilesStartForward({
+  fs,
+  startFolder,
+}: {
+  fs: BrowsableFileSystem;
+  startFolder: string;
+}): ReactNode {
   const openPane = useOpenPane();
   useEffect(() => {
-    openPane(filesFolderPane, folderParams(fs, HOME), {
+    openPane(filesFolderPane, folderParams(fs, startFolder), {
       mode: "root",
       replace: true,
     });
-  }, [openPane, fs]);
+  }, [openPane, fs, startFolder]);
   return <Loading variant="rows" />;
 }
 

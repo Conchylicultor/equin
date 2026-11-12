@@ -32,7 +32,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`settings`** [4 sub-plugins] — Settings app.
     - **`sonata`** [test helpers] [exempt] [83 sub-plugins] — Sonata — extensible piano and music app.
     - **`studio`** [exempt] [27 sub-plugins] — Plugin inspection and visualization; home for the plugin graph and contribution tables.
-    - **`website`** [test helpers] [27 sub-plugins] — Website — the public-facing site of equin: the homepage's claim, a picture of it and the three layers of the project, a gallery of its apps, placeholder pages for the vision, the foundations and the…
+    - **`website`** [test helpers] [28 sub-plugins] — Website — the public-facing site of equin: the homepage's claim, a picture of it and the three layers of the project, a gallery of its apps, placeholder pages for the vision, the foundations and the…
 
 - **`apps-core`** [load-bearing] [test helpers] — App switcher rail. Wraps per-app shells; plugins contribute via Apps.App. Every app the browser registers, readable on the server: declaredApps() — each Apps.App contribution of the plugins the…
   - Plugins:
@@ -111,7 +111,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`sql-rows`** [exempt] — Parsed raw-SQL row reads: queryRows / executeRows parse every row against a zod schema and throw a SqlRowError naming the column, the value and its Postgres type OID — closing the pool.query<T>()…
     - **`sql-writes`** — Every hand-written SQL write (INSERT / UPDATE / DELETE / MERGE, in CTEs too) parsed with Postgres's own grammar (libpg_query) and checked against the schema the code declares — drizzle tables with…
 
-- **`debug`** [exempt] [72 sub-plugins] — Debug tools umbrella plugin.
+- **`debug`** [exempt] [73 sub-plugins] — Debug tools umbrella plugin.
 
 - **`fields`** [test helpers] [127 sub-plugins] — Type-dimension registry: owns the fields.identity slot where each field type registers its identity (token, label, icon, extends, coerce).
 
@@ -186,7 +186,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 
 - **`ids`** — The id-kind registry, web half: IdKinds.Kind registers a declared kind and IdKinds.Presenter how its ids render and open (icon, useReferent, usePane); useIdKinds() / useIdPresenters() read them at…
 
-- **`infra`** [test helpers] [exempt] [110 sub-plugins] — Umbrella for cross-cutting server-side primitives used by feature plugins: jobs, events, secrets, mcp, attachments.
+- **`infra`** [test helpers] [exempt] [111 sub-plugins] — Umbrella for cross-cutting server-side primitives used by feature plugins: jobs, events, secrets, mcp, attachments.
 
 - **`integrations`** — Umbrella for third-party service integrations that consume an auth connection (Gmail, …).
   - Plugins:

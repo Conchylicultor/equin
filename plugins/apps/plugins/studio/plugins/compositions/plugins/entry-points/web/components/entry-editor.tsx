@@ -51,8 +51,8 @@ function shortName(pattern: EntryPattern): string {
  *
  * With `editable={false}` the same list renders READ-ONLY — the chips keep their
  * shape and lose their remove button, Add is inert with a title saying why, and
- * a note names the file that does own the list. That is the two committed-source
- * rows (main's and `base-exclusions`): what they contain is emitted into the
+ * a note names the file that does own the list. That is the committed-source
+ * rows (main's and the inherited exclusion sets): what they contain is emitted into the
  * registries by codegen, off the committed config, so a stored edit would look
  * like a change and mean nothing. Rendered inert rather than absent, because
  * reading those entry points is exactly why someone opens this row.

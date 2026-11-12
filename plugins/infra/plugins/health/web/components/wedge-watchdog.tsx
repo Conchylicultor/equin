@@ -14,7 +14,7 @@ import {
 } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { showToast } from "@plugins/shell/plugins/toast/web";
 import { getHealth } from "../internal/client";
-import { PUSH_STALL_MS } from "../internal/connection-health";
+import { PUSH_STALL_MS } from "../internal/push-stall";
 import { wedgeReportSink } from "../internal/wedge-report-sink";
 import { createVisibleDeadlines } from "../internal/visible-deadline";
 

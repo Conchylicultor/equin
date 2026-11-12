@@ -14,6 +14,7 @@
 
 import { test, expect } from "bun:test";
 import {
+  ALL_EXCLUSIONS_ID,
   BASE_EXCLUSIONS_ID,
   MAIN_COMPOSITION_ID,
 } from "@plugins/infra/plugins/namespace/core";
@@ -49,6 +50,7 @@ test("composition name validation rejects namespace-unsafe names", () => {
 test("servable namespace validation additionally rejects the reserved namespaces", () => {
   expect(() => assertServableCompositionNamespace("sonata")).not.toThrow();
   expect([...RESERVED_COMPOSITION_NAMESPACES].sort()).toEqual([
+    "all-exclusions",
     "base-exclusions",
     "central",
     "main",
@@ -89,6 +91,13 @@ test("assertCompositionId accepts the named-but-unservable rows, assertServable 
     "reserved namespace",
   );
   expect(isServableCompositionId(BASE_EXCLUSIONS_ID)).toBe(false);
+
+  // So is the default exclusion set.
+  expect(() => assertCompositionId(ALL_EXCLUSIONS_ID)).not.toThrow();
+  expect(() => assertServableCompositionNamespace(ALL_EXCLUSIONS_ID)).toThrow(
+    "reserved namespace",
+  );
+  expect(isServableCompositionId(ALL_EXCLUSIONS_ID)).toBe(false);
 });
 
 test("assertCompositionId refuses the other reserved namespaces and bad names", () => {

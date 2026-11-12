@@ -40,11 +40,7 @@ import {
   namespaceCollision,
   probeNamespace,
 } from "@plugins/infra/plugins/worktree/server";
-import {
-  databaseExists,
-  dropDatabase,
-  ensureDatabase,
-} from "@plugins/database/plugins/admin/server";
+import { recreateDatabase } from "@plugins/database/plugins/admin/server";
 import {
   activatedCompositionIds,
   assertServableCompositionNamespace,
@@ -150,10 +146,10 @@ export async function resetCompositionData(
   // Recipe — guards passed; the target is provably this one namespace.
   // Drop + recreate the DB (fresh empty; the backend's boot migrator rebuilds the
   // schema on next spawn).
-  if (await databaseExists(ns)) {
-    await dropDatabase(ns);
-  }
-  await ensureDatabase(ns);
+  // One step as the pooler sees it: a drop-then-create left a window in which
+  // PgBouncer (refilling the pool, or the still-running backend) logged in to
+  // the missing database and cached that failure for the restarted backend.
+  await recreateDatabase(ns);
 
   // Wipe the config dir and re-propagate the git-layer first-launch defaults.
   await rm(configDir.file(ns), { recursive: true, force: true });

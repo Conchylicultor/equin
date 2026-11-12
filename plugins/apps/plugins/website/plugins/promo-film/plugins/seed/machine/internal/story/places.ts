@@ -1,8 +1,9 @@
 import type { SeedTagKey } from "@plugins/apps/plugins/places/plugins/places-core/server";
 
-// The film's saved places: a trip to Lisbon being planned (most still to go),
-// and the places of earlier trips and future ones across the world, so the
-// map has somewhere to zoom out to. Each is a real Google place, saved by id:
+// The film's saved places: a Parisian's, years of them — the neighbourhood,
+// the concert halls they go to or want to, last May's Lisbon trip, July's
+// Bergen and further afield — so a zoom out from Paris lands on a Europe full
+// of the user's own pins. Each is a real Google place, saved by id:
 // the seed fetches its details through the importer's own path (one Place
 // Details call each, on the host's Places key), so the cards show Google's
 // own name, address, kind and — fetched by the app on view — its photo. The
@@ -19,21 +20,21 @@ export interface FilmPlace {
   savedDaysAgo: number;
 }
 
-/** The Lisbon trip the film plans. */
-export const LISBON_PLACES: readonly FilmPlace[] = [
+/** Last May's trip to Lisbon. */
+const LISBON_PLACES: readonly FilmPlace[] = [
   {
     googlePlaceId: "ChIJNTZ10A0zGQ0ROwhyCh2mkwg", // Museu Calouste Gulbenkian Lisboa
-    tags: ["want", "museum", "art"],
+    tags: ["been", "museum", "art"],
     icon: "palette",
-    note: "Friday morning, booked.",
-    savedDaysAgo: 12,
+    note: "The garden first, then the Lalique room.",
+    savedDaysAgo: 190,
   },
   {
     googlePlaceId: "ChIJkfTl003LHg0RxFtZGUxQE8s", // MAAT Lisboa
-    tags: ["want", "museum", "art"],
+    tags: ["been", "museum", "art"],
     icon: "museum",
     note: "Walk along the river from Belém.",
-    savedDaysAgo: 12,
+    savedDaysAgo: 190,
   },
   {
     googlePlaceId: "ChIJS5zCw0LLHg0RP1FSz63cAjA", // Torre de Belém
@@ -51,52 +52,105 @@ export const LISBON_PLACES: readonly FilmPlace[] = [
   },
   {
     googlePlaceId: "ChIJm8MOtHc0GQ0R1zPkmUFwwLQ", // Castelo de São Jorge
-    tags: ["want", "attraction"],
+    tags: ["been", "attraction"],
     icon: "castle",
     note: "",
-    savedDaysAgo: 12,
+    savedDaysAgo: 190,
   },
   {
     googlePlaceId: "ChIJV32DNI8zGQ0R9GqiWeuNH2E", // Miradouro da Senhora do Monte
-    tags: ["want", "outdoors"],
+    tags: ["been", "outdoors"],
     icon: "landscape",
-    note: "Sunset, take the 28 tram up.",
-    savedDaysAgo: 12,
+    note: "Sunset. Worth the climb.",
+    savedDaysAgo: 190,
   },
   {
     googlePlaceId: "ChIJ-R6VlIUzGQ0RX8x1jtg9lh0", // Cervejaria Ramiro Lisboa
-    tags: ["want", "food", "restaurant"],
+    tags: ["been", "food", "restaurant"],
     icon: "set-meal",
-    note: "Saturday dinner. The garlic prawns.",
-    savedDaysAgo: 12,
+    note: "The garlic prawns.",
+    savedDaysAgo: 190,
   },
   {
     googlePlaceId: "ChIJdWBeWYc0GQ0RktxySU7hjxM", // Time Out Market Lisboa
-    tags: ["want", "food"],
+    tags: ["been", "food"],
     icon: "restaurant",
     note: "",
-    savedDaysAgo: 12,
+    savedDaysAgo: 190,
   },
   {
     googlePlaceId: "ChIJTRo64mU1GQ0RfEYk1nPW13c", // Park Bar Lisboa
-    tags: ["want", "bar"],
+    tags: ["been", "bar"],
     icon: "local-bar",
     note: "On top of a car park, ask for the lift.",
-    savedDaysAgo: 12,
+    savedDaysAgo: 190,
   },
   {
     googlePlaceId: "ChIJ5dveYa80GQ0RrEP1FKqq6zM", // LX Factory
-    tags: ["want", "shop"],
+    tags: ["been", "shop"],
     icon: "storefront",
     note: "Ler Devagar bookshop.",
-    savedDaysAgo: 12,
+    savedDaysAgo: 190,
   },
   {
     googlePlaceId: "ChIJqzZCU2MzGQ0RkegDvwGR1ys", // Jardim da Estrela Lisboa
-    tags: ["want", "outdoors"],
+    tags: ["been", "outdoors"],
     icon: "park",
     note: "",
-    savedDaysAgo: 12,
+    savedDaysAgo: 190,
+  },
+];
+
+/** Music: the halls the user goes to, or wants to — Paris and across Europe. */
+const MUSIC_PLACES: readonly FilmPlace[] = [
+  {
+    googlePlaceId: "ChIJA0Kr5chv5kcRufAlf3vuXsM", // Salle Gaveau
+    tags: ["been", "shows"],
+    icon: "piano",
+    note: "Best seats: balcony, left side.",
+    savedDaysAgo: 300,
+  },
+  {
+    googlePlaceId: "ChIJP1IC2bVt5kcRNmL7ZmRb7hE", // Philharmonie de Paris
+    tags: ["been", "shows"],
+    icon: "music-note",
+    note: "",
+    savedDaysAgo: 420,
+  },
+  {
+    googlePlaceId: "ChIJm46nd5H5PEYRBnw82R8cUQg", // Troldhaugen, Bergen
+    tags: ["want", "shows", "museum"],
+    icon: "piano",
+    note: "Grieg's house. Lunchtime concerts in Troldsalen, July.",
+    savedDaysAgo: 20,
+  },
+  {
+    googlePlaceId: "ChIJ-dNEa9MadkgRNYqylAShZqU", // Wigmore Hall, London
+    tags: ["want", "shows"],
+    icon: "music-note",
+    note: "",
+    savedDaysAgo: 150,
+  },
+  {
+    googlePlaceId: "ChIJx-raUZ0HbUcRT4MxN8ArwYI", // Musikverein, Vienna
+    tags: ["want", "shows"],
+    icon: "music-note",
+    note: "New Year's concert, one day.",
+    savedDaysAgo: 600,
+  },
+  {
+    googlePlaceId: "ChIJw6RppvoJxkcR6ZFbJ2aUYDM", // Concertgebouw, Amsterdam
+    tags: ["been", "shows"],
+    icon: "music-note",
+    note: "",
+    savedDaysAgo: 800,
+  },
+  {
+    googlePlaceId: "ChIJK_QFBbZRqEcRZgBlwtwfnv0", // Philharmonie Berlin
+    tags: ["want", "shows"],
+    icon: "music-note",
+    note: "",
+    savedDaysAgo: 240,
   },
 ];
 
@@ -224,6 +278,7 @@ const ELSEWHERE: readonly FilmPlace[] = [
 ];
 
 export const FILM_PLACES: readonly FilmPlace[] = [
+  ...MUSIC_PLACES,
   ...LISBON_PLACES,
   ...ELSEWHERE,
 ];

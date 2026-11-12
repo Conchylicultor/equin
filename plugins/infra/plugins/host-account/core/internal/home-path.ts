@@ -27,3 +27,19 @@ export function displayPath(path: string, home: string): string {
   if (abs.startsWith(`${home}/`)) return `${HOME}${abs.slice(home.length)}`;
   return abs;
 }
+
+/**
+ * Free text with every occurrence of the home directory collapsed to `~` — for
+ * prose that merely MENTIONS paths (a transcript, a command's output), where
+ * {@link displayPath} (one whole path) does not apply. Only a whole path
+ * segment matches: `/h/me` is collapsed in `/h/me/a` and `cd /h/me;` but not in
+ * `/h/meow`. Display only — never feed the result back to the filesystem.
+ */
+export function tildifyText(text: string, home: string): string {
+  if (home === "" || home === "/") return text;
+  const escaped = home.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return text.replace(
+    new RegExp(`(?<![\\w.~-])${escaped}(?![\\w.-])`, "g"),
+    HOME,
+  );
+}

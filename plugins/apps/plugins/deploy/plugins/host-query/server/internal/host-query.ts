@@ -5,13 +5,19 @@ import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import { sshRun } from "@plugins/infra/plugins/ssh/server";
 import { _deployDeployments } from "@plugins/apps/plugins/deploy/plugins/deployments/server";
 import { deploymentIdKind } from "@plugins/apps/plugins/deploy/plugins/deployments/core";
+import { deployServerIdKind } from "@plugins/apps/plugins/deploy/plugins/servers/core";
 import { resolveServerSshTarget } from "@plugins/apps/plugins/deploy/plugins/health/server";
+import { namespaceUrl } from "@plugins/infra/plugins/namespace/core";
+import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
+import { deployHostStandIns } from "./tables";
 import {
+  CURL_MAX_SECONDS,
   SSH_TIMEOUT_MS,
   queryOverSsh,
   type DeploymentTarget,
   type HostQueryAnswer,
   type HostQueryOptions,
+  type ThisInstanceResponse,
 } from "./query-over-ssh";
 
 /** SSH sessions to boxes at once, across every reader of every host-only route. */
@@ -26,6 +32,17 @@ async function resolveDeployment(
     .from(_deployDeployments)
     .where(eq(_deployDeployments.id, deploymentIdKind.key(deploymentId)));
   if (!deployment) return { kind: "not-found" };
+
+  const [standIn] = await db
+    .select({ serverId: deployHostStandIns.serverId })
+    .from(deployHostStandIns)
+    .where(
+      eq(
+        deployHostStandIns.serverId,
+        deployServerIdKind.key(deployment.serverId),
+      ),
+    );
+  if (standIn) return { kind: "this-instance" };
 
   // A reader, not the connection check: it never learns a host key it would
   // not persist, so an unverified server is refused rather than trusted.
@@ -52,6 +69,41 @@ async function resolveDeployment(
 }
 
 /**
+ * One GET through this instance's own gateway: the one proxy hop `hostOnly`
+ * accepts, from the owner (no Origin, no forwarded-for).
+ */
+async function fetchThisInstance(path: string): Promise<ThisInstanceResponse> {
+  try {
+    const res = await fetch(namespaceUrl(runtimeNamespace(), path), {
+      signal: AbortSignal.timeout(CURL_MAX_SECONDS * 1000),
+    });
+    return { kind: "response", status: res.status, body: await res.text() };
+  } catch (err) {
+    // Network failure or the deadline: a failed request, named — not thrown.
+    if (
+      err instanceof TypeError ||
+      (err instanceof DOMException && err.name === "TimeoutError")
+    )
+      return { kind: "unreachable", message: err.message };
+    throw err;
+  }
+}
+
+/**
+ * Mark a server's box as THIS instance: a demo's server, whose host-only routes
+ * are answered by this instance's own gateway (no SSH), the demo having written
+ * that data here. Idempotent.
+ */
+export async function markServerBoxIsThisInstance(
+  serverId: string,
+): Promise<void> {
+  await db
+    .insert(deployHostStandIns)
+    .values({ serverId: deployServerIdKind.key(serverId) })
+    .onConflictDoNothing();
+}
+
+/**
  * Ask a deployment's box one host-only route and parse its answer with
  * `schema`. Resolves the deployment's server and pinned SSH target (an
  * unverified server is refused, never trusted), then curls
@@ -68,6 +120,8 @@ async function resolveDeployment(
  *
  * Reads Postgres (deployment row, server, pinned host key, key secret) on
  * every call: the private key and host key may only be read here, at SSH time.
+ * A server marked with {@link markServerBoxIsThisInstance} is asked through
+ * this instance's own gateway instead of over SSH.
  * A live value serving this is therefore a `snapshot` external — the remote
  * answer has no change signal on this side.
  */
@@ -79,7 +133,7 @@ export function hostOnlyQueryOverSsh<T>(
 ): Promise<HostQueryAnswer<T>> {
   return sshSessions.run(() =>
     queryOverSsh(
-      { resolveDeployment, sshRun },
+      { resolveDeployment, sshRun, fetchThisInstance },
       deploymentId,
       path,
       schema,

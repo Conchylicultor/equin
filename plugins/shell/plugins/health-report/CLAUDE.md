@@ -146,8 +146,8 @@ probes, is mounted per page.
     - `HealthReport.Row` ← `conversations.runtime-sdk`
     - `HealthReport.Row` ← `database.query-deadline`
     - `HealthReport.Row` ← `debug.queue-health`
-    - `HealthReport.Row` ← `debug.sentinel`
-    - `HealthReport.Row` ← `infra.health`
+    - `HealthReport.Row` ← `debug.sentinel.health-row`
+    - `HealthReport.Row` ← `infra.health.connection-row`
     - `HealthReport.Row` ← `infra.host.io-health`
     - `HealthReport.Row` ← `infra.launcher.gateway-drift`
     - `HealthReport.Row` ← `infra.mcp.browser`
@@ -203,8 +203,8 @@ probes, is mounted per page.
     - `conversations/runtime-sdk`
     - `database/query-deadline`
     - `debug/queue-health`
-    - `debug/sentinel`
-    - `infra/health`
+    - `debug/sentinel/health-row`
+    - `infra/health/connection-row`
     - `infra/host/io-health`
     - `infra/launcher/gateway-drift`
     - `infra/mcp/browser`

@@ -10,7 +10,10 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { MachineUsageBreakdown } from "@plugins/debug/plugins/sentinel/plugins/machine-usage/web";
-import { sentinelVitals, type SentinelVitals } from "../../core";
+import {
+  sentinelVitals,
+  type SentinelVitals,
+} from "@plugins/debug/plugins/sentinel/core";
 import { METER_TONE, STALE_CLASS, VALUE_CLASS } from "../internal/vitals-tone";
 import {
   vitalsView,

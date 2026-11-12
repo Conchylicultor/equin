@@ -572,6 +572,7 @@ navigation, so it starts from nothing remembered.
     - `useFramePicks`
     - `useFrameSrc`
     - `usePrototypeDetail`
+    - `usePrototypeTitle`
     - `useWindowSize`
 - Core:
   - Uses:

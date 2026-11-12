@@ -24,3 +24,5 @@ export { resolveCompositionHome } from "./home";
 export { resolveCompositionUnlisted } from "./unlisted";
 export type { CompositionHome, CompositionHomeError } from "./home";
 export type { CompositionUnlisted } from "./unlisted";
+export { checkExclusionSets } from "./exclusion-sets";
+export type { ExclusionSetsVerdict } from "./exclusion-sets";

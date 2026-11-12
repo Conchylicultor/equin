@@ -214,7 +214,12 @@ export interface Camera {
   bounds?: RectV;
   /** Perspective of the stage the world plane tilts under (px, default 1600). */
   perspective?: number;
-  /** Blur derived from the camera's screen velocity (none across a `"step"` key: a cut); `false` turns it off. */
+  /**
+   * Blur derived from the camera's screen velocity (none across a `"step"`
+   * key: a cut). Off by default (`false`): Chromium's CSS blur is a no-op
+   * under ~0.75 device px of radius and a full gaussian above it, so the
+   * blur cannot ramp in — it snaps on and off in one frame mid-move.
+   */
   motionBlur?: MotionBlur | false;
 }
 

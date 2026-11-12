@@ -549,6 +549,7 @@ default, a left rail revealing each (`useRevealSection`).
     - `_deployDeployments`
     - `_deployRuns`
     - `DeployGates`
+    - `publishWrittenRuns`
   - Register:
     - `defineJob('retention.deploy_runs')`
     - `defineSupervisedJob('deploy.run')`

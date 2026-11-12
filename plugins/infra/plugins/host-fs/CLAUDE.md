@@ -234,6 +234,7 @@ this plugin implements: [`research/2026-10-02-apps-file-explorer-from-prototype.
     - `readHostPathText`
     - `resolveHostPath`
     - `serveHostPath`
+    - `setHostHomeResolver`
   - Resources:
     - `files.computer.bytes` (invalidate, notified)
     - `files.computer.complete` (push, notified, capped: FILE_COMPLETE_LIMIT)
@@ -261,6 +262,7 @@ this plugin implements: [`research/2026-10-02-apps-file-explorer-from-prototype.
   - Imported by:
     - `code-explorer`
     - `code-explorer/file-resolve`
+    - `infra/host-account`
     - `infra/host-fs/image`
     - `infra/host-fs/zip`
 - Exemptions:

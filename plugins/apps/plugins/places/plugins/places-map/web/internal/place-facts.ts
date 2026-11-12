@@ -98,3 +98,20 @@ export function compactCount(n: number): string {
   const k = n / 1000;
   return `${k >= 10 ? Math.round(k) : Math.round(k * 10) / 10}k`;
 }
+
+/**
+ * Today's hours as a card's one line: "Open · 10:00 AM – 7:00 PM" (Google's own
+ * wording of the day's hours), "Closed today", or `null` when Google gives
+ * no week for the place.
+ */
+export function todayHoursLine(
+  hours: OpeningHours,
+  utcOffsetMinutes: number | undefined,
+  now: Date,
+): { closed: boolean; text: string } | null {
+  const today = weekRows(hours, utcOffsetMinutes, now).find((r) => r.today);
+  if (today === undefined || today.hours === "") return null;
+  return /^closed$/i.test(today.hours)
+    ? { closed: true, text: "Closed today" }
+    : { closed: false, text: `Open · ${today.hours}` };
+}

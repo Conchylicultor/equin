@@ -1532,6 +1532,10 @@
       "name": "@equin/plugin-apps-website-promo-film",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/website/plugins/promo-film/plugins/circle": {
+      "name": "@equin/plugin-apps-website-promo-film-circle",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/website/plugins/promo-film/plugins/seed": {
       "name": "@equin/plugin-apps-website-promo-film-seed",
       "version": "0.0.1",
@@ -2891,6 +2895,10 @@
     },
     "plugins/debug/plugins/sentinel": {
       "name": "@equin/plugin-debug-sentinel",
+      "version": "0.0.1",
+    },
+    "plugins/debug/plugins/sentinel/plugins/health-row": {
+      "name": "@equin/plugin-debug-sentinel-health-row",
       "version": "0.0.1",
     },
     "plugins/debug/plugins/sentinel/plugins/machine-usage": {
@@ -4448,6 +4456,10 @@
     },
     "plugins/infra/plugins/health": {
       "name": "@equin/plugin-infra-health",
+      "version": "0.0.1",
+    },
+    "plugins/infra/plugins/health/plugins/connection-row": {
+      "name": "@equin/plugin-infra-health-connection-row",
       "version": "0.0.1",
     },
     "plugins/infra/plugins/host": {
@@ -8371,6 +8383,8 @@
 
     "@equin/plugin-apps-website-promo-film": ["@equin/plugin-apps-website-promo-film@workspace:plugins/apps/plugins/website/plugins/promo-film"],
 
+    "@equin/plugin-apps-website-promo-film-circle": ["@equin/plugin-apps-website-promo-film-circle@workspace:plugins/apps/plugins/website/plugins/promo-film/plugins/circle"],
+
     "@equin/plugin-apps-website-promo-film-seed": ["@equin/plugin-apps-website-promo-film-seed@workspace:plugins/apps/plugins/website/plugins/promo-film/plugins/seed"],
 
     "@equin/plugin-apps-website-shell": ["@equin/plugin-apps-website-shell@workspace:plugins/apps/plugins/website/plugins/shell"],
@@ -9034,6 +9048,8 @@
     "@equin/plugin-debug-scratch-hello": ["@equin/plugin-debug-scratch-hello@workspace:plugins/debug/plugins/scratch-hello"],
 
     "@equin/plugin-debug-sentinel": ["@equin/plugin-debug-sentinel@workspace:plugins/debug/plugins/sentinel"],
+
+    "@equin/plugin-debug-sentinel-health-row": ["@equin/plugin-debug-sentinel-health-row@workspace:plugins/debug/plugins/sentinel/plugins/health-row"],
 
     "@equin/plugin-debug-sentinel-machine-usage": ["@equin/plugin-debug-sentinel-machine-usage@workspace:plugins/debug/plugins/sentinel/plugins/machine-usage"],
 
@@ -9774,6 +9790,8 @@
     "@equin/plugin-infra-git-tree-lock": ["@equin/plugin-infra-git-tree-lock@workspace:plugins/infra/plugins/git/plugins/tree-lock"],
 
     "@equin/plugin-infra-health": ["@equin/plugin-infra-health@workspace:plugins/infra/plugins/health"],
+
+    "@equin/plugin-infra-health-connection-row": ["@equin/plugin-infra-health-connection-row@workspace:plugins/infra/plugins/health/plugins/connection-row"],
 
     "@equin/plugin-infra-host": ["@equin/plugin-infra-host@workspace:plugins/infra/plugins/host"],
 

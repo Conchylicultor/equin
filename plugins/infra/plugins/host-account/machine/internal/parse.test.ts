@@ -1,10 +1,5 @@
 import { describe, expect, test } from "bun:test";
 import { parseGecosFullName, parseIdFullName } from "./parse";
-import {
-  accountDisplayName,
-  accountFirstName,
-  accountInitial,
-} from "../../core/internal/account";
 
 describe("parseIdFullName (macOS id -F)", () => {
   test("reads the full name, trailing newline dropped", () => {
@@ -51,21 +46,5 @@ describe("parseGecosFullName (passwd GECOS)", () => {
     expect(() => parseGecosFullName("not a passwd line")).toThrow(
       /not a passwd entry/,
     );
-  });
-});
-
-describe("account display helpers", () => {
-  test("full name: first word and its initial", () => {
-    const a = { username: "epot", fullName: "etienne Pot" };
-    expect(accountDisplayName(a)).toBe("etienne Pot");
-    expect(accountFirstName(a)).toBe("etienne");
-    expect(accountInitial(a)).toBe("E");
-  });
-
-  test("no full name falls back to the login name", () => {
-    const a = { username: "epot", fullName: null };
-    expect(accountDisplayName(a)).toBe("epot");
-    expect(accountFirstName(a)).toBe("epot");
-    expect(accountInitial(a)).toBe("E");
   });
 });

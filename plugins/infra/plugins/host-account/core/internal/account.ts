@@ -20,17 +20,3 @@ export type HostAccount = z.infer<typeof HostAccountSchema>;
 export function accountDisplayName(account: HostAccount): string {
   return account.fullName ?? account.username;
 }
-
-/** The first word of {@link accountDisplayName} ("Etienne" for "Etienne Pot"). */
-export function accountFirstName(account: HostAccount): string {
-  const name = accountDisplayName(account);
-  return name.split(/\s+/)[0] ?? name;
-}
-
-/** The account's initial, upper-cased — what a one-letter avatar tile shows. */
-export function accountInitial(account: HostAccount): string {
-  // Spread, not `[0]`: a name starting with an astral character (an emoji, a
-  // supplementary-plane letter) would otherwise yield half a surrogate pair.
-  const [first] = [...accountFirstName(account)];
-  return (first ?? "?").toLocaleUpperCase();
-}

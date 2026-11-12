@@ -1,6 +1,6 @@
 {
-  "id": "d60f08a0-e56e-4e26-973c-61e1e0ead0b3",
-  "prevId": "263b78bc-f0bc-461f-b657-2cff4a7c8182",
+  "id": "ae2f279d-5a12-468e-9866-ed0507e3e212",
+  "prevId": "d60f08a0-e56e-4e26-973c-61e1e0ead0b3",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -2100,6 +2100,46 @@
           "tableTo": "deploy_servers",
           "columnsFrom": [
             "parent_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.deploy_host_stand_ins": {
+      "name": "deploy_host_stand_ins",
+      "schema": "",
+      "columns": {
+        "server_id": {
+          "name": "server_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "deploy_host_stand_ins_server_id_deploy_servers_id_fk": {
+          "name": "deploy_host_stand_ins_server_id_deploy_servers_id_fk",
+          "tableFrom": "deploy_host_stand_ins",
+          "tableTo": "deploy_servers",
+          "columnsFrom": [
+            "server_id"
           ],
           "columnsTo": [
             "id"

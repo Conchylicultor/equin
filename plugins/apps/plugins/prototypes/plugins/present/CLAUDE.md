@@ -121,6 +121,10 @@ the Prototypes app, so opened alone it is the only column and fills the tab):
   so its link carries none, and the page then reads the shared record too.
   Any other frame's link carries its own variant.
 
+Its tab (a browser tab, or a desktop window's title) is named by the
+prototype's own `<title>` (`usePrototypeTitle` from `canvas`, the canvas
+pane's own title), so a window showing one frame reads as the app it mocks.
+
 The page mounts a one-frame canvas (`PrototypeDetailProvider` with
 `initialVersion` and `initialPicks`) and draws the same `PresentStage`, with
 page chrome of its own instead of the overlays' Exit:
@@ -154,8 +158,8 @@ The routes live in `internal/routes.ts`, apart from the panes.
     - `PrototypeFrameActions` "open-new-tab" → `OpenNewTabAction`
     - `PrototypeFrameActions` "full-screen" → `FullScreenAction`
     - `PrototypeCardActions` "open-new-tab" → `OpenCardNewTabAction`
-  - Uses: 57 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps/prototypes/canvas` ×25
+  - Uses: 58 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps/prototypes/canvas` ×26
     - `primitives/css/ui-kit` ×3
     - `primitives/hover-reveal` ×2
     - `primitives/latest-ref` ×2

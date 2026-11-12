@@ -44,49 +44,69 @@ function under(root: string, rel: string): string | null {
   return existsSync(p) ? p : null;
 }
 
+/** Routes the film origin on a page to one composition and its files. */
+export interface FilmServer {
+  /** Route `page`; call before `page.goto(STAGE_URL)`. */
+  serve(page: Page): Promise<void>;
+}
+
 /**
- * Route the film origin on `page` to `comp` and its files. Call before
- * `page.goto(STAGE_URL)`. `samples`: recorded sounds the SFX synth plays, by
- * the name it fetches them under (`SAMPLE_PREFIX` + name) → absolute path.
+ * A server for `comp` and its files, the renderer bundled once for every page
+ * it routes (a parallel render opens one page per chunk). `samples`: recorded
+ * sounds the SFX synth plays, by the name it fetches them under
+ * (`SAMPLE_PREFIX` + name) → absolute path.
  */
-export async function serveFilm(
-  page: Page,
+export async function filmServer(
   comp: Composition,
   samples: Record<string, string> = {},
-): Promise<void> {
+): Promise<FilmServer> {
   const renderer = await bundlePageScript("main.ts");
   const json = JSON.stringify(comp);
   const fonts = interDir();
   const assets = comp.assets.dir;
-  await page.route(`${FILM_ORIGIN}/**`, async (route) => {
-    const path = decodeURIComponent(new URL(route.request().url()).pathname);
-    const send = (body: string | Buffer, contentType: string): Promise<void> =>
-      route.fulfill({
-        status: 200,
-        body,
-        contentType,
-        headers: { "cache-control": "no-store" },
+  return {
+    async serve(page) {
+      await page.route(`${FILM_ORIGIN}/**`, async (route) => {
+        const path = decodeURIComponent(
+          new URL(route.request().url()).pathname,
+        );
+        const send = (
+          body: string | Buffer,
+          contentType: string,
+        ): Promise<void> =>
+          route.fulfill({
+            status: 200,
+            body,
+            contentType,
+            headers: { "cache-control": "no-store" },
+          });
+        if (path === "/__film/stage.html")
+          return send(STAGE_HTML, "text/html; charset=utf-8");
+        if (path === "/__film/renderer.js")
+          return send(renderer, "text/javascript; charset=utf-8");
+        if (path === "/__film/composition.json")
+          return send(json, "application/json");
+        const sample = path.startsWith(SAMPLE_PREFIX)
+          ? samples[path.slice(SAMPLE_PREFIX.length)]
+          : undefined;
+        if (sample !== undefined)
+          return send(readFileSync(sample), "audio/wav");
+        const file = path.startsWith("/__film/assets/")
+          ? under(assets, path.slice("/__film/assets/".length))
+          : path.startsWith("/__film/fonts/inter/")
+            ? under(fonts, path.slice("/__film/fonts/inter/".length))
+            : null;
+        if (file === null)
+          return route.fulfill({
+            status: 404,
+            body: `film: nothing at ${path}`,
+          });
+        return send(
+          readFileSync(file),
+          MIME[extname(basename(file)).toLowerCase()] ??
+            "application/octet-stream",
+        );
       });
-    if (path === "/__film/stage.html")
-      return send(STAGE_HTML, "text/html; charset=utf-8");
-    if (path === "/__film/renderer.js")
-      return send(renderer, "text/javascript; charset=utf-8");
-    if (path === "/__film/composition.json")
-      return send(json, "application/json");
-    const sample = path.startsWith(SAMPLE_PREFIX)
-      ? samples[path.slice(SAMPLE_PREFIX.length)]
-      : undefined;
-    if (sample !== undefined) return send(readFileSync(sample), "audio/wav");
-    const file = path.startsWith("/__film/assets/")
-      ? under(assets, path.slice("/__film/assets/".length))
-      : path.startsWith("/__film/fonts/inter/")
-        ? under(fonts, path.slice("/__film/fonts/inter/".length))
-        : null;
-    if (file === null)
-      return route.fulfill({ status: 404, body: `film: nothing at ${path}` });
-    return send(
-      readFileSync(file),
-      MIME[extname(basename(file)).toLowerCase()] ?? "application/octet-stream",
-    );
-  });
+    },
+  };
 }

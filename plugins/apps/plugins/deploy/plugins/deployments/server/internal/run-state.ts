@@ -775,6 +775,15 @@ async function seedNewestRuns(): Promise<void> {
   if (seeded) deployRunsServed.notify();
 }
 
+/**
+ * Put runs written straight into the ledger after boot (a demo's fixture:
+ * finished rows only) into the live view, as boot does for the rows it finds
+ * — without it the site reads "Not deployed" until the next restart.
+ */
+export async function publishWrittenRuns(): Promise<void> {
+  await seedNewestRuns();
+}
+
 /** Which phase an open row is in, from the leg it names and whether it ran. */
 async function phaseOfOpenRow(legId: string | null): Promise<DeployPhase> {
   if (legId === null) return "converge";

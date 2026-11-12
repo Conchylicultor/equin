@@ -135,4 +135,26 @@ describe("resolveTarget", () => {
 
     expect(resolveTarget(110, 16)).toBe(over);
   });
+
+  test("a split row's hit-area layer resolves to the row, never to itself", () => {
+    // Row with actions: a box holding the control button, whose aria-hidden
+    // hit-area span spreads over the whole box (padding included).
+    document.body.innerHTML = `<div id="row"><button id="ctl"><span id="label">Feel</span><span id="hit" aria-hidden="true"></span></button></div>`;
+    const row = document.getElementById("row")!;
+    const ctl = document.getElementById("ctl")!;
+    const hit = document.getElementById("hit")!;
+    box(row, 0, 0, 380, 42);
+    box(ctl, 16, 12, 270, 30);
+    box(document.getElementById("label")!, 40, 12, 80, 30);
+    box(hit, 0, 0, 380, 42);
+
+    // The padding, left of the button: the browser hits the layer.
+    seed(hit);
+    expect(resolveTarget(5, 21)).toBe(row);
+    // Over the button but beside its label: the button, not the layer.
+    expect(resolveTarget(200, 21)).toBe(ctl);
+    // Seeded at the row (a hit-area under the content): still never the layer.
+    seed(row);
+    expect(resolveTarget(5, 21)).toBe(row);
+  });
 });

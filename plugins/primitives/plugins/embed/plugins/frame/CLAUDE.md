@@ -119,6 +119,7 @@ must be the new one (`./equin start --force`).
     - `apps/prototypes/canvas`
     - `apps/prototypes/compare/route`
     - `apps/prototypes/present`
+    - `apps/website/promo-film/circle`
     - `conversations/conversation-view/open-app`
     - `page/embed`
     - `page/prototype`

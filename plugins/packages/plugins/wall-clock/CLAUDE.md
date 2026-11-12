@@ -101,6 +101,7 @@ not state: the same arguments give the same answer with or without it.
     - `apps/chord/progress`
     - `apps/events/sources/coworkmeet`
     - `apps/events/sources/dmda`
+    - `apps/website/promo-film/seed`
     - `integrations/google-maps/usage`
     - `network/live`
     - `primitives/metrics`

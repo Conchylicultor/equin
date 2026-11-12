@@ -22,3 +22,5 @@ export type {
   ClaudeCredential,
   ClaudeCredentialKind,
 } from "./internal/accounts";
+
+export { withStandInNames } from "./internal/display-names";

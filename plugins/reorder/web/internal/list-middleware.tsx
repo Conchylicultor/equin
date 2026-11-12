@@ -1,4 +1,5 @@
-import { Fragment, useMemo, useRef, type ReactNode } from "react";
+import { Fragment, useMemo, useRef, useState, type ReactNode } from "react";
+import { Reveal } from "@plugins/primitives/plugins/css/plugins/motion/web";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import { useSetConfig } from "@plugins/config_v2/web";
 import type { ConfigDescriptor } from "@plugins/config_v2/core";
@@ -10,6 +11,7 @@ import { reorderDescriptors } from "./descriptors";
 import { useReorderTree } from "./use-reorder-config";
 import {
   applyTree,
+  contributionKey,
   isNodeData,
   type ReorderNodeData,
   type ReorderState,
@@ -118,8 +120,56 @@ function ReorderKnownArea({
       />
     );
   }
-  // `renderItem` keys each item by its entryKey itself.
-  return <>{state.entries.map((e) => renderItem(e as Contribution))}</>;
+  return <RevealingItems state={state} renderItem={renderItem} />;
+}
+
+/**
+ * The items of an items-only layout. One the layout has just un-hidden (it was
+ * in the slot but hidden, and is drawn now) is wrapped in `<Reveal>` — it
+ * eases in rather than popping. Items drawn at the first render, and
+ * contributions that arrive later (a plugin tier loading), are not: only the
+ * layout's own reveal is announced. A revealed item stays wrapped while it is
+ * drawn (a tree change would remount it); hiding it again forgets it.
+ */
+function RevealingItems({
+  state,
+  renderItem,
+}: {
+  state: ReorderState;
+  renderItem: (contribution: Contribution) => ReactNode;
+}) {
+  const hiddenKeys = state.hidden.map((c) => contributionKey(c) ?? "");
+  const [track, setTrack] = useState(() => ({
+    hidden: new Set(hiddenKeys),
+    revealed: new Set<string>(),
+  }));
+  const hiddenNow = new Set(hiddenKeys);
+  const revealed = new Set<string>();
+  for (const key of track.revealed) if (!hiddenNow.has(key)) revealed.add(key);
+  for (const e of state.entries) {
+    if (isNodeData(e)) continue;
+    const key = contributionKey(e);
+    if (key && track.hidden.has(key)) revealed.add(key);
+  }
+  const same = (a: ReadonlySet<string>, b: ReadonlySet<string>) =>
+    a.size === b.size && [...a].every((k) => b.has(k));
+  if (!same(hiddenNow, track.hidden) || !same(revealed, track.revealed)) {
+    setTrack({ hidden: hiddenNow, revealed });
+  }
+  return (
+    <>
+      {state.entries.map((e) => {
+        const c = e as Contribution;
+        const key = contributionKey(c);
+        // `renderItem` keys each item by its entryKey itself.
+        return key !== null && revealed.has(key) ? (
+          <Reveal key={key}>{renderItem(c)}</Reveal>
+        ) : (
+          renderItem(c)
+        );
+      })}
+    </>
+  );
 }
 
 /** An area whose layout places nodes between its items. */

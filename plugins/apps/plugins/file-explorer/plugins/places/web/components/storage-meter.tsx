@@ -5,6 +5,7 @@ import { Meter } from "@plugins/primitives/plugins/css/plugins/meter/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { useHomeDir } from "@plugins/apps/plugins/file-explorer/plugins/browser/web";
 import { formatSize } from "@plugins/apps/plugins/file-explorer/plugins/browser/core";
 
 /** On the places' icon column: the sidebar's rail plus a row's own padding. */
@@ -19,10 +20,13 @@ const METER_INSET = {
  * signals a change). Renders nothing until the volume has answered — a meter
  * at zero would claim an empty disk — nor when it cannot (the startup-volume
  * place above says why), nor on a host without the computer's disk: only it
- * has a volume to measure.
+ * has a volume to measure — nor under a stand-in home folder.
  */
 export function StorageMeter(): ReactNode {
   const volume = useLive(computerVolume, { path: "/" });
+  const home = useHomeDir();
+  // The startup volume is a fact about the machine; a stand-in home names none.
+  if (home.kind === "ready" && home.standIn) return null;
   switch (volume.status) {
     case "loading":
     case "error":

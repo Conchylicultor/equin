@@ -347,6 +347,7 @@ the title — a chord-grid save endpoint physically cannot carry one.
   - Exports (values):
     - `Library`
     - `openSongImperative`
+    - `requestPlayOnOpen`
     - `sonataLibraryPane`
     - `sonataPlayerPane`
     - `sonataSongLink`

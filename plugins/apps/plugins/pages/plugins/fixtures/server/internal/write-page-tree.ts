@@ -37,9 +37,13 @@ import {
  * needs them in place before it goes on settles the job queue
  * (`settleJobQueue`, the in-process queue).
  */
-export async function writePageTree(tree: PageTreeFixture): Promise<void> {
+export async function writePageTree(
+  tree: PageTreeFixture,
+  /** When the pages were written (their created / updated times): now unless a story is set at another instant. */
+  now: Date = new Date(),
+): Promise<void> {
   await applyPageBlockPatch(null, {
-    creates: forestRows(tree, null, null, new Date()),
+    creates: forestRows(tree, null, null, now),
     updates: [],
     deleteIds: [],
   });
@@ -121,7 +125,11 @@ function siblingRows(
       parentId,
       pageId,
       rank: ranks[i]!,
-      expanded: true,
+      expanded: !(
+        sibling.kind === "fixture" &&
+        sibling.node.type === PAGE_BLOCK_TYPE &&
+        sibling.node.expanded === false
+      ),
       createdAt: now,
       updatedAt: now,
     };
@@ -157,6 +165,8 @@ function siblingRows(
         },
         ...forestRows(node.children, node.id, node.id, now),
       ];
+    if (node.type === "place")
+      return [{ ...row, type: node.type, data: { ...node.place } }];
     const text = [{ text: node.text }];
     return [
       {
@@ -165,6 +175,7 @@ function siblingRows(
         data:
           node.type === "to-do" ? { text, checked: node.checked } : { text },
       },
+      ...forestRows(node.children ?? [], node.id, pageId, now),
     ];
   });
 }

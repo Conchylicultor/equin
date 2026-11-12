@@ -18,7 +18,10 @@ import {
   useSession,
 } from "@plugins/apps/plugins/sonata/plugins/session/web";
 import { barPositionAt } from "@plugins/apps/plugins/sonata/plugins/score/core";
-import { sonataSongLink } from "@plugins/apps/plugins/sonata/plugins/library/web";
+import {
+  requestPlayOnOpen,
+  sonataSongLink,
+} from "@plugins/apps/plugins/sonata/plugins/library/web";
 import {
   MIDI_SOURCE_ID,
   deriveMidiSongMeta,
@@ -110,10 +113,12 @@ function OpenInSonata({
   bytes: ArrayBuffer;
 }) {
   const appLink = useAppLink();
-  const { score, stop } = useSession();
+  const { score, stop, isPlaying } = useSession();
   const cursor = useCursorApi();
   const fetchEndpoint = useFetchEndpoint();
   const resolve = async () => {
+    // Opening continues what the preview was doing: playing → Sonata plays.
+    const wasPlaying = isPlaying;
     stop();
     // Anywhere in the first bar (or its lead-in) is "the start": no bar.
     const at = barPositionAt(score, cursor.getBeat()).bar;
@@ -124,6 +129,7 @@ function OpenInSonata({
         bytes,
         locationName(file),
       );
+      if (wasPlaying) requestPlayOnOpen(song.id);
       return appLink(sonataSongLink(song.id, bar));
     } catch (err) {
       showToast({

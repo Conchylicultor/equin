@@ -75,6 +75,7 @@ The Claude accounts agents can run on, and which one new agents launch on.
     - `selectClaudeAccount`
     - `setClaudeAccountAutoSwitch`
     - `SYSTEM_ACCOUNT_ID`
+    - `withStandInNames`
 - Cross-plugin:
   - Imported by:
     - `conversations/model-provider/catalog`

@@ -737,9 +737,11 @@ for the `checkpoints` plugin's end-of-turn job, and the history contract
     - `apps/prototypes/present`
     - `apps/prototypes/state`
     - `apps/prototypes/thumbnails`
+    - `apps/website/promo-film/circle`
     - `conversations/conversation-view/artifacts/prototype`
     - `page/prototype`
     - `primitives/embed/frame`
+  - Endpoint callers: `seed`
 - Cli:
   - Exports (types): `DeletedPrototypeIds`
   - Exports (values):

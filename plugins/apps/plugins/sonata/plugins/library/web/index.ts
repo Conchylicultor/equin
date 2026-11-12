@@ -31,6 +31,7 @@ export {
 } from "./panes";
 export { useSongLink } from "./hooks";
 export { openSongImperative } from "./open-song";
+export { requestPlayOnOpen } from "./play-on-open";
 export { useCurrentSong } from "./use-current-song";
 export { useSectionPaneCollapsed } from "./components/panels-toggle";
 

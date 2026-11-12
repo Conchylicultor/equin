@@ -32,13 +32,13 @@ import { baseName, isWithin, pathChain } from "../../core";
 /**
  * The user's home directory, absolute — what `~` stands for. Every comparison
  * between a typed path and a listed one goes through it. Read from the
- * backend account's `host-account.home` live value (fixed for the process);
+ * backend account's `host-account.home` live value (the account's home, or the configured stand-in home folder, `standIn`);
  * pending until it arrives. `unavailable` on a host without the computer (the
  * demo), which has no home folder — `message` says so.
  */
 export type HomeDir =
   | { kind: "pending" }
-  | { kind: "ready"; home: string }
+  | { kind: "ready"; home: string; standIn: boolean }
   | { kind: "failed"; error: ResourceError; refetch: () => Promise<void> }
   | { kind: "unavailable"; message: string };
 
@@ -50,7 +50,7 @@ export function useHomeDir(): HomeDir {
     case "error":
       return { kind: "failed", error: home.error, refetch: home.refetch };
     case "ready":
-      return { kind: "ready", home: home.data };
+      return { kind: "ready", home: home.data.dir, standIn: home.data.standIn };
     case "unavailable":
       return { kind: "unavailable", message: home.message };
   }

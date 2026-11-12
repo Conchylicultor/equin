@@ -127,6 +127,18 @@ Like the status read, it resolves the namespace from the answering backend's own
 checkout, so Reset in a worktree's Studio resets `<id>.<checkout>` and cannot
 reach the one main serves.
 
+The database is recreated with `recreateDatabase` (`database/admin`), never a
+`dropDatabase` then `ensureDatabase`: between those two, PgBouncer logs in to
+the missing database on its own (its `min_pool_size` refill, or the
+still-running backend reconnecting) and CACHES that failure for
+`server_login_retry`, so the restarted backend was refused "server login has
+been failing, cached error: database … does not exist" and booted on no schema
+(`relation "graphile_worker._private_known_crontabs" does not exist`).
+`recreateDatabase` holds the database in the pooler (`KILL`, then `RESUME` once
+it exists again — the admin console, as the `pgbouncer` user over the Unix
+socket), so no login can reach it while it is missing, and the pool with any
+cached failure is dropped.
+
 The config is **re-propagated**, not merely deleted: a bare `rm -rf` would fall
 back to *code* defaults, whereas re-running `propagateConfigToUser` restores the
 shipped **git-layer** first-launch defaults `serveOne` installs.
@@ -246,8 +258,7 @@ code, that is the bug this section exists to prevent.
     - `resource.declare` "build.serve-status"
   - Uses:
     - `database/admin.databaseExists`
-    - `database/admin.dropDatabase`
-    - `database/admin.ensureDatabase`
+    - `database/admin.recreateDatabase`
     - `infra/endpoints.implement`
     - `infra/paths.checkoutRef`
     - `infra/worktree.ensureMainWorktreeRoot`

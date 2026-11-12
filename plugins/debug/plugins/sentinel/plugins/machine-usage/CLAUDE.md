@@ -141,7 +141,7 @@ so Postgres is the only owner measured this way:
   - Imported by:
     - `debug/health-monitor`
     - `debug/profiling/tab-memory`
-    - `debug/sentinel`
+    - `debug/sentinel/health-row`
 - Exemptions:
   - Exempts itself from: `timer/no-unlisted-timer` — `machine/internal/owner-sampler.ts` (sanctioned)
 - Machine:

@@ -7,6 +7,7 @@ import { stringListField } from "@plugins/fields/plugins/string-list/plugins/con
 import { tagsField } from "@plugins/fields/plugins/tags/plugins/config/core";
 import { HOSTS } from "@plugins/framework/plugins/plugin-id/core";
 import {
+  ALL_EXCLUSIONS_ID,
   BASE_EXCLUSIONS_ID,
   MAIN_COMPOSITION_ID,
 } from "@plugins/infra/plugins/namespace/core";
@@ -31,6 +32,10 @@ import { SERVE_MODE_OPTIONS } from "./serve-mode";
 //                `extends` (first-class composition reference; resolved by
 //                `flattenManifest` before closure). `self-improvement` is the pack
 //                the agent-manager profile demonstrates.
+//   exclusions — an EXCLUSION SET: negatives only, folded into the rows that
+//                choose it through their `exclusions` field (absent: the
+//                strictest, `all-exclusions`). `base-exclusions` holds what is in
+//                no composition at all; every set reaches it through `extends`.
 //
 // Code defaults carry an EXPLICIT stable `id` (the UI only auto-injects one on
 // "Add"), so seeded rows are editable. Order is array position — no `rank`.
@@ -166,7 +171,7 @@ export const compositionsConfig = defineConfig({
         name: textField({ label: "Name" }),
         category: enumField({
           label: "Category",
-          options: ["app", "profile", "subsystem", "pack"],
+          options: ["app", "profile", "subsystem", "pack", "exclusions"],
           default: "app",
         }),
         // WHERE this composition runs — `desktop` (the computer: `machine/`
@@ -192,6 +197,18 @@ export const compositionsConfig = defineConfig({
         // enforces disjointness against each named bundle's containment. Lets an
         // app declare it is self-contained (e.g. excludes `agent-runtime`/`auth`).
         excludes: stringListField({ label: "Excludes" }),
+        // WHICH exclusion set this composition inherits: the name of an
+        // `exclusions`-category row, whose negatives (its `extends` chain
+        // folded in) `flattenManifest` subtracts from this row's bundle. Empty
+        // (the default) means `all-exclusions`, the STRICTEST set — so main, the
+        // site, the demo and every row written later are protected without
+        // remembering to ask. A row that must keep something the default
+        // removes names a narrower set (`promo-film`: `base-exclusions`, the
+        // film's own app). Never set on an exclusion set itself (a set's
+        // exclusions are its own entries). A `CompositionManifest` field
+        // (`manifestItemToManifest` resolves the default); `composition-closure`
+        // refuses a name that is no exclusion set.
+        exclusions: textField({ label: "Exclusions" }),
         // WHEN this composition should be built and served. Anything but `off`
         // declares "this composition is meant to be live here" — a build of it
         // composes a per-composition frontend dist + empty DB served at
@@ -286,6 +303,7 @@ export const compositionsConfig = defineConfig({
           selectedContributors: [] as string[],
           extends: [] as string[],
           excludes: [] as string[],
+          exclusions: "",
           serve: "off",
           // Main lands on the app gallery.
           home: "home",
@@ -308,10 +326,41 @@ export const compositionsConfig = defineConfig({
           name: "promo-film",
           category: "app" as const,
           hosts: ["desktop"],
-          entryPoints: ["**"],
+          // Not the health rows that report the developer machine rather
+          // than the user's story — machine noise never shows in the film:
+          // the gateway-drift row ("Out of date": the machine's login gateway
+          // older than main's, which held the dot on attention for a whole
+          // recording), and the two a main restart flickers — the Machine
+          // watcher row (main's cluster sentinel restarting with main) and
+          // the Connection row (central's socket drops while main restarts),
+          // and host I/O health (its Disk I/O row goes to attention while a
+          // host daemon such as fseventsd runs hot — it held the dot on
+          // attention for a whole recording; the plugin also carries only its
+          // Debug → Reports summary, nothing the film shows), and the
+          // Database row (database.query-deadline: the film's pages run on
+          // the film's own calendar — a weekday afternoon, hours or days off
+          // the server's clock — so the row reads the lock watch's last look,
+          // stamped by the server, as long overdue and holds the dot on
+          // attention; the plugin also carries only the deadline reports'
+          // summaries, nothing the film shows).
+          // The first three are their own leaf plugins, so nothing else goes
+          // with them.
+          entryPoints: [
+            "**",
+            "!infra.launcher.gateway-drift",
+            "!debug.sentinel.health-row",
+            "!infra.health.connection-row",
+            "!infra.host.io-health",
+            "!database.query-deadline",
+          ],
           selectedContributors: [] as string[],
           extends: [] as string[],
           excludes: [] as string[],
+          // The film's own app, Circle (`apps.website.promo-film.circle`), and
+          // its seed are taken out of every other composition by
+          // `all-exclusions`; this row inherits only the repo-wide removals,
+          // so it is the one composition that ships them.
+          exclusions: BASE_EXCLUSIONS_ID,
           serve: "manual",
           home: "home",
           unlisted: [] as string[],
@@ -320,12 +369,13 @@ export const compositionsConfig = defineConfig({
 
         // ── The global exclusions ───────────────────────────────────────────────
         // The one row that says what is NOT in any app. Everything else in this
-        // registry says what it includes; this one subtracts, and every other row
-        // inherits it — `flattenManifest` folds this row into EVERY manifest
-        // unconditionally, NOT via `extends`. That difference is the whole point:
-        // an exclusion written once holds for compositions that do not exist yet,
-        // instead of holding only for the rows whose author remembered to
-        // reference it.
+        // registry says what it includes; this exclusion set subtracts, and every
+        // other row inherits it — every exclusion set extends it
+        // (`composition-closure` refuses one that does not), and `flattenManifest`
+        // folds a row's set into it whether or not the row names one (absent:
+        // `all-exclusions`, below). That is the whole point: an exclusion written
+        // once holds for compositions that do not exist yet, instead of holding
+        // only for the rows whose author remembered to reference it.
         //
         // NEGATIVES ONLY. `selectedContributors` stays empty and every entry point
         // starts with `!` (`composition-closure` enforces both). A positive here
@@ -374,7 +424,7 @@ export const compositionsConfig = defineConfig({
         {
           id: BASE_EXCLUSIONS_ID,
           name: BASE_EXCLUSIONS_ID,
-          category: "pack" as const,
+          category: "exclusions" as const,
           hosts: ["desktop"],
           entryPoints: [
             "!review.plugin-changes.**",
@@ -385,6 +435,42 @@ export const compositionsConfig = defineConfig({
           selectedContributors: [] as string[],
           extends: [] as string[],
           excludes: [] as string[],
+          exclusions: "",
+          serve: "off",
+          home: "",
+          unlisted: [] as string[],
+          crawlable: false,
+        },
+
+        // ── The default exclusion set ───────────────────────────────────────────
+        // What every composition leaves out unless it names a narrower set in
+        // its `exclusions` field: the repo-wide removals (`extends:
+        // ["base-exclusions"]`), plus plugins that exist for ONE composition
+        // only and that every other one must not ship.
+        //
+        // `!apps.website.promo-film.circle`: Circle, the P2P app the showcase
+        // film's user asks for, is a stand-in for the agent's implementation —
+        // an app no real user has. Only `promo-film` (whose `exclusions` is
+        // `base-exclusions`) ships it.
+        // `!apps.website.promo-film.seed`: the film's seed (its endpoint answers
+        // only on the `promo-film` namespace; its `machine/` imports Circle, so
+        // the cascade would take it anyway — written down so it is said). The
+        // `./equin promo-film seed` verb stays: it is the parent's `cli/`,
+        // which runs on no host, so its import of the seed's `core/` is no
+        // edge of any bundle.
+        {
+          id: ALL_EXCLUSIONS_ID,
+          name: ALL_EXCLUSIONS_ID,
+          category: "exclusions" as const,
+          hosts: ["desktop"],
+          entryPoints: [
+            "!apps.website.promo-film.circle",
+            "!apps.website.promo-film.seed",
+          ],
+          selectedContributors: [] as string[],
+          extends: [BASE_EXCLUSIONS_ID],
+          excludes: [] as string[],
+          exclusions: "",
           serve: "off",
           home: "",
           unlisted: [] as string[],
@@ -406,6 +492,7 @@ export const compositionsConfig = defineConfig({
           selectedContributors: ["ui.theme-toggle"],
           extends: ["self-improvement", "served-baseline"],
           excludes: [] as string[],
+          exclusions: "",
           serve: "off",
           home: "agent-manager",
           unlisted: [] as string[],
@@ -420,6 +507,7 @@ export const compositionsConfig = defineConfig({
           selectedContributors: ["ui.theme-toggle"],
           extends: ["served-baseline"],
           excludes: [] as string[],
+          exclusions: "",
           serve: "off",
           home: "agent-manager",
           unlisted: [] as string[],
@@ -590,6 +678,7 @@ export const compositionsConfig = defineConfig({
           selectedContributors: ["ui.theme-toggle", "map.google"],
           extends: ["self-improvement", "served-baseline", "pages"],
           excludes: [] as string[],
+          exclusions: "",
           serve: "off",
           home: "home",
           unlisted: [] as string[],
@@ -741,6 +830,7 @@ export const compositionsConfig = defineConfig({
           selectedContributors: [] as string[],
           extends: ["conversations", "tasks-domain"],
           excludes: [] as string[],
+          exclusions: "",
           serve: "off",
           home: "",
           unlisted: [] as string[],
@@ -925,6 +1015,7 @@ function app(
     selectedContributors: [] as string[],
     extends: ["served-baseline", ...(opts.extraExtends ?? [])],
     excludes: opts.excludes ?? [],
+    exclusions: "",
     serve: "off",
     // An app row's name IS its `defineApp` id — the app it ships is its home.
     home: name,
@@ -944,6 +1035,7 @@ function subsystem(name: string, opts: { entryPoints: string[] }) {
     selectedContributors: [] as string[],
     extends: [] as string[],
     excludes: [] as string[],
+    exclusions: "",
     serve: "off",
     home: "",
     unlisted: [] as string[],
@@ -962,6 +1054,7 @@ function pack(name: string, opts: { selectedContributors: string[] }) {
     selectedContributors: opts.selectedContributors,
     extends: [] as string[],
     excludes: [] as string[],
+    exclusions: "",
     serve: "off",
     home: "",
     unlisted: [] as string[],

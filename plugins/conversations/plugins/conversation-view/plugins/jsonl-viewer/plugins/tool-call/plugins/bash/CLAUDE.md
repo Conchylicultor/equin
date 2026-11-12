@@ -17,6 +17,7 @@
     - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCode`
     - `conversations/conversation-view/jsonl-viewer/tool-call.ToolOutput`
     - `conversations/conversation-view/jsonl-viewer/tool-call.ToolSection`
+    - `infra/host-account.useHomeDisplay`
     - `network/live/live-state.ResourceErrorInline`
     - `primitives/css/badge.Badge`
     - `primitives/css/spacing.Stack`

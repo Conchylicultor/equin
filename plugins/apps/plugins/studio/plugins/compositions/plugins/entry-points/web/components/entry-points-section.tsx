@@ -36,7 +36,7 @@ export function EntryPointsSection({ id }: { id: string }): ReactElement {
     );
   }
 
-  // Main's row and the `base-exclusions` row are the two whose entry points
+  // Main's row and the inherited exclusion sets are the rows whose entry points
   // decide what the app SHIPS, and codegen reads them from the committed config
   // — so an edit stored here could never reach a registry. The same predicate
   // the `save` guard uses, so the inert control and the throw beneath it cannot

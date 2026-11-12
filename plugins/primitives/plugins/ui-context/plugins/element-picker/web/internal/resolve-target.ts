@@ -42,6 +42,21 @@ function containsPoint(el: Element, x: number, y: number): boolean {
 }
 
 /**
+ * Decoration: an `aria-hidden` element with no content of its own — a hit-area
+ * layer (`Row`'s full-bleed `absolute inset-0` span that keeps a split row's
+ * padding clickable), a backdrop, a rule. It covers what the user points at
+ * without being anything they could mean, so it is never selected: a pick on
+ * a row's padding resolves to the row, not to the empty span spread over it.
+ */
+function isDecoration(el: Element): boolean {
+  return (
+    el.getAttribute("aria-hidden") === "true" &&
+    el.childElementCount === 0 &&
+    (el.textContent ?? "").trim() === ""
+  );
+}
+
+/**
  * Depth-first search for the deepest selectable element containing the point.
  *
  * Pruning: a subtree whose root's box excludes the point is skipped. This
@@ -64,6 +79,8 @@ function deepestAt(
   // internals (`path`, `g`) are never a meaningful pick target, so the whole
   // subtree stands in for whatever hosts it.
   if (el instanceof SVGElement) return null;
+
+  if (isDecoration(el)) return null;
 
   const style = getComputedStyle(el);
   if (style.display === "none" || style.visibility === "hidden") return null;
@@ -94,7 +111,16 @@ export function resolveTarget(x: number, y: number): Element | null {
   const seed = document.elementFromPoint(x, y);
   if (!seed) return null;
   if (seed.closest("[data-element-picker]")) return null;
-  // The seed is itself a valid answer when nothing below it qualifies (it is a
+  // A decoration the browser hit (a hit-area layer) stands for the nearest
+  // ancestor whose own box holds the point — the layer may escape its parent's
+  // box (a split row's hit-area spans the row, its parent is the inner button).
+  let start = seed;
+  while (
+    (isDecoration(start) || !containsPoint(start, x, y)) &&
+    start.parentElement
+  )
+    start = start.parentElement;
+  // The start is itself a valid answer when nothing below it qualifies (it is a
   // leaf, or its only descendants are svg internals).
-  return deepestAt(seed, x, y, 0)?.el ?? seed;
+  return deepestAt(start, x, y, 0)?.el ?? start;
 }

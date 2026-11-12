@@ -27,6 +27,8 @@ import {
 } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { NewTabButton } from "@plugins/primitives/plugins/link-gesture/plugins/new-tab/web";
+import { Reveal } from "@plugins/primitives/plugins/css/plugins/motion/web";
+import { usePlaceDetails } from "@plugins/apps/plugins/places/plugins/place-details/web";
 import type { PlaceDetailsResult } from "@plugins/apps/plugins/places/plugins/place-details/core";
 import {
   directionsHref,
@@ -37,6 +39,7 @@ import { untilDay } from "../internal/until-day";
 import {
   compactCount,
   openLine,
+  todayHoursLine,
   weekRows,
   type OpenTone,
 } from "../internal/place-facts";
@@ -412,4 +415,37 @@ export function MapsActions({
       {children}
     </Line>
   );
+}
+
+/**
+ * A place card's opening-hours line, today's only: "Open · 10:00 AM – 7:00 PM"
+ * or "Closed today", from Google's rich details of the place (read when the
+ * card is drawn; the server keeps each answer for a day). Nothing for a place
+ * with no hours, and nothing while they are not known.
+ */
+export function TodayHours({
+  googlePlaceId,
+  reveal,
+}: {
+  googlePlaceId: string | null;
+  /** The line is new to a drawn card: it eases in rather than appearing. */
+  reveal: boolean;
+}): ReactNode {
+  const read = usePlaceDetails(googlePlaceId);
+  const now = useNow(MINUTE_MS);
+  if (read.status !== "ready" || read.data.kind !== "ok") return null;
+  const { hours, utcOffsetMinutes } = read.data.details;
+  if (hours === undefined) return null;
+  const line = todayHoursLine(hours, utcOffsetMinutes, new Date(now));
+  if (line === null) return null;
+  const text = (
+    <Text
+      variant="caption"
+      tone={line.closed ? "muted" : "strong"}
+      className={line.closed ? undefined : "text-success"}
+    >
+      {line.text}
+    </Text>
+  );
+  return reveal ? <Reveal>{text}</Reveal> : text;
 }

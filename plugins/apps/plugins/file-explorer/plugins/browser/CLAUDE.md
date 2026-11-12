@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: The file explorer's browser over any file system this host serves (the computer's disk, the browser's storage; useExplorerSystem says what `~` is there and what it can do, useHomeSystem which one Files opens on): the browser's header as the shared FileBrowserHeader pane-header slot (back / forward / up, the system's path bar as each pane's title — FileBrowserPath —, a filter, show hidden, the lenses' hide-rule toggles and the folder view's own controls), borrowed by the Files folder column, the folder peek and the conversation's Files pane, whose host wraps its PaneChrome in FileBrowserProvider (PendingFileBrowserProvider while it has nothing to browse) over FileBrowserBody (the folder as a lazily-listed DataView tree with Name / Modified / Size; a status bar; the selected file previewed beside it, or handed to fileTarget); <FileBrowser/>, the same in one box under a sub-header of the same items, for a host with no pane header; its FileBrowserSlots seams — RowActions, a row's hover actions (its own: Extract here on an archive, Copy path in the ⋯ menu), and Lens, hide-rule toggles and a file's git context), and the /files routes it runs under — a Miller row of a folder column (/files/browse/<folder>[;fs=<system>], the bare /files forwarding to the home system's home) and the open file's preview column beside it (…/preview/<open file>, pushed and closed so it slides in and out while the listing stays mounted; the old /files/<fs>/at/<folder>[/<open file>] forwards), so every location is a link and back / forward are the browser history; moves (drag onto a folder) and the other operations are offered only where the system has them; useExplorerFileTarget names any file's place there (its folder, the file previewed) as a pane's Expand target; useFileHostPath + useHostPathSource let any surface draw a file's place as the same host path bar. The preview's header is the shared FilePreviewHeader pane-header slot (the file's title, its renderer tabs, Open with default app) — borrowed by the Files preview column and the attachment preview, with FilePreviewProvider / useFilePreview / FilePreviewBody for a host's own pane; a browser hosted inside one pane previews the open file beside the listing under a sub-header of the same items. Contributes the files-document sub-theme the preview's page wears (28/32/48px inset, 14px on 1.6, a 24px heading).
+- Description: The file explorer's browser over any file system this host serves (the computer's disk, the browser's storage; useExplorerSystem says what `~` is there and what it can do, useHomeSystem which one Files opens on): the browser's header as the shared FileBrowserHeader pane-header slot (back / forward / up, the system's path bar as each pane's title — FileBrowserPath —, a filter, show hidden, the lenses' hide-rule toggles and the folder view's own controls), borrowed by the Files folder column, the folder peek and the conversation's Files pane, whose host wraps its PaneChrome in FileBrowserProvider (PendingFileBrowserProvider while it has nothing to browse) over FileBrowserBody (the folder as a lazily-listed DataView tree with Name / Modified / Size; a status bar; the selected file previewed beside it, or handed to fileTarget); <FileBrowser/>, the same in one box under a sub-header of the same items, for a host with no pane header; its FileBrowserSlots seams — RowActions, a row's hover actions (its own: Extract here on an archive, Copy path in the ⋯ menu), and Lens, hide-rule toggles and a file's git context), and the /files routes it runs under — a Miller row of a folder column (/files/browse/<folder>[;fs=<system>], the bare /files forwarding to the home system's home) and the open file's preview column beside it (…/preview/<open file>, pushed and closed so it slides in and out while the listing stays mounted; the old /files/<fs>/at/<folder>[/<open file>] forwards), so every location is a link and back / forward are the browser history; moves (drag onto a folder) and the other operations are offered only where the system has them; useExplorerFileTarget names any file's place there (its folder, the file previewed) as a pane's Expand target; useFileHostPath + useHostPathSource let any surface draw a file's place as the same host path bar. The preview's header is the shared FilePreviewHeader pane-header slot (the file's title, its renderer tabs, Open with default app) — borrowed by the Files preview column and the attachment preview, with FilePreviewProvider / useFilePreview / FilePreviewBody for a host's own pane; a browser hosted inside one pane previews the open file beside the listing under a sub-header of the same items. Contributes the files-document sub-theme the preview's page wears (28/32/48px inset, 14px on 1.6, a 24px heading). Registers the Files start-folder config: the folder the file explorer opens on when launched.
 - Web:
   - Slots:
     - `filesHomePane.Actions`
@@ -38,9 +38,10 @@
     - `FileBrowserHeader` "toggles" → `FileBrowserToggles`
     - `FilePreviewHeader` "tabs" → `FilePreviewTabs`
     - `FilePreviewHeader` "open-with" → `OpenWithDefaultApp`
+    - `ConfigV2.WebRegister` "files"
     - `FileBrowserSlots.RowActions` "extract" → `ExtractAction`
     - `FileBrowserSlots.RowActions` "copy-path" → `CopyPathAction`
-  - Uses: 80 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 82 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/data-view` ×10
     - `primitives/css/ui-kit` ×8
     - `primitives/file-viewer` ×7
@@ -50,6 +51,7 @@
     - `infra/paths/file-systems` ×3
     - `network/live/live-state` ×3
     - `primitives/path-bar` ×3
+    - `config_v2` ×2
     - `primitives/copy-to-clipboard` ×2
     - `primitives/link-gesture` ×2
     - `primitives/networking` ×2
@@ -121,8 +123,12 @@
     - `useHostPathSource`
     - `useLocationNavigator`
     - `useOpenInFiles`
+- Server:
+  - Contributes: `ConfigV2.Register` "files"
+  - Uses: `config_v2.ConfigV2`
 - Core:
   - Uses:
+    - `config_v2.defineConfig`
     - `fields/text/config.textField`
     - `infra/host-account.HOME`
     - `network/live.rowKind`
@@ -148,6 +154,7 @@
     - `entryExtension`
     - `entryKindLabel`
     - `fileEntry`
+    - `filesConfig`
     - `formatCount`
     - `formatModified`
     - `formatModifiedFull`
@@ -175,6 +182,7 @@
     - `apps/file-explorer/folder-peek`
     - `apps/file-explorer/git`
     - `apps/file-explorer/places`
+    - `apps/website/promo-film/seed`
     - `conversations/conversation-view/code/file-pane`
     - `conversations/conversation-view/explorer`
     - `plugin-meta/plugin-view/file-tree`

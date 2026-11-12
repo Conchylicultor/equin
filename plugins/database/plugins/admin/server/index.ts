@@ -12,6 +12,7 @@ export {
   databaseExists,
   dropDatabase,
   ensureDatabase,
+  recreateDatabase,
   countActiveConnections,
   databaseSizeBytes,
 } from "./internal/databases";

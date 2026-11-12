@@ -62,14 +62,15 @@ export type CheckoutRef =
 export const MAIN_COMPOSITION_ID = LEGACY_IDS.mainNamespace;
 
 /**
- * The id of the manifest row whose NEGATIVES every composition inherits.
+ * The id of the exclusion set whose NEGATIVES every composition inherits.
  *
- * A composition says what it includes; this one row says what the repo has
- * decided is not in any app. `flattenManifest` folds it into every manifest
- * unconditionally — not via `extends`, which a new composition could forget —
- * so an exclusion written once holds everywhere. A composition takes a plugin
- * back by naming it explicitly, which the engine's protection rule already makes
- * win over any negative.
+ * A composition says what it includes; this row says what the repo has decided
+ * is not in any app. Every exclusion set extends it (`composition-closure`
+ * refuses one that does not), and `flattenManifest` folds a set into every
+ * manifest — the one it names in `exclusions`, else {@link ALL_EXCLUSIONS_ID} —
+ * so an exclusion written here holds everywhere, for rows that do not exist
+ * yet too. A composition takes a plugin back by naming it explicitly, which the
+ * engine's protection rule already makes win over any negative.
  *
  * Lives here beside `MAIN_COMPOSITION_ID` for the same reason: the closure
  * engine, the checks, the CLI and the browser all have to name this row, and a
@@ -80,6 +81,16 @@ export const MAIN_COMPOSITION_ID = LEGACY_IDS.mainNamespace;
  * namespace nothing could be served at.
  */
 export const BASE_EXCLUSIONS_ID = "base-exclusions";
+
+/**
+ * The id of the DEFAULT exclusion set: the one a composition inherits when its
+ * `exclusions` names none — the strictest, so a new row is protected without
+ * asking. It extends {@link BASE_EXCLUSIONS_ID} and adds what exists for one
+ * composition only (the showcase film's app, kept to `promo-film`, which names
+ * the narrower `base-exclusions`). Reserved like the base row: a legal id,
+ * never a servable namespace.
+ */
+export const ALL_EXCLUSIONS_ID = "all-exclusions";
 
 /** One DNS label: the charset that is also path-safe and Postgres-safe. */
 export const NAMESPACE_LABEL_RE = /^[a-z0-9][a-z0-9-]{0,62}$/;

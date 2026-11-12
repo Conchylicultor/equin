@@ -1,7 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import type { ChannelStatuses } from "@plugins/network/plugins/live/plugins/live-state/web";
 import type { WsStatus } from "@plugins/primitives/plugins/networking/web";
-import { connectionHealth, PUSH_STALL_MS } from "./connection-health";
+import { PUSH_STALL_MS } from "@plugins/infra/plugins/health/web";
+import { connectionHealth } from "./connection-health";
 
 /** Both sockets' states, with each server's latest reported flush age (ms). */
 function sockets(

@@ -205,6 +205,8 @@ database in `backup-plan.test.ts`. The real dump → restore round trip is in
     - `database/connection.createDbClient`
     - `database/connection.createDbPool`
     - `database/connection.withQueryDeadline`
+    - `database/pgbouncer.PGBOUNCER_PORT`
+    - `database/pgbouncer.PGBOUNCER_SOCKET_DIR`
     - `infra/host/host-admission.defineHostPool`
   - DB schema: `plugins/database/plugins/admin/server/internal/table-label.ts`
   - Exports (types):
@@ -245,6 +247,7 @@ database in `backup-plan.test.ts`. The real dump → restore round trip is in
     - `openHeldClient`
     - `openShortLivedClient`
     - `reclaimForkTemp`
+    - `recreateDatabase`
 - Cross-plugin:
   - Imported by: 32 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `debug` ×8

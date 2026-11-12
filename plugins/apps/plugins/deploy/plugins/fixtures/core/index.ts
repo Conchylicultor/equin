@@ -3,4 +3,6 @@ export type {
   DeployRunFixture,
   DeployServerFixture,
   DeploymentFixture,
+  SiteMessageFixture,
+  VisitFixture,
 } from "./internal/deploy-state";

@@ -46,6 +46,10 @@ export interface InputLog {
   keys: Array<{ t: number; key: string; text?: string }>;
   /** Named beats the script marked, with the rect of their element then (if any). */
   marks: Record<string, { t: number; rect?: Rect }>;
+  /** A watched scroller's position at every frame while watched (`Recorder.watchScroll`): [t, scrollTop]. */
+  scroll?: Array<[number, number]>;
+  /** Each page-clock rate change (`Recorder.clockRate`): [t, the rate it goes to]. Absent: real speed throughout. */
+  rate?: Array<[number, number]>;
 }
 
 /** A page taller than the viewport, captured as viewport tiles stacked top to bottom. */

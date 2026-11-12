@@ -1974,6 +1974,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `infra/retention.markCascadeBounded`
                   - `network/live/change-feed.ExcludeFromChangeFeed`
                 - DB schema: `plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/server/internal/tables.ts`
+                - Exports (types):
+                  - `CollectContext`
+                  - `CountryLookup`
+                - Exports (values): `recordCollect`
                 - Register:
                   - `defineJob('analytics.rollup')`
                   - `defineJob('retention.analytics_visits')`
@@ -2180,6 +2184,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Imported by:
                   - `apps/deploy/analytics/dashboard`
                   - `apps/deploy/analytics/sessions`
+                  - `apps/deploy/fixtures`
                   - `apps/deploy/site-messages/intake`
                   - `apps/website/improve`
                   - `apps/website/pages/apps`
@@ -2548,6 +2553,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `plugin-meta/plugin-tree.getFacetsTreeCached`
                   - `plugin-meta/plugin-tree.onPluginFacetsChanged`
                 - DB schema: `plugins/apps/plugins/deploy/plugins/deploy-secrets/plugins/approvals/server/internal/tables.ts`
+                - Exports (values): `setAndApproveDeploySecret`
                 - Resources: `deploy-secrets.status` (push, notified, whole: one row per deploy secret the deployment's composition closure declares — a handful, whole: the plugins in one closure declaring the same key — normally one)
                 - Routes:
                   - `PUT /api/deploy-secrets/values/:key`
@@ -2584,7 +2590,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `SECRETS_SECTION_ID`
                   - `setDeploySecretValue`
               - Cross-plugin:
-                - Imported by: `framework/cli/deploy`
+                - Imported by:
+                  - `apps/deploy/fixtures`
+                  - `framework/cli/deploy`
         - **`deployments`** — Sites — the Deploy app's primary entity, a deployment: the sites index (the app's landing page, a DataView of every deployment with its server and status), the site page (site/:deploymentId/:tab?) — a header (mark, hostname, status pill, hostnames, composition, contributed SiteHeader actions), the production strip (SiteStrip cells, its Server cell this plugin's own) with the first applicable SiteBanner, and the SiteTabs host bound to the URL's :tab?, whose Overview (a two-column host over SiteOverview.Card plus a Checks card over SiteCheck) and Settings (the DeploymentDetail sections — General, Install and a Danger zone of its own — under a left anchor rail) tabs are this plugin's, the sidebar's Overview entry and Sites section (status dot per site from useSiteStatus, + opening the add dialog), and the Deployments section of a server's page (that server's sites as a DataView, an add affordance whose composition picker reads the compositions config, a Deploy row action that launches the CLI's whole converge-build-ship run). Old server/:serverId/dep/:deploymentId links forward to the site. Owns the deploy_deployments table: where a composition is served and under what URL ((composition × server) → { hostnames, loopbackPort }), its live collection, and the CRUD endpoints. Also launches `./equin deploy converge|ship` for a deployment — and orchestrates the `update` sequence (converge → build a candidate unless one is already current → ship that pinned run id) over the awaitable release engine — streaming the CLI's output into the durable `deploy` log channel, each run's phase and outcome into the in-memory `deploy.runs` live view, and every run into the durable `deploy_runs` ledger it serves back as a live history window — the record that survives the restart the live view does not. Before any leg spawns, every DeployGates.Gate contribution is asked; a run one of them refuses ends needs-approval having converged and shipped nothing. The install itself — run user, dir layout, systemd unit, Caddy site — is derived in core/, never stored.
           - Web:
             - Slots:
@@ -2730,6 +2738,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `_deployDeployments`
               - `_deployRuns`
               - `DeployGates`
+              - `publishWrittenRuns`
             - Register:
               - `defineJob('retention.deploy_runs')`
               - `defineSupervisedJob('deploy.run')`
@@ -2896,13 +2905,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`fixtures`** — Writes a Deploy fixture (servers, their last check, deployments and finished runs) into this instance through the rows the app's own handlers write. Contributes nothing: a host boots it for the seed that imports it.
           - Server:
             - Uses:
+              - `apps/deploy/analytics/collect.recordCollect`
+              - `apps/deploy/deploy-secrets/approvals.setAndApproveDeploySecret`
               - `apps/deploy/deployments._deployDeployments`
               - `apps/deploy/deployments._deployRuns`
+              - `apps/deploy/deployments.publishWrittenRuns`
               - `apps/deploy/health.serverHealth`
+              - `apps/deploy/host-query.markServerBoxIsThisInstance`
               - `apps/deploy/servers._deployServers`
               - `apps/deploy/servers.generateServerSshKey`
+              - `apps/deploy/site-messages/intake.insertReceivedSiteMessage`
               - `config_v2.getConfig`
               - `database.db`
+              - `release/bundles.readCommitSubject`
             - Exports (values): `writeDeployFixture`
           - Cross-plugin:
             - Imported by: `apps/website/promo-film/seed`
@@ -2912,6 +2927,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `DeploymentFixture`
               - `DeployRunFixture`
               - `DeployServerFixture`
+              - `SiteMessageFixture`
+              - `VisitFixture`
         - **`health`** — Server reachability for the deploy app: probes a registered server over SSH, records the classified verdict, and exposes its verdict as the `status` field of every list of servers plus the verify step of the SSH setup flow, and the Deploy sidebar's Servers section (each server with its verdict dot). Owns the deploy_servers_ext_health side-table: the last SSH reachability verdict per server (ok, classified failure kind, the public key as of the check, and the TOFU-pinned host key), its live collection, its `status` field exposed to every list of servers, and the probe / forget-host-key endpoints.
           - Web:
             - Contributes:
@@ -3016,7 +3033,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ServerHealthRowSchema`
               - `serverHealthShape`
               - `SshCheckResultSchema`
-        - **`host-query`** — The deploy app's shared pieces for a section that reads its deployment's box over SSH: HostQueryFailureState renders every way the read can fail (no SSH key, unverified host, SSH failure, failed request, unreadable answer) in one vocabulary, and useDeploymentShips(deploymentId, pluginId) answers whether the deployment's composition closure includes a plugin (useShipsGate: the tab gate over it — shown unless the answer is no). hostOnlyQueryOverSsh(deploymentId, path, schema, { maxAnswerBytes? }): resolves a deployment's server and pinned SSH target, curls one host-only route of the install through its own gateway on the loopback port (two SSH sessions at most), refuses an answer over maxAnswerBytes unread (curl --max-filesize on the box, re-checked here), and answers the parsed answer, which of SSH, the request or the answer failed, or not-found.
+        - **`host-query`** — The deploy app's shared pieces for a section that reads its deployment's box over SSH: HostQueryFailureState renders every way the read can fail (no SSH key, unverified host, SSH failure, failed request, unreadable answer) in one vocabulary, and useDeploymentShips(deploymentId, pluginId) answers whether the deployment's composition closure includes a plugin (useShipsGate: the tab gate over it — shown unless the answer is no). hostOnlyQueryOverSsh(deploymentId, path, schema, { maxAnswerBytes? }): resolves a deployment's server and pinned SSH target, curls one host-only route of the install through its own gateway on the loopback port (two SSH sessions at most), refuses an answer over maxAnswerBytes unread (curl --max-filesize on the box, re-checked here), and answers the parsed answer, which of SSH, the request or the answer failed, or not-found. markServerBoxIsThisInstance(serverId) marks a demo's server whose box is this instance: its host-only routes are answered through this instance's own gateway, no SSH (the same answer cap applies).
           - Web:
             - Uses:
               - `network/live.LiveRowResult`
@@ -3036,12 +3053,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses:
               - `apps/deploy/deployments._deployDeployments`
               - `apps/deploy/health.resolveServerSshTarget`
+              - `apps/deploy/servers._deployServers`
               - `database.db`
+              - `ids.idRef`
               - `infra/ssh.sshRun`
+            - DB schema: `plugins/apps/plugins/deploy/plugins/host-query/server/internal/tables.ts`
             - Exports (types):
               - `HostQueryAnswer`
               - `HostQueryOptions`
-            - Exports (values): `hostOnlyQueryOverSsh`
+            - Exports (values):
+              - `hostOnlyQueryOverSsh`
+              - `markServerBoxIsThisInstance`
           - Core:
             - Uses: `infra/ssh.SshFailureKindSchema`
             - Exports (types): `HostQueryFailure`
@@ -3053,6 +3075,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `apps/deploy/analytics/dashboard`
               - `apps/deploy/analytics/sessions`
+              - `apps/deploy/fixtures`
               - `apps/deploy/site-messages/inbox`
               - `apps/deploy/site-reports/import`
         - **`local-serve`** — Test locally: the site page's header button that serves the site's composition on the shared gateway (opening it once live), plus the same one-button serve/open shortcut on the deployments list row.
@@ -3284,6 +3307,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/deploy/deployments/runs-arm`
               - `apps/deploy/fixtures`
               - `apps/deploy/health`
+              - `apps/deploy/host-query`
               - `apps/deploy/ssh-setup`
               - `debug/read-set`
               - `framework/cli/deploy`
@@ -3422,6 +3446,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `integrations/resend.sendEmail`
                   - `network/live/change-feed.ExcludeFromChangeFeed`
                 - DB schema: `plugins/apps/plugins/deploy/plugins/site-messages/plugins/intake/server/internal/tables.ts`
+                - Exports (values): `insertReceivedSiteMessage`
                 - Register:
                   - `defineJob('site-messages.notify')`
                   - `defineJob('site-messages.confirm')`
@@ -3473,6 +3498,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `SpamReasonSchema`
               - Cross-plugin:
                 - Imported by:
+                  - `apps/deploy/fixtures`
                   - `apps/deploy/site-messages/inbox`
                   - `apps/website/landing/contact`
               - Deploy-secrets:
@@ -4874,7 +4900,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/pane.useOpenPane`
               - `primitives/text-editor/paste-images.AttachmentSlots`
             - Exports (values): `attachmentPreviewPane`
-        - **`browser`** — The file explorer's browser over any file system this host serves (the computer's disk, the browser's storage; useExplorerSystem says what `~` is there and what it can do, useHomeSystem which one Files opens on): the browser's header as the shared FileBrowserHeader pane-header slot (back / forward / up, the system's path bar as each pane's title — FileBrowserPath —, a filter, show hidden, the lenses' hide-rule toggles and the folder view's own controls), borrowed by the Files folder column, the folder peek and the conversation's Files pane, whose host wraps its PaneChrome in FileBrowserProvider (PendingFileBrowserProvider while it has nothing to browse) over FileBrowserBody (the folder as a lazily-listed DataView tree with Name / Modified / Size; a status bar; the selected file previewed beside it, or handed to fileTarget); <FileBrowser/>, the same in one box under a sub-header of the same items, for a host with no pane header; its FileBrowserSlots seams — RowActions, a row's hover actions (its own: Extract here on an archive, Copy path in the ⋯ menu), and Lens, hide-rule toggles and a file's git context), and the /files routes it runs under — a Miller row of a folder column (/files/browse/<folder>[;fs=<system>], the bare /files forwarding to the home system's home) and the open file's preview column beside it (…/preview/<open file>, pushed and closed so it slides in and out while the listing stays mounted; the old /files/<fs>/at/<folder>[/<open file>] forwards), so every location is a link and back / forward are the browser history; moves (drag onto a folder) and the other operations are offered only where the system has them; useExplorerFileTarget names any file's place there (its folder, the file previewed) as a pane's Expand target; useFileHostPath + useHostPathSource let any surface draw a file's place as the same host path bar. The preview's header is the shared FilePreviewHeader pane-header slot (the file's title, its renderer tabs, Open with default app) — borrowed by the Files preview column and the attachment preview, with FilePreviewProvider / useFilePreview / FilePreviewBody for a host's own pane; a browser hosted inside one pane previews the open file beside the listing under a sub-header of the same items. Contributes the files-document sub-theme the preview's page wears (28/32/48px inset, 14px on 1.6, a 24px heading).
+        - **`browser`** — The file explorer's browser over any file system this host serves (the computer's disk, the browser's storage; useExplorerSystem says what `~` is there and what it can do, useHomeSystem which one Files opens on): the browser's header as the shared FileBrowserHeader pane-header slot (back / forward / up, the system's path bar as each pane's title — FileBrowserPath —, a filter, show hidden, the lenses' hide-rule toggles and the folder view's own controls), borrowed by the Files folder column, the folder peek and the conversation's Files pane, whose host wraps its PaneChrome in FileBrowserProvider (PendingFileBrowserProvider while it has nothing to browse) over FileBrowserBody (the folder as a lazily-listed DataView tree with Name / Modified / Size; a status bar; the selected file previewed beside it, or handed to fileTarget); <FileBrowser/>, the same in one box under a sub-header of the same items, for a host with no pane header; its FileBrowserSlots seams — RowActions, a row's hover actions (its own: Extract here on an archive, Copy path in the ⋯ menu), and Lens, hide-rule toggles and a file's git context), and the /files routes it runs under — a Miller row of a folder column (/files/browse/<folder>[;fs=<system>], the bare /files forwarding to the home system's home) and the open file's preview column beside it (…/preview/<open file>, pushed and closed so it slides in and out while the listing stays mounted; the old /files/<fs>/at/<folder>[/<open file>] forwards), so every location is a link and back / forward are the browser history; moves (drag onto a folder) and the other operations are offered only where the system has them; useExplorerFileTarget names any file's place there (its folder, the file previewed) as a pane's Expand target; useFileHostPath + useHostPathSource let any surface draw a file's place as the same host path bar. The preview's header is the shared FilePreviewHeader pane-header slot (the file's title, its renderer tabs, Open with default app) — borrowed by the Files preview column and the attachment preview, with FilePreviewProvider / useFilePreview / FilePreviewBody for a host's own pane; a browser hosted inside one pane previews the open file beside the listing under a sub-header of the same items. Contributes the files-document sub-theme the preview's page wears (28/32/48px inset, 14px on 1.6, a 24px heading). Registers the Files start-folder config: the folder the file explorer opens on when launched.
           - Web:
             - Slots:
               - `filesHomePane.Actions`
@@ -4908,9 +4934,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `FileBrowserHeader` "toggles" → `FileBrowserToggles`
               - `FilePreviewHeader` "tabs" → `FilePreviewTabs`
               - `FilePreviewHeader` "open-with" → `OpenWithDefaultApp`
+              - `ConfigV2.WebRegister` "files"
               - `FileBrowserSlots.RowActions` "extract" → `ExtractAction`
               - `FileBrowserSlots.RowActions` "copy-path" → `CopyPathAction`
-            - Uses: 80 symbols — full list in [`plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md`](../plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md)
+            - Uses: 82 symbols — full list in [`plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md`](../plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md)
               - `primitives/data-view` ×10
               - `primitives/css/ui-kit` ×8
               - `primitives/file-viewer` ×7
@@ -4920,6 +4947,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/paths/file-systems` ×3
               - `network/live/live-state` ×3
               - `primitives/path-bar` ×3
+              - `config_v2` ×2
               - `primitives/copy-to-clipboard` ×2
               - `primitives/link-gesture` ×2
               - `primitives/networking` ×2
@@ -4991,8 +5019,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useHostPathSource`
               - `useLocationNavigator`
               - `useOpenInFiles`
+          - Server:
+            - Contributes: `ConfigV2.Register` "files"
+            - Uses: `config_v2.ConfigV2`
           - Core:
             - Uses:
+              - `config_v2.defineConfig`
               - `fields/text/config.textField`
               - `infra/host-account.HOME`
               - `network/live.rowKind`
@@ -5018,6 +5050,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `entryExtension`
               - `entryKindLabel`
               - `fileEntry`
+              - `filesConfig`
               - `formatCount`
               - `formatModified`
               - `formatModifiedFull`
@@ -5045,6 +5078,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/file-explorer/folder-peek`
               - `apps/file-explorer/git`
               - `apps/file-explorer/places`
+              - `apps/website/promo-film/seed`
               - `conversations/conversation-view/code/file-pane`
               - `conversations/conversation-view/explorer`
               - `plugin-meta/plugin-view/file-tree`
@@ -6418,7 +6452,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/pane.useOpenPane`
               - `tasks/task-detail.TaskDetailSlots`
               - `ui/icons.Icon`
-        - **`shell`** — App shell for Pages. Registers the /pages app entry — its brand the workspace (the user's initial tile as the launcher mark, and "<first name>'s pages" from the OS account) — defines the Pages.Sidebar slot, and contributes the app's own theme (Ink), which Pages selects.
+        - **`shell`** — App shell for Pages. Registers the /pages app entry — its brand the workspace (the user's initial tile as the launcher mark, and "<first name>'s pages" from the user's profile name — "My pages" and the pages glyph when the user shows no name) — defines the Pages.Sidebar slot, and contributes the app's own theme (Ink), which Pages selects.
           - Web:
             - Slots: `Pages.Sidebar`
             - Slot contributors:
@@ -6430,7 +6464,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ThemeEngine.Theme` "Ink"
             - Uses:
               - `apps-core.Apps`
-              - `infra/host-account.useHostAccount`
+              - `infra/host-account.useProfileName`
               - `layouts/miller.MillerColumns`
               - `network/live/live-state.ResourceErrorInline`
               - `primitives/app-shell.AppShellLayout`
@@ -6955,7 +6989,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - Server:
                 - Contributes: `host-service:places.icon-picker` "places.icon-picker"
                 - Uses: `apps/places/places-core.PlaceIconPicker`
-        - **`places-map`** — The Places app's index pane (/places): every saved place on one full-bleed map whose views are filter presets (All places, then the user's own — edits are drafts until saved, ⌥1–9 switch), with its chrome floating on the map — the tag sidebar (the presets with their counts and dirty dots, the tag filter as AND-ed rows of OR-ed tags with the preset's Reset / Save as new / Update, the tag tree with faceted counts; folded, the header alone, titled by a dropdown of the presets), the side panel (the preset's places in view or all, as a list or a gallery, hover-linked with their pins, a selected place's card drilled into it), the "Search or add places" bar (your places filtered live, Google's hits around the map's view as cards to save and as ghost pins hover-linked with them, the camera never moving; Ask Sonnet hands a question to a background run shown as a thread in a card docked on the right — the newest picks as Google cards with photos, why they fit, what makes them special and their sources, earlier answers folded, as numbered pins — its progress as a pill in the bar that shows and hides the card, and the recent questions in the panel to reopen), the selected place's card or a Google place's detail card — plus the saved-place pin (a drop near, a round badge far out with each spot's size beside it), the Google result's ghost pin, Sonnet's numbered pick pin, the thread's step labels for the Ask Sonnet tools, and the transcript row of places_show_picks (the numbered picks beside a mini map, hover-linked). Its ;page param, /places;page=<pageId>, lays one page's places over the same map, read live (page-overlay): the page's saved places numbered, the rest dimmed, the page's places not saved yet as numbered ghost pins, the camera framed on the page, the map never remounted — and a panel in the side panel's spot listing them in page order (hover-linked with their pins, each place's card drilled in, Save and Save all with one Undo, × back to the plain map).
+        - **`places-map`** — The Places app's index pane (/places): every saved place on one full-bleed map whose views are filter presets (All places, then the user's own — edits are drafts until saved, ⌥1–9 switch), with its chrome floating on the map — the tag sidebar (the presets with their counts and dirty dots, the tag filter as AND-ed rows of OR-ed tags with the preset's Reset / Save as new / Update, the tag tree with faceted counts; folded, the header alone, titled by a dropdown of the presets), the side panel (the preset's places in view or all, as a list or a gallery, hover-linked with their pins, a selected place's card drilled into it), the "Search or add places" bar (your places filtered live, Google's hits around the map's view as cards to save and as ghost pins hover-linked with them, the camera never moving; Ask Sonnet hands a question to a background run shown as a thread in a card docked on the right — the newest picks as Google cards with photos, why they fit, what makes them special and their sources, earlier answers folded, as numbered pins — its progress as a pill in the bar that shows and hides the card, and the recent questions in the panel to reopen), the selected place's card or a Google place's detail card — plus the saved-place pin (a drop near, a round badge far out with each spot's size beside it), the Google result's ghost pin, Sonnet's numbered pick pin, the thread's step labels for the Ask Sonnet tools, and the transcript row of places_show_picks (the numbered picks beside a mini map, hover-linked). Its ;page param, /places;page=<pageId>, lays one page's places over the same map, read live (page-overlay): the page's saved places numbered, the rest dimmed, the page's places not saved yet as numbered ghost pins, the camera framed on the page, the map never remounted — and a panel in the side panel's spot listing them in page order (hover-linked with their pins, each place's card drilled in, Save and Save all with one Undo, × back to the plain map). Registers the Places place-cards setting (the opening hours on the side panel's cards).
           - Web:
             - Slots:
               - `places-map.actions`
@@ -6966,6 +7000,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes:
               - `Pane.Register` "places-map"
               - `FieldPresentation.Register` "entity:places"
+              - `ConfigV2.WebRegister` "place-cards"
               - `GeoMap.Pin` → `SavedPlacePin`
               - `GeoMap.Pin` → `GoogleResultPin`
               - `GeoMap.Pin` → `PageItemPin`
@@ -6974,7 +7009,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `AgentThreadSlots.StepLabel` "places_search_text" → `SearchStepLabel`
               - `AgentThreadSlots.StepLabel` "places_show_picks" → `PicksStepLabel`
               - `renderer` "mcp__equin__places_show_picks" → `ParsedToolView`
-            - Uses: 141 symbols — full list in [`plugins/apps/plugins/places/plugins/places-map/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-map/REFERENCE.md)
+            - Uses: 145 symbols — full list in [`plugins/apps/plugins/places/plugins/places-map/REFERENCE.md`](../plugins/apps/plugins/places/plugins/places-map/REFERENCE.md)
               - `primitives/data-view` ×15
               - `apps/places/places-core` ×8
               - `conversations/agent-thread` ×8
@@ -6985,11 +7020,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/ui-kit` ×4
               - `primitives/overlay/image-viewer` ×4
               - `infra/endpoints` ×3
+              - `primitives/css/motion` ×3
               - `primitives/hover-reveal` ×3
               - `primitives/link-gesture/new-tab` ×3
               - `tag-tree/picker` ×3
               - `ui/icons` ×3
               - `apps/places/page-overlay` ×2
+              - `config_v2` ×2
               - `conversations/conversation-view/jsonl-viewer/tool-call` ×2
               - `integrations/google-maps` ×2
               - `page/place` ×2
@@ -7016,7 +7053,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/grid.Grid`
               - `primitives/css/inline.Inline`
               - `primitives/css/line.Line`
-              - `primitives/css/motion.Presence`
               - `primitives/css/pin.Pin`
               - `primitives/css/placeholder.Placeholder`
               - `primitives/css/scroll.Scroll`
@@ -7040,8 +7076,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/shortcuts.useSurfaceShortcuts`
               - `shell/toast.showToast`
               - `tag-tree/engine.useTagTreeActions`
+          - Server:
+            - Contributes: `ConfigV2.Register` "place-cards"
+            - Uses: `config_v2.ConfigV2`
           - Core:
             - Uses:
+              - `config_v2.defineConfig`
+              - `fields/bool/config.boolField`
               - `primitives/data-view.FilterGroup`
               - `primitives/data-view.FilterNode`
               - `primitives/data-view.filterNodeIdKind`
@@ -7055,6 +7096,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `includedTags`
               - `mergeRows`
               - `moveTag`
+              - `placeCardsConfig`
               - `presetAutoName`
               - `presetIcon`
               - `removeTag`
@@ -7258,6 +7300,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useFramePicks`
               - `useFrameSrc`
               - `usePrototypeDetail`
+              - `usePrototypeTitle`
               - `useWindowSize`
           - Core:
             - Uses:
@@ -7558,9 +7601,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/prototypes/present`
               - `apps/prototypes/state`
               - `apps/prototypes/thumbnails`
+              - `apps/website/promo-film/circle`
               - `conversations/conversation-view/artifacts/prototype`
               - `page/prototype`
               - `primitives/embed/frame`
+            - Endpoint callers: `seed`
           - Cli:
             - Exports (types): `DeletedPrototypeIds`
             - Exports (values):
@@ -7710,8 +7755,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PrototypeFrameActions` "open-new-tab" → `OpenNewTabAction`
               - `PrototypeFrameActions` "full-screen" → `FullScreenAction`
               - `PrototypeCardActions` "open-new-tab" → `OpenCardNewTabAction`
-            - Uses: 57 symbols — full list in [`plugins/apps/plugins/prototypes/plugins/present/REFERENCE.md`](../plugins/apps/plugins/prototypes/plugins/present/REFERENCE.md)
-              - `apps/prototypes/canvas` ×25
+            - Uses: 58 symbols — full list in [`plugins/apps/plugins/prototypes/plugins/present/REFERENCE.md`](../plugins/apps/plugins/prototypes/plugins/present/REFERENCE.md)
+              - `apps/prototypes/canvas` ×26
               - `primitives/css/ui-kit` ×3
               - `primitives/hover-reveal` ×2
               - `primitives/latest-ref` ×2
@@ -8413,6 +8458,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values):
               - `Library`
               - `openSongImperative`
+              - `requestPlayOnOpen`
               - `sonataLibraryPane`
               - `sonataPlayerPane`
               - `sonataSongLink`
@@ -10273,6 +10319,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                     - Contributes: `FileViewer.Renderer` "MIDI" → `MidiFilePreview`
                     - Uses:
                       - `apps-core/tabs.useAppLink`
+                      - `apps/sonata/library.requestPlayOnOpen`
                       - `apps/sonata/library.sonataSongLink`
                       - `apps/sonata/mini-player.SonataMiniPlayer`
                       - `apps/sonata/session.useCursorApi`
@@ -12396,25 +12443,64 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PROMO_MUSIC`
               - `promoMusic`
           - Plugins:
-            - **`seed`** — The showcase film's seed: POST /api/promo-film/seed writes the film's curated story (the piano wiki, the practice-file conversation and its transcript and workspace files, a tidy task list, the Lisbon places, a deploy history, the Circle prototype) through each app's own write path. Booted only by the promo-film composition, and refused anywhere but its own first-launch database.
+            - **`circle`** (excluded) — Circle, the film's 'implemented' P2P messaging app: registers the /circle app entry, whose one page is the Circle prototype it was built from, full surface, in its light theme.
+              - Web:
+                - Contributes: `Apps.App` "Circle" → `CircleLayout`
+                - Uses:
+                  - `apps-core.Apps`
+                  - `primitives/css/center.Center`
+                  - `primitives/css/text.Text`
+                  - `primitives/embed/frame.ContentFrame`
+                  - `primitives/embed/frame.useContentUrl`
+              - Core:
+                - Uses:
+                  - `primitives/pane.defineApp`
+                  - `ui/icons.symbol`
+                - Exports (values):
+                  - `CIRCLE_PROTOTYPE`
+                  - `circleApp`
+              - Cross-plugin:
+                - Imported by: `apps/website/promo-film/seed`
+            - **`seed`** (excluded) — The showcase film's seed: POST /api/promo-film/seed writes the film's curated story (an organised Pages workspace with the agent's note on the Piano page, a Grieg conversation with its transcript and its score and MIDI files, twenty other agent runs, saved places across Europe, the Circle prototype) through each app's own write path; POST /api/promo-film/agent-run finishes the agent run of a task the film's Wish filed (its conversation and transcript); POST /api/promo-film/agent-shops is the shops agent's one edit_page on Buying a piano (every added shop with its place, a blank line and a map, in one apply). Booted only by the promo-film composition, and refused anywhere but its own instance.
               - Machine:
                 - Uses:
                   - `apps/prototypes/fixtures.readPrototypeFixtureDir`
                   - `infra/endpoints.implementMachine`
                   - `integrations/google-maps.getPlacesClient`
                   - `integrations/google-maps/places-api.placeDetails`
-                - Routes: `POST /api/promo-film/seed`
+                - Routes:
+                  - `POST /api/promo-film/seed`
+                  - `POST /api/promo-film/agent-run`
+                  - `POST /api/promo-film/agent-shops`
               - Core:
-                - Uses: `infra/endpoints.defineEndpoint`
-                - Exports (types): `PromoFilmSeedReport`
+                - Uses:
+                  - `infra/endpoints.defineEndpoint`
+                  - `packages/wall-clock.wallClockToInstant`
+                  - `packages/wall-clock.zoneWallClock`
+                - Exports (types):
+                  - `FilmClock`
+                  - `PromoFilmSeedReport`
                 - Exports (values):
+                  - `APP_LAYOUT`
+                  - `FILM_CLOCK_FILE`
+                  - `FILM_HOUR`
+                  - `FILM_PAGES_OPENED`
                   - `FILM_SEEN_HINTS`
-                  - `LISBON_IDEAS`
+                  - `FILM_WEEKDAYS`
+                  - `FILM_ZONE`
+                  - `filmAppLayout`
+                  - `FilmClockSchema`
+                  - `filmNowAfter`
+                  - `finishFilmAgentRun`
+                  - `PIANO_SHOP_LIST`
+                  - `PIANO_SHOPS_ADDED`
+                  - `PLACES_HOURS_CONFIG`
                   - `PROMO_FILM_COMPOSITION_ID`
                   - `PromoFilmSeedReportSchema`
                   - `seedPromoFilm`
                   - `SONATA_KEY_SECTION`
                   - `SONATA_SECTION_LAYOUT`
+                  - `writeFilmShops`
               - Cross-plugin:
                 - Imported by: `apps/website/promo-film`
               - Structure:
@@ -12541,8 +12627,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `Apps.TabBar`
       - `Apps.TabBarActions`
       - `Apps.Overlay`
-    - Slot contributors: 25 contributors — full list in [`plugins/apps-core/REFERENCE.md`](../plugins/apps-core/REFERENCE.md)
-      - `Apps.App` ×20
+    - Slot contributors: 26 contributors — full list in [`plugins/apps-core/REFERENCE.md`](../plugins/apps-core/REFERENCE.md)
+      - `Apps.App` ×21
       - `Apps.Overlay` ← `apps-core.app-launcher`
       - `Apps.RailFraming` ← `apps-core.app-rail-framing`
       - `Apps.Surface` ← `apps-core.surface`
@@ -12600,8 +12686,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `APP_RAIL_WIDTH`
       - `documentTitle`
   - Cross-plugin:
-    - Imported by: 59 plugins — full list in [`plugins/apps-core/REFERENCE.md`](../plugins/apps-core/REFERENCE.md)
-      - `apps` ×28
+    - Imported by: 60 plugins — full list in [`plugins/apps-core/REFERENCE.md`](../plugins/apps-core/REFERENCE.md)
+      - `apps` ×29
       - `apps-core` ×14
       - `ui` ×6
       - `config_v2` ×2
@@ -14603,8 +14689,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `resource.declare` "build.serve-status"
         - Uses:
           - `database/admin.databaseExists`
-          - `database/admin.dropDatabase`
-          - `database/admin.ensureDatabase`
+          - `database/admin.recreateDatabase`
           - `infra/endpoints.implement`
           - `infra/paths.checkoutRef`
           - `infra/worktree.ensureMainWorktreeRoot`
@@ -14911,8 +14996,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 - **`config_v2`** — Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins: the registry over the user-layer store (the ConfigStore host service) and the committed layer (ConfigGitLayer), its live values and the scope routes.
   - Web:
     - Slots: `ConfigV2.WebRegister`
-    - Slot contributors: 96 contributors — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×96
+    - Slot contributors: 99 contributors — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×99
     - Uses:
       - `infra/endpoints.useEndpointMutation`
       - `network/live.useLive`
@@ -15111,17 +15196,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `validationIssues`
       - `withOverrideLegend`
   - Cross-plugin:
-    - Imported by: 142 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
-      - `apps` ×39
+    - Imported by: 147 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
+      - `apps` ×42
       - `debug` ×15
       - `conversations` ×14
       - `backup` ×13
       - `ui` ×11
       - `config_v2` ×8
       - `auth` ×6
+      - `infra` ×6
       - `tasks` ×6
       - `framework` ×5
-      - `infra` ×4
       - `build` ×3
       - `primitives` ×3
       - `integrations` ×2
@@ -17481,6 +17566,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `conversations/conversation-view/jsonl-viewer/row-actions.EventRowActions`
                   - `conversations/conversation-view/jsonl-viewer/row-actions.JsonlRowActions`
                   - `conversations/conversation-view/jsonl-viewer/steady-reveal.useSteadyReveal`
+                  - `infra/host-account.useHomeDisplay`
                   - `primitives/css/text.Text`
                   - `primitives/icon-button.IconButton`
                   - `primitives/select-scope.ContentScope`
@@ -18225,6 +18311,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `conversations.useConversationById`
                   - `conversations/conversation-view.conversationPane`
                   - `conversations/conversation-view/code/file-pane.filePeekPane`
+                  - `infra/host-account.useHomeDisplay`
                   - `network/live.RowView`
                   - `primitives/copy-to-clipboard.CopyButton`
                   - `primitives/css/inline.Inline`
@@ -18875,6 +18962,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCode`
                       - `conversations/conversation-view/jsonl-viewer/tool-call.ToolOutput`
                       - `conversations/conversation-view/jsonl-viewer/tool-call.ToolSection`
+                      - `infra/host-account.useHomeDisplay`
                       - `network/live/live-state.ResourceErrorInline`
                       - `primitives/css/badge.Badge`
                       - `primitives/css/spacing.Stack`
@@ -22236,6 +22324,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `database/connection.createDbClient`
           - `database/connection.createDbPool`
           - `database/connection.withQueryDeadline`
+          - `database/pgbouncer.PGBOUNCER_PORT`
+          - `database/pgbouncer.PGBOUNCER_SOCKET_DIR`
           - `infra/host/host-admission.defineHostPool`
         - DB schema: `plugins/database/plugins/admin/server/internal/table-label.ts`
         - Exports (types):
@@ -22276,6 +22366,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `openHeldClient`
           - `openShortLivedClient`
           - `reclaimForkTemp`
+          - `recreateDatabase`
       - Cross-plugin:
         - Imported by: 32 plugins — full list in [`plugins/database/plugins/admin/REFERENCE.md`](../plugins/database/plugins/admin/REFERENCE.md)
           - `debug` ×8
@@ -22899,6 +22990,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Imported by:
           - `database`
+          - `database/admin`
           - `database/query-deadline`
           - `infra/launcher`
           - `infra/paths/root-migration`
@@ -25504,33 +25596,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Register: `mcpTool('scratch_hello_where')`
       - Exemptions:
         - Exempts itself from: `boundaries/no-platform-api` — `server/internal/profile.ts` (debt)
-    - **`sentinel`** — Sentinel web presence: registers the sentinel config (sampler cadence + onset thresholds) for Settings → Config, the one-line duress-episode and sentinel-down report summaries for Debug → Reports, and the health report's Machine watcher row (critical while main's watcher is down or its process is gone or the disk is nearly full, attention while it restarts, the machine is under duress or the disk is low or filling fast, read from the sentinel.status push resource), with its stats — load per core, available memory, free disk and builds at a glance, and, when expanded, each signal that can trip duress against its limit — read from the sentinel.vitals push resource — and where the machine's CPU and memory go (machine-usage). Cluster congestion sentinel: a main-only always-on sampler + onset detector + duress-latch lifecycle on a dedicated worker thread (host load, Postgres-side wait/lock/IO pressure, fleet state, per-backend health rollup, compressor pressure), feeding the 'cluster' trace ring so every trace gains a cluster-vitals lane, congestion onset is observable, and the latch lease survives a wedged main loop. Persists duress episodes as trip/clear lines on the duress-episodes channel (readDuressEpisodes). Reports the watcher's own supervision status: a host-global status file written on every transition, served on every backend as the sentinel.status push resource (with the duress latch), and a sentinel-down report when main gives up respawning it. Its worker writes the latest reading to a host-global vitals file every tick, served on every backend as the sentinel.vitals push resource.
+    - **`sentinel`** — Sentinel web presence: registers the sentinel config (sampler cadence + onset thresholds) for Settings → Config and the one-line duress-episode and sentinel-down report summaries for Debug → Reports. The health report's Machine watcher row is its health-row sub-plugin. Cluster congestion sentinel: a main-only always-on sampler + onset detector + duress-latch lifecycle on a dedicated worker thread (host load, Postgres-side wait/lock/IO pressure, fleet state, per-backend health rollup, compressor pressure), feeding the 'cluster' trace ring so every trace gains a cluster-vitals lane, congestion onset is observable, and the latch lease survives a wedged main loop. Persists duress episodes as trip/clear lines on the duress-episodes channel (readDuressEpisodes). Reports the watcher's own supervision status: a host-global status file written on every transition, served on every backend as the sentinel.status push resource (with the duress latch), and a sentinel-down report when main gives up respawning it. Its worker writes the latest reading to a host-global vitals file every tick, served on every backend as the sentinel.vitals push resource.
       - Web:
         - Contributes:
           - `ConfigV2.WebRegister` "sentinel"
           - `Reports.KindView` → `DuressEpisodeSummary`
           - `Reports.KindView` → `SentinelDownSummary`
-          - `HealthReport.Row` "Machine watcher" → `MachineWatcherDetail`
         - Uses:
           - `config_v2.ConfigV2`
-          - `debug/sentinel/machine-usage.MachineUsageBreakdown`
-          - `network/live.useLive`
-          - `network/live/live-state.ResourceErrorInline`
           - `primitives/css/badge.Badge`
-          - `primitives/css/cluster.Cluster`
-          - `primitives/css/fill.Fill`
           - `primitives/css/inline.Inline`
-          - `primitives/css/line.Line`
-          - `primitives/css/meter.Meter`
-          - `primitives/css/rigid.rigidClass`
-          - `primitives/css/spacing.insetClass`
-          - `primitives/css/spacing.Stack`
-          - `primitives/css/text.Text`
-          - `primitives/css/ui-kit.cn`
-          - `primitives/loading.Loading`
-          - `primitives/relative-time.useNow`
           - `reports.Reports`
-          - `shell/health-report.HealthReport`
       - Server:
         - Contributes:
           - `trace-event-class` "cluster"
@@ -25598,25 +25674,48 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `sentinelVitals`
           - `SentinelVitalsSchema`
       - Cross-plugin:
-        - Uses tokens:
-          - `ui/tokens/color-palette --border`
-          - `ui/tokens/color-palette --destructive`
-          - `ui/tokens/color-palette --foreground`
-          - `ui/tokens/color-palette --muted`
-          - `ui/tokens/color-palette --muted-foreground`
-          - `ui/tokens/color-palette --warning`
-          - `ui/tokens/density --space-md`
-          - `ui/tokens/density --space-sm`
-          - `ui/tokens/shape --radius`
-          - `ui/tokens/shape --spacing`
-          - `ui/tokens/type-scale --font-weight-semibold`
-        - Imported by: `debug/timeline`
+        - Uses tokens: `ui/tokens/color-palette --muted-foreground`
+        - Imported by:
+          - `debug/sentinel/health-row`
+          - `debug/timeline`
       - Exemptions:
         - Exempts itself from:
           - `detached-work-safety/no-raw-set-interval` — `server/internal/worker/entry.ts` (sanctioned)
           - `boundaries/no-platform-api` — `server/internal/status-resource.ts`, `server/internal/worker-host.ts`, `server/internal/worker/pg.ts`, `server/internal/worker/sample.ts` (debt)
           - `user-path/no-unproven-claim` — `server/internal/worker/sample.ts` (sanctioned)
       - Plugins:
+        - **`health-row`** — The health report's Machine watcher row: critical while main's watcher is down or its process is gone or the disk is nearly full, attention while it restarts, the machine is under duress or the disk is low or filling fast (read from the sentinel.status push resource), with its stats — load per core, available memory, free disk and builds at a glance, and, when expanded, each signal that can trip duress against its limit (the sentinel.vitals push resource) and where the machine's CPU and memory go (machine-usage).
+          - Web:
+            - Contributes: `HealthReport.Row` "Machine watcher" → `MachineWatcherDetail`
+            - Uses:
+              - `debug/sentinel/machine-usage.MachineUsageBreakdown`
+              - `network/live.useLive`
+              - `network/live/live-state.ResourceErrorInline`
+              - `primitives/css/cluster.Cluster`
+              - `primitives/css/fill.Fill`
+              - `primitives/css/line.Line`
+              - `primitives/css/meter.Meter`
+              - `primitives/css/rigid.rigidClass`
+              - `primitives/css/spacing.insetClass`
+              - `primitives/css/spacing.Stack`
+              - `primitives/css/text.Text`
+              - `primitives/css/ui-kit.cn`
+              - `primitives/loading.Loading`
+              - `primitives/relative-time.useNow`
+              - `shell/health-report.HealthReport`
+          - Cross-plugin:
+            - Uses tokens:
+              - `ui/tokens/color-palette --border`
+              - `ui/tokens/color-palette --destructive`
+              - `ui/tokens/color-palette --foreground`
+              - `ui/tokens/color-palette --muted`
+              - `ui/tokens/color-palette --muted-foreground`
+              - `ui/tokens/color-palette --warning`
+              - `ui/tokens/density --space-md`
+              - `ui/tokens/density --space-sm`
+              - `ui/tokens/shape --radius`
+              - `ui/tokens/shape --spacing`
+              - `ui/tokens/type-scale --font-weight-semibold`
         - **`machine-usage`** — The Machine watcher card's "Where it goes" block (MachineUsageBreakdown): the machine's CPU and memory as two bars split into your Chrome, agent ops, the agent browser, the agents, the backends, Postgres and other, then one line per bucket — read from the sentinel.machine-usage value, sampled when the card opens.
           - Server:
             - Contributes: `resource.declare` "sentinel.machine-usage"
@@ -25685,7 +25784,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `debug/health-monitor`
               - `debug/profiling/tab-memory`
-              - `debug/sentinel`
+              - `debug/sentinel/health-row`
           - Exemptions:
             - Exempts itself from: `timer/no-unlisted-timer` — `machine/internal/owner-sampler.ts` (sanctioned)
           - Machine:
@@ -25696,6 +25795,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Imported by:
               - `debug/sentinel`
+              - `debug/sentinel/health-row`
               - `framework/cli/op-runtime`
           - Exemptions:
             - Exempts itself from: `boundaries/no-platform-api` — `server/internal/json-file.ts`, `server/internal/status-file.ts`, `server/internal/vitals-file.ts` (debt)
@@ -26985,14 +27085,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `boolField`
               - `boolSample`
           - Cross-plugin:
-            - Imported by: 79 plugins — full list in [`plugins/fields/plugins/bool/plugins/config/REFERENCE.md`](../plugins/fields/plugins/bool/plugins/config/REFERENCE.md)
-              - `apps` ×25
+            - Imported by: 81 plugins — full list in [`plugins/fields/plugins/bool/plugins/config/REFERENCE.md`](../plugins/fields/plugins/bool/plugins/config/REFERENCE.md)
+              - `apps` ×26
               - `debug` ×13
               - `backup` ×12
               - `conversations` ×7
               - `tasks` ×4
+              - `infra` ×3
               - `shell` ×3
-              - `infra` ×2
               - `page` ×2
               - `stats` ×2
               - `audience`
@@ -28871,12 +28971,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `textField`
               - `textSample`
           - Cross-plugin:
-            - Imported by: 108 plugins — full list in [`plugins/fields/plugins/text/plugins/config/REFERENCE.md`](../plugins/fields/plugins/text/plugins/config/REFERENCE.md)
+            - Imported by: 109 plugins — full list in [`plugins/fields/plugins/text/plugins/config/REFERENCE.md`](../plugins/fields/plugins/text/plugins/config/REFERENCE.md)
               - `apps` ×29
               - `conversations` ×20
               - `tasks` ×14
+              - `infra` ×8
               - `page` ×8
-              - `infra` ×7
               - `primitives` ×6
               - `debug` ×5
               - `build` ×2
@@ -29882,10 +29982,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/launcher/gateway-drift`
     - **`product-name`** — The product's own name, as data: PRODUCT_NAME (`equin`, always lowercase — what every person and agent reads) and LEGACY_PRODUCT_NAMES (the names it went by before, never written again), enforced by the product-name:legacy check over every tracked file; and LEGACY_IDS, the identifiers built from the old name that are kept for good (stored state, cross-version contracts), the one place they are spelled — enforced by product-name:legacy-id (and its mirrors by product-name:legacy-ids-in-sync). A dependency-free leaf, so a browser bundle, a server or a script can import it.
       - Cross-plugin:
-        - Imported by: 65 plugins — full list in [`plugins/framework/plugins/product-name/REFERENCE.md`](../plugins/framework/plugins/product-name/REFERENCE.md)
+        - Imported by: 64 plugins — full list in [`plugins/framework/plugins/product-name/REFERENCE.md`](../plugins/framework/plugins/product-name/REFERENCE.md)
           - `infra` ×15
           - `framework` ×11
-          - `apps` ×10
+          - `apps` ×9
           - `conversations` ×4
           - `database` ×4
           - `primitives` ×4
@@ -32340,8 +32440,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `parseKindLabel`
       - `storedIdSchema`
   - Cross-plugin:
-    - Imported by: 44 plugins — full list in [`plugins/ids/REFERENCE.md`](../plugins/ids/REFERENCE.md)
-      - `apps` ×13
+    - Imported by: 45 plugins — full list in [`plugins/ids/REFERENCE.md`](../plugins/ids/REFERENCE.md)
+      - `apps` ×14
       - `conversations` ×7
       - `infra` ×3
       - `primitives` ×3
@@ -32922,6 +33022,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `selectClaudeAccount`
               - `setClaudeAccountAutoSwitch`
               - `SYSTEM_ACCOUNT_ID`
+              - `withStandInNames`
           - Cross-plugin:
             - Imported by:
               - `conversations/model-provider/catalog`
@@ -34452,12 +34553,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `user-path/no-unproven-claim` — `core/internal/tree-lock.ts` (sanctioned)
               - `boundaries/no-platform-api` — `core/internal/tree-lock.ts` (debt)
               - `blocking-fs/sync-named` — `core/internal/tree-lock.ts` (sanctioned)
-    - **`health`** — Surfaces server restarts as a toast; exposes /api/health helpers; reports the server and central socket connection as the health report's Connection row. Liveness endpoint used by clients to detect server restarts.
+    - **`health`** — Surfaces server restarts as a toast; exposes /api/health helpers; watches for a live-state channel that stopped delivering (PUSH_STALL_MS, the threshold its Connection row — the connection-row sub-plugin — shares). Liveness endpoint used by clients to detect server restarts.
       - Web:
         - Contributes:
           - `Core.Root` → `ReconnectWatcher`
           - `Core.Root` → `WedgeWatchdog`
-          - `HealthReport.Row` "Connection"
         - Uses:
           - `network/live/live-state.getNotificationsClient`
           - `network/live/live-state.liveStateSocketKind`
@@ -34469,10 +34569,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/networking.subscribeNetDiag`
           - `primitives/networking.subscribeWsStatus`
           - `primitives/networking/page-transport.pageTransport`
-          - `shell/health-report.HealthReport`
           - `shell/toast.showToast`
         - Exports (types): `WedgeReport`
-        - Exports (values): `wedgeReportSink`
+        - Exports (values):
+          - `PUSH_STALL_MS`
+          - `wedgeReportSink`
       - Server:
         - Uses:
           - `infra/endpoints.HttpError`
@@ -34490,6 +34591,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Imported by:
           - `framework/cli/build`
+          - `infra/health/connection-row`
           - `infra/launcher`
           - `reports/crash`
         - Endpoint callers: `backend-liveness`
@@ -34498,6 +34600,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `networking/no-page-transport` — `web/internal/client.ts` (sanctioned)
           - `networking/no-page-transport` — `web/components/wedge-watchdog.tsx` (sanctioned)
           - `endpoints/no-raw-web-fetch` — `web/internal/client.ts` (sanctioned)
+      - Plugins:
+        - **`connection-row`** — The health report's Connection row: this worktree's server and central notification sockets folded into one status — critical when one is closed or every push stopped, attention while one reconnects or one resource's push is stuck.
+          - Web:
+            - Contributes: `HealthReport.Row` "Connection"
+            - Uses:
+              - `infra/health.PUSH_STALL_MS`
+              - `network/live/live-state.useNotificationsChannelStatuses`
+              - `shell/health-report.HealthReport`
     - **`host`** — How much of the shared host machine may I take right now, and is the box still healthy? — the host-wide admission pools (host-admission), the heavy git/filesystem read budget declared through them (host-read-pool), the box's load snapshot (contention), and the 'the box is in trouble' latch plus the shed engine that rides it (duress).
       - Plugins:
         - **`contention`** — Cached, cluster-wide system-contention snapshot (OS load average + Postgres backend counts) stamped onto slow ops.
@@ -34867,35 +34977,63 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `debug/health-monitor`
               - `debug/profiling/ops`
               - `debug/slow-ops`
-    - **`host-account`** — Host account, read: useHostAccount() — the account this instance runs as (login name and full name: the OS account on the desktop, a guest account on a host without the computer), loading until its value arrives. Its home directory is the hostHome value (core, needsMachine), read with useLive. Host account: serves the host-account value — the account this instance runs as (login name and full name), read once through the HostAccountSource host service: the OS account on the desktop (machine/), a fixed guest account on a host without the computer. Its sibling host-account.home, the account's home directory, is the machine half's.
+    - **`host-account`** — Host account, read: useHostAccount() — the account this instance runs as (login name and full name: the OS account on the desktop, a guest account on a host without the computer), loading until its value arrives; useProfileName() — the name to show for the user (the profile-name setting's name, else the account's), or anonymous when the user turned their name off. Registers that setting. Its home directory is the hostHome value (core, needsMachine), read with useLive. Host account: serves the host-account value — the account this instance runs as (login name and full name), read once through the HostAccountSource host service: the OS account on the desktop (machine/), a fixed guest account on a host without the computer. Its sibling host-account.home, the account's home directory, is the machine half's. Registers the profile-name setting (the name shown for the user, or none).
+      - Web:
+        - Contributes:
+          - `ConfigV2.WebRegister` "home-folder"
+          - `ConfigV2.WebRegister` "profile-name"
+        - Uses:
+          - `config_v2.ConfigV2`
+          - `config_v2.useConfigResult`
+          - `network/live.useLive`
+          - `network/live/live-state.mapResource`
+          - `network/live/live-state.ResourceResult`
+          - `network/live/live-state.useCombinedResources`
+        - Exports (values):
+          - `useHomeDisplay`
+          - `useHostAccount`
+          - `useProfileName`
       - Server:
         - Contributes:
           - `resource.declare` "host-account"
           - `resource.declare` "host-account.home"
+          - `ConfigV2.Register` "home-folder"
+          - `ConfigV2.Register` "profile-name"
           - `host-service:host-account.source` "host-account.source"
-        - Uses: `network/live.serveValue`
+        - Uses:
+          - `config_v2.ConfigV2`
+          - `network/live.serveValue`
         - Exports (types): `HostAccountSourceImpl`
         - Exports (values): `HostAccountSource`
         - Resources:
           - `host-account` (push, fixed)
-          - `host-account.home` (push, fixed)
-      - Web:
-        - Uses: `network/live.useLive`
-        - Exports (values): `useHostAccount`
+          - `host-account.home` (push, notified)
       - Machine:
         - Uses: `network/live.serveValue`
       - Core:
-        - Uses: `network/live.liveValue`
-        - Exports (types): `HostAccount`
+        - Uses:
+          - `config_v2.defineConfig`
+          - `fields/bool/config.boolField`
+          - `fields/text/config.textField`
+          - `network/live.liveValue`
+        - Exports (types):
+          - `HostAccount`
+          - `HostHome`
+          - `ProfileName`
+          - `ProfileNameSettings`
         - Exports (values):
           - `absolutePath`
-          - `accountFirstName`
-          - `accountInitial`
           - `displayPath`
+          - `firstName`
           - `HOME`
+          - `homeFolderConfig`
           - `hostAccount`
           - `HostAccountSchema`
           - `hostHome`
+          - `nameInitial`
+          - `profileName`
+          - `profileNameConfig`
+          - `tildifyText`
       - Cross-plugin:
         - Imported by:
           - `apps/file-explorer/attachment-preview`
@@ -34904,6 +35042,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/file-explorer/places`
           - `apps/pages/shell`
           - `apps/sonata/sources/midi/folders`
+          - `apps/website/promo-film/seed`
+          - `conversations/conversation-view/jsonl-viewer/assistant-text`
+          - `conversations/conversation-view/jsonl-viewer/file-path`
+          - `conversations/conversation-view/jsonl-viewer/tool-call/bash`
+          - `infra/claude-cli/accounts`
           - `infra/host-account/guest`
       - Plugins:
         - **`guest`** (excluded) — The account of a host without the computer: provides the HostAccountSource host service as a fixed guest account (login `demo`, full name Demo), so a surface that greets the user — the Pages brand — renders as it does on the desktop (the browser composition, the portable boot test). Never booted by the desktop.
@@ -34941,6 +35084,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `readHostPathText`
           - `resolveHostPath`
           - `serveHostPath`
+          - `setHostHomeResolver`
         - Resources:
           - `files.computer.bytes` (invalidate, notified)
           - `files.computer.complete` (push, notified, capped: FILE_COMPLETE_LIMIT)
@@ -34968,6 +35112,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `code-explorer`
           - `code-explorer/file-resolve`
+          - `infra/host-account`
           - `infra/host-fs/image`
           - `infra/host-fs/zip`
       - Exemptions:
@@ -36053,6 +36198,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Namespace`
           - `NamespaceParts`
         - Exports (values):
+          - `ALL_EXCLUSIONS_ID`
           - `asNamespace`
           - `asNamespaceOrigin`
           - `BASE_EXCLUSIONS_ID`
@@ -36079,10 +36225,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `namespaceUrl`
           - `resolveNamespaceAlias`
       - Cross-plugin:
-        - Imported by: 76 plugins — full list in [`plugins/infra/plugins/namespace/REFERENCE.md`](../plugins/infra/plugins/namespace/REFERENCE.md)
+        - Imported by: 77 plugins — full list in [`plugins/infra/plugins/namespace/REFERENCE.md`](../plugins/infra/plugins/namespace/REFERENCE.md)
           - `framework` ×13
           - `debug` ×12
-          - `apps` ×10
+          - `apps` ×11
           - `infra` ×9
           - `conversations` ×7
           - `build` ×6
@@ -36594,10 +36740,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/host-fs/user-path.asAppPath`
             - Exports (values): `REPO_ROOT`
           - Cross-plugin:
-            - Imported by: 47 plugins — full list in [`plugins/infra/plugins/paths/plugins/repo-root/REFERENCE.md`](../plugins/infra/plugins/paths/plugins/repo-root/REFERENCE.md)
+            - Imported by: 48 plugins — full list in [`plugins/infra/plugins/paths/plugins/repo-root/REFERENCE.md`](../plugins/infra/plugins/paths/plugins/repo-root/REFERENCE.md)
               - `framework` ×14
               - `infra` ×8
-              - `apps` ×6
+              - `apps` ×7
               - `build` ×6
               - `debug` ×3
               - `plugin-meta` ×3
@@ -36728,12 +36874,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `runtimeNamespace`
           - `servingSocketPath`
       - Cross-plugin:
-        - Imported by: 70 plugins — full list in [`plugins/infra/plugins/runtime-identity/REFERENCE.md`](../plugins/infra/plugins/runtime-identity/REFERENCE.md)
+        - Imported by: 71 plugins — full list in [`plugins/infra/plugins/runtime-identity/REFERENCE.md`](../plugins/infra/plugins/runtime-identity/REFERENCE.md)
           - `infra` ×16
           - `debug` ×14
           - `conversations` ×9
           - `build` ×7
-          - `apps` ×4
+          - `apps` ×5
           - `database` ×4
           - `tasks` ×4
           - `backup` ×2
@@ -37367,7 +37513,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `worktreePathFor`
           - `writeWorktreeSpec`
       - Cross-plugin:
-        - Imported by: 37 plugins — full list in [`plugins/infra/plugins/worktree/REFERENCE.md`](../plugins/infra/plugins/worktree/REFERENCE.md)
+        - Imported by: 38 plugins — full list in [`plugins/infra/plugins/worktree/REFERENCE.md`](../plugins/infra/plugins/worktree/REFERENCE.md)
           - `debug` ×9
           - `infra` ×8
           - `framework` ×4
@@ -37375,6 +37521,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations` ×3
           - `build` ×2
           - `stats` ×2
+          - `apps/website/promo-film/seed`
           - `backup/sources/databases`
           - `code-explorer`
           - `plugin-meta/plugin-health`
@@ -38323,6 +38470,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `apps/prototypes/canvas`
           - `apps/website/promo-film`
+      - Core:
+        - Exports (types): `FrameRange`
+        - Exports (values):
+          - `defaultWorkers`
+          - `frameCount`
+          - `frameTime`
+          - `splitFrames`
     - **`player`** — Themed video / audio player in place of the browser's native controls: a floating glass control pill (play, volume, time, seek, settings, full screen) that fades while playing, a vertical volume capsule, a settings panel with a fine speed dial (0.25–3×), presets, loop and picture in picture (a Document Picture-in-Picture window holding the whole player, falling back to the video's own), centre feedback and the YouTube-style keyboard. Audio draws the same controls as a static bar.
       - Web:
         - Contributes:
@@ -38976,10 +39130,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveValueOn`
           - `sliceRange`
       - Cross-plugin:
-        - Imported by: 342 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+        - Imported by: 343 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
           - `apps` ×86
           - `conversations` ×70
-          - `debug` ×35
+          - `debug` ×36
           - `tasks` ×28
           - `infra` ×24
           - `page` ×16
@@ -39383,7 +39537,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `unresolved`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/color-palette --destructive`
-            - Imported by: 303 plugins — full list in [`plugins/network/plugins/live/plugins/live-state/REFERENCE.md`](../plugins/network/plugins/live/plugins/live-state/REFERENCE.md)
+            - Imported by: 305 plugins — full list in [`plugins/network/plugins/live/plugins/live-state/REFERENCE.md`](../plugins/network/plugins/live/plugins/live-state/REFERENCE.md)
               - `apps` ×83
               - `conversations` ×48
               - `debug` ×31
@@ -39391,8 +39545,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tasks` ×22
               - `page` ×16
               - `primitives` ×15
+              - `infra` ×10
               - `build` ×9
-              - `infra` ×8
               - `active-data` ×5
               - `plugin-meta` ×5
               - `auth` ×4
@@ -40460,8 +40614,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `withForegroundPriority`
     - **`string-hash`** — Portable string hashes in plain JS (no node:crypto, no Bun.hash), so every host — the Bun server, central and a browser page — computes the same value: hash53 (cyrb53, a 53-bit number, optionally seeded), hashHex (two seeded cyrb53s, ~106 bits as hex), hash64 (a 64-bit bigint), sha256Hex (a synchronous SHA-256, identical to node:crypto's hex digest), createSha256 (the same SHA-256, incremental over strings and bytes) and sha1Hex (SHA-1 for values already stored as one).
       - Cross-plugin:
-        - Imported by: 41 plugins — full list in [`plugins/packages/plugins/string-hash/REFERENCE.md`](../plugins/packages/plugins/string-hash/REFERENCE.md)
-          - `apps` ×12
+        - Imported by: 42 plugins — full list in [`plugins/packages/plugins/string-hash/REFERENCE.md`](../plugins/packages/plugins/string-hash/REFERENCE.md)
+          - `apps` ×13
           - `network` ×5
           - `database` ×4
           - `framework` ×3
@@ -40619,6 +40773,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/chord/progress`
           - `apps/events/sources/coworkmeet`
           - `apps/events/sources/dmda`
+          - `apps/website/promo-film/seed`
           - `integrations/google-maps/usage`
           - `network/live`
           - `primitives/metrics`
@@ -42020,9 +42175,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/shape` ×2
           - `ui/tokens/font-family --font-mono`
           - `ui/tokens/shadow --shadow`
-        - Imported by: 92 plugins — full list in [`plugins/page/plugins/editor/REFERENCE.md`](../plugins/page/plugins/editor/REFERENCE.md)
+        - Imported by: 91 plugins — full list in [`plugins/page/plugins/editor/REFERENCE.md`](../plugins/page/plugins/editor/REFERENCE.md)
           - `page` ×61
-          - `apps` ×17
+          - `apps` ×16
           - `reports` ×4
           - `active-data` ×3
           - `primitives` ×3
@@ -42476,7 +42631,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens: `ui/tokens/shape --spacing`
         - Imported by:
           - `apps/website/demos/workspace/story`
-          - `apps/website/promo-film/seed`
           - `page/editor`
     - **`links`** — Backlinks index for cross-page links: page_links edge table, extractor registry, reindex, backlinks resource. Backlinks index for cross-page links: page_links edge table, extractor registry, reindex, backlinks resource, and the boot backfill (a warm-up enqueuing a job that reindexes every live page's outgoing links, off the serving-critical boot path).
       - Server:
@@ -43672,7 +43826,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework/plugin-id.PluginId`
           - `framework/plugin-id.RuntimeFolder`
           - `framework/plugin-id.SHIPPED_RUNTIME_FOLDERS`
-          - `infra/namespace.BASE_EXCLUSIONS_ID`
+          - `infra/namespace.ALL_EXCLUSIONS_ID`
           - `plugin-meta/closure/entry-pattern.parseEntryPattern`
           - `plugin-meta/facets.getFacet`
           - `plugin-meta/facets/contributions.contributionsFacetDef`
@@ -43737,6 +43891,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/studio/graph`
               - `framework/cli/release`
               - `plugin-meta/closure`
+              - `plugin-meta/composition`
               - `plugin-meta/plugin-refs`
     - **`composition`** — Web hooks + active-composition store for the Studio closure visualization: fetches and deserializes the edge graph once, holds the working draft, and derives membership / inclusion / impact client-side. Owns the manifest read/write API over the compositions config_v2 config. Serves the classified edge graph for the Studio closure visualization; registers the runtime-editable compositions config.
       - Web:
@@ -43807,18 +43962,21 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework/plugin-id.PluginId`
           - `framework/plugin-id.RUNTIME_FOLDERS`
           - `framework/slot-declaration.KEY_SPACES`
+          - `infra/namespace.ALL_EXCLUSIONS_ID`
           - `infra/namespace.BASE_EXCLUSIONS_ID`
           - `infra/namespace.MAIN_COMPOSITION_ID`
           - `infra/namespace.NAMESPACE_LABEL_RE`
           - `network/live.liveValue`
           - `packages/list-bound.wholeList`
           - `packages/list-bound.wholeRecord`
+          - `plugin-meta/closure/entry-pattern.parseEntryPattern`
         - Exports (types):
           - `CompositionData`
           - `CompositionHome`
           - `CompositionHomeError`
           - `CompositionManifestItem`
           - `CompositionUnlisted`
+          - `ExclusionSetsVerdict`
           - `ServeMode`
           - `ServeModeOption`
         - Exports (values):
@@ -43827,6 +43985,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `assertCompositionName`
           - `assertServableCompositionNamespace`
           - `autoRebuildIntervalMs`
+          - `checkExclusionSets`
           - `compositionData`
           - `compositionsConfig`
           - `isCommittedSourceComposition`
@@ -46085,8 +46244,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `CenterProps`
             - Exports (values): `Center`
           - Cross-plugin:
-            - Imported by: 136 plugins — full list in [`plugins/primitives/plugins/css/plugins/center/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/center/REFERENCE.md)
-              - `apps` ×45
+            - Imported by: 137 plugins — full list in [`plugins/primitives/plugins/css/plugins/center/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/center/REFERENCE.md)
+              - `apps` ×46
               - `primitives` ×25
               - `page` ×18
               - `conversations` ×10
@@ -46631,11 +46790,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/sonata/playback-history`
               - `conversations/runtime-sdk`
               - `debug/logs`
-              - `debug/sentinel`
+              - `debug/sentinel/health-row`
               - `debug/slow-ops/cluster`
               - `debug/timeline`
               - `integrations/google-maps/usage`
-        - **`motion`** — How floating surfaces move: <Presence> keeps a leaving surface drawn until its exit has run (and cross-fades a keyed swap), useSizeMotion tweens a surface's size when its content changes, useFlowMotion fades a newly shown in-flow item in and glides the siblings it displaces, useEnterMotion fades in an element its owner places itself (a canvas frame) when it arrives, prefersReducedMotion, <Arrival> eases a row that arrives while the reader watches into a flow of rows (slot opens, row fades in), useTransitionHold / openTransitionHolds (a view transition's new picture waits, bounded, until a surface mounted in its update has painted — a map's tiles) — plus the no-unanimated-surface-exit lint rule.
+        - **`motion`** — How floating surfaces move: <Presence> keeps a leaving surface drawn until its exit has run (and cross-fades a keyed swap), useSizeMotion tweens a surface's size when its content changes, useFlowMotion fades a newly shown in-flow item in and glides the siblings it displaces, useEnterMotion fades in an element its owner places itself (a canvas frame) when it arrives, prefersReducedMotion, <Arrival> eases a row that arrives while the reader watches into a flow of rows (slot opens, row fades in), useTransitionHold / openTransitionHolds (a view transition's new picture waits, bounded, until a surface mounted in its update has painted — a map's tiles), <Reveal> eases content that appears in a drawn surface open with a fade and an accent wash — plus the no-unanimated-surface-exit lint rule.
           - Web:
             - Uses:
               - `primitives/dom/auto-scroll.FOLLOW_MOTION_ATTR`
@@ -46652,12 +46811,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `openTransitionHolds`
               - `prefersReducedMotion`
               - `Presence`
+              - `Reveal`
               - `useEnterMotion`
               - `useFlowMotion`
+              - `useRevealedLater`
               - `useSizeMotion`
               - `useTransitionHold`
           - Cross-plugin:
-            - Imported by: 21 plugins — full list in [`plugins/primitives/plugins/css/plugins/motion/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/motion/REFERENCE.md)
+            - Uses tokens: `ui/tokens/color-palette --primary`
+            - Imported by: 22 plugins — full list in [`plugins/primitives/plugins/css/plugins/motion/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/motion/REFERENCE.md)
               - `primitives` ×8
               - `apps` ×5
               - `map` ×2
@@ -46666,6 +46828,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversation-view/jsonl-viewer`
               - `hints/ask`
               - `layouts/miller`
+              - `reorder`
         - **`overlay`** — In-flow positioning layout primitive: <Overlay behind above clickThrough> paints full-bleed layers under/over its content within its own box, plus the click-through-toggle idiom.
           - Web:
             - Uses:
@@ -47275,8 +47438,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×37
               - `ui/tokens/color-palette` ×6
               - `ui/tokens/font-family` ×2
-            - Imported by: 425 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
-              - `apps` ×110
+            - Imported by: 426 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+              - `apps` ×111
               - `conversations` ×84
               - `primitives` ×47
               - `debug` ×39
@@ -49599,6 +49762,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/prototypes/canvas`
               - `apps/prototypes/compare/route`
               - `apps/prototypes/present`
+              - `apps/website/promo-film/circle`
               - `conversations/conversation-view/open-app`
               - `page/embed`
               - `page/prototype`
@@ -51930,8 +52094,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-2xs`
           - `ui/tokens/density --space-md`
           - `ui/tokens/shape --spacing`
-        - Imported by: 204 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
-          - `apps` ×74
+        - Imported by: 205 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+          - `apps` ×75
           - `conversations` ×32
           - `debug` ×29
           - `active-data` ×13
@@ -54132,6 +54296,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Imported by:
           - `apps/deploy/deployments`
+          - `apps/deploy/fixtures`
           - `apps/deploy/remote-deploy`
           - `framework/cli/deploy`
           - `framework/cli/release`
@@ -54196,6 +54361,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `network/live/live-state.foldResource`
       - `network/live/live-state.mapResource`
       - `network/live/live-state.ResourceResult`
+      - `primitives/css/motion.Reveal`
       - `primitives/dom/layout-host.useHostFlowAxis`
       - `primitives/latest-ref.useLatestRef`
       - `reorder/node-types.useReorderNodeTypes`
@@ -56070,8 +56236,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `HealthReport.Row` ← `conversations.runtime-sdk`
           - `HealthReport.Row` ← `database.query-deadline`
           - `HealthReport.Row` ← `debug.queue-health`
-          - `HealthReport.Row` ← `debug.sentinel`
-          - `HealthReport.Row` ← `infra.health`
+          - `HealthReport.Row` ← `debug.sentinel.health-row`
+          - `HealthReport.Row` ← `infra.health.connection-row`
           - `HealthReport.Row` ← `infra.host.io-health`
           - `HealthReport.Row` ← `infra.launcher.gateway-drift`
           - `HealthReport.Row` ← `infra.mcp.browser`
@@ -56127,8 +56293,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/runtime-sdk`
           - `database/query-deadline`
           - `debug/queue-health`
-          - `debug/sentinel`
-          - `infra/health`
+          - `debug/sentinel/health-row`
+          - `infra/health/connection-row`
           - `infra/host/io-health`
           - `infra/launcher/gateway-drift`
           - `infra/mcp/browser`
@@ -59864,8 +60030,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useWantedStyleKeys`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
-        - Imported by: 588 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
-          - `apps` ×154
+        - Imported by: 589 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+          - `apps` ×155
           - `conversations` ×123
           - `primitives` ×53
           - `page` ×52
@@ -60054,6 +60220,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/pages/history`
               - `apps/pages/page-tree`
               - `apps/website/demos/workspace/story`
+              - `apps/website/promo-film/seed`
               - `page/editor`
               - `page/links`
               - `page/read-only-view`
@@ -61165,11 +61332,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/density --space-sm`
               - `ui/tokens/shape --spacing`
-            - Tokens used by: 543 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
+            - Tokens used by: 545 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
               - `apps` ×122
               - `conversations` ×96
-              - `primitives` ×73
-              - `debug` ×41
+              - `primitives` ×74
+              - `debug` ×42
               - `page` ×33
               - `plugin-meta` ×28
               - `ui` ×26

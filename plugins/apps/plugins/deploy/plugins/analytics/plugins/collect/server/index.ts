@@ -22,6 +22,10 @@ import {
   analyticsVisits,
 } from "./internal/tables";
 
+// A demo's seed writes its analytics through the real collect path.
+export { recordCollect } from "./internal/collect";
+export type { CollectContext, CountryLookup } from "./internal/collect";
+
 export default {
   description:
     "Owns the analytics tables (daily salts kept 30 days with the hash → visitor links that let a returning visitor keep one id, 90-day visits and hits, forever daily totals at every single-filter level and forever per-visit memberships for exact unique visitors over any range), the public collect endpoint, the host-only report, sessions (individual visits with their hits, by key range) and session-counts queries, the nightly analytics.rollup job and the visits retention sweep that refuses to delete a day not yet rolled up.",

@@ -1,13 +1,14 @@
 import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
-import { BASE_EXCLUSIONS_ID } from "@plugins/infra/plugins/namespace/core";
+import { ALL_EXCLUSIONS_ID } from "@plugins/infra/plugins/namespace/core";
 import type { EntryPattern } from "@plugins/plugin-meta/plugins/closure/plugins/entry-pattern/core";
 import type { CompositionManifest } from "./types";
 
 /**
  * Resolve a manifest's `extends` chain into a single flat manifest. The result's
  * `entryPoints` + `selectedContributors` are the UNION of this manifest's own,
- * every transitively-extended composition's, and the base-exclusions row's, with
- * `extends` cleared (`[]`). Everything the engine consumes
+ * every transitively-extended composition's, and its exclusion set's (the row
+ * `manifest.exclusions` names, else `ALL_EXCLUSIONS_ID`, with that set's own
+ * `extends` chain), with `extends` cleared (`[]`). Everything the engine consumes
  * (`resolveComposition`, the causality queries, the `composition-closure` check)
  * operates on a flattened manifest, so `extends` is a pure pre-resolution
  * rewrite — never a special case downstream.
@@ -46,21 +47,23 @@ export function flattenManifest(
   };
   visit(manifest);
 
-  // The base-exclusions row is folded into EVERY composition, unconditionally —
-  // it is not something a manifest opts into via `extends`. That is the whole
-  // point: an exclusion the repo has decided on holds by construction, not by
-  // each new composition remembering to reference it. A composition that wants
-  // one of those plugins back names it explicitly, and the negative pass's
-  // protection rule makes that local positive win.
+  // The exclusion set is folded into EVERY composition — the one it names, and
+  // the strictest (`ALL_EXCLUSIONS_ID`) when it names none. Not something a
+  // manifest opts into via `extends`: an exclusion the repo has decided on holds
+  // by construction, not by each new composition remembering to reference it,
+  // and a row can only trade the default for a narrower set by saying so. Every
+  // set extends `base-exclusions` (`composition-closure` holds that), so no row
+  // can drop the repo-wide removals. A composition that wants one of those
+  // plugins back names it explicitly, and the negative pass's protection rule
+  // makes that local positive win.
   //
-  // Looked up by `name` because that is how `extends` already resolves a
-  // reference, and the base row's name equals its id. The row is optional in the
-  // registry: a synthetic registry that has none flattens exactly as before,
+  // Looked up by `name`, as `extends` resolves a reference (a set's name equals
+  // its id), and visited like one: the set's own `extends` chain comes with it,
+  // and a set flattening itself is already visited. The set is optional in the
+  // registry: a synthetic registry without it flattens exactly as before,
   // inertly — same rule as an unknown `extends` name.
-  if (manifest.name !== BASE_EXCLUSIONS_ID) {
-    const base = byName.get(BASE_EXCLUSIONS_ID);
-    if (base) visit(base);
-  }
+  const set = byName.get(manifest.exclusions ?? ALL_EXCLUSIONS_ID);
+  if (set) visit(set);
 
   return {
     ...manifest,

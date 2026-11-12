@@ -16,7 +16,7 @@ export { PagesSidebarRow } from "./components/pages-sidebar-row";
 
 export default {
   description:
-    "App shell for Pages. Registers the /pages app entry — its brand the workspace (the user's initial tile as the launcher mark, and \"<first name>'s pages\" from the OS account) — defines the Pages.Sidebar slot, and contributes the app's own theme (Ink), which Pages selects.",
+    "App shell for Pages. Registers the /pages app entry — its brand the workspace (the user's initial tile as the launcher mark, and \"<first name>'s pages\" from the user's profile name — \"My pages\" and the pages glyph when the user shows no name) — defines the Pages.Sidebar slot, and contributes the app's own theme (Ink), which Pages selects.",
   contributions: [
     Apps.App({
       app: pagesApp,

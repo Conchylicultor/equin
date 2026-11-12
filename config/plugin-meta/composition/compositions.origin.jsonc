@@ -1,4 +1,4 @@
-// @hash 55061173662c
+// @hash b244766819e6
 {
   "manifests": [
     {
@@ -14,6 +14,7 @@
       "selectedContributors": [],
       "extends": [],
       "excludes": [],
+      "exclusions": "",
       "serve": "off",
       "home": "home",
       "unlisted": [],
@@ -27,11 +28,17 @@
         "desktop"
       ],
       "entryPoints": [
-        "**"
+        "**",
+        "!infra.launcher.gateway-drift",
+        "!debug.sentinel.health-row",
+        "!infra.health.connection-row",
+        "!infra.host.io-health",
+        "!database.query-deadline"
       ],
       "selectedContributors": [],
       "extends": [],
       "excludes": [],
+      "exclusions": "base-exclusions",
       "serve": "manual",
       "home": "home",
       "unlisted": [],
@@ -40,7 +47,7 @@
     {
       "id": "base-exclusions",
       "name": "base-exclusions",
-      "category": "pack",
+      "category": "exclusions",
       "hosts": [
         "desktop"
       ],
@@ -53,6 +60,29 @@
       "selectedContributors": [],
       "extends": [],
       "excludes": [],
+      "exclusions": "",
+      "serve": "off",
+      "home": "",
+      "unlisted": [],
+      "crawlable": false
+    },
+    {
+      "id": "all-exclusions",
+      "name": "all-exclusions",
+      "category": "exclusions",
+      "hosts": [
+        "desktop"
+      ],
+      "entryPoints": [
+        "!apps.website.promo-film.circle",
+        "!apps.website.promo-film.seed"
+      ],
+      "selectedContributors": [],
+      "extends": [
+        "base-exclusions"
+      ],
+      "excludes": [],
+      "exclusions": "",
       "serve": "off",
       "home": "",
       "unlisted": [],
@@ -103,6 +133,7 @@
         "served-baseline"
       ],
       "excludes": [],
+      "exclusions": "",
       "serve": "off",
       "home": "agent-manager",
       "unlisted": [],
@@ -152,6 +183,7 @@
         "served-baseline"
       ],
       "excludes": [],
+      "exclusions": "",
       "serve": "off",
       "home": "agent-manager",
       "unlisted": [],
@@ -227,6 +259,7 @@
         "pages"
       ],
       "excludes": [],
+      "exclusions": "",
       "serve": "off",
       "home": "home",
       "unlisted": [],
@@ -247,6 +280,7 @@
         "served-baseline"
       ],
       "excludes": [],
+      "exclusions": "",
       "serve": "off",
       "home": "home",
       "unlisted": [],
@@ -267,6 +301,7 @@
         "served-baseline"
       ],
       "excludes": [],
+      "exclusions": "",
       "serve": "off",
       "home": "pages",
       "unlisted": [],
@@ -287,6 +322,7 @@
         "served-baseline"
       ],
       "excludes": [],
+      "exclusions": "",
       "serve": "off",
       "home": "settings",
       "unlisted": [],
@@ -307,6 +343,7 @@
         "served-baseline"
       ],
       "excludes": [],
+      "exclusions": "",
       "serve": "off",
       "home": "studio",
       "unlisted": [],
@@ -332,6 +369,7 @@
         "agent-runtime",
         "auth"
       ],
+      "exclusions": "",
       "serve": "off",
       "home": "sonata",
       "unlisted": [],
@@ -352,6 +390,7 @@
         "served-baseline"
       ],
       "excludes": [],
+      "exclusions": "",
       "serve": "off",
       "home": "debug",
       "unlisted": [],
@@ -372,6 +411,7 @@
         "served-baseline"
       ],
       "excludes": [],
+      "exclusions": "",
       "serve": "off",
       "home": "deploy",
       "unlisted": [],
@@ -392,6 +432,7 @@
         "served-baseline"
       ],
       "excludes": [],
+      "exclusions": "",
       "serve": "off",
       "home": "file-explorer",
       "unlisted": [],
@@ -422,6 +463,7 @@
         "agent-runtime",
         "auth"
       ],
+      "exclusions": "",
       "serve": "off",
       "home": "website",
       "unlisted": [],
@@ -440,6 +482,7 @@
       "selectedContributors": [],
       "extends": [],
       "excludes": [],
+      "exclusions": "",
       "serve": "off",
       "home": "",
       "unlisted": [],
@@ -460,6 +503,7 @@
       "selectedContributors": [],
       "extends": [],
       "excludes": [],
+      "exclusions": "",
       "serve": "off",
       "home": "",
       "unlisted": [],
@@ -479,6 +523,7 @@
       "selectedContributors": [],
       "extends": [],
       "excludes": [],
+      "exclusions": "",
       "serve": "off",
       "home": "",
       "unlisted": [],
@@ -497,6 +542,7 @@
       "selectedContributors": [],
       "extends": [],
       "excludes": [],
+      "exclusions": "",
       "serve": "off",
       "home": "",
       "unlisted": [],
@@ -515,6 +561,7 @@
       "selectedContributors": [],
       "extends": [],
       "excludes": [],
+      "exclusions": "",
       "serve": "off",
       "home": "",
       "unlisted": [],
@@ -533,6 +580,7 @@
       "selectedContributors": [],
       "extends": [],
       "excludes": [],
+      "exclusions": "",
       "serve": "off",
       "home": "",
       "unlisted": [],
@@ -551,6 +599,7 @@
       "selectedContributors": [],
       "extends": [],
       "excludes": [],
+      "exclusions": "",
       "serve": "off",
       "home": "",
       "unlisted": [],
@@ -569,6 +618,7 @@
       "selectedContributors": [],
       "extends": [],
       "excludes": [],
+      "exclusions": "",
       "serve": "off",
       "home": "",
       "unlisted": [],
@@ -593,6 +643,7 @@
         "tasks-domain"
       ],
       "excludes": [],
+      "exclusions": "",
       "serve": "off",
       "home": "",
       "unlisted": [],
@@ -611,6 +662,7 @@
       "selectedContributors": [],
       "extends": [],
       "excludes": [],
+      "exclusions": "",
       "serve": "off",
       "home": "",
       "unlisted": [],
@@ -629,6 +681,7 @@
       "selectedContributors": [],
       "extends": [],
       "excludes": [],
+      "exclusions": "",
       "serve": "off",
       "home": "",
       "unlisted": [],
@@ -647,6 +700,7 @@
       "selectedContributors": [],
       "extends": [],
       "excludes": [],
+      "exclusions": "",
       "serve": "off",
       "home": "",
       "unlisted": [],
@@ -665,6 +719,7 @@
       "selectedContributors": [],
       "extends": [],
       "excludes": [],
+      "exclusions": "",
       "serve": "off",
       "home": "",
       "unlisted": [],
@@ -687,6 +742,7 @@
       "selectedContributors": [],
       "extends": [],
       "excludes": [],
+      "exclusions": "",
       "serve": "off",
       "home": "",
       "unlisted": [],
@@ -722,6 +778,7 @@
       "selectedContributors": [],
       "extends": [],
       "excludes": [],
+      "exclusions": "",
       "serve": "off",
       "home": "",
       "unlisted": [],
@@ -742,6 +799,7 @@
       "selectedContributors": [],
       "extends": [],
       "excludes": [],
+      "exclusions": "",
       "serve": "off",
       "home": "",
       "unlisted": [],
@@ -761,6 +819,7 @@
       "selectedContributors": [],
       "extends": [],
       "excludes": [],
+      "exclusions": "",
       "serve": "off",
       "home": "",
       "unlisted": [],
@@ -785,6 +844,7 @@
         "reporters"
       ],
       "excludes": [],
+      "exclusions": "",
       "serve": "off",
       "home": "",
       "unlisted": [],
@@ -805,6 +865,7 @@
       ],
       "extends": [],
       "excludes": [],
+      "exclusions": "",
       "serve": "off",
       "home": "",
       "unlisted": [],
@@ -830,6 +891,7 @@
       ],
       "extends": [],
       "excludes": [],
+      "exclusions": "",
       "serve": "off",
       "home": "",
       "unlisted": [],

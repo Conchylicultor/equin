@@ -1,0 +1,5 @@
+// @hash 2e731a41b6c8
+{
+  // An absolute folder every app shows and opens as Home instead of your account's home folder — for a demo or a recording. Leave empty for your own home folder.
+  "standIn": ""
+}

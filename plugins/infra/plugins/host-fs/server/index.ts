@@ -2,7 +2,7 @@ import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-c
 
 export { inertHeaders, serveHostPath } from "./internal/raw";
 export { readHostPathText } from "./internal/text";
-export { resolveHostPath } from "./internal/path";
+export { resolveHostPath, setHostHomeResolver } from "./internal/path";
 export { openHostFile, type HostFileOpen } from "./internal/open-file";
 export { decodeTextBytes, type TextBytesResult } from "./internal/decode";
 export {

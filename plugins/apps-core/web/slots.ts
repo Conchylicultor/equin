@@ -79,7 +79,7 @@ interface AppEntryBase {
   /** The name heading the app's sidebar (the brand's `header` form), drawn
    * whole — text, typography and its own loading state. Omitted, the brand
    * prints {@link AppRef.name}. For an app whose sidebar is named after what it
-   * holds rather than what it is ("Etienne's pages"). */
+   * holds rather than what it is ("Jane's pages"). */
   brandName?: ComponentType;
   /** Optional overlay rendered on the app's rail icon (e.g. an attention
    * dot). Painted at the icon's top-right corner; render `null` when there's

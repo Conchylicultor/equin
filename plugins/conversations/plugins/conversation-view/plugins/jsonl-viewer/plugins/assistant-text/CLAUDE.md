@@ -20,6 +20,7 @@
     - `conversations/conversation-view/jsonl-viewer/row-actions.EventRowActions`
     - `conversations/conversation-view/jsonl-viewer/row-actions.JsonlRowActions`
     - `conversations/conversation-view/jsonl-viewer/steady-reveal.useSteadyReveal`
+    - `infra/host-account.useHomeDisplay`
     - `primitives/css/text.Text`
     - `primitives/icon-button.IconButton`
     - `primitives/select-scope.ContentScope`

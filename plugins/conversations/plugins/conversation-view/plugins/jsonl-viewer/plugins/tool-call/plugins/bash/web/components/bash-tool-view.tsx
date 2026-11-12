@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { useHomeDisplay } from "@plugins/infra/plugins/host-account/web";
 import type {
   ToolCall,
   ToolViewProps,
@@ -150,6 +151,7 @@ function readExit(result: NonNullable<ToolCall["result"]>): {
 
 /** The command, and its result: the output, or a background call's acknowledgement. */
 function BashBody({ event, input }: { event: ToolCall; input: BashInput }) {
+  const homeDisplay = useHomeDisplay();
   const result = event.result;
   // A backgrounded call's result is its launch acknowledgement, not the
   // command's end: it has no exit code to read.
@@ -165,13 +167,13 @@ function BashBody({ event, input }: { event: ToolCall; input: BashInput }) {
           <Text tone="faint" className="select-none">
             ${" "}
           </Text>
-          {input.command}
+          {homeDisplay(input.command)}
         </ToolCode>
       </ToolSection>
       {exit && (
         <ToolOutput
           event={event}
-          text={exit.output}
+          text={homeDisplay(exit.output)}
           detail={exit.code !== undefined ? `exit ${exit.code}` : undefined}
           empty="(no output)"
         />

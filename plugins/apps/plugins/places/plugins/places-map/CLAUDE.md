@@ -453,7 +453,7 @@ away closes it — a click in the thread is not away (`useClickAway`'s
 
 ## Plugin reference
 
-- Description: The Places app's index pane (/places): every saved place on one full-bleed map whose views are filter presets (All places, then the user's own — edits are drafts until saved, ⌥1–9 switch), with its chrome floating on the map — the tag sidebar (the presets with their counts and dirty dots, the tag filter as AND-ed rows of OR-ed tags with the preset's Reset / Save as new / Update, the tag tree with faceted counts; folded, the header alone, titled by a dropdown of the presets), the side panel (the preset's places in view or all, as a list or a gallery, hover-linked with their pins, a selected place's card drilled into it), the "Search or add places" bar (your places filtered live, Google's hits around the map's view as cards to save and as ghost pins hover-linked with them, the camera never moving; Ask Sonnet hands a question to a background run shown as a thread in a card docked on the right — the newest picks as Google cards with photos, why they fit, what makes them special and their sources, earlier answers folded, as numbered pins — its progress as a pill in the bar that shows and hides the card, and the recent questions in the panel to reopen), the selected place's card or a Google place's detail card — plus the saved-place pin (a drop near, a round badge far out with each spot's size beside it), the Google result's ghost pin, Sonnet's numbered pick pin, the thread's step labels for the Ask Sonnet tools, and the transcript row of places_show_picks (the numbered picks beside a mini map, hover-linked). Its ;page param, /places;page=<pageId>, lays one page's places over the same map, read live (page-overlay): the page's saved places numbered, the rest dimmed, the page's places not saved yet as numbered ghost pins, the camera framed on the page, the map never remounted — and a panel in the side panel's spot listing them in page order (hover-linked with their pins, each place's card drilled in, Save and Save all with one Undo, × back to the plain map).
+- Description: The Places app's index pane (/places): every saved place on one full-bleed map whose views are filter presets (All places, then the user's own — edits are drafts until saved, ⌥1–9 switch), with its chrome floating on the map — the tag sidebar (the presets with their counts and dirty dots, the tag filter as AND-ed rows of OR-ed tags with the preset's Reset / Save as new / Update, the tag tree with faceted counts; folded, the header alone, titled by a dropdown of the presets), the side panel (the preset's places in view or all, as a list or a gallery, hover-linked with their pins, a selected place's card drilled into it), the "Search or add places" bar (your places filtered live, Google's hits around the map's view as cards to save and as ghost pins hover-linked with them, the camera never moving; Ask Sonnet hands a question to a background run shown as a thread in a card docked on the right — the newest picks as Google cards with photos, why they fit, what makes them special and their sources, earlier answers folded, as numbered pins — its progress as a pill in the bar that shows and hides the card, and the recent questions in the panel to reopen), the selected place's card or a Google place's detail card — plus the saved-place pin (a drop near, a round badge far out with each spot's size beside it), the Google result's ghost pin, Sonnet's numbered pick pin, the thread's step labels for the Ask Sonnet tools, and the transcript row of places_show_picks (the numbered picks beside a mini map, hover-linked). Its ;page param, /places;page=<pageId>, lays one page's places over the same map, read live (page-overlay): the page's saved places numbered, the rest dimmed, the page's places not saved yet as numbered ghost pins, the camera framed on the page, the map never remounted — and a panel in the side panel's spot listing them in page order (hover-linked with their pins, each place's card drilled in, Save and Save all with one Undo, × back to the plain map). Registers the Places place-cards setting (the opening hours on the side panel's cards).
 - Web:
   - Slots:
     - `places-map.actions`
@@ -464,6 +464,7 @@ away closes it — a click in the thread is not away (`useClickAway`'s
   - Contributes:
     - `Pane.Register` "places-map"
     - `FieldPresentation.Register` "entity:places"
+    - `ConfigV2.WebRegister` "place-cards"
     - `GeoMap.Pin` → `SavedPlacePin`
     - `GeoMap.Pin` → `GoogleResultPin`
     - `GeoMap.Pin` → `PageItemPin`
@@ -472,7 +473,7 @@ away closes it — a click in the thread is not away (`useClickAway`'s
     - `AgentThreadSlots.StepLabel` "places_search_text" → `SearchStepLabel`
     - `AgentThreadSlots.StepLabel` "places_show_picks" → `PicksStepLabel`
     - `renderer` "mcp__equin__places_show_picks" → `ParsedToolView`
-  - Uses: 141 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 145 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/data-view` ×15
     - `apps/places/places-core` ×8
     - `conversations/agent-thread` ×8
@@ -483,11 +484,13 @@ away closes it — a click in the thread is not away (`useClickAway`'s
     - `primitives/css/ui-kit` ×4
     - `primitives/overlay/image-viewer` ×4
     - `infra/endpoints` ×3
+    - `primitives/css/motion` ×3
     - `primitives/hover-reveal` ×3
     - `primitives/link-gesture/new-tab` ×3
     - `tag-tree/picker` ×3
     - `ui/icons` ×3
     - `apps/places/page-overlay` ×2
+    - `config_v2` ×2
     - `conversations/conversation-view/jsonl-viewer/tool-call` ×2
     - `integrations/google-maps` ×2
     - `page/place` ×2
@@ -514,7 +517,6 @@ away closes it — a click in the thread is not away (`useClickAway`'s
     - `primitives/css/grid.Grid`
     - `primitives/css/inline.Inline`
     - `primitives/css/line.Line`
-    - `primitives/css/motion.Presence`
     - `primitives/css/pin.Pin`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/scroll.Scroll`
@@ -538,8 +540,13 @@ away closes it — a click in the thread is not away (`useClickAway`'s
     - `primitives/shortcuts.useSurfaceShortcuts`
     - `shell/toast.showToast`
     - `tag-tree/engine.useTagTreeActions`
+- Server:
+  - Contributes: `ConfigV2.Register` "place-cards"
+  - Uses: `config_v2.ConfigV2`
 - Core:
   - Uses:
+    - `config_v2.defineConfig`
+    - `fields/bool/config.boolField`
     - `primitives/data-view.FilterGroup`
     - `primitives/data-view.FilterNode`
     - `primitives/data-view.filterNodeIdKind`
@@ -553,6 +560,7 @@ away closes it — a click in the thread is not away (`useClickAway`'s
     - `includedTags`
     - `mergeRows`
     - `moveTag`
+    - `placeCardsConfig`
     - `presetAutoName`
     - `presetIcon`
     - `removeTag`

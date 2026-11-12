@@ -1,19 +1,12 @@
 import type { ChannelStatuses } from "@plugins/network/plugins/live/plugins/live-state/web";
 import type { HealthStatus } from "@plugins/shell/plugins/health-report/web";
+import { PUSH_STALL_MS } from "@plugins/infra/plugins/health/web";
 
 /** The two sockets the app lives on, in the order a summary names them. */
 const CHANNELS = [
   { key: "worktree", name: "server", subject: "the server" },
   { key: "central", name: "central", subject: "central" },
 ] as const;
-
-/**
- * How long a server's oldest owed change may go undelivered before the row
- * calls live updates stuck. A healthy push lands in milliseconds (a throttled
- * value waits at most its window); the heartbeat that reports the age arrives
- * every 20 s, so a stall shows within ~50 s.
- */
-export const PUSH_STALL_MS = 30_000;
 
 function capitalize(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);

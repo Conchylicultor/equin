@@ -5,10 +5,32 @@ import {
 import type { TagColor } from "@plugins/page/plugins/tags/core";
 import type { Emoji } from "@plugins/ui/plugins/icons/plugins/emoji/core";
 
-/** A content block: its type and its text (a to-do's checked state too). */
+/**
+ * A content block: its type and its text (a to-do's checked state too), or a
+ * place picked from a provider (`{ providerId, placeId }` — the page resolves
+ * its name, address and position itself, as it does for a place a user
+ * picks). A text or to-do block may hold blocks nested under it (`children`,
+ * in document order): a checklist item with its place under it.
+ */
 export type PageFixtureBlock =
-  | { id: string; type: "text" | "heading-2" | "prompt"; text: string }
-  | { id: string; type: "to-do"; text: string; checked: boolean };
+  | {
+      id: string;
+      type: "text" | "heading-2" | "prompt";
+      text: string;
+      children?: readonly PageFixtureBlock[];
+    }
+  | {
+      id: string;
+      type: "to-do";
+      text: string;
+      checked: boolean;
+      children?: readonly PageFixtureBlock[];
+    }
+  | {
+      id: string;
+      type: "place";
+      place: { providerId: string; placeId: string };
+    };
 
 /**
  * A run of content blocks written as the page's own markdown — the dialect
@@ -33,6 +55,11 @@ export interface PageFixture {
   icon?: Emoji;
   /** The page's cover (a gradient preset, or an attachment); absent = none. */
   cover?: PageCover;
+  /**
+   * `false`: its row in the parent page stays a plain row (the in-document
+   * arrow folded). Left out, the parent shows its content inline.
+   */
+  expanded?: false;
   /** Tag names, created in the vocabulary with this colour when absent. */
   tags?: readonly { name: string; color: TagColor }[];
   starred?: true;

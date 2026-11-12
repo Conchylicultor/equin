@@ -162,12 +162,14 @@ function CompositionsDataView({
         type: "enum",
         value: (it) => it.category,
         // Options order is the group display order (profile / app / subsystem /
-        // pack, then any other); `other` catches categories outside the taxonomy.
+        // pack / exclusions, then any other); `other` catches categories outside
+        // the taxonomy.
         options: [
           { value: "profile", label: "Profiles" },
           { value: "app", label: "Apps" },
           { value: "subsystem", label: "Subsystems" },
           { value: "pack", label: "Packs" },
+          { value: "exclusions", label: "Exclusion sets" },
           { value: "other", label: "Other" },
         ],
         sortable: true,

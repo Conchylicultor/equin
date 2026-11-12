@@ -1,6 +1,8 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { GeoMap } from "@plugins/map/web";
+import { ConfigV2 } from "@plugins/config_v2/web";
+import { placeCardsConfig } from "../core";
 import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { placesMapPane } from "./panes";
 import { SavedPlacePin, savedPlaceMark } from "./components/saved-place-pin";
@@ -36,6 +38,7 @@ export default {
   contributions: [
     Pane.Register({ pane: placesMapPane }),
     placePresentation,
+    ConfigV2.WebRegister({ descriptor: placeCardsConfig }),
     GeoMap.Pin({
       match: SAVED_PLACE_PIN_TYPE,
       component: SavedPlacePin,

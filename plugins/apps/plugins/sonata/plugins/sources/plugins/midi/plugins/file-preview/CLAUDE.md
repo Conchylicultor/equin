@@ -47,6 +47,7 @@ preview, then the same in Sonata after Open in Sonata.
   - Contributes: `FileViewer.Renderer` "MIDI" → `MidiFilePreview`
   - Uses:
     - `apps-core/tabs.useAppLink`
+    - `apps/sonata/library.requestPlayOnOpen`
     - `apps/sonata/library.sonataSongLink`
     - `apps/sonata/mini-player.SonataMiniPlayer`
     - `apps/sonata/session.useCursorApi`

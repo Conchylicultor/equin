@@ -67,7 +67,7 @@ Exhibit: `meter/gallery`.
     - `apps/sonata/playback-history`
     - `conversations/runtime-sdk`
     - `debug/logs`
-    - `debug/sentinel`
+    - `debug/sentinel/health-row`
     - `debug/slow-ops/cluster`
     - `debug/timeline`
     - `integrations/google-maps/usage`

@@ -1,5 +1,10 @@
 import { expect, test } from "bun:test";
-import { compactCount, openLine, weekRows } from "./place-facts";
+import {
+  compactCount,
+  openLine,
+  todayHoursLine,
+  weekRows,
+} from "./place-facts";
 
 const at = (day: number, hour: number, minute = 0) => ({ day, hour, minute });
 const weekdays = {
@@ -53,4 +58,16 @@ test("counts compact like Google's", () => {
   expect(compactCount(950)).toBe("950");
   expect(compactCount(2100)).toBe("2.1k");
   expect(compactCount(182000)).toBe("182k");
+});
+
+test("today's hours line: the day's hours, or closed today", () => {
+  expect(todayHoursLine(weekdays, 0, wed(10))).toEqual({
+    closed: false,
+    text: "Open · 9:00 AM – 6:30 PM",
+  });
+  const sat = new Date(Date.UTC(2026, 9, 17, 12));
+  expect(todayHoursLine(weekdays, 0, sat)).toEqual({
+    closed: true,
+    text: "Closed today",
+  });
 });

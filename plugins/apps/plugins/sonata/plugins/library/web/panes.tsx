@@ -60,6 +60,7 @@ import {
   RAIL_RESERVE,
 } from "./internal/player-geometry";
 import { formatBarParam, parseBarParam } from "./bar-param";
+import { takePlayOnOpen } from "./play-on-open";
 
 // Panes are declared first so their types are known before the component bodies
 // reference them. The component identifiers below are hoisted function
@@ -281,7 +282,7 @@ function SongLoader({
   placedForRef: PlacedForRef;
 }): ReactNode {
   const loadDocument = useLoadDocument();
-  const { requestSeekOnLoad } = useSession();
+  const { requestSeekOnLoad, requestPlayOnLoad } = useSession();
   const barRef = useLatestRef(bar);
   // One load per mount: the loader unmounts once the document is this song,
   // and a re-render before that (the seek intent's own state) must not load
@@ -300,11 +301,22 @@ function SongLoader({
     if (target !== undefined) {
       requestSeekOnLoad((loaded) => barStartBeat(loaded, target));
     }
+    // An opener that handed the song over playing (a file preview) asked for
+    // it to keep playing: consumed by the same content reset as the seek.
+    if (takePlayOnOpen(songId)) requestPlayOnLoad();
     placedForRef.current = placementKey(songId, target);
     // The song id travels WITH its content: loading it hands the song's
     // settings over in the same write (see `useLoadDocument`).
     loadDocument({ kind: "library", songId }, ready);
-  }, [ready, songId, loadDocument, requestSeekOnLoad, barRef, placedForRef]);
+  }, [
+    ready,
+    songId,
+    loadDocument,
+    requestSeekOnLoad,
+    requestPlayOnLoad,
+    barRef,
+    placedForRef,
+  ]);
 
   return matchResource(hydration, {
     loading: () => <Loading />,
