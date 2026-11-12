@@ -9,6 +9,7 @@ import { flushSync } from "react-dom";
 
 import {
   afterLayout,
+  observeInPhase,
   runAsAfterLayout,
   type AfterLayoutRead,
 } from "@plugins/primitives/plugins/dom/plugins/after-layout/web";
@@ -100,16 +101,25 @@ export function useResizeObserver(
 
     // Resolve, subscribe and take the initial measure after layout — never on
     // the commit path, where each read forces a full style recalc.
+    const cancelObserves: (() => void)[] = [];
     const cancelInitial = afterLayout(() => {
       const elements = resolveTargets(target);
       if (elements.length === 0) return;
-      observer = new ResizeObserver(() => runAsAfterLayout(schedule));
-      for (const el of elements) observer.observe(el);
+      const created = new ResizeObserver((entries) =>
+        runAsAfterLayout(
+          schedule,
+          entries.map((e) => e.target),
+        ),
+      );
+      observer = created;
+      for (const el of elements)
+        cancelObserves.push(observeInPhase(created, el));
       return handler();
     });
 
     return () => {
       cancelInitial();
+      for (const cancel of cancelObserves) cancel();
       observer?.disconnect();
       if (rafId !== null) cancelAnimationFrame(rafId);
     };
@@ -139,24 +149,30 @@ export function useResizeObserver(
  * (sticky offsets, paddings, fold breakpoints), which is the layout size.
  *
  * Both measures come from the observer's own entries, so the value and its
- * change signal are one quantity: the first (the observation of a newly
- * observed box, delivered after this frame's layout) commits before paint
- * (`flushSync`, in the after-layout phase — no first-paint flash, no read on
- * the commit path); later ones are RAF-debounced, like `useResizeObserver`'s.
- * Horizontal writing modes: `width` is the inline size, `height` the block one.
+ * change signal are one quantity. The node is observed on the commit path
+ * (`observeInPhase`): mounted by an ordinary commit, its first notification is
+ * delivered in the next step's first broadcast, together with the after-layout
+ * root trigger — so the commit it makes there (`flushSync`, before paint: no
+ * first-paint flash) may change layout at any depth without the browser
+ * holding a notification back. Later measures are RAF-debounced, like
+ * `useResizeObserver`'s. Horizontal writing modes: `width` is the inline size,
+ * `height` the block one.
  *
  * `target` lets you attach the ref to one node but measure another — e.g.
  * `useElementSize((el) => el.offsetParent)` measures the offset parent while
- * the ref stays on the anchor child. It is resolved in the after-layout phase
- * (so it may read layout), and the box it returns is the one observed.
+ * the ref stays on the anchor child. It may read layout, so it is resolved in
+ * the after-layout phase and observed from there: its first notification comes
+ * in a later broadcast of the same step, whose commit must stay inside what
+ * that broadcast can still deliver (the measured host's own subtree).
  */
 export function useElementSize<T extends HTMLElement = HTMLElement>(
-  target: (el: T) => Element | null | undefined = (el) => el,
+  target?: (el: T) => Element | null | undefined,
 ): [(node: T | null) => void, ElementSize] {
   const [size, setSize] = useState<ElementSize>({ width: 0, height: 0 });
   const [node, setNode] = useState<T | null>(null);
   const setRef = useCallback((next: T | null) => setNode(next), []);
-  const resolveTarget = useEventCallback(target);
+  const resolveTarget = useEventCallback(target ?? ((el: T) => el));
+  const resolves = target !== undefined;
 
   useLayoutEffect(() => {
     if (node === null) return;
@@ -177,26 +193,29 @@ export function useElementSize<T extends HTMLElement = HTMLElement>(
       latest = { width: box.inlineSize, height: box.blockSize };
       if (!delivered) {
         delivered = true;
-        runAsAfterLayout(() => flushSync(apply));
+        runAsAfterLayout(
+          () => flushSync(apply),
+          entries.map((e) => e.target),
+        );
         return;
       }
       if (rafId !== null) cancelAnimationFrame(rafId);
       rafId = requestAnimationFrame(apply);
     });
-    // Resolve the target where reading layout is free, then observe it: a
-    // newly observed box (deeper than the phase's root trigger) is delivered
-    // in this same frame, after its layout.
-    const cancelResolve = afterLayout(() => {
-      const el = resolveTarget(node);
-      if (el) observer.observe(el);
-    });
+    let cancelObserve = (): void => {};
+    const cancelResolve = resolves
+      ? afterLayout(() => {
+          const el = resolveTarget(node);
+          if (el) cancelObserve = observeInPhase(observer, el);
+        })
+      : ((cancelObserve = observeInPhase(observer, node)), () => {});
     return () => {
       cancelResolve();
+      cancelObserve();
       observer.disconnect();
       if (rafId !== null) cancelAnimationFrame(rafId);
     };
-    // `resolveTarget` is stable: an inline getter never re-subscribes.
-  }, [node, resolveTarget]);
+  }, [node, resolves, resolveTarget]);
 
   return [setRef, size];
 }
@@ -248,7 +267,7 @@ export function useResizeObserverSet(
         });
       }
       const observer = state.observer;
-      observer.observe(el);
+      const cancelObserve = observeInPhase(observer, el);
       // First measure after layout (no forced recalc in the ref callback),
       // before paint (no first-paint flash).
       const cancelFirst = afterLayout(() => {
@@ -256,6 +275,7 @@ export function useResizeObserverSet(
       });
       return () => {
         cancelFirst();
+        cancelObserve();
         observer.unobserve(el);
         state.pending.delete(el);
       };

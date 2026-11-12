@@ -80,7 +80,7 @@ ruleTester.run("no-raw-actions-slot", rule, {
           return (
             <Stack>
               {children}
-              <Clip className={cn("transition-all", open ? "w-auto" : "w-0")}>{actions}</Clip>
+              <Clip className={cn("transition-[width]", open ? "w-auto" : "w-0")}>{actions}</Clip>
             </Stack>
           );
         }`,

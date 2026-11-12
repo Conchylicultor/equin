@@ -26,7 +26,7 @@ const refreshIcon = symbol("refresh");
 // whatever the Shape preset says (the same clamp `select.tsx` documents).
 // eslint-disable-next-line radius/no-adhoc-radius -- intentional min() clamps pin the small sizes' corners below the Shape preset's radius
 const buttonVariants = cva(
-  "group/button focus-ring inline-flex shrink-0 items-center justify-center rounded-control border border-transparent bg-clip-padding font-control whitespace-nowrap transition-all select-none active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+  "group/button focus-ring inline-flex shrink-0 items-center justify-center rounded-control border border-transparent bg-clip-padding font-control whitespace-nowrap transition-[color,background-color,border-color,outline-color,box-shadow,opacity,translate,scale,transform] select-none active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0",
   {
     variants: {
       variant: {

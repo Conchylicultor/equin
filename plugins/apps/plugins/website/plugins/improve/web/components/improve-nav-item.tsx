@@ -31,8 +31,8 @@ const autoAwesomeIcon = symbol("auto-awesome");
  * Escape that would otherwise dismiss a popover.
  *
  * `display:none`, not `visibility:hidden`: visibility is inherited AND
- * transitionable, so every `transition-all` control in the panel (every
- * `Button`) would lag the panel by its transition — lingering over the page as
+ * transitionable, so a control in the panel that transitions it would lag the
+ * panel by its transition — lingering over the page as
  * the panel hides, and still hidden for a frame when it comes back, which is
  * exactly when the pick focuses the field (a focus that then fails silently).
  * `display` does not transition.

@@ -48974,7 +48974,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `review/plugin-changes/file-changes`
     - **`dom`** — How do I read and drive the real DOM, and where is the one place allowed to do it? — the guarded selection read (dom-selection), element measurement (element-size), on-screen detection (in-view), scroll ownership (auto-scroll), the wasted-scroll bounce (overscroll-hint), reveal-on-activation (scroll-reveal), and copying what an element stands for (copy-source-text).
       - Plugins:
-        - **`after-layout`** — Read layout where the browser already computed it: afterLayout(read) runs `read` once the current frame is styled and laid out, before it paints (a ResizeObserver delivery), batched with every other read of that frame — reads first, then the writes they return, then one React commit (flushSync) — so a layout or style read never forces a synchronous recalc on React's commit path, and a write never sits between two reads. runAsAfterLayout(fn) lets a ResizeObserver callback join the phase. element-size and layout-host read through it.
+        - **`after-layout`** — Read layout where the browser already computed it: afterLayout(read) runs `read` once the current frame is styled and laid out, before it paints (a ResizeObserver delivery), batched with every other read of that frame — reads first, then the writes they return, then one React commit (flushSync) — so a layout or style read never forces a synchronous recalc on React's commit path, and a write never sits between two reads. runAsAfterLayout(fn, delivered) lets a ResizeObserver callback join the phase; observeInPhase(observer, el) starts an observation where the browser can deliver it — at once, or (a target the running delivery can no longer reach) at the next frame, never a 'ResizeObserver loop' — and arms the root trigger with one started outside a phase, so its first callback shares the root's broadcast. element-size and layout-host read through it.
           - Cross-plugin:
             - Imported by:
               - `primitives/css/layout-harness`
@@ -48986,6 +48986,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `AfterLayoutRead`
             - Exports (values):
               - `afterLayout`
+              - `observeInPhase`
               - `runAsAfterLayout`
         - **`auto-scroll`** — The scroll-owning primitive: the one sanctioned home for driving a scroll container. Stick-to-bottom streaming (useStickyScroll + JumpToBottomButton; content stamped FOLLOW_MOTION_ATTR is followed frame by frame while it animates), container-scoped scrollToBottom / scrollChildIntoView, a scroll glided frame by frame on a given CSS curve so it moves in step with a transition beside it (glideScroll), gesture-agnostic edge auto-scroll (useEdgeAutoScroll), scroll kept across a wholesale DOM swap (KeepScrollAcross, or restoreScrollOffset from a caller's own snapshot), the reader's anchor kept on screen across a commit that resizes content above it (KeepAnchorAcross), an element kept at its screen position across a re-layout (keepInPlace), a deep copy that keeps its scroll offsets (cloneWithScroll, for a stand-in drawn while content leaves, or — visibleOnly — a picture of only what shows), an inner scroller's offset kept across a page reload (useScrollAcrossReload, put back as async content arrives until reached or the reader takes over) and across an unloaded subtree's revival (ScrollRevival: an in-app tab mounted again), and the shared findScrollParent discovery.
           - Web:
@@ -49083,11 +49084,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `selectionIsCollapsed`
               - `selectionRange`
               - `selectionRect`
-        - **`element-size`** — Element-size ResizeObserver idiom as a primitive: useElementSize(target?) reactively measures an element's layout size (callback ref; the observer's own border-box size, so a transform never freezes a wrong value; a target getter measures another node), useResizeObserver(target, onResize, {debounce, deps}) is the substrate, and useResizeObserverSet(onResize) observes a changing set of elements (windowed rows) through one observer — initial measure after layout and before paint (dom/after-layout: no forced recalc on the commit path), RAF-debounced resize callbacks, auto cleanup. The single sanctioned home for the hand-rolled ResizeObserver-for-size idiom.
+        - **`element-size`** — Element-size ResizeObserver idiom as a primitive: useElementSize() reactively measures an element's layout size (callback ref; the observer's own border-box size, so a transform never freezes a wrong value; its first delivery shares the after-layout root's broadcast, so the commit it makes may change layout at any depth), useResizeObserver(target, onResize, {debounce, deps}) is the substrate, and useResizeObserverSet(onResize) observes a changing set of elements (windowed rows) through one observer — initial measure after layout and before paint (dom/after-layout: no forced recalc on the commit path), RAF-debounced resize callbacks, every observation started through after-layout's observeInPhase (never held back into a 'ResizeObserver loop'), auto cleanup. The single sanctioned home for the hand-rolled ResizeObserver-for-size idiom.
           - Web:
             - Uses:
               - `primitives/dom/after-layout.afterLayout`
               - `primitives/dom/after-layout.AfterLayoutRead`
+              - `primitives/dom/after-layout.observeInPhase`
               - `primitives/dom/after-layout.runAsAfterLayout`
               - `primitives/latest-ref.useEventCallback`
             - Exports (types):

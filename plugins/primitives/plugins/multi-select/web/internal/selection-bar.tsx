@@ -23,7 +23,7 @@ export function SelectionBar({
         offset="xs"
         layer="float"
         className={cn(
-          "transition-all duration-200",
+          "transition-[translate,opacity] duration-200",
           isActive
             ? "translate-y-0 opacity-100"
             : "pointer-events-none -translate-y-2 opacity-0",

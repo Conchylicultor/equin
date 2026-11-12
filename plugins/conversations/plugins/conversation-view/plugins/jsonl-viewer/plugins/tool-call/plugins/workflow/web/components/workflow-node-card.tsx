@@ -61,7 +61,7 @@ export function WorkflowNodeCard({
       onMouseEnter={() => onHover(node.id)}
       onMouseLeave={() => onHover(null)}
       className={cn(
-        "w-full px-sm py-sm text-left transition-all",
+        "w-full px-sm py-sm text-left transition-[opacity,border-color,box-shadow]",
         "hover:border-foreground/40",
         emphasis === "dim" && "opacity-40",
         emphasis === "active" && "border-primary ring-2 ring-primary/30",

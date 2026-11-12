@@ -334,9 +334,9 @@ function MenuRowTrailParts({ shortcut, action }: MenuRowTrailProps) {
               aria-label={action.label}
               tooltip={action.label}
               data-slot="dropdown-menu-item-action"
-              // `transition-colors`, not the Button's `transition-all`: that
-              // also animates `visibility`, which kept the action showing on
-              // a row the highlight had already left.
+              // `transition-colors` only: the action's `visibility` must not
+              // transition, or it keeps showing on a row the highlight has
+              // already left.
               className="invisible transition-colors group-data-highlighted/menu-row:visible"
               {...menuRowActionProps(action, { isolate: true })}
             >

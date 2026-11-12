@@ -23,6 +23,15 @@ const MAX_PASSES = 50;
 
 let pending: Entry[] = [];
 let inPhase = false;
+/**
+ * The elements whose delivery opened the current phase (the root for the
+ * trigger's), or null outside a phase. Their shallowest depth bounds what this
+ * rendering step can still deliver — see {@link observeInPhase}. Kept as the
+ * elements, and walked only when an observation is started, so a delivery that
+ * starts none pays nothing.
+ */
+let phaseDelivered: readonly Element[] | null = null;
+let phaseDepth: number | null = null;
 let armed = false;
 let trigger: ResizeObserver | null = null;
 
@@ -74,18 +83,94 @@ export function afterLayout(read: AfterLayoutRead): () => void {
  * frame, rather than arming a fresh observation mid-delivery (which the browser
  * would defer to the next frame with a "loop completed" error).
  */
-export function runAsAfterLayout(fn: () => void): void {
+export function runAsAfterLayout(
+  fn: () => void,
+  delivered: readonly Element[],
+): void {
   if (inPhase) {
     fn();
     return;
   }
   inPhase = true;
+  phaseDelivered = delivered;
+  phaseDepth = null;
   try {
     fn();
     drain();
   } finally {
     inPhase = false;
+    phaseDelivered = null;
+    phaseDepth = null;
   }
+}
+
+/**
+ * Start observing `el`, where the browser can deliver its first notification.
+ *
+ * Inside a phase, the rendering step is mid-delivery: the browser delivers a
+ * new observation in this step only when its target is DEEPER than the
+ * shallowest element of the broadcast running now; a shallower one (a portal
+ * at the body, a fixed band) is held back to the next frame and the step ends
+ * with "ResizeObserver loop completed with undelivered notifications". Such a
+ * target is observed at the start of the next frame instead (an animation
+ * frame callback runs before that frame's observers are gathered), so its first
+ * notification arrives exactly when the browser would have delivered it — with
+ * no loop. Every caller has already taken its first measure directly, so
+ * nothing is late. Outside a phase, and for a deeper target, it observes now.
+ *
+ * Returns the cancel (for a cleanup that runs before the deferred observe).
+ */
+export function observeInPhase(
+  observer: ResizeObserver,
+  el: Element,
+): () => void {
+  if (phaseDelivered === null) {
+    observer.observe(el);
+    // Delivered in the next step's FIRST broadcast: armed with it, the root
+    // trigger shares that broadcast, so its shallowest depth is the root's and
+    // a callback committing there may change layout at any depth.
+    if (!atOnce) arm();
+    return noop;
+  }
+  if (depthOf(el) > currentPhaseDepth()) {
+    observer.observe(el);
+    return noop;
+  }
+  let cancelled = false;
+  const id = requestAnimationFrame(() => {
+    if (!cancelled) observeInPhase(observer, el);
+  });
+  return () => {
+    cancelled = true;
+    cancelAnimationFrame(id);
+  };
+}
+
+function currentPhaseDepth(): number {
+  if (phaseDepth === null) {
+    let min = Infinity;
+    for (const el of phaseDelivered ?? []) min = Math.min(min, depthOf(el));
+    phaseDepth = min;
+  }
+  return phaseDepth;
+}
+
+/** The element's depth in the flat tree (the root is 0), shadow hosts included
+ * — the measure the browser compares observations by. */
+function depthOf(el: Element): number {
+  let depth = 0;
+  let node: Element | null = el;
+  while (node !== null && node !== document.documentElement) {
+    depth++;
+    const parent: Element | null = node.parentElement;
+    if (parent !== null) {
+      node = parent;
+      continue;
+    }
+    const root = node.getRootNode();
+    node = root instanceof ShadowRoot ? root.host : null;
+  }
+  return depth;
 }
 
 function drain(): void {
@@ -133,7 +218,9 @@ function drain(): void {
 function arm(): void {
   if (armed) return;
   armed = true;
-  trigger ??= new ResizeObserver(() => runAsAfterLayout(noop));
+  trigger ??= new ResizeObserver(() =>
+    runAsAfterLayout(noop, [document.documentElement]),
+  );
   // A new observation of a box with a size is delivered at the next rendering
   // step, after its layout: the root always has one.
   trigger.observe(document.documentElement);
