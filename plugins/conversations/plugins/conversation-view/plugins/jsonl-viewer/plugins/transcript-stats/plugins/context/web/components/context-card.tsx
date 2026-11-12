@@ -24,6 +24,10 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
+import { toRelativePath } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/file-path/web";
+import { useConversationById } from "@plugins/conversations/web";
+import { useHomeDisplay } from "@plugins/infra/plugins/host-account/web";
+import { rowOrStale } from "@plugins/network/plugins/live/web";
 import { contextRows, tokensToAutoCompact } from "./context-math";
 
 const chevronIcon = symbol("chevron-right");
@@ -66,6 +70,7 @@ export function ContextCard({
   onCompacted: () => void;
 }) {
   const [instructions, setInstructions] = useState("");
+  const shownPath = useShownPath(conversationId);
   const sendConversationTurn = useSendConversationTurn();
   // Compacting is a turn: on a host without the computer it is disabled.
   const sendAvailability = useTurnSendAvailability();
@@ -81,7 +86,7 @@ export function ContextCard({
   return (
     <Stack gap="md">
       {usage !== null ? (
-        <Breakdown usage={usage} />
+        <Breakdown usage={usage} shownPath={shownPath} />
       ) : (
         <Text variant="caption" tone="muted">
           No reading yet. The agent measures its context when it starts and
@@ -119,7 +124,28 @@ export function ContextCard({
   );
 }
 
-export function Breakdown({ usage }: { usage: ContextUsage }) {
+/**
+ * How a file the agent loaded is named in the card: relative to the
+ * conversation's checkout (the repo root), else with the home dir as `~`.
+ * Until the conversation row is known, a path reads with `~` only.
+ */
+function useShownPath(conversationId: string): (path: string) => string {
+  const conversation = rowOrStale(useConversationById(conversationId));
+  const homeDisplay = useHomeDisplay();
+  return (path) =>
+    homeDisplay(
+      conversation ? toRelativePath(path, conversation.attemptId) : path,
+    );
+}
+
+export function Breakdown({
+  usage,
+  shownPath,
+}: {
+  usage: ContextUsage;
+  /** How a memory file's path is shown (the harness reports it absolute). */
+  shownPath: (path: string) => string;
+}) {
   const { messages, setup, free, reserve } = contextRows(usage);
   const window = usage.rawMaxTokens;
   const scale = Math.min(window, usage.totalTokens / USED_FLOOR);
@@ -231,7 +257,7 @@ export function Breakdown({ usage }: { usage: ContextUsage }) {
               color={seriesColor(i)}
               name={c.name}
               tokens={c.tokens}
-              detail={setupDetail(usage, c.name)}
+              detail={setupDetail(usage, c.name, shownPath)}
               nested
             />
           ))}
@@ -259,9 +285,16 @@ function messageDetail(usage: ContextUsage): Item[] {
   ].filter((i) => i.tokens > 0);
 }
 
-function setupDetail(usage: ContextUsage, row: string): Item[] {
+function setupDetail(
+  usage: ContextUsage,
+  row: string,
+  shownPath: (path: string) => string,
+): Item[] {
   if (row === MEMORY_FILES_ROW)
-    return usage.memoryFiles.map((f) => ({ name: f.path, tokens: f.tokens }));
+    return usage.memoryFiles.map((f) => ({
+      name: shownPath(f.path),
+      tokens: f.tokens,
+    }));
   if (row === MCP_TOOLS_ROW) {
     const byServer = new Map<string, number>();
     for (const tool of usage.mcpTools) {

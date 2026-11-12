@@ -153,6 +153,7 @@ is off — the accounts file itself untouched).
     - `conversations/conversation-view/jsonl-viewer/assistant-text`
     - `conversations/conversation-view/jsonl-viewer/file-path`
     - `conversations/conversation-view/jsonl-viewer/tool-call/bash`
+    - `conversations/conversation-view/jsonl-viewer/transcript-stats/context`
     - `infra/claude-cli/accounts`
     - `infra/host-account/guest`
 - Sub-plugins:

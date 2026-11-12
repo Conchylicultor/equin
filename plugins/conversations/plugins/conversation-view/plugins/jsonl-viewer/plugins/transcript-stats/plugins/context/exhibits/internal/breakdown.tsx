@@ -2,6 +2,9 @@ import type { ContextUsage } from "@plugins/conversations/plugins/context-usage/
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Breakdown } from "../../web/components/context-card";
 
+// The exhibit's checkout is `/repo`: its memory files read repo-relative.
+const shownPath = (path: string) => path.replace(/^\/repo\//, "");
+
 // The two readings the card was redesigned against: a 200k window close to
 // auto-compact, and a 1M window barely used — where the bar zooms in.
 function usage(window: number, messages: number): ContextUsage {
@@ -44,8 +47,8 @@ function usage(window: number, messages: number): ContextUsage {
 export default function BreakdownExhibit() {
   return (
     <Stack gap="xl">
-      <Breakdown usage={usage(200_000, 107_000)} />
-      <Breakdown usage={usage(1_000_000, 10_000)} />
+      <Breakdown usage={usage(200_000, 107_000)} shownPath={shownPath} />
+      <Breakdown usage={usage(1_000_000, 10_000)} shownPath={shownPath} />
     </Stack>
   );
 }

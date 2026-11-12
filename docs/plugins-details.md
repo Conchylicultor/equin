@@ -15740,8 +15740,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `SYSTEM_CATEGORY_ID`
       - `withdrawConversationTurn`
   - Cross-plugin:
-    - Imported by: 85 plugins — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
-      - `conversations` ×59
+    - Imported by: 86 plugins — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
+      - `conversations` ×60
       - `tasks` ×8
       - `apps` ×6
       - `infra` ×3
@@ -18364,6 +18364,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `conversations/conversation-view/jsonl-viewer/tool-call/read`
                   - `conversations/conversation-view/jsonl-viewer/tool-call/search-tools`
                   - `conversations/conversation-view/jsonl-viewer/tool-call/write`
+                  - `conversations/conversation-view/jsonl-viewer/transcript-stats/context`
             - **`investigate-event`** — Contributes the add-a-renderer row action to every JSONL transcript row whose nearest dispatch fell back (unhandled event kind, tool name, or attachment subtype), launching an agent briefed to implement the missing renderer for that dispatch key.
               - Web:
                 - Contributes: `JsonlRowActions.Item` "investigate-event" → `InvestigateEventAction`
@@ -19613,13 +19614,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - **`context`** — The context window as a transcript stat: a ring at the end of the strip showing how full the agent's window is against where the harness compacts it (the harness's own measure as the agent last reported it — once ready and after every turn — read from conversations.context-usage, never asked of the agent), opening a card with the breakdown — the conversation's messages, the setup it starts with (system prompt, tools, memory files, skills, MCP) and what is free — and a Compact action that sends /compact with optional compaction instructions.
                   - Web:
                     - Contributes: `TranscriptStats.Item` "context" → `ContextStat`
-                    - Uses: 24 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/transcript-stats/plugins/context/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/transcript-stats/plugins/context/REFERENCE.md)
+                    - Uses: 28 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/transcript-stats/plugins/context/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/transcript-stats/plugins/context/REFERENCE.md)
                       - `primitives/css/ui-kit` ×4
                       - `conversations/conversation-view/jsonl-viewer/transcript-stats` ×3
                       - `conversations/conversation-view/jsonl-viewer` ×3
                       - `conversations/conversation-view/pending-turn` ×2
+                      - `network/live` ×2
                       - `primitives/css/spacing` ×2
-                      - `network/live.useLive`
+                      - `conversations/conversation-view/jsonl-viewer/file-path.toRelativePath`
+                      - `conversations.useConversationById`
+                      - `infra/host-account.useHomeDisplay`
                       - `primitives/collapsible.FoldMotion`
                       - `primitives/css/clip.Clip`
                       - `primitives/css/grow.growClass`
@@ -35069,6 +35073,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/conversation-view/jsonl-viewer/assistant-text`
           - `conversations/conversation-view/jsonl-viewer/file-path`
           - `conversations/conversation-view/jsonl-viewer/tool-call/bash`
+          - `conversations/conversation-view/jsonl-viewer/transcript-stats/context`
           - `infra/claude-cli/accounts`
           - `infra/host-account/guest`
       - Plugins:
