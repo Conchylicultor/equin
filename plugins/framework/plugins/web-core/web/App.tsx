@@ -42,6 +42,7 @@ import {
 } from "@plugins/primitives/plugins/perfs/plugins/boot-trace/core";
 import type { BootPluginLoadDetail } from "@plugins/primitives/plugins/perfs/plugins/boot-trace/core";
 import { report } from "@plugins/reports/web";
+import { crashFieldsOf } from "@plugins/packages/plugins/error-subject/core";
 import {
   composition,
   webEntries,
@@ -165,6 +166,22 @@ function reportMissingCompanion(message: string): void {
   });
 }
 
+// The boot sequence itself threw before the app rendered. Same funnel as a
+// boot problem — and for the same reason a direct POST: no plugin (the crash
+// collector included) may have loaded yet.
+function reportBootCrash(err: unknown): void {
+  const message = err instanceof Error ? err.message : String(err);
+  console.error("[boot] the app failed to start", err);
+  void report({
+    kind: "crash",
+    source: "client-boot-crash",
+    message: `boot: ${message}`,
+    url: window.location.href,
+    userAgent: navigator.userAgent,
+    data: { ...crashFieldsOf(err) },
+  });
+}
+
 // A failed or overdue boot task, into the alert funnel. `report()` is a direct
 // keepalive POST: the crash collector's window listeners are not mounted during
 // boot. In a fully wedged backend this POST may stall too — the server's own
@@ -283,6 +300,9 @@ type BootState =
       tasks: readonly BootTaskStatus[];
       continueAnyway: () => void;
     }
+  // The boot sequence threw before `ready` (e.g. the page transport needs an API
+  // this browser lacks): nothing will move it on, so it is a terminal error.
+  | { phase: "crashed"; message: string }
   | {
       phase: "ready";
       // Core-stage (eager) load errors ONLY — set once from the eager result and
@@ -377,6 +397,10 @@ function PageApp() {
       recordErrors(errors);
     };
 
+    // Whether the app has rendered: a throw before that leaves nothing on screen
+    // but the boot screen, which must then say so instead of waiting forever.
+    let rendered = false;
+
     void (async () => {
       // Layer 1 — Transport hoist. Construct the page transport's live-state
       // pipeline NOW, before any plugin evaluation, so its leader-election lock
@@ -452,6 +476,7 @@ function PageApp() {
       // screen mounts no PluginProvider), so this append notifies no one.
       registry.append(eagerResult.plugins);
       setState({ phase: "ready", coreErrors: eagerResult.errors });
+      rendered = true;
       recordErrors(eagerResult.errors);
 
       await loadDeferredBatch(priority, { routeContent: true });
@@ -472,7 +497,18 @@ function PageApp() {
       // bundle lacks, and its owner is degrading silently right now.
       for (const message of missingCompanions(registry))
         reportMissingCompanion(message);
-    })();
+    })().catch((err: unknown) => {
+      // After the first render the app is on screen and its own crash
+      // collector reports an unhandled rejection: leave it to that.
+      if (rendered) throw err;
+      reportBootCrash(err);
+      if (!cancelled) {
+        setState({
+          phase: "crashed",
+          message: err instanceof Error ? err.message : String(err),
+        });
+      }
+    });
 
     return () => {
       cancelled = true;
@@ -481,6 +517,8 @@ function PageApp() {
 
   if (state.phase === "loading-code")
     return <BootScreen phase="loading-code" />;
+  if (state.phase === "crashed")
+    return <BootScreen phase="crashed" message={state.message} />;
   if (state.phase === "boot-tasks") {
     return (
       <BootScreen

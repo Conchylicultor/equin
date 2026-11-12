@@ -35,6 +35,10 @@ deleted, so a stray `@/` import is now an unresolved-module error at build time.
     after a 3s grace, `BOOT_SCREEN_GRACE_MS`, so a normal boot never shows it), `stuck` (a `block` task
     past the deadline) or `failed` (one rejected), with Retry / Continue anyway.
     A failed / overdue task also files a `client-boot-task` report.
+    A throw in the boot sequence itself before the app renders (e.g. the page
+    transport needs an API the browser lacks) is `crashed`: "Couldn't start the
+    app" with Retry, and a `client-boot-crash` report — never an endless
+    "Loading the app…".
     `data-boot-state` is the e2e hook (`network/live/boot-snapshot/e2e/boot-stall.ts`).
   - `__tests__/` — render smoke tests
   - `public/` — static assets

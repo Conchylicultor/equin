@@ -20,7 +20,10 @@ export type BootScreenProps =
       phase: "boot-tasks";
       tasks: readonly BootTaskStatus[];
       onContinue: () => void;
-    };
+    }
+  // Boot itself threw before the app could render (an API the browser lacks, a
+  // bug in the boot sequence): nothing will ever continue it, so say so.
+  | { phase: "crashed"; message: string };
 
 // What the screen says, derived from the task statuses. Only a `block` task can
 // turn it into an error: a `continue` task that fails or runs late is reported
@@ -28,11 +31,15 @@ export type BootScreenProps =
 type View =
   | { kind: "waiting"; title: string; pending: string[] }
   | { kind: "stuck"; overdue: string[] }
-  | { kind: "failed"; failures: { label: string; message: string }[] };
+  | { kind: "failed"; failures: { label: string; message: string }[] }
+  | { kind: "crashed"; message: string };
 
 function viewOf(props: BootScreenProps): View {
   if (props.phase === "loading-code") {
     return { kind: "waiting", title: "Loading the app…", pending: [] };
+  }
+  if (props.phase === "crashed") {
+    return { kind: "crashed", message: props.message };
   }
   const blocking = props.tasks.filter((t) => t.ifUnavailable === "block");
   const failures = blocking.flatMap((t) =>
@@ -95,12 +102,18 @@ export function BootScreen(props: BootScreenProps) {
             <Text variant="heading" tone="destructive">
               {view.kind === "stuck"
                 ? "The server isn't answering"
-                : "Couldn't load the app's data"}
+                : view.kind === "crashed"
+                  ? "Couldn't start the app"
+                  : "Couldn't load the app's data"}
             </Text>
             {view.kind === "stuck" ? (
               <Text variant="body" tone="muted">
                 {view.overdue.join(", ")} still pending after{" "}
                 <ElapsedTime since={since} />
+              </Text>
+            ) : view.kind === "crashed" ? (
+              <Text variant="body" tone="muted">
+                {view.message}
               </Text>
             ) : (
               view.failures.map((f) => (

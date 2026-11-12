@@ -67,6 +67,7 @@ export const CLIENT_REPORT_SUBJECT: Record<
   "client-icon-missing-glyph": "page",
   "boot-snapshot": "load",
   "client-boot-task": "page",
+  "client-boot-crash": "page",
   "client-missing-companion": "page",
   "plugin-load": "load",
   "client-storage": "load",
