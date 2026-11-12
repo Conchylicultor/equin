@@ -80,7 +80,7 @@ describe("renderThemeHead", () => {
     );
   });
 
-  it("paints a surface-mode app's scope on the \"\" entry only, giving it no entry of its own", () => {
+  it('paints a surface-mode app\'s scope on the "" entry only, giving it no entry of its own', () => {
     const head = renderThemeHead(
       sources,
       [...apps, { id: "desktop", colorMode: "light" }],
@@ -97,7 +97,9 @@ describe("renderThemeHead", () => {
     expect(head[""]).toContain('<style id="theme-scope-app:desktop-palette">');
     // A tab app's page carries its own scope, not the desktop's.
     expect(head["/pages"]).not.toContain("theme-scope-app:desktop");
-    expect(head["/pages"]).toContain('<style id="theme-scope-app:pages-palette">');
+    expect(head["/pages"]).toContain(
+      '<style id="theme-scope-app:pages-palette">',
+    );
   });
 
   it("ends every entry with the desktop's scheme on <html>, resolving system in the page", () => {
