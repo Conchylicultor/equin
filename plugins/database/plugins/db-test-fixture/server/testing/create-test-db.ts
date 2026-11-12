@@ -84,7 +84,10 @@ export async function createTestDb(
     connectionString,
     async drop() {
       await pool.end();
-      await dropDatabase(name);
+      await dropDatabase({
+        unserved: name,
+        reason: "a test's throwaway database: no backend boots on it",
+      });
     },
   };
 }

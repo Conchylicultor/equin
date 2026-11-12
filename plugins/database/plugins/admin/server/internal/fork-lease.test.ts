@@ -11,7 +11,7 @@ describe("fork temp lease", () => {
   const temp = forkTempName(`fork-lease-test-${process.pid}`);
 
   afterAll(async () => {
-    await dropDatabase(temp);
+    await dropDatabase({ unserved: temp, reason: "a test database" });
     await closeAdminPool();
   });
 

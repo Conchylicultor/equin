@@ -14701,6 +14701,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/worktree.loadCompositionMarker`
           - `infra/worktree.namespaceCollision`
           - `infra/worktree.probeNamespace`
+          - `infra/worktree/backend-hold.holdBackendDown`
+          - `infra/worktree/backend-hold.startBackend`
           - `infra/worktree/reclaim.NamespaceReclaimError`
           - `infra/worktree/reclaim.namespacesOwnedByComposition`
           - `infra/worktree/reclaim.OwnedNamespace`
@@ -22339,6 +22341,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `BackupExclusions`
           - `BackupInfo`
           - `BackupPlan`
+          - `DatabaseToDrop`
           - `ForkExclusions`
           - `ForkOutcome`
           - `ForkPlan`
@@ -26870,7 +26873,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `report-kind` "worktree-reap-failed"
           - `resource.declare` "debug.worktree-cleanup.worktrees"
           - `resource.declare` "debug.worktree-cleanup.worktrees:meta"
-        - Uses: 40 symbols — full list in [`plugins/debug/plugins/worktree-cleanup/REFERENCE.md`](../plugins/debug/plugins/worktree-cleanup/REFERENCE.md)
+        - Uses: 41 symbols — full list in [`plugins/debug/plugins/worktree-cleanup/REFERENCE.md`](../plugins/debug/plugins/worktree-cleanup/REFERENCE.md)
           - `infra/worktree` ×14
           - `infra/worktree/reclaim` ×4
           - `tasks/tasks-core` ×4
@@ -26882,6 +26885,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live` ×2
           - `conversations/workspace.announceWorkspacesReclaimed`
           - `infra/ndjson-stream.ndjsonResponse`
+          - `infra/worktree/backend-hold.holdBackendDown`
           - `primitives/log-channels.defineLogSink`
           - `reports.ReportKind`
         - Register: `defineSupervisedJob('worktree-cleanup.reap-stale')`
@@ -36236,11 +36240,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `namespaceUrl`
           - `resolveNamespaceAlias`
       - Cross-plugin:
-        - Imported by: 77 plugins — full list in [`plugins/infra/plugins/namespace/REFERENCE.md`](../plugins/infra/plugins/namespace/REFERENCE.md)
+        - Imported by: 78 plugins — full list in [`plugins/infra/plugins/namespace/REFERENCE.md`](../plugins/infra/plugins/namespace/REFERENCE.md)
           - `framework` ×13
           - `debug` ×12
           - `apps` ×11
-          - `infra` ×9
+          - `infra` ×10
           - `conversations` ×7
           - `build` ×6
           - `plugin-meta` ×3
@@ -37559,6 +37563,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `OP_KINDS`
           - `stripAttemptBranchPrefix`
       - Plugins:
+        - **`backend-hold`** — Backend down before its data: holdBackendDown stops a namespace's backend through the gateway and holds it down (POST /gateway/worktrees/<ns>/stop?hold=1), answering the HeldBackend proof database/admin's dropDatabase / recreateDatabase require for a namespace's database; startBackend cold-starts it again (a deploy start, which releases the hold).
+          - Cross-plugin:
+            - Imported by:
+              - `build/serve-composition`
+              - `debug/worktree-cleanup`
+              - `framework/cli/db`
+              - `infra/worktree/reclaim`
+          - Exemptions:
+            - Exempts itself from: `endpoints:no-raw-json-handlers` — `server/internal/hold.test.ts` (sanctioned)
+          - Server:
+            - Exports (values):
+              - `BackendHoldError`
+              - `holdBackendDown`
+              - `startBackend`
+          - Core:
+            - Exports (types): `HeldBackend`
         - **`reclaim`** — Namespace reclaim: reclaimNamespace tears down one compose-serve namespace's four artifacts (database, config dir, gateway registry dir, and the composing checkout's filtered registries) behind provenance guards, and the marker-driven ownership queries answer what a checkout or a composition owns — so a reclaim trigger asks rather than enumerating.
           - Server:
             - Uses:
@@ -37571,6 +37591,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/worktree.loadCompositionMarker`
               - `infra/worktree.removeWorktreeSpec`
               - `infra/worktree.worktreePathFor`
+              - `infra/worktree/backend-hold.holdBackendDown`
             - Exports (types): `OwnedNamespace`
             - Exports (values):
               - `listCompositionNamespaces`

@@ -15,7 +15,14 @@ import {
   spawnCaptured,
 } from "@plugins/infra/plugins/spawn/core";
 import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/namespace/core";
+import {
+  asNamespace,
+  MAIN_WORKTREE_NAME,
+} from "@plugins/infra/plugins/namespace/core";
+import {
+  holdBackendDown,
+  startBackend,
+} from "@plugins/infra/plugins/worktree/plugins/backend-hold/server";
 import { checkoutNamespace } from "@plugins/infra/plugins/paths/core";
 import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
 import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
@@ -88,11 +95,20 @@ const run: CliAction<[string | undefined], { replace?: boolean }> = async (
   // Read the exclusions BEFORE dropping anything: if the graph cannot be read,
   // the command fails with the existing database still in place.
   const exclusions = await declaredForkExclusions(root);
-  if (opts.replace === true && (await databaseExists(name))) {
+  // Backend down before its data: the namespace's backend (if it runs) is
+  // stopped and held down before its database is dropped, and cold-started on
+  // the fresh fork afterwards. A fork that fails in between leaves it held —
+  // `./equin build` (a deploy start) releases it — never serving against a
+  // database that is not there.
+  const held =
+    opts.replace === true && (await databaseExists(name))
+      ? await holdBackendDown(asNamespace(name))
+      : null;
+  if (held !== null) {
     console.log(
       `Dropping "${name}" (--replace): every row only it has is lost...`,
     );
-    await dropDatabase(name);
+    await dropDatabase(held);
   }
   console.log(`Forking "${LEGACY_IDS.pgBaseDatabase}" → "${name}"...`);
   const outcome = await forkDatabase(
@@ -112,6 +128,7 @@ const run: CliAction<[string | undefined], { replace?: boolean }> = async (
       console.warn(`  warning: ${describeUndeclaredSchema(s)}`);
     }
   }
+  if (held !== null) await startBackend(held);
   console.log(
     outcome.kind === "already-present"
       ? `DB "${name}" already existed — nothing to do (--replace forks it afresh).`

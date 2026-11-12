@@ -12,6 +12,8 @@ import {
   removeWorktreeSpec,
   type WorktreeRemoval,
 } from "@plugins/infra/plugins/worktree/server";
+import { asNamespace } from "@plugins/infra/plugins/namespace/core";
+import { holdBackendDown } from "@plugins/infra/plugins/worktree/plugins/backend-hold/server";
 import {
   namespacesOwnedByCheckout,
   reclaimNamespace,
@@ -93,10 +95,16 @@ export async function reapAttempt(
   // The two ARE different things; the guard says so, and the duplication is the
   // price of it saying so.
   opts.onStep?.("database");
+  // Backend down before its data — the same order `reclaimNamespace` keeps: the
+  // checkout's backend runs until the spec removal below deregisters it, so it
+  // is stopped and held down first, else the drop cuts its sessions and it
+  // exits on a database that no longer exists (a backend-exit report for a
+  // checkout being reaped).
+  const held = await holdBackendDown(asNamespace(id));
   // The fork DB may already be gone — an earlier reap dropped it, or a legacy
   // registry-only entry never had one — so the drop runs only when it exists.
   if (await databaseExists(id)) {
-    await dropDatabase(id);
+    await dropDatabase(held);
   }
 
   opts.onStep?.("config");

@@ -90,7 +90,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await targetPool?.end();
-  await dropDatabase(target);
+  await dropDatabase({ unserved: target, reason: "a test database" });
   await source.drop();
 });
 

@@ -278,6 +278,8 @@ code, that is the bug this section exists to prevent.
     - `infra/worktree.loadCompositionMarker`
     - `infra/worktree.namespaceCollision`
     - `infra/worktree.probeNamespace`
+    - `infra/worktree/backend-hold.holdBackendDown`
+    - `infra/worktree/backend-hold.startBackend`
     - `infra/worktree/reclaim.NamespaceReclaimError`
     - `infra/worktree/reclaim.namespacesOwnedByComposition`
     - `infra/worktree/reclaim.OwnedNamespace`

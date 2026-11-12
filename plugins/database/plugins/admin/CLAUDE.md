@@ -213,6 +213,7 @@ database in `backup-plan.test.ts`. The real dump → restore round trip is in
     - `BackupExclusions`
     - `BackupInfo`
     - `BackupPlan`
+    - `DatabaseToDrop`
     - `ForkExclusions`
     - `ForkOutcome`
     - `ForkPlan`

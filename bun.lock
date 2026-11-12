@@ -4736,6 +4736,10 @@
     "plugins/infra/plugins/worktree": {
       "name": "@equin/plugin-infra-worktree",
     },
+    "plugins/infra/plugins/worktree/plugins/backend-hold": {
+      "name": "@equin/plugin-infra-worktree-backend-hold",
+      "version": "0.0.1",
+    },
     "plugins/infra/plugins/worktree/plugins/reclaim": {
       "name": "@equin/plugin-infra-worktree-reclaim",
       "version": "0.0.1",
@@ -9928,6 +9932,8 @@
     "@equin/plugin-infra-warmup-sole-host": ["@equin/plugin-infra-warmup-sole-host@workspace:plugins/infra/plugins/warmup/plugins/sole-host"],
 
     "@equin/plugin-infra-worktree": ["@equin/plugin-infra-worktree@workspace:plugins/infra/plugins/worktree"],
+
+    "@equin/plugin-infra-worktree-backend-hold": ["@equin/plugin-infra-worktree-backend-hold@workspace:plugins/infra/plugins/worktree/plugins/backend-hold"],
 
     "@equin/plugin-infra-worktree-reclaim": ["@equin/plugin-infra-worktree-reclaim@workspace:plugins/infra/plugins/worktree/plugins/reclaim"],
 

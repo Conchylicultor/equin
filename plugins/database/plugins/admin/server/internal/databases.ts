@@ -1,5 +1,6 @@
 import { queryOne, queryRows } from "@plugins/database/plugins/sql-rows/core";
 import { NAMESPACE_RE } from "@plugins/infra/plugins/namespace/core";
+import type { HeldBackend } from "@plugins/infra/plugins/worktree/plugins/backend-hold/core";
 import { z } from "zod";
 import { getAdminPool } from "./pool";
 import { runDatabaseDdl } from "./database-ddl";
@@ -65,7 +66,29 @@ export async function databaseExists(name: string): Promise<boolean> {
   return result.rowCount !== null && result.rowCount > 0;
 }
 
-export async function dropDatabase(name: string): Promise<void> {
+/**
+ * The database a drop removes, and why no backend serves it while it does —
+ * one of two things, and the caller must say which:
+ *
+ * - a `HeldBackend`: a namespace's database, its backend already stopped and
+ *   held down by the gateway (`holdBackendDown`,
+ *   `infra/worktree/backend-hold`). Dropping one under a live backend cut its
+ *   sessions and left it serving against nothing — a backend-exit report, or
+ *   errors on every request, for a namespace being torn down
+ *   (report-1794167098-q99s8d). Holding first is the only way to get here, so
+ *   that order has no other spelling.
+ * - `{ unserved, reason }`: a database no backend ever boots on — a fork's
+ *   temp, a test's throwaway, a CLI target whose backend was held elsewhere —
+ *   with the reason written down where a reviewer reads it.
+ */
+export type DatabaseToDrop =
+  HeldBackend | { readonly unserved: string; readonly reason: string };
+
+const nameToDrop = (target: DatabaseToDrop): string =>
+  "unserved" in target ? target.unserved : target.namespace;
+
+export async function dropDatabase(target: DatabaseToDrop): Promise<void> {
+  const name = nameToDrop(target);
   assertSafeName(name);
   // Terminates the database's sessions, waits for them to exit, then removes
   // all of its files: the database-DDL bound, not the 60 s default.
@@ -103,16 +126,17 @@ export async function ensureDatabase(name: string): Promise<void> {
 }
 
 /**
- * Drop `name` and create it empty — one step as every client of the pooler
- * sees it: no login reaches the database while it is missing, so none can fail
+ * Drop a held namespace's database and create it empty — one step as every
+ * client of the pooler sees it: no login reaches the database while it is missing, so none can fail
  * and leave PgBouncer refusing the recreated database from its cached error
  * (see `withPoolerHeld`). A reset-to-empty must use this, never
  * `dropDatabase` then `ensureDatabase`.
  */
-export async function recreateDatabase(name: string): Promise<void> {
+export async function recreateDatabase(held: HeldBackend): Promise<void> {
+  const name = held.namespace;
   assertSafeName(name);
   await withPoolerHeld(name, async () => {
-    await dropDatabase(name);
+    await dropDatabase(held);
     await ensureDatabase(name);
   });
 }

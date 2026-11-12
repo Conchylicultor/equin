@@ -21,6 +21,7 @@ import {
   dropDatabase,
 } from "@plugins/database/plugins/admin/server";
 import type { Namespace } from "@plugins/infra/plugins/namespace/core";
+import { holdBackendDown } from "@plugins/infra/plugins/worktree/plugins/backend-hold/server";
 import {
   ensureMainWorktreeRoot,
   hasCompositionMarker,
@@ -76,8 +77,9 @@ async function checkoutRootFor(
 }
 
 /**
- * Reclaim every artifact of one compose-serve namespace: database → config dir →
- * registry dir → the composing checkout's filtered registries.
+ * Reclaim every artifact of one compose-serve namespace: backend held down →
+ * database → config dir → registry dir → the composing checkout's filtered
+ * registries.
  *
  * ALL guards pass before anything is touched, else it throws
  * `NamespaceReclaimError` having changed nothing. A reclaim that cannot prove
@@ -128,11 +130,19 @@ export async function reclaimNamespace(
   const checkout = await checkoutRootFor(marker);
 
   onStep?.("database");
+  // Backend down before its data: the namespace's backend is still running
+  // (the spec removal below is what deregisters it), so it is stopped and held
+  // down first — else the drop cuts its sessions and it serves against a
+  // database that no longer exists, filing a backend-exit report for a
+  // namespace being torn down. The hold lasts until the spec removal ends the
+  // namespace; a reclaim that fails in between leaves it held (a deploy start
+  // releases it), never serving on half its data.
+  const held = await holdBackendDown(ns);
   // The database may already be gone — an earlier reclaim dropped it, or a
   // legacy registry-only entry never had one — so the drop runs only when it
   // exists.
   if (await databaseExists(ns)) {
-    await dropDatabase(ns);
+    await dropDatabase(held);
   }
 
   onStep?.("config");

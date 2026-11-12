@@ -7,6 +7,13 @@ import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { libpqSubprocessEnv } from "./pool";
 import { runDatabaseDdl } from "./database-ddl";
 import { databaseExists, dropDatabase } from "./databases";
+
+// A fork's temp is never served: no namespace names it, so no backend boots on
+// it before the rename publishes it under the target's name.
+const UNSERVED_TEMP = (temp: string) => ({
+  unserved: temp,
+  reason: "a fork's temp, never published: no backend boots on it",
+});
 import { withDbForkSlot } from "./fork-gate";
 import { withForkTempLease } from "./fork-lease";
 import { forkTempName } from "./temp-name";
@@ -191,11 +198,11 @@ export async function forkDatabase(
             }
           }
         } catch (err) {
-          await dropDatabase(temp);
+          await dropDatabase(UNSERVED_TEMP(temp));
           throw err;
         }
         if (failure !== undefined) {
-          await dropDatabase(temp);
+          await dropDatabase(UNSERVED_TEMP(temp));
           throw new Error(
             `forkDatabase(${source} → ${target}) failed: ${failure}`,
           );
@@ -219,7 +226,7 @@ export async function forkDatabase(
     try {
       await stampForkPoint(temp);
     } catch (err) {
-      await dropDatabase(temp);
+      await dropDatabase(UNSERVED_TEMP(temp));
       throw err;
     }
 
@@ -247,7 +254,7 @@ export async function forkDatabase(
         "code" in err &&
         (err as { code?: string }).code === "42P04"; // duplicate_database
       if (dup || (await databaseExists(target))) {
-        await dropDatabase(temp); // drop our loser temp; target already published
+        await dropDatabase(UNSERVED_TEMP(temp)); // drop our loser temp; target already published
         return { kind: "already-present" };
       }
       throw err;

@@ -16,6 +16,7 @@ export {
   countActiveConnections,
   databaseSizeBytes,
 } from "./internal/databases";
+export type { DatabaseToDrop } from "./internal/databases";
 export { forkDatabase } from "./internal/fork";
 export type { ForkOutcome } from "./internal/fork";
 // What the fork found while matching the declared set against the source

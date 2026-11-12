@@ -67,7 +67,11 @@ export const testDbSweepJob = defineJob({
       // Measured BEFORE the drop — afterwards there is nothing left to measure,
       // and "how much was this costing" is half of why anyone reads the report.
       const bytes = await databaseSizeBytes(name);
-      await dropDatabase(name);
+      await dropDatabase({
+        unserved: name,
+        reason:
+          "a killed test run's throwaway database: no backend boots on it",
+      });
       await recordReport({
         kind: "test-database-leaked",
         source: "server-caught",

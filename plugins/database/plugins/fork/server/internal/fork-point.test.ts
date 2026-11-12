@@ -36,8 +36,8 @@ const nowMs = async (exec: typeof sourceDb): Promise<number> =>
 afterAll(async () => {
   await sourcePool.end();
   await targetPool.end();
-  await dropDatabase(target);
-  await dropDatabase(source);
+  await dropDatabase({ unserved: target, reason: "a test database" });
+  await dropDatabase({ unserved: source, reason: "a test database" });
 });
 
 describe("fork point", () => {

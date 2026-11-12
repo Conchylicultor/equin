@@ -78,7 +78,11 @@ export async function reclaimForkTemp(
   const lease = await openLease(temp);
   try {
     if (!lease.ok) return "in-use";
-    await dropDatabase(temp);
+    await dropDatabase({
+      unserved: temp,
+      reason:
+        "an orphaned fork temp: never published, so no backend boots on it",
+    });
     return "dropped";
   } finally {
     await lease.release();
