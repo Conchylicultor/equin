@@ -47723,7 +47723,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewSlots.Control` ×4
           - `DataViewSlots.Setting` ×4
           - `IdKinds.Kind` ×2
-        - Uses: 146 symbols — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+        - Uses: 147 symbols — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
           - `network/live` ×24
           - `primitives/css/ui-kit` ×17
           - `primitives/data-view/view-core` ×11
@@ -47777,6 +47777,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/overlay/tooltip.Kbd`
           - `primitives/pane.usePaneViewParam`
           - `primitives/relative-time.useNow`
+          - `primitives/virtual-rows.offscreenSkipClass`
           - `ui/icons.Icon`
         - Exports (types):
           - `CardFields`
@@ -53699,7 +53700,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/data-view/view-core`
           - `primitives/markdown`
           - `primitives/tabbed-view`
-    - **`virtual-rows`** — Self-discovering windowed row renderer (@tanstack/react-virtual): renders only the rows intersecting the host's scroll viewport (+overscan) inside a full-height sizer, discovering the scroll container at runtime. Shared by data-view's list / gallery / icons views and data-table.
+    - **`virtual-rows`** — Self-discovering windowed row renderer (@tanstack/react-virtual): renders only the rows intersecting the host's scroll viewport (+overscan) inside a full-height sizer, discovering the scroll container at runtime. Shared by data-view's list / gallery / icons views and data-table. Plus offscreenSkipClass: content-visibility: auto for a mounted box sized from outside its content (a fixed-height line, an aspect-ratio cover), so the browser skips styling it while off screen.
       - Web:
         - Uses:
           - `primitives/css/coords.Placed`
@@ -53712,12 +53713,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `UseVirtualRowsResult`
           - `VirtualRowsProps`
         - Exports (values):
+          - `offscreenSkipClass`
           - `useVirtualRows`
           - `VirtualRows`
       - Cross-plugin:
         - Imported by:
           - `apps/sonata/notation`
           - `primitives/data-table`
+          - `primitives/data-view`
           - `primitives/data-view/gallery`
           - `primitives/data-view/icons`
           - `primitives/data-view/list`

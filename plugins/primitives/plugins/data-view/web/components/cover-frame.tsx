@@ -3,6 +3,7 @@ import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Layer } from "@plugins/primitives/plugins/css/plugins/layer/web";
+import { offscreenSkipClass } from "@plugins/primitives/plugins/virtual-rows/web";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import type { AssetPath } from "@plugins/infra/plugins/endpoints/core";
 import { useAssetSrc } from "@plugins/infra/plugins/endpoints/web";
@@ -153,6 +154,10 @@ export function CoverFrame({
       {...(size === "card" ? dataPart("dv.cover") : {})}
       className={cn(
         "group/cover-frame relative bg-cover-fill",
+        // Sized from outside (its aspect ratio / the thumb size) and clipped
+        // already: off screen, the browser skips styling the picture and its
+        // overlays — a gallery holds every card of a sub-threshold section.
+        offscreenSkipClass,
         FRAME[size],
         className,
       )}

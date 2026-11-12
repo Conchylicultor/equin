@@ -12,6 +12,7 @@ import {
 import type { RolePart } from "@plugins/primitives/plugins/css/plugins/text/core";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
+import { offscreenSkipClass } from "@plugins/primitives/plugins/virtual-rows/web";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import { DATA_VIEW_PICKS } from "@plugins/ui/plugins/tokens/plugins/data-view/core";
 import { dataPart, type FieldDef } from "../../core";
@@ -165,6 +166,7 @@ export function CardMeta({
         <Line
           className={cn(
             "h-card-title-line gap-xs",
+            offscreenSkipClass,
             rolePickClass(P.cardTitle.fallback),
           )}
         >
@@ -194,6 +196,7 @@ export function CardMeta({
           <Line
             className={cn(
               "h-[calc(var(--card-subtitle-lines)*var(--card-subtitle-line))]",
+              offscreenSkipClass,
               rolePickClass(P.cardSubtitle.fallback),
             )}
           >
@@ -257,7 +260,10 @@ function CardExcerpt({
     <PickedLine part={P.cardSubtitle} className="pt-card-excerpt">
       <div
         className={cn(
+          // Reserved, the box is token-sized — skippable off screen; unreserved
+          // its text sizes it, so it is not.
           reserve && "h-[calc(var(--card-excerpt-lines)*1lh)]",
+          reserve && offscreenSkipClass,
           rolePickClass(P.cardSubtitle.fallback),
         )}
       >
@@ -330,6 +336,7 @@ export function CardTokens({
       <Line
         className={cn(
           "h-card-tokens-line gap-card-token",
+          offscreenSkipClass,
           rolePickClass(P.cardToken.fallback),
         )}
         {...dataPart("dv.card-tokens")}
