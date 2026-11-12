@@ -125,8 +125,7 @@ agents without tmux, per-namespace paths, the Claude Code health row:
   (`startAgentProcess`, a per-start field like `claudeBin`), and the agent
   numbers its events past `max(seqFloor, the file's last seq)` — so a launch
   whose events file is gone cannot restart at seq 1 under the cursor, where
-  the reducer would skip every line. The agent removes its `bin/` clones'
-  folder on exit.
+  the reducer would skip every line.
 - **An agent directory lives as long as its attempt's workspace**
   (`machine/internal/agent-dirs-reclaim.ts`, wired in `agent-dirs-job.ts`). A
   reaper that deletes workspaces announces it (`Workspace.Reclaimed`,
@@ -286,8 +285,17 @@ agents without tmux, per-namespace paths, the Claude Code health row:
   keys a bundle-less client by path, so each conversation's grants are its
   own; the name is chosen at its first start and kept across relaunches
   (read back from the previous launch.json), re-cloned from the current binary
-  when it changed, and removed by the agent on exit (a kept clone would pin a
-  replaced binary).
+  when it changed.
+- **An agent's clones outlive its process** (its named claude and its named
+  bun, `<agent dir>/bin/`). Each fresh clone costs a macOS malware scan on its
+  first exec — 3.2 s for the 322 MB claude, 1.2 s for bun (measured
+  2026-11-12; a second exec 0.02 s) — and a start that finds a current clone
+  reuses it (`cloneNamedBinary`). They used to be removed on exit, so every
+  wake of a hibernated conversation, rewind relaunch and account move paid
+  ~4.4 s of scans inside the request (`resume-hibernated` at 6–13 s). The
+  daily `runtime-sdk.agent-dirs-reclaim` removes a kept clone an upgrade has
+  replaced (`pruneStaleClones`, never a running agent's), so a stopped agent
+  pins no old build; the whole folder goes with the workspace.
 
 Gotchas the spike hit:
 
@@ -389,6 +397,7 @@ Gotchas the spike hit:
     - `infra/endpoints.implementMachine`
     - `network/live.serveValue`
     - `packages/process-name.cloneNamedBinary`
+    - `packages/process-name.isCurrentCloneOf`
   - Register:
     - `defineFileWatcher('runtime-sdk.events')`
     - `defineDaemon('runtime-sdk.agent')`

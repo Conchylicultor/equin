@@ -53,6 +53,11 @@ export interface AgentDirFacts {
   workspacePresent(
     attemptIds: readonly string[],
   ): Promise<ReadonlyMap<string, boolean>>;
+  /**
+   * Whether a named binary in an agent's `bin/` is a current clone of the
+   * executable it was cloned from — what the agent's next start would keep.
+   */
+  cloneIsCurrent(path: AppPath): Promise<boolean>;
 }
 
 export interface AgentDirsReclaim {
@@ -66,6 +71,8 @@ export interface AgentDirsReclaim {
   unknown: number;
   /** Namespace directories deleted once empty. */
   namespacesRemoved: number;
+  /** Outdated clones deleted from kept directories (see {@link pruneStaleClones}). */
+  staleClonesRemoved: number;
 }
 
 const emptyReclaim = (): AgentDirsReclaim => ({
@@ -74,6 +81,7 @@ const emptyReclaim = (): AgentDirsReclaim => ({
   present: 0,
   unknown: 0,
   namespacesRemoved: 0,
+  staleClonesRemoved: 0,
 });
 
 /**
@@ -125,8 +133,10 @@ export async function sweepReclaimedAgentDirs(
       const isPresent =
         attemptId === undefined ? undefined : present.get(attemptId);
       if (isPresent === undefined) out.unknown++;
-      else if (isPresent) out.present++;
-      else
+      else if (isPresent) {
+        out.present++;
+        await pruneStaleClones(roots, roots.ownNamespace, id, facts, out, opts);
+      } else
         await removeAgentDir(roots, roots.ownNamespace, id, out, opts.dryRun, {
           stillGone: () => stillGone(facts, attemptId!),
           present: () => out.present++,
@@ -146,15 +156,53 @@ export async function sweepReclaimedAgentDirs(
       });
       continue;
     }
-    const count = (await dirsIn(joinAppPath(roots.agentsRoot, ns))).length;
-    if (isPresent) out.present += count;
-    else out.unknown += count;
+    const ids = await dirsIn(joinAppPath(roots.agentsRoot, ns));
+    const count = ids.length;
+    if (isPresent) {
+      out.present += count;
+      for (const id of ids)
+        await pruneStaleClones(roots, ns, id, facts, out, opts);
+    } else out.unknown += count;
     // An empty namespace holds nothing to lose, whoever owns it; the next
     // launch under it makes it again.
     if (count === 0 && !opts.dryRun) await removeEmptyNamespace(roots, ns, out);
     else if (count === 0) out.namespacesRemoved++;
   }
   return out;
+}
+
+/**
+ * A kept agent directory's outdated clones. An agent keeps its named claude and
+ * bun past its exit (`bin/agent.ts`): a fresh one costs a malware scan on its
+ * first exec, and the next start reuses a current one. A clone an upgrade has
+ * since replaced is no use to that start (it re-clones) and pins the old
+ * build's blocks, so it goes here — unless the agent runs on it.
+ */
+async function pruneStaleClones(
+  roots: AgentDirRoots,
+  ns: string,
+  id: string,
+  facts: AgentDirFacts,
+  out: AgentDirsReclaim,
+  opts: { dryRun: boolean },
+): Promise<void> {
+  const bin = joinAppPath(roots.agentsRoot, ns, id, "bin");
+  const clones = await filesIn(bin);
+  if (clones.length === 0) return;
+  if (await agentMayRun(joinAppPath(roots.pidsRoot, ns, `${id}.pid`))) return;
+  for (const name of clones) {
+    const path = joinAppPath(bin, name);
+    if (await facts.cloneIsCurrent(path)) continue;
+    out.staleClonesRemoved++;
+    if (opts.dryRun) continue;
+    // Asked again just before: a start that began since swaps a current
+    // clone in under the same name (one rename), and that one must stay.
+    if (await facts.cloneIsCurrent(path)) {
+      out.staleClonesRemoved--;
+      continue;
+    }
+    await rm(path, { force: true });
+  }
 }
 
 /**
@@ -253,6 +301,17 @@ async function dirsIn(dir: AppPath): Promise<string[]> {
   try {
     const entries = await readdir(dir, { withFileTypes: true });
     return entries.filter((e) => e.isDirectory()).map((e) => e.name);
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return [];
+    throw err;
+  }
+}
+
+/** The plain files in `dir`; none when it does not exist. */
+async function filesIn(dir: AppPath): Promise<string[]> {
+  try {
+    const entries = await readdir(dir, { withFileTypes: true });
+    return entries.filter((e) => e.isFile()).map((e) => e.name);
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === "ENOENT") return [];
     throw err;

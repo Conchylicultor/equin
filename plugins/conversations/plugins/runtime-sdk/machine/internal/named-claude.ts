@@ -22,8 +22,9 @@ import { agentBinDir } from "./paths";
 // conversation even when its title changes. Each start re-clones it from
 // the current binary when that changed, so an SDK upgrade reaches it.
 //
-// The agent removes the clone when it exits (`bin/agent.ts`): a clone left in
-// place would pin a binary a reinstall has since replaced.
+// The clone outlives the agent (`bin/agent.ts`): its first exec costs a ~3 s
+// malware scan, which the next start skips by finding it current. One an
+// upgrade replaced goes with the daily reclaim (`agent-dirs-reclaim.ts`).
 
 /**
  * The named clone this start of `conversationId` spawns, or null to spawn

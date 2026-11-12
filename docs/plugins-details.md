@@ -21207,6 +21207,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/endpoints.implementMachine`
           - `network/live.serveValue`
           - `packages/process-name.cloneNamedBinary`
+          - `packages/process-name.isCurrentCloneOf`
         - Register:
           - `defineFileWatcher('runtime-sdk.events')`
           - `defineDaemon('runtime-sdk.agent')`
@@ -40051,6 +40052,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `CHECKOUT_BUN_DIR`
           - `checkoutBun`
           - `cloneNamedBinary`
+          - `isCurrentCloneOf`
           - `refreshCheckoutBun`
     - **`refcount-hub`** — Keyed refcounted subscription hub: createRefcountHub(open) shares ONE underlying subscription per key among every holder — the first acquire opens it (sync or async), each event fans out to every holder, the last release stops it — so N readers of one source cost one watch.
       - Cross-plugin:

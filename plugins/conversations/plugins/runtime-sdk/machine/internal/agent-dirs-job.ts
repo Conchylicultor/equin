@@ -6,6 +6,9 @@ import {
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { stat } from "@plugins/packages/plugins/timed-fs/core";
+import { isCurrentCloneOf } from "@plugins/packages/plugins/process-name/machine";
+import { bundledClaudeBin } from "@plugins/infra/plugins/claude-cli/plugins/sdk/machine";
+import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { Log } from "@plugins/primitives/plugins/log-channels/server";
 import { sdkAgentPidsDir, sdkAgentsDir } from "../../data-dirs";
 import {
@@ -43,6 +46,15 @@ const facts: AgentDirFacts = {
     }
     return out;
   },
+  // What `startAgentProcess` clones: the Agent SDK's claude and this
+  // backend's bun. A worktree backend on another bun re-clones its own at
+  // its agent's next start.
+  async cloneIsCurrent(path) {
+    return isCurrentCloneOf(path, [
+      await bundledClaudeBin(),
+      asAppPath(process.execPath),
+    ]);
+  },
 };
 
 async function exists(path: string): Promise<boolean> {
@@ -56,7 +68,7 @@ async function exists(path: string): Promise<boolean> {
 }
 
 function describe(r: AgentDirsReclaim): string {
-  return `${String(r.removed)} agent dir(s) and ${String(r.namespacesRemoved)} namespace dir(s); kept ${String(r.live)} running, ${String(r.present)} whose workspace is on disk, ${String(r.unknown)} this database cannot place`;
+  return `${String(r.removed)} agent dir(s), ${String(r.namespacesRemoved)} namespace dir(s) and ${String(r.staleClonesRemoved)} outdated clone(s); kept ${String(r.live)} running, ${String(r.present)} whose workspace is on disk, ${String(r.unknown)} this database cannot place`;
 }
 
 /**
@@ -80,7 +92,7 @@ export const agentDirsOnReclaim = WorkspaceReclaimed({
 export const agentDirsReclaimJob = defineJob({
   name: "runtime-sdk.agent-dirs-reclaim",
   description:
-    "Deletes the state of SDK agents (event log, launch options, log) whose conversation's workspace no longer exists and whose agent is not running.",
+    "Deletes the state of SDK agents (event log, launch options, log) whose conversation's workspace no longer exists and whose agent is not running, and the named claude / bun clones a stopped agent kept that an upgrade has since replaced.",
   // seconds: a readdir and a stat per agent directory, one indexed read per batch.
   hold: "seconds",
   input: z.object({ dryRun: z.boolean().default(false) }),

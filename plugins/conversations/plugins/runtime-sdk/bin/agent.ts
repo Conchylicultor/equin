@@ -30,13 +30,7 @@ import type {
   SDKUserMessage,
 } from "@anthropic-ai/claude-agent-sdk";
 import { spawn, spawnSync, type ChildProcessByStdio } from "node:child_process";
-import {
-  mkdirSync,
-  renameSync,
-  rmSync,
-  rmdirSync,
-  writeFileSync,
-} from "node:fs";
+import { mkdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
 import { createServer, type Socket } from "node:net";
 import type { Readable, Writable } from "node:stream";
@@ -746,36 +740,18 @@ process.on("SIGTERM", () =>
 process.on("exit", removeExitFiles);
 
 /**
- * What the agent leaves only while it lives: the named claude and the named
- * bun it runs on (left in place either would pin a version the updater has
- * since deleted; the next start makes them again, same names), then the pid
- * file — last.
+ * What the agent leaves only while it lives: its pid file. The named claude
+ * and bun it runs on stay, for the conversation's next start: each is a file
+ * macOS scans on its first exec (syspolicyd: ~3.2 s for the 322 MB claude,
+ * ~1.2 s for bun, measured 2026-11-12), and a clone the next start finds
+ * current is not re-made (`cloneNamedBinary`). Removed on exit, every wake of
+ * a hibernated conversation, every rewind and account relaunch paid both
+ * scans again. A clone an upgrade left behind is the reclaim job's
+ * (`agent-dirs-reclaim.ts`, `pruneStaleClones`), as is the whole folder once
+ * the conversation's workspace goes.
  */
 function removeExitFiles(): void {
-  if (options.namedClaudeBin) rmSync(options.namedClaudeBin, { force: true });
-  if (options.namedBun) rmSync(options.namedBun, { force: true });
-  // Their folder too, once empty (it holds only those two): one per agent
-  // ever run otherwise stays behind.
-  for (const clone of [options.namedClaudeBin, options.namedBun]) {
-    if (clone) rmEmptyDir(dirname(clone));
-  }
   rmSync(pidPath, { force: true });
-}
-
-/**
- * Remove `path` if it is an empty directory; one still holding files, or gone,
- * stays as is. Any other failure is written to the log, never thrown: it runs
- * on the way out, before the pid file goes, and a leftover empty folder must
- * not leave a pid file claiming this agent still runs.
- */
-function rmEmptyDir(path: string): void {
-  try {
-    rmdirSync(path);
-  } catch (err) {
-    const code = (err as NodeJS.ErrnoException).code;
-    if (code === "ENOTEMPTY" || code === "ENOENT") return;
-    log(`could not remove ${path} on exit: ${String(err)}`);
-  }
 }
 
 /**

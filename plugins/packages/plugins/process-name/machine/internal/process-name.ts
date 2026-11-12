@@ -90,6 +90,23 @@ export async function cloneNamedBinary(opts: {
 }
 
 /**
+ * Whether `path` is a current clone of one of `bins` (symlinks resolved) —
+ * what {@link cloneNamedBinary} would leave alone. False when `path` is gone.
+ * For whoever keeps clones past their process (the sdk runtime's agents) and
+ * must tell one an upgrade left behind.
+ */
+export async function isCurrentCloneOf(
+  path: AppPath,
+  bins: readonly AppPath[],
+): Promise<boolean> {
+  for (const bin of bins) {
+    if (await isCurrentClone(path, await stat(await realpath(bin))))
+      return true;
+  }
+  return false;
+}
+
+/**
  * `path` is a current clone of the file `source` describes: a file of its own
  * (one name — a hardlink is the hazard above, not a clone) with its size and
  * mtime.
