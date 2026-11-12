@@ -177,6 +177,20 @@ GC and the sweeper's superseded DELETE discard the logs of the rows they remove
 — only row-owned run ids, since a baked (keyed/resume) id is shared with
 whatever row holds that key next.
 
+## A fork inherits no run
+
+A run belongs to the database whose queue ran it. A worktree's database is
+forked from main while main has runs in flight (every launch: the spawn is
+suspended on its checkout wait when the fork lands), so the fork leaves behind
+everything a run is resumed or replayed from: graphile's rows and the step and
+wait logs, declared together in `jobs#machine` (`machine/internal/fork-exclusion.ts`;
+the desktop is the only host whose database is forked). A copied pending wait was resumed by the
+worktree's own backend and launched a second agent of main's conversation
+(2026-11-12). The `ctx.waitFor` trigger rows still come across (one table per
+event); without their wait, the `jobs.resume` they start finds nothing to resume.
+`machine/internal/fork-inherits-no-runs.test.ts` forks a suspended run with
+these declarations and checks nothing of it is in the fork.
+
 ## A run's death is a fact its job is told: `onDead`
 
 `defineJob({ onDead })` is called once, at the instant the queue decides no
@@ -766,6 +780,8 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `resource.declare` "jobs:rows"
     - `host-service:jobs.queue` "jobs.queue"
     - `fork-schema-data-exclusion` "graphile_worker"
+    - `fork-data-exclusion` "job_steps"
+    - `fork-data-exclusion` "job_waits"
   - Uses:
     - `database.db`
     - `database/connection.BOOT_DDL_QUERY_DEADLINE_MS`

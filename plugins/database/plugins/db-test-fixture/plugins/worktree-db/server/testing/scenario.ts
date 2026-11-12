@@ -40,7 +40,7 @@ let installed: Promise<void> | null = null;
  *
  * A worktree database no longer arrives in that state — the fork keeps
  * graphile's migration watermark (`ExcludeSchemaDataFromFork({ schema:
- * "graphile_worker", keep: ["migrations"] })` in jobs' server barrel), so it is
+ * "graphile_worker", keep: ["migrations"] })` in `jobs#machine`), so it is
  * born queue-capable. This gate stays because it is cheap (one connect, one
  * SELECT) and because it is the harness's job to state its own precondition
  * rather than inherit one from how the database happened to be provisioned —

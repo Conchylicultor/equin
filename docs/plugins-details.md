@@ -34400,6 +34400,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `resource.declare` "jobs:rows"
           - `host-service:jobs.queue` "jobs.queue"
           - `fork-schema-data-exclusion` "graphile_worker"
+          - `fork-data-exclusion` "job_steps"
+          - `fork-data-exclusion` "job_waits"
         - Uses:
           - `database.db`
           - `database/connection.BOOT_DDL_QUERY_DEADLINE_MS`
