@@ -19,7 +19,7 @@ export function StorageFailureCollector() {
         source: "client-storage",
         message:
           f.reason === "corrupt"
-            ? `web-storage: an entry of ${f.owner} (${f.area}) failed its schema and was dropped`
+            ? `web-storage: an entry of ${f.owner} (${f.area}) failed the schema that wrote it and was dropped`
             : `web-storage: ${f.owner} (${f.area}) write refused: ${f.reason}${f.error ? ` (${f.error})` : ""}`,
         url: window.location.href,
         userAgent: navigator.userAgent,

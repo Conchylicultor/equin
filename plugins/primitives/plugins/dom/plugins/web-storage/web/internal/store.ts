@@ -1,4 +1,6 @@
 import type { z } from "zod";
+import { hash53 } from "@plugins/packages/plugins/string-hash/core";
+import { describeSchema } from "@plugins/packages/plugins/zod-introspect/core";
 import { defineReportSink } from "@plugins/primitives/plugins/report-sink/core";
 import {
   AREA_BUDGET,
@@ -46,7 +48,12 @@ export interface StoreSpec<T> {
   /** Milliseconds an entry lives after its last write; `Infinity` for never. */
   ttl: number;
   whenFull: WhenFull;
-  /** Decodes a stored value; an entry that fails it is corrupt (dropped, reported). */
+  /**
+   * Decodes a stored value. Every entry is stamped with the schema that wrote
+   * it: one stamped with this schema that fails it is corrupt (dropped,
+   * reported); one another schema wrote (a tab on another build) is left alone
+   * — read as `other-schema`, never dropped.
+   */
   schema: z.ZodType<T>;
   /**
    * Set only for state about the page itself, never about what an app inside
@@ -77,7 +84,21 @@ export interface LegacyKeys {
 
 export type StoreRead<T> =
   | { kind: "value"; value: T; ts: number }
-  | { kind: "none"; why: "absent" | "expired" | "corrupt" | "unavailable" };
+  | {
+      kind: "none";
+      why:
+        | "absent"
+        | "expired"
+        /** Written under this owner's schema, and fails it: dropped and reported. */
+        | "corrupt"
+        /**
+         * Written under ANOTHER schema of this owner (a tab on an older or newer
+         * build), and this one cannot read it: left in place for the builds
+         * that can — never dropped, never reported.
+         */
+        | "other-schema"
+        | "unavailable";
+    };
 
 export type WriteFailureReason =
   /** The value would take the owner over its own cap (a `refuse` store, or one entry bigger than the cap). */
@@ -200,6 +221,8 @@ const NESTED_SHARE = 1 / 4;
 
 interface OwnerState<T> {
   spec: StoreSpec<T>;
+  /** `schemaStamp(spec.schema)`, computed on first need. */
+  stamp: string | null;
   cap: number;
   /**
    * The most the page's own scope may hold: the cap less the scopes' reserve
@@ -264,7 +287,42 @@ function fail(
   notifyChanged();
 }
 
-type Envelope = { v: unknown; ts: number };
+/**
+ * One stored entry. `s` is the stamp of the schema that wrote it
+ * ({@link schemaStamp}): what lets a reader tell an entry its own schema
+ * wrote — bytes that fail it are corrupt — from one another build's schema
+ * wrote, which it has no right to judge. Absent on entries written before
+ * stamps existed: their writer is unknown, so they are treated as another
+ * schema's.
+ */
+type Envelope = { v: unknown; ts: number; s?: string };
+
+/**
+ * A schema's identity across builds: a hash of zod-introspect's description of
+ * it (what it accepts and produces, as data), so two builds whose schema for an
+ * owner is the same stamp the same, and any change to what it accepts moves
+ * the stamp. A change confined to a transform's body does not (describeSchema
+ * cannot see into it) — such an entry is then judged corrupt, loudly, never
+ * left silently.
+ */
+function schemaStamp(state: OwnerState<unknown>): string {
+  state.stamp ??= hash53(
+    JSON.stringify(describeSchema(state.spec.schema).description),
+  ).toString(36);
+  return state.stamp;
+}
+
+function envelope(
+  state: OwnerState<unknown>,
+  value: unknown,
+  ts: number,
+): string {
+  return JSON.stringify({
+    v: value,
+    ts,
+    s: schemaStamp(state),
+  } satisfies Envelope);
+}
 
 function parseEnvelope(raw: string): Envelope | null {
   let parsed: unknown;
@@ -279,10 +337,15 @@ function parseEnvelope(raw: string): Envelope | null {
     parsed === null ||
     !("v" in parsed) ||
     !("ts" in parsed) ||
-    typeof parsed.ts !== "number"
+    typeof parsed.ts !== "number" ||
+    ("s" in parsed && typeof parsed.s !== "string")
   )
     return null;
-  return { v: parsed.v, ts: parsed.ts };
+  return {
+    v: parsed.v,
+    ts: parsed.ts,
+    ...("s" in parsed && typeof parsed.s === "string" ? { s: parsed.s } : {}),
+  };
 }
 
 function expired(state: OwnerState<unknown>, ts: number): boolean {
@@ -337,10 +400,7 @@ function load<T>(state: OwnerState<T>): Map<string, Entry> | null {
       const parsed = state.spec.schema.safeParse(adopted.value);
       const newKey = `${state.prefix}${adopted.id}`;
       if (!parsed.success || entries.has(newKey)) continue;
-      const raw = JSON.stringify({
-        v: parsed.data,
-        ts: adopted.ts,
-      } satisfies Envelope);
+      const raw = envelope(state, parsed.data, adopted.ts);
       const bytes = entryBytes(newKey, raw);
       if (
         state.pageUsed + bytes > state.pageCap ||
@@ -501,6 +561,7 @@ export function defineStore<T>(spec: StoreSpec<T>): Store<T> | ScopedStore<T> {
   const cap = parseStorageSize(spec.cap);
   const state: OwnerState<T> = {
     spec,
+    stamp: null,
     cap,
     pageCap: spec.pageWide ? cap : cap - Math.floor(cap * NESTED_SHARE),
     prefix: ownerPrefix(spec.owner),
@@ -634,18 +695,24 @@ function bind<T>(state: OwnerState<T>, scope: string | null): Store<T> {
       }
       if (raw === null) return { kind: "none", why: "absent" };
       const env = parseEnvelope(raw);
-      const parsed = env ? spec.schema.safeParse(env.v) : null;
-      if (!env || !parsed?.success) {
-        removeKey(state, k);
-        fail(state, { reason: "corrupt" });
-        return { kind: "none", why: "corrupt" };
-      }
-      if (expired(state, env.ts)) {
+      if (env && expired(state, env.ts)) {
         removeKey(state, k);
         notifyChanged();
         return { kind: "none", why: "expired" };
       }
-      return { kind: "value", value: parsed.data, ts: env.ts };
+      const parsed = env ? spec.schema.safeParse(env.v) : null;
+      if (env && parsed?.success)
+        return { kind: "value", value: parsed.data, ts: env.ts };
+      // A valid envelope from another schema: a tab on another build wrote
+      // what that build reads. Not ours to judge, so never ours to drop — the
+      // user's value stays for every tab that can read it.
+      if (env && env.s !== schemaStamp(state))
+        return { kind: "none", why: "other-schema" };
+      // Our own schema wrote it (or no build could have: not an envelope):
+      // our bytes failing our schema, a bug — dropped and reported.
+      removeKey(state, k);
+      fail(state, { reason: "corrupt" });
+      return { kind: "none", why: "corrupt" };
     },
 
     write(id, value) {
@@ -657,7 +724,7 @@ function bind<T>(state: OwnerState<T>, scope: string | null): Store<T> {
         return { ok: false, reason: "blocked" };
       }
       const now = Date.now();
-      const raw = JSON.stringify({ v: value, ts: now } satisfies Envelope);
+      const raw = envelope(state, value, now);
       const bytes = entryBytes(k, raw);
       const prev = entries.get(k)?.bytes ?? 0;
       if (

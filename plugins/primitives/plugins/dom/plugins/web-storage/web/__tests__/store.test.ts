@@ -175,10 +175,33 @@ describe("defineStore", () => {
     expect(local.getItem(`s:${o}:old`)).toBeNull();
   });
 
-  it("an entry failing the schema is dropped and reported as corrupt", () => {
+  it("an entry its own schema wrote that fails it is dropped and reported as corrupt", () => {
     const seen = failures();
     const o = owner("corrupt");
-    local.setItem(`s:${o}:a`, JSON.stringify({ v: 42, ts: Date.now() }));
+    const spec = {
+      owner: o,
+      label: "X",
+      area: "local",
+      cap: "1 KB",
+      ttl: Infinity,
+      whenFull: "refuse",
+      schema: z.string(),
+    } as const;
+    const s = defineStore(spec).in(ROOT);
+    expect(s.write("a", "fine")).toEqual({ ok: true });
+    // Same envelope, same schema stamp, bytes the schema refuses.
+    const env = JSON.parse(local.getItem(`s:${o}:a`)!);
+    local.setItem(`s:${o}:a`, JSON.stringify({ ...env, v: 42 }));
+    expect(s.read("a")).toEqual({ kind: "none", why: "corrupt" });
+    expect(local.getItem(`s:${o}:a`)).toBeNull();
+    expect(seen).toEqual([
+      expect.objectContaining({ owner: o, reason: "corrupt" }),
+    ]);
+  });
+
+  it("a stored value that is not an envelope is corrupt", () => {
+    const seen = failures();
+    const o = owner("not-envelope");
     const s = defineStore({
       owner: o,
       label: "X",
@@ -188,11 +211,63 @@ describe("defineStore", () => {
       whenFull: "refuse",
       schema: z.string(),
     }).in(ROOT);
+    s.ids(); // first touch: the sweep would drop it, so plant it after
+    local.setItem(`s:${o}:a`, "{not json");
     expect(s.read("a")).toEqual({ kind: "none", why: "corrupt" });
     expect(local.getItem(`s:${o}:a`)).toBeNull();
-    expect(seen).toEqual([
-      expect.objectContaining({ owner: o, reason: "corrupt" }),
-    ]);
+    expect(seen).toHaveLength(1);
+  });
+
+  it("an entry another schema wrote is left in place, unreported (a tab on another build)", () => {
+    const seen = failures();
+    const o = owner("skew");
+    // What a newer build's schema wrote: an enum value this build lacks.
+    const newer = { v: "c", ts: Date.now(), s: "a-newer-schema" };
+    local.setItem(`s:${o}:a`, JSON.stringify(newer));
+    // And an entry written before stamps existed: its writer is unknown.
+    const unstamped = { v: 7, ts: Date.now() };
+    local.setItem(`s:${o}:b`, JSON.stringify(unstamped));
+    const s = defineStore({
+      owner: o,
+      label: "X",
+      area: "local",
+      cap: "1 KB",
+      ttl: Infinity,
+      whenFull: "refuse",
+      schema: z.enum(["a", "b"]),
+    }).in(ROOT);
+    expect(s.read("a")).toEqual({ kind: "none", why: "other-schema" });
+    expect(s.read("b")).toEqual({ kind: "none", why: "other-schema" });
+    expect(JSON.parse(local.getItem(`s:${o}:a`)!)).toEqual(newer);
+    expect(JSON.parse(local.getItem(`s:${o}:b`)!)).toEqual(unstamped);
+    expect(seen).toEqual([]);
+    // A readable entry from another schema is still read.
+    local.setItem(
+      `s:${o}:c`,
+      JSON.stringify({ v: "b", ts: Date.now(), s: "a-newer-schema" }),
+    );
+    expect(s.read("c")).toMatchObject({ kind: "value", value: "b" });
+  });
+
+  it("the same schema declared twice stamps the same; a changed one does not", () => {
+    const stampOf = (schema: z.ZodType<unknown>) => {
+      const o = owner("stamp");
+      defineStore({
+        owner: o,
+        label: "X",
+        area: "local",
+        cap: "1 KB",
+        ttl: Infinity,
+        whenFull: "evict-oldest",
+        schema,
+      })
+        .in(ROOT)
+        .write("a", "a");
+      return JSON.parse(local.getItem(`s:${o}:a`)!).s as string;
+    };
+    const one = stampOf(z.enum(["a", "b"]));
+    expect(stampOf(z.enum(["a", "b"]))).toBe(one);
+    expect(stampOf(z.enum(["a", "b", "c"]))).not.toBe(one);
   });
 
   it("legacy keys are adopted into the store, then deleted", () => {

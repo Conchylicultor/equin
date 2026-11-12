@@ -16,7 +16,7 @@ export const paneRoutes = defineStore({
   cap: "256 KB",                       // literal: the budget-fits check reads it
   ttl: 30 * DAY,                       // ms since last write; Infinity = never
   whenFull: "evict-oldest",            // caches; "refuse" for what the user typed
-  schema: savedRouteSchema,            // zod; an entry failing it is dropped + reported
+  schema: savedRouteSchema,            // zod; an entry IT wrote that fails it is dropped + reported
   legacy: { match: (k) => k.startsWith("route.restore."), adopt },  // pre-primitive keys
 });
 ```
@@ -78,8 +78,20 @@ Tests outside React use `storageScopeOf(id)` from `web/testing`.
 - **Every refused write is loud**: `onStorageFailure` (a toast once per owner
   per page load — `plugins/health`), `storageFailureReportSink` (a deduped
   crash report — `reports/web-storage`), and the counters the health report's
-  **Browser storage** row reads. An unreadable entry (bad JSON, fails the
-  schema) is dropped and reported, never handed back.
+  **Browser storage** row reads.
+- **A tab never destroys what another build wrote.** Each entry's envelope
+  `{v, ts, s}` carries the stamp of the schema that wrote it (`s`: a hash of
+  zod-introspect's `describeSchema` of the owner's schema — equal across
+  builds whose schema is the same, moved by any change to what it accepts).
+  An entry that fails the reader's schema is judged by that stamp: written
+  under the reader's own schema (or not an envelope at all) it is **corrupt**
+  — our bytes failing our schema, a bug — dropped and reported; written under
+  ANOTHER schema (a tab on an older or newer build — an enum value added, a
+  field renamed) it reads as `{kind:"none", why:"other-schema"}` and is left
+  in place, unreported, for the builds that can read it. An entry from before
+  stamps existed has no `s`: its writer is unknown, so it counts as another
+  schema's. (Before stamps, a stale tab read a newer build's entry as corrupt
+  and deleted it for every tab — 2026-11-11, `demo-scope.host-generation`.)
 - **Accounting is O(1) per write.** An owner's keys are scanned once, on first
   touch — that scan is also the TTL sweep and the legacy migration — then kept
   exact from its own writes and the `storage` event.

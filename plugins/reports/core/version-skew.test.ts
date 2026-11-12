@@ -41,6 +41,9 @@ describe("versionSkewMayExplain", () => {
       "client-render-loop",
       "client-main-thread-stall",
       "client-slow-interaction",
+      // web-storage never reports another build's entry (2026-11-11: a stale
+      // tab dropped demo-scope.host-generation, muted as skew).
+      "client-storage",
     ]) {
       expect(versionSkewMayExplain({ source, staleOrigin: true })).toBe(false);
     }

@@ -78,6 +78,7 @@ tag.get(schema);                       // T | undefined
     - `network/live/live-state`
     - `network/live/query-resource`
     - `packages/list-bound`
+    - `primitives/dom/web-storage`
     - `ui/icons/saved-names`
 - Exemptions:
   - Exempts itself from: `zod-introspect/no-zod-internals` — `core/internal`, `lint` (sanctioned)

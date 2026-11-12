@@ -69,10 +69,9 @@ export const CLIENT_REPORT_SUBJECT: Record<
   "client-boot-crash": "page",
   "client-missing-companion": "page",
   "plugin-load": "load",
-  // Not `load`: an entry this bundle's schema cannot read is DELETED by it
-  // (web-storage drops a corrupt entry) — an outdated tab destroying what a
-  // newer build stored is that tab's code losing the user's data, whatever
-  // explains the mismatch.
+  // A write refused (a cap, the browser's quota) or an entry the tab's own
+  // schema wrote failing that schema: web-storage leaves another build's
+  // entries alone (stamped with their writer's schema), so neither is skew.
   "client-storage": "page",
 };
 
