@@ -1,8 +1,7 @@
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { serveValue } from "@plugins/network/plugins/live/machine";
 import { mcpCatalog, type McpCatalog } from "../../core";
 import { mountTool, newMcpServer } from "./handle-mcp";
+import { mcpSdk } from "./sdk";
 import {
   registry,
   scopeRegistry,
@@ -22,12 +21,13 @@ const CATALOG_CTX = { conversationId: "(catalog)" };
 async function listedInputSchemas(): Promise<
   Map<string, Record<string, unknown>>
 > {
-  const server = newMcpServer();
+  const sdk = await mcpSdk();
+  const server = newMcpServer(sdk);
   for (const tool of registry.values()) {
     mountTool(server, tool, tool.description, CATALOG_CTX);
   }
-  const [clientSide, serverSide] = InMemoryTransport.createLinkedPair();
-  const client = new Client({ name: "mcp-catalog", version: "0.0.1" });
+  const [clientSide, serverSide] = sdk.InMemoryTransport.createLinkedPair();
+  const client = new sdk.Client({ name: "mcp-catalog", version: "0.0.1" });
   await server.connect(serverSide);
   try {
     await client.connect(clientSide);

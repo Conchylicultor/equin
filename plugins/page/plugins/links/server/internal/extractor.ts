@@ -14,6 +14,13 @@ import { defineServerContribution } from "@plugins/framework/plugins/server-core
 export interface PageLinkExtractor {
   type?: string;
   extract: (data: unknown) => string[];
+  /**
+   * The module holding `extract` (`import.meta`) — part of the code the
+   * stored `page_links` rows were derived by. The boot backfill re-derives
+   * every page's links only when that code changes (its source digest), so
+   * keep the extractor in a small module: everything it loads counts.
+   */
+  code: ImportMeta;
 }
 
 export const PageLinks = {

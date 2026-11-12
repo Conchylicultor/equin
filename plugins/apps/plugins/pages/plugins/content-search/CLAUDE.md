@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: Pages full-text search consumer: contributes the Search button into the Pages sidebar, opening the reusable quick-find dialog scoped to the pages source. Pages full-text search consumer: indexes pages into the search engine, reindexing on blocksChanged, with the backfill job that seeds existing pages (enqueued at boot by a warm-up, so pages that predate the index — or drifted — become searchable).
+- Description: Pages full-text search consumer: contributes the Search button into the Pages sidebar, opening the reusable quick-find dialog scoped to the pages source. Pages full-text search consumer: indexes pages into the search engine, reindexing on blocksChanged, with the boot backfill that re-derives every page's doc once per change of the derivation code (a warm-up declaring derivedFrom: pages that predate the index, or docs an older derivation wrote, become current).
 - Web:
   - Contributes: `Pages.Sidebar` "Search" → `PagesSearch`
   - Uses:
@@ -36,14 +36,11 @@
     - `page/editor.DeletedBlockRow`
     - `page/editor.liveBlocks`
     - `page/editor.PAGE_BLOCK_TYPE`
-    - `page/editor.pageData`
     - `search/engine.deleteSearchDocs`
     - `search/engine.getSourceDocMetadata`
     - `search/engine.upsertSearchDocs`
-  - Exports (values): `backfillPagesSearchJob`
   - Register:
     - `defineJob('pages.search.reindex')`
-    - `defineJob('pages.search.backfill')`
     - `defineWarmup('pages.search.backfill')`
 - Cross-plugin:
   - Uses tokens:

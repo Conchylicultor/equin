@@ -1,6 +1,6 @@
 {
-  "id": "5e709931-62cf-4485-8d0d-7e7374f6badc",
-  "prevId": "d6e0e122-808b-43d5-8ec7-04fb4f4196f8",
+  "id": "53e1d179-c084-4023-b5c5-1036f6b0e077",
+  "prevId": "5e709931-62cf-4485-8d0d-7e7374f6badc",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -11835,6 +11835,38 @@
           "with": {}
         }
       },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.warmup_code_stamps": {
+      "name": "warmup_code_stamps",
+      "schema": "",
+      "columns": {
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "code_digest": {
+          "name": "code_digest",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "derived_at": {
+          "name": "derived_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},

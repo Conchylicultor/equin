@@ -26,6 +26,20 @@ like `defineJob`.
   drain continues (a warm-up is an optimization, never a correctness
   dependency). Each run is recorded in memory (`warmupRunOf` / `onWarmupRun`) —
   `background-arm` shows it in Background activity.
+- **A backfill runs once per change of its code, not once per boot
+  (`derivedFrom`).** A warm-up that re-derives stored state every write
+  already keeps fresh (a search index, an edge table) only has work when the
+  derivation's code changed, or on a database that never ran it. It declares
+  that code — `derivedFrom: () => [sourceSet]`, each set's included modules
+  kept small (everything they load counts) — and the drain runs it only when
+  the code's digest (`WarmupHost.codeDigest`) differs from the one its last
+  successful run stamped into `warmup_code_stamps`; it stamps the new digest
+  once `run` resolves, in the same slot (a failed run stamps nothing). The run
+  is recorded `unchanged` otherwise. Desktop: source-digest; a sole host
+  answers `null` (no source tree) and the warm-up runs every boot. A fork
+  inherits main's stamps along with main's rows. Users: `page/links`,
+  `apps/pages/content-search`. Not for state written by hand (a data
+  migration rewriting derived rows): the stamp only sees code.
 - **Profile.** Each body is a `warmup:<name>` span under the framework's
   `settled` span.
 - **A barrel turning portable brings its warm-ups to the browser.** A warm-up
@@ -39,6 +53,8 @@ like `defineJob`.
 - Description: Declared heavy boot warm-up category, on every host: defineWarmup registers a deferred, throttled, scope-gated warm-up; the plugin's onSettled drains them once the serving host has settled (never in exec) under a concurrency gate + the host's admission (the WarmupHost host service: which scopes run here, and the slot each takes) + macrotask yield, recording each warm-up's run in memory (warmupRunOf / onWarmupRun); listRegisteredWarmups lists the declared set with the plugin that declared each.
 - Server:
   - Contributes: `host-service:warmup.host` "warmup.host"
+  - Uses: `database.db`
+  - DB schema: `plugins/infra/plugins/warmup/server/internal/tables.ts`
   - Exports (types):
     - `RegisteredWarmup`
     - `WarmupHostImpl`

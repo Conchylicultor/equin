@@ -2,26 +2,20 @@ import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-c
 import { eventField, Trigger } from "@plugins/infra/plugins/events/server";
 import { blocksChanged, BlockLifecycle } from "@plugins/page/plugins/editor/server";
 import { reindexPageSearchJob } from "./internal/reindex-job";
-import { backfillPagesSearchJob } from "./internal/backfill-job";
-import { pagesSearchBackfillWarmup } from "./internal/backfill-warmup";
+import { pagesSearchBackfillWarmup } from "./internal/backfill";
 import {
   deletePagesSearchHook,
   trashPagesSearchHook,
   restorePagesSearchHook,
 } from "./internal/delete-hook";
 
-export { backfillPagesSearchJob } from "./internal/backfill-job";
-
 export default {
   description:
-    "Pages full-text search consumer: indexes pages into the search engine, reindexing on blocksChanged, with the backfill job that seeds existing pages (enqueued at boot by a warm-up, so pages that predate the index — or drifted — become searchable).",
-  // The warm-up enqueues the seed scan off the serving-critical boot path (see
-  // backfill-warmup.ts); the jobs back it and the steady-state reindex trigger.
-  register: [
-    reindexPageSearchJob,
-    backfillPagesSearchJob,
-    pagesSearchBackfillWarmup,
-  ],
+    "Pages full-text search consumer: indexes pages into the search engine, reindexing on blocksChanged, with the boot backfill that re-derives every page's doc once per change of the derivation code (a warm-up declaring derivedFrom: pages that predate the index, or docs an older derivation wrote, become current).",
+  // The steady-state reindex job, and the backfill warm-up (deferred past
+  // serving-ready; runs only when the doc derivation's code changed — see
+  // internal/backfill.ts).
+  register: [reindexPageSearchJob, pagesSearchBackfillWarmup],
   contributions: [
     // Reindex a page's search doc whenever its blocks change. Declared (not
     // imperatively bound) so the events plugin makes it idempotent across

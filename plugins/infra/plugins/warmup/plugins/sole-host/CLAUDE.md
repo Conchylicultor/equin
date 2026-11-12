@@ -12,7 +12,7 @@ one service fail boot; `plugin-meta/closure`'s `hostProviders`).
 
 ## Plugin reference
 
-- Description: Warm-up admission of a sole host — one backend with no neighbours (the browser composition, the portable boot test): provides the WarmupHost host service running every scope, host-scoped warm-ups included, with no slot to take. Never booted by the desktop.
+- Description: Warm-up admission of a sole host — one backend with no neighbours (the browser composition, the portable boot test): provides the WarmupHost host service running every scope, host-scoped warm-ups included, with no slot to take, and no code digest (a warm-up declaring derivedFrom runs on every boot). Never booted by the desktop.
 - Excluded: yes
 - Server:
   - Contributes: `host-service:warmup.host` "warmup.host"

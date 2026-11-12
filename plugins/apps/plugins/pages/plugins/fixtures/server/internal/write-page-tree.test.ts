@@ -168,8 +168,8 @@ describe.if(IN_CHILD)("writePageTree on a portable host", () => {
       ),
       onUnmatched: unmatchedApiResponse,
     });
-    // The boot warm-ups (links and search backfills) enqueue over the empty
-    // corpus; let them land before the write, so the settle below runs them.
+    // The boot warm-ups (links and search backfills) run over the empty
+    // corpus; let them land before the write.
     await host.settled;
     await writePageTree(TREE);
     await settleJobQueue();

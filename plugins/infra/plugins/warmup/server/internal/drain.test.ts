@@ -10,6 +10,7 @@ import {
   type WarmupRun,
 } from "./executor";
 import { DEFAULT_WARMUP_BUDGET_MS, type WarmupSpec } from "./registry";
+import { defineSourceSet } from "@plugins/packages/plugins/source-digest/core";
 
 // A passthrough heavy-read slot + a real macrotask yield, so the tests exercise
 // the executor's own concurrency gate / scope gate (`runs`, stubbed — the host's
@@ -25,6 +26,11 @@ function baseDeps(
     withSlot: (fn) => fn(),
     yieldMacrotask: () => new Promise<void>((r) => setImmediate(r)),
     concurrency: 2,
+    codeDigest: () => Promise.resolve(null),
+    stamps: {
+      read: () => Promise.reject(new Error("no derivedFrom warm-up here")),
+      write: () => Promise.reject(new Error("no derivedFrom warm-up here")),
+    },
     ...overrides,
   };
 }
@@ -239,5 +245,115 @@ describe("drainWarmupsWith", () => {
     expect(run.outcome).toBe("succeeded");
     if (run.outcome !== "succeeded") return;
     expect(run.durationMs).toBeLessThan(60);
+  });
+});
+
+describe("drainWarmupsWith — derivedFrom", () => {
+  const code = defineSourceSet("a test derivation's code");
+
+  function derived(onRun: () => void, fail = false): WarmupSpec {
+    return {
+      name: "derived",
+      description: "Test warm-up.",
+      scope: "worktree",
+      derivedFrom: () => [code],
+      run: async () => {
+        onRun();
+        if (fail) throw new Error("boom");
+      },
+    };
+  }
+
+  function memoryStamps(initial: Record<string, string> = {}) {
+    const rows = new Map(Object.entries(initial));
+    return {
+      rows,
+      stamps: {
+        read: (name: string) => Promise.resolve(rows.get(name) ?? null),
+        write: (name: string, digest: string) => {
+          rows.set(name, digest);
+          return Promise.resolve();
+        },
+      },
+    };
+  }
+
+  test("runs on a database with no stamp, then stamps the code's digest", async () => {
+    let ran = 0;
+    const { rows, stamps } = memoryStamps();
+    await drainWarmupsWith(
+      baseDeps([derived(() => ran++)], {
+        codeDigest: () => Promise.resolve("d1"),
+        stamps,
+      }),
+    );
+    expect(ran).toBe(1);
+    expect(rows.get("derived")).toBe("d1");
+  });
+
+  test("skips as unchanged when the stamp is the code's digest", async () => {
+    let ran = 0;
+    const runs: Record<string, WarmupRun> = {};
+    const { stamps } = memoryStamps({ derived: "d1" });
+    await drainWarmupsWith(
+      baseDeps([derived(() => ran++)], {
+        codeDigest: () => Promise.resolve("d1"),
+        stamps,
+        onRun: (name, run) => {
+          runs[name] = run;
+        },
+      }),
+    );
+    expect(ran).toBe(0);
+    expect(runs.derived).toEqual({ outcome: "unchanged", codeDigest: "d1" });
+  });
+
+  test("runs again when the code changed", async () => {
+    let ran = 0;
+    const { rows, stamps } = memoryStamps({ derived: "d1" });
+    await drainWarmupsWith(
+      baseDeps([derived(() => ran++)], {
+        codeDigest: () => Promise.resolve("d2"),
+        stamps,
+      }),
+    );
+    expect(ran).toBe(1);
+    expect(rows.get("derived")).toBe("d2");
+  });
+
+  test("a failed run records no stamp, so the next boot runs it again", async () => {
+    const { rows, stamps } = memoryStamps({ derived: "d1" });
+    await drainWarmupsWith(
+      baseDeps([derived(() => {}, true)], {
+        codeDigest: () => Promise.resolve("d2"),
+        stamps,
+      }),
+    );
+    expect(rows.get("derived")).toBe("d1");
+  });
+
+  test("runs every boot where the host cannot digest code", async () => {
+    let ran = 0;
+    const { rows, stamps } = memoryStamps({ derived: "d1" });
+    await drainWarmupsWith(baseDeps([derived(() => ran++)], { stamps }));
+    expect(ran).toBe(1);
+    expect(rows.get("derived")).toBe("d1");
+  });
+
+  test("a digest that throws fails the warm-up rather than skipping it", async () => {
+    let ran = 0;
+    const runs: Record<string, WarmupRun> = {};
+    const { stamps } = memoryStamps({ derived: "d1" });
+    await drainWarmupsWith(
+      baseDeps([derived(() => ran++)], {
+        codeDigest: () => Promise.reject(new Error("unresolvable import")),
+        stamps,
+        onRun: (name, run) => {
+          runs[name] = run;
+        },
+      }),
+    );
+    expect(ran).toBe(0);
+    expect(runs.derived?.outcome).toBe("failed");
   });
 });

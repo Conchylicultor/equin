@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { plainOf } from "@plugins/page/plugins/editor/core";
+import type { PageLinkExtractor } from "@plugins/page/plugins/links/server";
 import { scanPageLinkTokens } from "../../core";
 
 // `data` is raw jsonb; only text-bearing blocks carry a `text` field. `text` may
@@ -12,3 +13,10 @@ export function extractInlinePageLinks(data: unknown): string[] {
   const r = TextShape.safeParse(data);
   return r.success ? scanPageLinkTokens(plainOf(r.data.text)) : [];
 }
+
+/** The global extractor as contributed: its module is part of the code the
+ * stored backlinks were derived by (`PageLinkExtractor.code`). */
+export const inlinePageLinksExtractor: PageLinkExtractor = {
+  extract: extractInlinePageLinks,
+  code: import.meta,
+};

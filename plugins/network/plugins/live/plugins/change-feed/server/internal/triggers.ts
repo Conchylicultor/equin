@@ -909,7 +909,10 @@ export async function rebuildTriggers(
   return { kept };
 }
 
-const TriggerNameRowSchema = z.object({ tgname: z.string() });
+const TableTriggerRowSchema = z.object({
+  relname: z.string(),
+  tgname: z.string(),
+});
 
 // Boot-time coverage check (replaces a separate ./equin check, which can't
 // reach a live DB). After installing triggers, query which public tables (minus
@@ -917,30 +920,43 @@ const TriggerNameRowSchema = z.object({ tgname: z.string() });
 // by-construction coverage this should always be empty; a non-empty result means
 // something drifted (a trigger failed to create, or a table appeared between the
 // enumerate and the check) and is the loud signal to investigate.
+//
+// ONE catalog read of every public table's `live_state_*` triggers: it used to
+// ask per table, ~230 round trips one after another inside onReadyBlocking on
+// every boot, for an answer one join gives.
 async function warnOnCoverageGaps(
   db: NodePgDatabase,
   exclude: Set<string>,
 ): Promise<void> {
   const tables = await listPublicTables(db, exclude);
+  const rows = await executeRows(db, {
+    query: drizzleSql.raw(
+      `SELECT c.relname, t.tgname
+       FROM pg_trigger t
+       JOIN pg_class c ON c.oid = t.tgrelid
+       JOIN pg_namespace n ON n.oid = c.relnamespace
+       WHERE n.nspname = 'public'
+         AND NOT t.tgisinternal
+         AND t.tgname LIKE 'live_state_%'`,
+    ),
+    row: TableTriggerRowSchema,
+    label: "warnOnCoverageGaps",
+  });
+  const installed = new Map<string, Set<string>>();
+  for (const r of rows) {
+    const names = installed.get(r.relname) ?? new Set<string>();
+    names.add(r.tgname);
+    installed.set(r.relname, names);
+  }
   const gaps: string[] = [];
   for (const table of tables) {
-    const rows = await executeRows(db, {
-      query: drizzleSql.raw(
-        `SELECT tgname FROM pg_trigger
-         WHERE tgrelid = format('public.%I', ${quoteLiteral(table)})::regclass
-           AND NOT tgisinternal
-           AND tgname LIKE 'live_state_%'`,
-      ),
-      row: TriggerNameRowSchema,
-      label: "warnOnCoverageGaps",
-    });
-    const names = new Set(rows.map((r) => r.tgname));
+    const names = installed.get(table);
     const expected = [
       triggerName(table, "i"),
       triggerName(table, "u"),
       triggerName(table, "d"),
     ];
-    if (!expected.every((n) => names.has(n))) gaps.push(table);
+    if (!expected.every((n) => names?.has(n) === true)) gaps.push(table);
   }
 
   if (gaps.length > 0) {

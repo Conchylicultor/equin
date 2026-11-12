@@ -11,7 +11,12 @@ import {
 } from "@plugins/infra/plugins/warmup/server";
 
 function toRun(run: WarmupRun | undefined): BackgroundRun | null {
-  if (run === undefined || run.outcome === "skipped") return null;
+  if (
+    run === undefined ||
+    run.outcome === "skipped" ||
+    run.outcome === "unchanged"
+  )
+    return null;
   if (run.outcome === "running") {
     return {
       startedAt: run.startedAt.toISOString(),

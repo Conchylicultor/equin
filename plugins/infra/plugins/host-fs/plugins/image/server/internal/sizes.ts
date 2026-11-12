@@ -1,4 +1,3 @@
-import sharp from "sharp";
 import { openHostFile } from "@plugins/infra/plugins/host-fs/server";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import {
@@ -6,6 +5,7 @@ import {
   type ImageSize,
 } from "@plugins/infra/plugins/paths/plugins/file-systems/core";
 import type { UserPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import { loadSharp } from "./sharp";
 
 /** Header reads are a few ms each; bounded so a big folder cannot open hundreds of files at once. */
 const reads = createSemaphore(8);
@@ -47,6 +47,7 @@ export async function sizeOf(path: UserPath): Promise<ImageSize | null> {
   const key = `${file.path}\0${resizedVersion(file)}`;
   const known = memo.get(key);
   if (known) return known;
+  const sharp = await loadSharp();
   return reads.run(async () => {
     try {
       const meta = await sharp(file.onDisk ? file.path : await file.read(), {

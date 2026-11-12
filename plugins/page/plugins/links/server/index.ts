@@ -6,10 +6,7 @@ import {
   BlockLifecycle,
 } from "@plugins/page/plugins/editor/server";
 import { reindexLinksJob } from "./internal/reindex-job";
-import {
-  backfillPageLinksJob,
-  pageLinksBackfillWarmup,
-} from "./internal/backfill-job";
+import { pageLinksBackfillWarmup } from "./internal/backfill";
 import {
   pageBacklinkEdgesServed,
   pageBacklinksServed,
@@ -26,10 +23,9 @@ export type { BacklinkSource } from "./internal/backlink-sources";
 
 export default {
   description:
-    "Backlinks index for cross-page links: page_links edge table, extractor registry, reindex, backlinks resource, and the boot backfill (a warm-up enqueuing a job that reindexes every live page's outgoing links, off the serving-critical boot path).",
-  // The steady-state reindex trigger's job, and the boot backfill's job and
-  // warm-up.
-  register: [reindexLinksJob, backfillPageLinksJob, pageLinksBackfillWarmup],
+    "Backlinks index for cross-page links: page_links edge table, extractor registry, reindex, backlinks resource, and the boot backfill (a warm-up reindexing every live page's outgoing links, off the serving-critical boot path, once per change of the derivation code: derive-edges.ts plus every extractor's module).",
+  // The steady-state reindex trigger's job, and the boot backfill's warm-up.
+  register: [reindexLinksJob, pageLinksBackfillWarmup],
   contributions: [
     ...pageBacklinkEdgesServed.declare,
     ...pageBacklinksServed.declare,

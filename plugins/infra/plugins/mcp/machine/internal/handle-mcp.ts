@@ -1,5 +1,4 @@
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { bodyMessages, hasToolsList } from "./messages";
 import { MCP_SERVER_NAME } from "../../core";
 import { runContribution } from "./isolate";
@@ -7,6 +6,7 @@ import type { McpTool, McpToolCallContext, McpToolContext } from "../../server";
 import { recordMcpRequest } from "./health";
 import { registry, scopeRegistry } from "../../server/internal/registry";
 import { toolsInScope } from "./scope";
+import { mcpSdk, type McpSdk } from "./sdk";
 
 /**
  * The MCP route: answers one request, and records its outcome for the health
@@ -58,7 +58,8 @@ async function answerMcpRequest(
     ? await renderDescriptions({ conversationId })
     : null;
 
-  const server = newMcpServer();
+  const sdk = await mcpSdk();
+  const server = newMcpServer(sdk);
 
   // Per-conversation visibility: first the scope, then each tool's own `when`.
   // A tool either says no to is never registered on this request's server, so
@@ -87,7 +88,7 @@ async function answerMcpRequest(
     );
   }
 
-  const transport = new WebStandardStreamableHTTPServerTransport({
+  const transport = new sdk.WebStandardStreamableHTTPServerTransport({
     sessionIdGenerator: undefined,
     enableJsonResponse: true,
   });
@@ -106,8 +107,8 @@ async function answerMcpRequest(
  * How to use a tool belongs in its description; context about the agent and
  * its task is a `SystemPrompt.Section` (conversations/system-prompt).
  */
-export function newMcpServer(): McpServer {
-  return new McpServer({ name: MCP_SERVER_NAME, version: "0.0.1" });
+export function newMcpServer(sdk: McpSdk): McpServer {
+  return new sdk.McpServer({ name: MCP_SERVER_NAME, version: "0.0.1" });
 }
 
 /** Registers one tool on a server, the one way both the request path and the

@@ -1,4 +1,5 @@
 import { defineHostService } from "@plugins/framework/plugins/server-core/core";
+import type { SourceSet } from "@plugins/packages/plugins/source-digest/core";
 import type { WarmupSpec } from "./registry";
 
 /**
@@ -17,6 +18,14 @@ export interface WarmupHostImpl {
   runs(scope: WarmupSpec["scope"]): boolean;
   /** Run one warm-up body under the host's admission. */
   withSlot<T>(fn: () => Promise<T>): Promise<T>;
+  /**
+   * The digest of the code these source sets load (a warm-up's
+   * `derivedFrom`), or `null` when this host cannot digest code — then such a
+   * warm-up runs on every boot. Throws when the digest cannot vouch for the
+   * code (an unresolvable import): the drain reports it as the warm-up's
+   * failure, and nothing is skipped on a digest nobody computed.
+   */
+  codeDigest(sets: readonly SourceSet[]): Promise<string | null>;
 }
 
 export const WarmupHost = defineHostService<WarmupHostImpl>("warmup.host");

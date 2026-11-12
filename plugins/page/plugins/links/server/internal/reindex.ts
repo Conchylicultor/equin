@@ -1,8 +1,5 @@
 import { and, eq, or, sql } from "drizzle-orm";
-import {
-  inDocumentOrder,
-  type BlockNode,
-} from "@plugins/page/plugins/editor/core";
+import type { BlockNode } from "@plugins/page/plugins/editor/core";
 import { db, type DbExecutor } from "@plugins/database/server";
 import {
   existingPageIds,
@@ -10,6 +7,7 @@ import {
 } from "@plugins/page/plugins/editor/server";
 import { PageLinks } from "./extractor";
 import { _pageLinks } from "./tables";
+import { edgeKey, extractEdges, firstLinkingBlocks } from "./derive-edges";
 
 // Rebuild the outgoing link edges for a single source page.
 //
@@ -17,6 +15,7 @@ import { _pageLinks } from "./tables";
 // 2. Dispatch each block generically by `block.type` over the collected
 //    extractors (collection-consumer separation — never names a block type),
 //    recording WHICH block each link came from: an edge is (target, block).
+//    Pure, in `derive-edges.ts` (with step 4): its code stamps the rows.
 // 3. Drop self-references and ids that name no `type="page"` row. A TRASHED
 //    target is kept: an edge is the source's content, whatever its target's
 //    state — readers filter liveness (`pageLive`, `liveBlocks`), so a
@@ -55,16 +54,6 @@ async function reindexLocked(pageId: string, tx: DbExecutor): Promise<void> {
     .limit(1);
   if (!source) return;
 
-  // Built fresh each call so newly-registered extractors are always honored.
-  // `getContributions()` reads the populated server registry. Typed extractors
-  // run on their matching block type; global (type-less) ones run on every block.
-  const extractors = new Map<string, (data: unknown) => string[]>();
-  const globalExtractors: ((data: unknown) => string[])[] = [];
-  for (const c of PageLinks.Extractor.getContributions()) {
-    if (c.type === undefined) globalExtractors.push(c.extract);
-    else extractors.set(c.type, c.extract);
-  }
-
   const blocks: BlockNode[] = (
     await tx
       .select({
@@ -80,34 +69,20 @@ async function reindexLocked(pageId: string, tx: DbExecutor): Promise<void> {
       .where(eq(liveBlocks.pageId, pageId))
   ).map((b) => ({ ...b, rank: String(b.rank) }));
 
-  // `edgeKey(target, block)` → the edge, deduped (two extractors, or one
-  // extractor naming a target twice, still make one edge per block).
-  const found = new Map<string, Edge>();
-  const collect = (
-    extract: (data: unknown) => string[],
-    block: { id: string; data: unknown },
-  ) => {
-    for (const targetPageId of extract(block.data)) {
-      if (!targetPageId || targetPageId === pageId) continue;
-      const edge = { targetPageId, sourceBlockId: block.id };
-      found.set(edgeKey(edge), edge);
-    }
-  };
-  for (const block of blocks) {
-    const extract = extractors.get(block.type);
-    if (extract) collect(extract, block);
-    for (const g of globalExtractors) collect(g, block);
-  }
+  // Built from the registry each call, so every registered extractor counts.
+  const found = extractEdges(
+    pageId,
+    blocks,
+    PageLinks.Extractor.getContributions(),
+  );
 
   // Validate targets: a page row, live or trashed (a non-page id, or one
   // naming nothing, is dropped — the FK would refuse it).
   const validTargets = await existingPageIds(
-    [...new Set([...found.values()].map((e) => e.targetPageId))],
+    [...new Set(found.map((e) => e.targetPageId))],
     tx,
   );
-  const kept = [...found.values()].filter((e) =>
-    validTargets.has(e.targetPageId),
-  );
+  const kept = found.filter((e) => validTargets.has(e.targetPageId));
   const firstOf = firstLinkingBlocks(blocks, kept);
   const next = new Map(
     kept.map((e) => [
@@ -167,36 +142,3 @@ async function reindexLocked(pageId: string, tx: DbExecutor): Promise<void> {
       );
   }
 }
-
-/**
- * Per target page, the id of its FIRST linking block in the page's document
- * order. A target linked from one block (the usual case) needs no ordering;
- * `inDocumentOrder` ranks the rest — a block's `rank` is comparable only among
- * its siblings, so the order is the forest's DFS, never a rank sort.
- */
-function firstLinkingBlocks(
-  forest: BlockNode[],
-  edges: readonly Edge[],
-): Map<string, string> {
-  const linking = new Map<string, string[]>();
-  for (const e of edges) {
-    const list = linking.get(e.targetPageId);
-    if (list) list.push(e.sourceBlockId);
-    else linking.set(e.targetPageId, [e.sourceBlockId]);
-  }
-  const first = new Map<string, string>();
-  for (const [target, ids] of linking) {
-    const [id] = ids.length === 1 ? ids : inDocumentOrder(forest, ids);
-    if (id !== undefined) first.set(target, id);
-  }
-  return first;
-}
-
-interface Edge {
-  targetPageId: string;
-  sourceBlockId: string;
-}
-
-/** One spelling of an edge's identity within its source page. */
-const edgeKey = (e: Edge): string =>
-  `${e.targetPageId}\u0000${e.sourceBlockId}`;

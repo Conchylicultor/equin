@@ -9,6 +9,8 @@ import {
   type WarmupSpec,
 } from "./registry";
 import { recordWarmupRun } from "./runs";
+import { readCodeStamp, writeCodeStamp } from "./code-stamps";
+import type { SourceSet } from "@plugins/packages/plugins/source-digest/core";
 
 /**
  * How many warm-ups may run at once. Kept deliberately small: warm-ups drain
@@ -30,6 +32,15 @@ export interface WarmupExecDeps {
   withSlot: <T>(fn: () => Promise<T>) => Promise<T>;
   yieldMacrotask: () => Promise<void>;
   concurrency: number;
+  /** The digest of a `derivedFrom` warm-up's code, `null` where the host
+   * cannot digest code (`WarmupHost.codeDigest`). */
+  codeDigest: (sets: readonly SourceSet[]) => Promise<string | null>;
+  /** Where each `derivedFrom` warm-up's last successful code digest is kept
+   * (`warmup_code_stamps` in this host's database). */
+  stamps: {
+    read: (name: string) => Promise<string | null>;
+    write: (name: string, digest: string) => Promise<void>;
+  };
   /** Told when each warm-up starts and settles (in-memory run record). */
   onRun?: (name: string, run: WarmupRun) => void;
 }
@@ -49,7 +60,10 @@ export type WarmupRun =
       durationMs: number;
       error: string | null;
     }
-  | { outcome: "skipped" };
+  | { outcome: "skipped" }
+  /** A `derivedFrom` warm-up whose code digests as it did at its last
+   * successful run against this database: nothing to re-derive. */
+  | { outcome: "unchanged"; codeDigest: string };
 
 /**
  * Drain the given warm-ups. Executor semantics (baked in, not per-consumer):
@@ -61,6 +75,10 @@ export type WarmupRun =
  *   `yieldMacrotask()` before each so request IO/timers interleave;
  * - each is wrapped in a `warmup:<name>` profiler span for boot-Gantt visibility,
  *   timed — like its recorded run — from the moment its slot is granted;
+ * - a `derivedFrom` warm-up runs only when its code's digest differs from the
+ *   one stamped by its last successful run (`unchanged` otherwise), and its new
+ *   digest is stamped once `run` resolves — inside the slot, so a stamp never
+ *   records a run that did not finish;
  * - a throw is NEVER fatal — a warm-up is an optimization, so it is logged and
  *   the drain continues (slow-ops flags a slow one, on its `bg` span).
  */
@@ -88,6 +106,7 @@ export async function drainWarmupsWith(deps: WarmupExecDeps): Promise<void> {
         // takes off its own time.
         let started: { at: Date; t0: number; end: () => void } | null = null;
         let error: string | null = null;
+        let unchanged: string | null = null;
         try {
           // Boot-Gantt bar (profilerStart) and runtime `bg` aggregate
           // (runTracked) are complementary: the former is the coarse boot phase,
@@ -96,7 +115,17 @@ export async function drainWarmupsWith(deps: WarmupExecDeps): Promise<void> {
           await runTracked(
             `warmup:${w.name}`,
             () =>
-              deps.withSlot(() => {
+              deps.withSlot(async () => {
+                const digest = w.derivedFrom
+                  ? await deps.codeDigest(w.derivedFrom())
+                  : null;
+                if (
+                  digest !== null &&
+                  (await deps.stamps.read(w.name)) === digest
+                ) {
+                  unchanged = digest;
+                  return;
+                }
                 started = {
                   end: profilerStart(
                     `warmup:${w.name}`,
@@ -111,7 +140,8 @@ export async function drainWarmupsWith(deps: WarmupExecDeps): Promise<void> {
                   outcome: "running",
                   startedAt: started.at,
                 });
-                return w.run();
+                await w.run();
+                if (digest !== null) await deps.stamps.write(w.name, digest);
               }),
             budget,
           );
@@ -129,16 +159,22 @@ export async function drainWarmupsWith(deps: WarmupExecDeps): Promise<void> {
           } | null;
           const startedAt = run?.at ?? new Date();
           run?.end();
-          deps.onRun?.(w.name, {
-            outcome: error === null ? "succeeded" : "failed",
-            startedAt,
-            finishedAt: new Date(),
-            durationMs:
-              run === null
-                ? 0
-                : Math.round((performance.now() - run.t0) * 10) / 10,
-            error,
-          });
+          const skippedAs = unchanged as string | null;
+          deps.onRun?.(
+            w.name,
+            skippedAs !== null && error === null
+              ? { outcome: "unchanged", codeDigest: skippedAs }
+              : {
+                  outcome: error === null ? "succeeded" : "failed",
+                  startedAt,
+                  finishedAt: new Date(),
+                  durationMs:
+                    run === null
+                      ? 0
+                      : Math.round((performance.now() - run.t0) * 10) / 10,
+                  error,
+                },
+          );
         }
       }),
     ),
@@ -160,6 +196,8 @@ export async function drainWarmups(): Promise<void> {
     withSlot: (fn) => host.withSlot(fn),
     yieldMacrotask,
     concurrency: WARMUP_CONCURRENCY,
+    codeDigest: (sets) => host.codeDigest(sets),
+    stamps: { read: readCodeStamp, write: writeCodeStamp },
     onRun: recordWarmupRun,
   });
 }

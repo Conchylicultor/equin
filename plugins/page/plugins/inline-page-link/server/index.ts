@@ -3,7 +3,7 @@ import { PageLinks } from "@plugins/page/plugins/links/server";
 import { Editor } from "@plugins/page/plugins/editor/server";
 import { InlineTokenReferentSource } from "@plugins/primitives/plugins/text-editor/plugins/inline-chip/server";
 import { PAGE_LINK_TOKEN_PATTERN, pageLinkInlineNode } from "../core";
-import { extractInlinePageLinks } from "./internal/extract-inline-links";
+import { inlinePageLinksExtractor } from "./internal/extract-inline-links";
 import { pageLinkLiveRead, resolvePageLinkReferent } from "./internal/referent";
 
 export default {
@@ -12,7 +12,7 @@ export default {
   contributions: [
     // Global extractor (no `type`): runs on every block so inline links in any
     // text-bearing block type feed the backlinks index without enumerating types.
-    PageLinks.Extractor({ extract: extractInlinePageLinks }),
+    PageLinks.Extractor(inlinePageLinksExtractor),
     // The same pattern the web extension deserializes with, so server-side
     // markdown serialization leaves `[[page:<pageId>]]` bytes alone. One
     // RegExp, and its alternation already covers the pre-namespace form — the

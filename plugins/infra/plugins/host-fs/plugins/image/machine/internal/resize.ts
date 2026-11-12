@@ -6,7 +6,6 @@ import { createHash } from "node:crypto";
 import { exists, stat } from "@plugins/packages/plugins/timed-fs/core";
 import { mkdir, rename, utimes, writeFile } from "node:fs/promises";
 import { cpus } from "node:os";
-import sharp from "sharp";
 import { HttpError } from "@plugins/infra/plugins/endpoints/server";
 import {
   inertHeaders,
@@ -23,6 +22,7 @@ import {
   type ResizedEdge,
 } from "@plugins/infra/plugins/paths/plugins/file-systems/core";
 import { asUserPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import { loadSharp } from "../../server/internal/sharp";
 
 /** JPEG / WebP quality of a resized copy: invisible loss at thumbnail and screen sizes. */
 const QUALITY = 82;
@@ -63,6 +63,7 @@ export async function resizeBytes(
   bytes: Uint8Array,
   edge: ResizedEdge,
 ): Promise<{ data: Buffer; type: Copy["type"] }> {
+  const sharp = await loadSharp();
   const image = sharp(bytes, { failOn: "none" });
   const { hasAlpha } = await image.metadata();
   const pipeline = image.rotate().resize({

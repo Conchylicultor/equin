@@ -6224,7 +6224,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Routes: `POST /api/pages/:pageId/auto-icon/regenerate`
           - Cross-plugin:
             - Imported by: `apps/pages/page-tree`
-        - **`content-search`** — Pages full-text search consumer: contributes the Search button into the Pages sidebar, opening the reusable quick-find dialog scoped to the pages source. Pages full-text search consumer: indexes pages into the search engine, reindexing on blocksChanged, with the backfill job that seeds existing pages (enqueued at boot by a warm-up, so pages that predate the index — or drifted — become searchable).
+        - **`content-search`** — Pages full-text search consumer: contributes the Search button into the Pages sidebar, opening the reusable quick-find dialog scoped to the pages source. Pages full-text search consumer: indexes pages into the search engine, reindexing on blocksChanged, with the boot backfill that re-derives every page's doc once per change of the derivation code (a warm-up declaring derivedFrom: pages that predate the index, or docs an older derivation wrote, become current).
           - Web:
             - Contributes: `Pages.Sidebar` "Search" → `PagesSearch`
             - Uses:
@@ -6256,14 +6256,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `page/editor.DeletedBlockRow`
               - `page/editor.liveBlocks`
               - `page/editor.PAGE_BLOCK_TYPE`
-              - `page/editor.pageData`
               - `search/engine.deleteSearchDocs`
               - `search/engine.getSourceDocMetadata`
               - `search/engine.upsertSearchDocs`
-            - Exports (values): `backfillPagesSearchJob`
             - Register:
               - `defineJob('pages.search.reindex')`
-              - `defineJob('pages.search.backfill')`
               - `defineWarmup('pages.search.backfill')`
           - Cross-plugin:
             - Uses tokens:
@@ -22490,10 +22487,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `loadedDatabaseConfig`
       - `readDatabaseConfigSync`
   - Cross-plugin:
-    - Imported by: 166 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
+    - Imported by: 167 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
       - `apps` ×47
       - `conversations` ×20
-      - `infra` ×16
+      - `infra` ×17
       - `page` ×14
       - `tasks` ×14
       - `debug` ×10
@@ -37819,6 +37816,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`warmup`** — Declared heavy boot warm-up category, on every host: defineWarmup registers a deferred, throttled, scope-gated warm-up; the plugin's onSettled drains them once the serving host has settled (never in exec) under a concurrency gate + the host's admission (the WarmupHost host service: which scopes run here, and the slot each takes) + macrotask yield, recording each warm-up's run in memory (warmupRunOf / onWarmupRun); listRegisteredWarmups lists the declared set with the plugin that declared each.
       - Server:
         - Contributes: `host-service:warmup.host` "warmup.host"
+        - Uses: `database.db`
+        - DB schema: `plugins/infra/plugins/warmup/server/internal/tables.ts`
         - Exports (types):
           - `RegisteredWarmup`
           - `WarmupHostImpl`
@@ -37855,7 +37854,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/warmup.WarmupRun`
               - `infra/warmup.warmupRunOf`
             - Register: `defineBackgroundKind('warmup')`
-        - **`sole-host`** (excluded) — Warm-up admission of a sole host — one backend with no neighbours (the browser composition, the portable boot test): provides the WarmupHost host service running every scope, host-scoped warm-ups included, with no slot to take. Never booted by the desktop.
+        - **`sole-host`** (excluded) — Warm-up admission of a sole host — one backend with no neighbours (the browser composition, the portable boot test): provides the WarmupHost host service running every scope, host-scoped warm-ups included, with no slot to take, and no code digest (a warm-up declaring derivedFrom runs on every boot). Never booted by the desktop.
           - Server:
             - Contributes: `host-service:warmup.host` "warmup.host"
             - Uses: `infra/warmup.WarmupHost`
@@ -40968,12 +40967,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`source-digest`** — Digest of the code a source set loads: sourceDigest(sets) — sha256 over the static runtime import closure of the modules each set includes (repo files by relative path and bytes, packages by name@version, builtins by name; type-only imports erased), computed once per process, every defined set started at a serving backend's boot. What persisted or inherited state stamps itself with, so a cache built by other code is refused without a version anyone bumps. Central's reach to the source-digest closure walk: closureChangedSince(entries, sinceMs) — whether nothing a closure loads (repo files, package resolution entries) changed since an instant, by inode change time — and sourceDigest(sets), the digest of the code a set loads. The same walk the server barrel serves (shared/), so central reads its code exactly as a backend does: restart-skip's judgement, and central's own code build (build/central-build-id).
       - Cross-plugin:
         - Imported by:
+          - `apps/pages/content-search`
           - `build/central-build-id`
           - `build/restart-skip`
           - `infra/corpus-index`
+          - `infra/warmup`
           - `network/live`
           - `network/live/live-state-snapshot`
           - `network/live/query-resource`
+          - `page/links`
           - `reports/engine`
           - `stats/commits`
           - `ui/icons/saved-sources`
@@ -43089,7 +43091,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `apps/website/demos/workspace/story`
           - `page/editor`
-    - **`links`** — Backlinks index for cross-page links: page_links edge table, extractor registry, reindex, backlinks resource. Backlinks index for cross-page links: page_links edge table, extractor registry, reindex, backlinks resource, and the boot backfill (a warm-up enqueuing a job that reindexes every live page's outgoing links, off the serving-critical boot path).
+    - **`links`** — Backlinks index for cross-page links: page_links edge table, extractor registry, reindex, backlinks resource. Backlinks index for cross-page links: page_links edge table, extractor registry, reindex, backlinks resource, and the boot backfill (a warm-up reindexing every live page's outgoing links, off the serving-critical boot path, once per change of the derivation code: derive-edges.ts plus every extractor's module).
       - Server:
         - Contributes:
           - `resource.declare` "page-backlinks"
@@ -43123,7 +43125,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `reindexPage`
         - Register:
           - `defineJob('page.links.reindex')`
-          - `defineJob('page.links.backfill')`
           - `defineWarmup('page.links.backfill')`
         - Resources:
           - `page-backlinks` (push, whole: the pages that link to one page — a join over page_links and the live page blocks, not the rows of one table, whole: one page's ancestors — as deep as the page tree nests)

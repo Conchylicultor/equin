@@ -2,6 +2,7 @@ import {
   registeringPlugin,
   type Registration,
 } from "@plugins/framework/plugins/server-core/core";
+import type { SourceSet } from "@plugins/packages/plugins/source-digest/core";
 
 /**
  * A declared heavy boot warm-up. Deferred past serving-ready and drained in
@@ -36,6 +37,22 @@ export interface WarmupSpec {
    * their own lazy on-demand refresh.
    */
   run: () => Promise<void>;
+  /**
+   * For a warm-up that re-derives stored state from its sources (a backfill
+   * of an index every write already keeps fresh): the code the derivation
+   * runs — keep each included module small, since everything it loads counts.
+   * Such stored state only goes stale when that code changes, so the drain
+   * runs the warm-up only when the code's digest differs from the one recorded
+   * when it last succeeded against this database (`warmup_code_stamps`), and
+   * records the new one once `run` resolves: once per change of the code, never
+   * on a boot whose code is the code that derived the rows. A fresh database
+   * has no stamp, so its first boot runs it. Called at drain time, after every
+   * contribution is registered (a set may include contributed modules).
+   *
+   * Where the host cannot digest code (`WarmupHost.codeDigest` answers
+   * `null`: a browser host has no source tree), the warm-up runs on every boot.
+   */
+  derivedFrom?: () => readonly SourceSet[];
   /**
    * Per-warmup budget (ms) on its own time. The executor stamps it on the
    * warm-up's `bg` span, which slow-ops judges it by (the one judge of a
