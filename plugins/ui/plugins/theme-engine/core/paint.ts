@@ -9,7 +9,6 @@
 
 import {
   appThemeScope,
-  fixedThemeScope,
   subThemeScope,
   themeScopeSelectors,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
@@ -211,13 +210,16 @@ export function fixedThemeGroupValues(
   return { values, colorAdjust: theme.colorAdjust, skipped };
 }
 
-/** Everything painting depends on that is not a scope's choice. */
+/**
+ * Everything a scope's painting depends on that is not its choice. Sub-themes
+ * and fixed themes are not here: they are code, painted by the browser in its
+ * first commit, never pending — so the server has no first frame to paint them
+ * for (see {@link themePainter}).
+ */
 export interface ThemePaintSources {
   groups: readonly TokenGroupSpec[];
   /** Code themes and every stored theme, by id. */
   themesById: ReadonlyMap<ThemeId, Theme>;
-  subThemes: readonly SubTheme[];
-  fixedThemes: readonly FixedTheme[];
 }
 
 /**
@@ -232,7 +234,11 @@ export interface ThemePaintSources {
 export interface ThemePaintSelection {
   /** The theme the `:root` / `.dark` blocks paint: the desktop's (the base document's). */
   baseThemeId: ThemeId;
-  /** Each app with its own theme document, painted on `[data-theme-scope="app:<id>"]`. */
+  /**
+   * The apps whose scoped blocks to paint, on `[data-theme-scope="app:<id>"]`
+   * — each with its own theme document. The browser paints every themed app;
+   * the server's first frame only the one a page load opens (theme-head.ts).
+   */
   appThemes: readonly { appId: string; themeId: ThemeId }[];
   /**
    * The theme whose `--background` the document canvas (`<body>`) paints: the
@@ -251,9 +257,9 @@ export interface ThemePaintSelection {
 }
 
 /**
- * Every `<style>` the browser's painter mounts for this selection, as
- * `styleId → css`, in the order it mounts them: the `:root` blocks, each
- * app's scoped blocks, the canvas, the sub-themes', the fixed themes'. A selection naming
+ * The `<style>` elements of a selection, as `styleId → css`, in the order the
+ * browser's painter mounts them: the `:root` blocks, each app's scoped blocks,
+ * the canvas — the server's first-frame head. A selection naming
  * a theme that does not exist paints Default, as the browser does (which also
  * reports it — this function only paints).
  */
@@ -273,14 +279,19 @@ export interface ThemePainter {
  * A painter of several selections over the same sources — the server's
  * first-frame head paints one per app path. A block is a function of the
  * sources and of its (theme, scope) alone, so each is rendered once per
- * painter however many selections hold it: the sub-theme and fixed-theme
- * blocks (every selection holds them, unchanged), and each scope's blocks for
- * a theme. Holds nothing past the painter: a new render makes a new one.
+ * painter however many selections hold it (the `:root` blocks every entry
+ * holds, an app's blocks for a theme). Holds nothing past the painter: a new
+ * render makes a new one.
+ *
+ * Never the sub-themes' or fixed themes' blocks: those are code, so the
+ * browser paints them in the insertion effects of its first commit, before
+ * any region wearing them is on screen — and before that commit the page body
+ * is empty, so nothing could read them. Inlining them cost every page load
+ * ~230 KB of CSS for no frame.
  */
 export function themePainter(sources: ThemePaintSources): ThemePainter {
   const scopes = new Map<string, Record<string, string>>();
   const canvases = new Map<string, string>();
-  let regions: Record<string, string> | undefined;
 
   const scope = (themeId: ThemeId, scopeToken?: string) => {
     const key = JSON.stringify([themeId, scopeToken ?? null]);
@@ -310,7 +321,6 @@ export function themePainter(sources: ThemePaintSources): ThemePainter {
         canvases.set(canvasKey, canvas);
       }
       styles[CANVAS_STYLE_ID] = canvas;
-      Object.assign(styles, (regions ??= paintRegionStyles(sources)));
       return styles;
     },
   };
@@ -392,34 +402,6 @@ function paintScopeStyles(
       theme.colorAdjust,
       scopeToken,
     );
-  }
-  return styles;
-}
-
-/** The blocks no scope chooses: every sub-theme's, then every fixed theme's. */
-function paintRegionStyles(sources: ThemePaintSources): Record<string, string> {
-  const { groups } = sources;
-  const styles: Record<string, string> = {};
-  for (const { subTheme, group, fragment } of subThemeBlocks(
-    sources.subThemes,
-    groups,
-  ).blocks) {
-    styles[themeStyleId(group.id, subThemeScope(subTheme))] =
-      renderSubThemeBlock(group, fragment, subTheme);
-  }
-
-  assertUniqueFixedThemes(sources.fixedThemes);
-  for (const fixed of sources.fixedThemes) {
-    const { values, colorAdjust } = fixedThemeGroupValues(fixed, groups);
-    const scopeToken = fixedThemeScope(fixed);
-    for (const g of groups) {
-      styles[themeStyleId(g.id, scopeToken)] = renderThemeGroupBlock(
-        g,
-        values[g.id]!,
-        colorAdjust,
-        scopeToken,
-      );
-    }
   }
   return styles;
 }

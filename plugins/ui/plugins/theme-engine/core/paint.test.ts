@@ -4,9 +4,11 @@ import { both, defineTokenGroup } from "./define-token-group";
 import { defineFixedTheme } from "./fixed-theme";
 import {
   CANVAS_STYLE_ID,
+  fixedThemeGroupValues,
   paintThemeStyles,
+  renderSubThemeBlock,
+  renderThemeGroupBlock,
   themePainter,
-  themeStyleId,
 } from "./paint";
 import { defineSubTheme } from "./sub-theme";
 import { DEFAULT_THEME_ID, defineTheme, type Theme } from "./theme";
@@ -53,15 +55,10 @@ const chrome = defineFixedTheme({
 const themesById = new Map<string, Theme>(
   [defaultTheme, red].map((t) => [t.id, t]),
 );
-const sources = {
-  groups,
-  themesById,
-  subThemes: [card],
-  fixedThemes: [chrome],
-};
+const sources = { groups, themesById };
 
 describe("paintThemeStyles", () => {
-  it("paints the root, other apps, sub-themes and fixed themes, in mount order", () => {
+  it("paints the root, the selected apps and the canvas, in mount order — never a sub-theme or fixed theme", () => {
     const styles = paintThemeStyles(sources, {
       baseThemeId: "red",
       canvasThemeId: "red",
@@ -74,9 +71,6 @@ describe("paintThemeStyles", () => {
       "theme-scope-app:home-palette",
       "theme-scope-app:home-shape",
       "theme-engine-canvas",
-      "theme-scope-sub:card-shape",
-      "theme-scope-fixed:chrome-palette",
-      "theme-scope-fixed:chrome-shape",
     ]);
     expect(styles["theme-engine-palette"]).toBe(
       `${ROOT_LIGHT} {\n  --primary: red;\n  --background: white;\n}\n${ROOT_DARK} {\n  --primary: blue;\n  --background: black;\n}`,
@@ -120,25 +114,21 @@ describe("paintThemeStyles", () => {
   });
 
   it("writes a sub-theme's named tokens plus the ones derived from them, nothing else", () => {
-    const styles = paintThemeStyles(sources, {
-      baseThemeId: DEFAULT_THEME_ID,
-      canvasThemeId: DEFAULT_THEME_ID,
-      canvasColorMode: "light" as const,
-      appThemes: [],
-    });
-    expect(styles[themeStyleId("shape", "sub:card")]).toBe(
+    expect(renderSubThemeBlock(shape, card.fragments[0]!, card)).toBe(
       `[data-theme-scope="sub:card"] {\n  --radius: 1rem;\n  --pad: var(--radius);\n}\n${themeScopeSelectors("sub:card").darkScope} {\n${themeScopeSelectors("sub:card").dark} {\n  --radius: 1rem;\n  --pad: var(--radius);\n}\n}`,
     );
   });
 
   it("wears a fixed theme's scheme in both modes", () => {
-    const styles = paintThemeStyles(sources, {
-      baseThemeId: DEFAULT_THEME_ID,
-      canvasThemeId: DEFAULT_THEME_ID,
-      canvasColorMode: "light" as const,
-      appThemes: [],
-    });
-    expect(styles["theme-scope-fixed:chrome-palette"]).toBe(
+    const { values, colorAdjust } = fixedThemeGroupValues(chrome, groups);
+    expect(
+      renderThemeGroupBlock(
+        palette,
+        values.palette!,
+        colorAdjust,
+        "fixed:chrome",
+      ),
+    ).toBe(
       `[data-theme-scope="fixed:chrome"] {\n  --primary: grey;\n  --background: black;\n}\n${themeScopeSelectors("fixed:chrome").darkScope} {\n${themeScopeSelectors("fixed:chrome").dark} {\n  --primary: grey;\n  --background: black;\n}\n}`,
     );
   });

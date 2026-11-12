@@ -1,8 +1,8 @@
 # theme-declarations-in-sync
 
 Fails if `plugins/ui/plugins/theme-engine/server/internal/theme-declarations.generated.ts`
-drifts from what the browser registers: the token groups, code themes,
-sub-themes and fixed themes contributed to theme-engine's web slots. The server paints the first frame's theme
+drifts from what the browser registers: the token groups and code themes
+contributed to theme-engine's web slots. The server paints the first frame's theme
 CSS from that file, so a stale copy paints a theme the browser then repaints.
 Fix by running `./equin build` and committing the regenerated manifest.
 

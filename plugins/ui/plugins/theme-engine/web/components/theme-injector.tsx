@@ -299,7 +299,8 @@ function DocumentCanvas({ root }: { root: RootThemeScopeState }) {
 // It reuses the same resolution, color adjustment and completeness backstop as
 // the `:root` path (all live in ScopeStyles / GroupStyle) — only the selector and
 // style id differ (via `scopeToken`). The server paints the same blocks into the
-// first frame's HTML. Its light/dark half is chosen per element by the nearest
+// first frame's HTML for the app a page load opens (adopted here by id); every
+// other app's are painted here, in the first commit. Its light/dark half is chosen per element by the nearest
 // `data-color-scheme` carrier (the app's boundary stamps its own scheme).
 //
 // Mounted centrally (one per registered app via AppScopeThemes at Core.Root),
@@ -381,7 +382,7 @@ function PageAppScopeThemes() {
  *
  * Painted for as long as a sub-theme is contributed, not when a region wearing
  * it mounts: the blocks are a handful of variables, and always being there puts
- * them in the pre-paint cache, so a region never shows one frame in the
+ * them in the first commit, so a region never shows one frame in the
  * surrounding theme's values before its own.
  */
 export function SubThemeStyles() {
@@ -440,8 +441,8 @@ function SubThemeFragmentStyle({
  * resolution is written under both the light and the dark selector.
  *
  * Painted for as long as it is contributed (not when a region wearing it
- * mounts), and never pending — it resolves against itself alone — so it is in
- * the pre-paint cache and on screen in the first commit.
+ * mounts), and never pending — it resolves against itself alone — so it is
+ * on screen in the first commit.
  */
 export function FixedThemeStyles() {
   const fixedThemes = ThemeEngine.FixedTheme.useContributions();

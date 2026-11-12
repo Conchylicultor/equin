@@ -39,8 +39,6 @@ const ink = defineTheme({
 const sources = {
   groups: [palette],
   themesById: new Map<string, Theme>([defaultTheme, ink].map((t) => [t.id, t])),
-  subThemes: [],
-  fixedThemes: [],
 };
 const apps = [
   { id: "home", basePath: "/home", colorMode: "dark" as const },
@@ -48,7 +46,7 @@ const apps = [
 ];
 
 describe("renderThemeHead", () => {
-  it("paints the same token blocks on every path, the canvas from the app a path opens", () => {
+  it("paints :root on every path, and an app's scope and canvas only on the path that opens it", () => {
     const head = renderThemeHead(sources, apps, {
       baseThemeId: DEFAULT_THEME_ID,
       colorMode: "dark",
@@ -66,11 +64,13 @@ describe("renderThemeHead", () => {
       expect(entry).toContain(
         `<style id="theme-engine-palette">${ROOT_SCHEME_SELECTORS.light} {\n  --primary: blue;`,
       );
-      // …and the app's own theme is on its scope, on every path.
-      expect(entry).toContain(
-        '<style id="theme-scope-app:pages-palette">[data-theme-scope="app:pages"] {\n  --primary: black;',
-      );
     }
+    // …and the app's own theme is on its scope, only where a page opens it:
+    // everywhere else the browser paints it in its first commit.
+    expect(head["/pages"]).toContain(
+      '<style id="theme-scope-app:pages-palette">[data-theme-scope="app:pages"] {\n  --primary: black;',
+    );
+    expect(head[""]).not.toContain("theme-scope-app:pages");
     // Only the canvas follows the app the path opens, in its (dark) scheme.
     expect(head["/pages"]).toContain(
       '<style id="theme-engine-canvas">body {\n  background-color: charcoal;',
@@ -80,18 +80,24 @@ describe("renderThemeHead", () => {
     );
   });
 
-  it("paints a surface-mode app's scope but gives it no entry", () => {
+  it("paints a surface-mode app's scope on the \"\" entry only, giving it no entry of its own", () => {
     const head = renderThemeHead(
       sources,
       [...apps, { id: "desktop", colorMode: "light" }],
       {
         baseThemeId: DEFAULT_THEME_ID,
         colorMode: "dark",
-        scopes: [{ scopeId: "app:desktop", themeId: "ink" }],
+        scopes: [
+          { scopeId: "app:desktop", themeId: "ink" },
+          { scopeId: "app:pages", themeId: "ink" },
+        ],
       },
     );
-    expect(Object.keys(head)).toEqual([""]);
+    expect(Object.keys(head).sort()).toEqual(["", "/pages"]);
     expect(head[""]).toContain('<style id="theme-scope-app:desktop-palette">');
+    // A tab app's page carries its own scope, not the desktop's.
+    expect(head["/pages"]).not.toContain("theme-scope-app:desktop");
+    expect(head["/pages"]).toContain('<style id="theme-scope-app:pages-palette">');
   });
 
   it("ends every entry with the desktop's scheme on <html>, resolving system in the page", () => {
@@ -121,9 +127,7 @@ describe("renderThemeHead", () => {
     expect(head["/home/panel"]).toContain(
       `<style id="theme-engine-palette">${ROOT_SCHEME_SELECTORS.light} {\n  --primary: blue;`,
     );
-    expect(head["/home/panel"]).toContain(
-      '<style id="theme-scope-app:pages-palette">',
-    );
+    expect(head["/home/panel"]).not.toContain("theme-scope-");
     // …its canvas in its own scheme; <html> keeps the desktop's on every path.
     expect(head["/home/panel"]).toContain(
       "@media (prefers-color-scheme: dark)",

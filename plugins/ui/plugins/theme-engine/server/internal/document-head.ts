@@ -18,12 +18,7 @@ import {
 } from "../../core";
 import { declaredApps } from "@plugins/apps-core/server";
 import { appThemeScope } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
-import {
-  codeThemes,
-  fixedThemes,
-  subThemes,
-  tokenGroups,
-} from "./theme-declarations.generated";
+import { codeThemes, tokenGroups } from "./theme-declarations.generated";
 import { ThemeEngine } from "./source";
 import { renderThemeHead } from "./theme-head";
 
@@ -54,7 +49,7 @@ async function render(): Promise<HeadFragments> {
   const globalMode = parseConfiguredColorMode(
     getConfig(themeSelectionConfig).colorMode,
   );
-  // Every app scope gets its blocks; only a tab app is opened by a page at its
+  // Only a tab app is opened by a page at its
   // base path. A surface-mode app's base path (`/desktop`) is a route prefix in
   // front of another app's URL — the `""` entry these pages already fall back to.
   const apps = declaredApps.map(({ app, launch }) => ({
@@ -71,8 +66,6 @@ async function render(): Promise<HeadFragments> {
     {
       groups: tokenGroups,
       themesById: await themesById(),
-      subThemes,
-      fixedThemes,
     },
     apps,
     {

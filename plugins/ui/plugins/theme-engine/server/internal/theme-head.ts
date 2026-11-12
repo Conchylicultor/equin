@@ -26,7 +26,7 @@ export interface ThemeHeadApp {
    * The base path a page load opens the app at, full-surface; absent for a
    * surface-mode app (the desktop), whose base path is a route prefix in front
    * of another app's URL — its pages are the `""` entry. Its scoped blocks are
-   * painted all the same: the desktop's chrome wears `app:desktop`.
+   * painted on the `""` entry: the desktop's chrome wears `app:desktop`.
    */
   basePath?: string;
   /** `effectiveColorMode` of the app (its declared default and the user's override). */
@@ -37,16 +37,35 @@ export interface ThemeHeadApp {
  * The first frame's theme, as head HTML per app path — what theme-engine's
  * `DocumentHead.Fragment` answers.
  *
- * Every entry carries the SAME token blocks the browser mounts whatever it
- * shows: `:root` in the desktop's theme (never re-rooted on an app — see
- * `ThemePaintSelection`), each themed app's scoped blocks, the sub-themes' and
- * the fixed themes'. So the browser adopts them unchanged on any path. What
- * differs per path is only what the page around the app wears before it
- * mounts: the canvas — `<body>`'s background, in the app's theme and scheme.
- * `<html>`'s scheme (`data-color-scheme`) is the desktop's on every path: an
- * app wears its own on its own boundary, so the page never flips it.
+ * A page's head carries what the page shows before the browser's painter has
+ * run, and what stays up while it is held. Before React's first commit the body is
+ * empty: the only thing on screen is the canvas. In that first commit the
+ * browser's `ThemeInjector` paints every block it mounts — in insertion
+ * effects, before any layout or paint — from inputs the boot snapshot hydrated
+ * (the selections, the saved themes) or code (sub-themes, fixed themes). So
+ * the head need not carry every app's blocks (it did: 19 scopes × 19 groups,
+ * ~850 KB of CSS on every page load). It carries:
  *
- * One entry per page-opened app whose canvas differs from the desktop's — its
+ * - `:root` in the desktop's theme (never re-rooted on an app — see
+ *   `ThemePaintSelection`), the base every region inherits;
+ * - the canvas — `<body>`'s background, in the theme and scheme of the app the
+ *   page opens;
+ * - that app's own scoped blocks, when it has a theme document — what the
+ *   page's app wears should its theme still be pending at the first commit (a
+ *   resident theme source not hydrated while the selections are: the
+ *   painter then leaves the served CSS up — a boot snapshot that failed whole
+ *   leaves app membership unknown, so no app block is claimed at all). On
+ *   the `""` entry these are the themed surface-mode apps' (the desktop), whose
+ *   chrome a page outside every tab app's base path shows;
+ * - the script putting the desktop's scheme on `<html>` (`system` as a
+ *   `matchMedia` test). `<html>`'s scheme is the desktop's on every path: an
+ *   app wears its own on its own boundary, so the page never flips it.
+ *
+ * Every other app's blocks, and the sub-themes' and fixed themes', are the
+ * browser's alone; it adopts the served elements by id, so they are never
+ * painted twice.
+ *
+ * One entry per page-opened app whose head differs from the `""` entry's — its
  * own theme document, or a scheme other than the global one — keyed by its
  * base path, plus the `""` entry for every other path. Schemes come from the
  * setting rather than its resolution: `system` is resolved against the OS by
@@ -63,26 +82,35 @@ export function renderThemeHead(
     themeOf.set(scopeId.slice(scopeId.indexOf(":") + 1), themeId);
   }
   // An app scope whose app this composition does not bundle paints nowhere.
-  const appThemes = apps.flatMap((app) => {
-    const themeId = themeOf.get(app.id);
-    return themeId === undefined ? [] : [{ appId: app.id, themeId }];
-  });
+  const appThemesOf = (opened: readonly ThemeHeadApp[]) =>
+    opened.flatMap((app) => {
+      const themeId = themeOf.get(app.id);
+      return themeId === undefined ? [] : [{ appId: app.id, themeId }];
+    });
 
-  // One painter for every entry: they share every token block, rendered once
+  // One painter for every entry: they share the `:root` blocks, rendered once
   // here instead of per entry.
   const painter = themePainter(sources);
-  const entry = (canvasThemeId: ThemeId, colorMode: ConfiguredColorMode) =>
+  const entry = (
+    opened: readonly ThemeHeadApp[],
+    canvasThemeId: ThemeId,
+    colorMode: ConfiguredColorMode,
+  ) =>
     styleTags(
       painter.paint({
         baseThemeId: selections.baseThemeId,
-        appThemes,
+        appThemes: appThemesOf(opened),
         canvasThemeId,
         canvasColorMode: colorMode,
       }),
     ) + colorSchemeScript(selections.colorMode);
 
   const head: Record<string, string> = {
-    "": entry(selections.baseThemeId, selections.colorMode),
+    "": entry(
+      apps.filter((app) => app.basePath === undefined),
+      selections.baseThemeId,
+      selections.colorMode,
+    ),
   };
   for (const app of apps) {
     if (app.basePath === undefined) continue;
@@ -91,6 +119,7 @@ export function renderThemeHead(
       continue;
     }
     head[app.basePath] = entry(
+      [app],
       themeId ?? selections.baseThemeId,
       app.colorMode,
     );

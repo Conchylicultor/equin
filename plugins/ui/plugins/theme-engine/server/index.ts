@@ -8,7 +8,7 @@ export type { ServerThemeSource } from "./internal/source";
 
 export default {
   description:
-    "Registers the theme selection and per-app color-mode configs, and paints the first frame: renders every app's theme CSS into the SPA shell's head (DocumentHead.Fragment) from the generated theme declarations, the ThemeEngine.Source themes, the selections and each app's effective light/dark (its declared default and the user's override), re-rendered when any of them changes.",
+    "Registers the theme selection and per-app color-mode configs, and paints the first frame: renders the page's first-frame theme CSS (:root, the canvas and the opened app's scope) into the SPA shell's head (DocumentHead.Fragment) from the generated theme declarations, the ThemeEngine.Source themes, the selections and each app's effective light/dark (its declared default and the user's override), re-rendered when any of them changes.",
   contributions: [
     ConfigV2.Register({ descriptor: themeSelectionConfig }),
     ConfigV2.Register({ descriptor: appColorModeConfig }),

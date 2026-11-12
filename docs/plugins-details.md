@@ -60240,7 +60240,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density --space-sm`
               - `ui/tokens/density --space-xs`
               - `ui/tokens/shape --spacing`
-    - **`theme-engine`** — Paints each scope's selected theme: the token-group, theme and theme-source slots, the theme selection config, the injector that resolves one theme per scope into CSS variables, and light/dark per region: every app wears its own effective color mode (the app's declared default from defineApp, the user's per-app override, else the global setting) on its own boundary, published for theme-boundary to stamp (ColorSchemePublisher), each fixed theme its own scheme, and <html> the desktop's — so a focus or surface-mode change flips no scheme. The light/dark controls read and write the focused full-surface app's setting through useColorModeSetting (a state: not known until the surface says which app fills it); useColorMode is the scheme of the region a component renders in. :root always wears the desktop's theme; each app's theme is painted on its own scope. Registers the theme selection and per-app color-mode configs, and paints the first frame: renders every app's theme CSS into the SPA shell's head (DocumentHead.Fragment) from the generated theme declarations, the ThemeEngine.Source themes, the selections and each app's effective light/dark (its declared default and the user's override), re-rendered when any of them changes.
+    - **`theme-engine`** — Paints each scope's selected theme: the token-group, theme and theme-source slots, the theme selection config, the injector that resolves one theme per scope into CSS variables, and light/dark per region: every app wears its own effective color mode (the app's declared default from defineApp, the user's per-app override, else the global setting) on its own boundary, published for theme-boundary to stamp (ColorSchemePublisher), each fixed theme its own scheme, and <html> the desktop's — so a focus or surface-mode change flips no scheme. The light/dark controls read and write the focused full-surface app's setting through useColorModeSetting (a state: not known until the surface says which app fills it); useColorMode is the scheme of the region a component renders in. :root always wears the desktop's theme; each app's theme is painted on its own scope. Registers the theme selection and per-app color-mode configs, and paints the first frame: renders the page's first-frame theme CSS (:root, the canvas and the opened app's scope) into the SPA shell's head (DocumentHead.Fragment) from the generated theme declarations, the ThemeEngine.Source themes, the selections and each app's effective light/dark (its declared default and the user's override), re-rendered when any of them changes.
       - Web:
         - Slots:
           - `ThemeEngine.VariantGroup`
@@ -60338,7 +60338,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `packages/list-bound.wholeList`
           - `packages/list-bound.wholeRecord`
           - `primitives/css/ui-kit.appThemeScope`
-          - `primitives/css/ui-kit.fixedThemeScope`
           - `primitives/css/ui-kit.ROOT_SCHEME_SELECTORS`
           - `primitives/css/ui-kit.SchemeSelectors`
           - `primitives/css/ui-kit.subThemeScope`
@@ -60404,8 +60403,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tokenGroupMatchesSearch`
           - `transformValues`
       - Cross-plugin:
-        - Uses tokens: 69 vars — full list in [`plugins/ui/plugins/theme-engine/REFERENCE.md`](../plugins/ui/plugins/theme-engine/REFERENCE.md)
-          - `ui/tokens/density` ×29
+        - Uses tokens: 68 vars — full list in [`plugins/ui/plugins/theme-engine/REFERENCE.md`](../plugins/ui/plugins/theme-engine/REFERENCE.md)
+          - `ui/tokens/density` ×28
           - `ui/tokens/color-palette` ×26
           - `ui/tokens/shadow` ×4
           - `ui/tokens/shape` ×4
