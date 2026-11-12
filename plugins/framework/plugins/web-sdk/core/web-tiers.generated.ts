@@ -76,6 +76,7 @@ export const DEFERRED_PLUGIN_PATHS: ReadonlySet<string> = new Set([
   "apps/plugins/deploy/plugins/servers",
   "apps/plugins/deploy/plugins/site-messages/plugins/inbox",
   "apps/plugins/deploy/plugins/site-messages/plugins/intake",
+  "apps/plugins/deploy/plugins/site-mirror/plugins/pull",
   "apps/plugins/deploy/plugins/site-reports/plugins/import",
   "apps/plugins/deploy/plugins/ssh-setup",
   "apps/plugins/deploy/plugins/ssh-setup/plugins/hetzner",

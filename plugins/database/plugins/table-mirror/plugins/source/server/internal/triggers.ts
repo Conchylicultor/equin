@@ -5,7 +5,7 @@ import {
   type DbTriggerSet,
 } from "@plugins/database/plugins/db-triggers/server";
 import type { MirroredTable, MirrorSetDefinition } from "./define";
-import { lit, pkJson } from "./sql";
+import { ident, lit, pkJson } from "./sql";
 
 /** The db-triggers set id; claimed with `DbTriggerClaim` (installed in onReadyBlocking). */
 export const TABLE_MIRROR_TRIGGER_SET = "table-mirror";
@@ -25,7 +25,9 @@ function logFunction(
     FROM ${from} r${where}
     ON CONFLICT (tbl, pk) DO UPDATE
       SET set_id = excluded.set_id, xid = excluded.xid, deleted = excluded.deleted;`;
-  const keyChanged = t.pk.map((c) => `n.${c.name} = r.${c.name}`).join(" AND ");
+  const keyChanged = t.pk
+    .map((c) => `n.${ident(c.name)} = r.${ident(c.name)}`)
+    .join(" AND ");
   // One function per table, static SQL over the statement's transition tables:
   // one log row per key the statement touched, the newest change winning. An
   // UPDATE that moves a key tombstones the old one. A DELETE cascaded from a
@@ -57,7 +59,7 @@ function tableTriggers(t: MirroredTable): DbTriggerDdl[] {
   ) => ({
     name: `tm_${t.name}_${suffix}`,
     table: t.name,
-    ddl: `CREATE OR REPLACE TRIGGER tm_${t.name}_${suffix} AFTER ${event} ON ${t.name}${transition} FOR EACH STATEMENT EXECUTE FUNCTION ${exec}()`,
+    ddl: `CREATE OR REPLACE TRIGGER tm_${t.name}_${suffix} AFTER ${event} ON ${ident(t.name)}${transition} FOR EACH STATEMENT EXECUTE FUNCTION ${exec}()`,
   });
   return [
     on("i", "INSERT", " REFERENCING NEW TABLE AS new_rows", fn),

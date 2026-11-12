@@ -1,6 +1,6 @@
 {
-  "id": "40b6e72f-b112-46cf-a370-f3c78ec73110",
-  "prevId": "04123b4d-3456-4a76-8426-348f2e954385",
+  "id": "44a832ac-b99a-44a4-a5ed-f6c08822f2d3",
+  "prevId": "40b6e72f-b112-46cf-a370-f3c78ec73110",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -2429,6 +2429,92 @@
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.site_mirror_replicas": {
+      "name": "site_mirror_replicas",
+      "schema": "",
+      "columns": {
+        "replica_id": {
+          "name": "replica_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "deployment_id": {
+          "name": "deployment_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "set_id": {
+          "name": "set_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "requested_at": {
+          "name": "requested_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "run_error": {
+          "name": "run_error",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "site_mirror_replicas_replica_id_table_mirror_replicas_id_fk": {
+          "name": "site_mirror_replicas_replica_id_table_mirror_replicas_id_fk",
+          "tableFrom": "site_mirror_replicas",
+          "tableTo": "table_mirror_replicas",
+          "columnsFrom": [
+            "replica_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "site_mirror_replicas_deployment_id_deploy_deployments_id_fk": {
+          "name": "site_mirror_replicas_deployment_id_deploy_deployments_id_fk",
+          "tableFrom": "site_mirror_replicas",
+          "tableTo": "deploy_deployments",
+          "columnsFrom": [
+            "deployment_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "site_mirror_replicas_deployment_id_set_id_unique": {
+          "name": "site_mirror_replicas_deployment_id_set_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "deployment_id",
+            "set_id"
+          ]
+        }
+      },
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false

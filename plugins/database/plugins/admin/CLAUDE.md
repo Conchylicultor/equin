@@ -250,11 +250,11 @@ database in `backup-plan.test.ts`. The real dump → restore round trip is in
     - `reclaimForkTemp`
     - `recreateDatabase`
 - Cross-plugin:
-  - Imported by: 33 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 34 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `debug` ×8
     - `infra` ×7
     - `database` ×5
-    - `apps` ×3
+    - `apps` ×4
     - `framework` ×3
     - `build` ×2
     - `network` ×2

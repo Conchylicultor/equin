@@ -24,10 +24,12 @@ import { AudienceSchema, DEFAULT_AUDIENCE } from "./audience";
 import {
   AnalyticsFilterSchema,
   MAX_FILTERS,
-  base64UrlJsonParamSchema,
-  encodeBase64UrlJson,
   withoutDefaultAudience,
 } from "./query";
+import {
+  base64UrlJsonParamSchema,
+  encodeBase64UrlJson,
+} from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/host-only/core";
 
 /**
  * Individual visits ("sessions"), each with its hits in order — what the

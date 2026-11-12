@@ -1,8 +1,26 @@
 import type { MirroredTable } from "./define";
 
 // The SQL fragments every reader and the triggers share, generated from a
-// mirrored table's declaration. Names are plain identifiers (asserted by
-// `defineMirrorSet`), so they are spelled unquoted.
+// mirrored table's declaration. Every table and column name is spelled
+// through `ident` — quoted, since a plain lower-case name can still be a
+// reserved word (collect's `analytics_visits.returning`).
+
+const PLAIN_IDENT_RE = /^[a-z_][a-z0-9_]*$/;
+
+/**
+ * A table or column name as SQL spells it: double-quoted. Names are plain
+ * lower-case identifiers (asserted by `defineMirrorSet`), so the quoted form
+ * names exactly the same object — and a reserved word (`returning`, `user`)
+ * still parses as a name.
+ */
+export function ident(name: string): string {
+  if (!PLAIN_IDENT_RE.test(name)) {
+    throw new Error(
+      `table-mirror: "${name}" is not a plain lower-case identifier`,
+    );
+  }
+  return `"${name}"`;
+}
 
 /** A string as a SQL literal. */
 export function lit(value: string): string {
@@ -16,7 +34,7 @@ export function textArray(values: readonly string[]): string {
 
 /** The row's key as the log spells it: `jsonb_build_object('id', a.id, …)`. */
 export function pkJson(t: MirroredTable, alias: string): string {
-  return `jsonb_build_object(${t.pk.map((c) => `${lit(c.name)}, ${alias}.${c.name}`).join(", ")})`;
+  return `jsonb_build_object(${t.pk.map((c) => `${lit(c.name)}, ${alias}.${ident(c.name)}`).join(", ")})`;
 }
 
 /**
@@ -46,7 +64,9 @@ export function rowHash(json: string): string {
 /** `a.c1 COLLATE "C", a.c2` — the key order every keyset walk uses, on both sides. */
 export function pkOrder(t: MirroredTable, alias: string): string {
   return t.pk
-    .map((c) => `${alias}.${c.name}${c.collatable ? ` COLLATE "C"` : ""}`)
+    .map(
+      (c) => `${alias}.${ident(c.name)}${c.collatable ? ` COLLATE "C"` : ""}`,
+    )
     .join(", ");
 }
 
@@ -57,7 +77,7 @@ export function pkMatch(
   keyAlias: string,
 ): string {
   return t.pk
-    .map((c) => `${alias}.${c.name} = ${keyAlias}.${c.name}`)
+    .map((c) => `${alias}.${ident(c.name)} = ${keyAlias}.${ident(c.name)}`)
     .join(" AND ");
 }
 
@@ -70,7 +90,7 @@ export function typedKey(
   json: string,
   schema = "public",
 ): string {
-  return `jsonb_populate_record(NULL::${schema}.${t.name}, ${json})`;
+  return `jsonb_populate_record(NULL::${schema}.${ident(t.name)}, ${json})`;
 }
 
 /**
@@ -91,6 +111,7 @@ export function pkAfter(
  * read by both.
  */
 export const mirrorSql = {
+  ident,
   lit,
   textArray,
   pkJson,

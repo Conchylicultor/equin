@@ -4,6 +4,7 @@ import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
 import {
   bigint,
   date,
+  boolean,
   integer,
   jsonb,
   numeric,
@@ -25,15 +26,17 @@ import {
   executeRows,
 } from "@plugins/database/plugins/sql-rows/core";
 import type { MirrorPk } from "@plugins/database/plugins/table-mirror/core";
-import type { MirrorSetDefinition } from "@plugins/database/plugins/table-mirror/plugins/source/server";
 import {
   defineMirrorSet,
-  installMirrorSource,
-  pruneMirrorLog,
   readMirrorChanges,
   readMirrorCopy,
   readMirrorKeys,
   readMirrorRows,
+  type MirrorSetDefinition,
+} from "@plugins/database/plugins/table-mirror/plugins/source/server";
+import {
+  installMirrorSource,
+  pruneMirrorLog,
 } from "@plugins/database/plugins/table-mirror/plugins/source/server/testing";
 import type { MirrorFetch, MirrorSinkBatch } from "./pull";
 import { ConcurrentPullError, pullReplica } from "./pull";
@@ -91,6 +94,13 @@ const rpKv = pgTable("rp_kv", {
   v: text("v").notNull(),
 });
 
+// Reserved words as names: every name the generated SQL spells must parse.
+const rpReserved = pgTable("user", {
+  order: text("order").primaryKey(),
+  returning: boolean("returning").notNull(),
+  select: text("select"),
+});
+
 const mainSet = defineMirrorSet({
   id: "rp_main",
   tables: [rpParent, rpChild, rpPair],
@@ -99,6 +109,11 @@ const mainSet = defineMirrorSet({
 const wideSet = defineMirrorSet({ id: "rp_wide", tables: [rpWide] });
 const kvSet = defineMirrorSet({ id: "rp_kv", tables: [rpKv] });
 const numSet = defineMirrorSet({ id: "rp_num", tables: [rpNum] });
+const reservedSet = defineMirrorSet({
+  id: "rp_reserved",
+  tables: [rpReserved],
+  omit: [rpReserved.select],
+});
 
 let t: TestDb;
 let db: NodePgDatabase;
@@ -118,9 +133,14 @@ beforeAll(async () => {
     CREATE TABLE rp_wide (id int PRIMARY KEY, label text NOT NULL);
     CREATE TABLE rp_kv (k text PRIMARY KEY, v text NOT NULL);
     CREATE TABLE rp_num (id int PRIMARY KEY, amount numeric, doc jsonb, big bigint, at timestamptz);
+    CREATE TABLE "user" ("order" text PRIMARY KEY, "returning" boolean NOT NULL, "select" text);
   `),
   );
-  await installMirrorSource(db, [mainSet, wideSet, kvSet, numSet], []);
+  await installMirrorSource(
+    db,
+    [mainSet, wideSet, kvSet, numSet, reservedSet],
+    [],
+  );
 });
 
 afterAll(async () => {
@@ -649,6 +669,47 @@ describe("values JSON cannot hold", () => {
     stats.rowKeys = [];
     expect((await sync(id, numSet, fetch)).outcome.kind).toBe("synced");
     expect(stats.rowKeys).toEqual([]);
+  });
+});
+
+describe("reserved words as table and column names", () => {
+  test("copy, delta, delete and reconcile all run (every name is quoted)", async () => {
+    const id = "rp-reserved-1";
+    const { fetch, stats } = directFetch(reservedSet);
+    const both = async () => {
+      const s = await schemaOf(id);
+      const read = (schema: string) =>
+        executeRows(db, {
+          query: sql.raw(
+            `SELECT "order", "returning" FROM ${schema}."user" ORDER BY 1`,
+          ),
+          row: z.object({ order: z.string(), returning: z.boolean() }),
+        });
+      expect(await read(s)).toEqual(await read("public"));
+    };
+    await db.execute(
+      sql.raw(
+        `INSERT INTO "user" VALUES ('a', true, 'x'), ('b', false, 'y'), ('c', true, NULL)`,
+      ),
+    );
+    await ensureReplica(db, { id, set: reservedSet });
+    expect((await sync(id, reservedSet, fetch)).outcome.kind).toBe("synced");
+    await both();
+    await db.execute(
+      sql.raw(
+        `UPDATE "user" SET "returning" = NOT "returning" WHERE "order" = 'a'; DELETE FROM "user" WHERE "order" = 'b'; UPDATE "user" SET "order" = 'd' WHERE "order" = 'c'`,
+      ),
+    );
+    expect((await sync(id, reservedSet, fetch)).outcome.kind).toBe("synced");
+    await both();
+    await db.execute(
+      sql.raw(`UPDATE "user" SET "returning" = true WHERE "order" = 'a'`),
+    );
+    await pastTheHorizon();
+    stats.rowKeys = [];
+    expect((await sync(id, reservedSet, fetch)).outcome.kind).toBe("synced");
+    await both();
+    expect(stats.rowKeys).toEqual([{ order: "a" }]);
   });
 });
 

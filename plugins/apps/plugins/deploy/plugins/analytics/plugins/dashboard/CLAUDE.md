@@ -105,13 +105,14 @@ Run with `./equin test plugins/apps/plugins/deploy/plugins/analytics/plugins/das
     - `SiteOverview.Card` "traffic" → `TrafficCard`
     - `SiteOverview.Card` "top" → `TopCards`
     - `SiteOverview.Card` "owner-devices" → `OwnerDevicesCard`
-  - Uses: 42 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 43 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/deploy/deployments` ×6
     - `apps/deploy/host-query` ×6
     - `primitives/css/coords` ×2
     - `primitives/css/text` ×2
     - `primitives/css/ui-kit` ×2
     - `primitives/link-gesture` ×2
+    - `apps/deploy/site-mirror/pull.MirrorFreshness`
     - `network/live/live-state.ResourceErrorInline`
     - `network/live.useLive`
     - `primitives/collapsible.FoldMotion`

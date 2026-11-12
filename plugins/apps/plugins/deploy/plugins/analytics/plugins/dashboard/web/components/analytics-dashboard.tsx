@@ -1,5 +1,6 @@
 import { useId, useState, type ReactNode } from "react";
 import {
+  ANALYTICS_MIRROR_SET_ID,
   AUDIENCE_OPTIONS,
   reportSourceFor,
   type AnalyticsFilter,
@@ -35,6 +36,7 @@ import { RecordedFields } from "./recorded-fields";
 import { ResultState } from "./result-states";
 import { TrendChart } from "./trend-chart";
 import { symbol } from "@plugins/ui/plugins/icons/core";
+import { MirrorFreshness } from "@plugins/apps/plugins/deploy/plugins/site-mirror/plugins/pull/web";
 
 const refreshIcon = symbol("refresh");
 
@@ -87,6 +89,13 @@ export function AnalyticsDashboard({
 
   return (
     <Stack gap="md">
+      {/* The local copy of the site's analytics tables (site-mirror). Nothing
+          reads it yet; the report below is still asked over SSH. */}
+      <MirrorFreshness
+        deploymentId={deploymentId}
+        setId={ANALYTICS_MIRROR_SET_ID}
+        subject={{ reading: "analytics", answer: "a page of analytics rows" }}
+      />
       <Cluster gap="md" align="center">
         <SegmentedControl
           options={RANGE_OPTIONS}

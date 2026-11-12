@@ -19,7 +19,7 @@ import type { Exec, KeyHash, ReplicaTx } from "./exec";
 // Names are plain identifiers (asserted by `defineMirrorSet`, and the schema
 // name is minted here), so they are spelled unquoted.
 
-const { lit, textArray, pkJson, pkOrder, typedKey, rowHash } = mirrorSql;
+const { ident, lit, textArray, pkJson, pkOrder, typedKey, rowHash } = mirrorSql;
 
 /**
  * A replica's schema name: `tm_<set>_<hash of the replica id>`. 60 characters
@@ -92,15 +92,17 @@ async function createLike(
   schema: string,
   t: MirroredTable,
 ): Promise<void> {
-  const target = `${schema}.${t.name}`;
+  const target = `${schema}.${ident(t.name)}`;
   await tx.execute(
     sql.raw(
-      `CREATE TABLE ${target} (LIKE public.${t.name} INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING INDEXES)`,
+      `CREATE TABLE ${target} (LIKE public.${ident(t.name)} INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING INDEXES)`,
     ),
   );
   for (const c of t.omit) {
     await tx.execute(
-      sql.raw(`ALTER TABLE ${target} DROP COLUMN IF EXISTS ${c} CASCADE`),
+      sql.raw(
+        `ALTER TABLE ${target} DROP COLUMN IF EXISTS ${ident(c)} CASCADE`,
+      ),
     );
   }
   const indexes = await executeRows(tx, {
@@ -151,7 +153,7 @@ async function rebuild(
   await tx.execute(sql.raw(`DROP SCHEMA IF EXISTS ${scratch} CASCADE`));
   await tx.execute(sql.raw(`CREATE SCHEMA ${scratch}`));
   await tx.execute(
-    sql.raw(`ALTER TABLE ${schema}.${t.name} SET SCHEMA ${scratch}`),
+    sql.raw(`ALTER TABLE ${schema}.${ident(t.name)} SET SCHEMA ${scratch}`),
   );
   await createLike(tx, schema, t);
   const next = await columnsOf(tx, schema, t.name);
@@ -165,10 +167,12 @@ async function rebuild(
   );
   let kept = false;
   if (keysSurvive && newOnesOptional) {
-    const cols = common.map((c) => c.name).join(", ");
+    const cols = common.map((c) => ident(c.name)).join(", ");
     const values = common
       .map((c) =>
-        prev.get(c.name)!.type === c.type ? c.name : `${c.name}::${c.type}`,
+        prev.get(c.name)!.type === c.type
+          ? ident(c.name)
+          : `${ident(c.name)}::${c.type}`,
       )
       .join(", ");
     // In a savepoint: old rows the new DDL refuses (a cast that fails, a NULL
@@ -179,7 +183,7 @@ async function rebuild(
         // sql-writes:hand-written — the local rebuild copies the old mirror table's shared columns into the new one
         await sp.execute(
           sql.raw(
-            `INSERT INTO ${schema}.${t.name} (${cols}) SELECT ${values} FROM ${scratch}.${t.name}`,
+            `INSERT INTO ${schema}.${ident(t.name)} (${cols}) SELECT ${values} FROM ${scratch}.${ident(t.name)}`,
           ),
         );
         return true;
@@ -305,8 +309,8 @@ export async function applyToSchema(
   upserts: readonly MirrorKeyedRow[],
   deletes: readonly MirrorPk[],
 ): Promise<void> {
-  const target = `${schema}.${t.name}`;
-  const keyCols = t.pk.map((c) => c.name).join(", ");
+  const target = `${schema}.${ident(t.name)}`;
+  const keyCols = t.pk.map((c) => ident(c.name)).join(", ");
   if (deletes.length > 0) {
     // sql-writes:hand-written — tombstoned keys deleted from a replica table named per replica
     await tx.execute(
@@ -336,8 +340,8 @@ export async function applyToSchema(
   const onConflict =
     updates.length === 0
       ? "DO NOTHING"
-      : `DO UPDATE SET ${updates.map((c) => `${c} = EXCLUDED.${c}`).join(", ")}`;
-  const list = cols.join(", ");
+      : `DO UPDATE SET ${updates.map((c) => `${ident(c)} = EXCLUDED.${ident(c)}`).join(", ")}`;
+  const list = cols.map(ident).join(", ");
   await tx.execute(
     sql`INSERT INTO ${sql.raw(target)} (${sql.raw(list)}) SELECT ${sql.raw(list)} FROM jsonb_populate_recordset(NULL::${sql.raw(target)}, ${`[${upserts.map((r) => r.row).join(",")}]`}::jsonb) ON CONFLICT (${sql.raw(keyCols)}) ${sql.raw(onConflict)}`,
   );
@@ -368,7 +372,7 @@ export async function schemaKeyHashes(
     dropped.length === 0
       ? "to_jsonb(t)"
       : `(to_jsonb(t) - ${textArray(dropped)})`;
-  const from: string[] = [`${schema}.${t.name} t`];
+  const from: string[] = [`${schema}.${ident(t.name)} t`];
   const where: string[] = [];
   if (afterPk !== null) {
     from.push(

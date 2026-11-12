@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-apps-deploy-site-mirror-box",
+  "description": "Ships on the deployed box: the host-only table-mirror routes (changes, copy, keys, rows) over table-mirror/source's readers — a companion of the source, so it ships wherever a mirror set does.",
+  "private": true,
+  "version": "0.0.1"
+}

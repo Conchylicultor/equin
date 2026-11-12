@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-apps-deploy-site-mirror-pull",
+  "description": "Local only: one table-mirror replica per (deployment, set), pulled over SSH through host-query; the site-mirror.pull job and its hourly main-only pull-all, the sync endpoint, the site-mirror.status live value and the MirrorFreshness line.",
+  "private": true,
+  "version": "0.0.1"
+}

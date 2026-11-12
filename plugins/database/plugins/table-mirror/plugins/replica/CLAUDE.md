@@ -161,7 +161,10 @@ drop and sweep.
     - `onReplicaApplied`
     - `pullReplica`
     - `sweepOrphanReplicaSchemas`
+    - `tableMirrorReplicas`
     - `withReplicaSchema`
+- Cross-plugin:
+  - Imported by: `apps/deploy/site-mirror/pull`
 - Exemptions:
   - Exempts itself from:
     - `sql-writes:fit:hand-written` — `server/internal/schema-sink.ts` (sanctioned)

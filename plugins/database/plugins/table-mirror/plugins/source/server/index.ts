@@ -4,11 +4,16 @@ import { DbTriggerClaim } from "@plugins/database/plugins/db-triggers/server";
 import { ExcludeFromChangeFeed } from "@plugins/network/plugins/live/plugins/change-feed/server";
 import { MirrorSet, NeverMirrored } from "./internal/define";
 import { installMirrorSource } from "./internal/install";
+import {
+  assertMirrorReadable,
+  MirrorReaderRoutes,
+} from "./internal/reader-route";
 import { tableMirrorPruneJob } from "./internal/prune";
 import { tableMirrorLog } from "./internal/tables";
 import { TABLE_MIRROR_TRIGGER_SET } from "./internal/triggers";
 
 export {
+  defineMirrorSet,
   MirrorSet,
   NeverMirrored,
   type MirrorSetDefinition,
@@ -16,12 +21,17 @@ export {
   type MirroredTable,
   type NeverMirroredSpec,
 } from "./internal/define";
+export { MirrorReaderRoutes } from "./internal/reader-route";
 export { resolveMirrorSet } from "./internal/registry";
-export type {
-  ReadMirrorChangesOptions,
-  ReadMirrorCopyOptions,
-  ReadMirrorKeysOptions,
-  ReadMirrorRowsOptions,
+export {
+  readMirrorChanges,
+  readMirrorCopy,
+  readMirrorKeys,
+  readMirrorRows,
+  type ReadMirrorChangesOptions,
+  type ReadMirrorCopyOptions,
+  type ReadMirrorKeysOptions,
+  type ReadMirrorRowsOptions,
 } from "./internal/read";
 export { readSourceIdentity, readTableFingerprints } from "./internal/identity";
 export { mirrorSql } from "./internal/sql";
@@ -52,6 +62,14 @@ export default {
     await DatabaseDriver.get().bootDdl(
       () => installMirrorSource(db, sets, never),
       "boot: table-mirror triggers",
+    );
+  },
+  // Serving hosts only: a set nobody can read is a graph built outside the
+  // closure engine (the routes are a companion of this plugin).
+  onReady() {
+    assertMirrorReadable(
+      MirrorSet.getContributions(),
+      MirrorReaderRoutes.getContributions(),
     );
   },
 } satisfies ServerPluginDefinition;

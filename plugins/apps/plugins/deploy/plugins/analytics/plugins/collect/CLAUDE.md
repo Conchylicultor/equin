@@ -228,6 +228,8 @@ Without it the box knows only the sections someone reached.
 - Description: The cookieless visit tracker a deployed site mounts: <AnalyticsTracker app={…} /> records one pageview per path change under that app (landing referrer and utm tags on the first only) and the visible time on each; track(name, props?) records a custom event on the current page; useSectionReach(section) / observeSectionReach(el, section) record section_reach once when a section reaches the upper half of the screen, its section prop (<page>/<key>) giving a per-section reach funnel. Owns the analytics tables (daily salts kept 30 days with the hash → visitor links that let a returning visitor keep one id, 90-day visits and hits, forever daily totals at every single-filter level and forever per-visit memberships for exact unique visitors over any range), the public collect endpoint, the host-only report, sessions (individual visits with their hits, by key range) and session-counts queries, the nightly analytics.rollup job and the visits retention sweep that refuses to delete a day not yet rolled up.
 - Server:
   - Contributes:
+    - `table-mirror-set` "analytics"
+    - `table-mirror-never` "analytics_salts, analytics_visitor_links"
     - `change-feed-exclusion` "analytics_hits"
     - `change-feed-exclusion` "analytics_visit_members"
     - `change-feed-exclusion` "analytics_visitor_links"
@@ -241,6 +243,9 @@ Without it the box knows only the sections someone reached.
     - `database.db`
     - `database/sql-column.parsedJson`
     - `database/sql-column.parsedText`
+    - `database/table-mirror/source.defineMirrorSet`
+    - `database/table-mirror/source.MirrorSet`
+    - `database/table-mirror/source.NeverMirrored`
     - `infra/endpoints.implement`
     - `infra/endpoints.rawEndpointHandler`
     - `infra/jobs.defineJob`
@@ -277,6 +282,8 @@ Without it the box knows only the sections someone reached.
     - `useSectionReach`
 - Core:
   - Uses:
+    - `apps/deploy/analytics/host-only.base64UrlJsonParamSchema`
+    - `apps/deploy/analytics/host-only.encodeBase64UrlJson`
     - `apps/deploy/analytics/host-only.HOST_ONLY_PREFIX`
     - `framework/plugin-id.asPluginId`
     - `infra/endpoints.defineEndpoint`
@@ -333,6 +340,7 @@ Without it the box knows only the sections someone reached.
     - `addDays`
     - `addMetrics`
     - `addMonths`
+    - `ANALYTICS_MIRROR_SET_ID`
     - `ANALYTICS_RANGES`
     - `AnalyticsFilterSchema`
     - `analyticsQueryEndpoint`
@@ -351,7 +359,6 @@ Without it the box knows only the sections someone reached.
     - `AudienceSchema`
     - `averageTimeOnPageMs`
     - `averageVisitDurationMs`
-    - `BASE64URL_PATTERN`
     - `bounceRate`
     - `BROWSER_FAMILIES`
     - `BrowserFamilySchema`

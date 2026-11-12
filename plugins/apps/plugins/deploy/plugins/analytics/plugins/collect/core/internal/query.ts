@@ -1,5 +1,9 @@
 import { z } from "zod";
 import {
+  base64UrlJsonParamSchema,
+  encodeBase64UrlJson,
+} from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/host-only/core";
+import {
   cappedList,
   wholeList,
 } from "@plugins/packages/plugins/list-bound/core";
@@ -239,66 +243,7 @@ export const AnalyticsQueryResultSchema = z.discriminatedUnion("kind", [
 ]);
 export type AnalyticsQueryResult = z.infer<typeof AnalyticsQueryResultSchema>;
 
-// ── Wire encoding ────────────────────────────────────────────────────────
-
-export const BASE64URL_PATTERN = /^[A-Za-z0-9_-]+$/;
-
-/**
- * A host-only question travels as ONE base64url query-string value.
- * base64url's alphabet (`A-Z a-z 0-9 - _`) needs no quoting in a URL nor in
- * the remote shell `sshRun` joins its argv into, so the dashboard can curl it
- * over SSH as-is.
- */
-export function encodeBase64UrlJson(value: unknown): string {
-  let binary = "";
-  for (const byte of new TextEncoder().encode(JSON.stringify(value))) {
-    binary += String.fromCharCode(byte);
-  }
-  return btoa(binary)
-    .replaceAll("+", "-")
-    .replaceAll("/", "_")
-    .replace(/=+$/, "");
-}
-
-/** The JSON text inside an encoded question. Throws on a value that is not base64url. */
-export function decodeBase64UrlJson(encoded: string): string {
-  if (!BASE64URL_PATTERN.test(encoded)) {
-    throw new Error("analytics query: not base64url");
-  }
-  const binary = atob(encoded.replaceAll("-", "+").replaceAll("_", "/"));
-  return new TextDecoder().decode(
-    Uint8Array.from(binary, (char) => char.charCodeAt(0)),
-  );
-}
-
-/** The `?q=` query-string schema of a question `schema`: decodes and validates in one step. */
-export function base64UrlJsonParamSchema<S extends z.ZodType>(schema: S) {
-  return z
-    .object({
-      q: z
-        .string()
-        .max(4096)
-        .regex(BASE64URL_PATTERN)
-        .transform((encoded, ctx) => {
-          try {
-            return JSON.parse(decodeBase64UrlJson(encoded)) as unknown;
-          } catch (err) {
-            // atob's malformed-length DOMException, JSON.parse's SyntaxError:
-            // both are a bad request, not a server fault.
-            if (!(err instanceof SyntaxError || err instanceof DOMException)) {
-              throw err;
-            }
-            ctx.addIssue({
-              code: "custom",
-              message: "q is not base64url-encoded JSON",
-            });
-            return z.NEVER;
-          }
-        })
-        .pipe(schema),
-    })
-    .strict();
-}
+// ── Wire encoding (host-only's base64url question) ──────────────────────
 
 /** The report's question on the wire (see {@link encodeBase64UrlJson}). */
 export function encodeAnalyticsQuery(query: AnalyticsQuery): string {

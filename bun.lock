@@ -451,6 +451,18 @@
       "name": "@equin/plugin-apps-deploy-site-messages-intake",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/deploy/plugins/site-mirror": {
+      "name": "@equin/plugin-apps-deploy-site-mirror",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/deploy/plugins/site-mirror/plugins/box": {
+      "name": "@equin/plugin-apps-deploy-site-mirror-box",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/deploy/plugins/site-mirror/plugins/pull": {
+      "name": "@equin/plugin-apps-deploy-site-mirror-pull",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/deploy/plugins/site-reports": {
       "name": "@equin/plugin-apps-deploy-site-reports",
       "version": "0.0.1",
@@ -7888,6 +7900,12 @@
     "@equin/plugin-apps-deploy-site-messages-inbox": ["@equin/plugin-apps-deploy-site-messages-inbox@workspace:plugins/apps/plugins/deploy/plugins/site-messages/plugins/inbox"],
 
     "@equin/plugin-apps-deploy-site-messages-intake": ["@equin/plugin-apps-deploy-site-messages-intake@workspace:plugins/apps/plugins/deploy/plugins/site-messages/plugins/intake"],
+
+    "@equin/plugin-apps-deploy-site-mirror": ["@equin/plugin-apps-deploy-site-mirror@workspace:plugins/apps/plugins/deploy/plugins/site-mirror"],
+
+    "@equin/plugin-apps-deploy-site-mirror-box": ["@equin/plugin-apps-deploy-site-mirror-box@workspace:plugins/apps/plugins/deploy/plugins/site-mirror/plugins/box"],
+
+    "@equin/plugin-apps-deploy-site-mirror-pull": ["@equin/plugin-apps-deploy-site-mirror-pull@workspace:plugins/apps/plugins/deploy/plugins/site-mirror/plugins/pull"],
 
     "@equin/plugin-apps-deploy-site-reports": ["@equin/plugin-apps-deploy-site-reports@workspace:plugins/apps/plugins/deploy/plugins/site-reports"],
 

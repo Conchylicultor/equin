@@ -23,6 +23,7 @@ import {
 import type { MirroredTable, MirrorSetDefinition } from "./define";
 import { readSourceIdentity, readTableFingerprints } from "./identity";
 import {
+  ident,
   lit,
   pkAfter,
   pkJson,
@@ -193,7 +194,7 @@ export async function readMirrorChanges(
     const content = `CASE WHEN l.deleted THEN NULL ELSE CASE l.tbl ${set.tables
       .map(
         (t) =>
-          `WHEN ${lit(t.name)} THEN (SELECT ${rowJson(t, "t", null)} FROM public.${t.name} t, ${typedKey(t, "l.pk")} k WHERE ${pkMatch(t, "t", "k")})`,
+          `WHEN ${lit(t.name)} THEN (SELECT ${rowJson(t, "t", null)} FROM public.${ident(t.name)} t, ${typedKey(t, "l.pk")} k WHERE ${pkMatch(t, "t", "k")})`,
       )
       .join(" ")} END END`;
     const inner = `SELECT l.xid, l.tbl, l.pk, l.deleted, ${content} AS row
@@ -279,7 +280,7 @@ function afterClause(
 /** The order columns a keyset inner select carries, and their window order. */
 function pkCarry(t: MirroredTable): { select: string; order: string } {
   return {
-    select: t.pk.map((c, i) => `t.${c.name} AS _k${i}`).join(", "),
+    select: t.pk.map((c, i) => `t.${ident(c.name)} AS _k${i}`).join(", "),
     order: t.pk
       .map((c, i) => `p._k${i}${c.collatable ? ` COLLATE "C"` : ""}`)
       .join(", "),
@@ -316,7 +317,7 @@ export async function readMirrorCopy(
     const { from, where } = afterClause(t, opts.afterPk);
     const carry = pkCarry(t);
     const inner = `SELECT ${carry.select}, ${pkJson(t, "t")} AS pk, ${rowJson(t, "t", null)} AS row
-      FROM public.${t.name} t${from}${where}
+      FROM public.${ident(t.name)} t${from}${where}
       ORDER BY ${pkOrder(t, "t")}`;
     const rows = await executeRows(tx, {
       query: sql.raw(
@@ -381,7 +382,7 @@ export async function readMirrorKeys(
     const { from, where } = afterClause(t, opts.afterPk);
     const carry = pkCarry(t);
     const inner = `SELECT ${carry.select}, ${pkJson(t, "t")} AS pk, ${rowHash(rowJson(t, "t", columns))} AS h
-      FROM public.${t.name} t${from}${where}
+      FROM public.${ident(t.name)} t${from}${where}
       ORDER BY ${pkOrder(t, "t")}`;
     // A key page has no byte cap beyond its key count: keys are small.
     const rows = await executeRows(tx, {
@@ -461,7 +462,7 @@ export async function readMirrorRows(
     };
     if (opts.pks.length === 0)
       return { ...base, rows: [], missing: [], remaining: [] };
-    const present = `t.${t.pk[0]!.name} IS NOT NULL`;
+    const present = `t.${ident(t.pk[0]!.name)} IS NOT NULL`;
     // The byte cap is applied in the database: a key past it comes back
     // without its content.
     const found = await executeRows(tx, {
@@ -481,7 +482,7 @@ export async function readMirrorRows(
                     CASE WHEN ${present} THEN ${rowHash(rowJson(t, "t", columns))} END AS h
              FROM jsonb_array_elements(${lit(JSON.stringify(opts.pks))}::jsonb) WITH ORDINALITY e(key, ord)
              CROSS JOIN LATERAL ${typedKey(t, "e.key")} k
-             LEFT JOIN public.${t.name} t ON ${pkMatch(t, "t", "k")}
+             LEFT JOIN public.${ident(t.name)} t ON ${pkMatch(t, "t", "k")}
            ) q
          ) s
          ORDER BY s.ord`,

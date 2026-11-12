@@ -41,6 +41,8 @@ deployments or analytics. The design and its decisions:
 - Description: Table mirror: pull a remote database's tables into local Postgres from a row-level change log (deltas plus tombstones, paged by an xid8 cursor), reconciling by key and row hash when deltas cannot be trusted. The umbrella's core is the wire protocol both halves speak.
 - Cross-plugin:
   - Imported by:
+    - `apps/deploy/site-mirror`
+    - `apps/deploy/site-mirror/pull`
     - `database/table-mirror/replica`
     - `database/table-mirror/source`
 - Core:

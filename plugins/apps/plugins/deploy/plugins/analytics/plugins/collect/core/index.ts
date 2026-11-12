@@ -108,7 +108,6 @@ export {
   AnalyticsQueryResultSchema,
   AnalyticsQuerySchema,
   AnalyticsReportSchema,
-  BASE64URL_PATTERN,
   MAX_FILTERS,
   MAX_TOTALS_FILTERS,
   MetricsSchema,
@@ -202,3 +201,4 @@ export {
   SECTION_REACH_EVENT,
   SECTION_REACH_PROP,
 } from "./internal/plugin-id";
+export { ANALYTICS_MIRROR_SET_ID } from "./internal/mirror";

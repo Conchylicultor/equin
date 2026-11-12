@@ -16,7 +16,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
       - Plugins:
         - **`chrome`** — The demo before it runs, drawn for <DemoScope boot>: the equin logo over the logo's own colours, then the Enter equin button on every visit (a first visit downloads nothing before it; a return…
         - **`shell`** — App shell for the Demo sandbox: registers the /demo app entry — equin rendered in-process on made-up data (DemoScope + AppEmbed over the workspace demo's browser host), starting on its home app (the…
-    - **`deploy`** [test helpers] [exempt] [30 sub-plugins] — The Deploy task category: the category tasks filed from the Deploy app, such as a failed deploy's investigation, are grouped under.
+    - **`deploy`** [test helpers] [exempt] [33 sub-plugins] — The Deploy task category: the category tasks filed from the Deploy app, such as a failed deploy's investigation, are grouped under.
     - **`desktop`** [11 sub-plugins] — Desktop — the floating-window desktop mode as an app: windows over a wallpaper, one bottom shelf (launcher, pinned apps, running windows, tray), virtual desktops, overview and a window switcher.
     - **`events`** [exempt] [22 sub-plugins] — Events — track events from pluggable sources in one database.
     - **`file-explorer`** [exempt] [6 sub-plugins] — File explorer app.

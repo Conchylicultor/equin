@@ -1954,6 +1954,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - **`collect`** — The cookieless visit tracker a deployed site mounts: <AnalyticsTracker app={…} /> records one pageview per path change under that app (landing referrer and utm tags on the first only) and the visible time on each; track(name, props?) records a custom event on the current page; useSectionReach(section) / observeSectionReach(el, section) record section_reach once when a section reaches the upper half of the screen, its section prop (<page>/<key>) giving a per-section reach funnel. Owns the analytics tables (daily salts kept 30 days with the hash → visitor links that let a returning visitor keep one id, 90-day visits and hits, forever daily totals at every single-filter level and forever per-visit memberships for exact unique visitors over any range), the public collect endpoint, the host-only report, sessions (individual visits with their hits, by key range) and session-counts queries, the nightly analytics.rollup job and the visits retention sweep that refuses to delete a day not yet rolled up.
               - Server:
                 - Contributes:
+                  - `table-mirror-set` "analytics"
+                  - `table-mirror-never` "analytics_salts, analytics_visitor_links"
                   - `change-feed-exclusion` "analytics_hits"
                   - `change-feed-exclusion` "analytics_visit_members"
                   - `change-feed-exclusion` "analytics_visitor_links"
@@ -1967,6 +1969,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `database.db`
                   - `database/sql-column.parsedJson`
                   - `database/sql-column.parsedText`
+                  - `database/table-mirror/source.defineMirrorSet`
+                  - `database/table-mirror/source.MirrorSet`
+                  - `database/table-mirror/source.NeverMirrored`
                   - `infra/endpoints.implement`
                   - `infra/endpoints.rawEndpointHandler`
                   - `infra/jobs.defineJob`
@@ -2003,6 +2008,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `useSectionReach`
               - Core:
                 - Uses:
+                  - `apps/deploy/analytics/host-only.base64UrlJsonParamSchema`
+                  - `apps/deploy/analytics/host-only.encodeBase64UrlJson`
                   - `apps/deploy/analytics/host-only.HOST_ONLY_PREFIX`
                   - `framework/plugin-id.asPluginId`
                   - `infra/endpoints.defineEndpoint`
@@ -2059,6 +2066,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `addDays`
                   - `addMetrics`
                   - `addMonths`
+                  - `ANALYTICS_MIRROR_SET_ID`
                   - `ANALYTICS_RANGES`
                   - `AnalyticsFilterSchema`
                   - `analyticsQueryEndpoint`
@@ -2077,7 +2085,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `AudienceSchema`
                   - `averageTimeOnPageMs`
                   - `averageVisitDurationMs`
-                  - `BASE64URL_PATTERN`
                   - `bounceRate`
                   - `BROWSER_FAMILIES`
                   - `BrowserFamilySchema`
@@ -2213,13 +2220,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `SiteOverview.Card` "traffic" → `TrafficCard`
                   - `SiteOverview.Card` "top" → `TopCards`
                   - `SiteOverview.Card` "owner-devices" → `OwnerDevicesCard`
-                - Uses: 42 symbols — full list in [`plugins/apps/plugins/deploy/plugins/analytics/plugins/dashboard/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/analytics/plugins/dashboard/REFERENCE.md)
+                - Uses: 43 symbols — full list in [`plugins/apps/plugins/deploy/plugins/analytics/plugins/dashboard/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/analytics/plugins/dashboard/REFERENCE.md)
                   - `apps/deploy/deployments` ×6
                   - `apps/deploy/host-query` ×6
                   - `primitives/css/coords` ×2
                   - `primitives/css/text` ×2
                   - `primitives/css/ui-kit` ×2
                   - `primitives/link-gesture` ×2
+                  - `apps/deploy/site-mirror/pull.MirrorFreshness`
                   - `network/live/live-state.ResourceErrorInline`
                   - `network/live.useLive`
                   - `primitives/collapsible.FoldMotion`
@@ -2291,6 +2299,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `apps/deploy/deploy-secrets`
                   - `apps/deploy/host-query`
                   - `apps/deploy/site-messages/intake`
+                  - `apps/deploy/site-mirror`
+                  - `apps/deploy/site-mirror/box`
+                  - `apps/deploy/site-mirror/pull`
                   - `apps/deploy/site-reports/intake`
                   - `framework/cli/deploy`
               - Server:
@@ -2300,7 +2311,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `isBotUserAgent`
                   - `requestClientIp`
               - Core:
-                - Exports (values): `HOST_ONLY_PREFIX`
+                - Exports (values):
+                  - `BASE64URL_PATTERN`
+                  - `base64UrlJsonParamSchema`
+                  - `decodeBase64UrlJson`
+                  - `DEFAULT_QUESTION_MAX_CHARS`
+                  - `encodeBase64UrlJson`
+                  - `HOST_ONLY_PREFIX`
             - **`ip-country`** — IP-to-country lookup from a local copy of DB-IP IP-to-Country Lite: lookupCountry(ip) answers found / unlisted / unavailable by binary search over an in-memory snapshot read lazily from the machine-wide cache, and the weekly ip-country.refresh job (also enqueued at boot when the snapshot is missing or stale) downloads the CSV, builds the compact binary snapshot and swaps it in. The IP never leaves the process.
               - Server:
                 - Uses: `infra/jobs.defineJob`
@@ -2866,6 +2883,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/deploy/local-serve`
               - `apps/deploy/remote-deploy`
               - `apps/deploy/site-messages/inbox`
+              - `apps/deploy/site-mirror/pull`
               - `apps/deploy/site-reports/import`
               - `framework/cli/deploy`
           - Exemptions:
@@ -3079,6 +3097,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/deploy/analytics/sessions`
               - `apps/deploy/fixtures`
               - `apps/deploy/site-messages/inbox`
+              - `apps/deploy/site-mirror/pull`
               - `apps/deploy/site-reports/import`
         - **`local-serve`** — Test locally: the site page's header button that serves the site's composition on the shared gateway (opening it once live), plus the same one-button serve/open shortcut on the deployments list row.
           - Web:
@@ -3505,6 +3524,118 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `apps/website/landing/contact`
               - Deploy-secrets:
                 - Deploy secrets: `RESEND_API_KEY` — Resend API key the site uses to email you each message a visitor sends through its contact form.
+        - **`site-mirror`** — The table mirror between a deployed site's box and this computer: the host-only route contracts both halves speak (changes, copy, keys, rows), the box half serving them over the source's readers, and the pull half keeping one replica per deployment and set.
+          - Core:
+            - Uses:
+              - `apps/deploy/analytics/host-only.base64UrlJsonParamSchema`
+              - `apps/deploy/analytics/host-only.HOST_ONLY_PREFIX`
+              - `database/table-mirror.MirrorChangesPageSchema`
+              - `database/table-mirror.MirrorChangesRequestSchema`
+              - `database/table-mirror.MirrorCopyPageSchema`
+              - `database/table-mirror.MirrorCopyRequestSchema`
+              - `database/table-mirror.MirrorKeysPageSchema`
+              - `database/table-mirror.MirrorKeysRequestSchema`
+              - `database/table-mirror.MirrorRefusalSchema`
+              - `database/table-mirror.MirrorRowsAnswerSchema`
+              - `database/table-mirror.MirrorRowsRequestSchema`
+              - `infra/endpoints.defineEndpoint`
+            - Exports (values):
+              - `MIRROR_ANSWER_MAX_BYTES`
+              - `MIRROR_QUESTION_MAX_CHARS`
+              - `MirrorChangesAnswerSchema`
+              - `mirrorChangesEndpoint`
+              - `MirrorCopyAnswerSchema`
+              - `mirrorCopyEndpoint`
+              - `MirrorKeysAnswerSchema`
+              - `mirrorKeysEndpoint`
+              - `mirrorRowsEndpoint`
+              - `MirrorRowsResultSchema`
+          - Cross-plugin:
+            - Imported by:
+              - `apps/deploy/site-mirror/box`
+              - `apps/deploy/site-mirror/pull`
+          - Plugins:
+            - **`box`** — Ships on the deployed box: the host-only table-mirror routes — changes, copy, keys and rows, each one page of table-mirror/source's readers for a set this release contributes (unknown-set otherwise), behind hostOnly and Caddy's host-only 404. A companion of table-mirror/source (MirrorReaderRoutes), so every composition holding a mirror set serves its readers.
+              - Server:
+                - Contributes: `table-mirror-reader-routes` "apps/deploy/site-mirror/box serves the readers as host-only routes, curled over SSH by the deploy app's site-mirror/pull"
+                - Uses:
+                  - `apps/deploy/analytics/host-only.hostOnly`
+                  - `database.db`
+                  - `database/table-mirror/source.MirrorReaderRoutes`
+                  - `database/table-mirror/source.readMirrorChanges`
+                  - `database/table-mirror/source.readMirrorCopy`
+                  - `database/table-mirror/source.readMirrorKeys`
+                  - `database/table-mirror/source.readMirrorRows`
+                  - `database/table-mirror/source.resolveMirrorSet`
+                  - `infra/endpoints.implement`
+            - **`pull`** — MirrorFreshness({ deploymentId, setId, subject }): how fresh this computer's copy of a deployed site's mirrored set is — Synced N ago with Sync now, Copying… / Reconciling… while a pass runs, a failed pull in host-query's failure vocabulary (a site whose release predates the set: redeploy it) above the still-readable older data — asking for a pull on open when the copy is a few minutes old or missing. Keeps one table-mirror replica per (deployment, mirror set) of each deployed site's box, pulled over SSH through host-query (each page one host-only GET, a key list cut to what one question carries): the site-mirror.pull job (one bounded chunk per run, re-enqueued while behind, one pending per replica), its hourly main-only site-mirror.pull-all (drops deleted deployments' replicas and orphan schemas, then pulls every replica), POST /api/site-mirror/sync (on a tab open and on Sync now; creates the set's replica on first ask), and the site-mirror.status live value (phase, progress, last sync, last outcome).
+              - Server:
+                - Contributes:
+                  - `resource.declare` "site-mirror.status"
+                  - `fork-data-exclusion` "site_mirror_replicas"
+                - Uses:
+                  - `apps/deploy/deployments._deployDeployments`
+                  - `apps/deploy/host-query.hostOnlyQueryOverSsh`
+                  - `database.db`
+                  - `database/admin.ExcludeFromFork`
+                  - `database/table-mirror/replica.dropReplica`
+                  - `database/table-mirror/replica.ensureReplica`
+                  - `database/table-mirror/replica.pullReplica`
+                  - `database/table-mirror/replica.ReplicaOutcome`
+                  - `database/table-mirror/replica.ReplicaProgress`
+                  - `database/table-mirror/replica.sweepOrphanReplicaSchemas`
+                  - `database/table-mirror/replica.tableMirrorReplicas`
+                  - `database/table-mirror/source.resolveMirrorSet`
+                  - `ids.externalIdColumn`
+                  - `ids.idRef`
+                  - `infra/endpoints.endpointPath`
+                  - `infra/endpoints.HttpError`
+                  - `infra/endpoints.implement`
+                  - `infra/jobs.defineJob`
+                  - `network/live.serveValue`
+                - DB schema: `plugins/apps/plugins/deploy/plugins/site-mirror/plugins/pull/server/internal/tables.ts`
+                - Register:
+                  - `defineJob('site-mirror.pull')`
+                  - `defineJob('site-mirror.pull-all')`
+                - Resources: `site-mirror.status` (push, whole: one row per mirror set this computer declares — a handful, whole: the columns of one table this computer requires)
+                - Routes: `POST /api/site-mirror/sync`
+              - Web:
+                - Uses:
+                  - `apps/deploy/host-query.HostQueryErrorState`
+                  - `apps/deploy/host-query.HostQueryFailureState`
+                  - `apps/deploy/host-query.HostQuerySubject`
+                  - `infra/endpoints.useEndpointMutation`
+                  - `network/live.useLive`
+                  - `network/live/live-state.ResourceErrorInline`
+                  - `primitives/css/inline.Inline`
+                  - `primitives/css/spacing.Stack`
+                  - `primitives/css/text.Text`
+                  - `primitives/css/ui-kit.Button`
+                  - `primitives/loading.Loading`
+                  - `primitives/relative-time.RelativeTime`
+                - Exports (values): `MirrorFreshness`
+              - Core:
+                - Uses:
+                  - `apps/deploy/host-query.HOST_QUERY_FAILURE_ARMS`
+                  - `database/table-mirror.MirrorRefusalSchema`
+                  - `infra/endpoints.defineEndpoint`
+                  - `network/live.liveValue`
+                  - `packages/list-bound.wholeList`
+                - Exports (types):
+                  - `MirrorOutcome`
+                  - `MirrorPhase`
+                  - `MirrorProgress`
+                  - `SiteMirrorStatus`
+                - Exports (values):
+                  - `MirrorOutcomeSchema`
+                  - `MirrorPhaseSchema`
+                  - `MirrorProgressSchema`
+                  - `siteMirrorStatus`
+                  - `SiteMirrorStatusSchema`
+                  - `SiteMirrorSyncBodySchema`
+                  - `siteMirrorSyncEndpoint`
+              - Cross-plugin:
+                - Imported by: `apps/deploy/analytics/dashboard`
         - **`site-reports`** — Umbrella for the error reports a deployed site's visitors' browsers send: the intake that ships inside the site (public bounded endpoint, aggregated table, host-only list) and the page channel that sends them (deduped, capped, batched).
           - Plugins:
             - **`channel`** (excluded) — The website's report channel: registers itself as reports' reportChannel at register time, so report() on a site page — the page's collectors, which also catch what the live demo raises — sends to the site's own public intake (POST /api/site-reports) instead of a reports engine the site does not have: deduped by fingerprint (a repeat only counted), at most 20 fingerprints and 10 POSTs per visit, batched 5 s, backed off on failure (stopping after 5), anonymous (no client id or user agent, the pathname only, strings clamped). Excluded from every composition by default (base-exclusions); the website names it.
@@ -22298,8 +22429,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `loadedDatabaseConfig`
       - `readDatabaseConfigSync`
   - Cross-plugin:
-    - Imported by: 164 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
-      - `apps` ×45
+    - Imported by: 166 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
+      - `apps` ×47
       - `conversations` ×20
       - `infra` ×16
       - `page` ×14
@@ -22390,11 +22521,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `reclaimForkTemp`
           - `recreateDatabase`
       - Cross-plugin:
-        - Imported by: 33 plugins — full list in [`plugins/database/plugins/admin/REFERENCE.md`](../plugins/database/plugins/admin/REFERENCE.md)
+        - Imported by: 34 plugins — full list in [`plugins/database/plugins/admin/REFERENCE.md`](../plugins/database/plugins/admin/REFERENCE.md)
           - `debug` ×8
           - `infra` ×7
           - `database` ×5
-          - `apps` ×3
+          - `apps` ×4
           - `framework` ×3
           - `build` ×2
           - `network` ×2
@@ -23246,6 +23377,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`table-mirror`** — Table mirror: pull a remote database's tables into local Postgres from a row-level change log (deltas plus tombstones, paged by an xid8 cursor), reconciling by key and row hash when deltas cannot be trusted. The umbrella's core is the wire protocol both halves speak.
       - Cross-plugin:
         - Imported by:
+          - `apps/deploy/site-mirror`
+          - `apps/deploy/site-mirror/pull`
           - `database/table-mirror/replica`
           - `database/table-mirror/source`
       - Core:
@@ -23339,7 +23472,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `onReplicaApplied`
               - `pullReplica`
               - `sweepOrphanReplicaSchemas`
+              - `tableMirrorReplicas`
               - `withReplicaSchema`
+          - Cross-plugin:
+            - Imported by: `apps/deploy/site-mirror/pull`
           - Exemptions:
             - Exempts itself from:
               - `sql-writes:fit:hand-written` — `server/internal/schema-sink.ts` (sanctioned)
@@ -23372,26 +23508,31 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ReadMirrorKeysOptions`
               - `ReadMirrorRowsOptions`
             - Exports (values):
+              - `defineMirrorSet`
+              - `MirrorReaderRoutes`
               - `MirrorSet`
               - `mirrorSql`
               - `NeverMirrored`
+              - `readMirrorChanges`
+              - `readMirrorCopy`
+              - `readMirrorKeys`
+              - `readMirrorRows`
               - `readSourceIdentity`
               - `readTableFingerprints`
               - `resolveMirrorSet`
             - Register: `defineJob('table-mirror.prune')`
           - Cross-plugin:
-            - Imported by: `database/table-mirror/replica`
+            - Imported by:
+              - `apps/deploy/analytics/collect`
+              - `apps/deploy/site-mirror/box`
+              - `apps/deploy/site-mirror/pull`
+              - `database/table-mirror/replica`
           - Exemptions:
             - Exempts itself from: `sql-writes:fit:hand-written` — `server/internal/triggers.ts` (sanctioned)
           - Test helpers:
             - Server: `@plugins/database/plugins/table-mirror/plugins/source/server/testing`
-              - `defineMirrorSet` — Declare a set of tables mirrored together.
               - `installMirrorSource` — Make this database a mirror source for `sets`: the boot guard (no never-mirrored table in a set, no table in two sets), the identity row (seeded once; a new cluster or a restored box mints a new one with its database), the log rows of tables no set mirrors any more dropped (the stream could not join them to a table), and the change-log triggers installed one table per transaction.
               - `pruneMirrorLog` — One prune run as of `now`, in one transaction: record a mark (`now`, this snapshot's xmin), then take M = the newest mark at least `retentionDays` old and delete every log row with `xid < M` — upserts and tombstones alike — and every older mark, and raise the horizon to M.
-              - `readMirrorChanges` — One page of the change stream after `cursor`: for each log row in `(xid, tbl, pk)` order, the row's current content and hash (an upsert) or its key (a tombstone).
-              - `readMirrorCopy` — One keyset page of a whole table, rows with their hash — a replica's first sync only, when it has nothing to compare against.
-              - `readMirrorKeys` — One keyset page of `(pk, h)` — reconciliation's walk, about 40 bytes a key.
-              - `readMirrorRows` — The current rows for a bounded list of keys — what reconciliation found different.
 
 - **`debug`** — Debug tools umbrella plugin.
   - Cross-plugin:
@@ -32619,8 +32760,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `parseKindLabel`
       - `storedIdSchema`
   - Cross-plugin:
-    - Imported by: 46 plugins — full list in [`plugins/ids/REFERENCE.md`](../plugins/ids/REFERENCE.md)
-      - `apps` ×14
+    - Imported by: 47 plugins — full list in [`plugins/ids/REFERENCE.md`](../plugins/ids/REFERENCE.md)
+      - `apps` ×15
       - `conversations` ×7
       - `infra` ×3
       - `primitives` ×3
@@ -33977,8 +34118,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `unmatchedApiResponse`
           - `unsupportedEndpointResponse`
       - Cross-plugin:
-        - Imported by: 256 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
-          - `apps` ×77
+        - Imported by: 259 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
+          - `apps` ×80
           - `conversations` ×35
           - `infra` ×23
           - `debug` ×20
@@ -35627,8 +35768,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `taskFor`
           - `TOTAL_JOB_SLOTS`
       - Cross-plugin:
-        - Imported by: 87 plugins — full list in [`plugins/infra/plugins/jobs/REFERENCE.md`](../plugins/infra/plugins/jobs/REFERENCE.md)
-          - `apps` ×21
+        - Imported by: 88 plugins — full list in [`plugins/infra/plugins/jobs/REFERENCE.md`](../plugins/infra/plugins/jobs/REFERENCE.md)
+          - `apps` ×22
           - `conversations` ×18
           - `infra` ×15
           - `debug` ×12
@@ -39328,8 +39469,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveValueOn`
           - `sliceRange`
       - Cross-plugin:
-        - Imported by: 343 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
-          - `apps` ×86
+        - Imported by: 344 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+          - `apps` ×87
           - `conversations` ×70
           - `debug` ×36
           - `tasks` ×28
@@ -39737,8 +39878,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `unresolved`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/color-palette --destructive`
-            - Imported by: 305 plugins — full list in [`plugins/network/plugins/live/plugins/live-state/REFERENCE.md`](../plugins/network/plugins/live/plugins/live-state/REFERENCE.md)
-              - `apps` ×83
+            - Imported by: 306 plugins — full list in [`plugins/network/plugins/live/plugins/live-state/REFERENCE.md`](../plugins/network/plugins/live/plugins/live-state/REFERENCE.md)
+              - `apps` ×84
               - `conversations` ×48
               - `debug` ×31
               - `ui` ×25
@@ -40425,8 +40566,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `wholeRecord`
           - `wholeTuple`
       - Cross-plugin:
-        - Imported by: 129 plugins — full list in [`plugins/packages/plugins/list-bound/REFERENCE.md`](../plugins/packages/plugins/list-bound/REFERENCE.md)
-          - `apps` ×28
+        - Imported by: 130 plugins — full list in [`plugins/packages/plugins/list-bound/REFERENCE.md`](../plugins/packages/plugins/list-bound/REFERENCE.md)
+          - `apps` ×29
           - `debug` ×20
           - `infra` ×16
           - `conversations` ×15
@@ -46824,8 +46965,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `InlineProps`
             - Exports (values): `Inline`
           - Cross-plugin:
-            - Imported by: 116 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
-              - `apps` ×23
+            - Imported by: 117 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
+              - `apps` ×24
               - `debug` ×20
               - `reports` ×20
               - `primitives` ×12
@@ -47409,8 +47550,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Stack`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Imported by: 441 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
-              - `apps` ×108
+            - Imported by: 442 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
+              - `apps` ×109
               - `conversations` ×76
               - `primitives` ×54
               - `debug` ×40
@@ -47652,8 +47793,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×37
               - `ui/tokens/color-palette` ×6
               - `ui/tokens/font-family` ×2
-            - Imported by: 426 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
-              - `apps` ×111
+            - Imported by: 427 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+              - `apps` ×112
               - `conversations` ×84
               - `primitives` ×47
               - `debug` ×39
@@ -47973,9 +48114,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/chart` ×5
               - `ui/tokens/font-family` ×4
               - `ui/tokens/scrollbar --scrollbar-color`
-            - Imported by: 465 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Imported by: 466 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `primitives` ×111
-              - `apps` ×108
+              - `apps` ×109
               - `conversations` ×53
               - `page` ×27
               - `debug` ×25
@@ -50835,8 +50976,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-size-body`
           - `ui/tokens/type-scale --font-weight-normal`
           - `ui/tokens/type-scale --line-height-body`
-        - Imported by: 230 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
-          - `apps` ×71
+        - Imported by: 231 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
+          - `apps` ×72
           - `conversations` ×23
           - `ui` ×23
           - `debug` ×20
@@ -52720,8 +52861,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from: `sortable-list/no-raw-dnd-kit` — `web` (sanctioned)
     - **`relative-time`** — Formats a Date as a human-readable relative string (just now, Nm ago, Nh ago, Nd ago — or the short now / Nm / Nh / Nd), and a running duration as a clock (m:ss). Exposes formatRelativeTime(), <RelativeTime date={…} />, formatElapsed(), useNow() and <ElapsedTime since={…} />.
       - Cross-plugin:
-        - Imported by: 70 plugins — full list in [`plugins/primitives/plugins/relative-time/REFERENCE.md`](../plugins/primitives/plugins/relative-time/REFERENCE.md)
-          - `apps` ×25
+        - Imported by: 71 plugins — full list in [`plugins/primitives/plugins/relative-time/REFERENCE.md`](../plugins/primitives/plugins/relative-time/REFERENCE.md)
+          - `apps` ×26
           - `debug` ×15
           - `conversations` ×10
           - `infra` ×4

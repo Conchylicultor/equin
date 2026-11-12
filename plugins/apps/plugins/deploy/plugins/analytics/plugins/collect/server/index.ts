@@ -7,6 +7,7 @@ import {
   analyticsSessionsEndpoint,
   collectEndpoint,
 } from "../core";
+import { analyticsMirrorContributions } from "./internal/mirror";
 import { analyticsRollupJob } from "./internal/rollup";
 import { analyticsVisitsRetention } from "./internal/retention";
 import {
@@ -36,6 +37,9 @@ export default {
     [analyticsSessionCountsEndpoint.route]: handleSessionCountsQuery,
   },
   contributions: [
+    // The analytics mirror set (the deploy app's site-mirror copies it); the
+    // salts and visitor links never leave the box.
+    ...analyticsMirrorContributions,
     // Every public page load writes here; nothing renders these rows live
     // (the dashboard reads a report over SSH on demand), so a change-feed
     // trigger would be pure notify churn driven by internet traffic.

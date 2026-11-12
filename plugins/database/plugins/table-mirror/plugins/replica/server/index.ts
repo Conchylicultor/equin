@@ -36,6 +36,9 @@ export type {
   ReconcileReason,
 } from "./internal/state";
 export type { ReplicaTx } from "./internal/exec";
+// Read-only for owners: a replica's state, for a status value's declared
+// reads and an owner's own sweep. Written only by this plugin's functions.
+export { tableMirrorReplicas } from "./internal/tables";
 
 export default {
   description:
