@@ -2983,13 +2983,18 @@ export class NotificationsClient {
     )
       return;
     const appliedAt = Date.now();
-    const { changedAt, sentAt, deliverMs, holdMs } = timing;
+    const { changedAt, sentAt, deliverMs, holdMs, heardAt } = timing;
+    // The host's watch hearing the write (a file change only): judged by the
+    // server as its `watch-delivery`, so split out of `server-notice` here.
+    const heard =
+      heardAt === undefined ? changedAt : Math.max(heardAt, changedAt);
     clientLatencySink.emit({
       signal: "update",
       key,
       params,
       phases: splitPhases("update", {
-        "server-notice": sentAt - deliverMs - changedAt,
+        "watch-delivery": heard - changedAt,
+        "server-notice": sentAt - deliverMs - heard,
         // The resource's own declared throttle — held by design, not slow.
         "throttle-hold": holdMs,
         "server-deliver": deliverMs - holdMs,

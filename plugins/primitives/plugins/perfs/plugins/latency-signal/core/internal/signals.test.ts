@@ -17,6 +17,7 @@ describe("splitPhases", () => {
     const receivedAt = 1052;
     const appliedAt = 1060;
     const phases = splitPhases("update", {
+      "watch-delivery": 0,
       "server-notice": sentAt - deliverMs - changedAt,
       "throttle-hold": 0,
       "server-deliver": deliverMs,
@@ -25,6 +26,7 @@ describe("splitPhases", () => {
       "client-apply": appliedAt - receivedAt,
     });
     expect(phases).toEqual({
+      "watch-delivery": 0,
       "server-notice": 25,
       "throttle-hold": 0,
       "server-deliver": 15,
@@ -68,6 +70,7 @@ describe("splitPhases", () => {
   test("tsc rejects a missing or foreign phase", () => {
     // @ts-expect-error — `client-apply` missing
     splitPhases("update", {
+      "watch-delivery": 0,
       "server-notice": 0,
       "throttle-hold": 0,
       "server-deliver": 0,
@@ -135,6 +138,7 @@ describe("clientLatencySink", () => {
       key: "tasks",
       params: {},
       phases: {
+        "watch-delivery": 0,
         "server-notice": 1,
         "throttle-hold": 0,
         "server-deliver": 2,
@@ -158,6 +162,7 @@ describe("ownMsOf", () => {
       key: "queue-health.pulse",
       params: {},
       phases: splitPhases("update", {
+        "watch-delivery": 0,
         "server-notice": 1,
         "throttle-hold": 998,
         "server-deliver": 1,
@@ -179,6 +184,7 @@ describe("ownMsOf", () => {
       key: "queue-health.pulse",
       params: {},
       phases: splitPhases("update", {
+        "watch-delivery": 0,
         "server-notice": 20,
         "throttle-hold": 0,
         "server-deliver": 3295,

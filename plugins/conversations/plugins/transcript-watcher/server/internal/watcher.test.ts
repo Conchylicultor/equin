@@ -279,6 +279,9 @@ describe("a fixed room follows its files over kqueue", () => {
     expect(changed.changedAt).toBeDefined();
     expect(changed.changedAt!).toBeLessThanOrEqual(mtimeMs);
     expect(Date.now() - changed.changedAt!).toBeLessThan(5000);
+    // Heard by the follow, after the write it names: the watch's delivery.
+    expect(changed.heardAt).toBeDefined();
+    expect(changed.heardAt!).toBeGreaterThanOrEqual(changed.changedAt!);
     un();
   });
 });

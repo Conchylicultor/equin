@@ -167,6 +167,8 @@ const FRAME_TIMING = w.object({
   sentAt: w.number,
   deliverMs: w.number,
   holdMs: w.number,
+  /** When the host's file watch heard the change (see `PendingNotify.heardAt`). */
+  heardAt: w.optional(w.number),
 });
 
 const s = <const K extends string, const F extends WireFields>(
@@ -211,7 +213,8 @@ const c = <const K extends string, const F extends WireFields>(
  *   change), `sentAt` (wall-clock epoch ms the frame was sent) and `deliverMs`
  *   (first notify → send, on the server's monotonic clock), of which `holdMs`
  *   is the resource's own declared throttle holding the drain (0 when it
- *   declares none). One object so a
+ *   declares none), and `heardAt` (optional: when the host's file watch heard
+ *   a file change — its delivery, split out of `server-notice`). One object so a
  *   frame cannot carry a change time without the send time that splits its
  *   latency into server and transport layers. Absent on every frame no change
  *   stands behind (catch-up replay, a forced resubscribe's answer, …).

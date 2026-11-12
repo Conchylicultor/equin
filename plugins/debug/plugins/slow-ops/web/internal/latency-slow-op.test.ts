@@ -21,6 +21,7 @@ const update = (over: Partial<ClientLatencySample> = {}): ClientLatencySample =>
     key: "tasks",
     params: { status: "open", id: "7" },
     phases: {
+      "watch-delivery": 0,
       "server-notice": 1200,
       "throttle-hold": 0,
       "server-deliver": 300,
@@ -61,6 +62,7 @@ describe("latencySlowOp", () => {
       caller: { kind: "route", label: "/agents" },
       detail: { variant: '{"id":"7","status":"open"}' },
       waits: {
+        "watch-delivery": 0,
         "server-notice": 1200,
         "throttle-hold": 0,
         "server-deliver": 300,
@@ -106,6 +108,7 @@ describe("latencySlowOp", () => {
     const pulse = update({
       totalMs: 1002,
       phases: {
+        "watch-delivery": 0,
         "server-notice": 1,
         "throttle-hold": 998,
         "server-deliver": 1,
@@ -120,6 +123,7 @@ describe("latencySlowOp", () => {
       update({
         totalMs: 2500,
         phases: {
+          "watch-delivery": 0,
           "server-notice": 1400,
           "throttle-hold": 998,
           "server-deliver": 100,
@@ -143,6 +147,7 @@ describe("latencySlowOp", () => {
         update({
           totalMs: 3424,
           phases: {
+            "watch-delivery": 0,
             "server-notice": 20,
             "throttle-hold": 0,
             "server-deliver": 3295,

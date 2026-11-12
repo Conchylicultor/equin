@@ -30,9 +30,15 @@ interface EventsChange {
 const hub = createRefcountHub<EventsChange>((conversationId, emit) => {
   const unsub = TranscriptSource.get().watch(
     conversationId,
-    ({ events, signature, changedAt }) => {
+    ({ events, signature, changedAt, heardAt }) => {
       primeJsonlEvents(conversationId, signature, events);
-      emit({ events, change: changedAt === undefined ? {} : { changedAt } });
+      emit({
+        events,
+        change:
+          changedAt === undefined
+            ? {}
+            : { changedAt, ...(heardAt === undefined ? {} : { heardAt }) },
+      });
     },
   );
   return () => {

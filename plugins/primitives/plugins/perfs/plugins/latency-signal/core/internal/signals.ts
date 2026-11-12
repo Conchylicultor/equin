@@ -6,7 +6,9 @@ import { defineObservationSink } from "@plugins/primitives/plugins/report-sink/c
  * and an emit site — tsc demands the first, see CLAUDE.md).
  *
  * - `update`: a server-side change → its pushed frame applied to the client
- *   cache. `server-notice` (change → first notify), `throttle-hold` (the
+ *   cache. `watch-delivery` (a file's write → the host's watch heard it; 0
+ *   for a change no watch heard), `server-notice` (then → first notify),
+ *   `throttle-hold` (the
  *   resource's own declared `throttleMs` holding the drain), `server-deliver`
  *   (the rest of notify → send), `transport` (send → the frame reached the
  *   browser: the socket's SharedWorker stamps its arrival, off the page's main
@@ -33,6 +35,7 @@ import { defineObservationSink } from "@plugins/primitives/plugins/report-sink/c
  */
 export const CLIENT_LATENCY_SIGNALS = {
   update: [
+    "watch-delivery",
     "server-notice",
     "throttle-hold",
     "server-deliver",
@@ -66,7 +69,9 @@ export type PhaseOf<S extends ClientLatencySignal> =
  * - `server`: a window the server judges itself, on its own spans — the
  *   update's notify → send is the server's `push deliver:<key>` span (and the
  *   loader or flush it waited on), each filed there when slow. Counting it here
- *   too filed one server slowness twice, once per side. Likewise a confirm's
+ *   too filed one server slowness twice, once per side. So is an update's
+ *   `watch-delivery`: the host's file watch hearing the write, which the
+ *   server judges as `bg watch-delivery:<backend>` (split at its arming). Likewise a confirm's
  *   `server` phase is the handler's time, which the server files as its own
  *   route span (`POST /api/…`) when slow.
  */
@@ -82,7 +87,11 @@ export const EXCLUDED_PHASES: {
     Partial<Record<PhaseOf<S>, ExcludedPhaseOwner>>
   >;
 } = {
-  update: { "throttle-hold": "declared", "server-deliver": "server" },
+  update: {
+    "watch-delivery": "server",
+    "throttle-hold": "declared",
+    "server-deliver": "server",
+  },
   // The handler's own time: the server files its route span when slow.
   confirm: { server: "server" },
   // Both are what the user waits on; neither is judged anywhere else.

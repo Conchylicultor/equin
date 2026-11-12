@@ -29,9 +29,17 @@ const WAIT_LAYER_HINTS: Readonly<Record<string, string>> = {
     "The resource's own declared throttle held the change — by design, not counted against this op.",
   "flush-queue":
     "The change waited for the flush lane — an earlier flush pass still running (passes run one at a time), or an earlier level of this one — not for this resource. Filed once as `wait flush-queue`, net of any op already filed inside the pass; the trace's completed `flush` span shows which resources held the pass.",
+  // infra/file-watcher `watch-delivery` layers (`delivery-lag.ts`): a write
+  // made before the watch was armed.
+  "watch-arm":
+    "The write was made while this backend was booting, before the watch that heard it was armed — the boot's time to arm, not the watch's delivery. Filed once as `wait watch-arm`; look at what the backend did between its start and this watcher's `start` (the boot profile, the warm-ups ahead of the first read that arms it).",
+  "watch-before-start":
+    "The write was made before this backend process started (the previous one was stopping, or nothing ran) — neither the watch's delivery nor this boot's time to arm.",
   // perfs/latency-signal `update` phases.
+  "watch-delivery":
+    "The host's file watch heard the write late (the file's write → the watch heard it) — not counted against this update: the server judges that window itself, as `bg watch-delivery:<backend>` (a write made before the watch was armed as `wait watch-arm`).",
   "server-notice":
-    "The server took long to notice the change (commit → first notify): a long-held transaction, a slow change-feed consumer, or a stalled serving thread.",
+    "The server took long to notice the change (commit, or its file watch hearing it → first notify): a long-held transaction, a slow change-feed consumer, a slow re-read of the changed file, or a stalled serving thread.",
   "server-deliver":
     "The server's notify → send — not counted against this update: the server judges that window itself (its `push deliver:<key>` span, and the loader or flush it waited on, each filed on its own).",
   transport:

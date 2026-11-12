@@ -37,6 +37,7 @@ import {
 } from "@plugins/primitives/plugins/networking/web/testing";
 import {
   clientLatencySink,
+  ownMsOf,
   type ClientLatencySample,
 } from "@plugins/primitives/plugins/perfs/plugins/latency-signal/core";
 import { NotificationsClient } from "../notifications-client";
@@ -143,6 +144,7 @@ describe("NotificationsClient — update latency sample", () => {
         key: "k",
         params: { a: "1" },
         phases: {
+          "watch-delivery": 0, // no host watch heard this change
           "server-notice": 200,
           "throttle-hold": 0,
           "server-deliver": 40,
@@ -191,6 +193,7 @@ describe("NotificationsClient — update latency sample", () => {
     await flush();
     expect(samples).toHaveLength(1);
     expect(samples[0]!.phases).toEqual({
+      "watch-delivery": 0,
       "server-notice": 140,
       "throttle-hold": 0,
       "server-deliver": 10,
@@ -321,6 +324,29 @@ describe("NotificationsClient — update latency sample", () => {
       "throttle-hold": 30,
       "server-deliver": 10,
     });
+  });
+
+  test("a file change's watch delivery is its own phase, carved out of server-notice", async () => {
+    const { client, socket } = await setup();
+    await seedValue(client, socket);
+    listen();
+    socket.serverSend({
+      kind: "update",
+      key: "k",
+      params: { a: "1" },
+      value: { status: "v2" },
+      version: 2,
+      // Written at -300, heard by the host's watch at -200, notified at -100.
+      timing: { ...timing, heardAt: NOW - 200 },
+    });
+    await flush();
+    expect(samples[0]!.phases).toMatchObject({
+      "watch-delivery": 100,
+      "server-notice": 100,
+    });
+    // Excluded from the update's own time, like server-deliver — still in the trace.
+    // (server-deliver: deliverMs 40, no hold.)
+    expect(ownMsOf(samples[0]!)).toBe(samples[0]!.totalMs - 100 - 40);
   });
 
   test("no sample is built while nobody subscribes", async () => {

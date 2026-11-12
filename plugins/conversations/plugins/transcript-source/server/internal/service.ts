@@ -14,6 +14,12 @@ export interface TranscriptSnapshot {
    * so its update latency starts at the write, not when the watch heard it.
    */
   changedAt?: number;
+  /**
+   * When the host's watch heard that change (wall-clock epoch ms), beside
+   * `changedAt` only — passed on with it (`notify({ changedAt, heardAt })`) so
+   * the tab splits the watch's delivery out of the server's notice.
+   */
+  heardAt?: number;
 }
 
 /**

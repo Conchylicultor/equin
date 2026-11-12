@@ -33,6 +33,13 @@ export interface PathsSnapshot<T> {
    * followed one before it (a change the room saw), absent on its first read.
    */
   changedAt?: number;
+  /**
+   * When a watch heard that write (wall-clock epoch ms), beside `changedAt`
+   * only: the latest hearing among the events this read followed. Absent when
+   * no watch event led to the read (a refresh) or the read saw a write newer
+   * than any it heard of (read before the watch reported it — no watch delay).
+   */
+  heardAt?: number;
 }
 
 /**
@@ -149,7 +156,25 @@ let watcher: FileWatcher | null = null;
  * re-resolves its membership first (a discovered room's event, or a
  * dropped-events report).
  */
-type RoomWork = "read" | "resolve";
+interface RoomWork {
+  kind: "read" | "resolve";
+  /**
+   * When the watch event behind this work was heard (epoch ms; absent for a
+   * refresh or a dropped-events sweep) — the moment its batch reached this
+   * watcher's reaction (debounce 0: at once, but after any reaction still
+   * running), so the watch's delivery can be split from the read after it.
+   */
+  heardAt?: number;
+}
+
+/** The latest hearing among a run's work, if a watch event led to it. */
+function heardAtOf(work: readonly RoomWork[]): number | undefined {
+  let latest: number | undefined;
+  for (const w of work)
+    if (w.heardAt !== undefined && (latest === undefined || w.heardAt > latest))
+      latest = w.heardAt;
+  return latest;
+}
 
 // One run at a time per room; events and ticks landing mid-run fold into one
 // trailing run. Each run reads the room's CURRENT files, so a room written a
@@ -157,15 +182,20 @@ type RoomWork = "read" | "resolve";
 // run however fast the lines come — and a slow room holds only itself.
 const roomRuns = createKeyedCoalescer<Room, RoomWork>({
   run: (room, work) =>
-    work.includes("resolve")
-      ? runTracked("transcript-watcher:reconcile", () => reconcileRoom(room))
-      : runTracked("transcript-watcher:process", () => processRoom(room)),
+    work.some((w) => w.kind === "resolve")
+      ? runTracked("transcript-watcher:reconcile", () =>
+          reconcileRoom(room, heardAtOf(work)),
+        )
+      : runTracked("transcript-watcher:process", () =>
+          processRoom(room, heardAtOf(work)),
+        ),
 });
 
 export async function startTranscriptWatcher(): Promise<void> {
   watcher = await transcriptsWatcher.start({
     dirs: [CLAUDE_PROJECTS_DIR],
     onChange: (events) => {
+      const heardAt = Date.now();
       notifySessionTranscriptWrites(events, CLAUDE_PROJECTS_DIR);
       // Collapse the batch per room FIRST. Parcel delivers many events at once
       // (a sub-agent directory sees one per appended line), and a discovered
@@ -178,14 +208,17 @@ export async function startTranscriptWatcher(): Promise<void> {
         // A discovered room re-resolves first: the event may BE the creation of a
         // file that belongs to it. A fixed-membership room cannot have gained a
         // file, so it only re-reads.
-        roomRuns.trigger(room, [room.discovered ? "resolve" : "read"]);
+        roomRuns.trigger(room, [
+          { kind: room.discovered ? "resolve" : "read", heardAt },
+        ]);
       }
     },
     onLost: () => {
       // The watch dropped events: any room may have missed a write or a new
       // file. (A session switch is not this path's job: the chain's one writer,
       // the status reconciler, calls `refreshConversationChain` right after it.)
-      for (const room of rooms.values()) roomRuns.trigger(room, ["resolve"]);
+      for (const room of rooms.values())
+        roomRuns.trigger(room, [{ kind: "resolve" }]);
     },
   });
 }
@@ -296,9 +329,9 @@ function hasTargets(targets: WatchTargets): boolean {
  * resolved (DB blip, glob failure) must not abort the sweep for every other room
  * — same reasoning as `processRoom`'s catch.
  */
-async function reconcileRoom(room: Room): Promise<void> {
+async function reconcileRoom(room: Room, heardAt?: number): Promise<void> {
   try {
-    await refreshRoom(room);
+    await refreshRoom(room, heardAt);
     // eslint-disable-next-line promise-safety/no-bare-catch
   } catch (err) {
     console.error(`[transcript-watcher] reconcile failed for ${room.key}`, err);
@@ -325,14 +358,14 @@ async function reconcileRoom(room: Room): Promise<void> {
  * known is NOT pending: its empty file set is a legitimate value ("no sub-agents
  * yet") and is delivered. A DB or glob failure throws to the caller.
  */
-async function refreshRoom(room: Room): Promise<void> {
+async function refreshRoom(room: Room, heardAt?: number): Promise<void> {
   if (rooms.get(room.key) !== room) return;
   const targets = await room.spec.resolve();
   // Closed (or replaced) while resolving: registering now would leak index
   // entries for a room nobody can reach.
   if (rooms.get(room.key) !== room) return;
   if (hasTargets(targets)) registerTargets(room, targets);
-  await processRoom(room);
+  await processRoom(room, heardAt);
 }
 
 function registerTargets(room: Room, targets: WatchTargets): void {
@@ -363,7 +396,7 @@ function registerTargets(room: Room, targets: WatchTargets): void {
   }
 }
 
-async function processRoom(room: Room): Promise<void> {
+async function processRoom(room: Room, heardAt?: number): Promise<void> {
   if (!rooms.has(room.key)) return;
   if (room.paths.length === 0 && room.watchKeys.length === 0) return;
   try {
@@ -398,7 +431,16 @@ async function processRoom(room: Room): Promise<void> {
     room.lastValue = value;
     room.lastSignature = signature;
     room.lastChangedAt = changedAt;
-    fanOut(room, { value, signature, ...(wrote ? { changedAt } : {}) });
+    fanOut(room, {
+      value,
+      signature,
+      ...(wrote ? { changedAt } : {}),
+      // Paired with the write it heard: a read that found a write newer than
+      // any hearing had no watch delay for it.
+      ...(wrote && heardAt !== undefined && heardAt >= changedAt
+        ? { heardAt }
+        : {}),
+    });
     // eslint-disable-next-line promise-safety/no-bare-catch
   } catch (err) {
     console.error(
@@ -451,7 +493,8 @@ function followRoom(room: Room, paths: readonly string[]): void {
         transcriptFollowsWatcher.start({
           files,
           label: room.key,
-          onChange: () => roomRuns.trigger(room, ["read"]),
+          onChange: () =>
+            roomRuns.trigger(room, [{ kind: "read", heardAt: Date.now() }]),
         }),
       );
       if (step.ok) opened = step.value;
@@ -509,6 +552,8 @@ export interface TranscriptSnapshot {
   signature: string;
   /** When the files changed — absent on the first read (see `PathsSnapshot.changedAt`). */
   changedAt?: number;
+  /** When a watch heard that change (see `PathsSnapshot.heardAt`). */
+  heardAt?: number;
 }
 
 /**
@@ -553,11 +598,12 @@ export function watchTranscript(
       }),
       read: readTranscript,
     },
-    ({ value, signature, changedAt }) =>
+    ({ value, signature, changedAt, heardAt }) =>
       onChange({
         events: value.events,
         signature,
         ...(changedAt === undefined ? {} : { changedAt }),
+        ...(heardAt === undefined ? {} : { heardAt }),
       }),
   );
 }
@@ -580,11 +626,12 @@ export function watchTranscriptFile(
       resolve: () => Promise.resolve({ paths: [path] }),
       read: readTranscript,
     },
-    ({ value, signature, changedAt }) =>
+    ({ value, signature, changedAt, heardAt }) =>
       onChange({
         events: value.events,
         signature,
         ...(changedAt === undefined ? {} : { changedAt }),
+        ...(heardAt === undefined ? {} : { heardAt }),
       }),
   );
 }

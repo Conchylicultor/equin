@@ -1110,8 +1110,10 @@ export interface ExternalResource<
    * changed, if the notifier knows — a file's write, heard later by a watch.
    * It becomes the pending's `changedAt` (the frame's `timing`), so the tab's
    * update latency starts there. Absent: the call is the change.
+   * `change.heardAt`: when the host's watch heard that write (see
+   * `PendingNotify.heardAt`) — rides beside `changedAt`, never alone.
    */
-  notify(params?: P, change?: { changedAt?: number }): void;
+  notify(params?: P, change?: { changedAt?: number; heardAt?: number }): void;
 }
 
 /**
@@ -1220,6 +1222,15 @@ interface PendingNotify {
    * synthetic and ack-only pendings and for catch-up replay.
    */
   changedAt?: number;
+  /**
+   * When the host's file watch heard the change `changedAt` names (wall-clock
+   * epoch ms) — set only with it, and replaced with it whenever a merge lowers
+   * `changedAt`, so the pair always names one change. Rides the frame's
+   * `timing`: the tab splits `changedAt → heardAt` out as `watch-delivery`,
+   * the server's to judge (`bg watch-delivery:<backend>`). Absent for any
+   * change no watch heard (a DB change, a hand notify).
+   */
+  heardAt?: number;
   /**
    * Source transaction ids (`pg_current_xact_id()::text` from the change-feed
    * NOTIFY) of the DB changes coalesced into this pending — the mutation-ack
@@ -1910,6 +1921,7 @@ function frameTiming(pending: PendingNotify):
         sentAt: number;
         deliverMs: number;
         holdMs: number;
+        heardAt?: number;
       };
     }
   | Record<string, never> {
@@ -1917,6 +1929,7 @@ function frameTiming(pending: PendingNotify):
   return {
     timing: {
       changedAt: pending.changedAt,
+      ...(pending.heardAt !== undefined ? { heardAt: pending.heardAt } : {}),
       sentAt: Date.now(),
       deliverMs: performance.now() - pending.enqueuedAt,
       holdMs: pending.holdMs ?? 0,
@@ -4987,6 +5000,7 @@ export function createResourceRuntime(
     sourceTx?: ReadonlySet<string>,
     changedAt?: number,
     unresolved?: readonly UnresolvedReverse[],
+    heardAt?: number,
   ): void {
     const existing = map.get(pk);
     const now = performance.now();
@@ -5003,6 +5017,9 @@ export function createResourceRuntime(
         enqueuedAt: now,
         lastNotifyAt: now,
         ...(changedAt !== undefined ? { changedAt } : {}),
+        ...(changedAt !== undefined && heardAt !== undefined
+          ? { heardAt }
+          : {}),
       };
       if (incoming !== null) mergeUnresolved(created, unresolved);
       unionSourceTx(created, sourceTx);
@@ -5024,6 +5041,8 @@ export function createResourceRuntime(
       (existing.changedAt === undefined || changedAt < existing.changedAt)
     ) {
       existing.changedAt = changedAt;
+      // The pair names one change: the earliest's own hearing, or none.
+      existing.heardAt = heardAt;
     }
     if (existing.affected === null) return; // FULL absorbs everything (incl. deleted)
     if (incoming === null) {
@@ -5429,7 +5448,10 @@ export function createResourceRuntime(
           await entry.loader(canonicalTuple(entry, params)),
         );
       },
-      notify(params?: P, change?: { changedAt?: number }): void {
+      notify(
+        params?: P,
+        change?: { changedAt?: number; heardAt?: number },
+      ): void {
         // A deferred placeholder not bound yet (a deferred external whose
         // watcher fired during the register phase) has nothing to recompute:
         // nothing can be served — so nobody holds a value — before its bind,
@@ -5441,7 +5463,12 @@ export function createResourceRuntime(
           null,
           change?.changedAt === undefined
             ? undefined
-            : { changedAt: change.changedAt },
+            : {
+                changedAt: change.changedAt,
+                ...(change.heardAt !== undefined
+                  ? { heardAt: change.heardAt }
+                  : {}),
+              },
         );
       },
     };
@@ -6536,6 +6563,8 @@ export function createResourceRuntime(
       /** Wall-clock epoch ms of the change (feed). A hand `notify()` defaults to
        *  now — the call IS the change for an external resource. */
       changedAt?: number;
+      /** When a host watch heard the change `changedAt` names (only with it). */
+      heardAt?: number;
       /** Reverse routes the drain must resolve (routed entries only). */
       unresolved?: readonly UnresolvedReverse[];
     },
@@ -6599,6 +6628,7 @@ export function createResourceRuntime(
       opts?.sourceTx !== undefined ? new Set([opts.sourceTx]) : undefined,
       opts?.changedAt ?? (source === "hand" ? Date.now() : undefined),
       opts?.unresolved,
+      opts?.changedAt !== undefined ? opts.heardAt : undefined,
     );
     armFlush(entry);
   }
@@ -7401,6 +7431,7 @@ export function createResourceRuntime(
     valueComputed: boolean,
     sourceTx?: ReadonlySet<string>,
     changedAt?: number,
+    heardAt?: number,
   ): Promise<void> {
     for (const edge of entry.downstream) {
       const down = registry.get(edge.downstreamKey);
@@ -7465,6 +7496,8 @@ export function createResourceRuntime(
           undefined,
           sourceTx,
           changedAt,
+          undefined,
+          heardAt,
         );
       }
       // A non-debounced downstream drains at its (deeper) level of this very
@@ -8531,6 +8564,7 @@ export function createResourceRuntime(
         valueComputed,
         cascadeSourceTx(pendingEntry),
         pendingEntry.changedAt,
+        pendingEntry.heardAt,
       );
     }
   }

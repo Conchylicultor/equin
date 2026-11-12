@@ -32,6 +32,7 @@ const update = () =>
     key: "tasks",
     params: {},
     phases: {
+      "watch-delivery": 0,
       "server-notice": 10,
       "throttle-hold": 0,
       "server-deliver": 20,

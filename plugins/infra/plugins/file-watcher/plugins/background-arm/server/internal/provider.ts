@@ -73,7 +73,10 @@ function facts(w: FileWatcherSnapshot): BackgroundFact[] {
     const d = w.lastDelivery;
     out.push({
       label: "Heard after",
-      value: `${formatLag(d.lagMs)} — a write to ${basename(d.path)} reached the watch that long after it happened · ${clock(new Date(d.arrivedAt), true)}`,
+      value:
+        d.beforeArm === undefined
+          ? `${formatLag(d.lagMs)} — a write to ${basename(d.path)} reached the watch that long after it happened · ${clock(new Date(d.arrivedAt), true)}`
+          : `${formatLag(d.lagMs)} after arming — a write to ${basename(d.path)} made before the watch was armed (${formatLag(d.beforeArm.armMs)} from this backend's start to arming${d.beforeArm.beforeStartMs > 0 ? `, ${formatLag(d.beforeArm.beforeStartMs)} before it started` : ""}) · ${clock(new Date(d.arrivedAt), true)}`,
     });
   }
   const folded = w.instances.reduce((n, i) => n + i.foldedBatches, 0);

@@ -235,9 +235,16 @@ interface FollowsOption<S, F> {
  * the pushed frame's `timing`, so the tab's `update` sample and the ledger's
  * update delay start at the source, and a late watch shows as `server-notice`
  * instead of happening before every clock.
+ *
+ * `heardAt` (wall-clock epoch ms, only beside `changedAt`): when the host's
+ * file watch heard that write. `changedAt → heardAt` is the watch's delivery,
+ * which the server judges on its own (`bg watch-delivery:<backend>`), so the
+ * tab splits it out of `server-notice` as `watch-delivery` and does not judge
+ * it again.
  */
 export interface ValueChange {
   changedAt?: number;
+  heardAt?: number;
 }
 
 /** A `"notified"` value's `notify`, as its hooks are handed it. */

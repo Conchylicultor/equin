@@ -111,10 +111,32 @@ listing diffed on its move to FSEvents, a new folder's walk on inotify — goes
 through `look`, never the probe (`followFiles` and `ChildrenWatchOn` require
 both): timed, it reads the file's age as lag.
 
-- `recordSpan("bg", "watch-delivery:<backend>", lagMs, { variant: watcher }, { latency: true })`:
-  slow-ops holds it to the live-update bar — one row and one report per
-  backend (`watch-delivery:fs-events`), every watcher it delayed a variant.
-- `onWatchDelivery(listener)`: the latency ledger's `watch-delivery` metric.
+**A write made before the watch was armed is split, not excused.** A fresh
+native watch hears such a write only when the OS still held it queued at
+arming (a backlogged fseventsd hands its queue to a new stream; a healthy one
+hands nothing older than the stream — checked 2026-11-12: a write 3 s before
+`subscribe` is not delivered). After a main restart that read as 30–150 s of
+"delivery" on `plugin-tree.plugins-dir`, 7–17 s after boot: the write was
+from before the process started. Each sample's `writtenAt → arrivedAt` is cut
+at the process's start (`performance.timeOrigin`) and at the instance's
+arming (`createFileWatcher` entered), into three parts that sum to it
+(`splitDeliveryLag`):
+
+| Part | Window | Where it goes |
+|---|---|---|
+| `beforeArm.beforeStartMs` | write → this process started | the span's leading wait `watch-before-start`: shown, not judged (the process did not exist) |
+| `beforeArm.armMs` | process start (or the write) → arming | the span's queue `watch-arm`: off the delivery, filed on its own as `wait watch-arm` — the boot's time to arm, the stale window a slow boot leaves |
+| `lagMs` | arming (or the write, if later) → arrival | the delivery after arming: the watch's own, judged |
+
+A write made during the subscribe counts as delivery in full (when the native
+stream really started inside it is unknown): over, never under.
+
+- `recordSpan("bg", "watch-delivery:<backend>", arrivedAt − writtenAt, { variant: watcher }, { latency: true, waits?, queue? })`:
+  slow-ops holds its own part (`lagMs`) to the live-update bar — one row and
+  one report per backend (`watch-delivery:fs-events`), every watcher it
+  delayed a variant.
+- `onWatchDelivery(listener)`: the latency ledger's `watch-delivery` metric
+  (`lagMs`, the delivery after arming).
 - The catalog's `Heard after` fact (`FileWatcherSnapshot.lastDelivery`).
 
 FSEvents' lag is fseventsd's queue, shared by every stream on the machine:

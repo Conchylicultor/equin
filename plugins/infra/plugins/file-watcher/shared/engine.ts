@@ -266,6 +266,9 @@ export async function createFileWatcher(
         "file-watcher",
     );
 
+  // When this instance began arming: a write older than it was made before
+  // anything here listened (see `delivery-lag.ts`).
+  const armedAt = Date.now();
   let pending: parcel.Event[] = [];
   let debounceTimer: ReturnType<typeof setTimeout> | null = null;
   let ceilingTimer: ReturnType<typeof setTimeout> | null = null;
@@ -326,7 +329,7 @@ export async function createFileWatcher(
   const probe =
     opts.onDeliveryLag === undefined
       ? null
-      : createDeliveryLagProbe(DELIVERY_LAG_HOST, opts.onDeliveryLag);
+      : createDeliveryLagProbe(DELIVERY_LAG_HOST, armedAt, opts.onDeliveryLag);
   const enqueue = (events: parcel.Event[]): void => {
     if (stopped || events.length === 0) return;
     if (debounceMs === 0) {
@@ -725,6 +728,7 @@ const DELIVERY_LAG_HOST: DeliveryLagHost = {
       throw err;
     }
   },
+  startedAt: performance.timeOrigin,
   // Only the last wake is placed on the wall clock (`kern.waketime`); an
   // earlier sleep inside a lag of hours is not seen.
   wokeBetween(from, to) {

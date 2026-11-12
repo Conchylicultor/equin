@@ -243,7 +243,11 @@ const deliveryListeners = new Set<(delivery: WatchDelivery) => void>();
  * latency ledger keeps their distribution; each is also recorded as a latency
  * leaf `bg watch-delivery:<backend>` (variant: the watcher), which slow-ops
  * holds to the live-update bar — a write the app hears late is a tab that
- * shows it late. Returns the unsubscribe.
+ * shows it late. A write made before the watch was armed carries
+ * `beforeArm`: its `lagMs` is the delivery after arming only, and the time
+ * before (the boot's time to arm, filed as `wait watch-arm`; before the
+ * process started, shown only) rides the span's layers. Returns the
+ * unsubscribe.
  */
 export function onWatchDelivery(
   listener: (delivery: WatchDelivery) => void,
@@ -254,18 +258,49 @@ export function onWatchDelivery(
   };
 }
 
+/**
+ * The leading wait layer of a `watch-delivery` span whose write predates this
+ * backend process: shown in the trace, judged by nothing here — the process
+ * did not exist yet.
+ */
+const WATCH_BEFORE_START_LAYER = "watch-before-start";
+
+/**
+ * The queue layer of a `watch-delivery` span whose write predates the watch's
+ * arming: backend start → the watch began arming, the boot's time to arm —
+ * excluded from the delivery span and filed on its own as `wait watch-arm`.
+ */
+const WATCH_ARM_LAYER = "watch-arm";
+
 function noteDelivery(state: DeclState, sample: DeliveryLagSample): void {
   state.lastDelivery = sample;
   const backend = backendOf(state.spec);
   // Labelled by backend, the watcher its variant: the lag is the OS's queue
   // (fseventsd holds every stream at once), so one slow backend is ONE row
   // and one report, every watcher it delayed among its variants.
+  //
+  // The span is the write's whole staleness (`writtenAt → arrivedAt`), laid
+  // out as a latency leaf: the part before this process started (a leading
+  // wait), the boot's time to arm (the queue: filed as `wait watch-arm`), then
+  // the watch's own delivery after arming — the only part judged as
+  // watch-delivery. Nothing is dropped: every millisecond is in one layer.
+  const before = sample.beforeArm;
   recordSpan(
     "bg",
     `watch-delivery:${backend}`,
-    sample.lagMs,
+    sample.arrivedAt - sample.writtenAt,
     { variant: state.spec.name },
-    { latency: true },
+    before === undefined
+      ? { latency: true }
+      : {
+          latency: true,
+          ...(before.beforeStartMs > 0
+            ? { waits: { [WATCH_BEFORE_START_LAYER]: before.beforeStartMs } }
+            : {}),
+          ...(before.armMs > 0
+            ? { queue: { layer: WATCH_ARM_LAYER, ms: before.armMs } }
+            : {}),
+        },
   );
   const delivery: WatchDelivery = {
     ...sample,
