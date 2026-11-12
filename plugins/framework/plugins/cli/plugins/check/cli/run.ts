@@ -493,6 +493,7 @@ const run: CliAction<
       // Last line, so it survives `./equin check | tail`.
       if (!ok) console.error(`\nFull check output: ${checkLogPath}`);
       if (verification) {
+        await verification.settled();
         const agree = verificationPassed(verification);
         for (const line of describeVerification(verification))
           (agree ? console.log : console.error)(line);

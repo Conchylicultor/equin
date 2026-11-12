@@ -188,7 +188,7 @@ export async function facetRecordTexts(
   const { snapshot, store } = input;
   // One group per plugin: a no-change build asks the store ~1.7k keys, not
   // one per (plugin, facet) (~18.7k).
-  const texts = readGrouped(
+  const texts = await readGrouped(
     store,
     "facet",
     [...keyed.values()].map((perFacet) => [...perFacet.values()]),

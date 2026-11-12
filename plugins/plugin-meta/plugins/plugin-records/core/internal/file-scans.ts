@@ -143,7 +143,11 @@ export async function scanFilesCached<T>(
   const keys = files.map((rel) =>
     recordKey(identity, ...params, rel, repo.blobOf(rel)),
   );
-  const hits = readGrouped(input.store, "file", groupedByOwner(files, keys));
+  const hits = await readGrouped(
+    input.store,
+    "file",
+    groupedByOwner(files, keys),
+  );
   const fresh: [string, string][] = [];
   const out = await Promise.all(
     files.map(async (rel, i) => {

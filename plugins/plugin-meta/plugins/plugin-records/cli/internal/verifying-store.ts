@@ -20,6 +20,12 @@ export interface RecordVerification {
   /** Fresh records the shared store did not hold (nothing to compare). */
   readonly absent: number;
   readonly disagreements: readonly RecordDisagreement[];
+  /**
+   * Resolves once every fresh record put so far was compared (a comparison
+   * reads the shared store, which is async). Await it before reading the
+   * counts.
+   */
+  settled(): Promise<void>;
 }
 
 /**
@@ -38,27 +44,43 @@ export function verifyRecordsAgainst(shared: RecordStore): RecordVerification {
   let agreed = 0;
   let absent = 0;
   const disagreements: RecordDisagreement[] = [];
+  // Keys this process already made, per table: one is not compared twice.
+  const made = new Map<RecordTable, Set<string>>();
+  // Each comparison settled to its error (or null) the moment it is made, so
+  // one that fails mid-pass is held for `settled()` to throw, never left an
+  // unhandled rejection that kills the pass before its verdict.
+  const comparisons: Promise<unknown>[] = [];
+  const compare = async (
+    table: RecordTable,
+    fresh: ReadonlyArray<readonly [string, string]>,
+  ): Promise<void> => {
+    const stored = await shared.getMany(
+      table,
+      fresh.map(([k]) => k),
+    );
+    for (const [key, value] of fresh) {
+      const s = stored.get(key);
+      if (s === undefined) absent++;
+      else if (s === value) agreed++;
+      else disagreements.push({ table, key, stored: s, fresh: value });
+    }
+  };
   const store: RecordStore = {
     environment: shared.environment,
     getMany: (table, keys) => own.getMany(table, keys),
     putMany(table, entries) {
-      // A key this process already made is not compared twice.
-      const known = own.getMany(
-        table,
-        entries.map(([k]) => k),
-      );
-      const fresh = entries.filter(([k]) => !known.has(k));
+      let seen = made.get(table);
+      if (!seen) made.set(table, (seen = new Set()));
+      const fresh = entries.filter(([k]) => !seen.has(k));
+      for (const [k] of fresh) seen.add(k);
       own.putMany(table, fresh);
-      const stored = shared.getMany(
-        table,
-        fresh.map(([k]) => k),
-      );
-      for (const [key, value] of fresh) {
-        const s = stored.get(key);
-        if (s === undefined) absent++;
-        else if (s === value) agreed++;
-        else disagreements.push({ table, key, stored: s, fresh: value });
-      }
+      if (fresh.length > 0)
+        comparisons.push(
+          compare(table, fresh).then(
+            () => null,
+            (err: unknown) => err,
+          ),
+        );
     },
     // Writes nothing to the shared store, so holds nothing back.
     flush() {},
@@ -72,6 +94,12 @@ export function verifyRecordsAgainst(shared: RecordStore): RecordVerification {
       return absent;
     },
     disagreements,
+    async settled() {
+      // A comparison settled meanwhile may have been joined by more puts.
+      for (let n = 0; n < comparisons.length; n = comparisons.length)
+        for (const err of await Promise.all(comparisons.slice(n)))
+          if (err !== null) throw err;
+    },
   };
 }
 

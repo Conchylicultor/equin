@@ -1,6 +1,10 @@
 import { Database } from "bun:sqlite";
 import { rmSync } from "node:fs";
 import { z } from "zod";
+import {
+  createThreadPool,
+  serveThreadPool,
+} from "@plugins/packages/plugins/thread-pool/cli";
 import { RECORD_TABLES, type RecordStore, type RecordTable } from "../../core";
 import { pluginRecordsDir } from "../../data-dirs";
 
@@ -31,6 +35,16 @@ import { pluginRecordsDir } from "../../data-dirs";
  * write will touch are read BEFORE the lock is taken, and a transaction
  * commits once it has held the lock {@link HOLD_MS}, however many records are
  * left. The reclaim runs off every build's path, the same way.
+ *
+ * NO READ HOLDS THE CALLER'S THREAD. A lookup is a random read of a multi-GB
+ * file: measured 2026-11-12 on a 24M-row, 8.7 GB store (5% of its rows read
+ * that day, so nearly every page holds a live row and none stays cached) at
+ * load ~50, ~0.5 ms each, 87% of it waiting on the disk. A check pass asks
+ * ~32k of them, and its one JS thread is every check's: done in-process they
+ * held it 10–15 s a pass (check-thread-stall, ~75 reports a day). So the
+ * lookups run on reader threads ({@link READERS}, `bin/record-reader.ts`,
+ * each with its own connection) and `getMany` awaits them; what this process
+ * already read or holds answers in-process.
  */
 
 const KEEP_DAYS = 7;
@@ -42,6 +56,9 @@ const FLUSH_BYTES = 64 * 1024 * 1024;
 // SQLite's default bound on host parameters per statement is 32766; a batch
 // stays well under it.
 const BATCH = 500;
+// Reader threads, each with its own connection: a lookup is I/O-bound (a
+// random page read), so a few in flight at once overlap their waits.
+const READERS = 4;
 // The longest one write transaction holds the store's lock. Bounded by TIME,
 // not by a record count: what one record costs under the lock is not a
 // constant. The count bound before it (2,000 records, measured 2026-11-08 at
@@ -354,20 +371,80 @@ export function reclaimRecordStore(opts?: { path?: string }): ReclaimResult {
   return result;
 }
 
+/** One batch of lookups, as a reader thread is sent it. */
+interface ReadRequest {
+  /** The store's file. */
+  path: string;
+  tbl: RecordTable;
+  /** At most {@link BATCH} record keys. */
+  keys: string[];
+  /** Today, as the asking process counts it: a row read before is refreshed. */
+  day: number;
+}
+
+/**
+ * The reader-thread half (`bin/record-reader.ts`): answer each batch of
+ * lookups with the rows found, and refresh the found rows' last-read day — on
+ * a connection of its own per store file, opened on first use.
+ */
+export function serveRecordReads(): void {
+  const readers = new Map<string, (req: ReadRequest) => [string, string][]>();
+  // Async, so a throw (a busy store, a bad row) rejects that request with its
+  // own stack instead of killing the thread.
+  serveThreadPool<ReadRequest, [string, string][]>(async (req) => {
+    let read = readers.get(req.path);
+    if (!read) readers.set(req.path, (read = recordReader(req.path)));
+    return read(req);
+  });
+}
+
+function recordReader(path: string): (req: ReadRequest) => [string, string][] {
+  const db = openDatabase(path);
+  const select = (n: number) =>
+    db.query(
+      `SELECT k.key AS key, v.value AS value, k.used AS used FROM keys k JOIN vals v ON v.vid = k.vid WHERE k.tbl = ? AND k.key IN (${Array(n).fill("?").join(",")})`,
+    );
+  const touch = db.query("UPDATE keys SET used = ? WHERE tbl = ? AND key = ?");
+  return ({ tbl, keys, day }) => {
+    const found: [string, string][] = [];
+    const stale: Uint8Array[] = [];
+    for (const row of RecordRows.parse(
+      select(keys.length).all(tbl, ...keys.map(keyBytes)),
+    )) {
+      found.push([Buffer.from(row.key).toString("hex"), row.value]);
+      if (row.used < day) stale.push(row.key);
+    }
+    // Refreshed right after their read, so the pages the updates touch
+    // are the ones it just brought in: no read before the lock is needed.
+    writeBounded(
+      db,
+      stale,
+      (batch) => batch,
+      (key) => touch.run(day, tbl, key),
+    );
+    return found;
+  };
+}
+
 export function openRecordStore(opts?: { path?: string }): RecordStore {
-  const db = openDatabase(storePath(opts));
+  const path = storePath(opts);
+  // Opened here first: a fresh file is created (and its schema made) before
+  // any reader thread opens it.
+  const db = openDatabase(path);
   const day = today();
+  // Lazy (no thread until the first lookup) and unref-ed while idle, so it
+  // never keeps the process alive.
+  const readers = createThreadPool<ReadRequest, [string, string][]>({
+    url: new URL("../../bin/record-reader.ts", import.meta.url),
+    size: READERS,
+    name: "plugin-records-reader",
+  });
 
   const tableId = (t: RecordTable): RecordTable => {
     if (!RECORD_TABLES.includes(t))
       throw new Error(`[plugin-records] unknown record table ${t}`);
     return t;
   };
-  const select = (n: number) =>
-    db.query(
-      `SELECT k.key AS key, v.value AS value, k.used AS used FROM keys k JOIN vals v ON v.vid = k.vid WHERE k.tbl = ? AND k.key IN (${Array(n).fill("?").join(",")})`,
-    );
-  const touch = db.query("UPDATE keys SET used = ? WHERE tbl = ? AND key = ?");
   // The reads before the lock (writeBounded's probe): each ends on the page
   // its write goes into.
   const keyAt = db.query("SELECT 1 FROM keys WHERE tbl = ? AND key = ?");
@@ -396,6 +473,14 @@ export function openRecordStore(opts?: { path?: string }): RecordStore {
   const knownOf = (tbl: RecordTable): Map<string, string> => {
     let m = known.get(tbl);
     if (!m) known.set(tbl, (m = new Map()));
+    return m;
+  };
+  // The reads on their way, per table and key: a key another caller is
+  // already reading joins that read rather than asking again.
+  const inFlight = new Map<RecordTable, Map<string, Promise<void>>>();
+  const inFlightOf = (tbl: RecordTable): Map<string, Promise<void>> => {
+    let m = inFlight.get(tbl);
+    if (!m) inFlight.set(tbl, (m = new Map()));
     return m;
   };
   const flush = (): void => {
@@ -440,39 +525,47 @@ export function openRecordStore(opts?: { path?: string }): RecordStore {
 
   return {
     environment: `bun ${Bun.version} ${process.platform}-${process.arch}`,
-    getMany(table, keys) {
+    async getMany(table, keys) {
       const tbl = tableId(table);
       const out = new Map<string, string>();
       // A record put but not yet flushed answers from where it is held, one
-      // this process already read or wrote from what it knows.
+      // this process already read or wrote from what it knows, one another
+      // caller is reading from that read.
       const held = pending.get(tbl);
       const seen = knownOf(tbl);
-      const unheld: string[] = [];
+      const flying = inFlightOf(tbl);
+      const joined = new Set<Promise<void>>();
+      const ask: string[] = [];
       for (const k of keys) {
         const v = held?.get(k) ?? seen.get(k);
-        if (v === undefined) unheld.push(k);
-        else out.set(k, v);
-      }
-      for (let i = 0; i < unheld.length; i += BATCH) {
-        const chunk = unheld.slice(i, i + BATCH).map(keyBytes);
-        const stale: Uint8Array[] = [];
-        for (const row of RecordRows.parse(
-          select(chunk.length).all(tbl, ...chunk),
-        )) {
-          const key = Buffer.from(row.key).toString("hex");
-          out.set(key, row.value);
-          seen.set(key, row.value);
-          if (row.used < day) stale.push(row.key);
+        if (v !== undefined) out.set(k, v);
+        else {
+          const f = flying.get(k);
+          if (f) joined.add(f);
+          else ask.push(k);
         }
-        // Refreshed right after their read, so the pages the updates touch
-        // are the ones it just brought in: no read before the lock is needed.
-        writeBounded(
-          db,
-          stale,
-          (batch) => batch,
-          (key) => touch.run(day, tbl, key),
-        );
       }
+      for (let i = 0; i < ask.length; i += BATCH) {
+        const chunk = ask.slice(i, i + BATCH);
+        const read = readers
+          .run({ path, tbl, keys: chunk, day })
+          .then((rows) => {
+            for (const [k, v] of rows) seen.set(k, v);
+          })
+          .finally(() => {
+            for (const k of chunk) flying.delete(k);
+          });
+        for (const k of chunk) flying.set(k, read);
+        joined.add(read);
+      }
+      if (joined.size === 0) return out;
+      // Every read this call waited for left what it found in `seen`.
+      await Promise.all(joined);
+      for (const k of keys)
+        if (!out.has(k)) {
+          const v = seen.get(k);
+          if (v !== undefined) out.set(k, v);
+        }
       return out;
     },
     putMany(table, entries) {

@@ -198,7 +198,7 @@ export async function evaluateBarrels(
   const recordText = (rec: EvaluatedRecord) => storeText(JSON.stringify(rec));
 
   const records = new Map<string, EvaluatedRecord>();
-  for (const [k, v] of store.getMany(
+  for (const [k, v] of await store.getMany(
     "evaluated",
     barrels.map((b) => keyOf(b.path)),
   ))
@@ -208,7 +208,7 @@ export async function evaluateBarrels(
   const moduleRecords = new Map<string, ModuleRecord>();
   // A plugin's module records at a time (`readGrouped`): ~10k keys asked one
   // by one were most of an evaluation's store time.
-  for (const [k, v] of readGrouped(
+  for (const [k, v] of await readGrouped(
     store,
     "module",
     groupedByOwner([...loaded], [...loaded].map(moduleKeyOf)),
@@ -464,7 +464,7 @@ export async function evaluateBarrels(
       const setHash = recordKey("declared", ...declared.sort());
       const declaredKey = (b: string): string =>
         recordKey(keyOf(b), "declared", setHash);
-      const hits = store.getMany(
+      const hits = await store.getMany(
         "evaluated",
         dependents.map((b) => declaredKey(b.path)),
       );

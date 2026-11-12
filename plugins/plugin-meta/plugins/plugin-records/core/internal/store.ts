@@ -5,9 +5,15 @@
  * once one of its inputs changes — and a store may be shared by every worktree
  * and every process of the machine.
  *
- * The interface is synchronous and batched on purpose: a warm build asks for
- * ~20k records, in a handful of batches, and the SQLite store answers a batch
- * in one prepared statement.
+ * Batched on purpose: a warm build asks for ~20k records, in a handful of
+ * batches, and the SQLite store answers a batch in one prepared statement.
+ *
+ * A read is ASYNC: answering one is I/O (a lookup of the shared store is a
+ * random read of a multi-GB file, ~0.5 ms on a loaded host when its pages are
+ * not cached — a check pass asks ~32k), and the process asking is often a
+ * check pass, whose one JS thread every check shares. So the shared store
+ * reads off that thread (`cli`'s `openRecordStore`), and a reader awaits.
+ * Writes stay synchronous: they are held in memory until a `flush`.
  */
 
 /** The kinds of record, one table each. */
@@ -37,7 +43,10 @@ export interface RecordStore {
    */
   readonly environment: string;
   /** The values stored under `keys` (a key with no value is absent). */
-  getMany(table: RecordTable, keys: readonly string[]): Map<string, string>;
+  getMany(
+    table: RecordTable,
+    keys: readonly string[],
+  ): Promise<Map<string, string>>;
   /** Store `entries`; a key already present keeps its value (it is the same). */
   putMany(
     table: RecordTable,
@@ -70,7 +79,7 @@ export function createMemoryRecordStore(environment = "memory"): RecordStore {
         const v = m.get(k);
         if (v !== undefined) out.set(k, v);
       }
-      return out;
+      return Promise.resolve(out);
     },
     putMany(table, entries) {
       const m = tableOf(table);

@@ -78,7 +78,7 @@ plugin) therefore spreads its FACET misses over worker threads
 
 ## The store
 
-`core` defines `RecordStore` (synchronous, batched) and a per-process memory
+`core` defines `RecordStore` (batched; async reads, synchronous writes) and a per-process memory
 store (`currentRecordStore()` without an install). The build, `regen-generated`
 and **every check pass** install the shared one, `cli`'s `openRecordStore()`:
 one SQLite file (`<data root>/cache/plugin-records/records.v2.sqlite`, WAL), so
@@ -89,6 +89,13 @@ a pass computes only the records no checkout has made yet.
   2026-11-05: 8.7M rows held 30k distinct values — 99% duplicates, 4.4 GB in
   two days). A key row names its value by the value's sha256, and each
   distinct value is stored once.
+- **No read holds the caller's thread.** `getMany` is async: lookups run
+  on reader threads (`bin/record-reader.ts`, each its own connection, lazy,
+  unref-ed when idle); what the process holds or read answers in-process, and
+  a key already being read joins that read. A lookup is a random read of a
+  multi-GB file (~0.5 ms on a loaded host, mostly I/O wait) and a check pass
+  asks ~32k: in-process they held the one thread every check shares 10–15 s.
+  Writes stay synchronous (held until `flush`).
 - **A key is read once per process.** A record is a pure function of its
   key, so the store keeps what it read and never asks SQLite for that key
   again (a no-change build re-read ~37k keys: the facet records for both
@@ -279,7 +286,9 @@ its docblock records — and then lowered as readily as raised.
     - `scanFilesCached`
     - `scanRepoFiles`
 - Cli:
-  - Uses: `packages/thread-pool.createThreadPool`
+  - Uses:
+    - `packages/thread-pool.createThreadPool`
+    - `packages/thread-pool.serveThreadPool`
   - Exports (types):
     - `ReclaimResult`
     - `RecordDisagreement`
@@ -290,6 +299,7 @@ its docblock records — and then lowered as readily as raised.
     - `idealRecordWorkerThreads`
     - `openRecordStore`
     - `reclaimRecordStore`
+    - `serveRecordReads`
     - `verificationPassed`
     - `verifyRecordsAgainst`
 - Cross-plugin:

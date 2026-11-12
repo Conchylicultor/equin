@@ -44768,7 +44768,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `scanFilesCached`
           - `scanRepoFiles`
       - Cli:
-        - Uses: `packages/thread-pool.createThreadPool`
+        - Uses:
+          - `packages/thread-pool.createThreadPool`
+          - `packages/thread-pool.serveThreadPool`
         - Exports (types):
           - `ReclaimResult`
           - `RecordDisagreement`
@@ -44779,6 +44781,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `idealRecordWorkerThreads`
           - `openRecordStore`
           - `reclaimRecordStore`
+          - `serveRecordReads`
           - `verificationPassed`
           - `verifyRecordsAgainst`
       - Cross-plugin:

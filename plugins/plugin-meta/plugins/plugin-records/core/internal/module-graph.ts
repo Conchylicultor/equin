@@ -338,7 +338,7 @@ async function growGraph(
         factsId === null
           ? []
           : level.flatMap((p, i) => (SCANNED.test(p) ? [i] : []));
-      const hits = readGrouped(
+      const hits = await readGrouped(
         store,
         "file",
         groupedByOwner(

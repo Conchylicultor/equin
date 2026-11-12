@@ -86,7 +86,8 @@ export async function drizzleVerdict(
 ): Promise<DrizzleVerdict> {
   const snapshot = await repoSnapshotNow(root);
   const key = await drizzleVerdictKey(snapshot, store);
-  const hit = store.getMany("verdict", [key.key]).get(key.key) === VERDICT;
+  const hit =
+    (await store.getMany("verdict", [key.key])).get(key.key) === VERDICT;
   return {
     hit,
     schemaFiles: key.schemaFiles,

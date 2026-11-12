@@ -24,7 +24,7 @@ const k = (s: string): string => recordKey(s);
 // as references to real plugins.
 const pj = (rel: string): string => `plugins/${rel}`;
 
-test("a group is read member by member until every member exists, then as one record", () => {
+test("a group is read member by member until every member exists, then as one record", async () => {
   const { store, asked } = counted();
   store.putMany("file", [
     [k("a"), "A"],
@@ -33,39 +33,39 @@ test("a group is read member by member until every member exists, then as one re
   const groups = [[k("a"), k("b")], [k("c")]];
 
   // c is missing: its group is not written; a and b's is.
-  const first = readGrouped(store, "file", groups);
+  const first = await readGrouped(store, "file", groups);
   expect([...first.values()].sort()).toEqual(["A", "B"]);
   expect(asked.get("file")).toBe(3);
 
   store.putMany("file", [[k("c"), "C"]]);
   asked.clear();
-  const second = readGrouped(store, "file", groups);
+  const second = await readGrouped(store, "file", groups);
   expect(second.get(k("c"))).toBe("C");
   // a+b answered by their group record; only c's members asked.
   expect(asked.get("file")).toBe(1);
 
   asked.clear();
-  const third = readGrouped(store, "file", groups);
+  const third = await readGrouped(store, "file", groups);
   expect(third).toEqual(second);
   // c is a group of one: read as itself, no group record of its own.
   expect(asked.get("file")).toBe(1);
   expect(asked.get("group")).toBe(1);
 });
 
-test("a group is keyed by its members alone, in any order", () => {
+test("a group is keyed by its members alone, in any order", async () => {
   const { store, asked } = counted();
   store.putMany("file", [
     [k("a"), "A"],
     [k("b"), "B"],
   ]);
-  readGrouped(store, "file", [[k("a"), k("b")]]);
+  await readGrouped(store, "file", [[k("a"), k("b")]]);
   asked.clear();
-  const again = readGrouped(store, "file", [[k("b"), k("a"), k("a")]]);
+  const again = await readGrouped(store, "file", [[k("b"), k("a"), k("a")]]);
   expect(again.get(k("a"))).toBe("A");
   expect(asked.get("file")).toBeUndefined();
   // Another member set (a changed file is a new key) is a new group.
   store.putMany("file", [[k("b2"), "B2"]]);
-  const changed = readGrouped(store, "file", [[k("a"), k("b2")]]);
+  const changed = await readGrouped(store, "file", [[k("a"), k("b2")]]);
   expect(changed.get(k("b2"))).toBe("B2");
   expect(asked.get("file")).toBe(2);
 });

@@ -31,21 +31,26 @@ import type { RecordStore, RecordTable } from "./store";
  * reclaimed — that plugin's records, never more: the cost of a change stays
  * the plugin it touches.
  */
-export function readGrouped(
+export async function readGrouped(
   store: RecordStore,
   table: RecordTable,
   groups: ReadonlyArray<readonly string[]>,
-): Map<string, string> {
+): Promise<Map<string, string>> {
   const out = new Map<string, string>();
   const all = groups.map((g) => [...new Set(g)].sort());
   const singles = all.filter((g) => g.length === 1).map((g) => g[0]!);
   const members = all.filter((g) => g.length > 1);
-  if (singles.length > 0)
-    for (const [k, v] of store.getMany(table, singles)) out.set(k, v);
   const keyOf = (g: readonly string[]): string =>
     recordKey("group", table, ...g);
   const keys = members.map(keyOf);
-  const stored = store.getMany("group", keys);
+  // Both reads in flight at once: each is I/O off this thread.
+  const [single, stored] = await Promise.all([
+    singles.length > 0
+      ? store.getMany(table, singles)
+      : Promise.resolve(new Map<string, string>()),
+    store.getMany("group", keys),
+  ]);
+  for (const [k, v] of single) out.set(k, v);
   const missed: string[][] = [];
   members.forEach((g, i) => {
     const text = stored.get(keys[i]!);
@@ -61,7 +66,7 @@ export function readGrouped(
     g.forEach((k, j) => out.set(k, values[j]!));
   });
   if (missed.length === 0) return out;
-  const found = store.getMany(table, missed.flat());
+  const found = await store.getMany(table, missed.flat());
   const complete: [string, string][] = [];
   for (const g of missed) {
     let all = true;

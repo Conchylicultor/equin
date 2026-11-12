@@ -17,7 +17,7 @@ afterAll(() => rmSync(dir, { recursive: true, force: true }));
 
 const k = (name: string): string => recordKey(name);
 
-test("records survive a reopen, per table, and a present key keeps its value", () => {
+test("records survive a reopen, per table, and a present key keeps its value", async () => {
   const path = join(dir, "records.sqlite");
   const a = openRecordStore({ path });
   a.putMany("facet", [
@@ -27,30 +27,30 @@ test("records survive a reopen, per table, and a present key keeps its value", (
   a.putMany("facet", [[k("1"), "other"]]);
   a.flush();
   const b = openRecordStore({ path });
-  expect([...b.getMany("facet", [k("1"), k("2"), k("3")])]).toEqual([
+  expect([...(await b.getMany("facet", [k("1"), k("2"), k("3")]))]).toEqual([
     [k("1"), "v1"],
     [k("2"), "v2"],
   ]);
-  expect(b.getMany("file", [k("1")]).size).toBe(0);
+  expect((await b.getMany("file", [k("1")])).size).toBe(0);
 });
 
-test("puts are held until a flush: own reads see them, another process's do not", () => {
+test("puts are held until a flush: own reads see them, another process's do not", async () => {
   const path = join(dir, "held.sqlite");
   const a = openRecordStore({ path });
   const b = openRecordStore({ path });
   a.putMany("facet", [[k("h"), "held"]]);
-  expect(a.getMany("facet", [k("h")]).get(k("h"))).toBe("held");
-  expect(b.getMany("facet", [k("h")]).size).toBe(0);
+  expect((await a.getMany("facet", [k("h")])).get(k("h"))).toBe("held");
+  expect((await b.getMany("facet", [k("h")])).size).toBe(0);
   a.flush();
-  expect(b.getMany("facet", [k("h")]).get(k("h"))).toBe("held");
+  expect((await b.getMany("facet", [k("h")])).get(k("h"))).toBe("held");
   // A key held twice keeps its first value, as a stored one does.
   a.putMany("facet", [[k("h2"), "first"]]);
   a.putMany("facet", [[k("h2"), "second"]]);
   a.flush();
-  expect(b.getMany("facet", [k("h2")]).get(k("h2"))).toBe("first");
+  expect((await b.getMany("facet", [k("h2")])).get(k("h2"))).toBe("first");
 });
 
-test("a batch larger than one statement's parameters is read whole", () => {
+test("a batch larger than one statement's parameters is read whole", async () => {
   const s = openRecordStore({ path: join(dir, "big.sqlite") });
   const entries = Array.from(
     { length: 1234 },
@@ -58,14 +58,16 @@ test("a batch larger than one statement's parameters is read whole", () => {
   );
   s.putMany("module", entries);
   expect(
-    s.getMany(
-      "module",
-      entries.map(([key]) => key),
+    (
+      await s.getMany(
+        "module",
+        entries.map(([key]) => key),
+      )
     ).size,
   ).toBe(1234);
 });
 
-test("one value stored under many keys is stored once", () => {
+test("one value stored under many keys is stored once", async () => {
   const path = join(dir, "dedupe.sqlite");
   const s = openRecordStore({ path });
   const value = "x".repeat(10_000);
@@ -74,7 +76,7 @@ test("one value stored under many keys is stored once", () => {
     Array.from({ length: 50 }, (_, i) => [k(`e${i}`), value] as const),
   );
   s.putMany("facet", [[k("f"), value]]);
-  expect(s.getMany("facet", [k("f")]).get(k("f"))).toBe(value);
+  expect((await s.getMany("facet", [k("f")])).get(k("f"))).toBe(value);
   s.flush();
   const db = new Database(path, { readonly: true });
   expect(db.query("SELECT count(*) AS n FROM vals").get()).toEqual({ n: 1 });
@@ -82,7 +84,7 @@ test("one value stored under many keys is stored once", () => {
   db.close();
 });
 
-test("the reclaim drops unread keys, then the values only they named", () => {
+test("the reclaim drops unread keys, then the values only they named", async () => {
   const path = join(dir, "reclaim.sqlite");
   const s = openRecordStore({ path });
   s.putMany("file", [
@@ -107,9 +109,9 @@ test("the reclaim drops unread keys, then the values only they named", () => {
   });
   const again = openRecordStore({ path });
   expect([
-    ...again.getMany("file", [k("old"), k("shared-old"), k("new")]),
+    ...(await again.getMany("file", [k("old"), k("shared-old"), k("new")])),
   ]).toEqual([[k("new"), "shared"]]);
-  expect(again.getMany("facet", [k("old-facet")]).size).toBe(0);
+  expect((await again.getMany("facet", [k("old-facet")])).size).toBe(0);
   const check = new Database(path, { readonly: true });
   expect(check.query("SELECT value FROM vals").all()).toEqual([
     { value: "shared" },
@@ -173,7 +175,7 @@ test("a reclaim of a file without incremental auto_vacuum ends, keeping its page
   });
 });
 
-test("a flush of several probe batches lands whole", () => {
+test("a flush of several probe batches lands whole", async () => {
   const path = join(dir, "chunks.sqlite");
   const s = openRecordStore({ path });
   const entries = Array.from(
@@ -183,14 +185,16 @@ test("a flush of several probe batches lands whole", () => {
   s.putMany("file", entries);
   s.flush();
   expect(
-    openRecordStore({ path }).getMany(
-      "file",
-      entries.map(([key]) => key),
+    (
+      await openRecordStore({ path }).getMany(
+        "file",
+        entries.map(([key]) => key),
+      )
     ).size,
   ).toBe(4_321);
 });
 
-test("opening an existing store never waits for a writer", () => {
+test("opening an existing store never waits for a writer", async () => {
   const path = join(dir, "open-under-writer.sqlite");
   const seed = openRecordStore({ path });
   seed.putMany("file", [[k("w"), "v"]]);
@@ -202,7 +206,7 @@ test("opening an existing store never waits for a writer", () => {
   writer.exec("UPDATE keys SET used = used");
   const t0 = performance.now();
   const s = openRecordStore({ path });
-  expect(s.getMany("file", [k("w")]).get(k("w"))).toBe("v");
+  expect((await s.getMany("file", [k("w")])).get(k("w"))).toBe("v");
   expect(performance.now() - t0).toBeLessThan(5_000);
   writer.exec("ROLLBACK");
   writer.close();
@@ -217,7 +221,7 @@ test("a key that is not a record key is refused", () => {
   expect(() => s.putMany("file", [["k1", "v"]])).toThrow(/not a record key/);
 });
 
-test("the verifier recomputes everything and names a record whose value moved under its key", () => {
+test("the verifier recomputes everything and names a record whose value moved under its key", async () => {
   const shared = openRecordStore({ path: join(dir, "verify.sqlite") });
   shared.putMany("facet", [
     [k("same"), "a"],
@@ -225,7 +229,9 @@ test("the verifier recomputes everything and names a record whose value moved un
   ]);
   const v = verifyRecordsAgainst(shared);
   // Reads see only what this process computed: every record is made again.
-  expect(v.store.getMany("facet", [k("same"), k("moved")]).size).toBe(0);
+  expect((await v.store.getMany("facet", [k("same"), k("moved")])).size).toBe(
+    0,
+  );
   v.store.putMany("facet", [
     [k("same"), "a"],
     [k("moved"), "fresh"],
@@ -233,7 +239,10 @@ test("the verifier recomputes everything and names a record whose value moved un
   ]);
   // Made twice in one process: compared once.
   v.store.putMany("facet", [[k("moved"), "fresh"]]);
-  expect(v.store.getMany("facet", [k("same")]).get(k("same"))).toBe("a");
+  expect((await v.store.getMany("facet", [k("same")])).get(k("same"))).toBe(
+    "a",
+  );
+  await v.settled();
   expect(v.agreed).toBe(1);
   expect(v.absent).toBe(1);
   expect(v.disagreements).toEqual([
@@ -241,7 +250,7 @@ test("the verifier recomputes everything and names a record whose value moved un
   ]);
   expect(describeVerification(v)[0]).toContain("1 disagree");
   // The shared store is never written.
-  expect(shared.getMany("facet", [k("new")]).size).toBe(0);
+  expect((await shared.getMany("facet", [k("new")])).size).toBe(0);
 });
 
 test("a bounded write commits once it has held the lock its budget, and every item lands", () => {
@@ -289,7 +298,7 @@ test("a bounded write commits once it has held the lock its budget, and every it
   db.close();
 });
 
-test("a flush writes nothing for a record another process stored meanwhile", () => {
+test("a flush writes nothing for a record another process stored meanwhile", async () => {
   const path = join(dir, "raced.sqlite");
   const a = openRecordStore({ path });
   const b = openRecordStore({ path });
@@ -314,6 +323,7 @@ test("a flush writes nothing for a record another process stored meanwhile", () 
   ).toEqual({ used: 1 });
   check.close();
   expect(
-    openRecordStore({ path }).getMany("facet", [k("both"), k("only-a")]).size,
+    (await openRecordStore({ path }).getMany("facet", [k("both"), k("only-a")]))
+      .size,
   ).toBe(2);
 });
