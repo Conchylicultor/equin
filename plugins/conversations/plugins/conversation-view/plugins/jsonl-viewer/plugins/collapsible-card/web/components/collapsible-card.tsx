@@ -280,8 +280,9 @@ export function CollapsibleCard({
 const GHOST_NODE = "h-7 w-6";
 const GHOST_HEADER =
   "w-full rounded-md font-sans text-tag text-muted-foreground transition-colors hover:bg-muted/55 hover:text-foreground";
-// The title's own weight: a row's name reads stronger than its summary.
-const GHOST_TITLE = "font-tag-strong";
+// The title's own weight: the row's regular tag weight — a quiet timeline row,
+// its name set apart from the summary by colour, not by bolding.
+const GHOST_TITLE = "font-tag";
 
 /**
  * The node column every timeline row starts with: the row's glyph, centred on
