@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -127,5 +128,77 @@ func TestStopRouteUnknownWorktree404(t *testing.T) {
 	fx := newStaticProxy(t)
 	if rec := postStop(fx.proxy, "nope"); rec.Code != http.StatusNotFound {
 		t.Fatalf("status = %d, want 404", rec.Code)
+	}
+}
+
+func postStopHeld(p *Proxy, name string) *httptest.ResponseRecorder {
+	req := httptest.NewRequest(http.MethodPost, "http://localhost:9000/gateway/worktrees/"+name+"/stop?hold=1", nil)
+	rec := httptest.NewRecorder()
+	p.ServeHTTP(rec, req)
+	return rec
+}
+
+// A held stop leaves the worktree idle with no backend, and traffic — a
+// browser or a background caller — cannot cold-start one onto data its caller
+// is about to replace. Only a deploy start leaves the hold.
+func TestStopRouteHoldKeepsTrafficFromStarting(t *testing.T) {
+	fx := newStaticProxy(t)
+	wt := fx.reg.Resolve("alpha")
+	if wt == nil {
+		t.Fatal("alpha should resolve")
+	}
+	bk, pid := runFakeBackend(t, wt)
+
+	rec := postStopHeld(fx.proxy, "alpha")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, body %q", rec.Code, rec.Body.String())
+	}
+	st := decodeStatus(t, rec)
+	if st.State != "idle" || !st.Held {
+		t.Fatalf("status = %+v, want idle and held", st)
+	}
+	select {
+	case <-bk.exitCh:
+	default:
+		t.Fatal("backend must have exited before the response")
+	}
+	waitGone(t, pid, time.Second)
+
+	for _, reason := range []StartReason{StartBrowser, StartBackground} {
+		if _, err := wt.Ensure(context.Background(), reason, "test"); !errors.Is(err, ErrHeld) {
+			t.Fatalf("Ensure(%v) err = %v, want ErrHeld", reason, err)
+		}
+	}
+	if st := wt.Snapshot(); st.State != "idle" || !st.Held {
+		t.Fatalf("after refused traffic: %+v, want still idle and held", st)
+	}
+
+	// A deploy start is the release: it begins a boot (whatever that boot's
+	// outcome in this fixture), and the hold is gone with it.
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if _, err := wt.Ensure(ctx, StartDeploy, "test"); errors.Is(err, ErrHeld) {
+		t.Fatalf("a deploy start must leave the hold, got %v", err)
+	}
+	if st := wt.Snapshot(); st.Held {
+		t.Fatalf("after a deploy start: %+v, want not held", st)
+	}
+}
+
+// Held on an already-idle worktree still holds it: the caller's next step
+// destroys the data whether or not a backend happened to be running.
+func TestStopRouteHoldOnIdle(t *testing.T) {
+	fx := newStaticProxy(t)
+	rec := postStopHeld(fx.proxy, "alpha")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, body %q", rec.Code, rec.Body.String())
+	}
+	if st := decodeStatus(t, rec); st.State != "idle" || !st.Held {
+		t.Fatalf("status = %+v, want idle and held", st)
+	}
+	// A plain stop is not a hold.
+	fx2 := newStaticProxy(t)
+	if st := decodeStatus(t, postStop(fx2.proxy, "alpha")); st.Held {
+		t.Fatalf("plain stop: %+v, want not held", st)
 	}
 }

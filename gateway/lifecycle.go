@@ -32,7 +32,13 @@ type phase interface {
 	state() State
 }
 
-type phaseIdle struct{}
+// phaseIdle: no backend. `held` is an idle that traffic may not leave: a
+// caller about to destroy the namespace's data (a composition reset drops and
+// recreates its database) stopped the backend with a hold, so no request
+// cold-starts a backend onto data that is about to vanish under it. Only a
+// deploy start (POST …/restart) leaves a held idle — the caller's own "the data
+// is ready, boot onto it" (see Worktree.Stop).
+type phaseIdle struct{ held bool }
 
 // phaseStarting: a boot is in flight; every caller waits on it.
 type phaseStarting struct{ spawn *spawnAttempt }

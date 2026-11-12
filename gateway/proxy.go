@@ -511,14 +511,27 @@ func (p *Proxy) handleGatewayAPI(w http.ResponseWriter, r *http.Request) {
 			// worktree stays registered at idle, and the next request
 			// cold-starts it (the cold-start benchmark's reset step). Same
 			// stop path and the same pinned rule as Registry.Sweep.
+			//
+			// ?hold=1: stop and HOLD it down — no request cold-starts it until
+			// a deploy start (POST …/restart) does. The step before replacing
+			// the namespace's data (Worktree.StopHeld).
 			if wt.Pinned() {
 				http.Error(w, name+" is pinned and is never stopped", http.StatusConflict)
 				return
 			}
+			held := r.URL.Query().Get("hold") == "1"
 			// Not the request's own context: a caller that hangs up must not
 			// turn the backend's SIGTERM grace into an instant SIGKILL
 			// (terminateBackend ends the grace when its context does).
-			if err := wt.Stop(context.WithoutCancel(r.Context())); err != nil {
+			stop := wt.Stop
+			if held {
+				stop = wt.StopHeld
+			}
+			if err := stop(context.WithoutCancel(r.Context())); err != nil {
+				if errors.Is(err, ErrStopping) {
+					http.Error(w, "backend is stopping; retry shortly", http.StatusServiceUnavailable)
+					return
+				}
 				http.Error(w, "stop failed: "+err.Error(), http.StatusInternalServerError)
 				return
 			}

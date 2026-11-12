@@ -147,12 +147,18 @@ type WorktreeStatus struct {
 	// LastSpawnErr is the last spawn/readiness failure, empty when none. Lets a
 	// consumer (the build CLI) distinguish a real boot crash from a slow boot.
 	LastSpawnErr string `json:"lastSpawnErr"`
+	// Held: stopped with a hold (Worktree.StopHeld) — idle, and traffic does
+	// not cold-start it until a deploy start does.
+	Held bool `json:"held"`
 }
 
 var (
 	ErrBroken      = errors.New("worktree in broken cooldown")
 	ErrSpawnFailed = errors.New("backend spawn failed")
 	ErrStopping    = errors.New("worktree is stopping")
+	// ErrHeld: the backend was stopped with a hold (Stop's held mode) while its
+	// data is replaced; only a deploy start boots it again.
+	ErrHeld = errors.New("the backend is held down while its data is replaced; a deploy start (./equin build, or POST /gateway/worktrees/<name>/restart) boots it again")
 )
 
 // StartReason is why a caller may start the backend, which sets the spawn's
@@ -423,6 +429,13 @@ func (w *Worktree) Ensure(ctx context.Context, reason StartReason, cause string)
 	case phaseStopping:
 		w.mu.Unlock()
 		return nil, ErrStopping
+
+	case phaseIdle:
+		if p.held && reason != StartDeploy {
+			w.mu.Unlock()
+			return nil, ErrHeld
+		}
+		// not held, or a deploy releasing the hold → fall through to spawn
 
 	case phaseBroken:
 		// A failed boot is not retried by traffic. Whatever made it fail — a
@@ -703,7 +716,24 @@ func (w *Worktree) drainAndStop(bk *backend) {
 // Stop performs a graceful shutdown: SIGTERM → grace → SIGKILL. Idempotent.
 // A boot or hot restart in flight is waited out first (its owner ends its
 // phase), then whatever it settled to is stopped.
-func (w *Worktree) Stop(ctx context.Context) error {
+func (w *Worktree) Stop(ctx context.Context) error { return w.stop(ctx, false) }
+
+// StopHeld stops the backend like Stop and leaves the worktree HELD idle:
+// traffic gets ErrHeld instead of a cold start, until a deploy start
+// (deployRestart) boots it again. It is the step before destroying the
+// namespace's data — a composition reset drops and recreates its database —
+// so that no backend is alive, or can come alive, while the database it booted
+// on is replaced. Without it a reset dropped the database under the serving
+// backend, and the hot restart that followed kept that backend serving
+// (zero-downtime) against the recreated, empty one until it crashed on missing
+// tables (report-1794167098-q99s8d).
+//
+// The hold is set in the same critical section that ends the stop, so no
+// request can slip a cold start in between. A held worktree also leaves a
+// broken cooldown: the caller is about to replace what the failed boot ran on.
+func (w *Worktree) StopHeld(ctx context.Context) error { return w.stop(ctx, true) }
+
+func (w *Worktree) stop(ctx context.Context, held bool) error {
 	for {
 		w.mu.Lock()
 		var wait <-chan struct{}
@@ -722,12 +752,24 @@ func (w *Worktree) Stop(ctx context.Context) error {
 
 			w.mu.Lock()
 			if cur, ok := w.phase.(phaseStopping); ok && cur.bk == bk {
-				w.phase = phaseIdle{}
+				w.phase = phaseIdle{held: held}
 			}
 			w.mu.Unlock()
-			slog.Info("backend stopped", "worktree", w.Name)
+			slog.Info("backend stopped", "worktree", w.Name, "held", held)
 			return nil
-		default:
+		case phaseStopping:
+			// Another stop is tearing it down and will leave it plain idle.
+			// Plain: that is what was asked. Held: the hold would be lost to
+			// it, so refuse rather than claim one (the route answers 503).
+			w.mu.Unlock()
+			if held {
+				return ErrStopping
+			}
+			return nil
+		default: // idle, broken
+			if held {
+				w.phase = phaseIdle{held: true}
+			}
 			w.mu.Unlock()
 			return nil
 		}
@@ -757,6 +799,8 @@ func (w *Worktree) Snapshot() WorktreeStatus {
 	if p, ok := w.phase.(phaseBroken); ok && p.err != nil {
 		lastSpawnErr = p.err.Error()
 	}
+	idle, isIdle := w.phase.(phaseIdle)
+	held := isIdle && idle.held
 	w.mu.Unlock()
 	spec := w.Spec()
 	var socketPath string
@@ -774,6 +818,7 @@ func (w *Worktree) Snapshot() WorktreeStatus {
 		Server:       spec.Server,
 		Web:          spec.Web,
 		LastSpawnErr: lastSpawnErr,
+		Held:         held,
 	}
 }
 

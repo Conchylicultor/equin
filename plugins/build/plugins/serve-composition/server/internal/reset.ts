@@ -34,6 +34,7 @@
 
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { rm } from "node:fs/promises";
+import { z } from "zod";
 import {
   ensureMainWorktreeRoot,
   hasCompositionMarker,
@@ -144,40 +145,102 @@ export async function resetCompositionData(
   }
 
   // Recipe — guards passed; the target is provably this one namespace.
-  // Drop + recreate the DB (fresh empty; the backend's boot migrator rebuilds the
-  // schema on next spawn).
+  //
+  // ORDER IS THE POINT. The backend serving this namespace booted on the
+  // database about to be dropped; it must be gone — and unable to come back —
+  // before that database is. It used to be dropped and recreated under the
+  // serving backend, with a hot restart asked for afterwards: a hot restart is
+  // zero-downtime, so the OLD backend kept serving while its successor migrated
+  // the empty database, then died on `relation "reports" does not exist` /
+  // graphile's "breaking migration" (report-1794167098-q99s8d). So: stop it
+  // HELD (no request may cold-start one onto the database mid-replace), replace
+  // the data, then cold-start it — a backend booted on the new database only.
+  await holdBackendDown(ns);
+
+  // Drop + recreate the DB (fresh empty; the backend's boot migrator rebuilds
+  // the schema on the cold start below).
   // One step as the pooler sees it: a drop-then-create left a window in which
-  // PgBouncer (refilling the pool, or the still-running backend) logged in to
-  // the missing database and cached that failure for the restarted backend.
+  // PgBouncer (refilling the pool) logged in to the missing database and cached
+  // that failure for the restarted backend.
   await recreateDatabase(ns);
 
   // Wipe the config dir and re-propagate the git-layer first-launch defaults.
   await rm(configDir.file(ns), { recursive: true, force: true });
   await repropagateConfig(root, configDir.file(ns));
 
-  await restartNamespace(ns);
+  await startBackend(ns);
+}
+
+const gatewayWorktreeUrl = (ns: Namespace, action: "stop" | "restart") =>
+  `http://localhost:9000/gateway/worktrees/${encodeURIComponent(ns)}/${action}`;
+
+/**
+ * Stop the namespace's backend and HOLD it down: the gateway answers traffic
+ * with "held" instead of cold-starting a backend, until `startBackend`'s deploy
+ * start releases it. Throws unless the gateway confirms the hold — a gateway
+ * that predates `?hold=1` stops the backend but holds nothing, and proceeding
+ * on that would reopen the window this closes.
+ *
+ * Two answers mean nothing can be running, so there is nothing to hold: an
+ * unreachable gateway (every backend is its child) and 404 (the namespace is
+ * not registered, so the gateway cannot start it).
+ */
+async function holdBackendDown(ns: Namespace): Promise<void> {
+  let resp: Response;
+  try {
+    resp = await fetch(`${gatewayWorktreeUrl(ns, "stop")}?hold=1`, {
+      method: "POST",
+      signal: AbortSignal.timeout(60_000),
+    });
+  } catch (err) {
+    if (err instanceof TypeError) return; // gateway down: no backend runs
+    throw err;
+  }
+  if (resp.status === 404) return;
+  const body = await resp.text();
+  if (!resp.ok) {
+    throw new CompositionResetError(
+      `reset "${ns}": could not stop its backend before replacing its database ` +
+        `(gateway ${resp.status}: ${body.trim()}); nothing was touched.`,
+    );
+  }
+  const status = z
+    .object({ held: z.boolean().optional() })
+    .parse(JSON.parse(body));
+  if (status.held !== true) {
+    throw new CompositionResetError(
+      `reset "${ns}": the gateway stopped its backend but did not hold it down ` +
+        `(it predates the held stop — main's next deploy updates it); refusing to ` +
+        `replace the database while traffic could boot a backend onto it. ` +
+        `Nothing was touched; the backend cold-starts on the next request.`,
+    );
+  }
 }
 
 /**
- * Reboot the composition's backend against the emptied DB. Tolerant, mirroring
- * compose-serve's gateway-notify: resp.ok = restarted; 404 = not running (spawns
- * on first request, fine); a TypeError/DOMException from fetch = the gateway is
- * down (fine — it spawns on first request); anything else is rethrown.
+ * Cold-start the namespace's backend on the replaced database — a deploy start,
+ * which is also what releases `holdBackendDown`'s hold. Waits for it to be
+ * ready, so a caller's next request (the promo-film seed) reaches the new one.
+ * An unreachable gateway or an unregistered namespace starts nothing to wait
+ * for (it spawns on first request); any other failure is the reset's.
  *
  * Deliberately does NOT call `getAdminPool().end()` — that is a CLI-exit concern;
  * the server's admin pool is long-lived.
  */
-async function restartNamespace(ns: Namespace): Promise<void> {
+async function startBackend(ns: Namespace): Promise<void> {
+  let resp: Response;
   try {
-    await fetch(`http://localhost:9000/gateway/worktrees/${ns}/restart`, {
+    resp = await fetch(gatewayWorktreeUrl(ns, "restart"), {
       method: "POST",
-      signal: AbortSignal.timeout(30_000),
+      signal: AbortSignal.timeout(180_000),
     });
-    // resp.ok / 404 / other status are all acceptable outcomes here: the backend
-    // will (re)spawn against the fresh DB on the next request regardless.
   } catch (err) {
-    if (!(err instanceof TypeError) && !(err instanceof DOMException))
-      throw err;
-    // Gateway unreachable — the backend spawns on first request; nothing to do.
+    if (err instanceof TypeError) return; // gateway down: spawns on first request
+    throw err;
   }
+  if (resp.ok || resp.status === 404) return;
+  throw new CompositionResetError(
+    `reset "${ns}": its database was reset, but its backend failed to boot on ` +
+      `it (gateway ${resp.status}: ${(await resp.text()).trim()}).`,
+  );
 }

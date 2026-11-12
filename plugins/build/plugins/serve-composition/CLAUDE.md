@@ -127,6 +127,18 @@ Like the status read, it resolves the namespace from the answering backend's own
 checkout, so Reset in a worktree's Studio resets `<id>.<checkout>` and cannot
 reach the one main serves.
 
+**The backend is down for the whole replacement**: the reset stops it HELD
+(`POST /gateway/worktrees/<ns>/stop?hold=1` — traffic cannot cold-start it), then
+replaces the database and config, then cold-starts it with a deploy start (the
+restart route, which releases the hold and waits until it is ready). It used to
+drop the database under the serving backend and then ask for a restart — a HOT
+restart, zero-downtime by design, so the old backend kept serving against the
+recreated, empty database while its successor migrated it, and died on
+`relation "reports" does not exist` and graphile's "breaking migration"
+(report-1794167098-q99s8d, hit on every `promo-film seed`). A gateway that does
+not confirm the hold (it predates `?hold=1`) fails the reset before anything is
+touched.
+
 The database is recreated with `recreateDatabase` (`database/admin`), never a
 `dropDatabase` then `ensureDatabase`: between those two, PgBouncer logs in to
 the missing database on its own (its `min_pool_size` refill, or the
