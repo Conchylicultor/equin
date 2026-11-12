@@ -35,7 +35,8 @@ export type {
 export { currentScanView } from "./scan-context";
 export { defineFoldCheck } from "./fold-check";
 export type { FoldCheck, FoldVerdictContext, RepoPaths } from "./fold-check";
-export type { GrepIndexStore } from "./grep-index";
+export type { FoldKey, GrepIndexStore } from "./grep-index";
+export { foldKeyOf } from "./grep-index";
 export {
   grepCode,
   grepImports,

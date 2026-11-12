@@ -94,27 +94,44 @@ the run-shared parse (`parsedTsSource`, so the thread yields); it builds no
 type checker. Every check of a pass shares one analysis; an input-keyed check
 gets its own, so its reads land in its read-set.
 
-## Grep selections are answered per blob (`core/grep-index.ts`)
+## Grep selections are folded along git's trees (`core/grep-index.ts`)
 
 `grepCode` / `grepImports` / `listCandidateSources` select their candidates
-through the run's **grep index**, not one whole-tree `git grep` each. Whether a
-blob matches a pattern is a pure function of (git version, `-E`/`-F`, pattern,
-blob bytes), so the answer is kept per blob in one host-wide SQLite file
+through the run's **grep index**, not one whole-tree `git grep` each. A
+selection over a git tree is a pure function of (git version, `-E`/`-F`,
+pattern, pathspecs, the tree's id), and git's trees are already a Merkle tree
+over the directories, so the answers are kept host-wide in one SQLite file
 (`checks/cli`'s `openGrepIndexStore`, opened by the `check` command and handed
-to `runChecks` as `grepIndex`), and a run greps only the blobs no run on the host
-has asked about yet. Before it, a pass ran ~99 whole-tree greps (each ~2.5
-CPU-s over 116 MB of blobs, up to 18 at once): ~60 % of a pass's CPU, and the
-same answers every run.
+to `runChecks` as `grepIndex`) at three grains:
+
+- **a directory record** per (query, pathspecs, path, tree id): its own
+  selected file names, and each sub-directory with a selected file below BY
+  ITS TREE ID — the key of the child's record, never a copy of its answer. A
+  selection walks the records down from the run's root tree, entering only
+  directories with a match below; a directory with no record is read as a tree
+  object (`readTreeObjects`, one `cat-file --batch` per level) and folded.
+- **a membership record** per (pathspecs, path, the directory's file names):
+  which of its files the pathspecs name — a content edit never re-asks it.
+- **a per-blob answer** per (query, blob), shared by every path, directory and
+  worktree holding those bytes.
+
+So a selection costs what changed: after a one-line edit, ~6 tree objects read
+for the whole pass, one record per directory on the edited path per query
+(O(depth) new bytes — 83.5 KB for the pass's 91 selections), and the
+directories with a match below read as records (35.7k lookups per pass, against
+1.40M per-blob lookups when every selection asked about every blob of its
+domain). A cold store reads each tree once and records every directory per
+query (~9k rows, ~0.8 MB each).
 
 git stays the authority on both halves, so a selection equals what `git grep -l
 <pattern> <tree> -- <pathspecs>` prints:
 
-- **which files**: `listTreePathspec` (`core/tree-hash.ts`) — `read-tree` of the
-  run's tree into a scratch index, `ls-files -s` over it. Never
-  `pathspecToRegex`, which is only a superset.
+- **which files**: `filterPathspec` (`core/tree-hash.ts`) — the files asked
+  about staged into a scratch index (`update-index --index-info`), `ls-files
+  -s` over it. Never `pathspecToRegex`, which is only a superset.
 - **whether one matches**: `git grep` itself, over the unknown blobs only (by
   `:(literal)` path, or the whole query when there are many — whose output must
-  then lie inside the domain, or the run throws).
+  then lie inside the domain `listTreePathspec` lists, or the run throws).
 
 `gitGrepList` reads `-z` output: a quoted path (non-ASCII, `"`, `\`) would
 otherwise name no file and be recorded as not matching, host-wide.
@@ -154,8 +171,8 @@ An input-keyed check's read-set replays each recorded `git grep -l` selection
 whose pathspec fingerprint moved (`validate`, `core/read-set.ts`) — for a `*.ts`
 selection, after ANY `.ts` edit, and on every later run until the body runs
 again (a hit does not re-record). The replay asks the run's grep index
-(`runner.ts` `validateStored`), the same per-blob answers the checks select
-through, so only unknown blobs are grepped. Through a raw whole-tree
+(`runner.ts` `validateStored`), the same records the checks select through,
+so only unknown blobs are grepped. Through a raw whole-tree
 `gitGrepList` it re-grepped every blob for every recorded query: ~22 whole-tree
 greps, ~13 CPU-s, in a build whose checks were all cached (2026-11-06).
 
@@ -576,6 +593,7 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
     - `FileFact`
     - `FileSystemView`
     - `FoldCheck`
+    - `FoldKey`
     - `FoldVerdictContext`
     - `GlobFact`
     - `GrepIndexStore`
@@ -598,6 +616,7 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
     - `currentScanView`
     - `defineFoldCheck`
     - `fingerprint`
+    - `foldKeyOf`
     - `gitGrepList`
     - `grepCode`
     - `grepImports`

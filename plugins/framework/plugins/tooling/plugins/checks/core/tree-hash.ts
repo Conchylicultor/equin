@@ -258,6 +258,60 @@ export async function listTreePathspec(
   tree: string,
   pathspecs: readonly string[],
 ): Promise<TreePathspecEntry[]> {
+  return listScratchPathspec(root, pathspecs, (env) =>
+    git(root, ["read-tree", tree], env).then(({ code }) => {
+      if (code !== 0)
+        throw new Error(
+          `listTreePathspec: git read-tree ${tree} failed (exit ${code})`,
+        );
+    }),
+  );
+}
+
+/** One file of a tree object, named by its path from the tree's root. */
+export interface TreeFileEntry {
+  path: string;
+  /** The git mode, as git spells it (`100644`, `100755`, `120000`). */
+  mode: string;
+  blob: string;
+}
+
+/**
+ * Which of `entries` `pathspecs` name, by git's OWN matcher — what
+ * `listTreePathspec` answers for a whole tree, asked of just these files: they
+ * are staged into a scratch index (`update-index --index-info`, no file read)
+ * and listed with `ls-files`. Whether a pathspec names a file is a function of
+ * its path alone, so the answer for a file is the one the whole tree's listing
+ * gives it. Throws on any git failure.
+ */
+export async function filterPathspec(
+  root: AppPath,
+  entries: readonly TreeFileEntry[],
+  pathspecs: readonly string[],
+): Promise<TreePathspecEntry[]> {
+  if (entries.length === 0) return [];
+  return listScratchPathspec(root, pathspecs, (env) =>
+    git(root, ["update-index", "--add", "-z", "--index-info"], env, {
+      stdin: entries.map((e) => `${e.mode} ${e.blob}\t${e.path}\0`).join(""),
+    }).then(({ code }) => {
+      if (code !== 0)
+        throw new Error(
+          `filterPathspec: git update-index --index-info failed (exit ${code})`,
+        );
+    }),
+  );
+}
+
+/**
+ * The scratch-index listing both of the above share: `seed` fills a fresh
+ * index beside this checkout's real one, then `ls-files -s` lists what
+ * `pathspecs` name in it.
+ */
+async function listScratchPathspec(
+  root: AppPath,
+  pathspecs: readonly string[],
+  seed: (env: Record<string, string>) => Promise<void>,
+): Promise<TreePathspecEntry[]> {
   const indexPath = (
     await git(root, [
       "rev-parse",
@@ -275,12 +329,11 @@ export async function listTreePathspec(
   );
   try {
     const { GIT_INDEX_FILE: _ignored, ...inherited } = process.env;
-    const env = { ...inherited, GIT_INDEX_FILE: scratch };
-    const read = await git(root, ["read-tree", tree], env);
-    if (read.code !== 0)
-      throw new Error(
-        `listTreePathspec: git read-tree ${tree} failed (exit ${read.code})`,
-      );
+    const env: Record<string, string> = {};
+    for (const [k, v] of Object.entries(inherited))
+      if (v !== undefined) env[k] = v;
+    env.GIT_INDEX_FILE = scratch;
+    await seed(env);
     const listFiles = async (
       specs: readonly string[],
     ): Promise<TreePathspecEntry[]> => {
@@ -325,6 +378,75 @@ export async function listTreePathspec(
   } finally {
     rmSync(scratch, { force: true });
   }
+}
+
+/** One tree object, read: its subtrees and its files (a gitlink is neither). */
+export interface TreeObject {
+  /** Sub-directories: name → tree id. */
+  dirs: Array<[name: string, tree: string]>;
+  /** Files (blobs, symlinks included): name, mode, blob id. */
+  files: Array<{ name: string; mode: string; blob: string }>;
+}
+
+/**
+ * Read tree objects by id, in one `git cat-file --batch` — the objects
+ * themselves, not a recursive listing, so the cost is the trees asked for.
+ * Throws on any git failure or a tree that is not there.
+ */
+export async function readTreeObjects(
+  root: AppPath,
+  trees: readonly string[],
+): Promise<Map<string, TreeObject>> {
+  const out = new Map<string, TreeObject>();
+  if (trees.length === 0) return out;
+  const argv = ["git", "cat-file", "--batch"];
+  const result = await spawnCaptured(argv, {
+    cwd: root,
+    stdin: trees.join("\n") + "\n",
+    timeoutMs: TREE_HASH_TIMEOUT_MS,
+  });
+  if (result.exitCode !== 0)
+    throw new Error(
+      `readTreeObjects: git cat-file --batch failed (exit ${result.exitCode}): ${result.stderr.trim()}`,
+    );
+  const buf = result.stdoutBytes;
+  const decoder = new TextDecoder();
+  let i = 0;
+  for (const tree of trees) {
+    const nl = buf.indexOf(0x0a, i);
+    if (nl < 0) throw new Error(`readTreeObjects: output ends before ${tree}`);
+    const [id, type, sizeText] = decoder.decode(buf.subarray(i, nl)).split(" ");
+    i = nl + 1;
+    const size = Number(sizeText);
+    if (id !== tree || type !== "tree" || !Number.isInteger(size))
+      throw new Error(`readTreeObjects: ${tree} is not a readable tree`);
+    out.set(tree, parseTreeObject(buf.subarray(i, i + size), tree.length / 2));
+    i += size + 1;
+  }
+  return out;
+}
+
+/** A raw tree object: `<mode> <name>\0<id bytes>`, repeated. */
+function parseTreeObject(raw: Uint8Array, idBytes: number): TreeObject {
+  const decoder = new TextDecoder();
+  const dirs: TreeObject["dirs"] = [];
+  const files: TreeObject["files"] = [];
+  let i = 0;
+  while (i < raw.length) {
+    const space = raw.indexOf(0x20, i);
+    const nul = raw.indexOf(0x00, space);
+    if (space < 0 || nul < 0 || nul + 1 + idBytes > raw.length)
+      throw new Error("readTreeObjects: malformed tree object");
+    const mode = decoder.decode(raw.subarray(i, space));
+    const name = decoder.decode(raw.subarray(space + 1, nul));
+    const id = Buffer.from(raw.subarray(nul + 1, nul + 1 + idBytes)).toString(
+      "hex",
+    );
+    i = nul + 1 + idBytes;
+    if (mode === "40000") dirs.push([name, id]);
+    else if (mode !== "160000") files.push({ name, mode, blob: id });
+  }
+  return { dirs, files };
 }
 
 /**

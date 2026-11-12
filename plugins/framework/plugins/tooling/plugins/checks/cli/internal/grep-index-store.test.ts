@@ -2,6 +2,7 @@ import { afterAll, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { foldKeyOf } from "../../core";
 import { openGrepIndexStore } from "./grep-index-store";
 
 const dir = mkdtempSync(join(tmpdir(), "grep-index-store-"));
@@ -46,4 +47,29 @@ test("a lookup wider than one statement's batch answers every blob", () => {
   expect(got.size).toBe(blobs.length);
   expect(got.get(blobs[3]!)).toBe(true);
   expect(got.get(blobs[4]!)).toBe(false);
+});
+
+test("folds round-trip per scope by (path, id), survive a reopen, and keep the first value", () => {
+  const path = join(dir, "folds.sqlite");
+  const store = openGrepIndexStore({ path });
+  const keys = Array.from({ length: 700 }, (_, i) => ({
+    path: `dir/${i}`,
+    id: i.toString(16).padStart(40, "0"),
+  }));
+  store.recordFolds(
+    "s1",
+    keys.map((k, i) => [k, `v${i}`] as const),
+  );
+  store.recordFolds("s2", [[keys[0]!, "other"]]);
+  const got = store.folds("s1", [...keys, { path: "dir/0", id: B }]);
+  expect(got.size).toBe(keys.length);
+  expect(got.get(foldKeyOf(keys[699]!))).toBe("v699");
+  expect(store.folds("s2", keys.slice(0, 2))).toEqual(
+    new Map([[foldKeyOf(keys[0]!), "other"]]),
+  );
+  const reopened = openGrepIndexStore({ path });
+  reopened.recordFolds("s1", [[keys[1]!, "changed"]]);
+  expect(reopened.folds("s1", [keys[1]!])).toEqual(
+    new Map([[foldKeyOf(keys[1]!), "v1"]]),
+  );
 });

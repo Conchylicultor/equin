@@ -30988,6 +30988,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `FileFact`
               - `FileSystemView`
               - `FoldCheck`
+              - `FoldKey`
               - `FoldVerdictContext`
               - `GlobFact`
               - `GrepIndexStore`
@@ -31010,6 +31011,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `currentScanView`
               - `defineFoldCheck`
               - `fingerprint`
+              - `foldKeyOf`
               - `gitGrepList`
               - `grepCode`
               - `grepImports`

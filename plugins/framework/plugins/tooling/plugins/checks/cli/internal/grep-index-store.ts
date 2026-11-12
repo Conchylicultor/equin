@@ -1,6 +1,6 @@
 import { Database } from "bun:sqlite";
 import { z } from "zod";
-import type { GrepIndexStore } from "../../core";
+import { foldKeyOf, type GrepIndexStore } from "../../core";
 import { checkGrepIndexDir } from "../../data-dirs";
 
 /**
@@ -14,6 +14,8 @@ import { checkGrepIndexDir } from "../../data-dirs";
  *
  * Compact on purpose: one row per (query, blob) — ~100 queries × every blob
  * version the host has seen — so a query is an integer and a blob its raw bytes.
+ * A fold (a directory's record) is one row per (scope, directory path, id):
+ * the scope an integer like a query, the id (a tree id or a names digest) raw.
  */
 
 const KEEP_DAYS = 14;
@@ -22,6 +24,14 @@ const BATCH = 500;
 
 const MetaRow = z.object({ value: z.string() });
 const QueryRow = z.object({ id: z.number() });
+const FoldRows = z.array(
+  z.object({
+    path: z.string(),
+    id: z.instanceof(Uint8Array),
+    value: z.string(),
+    used: z.number(),
+  }),
+);
 const AnswerRows = z.array(
   z.object({
     blob: z.instanceof(Uint8Array),
@@ -53,6 +63,9 @@ export function openGrepIndexStore(opts?: { path?: string }): GrepIndexStore {
     "CREATE TABLE IF NOT EXISTS answers (query INTEGER NOT NULL, blob BLOB NOT NULL, matched INTEGER NOT NULL, used INTEGER NOT NULL, PRIMARY KEY (query, blob)) WITHOUT ROWID",
   );
   db.exec(
+    "CREATE TABLE IF NOT EXISTS folds (scope INTEGER NOT NULL, path TEXT NOT NULL, id BLOB NOT NULL, value TEXT NOT NULL, used INTEGER NOT NULL, PRIMARY KEY (scope, path, id)) WITHOUT ROWID",
+  );
+  db.exec(
     "CREATE TABLE IF NOT EXISTS meta (name TEXT PRIMARY KEY, value TEXT NOT NULL) WITHOUT ROWID",
   );
   const day = today();
@@ -62,6 +75,7 @@ export function openGrepIndexStore(opts?: { path?: string }): GrepIndexStore {
   if (pruned === null || Number(pruned.value) < day) {
     db.transaction(() => {
       db.query("DELETE FROM answers WHERE used < ?").run(day - KEEP_DAYS);
+      db.query("DELETE FROM folds WHERE used < ?").run(day - KEEP_DAYS);
       db.query(
         "INSERT INTO meta (name, value) VALUES ('pruned', ?) ON CONFLICT (name) DO UPDATE SET value = excluded.value",
       ).run(String(day));
@@ -89,6 +103,17 @@ export function openGrepIndexStore(opts?: { path?: string }): GrepIndexStore {
     db.query(
       `UPDATE answers SET used = ? WHERE query = ? AND blob IN (${Array(n).fill("?").join(",")})`,
     );
+  // A fold is asked by (path, id) pairs: a row-value IN over the primary key.
+  const selectFolds = (n: number) =>
+    db.query(
+      `SELECT path, id, value, used FROM folds WHERE scope = ? AND (path, id) IN (VALUES ${Array(n).fill("(?, ?)").join(",")})`,
+    );
+  const touchFold = db.query(
+    "UPDATE folds SET used = ? WHERE scope = ? AND path = ? AND id = ?",
+  );
+  const insertFold = db.query(
+    "INSERT INTO folds (scope, path, id, value, used) VALUES (?, ?, ?, ?, ?) ON CONFLICT (scope, path, id) DO NOTHING",
+  );
   const insert = db.query(
     "INSERT INTO answers (query, blob, matched, used) VALUES (?, ?, ?, ?) ON CONFLICT (query, blob) DO NOTHING",
   );
@@ -115,6 +140,36 @@ export function openGrepIndexStore(opts?: { path?: string }): GrepIndexStore {
           }
         })();
       return out;
+    },
+    folds(scope, keys) {
+      const id = queryId(scope);
+      const out = new Map<string, string>();
+      const stale: Array<{ path: string; id: Uint8Array }> = [];
+      // Two host parameters per key.
+      const per = Math.floor(BATCH / 2);
+      for (let i = 0; i < keys.length; i += per) {
+        const chunk = keys.slice(i, i + per);
+        const params = chunk.flatMap((k) => [k.path, raw(k.id)]);
+        for (const row of FoldRows.parse(
+          selectFolds(chunk.length).all(id, ...params),
+        )) {
+          out.set(foldKeyOf({ path: row.path, id: hex(row.id) }), row.value);
+          if (row.used < day) stale.push({ path: row.path, id: row.id });
+        }
+      }
+      if (stale.length > 0)
+        db.transaction(() => {
+          for (const k of stale) touchFold.run(day, id, k.path, k.id);
+        })();
+      return out;
+    },
+    recordFolds(scope, folds) {
+      if (folds.length === 0) return;
+      const id = queryId(scope);
+      db.transaction(() => {
+        for (const [key, value] of folds)
+          insertFold.run(id, key.path, raw(key.id), value, day);
+      })();
     },
     record(query, answers) {
       if (answers.length === 0) return;

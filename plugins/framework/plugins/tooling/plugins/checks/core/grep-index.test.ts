@@ -7,7 +7,12 @@ import {
 import { createReadSetRepo } from "./testing";
 import { computeTreeHash } from "./tree-hash";
 import { gitGrepList } from "./grep-code";
-import { createGrepIndex, type GrepIndexStore } from "./grep-index";
+import {
+  createGrepIndex,
+  foldKeyOf,
+  type FoldKey,
+  type GrepIndexStore,
+} from "./grep-index";
 
 const roots: string[] = [];
 afterAll(() => {
@@ -15,10 +20,34 @@ afterAll(() => {
 });
 
 /** A store in memory that counts what it is asked. */
-function memoryStore(): GrepIndexStore & { recorded: number } {
+function memoryStore(): GrepIndexStore & {
+  recorded: number;
+  foldsRecorded: string[];
+} {
   const rows = new Map<string, boolean>();
+  const folds = new Map<string, string>();
   const store = {
     recorded: 0,
+    foldsRecorded: [] as string[],
+    folds(scope: string, keys: readonly FoldKey[]) {
+      const out = new Map<string, string>();
+      for (const k of keys) {
+        const v = folds.get(`${scope}\0${foldKeyOf(k)}`);
+        if (v !== undefined) out.set(foldKeyOf(k), v);
+      }
+      return out;
+    },
+    recordFolds(
+      scope: string,
+      entries: ReadonlyArray<readonly [FoldKey, string]>,
+    ) {
+      for (const [k, v] of entries) {
+        folds.set(`${scope}\0${foldKeyOf(k)}`, v);
+        store.foldsRecorded.push(
+          `${scope.includes('"members"') ? "members" : "dir"}:${k.path}`,
+        );
+      }
+    },
     answers(query: string, blobs: readonly string[]) {
       const out = new Map<string, boolean>();
       for (const b of blobs) {
@@ -91,13 +120,31 @@ test("a selection is exactly git grep's, cold and warm, across an edit", async (
     new Set(QUERIES.map(([arg, fixed]) => `${fixed}:${arg}`)).size,
   );
 
-  // Same tree, a new run: every answer is known, no grep runs.
+  // Same tree, a new run: every answer is known, no grep runs, nothing is
+  // recorded again.
+  const foldsBefore = store.foldsRecorded.length;
   const warm = await indexOver(asAppPath(repo.root), store, greps);
   for (const [arg, fixed, specs] of QUERIES)
     expect(await warm.index.select(arg, fixed, specs)).toEqual(
       await warm.git(arg, fixed, specs),
     );
   expect(greps.count).toBe(coldGreps);
+  expect(store.foldsRecorded.length).toBe(foldsBefore);
+
+  // A content edit re-records only the directories on its path, and asks no
+  // membership again (the directory's file names did not change).
+  repo.write("src/c/core/w.ts", "export const s = 2;\n");
+  const contentEdit = await indexOver(asAppPath(repo.root), store, greps);
+  const recordedFolds = store.foldsRecorded.length;
+  for (const [arg, fixed, specs] of QUERIES)
+    expect(await contentEdit.index.select(arg, fixed, specs)).toEqual(
+      await contentEdit.git(arg, fixed, specs),
+    );
+  const written = store.foldsRecorded.slice(recordedFolds);
+  expect(written.filter((w) => w.startsWith("members:"))).toEqual([]);
+  expect(new Set(written)).toEqual(
+    new Set(["dir:", "dir:src", "dir:src/c", "dir:src/c/core"]),
+  );
 
   // An edit (a new matcher, a file that stops matching, an untracked file):
   // only the changed blobs are grepped, and the answer is still git's.

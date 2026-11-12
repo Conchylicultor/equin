@@ -363,3 +363,76 @@ grep-index `select` is now the largest owner: every selection asks the store
 about every blob of its domain (~99 queries × ~11k blobs per pass), so a
 one-line edit still costs ~1M lookups. Then the remaining parse, which goes
 through sourceAnalysis's cross-file reads.
+
+## Grep selections folded along git's trees (task: check pass O(changes), 4)
+
+Measured 2026-11-12, same one-line edit (a comment appended to
+`hints/help-menu/web/index.ts`), host load 3–12; selection internals by a
+temporary probe (reverted).
+
+### Split of `select` before
+
+Per pass, 91 selections (each a `git grep -l` the checks narrow by):
+
+- **1.40M per-blob store lookups** — every selection asked about every blob of
+  its domain (~15k), synchronous SQLite on the check thread: 1.7–2.5 s of
+  thread, the bulk of the owner's ~3.7–4.9 s.
+- **91 whole-tree domain listings** — `read-tree` of the run's tree into a
+  scratch index plus `ls-files -s` (twice with excludes), each O(repo) in git
+  and parsed on the thread: ~9–12 s of summed wall, off-thread mostly.
+- 82 literal greps of the one edited blob (one per query whose domain holds it).
+
+Root cause: the answer was keyed per blob, so a selection was O(domain) lookups
+plus an O(repo) domain listing, whatever changed. The per-blob key made the
+*grep* O(changes), never the *selection*.
+
+### Fix
+
+A selection over a git tree is a pure function of (query, pathspecs, tree id),
+and git's trees are a Merkle tree over the directories. So `select` folds along
+them (`checks/core/grep-index.ts`): a directory record per (query, pathspecs,
+path, tree id) holds its own selected names and its matching sub-directories
+**by tree id** (the child record's key — never a copy of the child's answer, so
+an edit writes O(depth) bytes); a membership record per (pathspecs, path, file
+names) says which files the pathspecs name (git's own matcher over a scratch
+index of just those files, `filterPathspec`); the per-blob answers stay for the
+files of a directory being folded. A walk reads records down from the root
+tree, entering only directories with a match below; a missing record reads
+that tree object (`cat-file --batch`, one per level, shared by every selection
+of the run). Nothing is invalidated wholesale and no fingerprint is consulted:
+every record is a pure function of its key, so a hit is the answer, and the
+cold case is the same walk with every record missing.
+
+| one-line edit (91 selections) | before | after |
+| --- | ---: | ---: |
+| store lookups | 1,395,806 | 35,754 dir records + 356 blobs |
+| whole-tree domain listings (git spawns of O(repo) work) | 91 (~180 spawns) | 0 |
+| tree objects read | — | 6 (6 spawns) |
+| membership asked of git | (in the listings) | 0 |
+| bytes written to the store | 82 answer rows | 528 dir records, 83.5 KB + 82 answer rows |
+| check-thread owner `select` | ~3.7–4.9 s (top 1) | below the top 10 (< 0.6 s) |
+| run, start → verdict | 44.2 s (load 3–7) | 44.1 s (load 8–10, noise-bound) |
+
+The 35.7k lookups that remain are the directories with a match below, read to
+list the selection (O(matching directories), ~390 per query); the 82 literal
+greps are the edited blob's own answer per query.
+
+Cold store (every fold missing, blob answers warm): 9,189 tree objects read in
+15 spawns, membership asked of git 17 times (once per distinct pathspec set,
+the whole tree each), 858k directory records (78 MB) and 157k membership
+records (15 MB) written — every directory once per query, reclaimed like the
+blob answers after 14 days unread. From an empty store a selection is 0.7–2.4 s
+(the whole-query grep, as before) and 3–66 ms warm.
+
+Equivalence: on the real tree, five selections (including `:(exclude)` and
+`:!` pathspecs, 16 to 12,243 matches) equal `git grep -l` cold and warm; the
+unit tests check that a content edit records exactly the edited path's
+directories and asks no membership again.
+
+### Next
+
+The folds of `defineFoldCheck` / `foldRepoFiles` (plugin-boundaries 2.8 MB,
+boundary-rules 1.7 MB) still write their whole O(repo) answer into every
+ancestor's record per edit: the shared store's churn grows with every edit.
+Their verdict reads the combined answer at the root, so referencing children by
+key moves the cost to the read; the design has to keep both O(changes).
