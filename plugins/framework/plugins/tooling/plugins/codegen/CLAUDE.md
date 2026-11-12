@@ -223,7 +223,7 @@ wrapper fixpoint reads.
 - Description: Plugin doc generation and registry codegen
 - Core:
   - Uses: 150 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `plugin-meta/parse-utils` ×19
+    - `plugin-meta/parse-utils` ×17
     - `config_v2` ×16
     - `framework/plugin-id` ×13
     - `network/live/resource-vocabulary` ×11
@@ -246,6 +246,7 @@ wrapper fixpoint reads.
     - `framework/tooling/web-artifacts` ×2
     - `infra/paths` ×2
     - `network/live/resource-protocol` ×2
+    - `plugin-meta/parse-utils/source-files` ×2
     - `plugin-meta/plugin-tree` ×2
     - `fields/reorder-tree.REORDER_NODE_LEGEND`
     - `framework/tooling/guards/agent-policy.agentPolicySettings`
@@ -259,7 +260,7 @@ wrapper fixpoint reads.
     - `plugin-meta/plugin-tree/faceted.buildFacetedPluginTree`
     - `primitives/css/ui-kit.APP_STYLESHEET_PATH`
     - `ui/icons/icon-sets.renderSymbolNameFilesSync`
-    - `ui/icons.isIconRefModule`
+    - `ui/icons/icon-uses.isIconRefModule`
   - Exports (types):
     - `AuthoredOverrideSeedResult`
     - `BarrelEvaluation`

@@ -69,14 +69,27 @@ export function scannersFor(
   return scanners;
 }
 
-/** Every ref of `kinds` in one file, as a file scan. */
-export function pluginRefsScan(
-  kinds: ReadonlySet<PluginRefKind>,
-): FileScan<PluginRef[]> {
-  return {
-    url: import.meta.url,
-    params: [...kinds].sort(),
-    scan: (text, path) =>
-      scannersFor(path, kinds).flatMap((scanner) => scanner(text)),
-  };
-}
+/** Every kind: what the one file scan reads each file for. */
+const ALL_REF_KINDS: ReadonlySet<PluginRefKind> = new Set([
+  "path",
+  "dot",
+  "relative",
+]);
+
+/**
+ * Every ref in one file, of every kind, as a file scan — one scan whatever
+ * kinds a caller asks for (`findPluginRefs` filters after).
+ *
+ * Not one scan per kind set: a scan's parameters are part of every record's
+ * key, so the three kind sets the passes ask for (`dot`, `path`+`dot`,
+ * `relative`) kept three records of each file — a third of the shared store's
+ * file records (measured 2026-11-12: 36k of 112k keys per scan identity), all
+ * re-keyed together on every move of this module's closure. A file's refs of
+ * kind K are the same whichever other kinds are read with them, so the
+ * all-kinds value, filtered, IS each caller's answer.
+ */
+export const pluginRefsScan: FileScan<PluginRef[]> = {
+  url: import.meta.url,
+  scan: (text, path) =>
+    scannersFor(path, ALL_REF_KINDS).flatMap((scanner) => scanner(text)),
+};

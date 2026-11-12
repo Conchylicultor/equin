@@ -5683,6 +5683,10 @@
       "name": "@equin/plugin-plugin-meta-parse-utils",
       "version": "0.0.1",
     },
+    "plugins/plugin-meta/plugins/parse-utils/plugins/source-files": {
+      "name": "@equin/plugin-plugin-meta-parse-utils-source-files",
+      "version": "0.0.1",
+    },
     "plugins/plugin-meta/plugins/plugin-health": {
       "name": "@equin/plugin-plugin-meta-plugin-health",
       "version": "0.0.1",
@@ -7317,6 +7321,10 @@
     },
     "plugins/ui/plugins/icons/plugins/icon-sets": {
       "name": "@equin/plugin-ui-icons-icon-sets",
+      "version": "0.0.1",
+    },
+    "plugins/ui/plugins/icons/plugins/icon-uses": {
+      "name": "@equin/plugin-ui-icons-icon-uses",
       "version": "0.0.1",
     },
     "plugins/ui/plugins/icons/plugins/saved-names": {
@@ -10411,6 +10419,8 @@
 
     "@equin/plugin-plugin-meta-parse-utils": ["@equin/plugin-plugin-meta-parse-utils@workspace:plugins/plugin-meta/plugins/parse-utils"],
 
+    "@equin/plugin-plugin-meta-parse-utils-source-files": ["@equin/plugin-plugin-meta-parse-utils-source-files@workspace:plugins/plugin-meta/plugins/parse-utils/plugins/source-files"],
+
     "@equin/plugin-plugin-meta-plugin-health": ["@equin/plugin-plugin-meta-plugin-health@workspace:plugins/plugin-meta/plugins/plugin-health"],
 
     "@equin/plugin-plugin-meta-plugin-records": ["@equin/plugin-plugin-meta-plugin-records@workspace:plugins/plugin-meta/plugins/plugin-records"],
@@ -11174,6 +11184,8 @@
     "@equin/plugin-ui-icons-emoji": ["@equin/plugin-ui-icons-emoji@workspace:plugins/ui/plugins/icons/plugins/emoji"],
 
     "@equin/plugin-ui-icons-icon-sets": ["@equin/plugin-ui-icons-icon-sets@workspace:plugins/ui/plugins/icons/plugins/icon-sets"],
+
+    "@equin/plugin-ui-icons-icon-uses": ["@equin/plugin-ui-icons-icon-uses@workspace:plugins/ui/plugins/icons/plugins/icon-uses"],
 
     "@equin/plugin-ui-icons-saved-names": ["@equin/plugin-ui-icons-saved-names@workspace:plugins/ui/plugins/icons/plugins/saved-names"],
 

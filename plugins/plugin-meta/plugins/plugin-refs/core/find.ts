@@ -68,9 +68,10 @@ export async function findPluginRefs(
   const files = repo
     .all()
     .filter((path) => scannersFor(path, kinds).length > 0);
-  // A file's refs are a function of its bytes, its path, the kinds asked for
-  // and the scanners' code: file records, so a pass reads only the files
-  // whose blob it has not scanned yet.
-  const perFile = await options.scanFiles(repo, files, pluginRefsScan(kinds));
-  return perFile.flat();
+  // A file's refs are a function of its bytes, its path and the scanners'
+  // code: file records, so a pass reads only the files whose blob it has not
+  // scanned yet. Every kind is read (one record per file, whatever a pass
+  // asks for — `pluginRefsScan`), and the kinds not asked for dropped here.
+  const perFile = await options.scanFiles(repo, files, pluginRefsScan);
+  return perFile.flat().filter((ref) => kinds.has(ref.kind));
 }

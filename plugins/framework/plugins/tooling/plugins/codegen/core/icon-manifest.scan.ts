@@ -5,7 +5,7 @@ import {
   unreadableAt,
   type ParsedFile,
 } from "@plugins/framework/plugins/tooling/plugins/checks/plugins/source-analysis/core";
-import { isIconRefModule } from "@plugins/ui/plugins/icons/core";
+import { isIconRefModule } from "@plugins/ui/plugins/icons/plugins/icon-uses/core";
 import type { FileScan } from "@plugins/plugin-meta/plugins/plugin-records/core";
 import type TS from "typescript";
 

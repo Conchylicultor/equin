@@ -9,7 +9,7 @@ import {
   scanCompositionManifestRefs,
   scanReorderItemRefs,
 } from "./config-refs";
-import { findPluginRefs } from "./find";
+import { findPluginRefs, type ScanFiles } from "./find";
 import {
   BOUNDARY_CONFIG,
   COMPOSITIONS_MANIFEST,
@@ -393,6 +393,25 @@ describe("findPluginRefs over a fixture repo", () => {
       scanFiles: scanRepoFiles,
     });
     expect(new Set(refs.map((r) => r.kind))).toEqual(new Set(["relative"]));
+  });
+
+  test("every kind set reads one record per file: the same scan, its answer filtered", async () => {
+    // A scan's params are part of every file record's key: one scan per kind
+    // set kept a record of each file per set the passes ask for.
+    const scans = new Set<unknown>();
+    const scanFiles: ScanFiles = (r, fs, scanner) => {
+      scans.add(scanner);
+      expect(scanner.params ?? []).toEqual([]);
+      return scanRepoFiles(r, fs, scanner);
+    };
+    const all = await findPluginRefs(repo, { scanFiles });
+    for (const kinds of [["dot"], ["path", "dot"], ["relative"]] as const) {
+      const refs = await findPluginRefs(repo, { kinds, scanFiles });
+      expect(refs).toEqual(
+        all.filter((r) => (kinds as readonly string[]).includes(r.kind)),
+      );
+    }
+    expect(scans.size).toBe(1);
   });
 
   test("a missing fixed input throws rather than reporting no refs", async () => {

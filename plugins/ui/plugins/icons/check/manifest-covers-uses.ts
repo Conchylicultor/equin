@@ -7,7 +7,7 @@ import {
 } from "@plugins/plugin-meta/plugins/plugin-records/core";
 import { iconManifestPath } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { relative } from "path";
-import type { IconMarker } from "../core";
+import type { IconMarker } from "@plugins/ui/plugins/icons/plugins/icon-uses/core";
 import { iconUsesScan } from "./icon-uses.scan";
 
 const LISTS: Record<IconMarker, "symbols" | "brands" | "seti"> = {

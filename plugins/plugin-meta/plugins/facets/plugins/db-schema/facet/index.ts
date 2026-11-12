@@ -14,14 +14,16 @@ import {
   type PluginId,
 } from "@plugins/framework/plugins/plugin-id/core";
 import {
-  readIfExistsSync,
   stripTypes,
   findMarkerCalls,
   findImports,
   maskSource,
   markerCallSpans,
-  walkFilesSync,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
+import {
+  readIfExistsSync,
+  walkFilesSync,
+} from "@plugins/plugin-meta/plugins/parse-utils/plugins/source-files/core";
 import { type DbSchemaFacetData, dbSchemaFacetDef } from "../core";
 import {
   type AppPath,

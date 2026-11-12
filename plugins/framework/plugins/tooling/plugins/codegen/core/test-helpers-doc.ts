@@ -14,8 +14,8 @@ import {
   findImports,
   maskSource,
   parseBarrelExports,
-  readIfExistsSync,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
+import { readIfExistsSync } from "@plugins/plugin-meta/plugins/parse-utils/plugins/source-files/core";
 
 /**
  * A plugin's shared test helpers: what each `<runtime>/testing/index.ts` barrel

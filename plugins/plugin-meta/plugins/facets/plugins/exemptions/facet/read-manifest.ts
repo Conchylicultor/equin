@@ -2,7 +2,7 @@ import {
   joinAppPath,
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { pathExistsSync } from "@plugins/plugin-meta/plugins/parse-utils/core";
+import { pathExistsSync } from "@plugins/plugin-meta/plugins/parse-utils/plugins/source-files/core";
 import type { Exemptions } from "@plugins/framework/plugins/tooling/plugins/exempt/core";
 import type { DeclaredExemption } from "../core";
 

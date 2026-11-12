@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-plugin-meta-parse-utils-source-files",
+  "version": "0.0.1",
+  "private": true,
+  "description": "A plugin's source files and their bytes, as a scanner reads them: walkFilesSync / sourceFilesIn (sub-plugin trees and test code skipped), readIfExistsSync / pathExistsSync — answered from the ambient FS snapshot (parse-utils' runWithFsSnapshot) when it covers the path, from disk otherwise. Apart from parse-utils so its pure source parsers import no file system: a file scan's record key is its module's whole closure, and these pulled timed-fs, user-path and plugin-id into every scan's."
+}

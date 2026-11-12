@@ -7,14 +7,10 @@ export {
   parseDefineGroup,
   parseStaticCallId,
   parseStringField,
-  pathExistsSync,
-  readIfExistsSync,
   readStaticCallId,
   readStringLiteral,
   stripTypes,
   unresolvableCallIdMessage,
-  walkFilesSync,
-  sourceFilesIn,
 } from "./helpers";
 export type {
   BarrelExport,
@@ -24,7 +20,12 @@ export type {
   StringLiteralResult,
 } from "./helpers";
 export { maskSource } from "./mask-source";
-export { runWithFsSnapshot } from "./snapshot-scope";
+export {
+  assertDiskReadAllowed,
+  currentFsSnapshot,
+  runWithFsSnapshot,
+  snapshotHas,
+} from "./snapshot-scope";
 export type { FsSnapshot, SnapshotDirEntry } from "./snapshot-scope";
 export {
   hostServicesByName,

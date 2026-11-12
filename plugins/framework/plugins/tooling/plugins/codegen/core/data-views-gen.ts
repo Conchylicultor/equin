@@ -4,7 +4,7 @@ import {
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { join, relative } from "path";
 import { writeGenerated } from "./write-generated";
-import { sourceFilesIn } from "@plugins/plugin-meta/plugins/parse-utils/core";
+import { sourceFilesIn } from "@plugins/plugin-meta/plugins/parse-utils/plugins/source-files/core";
 import { buildBarrelFreeTree } from "./barrel-free-tree";
 import { mainBundle } from "./main-bundle";
 import { scanFiles } from "./file-scans";

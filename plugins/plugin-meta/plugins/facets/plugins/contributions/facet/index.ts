@@ -18,10 +18,10 @@ import {
   slotsFacetDef,
 } from "@plugins/plugin-meta/plugins/facets/plugins/slots/core";
 import {
-  readIfExistsSync,
   stripTypes,
   maskSource,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
+import { readIfExistsSync } from "@plugins/plugin-meta/plugins/parse-utils/plugins/source-files/core";
 import {
   type Contribution,
   type ContributionsFacetData,

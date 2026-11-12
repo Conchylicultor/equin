@@ -53,7 +53,7 @@ const tsIcon = seti("typescript");         // { kind: "seti",   name: "typescrip
   the manifest to a re-run of its own generator, so it catches drift but never
   a generator bug (a spread `...symbol("x")` was once dropped from both sides).
   `icons:manifest-covers-uses` reads every use through ESLint's scope analysis
-  instead — `iconUsesIn` (`core/icon-calls.ts`), the same reader the three
+  instead — `iconUsesIn` (the `icon-uses` sub-plugin), the same reader the three
   icons lint rules use — and fails on any name the committed manifest lacks.
   Keep the two readers separate: the cross-check is worth only what it does
   not share with the generator.
@@ -531,7 +531,7 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
     - `useWantedStyleKeys`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shadow --shadow`
-  - Imported by: 589 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 588 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×155
     - `conversations` ×123
     - `primitives` ×53
@@ -551,11 +551,11 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
     - `reports` ×4
     - `review` ×4
     - `audience` ×3
-    - `framework` ×3
     - `hints` ×3
     - `menu-bar` ×3
     - `reorder` ×3
     - `backup` ×2
+    - `framework` ×2
     - `integrations` ×2
     - `map` ×2
     - `screenshot` ×2
@@ -585,25 +585,17 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
     - `BrandName`
     - `BrandRef`
     - `CustomRef`
-    - `DeclaredVariable`
-    - `DeclaredVariables`
-    - `EsNode`
-    - `EsProgram`
     - `IconBody`
-    - `IconCall`
     - `IconFamily`
     - `IconFamilyCoverage`
     - `IconFamilyId`
     - `IconFill`
     - `IconGlyph`
     - `IconGlyphSource`
-    - `IconMarker`
-    - `IconMisuse`
     - `IconMotion`
     - `IconRef`
     - `IconShape`
     - `IconStyle`
-    - `IconUses`
     - `IconWeight`
     - `InlineIconFamily`
     - `LucideName`
@@ -641,10 +633,8 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
     - `ICON_SHAPES`
     - `ICON_WEIGHTS`
     - `iconifyName`
-    - `iconUsesIn`
     - `isIconFamilyId`
     - `isIconMotion`
-    - `isIconRefModule`
     - `isSpriteKey`
     - `isStyleKey`
     - `LUCIDE_ACTIVE_SPRITE`
@@ -688,6 +678,7 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
 - Sub-plugins:
   - **`emoji`** — The <EmojiPicker>: a searchable, categorized emoji grid over frimousse whose emojibase data is served same-origin by the asset mirror; onSelect hands back a parsed Emoji. Plus <EmojiGlyph>, which…
   - **`icon-sets`** — The installed @iconify-json sets, host-side: read one (readIconSet), their versions, and the SymbolName / BrandName / LucideName unions and the saved-names runtime list derived from them — rendered…
+  - **`icon-uses`** — Where a module uses the icon constructors: iconUsesIn (each symbol / brand / seti import followed through ESLint's scope analysis) and isIconRefModule (does an import specifier name the module…
   - **`saved-names`** — The membership-checked SavedSymbolName: a user-picked Material Symbols name, parsed against the installed sets before anything stores it.
   - **`saved-sources`** — The saved-icon source registry: defineSavedIconSource registers a place that stores user-picked icons (its tables, its names, a watch for a non-DB store), and savedIconSources lists them for the…
   - **`sprites`** — Mounts the page's icon sprites inline: the resident default-style sprites from the boot snapshot (present at first paint) plus, on demand, the sprite of every other style a theme scope picks, and…

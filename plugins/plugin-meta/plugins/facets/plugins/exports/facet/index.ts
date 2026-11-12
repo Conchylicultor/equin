@@ -14,9 +14,9 @@ import {
 } from "@plugins/framework/plugins/plugin-id/core";
 import {
   parseBarrelExports,
-  readIfExistsSync,
   maskSource,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
+import { readIfExistsSync } from "@plugins/plugin-meta/plugins/parse-utils/plugins/source-files/core";
 import { crossRefsFacetDef } from "@plugins/plugin-meta/plugins/facets/plugins/cross-refs/core";
 import { type ExportedSymbol, type ExportsData, exportsFacetDef } from "../core";
 import { joinAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";

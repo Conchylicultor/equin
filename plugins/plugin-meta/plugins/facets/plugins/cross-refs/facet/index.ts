@@ -15,16 +15,18 @@ import {
   asPath,
 } from "@plugins/framework/plugins/plugin-id/core";
 import {
-  walkFilesSync,
-  readIfExistsSync,
   findImports,
   runWithFsSnapshot,
   maskSource,
   markerCallSpans,
   matchBracket,
   parseStaticCallId,
-  pathExistsSync,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
+import {
+  walkFilesSync,
+  readIfExistsSync,
+  pathExistsSync,
+} from "@plugins/plugin-meta/plugins/parse-utils/plugins/source-files/core";
 import { APP_STYLESHEET_PATH } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
 import { parse as parseJsonc } from "jsonc-parser";
 import {

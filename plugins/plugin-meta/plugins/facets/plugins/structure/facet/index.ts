@@ -5,10 +5,10 @@ import {
 } from "@plugins/plugin-meta/plugins/facets/core";
 import { standardPluginDirsFromSnapshot } from "@plugins/framework/plugins/tooling/plugins/collected-dir/plugins/discovery/core";
 import {
-  readIfExistsSync,
   type FsSnapshot,
   type SnapshotDirEntry,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
+import { readIfExistsSync } from "@plugins/plugin-meta/plugins/parse-utils/plugins/source-files/core";
 import { type StructureFacetData, structureFacetDef } from "../core";
 import {
   type AppPath,

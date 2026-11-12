@@ -1,8 +1,6 @@
 import { join } from "path";
 import {
   matchBracket,
-  walkFilesSync,
-  readIfExistsSync,
   readStringLiteral,
   findImports,
   maskSource,
@@ -13,6 +11,10 @@ import {
   stripTypes,
   type MarkerCallSpan,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
+import {
+  walkFilesSync,
+  readIfExistsSync,
+} from "@plugins/plugin-meta/plugins/parse-utils/plugins/source-files/core";
 import type {
   PaneDeclaration,
   RouteDeclaration,

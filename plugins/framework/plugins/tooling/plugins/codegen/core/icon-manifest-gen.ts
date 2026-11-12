@@ -3,7 +3,7 @@ import {
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { relative } from "path";
-import { sourceFilesIn } from "@plugins/plugin-meta/plugins/parse-utils/core";
+import { sourceFilesIn } from "@plugins/plugin-meta/plugins/parse-utils/plugins/source-files/core";
 import { buildBarrelFreeTree } from "./barrel-free-tree";
 import { scanFiles } from "./file-scans";
 import { loadTypescript } from "@plugins/framework/plugins/tooling/plugins/import-closure/core";

@@ -40,7 +40,15 @@ export interface FileScan<T> {
    * commit in four while the answers almost never change.
    */
   url: string;
-  /** Parameters the scan reads besides the file (part of the key). */
+  /**
+   * Parameters the scan reads besides the file (part of the key). Each
+   * distinct parameter list keeps its own record of every file, all re-keyed
+   * together when the scan's closure moves — so never a parameter that only
+   * selects PART of an answer (which kinds to report): scan for all of it and
+   * let the caller filter. plugin-refs' scan took its kind set as one and
+   * kept three records of each file, a third of the store's file records
+   * (2026-11-12).
+   */
   params?: readonly string[];
   scan(src: string, rel: string): T;
 }

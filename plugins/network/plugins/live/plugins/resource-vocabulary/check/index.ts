@@ -5,10 +5,8 @@ import type {
   CheckResult,
 } from "@plugins/framework/plugins/tooling/core";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
-import {
-  parseBarrelExports,
-  readIfExistsSync,
-} from "@plugins/plugin-meta/plugins/parse-utils/core";
+import { parseBarrelExports } from "@plugins/plugin-meta/plugins/parse-utils/core";
+import { readIfExistsSync } from "@plugins/plugin-meta/plugins/parse-utils/plugins/source-files/core";
 import {
   resourceDescriptorFactories,
   resourceRegisterMarkers,

@@ -30932,7 +30932,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `packages/ticket-line` (1 debt)
               - `packages/timed-fs` (0 debt)
               - `plugin-meta/barrel-import` (2 debt)
-              - `plugin-meta/parse-utils` (1 debt)
+              - `plugin-meta/parse-utils/source-files` (1 debt)
               - `plugin-meta/plugin-records` (1 debt)
               - `plugin-meta/plugin-refs` (1 debt)
               - `plugin-meta/plugin-tree` (2 debt)
@@ -31284,7 +31284,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`codegen`** — Plugin doc generation and registry codegen
           - Core:
             - Uses: 150 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
-              - `plugin-meta/parse-utils` ×19
+              - `plugin-meta/parse-utils` ×17
               - `config_v2` ×16
               - `framework/plugin-id` ×13
               - `network/live/resource-vocabulary` ×11
@@ -31307,6 +31307,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/tooling/web-artifacts` ×2
               - `infra/paths` ×2
               - `network/live/resource-protocol` ×2
+              - `plugin-meta/parse-utils/source-files` ×2
               - `plugin-meta/plugin-tree` ×2
               - `fields/reorder-tree.REORDER_NODE_LEGEND`
               - `framework/tooling/guards/agent-policy.agentPolicySettings`
@@ -31320,7 +31321,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `plugin-meta/plugin-tree/faceted.buildFacetedPluginTree`
               - `primitives/css/ui-kit.APP_STYLESHEET_PATH`
               - `ui/icons/icon-sets.renderSymbolNameFilesSync`
-              - `ui/icons.isIconRefModule`
+              - `ui/icons/icon-uses.isIconRefModule`
             - Exports (types):
               - `AuthoredOverrideSeedResult`
               - `BarrelEvaluation`
@@ -45247,16 +45248,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Contributes: `PluginChangesSlots.DiffRenderer` "Structure"
                 - Uses: `review/plugin-changes.PluginChangesSlots`
     - **`parse-utils`**
+      - Cross-plugin:
+        - Imported by:
+          - `framework/tooling/boundaries`
+          - `framework/tooling/checks`
+          - `framework/tooling/codegen`
+          - `framework/tooling/collected-dir/discovery`
+          - `framework/tooling/test-layout`
+          - `network/live/resource-vocabulary`
+          - `plugin-meta/parse-utils/source-files`
+          - `plugin-meta/plugin-refs`
+          - `plugin-meta/plugin-tree`
+          - `plugin-meta/plugin-tree/faceted`
+          - `plugin-meta/token-usage`
+      - Exemptions:
+        - Exempts itself from: `import-scan-safety/no-adhoc-import-scan` — `core/find-imports.ts` (sanctioned)
       - Core:
-        - Uses:
-          - `framework/plugin-id.isTestCodePath`
-          - `framework/plugin-id.TESTING_FOLDER`
-          - `framework/plugin-id.TESTS_DIR`
-          - `infra/host-fs/user-path.AppPath`
-          - `infra/host-fs/user-path.joinAppPath`
-          - `packages/timed-fs.existsSync`
-          - `packages/timed-fs.readdirSync`
-          - `packages/timed-fs.readFileSync`
         - Exports (types):
           - `BarrelExport`
           - `DefaultExportObject`
@@ -45272,6 +45279,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `StringFieldResult`
           - `StringLiteralResult`
         - Exports (values):
+          - `assertDiskReadAllowed`
+          - `currentFsSnapshot`
           - `defaultExportObjectBody`
           - `endpointExports`
           - `findImports`
@@ -45289,32 +45298,37 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `parseServerContributionDeclarations`
           - `parseStaticCallId`
           - `parseStringField`
-          - `pathExistsSync`
           - `providedServiceNames`
-          - `readIfExistsSync`
           - `readStaticCallId`
           - `readStringLiteral`
           - `runWithFsSnapshot`
-          - `sourceFilesIn`
+          - `snapshotHas`
           - `stripTypes`
           - `unresolvableCallIdMessage`
-          - `walkFilesSync`
-      - Cross-plugin:
-        - Imported by:
-          - `framework/tooling/boundaries`
-          - `framework/tooling/checks`
-          - `framework/tooling/codegen`
-          - `framework/tooling/collected-dir/discovery`
-          - `framework/tooling/test-layout`
-          - `network/live/resource-vocabulary`
-          - `plugin-meta/plugin-refs`
-          - `plugin-meta/plugin-tree`
-          - `plugin-meta/plugin-tree/faceted`
-          - `plugin-meta/token-usage`
-      - Exemptions:
-        - Exempts itself from:
-          - `import-scan-safety/no-adhoc-import-scan` — `core/find-imports.ts` (sanctioned)
-          - `boundaries/no-platform-api` — `core/helpers.ts` (debt)
+      - Plugins:
+        - **`source-files`** — A plugin's source files and their bytes, as a scanner reads them: walkFilesSync / sourceFilesIn (sub-plugin trees and test code skipped), readIfExistsSync / pathExistsSync — answered from the ambient FS snapshot (parse-utils' runWithFsSnapshot) when it covers the path, from disk otherwise. Apart from parse-utils so its pure source parsers import no file system: a file scan's record key is its module's whole closure, and these pulled timed-fs, user-path and plugin-id into every scan's.
+          - Core:
+            - Uses:
+              - `framework/plugin-id.isTestCodePath`
+              - `framework/plugin-id.TESTING_FOLDER`
+              - `framework/plugin-id.TESTS_DIR`
+              - `infra/host-fs/user-path.AppPath`
+              - `infra/host-fs/user-path.joinAppPath`
+              - `packages/timed-fs.existsSync`
+              - `packages/timed-fs.readdirSync`
+              - `packages/timed-fs.readFileSync`
+              - `plugin-meta/parse-utils.assertDiskReadAllowed`
+              - `plugin-meta/parse-utils.currentFsSnapshot`
+              - `plugin-meta/parse-utils.snapshotHas`
+            - Exports (values):
+              - `pathExistsSync`
+              - `readIfExistsSync`
+              - `sourceFilesIn`
+              - `walkFilesSync`
+          - Cross-plugin:
+            - Imported by: `framework/tooling/codegen`
+          - Exemptions:
+            - Exempts itself from: `boundaries/no-platform-api` — `core/source-files.ts` (debt)
     - **`plugin-health`** — Displays health review status and staleness in the plugin detail pane. Per-plugin health review tracking.
       - Web:
         - Contributes:
@@ -60503,7 +60517,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useWantedStyleKeys`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
-        - Imported by: 589 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+        - Imported by: 588 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
           - `apps` ×155
           - `conversations` ×123
           - `primitives` ×53
@@ -60523,11 +60537,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `reports` ×4
           - `review` ×4
           - `audience` ×3
-          - `framework` ×3
           - `hints` ×3
           - `menu-bar` ×3
           - `reorder` ×3
           - `backup` ×2
+          - `framework` ×2
           - `integrations` ×2
           - `map` ×2
           - `screenshot` ×2
@@ -60557,25 +60571,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `BrandName`
           - `BrandRef`
           - `CustomRef`
-          - `DeclaredVariable`
-          - `DeclaredVariables`
-          - `EsNode`
-          - `EsProgram`
           - `IconBody`
-          - `IconCall`
           - `IconFamily`
           - `IconFamilyCoverage`
           - `IconFamilyId`
           - `IconFill`
           - `IconGlyph`
           - `IconGlyphSource`
-          - `IconMarker`
-          - `IconMisuse`
           - `IconMotion`
           - `IconRef`
           - `IconShape`
           - `IconStyle`
-          - `IconUses`
           - `IconWeight`
           - `InlineIconFamily`
           - `LucideName`
@@ -60613,10 +60619,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ICON_SHAPES`
           - `ICON_WEIGHTS`
           - `iconifyName`
-          - `iconUsesIn`
           - `isIconFamilyId`
           - `isIconMotion`
-          - `isIconRefModule`
           - `isSpriteKey`
           - `isStyleKey`
           - `LUCIDE_ACTIVE_SPRITE`
@@ -60727,6 +60731,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/icons`
           - Exemptions:
             - Exempts itself from: `boundaries/no-platform-api` — `core/internal/symbol-names.ts` (debt)
+        - **`icon-uses`** — Where a module uses the icon constructors: iconUsesIn (each symbol / brand / seti import followed through ESLint's scope analysis) and isIconRefModule (does an import specifier name the module exporting them). A leaf with no imports, so the icon scans (the manifest's and manifest-covers-uses') and the icons lint rules read icon uses without loading the icons core — a file scan's record key follows these two modules, not the icons barrel and its glyph tables.
+          - Cross-plugin:
+            - Imported by: `framework/tooling/codegen`
+          - Core:
+            - Exports (types):
+              - `DeclaredVariable`
+              - `DeclaredVariables`
+              - `EsNode`
+              - `EsProgram`
+              - `IconCall`
+              - `IconMarker`
+              - `IconMisuse`
+              - `IconUses`
+            - Exports (values):
+              - `iconUsesIn`
+              - `isIconRefModule`
         - **`saved-names`** — The membership-checked SavedSymbolName: a user-picked Material Symbols name, parsed against the installed sets before anything stores it.
           - Core:
             - Uses: `packages/zod-introspect.retype`

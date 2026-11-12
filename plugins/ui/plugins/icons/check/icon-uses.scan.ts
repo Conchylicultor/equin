@@ -1,6 +1,9 @@
 import { parseForESLint } from "@typescript-eslint/parser";
 import type { FileScan } from "@plugins/plugin-meta/plugins/plugin-records/core";
-import { iconUsesIn, type IconMarker } from "../core";
+import {
+  iconUsesIn,
+  type IconMarker,
+} from "@plugins/ui/plugins/icons/plugins/icon-uses/core";
 
 // The per-file scan behind `icons:manifest-covers-uses`. A scan's records are
 // keyed by its module's whole closure (`FileScan.url`), so this module holds

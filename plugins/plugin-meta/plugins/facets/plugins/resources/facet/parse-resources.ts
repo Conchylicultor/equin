@@ -1,13 +1,15 @@
 import { sep } from "path";
 import {
-  walkFilesSync,
-  readIfExistsSync,
   findMarkerCalls,
   maskSource,
   matchBracket,
   lineAt,
   parseStringField,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
+import {
+  walkFilesSync,
+  readIfExistsSync,
+} from "@plugins/plugin-meta/plugins/parse-utils/plugins/source-files/core";
 import {
   buildDescriptorIndex,
   isResourceVocabularyOwner,

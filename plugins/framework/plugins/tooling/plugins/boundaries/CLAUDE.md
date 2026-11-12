@@ -43,7 +43,7 @@ Test code is a second dimension beside the folder, defined once by
   (`core/evaluate.ts`) asks this before the own-folder exemption.
 - **`testing/` sits directly under a runtime folder, never under `e2e/`.**
   Anywhere else it is reported (`misplaced-testing`). That keeps the name
-  unambiguous, so walkers (`parse-utils`' `walkFilesSync`) skip it by name, which
+  unambiguous, so walkers (`parse-utils/source-files`' `walkFilesSync`) skip it by name, which
   keeps a harness's imports out of a plugin's docs and composition closure.
 - `@plugins/<p>/<runtime>/testing` is the one legal import ending beyond the
   barrel (plugin-boundaries R4), and the testing barrel is held to R3 like any
@@ -356,7 +356,7 @@ takes a `debt` exemption on the check's id.
     - `packages/ticket-line` (1 debt)
     - `packages/timed-fs` (0 debt)
     - `plugin-meta/barrel-import` (2 debt)
-    - `plugin-meta/parse-utils` (1 debt)
+    - `plugin-meta/parse-utils/source-files` (1 debt)
     - `plugin-meta/plugin-records` (1 debt)
     - `plugin-meta/plugin-refs` (1 debt)
     - `plugin-meta/plugin-tree` (2 debt)

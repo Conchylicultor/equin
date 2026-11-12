@@ -15,14 +15,16 @@ import {
   type SlotHandle,
 } from "@plugins/framework/plugins/slot-declaration/core";
 import {
-  readIfExistsSync,
   stripTypes,
   maskSource,
   parseDefineGroup,
   markerCallSpans,
   matchBracket,
-  walkFilesSync,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
+import {
+  readIfExistsSync,
+  walkFilesSync,
+} from "@plugins/plugin-meta/plugins/parse-utils/plugins/source-files/core";
 import { type SlotDef, slotsFacetDef } from "../core";
 import {
   type AppPath,

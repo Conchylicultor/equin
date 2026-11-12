@@ -1,6 +1,7 @@
 import { lintRuleCreator } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 import type { TSESTree } from "@typescript-eslint/utils";
-import { iconUsesIn, RESERVED_STATE_GLYPHS } from "../core";
+import { RESERVED_STATE_GLYPHS } from "../core";
+import { iconUsesIn } from "@plugins/ui/plugins/icons/plugins/icon-uses/core";
 
 const createRule = lintRuleCreator(import.meta.url);
 

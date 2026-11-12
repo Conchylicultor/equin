@@ -10,12 +10,14 @@ import type {
 } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import {
   endpointExports,
-  readIfExistsSync,
   stripTypes,
   matchBracket,
   maskSource,
-  walkFilesSync,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
+import {
+  readIfExistsSync,
+  walkFilesSync,
+} from "@plugins/plugin-meta/plugins/parse-utils/plugins/source-files/core";
 import { type RouteDef, type RoutesData, routesFacetDef } from "../core";
 import {
   type AppPath,

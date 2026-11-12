@@ -9,7 +9,7 @@ import {
   pathExistsSync,
   readIfExistsSync,
   walkFilesSync,
-} from "@plugins/plugin-meta/plugins/parse-utils/core";
+} from "@plugins/plugin-meta/plugins/parse-utils/plugins/source-files/core";
 import {
   type ExemptedBy,
   type ExemptionsData,
