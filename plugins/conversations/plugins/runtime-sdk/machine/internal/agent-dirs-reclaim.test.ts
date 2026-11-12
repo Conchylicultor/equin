@@ -59,9 +59,12 @@ function factsOf(
   workspaces: Record<string, boolean>,
   // A clone is current unless its file name says otherwise.
   cloneIsCurrent: (path: string) => boolean = (path) => !path.endsWith("old"),
+  sharedAgentBuns: AppPath[] = [],
 ): AgentDirFacts {
   return {
     cloneIsCurrent: (path) => Promise.resolve(cloneIsCurrent(path)),
+    sharedAgentBuns: () => Promise.resolve(sharedAgentBuns),
+    sharedBunIsCurrent: (path) => Promise.resolve(!path.includes("bun-old")),
     attemptsOfConversations: (ids) =>
       Promise.resolve(
         new Map(
@@ -145,6 +148,7 @@ describe("sweepReclaimedAgentDirs (the backstop)", () => {
       unknown: 1,
       namespacesRemoved: 0,
       staleClonesRemoved: 0,
+      staleSharedBunsRemoved: 0,
     });
     expect(existsSync(gone)).toBe(false);
     expect(existsSync(present)).toBe(true);
@@ -205,6 +209,7 @@ describe("sweepReclaimedAgentDirs (the backstop)", () => {
       unknown: 0,
       namespacesRemoved: 0,
       staleClonesRemoved: 0,
+      staleSharedBunsRemoved: 0,
     });
   });
 });
@@ -237,6 +242,24 @@ describe("sweepReclaimedAgentDirs: clones a stopped agent kept", () => {
     expect(existsSync(current)).toBe(true);
     expect(existsSync(old)).toBe(false);
     expect(existsSync(oldInCheckout)).toBe(false);
+  });
+
+  test("a stopped agent's per-conversation bun clone goes, its claude stays", async () => {
+    agentDir(OWN, "conv-a");
+    const claude = clone(OWN, "conv-a", "equin · conv-a · Fix login");
+    const legacyBun = clone(OWN, "conv-a", "equin · agent · conv-a");
+    // As the job decides it: only a claude clone is current in `bin/`.
+    const facts = factsOf(
+      { "conv-a": "att-1" },
+      { "att-1": true },
+      (path) => !path.includes("equin · agent"),
+    );
+
+    const r = await sweepReclaimedAgentDirs(roots, facts, { dryRun: false });
+
+    expect(r.staleClonesRemoved).toBe(1);
+    expect(existsSync(claude)).toBe(true);
+    expect(existsSync(legacyBun)).toBe(false);
   });
 
   test("a running agent's clones are left alone, outdated or not", async () => {
@@ -272,6 +295,83 @@ describe("sweepReclaimedAgentDirs: clones a stopped agent kept", () => {
     const facts = factsOf({ "conv-a": "att-1" }, { "att-1": true });
     const r = await sweepReclaimedAgentDirs(roots, facts, { dryRun: true });
     expect(r.staleClonesRemoved).toBe(1);
+    expect(existsSync(old)).toBe(true);
+  });
+});
+
+describe("sweepReclaimedAgentDirs: the shared agent bun of an outdated Bun", () => {
+  function sharedBun(version: string): AppPath {
+    const dir = join(root, "process-names", `bun-${version}`);
+    mkdirSync(dir, { recursive: true });
+    const path = joinAppPath(asAppPath(dir), "equin · agent");
+    writeFileSync(path, "bun");
+    return path;
+  }
+
+  function launched(ns: string, id: string, namedBun: string | null): void {
+    writeFileSync(
+      join(agentDir(ns, id), "launch.json"),
+      JSON.stringify({ cwd: "/w", prompt: null, namedBun }),
+    );
+  }
+
+  test("an outdated one goes, the current one stays", async () => {
+    const current = sharedBun("new");
+    const old = sharedBun("old");
+    const facts = factsOf({}, {}, undefined, [current, old]);
+
+    const r = await sweepReclaimedAgentDirs(roots, facts, { dryRun: false });
+
+    expect(r.staleSharedBunsRemoved).toBe(1);
+    expect(existsSync(current)).toBe(true);
+    expect(existsSync(old)).toBe(false);
+  });
+
+  test("one a running agent executes stays, in any namespace", async () => {
+    const old = sharedBun("old");
+    launched("att-2", "conv-t", old);
+    pidFile("att-2", "conv-t", `${String(process.pid)}\naccount`);
+    const facts = factsOf({}, { "att-2": true }, undefined, [old]);
+
+    const r = await sweepReclaimedAgentDirs(roots, facts, { dryRun: false });
+
+    expect(r.staleSharedBunsRemoved).toBe(0);
+    expect(existsSync(old)).toBe(true);
+  });
+
+  test("a stopped agent that ran on it does not keep it", async () => {
+    const old = sharedBun("old");
+    launched(OWN, "conv-a", old);
+    pidFile(OWN, "conv-a", `${DEAD_PID}\naccount`);
+    const facts = factsOf({ "conv-a": "att-1" }, { "att-1": true }, undefined, [
+      old,
+    ]);
+
+    const r = await sweepReclaimedAgentDirs(roots, facts, { dryRun: false });
+
+    expect(r.staleSharedBunsRemoved).toBe(1);
+    expect(existsSync(old)).toBe(false);
+  });
+
+  test("a running agent whose launch.json is missing keeps every one", async () => {
+    const old = sharedBun("old");
+    agentDir(OWN, "conv-a");
+    pidFile(OWN, "conv-a", `${String(process.pid)}\naccount`);
+    const facts = factsOf({ "conv-a": "att-1" }, { "att-1": true }, undefined, [
+      old,
+    ]);
+
+    const r = await sweepReclaimedAgentDirs(roots, facts, { dryRun: false });
+
+    expect(r.staleSharedBunsRemoved).toBe(0);
+    expect(existsSync(old)).toBe(true);
+  });
+
+  test("a dry run counts it and keeps it", async () => {
+    const old = sharedBun("old");
+    const facts = factsOf({}, {}, undefined, [old]);
+    const r = await sweepReclaimedAgentDirs(roots, facts, { dryRun: true });
+    expect(r.staleSharedBunsRemoved).toBe(1);
     expect(existsSync(old)).toBe(true);
   });
 });

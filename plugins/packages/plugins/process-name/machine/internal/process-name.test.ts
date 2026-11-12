@@ -78,8 +78,26 @@ describe("cloneNamedBinary", () => {
     const live = `.${String(process.ppid)}.1.tmp`;
     writeFileSync(join(dir, live), "");
     await cloneNamedBinary({ bin, dir, name: "equin · x" });
-    expect(readdirSync(dir).sort()).toEqual([live, "equin · x"].sort());
+    expect(readdirSync(dir).sort()).toEqual(
+      [live, "equin · x", ".locks"].sort(),
+    );
     expect(statSync(bin).nlink).toBe(1);
+  });
+
+  test("concurrent makers of one name make it once: none renames over another's file", async () => {
+    const root = asAppPath(mkdtempSync(join(tmpdir(), "process-name-")));
+    const bin = fakeBin(root);
+    const dir = asAppPath(join(root, "names"));
+    const inos = await Promise.all(
+      Array.from({ length: 6 }, async () => {
+        const named = await cloneNamedBinary({ bin, dir, name: "equin · x" });
+        if (named.kind !== "cloned") throw new Error("not cloned");
+        // What a process exec'ing it as soon as its start returned would run.
+        return statSync(named.path).ino;
+      }),
+    );
+    expect(new Set(inos).size).toBe(1);
+    expect(statSync(join(dir, "equin · x")).ino).toBe(inos[0]!);
   });
 
   test("an old build's hardlink at the name is replaced by a clone", async () => {

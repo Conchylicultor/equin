@@ -1,4 +1,5 @@
 import { PRODUCT_NAME } from "@plugins/framework/plugins/product-name/core";
+import { waitForFlock } from "@plugins/packages/plugins/flock/core";
 import { constants, type Stats } from "node:fs";
 import {
   copyFile,
@@ -63,6 +64,14 @@ const REFUSALS = new Set(["EXDEV", "EPERM", "ENOTSUP", "EACCES", "ENOSYS"]);
  * clone is swapped in with one rename, so a concurrent launch through the same
  * name never finds it missing or half-made, and an upgrade reaches it. A
  * hardlink left by an older build is not a clone, so it is replaced.
+ *
+ * Making one holds a per-name kernel lock across processes
+ * (`dir/.locks/<name>`): a name many processes run through (the shared
+ * `equin · agent`) is made by the first, and the others, once it is done,
+ * find it current. Two makers would
+ * each rename their own clone in, and the second rename would unname the
+ * first's file while a process that exec'd it may still be under macOS's
+ * malware scan — the ENOENT SIGKILL at the top of this file.
  */
 export async function cloneNamedBinary(opts: {
   bin: AppPath;
@@ -75,7 +84,24 @@ export async function cloneNamedBinary(opts: {
   await mkdir(opts.dir, { recursive: true });
   await removeOrphanStaging(opts.dir);
   if (await isCurrentClone(path, sourceStat)) return { kind: "cloned", path };
-  const staging = joinAppPath(opts.dir, `.${stagingSuffix()}`);
+  // Only on this path, which runs when the name is missing or outdated: the
+  // wait is a child process.
+  const held = await waitForFlock(joinAppPath(opts.dir, ".locks", opts.name));
+  try {
+    if (await isCurrentClone(path, sourceStat)) return { kind: "cloned", path };
+    return await swapInClone(source, opts.dir, path);
+  } finally {
+    await held.release();
+  }
+}
+
+/** Clone `source` beside `path` and rename it over `path`. */
+async function swapInClone(
+  source: string,
+  dir: AppPath,
+  path: AppPath,
+): Promise<NamedBinary> {
+  const staging = joinAppPath(dir, `.${stagingSuffix()}`);
   try {
     // The clone keeps the source's mtime (to the nanosecond), which is how
     // `isCurrentClone` — and the `./equin` script — recognise it later.

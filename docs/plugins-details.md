@@ -21498,7 +21498,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/endpoints.implementMachine`
           - `network/live.serveValue`
           - `packages/process-name.cloneNamedBinary`
+          - `packages/process-name.cloneSharedBun`
           - `packages/process-name.isCurrentCloneOf`
+          - `packages/process-name.sharedBunDir`
+          - `packages/process-name.sharedBunsNamed`
         - Register:
           - `defineFileWatcher('runtime-sdk.events')`
           - `defineDaemon('runtime-sdk.agent')`
@@ -40542,10 +40545,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `holdParentLifeline`
           - `waitForFlock`
       - Cross-plugin:
-        - Imported by: 22 plugins — full list in [`plugins/packages/plugins/flock/REFERENCE.md`](../plugins/packages/plugins/flock/REFERENCE.md)
+        - Imported by: 23 plugins — full list in [`plugins/packages/plugins/flock/REFERENCE.md`](../plugins/packages/plugins/flock/REFERENCE.md)
           - `infra` ×9
           - `framework` ×5
-          - `packages` ×3
+          - `packages` ×4
           - `apps/chord/song-index`
           - `debug/browser-recordings/writer`
           - `integrations/youtube/audio-fetch`
@@ -40787,8 +40790,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `CHECKOUT_BUN_DIR`
           - `checkoutBun`
           - `cloneNamedBinary`
+          - `cloneSharedBun`
           - `isCurrentCloneOf`
           - `refreshCheckoutBun`
+          - `sharedBunDir`
+          - `sharedBunsNamed`
     - **`refcount-hub`** — Keyed refcounted subscription hub: createRefcountHub(open) shares ONE underlying subscription per key among every holder — the first acquire opens it (sync or async), each event fans out to every holder, the last release stops it — so N readers of one source cost one watch.
       - Cross-plugin:
         - Imported by:

@@ -19,7 +19,7 @@ the agent browser host, each running op's CLI process (op markers — so an
 agent's build is the op's), then processes heading a bucket by name — Postgres
 and PgBouncer (executable name), the app bundle (`equin.app`: the gateway, and
 through it every backend), a `equin · server · …` / `equin · central` backend,
-an `equin · agent · conv-…` agent (and its `equin · conv-… · <title>` Claude
+an `equin · agent` agent (and its `equin · conv-… · <title>` Claude
 Code) — the names `packages/process-name` gives, read back with its
 `processKindOf`. The rest is Chrome by its bundle, else other.
 

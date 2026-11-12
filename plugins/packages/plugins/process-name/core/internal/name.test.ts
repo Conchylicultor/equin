@@ -26,6 +26,11 @@ describe("processKindOf", () => {
     ).toBe("agent");
     expect(
       processKindOf(
+        "/h/u/.equin/cache/process-names/bun-1.4.4/processes/equin · agent /repo/agent.ts --dir /h/u/x",
+      ),
+    ).toBe("agent");
+    expect(
+      processKindOf(
         "node_modules/.cache/equin-bun/verbs/equin · build plugins/cli/bin/index.ts build",
       ),
     ).toBe("build");

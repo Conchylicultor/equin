@@ -7,7 +7,9 @@ import {
   pidAlive,
   readPidFile,
 } from "@plugins/infra/plugins/spawn/plugins/daemon/server";
-import { readdir } from "@plugins/packages/plugins/timed-fs/core";
+import { readdir, readFile } from "@plugins/packages/plugins/timed-fs/core";
+import { z } from "zod";
+import { AGENT_OPTIONS_FILE, type AgentLaunchOptions } from "../../core";
 
 // An agent's directory (`<agentsRoot>/<ns>/<conversationId>/`: launch.json,
 // events.jsonl, agent.log) is worth something only while its conversation can
@@ -56,8 +58,14 @@ export interface AgentDirFacts {
   /**
    * Whether a named binary in an agent's `bin/` is a current clone of the
    * executable it was cloned from — what the agent's next start would keep.
+   * Only its claude: a per-conversation bun clone an older start left there is
+   * no longer made, so it is never current.
    */
   cloneIsCurrent(path: AppPath): Promise<boolean>;
+  /** The machine-wide `equin · agent` bun clones, one per Bun version that made one. */
+  sharedAgentBuns(): Promise<AppPath[]>;
+  /** Whether a shared agent bun is a current clone of the Bun a start here would run. */
+  sharedBunIsCurrent(path: AppPath): Promise<boolean>;
 }
 
 export interface AgentDirsReclaim {
@@ -73,6 +81,8 @@ export interface AgentDirsReclaim {
   namespacesRemoved: number;
   /** Outdated clones deleted from kept directories (see {@link pruneStaleClones}). */
   staleClonesRemoved: number;
+  /** Outdated shared agent buns deleted (see {@link pruneStaleSharedBuns}). */
+  staleSharedBunsRemoved: number;
 }
 
 const emptyReclaim = (): AgentDirsReclaim => ({
@@ -82,6 +92,7 @@ const emptyReclaim = (): AgentDirsReclaim => ({
   unknown: 0,
   namespacesRemoved: 0,
   staleClonesRemoved: 0,
+  staleSharedBunsRemoved: 0,
 });
 
 /**
@@ -168,15 +179,85 @@ export async function sweepReclaimedAgentDirs(
     if (count === 0 && !opts.dryRun) await removeEmptyNamespace(roots, ns, out);
     else if (count === 0) out.namespacesRemoved++;
   }
+  await pruneStaleSharedBuns(roots, facts, out, opts);
   return out;
 }
 
 /**
- * A kept agent directory's outdated clones. An agent keeps its named claude and
- * bun past its exit (`bin/agent.ts`): a fresh one costs a malware scan on its
- * first exec, and the next start reuses a current one. A clone an upgrade has
- * since replaced is no use to that start (it re-clones) and pins the old
- * build's blocks, so it goes here — unless the agent runs on it.
+ * The shared `equin · agent` buns a Bun upgrade left behind (one per Bun
+ * version, `packages/process-name`'s `bun-<version>/processes/`): no start here
+ * runs one again, and each pins its Bun's blocks. One a running agent executes
+ * stays — by its launch.json's `namedBun`, in any namespace — and when a
+ * running agent's launch.json cannot be read none goes this pass.
+ *
+ * Not seen: an agent between its launch.json and its pid file (the login
+ * shell, the exec and its scan, agent.ts loading — seconds). Only a backend
+ * still on an outdated Bun starts one on such a clone; if this daily pass hits
+ * that window, that launch fails (AgentStartError: the exec finds no file, or
+ * macOS kills it as it scans), shown as the conversation's failed start, and
+ * its next start clones the name again.
+ */
+async function pruneStaleSharedBuns(
+  roots: AgentDirRoots,
+  facts: AgentDirFacts,
+  out: AgentDirsReclaim,
+  opts: { dryRun: boolean },
+): Promise<void> {
+  const stale: AppPath[] = [];
+  for (const path of await facts.sharedAgentBuns())
+    if (!(await facts.sharedBunIsCurrent(path))) stale.push(path);
+  if (stale.length === 0) return;
+  const inUse = await runningAgentBuns(roots);
+  if (inUse === "unknown") return;
+  for (const path of stale) {
+    if (inUse.has(path)) continue;
+    out.staleSharedBunsRemoved++;
+    if (!opts.dryRun) await rm(path, { force: true });
+  }
+}
+
+/** The one launch.json field this reads — whatever else a start wrote there. */
+const LaunchedBunSchema = z.object({
+  namedBun: z.string().nullable().default(null),
+}) satisfies z.ZodType<Pick<AgentLaunchOptions, "namedBun">, unknown>;
+
+/**
+ * The bun every running agent on this machine executes (its launch.json's
+ * `namedBun`), or "unknown" when a running agent's launch.json is missing.
+ */
+async function runningAgentBuns(
+  roots: AgentDirRoots,
+): Promise<Set<string> | "unknown"> {
+  const out = new Set<string>();
+  for (const ns of await dirsIn(roots.pidsRoot)) {
+    for (const file of await filesIn(joinAppPath(roots.pidsRoot, ns))) {
+      if (!file.endsWith(".pid")) continue;
+      if (!(await agentMayRun(joinAppPath(roots.pidsRoot, ns, file)))) continue;
+      const id = file.slice(0, -".pid".length);
+      let text: string;
+      try {
+        text = await readFile(
+          joinAppPath(roots.agentsRoot, ns, id, AGENT_OPTIONS_FILE),
+          "utf8",
+        );
+      } catch (err) {
+        if ((err as NodeJS.ErrnoException).code === "ENOENT") return "unknown";
+        throw err;
+      }
+      const { namedBun } = LaunchedBunSchema.parse(JSON.parse(text));
+      if (namedBun !== null) out.add(namedBun);
+    }
+  }
+  return out;
+}
+
+/**
+ * A kept agent directory's outdated clones. An agent keeps its named claude
+ * past its exit: a fresh one costs a malware scan on its first exec, and the
+ * next start reuses a current one. A clone an upgrade has since replaced is no
+ * use to that start (it re-clones) and pins the old build's blocks, so it goes
+ * here — unless the agent runs on it. So does a per-conversation bun clone an
+ * older start made (the agent now runs the shared `equin · agent`).
  */
 async function pruneStaleClones(
   roots: AgentDirRoots,

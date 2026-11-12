@@ -1,8 +1,9 @@
 import { defineDataDir } from "@plugins/infra/plugins/paths/core";
 
 /**
- * The CLI's named Buns, shared by every checkout on the machine:
- * `bun-<version>/equin · <verb>`, one APFS clone per verb and Bun version.
+ * The machine's shared named Buns: `bun-<version>/equin · <verb>` for the CLI
+ * and `bun-<version>/processes/equin · agent` for the SDK agents, one APFS clone per
+ * name and Bun version, shared by every checkout and backend.
  *
  * Machine-wide, not per checkout, because macOS scans a fresh executable on its
  * first exec (~1 s and two full reads of the 88 MB binary, by syspolicyd): one
@@ -20,7 +21,7 @@ export const processNamesDir = defineDataDir({
   name: "process-names",
   owner: "packages/process-name",
   description:
-    "One named APFS clone of Bun per CLI verb and Bun version (bun-<version>/equin · <verb>), shared by every checkout so macOS scans each name once, not once per worktree",
+    "One named APFS clone of Bun per name and Bun version (bun-<version>/equin · <verb> for the CLI, bun-<version>/processes/equin · agent for SDK agents), shared by every checkout so macOS scans each name once, not once per worktree or conversation",
   reclaim: { kind: "safe" },
 });
 

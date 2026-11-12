@@ -8,6 +8,11 @@ export {
   refreshCheckoutBun,
 } from "./internal/process-name";
 export type { NamedBinary } from "./internal/process-name";
+export {
+  cloneSharedBun,
+  sharedBunDir,
+  sharedBunsNamed,
+} from "./internal/shared-bun";
 
 export default {
   description:

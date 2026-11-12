@@ -1,5 +1,4 @@
-import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdir, rename, rm, writeFile } from "node:fs/promises";
 import { openOwnedFd } from "@plugins/packages/plugins/owned-fd/core";
 import {
   exists,
@@ -40,11 +39,13 @@ import { liveAgentIds } from "./agent-processes";
 import { readClaudeUsage } from "./claude-usage";
 import { resolveDisclaimExec } from "./disclaim";
 import { namedClaudeBin } from "./named-claude";
-import { cloneNamedBinary } from "@plugins/packages/plugins/process-name/machine";
+import {
+  cloneSharedBun,
+  sharedBunDir,
+} from "@plugins/packages/plugins/process-name/machine";
 import { processName } from "@plugins/packages/plugins/process-name/core";
 import {
   AGENT_SCRIPT,
-  agentBinDir,
   agentDir,
   agentLogPath,
   agentOptionsPath,
@@ -209,17 +210,16 @@ export async function startAgentProcess(
     previous: await previousNamedClaudeBin(id),
   });
   // This backend's own bun, by path (the login shell's PATH is the account's),
-  // under the conversation's name so Activity Monitor tells the agents apart.
-  const bun = await cloneNamedBinary({
-    bin: asAppPath(process.execPath),
-    dir: agentBinDir(id),
-    name: processName("agent", id),
-  });
+  // named `equin · agent` — one clone per machine and Bun version, shared by
+  // every agent, so only the first agent after a Bun upgrade pays macOS's
+  // first-exec scan (~1.7 s; a per-conversation name paid it at every new
+  // conversation's first start). Its claude carries the conversation's name.
+  const bun = await cloneSharedBun(processName("agent"));
   if (bun.kind === "refused")
     await recordReport({
       kind: "crash",
       source: "server-caught",
-      message: `SDK agent ${id}: could not clone bun into ${agentBinDir(id)} (${bun.code}), so Activity Monitor lists the agent as a bare \`bun\``,
+      message: `SDK agent ${id}: could not clone bun into ${sharedBunDir()} (${bun.code}), so Activity Monitor lists the agent as a bare \`bun\``,
       data: { errorType: "SdkAgentBunLink", label: "runtime-sdk.process-name" },
     });
   const namedBun = bun.kind === "cloned" ? bun.path : null;
@@ -231,7 +231,12 @@ export async function startAgentProcess(
     namedBun,
     seqFloor: await appliedSeq(id),
   };
-  await writeFile(agentOptionsPath(id), JSON.stringify(options, null, 2));
+  // Whole or not at all: the daily reclaim reads a running agent's file, and
+  // a torn one would fail its pass.
+  const optionsPath = agentOptionsPath(id);
+  const staging = `${optionsPath}.${String(process.pid)}.tmp`;
+  await writeFile(staging, JSON.stringify(options, null, 2));
+  await rename(staging, optionsPath);
   const account = await chooseLaunchAccount();
   // Not demoted: the agent leaves darwinbg itself and demotes only what its
   // CLI launches (bin/agent.ts, scheduling tier).

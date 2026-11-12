@@ -315,9 +315,11 @@ export const AgentLaunchOptionsSchema = z.preprocess(
      */
     namedClaudeBin: z.string().nullable().default(null),
     /**
-     * The Bun this agent process runs on, cloned as `equin · agent · <id>`
-     * (packages/process-name) so Activity Monitor names it; null when the clone
-     * was refused. Made at every start, removed by the agent when it exits.
+     * The Bun this agent process runs on, the machine-wide `equin · agent`
+     * clone of this Bun version (packages/process-name `cloneSharedBun`) so
+     * Activity Monitor names it; null when the clone was refused. Shared by
+     * every agent, so a new conversation's first start skips macOS's
+     * first-exec scan of a fresh Bun.
      */
     namedBun: z.string().nullable().default(null),
     /**

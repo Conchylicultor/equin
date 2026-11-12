@@ -286,16 +286,33 @@ agents without tmux, per-namespace paths, the Claude Code health row:
   own; the name is chosen at its first start and kept across relaunches
   (read back from the previous launch.json), re-cloned from the current binary
   when it changed.
-- **An agent's clones outlive its process** (its named claude and its named
-  bun, `<agent dir>/bin/`). Each fresh clone costs a macOS malware scan on its
-  first exec — 3.2 s for the 322 MB claude, 1.2 s for bun (measured
-  2026-11-12; a second exec 0.02 s) — and a start that finds a current clone
-  reuses it (`cloneNamedBinary`). They used to be removed on exit, so every
-  wake of a hibernated conversation, rewind relaunch and account move paid
-  ~4.4 s of scans inside the request (`resume-hibernated` at 6–13 s). The
-  daily `runtime-sdk.agent-dirs-reclaim` removes a kept clone an upgrade has
+- **An agent's claude clone outlives its process** (`<agent dir>/bin/`). Each
+  fresh executable costs a macOS malware scan on its first exec — 3–4 s for
+  the 322 MB claude, ~1.7 s for bun (measured 2026-11-12; a second exec
+  0.03 s) — and a start that finds a current clone reuses it
+  (`cloneNamedBinary`). Clones used to be removed on exit, so every wake of a
+  hibernated conversation, rewind relaunch and account move paid the scans
+  inside the request (`resume-hibernated` at 6–13 s). The daily
+  `runtime-sdk.agent-dirs-reclaim` removes a kept clone an upgrade has
   replaced (`pruneStaleClones`, never a running agent's), so a stopped agent
   pins no old build; the whole folder goes with the workspace.
+- **The agent's bun is shared**: `equin · agent`, one clone per machine and Bun
+  version (packages/process-name `cloneSharedBun`, beside the CLI verbs), so a
+  new conversation's first start no longer scans a fresh bun (~1.7 s). The
+  same daily reclaim removes the shared clone of a Bun version that is no
+  longer this backend's (`pruneStaleSharedBuns`) unless a running agent's
+  launch.json names it, and the per-conversation bun clones older starts left
+  in `bin/`.
+- **Why the claude clone is still per conversation** — the first start's
+  remaining ~3 s: its path is the conversation's macOS permission identity
+  (TCC keys a bundle-less client by path) and its Activity Monitor name, and
+  macOS keeps a scan's verdict per (path, file) — a pre-scanned clone renamed,
+  moved or hardlinked to a new path is scanned again; signature, notarization
+  and provenance change nothing; a symlink is not scanned but names the
+  process (and its TCC identity) after its target (process-name's CLAUDE.md
+  has the measurements). Removing it means giving up per-conversation grants
+  (one shared claude path), or exempting the parent from the scan (Developer
+  Tools), or a macOS that keys the verdict by cdhash.
 
 Gotchas the spike hit:
 
@@ -397,7 +414,10 @@ Gotchas the spike hit:
     - `infra/endpoints.implementMachine`
     - `network/live.serveValue`
     - `packages/process-name.cloneNamedBinary`
+    - `packages/process-name.cloneSharedBun`
     - `packages/process-name.isCurrentCloneOf`
+    - `packages/process-name.sharedBunDir`
+    - `packages/process-name.sharedBunsNamed`
   - Register:
     - `defineFileWatcher('runtime-sdk.events')`
     - `defineDaemon('runtime-sdk.agent')`

@@ -26,11 +26,24 @@ its first exec, so a current clone is never re-made.
 - `cloneNamedBinary({ bin, dir, name })` — clone `bin` into `dir` as `name`. A
   name already holding a current clone (one link, the source's size and mtime —
   a clone keeps the mtime) is left alone; otherwise the clone is swapped in with
-  one rename, so an old build's hardlink is replaced. `{ kind: "refused" }` when
+  one rename, so an old build's hardlink is replaced. Making one holds a
+  per-name kernel lock across processes (`dir/.locks/<name>`, packages/flock):
+  for a name many processes share, a second maker's rename would unname the
+  first's file while a process that exec'd it is still being scanned — the
+  SIGKILL above. `{ kind: "refused" }` when
   the filesystem cannot (not APFS, another volume): run `bin` itself. Every
   call also removes the staging files (`.<pid>[.<seq>].tmp`) in `dir` whose
   writer is dead (a crash mid-clone; the hardlink builds' leaks), so a dir
   heals the next time anything is named in it.
+- `sharedBunDir()` / `cloneSharedBun(name)` / `sharedBunsNamed(name)` — the
+  machine-wide named Buns, `process-names/bun-<version>/`: one clone per name
+  and Bun version, shared by every checkout and backend, so macOS scans each
+  once per machine. The CLI verbs sit in it directly (named by the `./equin`
+  script from its argv); what a backend starts (`cloneSharedBun`: the SDK
+  agents' `equin · agent`) in its `processes/`, so no verb can take one of
+  those names. `sharedBunsNamed` lists a name under every version, for the
+  one who runs processes through it to reclaim an upgrade's leftovers
+  (`runtime-sdk`'s daily agent-dirs reclaim does it for `equin · agent`).
 - `refreshCheckoutBun(root, bin, verbsDir)` / `CHECKOUT_BUN_DIR` — the
   checkout's Bun as a clone plus a stamp, and `verbs`, a symlink to
   `verbsDir` (the `process-names` data dir's `bun-<version>/`), written by the
@@ -47,11 +60,27 @@ syspolicyd reads in one hour on 2026-11-05, 28 % of the host's attributed disk
 reads, and a source of the io-health `rename-stall` finding. So a verb's name is
 made once per machine and Bun version, and every checkout runs it through its
 `verbs` symlink — exec through a symlink is no fresh file (no scan, measured)
-and is still listed under the clone's name. Renaming a scanned clone does NOT
-reliably dodge the scan (rescanned 6 of 8 times, ~0.6 s), nor does moving it to
-another directory or hardlinking it. Per-instance names stay where they are
-worth a scan: backends and agents, long-lived and what a user looks for in
-Activity Monitor and in a permission prompt.
+and is still listed under the clone's name (a symlink to a *directory*: a
+symlink to the file itself names the process after its target).
+
+**What the scan's verdict is kept by** (measured 2026-11-12, a 6 s settle
+after each scan, the 322 MB claude): the (path, file) pair. Same file, same
+path: 0.03 s. The scanned file renamed or moved to a new path: 1.5–1.8 s
+(rescanned); hardlinked to a new path: 1.5 s; renamed back to its old path:
+free; a new clone at a scanned path: 3.0–3.6 s. Not the signature: a copy of
+the notarized Developer ID binary (same cdhash) scans in full, an ad-hoc
+re-signed one too, with or without `com.apple.provenance`; `spctl --assess`
+does not pre-warm it. A move within ~1 s of the scan sometimes skips it — the
+verdict is still being written — which is why earlier tries saw "6 of 8". So a
+pool of pre-scanned clones renamed into place does not help, and every new
+executable path pays one scan.
+
+Per-instance names stay only where they are worth a scan: backends (long-lived,
+one per build) and the agent's claude, whose path is its macOS permission
+identity (TCC keys a bundle-less client by path, so per-conversation grants
+need a per-conversation file). The agent's bun is the shared `equin · agent`:
+a per-conversation one cost every new conversation's first start ~1.7 s, and
+its claude already carries the conversation's name.
 
 Who names what:
 
@@ -59,7 +88,7 @@ Who names what:
 |---|---|---|
 | CLI op | `equin · build` (one machine-wide clone per verb) | the `./equin` script |
 | backend / central | `equin · server · att-…`, `equin · central` | `./equin build`, as the spec's `command` |
-| SDK agent wrapper | `equin · agent · conv-…` | `runtime-sdk`'s `startAgentProcess` |
+| SDK agent wrapper | `equin · agent` (one machine-wide clone per Bun version) | `runtime-sdk`'s `startAgentProcess` |
 | the agent's claude | `equin · conv-… · <title>` | `runtime-sdk`'s `named-claude.ts` (its own scheme: a TCC grant is keyed by it) |
 
 Children a named process spawns through `process.execPath` inherit its name — a
@@ -87,7 +116,10 @@ test worker reads as the `test` op that started it.
     - `CHECKOUT_BUN_DIR`
     - `checkoutBun`
     - `cloneNamedBinary`
+    - `cloneSharedBun`
     - `isCurrentCloneOf`
     - `refreshCheckoutBun`
+    - `sharedBunDir`
+    - `sharedBunsNamed`
 
 <!-- AUTOGENERATED:END -->

@@ -1,6 +1,8 @@
 import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { processNamesDir } from "@plugins/packages/plugins/process-name/data-dirs";
-import { refreshCheckoutBun } from "@plugins/packages/plugins/process-name/machine";
+import {
+  refreshCheckoutBun,
+  sharedBunDir,
+} from "@plugins/packages/plugins/process-name/machine";
 
 /**
  * Record the Bun this CLI runs on as the checkout's, so the next `./equin` runs
@@ -14,6 +16,6 @@ export async function recordCheckoutBun(): Promise<void> {
   await refreshCheckoutBun(
     asAppPath(process.cwd()),
     asAppPath(process.execPath),
-    processNamesDir.file(`bun-${Bun.version}`),
+    sharedBunDir(),
   );
 }
