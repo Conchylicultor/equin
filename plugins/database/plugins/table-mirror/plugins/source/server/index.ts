@@ -9,7 +9,6 @@ import { tableMirrorLog } from "./internal/tables";
 import { TABLE_MIRROR_TRIGGER_SET } from "./internal/triggers";
 
 export {
-  defineMirrorSet,
   MirrorSet,
   NeverMirrored,
   type MirrorSetDefinition,
@@ -18,19 +17,14 @@ export {
   type NeverMirroredSpec,
 } from "./internal/define";
 export { resolveMirrorSet } from "./internal/registry";
-export {
-  readMirrorChanges,
-  readMirrorCopy,
-  readMirrorKeys,
-  readMirrorRows,
-  type ReadMirrorChangesOptions,
-  type ReadMirrorCopyOptions,
-  type ReadMirrorKeysOptions,
-  type ReadMirrorRowsOptions,
+export type {
+  ReadMirrorChangesOptions,
+  ReadMirrorCopyOptions,
+  ReadMirrorKeysOptions,
+  ReadMirrorRowsOptions,
 } from "./internal/read";
 export { readSourceIdentity, readTableFingerprints } from "./internal/identity";
-export { installMirrorSource } from "./internal/install";
-export { pruneMirrorLog } from "./internal/prune";
+export { mirrorSql } from "./internal/sql";
 
 export default {
   description:

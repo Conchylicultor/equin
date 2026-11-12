@@ -61,9 +61,16 @@ export function pkMatch(
     .join(" AND ");
 }
 
-/** A jsonb key, typed as the table's row: `jsonb_populate_record(NULL::t, <json>)`. */
-export function typedKey(t: MirroredTable, json: string): string {
-  return `jsonb_populate_record(NULL::public.${t.name}, ${json})`;
+/**
+ * A jsonb key, typed as the table's row: `jsonb_populate_record(NULL::s.t,
+ * <json>)` — `public` on the source; a replica types it by its own copy.
+ */
+export function typedKey(
+  t: MirroredTable,
+  json: string,
+  schema = "public",
+): string {
+  return `jsonb_populate_record(NULL::${schema}.${t.name}, ${json})`;
 }
 
 /**
@@ -77,3 +84,19 @@ export function pkAfter(
 ): string {
   return `ROW(${pkOrder(t, alias)}) > ROW(${pkOrder(t, keyAlias)})`;
 }
+
+/**
+ * The fragments a replica spells the same way as the source (the key, the key
+ * order, the row hash), so the two halves cannot drift apart: one definition,
+ * read by both.
+ */
+export const mirrorSql = {
+  lit,
+  textArray,
+  pkJson,
+  pkOrder,
+  pkMatch,
+  pkAfter,
+  typedKey,
+  rowHash,
+} as const;

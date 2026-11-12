@@ -738,6 +738,7 @@ only agreement that matters.
     - `sql-writes:fit:hand-written` — `server/internal/runner.ts` (sanctioned)
   - Exempted by:
     - `database/migrations` (0 debt)
+    - `database/table-mirror/replica` (0 debt)
     - `framework/tooling/checks` (0 debt)
     - `plugin-meta/plugin-records` (0 debt)
 - Machine:

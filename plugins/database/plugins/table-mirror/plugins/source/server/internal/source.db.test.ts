@@ -170,14 +170,14 @@ describe("the change log", () => {
     ]);
     const one = changes.find((c) => c.tbl === "tm_parent" && c.pk.id === P1);
     if (one?.kind !== "upsert") throw new Error("no upsert for P1");
-    expect(one.row).toEqual({
+    expect(JSON.parse(one.row)).toEqual({
       id: P1,
       name: "one",
       at: "2026-11-12T10:00:00+00:00",
       props: { a: [1, 2], b: 1 },
       n: 9007199254740993,
     });
-    expect("secret" in one.row).toBe(false);
+    expect("secret" in JSON.parse(one.row)).toBe(false);
     expect(one.h).toMatch(/^[0-9a-f]{32}$/);
     floor = nextFloor;
   });
@@ -194,7 +194,7 @@ describe("the change log", () => {
     ]);
     const c1 = changes[0];
     if (c1?.kind !== "upsert") throw new Error("c1 is not an upsert");
-    expect(c1.row.path).toBe("/a2");
+    expect(JSON.parse(c1.row).path).toBe("/a2");
     floor = nextFloor;
   });
 
@@ -401,7 +401,7 @@ describe("key + hash reads", () => {
     expect(rows.rows.map((r) => r.h)).toEqual(keys.keys.map((k) => k.h));
     const replicaHash = (
       await db.execute(
-        sql`SELECT md5((${JSON.stringify(rows.rows[0]!.row)}::jsonb)::text) AS h`,
+        sql`SELECT md5((${rows.rows[0]!.row}::jsonb)::text) AS h`,
       )
     ).rows.map((r) => RowSchema.parse(r))[0]?.h;
     expect(replicaHash).toBe(keys.keys[0]!.h);

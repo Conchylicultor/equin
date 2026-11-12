@@ -1,6 +1,6 @@
 {
-  "id": "04123b4d-3456-4a76-8426-348f2e954385",
-  "prevId": "ae2f279d-5a12-468e-9866-ed0507e3e212",
+  "id": "40b6e72f-b112-46cf-a370-f3c78ec73110",
+  "prevId": "04123b4d-3456-4a76-8426-348f2e954385",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -8217,6 +8217,204 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.table_mirror_keys": {
+      "name": "table_mirror_keys",
+      "schema": "",
+      "columns": {
+        "replica_id": {
+          "name": "replica_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tbl": {
+          "name": "tbl",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "pk": {
+          "name": "pk",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "h": {
+          "name": "h",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "table_mirror_keys_replica_id_table_mirror_replicas_id_fk": {
+          "name": "table_mirror_keys_replica_id_table_mirror_replicas_id_fk",
+          "tableFrom": "table_mirror_keys",
+          "tableTo": "table_mirror_replicas",
+          "columnsFrom": [
+            "replica_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "table_mirror_keys_replica_id_tbl_pk_pk": {
+          "name": "table_mirror_keys_replica_id_tbl_pk_pk",
+          "columns": [
+            "replica_id",
+            "tbl",
+            "pk"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.table_mirror_replicas": {
+      "name": "table_mirror_replicas",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "set_id": {
+          "name": "set_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sink": {
+          "name": "sink",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "schema_name": {
+          "name": "schema_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "phase": {
+          "name": "phase",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'empty'"
+        },
+        "progress": {
+          "name": "progress",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "local_tables": {
+          "name": "local_tables",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "source_identity": {
+          "name": "source_identity",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "fingerprints": {
+          "name": "fingerprints",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "floor": {
+          "name": "floor",
+          "type": "xid8",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "after": {
+          "name": "after",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "pass_xmin": {
+          "name": "pass_xmin",
+          "type": "xid8",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "seq": {
+          "name": "seq",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "source_now": {
+          "name": "source_now",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "last_synced_at": {
+          "name": "last_synced_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "copied_at": {
+          "name": "copied_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "last_attempt_at": {
+          "name": "last_attempt_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "last_outcome": {
+          "name": "last_outcome",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "table_mirror_replicas_schema_name_unique": {
+          "name": "table_mirror_replicas_schema_name_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "schema_name"
+          ]
+        }
+      },
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false

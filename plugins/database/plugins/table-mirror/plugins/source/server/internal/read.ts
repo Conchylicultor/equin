@@ -147,7 +147,7 @@ const ChangeRowSchema = BoundRowSchema.extend({
   tbl: z.string(),
   pk: z.record(z.string(), z.unknown()),
   deleted: z.boolean(),
-  row: z.record(z.string(), z.unknown()).nullable(),
+  row: z.string().nullable(),
   h: z.string().nullable(),
 });
 
@@ -209,7 +209,7 @@ export async function readMirrorChanges(
     );
     const rows = await executeRows(tx, {
       query: sql.raw(
-        `SELECT q.xid::text AS xid, q.tbl, q.pk, q.deleted, q.row,
+        `SELECT q.xid::text AS xid, q.tbl, q.pk, q.deleted, q.row::text AS row,
                 CASE WHEN q.row IS NULL THEN NULL ELSE ${rowHash("q.row")} END AS h,
                 q._rn, q._fetched
          FROM (${paged}) q ORDER BY q._rn`,
@@ -262,7 +262,7 @@ export async function readMirrorChanges(
 const KeyedRowSchema = BoundRowSchema.extend({
   pk: z.record(z.string(), z.unknown()),
   h: z.string(),
-  row: z.record(z.string(), z.unknown()),
+  row: z.string(),
 });
 
 function afterClause(
@@ -320,7 +320,7 @@ export async function readMirrorCopy(
       ORDER BY ${pkOrder(t, "t")}`;
     const rows = await executeRows(tx, {
       query: sql.raw(
-        `SELECT q.pk, q.row, ${rowHash("q.row")} AS h, q._rn, q._fetched
+        `SELECT q.pk, q.row::text AS row, ${rowHash("q.row")} AS h, q._rn, q._fetched
          FROM (${boundedPage(inner, carry.order, "octet_length(p.row::text)", maxRows, maxBytes)}) q
          ORDER BY q._rn`,
       ),
@@ -412,7 +412,7 @@ const RowsRowSchema = z.object({
   ord: z.coerce.number(),
   key: z.record(z.string(), z.unknown()),
   pk: z.record(z.string(), z.unknown()).nullable(),
-  row: z.record(z.string(), z.unknown()).nullable(),
+  row: z.string().nullable(),
   h: z.string().nullable(),
   taken: z.boolean(),
 });
@@ -468,7 +468,7 @@ export async function readMirrorRows(
       query: sql.raw(
         `SELECT s.ord, s.key,
                 CASE WHEN s.taken THEN s.pk END AS pk,
-                CASE WHEN s.taken THEN s.row END AS row,
+                CASE WHEN s.taken THEN s.row::text END AS row,
                 CASE WHEN s.taken THEN s.h END AS h,
                 s.taken
          FROM (

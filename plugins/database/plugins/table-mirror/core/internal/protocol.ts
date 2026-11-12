@@ -16,9 +16,11 @@ export const TOMBSTONE_RETENTION_DAYS = 30;
  * Default bounds of one page, whichever comes first. A page must answer within
  * the transport's deadline (one curl over SSH, 10 s); the byte cap is enforced
  * by the source while it reads (a running sum), and re-checked by the
- * transport.
+ * transport. Rows: measured on the real site (plan § Measured sizes) — at 2000
+ * a page was cut at ~450 KB, a ninth of the byte cap, on every analytics
+ * table; 10000 rows of `analytics_daily` are ~2.3 MB.
  */
-export const MIRROR_PAGE_MAX_ROWS = 2000;
+export const MIRROR_PAGE_MAX_ROWS = 10_000;
 export const MIRROR_PAGE_MAX_BYTES = 4 * 1024 * 1024;
 /** Default bound of one key + hash page (about 40 bytes per key). */
 export const MIRROR_KEYS_MAX = 20_000;
@@ -37,10 +39,15 @@ export type MirrorPk = z.infer<typeof MirrorPkSchema>;
 
 /**
  * A row's content: `to_jsonb(row)` minus the set's omitted columns, keyed by
- * database column names, in Postgres's own text forms (a replica applies it
- * with `jsonb_populate_recordset`, no JS decode of the values).
+ * database column names — carried as the jsonb's own TEXT, never decoded into
+ * JS values. A JSON parse would round a `bigint` past 2^53 or a long
+ * `numeric`, and re-encode `1.50` as `1.5` or a jsonb `2.0` as `2`: the copy
+ * would then hold another value than the source and hash differently forever.
+ * A replica hands the text straight back to Postgres
+ * (`jsonb_populate_recordset`), so the values stay in Postgres's own text
+ * forms end to end.
  */
-export const MirrorRowSchema = z.record(z.string(), z.unknown());
+export const MirrorRowSchema = z.string();
 export type MirrorRow = z.infer<typeof MirrorRowSchema>;
 
 /**

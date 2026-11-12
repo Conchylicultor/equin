@@ -22298,7 +22298,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `loadedDatabaseConfig`
       - `readDatabaseConfigSync`
   - Cross-plugin:
-    - Imported by: 163 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
+    - Imported by: 164 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
       - `apps` ×45
       - `conversations` ×20
       - `infra` ×16
@@ -22306,7 +22306,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `tasks` ×14
       - `debug` ×10
       - `active-data` ×8
-      - `database` ×6
+      - `database` ×7
       - `primitives` ×4
       - `network` ×3
       - `stats` ×3
@@ -22390,10 +22390,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `reclaimForkTemp`
           - `recreateDatabase`
       - Cross-plugin:
-        - Imported by: 32 plugins — full list in [`plugins/database/plugins/admin/REFERENCE.md`](../plugins/database/plugins/admin/REFERENCE.md)
+        - Imported by: 33 plugins — full list in [`plugins/database/plugins/admin/REFERENCE.md`](../plugins/database/plugins/admin/REFERENCE.md)
           - `debug` ×8
           - `infra` ×7
-          - `database` ×4
+          - `database` ×5
           - `apps` ×3
           - `framework` ×3
           - `build` ×2
@@ -22957,6 +22957,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `sql-writes:fit:hand-written` — `server/internal/runner.ts` (sanctioned)
         - Exempted by:
           - `database/migrations` (0 debt)
+          - `database/table-mirror/replica` (0 debt)
           - `framework/tooling/checks` (0 debt)
           - `plugin-meta/plugin-records` (0 debt)
       - Machine:
@@ -23130,13 +23131,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens: `ui/tokens/color-palette --muted-foreground`
     - **`sql-column`** — Decoded columns: `parsedText` / `parsedJson` derive a column's type from a zod schema that really decodes it — on every read and every write — so a column can no longer declare a string-literal union, or a jsonb shape, that nothing verifies. `withWire` declares a column type's JSON wire form (a codec applied in JS by whatever projects the column onto the wire), carried on the built column's type so a row schema must match it.
       - Cross-plugin:
-        - Imported by: 27 plugins — full list in [`plugins/database/plugins/sql-column/REFERENCE.md`](../plugins/database/plugins/sql-column/REFERENCE.md)
+        - Imported by: 28 plugins — full list in [`plugins/database/plugins/sql-column/REFERENCE.md`](../plugins/database/plugins/sql-column/REFERENCE.md)
           - `apps` ×8
           - `fields` ×5
           - `infra` ×4
           - `conversations` ×2
           - `debug` ×2
           - `network` ×2
+          - `database/table-mirror/replica`
           - `ids`
           - `search/engine`
           - `tasks/orchestration/watch`
@@ -23201,8 +23203,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `toMapper`
     - **`sql-rows`** — Parsed raw-SQL row reads: queryRows / executeRows parse every row against a zod schema and throw a SqlRowError naming the column, the value and its Postgres type OID — closing the pool.query<T>() assertion hole.
       - Cross-plugin:
-        - Imported by: 54 plugins — full list in [`plugins/database/plugins/sql-rows/REFERENCE.md`](../plugins/database/plugins/sql-rows/REFERENCE.md)
-          - `database` ×15
+        - Imported by: 55 plugins — full list in [`plugins/database/plugins/sql-rows/REFERENCE.md`](../plugins/database/plugins/sql-rows/REFERENCE.md)
+          - `database` ×16
           - `apps` ×9
           - `debug` ×6
           - `tasks` ×5
@@ -23243,7 +23245,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`sql-writes`** — Every hand-written SQL write (INSERT / UPDATE / DELETE / MERGE, in CTEs too) parsed with Postgres's own grammar (libpg_query) and checked against the schema the code declares — drizzle tables with their derived updated_at and generated columns, plus hand-written DDL: known tables and columns, required columns inserted, no write to a derived column (check sql-writes:fit).
     - **`table-mirror`** — Table mirror: pull a remote database's tables into local Postgres from a row-level change log (deltas plus tombstones, paged by an xid8 cursor), reconciling by key and row hash when deltas cannot be trusted. The umbrella's core is the wire protocol both halves speak.
       - Cross-plugin:
-        - Imported by: `database/table-mirror/source`
+        - Imported by:
+          - `database/table-mirror/replica`
+          - `database/table-mirror/source`
       - Core:
         - Exports (types):
           - `MirrorChange`
@@ -23289,6 +23293,58 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TOMBSTONE_RETENTION_DAYS`
           - `Xid8Schema`
       - Plugins:
+        - **`replica`** — The table mirror's replica half: one Postgres schema per replica (tm_<set>_<hash>) holding tables LIKE the local install's own (unique constraints relaxed, no foreign keys), filled by pullReplica — a transport-agnostic, budgeted pull that applies each page together with its cursor in one transaction (NOTIFY table_mirror at commit): a first copy, then the delta stream; key + hash reconciliation (deleting keys the source no longer has, fetching only rows whose hash differs) when deltas cannot be trusted — reconcile-required, another source identity or epoch, a source fingerprint change, a table created or rebuilt locally (LIKE + INSERT … SELECT + swap); a custom sink in place of the schema, backed by the content-free key index table_mirror_keys; withReplicaSchema runs the owner's own SQL on the copy (search_path = the replica's schema, pg_catalog); onReplicaApplied is the change signal; replicas and their schemas are left out of worktree forks.
+          - Server:
+            - Contributes:
+              - `fork-data-exclusion` "table_mirror_keys"
+              - `fork-data-exclusion` "table_mirror_replicas"
+              - `fork-schema-data-exclusion` "tm_*"
+              - `change-feed-exclusion` "table_mirror_keys"
+            - Uses:
+              - `database.DatabaseDriver`
+              - `database.ListenSession`
+              - `database/admin.ExcludeFromFork`
+              - `database/admin.ExcludeSchemaDataFromFork`
+              - `database/sql-column.parsedJson`
+              - `database/sql-column.parsedText`
+              - `database/table-mirror/source.MirroredTable`
+              - `database/table-mirror/source.MirrorSetDefinition`
+              - `database/table-mirror/source.mirrorSql`
+              - `database/table-mirror/source.readTableFingerprints`
+              - `ids.externalIdColumn`
+              - `network/live/change-feed.ExcludeFromChangeFeed`
+            - DB schema:
+              - `plugins/database/plugins/table-mirror/plugins/replica/server/internal/schema-sink.ts`
+              - `plugins/database/plugins/table-mirror/plugins/replica/server/internal/tables.ts`
+            - Exports (types):
+              - `EnsureReplicaOptions`
+              - `MirrorCustomSink`
+              - `MirrorFetch`
+              - `MirrorFetchFailed`
+              - `MirrorSinkBatch`
+              - `PullReplicaOptions`
+              - `PullResult`
+              - `ReconcileReason`
+              - `ReplicaAppliedHandler`
+              - `ReplicaOutcome`
+              - `ReplicaPhase`
+              - `ReplicaProgress`
+              - `ReplicaRead`
+              - `ReplicaSinkKind`
+              - `ReplicaTx`
+            - Exports (values):
+              - `ConcurrentPullError`
+              - `dropReplica`
+              - `ensureReplica`
+              - `onReplicaApplied`
+              - `pullReplica`
+              - `sweepOrphanReplicaSchemas`
+              - `withReplicaSchema`
+          - Exemptions:
+            - Exempts itself from:
+              - `sql-writes:fit:hand-written` — `server/internal/schema-sink.ts` (sanctioned)
+              - `sql-writes:fit:dynamic` — `server/internal/schema-sink.ts` (sanctioned)
+              - `imperative-create-table-allowlisted` — `server/internal/schema-sink.ts` (sanctioned)
         - **`source`** — The table mirror's source half: defineMirrorSet / MirrorSet (tables mirrored together) and NeverMirrored (tables whose rows never leave, refused at module eval and at boot); generated statement-level change-log triggers (one table_mirror_log row per primary key — cascaded deletes, retention and TRUNCATE included); the source identity and per-table fingerprints; the readers — the delta stream paged by a { floor, after } xid8 cursor, a first-sync copy, and reconciliation's key + hash walk and rows by key; and the daily log prune at the 30-day horizon, below which a replica is answered reconcile-required.
           - Server:
             - Contributes:
@@ -23316,21 +23372,26 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ReadMirrorKeysOptions`
               - `ReadMirrorRowsOptions`
             - Exports (values):
-              - `defineMirrorSet`
-              - `installMirrorSource`
               - `MirrorSet`
+              - `mirrorSql`
               - `NeverMirrored`
-              - `pruneMirrorLog`
-              - `readMirrorChanges`
-              - `readMirrorCopy`
-              - `readMirrorKeys`
-              - `readMirrorRows`
               - `readSourceIdentity`
               - `readTableFingerprints`
               - `resolveMirrorSet`
             - Register: `defineJob('table-mirror.prune')`
+          - Cross-plugin:
+            - Imported by: `database/table-mirror/replica`
           - Exemptions:
             - Exempts itself from: `sql-writes:fit:hand-written` — `server/internal/triggers.ts` (sanctioned)
+          - Test helpers:
+            - Server: `@plugins/database/plugins/table-mirror/plugins/source/server/testing`
+              - `defineMirrorSet` — Declare a set of tables mirrored together.
+              - `installMirrorSource` — Make this database a mirror source for `sets`: the boot guard (no never-mirrored table in a set, no table in two sets), the identity row (seeded once; a new cluster or a restored box mints a new one with its database), the log rows of tables no set mirrors any more dropped (the stream could not join them to a table), and the change-log triggers installed one table per transaction.
+              - `pruneMirrorLog` — One prune run as of `now`, in one transaction: record a mark (`now`, this snapshot's xmin), then take M = the newest mark at least `retentionDays` old and delete every log row with `xid < M` — upserts and tombstones alike — and every older mark, and raise the horizon to M.
+              - `readMirrorChanges` — One page of the change stream after `cursor`: for each log row in `(xid, tbl, pk)` order, the row's current content and hash (an upsert) or its key (a tombstone).
+              - `readMirrorCopy` — One keyset page of a whole table, rows with their hash — a replica's first sync only, when it has nothing to compare against.
+              - `readMirrorKeys` — One keyset page of `(pk, h)` — reconciliation's walk, about 40 bytes a key.
+              - `readMirrorRows` — The current rows for a bounded list of keys — what reconciliation found different.
 
 - **`debug`** — Debug tools umbrella plugin.
   - Cross-plugin:
@@ -32558,7 +32619,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `parseKindLabel`
       - `storedIdSchema`
   - Cross-plugin:
-    - Imported by: 45 plugins — full list in [`plugins/ids/REFERENCE.md`](../plugins/ids/REFERENCE.md)
+    - Imported by: 46 plugins — full list in [`plugins/ids/REFERENCE.md`](../plugins/ids/REFERENCE.md)
       - `apps` ×14
       - `conversations` ×7
       - `infra` ×3
@@ -32569,6 +32630,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `page` ×2
       - `release` ×2
       - `reports` ×2
+      - `database/table-mirror/replica`
       - `debug/tests`
       - `history/engine`
       - `plugin-meta/plugin-health`
@@ -37084,14 +37146,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SPAN_MEASURES`
           - `waitSplit`
       - Cross-plugin:
-        - Imported by: 76 plugins — full list in [`plugins/infra/plugins/runtime-profiler/REFERENCE.md`](../plugins/infra/plugins/runtime-profiler/REFERENCE.md)
+        - Imported by: 77 plugins — full list in [`plugins/infra/plugins/runtime-profiler/REFERENCE.md`](../plugins/infra/plugins/runtime-profiler/REFERENCE.md)
           - `infra` ×22
           - `debug` ×21
           - `apps` ×7
           - `conversations` ×7
           - `build` ×3
+          - `database` ×3
           - `tasks` ×3
-          - `database` ×2
           - `packages` ×2
           - `primitives` ×2
           - `reports` ×2
@@ -39454,6 +39516,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/deploy/site-reports/intake`
               - `conversations/runtime-sdk`
               - `conversations/usage`
+              - `database/table-mirror/replica`
               - `database/table-mirror/source`
               - `debug/latency-ledger`
               - `debug/op-rate`
@@ -40738,10 +40801,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `withForegroundPriority`
     - **`string-hash`** — Portable string hashes in plain JS (no node:crypto, no Bun.hash), so every host — the Bun server, central and a browser page — computes the same value: hash53 (cyrb53, a 53-bit number, optionally seeded), hashHex (two seeded cyrb53s, ~106 bits as hex), hash64 (a 64-bit bigint), sha256Hex (a synchronous SHA-256, identical to node:crypto's hex digest), createSha256 (the same SHA-256, incremental over strings and bytes) and sha1Hex (SHA-1 for values already stored as one).
       - Cross-plugin:
-        - Imported by: 42 plugins — full list in [`plugins/packages/plugins/string-hash/REFERENCE.md`](../plugins/packages/plugins/string-hash/REFERENCE.md)
+        - Imported by: 43 plugins — full list in [`plugins/packages/plugins/string-hash/REFERENCE.md`](../plugins/packages/plugins/string-hash/REFERENCE.md)
           - `apps` ×13
+          - `database` ×5
           - `network` ×5
-          - `database` ×4
           - `framework` ×3
           - `reports` ×3
           - `ui` ×3

@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-database-table-mirror-replica",
+  "private": true,
+  "version": "0.0.1",
+  "description": "The replica half of the table mirror: one Postgres schema per replica with tables LIKE the local install's own, a pull engine applying each page with its cursor in one transaction (first copy, delta stream, key + hash reconciliation, a local rebuild on a local schema change), the content-free key index for custom sinks, withReplicaSchema for owners' unchanged SQL, the table_mirror change signal, and fork exclusion."
+}
