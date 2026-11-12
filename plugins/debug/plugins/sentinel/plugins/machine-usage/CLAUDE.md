@@ -140,6 +140,7 @@ so Postgres is the only owner measured this way:
     - `ui/tokens/shape --spacing`
   - Imported by:
     - `debug/health-monitor`
+    - `debug/profiling/tab-memory`
     - `debug/sentinel`
 - Exemptions:
   - Exempts itself from: `timer/no-unlisted-timer` — `machine/internal/owner-sampler.ts` (sanctioned)

@@ -170,6 +170,7 @@ export function summarizeOwners(opts: {
     rows.push({
       bucket,
       name: processLabel(p.args),
+      pid: p.pid,
       memMb,
       ...(cpuCores === undefined ? {} : { cpuCores }),
     });

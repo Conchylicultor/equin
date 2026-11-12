@@ -170,6 +170,8 @@ describe("summarizeOwners", () => {
       "p15",
     ]);
     expect(sample.top[6]!.name).toBe("p100");
+    // Each named process carries its pid: one process, one series.
+    expect(sample.top.every((t) => typeof t.pid === "number")).toBe(true);
     expect(sample.top.length).toBe(7);
   });
 });

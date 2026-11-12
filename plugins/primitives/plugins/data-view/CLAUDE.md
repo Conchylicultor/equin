@@ -2284,8 +2284,8 @@ list, table and `primitives/tree` share it.
     - `DataViewSlots.Control` ← `primitives.data-view`
     - `DataViewSlots.FieldExtension` ← `primitives.data-view.custom-columns`
     - `DataViewSlots.RowOrder` ← `primitives.data-view.view-order`
-  - Contributes: 104 contributions — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ConfigV2.WebRegister` ×94
+  - Contributes: 105 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ConfigV2.WebRegister` ×95
     - `DataViewSlots.Control` ×4
     - `DataViewSlots.Setting` ×4
     - `IdKinds.Kind` ×2
@@ -2564,8 +2564,8 @@ list, table and `primitives/tree` share it.
     - `useViewRowCounts`
     - `wearsTimeInk`
 - Server:
-  - Contributes: 96 contributions — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ConfigV2.Register` ×94
+  - Contributes: 97 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ConfigV2.Register` ×95
     - `ids.kind` ×2
   - Uses:
     - `config_v2.getAllDescriptors`
@@ -2763,10 +2763,10 @@ list, table and `primitives/tree` share it.
     - `ui/tokens/type-scale` ×6
     - `ui/tokens/shadow` ×4
     - `ui/tokens/shape` ×3
-  - Imported by: 124 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 125 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `fields` ×39
     - `apps` ×29
-    - `debug` ×16
+    - `debug` ×17
     - `primitives` ×10
     - `conversations` ×8
     - `infra` ×4

@@ -725,12 +725,16 @@ function embeddedLocation(
 ): string {
   const prefix = routePrefixForMode(mode, apps) ?? "";
   if (tab === undefined) return prefix === "" ? "/" : prefix;
-  const state = tab.store.getRouteState();
-  const path =
-    state.kind === "unresolved"
-      ? `${appPathFor(tab.appId, apps)}/${state.rawPath}`
-      : tab.store.routeUrl(state.slots, tab.store.getIndexParams());
+  const path = tabPath(tab, apps);
   return prefix + (path === "" ? "/" : path);
+}
+
+/** The in-app path `tab` shows, without any route prefix ("" at the root). */
+function tabPath(tab: Tab, apps: AppList): string {
+  const state = tab.store.getRouteState();
+  return state.kind === "unresolved"
+    ? `${appPathFor(tab.appId, apps)}/${state.rawPath}`
+    : tab.store.routeUrl(state.slots, tab.store.getIndexParams());
 }
 
 /** `path` under `mode`'s route prefix, unless it already carries one. */
@@ -1705,6 +1709,13 @@ export function TabsProvider({
         mode: () => modeForHandle.current,
         hasTab: (tabId) => tabsRef.current.some((t) => t.tabId === tabId),
         focusedTabId: () => focusedRef.current,
+        openTabs: () =>
+          tabsRef.current.map((t) => ({
+            tabId: t.tabId,
+            appId: t.appId,
+            path: tabPath(t, appsRef.current) || "/",
+            focused: t.tabId === focusedRef.current,
+          })),
         setMode: (next) => setModeForHandle.current(next),
         exitToPreviousMode: () => exitForHandle.current(),
         browserTabUrl: (path) => {

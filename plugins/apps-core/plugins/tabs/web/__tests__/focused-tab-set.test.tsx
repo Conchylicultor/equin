@@ -22,6 +22,7 @@ function fakeSet(id: string, initial: string) {
     mode: () => state.mode,
     hasTab: () => false,
     focusedTabId: () => undefined,
+    openTabs: () => [],
     setMode: vi.fn((next: string) => {
       state.mode = next;
       tabSetModeChanged();

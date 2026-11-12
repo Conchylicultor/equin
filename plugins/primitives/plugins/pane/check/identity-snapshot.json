@@ -319,6 +319,12 @@
       "parent": null
     },
     {
+      "paneId": "debug-tab-memory",
+      "segment": "tab-memory",
+      "appIndex": false,
+      "parent": null
+    },
+    {
       "paneId": "debug-test-file",
       "segment": "test-file/:path*",
       "appIndex": false,

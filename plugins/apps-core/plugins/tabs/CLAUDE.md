@@ -237,6 +237,7 @@ same browser tab from finding the blob. Both call sites are marked for removal.
     - `EmbeddedAt`
     - `EmbeddedTabSet`
     - `NavigateOptions`
+    - `OpenTab`
     - `PlacementCapabilities`
     - `PlacementRegistry`
     - `Tab`
@@ -255,6 +256,7 @@ same browser tab from finding the blob. Both call sites are marked for removal.
     - `peekDefaultPlacement`
     - `peekFocusedTabSet`
     - `peekSurfaceEmpty`
+    - `peekTabSets`
     - `placementHasAppThemeScope`
     - `placementIsNewTabFollows`
     - `placementOwnsChrome`
@@ -274,10 +276,10 @@ same browser tab from finding the blob. Both call sites are marked for removal.
     - `useSurfaceMode`
     - `useTabs`
 - Cross-plugin:
-  - Imported by: 40 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 41 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×16
     - `apps-core` ×8
-    - `debug` ×3
+    - `debug` ×4
     - `hints` ×2
     - `primitives` ×2
     - `shell` ×2

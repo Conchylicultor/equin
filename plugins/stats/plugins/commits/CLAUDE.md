@@ -66,6 +66,7 @@
     - `ui/tokens/type-scale --font-weight-medium`
   - Imported by:
     - `debug/health-monitor`
+    - `debug/profiling/tab-memory`
     - `stats/cost`
     - `stats/pushes`
     - `stats/responsiveness`

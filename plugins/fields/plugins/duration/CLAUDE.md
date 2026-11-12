@@ -25,6 +25,7 @@
     - `debug/backend-crash`
     - `debug/claude-cli-calls`
     - `debug/profiling/runtime`
+    - `debug/profiling/tab-memory`
     - `debug/queue`
     - `debug/service-down`
     - `debug/slow-ops/cluster`

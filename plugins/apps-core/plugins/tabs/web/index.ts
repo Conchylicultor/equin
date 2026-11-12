@@ -33,6 +33,8 @@ export { useSurfaceFocused } from "./internal/use-surface-focused";
 export {
   claimTabSet,
   peekFocusedTabSet,
+  peekTabSets,
+  type OpenTab,
   useFocusedTabSet,
   type TabSetHandle,
 } from "./internal/tab-sets";

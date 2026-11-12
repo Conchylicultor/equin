@@ -220,6 +220,7 @@ export const reorderableSlots: ReorderableSlot[] = [
   { slotId: "debug.profiling.debug-profiling.actions", pluginId: "debug.profiling", configName: "debug-profiling.actions" },
   { slotId: "debug.profiling.ops.debug-profiling-op-detail.actions", pluginId: "debug.profiling.ops", configName: "debug-profiling-op-detail.actions" },
   { slotId: "debug.profiling.section", pluginId: "debug.profiling", configName: "section" },
+  { slotId: "debug.profiling.tab-memory.debug-tab-memory.actions", pluginId: "debug.profiling.tab-memory", configName: "debug-tab-memory.actions" },
   { slotId: "debug.queue.job-actions", pluginId: "debug.queue", configName: "job-actions" },
   { slotId: "debug.queue.queue-dead.actions", pluginId: "debug.queue", configName: "queue-dead.actions" },
   { slotId: "debug.queue.queue-emission.actions", pluginId: "debug.queue", configName: "queue-emission.actions" },

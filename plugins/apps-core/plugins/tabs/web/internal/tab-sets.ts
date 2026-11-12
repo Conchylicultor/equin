@@ -9,6 +9,16 @@ import type { Placement } from "@plugins/apps-core/core";
 /** The id of the page's own tab set — the app's surface. */
 export const PAGE_TAB_SET_ID = "page";
 
+/** One open in-app tab of a tab set, as an out-of-tree reader sees it. */
+export interface OpenTab {
+  readonly tabId: string;
+  readonly appId: string;
+  /** The in-app path it shows (no route prefix). */
+  readonly path: string;
+  /** It is its set's focused tab. */
+  readonly focused: boolean;
+}
+
 /**
  * A mounted tab set as an out-of-tree caller sees it: a keyboard shortcut's
  * `when` / handler, a window command — code that runs from the window keydown
@@ -26,6 +36,11 @@ export interface TabSetHandle {
   hasTab(tabId: string): boolean;
   /** Its focused tab right now (undefined on an empty surface). */
   focusedTabId(): string | undefined;
+  /**
+   * Every open tab right now, in strip order — each one MOUNTED (keep-alive),
+   * so what the page holds in memory.
+   */
+  openTabs(): readonly OpenTab[];
   /** Switch its surface mode (the Layout control, a window's Full screen). */
   setMode(mode: Placement): void;
   /** Return it to the mode before the current one (solo's exit). */
@@ -95,6 +110,15 @@ export function claimTabSet(id: string): void {
  */
 export function peekFocusedTabSet(): TabSetHandle | undefined {
   return tabSets.get(activeTabSet.peek()) ?? tabSets.get(PAGE_TAB_SET_ID);
+}
+
+/**
+ * Every mounted tab set — the page's and each `AppEmbed`'s — for a reader
+ * outside React that needs the whole page (tab-memory telemetry). A snapshot,
+ * not a subscription.
+ */
+export function peekTabSets(): readonly TabSetHandle[] {
+  return [...tabSets.values()];
 }
 
 /** A registered tab set's mode changed: re-render whoever reads it. */

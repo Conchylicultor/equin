@@ -1827,8 +1827,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Slots:
               - `DebugApp.Sidebar`
               - `DebugApp.Toolbar`
-            - Slot contributors: 28 contributors — full list in [`plugins/apps/plugins/debug/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/debug/plugins/shell/REFERENCE.md)
-              - `DebugApp.Sidebar` ×28
+            - Slot contributors: 29 contributors — full list in [`plugins/apps/plugins/debug/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/debug/plugins/shell/REFERENCE.md)
+              - `DebugApp.Sidebar` ×29
             - Contributes: `Apps.App` "Debug" → `DebugLayout`
             - Uses:
               - `apps-core.Apps`
@@ -1842,8 +1842,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/icons.symbol`
             - Exports (values): `debugApp`
           - Cross-plugin:
-            - Imported by: 39 plugins — full list in [`plugins/apps/plugins/debug/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/debug/plugins/shell/REFERENCE.md)
-              - `debug` ×30
+            - Imported by: 40 plugins — full list in [`plugins/apps/plugins/debug/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/debug/plugins/shell/REFERENCE.md)
+              - `debug` ×31
               - `infra` ×2
               - `backup`
               - `build`
@@ -13099,6 +13099,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `EmbeddedAt`
           - `EmbeddedTabSet`
           - `NavigateOptions`
+          - `OpenTab`
           - `PlacementCapabilities`
           - `PlacementRegistry`
           - `Tab`
@@ -13117,6 +13118,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `peekDefaultPlacement`
           - `peekFocusedTabSet`
           - `peekSurfaceEmpty`
+          - `peekTabSets`
           - `placementHasAppThemeScope`
           - `placementIsNewTabFollows`
           - `placementOwnsChrome`
@@ -13136,10 +13138,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useSurfaceMode`
           - `useTabs`
       - Cross-plugin:
-        - Imported by: 40 plugins — full list in [`plugins/apps-core/plugins/tabs/REFERENCE.md`](../plugins/apps-core/plugins/tabs/REFERENCE.md)
+        - Imported by: 41 plugins — full list in [`plugins/apps-core/plugins/tabs/REFERENCE.md`](../plugins/apps-core/plugins/tabs/REFERENCE.md)
           - `apps` ×16
           - `apps-core` ×8
-          - `debug` ×3
+          - `debug` ×4
           - `hints` ×2
           - `primitives` ×2
           - `shell` ×2
@@ -24827,9 +24829,76 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exempts itself from:
               - `sink-safety/no-adhoc-profiler-seam` — `.` (sanctioned)
               - `boundaries/no-platform-api` — `server/internal/mcp-tools.ts` (debt)
-        - **`tab-memory`** — Tab memory, the parts a heap snapshot cannot see: clean-soak spawns chrome-headless-shell with nothing attached to the page and reads Chrome's memory-infra dumps per allocator (v8, malloc, partition_alloc, blink_gc, web_cache…) over an idle soak or in-app navigation rounds; listener-probe attributes a tab's event-listener growth to the stacks that add it.
+        - **`tab-memory`** — Tab memory telemetry, browser half: every top-level page the user drives samples itself (JS heap, DOM nodes, canvases, images, its open in-app tabs and route) 30 s after load and every 5 minutes after, posted to its own server; Debug → Tab memory draws each page beside each Chrome renderer's footprint (by pid) over the last 12 h, with a DataView of the pages. Tab memory telemetry, server half: logs each page's sample to the durable tab-memory channel of the worktree it talks to, and serves tab-memory.series — every worktree's pages over the last 12 h beside each Chrome renderer's footprint (by pid) from main's health-owners log.
+          - Web:
+            - Slots: `tabMemoryPane.Actions`
+            - Slot contributors: `tabMemoryPane.Actions` ← `primitives.pane`
+            - Contributes:
+              - `Core.Root` → `TabMemoryRecorder`
+              - `Pane.Register` "debug-tab-memory"
+              - `DebugApp.Sidebar` "Tab memory"
+            - Uses: 28 symbols — full list in [`plugins/debug/plugins/profiling/plugins/tab-memory/REFERENCE.md`](../plugins/debug/plugins/profiling/plugins/tab-memory/REFERENCE.md)
+              - `stats/commits` ×7
+              - `primitives/pane` ×4
+              - `primitives/data-view` ×3
+              - `infra/endpoints` ×2
+              - `primitives/css/spacing` ×2
+              - `primitives/css/text` ×2
+              - `apps-core/tabs.peekTabSets`
+              - `apps/debug/shell.DebugApp`
+              - `network/live/live-state.ResourceErrorInline`
+              - `network/live.useLive`
+              - `primitives/css/placeholder.Placeholder`
+              - `primitives/networking/page-transport.pageTransport`
+              - `primitives/relative-time.RelativeTime`
+              - `primitives/scope/tab-id.getTabId`
+            - Exports (values): `tabMemoryPane`
+          - Server:
+            - Contributes: `resource.declare` "tab-memory.series"
+            - Uses:
+              - `infra/endpoints.implement`
+              - `infra/file-watcher.acquireDirWatch`
+              - `infra/paths.listWorktreeDirsAsync`
+              - `infra/paths.worktreesDir`
+              - `network/live.serveValue`
+              - `primitives/log-channels.defineLogSink`
+              - `primitives/log-channels/log-files.readChannelJson`
+            - Resources: `tab-memory.series` (push, notified, capped: MAX_PAGES, capped: MAX_RENDERERS, capped: MAX_PAGE_POINTS, capped: MAX_RENDERER_POINTS, capped: MAX_IN_APP_TABS)
+            - Routes: `POST /api/tab-memory/sample`
+          - Core:
+            - Uses:
+              - `infra/endpoints.defineEndpoint`
+              - `network/live.liveValue`
+              - `packages/list-bound.cappedList`
+            - Exports (types):
+              - `InAppTab`
+              - `PagePoint`
+              - `PageSeries`
+              - `RendererSeries`
+              - `TabMemoryData`
+              - `TabMemorySample`
+            - Exports (values):
+              - `InAppTabSchema`
+              - `jsHeapGrowthMbPerHour`
+              - `MAX_IN_APP_TABS`
+              - `MAX_PAGE_POINTS`
+              - `MAX_PAGES`
+              - `MAX_RENDERER_POINTS`
+              - `MAX_RENDERERS`
+              - `RENDERER_BUCKET_MS`
+              - `submitTabMemorySample`
+              - `TAB_MEMORY_FIRST_SAMPLE_MS`
+              - `TAB_MEMORY_SAMPLE_EVERY_MS`
+              - `TAB_MEMORY_WINDOW_MS`
+              - `TabMemoryDataSchema`
+              - `TabMemorySampleSchema`
+              - `tabMemorySeries`
+          - Cross-plugin:
+            - Uses tokens: `ui/tokens/shape --spacing`
           - Exemptions:
-            - Exempts itself from: `no-raw-websocket` — `e2e/clean-soak.ts` (sanctioned)
+            - Exempts itself from:
+              - `no-raw-websocket` — `e2e/clean-soak.ts` (sanctioned)
+              - `networking/no-page-transport` — `web/components/tab-memory-recorder.tsx` (sanctioned)
     - **`queue`** — Debug → Queue: the jobs queue as live DataViews with side detail panes — Queue (the host's live job queue, a windowed external collection: status, hold class, attempts, run-at, error, per-state counts; Retry / Cancel), History (the recorded runs, a windowed collection: outcome, duration against the class ceiling, slot wait, error; Run now) — a job leaves Queue for History when its run finishes, and an open detail follows it — Dead (the dead-letter archive), Events (the emit() log, matched or not) and Triggers (every event→job subscription, enable / disable / delete).
       - Web:
         - Slots:
@@ -25468,6 +25537,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/shape --spacing`
             - Imported by:
               - `debug/health-monitor`
+              - `debug/profiling/tab-memory`
               - `debug/sentinel`
           - Exemptions:
             - Exempts itself from: `timer/no-unlisted-timer` — `machine/internal/owner-sampler.ts` (sanctioned)
@@ -27184,6 +27254,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `debug/backend-crash`
           - `debug/claude-cli-calls`
           - `debug/profiling/runtime`
+          - `debug/profiling/tab-memory`
           - `debug/queue`
           - `debug/service-down`
           - `debug/slow-ops/cluster`
@@ -31482,8 +31553,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Slots:
           - `Core.Root`
           - `Core.Boot`
-        - Slot contributors: 54 contributors — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
-          - `Core.Root` ×53
+        - Slot contributors: 55 contributors — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
+          - `Core.Root` ×54
           - `Core.Boot` ← `network.live.boot-snapshot`
       - Core:
         - Uses:
@@ -31552,13 +31623,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `webCollectedDir`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
-        - Imported by: 120 plugins — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
+        - Imported by: 121 plugins — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
           - `primitives` ×23
           - `reports` ×21
           - `apps` ×18
           - `ui` ×7
           - `apps-core` ×6
-          - `debug` ×5
+          - `debug` ×6
           - `framework` ×4
           - `page` ×4
           - `shell` ×4
@@ -33438,11 +33509,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `unmatchedApiResponse`
           - `unsupportedEndpointResponse`
       - Cross-plugin:
-        - Imported by: 255 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
+        - Imported by: 256 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
           - `apps` ×77
           - `conversations` ×35
           - `infra` ×23
-          - `debug` ×19
+          - `debug` ×20
           - `page` ×19
           - `tasks` ×18
           - `primitives` ×15
@@ -33937,9 +34008,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Register: `file-sink-exit-flush`
     - **`file-watcher`** — defineFileWatcher: the one declared in-process file watcher — a named, described declaration (static policy: extensions, ignore, debounce, ceiling, writesWhileOpen, depth, mainOnly) whose start({dirs, label, onChange, onLost}) — start({files, …}) for a writesWhileOpen one, which follows writes to the named files only (kqueue on darwin, one descriptor per file; every follow of a directory shares one subscription) — opens instances over one @parcel/watcher engine (debounce + ceiling flush; no timer — a dropped event is reported to onLost, the one backstop). Records per declaration its open instances, last change batch and a ring of handler runs for the Background activity catalog (onWatcherActivity / listFileWatchers / fileWatcherRecentRuns). The cli barrel's watchForCommand is the same engine for a foreground command, with no registry. acquireDirWatch({dir, scope, onChange}) is the shared directory-watch hub: refcounted native watches, a dir under a watched root riding its watch (a watcher never moved off a live root: a root opening above leaves it where it is), with subtree or children (depth-1 listing) scope — a children request with no root above it opening only a single-directory watch (depth children), never a recursive one. On macOS a children watch is kqueue's (a descriptor on the dir and each entry, budgeted — a dir past the budget rides FSEvents), so watching / or ~ puts nothing on fseventsd; every other FSEvents watch with no ignore rides the process's stream pool — one stream per watched root, a dir under an open recursive stream riding it, whatever declaration asks (fsEventsStreams reads it).
       - Cross-plugin:
-        - Imported by: 43 plugins — full list in [`plugins/infra/plugins/file-watcher/REFERENCE.md`](../plugins/infra/plugins/file-watcher/REFERENCE.md)
+        - Imported by: 44 plugins — full list in [`plugins/infra/plugins/file-watcher/REFERENCE.md`](../plugins/infra/plugins/file-watcher/REFERENCE.md)
           - `infra` ×15
-          - `debug` ×9
+          - `debug` ×10
           - `build` ×5
           - `conversations` ×5
           - `apps` ×2
@@ -35819,9 +35890,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `namespaceUrl`
           - `resolveNamespaceAlias`
       - Cross-plugin:
-        - Imported by: 75 plugins — full list in [`plugins/infra/plugins/namespace/REFERENCE.md`](../plugins/infra/plugins/namespace/REFERENCE.md)
+        - Imported by: 76 plugins — full list in [`plugins/infra/plugins/namespace/REFERENCE.md`](../plugins/infra/plugins/namespace/REFERENCE.md)
           - `framework` ×13
-          - `debug` ×11
+          - `debug` ×12
           - `apps` ×10
           - `infra` ×9
           - `conversations` ×7
@@ -35948,11 +36019,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `worktreeDataDir`
           - `worktreesDir`
       - Cross-plugin:
-        - Imported by: 135 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
+        - Imported by: 136 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
           - `infra` ×34
           - `apps` ×20
           - `framework` ×20
-          - `debug` ×14
+          - `debug` ×15
           - `conversations` ×7
           - `build` ×6
           - `backup` ×4
@@ -38710,10 +38781,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveValueOn`
           - `sliceRange`
       - Cross-plugin:
-        - Imported by: 341 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+        - Imported by: 342 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
           - `apps` ×86
           - `conversations` ×70
-          - `debug` ×34
+          - `debug` ×35
           - `tasks` ×28
           - `infra` ×24
           - `page` ×16
@@ -39116,10 +39187,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `unresolved`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/color-palette --destructive`
-            - Imported by: 302 plugins — full list in [`plugins/network/plugins/live/plugins/live-state/REFERENCE.md`](../plugins/network/plugins/live/plugins/live-state/REFERENCE.md)
+            - Imported by: 303 plugins — full list in [`plugins/network/plugins/live/plugins/live-state/REFERENCE.md`](../plugins/network/plugins/live/plugins/live-state/REFERENCE.md)
               - `apps` ×83
               - `conversations` ×48
-              - `debug` ×30
+              - `debug` ×31
               - `ui` ×25
               - `tasks` ×22
               - `page` ×16
@@ -39817,9 +39888,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `wholeRecord`
           - `wholeTuple`
       - Cross-plugin:
-        - Imported by: 128 plugins — full list in [`plugins/packages/plugins/list-bound/REFERENCE.md`](../plugins/packages/plugins/list-bound/REFERENCE.md)
+        - Imported by: 129 plugins — full list in [`plugins/packages/plugins/list-bound/REFERENCE.md`](../plugins/packages/plugins/list-bound/REFERENCE.md)
           - `apps` ×28
-          - `debug` ×19
+          - `debug` ×20
           - `infra` ×16
           - `conversations` ×15
           - `tasks` ×8
@@ -46454,9 +46525,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-size-body`
               - `ui/tokens/type-scale --font-weight-normal`
               - `ui/tokens/type-scale --line-height-body`
-            - Imported by: 93 plugins — full list in [`plugins/primitives/plugins/css/plugins/placeholder/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/placeholder/REFERENCE.md)
+            - Imported by: 94 plugins — full list in [`plugins/primitives/plugins/css/plugins/placeholder/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/placeholder/REFERENCE.md)
               - `apps` ×30
-              - `debug` ×18
+              - `debug` ×19
               - `primitives` ×12
               - `page` ×7
               - `conversations` ×6
@@ -46738,11 +46809,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Stack`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Imported by: 440 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
+            - Imported by: 441 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
               - `apps` ×108
               - `conversations` ×76
               - `primitives` ×54
-              - `debug` ×39
+              - `debug` ×40
               - `ui` ×31
               - `page` ×27
               - `plugin-meta` ×16
@@ -46981,11 +47052,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×37
               - `ui/tokens/color-palette` ×6
               - `ui/tokens/font-family` ×2
-            - Imported by: 424 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+            - Imported by: 425 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
               - `apps` ×110
               - `conversations` ×84
               - `primitives` ×47
-              - `debug` ×38
+              - `debug` ×39
               - `page` ×25
               - `ui` ×18
               - `plugin-meta` ×15
@@ -47597,8 +47668,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewSlots.Control` ← `primitives.data-view`
           - `DataViewSlots.FieldExtension` ← `primitives.data-view.custom-columns`
           - `DataViewSlots.RowOrder` ← `primitives.data-view.view-order`
-        - Contributes: 104 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
-          - `ConfigV2.WebRegister` ×94
+        - Contributes: 105 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+          - `ConfigV2.WebRegister` ×95
           - `DataViewSlots.Control` ×4
           - `DataViewSlots.Setting` ×4
           - `IdKinds.Kind` ×2
@@ -47877,8 +47948,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useViewRowCounts`
           - `wearsTimeInk`
       - Server:
-        - Contributes: 96 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
-          - `ConfigV2.Register` ×94
+        - Contributes: 97 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+          - `ConfigV2.Register` ×95
           - `ids.kind` ×2
         - Uses:
           - `config_v2.getAllDescriptors`
@@ -48076,10 +48147,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale` ×6
           - `ui/tokens/shadow` ×4
           - `ui/tokens/shape` ×3
-        - Imported by: 124 plugins — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+        - Imported by: 125 plugins — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
           - `fields` ×39
           - `apps` ×29
-          - `debug` ×16
+          - `debug` ×17
           - `primitives` ×10
           - `conversations` ×8
           - `infra` ×4
@@ -50251,9 +50322,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-xs`
           - `ui/tokens/shape --radius`
           - `ui/tokens/shape --spacing`
-        - Imported by: 74 plugins — full list in [`plugins/primitives/plugins/log-channels/REFERENCE.md`](../plugins/primitives/plugins/log-channels/REFERENCE.md)
+        - Imported by: 75 plugins — full list in [`plugins/primitives/plugins/log-channels/REFERENCE.md`](../plugins/primitives/plugins/log-channels/REFERENCE.md)
           - `apps` ×14
-          - `debug` ×12
+          - `debug` ×13
           - `infra` ×10
           - `conversations` ×6
           - `database` ×6
@@ -50299,6 +50370,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `debug/health-monitor`
               - `debug/logs`
               - `debug/profiling/fs-wait`
+              - `debug/profiling/tab-memory`
               - `debug/sentinel`
               - `debug/slow-ops`
               - `debug/timeline`
@@ -50759,6 +50831,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/deploy/analytics/collect` (0 debt)
           - `apps/deploy/site-reports/channel` (0 debt)
           - `debug/latency-ledger` (0 debt)
+          - `debug/profiling/tab-memory` (0 debt)
           - `debug/slow-ops` (0 debt)
           - `framework/web-core` (0 debt)
           - `infra/endpoints` (0 debt)
@@ -50807,6 +50880,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/deploy/analytics/collect`
               - `apps/deploy/site-reports/channel`
               - `debug/latency-ledger`
+              - `debug/profiling/tab-memory`
               - `debug/slow-ops`
               - `framework/web-core`
               - `infra/health`
@@ -51336,9 +51410,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`pane`** — Unified pane primitive: Pane.define and chrome components.
       - Web:
         - Slots: `Pane.Register`
-        - Slot contributors: 95 contributors — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
-          - `Pane.Register` ×95
-        - Contributes: 126 contributions — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+        - Slot contributors: 96 contributors — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+          - `Pane.Register` ×96
+        - Contributes: 127 contributions — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
           - `FileBrowserHeader` "title" → `PaneTitleItem`
           - `FilePreviewHeader` "title" → `PaneTitleItem`
           - `SlotRender.ListMiddleware`
@@ -51454,6 +51528,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `start.actions` "title" → `PaneTitleItem`
           - `statsPane.Actions` "title" → `PaneTitleItem`
           - `systemAgentDetailPane.Actions` "title" → `PaneTitleItem`
+          - `tabMemoryPane.Actions` "title" → `PaneTitleItem`
           - `tableDetailPane.Actions` "title" → `PaneTitleItem`
           - `taskDetailPane.Actions` "title" → `PaneTitleItem`
           - `tasksRootPane.Actions` "title" → `PaneTitleItem`
@@ -51616,10 +51691,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-2xs`
           - `ui/tokens/density --space-md`
           - `ui/tokens/shape --spacing`
-        - Imported by: 203 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+        - Imported by: 204 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
           - `apps` ×74
           - `conversations` ×32
-          - `debug` ×28
+          - `debug` ×29
           - `active-data` ×13
           - `tasks` ×10
           - `apps-core` ×7
@@ -52025,9 +52100,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from: `sortable-list/no-raw-dnd-kit` — `web` (sanctioned)
     - **`relative-time`** — Formats a Date as a human-readable relative string (just now, Nm ago, Nh ago, Nd ago — or the short now / Nm / Nh / Nd), and a running duration as a clock (m:ss). Exposes formatRelativeTime(), <RelativeTime date={…} />, formatElapsed(), useNow() and <ElapsedTime since={…} />.
       - Cross-plugin:
-        - Imported by: 69 plugins — full list in [`plugins/primitives/plugins/relative-time/REFERENCE.md`](../plugins/primitives/plugins/relative-time/REFERENCE.md)
+        - Imported by: 70 plugins — full list in [`plugins/primitives/plugins/relative-time/REFERENCE.md`](../plugins/primitives/plugins/relative-time/REFERENCE.md)
           - `apps` ×25
-          - `debug` ×14
+          - `debug` ×15
           - `conversations` ×10
           - `infra` ×4
           - `tasks` ×4
@@ -52221,6 +52296,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Imported by:
               - `apps-core/tab-origin`
+              - `debug/profiling/tab-memory`
               - `network/live/live-state`
               - `primitives/scope/app-instance`
               - `reports`
@@ -53858,8 +53934,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 
 - **`reorder`** — Generic reorder primitive: every defineRenderSlot is unconditionally reorderable; use defineMountSlot for headless slots. Applies each slot's committed layout (order, hidden items, spacers, dividers, groups) everywhere slots render; a layout is edited in its config file or the Config pane's reorder-tree field. Generic reorder primitive: per-slot config_v2 directives for contribution order/visibility.
   - Web:
-    - Contributes: 282 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×282
+    - Contributes: 283 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×283
     - Uses:
       - `config_v2.ConfigV2`
       - `config_v2.useConfigResult`
@@ -53882,8 +53958,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `useLayoutOrder`
       - `useReorderedEntries`
   - Server:
-    - Contributes: 281 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.Register` ×281
+    - Contributes: 282 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.Register` ×282
     - Uses: `config_v2.ConfigV2`
     - Exports (values): `reorderDirectiveDescriptor`
   - Cross-plugin:
@@ -56189,6 +56265,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-weight-medium`
         - Imported by:
           - `debug/health-monitor`
+          - `debug/profiling/tab-memory`
           - `stats/cost`
           - `stats/pushes`
           - `stats/responsiveness`
@@ -59514,13 +59591,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useWantedStyleKeys`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
-        - Imported by: 587 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+        - Imported by: 588 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
           - `apps` ×154
           - `conversations` ×123
           - `primitives` ×53
           - `page` ×52
           - `fields` ×41
-          - `debug` ×29
+          - `debug` ×30
           - `tasks` ×23
           - `plugin-meta` ×16
           - `active-data` ×11
@@ -61389,12 +61466,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/density --radius-chip-compact`
               - `ui/tokens/density --space-sm`
-            - Tokens used by: 404 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
+            - Tokens used by: 405 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
               - `conversations` ×94
               - `apps` ×82
               - `primitives` ×60
               - `page` ×36
-              - `debug` ×27
+              - `debug` ×28
               - `ui` ×26
               - `tasks` ×11
               - `plugin-meta` ×9

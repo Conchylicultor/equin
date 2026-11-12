@@ -28,6 +28,7 @@ describe("useFocusedTabSet under a server render", () => {
       mode: () => mode,
       hasTab: () => false,
       focusedTabId: () => undefined,
+      openTabs: () => [],
       setMode: () => {},
       exitToPreviousMode: () => {},
       browserTabUrl: (path) => path,

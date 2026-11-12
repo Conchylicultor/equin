@@ -2849,6 +2849,9 @@
     "plugins/debug/plugins/profiling/plugins/tab-memory": {
       "name": "@equin/plugin-debug-profiling-tab-memory",
       "version": "0.0.1",
+      "dependencies": {
+        "recharts": "^3.10.1",
+      },
     },
     "plugins/debug/plugins/queue": {
       "name": "@equin/plugin-debug-queue",

@@ -253,7 +253,10 @@ Sidequests, manual start:
 - `task-1794377776-b2972y` — every open in-app tab stays mounted forever: tab
   memory scales with tabs ever opened.
 - `task-1794377779-w0zmm1` — no tab-side memory telemetry: a 10.7 GB renderer
-  cannot be attributed to a tab, app or route.
+  cannot be attributed to a tab, app or route. Done: every page now
+  samples itself into a `tab-memory` log and Debug → Tab memory draws it
+  beside each renderer's footprint by pid
+  ([`2026-11-12-global-tab-memory-telemetry.md`](2026-11-12-global-tab-memory-telemetry.md)).
 
 Not filed: the toast history (§3) is bounded by sonner at 100 toasts; its
 stale comment in `show-toast.tsx` is corrected in this change.

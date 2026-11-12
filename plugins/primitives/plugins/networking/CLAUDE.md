@@ -257,6 +257,7 @@ built on them — see
     - `apps/deploy/analytics/collect` (0 debt)
     - `apps/deploy/site-reports/channel` (0 debt)
     - `debug/latency-ledger` (0 debt)
+    - `debug/profiling/tab-memory` (0 debt)
     - `debug/slow-ops` (0 debt)
     - `framework/web-core` (0 debt)
     - `infra/endpoints` (0 debt)

@@ -49,6 +49,7 @@ export const dataViews: DataViewEntry[] = [
   { id: "debug.slow-ops.cluster-aggregate", pluginId: "debug.slow-ops.cluster" },
   { id: "debug.slow-ops.cluster-timeline", pluginId: "debug.slow-ops.cluster" },
   { id: "debug.slow-ops.local", pluginId: "debug.slow-ops.pane" },
+  { id: "debug.tab-memory.pages", pluginId: "debug.profiling.tab-memory" },
   { id: "debug.tests.file-runs", pluginId: "debug.tests" },
   { id: "debug.tests.tree", pluginId: "debug.tests" },
   { id: "debug.trace.events", pluginId: "debug.trace.pane" },

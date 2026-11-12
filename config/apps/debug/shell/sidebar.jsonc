@@ -1,4 +1,4 @@
-// @hash 6a1c3d1b833d
+// @hash 63cd139c0a7c
 // @legend — how to write this file (rewritten by ./equin build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -21,6 +21,7 @@
     "debug.render-profiler:render-profiler",
     "debug.health-monitor:health-monitor",
     "debug.heap-snapshot:heap-snapshot",
+    "debug.profiling.tab-memory:tab-memory",
     "debug.queue:queue",
     "debug.background:background",
     "debug.live-state-health:live-state-health",

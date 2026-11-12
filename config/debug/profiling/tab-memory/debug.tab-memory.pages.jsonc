@@ -1,0 +1,11 @@
+// @hash 6ec84829688d
+// The pages that sampled themselves in the last 12 h. Recent first: the page
+// still open is usually the one to look at. Growing: the steepest JS heap
+// climb first — the page behind a renderer's ramp, when the growth is JS.
+{
+  "views": [
+    { "id": "recent", "name": "Recent", "icon": "history", "view": { "type": "table", "sort": { "fieldId": "lastSample", "direction": "desc" } } },
+    { "id": "growing", "name": "Growing", "icon": "trending-up", "view": { "type": "table", "sort": { "fieldId": "growth", "direction": "desc" } } },
+    { "id": "list", "name": "List", "icon": "list", "view": { "type": "list", "sort": { "fieldId": "lastSample", "direction": "desc" } } }
+  ]
+}

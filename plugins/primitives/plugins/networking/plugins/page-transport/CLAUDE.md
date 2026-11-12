@@ -37,6 +37,7 @@ to itself).
     - `apps/deploy/analytics/collect`
     - `apps/deploy/site-reports/channel`
     - `debug/latency-ledger`
+    - `debug/profiling/tab-memory`
     - `debug/slow-ops`
     - `framework/web-core`
     - `infra/health`

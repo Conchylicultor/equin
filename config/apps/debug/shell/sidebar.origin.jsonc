@@ -1,4 +1,4 @@
-// @hash 6a1c3d1b833d
+// @hash 63cd139c0a7c
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -25,6 +25,7 @@
     "debug.mcp-tools:mcp-tools",
     "debug.memory:memory",
     "debug.profiling:profiling",
+    "debug.profiling.tab-memory:tab-memory",
     "debug.queue:queue",
     "debug.read-set:read-set",
     "debug.render-profiler:render-profiler",

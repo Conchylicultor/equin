@@ -132,6 +132,12 @@ export const TopProcessSchema = z.object({
   bucket: MachineUsageBucketSchema,
   /** The executable's file name, or the start of a nameless command line. */
   name: z.string(),
+  /**
+   * Its process id, so one process reads as one series across windows (one
+   * Chrome renderer among dozens of the same name — debug/profiling/tab-memory).
+   * Absent on lines written before it was recorded.
+   */
+  pid: z.number().int().optional(),
   cpuCores: z.number().min(0).optional(),
   memMb: z.number().min(0),
 });
