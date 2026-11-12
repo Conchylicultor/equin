@@ -56,6 +56,17 @@ export const IO_HEALTH_THRESHOLDS = {
   /** Below this median residency the canaries count as evicted. */
   cacheResident: 0.5,
   /**
+   * A tick reclaiming this much clean memory (MB/s, the pageout daemon taking
+   * file pages back) is memory demand evicting the cache: a disk-quiet tick
+   * reads ≤ ~2 MB/s, so ordinary replacement of old pages by new reads stays
+   * under it. Measured 2026-11-11 with the machine's RAM full (64 GB, 0.4 GB
+   * free, 11 GB compressed, Chrome holding ~29 GB): 1–25 MB/s per 30 s on
+   * quiet ticks, and every canary evicted within a minute. A canary evicted
+   * with every tick since its read below it stays a `cache-collapse` (no
+   * measured cause); with one above it, a `memory-pressure`.
+   */
+  memoryReclaimMbS: 4,
+  /**
    * A tick's slowest rename over this is a held rename. Measured 2026-11-05 with
    * a 10 Hz probe renaming one file in its own directory: ≤ 14 ms in every
    * quiet window (p99 ~5 ms), 290–1300 ms while a `bun install` or an
@@ -392,42 +403,160 @@ function isQuiet(r: MonitorTick): boolean {
   return r.new_vnodes_s !== undefined && r.new_vnodes_s < T.quietNewVnodesS;
 }
 
-/** The canaries of tick `i` read 60–180 s ago, keeping only those every tick since whose read was quiet. */
-function quietCanaries(win: readonly MonitorTick[], i: number): number[] {
+/** One canary read 60–180 s before a tick, every tick since its read disk-quiet. */
+interface QuietCanary {
+  resident: number;
+  /** Memory demand reclaimed the file cache on some tick since the read. */
+  reclaimed: boolean;
+}
+
+/**
+ * The canaries of tick `i` read 60–180 s ago, keeping only those every tick
+ * since whose read was disk-quiet, each marked with whether memory demand
+ * reclaimed the cache in that stretch. A tick that measured no reclaim (the
+ * history before 2026-11-11) does not mark it: the eviction stays one no
+ * measured cause explains (`cache-collapse`).
+ */
+function quietCanaries(win: readonly MonitorTick[], i: number): QuietCanary[] {
   const r = win[i]!;
   if (!isQuiet(r)) return [];
-  return r.canary
-    .filter((c) => c.age_s >= T.cacheAgeMinS && c.age_s < T.cacheAgeMaxS)
-    .filter((c) => {
-      for (let j = i - 1; j >= 0 && win[j]!.t > r.t - c.age_s - 1; j--) {
-        if (!isQuiet(win[j]!)) return false;
-      }
-      // The window must reach back to the read, or the stretch is unknown.
-      return win[0]!.t <= r.t - c.age_s;
-    })
-    .map((c) => c.resident);
+  const out: QuietCanary[] = [];
+  for (const c of r.canary) {
+    if (c.age_s < T.cacheAgeMinS || c.age_s >= T.cacheAgeMaxS) continue;
+    // The window must reach back to the read, or the stretch is unknown.
+    if (win[0]!.t > r.t - c.age_s) continue;
+    let quiet = true;
+    let reclaimed = false;
+    for (let j = i; j >= 0 && win[j]!.t > r.t - c.age_s - 1; j--) {
+      if (j < i && !isQuiet(win[j]!)) quiet = false;
+      // A tick's rate covers the stretch since the tick before it: only the
+      // ticks after the read say what happened to the canary.
+      const reclaim = win[j]!.memory?.file_reclaim_mb_s;
+      if (win[j]!.t > r.t - c.age_s && reclaim !== undefined)
+        reclaimed ||= reclaim >= T.memoryReclaimMbS;
+    }
+    if (quiet) out.push({ resident: c.resident, reclaimed });
+  }
+  return out;
+}
+
+/** The disk-quiet canaries of every tick in the window, those of one cause. */
+function evictedCanaries(
+  win: readonly MonitorTick[],
+  reclaimed: boolean,
+): { residency: number; ticks: MonitorTick[] } | null {
+  const perTick = win.map((_, i) =>
+    quietCanaries(win, i).filter((c) => c.reclaimed === reclaimed),
+  );
+  const ticks = win.filter((_, i) => perTick[i]!.length > 0);
+  if (ticks.length < T.cacheMinQuietTicks) return null;
+  const m = median(perTick.flat().map((c) => c.resident));
+  if (m === null || m >= T.cacheResident) return null;
+  return { residency: m, ticks };
 }
 
 function cacheCollapse(win: readonly MonitorTick[]): Observation[] {
-  const perTick = win.map((_, i) => quietCanaries(win, i));
-  const quiet = win.filter((_, i) => perTick[i]!.length > 0);
-  if (quiet.length < T.cacheMinQuietTicks) return [];
-  const resident = perTick.flat();
-  const m = median(resident);
-  if (m === null || m >= T.cacheResident) return [];
-  const churn = median(quiet.map((r) => r.new_vnodes_s ?? 0));
+  const evicted = evictedCanaries(win, false);
+  if (evicted === null) return [];
+  const churn = median(evicted.ticks.map((r) => r.new_vnodes_s ?? 0));
+  const unmeasured = evicted.ticks.filter(
+    (r) => r.memory?.file_reclaim_mb_s === undefined,
+  ).length;
   return [
     {
       rule: "cache-collapse",
       subject: "cache",
       severity: "attention",
-      summary: `The file cache drops files read 1–3 min ago (${fmt(m * 100, 0)} % resident) although the machine is quiet`,
+      summary: `The file cache drops files read 1–3 min ago (${fmt(evicted.residency * 100, 0)} % resident) with the disk quiet and no memory reclaim measured`,
       evidence: [
-        { label: "canary residency at 60–180 s (median)", value: fmt(m, 2) },
-        { label: "quiet ticks", value: String(quiet.length) },
+        {
+          label: "canary residency at 60–180 s (median)",
+          value: fmt(evicted.residency, 2),
+        },
+        { label: "quiet ticks", value: String(evicted.ticks.length) },
         {
           label: "new vnodes/s in them (median)",
           value: churn === null ? "-" : fmt(churn, 0),
+        },
+        {
+          label: "of them, ticks that measured no memory reclaim",
+          value: String(unmeasured),
+        },
+      ],
+    },
+  ];
+}
+
+const PRESSURE_LEVEL: Record<number, string> = {
+  1: "normal",
+  2: "warning",
+  4: "critical",
+};
+
+function gb(mb: number): string {
+  return `${fmt(mb / 1000)} GB`;
+}
+
+/**
+ * Memory demand evicts the file cache: the same symptom as `cache-collapse`
+ * (canaries read 1–3 min ago gone on a disk-quiet machine), with its cause
+ * measured — the pageout daemon reclaimed the cache on the ticks since their
+ * read. Names who holds the memory, as of the newest tick.
+ */
+function memoryPressure(win: readonly MonitorTick[]): Observation[] {
+  const evicted = evictedCanaries(win, true);
+  if (evicted === null) return [];
+  const reclaim = median(
+    evicted.ticks.flatMap((r) => r.memory?.file_reclaim_mb_s ?? []),
+  );
+  const alloc = median(
+    evicted.ticks.flatMap((r) => r.memory?.zero_fill_mb_s ?? []),
+  );
+  const mem = win.findLast((r) => r.memory !== undefined)!.memory!;
+  const top = Object.entries(mem.top_footprint_mb)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 4);
+  return [
+    {
+      rule: "memory-pressure",
+      subject: "memory",
+      severity: "attention",
+      summary: `Memory demand evicts files read 1–3 min ago from the file cache (${fmt(evicted.residency * 100, 0)} % resident): it reclaims ${reclaim === null ? "-" : fmt(reclaim, 0)} MB/s of it with the disk quiet`,
+      evidence: [
+        {
+          label: "canary residency at 60–180 s (median)",
+          value: fmt(evicted.residency, 2),
+        },
+        { label: "disk-quiet ticks", value: String(evicted.ticks.length) },
+        {
+          label: "file cache reclaimed MB/s (median)",
+          value: reclaim === null ? "-" : fmt(reclaim),
+        },
+        {
+          label: "new memory allocated MB/s (median zero-fill)",
+          value: alloc === null ? "-" : fmt(alloc, 0),
+        },
+        {
+          label: "available / pressure level",
+          value: `${mem.available_pct} % / ${PRESSURE_LEVEL[mem.pressure_level] ?? String(mem.pressure_level)}`,
+        },
+        {
+          label: "file cache / anonymous / compressor / swap",
+          value: [
+            mem.file_cache_mb,
+            mem.anonymous_mb,
+            mem.compressor_mb,
+            mem.swap_used_mb,
+          ]
+            .map(gb)
+            .join(" / "),
+        },
+        {
+          label: "largest memory users (footprint)",
+          value:
+            top.length === 0
+              ? "-"
+              : top.map(([n, mb]) => `${n} ${gb(mb)}`).join(", "),
         },
       ],
     },
@@ -476,6 +605,7 @@ const RULES: ((win: readonly MonitorTick[], held: Held) => Observation[])[] = [
   renameStall,
   relaunchLoop,
   cacheCollapse,
+  memoryPressure,
   fseventsFlood,
   rootDaemon,
 ];

@@ -173,6 +173,63 @@ describe("io-health detector", () => {
     expect(resident.raised).toEqual([]);
   });
 
+  test("an eviction memory demand explains is memory-pressure, naming who holds the memory, not cache-collapse", () => {
+    const canary = [{ age_s: 90, resident: 0 }];
+    const memory = (reclaim: number) => ({
+      available_pct: 70,
+      pressure_level: 1,
+      free_mb: 400,
+      file_cache_mb: 13_900,
+      anonymous_mb: 34_000,
+      wired_mb: 4_000,
+      compressor_mb: 11_700,
+      swap_used_mb: 1_400,
+      file_reclaim_mb_s: reclaim,
+      zero_fill_mb_s: 300,
+      pageouts_mb_s: 0,
+      swapouts_mb_s: 0,
+      top_footprint_mb: { "Google Chrome Helper (Renderer)": 18_000, bun: 900 },
+    });
+    const pressed = run(120, () => ({
+      new_vnodes_s: 50,
+      canary,
+      memory: memory(25),
+    }));
+    expect(pressed.raised.map((r) => r.key)).toEqual([
+      "memory-pressure:memory",
+    ]);
+    const f = pressed.d.active()[0]!;
+    expect(f.summary).toContain("reclaims 25 MB/s");
+    expect(f.evidence).toContainEqual({
+      label: "largest memory users (footprint)",
+      value: "Google Chrome Helper (Renderer) 18.0 GB, bun 0.9 GB",
+    });
+
+    // Memory calm since the read: the eviction has no measured cause.
+    const calm = run(120, () => ({
+      new_vnodes_s: 50,
+      canary,
+      memory: memory(0.5),
+    }));
+    expect(calm.raised.map((r) => r.key)).toEqual(["cache-collapse:cache"]);
+
+    // One reclaim burst between the read and the reading marks the canary.
+    const burst = run(120, (i) => ({
+      new_vnodes_s: 50,
+      canary,
+      memory: memory(i % 3 === 0 ? 30 : 0.5),
+    }));
+    expect(burst.raised.map((r) => r.key)).toEqual(["memory-pressure:memory"]);
+
+    // Memory demand with the canaries resident is no finding.
+    const fine = run(120, () => ({
+      new_vnodes_s: 50,
+      canary: [{ age_s: 90, resident: 1 }],
+      memory: memory(25),
+    }));
+    expect(fine.raised).toEqual([]);
+  });
+
   test("a root daemon installed but silent is raised from the first tick that says so, and cleared by the next that does not", () => {
     const status = {
       problem: "empty" as const,

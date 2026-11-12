@@ -16,8 +16,10 @@ export const IO_HEALTH_RULES = [
   "rename-stall",
   /** A watched daemon is relaunched over and over (a new pid each run). */
   "relaunch-loop",
-  /** The file cache drops files within minutes although nothing churns it. */
+  /** The file cache drops files within minutes with the disk quiet and no memory demand measured reclaiming it. */
   "cache-collapse",
+  /** Memory demand (anonymous allocation) reclaims the file cache within minutes while the disk is quiet. */
+  "memory-pressure",
   /** The machine generates file events at a rate no healthy hour reaches (a runaway writer). */
   "fsevents-flood",
   /** The monitor's root daemon is installed but not the one writing (its plist empty, invalid or unloaded, or it is silent). */
@@ -36,7 +38,7 @@ export const EVIDENCE_MAX = 8;
 
 export const FindingSchema = z.object({
   rule: z.enum(IO_HEALTH_RULES),
-  /** What the rule is about: a daemon's name, or `disk` / `probe` / `volume` / `cache` / `root-daemon`. */
+  /** What the rule is about: a daemon's name, or `disk` / `probe` / `volume` / `cache` / `memory` / `root-daemon`. */
   subject: z.string(),
   severity: z.enum(["attention", "critical"]),
   /** One sentence, the report's message and the health row's summary. */

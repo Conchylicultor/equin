@@ -40,7 +40,7 @@ from `./equin start` with no `sudo`.
 ```
 
 No `sudo`. Every signal the detector reads — daemon CPU, pids and ages,
-device ms/op, probes, canaries, vnode counters — needs no root.
+device ms/op, probes, canaries, vnode counters, memory (sizes, the file-cache reclaim and allocation rates, the largest processes by footprint — your own only) — needs no root.
 
 ## Root: an opt-in, for attribution
 

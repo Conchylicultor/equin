@@ -1,7 +1,7 @@
 // The calls the monitor makes that no command line exposes, over bun:ffi
 // (macOS only): into libSystem, darwinbg on this process, page residency of a
-// file (mincore over a read-only mapping) and a process's disk bytes read
-// (proc_pid_rusage); into CoreServices, the current FSEvents event id.
+// file (mincore over a read-only mapping) and a process's disk bytes read and
+// physical footprint (proc_pid_rusage); into CoreServices, the current FSEvents event id.
 import { dlopen, FFIType } from "bun:ffi";
 import { closeSync, openSync } from "node:fs";
 
@@ -88,17 +88,31 @@ export function residentFraction(paths: string[], bytes: number): number {
 }
 
 const RUSAGE_INFO_V2 = 2;
-// struct rusage_info_v2: uuid[16], then 18 uint64 — ri_diskio_bytesread is the 17th.
+// struct rusage_info_v2: uuid[16], then 18 uint64 — ri_phys_footprint is the
+// 8th, ri_diskio_bytesread the 17th.
 const RUSAGE_V2_BYTES = 16 + 18 * 8;
+const PHYS_FOOTPRINT_OFFSET = 16 + 7 * 8;
 const DISKIO_READ_OFFSET = 16 + 16 * 8;
+
+/** One uint64 field of `pid`'s rusage_info_v2; null when it cannot be read (gone, or not ours without root). */
+function rusageField(pid: number, offset: number): number | null {
+  const buf = new Uint8Array(RUSAGE_V2_BYTES);
+  if (lib.symbols.proc_pid_rusage(pid, RUSAGE_INFO_V2, buf) !== 0) return null;
+  return Number(new DataView(buf.buffer).getBigUint64(offset, true));
+}
 
 /** Bytes `pid` has read from disk over its life; null when it cannot be read (gone, or not ours without root). */
 export function diskBytesRead(pid: number): number | null {
-  const buf = new Uint8Array(RUSAGE_V2_BYTES);
-  if (lib.symbols.proc_pid_rusage(pid, RUSAGE_INFO_V2, buf) !== 0) return null;
-  return Number(
-    new DataView(buf.buffer).getBigUint64(DISKIO_READ_OFFSET, true),
-  );
+  return rusageField(pid, DISKIO_READ_OFFSET);
+}
+
+/**
+ * `pid`'s physical footprint in bytes — what Activity Monitor calls Memory:
+ * resident and compressed anonymous memory it owns. Null when it cannot be
+ * read (gone, or not ours without root).
+ */
+export function physFootprint(pid: number): number | null {
+  return rusageField(pid, PHYS_FOOTPRINT_OFFSET);
 }
 
 /**

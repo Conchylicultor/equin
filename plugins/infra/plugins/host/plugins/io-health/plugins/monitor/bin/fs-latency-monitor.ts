@@ -40,6 +40,14 @@
  *              2026-11-09). Beside them the system's current FSEvents
  *              event id, which dates a wedge against the id's history
  *              (the 2026-11-08 one began as it crossed 2^32).
+ *   memory     what competes with the file cache for RAM: available %,
+ *              pressure level, free / file cache / anonymous / wired /
+ *              compressor / swap sizes, and since the last tick the clean
+ *              pages the pageout daemon reclaimed (the file cache taken
+ *              back), the zero-fill (allocation), page-out and swap-out
+ *              rates; beside them the largest processes by physical
+ *              footprint. On a disk-quiet tick, reclaim is what memory
+ *              demand takes from the cache (io-health's `memory-pressure`).
  *   readers    root only: the processes reading the most from disk since the
  *              last tick, and the fseventsd log files fseventsd holds open.
  *
@@ -75,6 +83,7 @@ import type {
 import {
   currentFsEventId,
   diskBytesRead,
+  physFootprint,
   residentFraction,
   setDarwinbg,
 } from "./native";
@@ -102,6 +111,7 @@ const CANARY_GROUPS = 12;
 const CANARY_FILES = 50;
 const CANARY_BYTES = 16_384;
 const TOP_READERS = 8;
+const TOP_MEMORY = 8;
 const DAEMONS = [
   "fseventsd",
   "syspolicyd",
@@ -123,6 +133,14 @@ interface State {
     wops: number;
     rbytes: number;
     rtime: number;
+  };
+  /** The memory counters of the last tick, in pages. */
+  mem_prev?: {
+    t: number;
+    reclaimed: number;
+    zero_fill: number;
+    pageouts: number;
+    swapouts: number;
   };
   readers_prev?: Record<string, number>;
   readers_t?: number;
@@ -441,6 +459,93 @@ function diskReaders(
   };
 }
 
+/** vm_stat's counters by label ("Pages free", "Anonymous pages", …), and its page size. */
+function vmStat(): { pageBytes: number; pages: Record<string, number> } {
+  const out = run(["vm_stat"]);
+  const size = /page size of (\d+) bytes/.exec(out);
+  if (size === null) throw new Error(`vm_stat: no page size in ${out}`);
+  const pages: Record<string, number> = {};
+  for (const m of out.matchAll(/^"?([^:"]+)"?:\s+(\d+)\.?$/gm))
+    pages[m[1]!.trim()] = Number(m[2]);
+  return { pageBytes: Number(size[1]), pages };
+}
+
+/** The largest processes by physical footprint, MB summed by name (only our own without root). */
+function topFootprint(): Record<string, number> {
+  const byName = new Map<string, number>();
+  for (const line of run(["ps", "-Ao", "pid=,comm="]).split("\n")) {
+    const m = /^\s*(\d+)\s+(.+)$/.exec(line);
+    if (m === null) continue;
+    const bytes = physFootprint(Number(m[1]));
+    if (bytes === null) continue;
+    const name = basename(m[2]!.trim());
+    byName.set(name, (byName.get(name) ?? 0) + bytes);
+  }
+  return Object.fromEntries(
+    [...byName]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, TOP_MEMORY)
+      .map(([n, b]) => [n, Math.round(b / 1e6)]),
+  );
+}
+
+/** `vm.swapusage`'s `used = 1396.75M`, in MB. */
+function swapUsedMb(swapusage: string): number {
+  const m = /used = ([\d.]+)([KMG])/.exec(swapusage);
+  if (m === null) throw new Error(`vm.swapusage: ${swapusage}`);
+  const unit = { K: 1 / 1024, M: 1, G: 1024 }[m[2] as "K" | "M" | "G"];
+  return round(Number(m[1]) * unit * 1.048576, 0);
+}
+
+function memory(now: number, state: State): WrittenTick["memory"] {
+  const k = sysctl([
+    "kern.memorystatus_level",
+    "kern.memorystatus_vm_pressure_level",
+    "vm.pageout_inactive_clean",
+    "vm.pageout_speculative_clean",
+    "vm.swapusage",
+  ]);
+  const { pageBytes, pages } = vmStat();
+  const count = (label: string) => {
+    const v = pages[label];
+    if (v === undefined) throw new Error(`vm_stat: no "${label}"`);
+    return v;
+  };
+  const mb = (n: number) => round((n * pageBytes) / 1e6, 0);
+  const cur = {
+    t: now,
+    reclaimed:
+      int(k, "vm.pageout_inactive_clean") +
+      int(k, "vm.pageout_speculative_clean"),
+    zero_fill: count("Pages zero filled"),
+    pageouts: count("Pageouts"),
+    swapouts: count("Swapouts"),
+  };
+  const out: WrittenTick["memory"] = {
+    available_pct: int(k, "kern.memorystatus_level"),
+    pressure_level: int(k, "kern.memorystatus_vm_pressure_level"),
+    free_mb: mb(count("Pages free")),
+    file_cache_mb: mb(count("File-backed pages")),
+    anonymous_mb: mb(count("Anonymous pages")),
+    wired_mb: mb(count("Pages wired down")),
+    compressor_mb: mb(count("Pages occupied by compressor")),
+    swap_used_mb: swapUsedMb(k["vm.swapusage"] ?? ""),
+    top_footprint_mb: topFootprint(),
+  };
+  const prev = state.mem_prev;
+  if (prev !== undefined && now > prev.t) {
+    const dt = now - prev.t;
+    const rate = (a: number, b: number) =>
+      round(((b - a) * pageBytes) / dt / 1e6, 1);
+    out.file_reclaim_mb_s = rate(prev.reclaimed, cur.reclaimed);
+    out.zero_fill_mb_s = rate(prev.zero_fill, cur.zero_fill);
+    out.pageouts_mb_s = rate(prev.pageouts, cur.pageouts);
+    out.swapouts_mb_s = rate(prev.swapouts, cur.swapouts);
+  }
+  state.mem_prev = cur;
+  return out;
+}
+
 /** Root only: the `.fseventsd` log files fseventsd holds open (hex event ids). */
 function fseventsdLogs(): string[] | null {
   const pid = run(["pgrep", "-x", "fseventsd"], false).trim().split(/\s+/)[0];
@@ -596,6 +701,7 @@ function runTick(spec: RootDaemonSpec): void {
     daemon_procs: daemonProcs(),
     fsevents_event_id: currentFsEventId(),
     uninterruptible: blocked,
+    memory: memory(now, state),
   };
   if (rootDaemon !== undefined) rec.root_daemon = rootDaemon;
   if (isRoot) {

@@ -43,6 +43,45 @@ export const RootDaemonStatusSchema = z.object({
 export type RootDaemonStatus = z.infer<typeof RootDaemonStatusSchema>;
 
 /**
+ * The machine's memory as one tick saw it (from 2026-11-11): what competes
+ * with the file cache for RAM. Sizes in MB; rates are deltas, absent on a
+ * monitor's first tick.
+ */
+const MemorySchema = z.object({
+  /** `kern.memorystatus_level`: the % of memory the kernel counts available (memory_pressure's "free percentage"). */
+  available_pct: z.number(),
+  /** `kern.memorystatus_vm_pressure_level`: 1 normal, 2 warning, 4 critical. */
+  pressure_level: z.number(),
+  free_mb: z.number(),
+  /** File-backed pages: the file cache. */
+  file_cache_mb: z.number(),
+  anonymous_mb: z.number(),
+  wired_mb: z.number(),
+  /** Physical memory the compressor occupies (not what it holds). */
+  compressor_mb: z.number(),
+  swap_used_mb: z.number(),
+  /**
+   * Clean pages the pageout daemon took back since the last tick
+   * (`vm.pageout_inactive_clean` + `vm.pageout_speculative_clean`): the file
+   * cache reclaimed to make room. Small while the disk reads little and RAM
+   * has room; anonymous memory demand (an app allocating) is what drives it
+   * on a disk-quiet tick (`memory-pressure`).
+   */
+  file_reclaim_mb_s: z.number().optional(),
+  /** Fresh anonymous memory handed out (zero-filled pages): the allocation rate. */
+  zero_fill_mb_s: z.number().optional(),
+  pageouts_mb_s: z.number().optional(),
+  swapouts_mb_s: z.number().optional(),
+  /**
+   * The largest memory users by physical footprint, MB summed by process
+   * name, the biggest few. Without root only the user's own processes are
+   * readable (WindowServer and system daemons are not).
+   */
+  top_footprint_mb: z.record(z.string(), z.number()),
+});
+type Memory = z.infer<typeof MemorySchema>;
+
+/**
  * One line of `fs-latency.jsonl`, reduced to what the detector reads (unknown
  * keys are dropped). Fields the monitor added over time are optional, so the
  * recorded history from 2026-11-03 parses as it was written: the first tick
@@ -84,6 +123,8 @@ export const MonitorTickSchema = z.object({
    * fseventsd is relaunched after an unclean exit (it destroys its history).
    */
   fsevents_event_id: z.number().optional(),
+  /** The machine's memory (from 2026-11-11). */
+  memory: MemorySchema.optional(),
 });
 export type MonitorTick = z.infer<typeof MonitorTickSchema>;
 
@@ -160,6 +201,7 @@ export interface WrittenTick {
   root_daemon?: RootDaemonStatus;
   /** Processes in uninterruptible wait (ps state U) as the tick ran: count by name, the busiest few. */
   uninterruptible: Record<string, number>;
+  memory: Memory;
 }
 
 type Holds<T extends true> = T;
