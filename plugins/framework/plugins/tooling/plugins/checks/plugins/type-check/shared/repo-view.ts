@@ -24,10 +24,16 @@
 // real filesystem answers: dependencies are pinned by the lockfile, which is in
 // the engine (`./tsc-engine.ts`).
 //
-// Bytes are still read off the disk, but only CHECKED against the view: a file
-// whose bytes no longer hash to its version changed after the tree was taken,
-// and reading on would record a result under a key it does not belong to. That
-// throws (`readText`).
+// A file's BYTES are its blob's, by construction: `readText` answers the
+// content its version names, never "whatever is on disk now". The disk is only
+// a fast way to the same bytes — read, hashed, and used when they hash to the
+// version; otherwise (the file was edited, or a push advanced the checkout,
+// after the tree was taken) the blob is read out of git's object store, where
+// `computeTreeHash` already wrote it. So the working tree moving under a run
+// changes nothing the run reads: the verdict is a function of its tree, and a
+// long run on a live checkout (the daily backstop on main, killed by a push's
+// merge on 2026-11-12) no longer dies of it. A blob missing from the store
+// throws — the tree names content git does not hold.
 
 import { createHash } from "crypto";
 import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
@@ -66,10 +72,54 @@ export interface RepoView {
   /** A directory's entries (files and subdirectories); empty when it is not one. */
   entries(dir: string): DirEntries;
   /**
-   * A file's text off the disk, CHECKED against its version: throws when the
-   * file is not in the view, or its bytes changed since the tree was taken.
+   * A file's text: the bytes of its blob (off the disk when they still hash to
+   * its version, else out of the object store). Throws when the file is not in
+   * the view, or the object store does not hold its blob.
    */
   readText(path: string): string;
+}
+
+/**
+ * Where a blob's bytes come from by sha: git's object store. Synchronous —
+ * `readText` answers a TypeScript `CompilerHost`, which is.
+ */
+export type BlobSource = (sha: string) => Uint8Array;
+
+/**
+ * An object store holding exactly `texts` (each under its blob sha in a tree of
+ * `treeHash`'s format): a fixture's tree, without a repository.
+ */
+export function blobSourceOf(
+  texts: Iterable<string>,
+  treeHash: string,
+): BlobSource {
+  const held = new Map<string, Uint8Array>();
+  for (const text of texts) {
+    const bytes = Buffer.from(text);
+    held.set(gitBlobSha(bytes, treeHash), bytes);
+  }
+  return (sha) => {
+    const bytes = held.get(sha);
+    if (bytes === undefined) throw new Error(`no blob ${sha} in the fixture`);
+    return bytes;
+  };
+}
+
+/** `root`'s object store: `git cat-file blob <sha>`, one spawn per blob. */
+export function gitBlobSource(root: AppPath): BlobSource {
+  return (sha) => {
+    const proc = Bun.spawnSync(["git", "cat-file", "blob", sha], {
+      cwd: root,
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    if (proc.exitCode !== 0) {
+      throw new Error(
+        `type-check: git's object store in ${root} does not hold blob ${sha} (git cat-file exit ${proc.exitCode}: ${proc.stderr.toString().trim()})`,
+      );
+    }
+    return proc.stdout;
+  };
 }
 
 /**
@@ -83,6 +133,16 @@ export function gitBlobSha(bytes: Uint8Array, treeHash: string): string {
     .update(`blob ${bytes.length}\0`)
     .update(bytes)
     .digest("hex");
+}
+
+/** A file's bytes, or null when no file is there (any other error throws). */
+function readIfPresent(abs: AppPath): Uint8Array | null {
+  try {
+    return readFileSync(abs);
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return null;
+    throw err;
+  }
 }
 
 /** UTF-8 text the way `ts.sys.readFile` decodes it: a leading BOM dropped. */
@@ -99,13 +159,15 @@ function decode(bytes: Uint8Array): string {
 }
 
 /**
- * A view over `blobs` (repo path → blob sha). Pure: the tree comes from the
- * caller — `openRepoView` reads it out of git; a test hands it a fixture's.
+ * A view over `blobs` (repo path → blob sha), whose bytes `objects` holds. Pure:
+ * the tree comes from the caller — `openRepoView` reads it out of git; a test
+ * hands it a fixture's.
  */
 export function repoViewOver(
   root: AppPath,
   treeHash: string,
   blobs: ReadonlyMap<string, string>,
+  objects: BlobSource,
 ): RepoView {
   const index = new Map<string, { files: Set<string>; dirs: Set<string> }>();
   const at = (dir: string) => {
@@ -152,13 +214,19 @@ export function repoViewOver(
           `type-check: ${path} is not in the checked tree ${treeHash}`,
         );
       }
-      const bytes = readFileSync(joinAppPath(root, path));
-      if (gitBlobSha(bytes, treeHash) !== version) {
+      // The disk, when it still holds the blob (a missing file is a moved
+      // tree too); the object store otherwise — checked all the same.
+      const onDisk = readIfPresent(joinAppPath(root, path));
+      if (onDisk !== null && gitBlobSha(onDisk, treeHash) === version) {
+        return decode(onDisk);
+      }
+      const stored = objects(version);
+      if (gitBlobSha(stored, treeHash) !== version) {
         throw new Error(
-          `type-check: ${path} changed on disk after the check took its tree (${treeHash}) — its bytes no longer hash to its version. Re-run the check once the tree is quiet.`,
+          `type-check: the object store answered blob ${version} (${path}) with bytes that do not hash to it`,
         );
       }
-      return decode(bytes);
+      return decode(stored);
     },
   };
 }
@@ -167,7 +235,12 @@ export function repoViewOver(
 export function viewOfSnapshot(snapshot: GitTreeSnapshot): RepoView {
   const blobs = new Map<string, string>();
   for (const p of snapshot.paths()) blobs.set(p, snapshot.blobSha(p)!);
-  return repoViewOver(snapshot.root, snapshot.treeHash, blobs);
+  return repoViewOver(
+    snapshot.root,
+    snapshot.treeHash,
+    blobs,
+    gitBlobSource(snapshot.root),
+  );
 }
 
 /** The view of `tree` over `root`: its snapshot, read out of git. */
@@ -218,9 +291,9 @@ export function viewSys(view: RepoView): ViewSys {
         ? ts.sys.getDirectories(abs)
         : [...view.entries(r).dirs];
     },
-    // No symlink is in the view (git stores one as a blob, which the view
-    // reads as the file it points at only through `readText`'s disk read), so
-    // a repo path is its own real path.
+    // A symlink in the tree is a blob holding its target's path, and the view
+    // reads it as that blob, never the file it points at: a repo path is its
+    // own real path.
     realpath: (abs) =>
       repo(abs) === null ? (ts.sys.realpath?.(abs) ?? abs) : abs,
   };

@@ -25,7 +25,12 @@ import {
 } from "fs";
 import { tmpdir } from "os";
 import { dirname, join } from "path";
-import { gitBlobSha, repoViewOver, type RepoView } from "../shared/repo-view";
+import {
+  blobSourceOf,
+  gitBlobSha,
+  repoViewOver,
+  type RepoView,
+} from "../shared/repo-view";
 import {
   LINT_DATA_FILES,
   LINT_CONFIG_SOURCE,
@@ -57,7 +62,12 @@ function viewOf(
     writeFileSync(join(root, rel), text);
     if (rel in files) blobs.set(rel, gitBlobSha(Buffer.from(text), TREE));
   }
-  return repoViewOver(asAppPath(root), TREE, blobs);
+  return repoViewOver(
+    asAppPath(root),
+    TREE,
+    blobs,
+    blobSourceOf(Object.values(files), TREE),
+  );
 }
 
 const sorted = (s: Set<string>): string[] => [...s].sort();

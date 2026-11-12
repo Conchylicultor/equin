@@ -41,7 +41,7 @@ See `research/2026-10-21-global-type-check-prepare-follows-the-change.md` and `r
 
 Other choices:
 
-- **Why `readText` verifies the blob sha.** The lint and name stores are host-wide; a result recorded under another text's key poisons every worktree that later reads it.
+- **Why `readText` answers the blob, not the disk.** The lint and name stores are host-wide; a result recorded under another text's key poisons every worktree that later reads it. It used to read the disk and THROW on a mismatch, which kept the stores clean but made a run on a live checkout die whenever anything moved the working tree under it — the daily backstop on main died when a push merged into main mid-run (2026-11-12, `media-player.tsx`). A nightly check of "main at HEAD" must be a function of one tree, so the bytes now come from the tree itself: the disk is only a fast path, taken when its bytes hash to the version, and the object store (which `computeTreeHash`'s `git add` already wrote every blob of the tree into) answers otherwise. Rejected: running the backstop on a pinned checkout of HEAD — it fixes one caller and leaves every other run (an agent's worktree edited mid-check) on the throw.
 - **Why the tree hash is computed under `--no-cache` too.** A tree hash is a fact, not a cache.
 - **Why `ts.matchFiles` (internal API).** The include expansion over the tree must be EXACTLY tsc's, or the coverage gate and the program disagree on the roots. It is asserted present, so a TypeScript upgrade that drops it fails loudly.
 - **Why the snapshot is a value, not a module memo.** A snapshot is of a tree that keeps changing; as a memo its staleness window was silently "the rest of the process".

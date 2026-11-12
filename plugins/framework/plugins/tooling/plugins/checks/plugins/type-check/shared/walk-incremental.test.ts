@@ -45,7 +45,12 @@ import {
   memoryNameStore,
   type NameStore,
 } from "./name-store";
-import { gitBlobSha, repoViewOver, type RepoView } from "./repo-view";
+import {
+  blobSourceOf,
+  gitBlobSha,
+  repoViewOver,
+  type RepoView,
+} from "./repo-view";
 import {
   openWalkBase,
   openWalkBaseStore,
@@ -125,6 +130,7 @@ const viewOf = (
         gitBlobSha(Buffer.from(text), tree),
       ]),
     ),
+    blobSourceOf(Object.values(files), tree),
   );
 
 /** A base's every shard, read. */
@@ -528,11 +534,18 @@ test("a run that throws writes no base: the next run walks from the last one", a
   const tree = nextTree();
   const files = { "lone.ts": "export const lone = 1;\n" };
   writeTree(root, { "lone.ts": "export const lone = 2;\n" }, {});
+  // Neither the disk nor the object store holds the tree's blob: the read throws.
+  const view = repoViewOver(
+    asAppPath(root),
+    tree,
+    new Map([["lone.ts", gitBlobSha(Buffer.from(files["lone.ts"]), tree)]]),
+    blobSourceOf([], tree),
+  );
   let thrown: unknown;
   try {
     // The worker writes the base only from a run that returned.
     await runNameCheck({
-      view: viewOf(root, files, tree),
+      view,
       options: optionsFor(root),
       roots: ["lone.ts"],
       engine: "fixture",
@@ -544,6 +557,6 @@ test("a run that throws writes no base: the next run walks from the last one", a
   } catch (err) {
     thrown = err;
   }
-  expect(String(thrown)).toContain("changed on disk");
+  expect(String(thrown)).toContain("no blob");
   expect(wstore.pointer(tree)).toBeUndefined();
 });

@@ -43,7 +43,7 @@ The check is `inputKeyed`: the verdict must be a function of `ctx.snapshot()`'s 
 
 - **A file's version is its git blob sha.**
   - Stores are keyed on it, so lookups read no file.
-  - Bytes read to parse are CHECKED: `readText` throws when they no longer hash to the version (a result under the wrong key would poison a host-wide store).
+  - A file's bytes are its blob's, by construction: `readText` takes the disk's only when they hash to the version, else reads the blob out of git's object store (where `computeTreeHash` wrote it). An edit or a push advancing the checkout mid-run changes nothing the run reads (a result under the wrong key would poison a host-wide store); a blob the store lacks throws.
 - **No gitignored file is in the input**, even under the tsconfig `include` — the per-composition `*.composition.*.generated.ts` registries are build output a build rewrites mid-run (they were once an "overlay" beside the tree; DESIGN.md says why it went).
   - `readCheckTree` expands `include` over the tree's listing with `ts.matchFiles` (internal, asserted present, so it is EXACTLY tsc's expansion).
   - The tree crosses to the worker as its hash (`TypeCheckTree`); the worker loads it itself.

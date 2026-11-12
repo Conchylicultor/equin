@@ -9,7 +9,8 @@
  *   3. the worker's parse of the tsconfig over the view finds the same roots;
  *   4. no gitignored entry moves a resolution key — a transient one at the
  *      root, nor one the tsconfig includes that would shadow a resolution;
- *   5. a file whose bytes changed after the tree was taken cannot be read.
+ *   5. a file edited or deleted after the tree was taken still reads as the
+ *      tree's blob.
  */
 
 import {
@@ -194,14 +195,16 @@ test("no gitignored entry moves a resolution key — transient, or included and 
   }
 });
 
-test("a file whose bytes changed after the tree was taken cannot be read", async () => {
+test("a file edited or deleted after the tree was taken reads as the tree's blob", async () => {
   const { view } = await read();
   expect(view.readText("src/a.ts")).toBe("export const a = 1;\n");
+  // What a push merging into a live checkout mid-run does: the working tree
+  // moves, the run's tree does not — its bytes come out of the object store.
   write("src/a.ts", "export const a = 2;\n");
   try {
-    expect(() => view.readText("src/a.ts")).toThrow(
-      "changed on disk after the check took its tree",
-    );
+    expect(view.readText("src/a.ts")).toBe("export const a = 1;\n");
+    rmSync(join(root, "src/a.ts"));
+    expect(view.readText("src/a.ts")).toBe("export const a = 1;\n");
   } finally {
     write("src/a.ts", "export const a = 1;\n");
   }

@@ -57,7 +57,12 @@ import {
   memoryNameStore,
   type NameStore,
 } from "./name-store";
-import { gitBlobSha, repoViewOver, type RepoView } from "./repo-view";
+import {
+  blobSourceOf,
+  gitBlobSha,
+  repoViewOver,
+  type RepoView,
+} from "./repo-view";
 import { canonicalDeclarations } from "./tsc-engine";
 
 // Each case builds several programs over lib.es2022 — seconds on a loaded host,
@@ -125,6 +130,7 @@ const viewOf = (root: string, files: Record<string, string>): RepoView =>
         .filter(([f]) => !f.startsWith("node_modules/"))
         .map(([f, text]) => [f, gitBlobSha(Buffer.from(text), TREE)]),
     ),
+    blobSourceOf(Object.values(files), TREE),
   );
 
 /** One run on the tree as it is now, beside a full check. */
@@ -722,27 +728,14 @@ test("a version is the file's git blob sha", async () => {
   ).toBe(true);
 });
 
-test("a file whose bytes changed after the tree was taken fails the run", async () => {
+test("a file whose bytes changed after the tree was taken is checked as the tree's", async () => {
   const root = freshRoot();
   const files = { "lone.ts": "export const lone = 1;\n" };
-  writeTree(root, { "lone.ts": "export const lone = 2;\n" });
-  let thrown: unknown;
-  try {
-    await runNameCheck({
-      view: viewOf(root, files),
-      options: optionsFor(root),
-      roots: ["lone.ts"],
-      engine: "fixture",
-      store: memoryNameStore(),
-      cache: createSourceFileCache(),
-      onMiss: "throw",
-    });
-  } catch (err) {
-    thrown = err;
-  }
-  expect(String(thrown)).toContain(
-    "changed on disk after the check took its tree",
-  );
+  // On disk, a version the tree does not name — and one that would not type.
+  writeTree(root, { "lone.ts": "export const lone: string = 2;\n" });
+  const out = await run(root, files, memoryNameStore());
+  expect(out.checked).toEqual(["lone.ts"]);
+  expect(out.results.get("lone.ts")!.diagnostics).toEqual([]);
 });
 
 test("a probed directory that starts to exist moves the key", async () => {
