@@ -1,15 +1,15 @@
 import { describe, expect, test } from "bun:test";
 import { propagate, threeWayMerge } from "./tier-logic";
 import { computeHash, readonlyProxy } from "./config-proxy";
-import type { ConfigProxy } from "./config-proxy";
+import type { ConfigFileContent, ConfigProxy } from "./config-proxy";
 import type { JsonValue } from "./types";
 
 // In-memory ConfigProxy for exercising propagate's ancestor capture without
 // touching disk. `null` content = file absent.
-function memProxy(initial?: { content: JsonValue; hash: string | null }): ConfigProxy & {
-  snapshot: () => { content: JsonValue; hash: string | null } | null;
+function memProxy(initial?: ConfigFileContent): ConfigProxy & {
+  snapshot: () => ConfigFileContent | null;
 } {
-  let state: { content: JsonValue; hash: string | null } | null = initial ?? null;
+  let state: ConfigFileContent | null = initial ?? null;
   return {
     read: () => (state ? { ...state } : null),
     write: (content, hash) => {
@@ -128,6 +128,34 @@ describe("propagate ancestor capture", () => {
 
     propagate(readonlyProxy(v3), origin, overwrites, ancestor); // now in sync with v2 → capture v2
     expect(ancestor.snapshot()?.content).toEqual(v2);
+  });
+
+  test("an unstamped (hand-written) override is stamped with the origin it replaces", () => {
+    const origin = memProxy({ content: v1, hash: computeHash(v1) });
+    const overwrites = memProxy({ content: { x: 99 }, hash: null });
+    const ancestor = memProxy();
+
+    const { conflict } = propagate(
+      readonlyProxy(v2),
+      origin,
+      overwrites,
+      ancestor,
+    );
+    // Written against v1, so v2 makes it a conflict — with v1 kept as the base.
+    expect(conflict).toBe(true);
+    expect(overwrites.read()).toEqual({
+      content: { x: 99 },
+      hash: computeHash(v1),
+    });
+    expect(ancestor.snapshot()?.content).toEqual(v1);
+  });
+
+  test("an override that does not parse is never stamped (that would rewrite its text)", () => {
+    const origin = memProxy({ content: v1, hash: computeHash(v1) });
+    const broken = { content: { x: 99 }, hash: null, syntaxErrors: ["bad"] };
+    const overwrites = memProxy(broken);
+    propagate(readonlyProxy(v2), origin, overwrites);
+    expect(overwrites.snapshot()).toEqual(broken);
   });
 
   test("backward compatible: omitting the ancestor proxy still reports conflict", () => {

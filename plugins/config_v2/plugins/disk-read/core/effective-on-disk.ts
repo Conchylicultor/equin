@@ -6,20 +6,18 @@ import {
   joinAppPath,
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { parse as parseJsonc } from "jsonc-parser";
 import {
   effective,
   loadedProxy,
   readonlyProxy,
   readTypedConfig,
-  CONFIG_HASH_RE,
+  parseOverrideFile,
 } from "@plugins/config_v2/core";
 import type {
   ConfigDescriptor,
   ConfigFileContent,
   ConfigProxy,
   ConfigValues,
-  JsonValue,
 } from "@plugins/config_v2/core";
 import type { FieldsRecord } from "@plugins/fields/core";
 
@@ -44,13 +42,12 @@ function documentPaths(
   ];
 }
 
-/** One config file's text as a document: its `// @hash` header and its JSONC body. */
-function parseDocument(raw: string): ConfigFileContent {
-  const match = CONFIG_HASH_RE.exec(raw);
-  const hash = match ? match[1]! : null;
-  const body = match ? raw.slice(match[0].length) : raw;
-  return { content: parseJsonc(body) as JsonValue, hash };
-}
+/**
+ * One config file's text as a document: its `// @hash` header (optional — an
+ * unstamped hand-written override) and its JSONC body, syntax errors kept so the
+ * cascade resolves past an override that does not parse, as the runtime does.
+ */
+const parseDocument = parseOverrideFile;
 
 function absentAsNull(err: unknown): null {
   const code = (err as NodeJS.ErrnoException).code;

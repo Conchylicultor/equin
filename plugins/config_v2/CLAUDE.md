@@ -90,7 +90,7 @@ Code (defineConfig)  →  git config/  →  ~/.equin/state/config/
 
 `./equin build` propagates the resolved git config (override if present, else origin) to `~/.equin/state/config/<plugin-tree>/<name>.origin.jsonc` with a hash of the source content. The server reads from this directory at startup without re-propagating.
 
-**User overrides:** UI `setConfig` or manual edits create `~/.equin/state/config/<plugin-tree>/<name>.jsonc` with the origin's content hash.
+**User overrides:** UI `setConfig` or manual edits create `~/.equin/state/config/<plugin-tree>/<name>.jsonc` with the origin's content hash. A manual edit may leave the `// @hash` line out: the registry stamps it with the origin's hash (see [Conflict precedence](#conflict-precedence-origin-wins-until-reconciled)).
 
 **Conflict detection:** When git config changes, the propagated origin hash updates, and a user override still carrying the old hash becomes a **conflict**: the new git value takes effect, and the settings UI surfaces the conflict (Keep / Accept / Merge) — see [Conflict precedence](#conflict-precedence-origin-wins-until-reconciled). A user override therefore never silently masks a committed change; it only wins while the git value it was written against is unchanged.
 
@@ -139,7 +139,9 @@ A three-way merge needs the **base** — the origin the override was written aga
 
 `threeWayMerge(base, ours, theirs)` (pure, `tier-logic.ts`) returns the merged document plus the truly-conflicting keys. `computeAllConflicts` attaches `trueConflictKeys` to the `kind: "hash"` entry when an ancestor exists; its presence is what makes the UI offer **Merge** (legacy conflicts with no ancestor fall back to binary Keep/Accept). `mergeConflictByPath` bumps the hash and deletes the ancestor when nothing truly conflicts; otherwise it keeps the stale hash so the conflict stays surfaced, and re-running Merge finalizes it. Every terminal resolution (acknowledge-conflict, delete-override) also deletes the ancestor.
 
-**Every config file on disk must carry a `// @hash` header** — the anchor conflict detection compares against; a hashless file is corrupt, not a benign "untracked" override. Enforced by throwing at both boundaries: `readConfigFile` (the file store's `read`) on a hashless file, and `setConfig` rather than fabricating a hashless override when no origin has been propagated. There is no "null hash wins" fallback.
+**Every config file carries a `// @hash` header** — the anchor conflict detection compares against. Origins, ancestors and committed files are written only by the build and the registry, so one without it is corrupt: `parseConfigFile` throws (the file store's `read` of an origin / ancestor, the git layer), and `setConfig` throws rather than write an override when no origin has been propagated.
+
+**A user override is the one file written by hand, so its hash is derived, never asked of the writer.** An override with no header (`parseOverrideFile` → `hash: null`, "unstamped") was written against the origin beside it; the registry stamps it with that origin's hash the first time it reads it (`readEntryValues`, in the document's lock — a `stamp-unstamped-override` edit), and the build's `propagate` stamps it with the origin it is about to replace. So a hand-written override is applied as soon as it lands and then joins the conflict chain like one `setConfig` wrote. (It used to be refused: the reader threw from the watcher's re-read, the crash went to the worktree's reports, and the app kept serving the old value with nothing on screen saying so.) The release launcher's `propagateOriginLayer` does not stamp: an unstamped override on a deployed host is stamped against the new origin at its next read.
 
 Because the running app resolves to origin during a conflict, the settings editor binds to `conflictEntry.overrideValues` (the user's override document on disk), not to `useConfig` (the resolved value) — otherwise the user could neither see nor fix their pending override.
 
@@ -597,6 +599,7 @@ worker `ConfigV2.Register` is the coverage guard's config arm (run by
     - `orphanRiskClassSchema`
     - `parseConfigFile`
     - `parseConfigFileRelPath`
+    - `parseOverrideFile`
     - `propagate`
     - `propagateGitLayerDocument`
     - `readCommittedFilesSync`

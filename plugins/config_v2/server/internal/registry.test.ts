@@ -397,6 +397,52 @@ describe("reloadConfigDocument", () => {
       }
     }));
 
+  test("an override hand-written without a hash is applied and stamped with its origin's", () =>
+    run(async () => {
+      // What a person or an agent writes straight into the user layer: no
+      // `// @hash` header. It is applied, not refused, and stamped so the next
+      // origin change surfaces it as a conflict like any other override.
+      await memory.write(
+        file(ALPHA, "override"),
+        { enabled: false, title: "by hand" },
+        null,
+      );
+      await reloadConfigDocument(ALPHA, "");
+      expect(getConfig(alpha)).toEqual({ enabled: false, title: "by hand" });
+      expect(await read(file(ALPHA, "override"))).toEqual({
+        content: { enabled: false, title: "by hand" },
+        hash: computeHash(ALPHA_ORIGIN),
+      });
+      expect(lastEdits(1)).toEqual(["stamp-unstamped-override"]);
+      await deleteOverrideByPath(ALPHA, { writer });
+    }));
+
+  test("an override that does not parse is never applied nor rewritten", () =>
+    run(async () => {
+      const broken = {
+        content: { enabled: false },
+        hash: null,
+        syntaxErrors: ["JSONC syntax error: CommaExpected at line 3"],
+      };
+      const ref = file(ALPHA, "override");
+      // The memory store holds what it is given: stand the parsed broken file in.
+      const realRead = store.read;
+      store.read = (r) =>
+        r.storePath === ref.storePath && r.file === "override" && !r.scopeId
+          ? Promise.resolve(broken)
+          : realRead(r);
+      try {
+        await memory.write(ref, { enabled: false }, null); // moves the stamp
+        const before = edits.length;
+        await reloadConfigDocument(ALPHA, "");
+        expect(getConfig(alpha)).toEqual(ALPHA_ORIGIN);
+        expect(edits.length).toBe(before); // not stamped
+      } finally {
+        store.read = realRead;
+      }
+      await deleteOverrideByPath(ALPHA, { writer });
+    }));
+
   test("a scoped document whose files were removed leaves the registry", () =>
     run(async () => {
       await forkDescriptorScope(ALPHA, "app:tmp", { writer });

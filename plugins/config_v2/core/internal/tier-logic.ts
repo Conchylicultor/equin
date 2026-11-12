@@ -1,4 +1,4 @@
-import type { ConfigProxy } from "./config-proxy";
+import type { ConfigFileContent, ConfigProxy } from "./config-proxy";
 import { computeHash } from "./config-proxy";
 import type { ConfigDescriptor, ConfigValues } from "./types";
 import type { JsonValue } from "./types";
@@ -33,10 +33,10 @@ export function isForeignOverride(
 // again). With no origin to defer to, the override still stands. Returns
 // undefined when there is no such override. Schema/foreign validity is a
 // separate concern, layered on by the callers.
-function nonStaleOverrideContent(
+function nonStaleOverride(
   originData: { content: JsonValue; hash: string | null } | null,
   overwrites: ConfigProxy,
-): JsonValue | undefined {
+): ConfigFileContent | undefined {
   if (!overwrites.exists()) return undefined;
   const ow = overwrites.read();
   if (!ow) return undefined;
@@ -44,7 +44,19 @@ function nonStaleOverrideContent(
     originData !== null &&
     ow.hash !== null &&
     ow.hash !== computeHash(originData.content);
-  return stale ? undefined : ow.content;
+  return stale ? undefined : ow;
+}
+
+// The override content the cascade may apply: a non-stale override whose text
+// parsed. One that did not (`syntaxErrors`) is never applied — what the lenient
+// parser salvaged is not what its author wrote — and `validationIssues`
+// surfaces it as invalid.
+function nonStaleOverrideContent(
+  originData: { content: JsonValue; hash: string | null } | null,
+  overwrites: ConfigProxy,
+): JsonValue | undefined {
+  const ow = nonStaleOverride(originData, overwrites);
+  return ow === undefined || ow.syntaxErrors ? undefined : ow.content;
 }
 
 export function effective(
@@ -90,6 +102,20 @@ export function propagate(
   // builds: once the override is stale, `oldOrigin.hash !== ow.hash`, so we
   // never clobber the true base with an intermediate origin.
   const oldOrigin = downstreamOrigin.read();
+  // An override written by hand without a `// @hash` header (`parseOverrideFile`)
+  // was written against the origin on disk now — the one about to be replaced.
+  // Stamp it with that origin's hash first, so the new upstream makes it a
+  // conflict like any other override instead of an unanchored file that would
+  // silently win over every later origin. (The running registry stamps it the
+  // same way when it reads it first.)
+  if (oldOrigin && downstreamOverwrites.exists()) {
+    const ow = downstreamOverwrites.read();
+    // Never one that does not parse: the write would replace the author's text
+    // with what the lenient parser salvaged.
+    if (ow && ow.hash === null && !ow.syntaxErrors) {
+      downstreamOverwrites.write(ow.content, computeHash(oldOrigin.content));
+    }
+  }
   if (ancestor) {
     const ow = downstreamOverwrites.exists()
       ? downstreamOverwrites.read()
@@ -209,6 +235,13 @@ export function readTypedConfigWithLayer<F extends FieldsRecord>(
     : null;
 
   // Tier 1: a non-stale override wins — but only if it can actually be applied.
+  const unparsed = nonStaleOverride(originData, overwrites)?.syntaxErrors;
+  if (unparsed) {
+    console.warn(
+      `[config-v2] override for "${descriptor.name}" does not parse; resolving to origin. ` +
+        unparsed.join("; "),
+    );
+  }
   const ow = nonStaleOverrideContent(originData, overwrites);
   if (ow !== undefined) {
     if (isForeignOverride(ow, fieldKeys)) {
@@ -292,6 +325,15 @@ export function validationIssues(
 ): ConfigV2ValidationIssue[] | null {
   const fieldKeys = Object.keys(descriptor.fields);
   const originData = origin.read();
+  // A hand-written override that does not parse: the runtime resolved past it
+  // to the origin. Root path — the whole document is unusable.
+  const unparsed = nonStaleOverride(originData, overwrites)?.syntaxErrors;
+  if (unparsed) {
+    return unparsed.map((message) => ({
+      path: [],
+      message: `${message} — this saved setting is not applied until the file parses.`,
+    }));
+  }
   const ow = nonStaleOverrideContent(originData, overwrites);
   if (ow !== undefined) {
     if (isForeignOverride(ow, fieldKeys)) {

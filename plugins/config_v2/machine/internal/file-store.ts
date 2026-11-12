@@ -130,7 +130,7 @@ async function fileStamp(path: AppPath): Promise<string> {
  * ledgered.
  */
 export const fileConfigStore: ConfigStoreImpl = {
-  read: (ref) => readConfigFile(userFilePath(ref)),
+  read: (ref) => readConfigFile(userFilePath(ref), ref.file),
   write: (ref, content, hash) =>
     writeConfigFile(userFilePath(ref), content, hash),
   remove: (ref) => removeIfPresent(userFilePath(ref)),

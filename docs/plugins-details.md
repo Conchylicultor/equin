@@ -15091,6 +15091,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `orphanRiskClassSchema`
       - `parseConfigFile`
       - `parseConfigFileRelPath`
+      - `parseOverrideFile`
       - `propagate`
       - `propagateGitLayerDocument`
       - `readCommittedFilesSync`
@@ -15207,9 +15208,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`disk-read`** — A config's resolved value read straight off disk, with no server runtime and no build tooling: readEffectiveConfigFromDisk (this checkout's git layer as propagation will write it, under a namespace's user overrides; async for a backend, readEffectiveConfigFromDiskSync for a CLI step).
       - Core:
         - Uses:
-          - `config_v2.CONFIG_HASH_RE`
           - `config_v2.effective`
           - `config_v2.loadedProxy`
+          - `config_v2.parseOverrideFile`
           - `config_v2.readonlyProxy`
           - `config_v2.readTypedConfig`
           - `infra/host-fs/user-path.AppPath`
@@ -30699,9 +30700,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                     - Uses: `framework/tooling/checks/type-check.readTypeCheckTree`
         - **`codegen`** — Plugin doc generation and registry codegen
           - Core:
-            - Uses: 149 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
+            - Uses: 150 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
               - `plugin-meta/parse-utils` ×19
-              - `config_v2` ×15
+              - `config_v2` ×16
               - `framework/plugin-id` ×13
               - `network/live/resource-vocabulary` ×11
               - `plugin-meta/plugin-records` ×8

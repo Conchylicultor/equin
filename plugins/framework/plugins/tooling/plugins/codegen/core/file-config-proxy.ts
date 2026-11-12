@@ -10,8 +10,7 @@ import {
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { randomUUID } from "crypto";
 import { basename, dirname } from "path";
-import { parse as parseJsonc } from "jsonc-parser";
-import { CONFIG_HASH_RE } from "@plugins/config_v2/core";
+import { parseOverrideFile } from "@plugins/config_v2/core";
 import type { ConfigProxy, JsonValue } from "@plugins/config_v2/core";
 
 /**
@@ -24,12 +23,9 @@ export function fileConfigProxy(filePath: AppPath): ConfigProxy {
   return {
     read() {
       if (!existsSync(filePath)) return null;
-      const raw = readFileSync(filePath, "utf-8");
-      const match = CONFIG_HASH_RE.exec(raw);
-      const hash = match ? match[1]! : null;
-      const body = match ? raw.slice(match[0].length) : raw;
-      const content = parseJsonc(body) as JsonValue;
-      return { content, hash };
+      // The lenient override reading (header optional, syntax errors kept),
+      // so propagation never stamps — rewrites — a file that does not parse.
+      return parseOverrideFile(readFileSync(filePath, "utf-8"));
     },
     write(content: JsonValue, hash: string | null) {
       let str = "";

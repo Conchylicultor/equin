@@ -72,7 +72,11 @@ export type {
   CommittedFs,
   GitLayerDocument,
 } from "./internal/git-layer";
-export { CONFIG_HASH_RE, parseConfigFile } from "./internal/config-file";
+export {
+  CONFIG_HASH_RE,
+  parseConfigFile,
+  parseOverrideFile,
+} from "./internal/config-file";
 export { createMemoryConfigStore } from "./internal/memory-store";
 export {
   configFileRelPath,

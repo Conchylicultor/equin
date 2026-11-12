@@ -2,8 +2,16 @@ import { mkdir, rename, unlink, writeFile } from "node:fs/promises";
 import { readFile } from "@plugins/packages/plugins/timed-fs/core";
 import { randomUUID } from "node:crypto";
 import { basename, dirname } from "node:path";
-import { parseConfigFile, stringifyConfigValue } from "../../core";
-import type { ConfigFileContent, JsonValue } from "../../core";
+import {
+  parseConfigFile,
+  parseOverrideFile,
+  stringifyConfigValue,
+} from "../../core";
+import type {
+  ConfigDocumentFile,
+  ConfigFileContent,
+  JsonValue,
+} from "../../core";
 import {
   appPathParent,
   joinAppPath,
@@ -18,17 +26,22 @@ import {
 /**
  * One config file's parsed content, or `null` when it does not exist.
  *
- * Every config file on disk must record the origin hash it was written against
- * (`// @hash` on line 1). The canonical writers (setConfig, propagate) always
- * emit it; a file without one is corrupt (truncated write, bad hand-edit), not
- * a benign "untracked" override — the strict parse throws rather than
- * resolving it as a no-conflict override.
+ * An origin or ancestor must record the origin hash it was written against
+ * (`// @hash` on line 1): only the build and the registry write them, always
+ * with one, so a file without it is corrupt (a bad hand-edit) and the strict
+ * parse throws. An OVERRIDE is the file people and agents write by hand: one
+ * without a header is unstamped — written against the origin beside it — and
+ * reads as `hash: null` for the registry to stamp (`parseOverrideFile`).
  */
 export async function readConfigFile(
   filePath: AppPath,
+  file: ConfigDocumentFile,
 ): Promise<ConfigFileContent | null> {
   const text = await readRawOrNull(filePath);
-  return text === null ? null : parseConfigFile(text, filePath);
+  if (text === null) return null;
+  return file === "override"
+    ? parseOverrideFile(text)
+    : parseConfigFile(text, filePath);
 }
 
 /** The bytes a config file holds for `content` written against `hash`. */

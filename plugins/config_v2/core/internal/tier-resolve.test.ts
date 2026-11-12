@@ -2,11 +2,11 @@ import { describe, expect, test } from "bun:test";
 import { z } from "zod";
 import { isForeignOverride, readTypedConfig, validationIssues, effective } from "./tier-logic";
 import { computeHash } from "./config-proxy";
-import type { ConfigProxy } from "./config-proxy";
+import type { ConfigFileContent, ConfigProxy } from "./config-proxy";
 import type { ConfigDescriptor, JsonValue } from "./types";
 
 // Minimal in-memory proxy. `null` = file absent.
-function memProxy(state: { content: JsonValue; hash: string | null } | null): ConfigProxy {
+function memProxy(state: ConfigFileContent | null): ConfigProxy {
   return {
     read: () => (state ? { ...state } : null),
     write: () => {},
@@ -85,6 +85,19 @@ describe("validationIssues surfaces the unusable override LOUDLY", () => {
   test("valid override → no issue", () => {
     const ok = memProxy({ content: { items: ["b:status"] } as JsonValue, hash: H });
     expect(validationIssues(descriptor, origin, ok)).toBeNull();
+  });
+
+  test("override that does not parse → its syntax errors, and the origin applies", () => {
+    const unparsed = memProxy({
+      content: { items: ["b:status"] } as JsonValue,
+      hash: null,
+      syntaxErrors: ["JSONC syntax error: CommaExpected at line 3"],
+    });
+    expect(readTypedConfig(descriptor, origin, unparsed)).toEqual(ORIGIN);
+    const issues = validationIssues(descriptor, origin, unparsed);
+    expect(issues).toHaveLength(1);
+    expect(issues![0]!.message).toContain("CommaExpected at line 3");
+    expect(issues![0]!.path).toEqual([]);
   });
 
   test("schema-invalid override → schema issues", () => {

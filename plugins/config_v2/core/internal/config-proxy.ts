@@ -6,6 +6,14 @@ import type { FieldsRecord } from "@plugins/fields/core";
 export interface ConfigFileContent {
   content: JsonValue;
   hash: string | null;
+  /**
+   * A hand-written override whose JSONC does not parse (`parseOverrideFile`):
+   * each syntax error, in words. `content` is then only what the lenient parser
+   * salvaged — never applied: the tier cascade resolves past the override and
+   * surfaces these as its `kind: "invalid"` issues, and nothing rewrites the
+   * file (stamping it would replace the author's text with the salvage).
+   */
+  syntaxErrors?: string[];
 }
 
 export interface ConfigProxy {

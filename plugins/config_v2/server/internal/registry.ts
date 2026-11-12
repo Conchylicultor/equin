@@ -41,7 +41,10 @@ import { getFieldStorageProvider } from "./field-storage-providers";
 import { configDocumentsAgree } from "./field-tiers";
 import { writeScopedOriginSnapshot } from "./scope-snapshot";
 import { asPath, asPluginId } from "@plugins/framework/plugins/plugin-id/core";
-import type { WriteOrigin } from "@plugins/infra/plugins/request-origin/core";
+import {
+  systemOrigin,
+  type WriteOrigin,
+} from "@plugins/infra/plugins/request-origin/core";
 
 interface CacheEntry {
   scopeId: string;
@@ -149,15 +152,56 @@ const knownScopeIds = new Set<string>();
 // schema-typed, collections normalized), and whether the document has a file
 // of its own. Provider-backed fields are layered on by the caller — they live
 // outside the JSONC document.
+//
+// An override written by hand without a `// @hash` header (a person or an agent
+// editing the user layer directly) is STAMPED here with the hash of the origin
+// beside it — the origin it was written against: nothing but the build moves an
+// origin, and the build stamps such a file itself before it does (`propagate`).
+// The hash is derived, never asked of the writer, so a hand-written override is
+// applied as soon as it lands and joins the conflict chain like one `setConfig`
+// wrote — a later origin change surfaces Keep / Accept / Merge rather than the
+// file winning forever. `stamped` says the read wrote it, so the caller re-takes
+// the trio's stamp. With no origin there is nothing to stamp against: the
+// override stands alone, as it would anyway, until the build propagates one.
+// Runs in the document's lock (or at boot, before any writer).
 async function readEntryValues(
   descriptor: ConfigDescriptor,
+  doc: ConfigDocRef,
   files: Record<ConfigDocumentFile, ConfigFileRef>,
-): Promise<{ values: ConfigValues<FieldsRecord>; ownConfig: boolean }> {
+): Promise<{
+  values: ConfigValues<FieldsRecord>;
+  ownConfig: boolean;
+  stamped: boolean;
+}> {
   const store = ConfigStore.get();
-  const [origin, override] = await Promise.all([
+  const [origin, read] = await Promise.all([
     store.read(files.origin),
     store.read(files.override),
   ]);
+  let override = read;
+  let stamped = false;
+  // Not one that does not parse (`syntaxErrors`): it is surfaced as invalid,
+  // and rewriting it would replace the author's text with the parser's salvage.
+  if (
+    override !== null &&
+    override.hash === null &&
+    override.syntaxErrors === undefined &&
+    origin !== null
+  ) {
+    const stampedOverride = {
+      content: override.content,
+      hash: computeHash(origin.content),
+    };
+    await store.edit(doc, STAMP_WRITER, "stamp-unstamped-override", () =>
+      store.write(
+        files.override,
+        stampedOverride.content,
+        stampedOverride.hash,
+      ),
+    );
+    override = stampedOverride;
+    stamped = true;
+  }
   const raw = readTypedConfig(
     descriptor,
     loadedProxy(origin),
@@ -169,8 +213,12 @@ async function readEntryValues(
       descriptor.fields,
     ) as ConfigValues<FieldsRecord>,
     ownConfig: origin !== null || override !== null,
+    stamped,
   };
 }
+
+/** Who stamps an unstamped override: the registry itself, never the request. */
+const STAMP_WRITER = systemOrigin("config-v2.stamp-unstamped-override");
 
 /**
  * THE single "this entry's files changed" path: re-read from the store, replace the
@@ -204,12 +252,15 @@ async function refreshEntryNow(
   // the document's values, conflicts or tiers are a function of — the watcher
   // event for a write this process already refreshed, a touch that rewrote
   // nothing — so it notifies nothing.
-  const stamp = await documentStamp(entry.files);
+  let stamp = await documentStamp(entry.files);
   if (stamp === entry.stamp) return;
-  const { values: freshValues, ownConfig } = await readEntryValues(
-    descriptor,
-    entry.files,
-  );
+  const {
+    values: freshValues,
+    ownConfig,
+    stamped,
+  } = await readEntryValues(descriptor, docOf(entry), entry.files);
+  // Its own write moved the trio: the stamp is the one after it.
+  if (stamped) stamp = await documentStamp(entry.files);
   // Only a read that succeeded answers for the stamp: a document that fails
   // to parse is read (and fails) again on the next refresh.
   entry.stamp = stamp;
@@ -271,8 +322,13 @@ async function buildEntry(
   scopeId: string,
 ): Promise<CacheEntry> {
   const files = documentFiles({ storePath, scopeId });
-  const stamp = await documentStamp(files);
-  const { values, ownConfig } = await readEntryValues(descriptor, files);
+  let stamp = await documentStamp(files);
+  const { values, ownConfig, stamped } = await readEntryValues(
+    descriptor,
+    { storePath, scopeId },
+    files,
+  );
+  if (stamped) stamp = await documentStamp(files);
 
   for (const [key, field] of Object.entries(descriptor.fields)) {
     const provider = getFieldStorageProvider(field.type.id);
