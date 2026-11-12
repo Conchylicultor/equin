@@ -25,6 +25,8 @@ export type { IconSource } from "./internal/icon-drawing";
 export { IconMotionRegion } from "./internal/motion-region";
 export { iconFamilyGapReportSink } from "./internal/family-gap";
 export type { IconFamilyGap } from "./internal/family-gap";
+export { iconMissingGlyphReportSink } from "./internal/missing-glyph";
+export type { IconMissingGlyph } from "./internal/missing-glyph";
 export { useIconMarkup } from "./internal/icon-markup";
 export type { IconMarkup, IconMarkupReader } from "./internal/icon-markup";
 export {
@@ -40,7 +42,7 @@ export type {
 
 export default {
   description:
-    "Draws icons: <Icon icon={symbol(…)} active?/> renders an IconRef from the page's inline SVG sprites in its theme scope's icon style. A leaf below the ui-kit — it knows no theme: the icons token group publishes each scope's style (usePublishIconStyle), <Theme> boundaries say which scope an icon is in (IconScopeProvider), and the sprites plugin fills and mounts the sheet. Icon families beyond Material are contributed to Icons.Family (Lucide is this plugin's own; an app draws its own with defineIconFamily), published to <Icon> by IconFamilyHost. A family states its coverage: fallback (an unmapped symbol draws the next family of its chain, Material last) or strict (its gap glyph, reported through iconFamilyGapReportSink); resolveIconSource answers which, by the same chain. Animated family glyphs (data-motion parts, a closed ICON_MOTIONS vocabulary) are drawn inline and play once on hover inside an IconMotionRegion.",
+    "Draws icons: <Icon icon={symbol(…)} active?/> renders an IconRef from the page's inline SVG sprites in its theme scope's icon style. A leaf below the ui-kit — it knows no theme: the icons token group publishes each scope's style (usePublishIconStyle), <Theme> boundaries say which scope an icon is in (IconScopeProvider), and the sprites plugin fills and mounts the sheet. Icon families beyond Material are contributed to Icons.Family (Lucide is this plugin's own; an app draws its own with defineIconFamily), published to <Icon> by IconFamilyHost. A family states its coverage: fallback (an unmapped symbol draws the next family of its chain, Material last) or strict (its gap glyph, reported through iconFamilyGapReportSink); resolveIconSource answers which, by the same chain. A held sprite without an icon's symbol (the build's manifest missed its name) draws a crossed-out missing-glyph marker and is reported through iconMissingGlyphReportSink — never a silent empty box. Animated family glyphs (data-motion parts, a closed ICON_MOTIONS vocabulary) are drawn inline and play once on hover inside an IconMotionRegion.",
   contributions: [
     Core.Root({ slot: Icons.Root }),
     Icons.Root({ component: IconFamilyHost, companion: true, scope: "each" }),

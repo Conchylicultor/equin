@@ -13,6 +13,7 @@ import { resolveIconDrawing, type DrawingSource } from "./icon-drawing";
 import { iconFamily, useIconFamilies } from "./family-store";
 import { askFor, useIconStyle } from "./icon";
 import { reportIconFamilyGap } from "./family-gap";
+import { MISSING_GLYPH_BODY, reportIconMissingGlyph } from "./missing-glyph";
 import { useIconFamilyPreview } from "./icon-scope";
 
 /**
@@ -117,10 +118,16 @@ export function useIconMarkup(): IconMarkupReader {
         reportIconFamilyGap({ family: source.family, name: source.name }),
       );
     }
-    const markup = symbolMarkup(drawing.id, drawing.source, runtime);
+    if (source.kind === "missing") {
+      queueMicrotask(() =>
+        reportIconMissingGlyph({ sprite: source.sprite, id: source.id }),
+      );
+      return { kind: "ready", viewBox: "0 0 24 24", body: MISSING_GLYPH_BODY };
+    }
+    const markup = symbolMarkup(drawing.id, source, runtime);
     if (markup === undefined) {
-      // The resolver said this sprite holds the symbol: a sprite without it
-      // is a manifest out of step with the code naming the icon.
+      // The resolver checked the held sprite has it (a missing one is the
+      // `missing` source above): reaching here is a resolver bug.
       throw new Error(
         `[icons] ${drawing.id} is not in the sprite that should hold it`,
       );

@@ -1,6 +1,6 @@
 import { lintRuleCreator } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 import type { TSESTree } from "@typescript-eslint/utils";
-import { isIconRefModule } from "../core";
+import { iconUsesIn } from "../core";
 
 const createRule = lintRuleCreator(import.meta.url);
 
@@ -34,32 +34,21 @@ export default createRule({
   defaultOptions: [],
   create(context) {
     return {
-      ImportDeclaration(node: TSESTree.ImportDeclaration) {
-        if (!isIconRefModule(context.filename, node.source.value)) return;
-        for (const spec of node.specifiers) {
-          if (spec.type !== "ImportSpecifier") continue;
-          const imported =
-            spec.imported.type === "Identifier"
-              ? spec.imported.name
-              : spec.imported.value;
-          if (imported !== "symbol") continue;
-          const variable = context.sourceCode
-            .getDeclaredVariables(spec)
-            .find((v) => v.name === spec.local.name);
-          for (const ref of variable?.references ?? []) {
-            const call = ref.identifier.parent;
-            if (call?.type !== "CallExpression") continue;
-            const [arg] = call.arguments;
-            if (arg?.type !== "Literal" || typeof arg.value !== "string")
-              continue;
-            const key = RESERVED[arg.value];
-            if (key === undefined) continue;
-            context.report({
-              node: call,
-              messageId: "reserved",
-              data: { name: arg.value, key },
-            });
-          }
+      Program(program: TSESTree.Program) {
+        const { calls } = iconUsesIn(
+          program,
+          context.filename,
+          context.sourceCode.getDeclaredVariables.bind(context.sourceCode),
+        );
+        for (const { marker, name, call } of calls) {
+          if (marker !== "symbol") continue;
+          const key = RESERVED[name];
+          if (key === undefined) continue;
+          context.report({
+            node: call as TSESTree.CallExpression,
+            messageId: "reserved",
+            data: { name, key },
+          });
         }
       },
     };

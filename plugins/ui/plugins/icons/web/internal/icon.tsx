@@ -13,6 +13,7 @@ import {
   type IconRef,
   type IconStyle,
   type InlineIconFamily,
+  type SpriteKey,
 } from "../../core";
 import { useIconFamilyPreview, useIconScope } from "./icon-scope";
 import { useScopeIconStyle } from "./style-store";
@@ -28,6 +29,7 @@ import {
 } from "./icon-drawing";
 import { iconFamily, subscribeFamilies } from "./family-store";
 import { reportIconFamilyGap } from "./family-gap";
+import { MISSING_GLYPH_BODY, reportIconMissingGlyph } from "./missing-glyph";
 import { useSheetResources } from "./sheet-resources";
 
 export interface IconProps extends Omit<
@@ -114,6 +116,7 @@ const inlineMarkup = new WeakMap<InlineIconFamily, Map<string, string>>();
  * page's first mask of an id would blank every other).
  */
 function inlineGlyphMarkup(source: DrawingSource | undefined): string | null {
+  if (source?.kind === "missing") return MISSING_GLYPH_BODY;
   if (source?.kind !== "family") return null;
   const family = iconFamily(source.family);
   if (family?.kind !== "inline") return null;
@@ -163,6 +166,11 @@ function inlineGlyphMarkup(source: DrawingSource | undefined): string | null {
  * does not map draws the family's gap glyph — never Material or Lucide — and is
  * reported once per (family, name) (`iconFamilyGapReportSink`).
  *
+ * A held sprite that has no symbol for the icon (the build's icon manifest
+ * missed its name) draws the missing-glyph marker — a crossed-out dashed
+ * square — and is reported once per (sprite, id) per page
+ * (`iconMissingGlyphReportSink`): never a silent empty box.
+ *
  * An ANIMATED family glyph (moving parts, `data-motion`) is drawn inline rather
  * than through `<use>`, so a motion region's CSS can play it on hover.
  *
@@ -210,6 +218,18 @@ export function Icon({ icon, active = false, title, ...rest }: IconProps) {
     if (gapFamily === null || icon.kind !== "symbol" || previewing) return;
     reportIconFamilyGap({ family: gapFamily, name: icon.name });
   }, [gapFamily, icon, previewing]);
+  // A held sprite without this icon's symbol: reported (a manifest out of step
+  // with the code), drawn as the missing-glyph marker — never an empty box.
+  const readMissing = () => {
+    const source = resolve().drawing?.source;
+    return source?.kind === "missing" ? `${source.sprite}\0${source.id}` : null;
+  };
+  const missing = useSyncExternalStore(subscribe, readMissing, readMissing);
+  useEffect(() => {
+    if (missing === null) return;
+    const [sprite, id] = missing.split("\0") as [SpriteKey, string];
+    reportIconMissingGlyph({ sprite, id });
+  }, [missing]);
   useEffect(() => {
     if (wanted === "") return;
     for (const w of resolveIconDrawing(icon, style, active, runtime).wants)

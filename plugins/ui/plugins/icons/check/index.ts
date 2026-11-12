@@ -29,6 +29,7 @@ import {
   renderSetiNames,
   setiIdentity,
 } from "../shared";
+import { manifestCoversUses } from "./manifest-covers-uses";
 
 const REGEN_NAMES =
   "Run `./equin regen-generated` (or `./equin build`) and commit the result.";
@@ -65,7 +66,7 @@ const symbolNamesInSync: Check = {
 const manifestInSync: Check = {
   id: "icons:manifest-in-sync",
   description:
-    'icons/core/icon-manifest.generated.ts lists every symbol("…") / brand("…") / seti("…") literal in the repo',
+    "the committed icon manifest matches a re-run of its generator (drift only: a generator bug is on both sides — icons:manifest-covers-uses is the independent oracle)",
   async run(ctx) {
     const pass = codegenPassOver(await ctx.repo());
     const root = pass.root;
@@ -177,4 +178,10 @@ const lucideCoverage: Check = {
   },
 };
 
-export default [symbolNamesInSync, manifestInSync, setiInSync, lucideCoverage];
+export default [
+  symbolNamesInSync,
+  manifestInSync,
+  manifestCoversUses,
+  setiInSync,
+  lucideCoverage,
+];

@@ -166,7 +166,12 @@ describe("<Icon> in a strict scope", () => {
     const gaps: IconFamilyGap[] = [];
     iconFamilyGapReportSink.register((g) => gaps.push(g));
     act(() => provideIconFamilies("", [strictFam, fallbackFam]));
-    act(() => provideSprite("seti", "<svg></svg>"));
+    act(() =>
+      provideSprite(
+        "seti",
+        '<svg><symbol id="seti-typescript"></symbol></svg>',
+      ),
+    );
     act(() =>
       pageRuntimeSymbols.provide("cov-runtime", "<svg></svg>", [
         { styleKey: "default-outline-400", name: "home" },

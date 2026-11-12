@@ -18,7 +18,7 @@ import {
   type StyleKey,
   type SymbolName,
 } from "../../core";
-import { hasSprite } from "./sprite-store";
+import { hasSprite, spriteHolds } from "./sprite-store";
 import type { RuntimeSymbolStore } from "./runtime-symbol-store";
 import { iconFamily } from "./family-store";
 
@@ -29,7 +29,14 @@ export type DrawingSource =
   /** `active`: the glyph's active form is drawn (it has one, and the icon is active). */
   | { kind: "family"; family: string; glyph: string; active: boolean }
   /** A strict family's gap glyph, standing in for `name` it does not map. */
-  | { kind: "gap"; family: string; name: SymbolName };
+  | { kind: "gap"; family: string; name: SymbolName }
+  /**
+   * Sprite `sprite` is held but has no `<symbol id="<id>">`: the build's icon
+   * manifest is out of step with the code naming the icon. Drawn as the
+   * missing-glyph marker and reported (`iconMissingGlyphReportSink`) — never a
+   * `<use>` of nothing, which draws an empty box and tells no one.
+   */
+  | { kind: "missing"; sprite: SpriteKey; id: string };
 
 /** Something a drawing is still waiting for, to ask its loader for. */
 export type DrawingWant =
@@ -46,6 +53,19 @@ export type DrawingWant =
  * fallback (or nothing) stands in for it.
  */
 type Drawing = { id: string; source: DrawingSource };
+
+/** The id that stands for a missing glyph: never `<use>`d (`<Icon>` draws it inline). */
+export const MISSING_GLYPH_ID = "icon-missing-glyph";
+
+/**
+ * Symbol `id` from held sprite `key` — or, when the sprite is held and lacks
+ * it, the missing-glyph drawing. Only for a sprite the caller knows is held.
+ */
+function fromSprite(key: SpriteKey, id: string): Drawing {
+  return spriteHolds(key, id) === false
+    ? { id: MISSING_GLYPH_ID, source: { kind: "missing", sprite: key, id } }
+    : { id, source: { kind: "sprite", key } };
+}
 
 /**
  * The families a scope of family `id` draws a symbol from, in order: the
@@ -101,10 +121,7 @@ function familyDrawing(
       const activeId = f.idOf(name, true);
       if (activeId !== undefined && hasSprite(f.activeSprite)) {
         return {
-          drawing: {
-            id: activeId,
-            source: { kind: "sprite", key: f.activeSprite },
-          },
+          drawing: fromSprite(f.activeSprite, activeId),
           wants,
           strictEnd: undefined,
         };
@@ -113,7 +130,7 @@ function familyDrawing(
     }
     if (hasSprite(f.sprite)) {
       return {
-        drawing: { id, source: { kind: "sprite", key: f.sprite } },
+        drawing: fromSprite(f.sprite, id),
         wants,
         strictEnd: undefined,
       };
@@ -194,19 +211,18 @@ export function resolveIconDrawing(
   switch (icon.kind) {
     case "brand":
       return {
-        drawing: {
-          id: brandId(icon.name),
-          source: { kind: "sprite", key: BRANDS_SPRITE },
-        },
+        drawing: hasSprite(BRANDS_SPRITE)
+          ? fromSprite(BRANDS_SPRITE, brandId(icon.name))
+          : {
+              id: brandId(icon.name),
+              source: { kind: "sprite", key: BRANDS_SPRITE },
+            },
         wants: [],
       };
     case "seti":
       return {
         drawing: hasSprite(SETI_SPRITE)
-          ? {
-              id: setiId(icon.name),
-              source: { kind: "sprite", key: SETI_SPRITE },
-            }
+          ? fromSprite(SETI_SPRITE, setiId(icon.name))
           : null,
         wants: hasSprite(SETI_SPRITE)
           ? []
@@ -277,10 +293,7 @@ export function resolveIconDrawing(
       }
       const drawnKey = hasSprite(key) ? key : defaultKey;
       return {
-        drawing: {
-          id: symbolId(drawnKey, icon.name),
-          source: { kind: "sprite", key: drawnKey },
-        },
+        drawing: fromSprite(drawnKey, symbolId(drawnKey, icon.name)),
         wants: family.wants,
       };
     }

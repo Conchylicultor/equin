@@ -818,6 +818,7 @@ export const compositionsConfig = defineConfig({
             "reports.collab-hydration.**",
             "reports.endpoint-errors.**",
             "reports.icon-family-gap.**",
+            "reports.icon-missing-glyph.**",
             "reports.live-state-stale-drop.**",
             "reports.main-thread-stall.**",
             "reports.mutation-errors.**",

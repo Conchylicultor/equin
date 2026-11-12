@@ -118,6 +118,9 @@ export const CLIENT_REPORT_SOURCES = [
   // A symbol drawn in the scope of a strict icon family that does not map it
   // (reports/icon-family-gap): the scope shows the family's gap glyph.
   "client-icon-family-gap",
+  // A held icon sprite without the symbol an <Icon> draws
+  // (reports/icon-missing-glyph): the build's icon manifest missed the name.
+  "client-icon-missing-glyph",
   "boot-snapshot",
   // A Core.Boot task failed or ran past App's boot deadline (web-core's
   // boot-tasks): the page is showing its boot waiting / error screen.
@@ -176,6 +179,7 @@ export const CLIENT_REPORT_SUBJECT: Record<
   "client-page-undo-conflict": "page",
   "client-theme-resolution": "page",
   "client-icon-family-gap": "page",
+  "client-icon-missing-glyph": "page",
   "boot-snapshot": "page",
   "client-boot-task": "page",
   "client-missing-companion": "page",

@@ -31482,8 +31482,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Slots:
           - `Core.Root`
           - `Core.Boot`
-        - Slot contributors: 53 contributors — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
-          - `Core.Root` ×52
+        - Slot contributors: 54 contributors — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
+          - `Core.Root` ×53
           - `Core.Boot` ← `network.live.boot-snapshot`
       - Core:
         - Uses:
@@ -31552,9 +31552,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `webCollectedDir`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
-        - Imported by: 119 plugins — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
+        - Imported by: 120 plugins — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
           - `primitives` ×23
-          - `reports` ×20
+          - `reports` ×21
           - `apps` ×18
           - `ui` ×7
           - `apps-core` ×6
@@ -40189,17 +40189,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `withForegroundPriority`
     - **`string-hash`** — Portable string hashes in plain JS (no node:crypto, no Bun.hash), so every host — the Bun server, central and a browser page — computes the same value: hash53 (cyrb53, a 53-bit number, optionally seeded), hashHex (two seeded cyrb53s, ~106 bits as hex), hash64 (a 64-bit bigint), sha256Hex (a synchronous SHA-256, identical to node:crypto's hex digest), createSha256 (the same SHA-256, incremental over strings and bytes) and sha1Hex (SHA-1 for values already stored as one).
       - Cross-plugin:
-        - Imported by: 40 plugins — full list in [`plugins/packages/plugins/string-hash/REFERENCE.md`](../plugins/packages/plugins/string-hash/REFERENCE.md)
+        - Imported by: 41 plugins — full list in [`plugins/packages/plugins/string-hash/REFERENCE.md`](../plugins/packages/plugins/string-hash/REFERENCE.md)
           - `apps` ×12
           - `network` ×5
           - `database` ×4
           - `framework` ×3
+          - `reports` ×3
           - `ui` ×3
           - `debug` ×2
           - `infra` ×2
           - `page` ×2
           - `plugin-meta` ×2
-          - `reports` ×2
           - `map`
           - `menu-bar`
           - `tasks/orchestration/watch`
@@ -45733,11 +45733,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×6
               - `ui/tokens/shape` ×3
               - `ui/tokens/font-family --font-mono`
-            - Imported by: 183 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
+            - Imported by: 184 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
               - `apps` ×39
               - `debug` ×38
               - `conversations` ×27
-              - `reports` ×17
+              - `reports` ×18
               - `primitives` ×10
               - `tasks` ×10
               - `plugin-meta` ×8
@@ -46168,10 +46168,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `InlineProps`
             - Exports (values): `Inline`
           - Cross-plugin:
-            - Imported by: 113 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
+            - Imported by: 114 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
               - `apps` ×23
               - `debug` ×19
-              - `reports` ×18
+              - `reports` ×19
               - `primitives` ×12
               - `conversations` ×9
               - `page` ×6
@@ -54095,8 +54095,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 - **`reports`** — Reports uncaught browser errors to the server, and registers the reports engine's fan-out ceiling config (per-window distinct-fingerprint budget, window, storm roster cap) for Settings → Config. The reports table and its live read (reports.list), the ReportKind / ReportNoiseRule slots every kind and rule contributes to, and the fan-out ceiling config; recording is the engine's (reports/plugins/engine).
   - Web:
     - Slots: `Reports.KindView`
-    - Slot contributors: 44 contributors — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
-      - `Reports.KindView` ×44
+    - Slot contributors: 45 contributors — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
+      - `Reports.KindView` ×45
     - Contributes:
       - `IdKinds.Kind` "report|crash"
       - `ConfigV2.WebRegister` "reports"
@@ -54227,8 +54227,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `submitReport`
       - `UNTRUSTED_REPORT_SOURCES`
   - Cross-plugin:
-    - Imported by: 78 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
-      - `reports` ×30
+    - Imported by: 79 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
+      - `reports` ×31
       - `debug` ×18
       - `conversations` ×7
       - `database` ×4
@@ -54491,6 +54491,26 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `iconFamilyGapFingerprint`
           - `IconFamilyGapPayloadSchema`
+    - **`icon-missing-glyph`** — Icon-missing-glyph collector: drains the icons plugin's iconMissingGlyphReportSink into a deduped report whenever a held sprite has no symbol for an icon <Icon> draws (the build's icon manifest missed the name; the icon shows the missing-glyph marker), plus the Debug → Reports summary view. Icon-missing-glyph report kind: validates the payload <Icon> files when a held sprite has no symbol for an icon it draws (the build's icon manifest missed the name; the icon shows the missing-glyph marker), fingerprints by (sprite, symbol id), and renders a task pointing at icons:manifest-covers-uses.
+      - Web:
+        - Contributes:
+          - `Core.Root` → `IconMissingGlyphCollector`
+          - `Reports.KindView` → `IconMissingGlyphKindView`
+        - Uses:
+          - `primitives/css/badge.Badge`
+          - `primitives/css/inline.Inline`
+          - `reports.report`
+          - `reports.Reports`
+          - `ui/icons.iconMissingGlyphReportSink`
+      - Server:
+        - Contributes: `report-kind` "icon-missing-glyph"
+        - Uses: `reports.ReportKind`
+      - Core:
+        - Uses: `packages/string-hash.sha256Hex`
+        - Exports (types): `IconMissingGlyphPayload`
+        - Exports (values):
+          - `iconMissingGlyphFingerprint`
+          - `IconMissingGlyphPayloadSchema`
     - **`interaction-budget`** — Interaction-budget report kind's Debug → Reports summary view: one line naming the scenario, each case over budget against its budget, and the commit range. Filed by a scenario's budget run through the report outbox — no collector here. Interaction-budget report kind: one row per scenario (fingerprint = scenario id) whose measured work — a count such as elements restyled, not a time — went over its budget on main's deploy, filed through the report outbox by the scenario's budget run. Renders a task naming the commit range since the last run within budget, every case's median against its budget, and the command that reproduces it. Warning, re-arms every 6 h.
       - Web:
         - Contributes: `Reports.KindView` → `InteractionBudgetSummary`
@@ -59441,7 +59461,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/breadcrumb-separator.BreadcrumbSeparator`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/color-palette --muted-foreground`
-    - **`icons`** — Draws icons: <Icon icon={symbol(…)} active?/> renders an IconRef from the page's inline SVG sprites in its theme scope's icon style. A leaf below the ui-kit — it knows no theme: the icons token group publishes each scope's style (usePublishIconStyle), <Theme> boundaries say which scope an icon is in (IconScopeProvider), and the sprites plugin fills and mounts the sheet. Icon families beyond Material are contributed to Icons.Family (Lucide is this plugin's own; an app draws its own with defineIconFamily), published to <Icon> by IconFamilyHost. A family states its coverage: fallback (an unmapped symbol draws the next family of its chain, Material last) or strict (its gap glyph, reported through iconFamilyGapReportSink); resolveIconSource answers which, by the same chain. Animated family glyphs (data-motion parts, a closed ICON_MOTIONS vocabulary) are drawn inline and play once on hover inside an IconMotionRegion. The vendored Seti file-type set (jesseweed/seti-ui, MIT, one colour), portable: SETI_SET names it, readSetiSet loads it (a lazy JSON module, so a browser host bundles it too). The pure drawing — resolveIcon, resolveSymbol, buildSymbol — is core's; reading the installed Material sets is the machine half's (symbolBody).
+    - **`icons`** — Draws icons: <Icon icon={symbol(…)} active?/> renders an IconRef from the page's inline SVG sprites in its theme scope's icon style. A leaf below the ui-kit — it knows no theme: the icons token group publishes each scope's style (usePublishIconStyle), <Theme> boundaries say which scope an icon is in (IconScopeProvider), and the sprites plugin fills and mounts the sheet. Icon families beyond Material are contributed to Icons.Family (Lucide is this plugin's own; an app draws its own with defineIconFamily), published to <Icon> by IconFamilyHost. A family states its coverage: fallback (an unmapped symbol draws the next family of its chain, Material last) or strict (its gap glyph, reported through iconFamilyGapReportSink); resolveIconSource answers which, by the same chain. A held sprite without an icon's symbol (the build's manifest missed its name) draws a crossed-out missing-glyph marker and is reported through iconMissingGlyphReportSink — never a silent empty box. Animated family glyphs (data-motion parts, a closed ICON_MOTIONS vocabulary) are drawn inline and play once on hover inside an IconMotionRegion. The vendored Seti file-type set (jesseweed/seti-ui, MIT, one colour), portable: SETI_SET names it, readSetiSet loads it (a lazy JSON module, so a browser host bundles it too). The pure drawing — resolveIcon, resolveSymbol, buildSymbol — is core's; reading the installed Material sets is the machine half's (symbolBody).
       - Web:
         - Slots:
           - `Icons.Root`
@@ -59463,6 +59483,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `IconFamilyGap`
           - `IconMarkup`
           - `IconMarkupReader`
+          - `IconMissingGlyph`
           - `IconProps`
           - `IconSource`
           - `RuntimeSymbolEntry`
@@ -59472,6 +59493,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Icon`
           - `iconFamilyGapReportSink`
           - `IconFamilyPreview`
+          - `iconMissingGlyphReportSink`
           - `IconMotionRegion`
           - `Icons`
           - `IconScopeProvider`
@@ -59492,7 +59514,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useWantedStyleKeys`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
-        - Imported by: 586 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+        - Imported by: 587 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
           - `apps` ×154
           - `conversations` ×123
           - `primitives` ×53
@@ -59509,13 +59531,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `config_v2` ×5
           - `shell` ×5
           - `build` ×4
+          - `reports` ×4
           - `review` ×4
           - `audience` ×3
           - `framework` ×3
           - `hints` ×3
           - `menu-bar` ×3
           - `reorder` ×3
-          - `reports` ×3
           - `backup` ×2
           - `integrations` ×2
           - `map` ×2
@@ -59546,17 +59568,25 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `BrandName`
           - `BrandRef`
           - `CustomRef`
+          - `DeclaredVariable`
+          - `DeclaredVariables`
+          - `EsNode`
+          - `EsProgram`
           - `IconBody`
+          - `IconCall`
           - `IconFamily`
           - `IconFamilyCoverage`
           - `IconFamilyId`
           - `IconFill`
           - `IconGlyph`
           - `IconGlyphSource`
+          - `IconMarker`
+          - `IconMisuse`
           - `IconMotion`
           - `IconRef`
           - `IconShape`
           - `IconStyle`
+          - `IconUses`
           - `IconWeight`
           - `InlineIconFamily`
           - `LucideName`
@@ -59594,6 +59624,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ICON_SHAPES`
           - `ICON_WEIGHTS`
           - `iconifyName`
+          - `iconUsesIn`
           - `isIconFamilyId`
           - `isIconMotion`
           - `isIconRefModule`

@@ -6756,6 +6756,10 @@
       "name": "@equin/plugin-reports-icon-family-gap",
       "version": "0.0.1",
     },
+    "plugins/reports/plugins/icon-missing-glyph": {
+      "name": "@equin/plugin-reports-icon-missing-glyph",
+      "version": "0.0.1",
+    },
     "plugins/reports/plugins/interaction-budget": {
       "name": "@equin/plugin-reports-interaction-budget",
       "version": "0.0.1",
@@ -10815,6 +10819,8 @@
     "@equin/plugin-reports-host-check": ["@equin/plugin-reports-host-check@workspace:plugins/reports/plugins/host-check"],
 
     "@equin/plugin-reports-icon-family-gap": ["@equin/plugin-reports-icon-family-gap@workspace:plugins/reports/plugins/icon-family-gap"],
+
+    "@equin/plugin-reports-icon-missing-glyph": ["@equin/plugin-reports-icon-missing-glyph@workspace:plugins/reports/plugins/icon-missing-glyph"],
 
     "@equin/plugin-reports-interaction-budget": ["@equin/plugin-reports-interaction-budget@workspace:plugins/reports/plugins/interaction-budget"],
 

@@ -32,6 +32,29 @@ export function hasSprite(key: SpriteKey): boolean {
   return sprites.has(key);
 }
 
+/** The `<symbol id>`s of each held sprite's markup, built on first ask. */
+const symbolIds = new Map<string, ReadonlySet<string>>();
+
+/**
+ * Does held sprite `key` have a `<symbol id="<id>">`? `undefined` while the
+ * sprite is not held (a loading state, not an answer). A regex over the
+ * sprite builder's own markup — no `DOMParser`, so a server render (a static
+ * render to HTML) answers the same.
+ */
+export function spriteHolds(key: SpriteKey, id: string): boolean | undefined {
+  const markup = sprites.get(key);
+  if (markup === undefined) return undefined;
+  let ids = symbolIds.get(markup);
+  if (ids === undefined) {
+    ids = new Set(
+      [...markup.matchAll(/<symbol\b[^>]*?\sid="([^"]+)"/g)].map((m) => m[1]!),
+    );
+    // One entry per sprite markup the page ever held: bounded by the sheet.
+    symbolIds.set(markup, ids);
+  }
+  return ids.has(id);
+}
+
 /** The whole `<svg>` sprite `key` is held as, or `undefined` while it is not here. */
 export function spriteMarkup(key: SpriteKey): string | undefined {
   return sprites.get(key);

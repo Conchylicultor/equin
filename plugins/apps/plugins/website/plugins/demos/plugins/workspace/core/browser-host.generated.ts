@@ -767,6 +767,7 @@ export const browserHost = {
     "reports.crash",
     "reports.endpoint-errors",
     "reports.icon-family-gap",
+    "reports.icon-missing-glyph",
     "reports.launch-fix",
     "reports.live-state-stale-drop",
     "reports.main-thread-stall",

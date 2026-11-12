@@ -26,6 +26,16 @@ import { pageRuntimeSymbols } from "../internal/runtime-symbol-store";
 
 afterEach(cleanup);
 
+/** A sprite holding `<symbol id>` for each of `ids`. */
+function spriteOf(...ids: string[]): string {
+  return `<svg>${ids.map((id) => `<symbol id="${id}" viewBox="0 0 24 24"></symbol>`).join("")}</svg>`;
+}
+
+/** Material style sprite `key`, holding every symbol these tests draw. */
+function msSprite(key: string): string {
+  return spriteOf(...["forum", "folder", "grain"].map((n) => `ms-${key}-${n}`));
+}
+
 const forum = symbol("forum");
 
 function hrefOf(container: HTMLElement): string | null {
@@ -92,12 +102,16 @@ describe("<Icon>", () => {
     );
     // The scope wants rounded-filled-300, which is not loaded yet.
     expect(hrefOf(container)).toBe("#ms-default-outline-400-forum");
-    act(() => provideSprite("rounded-filled-300", "<svg></svg>"));
+    act(() =>
+      provideSprite("rounded-filled-300", msSprite("rounded-filled-300")),
+    );
     expect(hrefOf(container)).toBe("#ms-rounded-filled-300-forum");
   });
 
   it("falls back to the root's style for a scope that publishes none", () => {
-    act(() => provideSprite("rounded-outline-300", "<svg></svg>"));
+    act(() =>
+      provideSprite("rounded-outline-300", msSprite("rounded-outline-300")),
+    );
     const { container } = render(
       <>
         <Publish scope={undefined} style={rounded} />
@@ -141,7 +155,7 @@ describe("<Icon> on a Seti file-type glyph", () => {
       "size-4",
     );
     expect(hrefOf(container)).toBeNull();
-    act(() => provideSprite("seti", "<svg></svg>"));
+    act(() => provideSprite("seti", spriteOf("seti-typescript")));
     expect(hrefOf(container)).toBe("#seti-typescript");
   });
 });
@@ -202,7 +216,9 @@ describe("<Icon> in a Lucide scope", () => {
 
   it("draws a mapped symbol's Lucide drawing once the lucide sprite lands, its Material drawing until then", () => {
     act(() => provideIconFamilies("", [LUCIDE_FAMILY]));
-    act(() => provideSprite("rounded-filled-300", "<svg></svg>"));
+    act(() =>
+      provideSprite("rounded-filled-300", msSprite("rounded-filled-300")),
+    );
     const { container, getByTestId } = render(
       <>
         <Wanted />
@@ -214,13 +230,13 @@ describe("<Icon> in a Lucide scope", () => {
     );
     expect(getByTestId("wanted").textContent).toContain("lucide");
     expect(hrefOf(container)).toBe("#ms-rounded-filled-300-folder");
-    act(() => provideSprite("lucide", "<svg></svg>"));
+    act(() => provideSprite("lucide", spriteOf("lucide-folder")));
     expect(hrefOf(container)).toBe("#lucide-folder");
   });
 
   it("keeps the Material drawing, in the scope's style, for a material-only symbol", () => {
     act(() => provideIconFamilies("", [LUCIDE_FAMILY]));
-    act(() => provideSprite("lucide", "<svg></svg>"));
+    act(() => provideSprite("lucide", spriteOf("lucide-folder")));
     const { container } = render(
       <>
         <Publish scope="app:lucide-only" style={lucide} />
@@ -267,7 +283,7 @@ describe("<Icon> with an app-drawn family", () => {
 
   it("falls down the chain for a name it does not map: Lucide, then Material", () => {
     act(() => provideIconFamilies("", [app, LUCIDE_FAMILY]));
-    act(() => provideSprite("lucide", "<svg></svg>"));
+    act(() => provideSprite("lucide", spriteOf("lucide-folder")));
     expect(hrefOf(inApp("app:fam-2", symbol("folder")))).toBe("#lucide-folder");
     expect(hrefOf(inApp("app:fam-3", symbol("grain")))).toBe(
       "#ms-rounded-filled-300-grain",

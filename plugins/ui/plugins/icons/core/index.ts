@@ -2,6 +2,17 @@ export { brand, runtimeSymbol, seti, symbol } from "./icon-ref";
 export { navIcons } from "./nav-icons";
 export { RESERVED_STATE_GLYPHS, stateIcons } from "./state-icons";
 export { isIconRefModule } from "./icon-module";
+export { iconUsesIn } from "./icon-calls";
+export type {
+  DeclaredVariable,
+  DeclaredVariables,
+  EsNode,
+  EsProgram,
+  IconCall,
+  IconMarker,
+  IconMisuse,
+  IconUses,
+} from "./icon-calls";
 export type {
   BrandRef,
   CustomRef,

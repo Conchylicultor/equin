@@ -45,11 +45,23 @@ const tsIcon = seti("typescript");         // { kind: "seti",   name: "typescrip
   imported under their own name and only ever called
   (lint `icons/literal-icon-name`). The build scans those literals into the
   icon manifest (`codegen/core/icon-manifest-gen.ts`, a pre-barrel manifest;
-  `icons:manifest-in-sync`), and the sprites ship exactly the manifest — a
-  name the scan cannot see would draw an empty box. The manifest sits beside
+  `icons:manifest-in-sync`), and the sprites ship exactly the manifest. The manifest sits beside
   its one reader, `plugins/sprites/machine/internal/icon-manifest.generated.ts`,
   not in `core/`: the CLI loads the core barrel (through this plugin's checks)
   in the process that regenerates the manifest, which would freeze it.
+- **The manifest has an independent oracle.** `icons:manifest-in-sync` compares
+  the manifest to a re-run of its own generator, so it catches drift but never
+  a generator bug (a spread `...symbol("x")` was once dropped from both sides).
+  `icons:manifest-covers-uses` reads every use through ESLint's scope analysis
+  instead — `iconUsesIn` (`core/icon-calls.ts`), the same reader the three
+  icons lint rules use — and fails on any name the committed manifest lacks.
+  Keep the two readers separate: the cross-check is worth only what it does
+  not share with the generator.
+- **A missing glyph is loud at runtime.** A held sprite without the symbol an
+  `<Icon>` asks for (`spriteHolds`) resolves to a `missing` drawing: a
+  crossed-out dashed square, reported once per (sprite, id) per page into
+  `iconMissingGlyphReportSink` (`reports/icon-missing-glyph`). `useIconMarkup`
+  answers the same marker. A sprite not held yet is still a loading state.
 - `<Icon>` is an `<svg viewBox="0 0 24 24" width="1em" height="1em">` holding
   `<use href="#<id>">`, so `size-*` classes and `[&_svg]:…` rules size it as
   before. Hidden from assistive tech unless it has `title` / `aria-label` /
@@ -466,7 +478,7 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
 
 ## Plugin reference
 
-- Description: Draws icons: <Icon icon={symbol(…)} active?/> renders an IconRef from the page's inline SVG sprites in its theme scope's icon style. A leaf below the ui-kit — it knows no theme: the icons token group publishes each scope's style (usePublishIconStyle), <Theme> boundaries say which scope an icon is in (IconScopeProvider), and the sprites plugin fills and mounts the sheet. Icon families beyond Material are contributed to Icons.Family (Lucide is this plugin's own; an app draws its own with defineIconFamily), published to <Icon> by IconFamilyHost. A family states its coverage: fallback (an unmapped symbol draws the next family of its chain, Material last) or strict (its gap glyph, reported through iconFamilyGapReportSink); resolveIconSource answers which, by the same chain. Animated family glyphs (data-motion parts, a closed ICON_MOTIONS vocabulary) are drawn inline and play once on hover inside an IconMotionRegion. The vendored Seti file-type set (jesseweed/seti-ui, MIT, one colour), portable: SETI_SET names it, readSetiSet loads it (a lazy JSON module, so a browser host bundles it too). The pure drawing — resolveIcon, resolveSymbol, buildSymbol — is core's; reading the installed Material sets is the machine half's (symbolBody).
+- Description: Draws icons: <Icon icon={symbol(…)} active?/> renders an IconRef from the page's inline SVG sprites in its theme scope's icon style. A leaf below the ui-kit — it knows no theme: the icons token group publishes each scope's style (usePublishIconStyle), <Theme> boundaries say which scope an icon is in (IconScopeProvider), and the sprites plugin fills and mounts the sheet. Icon families beyond Material are contributed to Icons.Family (Lucide is this plugin's own; an app draws its own with defineIconFamily), published to <Icon> by IconFamilyHost. A family states its coverage: fallback (an unmapped symbol draws the next family of its chain, Material last) or strict (its gap glyph, reported through iconFamilyGapReportSink); resolveIconSource answers which, by the same chain. A held sprite without an icon's symbol (the build's manifest missed its name) draws a crossed-out missing-glyph marker and is reported through iconMissingGlyphReportSink — never a silent empty box. Animated family glyphs (data-motion parts, a closed ICON_MOTIONS vocabulary) are drawn inline and play once on hover inside an IconMotionRegion. The vendored Seti file-type set (jesseweed/seti-ui, MIT, one colour), portable: SETI_SET names it, readSetiSet loads it (a lazy JSON module, so a browser host bundles it too). The pure drawing — resolveIcon, resolveSymbol, buildSymbol — is core's; reading the installed Material sets is the machine half's (symbolBody).
 - Web:
   - Slots:
     - `Icons.Root`
@@ -488,6 +500,7 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
     - `IconFamilyGap`
     - `IconMarkup`
     - `IconMarkupReader`
+    - `IconMissingGlyph`
     - `IconProps`
     - `IconSource`
     - `RuntimeSymbolEntry`
@@ -497,6 +510,7 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
     - `Icon`
     - `iconFamilyGapReportSink`
     - `IconFamilyPreview`
+    - `iconMissingGlyphReportSink`
     - `IconMotionRegion`
     - `Icons`
     - `IconScopeProvider`
@@ -517,7 +531,7 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
     - `useWantedStyleKeys`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shadow --shadow`
-  - Imported by: 586 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 587 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×154
     - `conversations` ×123
     - `primitives` ×53
@@ -534,13 +548,13 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
     - `config_v2` ×5
     - `shell` ×5
     - `build` ×4
+    - `reports` ×4
     - `review` ×4
     - `audience` ×3
     - `framework` ×3
     - `hints` ×3
     - `menu-bar` ×3
     - `reorder` ×3
-    - `reports` ×3
     - `backup` ×2
     - `integrations` ×2
     - `map` ×2
@@ -571,17 +585,25 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
     - `BrandName`
     - `BrandRef`
     - `CustomRef`
+    - `DeclaredVariable`
+    - `DeclaredVariables`
+    - `EsNode`
+    - `EsProgram`
     - `IconBody`
+    - `IconCall`
     - `IconFamily`
     - `IconFamilyCoverage`
     - `IconFamilyId`
     - `IconFill`
     - `IconGlyph`
     - `IconGlyphSource`
+    - `IconMarker`
+    - `IconMisuse`
     - `IconMotion`
     - `IconRef`
     - `IconShape`
     - `IconStyle`
+    - `IconUses`
     - `IconWeight`
     - `InlineIconFamily`
     - `LucideName`
@@ -619,6 +641,7 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
     - `ICON_SHAPES`
     - `ICON_WEIGHTS`
     - `iconifyName`
+    - `iconUsesIn`
     - `isIconFamilyId`
     - `isIconMotion`
     - `isIconRefModule`
