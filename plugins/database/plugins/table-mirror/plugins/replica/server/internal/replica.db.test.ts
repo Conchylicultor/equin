@@ -796,6 +796,25 @@ describe("a custom sink", () => {
     expect(after.map((k) => k.k)).toEqual(["a", "b"]);
   });
 
+  test("hands each row content once: a re-delivery is not handed, a change is", async () => {
+    const handedKeys = () =>
+      applied.flatMap((a) =>
+        a.batch.flatMap((b) => b.upserts.map((u) => u.pk.k)),
+      );
+    await sync(id, kvSet, fetch, { sink });
+    applied.length = 0;
+    await db.execute(sql.raw(`UPDATE rp_kv SET v = '11' WHERE k = 'a'`));
+    expect((await sync(id, kvSet, fetch, { sink })).outcome.kind).toBe(
+      "synced",
+    );
+    expect(handedKeys()).toEqual(["a"]);
+    // The same content written again: logged and re-delivered, never handed.
+    applied.length = 0;
+    await db.execute(sql.raw(`UPDATE rp_kv SET v = '11' WHERE k = 'a'`));
+    await sync(id, kvSet, fetch, { sink });
+    expect(handedKeys()).toEqual([]);
+  });
+
   test("a schema replica read of a custom one throws; a missing sink throws", async () => {
     expect(withReplicaSchema(db, id, async () => 1)).rejects.toThrow(
       /custom sink/,

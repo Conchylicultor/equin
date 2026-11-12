@@ -10,6 +10,7 @@ import {
 import { siteMirrorSyncEndpoint } from "../../core";
 import { ensureSiteReplica, requestPull } from "./jobs";
 import { tableMirrorReplicas } from "@plugins/database/plugins/table-mirror/plugins/replica/server";
+import { siteMirrorSinkOf } from "./sink";
 import { siteMirrorReplicas } from "./tables";
 
 /** A copy older than this is pulled again when a tab showing it opens. */
@@ -57,7 +58,8 @@ async function staleOnOpen(
 
 /**
  * Ask for a pull now. With a set: that set's replica (created on the first
- * ask). Without: every replica the deployment already has. A write — it only
+ * ask). Without: every replica the deployment already has. A set read through
+ * a sink (`SiteMirrorSink`) is never pulled here — its pace is its bound. A write — it only
  * enqueues; the status value says how the pull went.
  */
 export const handleSiteMirrorSync = implement(
@@ -74,6 +76,14 @@ export const handleSiteMirrorSync = implement(
       if ("kind" in resolveMirrorSet(setId)) {
         throw new HttpError(400, `This app declares no mirror set "${setId}".`);
       }
+      // Read at its pace by the hourly pull-all only: a sync must not add
+      // pulls past its flood bound.
+      if (siteMirrorSinkOf(setId) !== null) {
+        throw new HttpError(
+          400,
+          `The mirror set "${setId}" is read on its own schedule; it cannot be synced on demand.`,
+        );
+      }
       if (reason === "open" && !(await staleOnOpen(key, setId))) return;
       await ensureSiteReplica(deploymentId, setId);
       await requestPull(deploymentId, setId);
@@ -84,6 +94,7 @@ export const handleSiteMirrorSync = implement(
       .from(siteMirrorReplicas)
       .where(eq(siteMirrorReplicas.deploymentId, key));
     for (const r of owned) {
+      if (siteMirrorSinkOf(r.setId) !== null) continue; // its own schedule
       if (reason === "open" && !(await staleOnOpen(key, r.setId))) continue;
       await requestPull(deploymentId, r.setId);
     }

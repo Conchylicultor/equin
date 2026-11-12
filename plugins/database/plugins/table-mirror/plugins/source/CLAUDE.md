@@ -124,6 +124,7 @@ caller may ask for less (site-reports' 50 rows a page).
     - `apps/deploy/analytics/collect`
     - `apps/deploy/site-mirror/box`
     - `apps/deploy/site-mirror/pull`
+    - `apps/deploy/site-reports/intake`
     - `database/table-mirror/replica`
 - Exemptions:
   - Exempts itself from: `sql-writes:fit:hand-written` — `server/internal/triggers.ts` (sanctioned)

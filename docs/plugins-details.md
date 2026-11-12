@@ -2884,7 +2884,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/deploy/remote-deploy`
               - `apps/deploy/site-messages/inbox`
               - `apps/deploy/site-mirror/pull`
-              - `apps/deploy/site-reports/import`
               - `framework/cli/deploy`
           - Exemptions:
             - Exempts itself from:
@@ -3098,7 +3097,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/deploy/fixtures`
               - `apps/deploy/site-messages/inbox`
               - `apps/deploy/site-mirror/pull`
-              - `apps/deploy/site-reports/import`
         - **`local-serve`** — Test locally: the site page's header button that serves the site's composition on the shared gateway (opening it once live), plus the same one-button serve/open shortcut on the deployments list row.
           - Web:
             - Contributes:
@@ -3568,7 +3566,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `database/table-mirror/source.readMirrorRows`
                   - `database/table-mirror/source.resolveMirrorSet`
                   - `infra/endpoints.implement`
-            - **`pull`** — MirrorFreshness({ deploymentId, setId, subject }): how fresh this computer's copy of a deployed site's mirrored set is — Synced N ago with Sync now, Copying… / Reconciling… while a pass runs, a failed pull in host-query's failure vocabulary (a site whose release predates the set: redeploy it) above the still-readable older data — asking for a pull on open when the copy is a few minutes old or missing. Keeps one table-mirror replica per (deployment, mirror set) of each deployed site's box, pulled over SSH through host-query (each page one host-only GET, a key list cut to what one question carries): the site-mirror.pull job (one bounded chunk per run, re-enqueued while behind, one pending per replica), its hourly main-only site-mirror.pull-all (drops deleted deployments' replicas and orphan schemas, then pulls every replica), POST /api/site-mirror/sync (on a tab open and on Sync now; creates the set's replica on first ask), and the site-mirror.status live value (phase, progress, last sync, last outcome).
+            - **`pull`** — MirrorFreshness({ deploymentId, setId, subject }): how fresh this computer's copy of a deployed site's mirrored set is — Synced N ago with Sync now, Copying… / Reconciling… while a pass runs, a failed pull in host-query's failure vocabulary (a site whose release predates the set: redeploy it) above the still-readable older data — asking for a pull on open when the copy is a few minutes old or missing. Keeps one table-mirror replica per (deployment, mirror set) of each deployed site's box, pulled over SSH through host-query (each page one host-only GET, a key list cut to what one question carries): the site-mirror.pull job (one bounded chunk per run, re-enqueued while behind, one pending per replica), its hourly main-only site-mirror.pull-all (drops deleted deployments' replicas and orphan schemas, then pulls every replica), POST /api/site-mirror/sync (on a tab open and on Sync now; creates the set's replica on first ask), the SiteMirrorSink contribution (a set read as a change stream through its owner's sink — only the content-free key index kept — kept for every deployment and pulled at its own pace, one bounded page per hourly run, never on demand), and the site-mirror.status live value (phase, progress, last sync, last outcome).
               - Server:
                 - Contributes:
                   - `resource.declare` "site-mirror.status"
@@ -3585,6 +3583,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `database/table-mirror/replica.ReplicaProgress`
                   - `database/table-mirror/replica.sweepOrphanReplicaSchemas`
                   - `database/table-mirror/replica.tableMirrorReplicas`
+                  - `database/table-mirror/source.MirrorSetDefinition`
                   - `database/table-mirror/source.resolveMirrorSet`
                   - `ids.externalIdColumn`
                   - `ids.idRef`
@@ -3594,6 +3593,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `infra/jobs.defineJob`
                   - `network/live.serveValue`
                 - DB schema: `plugins/apps/plugins/deploy/plugins/site-mirror/plugins/pull/server/internal/tables.ts`
+                - Exports (types):
+                  - `SiteMirrorPace`
+                  - `SiteMirrorSinkSpec`
+                  - `SiteMirrorSite`
+                - Exports (values): `SiteMirrorSink`
                 - Register:
                   - `defineJob('site-mirror.pull')`
                   - `defineJob('site-mirror.pull-all')`
@@ -3635,7 +3639,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `SiteMirrorSyncBodySchema`
                   - `siteMirrorSyncEndpoint`
               - Cross-plugin:
-                - Imported by: `apps/deploy/analytics/dashboard`
+                - Imported by:
+                  - `apps/deploy/analytics/dashboard`
+                  - `apps/deploy/site-reports/import`
         - **`site-reports`** — Umbrella for the error reports a deployed site's visitors' browsers send: the intake that ships inside the site (public bounded endpoint, aggregated table, host-only list) and the page channel that sends them (deduped, capped, batched).
           - Plugins:
             - **`channel`** (excluded) — The website's report channel: registers itself as reports' reportChannel at register time, so report() on a site page — the page's collectors, which also catch what the live demo raises — sends to the site's own public intake (POST /api/site-reports) instead of a reports engine the site does not have: deduped by fingerprint (a repeat only counted), at most 20 fingerprints and 10 POSTs per visit, batched 5 s, backed off on failure (stopping after 5), anonymous (no client id or user agent, the pathname only, strings clamped). Excluded from every composition by default (base-exclusions); the website names it.
@@ -3647,7 +3653,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `reports.reportChannel`
               - Exemptions:
                 - Exempts itself from: `networking/no-page-transport` — `web/internal/channel.ts` (sanctioned)
-            - **`import`** — Errors a deployed site's visitors hit, pulled hourly from the site's box over SSH into this computer's Reports as untrusted website-visitor reports (never auto-investigated, fenced as data when investigated by hand). Web half: the kind's Debug → Reports summary view — a Website visitors badge, then the site, the page and the visitor's error as plain text (never markup or a link) with the site's own occurrence count. Pulls the errors a deployed site's visitors hit into this computer's Reports: the hourly main-only site-reports.import job reads each deployment's host-only list over SSH (outbound only; answer capped at 1 MB and 100 rows), reduces every row to typed, clamped fields (the site's payload never copied) and records at most 50 per deployment per run as ONE incident of the website-visitor-error kind, source website-visitor — untrusted: never on the worklist automations read, fenced as data when investigated by hand. Keeps a per-deployment watermark (site_report_imports).
+            - **`import`** — Errors a deployed site's visitors hit, read hourly from the site's box over SSH (its mirror change stream, reduced as it arrives) into this computer's Reports as untrusted website-visitor reports (never auto-investigated, fenced as data when investigated by hand). Web half: the kind's Debug → Reports summary view — a Website visitors badge, then the site, the page and the visitor's error as plain text (never markup or a link) with the site's own occurrence count. Reads the errors a deployed site's visitors hit into this computer's Reports: the box's site_reports change stream (site-mirror, outbound SSH only) goes through the reduce step as the replica's sink — every row strictly parsed and reduced to typed, clamped fields, the site's payload never copied, no raw row stored here (only the mirror's content-free key index) — at most 50 rows per deployment per hourly run, each page ONE incident of the website-visitor-error kind (a reconciliation's catch-up rings no bell), source website-visitor — untrusted: never on the worklist automations read, fenced as data when investigated by hand.
               - Web:
                 - Contributes: `Reports.KindView` → `WebsiteVisitorSummary`
                 - Uses:
@@ -3657,21 +3663,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - Server:
                 - Contributes:
                   - `report-kind` "website-visitor-error"
-                  - `change-feed-exclusion` "site_report_imports"
+                  - `site-mirror-sink` "site_reports"
                 - Uses:
-                  - `apps/deploy/deployments._deployDeployments`
-                  - `apps/deploy/host-query.hostOnlyQueryOverSsh`
-                  - `database.db`
-                  - `database/sql-column.parsedText`
-                  - `infra/endpoints.endpointPath`
-                  - `infra/jobs.defineJob`
-                  - `network/live/change-feed.ExcludeFromChangeFeed`
+                  - `apps/deploy/site-mirror/pull.SiteMirrorSink`
                   - `primitives/log-channels.Log`
                   - `reports.ReportKind`
                   - `reports.ReportRow`
                   - `reports/engine.recordReportIncident`
-                - DB schema: `plugins/apps/plugins/deploy/plugins/site-reports/plugins/import/server/internal/tables.ts`
-                - Register: `defineJob('site-reports.import')`
               - Core:
                 - Uses:
                   - `packages/list-bound.cappedList`
@@ -3687,9 +3685,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `WEBSITE_VISITOR_ERROR_KIND`
                   - `WebsiteVisitorErrorSchema`
                   - `websiteVisitorErrorSummary`
-            - **`intake`** — Owns site_reports and site_report_drops: the public POST /api/site-reports endpoint a site page's report channel posts batches to (body capped at 64 KB, at most 10 reports; per-visitor and global batch budgets per minute keyed by a per-process salted IP hash, never stored; each report identified by its ReportKind's own schema and fingerprint and a new fingerprint admitted through the reports fan-out ceiling), aggregated in memory and flushed once a minute as one upsert per fingerprint, the table capped at 2,000 rows, every refusal counted per minute and reason, a 30-day sweep, and the host-only list the deploy app reads over SSH.
+            - **`intake`** — Owns site_reports and site_report_drops: the public POST /api/site-reports endpoint a site page's report channel posts batches to (body capped at 64 KB, at most 10 reports; per-visitor and global batch budgets per minute keyed by a per-process salted IP hash, never stored; each report identified by its ReportKind's own schema and fingerprint and a new fingerprint admitted through the reports fan-out ceiling), aggregated in memory and flushed once a minute as one upsert per fingerprint, the table capped at 2,000 rows, every refusal counted per minute and reason, a 30-day sweep, the site_reports mirror set (the change stream the deploy app's site-reports/import reduces), and the host-only list.
               - Server:
                 - Contributes:
+                  - `table-mirror-set` "site_reports"
                   - `change-feed-exclusion` "site_report_drops"
                   - `change-feed-exclusion` "site_reports"
                 - Uses:
@@ -3699,6 +3698,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `database.db`
                   - `database/sql-column.parsedJson`
                   - `database/sql-column.parsedText`
+                  - `database/table-mirror/source.defineMirrorSet`
+                  - `database/table-mirror/source.MirrorSet`
                   - `infra/endpoints.implement`
                   - `infra/endpoints.rawEndpointHandler`
                   - `infra/retention.defineRetention`
@@ -3729,6 +3730,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Exports (values):
                   - `SITE_REPORT_DROP_REASONS`
                   - `SITE_REPORT_LIMITS`
+                  - `SITE_REPORTS_MIRROR_SET_ID`
                   - `SITE_REPORTS_PAGE_DEFAULT`
                   - `SITE_REPORTS_PAGE_MAX`
                   - `SiteReportDropRecordSchema`
@@ -22429,8 +22431,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `loadedDatabaseConfig`
       - `readDatabaseConfigSync`
   - Cross-plugin:
-    - Imported by: 166 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
-      - `apps` ×47
+    - Imported by: 165 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
+      - `apps` ×46
       - `conversations` ×20
       - `infra` ×16
       - `page` ×14
@@ -23262,8 +23264,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens: `ui/tokens/color-palette --muted-foreground`
     - **`sql-column`** — Decoded columns: `parsedText` / `parsedJson` derive a column's type from a zod schema that really decodes it — on every read and every write — so a column can no longer declare a string-literal union, or a jsonb shape, that nothing verifies. `withWire` declares a column type's JSON wire form (a codec applied in JS by whatever projects the column onto the wire), carried on the built column's type so a row schema must match it.
       - Cross-plugin:
-        - Imported by: 28 plugins — full list in [`plugins/database/plugins/sql-column/REFERENCE.md`](../plugins/database/plugins/sql-column/REFERENCE.md)
-          - `apps` ×8
+        - Imported by: 27 plugins — full list in [`plugins/database/plugins/sql-column/REFERENCE.md`](../plugins/database/plugins/sql-column/REFERENCE.md)
+          - `apps` ×7
           - `fields` ×5
           - `infra` ×4
           - `conversations` ×2
@@ -23526,6 +23528,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/deploy/analytics/collect`
               - `apps/deploy/site-mirror/box`
               - `apps/deploy/site-mirror/pull`
+              - `apps/deploy/site-reports/intake`
               - `database/table-mirror/replica`
           - Exemptions:
             - Exempts itself from: `sql-writes:fit:hand-written` — `server/internal/triggers.ts` (sanctioned)
@@ -30503,13 +30506,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `withNotifyBatch`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
-        - Imported by: 114 plugins — full list in [`plugins/framework/plugins/server-core/REFERENCE.md`](../plugins/framework/plugins/server-core/REFERENCE.md)
+        - Imported by: 115 plugins — full list in [`plugins/framework/plugins/server-core/REFERENCE.md`](../plugins/framework/plugins/server-core/REFERENCE.md)
           - `infra` ×28
           - `debug` ×14
           - `conversations` ×11
           - `database` ×10
           - `tasks` ×10
-          - `apps` ×7
+          - `apps` ×8
           - `network` ×5
           - `reports` ×5
           - `page` ×3
@@ -34118,8 +34121,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `unmatchedApiResponse`
           - `unsupportedEndpointResponse`
       - Cross-plugin:
-        - Imported by: 259 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
-          - `apps` ×80
+        - Imported by: 258 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
+          - `apps` ×79
           - `conversations` ×35
           - `infra` ×23
           - `debug` ×20
@@ -35768,8 +35771,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `taskFor`
           - `TOTAL_JOB_SLOTS`
       - Cross-plugin:
-        - Imported by: 88 plugins — full list in [`plugins/infra/plugins/jobs/REFERENCE.md`](../plugins/infra/plugins/jobs/REFERENCE.md)
-          - `apps` ×22
+        - Imported by: 87 plugins — full list in [`plugins/infra/plugins/jobs/REFERENCE.md`](../plugins/infra/plugins/jobs/REFERENCE.md)
+          - `apps` ×21
           - `conversations` ×18
           - `infra` ×15
           - `debug` ×12
@@ -39653,7 +39656,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/chord/video-availability`
               - `apps/deploy/analytics/collect`
               - `apps/deploy/site-messages/intake`
-              - `apps/deploy/site-reports/import`
               - `apps/deploy/site-reports/intake`
               - `conversations/runtime-sdk`
               - `conversations/usage`
@@ -55262,6 +55264,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `packages/source-digest.sourceDigest`
         - DB schema: `plugins/reports/plugins/engine/server/internal/tables.ts`
         - Exports (types):
+          - `IncidentOptions`
           - `RecordReportResult`
           - `RestateOccurrence`
           - `RestateResult`

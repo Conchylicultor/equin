@@ -1,6 +1,6 @@
 {
-  "id": "44a832ac-b99a-44a4-a5ed-f6c08822f2d3",
-  "prevId": "40b6e72f-b112-46cf-a370-f3c78ec73110",
+  "id": "4d2e1c3b-969f-4f1e-8cf9-45d15362d7d5",
+  "prevId": "44a832ac-b99a-44a4-a5ed-f6c08822f2d3",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -2515,57 +2515,6 @@
           ]
         }
       },
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.site_report_imports": {
-      "name": "site_report_imports",
-      "schema": "",
-      "columns": {
-        "deployment_id": {
-          "name": "deployment_id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "watermark": {
-          "name": "watermark",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "last_run_at": {
-          "name": "last_run_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "last_outcome": {
-          "name": "last_outcome",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "site_report_imports_deployment_id_deploy_deployments_id_fk": {
-          "name": "site_report_imports_deployment_id_deploy_deployments_id_fk",
-          "tableFrom": "site_report_imports",
-          "tableTo": "deploy_deployments",
-          "columnsFrom": [
-            "deployment_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false

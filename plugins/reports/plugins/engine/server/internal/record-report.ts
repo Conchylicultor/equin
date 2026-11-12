@@ -197,6 +197,18 @@ export async function recordReport(
 }
 
 /**
+ * How an incident is filed. `alert: false` — a catch-up of occurrences
+ * already past, which a puller learned about late (site-reports'
+ * reconciliation after the computer was away): every row lands, counts and
+ * stays in the worklist exactly as otherwise, but no bell rings — history,
+ * not news. A per-incident choice of the filer; a kind still cannot opt out
+ * of the bell.
+ */
+export interface IncidentOptions {
+  alert?: boolean;
+}
+
+/**
  * The reports ONE cause produced at one instant, most significant first: each
  * lands on its OWN fingerprint — row, count, velocity, fan-out and shed exactly
  * as `recordReport` — but the bell rings ONCE for the incident, not once per
@@ -207,6 +219,7 @@ export async function recordReport(
  */
 export async function recordReportIncident(
   inputs: readonly ReportInput[],
+  opts: IncidentOptions = {},
 ): Promise<RecordReportResult[]> {
   for (const input of inputs) stampCommit(input);
   // Sequential: the order is the caller's significance order, and the fan-out
@@ -225,7 +238,7 @@ export async function recordReportIncident(
   const pick = pickIncidentBell(
     bells.map((b) => ({ isNew: b.row.count === 1 })),
   );
-  if (pick) {
+  if (pick && opts.alert !== false) {
     // The rows the incident wrote — a shed or collapsed member has none yet.
     const reportIds = filed.flatMap((f) =>
       f.result.outcome === "recorded" ? [f.result.reportId] : [],

@@ -953,8 +953,8 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `taskFor`
     - `TOTAL_JOB_SLOTS`
 - Cross-plugin:
-  - Imported by: 88 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×22
+  - Imported by: 87 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×21
     - `conversations` ×18
     - `infra` ×15
     - `debug` ×12

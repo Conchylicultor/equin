@@ -2,7 +2,10 @@ import { z } from "zod";
 import { and, eq, isNull, like } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
-import { resolveMirrorSet } from "@plugins/database/plugins/table-mirror/plugins/source/server";
+import {
+  resolveMirrorSet,
+  type MirrorSetDefinition,
+} from "@plugins/database/plugins/table-mirror/plugins/source/server";
 import {
   dropReplica,
   ensureReplica,
@@ -11,7 +14,13 @@ import {
   tableMirrorReplicas,
 } from "@plugins/database/plugins/table-mirror/plugins/replica/server";
 import { deploymentIdKind } from "@plugins/apps/plugins/deploy/plugins/deployments/core";
+import { _deployDeployments } from "@plugins/apps/plugins/deploy/plugins/deployments/server";
 import { mirrorFetchOverSsh } from "./fetch";
+import {
+  SiteMirrorSink,
+  siteMirrorSinkOf,
+  type SiteMirrorSinkSpec,
+} from "./sink";
 import { siteMirrorReplicas } from "./tables";
 
 /** Every replica this plugin owns is named `site-mirror:<deployment>:<set>`. */
@@ -65,7 +74,12 @@ export async function ensureSiteReplica(
   const set = resolveMirrorSet(setId);
   if ("kind" in set) throw new UnknownMirrorSetError(setId);
   const replicaId = replicaIdOf(deploymentId, setId);
-  await ensureReplica(db, { id: replicaId, set });
+  // A set read through a contributed sink keeps no schema, only the key index.
+  await ensureReplica(db, {
+    id: replicaId,
+    set,
+    sink: siteMirrorSinkOf(setId) === null ? "schema" : "custom",
+  });
   await db
     .insert(siteMirrorReplicas)
     .values({
@@ -103,7 +117,7 @@ export async function requestPull(
 export const siteMirrorPullJob = defineJob({
   name: "site-mirror.pull",
   description:
-    "Copies a deployed site's mirrored tables (its analytics) from the site's server into this computer, a few pages at a time.",
+    "Copies a deployed site's mirrored tables (its analytics) from the site's server into this computer, a few pages at a time — or reads a set kept only through its owner's sink (its visitors' errors), one bounded page an hour.",
   hold: "minutes",
   inProcess:
     "Each page is applied with its cursor in one transaction, so a run killed by a restart resumes from the last committed page on its next run; at most 20 SSH requests, each bounded by its 20 s deadline.",
@@ -137,21 +151,26 @@ export const siteMirrorPullJob = defineJob({
     try {
       const set = resolveMirrorSet(setId);
       if ("kind" in set) throw new UnknownMirrorSetError(setId);
-      const result = await pullReplica({
-        db,
-        replicaId,
-        set,
-        fetch: mirrorFetchOverSsh(deploymentId),
-        budget: { pages: PULL_BUDGET_PAGES },
-        bounds: { maxKeys: RECONCILE_KEYS_PER_PAGE },
-      });
+      const sinkSpec = siteMirrorSinkOf(setId);
+      if (sinkSpec === null) {
+        const result = await pullReplica({
+          db,
+          replicaId,
+          set,
+          fetch: mirrorFetchOverSsh(deploymentId),
+          budget: { pages: PULL_BUDGET_PAGES },
+          bounds: { maxKeys: RECONCILE_KEYS_PER_PAGE },
+        });
+        if (result.outcome.kind === "stopped") {
+          await requestPull(deploymentId, setId);
+        }
+      } else {
+        await pullPaced(deploymentId, replicaId, set, sinkSpec);
+      }
       await db
         .update(siteMirrorReplicas)
         .set({ runError: null })
         .where(eq(siteMirrorReplicas.replicaId, replicaId));
-      if (result.outcome.kind === "stopped") {
-        await requestPull(deploymentId, setId);
-      }
     } catch (err) {
       await db
         .update(siteMirrorReplicas)
@@ -163,11 +182,55 @@ export const siteMirrorPullJob = defineJob({
 });
 
 /**
+ * One pull of a set read through a sink, at its pace: skipped when the last
+ * attempt is closer than `minIntervalMs`; otherwise ONE fetch step of at most
+ * `rowsPerRun` rows, its answer capped at `maxAnswerBytes`, and no follow-up
+ * — a backlog drains at that rate, from the cursor, nothing skipped.
+ */
+async function pullPaced(
+  deploymentId: string,
+  replicaId: string,
+  set: MirrorSetDefinition,
+  spec: SiteMirrorSinkSpec,
+): Promise<void> {
+  const [replica] = await db
+    .select({ lastAttemptAt: tableMirrorReplicas.lastAttemptAt })
+    .from(tableMirrorReplicas)
+    .where(eq(tableMirrorReplicas.id, replicaId));
+  const last = replica?.lastAttemptAt ?? null;
+  if (last !== null && Date.now() - last.getTime() < spec.pace.minIntervalMs) {
+    return;
+  }
+  const [deployment] = await db
+    .select({ hostnames: _deployDeployments.hostnames })
+    .from(_deployDeployments)
+    .where(eq(_deployDeployments.id, deploymentIdKind.key(deploymentId)));
+  // Deleted mid-run: its owner row cascades, the pull-all drops the replica.
+  if (deployment === undefined) return;
+  await pullReplica({
+    db,
+    replicaId,
+    set,
+    fetch: mirrorFetchOverSsh(deploymentId, {
+      maxAnswerBytes: spec.pace.maxAnswerBytes,
+    }),
+    sink: spec.sink({ deploymentId, hostnames: deployment.hostnames }),
+    budget: { pages: 1 },
+    bounds: {
+      maxRows: spec.pace.rowsPerRun,
+      maxKeys: spec.pace.rowsPerRun,
+      maxBytes: spec.pace.maxBytes,
+    },
+  });
+}
+
+/**
  * Hourly, on main only (no `perWorktree`): a pull of every replica this
  * computer keeps — the box has no change signal reaching here, so the
- * schedule is what keeps an unopened site's copy fresh. First drops the
- * replicas whose deployment is gone (their owner row cascaded) and every
- * replica schema no replica names.
+ * schedule is what keeps an unopened site's copy fresh, and the only reader
+ * of a set read through a sink (`SiteMirrorSink`), whose replica it creates
+ * for every deployment. First drops the replicas whose deployment is gone
+ * (their owner row cascaded) and every replica schema no replica names.
  */
 export const siteMirrorPullAllJob = defineJob({
   name: "site-mirror.pull-all",
@@ -194,6 +257,15 @@ export const siteMirrorPullAllJob = defineJob({
       );
     for (const { id } of orphans) await dropReplica(db, id);
     await sweepOrphanReplicaSchemas(db);
+    const sinkSets = SiteMirrorSink.getContributions().map((s) => s.setId);
+    if (sinkSets.length > 0) {
+      const deployments = await db
+        .select({ id: _deployDeployments.id })
+        .from(_deployDeployments);
+      for (const d of deployments) {
+        for (const setId of sinkSets) await ensureSiteReplica(d.id, setId);
+      }
+    }
     const owned = await db
       .select({
         deploymentId: siteMirrorReplicas.deploymentId,

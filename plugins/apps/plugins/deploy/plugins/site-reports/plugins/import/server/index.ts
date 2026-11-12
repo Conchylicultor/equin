@@ -1,19 +1,20 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
-import { ExcludeFromChangeFeed } from "@plugins/network/plugins/live/plugins/change-feed/server";
-import { importSiteReportsJob } from "./internal/import-job";
+import { SiteMirrorSink } from "@plugins/apps/plugins/deploy/plugins/site-mirror/plugins/pull/server";
+import { SITE_REPORTS_MIRROR_SET_ID } from "@plugins/apps/plugins/deploy/plugins/site-reports/plugins/intake/core";
 import { websiteVisitorErrorKind } from "./internal/kind";
-import { siteReportImports } from "./internal/tables";
+import { IMPORT_PACE, reduceSink } from "./internal/reduce-sink";
 
 export default {
   description:
-    "Pulls the errors a deployed site's visitors hit into this computer's Reports: the hourly main-only site-reports.import job reads each deployment's host-only list over SSH (outbound only; answer capped at 1 MB and 100 rows), reduces every row to typed, clamped fields (the site's payload never copied) and records at most 50 per deployment per run as ONE incident of the website-visitor-error kind, source website-visitor — untrusted: never on the worklist automations read, fenced as data when investigated by hand. Keeps a per-deployment watermark (site_report_imports).",
+    "Reads the errors a deployed site's visitors hit into this computer's Reports: the box's site_reports change stream (site-mirror, outbound SSH only) goes through the reduce step as the replica's sink — every row strictly parsed and reduced to typed, clamped fields, the site's payload never copied, no raw row stored here (only the mirror's content-free key index) — at most 50 rows per deployment per hourly run, each page ONE incident of the website-visitor-error kind (a reconciliation's catch-up rings no bell), source website-visitor — untrusted: never on the worklist automations read, fenced as data when investigated by hand.",
   contributions: [
     websiteVisitorErrorKind,
-    ExcludeFromChangeFeed({
-      table: siteReportImports,
+    SiteMirrorSink({
+      setId: SITE_REPORTS_MIRROR_SET_ID,
+      sink: reduceSink,
+      pace: IMPORT_PACE,
       reason:
-        "The import job's own bookkeeping (watermark, last outcome per deployment); no live-state resource reads it.",
+        "A site's error rows are written by anonymous strangers (free text, arbitrary data): only their reduced form may be kept on this computer, so the stream is reduced as it arrives, never copied.",
     }),
   ],
-  register: [importSiteReportsJob],
 } satisfies ServerPluginDefinition;

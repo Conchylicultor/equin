@@ -611,8 +611,11 @@ Nothing reads the mirror yet. It fills, and its freshness line can be checked in
 6. **Analytics + Overview on the mirror**: the loader through `withReplicaSchema`, `asOf`, URL
    state, and the parity test.
 7. **site-messages on the mirror**: the set with `omit`, and the inbox DataView.
-8. **site-reports on the change stream**: `reduceSink`, removal of `site_report_imports` and the
-   old job.
+8. ~~**site-reports on the change stream**: `reduceSink`, removal of `site_report_imports` and the
+   old job.~~ Done: site-mirror's `SiteMirrorSink` contribution (a sink set kept for every
+   deployment, read at its pace: one page of 50 rows per hourly run, never on demand); the replica
+   hands a custom sink only rows whose hash changed (re-deliveries never recounted); the engine's
+   `recordReportIncident(…, { alert: false })` for a reconciliation's catch-up.
 9. **Cleanup**: retire the box endpoints no consumer calls any more.
 
 Tasks 5–8 depend on 4. Tasks 5 and 6 can run in parallel, and so can 7 and 8.

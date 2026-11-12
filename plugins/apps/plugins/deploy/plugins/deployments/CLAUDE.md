@@ -676,7 +676,6 @@ default, a left rail revealing each (`useRevealSection`).
     - `apps/deploy/remote-deploy`
     - `apps/deploy/site-messages/inbox`
     - `apps/deploy/site-mirror/pull`
-    - `apps/deploy/site-reports/import`
     - `framework/cli/deploy`
 - Exemptions:
   - Exempts itself from:

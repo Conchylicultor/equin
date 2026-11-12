@@ -26,3 +26,4 @@ export {
   siteReportsEndpoint,
   siteReportsListEndpoint,
 } from "./internal/endpoints";
+export { SITE_REPORTS_MIRROR_SET_ID } from "./internal/mirror";

@@ -57,6 +57,9 @@ is new (never seen in this worktree) when there is one, so a new problem always
 alerts unread. Otherwise it is the lead (`pickIncidentBell`). Its description
 leads with `[+N related, M new]`, and its metadata lists every member
 (`incidentReportIds`). Identity stays per problem and only the alert is shared.
+`{ alert: false }` files a catch-up incident — occurrences already past,
+learned about late (site-reports' reconciliation) — with every row landing as
+usual and no bell: a per-incident choice of the filer, never a kind's.
 So never merge co-occurring reports into one fingerprint to quiet the bell:
 that puts unrelated incidents on one row and hides the member that only ever
 co-occurs. First user: slow-ops' per-batch bursts.
@@ -267,6 +270,7 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
     - `packages/source-digest.sourceDigest`
   - DB schema: `plugins/reports/plugins/engine/server/internal/tables.ts`
   - Exports (types):
+    - `IncidentOptions`
     - `RecordReportResult`
     - `RestateOccurrence`
     - `RestateResult`

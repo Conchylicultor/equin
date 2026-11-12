@@ -77,9 +77,12 @@ export interface MirrorSinkBatch {
 /**
  * A sink of the owner's own, in place of the replica's schema (site-reports'
  * reduce step): handed every applied page in the page's transaction, beside
- * the cursor. The replica keeps the key index for it. `reconciling`: the rows
- * come from a reconciliation (they changed while deltas could not say so);
- * `firstCopy`: from the replica's first sync.
+ * the cursor. The replica keeps the key index for it, and hands it only the
+ * upserts whose row hash the index did not hold — each row content once, a
+ * re-delivery never (tombstones are all handed). `reconciling`: the rows come
+ * from a reconciliation (they changed while deltas could not say so);
+ * `firstCopy`: from the replica's first sync (its copy, then the stream that
+ * catches it up).
  */
 export interface MirrorCustomSink {
   apply(
@@ -191,10 +194,21 @@ function sinkOf(
     },
     columns: async (_exec, t) => [...t.columns],
     async apply(tx, batch, opts) {
+      // The sink is handed each row content once: a re-delivered row (same
+      // hash as the index holds) is left out, so a sink that counts what it
+      // is handed (site-reports' recurrences) never counts one twice.
+      const handed: MirrorSinkBatch[] = [];
       for (const b of batch) {
-        await applyToKeyIndex(tx, row.id, table(b.table), b.upserts, b.deletes);
+        const upserts = await applyToKeyIndex(
+          tx,
+          row.id,
+          table(b.table),
+          b.upserts,
+          b.deletes,
+        );
+        handed.push({ table: b.table, upserts, deletes: b.deletes });
       }
-      await custom.apply(tx, batch, opts);
+      await custom.apply(tx, handed, opts);
     },
     keyHashes: (exec, t, _columns, afterPk, lastPk) =>
       keyIndexHashes(exec, row.id, t, afterPk, lastPk),

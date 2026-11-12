@@ -97,10 +97,14 @@ const ROUTES = {
  * How a replica reaches one deployment's box: each page one host-only GET
  * curled over SSH (`hostOnlyQueryOverSsh`; through this instance's own
  * gateway for a demo's stand-in box), its answer capped at
- * `MIRROR_ANSWER_MAX_BYTES`. Every way the read can fail before the box
+ * `MIRROR_ANSWER_MAX_BYTES` (or a sink set's tighter pace). Every way the read can fail before the box
  * answers is handed back as-is (`fetch-failed`), recorded on the replica.
  */
-export function mirrorFetchOverSsh(deploymentId: string): MirrorFetch {
+export function mirrorFetchOverSsh(
+  deploymentId: string,
+  opts: { maxAnswerBytes?: number } = {},
+): MirrorFetch {
+  const maxAnswerBytes = opts.maxAnswerBytes ?? MIRROR_ANSWER_MAX_BYTES;
   async function ask<T>(
     route: { route: string; path: string },
     question: unknown,
@@ -108,7 +112,7 @@ export function mirrorFetchOverSsh(deploymentId: string): MirrorFetch {
   ): Promise<T | MirrorFetchFailed> {
     const path = `${route.path}?q=${encodeQuestion(route.route, question)}`;
     const answer = await hostOnlyQueryOverSsh(deploymentId, path, schema, {
-      maxAnswerBytes: MIRROR_ANSWER_MAX_BYTES,
+      maxAnswerBytes,
     });
     if (answer.kind === "answer") return answer.value;
     return { kind: "fetch-failed", failure: answer };

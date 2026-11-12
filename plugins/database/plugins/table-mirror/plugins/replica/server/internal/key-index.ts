@@ -9,7 +9,7 @@ import {
   mirrorSql,
   type MirroredTable,
 } from "@plugins/database/plugins/table-mirror/plugins/source/server";
-import type { Exec, KeyHash, ReplicaTx } from "./exec";
+import { keyText, type Exec, type KeyHash, type ReplicaTx } from "./exec";
 import { rowColumns } from "./schema-sink";
 import { tableMirrorKeys } from "./tables";
 
@@ -36,14 +36,21 @@ export async function pruneKeyIndex(
     );
 }
 
-/** Record one table's part of a page: tombstoned keys forgotten, applied rows' hashes kept. */
+/**
+ * Record one table's part of a page: tombstoned keys forgotten, applied rows'
+ * hashes kept. Answers the upserts whose hash the index did not hold already —
+ * a new key, or a row whose content changed. A re-delivered row (the stream
+ * re-reads from its floor; the stream after a copy or a reconcile re-reads
+ * rows that pass already applied) is not among them, so a sink handed only
+ * these sees each row content once.
+ */
 export async function applyToKeyIndex(
   tx: ReplicaTx,
   replicaId: string,
   t: MirroredTable,
   upserts: readonly MirrorKeyedRow[],
   deletes: readonly MirrorPk[],
-): Promise<void> {
+): Promise<MirrorKeyedRow[]> {
   if (deletes.length > 0) {
     await tx
       .delete(tableMirrorKeys)
@@ -55,36 +62,41 @@ export async function applyToKeyIndex(
         ),
       );
   }
-  if (upserts.length > 0) {
-    // A page's `h` covers every column the source sends; a keys page hashes
-    // only the ones this install's table has. Kept as the latter, so a newer
-    // source (extra columns) does not make every key differ at each reconcile.
-    const own = new Set(t.columns);
-    const hashOf = (r: MirrorKeyedRow) => {
-      const extra = rowColumns(r.row).filter((c) => !own.has(c));
-      return extra.length === 0
-        ? r.h
-        : sql`md5(((${r.row})::jsonb - ${sql.raw(textArray(extra))})::text)`;
-    };
-    await tx
-      .insert(tableMirrorKeys)
-      .values(
-        upserts.map((r) => ({
-          replicaId,
-          tbl: t.name,
-          pk: r.pk,
-          h: hashOf(r),
-        })),
-      )
-      .onConflictDoUpdate({
-        target: [
-          tableMirrorKeys.replicaId,
-          tableMirrorKeys.tbl,
-          tableMirrorKeys.pk,
-        ],
-        set: { h: sql`excluded.h` },
-      });
-  }
+  if (upserts.length === 0) return [];
+  // A page's `h` covers every column the source sends; a keys page hashes
+  // only the ones this install's table has. Kept as the latter, so a newer
+  // source (extra columns) does not make every key differ at each reconcile.
+  const own = new Set(t.columns);
+  const hashOf = (r: MirrorKeyedRow) => {
+    const extra = rowColumns(r.row).filter((c) => !own.has(c));
+    return extra.length === 0
+      ? r.h
+      : sql`md5(((${r.row})::jsonb - ${sql.raw(textArray(extra))})::text)`;
+  };
+  const changed = await tx
+    .insert(tableMirrorKeys)
+    .values(
+      upserts.map((r) => ({
+        replicaId,
+        tbl: t.name,
+        pk: r.pk,
+        h: hashOf(r),
+      })),
+    )
+    .onConflictDoUpdate({
+      target: [
+        tableMirrorKeys.replicaId,
+        tableMirrorKeys.tbl,
+        tableMirrorKeys.pk,
+      ],
+      set: { h: sql`excluded.h` },
+      // An unchanged hash is no write and no RETURNING row: what tells a
+      // re-delivery from a change.
+      setWhere: sql`${tableMirrorKeys.h} IS DISTINCT FROM excluded.h`,
+    })
+    .returning({ pk: tableMirrorKeys.pk });
+  const fresh = new Set(changed.map((r) => keyText(r.pk)));
+  return upserts.filter((r) => fresh.has(keyText(r.pk)));
 }
 
 const KeyHashRowSchema = z.object({

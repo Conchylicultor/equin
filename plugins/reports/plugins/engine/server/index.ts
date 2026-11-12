@@ -31,7 +31,11 @@ export {
   reportWorklist,
   reportWorklistCounts,
 } from "./internal/uninvestigated";
-export { recordReport, recordReportIncident } from "./internal/record-report";
+export {
+  recordReport,
+  recordReportIncident,
+  type IncidentOptions,
+} from "./internal/record-report";
 export { restateReportOccurrence } from "./internal/restate-report";
 export type {
   RestateOccurrence,

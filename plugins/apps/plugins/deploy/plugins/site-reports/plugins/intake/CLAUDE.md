@@ -38,6 +38,15 @@ Every number is `SITE_REPORT_LIMITS` (`core/internal/limits.ts`).
 Every refusal is counted in `site_report_drops` per (window, reason), written
 in the same flush. Nothing is queued past the bounds.
 
+## Read by the computer as a change stream
+
+`site_reports` is the `site_reports` mirror set (`server/internal/mirror.ts`,
+`table-mirror/source`): its change-log triggers log every flush's upserts and
+the sweep's deletes, and the deploy app's `site-reports/import` reads that
+stream over SSH through its reduce step (never copying rows). The host-only
+list (`GET /api/host-only/site-reports`) is no longer read by this computer;
+it stays for older releases until the mirror plan's cleanup task retires it.
+
 Only anonymous data is stored: no IP, client id or user agent. The page sends
 its pathname and clamps every string (`channel`'s `toSiteReport`).
 
@@ -55,9 +64,10 @@ its pathname and clamps every string (`channel`'s `toSiteReport`).
 
 ## Plugin reference
 
-- Description: Owns site_reports and site_report_drops: the public POST /api/site-reports endpoint a site page's report channel posts batches to (body capped at 64 KB, at most 10 reports; per-visitor and global batch budgets per minute keyed by a per-process salted IP hash, never stored; each report identified by its ReportKind's own schema and fingerprint and a new fingerprint admitted through the reports fan-out ceiling), aggregated in memory and flushed once a minute as one upsert per fingerprint, the table capped at 2,000 rows, every refusal counted per minute and reason, a 30-day sweep, and the host-only list the deploy app reads over SSH.
+- Description: Owns site_reports and site_report_drops: the public POST /api/site-reports endpoint a site page's report channel posts batches to (body capped at 64 KB, at most 10 reports; per-visitor and global batch budgets per minute keyed by a per-process salted IP hash, never stored; each report identified by its ReportKind's own schema and fingerprint and a new fingerprint admitted through the reports fan-out ceiling), aggregated in memory and flushed once a minute as one upsert per fingerprint, the table capped at 2,000 rows, every refusal counted per minute and reason, a 30-day sweep, the site_reports mirror set (the change stream the deploy app's site-reports/import reduces), and the host-only list.
 - Server:
   - Contributes:
+    - `table-mirror-set` "site_reports"
     - `change-feed-exclusion` "site_report_drops"
     - `change-feed-exclusion` "site_reports"
   - Uses:
@@ -67,6 +77,8 @@ its pathname and clamps every string (`channel`'s `toSiteReport`).
     - `database.db`
     - `database/sql-column.parsedJson`
     - `database/sql-column.parsedText`
+    - `database/table-mirror/source.defineMirrorSet`
+    - `database/table-mirror/source.MirrorSet`
     - `infra/endpoints.implement`
     - `infra/endpoints.rawEndpointHandler`
     - `infra/retention.defineRetention`
@@ -97,6 +109,7 @@ its pathname and clamps every string (`channel`'s `toSiteReport`).
   - Exports (values):
     - `SITE_REPORT_DROP_REASONS`
     - `SITE_REPORT_LIMITS`
+    - `SITE_REPORTS_MIRROR_SET_ID`
     - `SITE_REPORTS_PAGE_DEFAULT`
     - `SITE_REPORTS_PAGE_MAX`
     - `SiteReportDropRecordSchema`

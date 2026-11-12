@@ -1,6 +1,6 @@
 {
   "name": "@equin/plugin-apps-deploy-site-reports-import",
-  "description": "Pulls a deployed site's visitor error reports into this computer's Reports: an hourly main-only job reads each deployment's host-only list over SSH, reduces every row to typed, clamped fields and records it as a website-visitor-error report (source website-visitor: untrusted, never auto-investigated, fenced as data when investigated by hand).",
+  "description": "Reads a deployed site's visitor error reports into this computer's Reports: the box's site_reports change stream (site-mirror) goes through the reduce step as the replica's sink \u2014 typed, clamped fields only, no raw row kept \u2014 at most 50 per deployment per hourly run, recorded as website-visitor-error reports (source website-visitor: untrusted, never auto-investigated, fenced as data when investigated by hand).",
   "private": true,
   "version": "0.0.1"
 }
