@@ -2,8 +2,9 @@
 
 Visitor messages, on the deployed box. The website's contact card
 (`apps/website/landing/contact`) posts here; the deploy app's
-[`inbox`](../inbox/CLAUDE.md) reads the stored messages over SSH. This plugin
-knows nothing about SSH or the deploy UI.
+[`inbox`](../inbox/CLAUDE.md) reads the stored messages from its copy of this
+table (the mirror set below). This plugin knows nothing about SSH or the
+deploy UI.
 
 **A site takes messages by importing the `web` barrel** (`useSendSiteMessage()`),
 never only `core`: a composition's closure follows same-runtime imports, so a
@@ -35,7 +36,7 @@ for `website`.
    Accepted messages are kept.
 
 `site_messages` is `ExcludeFromChangeFeed`: public traffic writes it and
-nothing renders it live.
+nothing renders it live on the box.
 
 ## The notification — `site-messages.notify`
 
@@ -73,18 +74,28 @@ before confirmations read `skipped`). Same job shape and the same
   one address (case-insensitive) in any 24 h. Past either → `throttled`, never
   sent later. Spam is never confirmed.
 
-## The host-only list — `GET /api/host-only/site-messages`
+## The mirror set — `site_messages`
 
-`hostOnly()`, `?verdict=&limit=` (default 100, max 200), newest first,
-`{ kind: "messages", messages, hasMore }`. The inbox builds the path it curls
-with `endpointPath(siteMessagesListEndpoint, {}, query)` (`endpoints/server`).
+`server/internal/mirror.ts` declares the table-mirror set
+`SITE_MESSAGES_MIRROR_SET_ID` (`site_messages`) = `site_messages` with
+`omit: [ip_hash]`, and `site_messages_salt` `NeverMirrored`
+(`database/table-mirror/source`): the deploy app (`apps/deploy/site-mirror`)
+copies every message, the notify / confirm jobs' updates as changes and the
+spam sweep's deletes as tombstones, while the salted IP hash and the salt
+never leave the box. `ip_hash` is nullable only because an omitted column must
+be (a copy's row is valid without it); the intake always writes one. A release
+from before the set answers the deploy app `unknown-set` ("deploy it again").
+The inbox reads the copy with this plugin's `siteMessages` table (server
+barrel), so its SQL names the intake's own columns.
 
 ## Tests
 
 - `core/internal/message.test.ts` — the body's zod limits.
 - `server/internal/classify.test.ts`, `rate-limit.test.ts` — pure rules.
+- `server/internal/mirror.test.ts` — the set mirrors `site_messages` without
+  `ip_hash`, and listing the salt in a set throws.
 - `server/internal/site-messages.db.test.ts` — real Postgres: intake (stored,
-  spam, rate limit, list), notify (not-configured, sent, retry then failed, the
+  spam, rate limit), notify (not-configured, sent, retry then failed, the
   cap and the held count), confirm (sent, not-configured, retry then failed,
   the per-address cap), the spam sweep.
 
@@ -94,7 +105,7 @@ Run with `./equin test plugins/apps/plugins/deploy/plugins/site-messages`.
 
 ## Plugin reference
 
-- Description: useSendSiteMessage() — the contact form's send (sent or rate-limited); a site takes messages by importing this barrel, which pulls the intake's server half into its composition. Registers the site-message id kind (smsg) with the web id registry — the server barrel registers the same kind. Owns site_messages: the public POST /api/site-messages endpoint (body capped at 8 KB; honeypot, a send under three seconds or a bot user agent stored as spam and still answered sent; 3 per 10 minutes and 10 per day per salted IP hash, the IP never stored), the site-messages.notify job emailing each accepted message through Resend from the approved RESEND_API_KEY deploy secret (not-configured without one, at most 30 emails a day, the rest held and counted in the next), the site-messages.confirm job emailing the visitor a copy so they know it arrived (at most 30 a day and 3 a day per address), the 30-day spam sweep, and the host-only list the deploy app reads over SSH.
+- Description: useSendSiteMessage() — the contact form's send (sent or rate-limited); a site takes messages by importing this barrel, which pulls the intake's server half into its composition. Registers the site-message id kind (smsg) with the web id registry — the server barrel registers the same kind. Owns site_messages: the public POST /api/site-messages endpoint (body capped at 8 KB; honeypot, a send under three seconds or a bot user agent stored as spam and still answered sent; 3 per 10 minutes and 10 per day per salted IP hash, the IP never stored), the site-messages.notify job emailing each accepted message through Resend from the approved RESEND_API_KEY deploy secret (not-configured without one, at most 30 emails a day, the rest held and counted in the next), the site-messages.confirm job emailing the visitor a copy so they know it arrived (at most 30 a day and 3 a day per address), the 30-day spam sweep, and the site_messages mirror set the deploy app copies (ip_hash omitted, the salt never mirrored).
 - Web:
   - Contributes: `IdKinds.Kind` "smsg"
   - Uses:
@@ -105,14 +116,18 @@ Run with `./equin test plugins/apps/plugins/deploy/plugins/site-messages`.
   - Contributes:
     - `ids.kind` "smsg"
     - `change-feed-exclusion` "site_messages"
+    - `table-mirror-set` "site_messages"
+    - `table-mirror-never` "site_messages_salt"
   - Uses:
     - `apps/deploy/analytics/host-only.capBodySize`
-    - `apps/deploy/analytics/host-only.hostOnly`
     - `apps/deploy/analytics/host-only.isBotUserAgent`
     - `apps/deploy/analytics/host-only.requestClientIp`
     - `apps/deploy/deploy-secrets.readDeploySecret`
     - `database.db`
     - `database/sql-column.parsedText`
+    - `database/table-mirror/source.defineMirrorSet`
+    - `database/table-mirror/source.MirrorSet`
+    - `database/table-mirror/source.NeverMirrored`
     - `ids.idColumn`
     - `ids.IdKinds`
     - `infra/endpoints.implement`
@@ -122,14 +137,14 @@ Run with `./equin test plugins/apps/plugins/deploy/plugins/site-messages`.
     - `integrations/resend.sendEmail`
     - `network/live/change-feed.ExcludeFromChangeFeed`
   - DB schema: `plugins/apps/plugins/deploy/plugins/site-messages/plugins/intake/server/internal/tables.ts`
-  - Exports (values): `insertReceivedSiteMessage`
+  - Exports (values):
+    - `insertReceivedSiteMessage`
+    - `siteMessages`
   - Register:
     - `defineJob('site-messages.notify')`
     - `defineJob('site-messages.confirm')`
     - `defineJob('retention.site_messages')`
-  - Routes:
-    - `POST /api/site-messages`
-    - `GET /api/host-only/site-messages`
+  - Routes: `POST /api/site-messages`
 - Core:
   - Uses:
     - `apps/deploy/analytics/collect.PagePathSchema`
@@ -138,15 +153,11 @@ Run with `./equin test plugins/apps/plugins/deploy/plugins/site-messages`.
     - `ids.defineIdKind`
     - `ids.IdOf`
     - `infra/endpoints.defineEndpoint`
-    - `packages/list-bound.cappedList`
   - Exports (types):
     - `NotifyState`
     - `SiteMessageBody`
     - `SiteMessageId`
-    - `SiteMessageRecord`
     - `SiteMessageResponse`
-    - `SiteMessagesListQuery`
-    - `SiteMessagesPage`
     - `SiteMessageVerdict`
     - `SpamReason`
   - Exports (values):
@@ -159,15 +170,10 @@ Run with `./equin test plugins/apps/plugins/deploy/plugins/site-messages`.
     - `RESEND_API_KEY`
     - `sendSiteMessageEndpoint`
     - `SITE_MESSAGE_VERDICTS`
-    - `SITE_MESSAGES_PAGE_DEFAULT`
-    - `SITE_MESSAGES_PAGE_MAX`
+    - `SITE_MESSAGES_MIRROR_SET_ID`
     - `SiteMessageBodySchema`
     - `siteMessageIdKind`
-    - `SiteMessageRecordSchema`
     - `SiteMessageResponseSchema`
-    - `siteMessagesListEndpoint`
-    - `SiteMessagesListQuerySchema`
-    - `SiteMessagesPageSchema`
     - `SiteMessageVerdictSchema`
     - `SPAM_REASONS`
     - `SPAM_RETENTION_DAYS`

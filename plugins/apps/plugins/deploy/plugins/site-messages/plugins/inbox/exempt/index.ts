@@ -6,6 +6,6 @@ export default [
     paths: ["server/internal/served.ts"],
     kind: "sanctioned",
     reason:
-      "deploymentSiteMessages is a snapshot external: the truth is the deployed site's own data, read over SSH, with no change signal here. `hostOnlyQueryOverSsh` (deploy/host-query) reads the deployment's SSH target from Postgres (row, server, pinned host key, key secret) inside the loader — the private key may only be read at SSH time — and re-reads it on every measure, so it is never staler than the snapshot the value already says is re-measured only on ask. A `db` arm would label it fresh, and `reads` is a notified value's.",
+      "siteMessagesInbox reads this computer's copy of a deployed site's site_messages: a table-mirror replica schema (tm_*), which the change feed deliberately excludes (no triggers outside public). Its change signal is the mirror's own — every applied page NOTIFYs table_mirror in its transaction, and onSiteMirrorApplied hands that to the collection's notify — so the external arm with changes: \"notified\" is the one that can see a write. Besides the copy it reads only the replica's state row (table_mirror_replicas, inside withReplicaSchema's snapshot), which the same NOTIFY covers.",
   },
 ] satisfies Exemptions;

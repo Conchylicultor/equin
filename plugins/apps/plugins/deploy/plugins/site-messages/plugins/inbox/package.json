@@ -1,6 +1,6 @@
 {
   "name": "@equin/plugin-apps-deploy-site-messages-inbox",
-  "description": "Messages section of a deployment's page, shown only when the deployment's composition ships the site-messages intake: the messages visitors sent through the site, read over SSH from the box on demand, as a DataView (received, from as a reply link, the message with its full text on open, verdict, notification state), with explicit states for every way the read can fail.",
+  "description": "Messages tab of a site's page, shown only when the deployment's composition ships the site-messages intake: every message visitors sent through the site, from this computer's copy of the site's messages (site-mirror), as a live DataView paged, searched and filtered in SQL, with the copy's freshness line.",
   "private": true,
   "version": "0.0.1"
 }

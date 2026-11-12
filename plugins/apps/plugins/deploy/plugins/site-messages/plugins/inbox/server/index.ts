@@ -1,8 +1,8 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
-import { deploymentSiteMessagesServed } from "./internal/served";
+import { siteMessagesInboxServed } from "./internal/served";
 
 export default {
   description:
-    "Reads a deployment's stored site messages over SSH through host-query's hostOnlyQueryOverSsh (the intake's host-only list, newest first) and answers a discriminated result: the page, or which of SSH, the request or the answer failed.",
-  contributions: [...deploymentSiteMessagesServed.declare],
+    "Serves deploy-site-messages.inbox: a deployed site's contact-form messages as a live window over this computer's copy of the site's site_messages (site-mirror's replica of the intake's mirror set) — newest first, filtered, searched, grouped and counted in SQL on the copy, re-read whenever a sync applies a page.",
+  contributions: [...siteMessagesInboxServed.declare],
 } satisfies ServerPluginDefinition;

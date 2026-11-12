@@ -51,8 +51,16 @@ replicas). Replica ids are `site-mirror:<deployment>:<set>`.
   (`HostQueryFailureState`), and `unknown-set` / `unknown-table` /
   `source-older` as "this site runs an older release — deploy it again",
   above "showing data synced 3h ago". On mount it asks for a pull when the
-  copy is missing or more than 5 minutes old. Shown today in the Analytics
-  tab (collect's `analytics` set), which does not read the copy yet.
+  copy is missing or more than 5 minutes old. Shown in the Analytics tab
+  (collect's `analytics` set, which does not read the copy yet) and the
+  Messages tab and card (the intake's `site_messages` set).
+- **Reading a copy** (server barrel): `readSiteMirror(deploymentId, setId,
+  fn)` runs the set owner's own SQL on the deployment's copy
+  (`withReplicaSchema`: `ready: false` until a whole copy is in place; no
+  replica yet throws — a consumer reads only once `site-mirror.status` says
+  `copied`), and `onSiteMirrorApplied(setId, fn)` is its change signal (any
+  deployment's copy of the set applied a page). The inbox
+  (`site-messages/inbox`) serves its live window through both.
 
 Tests: `./equin test plugins/apps/plugins/deploy/plugins/site-mirror` (the key
 list cut); the engine's own round trips are `table-mirror/replica`'s suite.
@@ -61,30 +69,20 @@ list cut); the engine's own round trips are `table-mirror/replica`'s suite.
 
 ## Plugin reference
 
-- Description: MirrorFreshness({ deploymentId, setId, subject }): how fresh this computer's copy of a deployed site's mirrored set is — Synced N ago with Sync now, Copying… / Reconciling… while a pass runs, a failed pull in host-query's failure vocabulary (a site whose release predates the set: redeploy it) above the still-readable older data — asking for a pull on open when the copy is a few minutes old or missing. Keeps one table-mirror replica per (deployment, mirror set) of each deployed site's box, pulled over SSH through host-query (each page one host-only GET, a key list cut to what one question carries): the site-mirror.pull job (one bounded chunk per run, re-enqueued while behind, one pending per replica), its hourly main-only site-mirror.pull-all (drops deleted deployments' replicas and orphan schemas, then pulls every replica), POST /api/site-mirror/sync (on a tab open and on Sync now; creates the set's replica on first ask), the SiteMirrorSink contribution (a set read as a change stream through its owner's sink — only the content-free key index kept — kept for every deployment and pulled at its own pace, one bounded page per hourly run, never on demand), and the site-mirror.status live value (phase, progress, last sync, last outcome).
+- Description: MirrorFreshness({ deploymentId, setId, subject }): how fresh this computer's copy of a deployed site's mirrored set is — Synced N ago with Sync now, Copying… / Reconciling… while a pass runs, a failed pull in host-query's failure vocabulary (a site whose release predates the set: redeploy it) above the still-readable older data — asking for a pull on open when the copy is a few minutes old or missing. Keeps one table-mirror replica per (deployment, mirror set) of each deployed site's box, pulled over SSH through host-query (each page one host-only GET, a key list cut to what one question carries): the site-mirror.pull job (one bounded chunk per run, re-enqueued while behind, one pending per replica), its hourly main-only site-mirror.pull-all (drops deleted deployments' replicas and orphan schemas, then pulls every replica), POST /api/site-mirror/sync (on a tab open and on Sync now; creates the set's replica on first ask), the SiteMirrorSink contribution (a set read as a change stream through its owner's sink — only the content-free key index kept — kept for every deployment and pulled at its own pace, one bounded page per hourly run, never on demand), the site-mirror.status live value (phase, progress, last sync, last outcome), and readSiteMirror / onSiteMirrorApplied — a consumer's own SQL on a deployment's copy, and its change signal.
 - Server:
   - Contributes:
     - `resource.declare` "site-mirror.status"
     - `fork-data-exclusion` "site_mirror_replicas"
-  - Uses:
+  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `database/table-mirror/replica` ×11
+    - `infra/endpoints` ×3
+    - `database/table-mirror/source` ×2
+    - `ids` ×2
     - `apps/deploy/deployments._deployDeployments`
     - `apps/deploy/host-query.hostOnlyQueryOverSsh`
-    - `database.db`
     - `database/admin.ExcludeFromFork`
-    - `database/table-mirror/replica.dropReplica`
-    - `database/table-mirror/replica.ensureReplica`
-    - `database/table-mirror/replica.pullReplica`
-    - `database/table-mirror/replica.ReplicaOutcome`
-    - `database/table-mirror/replica.ReplicaProgress`
-    - `database/table-mirror/replica.sweepOrphanReplicaSchemas`
-    - `database/table-mirror/replica.tableMirrorReplicas`
-    - `database/table-mirror/source.MirrorSetDefinition`
-    - `database/table-mirror/source.resolveMirrorSet`
-    - `ids.externalIdColumn`
-    - `ids.idRef`
-    - `infra/endpoints.endpointPath`
-    - `infra/endpoints.HttpError`
-    - `infra/endpoints.implement`
+    - `database.db`
     - `infra/jobs.defineJob`
     - `network/live.serveValue`
   - DB schema: `plugins/apps/plugins/deploy/plugins/site-mirror/plugins/pull/server/internal/tables.ts`
@@ -92,7 +90,10 @@ list cut); the engine's own round trips are `table-mirror/replica`'s suite.
     - `SiteMirrorPace`
     - `SiteMirrorSinkSpec`
     - `SiteMirrorSite`
-  - Exports (values): `SiteMirrorSink`
+  - Exports (values):
+    - `onSiteMirrorApplied`
+    - `readSiteMirror`
+    - `SiteMirrorSink`
   - Register:
     - `defineJob('site-mirror.pull')`
     - `defineJob('site-mirror.pull-all')`
@@ -136,6 +137,7 @@ list cut); the engine's own round trips are `table-mirror/replica`'s suite.
 - Cross-plugin:
   - Imported by:
     - `apps/deploy/analytics/dashboard`
+    - `apps/deploy/site-messages/inbox`
     - `apps/deploy/site-reports/import`
 
 <!-- AUTOGENERATED:END -->

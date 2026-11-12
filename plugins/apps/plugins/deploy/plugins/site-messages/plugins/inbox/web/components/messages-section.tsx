@@ -5,51 +5,51 @@ import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
-import { useLive } from "@plugins/network/plugins/live/web";
+import { RowView, useLive } from "@plugins/network/plugins/live/web";
 import {
   DataView,
   defineDataView,
-  type FieldDef,
+  fieldOverrides,
+  liveDataSource,
 } from "@plugins/primitives/plugins/data-view/web";
 import {
-  HostQueryFailureState,
   useDeploymentShips,
   type HostQuerySubject,
 } from "@plugins/apps/plugins/deploy/plugins/host-query/web";
-import {
-  NOTIFY_STATES,
-  SITE_MESSAGE_VERDICTS,
-  type SiteMessageRecord,
-  type SiteMessagesPage,
-} from "@plugins/apps/plugins/deploy/plugins/site-messages/plugins/intake/core";
-import { symbol } from "@plugins/ui/plugins/icons/core";
+import { MirrorFreshness } from "@plugins/apps/plugins/deploy/plugins/site-mirror/plugins/pull/web";
+import { SITE_MESSAGES_MIRROR_SET_ID } from "@plugins/apps/plugins/deploy/plugins/site-messages/plugins/intake/core";
 import {
   SiteCard,
   SiteCardBody,
 } from "@plugins/apps/plugins/deploy/plugins/deployments/web";
-import { deploymentSiteMessages } from "../../core";
+import { siteMessagesInbox, type SiteMessageRow } from "../../core";
 import { INTAKE_PLUGIN_ID } from "../internal/intake-plugin-id";
-import {
-  NOTIFY_LABEL,
-  NOTIFY_VARIANT,
-  SPAM_REASON_LABEL,
-  VERDICT_LABEL,
-  VERDICT_VARIANT,
-  replyHref,
-} from "../internal/present";
+import { SPAM_REASON_LABEL, firstLine, replyHref } from "../internal/present";
+import { useMessagesCopy } from "../internal/use-messages-copy";
 
 // Marker scraped by codegen (data-views.generated.ts). Must live in web/**.
 const MESSAGES_VIEW = defineDataView("deploy.site-messages");
 
-const refreshIcon = symbol("refresh");
-
-const MESSAGES_SUBJECT: HostQuerySubject = {
+/** What the freshness line's failure sentences call this set. */
+export const MESSAGES_SUBJECT: HostQuerySubject = {
   reading: "messages",
-  answer: "a list of messages",
+  answer: "a page of messages",
 };
+
+/**
+ * The live source: every message of the site's copy, searched (who wrote and
+ * what they wrote) and filtered in SQL. Scoped per site below.
+ */
+const messagesSource = liveDataSource(siteMessagesInbox, {
+  surface: MESSAGES_VIEW,
+  unscoped: {
+    reason:
+      "served from this computer's copy of the site's table (a per-replica schema outside the change feed) — a custom column is a Postgres side table joined into a routed window, which an external window cannot join",
+  },
+  searchable: ["replyTo", "message"],
+});
 
 function ReplyLink({ replyTo }: { replyTo: string }): ReactNode {
   return (
@@ -64,66 +64,23 @@ function ReplyLink({ replyTo }: { replyTo: string }): ReactNode {
   );
 }
 
-const FIELDS: FieldDef<SiteMessageRecord>[] = [
-  {
-    id: "message",
-    label: "Message",
-    type: "multiline-text",
-    value: (m) => m.message,
-  },
-  {
-    id: "replyTo",
-    label: "From",
-    type: "text",
-    primary: true,
-    value: (m) => m.replyTo,
-    cell: (m) => <ReplyLink replyTo={m.replyTo} />,
-    sortable: true,
-    width: "16rem",
-  },
-  {
-    id: "createdAt",
-    label: "Received",
-    type: "date",
-    value: (m) => new Date(m.createdAt),
-    sortable: true,
-    filterable: true,
-    width: "7rem",
-  },
-  {
-    id: "verdict",
-    label: "Verdict",
-    type: "enum",
-    value: (m) => m.verdict,
-    options: SITE_MESSAGE_VERDICTS.map((value) => ({
-      value,
-      label: VERDICT_LABEL[value],
-      variant: VERDICT_VARIANT[value],
-    })),
-    filterable: true,
-    groupable: true,
-    width: "7rem",
-  },
-  {
-    id: "notifyState",
-    label: "Notification",
-    type: "enum",
-    value: (m) => m.notifyState,
-    options: NOTIFY_STATES.map((value) => ({
-      value,
-      label: NOTIFY_LABEL[value],
-      variant: NOTIFY_VARIANT[value],
-    })),
-    filterable: true,
-    groupable: true,
-    width: "9rem",
-  },
-];
+// What the list says of the fields it derives from `siteMessagesInbox`: the
+// sender as a reply link, the message on one line (its full text opens below),
+// and widths. `deploymentId` is the scope every read states — not a column.
+const overrides = fieldOverrides(siteMessagesInbox, {
+  replyTo: { cell: (m) => <ReplyLink replyTo={m.replyTo} />, width: "16rem" },
+  message: { cell: (m) => firstLine(m.message) },
+  createdAt: { width: "7rem" },
+  verdict: { width: "7rem" },
+  notifyState: { width: "9rem" },
+  deploymentId: { visible: false, filterable: false, groupable: false },
+});
 
 /**
  * **Messages** — what visitors sent through the deployed site's contact form,
- * read from the box over SSH when the section opens (and on Refresh). Shown
- * only when the deployment's composition ships the intake.
+ * every one of them, from this computer's copy of the site's messages (synced
+ * from the box on open, hourly and on Sync now). Shown only when the
+ * deployment's composition ships the intake.
  */
 export function MessagesSection({
   deploymentId,
@@ -153,73 +110,84 @@ export function MessagesSection({
 }
 
 function MessagesInbox({ deploymentId }: { deploymentId: string }): ReactNode {
-  // One snapshot per deployment; each measure is an SSH session to the box,
-  // so nothing re-asks on its own — Refresh (`refresh()`) is the re-ask.
-  const answer = useLive(deploymentSiteMessages, { deploymentId });
+  const copy = useMessagesCopy(deploymentId);
   return (
-    <SiteCard
-      title="Messages"
-      meta="Read from the server when this page opens"
-      trailing={
-        <IconButton
-          icon={refreshIcon}
-          label="Refresh"
-          loading={answer.status === "loading"}
-          onClick={() => answer.refresh()}
-        />
-      }
-    >
+    <SiteCard title="Messages">
       <SiteCardBody>
-      {answer.status === "loading" ? (
-        <Loading variant="rows" count={4} />
-      ) : answer.status === "error" ? (
-        <ResourceErrorInline
-          variant="block"
-          subject="this deployment's messages"
-          error={answer.error}
-          refetch={answer.refresh}
-        />
-      ) : answer.data.kind === "messages" ? (
-        <MessageList page={answer.data} />
-      ) : (
-        <HostQueryFailureState
-          failure={answer.data}
-          subject={MESSAGES_SUBJECT}
-        />
-      )}
+        <Stack gap="md">
+          <MirrorFreshness
+            deploymentId={deploymentId}
+            setId={SITE_MESSAGES_MIRROR_SET_ID}
+            subject={MESSAGES_SUBJECT}
+          />
+          {copy.kind === "loading" ? (
+            <Loading variant="rows" count={4} />
+          ) : copy.kind === "error" ? (
+            <ResourceErrorInline
+              variant="block"
+              subject="this site's copy of its messages"
+              error={copy.error}
+              refetch={copy.refetch}
+            />
+          ) : copy.kind === "copied" ? (
+            <MessageList deploymentId={deploymentId} />
+          ) : copy.syncing ? (
+            <Loading variant="rows" count={4} />
+          ) : null}
+        </Stack>
       </SiteCardBody>
     </SiteCard>
   );
 }
 
-function MessageList({ page }: { page: SiteMessagesPage }): ReactNode {
-  const [openId, setOpenId] = useState<string | null>(null);
-  const open = useMemo(
-    () => page.messages.find((m) => m.id === openId) ?? null,
-    [page.messages, openId],
+function MessageList({ deploymentId }: { deploymentId: string }): ReactNode {
+  // This site's messages: its scope, stated as data (never a filter the
+  // user's Filter control could name or widen).
+  const source = useMemo(
+    () => messagesSource.scoped({ where: { deploymentId } }),
+    [deploymentId],
   );
+  const [openId, setOpenId] = useState<string | null>(null);
   return (
     <Stack gap="md">
-      <DataView<SiteMessageRecord>
-        rows={page.messages}
-        fields={FIELDS}
-        rowKey={(m) => m.id}
+      <DataView<SiteMessageRow>
+        source={source}
+        overrides={overrides}
         views={["list", "table"]}
         defaultView="list"
-        storageKey={MESSAGES_VIEW}
         selectedRowId={openId ?? undefined}
         onRowActivate={(m) => setOpenId((id) => (id === m.id ? null : m.id))}
-        searchAccessor={(m) => `${m.replyTo} ${m.message}`}
         recipe="inbox"
         emptyState={<>No one has written yet.</>}
       />
-      {page.hasMore && (
-        <Text variant="caption" tone="muted">
-          Showing the newest {page.messages.length} messages.
-        </Text>
+      {openId !== null && (
+        <OpenMessage id={openId} onClose={() => setOpenId(null)} />
       )}
-      {open && <MessageDetail message={open} onClose={() => setOpenId(null)} />}
     </Stack>
+  );
+}
+
+/** The opened message, read live by id (an email sent meanwhile updates it). */
+function OpenMessage({
+  id,
+  onClose,
+}: {
+  id: string;
+  onClose: () => void;
+}): ReactNode {
+  const row = useLive(siteMessagesInbox, { id });
+  return (
+    <RowView
+      row={row}
+      subject="this message"
+      missing={
+        <Text variant="caption" tone="muted">
+          This message is no longer on the site (spam is deleted after 30 days).
+        </Text>
+      }
+    >
+      {(m) => <MessageDetail message={m} onClose={onClose} />}
+    </RowView>
   );
 }
 
@@ -228,7 +196,7 @@ function MessageDetail({
   message,
   onClose,
 }: {
-  message: SiteMessageRecord;
+  message: SiteMessageRow;
   onClose: () => void;
 }): ReactNode {
   return (
@@ -255,8 +223,7 @@ function MessageDetail({
         </Text>
         <Stack gap="2xs">
           <Text variant="caption" tone="muted">
-            Received {new Date(message.createdAt).toLocaleString()} on{" "}
-            {message.host}
+            Received {message.createdAt.toLocaleString()} on {message.host}
             {message.page}
           </Text>
           {message.spamReason && (

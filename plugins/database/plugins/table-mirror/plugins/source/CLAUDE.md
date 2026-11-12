@@ -122,6 +122,7 @@ caller may ask for less (site-reports' 50 rows a page).
 - Cross-plugin:
   - Imported by:
     - `apps/deploy/analytics/collect`
+    - `apps/deploy/site-messages/intake`
     - `apps/deploy/site-mirror/box`
     - `apps/deploy/site-mirror/pull`
     - `apps/deploy/site-reports/intake`

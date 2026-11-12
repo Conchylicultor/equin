@@ -15,6 +15,10 @@ import {
  *
  * The visitor's IP is never stored: `ip_hash` is `sha256(install salt ‖ ip)`
  * (`ip-hash.ts`), read only by the rate limiter.
+ *
+ * Mirrored to the deploy app (`mirror.ts`) without `ip_hash`, which never
+ * leaves the box. The intake always writes one; the column is nullable only
+ * because a mirror set's omitted column must be (table-mirror/source).
  */
 export const siteMessages = pgTable(
   "site_messages",
@@ -27,7 +31,7 @@ export const siteMessages = pgTable(
     // Where it came from.
     host: text("host").notNull(),
     page: text("page").notNull(),
-    ipHash: text("ip_hash").notNull(),
+    ipHash: text("ip_hash"),
     // What the intake decided.
     verdict: parsedText("verdict", SiteMessageVerdictSchema).notNull(),
     /** Set exactly when `verdict` is `spam`. */

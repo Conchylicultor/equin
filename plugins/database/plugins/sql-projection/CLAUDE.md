@@ -221,6 +221,7 @@ Design: `research/2026-08-25-database-mapped-sql-projections.md`.
     - `apps-core/app-usage`
     - `apps/chord/video-availability`
     - `apps/deploy/deployments/runs-arm`
+    - `apps/deploy/site-messages/inbox`
     - `backup/runs-arm`
     - `build/runs-arm`
     - `conversations/agents`

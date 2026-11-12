@@ -1,6 +1,6 @@
 {
-  "id": "d6e0e122-808b-43d5-8ec7-04fb4f4196f8",
-  "prevId": "4d2e1c3b-969f-4f1e-8cf9-45d15362d7d5",
+  "id": "5e709931-62cf-4485-8d0d-7e7374f6badc",
+  "prevId": "d6e0e122-808b-43d5-8ec7-04fb4f4196f8",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -2269,7 +2269,7 @@
           "name": "ip_hash",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "verdict": {
           "name": "verdict",

@@ -34,7 +34,6 @@ import {
   type ConfirmDeps,
 } from "./confirm";
 import { recordSiteMessage, type IntakeContext } from "./intake";
-import { listSiteMessages } from "./list";
 import { DAILY_EMAIL_CAP, notifySiteMessage, type NotifyDeps } from "./notify";
 import { SPAM_ONLY } from "./retention";
 import { siteMessages } from "./tables";
@@ -144,21 +143,6 @@ describe("intake", () => {
     expect(await rows()).toHaveLength(3);
     // Another visitor is not affected.
     expect(await send({}, { ip: "198.51.100.1" })).toEqual({ kind: "sent" });
-  });
-
-  test("the list is newest first, filterable by verdict, bounded", async () => {
-    await send({}, { now: NOW });
-    await send({ honeypot: "x" }, { now: new Date(NOW.getTime() + 1000) });
-    const all = await listSiteMessages(t.db, { limit: 1 });
-    expect(all.messages.map((m) => m.verdict)).toEqual(["spam"]);
-    expect(all.hasMore).toBe(true);
-    const accepted = await listSiteMessages(t.db, {
-      verdict: "accepted",
-      limit: 10,
-    });
-    expect(accepted.messages).toHaveLength(1);
-    expect(accepted.hasMore).toBe(false);
-    expect(accepted.messages[0]!.createdAt).toBe(NOW.toISOString());
   });
 });
 

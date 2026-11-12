@@ -14,25 +14,15 @@ export {
   NOTIFY_STATES,
   NotifyStateSchema,
   SITE_MESSAGE_VERDICTS,
-  SITE_MESSAGES_PAGE_DEFAULT,
-  SITE_MESSAGES_PAGE_MAX,
   SPAM_REASONS,
   SPAM_RETENTION_DAYS,
-  SiteMessageRecordSchema,
   SiteMessageVerdictSchema,
-  SiteMessagesListQuerySchema,
-  SiteMessagesPageSchema,
   SpamReasonSchema,
 } from "./internal/record";
 export type {
   NotifyState,
-  SiteMessageRecord,
   SiteMessageVerdict,
-  SiteMessagesListQuery,
-  SiteMessagesPage,
   SpamReason,
 } from "./internal/record";
-export {
-  sendSiteMessageEndpoint,
-  siteMessagesListEndpoint,
-} from "./internal/endpoints";
+export { sendSiteMessageEndpoint } from "./internal/endpoints";
+export { SITE_MESSAGES_MIRROR_SET_ID } from "./internal/mirror-set";

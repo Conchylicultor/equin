@@ -1,43 +1,78 @@
-import { endpointPath } from "@plugins/infra/plugins/endpoints/server";
-import { serveValue } from "@plugins/network/plugins/live/server";
-import { hostOnlyQueryOverSsh } from "@plugins/apps/plugins/deploy/plugins/host-query/server";
+import type { LiveDecodedCountQuery } from "@plugins/network/plugins/live/core";
+import { serveCollection } from "@plugins/network/plugins/live/server";
+import type { ReplicaTx } from "@plugins/database/plugins/table-mirror/plugins/replica/server";
 import {
-  SITE_MESSAGES_PAGE_MAX,
-  siteMessagesListEndpoint,
-  SiteMessagesPageSchema,
-} from "@plugins/apps/plugins/deploy/plugins/site-messages/plugins/intake/core";
-import { deploymentSiteMessages } from "../../core";
+  onSiteMirrorApplied,
+  readSiteMirror,
+} from "@plugins/apps/plugins/deploy/plugins/site-mirror/plugins/pull/server";
+import { SITE_MESSAGES_MIRROR_SET_ID } from "@plugins/apps/plugins/deploy/plugins/site-messages/plugins/intake/core";
+import { siteMessagesInbox, type SiteMessageRow } from "../../core";
+import {
+  deploymentOf,
+  messageIdsByDeployment,
+  readInboxCount,
+  readInboxGroups,
+  readInboxRows,
+  readInboxWindow,
+} from "./reads";
 
-// A snapshot external, for the reasons host-query's CLAUDE.md gives: the answer
-// is the deployed site's own data with no change signal here, and the SSH
-// target is resolved from Postgres inside `hostOnlyQueryOverSsh` (an
-// undeclared read only `snapshot` keeps honest — sanctioned in this plugin's
-// `exempt/index.ts`).
-export const deploymentSiteMessagesServed = serveValue(deploymentSiteMessages, {
-  source: "external",
-  changes: {
-    snapshot: {
-      reason:
-        "the deployed site's messages, read over SSH from its box: visitors add them with no change signal here",
-    },
-  },
-  loader: async ({ deploymentId }) => {
-    const result = await hostOnlyQueryOverSsh(
-      deploymentId,
-      endpointPath(
-        siteMessagesListEndpoint,
-        {},
-        { limit: SITE_MESSAGES_PAGE_MAX },
-      ),
-      SiteMessagesPageSchema,
+// The inbox's questions (`reads.ts`), answered over this computer's copy of
+// one site's `site_messages` — site-mirror's replica of the intake's mirror
+// set, read in a snapshot whose search_path is the copy's schema.
+
+/** The copy of one deployment's messages, read with `fn` — loud while no whole copy is in place. */
+async function onCopy<T>(
+  deploymentId: string,
+  fn: (tx: ReplicaTx) => Promise<T>,
+): Promise<T> {
+  const read = await readSiteMirror(
+    deploymentId,
+    SITE_MESSAGES_MIRROR_SET_ID,
+    fn,
+  );
+  if (!read.ready) {
+    // The inbox mounts its list only once `site-mirror.status` says the copy
+    // is in place, so reaching here is a read that raced a reset copy.
+    throw new Error(
+      `deploy-site-messages.inbox: ${deploymentId}'s copy of its messages is not readable yet (${read.phase})`,
     );
-    if (result.kind === "not-found") {
-      throw deploymentSiteMessages.refuse(
-        "missing",
-        "This deployment no longer exists.",
+  }
+  return read.value;
+}
+
+export const siteMessagesInboxServed = serveCollection(siteMessagesInbox, {
+  source: "external",
+  changes: "notified",
+  window: async (q) => {
+    const scope = deploymentOf(q.where);
+    if (scope.kind === "none") return [];
+    return onCopy(scope.id, (tx) => readInboxWindow(tx, scope.id, q));
+  },
+  rows: async (ids) => {
+    const out: SiteMessageRow[] = [];
+    for (const [deploymentId, messageIds] of messageIdsByDeployment(ids)) {
+      out.push(
+        ...(await onCopy(deploymentId, (tx) =>
+          readInboxRows(tx, deploymentId, messageIds),
+        )),
       );
     }
-    // The box's answer, or which of SSH, the request or the answer failed.
-    return result.kind === "answer" ? result.value : result;
+    return out;
   },
+  groups: async (q) => {
+    const scope = deploymentOf(q.where);
+    if (scope.kind === "none") return [];
+    return onCopy(scope.id, (tx) => readInboxGroups(tx, scope.id, q));
+  },
+  count: async (q: LiveDecodedCountQuery) => {
+    const scope = deploymentOf(q.where);
+    if (scope.kind === "none") return 0;
+    return onCopy(scope.id, (tx) => readInboxCount(tx, scope.id, q.where));
+  },
+  keyText: { createdAt: (d: Date) => d.toISOString() },
+  // A sync that applied a page of any site's copy re-reads every held tuple
+  // (each diffed by key); a burst of pages costs one re-read a second.
+  whileSubscribed: (notify) =>
+    onSiteMirrorApplied(SITE_MESSAGES_MIRROR_SET_ID, () => notify()),
+  throttleMs: 1000,
 });

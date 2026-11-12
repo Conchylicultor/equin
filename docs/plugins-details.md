@@ -1946,6 +1946,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `apps/deploy/deploy-history/investigate-failure`
           - `apps/deploy/deployments/runs-arm`
+          - `apps/deploy/site-messages/inbox`
       - Core:
         - Exports (values): `DEPLOY_CATEGORY_ID`
       - Plugins:
@@ -3395,49 +3396,72 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/deploy/health`
               - `apps/deploy/servers`
               - `apps/website`
-        - **`site-messages`** — Umbrella for messages a deployed site's visitors send: the intake half that ships inside the site (table, public endpoint, abuse limits, notification email) and the inbox half in the local deploy app (read over SSH).
+        - **`site-messages`** — Umbrella for messages a deployed site's visitors send: the intake half that ships inside the site (table, public endpoint, abuse limits, notification email, the site_messages mirror set) and the inbox half in the local deploy app (a live window over this computer's copy of the site's messages).
           - Plugins:
-            - **`inbox`** — Messages tab of a site's page, shown only when the deployment's composition ships the site-messages intake: the messages visitors sent through the site, read over SSH from the box on demand, as a DataView (received, from as a reply link, the message with its full text on open, verdict, notification state), with explicit states for every way the read can fail. Reads a deployment's stored site messages over SSH through host-query's hostOnlyQueryOverSsh (the intake's host-only list, newest first) and answers a discriminated result: the page, or which of SSH, the request or the answer failed.
+            - **`inbox`** — Messages tab of a site's page, shown only when the deployment's composition ships the site-messages intake: every message visitors sent through the site, from this computer's copy of the site's messages (site-mirror), as a live DataView paged, searched and filtered in SQL (received, from as a reply link, the message with its full text on open, verdict, notification state), under the copy's freshness line; the Overview's newest-messages card and the tab's 7-day badge read the same copy. Serves deploy-site-messages.inbox: a deployed site's contact-form messages as a live window over this computer's copy of the site's site_messages (site-mirror's replica of the intake's mirror set) — newest first, filtered, searched, grouped and counted in SQL on the copy, re-read whenever a sync applies a page.
               - Web:
                 - Contributes:
+                  - `DataViewSlots.CollectionItemAction` "deploy-site-messages.inbox:investigate" → `CollectionInvestigate`
                   - `SiteTabs.View` "Messages" → `MessagesSection`
                   - `SiteOverview.Card` "messages" → `MessagesCard`
-                - Uses: 28 symbols — full list in [`plugins/apps/plugins/deploy/plugins/site-messages/plugins/inbox/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/site-messages/plugins/inbox/REFERENCE.md)
+                - Uses: 30 symbols — full list in [`plugins/apps/plugins/deploy/plugins/site-messages/plugins/inbox/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/site-messages/plugins/inbox/REFERENCE.md)
                   - `apps/deploy/deployments` ×7
-                  - `apps/deploy/host-query` ×4
-                  - `primitives/data-view` ×3
+                  - `primitives/data-view` ×4
+                  - `apps/deploy/host-query` ×3
+                  - `network/live` ×2
                   - `primitives/relative-time` ×2
+                  - `apps/deploy/site-mirror/pull.MirrorFreshness`
                   - `network/live/live-state.ResourceErrorInline`
-                  - `network/live.useLive`
                   - `primitives/css/card.Card`
                   - `primitives/css/fill.Fill`
                   - `primitives/css/line.Line`
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/text.Text`
                   - `primitives/css/ui-kit.Button`
-                  - `primitives/icon-button.IconButton`
+                  - `primitives/launch/investigate.Investigate`
                   - `primitives/link-gesture.linkProps`
                   - `primitives/loading.Loading`
                   - `ui/icons.Icon`
               - Server:
-                - Contributes: `resource.declare` "deploy-site-messages.list"
+                - Contributes:
+                  - `resource.declare` "deploy-site-messages.inbox"
+                  - `resource.declare` "deploy-site-messages.inbox:count"
+                  - `resource.declare` "deploy-site-messages.inbox:groups"
+                  - `resource.declare` "deploy-site-messages.inbox:rows"
                 - Uses:
-                  - `apps/deploy/host-query.hostOnlyQueryOverSsh`
-                  - `infra/endpoints.endpointPath`
-                  - `network/live.serveValue`
-                - Resources: `deploy-site-messages.list` (invalidate, snapshot)
+                  - `apps/deploy/site-messages/intake.siteMessages`
+                  - `apps/deploy/site-mirror/pull.onSiteMirrorApplied`
+                  - `apps/deploy/site-mirror/pull.readSiteMirror`
+                  - `database/sql-projection.parsed`
+                  - `network/live.serveCollection`
+                  - `network/live/filter.filterSql`
+                - Resources:
+                  - `deploy-site-messages.inbox` (keyed, window)
+                  - `deploy-site-messages.inbox:count` (push)
+                  - `deploy-site-messages.inbox:groups` (push)
+                  - `deploy-site-messages.inbox:rows` (keyed, point)
               - Core:
                 - Uses:
-                  - `apps/deploy/host-query.HOST_QUERY_FAILURE_ARMS`
-                  - `apps/deploy/site-messages/intake.SiteMessagesPageSchema`
-                  - `network/live.liveValue`
-                - Exports (types): `DeploymentSiteMessagesResult`
-                - Exports (values): `deploymentSiteMessages`
+                  - `apps/deploy/site-messages/intake.NOTIFY_STATES`
+                  - `apps/deploy/site-messages/intake.SITE_MESSAGE_VERDICTS`
+                  - `apps/deploy/site-messages/intake.SPAM_REASONS`
+                  - `fields.nullable`
+                  - `fields/date/config.dateField`
+                  - `fields/text/config.enumTextField`
+                  - `fields/text/config.textField`
+                  - `network/live.liveCollection`
+                  - `network/live.LiveRowsCollection`
+                - Exports (types): `SiteMessageRow`
+                - Exports (values):
+                  - `parseSiteMessageRowId`
+                  - `SITE_MESSAGES_INBOX_MAX_LIMIT`
+                  - `siteMessageRowId`
+                  - `siteMessagesInbox`
               - Cross-plugin:
                 - Uses tokens: `ui/tokens/color-palette --border`
               - Exemptions:
                 - Exempts itself from: `no-db-backed-notify` — `server/internal/served.ts` (sanctioned)
-            - **`intake`** — useSendSiteMessage() — the contact form's send (sent or rate-limited); a site takes messages by importing this barrel, which pulls the intake's server half into its composition. Registers the site-message id kind (smsg) with the web id registry — the server barrel registers the same kind. Owns site_messages: the public POST /api/site-messages endpoint (body capped at 8 KB; honeypot, a send under three seconds or a bot user agent stored as spam and still answered sent; 3 per 10 minutes and 10 per day per salted IP hash, the IP never stored), the site-messages.notify job emailing each accepted message through Resend from the approved RESEND_API_KEY deploy secret (not-configured without one, at most 30 emails a day, the rest held and counted in the next), the site-messages.confirm job emailing the visitor a copy so they know it arrived (at most 30 a day and 3 a day per address), the 30-day spam sweep, and the host-only list the deploy app reads over SSH.
+            - **`intake`** — useSendSiteMessage() — the contact form's send (sent or rate-limited); a site takes messages by importing this barrel, which pulls the intake's server half into its composition. Registers the site-message id kind (smsg) with the web id registry — the server barrel registers the same kind. Owns site_messages: the public POST /api/site-messages endpoint (body capped at 8 KB; honeypot, a send under three seconds or a bot user agent stored as spam and still answered sent; 3 per 10 minutes and 10 per day per salted IP hash, the IP never stored), the site-messages.notify job emailing each accepted message through Resend from the approved RESEND_API_KEY deploy secret (not-configured without one, at most 30 emails a day, the rest held and counted in the next), the site-messages.confirm job emailing the visitor a copy so they know it arrived (at most 30 a day and 3 a day per address), the 30-day spam sweep, and the site_messages mirror set the deploy app copies (ip_hash omitted, the salt never mirrored).
               - Web:
                 - Contributes: `IdKinds.Kind` "smsg"
                 - Uses:
@@ -3448,14 +3472,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Contributes:
                   - `ids.kind` "smsg"
                   - `change-feed-exclusion` "site_messages"
+                  - `table-mirror-set` "site_messages"
+                  - `table-mirror-never` "site_messages_salt"
                 - Uses:
                   - `apps/deploy/analytics/host-only.capBodySize`
-                  - `apps/deploy/analytics/host-only.hostOnly`
                   - `apps/deploy/analytics/host-only.isBotUserAgent`
                   - `apps/deploy/analytics/host-only.requestClientIp`
                   - `apps/deploy/deploy-secrets.readDeploySecret`
                   - `database.db`
                   - `database/sql-column.parsedText`
+                  - `database/table-mirror/source.defineMirrorSet`
+                  - `database/table-mirror/source.MirrorSet`
+                  - `database/table-mirror/source.NeverMirrored`
                   - `ids.idColumn`
                   - `ids.IdKinds`
                   - `infra/endpoints.implement`
@@ -3465,14 +3493,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `integrations/resend.sendEmail`
                   - `network/live/change-feed.ExcludeFromChangeFeed`
                 - DB schema: `plugins/apps/plugins/deploy/plugins/site-messages/plugins/intake/server/internal/tables.ts`
-                - Exports (values): `insertReceivedSiteMessage`
+                - Exports (values):
+                  - `insertReceivedSiteMessage`
+                  - `siteMessages`
                 - Register:
                   - `defineJob('site-messages.notify')`
                   - `defineJob('site-messages.confirm')`
                   - `defineJob('retention.site_messages')`
-                - Routes:
-                  - `POST /api/site-messages`
-                  - `GET /api/host-only/site-messages`
+                - Routes: `POST /api/site-messages`
               - Core:
                 - Uses:
                   - `apps/deploy/analytics/collect.PagePathSchema`
@@ -3481,15 +3509,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ids.defineIdKind`
                   - `ids.IdOf`
                   - `infra/endpoints.defineEndpoint`
-                  - `packages/list-bound.cappedList`
                 - Exports (types):
                   - `NotifyState`
                   - `SiteMessageBody`
                   - `SiteMessageId`
-                  - `SiteMessageRecord`
                   - `SiteMessageResponse`
-                  - `SiteMessagesListQuery`
-                  - `SiteMessagesPage`
                   - `SiteMessageVerdict`
                   - `SpamReason`
                 - Exports (values):
@@ -3502,15 +3526,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `RESEND_API_KEY`
                   - `sendSiteMessageEndpoint`
                   - `SITE_MESSAGE_VERDICTS`
-                  - `SITE_MESSAGES_PAGE_DEFAULT`
-                  - `SITE_MESSAGES_PAGE_MAX`
+                  - `SITE_MESSAGES_MIRROR_SET_ID`
                   - `SiteMessageBodySchema`
                   - `siteMessageIdKind`
-                  - `SiteMessageRecordSchema`
                   - `SiteMessageResponseSchema`
-                  - `siteMessagesListEndpoint`
-                  - `SiteMessagesListQuerySchema`
-                  - `SiteMessagesPageSchema`
                   - `SiteMessageVerdictSchema`
                   - `SPAM_REASONS`
                   - `SPAM_RETENTION_DAYS`
@@ -3566,30 +3585,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `database/table-mirror/source.readMirrorRows`
                   - `database/table-mirror/source.resolveMirrorSet`
                   - `infra/endpoints.implement`
-            - **`pull`** — MirrorFreshness({ deploymentId, setId, subject }): how fresh this computer's copy of a deployed site's mirrored set is — Synced N ago with Sync now, Copying… / Reconciling… while a pass runs, a failed pull in host-query's failure vocabulary (a site whose release predates the set: redeploy it) above the still-readable older data — asking for a pull on open when the copy is a few minutes old or missing. Keeps one table-mirror replica per (deployment, mirror set) of each deployed site's box, pulled over SSH through host-query (each page one host-only GET, a key list cut to what one question carries): the site-mirror.pull job (one bounded chunk per run, re-enqueued while behind, one pending per replica), its hourly main-only site-mirror.pull-all (drops deleted deployments' replicas and orphan schemas, then pulls every replica), POST /api/site-mirror/sync (on a tab open and on Sync now; creates the set's replica on first ask), the SiteMirrorSink contribution (a set read as a change stream through its owner's sink — only the content-free key index kept — kept for every deployment and pulled at its own pace, one bounded page per hourly run, never on demand), and the site-mirror.status live value (phase, progress, last sync, last outcome).
+            - **`pull`** — MirrorFreshness({ deploymentId, setId, subject }): how fresh this computer's copy of a deployed site's mirrored set is — Synced N ago with Sync now, Copying… / Reconciling… while a pass runs, a failed pull in host-query's failure vocabulary (a site whose release predates the set: redeploy it) above the still-readable older data — asking for a pull on open when the copy is a few minutes old or missing. Keeps one table-mirror replica per (deployment, mirror set) of each deployed site's box, pulled over SSH through host-query (each page one host-only GET, a key list cut to what one question carries): the site-mirror.pull job (one bounded chunk per run, re-enqueued while behind, one pending per replica), its hourly main-only site-mirror.pull-all (drops deleted deployments' replicas and orphan schemas, then pulls every replica), POST /api/site-mirror/sync (on a tab open and on Sync now; creates the set's replica on first ask), the SiteMirrorSink contribution (a set read as a change stream through its owner's sink — only the content-free key index kept — kept for every deployment and pulled at its own pace, one bounded page per hourly run, never on demand), the site-mirror.status live value (phase, progress, last sync, last outcome), and readSiteMirror / onSiteMirrorApplied — a consumer's own SQL on a deployment's copy, and its change signal.
               - Server:
                 - Contributes:
                   - `resource.declare` "site-mirror.status"
                   - `fork-data-exclusion` "site_mirror_replicas"
-                - Uses:
+                - Uses: 24 symbols — full list in [`plugins/apps/plugins/deploy/plugins/site-mirror/plugins/pull/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/site-mirror/plugins/pull/REFERENCE.md)
+                  - `database/table-mirror/replica` ×11
+                  - `infra/endpoints` ×3
+                  - `database/table-mirror/source` ×2
+                  - `ids` ×2
                   - `apps/deploy/deployments._deployDeployments`
                   - `apps/deploy/host-query.hostOnlyQueryOverSsh`
-                  - `database.db`
                   - `database/admin.ExcludeFromFork`
-                  - `database/table-mirror/replica.dropReplica`
-                  - `database/table-mirror/replica.ensureReplica`
-                  - `database/table-mirror/replica.pullReplica`
-                  - `database/table-mirror/replica.ReplicaOutcome`
-                  - `database/table-mirror/replica.ReplicaProgress`
-                  - `database/table-mirror/replica.sweepOrphanReplicaSchemas`
-                  - `database/table-mirror/replica.tableMirrorReplicas`
-                  - `database/table-mirror/source.MirrorSetDefinition`
-                  - `database/table-mirror/source.resolveMirrorSet`
-                  - `ids.externalIdColumn`
-                  - `ids.idRef`
-                  - `infra/endpoints.endpointPath`
-                  - `infra/endpoints.HttpError`
-                  - `infra/endpoints.implement`
+                  - `database.db`
                   - `infra/jobs.defineJob`
                   - `network/live.serveValue`
                 - DB schema: `plugins/apps/plugins/deploy/plugins/site-mirror/plugins/pull/server/internal/tables.ts`
@@ -3597,7 +3606,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `SiteMirrorPace`
                   - `SiteMirrorSinkSpec`
                   - `SiteMirrorSite`
-                - Exports (values): `SiteMirrorSink`
+                - Exports (values):
+                  - `onSiteMirrorApplied`
+                  - `readSiteMirror`
+                  - `SiteMirrorSink`
                 - Register:
                   - `defineJob('site-mirror.pull')`
                   - `defineJob('site-mirror.pull-all')`
@@ -3641,6 +3653,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - Cross-plugin:
                 - Imported by:
                   - `apps/deploy/analytics/dashboard`
+                  - `apps/deploy/site-messages/inbox`
                   - `apps/deploy/site-reports/import`
         - **`site-reports`** — Umbrella for the error reports a deployed site's visitors' browsers send: the intake that ships inside the site (public bounded endpoint, aggregated table, host-only list) and the page channel that sends them (deduped, capped, batched).
           - Plugins:
@@ -23358,6 +23371,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps-core/app-usage`
           - `apps/chord/video-availability`
           - `apps/deploy/deployments/runs-arm`
+          - `apps/deploy/site-messages/inbox`
           - `backup/runs-arm`
           - `build/runs-arm`
           - `conversations/agents`
@@ -23580,6 +23594,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Imported by:
               - `apps/deploy/analytics/collect`
+              - `apps/deploy/site-messages/intake`
               - `apps/deploy/site-mirror/box`
               - `apps/deploy/site-mirror/pull`
               - `apps/deploy/site-reports/intake`
@@ -27289,9 +27304,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `Fields.Identity` ×35
     - Exports (values): `Fields`
   - Cross-plugin:
-    - Imported by: 136 plugins — full list in [`plugins/fields/REFERENCE.md`](../plugins/fields/REFERENCE.md)
+    - Imported by: 137 plugins — full list in [`plugins/fields/REFERENCE.md`](../plugins/fields/REFERENCE.md)
       - `fields` ×65
-      - `apps` ×21
+      - `apps` ×22
       - `conversations` ×10
       - `infra` ×6
       - `debug` ×5
@@ -27718,8 +27733,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `DateFieldDef`
             - Exports (values): `dateField`
           - Cross-plugin:
-            - Imported by: 60 plugins — full list in [`plugins/fields/plugins/date/plugins/config/REFERENCE.md`](../plugins/fields/plugins/date/plugins/config/REFERENCE.md)
-              - `apps` ×14
+            - Imported by: 61 plugins — full list in [`plugins/fields/plugins/date/plugins/config/REFERENCE.md`](../plugins/fields/plugins/date/plugins/config/REFERENCE.md)
+              - `apps` ×15
               - `conversations` ×10
               - `infra` ×7
               - `debug` ×5
@@ -29349,8 +29364,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `textField`
               - `textSample`
           - Cross-plugin:
-            - Imported by: 109 plugins — full list in [`plugins/fields/plugins/text/plugins/config/REFERENCE.md`](../plugins/fields/plugins/text/plugins/config/REFERENCE.md)
-              - `apps` ×29
+            - Imported by: 110 plugins — full list in [`plugins/fields/plugins/text/plugins/config/REFERENCE.md`](../plugins/fields/plugins/text/plugins/config/REFERENCE.md)
+              - `apps` ×30
               - `conversations` ×20
               - `tasks` ×14
               - `infra` ×8
@@ -34182,8 +34197,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `unmatchedApiResponse`
           - `unsupportedEndpointResponse`
       - Cross-plugin:
-        - Imported by: 258 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
-          - `apps` ×79
+        - Imported by: 257 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
+          - `apps` ×78
           - `conversations` ×35
           - `infra` ×23
           - `debug` ×20
@@ -39751,6 +39766,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`filter`** — The filter language's SQL half: renderOpSql renders one op's dialect-free template over a rendered target (operands as params cast to the domain's SQL type, lists as ONE array param), and filterSql compiles a whole and/or Filter tree over a column → rendered-SQL target map.
           - Cross-plugin:
             - Imported by:
+              - `apps/deploy/site-messages/inbox`
               - `fields/bool/filter`
               - `fields/date/filter`
               - `fields/enum/filter`
@@ -40639,8 +40655,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `wholeRecord`
           - `wholeTuple`
       - Cross-plugin:
-        - Imported by: 131 plugins — full list in [`plugins/packages/plugins/list-bound/REFERENCE.md`](../plugins/packages/plugins/list-bound/REFERENCE.md)
-          - `apps` ×29
+        - Imported by: 130 plugins — full list in [`plugins/packages/plugins/list-bound/REFERENCE.md`](../plugins/packages/plugins/list-bound/REFERENCE.md)
+          - `apps` ×28
           - `debug` ×20
           - `conversations` ×16
           - `infra` ×16
@@ -48475,9 +48491,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewSlots.ValueCodec`
           - `DataViewSlots.Grouping`
           - `DataViewSlots.ColumnConfig`
-        - Slot contributors: 63 contributors — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+        - Slot contributors: 64 contributors — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
           - `DataViewSlots.Cell` ×16
-          - `DataViewSlots.CollectionItemAction` ×10
+          - `DataViewSlots.CollectionItemAction` ×11
           - `DataViewSlots.Filter` ×9
           - `DataViewSlots.CellEditor` ×6
           - `DataViewSlots.View` ×5
@@ -50706,8 +50722,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `IconButton`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
-        - Imported by: 135 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
-          - `apps` ×47
+        - Imported by: 134 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
+          - `apps` ×46
           - `primitives` ×22
           - `conversations` ×21
           - `tasks` ×8
@@ -50917,6 +50933,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/shape --spacing`
             - Imported by:
               - `apps/deploy/deploy-history/investigate-failure`
+              - `apps/deploy/site-messages/inbox`
               - `apps/events/sources`
               - `apps/events/sources/source-detail/runs`
               - `apps/studio/compositions/release`
