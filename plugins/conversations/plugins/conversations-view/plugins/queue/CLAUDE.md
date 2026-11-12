@@ -180,7 +180,7 @@ Every live conversation gets one fractional-index rank stored in `conversations_
 |---|---|
 | **Pinned** | Group's members are all `waiting` AND the user pinned it. Drag-and-drop reorder is available here. |
 | **Queue** | Group's members are all `waiting`. Drag-and-drop reorder is available here. |
-| **Working** | Group has at least one `working`/`starting` member — pinned or not. |
+| **Working** | Group has at least one `working`/`starting` member — pinned or not. Or it supervises running work (`supervisingTaskIds`: a task it manages, at any depth, has a working/starting conversation) and none of its members waits on the user (`waitingFor`): a supervisor waiting on its agents is not waiting on you. Its rows keep their own (amber) status. |
 | **Unranked** | Status is `waiting` but no rank row exists (not yet seeded or manually removed). |
 | **Disconnected** | Status is `gone` but still in the active list. |
 | **Done** | Recently gone conversations. |

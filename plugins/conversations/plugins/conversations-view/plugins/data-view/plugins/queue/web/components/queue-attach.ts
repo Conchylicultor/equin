@@ -27,6 +27,40 @@ export function queueParentTaskId(row: {
 }
 
 /**
+ * The tasks whose supervised work is running: every manager, up the chain, of
+ * a task with a working or starting live conversation — so a supervisor that
+ * waits on its agents reads under Working rather than among the groups waiting
+ * on the person. The manager relation is the one {@link queueParentTaskId}
+ * reads, taken whatever the row waits for (a supervisor asking the person
+ * something still has its own manager waiting on it).
+ */
+export function supervisingTaskIds(
+  live: readonly {
+    readonly taskId: string;
+    readonly status: string;
+    readonly $columns: ContributedColumns;
+  }[],
+): Set<string> {
+  const managerOf = new Map<string, string>();
+  for (const row of live) {
+    const manager = managerColumns.read(row).managerTaskId;
+    if (manager != null && manager !== row.taskId)
+      managerOf.set(row.taskId, manager);
+  }
+  const supervising = new Set<string>();
+  for (const row of live) {
+    if (row.status !== "working" && row.status !== "starting") continue;
+    // Walk up the managers; a task already marked had its chain walked.
+    let manager = managerOf.get(row.taskId);
+    while (manager !== undefined && !supervising.has(manager)) {
+      supervising.add(manager);
+      manager = managerOf.get(manager);
+    }
+  }
+  return supervising;
+}
+
+/**
  * Supervised tasks drawn beneath their supervisor's row, in its section,
  * whatever their own status — their own status still shows on their row. A
  * finished conversation (Done) stays in Done.

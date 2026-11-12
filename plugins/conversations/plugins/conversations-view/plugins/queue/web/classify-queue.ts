@@ -80,8 +80,11 @@ export interface ClassifiedQueue<C extends Conversation = Conversation> {
  * A section (Pinned, or a user section) only holds WAITING groups: an active
  * group belongs in Working whatever section it is filed into, since Working
  * answers "what is running right now" and a section answers "where do I want to
- * keep this". A group filed into a section id not in `sectionIds` (deleted
- * under a stale read) reads as the Queue.
+ * keep this". A waiting group whose task supervises running work
+ * (`supervisingTaskIds`) is in Working too: it waits on its agents, not on the
+ * user — unless one of its members asks the user something (`waitingFor`).
+ * Its rows keep their own (waiting) status. A group filed into a section id not
+ * in `sectionIds` (deleted under a stale read) reads as the Queue.
  *
  * Kept free of React and of the DataView so the partitioning stays testable and
  * reusable by any presentation of the queue.
@@ -96,8 +99,22 @@ export function classifyQueue<C extends Conversation>(data: {
   spawnFailedIds: ReadonlySet<string>;
   /** Every known user section id, in display (rank) order. */
   sectionIds: readonly ConversationSectionId[];
+  /**
+   * The tasks whose supervised work is running: a task one of their managed
+   * tasks (at any depth) has a working or starting conversation of. Derived by
+   * the caller, which reads the manager relation the rows carry.
+   */
+  supervisingTaskIds: ReadonlySet<string>;
 }): ClassifiedQueue<C> {
-  const { active, gone, queue, tasks, spawnFailedIds, sectionIds } = data;
+  const {
+    active,
+    gone,
+    queue,
+    tasks,
+    spawnFailedIds,
+    sectionIds,
+    supervisingTaskIds,
+  } = data;
   const ranks = new Map(queue.ranks.map((r) => [r.conversationId, r]));
   const taskStatusMap = new Map(tasks.map((t) => [t.id, t.status]));
   const ranked: RankedConversation<C>[] = [];
@@ -165,7 +182,12 @@ export function classifyQueue<C extends Conversation>(data: {
       members,
       count: members.length,
     };
-    if (workingMember) {
+    // A supervisor waiting on its running agents is running work too — unless
+    // it is waiting on the user (a question, a stuck turn).
+    const supervising =
+      supervisingTaskIds.has(taskId) &&
+      members.every((m) => m.waitingFor === null);
+    if (workingMember || supervising) {
       working.push(group);
     } else {
       // The section is written to every live member of a group, so any member

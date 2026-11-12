@@ -14,6 +14,7 @@ const ADOPTED_SPAWNED_BY = "poller";
 const conv = (o: Partial<Conversation> & { id: string }): Conversation =>
   ({
     status: "waiting",
+    waitingFor: null,
     taskId: `task-${o.id}`,
     spawnedBy: "equin",
     createdAt: new Date(0),
@@ -48,6 +49,7 @@ describe("classifyQueue — Lost", () => {
       tasks: [],
       spawnFailedIds: new Set(),
       sectionIds: [],
+      supervisingTaskIds: new Set(),
     });
     expect(q.lost.map((c) => c.id)).toEqual(["spike-a", "spike-b"]);
     expect(q.waitingGroups.map((g) => g.selected.id)).toEqual(["conv-1"]);
@@ -66,6 +68,7 @@ describe("classifyQueue — Lost", () => {
       tasks: [],
       spawnFailedIds: new Set(),
       sectionIds: [],
+      supervisingTaskIds: new Set(),
     });
     expect(q.lost).toEqual([]);
     expect(q.disconnected.map((c) => c.id)).toEqual(["spike-a"]);
@@ -87,6 +90,7 @@ describe("classifyQueue — Failed to start", () => {
       tasks: [],
       spawnFailedIds: new Set(["conv-failed", "conv-retried"]),
       sectionIds: [],
+      supervisingTaskIds: new Set(),
     });
     expect(q.failedToStart.map((c) => c.id)).toEqual(["conv-failed"]);
     expect(q.disconnected.map((c) => c.id)).toEqual(["conv-ran"]);
@@ -124,6 +128,7 @@ describe("classifyQueue — sections", () => {
       tasks: [],
       spawnFailedIds: new Set(),
       sectionIds: [mine, empty],
+      supervisingTaskIds: new Set(),
     });
     expect(q.pinnedGroups.map((g) => g.selected.id)).toEqual(["pinned"]);
     expect([...q.sectionGroups.keys()]).toEqual([mine, empty]);
@@ -154,6 +159,7 @@ describe("classifyQueue — sections", () => {
       tasks: [],
       spawnFailedIds: new Set(),
       sectionIds: [mine],
+      supervisingTaskIds: new Set(),
     });
     expect(q.workingGroups.map((g) => g.selected.id)).toEqual([
       "run-pinned",
@@ -161,5 +167,53 @@ describe("classifyQueue — sections", () => {
     ]);
     expect(q.pinnedGroups).toEqual([]);
     expect(q.sectionGroups.get(mine)).toEqual([]);
+  });
+});
+
+describe("classifyQueue — supervisors", () => {
+  test("a waiting supervisor of running work is Working, whatever its section", () => {
+    const q = classifyQueue({
+      active: [
+        conv({ id: "sup-pinned", taskId: "task-sup-pinned" }),
+        conv({ id: "sup-queued", taskId: "task-sup-queued" }),
+        conv({ id: "idle-sup", taskId: "task-idle-sup" }),
+      ],
+      gone: [],
+      queue: {
+        ranks: [
+          rankRow("sup-pinned", PINNED_SECTION, Rank.between(null, null)),
+          rankRow("sup-queued"),
+          rankRow("idle-sup"),
+        ],
+      },
+      tasks: [],
+      spawnFailedIds: new Set(),
+      sectionIds: [],
+      supervisingTaskIds: new Set(["task-sup-pinned", "task-sup-queued"]),
+    });
+    expect(q.workingGroups.map((g) => g.selected.id).sort()).toEqual([
+      "sup-pinned",
+      "sup-queued",
+    ]);
+    // Its own status is untouched: it is still waiting.
+    expect(q.workingGroups.every((g) => g.selected.status === "waiting")).toBe(
+      true,
+    );
+    expect(q.pinnedGroups).toEqual([]);
+    expect(q.waitingGroups.map((g) => g.selected.id)).toEqual(["idle-sup"]);
+  });
+
+  test("a supervisor asking the user something stays among the waiting", () => {
+    const q = classifyQueue({
+      active: [conv({ id: "sup", taskId: "task-sup", waitingFor: "question" })],
+      gone: [],
+      queue: { ranks: [rankRow("sup")] },
+      tasks: [],
+      spawnFailedIds: new Set(),
+      sectionIds: [],
+      supervisingTaskIds: new Set(["task-sup"]),
+    });
+    expect(q.workingGroups).toEqual([]);
+    expect(q.waitingGroups.map((g) => g.selected.id)).toEqual(["sup"]);
   });
 });

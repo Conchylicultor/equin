@@ -31,7 +31,11 @@ import {
 } from "@plugins/conversations/plugins/conversations-view/plugins/queue/web";
 import { spawnFailureRows } from "@plugins/conversations/plugins/spawn-failure/core";
 import { reuseRows } from "./reuse-rows";
-import { queueParentTaskId, stepFlags } from "./queue-attach";
+import {
+  queueParentTaskId,
+  stepFlags,
+  supervisingTaskIds,
+} from "./queue-attach";
 import type { QueueUserSection } from "./queue-sections";
 
 /**
@@ -246,6 +250,7 @@ export function useQueueRows(view: ViewState): {
       tasks,
       spawnFailedIds: new Set(failures.map((f) => f.conversationId)),
       sectionIds: sections.map((sec) => sec.id),
+      supervisingTaskIds: supervisingTaskIds(active),
     });
 
     const out: QueueRow[] = [];
