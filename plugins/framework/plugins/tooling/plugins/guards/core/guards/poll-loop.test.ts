@@ -379,9 +379,11 @@ describe("poll-loop guard", () => {
       expect(v.kind === "inform" && v.context).toContain("has settled");
     });
 
-    test("the same reads of a run with no terminal marker stay a wait", () => {
+    test("the same reads of a live run (no terminal marker, still written) stay a wait", () => {
+      // The variable resolves (`parseShell` tracks `L=…`), so the looks see the
+      // transcript's mtime: a live run is one that is still writing it.
       const log = runLog(false);
-      const v = runAll([
+      const v = looksWhileGrowing(log, [
         `L=${log}; wc -l $L`,
         `L=${log}; rg -n "locked" $L`,
         `L=${log}; head -20 $L`,

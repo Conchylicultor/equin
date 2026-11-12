@@ -11,6 +11,7 @@
  *   …/replay-transcripts.ts --days 60 --verbose
  *   …/replay-transcripts.ts --guards        every Bash guard, denials and why
  *   …/replay-transcripts.ts --guards --assert
+ *   …/replay-transcripts.ts --guards --show <guard>   that guard's denied commands
  *
  * Re-run the default mode after any change to `core/poll-detect.ts`, and
  * `--guards` after any change to `core/parse-shell.ts` — the parser is the one
@@ -44,6 +45,7 @@ import { migrationsGuard } from "../core/guards/migrations";
 import { postgresGuard } from "../core/guards/postgres";
 import { rgReplaceGuard } from "../core/guards/rg-replace";
 import { sharedTmpGuard } from "../core/guards/shared-tmp";
+import { dataRootWritesGuard } from "../core/guards/data-root-writes";
 import type { Guard } from "../core/types";
 
 /**
@@ -80,7 +82,9 @@ const FLOOR_HEREDOC_DENIALS = 10;
  * `poll-loop` (tmpdir session state) WRITES to disk when it runs, so replaying
  * it would mutate the machine; the poll rule is the default mode's job anyway.
  * `git-diff-main` asks git about the repo as it is NOW, not as the session saw
- * it.
+ * it. `data-root-writes` does read the disk (does a `<kind>/<name>` exist?),
+ * only to READ it — a dir created since the session reads as existing now,
+ * which can only under-count.
  */
 const PURE_GUARDS: Guard<unknown>[] = [
   findGuard,
@@ -93,6 +97,7 @@ const PURE_GUARDS: Guard<unknown>[] = [
   macosAutomationGuard,
   backgroundOpsGuard,
   sharedTmpGuard,
+  dataRootWritesGuard,
 ] as Guard<unknown>[];
 
 const SHELLS = new Set(["bash", "sh", "zsh", "dash", "ksh"]);
@@ -167,12 +172,16 @@ function parseArgs(argv: string[]): {
   days: number;
   verbose: boolean;
   guards: boolean;
+  show: string | null;
 } {
   const days = Number(argv[argv.indexOf("--days") + 1]);
   return {
     days: argv.includes("--days") && Number.isFinite(days) ? days : 30,
     verbose: argv.includes("--verbose"),
     guards: argv.includes("--guards"),
+    show: argv.includes("--show")
+      ? (argv[argv.indexOf("--show") + 1] ?? null)
+      : null,
   };
 }
 
@@ -279,12 +288,12 @@ function sessionFiles(since: number): [string, string][] {
   return out;
 }
 
-const { days, verbose, guards } = parseArgs(process.argv.slice(2));
+const { days, verbose, guards, show } = parseArgs(process.argv.slice(2));
 const since = Date.now() - days * 24 * 3600 * 1000;
 const corpus = sessionFiles(since);
 
 if (guards) {
-  replayGuards(corpus, days, verbose);
+  replayGuards(corpus, days, verbose, show);
   process.exit(0);
 }
 
@@ -359,6 +368,18 @@ function denialsFor(call: ToolCall, command: string): string[] {
   return denied;
 }
 
+/** The first line of one guard's denial of a call — what `--show` prints under it. */
+function denialLine(call: ToolCall, name: string): string {
+  const guard = PURE_GUARDS.find((g) => g.name === name);
+  if (!guard) return "";
+  const verdict = guard.check(
+    { command: call.cmd, run_in_background: call.bg } as never,
+    createContext(call.cwd, "replay") as never,
+  );
+  if (verdict instanceof Promise || verdict.kind !== "deny") return "";
+  return verdict.reason.split("\n")[0]!.slice(0, 240);
+}
+
 /**
  * Replay every Bash guard over the corpus.
  *
@@ -372,8 +393,10 @@ function replayGuards(
   corpus: [string, string][],
   days: number,
   verbose: boolean,
+  show: string | null,
 ): void {
   const perGuard = new Map<string, number>();
+  const shown: { session: string; cmd: string; why: string }[] = [];
   const bodySourced: { session: string; guard: string; cmd: string }[] = [];
   let bash = 0;
   let denied = 0;
@@ -387,6 +410,8 @@ function replayGuards(
       bash++;
       const names = denialsFor(call, call.cmd);
       for (const n of names) perGuard.set(n, (perGuard.get(n) ?? 0) + 1);
+      if (show !== null && names.includes(show))
+        shown.push({ session, cmd: call.cmd, why: denialLine(call, show) });
       if (names.length > 0) denied++;
 
       const parsed = parseShell(call.cmd);
@@ -421,6 +446,14 @@ function replayGuards(
   console.log("denials per guard:");
   for (const [name, n] of [...perGuard].sort((a, b) => b[1] - a[1]))
     console.log(`  ${String(n).padStart(5)}  ${name}`);
+
+  if (show !== null) {
+    console.log(`\n${show} denials (${shown.length}):`);
+    for (const d of shown)
+      console.log(
+        `  ${d.session.padEnd(34)} ${d.cmd.replace(/\n/g, "\\n").slice(0, 240)}\n      → ${d.why}`,
+      );
+  }
 
   if (bodySourced.length > 0 || verbose) {
     console.log("\ndocument writes refused as commands (these are the bug):");

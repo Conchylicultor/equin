@@ -141,14 +141,44 @@ command the argv grammar does not model (`--out /tmp/shot`, `-o`, `git bundle
 create`). Reads stay free (`cat`, `tail`, `cp /tmp/a .`): a log a person put
 there, a task's output file. Not `allowOnRepeat` — the concern is correctness.
 Subagents share the parent's directory (same session, the parent names their
-files), and a fixed path built from a variable (`"$D/msg.txt"`) is not
-resolved.
+files). A path held in a variable the command assigned a literal
+(`D=/tmp/x; echo > "$D/msg.txt"`) is resolved — `parse-shell` tracks literal
+assignments per scope — and one set by running something (`f=$(mktemp)`) is not.
+
+The write scan itself (`core/write-scan.ts`: `firstFlaggedWrite` over a path
+classifier) is shared with `data-root-writes` below — a guard that refuses a
+write by WHERE it lands asks it, never rebuilds it.
+
+## The data root is declared, never written by hand
+
+`data-root-writes` (Bash, Write, Edit, NotebookEdit) refuses a write that would
+create an entry at the data root (`~/.equin`) nothing declares — the question
+`paths:no-undeclared-data-dirs` asks hourly AFTER the fact, asked BEFORE the
+write lands (`dataRootWriteViolationSync`, `infra/paths` core). A data dir comes
+into existence through its declaration's `ensure()`, so a write by hand may
+land only inside what stands: a kind directory's existing `<kind>/<name>` (the
+prototypes tree, a worktree's data dir), an open kind (`deprecated`,
+`worktrees`), a legacy shim name, or a service a declaration grandfathers at
+the root (`postgres`, `sockets` — read from the machine's data-dirs
+manifests). Reads and removals (`rm` of a stray is the repair) pass.
+
+Written after 2026-11-10, when two agents put screenshots there: one copied its
+browser screenshots to `~/.equin/demo-audit-2026-11-10/` so the tasks it filed
+could cite them; one, refused by `launcher:env-names` for spelling
+`process.env.EQUIN_SCRATCH`, hard-coded `~/.equin/tmp-probe-…png` into its
+probe script. The audit then failed every hour. The denial points at
+`$EQUIN_SCRATCH` (`readEnv("SCRATCH")` in a script), attaching evidence to
+the task, and `defineDataDir` for durable state. A script that writes under
+the root from inside (the second case) is outside what a hook sees; the
+`env-names` refusal now names the exact `readEnv("<KEY>")` replacement, and the
+hourly audit stays the backstop. Replay (30 days): ~20 calls, all hand-made
+entries (`zz-probe/`, `tcc-spike/`, `cache/gw-spike/`, `state/config-archive/`, …).
 
 ## Known gaps, on purpose
 
 - **`search-scope` stops accidents, not intent.** A root built from a variable
-  other than `$HOME` (`rg foo "$PWD/.."`, `$(dirname …)`) or run through
-  `bash -c` is not resolved.
+  the command did not assign a literal (`rg foo "$PWD/.."`, `$(dirname …)`) or
+  run through `bash -c` is not resolved.
 
 - **BSD `sed -i .bak`.** BSD spells the backup suffix as its own token. `-i` is
   modelled as taking no separate value — the only way both BSD's `sed -i ''` and
@@ -304,8 +334,8 @@ can blind or deafen all of them at once.
 
 - Description: Claude Code PreToolUse guards: safety checks that intercept tool calls before execution
 - Core:
-  - Uses: 32 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `infra/paths` ×4
+  - Uses: 35 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `infra/paths` ×7
     - `packages/timed-fs` ×4
     - `framework/cli/cli-name` ×3
     - `infra/host-fs/user-path` ×3
@@ -365,7 +395,7 @@ can blind or deafen all of them at once.
     - `user-path/no-sync-fs` — `core/context.ts`, `core/git-target.ts`, `core/guards/poll-loop.ts`, `core/walk-scope.ts` (sanctioned)
     - `python/no-system-python` — `core` (sanctioned)
     - `boundaries/no-platform-api` — `core/agent-ops.ts`, `core/argv.ts`, `core/context.ts`, `core/git-target.ts`, `core/informed-once.ts`, `core/guards/git-diff-main.ts`, `core/guards/main-edits.ts`, `core/guards/poll-loop.ts`, `core/parse-shell.ts`, `core/stop-guard.ts`, `core/walk-scope.ts` (debt)
-    - `blocking-fs/sync-named` — `core/agent-ops.ts`, `core/context.ts`, `core/git-target.ts`, `core/guards/git-diff-main.ts`, `core/guards/poll-loop.ts`, `core/informed-once.ts`, `core/walk-scope.ts` (sanctioned)
+    - `blocking-fs/sync-named` — `core/agent-ops.ts`, `core/context.ts`, `core/git-target.ts`, `core/guards/data-root-writes.ts`, `core/guards/git-diff-main.ts`, `core/guards/poll-loop.ts`, `core/informed-once.ts`, `core/walk-scope.ts` (sanctioned)
 - Sub-plugins:
   - **`agent-policy`** — The protections every agent runs with — the guard and stop-guard hooks and the deny rules — declared once as data: `.claude/settings.json`'s protection keys are generated from it…
   - **`bypass-tokens`** — BYPASS_TOKENS: every bypass file a guard may honour (.allow-main, …), declared as data, and the BypassToken type a guard's bypassToken must be — so a guard cannot name an undeclared file (tsc) and…

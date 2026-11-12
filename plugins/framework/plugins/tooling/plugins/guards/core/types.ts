@@ -1,3 +1,4 @@
+import type { DataRootView } from "@plugins/infra/plugins/paths/core";
 import type { BypassToken } from "@plugins/framework/plugins/tooling/plugins/guards/plugins/bypass-tokens/core";
 export type AllowVerdict = { kind: "allow" };
 /**
@@ -159,6 +160,12 @@ export interface GuardContext {
    * guard knows it (a session no app launched, keyed by its Claude session id).
    */
   scratch: { dir: string; delivered: boolean };
+  /**
+   * This process's data root as `dataRootWriteViolationSync` (`infra/paths`)
+   * reads it — built on first read, so a guard that never asks never reads
+   * the disk (and a split install throws only there).
+   */
+  readonly dataRoot: DataRootView;
   hasBypass(token: string): boolean;
   allow(): AllowVerdict;
   deny(reason: string): DenyVerdict;

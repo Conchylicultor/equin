@@ -10,6 +10,7 @@ import { dirname } from "node:path";
 import {
   asNamespace,
   isNamespace,
+  MAIN_WORKTREE_NAME,
   type Namespace,
 } from "@plugins/infra/plugins/namespace/core";
 // Relative siblings: this file lives INSIDE the `paths` plugin, so the
@@ -292,6 +293,19 @@ export function readForeignManifestsSync(self: string): ForeignManifests {
     manifests.push(parsed);
   }
   return { manifests, unreadable };
+}
+
+/**
+ * The main namespace's own manifest — what merged code declares — or `null`
+ * when it has not published one (a machine whose main never booted) or it
+ * cannot be used. One read, for a caller on a hot path (an agent hook) that
+ * cannot afford {@link readForeignManifestsSync}'s scan of every namespace.
+ */
+export function readMainManifestSync(): DataDirsManifest | null {
+  const path = worktreeArtifacts.dataDirs(asNamespace(MAIN_WORKTREE_NAME));
+  if (!statManifestSync(path)) return null;
+  const parsed = parseManifest(readFileSync(path, "utf8"));
+  return typeof parsed === "string" ? null : parsed;
 }
 
 /** Which namespaces declare each of `names`, for the names any of them declares. */

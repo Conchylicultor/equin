@@ -608,3 +608,66 @@ test("the repo CLI is named canonically under either of its names", () => {
     expect(parseShell(cmd).calls.map((c) => c.name)).toEqual(["equin"]);
   }
 });
+
+describe("shell variables a command assigns a literal", () => {
+  const args = (cmd: string) =>
+    parseShell(cmd, "/w").calls.map((c) => [c.name, ...c.args].join(" "));
+
+  test("a literal assignment resolves later words and redirections", () => {
+    // The braced form, built so the string is not read as a template typo.
+    const braced = "$" + "{O}/b";
+    expect(args(`O=/tmp/x; mkdir -p $O; cp a ${braced}`)).toEqual([
+      "mkdir -p /tmp/x",
+      "cp a /tmp/x/b",
+    ]);
+    expect(parseShell("O=/tmp/x; echo hi > $O/log", "/w").redirections).toEqual(
+      [{ kind: "file", op: ">", path: "/tmp/x/log" }],
+    );
+    expect(args("export F=/tmp/f; touch $F")).toEqual([
+      "export F=/tmp/f",
+      "touch /tmp/f",
+    ]);
+  });
+
+  test("the command name expands too, as in the shell", () => {
+    expect(args("B=/opt/bin/bun; $B x.ts")).toEqual(["bun x.ts"]);
+  });
+
+  test("single quotes keep `$O` literal", () => {
+    expect(args("O=/tmp/x; rg -g '$O/*' foo")).toEqual(["rg -g $O/* foo"]);
+  });
+
+  test("a value the parser cannot know is forgotten, never kept stale", () => {
+    expect(args("x=$(mktemp); cat $x")).toContain("cat $x");
+    expect(args("O=/tmp/x; for O in a b; do touch $O; done")).toContain(
+      "touch $O",
+    );
+    expect(args("O=/tmp/x; read O; touch $O")).toContain("touch $O");
+    expect(args("O=/tmp/x; O+=/y; touch $O")).toContain("touch $O");
+    expect(args("O=/tmp/x; f() { local O=$1; touch $O; }")).toContain(
+      "touch $O",
+    );
+    expect(args('O="a b"; touch $O')).toEqual(["touch $O"]);
+  });
+
+  test("scopes: a subshell and a pipeline stage do not leak", () => {
+    expect(args("( Q=/q; echo $Q ); echo $Q")).toEqual(["echo /q", "echo $Q"]);
+    expect(args("O=/tmp/a | cat; touch $O")).toContain("touch $O");
+  });
+
+  test("a quoted heredoc's interpreter does not see the outer variables", () => {
+    expect(args("O=/tmp/x; bash <<'EOF'\ntouch $O\nEOF")).toContain("touch $O");
+  });
+});
+
+describe("command substitution bodies", () => {
+  test("an escaped or quoted paren does not end the body", () => {
+    const calls = parseShell('f=$(rg -l "x \\(y" /d); echo $f', "/w").calls;
+    expect(calls.map((c) => c.name)).toEqual(["rg", "echo"]);
+  });
+
+  test("an unclosed quote in the body falls back to the quote-blind match", () => {
+    const calls = parseShell("y=$(# don't\nls); touch /tmp/zz2", "/w").calls;
+    expect(calls.some((c) => c.name === "touch")).toBe(true);
+  });
+});

@@ -31096,8 +31096,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `blocking-fs/sync-named` — `core/internal/changed-files.ts` (sanctioned)
         - **`guards`** — Claude Code PreToolUse guards: safety checks that intercept tool calls before execution
           - Core:
-            - Uses: 32 symbols — full list in [`plugins/framework/plugins/tooling/plugins/guards/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/guards/REFERENCE.md)
-              - `infra/paths` ×4
+            - Uses: 35 symbols — full list in [`plugins/framework/plugins/tooling/plugins/guards/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/guards/REFERENCE.md)
+              - `infra/paths` ×7
               - `packages/timed-fs` ×4
               - `framework/cli/cli-name` ×3
               - `infra/host-fs/user-path` ×3
@@ -31157,7 +31157,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `user-path/no-sync-fs` — `core/context.ts`, `core/git-target.ts`, `core/guards/poll-loop.ts`, `core/walk-scope.ts` (sanctioned)
               - `python/no-system-python` — `core` (sanctioned)
               - `boundaries/no-platform-api` — `core/agent-ops.ts`, `core/argv.ts`, `core/context.ts`, `core/git-target.ts`, `core/informed-once.ts`, `core/guards/git-diff-main.ts`, `core/guards/main-edits.ts`, `core/guards/poll-loop.ts`, `core/parse-shell.ts`, `core/stop-guard.ts`, `core/walk-scope.ts` (debt)
-              - `blocking-fs/sync-named` — `core/agent-ops.ts`, `core/context.ts`, `core/git-target.ts`, `core/guards/git-diff-main.ts`, `core/guards/poll-loop.ts`, `core/informed-once.ts`, `core/walk-scope.ts` (sanctioned)
+              - `blocking-fs/sync-named` — `core/agent-ops.ts`, `core/context.ts`, `core/git-target.ts`, `core/guards/data-root-writes.ts`, `core/guards/git-diff-main.ts`, `core/guards/poll-loop.ts`, `core/informed-once.ts`, `core/walk-scope.ts` (sanctioned)
           - Plugins:
             - **`agent-policy`** — The protections every agent runs with — the guard and stop-guard hooks and the deny rules — declared once as data: `.claude/settings.json`'s protection keys are generated from it (guards:claude-settings-in-sync) and every app launch carries it, whatever its workspace, so an agent outside the repo (a scratch workspace) is guarded too.
               - Core:
@@ -36063,6 +36063,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataDirRef`
           - `DataDirSpec`
           - `DataRootLayout`
+          - `DataRootView`
+          - `DataRootWriteViolation`
           - `LegacyMove`
           - `LogBound`
           - `LogClaim`
@@ -36090,6 +36092,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `dataRoot`
           - `dataRootLayout`
           - `DataRootSplitError`
+          - `dataRootWriteViolationSync`
           - `declareDataRootLayoutSync`
           - `defineAppDataDir`
           - `defineDataDir`
@@ -36106,6 +36109,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `logPatternMatches`
           - `lookupCheckoutDeploy`
           - `lookupCheckoutDeploySync`
+          - `machineDeclaredRootEntriesSync`
+          - `OPEN_KINDS`
           - `planMigration`
           - `PLUGINS_DIR`
           - `pruneWorktreeCheckArtifactsSync`

@@ -43,6 +43,8 @@ import {
   undeclaredLegacyTargets,
 } from "../core/internal/legacy-layout";
 import type { LegacyRootEntry } from "../core/internal/legacy-layout";
+// Kinds whose contents are not a declared set — shared with the write guard's predicate.
+import { OPEN_KINDS } from "../core/internal/data-root-writes";
 import { logsClaimedCheck } from "./internal/logs-claimed";
 
 function escapeRegExp(s: string): string {
@@ -287,18 +289,6 @@ const noInlinedWorktreeArtifactsCheck: Check = {
 const OS_NOISE = new Set([".DS_Store"]);
 
 const KIND_NAMES: ReadonlySet<string> = new Set<string>(DATA_DIR_KINDS);
-
-/**
- * Kinds whose CONTENTS are not a declared set, exempt from the second-level rule.
- *
- * - `deprecated` IS the quarantine: its entries are precisely the things with no
- *   owner, so demanding a declaration for each would invert the point of it.
- * - `worktrees` is per-worktree and dynamic — one entry per live namespace,
- *   minted and reaped at runtime. Its layout is owned by `paths.ts`
- *   (`worktreeDataDir` / `worktreeArtifacts`) and policed by
- *   `paths:no-inlined-worktree-artifacts` above, not by a registry of names.
- */
-const OPEN_KINDS: ReadonlySet<string> = new Set(["deprecated", "worktrees"]);
 
 /** What actually sits at a path — never a boolean, so "absent" and "wrong shape" stay distinct. */
 type RootNode =

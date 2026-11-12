@@ -20,6 +20,7 @@ import { pollLoopGuard } from "./guards/poll-loop";
 import { postgresGuard } from "./guards/postgres";
 import { rgReplaceGuard } from "./guards/rg-replace";
 import { sharedTmpGuard } from "./guards/shared-tmp";
+import { dataRootWritesGuard } from "./guards/data-root-writes";
 import {
   globScopeGuard,
   grepScopeGuard,
@@ -59,6 +60,7 @@ export const GUARDS: Guard<any>[] = [
   // Bash + file writes
   noMemoryGuard,
   sharedTmpGuard,
+  dataRootWritesGuard,
   // Search tools
   grepScopeGuard,
   globScopeGuard,

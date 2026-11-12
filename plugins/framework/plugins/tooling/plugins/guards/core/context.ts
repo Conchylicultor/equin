@@ -4,6 +4,11 @@ import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { agentScratchDir } from "@plugins/infra/plugins/launcher/plugins/agent-scratch/core";
+import {
+  dataRootLayout,
+  machineDeclaredRootEntriesSync,
+} from "@plugins/infra/plugins/paths/core";
+import type { DataRootView } from "@plugins/infra/plugins/paths/core";
 import { classifyRepo } from "./git-target";
 import { worktreeContextOf } from "./worktree-root";
 import type {
@@ -57,6 +62,32 @@ function mainCheckoutOf(checkout: string): string {
  */
 const SESSION_SEGMENT = /^[A-Za-z0-9][A-Za-z0-9_-]*$/;
 
+let declaredRootEntries: ReadonlySet<string> | undefined;
+let dataRootView: DataRootView | undefined;
+
+/**
+ * The data root as `data-root-writes` reads it: every spelling of the root
+ * (the root, and the legacy name while it links to it), a disk probe, and the
+ * machine's grandfathered root entries — read once per hook process, and only
+ * when a write names a top-level entry that is neither a kind nor a shim.
+ * Built on first read: a split install throws `DataRootSplitError` there, on
+ * the one guard that reads a path, not on every hook call.
+ */
+function dataRootViewSync(): DataRootView {
+  if (dataRootView) return dataRootView;
+  const layout = dataRootLayout();
+  dataRootView = {
+    roots:
+      layout.kind === "current" && layout.legacyLink
+        ? [layout.root, layout.legacy]
+        : [layout.root],
+    existsSync,
+    declaredRootEntriesSync: () =>
+      (declaredRootEntries ??= machineDeclaredRootEntriesSync()),
+  };
+  return dataRootView;
+}
+
 export function createContext(
   cwd: string,
   sessionId = "unknown",
@@ -101,6 +132,9 @@ export function createContext(
             delivered: false,
           }
         : { dir: scratchDir, delivered: true },
+    get dataRoot(): DataRootView {
+      return dataRootViewSync();
+    },
     readTranscript(): TranscriptRead {
       if (!transcriptPath)
         return {

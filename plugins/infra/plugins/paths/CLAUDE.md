@@ -329,6 +329,13 @@ entry nobody on this machine declares is an offender. Two things not to undo:
   it on demand with `./equin check paths:no-undeclared-data-dirs`. A namespace that has never booted
   publishes nothing, so its dirs read as undeclared until it does.
 
+An agent's hand-made write is refused BEFORE it lands, by the same rule:
+`dataRootWriteViolationSync` (core) — a write may go only inside what stands (a
+kind's existing `<kind>/<name>`, an open kind, a legacy shim, a grandfathered
+service) — asked of every Bash/Write/Edit call by the `data-root-writes` guard
+(`framework/tooling/guards`). The audit below stays the backstop for what a
+hook cannot see (a script writing from inside). `OPEN_KINDS` is shared by both.
+
 `paths:no-undeclared-data-dirs` reads the REAL root and fails on any top-level
 entry that is neither declared nor grandfathered. Grandfathering is driven by
 one `LEGACY_LAYOUT` table (`core/internal/legacy-layout.ts`), shared by the
@@ -409,6 +416,8 @@ reaped namespaces' gateway logs were each found by accident, months in.
     - `DataDirRef`
     - `DataDirSpec`
     - `DataRootLayout`
+    - `DataRootView`
+    - `DataRootWriteViolation`
     - `LegacyMove`
     - `LogBound`
     - `LogClaim`
@@ -436,6 +445,7 @@ reaped namespaces' gateway logs were each found by accident, months in.
     - `dataRoot`
     - `dataRootLayout`
     - `DataRootSplitError`
+    - `dataRootWriteViolationSync`
     - `declareDataRootLayoutSync`
     - `defineAppDataDir`
     - `defineDataDir`
@@ -452,6 +462,8 @@ reaped namespaces' gateway logs were each found by accident, months in.
     - `logPatternMatches`
     - `lookupCheckoutDeploy`
     - `lookupCheckoutDeploySync`
+    - `machineDeclaredRootEntriesSync`
+    - `OPEN_KINDS`
     - `planMigration`
     - `PLUGINS_DIR`
     - `pruneWorktreeCheckArtifactsSync`

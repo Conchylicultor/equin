@@ -138,6 +138,19 @@ export type { LogBound, LogClaim } from "./internal/log-claims";
 // planner and the check's symlink-verified grandfathering are deleted together
 // once the drop-legacy pass has run everywhere.
 export { LEGACY_LAYOUT, planMigration } from "./internal/legacy-layout";
+
+// Would a write by hand mint an undeclared entry at the data root? The
+// question `paths:no-undeclared-data-dirs` asks after the fact, asked of one
+// write before it lands — by the agent guard that refuses it.
+export {
+  OPEN_KINDS,
+  dataRootWriteViolationSync,
+  machineDeclaredRootEntriesSync,
+} from "./internal/data-root-writes";
+export type {
+  DataRootView,
+  DataRootWriteViolation,
+} from "./internal/data-root-writes";
 export type { LegacyMove, MigrationStep } from "./internal/legacy-layout";
 
 // The check transcript is written by the check runner, which is a `core`-runtime

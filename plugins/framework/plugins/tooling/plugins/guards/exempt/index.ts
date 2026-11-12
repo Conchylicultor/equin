@@ -59,6 +59,7 @@ export default [
       "core/agent-ops.ts",
       "core/context.ts",
       "core/git-target.ts",
+      "core/guards/data-root-writes.ts",
       "core/guards/git-diff-main.ts",
       "core/guards/poll-loop.ts",
       "core/informed-once.ts",

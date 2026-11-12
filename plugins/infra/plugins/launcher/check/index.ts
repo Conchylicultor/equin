@@ -132,7 +132,13 @@ const envNamesCheck: Check = {
         }
         if (ts) {
           for (const match of code[i]!.matchAll(FULL_NAME_RE)) {
-            handSpelled.push(`${rel}:${i + 1}  ${match[0]}`);
+            // Name the exact replacement: a generic example (`readEnv("LANE")`)
+            // once left an agent rewriting `process.env.EQUIN_SCRATCH` to a
+            // hard-coded path under the data root instead (2026-11-10).
+            const key = envKeyOf(match[0]);
+            handSpelled.push(
+              `${rel}:${i + 1}  ${match[0]}${key ? `  → readEnv("${key}")` : ""}`,
+            );
           }
         }
       }

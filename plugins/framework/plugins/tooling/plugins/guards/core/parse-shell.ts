@@ -101,7 +101,7 @@ export function findCall(
 
 export function parseShell(cmd: string, baseCwd = ""): ShellParseResult {
   const calls: ShellCall[] = [];
-  const { code } = collect(cmd, baseCwd, calls, 0);
+  const { code } = collect(cmd, baseCwd, calls, 0, new Map());
   return { calls, redirections: calls.flatMap((c) => c.redirections), code };
 }
 
@@ -137,6 +137,7 @@ function collect(
   baseCwd: string,
   out: ShellCall[],
   depth: number,
+  vars: ShellVars,
 ): { cwd: string; code: string } {
   if (depth > MAX_DEPTH) return { cwd: baseCwd, code: cmd };
   const { code, docs } = splitHeredocs(cmd);
@@ -148,7 +149,10 @@ function collect(
     const from = out.length;
     const segCwd = cwd;
     const seg = part.text.trim();
-    if (seg) cwd = collectSegment(seg, cwd, out, depth, pipedIn);
+    // A pipeline stage runs in a subshell: what it assigns does not reach
+    // the next stage, nor the shell after the pipeline.
+    const scope = pipedIn || isPipe(part.sep) ? new Map(vars) : vars;
+    if (seg) cwd = collectSegment(seg, cwd, out, depth, pipedIn, scope);
     pipedIn = isPipe(part.sep);
     segs.push({
       end: part.end,
@@ -158,7 +162,7 @@ function collect(
       cwd: segCwd,
     });
   }
-  for (const doc of docs) attachDoc(doc, segs, out, baseCwd, depth);
+  for (const doc of docs) attachDoc(doc, segs, out, baseCwd, depth, vars);
   return { cwd, code };
 }
 
@@ -186,6 +190,7 @@ function collectSegment(
   out: ShellCall[],
   depth: number,
   pipedIn: boolean,
+  vars: ShellVars,
 ): string {
   // Pull `$( … )` / backtick bodies out FIRST, so their contents are parsed as
   // commands rather than swallowed as opaque argument text — and so the
@@ -193,13 +198,25 @@ function collectSegment(
   // `x=$(cd /tmp && pwd)` the assignment's value spans a space, so peeling on
   // whitespace before extraction would strand `/tmp && pwd)` as the command.
   const { stripped, inner } = extractSubstitutions(seg);
-  const head = peelPrefixes(stripped);
+  const { rest: head, assignments } = peelPrefixes(stripped);
+  // A segment that is ONLY assignments sets shell variables; so do the
+  // declaration builtins (`export O=…`). An assignment prefixing a command
+  // (`X=1 cmd`) reaches that command's environment alone, not the shell.
+  // `extractSubstitutions` lifts a `$( … )` / backtick body out WITHOUT a
+  // trace, so a segment that had one cannot tell `x=$(mktemp)` from `x=`:
+  // its assignments are forgotten, never recorded.
+  const opaque = inner.length > 0;
+  if (head === "") for (const a of assignments) assign(a, vars, opaque);
+  // `for O in …` / `select O in …` rebinds O to values the parser does not
+  // follow: forget it, never keep the stale one.
+  const loopVar = /^(?:for|select)\s+([A-Za-z_][A-Za-z0-9_]*)\b/.exec(stripped);
+  if (loopVar) vars.delete(loopVar[1]!);
 
   // A whole `( … )` group is its own shell: parse it in an isolated scope so
   // a `cd` inside cannot move the parent's directory.
   if (head.startsWith("(") && matchParen(head, 0) === head.length - 1) {
-    collect(head.slice(1, -1), cwd, out, depth + 1);
-    for (const src of inner) collect(src, cwd, out, depth + 1);
+    collect(head.slice(1, -1), cwd, out, depth + 1, new Map(vars));
+    for (const src of inner) collect(src, cwd, out, depth + 1, new Map(vars));
     return cwd;
   }
 
@@ -208,7 +225,11 @@ function collectSegment(
   // separately — a regex over a quote-masked copy for the redirections, another
   // over the quote-erased tokens for the args — is what let the two disagree:
   // a quoted `> "<path>"` vanished from both, and `&>file` survived as an arg.
-  const { words, redirections } = splitCommand(head);
+  // Variables expand in the TEXT, where the quoting is still visible: `'$O'`
+  // is a literal, and a word list has lost that. The command name expands
+  // too (`B=…/bun; $B x.ts` runs bun), as in the shell.
+  const { words, redirections } = splitCommand(substituteVars(head, vars));
+  rebind(words, vars, opaque);
   const tokens = stripGroupParens(words);
   // A wrapper (`nohup`, `env`, `sudo`, `xargs`, `timeout`, …) carries the real
   // command in its args, hiding it from every name-matching predicate the same
@@ -228,7 +249,7 @@ function collectSegment(
     toks = wrapped;
   }
 
-  for (const src of inner) collect(src, cur, out, depth + 1);
+  for (const src of inner) collect(src, cur, out, depth + 1, new Map(vars));
   return cur;
 }
 
@@ -502,6 +523,7 @@ function attachDoc(
   out: ShellCall[],
   baseCwd: string,
   depth: number,
+  vars: ShellVars,
 ): void {
   const i = segs.findIndex((s) => doc.at <= s.end);
   const owner = i === -1 ? segs.at(-1) : segs[i];
@@ -514,12 +536,20 @@ function attachDoc(
     owner && isPipe(owner.sep) && i !== -1 ? segs[i + 1] : undefined;
 
   if (interpreter(owner) || interpreter(piped)) {
-    collect(doc.body, cwd, out, depth + 1);
+    // A quoted delimiter keeps the outer shell from expanding the body, and
+    // the interpreter inherits exported variables only — none are known.
+    collect(
+      doc.body,
+      cwd,
+      out,
+      depth + 1,
+      doc.expanded ? new Map(vars) : new Map(),
+    );
     return;
   }
   if (!doc.expanded) return;
   for (const src of bodySubstitutions(doc.body))
-    collect(src, cwd, out, depth + 1);
+    collect(src, cwd, out, depth + 1, new Map(vars));
 }
 
 /**
@@ -635,18 +665,141 @@ function dropWrapperOptions(args: string[]): string[] {
  * Strip leading block keywords and `VAR=value` prefixes off a segment until a
  * real command name is exposed. Returns "" when the segment holds no command.
  */
-function peelPrefixes(seg: string): string {
+function peelPrefixes(seg: string): { rest: string; assignments: string[] } {
   let s = seg;
+  const assignments: string[] = [];
   for (;;) {
-    if (!s) return "";
+    if (!s) return { rest: "", assignments };
+    // An assignment's value may be quoted across blanks (`O="a b"`): take it
+    // as one shell word, not up to the first space.
+    const word = ASSIGNMENT_HEAD.test(s) ? readWord(s, 0) : null;
+    if (word) {
+      assignments.push(s.slice(0, word.end));
+      s = s.slice(word.end).trim();
+      continue;
+    }
     const sp = s.search(/\s/);
     const head = sp === -1 ? s : s.slice(0, sp);
     // `for f in a b` binds a variable over a word list — never a command.
-    if (head === "for") return "";
-    const isAssignment = /^[A-Za-z_][A-Za-z0-9_]*=/.test(head);
-    if (!isAssignment && !BLOCK_KEYWORDS.has(head)) return s;
+    if (head === "for") return { rest: "", assignments: [] };
+    if (!BLOCK_KEYWORDS.has(head)) return { rest: s, assignments };
     s = sp === -1 ? "" : s.slice(sp + 1).trim();
   }
+}
+
+const ASSIGNMENT_HEAD = /^[A-Za-z_][A-Za-z0-9_]*\+?=/;
+
+/**
+ * Shell variables this scope assigned a value the parser can know, by name.
+ *
+ * Without them a path held in a variable is a blind spot every Bash guard
+ * shares: `O=$HOME/.equin/x; mkdir -p $O` (2026-11-10, an agent that wrote
+ * screenshots into the data root) reaches each guard as `mkdir -p $O`. An
+ * assignment whose value runs something (`$(…)`, backticks) or reads an
+ * unknown variable FORGETS the name instead — a stale value would be a wrong
+ * answer, and an unknown `$X` left in a word is what every guard already sees.
+ * Inner scopes (`( … )`, `$( … )`, a heredoc an interpreter runs) read a copy:
+ * what they assign does not reach the parent, as in the shell.
+ */
+type ShellVars = Map<string, string>;
+
+/** The builtins whose `NAME=value` args set a shell variable. */
+const DECLARATION_BUILTINS = new Set([
+  "export",
+  "declare",
+  "local",
+  "readonly",
+  "typeset",
+]);
+
+/**
+ * The names a command's words rebind: a declaration builtin's `NAME=value`
+ * args (anywhere in the words, so a function body's `f() { local O=$1`
+ * counts), and `read`'s targets (a value from stdin: forgotten).
+ */
+function rebind(words: string[], vars: ShellVars, opaque: boolean): void {
+  for (let i = 0; i < words.length; i++) {
+    const w = words[i]!;
+    if (DECLARATION_BUILTINS.has(w)) {
+      for (const a of words.slice(i + 1))
+        if (a.includes("=")) assign(a, vars, opaque);
+        else if (/^[A-Za-z_][A-Za-z0-9_]*$/.test(a)) vars.delete(a);
+    } else if (w === "read") {
+      for (const a of words.slice(i + 1))
+        if (/^[A-Za-z_][A-Za-z0-9_]*$/.test(a)) vars.delete(a);
+    }
+  }
+}
+
+/** Record one `NAME=value` word (still quoted, as typed) into `vars`. */
+function assign(raw: string, vars: ShellVars, opaque: boolean): void {
+  const eq = raw.indexOf("=");
+  if (eq <= 0) return;
+  const name = raw.slice(0, eq);
+  // `x+=y` appends to a value this parser may not hold whole: forget it.
+  if (name.endsWith("+")) {
+    vars.delete(name.slice(0, -1));
+    return;
+  }
+  if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) return;
+  if (opaque) {
+    vars.delete(name);
+    return;
+  }
+  const valueText = raw.slice(eq + 1);
+  // A `$` the substitution below cannot resolve means the value is not known.
+  const value =
+    valueText === "" ? "" : (readWord(valueText, 0)?.text ?? valueText);
+  const known = expandHome(substituteVars(value, vars));
+  // Only a value that reads back as ONE plain word is kept: it is spliced
+  // into command text, where a blank, a quote or an operator would re-parse
+  // as something the shell never ran.
+  if (SAFE_VALUE.test(known)) vars.set(name, known);
+  else vars.delete(name);
+}
+
+const SAFE_VALUE = /^[^\s'"`$\\;&|<>(){}*?[\]#~]*$/;
+
+/**
+ * Replace every `$NAME` / `${NAME}` this scope knows in command TEXT, outside
+ * single quotes (a literal there, as in the shell); leave the rest as typed.
+ */
+function substituteVars(text: string, vars: ShellVars): string {
+  if (vars.size === 0 || !text.includes("$")) return text;
+  let out = "";
+  let single = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i]!;
+    if (single) {
+      out += c;
+      if (c === "'") single = false;
+      continue;
+    }
+    if (c === "\\" && i + 1 < text.length) {
+      out += c + text[i + 1];
+      i++;
+      continue;
+    }
+    if (c === "'") {
+      single = true;
+      out += c;
+      continue;
+    }
+    if (c === "$") {
+      const m =
+        /^\$(?:\{([A-Za-z_][A-Za-z0-9_]*)\}|([A-Za-z_][A-Za-z0-9_]*))/.exec(
+          text.slice(i),
+        );
+      const value = m ? vars.get((m[1] ?? m[2])!) : undefined;
+      if (m && value !== undefined) {
+        out += value;
+        i += m[0].length - 1;
+        continue;
+      }
+    }
+    out += c;
+  }
+  return out;
 }
 
 /**
@@ -685,7 +838,7 @@ function extractSubstitutions(s: string): {
       continue;
     }
     if (c === "$" && next === "(") {
-      const end = matchParen(s, i + 1);
+      const end = matchParen(s, i + 1, true);
       if (end !== -1) {
         inner.push(s.slice(i + 2, end));
         i = end;
@@ -698,7 +851,7 @@ function extractSubstitutions(s: string): {
     // text can never be read as a redirection target, and it can never pose as
     // an arg.
     if (mode === "none" && (c === ">" || c === "<") && next === "(") {
-      const end = matchParen(s, i + 1);
+      const end = matchParen(s, i + 1, true);
       if (end !== -1) {
         inner.push(s.slice(i + 2, end));
         i = end;
@@ -719,14 +872,46 @@ function extractSubstitutions(s: string): {
 }
 
 /** Index of the `)` closing the `(` at `open`, or -1 when unbalanced. */
-function matchParen(s: string, open: number): number {
+function matchParen(s: string, open: number, quoted = false): number {
   let depth = 0;
   for (let i = open; i < s.length; i++) {
+    if (quoted) {
+      // Command text: a `\(` is a literal, and so is any paren in quotes — a
+      // `$(rg "x \(y" dir)` once ended at the escaped paren, minting a phantom
+      // call out of the rest. Heredoc bodies stay quote-blind (an apostrophe
+      // there is prose), so this is opt-in.
+      const c = s[i];
+      if (c === "\\") {
+        i++;
+        continue;
+      }
+      if (c === "'" || c === '"') {
+        const close = skipQuoted(s, i);
+        // An unclosed quote is not one the shell sees (`$(# don't …)`, an
+        // ANSI-C `$'it\'s'`): match as before, quote-blind.
+        if (close === -1) return matchParen(s, open);
+        i = close;
+        continue;
+      }
+    }
     if (s[i] === "(") depth++;
     else if (s[i] === ")") {
       depth--;
       if (depth === 0) return i;
     }
+  }
+  return -1;
+}
+
+/** Index of the quote closing the one at `at` (`\\"` escapes inside `"`), or -1. */
+function skipQuoted(s: string, at: number): number {
+  const q = s[at];
+  for (let i = at + 1; i < s.length; i++) {
+    if (q === '"' && s[i] === "\\") {
+      i++;
+      continue;
+    }
+    if (s[i] === q) return i;
   }
   return -1;
 }
