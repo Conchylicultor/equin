@@ -182,6 +182,7 @@ export function createSourceAnalysis(host: SourceAnalysisHost): SourceAnalysis {
   const aliasPrefixes = Object.keys(compilerOptions.paths ?? {}).map((k) =>
     k.replace(/\*.*$/, ""),
   );
+  const namespaceImport = namespaceImportPattern(aliasPrefixes);
 
   const resolutionHost: TS.ModuleResolutionHost = {
     fileExists: (p) => {
@@ -528,16 +529,18 @@ export function createSourceAnalysis(host: SourceAnalysisHost): SourceAnalysis {
 
     // Every name a target is exported under: a re-export spells the name it
     // re-exports, so each round's candidates hold every next alias.
+    const named = (): ReadonlySet<string> =>
+      new Set([...spellings, ...namespaceSpellings]);
     let candidates: ReadonlyArray<{ rel: string; src: string }> = [];
     for (;;) {
       candidates = await candidatesFor(
-        grepAlternation(new Set([...spellings, ...namespaceSpellings])),
+        grepAlternation(named(), namespaceImport),
       );
       const before = spellings.size + namespaceSpellings.size;
       for (const c of candidates) {
         const f = await seed(c.rel, c.src);
         if (f === null) continue;
-        for (const name of exportedNames(ts, f.sf)) {
+        for (const name of aliasingExports(ts, f.sf, named())) {
           if (spellings.has(name) || namespaceSpellings.has(name)) continue;
           const b = await exportIn(c.rel, name, new Set());
           if (targetOf(b) !== undefined) spellings.add(name);
@@ -574,22 +577,36 @@ export function createSourceAnalysis(host: SourceAnalysisHost): SourceAnalysis {
         const ms = stmt.moduleSpecifier;
         if (ms === undefined || !ts.isStringLiteral(ms)) continue;
         const spec = ms.text;
-        const names = new Set<string>([...spellings, ...namespaceSpellings]);
+        // The names this statement can bind a target under. An element can
+        // only if it imports one of the names a target is exported under (the
+        // fixpoint above found them all — a rename spells both names, so its
+        // file was a candidate); a whole module — `import * as`, `export *` —
+        // is asked for every one of them, for the reader's isTargetModule.
+        // Resolving every element instead parsed every module a candidate
+        // imports: ~2k of the check pass's parses, for no answer.
+        const known = named();
+        const names = new Set<string>();
+        const consider = (name: string) => {
+          if (known.has(name)) names.add(name);
+        };
         if (ts.isImportDeclaration(stmt)) {
           const clause = stmt.importClause;
           if (clause === undefined || clause.isTypeOnly) continue;
-          if (clause.name !== undefined) names.add("default");
+          if (clause.name !== undefined) consider("default");
           const b = clause.namedBindings;
-          if (b !== undefined && !ts.isNamespaceImport(b))
+          if (b !== undefined && ts.isNamespaceImport(b))
+            for (const n of known) names.add(n);
+          else if (b !== undefined)
             for (const el of b.elements)
-              if (!el.isTypeOnly) names.add((el.propertyName ?? el.name).text);
+              if (!el.isTypeOnly) consider((el.propertyName ?? el.name).text);
         } else if (stmt.isTypeOnly) continue;
         else if (
           stmt.exportClause !== undefined &&
           ts.isNamedExports(stmt.exportClause)
-        )
+        ) {
           for (const el of stmt.exportClause.elements)
-            if (!el.isTypeOnly) names.add((el.propertyName ?? el.name).text);
+            if (!el.isTypeOnly) consider((el.propertyName ?? el.name).text);
+        } else for (const n of known) names.add(n);
         const m = resolveModule(f.rel, spec);
         if (m.kind === "external") continue;
         if (m.kind === "missing") {
@@ -692,11 +709,97 @@ export function boundConst(
   return null;
 }
 
-/** `a|b|\* as `: a file naming any spelling, or importing some namespace. */
-function grepAlternation(names: ReadonlySet<string>): string {
-  return [...[...names].map((n) => n.replace(/\$/g, "\\$")), "\\* as "].join(
-    "|",
+/** `a|b|<namespace>`: a file naming any spelling, or namespace-importing a repo module. */
+function grepAlternation(
+  names: ReadonlySet<string>,
+  namespaceImport: string,
+): string {
+  return [
+    ...[...names].map((n) => n.replace(/\$/g, "\\$")),
+    namespaceImport,
+  ].join("|");
+}
+
+/**
+ * A `git grep -E` pattern for a line that may namespace-import (or
+ * namespace-re-export) a REPO module: `* as x from "<./, /, or a path alias>"`,
+ * or a `* as` / `* as x` ending its line (an import split across lines — the
+ * pattern cannot see its specifier, so it is selected). A namespace of an npm
+ * package (`* as React from "react"`) can never be a target's module, and
+ * `\* as ` alone also matched every JSDoc line opening with "as": ~410
+ * candidates, 33 of them namespace imports of the repo's own code.
+ */
+function namespaceImportPattern(aliasPrefixes: readonly string[]): string {
+  const sources = [".", "/", ...aliasPrefixes.filter((p) => p !== "")].map(
+    (p) => p.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
   );
+  return `\\* as([[:space:]]*$| [A-Za-z0-9_$]+[[:space:]]*$| [A-Za-z0-9_$]+ from ["'](${sources.join("|")}))`;
+}
+
+/**
+ * The names `sf` exports that can alias a target or a namespace holding one,
+ * given the names known to do so: a re-export whose source name is known
+ * (`export { known as alias } from`), a local re-export of a known import or of
+ * a namespace import (`import * as ns …; export { ns }`), `export * as ns`, and
+ * `export default` of such a binding. Every other export (a declaration, a
+ * re-export of an unknown name) cannot: a rename spells the name it renames,
+ * so the file holding it was selected by that name — the fixpoint finds each
+ * alias in the round after its source. Resolving every export of every
+ * candidate instead parsed each re-export's module.
+ */
+function aliasingExports(
+  ts: typeof TS,
+  sf: TS.SourceFile,
+  known: ReadonlySet<string>,
+): string[] {
+  const imported = new Map<string, string | "*">(); // local → imported name, "*" for a namespace
+  for (const stmt of sf.statements) {
+    if (!ts.isImportDeclaration(stmt)) continue;
+    const clause = stmt.importClause;
+    if (clause === undefined || clause.isTypeOnly) continue;
+    if (clause.name !== undefined) imported.set(clause.name.text, "default");
+    const b = clause.namedBindings;
+    if (b === undefined) continue;
+    if (ts.isNamespaceImport(b)) imported.set(b.name.text, "*");
+    else
+      for (const el of b.elements)
+        if (!el.isTypeOnly)
+          imported.set(el.name.text, (el.propertyName ?? el.name).text);
+  }
+  const aliases = (local: string): boolean => {
+    if (known.has(local)) return true;
+    const from = imported.get(local);
+    return from !== undefined && (from === "*" || known.has(from));
+  };
+  const out: string[] = [];
+  for (const stmt of sf.statements) {
+    if (ts.isExportDeclaration(stmt)) {
+      if (stmt.isTypeOnly) continue;
+      const c = stmt.exportClause;
+      if (c === undefined) continue;
+      if (ts.isNamespaceExport(c)) {
+        out.push(c.name.text);
+        continue;
+      }
+      for (const el of c.elements) {
+        if (el.isTypeOnly) continue;
+        const source = (el.propertyName ?? el.name).text;
+        if (
+          stmt.moduleSpecifier === undefined
+            ? aliases(source)
+            : known.has(source)
+        )
+          out.push(el.name.text);
+      }
+    } else if (
+      ts.isExportAssignment(stmt) &&
+      !stmt.isExportEquals &&
+      ts.isIdentifier(stmt.expression) &&
+      aliases(stmt.expression.text)
+    )
+      out.push("default");
+  }
+  return out;
 }
 
 /** Every string specifier a file loads dynamically: `import("…")`, `require("…")`. */
@@ -715,23 +818,6 @@ function dynamicSpecifiers(ts: typeof TS, sf: TS.SourceFile): string[] {
     ts.forEachChild(node, visit);
   };
   visit(sf);
-  return out;
-}
-
-/** Every name a file exports a value under (its declarations, `export {}` lists, `export default`). */
-function exportedNames(ts: typeof TS, sf: TS.SourceFile): string[] {
-  const out: string[] = [];
-  for (const stmt of sf.statements) {
-    if (ts.isExportDeclaration(stmt)) {
-      if (stmt.isTypeOnly) continue;
-      const c = stmt.exportClause;
-      if (c === undefined) continue;
-      if (ts.isNamespaceExport(c)) out.push(c.name.text);
-      else
-        for (const el of c.elements) if (!el.isTypeOnly) out.push(el.name.text);
-    } else if (ts.isExportAssignment(stmt) && !stmt.isExportEquals)
-      out.push("default");
-  }
   return out;
 }
 

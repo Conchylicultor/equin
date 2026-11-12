@@ -298,8 +298,16 @@ export async function readTreeSnapshot(
 // widened allowlist. Scoped to `core/` only: this plugin's `server/` holds the
 // view-rebuild logic, which no check's verdict depends on. (Neither check is
 // `inputKeyed` today either.)
+//
+// `plugin-id/`. The repo's path vocabulary — which plugin a path belongs to
+// (`pluginDirOfRepoPath`), what is test code (`isTestCodePath`), the folder
+// kinds — is code that input-keyed verdicts call (`no-db-backed-notify` reads
+// a feed exclusion per plugin and skips test code by it; `plugin-boundaries`'
+// rules are written in it), invisible to the `FileSystemView`. It changes
+// rarely, so keying on it costs little.
 const CHECK_SOURCE_PREFIXES = [
   "plugins/framework/plugins/tooling/",
+  "plugins/framework/plugins/plugin-id/",
   "plugins/plugin-meta/plugins/parse-utils/",
   "plugins/plugin-meta/plugins/plugin-tree/",
   "plugins/database/plugins/migrations/core/",

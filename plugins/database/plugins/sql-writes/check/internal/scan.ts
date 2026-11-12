@@ -3,7 +3,8 @@ import { relative } from "path";
 import { SchemaModel } from "./model";
 import type { ExportRef } from "./probe-types";
 import { runSchemaProbe } from "./run-probe";
-import { repoCompilerOptions, SiteScanner, type SqlSite } from "./sites";
+import type { ScannedSite, SqlSite } from "./sites";
+import type { SqlWritesPart } from "./sites.scan";
 import { parseSite, type Parsed } from "./statements";
 import { validateStatements, writesIn, type IssueKind } from "./validate";
 
@@ -50,45 +51,20 @@ export type ScanResult =
     }
   | { readonly kind: "failed"; readonly message: string };
 
-// A module talking to SQLite (bun:sqlite) holds SQLite's SQL, not the app's
-// Postgres: a different database with a different grammar.
-const SQLITE = /from\s+["']bun:sqlite["']/;
-// Cheap prefilter before a file is parsed as TypeScript.
-// A marker is matched too, so a file whose last raw write was typed still has
-// its stale marker found.
-const MENTIONS =
-  /\b(insert|update|delete|merge|create|alter)\b|sql-writes:hand-written/i;
-
 export async function scanSqlWrites(opts: {
   readonly root: string;
-  /** Repo-relative candidate files. */
-  readonly files: readonly string[];
-  readonly read: (rel: string) => Promise<string | null>;
-  readonly readSync: (abs: string) => string | null;
+  /** Every candidate file's sites and markers (`sites.scan.ts`, folded). */
+  readonly folded: SqlWritesPart;
+  /** Follows the holes another file decides (`resolve.ts`). */
+  readonly resolver: { resolveSite(site: ScannedSite): Promise<SqlSite> };
   /** Absolute schema-glob files. */
   readonly schemaFiles: readonly string[];
 }): Promise<ScanResult> {
   await loadModule();
-  const scanner = new SiteScanner(
-    opts.root,
-    repoCompilerOptions(opts.root),
-    opts.readSync,
-    new Set(opts.schemaFiles),
-  );
-  const texts = await Promise.all(
-    opts.files.map(async (f) => [f, await opts.read(f)] as const),
-  );
   const sites: SqlSite[] = [];
-  const markers = new Map<string, { text: string; at: number[] }>();
-  let files = 0;
-  for (const [file, text] of texts) {
-    if (text === null || !MENTIONS.test(text) || SQLITE.test(text)) continue;
-    files++;
-    const scanned = await scanner.scan(file, text);
-    sites.push(...scanned.sites);
-    if (scanned.markers.length > 0)
-      markers.set(file, { text, at: scanned.markers });
-  }
+  for (const site of opts.folded.sites)
+    sites.push(await opts.resolver.resolveSite(site));
+  const files = opts.folded.files;
 
   // One probe for every export a hole names.
   const refs = new Map<string, ExportRef>();
@@ -171,16 +147,10 @@ export async function scanSqlWrites(opts: {
       binds.set(k, (binds.get(k) ?? 0) + 1);
     }
   const strayMarkers: StrayMarker[] = [];
-  for (const [file, { text, at }] of markers)
-    for (const pos of at) {
-      const n = binds.get(`${file}#${pos}`) ?? 0;
-      if (n !== 1)
-        strayMarkers.push({
-          file,
-          line: text.slice(0, pos).split("\n").length,
-          binds: n,
-        });
-    }
+  for (const m of opts.folded.markers) {
+    const n = binds.get(`${m.file}#${m.pos}`) ?? 0;
+    if (n !== 1) strayMarkers.push({ file: m.file, line: m.line, binds: n });
+  }
   return {
     kind: "ok",
     files,

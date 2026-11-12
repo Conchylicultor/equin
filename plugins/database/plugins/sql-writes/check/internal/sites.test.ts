@@ -1,38 +1,49 @@
-import { afterAll, describe, expect, test } from "bun:test";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "fs";
-import { tmpdir } from "os";
-import { join } from "path";
+import { describe, expect, test } from "bun:test";
 import ts from "typescript";
-import { SiteScanner } from "./sites";
+import {
+  createSourceAnalysis,
+  readRepoCompilerOptions,
+} from "@plugins/framework/plugins/tooling/plugins/checks/plugins/source-analysis/core";
+import { createHoleResolver } from "./resolve";
+import { scanFileSites as scanParsed } from "./sites";
 
-// The scanner over real files in a scratch dir: hole resolution follows imports
-// with the TypeScript resolver, which reads the disk.
-const root = mkdtempSync(join(tmpdir(), "sql-writes-sites-"));
-afterAll(() => rmSync(root, { recursive: true, force: true }));
-
-writeFileSync(
-  join(root, "tables.ts"),
-  `export const things = defineExtension(parent, "thing", shape);\n` +
+// The per-file scan (what a file's fold records), then the cross-file
+// resolution of its deferred holes over an in-memory repo: imports followed
+// with the repo project's own module resolution.
+const ROOT = "/checkout";
+const FILES: Record<string, string> = {
+  "tsconfig.json": `{ "compilerOptions": { "module": "ESNext", "moduleResolution": "bundler" } }`,
+  "tables.ts":
+    `export const things = defineExtension(parent, "thing", shape);\n` +
     `export const THING_TABLE = "things_raw";\n`,
-);
-writeFileSync(
-  join(root, "barrel.ts"),
-  `export { things, THING_TABLE as RAW } from "./tables";\n`,
-);
+  "barrel.ts": `export { things, THING_TABLE as RAW } from "./tables";\n`,
+};
+const repo = {
+  has: (rel: string) => Object.hasOwn(FILES, rel),
+  read: (rel: string) => Promise.resolve(FILES[rel] ?? null),
+};
+const resolver = createHoleResolver({
+  analysis: createSourceAnalysis({
+    ts,
+    files: repo,
+    parse: ({ rel, src }) =>
+      Promise.resolve(
+        ts.createSourceFile(rel, src, ts.ScriptTarget.Latest, true),
+      ),
+    compilerOptions: await readRepoCompilerOptions(ts, repo),
+  }),
+  root: ROOT,
+  schemaFiles: new Set(["tables.ts"]),
+});
 
-const scanner = new SiteScanner(
-  root,
-  {
-    module: ts.ModuleKind.ESNext,
-    moduleResolution: ts.ModuleResolutionKind.Bundler,
-  },
-  (abs) => readFileSync(abs, "utf8"),
-  new Set([join(root, "tables.ts")]),
-);
+const scanFileSites = (rel: string, src: string) =>
+  scanParsed(ts.createSourceFile(rel, src, ts.ScriptTarget.Latest, true));
 
 async function holesOf(src: string) {
-  const { sites } = await scanner.scan("use.ts", src);
-  return sites.map((s) => s.holes);
+  const { sites } = scanFileSites("use.ts", src);
+  const out = [];
+  for (const s of sites) out.push((await resolver.resolveSite(s)).holes);
+  return out;
 }
 
 describe("hole resolution", () => {
@@ -45,7 +56,7 @@ describe("hole resolution", () => {
       {
         kind: "export",
         ref: {
-          file: join(root, "tables.ts"),
+          file: `${ROOT}/tables.ts`,
           exportName: "things",
           path: ["table"],
         },
@@ -78,8 +89,45 @@ describe("hole resolution", () => {
     ]);
   });
 
+  test("a template splicing an imported constant, and a namespace import's member, resolve across files", async () => {
+    const [tpl, ns] = await holesOf(
+      `import { RAW } from "./barrel";\nimport * as T from "./tables";\n` +
+        `const name = \`\${RAW}_v2\`;\n` +
+        `const a = \`DELETE FROM \${name} WHERE id = $1\`;\n` +
+        `const b = sql\`DELETE FROM \${T.things.table} WHERE id = 1\`;\n`,
+    );
+    expect(tpl).toEqual([{ kind: "text", text: "things_raw_v2" }]);
+    expect(ns).toEqual([
+      {
+        kind: "export",
+        ref: {
+          file: `${ROOT}/tables.ts`,
+          exportName: "things",
+          path: ["table"],
+        },
+      },
+    ]);
+  });
+
+  test("a file's own sites are found without reading any other file; the holes another file decides are deferred", () => {
+    const { sites } = scanFileSites(
+      "use.ts",
+      `import { RAW } from "./nowhere";\nconst a = \`DELETE FROM \${RAW} WHERE id = $1\`;\n`,
+    );
+    expect(sites.map((s) => s.holes.map((h) => h.kind))).toEqual([
+      ["deferred"],
+    ]);
+  });
+
+  test("an import naming no file of the repo is opaque", async () => {
+    const [holes] = await holesOf(
+      `import { RAW } from "./nowhere";\nconst a = \`DELETE FROM \${RAW} WHERE id = $1\`;\n`,
+    );
+    expect(holes).toEqual([{ kind: "opaque", expr: "RAW" }]);
+  });
+
   test("prose is no site; a sql tag in a plain template's hole is found", async () => {
-    const { sites } = await scanner.scan(
+    const { sites } = scanFileSites(
       "use.ts",
       'const m = "update the gateway";\n' +
         `const s = \`\${sql\`DELETE FROM x WHERE id = 1\`}\`;\n`,
@@ -98,14 +146,14 @@ describe("site markers (sql-writes:hand-written)", () => {
       "  await db.execute(sql`DELETE FROM x WHERE id = 1`);\n" +
       "  await db.execute(sql`DELETE FROM y WHERE id = 1`);\n" +
       "}\n";
-    const { sites, markers } = await scanner.scan("use.ts", src);
+    const { sites, markers } = scanFileSites("use.ts", src);
     expect(sites.map((s) => s.marker === null)).toEqual([false, true]);
     expect(markers.length).toBe(1);
-    expect(sites[0]?.marker).toBe(markers[0]);
+    expect(sites[0]?.marker).toBe(markers[0]?.pos ?? -1);
   });
 
   test("SQL text inside a literal is never a marker comment", async () => {
-    const { markers } = await scanner.scan(
+    const { markers } = scanFileSites(
       "use.ts",
       "const s = sql`-- sql-writes:hand-written\nDELETE FROM x WHERE id = 1`;\n",
     );
@@ -113,7 +161,7 @@ describe("site markers (sql-writes:hand-written)", () => {
   });
 
   test("a marker binding no write is still listed, so a stale one can be found", async () => {
-    const { sites, markers } = await scanner.scan(
+    const { sites, markers } = scanFileSites(
       "use.ts",
       "// sql-writes:hand-written — gone\nconst a = 1;\n",
     );
@@ -122,7 +170,7 @@ describe("site markers (sql-writes:hand-written)", () => {
   });
 
   test("one marker above a switch reaches every case's write — which the scan refuses as shared", async () => {
-    const { sites } = await scanner.scan(
+    const { sites } = scanFileSites(
       "use.ts",
       "function f(k) {\n" +
         "  // sql-writes:hand-written — one\n" +

@@ -17,6 +17,18 @@ function loadTs(): Promise<typeof TS> {
 
 const check: Check = {
   id: ID,
+  // INPUT-KEYED: every byte the verdict reads goes through `ctx.repo()` (the
+  // source analysis's files and module resolution, the exemption manifests)
+  // or `listCandidateSources` (each grep selection and its candidates), both
+  // recorded. So an edit to a file the analysis never read — most edits: it
+  // reads ~1.5k of ~14k sources — replays the read-set and runs nothing; one
+  // it read, or one that changes a selection, runs the whole analysis again.
+  // Its code is covered by the check-source hash (it and source-analysis live
+  // under `tooling/`); the parser's version is the signature.
+  inputKeyed: true,
+  async cacheSignature() {
+    return `typescript@${(await loadTs()).version}`;
+  },
   outOfScope: ["test"],
   description:
     'Resources whose loader reads the DB (in the call, or in any function or const it reaches, followed to its declaration across files) must not be served external (`defineExternalResource`, or `serveValue` / `serveCollection` with `source: "external"`), which exposes hand-`notify` — the DB change-feed is their only invalidation path — unless the external `serveValue` declares those reads (`reads:`), which routes it from the feed. DB writes in an external loader are allowed. Exempt: a read that names (by reference or SQL name) a table the serving plugin excludes from the feed (`ExcludeFromChangeFeed({ table: <identifier> })`), whose writer is then the only change signal. Read from the syntax tree through every alias, barrel and wrapper, fail-closed: what cannot be read is a violation.',

@@ -58,7 +58,10 @@ Migrating a check: move its per-file body into the scan (returning what the
 cross-file part needs of the file, not the bytes), make the cross-file part
 the verdict. A rule that needs another file's bytes is cross-file — fold what
 it reads of each file (plugin-boundaries' `summarizeExports`). Users:
-`plugin-boundaries`, `relocate:moved-plugins-unnamed`.
+`plugin-boundaries`, `relocate:moved-plugins-unnamed`, `parse-utils:mask-sync`.
+`sql-writes:fit` folds its per-file sites with `foldRepoFiles` directly: a
+few of its holes name another file, followed after the fold through the
+source analysis (what they name, never the tree).
 
 ## Reading code: `sourceAnalysis`, not regexes
 
@@ -95,6 +98,14 @@ It reuses the repo project (the root `tsconfig.json`'s module resolution) and
 the run-shared parse (`parsedTsSource`, so the thread yields); it builds no
 type checker. Every check of a pass shares one analysis; an input-keyed check
 gets its own, so its reads land in its read-set.
+
+A check whose whole question is cross-file (where a call's reachable code
+reads the DB) cannot fold per file; it is **input-keyed** instead, so an edit
+to a file it never read replays its read-set and runs nothing:
+`no-db-backed-notify` reads ~1.5k of ~14k sources, and its read-set is what
+it read — `usesOf` selects only files that spell a target's name or
+namespace-import a repo module, and resolves only the imports that can name
+a target.
 
 ## Grep selections are folded along git's trees (`core/grep-index.ts`)
 
@@ -242,10 +253,11 @@ runner-internal failures only — don't route check failures back to it.
 
 ## `inputKeyed` carries an extra rule
 
-Live, not a dormant scaffold — nine checks set it: `type-check`,
-`plugin-boundaries`, `active-data`, `no-raw-event-source`, `no-raw-sse`,
-`no-raw-websocket`, `no-hardcoded-colors`, `no-hand-built-link-to`,
-`no-use-resource-cast`.
+Live, not a dormant scaffold — among others: `type-check`,
+`plugin-boundaries`, `parse-utils:mask-sync`, `no-db-backed-notify`,
+`active-data`, `no-raw-event-source`, `no-raw-sse`, `no-raw-websocket`,
+`no-hardcoded-colors`, `no-hand-built-link-to`, `no-use-resource-cast`
+(`rg 'inputKeyed: true'` for the current set).
 
 The read-set slot is keyed on `(checkId, cacheSignature(), checkout)` with **no
 tree hash at all** (`readSetFile` in [`core/cache.ts`](core/cache.ts)), so a PASS recorded

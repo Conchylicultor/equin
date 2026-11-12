@@ -18,7 +18,9 @@ const TSCONFIG = {
 async function analysisOver(files: Record<string, string>): Promise<{
   analysis: SourceAnalysis;
   candidatesFor: (g: string) => Promise<{ rel: string; src: string }[]>;
+  parsed: Set<string>;
 }> {
+  const parsed = new Set<string>();
   const all: Record<string, string> = { ...TSCONFIG, ...files };
   const repo = {
     has: (rel: string) => Object.hasOwn(all, rel),
@@ -27,21 +29,24 @@ async function analysisOver(files: Record<string, string>): Promise<{
   const analysis = createSourceAnalysis({
     ts,
     files: repo,
-    parse: ({ rel, src }) =>
-      Promise.resolve(
+    parse: ({ rel, src }) => {
+      parsed.add(rel);
+      return Promise.resolve(
         ts.createSourceFile(rel, src, ts.ScriptTarget.Latest, true),
-      ),
+      );
+    },
     compilerOptions: await readRepoCompilerOptions(ts, repo),
   });
+  // `git grep -E` per line: its POSIX classes spelled for JS.
   const candidatesFor = (grepArg: string) => {
-    const re = new RegExp(grepArg);
+    const re = new RegExp(grepArg.replaceAll("[[:space:]]", "\\s"), "m");
     return Promise.resolve(
       Object.entries(files)
         .filter(([rel, src]) => /\.tsx?$/.test(rel) && re.test(src))
         .map(([rel, src]) => ({ rel, src })),
     );
   };
-  return { analysis, candidatesFor };
+  return { analysis, candidatesFor, parsed };
 }
 
 const DEF = "fx/lib/core/def.ts";
@@ -197,6 +202,56 @@ describe("createSourceAnalysis", () => {
         /^fx\/a\/web\/passed\.ts:2: `mark` is used other than called/,
       ),
     ]);
+  });
+
+  it("finds every alias and namespace hop, parsing only what can name a target", async () => {
+    const { analysis, candidatesFor, parsed } = await analysisOver({
+      [DEF]: `export function mark(x: string) {}`,
+      [BARREL]: `export { mark } from "./def";\nexport { other } from "./other";`,
+      "fx/lib/core/other.ts": `export const other = 1;`,
+      // a rename of a rename: tag2's file names only tag
+      "fx/lib/core/alias.ts": `export { mark as tag } from "./index";`,
+      "fx/lib/core/alias2.ts": `export { tag as tag2 } from "./alias";`,
+      // a local re-export of a renamed import
+      "fx/lib/core/local.ts": `import { mark as m } from "./index";\nexport { m as viaLocal };`,
+      // a namespace import re-exported by name, then imported
+      "fx/lib/core/nslocal.ts": `import * as L2 from "./index";\nexport { L2 };`,
+      "fx/a/web/tag2.ts": `import { tag2 } from "@fx/lib/core/alias2";\ntag2("a");`,
+      "fx/a/web/local.ts": `import { viaLocal } from "@fx/lib/core/local";\nviaLocal("b");`,
+      "fx/a/web/nslocal.ts": `import { L2 } from "@fx/lib/core/nslocal";\nL2[k]("c");`,
+      // a namespace import split across lines is still read
+      "fx/a/web/split.ts": `import * as\n  S from "@fx/lib/core";\nS[k]("d");`,
+      // an npm namespace, and a JSDoc line opening with "as": never candidates
+      "fx/a/web/npm.ts": `import * as React from "react";\n/**\n * as a note\n */\nReact.x();`,
+      // names nothing a target is exported under: its imports are not followed
+      "fx/a/web/elsewhere.ts": `import { other } from "@fx/lib/core";\nimport * as N from "@fx/lib/core/other";\nuse(other, N);`,
+    });
+    const r = await analysis.usesOf(
+      { mark: { rel: DEF, name: "mark" } },
+      candidatesFor,
+    );
+    expect(r.found.map(summary).sort()).toEqual(
+      [
+        "reexport mark fx/lib/core/index.ts:1",
+        "reexport mark fx/lib/core/alias.ts:1",
+        "reexport mark fx/lib/core/alias2.ts:1",
+        "call mark fx/a/web/tag2.ts:2",
+        "reexport mark fx/lib/core/local.ts:2",
+        "call mark fx/a/web/local.ts:2",
+      ].sort(),
+    );
+    expect(r.unreadable.map(formatUnreadable).sort()).toEqual([
+      expect.stringMatching(
+        /^fx\/a\/web\/nslocal\.ts:1: `L2` from "@fx\/lib\/core\/nslocal" is a namespace re-export/,
+      ),
+      expect.stringMatching(/^fx\/a\/web\/split\.ts:3: the namespace `S`/),
+      expect.stringMatching(
+        /^fx\/lib\/core\/nslocal\.ts:2: the namespace `L2`/,
+      ),
+    ]);
+    expect(parsed.has("fx/a/web/npm.ts")).toBe(false);
+    // selected (a namespace import of the repo), but `other` names no target
+    expect(parsed.has("fx/lib/core/other.ts")).toBe(true);
   });
 
   it("reads a destructured export as a declaration, and a JSON module as data", async () => {

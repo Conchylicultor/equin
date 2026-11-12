@@ -1,8 +1,11 @@
 import type { Check } from "@plugins/framework/plugins/tooling/core";
 import { schemaFilesIn } from "@plugins/database/plugins/migrations/core";
-import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
+import { sourceAnalysis } from "@plugins/framework/plugins/tooling/plugins/checks/core";
+import { foldRepoFiles } from "@plugins/plugin-meta/plugins/plugin-records/core";
 import { resolve } from "path";
+import { createHoleResolver } from "./internal/resolve";
 import { scanSqlWrites } from "./internal/scan";
+import { sqlWritesFold } from "./internal/sites.scan";
 import type { IssueKind } from "./internal/validate";
 import { isInCategory } from "@plugins/framework/plugins/tooling/plugins/exempt/core";
 
@@ -48,25 +51,26 @@ const check: Check = {
   async run(ctx) {
     const repo = await ctx.repo();
     const root = repo.root;
-    const schemaFiles = schemaFilesIn(repo).map((f) => resolve(root, f));
+    const schemaFiles = schemaFilesIn(repo);
     const candidates = repo
       .under("plugins")
       .filter(
         (f) => /\.tsx?$/.test(f) && !f.endsWith(".d.ts") && ctx.inScope(f),
       );
+    // Each file's sites, folded along the directory tree: a pass after an
+    // edit parses the edited files only. Then the few holes another file
+    // decides are followed into it (`resolve.ts`), through the run's source
+    // analysis — what those holes name, never the tree.
+    const folded = await foldRepoFiles(repo, candidates, sqlWritesFold, null);
     const scan = await scanSqlWrites({
       root,
-      files: candidates,
-      read: (f) => repo.read(f),
-      readSync: (abs) => {
-        try {
-          return readFileSync(abs, "utf8");
-        } catch (err) {
-          if ((err as NodeJS.ErrnoException).code === "ENOENT") return null;
-          throw err;
-        }
-      },
-      schemaFiles,
+      folded,
+      resolver: createHoleResolver({
+        analysis: await sourceAnalysis(ctx),
+        root,
+        schemaFiles: new Set(schemaFiles),
+      }),
+      schemaFiles: schemaFiles.map((f) => resolve(root, f)),
     });
     if (scan.kind === "failed") return { ok: false, message: scan.message };
 

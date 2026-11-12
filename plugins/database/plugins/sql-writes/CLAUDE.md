@@ -94,11 +94,18 @@ No hand-kept list. Two sources:
   COLUMN` apply after every CREATE. An imperative table whose DDL is generated
   (a rollup's) is known by name only, and its columns are not checked.
 
-## Finding the writes (`check/internal/sites.ts`)
+## Finding the writes (`check/internal/sites.ts`, folded by `sites.scan.ts`)
 
 Every `.ts` / `.tsx` under `plugins/` outside the `test`, `research` and
 `generated` categories, minus modules importing `bun:sqlite` (SQLite's SQL, a
-different database). A site is:
+different database). Each file's sites and marker comments are a function of
+its own bytes, so they are a **fold** kept along the directory tree
+(`plugin-records`' `foldRepoFiles`): a pass after a one-line edit parses the
+edited file, not the ~2.6k files the word prefilter passes (56 hold a site).
+A hole whose value another file decides is recorded **deferred** (an import,
+an exported `const` of a schema file) and followed afterwards
+(`check/internal/resolve.ts`, through the run's source analysis): ~10 files,
+only those the holes name. A site is:
 
 - a drizzle tagged template — a tag spelled `sql` or `…Sql`;
 - an untagged string / template literal that *starts* like a statement (WITH /
@@ -114,8 +121,8 @@ concatenation (`"insert into " + t`), which is no literal to parse.
 ## Holes: `${…}`
 
 Resolved from the source alone, no type checker: a local `const`, an import
-followed through barrels' re-exports (`ts.resolveModuleName` with the repo's
-`paths`), `sql.raw(…)` / `sql.identifier(…)` of a constant string, a property
+followed through barrels' re-exports (the source analysis's module
+resolution, the repo project's `paths` over the run's file set), `sql.raw(…)` / `sql.identifier(…)` of a constant string, a property
 path (`sdkAgentStops.table`). A chain ending at an export of a schema-glob file
 is evaluated by the probe (a table renders as its quoted name, a column as
 drizzle renders it, `"table"."col"`). In a drizzle tag a constant string is a

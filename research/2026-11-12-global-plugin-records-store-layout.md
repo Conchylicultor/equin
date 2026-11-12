@@ -524,3 +524,98 @@ scan's content reads) would have to be recorded precisely first.
 The shared parse behind the sourceAnalysis checks (no-db-backed-notify,
 sql-writes:fit: `parsedTsSource` is the thread's top owner, ~3.6–4.9 s per
 one-line-edit pass).
+
+## The shared parse behind the cross-file checks (task: check pass O(changes), 6)
+
+Measured 2026-11-12, same one-line edit (a comment appended to
+`hints/help-menu/web/index.ts`), `./equin check --scope tree` after a warm pass
+of the same code; standalone probes (temporary, reverted) counted parses.
+
+### Split before
+
+- **no-db-backed-notify: 3,603 parses**, 2,058 of them in the `usesOf` that only
+  looks for `ExcludeFromChangeFeed`. Two causes in source-analysis's `usesOf`:
+  - its selection added `\* as ` to every query: 409 files, of which 33
+    namespace-import a repo module — the rest npm namespaces (`* as React`) and
+    JSDoc lines opening with "as";
+  - each candidate's EVERY import (and every export) was resolved to ask
+    whether it names a target, parsing every module a candidate imports.
+  The rest is the question itself: the ~450 files that spell a serve function,
+  and the code an external loader reaches (~970 files).
+- **sql-writes:fit: 2,604 parses** — every file its word prefilter passes
+  (`insert|update|delete|create…`), on every pass; 56 hold a site, and the hole
+  resolution reads 11 other files.
+
+### Fix
+
+- **`usesOf` parses only what can name a target.** A file is a candidate when
+  it spells a known name or namespace-imports a REPO module (`* as x from
+  "./…"|"@plugins/…"`, or a `* as` ending its line — the old selection missed a
+  namespace import split across lines); an import or re-export is followed only
+  for the names it takes that are known spellings (a whole-module form for all
+  of them), and only an export whose source name is known (or a namespace) is
+  resolved in the fixpoint. A rename spells the name it renames, so its file is
+  selected by it and the fixpoint finds the alias in the next round.
+  Equivalence: no-db-backed-notify's offenders, unreadable spots and feed
+  exclusions are byte-identical on the real tree (exemptions off), and so are
+  `live:*` and `investigate:failures-registered`; a unit test pins rename
+  chains, local re-exports of an import, a re-exported namespace import and a
+  split namespace import.
+- **no-db-backed-notify is input-keyed.** Its question is cross-file (where a
+  serve call's reachable code reads the DB), so it does not fold per file; but
+  every byte it reads goes through `ctx.repo()` and `listCandidateSources`,
+  both recorded. An edit to a file it never read replays the read-set; one it
+  read (or one that moves a selection) re-runs it. The TypeScript version is
+  its signature; `plugin-id/` joins the check-source hash (its verdict calls
+  `pluginDirOfRepoPath` / `isTestCodePath`).
+- **sql-writes:fit folds its sites** (`sites.scan.ts`, `foldRepoFiles`): a
+  file's sites and markers from its own bytes; a hole whose value another file
+  decides is recorded deferred and followed afterwards (`resolve.ts`, through
+  the run's source analysis — module resolution over the run's file set, no
+  `ts.sys` reads). Equivalence: the check's whole result on the real tree
+  (164 write sites, 22 fit issues, 41 hand-written writes) is byte-identical.
+
+| one-line edit, in a full pass | before | after |
+| --- | ---: | ---: |
+| parses, no-db-backed-notify | 3,603 | 0 (read-set hit; 1,502 when it re-runs) |
+| parses, sql-writes:fit | 2,604 | the edited file if it passes the prefilter, + ≤ 11 to resolve holes |
+| files read, no-db-backed-notify | 3,110 | 10 (replay) |
+| files read, sql-writes:fit | 14,003 | 349 |
+| duration, no-db-backed-notify / sql-writes:fit | 25.0 s / 16.2 s | 2.4 s / 17.5 s |
+| check-thread samples: `parsedTsSource` + the two checks + source-analysis | 742 of 3,538 (21%) | none in the top 10 (each < 66 of 2,723) |
+| check-thread samples, whole run | 3,538 | 2,723 |
+| files read by check bodies | 222.4k | 205.9k |
+| grant → verdict | 31.3 s (load 10–12) | 51.0 s (load 3–8) |
+
+The wall time is noise-bound and set by other checks: after, `layout-geometry`
+(a browser check) ran 41.6 s and every other check ended by 24.7 s; before, the
+last ended at 30.1 s. sql-writes:fit's own duration is its schema probe (a
+subprocess importing every schema file) and libpg_query, not its parse.
+
+Cold: sql-writes:fit's first fold (scan module new) 25.0 s / 14,012 reads,
+once, against 16.2 s / 14,003 reads on every pass before; standalone, 6.3 s vs
+10.0 s. no-db-backed-notify on a read-set miss: 20.5 s / 1,253 reads (vs 25.0 s
+/ 3,110 every pass).
+
+What an edit writes to the shared store (sql-writes' fold): a node record per
+directory on the edited path; values only when the edited file's sites change.
+The whole answer is 82 KB of JSON (194 sites, 50 holes deferred) — under the
+256 KB inline limit, so an edit that changes a file's sites writes at most one
+value per ancestor directory, each at most that; a file with no site is a
+35-byte value shared by every such file.
+
+### What is still O(answer) or O(read-set)
+
+- no-db-backed-notify re-runs whole (~1.5k parses) when any file it read
+  changes. Folding it needs per-file summaries of the binding graph its walk
+  follows (each declaration's references, `db` uses, serve calls' options,
+  wrapper parameters) and the walk over summaries — a rewrite of the analysis.
+- sql-writes:fit reads its folded answer (82 KB) and resolves its 50 deferred
+  holes (~11 parses) every pass.
+
+### Next
+
+Making an unbounded whole-tree read in a check's `run()` a declared, visible
+property, and migrating its readers (theme-bridge-reads,
+negated-complex-selector / script-state:no-stylesheet-reads,
+pre-barrel-manifests-complete, boot:closure-digestable, plugins-doc-in-sync).

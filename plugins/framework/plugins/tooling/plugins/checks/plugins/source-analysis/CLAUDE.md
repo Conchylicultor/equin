@@ -37,7 +37,15 @@ icon scan that skipped `{ ...symbol("x") }` and shipped empty icons).
   finds every name a target is exported under (re-exports followed to a
   fixpoint), selects candidates through the caller's grep, and resolves each
   file's imports through every barrel. An import that resolves to no repo file
-  is Unreadable (it might have named the target).
+  is Unreadable (it might have named the target). It parses only what can
+  name a target: candidates are the files spelling one of those names or
+  namespace-importing a REPO module (`* as x from "./…" | "@plugins/…"`, or a
+  `* as` ending its line — an import split across lines), never an npm
+  namespace; and an import or re-export is followed only for the names it
+  takes that are known spellings (a whole-module form for all of them). A
+  rename spells the name it renames, so the fixpoint finds every alias in the
+  round after its source. Following every import of every candidate parsed
+  ~2k modules per pass for no answer (`research/2026-11-12-global-plugin-records-store-layout.md`).
 - `exportedBinding`, `bindingOf`, `initializerOf`: go-to-definition (scope
   aware: parameters, block declarations, hoisted `var`s, catch variables) and a
   `const`'s value — `let`/`var`/parameters/destructuring are Unreadable. A
