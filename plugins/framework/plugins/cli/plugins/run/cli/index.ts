@@ -36,7 +36,7 @@ export default defineCliCommand<[string, string[]], object>({
     {
       name: "<script>",
       description:
-        "Path to a script module inside this checkout (repo-root-relative or absolute)",
+        "Path to a script module inside this checkout (repo-root-relative or absolute), or in this session's own scratch dir",
     },
     {
       name: "[args...]",

@@ -34885,8 +34885,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `setEnvDefault`
               - `unsetEnv`
           - Cross-plugin:
-            - Imported by: 46 plugins — full list in [`plugins/infra/plugins/launcher/plugins/env-names/REFERENCE.md`](../plugins/infra/plugins/launcher/plugins/env-names/REFERENCE.md)
-              - `framework` ×17
+            - Imported by: 47 plugins — full list in [`plugins/infra/plugins/launcher/plugins/env-names/REFERENCE.md`](../plugins/infra/plugins/launcher/plugins/env-names/REFERENCE.md)
+              - `framework` ×18
               - `infra` ×12
               - `database` ×4
               - `packages` ×4

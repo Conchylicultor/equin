@@ -76,11 +76,26 @@ flag it recognizes and reject any it does not, so the declaration sets
 loudly — the flag precedes the script, so no script was named.
 
 **It refuses rather than running something else.** A path that does not exist,
-is not a regular file, is not a module, or resolves outside this checkout is an
+is not a regular file, is not a module, or resolves outside this checkout (and outside the session's
+scratch dir, below) is an
 error naming both the path you typed and the path it resolved to. Bun would
 happily execute a directory's `index.ts` or a file in a sibling checkout — and
 the sibling checkout is precisely the failure this command closes, so it must
 not be reachable through the command that closes it.
+
+**One place outside the checkout is accepted: the session's own scratch dir**
+(`$EQUIN_SCRATCH`), where the root `CLAUDE.md` sends every one-off file. Without
+it, an ad-hoc analysis script had no way to run: this command refused it, and
+the `bun-script` guard rewrote a bare `bun "$EQUIN_SCRATCH/x.ts"` into the same
+refused call — so agents fell back to Python or wrote scratch scripts into the
+worktree. A scratch dir belongs to no checkout, so nothing in it can pull another
+tree's code; what it lacks is a tree to walk up into. So bun is pointed at THIS
+one: `NODE_PATH=<root>/node_modules` for the script's bare npm imports, and
+`--tsconfig-override <root>/tsconfig.json` for its `@plugins/…` path aliases.
+Relative imports between scratch files resolve as usual; a repo file it imports
+resolves from its own location — this checkout. The match is by real path
+(`/tmp` is `/private/tmp`), and only the session's own dir: another session's
+scratch dir, or any other temp path, is still refused.
 
 **The accepted extensions are the guard's — the same declaration, not a copy of
 it.** `MODULE_EXTENSION` lives in `guards/core/module-extension.ts` and is

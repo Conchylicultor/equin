@@ -1,5 +1,9 @@
-import { existsSync, statSync } from "@plugins/packages/plugins/timed-fs/core";
-import { extname, relative, resolve } from "path";
+import {
+  existsSync,
+  realpathSync,
+  statSync,
+} from "@plugins/packages/plugins/timed-fs/core";
+import { extname, join, relative, resolve } from "path";
 import type { CliAction } from "@plugins/framework/plugins/cli/core";
 // The set of extensions this command accepts is READ FROM THE GUARD, not
 // re-stated here. The `bun-script` guard denies `bun <file>` for exactly these
@@ -13,6 +17,10 @@ import { isE2eScriptPath } from "@plugins/framework/plugins/tooling/plugins/e2e-
 import { withDirectOp } from "@plugins/framework/plugins/cli/plugins/op-runtime/cli";
 import { withForegroundPriority } from "@plugins/packages/plugins/spawn-priority/core";
 import { pacedHeapEnv } from "@plugins/packages/plugins/heap-pacing/core";
+import {
+  envName,
+  readEnv,
+} from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import {
   getWorktreeRoot,
   spawnPassthrough,
@@ -31,6 +39,18 @@ function reject(script: string, abs: string, why: string): never {
   process.exit(1);
 }
 
+/**
+ * Whether `abs` sits in this session's own scratch directory (the `SCRATCH`
+ * env key the launcher hands an agent's shell). Compared by real path: `/tmp` is
+ * `/private/tmp` on macOS, and either spelling must match.
+ */
+function inOwnScratch(abs: string): boolean {
+  const scratch = readEnv("SCRATCH");
+  if (!scratch || !existsSync(scratch)) return false;
+  const rel = relative(realpathSync(scratch), realpathSync(abs));
+  return rel !== "" && !rel.startsWith("..") && !rel.startsWith("/");
+}
+
 const run: CliAction<[string, string[]], object> = async (script, args) => {
   const root = await getWorktreeRoot();
 
@@ -45,9 +65,24 @@ const run: CliAction<[string, string[]], object> = async (script, args) => {
   // A script in a SIBLING checkout would resolve its dependencies from that
   // checkout's tree — the exact failure this command exists to close, so it
   // must not be reachable through the command that closes it.
-  const rel = relative(root, abs);
-  if (rel.startsWith("..")) {
-    reject(script, abs, `outside this checkout (${root})`);
+  //
+  // The one place outside the checkout that IS accepted is the session's own
+  // scratch dir (the `SCRATCH` env key), where CLAUDE.md sends every one-off file.
+  // It belongs to no checkout, so nothing in it can pull another tree's code;
+  // what it lacks is a tree to walk up into, so bun is pointed at THIS one:
+  // `NODE_PATH` for its bare npm imports, `--tsconfig-override` for the
+  // `@plugins/…` path aliases. Its relative imports (sibling scratch files)
+  // resolve as usual; a repo file it imports resolves from its own location,
+  // i.e. this checkout.
+  const scratch = inOwnScratch(abs);
+  const rel = scratch ? abs : relative(root, abs);
+  if (!scratch && rel.startsWith("..")) {
+    const scratchDir = readEnv("SCRATCH");
+    reject(
+      script,
+      abs,
+      `outside this checkout (${root}) and this session's scratch dir ($${envName("SCRATCH")}${scratchDir ? ` = ${scratchDir}` : ", unset"})`,
+    );
   }
 
   if (!MODULE_EXTENSION.test(abs)) {
@@ -100,7 +135,17 @@ const run: CliAction<[string, string[]], object> = async (script, args) => {
   const kind = isE2eScriptPath(rel) ? "e2e" : "script";
   const outcome = await withDirectOp(kind, { max: 1 }, async (grant) => {
     const spawnScript = () =>
-      spawnPassthrough([process.execPath, abs, ...args], {
+      spawnPassthrough(
+        scratch
+          ? [
+              process.execPath,
+              "--tsconfig-override",
+              join(root, "tsconfig.json"),
+              abs,
+              ...args,
+            ]
+          : [process.execPath, abs, ...args],
+        {
         cwd: root,
         stdin: "inherit",
         // Paced heap: a script that builds a whole-repo TypeScript program
@@ -109,9 +154,11 @@ const run: CliAction<[string, string[]], object> = async (script, args) => {
         // heap is far below the pacing size and runs as before.
         env: pacedHeapEnv({
           ...process.env,
+            ...(scratch ? { NODE_PATH: join(root, "node_modules") } : {}),
           ...(grant === null ? {} : grant.env()),
         }),
-      });
+        },
+      );
     const { exitCode, signalCode } =
       grant === null
         ? await spawnScript()
