@@ -33,7 +33,7 @@ export function EditView({ event }: ToolRendererProps) {
     <ToolCallCard
       event={event}
       aside={<FilePath filePath={file_path} />}
-      defaultOpen
+      defaultOpen={event.result?.isError === true}
     >
       <Stack gap="sm">
         <InlineDiff

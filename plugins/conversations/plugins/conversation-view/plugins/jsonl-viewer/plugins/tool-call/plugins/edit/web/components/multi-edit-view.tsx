@@ -36,7 +36,7 @@ export function MultiEditView({ event }: ToolRendererProps) {
     <ToolCallCard
       event={event}
       aside={<FilePath filePath={file_path} />}
-      defaultOpen
+      defaultOpen={event.result?.isError === true}
     >
       <Stack gap="md">
         {edits.map((edit, i) => (
