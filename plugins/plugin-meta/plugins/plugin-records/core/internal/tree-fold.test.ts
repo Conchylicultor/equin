@@ -127,8 +127,9 @@ describe("foldFilesCached", () => {
     const edited = { ...files, "src/b/y/f3.txt": "EDIT" };
     const { value, scanned } = await run(store, edited);
     expect(scanned).toEqual(["src/b/y/f3.txt"]);
-    // root, src, src/{a,b,c}, src/b/{w,x,y,z}, src/b/y/f0..f4
-    expect(store.asked() - before).toBe(1 + 1 + 3 + 4 + 5);
+    // src (the root holds only src/, so it is src), src/{a,b,c},
+    // src/b/{w,x,y,z}, src/b/y/f0..f4
+    expect(store.asked() - before).toBe(1 + 3 + 4 + 5);
     expect(value).toBe((await run(createMemoryRecordStore(), edited)).value);
   });
 
@@ -139,6 +140,28 @@ describe("foldFilesCached", () => {
     const { scanned, value } = await run(store, files, { sep: "-" });
     expect(scanned.length).toBe(60);
     expect(value.includes("-")).toBe(true);
+  });
+
+  test("a one-member directory is its member, with no record of its own", async () => {
+    const store = createMemoryRecordStore();
+    const written: string[] = [];
+    const recording: RecordStore = {
+      ...store,
+      environment: store.environment,
+      getMany: (t, k) => store.getMany(t, k),
+      putMany: (t, e) => {
+        if (t === "fold") written.push(...e.map(([k]) => k));
+        return store.putMany(t, e);
+      },
+      flush: () => store.flush(),
+    };
+    const files = { [FOLD_MODULE]: "x", "src/only/deep/f.txt": "F" };
+    const { value } = await run(recording, files);
+    expect(value).toBe("F+");
+    // The root, src/, src/only/ and src/only/deep/ all fold to the one file.
+    expect(written.length).toBe(1);
+    const one = await run(createMemoryRecordStore(), { [FOLD_MODULE]: "x" });
+    expect(one.value).toBe("");
   });
 
   test("an added file is folded in, the rest stays recorded", async () => {

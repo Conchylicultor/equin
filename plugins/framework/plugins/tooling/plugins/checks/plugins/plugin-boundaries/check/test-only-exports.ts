@@ -9,9 +9,10 @@
 // A name nothing imports at all is out of scope — that is dead code, not a
 // test leak.
 //
-// Pure: `findTestOnlyExports(barrels, uses)` takes what the check's one file
-// loop collected (`barrelExportNames` per public barrel, `collectBarrelUses`
-// per source file), so the unit test needs no repo.
+// Pure: `findTestOnlyExports(barrels, uses)` takes what the check's per-file
+// fold collected (`barrelExportNames` per public barrel, `collectBarrelUses`
+// per source file, summarized and combined by `combineBarrelUses`), so the
+// unit test needs no repo.
 
 import { dirname, join } from "path";
 import { isTestCodePath } from "@plugins/framework/plugins/plugin-id/core";
@@ -55,20 +56,20 @@ export function barrelExportNames(src: string): string[] {
 }
 
 /**
- * Every use `importer` makes of a public barrel. `barrels` holds the public
- * barrels' `index.ts` paths; a specifier reaches one either as
+ * Every use `importer` makes of a public barrel. `isBarrel` says which
+ * `index.ts` paths are public barrels; a specifier reaches one either as
  * `@plugins/<p>/<runtime>` or as a relative path landing on `<runtime>/index`.
  */
 export function collectBarrelUses(
   importer: string,
   src: string,
-  barrels: ReadonlySet<string>,
+  isBarrel: (path: string) => boolean,
 ): BarrelUse[] {
   const fromTest = isTestCodePath(importer.split("/"));
   const out: BarrelUse[] = [];
   for (const imp of findImports(src)) {
     if (imp.sideEffect) continue;
-    const barrel = resolveBarrel(importer, imp.specifier, barrels);
+    const barrel = resolveBarrel(importer, imp.specifier, isBarrel);
     if (barrel === null || barrel === importer) continue;
     const clause = imp.clause.trim();
     if (/^(?:type\s+)?\*/.test(clause)) {
@@ -87,7 +88,7 @@ export function collectBarrelUses(
 function resolveBarrel(
   importer: string,
   specifier: string,
-  barrels: ReadonlySet<string>,
+  isBarrel: (path: string) => boolean,
 ): string | null {
   let target: string;
   if (specifier.startsWith("@plugins/")) {
@@ -99,48 +100,106 @@ function resolveBarrel(
   }
   target = target.replace(/\/index(\.tsx?)?$/, "");
   const barrel = `${target}/index.ts`;
-  return barrels.has(barrel) ? barrel : null;
+  return isBarrel(barrel) ? barrel : null;
+}
+
+/**
+ * What a set of importers makes of each public barrel, in a form that folds:
+ * the names shipping code takes (`"all"` once a namespace import takes every
+ * one), and for each name no shipping code took yet, the test files that take
+ * it. A name shipping code takes can never be test-only again, so its test
+ * importers are dropped as soon as it is shipped — the summary stays as small
+ * as the shipped names.
+ */
+export type BarrelUseSummary = Record<
+  string,
+  { shipped: string[] | "all"; tests: Record<string, string[]> }
+>;
+
+/** `uses` (in importer order) as a summary. */
+export function summarizeBarrelUses(
+  uses: readonly BarrelUse[],
+): BarrelUseSummary {
+  return combineBarrelUses(
+    uses.map((use) => {
+      if (!isTestCodePath(use.importer.split("/")))
+        return {
+          [use.barrel]: {
+            shipped: use.names === "all" ? "all" : [...use.names],
+            tests: {},
+          },
+        };
+      if (use.names === "all") return {};
+      // fromEntries defines own properties: a name like `__proto__` stays a key.
+      const tests = Object.fromEntries(
+        use.names.map((n) => [n, [use.importer]]),
+      );
+      return { [use.barrel]: { shipped: [], tests } };
+    }),
+  );
+}
+
+/**
+ * Summaries merged, handed in importer order. Associative, so it folds along
+ * the directory tree: what it keeps of a name is decided by the union of
+ * every part, whichever way the parts were grouped.
+ */
+export function combineBarrelUses(
+  parts: readonly BarrelUseSummary[],
+): BarrelUseSummary {
+  if (parts.length === 1) return parts[0]!;
+  const shipped = new Map<string, Set<string> | "all">();
+  const tests = new Map<string, Map<string, string[]>>();
+  for (const part of parts)
+    for (const [barrel, use] of Object.entries(part)) {
+      const seen = shipped.get(barrel);
+      if (use.shipped === "all" || seen === "all") shipped.set(barrel, "all");
+      else {
+        const set = seen ?? new Set<string>();
+        for (const n of use.shipped) set.add(n);
+        shipped.set(barrel, set);
+      }
+      const byName = tests.get(barrel) ?? new Map<string, string[]>();
+      for (const [name, importers] of Object.entries(use.tests)) {
+        const list = byName.get(name) ?? [];
+        for (const f of importers) if (!list.includes(f)) list.push(f);
+        byName.set(name, list);
+      }
+      tests.set(barrel, byName);
+    }
+  const out: BarrelUseSummary = {};
+  for (const [barrel, names] of [...shipped].sort(([a], [b]) =>
+    a < b ? -1 : a > b ? 1 : 0,
+  )) {
+    const left: Record<string, string[]> =
+      names === "all"
+        ? {}
+        : Object.fromEntries(
+            [...tests.get(barrel)!]
+              .filter(([name]) => !names.has(name))
+              .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)),
+          );
+    out[barrel] = {
+      shipped: names === "all" ? "all" : [...names].sort(),
+      tests: left,
+    };
+  }
+  return out;
 }
 
 /** R13 violations: a published name with at least one importer, all of them test code. */
 export function findTestOnlyExports(
   barrels: ReadonlyMap<string, readonly string[]>,
-  uses: readonly BarrelUse[],
+  uses: BarrelUseSummary,
 ): Violation[] {
-  const shipped = new Map<string, Set<string> | "all">();
-  const testImporters = new Map<string, Map<string, string[]>>();
-  for (const use of uses) {
-    if (!isTestCodePath(use.importer.split("/"))) {
-      const seen = shipped.get(use.barrel);
-      if (seen === "all") continue;
-      if (use.names === "all") {
-        shipped.set(use.barrel, "all");
-        continue;
-      }
-      const set = seen ?? new Set<string>();
-      for (const n of use.names) set.add(n);
-      shipped.set(use.barrel, set);
-      continue;
-    }
-    if (use.names === "all") continue;
-    const byName = testImporters.get(use.barrel) ?? new Map<string, string[]>();
-    for (const n of use.names) {
-      const list = byName.get(n) ?? [];
-      if (!list.includes(use.importer)) list.push(use.importer);
-      byName.set(n, list);
-    }
-    testImporters.set(use.barrel, byName);
-  }
-
   const out: Violation[] = [];
   for (const [barrel, names] of barrels) {
-    const shippedNames = shipped.get(barrel);
-    if (shippedNames === "all") continue;
-    const byName = testImporters.get(barrel);
-    if (!byName) continue;
+    if (!Object.hasOwn(uses, barrel)) continue;
+    const use = uses[barrel]!;
+    if (use.shipped === "all") continue;
     for (const name of new Set(names)) {
-      const importers = byName.get(name);
-      if (!importers || shippedNames?.has(name)) continue;
+      if (!Object.hasOwn(use.tests, name)) continue;
+      const importers = use.tests[name]!;
       const shown = importers
         .slice(0, MAX_IMPORTERS_SHOWN)
         .map((f) => `\`${f}\``);

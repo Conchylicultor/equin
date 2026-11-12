@@ -2,9 +2,9 @@ import {
   asFsPath,
   type PluginId,
 } from "@plugins/framework/plugins/plugin-id/core";
-import type { Check } from "@plugins/framework/plugins/tooling/core";
+import type { RepoFiles } from "@plugins/framework/plugins/tooling/core";
+import { defineFoldCheck } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import { pluginMentionsFold } from "@plugins/plugin-meta/plugins/plugin-refs/core";
-import { foldRepoFiles } from "@plugins/plugin-meta/plugins/plugin-records/core";
 import {
   movedPluginId,
   parsePluginMoves,
@@ -36,7 +36,21 @@ function currentId(id: PluginId, later: readonly PluginMove[]): PluginId {
  * `package.json` is tracked): the name was reused, and every mention of it is
  * that plugin's.
  */
-const movedPluginsUnnamed: Check = {
+/** Each moved-away id (its old directory no longer a plugin), with where it lives now. */
+async function goneIds(repo: RepoFiles): Promise<Map<PluginId, PluginId>> {
+  const ledger = await repo.read(PLUGIN_MOVES_FILE);
+  if (ledger === null)
+    throw new Error(`${PLUGIN_MOVES_FILE} is not in the repo file set`);
+  const moves = parsePluginMoves(ledger);
+  const gone = new Map<PluginId, PluginId>();
+  moves.forEach((m, i) => {
+    if (repo.has(`${dirOf(m.from)}/package.json`)) return;
+    gone.set(m.from, currentId(m.from, moves.slice(i)));
+  });
+  return gone;
+}
+
+const movedPluginsUnnamed = defineFoldCheck({
   id: RULE,
   description:
     "no file names a plugin path (with or without its leading plugins/) or dot id the plugin-move ledger moved away, and none sits under its old directory",
@@ -46,21 +60,17 @@ const movedPluginsUnnamed: Check = {
   },
   // Dated records name what existed then; derived files follow their source.
   outOfScope: ["research", "generated"],
-  async run(ctx) {
-    const repo = await ctx.repo();
-    const ledger = await repo.read(PLUGIN_MOVES_FILE);
-    if (ledger === null)
-      throw new Error(`${PLUGIN_MOVES_FILE} is not in the repo file set`);
-    const moves = parsePluginMoves(ledger);
-
-    // Each moved-away id, with where it lives now.
-    const gone = new Map<PluginId, PluginId>();
-    moves.forEach((m, i) => {
-      if (repo.has(`${dirOf(m.from)}/package.json`)) return;
-      gone.set(m.from, currentId(m.from, moves.slice(i)));
-    });
+  context: async (ctx) => ({
+    ids: [...(await goneIds(await ctx.repo())).keys()].sort(),
+  }),
+  // Folded along the directory tree: after an edit only the edited files are
+  // read and scanned. With nothing moved away there is nothing to look for.
+  files: (repo, { ids }) => (ids.length === 0 ? [] : repo.all()),
+  facts: async (ctx) => goneIds(await ctx.repo()),
+  fold: pluginMentionsFold,
+  async verdict(mentions, { facts: gone }, ctx) {
     if (gone.size === 0) return { ok: true };
-
+    const repo = await ctx.repo();
     const exempt = await ctx.exempt(RULE);
     const problems: string[] = [];
     for (const [id, now] of gone) {
@@ -71,14 +81,6 @@ const movedPluginsUnnamed: Check = {
         );
       }
     }
-    // Folded along the directory tree: after an edit only the edited files
-    // are read and scanned. A file out of scope is never read.
-    const mentions = await foldRepoFiles(
-      repo,
-      repo.all().filter((f) => ctx.inScope(f)),
-      pluginMentionsFold,
-      { ids: [...gone.keys()].sort() },
-    );
     for (const m of mentions) {
       if (exempt.skips(m.file)) continue;
       const now = gone.get(m.id)!;
@@ -109,6 +111,6 @@ const movedPluginsUnnamed: Check = {
         `before it is renamed — or, kept on purpose, an exemption in the file's plugin's exempt/index.ts (rule ${RULE}).`,
     };
   },
-};
+});
 
 export default movedPluginsUnnamed;

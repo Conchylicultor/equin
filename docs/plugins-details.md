@@ -30955,7 +30955,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Exports (values): `parseRuntimeException`
         - **`checks`** — Check runner and built-in checks for ./equin check
           - Core:
-            - Uses: 75 symbols — full list in [`plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md)
+            - Uses: 78 symbols — full list in [`plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md)
               - `framework/tooling` ×11
               - `packages/timed-fs` ×10
               - `framework/tooling/exempt` ×7
@@ -30966,6 +30966,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/launcher/env-names` ×3
               - `infra/spawn` ×3
               - `plugin-meta/parse-utils` ×3
+              - `plugin-meta/plugin-records` ×3
               - `framework/tooling/collected-dir` ×2
               - `infra/paths` ×2
               - `packages/macrotask-yield` ×2
@@ -30989,6 +30990,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `DirFact`
               - `FileFact`
               - `FileSystemView`
+              - `FoldCheck`
+              - `FoldVerdictContext`
               - `GlobFact`
               - `GrepIndexStore`
               - `ImportMatch`
@@ -30996,6 +30999,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `OutstandingCheck`
               - `ProgressRecord`
               - `QueryFact`
+              - `RepoPaths`
               - `RunChecksOptions`
               - `SourceText`
               - `TreeSnapshot`
@@ -31007,6 +31011,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `computeCheckSourceHash`
               - `computeTreeHash`
               - `currentScanView`
+              - `defineFoldCheck`
               - `fingerprint`
               - `gitGrepList`
               - `grepCode`
@@ -31158,7 +31163,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - Exemptions:
                 - Exempts itself from:
                   - `marker-scan-safety/no-adhoc-marker-scan` — `check/parse.ts` (sanctioned)
-                  - `check-thread-safety/no-blocking-check-work` — `check/index.ts`, `check/parse.ts` (debt)
+                  - `check-thread-safety/no-blocking-check-work` — `check/parse.ts` (debt)
                 - Exempted by: `framework/web-core` (0 debt)
             - **`plugin-refs-resolve`**
             - **`plugins-doc-in-sync`**
@@ -31919,7 +31924,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `framework/tooling/checks/inherited-theme-defaults-scoped` (1 debt)
                   - `framework/tooling/checks/migration-hashes-unique` (1 debt)
                   - `framework/tooling/checks/no-reexport-default` (1 debt)
-                  - `framework/tooling/checks/plugin-boundaries` (2 debt)
+                  - `framework/tooling/checks/plugin-boundaries` (1 debt)
                   - `framework/tooling/checks/plugins-have-claudemd` (1 debt)
                   - `framework/tooling/checks/table-defs-in-schema-glob` (1 debt)
                   - `framework/tooling/checks/type-check` (1 debt)
@@ -45509,6 +45514,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework/cli/test`
           - `framework/cli/test/digest`
           - `framework/tooling/boundaries`
+          - `framework/tooling/checks`
           - `framework/tooling/codegen`
           - `framework/tooling/web-artifacts`
           - `plugin-meta/plugin-records/evaluate`

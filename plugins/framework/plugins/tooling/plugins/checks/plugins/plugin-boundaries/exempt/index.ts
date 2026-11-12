@@ -10,7 +10,7 @@ export default [
   },
   {
     rule: "check-thread-safety/no-blocking-check-work",
-    paths: ["check/index.ts", "check/parse.ts"],
+    paths: ["check/parse.ts"],
     kind: "debt",
     task: "task-1793375830-dv7cez",
     reason:

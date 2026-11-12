@@ -76,7 +76,7 @@ interface DirNode {
 type TreeNode = FileNode | DirNode;
 
 /** The selected files as a directory tree, members sorted by name. */
-function treeOf(files: readonly string[]): DirNode {
+function treeOf(files: readonly string[]): TreeNode {
   const root: DirNode = { kind: "dir", path: "", members: [], key: "" };
   const dirs = new Map<string, DirNode>([["", root]]);
   const dirAt = (path: string): DirNode => {
@@ -102,7 +102,21 @@ function treeOf(files: readonly string[]): DirNode {
     dir.members.sort((a, b) =>
       nameOf(a) < nameOf(b) ? -1 : nameOf(a) > nameOf(b) ? 1 : 0,
     );
-  return root;
+  return passThrough(root);
+}
+
+/**
+ * The tree with every one-member directory replaced by its member: its fold is
+ * its member's (`combine([a])` is `a`), so a record of its own would only
+ * repeat the member's under another key. A chain of them — the repo root
+ * holding only `plugins/` — would otherwise rewrite the whole answer once per
+ * link on every edit.
+ */
+function passThrough(node: TreeNode): TreeNode {
+  if (node.kind === "file") return node;
+  if (node.members.length === 1) return passThrough(node.members[0]!);
+  node.members = node.members.map(passThrough);
+  return node;
 }
 
 /**
@@ -125,8 +139,8 @@ export async function foldFilesCached<C extends FoldContext, F>(
   // What the scan sees is what the key holds: the context's JSON, read back.
   const seen = JSON.parse(contextText) as C;
   const spell = (value: F): string => JSON.stringify(value);
+  if (files.length === 0) return fold.combine([]);
   const root = treeOf(files);
-  if (root.members.length === 0) return fold.combine([]);
 
   const values = new Map<TreeNode, F>();
   const toScan: FileNode[] = [];
@@ -169,11 +183,13 @@ export async function foldFilesCached<C extends FoldContext, F>(
       level = next;
     }
   } else {
-    const all = (dir: DirNode): void => {
-      missedDirs.push(dir);
-      for (const m of dir.members)
-        if (m.kind === "file") toScan.push(m);
-        else all(m);
+    const all = (node: TreeNode): void => {
+      if (node.kind === "file") {
+        toScan.push(node);
+        return;
+      }
+      missedDirs.push(node);
+      for (const m of node.members) all(m);
     };
     all(root);
   }

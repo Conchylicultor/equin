@@ -15,10 +15,21 @@ const createRule = lintRuleCreator(import.meta.url);
  * A `check/` FOLDER's own code — `<plugin>/check/…`, not a plugin named
  * `check` (`…/plugins/check/cli/…`). Its tests are out of scope (contributed
  * rules are off in test files by default).
+ *
+ * So is a `*.scan.ts` module: a plugin-records file scan or fold
+ * (`FileScan` / `FileFold`, the per-file half of a `defineFoldCheck`). Its
+ * `scan(src)` is synchronous by contract — it is handed the bytes and must
+ * answer from them alone — and the fold that calls it owns the thread: it
+ * yields every ~10 ms between files, and after the first pass it scans only
+ * the files an edit moved.
  */
 const CHECK_FOLDER = /\/plugins\/(?:[^/]+\/plugins\/)*[^/]+\/check\//;
 function inScope(filename: string): boolean {
-  return CHECK_FOLDER.test(filename) && !/\/plugins\/check\//.test(filename);
+  return (
+    CHECK_FOLDER.test(filename) &&
+    !/\/plugins\/check\//.test(filename) &&
+    !filename.endsWith(".scan.ts")
+  );
 }
 
 /**

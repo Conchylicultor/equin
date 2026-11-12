@@ -408,6 +408,7 @@ its docblock records — and then lowered as readily as raised.
     - `framework/cli/test`
     - `framework/cli/test/digest`
     - `framework/tooling/boundaries`
+    - `framework/tooling/checks`
     - `framework/tooling/codegen`
     - `framework/tooling/web-artifacts`
     - `plugin-meta/plugin-records/evaluate`

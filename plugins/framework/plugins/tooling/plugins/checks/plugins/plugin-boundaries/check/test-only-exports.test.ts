@@ -2,7 +2,9 @@ import { describe, expect, it } from "bun:test";
 import {
   barrelExportNames,
   collectBarrelUses,
+  combineBarrelUses,
   findTestOnlyExports,
+  summarizeBarrelUses,
 } from "./test-only-exports";
 
 const JOBS = "plugins/infra/plugins/jobs/server/index.ts";
@@ -19,9 +21,17 @@ const BARREL_SET = new Set(BARRELS.keys());
 /** R13 messages for a repo made of JOBS plus these importer files. */
 function r13(files: Record<string, string>): string[] {
   const uses = Object.entries(files).flatMap(([path, src]) =>
-    collectBarrelUses(path, src, BARREL_SET),
+    collectBarrelUses(path, src, (p) => BARREL_SET.has(p)),
   );
-  return findTestOnlyExports(BARRELS, uses).map((v) => v.message);
+  // One summary per importer, folded pairwise and whole: the same answer.
+  const perFile = uses.map((u) => summarizeBarrelUses([u]));
+  const whole = summarizeBarrelUses(uses);
+  const paired = perFile.reduce(
+    (acc, p) => combineBarrelUses([acc, p]),
+    combineBarrelUses([]),
+  );
+  expect(paired).toEqual(whole);
+  return findTestOnlyExports(BARRELS, whole).map((v) => v.message);
 }
 
 const TEST =

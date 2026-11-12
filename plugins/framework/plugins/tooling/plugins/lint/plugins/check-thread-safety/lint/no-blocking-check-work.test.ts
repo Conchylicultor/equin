@@ -27,6 +27,12 @@ ruleTester.run("no-blocking-check-work", rule, {
       code: `for (const f of fs) readFileSync(f);`,
       filename: "/repo/plugins/framework/plugins/cli/plugins/check/cli/run.ts",
     },
+    // A file scan / fold module: `scan(src)` is synchronous by contract, and
+    // the fold that calls it yields between files.
+    {
+      code: `export const fold = { scan: (src) => maskSource(src) }; for (const s of xs) maskSource(s);`,
+      filename: "/repo/plugins/foo/check/foo.scan.ts",
+    },
     // The async forms.
     {
       code: `await readFile("x"); await repo.read("x"); await maskedSource(s); await parsedTsSource(ts, s);`,

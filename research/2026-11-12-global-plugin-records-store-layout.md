@@ -248,3 +248,70 @@ The same fold for the next file-local whole-tree reader by cost:
 plugin-boundaries (52.9k reads, ~6 s of thread). Then the shared TS parse
 (sourceAnalysis checks), parse-utils:mask-sync, sql-writes:fit and the grep
 selections, each needing its per-file part separated from its cross-file part.
+
+## The fold as the check API's shape: plugin-boundaries (task: check pass O(changes), 2)
+
+`checks/core` gains `defineFoldCheck`: a check declares its per-file work (a
+plugin-records `FileFold` in a `*.scan.ts` module), the small context every
+file's part reads (part of the key), what the verdict alone reads, and the
+verdict — which is handed the file set without `read`. The runner sees an
+ordinary `Check`. plugin-boundaries is its first user, relocate's
+moved-plugins-unnamed its second (a mechanical rewrite of its `foldRepoFiles`
+call). boundary-rules stays on `foldRepoFiles` directly: it lives in
+`boundaries/core`, and `checks/core` importing back into it would close a
+plugin cycle.
+
+plugin-boundaries split: per file (the fold) — R1 (a package.json), R3 purity
+and R12 (a barrel), R4–R10, and what the cross-file rules need of each file:
+its R6 edges, its R13 barrel uses (`combineBarrelUses`: shipped names, plus the
+test importers of names nothing shipped takes yet — associative, and as small
+as the shipped names), a public barrel's names, its re-exports
+(`summarizeExports`). Across files (the verdict, no reads) — R1 missing
+package.json, R3 barrel-required and the provenance chase over the folded
+re-exports, R6 cycles, R11, R13. Equivalence: the old and new check report
+the same 19 violations on an injected fixture exercising every rule.
+
+Measured 2026-11-12, host load 17–34 (not calm; no calm window came):
+
+| plugin-boundaries | before | after |
+| --- | ---: | ---: |
+| one-line edit, in a full pass: files read | 52,937 | 2,300 |
+| one-line edit, in a full pass: check-thread samples (owner `check …/plugin-boundaries`) | 1,410 (~9.4 s at 150 Hz) | below the top 10 (< 234) |
+| one-line edit, alone: duration / reads | 8.6 s / 56.7k | 0.4–0.8 s / 6.0k |
+| cold fold (scan module edited), alone: duration / reads | (every run) 8.6 s / 56.7k | 3.4 s / 24.4k |
+
+The cold case reads each file once (the old walk read barrels and re-export
+chains a second time), so it is cheaper than the old every-run cost too. The
+6.0k reads left alone are the shared inputs a fresh process builds first (the
+plugin tree, the collected-dir discovery, the exemption manifests, the scan
+module's import graph); in a full pass another check usually builds the
+plugin tree first, leaving 2.3k.
+
+**What an edit writes.** A directory's record holds its subtree's whole
+answer, so each edit writes the answer again for every ancestor of the edited
+file. plugin-boundaries' answer over the repo was 4.3 MB at first (re-exports
+1.8 MB, edges 1.7 MB); edges grouped by source (`<from>\0<runtime>` → targets)
+and re-exports spelled as tuples bring it to 2.8 MB (boundary-rules': 1.7 MB).
+And `foldFilesCached` now treats a one-member directory as its member
+(`combine([a])` is `a`): the repo root, which holds only `plugins/`, no longer
+writes a second copy of the whole answer. The answer stays O(repo) because the
+verdict's inputs are (the cycle graph, every barrel's names and re-exports);
+each edit writes about one whole answer plus its plugin's subtree, reclaimed
+after 7 days unread.
+
+Whole pass, one-line edit: 58.5 s → 62.4 s from start to verdict, at load 17
+vs 26 — noise-bound; files read by check bodies 236.7k → 180.4k. The thread is
+now led by the shared TS parse (`parsedTsSource`, ~10 s), grep-index `select`
+(~7 s), `platformOffenders` (~4.5 s).
+
+### Next
+
+The rest of the whole-tree readers by measured cost, each a fold check once its
+per-file part is separated from its cross-file part: parse-utils:mask-sync
+(16.9k reads), theme-bridge-reads (16.6k), sql-writes:fit (14.0k),
+negated-complex-selector / script-state:no-stylesheet-reads (13.9k each),
+pre-barrel-manifests-complete (13.1k), boot:closure-digestable (11.9k); and the
+shared TS parse behind the sourceAnalysis checks. Nothing yet stops a new check
+from doing whole-tree work in `run()`: the runner counts each check's reads
+(`fs` on its `end` record), so an unbounded read can be made a declared,
+visible property of the check.

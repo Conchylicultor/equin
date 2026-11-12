@@ -27,6 +27,37 @@ left in that gitignored directory counted as source and failed its coverage
 gate. Both ask git for tracked + untracked-not-ignored — the same universe
 `computeTreeHash` builds. The `no-adhoc-repo-walk` lint rule enforces it.
 
+## A check whose work is per file is a fold check (`defineFoldCheck`)
+
+A check that judges each file on its own bytes (an import grammar, a
+per-file pattern) and then decides across files (a cycle, "only tests import
+it") is written as **`defineFoldCheck`** (`core/fold-check.ts`), not as a
+`run()` that reads the whole tree:
+
+- `context(ctx)` — small plain data every file's part also reads (the plugin
+  set), part of every record's key;
+- `files(repo, context)` — which files, chosen from paths alone;
+- `fold` — a plugin-records `FileFold` (`scan(src, rel, context)` and an
+  associative `combine`) in a `*.scan.ts` module of its own;
+- `facts(ctx)` — what the verdict alone reads beyond the paths (a shared,
+  memoized input), keyed by nothing;
+- `verdict(folded, { context, facts }, ctx)` — the cross-file rules, handed
+  the file set WITHOUT `read`.
+
+The fold's records are kept along the directory tree, so a pass after an
+edit reads and judges only the edited files (an unchanged directory is one
+record), and a cold store reads each file once. A one-line edit re-ran
+plugin-boundaries' whole-tree walk (52.9k reads, ~9 s of check thread); as a
+fold it reads the edited file (research/2026-11-12-global-plugin-records-store-layout.md).
+An input-keyed fold check needs no read-set code: keying a file's record takes
+its blob id through the recording file set, which records the file.
+
+Migrating a check: move its per-file body into the scan (returning what the
+cross-file part needs of the file, not the bytes), make the cross-file part
+the verdict. A rule that needs another file's bytes is cross-file — fold what
+it reads of each file (plugin-boundaries' `summarizeExports`). Users:
+`plugin-boundaries`, `relocate:moved-plugins-unnamed`.
+
 ## Reading code: `sourceAnalysis`, not regexes
 
 A check that asks a question about code — where a function is called, what an
@@ -509,7 +540,7 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
 
 - Description: Check runner and built-in checks for ./equin check
 - Core:
-  - Uses: 75 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 78 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `framework/tooling` ×11
     - `packages/timed-fs` ×10
     - `framework/tooling/exempt` ×7
@@ -520,6 +551,7 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
     - `infra/launcher/env-names` ×3
     - `infra/spawn` ×3
     - `plugin-meta/parse-utils` ×3
+    - `plugin-meta/plugin-records` ×3
     - `framework/tooling/collected-dir` ×2
     - `infra/paths` ×2
     - `packages/macrotask-yield` ×2
@@ -543,6 +575,8 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
     - `DirFact`
     - `FileFact`
     - `FileSystemView`
+    - `FoldCheck`
+    - `FoldVerdictContext`
     - `GlobFact`
     - `GrepIndexStore`
     - `ImportMatch`
@@ -550,6 +584,7 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
     - `OutstandingCheck`
     - `ProgressRecord`
     - `QueryFact`
+    - `RepoPaths`
     - `RunChecksOptions`
     - `SourceText`
     - `TreeSnapshot`
@@ -561,6 +596,7 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
     - `computeCheckSourceHash`
     - `computeTreeHash`
     - `currentScanView`
+    - `defineFoldCheck`
     - `fingerprint`
     - `gitGrepList`
     - `grepCode`

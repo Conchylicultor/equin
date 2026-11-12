@@ -1,13 +1,13 @@
 // plugin-boundaries' input-keyed read-set (Stage 3 of the input-keyed check
 // cache — see research/2026-07-17-global-input-keyed-check-cache.md).
 //
-// plugin-boundaries is one of the most expensive checks: it covers the ENTIRE
-// plugins/ source tree (buildPluginTree + the git-derived enumeration in
-// ./source-files and ./repo-tree), reads every .ts/.tsx file, parses its
-// imports, and evaluates them against the boundary rules — plus reads every package.json (R1 naming + the compositionRoot marker)
-// and every runtime barrel, and derives the standard-dir set from every
-// core/*.ts. Its OUTER cache was whole-tree keyed, so ANY byte change anywhere
-// re-ran the whole walk, and every push-rebase was a guaranteed miss.
+// plugin-boundaries covers the ENTIRE plugins/ source tree (buildPluginTree +
+// the git-derived enumeration in ./source-files and ./repo-tree): its fold
+// judges every .ts/.tsx file and every package.json (R1 naming + the
+// compositionRoot marker), and it derives the standard-dir set from every
+// core/*.ts. The fold keys each folded file by its blob through the recording
+// file set, which records it already; this read-set states the same facts
+// explicitly, independent of how the fold reaches them.
 //
 // This module records, into the ambient recording FileSystemView, EVERY
 // filesystem fact the verdict depends on, so validate-by-replay turns a change
