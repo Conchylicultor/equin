@@ -18,10 +18,11 @@ The list is plain data (`web/internal/catalog.ts`): the site is a written page,
 so adding an app to equin does not add it here — edit the catalog. The homepage's
 layers band keeps its own shorter teaser of the same apps.
 
-**A card opens the live demo.** An app the homepage's live demo carries has a
-place in it (`core/demo-places.ts`, `APP_DEMO_PLACES`, keyed by the catalog's
-id — where its screenshot is taken): the whole card is a link to the homepage,
-where the demo starts — not to the staged frame the picture shows — a
+**A card opens the app live.** An app the homepage's live demo carries has an
+entry in `core/demo-places.ts` (`APP_DEMO_PLACES`, keyed by the catalog's id:
+the app's `home`, and the staged `shot` place its screenshot is taken at): the whole
+card is a link to the homepage with the demo maximized on the app's home
+(`/about/at/<home>;full=1`) — never the staged screenshot frame — a
 full-bleed button behind the card's content, so Install stays its own control,
 and an always-drawn "Try it live" chip on the picture says so before any hover.
 
@@ -29,8 +30,8 @@ The screenshots live in `web/shots/`: taken with the website's
 `e2e/app-screenshots.ts`, then cut down to 640px JPEGs (`sips -Z 640 -s format
 jpeg`), because a web artifact inlines every image it imports as a data URI
 (this plugin is in the deferred tier, so it never weighs on boot). An app the
-demo carries is shot IN the demo at its `APP_DEMO_PLACES` place — the demo's
-made-up data, and exactly the frame its card opens on; pick a place that shows
+demo carries is shot IN the demo at its `APP_DEMO_PLACES` `shot` place — the demo's
+made-up data; pick a place that shows
 the app in use (a song in the piano roll, a page of blocks), not its empty
 landing. Shoot main (`--url http://equin.localhost:9000`): a worktree deploy
 wears the red experimental frame. Any other app is shot on the instance, with

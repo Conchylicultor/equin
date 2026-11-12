@@ -2,7 +2,7 @@
 // gallery's screenshots can be refreshed whenever an app's design moves.
 //
 // An app the homepage's live demo carries is photographed IN the demo, at its
-// place (`APP_DEMO_PLACES`, the apps page's core): the homepage at
+// staged `shot` place (`APP_DEMO_PLACES`, the apps page's core): the homepage at
 // `/about/at/<place>;full=1`, the demo maximized over the page — the demo's
 // own made-up data, never anyone's real one. Every tip the demo raises is answered before
 // the shot, so none covers the app.
@@ -62,9 +62,9 @@ const INSTANCE_APPS: Readonly<Record<string, AppRef>> = {
 
 /** Each gallery app and the path that shows it. */
 const GALLERY: { id: string; path: string }[] = [
-  ...Object.entries(APP_DEMO_PLACES).map(([id, place]) => ({
+  ...Object.entries(APP_DEMO_PLACES).map(([id, { shot }]) => ({
     id,
-    path: websiteApp.basePath + embedTailPath(place, { maximized: true }),
+    path: websiteApp.basePath + embedTailPath(shot, { maximized: true }),
   })),
   ...Object.entries(INSTANCE_APPS).map(([id, app]) => ({
     id,

@@ -1,25 +1,45 @@
+/** A gallery app the homepage's live demo carries. */
+export interface AppDemoPlace {
+  /**
+   * The app's home — its base path (`/sonata`): the card's "Try it live"
+   * opens the demo maximized there (`/about/at/<home>;full=1`), where a
+   * visitor starts using it. Text, not the app's descriptor: importing an
+   * app's shell would pull it into the website composition's bundle.
+   */
+  readonly home: string;
+  /**
+   * The staged frame the card's picture is taken at — an app-rooted location
+   * inside the demo (`/sonata/song/<id>;bar=12`), photographed by the
+   * website's `e2e/app-screenshots.ts`. Never where the card opens: a frame
+   * picked for a picture is not where someone trying the app begins.
+   */
+  readonly shot: string;
+}
+
 /**
- * Where each gallery app opens in the homepage's live demo — an app-rooted
- * location inside the demo (`/sonata/song/<id>;bar=12`), keyed by the
- * catalog's app id. The website's `e2e/app-screenshots.ts` photographs that
- * frame for the gallery card's picture; the card itself (a "Try it live" link)
- * opens the homepage, where the demo starts from its own beginning.
+ * Every gallery app the homepage's live demo carries
+ * (`website/demos/workspace`), keyed by the catalog's app id.
  *
- * Only apps the demo carries (`website/demos/workspace`) have one; the ids
- * below are the demo's seeded ones (its story, `story/core`), written as text
- * because the site never bundles the story. A frame worth publishing is a
- * real use of the app — a song in the piano roll, a page with every block —
- * not its empty landing.
+ * Every `shot` lies under its `home`. The ids in `shot` are the demo's seeded ones (its story, `story/core`),
+ * written as text because the site never bundles the story. A frame worth
+ * publishing is a real use of the app — a song in the piano roll, a page with
+ * every block — not its empty landing.
  */
-export const APP_DEMO_PLACES: Readonly<Record<string, string>> = {
+export const APP_DEMO_PLACES: Readonly<Record<string, AppDemoPlace>> = {
   // The practice-timer agent, waiting for review.
-  agents: "/agents/c/conv-demo-practice-timer",
-  prototypes: "/prototypes",
+  agents: { home: "/agents", shot: "/agents/c/conv-demo-practice-timer" },
+  prototypes: { home: "/prototypes", shot: "/prototypes" },
   // "Block tour": one of every block.
-  pages: "/pages/page/block-1760000000-demo30",
+  pages: { home: "/pages", shot: "/pages/page/block-1760000000-demo30" },
   // Chopin's Nocturne Op. 48 No. 1 in the piano roll, a few bars in.
-  sonata: "/sonata/song/song-1792900000-demo04;bar=12",
+  sonata: {
+    home: "/sonata",
+    shot: "/sonata/song/song-1792900000-demo04;bar=12",
+  },
   // Demo's home folder, a note previewed beside it.
-  files: "/files/browse/~;fs=browser/preview/This%20week.md",
-  maps: "/places",
+  files: {
+    home: "/files",
+    shot: "/files/browse/~;fs=browser/preview/This%20week.md",
+  },
+  maps: { home: "/places", shot: "/places" },
 };
