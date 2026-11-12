@@ -397,6 +397,16 @@ preemption mid-tick no longer reads as watch cost. Per-check `stalledMs` and
   the interval also covers other work that ran while the import awaited.
 - `native <leaf>`: no source frame at all, and no activity running.
 
+**Reading an owner's example stack** (`OwnerShare.example`): one real sample
+from the owner's **busiest path** (innermost frame + innermost repo frame, lines
+ignored), never its first sample — a first sample can be a 5 ms regex while the
+seconds are a directory walk deeper in the same check. `exampleSamples` (the
+transcript's `busiest path: N of M`) says how representative it is. When the
+innermost repo frame lies past the frame budget, the example is the leaf, a
+`… N frames` marker, then the stack from that repo frame out — so it names the
+repo code that called into the dependency, and the outbox's staleness paths
+have a file to diff.
+
 **Reading a stall's kind split**: an owner says WHOSE code held the thread;
 `classifyLeaf` (`core/thread-attribution.ts`) says WHAT it was doing, sorting
 each sample's innermost frame into `blocking-io` (a native `*Sync` frame — the

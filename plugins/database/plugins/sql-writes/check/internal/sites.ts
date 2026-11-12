@@ -515,7 +515,16 @@ function propName(n: ts.PropertyName): string | null {
   return ts.isIdentifier(n) || ts.isStringLiteral(n) ? n.text : null;
 }
 
-/** The repo's compiler options (for `paths`), read from its root tsconfig. */
+/**
+ * The repo's compiler options (for `paths`), read from its root tsconfig and
+ * its `extends` chain.
+ *
+ * OPTIONS ONLY: the host lists no directory. Over `ts.sys`, parsing also
+ * expands the tsconfig's `include` globs, i.e. walks the whole repo with
+ * `readdirSync` + `realpathSync` on the check thread — measured 3.6 s of a
+ * 4.7 s stall (report-1794164673-6le9e5) — for a `fileNames` list nothing
+ * reads. The files to scan are the check's own candidates.
+ */
 export function repoCompilerOptions(root: string): ts.CompilerOptions {
   const configPath = resolve(root, "tsconfig.json");
   const read = ts.readConfigFile(configPath, ts.sys.readFile);
@@ -523,6 +532,26 @@ export function repoCompilerOptions(root: string): ts.CompilerOptions {
     throw new Error(
       `sql-writes: cannot read ${configPath}: ${String(read.error.messageText)}`,
     );
-  return ts.parseJsonConfigFileContent(read.config, ts.sys, dirname(configPath))
-    .options;
+  const host: ts.ParseConfigHost = {
+    useCaseSensitiveFileNames: ts.sys.useCaseSensitiveFileNames,
+    readDirectory: () => [],
+    fileExists: ts.sys.fileExists,
+    readFile: ts.sys.readFile,
+  };
+  const parsed = ts.parseJsonConfigFileContent(
+    read.config,
+    host,
+    dirname(configPath),
+    undefined,
+    configPath,
+  );
+  // 18003: "No inputs were found" — the host lists no directory on purpose.
+  const errors = parsed.errors.filter((d) => d.code !== 18003);
+  if (errors.length > 0)
+    throw new Error(
+      `sql-writes: cannot parse ${configPath}: ${errors
+        .map((d) => ts.flattenDiagnosticMessageText(d.messageText, "\n"))
+        .join("\n")}`,
+    );
+  return parsed.options;
 }

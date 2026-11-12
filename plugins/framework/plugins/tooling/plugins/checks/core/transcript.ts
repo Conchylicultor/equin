@@ -220,6 +220,11 @@ export function renderThreadBlock(thread: ThreadSummary): string[] {
       lines.push(
         `    ${percent(o.samples, stall.samples).padStart(4)}  ${o.owner}`,
         ...detailLines(o),
+        ...(o.example.length > 0 && o.exampleSamples < o.samples
+          ? [
+              `          (busiest path: ${o.exampleSamples} of ${o.samples} samples)`,
+            ]
+          : []),
         ...o.example.map((frame) => `          ${frame}`),
       );
     }

@@ -104,12 +104,14 @@ function summary(over: Partial<ThreadSummary> = {}): ThreadSummary {
     owner: "check x",
     samples: 60,
     example: ["spin @ plugins/x/check/index.ts:3"],
+    exampleSamples: 60,
     detail: [],
   };
   const helper = {
     owner: "shared helper @ plugins/y/core/h.ts",
     samples: 20,
     example: ["helper @ plugins/y/core/h.ts:9"],
+    exampleSamples: 20,
     detail: [],
   };
   return {
@@ -245,6 +247,7 @@ describe("renderThreadBlock", () => {
             owner: "import",
             samples: 100,
             example: [],
+            exampleSamples: 0,
             detail: [{ name: "apps/mail", samples: 40 }],
             ms: null,
           },

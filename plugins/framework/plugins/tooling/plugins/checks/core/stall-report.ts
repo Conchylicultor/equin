@@ -80,6 +80,7 @@ function reportOwner(share: OwnerShare): CheckThreadStallOwner {
     owner: share.owner,
     samples: share.samples,
     example: share.example,
+    exampleSamples: share.exampleSamples,
   };
 }
 

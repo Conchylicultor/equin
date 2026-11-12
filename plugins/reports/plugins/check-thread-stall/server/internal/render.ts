@@ -22,6 +22,11 @@ function ownerLines(owners: readonly CheckThreadStallOwner[]): string[] {
   for (const owner of owners) {
     lines.push(`- \`${owner.owner}\` — ${owner.samples} samples`);
     if (owner.example.length > 0) {
+      lines.push(
+        owner.exampleSamples === undefined
+          ? "  its first sample (of unknown weight):"
+          : `  its busiest path, ${owner.exampleSamples} of ${owner.samples} samples:`,
+      );
       lines.push("  ```");
       for (const frame of owner.example) lines.push(`  ${frame}`);
       lines.push("  ```");

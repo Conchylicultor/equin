@@ -201,7 +201,10 @@ export interface ProgressStall {
   running: string[];
   bootstrap: string[];
   samples: number;
-  owners: Array<RecordOwner & { example: string[] }>;
+  /** `exampleSamples`: how many of the owner's samples took its example's path
+   *  (`OwnerShare.exampleSamples`). Optional on the wire: older lines carry the
+   *  owner's first sample instead, of unknown weight. */
+  owners: Array<RecordOwner & { example: string[]; exampleSamples?: number }>;
   /**
    * Sample counts by innermost-frame kind (blocking-io/process/module-load/cpu/
    * native — see `classifyLeaf`). OPTIONAL on the wire for the same reason as
@@ -268,6 +271,7 @@ function stallRecord(stall: ThreadStall): ProgressStall {
     owners: stall.owners.slice(0, STALL_RECORD_OWNERS).map((share) => ({
       ...recordOwner(share),
       example: share.example.slice(0, STALL_RECORD_FRAMES),
+      exampleSamples: share.exampleSamples,
     })),
     kinds: stall.kinds,
     leaves: stall.leaves,

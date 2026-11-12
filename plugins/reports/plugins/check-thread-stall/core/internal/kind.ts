@@ -26,13 +26,22 @@ export const STALL_REPORT_MS = 2_000;
 /** A run whose stalls add up to at least this much HELD time files one `total` report. See above. */
 export const TOTAL_REPORT_MS = 20_000;
 
-/** One owner of the thread, with the first frames of one real stack. */
+/** One owner of the thread, with the frames of one real stack on its busiest path. */
 const OwnerSchema = z.object({
   /** `check <plugin>`, `shared <fn @ path>`, `import`, or `native <leaf>`. */
   owner: z.string(),
   samples: z.number().int(),
-  /** Innermost first, as `name @ path:line` frame keys. */
+  /**
+   * Innermost first, as `name @ path:line` frame keys — one sample from the
+   * owner's busiest path, a `… N frames` marker standing for dependency and
+   * native frames between its leaf and the repo code that called them.
+   */
   example: z.array(z.string()),
+  /**
+   * How many of `samples` took the example's path. Optional on read only: rows
+   * filed before it carry the owner's FIRST sample, of unknown weight.
+   */
+  exampleSamples: z.number().int().optional(),
 });
 export type CheckThreadStallOwner = z.infer<typeof OwnerSchema>;
 

@@ -258,11 +258,17 @@ export interface OwnerShare {
   owner: string;
   samples: number;
   /**
-   * ONE representative sample's stack, innermost first, as frame keys — the
-   * first sample seen for this owner. `frame.line` is the EXECUTING line, so
-   * read it as "a" position on the owner's path, not "the" position.
+   * ONE representative sample's stack, innermost first, as frame keys — see
+   * `exampleFrames`. Taken from the owner's busiest PATH (`pathKey`), not its
+   * first sample: a first sample is wherever the owner happened to be when the
+   * sampler first caught it, and on 2026-11-12 that named a 5 ms regex in
+   * sql-writes for a stall whose 3.6 s were a repo-wide directory walk further
+   * down the same check (report-1794164673-6le9e5). `frame.line` is the
+   * EXECUTING line, so read it as "a" position on that path, not "the" one.
    */
   example: string[];
+  /** How many of `samples` took the example's path — how representative it is. */
+  exampleSamples: number;
   /**
    * What an owner that pools many sources was made of (an `import` owner's
    * evaluated plugins, an `activity` owner's instances), busiest first. Empty
@@ -273,6 +279,66 @@ export interface OwnerShare {
 
 /** How many frames an example keeps — the transcript's depth; records cut it further. */
 export const EXAMPLE_FRAMES = 8;
+
+/** Innermost frames an elided example keeps before its `… N frames` marker. */
+const ELIDED_HEAD = 2;
+
+/** A frame in this repo's own code: a source file in the checkout, not a dependency's. */
+function repoRelOf(frame: StackFrame, roots: readonly string[]): string | null {
+  const source = sourceOf(frame);
+  if (source === null || packageOf(source) !== null) return null;
+  return relativize(source, roots);
+}
+
+/**
+ * The frames an example keeps, innermost first: the innermost
+ * `EXAMPLE_FRAMES`, unless the innermost REPO frame lies deeper — then the
+ * leaf (`ELIDED_HEAD` frames), a `… N frames` marker for the dependency and
+ * native frames between, and the stack from that repo frame outwards.
+ *
+ * Without it, a stack deep inside a dependency (TypeScript's config parser
+ * walking directories is 15+ frames of typescript.js) shows only the
+ * dependency: it names no code this repo can change, and leaves the outbox's
+ * staleness paths (`codePathsOf`) empty. The repo frame is the call into it.
+ * Cut further by a caller (a progress record keeps 5), the head, the marker
+ * and that repo frame survive.
+ */
+export function exampleFrames(
+  frames: readonly StackFrame[],
+  roots: readonly string[],
+): string[] {
+  const shorten = (sourceURL: string): string =>
+    shortenSource(sourceURL, roots);
+  const repoAt = frames.findIndex((frame) => repoRelOf(frame, roots) !== null);
+  if (repoAt < EXAMPLE_FRAMES)
+    return frames
+      .slice(0, EXAMPLE_FRAMES)
+      .map((frame) => frameKey(frame, shorten));
+  const tail = EXAMPLE_FRAMES - ELIDED_HEAD - 1;
+  return [
+    ...frames.slice(0, ELIDED_HEAD).map((frame) => frameKey(frame, shorten)),
+    `… ${repoAt - ELIDED_HEAD} frames`,
+    ...frames
+      .slice(repoAt, repoAt + tail)
+      .map((frame) => frameKey(frame, shorten)),
+  ];
+}
+
+/**
+ * Which path a sample took, for choosing an owner's example: the innermost
+ * frame's name and the innermost repo frame (function and file), LINES LEFT
+ * OUT — `line` is the executing line, so keyed with it one loop would split
+ * into a key per line and the busiest path would lose to a first sample.
+ */
+function pathKey(
+  frames: readonly StackFrame[],
+  roots: readonly string[],
+): string {
+  const leaf = frames[0];
+  const repo = frames.find((frame) => repoRelOf(frame, roots) !== null);
+  const repoKey = repo ? `${nameOf(repo)} @ ${repoRelOf(repo, roots)}` : "";
+  return `${leaf ? nameOf(leaf) : "(no frames)"} | ${repoKey}`;
+}
 
 /** How many entries an owner's `detail` keeps. */
 const DETAIL_ENTRIES = 3;
@@ -293,11 +359,14 @@ export interface OwnerTally {
 export function createOwnerTally(roots: readonly string[]): OwnerTally {
   const buckets = new Map<
     string,
-    { samples: number; example: string[]; detail: Map<string, number> }
+    {
+      samples: number;
+      /** Per path (`pathKey`): its count and the first stack seen on it. */
+      paths: Map<string, { samples: number; example: string[] }>;
+      detail: Map<string, number>;
+    }
   >();
   let samples = 0;
-  const shorten = (sourceURL: string): string =>
-    shortenSource(sourceURL, roots);
 
   return {
     get samples() {
@@ -308,16 +377,18 @@ export function createOwnerTally(roots: readonly string[]): OwnerTally {
       const key = ownerLabel(owner);
       let bucket = buckets.get(key);
       if (!bucket) {
-        bucket = {
-          samples: 0,
-          example: frames
-            .slice(0, EXAMPLE_FRAMES)
-            .map((frame) => frameKey(frame, shorten)),
-          detail: new Map(),
-        };
+        bucket = { samples: 0, paths: new Map(), detail: new Map() };
         buckets.set(key, bucket);
       }
       bucket.samples += 1;
+      const path = pathKey(frames, roots);
+      const seen = bucket.paths.get(path);
+      if (seen) seen.samples += 1;
+      else
+        bucket.paths.set(path, {
+          samples: 1,
+          example: exampleFrames(frames, roots),
+        });
       const detail =
         owner.kind === "import"
           ? owner.plugin
@@ -332,15 +403,23 @@ export function createOwnerTally(roots: readonly string[]): OwnerTally {
       return [...buckets.entries()]
         .sort((a, b) => b[1].samples - a[1].samples)
         .slice(0, n)
-        .map(([owner, bucket]) => ({
-          owner,
-          samples: bucket.samples,
-          example: bucket.example,
-          detail: [...bucket.detail.entries()]
-            .sort((a, b) => b[1] - a[1])
-            .slice(0, DETAIL_ENTRIES)
-            .map(([name, count]) => ({ name, samples: count })),
-        }));
+        .map(([owner, bucket]) => {
+          // Busiest path; on a tie, the first seen (Map order).
+          let busiest: { samples: number; example: string[] } | null = null;
+          for (const path of bucket.paths.values())
+            if (busiest === null || path.samples > busiest.samples)
+              busiest = path;
+          return {
+            owner,
+            samples: bucket.samples,
+            example: busiest?.example ?? [],
+            exampleSamples: busiest?.samples ?? 0,
+            detail: [...bucket.detail.entries()]
+              .sort((a, b) => b[1] - a[1])
+              .slice(0, DETAIL_ENTRIES)
+              .map(([name, count]) => ({ name, samples: count })),
+          };
+        });
     },
   };
 }

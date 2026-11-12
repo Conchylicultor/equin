@@ -14,6 +14,8 @@ import {
   classifyLeaf,
   createKindTally,
   createOwnerTally,
+  EXAMPLE_FRAMES,
+  exampleFrames,
   ownerLabel,
   ownerOf,
   repoRoots,
@@ -32,6 +34,8 @@ function native(name: string, category = "native"): StackFrame {
 }
 
 const CHECK = "/repo/plugins/database/plugins/migrations/check/index.ts";
+const SITES =
+  "/repo/plugins/database/plugins/migrations/check/internal/sites.ts";
 const RUNNER =
   "/repo/plugins/framework/plugins/tooling/plugins/checks/core/runner.ts";
 const TREE =
@@ -209,8 +213,43 @@ describe("ownerLabel", () => {
   });
 });
 
+describe("exampleFrames", () => {
+  test("a short stack is kept whole", () => {
+    expect(
+      exampleFrames([native("statSync"), js("run", CHECK, 3)], ROOTS),
+    ).toEqual([
+      "statSync [native]",
+      "run @ plugins/database/plugins/migrations/check/index.ts:3",
+    ]);
+  });
+
+  test("a repo frame below the depth is reached through a `… N frames` marker", () => {
+    const ts = "/repo/node_modules/typescript/lib/typescript.js";
+    const frames = [
+      native("readdirSync"),
+      ...Array.from({ length: 12 }, (_, i) => js(`visit${i}`, ts, i)),
+      js("repoCompilerOptions", SITES, 526),
+      js("scan", SITES, 70),
+      js("run", CHECK, 57),
+    ];
+    const example = exampleFrames(frames, ROOTS);
+    // Head 2 + marker + the 3 frames from the repo frame out (room for 5).
+    expect(example.length).toBeLessThanOrEqual(EXAMPLE_FRAMES);
+    expect(example).toHaveLength(6);
+    expect(example.slice(0, 4)).toEqual([
+      "readdirSync [native]",
+      "visit0 @ node_modules/typescript/lib/typescript.js:0",
+      "… 11 frames",
+      "repoCompilerOptions @ plugins/database/plugins/migrations/check/internal/sites.ts:526",
+    ]);
+    expect(example.at(-1)).toBe(
+      "run @ plugins/database/plugins/migrations/check/index.ts:57",
+    );
+  });
+});
+
 describe("createOwnerTally", () => {
-  test("counts per owner, keeps the first sample's stack shortened, and pools import detail", () => {
+  test("counts per owner, keeps a sample's stack shortened, and pools import detail", () => {
     const tally = createOwnerTally(ROOTS);
     const checkStack = [js("spin", CHECK, 9), js("checkRun", CHECK, 4)];
     tally.add({ kind: "check", module: "database/migrations" }, checkStack);
@@ -237,6 +276,8 @@ describe("createOwnerTally", () => {
         "spin @ plugins/database/plugins/migrations/check/index.ts:9",
         "checkRun @ plugins/database/plugins/migrations/check/index.ts:4",
       ],
+      // Two paths of one sample each: a tie keeps the first seen.
+      exampleSamples: 1,
       detail: [],
     });
     expect(imports?.owner).toBe("import");
@@ -245,6 +286,25 @@ describe("createOwnerTally", () => {
       { name: "pages", samples: 1 },
     ]);
     expect(tally.top(1)).toHaveLength(1);
+  });
+
+  test("the example is the owner's BUSIEST path, not its first sample", () => {
+    // report-1794164673-6le9e5's shape: the check's first sample was a short
+    // regex match at its top level; most of its samples were a directory walk
+    // further down, on lines that vary from sample to sample.
+    const tally = createOwnerTally(ROOTS);
+    const owner = { kind: "check", module: "database/migrations" } as const;
+    tally.add(owner, [native("match"), js("run", CHECK, 51)]);
+    for (const line of [10, 11, 12])
+      tally.add(owner, [
+        native("readdirSync"),
+        js("walk", SITES, line),
+        js("run", CHECK, 57),
+      ]);
+    const [share] = tally.top(1);
+    expect(share?.samples).toBe(4);
+    expect(share?.exampleSamples).toBe(3);
+    expect(share?.example[0]).toBe("readdirSync [native]");
   });
 
   test("pools an activity's instances as detail under one owner", () => {

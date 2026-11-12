@@ -51,6 +51,7 @@ const OWNER: OwnerShare = {
     "outside @ /opt/elsewhere/file.ts:9",
     "scan @ plugins/framework/plugins/tooling/plugins/boundaries/check/index.ts:30",
   ],
+  exampleSamples: 40,
   detail: [],
 };
 
