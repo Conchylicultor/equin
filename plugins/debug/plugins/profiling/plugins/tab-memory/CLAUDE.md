@@ -51,7 +51,15 @@ cross-origin isolation, which the app does not have. Design:
   footprint; v8, malloc, partition_alloc and its partitions, blink_gc,
   web_cache …) every `--every` seconds, or after each round of `--paths`
   (in-app navigation through `Runtime.evaluate` on a flat page session, no
-  domain enabled).
+  domain enabled). With `--tabs`, each `--paths` entry opens in its own in-app
+  tab (dump after each), then `--rounds` cycles focus through every tab — the
+  cost of a session's accumulated tabs:
+
+  ```bash
+  ./equin run plugins/debug/plugins/profiling/plugins/tab-memory/e2e/clean-soak.ts \
+    --urls http://<ns>.localhost:9000/agents --tabs --paths /sonata,/agents/c/<id>,… \
+    --rounds 2 --dwell 5000 --out "$EQUIN_SCRATCH/tabs"
+  ```
 
   ```bash
   ./equin run plugins/debug/plugins/profiling/plugins/tab-memory/e2e/clean-soak.ts \

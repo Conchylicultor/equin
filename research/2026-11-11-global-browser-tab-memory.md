@@ -153,6 +153,14 @@ as long as it is open. A browser tab that has accumulated in-app tabs over a
 day pays all of them. This is the most likely multiplier behind the 1.2 GiB
 routine number. Filed as a follow-up.
 
+**Fixed 2026-11-12** (`apps-core/tabs` `useResidentTabs`): only the tabs on
+screen and the 2 most recently focused hidden ones stay mounted; the rest are
+unloaded (route, title and scroll kept, app unmounted). `clean-soak.ts --tabs`,
+`/agents` + 8 in-app tabs (Sonata, 3 conversations, Pages, Places, Events,
+Studio), 6 focus rounds, main vs the fix side by side: footprint 941 → 726 MB,
+V8 313 → 138 MB after round 5, flat across rounds. The desktop (windows mode)
+still keeps every window mounted — `task-1794458652-w4qp7j`.
+
 ### 3. Toast history keeps each custom toast's portal container and ~140 React root listeners (bounded)
 
 Idle `/agents` on main (Playwright, 30 min): JS event listeners 1,133 →

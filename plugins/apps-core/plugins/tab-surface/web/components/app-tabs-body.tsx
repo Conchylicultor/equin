@@ -3,6 +3,7 @@ import { Theme } from "@plugins/primitives/plugins/css/plugins/theme-boundary/we
 import { useEffect } from "react";
 import {
   usePlacementRegistry,
+  useResidentTabs,
   useTabs,
   type PlacementCapabilities,
 } from "@plugins/apps-core/plugins/tabs/web";
@@ -26,9 +27,10 @@ const DOCKED_ONLY: PlacementCapabilities = {
 };
 
 /**
- * The keep-alive tab surface: every open tab mounted at once, only the focused
+ * The keep-alive tab surface: every open tab rendered at once, only the focused
  * one visible (`display:none` keeps the rest mounted with their route + React
- * state). Each tab gets its own `PaneSurfaceProvider` binding its store + base
+ * state) — the resident ones, that is: a tab the residency policy unloads
+ * (`useResidentTabs`) keeps its box and its route, not its app. Each tab gets its own `PaneSurfaceProvider` binding its store + base
  * path, so background tabs hold their route in memory while the focused tab
  * mirrors to the URL. This is the `body` the rail-framing wraps — it sits to the
  * right of the rail, both below the top-level tab bar.
@@ -41,6 +43,11 @@ export function AppTabsBody() {
   const { tabs, focusedTabId } = useTabs();
   const registry = usePlacementRegistry();
   useEffect(() => registry.install(DOCKED_ONLY), [registry]);
+  const resident = useResidentTabs(
+    tabs.map((t) => t.tabId),
+    (id) => id === focusedTabId,
+    focusedTabId,
+  );
   return (
     // `transform-gpu` makes this a containing block for `position: fixed`
     // descendants, so an app shell's viewport-pinned sidebar (shadcn
@@ -75,7 +82,7 @@ export function AppTabsBody() {
             className="absolute inset-0"
             style={{ display: focused ? "block" : "none" }}
           >
-            <TabSurface tab={tab} />
+            <TabSurface tab={tab} resident={resident.has(tab.tabId)} />
           </Theme>
         );
       })}

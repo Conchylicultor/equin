@@ -5,11 +5,14 @@ import {
   useStore,
 } from "@plugins/primitives/plugins/dom/plugins/web-storage/web";
 import { listenForNavigation } from "./announce-navigation";
+import { useScrollRevival } from "./scroll-revival";
 
 /**
  * This document. An offset saved under another one was saved before a reload
  * (or before the tab was restored); one saved under this one is an in-app
- * revisit, which opens at the top the way following a link does.
+ * revisit, which opens at the top the way following a link does — unless the
+ * scroller mounts in a revived subtree (`ScrollRevival`: an unloaded in-app tab
+ * mounted again), which is a restoration like a reload.
  */
 const DOCUMENT_ID = crypto.randomUUID();
 
@@ -64,6 +67,7 @@ export function useScrollAcrossReload(
   key: string | undefined,
 ): (el: HTMLElement | null) => void {
   const store = useStore(offsetStore);
+  const revival = useScrollRevival();
   const [el, setEl] = useState<HTMLElement | null>(null);
   const ref = useCallback((node: HTMLElement | null) => setEl(node), []);
 
@@ -72,7 +76,8 @@ export function useScrollAcrossReload(
     const saved = store.read(key);
     let target =
       saved.kind === "value" &&
-      saved.value.doc !== DOCUMENT_ID &&
+      (saved.value.doc !== DOCUMENT_ID ||
+        (revival !== null && revival.claim(key, el))) &&
       saved.value.top > 0
         ? saved.value.top
         : null;
@@ -81,6 +86,10 @@ export function useScrollAcrossReload(
       // Mid-restore the saved target stands as written: a remount while the
       // page is still loading must find it again.
       if (target !== null) return;
+      // A scroller with no layout box (under `display: none` — a hidden tab
+      // being unloaded) reads 0, which is not where the reader left it: keep
+      // what was saved while it was shown.
+      if (el.getClientRects().length === 0) return;
       const top = el.scrollTop;
       if (top > 0) store.write(key, { top, doc: DOCUMENT_ID });
       else store.remove(key);
@@ -156,7 +165,7 @@ export function useScrollAcrossReload(
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("pagehide", flush);
     };
-  }, [el, key, store]);
+  }, [el, key, store, revival]);
 
   return ref;
 }

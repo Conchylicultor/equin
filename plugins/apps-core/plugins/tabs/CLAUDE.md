@@ -130,11 +130,50 @@ registered app's pane, the tab is rebuilt on that app with the same route,
 **replacing** the entry. Deferred a microtask, because a pending route resolves
 during render.
 
+## Hidden tabs: a few kept mounted, the rest unloaded
+
+A mounted tab holds its whole app — DOM, React state, live subscriptions (a
+conversation ~110 MB, Sonata ~600 MB; `research/2026-11-11-global-browser-tab-memory.md`
+§2). So the surface does not keep every open tab mounted: `useResidentTabs`
+(`internal/tab-residency.ts`) decides which are **resident** — every tab on
+screen (the focused one; every window in a mode that shows unfocused tabs) plus
+the `KEPT_HIDDEN_TABS` most recently focused hidden ones. Switching back to a
+tab you just left is instant; a browser tab's memory is bounded by what is open
+now, not by every tab ever opened in it.
+
+An **unloaded** tab keeps everything that is the tab: its entry in the set, its
+pane store (route, pane instance uuids), its container and its title reporter
+(`tab-surface`), so the tab bar keeps its name. Only the app subtree unmounts.
+Focusing it mounts the app again from its store, as a reload would: drafts come
+back through `persistent-draft`, a conversation's reading position through its
+sticky-scroll `persist`, and every `PaneScroll` through `useScrollAcrossReload`
+— which `tab-surface` wraps in `ScrollRevival`, so an offset saved in this same
+document counts as a restoration there instead of an in-app revisit. Whatever an
+app holds only in memory (undo history, a playing sound) does not survive.
+
+Recency is what the surface has seen focused. A reload mounts only the focused
+tab; the others mount when first opened.
+
+A mode that shows unfocused tabs (the desktop's windows) keeps every tab
+mounted — they are on screen — and keeps them while it is the mode to go back
+to (`previousMode`): a window's Full screen enters solo from the desktop, and
+the way back must restyle the windows, not rebuild them. So the bound does not
+yet apply on the desktop: minimised windows and other virtual desktops' windows
+stay mounted (their hiding is the placement's, `setContainerHidden`, which the
+surface does not count as off screen).
+
+`ScrollRevival` covers only the route the tab came back on: the first
+navigation after that closes it, so a pane opened later opens at the top, as in
+a tab that was never unloaded. And a scroller with no layout box (a tab hidden
+with `display: none`, as `AppTabsBody` does) saves nothing on unmount — it would
+read 0 — so the offset it had while shown is the one restored.
+
 ## Keep-alive means a background tab still has listeners
 
-Every open tab stays MOUNTED — unfocused ones are `display: none`, and the
-floating placement shows several at once. So a `window`-level `keydown` a pane
-registers is live in background tabs too, and one Escape reaches all of them.
+A resident tab that is not focused stays MOUNTED — unfocused ones are hidden,
+and the floating placement shows several at once. So a `window`-level `keydown`
+a pane registers is live in background tabs too, and one Escape reaches all of
+them.
 `useSurfaceFocused()` is the gate: it compares the caller's `useSurfaceTabId()`
 against `focusedTabId`, and answers `true` outside any surface (chrome has no
 background-tab ambiguity, and returning `false` there would kill the handlers
@@ -219,7 +258,7 @@ same browser tab from finding the blob. Both call sites are marked for removal.
 
 ## Plugin reference
 
-- Description: Tab manager for the app switcher: the open-tab set, focus model, cross-app navigate(), the focused-placement module store, the focused tab's title as a module signal (useFocusedTabTitle, readable outside TabsProvider), and the surface-written placement-capabilities registry — one per tab set: the page's own, or an embedded one (TabsProvider embedded={{ at, onLeave, onLocationChange?, browserTabUrl? }}, an AppEmbed's: seeded, never live, persisting nothing, publishing no page-global signal, behind its own navigation boundary), found from outside React by peekFocusedTabSet().
+- Description: Tab manager for the app switcher: the open-tab set, focus model, cross-app navigate(), the focused-placement module store, which tabs stay mounted (useResidentTabs: those on screen plus the most recently focused hidden ones; the rest are unloaded), the focused tab's title as a module signal (useFocusedTabTitle, readable outside TabsProvider), and the surface-written placement-capabilities registry — one per tab set: the page's own, or an embedded one (TabsProvider embedded={{ at, onLeave, onLocationChange?, browserTabUrl? }}, an AppEmbed's: seeded, never live, persisting nothing, publishing no page-global signal, behind its own navigation boundary), found from outside React by peekFocusedTabSet().
 - Web:
   - Uses: 50 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/pane` ×21
@@ -272,6 +311,7 @@ same browser tab from finding the blob. Both call sites are marked for removal.
     - `useNavigate`
     - `usePlacementCapabilities`
     - `usePlacementRegistry`
+    - `useResidentTabs`
     - `useSurfaceFocused`
     - `useSurfaceMode`
     - `useTabs`

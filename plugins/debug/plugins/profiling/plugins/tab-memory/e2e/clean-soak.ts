@@ -14,6 +14,12 @@
 // visit each path in turn (history.pushState + popstate, `--dwell` ms each)
 // through `Runtime.evaluate` on a flat page session — no domain enabled, so
 // nothing is buffered — and dump after every round.
+//
+// With `--tabs` as well, each path opens in its OWN in-app tab instead (the
+// surface switched to docked so the tab bar shows; New tab, then the in-app
+// navigation), with a dump after each tab opens; then `--rounds` times, focus
+// every tab in turn (its tab-bar chip) and dump after the round. That is what
+// a day of opened tabs costs a browser tab — how many apps stay mounted.
 import { spawn, type ChildProcess } from "node:child_process";
 import {
   mkdtempSync,
@@ -26,6 +32,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   arg,
+  flag,
   numArg,
   requireArg,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
@@ -219,6 +226,59 @@ async function dump(
 const paths = (arg("paths", "") ?? "").split(",").filter(Boolean);
 const rounds = numArg("rounds", 6);
 const dwell = numArg("dwell", 3000);
+const asTabs = flag("tabs");
+
+async function evaluate(
+  cdp: Cdp,
+  session: string,
+  expression: string,
+): Promise<unknown> {
+  const r = await cdp.send<{
+    result?: { value?: unknown };
+    exceptionDetails?: unknown;
+  }>(
+    "Runtime.evaluate",
+    { expression, awaitPromise: true, returnByValue: true },
+    session,
+  );
+  if (r.exceptionDetails)
+    throw new Error(`evaluate: ${JSON.stringify(r.exceptionDetails)}`);
+  return r.result?.value;
+}
+
+/**
+ * Put the tab set in docked mode (the tab bar shows) by editing its persisted
+ * entry and reloading — a reload adopts the same app instance, mode included.
+ */
+const DOCK_AND_RELOAD = `(() => {
+  const key = Object.keys(sessionStorage).find((k) => k.startsWith("s:apps-core.tabs:"));
+  if (!key) throw new Error("no persisted tab set in sessionStorage");
+  const entry = JSON.parse(sessionStorage.getItem(key));
+  entry.v.mode = "docked";
+  sessionStorage.setItem(key, JSON.stringify(entry));
+  setTimeout(() => location.reload(), 0);
+  return key;
+})()`;
+
+/** Open a new in-app tab and route it to `path` (the focused tab follows the URL). */
+const openTabAt = (path: string): string => `(async () => {
+  const button = document.querySelector('button[aria-label="New tab"]');
+  if (!button) throw new Error("no New tab button (is the surface docked?)");
+  button.click();
+  await new Promise((r) => setTimeout(r, 1000));
+  history.pushState(null, "", ${JSON.stringify(path)});
+  dispatchEvent(new PopStateEvent("popstate", { state: null }));
+  return document.querySelectorAll("[data-app-tab]").length;
+})()`;
+
+/** Focus the `i`-th tab through its tab-bar chip. */
+const focusTabAt = (i: number): string => `(() => {
+  const chip = document.querySelectorAll("[data-app-tab]")[${i}];
+  const target = chip?.querySelector('[role="button"][aria-pressed]');
+  if (!target) throw new Error("no tab chip ${i}");
+  target.click();
+  return location.pathname;
+})()`;
 
 async function pageSession(cdp: Cdp): Promise<string> {
   const { targetInfos } = await cdp.send<{
@@ -337,7 +397,33 @@ try {
   browsers = await Promise.all(urls.map(launch));
   const t0 = Date.now();
   await Bun.sleep(20_000); // boot settles
-  if (paths.length > 0) {
+  if (paths.length > 0 && asTabs) {
+    let sessions = await Promise.all(browsers.map((b) => pageSession(b.cdp)));
+    await report(t0, "boot");
+    await Promise.all(
+      browsers.map((b, i) => evaluate(b.cdp, sessions[i]!, DOCK_AND_RELOAD)),
+    );
+    await Bun.sleep(20_000); // the reload settles
+    // A reload is a new document: the page target keeps its id, but attach
+    // again so the session is certainly the live one.
+    sessions = await Promise.all(browsers.map((b) => pageSession(b.cdp)));
+    for (const [k, p] of paths.entries()) {
+      await Promise.all(
+        browsers.map((b, i) => evaluate(b.cdp, sessions[i]!, openTabAt(p))),
+      );
+      await Bun.sleep(dwell);
+      await report(t0, `+tab ${k + 1}`);
+    }
+    for (let r = 0; r < rounds; r++) {
+      for (let k = 0; k <= paths.length; k++) {
+        await Promise.all(
+          browsers.map((b, i) => evaluate(b.cdp, sessions[i]!, focusTabAt(k))),
+        );
+        await Bun.sleep(dwell);
+      }
+      await report(t0, `round ${r}`);
+    }
+  } else if (paths.length > 0) {
     const sessions = await Promise.all(browsers.map((b) => pageSession(b.cdp)));
     await report(t0, "boot");
     for (let r = 0; r < rounds; r++) {

@@ -12970,8 +12970,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Contributes:
           - `Apps.Surface` "Surface" → `SurfaceBody`
           - `ActionBar.ViewOption` → `ActionBarPlacementControl`
-        - Uses: 24 symbols — full list in [`plugins/apps-core/plugins/surface/REFERENCE.md`](../plugins/apps-core/plugins/surface/REFERENCE.md)
-          - `apps-core/tabs` ×5
+        - Uses: 25 symbols — full list in [`plugins/apps-core/plugins/surface/REFERENCE.md`](../plugins/apps-core/plugins/surface/REFERENCE.md)
+          - `apps-core/tabs` ×6
           - `network/live/live-state` ×3
           - `primitives/css/toggle-chip` ×2
           - `primitives/slot-render` ×2
@@ -13061,15 +13061,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `debug/reports`
           - `shell/notifications`
-    - **`tab-surface`** — Per-tab surface render core: TabSurface mounts a tab's PaneSurfaceProvider and reports its leaf title; AppTabsBody is the keep-alive fallback body that stacks every open tab.
+    - **`tab-surface`** — Per-tab surface render core: TabSurface mounts a tab's PaneSurfaceProvider and reports its leaf title; AppTabsBody is the keep-alive fallback body that stacks every open tab. resident={false} unloads a tab: only its pane provider and title reporter stay mounted, and the app mounts again under ScrollRevival.
       - Web:
-        - Uses: 22 symbols — full list in [`plugins/apps-core/plugins/tab-surface/REFERENCE.md`](../plugins/apps-core/plugins/tab-surface/REFERENCE.md)
+        - Uses: 24 symbols — full list in [`plugins/apps-core/plugins/tab-surface/REFERENCE.md`](../plugins/apps-core/plugins/tab-surface/REFERENCE.md)
+          - `apps-core/tabs` ×7
           - `primitives/pane` ×7
-          - `apps-core/tabs` ×6
           - `apps-core` ×2
           - `primitives/sync-status` ×2
           - `primitives/undo-redo` ×2
           - `primitives/css/theme-boundary.Theme`
+          - `primitives/dom/auto-scroll.ScrollRevival`
           - `primitives/overlay/surface-overlay.SurfaceOverlayHost`
           - `primitives/slot-render.renderIsolated`
         - Exports (values):
@@ -13081,7 +13082,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps-core/app-embed`
           - `apps-core/layout`
           - `apps-core/surface`
-    - **`tabs`** — Tab manager for the app switcher: the open-tab set, focus model, cross-app navigate(), the focused-placement module store, the focused tab's title as a module signal (useFocusedTabTitle, readable outside TabsProvider), and the surface-written placement-capabilities registry — one per tab set: the page's own, or an embedded one (TabsProvider embedded={{ at, onLeave, onLocationChange?, browserTabUrl? }}, an AppEmbed's: seeded, never live, persisting nothing, publishing no page-global signal, behind its own navigation boundary), found from outside React by peekFocusedTabSet().
+    - **`tabs`** — Tab manager for the app switcher: the open-tab set, focus model, cross-app navigate(), the focused-placement module store, which tabs stay mounted (useResidentTabs: those on screen plus the most recently focused hidden ones; the rest are unloaded), the focused tab's title as a module signal (useFocusedTabTitle, readable outside TabsProvider), and the surface-written placement-capabilities registry — one per tab set: the page's own, or an embedded one (TabsProvider embedded={{ at, onLeave, onLocationChange?, browserTabUrl? }}, an AppEmbed's: seeded, never live, persisting nothing, publishing no page-global signal, behind its own navigation boundary), found from outside React by peekFocusedTabSet().
       - Web:
         - Uses: 50 symbols — full list in [`plugins/apps-core/plugins/tabs/REFERENCE.md`](../plugins/apps-core/plugins/tabs/REFERENCE.md)
           - `primitives/pane` ×21
@@ -13134,6 +13135,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useNavigate`
           - `usePlacementCapabilities`
           - `usePlacementRegistry`
+          - `useResidentTabs`
           - `useSurfaceFocused`
           - `useSurfaceMode`
           - `useTabs`
@@ -48900,7 +48902,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values):
               - `afterLayout`
               - `runAsAfterLayout`
-        - **`auto-scroll`** — The scroll-owning primitive: the one sanctioned home for driving a scroll container. Stick-to-bottom streaming (useStickyScroll + JumpToBottomButton; content stamped FOLLOW_MOTION_ATTR is followed frame by frame while it animates), container-scoped scrollToBottom / scrollChildIntoView, a scroll glided frame by frame on a given CSS curve so it moves in step with a transition beside it (glideScroll), gesture-agnostic edge auto-scroll (useEdgeAutoScroll), scroll kept across a wholesale DOM swap (KeepScrollAcross, or restoreScrollOffset from a caller's own snapshot), the reader's anchor kept on screen across a commit that resizes content above it (KeepAnchorAcross), an element kept at its screen position across a re-layout (keepInPlace), a deep copy that keeps its scroll offsets (cloneWithScroll, for a stand-in drawn while content leaves, or — visibleOnly — a picture of only what shows), an inner scroller's offset kept across a page reload (useScrollAcrossReload, put back as async content arrives until reached or the reader takes over), and the shared findScrollParent discovery.
+        - **`auto-scroll`** — The scroll-owning primitive: the one sanctioned home for driving a scroll container. Stick-to-bottom streaming (useStickyScroll + JumpToBottomButton; content stamped FOLLOW_MOTION_ATTR is followed frame by frame while it animates), container-scoped scrollToBottom / scrollChildIntoView, a scroll glided frame by frame on a given CSS curve so it moves in step with a transition beside it (glideScroll), gesture-agnostic edge auto-scroll (useEdgeAutoScroll), scroll kept across a wholesale DOM swap (KeepScrollAcross, or restoreScrollOffset from a caller's own snapshot), the reader's anchor kept on screen across a commit that resizes content above it (KeepAnchorAcross), an element kept at its screen position across a re-layout (keepInPlace), a deep copy that keeps its scroll offsets (cloneWithScroll, for a stand-in drawn while content leaves, or — visibleOnly — a picture of only what shows), an inner scroller's offset kept across a page reload (useScrollAcrossReload, put back as async content arrives until reached or the reader takes over) and across an unloaded subtree's revival (ScrollRevival: an in-app tab mounted again), and the shared findScrollParent discovery.
           - Web:
             - Uses:
               - `primitives/css/ui-kit.Button`
@@ -48942,6 +48944,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `KeepScrollAcross`
               - `restoreScrollOffset`
               - `scrollChildIntoView`
+              - `ScrollRevival`
               - `scrollToBottom`
               - `scrollToTop`
               - `useEdgeAutoScroll`
@@ -48951,10 +48954,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/density --space-xs`
               - `ui/tokens/shape --spacing`
-            - Imported by: 21 plugins — full list in [`plugins/primitives/plugins/dom/plugins/auto-scroll/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/auto-scroll/REFERENCE.md)
+            - Imported by: 22 plugins — full list in [`plugins/primitives/plugins/dom/plugins/auto-scroll/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/auto-scroll/REFERENCE.md)
               - `primitives` ×8
               - `apps` ×7
               - `conversations` ×4
+              - `apps-core/tab-surface`
               - `layouts/miller`
               - `page/editor`
           - Exemptions:

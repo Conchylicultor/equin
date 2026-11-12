@@ -1,4 +1,5 @@
-import { useContext, useEffect, type ReactNode } from "react";
+import { useContext, useEffect, useState, type ReactNode } from "react";
+import { ScrollRevival } from "@plugins/primitives/plugins/dom/plugins/auto-scroll/web";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
 import {
@@ -41,9 +42,24 @@ import {
  * cannot belong to any one pane or editor; and the `mod+z` bindings must be
  * registered exactly once per surface, or two same-id registrations would race
  * in the page-global `ShortcutManager`.
+ *
+ * `resident={false}` UNLOADS the tab (the surface's residency policy, `tabs`'
+ * `useResidentTabs`): the app subtree and its per-tab primitives unmount — its
+ * DOM, React state and live subscriptions go — while the tab's pane store (its
+ * route) and its title reporter stay, so the tab bar keeps naming it. Resident
+ * again, the app mounts from that store like after a reload, and its kept
+ * scrollers come back to where they were (`ScrollRevival`).
  */
-export function TabSurface({ tab }: { tab: Tab }) {
+export function TabSurface({
+  tab,
+  resident = true,
+}: {
+  tab: Tab;
+  /** Whether the tab's app is mounted (default) or unloaded. */
+  resident?: boolean;
+}) {
   const apps = Apps.App.useContributions();
+  const residency = useResidency(resident);
   const app = apps.find((a) => a.id === tab.appId);
   if (!app) return null;
   return (
@@ -51,35 +67,62 @@ export function TabSurface({ tab }: { tab: Tab }) {
       appId={tab.appId}
       store={tab.store}
       surfaceId={tab.tabId}
-      beside={
-        <>
-          <TabTitleReporter tabId={tab.tabId} />
-          <UndoRedoKeys />
-        </>
-      }
+      residency={residency}
+      reporters={<TabTitleReporter tabId={tab.tabId} />}
+      beside={<UndoRedoKeys />}
     />
   );
+}
+
+/**
+ * Where a surface's app stands: mounted for the first time (`loaded`), mounted
+ * again after it was unloaded (`revived` — a restoration, not a navigation), or
+ * not mounted (`unloaded`).
+ */
+export type SurfaceResidency = "loaded" | "revived" | "unloaded";
+
+/**
+ * Tracks a tab's `resident` flag into a {@link SurfaceResidency}: counts the
+ * times it became resident (adjusted during render, so the commit that mounts
+ * the app already knows it is a revival).
+ */
+function useResidency(resident: boolean): SurfaceResidency {
+  const [seen, setSeen] = useState({ resident, loads: resident ? 1 : 0 });
+  let { loads } = seen;
+  if (seen.resident !== resident) {
+    if (resident) loads++;
+    setSeen({ resident, loads });
+  }
+  if (!resident) return "unloaded";
+  return loads > 1 ? "revived" : "loaded";
 }
 
 /**
  * One app surface, whoever hosts it: the app's `PaneSurfaceProvider` (its
  * store, base path, app id, surface id and load-scope prefix), one
  * `<SyncStatusProvider>` and `<UndoRedoProvider>` per surface, and the overlay
- * host around the app render. A tab adds its title reporter and its `mod+z`
- * bindings (`beside`, rendered inside the undo provider); an in-process app
- * embed adds neither — it is not a tab, and a second same-id `mod+z`
- * registration would race the host's in the page-global `ShortcutManager`.
- * Throws for an app id no `Apps.App` registers (a tab filters those first).
+ * host around the app render. A tab adds its title reporter (`reporters`,
+ * rendered right inside the pane provider, so it keeps running while the tab
+ * is unloaded) and its `mod+z` bindings (`beside`, rendered inside the undo
+ * provider); an in-process app embed adds neither — it is not a tab, and a
+ * second same-id `mod+z` registration would race the host's in the page-global
+ * `ShortcutManager`. `residency="unloaded"` renders only the pane provider and
+ * `reporters`. Throws for an app id no `Apps.App` registers (a tab filters
+ * those first).
  */
 export function SurfaceCore({
   appId,
   store,
   surfaceId,
+  residency = "loaded",
+  reporters,
   beside,
 }: {
   appId: string;
   store: PaneStore;
   surfaceId: string;
+  residency?: SurfaceResidency;
+  reporters?: ReactNode;
   beside?: ReactNode;
 }) {
   const apps = Apps.App.useContributions();
@@ -99,24 +142,56 @@ export function SurfaceCore({
       surfaceId={surfaceId}
       loadScopePrefix={loadScopePrefixFor(app._pluginId)}
     >
-      <SyncStatusProvider>
-        <UndoRedoProvider>
-          {beside}
-          {/* Owns the surface's outer box — `relative` so the indicator's Pin
-              anchors to this surface's corner, `size-full` so the app render
-              still fills it. It is also every surface's overlay host, so a pane
-              can fill its own surface (leaving the tab bar and rail on screen)
-              instead of escaping to the viewport — and because the host sits
-              INSIDE whatever box the placement hands the surface, that overlay
-              lands correctly under docked, floating-window, solo and an embed
-              alike. */}
-          <SurfaceOverlayHost>
-            {renderIsolated(Apps.App, app as unknown as Contribution)}
-            <SyncStatusIndicator />
-          </SurfaceOverlayHost>
-        </UndoRedoProvider>
-      </SyncStatusProvider>
+      {reporters}
+      {residency !== "unloaded" && (
+        <RouteScrollRevival revived={residency === "revived"}>
+          <SyncStatusProvider>
+            <UndoRedoProvider>
+              {beside}
+              {/* Owns the surface's outer box — `relative` so the indicator's Pin
+                  anchors to this surface's corner, `size-full` so the app render
+                  still fills it. It is also every surface's overlay host, so a pane
+                  can fill its own surface (leaving the tab bar and rail on screen)
+                  instead of escaping to the viewport — and because the host sits
+                  INSIDE whatever box the placement hands the surface, that overlay
+                  lands correctly under docked, floating-window, solo and an embed
+                  alike. */}
+              <SurfaceOverlayHost>
+                {renderIsolated(Apps.App, app as unknown as Contribution)}
+                <SyncStatusIndicator />
+              </SurfaceOverlayHost>
+            </UndoRedoProvider>
+          </SyncStatusProvider>
+        </RouteScrollRevival>
+      )}
     </PaneSurfaceProvider>
+  );
+}
+
+/**
+ * {@link ScrollRevival} over what the surface shows: its route's pane instances
+ * (each slot's uuid, pane and params, or the pending path). A revived tab's
+ * scrollers restore their offsets for the route it came back on; the first
+ * navigation after that is navigation again.
+ */
+function RouteScrollRevival({
+  revived,
+  children,
+}: {
+  revived: boolean;
+  children: ReactNode;
+}) {
+  const state = useRouteState();
+  const showing =
+    state.kind === "unresolved"
+      ? `pending:${state.rawPath}`
+      : state.slots
+          .map((s) => `${s.uuid}:${s.paneId}:${JSON.stringify(s.params)}`)
+          .join("|");
+  return (
+    <ScrollRevival revived={revived} showing={showing}>
+      {children}
+    </ScrollRevival>
   );
 }
 
@@ -142,8 +217,8 @@ function UndoRedoKeys() {
  * auxiliary panes stacked to its right (file peek, review, terminal) never
  * steal the title; routes with no owner fall back to the leaf. Mounted inside
  * each tab's `PaneSurfaceProvider`, so `useRoute()` reads THIS tab's store —
- * including background (keep-alive) tabs, which keep their label fresh while
- * unfocused. The actual `useTitle` hook runs one level down in
+ * including background tabs, mounted or unloaded, which keep their label fresh
+ * while unfocused. The actual `useTitle` hook runs one level down in
  * {@link LeafTitleReporter}, keyed by pane id.
  */
 function TabTitleReporter({ tabId }: { tabId: string }) {

@@ -236,7 +236,7 @@ even before enough rows arrive to overflow it. Hence an opt-in, not one behavior
 
 ## Plugin reference
 
-- Description: The scroll-owning primitive: the one sanctioned home for driving a scroll container. Stick-to-bottom streaming (useStickyScroll + JumpToBottomButton; content stamped FOLLOW_MOTION_ATTR is followed frame by frame while it animates), container-scoped scrollToBottom / scrollChildIntoView, a scroll glided frame by frame on a given CSS curve so it moves in step with a transition beside it (glideScroll), gesture-agnostic edge auto-scroll (useEdgeAutoScroll), scroll kept across a wholesale DOM swap (KeepScrollAcross, or restoreScrollOffset from a caller's own snapshot), the reader's anchor kept on screen across a commit that resizes content above it (KeepAnchorAcross), an element kept at its screen position across a re-layout (keepInPlace), a deep copy that keeps its scroll offsets (cloneWithScroll, for a stand-in drawn while content leaves, or — visibleOnly — a picture of only what shows), an inner scroller's offset kept across a page reload (useScrollAcrossReload, put back as async content arrives until reached or the reader takes over), and the shared findScrollParent discovery.
+- Description: The scroll-owning primitive: the one sanctioned home for driving a scroll container. Stick-to-bottom streaming (useStickyScroll + JumpToBottomButton; content stamped FOLLOW_MOTION_ATTR is followed frame by frame while it animates), container-scoped scrollToBottom / scrollChildIntoView, a scroll glided frame by frame on a given CSS curve so it moves in step with a transition beside it (glideScroll), gesture-agnostic edge auto-scroll (useEdgeAutoScroll), scroll kept across a wholesale DOM swap (KeepScrollAcross, or restoreScrollOffset from a caller's own snapshot), the reader's anchor kept on screen across a commit that resizes content above it (KeepAnchorAcross), an element kept at its screen position across a re-layout (keepInPlace), a deep copy that keeps its scroll offsets (cloneWithScroll, for a stand-in drawn while content leaves, or — visibleOnly — a picture of only what shows), an inner scroller's offset kept across a page reload (useScrollAcrossReload, put back as async content arrives until reached or the reader takes over) and across an unloaded subtree's revival (ScrollRevival: an in-app tab mounted again), and the shared findScrollParent discovery.
 - Web:
   - Uses:
     - `primitives/css/ui-kit.Button`
@@ -278,6 +278,7 @@ even before enough rows arrive to overflow it. Hence an opt-in, not one behavior
     - `KeepScrollAcross`
     - `restoreScrollOffset`
     - `scrollChildIntoView`
+    - `ScrollRevival`
     - `scrollToBottom`
     - `scrollToTop`
     - `useEdgeAutoScroll`
@@ -287,10 +288,11 @@ even before enough rows arrive to overflow it. Hence an opt-in, not one behavior
   - Uses tokens:
     - `ui/tokens/density --space-xs`
     - `ui/tokens/shape --spacing`
-  - Imported by: 21 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 22 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives` ×8
     - `apps` ×7
     - `conversations` ×4
+    - `apps-core/tab-surface`
     - `layouts/miller`
     - `page/editor`
 - Exemptions:

@@ -5,6 +5,16 @@ reports its leaf title to the tabs store, and renders the app — identically fo
 every placement, so docked / floating-window / solo differ only in the box they
 hand it.
 
+## An unloaded tab keeps its provider and its title
+
+`TabSurface resident={false}` (the surface's residency policy, `tabs`'
+`useResidentTabs`) renders only the tab's `PaneSurfaceProvider` and its title
+reporter: the app, its sync-status and undo providers and its `mod+z` keys
+unmount. The title reporter sits right inside the pane provider, not inside the
+app, so an unloaded tab is still named in the tab bar. Mounted again, the app is
+wrapped in `ScrollRevival` (auto-scroll), so its kept scrollers restore the
+offsets they saved when it unloaded.
+
 ## The surface box is the overlay host
 
 The tab's outer box is a `<SurfaceOverlayHost>` (`primitives/overlay/surface-overlay`),
@@ -29,15 +39,16 @@ stays empty and which app fills the surface is never known (`apps-core/theme-sco
 
 ## Plugin reference
 
-- Description: Per-tab surface render core: TabSurface mounts a tab's PaneSurfaceProvider and reports its leaf title; AppTabsBody is the keep-alive fallback body that stacks every open tab.
+- Description: Per-tab surface render core: TabSurface mounts a tab's PaneSurfaceProvider and reports its leaf title; AppTabsBody is the keep-alive fallback body that stacks every open tab. resident={false} unloads a tab: only its pane provider and title reporter stay mounted, and the app mounts again under ScrollRevival.
 - Web:
-  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps-core/tabs` ×7
     - `primitives/pane` ×7
-    - `apps-core/tabs` ×6
     - `apps-core` ×2
     - `primitives/sync-status` ×2
     - `primitives/undo-redo` ×2
     - `primitives/css/theme-boundary.Theme`
+    - `primitives/dom/auto-scroll.ScrollRevival`
     - `primitives/overlay/surface-overlay.SurfaceOverlayHost`
     - `primitives/slot-render.renderIsolated`
   - Exports (values):

@@ -18,6 +18,7 @@ import {
   claimTabSet,
   useTabs,
   usePlacementRegistry,
+  useResidentTabs,
   type Tab,
 } from "@plugins/apps-core/plugins/tabs/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
@@ -171,6 +172,7 @@ function SurfaceBodyReady({
     closeTab,
     mode,
     exitToPreviousMode,
+    previousMode,
     titles,
   } = useTabs();
 
@@ -223,6 +225,25 @@ function SurfaceBodyReady({
   const presence = useTabPresence(tabs, activeDef);
   const liveIds = presence.filter((p) => !p.exiting).map((p) => p.tab.tabId);
   const retainedIds = presence.map((p) => p.tab.tabId);
+  // Which tabs keep their app mounted: every tab the mode paints (the focused
+  // one; all of them in a mode that shows unfocused tabs, i.e. windows) plus
+  // the most recently focused hidden ones. The rest are unloaded — their
+  // container stays (geometry, Chrome, exit tween), their app does not.
+  //
+  // A mode that shows unfocused tabs keeps them while it is the one to go
+  // back to, too: a window's Full screen enters solo from the desktop, and its
+  // way back (`exitToPreviousMode`) must find every window as it left it — a
+  // visibility change, never a rebuild (see the `content-visibility` note on
+  // `TabContainer`). Leaving it for good (another mode switch) lets the budget
+  // apply.
+  const showsUnfocused =
+    (activeDef?.visibleWhenUnfocused ?? false) ||
+    (byId.get(previousMode)?.visibleWhenUnfocused ?? false);
+  const resident = useResidentTabs(
+    retainedIds,
+    (id) => showsUnfocused || id === focusedTabId,
+    focusedTabId,
+  );
 
   // The modes whose own surfaces (Backdrop / Foreground / per-tab Chrome) are
   // mounted: every mode the surface has been in, in the slot's order. A mode's
@@ -304,6 +325,7 @@ function SurfaceBodyReady({
           mounted={mounted}
           tab={p.tab}
           focused={p.tab.tabId === focusedTabId}
+          resident={resident.has(p.tab.tabId)}
           exiting={p.exiting}
           title={titles[p.tab.tabId]}
           onFocus={() => focusTab(p.tab.tabId)}
@@ -416,6 +438,8 @@ interface TabContainerProps {
   mounted: readonly PlacementDef[];
   tab: Tab;
   focused: boolean;
+  /** Whether the tab's app is mounted, or unloaded by the residency policy. */
+  resident: boolean;
   /** True while this tab has left the store but is retained for its exit tween. */
   exiting: boolean;
   title: string | undefined;
@@ -454,6 +478,7 @@ function TabContainer({
   mounted,
   tab,
   focused,
+  resident,
   exiting,
   title,
   onFocus,
@@ -499,7 +524,8 @@ function TabContainer({
   );
   const visibleWhenUnfocused = def?.visibleWhenUnfocused ?? false;
 
-  // Every tab stays mounted (keep-alive); only the visibility gate changes. A
+  // Every resident tab stays mounted (keep-alive; an unloaded one keeps only
+  // this container, see `useResidentTabs`); only the visibility gate changes. A
   // mode that paints all tabs (`visibleWhenUnfocused`, i.e. windows) shows every
   // tab; docked / solo show only the focused one, so a non-focused tab is
   // hidden and can never overlap the visible one.
@@ -577,7 +603,7 @@ function TabContainer({
         )}
         style={insetStyle ?? undefined}
       >
-        <TabSurface tab={tab} />
+        <TabSurface tab={tab} resident={resident} />
       </div>
 
       {/* Each mounted mode's optional sibling Chrome overlay (never a parent of
