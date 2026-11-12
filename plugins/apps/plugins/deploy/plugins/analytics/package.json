@@ -1,6 +1,6 @@
 {
   "name": "@equin/plugin-apps-deploy-analytics",
-  "description": "Umbrella for cookieless site analytics on deployed compositions: the host-only route guard, the collect half that ships inside the deployed site (ingest, tables, nightly rollup, retention, host-only report query), and the dashboard half in the local deploy app.",
+  "description": "Umbrella for cookieless site analytics on deployed compositions: the host-only route guard, the collect half that ships inside the deployed site (ingest, tables, nightly rollup, retention, the report and its mirror set), and the dashboard half in the local deploy app, which runs that report on its copy of the site's tables.",
   "private": true,
   "version": "0.0.1"
 }

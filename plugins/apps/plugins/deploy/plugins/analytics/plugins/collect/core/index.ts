@@ -104,7 +104,6 @@ export type {
 } from "./internal/periods";
 export {
   AnalyticsFilterSchema,
-  AnalyticsQueryParamSchema,
   AnalyticsQueryResultSchema,
   AnalyticsQuerySchema,
   AnalyticsReportSchema,
@@ -117,7 +116,6 @@ export {
   ReportRowSchema,
   SeriesPointSchema,
   audienceAvailable,
-  encodeAnalyticsQuery,
   reportRowGroup,
   reportSourceFor,
 } from "./internal/query";
@@ -149,7 +147,7 @@ export {
   RECORDED_FIELDS,
 } from "./internal/recorded-fields";
 export type { RecordedColumn, RecordedField } from "./internal/recorded-fields";
-export { analyticsQueryEndpoint, collectEndpoint } from "./internal/endpoints";
+export { collectEndpoint } from "./internal/endpoints";
 export {
   MAX_SESSION_HITS,
   MAX_SESSIONS_LIMIT,

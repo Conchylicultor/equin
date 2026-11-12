@@ -1,8 +1,9 @@
 # collect
 
 Cookieless visit analytics that ship **inside** a deployed site. The deploy app's
-dashboard (a sibling plugin) reads the report over SSH; this plugin never knows
-about SSH, the deploy UI, or any particular site.
+dashboard (a sibling plugin) runs this plugin's own report on a local copy of the
+site's tables (see *The mirror* below); this plugin never knows about SSH, the
+deploy UI, or any particular site.
 
 ## Data model
 
@@ -201,6 +202,28 @@ Without it the box knows only the sections someone reached.
   newest, whatever order keepalive beacons land in). `NULL` = not recorded (an
   event, an older tracker, a page with no sections, no beacon yet).
 
+## The mirror
+
+The `analytics` mirror set (`server/internal/mirror.ts`, table-mirror's
+`defineMirrorSet`) is what the deploy app copies from a site's box
+(`apps/deploy/site-mirror`): visits, hits, daily totals and visit memberships.
+The salts and the visitor links never leave the box (`NeverMirrored`).
+
+The report has **one implementation**: `runAnalyticsQuery(dbx, query, now)`,
+exported from the server barrel. It reads through `AnalyticsReadDb` (the `db`
+or an open transaction) and names its tables unqualified, so the dashboard runs
+it unchanged inside `withReplicaSchema` — the copy's schema, then
+`pg_catalog`, no `public` — as of the box's clock at the last page synced.
+`analyticsMirrorTables` (server) is the set's tables, for that value's declared
+reads. Nothing in the report may read the clock or a table outside the set: the
+copy would answer differently, or fail.
+
+Pinned by the mirror parity test at the end of `analytics.db.test.ts`: source
+and replica in one database, every range (incl. `12m` on the stored totals) ×
+audience × filters × compare, over two clocks, plus the sessions window and
+its counts (the visit list's window, count and groups), equal on `public` and on the copy — after the first copy and again
+after new visits, a rollup and a retention sweep arrive as deltas.
+
 ## Runtime notes
 
 - The rollup and retention crons are `perWorktree: true` **on purpose**. A
@@ -209,7 +232,8 @@ Without it the box knows only the sections someone reached.
   so raw rows are never deleted before they are summed.
 - Visits, hits, visitor links and memberships are excluded from the
   change-feed: public traffic (or the rollup) writes them, and nothing renders
-  them live.
+  them live (the deploy app's report reads its own copy, pushed by the
+  mirror's applied pages).
 - `RECORDED_FIELDS` (core) is what "What one visit records" renders.
   `server/internal/recorded-columns.ts` fails to compile if the stored columns and
   that list disagree.

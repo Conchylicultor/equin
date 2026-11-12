@@ -17,9 +17,10 @@ import { ANALYTICS_MIRROR_SET_ID } from "../../core";
  * The `analytics` mirror set: what the deploy app copies from a deployed
  * site's box into this computer (`apps/deploy/site-mirror`) so its reports
  * run locally on the same SQL. The raw visits and hits (90 days; a deleted
- * visit's hits arrive as their own tombstones) and the forever rollups.
+ * visit's hits arrive as their own tombstones) and the forever rollups — also
+ * what a reader of a copy declares it reads (its change signal is the
+ * replica's applied pages, never this computer's own rows).
  */
-/** The tables of the `analytics` mirror set — what a reader of a copy of it reads. */
 export const analyticsMirrorTables = [
   analyticsVisits,
   analyticsHits,

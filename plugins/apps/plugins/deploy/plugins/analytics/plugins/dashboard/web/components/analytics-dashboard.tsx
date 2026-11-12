@@ -19,13 +19,12 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Switch } from "@plugins/primitives/plugins/css/plugins/switch/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { SegmentedControl } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
-import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
-import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { clickRow, removeFilter } from "../internal/filters";
 import { RANGE_OPTIONS } from "../internal/format";
+import { ANALYTICS_MIRROR_SUBJECT } from "../internal/mirror";
 import { kpiById, type KpiId } from "../internal/kpis";
 import { PANELS } from "../internal/panels";
 import { deploymentAnalytics } from "../../core";
@@ -35,10 +34,7 @@ import { RankedPanel } from "./ranked-panel";
 import { RecordedFields } from "./recorded-fields";
 import { ResultState } from "./result-states";
 import { TrendChart } from "./trend-chart";
-import { symbol } from "@plugins/ui/plugins/icons/core";
 import { MirrorFreshness } from "@plugins/apps/plugins/deploy/plugins/site-mirror/plugins/pull/web";
-
-const refreshIcon = symbol("refresh");
 
 /** Dimensions a visitor ARRIVES through: filtering by one shows where they landed. */
 const SOURCE_DIMENSIONS: ReadonlySet<Dimension> = new Set([
@@ -51,8 +47,10 @@ const SOURCE_DIMENSIONS: ReadonlySet<Dimension> = new Set([
 /**
  * The deployed site's analytics: range and comparison, the KPI tiles and their
  * trend, ranked panels that filter the whole dashboard, and what one visit
- * records. Every change of range, comparison or filters asks the box again;
- * nothing refreshes on a timer.
+ * records. The report runs on this computer's copy of the site's tables, so
+ * every change of range, comparison or filters is answered locally; it moves
+ * with each page the copy syncs, and the freshness line above it says when
+ * that was (Sync now asks the box for what is new).
  */
 export function AnalyticsDashboard({
   deploymentId,
@@ -73,9 +71,9 @@ export function AnalyticsDashboard({
   // Decided client-side with the same function the server uses, so a second
   // filter is disabled BEFORE asking rather than refused after.
   const source = reportSourceFor(query, new Date());
-  // One snapshot per (deployment, query): every range, compare or filter
-  // change is a new question; nothing re-asks on its own — each measure is an
-  // SSH session to the box — so Refresh (`refresh()`) is the only re-ask.
+  // One pushed answer per (deployment, query): every range, compare or filter
+  // change is a new question, answered from the local copy; each page the
+  // copy syncs recomputes it.
   const answer = useLive(deploymentAnalytics, { deploymentId, query });
 
   const onFilterRow = (dimension: Dimension, value: string) => {
@@ -89,12 +87,13 @@ export function AnalyticsDashboard({
 
   return (
     <Stack gap="md">
-      {/* The local copy of the site's analytics tables (site-mirror). Nothing
-          reads it yet; the report below is still asked over SSH. */}
+      {/* The local copy of the site's analytics tables (site-mirror) the
+          report below runs on: when it was synced, Sync now, and why a pull
+          failed. Opening the tab asks for a pull when the copy is stale. */}
       <MirrorFreshness
         deploymentId={deploymentId}
         setId={ANALYTICS_MIRROR_SET_ID}
-        subject={{ reading: "analytics", answer: "a page of analytics rows" }}
+        subject={ANALYTICS_MIRROR_SUBJECT}
       />
       <Cluster gap="md" align="center">
         <SegmentedControl
@@ -118,20 +117,6 @@ export function AnalyticsDashboard({
             Compare to previous period
           </Text>
         </Inline>
-        <Inline gap="xs">
-          {answer.status === "ready" && answer.data.kind === "report" && (
-            <Text variant="caption" tone="muted">
-              Updated{" "}
-              <RelativeTime date={new Date(answer.data.report.generatedAt)} />
-            </Text>
-          )}
-          <IconButton
-            icon={refreshIcon}
-            label="Refresh"
-            loading={answer.status === "loading"}
-            onClick={() => answer.refresh()}
-          />
-        </Inline>
       </Cluster>
 
       <FilterBar
@@ -148,7 +133,7 @@ export function AnalyticsDashboard({
           variant="block"
           subject="this deployment's analytics"
           error={answer.error}
-          refetch={answer.refresh}
+          refetch={answer.refetch}
         />
       ) : answer.data.kind === "report" ? (
         <ReportView
@@ -161,13 +146,17 @@ export function AnalyticsDashboard({
           onTab={(panel, tab) => setTabs((t) => ({ ...t, [panel]: tab }))}
           onFilterRow={onFilterRow}
         />
-      ) : (
+      ) : answer.data.kind === "refused" ? (
         <ResultState
           result={answer.data}
           filters={filters}
           onKeepFirstFilter={() => setFilters((f) => f.slice(0, 1))}
           onVisitorsOnly={() => setAudience("visitors")}
         />
+      ) : (
+        // Not copied yet is not known yet: loading, while the freshness line
+        // above says how the first copy is going.
+        <Loading variant="cards" count={6} />
       )}
 
       <RecordedFields />

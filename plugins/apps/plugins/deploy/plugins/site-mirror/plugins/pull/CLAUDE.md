@@ -51,16 +51,19 @@ replicas). Replica ids are `site-mirror:<deployment>:<set>`.
   (`HostQueryFailureState`), and `unknown-set` / `unknown-table` /
   `source-older` as "this site runs an older release — deploy it again",
   above "showing data synced 3h ago". On mount it asks for a pull when the
-  copy is missing or more than 5 minutes old. Shown in the Analytics tab
-  (collect's `analytics` set, which does not read the copy yet) and the
+  copy is missing or more than 5 minutes old. Shown above the Analytics tab
+  and in the Overview's Traffic card (collect's `analytics` set), and in the
   Messages tab and card (the intake's `site_messages` set).
 - **Reading a copy** (server barrel): `readSiteMirror(deploymentId, setId,
   fn)` runs the set owner's own SQL on the deployment's copy
-  (`withReplicaSchema`: `ready: false` until a whole copy is in place; no
-  replica yet throws — a consumer reads only once `site-mirror.status` says
-  `copied`), and `onSiteMirrorApplied(setId, fn)` is its change signal (any
-  deployment's copy of the set applied a page). The inbox
-  (`site-messages/inbox`) serves its live window through both.
+  (`withReplicaSchema`), `fn(tx, { sourceNow })` getting the box's clock at the
+  last page applied — the "now" a report over the copy runs as of. `ready:
+  false` until a whole copy is in place, and (`empty`) while no replica exists
+  yet — never a throw. `onSiteMirrorApplied({ setId, deploymentId? }, fn)` is
+  its change signal (a copy of the set — that deployment's, when named —
+  applied a page, or a lost LISTEN reopened), resolving to the unsubscribe once
+  listening. The analytics report (`analytics/dashboard`, per deployment) and
+  the inbox (`site-messages/inbox`, any deployment) serve through both.
 
 Tests: `./equin test plugins/apps/plugins/deploy/plugins/site-mirror` (the key
 list cut); the engine's own round trips are `table-mirror/replica`'s suite.

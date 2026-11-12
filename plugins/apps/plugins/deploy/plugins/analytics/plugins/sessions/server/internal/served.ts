@@ -104,13 +104,7 @@ async function onCopy<T>(
   const read = await readSiteMirror(
     deploymentId,
     ANALYTICS_MIRROR_SET_ID,
-    (tx, { sourceNow }) => {
-      if (sourceNow === null)
-        throw new Error(
-          `deploy-analytics.sessions: ${deploymentId}'s copy is whole but has no source clock`,
-        );
-      return fn(tx, sourceNow);
-    },
+    (tx, { sourceNow }) => fn(tx, sourceNow),
   );
   if (!read.ready)
     throw new Error(
@@ -128,7 +122,7 @@ export const deploymentSessionsServed = serveCollection(deploymentSessions, {
   changes: "notified",
   throttleMs: 1000,
   whileSubscribed: (notify) =>
-    onSiteMirrorApplied(ANALYTICS_MIRROR_SET_ID, () => notify()),
+    onSiteMirrorApplied({ setId: ANALYTICS_MIRROR_SET_ID }, () => notify()),
   // What the answers read: the copy's tables (named as collect's own — the
   // replica schema holds them under the same names) and the replica's state
   // row. Every change to either arrives through the replica's NOTIFY above,

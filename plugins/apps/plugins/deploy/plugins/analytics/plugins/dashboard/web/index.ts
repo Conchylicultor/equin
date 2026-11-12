@@ -11,7 +11,7 @@ import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export default {
   description:
-    "Analytics tab of a site's page, shown only when the deployment's composition ships the collect plugin: range and comparison controls, KPI tiles choosing a trend line with a dashed previous period, ranked Pages / Sources / Locations / Devices / Events panels whose rows filter the whole dashboard (one filter on ranges past the raw window), and what one visit records. Reads the report over SSH on demand, with explicit states for every failure.",
+    "Analytics tab of a site's page, shown only when the deployment's composition ships the collect plugin: range and comparison controls, KPI tiles choosing a trend line with a dashed previous period, ranked Pages / Sources / Locations / Devices / Events panels whose rows filter the whole dashboard (one filter on ranges past the raw window), and what one visit records. Reads the report computed from this computer's copy of the site's tables (pushed as the copy syncs), under the copy's freshness line; loading until a first copy is in place, an explicit state for a refusal or a failed read.",
   contributions: [
     SiteTabs.View({
       id: "analytics",

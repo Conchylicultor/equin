@@ -123,8 +123,19 @@ export async function sweepOrphanReplicaSchemas(
  * never a partial list.
  */
 export type ReplicaRead<T> =
-  | { ready: true; value: T; sourceNow: string | null }
+  | { ready: true; value: T; sourceNow: Date }
   | { ready: false; phase: ReplicaPhase; progress: ReplicaProgress | null };
+
+/**
+ * What a read of the copy is "as of": the source's own clock at the last
+ * page applied (`source_now`), read in the same snapshot as the rows — so an
+ * owner's report over the copy is exactly what the source would have answered
+ * at that moment (today's partial day, a live-visit cutoff), never this
+ * computer's clock.
+ */
+export interface ReplicaAsOf {
+  sourceNow: Date;
+}
 
 /**
  * Run `fn` against a replica's copy: one read-only REPEATABLE READ
@@ -140,7 +151,7 @@ export type ReplicaRead<T> =
 export async function withReplicaSchema<T>(
   db: NodePgDatabase,
   replicaId: string,
-  fn: (tx: ReplicaTx, copy: { sourceNow: Date | null }) => Promise<T>,
+  fn: (tx: ReplicaTx, asOf: ReplicaAsOf) => Promise<T>,
 ): Promise<ReplicaRead<T>> {
   return db.transaction(
     async (tx): Promise<ReplicaRead<T>> => {
@@ -169,14 +180,21 @@ export async function withReplicaSchema<T>(
       if (row.copiedAt === null) {
         return { ready: false, phase: row.phase, progress: row.progress };
       }
+      // Every applied page stamps `source_now` with the copy's progress, so a
+      // copy in place without one is a broken invariant, not an unknown time.
+      if (row.sourceNow === null) {
+        throw new Error(
+          `table-mirror: replica ${replicaId} holds a whole copy but no source clock`,
+        );
+      }
+      const sourceNow = new Date(row.sourceNow);
       await tx.execute(
         sql.raw(`SET LOCAL search_path TO ${row.schemaName}, pg_catalog`),
       );
-      const sourceNow = row.sourceNow === null ? null : new Date(row.sourceNow);
       return {
         ready: true,
         value: await fn(tx, { sourceNow }),
-        sourceNow: row.sourceNow,
+        sourceNow,
       };
     },
     { isolationLevel: "repeatable read", accessMode: "read only" },

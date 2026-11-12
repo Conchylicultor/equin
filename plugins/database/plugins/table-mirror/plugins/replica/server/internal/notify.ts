@@ -13,8 +13,8 @@ export type ReplicaNotice = z.infer<typeof ReplicaNoticeSchema>;
 
 /**
  * Told when a replica of the set committed a page: `replicaId`, or `null`
- * when the LISTEN session was lost and a notice may have been missed (re-read
- * every replica of the set).
+ * once a lost LISTEN session is open again, a notice having maybe been missed
+ * (re-read every replica of the set).
  */
 export type ReplicaAppliedHandler = (replicaId: string | null) => void;
 
@@ -33,8 +33,15 @@ function open(): Promise<ListenSession> {
     notification: (_channel, payload) => dispatch(payload),
     lost: () => {
       session = null;
-      for (const fn of handlers.keys()) fn(null);
-      if (handlers.size > 0) session = open();
+      if (handlers.size === 0) return;
+      // Re-read only once the new LISTEN is up: a page committed between the
+      // loss and the re-LISTEN is then in what the re-read sees, never in
+      // neither. A failed reopen is loud through `open` itself.
+      const reopened = open();
+      session = reopened;
+      void reopened.then(() => {
+        for (const fn of handlers.keys()) fn(null);
+      });
     },
   });
   // A failed open is loud (an unhandled rejection) and leaves no session, so
@@ -49,15 +56,24 @@ function open(): Promise<ListenSession> {
 /**
  * Call `fn` whenever a replica of `setId` commits a page — push-based: the
  * apply transaction itself NOTIFYs `table_mirror` at its commit. A served
- * value over a replica calls its own `notify()` from it. Returns the
- * unsubscribe; the LISTEN session lives while anyone is subscribed.
+ * value over a replica calls its own `notify()` from it. Resolves to the
+ * unsubscribe once the LISTEN is active — so a read made after it cannot miss
+ * a page committed meanwhile (a served value's `whileSubscribed` returns this
+ * promise; its first load waits for it). Rejects, subscribing nothing, when
+ * the LISTEN cannot be opened. The session lives while anyone is subscribed.
  */
-export function onReplicaApplied(
+export async function onReplicaApplied(
   setId: string,
   fn: ReplicaAppliedHandler,
-): () => void {
+): Promise<() => void> {
   handlers.set(fn, setId);
   session ??= open();
+  try {
+    await session;
+  } catch (err) {
+    handlers.delete(fn);
+    throw err;
+  }
   return () => {
     handlers.delete(fn);
     if (handlers.size === 0 && session !== null) {

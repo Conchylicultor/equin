@@ -1,27 +1,17 @@
 import type { ReactNode } from "react";
 import type { AnalyticsFilter } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/core";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import {
-  HostQueryErrorState,
-  HostQueryFailureState,
-  type HostQuerySubject,
-} from "@plugins/apps/plugins/deploy/plugins/host-query/web";
+import { HostQueryErrorState } from "@plugins/apps/plugins/deploy/plugins/host-query/web";
 import type { DeploymentAnalyticsResult } from "../../core";
 import { DIMENSION_LABEL } from "../internal/format";
 
-/** Every answer that is not a report. */
-export type NonReport = Exclude<DeploymentAnalyticsResult, { kind: "report" }>;
-
-const ANALYTICS_SUBJECT: HostQuerySubject = {
-  reading: "analytics",
-  answer: "an analytics report",
-};
+/** collect's refusal of a question: named for what to do, never an empty dashboard. */
+export type Refusal = Extract<DeploymentAnalyticsResult, { kind: "refused" }>;
 
 /**
- * The dashboard's body for every answer that is not a report. Each is named
- * for what failed and what to do — none of them renders as an empty dashboard.
- * The SSH / request failures speak host-query's shared vocabulary; `refused`
- * is collect's own answer.
+ * The dashboard's body for a refused question (collect's own answer), with the
+ * one change that makes it answerable. A copy that is not readable yet is not
+ * a refusal: the caller renders it as loading.
  */
 export function ResultState({
   result,
@@ -29,17 +19,12 @@ export function ResultState({
   onKeepFirstFilter,
   onVisitorsOnly,
 }: {
-  result: NonReport;
+  result: Refusal;
   filters: readonly AnalyticsFilter[];
   onKeepFirstFilter: () => void;
   /** Back to the default audience — the one the stored totals hold. */
   onVisitorsOnly: () => void;
 }): ReactNode {
-  if (result.kind !== "refused") {
-    return (
-      <HostQueryFailureState failure={result} subject={ANALYTICS_SUBJECT} />
-    );
-  }
   if (result.reason === "audience-beyond-raw-window") {
     return (
       <HostQueryErrorState

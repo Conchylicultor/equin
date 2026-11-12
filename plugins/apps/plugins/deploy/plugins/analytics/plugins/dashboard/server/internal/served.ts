@@ -1,49 +1,65 @@
-import { endpointPath } from "@plugins/infra/plugins/endpoints/server";
+import { eq } from "drizzle-orm";
+import { db } from "@plugins/database/server";
 import { serveValue } from "@plugins/network/plugins/live/server";
-import { hostOnlyQueryOverSsh } from "@plugins/apps/plugins/deploy/plugins/host-query/server";
+import { tableMirrorReplicas } from "@plugins/database/plugins/table-mirror/plugins/replica/server";
+import { _deployDeployments } from "@plugins/apps/plugins/deploy/plugins/deployments/server";
+import { deploymentIdKind } from "@plugins/apps/plugins/deploy/plugins/deployments/core";
 import {
-  analyticsQueryEndpoint,
-  AnalyticsQueryResultSchema,
-  encodeAnalyticsQuery,
-} from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/core";
+  onSiteMirrorApplied,
+  readSiteMirror,
+} from "@plugins/apps/plugins/deploy/plugins/site-mirror/plugins/pull/server";
+import { ANALYTICS_MIRROR_SET_ID } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/core";
+import {
+  analyticsMirrorTables,
+  runAnalyticsQuery,
+} from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/server";
 import { deploymentAnalytics } from "../../core";
 
-// A snapshot, not `db` and not "notified": the answer is the remote site's
-// report, which moves with every visit and has no change signal on this side.
-// Under `db` it would be labelled fresh while only an unrelated write to the
-// deployment or server row re-asked the box; "notified" would claim a notifier
-// nobody has. `hostOnlyQueryOverSsh` also resolves the deployment's SSH target
-// from Postgres (row, server, pinned host key, key secret) — the private key
-// and the pinned host key may only be read there, at SSH time, so it cannot be
-// resolved outside the loader. That part is re-read on every measure with the
-// report, so it is never staler than the report the snapshot already says is
-// re-measured only on ask.
-//
-// That Postgres read is UNDECLARED: `no-db-backed-notify` reaches it (this
-// plugin's `exempt/index.ts` sanctions it), but the runtime's D5 guard skips
-// snapshot externals. Only `snapshot` keeps it honest — never copy this loader
-// into a `fixed` value.
+/**
+ * The report, run on this computer's copy of the site's analytics tables:
+ * collect's own `runAnalyticsQuery` — no second implementation — inside the
+ * replica's read-only snapshot (`search_path` = the copy, so its unqualified
+ * tables are the site's, and a table the set does not mirror fails), as of the
+ * site's clock at the last page applied. Pushed: each page the replica
+ * commits notifies this deployment's tuples (`onSiteMirrorApplied`).
+ */
 export const deploymentAnalyticsServed = serveValue(deploymentAnalytics, {
   source: "external",
-  changes: {
-    snapshot: {
+  changes: "notified",
+  reads: {
+    tables: [_deployDeployments],
+    reason:
+      "Whether the deployment still exists (refused `missing` once it is deleted), read before the copy.",
+    notified: {
+      relations: [tableMirrorReplicas, ...analyticsMirrorTables],
       reason:
-        "the deployed site's report, read over SSH from its box: it changes with every visit and has no change signal here",
+        "The replica's state and its copy of the site's analytics tables move only when a pull applies a page, whose commit NOTIFYs table_mirror — heard per deployment by onSiteMirrorApplied.",
     },
   },
   loader: async ({ deploymentId, query }) => {
-    const result = await hostOnlyQueryOverSsh(
-      deploymentId,
-      `${endpointPath(analyticsQueryEndpoint, {})}?q=${encodeAnalyticsQuery(query)}`,
-      AnalyticsQueryResultSchema,
-    );
-    if (result.kind === "not-found") {
+    const [deployment] = await db
+      .select({ id: _deployDeployments.id })
+      .from(_deployDeployments)
+      .where(eq(_deployDeployments.id, deploymentIdKind.key(deploymentId)));
+    if (deployment === undefined) {
       throw deploymentAnalytics.refuse(
         "missing",
         "This deployment no longer exists.",
       );
     }
-    // The box's answer, or which of SSH, the request or the answer failed.
-    return result.kind === "answer" ? result.value : result;
+    const read = await readSiteMirror(
+      deploymentId,
+      ANALYTICS_MIRROR_SET_ID,
+      (tx, { sourceNow }) => runAnalyticsQuery(tx, query, sourceNow),
+    );
+    return read.ready ? read.value : { kind: "not-copied" as const };
   },
+  whileSubscribed: ({ deploymentId }, notify) =>
+    onSiteMirrorApplied(
+      { setId: ANALYTICS_MIRROR_SET_ID, deploymentId },
+      () => notify(),
+    ),
+  // A first copy or a reconcile commits a page after another; one report per
+  // second is all a reader can see of it.
+  throttleMs: 1000,
 });

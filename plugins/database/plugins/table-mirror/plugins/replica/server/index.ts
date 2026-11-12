@@ -23,6 +23,7 @@ export {
   withReplicaSchema,
   type EnsureReplicaOptions,
   type ReplicaRead,
+  type ReplicaAsOf,
 } from "./internal/replicas";
 export {
   onReplicaApplied,

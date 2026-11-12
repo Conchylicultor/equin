@@ -1,6 +1,7 @@
 import { randomBytes, randomUUID } from "node:crypto";
-import { and, desc, eq, gt, gte, lte, sql } from "drizzle-orm";
+import { and, desc, eq, gt, gte, lte, sql, type SQL } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
+import type { SqlExecutable } from "@plugins/database/plugins/sql-rows/core";
 import type { IpCountryResult } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/ip-country/server";
 import { isBotUserAgent } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/host-only/server";
 import {
@@ -29,6 +30,14 @@ import { liveVisitCutoff } from "./visit-grouping";
 /** Any drizzle handle collect can write through: the app's `db`, or a test DB. */
 export type AnalyticsDb = NodePgDatabase;
 type Tx = Parameters<Parameters<AnalyticsDb["transaction"]>[0]>[0];
+
+/**
+ * Anything collect's reads (the report, the visit list) run on: the app's
+ * `db`, or an open transaction — the deploy app runs the same SQL inside a
+ * mirror's read-only snapshot of a site's tables (`withReplicaSchema`), so a
+ * read never needs `transaction` of its own.
+ */
+export type AnalyticsReadDb = SqlExecutable<SQL>;
 
 /** What the request itself says about the visitor. Used in memory, never stored as-is. */
 export interface CollectContext {

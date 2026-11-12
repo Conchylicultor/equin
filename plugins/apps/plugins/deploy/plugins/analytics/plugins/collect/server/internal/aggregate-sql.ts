@@ -14,7 +14,7 @@ import {
   type Granularity,
   type VisitDimension,
 } from "../../core";
-import type { AnalyticsDb } from "./collect";
+import type { AnalyticsDb, AnalyticsReadDb } from "./collect";
 import {
   analyticsDaily,
   analyticsVisitMembers,
@@ -282,7 +282,7 @@ const isRolledUp = sql`EXISTS (
  * already have daily totals are skipped — the raw half of a totals report.
  */
 export async function rawDailyRows(
-  dbx: AnalyticsDb,
+  dbx: AnalyticsReadDb,
   opts: {
     from: string;
     to: string;
@@ -308,7 +308,7 @@ export async function rawDailyRows(
 
 /** Raw `total` rows per UTC hour (`YYYY-MM-DDTHH:00:00Z`) of visit start, for one day. */
 export async function rawHourlyTotals(
-  dbx: AnalyticsDb,
+  dbx: AnalyticsReadDb,
   opts: {
     day: string;
     audience: Audience;
@@ -334,7 +334,7 @@ export type TotalsLevel =
 
 /** Rows read back from `analytics_daily` for one level, days `from..to`. */
 export async function dailyTotalsRows(
-  dbx: AnalyticsDb,
+  dbx: AnalyticsReadDb,
   opts: {
     from: string;
     to: string;
@@ -429,7 +429,7 @@ export type VisitorRow = z.infer<typeof VisitorRowSchema>;
  * many days they came.
  */
 export async function visitorCounts(
-  dbx: AnalyticsDb,
+  dbx: AnalyticsReadDb,
   opts: {
     from: string;
     to: string;
@@ -524,7 +524,7 @@ const DayRow = z.object({ day: z.string() });
  * existed). The rollup backfills them.
  */
 export async function daysMissingTotals(
-  dbx: AnalyticsDb,
+  dbx: AnalyticsReadDb,
   today: string,
 ): Promise<string[]> {
   const rows = await executeRows(dbx, {
@@ -541,7 +541,7 @@ export async function daysMissingTotals(
 
 /** Which of `days` are rolled up (have their memberships; see {@link isRolledUp}). */
 export async function rolledUpDays(
-  dbx: AnalyticsDb,
+  dbx: AnalyticsReadDb,
   days: readonly string[],
 ): Promise<Set<string>> {
   if (days.length === 0) return new Set();

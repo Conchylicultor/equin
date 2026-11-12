@@ -12,8 +12,8 @@ const r = await pullReplica({
   sink,                                  // only for a "custom" replica (site-reports' reduce step)
 });
 const read = await withReplicaSchema(db, id, (tx, { sourceNow }) => runAnalyticsQuery(tx, q, sourceNow));
-// read: { ready: true, value, sourceNow } | { ready: false, phase, progress }
-const stop = onReplicaApplied("analytics", (replicaId) => served.notify());
+// read: { ready: true, value, sourceNow: Date } | { ready: false, phase, progress }
+const stop = await onReplicaApplied("analytics", (replicaId) => served.notify()); // once LISTENing
 ```
 
 - **State** — `table_mirror_replicas` (one row per replica, keyed by the
@@ -93,8 +93,10 @@ const stop = onReplicaApplied("analytics", (replicaId) => served.notify());
 - **`withReplicaSchema`**: a read-only REPEATABLE READ transaction with
   `search_path = <schema>, pg_catalog` — no `public`, so the owner's own SQL
   runs unchanged on the copy and a table the set does not mirror fails
-  instead of reading this computer's rows. `fn` gets the copy's `sourceNow`
-  (a `Date`): a read that depends on time asks it of the copy's moment.
+  instead of reading this computer's rows. `fn` also gets `{ sourceNow }`,
+  the source's clock at the last applied page, read in the same snapshot: the
+  "now" an owner's query runs as of, so it answers what the source would have
+  at that moment (a whole copy without one throws).
 - **Ownership**: `dropReplica` (schema + row + key index, one transaction);
   `sweepOrphanReplicaSchemas` drops every `tm_*` schema no row names (the
   `tm_` schema namespace is this plugin's) — schemas listed before rows, so a
@@ -104,8 +106,10 @@ const stop = onReplicaApplied("analytics", (replicaId) => served.notify());
   a fork has empty `tm_*` schemas and no replicas, pulls its own copy on open,
   and the sweep drops the empty schemas.
 - **Change signal**: `onReplicaApplied(setId, fn)` LISTENs on `table_mirror`
-  through the host's `DatabaseDriver.listen` while anyone is subscribed;
-  `fn(null)` after a lost session (a notice may have been missed).
+  through the host's `DatabaseDriver.listen` while anyone is subscribed, and
+  resolves to the unsubscribe only once the LISTEN is active (a read after it
+  cannot miss a page); `fn(null)` once a lost session is open again (a notice
+  may have been missed).
 
 Tests: `server/internal/replica.db.test.ts` — source and replica in one
 throwaway database, `fetch` the source's readers in-process (counting what

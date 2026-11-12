@@ -1,7 +1,8 @@
 /**
  * The dashboard's body for every answer: a loading state while the report is
- * asked for, and an explicit, named error for every failure — never KPI tiles
- * or panels over an unknown or failed read.
+ * asked for or the site's tables are not copied yet, and an explicit, named
+ * state for a refusal or a failed read — never KPI tiles or panels over an
+ * unknown or failed read.
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -19,13 +20,22 @@ vi.mock("@plugins/network/plugins/live/web", async (importOriginal) => ({
   ...(await importOriginal<object>()),
   useLive: () => answer.current,
 }));
+// The freshness line above the report is site-mirror's (and its tests');
+// here it only has to be there.
+vi.mock(
+  "@plugins/apps/plugins/deploy/plugins/site-mirror/plugins/pull/web",
+  async (importOriginal) => ({
+    ...(await importOriginal<object>()),
+    MirrorFreshness: () => <div data-testid="mirror-freshness" />,
+  }),
+);
 // Recharts measures a real layout jsdom does not have; the chart is not what
 // these states are about.
 vi.mock("../components/trend-chart", () => ({
   TrendChart: () => <div data-testid="trend-chart" />,
 }));
 
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import { ResourceError } from "@plugins/network/plugins/live/plugins/live-state/core";
 import type { AnalyticsReport } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/core";
 import type { DeploymentAnalyticsResult } from "../../core";
@@ -35,10 +45,9 @@ import { report, row } from "../testing";
 afterEach(cleanup);
 
 const refetch = vi.fn(() => Promise.resolve());
-const refresh = vi.fn(() => Promise.resolve());
 
 function settled(data: DeploymentAnalyticsResult) {
-  answer.current = { status: "ready", data, refetch, refresh };
+  answer.current = { status: "ready", data, refetch };
 }
 
 function renderDashboard() {
@@ -52,7 +61,7 @@ function expectNoDashboard() {
 
 describe("AnalyticsDashboard states", () => {
   it("shows a loading state, not an empty dashboard, while pending", () => {
-    answer.current = { status: "loading", refetch, refresh };
+    answer.current = { status: "loading", refetch };
     renderDashboard();
     expectNoDashboard();
     expect(screen.queryByRole("alert")).toBeNull();
@@ -71,51 +80,24 @@ describe("AnalyticsDashboard states", () => {
         "missing",
       ),
       refetch,
-      refresh,
     };
     renderDashboard();
     expectNoDashboard();
     expect(screen.getByText(/This deployment no longer exists\./)).toBeTruthy();
   });
 
+  it("shows a loading state, not an empty dashboard, while the site's tables are not copied yet", () => {
+    settled({ kind: "not-copied" });
+    renderDashboard();
+    expectNoDashboard();
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.getByText("What one visit records")).toBeTruthy();
+    expect(screen.getByTestId("mirror-freshness")).toBeTruthy();
+  });
+
   it.each<[string, DeploymentAnalyticsResult, RegExp]>([
-    ["no key", { kind: "no-ssh-key" }, /has no SSH key yet/],
-    ["unverified", { kind: "unverified" }, /never verified/],
     [
-      "ssh failure",
-      {
-        kind: "ssh-failed",
-        failure: "auth",
-        message: "auth failed",
-        stderr: "Permission denied (publickey).",
-      },
-      /rejected this app's SSH key/,
-    ],
-    [
-      "site down",
-      { kind: "request-failed", exitCode: 7, stderr: "" },
-      /not running/,
-    ],
-    [
-      "site error",
-      { kind: "request-failed", exitCode: 22, stderr: "HTTP 500: boom" },
-      /answered with an error/,
-    ],
-    [
-      "route missing",
-      {
-        kind: "route-missing",
-        path: "/api/host-only/analytics/report",
-      },
-      /older than this app[\s\S]*Deploy it again/,
-    ],
-    [
-      "unreadable",
-      { kind: "unreadable-answer", detail: "Not JSON" },
-      /not with an analytics report/,
-    ],
-    [
-      "refused",
+      "stacked filters",
       {
         kind: "refused",
         reason: "stacked-filters-beyond-raw-window",
@@ -124,22 +106,20 @@ describe("AnalyticsDashboard states", () => {
       },
       /last 90 days/,
     ],
-  ])("renders %s as an explicit error state", (_name, data, text) => {
+    [
+      "an audience past the raw window",
+      {
+        kind: "refused",
+        reason: "audience-beyond-raw-window",
+        rawWindowDays: 90,
+      },
+      /only visitors are kept/,
+    ],
+  ])("renders a refusal (%s) as an explicit state", (_name, data, text) => {
     settled(data);
     renderDashboard();
     expectNoDashboard();
     expect(screen.getByRole("alert").textContent).toMatch(text);
-  });
-
-  it("shows the SSH diagnostic verbatim", () => {
-    settled({
-      kind: "ssh-failed",
-      failure: "unknown",
-      message: "?",
-      stderr: "kex_exchange_identification: boom",
-    });
-    renderDashboard();
-    expect(screen.getByText("kex_exchange_identification: boom")).toBeTruthy();
   });
 
   it("renders a report as tiles, chart and panels", () => {
@@ -170,14 +150,5 @@ describe("AnalyticsDashboard states", () => {
     ).toBeTruthy();
     expect(screen.getByRole("link", { name: "DB-IP" })).toBeTruthy();
     expect(screen.queryByText("Not collected yet.")).toBeNull();
-  });
-
-  it("re-measures only when asked", () => {
-    settled({ kind: "report", report: report() });
-    refresh.mockClear();
-    renderDashboard();
-    expect(refresh).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
-    expect(refresh).toHaveBeenCalledTimes(1);
   });
 });

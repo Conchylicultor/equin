@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from "react";
 import {
+  ANALYTICS_MIRROR_SET_ID,
   reportSourceFor,
   type AnalyticsQuery,
   type AnalyticsReport,
@@ -19,8 +20,10 @@ import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
+import { MirrorFreshness } from "@plugins/apps/plugins/deploy/plugins/site-mirror/plugins/pull/web";
 import { kpiById, type KpiId } from "../internal/kpis";
 import { PANELS } from "../internal/panels";
+import { ANALYTICS_MIRROR_SUBJECT } from "../internal/mirror";
 import { useShipsAnalytics } from "../internal/use-analytics-available";
 import { deploymentAnalytics } from "../../core";
 import { KpiTiles } from "./kpi-tiles";
@@ -33,7 +36,7 @@ const chevronIcon = symbol("chevron-right");
 /**
  * THE question the Overview asks: the Analytics tab's own opening one (30 days,
  * compared to the previous 30, unfiltered), so the Overview's three cards and
- * the tab share ONE snapshot — each measure is an SSH session to the box.
+ * the tab share ONE answer, computed from the local copy of the site's tables.
  */
 const OVERVIEW_QUERY: AnalyticsQuery = {
   range: "30d",
@@ -60,7 +63,9 @@ function OpenAnalytics(): ReactNode {
 /**
  * Gates an Overview analytics card the way the tab is gated (absent when the
  * composition ships no collector) and reads the shared report. Every way the
- * read can fail renders in the card's place, through the tab's own states.
+ * read can fail renders in the card's place, through the tab's own states; a
+ * copy not readable yet is loading, with the freshness line saying how the
+ * first copy is going (and asking for it).
  */
 function ReportGate({
   deployment,
@@ -131,16 +136,25 @@ function LoadedReport({
             variant="block"
             subject="this site's analytics"
             error={answer.error}
-            refetch={answer.refresh}
+            refetch={answer.refetch}
           />
-        ) : answer.data.kind === "report" ? null : (
+        ) : answer.data.kind === "refused" ? (
           <ResultState
             result={answer.data}
             filters={NO_FILTERS}
             onKeepFirstFilter={ignore}
             onVisitorsOnly={ignore}
           />
-        )}
+        ) : answer.data.kind === "not-copied" ? (
+          <Stack gap="sm">
+            <MirrorFreshness
+              deploymentId={deploymentId}
+              setId={ANALYTICS_MIRROR_SET_ID}
+              subject={ANALYTICS_MIRROR_SUBJECT}
+            />
+            <Loading variant="rows" count={3} />
+          </Stack>
+        ) : null}
       </SiteCardBody>
     </SiteCard>
   );
@@ -150,7 +164,7 @@ function LoadedReport({
 export function TrafficCard({ deployment }: SiteProps): ReactNode {
   return (
     <ReportGate deployment={deployment} title="Traffic">
-      {(report) => <TrafficBody report={report} />}
+      {(report) => <TrafficBody deploymentId={deployment.id} report={report} />}
     </ReportGate>
   );
 }
@@ -166,7 +180,13 @@ const OVERVIEW_KPIS: readonly KpiId[] = [
   "duration",
 ];
 
-function TrafficBody({ report }: { report: AnalyticsReport }): ReactNode {
+function TrafficBody({
+  deploymentId,
+  report,
+}: {
+  deploymentId: string;
+  report: AnalyticsReport;
+}): ReactNode {
   const [metric, setMetric] = useState<KpiId>("visitors");
   return (
     <SiteCard
@@ -183,6 +203,13 @@ function TrafficBody({ report }: { report: AnalyticsReport }): ReactNode {
             only={OVERVIEW_KPIS}
           />
           <TrendChart report={report} kpi={kpiById(metric)} />
+          {/* When the copy these numbers come from was synced (opening the
+              Overview asks for a pull when it is stale). */}
+          <MirrorFreshness
+            deploymentId={deploymentId}
+            setId={ANALYTICS_MIRROR_SET_ID}
+            subject={ANALYTICS_MIRROR_SUBJECT}
+          />
         </Stack>
       </SiteCardBody>
     </SiteCard>

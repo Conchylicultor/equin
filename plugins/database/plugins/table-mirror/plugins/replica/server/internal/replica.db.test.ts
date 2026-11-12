@@ -311,6 +311,12 @@ describe("a schema replica", () => {
       }),
     );
     expect(read).toMatchObject({ ready: true, value: { n: 5 } });
+    // The copy's "as of" is the source's clock at the last page, handed to
+    // the owner's read and returned with it.
+    const asOf = await withReplicaSchema(db, id, async (_tx, at) => at);
+    if (!asOf.ready) throw new Error("expected a readable copy");
+    expect(asOf.value.sourceNow).toEqual(asOf.sourceNow);
+    expect(asOf.sourceNow.getTime()).toBeLessThanOrEqual(Date.now());
     expect(
       withReplicaSchema(db, id, (tx) =>
         tx.execute(sql.raw(`SELECT 1 FROM rp_wide`)),

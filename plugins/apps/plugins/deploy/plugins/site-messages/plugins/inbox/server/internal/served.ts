@@ -73,6 +73,6 @@ export const siteMessagesInboxServed = serveCollection(siteMessagesInbox, {
   // A sync that applied a page of any site's copy re-reads every held tuple
   // (each diffed by key); a burst of pages costs one re-read a second.
   whileSubscribed: (notify) =>
-    onSiteMirrorApplied(SITE_MESSAGES_MIRROR_SET_ID, () => notify()),
+    onSiteMirrorApplied({ setId: SITE_MESSAGES_MIRROR_SET_ID }, () => notify()),
   throttleMs: 1000,
 });

@@ -1,9 +1,5 @@
 import { z } from "zod";
 import {
-  base64UrlJsonParamSchema,
-  encodeBase64UrlJson,
-} from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/host-only/core";
-import {
   cappedList,
   wholeList,
 } from "@plugins/packages/plugins/list-bound/core";
@@ -230,7 +226,7 @@ const AnalyticsRefusalSchema = z.discriminatedUnion("reason", [
 ]);
 
 /**
- * The query endpoint's answer. `refused` is not an error to paper over: the
+ * A report's answer (`runAnalyticsQuery`). `refused` is not an error to paper over: the
  * query asked for stacked filters on a range only the daily totals can answer
  * (those hold single filters only), or for an audience only the raw visits
  * know, beyond their window.
@@ -243,12 +239,7 @@ export const AnalyticsQueryResultSchema = z.discriminatedUnion("kind", [
 ]);
 export type AnalyticsQueryResult = z.infer<typeof AnalyticsQueryResultSchema>;
 
-// ── Wire encoding (host-only's base64url question) ──────────────────────
-
-/** The report's question on the wire (see {@link encodeBase64UrlJson}). */
-export function encodeAnalyticsQuery(query: AnalyticsQuery): string {
-  return encodeBase64UrlJson(withoutDefaultAudience(query));
-}
+// ── Wire encoding (host-only's base64url questions: the sessions reads) ──
 
 /**
  * `query` without its `audience` when it is the default, which the schema
@@ -262,7 +253,3 @@ export function withoutDefaultAudience<Q extends { audience: string }>(
   const { audience: _default, ...rest } = query;
   return rest;
 }
-
-/** The report endpoint's `?q=` schema. */
-export const AnalyticsQueryParamSchema =
-  base64UrlJsonParamSchema(AnalyticsQuerySchema);

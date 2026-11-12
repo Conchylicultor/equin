@@ -8,6 +8,10 @@
  * `analytics_daily` (unfiltered and each single filter) must equal the same
  * breakdown computed from raw rows. That equality is what lets a 12-month
  * report read totals while a 30-day report reads raw rows and still agree.
+ *
+ * The mirror parity test (last) holds the deploy app to the same SQL: the
+ * tables copied by table-mirror into a replica schema answer every report and
+ * sessions window exactly as the source does.
  */
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
@@ -28,6 +32,19 @@ import {
   type IpCountryLookup,
 } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/ip-country/server/testing";
 import {
+  readMirrorChanges,
+  readMirrorCopy,
+  readMirrorKeys,
+  readMirrorRows,
+} from "@plugins/database/plugins/table-mirror/plugins/source/server";
+import { installMirrorSource } from "@plugins/database/plugins/table-mirror/plugins/source/server/testing";
+import {
+  ensureReplica,
+  pullReplica,
+  withReplicaSchema,
+  type MirrorFetch,
+} from "@plugins/database/plugins/table-mirror/plugins/replica/server";
+import {
   UNFILTERED_LEVEL,
   addDays,
   type AnalyticsFilter,
@@ -45,6 +62,8 @@ import {
 } from "@plugins/network/plugins/live/plugins/filter/core";
 import { MAX_SESSION_HITS, type Session } from "../../core/internal/sessions";
 import { CollectBodySchema } from "../../core/internal/collect-body";
+import { ANALYTICS_RANGES } from "../../core/internal/periods";
+import { AUDIENCES } from "../../core/internal/audience";
 import { DimensionSchema } from "../../core/internal/dimensions";
 import { eventPropValue } from "../../core/internal/event-prop";
 import {
@@ -55,7 +74,12 @@ import {
   type KeyedRow,
   type VisitorRow,
 } from "./aggregate-sql";
-import { firstIdentityDay, recordCollect } from "./collect";
+import {
+  firstIdentityDay,
+  recordCollect,
+  type AnalyticsReadDb,
+} from "./collect";
+import { analyticsMirror } from "./mirror";
 import { runAnalyticsQuery } from "./report";
 import {
   countVisits,
@@ -1523,5 +1547,195 @@ describe("sliding identity", () => {
     // The next rollup heals it.
     await night(addDays(START, 45));
     await assertDaysRolledUp(t.db, [day]);
+  });
+});
+
+describe("mirror parity: the copy answers every report as the source does", () => {
+  // Source and replica in one database, as the demo's stand-in box: the
+  // source is `public` (everything the suites above recorded, rolled up and
+  // swept), the replica its own schema, `fetch` the source's readers called
+  // in-process. Last in the file, so the change-log triggers installed here
+  // touch no other suite.
+  const replicaId = "analytics-parity";
+  const set = analyticsMirror;
+  const fetch: MirrorFetch = {
+    changes: (req) => readMirrorChanges(t.db, { ...req, set }),
+    copy: (req) => readMirrorCopy(t.db, { ...req, set }),
+    keys: (req) => readMirrorKeys(t.db, { ...req, set }),
+    rows: (req) => readMirrorRows(t.db, { ...req, set }),
+  };
+
+  async function sync(): Promise<void> {
+    for (let i = 0; i < 500; i++) {
+      // Small pages, so the copy and the stream both take several.
+      const r = await pullReplica({
+        db: t.db,
+        replicaId,
+        set,
+        fetch,
+        budget: { pages: 5 },
+        bounds: { maxRows: 7, maxKeys: 11 },
+      });
+      if (r.outcome.kind === "synced") return;
+      if (r.outcome.kind !== "stopped") {
+        throw new Error(`sync ended ${JSON.stringify(r.outcome)}`);
+      }
+    }
+    throw new Error("sync did not settle");
+  }
+
+  /** `run` on the source, and on the copy — through `withReplicaSchema`, as the deploy app reads it. */
+  async function both<T>(
+    run: (dbx: AnalyticsReadDb) => Promise<T>,
+  ): Promise<{ source: T; mirror: T }> {
+    const source = await run(t.db);
+    const read = await withReplicaSchema(t.db, replicaId, (tx) => run(tx));
+    if (!read.ready) throw new Error("the copy is not readable");
+    return { source, mirror: read.value };
+  }
+
+  // Every range, from the seeded day (raw) to well after the identity days
+  // (`12m` on the stored totals).
+  const NOWS = [at(NEXT, "12:00"), at(addDays("2026-10-01", 46), "12:00")];
+  const FILTERS: AnalyticsFilter[][] = [
+    [],
+    [{ dimension: "channel", value: "Search" }],
+    [{ dimension: "page", value: "/" }],
+    [
+      { dimension: "event", value: "improve_open" },
+      { dimension: "channel", value: "Search" },
+    ],
+  ];
+
+  const VISIT_WHERES: (Filter | undefined)[] = [
+    undefined,
+    clause("owner", "eq", false),
+    allOf(clause("events", "gt", 0), clause("channel", "eq", "Search")),
+    clause("pageviews", "gte", 2),
+  ];
+
+  // Every question twice, over two clocks: a few hundred reads.
+  const PARITY_TIMEOUT_MS = 120_000;
+
+  /** Asserts parity; answers how many reports, and how many with visits per clock. */
+  async function expectParity(): Promise<{
+    reports: number;
+    withVisits: number[];
+  }> {
+    let reports = 0;
+    const withVisits: number[] = [];
+    for (const now of NOWS) {
+      let visited = 0;
+      for (const range of ANALYTICS_RANGES) {
+        for (const audience of AUDIENCES) {
+          for (const filters of FILTERS) {
+            for (const compare of [true, false]) {
+              const q: AnalyticsQuery = { range, compare, audience, filters };
+              const { source, mirror } = await both((dbx) =>
+                runAnalyticsQuery(dbx, q, now),
+              );
+              expect(mirror).toEqual(source);
+              if (source.kind === "report") {
+                reports++;
+                if (source.report.current.summary.visits > 0) visited++;
+              }
+            }
+          }
+        }
+      }
+      withVisits.push(visited);
+      // The visit list (the Sessions tab's reads): its window, its count and
+      // a grouping, over the same filter language.
+      for (const where of VISIT_WHERES) {
+        const q = { where, filterable: FILTERABLE };
+        const w = await both((dbx) =>
+          readVisitWindow(dbx, { ...q, direction: "desc", limit: 3 }, now),
+        );
+        expect(w.mirror).toEqual(w.source);
+        const n = await both((dbx) => countVisits(dbx, q));
+        expect(n.mirror).toEqual(n.source);
+        const g = await both((dbx) =>
+          readVisitGroups(dbx, { ...q, groupBy: "channel", limit: 10 }),
+        );
+        expect(g.mirror).toEqual(g.source);
+      }
+    }
+    return { reports, withVisits };
+  }
+
+  /** Not vacuous: most questions answer a report, and every clock sees visits. */
+  function expectSubstantial(r: { reports: number; withVisits: number[] }) {
+    expect(r.reports).toBeGreaterThan(50);
+    for (const n of r.withVisits) expect(n).toBeGreaterThan(0);
+  }
+
+  beforeAll(async () => {
+    await installMirrorSource(
+      t.db,
+      [analyticsMirror],
+      [
+        {
+          tables: ["analytics_salts", "analytics_visitor_links"],
+          reason: "stay on the box",
+        },
+      ],
+    );
+    await ensureReplica(t.db, { id: replicaId, set });
+  });
+
+  test(
+    "before the first copy the report is not readable, after it every answer is equal",
+    async () => {
+      expect(
+        (await withReplicaSchema(t.db, replicaId, async () => 1)).ready,
+      ).toBe(false);
+      await sync();
+      expectSubstantial(await expectParity());
+    },
+    PARITY_TIMEOUT_MS,
+  );
+
+  test(
+    "new visits, a rollup and a retention sweep reach the copy as deltas, and still agree",
+    async () => {
+      const day = addDays("2026-10-01", 46);
+      await hit(
+        {
+          kind: "pageview",
+          host,
+          path: "/after-copy",
+          referrer: "https://www.google.com/",
+        },
+        C,
+        at(day, "10:00"),
+      );
+      await runRollup(t.db, at(addDays(day, 1), "00:15"));
+      // The sweep's own guard, then its delete: the seeded day's raw visits go
+      // (their hits cascade), its totals and memberships stay.
+      await assertDaysRolledUp(t.db, [DAY]);
+      await t.db.delete(analyticsVisits).where(eq(analyticsVisits.day, DAY));
+      await sync();
+      expectSubstantial(await expectParity());
+    },
+    PARITY_TIMEOUT_MS,
+  );
+
+  test("a report on the copy reads only the copy's tables", async () => {
+    // The copy's schema is where an unqualified table resolves — not public.
+    const schema = await withReplicaSchema(t.db, replicaId, (tx) =>
+      executeRows(tx, {
+        query: sql`SELECT current_schema() AS s`,
+        row: z.object({ s: z.string() }),
+      }),
+    );
+    if (!schema.ready) throw new Error("the copy is not readable");
+    expect(schema.value[0]?.s).toMatch(/^tm_analytics_/);
+    // search_path is the replica's schema then pg_catalog: a table the set
+    // does not mirror is not there, rather than read from this database.
+    expect(
+      withReplicaSchema(t.db, replicaId, (tx) =>
+        tx.execute(sql`SELECT 1 FROM analytics_salts`),
+      ),
+    ).rejects.toThrow(/analytics_salts/);
   });
 });

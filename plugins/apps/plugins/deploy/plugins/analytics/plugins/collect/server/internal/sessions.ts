@@ -1,15 +1,12 @@
 import { sql, type SQL } from "drizzle-orm";
 import { z } from "zod";
-import {
-  executeOne,
-  executeRows,
-  type SqlExecutable,
-} from "@plugins/database/plugins/sql-rows/core";
+import { executeOne, executeRows } from "@plugins/database/plugins/sql-rows/core";
 import type {
   Filter,
   FilterColumn,
 } from "@plugins/network/plugins/live/plugins/filter/core";
 import { filterSql } from "@plugins/network/plugins/live/plugins/filter/server";
+import type { AnalyticsReadDb } from "./collect";
 import {
   BrowserFamilySchema,
   ChannelSchema,
@@ -38,7 +35,7 @@ import { liveVisitCutoff } from "./visit-grouping";
 // the list keeps exactly the visits the report counts.
 
 /** Anything a read can run on: the database, or a transaction (a replica's read). */
-export type VisitReads = SqlExecutable<SQL>;
+export type VisitReads = AnalyticsReadDb;
 
 /** Each filterable visit column, as the SQL over `v` reads it. */
 const VISIT_FILTER_TARGETS: Readonly<Record<VisitFilterColumn, SQL>> = {

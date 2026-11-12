@@ -33,7 +33,7 @@ import {
   type VisitorGrouping,
   type VisitorRow,
 } from "./aggregate-sql";
-import type { AnalyticsDb } from "./collect";
+import type { AnalyticsReadDb } from "./collect";
 
 /**
  * Answer one analytics query as of `now`.
@@ -47,7 +47,7 @@ import type { AnalyticsDb } from "./collect";
  * bucket from the same visits (`visitorCounts`), never summed per day.
  */
 export async function runAnalyticsQuery(
-  dbx: AnalyticsDb,
+  dbx: AnalyticsReadDb,
   query: AnalyticsQuery,
   now: Date,
 ): Promise<AnalyticsQueryResult> {
@@ -99,7 +99,7 @@ interface ReportAsk {
 }
 
 async function periodData(
-  dbx: AnalyticsDb,
+  dbx: AnalyticsReadDb,
   ask: ReportAsk,
   period: ReportPeriod,
 ): Promise<PeriodData> {
@@ -139,7 +139,7 @@ async function periodData(
 }
 
 function dailyRows(
-  dbx: AnalyticsDb,
+  dbx: AnalyticsReadDb,
   { source, audience, filters }: ReportAsk,
   period: ReportPeriod,
 ): Promise<KeyedRow[]> {
@@ -156,7 +156,7 @@ function dailyRows(
 }
 
 async function totalsSourceRows(
-  dbx: AnalyticsDb,
+  dbx: AnalyticsReadDb,
   period: ReportPeriod,
   filters: readonly AnalyticsFilter[],
 ): Promise<KeyedRow[]> {
