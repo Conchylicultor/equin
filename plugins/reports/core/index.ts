@@ -8,6 +8,11 @@ export {
 } from "./sources";
 export { reportsConfig } from "./config";
 export type { ReportSource } from "./sources";
+export {
+  UNTRUSTED_REPORT_SOURCES,
+  isUntrustedReportSource,
+  fenceUntrustedReport,
+} from "./untrusted";
 export type { ReportFingerprintContext } from "./fingerprint";
 export { normalizeMessage } from "./message-identity";
 export { reportIdKind } from "./id-kind";

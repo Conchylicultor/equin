@@ -459,6 +459,10 @@
       "name": "@equin/plugin-apps-deploy-site-reports-channel",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/deploy/plugins/site-reports/plugins/import": {
+      "name": "@equin/plugin-apps-deploy-site-reports-import",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/deploy/plugins/site-reports/plugins/intake": {
       "name": "@equin/plugin-apps-deploy-site-reports-intake",
       "version": "0.0.1",
@@ -7789,6 +7793,8 @@
     "@equin/plugin-apps-deploy-site-reports": ["@equin/plugin-apps-deploy-site-reports@workspace:plugins/apps/plugins/deploy/plugins/site-reports"],
 
     "@equin/plugin-apps-deploy-site-reports-channel": ["@equin/plugin-apps-deploy-site-reports-channel@workspace:plugins/apps/plugins/deploy/plugins/site-reports/plugins/channel"],
+
+    "@equin/plugin-apps-deploy-site-reports-import": ["@equin/plugin-apps-deploy-site-reports-import@workspace:plugins/apps/plugins/deploy/plugins/site-reports/plugins/import"],
 
     "@equin/plugin-apps-deploy-site-reports-intake": ["@equin/plugin-apps-deploy-site-reports-intake@workspace:plugins/apps/plugins/deploy/plugins/site-reports/plugins/intake"],
 

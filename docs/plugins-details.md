@@ -2845,6 +2845,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/deploy/local-serve`
               - `apps/deploy/remote-deploy`
               - `apps/deploy/site-messages/inbox`
+              - `apps/deploy/site-reports/import`
               - `framework/cli/deploy`
           - Exemptions:
             - Exempts itself from:
@@ -3005,7 +3006,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ServerHealthRowSchema`
               - `serverHealthShape`
               - `SshCheckResultSchema`
-        - **`host-query`** — The deploy app's shared pieces for a section that reads its deployment's box over SSH: HostQueryFailureState renders every way the read can fail (no SSH key, unverified host, SSH failure, failed request, unreadable answer) in one vocabulary, and useDeploymentShips(deploymentId, pluginId) answers whether the deployment's composition closure includes a plugin (useShipsGate: the tab gate over it — shown unless the answer is no). hostOnlyQueryOverSsh(deploymentId, path, schema): resolves a deployment's server and pinned SSH target, curls one host-only route of the install through its own gateway on the loopback port (two SSH sessions at most), and answers the parsed answer, which of SSH, the request or the answer failed, or not-found.
+        - **`host-query`** — The deploy app's shared pieces for a section that reads its deployment's box over SSH: HostQueryFailureState renders every way the read can fail (no SSH key, unverified host, SSH failure, failed request, unreadable answer) in one vocabulary, and useDeploymentShips(deploymentId, pluginId) answers whether the deployment's composition closure includes a plugin (useShipsGate: the tab gate over it — shown unless the answer is no). hostOnlyQueryOverSsh(deploymentId, path, schema, { maxAnswerBytes? }): resolves a deployment's server and pinned SSH target, curls one host-only route of the install through its own gateway on the loopback port (two SSH sessions at most), refuses an answer over maxAnswerBytes unread (curl --max-filesize on the box, re-checked here), and answers the parsed answer, which of SSH, the request or the answer failed, or not-found.
           - Web:
             - Uses:
               - `network/live.LiveRowResult`
@@ -3027,7 +3028,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/deploy/health.resolveServerSshTarget`
               - `database.db`
               - `infra/ssh.sshRun`
-            - Exports (types): `HostQueryAnswer`
+            - Exports (types):
+              - `HostQueryAnswer`
+              - `HostQueryOptions`
             - Exports (values): `hostOnlyQueryOverSsh`
           - Core:
             - Uses: `infra/ssh.SshFailureKindSchema`
@@ -3041,6 +3044,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/deploy/analytics/dashboard`
               - `apps/deploy/analytics/sessions`
               - `apps/deploy/site-messages/inbox`
+              - `apps/deploy/site-reports/import`
         - **`local-serve`** — Test locally: the site page's header button that serves the site's composition on the shared gateway (opening it once live), plus the same one-button serve/open shortcut on the deployments list row.
           - Web:
             - Contributes:
@@ -3472,6 +3476,46 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `reports.reportChannel`
               - Exemptions:
                 - Exempts itself from: `networking/no-page-transport` — `web/internal/channel.ts` (sanctioned)
+            - **`import`** — Errors a deployed site's visitors hit, pulled hourly from the site's box over SSH into this computer's Reports as untrusted website-visitor reports (never auto-investigated, fenced as data when investigated by hand). Web half: the kind's Debug → Reports summary view — a Website visitors badge, then the site, the page and the visitor's error as plain text (never markup or a link) with the site's own occurrence count. Pulls the errors a deployed site's visitors hit into this computer's Reports: the hourly main-only site-reports.import job reads each deployment's host-only list over SSH (outbound only; answer capped at 1 MB and 100 rows), reduces every row to typed, clamped fields (the site's payload never copied) and records at most 50 per deployment per run as ONE incident of the website-visitor-error kind, source website-visitor — untrusted: never on the worklist automations read, fenced as data when investigated by hand. Keeps a per-deployment watermark (site_report_imports).
+              - Web:
+                - Contributes: `Reports.KindView` → `WebsiteVisitorSummary`
+                - Uses:
+                  - `primitives/css/badge.Badge`
+                  - `primitives/css/cluster.Cluster`
+                  - `reports.Reports`
+              - Server:
+                - Contributes:
+                  - `report-kind` "website-visitor-error"
+                  - `change-feed-exclusion` "site_report_imports"
+                - Uses:
+                  - `apps/deploy/deployments._deployDeployments`
+                  - `apps/deploy/host-query.hostOnlyQueryOverSsh`
+                  - `database.db`
+                  - `database/sql-column.parsedText`
+                  - `infra/endpoints.endpointPath`
+                  - `infra/jobs.defineJob`
+                  - `network/live/change-feed.ExcludeFromChangeFeed`
+                  - `primitives/log-channels.Log`
+                  - `reports.ReportKind`
+                  - `reports.ReportRow`
+                  - `reports/engine.recordReportIncident`
+                - DB schema: `plugins/apps/plugins/deploy/plugins/site-reports/plugins/import/server/internal/tables.ts`
+                - Register: `defineJob('site-reports.import')`
+              - Core:
+                - Uses:
+                  - `packages/list-bound.cappedList`
+                  - `packages/string-hash.hashHex`
+                  - `reports.CLIENT_REPORT_SOURCES`
+                - Exports (types):
+                  - `SiteContext`
+                  - `VisitorStackFrame`
+                  - `WebsiteVisitorError`
+                - Exports (values):
+                  - `reduceSiteReport`
+                  - `VISITOR_ERROR_LIMITS`
+                  - `WEBSITE_VISITOR_ERROR_KIND`
+                  - `WebsiteVisitorErrorSchema`
+                  - `websiteVisitorErrorSummary`
             - **`intake`** — Owns site_reports and site_report_drops: the public POST /api/site-reports endpoint a site page's report channel posts batches to (body capped at 64 KB, at most 10 reports; per-visitor and global batch budgets per minute keyed by a per-process salted IP hash, never stored; each report identified by its ReportKind's own schema and fingerprint and a new fingerprint admitted through the reports fan-out ceiling), aggregated in memory and flushed once a minute as one upsert per fingerprint, the table capped at 2,000 rows, every refusal counted per minute and reason, a 30-day sweep, and the host-only list the deploy app reads over SSH.
               - Server:
                 - Contributes:
@@ -3526,6 +3570,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Imported by:
                   - `apps/deploy/site-reports`
                   - `apps/deploy/site-reports/channel`
+                  - `apps/deploy/site-reports/import`
                 - Endpoint callers: `channel`
         - **`ssh-setup`** — SSH setup for deploy servers: owns the whole key flow (generate / paste-and-derive / fingerprint / install command / verify the connection / replace) as a collapsible section that always renders, and decorates it with the matched SshProvider's console prose when the server's console URL identifies one.
           - Web:
@@ -22016,8 +22061,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `loadedDatabaseConfig`
       - `readDatabaseConfigSync`
   - Cross-plugin:
-    - Imported by: 156 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
-      - `apps` ×44
+    - Imported by: 157 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
+      - `apps` ×45
       - `conversations` ×19
       - `infra` ×15
       - `page` ×14
@@ -22842,8 +22887,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens: `ui/tokens/color-palette --muted-foreground`
     - **`sql-column`** — Decoded columns: `parsedText` / `parsedJson` derive a column's type from a zod schema that really decodes it — on every read and every write — so a column can no longer declare a string-literal union, or a jsonb shape, that nothing verifies. `withWire` declares a column type's JSON wire form (a codec applied in JS by whatever projects the column onto the wire), carried on the built column's type so a row schema must match it.
       - Cross-plugin:
-        - Imported by: 25 plugins — full list in [`plugins/database/plugins/sql-column/REFERENCE.md`](../plugins/database/plugins/sql-column/REFERENCE.md)
-          - `apps` ×7
+        - Imported by: 26 plugins — full list in [`plugins/database/plugins/sql-column/REFERENCE.md`](../plugins/database/plugins/sql-column/REFERENCE.md)
+          - `apps` ×8
           - `fields` ×5
           - `infra` ×4
           - `conversations` ×2
@@ -25094,7 +25139,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Core:
         - Exports (types): `ReportStormPayload`
         - Exports (values): `ReportStormPayloadSchema`
-    - **`reports`** — Debug pane listing all recorded reports (including low-signal/noise crashes) with kind, source, count, noise flag, fix status and linked task — a view bar of Worklist (open ∪ regressed) / Regressed / Fix pending / Fixed / All; and a report notification's Fix (the fix-report notification action), the detail pane's investigate launch.
+    - **`reports`** — Debug pane listing all recorded reports (including low-signal/noise crashes) with kind, source, count, noise flag, fix status and linked task — a view bar of Worklist (open ∪ regressed) / Regressed / Fix pending / Fixed / Website visitors (errors pulled from deployed sites, source website-visitor, badged) / All; and a report notification's Fix (the fix-report notification action), the detail pane's investigate launch.
       - Web:
         - Slots:
           - `reportsPane.Actions`
@@ -25113,6 +25158,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `sources` "Regressed" → `ReportsSource`
           - `sources` "Fix pending" → `ReportsSource`
           - `sources` "Fixed" → `ReportsSource`
+          - `sources` "Website visitors" → `ReportsSource`
           - `sources` "All" → `ReportsSource`
         - Uses: 34 symbols — full list in [`plugins/debug/plugins/reports/REFERENCE.md`](../plugins/debug/plugins/reports/REFERENCE.md)
           - `primitives/data-view` ×7
@@ -33053,8 +33099,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `unmatchedApiResponse`
           - `unsupportedEndpointResponse`
       - Cross-plugin:
-        - Imported by: 253 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
-          - `apps` ×76
+        - Imported by: 254 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
+          - `apps` ×77
           - `conversations` ×35
           - `infra` ×23
           - `page` ×19
@@ -34573,8 +34619,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `taskFor`
           - `TOTAL_JOB_SLOTS`
       - Cross-plugin:
-        - Imported by: 79 plugins — full list in [`plugins/infra/plugins/jobs/REFERENCE.md`](../plugins/infra/plugins/jobs/REFERENCE.md)
-          - `apps` ×20
+        - Imported by: 80 plugins — full list in [`plugins/infra/plugins/jobs/REFERENCE.md`](../plugins/infra/plugins/jobs/REFERENCE.md)
+          - `apps` ×21
           - `conversations` ×17
           - `infra` ×14
           - `debug` ×8
@@ -38425,6 +38471,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/chord/video-availability`
               - `apps/deploy/analytics/collect`
               - `apps/deploy/site-messages/intake`
+              - `apps/deploy/site-reports/import`
               - `apps/deploy/site-reports/intake`
               - `conversations/runtime-sdk`
               - `conversations/usage`
@@ -39346,8 +39393,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `wholeRecord`
           - `wholeTuple`
       - Cross-plugin:
-        - Imported by: 125 plugins — full list in [`plugins/packages/plugins/list-bound/REFERENCE.md`](../plugins/packages/plugins/list-bound/REFERENCE.md)
-          - `apps` ×27
+        - Imported by: 126 plugins — full list in [`plugins/packages/plugins/list-bound/REFERENCE.md`](../plugins/packages/plugins/list-bound/REFERENCE.md)
+          - `apps` ×28
           - `debug` ×18
           - `conversations` ×15
           - `infra` ×15
@@ -39718,8 +39765,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `withForegroundPriority`
     - **`string-hash`** — Portable string hashes in plain JS (no node:crypto, no Bun.hash), so every host — the Bun server, central and a browser page — computes the same value: hash53 (cyrb53, a 53-bit number, optionally seeded), hashHex (two seeded cyrb53s, ~106 bits as hex), hash64 (a 64-bit bigint), sha256Hex (a synchronous SHA-256, identical to node:crypto's hex digest), createSha256 (the same SHA-256, incremental over strings and bytes) and sha1Hex (SHA-1 for values already stored as one).
       - Cross-plugin:
-        - Imported by: 38 plugins — full list in [`plugins/packages/plugins/string-hash/REFERENCE.md`](../plugins/packages/plugins/string-hash/REFERENCE.md)
-          - `apps` ×11
+        - Imported by: 39 plugins — full list in [`plugins/packages/plugins/string-hash/REFERENCE.md`](../plugins/packages/plugins/string-hash/REFERENCE.md)
+          - `apps` ×12
           - `network` ×5
           - `database` ×4
           - `framework` ×3
@@ -45258,8 +45305,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×6
               - `ui/tokens/shape` ×3
               - `ui/tokens/font-family --font-mono`
-            - Imported by: 182 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
-              - `apps` ×38
+            - Imported by: 183 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
+              - `apps` ×39
               - `debug` ×37
               - `conversations` ×28
               - `reports` ×17
@@ -45394,8 +45441,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `ClusterProps`
             - Exports (values): `Cluster`
           - Cross-plugin:
-            - Imported by: 66 plugins — full list in [`plugins/primitives/plugins/css/plugins/cluster/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/cluster/REFERENCE.md)
-              - `apps` ×24
+            - Imported by: 67 plugins — full list in [`plugins/primitives/plugins/css/plugins/cluster/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/cluster/REFERENCE.md)
+              - `apps` ×25
               - `debug` ×12
               - `conversations` ×8
               - `plugin-meta` ×6
@@ -49775,8 +49822,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-xs`
           - `ui/tokens/shape --radius`
           - `ui/tokens/shape --spacing`
-        - Imported by: 71 plugins — full list in [`plugins/primitives/plugins/log-channels/REFERENCE.md`](../plugins/primitives/plugins/log-channels/REFERENCE.md)
-          - `apps` ×13
+        - Imported by: 72 plugins — full list in [`plugins/primitives/plugins/log-channels/REFERENCE.md`](../plugins/primitives/plugins/log-channels/REFERENCE.md)
+          - `apps` ×14
           - `debug` ×10
           - `infra` ×10
           - `conversations` ×6
@@ -53609,8 +53656,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 - **`reports`** — Reports uncaught browser errors to the server, and registers the reports engine's fan-out ceiling config (per-window distinct-fingerprint budget, window, storm roster cap) for Settings → Config. The reports table and its live read (reports.list), the ReportKind / ReportNoiseRule slots every kind and rule contributes to, and the fan-out ceiling config; recording is the engine's (reports/plugins/engine).
   - Web:
     - Slots: `Reports.KindView`
-    - Slot contributors: 43 contributors — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
-      - `Reports.KindView` ×43
+    - Slot contributors: 44 contributors — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
+      - `Reports.KindView` ×44
     - Contributes:
       - `IdKinds.Kind` "report|crash"
       - `ConfigV2.WebRegister` "reports"
@@ -53711,6 +53758,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `ReportSource`
     - Exports (values):
       - `CLIENT_REPORT_SOURCES`
+      - `fenceUntrustedReport`
       - `fixedByClaim`
       - `FIXES_REPORT_TRAILER`
       - `fixStandingOf`
@@ -53718,6 +53766,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `formatReportActivity`
       - `investigateReport`
       - `isStaleOrigin`
+      - `isUntrustedReportSource`
       - `normalizeMessage`
       - `regresses`
       - `REPORT_FIX_STATE_LABELS`
@@ -53737,15 +53786,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `reportsRootRoute`
       - `SERVER_REPORT_SOURCES`
       - `submitReport`
+      - `UNTRUSTED_REPORT_SOURCES`
   - Cross-plugin:
-    - Imported by: 77 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
+    - Imported by: 78 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
       - `reports` ×30
       - `debug` ×18
       - `conversations` ×7
       - `database` ×4
       - `infra` ×4
+      - `apps` ×3
       - `build` ×3
-      - `apps` ×2
       - `framework` ×2
       - `active-data/report`
       - `backup`
@@ -53940,12 +53990,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Machine:
         - Uses: `infra/endpoints.implementMachine`
       - Cross-plugin:
-        - Imported by: 31 plugins — full list in [`plugins/reports/plugins/engine/REFERENCE.md`](../plugins/reports/plugins/engine/REFERENCE.md)
+        - Imported by: 32 plugins — full list in [`plugins/reports/plugins/engine/REFERENCE.md`](../plugins/reports/plugins/engine/REFERENCE.md)
           - `debug` ×11
           - `conversations` ×5
           - `database` ×3
           - `infra` ×3
           - `reports` ×3
+          - `apps/deploy/site-reports/import`
           - `backup`
           - `framework/cli/push`
           - `page/place/google`

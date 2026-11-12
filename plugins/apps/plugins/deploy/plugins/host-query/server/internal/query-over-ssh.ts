@@ -40,6 +40,7 @@ export type HostQueryAnswer<T> =
 export function hostQueryCurlArgv(
   loopbackPort: number,
   path: string,
+  opts: HostQueryOptions = {},
 ): string[] {
   if (!path.startsWith(HOST_ONLY_PREFIX)) {
     throw new Error(
@@ -51,21 +52,50 @@ export function hostQueryCurlArgv(
       `hostOnlyQueryOverSsh: ${JSON.stringify(path)} holds characters the remote shell would read — encode the query`,
     );
   }
+  const { maxAnswerBytes } = opts;
+  if (
+    maxAnswerBytes !== undefined &&
+    !(Number.isInteger(maxAnswerBytes) && maxAnswerBytes > 0)
+  ) {
+    throw new Error(
+      `hostOnlyQueryOverSsh: maxAnswerBytes must be a positive integer, got ${maxAnswerBytes}`,
+    );
+  }
   return [
     "curl",
     "-fsS",
     "-m",
     String(CURL_MAX_SECONDS),
+    // curl stops past the cap (exit 63) when the box declares the size up
+    // front; a chunked answer is bounded only by `-m` here, so the check in
+    // `mapSshAnswer` is the guarantee and this the early stop.
+    ...(maxAnswerBytes === undefined
+      ? []
+      : ["--max-filesize", String(maxAnswerBytes)]),
     // Quoted for the remote shell `sshRun` joins this into: `&` and `?`
     // would otherwise background the command or glob.
     `'http://${LOOPBACK_HOST}:${loopbackPort}${path}'`,
   ];
 }
 
+/**
+ * How a read bounds what it takes from the box. `maxAnswerBytes`: an answer
+ * longer than this is refused (`unreadable-answer`) before it is parsed — set
+ * it whenever the answer carries content strangers wrote.
+ */
+export interface HostQueryOptions {
+  maxAnswerBytes?: number;
+}
+
+function utf8Length(text: string): number {
+  return new TextEncoder().encode(text).length;
+}
+
 /** What the SSH layer answered, parsed with `schema` or mapped onto a failure. */
 export function mapSshAnswer<T>(
   result: SshRunResult,
   schema: z.ZodType<T>,
+  opts: HostQueryOptions = {},
 ): { kind: "answer"; value: T } | HostQueryFailure {
   if (!result.ok) {
     // `command-failed` means SSH connected and authenticated and the remote
@@ -83,6 +113,16 @@ export function mapSshAnswer<T>(
       failure: result.kind,
       message: result.message,
       stderr: result.stderr,
+    };
+  }
+
+  if (
+    opts.maxAnswerBytes !== undefined &&
+    utf8Length(result.stdout) > opts.maxAnswerBytes
+  ) {
+    return {
+      kind: "unreadable-answer",
+      detail: `The answer is over ${opts.maxAnswerBytes} bytes; it was not read.`,
     };
   }
 
@@ -127,9 +167,10 @@ export async function queryOverSsh<T>(
   deploymentId: string,
   path: string,
   schema: z.ZodType<T>,
+  opts: HostQueryOptions = {},
 ): Promise<HostQueryAnswer<T>> {
   const resolved = await deps.resolveDeployment(deploymentId);
   if (resolved.kind !== "ready") return resolved;
-  const argv = hostQueryCurlArgv(resolved.loopbackPort, path);
-  return mapSshAnswer(await deps.sshRun(resolved.target, argv), schema);
+  const argv = hostQueryCurlArgv(resolved.loopbackPort, path, opts);
+  return mapSshAnswer(await deps.sshRun(resolved.target, argv), schema, opts);
 }

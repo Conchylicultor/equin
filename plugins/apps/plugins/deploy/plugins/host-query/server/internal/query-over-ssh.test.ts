@@ -181,3 +181,47 @@ describe("queryOverSsh", () => {
     }
   });
 });
+
+describe("maxAnswerBytes", () => {
+  it("asks curl on the box to stop past the cap", () => {
+    const argv = hostQueryCurlArgv(9100, PATH, { maxAnswerBytes: 1024 });
+    const at = argv.indexOf("--max-filesize");
+    expect(at).toBeGreaterThan(0);
+    expect(argv[at + 1]).toBe("1024");
+    // The URL stays the last, quoted argument.
+    expect(unquoted(argv.at(-1)!)).toContain(PATH);
+  });
+
+  it("adds nothing when unset", () => {
+    expect(hostQueryCurlArgv(9100, PATH)).not.toContain("--max-filesize");
+  });
+
+  it("refuses a non-positive or fractional cap", () => {
+    expect(() =>
+      hostQueryCurlArgv(9100, PATH, { maxAnswerBytes: 0 }),
+    ).toThrow();
+    expect(() =>
+      hostQueryCurlArgv(9100, PATH, { maxAnswerBytes: 1.5 }),
+    ).toThrow();
+  });
+
+  it("refuses an oversized answer unread, even when it would parse", () => {
+    const big = JSON.stringify({ things: ["x".repeat(2_000)] });
+    const result = mapSshAnswer(ok(big), ThingsSchema, {
+      maxAnswerBytes: 1_000,
+    });
+    expect(result.kind).toBe("unreadable-answer");
+    // Within the cap it parses as before.
+    expect(
+      mapSshAnswer(ok(big), ThingsSchema, { maxAnswerBytes: 10_000 }).kind,
+    ).toBe("answer");
+  });
+
+  it("counts bytes, not characters", () => {
+    // 400 three-byte characters: 400 chars, ~1,200 bytes.
+    const wide = JSON.stringify({ things: ["€".repeat(400)] });
+    expect(
+      mapSshAnswer(ok(wide), ThingsSchema, { maxAnswerBytes: 1_000 }).kind,
+    ).toBe("unreadable-answer");
+  });
+});

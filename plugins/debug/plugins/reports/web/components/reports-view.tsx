@@ -7,6 +7,7 @@ import { TabOriginBadge } from "@plugins/apps-core/plugins/tab-origin/web";
 import { useStaleFrontend } from "@plugins/build/web";
 import {
   formatRecentCount,
+  isUntrustedReportSource,
   reportActivity,
   reportsList,
   REPORTS_SEARCHABLE,
@@ -68,6 +69,12 @@ const SCOPES = {
   regressed: reportsSource.scoped({ where: { fixState: "regressed" } }),
   pending: reportsSource.scoped({ where: { fixState: "pending" } }),
   fixed: reportsSource.scoped({ where: { fixState: "fixed" } }),
+  // Errors a deployed website's anonymous visitors hit, pulled from the
+  // site's box (apps/deploy/site-reports/import) — untrusted content, kept
+  // apart so they are never mistaken for the app's own.
+  websiteVisitors: reportsSource.scoped({
+    where: { source: "website-visitor" },
+  }),
 } satisfies Record<string, ReportsScope>;
 
 const EMPTY = {
@@ -75,6 +82,8 @@ const EMPTY = {
   regressed: "No regressions: every fix that went live has held.",
   pending: "No fix on its way.",
   fixed: "No report fixed yet. A push names its fix with --fixes-report.",
+  websiteVisitors:
+    "No errors from website visitors. They are pulled hourly from each deployed site.",
   all: "No reports recorded yet.",
 } as const;
 
@@ -104,6 +113,10 @@ export const RegressedSource = sourceComponent(
 );
 export const PendingSource = sourceComponent(SCOPES.pending, EMPTY.pending);
 export const FixedSource = sourceComponent(SCOPES.fixed, EMPTY.fixed);
+export const WebsiteVisitorsSource = sourceComponent(
+  SCOPES.websiteVisitors,
+  EMPTY.websiteVisitors,
+);
 export const AllReportsSource = sourceComponent(reportsSource, EMPTY.all);
 
 // How the derived fields present here. `kind` and `source` declare no
@@ -119,11 +132,14 @@ const overrides = fieldOverrides(reportsList, {
     width: "10rem",
   },
   source: {
-    cell: (r) => (
-      <Badge variant="muted" className="font-mono">
-        {r.source}
-      </Badge>
-    ),
+    cell: (r) =>
+      isUntrustedReportSource(r.source) ? (
+        <Badge variant="warning">website visitor</Badge>
+      ) : (
+        <Badge variant="muted" className="font-mono">
+          {r.source}
+        </Badge>
+      ),
     width: "10rem",
   },
   noise: {

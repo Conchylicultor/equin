@@ -1,4 +1,4 @@
-// @hash e8bf5e1750e9
+// @hash 298efc909b13
 // @legend — how to write this file (rewritten by ./equin build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -18,6 +18,7 @@
     "debug.reports:regressed",
     "debug.reports:pending",
     "debug.reports:fixed",
+    "debug.reports:website-visitors",
     "debug.reports:all"
   ]
 }

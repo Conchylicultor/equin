@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { reportsList, type Report } from "@plugins/reports/core";
+import { investigationPrompt } from "../internal/investigation-prompt";
 import { investigate } from "@plugins/reports/web";
 import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
@@ -45,18 +46,7 @@ export function ReportInvestigate({
         // — said, if it ever is, never swallowed.
         if (answer.kind === "unavailable") throw new Error(answer.message);
         const { taskId } = answer.value;
-        const parts: string[] = [];
-        parts.push(`## Report (${report.kind})\n`);
-        parts.push(`**Source:** ${report.source}`);
-        parts.push(`**Message:** ${report.message}`);
-        parts.push(
-          `\n\`\`\`json\n${JSON.stringify(report.data, null, 2)}\n\`\`\``,
-        );
-        const extra = userText.trim();
-        if (extra) {
-          parts.push(`\n## Context\n\n${extra}`);
-        }
-        return { taskId, prompt: parts.join("\n") };
+        return { taskId, prompt: investigationPrompt(report, userText) };
       }}
     />
   );

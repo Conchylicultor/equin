@@ -1,21 +1,39 @@
-import { and, asc, count, eq, gte, inArray, isNull } from "drizzle-orm";
+import {
+  and,
+  asc,
+  count,
+  eq,
+  gte,
+  inArray,
+  isNull,
+  notInArray,
+} from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { _reports, ReportKind, type ReportRow } from "@plugins/reports/server";
 import { reportsProducer } from "./producer";
 import {
+  fenceUntrustedReport,
   formatReportActivity,
+  isUntrustedReportSource,
   reportActivity,
   reportIdKind,
+  UNTRUSTED_REPORT_SOURCES,
 } from "@plugins/reports/core";
 
 // The worklist: what nobody is on — no task linked, not noise — among the
 // reports that need a fix: open (no fix named yet) or regressed (the fix did
 // not hold; its regression unlinked the old task, so it comes back here). A
 // pending or fixed report is someone's fix, on its way or live.
+//
+// Never a report from an UNTRUSTED source (strangers wrote its content —
+// `reports/core`'s UNTRUSTED_REPORT_SOURCES): every automation reads this
+// worklist, and a crafted message is a prompt-injection vector into an agent
+// with shell and repo access. Such a report is investigated only by hand.
 const worklist = and(
   isNull(_reports.taskId),
   eq(_reports.noise, false),
   inArray(_reports.fixState, ["open", "regressed"]),
+  notInArray(_reports.source, [...UNTRUSTED_REPORT_SOURCES]),
 );
 
 /**
@@ -44,8 +62,16 @@ export async function reportWorklist(args: {
   minCount: number;
   limit: number;
 }): Promise<ReportRow[]> {
+  return readWorklist(db, args);
+}
+
+/** {@link reportWorklist} over a given executor (a test's throwaway DB). */
+export async function readWorklist(
+  dbx: Pick<typeof db, "select">,
+  args: { kinds: readonly string[]; minCount: number; limit: number },
+): Promise<ReportRow[]> {
   if (args.kinds.length === 0) return [];
-  return db
+  return dbx
     .select()
     .from(_reports)
     .where(
@@ -96,8 +122,12 @@ export function renderReportTask(row: ReportRow): {
   // Every kind's body states the lifetime count; this line says what it is
   // doing now, so an investigator can tell a live problem from an old one.
   const activity = formatReportActivity(reportActivity(row, Date.now()));
-  return {
-    title,
-    description: `${description}\n\n**Activity:** ${activity}`,
-  };
+  const body = `${description}\n\n**Activity:** ${activity}`;
+  // Strangers wrote an untrusted report's content: the agent reads it as
+  // data, never instructions. (An untrusted kind builds its title from typed,
+  // identifier-shaped fields only — it is not fenced.)
+  if (isUntrustedReportSource(row.source)) {
+    return { title, description: fenceUntrustedReport(body) };
+  }
+  return { title, description: body };
 }

@@ -69,6 +69,11 @@ export const SERVER_REPORT_SOURCES = [
   // main's drain. Server-only so the browser endpoint cannot claim it: nothing
   // over HTTP comes from a CLI.
   "cli",
+  // An error a deployed website's anonymous VISITOR hit, pulled from the site's
+  // box by the computer (apps/deploy/site-reports/import). Server-only so the
+  // browser endpoint cannot claim it, and untrusted
+  // (UNTRUSTED_REPORT_SOURCES): strangers wrote its content.
+  "website-visitor",
 ] as const;
 export const CLIENT_REPORT_SOURCES = [
   "browser-error",

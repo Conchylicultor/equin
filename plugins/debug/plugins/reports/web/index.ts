@@ -11,6 +11,7 @@ import {
   FixedSource,
   PendingSource,
   RegressedSource,
+  WebsiteVisitorsSource,
   WorklistSource,
 } from "./components/reports-view";
 
@@ -18,7 +19,7 @@ export { reportsPane, reportDetailPane } from "./panes";
 
 export default {
   description:
-    "Debug pane listing all recorded reports (including low-signal/noise crashes) with kind, source, count, noise flag, fix status and linked task — a view bar of Worklist (open ∪ regressed) / Regressed / Fix pending / Fixed / All; and a report notification's Fix (the fix-report notification action), the detail pane's investigate launch.",
+    "Debug pane listing all recorded reports (including low-signal/noise crashes) with kind, source, count, noise flag, fix status and linked task — a view bar of Worklist (open ∪ regressed) / Regressed / Fix pending / Fixed / Website visitors (errors pulled from deployed sites, source website-visitor, badged) / All; and a report notification's Fix (the fix-report notification action), the detail pane's investigate launch.",
   contributions: [
     Pane.Register({ pane: reportsPane }),
     Pane.Register({ pane: reportDetailPane }),
@@ -59,6 +60,13 @@ export default {
       icon: symbol("check-circle"),
       views: ["table", "list"],
       component: FixedSource,
+    }),
+    ReportsSources({
+      id: "website-visitors",
+      title: "Website visitors",
+      icon: symbol("public"),
+      views: ["table", "list"],
+      component: WebsiteVisitorsSource,
     }),
     ReportsSources({
       id: "all",

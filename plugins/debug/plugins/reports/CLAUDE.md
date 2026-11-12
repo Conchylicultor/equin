@@ -40,7 +40,7 @@ All reports are listed — noise is surfaced via the badge, never filtered out.
 
 ## Plugin reference
 
-- Description: Debug pane listing all recorded reports (including low-signal/noise crashes) with kind, source, count, noise flag, fix status and linked task — a view bar of Worklist (open ∪ regressed) / Regressed / Fix pending / Fixed / All; and a report notification's Fix (the fix-report notification action), the detail pane's investigate launch.
+- Description: Debug pane listing all recorded reports (including low-signal/noise crashes) with kind, source, count, noise flag, fix status and linked task — a view bar of Worklist (open ∪ regressed) / Regressed / Fix pending / Fixed / Website visitors (errors pulled from deployed sites, source website-visitor, badged) / All; and a report notification's Fix (the fix-report notification action), the detail pane's investigate launch.
 - Web:
   - Slots:
     - `reportsPane.Actions`
@@ -59,6 +59,7 @@ All reports are listed — noise is surfaced via the badge, never filtered out.
     - `sources` "Regressed" → `ReportsSource`
     - `sources` "Fix pending" → `ReportsSource`
     - `sources` "Fixed" → `ReportsSource`
+    - `sources` "Website visitors" → `ReportsSource`
     - `sources` "All" → `ReportsSource`
   - Uses: 34 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/data-view` ×7

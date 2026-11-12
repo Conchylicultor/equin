@@ -73,8 +73,8 @@ before it) beside the total, worded by `formatReportActivity`
 - Description: Reports uncaught browser errors to the server, and registers the reports engine's fan-out ceiling config (per-window distinct-fingerprint budget, window, storm roster cap) for Settings → Config. The reports table and its live read (reports.list), the ReportKind / ReportNoiseRule slots every kind and rule contributes to, and the fan-out ceiling config; recording is the engine's (reports/plugins/engine).
 - Web:
   - Slots: `Reports.KindView`
-  - Slot contributors: 43 contributors — full list in [REFERENCE.md](./REFERENCE.md)
-    - `Reports.KindView` ×43
+  - Slot contributors: 44 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `Reports.KindView` ×44
   - Contributes:
     - `IdKinds.Kind` "report|crash"
     - `ConfigV2.WebRegister` "reports"
@@ -175,6 +175,7 @@ before it) beside the total, worded by `formatReportActivity`
     - `ReportSource`
   - Exports (values):
     - `CLIENT_REPORT_SOURCES`
+    - `fenceUntrustedReport`
     - `fixedByClaim`
     - `FIXES_REPORT_TRAILER`
     - `fixStandingOf`
@@ -182,6 +183,7 @@ before it) beside the total, worded by `formatReportActivity`
     - `formatReportActivity`
     - `investigateReport`
     - `isStaleOrigin`
+    - `isUntrustedReportSource`
     - `normalizeMessage`
     - `regresses`
     - `REPORT_FIX_STATE_LABELS`
@@ -201,15 +203,16 @@ before it) beside the total, worded by `formatReportActivity`
     - `reportsRootRoute`
     - `SERVER_REPORT_SOURCES`
     - `submitReport`
+    - `UNTRUSTED_REPORT_SOURCES`
 - Cross-plugin:
-  - Imported by: 77 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 78 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `reports` ×30
     - `debug` ×18
     - `conversations` ×7
     - `database` ×4
     - `infra` ×4
+    - `apps` ×3
     - `build` ×3
-    - `apps` ×2
     - `framework` ×2
     - `active-data/report`
     - `backup`

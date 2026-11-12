@@ -11,6 +11,7 @@ import {
   queryOverSsh,
   type DeploymentTarget,
   type HostQueryAnswer,
+  type HostQueryOptions,
 } from "./query-over-ssh";
 
 /** SSH sessions to boxes at once, across every reader of every host-only route. */
@@ -62,6 +63,9 @@ async function resolveDeployment(
  * answer, a {@link HostQueryFailure}, or `not-found` for a deployment that no
  * longer exists.
  *
+ * `opts.maxAnswerBytes` bounds the answer: curl stops past it on the box and
+ * a longer answer is refused unread (`unreadable-answer`).
+ *
  * Reads Postgres (deployment row, server, pinned host key, key secret) on
  * every call: the private key and host key may only be read here, at SSH time.
  * A live value serving this is therefore a `snapshot` external — the remote
@@ -71,8 +75,15 @@ export function hostOnlyQueryOverSsh<T>(
   deploymentId: string,
   path: string,
   schema: z.ZodType<T>,
+  opts: HostQueryOptions = {},
 ): Promise<HostQueryAnswer<T>> {
   return sshSessions.run(() =>
-    queryOverSsh({ resolveDeployment, sshRun }, deploymentId, path, schema),
+    queryOverSsh(
+      { resolveDeployment, sshRun },
+      deploymentId,
+      path,
+      schema,
+      opts,
+    ),
   );
 }
