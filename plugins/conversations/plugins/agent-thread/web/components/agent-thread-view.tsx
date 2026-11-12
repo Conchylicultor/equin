@@ -108,6 +108,7 @@ function ThreadHeader({
   action?: ReactNode;
 }) {
   return (
+    // eslint-disable-next-line rail/no-adhoc-band -- debt (task-1794239361-kagy27): a hand-rolled rule strip; move it onto its surface's header/footer or a Band
     <Line className="gap-sm border-b border-border px-md py-xs">
       {title}
       <StatusDot {...STATE_DOT[state]} />

@@ -88,6 +88,7 @@ function Section({
   children: ReactNode;
 }): ReactElement {
   return (
+    // eslint-disable-next-line rail/no-adhoc-band -- debt (task-1794239361-kagy27): a hand-rolled rule strip; move it onto its surface's header/footer or a Band
     <div className="border-b px-lg py-sm">
       <Stack gap="xs">
         <Text as="div" variant="caption" tone="muted">
@@ -106,6 +107,7 @@ function SlowOpBody({ op }: { op: SlowOp }): ReactElement {
   const hasMeasures = SPAN_MEASURES.some((m) => op.measures[m]);
   return (
     <Stack gap="none">
+      {/* eslint-disable-next-line rail/no-adhoc-band -- debt (task-1794239361-kagy27): a hand-rolled rule strip; move it onto its surface's header/footer or a Band */}
       <div className="border-b px-lg py-sm">
         <Stack gap="xs">
           <Stack direction="row" gap="xs" align="center">

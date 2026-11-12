@@ -69,6 +69,7 @@ export function SourceTabs({
   return (
     <Scroll
       axis="x"
+      // eslint-disable-next-line rail/no-adhoc-band -- debt (task-1794239361-kagy27): a hand-rolled rule strip; move it onto its surface's header/footer or a Band
       className="border-b border-border bg-background/95 px-sm py-xs backdrop-blur"
     >
       <Stack direction="row" gap="xs" align="center">

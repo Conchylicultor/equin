@@ -215,6 +215,7 @@ export function BroadcastsPanel() {
   return (
     <Stack gap="none" className="h-full">
       {/* Header */}
+      {/* eslint-disable-next-line rail/no-adhoc-band -- debt (task-1794239361-kagy27): a hand-rolled rule strip; move it onto its surface's header/footer or a Band */}
       <Line className="border-b px-lg py-md">
         <Fill>
           <Stack gap="2xs">
@@ -250,6 +251,7 @@ export function BroadcastsPanel() {
         <Text
           as="div"
           variant="caption"
+          // eslint-disable-next-line rail/no-adhoc-band -- debt (task-1794239361-kagy27): a hand-rolled rule strip; move it onto its surface's header/footer or a Band
           className="border-b bg-destructive/10 px-lg py-sm text-destructive"
         >
           {error}
@@ -258,6 +260,7 @@ export function BroadcastsPanel() {
 
       {/* Add form */}
       {showForm && (
+        // eslint-disable-next-line rail/no-adhoc-band -- debt (task-1794239361-kagy27): a hand-rolled rule strip; move it onto its surface's header/footer or a Band
         <Stack gap="sm" className="border-b bg-muted/30 px-lg py-md">
           {/* Severity */}
           <Stack direction="row" gap="sm" align="center">

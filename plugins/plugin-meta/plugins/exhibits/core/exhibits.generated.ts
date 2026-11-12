@@ -25,6 +25,7 @@ export const exhibitsEntries: CollectedEntry[] = [
   { pluginPath: "media/plugins/player", id: "media.player", loader: () => import("@plugins/media/plugins/player/exhibits"), dependsOn: [] },
   { pluginPath: "primitives/plugins/adaptive-bar", id: "primitives.adaptive-bar", loader: () => import("@plugins/primitives/plugins/adaptive-bar/exhibits"), dependsOn: ["primitives/plugins/css/plugins/text"] },
   { pluginPath: "primitives/plugins/css/plugins/color-picker", id: "primitives.css.color-picker", loader: () => import("@plugins/primitives/plugins/css/plugins/color-picker/exhibits"), dependsOn: [] },
+  { pluginPath: "primitives/plugins/css/plugins/column", id: "primitives.css.column", loader: () => import("@plugins/primitives/plugins/css/plugins/column/exhibits"), dependsOn: ["primitives/plugins/css/plugins/text"] },
   { pluginPath: "primitives/plugins/css/plugins/control-panel", id: "primitives.css.control-panel", loader: () => import("@plugins/primitives/plugins/css/plugins/control-panel/exhibits"), dependsOn: ["primitives/plugins/css/plugins/ui-kit"] },
   { pluginPath: "primitives/plugins/css/plugins/coords", id: "primitives.css.coords", loader: () => import("@plugins/primitives/plugins/css/plugins/coords/exhibits"), dependsOn: [] },
   { pluginPath: "primitives/plugins/css/plugins/meter", id: "primitives.css.meter", loader: () => import("@plugins/primitives/plugins/css/plugins/meter/exhibits"), dependsOn: ["primitives/plugins/css/plugins/text", "primitives/plugins/css/plugins/ui-kit"] },

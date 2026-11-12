@@ -207,6 +207,7 @@ export function PhotosHeader({
   onBack: () => void;
 }): ReactNode {
   return (
+    // eslint-disable-next-line rail/no-adhoc-band -- debt (task-1794239361-kagy27): a hand-rolled rule strip; move it onto its surface's header/footer or a Band
     <Line className="gap-xs border-b px-sm py-xs">
       <IconButton icon={backIcon} label="Back" onClick={onBack} />
       <Fill>

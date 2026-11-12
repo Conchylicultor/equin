@@ -37,6 +37,7 @@ export function GatesLane({ payload }: TraceLaneProps): ReactElement {
   gates.sort((a, b) => b[1].active - a[1].active);
 
   return (
+    // eslint-disable-next-line rail/no-adhoc-band -- debt (task-1794239361-kagy27): a hand-rolled rule strip; move it onto its surface's header/footer or a Band
     <Stack gap="xs" className="border-b px-lg py-sm">
       <SectionLabel>Gates</SectionLabel>
       {gates.length === 0 ? (

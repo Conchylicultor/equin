@@ -53,6 +53,7 @@ export function ExplorerView() {
   // toolbar, which pins to the top once the stats scroll past.
   return (
     <>
+      {/* eslint-disable-next-line rail/no-adhoc-band -- debt (task-1794239361-kagy27): a hand-rolled rule strip; move it onto its surface's header/footer or a Band */}
       <div className="border-b px-lg py-md">
         <Stack gap="xs">
           <Stat value={totals.plugins} label="plugins" />

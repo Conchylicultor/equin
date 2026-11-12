@@ -51,6 +51,7 @@ function AxisRow(): ReactNode {
   // The rows' own nesting, mirrored: the card's hairline (a transparent
   // border), the row's padding, the lane's inset — so the tracks line up.
   return (
+    // eslint-disable-next-line rail/no-adhoc-band -- debt (task-1794239361-kagy27): a hand-rolled rule strip mirroring the rows' geometry; a Band once its card owns the inset
     <div className="border-x border-b border-transparent border-b-border/60 px-row">
       <Inset
         x="sm"

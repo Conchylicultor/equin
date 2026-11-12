@@ -479,6 +479,7 @@ Exhibits: `hints/card`, `hints/caption`, `hints/spotlight`, `hints/welcome`.
     - `conversations/conversation-view/push-and-exit`
     - `conversations/conversations-view/data-view`
     - `hints/help-menu`
+    - `primitives/css/rail`
     - `shell/global-action-bar`
     - `tasks/task-draft-form`
     - `wish`

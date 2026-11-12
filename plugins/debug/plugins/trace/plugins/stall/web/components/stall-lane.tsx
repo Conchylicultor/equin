@@ -18,6 +18,7 @@ export function StallLane({ payload, trace }: TraceLaneProps): ReactElement {
   const parsed = StallSectionSchema.safeParse(payload);
   if (!parsed.success) {
     return (
+      // eslint-disable-next-line rail/no-adhoc-band -- debt (task-1794239361-kagy27): a hand-rolled rule strip; move it onto its surface's header/footer or a Band
       <Stack gap="xs" className="border-b px-lg py-sm">
         <SectionLabel>Stall stacks</SectionLabel>
         <Placeholder tone="muted">No stack samples recorded for this stall.</Placeholder>
@@ -27,6 +28,7 @@ export function StallLane({ payload, trace }: TraceLaneProps): ReactElement {
   const { nSamples, sampleRateHz, topLeaves, topStacks } = parsed.data;
 
   return (
+    // eslint-disable-next-line rail/no-adhoc-band -- debt (task-1794239361-kagy27): a hand-rolled rule strip; move it onto its surface's header/footer or a Band
     <Stack gap="sm" className="border-b px-lg py-sm">
       <Stack direction="row" align="center" gap="sm">
         <SectionLabel>Stall stacks</SectionLabel>

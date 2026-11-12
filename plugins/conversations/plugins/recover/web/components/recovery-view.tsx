@@ -133,6 +133,7 @@ export function RecoveryView() {
         gap="md"
         align="center"
         justify="between"
+        // eslint-disable-next-line rail/no-adhoc-band -- debt (task-1794237886-rfwccn): a Band only once the recovery pane owns its inset — today it hand-pads, so a Band here would sit on a different edge than its content
         className="px-lg py-md border-b"
       >
         <Stack
@@ -225,6 +226,7 @@ function ClusterGroup({
           gap="sm"
           align="center"
           justify="between"
+          // eslint-disable-next-line rail/no-adhoc-band -- debt (task-1794237886-rfwccn): a Band only once the recovery pane owns its inset — today it hand-pads, so a Band here would sit on a different edge than its content
           className="px-lg py-sm bg-muted/30 border-b"
         >
           <Text as="span" variant="caption" className="font-medium">

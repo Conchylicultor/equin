@@ -307,6 +307,7 @@ function OpStatusCard({ options, body }: HostedToolbarParts) {
             not a translucent wash of the card's tone: the table's group
             headers pin with `bg-chrome-mask`, so any other fill here would
             paint them as bands of a different colour. */}
+        {/* eslint-disable-next-line rail/no-adhoc-band -- debt (task-1794239361-kagy27): a hand-rolled rule strip; move it onto its surface's header/footer or a Band */}
         <div className="border-t border-border/60 bg-chrome-mask py-2xs text-foreground">
           {body}
         </div>

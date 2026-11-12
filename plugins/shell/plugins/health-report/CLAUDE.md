@@ -156,12 +156,11 @@ probes, is mounted per page.
     - `HealthReport.Row` ← `reports.resource-errors`
     - `HealthReport.Row` ← `tasks.worktree-identity`
   - Contributes: `ActionBar.Lead` → `HealthReportButton`
-  - Uses: 32 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 31 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/collapsible` ×4
     - `primitives/slot-render` ×4
     - `primitives/css/activity-ring` ×3
     - `primitives/css/ui-kit` ×3
-    - `primitives/css/spacing` ×2
     - `primitives/error-boundary` ×2
     - `network/live/live-state.ResourceErrorInline`
     - `primitives/css/center.Center`
@@ -169,6 +168,7 @@ probes, is mounted per page.
     - `primitives/css/line.Line`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/row.Row`
+    - `primitives/css/spacing.Stack`
     - `primitives/css/status-dot.StatusDot`
     - `primitives/css/text.Text`
     - `primitives/loading.Loading`
@@ -195,9 +195,7 @@ probes, is mounted per page.
     - `ui/tokens/color-palette --warning`
     - `ui/tokens/density --pad-row-x`
     - `ui/tokens/density --pad-row-y`
-    - `ui/tokens/density --space-md`
     - `ui/tokens/density --space-sm`
-    - `ui/tokens/density --space-xs`
     - `ui/tokens/shape --radius`
     - `ui/tokens/shape --spacing`
     - `ui/tokens/type-scale --font-weight-semibold`

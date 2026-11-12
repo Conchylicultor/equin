@@ -16,7 +16,7 @@ import type { ArtifactItem } from "@plugins/conversations/plugins/conversation-v
 import { ConversationArtifacts, type ArtifactKind } from "../slots";
 import { useConversationArtifacts } from "../use-conversation-artifacts";
 import { ArtifactsCloseContext } from "../internal/close-context";
-import { ArtifactsPanel } from "./artifacts-panel";
+import { ArtifactsHeader, ArtifactsPanel } from "./artifacts-panel";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
@@ -171,7 +171,9 @@ function ArtifactsReady({
     <InlinePopover
       align="end"
       width="picker"
-      padding="none"
+      padding="xs"
+      rows
+      header={<ArtifactsHeader />}
       maxHeight="xl"
       open={open}
       onOpenChange={onOpenChange}

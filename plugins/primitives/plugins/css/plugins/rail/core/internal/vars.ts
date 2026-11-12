@@ -35,3 +35,15 @@ export const RAIL_OWED_START_VAR = "--rail-owed-start";
 
 /** Inline end a follower must still apply itself. See {@link RAIL_OWED_START_VAR}. */
 export const RAIL_OWED_END_VAR = "--rail-owed-end";
+
+/**
+ * Inline start of the region's TEXT — the rail plus the row pad of a region
+ * whose content is padded rows (`rail-rows`), else the rail itself. What a band
+ * or a label re-applies so its text lines up with the rows' text. Published by
+ * every rail class; a hand-published region publishes none, so read it with a
+ * fallback to {@link RAIL_START_VAR}.
+ */
+export const RAIL_TEXT_START_VAR = "--rail-text-start";
+
+/** Inline end of the region's text. See {@link RAIL_TEXT_START_VAR}. */
+export const RAIL_TEXT_END_VAR = "--rail-text-end";

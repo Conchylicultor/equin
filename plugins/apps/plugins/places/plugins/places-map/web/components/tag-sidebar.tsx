@@ -189,9 +189,12 @@ export function TagSidebar({
           surface's, so the tree scrolls between a header and footer that stay put. */}
       <Column
         fill
+        // The column owns the inset: the header, the presets and the whole tag
+        // picker below land on one `sm` rail, none of them padding itself.
+        inset="sm"
         className="w-72"
         header={
-          <Stack gap="sm" className="p-sm">
+          <Stack gap="sm">
             {/* The launcher is a button of its own, so it sits beside the
                 fold trigger rather than inside it — and folded, so does the
                 preset dropdown that takes the title's place. */}

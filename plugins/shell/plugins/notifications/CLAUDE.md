@@ -233,7 +233,7 @@ DataView (`web/components/notifications-view.tsx`):
     - `notification-actions` "dismiss" → `DismissNotificationAction`
     - `Notifications.Action` "open"
     - `Notifications.Action` "reload"
-  - Uses: 56 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 55 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/data-view` ×5
     - `apps-core/tab-origin` ×4
     - `infra/endpoints` ×3
@@ -242,7 +242,6 @@ DataView (`web/components/notifications-view.tsx`):
     - `network/live/live-state` ×2
     - `primitives/css/coords` ×2
     - `primitives/css/fill` ×2
-    - `primitives/css/spacing` ×2
     - `primitives/cursor-pagination` ×2
     - `primitives/pane` ×2
     - `apps-core/tabs.useAppLink`
@@ -258,6 +257,7 @@ DataView (`web/components/notifications-view.tsx`):
     - `primitives/css/pin.Pin`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/scroll.Scroll`
+    - `primitives/css/spacing.Stack`
     - `primitives/css/status-dot.StatusDot`
     - `primitives/css/surface.Surface`
     - `primitives/css/text.Text`
@@ -367,10 +367,10 @@ DataView (`web/components/notifications-view.tsx`):
     - `notificationsRoute`
     - `NotificationStateSchema`
 - Cross-plugin:
-  - Uses tokens: 30 vars — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses tokens: 31 vars — full list in [REFERENCE.md](./REFERENCE.md)
     - `ui/tokens/color-palette` ×13
     - `ui/tokens/type-scale` ×10
-    - `ui/tokens/density` ×5
+    - `ui/tokens/density` ×6
     - `ui/tokens/shape` ×2
   - Imported by: 38 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations` ×15

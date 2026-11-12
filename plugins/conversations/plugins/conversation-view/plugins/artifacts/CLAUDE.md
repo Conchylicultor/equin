@@ -105,10 +105,12 @@ here) and the dismissal below. The row's `size` and the title's `Text variant`
 are one decision: the glyph is sized from the ROW's rung, so a title on a
 different one is back out of step.
 
-Everything in the panel shares one left edge, and each band pays for it
-separately: the header says `px-md` outright; inside the body stack's `p-xs`, a
-heading and a bespoke section say `px-sm`, which is what a row's `p-row` already
-is. Move one and the others have to follow.
+Everything in the panel shares one left edge, and the popover owns it: it is
+an `xs` row host (`padding="xs" rows`), so the rows land on its rail and the
+header's title (its `header` slot) lands on its text rail — rail plus a row's
+`--pad-row-x`. A section heading or a bespoke section's loose text says
+`px-row`, which is exactly a row's `p-row` inline half, so it starts where the
+rows' glyphs do. Nothing in the panel pays the popover's inset again.
 
 The relation mark goes in the row BODY, never in `Row`'s `actions` slot: it is
 state to read, not a control to press, and `actions` is hover-revealed.
@@ -163,7 +165,7 @@ here.
     - `ConversationArtifacts.Kind` ← `conversations.conversation-view.artifacts.skill`
     - `ConversationArtifacts.Kind` ← `debug.browser-recordings`
   - Contributes: `Conversation.ActionBar` → `ArtifactsButton`
-  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `network/live/live-state` ×4
     - `primitives/css/text` ×2
     - `primitives/css/ui-kit` ×2
@@ -172,7 +174,6 @@ here.
     - `conversations/conversation-view.conversationPane`
     - `network/live.useLive`
     - `primitives/css/fill.Fill`
-    - `primitives/css/line.Line`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/row.Row`
     - `primitives/css/spacing.Stack`
@@ -218,8 +219,7 @@ here.
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --muted-foreground`
-    - `ui/tokens/density --space-md`
-    - `ui/tokens/density --space-sm`
+    - `ui/tokens/density --pad-row-x`
     - `ui/tokens/density --space-xs`
     - `ui/tokens/shape --spacing`
     - `ui/tokens/type-scale --font-weight-semibold`

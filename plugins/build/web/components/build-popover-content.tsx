@@ -58,6 +58,7 @@ function BuildControls({
       direction="row"
       align="center"
       gap="sm"
+      // eslint-disable-next-line rail/no-adhoc-band -- debt (task-1794239361-kagy27): a Band once the build popover owns its inset (build-button.tsx)
       className="border-b px-md py-sm"
     >
       <Button

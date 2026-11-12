@@ -598,6 +598,7 @@ function ColorOptionPopover({
         align="center"
         sideOffset={8}
         width="content"
+        // eslint-disable-next-line rail/no-unowned-overlay -- the ColorPicker is a complete card with its own panel inset
         padding="none"
       >
         <ColorPicker

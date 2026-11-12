@@ -462,6 +462,7 @@ function SizeRow({
 /** A band of the Size popover under a hairline (`.psec`). */
 function Band({ children }: { children: ReactNode }): ReactElement {
   return (
+    // eslint-disable-next-line rail/no-adhoc-band -- debt (task-1794239361-kagy27): a hand-rolled rule strip; move it onto its surface's header/footer or a Band
     <Stack gap="smd" className="border-t border-border/64 px-smd pt-smd pb-xsm">
       {children}
     </Stack>

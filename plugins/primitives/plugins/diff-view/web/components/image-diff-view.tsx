@@ -96,6 +96,7 @@ function Panel({
           <Text
             as="div"
             variant="caption"
+            // eslint-disable-next-line rail/no-adhoc-band -- debt (task-1794239361-kagy27): a hand-rolled rule strip; move it onto its surface's header/footer or a Band
             className="border-b px-md py-xs font-medium text-muted-foreground"
           >
             {label}

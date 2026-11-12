@@ -149,6 +149,7 @@ export function InfoRow({
       direction="row"
       align="center"
       gap="md"
+      // eslint-disable-next-line rail/no-adhoc-band -- debt (task-1794239361-kagy27): a hand-rolled rule strip; move it onto its surface's header/footer or a Band
       className="min-h-10 border-t py-xs first:border-t-0"
     >
       <Icon icon={icon} className="size-5 text-muted-foreground" />
@@ -213,6 +214,7 @@ function HoursTrigger({
       aria-expanded={ctx.open}
       aria-controls={ctx.contentId}
       onClick={ctx.toggle}
+      // eslint-disable-next-line rail/no-adhoc-band -- debt (task-1794239361-kagy27): a hand-rolled rule strip; move it onto its surface's header/footer or a Band
       className="min-h-10 w-full gap-md border-t py-xs text-left first:border-t-0"
     >
       <Icon icon={hoursIcon} className="size-5 text-muted-foreground" />

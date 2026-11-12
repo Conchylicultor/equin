@@ -6,7 +6,22 @@ import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/lib/utils
  * The plain rule: a full-width (or full-height) hairline, no content.
  * `label` is spelled here as `never` so the two forms discriminate.
  */
-type PlainSeparatorProps = SeparatorPrimitive.Props & { label?: undefined };
+type PlainSeparatorProps =
+  | (SeparatorPrimitive.Props & { label?: undefined; bleed?: false })
+  | (Omit<SeparatorPrimitive.Props, "orientation"> & {
+      label?: undefined;
+      /**
+       * Run the hairline through the region's rail to its edge (`rail-bleed`)
+       * — the rule between a menu's search and its rows, inside any padded
+       * host — with a menu separator's room on both sides (`my-menu-separator`),
+       * so a hovered row never touches it. Horizontal only (a vertical bleed is a type error), and it drops
+       * the plain rule's `w-full`: a width class beside `rail-bleed` would
+       * cancel its widening (the rail contract's known gap), stopping the line
+       * one rail short of the edge it claims to reach.
+       */
+      bleed: true;
+      orientation?: "horizontal";
+    });
 
 /**
  * The labelled rule: a centered muted caption with the hairline growing to fill
@@ -59,14 +74,17 @@ function Separator(props: SeparatorProps) {
     className,
     orientation = "horizontal",
     label: _label,
+    bleed = false,
     ...rest
   } = props;
   return (
     <SeparatorPrimitive
       data-slot="separator"
-      orientation={orientation}
+      orientation={bleed ? "horizontal" : orientation}
       className={cn(
-        "shrink-0 bg-border data-horizontal:h-px data-horizontal:w-full data-vertical:w-px data-vertical:self-stretch",
+        bleed
+          ? "shrink-0 bg-border data-horizontal:h-px rail-bleed my-menu-separator"
+          : "shrink-0 bg-border data-horizontal:h-px data-horizontal:w-full data-vertical:w-px data-vertical:self-stretch",
         className,
       )}
       {...rest}

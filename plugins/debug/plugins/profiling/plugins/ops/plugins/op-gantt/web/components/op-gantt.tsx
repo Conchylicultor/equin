@@ -360,6 +360,7 @@ function OpLegend({
   if (entries.length === 0) return null;
 
   return (
+    // eslint-disable-next-line rail/no-adhoc-band -- debt (task-1794239361-kagy27): a hand-rolled rule strip; move it onto its surface's header/footer or a Band
     <Cluster gap="md" className="border-b px-lg py-xs">
       {entries.map((entry) => (
         <Stack key={entry.key} direction="row" align="center" gap="2xs">

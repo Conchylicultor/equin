@@ -19,7 +19,7 @@ import { HealthReport } from "../slots";
 import { HealthStore } from "../internal/store";
 import { BUTTON_TINT_CLASS } from "../internal/tone";
 import { HealthDot } from "./health-dot";
-import { HealthReportPanel } from "./health-report-panel";
+import { HealthReportHeader, HealthReportPanel } from "./health-report-panel";
 import { StatusProbes } from "./status-probes";
 
 interface DotView extends DotMerge {
@@ -83,7 +83,11 @@ function HealthReportTrigger({
     <InlinePopover
       align="end"
       width="2xl"
-      padding="none"
+      // The rows are padded pills on the `xs` rail; the header's verdict sits
+      // on their text rail.
+      padding="xs"
+      rows
+      header={<HealthReportHeader />}
       tooltip={label}
       trigger={
         <Button

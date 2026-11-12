@@ -16708,7 +16708,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ConversationArtifacts.Kind` ← `conversations.conversation-view.artifacts.skill`
               - `ConversationArtifacts.Kind` ← `debug.browser-recordings`
             - Contributes: `Conversation.ActionBar` → `ArtifactsButton`
-            - Uses: 24 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/artifacts/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/artifacts/REFERENCE.md)
+            - Uses: 23 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/artifacts/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/artifacts/REFERENCE.md)
               - `network/live/live-state` ×4
               - `primitives/css/text` ×2
               - `primitives/css/ui-kit` ×2
@@ -16717,7 +16717,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversation-view.conversationPane`
               - `network/live.useLive`
               - `primitives/css/fill.Fill`
-              - `primitives/css/line.Line`
               - `primitives/css/rigid.rigidClass`
               - `primitives/css/row.Row`
               - `primitives/css/spacing.Stack`
@@ -16763,8 +16762,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Uses tokens:
               - `ui/tokens/color-palette --muted-foreground`
-              - `ui/tokens/density --space-md`
-              - `ui/tokens/density --space-sm`
+              - `ui/tokens/density --pad-row-x`
               - `ui/tokens/density --space-xs`
               - `ui/tokens/shape --spacing`
               - `ui/tokens/type-scale --font-weight-semibold`
@@ -30945,9 +30943,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: `framework/tooling/guards/module-extension.MODULE_EXTENSION`
             - Exports (values): `isE2eScriptPath`
           - Cross-plugin:
-            - Imported by: 192 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
+            - Imported by: 193 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
               - `apps` ×58
-              - `primitives` ×28
+              - `primitives` ×29
               - `conversations` ×26
               - `page` ×26
               - `debug` ×9
@@ -31891,6 +31889,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `conversations/conversation-view/push-and-exit`
       - `conversations/conversations-view/data-view`
       - `hints/help-menu`
+      - `primitives/css/rail`
       - `shell/global-action-bar`
       - `tasks/task-draft-form`
       - `wish`
@@ -41882,12 +41881,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/shape` ×2
           - `ui/tokens/font-family --font-mono`
           - `ui/tokens/shadow --shadow`
-        - Imported by: 91 plugins — full list in [`plugins/page/plugins/editor/REFERENCE.md`](../plugins/page/plugins/editor/REFERENCE.md)
+        - Imported by: 92 plugins — full list in [`plugins/page/plugins/editor/REFERENCE.md`](../plugins/page/plugins/editor/REFERENCE.md)
           - `page` ×61
           - `apps` ×17
           - `reports` ×4
           - `active-data` ×3
-          - `primitives` ×2
+          - `primitives` ×3
           - `conversations/conversation-view/jsonl-viewer/tool-call/page-tools`
           - `debug/slow-ops`
           - `network/live`
@@ -46078,15 +46077,24 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Color`
               - `inGamut`
               - `maxChroma`
-        - **`column`** — Vertical named-slot layout primitive: <Column header body footer> stacks a rigid header, a flexible scrolling body, and a rigid footer in one flex column. Owns the rigid|flexible|rigid fill policy (shrink-0 header/footer, Scroll body); callers write roles, never shrink-0/min-h-0/flex-1 mechanics.
+        - **`column`** — Vertical named-slot layout primitive: <Column header body footer> stacks a rigid header, a flexible scrolling body, and a rigid footer in one flex column. Owns the rigid|flexible|rigid fill policy (shrink-0 header/footer, Scroll body); callers write roles, never shrink-0/min-h-0/flex-1 mechanics. `inset` makes each region (header, body scroller, footer) a region owner at that step (rail-x-<step> + rail-rows), `rules` draws its header/footer hairlines; <Band rule> is the rule-bearing strip mid-content, its text on the host's text rail.
           - Web:
             - Uses:
               - `primitives/css/scroll.Scroll`
               - `primitives/css/ui-kit.cn`
               - `primitives/css/ui-kit.SingleLineProvider`
-            - Exports (types): `ColumnProps`
-            - Exports (values): `Column`
+            - Exports (types):
+              - `BandProps`
+              - `BandRule`
+              - `ColumnProps`
+            - Exports (values):
+              - `Band`
+              - `Column`
           - Cross-plugin:
+            - Uses tokens:
+              - `ui/tokens/density --chrome-pad-x`
+              - `ui/tokens/density --pad-row-x`
+              - `ui/tokens/density --space-sm`
             - Imported by: 24 plugins — full list in [`plugins/primitives/plugins/css/plugins/column/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/column/REFERENCE.md)
               - `apps` ×9
               - `primitives` ×5
@@ -46400,10 +46408,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `LineProps`
             - Exports (values): `Line`
           - Cross-plugin:
-            - Imported by: 127 plugins — full list in [`plugins/primitives/plugins/css/plugins/line/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/line/REFERENCE.md)
+            - Imported by: 126 plugins — full list in [`plugins/primitives/plugins/css/plugins/line/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/line/REFERENCE.md)
               - `apps` ×37
               - `primitives` ×20
-              - `conversations` ×19
+              - `conversations` ×18
               - `debug` ×8
               - `page` ×6
               - `ui` ×6
@@ -46634,11 +46642,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `RAIL_OWED_END_VAR`
               - `RAIL_OWED_START_VAR`
               - `RAIL_START_VAR`
+              - `RAIL_TEXT_END_VAR`
+              - `RAIL_TEXT_START_VAR`
               - `railClass`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/density --chrome-pad-x`
             - Imported by:
               - `backup`
+              - `primitives/css/column`
               - `primitives/css/control-panel`
               - `primitives/css/ui-kit`
               - `primitives/data-view`
@@ -52418,6 +52429,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-2xs`
           - `ui/tokens/density --space-sm`
           - `ui/tokens/density --space-xl`
+          - `ui/tokens/density --space-xs`
           - `ui/tokens/shape --radius`
           - `ui/tokens/shape --radius-panel-row`
           - `ui/tokens/shape --spacing`
@@ -55911,12 +55923,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `HealthReport.Row` ← `reports.resource-errors`
           - `HealthReport.Row` ← `tasks.worktree-identity`
         - Contributes: `ActionBar.Lead` → `HealthReportButton`
-        - Uses: 32 symbols — full list in [`plugins/shell/plugins/health-report/REFERENCE.md`](../plugins/shell/plugins/health-report/REFERENCE.md)
+        - Uses: 31 symbols — full list in [`plugins/shell/plugins/health-report/REFERENCE.md`](../plugins/shell/plugins/health-report/REFERENCE.md)
           - `primitives/collapsible` ×4
           - `primitives/slot-render` ×4
           - `primitives/css/activity-ring` ×3
           - `primitives/css/ui-kit` ×3
-          - `primitives/css/spacing` ×2
           - `primitives/error-boundary` ×2
           - `network/live/live-state.ResourceErrorInline`
           - `primitives/css/center.Center`
@@ -55924,6 +55935,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/line.Line`
           - `primitives/css/rigid.rigidClass`
           - `primitives/css/row.Row`
+          - `primitives/css/spacing.Stack`
           - `primitives/css/status-dot.StatusDot`
           - `primitives/css/text.Text`
           - `primitives/loading.Loading`
@@ -55950,9 +55962,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/color-palette --warning`
           - `ui/tokens/density --pad-row-x`
           - `ui/tokens/density --pad-row-y`
-          - `ui/tokens/density --space-md`
           - `ui/tokens/density --space-sm`
-          - `ui/tokens/density --space-xs`
           - `ui/tokens/shape --radius`
           - `ui/tokens/shape --spacing`
           - `ui/tokens/type-scale --font-weight-semibold`
@@ -56019,7 +56029,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `notification-actions` "dismiss" → `DismissNotificationAction`
           - `Notifications.Action` "open"
           - `Notifications.Action` "reload"
-        - Uses: 56 symbols — full list in [`plugins/shell/plugins/notifications/REFERENCE.md`](../plugins/shell/plugins/notifications/REFERENCE.md)
+        - Uses: 55 symbols — full list in [`plugins/shell/plugins/notifications/REFERENCE.md`](../plugins/shell/plugins/notifications/REFERENCE.md)
           - `primitives/data-view` ×5
           - `apps-core/tab-origin` ×4
           - `infra/endpoints` ×3
@@ -56028,7 +56038,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live/live-state` ×2
           - `primitives/css/coords` ×2
           - `primitives/css/fill` ×2
-          - `primitives/css/spacing` ×2
           - `primitives/cursor-pagination` ×2
           - `primitives/pane` ×2
           - `apps-core/tabs.useAppLink`
@@ -56044,6 +56053,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/pin.Pin`
           - `primitives/css/rigid.rigidClass`
           - `primitives/css/scroll.Scroll`
+          - `primitives/css/spacing.Stack`
           - `primitives/css/status-dot.StatusDot`
           - `primitives/css/surface.Surface`
           - `primitives/css/text.Text`
@@ -56153,10 +56163,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `notificationsRoute`
           - `NotificationStateSchema`
       - Cross-plugin:
-        - Uses tokens: 30 vars — full list in [`plugins/shell/plugins/notifications/REFERENCE.md`](../plugins/shell/plugins/notifications/REFERENCE.md)
+        - Uses tokens: 31 vars — full list in [`plugins/shell/plugins/notifications/REFERENCE.md`](../plugins/shell/plugins/notifications/REFERENCE.md)
           - `ui/tokens/color-palette` ×13
           - `ui/tokens/type-scale` ×10
-          - `ui/tokens/density` ×5
+          - `ui/tokens/density` ×6
           - `ui/tokens/shape` ×2
         - Imported by: 38 plugins — full list in [`plugins/shell/plugins/notifications/REFERENCE.md`](../plugins/shell/plugins/notifications/REFERENCE.md)
           - `conversations` ×15
@@ -56801,7 +56811,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/color-palette --primary-foreground`
           - `ui/tokens/color-palette --primary-text`
           - `ui/tokens/color-palette --strong-foreground`
-          - `ui/tokens/density --space-2xs`
           - `ui/tokens/density --space-sm`
           - `ui/tokens/density --space-xs`
           - `ui/tokens/shape --radius`
@@ -61145,9 +61154,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `densityGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --radius`
-            - Tokens used by: 347 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
+            - Tokens used by: 348 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
               - `apps` ×73
-              - `primitives` ×71
+              - `primitives` ×72
               - `conversations` ×50
               - `debug` ×28
               - `ui` ×24

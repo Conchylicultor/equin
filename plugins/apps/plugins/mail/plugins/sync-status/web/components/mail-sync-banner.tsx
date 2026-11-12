@@ -189,6 +189,7 @@ function BannerShell({
     <div
       role="status"
       aria-live="polite"
+      // eslint-disable-next-line rail/no-adhoc-band -- debt (task-1794239361-kagy27): a hand-rolled rule strip; move it onto its surface's header/footer or a Band
       className={cn("border-b px-md py-sm", TONE_CLASS[tone])}
     >
       <Stack direction="row" gap="sm" align="center">

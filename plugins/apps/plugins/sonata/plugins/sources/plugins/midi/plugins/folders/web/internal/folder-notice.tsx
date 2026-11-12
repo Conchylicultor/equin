@@ -112,6 +112,7 @@ function FolderNoticeRow({ folder }: { folder: UnreadableFolder }) {
       direction="row"
       gap="md"
       align="center"
+      // eslint-disable-next-line rail/no-adhoc-band -- debt (task-1794239361-kagy27): a hand-rolled rule strip; move it onto its surface's header/footer or a Band
       className="border-t border-border px-lg py-md first:border-t-0"
     >
       {/* The tile sits at the top of the row (beside the title), the actions
@@ -211,6 +212,7 @@ function ChangeFolder({ path }: { path: string }) {
       onOpenChange={setOpen}
       align="end"
       width="xl"
+      // eslint-disable-next-line rail/no-unowned-overlay -- the FolderPicker is a complete surface (path bar, listing, footer) owning its own insets
       padding="none"
       trigger={
         <Button shape="pill" variant="secondary">

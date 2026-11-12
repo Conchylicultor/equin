@@ -203,6 +203,7 @@ function SourceFrame({
       fill
       style={{ width: PANEL_WIDTH }}
       header={
+        // eslint-disable-next-line rail/no-adhoc-band -- debt (task-1794239361-kagy27): a Band only once the overlay panel column owns its inset — today it hand-pads, so a Band here would sit on a different edge than its content
         <Stack gap="xs" className="border-b px-sm pt-sm pb-xs">
           <SourceLine onClose={onClose} />
         </Stack>
@@ -293,6 +294,7 @@ function PanelList(
       fill
       style={{ width: PANEL_WIDTH }}
       header={
+        // eslint-disable-next-line rail/no-adhoc-band -- debt (task-1794239361-kagy27): a Band only once the overlay panel column owns its inset — today it hand-pads, so a Band here would sit on a different edge than its content
         <Stack gap="xs" className="border-b px-sm pt-sm pb-xs">
           <SourceLine onClose={onClose} />
           <Line className="gap-xs">
@@ -362,6 +364,7 @@ function PanelList(
         )
       }
       footer={
+        // eslint-disable-next-line rail/no-adhoc-band -- debt (task-1794239361-kagy27): a Band only once the overlay panel column owns its inset — today it hand-pads, so a Band here would sit on a different edge than its content
         <Line className="gap-xs border-t px-sm py-xs">
           <IconButton
             icon={fitIcon}

@@ -184,6 +184,7 @@ function BuildButtonInner({
       trigger={trigger}
       align="end"
       width="3xl"
+      // eslint-disable-next-line rail/no-unowned-overlay -- debt (task-1794239361-kagy27): the popover's content (DeploymentChain, the log channel, RunsDataView) pays its own inset for the pane variant, so a padded popover would inset it twice; it can own the inset once they follow the rail
       padding="none"
     >
       <Stack
@@ -191,6 +192,7 @@ function BuildButtonInner({
         align="center"
         justify="between"
         gap="none"
+        // eslint-disable-next-line rail/no-adhoc-band -- debt (task-1794239361-kagy27): becomes the popover's header once the popover owns its inset (see above)
         className="border-b px-md py-sm"
       >
         <Text as="span" variant="label">

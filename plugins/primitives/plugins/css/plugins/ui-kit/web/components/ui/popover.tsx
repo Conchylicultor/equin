@@ -168,6 +168,8 @@ function PopoverContent({
   padding = "panel",
   maxHeight = "viewport",
   header,
+  footer,
+  rows,
   resetOnClose = false,
   className,
   children,
@@ -199,8 +201,12 @@ function PopoverContent({
      * `viewport` (fit the space Floating UI measured, and nothing tighter).
      */
     maxHeight?: PopoverMaxHeight;
-    /** Optional sticky header rendered above the content, full-bleed through the padding. */
+    /** Optional sticky header strip above the content (see `OverlayPanel`). */
     header?: React.ReactNode;
+    /** Optional sticky footer strip under the content (see `OverlayPanel`). */
+    footer?: React.ReactNode;
+    /** The content is padded rows: publish the text rail (see `OverlayPanel`). */
+    rows?: boolean;
     /**
      * Unmount the content on close, so every open starts from fresh state.
      *
@@ -274,6 +280,8 @@ function PopoverContent({
                 padding={padding}
                 maxHeight={maxHeight}
                 header={header}
+                footer={footer}
+                rows={rows}
                 className={className}
               >
                 {children}

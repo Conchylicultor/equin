@@ -106,7 +106,7 @@ export function Bar({
     // <Line>; Bar layers its strip chrome (border, tier height/inset, clip) on top.
     <Line
       as={As}
-      // eslint-disable-next-line layout/no-adhoc-layout -- Bar is the sanctioned single-line chrome-strip primitive (enforced by bar/no-adhoc-bar); it owns its own raw min-w-0 + clip mechanics, the same way the css/* layout primitives own theirs
+      // eslint-disable-next-line layout/no-adhoc-layout, rail/no-adhoc-band -- Bar is the sanctioned single-line chrome-strip primitive (enforced by bar/no-adhoc-bar); it owns its own raw min-w-0 + clip mechanics, the same way the css/* layout primitives own theirs; and it IS the pane/app chrome strip, whose inset is its tier's chrome pad (the floor bands and followers land on)
       className={cn(
         "gap-sm border-b",
         TIER_CLASS[tier],

@@ -378,6 +378,7 @@ export function Shelf({ tabIds }: { tabIds: string[] }) {
           side="top"
           align="center"
           sideOffset={peek.kind === "app" ? APP_PEEK_GAP : DESKTOP_PEEK_GAP}
+          // eslint-disable-next-line rail/no-unowned-overlay -- the peek is drawn by the mockup's own chrome (PEEK_CHROME), whose padding differs per content kind and is set on the surface itself
           padding="none"
           scroll={false}
           onPointerEnter={cancelHide}

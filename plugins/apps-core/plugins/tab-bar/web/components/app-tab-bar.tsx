@@ -129,7 +129,7 @@ export function AppTabBar() {
         // content seam (no line) — the colour step alone separates strip from
         // content. Idle controls in the strip (the `+`, the action bar's icons)
         // read the muted text colour and step up to full on hover.
-        // eslint-disable-next-line layout/no-adhoc-layout -- shrink-0 keeps the rigid tab bar's chrome height above the flexible tab body
+        // eslint-disable-next-line layout/no-adhoc-layout, rail/no-adhoc-band -- shrink-0 keeps the rigid tab bar's chrome height above the flexible tab body; debt (task-1794239361-kagy27): a hand-rolled rule strip; move it onto its surface's header/footer or a Band
         className={cn(
           "h-chrome-bar shrink-0 pr-sm text-muted-foreground",
           strip === "padded" && "border-b py-2xs",

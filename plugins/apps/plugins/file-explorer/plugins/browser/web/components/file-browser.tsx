@@ -543,6 +543,7 @@ function StatusBar({
         as={Line}
         variant="caption"
         tone="faint"
+        // eslint-disable-next-line rail/no-adhoc-band -- debt (task-1794239361-kagy27): a hand-rolled rule strip; move it onto its surface's header/footer or a Band
         className="h-7 gap-md border-t px-lg"
       >
         <Text variant="caption">{left}</Text>

@@ -31,6 +31,7 @@ export function ClientBootLane({ payload }: TraceLaneProps): ReactElement {
   const parsed = ClientBootSectionSchema.safeParse(payload);
   if (!parsed.success) {
     return (
+      // eslint-disable-next-line rail/no-adhoc-band -- debt (task-1794239361-kagy27): a hand-rolled rule strip; move it onto its surface's header/footer or a Band
       <Stack gap="xs" className="border-b px-lg py-sm">
         <SectionLabel>Client boot</SectionLabel>
         <Placeholder tone="muted">

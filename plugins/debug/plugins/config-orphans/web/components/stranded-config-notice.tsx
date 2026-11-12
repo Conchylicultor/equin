@@ -48,6 +48,7 @@ export function StrandedConfigNotice() {
     <Text
       as="div"
       variant="body"
+      // eslint-disable-next-line rail/no-adhoc-band -- debt (task-1794239361-kagy27): a hand-rolled rule strip; move it onto its surface's header/footer or a Band
       className="border-b border-warning/30 bg-warning/10 px-md py-sm text-warning"
     >
       <Stack direction="row" gap="sm" align="center" wrap>

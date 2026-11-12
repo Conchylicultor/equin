@@ -155,6 +155,7 @@ function TaskProgress({ aggregate }: { aggregate: TaskAggregate }) {
           </Stack>
           {tasks.length > 0 && (
             <FoldMotion {...contentProps}>
+              {/* eslint-disable-next-line rail/no-adhoc-band -- debt (task-1794239361-kagy27): a hand-rolled rule strip; move it onto its surface's header/footer or a Band */}
               <Scroll className="max-h-[180px] border-t border-border/40 py-xs">
                 {tasks.map((task) => (
                   <TaskRow key={task.taskId} task={task} />

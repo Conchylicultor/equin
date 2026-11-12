@@ -7,6 +7,7 @@ import {
   cn,
   SingleLineProvider,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { railClass } from "@plugins/primitives/plugins/css/plugins/rail/core";
 import type React from "react";
 import type { ReactNode } from "react";
 
@@ -29,7 +30,37 @@ type ColumnSizing =
       fill?: false;
     };
 
-export type ColumnProps = ColumnBaseProps & ColumnSizing;
+/**
+ * Who pays the column's inline inset. `inset` makes each of the column's
+ * regions a REGION OWNER at that step: the header, the body's scroller and the
+ * footer each pay AND publish it (`rail-x-<step>`, owed 0) — so the scroller
+ * and its scrollbar still reach the column's edge while its content lands on
+ * the rail, and a follower inside (a DataView's bands) pays nothing more.
+ * Not the app-shell sidebar's owe/follow split: a follower region would make
+ * every follower inside it pay a second time (nested followers each pay).
+ * It needs the managed `Scroll` body to own the body's region, so a plain
+ * `scrollBody={false}` body cannot take one (tsc).
+ */
+type ColumnInset =
+  | {
+      /** Wrap `body` in a `<Scroll axis="y" fill>` cell. Defaults to true. */
+      scrollBody?: true;
+      /**
+       * Open the column as a region inset by this ramp step: header, body and
+       * footer content lands on the rail (and bands on its text rail — a
+       * column's body is rows, so the text rail is one row pad further in) by
+       * doing nothing. Each region also takes the step as block padding.
+       * Content inside declares NO inset of its own.
+       */
+      inset?: SpaceStep;
+    }
+  | {
+      /** A plain flexible body that manages its own overflow. */
+      scrollBody: false;
+      inset?: undefined;
+    };
+
+export type ColumnProps = ColumnBaseProps & ColumnSizing & ColumnInset;
 
 interface ColumnBaseProps extends React.HTMLAttributes<HTMLElement> {
   /** Rigid top region — never shrinks (`shrink-0`). */
@@ -40,8 +71,12 @@ interface ColumnBaseProps extends React.HTMLAttributes<HTMLElement> {
   body?: ReactNode;
   /** Rigid bottom region — never shrinks (`shrink-0`). */
   footer?: ReactNode;
-  /** Wrap `body` in a `<Scroll axis="y" fill>` cell. Defaults to true. */
-  scrollBody?: boolean;
+  /**
+   * Draw the rules between regions: a hairline under the header and one over
+   * the footer, spanning the column (the strips are the column's own, never a
+   * `border-b px-* py-*` recipe in the slot content).
+   */
+  rules?: boolean;
   /** Hide the scrollbar chrome on the managed `Scroll` body while keeping it
    *  scrollable. Only applies when `scrollBody` is true. Defaults to false. */
   hideScrollbar?: boolean;
@@ -98,6 +133,8 @@ export function Column({
   body,
   footer,
   scrollBody = true,
+  inset,
+  rules = false,
   hideScrollbar = false,
   fill = false,
   fit = false,
@@ -107,6 +144,12 @@ export function Column({
   className,
   ...rest
 }: ColumnProps) {
+  // Each region opens its own region at the step — pays and publishes it, with
+  // the text rail one row pad in (a column's content is rows) — and takes the
+  // same step as block padding, so two regions sit one step apart on each side
+  // of their boundary (a group gap, as before the column owned the inset).
+  const regionInset =
+    inset && cn(railClass({ x: inset }), "rail-rows", rampClass("py", inset));
   return (
     // Flow container (always vertical): RESETS the single-line contract so stacked
     // regions wrap — `whitespace-normal` re-wraps raw text and the `SingleLine`
@@ -139,16 +182,29 @@ export function Column({
             : rest.style
         }
       >
-        {header != null && <div className="shrink-0">{header}</div>}
+        {header != null && (
+          <div className={cn("shrink-0", regionInset, rules && "border-b")}>
+            {header}
+          </div>
+        )}
         {body != null &&
           (scrollBody ? (
-            <Scroll axis="y" fill hideScrollbar={hideScrollbar}>
+            <Scroll
+              axis="y"
+              fill
+              hideScrollbar={hideScrollbar}
+              className={regionInset}
+            >
               {body}
             </Scroll>
           ) : (
             <div className="min-h-0 flex-1">{body}</div>
           ))}
-        {footer != null && <div className="shrink-0">{footer}</div>}
+        {footer != null && (
+          <div className={cn("shrink-0", regionInset, rules && "border-t")}>
+            {footer}
+          </div>
+        )}
       </As>
     </SingleLineProvider>
   );

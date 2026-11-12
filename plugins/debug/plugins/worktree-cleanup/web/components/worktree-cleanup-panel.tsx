@@ -249,6 +249,7 @@ export function WorktreeCleanupPanel() {
         gap="md"
         align="center"
         justify="between"
+        // eslint-disable-next-line rail/no-adhoc-band -- debt (task-1794239361-kagy27): a hand-rolled rule strip; move it onto its surface's header/footer or a Band
         className="px-lg py-md border-b"
       >
         <Stack
@@ -330,6 +331,7 @@ export function WorktreeCleanupPanel() {
       <Text
         as="div"
         variant="caption"
+        // eslint-disable-next-line rail/no-adhoc-band -- debt (task-1794239361-kagy27): a hand-rolled rule strip; move it onto its surface's header/footer or a Band
         className="px-lg py-sm text-muted-foreground border-b"
       >
         Orphaned forks, config dirs, and gateway registry entries are reclaimed
@@ -342,6 +344,7 @@ export function WorktreeCleanupPanel() {
         <Text
           as="div"
           variant="caption"
+          // eslint-disable-next-line rail/no-adhoc-band -- debt (task-1794239361-kagy27): a hand-rolled rule strip; move it onto its surface's header/footer or a Band
           className="px-lg py-sm bg-muted text-muted-foreground border-b"
         >
           {bulkResult}

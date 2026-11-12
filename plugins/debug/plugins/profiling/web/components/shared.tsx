@@ -226,6 +226,7 @@ export function SpanDetail({
     <Text
       as="div"
       variant="caption"
+      // eslint-disable-next-line rail/no-adhoc-band -- debt (task-1794237886-rfwccn): a Band only once the profiling pane owns its inset — today it hand-pads, so a Band here would sit on a different edge than its content
       className={cn("border-t bg-muted/50 px-lg py-sm", className)}
     >
       {span ? (

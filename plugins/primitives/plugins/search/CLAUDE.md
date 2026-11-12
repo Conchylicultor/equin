@@ -59,6 +59,7 @@ emoji search) is drawn through `render={<Lib.Search />}`, keeping this chrome.
     - `ui/tokens/density --space-2xs`
     - `ui/tokens/density --space-sm`
     - `ui/tokens/density --space-xl`
+    - `ui/tokens/density --space-xs`
     - `ui/tokens/shape --radius`
     - `ui/tokens/shape --radius-panel-row`
     - `ui/tokens/shape --spacing`

@@ -83,6 +83,7 @@ export function PluginChangeCard({
         <FoldMotion {...contentProps}>
           <Stack
             gap="md"
+            // eslint-disable-next-line rail/no-adhoc-band -- debt (task-1794239361-kagy27): a hand-rolled rule strip; move it onto its surface's header/footer or a Band
             className="px-md pb-md pt-xs border-t border-border/40"
           >
             <PluginChanges.Section.Render>

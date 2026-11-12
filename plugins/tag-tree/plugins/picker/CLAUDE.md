@@ -51,7 +51,6 @@
     - `ui/tokens/color-palette --primary-foreground`
     - `ui/tokens/color-palette --primary-text`
     - `ui/tokens/color-palette --strong-foreground`
-    - `ui/tokens/density --space-2xs`
     - `ui/tokens/density --space-sm`
     - `ui/tokens/density --space-xs`
     - `ui/tokens/shape --radius`

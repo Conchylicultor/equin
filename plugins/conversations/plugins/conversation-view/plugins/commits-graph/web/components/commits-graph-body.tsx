@@ -99,6 +99,7 @@ function AttemptCommitsGraph({ attemptId }: { attemptId: string }) {
         <Text
           as="header"
           variant="caption"
+          // eslint-disable-next-line rail/no-adhoc-band -- debt (task-1794239361-kagy27): a hand-rolled rule strip; move it onto its surface's header/footer or a Band
           className="border-b border-border px-lg py-sm text-muted-foreground"
         >
           <Stack direction="row" gap="sm" align="baseline">
@@ -173,6 +174,7 @@ function BehindSeparator({
   hasAgentWork: boolean;
 }) {
   return (
+    // eslint-disable-next-line rail/no-adhoc-band -- debt (task-1794239361-kagy27): a hand-rolled rule strip; move it onto its surface's header/footer or a Band
     <li className="border-b border-border/50 px-md py-xs">
       <Separator
         label={hasAgentWork ? `↓${count} on main` : `${count} commits on main`}

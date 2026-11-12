@@ -254,6 +254,7 @@ export function RestoreButton({
         </Button>
       }
       width="sm"
+      // eslint-disable-next-line rail/no-unowned-overlay -- debt (task-1794239361-kagy27): its content picks its own insets; migrate it onto a padded panel with header/footer/Band
       padding="none"
     >
       {/*

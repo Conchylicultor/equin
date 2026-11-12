@@ -55,7 +55,7 @@ export function BootProfileDetail({ id }: { id: string }): ReactElement {
   const data = result.row;
 
   const banner = (
-    // eslint-disable-next-line layout/no-adhoc-layout -- banner strip mirrors the live header strip
+    // eslint-disable-next-line layout/no-adhoc-layout, rail/no-adhoc-band -- banner strip mirrors the live header strip; debt (task-1794239361-kagy27): a hand-rolled rule strip; move it onto its surface's header/footer or a Band
     <div className="flex items-center gap-sm border-b px-lg py-sm">
       <Text as="span" variant="caption" className="text-muted-foreground">
         Saved snapshot ·{" "}

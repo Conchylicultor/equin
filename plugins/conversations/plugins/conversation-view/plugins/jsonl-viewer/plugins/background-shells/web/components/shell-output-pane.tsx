@@ -148,6 +148,7 @@ function ShellHeader({ shell }: { shell: BackgroundShell }) {
   return (
     <Stack
       gap="2xs"
+      // eslint-disable-next-line rail/no-adhoc-band -- debt (task-1794239361-kagy27): a hand-rolled rule strip; move it onto its surface's header/footer or a Band
       className={cn(rigidClass(), "border-b border-border/60 px-md py-sm")}
     >
       <Line className="gap-sm">

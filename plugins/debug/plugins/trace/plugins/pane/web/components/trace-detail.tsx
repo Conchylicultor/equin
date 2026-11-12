@@ -111,6 +111,7 @@ function AlsoInWindow({
 
   if (list.status === "error") {
     return (
+      // eslint-disable-next-line rail/no-adhoc-band -- debt (task-1794239361-kagy27): a hand-rolled rule strip; move it onto its surface's header/footer or a Band
       <div className="border-b px-lg py-sm">
         <ResourceErrorInline
           variant="inline"
@@ -124,6 +125,7 @@ function AlsoInWindow({
   if (siblings === null || siblings.length === 0) return null;
 
   return (
+    // eslint-disable-next-line rail/no-adhoc-band -- debt (task-1794239361-kagy27): a hand-rolled rule strip; move it onto its surface's header/footer or a Band
     <div className="border-b px-lg py-sm">
       <Stack gap="xs">
         <Text as="div" variant="caption" tone="muted">
@@ -191,6 +193,7 @@ function TraceGantt({ snapshot }: { snapshot: TraceSnapshot }): ReactElement {
 
   return (
     <Stack gap="none">
+      {/* eslint-disable-next-line rail/no-adhoc-band -- debt (task-1794239361-kagy27): a hand-rolled rule strip; move it onto its surface's header/footer or a Band */}
       <div className="border-b px-lg py-sm">
         <Trace.TriggerSummary.Dispatch trace={snapshot} />
       </div>

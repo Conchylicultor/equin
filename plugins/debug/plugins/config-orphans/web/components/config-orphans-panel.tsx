@@ -144,6 +144,7 @@ export function ConfigOrphansPanel() {
       <Text
         as="div"
         variant="caption"
+        // eslint-disable-next-line rail/no-adhoc-band -- debt (task-1794239361-kagy27): a hand-rolled rule strip; move it onto its surface's header/footer or a Band
         className="px-lg py-sm text-muted-foreground border-b"
       >
         On-disk config files in this worktree whose{" "}

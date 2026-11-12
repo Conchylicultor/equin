@@ -58,6 +58,19 @@ below.
 | `--rail-start` / `--rail-end` | the inset **already applied** between my content and the region edge. What a bleeder cancels. |
 | `--rail-owed-start` / `--rail-owed-end` | the inset a follower must **still apply itself**. `0` when the owner paid; the rail when it published without paying. |
 | `--rail-block-start` / `--rail-block-end` | block padding, per edge — `scroll-fade`'s strips read them |
+| `--rail-text-start` / `--rail-text-end` | where the region's TEXT starts: the rail, plus one row pad (`--pad-row-x`) in a row host. What a band or label re-applies |
+
+**The text rail.** In a region of padded rows (menu rows' `px-row`, `Row`'s
+`p-row`) a row's text sits one row pad in from its box — so a band or a label
+on the rail is 8px left of the rows' text. A row host declares it with
+`rail-rows`, and every rail class publishes `--rail-text-*` as its rail plus
+`--rail-row-pad`, a NON-INHERITED registered property (`@property`): the host's
+own rail class adds the host's row pad, and every nested region reads its own,
+initial, 0px — so the text rail resets one level down by construction, with no
+specificity or source-order contest on the host. A two-part inset that already
+publishes the sum (`cp-panel`) sets its text rail to its rail. Hosts:
+`DropdownMenuContent` (always), `OverlayPanel` / `PopoverContent` /
+`InlinePopover` with `rows`, `Column inset`.
 
 Applied and owed are two different questions and one number cannot answer both.
 A container that pads *and* publishes a non-zero "you owe this" is telling every
@@ -84,6 +97,9 @@ is the model behind them.
 | `rail-owe-<step>` | open a region and hand the bill on: publish, pay nothing. The inverted topology; the app-shell sidebar is its live user |
 | `rail-follow` | pay what is owed, publish nothing. Falls back owed → rail → pane inset → chrome pad |
 | `rail-bleed` | the escape: cancel and re-apply, as one class |
+| `rail-band` | the escape for a rule strip: cancel the rail, re-apply the TEXT rail (`Band`, an overlay panel's `header` / `footer`) |
+| `rail-rows` | declare a row host: the text rail is one row pad past the rail |
+| `rail-band-region` | a band's content box: republish the band's padding as the rail, so a child can `rail-bleed` to the region edge (a sideways-scrolling chip strip) |
 
 `core/` holds what CSS cannot: the var **spellings** (`RAIL_START_VAR`, …), for
 a `getComputedStyle` read or a `style={{…}}` publication, and **`railClass({rail,
@@ -162,6 +178,25 @@ band paid it and the band's own edge *is* the region edge. The one shape with no
 answer is a direct child of a `rail-owe-` owner reaching for `rail-bleed`:
 nothing has been applied there yet, so there is nothing to escape.
 
+## The region-owner rules (`lint/`)
+
+Three narrow rules, each naming its replacement
+(research/2026-11-09-global-surface-owned-inset.md):
+
+- `rail/no-unowned-overlay` — `padding="none"` on an overlay host. Give the
+  panel a step; strips go in its `header` / `footer`, mid-content rules in a
+  `Band`. A child that is itself a complete surface (the control panel's
+  `cp-*`, a colour picker card, the folder browser) keeps `none` behind a
+  per-site disable saying so.
+- `rail/no-adhoc-band` — one element with a top/bottom border and a `px-*` /
+  `py-*`. A strip whose inline inset is the rail's (`rail-band`, `rail-bleed`,
+  `rail-follow`) is not ad hoc.
+- `rail/no-pad-under-owner` — a `p-*` / `px-*` on the root of content placed in
+  a region owner (a `Column inset` region, a padded overlay panel's children
+  and strips), same file only.
+
+Sites that predate them carry `-- debt (task-…)` disables.
+
 ## Three traps, one shape
 
 **A box that pays the rail must not sit inside another box that pays the rail** —
@@ -214,11 +249,14 @@ now zero: approximately right in a screenshot, wrong in the DOM. Enforced by
     - `RAIL_OWED_END_VAR`
     - `RAIL_OWED_START_VAR`
     - `RAIL_START_VAR`
+    - `RAIL_TEXT_END_VAR`
+    - `RAIL_TEXT_START_VAR`
     - `railClass`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/density --chrome-pad-x`
   - Imported by:
     - `backup`
+    - `primitives/css/column`
     - `primitives/css/control-panel`
     - `primitives/css/ui-kit`
     - `primitives/data-view`

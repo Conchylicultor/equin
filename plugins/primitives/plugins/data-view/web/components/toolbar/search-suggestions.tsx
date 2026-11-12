@@ -81,6 +81,7 @@ export function SearchWithSuggestions({
         anchor={anchor}
         align="end"
         width="2xl"
+        // eslint-disable-next-line rail/no-unowned-overlay -- debt (task-1794239361-kagy27): its content picks its own insets; migrate it onto a padded panel with header/footer/Band
         padding="none"
         maxHeight="viewport"
         // Always under the field: a panel taller than the room below scrolls

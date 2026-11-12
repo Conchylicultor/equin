@@ -73,6 +73,7 @@ export function TimeAxis({
   );
 
   return (
+    // eslint-disable-next-line rail/no-adhoc-band -- debt (task-1794239361-kagy27): a hand-rolled rule strip; move it onto its surface's header/footer or a Band
     <Stack direction="row" gap="none" className="relative h-6 border-b px-lg">
       {/* eslint-disable-next-line layout/no-adhoc-layout -- fixed 160px (w-40) label column kept rigid (shrink-0) to align with the Gantt rows (LABEL_WIDTH) */}
       <div className="flex w-40 shrink-0 items-center gap-xs">

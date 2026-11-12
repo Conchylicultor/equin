@@ -251,6 +251,7 @@ function SectionPanel() {
         fill
         className="h-full"
         header={
+          // eslint-disable-next-line rail/no-adhoc-band -- debt (task-1794239361-kagy27): a hand-rolled rule strip; move it onto its surface's header/footer or a Band
           <Line className="gap-sm border-b border-border py-sm pr-xs pl-lg">
             <Fill>
               <Text variant="subheading" className="font-bold">

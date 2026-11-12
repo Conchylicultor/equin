@@ -264,6 +264,7 @@ function PanelList(
     body = <PanelRows {...props} shown={scoped.shown} />;
     if (!noMap && scope === "in-view" && scoped.outside > 0) {
       footer = (
+        // eslint-disable-next-line rail/no-adhoc-band -- debt (task-1794239361-kagy27): a hand-rolled rule strip; move it onto its surface's header/footer or a Band
         <Line className="gap-xs border-t px-sm py-xs">
           <Fill>
             <Text variant="caption" tone="muted">

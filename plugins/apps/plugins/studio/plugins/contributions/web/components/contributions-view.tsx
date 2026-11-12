@@ -114,6 +114,7 @@ function ContributionsTables({ plugins }: { plugins: PluginNode[] }) {
       className="h-full"
       header={
         <>
+          {/* eslint-disable-next-line rail/no-adhoc-band -- debt (task-1794239361-kagy27): a hand-rolled rule strip; move it onto its surface's header/footer or a Band */}
           <Scroll axis="x" className="border-b px-md py-sm">
             <Stack direction="row" gap="xs">
               {sortedTables.map((table) => {
@@ -143,6 +144,7 @@ function ContributionsTables({ plugins }: { plugins: PluginNode[] }) {
             </Stack>
           </Scroll>
 
+          {/* eslint-disable-next-line rail/no-adhoc-band -- debt (task-1794239361-kagy27): a hand-rolled rule strip; move it onto its surface's header/footer or a Band */}
           <div className="border-b px-md py-sm">
             <SearchInput
               value={filter}

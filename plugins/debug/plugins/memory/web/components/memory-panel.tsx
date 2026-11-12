@@ -93,6 +93,7 @@ export function MemoryPanel() {
           direction="row"
           gap="none"
           align="center"
+          // eslint-disable-next-line rail/no-adhoc-band -- debt (task-1794239361-kagy27): a hand-rolled rule strip; move it onto its surface's header/footer or a Band
           className="border-b px-md py-sm"
         >
           <SectionLabel as="span" className="font-medium">
@@ -115,6 +116,7 @@ export function MemoryPanel() {
           />
         </Scroll>
         {list.status === "ready" && (
+          // eslint-disable-next-line rail/no-adhoc-band -- debt (task-1794239361-kagy27): a hand-rolled rule strip; move it onto its surface's header/footer or a Band
           <div className="border-t px-md py-sm">
             <p
               className="truncate font-mono text-3xs text-muted-foreground/50"

@@ -34,6 +34,11 @@ export function closestOverlayPanel(el: Element): HTMLElement | null {
  *  padding (see the header below). */
 const HEADER_PIN_STYLE = { top: "calc(-1 * var(--rail-block-start, 0px))" };
 
+/** Pins the sticky footer at the panel's true bottom edge, the mirror. */
+const FOOTER_PIN_STYLE = {
+  bottom: "calc(-1 * var(--rail-block-end, 0px))",
+};
+
 /**
  * THE floating panel — the one definition of the box every overlay surface
  * contains.
@@ -94,8 +99,25 @@ export interface OverlayPanelProps extends Passthrough<HTMLDivElement> {
    * `maxHeight` does not apply.
    */
   scroll?: boolean;
-  /** Optional sticky header rendered above the content, full-bleed through the padding. */
+  /**
+   * Optional sticky header rendered above the content: its rule runs full-bleed
+   * through the padding, its text sits on the panel's text rail. The panel's top
+   * edge strip — never a hand-rolled `border-b px-* py-*` first child.
+   */
   header?: React.ReactNode;
+  /**
+   * Optional sticky footer pinned under the content — the mirror of `header`
+   * (`border-t`, full-bleed rule, text on the text rail). The panel's bottom
+   * edge strip — never a hand-rolled `border-t px-* py-*` last child.
+   */
+  footer?: React.ReactNode;
+  /**
+   * The panel's content is padded ROWS (menu rows, `Row` pills): publish the
+   * text rail one row pad in from the rail (`rail-rows`), so the header, the
+   * footer and every `Band` inside put their text where the rows' text is.
+   * Default false: the text rail is the rail.
+   */
+  rows?: boolean;
   /** Landing spot for a consumer override — always the LAST `cn()` argument. */
   className?: string;
   children?: React.ReactNode;
@@ -111,6 +133,8 @@ export function OverlayPanel({
   maxHeight = "viewport",
   scroll = true,
   header,
+  footer,
+  rows = false,
   className,
   children,
   ref,
@@ -184,6 +208,7 @@ export function OverlayPanel({
         "z-popover origin-(--transform-origin) duration-100 outline-none data-open:overlay-enter data-ending-style:overlay-exit data-closed:overflow-hidden",
         POPOVER_WIDTH[width],
         POPOVER_PADDING[padding],
+        rows && "rail-rows",
         scroll && [
           POPOVER_MAX_HEIGHT[maxHeight],
           "scroll-fade overflow-x-hidden overflow-y-auto",
@@ -202,11 +227,10 @@ export function OverlayPanel({
         <SidewaysScrollProvider value={false}>
           <OverlayBoundary>
             {header != null && (
-              // `rail-bleed` for the inline half: it cancels and re-applies
-              // whatever rail the panel is ACTUALLY on, which the `-mx-1` here
-              // before it did not — the default role is `md` (0.75rem), so a
-              // hardcoded 4px left every popover header visibly inset, and each of
-              // the six roles wanted a different number.
+              // `rail-band` for the inline half: it cancels whatever rail the
+              // panel is ACTUALLY on and re-applies the panel's TEXT rail, so
+              // the rule spans the panel while the title lines up with the
+              // rows' text (the rail itself unless the panel holds `rows`).
               // `my-overlay-header` is the block half: it bleeds up through the
               // panel's block padding by the published `--rail-block-start` (the
               // contract's escape is inline-only, so the role reads the var) and
@@ -215,14 +239,31 @@ export function OverlayPanel({
               // box pins at its scroller's PADDING edge, so `top: 0` here left a
               // strip of the panel's block padding above the pinned header where
               // the scrolled items showed through.
+              // `py-sm`: the strip's own breathing room — it has just bled up
+              // through the panel's block padding, so this IS the room above
+              // its title. The inner `rail-band-region` republishes the strip's
+              // padding as the rail, so a child can bleed to the panel edge (a
+              // sideways-scrolling chip strip).
               <div
-                className="sticky z-raised rail-bleed my-overlay-header border-b bg-popover py-xs"
+                className="sticky z-raised rail-band my-overlay-header border-b bg-popover py-sm"
                 style={HEADER_PIN_STYLE}
               >
-                {header}
+                <div className="rail-band-region">{header}</div>
               </div>
             )}
             <IconScopeProvider scope={popupScope}>{children}</IconScopeProvider>
+            {footer != null && (
+              // The header's mirror: `my-overlay-footer` bleeds DOWN through
+              // the panel's block padding (`--rail-block-end`) and spaces the
+              // last item off the rule; the pin offset keeps the panel's bottom
+              // padding from showing scrolled rows under the pinned strip.
+              <div
+                className="sticky z-raised rail-band my-overlay-footer border-t bg-popover py-sm"
+                style={FOOTER_PIN_STYLE}
+              >
+                <div className="rail-band-region">{footer}</div>
+              </div>
+            )}
           </OverlayBoundary>
         </SidewaysScrollProvider>
       </SingleLineProvider>

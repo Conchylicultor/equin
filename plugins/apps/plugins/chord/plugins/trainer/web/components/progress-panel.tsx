@@ -248,6 +248,7 @@ function ChordStandingLine({
   if (heardOnly) {
     return (
       <Line
+        // eslint-disable-next-line rail/no-adhoc-band -- debt (task-1794239361-kagy27): a hand-rolled rule strip; move it onto its surface's header/footer or a Band
         className="chord-tone gap-xs border-b border-border py-xs last:border-b-0"
         style={toneStyle}
         data-heard-only=""
@@ -272,6 +273,7 @@ function ChordStandingLine({
       : `${label}: ${String(Math.round(accuracy * 100))}% right over your last ${String(answers)}, usually in ${(medianMs / 1000).toFixed(1)} s`;
   return (
     <Line
+      // eslint-disable-next-line rail/no-adhoc-band -- debt (task-1794239361-kagy27): a hand-rolled rule strip; move it onto its surface's header/footer or a Band
       className="chord-tone gap-xs border-b border-border py-xs last:border-b-0"
       style={toneStyle}
       title={title}

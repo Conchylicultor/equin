@@ -146,6 +146,9 @@ function DropdownMenuContent({
                 padding={padding}
                 maxHeight={maxHeight}
                 header={header}
+                // A menu's content is rows (`px-row`), so its header and any
+                // band inside land on the rows' text, not on the panel's rail.
+                rows
                 className={className}
               >
                 {children}

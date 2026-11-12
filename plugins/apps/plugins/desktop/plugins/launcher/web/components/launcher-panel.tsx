@@ -184,6 +184,7 @@ function LauncherPanelBody({
                   direction="row"
                   gap="md"
                   align="center"
+                  // eslint-disable-next-line rail/no-adhoc-band -- debt (task-1794239361-kagy27): a hand-rolled rule strip; move it onto its surface's header/footer or a Band
                   className="h-14 border-b border-border px-lg text-muted-foreground"
                 >
                   <Icon
@@ -234,6 +235,7 @@ function LauncherPanelBody({
                 </Scroll>
                 <Cluster
                   gap="lg"
+                  // eslint-disable-next-line rail/no-adhoc-band -- debt (task-1794239361-kagy27): a hand-rolled rule strip; move it onto its surface's header/footer or a Band
                   className="border-t border-border px-lg py-sm text-muted-foreground"
                 >
                   <Text variant="caption" tone="muted">

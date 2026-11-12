@@ -91,6 +91,7 @@ function CardHeader({
   return (
     <Line
       onPointerDown={drag}
+      // eslint-disable-next-line rail/no-adhoc-band -- debt (task-1794239361-kagy27): a hand-rolled rule strip; move it onto its surface's header/footer or a Band
       className="cursor-grab gap-xs touch-none select-none border-b border-border py-xs pl-md pr-xs text-foreground"
     >
       <Icon icon={askIcon} className="size-4 text-primary-text" />

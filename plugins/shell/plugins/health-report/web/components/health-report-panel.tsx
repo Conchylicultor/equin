@@ -4,10 +4,7 @@ import {
 } from "@plugins/primitives/plugins/slot-render/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
-import {
-  Inset,
-  Stack,
-} from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -82,15 +79,53 @@ function ContributedRow({
  * included, since it derives from the rows — is a loading state, never the
  * rows in raw registration order (which would show hidden rows and then jump).
  */
+/**
+ * The report's header strip — the merged dot and the verdict — drawn in the
+ * popover's own `header` slot (sticky, its rule across the panel, its text on
+ * the panel's text rail). Always drawn (the slot's strip is there either way):
+ * over the ordered rows once their order is known, else over every status the
+ * probes have published — the same set, since one probe is mounted per
+ * contributed row, which is what the button's dot merges too.
+ */
+export function HealthReportHeader() {
+  const order = useSlotOrder(HealthReport.Row);
+  const statuses = HealthStore.useStore();
+  const rows =
+    order.status === "ready"
+      ? order.data
+      : order.status === "error"
+        ? order.stale
+        : undefined;
+  const statusList =
+    rows === undefined
+      ? Object.values(statuses)
+      : rows.flatMap((row) =>
+          row.kind === "status" ? [statuses[row.id]] : [],
+        );
+  const merged = mergeHealth(statusList);
+  const verdict = verdictOf(statusList);
+  return (
+    <Line className="gap-sm">
+      <ControlSizeProvider size="lg">
+        <HealthDot
+          level={merged.state}
+          pulsing={merged.pending || merged.transitioning}
+        />
+      </ControlSizeProvider>
+      <Fill>
+        <Text variant="label" className="font-semibold" title={verdict}>
+          {verdict}
+        </Text>
+      </Fill>
+    </Line>
+  );
+}
+
 export function HealthReportPanel() {
   const order = useSlotOrder(HealthReport.Row);
   switch (order.status) {
     case "loading":
-      return (
-        <Inset pad="xs">
-          <Loading variant="rows" count={4} />
-        </Inset>
-      );
+      return <Loading variant="rows" count={4} />;
     case "error":
       return order.stale === undefined ? (
         <ResourceErrorInline
@@ -110,32 +145,14 @@ export function HealthReportPanel() {
 /** The report once its rows' order is known — see {@link HealthReportPanel}. */
 function HealthReportPanelReady({ rows }: { rows: readonly SealedRow[] }) {
   const statuses = HealthStore.useStore();
-  const statusList = rows.flatMap((row) =>
-    row.kind === "status" ? [statuses[row.id]] : [],
-  );
-  const merged = mergeHealth(statusList);
-  const verdict = verdictOf(statusList);
   const statusOf = (row: SealedRow) =>
     row.kind === "status" ? statuses[row.id] : undefined;
   const items = foldQuietRows(sortRows(rows), statusOf, isPlain);
 
   return (
     <>
-      <Line className="gap-sm border-b px-md py-sm">
-        <ControlSizeProvider size="lg">
-          <HealthDot
-            level={merged.state}
-            pulsing={merged.pending || merged.transitioning}
-          />
-        </ControlSizeProvider>
-        <Fill>
-          <Text variant="label" className="font-semibold" title={verdict}>
-            {verdict}
-          </Text>
-        </Fill>
-      </Line>
       {items.length > 0 ? (
-        <Stack gap="2xs" className="p-xs">
+        <Stack gap="2xs">
           {/* Not a DataView: these are slot contributions — a handful at
               most — in the slot's layout order, arranged by the report (info
               first, quiet rows folded), inside a transient popover. */}

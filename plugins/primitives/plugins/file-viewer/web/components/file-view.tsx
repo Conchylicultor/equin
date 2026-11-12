@@ -35,6 +35,7 @@ export function FileView({
       fill
       className="h-full"
       header={
+        // eslint-disable-next-line rail/no-adhoc-band -- debt (task-1794239361-kagy27): a hand-rolled rule strip; move it onto its surface's header/footer or a Band
         <Text as={Line} variant="body" className="gap-sm border-b px-sm py-xs">
           <Fill>
             <FilepathBreadcrumb path={file.path} />

@@ -153,10 +153,10 @@ export function TagPickerPanel<Row extends TagRow>({
     // `data-tag-picker`: the panel's identity on the DOM (e2e scripts find
     // its rows as `[data-tag-picker] [data-tree-id]`).
     <Stack direction="col" gap="none" data-tag-picker>
-      {/* The search is the panel's first row, inset from its edge as a padded
-          popover insets every other menu search — never flush with it. */}
-      <Stack direction="col" gap="none" className="p-sm">
-        <SearchInput
+      {/* The panel declares NO inset: its host owns it (the popover's `xs`
+          rail, the Places sidebar column's `sm` one), so the search, the tree
+          and the footer share the host's one edge by doing nothing. */}
+      <SearchInput
           appearance="menu"
           autoFocus={autoFocus}
           value={query}
@@ -172,9 +172,10 @@ export function TagPickerPanel<Row extends TagRow>({
             else if (visible.pickable.has(exact.id)) onPick(exact.id);
           }}
         />
-      </Stack>
-      <Separator />
-      <Stack direction="col" gap="none" className="p-2xs">
+      {/* Hairlines spanning the host's region, whatever rail it is on; the
+          search field keeps its own room above and below (`menu-field`). */}
+      <Separator bleed />
+      <Stack direction="col" gap="none">
         {searching ? (
           <SearchResults
             query={needle}
@@ -215,10 +216,8 @@ export function TagPickerPanel<Row extends TagRow>({
       </Stack>
       {searching ? null : (
         <>
-          <Separator />
-          <Stack direction="col" gap="none" className="p-2xs">
-            <FooterRow onClick={() => openDraft(null)} />
-          </Stack>
+          <Separator bleed />
+          <FooterRow onClick={() => openDraft(null)} />
         </>
       )}
     </Stack>

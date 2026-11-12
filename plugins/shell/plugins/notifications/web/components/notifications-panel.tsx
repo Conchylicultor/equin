@@ -1,5 +1,4 @@
 import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
-import { useState } from "react";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { useAppLink } from "@plugins/apps-core/plugins/tabs/web";
@@ -7,10 +6,7 @@ import { afterOpen } from "@plugins/primitives/plugins/link-gesture/core";
 import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
 import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import {
-  Inset,
-  Stack,
-} from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
@@ -174,7 +170,7 @@ function FilterChips({
   if (categories.status === "error" || variants.status === "error") {
     const failed = categories.status === "error" ? categories : variants;
     return (
-      <div className="px-md py-xs border-b" data-testid="notification-chips">
+      <div data-testid="notification-chips">
         {failed.status === "error" && (
           <ResourceErrorInline
             variant="inline"
@@ -188,7 +184,7 @@ function FilterChips({
   }
   if (categories.status === "loading" || variants.status === "loading") {
     return (
-      <div className="px-md py-xs border-b" data-testid="notification-chips">
+      <div data-testid="notification-chips">
         <Loading label="Loading filters…" />
       </div>
     );
@@ -202,10 +198,12 @@ function FilterChips({
   );
 
   return (
+    // `rail-bleed`: the strip scrolls edge to edge of the popover (its chips
+    // start on the text rail), not clipped at the header's padding.
     <Scroll
       axis="x"
       hideScrollbar
-      className="px-sm pb-sm border-b"
+      className="rail-bleed"
       data-testid="notification-chips"
     >
       {/* Compact chips: the five user categories fit the 320px popover. */}
@@ -265,7 +263,7 @@ function StateChips({
   });
   if (groups.status === "error") {
     return (
-      <div className="px-md py-xs border-b" data-testid="notification-states">
+      <div data-testid="notification-states">
         <ResourceErrorInline
           variant="inline"
           subject="states"
@@ -277,7 +275,7 @@ function StateChips({
   }
   if (groups.status === "loading") {
     return (
-      <div className="px-md py-xs border-b" data-testid="notification-states">
+      <div data-testid="notification-states">
         <Loading label="Loading states…" />
       </div>
     );
@@ -296,7 +294,7 @@ function StateChips({
     <Scroll
       axis="x"
       hideScrollbar
-      className="px-sm py-xs border-b"
+      className="rail-bleed"
       data-testid="notification-states"
     >
       <ControlSizeProvider size="xs">
@@ -353,12 +351,12 @@ function Section({
   if (rows.length === 0) return null;
   return (
     <>
-      <Inset x="md" t="sm" b="2xs">
-        <Text variant="group" tone="faint">
-          {title}
-        </Text>
-      </Inset>
-      <Stack as="ul" gap="none" className="px-xs">
+      {/* On the panel's text rail (`px-row` over the `xs` rail), where the
+          header's title sits — the rows below pad themselves. */}
+      <Text as="p" variant="group" tone="faint" className="px-row pt-sm pb-2xs">
+        {title}
+      </Text>
+      <Stack as="ul" gap="none">
         {rows.map((n) => (
           <NotificationRow key={n.id} n={n} onClose={onClose} />
         ))}
@@ -432,26 +430,33 @@ function NotificationList({
   );
 }
 
+/** Which slice of the list the popover starts on, every time it opens. */
+export const INITIAL_NOTIFICATIONS_FILTER: Filter = { kind: "all" };
+
+export type { Filter as NotificationsFilter };
+
 /**
- * The popover body, mounted only while the popover is open — so the grouping
- * and filtered-window subscriptions exist only while someone is looking.
- * `empty` is the bell's default window being empty: the collection itself has
- * no rows, so there is nothing to filter.
+ * The popover's header strip (its `header` slot: sticky, its rule across the
+ * panel, its text on the panel's text rail): the title, Mark all read and View
+ * all, then the category chips and, under a picked category, the state chips.
+ * Mounted only while the popover is open, like the body.
  */
-export function NotificationsPanel({
+export function NotificationsHeader({
   empty,
+  filter,
+  onPick,
   onClose,
 }: {
   empty: boolean;
+  filter: Filter;
+  onPick: (next: Filter) => void;
   onClose: () => void;
 }) {
   const inAppLink = useAppLink();
-  const [filter, setFilter] = useState<Filter>({ kind: "all" });
   const markAllRead = useEndpointMutation(markAllNotificationsRead);
-
   return (
-    <>
-      <Line className="gap-xs pl-md pr-sm pt-sm pb-xs">
+    <Stack gap="xs">
+      <Line className="gap-xs">
         <Fill>
           <Text variant="body" tone="strong" className="font-semibold">
             Notifications
@@ -485,23 +490,43 @@ export function NotificationsPanel({
           View all
         </Text>
       </Line>
-      {empty ? (
-        <Text
-          as="p"
-          variant="body"
-          className="px-md py-xl text-center text-muted-foreground"
-        >
-          No notifications
-        </Text>
-      ) : (
+      {empty ? null : (
         <>
-          <FilterChips filter={filter} onPick={setFilter} />
+          <FilterChips filter={filter} onPick={onPick} />
           {filter.kind === "category" && (
-            <StateChips filter={filter} onPick={setFilter} />
+            <StateChips filter={filter} onPick={onPick} />
           )}
-          <NotificationList filter={filter} onClose={onClose} />
         </>
       )}
-    </>
+    </Stack>
   );
+}
+
+/**
+ * The popover body, mounted only while the popover is open — so the grouping
+ * and filtered-window subscriptions exist only while someone is looking.
+ * `empty` is the bell's default window being empty: the collection itself has
+ * no rows, so there is nothing to filter.
+ */
+export function NotificationsBody({
+  empty,
+  filter,
+  onClose,
+}: {
+  empty: boolean;
+  filter: Filter;
+  onClose: () => void;
+}) {
+  if (empty) {
+    return (
+      <Text
+        as="p"
+        variant="body"
+        className="px-md py-xl text-center text-muted-foreground"
+      >
+        No notifications
+      </Text>
+    );
+  }
+  return <NotificationList filter={filter} onClose={onClose} />;
 }

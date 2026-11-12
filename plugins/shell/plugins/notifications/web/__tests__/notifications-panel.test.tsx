@@ -38,7 +38,31 @@ import {
   type LiveStateHarness,
 } from "@plugins/network/plugins/live/plugins/live-state/web/testing";
 import { notifications } from "../../shared/resources";
-import { NotificationsPanel } from "../components/notifications-panel";
+import { useState } from "react";
+import {
+  INITIAL_NOTIFICATIONS_FILTER,
+  NotificationsBody,
+  NotificationsHeader,
+  type NotificationsFilter,
+} from "../components/notifications-panel";
+
+/** The popover's two halves over one filter, as the bell wires them. */
+function Panel() {
+  const [filter, setFilter] = useState<NotificationsFilter>(
+    INITIAL_NOTIFICATIONS_FILTER,
+  );
+  return (
+    <>
+      <NotificationsHeader
+        empty={false}
+        filter={filter}
+        onPick={setFilter}
+        onClose={() => {}}
+      />
+      <NotificationsBody empty={false} filter={filter} onClose={() => {}} />
+    </>
+  );
+}
 
 afterEach(cleanup);
 
@@ -46,7 +70,7 @@ function mount(live: LiveStateHarness) {
   vi.spyOn(live.notifications, "hasEverBeenReady").mockReturnValue(true);
   return render(
     <live.Wrapper>
-      <NotificationsPanel empty={false} onClose={() => {}} />
+      <Panel />
     </live.Wrapper>,
   );
 }

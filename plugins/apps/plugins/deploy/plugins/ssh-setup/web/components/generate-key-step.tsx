@@ -134,6 +134,7 @@ export function GenerateKeyStep({ server }: { server: Server }) {
           </span>
         </CollapsibleTrigger>
 
+        {/* eslint-disable-next-line rail/no-adhoc-band -- debt (task-1794239361-kagy27): a hand-rolled rule strip; move it onto its surface's header/footer or a Band */}
         <CollapsibleContent className="border-t border-border/60 px-md py-md">
           <Stack gap="sm">
             <StepNote>

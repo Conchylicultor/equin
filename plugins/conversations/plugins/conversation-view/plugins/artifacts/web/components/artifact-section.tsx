@@ -18,14 +18,11 @@ export function ArtifactSection({
   return (
     <Stack gap="2xs">
       {/*
-        `px-sm` is the inline half of the `p-row` padding an `ArtifactRow` puts
-        on itself, so the heading starts where the rows' glyphs do instead of
-        four pixels to their left. Re-spelled as a spacing step because there is
-        no `px-row` utility to name it directly — the two are the same 0.5rem
-        today, and a density preset that moved `--pad-row-x` alone would be what
-        separates them.
+        `px-row` is the inline half of the `p-row` padding an `ArtifactRow` puts
+        on itself, so the heading starts where the rows' glyphs do — the
+        popover's text rail.
       */}
-      <SectionLabel className="px-sm">{label}</SectionLabel>
+      <SectionLabel className="px-row">{label}</SectionLabel>
       {children}
     </Stack>
   );

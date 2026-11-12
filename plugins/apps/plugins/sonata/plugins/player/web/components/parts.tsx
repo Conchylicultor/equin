@@ -89,6 +89,7 @@ export function PlayerTransport({
       direction="row"
       align="center"
       gap={variant === "capsule" ? "sm" : "md"}
+      // eslint-disable-next-line rail/no-adhoc-band -- debt (task-1794239361-kagy27): a hand-rolled rule strip; move it onto its surface's header/footer or a Band
       className={
         variant === "capsule"
           ? "py-xs pr-sm pl-xs"

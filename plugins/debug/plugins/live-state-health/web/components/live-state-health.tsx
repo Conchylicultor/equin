@@ -155,6 +155,7 @@ function ResourcesSection({ subs }: { subs: DebugSub[] }): ReactElement {
       ) : (
         <Stack gap="none">
           {/* eslint-disable layout/no-adhoc-layout -- weighted (flex-[2]) + fixed-width column header row; not a single content/meta Frame */}
+          {/* eslint-disable-next-line rail/no-adhoc-band -- debt (task-1794239361-kagy27): a hand-rolled rule strip; move it onto its surface's header/footer or a Band */}
           <div className="flex items-center gap-md border-b py-xs">
             <HeadCell className="flex-[2]">Key</HeadCell>
             <HeadCell className="flex-[2]">Params</HeadCell>
@@ -189,6 +190,7 @@ function HeadCell({
 function ResourceRow({ sub }: { sub: DebugSub }): ReactElement {
   /* eslint-disable layout/no-adhoc-layout -- weighted (flex-[2]) + fixed-width column data row mirroring the header; not a single content/meta Frame */
   return (
+    // eslint-disable-next-line rail/no-adhoc-band -- debt (task-1794239361-kagy27): a hand-rolled rule strip; move it onto its surface's header/footer or a Band
     <div className="flex items-center gap-md border-b border-border/40 py-xs">
       <SingleLineProvider value={true}>
         <Text className="flex-[2]">

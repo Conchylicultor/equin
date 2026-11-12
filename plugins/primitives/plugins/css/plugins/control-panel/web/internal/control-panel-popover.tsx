@@ -128,6 +128,7 @@ export function ControlPanelPopover({
         width="content"
         className="cp-surface"
         maxHeight={maxHeight}
+        // eslint-disable-next-line rail/no-unowned-overlay -- `cp-surface` / `cp-panel` is the control panel's own region owner and publishes its rail
         padding="none"
       >
         <ControlPanel aria-label={label}>

@@ -48,6 +48,7 @@ interface Props {
 export function ToolsPane(props: Props) {
   return (
     <Stack gap="none" className="h-full">
+      {/* eslint-disable-next-line rail/no-adhoc-band -- debt (task-1794239361-kagy27): a hand-rolled rule strip; move it onto its surface's header/footer or a Band */}
       <Text as="div" variant="label" className="border-b px-md py-sm">
         Tools
       </Text>

@@ -17,7 +17,12 @@ import { useNotificationArrivals } from "../internal/use-notification-arrivals";
 import { useReachingNotifications } from "../internal/use-reaching-notifications";
 import { notificationsUnread } from "../../shared/resources";
 import { markAllNotificationsRead } from "../../shared/endpoints";
-import { NotificationsPanel } from "./notifications-panel";
+import {
+  INITIAL_NOTIFICATIONS_FILTER,
+  NotificationsBody,
+  NotificationsHeader,
+  type NotificationsFilter,
+} from "./notifications-panel";
 import { useToastNotification } from "./notification-view";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
@@ -26,6 +31,11 @@ const notificationsIcon = symbol("notifications");
 export function BellButton() {
   const markAllRead = useEndpointMutation(markAllNotificationsRead);
   const [open, setOpen] = useState(false);
+  // The picked chip, shared by the header strip (the chips) and the body (the
+  // list) — the two halves the popover draws. Every open starts on All.
+  const [filter, setFilter] = useState<NotificationsFilter>(
+    INITIAL_NOTIFICATIONS_FILTER,
+  );
   // The newest 200 undismissed notifications that reach the user's audience
   // (a developer's is the boot-preloaded default window). It drives the toasts
   // and the panel's `empty`; the popover body reads its own queries and mounts
@@ -92,9 +102,14 @@ export function BellButton() {
       ? "bg-destructive-solid text-destructive-solid-foreground"
       : "bg-warning-solid text-warning-solid-foreground";
 
+  const close = () => {
+    setOpen(false);
+  };
+
   function onOpenChange(next: boolean) {
     if (next) {
       hadUnreadRef.current = unreadCount > 0;
+      setFilter(INITIAL_NOTIFICATIONS_FILTER);
     } else if (hadUnreadRef.current) {
       markAllRead.mutate({});
       hadUnreadRef.current = false;
@@ -145,14 +160,26 @@ export function BellButton() {
       }
       align="end"
       width="xl"
-      padding="none"
+      // A menu-like list: the `xs` rail, rows publishing the text rail the
+      // header's title and the section labels sit on.
+      padding="xs"
+      rows
+      header={
+        open ? (
+          <NotificationsHeader
+            empty={list.length === 0}
+            filter={filter}
+            onPick={setFilter}
+            onClose={close}
+          />
+        ) : null
+      }
     >
       {open && (
-        <NotificationsPanel
+        <NotificationsBody
           empty={list.length === 0}
-          onClose={() => {
-            setOpen(false);
-          }}
+          filter={filter}
+          onClose={close}
         />
       )}
     </InlinePopover>

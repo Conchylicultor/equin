@@ -96,6 +96,7 @@ export function BootLane({ payload, onSelect }: TraceLaneProps): ReactElement {
   const parsed = BootSectionSchema.safeParse(payload);
   if (!parsed.success) {
     return (
+      // eslint-disable-next-line rail/no-adhoc-band -- debt (task-1794239361-kagy27): a hand-rolled rule strip; move it onto its surface's header/footer or a Band
       <Stack gap="xs" className="border-b px-lg py-sm">
         <SectionLabel>Server boot</SectionLabel>
         <Placeholder tone="muted">No boot profile recorded for this trace.</Placeholder>

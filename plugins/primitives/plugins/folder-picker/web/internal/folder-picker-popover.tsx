@@ -112,6 +112,7 @@ function AddFolderField({
         onOpenChange={setOpen}
         align="end"
         width="xl"
+        // eslint-disable-next-line rail/no-unowned-overlay -- the FolderPicker is a complete surface (path bar, listing, footer) owning its own insets
         padding="none"
         trigger={
           <Button variant="secondary" shape="pill">
@@ -224,6 +225,7 @@ function EditFolderField({
         align="end"
         tooltip="Browse folders"
         width="xl"
+        // eslint-disable-next-line rail/no-unowned-overlay -- the FolderPicker is a complete surface (path bar, listing, footer) owning its own insets
         padding="none"
         trigger={<IconButton icon={folderOpenIcon} label="Browse folders" />}
       >

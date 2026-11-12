@@ -6,7 +6,6 @@ import {
 } from "@plugins/tag-tree/plugins/engine/web";
 import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import type { TagPickerOptions } from "../internal/types";
 import { TagPickerPanel } from "./tag-picker-panel";
@@ -38,7 +37,8 @@ export function TagPickerPopover<Row extends TagRow>({
       onOpenChange={setOpen}
       trigger={trigger}
       width="picker"
-      padding="none"
+      // Menu parity: the panel declares no inset, the popover owns it.
+      padding="xs"
       maxHeight="xl"
       resetOnClose
     >
@@ -61,18 +61,10 @@ function PickerBody<Row extends TagRow>({
   const result = useTagTree(tree);
   const writes = useTagTreeActions(tree);
   if (result.status === "loading") {
-    return (
-      <Inset pad="sm">
-        <Loading variant="rows" />
-      </Inset>
-    );
+    return <Loading variant="rows" />;
   }
   if (result.status === "error") {
-    return (
-      <Inset pad="sm">
-        <Text tone="destructive">{result.error.message}</Text>
-      </Inset>
-    );
+    return <Text tone="destructive">{result.error.message}</Text>;
   }
   return <TagPickerPanel tags={result.data} writes={writes} {...options} />;
 }

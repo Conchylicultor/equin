@@ -47,7 +47,7 @@ export function BootProfileLive(): ReactElement {
   };
 
   const header = (
-    // eslint-disable-next-line layout/no-adhoc-layout -- header strip mirrors gantt-view.tsx
+    // eslint-disable-next-line layout/no-adhoc-layout, rail/no-adhoc-band -- header strip mirrors gantt-view.tsx; debt (task-1794239361-kagy27): a hand-rolled rule strip; move it onto its surface's header/footer or a Band
     <div className="flex items-center gap-sm border-b px-lg py-sm">
       {/* eslint-disable-next-line layout/no-adhoc-layout -- flexible spacer pushing buttons to the right (mirrors gantt-view.tsx) */}
       <div className="flex-1" />

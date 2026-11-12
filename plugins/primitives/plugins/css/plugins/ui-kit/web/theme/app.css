@@ -1297,32 +1297,32 @@
  * @twmerge group sg-rail-x excludes: px pr pl
  * @twmerge group sg-rail-y excludes: py pt pb */
 /* @ramp families: rail rail-x rail-y rail-owe */
-@utility rail-none { --rail-start: 0px;              --rail-end: 0px;              --rail-block-start: 0px;              --rail-block-end: 0px;              --rail-owed-start: 0px; --rail-owed-end: 0px; padding-block: var(--rail-block-start) var(--rail-block-end); padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail */
-@utility rail-2xs  { --rail-start: var(--space-2xs); --rail-end: var(--space-2xs); --rail-block-start: var(--space-2xs); --rail-block-end: var(--space-2xs); --rail-owed-start: 0px; --rail-owed-end: 0px; padding-block: var(--rail-block-start) var(--rail-block-end); padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail */
-@utility rail-xs   { --rail-start: var(--space-xs);  --rail-end: var(--space-xs);  --rail-block-start: var(--space-xs);  --rail-block-end: var(--space-xs);  --rail-owed-start: 0px; --rail-owed-end: 0px; padding-block: var(--rail-block-start) var(--rail-block-end); padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail */
-@utility rail-xsm  { --rail-start: var(--space-xsm);  --rail-end: var(--space-xsm);  --rail-block-start: var(--space-xsm);  --rail-block-end: var(--space-xsm);  --rail-owed-start: 0px; --rail-owed-end: 0px; padding-block: var(--rail-block-start) var(--rail-block-end); padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail */
-@utility rail-sm   { --rail-start: var(--space-sm);  --rail-end: var(--space-sm);  --rail-block-start: var(--space-sm);  --rail-block-end: var(--space-sm);  --rail-owed-start: 0px; --rail-owed-end: 0px; padding-block: var(--rail-block-start) var(--rail-block-end); padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail */
-@utility rail-smd  { --rail-start: var(--space-smd);  --rail-end: var(--space-smd);  --rail-block-start: var(--space-smd);  --rail-block-end: var(--space-smd);  --rail-owed-start: 0px; --rail-owed-end: 0px; padding-block: var(--rail-block-start) var(--rail-block-end); padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail */
-@utility rail-md   { --rail-start: var(--space-md);  --rail-end: var(--space-md);  --rail-block-start: var(--space-md);  --rail-block-end: var(--space-md);  --rail-owed-start: 0px; --rail-owed-end: 0px; padding-block: var(--rail-block-start) var(--rail-block-end); padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail */
-@utility rail-lg   { --rail-start: var(--space-lg);  --rail-end: var(--space-lg);  --rail-block-start: var(--space-lg);  --rail-block-end: var(--space-lg);  --rail-owed-start: 0px; --rail-owed-end: 0px; padding-block: var(--rail-block-start) var(--rail-block-end); padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail */
-@utility rail-xl   { --rail-start: var(--space-xl);  --rail-end: var(--space-xl);  --rail-block-start: var(--space-xl);  --rail-block-end: var(--space-xl);  --rail-owed-start: 0px; --rail-owed-end: 0px; padding-block: var(--rail-block-start) var(--rail-block-end); padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail */
-@utility rail-2xl  { --rail-start: var(--space-2xl); --rail-end: var(--space-2xl); --rail-block-start: var(--space-2xl); --rail-block-end: var(--space-2xl); --rail-owed-start: 0px; --rail-owed-end: 0px; padding-block: var(--rail-block-start) var(--rail-block-end); padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail */
+@utility rail-none { --rail-start: 0px;              --rail-end: 0px; --rail-text-start: calc(var(--rail-start) + var(--rail-row-pad)); --rail-text-end: calc(var(--rail-end) + var(--rail-row-pad));              --rail-block-start: 0px;              --rail-block-end: 0px;              --rail-owed-start: 0px; --rail-owed-end: 0px; padding-block: var(--rail-block-start) var(--rail-block-end); padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail */
+@utility rail-2xs  { --rail-start: var(--space-2xs); --rail-end: var(--space-2xs); --rail-text-start: calc(var(--rail-start) + var(--rail-row-pad)); --rail-text-end: calc(var(--rail-end) + var(--rail-row-pad)); --rail-block-start: var(--space-2xs); --rail-block-end: var(--space-2xs); --rail-owed-start: 0px; --rail-owed-end: 0px; padding-block: var(--rail-block-start) var(--rail-block-end); padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail */
+@utility rail-xs   { --rail-start: var(--space-xs);  --rail-end: var(--space-xs); --rail-text-start: calc(var(--rail-start) + var(--rail-row-pad)); --rail-text-end: calc(var(--rail-end) + var(--rail-row-pad));  --rail-block-start: var(--space-xs);  --rail-block-end: var(--space-xs);  --rail-owed-start: 0px; --rail-owed-end: 0px; padding-block: var(--rail-block-start) var(--rail-block-end); padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail */
+@utility rail-xsm  { --rail-start: var(--space-xsm);  --rail-end: var(--space-xsm); --rail-text-start: calc(var(--rail-start) + var(--rail-row-pad)); --rail-text-end: calc(var(--rail-end) + var(--rail-row-pad));  --rail-block-start: var(--space-xsm);  --rail-block-end: var(--space-xsm);  --rail-owed-start: 0px; --rail-owed-end: 0px; padding-block: var(--rail-block-start) var(--rail-block-end); padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail */
+@utility rail-sm   { --rail-start: var(--space-sm);  --rail-end: var(--space-sm); --rail-text-start: calc(var(--rail-start) + var(--rail-row-pad)); --rail-text-end: calc(var(--rail-end) + var(--rail-row-pad));  --rail-block-start: var(--space-sm);  --rail-block-end: var(--space-sm);  --rail-owed-start: 0px; --rail-owed-end: 0px; padding-block: var(--rail-block-start) var(--rail-block-end); padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail */
+@utility rail-smd  { --rail-start: var(--space-smd);  --rail-end: var(--space-smd); --rail-text-start: calc(var(--rail-start) + var(--rail-row-pad)); --rail-text-end: calc(var(--rail-end) + var(--rail-row-pad));  --rail-block-start: var(--space-smd);  --rail-block-end: var(--space-smd);  --rail-owed-start: 0px; --rail-owed-end: 0px; padding-block: var(--rail-block-start) var(--rail-block-end); padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail */
+@utility rail-md   { --rail-start: var(--space-md);  --rail-end: var(--space-md); --rail-text-start: calc(var(--rail-start) + var(--rail-row-pad)); --rail-text-end: calc(var(--rail-end) + var(--rail-row-pad));  --rail-block-start: var(--space-md);  --rail-block-end: var(--space-md);  --rail-owed-start: 0px; --rail-owed-end: 0px; padding-block: var(--rail-block-start) var(--rail-block-end); padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail */
+@utility rail-lg   { --rail-start: var(--space-lg);  --rail-end: var(--space-lg); --rail-text-start: calc(var(--rail-start) + var(--rail-row-pad)); --rail-text-end: calc(var(--rail-end) + var(--rail-row-pad));  --rail-block-start: var(--space-lg);  --rail-block-end: var(--space-lg);  --rail-owed-start: 0px; --rail-owed-end: 0px; padding-block: var(--rail-block-start) var(--rail-block-end); padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail */
+@utility rail-xl   { --rail-start: var(--space-xl);  --rail-end: var(--space-xl); --rail-text-start: calc(var(--rail-start) + var(--rail-row-pad)); --rail-text-end: calc(var(--rail-end) + var(--rail-row-pad));  --rail-block-start: var(--space-xl);  --rail-block-end: var(--space-xl);  --rail-owed-start: 0px; --rail-owed-end: 0px; padding-block: var(--rail-block-start) var(--rail-block-end); padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail */
+@utility rail-2xl  { --rail-start: var(--space-2xl); --rail-end: var(--space-2xl); --rail-text-start: calc(var(--rail-start) + var(--rail-row-pad)); --rail-text-end: calc(var(--rail-end) + var(--rail-row-pad)); --rail-block-start: var(--space-2xl); --rail-block-end: var(--space-2xl); --rail-owed-start: 0px; --rail-owed-end: 0px; padding-block: var(--rail-block-start) var(--rail-block-end); padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail */
 /* The `panel` padding role (`PopoverContent` / `OverlayPanel`'s default): the
  * theme's popover inset (`--popover-pad`, density group, default the `md` step). */
-@utility rail-panel { --rail-start: var(--popover-pad); --rail-end: var(--popover-pad); --rail-block-start: var(--popover-pad); --rail-block-end: var(--popover-pad); --rail-owed-start: 0px; --rail-owed-end: 0px; padding-block: var(--rail-block-start) var(--rail-block-end); padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail */
+@utility rail-panel { --rail-start: var(--popover-pad); --rail-end: var(--popover-pad); --rail-text-start: calc(var(--rail-start) + var(--rail-row-pad)); --rail-text-end: calc(var(--rail-end) + var(--rail-row-pad)); --rail-block-start: var(--popover-pad); --rail-block-end: var(--popover-pad); --rail-owed-start: 0px; --rail-owed-end: 0px; padding-block: var(--rail-block-start) var(--rail-block-end); padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail */
 /* The inline axis on its own — the rail proper, and the member almost every
  * region actually wants (a pane opens a horizontal region; its vertical rhythm
  * is a different decision). */
-@utility rail-x-none { --rail-start: 0px;              --rail-end: 0px;              --rail-owed-start: 0px; --rail-owed-end: 0px; padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail-x */
-@utility rail-x-2xs  { --rail-start: var(--space-2xs); --rail-end: var(--space-2xs); --rail-owed-start: 0px; --rail-owed-end: 0px; padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail-x */
-@utility rail-x-xs   { --rail-start: var(--space-xs);  --rail-end: var(--space-xs);  --rail-owed-start: 0px; --rail-owed-end: 0px; padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail-x */
-@utility rail-x-xsm  { --rail-start: var(--space-xsm);  --rail-end: var(--space-xsm);  --rail-owed-start: 0px; --rail-owed-end: 0px; padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail-x */
-@utility rail-x-sm   { --rail-start: var(--space-sm);  --rail-end: var(--space-sm);  --rail-owed-start: 0px; --rail-owed-end: 0px; padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail-x */
-@utility rail-x-smd  { --rail-start: var(--space-smd);  --rail-end: var(--space-smd);  --rail-owed-start: 0px; --rail-owed-end: 0px; padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail-x */
-@utility rail-x-md   { --rail-start: var(--space-md);  --rail-end: var(--space-md);  --rail-owed-start: 0px; --rail-owed-end: 0px; padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail-x */
-@utility rail-x-lg   { --rail-start: var(--space-lg);  --rail-end: var(--space-lg);  --rail-owed-start: 0px; --rail-owed-end: 0px; padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail-x */
-@utility rail-x-xl   { --rail-start: var(--space-xl);  --rail-end: var(--space-xl);  --rail-owed-start: 0px; --rail-owed-end: 0px; padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail-x */
-@utility rail-x-2xl  { --rail-start: var(--space-2xl); --rail-end: var(--space-2xl); --rail-owed-start: 0px; --rail-owed-end: 0px; padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail-x */
+@utility rail-x-none { --rail-start: 0px;              --rail-end: 0px; --rail-text-start: calc(var(--rail-start) + var(--rail-row-pad)); --rail-text-end: calc(var(--rail-end) + var(--rail-row-pad));              --rail-owed-start: 0px; --rail-owed-end: 0px; padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail-x */
+@utility rail-x-2xs  { --rail-start: var(--space-2xs); --rail-end: var(--space-2xs); --rail-text-start: calc(var(--rail-start) + var(--rail-row-pad)); --rail-text-end: calc(var(--rail-end) + var(--rail-row-pad)); --rail-owed-start: 0px; --rail-owed-end: 0px; padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail-x */
+@utility rail-x-xs   { --rail-start: var(--space-xs);  --rail-end: var(--space-xs); --rail-text-start: calc(var(--rail-start) + var(--rail-row-pad)); --rail-text-end: calc(var(--rail-end) + var(--rail-row-pad));  --rail-owed-start: 0px; --rail-owed-end: 0px; padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail-x */
+@utility rail-x-xsm  { --rail-start: var(--space-xsm);  --rail-end: var(--space-xsm); --rail-text-start: calc(var(--rail-start) + var(--rail-row-pad)); --rail-text-end: calc(var(--rail-end) + var(--rail-row-pad));  --rail-owed-start: 0px; --rail-owed-end: 0px; padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail-x */
+@utility rail-x-sm   { --rail-start: var(--space-sm);  --rail-end: var(--space-sm); --rail-text-start: calc(var(--rail-start) + var(--rail-row-pad)); --rail-text-end: calc(var(--rail-end) + var(--rail-row-pad));  --rail-owed-start: 0px; --rail-owed-end: 0px; padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail-x */
+@utility rail-x-smd  { --rail-start: var(--space-smd);  --rail-end: var(--space-smd); --rail-text-start: calc(var(--rail-start) + var(--rail-row-pad)); --rail-text-end: calc(var(--rail-end) + var(--rail-row-pad));  --rail-owed-start: 0px; --rail-owed-end: 0px; padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail-x */
+@utility rail-x-md   { --rail-start: var(--space-md);  --rail-end: var(--space-md); --rail-text-start: calc(var(--rail-start) + var(--rail-row-pad)); --rail-text-end: calc(var(--rail-end) + var(--rail-row-pad));  --rail-owed-start: 0px; --rail-owed-end: 0px; padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail-x */
+@utility rail-x-lg   { --rail-start: var(--space-lg);  --rail-end: var(--space-lg); --rail-text-start: calc(var(--rail-start) + var(--rail-row-pad)); --rail-text-end: calc(var(--rail-end) + var(--rail-row-pad));  --rail-owed-start: 0px; --rail-owed-end: 0px; padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail-x */
+@utility rail-x-xl   { --rail-start: var(--space-xl);  --rail-end: var(--space-xl); --rail-text-start: calc(var(--rail-start) + var(--rail-row-pad)); --rail-text-end: calc(var(--rail-end) + var(--rail-row-pad));  --rail-owed-start: 0px; --rail-owed-end: 0px; padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail-x */
+@utility rail-x-2xl  { --rail-start: var(--space-2xl); --rail-end: var(--space-2xl); --rail-text-start: calc(var(--rail-start) + var(--rail-row-pad)); --rail-text-end: calc(var(--rail-end) + var(--rail-row-pad)); --rail-owed-start: 0px; --rail-owed-end: 0px; padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail-x */
 /* PUBLISH WITHOUT PAYING — open a region and hand the bill to the children.
  * The inverted topology, stated out loud instead of emerging from a var nobody
  * set: the owner declares where its contents' edge is, applies no padding of
@@ -1338,20 +1338,20 @@
  * this arm by default — the owed fallback reads the rail. That is the right
  * default for a hand-published rail, but it means a hand-published rail that
  * ALSO pads is the one shape that double-insets. Use the ramp, or this. */
-@utility rail-owe-none { --rail-start: 0px;              --rail-end: 0px;              --rail-owed-start: var(--rail-start); --rail-owed-end: var(--rail-end); } /* twmerge: sg-rail-x */
-@utility rail-owe-2xs  { --rail-start: var(--space-2xs); --rail-end: var(--space-2xs); --rail-owed-start: var(--rail-start); --rail-owed-end: var(--rail-end); } /* twmerge: sg-rail-x */
-@utility rail-owe-xs   { --rail-start: var(--space-xs);  --rail-end: var(--space-xs);  --rail-owed-start: var(--rail-start); --rail-owed-end: var(--rail-end); } /* twmerge: sg-rail-x */
-@utility rail-owe-xsm  { --rail-start: var(--space-xsm);  --rail-end: var(--space-xsm);  --rail-owed-start: var(--rail-start); --rail-owed-end: var(--rail-end); } /* twmerge: sg-rail-x */
-@utility rail-owe-sm   { --rail-start: var(--space-sm);  --rail-end: var(--space-sm);  --rail-owed-start: var(--rail-start); --rail-owed-end: var(--rail-end); } /* twmerge: sg-rail-x */
-@utility rail-owe-smd  { --rail-start: var(--space-smd);  --rail-end: var(--space-smd);  --rail-owed-start: var(--rail-start); --rail-owed-end: var(--rail-end); } /* twmerge: sg-rail-x */
-@utility rail-owe-md   { --rail-start: var(--space-md);  --rail-end: var(--space-md);  --rail-owed-start: var(--rail-start); --rail-owed-end: var(--rail-end); } /* twmerge: sg-rail-x */
-@utility rail-owe-lg   { --rail-start: var(--space-lg);  --rail-end: var(--space-lg);  --rail-owed-start: var(--rail-start); --rail-owed-end: var(--rail-end); } /* twmerge: sg-rail-x */
-@utility rail-owe-xl   { --rail-start: var(--space-xl);  --rail-end: var(--space-xl);  --rail-owed-start: var(--rail-start); --rail-owed-end: var(--rail-end); } /* twmerge: sg-rail-x */
+@utility rail-owe-none { --rail-start: 0px;              --rail-end: 0px; --rail-text-start: calc(var(--rail-start) + var(--rail-row-pad)); --rail-text-end: calc(var(--rail-end) + var(--rail-row-pad));              --rail-owed-start: var(--rail-start); --rail-owed-end: var(--rail-end); } /* twmerge: sg-rail-x */
+@utility rail-owe-2xs  { --rail-start: var(--space-2xs); --rail-end: var(--space-2xs); --rail-text-start: calc(var(--rail-start) + var(--rail-row-pad)); --rail-text-end: calc(var(--rail-end) + var(--rail-row-pad)); --rail-owed-start: var(--rail-start); --rail-owed-end: var(--rail-end); } /* twmerge: sg-rail-x */
+@utility rail-owe-xs   { --rail-start: var(--space-xs);  --rail-end: var(--space-xs); --rail-text-start: calc(var(--rail-start) + var(--rail-row-pad)); --rail-text-end: calc(var(--rail-end) + var(--rail-row-pad));  --rail-owed-start: var(--rail-start); --rail-owed-end: var(--rail-end); } /* twmerge: sg-rail-x */
+@utility rail-owe-xsm  { --rail-start: var(--space-xsm);  --rail-end: var(--space-xsm); --rail-text-start: calc(var(--rail-start) + var(--rail-row-pad)); --rail-text-end: calc(var(--rail-end) + var(--rail-row-pad));  --rail-owed-start: var(--rail-start); --rail-owed-end: var(--rail-end); } /* twmerge: sg-rail-x */
+@utility rail-owe-sm   { --rail-start: var(--space-sm);  --rail-end: var(--space-sm); --rail-text-start: calc(var(--rail-start) + var(--rail-row-pad)); --rail-text-end: calc(var(--rail-end) + var(--rail-row-pad));  --rail-owed-start: var(--rail-start); --rail-owed-end: var(--rail-end); } /* twmerge: sg-rail-x */
+@utility rail-owe-smd  { --rail-start: var(--space-smd);  --rail-end: var(--space-smd); --rail-text-start: calc(var(--rail-start) + var(--rail-row-pad)); --rail-text-end: calc(var(--rail-end) + var(--rail-row-pad));  --rail-owed-start: var(--rail-start); --rail-owed-end: var(--rail-end); } /* twmerge: sg-rail-x */
+@utility rail-owe-md   { --rail-start: var(--space-md);  --rail-end: var(--space-md); --rail-text-start: calc(var(--rail-start) + var(--rail-row-pad)); --rail-text-end: calc(var(--rail-end) + var(--rail-row-pad));  --rail-owed-start: var(--rail-start); --rail-owed-end: var(--rail-end); } /* twmerge: sg-rail-x */
+@utility rail-owe-lg   { --rail-start: var(--space-lg);  --rail-end: var(--space-lg); --rail-text-start: calc(var(--rail-start) + var(--rail-row-pad)); --rail-text-end: calc(var(--rail-end) + var(--rail-row-pad));  --rail-owed-start: var(--rail-start); --rail-owed-end: var(--rail-end); } /* twmerge: sg-rail-x */
+@utility rail-owe-xl   { --rail-start: var(--space-xl);  --rail-end: var(--space-xl); --rail-text-start: calc(var(--rail-start) + var(--rail-row-pad)); --rail-text-end: calc(var(--rail-end) + var(--rail-row-pad));  --rail-owed-start: var(--rail-start); --rail-owed-end: var(--rail-end); } /* twmerge: sg-rail-x */
 /* The app-shell sidebar's rail: `rail-owe-sm` at the sidebar-metrics
  * `sidebarRail` token (default the `sm` step), so a theme moves the sidebar's
  * pills and band inset together. */
-@utility rail-owe-sidebar { --rail-start: var(--sidebar-rail); --rail-end: var(--sidebar-rail); --rail-owed-start: var(--rail-start); --rail-owed-end: var(--rail-end); } /* twmerge: sg-rail-x */
-@utility rail-owe-2xl  { --rail-start: var(--space-2xl); --rail-end: var(--space-2xl); --rail-owed-start: var(--rail-start); --rail-owed-end: var(--rail-end); } /* twmerge: sg-rail-x */
+@utility rail-owe-sidebar { --rail-start: var(--sidebar-rail); --rail-end: var(--sidebar-rail); --rail-text-start: calc(var(--rail-start) + var(--rail-row-pad)); --rail-text-end: calc(var(--rail-end) + var(--rail-row-pad)); --rail-owed-start: var(--rail-start); --rail-owed-end: var(--rail-end); } /* twmerge: sg-rail-x */
+@utility rail-owe-2xl  { --rail-start: var(--space-2xl); --rail-end: var(--space-2xl); --rail-text-start: calc(var(--rail-start) + var(--rail-row-pad)); --rail-text-end: calc(var(--rail-end) + var(--rail-row-pad)); --rail-owed-start: var(--rail-start); --rail-owed-end: var(--rail-end); } /* twmerge: sg-rail-x */
 
 /* The block axis on its own. It is published for the same reason the inline
  * pair is — a sticky inset resolves against the CONTENT box, so `scroll-fade`'s
@@ -1457,6 +1457,51 @@
  * element would resolve against its own declaration, not the region's. So two
  * NESTED followers each pay, exactly as two nested gutter classes did before. */
 @utility rail-follow { padding-inline: var(--rail-owed-start, var(--rail-start, var(--pane-inset, var(--chrome-pad-x)))) var(--rail-owed-end, var(--rail-end, var(--pane-inset, var(--chrome-pad-x)))); } /* twmerge: extend px */
+
+/* THE TEXT RAIL — where a region's TEXT starts, as opposed to where its
+ * boxes start. In most regions the two are one edge: every rail class above
+ * publishes `--rail-text-start` / `--rail-text-end` as its rail plus
+ * `--rail-row-pad`, which is 0px. A region whose content is ROWS — padded
+ * pills, the menu's `px-row`, `Row`'s `p-row` — has its text one row pad
+ * further in than its boxes, so a band or a label that must line up with the
+ * rows' text reads the text rail, never the rail plus a hand-picked number.
+ *
+ * `rail-rows` is how a row host says so. `--rail-row-pad` is registered
+ * NON-INHERITED (`@property` below), which is the whole mechanism: the host's
+ * own rail class adds it to the rail it publishes ON THE HOST, and every
+ * nested region — whose rail class reads its own, initial, 0px — resets the
+ * text rail to its own rail by construction. Nothing leaks one level down,
+ * and no rule has to win a specificity or source-order contest against the
+ * rail class on the same element. A region with no rail class (a
+ * hand-published one) publishes no text rail; readers fall back to its rail. */
+@property --rail-row-pad { syntax: "<length>"; inherits: false; initial-value: 0px; }
+@utility rail-rows { --rail-row-pad: var(--pad-row-x); } /* twmerge: standalone -- a row host's text-rail declaration; it composes with whatever rail class the host wears. */
+
+/* BAND — a rule-bearing strip inside a region (`Band`, and an overlay
+ * panel's `header` / `footer`). The `rail-bleed` escape with ONE difference:
+ * the re-applied term is the region's TEXT rail, so the strip's hairline runs
+ * edge to edge while its text lands where the rows' text does. Outside any
+ * region it bleeds by nothing and pads by the same floor `rail-follow` uses
+ * (pane inset, else chrome pad), so a band in a bare pane still lines up with
+ * the pane header. Same `extend px` membership and the same caveat as
+ * `rail-bleed`: never pair it with a width utility. */
+@utility rail-band {
+  /* twmerge: extend px */
+  margin-inline: calc(-1 * var(--rail-start, 0px)) calc(-1 * var(--rail-end, 0px));
+  width: calc(100% + var(--rail-start, 0px) + var(--rail-end, 0px));
+  padding-inline: var(--rail-text-start, var(--rail-start, var(--pane-inset, var(--chrome-pad-x)))) var(--rail-text-end, var(--rail-end, var(--pane-inset, var(--chrome-pad-x))));
+}
+
+/* A band's CONTENT box, as a region of its own: the strip padded by the text
+ * rail, so it republishes that padding as the rail its children read. Then a
+ * child that must reach the region's edge — a sideways-scrolling chip strip —
+ * `rail-bleed`s out of the band's padding exactly, landing on the edge the band
+ * itself bled to. It cannot live on the band's own box: the band's margins
+ * read `--rail-start` there, and re-declaring it on the same element would
+ * move them. The text rail stays inherited (it IS this rail now). A band in a
+ * hand-published region (no text rail) falls to the pane floor, as its
+ * padding does when no rail is published at all. */
+@utility rail-band-region { --rail-start: var(--rail-text-start, var(--pane-inset, var(--chrome-pad-x))); --rail-end: var(--rail-text-end, var(--pane-inset, var(--chrome-pad-x))); --rail-owed-start: 0px; --rail-owed-end: 0px; } /* twmerge: standalone -- a band's content wrapper republishing the band's padding; no padding of its own. */
 
 /* The pane's shared content inset as padding — a `PaneChrome inset="content"`
  * pane's header pads by it, so its title starts where the DataView toolbar and
@@ -1720,6 +1765,11 @@
      deliberately stop short of the panel's inner edge. */
   --rail-start: calc(var(--cp-panel-pad) + var(--cp-rail-icon));
   --rail-end: calc(var(--cp-panel-pad) + var(--cp-row-pad-x));
+  /* Its text rail IS its rail: the rail above already carries the row's
+     inset (the sum the two-part inset publishes), so a band's text and a
+     row's text share it with no row pad added on top. */
+  --rail-text-start: var(--rail-start);
+  --rail-text-end: var(--rail-end);
   /* The panel PAYS its own rail, so nothing inside it owes one — without this a
      `rail-follow` band dropped in a panel would inset itself a second time. */
   --rail-owed-start: 0px;
@@ -2003,7 +2053,26 @@
      does. Elsewhere (a dropdown, a dialog's list) rows sit on the rail, and a
      field bleeding out of a dialog's wide rail would run past every row. */
   position: relative;
+  /* Room of its own. Rows may sit on a narrow rail (a menu's `xs`): their pill
+     is invisible until hovered, so the rail reads as the panel's edge. The
+     search field's box is ALWAYS drawn, so on the same rail it looks pressed
+     against the edge. It tops its inset up to the `sm` step from the region's
+     edge (nothing on a rail already that wide), and keeps an `xs` step under
+     its box when a rule follows — the rule's own `xs` room completes the `sm`
+     gap (a host that stacks it with a gap already spaces it). Margins are the
+     mechanism because the room depends on the rail it sits on, which only the
+     field can read. A control panel's rows bleed instead (below). */
+  /* Outside any published region the fallback is the step itself, so the room
+     is 0: a field nobody opened a region for keeps its old geometry. */
+  margin-inline: max(0px, calc(var(--space-sm) - var(--rail-start, var(--space-sm))));
+  &:first-child {
+    margin-block-start: max(0px, calc(var(--space-sm) - var(--rail-block-start, var(--space-sm))));
+  }
+  &:has(+ [data-slot="separator"]) {
+    margin-block-end: var(--space-xs);
+  }
   .cp-panel & {
+    margin-block: 0;
     --cp-bleed-start: calc(min(var(--cp-panel-pad), var(--rail-start, 0px)) - var(--rail-start, 0px));
     --cp-bleed-end: calc(min(var(--cp-panel-pad), var(--rail-end, 0px)) - var(--rail-end, 0px));
     margin-inline: var(--cp-bleed-start) var(--cp-bleed-end);
@@ -2441,6 +2510,10 @@
  * role the panel is on) and spacing the first item off its border. */
 @utility my-menu-separator { margin-block: var(--space-xs); } /* twmerge: standalone -- the room around a menu hairline; no other margin class sits beside it. */
 @utility my-overlay-header { margin-block: calc(-1 * var(--rail-block-start, 0px)) var(--space-xs); } /* twmerge: standalone -- a panel header's block bleed through the panel padding plus the room under it; no other margin class sits beside it. */
+/* `my-overlay-footer`: the header's mirror — a panel's sticky footer bleeding
+ * down through the panel's block padding (`--rail-block-end`), with the room
+ * above it that spaces it off the last item. */
+@utility my-overlay-footer { margin-block: var(--space-xs) calc(-1 * var(--rail-block-end, 0px)); } /* twmerge: standalone -- a panel footer's block bleed through the panel padding plus the room above it; no other margin class sits beside it. */
 
 /* Semantic typography role utilities — the single source of truth for text
  * hierarchy (Text primitive). Each role is a frozen bundle of size + line-height

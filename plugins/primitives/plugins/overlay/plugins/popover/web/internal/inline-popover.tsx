@@ -14,7 +14,13 @@ import type { ComponentProps } from "react";
 
 type ContentPositionerProps = Pick<
   ComponentProps<typeof PopoverContent>,
-  "align" | "side" | "finalFocus" | "resetOnClose"
+  | "align"
+  | "side"
+  | "finalFocus"
+  | "resetOnClose"
+  | "header"
+  | "footer"
+  | "rows"
 >;
 
 export interface InlinePopoverProps extends ContentPositionerProps {
@@ -57,6 +63,9 @@ export function InlinePopover({
   contentClassName,
   finalFocus,
   resetOnClose,
+  header,
+  footer,
+  rows,
   open,
   onOpenChange,
 }: InlinePopoverProps) {
@@ -77,6 +86,9 @@ export function InlinePopover({
         maxHeight={maxHeight}
         finalFocus={finalFocus}
         resetOnClose={resetOnClose}
+        header={header}
+        footer={footer}
+        rows={rows}
         className={contentClassName}
       >
         {children}

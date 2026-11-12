@@ -46,6 +46,7 @@ export function ConflictDiff({
         as="div"
         variant="caption"
         tone="muted"
+        // eslint-disable-next-line rail/no-adhoc-band -- debt (task-1794237886-rfwccn): a Band only once the config detail pane owns its inset — today it hand-pads, so a Band here would sit on a different edge than its content
         className="border-b border-border bg-muted/40 px-md py-xs font-medium"
       >
         <Stack direction="row" align="center" justify="between" gap="none">

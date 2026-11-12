@@ -19,6 +19,7 @@ export function RawJsonAction({ event }: { event: JsonlEvent }) {
       trigger={<IconButton icon={dataObjectIcon} label="View raw JSON" />}
       align="end"
       width="4xl"
+      // eslint-disable-next-line rail/no-unowned-overlay -- the content is one tinted code block filling the popover edge to edge; its padding is the block's own
       padding="none"
     >
       <Scroll axis="y" className="max-h-[60vh] rounded-md">

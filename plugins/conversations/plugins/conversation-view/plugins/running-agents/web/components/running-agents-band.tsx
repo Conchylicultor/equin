@@ -377,6 +377,7 @@ function RunningAgentsCard({ options, switcher, body }: HostedToolbarParts) {
           {/* Capped and scrolled on its own: a workflow can fan out into
               dozens of rows, and an unbounded list would push the prompt box
               below it off-screen with no way to reach it. */}
+          {/* eslint-disable-next-line rail/no-adhoc-band -- debt (task-1794239361-kagy27): a hand-rolled rule strip; move it onto its surface's header/footer or a Band */}
           <Scroll className="max-h-[40vh] rail-x-2xs border-t border-border/60 bg-background/40 py-2xs">
             {body}
           </Scroll>

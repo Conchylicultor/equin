@@ -88,6 +88,7 @@ export function ControlPanelCard({
         align={align}
         side={side}
         width="settings"
+        // eslint-disable-next-line rail/no-unowned-overlay -- `cp-card` / `cp-panel` is the control panel's own region owner and publishes its rail
         padding="none"
         className="cp-card"
         initialFocus={(openType) =>
