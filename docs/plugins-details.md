@@ -3990,7 +3990,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Shortcuts.Shortcut` "floating.toggle-pin (ctrl+alt+p)"
               - `Shortcuts.Shortcut` "floating.window-to-next-desktop (ctrl+alt+shift+pagedown)"
               - `Shortcuts.Shortcut` "floating.window-to-prev-desktop (ctrl+alt+shift+pageup)"
-            - Uses: 51 symbols — full list in [`plugins/apps/plugins/desktop/plugins/windows/REFERENCE.md`](../plugins/apps/plugins/desktop/plugins/windows/REFERENCE.md)
+            - Uses: 52 symbols — full list in [`plugins/apps/plugins/desktop/plugins/windows/REFERENCE.md`](../plugins/apps/plugins/desktop/plugins/windows/REFERENCE.md)
               - `primitives/css/ui-kit` ×8
               - `apps-core/surface` ×4
               - `apps/desktop/shell` ×4
@@ -4013,6 +4013,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/line.Line`
               - `primitives/css/rigid.rigidClass`
               - `primitives/css/text.Text`
+              - `primitives/dom/auto-scroll.cloneWithScroll`
               - `primitives/dom/web-storage.defineStore`
               - `primitives/scope/app-instance.appInstanceId`
               - `primitives/slot-render.renderIsolated`
@@ -48794,7 +48795,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values):
               - `afterLayout`
               - `runAsAfterLayout`
-        - **`auto-scroll`** — The scroll-owning primitive: the one sanctioned home for driving a scroll container. Stick-to-bottom streaming (useStickyScroll + JumpToBottomButton; content stamped FOLLOW_MOTION_ATTR is followed frame by frame while it animates), container-scoped scrollToBottom / scrollChildIntoView, a scroll glided frame by frame on a given CSS curve so it moves in step with a transition beside it (glideScroll), gesture-agnostic edge auto-scroll (useEdgeAutoScroll), scroll kept across a wholesale DOM swap (KeepScrollAcross, or restoreScrollOffset from a caller's own snapshot), the reader's anchor kept on screen across a commit that resizes content above it (KeepAnchorAcross), an element kept at its screen position across a re-layout (keepInPlace), a deep copy that keeps its scroll offsets (cloneWithScroll, for a stand-in drawn while content leaves), an inner scroller's offset kept across a page reload (useScrollAcrossReload, put back as async content arrives until reached or the reader takes over), and the shared findScrollParent discovery.
+        - **`auto-scroll`** — The scroll-owning primitive: the one sanctioned home for driving a scroll container. Stick-to-bottom streaming (useStickyScroll + JumpToBottomButton; content stamped FOLLOW_MOTION_ATTR is followed frame by frame while it animates), container-scoped scrollToBottom / scrollChildIntoView, a scroll glided frame by frame on a given CSS curve so it moves in step with a transition beside it (glideScroll), gesture-agnostic edge auto-scroll (useEdgeAutoScroll), scroll kept across a wholesale DOM swap (KeepScrollAcross, or restoreScrollOffset from a caller's own snapshot), the reader's anchor kept on screen across a commit that resizes content above it (KeepAnchorAcross), an element kept at its screen position across a re-layout (keepInPlace), a deep copy that keeps its scroll offsets (cloneWithScroll, for a stand-in drawn while content leaves, or — visibleOnly — a picture of only what shows), an inner scroller's offset kept across a page reload (useScrollAcrossReload, put back as async content arrives until reached or the reader takes over), and the shared findScrollParent discovery.
           - Web:
             - Uses:
               - `primitives/css/ui-kit.Button`
@@ -48807,6 +48808,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/latest-ref.useLatestRef`
               - `ui/icons.Icon`
             - Exports (types):
+              - `CloneWithScrollOptions`
               - `CubicBezier`
               - `EdgeAutoScroll`
               - `EdgeScrollSurface`
@@ -48844,27 +48846,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/density --space-xs`
               - `ui/tokens/shape --spacing`
-            - Imported by:
-              - `apps/places/places-map`
-              - `apps/sonata/progress/loop`
-              - `apps/sonata/rich/chord-progression`
-              - `apps/website/pages/foundations`
-              - `apps/website/pages/story/data-views`
-              - `apps/website/pages/vision`
-              - `conversations/agent-thread`
-              - `conversations/conversation-view/jsonl-viewer`
-              - `conversations/conversation-view/jsonl-viewer/background-shells`
-              - `conversations/conversation-view/jsonl-viewer/outline`
+            - Imported by: 21 plugins — full list in [`plugins/primitives/plugins/dom/plugins/auto-scroll/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/auto-scroll/REFERENCE.md)
+              - `primitives` ×8
+              - `apps` ×7
+              - `conversations` ×4
               - `layouts/miller`
               - `page/editor`
-              - `primitives/css/motion`
-              - `primitives/data-view`
-              - `primitives/dom/scroll-reveal`
-              - `primitives/log-channels`
-              - `primitives/outline/scroll-spy`
-              - `primitives/overlay/image-viewer`
-              - `primitives/pane`
-              - `primitives/virtual-rows`
           - Exemptions:
             - Exempts itself from: `scroll-safety/no-adhoc-scroll-write` — `web` (sanctioned)
         - **`copy-source-text`** — Copy what an element STANDS FOR, not only what it shows: an element declares its source text via copiesAsText() / copiesAsOwnText — exported beside the handler, so importing them ships it — and one Core.Root-mounted document copy handler swaps every declaring element in the selection for that text before re-serializing the clipboard through the browser's own block-aware serializer. Restores the characters a rendering replaced (an active-data chip's `token`), and removes the newlines a chip's blockified label box injects mid-sentence. Yields to any handler that already prevented the default, and never acts inside a contenteditable. A substituting element also SELECTS as one unit: its letters take no highlight, and a selectionchange listener rings the whole element while the selection overlaps it — so the selection shows exactly what the copy will carry.
