@@ -86,8 +86,10 @@ rest of the file. The **`parse-utils:mask-sync` check** (`check/`) compares
 the mask with TypeScript's parse of every `.ts` / `.tsx`: identifiers outside
 templates stay code; string / template / JSX text / regex literals are blanked.
 On failure, teach `maskSource` the construct (+ a test); exempt a file only
-when no lexer heuristic can tell it apart. Whole-tree keyed (never
-input-keyed), so a masker edit re-runs it.
+when no lexer heuristic can tell it apart. A fold check
+(`check/mask-sync.scan.ts`): a pass after an edit masks and parses only the
+edited files; the records are keyed by the scan module's closure (the masker
+included), so a masker edit re-folds every file.
 
 `maskSource` supersedes the old per-scanner skip-loops (the boundary checker's
 private `stripComments`, and the inline logic in `matchBracket`).

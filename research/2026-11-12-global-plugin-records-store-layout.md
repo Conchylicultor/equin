@@ -315,3 +315,51 @@ shared TS parse behind the sourceAnalysis checks. Nothing yet stops a new check
 from doing whole-tree work in `run()`: the runner counts each check's reads
 (`fs` on its `end` record), so an unbounded read can be made a declared,
 visible property of the check.
+
+## The shared parse: who parses, and mask-sync as a fold (task: check pass O(changes), 3)
+
+Measured 2026-11-12, same one-line edit (a comment appended to
+`hints/help-menu/web/index.ts`), host load 9–14. A parse probe (temporary,
+reverted) tallied `parsedTsSource` misses by the check in whose async context
+they ran:
+
+| check | parses | parse CPU (in-thread) |
+| --- | ---: | ---: |
+| parse-utils:mask-sync | 13,161 | 1.86 s |
+| no-db-backed-notify (sourceAnalysis) | 3,542 | 1.09 s |
+| sql-writes:fit | 2,583 | 1.09 s |
+| everything else | 31 | 0.02 s |
+
+So "the shared parse" was mostly one check: mask-sync parsed and masked every
+`.ts` / `.tsx` on every pass (whole-tree keyed, so any edit re-ran it), though
+its work is purely per file and its answer (the divergences) is almost always
+empty. It is now a fold check (`parse-utils/check/mask-sync.scan.ts`), input-
+keyed; its records are keyed by the scan module's closure, the masker included,
+so a masker edit still re-folds every file. Verified: an injected template-JSX
+desync is still reported, with its line.
+
+| one-line edit | before | after |
+| --- | ---: | ---: |
+| mask-sync: files read (in the pass) | 16,887 | 338 |
+| mask-sync alone: duration | (every run, in-pass 22.9 s contended) | 0.12 s |
+| mask-sync cold fold alone (scan module new) | — | 2.8 s / 16.9k reads, once |
+| parses in the pass | 19,317 | 6,163 |
+| thread owner `parsedTsSource` | ~5.6 s | ~2.9 s |
+| check-thread samples, whole run | 3,910 at 86.8 Hz (~45 s) | 3,038 at 98.4 Hz (~31 s) |
+| files read by check bodies | 250.8k | 229.0k |
+| run, grant → verdict | 52.2 s | 49.0 s (noise-bound) |
+
+Bytes written to the store per edit by this fold: the edited file's record and
+its ancestor directories', each an empty list — O(depth) records of a few
+bytes; the answer is O(divergences), not O(repo).
+
+Thread owners after (top): grep-index `select` ~3.7 s, `parsedTsSource`
+~2.9 s (no-db-backed-notify and sql-writes:fit, both cross-file), 
+`platformOffenders` ~1.9 s, semaphore ~1.7 s.
+
+### Next
+
+grep-index `select` is now the largest owner: every selection asks the store
+about every blob of its domain (~99 queries × ~11k blobs per pass), so a
+one-line edit still costs ~1M lookups. Then the remaining parse, which goes
+through sourceAnalysis's cross-file reads.
