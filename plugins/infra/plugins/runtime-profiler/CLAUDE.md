@@ -582,6 +582,7 @@ remaining allocations are one flat band array per completed entry span, and what
     - `installProfilingSuppressionRuntime`
     - `installRootContextRuntime`
     - `installSpanContextRuntime`
+    - `loopStallsSince`
     - `markWait`
     - `noteLoopObserved`
     - `noteLoopTurn`

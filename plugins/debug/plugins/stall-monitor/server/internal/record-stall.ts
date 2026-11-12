@@ -21,7 +21,7 @@ export function recordEventLoopStall(
   section: StallSection,
   durationMs: number,
   thresholdMs: number,
-  windowMs: number,
+  lookbackMs: number,
 ): void {
   const { culpritStack, hotFrame } = deriveCulprit(section);
 
@@ -30,9 +30,11 @@ export function recordEventLoopStall(
   // ring directly (no ALS), so it is safe to call from here. Was ANY tracked
   // ENTRY span in flight across the freeze? No ⇒ the CPU burst inflated nothing
   // the profiler can see ⇒ we badge the report as the profiler-invisible culprit.
-  // The window looks back `windowMs` (the health tick's actual wall-time since
-  // the previous drain) on the profiler's own clock domain.
-  const fw = captureFlightWindow({ windowStartMs: profilerNowMs() - windowMs });
+  // The window looks back `lookbackMs` on the profiler's own clock domain: to
+  // where the block began when the sampler placed it, else to the previous drain.
+  const fw = captureFlightWindow({
+    windowStartMs: profilerNowMs() - lookbackMs,
+  });
   const cov = classifyCoverage(fw, durationMs);
 
   // Evidence first — captureTrace mints the id synchronously (before persist) and
@@ -60,6 +62,11 @@ export function recordEventLoopStall(
       thresholdMs,
       nSamples: section.nSamples,
       sampleRateHz: section.sampleRateHz,
+      ...(section.scope ? { scope: section.scope } : {}),
+      ...(section.spanMs !== undefined ? { spanMs: section.spanMs } : {}),
+      ...(section.windowSampleRateHz !== undefined
+        ? { windowSampleRateHz: section.windowSampleRateHz }
+        : {}),
       culpritStack,
       hotFrame,
       topLeaves: section.topLeaves,

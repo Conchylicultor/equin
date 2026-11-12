@@ -1,6 +1,6 @@
 import { expect, test, describe } from "bun:test";
 import type { StallSection } from "@plugins/debug/plugins/trace/plugins/stall/core";
-import { deriveCulprit } from "./culprit";
+import { deriveCulprit, NO_JS_IN_BLOCK } from "./culprit";
 
 describe("deriveCulprit", () => {
   test("labels the DOMINANT stack, not a cold attributable leaf (regression)", () => {
@@ -149,5 +149,18 @@ describe("deriveCulprit", () => {
       culpritStack: "unknown",
       hotFrame: "event-loop stall",
     });
+  });
+
+  test("a block with no sample in it is its own named finding", () => {
+    const section: StallSection = {
+      nSamples: 0,
+      sampleRateHz: 0,
+      scope: "block",
+      spanMs: 2856,
+      topLeaves: [],
+      topStacks: [],
+    };
+    expect(deriveCulprit(section).culpritStack).toBe(NO_JS_IN_BLOCK);
+    expect(deriveCulprit(section).hotFrame).toContain(NO_JS_IN_BLOCK);
   });
 });

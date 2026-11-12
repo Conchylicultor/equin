@@ -25921,6 +25921,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `config_v2.defineConfig`
           - `debug/trace/stall.StallLeafSchema`
+          - `debug/trace/stall.StallScopeSchema`
           - `debug/trace/stall.StallStackSchema`
           - `fields/bool/config.boolField`
         - Exports (types): `StallPayload`
@@ -26625,10 +26626,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Core:
             - Exports (types):
               - `StallLeaf`
+              - `StallScope`
               - `StallSection`
               - `StallStack`
             - Exports (values):
               - `StallLeafSchema`
+              - `StallScopeSchema`
               - `StallSectionSchema`
               - `StallStackSchema`
     - **`worktree-cleanup`** — Audit and remove stale git worktrees and their Postgres DB forks.
@@ -36694,6 +36697,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `installProfilingSuppressionRuntime`
           - `installRootContextRuntime`
           - `installSpanContextRuntime`
+          - `loopStallsSince`
           - `markWait`
           - `noteLoopObserved`
           - `noteLoopTurn`

@@ -25,7 +25,8 @@ export function StallLane({ payload, trace }: TraceLaneProps): ReactElement {
       </Stack>
     );
   }
-  const { nSamples, sampleRateHz, topLeaves, topStacks } = parsed.data;
+  const { nSamples, sampleRateHz, scope, spanMs, topLeaves, topStacks } =
+    parsed.data;
 
   return (
     // eslint-disable-next-line rail/no-adhoc-band -- debt (task-1794239361-kagy27): a hand-rolled rule strip; move it onto its surface's header/footer or a Band
@@ -37,10 +38,23 @@ export function StallLane({ payload, trace }: TraceLaneProps): ReactElement {
         </Badge>
         <Badge variant="muted" mono>
           {nSamples} samples · {sampleRateHz} Hz
+          {spanMs !== undefined && ` · ${formatDuration(spanMs)}`}
         </Badge>
+        {scope && (
+          <Badge variant={scope === "block" ? "muted" : "warning"} mono>
+            {scope === "block"
+              ? "the block's samples"
+              : "whole window's samples"}
+          </Badge>
+        )}
       </Stack>
 
-      {topLeaves.length === 0 ? (
+      {scope === "block" && nSamples === 0 ? (
+        <Placeholder tone="muted">
+          No JS ran on the thread during the block: it was off the CPU or
+          outside JS, so no stack of this process blocked it.
+        </Placeholder>
+      ) : topLeaves.length === 0 ? (
         <Placeholder tone="muted">No frames captured during the freeze.</Placeholder>
       ) : (
         <Stack gap="2xs">

@@ -3,6 +3,7 @@ export {
   recordEntrySpan,
   noteLoopTurn,
   noteLoopObserved,
+  loopStallsSince,
   markWait,
   beginWait,
   beginDeferredWait,

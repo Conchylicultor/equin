@@ -1,6 +1,7 @@
 import { z } from "zod";
 import {
   StallLeafSchema,
+  StallScopeSchema,
   StallStackSchema,
 } from "@plugins/debug/plugins/trace/plugins/stall/core";
 
@@ -20,6 +21,13 @@ export const StallPayloadSchema = z.object({
   thresholdMs: z.number(),
   nSamples: z.number(),
   sampleRateHz: z.number(),
+  // What the samples cover — the block's own, or (no registered block placed)
+  // the whole window's — and how long that span was; the window's sample rate
+  // beside the block's (StallSection). Optional ⇒ rows filed before this was
+  // recorded, all window-scoped.
+  scope: StallScopeSchema.optional(),
+  spanMs: z.number().optional(),
+  windowSampleRateHz: z.number().optional(),
   // The dominant caller-path signature (topStacks[0].stack) — THE dedup grain.
   culpritStack: z.string(),
   // The human-readable label derived from THAT stack's own frames (`what ←

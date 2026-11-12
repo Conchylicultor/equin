@@ -64,8 +64,21 @@ On **main**, the sampler also claims the background-thread JSC sampling profiler
 (`claimStackSampler("health-monitor")` from `infra/stack-sampler`, the
 profiler's one owner per process, which holds every bun:jsc fact) and drains it
 every tick. When a tick's `eventLoopMaxMs > 3 s` (a frozen backend), it
-aggregates the drained stacks into a `topLeaves`/`topStacks` histogram and hands
-the section to `debug/stall-monitor` via `recordEventLoopStall(...)`. The sampler
+aggregates **the block's own samples** into a `topLeaves`/`topStacks` histogram
+and hands the section to `debug/stall-monitor` via `recordEventLoopStall(...)`.
+The histogram says how long the loop blocked, never when, so `freezeEvidence`
+places the block among the loop probe's registered stalls (`loopStallsSince`,
+which first registers a probe that is overdue right now — the tick may run
+before the probe after a block) and keeps the samples inside
+`[t0 − probe period, t1]`, the same selection as a short stall's. The section
+says what it covers: `scope: "block"`, or `"window"` — the whole drain window's
+samples, named as such — only when no registered stall is long enough to be the
+freeze. It also carries `spanMs` and the window's own sample rate, so a block
+sampled far below it reads as a thread mostly off the CPU. A block with **no
+sample** is filed too, as its own finding (`no JS ran during the block`), never
+dropped. Until 2026-11-12 the freeze path summed the whole ~10 s window: main's
+3.2 s freeze at 04:00 that day was filed with 2,261 samples of ordinary work and
+no dominant stack. The sampler
 only **detects + aggregates**; `stall-monitor` **captures the trace and files the
 alert report** — so the "what code froze the loop" evidence lands in the durable
 trace store (**Debug → Slow Events**, rendered by the `trace/plugins/stall` event

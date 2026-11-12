@@ -3,7 +3,8 @@
 Built-in trace event class for **event-loop stalls** — a frozen backend, the most
 severe slow event. When the health-monitor sampler observes a tick whose
 `eventLoopMaxMs > 3 s`, it drains the background-thread JSC sampling profiler and
-aggregates the stacks into a `topLeaves`/`topStacks` histogram, then hands the
+aggregates the stacks sampled during the block (`scope: "block"`; `"window"` only
+when the block could not be placed, said so on the lane) into a `topLeaves`/`topStacks` histogram, then hands the
 section to `debug/stall-monitor`, which fires
 `captureTrace({ kind: "stall", critical: true, detail: <StallSection> })` (and
 files the alert report). This class surfaces that section as a lane on the
@@ -21,7 +22,7 @@ post-freeze burst of slow spans must never starve the frozen-backend trace) whil
 still honoring the per-trigger cooldown, so recurring identical freezes dedupe.
 
 The lane is a **histogram card** (the gates/contention shape, not time bars): the
-samples are aggregated over the whole freeze window, so there is no timeline to
+samples are aggregated over the freeze, so there is no timeline to
 position them on. `StallSection` (`core/`) is the single source of truth for the
 shape, shared by the sampler that builds it, this class that validates it, and the
 lane that parses it.
@@ -54,10 +55,12 @@ lane that parses it.
 - Core:
   - Exports (types):
     - `StallLeaf`
+    - `StallScope`
     - `StallSection`
     - `StallStack`
   - Exports (values):
     - `StallLeafSchema`
+    - `StallScopeSchema`
     - `StallSectionSchema`
     - `StallStackSchema`
 

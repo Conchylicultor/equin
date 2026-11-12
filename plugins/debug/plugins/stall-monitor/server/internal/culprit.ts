@@ -32,10 +32,24 @@ import type { StallSection, StallStack } from "@plugins/debug/plugins/trace/plug
 // Both the label and the fingerprint guard the empty section: `aggregateTraces`
 // returns empty arrays when `total === 0`, so we never index `[0]` blindly — the
 // `?? …` fallbacks cover it.
+//
+// A BLOCK with no sample in it is its own finding, not an unknown: the thread
+// ran no JS for the whole block (descheduled on an overloaded host, faulting
+// its pages back in, or in native work outside the VM), so no stack of this
+// process blocked it. It gets its own fingerprint and says so, rather than the
+// generic fallback that reads as "the sampler missed it".
+export const NO_JS_IN_BLOCK = "no JS ran during the block";
+
 export function deriveCulprit(section: StallSection): {
   culpritStack: string;
   hotFrame: string;
 } {
+  if (section.scope === "block" && section.nSamples === 0) {
+    return {
+      culpritStack: NO_JS_IN_BLOCK,
+      hotFrame: `${NO_JS_IN_BLOCK} (thread off the CPU or outside JS)`,
+    };
+  }
   const top = section.topStacks[0];
   return {
     culpritStack: top?.stack ?? "unknown",

@@ -2,7 +2,11 @@ import {
   recordEventLoopStall,
   recordLoopStallEvidence,
 } from "@plugins/debug/plugins/stall-monitor/server";
-import type { LoopStall } from "@plugins/infra/plugins/runtime-profiler/core";
+import {
+  loopStallsSince,
+  profilerNowMs,
+  type LoopStall,
+} from "@plugins/infra/plugins/runtime-profiler/core";
 import {
   claimStackSampler,
   frameKey,
@@ -14,6 +18,7 @@ import type {
   StallLeaf,
   StallStack,
 } from "@plugins/debug/plugins/trace/plugins/stall/core";
+import { PROBE_PERIOD_MS } from "./probe-cadence";
 
 // On-stall stack-trace capture. Folded into the health sampler's tick.
 //
@@ -27,10 +32,14 @@ import type {
 // (no stop, the directory-only argument, the varying rate, which frames are
 // missing) — is owned by `infra/stack-sampler`; see its CLAUDE.md.
 //
-// Why drain-then-capture aligns: during a 40 s block no setInterval tick fires
-// (the timer lives on the blocked loop), so the JSC buffer accumulates the entire
-// block's samples; the first tick after the block reads histogram.max ≈ 40 s AND
-// drains ~40 s of samples — both describe the same stall.
+// The tick's window is NOT the block. A 10 s window holding a 3 s block holds
+// 7 s of ordinary work too, and its samples summed say nothing about what
+// blocked the thread — the 2026-11-12 04:00 freeze on main (3.2 s) was filed
+// with 2,261 samples over 10 s and no dominant stack, while the probe's own
+// 2.8 s block a few seconds before had taken 4 samples. So the freeze's
+// evidence is the samples taken during the BLOCK only, placed by the loop
+// probe's registered stalls (`freezeEvidence`), exactly as a short stall's is.
+// The histogram only says how long the loop blocked, never when.
 //
 // On a stall the aggregated stacks are handed to `debug/stall-monitor` via
 // `recordEventLoopStall`, NOT dumped to a dead-end JSONL. This sampler only
@@ -236,6 +245,68 @@ export function samplesInStall(
 }
 
 /**
+ * The evidence of a freeze the 10 s window's histogram saw (`eventLoopMaxMs`):
+ * the samples of the registered block that explains it, or — when none of the
+ * probe's registered stalls in the window is long enough to be it — the whole
+ * window's, said so (`scope: "window"`), never passed off as the block's.
+ *
+ * A registered stall `[t0, t1]` (t0 = when the late probe tick was due) is a
+ * block of at most `t1 - t0 + probePeriodMs`; it explains the freeze when that
+ * reaches `eventLoopMaxMs` within one more probe period (the two clocks tick
+ * differently). The longest such stall is the block.
+ */
+export function freezeEvidence(
+  // This window's samples, and the batch drained before it (a short stall's
+  // early drain may have moved the block's first samples there).
+  samples: { window: readonly StackSample[]; earlier: readonly StackSample[] },
+  stalls: readonly LoopStall[],
+  eventLoopMaxMs: number,
+  windowMs: number,
+  probePeriodMs: number,
+): { section: StallSection; block: LoopStall | null } {
+  let block: LoopStall | null = null;
+  for (const s of stalls) {
+    if (s.t1 - s.t0 + 2 * probePeriodMs < eventLoopMaxMs) continue;
+    if (!block || s.t1 - s.t0 > block.t1 - block.t0) block = s;
+  }
+  const windowSampleRateHz = rateHz(samples.window.length, windowMs);
+  if (!block) {
+    return {
+      block,
+      section: {
+        nSamples: samples.window.length,
+        sampleRateHz: windowSampleRateHz,
+        scope: "window",
+        spanMs: windowMs,
+        windowSampleRateHz,
+        ...aggregateTraces(samples.window),
+      },
+    };
+  }
+  const inBlock = samplesInStall(
+    samples.earlier.concat(samples.window),
+    block,
+    probePeriodMs,
+  );
+  const spanMs = block.t1 - block.t0 + probePeriodMs;
+  return {
+    block,
+    section: {
+      nSamples: inBlock.length,
+      sampleRateHz: rateHz(inBlock.length, spanMs),
+      scope: "block",
+      spanMs,
+      windowSampleRateHz,
+      ...aggregateTraces(inBlock),
+    },
+  };
+}
+
+function rateHz(n: number, spanMs: number): number {
+  return spanMs > 0 ? Math.round(n / (spanMs / 1000)) : 0;
+}
+
+/**
  * A stall the loop probe just registered (called from its tick, right after the
  * block). One of STALL_EVIDENCE_MS up to the freeze threshold is attributed from
  * its own samples — only the block's, not the 10 s window's — and captured as a
@@ -265,12 +336,13 @@ export function noteRegisteredStall(
   // No sample in the block: the thread was not running JS (descheduled on a
   // loaded host, or native work the sampler cannot see). Still evidence — a
   // trace with nSamples 0 says the block was not this process's JS.
+  const spanMs = durationMs + probePeriodMs;
   recordLoopStallEvidence(
     {
       nSamples: inStall.length,
-      sampleRateHz: Math.round(
-        inStall.length / ((durationMs + probePeriodMs) / 1000),
-      ),
+      sampleRateHz: rateHz(inStall.length, spanMs),
+      scope: "block",
+      spanMs,
       topLeaves,
       topStacks,
     },
@@ -279,11 +351,11 @@ export function noteRegisteredStall(
   );
 }
 
-// Always drain (bounds memory + aligns the window). If the window stalled past
-// the threshold, aggregate the drained samples and hand the section to
-// stall-monitor (which files the trace + report); else discard. `windowMs` is the
-// actual wall-time since the previous drain (the tick fires late after a block),
-// so nSamples/window is the true sample rate.
+// Always drain (bounds memory). If the window stalled past the threshold, take
+// the block's own samples (`freezeEvidence`) and hand the section to
+// stall-monitor (which files the trace + report) — a block with no sample in it
+// included, as the finding it is. `windowMs` is the actual wall-time since the
+// previous drain (the tick fires late after a block).
 export function drainAndMaybeDump(
   eventLoopMaxMs: number,
   windowMs: number,
@@ -291,6 +363,7 @@ export function drainAndMaybeDump(
   if (!sampler) return;
   collect();
   const traces = pending;
+  const before = previousWindow;
   previousWindow = pending;
   pending = [];
   // Every drained batch, stall or not: what ran on the thread this window. Until
@@ -301,22 +374,23 @@ export function drainAndMaybeDump(
   }
 
   if (eventLoopMaxMs <= STALL_THRESHOLD_MS) return; // not a stall — discard
-  if (traces.length === 0) return; // nothing captured for this window
 
-  const windowSeconds = windowMs / 1000;
-  const sampleRateHz =
-    windowSeconds > 0 ? Math.round(traces.length / windowSeconds) : 0;
-  const { topLeaves, topStacks } = aggregateTraces(traces);
+  const windowStartMs = profilerNowMs() - windowMs;
+  const { section, block } = freezeEvidence(
+    { window: traces, earlier: before },
+    loopStallsSince(windowStartMs - PROBE_PERIOD_MS),
+    eventLoopMaxMs,
+    windowMs,
+    PROBE_PERIOD_MS,
+  );
 
-  const section: StallSection = {
-    nSamples: traces.length,
-    sampleRateHz,
-    topLeaves,
-    topStacks,
-  };
-
-  // Hand the aggregated evidence to the alert plugin, which owns both the trace
-  // (critical, stable-labelled) and the deduped `event-loop-stall` report. This
-  // sampler's job ends at detect + aggregate.
-  recordEventLoopStall(section, eventLoopMaxMs, STALL_THRESHOLD_MS, windowMs);
+  // Hand the evidence to the alert plugin, which owns both the trace (critical,
+  // stable-labelled) and the deduped `event-loop-stall` report. The span it
+  // looks for covering work in is the block's when one was placed.
+  recordEventLoopStall(
+    section,
+    eventLoopMaxMs,
+    STALL_THRESHOLD_MS,
+    block ? profilerNowMs() - (block.t0 - PROBE_PERIOD_MS) : windowMs,
+  );
 }

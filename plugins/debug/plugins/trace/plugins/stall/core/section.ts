@@ -60,11 +60,34 @@ export const StallStackSchema = z.object({
 });
 export type StallStack = z.infer<typeof StallStackSchema>;
 
+// What span of time the samples were selected from.
+//
+// - `block` — only the registered block's: from one loop-probe period before
+//   the late probe tick was due (where the block began at the earliest) to the
+//   tick that ended it. Every sample is the blocked thread's.
+// - `window` — the sampler's whole drain window (~10 s), because no block the
+//   loop probe registered could be placed in it. Ordinary work around the block
+//   is mixed in, so a stack here is NOT shown to have blocked the thread.
+//
+// Optional: traces persisted before this field existed were all `window` for a
+// freeze and `block` for a short stall.
+export const StallScopeSchema = z.enum(["block", "window"]);
+export type StallScope = z.infer<typeof StallScopeSchema>;
+
 export const StallSectionSchema = z.object({
-  // Total JSC stack samples drained for this freeze window.
+  // JSC stack samples taken during `spanMs` (0 for a block is a finding: the
+  // thread ran no JS while it was blocked — descheduled, faulting pages in, or
+  // in native work outside the VM — so no stack of this process blocked it).
   nSamples: z.number(),
-  // Derived per-dump (nSamples / windowSeconds), never assumed.
+  // nSamples over the span they were selected from, never assumed.
   sampleRateHz: z.number(),
+  scope: StallScopeSchema.optional(),
+  // How long the selection span was (ms).
+  spanMs: z.number().optional(),
+  // The sampler's rate over the whole drain window around it — the rate the
+  // thread was sampled at while it ran JS. A block sampled far below it spent
+  // most of its time off the CPU or outside JS.
+  windowSampleRateHz: z.number().optional(),
   topLeaves: z.array(StallLeafSchema),
   topStacks: z.array(StallStackSchema),
 });

@@ -1462,6 +1462,25 @@ function registerLateTurn(t: number): LoopStall | null {
   return stall;
 }
 
+/**
+ * The registered stalls that ended after `fromMs` (profiler clock), oldest
+ * first, as copies. A probe overdue right now is registered first
+ * (`noteLoopObserved`), so a caller that runs right after a block — before the
+ * probe's own late tick — still finds it. For an owner that must place a block
+ * it measured another way (health-monitor's 10 s sampler, whose histogram says
+ * how long the loop blocked but not when) among the probe's registered ones.
+ */
+export function loopStallsSince(fromMs: number): LoopStall[] {
+  noteLoopObserved();
+  const out: LoopStall[] = [];
+  for (let i = loopStalls.length - 1; i >= 0; i--) {
+    const s = loopStalls[i]!;
+    if (s.t1 <= fromMs) break;
+    out.push({ t0: s.t0, t1: s.t1 });
+  }
+  return out.reverse();
+}
+
 // How much of `[start, end]` the registered stalls cover.
 function loopStallOverlap(start: number, end: number): number {
   let ms = 0;

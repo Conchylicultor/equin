@@ -20,7 +20,7 @@ linked to its trace.
 
 ## Push-fed by a direct call, not a job
 
-health-monitor calls `recordEventLoopStall(section, durationMs, thresholdMs)`
+health-monitor calls `recordEventLoopStall(section, durationMs, thresholdMs, lookbackMs)`
 directly (a barrel import), and that function fires `captureTrace` + `recordReport`
 inline. There is **no scheduled drain job and no accumulator** — the mirror-image
 of boot-budget's documented "pull-only, no accumulator" deviation. The consumer set
@@ -38,6 +38,20 @@ trace, labelled `short stall: <dominant stack>` (`deriveCulprit`; prefixed so it
 cooldown key never shadows a freeze trace of the same culprit), non-critical, with **no
 report** — main has one in ~5–10% of its 10 s windows, evidence to group by
 label in Debug → Slow Events, not an alert each.
+
+## What the evidence covers
+
+The section says what its samples cover (`scope`): `block` — only the samples
+taken during the block itself — or `window`, the sampler's whole ~10 s drain
+window when the block could not be placed (rows filed before 2026-11-12 have no
+`scope` and are all window-scoped). The report text follows it: only a
+block-scoped stack is called the cause; a window-scoped one is said to mix
+ordinary work. A block with **no sample in it** is its own finding,
+fingerprinted `event-loop-stall:no JS ran during the block`
+(`NO_JS_IN_BLOCK`): the thread ran no JS while blocked — off the CPU on an
+overloaded host or faulting its pages back in — so the place to look is the host
+(Debug → Timeline), not the code. A native call made *from* JS (a sync syscall,
+`Atomics.wait`) is still sampled, with its JS caller on the stack.
 
 ## Fingerprint on the STACK, not the leaf
 
@@ -118,6 +132,7 @@ rename.
   - Uses:
     - `config_v2.defineConfig`
     - `debug/trace/stall.StallLeafSchema`
+    - `debug/trace/stall.StallScopeSchema`
     - `debug/trace/stall.StallStackSchema`
     - `fields/bool/config.boolField`
   - Exports (types): `StallPayload`

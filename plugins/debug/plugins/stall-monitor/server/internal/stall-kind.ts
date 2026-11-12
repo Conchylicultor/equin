@@ -35,6 +35,39 @@ export const stallMonitorKind = ReportKind({
   },
 });
 
+// What the samples below can and cannot say, by what they cover.
+function evidenceParagraph(d: StallPayload): string {
+  if (d.scope === "block" && d.nSamples === 0) {
+    return (
+      `**No JS ran on the thread during the block.** The JSC sampling ` +
+      `profiler took no sample inside it, so no stack of this process blocked ` +
+      `the loop: the thread was off the CPU (descheduled on an overloaded host, ` +
+      `or faulting its memory back in) or in native work outside the VM. Look ` +
+      `at the host at this instant (Debug → Timeline: duress, load, memory ` +
+      `compression), not at code.`
+    );
+  }
+  if (d.scope === "block") {
+    return (
+      `**This report is the CAUSE.** The samples below are only the ones the ` +
+      `background-thread JSC sampling profiler took during the block itself, so ` +
+      `the stack named is what the thread ran while blocked. A block sampled ` +
+      `far below the window's rate spent most of its time off the CPU or ` +
+      `outside JS, and its few stacks are not shown to have caused it.`
+    );
+  }
+  return (
+    `**The block could not be placed: the samples below are the whole ` +
+    `window's.** No event-loop stall the loop probe registered in this ` +
+    `window is long enough to be this freeze, so its own samples could not be ` +
+    `selected. The window mixes ordinary work around the block, so no stack ` +
+    `below is shown to have blocked the thread` +
+    (d.scope === undefined
+      ? ` (this row was filed before freezes were scoped to their block).`
+      : `.`)
+  );
+}
+
 function renderDescription(row: ReportRow, d: StallPayload): string {
   const lines: string[] = [];
 
@@ -66,20 +99,28 @@ function renderDescription(row: ReportRow, d: StallPayload): string {
   lines.push(
     `The main event loop was **frozen for ${Math.round(d.durationMs)}ms** ` +
       `(threshold ${Math.round(d.thresholdMs)}ms) — the whole backend blocked, ` +
-      `serving nothing. The background-thread JSC sampling profiler kept sampling ` +
-      `the blocked stack, so the code that froze the loop is named below.`,
+      `serving nothing.`,
   );
   lines.push("");
+  lines.push(evidenceParagraph(d));
+  lines.push("");
   lines.push(
-    `**This report is the CAUSE.** Any slow-op reports (page loads, delivers, ` +
-      `flushNotifies) filed in the same window are **victims** of this freeze — ` +
-      `they were merely waiting on the blocked loop, not slow in themselves. Fix ` +
-      `the stall below and the collateral reports stop.`,
+    `Any slow-op reports (page loads, delivers, flushNotifies) filed in the ` +
+      `same window are **victims** of this freeze — they were merely waiting on ` +
+      `the blocked loop, not slow in themselves.`,
   );
   lines.push("");
   lines.push(`**Freeze duration:** ${Math.round(d.durationMs)}ms`);
   lines.push(`**Threshold:** ${Math.round(d.thresholdMs)}ms`);
-  lines.push(`**Samples:** ${d.nSamples} @ ~${d.sampleRateHz} Hz`);
+  lines.push(
+    `**Samples:** ${d.nSamples} @ ~${d.sampleRateHz} Hz` +
+      (d.spanMs !== undefined
+        ? ` over ${Math.round(d.spanMs)}ms (${d.scope ?? "window"})`
+        : "") +
+      (d.windowSampleRateHz !== undefined
+        ? ` — the thread was sampled at ~${d.windowSampleRateHz} Hz over the whole 10 s window`
+        : ""),
+  );
   lines.push(`**Dominant caller stack:** \`${d.culpritStack}\``);
 
   if (d.topLeaves.length > 0) {

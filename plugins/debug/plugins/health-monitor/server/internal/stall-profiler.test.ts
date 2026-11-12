@@ -1,9 +1,13 @@
-import { expect, test } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import {
   claimStackSampler,
   type StackFrame,
 } from "@plugins/infra/plugins/stack-sampler/core";
-import { aggregateTraces, samplesInStall } from "./stall-profiler";
+import {
+  aggregateTraces,
+  freezeEvidence,
+  samplesInStall,
+} from "./stall-profiler";
 
 // Synthetic traces: deterministic histogram + percentage math.
 test("aggregateTraces builds leaf + stack histograms with percentages", () => {
@@ -200,4 +204,84 @@ test("samplesInStall keeps the samples taken during the block, nothing around it
   // The tick due at 200 ran at 900: the block began after the turn at 100.
   const kept = samplesInStall(samples, { t0: 200, t1: 900 }, 100);
   expect(kept.map((s) => s.atMs)).toEqual([120, 400, 900]);
+});
+
+// A freeze (> 3 s) is attributed from the block's samples like a short stall —
+// never from the 10 s window's, which mixes the block with ordinary work.
+describe("freezeEvidence", () => {
+  const at = (atMs: number | null, name = `f${atMs}`) => ({
+    timestamp: 0,
+    frames: [jsFrame(name, "/x/a.ts", 1)],
+    atMs,
+    activity: null,
+  });
+
+  test("selects the samples of the registered block that explains the freeze", () => {
+    const window = [
+      at(1_000, "before"),
+      at(2_000, "before"),
+      ...[4_000, 5_000, 6_000, 7_000].map((ms) => at(ms, "blocker")),
+      at(8_000, "after"),
+      at(9_000, "after"),
+    ];
+    const { section, block } = freezeEvidence(
+      { window, earlier: [] },
+      // A short unrelated stall, and the block: the tick due at 3_900 ran at 7_100.
+      [
+        { t0: 1_500, t1: 2_100 },
+        { t0: 3_900, t1: 7_100 },
+      ],
+      3_250,
+      10_000,
+      100,
+    );
+    expect(block).toEqual({ t0: 3_900, t1: 7_100 });
+    expect(section.scope).toBe("block");
+    expect(section.nSamples).toBe(4);
+    expect(section.spanMs).toBe(3_300);
+    expect(section.windowSampleRateHz).toBe(1);
+    expect(section.topStacks).toHaveLength(1);
+    expect(section.topStacks[0]?.stack).toBe("blocker");
+  });
+
+  test("a block with no sample in it is reported as such, not as the window", () => {
+    const window = [at(1_000, "ordinary"), at(9_000, "ordinary")];
+    const { section } = freezeEvidence(
+      { window, earlier: [] },
+      [{ t0: 3_900, t1: 7_100 }],
+      3_250,
+      10_000,
+      100,
+    );
+    expect(section.scope).toBe("block");
+    expect(section.nSamples).toBe(0);
+    expect(section.sampleRateHz).toBe(0);
+    expect(section.topStacks).toEqual([]);
+  });
+
+  test("the block's first samples may sit in the batch drained before", () => {
+    const { section } = freezeEvidence(
+      { window: [at(5_000, "blocker")], earlier: [at(4_000, "blocker")] },
+      [{ t0: 3_900, t1: 7_100 }],
+      3_250,
+      10_000,
+      100,
+    );
+    expect(section.nSamples).toBe(2);
+  });
+
+  test("no registered stall long enough: the window's samples, labelled so", () => {
+    const window = [at(1_000), at(2_000), at(3_000)];
+    const { section, block } = freezeEvidence(
+      { window, earlier: [at(500)] },
+      [{ t0: 1_500, t1: 2_100 }],
+      3_250,
+      10_000,
+      100,
+    );
+    expect(block).toBeNull();
+    expect(section.scope).toBe("window");
+    expect(section.nSamples).toBe(3);
+    expect(section.spanMs).toBe(10_000);
+  });
 });
