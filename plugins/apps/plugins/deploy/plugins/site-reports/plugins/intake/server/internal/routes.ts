@@ -5,18 +5,12 @@ import {
 } from "@plugins/infra/plugins/endpoints/server";
 import {
   capBodySize,
-  hostOnly,
   requestClientIp,
 } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/host-only/server";
 import { createFanOutGate, ReportKind } from "@plugins/reports/server";
-import {
-  SITE_REPORT_LIMITS,
-  siteReportsEndpoint,
-  siteReportsListEndpoint,
-} from "../../core";
+import { SITE_REPORT_LIMITS, siteReportsEndpoint } from "../../core";
 import { createAdmissionGate } from "./admission";
 import { createSiteReportsIntake } from "./intake";
-import { listSiteReports } from "./list";
 import { createVisitorKey } from "./visitor-key";
 
 // The process's one intake: its gates and its pending aggregate are in memory,
@@ -46,8 +40,4 @@ export const handleSubmitSiteReports = rawEndpointHandler(
       intake.submit(body.reports, requestClientIp(req)),
     ),
   ),
-);
-
-export const handleListSiteReports = hostOnly(
-  implement(siteReportsListEndpoint, ({ query }) => listSiteReports(db, query)),
 );

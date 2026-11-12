@@ -3654,7 +3654,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `apps/deploy/analytics/sessions`
                   - `apps/deploy/site-messages/inbox`
                   - `apps/deploy/site-reports/import`
-        - **`site-reports`** — Umbrella for the error reports a deployed site's visitors' browsers send: the intake that ships inside the site (public bounded endpoint, aggregated table, host-only list) and the page channel that sends them (deduped, capped, batched).
+        - **`site-reports`** — Umbrella for the error reports a deployed site's visitors' browsers send: the intake that ships inside the site (public bounded endpoint, aggregated table, mirror set) and the page channel that sends them (deduped, capped, batched).
           - Plugins:
             - **`channel`** (excluded) — The website's report channel: registers itself as reports' reportChannel at register time, so report() on a site page — the page's collectors, which also catch what the live demo raises — sends to the site's own public intake (POST /api/site-reports) instead of a reports engine the site does not have: deduped by fingerprint (a repeat only counted), at most 20 fingerprints and 10 POSTs per visit, batched 5 s, backed off on failure (stopping after 5), anonymous (no client id or user agent, the pathname only, strings clamped). Excluded from every composition by default (base-exclusions); the website names it.
               - Web:
@@ -3697,7 +3697,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `WEBSITE_VISITOR_ERROR_KIND`
                   - `WebsiteVisitorErrorSchema`
                   - `websiteVisitorErrorSummary`
-            - **`intake`** — Owns site_reports and site_report_drops: the public POST /api/site-reports endpoint a site page's report channel posts batches to (body capped at 64 KB, at most 10 reports; per-visitor and global batch budgets per minute keyed by a per-process salted IP hash, never stored; each report identified by its ReportKind's own schema and fingerprint and a new fingerprint admitted through the reports fan-out ceiling), aggregated in memory and flushed once a minute as one upsert per fingerprint, the table capped at 2,000 rows, every refusal counted per minute and reason, a 30-day sweep, the site_reports mirror set (the change stream the deploy app's site-reports/import reduces), and the host-only list.
+            - **`intake`** — Owns site_reports and site_report_drops: the public POST /api/site-reports endpoint a site page's report channel posts batches to (body capped at 64 KB, at most 10 reports; per-visitor and global batch budgets per minute keyed by a per-process salted IP hash, never stored; each report identified by its ReportKind's own schema and fingerprint and a new fingerprint admitted through the reports fan-out ceiling), aggregated in memory and flushed once a minute as one upsert per fingerprint, the table capped at 2,000 rows, every refusal counted per minute and reason, a 30-day sweep, and the site_reports mirror set (the change stream the deploy app's site-reports/import reduces).
               - Server:
                 - Contributes:
                   - `table-mirror-set` "site_reports"
@@ -3705,7 +3705,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `change-feed-exclusion` "site_reports"
                 - Uses:
                   - `apps/deploy/analytics/host-only.capBodySize`
-                  - `apps/deploy/analytics/host-only.hostOnly`
                   - `apps/deploy/analytics/host-only.requestClientIp`
                   - `database.db`
                   - `database/sql-column.parsedJson`
@@ -3722,9 +3721,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Register:
                   - `defineJob('retention.site_reports')`
                   - `defineJob('retention.site_report_drops')`
-                - Routes:
-                  - `POST /api/site-reports`
-                  - `GET /api/host-only/site-reports`
+                - Routes: `POST /api/site-reports`
               - Core:
                 - Uses:
                   - `infra/endpoints.defineEndpoint`
@@ -3732,25 +3729,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `reports.CLIENT_REPORT_SOURCES`
                 - Exports (types):
                   - `SiteReportDropReason`
-                  - `SiteReportDropRecord`
                   - `SiteReportEntry`
                   - `SiteReportRecord`
                   - `SiteReportsBody`
-                  - `SiteReportsListQuery`
-                  - `SiteReportsPage`
                   - `SiteReportsResponse`
                 - Exports (values):
                   - `SITE_REPORT_DROP_REASONS`
                   - `SITE_REPORT_LIMITS`
                   - `SITE_REPORTS_MIRROR_SET_ID`
-                  - `SITE_REPORTS_PAGE_DEFAULT`
-                  - `SITE_REPORTS_PAGE_MAX`
-                  - `SiteReportDropRecordSchema`
                   - `SiteReportRecordSchema`
                   - `siteReportsEndpoint`
-                  - `siteReportsListEndpoint`
-                  - `SiteReportsListQuerySchema`
-                  - `SiteReportsPageSchema`
               - Cross-plugin:
                 - Imported by:
                   - `apps/deploy/site-reports`

@@ -7,8 +7,9 @@
  *  3. the page sends ONE batch to POST /api/site-reports (its report
  *     channel, never /api/reports — the site's server has no reports engine)
  *     once the batch delay passes;
- *  4. after the intake's flush window, the host-only list holds one row for
- *     it whose count is 3 — and its path is the page's pathname, no query.
+ *  4. after the intake's flush window, the site's `site_reports` table (read
+ *     straight from the deploy's database) holds one row for it whose count
+ *     is 3 — and its path is the page's pathname, no query.
  *  (The thrown errors are the point: the run's PAGEERROR lines are expected.)
  *
  * Manual only. Needs the website composition built from this checkout:
@@ -17,18 +18,15 @@
  */
 import type { Request } from "playwright";
 import {
-  agentFetch,
+  onBeforeFinish,
+  openDeployDb,
   pathUrl,
   report,
   waitFor,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { answerTipsAsTheyShow } from "@plugins/hints/e2e";
-import {
-  SITE_REPORT_LIMITS,
-  SiteReportsPageSchema,
-  type SiteReportsPage,
-} from "@plugins/apps/plugins/deploy/plugins/site-reports/plugins/intake/core";
+import { SITE_REPORT_LIMITS } from "@plugins/apps/plugins/deploy/plugins/site-reports/plugins/intake/core";
 
 const BOOT_TIMEOUT_MS = 60_000;
 
@@ -97,17 +95,21 @@ await withBrowser(async (h) => {
   );
 
   // ── 4. one row, its count, after the intake's flush ────────────────
+  // Read straight from the deploy's database: the site's box has no route
+  // that lists its reports (the computer reads them as a mirror change stream).
+  const db = openDeployDb();
+  onBeforeFinish(() => db.close());
   const listed = await waitFor(
-    async (): Promise<SiteReportsPage | null> => {
-      const res = await agentFetch("/api/host-only/site-reports?limit=200");
-      if (!res.ok) return null;
-      return SiteReportsPageSchema.parse(await res.json());
-    },
-    (p) => p?.reports.some((row) => row.message.includes(nonce)) ?? false,
+    async () =>
+      db.query<{ count: number; path: string }>(
+        "SELECT count, path FROM site_reports WHERE position($1 in message) > 0",
+        [nonce],
+      ),
+    (rows) => rows.length > 0,
     { timeoutMs: SITE_REPORT_LIMITS.windowMs + 30_000, intervalMs: 2_000 },
   );
-  const row = listed.value?.reports.find((x) => x.message.includes(nonce));
-  r.ok("the site's server holds one row for it", row !== undefined);
+  r.ok("the site's server holds one row for it", listed.value.length === 1);
+  const row = listed.value[0];
   r.eq("its count is every occurrence", row?.count, 3);
   r.ok(
     "its path is the page's pathname, no query",

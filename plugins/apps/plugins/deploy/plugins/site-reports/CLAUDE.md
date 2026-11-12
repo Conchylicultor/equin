@@ -4,7 +4,7 @@ Errors a deployed site's visitors hit, reported to the site's own server. The
 split mirrors `site-messages` and `analytics`:
 
 - `intake` — ships inside the site. It has the public bounded endpoint, the
-  aggregated table, the drop counts, the sweep and the host-only list.
+  aggregated table, the drop counts, the sweep and the mirror set.
 - `channel` — ships in the site's page. It is where `report()` sends on a site
   (reports/web's `reportChannel`): deduped, capped, batched, backed off.
 
@@ -15,7 +15,8 @@ agent-runtime, which the website `excludes`. Design:
 `research/2026-11-11-global-website-demo-error-reports.md`.
 
 - `import` — ships in the local app only. An hourly pull over SSH of the
-  host-only list into this computer's Reports, marked as website visitors:
+  `site_reports` mirror change stream into this computer's Reports, reduced
+  as it arrives, marked as website visitors:
   untrusted, reduced to typed fields, never auto-investigated. Its
   CLAUDE.md has the threat model.
 
@@ -23,7 +24,7 @@ agent-runtime, which the website `excludes`. Design:
 
 ## Plugin reference
 
-- Description: Umbrella for the error reports a deployed site's visitors' browsers send: the intake that ships inside the site (public bounded endpoint, aggregated table, host-only list) and the page channel that sends them (deduped, capped, batched).
+- Description: Umbrella for the error reports a deployed site's visitors' browsers send: the intake that ships inside the site (public bounded endpoint, aggregated table, mirror set) and the page channel that sends them (deduped, capped, batched).
 - Sub-plugins:
   - **`channel`** (excluded) — The website's report channel: registers itself as reports' reportChannel at register time, so report() on a site page — the page's collectors, which also catch what the live demo raises — sends to…
   - **`import`** — Errors a deployed site's visitors hit, read hourly from the site's box over SSH (its mirror change stream, reduced as it arrives) into this computer's Reports as untrusted website-visitor reports…

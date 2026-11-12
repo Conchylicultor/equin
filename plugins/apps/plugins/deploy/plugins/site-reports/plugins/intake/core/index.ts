@@ -8,22 +8,7 @@ export type {
   SiteReportsBody,
   SiteReportsResponse,
 } from "./internal/body";
-export {
-  SITE_REPORTS_PAGE_DEFAULT,
-  SITE_REPORTS_PAGE_MAX,
-  SiteReportDropRecordSchema,
-  SiteReportRecordSchema,
-  SiteReportsListQuerySchema,
-  SiteReportsPageSchema,
-} from "./internal/record";
-export type {
-  SiteReportDropRecord,
-  SiteReportRecord,
-  SiteReportsListQuery,
-  SiteReportsPage,
-} from "./internal/record";
-export {
-  siteReportsEndpoint,
-  siteReportsListEndpoint,
-} from "./internal/endpoints";
+export { SiteReportRecordSchema } from "./internal/record";
+export type { SiteReportRecord } from "./internal/record";
+export { siteReportsEndpoint } from "./internal/endpoints";
 export { SITE_REPORTS_MIRROR_SET_ID } from "./internal/mirror";
