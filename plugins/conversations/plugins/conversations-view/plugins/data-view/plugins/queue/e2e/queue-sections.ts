@@ -480,10 +480,11 @@ await withBrowser(async (h) => {
     JSON.stringify(reordered.value),
   );
 
-  // 6. Move to → A, from the row's menu.
+  // 6. Move to → A, from the row's ⋯ (Move to lives in the overflow panel).
   const zRow = page.locator("div[data-row-key]").filter({ hasText: z }).first();
   await zRow.hover();
-  await zRow.getByRole("button", { name: "Move to…" }).click();
+  await zRow.getByRole("button", { name: "More" }).click();
+  await page.getByRole("button", { name: "Move to…" }).click();
   await snap(page, OUT, "6-move-to-menu");
   await page.getByRole("menuitemcheckbox", { name: A }).click();
   const moved = await waitFor(

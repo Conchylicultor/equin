@@ -8,18 +8,18 @@
 //   Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
 {
   // The conversation sidebar is a narrow column and these rows already carry a
-  // title, chips and a status dot, so only Pin and Move to — the actions a
-  // user reaches for repeatedly while triaging the queue into sections — keep
-  // an inline icon (Move to is itself a menu, so it cannot fold into the `⋯`).
-  // The queue moves and Close fold behind the row's single `⋯`. This split is a judgement
-  // about THIS surface's width; it is authored, never inferred.
+  // title, chips and a status dot, so only Pin — the action a user reaches for
+  // repeatedly while triaging the queue — keeps an inline icon. Move to (whose
+  // section menu opens from its row in the panel), the queue moves and Close
+  // fold behind the row's single `⋯`. This split is a judgement about THIS
+  // surface's width; it is authored, never inferred.
   "items": [
     "conversations.conversations-view.data-view.queue:pin",
-    "conversations.conversations-view.data-view.queue:move-to",
     {
       "type": "overflow",
       "id": "row-overflow",
       "items": [
+        "conversations.conversations-view.data-view.queue:move-to",
         "conversations.conversations-view.data-view.queue:promote",
         "conversations.conversations-view.data-view.queue:step-down",
         "conversations.conversations-view.data-view.queue:demote",

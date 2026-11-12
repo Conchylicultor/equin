@@ -22,6 +22,7 @@ const OUT = arg("out") ?? "/tmp/queue-overflow";
 
 /** The actions the committed config puts inside the bucket — never inline. */
 const BUCKETED = [
+  "Move to…",
   "Move to top",
   "Move down 5",
   "Move to bottom",

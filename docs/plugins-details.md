@@ -45106,6 +45106,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `primitives/css/fill.Fill`
           - `primitives/css/row.Row`
+          - `primitives/css/row.RowControlProps`
           - `primitives/css/text.Text`
           - `primitives/css/ui-kit.MenuSurfaceProvider`
           - `primitives/latest-ref.useLatestRef`

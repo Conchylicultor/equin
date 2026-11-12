@@ -78,15 +78,28 @@ export function IconButton({
   // — this is a constant `"full"` and the declaration is a no-op.
   const form = useActionForm(ICON_BUTTON_LADDER);
   if (form === "row") {
+    // Everything but the full-form-only dials rides along, so an IconButton
+    // that is something's trigger (`render={<IconButton …/>}` on a menu) keeps
+    // its ref, aria-* and handlers — and so still opens its menu — as a row.
+    const {
+      className: _className,
+      style: _style,
+      type: _type,
+      render: _render,
+      nativeButton: _nativeButton,
+      tooltipSide: _tooltipSide,
+      tooltipAlign: _tooltipAlign,
+      shape: _shape,
+      aspect: _aspect,
+      loading: _loading,
+      ...rowProps
+    } = props;
     return (
       <PanelActionRow
+        {...rowProps}
         icon={icon}
         active={active}
         label={label}
-        onClick={props.onClick}
-        onAuxClick={props.onAuxClick}
-        onMouseDown={props.onMouseDown}
-        disabled={props.disabled}
         shortcut={shortcut}
       />
     );

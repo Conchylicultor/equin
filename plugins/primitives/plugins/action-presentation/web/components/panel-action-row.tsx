@@ -1,6 +1,10 @@
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import type { IconRef } from "@plugins/ui/plugins/icons/core";
-import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
+import {
+  Row,
+  type RowControlProps,
+} from "@plugins/primitives/plugins/css/plugins/row/web";
+import type { Passthrough } from "@plugins/primitives/plugins/passthrough/core";
 import { MenuSurfaceProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -8,7 +12,16 @@ import { Kbd } from "@plugins/primitives/plugins/overlay/plugins/tooltip/web";
 import { formatShortcutLabel } from "@plugins/primitives/plugins/shortcuts/web";
 import type { MouseEventHandler } from "react";
 
-export interface PanelActionRowProps {
+/**
+ * The passthrough lands on the row (`Row`'s own rule: its box, the control
+ * attributes on its control). It is what lets a widget that IS a trigger — an
+ * `IconButton` rendered as a menu's trigger — keep working once relocated: the
+ * trigger's ref, `aria-*` and pointer/keyboard handlers reach the row.
+ */
+export interface PanelActionRowProps
+  extends
+    Passthrough,
+    Omit<RowControlProps, "onClick" | "onAuxClick" | "onMouseDown"> {
   icon: IconRef;
   /** Draw the icon in its active form (the theme's active fill). */
   active?: boolean;
@@ -69,6 +82,7 @@ export function PanelActionRow({
   onClick,
   onAuxClick,
   onMouseDown,
+  ...rest
 }: PanelActionRowProps) {
   // The row rung IS the panel form, so this row says it is on a menu surface
   // itself (panel-row corners, menu headings). The panel cannot say it: a
@@ -77,6 +91,7 @@ export function PanelActionRow({
   return (
     <MenuSurfaceProvider value={true}>
     <Row
+        {...rest}
       icon={<Icon icon={icon} active={active} />}
       onClick={onClick}
       onAuxClick={onAuxClick}
