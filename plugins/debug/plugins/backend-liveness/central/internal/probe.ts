@@ -3,7 +3,7 @@ import { z } from "zod";
 import { defineTimer } from "@plugins/infra/plugins/background/plugins/timer/central";
 import { GATEWAY_PORT } from "@plugins/infra/plugins/namespace/core";
 import { PRINCIPAL_HEADER } from "@plugins/framework/plugins/principal/core";
-import { fileReportFromProcess } from "@plugins/reports/plugins/outbox/core";
+import { fileReportFromProcess } from "@plugins/reports/plugins/outbox/plugins/file/core";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import {
   PROBE_EVERY_MS,

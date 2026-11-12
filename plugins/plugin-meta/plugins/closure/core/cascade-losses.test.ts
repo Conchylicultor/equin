@@ -66,6 +66,7 @@ function graph(): EdgeGraph {
     edges,
     rules: [],
     hostProviders: new Map(),
+    hostRoots: new Map(),
   };
 }
 

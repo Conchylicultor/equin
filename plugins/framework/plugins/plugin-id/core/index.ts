@@ -2,6 +2,7 @@ export type {
   PluginId,
   RuntimeFolder,
   HostId,
+  HostRoot,
   LeafFolder,
   PluginFolder,
 } from "./plugin-id";
@@ -23,6 +24,8 @@ export {
   SHIPPED_RUNTIME_FOLDERS,
   HOSTS,
   hostRuntimeFolders,
+  HOST_ROOTS,
+  hostRootFoldersOf,
   parseHosts,
   TESTING_FOLDER,
   TESTS_DIR,

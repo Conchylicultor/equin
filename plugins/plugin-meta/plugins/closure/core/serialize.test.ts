@@ -43,6 +43,10 @@ function tinyGraph(): EdgeGraph {
       { then: c, owner: a, users: [b], space: "field-type", key: "date" },
     ],
     hostProviders: new Map([[c, ["SomeService"]]]),
+    hostRoots: new Map([
+      ["desktop", [a]],
+      ["browser", []],
+    ]),
   };
 }
 

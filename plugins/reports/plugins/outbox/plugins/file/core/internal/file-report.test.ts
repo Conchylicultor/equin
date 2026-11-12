@@ -31,7 +31,7 @@ describe("fileReportFromProcess", () => {
         data: { n: 1 },
         code: {
           mergeBase: MERGE_BASE,
-          paths: ["plugins/reports/plugins/outbox/core/index.ts"],
+          paths: ["plugins/reports/plugins/outbox/plugins/file/core/index.ts"],
         },
       },
       { dir, now: 1234 },
@@ -52,7 +52,7 @@ describe("fileReportFromProcess", () => {
       occurredAt: 1234,
       code: {
         mergeBase: MERGE_BASE,
-        paths: ["plugins/reports/plugins/outbox/core/index.ts"],
+        paths: ["plugins/reports/plugins/outbox/plugins/file/core/index.ts"],
       },
       writer: { pid: process.pid },
     });

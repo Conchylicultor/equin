@@ -104,6 +104,26 @@ host picks its providers from these (codegen's browser-host derivation).
 `host-services:provider-placement` keeps the cascade empty — a host provider
 has no other barrel, no sub-plugin and no importer.
 
+### Host roots: in every composition on their host, by construction
+
+A host's **process root** — the desktop backend's entry, `server-core`'s
+`bin/` (`HOST_ROOTS`, `framework/plugin-id`) — is imported by no barrel, so no
+edge reaches it or what it calls into, yet it runs under every composition its
+host boots. `EdgeGraph.hostRoots` names, per host, the root's plugin and every
+plugin its root folder imports (the `cross-refs` facet's `rootUses`);
+`resolveComposition` seeds them into every composition on that host (membership
+`required`, inclusion origin `host-root`). They are seeded after the negative
+pass, so a negative naming one leaves it bundled and reported in
+`unsatisfiedExclusions`. They are NOT in `expandEntrySeeds` — that is what the
+manifest declares, the territory the `excludes` gate measures; every desktop
+row would otherwise contain the root.
+
+Why: the root wrote every boot's `start` line through `debug/boot-events` and
+the `ready` line came from boot-events' `onReady` — a composition without
+boot-events (the website) booted it half-way, and every backend read as wedged
+(2026-11-12). What the root needs now ships with every desktop bundle, so a
+root calling into a plugin whose hooks finish the job cannot be left half-run.
+
 **Conservative opt-IN model — NOTHING soft is included by default.** The bundle
 is the hard closure of (entries ∪ explicitly selected contributors). Soft
 contributors are *options* a human/agent reviews and selects; they are never
@@ -425,8 +445,12 @@ Run with `./equin test plugins/plugin-meta/plugins/closure`.
 
 - Core:
   - Uses:
+    - `framework/plugin-id.asPluginId`
+    - `framework/plugin-id.HOST_ROOTS`
     - `framework/plugin-id.HostId`
     - `framework/plugin-id.hostRuntimeFolders`
+    - `framework/plugin-id.HOSTS`
+    - `framework/plugin-id.parseHosts`
     - `framework/plugin-id.PluginId`
     - `framework/plugin-id.RuntimeFolder`
     - `framework/plugin-id.SHIPPED_RUNTIME_FOLDERS`

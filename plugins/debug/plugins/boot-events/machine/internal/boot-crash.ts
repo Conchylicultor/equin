@@ -12,7 +12,7 @@ import {
   fileReportFromProcess,
   mergeBaseWithMain,
   type ProcessReport,
-} from "@plugins/reports/plugins/outbox/core";
+} from "@plugins/reports/plugins/outbox/plugins/file/core";
 
 // A boot that throws must reach Reports. The process's crash listeners
 // (server-core's, installed before the graph loads) dispatch to the reports

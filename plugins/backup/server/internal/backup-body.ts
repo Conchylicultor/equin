@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
-import { fileReportFromProcess } from "@plugins/reports/plugins/outbox/core";
+import { fileReportFromProcess } from "@plugins/reports/plugins/outbox/plugins/file/core";
 import type {
   BackupSourceFailed,
   BackupSourceReport,

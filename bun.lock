@@ -6839,6 +6839,10 @@
       "name": "@equin/plugin-reports-outbox",
       "version": "0.0.1",
     },
+    "plugins/reports/plugins/outbox/plugins/file": {
+      "name": "@equin/plugin-reports-outbox-file",
+      "version": "0.0.1",
+    },
     "plugins/reports/plugins/page-doc-rank-drift": {
       "name": "@equin/plugin-reports-page-doc-rank-drift",
       "version": "0.0.1",
@@ -10902,6 +10906,8 @@
     "@equin/plugin-reports-optimistic-rejection": ["@equin/plugin-reports-optimistic-rejection@workspace:plugins/reports/plugins/optimistic-rejection"],
 
     "@equin/plugin-reports-outbox": ["@equin/plugin-reports-outbox@workspace:plugins/reports/plugins/outbox"],
+
+    "@equin/plugin-reports-outbox-file": ["@equin/plugin-reports-outbox-file@workspace:plugins/reports/plugins/outbox/plugins/file"],
 
     "@equin/plugin-reports-page-doc-rank-drift": ["@equin/plugin-reports-page-doc-rank-drift@workspace:plugins/reports/plugins/page-doc-rank-drift"],
 

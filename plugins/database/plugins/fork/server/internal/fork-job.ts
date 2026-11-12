@@ -2,7 +2,7 @@ import { z } from "zod";
 import { NonRetryableError } from "@plugins/infra/plugins/jobs/server";
 import { defineSupervisedJob } from "@plugins/infra/plugins/jobs/plugins/supervised-job/server";
 import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
-import { fileReportFromProcess } from "@plugins/reports/plugins/outbox/core";
+import { fileReportFromProcess } from "@plugins/reports/plugins/outbox/plugins/file/core";
 import {
   describeUndeclaredSchema,
   forkDatabase,

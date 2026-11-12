@@ -10,7 +10,7 @@ import {
 import type {
   MergeBaseResult,
   ProcessReport,
-} from "@plugins/reports/plugins/outbox/core";
+} from "@plugins/reports/plugins/outbox/plugins/file/core";
 import type { OwnerShare } from "./thread-attribution";
 import type { ThreadStall, ThreadSummary } from "./thread-watch";
 

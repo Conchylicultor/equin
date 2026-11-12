@@ -8,7 +8,7 @@ import {
 import {
   fileReportFromProcess,
   mergeBaseWithMain,
-} from "@plugins/reports/plugins/outbox/core";
+} from "@plugins/reports/plugins/outbox/plugins/file/core";
 import { checkProgressLogDir } from "../data-dirs";
 import {
   newFsCallTally,

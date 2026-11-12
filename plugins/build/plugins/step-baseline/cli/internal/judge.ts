@@ -5,7 +5,7 @@ import {
   worktreeDataDir,
 } from "@plugins/infra/plugins/paths/server";
 import type { Namespace } from "@plugins/infra/plugins/namespace/core";
-import { fileReportFromProcess } from "@plugins/reports/plugins/outbox/core";
+import { fileReportFromProcess } from "@plugins/reports/plugins/outbox/plugins/file/core";
 import {
   buildIdTime,
   detectStepRegressions,

@@ -53,6 +53,7 @@ function makeGraph(spec: {
     edges,
     rules: [],
     hostProviders: new Map(),
+    hostRoots: new Map(),
   };
 }
 

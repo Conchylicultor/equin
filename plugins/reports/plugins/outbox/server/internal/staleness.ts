@@ -1,5 +1,5 @@
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
-import type { OutboxCode } from "../../core";
+import type { OutboxCode } from "@plugins/reports/plugins/outbox/plugins/file/core";
 
 /** Same generosity as the writer's merge-base read — see merge-base.ts. */
 const DIFF_TIMEOUT_MS = 30_000;

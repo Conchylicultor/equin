@@ -9,6 +9,7 @@ import { resolvePluginSpecifier } from "@plugins/plugin-meta/plugins/plugin-tree
 import {
   RUNTIME_FOLDERS,
   SHIPPED_RUNTIME_FOLDERS,
+  hostRootFoldersOf,
   type PluginId,
   type RuntimeFolder,
   asPath,
@@ -32,6 +33,7 @@ import {
   type SourceText,
 } from "@plugins/plugin-meta/plugins/token-usage/core";
 import {
+  type ApiUse,
   type CrossRefsData,
   type DeclaredTokenGroup,
   type KeyRef,
@@ -292,6 +294,12 @@ export default createFacet<CrossRefsData>({
       const rtDir = joinAppPath(ctx.dir, rt);
       if (pathExistsSync(rtDir)) raw[rt] = parseRawUses(rtDir);
     }
+    // A host root's folder (server-core's `bin/`): no barrel, but every
+    // composition on its host runs it — see `HOST_ROOTS`.
+    const rawRoot = hostRootFoldersOf(ctx.pluginId).map(({ folder }) => {
+      const dir = joinAppPath(ctx.dir, folder);
+      return { folder, uses: pathExistsSync(dir) ? parseRawUses(dir) : [] };
+    });
     const coreDir = joinAppPath(ctx.dir, "core");
     const webDir = joinAppPath(ctx.dir, "web");
     const keyDefs: KeyRef[] = (
@@ -318,6 +326,8 @@ export default createFacet<CrossRefsData>({
       apiUses: emptyByRuntime(),
       importedBy: [],
       raw,
+      rootUses: [],
+      rawRoot,
       tokenGroups: pathExistsSync(coreDir) ? parseTokenGroups(coreDir) : [],
       tokenUses: [],
       tokenUsedBy: [],
@@ -355,9 +365,11 @@ export default createFacet<CrossRefsData>({
     for (const node of tree.byDir.values()) {
       const data = getFacet(node, crossRefsFacetDef);
       if (!data?.raw) continue;
-      for (const rt of RUNTIME_FOLDERS) {
+      // Resolve one folder's raw imports into its ApiUses (filed under it).
+      const resolveUses = (raw: readonly RawUse[]): ApiUse[] => {
+        const out: ApiUse[] = [];
         const seen = new Set<string>();
-        for (const use of data.raw[rt]) {
+        for (const use of raw) {
           const r = resolvePluginSpecifier(tree, use.specifier);
           // An unresolved @plugins/… import is either a genuine bug — already
           // caught loudly by `type-check` (tsc) and the boundary checker at
@@ -381,13 +393,25 @@ export default createFacet<CrossRefsData>({
           const key = `${r.node.id}:${barrel}:${use.symbol ?? ""}`;
           if (seen.has(key)) continue;
           seen.add(key);
-          data.apiUses[rt].push(
+          out.push(
             use.symbol === undefined
               ? { plugin: r.node.id, barrel }
               : { plugin: r.node.id, barrel, symbol: use.symbol },
           );
         }
-      }
+        return out;
+      };
+      for (const rt of RUNTIME_FOLDERS)
+        data.apiUses[rt].push(...resolveUses(data.raw[rt]));
+      data.rootUses = (data.rawRoot ?? []).map(({ folder, uses }) => ({
+        folder,
+        uses: resolveUses(uses).sort((a, b) =>
+          `${a.plugin}:${a.barrel}:${a.symbol ?? ""}`.localeCompare(
+            `${b.plugin}:${b.barrel}:${b.symbol ?? ""}`,
+          ),
+        ),
+      }));
+      data.rawRoot = undefined;
       // Clear the transient raw data so it doesn't leak into stored facet data.
       data.raw = undefined;
     }

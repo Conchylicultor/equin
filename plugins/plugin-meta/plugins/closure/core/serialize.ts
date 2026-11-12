@@ -1,4 +1,7 @@
-import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
+import {
+  parseHosts,
+  type PluginId,
+} from "@plugins/framework/plugins/plugin-id/core";
 import type { Edge, EdgeGraph, UsageRule } from "./types";
 
 /**
@@ -18,6 +21,8 @@ export interface SerializedEdgeGraph {
   rules: UsageRule[];
   /** {@link EdgeGraph.hostProviders}: host provider → the bindings it provides. */
   hostProviders: Record<string, string[]>;
+  /** {@link EdgeGraph.hostRoots}: host → the plugins its process root runs. */
+  hostRoots: Record<string, PluginId[]>;
 }
 
 function mapToRecord(map: Map<PluginId, PluginId[]>): Record<string, PluginId[]> {
@@ -43,6 +48,7 @@ export function serializeEdgeGraph(graph: EdgeGraph): SerializedEdgeGraph {
     edges: graph.edges,
     rules: graph.rules,
     hostProviders: Object.fromEntries(graph.hostProviders),
+    hostRoots: Object.fromEntries(graph.hostRoots),
   };
 }
 
@@ -61,6 +67,12 @@ export function deserializeEdgeGraph(s: SerializedEdgeGraph): EdgeGraph {
       Object.entries(s.hostProviders).map(([id, bindings]) => [
         id as PluginId,
         bindings,
+      ]),
+    ),
+    hostRoots: new Map(
+      Object.entries(s.hostRoots).map(([host, ids]) => [
+        parseHosts([host], "serialized edge graph")[0]!,
+        ids,
       ]),
     ),
   };

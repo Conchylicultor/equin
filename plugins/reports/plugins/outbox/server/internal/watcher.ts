@@ -11,8 +11,8 @@ import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { getMainRepoRoot } from "@plugins/infra/plugins/spawn/core";
 import { isReportKindRegistered } from "@plugins/reports/server";
 import { recordReport } from "@plugins/reports/plugins/engine/server";
-import { repositoryOf } from "../../core";
-import { reportOutboxDir } from "../../data-dirs";
+import { repositoryOf } from "@plugins/reports/plugins/outbox/plugins/file/core";
+import { reportOutboxDir } from "@plugins/reports/plugins/outbox/plugins/file/data-dirs";
 import { drainOutbox, type DrainDeps } from "./drain";
 import {
   acquireDrainerLock,

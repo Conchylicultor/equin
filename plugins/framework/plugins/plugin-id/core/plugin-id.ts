@@ -323,6 +323,52 @@ export function parseHosts(raw: readonly string[], owner: string): HostId[] {
   return out;
 }
 
+/** A host's PROCESS ROOT: the folder of one plugin holding the entry point a
+ *  host process runs — code no barrel imports, so no composition edge reaches
+ *  it, and which runs in EVERY composition booted on that host.
+ *
+ *  What a root imports is therefore a dependency of every composition on its
+ *  host, and the closure engine makes it one (`EdgeGraph.hostRoots`): the
+ *  `cross-refs` facet records the root folder's imports, and resolution seeds
+ *  the root plugin and every plugin it imports into each composition on the
+ *  host. Without it, a root that calls into a plugin whose hooks finish the
+ *  job ran that plugin's code in every backend but its hooks only where some
+ *  composition happened to bundle it — the serving entry wrote every boot's
+ *  `start` line (boot-events) and the `ready` line came from boot-events'
+ *  `onReady`, so every website backend read as wedged at boot (2026-11-12).
+ *
+ *  A browser host's root is `server-core`'s `core/browser-host.ts`, a barrel
+ *  folder whose imports are already edges, so it declares none here. */
+export interface HostRoot {
+  /** The plugin holding the root, as its dotted id. */
+  plugin: string;
+  /** The leaf folder holding the root's entry files (every file in it). */
+  folder: LeafFolder;
+}
+
+export const HOST_ROOTS: Record<HostId, readonly HostRoot[]> = {
+  // The desktop backend: `serve` (bin/serve.ts, under every composition's
+  // entry) and `exec` (bin/active-runtime.ts).
+  desktop: [{ plugin: "framework.server-core", folder: "bin" }],
+  browser: [],
+};
+
+/** The root folders `pluginId` holds, each with the hosts it roots — `[]` for
+ *  every plugin but a host root's. */
+export function hostRootFoldersOf(
+  pluginId: string,
+): { folder: LeafFolder; hosts: HostId[] }[] {
+  const out: { folder: LeafFolder; hosts: HostId[] }[] = [];
+  for (const host of HOSTS)
+    for (const root of HOST_ROOTS[host]) {
+      if (root.plugin !== pluginId) continue;
+      const known = out.find((r) => r.folder === root.folder);
+      if (known) known.hosts.push(host);
+      else out.push({ folder: root.folder, hosts: [host] });
+    }
+  return out;
+}
+
 /** The runtimes whose imports ship on SOME host — the union of every host's
  *  folders. For a reading that is not about one composition (the token and key
  *  scans of the cross-refs facet); a closure reads its own hosts' set. */

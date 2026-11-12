@@ -58,7 +58,7 @@ import {
   socketsDir,
 } from "../../data-dirs";
 import { gatewayLogs } from "@plugins/infra/plugins/launcher/plugins/gateway-logs/data-dirs";
-import { reportOutboxDir } from "@plugins/reports/plugins/outbox/data-dirs";
+import { reportOutboxDir } from "@plugins/reports/plugins/outbox/plugins/file/data-dirs";
 import { listenFlag } from "./listen";
 import {
   pickRuntimeEnv,

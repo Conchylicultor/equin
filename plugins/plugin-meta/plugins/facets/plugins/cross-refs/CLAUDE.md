@@ -34,6 +34,7 @@ existing web slot. The diff projection (`crossRefsToComparable`, the deduped
 - Core:
   - Uses:
     - `framework/plugin-id.asPath`
+    - `framework/plugin-id.LeafFolder`
     - `framework/plugin-id.PluginId`
     - `framework/plugin-id.RUNTIME_FOLDERS`
     - `framework/plugin-id.RuntimeFolder`

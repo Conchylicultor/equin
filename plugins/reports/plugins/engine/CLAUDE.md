@@ -280,6 +280,7 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
     - `renderReportTask`
     - `reportOutboxFatalSink`
     - `reportOutboxSink`
+    - `ReportOutboxWriter`
     - `reportWorklist`
     - `reportWorklistCounts`
     - `restateReportOccurrence`

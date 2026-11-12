@@ -141,6 +141,31 @@ test("default composition: small hard-only bundle + entry/required classificatio
   expect(comp.bundle.size).toBeLessThan(tree.byDir.size / 2);
 });
 
+// THE HOST ROOT: the desktop backend's entry (server-core's `bin/`) writes
+// every boot's `start` line through boot-events and relies on boot-events'
+// `onReady` for the `ready` line. A composition that did not bundle
+// boot-events booted it half-way — every website backend read as wedged.
+test("every desktop composition bundles what the backend's root runs", () => {
+  const roots = graph.hostRoots.get("desktop") ?? [];
+  expect(roots).toContain(asPluginId("framework.server-core"));
+  expect(roots).toContain(asPluginId("debug.boot-events"));
+  expect(graph.hostRoots.get("browser")).toEqual([]);
+  const lean: CompositionManifest = {
+    name: "probe",
+    hosts: ["desktop"],
+    entryPoints: [asPluginId("ui.logo")],
+    selectedContributors: [],
+  };
+  const comp = resolveComposition(graph, lean);
+  for (const id of roots) expect(comp.bundle.has(id)).toBe(true);
+  expect(
+    explainInclusion(graph, lean, asPluginId("debug.boot-events"))?.originKind,
+  ).toBe("host-root");
+  // A browser host boots no desktop root.
+  const browser = resolveComposition(graph, { ...lean, hosts: ["browser"] });
+  expect(browser.bundle.has(asPluginId("debug.boot-events"))).toBe(false);
+});
+
 // THE CONSERVATIVE WIN: under the old opt-out model, selecting `apps.agent-manager`
 // dragged in ~64% of the repo (every app registered into the `Apps.App` switcher
 // slot). Now nothing soft is auto-included, so sonata's whole subtree stays out of
@@ -598,6 +623,7 @@ function syntheticGraph(
     })),
     rules: [],
     hostProviders: new Map(),
+    hostRoots: new Map(),
   };
 }
 

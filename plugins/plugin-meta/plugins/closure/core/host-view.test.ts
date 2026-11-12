@@ -53,6 +53,7 @@ function graph(): EdgeGraph {
     edges: list,
     rules: [],
     hostProviders: new Map(),
+    hostRoots: new Map(),
   };
 }
 
@@ -153,4 +154,59 @@ test("a composition declaring no host is refused", () => {
   expect(() => resolveComposition(graph(), manifest([]))).toThrow(
     /at least one host/,
   );
+});
+
+// ── Host roots: what a host's process root runs is in every bundle on it ──
+
+// `hub` stands for the desktop root's plugin and `warmup` for what its root
+// folder imports: no manifest names them, no edge reaches them.
+function withDesktopRoot(): EdgeGraph {
+  return {
+    ...graph(),
+    hostRoots: new Map<HostId, PluginId[]>([
+      ["desktop", [asPluginId("hub"), asPluginId("warmup")]],
+      ["browser", []],
+    ]),
+  };
+}
+
+test("a host root and its closure ship in every composition on its host only", () => {
+  const g = withDesktopRoot();
+  const m = manifest(["desktop"], ["ui"]);
+  expect(bundleOf(g, m)).toEqual(["hub", "jobs", "ui", "warmup"]);
+  expect(resolveComposition(g, m).membership.get(asPluginId("warmup"))).toBe(
+    "required",
+  );
+  // The browser boots no desktop root.
+  expect(bundleOf(g, manifest(["browser"], ["ui"]))).toEqual(["ui"]);
+});
+
+test("host roots are not a manifest's declared territory", () => {
+  // `expandEntrySeeds` is what a manifest declares (the `excludes` gate's
+  // containment): every desktop row would otherwise contain the root.
+  const seeds = expandEntrySeeds(
+    manifest(["desktop"], ["ui"]),
+    withDesktopRoot(),
+  ).seeds;
+  expect([...seeds].map(String)).toEqual(["ui"]);
+});
+
+test("a negative cannot take a host root out — it is reported unsatisfied", () => {
+  const g = withDesktopRoot();
+  const comp = resolveComposition(g, manifest(["desktop"], ["ui", "!warmup"]));
+  expect(comp.bundle.has(asPluginId("warmup"))).toBe(true);
+  expect(comp.unsatisfiedExclusions.map((u) => String(u.target))).toEqual([
+    "warmup",
+  ]);
+  expect(comp.unsatisfiedExclusions[0]!.path.originKind).toBe("host-root");
+});
+
+test("an inclusion path through a host root names it as the origin", () => {
+  const path = explainInclusion(
+    withDesktopRoot(),
+    manifest(["desktop"], ["ui"]),
+    asPluginId("jobs"),
+  );
+  expect(path?.origin).toBe(asPluginId("warmup"));
+  expect(path?.originKind).toBe("host-root");
 });

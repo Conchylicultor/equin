@@ -99,6 +99,19 @@ export interface EdgeGraph {
    * providers from these (codegen's `hostProviderServerBarrels`).
    */
   hostProviders: Map<PluginId, string[]>;
+  /**
+   * Per host, the plugins every composition on it bundles because the host's
+   * PROCESS ROOT runs them (`HOST_ROOTS`, `framework/plugin-id`): the root's
+   * own plugin and every plugin its root folder imports (the `cross-refs`
+   * facet's `rootUses`) — `server-core` and what its `bin/` calls into on the
+   * desktop. Not an edge: no plugin imports a root, so nothing in a bundle
+   * reaches it, and yet it boots under every composition of its host.
+   * Resolution seeds them after the negative pass (`expandEntrySeeds`), so a
+   * negative naming one cannot take it out: it lands in
+   * `unsatisfiedExclusions`. In a host view ({@link graphForHosts}) only the
+   * viewed hosts' entries. Sorted.
+   */
+  hostRoots: Map<HostId, PluginId[]>;
 }
 
 /**
@@ -289,6 +302,8 @@ export interface InclusionPath {
   target: PluginId;
   state: MembershipState;
   origin: PluginId;
-  originKind: "entry" | "contributor";
+  /** `host-root`: the origin is seeded by its host's process root
+   *  ({@link EdgeGraph.hostRoots}), not by the manifest. */
+  originKind: "entry" | "host-root" | "contributor";
   steps: InclusionStep[];
 }

@@ -31,7 +31,7 @@ import {
   type TypeCheckWorkerOutput,
   type TypeCheckWorkerResult,
 } from "../../core";
-import { fileReportFromProcess } from "@plugins/reports/plugins/outbox/core";
+import { fileReportFromProcess } from "@plugins/reports/plugins/outbox/plugins/file/core";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { pacedHeapEnv } from "@plugins/packages/plugins/heap-pacing/core";
 import { reportMisses, type MissReportSink } from "./miss-reports";

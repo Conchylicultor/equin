@@ -1,7 +1,11 @@
 import { getFacet } from "@plugins/plugin-meta/plugins/facets/core";
 import type { PluginTreeData } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import {
+  HOST_ROOTS,
+  HOSTS,
   SHIPPED_RUNTIME_FOLDERS,
+  asPluginId,
+  type HostId,
   type PluginId,
   type RuntimeFolder,
 } from "@plugins/framework/plugins/plugin-id/core";
@@ -206,6 +210,42 @@ export function classifyEdges(tree: PluginTreeData): EdgeGraph {
     (a, b) => a.then.localeCompare(b.then) || a.key.localeCompare(b.key),
   );
 
+  // ── Host roots: what each host's process root runs, in every bundle ───
+  //
+  // A root (server-core's `bin/` on the desktop) is imported by no barrel, so
+  // no edge reaches it or what it imports — yet every composition booted on
+  // its host runs it. Its plugin and each plugin its root folder imports are
+  // seeded into every composition on the host (`expandEntrySeeds`); their
+  // own hard closures follow from there. A root plugin missing from the tree
+  // contributes nothing, like an unknown edge target (a synthetic test tree);
+  // the real tree's roots are pinned by `closure.test.ts`. A root whose facet
+  // never read its folder throws.
+  const byId = new Map([...tree.byDir.values()].map((n) => [n.id, n]));
+  const hostRoots = new Map<HostId, PluginId[]>();
+  for (const host of HOSTS) {
+    const ids = new Set<PluginId>();
+    for (const root of HOST_ROOTS[host]) {
+      const node = byId.get(asPluginId(root.plugin));
+      if (!node) continue;
+      ids.add(node.id);
+      const crossRefs = getFacet(node, crossRefsFacetDef);
+      if (!crossRefs) continue; // a tree without the facet (synthetic)
+      const rootFolder = crossRefs.rootUses.find(
+        (r) => r.folder === root.folder,
+      );
+      // The facet read the root's folder, or it is broken: a root whose
+      // imports went unread would silently drop what it runs out of every
+      // composition again — the bug this map exists for.
+      if (!rootFolder)
+        throw new Error(
+          `closure: host root ${root.plugin}/${root.folder} (${host}) has no rootUses in its cross-refs facet — the facet did not read the root's folder.`,
+        );
+      for (const use of rootFolder.uses)
+        if (hardForward.has(use.plugin)) ids.add(use.plugin);
+    }
+    hostRoots.set(host, [...ids].sort());
+  }
+
   // ── Derived flat edge list ────────────────────────────────────────────
   const edges: Edge[] = [];
   for (const [from, tos] of hardForward)
@@ -229,5 +269,6 @@ export function classifyEdges(tree: PluginTreeData): EdgeGraph {
     edges,
     rules,
     hostProviders,
+    hostRoots,
   };
 }

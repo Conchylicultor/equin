@@ -1,6 +1,7 @@
 import { defineFacet } from "@plugins/plugin-meta/plugins/facets/core";
 import {
   asPath,
+  type LeafFolder,
   type PluginId,
   type RuntimeFolder,
 } from "@plugins/framework/plugins/plugin-id/core";
@@ -63,6 +64,17 @@ export interface CrossRefsData {
   apiUses: Record<RuntimeFolder, ApiUse[]>;
   importedBy: PluginId[];
   raw?: Record<RuntimeFolder, RawUse[]>;
+  /**
+   * The cross-plugin imports of each HOST ROOT folder this plugin holds
+   * (`HOST_ROOTS`, `framework/plugin-id`: `server-core`'s `bin/`, the
+   * desktop backend's entry) — `[]` for every other plugin. A root is no
+   * barrel, so these are no `apiUses`; the closure engine seeds their targets
+   * into every composition on the root's host (`EdgeGraph.hostRoots`).
+   */
+  rootUses: { folder: LeafFolder; uses: ApiUse[] }[];
+  /** Transient: the root folders' raw imports, set by extract(); relate()
+   *  resolves them into `rootUses` and clears it. */
+  rawRoot?: { folder: LeafFolder; uses: RawUse[] }[];
   tokenGroups: DeclaredTokenGroup[];
   tokenUses: TokenUse[];
   /** The reverse of `tokenUses`: the plugins reading this plugin's token groups. */

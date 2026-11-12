@@ -14,8 +14,9 @@ const views = new WeakMap<EdgeGraph, Map<string, EdgeGraph>>();
 /**
  * The graph as a set of hosts sees it: only the hard edges that hold through a
  * folder one of `hosts` executes (`hostRuntimeFolders` — the union for several
- * hosts). Soft edges, subtrees, usage rules and host providers are host-free
- * and carried as they are.
+ * hosts), and only those hosts' {@link EdgeGraph.hostRoots}. Soft edges,
+ * subtrees, usage rules and host providers are host-free and carried as they
+ * are.
  *
  * `classifyEdges` returns the graph of EVERY shipping folder; a closure is
  * always walked over a view. `resolveComposition` and the causality queries
@@ -55,7 +56,17 @@ export function graphForHosts(
     }
     edges.push(e);
   }
-  const view: EdgeGraph = { ...source, hardForward, hardReverse, edges };
+  // Only the viewed hosts' roots: a browser view boots no desktop root.
+  const hostRoots = new Map(
+    [...source.hostRoots].filter(([h]) => hosts.includes(h)),
+  );
+  const view: EdgeGraph = {
+    ...source,
+    hardForward,
+    hardReverse,
+    edges,
+    hostRoots,
+  };
   sourceOf.set(view, source);
   byKey.set(key, view);
   return view;

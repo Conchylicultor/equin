@@ -65,6 +65,9 @@ const serializedEdgeGraphSchema: z.ZodType<SerializedEdgeGraph> = z.object({
     }),
     { reason: GRAPH_REASON },
   ),
+  hostRoots: wholeRecord(idList, {
+    reason: "one entry per host (a closed set of two)",
+  }),
 });
 
 export interface CompositionData {

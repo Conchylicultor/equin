@@ -200,7 +200,7 @@ export default defineBoundaries({
     "plugin.framework.tooling.checks.core -> plugin.framework.tooling.checks.data-dirs",
     "plugin.framework.tooling.web-artifacts.core -> plugin.framework.tooling.web-artifacts.data-dirs",
     "plugin.packages.signal-origin.sink.core -> plugin.packages.signal-origin.sink.data-dirs",
-    "plugin.reports.outbox.core -> plugin.reports.outbox.data-dirs",
+    "plugin.reports.outbox.file.core -> plugin.reports.outbox.file.data-dirs",
   ],
 
   // Layer 2: Zone DAG (first-match, default-deny)

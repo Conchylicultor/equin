@@ -16,7 +16,7 @@ import {
   getWorktreeRoot,
   spawnCaptured,
 } from "@plugins/infra/plugins/spawn/core";
-import { fileReportFromProcess } from "@plugins/reports/plugins/outbox/core";
+import { fileReportFromProcess } from "@plugins/reports/plugins/outbox/plugins/file/core";
 
 // Reports filed per run. A divergence is a key bug, so one is enough to act on;
 // a hundred are the same bug seen a hundred times, and every one is logged.

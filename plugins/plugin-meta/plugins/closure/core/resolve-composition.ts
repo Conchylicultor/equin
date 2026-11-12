@@ -266,6 +266,20 @@ function expandOver(
 }
 
 /**
+ * The plugins every composition on the view's hosts bundles because a host's
+ * process root runs them ({@link EdgeGraph.hostRoots}). Not entry seeds: a
+ * manifest declares none of them, so they stay out of `expandEntrySeeds` (a
+ * bundle's declared territory, which the `excludes` gate measures) and are
+ * seeded by `resolveComposition` itself, after the negative pass — a negative
+ * naming one leaves it in the bundle and in `unsatisfiedExclusions`.
+ */
+export function hostRootSeedsOf(graph: EdgeGraph): Set<PluginId> {
+  const out = new Set<PluginId>();
+  for (const ids of graph.hostRoots.values()) for (const id of ids) out.add(id);
+  return out;
+}
+
+/**
  * Resolve a flattened manifest over the graph as its hosts see it: the view of
  * `manifest.hosts` (their union — a composition declared for the desktop and
  * the browser bundles what either needs), or of `host` alone when given (how
@@ -311,13 +325,18 @@ export function resolveComposition(
     cascadeLosses,
   } = expandOver(manifest, graph);
 
-  // `required` = hard closure of the entry seeds ALONE — the locked set, unchanged.
-  const required = hardClosure(entrySeeds, graph);
+  // What the hosts' process roots run: in every composition on those hosts,
+  // whatever the manifest says (see {@link hostRootSeedsOf}).
+  const hostRootSeeds = hostRootSeedsOf(graph);
+
+  // `required` = hard closure of the entry and host-root seeds — the locked set.
+  const required = hardClosure([...entrySeeds, ...hostRootSeeds], graph);
 
   // Conservative, single-pass bundle: NO fixpoint, NO auto-activation. The bundle is
-  // exactly the hard closure of (entry seeds ∪ the explicitly selected contributors).
+  // exactly the hard closure of (entry seeds ∪ host-root seeds ∪ the explicitly
+  // selected contributors).
   const bundle = hardClosure(
-    [...entrySeeds, ...manifest.selectedContributors],
+    [...entrySeeds, ...hostRootSeeds, ...manifest.selectedContributors],
     graph,
   );
 
@@ -378,13 +397,14 @@ export function resolveComposition(
           bundle,
           membership,
           entrySeeds,
+          hostRootSeeds,
           selectedContributors: manifest.selectedContributors,
         },
         t,
       );
       if (!path) {
         // Unreachable, and loud if it ever stops being. `t` is in `bundle`, and
-        // `bundle` is `hardClosure(entrySeeds ∪ selectedContributors)` — so a
+        // `bundle` is `hardClosure(entrySeeds ∪ hostRootSeeds ∪ selectedContributors)` — so a
         // backward chain from `t` to one of those seeds must exist and the BFS
         // must find it. Reaching here means the graph and the closure disagree,
         // which is an engine bug, not a manifest the author can fix. Throwing

@@ -2,7 +2,10 @@ import {
   defineReportSink,
   defineRequestSink,
 } from "@plugins/primitives/plugins/report-sink/core";
-import type { ServerReport } from "@plugins/framework/plugins/server-core/core";
+import {
+  defineServerContribution,
+  type ServerReport,
+} from "@plugins/framework/plugins/server-core/core";
 import type { ReportInput } from "@plugins/reports/core";
 
 /**
@@ -24,3 +27,22 @@ export const reportOutboxSink = defineReportSink<ReportInput>();
  * held: a report held past the exit is lost anyway, and the caller must know.
  */
 export const reportOutboxFatalSink = defineRequestSink<ServerReport, boolean>();
+
+/**
+ * What attaches the writers of {@link reportOutboxSink} and
+ * {@link reportOutboxFatalSink}: `reports/outbox`'s `server/`. The engine
+ * cannot import it (the outbox's drain records through the engine), so the
+ * need is a COMPANION kind: the outbox contributes `ReportOutboxWriter({
+ * companion: true, reason })`, and the closure engine ships it wherever the
+ * engine ships. Without it a composition's exec children (and a backend before
+ * it serves) emitted into a sink nobody drained — the engine held their
+ * reports and dropped them. It used to ship only by accident, in the
+ * compositions where some plugin happened to import the outbox's writer.
+ */
+export const ReportOutboxWriter = defineServerContribution<{
+  /** What writes the outbox, and in which boot modes. */
+  reason: string;
+}>("reports-outbox-writer", {
+  companions: true,
+  docLabel: (p) => p.reason,
+});

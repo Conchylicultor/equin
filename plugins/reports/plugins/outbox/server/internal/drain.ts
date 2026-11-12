@@ -11,7 +11,7 @@ import {
   isOutboxTempName,
   type OutboxCode,
   type OutboxEntry,
-} from "../../core";
+} from "@plugins/reports/plugins/outbox/plugins/file/core";
 import type { StalenessVerdict } from "./staleness";
 
 /**

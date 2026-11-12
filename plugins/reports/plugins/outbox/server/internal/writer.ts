@@ -10,7 +10,7 @@ import {
   fileReportFromProcessSync,
   headCommitOf,
   repositoryOf,
-} from "../../core";
+} from "@plugins/reports/plugins/outbox/plugins/file/core";
 
 // The writes still in flight: a process must not exit before they land.
 const inFlight = new Set<Promise<unknown>>();

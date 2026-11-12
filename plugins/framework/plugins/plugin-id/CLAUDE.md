@@ -9,6 +9,7 @@
   - Uses: `framework/product-name.PRODUCT_NAME`
   - Exports (types):
     - `HostId`
+    - `HostRoot`
     - `LeafFolder`
     - `PluginFolder`
     - `PluginId`
@@ -17,6 +18,8 @@
     - `asFsPath`
     - `asPath`
     - `asPluginId`
+    - `HOST_ROOTS`
+    - `hostRootFoldersOf`
     - `hostRuntimeFolders`
     - `HOSTS`
     - `isMachineNode`

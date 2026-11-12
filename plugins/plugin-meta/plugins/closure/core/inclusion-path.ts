@@ -23,13 +23,18 @@ export interface ResolvedInclusionContext {
   membership: Map<PluginId, MembershipState>;
   /** The expanded entry seeds (entries ∪ their `.**` subtrees), post-negatives. */
   entrySeeds: Set<PluginId>;
+  /** The plugins the hosts' process roots run ({@link EdgeGraph.hostRoots}) —
+   *  seeds of every composition on those hosts, though no manifest names them. */
+  hostRootSeeds: Set<PluginId>;
   /** The manifest's declared soft selections (bundled or not). */
   selectedContributors: readonly PluginId[];
 }
 
 /**
  * Explain why `target` is in the bundle: the shortest chain of edges from a seed
- * (an entry point, or a SELECTED soft contributor) to `target`.
+ * (an entry point, a host root — {@link EdgeGraph.hostRoots} — or a SELECTED
+ * soft contributor) to `target`. Entry origins win, then host roots, then
+ * contributors.
  *
  * Returns `null` if `target` is not bundled. Otherwise BFS over `hardReverse`
  * from `target` back toward the seed frontier, stopping at the first reached seed
@@ -112,6 +117,9 @@ export function inclusionPathWithin(
     if (originIsEntry) {
       return { target, state, origin: seed, originKind: "entry", steps };
     }
+    if (ctx.hostRootSeeds.has(seed)) {
+      return { target, state, origin: seed, originKind: "host-root", steps };
+    }
     // Active contributor seed: prepend its soft edge to a bundled owned slot.
     const owner = (graph.softForward.get(seed) ?? []).find((b) =>
       ctx.bundle.has(b),
@@ -129,10 +137,12 @@ export function inclusionPathWithin(
   };
 
   // First pass: prefer an entry-origin path. Collect contributor seeds for fallback.
+  let hostRootSeed: PluginId | null = null;
   let contributorSeed: PluginId | null = null;
   while (queue.length) {
     const x = queue.shift()!;
     if (entrySet.has(x)) return buildPath(x);
+    if (hostRootSeed === null && ctx.hostRootSeeds.has(x)) hostRootSeed = x;
     if (contributorSeed === null && activeSet.has(x)) contributorSeed = x;
     for (const p of graph.hardReverse.get(x) ?? []) {
       if (visited.has(p)) continue;
@@ -149,7 +159,9 @@ export function inclusionPathWithin(
     }
   }
 
-  // No entry path; fall back to the shortest contributor-origin path found.
+  // No entry path; fall back to the shortest host-root path, then the
+  // shortest contributor-origin path found.
+  if (hostRootSeed !== null) return buildPath(hostRootSeed);
   if (contributorSeed !== null) return buildPath(contributorSeed);
   return null;
 }

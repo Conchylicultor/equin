@@ -130,7 +130,7 @@ candidate calls (an identifier callee — an alias, a twin — is always asked).
     - `conversations/runtime-sdk`
     - `integrations/youtube/audio-fetch`
     - `menu-bar`
-    - `reports/outbox`
+    - `reports/outbox/file`
     - `review/plugin-changes`
     - `toolchain`
     - `ui/icons/icon-sets`

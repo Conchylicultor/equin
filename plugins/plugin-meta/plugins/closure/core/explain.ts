@@ -4,12 +4,16 @@ import type {
 } from "@plugins/framework/plugins/plugin-id/core";
 import { graphForHosts } from "./host-view";
 import { inclusionPathWithin } from "./inclusion-path";
-import { resolveComposition, expandEntrySeeds } from "./resolve-composition";
+import {
+  resolveComposition,
+  expandEntrySeeds,
+  hostRootSeedsOf,
+} from "./resolve-composition";
 import type { CompositionManifest, EdgeGraph, InclusionPath } from "./types";
 
 /**
  * Explain why `target` is in the composition's bundle: the shortest chain of
- * edges from a seed (an entry point, or a SELECTED soft contributor) to
+ * edges from a seed (an entry point, a host root, or a SELECTED soft contributor) to
  * `target`. `null` if `target` is not bundled.
  *
  * The public, manifest-shaped entry point: it resolves the composition and hands
@@ -30,12 +34,14 @@ export function explainInclusion(
 ): InclusionPath | null {
   const comp = resolveComposition(graph, manifest, host);
   const { seeds } = expandEntrySeeds(manifest, graph, host);
+  const view = graphForHosts(graph, host ? [host] : manifest.hosts);
   return inclusionPathWithin(
-    graphForHosts(graph, host ? [host] : manifest.hosts),
+    view,
     {
       bundle: comp.bundle,
       membership: comp.membership,
       entrySeeds: seeds,
+      hostRootSeeds: hostRootSeedsOf(view),
       selectedContributors: manifest.selectedContributors,
     },
     target,

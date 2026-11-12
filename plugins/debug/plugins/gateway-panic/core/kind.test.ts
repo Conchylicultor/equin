@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { OutboxEntrySchema } from "@plugins/reports/plugins/outbox/core";
+import { OutboxEntrySchema } from "@plugins/reports/plugins/outbox/plugins/file/core";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { GatewayPanicPayloadSchema, describeGatewayPanic } from "./kind";
 

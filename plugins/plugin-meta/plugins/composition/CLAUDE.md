@@ -421,7 +421,7 @@ Run with `./equin test plugins/plugin-meta/plugins/composition`.
     - `plugin-meta/plugin-tree.getFacetsTreeCached`
     - `plugin-meta/plugin-tree.onPluginFacetsChanged`
     - `plugin-meta/plugin-tree.pluginFacetsGeneration`
-  - Resources: `composition.data` (invalidate, notified, whole: the plugin graph of this checkout — one entry per plugin (about 1.5k) and per edge between two, which the closure engine walks whole client-side, whole: the host-service bindings one plugin's server barrel provides, whole: the folders one edge holds through — a closed set of a dozen)
+  - Resources: `composition.data` (invalidate, notified, whole: the plugin graph of this checkout — one entry per plugin (about 1.5k) and per edge between two, which the closure engine walks whole client-side, whole: the host-service bindings one plugin's server barrel provides, whole: one entry per host (a closed set of two), whole: the folders one edge holds through — a closed set of a dozen)
 - Core:
   - Uses:
     - `config_v2.defineConfig`

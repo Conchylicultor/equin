@@ -10,8 +10,14 @@ import { mkdtemp, readdir, rm, utimes, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
-import { fileReportFromProcess, repositoryOf } from "../../core";
-import type { OutboxCode, OutboxEntry } from "../../core";
+import {
+  fileReportFromProcess,
+  repositoryOf,
+} from "@plugins/reports/plugins/outbox/plugins/file/core";
+import type {
+  OutboxCode,
+  OutboxEntry,
+} from "@plugins/reports/plugins/outbox/plugins/file/core";
 import { UNKNOWN_KIND_TTL_MS, drainOutbox, type DrainDeps } from "./drain";
 import type { StalenessVerdict } from "./staleness";
 

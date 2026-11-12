@@ -36,7 +36,7 @@ import {
   type CheckResult,
   type CheckScope,
 } from "@plugins/framework/plugins/tooling/core";
-import { fileReportFromProcess } from "@plugins/reports/plugins/outbox/core";
+import { fileReportFromProcess } from "@plugins/reports/plugins/outbox/plugins/file/core";
 import {
   HOST_CHECK_KIND,
   hostCheckMessage,

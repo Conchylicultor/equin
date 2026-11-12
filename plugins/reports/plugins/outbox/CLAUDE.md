@@ -8,7 +8,17 @@ directory, and main's backend records it.
 Plan: wiki page `block-ff91e68c-c8d9-4d92-928a-ba1edf2f1107` ("check thread
 stalls file reports").
 
-## Writing: `fileReportFromProcess` (core)
+## Writing: `fileReportFromProcess` (the `file` sub-plugin's core)
+
+The writer, the entry format and the outbox's data-dir declaration live in the
+core-only sub-plugin [`file`](plugins/file/CLAUDE.md)
+(`@plugins/reports/plugins/outbox/plugins/file/core`), never in this plugin's
+own barrels. A composition bundles a plugin whole (`plugin-meta/closure`), and
+this one's `server/` (the drain, the sink writers) reaches the reports engine
+and through it the git watcher — so a writer importing the outbox would ship
+all of that. The serving backend's boot-crash filer (`debug/boot-events`'
+`machine/`) runs in every desktop composition, the website and Sonata
+included, and needs only the writer.
 
 ```ts
 await fileReportFromProcess({ kind, message, data, code? });

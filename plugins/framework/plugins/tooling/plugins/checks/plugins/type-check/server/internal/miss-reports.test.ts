@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import type { ProcessReport } from "@plugins/reports/plugins/outbox/core";
+import type { ProcessReport } from "@plugins/reports/plugins/outbox/plugins/file/core";
 import { TypeCheckDivergencePayloadSchema } from "../../core";
 import { reportMisses, type MissReportSink } from "./miss-reports";
 

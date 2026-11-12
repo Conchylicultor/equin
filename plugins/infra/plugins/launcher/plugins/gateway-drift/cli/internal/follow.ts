@@ -26,7 +26,7 @@ import {
   reloadService,
   type LoginService,
 } from "@plugins/infra/plugins/launcher/plugins/login-services/machine";
-import { fileReportFromProcess } from "@plugins/reports/plugins/outbox/core";
+import { fileReportFromProcess } from "@plugins/reports/plugins/outbox/plugins/file/core";
 import { compareGatewayLaunch } from "../../machine";
 import {
   describeGatewayRestartFailed,

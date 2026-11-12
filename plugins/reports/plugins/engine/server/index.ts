@@ -38,6 +38,7 @@ export type {
   RestateResult,
 } from "./internal/restate-report";
 export {
+  ReportOutboxWriter,
   reportOutboxFatalSink,
   reportOutboxSink,
 } from "./internal/outbox-sink";

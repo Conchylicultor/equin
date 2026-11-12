@@ -14,7 +14,7 @@
 import type {
   FileReportOutcome,
   ProcessReport,
-} from "@plugins/reports/plugins/outbox/core";
+} from "@plugins/reports/plugins/outbox/plugins/file/core";
 import {
   TYPE_CHECK_DIVERGENCE_KIND,
   type TscPredictionMiss,

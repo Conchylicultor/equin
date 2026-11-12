@@ -11,7 +11,7 @@ import {
 import {
   fileReportFromProcess,
   mergeBaseWithMain,
-} from "@plugins/reports/plugins/outbox/core";
+} from "@plugins/reports/plugins/outbox/plugins/file/core";
 import {
   CANNOT_JUDGE_REPORT_KIND,
   type adoptCentralDeploy,

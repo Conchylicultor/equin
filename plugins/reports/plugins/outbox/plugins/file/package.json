@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-reports-outbox-file",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Writing a report into the report outbox, for a process with no server (a CLI run, a supervised child, a backend before it is ready): fileReportFromProcess / fileReportFromProcessSync, the entry format the drain reads, and the outbox's data-dir declaration. Core-only and light, so a writer bundles the writer and never the drain (reports/outbox's server, which reaches the reports engine)."
+}

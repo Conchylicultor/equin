@@ -36,6 +36,7 @@ function graphWith(rules: UsageRule[]): EdgeGraph {
     edges,
     rules,
     hostProviders: new Map(),
+    hostRoots: new Map(),
   };
 }
 

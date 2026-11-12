@@ -522,7 +522,7 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
     - `packages/macrotask-yield` ×2
     - `packages/owned-fd` ×2
     - `packages/thread-cpu-clock` ×2
-    - `reports/outbox` ×2
+    - `reports/outbox/file` ×2
     - `infra/file-sink.defineFileSink`
     - `infra/paths/repo-root.REPO_ROOT`
     - `packages/flock.flockTry`
