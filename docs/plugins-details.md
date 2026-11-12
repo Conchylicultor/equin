@@ -18216,9 +18216,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `CollapsibleCard`
                   - `TimelineLine`
               - Cross-plugin:
-                - Uses tokens: 21 vars — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/collapsible-card/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/collapsible-card/REFERENCE.md)
+                - Uses tokens: 22 vars — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/collapsible-card/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/collapsible-card/REFERENCE.md)
                   - `ui/tokens/color-palette` ×7
-                  - `ui/tokens/type-scale` ×6
+                  - `ui/tokens/type-scale` ×7
                   - `ui/tokens/density` ×5
                   - `ui/tokens/shape` ×2
                   - `ui/tokens/font-family --font-sans`

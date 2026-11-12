@@ -26,9 +26,9 @@
     - `CollapsibleCard`
     - `TimelineLine`
 - Cross-plugin:
-  - Uses tokens: 21 vars — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses tokens: 22 vars — full list in [REFERENCE.md](./REFERENCE.md)
     - `ui/tokens/color-palette` ×7
-    - `ui/tokens/type-scale` ×6
+    - `ui/tokens/type-scale` ×7
     - `ui/tokens/density` ×5
     - `ui/tokens/shape` ×2
     - `ui/tokens/font-family --font-sans`

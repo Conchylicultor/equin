@@ -280,8 +280,9 @@ export function CollapsibleCard({
 const GHOST_NODE = "h-7 w-6";
 const GHOST_HEADER =
   "w-full rounded-md font-sans text-tag text-muted-foreground transition-colors hover:bg-muted/55 hover:text-foreground";
-// The title's own weight: the row's regular tag weight — a quiet timeline row,
-// its name set apart from the summary by colour, not by bolding.
+// The title's own weight: the row's tag weight (`text-tag` carries it). The
+// summary / detail after it resets to `font-normal`, so only the name reads
+// emphasised.
 const GHOST_TITLE = "font-tag";
 
 /**
@@ -328,7 +329,9 @@ export function TimelineLine({
         <Line className="h-7 gap-sm pl-sm pr-2xs font-sans text-tag text-muted-foreground">
           <span className={cn(rigidClass(), GHOST_TITLE)}>{label}</span>
           <Fill>
-            <Line className="gap-xs text-muted-foreground/80">{children}</Line>
+            <Line className="gap-xs font-normal text-muted-foreground/80">
+              {children}
+            </Line>
           </Fill>
           <span className={rigidClass()}>
             <EventRowActions />
@@ -424,7 +427,7 @@ function GhostRow({
               <Fill>
                 <Line className="gap-sm">
                   {summary != null && (
-                    <Text className="pointer-events-none text-muted-foreground/80">
+                    <Text className="pointer-events-none font-normal text-muted-foreground/80">
                       {summary}
                     </Text>
                   )}
