@@ -2,6 +2,7 @@ import {
   joinAppPath,
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import { centralBuildOf } from "@plugins/build/plugins/central-build-id/cli";
 import { writeFileSync } from "node:fs";
 import { isPlatformApi } from "@plugins/framework/plugins/tooling/plugins/boundaries/core";
 import { rm } from "node:fs/promises";
@@ -1265,6 +1266,13 @@ export async function buildAndPublishWebDist(
               minify: opts.minify,
               buildId,
               buildCommit: opts.headAtStart,
+              // A served dist's tabs reach central: they name to it, and
+              // judge its values against, central's code build as this tree
+              // holds it. A release ships no central runtime.
+              centralBuild: () =>
+                opts.target.kind === "served"
+                  ? centralBuildOf(root)
+                  : Promise.resolve(null),
               source,
               ...(crawlable ? { crawl: { composition } } : {}),
               materialize: opts.materialize,

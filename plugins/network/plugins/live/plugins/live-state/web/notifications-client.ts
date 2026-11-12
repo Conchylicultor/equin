@@ -92,22 +92,39 @@ export type ReadOnceAnswer<T> =
   | { status: "refused"; code: string; message: string };
 
 /**
- * The build graph this tab's bundle was built from — sent on every `sub` /
- * `sub-batch` frame and every HTTP read, so the server can tell a tab running
- * an older bundle (skew — a reload fixes it) from a real contract bug. Read at
- * call time (tests stub it); `"dev"` where the build injected none.
+ * The build this tab's bundle was built against, in the identity the server on
+ * `kind`'s socket names its own build in — sent on every `sub` / `sub-batch`
+ * frame and every HTTP read, and what every value that server sends is judged
+ * against (`decodeValue`), so a tab running another bundle (skew — a reload
+ * fixes it) is told apart from a real contract bug:
+ *
+ * - `worktree` — the bundle's own web graph (the worktree server serves the
+ *   dist built alongside its code).
+ * - `central` — central's code build as the checkout held it when this bundle
+ *   was built (the source digest of central's entry closure,
+ *   `build/central-build-id`): central serves every worktree, each on its own
+ *   build, so only central's own code says what shaped its values.
+ *
+ * Read at call time (tests stub it); `"dev"` where the build injected none —
+ * every verdict then `unknown`, a decode failure loud.
  */
-function clientBuild(): string {
-  return import.meta.env.VITE_BUILD_GRAPH ?? DEV_BUILD;
+function clientBuild(kind: SocketKind): string {
+  const build =
+    kind === "central"
+      ? import.meta.env.VITE_CENTRAL_BUILD
+      : import.meta.env.VITE_BUILD_GRAPH;
+  // `""`: a build that composed this page without naming central's code (a
+  // release — it ships no central runtime) — as unknown as a dev bundle.
+  return build === undefined || build === "" ? DEV_BUILD : build;
 }
 
 /**
  * THE one decode of a value the server sent (a WS frame's value or row, an HTTP
  * read's body): parse it through this bundle's schema, and when that fails,
- * throw a `ResourceDecodeError` judged by build — this bundle's against
- * `serverGraph`, the build the server's code was built from (the ack frames'
- * and read envelopes' `graph`; undefined when the server never said, judged
- * `unknown`). The caller decides nothing: a `skew` failure is the tab being out
+ * throw a `ResourceDecodeError` judged by build — this bundle's build for the
+ * `kind` of server that sent it (`clientBuild`) against `serverGraph`, the
+ * build the server's code was built from (the ack frames' and read envelopes'
+ * `graph`; undefined when the server never said, judged `unknown`). The caller decides nothing: a `skew` failure is the tab being out
  * of date (the transport enters the read's `client-outdated` state), every
  * other verdict a real bug that stays loud. Any throw from the schema counts —
  * a zod rejection or a schema that fails to build while parsing.
@@ -117,6 +134,7 @@ function decodeValue<T>(
   value: unknown,
   key: string,
   params: ResourceParams,
+  kind: SocketKind,
   serverGraph: string | undefined,
 ): T {
   try {
@@ -125,7 +143,7 @@ function decodeValue<T>(
     throw new ResourceDecodeError(
       key,
       params,
-      contractVerdict(clientBuild(), serverGraph ?? null),
+      contractVerdict(clientBuild(kind), serverGraph ?? null),
       err,
     );
   }
@@ -607,6 +625,8 @@ export interface MissedFrame {
 }
 
 interface SocketChannel {
+  /** Which server this socket reaches — what its builds are named in (`clientBuild`). */
+  readonly kind: SocketKind;
   ws: TransportSocket;
   /** (key, paramsKey) -> subscription state for subs routed to this socket. */
   subs: Map<string, ActiveSub>;
@@ -1815,7 +1835,7 @@ export class NotificationsClient {
     const serverEpoch = channel?.serverEpoch;
     const url = resourceUrl(key, params, origin);
     const etag = this.etagFor(key, params, origin);
-    const build = buildHeader();
+    const build = buildHeader(socketKindFor(origin));
     let res = await this.fetchImpl(
       url,
       etag !== undefined
@@ -1897,7 +1917,14 @@ export class NotificationsClient {
     // first stops the etag just adopted from vouching for the older cache.
     let parsed: T;
     try {
-      parsed = decodeValue(schema, body.value, key, params, body.graph);
+      parsed = decodeValue(
+        schema,
+        body.value,
+        key,
+        params,
+        socketKindFor(origin),
+        body.graph,
+      );
     } catch (err) {
       if (err instanceof ResourceDecodeError && err.verdict === "skew")
         this.noteUndecodable(channel, err);
@@ -2070,13 +2097,20 @@ export class NotificationsClient {
   ): Promise<T> {
     const res = await this.fetchImpl(resourceUrl(key, params, origin), {
       cache: "no-store",
-      headers: buildHeader(),
+      headers: buildHeader(socketKindFor(origin)),
     });
     if (!res.ok) await throwReadFailure(key, params, res, read);
     const body = await readEnvelope(key, res, read);
     let value: T;
     try {
-      value = decodeValue(read.schema, body.value, key, params, body.graph);
+      value = decodeValue(
+        read.schema,
+        body.value,
+        key,
+        params,
+        socketKindFor(origin),
+        body.graph,
+      );
     } catch (err) {
       if (err instanceof ResourceDecodeError && err.verdict === "skew")
         this.noteUndecodable(undefined, err);
@@ -2197,6 +2231,7 @@ export class NotificationsClient {
 
   private openChannel(kind: SocketKind): SocketChannel {
     const channel: SocketChannel = {
+      kind,
       ws: this.makeSocket(this.socketUrls[kind]),
       subs: new Map(),
       pendingTeardown: new Map(),
@@ -2366,7 +2401,7 @@ export class NotificationsClient {
       wire({
         op: "sub-batch",
         tabId: this.tabId,
-        build: clientBuild(),
+        build: clientBuild(channel.kind),
         protocol: PROTOCOL,
         ...(channel.serverEpoch !== undefined
           ? { epoch: channel.serverEpoch }
@@ -2525,7 +2560,7 @@ export class NotificationsClient {
         tabId: this.tabId,
         // Per frame: one shared socket carries every tab's frames, and their
         // bundles may differ (see `clientBuild`).
-        build: clientBuild(),
+        build: clientBuild(channel.kind),
         // The vocabulary this tab reads: the server trusts a `derive` only
         // under its own.
         protocol: PROTOCOL,
@@ -2974,7 +3009,14 @@ export class NotificationsClient {
     // base (a tab out of date keeps following the stream, never resubscribing
     // per patch).
     entry.wire = this.reads.get(key)?.patches === true ? { value } : undefined;
-    const parsed = decodeValue(schema, value, key, params, channel.serverGraph);
+    const parsed = decodeValue(
+      schema,
+      value,
+      key,
+      params,
+      channel.kind,
+      channel.serverGraph,
+    );
     // Adopt the frame's commit watermark — and note its mutation acks —
     // IMMEDIATELY BEFORE the cache write they describe (load-bearing order:
     // QueryCache listeners — the optimistic hook's confirm pass — read the
@@ -3090,7 +3132,14 @@ export class NotificationsClient {
     for (const [rowId, row] of upserts)
       upsertMap.set(
         rowId,
-        decodeValue(element, row, key, params, channel.serverGraph),
+        decodeValue(
+          element,
+          row,
+          key,
+          params,
+          channel.kind,
+          channel.serverGraph,
+        ),
       );
 
     // The base-presence guard above already ensured a non-undefined base.
@@ -3200,8 +3249,8 @@ function resourceUrl(
  * restart-stable ETag would otherwise let it replay an old-boot
  * `{value, version}`.
  */
-function buildHeader(): Record<string, string> {
-  return { [BUILD_GRAPH_HEADER]: clientBuild() };
+function buildHeader(kind: SocketKind): Record<string, string> {
+  return { [BUILD_GRAPH_HEADER]: clientBuild(kind) };
 }
 
 /**

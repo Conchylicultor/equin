@@ -88,9 +88,10 @@ import.meta`, carried by `Resource.Declare`) — the L2 stamps judged by
 
 ## Plugin reference
 
-- Description: Digest of the code a source set loads: sourceDigest(sets) — sha256 over the static runtime import closure of the modules each set includes (repo files by relative path and bytes, packages by name@version, builtins by name; type-only imports erased), computed once per process, every defined set started at a serving backend's boot. What persisted or inherited state stamps itself with, so a cache built by other code is refused without a version anyone bumps. Central's reach to the source-digest closure walk: closureChangedSince(entries, sinceMs) — whether nothing a closure loads (repo files, package resolution entries) changed since an instant, by inode change time. The same walk the server barrel serves (shared/), so central's restart-skip judgement reads its code exactly as a backend's does.
+- Description: Digest of the code a source set loads: sourceDigest(sets) — sha256 over the static runtime import closure of the modules each set includes (repo files by relative path and bytes, packages by name@version, builtins by name; type-only imports erased), computed once per process, every defined set started at a serving backend's boot. What persisted or inherited state stamps itself with, so a cache built by other code is refused without a version anyone bumps. Central's reach to the source-digest closure walk: closureChangedSince(entries, sinceMs) — whether nothing a closure loads (repo files, package resolution entries) changed since an instant, by inode change time — and sourceDigest(sets), the digest of the code a set loads. The same walk the server barrel serves (shared/), so central reads its code exactly as a backend does: restart-skip's judgement, and central's own code build (build/central-build-id).
 - Cross-plugin:
   - Imported by:
+    - `build/central-build-id`
     - `build/restart-skip`
     - `infra/corpus-index`
     - `network/live`
@@ -108,7 +109,9 @@ import.meta`, carried by `Resource.Declare`) — the L2 stamps judged by
     - `computedLoads`
     - `sourceDigest`
 - Central:
-  - Exports (values): `closureChangedSince`
+  - Exports (values):
+    - `closureChangedSince`
+    - `sourceDigest`
 - Core:
   - Exports (types):
     - `ClosureSince`

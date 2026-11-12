@@ -41,8 +41,25 @@ export type DependsOnEntry<P extends ResourceParams = ResourceParams> =
 
 // Native wyhash for keyed snapshots, as the server (the runtime's portable
 // default is plain-JS `hash64`).
+// Central's code build — what shapes every value it serves, named on its ack
+// frames and read envelopes as `graph` (`ResourceRuntimeOptions.serverBuildGraph`)
+// so a tab whose schema rejects a central value judges it by build: another
+// build is skew (the tab is out of date), the same build a real bug. Central
+// serves worktrees on many builds, so this is central's OWN code — the source
+// digest of its entry closure — and a tab compares it against the central
+// build its bundle was built against, never its web graph. Boot-injected by
+// `build/central-build-id` (central-core imports no build plugin — the
+// server's `setClientBuildIdentity` pattern). Unknown (`null`) until injected →
+// every verdict `unknown` → a decode failure stays loud.
+let centralBuildIdentity: () => string | null = () => null;
+export function setCentralBuildIdentity(fn: () => string | null): void {
+  centralBuildIdentity = fn;
+}
+
 const runtime = createResourceRuntime({
   snapHash: (json) => Bun.hash.wyhash(json) ^ BigInt(json.length),
+  // Read at call time (see `setCentralBuildIdentity`).
+  serverBuildGraph: () => centralBuildIdentity(),
 });
 export const {
   defineResource,

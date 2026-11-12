@@ -196,11 +196,13 @@ const c = <const K extends string, const F extends WireFields>(
  *   to every holder).
  * - `epoch`: the server's boot identity, on every ack frame — echoed with the
  *   sub's version on a replay so a same-boot server can answer `up-to-date`.
- * - `graph` (beside `epoch`): the build graph the server's code was built from —
- *   what shapes every value it sends until its next boot. A tab whose own
- *   schema rejects a value judges it against this (`contractVerdict`): another
- *   build is skew (the tab is out of date, a reload fixes it), the same build a
- *   real bug. Absent when the server cannot say (no served graph, central).
+ * - `graph` (beside `epoch`): the build the server's code was built from —
+ *   what shapes every value it sends until its next boot (a worktree server's
+ *   web graph; central's own code build). A tab whose own schema rejects a
+ *   value judges it against the build its bundle carries for that host
+ *   (`contractVerdict`): another build is skew (the tab is out of date, a
+ *   reload fixes it), the same build a real bug. Absent when the server cannot
+ *   say (no served graph, central before its digest lands).
  * - `watermark` (Rule B′): the xid8 snapshot floor a FULLY reconciling value
  *   was read under — sub-ack, update, full keyed delta; never a scoped delta.
  * - `ackTx`: the source-transaction ids a feed-driven recompute folded in.

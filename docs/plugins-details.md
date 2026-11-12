@@ -14349,6 +14349,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `describeTermination`
       - Cross-plugin:
         - Imported by: `build/build-info`
+    - **`central-build-id`** — Central's code build, central's half: at register, starts the source digest of the entry central runs and, once it lands, names it as the central live-resource runtime's build (setCentralBuildIdentity) — the `graph` on central's ack frames and read envelopes a tab judges an undecodable central value against. Unknown (no `graph`, judged `unknown`: loud) until then, or when it cannot be computed.
+      - Central:
+        - Uses: `packages/source-digest.sourceDigest`
+      - Cross-plugin:
+        - Imported by: `framework/cli/build`
+      - Core:
+        - Exports (values): `CENTRAL_ENTRY`
+      - Cli:
+        - Exports (values): `centralBuildOf`
     - **`converge`** — Main-deploy-failed report renderer: a one-line Debug → Reports summary for the main-deploy-failed kind (how main's convergence run ended, what started it). The main-deploy-failed report kind — filed by the gateway through the report outbox when main's convergence run (`./equin build --allow-main --converge`) fails to decide or start a build, drained by main once it is up: how it ended, what started it, and its last lines.
       - Web:
         - Contributes: `Reports.KindView` → `MainDeployFailedSummary`
@@ -29152,8 +29161,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defineResource`
           - `handleResourceHttp`
           - `notificationsWsHandler`
+          - `setCentralBuildIdentity`
       - Cross-plugin:
-        - Imported by: `network/live`
+        - Imported by:
+          - `build/central-build-id`
+          - `network/live`
       - Exemptions:
         - Exempts itself from:
           - `detached-work-safety/no-raw-set-interval` — `bin/index.ts` (sanctioned)
@@ -29250,13 +29262,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `takeReexecBudget`
         - **`build`** — `./equin build` — the deploy command: codegen, migrations, web dist and backend restart for this checkout, or a composition's hermetic artifact set.
           - Cli:
-            - Uses: 57 symbols — full list in [`plugins/framework/plugins/cli/plugins/build/REFERENCE.md`](../plugins/framework/plugins/cli/plugins/build/REFERENCE.md)
+            - Uses: 58 symbols — full list in [`plugins/framework/plugins/cli/plugins/build/REFERENCE.md`](../plugins/framework/plugins/cli/plugins/build/REFERENCE.md)
               - `framework/cli/op-runtime` ×31
               - `framework/tooling/web-artifacts` ×6
               - `framework/cli/bootstrap` ×4
               - `framework/cli/migrations` ×3
               - `plugin-meta/plugin-records` ×3
               - `debug/profiling/op-log` ×2
+              - `build/central-build-id.centralBuildOf`
               - `build/converge.decideConvergence`
               - `build/run-ledger.createBuildRunRecorder`
               - `build/step-baseline.judgeBuildSteps`
@@ -36720,13 +36733,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SPAN_MEASURES`
           - `waitSplit`
       - Cross-plugin:
-        - Imported by: 73 plugins — full list in [`plugins/infra/plugins/runtime-profiler/REFERENCE.md`](../plugins/infra/plugins/runtime-profiler/REFERENCE.md)
+        - Imported by: 74 plugins — full list in [`plugins/infra/plugins/runtime-profiler/REFERENCE.md`](../plugins/infra/plugins/runtime-profiler/REFERENCE.md)
           - `infra` ×22
           - `debug` ×21
           - `apps` ×7
           - `conversations` ×6
+          - `build` ×3
           - `tasks` ×3
-          - `build` ×2
           - `database` ×2
           - `packages` ×2
           - `reports` ×2
@@ -40274,9 +40287,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `createSmoothClockModel`
           - `SMOOTH_CLOCK_MAX_SLEW`
           - `SMOOTH_CLOCK_SNAP_SEC`
-    - **`source-digest`** — Digest of the code a source set loads: sourceDigest(sets) — sha256 over the static runtime import closure of the modules each set includes (repo files by relative path and bytes, packages by name@version, builtins by name; type-only imports erased), computed once per process, every defined set started at a serving backend's boot. What persisted or inherited state stamps itself with, so a cache built by other code is refused without a version anyone bumps. Central's reach to the source-digest closure walk: closureChangedSince(entries, sinceMs) — whether nothing a closure loads (repo files, package resolution entries) changed since an instant, by inode change time. The same walk the server barrel serves (shared/), so central's restart-skip judgement reads its code exactly as a backend's does.
+    - **`source-digest`** — Digest of the code a source set loads: sourceDigest(sets) — sha256 over the static runtime import closure of the modules each set includes (repo files by relative path and bytes, packages by name@version, builtins by name; type-only imports erased), computed once per process, every defined set started at a serving backend's boot. What persisted or inherited state stamps itself with, so a cache built by other code is refused without a version anyone bumps. Central's reach to the source-digest closure walk: closureChangedSince(entries, sinceMs) — whether nothing a closure loads (repo files, package resolution entries) changed since an instant, by inode change time — and sourceDigest(sets), the digest of the code a set loads. The same walk the server barrel serves (shared/), so central reads its code exactly as a backend does: restart-skip's judgement, and central's own code build (build/central-build-id).
       - Cross-plugin:
         - Imported by:
+          - `build/central-build-id`
           - `build/restart-skip`
           - `infra/corpus-index`
           - `network/live`
@@ -40294,7 +40308,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `computedLoads`
           - `sourceDigest`
       - Central:
-        - Exports (values): `closureChangedSince`
+        - Exports (values):
+          - `closureChangedSince`
+          - `sourceDigest`
       - Core:
         - Exports (types):
           - `ClosureSince`
@@ -40423,14 +40439,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from: `boundaries/no-platform-api` — `core/internal/ticket-line.ts` (debt)
     - **`timed-fs`** — The file reads, listings, stats and glob scans every non-browser process makes, timed: node:fs's read calls under their own names and types (readFile / readdir / stat / lstat / access / realpath / readlink and their *Sync twins, existsSync) plus scanGlob / scanGlobSync over a Bun.Glob, each call metered while it runs (installFsWaitMeter — the backend's profiler shows one past FS_WAIT_FLOOR_MS in progress and charges it) and, once it returns past the floor, handed to onSlowFsCall subscribers, under a named wait layer (fs-read / fs-readdir / fs-stat / fs-glob) — so a disk stall names itself instead of reading as the caller's own work. A leaf (node builtins only), enforced by the timed-fs/no-untimed-fs-read lint.
       - Cross-plugin:
-        - Imported by: 164 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
+        - Imported by: 165 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
           - `infra` ×47
           - `framework` ×25
           - `apps` ×15
           - `debug` ×15
           - `backup` ×12
           - `conversations` ×12
-          - `build` ×5
+          - `build` ×6
           - `database` ×5
           - `packages` ×5
           - `plugin-meta` ×5

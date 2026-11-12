@@ -239,20 +239,27 @@ frames, which still reach **all** tabs — hence the gates below.
     unobserved read's success): an out-of-date tab is never answered, while a
     backend that was behind and restarted answers the replayed subs.
   - Every `sub`/`sub-batch` carries `build` (per frame — the socket is shared
-    across bundles); HTTP reads `BUILD_GRAPH_HEADER`.
+    across bundles); HTTP reads `BUILD_GRAPH_HEADER`. The build named is per
+    SERVER (`clientBuild(kind)`): the worktree gets the bundle's web graph
+    (`VITE_BUILD_GRAPH`), central the central code build the bundle was built
+    against (`VITE_CENTRAL_BUILD`, `build/central-build-id`).
   - `isTerminalResourceError` — `contract-mismatch`, `unknown-key`, `unserved`,
     a `ResourceDecodeError` — is never retried.
 - **A value this bundle cannot decode is judged by build, never per resource.**
   - Every value the server sends (WS sub-ack / update / patch / delta row, HTTP
     read body) is parsed by ONE `decodeValue`; a throw becomes a
     `ResourceDecodeError` whose `verdict` is `contractVerdict(this bundle's
-    build, the server's graph)` — the ack frames' and read envelopes' `graph`
-    (`resource-protocol`), learned per channel with `epoch`.
+    build for that server, the server's graph)` — the ack frames' and read
+    envelopes' `graph` (`resource-protocol`), learned per channel with
+    `epoch`. Central names its own code build (the source digest of its
+    entry closure): it serves every worktree, each on another build, so only
+    its own code says what shaped its values.
   - `skew` (a deploy grew an enum, added a field, …): `enterOutdated` — the
     tuple goes to the contract store (Reload advice) and its query to the
     `client-outdated` error state (last value kept as `stale`). Cleared by the
     next value the bundle CAN read; an `up-to-date` does not clear it.
-  - `same-build` / `unknown` (no graph: central, a dev bundle): a real bug —
+  - `same-build` / `unknown` (no graph: central before its digest lands, a
+    dev bundle, a release's page naming no central build): a real bug —
     re-thrown off the socket loop as a crash (HTTP: `loader-failed`, reported).
   - No resource patches its own stale-tab case: an enum addition anywhere is
     covered.

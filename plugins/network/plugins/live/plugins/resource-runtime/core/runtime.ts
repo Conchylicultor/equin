@@ -2112,14 +2112,18 @@ export interface ResourceRuntimeOptions {
    */
   onStaleFlightSupersede?: (key: string) => void;
   /**
-   * The build graph this process serves (the web bundle built alongside it),
-   * for judging a contract mismatch: a client whose `build` differs is running
-   * an older bundle (`skew` — expected, a reload fixes it, only warned), one
-   * whose build matches has a real bug (`same-build` — reported). Must be the
-   * graph read at BOOT, not a fresh read: the build swaps the served dist
-   * before it restarts this process, and the code answering is the boot
-   * build's. `null` = unknown. server: boot-injected by `build/server-build-id`
-   * through `setClientBuildIdentity`; central: omit (every verdict `unknown`).
+   * The build this process's code was built from, in the identity its
+   * clients name in `build` for THIS host, for judging a contract mismatch: a
+   * client whose `build` differs is running another bundle (`skew` — expected,
+   * a reload fixes it, only warned), one whose build matches has a real bug
+   * (`same-build` — reported). Must be the identity read at BOOT, not a fresh
+   * read: the code answering is the boot build's. `null` = unknown. server:
+   * the web graph built alongside it (the build swaps the served dist before
+   * it restarts this process), boot-injected by `build/server-build-id`
+   * through `setClientBuildIdentity`; central: its own code build (the source
+   * digest of its entry closure — a tab carries the one its bundle was built
+   * against), boot-injected by `build/central-build-id` through
+   * `setCentralBuildIdentity`.
    */
   serverBuildGraph?: () => string | null;
   /**

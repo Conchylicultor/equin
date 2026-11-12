@@ -85,6 +85,7 @@ const result = await runWebArtifactsPipeline({
   minify: true,
   buildId: "bp-cold",
   buildCommit: null,
+  centralBuild: () => Promise.resolve(null),
   log: (line) => console.log(`  ${line}`),
   isPlatformApi,
   onStage: async (id, _label, run) => {

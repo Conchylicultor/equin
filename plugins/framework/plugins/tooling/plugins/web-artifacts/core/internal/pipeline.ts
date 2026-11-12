@@ -104,6 +104,14 @@ export interface WebArtifactsPipelineOptions {
    * baked into index.html. `null` when git could not answer.
    */
   buildCommit: string | null;
+  /**
+   * Central's code build as the source tree holds it, baked into index.html
+   * (`composeDist`'s `centralBuild`). Started as the pipeline starts — the
+   * digest is a closure walk (seconds), run beside the artifact builds — and
+   * awaited at compose, where a failure fails the build. Resolves `null` for a
+   * dist no central serves (a release).
+   */
+  centralBuild: () => Promise<string | null>;
   /** Fleet source (entry set + registry); defaults to the committed full registry. */
   source?: FleetSource;
   /**
@@ -203,8 +211,15 @@ export async function runWebArtifactsPipeline(
   // (`lease.ts`). Released on success and failure alike; a crash releases it
   // through the kernel.
   const lease = openBuildLease();
+  // Settled, not raw: a pipeline that fails before compose never awaits it,
+  // and its rejection must not then surface as an unhandled one. Compose
+  // rethrows it.
+  const centralBuild = opts.centralBuild().then(
+    (build) => ({ ok: true as const, build }),
+    (error: unknown) => ({ ok: false as const, error }),
+  );
   try {
-    return await runPipeline(opts, lease);
+    return await runPipeline(opts, lease, centralBuild);
   } finally {
     await lease.release();
   }
@@ -213,6 +228,9 @@ export async function runWebArtifactsPipeline(
 async function runPipeline(
   opts: WebArtifactsPipelineOptions,
   lease: BuildLease,
+  centralBuild: Promise<
+    { ok: true; build: string | null } | { ok: false; error: unknown }
+  >,
 ): Promise<WebArtifactsPipelineResult> {
   const { root, log } = opts;
   const pluginsRoot = joinAppPath(root, "plugins");
@@ -748,11 +766,14 @@ async function runPipeline(
         });
       }
 
+      const central = await centralBuild;
+      if (!central.ok) throw central.error;
       const { importMap, preloads, graphHash } = composeDist({
         stagingDir: opts.stagingDir,
         webSrcDir,
         buildId: opts.buildId,
         buildCommit: opts.buildCommit,
+        centralBuild: central.build,
         minify: opts.minify,
         cssHref: css.href,
         links,

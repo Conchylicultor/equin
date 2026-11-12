@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-build-central-build-id",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Central's code build: the identity a central live value is shaped by — the source digest of central's entry closure — computed by central over the entry it runs and by ./equin build over the checkout's own central entry, so a tab can judge a central value its schema rejects by build (skew vs same code)."
+}

@@ -21,7 +21,11 @@ import {
   type ImportMapEntry,
 } from "../import-map";
 import { sha256Hex } from "../hash";
-import { COMMIT_GLOBAL, GRAPH_GLOBAL } from "./vite-builder";
+import {
+  CENTRAL_BUILD_GLOBAL,
+  COMMIT_GLOBAL,
+  GRAPH_GLOBAL,
+} from "./vite-builder";
 
 export interface ComposeOptions {
   stagingDir: AppPath;
@@ -35,6 +39,13 @@ export interface ComposeOptions {
    * commit reads as unknown, never as a plausible-looking sha.
    */
   buildCommit: string | null;
+  /**
+   * Central's code build as the tree this dist was composed from holds it
+   * (`build/central-build-id`), baked into index.html so the tab names it to
+   * central and judges central's values against it. `null` for a dist no
+   * central serves (a release) — the tab then reads it as unknown.
+   */
+  centralBuild: string | null;
   /** Recorded in the marker so map-in-sync recomputes with the dist's own flag. */
   minify: boolean;
   cssHref: string;
@@ -287,7 +298,8 @@ export function composeDist(opts: ComposeOptions): {
     // omitted, so the global always exists and reads as "unknown" instead of
     // throwing at a consumer that expected it.
     `<script>var ${GRAPH_GLOBAL} = ${JSON.stringify(graphHash)}; window.${GRAPH_GLOBAL} = ${GRAPH_GLOBAL};` +
-      ` var ${COMMIT_GLOBAL} = ${JSON.stringify(opts.buildCommit ?? "")}; window.${COMMIT_GLOBAL} = ${COMMIT_GLOBAL};</script>`,
+      ` var ${COMMIT_GLOBAL} = ${JSON.stringify(opts.buildCommit ?? "")}; window.${COMMIT_GLOBAL} = ${COMMIT_GLOBAL};` +
+      ` var ${CENTRAL_BUILD_GLOBAL} = ${JSON.stringify(opts.centralBuild ?? "")}; window.${CENTRAL_BUILD_GLOBAL} = ${CENTRAL_BUILD_GLOBAL};</script>`,
     `<script type="importmap">${JSON.stringify(importMap)}</script>`,
     `<link rel="stylesheet" href="${opts.cssHref}" />`,
     ...preloads.map((p) => `<link rel="modulepreload" href="${p}" />`),

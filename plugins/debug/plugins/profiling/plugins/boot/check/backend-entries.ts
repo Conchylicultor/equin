@@ -1,3 +1,4 @@
+import { CENTRAL_ENTRY } from "@plugins/build/plugins/central-build-id/core";
 import type {
   CheckResult,
   RepoFiles,
@@ -31,8 +32,8 @@ export function backendEntries(
   return entriesOf(repo, BIN_ENTRY, REGISTRIES);
 }
 
-/** Central's composition root. */
-const CENTRAL_BIN_ENTRY = "plugins/framework/plugins/central-core/bin/index.ts";
+/** Central's composition root — the one entry central's code build digests. */
+const CENTRAL_BIN_ENTRY = CENTRAL_ENTRY;
 // eslint-disable-next-line exempt/no-path-allowlist -- the registry whose members central boots, not an allowlist of violators
 const CENTRAL_REGISTRIES = [
   "plugins/framework/plugins/central-core/core/central.generated.ts",

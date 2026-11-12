@@ -37,7 +37,12 @@ export type SubErrorReason = (typeof SUB_ERROR_REASONS)[number];
  *   and a reload fixes it. Expected after every deploy that changes a contract.
  * - `same-build` — both run the same bundle: the client's own encoding fails
  *   the server's decode. A real bug.
- * - `unknown` — one side cannot say (a dev bundle, no served graph, central).
+ * - `unknown` — one side cannot say (a dev bundle, no served graph, central
+ *   before its code build is digested).
+ *
+ * "The build" is per HOST: a worktree server's is its web graph, central's its
+ * own code build (the digest of its entry closure) — a tab names, to each
+ * host, the build its bundle was built against for that host.
  */
 export type ContractVerdict = (typeof CONTRACT_VERDICTS)[number];
 

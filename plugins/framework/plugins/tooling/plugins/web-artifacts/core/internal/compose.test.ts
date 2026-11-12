@@ -3,6 +3,7 @@ import {
   lstatSync,
   mkdirSync,
   mkdtempSync,
+  readFileSync,
   readlinkSync,
   symlinkSync,
   writeFileSync,
@@ -18,6 +19,7 @@ import {
   computeGraphHash,
   computePreloadClosure,
 } from "./compose";
+import { CENTRAL_BUILD_GLOBAL } from "./vite-builder";
 
 const graph = {
   htmlSrc: "<!doctype html><head><script>var a = 1;</script></head>",
@@ -154,12 +156,14 @@ describe("composeDist with an address dir", () => {
     const compose = (
       staging: string,
       links: Array<{ linkName: string; storePath: ReturnType<typeof entry> }>,
+      centralBuild: string | null = null,
     ) =>
       composeDist({
         stagingDir: joinAppPath(base, staging),
         webSrcDir,
         buildId: "b",
         buildCommit: null,
+        centralBuild,
         minify: true,
         cssHref: `/artifacts/${links[0]!.linkName}/index.js`,
         links,
@@ -192,6 +196,22 @@ describe("composeDist with an address dir", () => {
         joinAppPath(f.base, "web.staging.1", "artifacts", "b.web.2"),
       ).isSymbolicLink(),
     ).toBe(true);
+  });
+
+  test("the page names central's code build beside its graph — unknown as empty", () => {
+    const f = fixture();
+    const a = f.entry("a.web.1");
+    const links = [{ linkName: "a.web.1", storePath: a }];
+    f.compose("web.staging.1", links, "central-digest-1");
+    f.compose("web.staging.2", links);
+    const html = (staging: string) =>
+      readFileSync(joinAppPath(f.base, staging, "index.html"), "utf8");
+    expect(html("web.staging.1")).toContain(
+      `var ${CENTRAL_BUILD_GLOBAL} = "central-digest-1";`,
+    );
+    expect(html("web.staging.2")).toContain(
+      `var ${CENTRAL_BUILD_GLOBAL} = "";`,
+    );
   });
 
   test("an existing name linking another store path throws", () => {

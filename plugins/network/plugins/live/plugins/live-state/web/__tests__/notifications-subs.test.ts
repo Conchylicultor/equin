@@ -963,6 +963,123 @@ describe("NotificationsClient — subs lifecycle + frame gates", () => {
       expect(entry.version).toBeUndefined();
       expect(entry.etag).toBeUndefined();
     });
+
+    // Central serves every worktree, each on its own build, so a central
+    // value is judged against central's OWN code build: the one this bundle
+    // was built against (VITE_CENTRAL_BUILD) vs the one central names on its
+    // acks — never this bundle's web graph.
+    describe("from central", () => {
+      /** Observe `key` on central and open its socket. */
+      async function observeCentral(
+        client: NotificationsClient,
+        hub: ReturnType<typeof createTransportHub>,
+        key: string,
+      ): Promise<FakeWebSocket> {
+        client.observe(key, {}, "central", { schema: ruleSchema });
+        await flush();
+        const central = hub.server
+          .all()
+          .find((x) => x.url.includes("central-notifications"))!;
+        central.open();
+        await flush();
+        return central;
+      }
+
+      test("names central's code build, not the web graph, to central", async () => {
+        vi.stubEnv("VITE_BUILD_GRAPH", "graph-x");
+        vi.stubEnv("VITE_CENTRAL_BUILD", "central-x");
+        const { client, socket, hub } = await setup();
+        const central = await observeCentral(client, hub, "c0");
+        const sub = central
+          .sentJson()
+          .find((m) => m.op === "sub-batch" || m.op === "sub")!;
+        expect(sub.build).toBe("central-x");
+        // The worktree socket still names the web graph.
+        client.observe("w0", {}, undefined, { schema: pushSchema });
+        await flush();
+        expect(subFrames(socket, "w0")[0]!.build).toBe("graph-x");
+      });
+
+      test("skew: a central build other than the one this bundle was built against is the tab being out of date", async () => {
+        // The web graph EQUAL to central's build string must not matter: a
+        // central value is never judged against the web graph.
+        vi.stubEnv("VITE_BUILD_GRAPH", "central-new");
+        vi.stubEnv("VITE_CENTRAL_BUILD", "central-old");
+        const { client, hub, qc } = await setup();
+        const store = renderHook(() => useResourceContractMismatches());
+        const central = await observeCentral(client, hub, "c1");
+        sendCapturingCrashes(central, {
+          kind: "sub-ack",
+          key: "c1",
+          params: {},
+          value: { rule: "daemon-cpu" },
+          version: 1,
+          epoch: "ce1",
+          graph: "central-new",
+        });
+        // Central's newer code pushes a member this bundle's enum lacks.
+        expect(
+          sendCapturingCrashes(central, {
+            kind: "update",
+            key: "c1",
+            params: {},
+            value: { rule: "memory-pressure" },
+            version: 2,
+          }),
+        ).toEqual([]);
+        await flush();
+        const state = qc.getQueryCache().find({
+          queryKey: queryKeyFor("c1", {}),
+        })!.state;
+        expect((state.error as ResourceDecodeError).verdict).toBe("skew");
+        expect(toResourceError(state.error).kind).toBe("client-outdated");
+        store.rerender();
+        expect(store.result.current).toEqual([
+          { key: "c1", reason: "contract-mismatch", verdict: "skew" },
+        ]);
+      });
+
+      test("same central build: the rejection is a real bug and stays a loud crash", async () => {
+        vi.stubEnv("VITE_BUILD_GRAPH", "graph-x");
+        vi.stubEnv("VITE_CENTRAL_BUILD", "central-same");
+        const { client, hub } = await setup();
+        const central = await observeCentral(client, hub, "c2");
+        const crashes = sendCapturingCrashes(central, {
+          kind: "sub-ack",
+          key: "c2",
+          params: {},
+          value: { rule: "memory-pressure" },
+          version: 1,
+          epoch: "ce1",
+          graph: "central-same",
+        });
+        expect(crashes).toHaveLength(1);
+        expect((crashes[0] as ResourceDecodeError).verdict).toBe("same-build");
+      });
+
+      test("a bundle built without central's build (a release, a dev bundle) cannot prove skew: loud", async () => {
+        vi.stubEnv("VITE_BUILD_GRAPH", "graph-x");
+        vi.stubEnv("VITE_CENTRAL_BUILD", "");
+        const { client, hub } = await setup();
+        const central = await observeCentral(client, hub, "c3");
+        expect(
+          central
+            .sentJson()
+            .find((m) => m.op === "sub-batch" || m.op === "sub")!.build,
+        ).toBe("dev");
+        const crashes = sendCapturingCrashes(central, {
+          kind: "sub-ack",
+          key: "c3",
+          params: {},
+          value: { rule: "memory-pressure" },
+          version: 1,
+          epoch: "ce1",
+          graph: "central-new",
+        });
+        expect(crashes).toHaveLength(1);
+        expect((crashes[0] as ResourceDecodeError).verdict).toBe("unknown");
+      });
+    });
   });
 
   test("legacy params-less sub-error frame → dropped safely (no throw, no fetch)", async () => {

@@ -146,9 +146,13 @@ export function assertCoEntriesOffHostPath(opts: {
 // The graph hash is the bundle's CONTENT identity (a pure function of the
 // composed module graph), not the id of the run that produced it: two builds of
 // an unchanged tree compose the same graph, so a tab holding it is not stale.
-// The commit is the tree the graph was built from.
+// The commit is the tree the graph was built from. The central build is
+// central's code build as that tree holds it (`build/central-build-id`): what a
+// tab names to central, and judges central's values against, since central
+// serves every worktree and only its own code says what shaped them.
 export const GRAPH_GLOBAL = `${LEGACY_IDS.artifactGlobalPrefix}GRAPH__`;
 export const COMMIT_GLOBAL = `${LEGACY_IDS.artifactGlobalPrefix}COMMIT__`;
+export const CENTRAL_BUILD_GLOBAL = `${LEGACY_IDS.artifactGlobalPrefix}CENTRAL_BUILD__`;
 
 const ARTIFACT_DEFINE: Record<string, string> = {
   "import.meta.env.DEV": "false",
@@ -156,6 +160,7 @@ const ARTIFACT_DEFINE: Record<string, string> = {
   "import.meta.env.MODE": JSON.stringify("production"),
   "import.meta.env.VITE_BUILD_GRAPH": GRAPH_GLOBAL,
   "import.meta.env.VITE_BUILD_COMMIT": COMMIT_GLOBAL,
+  "import.meta.env.VITE_CENTRAL_BUILD": CENTRAL_BUILD_GLOBAL,
   // Vite's APP build replaces this automatically, but LIB mode deliberately
   // preserves it — and `process` does not exist in the browser, so any
   // first-party or inlined npm code branching on NODE_ENV would crash at

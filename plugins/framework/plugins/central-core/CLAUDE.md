@@ -64,8 +64,11 @@ plugins/framework/plugins/central-core/
     - `defineResource`
     - `handleResourceHttp`
     - `notificationsWsHandler`
+    - `setCentralBuildIdentity`
 - Cross-plugin:
-  - Imported by: `network/live`
+  - Imported by:
+    - `build/central-build-id`
+    - `network/live`
 - Exemptions:
   - Exempts itself from:
     - `detached-work-safety/no-raw-set-interval` — `bin/index.ts` (sanctioned)

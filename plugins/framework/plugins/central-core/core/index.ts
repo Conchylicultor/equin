@@ -4,6 +4,7 @@ export {
   defineExternalResource,
   handleResourceHttp,
   notificationsWsHandler,
+  setCentralBuildIdentity,
 } from "./resources";
 export type {
   DependsOnEntry,
