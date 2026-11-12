@@ -28,6 +28,8 @@
     - `primitives/css/spacing.Stack`
     - `primitives/css/ui-kit.cn`
     - `primitives/outline/scroll-spy.useActiveInView`
+    - `primitives/overlay/hover-card.HoverCardContent`
+    - `primitives/overlay/hover-card.WithHoverCard`
     - `primitives/slot-render.defineRenderSlot`
     - `ui/icons.Icon`
   - Exports (types):

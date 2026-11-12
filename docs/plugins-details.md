@@ -19554,6 +19554,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/css/spacing.Stack`
                   - `primitives/css/ui-kit.cn`
                   - `primitives/outline/scroll-spy.useActiveInView`
+                  - `primitives/overlay/hover-card.HoverCardContent`
+                  - `primitives/overlay/hover-card.WithHoverCard`
                   - `primitives/slot-render.defineRenderSlot`
                   - `ui/icons.Icon`
                 - Exports (types):
@@ -51439,7 +51441,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `page/formatting/link`
               - `primitives/path-bar`
               - `primitives/text-editor/caret-trigger`
-        - **`hover-card`** — Hover card: <WithHoverCard card> describes its trigger in a card drawn as the shared overlay panel (the menu's look, one fixed width) — a title with an inline code id, a description, has / lacks chips, a path of steps, headed lists, a notice and a mono footer, passed as DATA so no call site styles its own card. Placed beside the trigger, or beside the menu the trigger is a row of, level with that row.
+        - **`hover-card`** — Hover card: <WithHoverCard card> describes its trigger in a card drawn as the shared overlay panel (the menu's look, one fixed width) — a title with an inline code id, a description, has / lacks chips, a path of steps, named figures, headed lists, a notice and a mono footer and a click hint, passed as DATA so no call site styles its own card. Placed beside the trigger, or beside the menu the trigger is a row of, level with that row.
           - Web:
             - Uses:
               - `primitives/css/badge.Badge`
@@ -51450,6 +51452,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/ui-kit.closestOverlayPanel`
               - `primitives/css/ui-kit.cn`
               - `primitives/css/ui-kit.ControlSizeProvider`
+              - `primitives/css/ui-kit.Separator`
               - `primitives/css/ui-kit.Tooltip`
               - `primitives/css/ui-kit.TooltipCardContent`
               - `primitives/css/ui-kit.TooltipTrigger`
@@ -51457,6 +51460,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types):
               - `HoverCardChip`
               - `HoverCardContent`
+              - `HoverCardFigures`
               - `HoverCardList`
               - `HoverCardSteps`
               - `WithHoverCardProps`
@@ -51472,6 +51476,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `active-data/commit-link`
               - `apps/prototypes/thumbnails`
+              - `conversations/conversation-view/jsonl-viewer/transcript-stats`
               - `primitives/text-editor/composer/picker-pill`
               - `ui/segmented-progress-bar`
         - **`hover-popover`** — Hover-opened popover: a controlled ui-kit Popover revealed by pointer hover (open intent delay, grace close while the pointer is on neither the trigger nor the portaled panel), ArrowDown, or a first touch tap; closed by Esc, outside press or focus leaving. The trigger's own click is never intercepted, so a trigger can navigate on click and preview on hover.

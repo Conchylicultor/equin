@@ -38,6 +38,21 @@ export interface HoverCardSteps {
 }
 
 /**
+ * A small table of named figures — the exact numbers behind a rounded
+ * reading: each label on the left, its value right-aligned in tabular digits.
+ */
+export interface HoverCardFigures {
+  /** What the figures measure, above them. */
+  label?: string;
+  rows: readonly {
+    label: string;
+    value: ReactNode;
+    /** The sum of the rows above it: set off by a rule, in strong ink. */
+    total?: boolean;
+  }[];
+}
+
+/**
  * What a hover card says, as data. Every part is optional but the title, and
  * each is laid out by the card itself — there is no free-form body, so a card
  * cannot be styled at its call site. A new kind of part is a new field here.
@@ -53,12 +68,16 @@ export interface HoverCardContent {
   chips?: readonly HoverCardChip[];
   /** A path of steps, after the chips. */
   steps?: HoverCardSteps;
-  /** Headed lists, in order, after the steps. */
+  /** Named figures, after the steps. */
+  figures?: HoverCardFigures;
+  /** Headed lists, in order, after the figures. */
   lists?: readonly HoverCardList[];
   /** Why it cannot be used right now. */
   notice?: string;
   /** Provenance parts (owner, counts…), joined with " · " in mono. */
   meta?: readonly string[];
+  /** What a click on the trigger does, last and faint. */
+  hint?: ReactNode;
 }
 
 export interface WithHoverCardProps {

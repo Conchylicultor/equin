@@ -18,7 +18,21 @@ export function UsageStat() {
       if (!totals) return null;
       return (
         <StatBadge
-          tooltip={`Latest context: ${totals.latestContext.toLocaleString()} tokens\nTotal output: ${totals.output.toLocaleString()} tokens`}
+          card={{
+            title: "Tokens",
+            figures: {
+              rows: [
+                {
+                  label: "Latest context",
+                  value: totals.latestContext.toLocaleString(),
+                },
+                {
+                  label: "Total output",
+                  value: totals.output.toLocaleString(),
+                },
+              ],
+            },
+          }}
         >
           {formatTokenCount(totals.latestContext)} ctx ·{" "}
           {formatTokenCount(totals.output)} out

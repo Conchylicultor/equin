@@ -11,6 +11,7 @@ import {
 } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/transcript-stats/web";
 import { usageFold } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/transcript-stats/plugins/usage/core";
 import { foldResource } from "@plugins/network/plugins/live/plugins/live-state/web";
+import type { HoverCardContent } from "@plugins/primitives/plugins/overlay/plugins/hover-card/web";
 import { useConversationSubagents } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/subagents/web";
 import {
   allAgentRows,
@@ -94,28 +95,36 @@ function AgentsStatFor({ conversationId }: { conversationId: string }) {
   const { agents, running, ownOutput, agentsOutput } = reading;
   const total = ownOutput + agentsOutput;
   const toggles = subject.kind === "conversation";
-  const title = [
-    `${plural(agents, "sub-agent", "sub-agents")}${running > 0 ? `, ${running} running` : ""}`,
-    `Output tokens: ${ownOutput.toLocaleString()} here + ${agentsOutput.toLocaleString()} in sub-agents = ${total.toLocaleString()}`,
+  const card: HoverCardContent = {
+    title: plural(agents, "sub-agent", "sub-agents"),
+    ...(running > 0 ? { chips: [{ label: `${running} running` }] } : {}),
+    figures: {
+      label: "Output tokens",
+      rows: [
+        { label: "This transcript", value: ownOutput.toLocaleString() },
+        { label: "Sub-agents", value: agentsOutput.toLocaleString() },
+        { label: "Total", value: total.toLocaleString(), total: true },
+      ],
+    },
     ...(toggles
-      ? [
-          view.showAll
+      ? {
+          hint: view.showAll
             ? "Click to show only the running agents above the prompt."
             : "Click to list every agent above the prompt.",
-        ]
-      : []),
-  ].join("\n");
+        }
+      : {}),
+  };
   const label = (
     <>
       {plural(agents, "agent", "agents")} · {formatTokenCount(total)} total
     </>
   );
 
-  if (!toggles) return <StatBadge tooltip={title}>{label}</StatBadge>;
+  if (!toggles) return <StatBadge card={card}>{label}</StatBadge>;
   return (
     <StatBadge
       as="button"
-      tooltip={title}
+      card={card}
       aria-pressed={view.showAll}
       onClick={toggleShowAll}
     >

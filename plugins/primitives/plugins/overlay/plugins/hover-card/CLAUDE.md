@@ -10,8 +10,10 @@ hangs off.
 - **The card is data, not markup.** `card` is a `HoverCardContent` —
   `title`, `code` (an id inline after it), `description`, `chips`
   (`{ label, off? }`, `off` drawn as Badge `absent`), `steps` (a path with
-  the current step lit), `lists` (headed lists of short lines), `notice`, `meta`
-  (mono footer parts). There is no `className` and no body slot: a new kind of
+  the current step lit), `figures` (named numbers, label left / value right in
+  tabular digits, a `total` row ruled off), `lists` (headed lists of short
+  lines), `notice`, `meta` (mono footer parts), `hint` (what a click on the
+  trigger does, last and faint). There is no `className` and no body slot: a new kind of
   part is a new field here, never markup at a call site. That is the point —
   every rich hover in the app reads as one card.
 - **`pinOnClick`** — a click pins the card open (tooltip's `usePinOnClick`).
@@ -27,7 +29,7 @@ hangs off.
 
 ## Plugin reference
 
-- Description: Hover card: <WithHoverCard card> describes its trigger in a card drawn as the shared overlay panel (the menu's look, one fixed width) — a title with an inline code id, a description, has / lacks chips, a path of steps, headed lists, a notice and a mono footer, passed as DATA so no call site styles its own card. Placed beside the trigger, or beside the menu the trigger is a row of, level with that row.
+- Description: Hover card: <WithHoverCard card> describes its trigger in a card drawn as the shared overlay panel (the menu's look, one fixed width) — a title with an inline code id, a description, has / lacks chips, a path of steps, named figures, headed lists, a notice and a mono footer and a click hint, passed as DATA so no call site styles its own card. Placed beside the trigger, or beside the menu the trigger is a row of, level with that row.
 - Web:
   - Uses:
     - `primitives/css/badge.Badge`
@@ -38,6 +40,7 @@ hangs off.
     - `primitives/css/ui-kit.closestOverlayPanel`
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.ControlSizeProvider`
+    - `primitives/css/ui-kit.Separator`
     - `primitives/css/ui-kit.Tooltip`
     - `primitives/css/ui-kit.TooltipCardContent`
     - `primitives/css/ui-kit.TooltipTrigger`
@@ -45,6 +48,7 @@ hangs off.
   - Exports (types):
     - `HoverCardChip`
     - `HoverCardContent`
+    - `HoverCardFigures`
     - `HoverCardList`
     - `HoverCardSteps`
     - `WithHoverCardProps`
@@ -60,6 +64,7 @@ hangs off.
   - Imported by:
     - `active-data/commit-link`
     - `apps/prototypes/thumbnails`
+    - `conversations/conversation-view/jsonl-viewer/transcript-stats`
     - `primitives/text-editor/composer/picker-pill`
     - `ui/segmented-progress-bar`
 

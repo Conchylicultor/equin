@@ -3,6 +3,10 @@ import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { Passthrough } from "@plugins/primitives/plugins/passthrough/core";
 import type { Tooltipped } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  WithHoverCard,
+  type HoverCardContent,
+} from "@plugins/primitives/plugins/overlay/plugins/hover-card/web";
 
 /** How loud a stat is. `attention` / `alert` change the ink, never the plate. */
 export type StatTone = "muted" | "attention" | "alert";
@@ -19,9 +23,14 @@ const INK: Record<StatTone, string> = {
   alert: "text-destructive",
 };
 
-/** `tooltip`: hover detail — the exact figures behind the rounded ones. */
+/**
+ * Hover detail: `card` for the exact figures behind the rounded ones (a hover
+ * card, so several numbers read as a table, not a run-on line); `tooltip` for
+ * a one-line label. Never both.
+ */
 export interface StatBadgeProps extends Tooltipped, Passthrough {
   tone?: StatTone;
+  card?: HoverCardContent;
   /**
    * `"button"` for a stat that opens something (a popover trigger spreads its
    * handlers and ref onto the badge, which is why the rest passes through).
@@ -33,10 +42,13 @@ export interface StatBadgeProps extends Tooltipped, Passthrough {
 export function StatBadge({
   tone = "muted",
   as = "span",
+  card,
   children,
   ...rest
 }: StatBadgeProps) {
-  return (
+  if (card !== undefined && rest.tooltip != null)
+    throw new Error("StatBadge: pass `card` or `tooltip`, not both.");
+  const badge = (
     <Badge
       as={as}
       colorClass={`${PLATE} ${INK[tone]}`}
@@ -50,4 +62,6 @@ export function StatBadge({
       {children}
     </Badge>
   );
+  if (card === undefined) return badge;
+  return <WithHoverCard card={card}>{badge}</WithHoverCard>;
 }

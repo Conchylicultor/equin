@@ -6,9 +6,14 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import {
   cn,
   ControlSizeProvider,
+  Separator,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 
-import type { HoverCardContent, HoverCardSteps } from "./with-hover-card";
+import type {
+  HoverCardContent,
+  HoverCardFigures,
+  HoverCardSteps,
+} from "./with-hover-card";
 
 // Past steps a quiet accent, the current one a strong accent, the rest a faint fill.
 const SEGMENT = {
@@ -19,7 +24,18 @@ const SEGMENT = {
 
 /** The one layout of a hover card's parts, top to bottom. */
 export function HoverCardBody({ card }: { card: HoverCardContent }) {
-  const { title, code, description, chips, steps, lists, notice, meta } = card;
+  const {
+    title,
+    code,
+    description,
+    chips,
+    steps,
+    figures,
+    lists,
+    notice,
+    meta,
+    hint,
+  } = card;
   return (
     <Stack gap="xs">
       <Cluster gap="xs" align="baseline">
@@ -50,6 +66,7 @@ export function HoverCardBody({ card }: { card: HoverCardContent }) {
         </ControlSizeProvider>
       )}
       {steps != null && <StepsPath steps={steps} />}
+      {figures != null && <FiguresTable figures={figures} />}
       {lists?.map((list) => (
         <Stack key={list.label} gap="2xs">
           <Text variant="caption" tone="faint">
@@ -75,6 +92,11 @@ export function HoverCardBody({ card }: { card: HoverCardContent }) {
       {meta != null && meta.length > 0 && (
         <Text variant="code" tone="faint">
           {meta.join(" · ")}
+        </Text>
+      )}
+      {hint != null && (
+        <Text variant="caption" tone="faint">
+          {hint}
         </Text>
       )}
     </Stack>
@@ -111,6 +133,44 @@ function StepsPath({ steps }: { steps: HoverCardSteps }) {
           {caption}
         </Text>
       )}
+    </Stack>
+  );
+}
+
+/** Label left, value right in tabular digits; a total row is ruled off above. */
+function FiguresTable({ figures }: { figures: HoverCardFigures }) {
+  const { label, rows } = figures;
+  return (
+    <Stack gap="2xs">
+      {label != null && (
+        <Text variant="caption" tone="faint">
+          {label}
+        </Text>
+      )}
+      {rows.map((row) => (
+        <Stack key={row.label} gap="2xs">
+          {row.total === true && <Separator />}
+          <Stack direction="row" justify="between" align="baseline" gap="md">
+            <Text
+              variant="caption"
+              tone={row.total === true ? "default" : "muted"}
+              className={cn(row.total === true && "font-medium")}
+            >
+              {row.label}
+            </Text>
+            <Text
+              variant="caption"
+              tone={row.total === true ? "strong" : "default"}
+              className={cn(
+                "tabular-nums",
+                row.total === true && "font-semibold",
+              )}
+            >
+              {row.value}
+            </Text>
+          </Stack>
+        </Stack>
+      ))}
     </Stack>
   );
 }

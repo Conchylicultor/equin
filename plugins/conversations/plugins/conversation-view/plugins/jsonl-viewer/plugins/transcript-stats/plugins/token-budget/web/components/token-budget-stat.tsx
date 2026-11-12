@@ -28,11 +28,22 @@ export function TokenBudgetStat() {
 function BudgetBadge({ status }: { status: BudgetStatus }) {
   const { spent, spentThisRequest, requests, allowance } = status;
 
-  const title = [
-    `${spent.toLocaleString()} tokens charged to the agent's work allowance`,
-    `${spentThisRequest.toLocaleString()} of ${allowance.toLocaleString()} in the current request`,
-    `Across ${requests} request${requests === 1 ? "" : "s"} — the allowance re-anchors in full on each new one, so what is "left" is never a conversation total.`,
-  ].join("\n");
+  const card = {
+    title: "Work allowance",
+    figures: {
+      label: "Tokens charged",
+      rows: [
+        { label: "This conversation", value: spent.toLocaleString() },
+        {
+          label: "Current request",
+          value: `${spentThisRequest.toLocaleString()} / ${allowance.toLocaleString()}`,
+        },
+        { label: "Requests", value: requests.toLocaleString() },
+      ],
+    },
+    description:
+      'The allowance re-anchors in full on each new request, so what is "left" is never a conversation total.',
+  };
 
-  return <StatBadge tooltip={title}>{formatTokenCount(spent)} used</StatBadge>;
+  return <StatBadge card={card}>{formatTokenCount(spent)} used</StatBadge>;
 }
