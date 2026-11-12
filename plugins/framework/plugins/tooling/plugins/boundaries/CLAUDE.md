@@ -264,7 +264,7 @@ takes a `debt` exemption on the check's id.
     - `backup/targets/local` (1 debt)
     - `build/restart-skip` (0 debt)
     - `build/serve-composition` (1 debt)
-    - `build/server-build-id` (2 debt)
+    - `build/server-build-id` (3 debt)
     - `code-explorer` (5 debt)
     - `config_v2/disk-read` (1 debt)
     - `config_v2/ledger` (1 debt)

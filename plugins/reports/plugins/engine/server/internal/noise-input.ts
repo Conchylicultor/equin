@@ -16,7 +16,7 @@ import type {
  */
 export function noiseInputOf(report: {
   source: string;
-  /** reports/core's `versionSkewMayExplain` of the report — judged by the caller, so this leaf stays type-only. */
+  /** reports/core's `versionSkewExplains` of the report — judged by the caller, so this leaf stays type-only. */
   versionSkew: boolean;
 }): ReportNoiseInput {
   return { source: report.source, versionSkew: report.versionSkew };

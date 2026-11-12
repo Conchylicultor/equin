@@ -4,7 +4,8 @@ export { reportsRootRoute, reportDetailRoute } from "./routes";
 export { SERVER_REPORT_SOURCES, CLIENT_REPORT_SOURCES } from "./sources";
 export {
   fromOutdatedBundle,
-  versionSkewMayExplain,
+  skewProofOf,
+  versionSkewExplains,
   versionSkewCode,
 } from "./version-skew";
 export { reportsConfig } from "./config";

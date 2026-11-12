@@ -6,6 +6,7 @@ export default [
     paths: [
       "server/internal/get-server-commit.ts",
       "server/internal/get-server-graph-hash.ts",
+      "server/internal/retired-build-file.ts",
     ],
     kind: "debt",
     task: "task-1792338443-riwqev",

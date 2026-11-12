@@ -628,6 +628,7 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
     - `network/live/boot-snapshot` (0 debt)
     - `network/live/live-state` (0 debt)
     - `primitives/networking` (0 debt)
+    - `reports/plugin-load-errors` (0 debt)
     - `shell/notifications` (0 debt)
     - `tasks/task-graph` (0 debt)
 - Server:

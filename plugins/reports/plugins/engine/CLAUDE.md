@@ -164,9 +164,12 @@ filed before the last deploy stale; it did, 2026-06 → 2026-11, muting real
 crashes on the first boot after each push). It is sticky: one occurrence from
 a tab on the served graph clears it for good, so the upsert takes each
 occurrence's noise verdict for the fact the row ends with (`NoiseVerdicts`).
-What the fact explains is reports/core's `versionSkewMayExplain` — only a
-report about loading what the server serves now (`load` sources), never a bug
-in the tab's own code nor what it saw the server do.
+That fact is shown, never judged on. What the noise follows is `skewProven`
+(sticky the same way): the occurrence PROVED version skew by its source's
+proof (reports/core's `SKEW_PROOF`) — a failed load by the 404 file the tab
+named (`missingFile`), re-checked by build/server-build-id's
+`isRetiredBuildFile`; another build's stored entry by `staleOrigin` itself.
+reports/core's `versionSkewExplains` reads it; see `noise-rules`.
 
 So the stored flags only go stale when the rules' code changes. The
 `reports.backfill-noise` warm-up stamps them with the source digest of that
@@ -252,10 +255,10 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
     - `fork-data-exclusion` "report_fixes"
     - `fork-data-exclusion` "reports"
     - `restart-skip.adopted` "the report fixes the adopted commit contains (deployed)"
-  - Uses: 31 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 32 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `reports` ×10
+    - `build/server-build-id` ×4
     - `shell/notifications` ×4
-    - `build/server-build-id` ×3
     - `infra/host/duress/shed` ×2
     - `primitives/commit-list` ×2
     - `build/restart-skip/hooks.RestartSkip`

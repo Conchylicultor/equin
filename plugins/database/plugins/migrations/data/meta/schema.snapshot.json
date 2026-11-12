@@ -1,6 +1,6 @@
 {
-  "id": "53e1d179-c084-4023-b5c5-1036f6b0e077",
-  "prevId": "5e709931-62cf-4485-8d0d-7e7374f6badc",
+  "id": "5dd8b139-d7b3-46b5-a5c1-6f619e9e4df7",
+  "prevId": "53e1d179-c084-4023-b5c5-1036f6b0e077",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -13594,6 +13594,13 @@
         },
         "stale_origin": {
           "name": "stale_origin",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "skew_proven": {
+          "name": "skew_proven",
           "type": "boolean",
           "primaryKey": false,
           "notNull": true,

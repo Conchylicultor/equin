@@ -43,6 +43,17 @@ export const ReportBodySchema = z.object({
   // (stamped by recordReport), the writer's HEAD for an outbox entry. What a
   // regression of a fixed report is judged on.
   commit: z.string().nullable().optional(),
+  // A load the report is about failed, and the tab found which file of its own
+  // build it needed that the server answered 404 for: that file's URL path
+  // (`/artifacts/<name>/<file>`). The tab's half of the proof that version
+  // skew explains the report — the server re-checks it against what it serves
+  // and the builds it retired (reports/core's version-skew), never trusting it
+  // alone. Absent when the tab proved no such file (all served, a network
+  // error, another status): then nothing explains the failure but a bug.
+  missingFile: z
+    .string()
+    .regex(/^\/artifacts\/[^/]+\/.+$/)
+    .optional(),
 });
 export type ReportBody = z.infer<typeof ReportBodySchema>;
 

@@ -14,12 +14,14 @@ import type { ReportNoiseRuleSpec } from "@plugins/reports/server";
 // the page being hidden — hidden pages kept measuring real server hangs). What
 // such a producer cannot establish, it no longer reports at all.
 
-// A report version skew may explain: only ever seen from tabs on an obsolete
-// bundle, and about such a tab loading what the server serves now (a chunk,
-// the boot snapshot) — reloading is the whole fix, and the tab already tells
-// its user so. Never a bug in the tab's own code nor what it saw the server
-// do (reports/core's versionSkewMayExplain). Record + file the task, mute the
-// notification.
+// A report version skew explains — PROVEN, not guessed (reports/core's
+// versionSkewExplains): every occurrence proved it by its source's proof — a
+// failed module load by a file of the tab's build the server answered 404 for
+// and confirmed retired; another build's stored entry by the tab being
+// outdated. Reloading is the whole fix, and the tab already tells its user so.
+// A load that failed with every file served, a network error, a 5xx, a failed
+// boot snapshot: never — whatever tab filed them. Record + file the task, mute
+// the notification.
 export const staleFrontendRule: ReportNoiseRuleSpec = {
   id: "stale-frontend",
   matches: (i) => i.versionSkew,

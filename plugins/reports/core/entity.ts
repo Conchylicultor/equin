@@ -113,11 +113,21 @@ export const reportFields = {
    * occurrence from a tab on the served graph clears it for good. A fact,
    * stored because nothing can re-derive it later: the server's graph has
    * moved on by then, and judging an old row against the current one calls
-   * every report filed before the last deploy stale. What it EXPLAINS is
-   * `versionSkewMayExplain` (only a report about loading what the server
-   * serves now — never a bug in the tab's own code).
+   * every report filed before the last deploy stale. It EXPLAINS nothing by
+   * itself: nearly every long-lived tab is outdated (main deploys on every
+   * push), and a bug in an old bundle is a bug.
    */
   staleOrigin: boolField({ label: "Stale tab" }),
+  /**
+   * Every occurrence so far PROVED version skew, by the proof its source
+   * declares (reports/core's `SKEW_PROOF`): a failed module load by a file of
+   * the tab's build the server answered 404 for and confirmed retired
+   * (`ReportBody.missingFile`, build/server-build-id's `isRetiredBuildFile`);
+   * another build's stored entry by the tab being outdated. Sticky like
+   * `staleOrigin`: one occurrence that proved nothing clears it for good. The
+   * one fact version skew explains a report by (`versionSkewExplains`).
+   */
+  skewProven: boolField({ label: "Version skew" }),
   /**
    * Attribution (last-writer-wins): the tab + bundle identity of the most
    * recent report for this fingerprint. NOT part of the dedup key.

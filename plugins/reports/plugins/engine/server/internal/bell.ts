@@ -15,7 +15,7 @@ import {
   formatReportActivity,
   reportActivity,
   reportDetailRoute,
-  versionSkewMayExplain,
+  versionSkewExplains,
 } from "@plugins/reports/core";
 import { bellKeyOf, fixNoticeOf } from "./fix-notice";
 
@@ -73,8 +73,8 @@ function writeBell(
   const fp = bell.fingerprint;
   // Mirror a "[Stale tab]" marker into the bell so the notification itself reads
   // as benign version-skew at a glance — only when skew may explain it (the
-  // row's, never this occurrence's alone: reports/core's versionSkewMayExplain).
-  const skew = versionSkewMayExplain(row);
+  // row's, never this occurrence's alone: reports/core's versionSkewExplains).
+  const skew = versionSkewExplains(row);
   const stalePrefix = skew ? "[Stale tab] " : "";
   // An incident's count leads, so the 140-char clamp below never cuts it.
   const incidentPrefix =

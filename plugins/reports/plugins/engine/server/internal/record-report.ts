@@ -11,6 +11,7 @@ import {
 } from "@plugins/infra/plugins/runtime-profiler/core";
 import {
   getServerGraphHash,
+  isRetiredBuildFile,
   serverPinCommit,
 } from "@plugins/build/plugins/server-build-id/server";
 import {
@@ -37,7 +38,8 @@ import {
   REPORT_RECENT_MAX,
   reportHourOf,
   fromOutdatedBundle,
-  versionSkewMayExplain,
+  skewProofOf,
+  versionSkewExplains,
   reportIdKind,
   reportMessageOrDerived,
   type ReportId,
@@ -281,7 +283,16 @@ interface FiledReport {
 }
 
 async function fileReport(input: ReportInput): Promise<FiledReport> {
-  const { kind, source, url, userAgent, clientId, buildId, commit } = input;
+  const {
+    kind,
+    source,
+    url,
+    userAgent,
+    clientId,
+    buildId,
+    commit,
+    missingFile,
+  } = input;
   // A blank message is a collector bug: filed anyway, its message derived
   // from what the report carries (error type, top frame) and naming the bug.
   const rawMessage = reportMessageOrDerived(input);
@@ -358,26 +369,39 @@ async function fileReport(input: ReportInput): Promise<FiledReport> {
   const limited = bumpWindowAndCheck(fp);
   // Whether this occurrence's bundle's graph hash differs from the graph this
   // server is serving — a FACT about the occurrence (reports/core's
-  // fromOutdatedBundle). Both sides are the artifact's content identity, so a
+  // fromOutdatedBundle), stored for display only: an outdated tab explains
+  // nothing by itself. Both sides are the artifact's content identity, so a
   // rebuild that composed the same graph does not make every open tab look
-  // outdated. What it explains is judged on the ROW (versionSkewMayExplain):
-  // the row's fact is sticky — one occurrence from a tab on the served graph
-  // clears it for good — so noise is judged both ways here and the upsert
-  // takes the verdict for the fact it ends with.
+  // outdated.
   const staleOrigin = fromOutdatedBundle({
     buildId,
     serverGraph: await getServerGraphHash(),
   });
-  const judge = (rowStale: boolean) =>
+  // Whether this occurrence PROVED version skew, by the proof its source
+  // declares (reports/core's skewProofOf): a failed module load by the file
+  // the tab got a 404 for, re-checked here as one this server no longer serves
+  // because it retired the tab's build graph (isRetiredBuildFile); another
+  // build's stored entry by the bundle comparison above. What it explains is
+  // judged on the ROW (versionSkewExplains): the row's fact is sticky — one
+  // occurrence that proved nothing clears it for good — so noise is judged
+  // both ways here and the upsert takes the verdict for the fact it ends with.
+  const proof = skewProofOf(source);
+  const skewProven =
+    proof === "outdated-tab"
+      ? staleOrigin
+      : proof === "retired-file" &&
+        missingFile !== undefined &&
+        (await isRetiredBuildFile({ graph: buildId, path: missingFile }));
+  const judge = (rowSkew: boolean) =>
     isNoiseReport(
       noiseInputOf({
         source,
-        versionSkew: versionSkewMayExplain({ source, staleOrigin: rowStale }),
+        versionSkew: versionSkewExplains({ skewProven: rowSkew }),
       }),
     );
   const noise: NoiseVerdicts = {
-    ifStale: judge(true),
-    ifCurrent: judge(false),
+    ifSkew: judge(true),
+    ifLive: judge(false),
   };
 
   const id = reportIdKind.mint();
@@ -414,6 +438,7 @@ async function fileReport(input: ReportInput): Promise<FiledReport> {
         limited,
         noise,
         staleOrigin,
+        skewProven,
         clientId: clientId ?? null,
         buildId: buildId ?? null,
         commit: commit ?? null,
@@ -491,14 +516,15 @@ async function fileReport(input: ReportInput): Promise<FiledReport> {
 }
 
 /**
- * An occurrence's noise, judged against each value of the row's `staleOrigin`
- * after this write: `ifStale` when every occurrence so far (this one included)
- * came from an outdated tab, `ifCurrent` otherwise. They differ only for a
- * report version skew may explain (the stale-frontend rule).
+ * An occurrence's noise, judged against each value of the row's `skewProven`
+ * after this write: `ifSkew` when every occurrence so far (this one
+ * included) proved version skew (reports/core's skewProofOf), `ifLive`
+ * otherwise. They
+ * differ only for a rule reading version skew (the stale-frontend rule).
  */
 export interface NoiseVerdicts {
-  ifStale: boolean;
-  ifCurrent: boolean;
+  ifSkew: boolean;
+  ifLive: boolean;
 }
 
 // The validated, clamped, fingerprinted values recordReport computes before
@@ -521,6 +547,12 @@ export interface ReportUpsertValues {
    * now — never re-derived). The row keeps it only while EVERY occurrence did.
    */
   staleOrigin: boolean;
+  /**
+   * This occurrence proved its tab failed loading a file of its own, retired
+   * build (`isRetiredBuildFile`, judged now). The row keeps it only while
+   * EVERY occurrence did; the noise follows it.
+   */
+  skewProven: boolean;
   clientId: string | null;
   buildId: string | null;
   /** The commit the reporting code ran; null when it could not name one. */
@@ -632,8 +664,9 @@ function buildUpsert(
       recent: [occurrence],
       hourly: { hours: [{ h: hour, n: 1 }], untrackedBefore: null },
       rateLimited: v.limited,
-      noise: v.staleOrigin ? v.noise.ifStale : v.noise.ifCurrent,
+      noise: v.skewProven ? v.noise.ifSkew : v.noise.ifLive,
       staleOrigin: v.staleOrigin,
+      skewProven: v.skewProven,
       lastClientId: v.clientId,
       lastBuildId: v.buildId,
       lastCommit: v.commit,
@@ -658,15 +691,17 @@ function buildUpsert(
         rateLimited: sql`${t.rateLimited} OR ${v.limited}`,
         // Sticky: the row stays "only ever seen from outdated tabs" while every
         // occurrence was — whatever their order — and one occurrence from a tab
-        // on the served graph clears it for good (that code path is live in
-        // the current build, so no reload explains it). The noise follows the
-        // fact the row ends with: the newest occurrence's verdict for it, or —
-        // for an older replay — the row's own, re-judged on this occurrence
-        // when the replay is what clears the fact.
-        noise: v.staleOrigin
-          ? sql`case when ${isNewest} then (case when ${t.staleOrigin} then ${v.noise.ifStale}::boolean else ${v.noise.ifCurrent}::boolean end) else ${t.noise} end`
-          : sql`case when ${isNewest} or ${t.staleOrigin} then ${v.noise.ifCurrent}::boolean else ${t.noise} end`,
+        // on the served graph clears it for good. Same for `skewProven`: one
+        // occurrence that proved no skew clears it for good (its load
+        // failed with every file there, or for a reason it could not prove).
+        // The noise follows `skewProven` as the row ends with it: the newest
+        // occurrence's verdict for it, or — for an older replay — the row's
+        // own, re-judged on this occurrence when the replay is what clears it.
+        noise: v.skewProven
+          ? sql`case when ${isNewest} then (case when ${t.skewProven} then ${v.noise.ifSkew}::boolean else ${v.noise.ifLive}::boolean end) else ${t.noise} end`
+          : sql`case when ${isNewest} or ${t.skewProven} then ${v.noise.ifLive}::boolean else ${t.noise} end`,
         staleOrigin: sql`${t.staleOrigin} and ${v.staleOrigin}::boolean`,
+        skewProven: sql`${t.skewProven} and ${v.skewProven}::boolean`,
         lastClientId: sql`case when ${isNewest} then ${v.clientId} else ${t.lastClientId} end`,
         lastBuildId: sql`case when ${isNewest} then ${v.buildId} else ${t.lastBuildId} end`,
         lastCommit: sql`case when ${isNewest} then ${v.commit} else ${t.lastCommit} end`,

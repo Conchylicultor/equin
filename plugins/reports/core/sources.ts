@@ -144,7 +144,8 @@ export const CLIENT_REPORT_SOURCES = [
   "client-storage",
   // A stored entry ANOTHER build's schema wrote that this tab cannot read
   // (web-storage's `other-schema`; the entry is left in place). From an
-  // outdated tab: a newer build's entry (skew). From a current tab: an older
+  // outdated tab: a newer build's entry (skew, proven by the bundle
+  // comparison — reports/core's SKEW_PROOF). From a current tab: an older
   // schema's entry this build neither reads nor migrates (a bug).
   "client-storage-other-schema",
 ] as const;

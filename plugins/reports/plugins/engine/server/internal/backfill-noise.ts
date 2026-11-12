@@ -9,7 +9,7 @@ import { _reports, ReportNoiseRule } from "@plugins/reports/server";
 import {
   reportIdKind,
   versionSkewCode,
-  versionSkewMayExplain,
+  versionSkewExplains,
 } from "@plugins/reports/core";
 import { isNoiseReport } from "./noise";
 import { noiseInputCode, noiseInputOf } from "./noise-input";
@@ -33,12 +33,13 @@ import { _reportsReconciled } from "./tables";
 // boots a day, up to 14 s under host load — for a rule set that changes a few
 // times a year.
 //
-// Every input is the row's own: `staleOrigin` is the fact recorded with the
-// occurrences (every one came from an outdated tab). Re-deriving it here
-// against the graph the server serves NOW marked every client report filed
-// before the last deploy as stale — muting real crashes on the first boot
-// after any push. What that fact EXPLAINS (reports/core's
-// versionSkewMayExplain) is code, and digested like a rule.
+// Every input is the row's own: `skewProven` is the fact recorded with the
+// occurrences (every one proved version skew), never
+// re-derived — the builds retired since would change the answer. (Re-deriving
+// the outdated-tab fact against the graph the server serves NOW once marked
+// every client report filed before the last deploy as stale, muting real
+// crashes after any push.) What the fact EXPLAINS (reports/core's
+// versionSkewExplains) is code, and digested like a rule.
 
 /**
  * The classifier's code: every contributed rule's module
@@ -88,7 +89,7 @@ async function reconcileNoise(): Promise<void> {
       id: _reports.id,
       source: _reports.source,
       noise: _reports.noise,
-      staleOrigin: _reports.staleOrigin,
+      skewProven: _reports.skewProven,
     })
     .from(_reports);
 
@@ -96,7 +97,7 @@ async function reconcileNoise(): Promise<void> {
   const signalIds: string[] = [];
   for (const row of rows) {
     const noise = isNoiseReport(
-      noiseInputOf({ ...row, versionSkew: versionSkewMayExplain(row) }),
+      noiseInputOf({ ...row, versionSkew: versionSkewExplains(row) }),
     );
     if (noise !== row.noise) {
       await setReportNoise(db, row.id, noise);

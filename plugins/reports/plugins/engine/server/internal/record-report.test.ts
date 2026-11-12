@@ -59,8 +59,9 @@ const values = (
   userAgent: null,
   data: {},
   limited: false,
-  noise: { ifStale: false, ifCurrent: false },
+  noise: { ifSkew: false, ifLive: false },
   staleOrigin: false,
+  skewProven: false,
   clientId: null,
   buildId: null,
   commit: null,
@@ -124,43 +125,62 @@ describe("writeReport (real DB)", () => {
   });
 
   // A verdict that differs by the row's fact: noise only while every
-  // occurrence came from an outdated tab (the stale-frontend rule's shape).
-  const skewNoise = { ifStale: true, ifCurrent: false };
+  // occurrence proved version skew (the stale-frontend
+  // rule's shape).
+  const skewNoise = { ifSkew: true, ifLive: false };
+  const proven = { staleOrigin: true, skewProven: true, noise: skewNoise };
 
-  test("staleOrigin holds while every occurrence came from an outdated tab, and noise follows it", async () => {
-    const [stale] = await writeReport(
-      values({ occurredAt: T1, staleOrigin: true, noise: skewNoise }),
+  test("skewProven holds while every occurrence proved skew, and noise follows it", async () => {
+    const [first] = await writeReport(
+      values({ occurredAt: T1, ...proven }),
       t.db,
     );
-    expect(stale?.staleOrigin).toBe(true);
-    expect(stale?.noise).toBe(true);
-    // Another outdated tab, newer: still only ever seen from outdated tabs.
+    expect(first?.skewProven).toBe(true);
+    expect(first?.noise).toBe(true);
     const [again] = await writeReport(
-      values({ occurredAt: T2, staleOrigin: true, noise: skewNoise }),
+      values({ occurredAt: T2, ...proven }),
       t.db,
     );
-    expect(again?.staleOrigin).toBe(true);
+    expect(again?.skewProven).toBe(true);
     expect(again?.noise).toBe(true);
   });
 
-  test("one occurrence from a tab on the served graph clears staleOrigin for good — even a replayed older one", async () => {
-    await writeReport(
-      values({ occurredAt: T1, staleOrigin: true, noise: skewNoise }),
-      t.db,
-    );
+  test("an outdated tab that proved nothing is loud, and clears skewProven for good — even a replayed older one", async () => {
+    await writeReport(values({ occurredAt: T1, ...proven }), t.db);
     const [replayed] = await writeReport(
-      values({ occurredAt: T0, staleOrigin: false, noise: skewNoise }),
+      values({
+        occurredAt: T0,
+        staleOrigin: true,
+        skewProven: false,
+        noise: skewNoise,
+      }),
       t.db,
     );
-    expect(replayed?.staleOrigin).toBe(false);
+    // Still only ever seen from outdated tabs — which explains nothing.
+    expect(replayed?.staleOrigin).toBe(true);
+    expect(replayed?.skewProven).toBe(false);
     expect(replayed?.noise).toBe(false);
-    // A later outdated tab cannot make it stale (or noise) again.
+    // A later proven occurrence cannot make it noise again.
     const [later] = await writeReport(
-      values({ occurredAt: T2, staleOrigin: true, noise: skewNoise }),
+      values({ occurredAt: T2, ...proven }),
+      t.db,
+    );
+    expect(later?.skewProven).toBe(false);
+    expect(later?.noise).toBe(false);
+  });
+
+  test("one occurrence from a tab on the served graph clears staleOrigin for good", async () => {
+    await writeReport(values({ occurredAt: T1, staleOrigin: true }), t.db);
+    const [current] = await writeReport(
+      values({ occurredAt: T0, staleOrigin: false }),
+      t.db,
+    );
+    expect(current?.staleOrigin).toBe(false);
+    const [later] = await writeReport(
+      values({ occurredAt: T2, staleOrigin: true }),
       t.db,
     );
     expect(later?.staleOrigin).toBe(false);
-    expect(later?.noise).toBe(false);
   });
 
   test("a genuinely newer repeat advances last_seen_at and takes over attribution", async () => {

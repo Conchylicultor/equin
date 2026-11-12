@@ -5,10 +5,12 @@ import { defineServerContribution } from "@plugins/framework/plugins/server-core
 // warning, a Claude Code exit code), so it has no spelling.
 export interface ReportNoiseInput {
   source: string;
-  // True when version skew may explain the report: every occurrence came from
-  // an outdated tab, and it is about that tab loading what the server serves
-  // now (reports/core's versionSkewMayExplain). Never for a bug in the tab's
-  // own code, nor for what it saw the server do.
+  // True when version skew explains the report: every occurrence PROVED it,
+  // by the proof its source declares (reports/core's SKEW_PROOF /
+  // versionSkewExplains) — a failed load by a 404 file of the tab's build the
+  // server confirmed retired, another build's stored entry by the tab being
+  // outdated. Never for a bug in the tab's own code, what it saw the server
+  // do, or a load whose files are all still served.
   versionSkew: boolean;
 }
 export interface ReportNoiseRuleSpec {

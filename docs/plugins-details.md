@@ -14892,7 +14892,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/website/promo-film`
       - Exemptions:
         - Exempts itself from: `boundaries/no-platform-api` — `server/internal/reset.ts` (debt)
-    - **`server-build-id`** — Served-bundle and server pin leaf: the commit this backend process was materialized from (serverPin — HEAD sampled at module eval, sealed by build/deployment at onAllReady, unresolved on a mixed boot), and reads the .build-commit (the tree the bundle was built from) and .build-graph (content identity of the served web graph) trailers out of the served dist, fresh on every call; also registers the boot-memoized graph as the live-resource runtime's build identity (contract-mismatch verdicts), and the served page's central build (.central-build) as what its ack frames name a reload brings for central's values (deploy-skew vs skew), re-read when the backend adopts a deploy instead of restarting (restart-skip). A leaf so the deployment description and stale-tab detection read them without importing the heavy build barrel (which pulls git-watcher/worktree).
+    - **`server-build-id`** — Served-bundle and server pin leaf: the commit this backend process was materialized from (serverPin — HEAD sampled at module eval, sealed by build/deployment at onAllReady, unresolved on a mixed boot), and reads the .build-commit (the tree the bundle was built from) and .build-graph (content identity of the served web graph) trailers out of the served dist, fresh on every call; judges whether a file a tab got a 404 for is gone because its build graph was retired (isRetiredBuildFile — the server half of the proof that version skew explains a failed load); also registers the boot-memoized graph as the live-resource runtime's build identity (contract-mismatch verdicts), and the served page's central build (.central-build) as what its ack frames name a reload brings for central's values (deploy-skew vs skew), re-read when the backend adopts a deploy instead of restarting (restart-skip). A leaf so the deployment description and stale-tab detection read them without importing the heavy build barrel (which pulls git-watcher/worktree).
       - Server:
         - Contributes: `restart-skip.adopted` "the web graph live-resource contract verdicts are judged against, and the served page's central build"
         - Uses:
@@ -14903,6 +14903,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `adoptServerPin`
           - `getServerCommit`
           - `getServerGraphHash`
+          - `isRetiredBuildFile`
           - `sealServerPin`
           - `serverPin`
           - `serverPinCommit`
@@ -14912,7 +14913,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `reports/engine`
       - Exemptions:
         - Exempts itself from:
-          - `boundaries/no-platform-api` — `server/internal/get-server-commit.ts`, `server/internal/get-server-graph-hash.ts` (debt)
+          - `boundaries/no-platform-api` — `server/internal/get-server-commit.ts`, `server/internal/get-server-graph-hash.ts`, `server/internal/retired-build-file.ts` (debt)
           - `blocking-fs/no-sync-fs` — `server/internal/server-pin.ts` (sanctioned)
     - **`step-baseline`** — Build-step-regression report kind's Debug → Reports summary view: one line naming the step, its value against its baseline, and for file calls where the extra calls went. Filed by main's build through the report outbox — no collector here. Build-step-regression report kind: one row per step and metric (time, or file calls in a build that rebuilt nothing), filed through the report outbox by main's `./equin build` when a step jumps against its own recent baseline in two same-work builds in a row. Renders a task naming the step, the before/after and, for file calls, the path prefixes the extra calls went to. Warning, re-arms every 6 h.
       - Web:
@@ -30819,7 +30820,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `backup/targets/local` (1 debt)
               - `build/restart-skip` (0 debt)
               - `build/serve-composition` (1 debt)
-              - `build/server-build-id` (2 debt)
+              - `build/server-build-id` (3 debt)
               - `code-explorer` (5 debt)
               - `config_v2/disk-read` (1 debt)
               - `config_v2/ledger` (1 debt)
@@ -34251,6 +34252,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live/boot-snapshot` (0 debt)
           - `network/live/live-state` (0 debt)
           - `primitives/networking` (0 debt)
+          - `reports/plugin-load-errors` (0 debt)
           - `shell/notifications` (0 debt)
           - `tasks/task-graph` (0 debt)
       - Server:
@@ -55236,10 +55238,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `reportsList`
       - `reportsRootRoute`
       - `SERVER_REPORT_SOURCES`
+      - `skewProofOf`
       - `submitReport`
       - `UNTRUSTED_REPORT_SOURCES`
       - `versionSkewCode`
-      - `versionSkewMayExplain`
+      - `versionSkewExplains`
   - Cross-plugin:
     - Imported by: 83 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
       - `reports` ×32
@@ -55403,10 +55406,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `fork-data-exclusion` "report_fixes"
           - `fork-data-exclusion` "reports"
           - `restart-skip.adopted` "the report fixes the adopted commit contains (deployed)"
-        - Uses: 31 symbols — full list in [`plugins/reports/plugins/engine/REFERENCE.md`](../plugins/reports/plugins/engine/REFERENCE.md)
+        - Uses: 32 symbols — full list in [`plugins/reports/plugins/engine/REFERENCE.md`](../plugins/reports/plugins/engine/REFERENCE.md)
           - `reports` ×10
+          - `build/server-build-id` ×4
           - `shell/notifications` ×4
-          - `build/server-build-id` ×3
           - `infra/host/duress/shed` ×2
           - `primitives/commit-list` ×2
           - `build/restart-skip/hooks.RestartSkip`
@@ -55674,7 +55677,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/endpoints.EndpointError`
           - `infra/endpoints.getEndpointErrorMessage`
           - `shell/notifications.useToast`
-    - **`noise-rules`** — Built-in noise classification rules: each judges a fact about a report (a stale tab loading what the server no longer serves), never its message text.
+    - **`noise-rules`** — Built-in noise classification rules: each judges a proven fact about a report (a tab failing to load a file of its own build that the server retired — the tab named the 404 file, the server confirmed the build retired), never its message text nor a guess.
       - Server:
         - Contributes: `report-noise-rule` "stale-frontend"
         - Uses: `reports.ReportNoiseRule`
@@ -55840,10 +55843,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `panelOverflowFingerprint`
           - `PanelOverflowPayloadSchema`
-    - **`plugin-load-errors`** — Files crash tasks for plugins whose chunk failed to load in the deferred tier.
+    - **`plugin-load-errors`** — Files crash tasks for plugins whose chunk failed to load, each after a load probe: the tab walks the failing plugin's static import graph through its own import map and asks the server for each file, so the report says what failed (a 404 file of its build — named as missingFile, the server re-checks it as retired — every file served, a network error, another status) instead of the browser's one ambiguous message.
       - Web:
         - Contributes: `Core.Root` → `PluginLoadErrorReporter`
         - Uses: `reports.report`
+      - Exemptions:
+        - Exempts itself from: `endpoints/no-raw-web-fetch` — `web/internal/load-probe.ts` (sanctioned)
     - **`popover-anchor-lost`** — Popover-anchor-lost collector: drains ui-kit's popoverAnchorLostSink into a deduped report whenever an open popover's anchor (its trigger, or the caller's anchor) leaves the document or is hidden under display: none — the moment the panel would have jumped to the screen's top-left corner — naming the popover, the anchor and the element that hid it (lineage, source line, owner), plus the Debug → Reports summary view. Popover-anchor-lost report kind: validates ui-kit's lost-anchor fault payloads (an open popover whose anchor left the document or went display: none, which used to throw the panel into the screen's top-left corner), fingerprints by cause + popover lineage + anchor + the element that hid it, and renders a task naming them. Re-arms every 6h.
       - Web:
         - Contributes:

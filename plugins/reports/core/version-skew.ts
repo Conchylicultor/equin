@@ -1,89 +1,95 @@
 import type { CLIENT_REPORT_SOURCES } from "./sources";
 
-// When a report from an outdated tab is version skew — and when it is not.
-// Imports nothing at runtime: the noise reconcile digests this module's code
-// (`versionSkewCode`), so the stored `noise` flags are re-judged exactly when
-// this judgment changes — and only then.
+// When a report from an outdated tab is version skew — a judgment of FACTS,
+// never of the report's words nor a guess from its source. Imports nothing at
+// runtime: the noise reconcile digests this module's code (`versionSkewCode`),
+// so the stored `noise` flags are re-judged exactly when this judgment
+// changes — and only then.
+//
+// Main deploys on every push, so nearly every long-lived tab runs an outdated
+// bundle — and an outdated bundle explains nothing by itself: a bug in an old
+// bundle's code, or in what the server did for it, is a bug. A report is
+// version skew only when its occurrence PROVES it, by the proof its source
+// declares ({@link SKEW_PROOF}).
 
 /**
- * What a client report is evidence about, and so whether the tab that filed it
- * running an outdated bundle can explain it.
+ * What proves version skew for a client source — a `Record` over every client
+ * source, so a new source states it.
  *
- * - `load` — the tab loading what the server serves NOW with the bundle it
- *   booted: a chunk of its graph, the boot snapshot's values, an entry another
- *   build's schema stored. Its graph and the server's no longer match, so the outdated
- *   bundle may be the whole cause, and reloading the tab the whole fix. The
- *   ONLY subject version skew can explain.
- * - `page` — the tab's own code doing something by itself: an exception, a
- *   render loop, a stall, a layout gone wrong. Its age explains none of it: a
- *   bug in an old bundle is a bug in that code, live in every tab still
- *   running it. Whether a newer build fixed it is the fix ledger's question
- *   (`--fixes-report`, judged on commits: an occurrence from code without
- *   the fix is no regression), never a guess from the build id — which
- *   differs on almost every tab, since main deploys on every push.
- * - `server` — what the tab observed the SERVER do (or not do): a sub left
- *   unanswered, a loader that failed, a 5xx, a write it refused. A tab on an
- *   old bundle still gets an answer to everything it asks (an unknown key is
- *   a `sub-error` the Reload advice handles, never filed), so the bundle's age
- *   explains none of it either.
- *
- * A `Record` over every client source, so a new source states its subject.
+ * - `retired-file` — a module load failed (`plugin-load`). The browser's
+ *   message reads the same for a file a rebuild retired, a network error while
+ *   the gateway restarts and a server failing to serve a file it should, so
+ *   two witnesses, neither trusted alone:
+ *   - the TAB names the file its failed load needed (`ReportBody.missingFile`):
+ *     it walked the failing module's own import graph and the server answered
+ *     404 for that file — not a network error, not a 5xx, not "every file is
+ *     served" (then the load failed for another reason: a bug);
+ *   - the SERVER re-checks it (build/server-build-id's `isRetiredBuildFile`):
+ *     the file is absent from what it serves AND the tab's build graph was
+ *     retired. A 404 for a build still retained is a retention bug — loud.
+ * - `outdated-tab` — the report is ABOUT the tab's bundle being another
+ *   build's, so the bundle comparison is the proof (`fromOutdatedBundle`): an
+ *   entry another build's schema stored (`client-storage-other-schema`; the
+ *   entry is left in place). An outdated tab meeting a newer build's entry is
+ *   expected; from a tab on the served graph it is a build that neither reads
+ *   nor migrates its own old data — loud.
+ * - `none` — nothing proves skew: loud from every tab. A failed boot snapshot
+ *   included: a tab boots from the page the server serves, so its age is no
+ *   proof of anything.
  */
-export const CLIENT_REPORT_SUBJECT: Record<
+export const SKEW_PROOF: Record<
   (typeof CLIENT_REPORT_SOURCES)[number],
-  "load" | "page" | "server"
+  "retired-file" | "outdated-tab" | "none"
 > = {
-  "browser-error": "page",
-  "browser-rejection": "page",
-  "react-boundary": "page",
-  // A 5xx (the server failed) or a validation 400 (the server refused the
-  // write — the user's edit is lost either way).
-  "client-endpoint": "server",
-  "live-state-wedge": "server",
-  "client-slow-op": "page",
-  "client-render-loop": "page",
-  "client-main-thread-stall": "page",
-  "client-slow-interaction": "page",
-  // Server truth superseded an acked op / the server refused one for good.
-  "client-optimistic-divergence": "server",
-  "client-optimistic-rejection": "server",
-  "client-turn-unconfirmed": "server",
-  // Bodies judged stale by the DATA's version / boot epoch, not the bundle's.
-  "client-live-state-stale-drop": "server",
-  // A live read's loader failed or found nothing (`client-outdated` is the
-  // Reload advice's, never filed).
-  "client-resource-error": "server",
-  "client-caret-flight": "page",
-  "client-adaptive-bar": "page",
-  "client-viewport-escape": "page",
-  "client-panel-overflow": "page",
-  "client-popover-anchor-lost": "page",
-  "client-scoped-out-dispatch": "page",
-  "client-tool-input-drift": "page",
-  "client-collab-hydration": "page",
-  "client-page-undo-conflict": "page",
-  "client-theme-resolution": "page",
-  "client-icon-family-gap": "page",
-  "client-icon-missing-glyph": "page",
-  "boot-snapshot": "load",
-  "client-boot-task": "page",
-  "client-boot-crash": "page",
-  "client-missing-companion": "page",
-  "plugin-load": "load",
-  // A write refused (a cap, the browser's quota) or an entry the tab's own
-  // schema wrote failing that schema: web-storage leaves another build's
-  // entries alone (stamped with their writer's schema), so neither is skew.
-  "client-storage": "page",
-  // Reading what another build stored: the subject skew can explain. From a
-  // current tab it is no skew (`staleOrigin` cleared) — an older schema's
-  // entry this build cannot read, loud.
-  "client-storage-other-schema": "load",
+  "browser-error": "none",
+  "browser-rejection": "none",
+  "react-boundary": "none",
+  "client-endpoint": "none",
+  "live-state-wedge": "none",
+  "client-slow-op": "none",
+  "client-render-loop": "none",
+  "client-main-thread-stall": "none",
+  "client-slow-interaction": "none",
+  "client-optimistic-divergence": "none",
+  "client-optimistic-rejection": "none",
+  "client-turn-unconfirmed": "none",
+  "client-live-state-stale-drop": "none",
+  "client-resource-error": "none",
+  "client-caret-flight": "none",
+  "client-adaptive-bar": "none",
+  "client-viewport-escape": "none",
+  "client-panel-overflow": "none",
+  "client-popover-anchor-lost": "none",
+  "client-scoped-out-dispatch": "none",
+  "client-tool-input-drift": "none",
+  "client-collab-hydration": "none",
+  "client-page-undo-conflict": "none",
+  "client-theme-resolution": "none",
+  "client-icon-family-gap": "none",
+  "client-icon-missing-glyph": "none",
+  "boot-snapshot": "none",
+  "client-boot-task": "none",
+  "client-boot-crash": "none",
+  "client-missing-companion": "none",
+  "plugin-load": "retired-file",
+  "client-storage": "none",
+  "client-storage-other-schema": "outdated-tab",
 };
+
+/** The proof a source declares; a server source never proves skew. */
+export function skewProofOf(
+  source: string,
+): "retired-file" | "outdated-tab" | "none" {
+  const proofs: Partial<
+    Record<string, "retired-file" | "outdated-tab" | "none">
+  > = SKEW_PROOF;
+  return proofs[source] ?? "none";
+}
 
 /**
  * The FACT of one occurrence: the reporting tab's bundle (its graph hash,
  * `buildId`) is not the graph this server serves. Says nothing about whether
- * that explains the report — {@link versionSkewMayExplain} does.
+ * that explains the report — it never does alone ({@link versionSkewExplains}).
  */
 export function fromOutdatedBundle(occurrence: {
   buildId: string | null | undefined;
@@ -94,22 +100,14 @@ export function fromOutdatedBundle(occurrence: {
 }
 
 /**
- * Whether version skew may explain a report: every occurrence it has came from
- * an outdated tab (`staleOrigin`, the row's fact — cleared for good by one
- * occurrence from a tab on the served graph) AND it is about the tab loading
- * what the server serves now (`load`, {@link CLIENT_REPORT_SUBJECT}). The one
- * judgment the stale-frontend noise rule, the bell's "(stale tab)" and the
- * crash task's origin line read.
+ * Whether version skew explains a report: every occurrence it has proved it,
+ * by its source's {@link SKEW_PROOF} (`skewProven`, the row's sticky fact —
+ * cleared for good by one occurrence that proved nothing).
+ * The one judgment the stale-frontend noise rule, the bell's "[Stale tab]" and
+ * the crash task's origin line read.
  */
-export function versionSkewMayExplain(report: {
-  source: string;
-  staleOrigin: boolean;
-}): boolean {
-  if (!report.staleOrigin) return false;
-  // A server source carries no bundle; it is never `load`.
-  const subjects: Partial<Record<string, "load" | "page" | "server">> =
-    CLIENT_REPORT_SUBJECT;
-  return subjects[report.source] === "load";
+export function versionSkewExplains(report: { skewProven: boolean }): boolean {
+  return report.skewProven;
 }
 
 /** This module, for the noise reconcile's code digest. */

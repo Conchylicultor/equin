@@ -6,9 +6,34 @@ A noise report is recorded and visible like any other, but the notification it
 files is `muted` (it stays out of the bell's unread surface). **A bug is never
 muted**: a rule judges a FACT about the report that makes it not a bug, never
 its message text, and never a guess the producer made. Today there is one:
-`stale-frontend` — an outdated tab failing to load what the server no longer
-serves (reports/core's `versionSkewMayExplain`), which the tab itself already
-answers with its Reload advice.
+`stale-frontend` — a report every occurrence of which PROVED version skew
+(reports/core's `versionSkewExplains`), by the proof its source declares
+(`SKEW_PROOF`):
+
+- `plugin-load` — a file of the tab's own build the server PROVABLY retired
+  (below); the tab already answers it with its Reload advice.
+- `client-storage-other-schema` — an outdated tab (`staleOrigin`, the bundle
+  comparison) meeting an entry another build stored: the report is about the
+  tab's bundle being another build's, so that comparison is the proof. The
+  entry is left in place; from a current tab it is loud.
+- everything else (the boot snapshot included) — nothing proves it: loud.
+
+A failed module load has two witnesses, neither trusted alone. The tab
+(`plugin-load-errors`' load probe) walks the failing plugin's static import
+graph as its own import map resolves it and asks the server for each file: a
+404 names the file (`ReportBody.missingFile`); every file served, a network
+error or another status names nothing, and the report stays loud. The server
+(build/server-build-id's `isRetiredBuildFile`) then re-checks that file: absent
+from the address dir it serves, AND the tab's build graph retired (its record
+gone — web-artifacts' address retention). A 404 for a graph still retained is
+a retention or store bug, loud. The row keeps the fact only while every
+occurrence proved skew (`skewProven`, sticky like `staleOrigin`).
+
+Before 2026-11-12 the rule muted any `load`-subject report (a plugin chunk, the
+boot snapshot, another schema's storage entry) from an outdated tab: the
+browser's "Importing a module script failed." reads the same for a retired file,
+a network error while the gateway restarts and a server failing to serve a file
+it should, so a real serving bug on an outdated tab was silenced.
 
 When a producer cannot tell a fault from a measurement artifact (a wait that
 spanned a frozen page), the producer stops claiming the fault — it does not
@@ -37,15 +62,13 @@ export const myRule: ReportNoiseRuleSpec = {
 };
 ```
 
-`matches` receives the report's `source`, `errorType`, `message`, `stack` and
-`versionSkew` — reports/core's `versionSkewMayExplain`: every occurrence came
-from an outdated tab (the row's sticky `staleOrigin` fact) AND the report is
-about that tab loading what the server serves now (a chunk, the boot snapshot). A bug in an outdated tab's own code (an exception, a render
-loop, a stall) or what it saw the server do (a failed loader, a 5xx) is never
-version skew: main deploys on every push, so nearly every long-lived tab is
-outdated, and muting those reports muted real bugs (2026-11-12 audit: all 7
-stale-muted reports of a day were real). Return `true` to mark the
-report as noise. A thrown error in `matches` is caught and treated as "no
+`matches` receives the report's `source` and `versionSkew` — reports/core's
+`versionSkewExplains`: every occurrence proved skew (the row's sticky
+`skewProven` fact, above). Being from an outdated tab
+(`staleOrigin`) is not version skew: main deploys on every push, so nearly
+every long-lived tab is outdated, and muting those reports muted real bugs
+(2026-11-12 audit: all 7 stale-muted reports of a day were real). Return
+`true` to mark the report as noise. A thrown error in `matches` is caught and treated as "no
 match", so a buggy rule never breaks the report pipeline.
 
 `code: import.meta` names the module the rule lives in. The engine reclassifies
@@ -57,7 +80,7 @@ importing nothing but types: everything it loads counts.
 
 ## Plugin reference
 
-- Description: Built-in noise classification rules: each judges a fact about a report (a stale tab loading what the server no longer serves), never its message text.
+- Description: Built-in noise classification rules: each judges a proven fact about a report (a tab failing to load a file of its own build that the server retired — the tab named the 404 file, the server confirmed the build retired), never its message text nor a guess.
 - Server:
   - Contributes: `report-noise-rule` "stale-frontend"
   - Uses: `reports.ReportNoiseRule`
