@@ -43,8 +43,8 @@ Extend this primitive rather than hand-rolling `scrollIntoView` again.
     - `revealElement`
     - `useRevealOnActive`
 - Cross-plugin:
-  - Imported by: 48 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×17
+  - Imported by: 49 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×18
     - `primitives` ×16
     - `page` ×6
     - `apps-core` ×2

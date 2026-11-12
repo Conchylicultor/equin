@@ -12168,6 +12168,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - **`story`** — The story page of the equin website: the /about/story pane answering 'how did equin come to be?', its Story nav link, and the WebsiteStory.Section slot the story is written into. The story page of the equin website on the server: its sitemap entry (WebsitePages.Page).
               - Web:
                 - Slots: `WebsiteStory.Section`
+                - Slot contributors: `WebsiteStory.Section` ← `apps.website.pages.story.essay`
                 - Contributes:
                   - `Pane.Register` "website-story"
                   - `WebsiteHeader` "story" → `StoryNavItem`
@@ -12176,7 +12177,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `apps/website/shell.WebsiteHeader`
                   - `apps/website/shell.WebsiteHero`
                   - `apps/website/shell.WebsiteNavLink`
-                  - `apps/website/shell.WebsiteSoon`
                   - `primitives/pane.defineRoute`
                   - `primitives/pane.Pane`
                   - `primitives/pane.useOpenPane`
@@ -12189,9 +12189,89 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Uses: `apps/website/crawlable.WebsitePages`
               - Core:
                 - Uses: `apps/website/crawlable.defineWebsitePage`
-                - Exports (values): `storyPage`
+                - Exports (values):
+                  - `STORY_PALETTE_DECLS`
+                  - `storyPage`
               - Cross-plugin:
-                - Imported by: `apps/website/landing/story-link`
+                - Uses tokens:
+                  - `ui/tokens/color-palette --background`
+                  - `ui/tokens/color-palette --border`
+                  - `ui/tokens/color-palette --card`
+                  - `ui/tokens/color-palette --faint-foreground`
+                  - `ui/tokens/color-palette --foreground`
+                  - `ui/tokens/color-palette --muted-foreground`
+                  - `ui/tokens/color-palette --primary`
+                  - `ui/tokens/font-family --font-mono`
+                - Imported by:
+                  - `apps/website/landing/story-link`
+                  - `apps/website/pages/story/data-views`
+                  - `apps/website/pages/story/essay`
+                  - `apps/website/pages/story/heads`
+                  - `apps/website/pages/story/skills-graph`
+              - Plugins:
+                - **`data-views`** — The story's data-view figures, pictures drawn on invented data (never live collections): <NotionDataView> (a Notion-like reading list on the same data view as the Artifacts page — views, search, filter, sort, layout, group by, infinite scroll), <ClaudeBefore> (the Claude app's sidebar and Artifacts page, cloned from claude.ai's light theme, two partial reimplementations of a data view) and <ClaudeAfter> (the same two surfaces rebuilt on one data-view primitive). Under the Claude figures, one feature line per capability; hovering one opens that capability in both surfaces at once, boxed by one highlight per surface, lists scrolling it into view and back, menu trees that never move once open.
+                  - Web:
+                    - Uses:
+                      - `primitives/dom/auto-scroll.glideScroll`
+                      - `primitives/dom/auto-scroll.restoreScrollOffset`
+                      - `primitives/dom/auto-scroll.scrollToTop`
+                      - `primitives/dom/in-view.createInViewWatcher`
+                      - `primitives/dom/in-view.InViewWatcher`
+                      - `primitives/dom/scroll-reveal.focusElement`
+                    - Exports (values):
+                      - `ClaudeAfter`
+                      - `ClaudeBefore`
+                      - `NotionDataView`
+                  - Cross-plugin:
+                    - Uses tokens:
+                      - `ui/tokens/color-palette --popover`
+                      - `ui/tokens/font-family --font-sans`
+                    - Imported by: `apps/website/pages/story/essay`
+                - **`essay`** — The story essay on the story page (WebsiteStory.Section): first contact with agents and the skills that taught them to think more like us (the skills graph, the update skill in full), the friction loop that built the agent manager (Me → Friction → My job, a new friction landing on the line, a head full of agents, and the clickable friction chain that unwinds), a world without friction (the backlog that never fills, the review desk), the restart after Google (two screenshots, opened in the image viewer) and the data view as one primitive reused everywhere (a Notion-like reading list, Claude's two surfaces before, and rebuilt on one data view after).
+                  - Web:
+                    - Contributes: `WebsiteStory.Section` "Story essay" → `StoryEssay`
+                    - Uses:
+                      - `apps/website/pages/story.WebsiteStory`
+                      - `apps/website/pages/story/data-views.ClaudeAfter`
+                      - `apps/website/pages/story/data-views.ClaudeBefore`
+                      - `apps/website/pages/story/data-views.NotionDataView`
+                      - `apps/website/pages/story/heads.MindOverload`
+                      - `apps/website/pages/story/heads.ReviewDesk`
+                      - `apps/website/pages/story/skills-graph.SkillsGraph`
+                      - `apps/website/shell.WebsiteBand`
+                      - `primitives/collapsible.FoldMotion`
+                      - `primitives/collapsible.useCollapsible`
+                      - `primitives/dom/in-view.createInViewWatcher`
+                      - `primitives/overlay/image-viewer.ImageGallery`
+                      - `primitives/overlay/image-viewer.useImageViewerTrigger`
+                  - Cross-plugin:
+                    - Uses tokens:
+                      - `ui/tokens/color-palette --border`
+                      - `ui/tokens/color-palette --card`
+                      - `ui/tokens/color-palette --faint-foreground`
+                      - `ui/tokens/color-palette --foreground`
+                      - `ui/tokens/color-palette --muted-foreground`
+                      - `ui/tokens/color-palette --primary`
+                      - `ui/tokens/font-family --font-mono`
+                - **`heads`** — The story's two head figures, drawn around one line-profile head with the same little robots: <MindOverload> (agents crowd in from every side, each pushing its conversation into the head, where the phrases jostle until an answer travels back out — the head is never clear) and <ReviewDesk> (ideas leave the head as agents working in the background, come back to wait in a line on the desk, and are reviewed one at a time — closed, or sent back to work). Each runs only while on screen; reduced motion gets a still.
+                  - Web:
+                    - Uses:
+                      - `primitives/dom/element-size.useResizeObserver`
+                      - `primitives/dom/in-view.createInViewWatcher`
+                    - Exports (values):
+                      - `MindOverload`
+                      - `ReviewDesk`
+                  - Cross-plugin:
+                    - Uses tokens: `ui/tokens/shadow --shadow`
+                    - Imported by: `apps/website/pages/story/essay`
+                - **`skills-graph`** — The story's skills graph: <SkillsGraph> draws the author's skills as a program — AGENTS.md as main(), the everyday skills (complete a task, answer a question, fix a bug, write tests first) funnelling into the meta skills (self-improvement, meta-fix, think a level higher, update skill, write a skill) in the highlight colour — with one run of execution travelling down it while on screen, and each skill's file and purpose on hover.
+                  - Web:
+                    - Uses:
+                      - `primitives/dom/element-size.useResizeObserver`
+                      - `primitives/dom/in-view.createInViewWatcher`
+                    - Exports (values): `SkillsGraph`
+                  - Cross-plugin:
+                    - Imported by: `apps/website/pages/story/essay`
             - **`vision`** — The vision page of the equin website: the /about/vision pane on the vision for applications — one Powers of Ten zoom-out on a dark starfield, six chapter cards scrolling over a pinned stage (an idea, an app that reshapes itself, apps that integrate, a personal OS, apps shared between people, every app rebuilt) with a layer strip under the header — its Vision nav link, and the WebsiteVision.Section slot for sections below it. The vision page of the equin website on the server: its sitemap entry (WebsitePages.Page).
               - Web:
                 - Slots: `WebsiteVision.Section`
@@ -12377,6 +12457,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/website/pages/foundations`
               - `apps/website/pages/guide`
               - `apps/website/pages/story`
+              - `apps/website/pages/story/essay`
               - `apps/website/pages/vision`
 
 - **`apps-core`** — App switcher rail. Wraps per-app shells; plugins contribute via Apps.App. Every app the browser registers, readable on the server: declaredApps — each Apps.App contribution's whole AppRef (id, name, base path, icon, tile colour) and its launch kind (tab or surface mode), generated at build time from the web contributions.
@@ -44956,10 +45037,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-size-caption`
           - `ui/tokens/type-scale --font-weight-normal`
           - `ui/tokens/type-scale --line-height-caption`
-        - Imported by: 58 plugins — full list in [`plugins/primitives/plugins/collapsible/REFERENCE.md`](../plugins/primitives/plugins/collapsible/REFERENCE.md)
+        - Imported by: 59 plugins — full list in [`plugins/primitives/plugins/collapsible/REFERENCE.md`](../plugins/primitives/plugins/collapsible/REFERENCE.md)
           - `conversations` ×14
+          - `apps` ×12
           - `ui` ×12
-          - `apps` ×11
           - `primitives` ×8
           - `plugin-meta` ×4
           - `review` ×3
@@ -48278,6 +48359,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/sonata/progress/loop`
               - `apps/sonata/rich/chord-progression`
               - `apps/website/pages/foundations`
+              - `apps/website/pages/story/data-views`
               - `apps/website/pages/vision`
               - `conversations/agent-thread`
               - `conversations/conversation-view/jsonl-viewer`
@@ -48345,9 +48427,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useResizeObserver`
               - `useResizeObserverSet`
           - Cross-plugin:
-            - Imported by: 46 plugins — full list in [`plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md)
+            - Imported by: 48 plugins — full list in [`plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md)
               - `primitives` ×25
-              - `apps` ×11
+              - `apps` ×13
               - `shell` ×2
               - `active-data/go`
               - `conversations/conversation-view/jsonl-viewer`
@@ -48395,6 +48477,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `apps/deploy/analytics/collect`
               - `apps/website/pages/foundations`
+              - `apps/website/pages/story/data-views`
+              - `apps/website/pages/story/essay`
+              - `apps/website/pages/story/heads`
+              - `apps/website/pages/story/skills-graph`
               - `apps/website/pages/vision`
               - `conversations/agent-thread`
               - `conversations/conversation-view/jsonl-viewer`
@@ -48494,8 +48580,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `revealElement`
               - `useRevealOnActive`
           - Cross-plugin:
-            - Imported by: 48 plugins — full list in [`plugins/primitives/plugins/dom/plugins/scroll-reveal/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/scroll-reveal/REFERENCE.md)
-              - `apps` ×17
+            - Imported by: 49 plugins — full list in [`plugins/primitives/plugins/dom/plugins/scroll-reveal/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/scroll-reveal/REFERENCE.md)
+              - `apps` ×18
               - `primitives` ×16
               - `page` ×6
               - `apps-core` ×2
@@ -50529,6 +50615,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `apps/pages/page-tree`
               - `apps/places/places-map`
+              - `apps/website/pages/story/essay`
               - `conversations/conversation-view/artifacts/screenshot`
               - `conversations/conversation-view/jsonl-viewer`
               - `conversations/conversation-view/jsonl-viewer/attachment/attached-file`
@@ -54268,7 +54355,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/color-palette --muted-foreground`
           - `ui/tokens/font-family --font-mono`
-        - Imported by: `apps/website/pages/vision`
+        - Imported by:
+          - `apps/website/pages/story/data-views`
+          - `apps/website/pages/story/heads`
+          - `apps/website/pages/story/skills-graph`
+          - `apps/website/pages/vision`
       - Core:
         - Exports (types):
           - `RenderLoopInitiator`
@@ -60202,8 +60293,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/density --space-sm`
               - `ui/tokens/shape --spacing`
-            - Tokens used by: 540 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
-              - `apps` ×119
+            - Tokens used by: 543 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
+              - `apps` ×122
               - `conversations` ×98
               - `primitives` ×73
               - `debug` ×40
@@ -60445,10 +60536,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `fontFamilyGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/density --space-sm`
-            - Tokens used by: 155 plugins — full list in [`plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md)
+            - Tokens used by: 158 plugins — full list in [`plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md)
               - `conversations` ×42
+              - `apps` ×24
               - `plugin-meta` ×23
-              - `apps` ×21
               - `debug` ×19
               - `primitives` ×14
               - `reports` ×7
@@ -60727,8 +60818,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-weight-normal`
               - `ui/tokens/type-scale --line-height-3xs`
               - `ui/tokens/type-scale --line-height-caption`
-            - Tokens used by: 51 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md)
-              - `apps` ×19
+            - Tokens used by: 52 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md)
+              - `apps` ×20
               - `primitives` ×10
               - `ui` ×5
               - `framework` ×3

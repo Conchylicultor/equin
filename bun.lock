@@ -1504,6 +1504,22 @@
       "name": "@equin/plugin-apps-website-pages-story",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/website/plugins/pages/plugins/story/plugins/data-views": {
+      "name": "@equin/plugin-apps-website-pages-story-data-views",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/website/plugins/pages/plugins/story/plugins/essay": {
+      "name": "@equin/plugin-apps-website-pages-story-essay",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/website/plugins/pages/plugins/story/plugins/heads": {
+      "name": "@equin/plugin-apps-website-pages-story-heads",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/website/plugins/pages/plugins/story/plugins/skills-graph": {
+      "name": "@equin/plugin-apps-website-pages-story-skills-graph",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/website/plugins/pages/plugins/vision": {
       "name": "@equin/plugin-apps-website-pages-vision",
       "version": "0.0.1",
@@ -8273,6 +8289,14 @@
     "@equin/plugin-apps-website-pages-guide": ["@equin/plugin-apps-website-pages-guide@workspace:plugins/apps/plugins/website/plugins/pages/plugins/guide"],
 
     "@equin/plugin-apps-website-pages-story": ["@equin/plugin-apps-website-pages-story@workspace:plugins/apps/plugins/website/plugins/pages/plugins/story"],
+
+    "@equin/plugin-apps-website-pages-story-data-views": ["@equin/plugin-apps-website-pages-story-data-views@workspace:plugins/apps/plugins/website/plugins/pages/plugins/story/plugins/data-views"],
+
+    "@equin/plugin-apps-website-pages-story-essay": ["@equin/plugin-apps-website-pages-story-essay@workspace:plugins/apps/plugins/website/plugins/pages/plugins/story/plugins/essay"],
+
+    "@equin/plugin-apps-website-pages-story-heads": ["@equin/plugin-apps-website-pages-story-heads@workspace:plugins/apps/plugins/website/plugins/pages/plugins/story/plugins/heads"],
+
+    "@equin/plugin-apps-website-pages-story-skills-graph": ["@equin/plugin-apps-website-pages-story-skills-graph@workspace:plugins/apps/plugins/website/plugins/pages/plugins/story/plugins/skills-graph"],
 
     "@equin/plugin-apps-website-pages-vision": ["@equin/plugin-apps-website-pages-vision@workspace:plugins/apps/plugins/website/plugins/pages/plugins/vision"],
 

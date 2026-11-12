@@ -1,0 +1,459 @@
+/* The story essay, ported from the prototype (proto-1794207359-w7ez6h) at its default options
+   (graphs: few, head: profile, hl: blue; theme follows the site — paper is its light mode, night its dark).
+
+   Every colour is a story palette role (--fg, --fg2, --fg3, --line, --panel, --hl), set on `.story-essay`
+   from the site's theme tokens (the mapping story/core `STORY_PALETTE` holds), so nothing here spells a colour.
+   The figures' one colour is --hl: the thing that changes (the friction, the open count). */
+
+.story-essay {
+  /* the story palette — the same mapping story/core's STORY_PALETTE gives the figures' shadow roots */
+  --fg: var(--foreground);
+  --fg2: var(--muted-foreground);
+  --fg3: var(--faint-foreground);
+  --line: var(--border);
+  --panel: var(--card);
+  --hl: var(--primary);
+  --mono: var(--font-mono);
+  font-size: 17px;
+  line-height: 1.6;
+  color: var(--fg);
+}
+
+/* ---------- prose: one 720px reading column inside the site's measure ---------- */
+.story-essay .prose {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 8px 0 80px;
+}
+.story-essay .prose h2 {
+  font-size: 26px;
+  font-weight: 600;
+  line-height: 1.6;
+  letter-spacing: -0.03em;
+  margin: 72px 0 14px;
+  color: var(--fg);
+}
+.story-essay .prose p,
+.story-essay .prose li {
+  color: var(--fg2);
+  font-size: 16.5px;
+}
+.story-essay .prose p {
+  margin: 0 0 16px;
+}
+.story-essay .prose p strong,
+.story-essay .prose li strong {
+  color: var(--fg);
+  font-weight: 600;
+}
+.story-essay .prose ul {
+  list-style: disc;
+  padding-left: 22px;
+  margin: 0 0 18px;
+}
+.story-essay .prose li {
+  margin: 4px 0;
+}
+.story-essay .prose li::marker {
+  color: var(--fg3);
+}
+.story-essay .details {
+  margin: 12px 0 20px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
+}
+.story-essay .summary {
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+  line-height: inherit;
+  cursor: pointer;
+  padding: 12px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--fg);
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.story-essay .summary::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-right: 1.5px solid var(--fg3);
+  border-bottom: 1.5px solid var(--fg3);
+  transform: rotate(-45deg);
+  transition: transform 0.15s ease;
+}
+.story-essay .details[data-open="true"] .summary::before {
+  transform: rotate(45deg);
+}
+.story-essay .summary .meta {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--fg3);
+  font-weight: 400;
+}
+.story-essay .details pre {
+  margin: 0;
+  padding: 4px 18px 18px;
+  font-family: var(--mono);
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--fg2);
+  white-space: pre-wrap;
+  border-top: 1px solid var(--line);
+  max-height: 520px;
+  overflow: auto;
+}
+
+/* ---------- figures: words on thin lines; one colour (--hl) for what changes ---------- */
+.story-essay .fig {
+  margin: 36px 0 40px;
+  padding: 28px 28px;
+  border-radius: 12px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  font-size: 15px;
+  line-height: 1.35;
+  color: var(--fg);
+}
+.story-essay .hl {
+  color: var(--hl);
+  font-weight: 600;
+}
+.story-essay .x {
+  color: var(--fg3);
+  text-decoration: line-through;
+}
+/* the line: an arrow filling its cell; .on puts a word on it */
+.story-essay .ln {
+  position: relative;
+  height: 1.5px;
+  min-width: 32px;
+  background: var(--fg);
+}
+.story-essay .ln::after {
+  content: "";
+  position: absolute;
+  right: -1px;
+  top: -4px;
+  border-left: 8px solid var(--fg);
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+}
+.story-essay .ln:has(.on) {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-width: max-content;
+  padding: 0 22px;
+}
+.story-essay .ln .on {
+  position: relative;
+  padding: 0 8px;
+  background: var(--panel);
+  color: var(--hl);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* nested friction: each row's goal is the row above's friction */
+.story-essay .nest {
+  display: grid;
+  gap: 18px;
+}
+.story-essay .nest .r {
+  display: grid;
+  grid-template-columns: max-content minmax(48px, 1fr) max-content;
+  align-items: center;
+  gap: 14px;
+}
+.story-essay .nest .r:nth-child(2) {
+  margin-left: 7%;
+}
+.story-essay .nest .r:nth-child(3) {
+  margin-left: 14%;
+}
+.story-essay .nest .r:nth-child(4) {
+  margin-left: 21%;
+}
+
+/* the chain: click a friction and it becomes the next objective */
+/* rows clip so they can collapse; the slack around them (padding, cancelled by the box's negative
+   margin) keeps a pulse ring inside the clip */
+.story-essay .chain {
+  gap: 0 !important;
+  margin-inline: -16px;
+}
+.story-essay .chain .step {
+  display: grid;
+  gap: 4px;
+  animation: story-rowin 0.45s ease both;
+  overflow: hidden;
+  max-height: 160px;
+  padding: 10px 16px 8px;
+  transition:
+    max-height 0.45s cubic-bezier(0.4, 0, 0.2, 1),
+    padding 0.45s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.35s ease;
+}
+.story-essay .chain .step.unq {
+  max-height: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  opacity: 0;
+}
+.story-essay .chain .desc {
+  justify-self: end;
+  font-size: 13px;
+  color: var(--fg3);
+  text-align: right;
+  animation: story-rowin 0.5s 0.3s ease both;
+}
+.story-essay .ln .on.appear {
+  animation:
+    story-rowin 0.5s ease both,
+    story-pulse 2.6s 0.5s ease-in-out infinite;
+}
+.story-essay .ln span.on.appear {
+  animation: story-rowin 0.6s ease both;
+}
+.story-essay .ln button.on,
+.story-essay .chain button.goal {
+  font: inherit;
+  font-weight: 600;
+  border: 0;
+  cursor: pointer;
+  border-radius: 999px;
+  padding: 2px 10px;
+}
+.story-essay .ln button.on.pulse,
+.story-essay .chain button.goal.pulse {
+  animation: story-pulse 2.6s ease-in-out infinite;
+}
+.story-essay .ln button.on.appear,
+.story-essay .chain button.goal.appear {
+  animation:
+    story-rowin 0.5s ease both,
+    story-pulse 2.6s 0.5s ease-in-out infinite;
+}
+.story-essay .ln button.on:disabled {
+  cursor: default;
+  color: var(--fg2);
+  font-weight: 500;
+}
+/* the last goal is the one to click: no friction left on its line */
+.story-essay .chain button.goal {
+  margin: -2px -10px;
+  background: none;
+  color: var(--hl);
+}
+.story-essay .chain button.goal:disabled {
+  cursor: default;
+  animation: none;
+}
+/* the stack unwinds: each goal is reached in turn (--hl, ticked), its friction fades off the row above */
+.story-essay .chain .ln .on.gone {
+  opacity: 0;
+  transition: opacity 0.45s ease;
+  animation: none;
+  box-shadow: none;
+}
+.story-essay .chain .r > :last-child {
+  transition: color 0.5s ease;
+}
+.story-essay .chain .r > .reached {
+  color: var(--hl);
+}
+.story-essay .chain .tick {
+  display: inline-block;
+  vertical-align: bottom;
+  overflow: hidden;
+  white-space: nowrap;
+  max-width: 0;
+  opacity: 0;
+  animation: story-tickin 0.45s ease forwards;
+}
+@keyframes story-tickin {
+  to {
+    max-width: 1.5em;
+    opacity: 1;
+  }
+}
+.story-essay .chain .again {
+  justify-self: start;
+  margin-top: 4px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--fg3);
+  background: none;
+  border: 0;
+  cursor: pointer;
+  padding: 0;
+}
+.story-essay .chain .again:hover {
+  color: var(--fg);
+}
+@keyframes story-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--hl) 0%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 6px color-mix(in srgb, var(--hl) 22%, transparent);
+  }
+}
+@keyframes story-rowin {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
+/* the backlog: rows grow in and collapse out, so the rest of the list slides instead of jumping */
+.story-essay .rowsbox {
+  display: grid;
+  min-height: 190px;
+  align-content: start;
+}
+.story-essay .sides {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 36px;
+}
+.story-essay .side {
+  display: grid;
+  gap: 0;
+  align-content: start;
+}
+.story-essay .side h4 {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin: 0 0 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--fg);
+}
+.story-essay .side h4 span {
+  font-size: 22px;
+  letter-spacing: -0.02em;
+}
+.story-essay .side h4 [data-n] {
+  font-variant-numeric: tabular-nums;
+}
+.story-essay .side .t {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 0;
+  border-top: 1px solid var(--line);
+  font-size: 14px;
+  overflow: hidden;
+  max-height: 44px;
+  transition:
+    max-height 0.45s cubic-bezier(0.3, 0.7, 0.2, 1),
+    padding 0.45s cubic-bezier(0.3, 0.7, 0.2, 1),
+    opacity 0.35s,
+    border-color 0.45s;
+}
+.story-essay .side .t.enter,
+.story-essay .side .t.exit {
+  max-height: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  opacity: 0;
+  border-top-color: transparent;
+}
+.story-essay .side .t span:last-child {
+  color: var(--fg3);
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+.story-essay .side .more {
+  padding: 8px 0;
+  border-top: 1px solid var(--line);
+  color: var(--fg3);
+  font-size: 13px;
+}
+
+/* the closing teaser */
+.story-essay .tbc {
+  margin: 88px 0 0;
+  padding-top: 40px;
+  border-top: 1px solid var(--line);
+  text-align: center;
+}
+.story-essay .tbc .tbc-k {
+  margin: 0 0 8px;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--fg);
+}
+
+/* embeds wider than the text column */
+.story-essay .wide {
+  margin: 32px 0 36px;
+  margin-inline: calc(50% - min(500px, 50vw - 32px));
+}
+
+/* screenshots: click to see one whole, in the standard image viewer */
+.story-essay .shot {
+  margin: 28px 0 34px;
+}
+.story-essay .shot img {
+  display: block;
+  width: 100%;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  cursor: zoom-in;
+}
+.story-essay .shot figcaption {
+  margin-top: 10px;
+  font-size: 13px;
+  color: var(--fg3);
+  text-align: center;
+}
+
+/* narrow: the same diagrams, tighter; lines stay lines */
+@media (max-width: 560px) {
+  .story-essay .fig {
+    padding: 22px 16px;
+    font-size: 14px;
+  }
+  .story-essay .nest .r {
+    grid-template-columns: max-content 1fr;
+    gap: 8px 10px;
+  }
+  .story-essay .nest .r > :last-child {
+    grid-column: 1 / -1;
+    justify-self: end;
+  }
+  .story-essay .nest .r:nth-child(n),
+  .story-essay .chain .step {
+    margin-left: 0 !important;
+  }
+  .story-essay .chain .desc {
+    justify-self: start;
+    text-align: left;
+  }
+  .story-essay .chain .r {
+    grid-template-columns: max-content 1fr;
+  }
+  .story-essay .ln:has(.on) {
+    padding: 0 10px;
+  }
+  .story-essay .side:last-child .rowsbox {
+    min-height: 80px;
+  }
+  .story-essay .ln .on {
+    font-size: 13px;
+  }
+  .story-essay .sides {
+    grid-template-columns: 1fr;
+  }
+}

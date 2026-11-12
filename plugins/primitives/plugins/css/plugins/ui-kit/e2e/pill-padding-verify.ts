@@ -99,7 +99,7 @@ await withBrowser(async (h) => {
   }
 
   await boot(page, pathUrl("/about"), {
-    marker: "text=Curious how equin came to be?",
+    marker: "text=Curious how equin was built?",
     settleMs: 800,
   });
   const site = await probe(page, '[data-theme-scope*="equin-document"]', "sm");

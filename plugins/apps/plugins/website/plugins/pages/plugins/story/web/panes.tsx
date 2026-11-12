@@ -4,7 +4,6 @@ import { storyPage } from "../core";
 import {
   WebsiteChrome,
   WebsiteHeader,
-  WebsiteSoon,
 } from "@plugins/apps/plugins/website/plugins/shell/web";
 import { WebsiteStory } from "./slots";
 import { StoryOpening } from "./components/story-opening";
@@ -15,8 +14,8 @@ import { StoryOpening } from "./components/story-opening";
  *
  * Wears the shared site header (`actions: WebsiteHeader`), so the wordmark and
  * every nav link follow the reader here, and renders every
- * `WebsiteStory.Section` contribution below the opening. Unwritten so far, so
- * the heading is followed by the site's "more details soon" note.
+ * `WebsiteStory.Section` contribution below the opening — the story itself is
+ * written there (`story/essay`).
  */
 export const storyPane = Pane.define({
   route: defineRoute({ id: "website-story", segment: "story" }),
@@ -30,7 +29,6 @@ function StoryBody() {
   return (
     <WebsiteChrome pane={storyPane}>
       <StoryOpening />
-      <WebsiteSoon />
       <WebsiteStory.Section.Render />
     </WebsiteChrome>
   );

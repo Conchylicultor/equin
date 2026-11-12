@@ -70,7 +70,11 @@ does not own.
   - Uses tokens:
     - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/font-family --font-mono`
-  - Imported by: `apps/website/pages/vision`
+  - Imported by:
+    - `apps/website/pages/story/data-views`
+    - `apps/website/pages/story/heads`
+    - `apps/website/pages/story/skills-graph`
+    - `apps/website/pages/vision`
 - Core:
   - Exports (types):
     - `RenderLoopInitiator`

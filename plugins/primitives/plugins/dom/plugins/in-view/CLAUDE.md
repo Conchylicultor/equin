@@ -70,6 +70,10 @@ allowlisting a copy.
   - Imported by:
     - `apps/deploy/analytics/collect`
     - `apps/website/pages/foundations`
+    - `apps/website/pages/story/data-views`
+    - `apps/website/pages/story/essay`
+    - `apps/website/pages/story/heads`
+    - `apps/website/pages/story/skills-graph`
     - `apps/website/pages/vision`
     - `conversations/agent-thread`
     - `conversations/conversation-view/jsonl-viewer`

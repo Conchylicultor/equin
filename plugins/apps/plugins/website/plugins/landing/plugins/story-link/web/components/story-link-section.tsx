@@ -7,7 +7,7 @@ import {
 } from "@plugins/apps/plugins/website/plugins/shell/web";
 import { storyPane } from "@plugins/apps/plugins/website/plugins/pages/plugins/story/web";
 
-const PROMPT = "Curious how equin came to be?";
+const PROMPT = "Curious how equin was built?";
 const LINK = "Read the full story and context";
 
 /**

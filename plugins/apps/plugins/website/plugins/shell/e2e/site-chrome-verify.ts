@@ -103,7 +103,7 @@ await withBrowser(async (h) => {
     colorScheme: "dark",
   });
   await boot(page, pathUrl("/about"), {
-    marker: "text=Curious how equin came to be?",
+    marker: "text=Curious how equin was built?",
     settleMs: 800,
   });
 
