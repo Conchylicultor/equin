@@ -118,8 +118,9 @@ whole-tree re-lint for no measured gain.
   consumes its own.
 - **Run instrumented code from outside the tree.** Copy the plugin dir under
   `.cache/` (gitignored) and run `./equin run .cache/<copy>/shared/worker.ts
-  <job copy>`. The worker checks every file it lints against the job's tree,
-  so an edit to a tracked file fails the replay ("changed on disk").
+  <job copy>`. The job names its tree: what the run reads is that tree's
+  blobs, whatever the disk holds. An instrumented copy kept beside them
+  cannot be mistaken for the code under check.
 - **Mind the walk namespace.** Changing any walk-engine file (every top-level
   `shared/*.ts` but the worker plumbing — `lint-engine.ts` included) refuses
   the job's walk base. The replay then does a FULL walk, which is a different
