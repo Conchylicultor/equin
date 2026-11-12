@@ -5,11 +5,14 @@ import type { ReportNoiseRuleSpec } from "@plugins/reports/server";
 // the code it loads changes — an import here would make every change to the
 // imported module re-run that reclassification.
 
+// The browser's own "ResizeObserver loop …" warning, and only it: a report of
+// another source that merely NAMES a ResizeObserver callback (a main-thread
+// stall attributed to one — 5.9 s and 7.2 s freezes were muted that way) is
+// that source's problem, and stays loud.
 export const resizeObserverRule: ReportNoiseRuleSpec = {
   id: "resize-observer",
-  matches: ({ message, errorType }) =>
-    message.toLowerCase().includes("resizeobserver") ||
-    (errorType?.toLowerCase().includes("resizeobserver") ?? false),
+  matches: ({ source, message }) =>
+    source === "browser-error" && message.startsWith("ResizeObserver loop"),
   code: import.meta,
 };
 
