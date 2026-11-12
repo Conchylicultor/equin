@@ -46703,6 +46703,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `row/no-adhoc-row` — `web` (sanctioned)
               - `row/no-row-focus-class` — `web` (sanctioned)
             - Exempted by: `primitives/css/row` (0 debt)
+        - **`script-state`** — Script-only state attributes: defineScriptState declares a frequently-flipped attribute of a high-up element (<html>, <body>, an app container) that script reads and no stylesheet may select on — enforced by the script-state:no-stylesheet-reads check.
+          - Cross-plugin:
+            - Imported by: `primitives/css/ui-kit`
+          - Core:
+            - Exports (types):
+              - `ScriptState`
+              - `StateAttribute`
+            - Exports (values): `defineScriptState`
         - **`scroll`** — Scroll-container layout primitive: <Scroll axis fill> owns overflow AND the flex-child fill policy (min-h-0 flex-1) as one role.
           - Web:
             - Uses:

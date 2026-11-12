@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { defineScriptState } from "@plugins/primitives/plugins/css/plugins/script-state/core";
 
 /**
  * Whether the user is driving the page with the pointer or navigating it with
@@ -14,7 +15,9 @@ import { useEffect } from "react";
  * Two marks, for two readers:
  *
  * - `data-input-modality="pointer"` on `<html>` (absent = keyboard) — the
- *   page's state, for script (`isPointerModality`). No stylesheet may read it.
+ *   page's state, for script (`isPointerModality`). Declared script-only
+ *   (`defineScriptState`), so `script-state:no-stylesheet-reads` rejects any
+ *   stylesheet selector naming it.
  * - `data-pointer-focus` on the ONE focused element, while the page is in
  *   pointer modality — what the `focus-ring` utilities in `app.css` read
  *   (`:focus-visible:where(:not([data-pointer-focus]))`). Only the focused
@@ -44,20 +47,19 @@ export function trackInputModality(doc: Document): () => void {
   let marked: Element | null = null;
   /** Move the pointer-focus mark to where it belongs now. */
   const sync = () => {
-    const target =
-      root.dataset.inputModality === POINTER ? focusedElement(doc) : null;
+    const target = MODALITY.read(root) === POINTER ? focusedElement(doc) : null;
     if (target === marked) return;
     marked?.removeAttribute(POINTER_FOCUS_ATTR);
     target?.setAttribute(POINTER_FOCUS_ATTR, "");
     marked = target;
   };
   const onPointer = () => {
-    root.dataset.inputModality = POINTER;
+    MODALITY.write(root, POINTER);
     sync();
   };
   const onKey = (e: KeyboardEvent) => {
     if (!NAVIGATION_KEYS.has(e.key)) return;
-    delete root.dataset.inputModality;
+    MODALITY.write(root, undefined);
     sync();
   };
   // Focus left an element (blurred, or removed with focus inside it): drop
@@ -79,7 +81,7 @@ export function trackInputModality(doc: Document): () => void {
     doc.removeEventListener("focusin", sync, true);
     doc.removeEventListener("focusout", onFocusOut, true);
     marked?.removeAttribute(POINTER_FOCUS_ATTR);
-    delete root.dataset.inputModality;
+    MODALITY.write(root, undefined);
   };
 }
 
@@ -106,6 +108,8 @@ const NAVIGATION_KEYS = new Set([
   "PageDown",
 ]);
 
+/** The page's modality on `<html>`: "pointer", absent for keyboard. Script-only. */
+const MODALITY = defineScriptState("data-input-modality");
 const POINTER = "pointer";
 /** Read by the `focus-ring*` utilities in `app.css` — keep the two in step. */
 const POINTER_FOCUS_ATTR = "data-pointer-focus";
@@ -116,5 +120,5 @@ const POINTER_FOCUS_ATTR = "data-pointer-focus";
  * should not treat as one the user navigated to.
  */
 export function isPointerModality(doc: Document): boolean {
-  return doc.documentElement.dataset.inputModality === POINTER;
+  return MODALITY.read(doc.documentElement) === POINTER;
 }

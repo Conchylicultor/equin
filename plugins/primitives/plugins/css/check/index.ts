@@ -101,6 +101,8 @@ const NOT_A_LAYOUT_MECHANIC: Record<string, string> = {
     "a form control (a themed range input) — a leaf, and a sibling of `switch` and `radio-group` above. It takes a `className` for its own width the way any leaf does; nothing about it arranges other boxes.",
   "space-ramp":
     "a token standard (the spacing ramp's steps and the class each names, generated from app.css) — the scale Stack/Inset/Grid draw their gap and pad from, not a box to reach for. The boxes are Stack and Inset, which the message already names.",
+  "script-state":
+    "a declaration of script-only state attributes (defineScriptState) and the check that keeps stylesheets off them — no component, nothing that arranges boxes",
   spinner: "loading indicator — a leaf",
   "activity-ring": "status glyph around a status dot — a leaf",
   "status-dot": "status glyph — a leaf",

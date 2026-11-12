@@ -123,6 +123,7 @@ export const checkEntries: CollectedEntry[] = [
   { pluginPath: "plugin-meta/plugins/relocate", id: "plugin-meta.relocate", loader: () => import("@plugins/plugin-meta/plugins/relocate/check"), dependsOn: ["plugin-meta/plugins/plugin-refs"] },
   { pluginPath: "primitives/plugins/css", id: "primitives.css", loader: () => import("@plugins/primitives/plugins/css/check"), dependsOn: [] },
   { pluginPath: "primitives/plugins/css/plugins/layout-harness", id: "primitives.css.layout-harness", loader: () => import("@plugins/primitives/plugins/css/plugins/layout-harness/check"), dependsOn: [] },
+  { pluginPath: "primitives/plugins/css/plugins/script-state", id: "primitives.css.script-state", loader: () => import("@plugins/primitives/plugins/css/plugins/script-state/check"), dependsOn: [] },
   { pluginPath: "primitives/plugins/dom/plugins/web-storage", id: "primitives.dom.web-storage", loader: () => import("@plugins/primitives/plugins/dom/plugins/web-storage/check"), dependsOn: [] },
   { pluginPath: "primitives/plugins/icon-picker", id: "primitives.icon-picker", loader: () => import("@plugins/primitives/plugins/icon-picker/check"), dependsOn: [] },
   { pluginPath: "primitives/plugins/launch/plugins/investigate", id: "primitives.launch.investigate", loader: () => import("@plugins/primitives/plugins/launch/plugins/investigate/check"), dependsOn: ["plugin-meta/plugins/parse-utils"] },

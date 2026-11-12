@@ -5906,6 +5906,10 @@
       "name": "@equin/plugin-primitives-css-row",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/css/plugins/script-state": {
+      "name": "@equin/plugin-primitives-css-script-state",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/css/plugins/scroll": {
       "name": "@equin/plugin-primitives-css-scroll",
       "version": "0.0.1",
@@ -10432,6 +10436,8 @@
     "@equin/plugin-primitives-css-rigid": ["@equin/plugin-primitives-css-rigid@workspace:plugins/primitives/plugins/css/plugins/rigid"],
 
     "@equin/plugin-primitives-css-row": ["@equin/plugin-primitives-css-row@workspace:plugins/primitives/plugins/css/plugins/row"],
+
+    "@equin/plugin-primitives-css-script-state": ["@equin/plugin-primitives-css-script-state@workspace:plugins/primitives/plugins/css/plugins/script-state"],
 
     "@equin/plugin-primitives-css-scroll": ["@equin/plugin-primitives-css-scroll@workspace:plugins/primitives/plugins/css/plugins/scroll"],
 

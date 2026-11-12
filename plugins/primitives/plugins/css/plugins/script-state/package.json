@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-primitives-css-script-state",
+  "description": "Script-only state attributes: defineScriptState declares a frequently-flipped attribute of a high-up element (<html>, <body>, an app container) that script reads and no stylesheet may select on — enforced by the script-state:no-stylesheet-reads check.",
+  "private": true,
+  "version": "0.0.1"
+}
