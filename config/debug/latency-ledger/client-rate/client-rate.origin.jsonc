@@ -1,0 +1,7 @@
+// @hash 00d90ddee2eb
+{
+  // When off, the client-rate job returns early and files no client-rate reports.
+  "enabled": true,
+  // File a client-rate report when one browser tab loads (or navigates to) the same route more than this many times what a client usually does in an hour (the 99th percentile of the last 7 days).
+  "baselineFactor": 3
+}

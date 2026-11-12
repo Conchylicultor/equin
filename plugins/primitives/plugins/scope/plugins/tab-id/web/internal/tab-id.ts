@@ -25,7 +25,14 @@ const tabIdStore = defineStore({
 });
 
 /**
- * Stable per-browser-tab id; a stable sentinel when session storage is
+ * What `getTabId()` answers when session storage cannot hold an id: shared by
+ * EVERY such tab, so it names no one tab — a consumer that counts per tab
+ * treats it as "client unknown".
+ */
+export const NO_TAB_ID = "no-tab-id";
+
+/**
+ * Stable per-browser-tab id; a stable sentinel (`NO_TAB_ID`) when session storage is
  * unavailable. Reading it also marks this page present under it (see
  * `useTabPresence`): whatever the id is stamped on, another page can then ask
  * whether the tab it names is still open.
@@ -41,7 +48,7 @@ function readTabId(): string {
   if (read.kind === "value") return read.value;
   // Storage blocked (disabled, private mode): degrade to a stable sentinel so
   // attribution never throws in a caller's hot path.
-  if (read.why === "unavailable") return "no-tab-id";
+  if (read.why === "unavailable") return NO_TAB_ID;
   const id = crypto.randomUUID();
-  return tabIdStore.write("", id).ok ? id : "no-tab-id";
+  return tabIdStore.write("", id).ok ? id : NO_TAB_ID;
 }

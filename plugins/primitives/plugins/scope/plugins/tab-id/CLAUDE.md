@@ -15,10 +15,12 @@ and falls back to `"no-tab-id"` if storage is unavailable.
   - Exports (types): `TabPresence`
   - Exports (values):
     - `getTabId`
+    - `NO_TAB_ID`
     - `useTabPresence`
 - Cross-plugin:
   - Imported by:
     - `apps-core/tab-origin`
+    - `debug/latency-ledger`
     - `debug/profiling/tab-memory`
     - `network/live/live-state`
     - `primitives/scope/app-instance`

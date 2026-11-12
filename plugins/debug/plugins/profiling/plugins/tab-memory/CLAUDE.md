@@ -121,7 +121,7 @@ The bell re-rings at most every 6 h.
     - `Core.Root` → `TabMemoryRecorder`
     - `Pane.Register` "debug-tab-memory"
     - `DebugApp.Sidebar` "Tab memory"
-  - Uses: 29 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 30 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `stats/commits` ×7
     - `primitives/pane` ×4
     - `primitives/data-view` ×3
@@ -136,6 +136,7 @@ The bell re-rings at most every 6 h.
     - `primitives/css/placeholder.Placeholder`
     - `primitives/networking/page-transport.pageTransport`
     - `primitives/relative-time.RelativeTime`
+    - `primitives/scope/automation.AUTOMATED_BROWSER`
     - `primitives/scope/tab-id.getTabId`
   - Exports (values): `tabMemoryPane`
 - Server:

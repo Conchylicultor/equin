@@ -4,6 +4,7 @@ import {
   fetchEndpointOver,
 } from "@plugins/infra/plugins/endpoints/web";
 import { pageTransport } from "@plugins/primitives/plugins/networking/plugins/page-transport/web";
+import { AUTOMATED_BROWSER } from "@plugins/primitives/plugins/scope/plugins/automation/web";
 import {
   submitTabMemorySample,
   TAB_MEMORY_FIRST_SAMPLE_MS,
@@ -48,7 +49,7 @@ async function send(): Promise<void> {
  */
 export function TabMemoryRecorder(): null {
   useEffect(() => {
-    if (window.top !== window || navigator.webdriver) return;
+    if (window.top !== window || AUTOMATED_BROWSER) return;
     let timer = setTimeout(function tick() {
       void send();
       timer = setTimeout(tick, TAB_MEMORY_SAMPLE_EVERY_MS);

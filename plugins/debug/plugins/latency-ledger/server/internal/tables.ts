@@ -92,6 +92,18 @@ export const _latencyLedgerInteraction = pgTable(
     censored: boolean("censored").notNull(),
     resourceCount: integer("resource_count").notNull(),
     lastResourceKey: text("last_resource_key"),
+    /**
+     * The browser tab it happened in (session-scoped: the same across the
+     * tab's reloads). Null for a row from a bundle that predates the field —
+     * a client unknown, never guessed.
+     */
+    clientId: text("client_id"),
+    /** The tab was driven by automation (`navigator.webdriver`). A mark only. */
+    automated: boolean("automated").notNull().default(false),
   },
-  (t) => [index("latency_ledger_interaction_at_idx").on(t.occurredAt)],
+  (t) => [
+    index("latency_ledger_interaction_at_idx").on(t.occurredAt),
+    // One client's interactions in a window (client-rate's routes of a trip).
+    index("latency_ledger_interaction_client_idx").on(t.clientId, t.occurredAt),
+  ],
 );

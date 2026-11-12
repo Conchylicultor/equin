@@ -32,12 +32,14 @@ export {
   submitClientLatency,
   ClientMinuteSchema,
   InteractionSchema,
+  LedgerClientSchema,
   LATENCY_WINDOWS,
   SLOWEST_INTERACTIONS,
 } from "./internal/endpoints";
 export type {
   ClientMinute,
   Interaction,
+  LedgerClient,
   LatencyStat,
   LatencySummary,
   LatencyWindow,

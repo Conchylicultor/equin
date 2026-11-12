@@ -111,7 +111,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`sql-rows`** [exempt] — Parsed raw-SQL row reads: queryRows / executeRows parse every row against a zod schema and throw a SqlRowError naming the column, the value and its Postgres type OID — closing the pool.query<T>()…
     - **`sql-writes`** — Every hand-written SQL write (INSERT / UPDATE / DELETE / MERGE, in CTEs too) parsed with Postgres's own grammar (libpg_query) and checked against the schema the code declares — drizzle tables with…
 
-- **`debug`** [exempt] [71 sub-plugins] — Debug tools umbrella plugin.
+- **`debug`** [exempt] [72 sub-plugins] — Debug tools umbrella plugin.
 
 - **`fields`** [test helpers] [127 sub-plugins] — Type-dimension registry: owns the fields.identity slot where each field type registers its identity (token, label, icon, extends, coerce).
 
@@ -320,7 +320,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`relocate`** [exempt] — `./equin plugin move <from> <to>` — relocate or rename a plugin (and every descendant) in one step: git mv the folder and its config dir, then rewrite every reference the plugin-refs locator finds…
     - **`token-usage`** [exempt] — Which theme tokens a plugin's source uses, and which plugin owns each one: the static defineTokenGroup reader (owner + CSS vars) and the token-usage scanner (literal var(--x) plus Tailwind classes…
 
-- **`primitives`** [test helpers] [exempt] [223 sub-plugins] — Umbrella for cross-cutting client-side primitives used by feature plugins: pane router, tree, live state, networking, editable fields, syntax highlighting, launch buttons.
+- **`primitives`** [test helpers] [exempt] [224 sub-plugins] — Umbrella for cross-cutting client-side primitives used by feature plugins: pane router, tree, live state, networking, editable fields, syntax highlighting, launch buttons.
 
 - **`release`** [exempt] [3 sub-plugins] — Release engine web presence: eagerly registers the boot-critical release.previews live value so boot-snapshot can hydrate it before first paint, independent of the (lazy) Studio release UI. Local…
 

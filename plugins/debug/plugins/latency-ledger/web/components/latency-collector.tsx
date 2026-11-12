@@ -5,8 +5,15 @@ import {
 } from "@plugins/primitives/plugins/perfs/plugins/latency-signal/core";
 import type { ClientLatencyMetric } from "../../core";
 import { pausesDuring } from "@plugins/primitives/plugins/perfs/plugins/page-pauses/web";
-import { recordInteraction, recordSample } from "../internal/client-ledger";
-import { startInteractionTracking } from "../internal/interaction-tracker";
+import {
+  flushOnPageHide,
+  recordInteraction,
+  recordSample,
+} from "../internal/client-ledger";
+import {
+  cutActiveInteraction,
+  startInteractionTracking,
+} from "../internal/interaction-tracker";
 
 // The ledger metric each client latency signal's total is kept as; a signal
 // with none (a write's confirm) is left to Debug → Slow Events.
@@ -21,6 +28,18 @@ const METRIC_OF: Partial<Record<ClientLatencySignal, ClientLatencyMetric>> = {
 // pushes into this tab, and of every sent message reaching it.
 export function LatencyCollector() {
   useEffect(() => startInteractionTracking(recordInteraction), []);
+
+  // Leaving the page: first the load still in flight is cut short and
+  // recorded, then everything is sent — in that order, so a page that never
+  // settled still leaves its row.
+  useEffect(() => {
+    const onPageHide = (): void => {
+      cutActiveInteraction();
+      flushOnPageHide();
+    };
+    window.addEventListener("pagehide", onPageHide);
+    return () => window.removeEventListener("pagehide", onPageHide);
+  }, []);
 
   // A signal's total, as its metric (`METRIC_OF`): the update delay (change →
   // pushed frame applied), a sent message shown. A sample the tab spent hidden

@@ -4,6 +4,11 @@ import {
 } from "@plugins/infra/plugins/endpoints/web";
 import { pageTransport } from "@plugins/primitives/plugins/networking/plugins/page-transport/web";
 import {
+  getTabId,
+  NO_TAB_ID,
+} from "@plugins/primitives/plugins/scope/plugins/tab-id/web";
+import { AUTOMATED_BROWSER } from "@plugins/primitives/plugins/scope/plugins/automation/web";
+import {
   HISTOGRAM_SCHEME,
   addSample,
   emptyAcc,
@@ -14,6 +19,7 @@ import {
   type ClientMinute,
   type HistogramAcc,
   type Interaction,
+  type LedgerClient,
 } from "../../core";
 
 // Page-wide telemetry: latency samples always reach the page's own server (D3).
@@ -111,6 +117,18 @@ function restore(
   );
 }
 
+// Who loaded these pages: the tab (kept across its reloads), and whether
+// automation drives it — a mark, so an agent browser's reload loop is judged
+// and reported like a person's. A tab whose storage cannot hold an id shares
+// the sentinel with every other such tab: it is sent as no client (unknown),
+// never pooled into one made-up client.
+function clientField(): { client?: LedgerClient } {
+  const tabId = getTabId();
+  return tabId === NO_TAB_ID
+    ? {}
+    : { client: { tabId, automated: AUTOMATED_BROWSER } };
+}
+
 async function flush(): Promise<void> {
   if (minutes.size === 0 && interactions.length === 0) return;
   const batchMinutes: ClientMinute[] = [...minutes.values()].map((e) => ({
@@ -130,6 +148,7 @@ async function flush(): Promise<void> {
           scheme: HISTOGRAM_SCHEME,
           minutes: batchMinutes,
           interactions: batchInteractions,
+          ...clientField(),
         },
         keepalive: true,
         // A failed observability post is not a user-facing error.
@@ -146,13 +165,16 @@ async function flush(): Promise<void> {
   }
 }
 
-if (typeof window !== "undefined") {
-  window.addEventListener("pagehide", () => {
-    if (flushTimer !== null) {
-      clearTimeout(flushTimer);
-      flushTimer = null;
-      flushDueAt = Infinity;
-    }
-    void flush();
-  });
+/**
+ * The page is going away: send everything now (the request outlives the page:
+ * `keepalive`). Called by the collector AFTER it has cut the active page load
+ * short, so a page that unloads before it settles is still recorded.
+ */
+export function flushOnPageHide(): void {
+  if (flushTimer !== null) {
+    clearTimeout(flushTimer);
+    flushTimer = null;
+    flushDueAt = Infinity;
+  }
+  void flush();
 }

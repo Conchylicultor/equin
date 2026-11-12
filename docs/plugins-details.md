@@ -14911,8 +14911,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 - **`config_v2`** — Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins: the registry over the user-layer store (the ConfigStore host service) and the committed layer (ConfigGitLayer), its live values and the scope routes.
   - Web:
     - Slots: `ConfigV2.WebRegister`
-    - Slot contributors: 95 contributors — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×95
+    - Slot contributors: 96 contributors — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×96
     - Uses:
       - `infra/endpoints.useEndpointMutation`
       - `network/live.useLive`
@@ -15111,10 +15111,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `validationIssues`
       - `withOverrideLegend`
   - Cross-plugin:
-    - Imported by: 141 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
+    - Imported by: 142 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
       - `apps` ×39
+      - `debug` ×15
       - `conversations` ×14
-      - `debug` ×14
       - `backup` ×13
       - `ui` ×11
       - `config_v2` ×8
@@ -23937,6 +23937,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/networking/page-transport.pageTransport`
           - `primitives/pane.currentRoutePath`
           - `primitives/perfs/page-pauses.pausesDuring`
+          - `primitives/scope/automation.AUTOMATED_BROWSER`
+          - `primitives/scope/tab-id.getTabId`
+          - `primitives/scope/tab-id.NO_TAB_ID`
       - Server:
         - Contributes:
           - `resource.declare` "latency-ledger.summary"
@@ -23969,6 +23972,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live.serveValue`
           - `network/live/change-feed.ExcludeFromChangeFeed`
         - DB schema: `plugins/debug/plugins/latency-ledger/server/internal/tables.ts`
+        - Exports (types): `ClientHour`
+        - Exports (values):
+          - `readClientHours`
+          - `readClientRoutes`
         - Register:
           - `defineJob('retention.latency_ledger_minute')`
           - `defineJob('retention.latency_ledger_host_minute')`
@@ -23992,6 +23999,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LatencyStat`
           - `LatencySummary`
           - `LatencyWindow`
+          - `LedgerClient`
         - Exports (values):
           - `addSample`
           - `BUCKET_COUNT`
@@ -24009,6 +24017,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LATENCY_METRICS`
           - `LATENCY_WINDOWS`
           - `latencySummary`
+          - `LedgerClientSchema`
           - `mergeAcc`
           - `mergeCounts`
           - `METRIC_LABELS`
@@ -24020,11 +24029,48 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `submitClientLatency`
           - `THREAD_STALL_MS`
       - Cross-plugin:
-        - Imported by: `stats/responsiveness`
+        - Imported by:
+          - `debug/latency-ledger/client-rate`
+          - `stats/responsiveness`
       - Exemptions:
         - Exempts itself from:
           - `ids:pk-declared` — `server/internal/tables.ts` (debt)
           - `networking/no-page-transport` — `web/internal/client-ledger.ts` (sanctioned)
+      - Plugins:
+        - **`client-rate`** — Client-rate report renderer: a one-line Debug → Reports summary (how many page loads one tab made this hour, against the usual client-hour, marked when automated), plus the config registration. Per-client page-load judge: a per-worktree job that counts each browser tab's page loads and in-app navigations in the clock hour so far (the latency ledger's interactions, by tab id) and files a client-rate report when one tab is far past what a client usually does in an hour (the 99th percentile of the last 7 days' client-hours) — the reload loop a per-op call-count alarm cannot see. Automated tabs are judged alike and marked.
+          - Web:
+            - Contributes:
+              - `ConfigV2.WebRegister` "client-rate"
+              - `Reports.KindView` → `ClientRateSummary`
+            - Uses:
+              - `config_v2.ConfigV2`
+              - `primitives/css/badge.Badge`
+              - `primitives/css/inline.Inline`
+              - `reports.Reports`
+          - Server:
+            - Contributes:
+              - `ConfigV2.Register` "client-rate"
+              - `report-kind` "client-rate"
+            - Uses:
+              - `config_v2.ConfigV2`
+              - `config_v2.getConfig`
+              - `debug/latency-ledger.readClientHours`
+              - `debug/latency-ledger.readClientRoutes`
+              - `infra/jobs.defineJob`
+              - `primitives/log-channels.defineLogSink`
+              - `reports.ReportKind`
+              - `reports/engine.recordReport`
+            - Register: `defineJob('debug.client-rate-monitor')`
+          - Core:
+            - Uses:
+              - `config_v2.defineConfig`
+              - `debug/latency-ledger.InteractionSchema`
+              - `fields/bool/config.boolField`
+              - `fields/int/config.intField`
+            - Exports (types): `ClientRatePayload`
+            - Exports (values):
+              - `clientRateConfig`
+              - `ClientRatePayloadSchema`
     - **`live-state-churn`** — Umbrella for live-state churn debugging: the no-op push monitor/detector and the synthetic-push emitter.
       - Plugins:
         - **`emit`** — Synthetic no-op live-state push emitter: drives N pushes/sec for a chosen resource so churn-driven render/DOM bugs reproduce deterministically, surfaced as the Debug → Live-State Emit pane and the window.__liveStateEmit API. Synthetic no-op live-state push emitter: drives N triggerResourcePush calls/sec for a chosen resource on a bounded setInterval (hard auto-stop cap), so churn-driven render/DOM bugs reproduce deterministically. Surfaced as the Debug → Live-State Emit pane. Its status is the live-state-emit.status value, notified by the emitter on every change; the resource dropdown reads debug/read-set's resources.debug snapshot.
@@ -24910,7 +24956,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Core.Root` → `TabMemoryRecorder`
               - `Pane.Register` "debug-tab-memory"
               - `DebugApp.Sidebar` "Tab memory"
-            - Uses: 29 symbols — full list in [`plugins/debug/plugins/profiling/plugins/tab-memory/REFERENCE.md`](../plugins/debug/plugins/profiling/plugins/tab-memory/REFERENCE.md)
+            - Uses: 30 symbols — full list in [`plugins/debug/plugins/profiling/plugins/tab-memory/REFERENCE.md`](../plugins/debug/plugins/profiling/plugins/tab-memory/REFERENCE.md)
               - `stats/commits` ×7
               - `primitives/pane` ×4
               - `primitives/data-view` ×3
@@ -24925,6 +24971,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/placeholder.Placeholder`
               - `primitives/networking/page-transport.pageTransport`
               - `primitives/relative-time.RelativeTime`
+              - `primitives/scope/automation.AUTOMATED_BROWSER`
               - `primitives/scope/tab-id.getTabId`
             - Exports (values): `tabMemoryPane`
           - Server:
@@ -25732,6 +25779,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/pane.currentRoutePath`
           - `primitives/perfs/boot-trace.getBootTrace`
           - `primitives/perfs/page-pauses.pausesDuring`
+          - `primitives/scope/automation.AUTOMATED_BROWSER`
           - `reports.Reports`
       - Server:
         - Contributes:
@@ -26937,10 +26985,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `boolField`
               - `boolSample`
           - Cross-plugin:
-            - Imported by: 78 plugins — full list in [`plugins/fields/plugins/bool/plugins/config/REFERENCE.md`](../plugins/fields/plugins/bool/plugins/config/REFERENCE.md)
+            - Imported by: 79 plugins — full list in [`plugins/fields/plugins/bool/plugins/config/REFERENCE.md`](../plugins/fields/plugins/bool/plugins/config/REFERENCE.md)
               - `apps` ×25
+              - `debug` ×13
               - `backup` ×12
-              - `debug` ×12
               - `conversations` ×7
               - `tasks` ×4
               - `shell` ×3
@@ -27865,9 +27913,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `intField`
               - `intSample`
           - Cross-plugin:
-            - Imported by: 58 plugins — full list in [`plugins/fields/plugins/int/plugins/config/REFERENCE.md`](../plugins/fields/plugins/int/plugins/config/REFERENCE.md)
+            - Imported by: 59 plugins — full list in [`plugins/fields/plugins/int/plugins/config/REFERENCE.md`](../plugins/fields/plugins/int/plugins/config/REFERENCE.md)
               - `apps` ×16
-              - `debug` ×13
+              - `debug` ×14
               - `conversations` ×7
               - `infra` ×5
               - `tasks` ×5
@@ -35253,11 +35301,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `taskFor`
           - `TOTAL_JOB_SLOTS`
       - Cross-plugin:
-        - Imported by: 85 plugins — full list in [`plugins/infra/plugins/jobs/REFERENCE.md`](../plugins/infra/plugins/jobs/REFERENCE.md)
+        - Imported by: 86 plugins — full list in [`plugins/infra/plugins/jobs/REFERENCE.md`](../plugins/infra/plugins/jobs/REFERENCE.md)
           - `apps` ×21
           - `conversations` ×18
           - `infra` ×15
-          - `debug` ×11
+          - `debug` ×12
           - `tasks` ×7
           - `database` ×3
           - `page` ×3
@@ -45959,9 +46007,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×6
               - `ui/tokens/shape` ×3
               - `ui/tokens/font-family --font-mono`
-            - Imported by: 185 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
+            - Imported by: 186 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
               - `apps` ×39
-              - `debug` ×38
+              - `debug` ×39
               - `conversations` ×27
               - `reports` ×19
               - `primitives` ×10
@@ -46403,10 +46451,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `InlineProps`
             - Exports (values): `Inline`
           - Cross-plugin:
-            - Imported by: 115 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
+            - Imported by: 116 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
               - `apps` ×23
+              - `debug` ×20
               - `reports` ×20
-              - `debug` ×19
               - `primitives` ×12
               - `conversations` ×9
               - `page` ×6
@@ -50512,9 +50560,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-xs`
           - `ui/tokens/shape --radius`
           - `ui/tokens/shape --spacing`
-        - Imported by: 75 plugins — full list in [`plugins/primitives/plugins/log-channels/REFERENCE.md`](../plugins/primitives/plugins/log-channels/REFERENCE.md)
+        - Imported by: 76 plugins — full list in [`plugins/primitives/plugins/log-channels/REFERENCE.md`](../plugins/primitives/plugins/log-channels/REFERENCE.md)
           - `apps` ×14
-          - `debug` ×13
+          - `debug` ×14
           - `infra` ×10
           - `conversations` ×6
           - `database` ×6
@@ -52398,6 +52446,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Test helpers:
             - Web: `@plugins/primitives/plugins/scope/plugins/app-instance/web/testing`
               - `resetAppInstanceForTests` — Drop the memoized generation (and its `pageshow` listener) between tests.
+        - **`automation`** — Whether this page is driven by automation (AUTOMATED_BROWSER: navigator.webdriver — Playwright, an e2e run, the agent browser): the one definition every beacon marks its signals with, so a report names who saw it instead of muting it.
+          - Cross-plugin:
+            - Imported by:
+              - `debug/latency-ledger`
+              - `debug/profiling/tab-memory`
+              - `debug/slow-ops`
+          - Web:
+            - Exports (values): `AUTOMATED_BROWSER`
         - **`dom-scope`** — The DOM node that belongs to ONE mounted instance: defineDomScope declares a scope a descendant publishes its element into and a sibling reads, so a lookup never reaches past its own instance into another mounted copy of the same surface. A scoped store holding one element — install-sink's discipline (named throws, subscription-only render reads, peek… naming) with scoped-store's per-Provider lifetime. Readers get a { attached } union, never a nullable root, so 'not mounted yet' cannot be absorbed into 'no matches'; the declared bounds derive the check that bans document-wide lookups of those attributes.
           - Web:
             - Uses: `primitives/scope/scoped-store.defineScopedStore`
@@ -52484,10 +52540,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `TabPresence`
             - Exports (values):
               - `getTabId`
+              - `NO_TAB_ID`
               - `useTabPresence`
           - Cross-plugin:
             - Imported by:
               - `apps-core/tab-origin`
+              - `debug/latency-ledger`
               - `debug/profiling/tab-memory`
               - `network/live/live-state`
               - `primitives/scope/app-instance`
@@ -54366,8 +54424,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 - **`reports`** — Reports uncaught browser errors to the server, and registers the reports engine's fan-out ceiling config (per-window distinct-fingerprint budget, window, storm roster cap) for Settings → Config. The reports table and its live read (reports.list), the ReportKind / ReportNoiseRule slots every kind and rule contributes to, and the fan-out ceiling config; recording is the engine's (reports/plugins/engine).
   - Web:
     - Slots: `Reports.KindView`
-    - Slot contributors: 46 contributors — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
-      - `Reports.KindView` ×46
+    - Slot contributors: 47 contributors — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
+      - `Reports.KindView` ×47
     - Contributes:
       - `IdKinds.Kind` "report|crash"
       - `ConfigV2.WebRegister` "reports"
@@ -54500,9 +54558,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `versionSkewCode`
       - `versionSkewMayExplain`
   - Cross-plugin:
-    - Imported by: 81 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
+    - Imported by: 82 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
       - `reports` ×32
-      - `debug` ×19
+      - `debug` ×20
       - `conversations` ×7
       - `database` ×4
       - `infra` ×4
@@ -54702,8 +54760,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Machine:
         - Uses: `infra/endpoints.implementMachine`
       - Cross-plugin:
-        - Imported by: 33 plugins — full list in [`plugins/reports/plugins/engine/REFERENCE.md`](../plugins/reports/plugins/engine/REFERENCE.md)
-          - `debug` ×12
+        - Imported by: 34 plugins — full list in [`plugins/reports/plugins/engine/REFERENCE.md`](../plugins/reports/plugins/engine/REFERENCE.md)
+          - `debug` ×13
           - `conversations` ×5
           - `database` ×3
           - `infra` ×3

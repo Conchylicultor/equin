@@ -361,6 +361,7 @@ bar).
     - `primitives/pane.currentRoutePath`
     - `primitives/perfs/boot-trace.getBootTrace`
     - `primitives/perfs/page-pauses.pausesDuring`
+    - `primitives/scope/automation.AUTOMATED_BROWSER`
     - `reports.Reports`
 - Server:
   - Contributes:

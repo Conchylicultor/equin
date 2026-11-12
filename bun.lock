@@ -2770,6 +2770,10 @@
       "name": "@equin/plugin-debug-latency-ledger",
       "version": "0.0.1",
     },
+    "plugins/debug/plugins/latency-ledger/plugins/client-rate": {
+      "name": "@equin/plugin-debug-latency-ledger-client-rate",
+      "version": "0.0.1",
+    },
     "plugins/debug/plugins/live-state-churn": {
       "name": "@equin/plugin-debug-live-state-churn",
       "version": "0.0.1",
@@ -6484,6 +6488,10 @@
       "name": "@equin/plugin-primitives-scope-app-instance",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/scope/plugins/automation": {
+      "name": "@equin/plugin-primitives-scope-automation",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/scope/plugins/dom-scope": {
       "name": "@equin/plugin-primitives-scope-dom-scope",
       "version": "0.0.1",
@@ -8967,6 +8975,8 @@
 
     "@equin/plugin-debug-latency-ledger": ["@equin/plugin-debug-latency-ledger@workspace:plugins/debug/plugins/latency-ledger"],
 
+    "@equin/plugin-debug-latency-ledger-client-rate": ["@equin/plugin-debug-latency-ledger-client-rate@workspace:plugins/debug/plugins/latency-ledger/plugins/client-rate"],
+
     "@equin/plugin-debug-live-state-churn": ["@equin/plugin-debug-live-state-churn@workspace:plugins/debug/plugins/live-state-churn"],
 
     "@equin/plugin-debug-live-state-churn-emit": ["@equin/plugin-debug-live-state-churn-emit@workspace:plugins/debug/plugins/live-state-churn/plugins/emit"],
@@ -10720,6 +10730,8 @@
     "@equin/plugin-primitives-scope": ["@equin/plugin-primitives-scope@workspace:plugins/primitives/plugins/scope"],
 
     "@equin/plugin-primitives-scope-app-instance": ["@equin/plugin-primitives-scope-app-instance@workspace:plugins/primitives/plugins/scope/plugins/app-instance"],
+
+    "@equin/plugin-primitives-scope-automation": ["@equin/plugin-primitives-scope-automation@workspace:plugins/primitives/plugins/scope/plugins/automation"],
 
     "@equin/plugin-primitives-scope-dom-scope": ["@equin/plugin-primitives-scope-dom-scope@workspace:plugins/primitives/plugins/scope/plugins/dom-scope"],
 

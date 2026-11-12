@@ -11,6 +11,7 @@ export const SERVER_REPORT_SOURCES = [
   "server-queue-monitor",
   "server-live-state-monitor",
   "server-op-rate-monitor",
+  "server-client-rate-monitor",
   "server-read-set-monitor",
   "server-boot-budget-monitor",
   "server-boot-monitor",

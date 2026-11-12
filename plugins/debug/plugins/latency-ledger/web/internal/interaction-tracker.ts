@@ -117,6 +117,17 @@ function begin(kind: Interaction["kind"], startMs: number): void {
 }
 
 /**
+ * The page is going away: record the interaction still in flight as "at least
+ * this long" (censored). Without it a page that unloads before its lists
+ * settle — every reload of a tab reloading faster than its page loads — would
+ * leave no row at all, and a reload loop would be invisible exactly when it is
+ * at its worst.
+ */
+export function cutActiveInteraction(): void {
+  if (active !== null) finish(active, performance.now(), true);
+}
+
+/**
  * Start tracking. `onInteraction` receives every finished page load and
  * navigation. Returns the teardown.
  */

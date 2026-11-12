@@ -41,6 +41,19 @@ export const InteractionSchema = z.object({
 });
 export type Interaction = z.infer<typeof InteractionSchema>;
 
+/**
+ * Which client a batch's interactions come from: the browser tab (its
+ * session-scoped id, the same across the tab's reloads) and whether automation
+ * drives it (the agent browser, an e2e run). The per-client page-load judge
+ * (`latency-ledger/client-rate`) counts a tab's loads by it. An automated
+ * client is marked, never left out.
+ */
+export const LedgerClientSchema = z.object({
+  tabId: z.string().min(1).max(100),
+  automated: z.boolean(),
+});
+export type LedgerClient = z.infer<typeof LedgerClientSchema>;
+
 export const submitClientLatency = defineEndpoint({
   route: "POST /api/latency-ledger/client",
   // Latency histograms and interactions only: an agent session's samples are
@@ -50,6 +63,11 @@ export const submitClientLatency = defineEndpoint({
     scheme: z.literal(HISTOGRAM_SCHEME),
     minutes: z.array(ClientMinuteSchema).max(60),
     interactions: z.array(InteractionSchema).max(100),
+    // Optional only for a bundle that predates it (a tab left open across the
+    // deploy): its interactions are stored with no client — counted toward no
+    // client, never toward a guessed one. Required, that tab's every post
+    // would be refused and re-queued for as long as it stays open.
+    client: LedgerClientSchema.optional(),
   }),
   response: z.object({ ok: z.boolean() }),
 });

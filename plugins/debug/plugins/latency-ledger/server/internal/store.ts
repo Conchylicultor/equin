@@ -5,6 +5,7 @@ import {
   type HistogramAcc,
   type Interaction,
   type LatencyMetric,
+  type LedgerClient,
 } from "../../core";
 import {
   _latencyLedgerHostMinute,
@@ -114,7 +115,10 @@ export async function writeThreadMinute(m: ThreadMinute): Promise<void> {
     .onConflictDoNothing();
 }
 
-export async function insertInteractions(rows: Interaction[]): Promise<void> {
+export async function insertInteractions(
+  rows: Interaction[],
+  client: LedgerClient | undefined,
+): Promise<void> {
   if (rows.length === 0) return;
   await db.insert(_latencyLedgerInteraction).values(
     rows.map((r) => ({
@@ -126,6 +130,8 @@ export async function insertInteractions(rows: Interaction[]): Promise<void> {
       censored: r.censored,
       resourceCount: r.resourceCount,
       lastResourceKey: r.lastResourceKey,
+      clientId: client?.tabId ?? null,
+      automated: client?.automated ?? false,
     })),
   );
 }

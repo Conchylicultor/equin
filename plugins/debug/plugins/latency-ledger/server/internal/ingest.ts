@@ -40,6 +40,7 @@ export const handleClientLatency = implement(
       }
       await insertInteractions(
         body.interactions.filter((i) => inRange(i.occurredAt)),
+        body.client,
       );
     });
     return { ok: true };

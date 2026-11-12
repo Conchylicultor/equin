@@ -1,6 +1,6 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
-export { getTabId } from "./internal/tab-id";
+export { getTabId, NO_TAB_ID } from "./internal/tab-id";
 export { useTabPresence, type TabPresence } from "./internal/presence";
 
 export default {

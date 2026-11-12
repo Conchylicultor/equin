@@ -5,15 +5,19 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render } from "@testing-library/react";
 import { clientLatencySink } from "@plugins/primitives/plugins/perfs/plugins/latency-signal/core";
-import { recordSample } from "../internal/client-ledger";
+import { flushOnPageHide, recordSample } from "../internal/client-ledger";
+import { cutActiveInteraction } from "../internal/interaction-tracker";
 import { LatencyCollector } from "../components/latency-collector";
 
+const order: string[] = [];
 vi.mock("../internal/client-ledger", () => ({
   recordSample: vi.fn(),
   recordInteraction: vi.fn(),
+  flushOnPageHide: vi.fn(() => order.push("flush")),
 }));
 vi.mock("../internal/interaction-tracker", () => ({
   startInteractionTracking: () => () => {},
+  cutActiveInteraction: vi.fn(() => order.push("cut")),
 }));
 let pageHidden = false;
 vi.mock(
@@ -45,6 +49,9 @@ const update = () =>
 
 afterEach(() => {
   pageHidden = false;
+  order.length = 0;
+  vi.mocked(flushOnPageHide).mockClear();
+  vi.mocked(cutActiveInteraction).mockClear();
   cleanup();
   recordMock.mockClear();
 });
@@ -90,10 +97,20 @@ describe("LatencyCollector", () => {
     expect(recordMock).not.toHaveBeenCalled();
   });
 
+  it("on pagehide, cuts the load in flight short BEFORE the final flush", () => {
+    // A tab reloading faster than its page settles leaves a row per load only
+    // if the unsettled load is recorded before the batch goes out.
+    render(<LatencyCollector />);
+    window.dispatchEvent(new Event("pagehide"));
+    expect(order).toEqual(["cut", "flush"]);
+  });
+
   it("unsubscribes on unmount", () => {
     const { unmount } = render(<LatencyCollector />);
     unmount();
     expect(clientLatencySink.hasSubscribers()).toBe(false);
+    window.dispatchEvent(new Event("pagehide"));
+    expect(order).toEqual([]);
     clientLatencySink.emit(update());
     expect(recordMock).not.toHaveBeenCalled();
   });
