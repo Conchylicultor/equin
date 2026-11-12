@@ -117,7 +117,7 @@ describe("GroupedSections — group header", () => {
     );
   });
 
-  it("a collapsed section keeps its chevron and fades its label", () => {
+  it("a collapsed section keeps its chevron and its label's ink", () => {
     renderSections(undefined, ["queue"]);
     const header = screen.getByRole("button", { name: "Queue6" });
     expect(header.getAttribute("aria-expanded")).toBe("false");
@@ -125,7 +125,8 @@ describe("GroupedSections — group header", () => {
       "opacity-100",
     );
     const label = header.querySelector('[data-part="dv.group-label"]')!;
-    expect(label.getAttribute("class")).toContain("text-faint-foreground");
+    expect(label.getAttribute("class")).toContain("text-group-label-ink");
+    expect(label.getAttribute("class")).not.toContain("text-faint-foreground");
     const open = screen.getByRole("button", { name: "Working2" });
     expect(
       open.querySelector('[data-part="dv.group-label"]')!.getAttribute("class"),

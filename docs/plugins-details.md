@@ -47594,7 +47594,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewSlots.Control` ×4
           - `DataViewSlots.Setting` ×4
           - `IdKinds.Kind` ×2
-        - Uses: 147 symbols — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+        - Uses: 146 symbols — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
           - `network/live` ×24
           - `primitives/css/ui-kit` ×17
           - `primitives/data-view/view-core` ×11
@@ -47602,13 +47602,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/slot-render` ×5
           - `primitives/css/control-panel` ×4
           - `primitives/rank-reorder` ×4
-          - `primitives/collapsible` ×3
           - `primitives/css/sticky/stack` ×3
           - `primitives/css/text` ×3
           - `primitives/css/toggle-chip` ×3
           - `primitives/dom/web-storage` ×3
           - `primitives/tree` ×3
           - `config_v2` ×2
+          - `primitives/collapsible` ×2
           - `primitives/css/fill` ×2
           - `primitives/css/overlay` ×2
           - `primitives/css/row` ×2

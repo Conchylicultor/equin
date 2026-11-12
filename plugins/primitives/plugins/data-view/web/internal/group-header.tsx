@@ -7,7 +7,6 @@ import { RowActions } from "@plugins/primitives/plugins/row-actions/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { useCollapsibleContext } from "@plugins/primitives/plugins/collapsible/web";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import { DATA_VIEW_PICKS } from "@plugins/ui/plugins/tokens/plugins/data-view/core";
 import {
@@ -119,18 +118,17 @@ const PILL_LABEL =
  * `text-group` before it was picked, so it does not step down in a compact
  * region (a gallery's cards) either.
  *
- * Its ink is `groupLabelInk` (muted) while the section is open, faint while
- * it is shut; inside a `pill` it reads at the foreground (muted when shut), as
- * the pill's fill already sets it apart.
+ * Its ink is `groupLabelInk` whether the section is open or shut — a shut
+ * section is marked by its chevron, shown at rest, never by a dimmed name
+ * (a faded label read as disabled). Inside a `pill` it reads at the
+ * foreground, as the pill's fill already sets it apart.
  */
 function GroupLabel({
   label,
   sub,
-  open,
 }: {
   label: ReactNode;
   sub: boolean;
-  open: boolean;
 }): ReactNode {
   return (
     <Text
@@ -140,9 +138,7 @@ function GroupLabel({
       // beats the picked rung's own weight (a theme's emphasis pick, also
       // important and later in the sheet, still wins).
       className={cn(
-        open
-          ? "text-group-label-ink [@container_style(--group-header-style:pill)]:text-foreground"
-          : "text-faint-foreground [@container_style(--group-header-style:pill)]:text-muted-foreground",
+        "text-group-label-ink [@container_style(--group-header-style:pill)]:text-foreground",
         PILL_LABEL,
         sub && "font-medium!",
       )}
@@ -207,14 +203,12 @@ export interface DataViewGroupHeaderProps {
  */
 export function DataViewGroupHeader({
   section,
-  open: openProp,
+  open,
   onClick,
   action,
   className,
   rename,
 }: DataViewGroupHeaderProps): ReactNode {
-  const ctx = useCollapsibleContext();
-  const open = openProp ?? ctx?.open ?? true;
   // A nested section's header below the roots steps its label down a weight
   // (medium, against a root's semibold), so the levels read apart.
   const sub = (section.nesting?.depth ?? 0) >= 1;
@@ -234,7 +228,7 @@ export function DataViewGroupHeader({
       chevronClassName={CHEVRON_AT_REST}
       metrics="group-header"
       parts={HEADER_PARTS}
-      open={openProp}
+      open={open}
       onClick={onClick}
       className={className}
       {...dataPart("dv.group-header")}
@@ -262,10 +256,10 @@ export function DataViewGroupHeader({
             rename.onStart();
           }}
         >
-          <GroupLabel label={section.label} sub={sub} open={open} />
+          <GroupLabel label={section.label} sub={sub} />
         </span>
       ) : (
-        <GroupLabel label={section.label} sub={sub} open={open} />
+        <GroupLabel label={section.label} sub={sub} />
       )}
       {/* The count right beside its label: a faint tally (`groupCountInk`) in
           the `groupCount` part, part of the label's run so the rule (under
