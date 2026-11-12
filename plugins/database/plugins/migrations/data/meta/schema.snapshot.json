@@ -1,6 +1,6 @@
 {
-  "id": "4d2e1c3b-969f-4f1e-8cf9-45d15362d7d5",
-  "prevId": "44a832ac-b99a-44a4-a5ed-f6c08822f2d3",
+  "id": "d6e0e122-808b-43d5-8ec7-04fb4f4196f8",
+  "prevId": "4d2e1c3b-969f-4f1e-8cf9-45d15362d7d5",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -7890,6 +7890,59 @@
         }
       },
       "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.conversations_ext_system_prompt": {
+      "name": "conversations_ext_system_prompt",
+      "schema": "",
+      "columns": {
+        "parent_id": {
+          "name": "parent_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "sections": {
+          "name": "sections",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "conversations_ext_system_prompt_parent_id_conversations_id_fk": {
+          "name": "conversations_ext_system_prompt_parent_id_conversations_id_fk",
+          "tableFrom": "conversations_ext_system_prompt",
+          "tableTo": "conversations",
+          "columnsFrom": [
+            "parent_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        }
+      },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},

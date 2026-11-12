@@ -15686,7 +15686,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `report-kind` "conversation-stuck-turn"
       - `report-kind` "held-turn-undelivered"
       - `resource.declare` "conversations.partial-message"
-    - Uses: 87 symbols — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
+    - Uses: 88 symbols — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
       - `tasks/tasks-core` ×27
       - `conversations/turn-ledger` ×15
       - `conversations/transcript-watcher` ×8
@@ -15703,6 +15703,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `conversations/model-provider/catalog.getModelCatalog`
       - `conversations/preprompts.resolvePrepromptItem`
       - `conversations/session-chain.recordSessionId`
+      - `conversations/system-prompt/composer.composeSystemPromptAppend`
       - `conversations/workspace/launch-option.getTaskWorkspace`
       - `database/fork-point.databaseForkedAt`
       - `infra/attachments.getAttachment`
@@ -19768,6 +19769,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `ui/icons.Icon`
                   - Cross-plugin:
                     - Uses tokens:
+                      - `ui/tokens/color-palette --destructive`
                       - `ui/tokens/color-palette --muted`
                       - `ui/tokens/color-palette --muted-foreground`
                       - `ui/tokens/color-palette --primary`
@@ -21854,6 +21856,51 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --line-height-caption`
       - Shared:
         - Exports (values): `generateConversationSummary`
+    - **`system-prompt`** — What equin appends to an agent's system prompt: the SystemPrompt.Section contribution — a plugin's context about this agent and its task (mandate, global page instructions, task tree), rendered at every spawn of its process and joined in id order inside <equin-context id> after the preprompt (system-prompt/composer composes and records it). The channel for agent context instead of MCP server instructions, which Claude Code cuts at 4,096 characters.
+      - Core:
+        - Uses:
+          - `fields/json/config.jsonField`
+          - `infra/entity-extensions.defineExtensionShape`
+          - `network/live.liveCollection`
+          - `packages/list-bound.wholeList`
+        - Exports (types):
+          - `ConversationSystemPrompt`
+          - `SystemPromptSectionRecord`
+        - Exports (values):
+          - `conversationSystemPrompt`
+          - `conversationSystemPromptShape`
+          - `estimateTokens`
+          - `PREPROMPT_SECTION_ID`
+          - `SYSTEM_PROMPT_SECTION_TAG`
+          - `SystemPromptSectionRecordSchema`
+      - Cross-plugin:
+        - Imported by:
+          - `conversations/conversation-view/jsonl-viewer/transcript-stats/context`
+          - `conversations/system-prompt/composer`
+          - `page/annotations/agent-access`
+          - `tasks`
+          - `tasks/orchestration/mandate`
+      - Server:
+        - Exports (types): `SystemPromptSection`
+        - Exports (values): `SystemPrompt`
+      - Plugins:
+        - **`composer`** — Composes what equin appends to an agent's system prompt at a spawn: composeSystemPromptAppend (the preprompt, then every SystemPrompt.Section in id order inside <equin-context id>, a throwing section reported and replaced by a notice), which the launch and resume paths call right before the agent process starts. Records each part's size per conversation (conversations_ext_system_prompt), read by the context card through the lookup-only conversations.system-prompt collection. Apart from the section contribution so a contributor's closure does not carry the conversations table.
+          - Server:
+            - Contributes: `resource.declare` "conversations.system-prompt:rows"
+            - Uses:
+              - `conversations/system-prompt.SystemPrompt`
+              - `conversations/system-prompt.SystemPromptSection`
+              - `infra/entity-extensions.defineExtension`
+              - `network/live.serveCollection`
+              - `tasks/tasks-core._conversations`
+            - DB schema: `plugins/conversations/plugins/system-prompt/plugins/composer/server/internal/tables.ts`
+            - Entity extension of: `tasks/tasks-core` (table `conversations_ext_system_prompt`)
+            - Exports (values):
+              - `_conversationSystemPromptTable`
+              - `composeSystemPromptAppend`
+            - Resources: `conversations.system-prompt:rows` (keyed, point)
+          - Cross-plugin:
+            - Imported by: `conversations`
     - **`task-categories`** — The task categories a conversation's own task is filed under (Conversations, System), registered from a portable barrel so every host labels them — the browser host included, which does not boot the conversations server barrel that files them.
       - Server:
         - Contributes:
@@ -21977,6 +22024,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`
           - `conversations/conversation-view/jsonl-viewer/transcript-stats`
           - `conversations/question-relay`
+          - `conversations/system-prompt/composer`
           - `conversations/transcript-source/memory`
           - `conversations/transcript-watcher`
       - Plugins:
@@ -24649,7 +24697,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/shape --spacing`
       - Exemptions:
         - Exempts itself from: `boundaries/no-platform-api` — `server/internal/served.ts`, `server/internal/sources.ts` (debt)
-    - **`mcp-tools`** — Debug → MCP tools: every tool the MCP server hosts as a live DataView (searchable over name, declaring plugin and description; filterable by plugin, visibility and live description), with a detail pane per tool — declaring plugin, the name agents call it by, who it is listed for (every conversation, gated by when, or reserved for scratch profiles), the full description, its arguments and the input schema exactly as tools/list sends it — plus the server instructions sections and scope resolver above the list.
+    - **`mcp-tools`** — Debug → MCP tools: every tool the MCP server hosts as a live DataView (searchable over name, declaring plugin and description; filterable by plugin, visibility and live description), with a detail pane per tool — declaring plugin, the name agents call it by, who it is listed for (every conversation, gated by when, or reserved for scratch profiles), the full description, its arguments and the input schema exactly as tools/list sends it — plus the scope resolver above the list.
       - Web:
         - Slots:
           - `mcp-tools.actions`
@@ -28406,9 +28454,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/font-family --font-mono`
               - `ui/tokens/shape --radius`
               - `ui/tokens/shape --spacing`
-            - Imported by: 39 plugins — full list in [`plugins/fields/plugins/json/plugins/config/REFERENCE.md`](../plugins/fields/plugins/json/plugins/config/REFERENCE.md)
+            - Imported by: 40 plugins — full list in [`plugins/fields/plugins/json/plugins/config/REFERENCE.md`](../plugins/fields/plugins/json/plugins/config/REFERENCE.md)
               - `apps` ×7
-              - `conversations` ×6
+              - `conversations` ×7
               - `debug` ×5
               - `infra` ×5
               - `page` ×4
@@ -30506,10 +30554,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `withNotifyBatch`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
-        - Imported by: 115 plugins — full list in [`plugins/framework/plugins/server-core/REFERENCE.md`](../plugins/framework/plugins/server-core/REFERENCE.md)
+        - Imported by: 117 plugins — full list in [`plugins/framework/plugins/server-core/REFERENCE.md`](../plugins/framework/plugins/server-core/REFERENCE.md)
           - `infra` ×28
           - `debug` ×14
-          - `conversations` ×11
+          - `conversations` ×13
           - `database` ×10
           - `tasks` ×10
           - `apps` ×8
@@ -34300,10 +34348,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defineExtensionShape`
           - `EXTENSION_TIMESTAMPS`
       - Cross-plugin:
-        - Imported by: 44 plugins — full list in [`plugins/infra/plugins/entity-extensions/REFERENCE.md`](../plugins/infra/plugins/entity-extensions/REFERENCE.md)
+        - Imported by: 46 plugins — full list in [`plugins/infra/plugins/entity-extensions/REFERENCE.md`](../plugins/infra/plugins/entity-extensions/REFERENCE.md)
           - `apps` ×17
           - `tasks` ×13
-          - `conversations` ×10
+          - `conversations` ×12
           - `page` ×3
           - `plugin-meta/plugin-health`
       - Exemptions:
@@ -36354,13 +36402,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/deps/rust`
               - `infra/deps/updates`
               - `infra/launcher`
-    - **`mcp`** — The MCP contribution API, SDK-free: Mcp.tool / Mcp.instructions / Mcp.scope register a tool, a server-instructions section or THE scope resolver into the in-process registry the desktop half (machine/) serves over HTTP — so a plugin contributing to the MCP server stays portable.
+    - **`mcp`** — The MCP contribution API, SDK-free: Mcp.tool / Mcp.scope register a tool or THE scope resolver (no server instructions: context about an agent is a conversations/system-prompt section) into the in-process registry the desktop half (machine/) serves over HTTP — so a plugin contributing to the MCP server stays portable.
       - Server:
         - Contributes:
           - `resource.declare` "mcp.catalog"
           - `resource.declare` "mcp.health"
         - Exports (types):
-          - `McpInstructions`
           - `McpScope`
           - `McpScopeResolver`
           - `McpTool`
@@ -36369,7 +36416,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `McpToolResult`
         - Exports (values): `Mcp`
         - Resources:
-          - `mcp.catalog` (push, fixed, whole: every Mcp.tool the code registers — fixed for the process, a hundred or so, whole: every Mcp.instructions section the code registers — fixed for the process, a handful, whole: the scratch profiles a tool is reserved for — one or two, whole: one JSON Schema object's top-level keywords (type, properties, required, …) — a handful)
+          - `mcp.catalog` (push, fixed, whole: every Mcp.tool the code registers — fixed for the process, a hundred or so, whole: the scratch profiles a tool is reserved for — one or two, whole: one JSON Schema object's top-level keywords (type, properties, required, …) — a handful)
           - `mcp.health` (push, notified, capped: MCP_HEALTH_MAX_DEGRADED)
       - Machine:
         - Uses:
@@ -36385,7 +36432,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `packages/list-bound.wholeRecord`
         - Exports (types):
           - `McpCatalog`
-          - `McpCatalogInstructions`
           - `McpCatalogTool`
           - `McpDegraded`
           - `McpHealth`
@@ -36394,7 +36440,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `MCP_HEALTH_MAX_DEGRADED`
           - `MCP_SERVER_NAME`
           - `mcpCatalog`
-          - `McpCatalogInstructionsSchema`
           - `McpCatalogSchema`
           - `McpCatalogToolSchema`
           - `McpDegradedSchema`
@@ -36402,9 +36447,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `McpHealthSchema`
           - `mcpRequest`
       - Cross-plugin:
-        - Imported by: 25 plugins — full list in [`plugins/infra/plugins/mcp/REFERENCE.md`](../plugins/infra/plugins/mcp/REFERENCE.md)
+        - Imported by: 24 plugins — full list in [`plugins/infra/plugins/mcp/REFERENCE.md`](../plugins/infra/plugins/mcp/REFERENCE.md)
           - `debug` ×6
-          - `tasks` ×6
+          - `tasks` ×5
           - `conversations` ×4
           - `apps` ×3
           - `infra` ×2
@@ -39472,9 +39517,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveValueOn`
           - `sliceRange`
       - Cross-plugin:
-        - Imported by: 344 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+        - Imported by: 346 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
           - `apps` ×87
-          - `conversations` ×70
+          - `conversations` ×72
           - `debug` ×36
           - `tasks` ×28
           - `infra` ×24
@@ -40405,9 +40450,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `withDeadline`
     - **`error-subject`** — What an error is about, carried by the error: SubjectError (a shared throw site — the migration runner, the trigger installer — names the one subject it failed for), errorSubject(err) (the subjects along the cause chain plus the innermost class code, ENOENT / SQLSTATE) and crashFieldsOf(err, scope?) — the errorType / stack / scope every crash filer derives from an error, so a shared throw site's failures land on one report row per cause instead of one for all. Enforced by error-subject/crash-fields-of.
       - Cross-plugin:
-        - Imported by: 29 plugins — full list in [`plugins/packages/plugins/error-subject/REFERENCE.md`](../plugins/packages/plugins/error-subject/REFERENCE.md)
+        - Imported by: 30 plugins — full list in [`plugins/packages/plugins/error-subject/REFERENCE.md`](../plugins/packages/plugins/error-subject/REFERENCE.md)
           - `infra` ×8
-          - `conversations` ×5
+          - `conversations` ×6
           - `database` ×5
           - `reports` ×3
           - `debug` ×2
@@ -40568,11 +40613,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `wholeRecord`
           - `wholeTuple`
       - Cross-plugin:
-        - Imported by: 130 plugins — full list in [`plugins/packages/plugins/list-bound/REFERENCE.md`](../plugins/packages/plugins/list-bound/REFERENCE.md)
+        - Imported by: 131 plugins — full list in [`plugins/packages/plugins/list-bound/REFERENCE.md`](../plugins/packages/plugins/list-bound/REFERENCE.md)
           - `apps` ×29
           - `debug` ×20
+          - `conversations` ×16
           - `infra` ×16
-          - `conversations` ×15
           - `tasks` ×8
           - `build` ×5
           - `stats` ×4
@@ -41207,16 +41252,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Exemptions:
         - Exempts itself from: `check-thread-safety/no-blocking-check-work` — `check/index.ts` (debt)
       - Plugins:
-        - **`agent-access`** — The agent-facing tool surface over a page, as the file triple: read_page (human-audience subtrees pruned), write_agent_note (one agent-authored block's whole contents — an <agent-inline> card, or an <agent-page> by its own id) and edit_page (any block, judged by what the diff touched — every write must resolve inside a region an agent authors, so an <agent-inline> card or an <agent-page> admits it and a <human> or <todo> card nested there refuses it; a tagless <agent-page title> mints a sub-page). The policy over page/markdown-apply's audience-and-author-agnostic engine, as portable functions (pageTools.read / edit / writeNote — the exact tool results) that the machine half's MCP tools wrap.
+        - **`agent-access`** — The agent-facing tool surface over a page, as the file triple: read_page (human-audience subtrees pruned), write_agent_note (one agent-authored block's whole contents — an <agent-inline> card, or an <agent-page> by its own id) and edit_page (any block, judged by what the diff touched — every write must resolve inside a region an agent authors, so an <agent-inline> card or an <agent-page> admits it and a <human> or <todo> card nested there refuses it; a tagless <agent-page title> mints a sub-page), and the page-instructions system-prompt section (what page instructions are, and every global one). The policy over page/markdown-apply's audience-and-author-agnostic engine, as portable functions (pageTools.read / edit / writeNote — the exact tool results) that the machine half's MCP tools wrap.
           - Server:
-            - Contributes: `conversations.compaction-context` "page-instructions (whole)"
-            - Uses: 26 symbols — full list in [`plugins/page/plugins/annotations/plugins/agent-access/REFERENCE.md`](../plugins/page/plugins/annotations/plugins/agent-access/REFERENCE.md)
+            - Contributes:
+              - `conversations.system-prompt.section` "page-instructions"
+              - `conversations.compaction-context` "page-instructions (whole)"
+            - Uses: 27 symbols — full list in [`plugins/page/plugins/annotations/plugins/agent-access/REFERENCE.md`](../plugins/page/plugins/annotations/plugins/agent-access/REFERENCE.md)
               - `page/annotations/instructions` ×9
               - `page/markdown-apply` ×5
               - `page/editor` ×4
               - `database` ×2
               - `page/tags` ×2
               - `conversations/compaction-context.CompactionContext`
+              - `conversations/system-prompt.SystemPrompt`
               - `infra/endpoints.HttpError`
               - `page/annotations/agent-notes/authorship.recordAgentNotesAuthor`
               - `page/annotations.humanAudienceTypes`
@@ -41234,7 +41282,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `mcpTool('read_page')`
               - `mcpTool('write_agent_note')`
               - `mcpTool('edit_page')`
-              - `mcpInstructions('page-instructions')`
         - **`agent-notes`** — Agent-notes block type: a void CONTAINER whose soft-tinted box wraps blocks of any type nested inside it, holding what an agent wrote back to the page's author. Agent-notes block type: registers its (empty) `data` schema at the server write boundary, rejecting stray keys like an injected `text`.
           - Web:
             - Contributes:
@@ -51081,7 +51128,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-xs`
           - `ui/tokens/shape --radius`
           - `ui/tokens/shape --spacing`
-        - Imported by: 76 plugins — full list in [`plugins/primitives/plugins/log-channels/REFERENCE.md`](../plugins/primitives/plugins/log-channels/REFERENCE.md)
+        - Imported by: 75 plugins — full list in [`plugins/primitives/plugins/log-channels/REFERENCE.md`](../plugins/primitives/plugins/log-channels/REFERENCE.md)
           - `apps` ×14
           - `debug` ×14
           - `infra` ×10
@@ -51097,7 +51144,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `backup`
           - `integrations/youtube/audio-fetch`
           - `menu-bar`
-          - `page/annotations/agent-access`
           - `primitives/log-channels/memory-persistence`
           - `release`
           - `stats/cost`
@@ -57523,6 +57569,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `resource.declare` "tasks.repo-info"
       - `treeDigestAnnotation` "tasks"
       - `conversations.compaction-context` "task-tree (fit)"
+      - `conversations.system-prompt.section` "tree-digest"
       - `watchSource` "tasks.created"
       - `watchSource` "tasks.settled"
       - `watchSource` "tasks.started"
@@ -57583,7 +57630,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Register:
       - `mcpTool('add_task')`
       - `mcpTool('task_tree')`
-      - `mcpInstructions('tree-digest')`
       - `defineWarmup('tasks.auto-start-reconcile')`
     - Routes: `POST /api/tasks/launch`
   - Core:
@@ -58261,12 +58307,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --line-height-body`
     - **`orchestration`** — Umbrella for the workflow-agnostic building blocks agents are orchestrated by inside a task subtree: the mandate (what an agent may do, resolved nearest-wins up the folder tree), the tree digest and watchers. Names no workflow, automation or track.
       - Plugins:
-        - **`mandate`** — The mandate's server half: the Mandate.Capability registry (each owner contributes how its granted value reads), mandateOf (the named mandate nearest-wins up the folder tree, resolved to its definition's current policy through mandate/definitions) and grantOf (per conversation, collapsed per request burst), granted(cap) for Mcp.tool.when, the `## Mandate` MCP instructions section, and the mandate.capabilities catalog value.
+        - **`mandate`** — The mandate's server half: the Mandate.Capability registry (each owner contributes how its granted value reads), mandateOf (the named mandate nearest-wins up the folder tree, resolved to its definition's current policy through mandate/definitions) and grantOf (per conversation, collapsed per request burst), granted(cap) for Mcp.tool.when, the `## Mandate` system-prompt section (only the lines no tool already says), and the mandate.capabilities catalog value.
           - Server:
-            - Contributes: `resource.declare` "mandate.capabilities"
+            - Contributes:
+              - `resource.declare` "mandate.capabilities"
+              - `conversations.system-prompt.section` "mandate"
             - Uses:
+              - `conversations/system-prompt.SystemPrompt`
               - `database.db`
-              - `infra/mcp.Mcp`
               - `network/live.serveValue`
               - `tasks/orchestration/mandate/definitions.mandateDefinitionEntries`
               - `tasks/tasks-core.getConversation`
@@ -58280,7 +58328,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Mandate`
               - `mandateOf`
               - `renderMandateInstructions`
-            - Register: `mcpInstructions('mandate')`
             - Resources: `mandate.capabilities` (push, fixed, whole: every capability the code contributes — fixed for the process, a handful)
           - Core:
             - Uses:
@@ -58301,7 +58348,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tasks/orchestration/watch`
               - `tasks/outcome-report`
           - Plugins:
-            - **`change-notice`** — A running agent follows a change of its task's mandate without a restart: on tasks.mandateChanged each live agent on those tasks reconnects the equin MCP server (its tools are the new mandate's at once), then is sent the new Mandate section as an event turn — the server instructions are read only at connect. The notice is typed now, the way a user message is (a working agent reads it at its next step), and says it is information only, not a request to act; an agent this backend does not run gets none.
+            - **`change-notice`** — A running agent follows a change of its task's mandate without a restart: on tasks.mandateChanged each live agent on those tasks reconnects the equin MCP server (its tools are the new mandate's at once), then is sent the new Mandate section as an event turn — its system prompt is fixed for the life of its process. The notice is typed now, the way a user message is (a working agent reads it at its next step), and says it is information only, not a request to act; an agent this backend does not run gets none.
               - Server:
                 - Contributes: `trigger` "mandate-change-notice.on-change"
                 - Uses:
@@ -58421,7 +58468,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Imported by:
                   - `tasks/mandate-presets`
                   - `tasks/orchestration/message`
-        - **`tree-digest`** — The tree digest: what an agent is shown of its mandate's task subtree — treeDigest (the whole subtree the first time, then only the tasks created or changed since the conversation's digest_cursors row, capped at 40 lines, advancing the cursor) and taskTree (the whole subtree, read-only). Each line is a task's id, title and derived status plus the words every TreeDigest.Annotation contribution adds; names no track or workflow.
+        - **`tree-digest`** — The tree digest: what an agent is shown of its mandate's task subtree — treeDigest (the whole subtree the first time, then only the tasks created or changed since the conversation's digest_cursors row, capped at 40 lines, advancing the cursor), treeSnapshot (the whole subtree, same cap, advancing the cursor — what an agent process starts with) and taskTree (the whole subtree, read-only). Each line is a task's id, title and derived status plus the words every TreeDigest.Annotation contribution adds; names no track or workflow.
           - Server:
             - Uses:
               - `database.db`
@@ -58441,6 +58488,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `taskTree`
               - `treeDigest`
               - `TreeDigest`
+              - `treeSnapshot`
           - Cross-plugin:
             - Imported by:
               - `conversations/conversation-view/jsonl-viewer/tool-call/orchestration-tools`
@@ -60163,8 +60211,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TRAILER_LOG_FORMAT`
           - `UNATTRIBUTED_TRAILER_KEY`
       - Cross-plugin:
-        - Imported by: 119 plugins — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
-          - `conversations` ×49
+        - Imported by: 120 plugins — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
+          - `conversations` ×50
           - `tasks` ×36
           - `debug` ×6
           - `active-data` ×5
@@ -60191,6 +60239,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/runtime-sdk` (table `conversations_ext_sdk_agent`)
           - `conversations/runtime-sdk` (table `conversations_ext_sdk_agent_stop`)
           - `conversations/spawn-failure` (table `conversations_ext_spawn_failure`)
+          - `conversations/system-prompt/composer` (table `conversations_ext_system_prompt`)
           - `conversations/conversation-view/turn-summary` (table `conversations_ext_turn_summary`)
           - `conversations/usage` (table `conversations_ext_usage`)
           - `tasks/auto-start` (table `tasks_ext_auto_start`)

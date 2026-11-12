@@ -1,5 +1,6 @@
--- singularity:snapshot id=587f6c3b-2c9d-414e-863c-4d5994eaa236 parents=44a832ac-b99a-44a4-a5ed-f6c08822f2d3
--- singularity:supersedes a0d9c97d
+-- singularity:snapshot id=d6e0e122-808b-43d5-8ec7-04fb4f4196f8 parents=4d2e1c3b-969f-4f1e-8cf9-45d15362d7d5
+-- singularity:supersedes a0efedfd
+-- singularity:supersedes a0efedfd <- a0d9c97d
 -- singularity:supersedes a0d9c97d <- a6036170
 -- singularity:phase expand
 CREATE TABLE "conversations_ext_system_prompt" (

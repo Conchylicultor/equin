@@ -114,7 +114,11 @@ export function ContextCard({
   return (
     <Stack gap="md">
       {usage !== null ? (
-        <Breakdown usage={usage} shownPath={shownPath} systemPrompt={systemPrompt} />
+        <Breakdown
+          usage={usage}
+          shownPath={shownPath}
+          systemPrompt={systemPrompt}
+        />
       ) : (
         <Text variant="caption" tone="muted">
           No reading yet. The agent measures its context when it starts and
