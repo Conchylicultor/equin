@@ -31,6 +31,7 @@ import {
   assertInstructionsReceived,
   deliverWithRead,
 } from "./instructions-gate";
+import { canonicalSnippet } from "./canonical-snippet";
 import { findEdits } from "./indent-match";
 import {
   BRACKET_STATUS_PREFIX,
@@ -439,29 +440,48 @@ async function editPage(
         `or, to change this page's tags, on its <tags> section.`,
     );
   }
-  const tryFind = (withHeader: boolean) =>
-    findEdits(
+  const tryFind = (withHeader: boolean, canonical: boolean) => {
+    const old = withHeader ? oldString : withoutPageMeta(oldString);
+    return findEdits(
       markdown,
-      withHeader ? oldString : withoutPageMeta(oldString),
+      canonical
+        ? canonicalSnippet(old, serverMarkdownContext().protectedSpans)
+        : old,
       agentWrittenText(
         withHeader ? newString : withoutPageMeta(newString),
         oldString,
       ),
     );
-  let found = tryFind(ownHeader);
+  };
+  let found = tryFind(ownHeader, false);
   // A BLOCK's read under the same page carries the very same header, yet its
   // body sits at another depth than the page's: pasted whole against the page
   // it cannot match with the header in front. Its header is then just the
   // read-only header of another read, and is dropped like any other.
-  if (found.kind === "none" && ownHeader) found = tryFind(false);
+  if (found.kind === "none" && ownHeader) found = tryFind(false, false);
+  // Text the agent wrote itself and quotes back from memory is spelled its way
+  // (`~20`), not the read's (`\~20`): retried in the read's spelling (see
+  // `canonicalSnippet`). Header-less, since a pasted header is the read's own.
+  if (found.kind === "none") found = tryFind(false, true);
   if (found.kind === "none") {
+    const missing = canonicalSnippet(
+      withoutPageMeta(oldString),
+      serverMarkdownContext().protectedSpans,
+    )
+      .split("\n")
+      .map((line) => line.trim())
+      .find((line) => line !== "" && !markdown.includes(line));
     throw new HttpError(
       400,
       `edit_page: old_string was not found in ${blockId}, not even with its ` +
-        `indentation shifted, so the difference is in the text itself. Call ` +
-        `read_page on that id and copy the text to replace out of its output ` +
-        `verbatim — a card the page's author addressed to themselves is not in ` +
-        `it, so text you remember from elsewhere may not be there.`,
+        `indentation shifted or its markdown spelled the way read_page spells ` +
+        `it, so the difference is in the text itself` +
+        (missing === undefined
+          ? ` (each line is there, but not in this order).`
+          : `: this line is not on the page as it stands — ${JSON.stringify(missing.slice(0, 200))}.`) +
+        ` The page may have changed since you last read it. Call read_page on ` +
+        `that id and copy the text to replace out of its output verbatim — a ` +
+        `card the page's author addressed to themselves is not in it.`,
     );
   }
   if (found.kind === "new-string-shallower") {

@@ -263,6 +263,16 @@ prefix and `new_string` shifted with it; the indentation BETWEEN lines stays
 exact, because it decides nesting. The result says `reindented`, and a match at
 two depths is still non-unique.
 
+**…and up to its inline spelling** (`server/internal/canonical-snippet.ts`).
+`read_page` emits canonical inline markdown — `~20` reads `\~20`, `snake_case`
+reads `snake\_case`, a bold run is split around an id chip — so an agent quoting
+text it WROTE (from its own earlier `new_string`, not from a read) missed every
+time. Still with no match, each line of `old_string` is re-spelled through the
+same `parseInlineMarkdown` → `serializeInlineMarkdown` pair the read uses (the
+identity on canonical text), leaving block prefixes, tag lines and fenced bodies
+alone, and matched again. A miss after that names the first line not on the
+page, which then really is a stale or misremembered line.
+
 `write_agent_note` composes its document rather than editing one, so it passes no
 baseline — there is nothing to subtract, and its apply is rooted at one card
 anyway.

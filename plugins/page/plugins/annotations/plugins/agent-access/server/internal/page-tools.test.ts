@@ -190,4 +190,47 @@ describe.if(IN_CHILD)("pageTools on a portable host", () => {
     const [part] = (await pageTools.read({ block_id: "PAGE" }, caller)).content;
     expect(part.text).toContain("The parser handles UTF-8.");
   });
+
+  test("edit finds text the agent wrote, quoted back in its own spelling", async () => {
+    await pageTools.writeNote(
+      { block_id: "CARD", content: "Took ~20 s on snake_case_files." },
+      caller,
+    );
+    const [read] = (await pageTools.read({ block_id: "PAGE" }, caller)).content;
+    expect(read.text).toContain("Took \\~20 s on snake\\_case\\_files.");
+    await pageTools.edit(
+      {
+        block_id: "PAGE",
+        old_string: "Took ~20 s on snake_case_files.",
+        new_string: "Took ~5 s on snake_case_files.",
+        replace_all: false,
+      },
+      caller,
+    );
+    const [after] = (await pageTools.read({ block_id: "PAGE" }, caller))
+      .content;
+    expect(after.text).toContain("Took \\~5 s on snake\\_case\\_files.");
+  });
+
+  test("a miss names the line that is not on the page", async () => {
+    const refusal = await pageTools
+      .edit(
+        {
+          block_id: "PAGE",
+          old_string: "Never written.",
+          new_string: "Anything.",
+          replace_all: false,
+        },
+        caller,
+      )
+      .then(
+        () => null,
+        (err: unknown) => {
+          if (err instanceof HttpError) return err;
+          throw err;
+        },
+      );
+    expect(refusal?.status).toBe(400);
+    expect(refusal?.message).toContain('"Never written."');
+  });
 });
