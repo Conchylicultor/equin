@@ -594,7 +594,8 @@ function recipes(story: Story, _s: PageSession, ctx: SessionContext): Turn[] {
     );
   const answers = [
     `Done (${id}, v1): the recipes you pick for the week sit in a bar at the bottom, with their photos and one tap to the shopping list.`,
-    `v2 is ready (${id}): the accent option now has plum and ocean beside terracotta and olive.\n\nNext would be the real app. That's a new app in your equin, so I'm asking first: build it from this prototype?`,
+    `v2 is ready (${id}): the accent option now has plum and ocean beside terracotta and olive.`,
+    `v3 is ready (${id}), with three new options in the picker:\n\n- **Cards**: photo (as before), overlay (the title on the photo) or list (compact rows).\n- **Headings**: serif or sans.\n- **Paper**: the background colour, beside the accent.\n\nNext would be the real app. That's a new app in your equin, so I'm asking first: build it from this prototype?`,
   ];
   if (answers.length !== steps.length)
     throw new Error(
@@ -651,12 +652,14 @@ function recipes(story: Story, _s: PageSession, ctx: SessionContext): Turn[] {
       const before = (i === 0 ? first : steps[i - 1]!).files;
       return [
         reply(version.subject),
-        ...Object.entries(version.changed).map(([file, text]) => {
-          const was = before[file];
-          return was === undefined
-            ? write(`${dir}/${file}`, text)
-            : editOf(`${dir}/${file}`, was, text);
-        }),
+        ...Object.entries(version.changed)
+          .map(([file, text]) => {
+            const was = before[file];
+            return was === undefined
+              ? [write(`${dir}/${file}`, text)]
+              : editsOf(`${dir}/${file}`, was, text);
+          })
+          .flat(),
         { kind: "assistant", text: answers[i]!, final: true } satisfies Turn,
       ];
     }),
@@ -664,32 +667,105 @@ function recipes(story: Story, _s: PageSession, ctx: SessionContext): Turn[] {
 }
 
 /**
- * The `Edit` an agent makes to turn `was` into `now`: the lines that differ,
- * with one unchanged line before them when the change only adds lines.
+ * The `Edit`s an agent makes to turn `was` into `now`: one per changed region
+ * (regions closer than a few lines apart merge), each anchored on a
+ * `old_string` unique in the file as the earlier edits left it — a pure
+ * insertion keeps the unchanged line before it (or, at the top, after it).
  */
-function editOf(path: string, was: string, now: string): Turn {
+function editsOf(path: string, was: string, now: string): Turn[] {
   const a = was.split("\n");
   const b = now.split("\n");
-  let head = 0;
-  while (head < a.length && head < b.length && a[head] === b[head]) head++;
-  let tail = 0;
-  while (
-    tail < a.length - head &&
-    tail < b.length - head &&
-    a[a.length - 1 - tail] === b[b.length - 1 - tail]
-  )
-    tail++;
-  // A pure insertion keeps one unchanged line to anchor on: the one before
-  // it, or, at the top of the file, the one after it.
-  const pure = a.length - tail === head;
-  const from = pure && head > 0 ? head - 1 : head;
-  const keep = pure && head === 0 ? tail - 1 : tail;
-  const oldString = a.slice(from, a.length - keep).join("\n");
-  if (was.split(oldString).length !== 2)
-    throw new Error(
-      `[demo] the edit of ${path} does not anchor on a unique old_string`,
+  const hunks = lineHunks(a, b);
+  if (hunks.length === 0)
+    throw new Error(`[demo] the edit of ${path} changes nothing`);
+  // Top-down, as the agent makes them: `shift` is how many lines the
+  // edits above have added to the text this hunk edits.
+  let text = a;
+  let shift = 0;
+  const turns: Turn[] = [];
+  for (const h of hunks) {
+    let from = h.a0 + shift;
+    let to = h.a1 + shift;
+    let bFrom = h.b0;
+    let bTo = h.b1;
+    const current = text.join("\n");
+    // Widen the context until old_string is non-empty and unique.
+    while (
+      to === from ||
+      current.split(text.slice(from, to).join("\n")).length !== 2
+    ) {
+      if (from > 0) {
+        from--;
+        bFrom--;
+      } else if (to < text.length) {
+        to++;
+        bTo++;
+      } else
+        throw new Error(
+          `[demo] the edit of ${path} does not anchor on a unique old_string`,
+        );
+    }
+    turns.push(
+      edit(
+        path,
+        text.slice(from, to).join("\n"),
+        b.slice(bFrom, bTo).join("\n"),
+      ),
     );
-  return edit(path, oldString, b.slice(from, b.length - keep).join("\n"));
+    text = [
+      ...text.slice(0, h.a0 + shift),
+      ...b.slice(h.b0, h.b1),
+      ...text.slice(h.a1 + shift),
+    ];
+    shift += h.b1 - h.b0 - (h.a1 - h.a0);
+  }
+  if (text.join("\n") !== now)
+    throw new Error(`[demo] the edits of ${path} do not rebuild its new text`);
+  return turns;
+}
+
+/** A line diff as changed regions: `a[a0, a1)` becomes `b[b0, b1)`. */
+function lineHunks(
+  a: readonly string[],
+  b: readonly string[],
+): { a0: number; a1: number; b0: number; b1: number }[] {
+  // LCS table over the lines (the files are a few hundred lines).
+  const n = a.length;
+  const m = b.length;
+  const lcs: Uint16Array[] = Array.from(
+    { length: n + 1 },
+    () => new Uint16Array(m + 1),
+  );
+  for (let i = n - 1; i >= 0; i--)
+    for (let j = m - 1; j >= 0; j--)
+      lcs[i]![j] =
+        a[i] === b[j]
+          ? lcs[i + 1]![j + 1]! + 1
+          : Math.max(lcs[i + 1]![j]!, lcs[i]![j + 1]!);
+  const hunks: { a0: number; a1: number; b0: number; b1: number }[] = [];
+  const MERGE_GAP = 3;
+  let i = 0;
+  let j = 0;
+  while (i < n || j < m) {
+    if (i < n && j < m && a[i] === b[j]) {
+      i++;
+      j++;
+      continue;
+    }
+    const a0 = i;
+    const b0 = j;
+    while (i < n || j < m) {
+      if (i < n && j < m && a[i] === b[j]) break;
+      if (j < m && (i === n || lcs[i]![j + 1]! >= lcs[i + 1]![j]!)) j++;
+      else i++;
+    }
+    const last = hunks.at(-1);
+    if (last !== undefined && a0 - last.a1 < MERGE_GAP) {
+      last.a1 = i;
+      last.b1 = j;
+    } else hunks.push({ a0, a1: i, b0, b1: j });
+  }
+  return hunks;
 }
 
 /**

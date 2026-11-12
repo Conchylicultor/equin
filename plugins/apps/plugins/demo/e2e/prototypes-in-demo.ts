@@ -14,7 +14,7 @@
  *     loaded from the `photos.js` beside it; the user's seeded pick (accent
  *     terracotta) is painted;
  *  3. picks another accent: the frame repaints, no reload;
- *  4. steps frame A back to `v0`: the frame loads a `/versions/<sha>/`
+ *  4. steps frame A back through its history to `v0`: the frame loads a `/versions/<sha>/`
  *     document (no week bar — `v1` added it);
  *  5. makes `v0` the latest (restore): a new version is recorded, the live
  *     frame shows it, and back in the gallery its card's thumbnail still loads
@@ -273,6 +273,15 @@ await withBrowser(async (h) => {
   await setLayout(page, "side");
   const srcBefore = await frameSrc(page, "A");
   const popover = await openOptions(page, "A");
+  r.eq(
+    "the latest version offers every option it declares",
+    await Promise.all(
+      ["Cards", "Headings", "Accent", "Paper"].map((label) =>
+        popover.getByRole("radiogroup", { name: label }).count(),
+      ),
+    ),
+    [1, 1, 1, 1],
+  );
   await pickValue(popover, "Accent", PICKED_ACCENT.label);
   await dismiss(page);
   await renders(
@@ -292,9 +301,10 @@ await withBrowser(async (h) => {
     () => frameSrc(page, "A"),
     (src) => FRAME_SRC_RE.test(src) && /\/versions\/[0-9a-f]+\//.test(src),
   );
-  await prev.click();
+  // Back to the first version, however many steps the history has.
+  while (await prev.isEnabled()) await prev.click();
   const v0 = await renders(
-    "‹ again: v0's document (cards, no week bar — v1 added it)",
+    "‹ to the start: v0's document (cards, no week bar — v1 added it)",
     async () => {
       const frame = await frameOf(page, "A");
       return frame ? frameLooks(frame) : null;

@@ -977,7 +977,12 @@ describe.if(IN_CHILD)("the demo's browser host", () => {
     );
     for (const meta of list) expect(meta.problems).toEqual([]);
     const featured = list.find((m) => m.name === DEMO_FEATURED_PROTOTYPE)!;
-    expect(featured.options.map((o) => o.name)).toEqual(["accent"]);
+    expect(featured.options.map((o) => o.name)).toEqual([
+      "cards",
+      "headings",
+      "accent",
+      "paper",
+    ]);
     // Menu mocks an exhibit, Miller columns the app at a route (compare's
     // `unresolved` arm here); the others stand on their own.
     expect(

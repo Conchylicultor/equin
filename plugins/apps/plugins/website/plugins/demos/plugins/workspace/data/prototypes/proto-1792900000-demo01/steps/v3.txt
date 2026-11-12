@@ -1,0 +1,1 @@
+Variants: card layout, heading font and paper colour
