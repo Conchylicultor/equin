@@ -17,10 +17,9 @@
 // and a file's resolution key is the hash of each probe's ANSWER — the
 // entries of its directory sharing its stem (`x`, `x.ts`, `x.d.ts`, `x/`) —
 // and those files' versions, all read from the check's VIEW of
-// the repo (`./repo-view.ts`): the run's git tree plus its overlay. An
-// untracked-not-ignored file is in the tree and shadows like a tracked one; a
-// gitignored file that is a program root (a composition registry) is in the
-// overlay and shadows too; anything else on disk does not exist for the check.
+// the repo (`./repo-view.ts`): the run's git tree. An untracked-not-ignored
+// file is in the tree and shadows like a tracked one; anything else on disk —
+// a gitignored file included — does not exist for the check.
 // It used to be the real `readdir` listing, so the transient gitignored entries
 // of the repo root (`.install.lock`, `.merge_file_*`, `.check-*`) — which every
 // lookup that walks up to the root's `node_modules` reached — moved ~6,000

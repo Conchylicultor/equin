@@ -7,7 +7,7 @@ import { pruneWorktreeRunArtifactsSync } from "@plugins/infra/plugins/paths/serv
 import { spawnToFile } from "@plugins/infra/plugins/spawn/core";
 import { watchForCommand } from "@plugins/infra/plugins/file-watcher/cli";
 import type { AttachedRun } from "./attached";
-import { RUN_TERMINAL_ENV } from "../../core/internal/shim";
+import { RUN_ERROR_ENV, RUN_TERMINAL_ENV } from "../../core/internal/shim";
 import { assertRunId, assertRunKindId } from "../../core/internal/ids";
 import { writeRunTerminalSync } from "../../core/internal/terminal";
 
@@ -72,7 +72,15 @@ export async function runAttachedNow(opts: AttachedRun): Promise<number> {
     const result = await spawnToFile(opts.argv, {
       outputPath: transcript,
       cwd: opts.cwd,
-      env: { ...opts.env, [RUN_TERMINAL_ENV]: terminal },
+      env: {
+        ...opts.env,
+        [RUN_TERMINAL_ENV]: terminal,
+        [RUN_ERROR_ENV]: worktreeArtifacts.runError(
+          opts.namespace,
+          opts.kindId,
+          opts.runId,
+        ),
+      },
       stdin: "inherit",
       onSpawn: (spawned) => {
         child = spawned;

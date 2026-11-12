@@ -35,7 +35,7 @@ export const lintResultsV3Dir = defineDataDir({
 /**
  * The run bases' ROOTS: per checked tree, the lint state a completed run
  * ended in — the global inputs it holds under (every rule group's
- * fingerprint, the typed parts', the overlay) and a map of shard id → shard
+ * fingerprint, the typed parts') and a map of shard id → shard
  * content hash. Plus the pointers (tree hash → root) and the per-worktree
  * "last tree" hints that find one. A root is ~150 KB, one per distinct tree
  * a check ran on, so this directory is bounded tighter than the shards.

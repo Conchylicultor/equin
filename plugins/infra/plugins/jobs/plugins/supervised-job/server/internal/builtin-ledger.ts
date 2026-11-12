@@ -12,7 +12,7 @@ import {
 } from "../../core";
 import type { UnfinishedRun } from "./run/registry";
 import { _supervisedJobRuns, SUPERVISED_JOB_RUNS_INFLIGHT_UQ } from "./tables";
-import { readTranscriptEnd } from "./run/tail";
+import { readRunError, readTranscriptEnd } from "./run/tail";
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { worktreeArtifacts } from "@plugins/infra/plugins/paths/core";
 import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
@@ -122,10 +122,12 @@ export function builtinLedgerFor(
     /**
      * Bare, idempotent, first-writer-wins: the only writer of the outcome.
      *
-     * A failed run is closed WITH its error: when its child recorded none —
-     * it died before its body's catch: a boot crash, a kill, an uncaught
-     * throw — the same write gives the row the end of its transcript, where
-     * the child said why. The row is what every surface quotes (the
+     * A failed run is closed WITH its error: when its child recorded none on
+     * the row — an `argv` child (an `./equin` command) cannot, and a `run`
+     * body's dies before its catch on a boot crash or a kill — the same write
+     * gives the row what the child wrote to its run's error file (an
+     * `./equin` command's uncaught exception, message first), else the end
+     * of its transcript. The row is what every surface quotes (the
      * dead-letter, a waiter's own message), so a crash is never recorded as
      * merely "crashed". One statement, so no reader sees the row closed
      * without its error. A cancelled run keeps none: the user stopped it.
@@ -134,15 +136,20 @@ export function builtinLedgerFor(
       const unrecorded =
         terminal.exitCode === 0
           ? null
-          : await unrecordedFailureMessage(
+          : await unrecordedFailureMessage({
               // This backend's own runs dir: a run's row and its files share
               // a namespace (the table is excluded from forks).
-              worktreeArtifacts.runTranscript(
+              error: worktreeArtifacts.runError(
                 runtimeNamespace(),
                 builtinKindIdFor(jobName),
                 runId,
               ),
-            );
+              transcript: worktreeArtifacts.runTranscript(
+                runtimeNamespace(),
+                builtinKindIdFor(jobName),
+                runId,
+              ),
+            });
       await conn
         .update(_supervisedJobRuns)
         .set({
@@ -221,26 +228,39 @@ export function builtinLedgerFor(
 export const UNRECORDED_FAILURE_EXCERPT_BYTES = 2048;
 
 /**
- * The error of a failed run whose child recorded none, in the child's own
- * words: the end of its transcript, with the path to the whole of it.
+ * The error of a failed run whose child recorded none on its row, in the
+ * child's own words: the error it wrote to its run's error file (an
+ * `./equin` command's uncaught exception — the message, then its first
+ * frames), else the end of its transcript; with the path to the whole
+ * transcript either way.
  */
-export async function unrecordedFailureMessage(
-  transcript: AppPath,
-): Promise<string> {
+export async function unrecordedFailureMessage(files: {
+  readonly error: AppPath;
+  readonly transcript: AppPath;
+}): Promise<string> {
+  const { transcript } = files;
+  const recorded = await readRunError(files.error);
+  if (recorded.kind === "recorded") {
+    return `${recorded.text}\n(its transcript: ${transcript})`;
+  }
+  const lead =
+    recorded.kind === "unreadable"
+      ? `recorded an error that could not be read (${files.error}: ${recorded.message})`
+      : "recorded no error";
   const end = await readTranscriptEnd(
     transcript,
     UNRECORDED_FAILURE_EXCERPT_BYTES,
   );
   switch (end.kind) {
     case "text":
-      return `recorded no error; its transcript (${transcript}) ends:\n${end.text}`;
+      return `${lead}; its transcript (${transcript}) ends:\n${end.text}`;
     case "empty":
-      return `recorded no error and wrote nothing to its transcript (${transcript})`;
+      return `${lead} and wrote nothing to its transcript (${transcript})`;
     case "missing":
       // A spawn that failed before creating it, or the artifact prune.
-      return `recorded no error and has no transcript at ${transcript}`;
+      return `${lead} and has no transcript at ${transcript}`;
     case "unreadable":
-      return `recorded no error, and its transcript (${transcript}) could not be read: ${end.message}`;
+      return `${lead}, and its transcript (${transcript}) could not be read: ${end.message}`;
   }
 }
 

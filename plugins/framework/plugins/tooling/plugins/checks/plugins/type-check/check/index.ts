@@ -90,7 +90,7 @@ async function runWorker(
     // The walk base bound to it: the files the walk does not visit keep the
     // keys the lint base holds.
     walkBase: lint.walkBase,
-    // The tree and overlay the plan keyed lint on: the worker versions every
+    // The tree the plan keyed lint on: the worker versions every
     // file the same way.
     tree: lint.tree,
     grant,
@@ -233,21 +233,16 @@ const check: Check = {
   // (e.g. docs-only) is an outer HIT with zero tsc workers. The INNER per-file
   // lint result store (lint-groups.ts / lint-results.ts) is untouched and orthogonal.
   //
-  // The one input outside the tree is the OVERLAY: the gitignored
-  // `*.composition.*.generated.ts` registries the tsconfig includes. The read-set
-  // cannot record them (it replays against git snapshots, which do not hold
-  // them), so an outer HIT trusts that they are what the tree generates — which
-  // `./equin build` regenerates before any check runs. The inner stores
-  // key them by content like every file, so no stored result is ever stale for
-  // one; only an overlay-only change with an unchanged tree can replay a PASS.
+  // There is no input outside the tree: a gitignored file — a build's
+  // `*.composition.*.generated.ts` registry — does not exist for the check
+  // (`../shared/repo-view.ts`), so the read-set replay sees all it reads.
   inputKeyed: true,
   async run(ctx: CheckContext) {
     // The run's tree: its hash and every blob's sha, as git hashed the working
     // tree — the same snapshot the cache key and the replay read, and taken
     // under `--no-cache` too (a tree hash is a fact, not a cache). Every file
     // this check keys is versioned by its blob sha in it, so its verdict is a
-    // function of this tree (plus the overlay the preparation reads beside
-    // it: the gitignored registries the tsconfig includes).
+    // function of this tree.
     const snapshot = await ctx.snapshot();
     const { root } = snapshot;
 
@@ -269,7 +264,7 @@ const check: Check = {
     let crash: string | undefined;
     let lintLines = "";
 
-    // Everything that reads file bytes or the tree — the overlay, the tsconfig
+    // Everything that reads file bytes or the tree — the tsconfig
     // include-expansion, the coverage gate, the lint rule groups, the lint
     // result store, and the records after the run — runs on the preparation
     // thread, so this thread (shared by every other check in the pass) keeps

@@ -12,6 +12,7 @@ import {
 } from "@plugins/packages/plugins/timed-fs/core";
 import type { Namespace } from "@plugins/infra/plugins/namespace/core";
 import {
+  RUN_ERROR_SUFFIX,
   RUN_TERMINAL_SUFFIX,
   RUN_TRANSCRIPT_SUFFIX,
   worktreeArtifacts,
@@ -122,8 +123,9 @@ const LEGACY_TEST_STATUS = "test-status.json";
 
 /**
  * How many recent supervised-run artifact sets to retain per worktree, PER KIND.
- * A "set" is the two files sharing one run: `<kindId>-<runId>.log` and
- * `<kindId>-<runId>.exit-code`.
+ * A "set" is the files sharing one run: `<kindId>-<runId>.log`,
+ * `<kindId>-<runId>.exit-code` and, when the child recorded one,
+ * `<kindId>-<runId>.error`.
  *
  * Same disk-bound rationale and the same number as the three families above,
  * with one difference that matters: the window is per kind, not per directory.
@@ -153,6 +155,7 @@ function runFamily(kindId: string): ArtifactFamily {
     patterns: [
       { prefix: `${kindId}-`, suffix: RUN_TRANSCRIPT_SUFFIX },
       { prefix: `${kindId}-`, suffix: RUN_TERMINAL_SUFFIX },
+      { prefix: `${kindId}-`, suffix: RUN_ERROR_SUFFIX },
     ],
     tmpPrefixes: [`${kindId}-`],
   };

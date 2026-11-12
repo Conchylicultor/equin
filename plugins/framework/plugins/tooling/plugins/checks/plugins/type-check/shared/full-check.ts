@@ -1,6 +1,6 @@
 // The ORACLE of the two-program type check: one fresh whole program over every
 // root, with TypeScript's own host over the same input — the check's view of
-// the repo (`./repo-view.ts`: the run's git tree plus its overlay), so the two
+// the repo (`./repo-view.ts`: the run's git tree), so the two
 // sides read one tree — every file checked in tsc's own order: no store, no
 // served `.d.ts`, no walk. `dual` mode (the daily backstop on main,
 // `scripts/dual-check.ts`) runs it beside the check and compares file by file.

@@ -9,7 +9,7 @@
 // is duplicated here and resolves specifiers to concrete repo-relative files.
 //
 // Nothing here enumerates or probes the disk: membership is the check's view
-// of the repo (the run's git tree plus its overlay, `../shared/repo-view.ts`),
+// of the repo (the run's git tree, `../shared/repo-view.ts`),
 // handed in as a predicate. It used to build the whole repo's graph — every
 // lintable file read and parsed, up to five `existsSync` per specifier — only
 // to walk ~100 small closures out of it (3 CPU-s per run, measured).

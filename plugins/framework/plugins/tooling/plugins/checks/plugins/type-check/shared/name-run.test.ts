@@ -633,8 +633,8 @@ test("an added file that shadows a resolution re-checks its importers", async ()
 
 test("a file added beside a directory index moves the key", async () => {
   // `pkg/index.ts` is what `./pkg` resolves to; a `pkg.ts` added to the tree
-  // beside it — untracked-not-ignored and in the tree, or a gitignored root in
-  // the overlay — shadows it. `use.ts` is unchanged; its resolution key moves.
+  // beside it — untracked-not-ignored, so in the tree — shadows it. `use.ts`
+  // is unchanged; its resolution key moves.
   const root = freshRoot();
   const store = memoryNameStore();
   const files = {

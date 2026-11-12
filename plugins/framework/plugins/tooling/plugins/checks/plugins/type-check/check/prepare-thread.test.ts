@@ -148,9 +148,8 @@ test(
         lintBase: null,
         // Nor a walk base bound to one: the worker's own last walk, if any.
         walkBase: { kind: "hint" },
-        // The tree the thread was handed, and no overlay: nothing the
-        // tsconfig includes is gitignored.
-        tree: { treeHash: (await input()).treeHash, overlay: {} },
+        // The tree the thread was handed.
+        tree: { treeHash: (await input()).treeHash },
         phaseMs: expect.any(Array) as [string, number][],
         baseLine: expect.stringContaining("base none") as string,
       };

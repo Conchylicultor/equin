@@ -9,7 +9,7 @@
 //     `.d.ts` and JSON — parsed once per process and shared through
 //     `SourceFileCache`;
 //   - every repo file and directory as the check's VIEW has it
-//     (`./repo-view.ts`: the run's git tree plus its overlay) — never the
+//     (`./repo-view.ts`: the run's git tree) — never the
 //     disk's, so the program reads exactly what the keys hash;
 //   - for every module that resolves to a repo source NOT in the set, that
 //     file's contract (its raw emitted `.d.ts`), served as a virtual `x.d.ts`

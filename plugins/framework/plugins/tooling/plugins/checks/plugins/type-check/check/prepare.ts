@@ -1,5 +1,5 @@
 // Everything type-check does that reads file bytes or the tree, before and
-// after the tsc worker: the run's tree and its overlay, the tsconfig's
+// after the tsc worker: the run's tree, the tsconfig's
 // include-expansion and the coverage gate, the lint rule groups, the run base
 // and the lint result lookups — and, once the worker is back, every record,
 // the next run base and the lint verdict.
@@ -153,9 +153,8 @@ export type Plan =
        */
       walkBase: TypeCheckWorkerJob["walkBase"];
       /**
-       * The input the worker checks: the run's tree and its overlay (the
-       * gitignored program roots, versioned) — the same versions this side
-       * keyed lint on.
+       * The input the worker checks: the run's tree — the same versions this
+       * side keyed lint on.
        */
       tree: TypeCheckTree;
       /** Wall ms per prepare phase, in order — the transcript's breakdown. */
@@ -467,11 +466,9 @@ export async function openPreparation({
     cpuMark = process.cpuUsage();
   };
 
-  // The input, read once: the run's tree (by the hash the runner took), the
-  // ignored entries git lists, and the tsconfig's include expanded over both
-  // — no filesystem walk. Its roots without a blob are the OVERLAY (the
-  // gitignored composition registries), versioned by their bytes; the worker
-  // gets both, so the two sides check one input.
+  // The input, read once: the run's tree (by the hash the runner took) and
+  // the tsconfig's include expanded over it — no filesystem walk. The worker
+  // gets the same tree hash, so the two sides check one input.
   const { tree, view, config } = await readCheckTree(
     root,
     program.tsconfigPath,
@@ -480,7 +477,7 @@ export async function openPreparation({
   // The lint universe: a FILTER over the tree, never its own walk — that
   // second enumeration is what let a stray `.ts` under gitignored `.cache/`
   // reach the coverage gate and fail a build over content the key never
-  // covered. (Overlay files are generated, so never lintable.)
+  // covered.
   const files = lintableFiles(view.files());
   const version = (rel: string): string => view.version(rel)!;
   lap("tree + tsconfig roots");
@@ -509,7 +506,7 @@ export async function openPreparation({
   const code =
     realpathSync(codeRoot) === realpathSync(root)
       ? view
-      : viewOfSnapshot(await readTreeSnapshot(asAppPath(codeRoot)), {});
+      : viewOfSnapshot(await readTreeSnapshot(asAppPath(codeRoot)));
   const groups = await computeLintGroups(view, code);
   lap(`lint groups, ${groups.parsedFiles} files parsed`);
   // Which groups hold a type-aware rule is learned by loading every
@@ -1082,7 +1079,6 @@ export async function openPreparation({
         format: RUN_BASE_FORMAT,
         treeHash,
         lint,
-        overlay: tree.overlay,
         ...(outcome.walkRoot === null ? {} : { walk: outcome.walkRoot }),
         shards: shardsOut,
       };

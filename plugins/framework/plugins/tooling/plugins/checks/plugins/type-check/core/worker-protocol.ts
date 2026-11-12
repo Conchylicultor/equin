@@ -202,8 +202,7 @@ export interface TypeCheckWorkerJob {
   walkBase: WalkBaseRef;
   /**
    * The input the worker checks: the git tree its every file is versioned by
-   * (the blob sha), and the overlay — the gitignored program roots, each with
-   * the blob sha of its bytes. Read once by whoever spawns the worker (the
+   * (the blob sha). Read once by whoever spawns the worker (the
    * check's preparation, which keys lint on the same versions), so the two
    * sides cannot see different trees.
    */
@@ -236,17 +235,14 @@ export type TypeCheckWorkerOutput =
   | { kind: "over-budget"; sources: number; bound: number };
 
 /**
- * The type check's input, as data: a git tree and its overlay
- * (`../shared/repo-view.ts`). Small — the overlay is the dozen gitignored
- * `*.composition.*.generated.ts` registries the tsconfig includes — so it
- * crosses threads and processes as a value, and each side loads the tree
- * itself from its hash.
+ * The type check's input, as data: a git tree (`../shared/repo-view.ts`) —
+ * nothing beside it, so a gitignored file (a build's composition registry)
+ * cannot reach the check. It crosses threads and processes as a value, and
+ * each side loads the tree itself from its hash.
  */
 export interface TypeCheckTree {
   /** The git tree object hash (the working tree as `computeTreeHash` writes it). */
   treeHash: string;
-  /** Each gitignored program root → the git blob sha of its bytes. */
-  overlay: Record<string, string>;
 }
 
 /** The worker's JSON stdout contract (see `../shared/worker.ts`). */

@@ -264,7 +264,6 @@ test("the lint engine loads only its declared npm packages", () => {
 test("a dependency or patch no rule loads moves no group; a patch of one a rule loads moves every group", async () => {
   const code = viewOfSnapshot(
     await readTreeSnapshot(asAppPath(codeCheckoutRoot())),
-    {},
   );
   const real = (rel: string): string =>
     readFileSync(join(codeCheckoutRoot(), rel), "utf8");

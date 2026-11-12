@@ -69,7 +69,6 @@ declared in its plugin's `exempt/index.ts` with the reason
     - `framework/tooling` (0 debt)
     - `framework/tooling/checks` (0 debt)
     - `framework/tooling/checks/no-gitlinks` (0 debt)
-    - `framework/tooling/checks/type-check` (0 debt)
     - `framework/tooling/lint` (0 debt)
     - `framework/tooling/web-artifacts` (0 debt)
     - `infra/deps/build` (0 debt)

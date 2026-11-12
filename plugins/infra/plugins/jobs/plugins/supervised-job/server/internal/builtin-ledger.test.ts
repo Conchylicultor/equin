@@ -481,6 +481,29 @@ describe("the built-in ledger (real DB)", () => {
         '[exec] failed\nerror: [fs-wait] already records as "cli"',
     );
 
+    // An `./equin` child records its uncaught exception in its run's error
+    // file: that, message first, beats a transcript ending in stack frames.
+    const thrown = await claim("thrown");
+    writeFileSync(
+      transcript(thrown),
+      "  at frame (a.ts:1:1)\n  at frame (b.ts:2:2)\n",
+    );
+    const errorFile = worktreeArtifacts.runError(
+      runtimeNamespace(),
+      builtinKindIdFor("t.silent"),
+      thrown,
+    );
+    transcripts.push(errorFile);
+    writeFileSync(
+      errorFile,
+      "Error: x.ts changed on disk\n  at frame (a.ts:1:1)\n",
+    );
+    await ledger.closeRow(thrown, ended(1));
+    expect(await errorOf(thrown)).toBe(
+      "Error: x.ts changed on disk\n  at frame (a.ts:1:1)\n" +
+        `(its transcript: ${transcript(thrown)})`,
+    );
+
     // The child's own error wins; a success records none; a lost transcript
     // is named as such.
     const recorded = await claim("recorded");

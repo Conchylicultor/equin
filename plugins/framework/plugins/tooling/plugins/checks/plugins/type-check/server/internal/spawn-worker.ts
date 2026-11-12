@@ -182,7 +182,7 @@ export async function spawnTypeCheckWorker(opts: {
    */
   walkBase?: TypeCheckWorkerJob["walkBase"];
   /**
-   * The input to check — the git tree and its overlay. The check's
+   * The input to check — the git tree. The check's
    * preparation reads it (and keys lint on the same versions); another caller
    * reads the working tree with `readTypeCheckTree` (`../../cli`). Required,
    * and never read here: reading it loads the TypeScript compiler and the check

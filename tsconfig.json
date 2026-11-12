@@ -28,9 +28,8 @@
   // outside `plugins/` is `test/*.ts`, `vitest.config.ts` or `eslint.config.ts`.
   // Every collected dir (web, server, check, facet, composition, data-dirs,
   // prewarm, provision, vite, scripts, lint, cli, bin, e2e, fixtures,
-  // __tests__, `shared/*.d.ts`, `web/vite-env.d.ts`, and the gitignored
-  // `*.composition.*.generated.ts` registries) is under it, so a new one needs
-  // no edit here.
+  // __tests__, `shared/*.d.ts`, `web/vite-env.d.ts`) is under it, so a new one
+  // needs no edit here.
   "include": ["plugins", "test", "*.config.ts"],
   // tsc expands `include` by walking the FILESYSTEM, not by listing git, so
   // these name what is on disk but not in git: `node_modules`, and the release
@@ -38,5 +37,16 @@
   // `dist.staging.*` / `dist.old.*` / `dist.swap.*`). Dot-prefixed directories
   // (`.cache`, `.check-*`, `.claude/worktrees`) are never matched by `*`/`**`
   // in a tsconfig pattern, so they need no entry.
-  "exclude": ["**/node_modules", "**/dist", "**/dist.*"]
+  //
+  // `*.composition.*.generated.ts`: the per-composition registries, gitignored
+  // build output a build rewrites in place. `type-check` reads only the git
+  // tree, so it never sees them; excluded here so an editor's program is the
+  // same set of roots (the committed `<dir>.generated.ts` registries, built
+  // from the same plugins, are checked).
+  "exclude": [
+    "**/node_modules",
+    "**/dist",
+    "**/dist.*",
+    "**/*.composition.*.generated.ts"
+  ]
 }

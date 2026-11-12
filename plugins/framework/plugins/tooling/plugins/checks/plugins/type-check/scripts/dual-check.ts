@@ -76,7 +76,7 @@ const job: TypeCheckWorkerJob = {
   typedParts: { split: [], whole: [] },
   lintBase: null,
   walkBase: { kind: walkBase },
-  // The checkout's working tree as it is now, and its gitignored roots.
+  // The checkout's working tree as it is now.
   tree: (await readCheckTree(root, tsconfigPath)).tree,
   batch: { kind: "batches", k: batchK },
 };

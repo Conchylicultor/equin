@@ -14,6 +14,9 @@ export { cliExecContext } from "./internal/cli-exec-context";
 // so a command that never relays pays nothing for it.
 export { runAttached } from "./internal/attached";
 export type { AttachedRun } from "./internal/attached";
+// An `./equin` command run as a supervised child records the exception it dies
+// of in its run's error file (read by the built-in ledger, `../core`).
+export { takeRunErrorPath, writeRunErrorSync } from "./internal/run-error";
 
 /**
  * The child half of a supervised task: boot the plugin graph in `exec` mode,

@@ -187,6 +187,8 @@ the shared Playwright harness.
     - `debug/profiling/op-log.OpProfiler`
     - `debug/profiling/op-log.readOpStates`
     - `infra/jobs/supervised-job.cliExecContext`
+    - `infra/jobs/supervised-job.takeRunErrorPath`
+    - `infra/jobs/supervised-job.writeRunErrorSync`
     - `tasks/task-track.checkoutTrack`
   - Exports (types):
     - `BuildProfile`
@@ -218,6 +220,7 @@ the shared Playwright harness.
     - `buildProfilerStart`
     - `checkBroadcasts`
     - `checkValveGuard`
+    - `claimRunErrorFile`
     - `createValveDeps`
     - `emitVerdict`
     - `FATAL_SIGNAL_EXITS`

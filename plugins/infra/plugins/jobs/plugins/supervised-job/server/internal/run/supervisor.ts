@@ -654,7 +654,10 @@ export async function startSupervisedRun(
     // pump onwards.
     const fd = await openOwnedFd(transcriptPath, "a");
     try {
-      const shim = supervisedArgv(opts.argv, terminalPath);
+      const shim = supervisedArgv(opts.argv, {
+        terminal: terminalPath,
+        error: worktreeArtifacts.runError(worktree, kind.id, opts.runId),
+      });
       const proc = Bun.spawn(shim.argv, {
         cwd: opts.cwd,
         stdin: "ignore",

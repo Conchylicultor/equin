@@ -1,5 +1,6 @@
 import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { open, type FileHandle } from "node:fs/promises";
+import { readFile } from "@plugins/packages/plugins/timed-fs/core";
 import { createKeyedMutex } from "@plugins/packages/plugins/keyed-mutex/core";
 
 /**
@@ -228,5 +229,32 @@ export async function readTranscriptEnd(
     };
   } finally {
     await fd.close();
+  }
+}
+
+// ─── The run's error file: what an `./equin` child said ended it ──────────
+// Written by the child (`../../../cli/internal/run-error.ts`, through `runCli`);
+// read here, beside the transcript's end, when the ledger closes a failed run.
+
+/** What {@link readRunError} found at a run's error path. */
+export type RecordedRunError =
+  | { readonly kind: "recorded"; readonly text: string }
+  /** ENOENT: the child recorded none (exited cleanly, was killed, or is not an `./equin` command). */
+  | { readonly kind: "none" }
+  /** Any other read failure, named — the caller is closing a run's row. */
+  | { readonly kind: "unreadable"; readonly message: string };
+
+/**
+ * The error a run's child recorded. Never rejects: its caller is the ledger's
+ * terminal write, which a file beside the row must not keep from closing it.
+ */
+export async function readRunError(path: AppPath): Promise<RecordedRunError> {
+  try {
+    const text = (await readFile(path, "utf8")).trim();
+    return text === "" ? { kind: "none" } : { kind: "recorded", text };
+  } catch (err) {
+    const e = err as NodeJS.ErrnoException;
+    if (e.code === "ENOENT") return { kind: "none" };
+    return { kind: "unreadable", message: e.message };
   }
 }

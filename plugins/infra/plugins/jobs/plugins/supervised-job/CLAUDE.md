@@ -89,13 +89,22 @@ the `@ts-expect-error` for each.
     is an INSERT against it (a 23505 on that index answers `null`). No `lock` ⇒
     one job-wide key, so at most one run of the job at a time.
   - `closeRow` is the only writer of the outcome. A failed run whose child
-    recorded no error (it died before its body's catch: a boot crash, a kill,
-    an uncaught throw) gets the end of its transcript as its `error_message`,
-    in the same write as its terminal (not a cancelled one) — so the dead-letter and any
+    recorded no error on the row (an `argv` child cannot; a `run` body's dies
+    before its catch on a boot crash or a kill) gets, in the same write as its
+    terminal (not a cancelled one), the error the child wrote to its run's
+    error file, else the end of its transcript — so the dead-letter and any
     waiter quoting the row (`latestSupervisedRun`) say why, never just
-    "crashed". Excluded from forks, so no
-    namespace column; kept 30 days after `finished_at` (`defineRetention`, per
-    worktree).
+    "crashed".
+  - **The run's error file** (`worktreeArtifacts.runError`, named to the child
+    as `SUPERVISED_RUN_ERROR` by the shim's env): an `./equin` command's
+    `runCli` writes its uncaught exception there (op-runtime's
+    `recordCliCrash`), message first and head-capped, and takes the variable
+    out of its environment at start so a command it spawns cannot write over
+    it. Without it, an `argv` child's error was the transcript's last 2 KB —
+    for a crash, its stack frames: the type-check backstop was dead-lettered
+    as "recorded no error" while its message sat 3 KB further up.
+  - The table is excluded from forks, so no namespace column; kept 30 days
+    after `finished_at` (`defineRetention`, per worktree).
   - Kind id derived from the name (`database.fork` → `databasefork`), asserted
     `^[a-z][a-z0-9]*$`; a collision throws at register.
   - **The dead-letter is its failure surface**, applied after any `onEnded`:
@@ -815,6 +824,8 @@ construction, and the job and the body it spawns cannot drift apart.
   - Exports (values):
     - `cliExecContext`
     - `runAttached`
+    - `takeRunErrorPath`
+    - `writeRunErrorSync`
 - Cross-plugin:
   - Imported by: 32 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `framework` ×9

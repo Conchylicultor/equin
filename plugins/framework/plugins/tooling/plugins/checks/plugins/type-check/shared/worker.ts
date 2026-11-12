@@ -387,13 +387,13 @@ async function run(job: Job): Promise<Result> {
     typedLinted: 0,
     syntacticLinted: 0,
   };
-  // 1. The input — the job's git tree plus its overlay — and the tsconfig's
+  // 1. The input — the job's git tree — and the tsconfig's
   //    include expanded over it (no filesystem walk, no type-check yet).
   const t0 = performance.now();
   const view = await openRepoView(job.root, job.tree);
   const t1 = performance.now();
   const config = parseTsconfigOver(view, job.tsconfigPath);
-  const inputLine = `type-check: input: tree ${job.tree.treeHash.slice(0, 12)} (${view.files().length} files, overlay ${Object.keys(job.tree.overlay).length}); view ${Math.round(t1 - t0)}ms, tsconfig roots ${Math.round(performance.now() - t1)}ms`;
+  const inputLine = `type-check: input: tree ${job.tree.treeHash.slice(0, 12)} (${view.files().length} files); view ${Math.round(t1 - t0)}ms, tsconfig roots ${Math.round(performance.now() - t1)}ms`;
   if (config.kind === "unreadable") {
     return {
       name: job.name,

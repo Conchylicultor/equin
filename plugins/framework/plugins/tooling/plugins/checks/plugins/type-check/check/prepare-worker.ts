@@ -24,7 +24,7 @@ async function handle(request: PrepareRequest): Promise<PrepareReply> {
         throw new Error("type-check prepare thread: prepare called twice");
       }
       // Mostly SYNCHRONOUS work. `openPreparation` awaits git (the run's tree
-      // by its hash, and the ignored entries the overlay comes from) and, when
+      // by its hash) and, when
       // a rule group moved, the lint contributions (`typeAwareLintGroups`);
       // `finalize` awaits the exemption manifests. Neither yields to another
       // request: a second one in flight is refused by the runner side

@@ -12,8 +12,8 @@
 //
 //   - the ROOT, one per checked tree (pointer `tree → root hash`), holds the
 //     global inputs its state is valid under — every syntactic group's
-//     fingerprint, every typed part's, the directive (`LINT_GROUP_ALL`) one,
-//     and the overlay — plus, per SHARD id, the shard's content hash, the hash
+//     fingerprint, every typed part's, the directive (`LINT_GROUP_ALL`) one
+//     — plus, per SHARD id, the shard's content hash, the hash
 //     of its listing (each lintable file's path and version), whether it holds
 //     any message, and the day it was last marked used;
 //   - a SHARD is the files of one leaf plugin (`shardOf`), each with its
@@ -142,7 +142,6 @@ const rootSchema = z.object({
     typed: z.record(z.string(), z.string()),
     allFp: z.string(),
   }),
-  overlay: z.record(z.string(), z.string()),
   walk: z.string().optional(),
   shards: z.record(
     z.string(),
@@ -160,8 +159,6 @@ export interface RunBaseRoot {
   /** The tree it was recorded on. */
   treeHash: string;
   lint: RunBaseLint;
-  /** The overlay it was checked with (gitignored program roots → blob sha). */
-  overlay: Record<string, string>;
   /**
    * The walk base the same run ended in (`./walk-base.ts`, its root's hash),
    * when its worker wrote one: what the next run's walk starts from, so every
@@ -274,7 +271,6 @@ function canonicalRoot(root: RunBaseRoot): RunBaseRoot {
       typed: sortedRecord(root.lint.typed) ?? {},
       allFp: root.lint.allFp,
     },
-    overlay: sortedRecord(root.overlay) ?? {},
     ...(root.walk === undefined ? {} : { walk: root.walk }),
     shards: sortedRecord(root.shards) ?? {},
   };

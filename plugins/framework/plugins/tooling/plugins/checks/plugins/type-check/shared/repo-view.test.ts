@@ -1,14 +1,14 @@
 /**
- * The check's input is the run's git tree plus its OVERLAY, read through one
- * view (`./repo-view.ts`), on a real git fixture:
+ * The check's input is the run's git tree alone, read through one view
+ * (`./repo-view.ts`), on a real git fixture:
  *   1. a file's version is its git blob sha — what `git hash-object` says;
- *   2. the overlay is the gitignored files the tsconfig makes roots of — a
- *      composition registry, a file under an ignored directory the tsconfig
- *      does not exclude — each versioned the same way; an ignored file under
- *      an excluded directory (`node_modules`, `dist`) is not one;
+ *   2. a gitignored file is not in the view and not a root, even under the
+ *      tsconfig `include` (a build's composition registry, a file under an
+ *      ignored directory the tsconfig does not exclude) — so a build
+ *      rewriting one while a check runs changes nothing it reads;
  *   3. the worker's parse of the tsconfig over the view finds the same roots;
- *   4. a transient gitignored entry at the root moves no resolution key, while
- *      a gitignored file the tsconfig includes, shadowing a resolution, does;
+ *   4. no gitignored entry moves a resolution key — a transient one at the
+ *      root, nor one the tsconfig includes that would shadow a resolution;
  *   5. a file whose bytes changed after the tree was taken cannot be read.
  */
 
@@ -94,7 +94,7 @@ beforeAll(async () => {
   write("src/a.ts", "export const a = 1;\n");
   write("src/pkg/index.ts", "export const v = 1;\n");
   write("src/use.ts", 'import { v } from "./pkg";\nexport const w = v;\n');
-  // Gitignored, under the include: the overlay.
+  // Gitignored, under the include: still not in the input.
   write("src/web.composition.x.generated.ts", "export const reg = [];\n");
   write("src/stale/keep.ts", "export const keep = 1;\n");
   // Gitignored, under an excluded directory: never a root.
@@ -116,28 +116,36 @@ test("a file's version is its git blob sha", async () => {
   }
 });
 
-test("the overlay is the gitignored roots, versioned like the tree", async () => {
-  const { tree, view, config } = await read();
-  expect(Object.keys(tree.overlay).sort()).toEqual([
-    "src/stale/keep.ts",
-    "src/web.composition.x.generated.ts",
-  ]);
-  for (const [rel, version] of Object.entries(tree.overlay)) {
-    expect(version).toBe(await git("hash-object", rel));
-    expect(view.version(rel)).toBe(version);
-  }
+test("a gitignored file is not in the input, even under the include", async () => {
+  const { view, config } = await read();
   if (config.kind !== "parsed") throw new Error("expected a parsed tsconfig");
   expect([...config.roots].sort()).toEqual([
     "src/a.ts",
     "src/pkg/index.ts",
-    "src/stale/keep.ts",
     "src/use.ts",
-    "src/web.composition.x.generated.ts",
     "vite.config.ts",
   ]);
-  // What is ignored and not a root is not in the view at all.
-  expect(view.isFile("src/node_modules/dep/index.ts")).toBe(false);
-  expect(view.isFile("src/dist/out.ts")).toBe(false);
+  for (const rel of [
+    "src/web.composition.x.generated.ts",
+    "src/stale/keep.ts",
+    "src/node_modules/dep/index.ts",
+    "src/dist/out.ts",
+  ]) {
+    expect(view.isFile(rel)).toBe(false);
+  }
+});
+
+test("a build rewriting a gitignored registry mid-run changes nothing the check reads", async () => {
+  const before = await read();
+  write("src/web.composition.x.generated.ts", "export const reg = [1];\n");
+  try {
+    const after = await read();
+    expect(after.tree.treeHash).toBe(before.tree.treeHash);
+    // Every file of the view still reads: none of them was the registry.
+    for (const rel of before.view.files()) before.view.readText(rel);
+  } finally {
+    write("src/web.composition.x.generated.ts", "export const reg = [];\n");
+  }
 });
 
 test("the worker's parse over the view finds the same roots", async () => {
@@ -159,7 +167,7 @@ function resolveUse(r: ReadCheckTree): { target: string; key: string } {
   return { target: rec.targets[0]![2], key: rec.key };
 }
 
-test("a transient gitignored entry moves no resolution key; an included shadow does", async () => {
+test("no gitignored entry moves a resolution key — transient, or included and shadowing", async () => {
   const before = await read();
   const base = resolveUse(before);
   expect(base.target).toBe("src/pkg/index.ts");
@@ -174,14 +182,13 @@ test("a transient gitignored entry moves no resolution key; an included shadow d
   );
   expect(resolveUse(transient)).toEqual(base);
 
-  // A gitignored file the tsconfig includes is in the overlay, and shadows.
+  // A gitignored file the tsconfig includes does not exist for the check:
+  // it shadows nothing.
   write("src/pkg.ts", "export const v = 2;\n");
   try {
     const shadowed = await read();
-    expect(Object.keys(shadowed.tree.overlay)).toContain("src/pkg.ts");
-    const moved = resolveUse(shadowed);
-    expect(moved.target).toBe("src/pkg.ts");
-    expect(moved.key).not.toBe(base.key);
+    expect(shadowed.view.isFile("src/pkg.ts")).toBe(false);
+    expect(resolveUse(shadowed)).toEqual(base);
   } finally {
     rmSync(join(root, "src/pkg.ts"));
   }

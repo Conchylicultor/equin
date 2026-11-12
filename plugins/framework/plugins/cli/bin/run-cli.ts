@@ -1,5 +1,8 @@
 import type { Command } from "commander";
-import { recordCliCrash } from "@plugins/framework/plugins/cli/plugins/op-runtime/cli";
+import {
+  claimRunErrorFile,
+  recordCliCrash,
+} from "@plugins/framework/plugins/cli/plugins/op-runtime/cli";
 
 /**
  * Process-boundary harness for the CLI. Commander's async actions reject
@@ -18,11 +21,14 @@ export async function runCli(
   program: Command,
   argv?: readonly string[],
 ): Promise<void> {
+  claimRunErrorFile();
   try {
     await program.parseAsync(argv as string[]);
   } catch (err) {
-    recordCliCrash(err);
+    // Printed and the exit code set FIRST: recording can itself fail (a write
+    // to the run's error file), and must not cost the error its one sure copy.
     console.error(err);
     process.exitCode = 1;
+    recordCliCrash(err);
   }
 }

@@ -98,7 +98,6 @@ test("inputs compare by every fingerprint, and a root's hash by its content", ()
     format: RUN_BASE_FORMAT,
     treeHash: "t",
     lint,
-    overlay: {},
     shards: { s: ["h", "l", 0, 1] },
   };
   expect(rootHash(root)).toBe(rootHash({ ...root, lint: { ...lint } }));

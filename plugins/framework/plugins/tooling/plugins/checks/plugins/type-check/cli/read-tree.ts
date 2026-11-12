@@ -3,8 +3,7 @@ import type { TypeCheckTree } from "../core";
 import { readCheckTree } from "../shared/repo-view";
 
 /**
- * The working tree as `spawnTypeCheckWorker` checks it: the git tree plus the
- * overlay of gitignored files the tsconfig makes roots of
+ * The working tree as `spawnTypeCheckWorker` checks it: its git tree
  * (`../shared/repo-view.ts`).
  */
 export async function readTypeCheckTree(

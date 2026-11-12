@@ -430,7 +430,8 @@ function runsDirFor(name: Namespace): AppPath {
 }
 
 /**
- * The two filename suffixes of the supervised-run family.
+ * The filename suffixes of the supervised-run family (the transcript, the exit
+ * marker, and the error a child recorded on its way out).
  *
  * Exported, unlike every other suffix in this file, because this family has a
  * READER that goes the other way: the supervisor watches the directory and has
@@ -441,6 +442,7 @@ function runsDirFor(name: Namespace): AppPath {
  */
 export const RUN_TRANSCRIPT_SUFFIX = ".log";
 export const RUN_TERMINAL_SUFFIX = ".exit-code";
+export const RUN_ERROR_SUFFIX = ".error";
 
 /**
  * The gateway's registration record for a namespace: `spec.json`, inside that
@@ -638,6 +640,16 @@ export const worktreeArtifacts = {
    */
   runTerminal: (name: Namespace, kindId: string, runId: string): AppPath =>
     joinAppPath(runsDirFor(name), `${kindId}-${runId}${RUN_TERMINAL_SUFFIX}`),
+  /**
+   * One supervised run's recorded error: what the child said ended it, in its
+   * own words, written by the child (an `./equin` command's `runCli`) as it
+   * dies of an exception, at the path the shim's environment names. Absent
+   * when the child exited cleanly, or was not one that records. Read by the
+   * built-in ledger as the failed run's error — a transcript's last bytes are
+   * a stack's frames more often than its message.
+   */
+  runError: (name: Namespace, kindId: string, runId: string): AppPath =>
+    joinAppPath(runsDirFor(name), `${kindId}-${runId}${RUN_ERROR_SUFFIX}`),
   /**
    * DIRECTORY. The web dist SERVED for namespace `name` — the tree the gateway
    * points at for `<name>.localhost:9000`. `name` is a *namespace*: a worktree

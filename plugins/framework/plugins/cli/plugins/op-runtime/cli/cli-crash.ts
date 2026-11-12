@@ -12,8 +12,28 @@
 // `runCli` records the error here on its way out; the build's verdict guard pulls
 // it at exit time (lazily, exactly like the fatal-signal record) and folds it into
 // the banner, so build.log names its own cause on every path.
+//
+// A command run as a supervised job's child (`type-check-backstop`, a build) also
+// writes the record to the run's error file (`claimRunErrorFile`), which the job's
+// ledger reads as the failed run's error — the end of its transcript is the
+// error's STACK, not its message.
+
+import {
+  takeRunErrorPath,
+  writeRunErrorSync,
+} from "@plugins/infra/plugins/jobs/plugins/supervised-job/cli";
 
 let crash: string | null = null;
+let runErrorPath: string | null = null;
+
+/**
+ * Take, once at the CLI's start, the error file this process records its crash
+ * to when it is a supervised run's child — and out of the environment, so a
+ * command it spawns cannot write over its record.
+ */
+export function claimRunErrorFile(): void {
+  runErrorPath = takeRunErrorPath();
+}
 
 /** Longest error text the verdict banner will carry — a stack is quoted, not dumped. */
 const MAX_LINES = 8;
@@ -42,6 +62,7 @@ function describe(err: unknown): string {
 /** Record the exception that is ending this CLI process. Last writer wins. */
 export function recordCliCrash(err: unknown): void {
   crash = describe(err);
+  if (runErrorPath !== null) writeRunErrorSync(runErrorPath, err);
 }
 
 /**

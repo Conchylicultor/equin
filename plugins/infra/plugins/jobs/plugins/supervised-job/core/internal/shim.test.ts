@@ -55,7 +55,10 @@ function spawnShim(
   argv: readonly string[],
   paths: { marker: string; transcript: string },
 ) {
-  const shim = supervisedArgv(argv, paths.marker);
+  const shim = supervisedArgv(argv, {
+    terminal: paths.marker,
+    error: `${paths.marker}.error`,
+  });
   const fd = openSync(paths.transcript, "a");
   try {
     return Bun.spawn(shim.argv, {
@@ -136,7 +139,9 @@ describe("supervisedArgv — exit capture", () => {
   });
 
   test("an empty argv is refused rather than spawning a bare shell", () => {
-    expect(() => supervisedArgv([], "/tmp/x")).toThrow(/empty argv/);
+    expect(() =>
+      supervisedArgv([], { terminal: "/tmp/x", error: "/tmp/y" }),
+    ).toThrow(/empty argv/);
   });
 });
 

@@ -6,6 +6,15 @@
 export const RUN_TERMINAL_ENV = "SUPERVISED_RUN_TERMINAL";
 
 /**
+ * The environment variable naming where the child records the error it dies
+ * of (`worktreeArtifacts.runError`). The shim does not read it: it is for the
+ * child — an `./equin` command records its uncaught exception there
+ * (`../../cli/internal/run-error.ts`), and takes the variable out of its own environment so
+ * a command it spawns cannot write over it.
+ */
+export const RUN_ERROR_ENV = "SUPERVISED_RUN_ERROR";
+
+/**
  * `$0` for the shim shell. It is what `sh` prefixes its own diagnostics with,
  * so a command that does not exist reports
  * `supervised-run: /no/such/binary: No such file or directory` into the
@@ -185,7 +194,7 @@ const SHIM_SCRIPT = [
  */
 export function supervisedArgv(
   argv: readonly string[],
-  terminalPath: string,
+  paths: { readonly terminal: string; readonly error: string },
 ): { argv: string[]; env: Record<string, string> } {
   if (argv.length === 0) {
     throw new Error(
@@ -194,6 +203,6 @@ export function supervisedArgv(
   }
   return {
     argv: ["/bin/sh", "-c", SHIM_SCRIPT, SHIM_ARGV0, ...argv],
-    env: { [RUN_TERMINAL_ENV]: terminalPath },
+    env: { [RUN_TERMINAL_ENV]: paths.terminal, [RUN_ERROR_ENV]: paths.error },
   };
 }

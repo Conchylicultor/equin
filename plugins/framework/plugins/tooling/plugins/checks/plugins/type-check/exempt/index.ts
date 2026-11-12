@@ -41,13 +41,6 @@ export default [
       "Per-file synchronous work on the shared check thread (a blocking fs/process call made per item, or a direct maskSource / createSourceFile) that predates the rule; move it onto ctx.repo() / fs/promises and checks/core's maskedSource / parsedTsSource.",
   },
   {
-    rule: "repo-walk-safety/no-adhoc-repo-listing",
-    paths: ["shared/repo-view.ts"],
-    kind: "sanctioned",
-    reason:
-      "Lists the IGNORED entries (`--others --ignored --directory`), which no file set holds: the coverage gate needs to know what git ignores, once per type-check run.",
-  },
-  {
     rule: "blocking-fs/sync-named",
     paths: [
       "shared/batch-processes.ts",

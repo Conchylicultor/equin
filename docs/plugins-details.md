@@ -30033,6 +30033,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `debug/profiling/op-log.OpProfiler`
               - `debug/profiling/op-log.readOpStates`
               - `infra/jobs/supervised-job.cliExecContext`
+              - `infra/jobs/supervised-job.takeRunErrorPath`
+              - `infra/jobs/supervised-job.writeRunErrorSync`
               - `tasks/task-track.checkoutTrack`
             - Exports (types):
               - `BuildProfile`
@@ -30064,6 +30066,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `buildProfilerStart`
               - `checkBroadcasts`
               - `checkValveGuard`
+              - `claimRunErrorFile`
               - `createValveDeps`
               - `emitVerdict`
               - `FATAL_SIGNAL_EXITS`
@@ -31260,7 +31263,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `boundaries/no-platform-api` — `server/internal/spawn-worker.ts`, `shared/batch-processes.ts`, `shared/batch-worker.ts`, `shared/full-check.ts`, `shared/keys.ts`, `shared/name-check.ts`, `shared/name-host.ts`, `shared/name-records.ts`, `shared/name-resolve.ts`, `shared/name-run.ts`, `shared/name-store.ts`, `shared/name-walk.ts`, `shared/pass-set.ts`, `shared/repo-view.ts`, `shared/tsc-engine.ts`, `shared/worker.ts` (debt)
                   - `user-path/no-unproven-claim` — `shared/worker.ts`, `shared/batch-worker.ts` (sanctioned)
                   - `check-thread-safety/no-blocking-check-work` — `check/import-graph.ts` (debt)
-                  - `repo-walk-safety/no-adhoc-repo-listing` — `shared/repo-view.ts` (sanctioned)
                   - `blocking-fs/sync-named` — `shared/batch-processes.ts`, `shared/batch-worker.ts`, `shared/name-store.ts`, `shared/pass-set.ts`, `shared/repo-view.ts`, `shared/tsc-engine.ts`, `shared/worker.ts` (sanctioned)
               - Cli:
                 - Exports (values): `readTypeCheckTree`
@@ -31997,7 +31999,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `framework/tooling` (0 debt)
                   - `framework/tooling/checks` (0 debt)
                   - `framework/tooling/checks/no-gitlinks` (0 debt)
-                  - `framework/tooling/checks/type-check` (0 debt)
                   - `framework/tooling/lint` (0 debt)
                   - `framework/tooling/web-artifacts` (0 debt)
                   - `infra/deps/build` (0 debt)
@@ -36105,6 +36106,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values):
               - `cliExecContext`
               - `runAttached`
+              - `takeRunErrorPath`
+              - `writeRunErrorSync`
           - Cross-plugin:
             - Imported by: 32 plugins — full list in [`plugins/infra/plugins/jobs/plugins/supervised-job/REFERENCE.md`](../plugins/infra/plugins/jobs/plugins/supervised-job/REFERENCE.md)
               - `framework` ×9

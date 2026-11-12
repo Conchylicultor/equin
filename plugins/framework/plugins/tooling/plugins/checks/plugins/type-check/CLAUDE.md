@@ -37,28 +37,25 @@ A run's two programs are views of it (files to check as source, the rest as stor
   - **producer** (`producerSources()`): the `shared/` import closure of what produces a stored result (`name-check`, `name-store`, emit options). In `tscEngineFp` (moving it re-checks every file) and in lint's typed engine.
   - **walk** (`engineSources()`: every top-level non-test `.ts` but the worker plumbing and the oracle): keys only the walk base store's namespace (`openWalkBaseStore`). Editing the walk, the bases or `name-run` re-checks nothing — at worst a full walk (~1–3 CPU-s).
 
-## The input is the git tree plus an overlay, read through one view
+## The input is the git tree alone, read through one view
 
 The check is `inputKeyed`: the verdict must be a function of `ctx.snapshot()`'s tree hash. Everything reads the input through `RepoView` (`shared/repo-view.ts`).
 
 - **A file's version is its git blob sha.**
   - Stores are keyed on it, so lookups read no file.
   - Bytes read to parse are CHECKED: `readText` throws when they no longer hash to the version (a result under the wrong key would poison a host-wide store).
-- **The overlay** = gitignored files the tsconfig makes ROOTS of (the `*.composition.*.generated.ts` registries).
-  - `readCheckTree` lists ignored entries (`git ls-files -o -i --directory`).
-  - It expands `include` over tree ∪ ignored with `ts.matchFiles` (internal, asserted present, so it is EXACTLY tsc's expansion).
-  - It versions blob-less roots by bytes.
-  - It crosses to the worker as data (`TypeCheckTree`); the worker loads the tree by hash itself.
+- **No gitignored file is in the input**, even under the tsconfig `include` — the per-composition `*.composition.*.generated.ts` registries are build output a build rewrites mid-run (they were once an "overlay" beside the tree; DESIGN.md says why it went).
+  - `readCheckTree` expands `include` over the tree's listing with `ts.matchFiles` (internal, asserted present, so it is EXACTLY tsc's expansion).
+  - The tree crosses to the worker as its hash (`TypeCheckTree`); the worker loads it itself.
 - **Every in-repo question is answered by the view** — tsconfig roots, module resolution (`RecordingResolver`), resolution keys (`ProbeFs`).
   - Anything on disk but not in the view (transient root files, build output, a stray file) does not exist for the check.
   - `node_modules` and paths above the root use the real fs, pinned by the lockfile in the engine.
-- **The outer read-set** cannot record the overlay (it replays against git snapshots), so an outer HIT trusts that the registries are what the tree generates (`./equin build` regenerates them before checks). Inner stores key overlay files by content.
 - **Nothing walks the filesystem**, and each side takes the tree once and passes the value around (runner: `ctx.snapshot()`; prepare and worker: load by hash).
   - A value, not a module memo, so the staleness window stays at the call site.
   - `no-adhoc-repo-walk` bans hand-written directory deny-lists.
 - The lint predicates spell only what `.gitignore` does not (`*.generated.ts`, `prototypes/**`; rest of eslint's ignore list in `lint/core/build-lint-config.ts`).
   - **Never restate `node_modules` / `dist` / `.check-*` / `.claude/worktrees` there.**
-  - The root tsconfig `exclude` is the one legitimate copy (it needs `**/node_modules` and the `dist*` trees; dot-dirs never match a wildcard).
+  - The root tsconfig `exclude` is the one legitimate copy (it needs `**/node_modules`, the `dist*` trees and the gitignored composition registries, for an editor's program; dot-dirs never match a wildcard).
 - A build skips less often than a bare check of the same tree: build regenerates stubs and registries, which are in the program.
 
 ## The coverage gate is set subtraction
@@ -216,7 +213,7 @@ What a change costs:
 `shared/run-base.ts`. A **run base** is the complete per-file lint state a completed run ended in, content-addressed, host-wide:
 
 - **Root** (`type-check-run-base-roots`, found by a `tree → root hash` pointer):
-  - every group / typed / directive fp, and the overlay;
+  - every group / typed / directive fp;
   - per **shard** (a leaf plugin's lintable files, `shardOf`): its content hash, listing hash (paths + versions), holds-messages flag, last-used day;
   - the walk base it names (`walk`).
 - **Shard** (`type-check-run-base-shards`): per file version, directive flag, R, non-empty raw messages per part.
@@ -310,7 +307,7 @@ Sizes: `research/2026-10-15-global-push-typecheck-lane-priority-and-cap.md`.
 | `type-check: walk: incremental (…) / full (<why>)`, `program 1: …`, `program 2: …`, `walk base … written` | the walk's cost and reads, each program's build/check/record ms, what was left for the next run |
 | `type-check: store opens: N in …ms; G generations dropped, U entries unlinked` | what opening the host-wide stores cost the worker (O(1) each, plus what an open evicted) |
 | `type-check worker repo: lane …, priority foreground (slot holder)` | lane and tier (`unknown (<reason>)` without darwinbg) |
-| `type-check: input: tree … (files, overlay N)` | the worker's input load |
+| `type-check: input: tree … (N files)` | the worker's input load |
 | `type-check: prepared off-thread in …` | prepare's phases with CPU, the base carried from (or `base none (<why>)` / `rules moved (…)`), files sent, what finalize wrote; `(finalize skipped: coverage gate failed)` |
 | `type-check: lint base …: every file carried unless its key moved` | the lint base the worker compares keys with |
 
@@ -366,7 +363,6 @@ Sizes: `research/2026-10-15-global-push-typecheck-lane-priority-and-cap.md`.
     - `boundaries/no-platform-api` — `server/internal/spawn-worker.ts`, `shared/batch-processes.ts`, `shared/batch-worker.ts`, `shared/full-check.ts`, `shared/keys.ts`, `shared/name-check.ts`, `shared/name-host.ts`, `shared/name-records.ts`, `shared/name-resolve.ts`, `shared/name-run.ts`, `shared/name-store.ts`, `shared/name-walk.ts`, `shared/pass-set.ts`, `shared/repo-view.ts`, `shared/tsc-engine.ts`, `shared/worker.ts` (debt)
     - `user-path/no-unproven-claim` — `shared/worker.ts`, `shared/batch-worker.ts` (sanctioned)
     - `check-thread-safety/no-blocking-check-work` — `check/import-graph.ts` (debt)
-    - `repo-walk-safety/no-adhoc-repo-listing` — `shared/repo-view.ts` (sanctioned)
     - `blocking-fs/sync-named` — `shared/batch-processes.ts`, `shared/batch-worker.ts`, `shared/name-store.ts`, `shared/pass-set.ts`, `shared/repo-view.ts`, `shared/tsc-engine.ts`, `shared/worker.ts` (sanctioned)
 - Cli:
   - Exports (values): `readTypeCheckTree`

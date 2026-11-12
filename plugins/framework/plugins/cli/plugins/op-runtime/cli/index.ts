@@ -114,4 +114,4 @@ export {
 } from "./build-output";
 export type { Verdict } from "./build-output";
 
-export { readCliCrash, recordCliCrash } from "./cli-crash";
+export { claimRunErrorFile, readCliCrash, recordCliCrash } from "./cli-crash";

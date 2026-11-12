@@ -28,7 +28,7 @@ Design and full measurement tables: `research/2026-09-18-global-type-check-one-p
 - **Rejected: prepare as a helper process.** The session must survive the worker: the record phase reuses prepare's lint entries, versions and directive flags, which a process would have to serialize.
 - **Why the walk engine keys only the walk-base namespace.** A base written by other walk code is simply not found, so the run walks every file (no TypeScript, ~1–3 CPU-s) instead of re-checking any. A change to a key's formula misses by itself; every other walk change is held by `walk-replay`, `dual-check` and the backstop. Putting the walk in `tscEngineFp` would re-check the repo on every walk edit for no soundness gain.
 
-## The input is the git tree plus an overlay, read through one view
+## The input is the git tree alone, read through one view
 
 Why the tree hash, not a filesystem walk: every walk saw _more_ than the cache key, and each copy of the skip rules drifted.
 
@@ -43,10 +43,10 @@ Other choices:
 
 - **Why `readText` verifies the blob sha.** The lint and name stores are host-wide; a result recorded under another text's key poisons every worktree that later reads it.
 - **Why the tree hash is computed under `--no-cache` too.** A tree hash is a fact, not a cache.
-- **Why `ts.matchFiles` (internal API).** The overlay expansion must be EXACTLY tsc's, or the coverage gate and the program disagree on the roots. It is asserted present, so a TypeScript upgrade that drops it fails loudly.
+- **Why `ts.matchFiles` (internal API).** The include expansion over the tree must be EXACTLY tsc's, or the coverage gate and the program disagree on the roots. It is asserted present, so a TypeScript upgrade that drops it fails loudly.
 - **Why the snapshot is a value, not a module memo.** A snapshot is of a tree that keeps changing; as a memo its staleness window was silently "the rest of the process".
 
-Limit: the outer read-set cannot record the overlay, so an overlay-only change on an unchanged tree can replay a PASS. The inner stores key overlay files by content, so no stored result is ever stale for one.
+- **Why no gitignored file is in the input** (there used to be an *overlay*: the gitignored `*.composition.*.generated.ts` registries the tsconfig included, versioned by their bytes). They are build output, rewritten by any `./equin build` of the checkout, so the verdict was not a function of the tree (the outer read-set could not record them: an overlay-only change replayed a PASS), and a build rewriting one mid-run killed the check (`readText`: "changed on disk") — the daily backstop on main died of it on 2026-11-09 and 2026-11-11. They are generated from the same plugins as the committed `<dir>.generated.ts` registries, which are checked, and no tracked file imports one; the root tsconfig `exclude`s them so an editor's program agrees with the check.
 
 ## The coverage gate is set subtraction
 
