@@ -215,6 +215,47 @@ describe("createFileWatcher: writesWhileOpen follows named files", () => {
     expect(followedDirs()).toEqual([]);
   });
 
+  test("a followed name that loops (ELOOP) does not leave its dir unfollowable", async () => {
+    // kqueue lists a looping symlink without a descriptor, so the open
+    // succeeds; the re-read it hands over then asked for the name THROUGH the
+    // link (`access`: ELOOP), the reopen rejected, and every later follow of
+    // the dir in the process failed with it (2026-11-12: the supervised runs
+    // dir, so no run streamed its output live). The re-read asks for the
+    // entry, and a failed reopen never blocks the next one.
+    if (process.platform !== "darwin") return; // kqueue's handling of the link
+    dir = mkdtempSync(join(tmpdir(), "fw-loop-"));
+    const loop = join(dir, "loop.log");
+    symlinkSync(loop, loop);
+    const ok = join(dir, "ok.log");
+    writeFileSync(ok, "");
+    const looped: string[] = [];
+    watcher = await createFileWatcher({
+      files: [loop],
+      writesWhileOpen: true,
+      debounceMs: 0,
+      onChange: (batch) => void looped.push(...batch.map((e) => e.path)),
+    });
+    // The link is an entry: its follower is handed the re-read, to fail itself.
+    await until(() => looped.includes(loop));
+    expect(looped).toContain(loop);
+    const heard: string[] = [];
+    const second = await createFileWatcher({
+      files: [ok],
+      writesWhileOpen: true,
+      debounceMs: 0,
+      onChange: (batch) => void heard.push(...batch.map((e) => e.type)),
+    });
+    try {
+      await until(() => heard.includes("update"));
+      heard.length = 0;
+      appendFileSync(ok, "x");
+      await until(() => heard.includes("update"));
+      expect(heard).toContain("update");
+    } finally {
+      await second.stop();
+    }
+  });
+
   test("a directory has no spelling", () => {
     const opts: FileWatcherOptions = {
       // @ts-expect-error — a writesWhileOpen watch takes files, never dirs

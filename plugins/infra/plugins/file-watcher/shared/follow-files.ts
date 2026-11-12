@@ -1,5 +1,5 @@
 import type * as parcel from "@parcel/watcher";
-import { exists } from "@plugins/packages/plugins/timed-fs/core";
+import { lstat } from "@plugins/packages/plugins/timed-fs/core";
 import { basename, dirname, join, resolve } from "node:path";
 import { WatchedDirGoneError } from "./dir-gone";
 
@@ -207,16 +207,23 @@ function resync(
     return reopen(dir, follow, subscribe);
   });
   follow.queued = run;
-  follow.running = run;
+  // The chain only orders the runs: the next one waits for this one to
+  // SETTLE, never for it to succeed. Chained on `run` itself, one rejection
+  // skipped every later reopen of the dir for the life of the process (and
+  // left `queued` set to it, so every later caller got the same error) —
+  // 2026-11-12, a followed name whose re-read threw ELOOP left the supervised
+  // runs dir unfollowable. The caller still gets the rejection: `run`.
+  follow.running = Promise.allSettled([run]).then(() => undefined);
   return run;
 }
 
 /**
  * Close the current subscription and open one over the current union of names.
- * Never rejects — a rejection would wedge every later resync of the dir behind
- * it: a failed close or open is handed to every follower that was live (`lost`,
- * which logs it — their watch may be gone) and left in `lastError` for the ones
- * it was opening (their `followFiles` throws it).
+ * Hands its failures to the followers rather than throwing them: a failed close
+ * or open goes to every follower that was live (`lost`, which logs it — their
+ * watch may be gone) and is left in `lastError` for the ones it was opening
+ * (their `followFiles` throws it); a failed re-read goes to its follower's
+ * `lost`. (A throw would still not wedge the dir — `resync` chains on settle.)
  */
 async function reopen(
   dir: string,
@@ -271,14 +278,44 @@ async function reopen(
   // Nothing was heard while no subscription was open: every follower re-reads.
   for (const m of members) {
     if (!m.live) continue;
-    const present: parcel.Event[] = [];
-    for (const name of m.names) {
-      const path = join(dir, name);
-      if (await exists(path)) present.push({ type: "update", path });
+    let present: parcel.Event[];
+    try {
+      present = await entriesPresent(dir, m.names);
+    } catch (err) {
+      // The follow is open; only the re-read could not be made up. The
+      // follower re-derives on a loss, which covers what it may have missed.
+      if (m.live) m.lost(dir, err);
+      continue;
     }
     // Re-checked after the awaits: it may have left meanwhile.
     if (present.length > 0 && m.live) m.look(present);
   }
+}
+
+/**
+ * An `update` for each of `names` that is an entry of `dir` — the question the
+ * subscription answers (it follows NAMES), so a name is asked with `lstat`,
+ * never through a symlink: a link that resolves to nothing, or loops (ELOOP),
+ * is still an entry the follower may read, and reading it is the follower's to
+ * fail. Throws only on what is not an answer about the name (EACCES on `dir`).
+ */
+async function entriesPresent(
+  dir: string,
+  names: ReadonlySet<string>,
+): Promise<parcel.Event[]> {
+  const present: parcel.Event[] = [];
+  for (const name of names) {
+    const path = join(dir, name);
+    try {
+      await lstat(path);
+    } catch (err) {
+      const code = (err as NodeJS.ErrnoException).code;
+      if (code === "ENOENT" || code === "ENOTDIR") continue;
+      throw err;
+    }
+    present.push({ type: "update", path });
+  }
+  return present;
 }
 
 function route(follow: DirFollow, events: parcel.Event[]): void {

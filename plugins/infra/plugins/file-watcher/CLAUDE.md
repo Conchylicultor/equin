@@ -71,7 +71,9 @@ enumerated: one descriptor per named file present plus one per directory —
   (re)open each follower is handed an `update` for each of its files on disk
   (nothing was heard while it was closed): a follower reads from its own
   cursor, so it must treat an update as "look", never as "something was
-  appended".
+  appended". "On disk" means an entry at the name (`lstat`, never through a
+  symlink); a failed re-read goes to that follower's `onLost`, and a failed
+  reopen never blocks the dir's next one.
 - **Upstream parcel 2.6.0's kqueue backend leaks the descriptor of a watched
   file that is deleted or renamed** (it never `close`s it; `unsubscribe` does
   not either — measured: 70 deletes under a dir-wide watch left 90 descriptors
