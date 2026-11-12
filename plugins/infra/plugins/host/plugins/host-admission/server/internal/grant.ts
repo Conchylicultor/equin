@@ -6,6 +6,7 @@ import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import {
   cpuBudget,
   HOST_POOLS,
+  laneCapacity,
   type Grant,
   type GrantHooks,
   type Lane,
@@ -13,6 +14,7 @@ import {
 } from "@plugins/infra/plugins/host/plugins/host-admission/core";
 import { withForegroundPriority } from "@plugins/packages/plugins/spawn-priority/server";
 import { defineHostPool, type HostPool } from "./pool";
+import { readFleetWindow, type FleetWindowNow } from "./fleet-memory";
 
 // The laned host CPU pool + the grant that subdivides it. This is where the fleet
 // ceiling `B` — host cores vs. how many worker-sized resident sets fit under the
@@ -66,7 +68,10 @@ function spendOf(want: number | undefined, held: number): number {
 }
 
 /**
- * Acquire a host CPU share for `lane` (up to `max` slots), run `fn` with a grant
+ * Acquire a host CPU share for `lane` (up to `max` slots, and never beyond the
+ * fleet's MEASURED memory window — `readFleetWindow`: what RAM is left beside
+ * the rest of the machine's actual use, less what the fleet already uses or
+ * reserves, holders included), run `fn` with a grant
  * over exactly the slots held, and release the share afterwards. `acquireShare`
  * guarantees `>= 1` slot, so a grant always has `units >= 1`: a 1-unit grant
  * merely serializes the holder's children — no starvation branch, no `min > 1`
@@ -108,7 +113,33 @@ export async function withHostGrant<T>(
   opts: { lane: Lane; priority: Priority; max: number; hooks?: GrantHooks },
   fn: (grant: Grant) => Promise<T>,
 ): Promise<T> {
-  return withPoolGrant(cpuPool, opts, fn);
+  const now = await readFleetWindow();
+  opts.hooks?.onAdmissionWindow?.(describeWindow(now));
+  return withPoolGrant(
+    cpuPool,
+    {
+      ...opts,
+      ...(now.kind === "measured"
+        ? { capacity: laneCapacity(now.window.slots, opts.lane) }
+        : {}),
+    },
+    fn,
+  );
+}
+
+const gb = (bytes: number): string => `${(bytes / 1e9).toFixed(1)} GB`;
+
+// The window in words, for whoever waits on it.
+function describeWindow(now: FleetWindowNow): string {
+  if (now.kind === "unmeasured")
+    return `memory unmeasured (${now.reason}): admitting on the static ${cpuBudget().B}-slot ceiling`;
+  const { window, reading } = now;
+  return (
+    `memory window ${window.slots} of ${cpuBudget().B} slots: ` +
+    `${gb(window.allowedBytes)} left for agent ops beside the rest of the machine ` +
+    `(${gb(reading.otherBytes)} + ${gb(reading.wiredBytes)} wired), ` +
+    `ops charged ${gb(window.chargedBytes)} (${reading.heldUnits} slots held, ${gb(reading.opsBytes)} measured)`
+  );
 }
 
 /**
@@ -120,13 +151,21 @@ export async function withHostGrant<T>(
  */
 export async function withPoolGrant<T>(
   pool: Pick<HostPool, "acquireShare">,
-  opts: { lane: Lane; priority: Priority; max: number; hooks?: GrantHooks },
+  opts: {
+    lane: Lane;
+    priority: Priority;
+    max: number;
+    hooks?: GrantHooks;
+    /** The pool slots this acquire may count on (`AcquireHooks.capacity`). */
+    capacity?: number;
+  },
   fn: (grant: Grant) => Promise<T>,
 ): Promise<T> {
   const share = await pool.acquireShare(opts.max, {
     ...opts.hooks,
     lane: opts.lane,
     priority: opts.priority,
+    ...(opts.capacity === undefined ? {} : { capacity: opts.capacity }),
   });
   const grant = grantOfUnits(share.slots, opts.lane);
   try {

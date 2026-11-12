@@ -481,13 +481,18 @@ export async function withDirectOp<K extends OpKind>(
     const grantHooks = (pool: GrantPool): GrantHooks => {
       const recorded = profiler?.grantHooks();
       let waited = false;
+      let window: string | undefined;
       return {
         ...recorded,
+        onAdmissionWindow: (text) => {
+          recorded?.onAdmissionWindow?.(text);
+          window = text;
+        },
         onWaitStart: () => {
           recorded?.onWaitStart?.();
           waited = true;
           deps.log(
-            `Waiting for a host ${pool} slot (every slot is taken — ${deps.describeQueue(pool, opId)}). This is a queue, not a hang; the ${kind} starts as soon as a slot frees.`,
+            `Waiting for a host ${pool} slot (every slot open to this ${kind} is taken — ${deps.describeQueue(pool, opId)}${window ? `; ${window}` : ""}). This is a queue, not a hang; the ${kind} starts as soon as a slot frees.`,
           );
         },
         onAcquired: (waitMs) => {

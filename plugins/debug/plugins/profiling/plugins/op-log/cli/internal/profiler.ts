@@ -337,10 +337,17 @@ export function createOpProfiler<K extends OpKind>(
       emitAfterRequested({ e: "requeue", cycle, cause: "duress" });
     },
 
-    grantHooks: (): GrantHooks => ({
+    grantHooks: (): GrantHooks => {
+      // The memory window the acquire is admitted against, carried as the
+      // wait's reason — what "every slot is taken" means at that moment.
+      let window: string | null = null;
+      return {
+        onAdmissionWindow: (text: string) => {
+          window = text;
+        },
       // Slow path only: every slot in the lane's window is busy. That is where a
       // real grant queue starts, so that is where the segment opens.
-      onWaitStart: () => waitStart("host-grant"),
+        onWaitStart: () => waitStart("host-grant", window),
       onAcquired: (waitMs: number) => {
         if (openWait?.kind === "host-grant") {
           waitEnd("acquired");
@@ -373,7 +380,8 @@ export function createOpProfiler<K extends OpKind>(
           cycle,
         });
       },
-    }),
+      };
+    },
 
     markGranted: () => {
       closeOpenWait("acquired");

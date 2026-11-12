@@ -51,4 +51,21 @@ export function poolLockDir(id: string): DataDir | undefined {
   return byId.get(id);
 }
 
-export default [...byId.values()];
+/**
+ * The fleet's measured memory reading (`fleet-memory.json`): main's owner
+ * sampler writes it every 30 s, every grant acquire reads it (`fleetWindow`).
+ *
+ * `locks` like the duress latch beside it: it is a lease, not a record — its
+ * `sampledAt` is the signal and it means nothing once the sampler that rewrites
+ * it has stopped (`FLEET_MEMORY_LEASE_MS`).
+ */
+export const fleetMemoryDir = defineDataDir({
+  kind: "locks",
+  name: "fleet-memory",
+  owner: "infra/host/host-admission",
+  description:
+    "The agent fleet's measured memory reading (RAM, wired, non-op and op footprints, held cpu slots) main's owner sampler leases every 30 s for cpu grant admission",
+  reclaim: { kind: "restart" },
+});
+
+export default [...byId.values(), fleetMemoryDir];

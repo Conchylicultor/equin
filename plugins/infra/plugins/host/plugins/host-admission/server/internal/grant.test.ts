@@ -15,12 +15,21 @@ import { withPoolGrant } from "./grant";
 
 // A pool whose share is `slots` wide, recording what was asked and released.
 function fakePool(slots: number) {
-  const calls = { max: [] as number[], lanes: [] as unknown[], released: 0 };
+  const calls = {
+    max: [] as number[],
+    lanes: [] as unknown[],
+    capacities: [] as unknown[],
+    released: 0,
+  };
   return {
     calls,
-    acquireShare: async (max: number, hooks?: { lane?: unknown }) => {
+    acquireShare: async (
+      max: number,
+      hooks?: { lane?: unknown; capacity?: unknown },
+    ) => {
       calls.max.push(max);
       calls.lanes.push(hooks?.lane);
+      calls.capacities.push(hooks?.capacity);
       return {
         slots,
         release: async () => {
@@ -223,4 +232,12 @@ test("inheritedGrant returns undefined for absent or invalid HOST_GRANT", async 
       expect(inheritedGrant()).toBeUndefined();
     });
   }
+});
+
+test("withPoolGrant hands the measured capacity to the acquire, and none when unmeasured", async () => {
+  const pool = fakePool(1);
+  const opts = { lane: "background", priority: "normal", max: 9 } as const;
+  await withPoolGrant(pool, { ...opts, capacity: 2 }, async () => {});
+  await withPoolGrant(pool, opts, async () => {});
+  expect(pool.calls.capacities).toEqual([2, undefined]);
 });

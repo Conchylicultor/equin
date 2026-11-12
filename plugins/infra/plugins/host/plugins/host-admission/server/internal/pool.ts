@@ -109,6 +109,11 @@ export interface HostPool<H extends PoolHolder = PoolHolder> {
   acquireShare(max: number, hooks?: AcquireHooks): Promise<HostShare>;
   /** Callers currently parked on the slow path (queue-depth gauge). */
   depth(): number;
+  /**
+   * Slots held host-wide right now, probed serially like `hostOccupancy()` —
+   * never from an acquire path (a probe briefly holds a free slot).
+   */
+  held(): Promise<number>;
 }
 
 /** Declares a host pool: how many holders of its kind may run at once, host-wide. */
@@ -247,6 +252,7 @@ export function defineHostPool<H extends PoolHolder>(
     acquireShare: (max, hooks) =>
       meterAcquire(layer, hooks, (h) => sem.acquireShare(max, h)),
     depth: () => sem.depth(),
+    held: () => probeOccupancy(slots, sem.liveSize()),
   };
   registry.set(spec.id, pool);
   return pool;

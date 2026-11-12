@@ -2,7 +2,11 @@ import { cpus, freemem, loadavg, totalmem } from "node:os";
 import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import type { HostSample } from "../../core";
-import { availableMemBytes, parseVmStat, type VmStat } from "./vm-stat";
+import {
+  availableMemBytes,
+  parseVmStat,
+  type VmStat,
+} from "@plugins/packages/plugins/vm-stat/core";
 import { detectWallJumpMs } from "./wall-jump";
 import { defineTimer } from "@plugins/infra/plugins/background/plugins/timer/server";
 

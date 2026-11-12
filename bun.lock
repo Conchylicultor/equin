@@ -5113,6 +5113,10 @@
       "name": "@equin/plugin-packages-value-patch",
       "version": "0.0.1",
     },
+    "plugins/packages/plugins/vm-stat": {
+      "name": "@equin/plugin-packages-vm-stat",
+      "version": "0.0.1",
+    },
     "plugins/packages/plugins/wall-clock": {
       "name": "@equin/plugin-packages-wall-clock",
       "version": "0.0.1",
@@ -10158,6 +10162,8 @@
     "@equin/plugin-packages-timed-fs": ["@equin/plugin-packages-timed-fs@workspace:plugins/packages/plugins/timed-fs"],
 
     "@equin/plugin-packages-value-patch": ["@equin/plugin-packages-value-patch@workspace:plugins/packages/plugins/value-patch"],
+
+    "@equin/plugin-packages-vm-stat": ["@equin/plugin-packages-vm-stat@workspace:plugins/packages/plugins/vm-stat"],
 
     "@equin/plugin-packages-wall-clock": ["@equin/plugin-packages-wall-clock@workspace:plugins/packages/plugins/wall-clock"],
 

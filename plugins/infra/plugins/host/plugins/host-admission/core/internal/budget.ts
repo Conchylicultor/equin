@@ -253,7 +253,15 @@ export interface CpuBudget {
  * interactive floor only becomes meaningful again at `B >= 2`.
  */
 export function cpuBudget(host: HostFacts = thisHost()): CpuBudget {
-  const B = Math.max(1, rawFleetCeiling(host));
+  return laneSplit(Math.max(1, rawFleetCeiling(host)));
+}
+
+/**
+ * The reserved-floor split of a `B`-slot window: the static pool (`cpuBudget`)
+ * and the measured memory window (`fleetWindow` → `laneCapacity`) split the same
+ * way, so a shrunken window keeps its top slot(s) for interactive work.
+ */
+export function laneSplit(B: number): CpuBudget {
   const reservedInteractive = Math.max(1, Math.floor(B / 3));
   const backgroundLimit = Math.max(1, B - reservedInteractive);
   return { B, reservedInteractive, backgroundLimit };

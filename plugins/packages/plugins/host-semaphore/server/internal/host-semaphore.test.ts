@@ -340,6 +340,60 @@ describe("acquireShare", () => {
   });
 });
 
+// A per-acquire `capacity` narrows the usable slot set to its low indices,
+// without touching the pool's identity: the window a caller can shrink when the
+// pool's real capacity moves (host-admission's measured memory window).
+describe("capacity", () => {
+  test("an acquire never takes a slot at or above its capacity, in either lane", async () => {
+    const slots = uniqueSlots("capacity");
+    const slotsDir = slots.path;
+    const sem = createHostSemaphore({ slots, size: 6, backgroundLimit: 4 });
+
+    // Interactive with capacity 3 sweeps slot-2 first (high-first WITHIN the window).
+    const i1 = await sem.acquireShare(1, { lane: "interactive", capacity: 3 });
+    expect(isSlotHeld(slotsDir, 2)).toBe(true);
+    expect(isSlotHeld(slotsDir, 5)).toBe(false);
+    // Background with capacity 2 asks for 4 and gets the two low slots only.
+    const b = await sem.acquireShare(4, { lane: "background", capacity: 2 });
+    expect(b.slots).toBe(2);
+    expect(isSlotHeld(slotsDir, 0)).toBe(true);
+    expect(isSlotHeld(slotsDir, 1)).toBe(true);
+    expect(isSlotHeld(slotsDir, 3)).toBe(false);
+
+    // A wider capacity reaches the free slots at once (taken before a waiter
+    // queues in this class's line, which a fresh acquire never barges past).
+    const wide = await sem.acquireShare(1, { lane: "interactive" });
+    expect(isSlotHeld(slotsDir, 5)).toBe(true);
+
+    // The window [0, 3) is full: a capacity-3 acquire waits although slot-3..4 are free.
+    let resolved = false;
+    const blocked = sem
+      .acquireShare(1, { lane: "interactive", capacity: 3 })
+      .then((s) => {
+        resolved = true;
+        return s;
+      });
+    await sleep(150);
+    expect(resolved).toBe(false);
+
+    await i1.release();
+    const share = await blocked;
+    expect(share.slots).toBe(1);
+    expect(isSlotHeld(slotsDir, 2)).toBe(true);
+    await Promise.all([share.release(), b.release(), wide.release()]);
+  });
+
+  test("a capacity that is not a positive integer throws", async () => {
+    const sem = createHostSemaphore({ slots: uniqueSlots("cap-bad"), size: 2 });
+    expect(sem.acquireShare(1, { capacity: 0 })).rejects.toThrow(
+      /capacity must be a positive integer/,
+    );
+    expect(sem.acquireShare(1, { capacity: 1.5 })).rejects.toThrow(
+      /capacity must be a positive integer/,
+    );
+  });
+});
+
 // The reserved-floor lane split. A size-4 pool with backgroundLimit-2 confines
 // `background` to slot-0..1 and reserves slot-2..3 for `interactive`, which sweeps
 // high-first. These four tests pin the window, the reverse order, the fast-path floor

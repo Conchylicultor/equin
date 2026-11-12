@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-packages-vm-stat",
+  "private": true,
+  "version": "0.0.1",
+  "description": "macOS vm_stat output, parsed: parseVmStat (page size and every counter), availableMemBytes (free + speculative + inactive — what the system can hand out without swapping) and wiredMemBytes (kernel wired memory, which no process footprint carries)."
+}

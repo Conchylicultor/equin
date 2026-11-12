@@ -171,6 +171,22 @@ export interface AcquireHooks {
    */
   priority?: Priority;
   /**
+   * How many of the pool's slots this acquire may count on — it sweeps, fans out
+   * over and tops up from the LOW `capacity` indices only (default: every slot).
+   * Within that window the lanes keep their meaning: `background` is confined to
+   * `slot-0 … slot-(min(backgroundLimit, capacity)-1)`, `interactive` sweeps
+   * `slot-(capacity-1) … slot-0`, high first. A positive integer, else it
+   * throws; above the live size it clamps (the live slot set is the ceiling).
+   *
+   * It exists for a pool whose real capacity moves while its slot set cannot (the
+   * set names flock files every process shares): the caller decides, at each
+   * acquire, how much of the set is usable now. Because the window is the low
+   * indices, a shrink takes effect for new acquires at once and for holders
+   * above the new window as they release — no acquire ever takes a slot at an
+   * index `≥ capacity`. It gates which slots, like `lane`; it is not a hook.
+   */
+  capacity?: number;
+  /**
    * Ambient cancellation for this acquire. Optional everywhere: omitting it is
    * exactly today's behavior, so nothing that does not pass one changes.
    *
@@ -441,10 +457,16 @@ export function createHostSemaphore(opts: {
   // the shared low slots, leaving the low slots for background. This is the whole
   // reserved-floor trick and it costs one reversal. When `backgroundLimit === size`
   // the two windows cover the same set — `interactive` reversed, `background` forward.
-  const laneOrder = (lane: Lane): number[] =>
-    lane === "background"
-      ? Array.from({ length: backgroundLimit }, (_, i) => i)
-      : Array.from({ length: size }, (_, i) => size - 1 - i);
+  //
+  // `capacity` (per acquire, `AcquireHooks.capacity`) narrows both windows to the
+  // low `capacity` indices, so a caller can shrink the usable set without
+  // touching the slot files' identity.
+  const laneOrder = (lane: Lane, capacity: number): number[] => {
+    const usable = Math.min(size, capacity);
+    return lane === "background"
+      ? Array.from({ length: Math.min(backgroundLimit, usable) }, (_, i) => i)
+      : Array.from({ length: usable }, (_, i) => usable - 1 - i);
+  };
 
   // Resolved per call, never captured — see the docblock on `slots`.
   const slotFile = (i: number) => slots.file(`slot-${i}.lock`);
@@ -921,6 +943,15 @@ export function createHostSemaphore(opts: {
         `acquireShare: max must be a positive integer, got ${max}`,
       );
     }
+    const capacity = hooks?.capacity ?? Number.POSITIVE_INFINITY;
+    if (
+      hooks?.capacity !== undefined &&
+      (!Number.isInteger(capacity) || capacity < 1)
+    ) {
+      throw new Error(
+        `acquireShare: capacity must be a positive integer, got ${hooks.capacity}`,
+      );
+    }
     const signal = hooks?.signal;
     // First line, mirroring `spawnCaptured`: a caller that has already been told
     // to stop never opens a new wait, and never takes a slot it would only have
@@ -940,10 +971,10 @@ export function createHostSemaphore(opts: {
     // AFTER the reconcile, never before: it is what settles which slot set this
     // acquire is entitled to sweep, so a window derived ahead of it could aim at the
     // wrong indices for the whole call.
-    const order = laneOrder(lane);
+    const order = laneOrder(lane, capacity);
     // Asking for more slots than the lane's window holds can't beat its ceiling —
     // clamp to the window size (`backgroundLimit` for background, `size` for
-    // interactive) so the fast-path sweep and the extras re-sweep agree on the bound.
+    // interactive, each narrowed by `capacity`) so the fast-path sweep and the extras re-sweep agree on the bound.
     const effectiveMax = Math.min(max, order.length);
 
     // `onWaitStart` fires once per acquire, however many times a `low` acquire

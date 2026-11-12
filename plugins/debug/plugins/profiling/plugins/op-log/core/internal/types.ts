@@ -38,7 +38,10 @@ export const WAIT_KINDS = {
   },
   "host-grant": {
     label: "Host CPU",
-    sentence: (_reason: string | null) => "waiting for a host CPU grant",
+    // The reason is the fleet memory window the acquire was admitted against
+    // (host-admission's `onAdmissionWindow`), when the pool reported one.
+    sentence: (reason: string | null) =>
+      `waiting for a host CPU grant${reason ? ` (${reason})` : ""}`,
   },
   "duress-valve": {
     label: "Duress valve",

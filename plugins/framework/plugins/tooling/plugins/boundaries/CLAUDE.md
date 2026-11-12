@@ -326,7 +326,7 @@ takes a `debt` exemption on the check's id.
     - `infra/host-fs/zip` (1 debt)
     - `infra/host/contention` (1 debt)
     - `infra/host/duress/latch` (1 debt)
-    - `infra/host/host-admission` (2 debt)
+    - `infra/host/host-admission` (3 debt)
     - `infra/host/host-read-pool` (1 debt)
     - `infra/jobs` (2 debt)
     - `infra/jobs/supervised-job` (3 debt)

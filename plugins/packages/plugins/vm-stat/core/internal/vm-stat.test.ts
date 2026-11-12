@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { availableMemBytes, parseVmStat } from "./vm-stat";
+import { availableMemBytes, parseVmStat, wiredMemBytes } from "./vm-stat";
 
 // Trimmed real `vm_stat` output (Apple Silicon, 16 KB pages) — every counter
 // the host sampler reads, plus a multi-word key with parentheses to exercise
@@ -9,6 +9,7 @@ Pages free:                               12862.
 Pages active:                            827392.
 Pages inactive:                          700000.
 Pages speculative:                        18000.
+Pages wired down:                        307729.
 Pages occupied by compressor:            655360.
 File-backed pages:                       301234.
 Pageins:                               12345678.
@@ -46,6 +47,18 @@ describe("availableMemBytes", () => {
   test("throws when a counter is missing", () => {
     expect(() => availableMemBytes(parseVmStat("Pages free: 10.\n"))).toThrow(
       /Pages speculative/,
+    );
+  });
+});
+
+describe("wiredMemBytes", () => {
+  test("counts wired pages", () => {
+    expect(wiredMemBytes(parseVmStat(FIXTURE))).toBe(307729 * 16384);
+  });
+
+  test("throws when the line is missing", () => {
+    expect(() => wiredMemBytes(parseVmStat("Pages free: 1.\n"))).toThrow(
+      /Pages wired down/,
     );
   });
 });

@@ -95,6 +95,12 @@ export interface GrantHooks {
    */
   onWaitStart?(): void;
   /**
+   * The fleet memory window this acquire is admitted against, in words — fired
+   * once, before the acquire. Only `withHostGrant` (the `cpu` pool) fires it;
+   * a caller that tells someone why it waits shows it with the wait.
+   */
+  onAdmissionWindow?(text: string): void;
+  /**
    * Always fires, fast path or slow, exactly once, at acquisition, before the
    * body runs. Its argument is the milliseconds spent waiting (≈0 on the fast
    * path).

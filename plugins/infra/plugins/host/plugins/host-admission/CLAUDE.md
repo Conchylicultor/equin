@@ -75,6 +75,59 @@ that reads "this box is smaller than one worker", not "the pools overcommitted
 the ceiling". The `max(1, …)` floor and the lane collapse below it handle that
 host; nothing a pool declares can produce it.
 
+### The measured window — what the fleet may hold *now*
+
+`B` is the most the fleet may **ever** hold (it names the slot files). On its
+own it modelled a host where nothing but the fleet used memory and a fleet whose
+only cost was the children it spends units on. Both were false on 2026-11-12
+03:58–04:24 (task-1794507763): Chrome held 37.6 GB and backends, agents and the
+rest another 23 GB, while the grant **holders** — `build`, its nested `check`, a
+top-level `check`, a test, charged nothing — were 1.3–4.5 GB each. The pool
+admitted ~30 GB of agent ops "within budget" onto a host already out of memory.
+
+So every `cpu` acquire is capped to a **measured window** of `B`
+(`core/internal/fleet-memory.ts`), counting every byte two ways:
+
+```
+allowed = RAM − wired − otherBytes                 // the rest of the machine, measured
+charged = max(heldUnits × PER_UNIT_BYTES, opsBytes) // the fleet: reserved, or measured if larger
+window  = clamp(heldUnits + floor((allowed − charged) / PER_UNIT_BYTES), 1, B)
+```
+
+- `otherBytes` — physical footprint of every process that is not an agent op;
+  `opsBytes` — every running op's whole process tree (holders, nested checks,
+  workers, tests); `wiredBytes` — kernel wired memory (vm_stat), in no
+  footprint. Main's owner sampler (`debug/sentinel/machine-usage`, 30 s)
+  attributes them, probes the held `cpu` slots, and writes the reading to
+  `locks/fleet-memory/fleet-memory.json` (`publishFleetMemory`).
+- **Holders are charged by measurement.** A held slot reserves a quantum from
+  the moment it is taken (a just-started build has not grown); once the ops'
+  measured footprint is larger — a 1-slot build whose `build` + `check` +
+  worker measure 6.5 GB — that is what the fleet is charged.
+- `withHostGrant` reads the reading (`readFleetWindow`) and passes
+  `capacity = laneCapacity(window, lane)` to the acquire
+  (`AcquireHooks.capacity`, `packages/host-semaphore`): the acquire only touches
+  the low `capacity` slots. Interactive gets the whole window, background its
+  `laneSplit` share — the same reserved-floor split `cpuBudget` makes of `B`.
+- The window never drops below 1, so one op always runs and the line moves.
+- Its words go to `GrantHooks.onAdmissionWindow`: the op log records them as the
+  host-grant wait's reason, and a direct op prints them when it queues.
+
+Limits, stated rather than hidden:
+
+- **Lag.** Readings are 30 s apart. Ops admitted inside one window reserve their
+  slots at once, but their holders' growth is seen at the next reading.
+- **A shrink drains, it does not evict.** Holders above a shrunken window keep
+  their slots until they release; no acquire takes a slot at index ≥ capacity.
+- **A grow wakes on the next release.** A waiter fanned out over a small window
+  does not re-sweep when the window widens; it re-reads the window on its next
+  acquire.
+- **Unmeasured → static.** No reading within `FLEET_MEMORY_LEASE_MS` (120 s:
+  main restarting or down) admits on `B` alone, and says so in the window text.
+- **Footprints count compressed pages.** The sum can exceed RAM while the
+  compressor holds it; admission treats that demand as real — compressor thrash
+  is what froze the host before.
+
 ### Why a pool no longer costs CPU, and why the quantum moved
 
 Until 2026-09-09 each pool declared a `PoolCost { cpu, ramBytes? }`, and
@@ -332,6 +385,7 @@ See `research/2026-07-10-global-host-admission-unified-budget.md`.
     - `packages/host-semaphore.HostShare`
     - `packages/spawn-priority.withForegroundPriority`
   - Exports (types):
+    - `FleetWindowNow`
     - `ForegroundSlot`
     - `HostPool`
     - `HostPoolSpec`
@@ -346,7 +400,9 @@ See `research/2026-07-10-global-host-admission-unified-budget.md`.
     - `e2ePool`
     - `hostOccupancy`
     - `inheritedGrant`
+    - `publishFleetMemory`
     - `pushPool`
+    - `readFleetWindow`
     - `repoPushLock`
     - `withE2eGrant`
     - `withHostGrant`
@@ -354,6 +410,7 @@ See `research/2026-07-10-global-host-admission-unified-budget.md`.
   - Imported by:
     - `database/admin`
     - `debug/profiling/boot-bench`
+    - `debug/sentinel/machine-usage`
     - `framework/cli/build`
     - `framework/cli/check`
     - `framework/cli/op-runtime`
@@ -368,10 +425,12 @@ See `research/2026-07-10-global-host-admission-unified-budget.md`.
 - Exemptions:
   - Exempts itself from:
     - `host-pools-declared` — `server` (sanctioned)
-    - `boundaries/no-platform-api` — `core/internal/budget.ts`, `server/internal/pool.ts` (debt)
+    - `boundaries/no-platform-api` — `core/internal/budget.ts`, `server/internal/pool.ts`, `server/internal/fleet-memory.ts` (debt)
 - Core:
   - Exports (types):
     - `CpuBudget`
+    - `FleetMemoryReading`
+    - `FleetWindow`
     - `Grant`
     - `GrantHooks`
     - `HostFacts`
@@ -381,10 +440,14 @@ See `research/2026-07-10-global-host-admission-unified-budget.md`.
     - `Priority`
   - Exports (values):
     - `cpuBudget`
+    - `FLEET_MEMORY_LEASE_MS`
+    - `FleetMemoryReadingSchema`
+    - `fleetWindow`
     - `HOST_POOLS`
     - `hostCpuCeiling`
     - `hostPoolsFor`
     - `hostRamCeiling`
+    - `laneCapacity`
     - `PER_UNIT_BYTES`
     - `rawFleetCeiling`
 

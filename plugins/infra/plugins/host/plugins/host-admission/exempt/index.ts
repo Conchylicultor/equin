@@ -10,7 +10,11 @@ export default [
   },
   {
     rule: "boundaries/no-platform-api",
-    paths: ["core/internal/budget.ts", "server/internal/pool.ts"],
+    paths: [
+      "core/internal/budget.ts",
+      "server/internal/pool.ts",
+      "server/internal/fleet-memory.ts",
+    ],
     kind: "debt",
     task: "task-1792338443-riwqev",
     reason: "not yet split into server/ + machine/",

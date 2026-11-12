@@ -16,3 +16,10 @@ export {
   cpuBudget,
 } from "./internal/budget";
 export type { Grant, GrantHooks } from "./internal/grant";
+export {
+  FleetMemoryReadingSchema,
+  FLEET_MEMORY_LEASE_MS,
+  fleetWindow,
+  laneCapacity,
+} from "./internal/fleet-memory";
+export type { FleetMemoryReading, FleetWindow } from "./internal/fleet-memory";

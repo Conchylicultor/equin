@@ -1,5 +1,6 @@
-// Pure `vm_stat` output parsing — kept free of log-channel/server imports so
-// the parser stays testable with a plain co-located bun:test.
+// Pure `vm_stat` output parsing: the host sampler (debug/health-monitor) reads
+// its pressure counters, main's owner sampler (debug/sentinel/machine-usage) the
+// wired memory it hands host admission. No imports, so every runtime can.
 
 export interface VmStat {
   pageSize: number;
@@ -34,4 +35,16 @@ export function availableMemBytes(vm: VmStat): number {
     },
   );
   return pages.reduce((a, b) => a + b, 0) * vm.pageSize;
+}
+
+/**
+ * Kernel wired memory, in bytes ("Pages wired down"): memory the kernel keeps
+ * resident for itself and drivers, which no process's physical footprint
+ * carries. Throws when the line is missing, like `availableMemBytes`.
+ */
+export function wiredMemBytes(vm: VmStat): number {
+  const pages = vm.map["Pages wired down"];
+  if (pages === undefined)
+    throw new Error(`vm_stat has no "Pages wired down" line`);
+  return pages * vm.pageSize;
 }

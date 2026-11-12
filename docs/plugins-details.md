@@ -30896,7 +30896,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/host-fs/zip` (1 debt)
               - `infra/host/contention` (1 debt)
               - `infra/host/duress/latch` (1 debt)
-              - `infra/host/host-admission` (2 debt)
+              - `infra/host/host-admission` (3 debt)
               - `infra/host/host-read-pool` (1 debt)
               - `infra/jobs` (2 debt)
               - `infra/jobs/supervised-job` (3 debt)
@@ -35116,6 +35116,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `packages/host-semaphore.HostShare`
               - `packages/spawn-priority.withForegroundPriority`
             - Exports (types):
+              - `FleetWindowNow`
               - `ForegroundSlot`
               - `HostPool`
               - `HostPoolSpec`
@@ -35130,7 +35131,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `e2ePool`
               - `hostOccupancy`
               - `inheritedGrant`
+              - `publishFleetMemory`
               - `pushPool`
+              - `readFleetWindow`
               - `repoPushLock`
               - `withE2eGrant`
               - `withHostGrant`
@@ -35138,6 +35141,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `database/admin`
               - `debug/profiling/boot-bench`
+              - `debug/sentinel/machine-usage`
               - `framework/cli/build`
               - `framework/cli/check`
               - `framework/cli/op-runtime`
@@ -35152,10 +35156,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Exemptions:
             - Exempts itself from:
               - `host-pools-declared` — `server` (sanctioned)
-              - `boundaries/no-platform-api` — `core/internal/budget.ts`, `server/internal/pool.ts` (debt)
+              - `boundaries/no-platform-api` — `core/internal/budget.ts`, `server/internal/pool.ts`, `server/internal/fleet-memory.ts` (debt)
           - Core:
             - Exports (types):
               - `CpuBudget`
+              - `FleetMemoryReading`
+              - `FleetWindow`
               - `Grant`
               - `GrantHooks`
               - `HostFacts`
@@ -35165,10 +35171,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Priority`
             - Exports (values):
               - `cpuBudget`
+              - `FLEET_MEMORY_LEASE_MS`
+              - `FleetMemoryReadingSchema`
+              - `fleetWindow`
               - `HOST_POOLS`
               - `hostCpuCeiling`
               - `hostPoolsFor`
               - `hostRamCeiling`
+              - `laneCapacity`
               - `PER_UNIT_BYTES`
               - `rawFleetCeiling`
         - **`host-read-pool`** — Shared host-wide budget for CPU/IO-heavy git/filesystem reads: withHeavyReadSlot admits at most a few heavy reads at once across all worktree servers.
@@ -35578,8 +35588,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exempts itself from: `boundaries/no-platform-api` — `server/internal/sweep.ts` (debt)
         - **`user-path`** — Which host paths a synchronous fs call may touch: AppPath (a path the app owns — its data dirs, its checkout; the only kind a sync fs call in runtime code may take) and UserPath (one the user or their config chose), with the type-aware lint that refuses a sync fs call on any path not proven app-owned — so a macOS Files & Folders prompt can never freeze a backend's JS thread, whether or not anyone marked the user's path.
           - Cross-plugin:
-            - Imported by: 105 plugins — full list in [`plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md`](../plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md)
-              - `infra` ×36
+            - Imported by: 106 plugins — full list in [`plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md`](../plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md)
+              - `infra` ×37
               - `framework` ×20
               - `apps` ×8
               - `debug` ×7
@@ -41102,8 +41112,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from: `boundaries/no-platform-api` — `core/internal/ticket-line.ts` (debt)
     - **`timed-fs`** — The file reads, listings, stats and glob scans every non-browser process makes, timed: node:fs's read calls under their own names and types (readFile / readdir / stat / lstat / access / realpath / readlink and their *Sync twins, existsSync) plus scanGlob / scanGlobSync over a Bun.Glob, each call metered while it runs (installFsWaitMeter — the backend's profiler shows one past FS_WAIT_FLOOR_MS in progress and charges it) and, once it returns past the floor, handed to onSlowFsCall subscribers, under a named wait layer (fs-read / fs-readdir / fs-stat / fs-glob) — so a disk stall names itself instead of reading as the caller's own work. A leaf (node builtins only), enforced by the timed-fs/no-untimed-fs-read lint.
       - Cross-plugin:
-        - Imported by: 166 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
-          - `infra` ×47
+        - Imported by: 167 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
+          - `infra` ×48
           - `framework` ×25
           - `apps` ×15
           - `debug` ×15
@@ -41189,6 +41199,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `applyValuePatch`
           - `diffValue`
+    - **`vm-stat`** — macOS vm_stat output, parsed: parseVmStat (page size and every counter), availableMemBytes (free + speculative + inactive — what the system can hand out without swapping) and wiredMemBytes (kernel wired memory, which no process footprint carries).
+      - Cross-plugin:
+        - Imported by:
+          - `debug/health-monitor`
+          - `debug/sentinel/machine-usage`
+      - Core:
+        - Exports (types): `VmStat`
+        - Exports (values):
+          - `availableMemBytes`
+          - `parseVmStat`
+          - `wiredMemBytes`
     - **`wall-clock`** — Wall clock ↔ UTC instant for an IANA zone, without a timezone database: a wall time's candidate instants are enumerated from the offsets either side of it and each verified against Intl, so a clock change resolves the same way in every zone rather than by the sign of its offset. Also reads a clock face back out of an instant, and answers when the local day began.
       - Cross-plugin:
         - Imported by:
