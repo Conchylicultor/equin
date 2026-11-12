@@ -103,7 +103,11 @@ export async function compareGatewayLaunch(): Promise<GatewayLaunchComparison> {
       "This machine has no service manager: the gateway is started by hand",
     );
   }
-  const installed = await service.installedJob();
+  // Main's checkout is read beside the installed definition, not after it.
+  const [installed, repoRoot] = await Promise.all([
+    service.installedJob(),
+    getMainRepoRoot(),
+  ]);
   if (installed === null) {
     return notApplicable(
       (await exists(service.definitionPath()))
@@ -112,7 +116,6 @@ export async function compareGatewayLaunch(): Promise<GatewayLaunchComparison> {
     );
   }
 
-  const repoRoot = await getMainRepoRoot();
   const [installedBinary = "", ...installedFlags] = installed.argv;
   const logLevel =
     flagValue(installedFlags, "-log-level") ?? DEV_GATEWAY_LOG_LEVEL;
@@ -134,17 +137,23 @@ export async function compareGatewayLaunch(): Promise<GatewayLaunchComparison> {
   // signed here, so the host is given no signing tool.
   const app = machineMacosAppHost(null, () => {});
   const bundle = bundleOfExecutable(app.bundle, installedBinary);
+  // The binary's build, its signature and the running gateway's command line
+  // are independent reads, each a process spawn or a source hash that waits
+  // on a busy host: asked together, the comparison costs the slowest, not
+  // their sum.
+  const [binary, signature, running] = await Promise.all([
+    describeBinary(installedBinary, repoRoot, app),
+    bundle === null
+      ? gatewaySignature(installedBinary)
+      : codeSignature(bundle, APP_BUNDLE_ID),
+    runningCommand(),
+  ]);
   const differences: string[] = [];
-  const binary = await describeBinary(installedBinary, repoRoot, app);
   if (binary !== null) differences.push(binary);
   differences.push(...diffGatewayFlags(installedFlags, expectedFlags));
   if (installed.cwd !== repoRoot) {
     differences.push(`working directory ${installed.cwd} → ${repoRoot}`);
   }
-  const signature =
-    bundle === null
-      ? await gatewaySignature(installedBinary)
-      : await codeSignature(bundle, APP_BUNDLE_ID);
   if (signature === "unsigned") {
     differences.push(
       bundle === null
@@ -154,7 +163,6 @@ export async function compareGatewayLaunch(): Promise<GatewayLaunchComparison> {
   } else if (signature === "no-identity") {
     differences.push("no stable signing identity on this machine yet");
   }
-  const running = await runningCommand();
   if (running !== null && running !== installed.argv.join(" ")) {
     differences.push(
       `the running gateway was started with another command than the installed ${service.manager} one`,
@@ -182,9 +190,11 @@ async function describeBinary(
   repoRoot: AppPath,
   app: MacosAppHost,
 ): Promise<string | null> {
-  const now = await readyNow(gatewayBinary, { root: repoRoot });
-  const was =
-    (await installedIdentity(installedBinary, app)) ?? installedBinary;
+  const [now, installedAs] = await Promise.all([
+    readyNow(gatewayBinary, { root: repoRoot }),
+    installedIdentity(installedBinary, app),
+  ]);
+  const was = installedAs ?? installedBinary;
   switch (now.kind) {
     case "ready": {
       const expected = plannedServiceExecutable(

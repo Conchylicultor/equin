@@ -60,17 +60,35 @@ export async function readPrototypeFolder(
     else files.push(entry.name);
   }
 
+  const texts = await readFolderTexts(mount, dirName, files);
+  return { dirName, subdirs, files, texts, siblings };
+}
+
+/**
+ * The text of every scannable file of `files` (names in `<dirName>/`), read
+ * at once rather than one after another — for a caller that already holds the
+ * folder's listing (the server's records), so the folder is not listed again.
+ * A file named that is no longer there throws: the listing moved under the
+ * read, and a scan of it would describe no folder that existed.
+ */
+export async function readFolderTexts(
+  mount: Mount,
+  dirName: string,
+  files: readonly string[],
+): Promise<Map<string, string>> {
+  const scannable = files.filter(isScannableFile);
+  const reads = await Promise.all(
+    scannable.map((fileName) => readText(mount, relPath(dirName, fileName))),
+  );
   const texts = new Map<string, string>();
-  for (const fileName of files) {
-    if (!isScannableFile(fileName)) continue;
-    const read = await readText(mount, relPath(dirName, fileName));
-    if (read.kind === "missing") {
+  scannable.forEach((fileName, i) => {
+    const read = reads[i];
+    if (read === undefined || read.kind === "missing") {
       throw new Error(
         `prototype file "${dirName}/${fileName}" vanished while it was read`,
       );
     }
     texts.set(fileName, read.text);
-  }
-
-  return { dirName, subdirs, files, texts, siblings };
+  });
+  return texts;
 }

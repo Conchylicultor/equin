@@ -52,26 +52,31 @@ async function entries(dir: AppPath): Promise<string[]> {
  */
 async function pidFileAgents(namespace: string): Promise<PidFileAgent[]> {
   const dir = joinAppPath(agentPidsRoot(), namespace);
-  const agents: PidFileAgent[] = [];
-  for (const name of await entries(dir)) {
-    if (!name.endsWith(PID_SUFFIX)) continue;
-    let text: string;
-    try {
-      text = await readFile(joinAppPath(dir, name), "utf8");
-    } catch (err) {
-      // Exited between the listing and the read: its file is gone.
-      if ((err as NodeJS.ErrnoException).code === "ENOENT") continue;
-      throw err;
-    }
-    const read = parsePidFile(text);
-    if (read.kind !== "pid") continue;
-    agents.push({
-      id: name.slice(0, -PID_SUFFIX.length),
-      pid: read.pid,
-      account: agentPidFileAccount(text),
-    });
-  }
-  return agents;
+  // Every file at once: in series, each read waits its turn behind whatever
+  // else holds the event loop and the file system — a restart's resubscribe
+  // storm made 41 reads one after another cost ~1 s.
+  const read = await Promise.all(
+    (await entries(dir))
+      .filter((name) => name.endsWith(PID_SUFFIX))
+      .map(async (name): Promise<PidFileAgent | null> => {
+        let text: string;
+        try {
+          text = await readFile(joinAppPath(dir, name), "utf8");
+        } catch (err) {
+          // Exited between the listing and the read: its file is gone.
+          if ((err as NodeJS.ErrnoException).code === "ENOENT") return null;
+          throw err;
+        }
+        const pidFile = parsePidFile(text);
+        if (pidFile.kind !== "pid") return null;
+        return {
+          id: name.slice(0, -PID_SUFFIX.length),
+          pid: pidFile.pid,
+          account: agentPidFileAccount(text),
+        };
+      }),
+  );
+  return read.filter((a): a is PidFileAgent => a !== null);
 }
 
 /**
@@ -197,19 +202,24 @@ async function refresh(): Promise<void> {
 }
 
 async function reread(pending: Set<string> | "all"): Promise<void> {
+  // Every namespace at once, for the reason `pidFileAgents` reads every file
+  // at once: one namespace dir per worktree that ever launched an agent (~80).
   if (pending === "all") {
-    const fresh = new Map<string, PidFileAgent[]>();
-    for (const namespace of await entries(agentPidsRoot()))
-      fresh.set(namespace, await pidFileAgents(namespace));
+    const namespaces = await entries(agentPidsRoot());
+    const agents = await Promise.all(namespaces.map(pidFileAgents));
     byNamespace.clear();
-    for (const [namespace, agents] of fresh) byNamespace.set(namespace, agents);
+    namespaces.forEach((namespace, i) =>
+      byNamespace.set(namespace, agents[i] ?? []),
+    );
     return;
   }
-  for (const namespace of pending) {
-    const agents = await pidFileAgents(namespace);
-    if (agents.length > 0) byNamespace.set(namespace, agents);
+  const namespaces = [...pending];
+  const agents = await Promise.all(namespaces.map(pidFileAgents));
+  namespaces.forEach((namespace, i) => {
+    const found = agents[i] ?? [];
+    if (found.length > 0) byNamespace.set(namespace, found);
     else byNamespace.delete(namespace);
-  }
+  });
 }
 
 async function countAgents(): Promise<AgentProcesses> {
@@ -283,10 +293,14 @@ export const agentProcessesServed = serveValue(sdkAgentProcesses, {
         notify();
       },
     });
-    // A pid file written between the first count and the watch opening
-    // produced no event; one full recount closes that gap.
+    // What happened while nothing watched was heard by no one: the first
+    // count after the watch opens reads everything. That count is this
+    // subscription's own first read — the runtime settles this start before
+    // it (`onFirstSubscribe`), so the watch already hears whatever lands
+    // during it. No notify here: one would only queue a second full count of
+    // every namespace behind the first (both ran on every cold start, ~1 s
+    // each on a busy host).
     markDirty("all");
-    notify();
     return () => {
       notifiers.delete(notify);
       release();

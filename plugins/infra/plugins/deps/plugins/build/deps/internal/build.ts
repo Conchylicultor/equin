@@ -146,13 +146,17 @@ export function build(opts: {
       ...(opts.admission === undefined ? {} : { admission: opts.admission }),
 
       async identityInputs(root) {
+        // The tool's version and the inputs' hashes are independent: asked
+        // together, the identity costs the slower of the two, not their sum.
+        const [version, hashes] = await Promise.all([
+          toolVersion(tool, root),
+          hashInputs(root, inputs),
+        ]);
         const identity: Record<string, string> = {
-          tool: await toolVersion(tool, root),
+          tool: version,
           target: `${target.platform}/${target.arch}`,
         };
-        for (const [path, sha] of await hashInputs(root, inputs)) {
-          identity[`file:${path}`] = sha;
-        }
+        for (const [path, sha] of hashes) identity[`file:${path}`] = sha;
         return identity;
       },
 
@@ -194,53 +198,62 @@ async function toolVersion(tool: BuildTool, root: string): Promise<string> {
   return result.stdout.trim();
 }
 
-/** Every file each glob matches under `root`, with its sha256, sorted by path. */
+/**
+ * Every file each glob matches under `root`, with its sha256, sorted by path.
+ * Each glob's listing, each file's presence and each file's hash are read
+ * concurrently: a process spawn or a file read waits on a busy host, and
+ * one after another those waits added up to seconds (`gateway-drift`, asked
+ * by every backend on every start, hashes the gateway's ~60 sources).
+ */
 async function hashInputs(
   root: string,
   globs: readonly string[],
 ): Promise<Map<string, string>> {
-  const files = new Set<string>();
-  for (const glob of globs) {
-    const result = await spawnCaptured(
-      [
-        "git",
-        "ls-files",
-        "-z",
-        "--cached",
-        "--others",
-        "--exclude-standard",
-        "--",
-        `:(glob)${glob}`,
-      ],
-      { cwd: root, timeoutMs: PROBE_TIMEOUT_MS },
-    );
-    if (result.exitCode !== 0) {
-      throw new Error(
-        `git ls-files ${glob} failed in ${root} (exit ${result.exitCode}): ${result.stderr.trim()}`,
+  const perGlob = await Promise.all(
+    globs.map(async (glob) => {
+      const result = await spawnCaptured(
+        [
+          "git",
+          "ls-files",
+          "-z",
+          "--cached",
+          "--others",
+          "--exclude-standard",
+          "--",
+          `:(glob)${glob}`,
+        ],
+        { cwd: root, timeoutMs: PROBE_TIMEOUT_MS },
       );
-    }
-    const matched = result.stdout.split("\0").filter((p) => p !== "");
-    // A tracked file deleted in the working tree is listed by --cached; it is
-    // not an input any more (the set of names changes, so the identity does).
-    const present: string[] = [];
-    for (const p of matched) {
-      if (await exists(join(root, p))) present.push(p);
-    }
-    if (present.length === 0) {
-      throw new Error(`build input ${glob} matches no file in ${root}`);
-    }
-    for (const p of present) files.add(p);
-  }
-  const hashes = new Map<string, string>();
-  for (const path of [...files].sort()) {
-    hashes.set(
-      path,
-      createHash("sha256")
-        .update(await readFile(join(root, path)))
-        .digest("hex"),
-    );
-  }
-  return hashes;
+      if (result.exitCode !== 0) {
+        throw new Error(
+          `git ls-files ${glob} failed in ${root} (exit ${result.exitCode}): ${result.stderr.trim()}`,
+        );
+      }
+      const matched = result.stdout.split("\0").filter((p) => p !== "");
+      // A tracked file deleted in the working tree is listed by --cached; it
+      // is not an input any more (the set of names changes, so the identity
+      // does).
+      const present = await Promise.all(
+        matched.map(async (p) => ((await exists(join(root, p))) ? p : null)),
+      );
+      const files = present.filter((p): p is string => p !== null);
+      if (files.length === 0) {
+        throw new Error(`build input ${glob} matches no file in ${root}`);
+      }
+      return files;
+    }),
+  );
+  const paths = [...new Set(perGlob.flat())].sort();
+  return new Map(
+    await Promise.all(
+      paths.map(async (path): Promise<[string, string]> => [
+        path,
+        createHash("sha256")
+          .update(await readFile(join(root, path)))
+          .digest("hex"),
+      ]),
+    ),
+  );
 }
 
 function validate(

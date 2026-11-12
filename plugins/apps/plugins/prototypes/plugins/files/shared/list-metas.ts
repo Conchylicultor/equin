@@ -32,7 +32,7 @@ import {
   type PrototypeScan,
   type PrototypeViewport,
 } from "../core";
-import { listPrototypeDirNames, readPrototypeFolder } from "./read-folder";
+import { listPrototypeDirNames, readFolderTexts } from "./read-folder";
 import {
   folderFilesOf,
   revOfSignature,
@@ -266,9 +266,18 @@ export async function scanPrototype(
     options: [],
   };
 
+  // The listing is the folder as the caller last listed it — every file and
+  // subdir its signature and `rev` describe — so only the bytes are read here,
+  // never a second listing.
   let folder: Omit<PrototypeFolder, "siblings">;
   try {
-    folder = await readPrototypeFolder(mount, dirName, []);
+    const fileNames = files.map((f) => f.name);
+    folder = {
+      dirName,
+      subdirs: listing.subdirs,
+      files: fileNames,
+      texts: await readFolderTexts(mount, dirName, fileNames),
+    };
   } catch (err) {
     // One unreadable folder must not take the whole gallery down with it — but
     // it is reported on its own card rather than swallowed.
