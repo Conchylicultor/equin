@@ -41299,8 +41299,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes:
               - `conversations.system-prompt.section` "page-instructions"
               - `conversations.compaction-context` "page-instructions (whole)"
-            - Uses: 27 symbols — full list in [`plugins/page/plugins/annotations/plugins/agent-access/REFERENCE.md`](../plugins/page/plugins/annotations/plugins/agent-access/REFERENCE.md)
-              - `page/annotations/instructions` ×9
+            - Uses: 28 symbols — full list in [`plugins/page/plugins/annotations/plugins/agent-access/REFERENCE.md`](../plugins/page/plugins/annotations/plugins/agent-access/REFERENCE.md)
+              - `page/annotations/instructions` ×10
               - `page/markdown-apply` ×5
               - `page/editor` ×4
               - `database` ×2
@@ -41487,6 +41487,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `instructionsByIds`
               - `instructionsContentHash`
               - `instructionsInScope`
+              - `instructionsQuietSeconds`
               - `markInstructionsDelivered`
               - `renderForDelivery`
               - `renderInstructions`

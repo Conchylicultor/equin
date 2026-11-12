@@ -61,6 +61,7 @@ deliveredInstructionIds(conversationId, executor?): Promise<string[]>   // oldes
 forgetInstructionsDeliveries(conversationId, blockIds, executor?): Promise<void>
 instructionsByIds(ids, executor?): Promise<InstructionsRef[]>   // live, not withheld; own placement as covers
 instructionsContentHash(markdown): string
+instructionsQuietSeconds(ids, executor?): Promise<Map<string, number>>   // since the last edit, DB clock
 
 InstructionsRef = { id, form: "card" | "page", global, title (page only),
                     covers: { pageId, title } }
@@ -157,6 +158,7 @@ at a time; exclusivity with `author`, and `global` requiring `instructions`, is
     - `instructionsByIds`
     - `instructionsContentHash`
     - `instructionsInScope`
+    - `instructionsQuietSeconds`
     - `markInstructionsDelivered`
     - `renderForDelivery`
     - `renderInstructions`

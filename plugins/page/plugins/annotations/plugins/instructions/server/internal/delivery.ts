@@ -1,4 +1,7 @@
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
+import { z } from "zod";
+import { executeRows } from "@plugins/database/plugins/sql-rows/core";
+import { PAGE_BLOCK_TYPE } from "@plugins/page/plugins/editor/core";
 import { db, type DbExecutor } from "@plugins/database/server";
 import { readBlockAsMarkdown } from "@plugins/page/plugins/markdown-apply/server";
 import { humanAudienceTypes } from "@plugins/page/plugins/annotations/server";
@@ -221,4 +224,47 @@ export async function forgetInstructionsDeliveries(
         inArray(_pageInstructionsDeliveries.blockId, [...blockIds]),
       ),
     );
+}
+
+const QuietRowSchema = z.object({ id: z.string(), quiet_seconds: z.number() });
+
+/**
+ * How long each instructions block has gone without an edit, in seconds, by
+ * the database's clock: `now()` minus the newest `updated_at` over the block
+ * and the rows its rendering reads — a card's subtree, an instructions page's
+ * content (a nested page is read as a pointer, so the walk stops at it, its
+ * own row included). Trashed rows count too: trashing a line is an edit.
+ *
+ * What a caller tells "the author is still typing" from "the instructions
+ * settled" by. An id with no row is absent from the map.
+ */
+export async function instructionsQuietSeconds(
+  ids: readonly string[],
+  executor: DbExecutor = db,
+): Promise<Map<string, number>> {
+  if (ids.length === 0) return new Map();
+  const rows = await executeRows(executor, {
+    label: "instructions.quiet-seconds",
+    row: QuietRowSchema,
+    query: sql`
+      WITH RECURSIVE sub AS (
+        SELECT b.id AS root, b.id, b.type, b.updated_at
+        FROM page_blocks b
+        WHERE b.id IN (${sql.join(
+          ids.map((id) => sql`${id}`),
+          sql`, `,
+        )})
+        UNION ALL
+        SELECT s.root, b.id, b.type, b.updated_at
+        FROM page_blocks b
+        JOIN sub s ON b.parent_id = s.id
+        WHERE s.id = s.root OR s.type <> ${PAGE_BLOCK_TYPE}
+      )
+      SELECT root AS id,
+        extract(epoch FROM now() - max(updated_at))::float8 AS quiet_seconds
+      FROM sub
+      GROUP BY root
+    `,
+  });
+  return new Map(rows.map((r) => [r.id, r.quiet_seconds] as const));
 }

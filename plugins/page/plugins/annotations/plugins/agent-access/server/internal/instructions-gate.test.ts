@@ -194,6 +194,9 @@ async function read(
 async function writeVerdict(
   conversationId: string,
   pageId: string,
+  // 0 by default: a test edits instructions and writes in the same instant,
+  // so every edit would still be settling. The settle window has its own test.
+  settleSeconds = 0,
 ): Promise<HttpError | string | null> {
   // The refusal is caught INSIDE the transaction: thrown out of it, the
   // transaction would roll back the delivery the refusal just recorded, which
@@ -205,6 +208,7 @@ async function writeVerdict(
         conversationId,
         pageId,
         executor: tx,
+        settleSeconds,
       });
       if (update === null) return null;
       await update.markDelivered();
@@ -288,14 +292,18 @@ describe("the write rule", () => {
     expect(await writeVerdict("conv", "TRACK")).toBeNull();
   });
 
-  test("an author typing in received instructions never refuses a write", async () => {
+  test("an author typing in received instructions neither refuses a write nor hands over each keystroke", async () => {
     await read("conv", "TRACK", "TRACK");
     for (const typed of ["r", "ro", "roo", "root"]) {
       await setData("IR-1", text(typed));
-      const verdict = await writeVerdict("conv", "TRACK");
-      expect(typeof verdict).toBe("string");
-      expect(verdict as string).toContain(typed);
+      // Just edited: still settling, so the write goes through carrying nothing.
+      expect(await writeVerdict("conv", "TRACK", 10)).toBeNull();
     }
+    // Once settled, the next write carries the final version, once.
+    const update = await writeVerdict("conv", "TRACK");
+    if (typeof update !== "string") throw new Error("expected an update");
+    expect(update).toContain("root");
+    expect(await writeVerdict("conv", "TRACK")).toBeNull();
   });
 
   test("a refusal carries the edited ones too; the retry is admitted", async () => {

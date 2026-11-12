@@ -6,6 +6,7 @@ import {
   globalInstructions,
   instructionsByIds,
   instructionsInScope,
+  instructionsQuietSeconds,
   markInstructionsDelivered,
   renderForDelivery,
   renderInstructions,
@@ -189,6 +190,14 @@ function formatUpdatedInstructions(
 }
 
 /**
+ * How long instructions an agent already received must go without an edit
+ * before their new version is handed over with a write. Below it the author is
+ * taken to be still typing: handing over each keystroke's version would bury
+ * the agent's writes under half-written instructions.
+ */
+export const INSTRUCTIONS_SETTLE_SECONDS = 10;
+
+/**
  * The write rule, run BEFORE the write plans anything:
  *
  * - **Instructions the conversation never received** refuse the write (409),
@@ -199,7 +208,9 @@ function formatUpdatedInstructions(
  *   works by a version of them, and the author may be editing them right now:
  *   refusing on every change would refuse every retry while they type. The
  *   write goes through and hands the current version back with its result —
- *   the returned {@link InstructionsUpdate}.
+ *   the returned {@link InstructionsUpdate} — once they have settled
+ *   ({@link INSTRUCTIONS_SETTLE_SECONDS} without an edit). Until then the
+ *   write carries nothing, and the first write after they settle carries them.
  *
  * So one write is refused at most once per instructions block per conversation
  * (again only after a compaction forgets it).
@@ -209,6 +220,8 @@ export async function admitWrite(args: {
   conversationId: string;
   pageId: string;
   executor?: DbExecutor;
+  /** Override of {@link INSTRUCTIONS_SETTLE_SECONDS}, for tests. */
+  settleSeconds?: number;
 }): Promise<InstructionsUpdate | null> {
   const executor = args.executor ?? db;
   const refs = await instructionsInScope(args.pageId, executor);
@@ -216,9 +229,22 @@ export async function admitWrite(args: {
   const delivery = await renderForDelivery(args.conversationId, refs, executor);
   if (delivery.pending.length === 0) return null;
   if (delivery.changed.length === delivery.pending.length) {
+    // Only instructions that have SETTLED are handed over: one the author is
+    // still typing in would arrive as a new half-written version on every
+    // write. It stays pending, and the first write after it settles carries it.
+    const quiet = await instructionsQuietSeconds(
+      delivery.changed.map((b) => b.id),
+      executor,
+    );
+    const settleSeconds = args.settleSeconds ?? INSTRUCTIONS_SETTLE_SECONDS;
+    const settled = delivery.changed.filter(
+      (b) => (quiet.get(b.id) ?? Infinity) >= settleSeconds,
+    );
+    if (settled.length === 0) return null;
     return {
-      text: formatUpdatedInstructions(delivery.changed),
-      markDelivered: () => delivery.markDelivered(),
+      text: formatUpdatedInstructions(settled),
+      markDelivered: () =>
+        markInstructionsDelivered(args.conversationId, settled, executor),
     };
   }
   await delivery.markDelivered();

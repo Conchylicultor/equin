@@ -470,7 +470,11 @@ agent gets them, in `server/internal/instructions-gate.ts`:
   received, so the retry goes through. A refusal therefore writes nothing.
   A block received and edited since does **not** refuse: the write goes through
   and its result gains a second text part, `<updated-instructions>`, with the
-  current version, recorded as received only once the write succeeded. Refusing
+  current version, recorded as received only once the write succeeded — and
+  only once the block has SETTLED (`INSTRUCTIONS_SETTLE_SECONDS`, 10 s, without
+  an edit to it or the rows it renders, read by `instructionsQuietSeconds`);
+  until then the write carries nothing, so half-typed versions are never handed
+  over, and the first write after it settles carries the final one. Refusing
   on a change made every write fail while the author was typing in the
   instructions (each keystroke a new hash); the agent already works by a version
   of them, so handing the new one over with the result is enough — and a write
@@ -582,8 +586,8 @@ Spec: `e2e/agent-access-verify.ts`.
   - Contributes:
     - `conversations.system-prompt.section` "page-instructions"
     - `conversations.compaction-context` "page-instructions (whole)"
-  - Uses: 27 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `page/annotations/instructions` ×9
+  - Uses: 28 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `page/annotations/instructions` ×10
     - `page/markdown-apply` ×5
     - `page/editor` ×4
     - `database` ×2

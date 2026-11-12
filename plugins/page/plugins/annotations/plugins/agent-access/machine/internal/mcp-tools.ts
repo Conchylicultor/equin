@@ -227,8 +227,9 @@ instructions from its author that this conversation has not received yet, the
 write is refused with nothing written, and the refusal carries those
 instructions in full. They then count as received: read them, and retry if the
 write still follows them. Instructions you received that the author edited since
-do not refuse: the write goes through, and the result carries their current
-version in an \`<updated-instructions>\` part — follow it, and fix the write if
+do not refuse: the write goes through, and once they have settled (no edit for
+a few seconds) a result carries their current version in an
+\`<updated-instructions>\` part — follow it, and fix the write if
 it no longer does. Reading the page with \`read_page\` first
 delivers them the same way.
 
@@ -421,8 +422,9 @@ instructions from its author that this conversation has not received yet, the
 edit is refused with nothing written, and the refusal carries those
 instructions in full. They then count as received: read them, and retry if the
 edit still follows them. Instructions you received that the author edited since
-do not refuse: the edit goes through, and the result carries their current
-version in an \`<updated-instructions>\` part — follow it, and fix the edit if
+do not refuse: the edit goes through, and once they have settled (no edit for
+a few seconds) a result carries their current version in an
+\`<updated-instructions>\` part — follow it, and fix the edit if
 it no longer does. Reading the page with \`read_page\` first
 delivers them the same way. An \`<instructions>\` card is the author's, like a
 \`<human>\` card: hand it back byte-identical.

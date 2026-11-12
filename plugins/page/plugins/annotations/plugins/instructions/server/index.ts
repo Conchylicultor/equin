@@ -17,6 +17,7 @@ export {
   deliveredInstructionIds,
   forgetInstructionsDeliveries,
   instructionsContentHash,
+  instructionsQuietSeconds,
   type RenderedInstructions,
   type InstructionsDelivery,
 } from "./internal/delivery";
