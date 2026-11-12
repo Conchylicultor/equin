@@ -9,7 +9,10 @@ straight into Claude Code / the Claude app through their deep links (the prompt
 is typed in; nothing runs until the reader presses Enter). Then the caveats as bullets —
 the first install builds every app (~15 minutes), and the apps were tuned
 for one person — and "Once it is running": open it, read the guide, press
-Improve.
+Improve. Last, for a reader not ready to install, one card opens the
+homepage's live demo full screen (`/about;full=1`, the demo at its own start —
+this page names no place inside it), saying its agents are off: they need equin
+on the reader's machine.
 
 The command, the source link and the local app's address come from the shell's
 `core/site.ts`, never spelled here, so the page cannot offer one repository's
@@ -20,17 +23,18 @@ installer beside another's source. The installer's steps are written out in
 
 ## Plugin reference
 
-- Description: The download page of the equin website: the /about/download pane with the one install command (or, for an agent, a prompt with deep links into Claude Code and the Claude app), what to do once it runs, and its Download nav link. The download page of the equin website on the server: its sitemap entry (WebsitePages.Page).
+- Description: The download page of the equin website: the /about/download pane with the one install command (or, for an agent, a prompt with deep links into Claude Code and the Claude app), what to do once it runs, a closing card opening the homepage's live demo full screen for a reader not ready to install (agents off there), and its Download nav link. The download page of the equin website on the server: its sitemap entry (WebsitePages.Page).
 - Web:
   - Contributes:
     - `Pane.Register` "website-download"
     - `WebsiteHeader` "download" → `DownloadNavItem`
-  - Uses: 30 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 31 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/website/shell` ×6
     - `primitives/collapsible` ×4
     - `primitives/css/spacing` ×3
     - `primitives/pane` ×3
     - `primitives/css/ui-kit` ×2
+    - `apps-core/tabs.useAppLinkProps`
     - `apps/deploy/analytics/collect.track`
     - `apps/website/pages/guide.guidePane`
     - `primitives/copy-to-clipboard.CopyButton`
@@ -52,14 +56,18 @@ installer beside another's source. The installer's steps are written out in
   - Exports (values): `downloadPage`
 - Cross-plugin:
   - Uses tokens:
+    - `ui/tokens/color-palette --background`
     - `ui/tokens/color-palette --border`
+    - `ui/tokens/color-palette --card`
     - `ui/tokens/color-palette --foreground`
     - `ui/tokens/color-palette --muted`
     - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/color-palette --primary`
     - `ui/tokens/font-family --font-mono`
     - `ui/tokens/font-family --font-sans`
     - `ui/tokens/shape --radius`
     - `ui/tokens/shape --spacing`
+    - `ui/tokens/type-scale --font-weight-medium`
     - `ui/tokens/type-scale --font-weight-semibold`
   - Imported by: `apps/website/pages/apps`
 

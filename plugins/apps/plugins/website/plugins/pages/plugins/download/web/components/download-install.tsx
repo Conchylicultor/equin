@@ -29,6 +29,7 @@ import { track } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/co
 import { DownloadCode } from "./download-code";
 import { DownloadLink } from "./download-link";
 import { DownloadNextSteps } from "./download-next-steps";
+import { DownloadTryDemo } from "./download-try-demo";
 
 const infoIcon = symbol("info");
 
@@ -62,7 +63,8 @@ const CLAUDE_APP_LINK = `claude://code/new?q=${PROMPT_QUERY}`;
 /**
  * The download page's body: one install, offered two ways — a command the
  * reader pastes into a terminal, or a prompt they hand to their own agent —
- * then the caveats to know before installing, and what to do once it runs.
+ * then the caveats to know before installing, what to do once it runs, and,
+ * last, the live demo for a reader not ready to install.
  *
  * Its column is narrower than the site's measure (820px): a code panel as wide
  * as the homepage's cards leaves the command stranded at one edge. It caps
@@ -86,6 +88,7 @@ export function DownloadInstall() {
         </Stack>
         <Disclaimer />
         <DownloadNextSteps />
+        <DownloadTryDemo />
       </Stack>
     </WebsiteBand>
   );

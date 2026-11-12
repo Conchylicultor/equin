@@ -274,8 +274,8 @@ same browser tab from finding the blob. Both call sites are marked for removal.
     - `useSurfaceMode`
     - `useTabs`
 - Cross-plugin:
-  - Imported by: 39 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×15
+  - Imported by: 40 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×16
     - `apps-core` ×8
     - `debug` ×3
     - `hints` ×2

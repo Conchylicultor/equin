@@ -30,6 +30,10 @@ const KNOWN: Readonly<Record<string, EventPresentation>> = {
     icon: symbol("terminal"),
     label: "Opened Claude Code",
   },
+  download_try_demo: {
+    icon: symbol("play-arrow"),
+    label: "Opened the demo from Download",
+  },
   download_open_claude_app: {
     icon: symbol("install-desktop"),
     label: "Opened the Claude app",

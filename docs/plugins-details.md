@@ -12102,17 +12102,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Imported by:
                   - `apps/website`
                   - `apps/website/landing/layers`
-            - **`download`** — The download page of the equin website: the /about/download pane with the one install command (or, for an agent, a prompt with deep links into Claude Code and the Claude app), what to do once it runs, and its Download nav link. The download page of the equin website on the server: its sitemap entry (WebsitePages.Page).
+            - **`download`** — The download page of the equin website: the /about/download pane with the one install command (or, for an agent, a prompt with deep links into Claude Code and the Claude app), what to do once it runs, a closing card opening the homepage's live demo full screen for a reader not ready to install (agents off there), and its Download nav link. The download page of the equin website on the server: its sitemap entry (WebsitePages.Page).
               - Web:
                 - Contributes:
                   - `Pane.Register` "website-download"
                   - `WebsiteHeader` "download" → `DownloadNavItem`
-                - Uses: 30 symbols — full list in [`plugins/apps/plugins/website/plugins/pages/plugins/download/REFERENCE.md`](../plugins/apps/plugins/website/plugins/pages/plugins/download/REFERENCE.md)
+                - Uses: 31 symbols — full list in [`plugins/apps/plugins/website/plugins/pages/plugins/download/REFERENCE.md`](../plugins/apps/plugins/website/plugins/pages/plugins/download/REFERENCE.md)
                   - `apps/website/shell` ×6
                   - `primitives/collapsible` ×4
                   - `primitives/css/spacing` ×3
                   - `primitives/pane` ×3
                   - `primitives/css/ui-kit` ×2
+                  - `apps-core/tabs.useAppLinkProps`
                   - `apps/deploy/analytics/collect.track`
                   - `apps/website/pages/guide.guidePane`
                   - `primitives/copy-to-clipboard.CopyButton`
@@ -12134,14 +12135,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Exports (values): `downloadPage`
               - Cross-plugin:
                 - Uses tokens:
+                  - `ui/tokens/color-palette --background`
                   - `ui/tokens/color-palette --border`
+                  - `ui/tokens/color-palette --card`
                   - `ui/tokens/color-palette --foreground`
                   - `ui/tokens/color-palette --muted`
                   - `ui/tokens/color-palette --muted-foreground`
+                  - `ui/tokens/color-palette --primary`
                   - `ui/tokens/font-family --font-mono`
                   - `ui/tokens/font-family --font-sans`
                   - `ui/tokens/shape --radius`
                   - `ui/tokens/shape --spacing`
+                  - `ui/tokens/type-scale --font-weight-medium`
                   - `ui/tokens/type-scale --font-weight-semibold`
                 - Imported by: `apps/website/pages/apps`
             - **`foundations`** — The technical foundations page of the equin website: the /about/foundations pane drawing what equin brings on top of Claude as an iceberg — ten layers from the apps at sea level down to the loop that builds them, each piece a pill that opens in place into a card (many with a live drawing), with a depth gauge, a Components / Harness filter and Expand all — and its Foundations nav link. The technical foundations page of the equin website on the server: its sitemap entry (WebsitePages.Page).
@@ -13119,8 +13124,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useSurfaceMode`
           - `useTabs`
       - Cross-plugin:
-        - Imported by: 39 plugins — full list in [`plugins/apps-core/plugins/tabs/REFERENCE.md`](../plugins/apps-core/plugins/tabs/REFERENCE.md)
-          - `apps` ×15
+        - Imported by: 40 plugins — full list in [`plugins/apps-core/plugins/tabs/REFERENCE.md`](../plugins/apps-core/plugins/tabs/REFERENCE.md)
+          - `apps` ×16
           - `apps-core` ×8
           - `debug` ×3
           - `hints` ×2
