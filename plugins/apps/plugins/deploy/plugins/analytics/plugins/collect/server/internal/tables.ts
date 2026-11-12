@@ -119,7 +119,8 @@ export const analyticsVisits = pgTable(
   (t) => [
     index("analytics_visits_visitor_last_at_idx").on(t.visitorId, t.lastAt),
     index("analytics_visits_day_idx").on(t.day),
-    index("analytics_visits_started_at_idx").on(t.startedAt),
+    // The sessions list's walk: newest first by `(started_at, id)`, from a key.
+    index("analytics_visits_started_at_id_idx").on(t.startedAt, t.id),
   ],
 );
 

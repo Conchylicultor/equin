@@ -3,6 +3,7 @@ import { rawEndpointHandler } from "@plugins/infra/plugins/endpoints/server";
 import { ExcludeFromChangeFeed } from "@plugins/network/plugins/live/plugins/change-feed/server";
 import {
   analyticsQueryEndpoint,
+  analyticsSessionCountsEndpoint,
   analyticsSessionsEndpoint,
   collectEndpoint,
 } from "../core";
@@ -11,6 +12,7 @@ import { analyticsVisitsRetention } from "./internal/retention";
 import {
   handleAnalyticsQuery,
   handleCollect,
+  handleSessionCountsQuery,
   handleSessionsQuery,
 } from "./internal/routes";
 import {
@@ -22,11 +24,12 @@ import {
 
 export default {
   description:
-    "Owns the analytics tables (daily salts kept 30 days with the hash → visitor links that let a returning visitor keep one id, 90-day visits and hits, forever daily totals at every single-filter level and forever per-visit memberships for exact unique visitors over any range), the public collect endpoint, the host-only report and sessions queries (individual visits with their hits, by key range), the nightly analytics.rollup job and the visits retention sweep that refuses to delete a day not yet rolled up.",
+    "Owns the analytics tables (daily salts kept 30 days with the hash → visitor links that let a returning visitor keep one id, 90-day visits and hits, forever daily totals at every single-filter level and forever per-visit memberships for exact unique visitors over any range), the public collect endpoint, the host-only report, sessions (individual visits with their hits, by key range) and session-counts queries, the nightly analytics.rollup job and the visits retention sweep that refuses to delete a day not yet rolled up.",
   httpRoutes: {
     [collectEndpoint.route]: rawEndpointHandler(collectEndpoint, handleCollect),
     [analyticsQueryEndpoint.route]: handleAnalyticsQuery,
     [analyticsSessionsEndpoint.route]: handleSessionsQuery,
+    [analyticsSessionCountsEndpoint.route]: handleSessionCountsQuery,
   },
   contributions: [
     // Every public page load writes here; nothing renders these rows live

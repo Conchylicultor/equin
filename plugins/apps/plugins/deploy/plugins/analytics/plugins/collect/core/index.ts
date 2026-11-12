@@ -152,6 +152,7 @@ export {
 export type { RecordedColumn, RecordedField } from "./internal/recorded-fields";
 export {
   analyticsQueryEndpoint,
+  analyticsSessionCountsEndpoint,
   analyticsSessionsEndpoint,
   collectEndpoint,
 } from "./internal/endpoints";
@@ -160,6 +161,7 @@ export {
   MAX_SESSIONS_LIMIT,
   SESSION_SHAPES,
   SESSIONS_PAGE,
+  SessionCountsResultSchema,
   SessionCountsSchema,
   SessionHitSchema,
   SessionKeySchema,
@@ -168,12 +170,15 @@ export {
   SessionsQueryParamSchema,
   SessionsQuerySchema,
   SessionsResultSchema,
+  encodeSessionCountsQuery,
   encodeSessionsQuery,
   sessionsAvailableFor,
 } from "./internal/sessions";
 export type {
   Session,
   SessionCounts,
+  SessionCountsQuery,
+  SessionCountsResult,
   SessionHit,
   SessionKey,
   SessionShape,

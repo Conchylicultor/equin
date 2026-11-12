@@ -47,8 +47,10 @@ export const MAX_SESSIONS_LIMIT = 2 * SESSIONS_PAGE;
 export const MAX_SESSION_HITS = 200;
 
 /**
- * Which visits the list shows. Each one's count over the whole range comes
- * back with every page (`counts`), so the switch can label every option.
+ * Which visits the list shows. Each one's count over the whole range is its
+ * own question ({@link SessionCountsQuery}), asked once per range and filters
+ * — never with every page, which would count the whole range on each scroll
+ * step.
  * - `all`
  * - `actions` — at least one custom event
  * - `multi` — two pageviews or more
@@ -75,6 +77,13 @@ export const SessionKeySchema = z
   .strict();
 export type SessionKey = z.infer<typeof SessionKeySchema>;
 
+/** Each visit's filter key, so a repeated filter is refused (the report's rule). */
+const noDuplicateFilters = (q: {
+  filters: readonly { dimension: string; value: string }[];
+}) =>
+  new Set(q.filters.map((f) => JSON.stringify([f.dimension, f.value]))).size ===
+  q.filters.length;
+
 export const SessionsQuerySchema = z
   .object({
     range: AnalyticsRangeSchema,
@@ -91,13 +100,24 @@ export const SessionsQuerySchema = z
     limit: z.number().int().min(1).max(MAX_SESSIONS_LIMIT),
   })
   .strict()
-  .refine(
-    (q) =>
-      new Set(q.filters.map((f) => JSON.stringify([f.dimension, f.value])))
-        .size === q.filters.length,
-    { message: "duplicate filter" },
-  );
+  .refine(noDuplicateFilters, { message: "duplicate filter" });
 export type SessionsQuery = z.infer<typeof SessionsQuerySchema>;
+
+/**
+ * How many visits of a range pass the filters, per shape — the sessions
+ * question without its shape and its key range. Counting a range costs the
+ * range's visits, so it is asked once per range / audience / filters (the
+ * Sessions tab's meta), not with every page of the list.
+ */
+export const SessionCountsQuerySchema = z
+  .object({
+    range: AnalyticsRangeSchema,
+    filters: z.array(AnalyticsFilterSchema).max(MAX_FILTERS),
+    audience: AudienceSchema.default(DEFAULT_AUDIENCE),
+  })
+  .strict()
+  .refine(noDuplicateFilters, { message: "duplicate filter" });
+export type SessionCountsQuery = z.infer<typeof SessionCountsQuerySchema>;
 
 /** Whether `range`'s every day still has raw rows at `now` (else sessions are refused). */
 export function sessionsAvailableFor(
@@ -203,6 +223,15 @@ export const SessionCountsSchema = z
   .strict();
 export type SessionCounts = z.infer<typeof SessionCountsSchema>;
 
+/** A range reaching past the raw window: sessions are raw rows only. */
+const SessionsRefusedSchema = z
+  .object({
+    kind: z.literal("refused"),
+    reason: z.literal("beyond-raw-window"),
+    rawWindowDays: z.literal(RAW_RETENTION_DAYS),
+  })
+  .strict();
+
 export const SessionsResultSchema = z.discriminatedUnion("kind", [
   z
     .object({
@@ -211,19 +240,25 @@ export const SessionsResultSchema = z.discriminatedUnion("kind", [
       generatedAt: z.iso.datetime(),
       /** In list order; fewer than the asked `limit` means the range ends here. */
       sessions: cappedList(SessionSchema, { max: MAX_SESSIONS_LIMIT }),
-      /** Visits per shape over the whole range and filters, whatever `shape`, `after`, `until` and `limit` are. */
+    })
+    .strict(),
+  SessionsRefusedSchema,
+]);
+export type SessionsResult = z.infer<typeof SessionsResultSchema>;
+
+export const SessionCountsResultSchema = z.discriminatedUnion("kind", [
+  z
+    .object({
+      kind: z.literal("counts"),
+      /** ISO instant the box answered at. */
+      generatedAt: z.iso.datetime(),
+      /** Visits per shape over the whole range and filters. */
       counts: SessionCountsSchema,
     })
     .strict(),
-  z
-    .object({
-      kind: z.literal("refused"),
-      reason: z.literal("beyond-raw-window"),
-      rawWindowDays: z.literal(RAW_RETENTION_DAYS),
-    })
-    .strict(),
+  SessionsRefusedSchema,
 ]);
-export type SessionsResult = z.infer<typeof SessionsResultSchema>;
+export type SessionCountsResult = z.infer<typeof SessionCountsResultSchema>;
 
 /** The sessions question on the wire — the report's base64url encoding. */
 export function encodeSessionsQuery(query: SessionsQuery): string {
@@ -233,3 +268,13 @@ export function encodeSessionsQuery(query: SessionsQuery): string {
 /** The sessions endpoint's `?q=` schema. */
 export const SessionsQueryParamSchema =
   base64UrlJsonParamSchema(SessionsQuerySchema);
+
+/** The session-counts question on the wire — the report's base64url encoding. */
+export function encodeSessionCountsQuery(query: SessionCountsQuery): string {
+  return encodeBase64UrlJson(withoutDefaultAudience(query));
+}
+
+/** The session-counts endpoint's `?q=` schema. */
+export const SessionCountsQueryParamSchema = base64UrlJsonParamSchema(
+  SessionCountsQuerySchema,
+);

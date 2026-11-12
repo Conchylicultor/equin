@@ -25,8 +25,11 @@ Pages are measured when the list first needs them (page 0 on mount, the next
 as it scrolls — DataView's auto-paging, `useLivePagedValuePaging`) and
 re-measured by Refresh; never on a timer (each is an SSH session).
 
-The **meta** sibling (`deploymentSessions.meta`, the same question) is a
-`limit: 1` ask whose answer is a discriminated state: `sessions` (the counts
+The **meta** sibling (`deploymentSessions.meta`, keyed by the same question)
+asks collect's host-only session-counts query — its own endpoint, with the
+question's range and audience but no shape or key range: counting costs the
+whole range, so it is asked once per question, never with each page. Its
+answer is a discriminated state: `sessions` (the counts
 per shape over the whole range, and when the box answered), `refused`
 (`beyond-raw-window`), or one of host-query's failure arms. The tab renders the
 failure from the meta (`HostQueryFailureState`); a page that cannot be read is

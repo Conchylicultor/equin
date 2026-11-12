@@ -2,7 +2,12 @@ import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 import { HOST_ONLY_PREFIX } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/host-only/core";
 import { CollectBodySchema, CollectResponseSchema } from "./collect-body";
 import { AnalyticsQueryParamSchema, AnalyticsQueryResultSchema } from "./query";
-import { SessionsQueryParamSchema, SessionsResultSchema } from "./sessions";
+import {
+  SessionCountsQueryParamSchema,
+  SessionCountsResultSchema,
+  SessionsQueryParamSchema,
+  SessionsResultSchema,
+} from "./sessions";
 
 /**
  * Public ingest. The tracker posts one body per pageview / event / engagement
@@ -42,5 +47,18 @@ export const analyticsSessionsEndpoint = defineEndpoint({
     "GET /api/host-only/analytics/sessions" satisfies `GET ${typeof HOST_ONLY_PREFIX}${string}`,
   query: SessionsQueryParamSchema,
   response: SessionsResultSchema,
+  dedupe: true,
+});
+
+/**
+ * How many visits of a range pass the filters, per shape — host-only, read
+ * over SSH by the Sessions tab once per question (its meta), apart from the
+ * pages: counting costs the whole range, a page only its own visits.
+ */
+export const analyticsSessionCountsEndpoint = defineEndpoint({
+  route:
+    "GET /api/host-only/analytics/session-counts" satisfies `GET ${typeof HOST_ONLY_PREFIX}${string}`,
+  query: SessionCountsQueryParamSchema,
+  response: SessionCountsResultSchema,
   dedupe: true,
 });

@@ -1,6 +1,6 @@
 {
-  "id": "e7717784-cef6-42c8-b357-cf2e617660cb",
-  "prevId": "65f150ac-9d35-4d00-911f-a1c20504afe1",
+  "id": "e5b9fa82-4691-469d-94e4-128f9b69d957",
+  "prevId": "e7717784-cef6-42c8-b357-cf2e617660cb",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -1617,11 +1617,17 @@
           "method": "btree",
           "with": {}
         },
-        "analytics_visits_started_at_idx": {
-          "name": "analytics_visits_started_at_idx",
+        "analytics_visits_started_at_id_idx": {
+          "name": "analytics_visits_started_at_id_idx",
           "columns": [
             {
               "expression": "started_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"

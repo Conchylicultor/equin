@@ -61,17 +61,110 @@ const VISIT_DIMENSION_COLUMN: Record<VisitDimension, string> = {
   os: analyticsVisits.os.name,
 };
 
-const membershipValues = sql.join(
-  [
-    sql`(${literal(UNFILTERED_LEVEL)}, ''::text)`,
-    sql`(${literal(TOTAL_DIMENSION)}, ''::text)`,
-    ...VISIT_DIMENSIONS.map(
-      (dim) =>
-        sql`(${literal(dim)}, b.${sql.raw(VISIT_DIMENSION_COLUMN[dim])}::text)`,
+/** A visit alias inlined into SQL: a closed set of short names, validated. */
+function visitAlias(alias: string): SQL {
+  if (!/^[a-z]+$/.test(alias))
+    throw new Error(`analytics: bad visit alias ${alias}`);
+  return sql.raw(alias);
+}
+
+/**
+ * Which visits {@link memberships} lists:
+ * - `one` — the visit under `alias` (an `analytics_visits` row in scope), as a
+ *   subquery for FROM: `(dim, value)` only, which is all a filter reads. Its
+ *   hit branches read that visit's own hits (`analytics_hits_visit_idx`), so
+ *   checking a visit costs its hits, whatever the range around it.
+ * - `all` — every visit of the `base` CTE (alias `b`), set-based (one join of
+ *   the hits per branch, which a whole range is cheapest as), with what each
+ *   contributes: `(visit_id, dim, value, pageviews, duration_ms, events)`.
+ */
+type MembershipScope = { kind: "one"; alias: string } | { kind: "all" };
+
+/**
+ * The membership definition above, as SQL — the ONE place it is written. Both
+ * scopes are built from the same branch list, so a filter ({@link visitHasAll},
+ * `one`) keeps exactly the visits whose memberships a report row counts
+ * (`m`, `all`).
+ */
+function memberships(scope: MembershipScope): SQL {
+  const all = scope.kind === "all";
+  const v = all ? sql.raw("b") : visitAlias(scope.alias);
+  const values = sql.join(
+    [
+      sql`(${literal(UNFILTERED_LEVEL)}, ''::text)`,
+      sql`(${literal(TOTAL_DIMENSION)}, ''::text)`,
+      ...VISIT_DIMENSIONS.map(
+        (dim) =>
+          sql`(${literal(dim)}, ${v}.${sql.raw(VISIT_DIMENSION_COLUMN[dim])}::text)`,
+      ),
+    ],
+    sql`, `,
+  );
+  // A branch's row: the pair, plus (set-based) what the visit contributes to it.
+  const row = (
+    dim: SQL,
+    value: SQL,
+    contributes: { pageviews: SQL; durationMs: SQL; events: SQL },
+  ) =>
+    all
+      ? sql`b.id AS visit_id, ${dim} AS dim, ${value} AS value,
+          ${contributes.pageviews} AS pageviews, ${contributes.durationMs} AS duration_ms,
+          ${contributes.events} AS events`
+      : sql`${dim} AS dim, ${value} AS value`;
+  const hits = (where: SQL, lateral: SQL = sql``) =>
+    all
+      ? sql`FROM analytics_hits h JOIN base b ON b.id = h.visit_id ${lateral} WHERE ${where}`
+      : sql`FROM analytics_hits h ${lateral} WHERE h.visit_id = ${v}.id AND ${where}`;
+  // Per visit, one row per pair; the `one` scope only asks whether a pair exists.
+  const perPair = (key: SQL) =>
+    all ? sql`GROUP BY b.id, b.pageviews, b.duration_ms, ${key}` : sql``;
+  const visitWide = {
+    pageviews: sql`b.pageviews::bigint`,
+    durationMs: sql`b.duration_ms`,
+  };
+  const propValue = sql`h.event_name || '.' || p.key || '=' || p.value`;
+  const body = sql`
+    SELECT ${row(sql`x.dim`, sql`COALESCE(x.value, ${NONE_VALUE}::text)`, { ...visitWide, events: sql`b.events::bigint` })}
+    FROM ${all ? sql`base b CROSS JOIN LATERAL ` : sql``}(VALUES ${values}) AS x(dim, value)
+    UNION ALL
+    SELECT ${row(literal("page"), sql`h.path`, {
+      pageviews: sql`count(*) FILTER (WHERE h.kind = 'pageview')`,
+      durationMs: sql`COALESCE(sum(h.engaged_ms) FILTER (WHERE h.kind = 'pageview'), 0)::bigint`,
+      events: sql`count(*) FILTER (WHERE h.kind = 'event')`,
+    })}
+    ${hits(sql`TRUE`)}
+    ${perPair(sql`h.path`)}
+    UNION ALL
+    SELECT ${row(literal("event"), sql`h.event_name`, { ...visitWide, events: sql`count(*)` })}
+    ${hits(sql`h.kind = 'event'`)}
+    ${perPair(sql`h.event_name`)}
+    UNION ALL
+    SELECT ${row(literal("event_prop"), propValue, { ...visitWide, events: sql`count(*)` })}
+    ${hits(sql`h.kind = 'event'`, sql`CROSS JOIN LATERAL jsonb_each_text(h.event_props) AS p(key, value)`)}
+    ${perPair(propValue)}`;
+  return all ? body : sql`(${body})`;
+}
+
+/**
+ * Over visit alias `alias`: the visit has EVERY filter's value, under the
+ * membership definition ({@link memberships}) — the ONE filter every reader
+ * applies (the report's and visitor counts' `base`, the sessions list, its
+ * counts). A per-visit check: its cost is the visit's own hits, never the
+ * range's — so it narrows the visits BEFORE their memberships are built.
+ */
+export function visitHasAll(
+  alias: string,
+  filters: readonly AnalyticsFilter[],
+): SQL {
+  if (filters.length === 0) return sql`TRUE`;
+  return sql.join(
+    filters.map(
+      (f) =>
+        sql`EXISTS (SELECT 1 FROM ${memberships({ kind: "one", alias })} AS mf WHERE mf.dim = ${f.dimension} AND mf.value = ${f.value})`,
     ),
-  ],
-  sql`, `,
-);
+    sql` AND `,
+  );
+}
 
 /**
  * The ONE definition of a visit's duration, over visit alias `v`: wall-clock
@@ -86,10 +179,10 @@ const membershipValues = sql.join(
  * (`NULL`: an older tracker, a visit from before `gaps` existed, no beacon
  * yet) adds no background time — its visible time is all that is known.
  *
- * The report (every aggregate below) and the sessions list (`kept`'s
- * `duration_ms`) both read it, so a visit lasts as long in one as in the other.
+ * The report (every aggregate below, through `base.duration_ms`) and the
+ * sessions list (its page's `durationMs`) both read it, so a visit lasts as long in one as in the other.
  */
-const visitDurationMs = sql`(
+export const visitDurationMs = sql`(
   (GREATEST(EXTRACT(EPOCH FROM (v.exit_at - v.started_at)) * 1000, 0))::bigint
   + v.exit_engaged_ms
   + COALESCE((
@@ -112,31 +205,7 @@ function visitsAndMemberships(where: SQL): SQL {
       FROM analytics_visits v
       WHERE ${where}
     ),
-    m AS (
-      SELECT b.id AS visit_id, x.dim, COALESCE(x.value, ${NONE_VALUE}::text) AS value,
-        b.pageviews::bigint AS pageviews, b.duration_ms, b.events::bigint AS events
-      FROM base b CROSS JOIN LATERAL (VALUES ${membershipValues}) AS x(dim, value)
-      UNION ALL
-      SELECT h.visit_id, ${literal("page")}, h.path,
-        count(*) FILTER (WHERE h.kind = 'pageview'),
-        COALESCE(sum(h.engaged_ms) FILTER (WHERE h.kind = 'pageview'), 0)::bigint,
-        count(*) FILTER (WHERE h.kind = 'event')
-      FROM analytics_hits h JOIN base b ON b.id = h.visit_id
-      GROUP BY h.visit_id, h.path
-      UNION ALL
-      SELECT h.visit_id, ${literal("event")}, h.event_name,
-        b.pageviews::bigint, b.duration_ms, count(*)
-      FROM analytics_hits h JOIN base b ON b.id = h.visit_id
-      WHERE h.kind = 'event'
-      GROUP BY h.visit_id, h.event_name, b.pageviews, b.duration_ms
-      UNION ALL
-      SELECT h.visit_id, ${literal("event_prop")},
-        h.event_name || '.' || p.key || '=' || p.value,
-        b.pageviews::bigint, b.duration_ms, count(*)
-      FROM analytics_hits h JOIN base b ON b.id = h.visit_id
-        CROSS JOIN LATERAL jsonb_each_text(h.event_props) AS p(key, value)
-      WHERE h.kind = 'event'
-      GROUP BY h.visit_id, 3, b.pageviews, b.duration_ms
+    m AS (${memberships({ kind: "all" })}
     )`;
 }
 
@@ -197,32 +266,6 @@ export function audienceCondition(audience: Audience): SQL {
   }
 }
 
-/** Keep the visits that have EVERY filter's value. */
-function keptVisits(filters: readonly AnalyticsFilter[]): SQL {
-  const conditions = filters.map(
-    (f) =>
-      sql`EXISTS (SELECT 1 FROM m mf WHERE mf.visit_id = b.id AND mf.dim = ${f.dimension} AND mf.value = ${f.value})`,
-  );
-  return sql`kept AS (
-    SELECT b.* FROM base b
-    WHERE ${conditions.length === 0 ? sql`TRUE` : sql.join(conditions, sql` AND `)}
-  )`;
-}
-
-/**
- * `WITH base, m, kept`: the visits matching `where` (alias `v`) of `audience`
- * that have EVERY filter's value, under the report's own membership definition — `kept`
- * is `analytics_visits` columns plus `duration_ms`. For readers of individual
- * visits (the sessions list), so they filter exactly as the report counts.
- */
-export function keptVisitsWith(
-  where: SQL,
-  audience: Audience,
-  filters: readonly AnalyticsFilter[],
-): SQL {
-  return sql`WITH ${visitsAndMemberships(sql`(${where}) AND ${audienceCondition(audience)}`)}, ${keptVisits(filters)}`;
-}
-
 /**
  * Over visit alias `v`: its day is rolled up. Memberships are the marker, not
  * the daily totals: the rollup writes every visit's memberships (the owner's
@@ -250,14 +293,14 @@ export async function rawDailyRows(
 ): Promise<KeyedRow[]> {
   const where = sql`v.day BETWEEN ${opts.from} AND ${opts.to} AND ${audienceCondition(opts.audience)}${
     opts.onlyNotRolledUp ? sql` AND NOT ${isRolledUp}` : sql``
-  }`;
+  } AND ${visitHasAll("v", opts.filters)}`;
   return executeRows(dbx, {
     label: "analytics.rawDailyRows",
     row: DailyRowSchema,
     query: sql`
-      WITH ${visitsAndMemberships(where)}, ${keptVisits(opts.filters)}
+      WITH ${visitsAndMemberships(where)}
       SELECT k.day::text AS "key", mm.dim AS "dimension", mm.value AS "value", ${metricColumns}
-      FROM m mm JOIN kept k ON k.id = mm.visit_id
+      FROM m mm JOIN base k ON k.id = mm.visit_id
       WHERE mm.dim <> ${UNFILTERED_LEVEL}
       GROUP BY k.day, mm.dim, mm.value`,
   });
@@ -276,10 +319,10 @@ export async function rawHourlyTotals(
     label: "analytics.rawHourlyTotals",
     row: DailyRowSchema,
     query: sql`
-      WITH ${visitsAndMemberships(sql`v.day = ${opts.day} AND ${audienceCondition(opts.audience)}`)}, ${keptVisits(opts.filters)}
+      WITH ${visitsAndMemberships(sql`v.day = ${opts.day} AND ${audienceCondition(opts.audience)} AND ${visitHasAll("v", opts.filters)}`)}
       SELECT to_char(date_trunc('hour', k.started_at AT TIME ZONE 'UTC'), 'YYYY-MM-DD"T"HH24":00:00Z"') AS "key",
         mm.dim AS "dimension", mm.value AS "value", ${metricColumns}
-      FROM m mm JOIN kept k ON k.id = mm.visit_id
+      FROM m mm JOIN base k ON k.id = mm.visit_id
       WHERE mm.dim = ${TOTAL_DIMENSION}
       GROUP BY 1, mm.dim, mm.value`,
   });
@@ -401,7 +444,14 @@ export async function visitorCounts(
     throw new Error(
       `analytics: the daily totals hold visitors only, not ${opts.audience}`,
     );
-  const inSpan = sql`v.day BETWEEN ${opts.from} AND ${opts.to} AND ${audienceCondition(opts.audience)}`;
+  // The filters narrow the visits before their memberships are listed: raw
+  // visits by the membership definition itself (visitHasAll), rolled-up ones
+  // by the memberships the rollup stored from it (their primary key).
+  const inSpan = sql`v.day BETWEEN ${opts.from} AND ${opts.to} AND ${audienceCondition(opts.audience)} AND ${visitHasAll("v", opts.filters)}`;
+  const storedKept = opts.filters.map(
+    (f) =>
+      sql` AND EXISTS (SELECT 1 FROM analytics_visit_members sf WHERE sf.visit_id = s.visit_id AND sf.dim = ${f.dimension} AND sf.value = ${f.value})`,
+  );
   const rawArm = sql`
     SELECT mm.visit_id, b.day, b.started_at, b.visitor_id, mm.dim, mm.value
     FROM m mm JOIN base b ON b.id = mm.visit_id
@@ -413,13 +463,9 @@ export async function visitorCounts(
         mem AS (
           SELECT s.visit_id, s.day, NULL::timestamptz AS started_at, s.visitor_id, s.dim, s.value
           FROM analytics_visit_members s
-          WHERE s.day BETWEEN ${opts.from} AND ${opts.to} AND NOT s.owner
+          WHERE s.day BETWEEN ${opts.from} AND ${opts.to} AND NOT s.owner${sql.join(storedKept, sql``)}
           UNION ALL ${rawArm}
         )`;
-  const kept = opts.filters.map(
-    (f) =>
-      sql`EXISTS (SELECT 1 FROM mem mf WHERE mf.visit_id = mm.visit_id AND mf.dim = ${f.dimension} AND mf.value = ${f.value})`,
-  );
   const [key, dimScope, groupBy] = visitorGrouping(opts.groupBy, opts.source);
   return executeRows(dbx, {
     label: "analytics.visitorCounts",
@@ -429,7 +475,7 @@ export async function visitorCounts(
       SELECT ${key} AS "key", mm.dim AS "dimension", mm.value AS "value",
         count(DISTINCT mm.visitor_id)::int AS "visitors"
       FROM mem mm
-      WHERE ${dimScope}${kept.length === 0 ? sql`` : sql` AND ${sql.join(kept, sql` AND `)}`}
+      WHERE ${dimScope}
       GROUP BY ${groupBy}`,
   });
 }

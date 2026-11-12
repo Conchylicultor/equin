@@ -6,9 +6,13 @@ import {
   type HostQueryAnswer,
 } from "@plugins/apps/plugins/deploy/plugins/host-query/server";
 import {
+  analyticsSessionCountsEndpoint,
   analyticsSessionsEndpoint,
+  encodeSessionCountsQuery,
   encodeSessionsQuery,
+  SessionCountsResultSchema,
   SessionsResultSchema,
+  type SessionCountsResult,
   type SessionKey,
   type SessionsQuery,
   type SessionsResult,
@@ -59,6 +63,18 @@ function askBox(
   );
 }
 
+/** The box's per-shape counts for one question — the whole range, whatever the shape. */
+function askBoxCounts(
+  q: DeploymentSessionsQuestion,
+): Promise<HostQueryAnswer<SessionCountsResult>> {
+  const query = { range: q.range, filters: [], audience: q.audience };
+  return hostOnlyQueryOverSsh(
+    q.deploymentId,
+    `${endpointPath(analyticsSessionCountsEndpoint, {})}?q=${encodeSessionCountsQuery(query)}`,
+    SessionCountsResultSchema,
+  );
+}
+
 // A snapshot, not `db` and not "notified": the visits are the remote site's,
 // arriving with every visitor, with no change signal on this side. Like the
 // report (`dashboard/server/internal/served.ts`), `hostOnlyQueryOverSsh` reads
@@ -100,12 +116,11 @@ export const deploymentSessionsServed = serveValue(deploymentSessions, {
         );
     }
   },
-  // The counts are over the whole range whatever the page: one visit asked.
+  // The counts are over the whole range whatever the page: their own
+  // question, asked once per question — never with each page, which would
+  // count the whole range on every scroll step.
   meta: async (q): Promise<DeploymentSessionsMeta> => {
-    const answer = await askBox(
-      q.deploymentId,
-      sessionsQueryOf(q, { after: null, until: null, limit: 1 }),
-    );
+    const answer = await askBoxCounts(q);
     if (answer.kind === "not-found")
       throw deploymentSessions.refuse(
         "missing",
@@ -113,7 +128,7 @@ export const deploymentSessionsServed = serveValue(deploymentSessions, {
       );
     if (answer.kind !== "answer") return answer;
     const result = answer.value;
-    return result.kind === "sessions"
+    return result.kind === "counts"
       ? {
           kind: "sessions",
           generatedAt: result.generatedAt,

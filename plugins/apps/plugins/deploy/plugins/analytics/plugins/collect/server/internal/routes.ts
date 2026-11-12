@@ -9,12 +9,13 @@ import {
 import {
   MAX_COLLECT_BODY_BYTES,
   analyticsQueryEndpoint,
+  analyticsSessionCountsEndpoint,
   analyticsSessionsEndpoint,
   collectEndpoint,
 } from "../../core";
 import { recordCollect } from "./collect";
 import { runAnalyticsQuery } from "./report";
-import { runSessionsQuery } from "./sessions";
+import { runSessionCountsQuery, runSessionsQuery } from "./sessions";
 
 export const handleCollect = capBodySize(
   MAX_COLLECT_BODY_BYTES,
@@ -42,5 +43,11 @@ export const handleAnalyticsQuery = hostOnly(
 export const handleSessionsQuery = hostOnly(
   implement(analyticsSessionsEndpoint, ({ query }) =>
     runSessionsQuery(db, query.q, new Date()),
+  ),
+);
+
+export const handleSessionCountsQuery = hostOnly(
+  implement(analyticsSessionCountsEndpoint, ({ query }) =>
+    runSessionCountsQuery(db, query.q, new Date()),
   ),
 );

@@ -14,43 +14,62 @@ import {
   planPeriods,
   sessionsAvailableFor,
   type SessionCounts,
+  type SessionCountsQuery,
+  type SessionCountsResult,
   type SessionHit,
   type SessionKey,
   type SessionShape,
   type SessionsQuery,
   type SessionsResult,
 } from "../../core";
-import { keptVisitsWith } from "./aggregate-sql";
+import {
+  audienceCondition,
+  visitDurationMs,
+  visitHasAll,
+} from "./aggregate-sql";
 import type { AnalyticsDb } from "./collect";
 import { liveVisitCutoff } from "./visit-grouping";
 
+const REFUSED = {
+  kind: "refused",
+  reason: "beyond-raw-window",
+  rawWindowDays: RAW_RETENTION_DAYS,
+} as const;
+
+/**
+ * Over visit alias `v`: it started on one of days `from..to` — its `day`
+ * (the UTC day it started, `utcDay(started_at)`), also spelled as the
+ * `started_at` interval it is, so the list walks `analytics_visits_started_at_id_idx`
+ * straight from the range's end instead of sorting the range.
+ */
+function startedInDays(from: string, to: string): SQL {
+  return sql`v.day BETWEEN ${from} AND ${to}
+    AND v.started_at >= (${from}::date)::timestamp AT TIME ZONE 'UTC'
+    AND v.started_at < (${to}::date + 1)::timestamp AT TIME ZONE 'UTC'`;
+}
+
 /**
  * Answer one sessions question as of `now`: the visits of `query.range` that
- * pass its filters (the report's membership SQL — no second filter dialect)
- * and its shape, newest first by `(started_at, id)`, inside the key range
- * `(after, until]`, at most `limit` of them, each with its first
- * {@link MAX_SESSION_HITS} hits in time order; plus every shape's count over
- * the whole range. A range past the raw window is refused: sessions are raw
- * rows only.
+ * pass its filters (the report's membership definition, `visitHasAll` — no
+ * second filter dialect) and its shape, newest first by `(started_at, id)`,
+ * inside the key range `(after, until]`, at most `limit` of them, each with
+ * its first {@link MAX_SESSION_HITS} hits in time order. A range past the raw
+ * window is refused: sessions are raw rows only.
+ *
+ * Costs the page, not the range: the read walks `(started_at, id)` down from
+ * `after`, checks each visit's filters against its own hits, and stops at the
+ * `limit`-th match — so a scroll step deep in a busy range costs what the first
+ * one does. (A filter that few visits pass walks further for its page: the
+ * visits it skips over, never the whole range unless nothing passes.)
  */
 export async function runSessionsQuery(
   dbx: AnalyticsDb,
   query: SessionsQuery,
   now: Date,
 ): Promise<SessionsResult> {
-  if (!sessionsAvailableFor(query.range, now)) {
-    return {
-      kind: "refused",
-      reason: "beyond-raw-window",
-      rawWindowDays: RAW_RETENTION_DAYS,
-    };
-  }
+  if (!sessionsAvailableFor(query.range, now)) return REFUSED;
   const { from, to } = planPeriods(query.range, now).current;
-  const inRange = sql`v.day BETWEEN ${from} AND ${to}`;
-  const [counts, visits] = await Promise.all([
-    shapeCounts(dbx, inRange, query),
-    pageOfVisits(dbx, inRange, query, now),
-  ]);
+  const visits = await pageOfVisits(dbx, startedInDays(from, to), query, now);
   const hits = await hitsOf(
     dbx,
     visits.map((v) => v.id),
@@ -58,7 +77,6 @@ export async function runSessionsQuery(
   return {
     kind: "sessions",
     generatedAt: now.toISOString(),
-    counts,
     sessions: visits.map((visit) => {
       const own = hits.get(visit.id) ?? [];
       return {
@@ -67,6 +85,26 @@ export async function runSessionsQuery(
         hitsTruncated: own.length > MAX_SESSION_HITS,
       };
     }),
+  };
+}
+
+/**
+ * How many visits of `query.range` pass its filters, per shape, as of `now`.
+ * An exact count of a range costs the range's visits (each checked against
+ * its own hits, as the list does) — which is why it is its own question,
+ * asked once per range and filters rather than with every page.
+ */
+export async function runSessionCountsQuery(
+  dbx: AnalyticsDb,
+  query: SessionCountsQuery,
+  now: Date,
+): Promise<SessionCountsResult> {
+  if (!sessionsAvailableFor(query.range, now)) return REFUSED;
+  const { from, to } = planPeriods(query.range, now).current;
+  return {
+    kind: "counts",
+    generatedAt: now.toISOString(),
+    counts: await shapeCounts(dbx, startedInDays(from, to), query),
   };
 }
 
@@ -94,7 +132,7 @@ const CountsRow = z.object({
 async function shapeCounts(
   dbx: AnalyticsDb,
   inRange: SQL,
-  query: SessionsQuery,
+  query: SessionCountsQuery,
 ): Promise<SessionCounts> {
   const shaped = (shape: SessionShape) =>
     sql`(count(*) FILTER (WHERE ${shapeCondition(shape)}))::int`;
@@ -102,10 +140,11 @@ async function shapeCounts(
     label: "analytics.sessionCounts",
     row: CountsRow,
     query: sql`
-      ${keptVisitsWith(inRange, query.audience, query.filters)}
       SELECT ${shaped("all")} AS "all", ${shaped("actions")} AS "actions",
         ${shaped("multi")} AS "multi", ${shaped("bounced")} AS "bounced"
-      FROM kept v`,
+      FROM analytics_visits v
+      WHERE ${inRange} AND ${audienceCondition(query.audience)}
+        AND ${visitHasAll("v", query.filters)}`,
   });
   const [row] = rows;
   if (!row || rows.length !== 1)
@@ -165,14 +204,18 @@ async function pageOfVisits(
   query: SessionsQuery,
   now: Date,
 ): Promise<VisitRow[]> {
-  // The key range and shape are per-visit facts, so they narrow `base` itself:
-  // a visit's memberships (and so the filters) do not depend on its neighbours.
+  // Every condition is a per-visit fact (a visit's memberships do not depend
+  // on its neighbours), so the walk down `(started_at, id)` checks each visit
+  // once and stops at the `limit`-th that passes; the duration is computed
+  // for the page's visits only.
   const where = sql.join(
     [
       inRange,
+      audienceCondition(query.audience),
       shapeCondition(query.shape),
       ...(query.after ? [keyBound("<", query.after)] : []),
       ...(query.until ? [keyBound(">=", query.until)] : []),
+      visitHasAll("v", query.filters),
     ],
     sql` AND `,
   );
@@ -180,24 +223,27 @@ async function pageOfVisits(
     label: "analytics.sessionsPage",
     row: VisitRow,
     query: sql`
-      ${keptVisitsWith(where, query.audience, query.filters)}
-      SELECT k.id::text AS "id",
+      SELECT v.id::text AS "id",
         -- The visitor id never leaves the box: a short one-way display hash only.
-        left(encode(sha256(convert_to(k.visitor_id, 'UTF8')), 'hex'), 8) AS "visitor",
-        k.returning, k.owner, k.day::text AS "day",
-        ${iso("k.started_at")} AS "startedAt", ${iso("k.last_at")} AS "lastAt",
-        (k.last_at > ${liveVisitCutoff(now).toISOString()}::timestamptz) AS "live",
-        k.host, k.entry_path AS "entryPath", k.exit_path AS "exitPath",
-        ${iso("k.exit_at")} AS "exitAt", k.exit_engaged_ms AS "exitEngagedMs",
-        k.duration_ms AS "durationMs", k.engaged_ms AS "engagedMs",
-        k.pageviews, k.events, k.channel,
-        k.referrer_host AS "referrerHost", k.referrer_path AS "referrerPath",
-        k.utm_source AS "utmSource", k.utm_medium AS "utmMedium",
-        k.utm_campaign AS "utmCampaign",
-        k.country, k.language, k.device, k.browser, k.os
-      FROM kept k
-      ORDER BY k.started_at DESC, k.id DESC
-      LIMIT ${query.limit}`,
+        left(encode(sha256(convert_to(v.visitor_id, 'UTF8')), 'hex'), 8) AS "visitor",
+        v.returning, v.owner, v.day::text AS "day",
+        ${iso("v.started_at")} AS "startedAt", ${iso("v.last_at")} AS "lastAt",
+        (v.last_at > ${liveVisitCutoff(now).toISOString()}::timestamptz) AS "live",
+        v.host, v.entry_path AS "entryPath", v.exit_path AS "exitPath",
+        ${iso("v.exit_at")} AS "exitAt", v.exit_engaged_ms AS "exitEngagedMs",
+        ${visitDurationMs} AS "durationMs", v.engaged_ms AS "engagedMs",
+        v.pageviews, v.events, v.channel,
+        v.referrer_host AS "referrerHost", v.referrer_path AS "referrerPath",
+        v.utm_source AS "utmSource", v.utm_medium AS "utmMedium",
+        v.utm_campaign AS "utmCampaign",
+        v.country, v.language, v.device, v.browser, v.os
+      FROM (
+        SELECT v.* FROM analytics_visits v
+        WHERE ${where}
+        ORDER BY v.started_at DESC, v.id DESC
+        LIMIT ${query.limit}
+      ) v
+      ORDER BY v.started_at DESC, v.id DESC`,
   });
 }
 
