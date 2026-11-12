@@ -666,9 +666,47 @@ describe("queue residue — many small waits are reported against the gate", () 
     } finally {
       sub.dispose();
     }
-    // Filed the moment the window reaches the bar, then started over: the
-    // 11th and 12th wait are the next window's.
+    // Filed the moment the window reaches the bar; the 11th and 12th wait are
+    // the same (already filed) window's.
     expect(filed).toEqual(["db-acquire 1000 http:GET /b ×10 window"]);
+  });
+
+  test("a window is filed once, however far past the bar it grows; the next window files again", async () => {
+    const filed: string[] = [];
+    const sub = fileWaitsOver(1000, filed);
+    try {
+      // A storm: 50 independent ops × 100 ms inside one window — 5× the bar,
+      // one incident.
+      for (let i = 0; i < 50; i++)
+        await recordEntrySpan("sub", `s${i}`, () => {
+          waitsInARow("read-admit", 1, 100);
+        });
+      fakeNow += 61_000; // the window expires
+      for (let i = 0; i < 10; i++)
+        await recordEntrySpan("sub", "again", () => {
+          waitsInARow("read-admit", 1, 100);
+        });
+    } finally {
+      sub.dispose();
+    }
+    expect(filed).toEqual([
+      "read-admit 1000 sub:s0 ×10 window",
+      "read-admit 1000 sub:again ×10 window",
+    ]);
+  });
+
+  test("one request's many small sequential waits are filed per request, not left to the window", async () => {
+    const filed: string[] = [];
+    const sub = fileWaitsOver(2000, filed);
+    try {
+      // 300 reads of one request, each queued 7 ms: 2.1 s lost by one request.
+      await recordEntrySpan("http", "GET /page", () => {
+        waitsInARow("read-admit", 300, 7);
+      });
+    } finally {
+      sub.dispose();
+    }
+    expect(filed).toEqual(["read-admit 2100 http:GET /page ×300"]);
   });
 
   test("a window's waits expire past GATE_WINDOW_MS", async () => {

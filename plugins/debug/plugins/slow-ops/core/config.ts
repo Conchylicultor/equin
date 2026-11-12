@@ -1,5 +1,6 @@
 import { defineConfig, type ConfigValues } from "@plugins/config_v2/core";
 import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
+import { floatField } from "@plugins/fields/plugins/float/plugins/config/core";
 import type { ClientLatencySignal } from "@plugins/primitives/plugins/perfs/plugins/latency-signal/core";
 
 // Per-signal slow-op thresholds (milliseconds). All of them render for free in the
@@ -64,6 +65,20 @@ export const slowOpConfig = defineConfig({
       label: "Job threshold (ms)",
       description:
         "Report a slow-op when a background job run exceeds this duration. A job can override this via defineJob({ slowThresholdMs }).",
+    }),
+    // A gate's window (the leftover waits of independent ops over a minute,
+    // summed) is not a latency anyone felt: by Little's law it is the gate's
+    // mean queue depth × the window. So it is judged on depth, not on the
+    // per-op `loaderMs` bar — that bar made 300 reads a minute waiting ~7 ms
+    // each (mean depth ~0.035) a "slow" gate. Measured on main over 24 h
+    // (2026-11-12): every boot storm's busiest minute on `read-admit` held a
+    // mean depth ≥ 0.57 (34–1570 s of waits); steady minutes ~0.035.
+    gateQueueDepth: floatField({
+      default: 0.25,
+      min: 0,
+      label: "Gate queue depth (mean waiters)",
+      description:
+        "Report a congested gate when, over its one-minute window, the requests no single slow-op covered kept on average more than this many waiters queued on it (summed wait ÷ window). One wait, or one request's waits summed, is still judged on the loader threshold.",
     }),
   },
 });

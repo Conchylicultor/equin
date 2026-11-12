@@ -52,6 +52,7 @@ capabilities from `number` via the identity `extends` chain.
     - `debug/profiling/op-log/op-store`
     - `debug/queue-health`
     - `debug/sentinel`
+    - `debug/slow-ops`
     - `infra/jobs`
     - `map/google`
     - `primitives/usage-rank`

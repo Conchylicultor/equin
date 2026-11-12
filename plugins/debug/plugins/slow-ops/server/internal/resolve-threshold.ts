@@ -125,14 +125,23 @@ export function resolveSlowThreshold(span: SlowSpan, t: Thresholds): number {
 }
 
 /**
- * The bar a gate's `queue` wait is judged against. A gate's queue holds work
- * back, so it shares the loader bar (no separate knob, which would also lower
- * the perf floor for every span). A latency leaf's queue (`SlowWait.latency`:
- * a delivery waiting for the flush lane) is staleness a tab shows, so it is
- * held to the update bar — the bar the delivery itself would have been judged
- * on had the queue been counted against it.
+ * The bar a gate's `queue` wait is judged against, by what it measures:
+ *
+ * - What ONE op waited (a single wait, or one entry's waits summed): a
+ *   latency. A gate's queue holds work back, so it shares the loader bar (no
+ *   separate knob, which would also lower the perf floor for every span). A
+ *   latency leaf's queue (`latency`: a delivery waiting for the flush lane) is
+ *   staleness a tab shows, so it is held to the update bar — the bar the
+ *   delivery itself would have been judged on had the queue been counted
+ *   against it. So a request that waits 2 s in total across many small waits
+ *   is still filed, per request.
+ * - A gate's WINDOW (independent ops' waits summed, `windowMs` set): not a
+ *   latency anyone felt but the window's mean queue depth × its length, so
+ *   its bar is `gateQueueDepth` × `windowMs` — how full the gate was, never
+ *   how many reads there were.
  */
 export function resolveWaitThreshold(wait: SlowWait, t: Thresholds): number {
+  if (wait.windowMs !== undefined) return t.gateQueueDepth * wait.windowMs;
   return wait.latency ? t.updateMs : t.loaderMs;
 }
 

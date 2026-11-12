@@ -91,8 +91,9 @@ import { readEnv } from "@plugins/infra/plugins/launcher/plugins/env-names/core"
 // (`handResidueOn`), which judges it the same way. Residue that leaves the top of its
 // chain unfiled (each request waited a little) lands in the gate's window
 // (`addGateWindow`): summed across independent ops for `GATE_WINDOW_MS` and
-// filed as the gate's own when the sum reaches a bar — a pool saturated by
-// many requests each under every bar.
+// offered as the gate's own (`GateWindowWait`). That sum is the window's mean
+// queue depth × its length, so it is judged on how full the gate was — never
+// on one op's latency bar — and filed at most once per window.
 
 // `http` / `db` / `loader` are spans of real work. `sub` / `push` are *origin*
 // entries: the WS-subscription ack and the cascade/push flush that trigger a
@@ -1000,37 +1001,25 @@ export function onSlowSpan(
 export type WaitKind = "queue" | "join" | "io";
 
 /**
- * One `queue` wait at or past an `onSlowWait` floor — or a sum of waits no
- * subscriber filed one by one: an entry's queue RESIDUE on one gate (see
- * `offerQueueResidue`), or a gate's WINDOW across independent ops (`window`),
- * so congestion made of many small waits is reported against the gate even
- * when no single wait reaches a bar.
+ * What `onSlowWait` is handed — one of two different measurements, told apart
+ * by `windowMs`:
+ *
+ * - `OpWait`: what ONE op waited — a single `queue` wait at or past a floor,
+ *   or an entry's queue RESIDUE on one gate (its waits each under every bar,
+ *   summed — see `offerQueueResidue`). A latency: how long that op lost.
+ * - `GateWindowWait`: the waits of INDEPENDENT ops summed over the gate's
+ *   window (`addGateWindow`). Not a latency anyone felt: by Little's law it is
+ *   the window's mean queue depth × its length, so it must be judged on how
+ *   full the gate was (`ms / windowMs`), never on one op's latency bar — 300
+ *   reads a minute waiting 7 ms each add up to 2 s while the queue is all but
+ *   empty.
  */
-export interface SlowWait {
+export type SlowWait = OpWait | GateWindowWait;
+
+interface SlowWaitBase {
   /** The gate's layer name (`read-admit`, `db-acquire`, …). */
   layer: string;
   ms: number;
-  /**
-   * The innermost open entry that waited (a latency leaf: the leaf itself); for
-   * a residue, the entry whose own time it was excluded from; for a window,
-   * the op that queued longest in it.
-   */
-  caller: SpanRef;
-  /**
-   * A residue or window only: how many queue waits it is the sum of. Absent
-   * for a single wait.
-   */
-  waits?: number;
-  /**
-   * A gate window only: the length of the window the waits (each op's under
-   * every bar) were summed over (`GATE_WINDOW_MS`).
-   */
-  windowMs?: number;
-  /**
-   * The queue of a latency leaf (`LeafSpanOptions.queue`): staleness someone
-   * sees, so a monitor may hold it to a latency bar rather than a work bar.
-   */
-  latency?: true;
   /**
    * Who held the gate when the wait was filed — the gate's own gauge
    * (`GateGauge.holders`), read at that instant. Absent when the gate names no
@@ -1038,6 +1027,37 @@ export interface SlowWait {
    * just before (the one whose release admitted a single wait) is not listed.
    */
   holders?: GateHolder[];
+}
+
+/** What one op waited on a gate: a single wait, or its residue summed. */
+export interface OpWait extends SlowWaitBase {
+  /**
+   * The innermost open entry that waited (a latency leaf: the leaf itself); for
+   * a residue, the entry whose own time it was excluded from.
+   */
+  caller: SpanRef;
+  /** A residue only: how many queue waits it is the sum of. */
+  waits?: number;
+  /**
+   * The queue of a latency leaf (`LeafSpanOptions.queue`): staleness someone
+   * sees, so a monitor may hold it to a latency bar rather than a work bar.
+   */
+  latency?: true;
+  windowMs?: never;
+}
+
+/** A gate's window: independent ops' leftover waits, summed. */
+export interface GateWindowWait extends SlowWaitBase {
+  /** The op that queued longest in the window. */
+  caller: SpanRef;
+  /** How many queue waits the window sums. */
+  waits: number;
+  /**
+   * The window's length (`GATE_WINDOW_MS`): `ms / windowMs` is its mean queue
+   * depth — the measure it is judged on.
+   */
+  windowMs: number;
+  latency?: never;
 }
 
 /**
@@ -2300,12 +2320,11 @@ function handResidueOn(
 }
 
 /**
- * How long a gate's window sums the residue of independent ops — a SUM here,
- * each op having lost its own time. Long enough that a pool saturated by a
- * steady stream of requests, each a little under every bar, adds up to one;
- * short enough that scattered unrelated waits expire instead of adding up over
- * hours into a report nobody felt. Fixed (tumbling), not sliding: a burst
- * straddling two windows under the bar in each is not filed.
+ * How long a gate's window sums the residue of independent ops. The sum over
+ * the window is its mean queue depth × its length (Little's law), so a
+ * subscriber judges it on how full the gate was (`GateWindowWait`), never on
+ * one op's latency bar. Fixed (tumbling), not sliding: a burst straddling two
+ * windows under the bar in each is not filed.
  */
 const GATE_WINDOW_MS = 60_000;
 
@@ -2321,6 +2340,8 @@ interface GateWindow {
   callers: Map<string, { ref: SpanRef; ms: number }>;
   /** The caller that queued longest so far (kept as each one grows). */
   top: { ref: SpanRef; ms: number } | undefined;
+  /** A subscriber filed this window: it is one incident, filed once. */
+  filed: boolean;
 }
 
 /** Per queue layer: the residue of independent ops in its current window. */
@@ -2329,9 +2350,12 @@ const gateWindows = new Map<string, GateWindow>();
 /**
  * Sum a root's unfiled residue into its gate's window, and offer the window to
  * `onSlowWait` as the gate's own wait — its caller the op that queued longest
- * in it — every time it grows. Filed, the window starts over (the next one
- * holds only time not yet reported); a window older than `GATE_WINDOW_MS` is
- * dropped as the next residue arrives, its time below every bar.
+ * in it — every time it grows, until a subscriber files it. A window is filed
+ * at most ONCE: "this gate was full this minute" is one incident, and a boot
+ * storm re-filed every time another 2 s accrued was 20–360 occurrences of one
+ * storm (main, 2026-11-12). Its later waits still count in the gate's meter
+ * (`GateMeter`, judged by op-rate's op-time). A window older than
+ * `GATE_WINDOW_MS` is replaced as the next residue arrives.
  */
 function addGateWindow(
   layer: string,
@@ -2342,7 +2366,14 @@ function addGateWindow(
   const t = now();
   let w = gateWindows.get(layer);
   if (!w || t - w.startMs > GATE_WINDOW_MS) {
-    w = { startMs: t, ms: 0, waits: 0, callers: new Map(), top: undefined };
+    w = {
+      startMs: t,
+      ms: 0,
+      waits: 0,
+      callers: new Map(),
+      top: undefined,
+      filed: false,
+    };
     gateWindows.set(layer, w);
   }
   w.ms += ms;
@@ -2355,16 +2386,14 @@ function addGateWindow(
     w.callers.set(key, entry);
   }
   if (entry && (!w.top || entry.ms > w.top.ms)) w.top = entry;
-  if (
-    notifySlowWait({
-      layer,
-      ms: w.ms,
-      caller: w.top?.ref ?? caller,
-      waits: w.waits,
-      windowMs: GATE_WINDOW_MS,
-    })
-  )
-    gateWindows.delete(layer);
+  if (w.filed) return;
+  w.filed = notifySlowWait({
+    layer,
+    ms: w.ms,
+    caller: w.top?.ref ?? caller,
+    waits: w.waits,
+    windowMs: GATE_WINDOW_MS,
+  });
 }
 
 // Cap the variant at MAX_VARIANT_LEN and drop empty parts, so an absent detail

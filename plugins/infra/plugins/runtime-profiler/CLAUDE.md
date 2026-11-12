@@ -205,8 +205,17 @@ summed) to `onSlowWait` FIRST; what no subscriber filed comes off
 unreported waits against its own bar. Filed, it takes the residue (not handed
 on); unfiled, the residue climbs to the nearest open ancestor, then the
 gate's window. Without it, 0.6 s own + a 1.5 s wait at a 2 s bar filed
-nothing: each part was judged alone. Invariant: a wait taken off one report is
-reported somewhere at the same bar.
+nothing: each part was judged alone. Invariant: a wait taken off one op's
+report is reported for that op (or an enclosing one) at the same bar.
+
+The gate's window is a different measurement (`GateWindowWait`, `windowMs`
+set): independent ops' leftover waits summed over 60 s are the gate's mean
+queue depth × 60 s (Little's law), not a latency anyone felt. A subscriber
+judges it on depth (slow-ops: `gateQueueDepth`), and it is filed at most once
+per window — one storm, one occurrence. Judged on the per-op bar, 300 reads a
+minute queued 7 ms each "filed" the gate, and a boot storm re-filed every 2 s
+of it (20–360 times per boot on main, 2026-11-12). Every wait stays in the
+gate's meter (`GateMeter`, below) either way.
 
 ### Claims — one slow op, filed once (`excludedMs` / `claims`)
 

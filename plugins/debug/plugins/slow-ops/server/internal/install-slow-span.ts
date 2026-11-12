@@ -121,7 +121,11 @@ export function installSlowSpanHook(thresholds: Thresholds): void {
   // wait), or, when every op waited a little, as the gate's window across
   // independent ops (`windowMs` set, its longest waiter the caller). A wait
   // returned unfiled comes back summed with others, so each is filed once. The
-  // bar per wait is `resolveWaitThreshold`; the floor is the lowest of them.
+  // bar is `resolveWaitThreshold`: one op's wait (single or summed) is a latency,
+  // held to the loader bar; a window is the gate's mean queue depth × its
+  // length, held to `gateQueueDepth` — how full the gate was, never how many
+  // reads went through it. The floor is the lowest per-op bar (a window's bar
+  // is far above it).
   waitDisposer = onSlowWait(
     (wait: SlowWait) => {
       const threshold = resolveWaitThreshold(wait, thresholds);

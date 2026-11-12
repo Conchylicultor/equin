@@ -18,6 +18,7 @@ const thresholds: Thresholds = {
   httpMs: 2000,
   dbMs: 500,
   jobMs: 3000,
+  gateQueueDepth: 0.25,
 };
 
 function span(kind: SpanKind, budgetMs?: number): SlowSpan {
@@ -72,5 +73,22 @@ describe("resolveWaitThreshold", () => {
         { ...thresholds, updateMs: 800 },
       ),
     ).toBe(800);
+  });
+  test("one request's waits summed are still judged per request: the loader bar", () => {
+    expect(
+      resolveWaitThreshold(
+        { layer: "read-admit", ms: 0, caller, waits: 300 },
+        thresholds,
+      ),
+    ).toBe(2000);
+  });
+  test("a gate's window is judged on mean queue depth, not on the count of waits", () => {
+    const window = { layer: "read-admit", caller, windowMs: 60_000 };
+    const bar = resolveWaitThreshold(
+      { ...window, ms: 0, waits: 0 },
+      thresholds,
+    );
+    // 0.25 waiters on average over the minute.
+    expect(bar).toBe(15_000);
   });
 });
