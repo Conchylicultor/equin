@@ -1,6 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { observeInPhase, runAsAfterLayout } from "../internal/after-layout";
+import {
+  installDeliveryWatch,
+  observeInPhase,
+  runAsAfterLayout,
+} from "../internal/after-layout";
 
 function fakeObserver(): { observer: ResizeObserver; observed: Element[] } {
   const observed: Element[] = [];
@@ -74,5 +78,58 @@ describe("observeInPhase", () => {
     cancel();
     for (const cb of frames) cb(0);
     expect(observed).toEqual([]);
+  });
+
+  it("a library observer's delivery bounds what starts in it, until the step ends", async () => {
+    const { shallow, deep, deeper } = tree();
+    const frames: FrameRequestCallback[] = [];
+    vi.stubGlobal("requestAnimationFrame", (cb: FrameRequestCallback) => {
+      frames.push(cb);
+      return frames.length;
+    });
+    // A drivable native observer: the test delivers its callback by hand.
+    const callbacks: ResizeObserverCallback[] = [];
+    class DrivableObserver {
+      constructor(cb: ResizeObserverCallback) {
+        callbacks.push(cb);
+      }
+      observe(): void {}
+      unobserve(): void {}
+      disconnect(): void {}
+    }
+    vi.stubGlobal("cancelAnimationFrame", () => {});
+    vi.stubGlobal("ResizeObserver", DrivableObserver);
+    const uninstall = installDeliveryWatch();
+    try {
+      // A library's observer (floating-ui's autoUpdate) — never wrapped in
+      // runAsAfterLayout — whose commit runs in a microtask of its callback.
+      const library = new ResizeObserver(() => {
+        void Promise.resolve().then(() => {
+          observeInPhase(own.observer, shallow);
+          observeInPhase(own.observer, deeper);
+        });
+      });
+      const own = fakeObserver();
+      callbacks[0]!(
+        [{ target: deep } as unknown as ResizeObserverEntry],
+        library,
+      );
+      await Promise.resolve();
+      // The deeper target can still be delivered this step; the shallow one
+      // would be held back into a loop, so it starts at the next frame —
+      // whose first callback has closed the delivery.
+      expect(own.observed).toEqual([deeper]);
+      for (const cb of frames) cb(0);
+      expect(own.observed).toEqual([deeper, shallow]);
+      expect(frames).toHaveLength(2);
+
+      // Once the step has ended, an observation starts at once again.
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      const later = fakeObserver();
+      observeInPhase(later.observer, shallow);
+      expect(later.observed).toEqual([shallow]);
+    } finally {
+      uninstall();
+    }
   });
 });

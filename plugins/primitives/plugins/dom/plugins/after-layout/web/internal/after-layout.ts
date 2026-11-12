@@ -31,8 +31,25 @@ let inPhase = false;
  * starts none pays nothing.
  */
 let phaseDelivered: readonly Element[] | null = null;
-let phaseDepth: number | null = null;
 let armed = false;
+/** A read queued during a delivery outside the phase, waiting for the
+ * microtask that drains it (see {@link afterLayout}). */
+let drainQueued = false;
+
+/**
+ * The targets of the `ResizeObserver` delivery running now — ANY observer's:
+ * the app's own (element-size's, the root trigger) or a library's (floating-ui's
+ * `autoUpdate`, inside every Base UI popup), which never goes through
+ * {@link runAsAfterLayout} and commits React from a microtask of its callback
+ * (`computePosition(...).then(() => flushSync(...))`). Set by the page's
+ * `ResizeObserver` (see {@link installDeliveryWatch}) when a callback starts,
+ * and kept until the rendering step ends — a callback's microtasks run inside
+ * the step, before the browser gathers the next broadcast — so whatever runs
+ * there knows the browser can no longer deliver a notification at or above
+ * these targets in this step. Null outside a delivery.
+ */
+let delivery: readonly Element[] | null = null;
+let deliveryEndScheduled = false;
 let trigger: ResizeObserver | null = null;
 
 /** One observation started through {@link observeInPhase}. */
@@ -94,7 +111,7 @@ export function afterLayout(read: AfterLayoutRead): () => void {
   }
   const entry: Entry = { read, live: true };
   pending.push(entry);
-  if (!inPhase) arm();
+  if (!inPhase) schedulePhase();
   return () => {
     entry.live = false;
   };
@@ -117,7 +134,6 @@ export function runAsAfterLayout(
   }
   inPhase = true;
   phaseDelivered = delivered;
-  phaseDepth = null;
   try {
     fn();
     drain();
@@ -125,7 +141,6 @@ export function runAsAfterLayout(
   } finally {
     inPhase = false;
     phaseDelivered = null;
-    phaseDepth = null;
     snapshot = null;
   }
 }
@@ -199,7 +214,10 @@ export function observeInPhase(
 }
 
 function start(obs: Observation): void {
-  if (phaseDelivered === null) {
+  // A delivery outside the phase (a library's observer committing from its
+  // callback's microtasks) bounds what this step can deliver just the same.
+  const delivered = phaseDelivered ?? delivery;
+  if (delivered === null) {
     obs.observer.observe(obs.el);
     // Delivered in the next step's FIRST broadcast: armed with it, the root
     // trigger shares that broadcast, so its shallowest depth is the root's and
@@ -207,7 +225,7 @@ function start(obs: Observation): void {
     if (!atOnce) arm();
     return;
   }
-  if (depthOf(obs.el) > currentPhaseDepth()) {
+  if (depthOf(obs.el) > shallowestDepth(delivered)) {
     obs.observer.observe(obs.el);
     return;
   }
@@ -256,7 +274,7 @@ function sameBox(a: Box, b: Box): boolean {
  * longer reach: at or above its shallowest target. */
 function shallowBoxes(): Map<Observation, Box> {
   const boxes = new Map<Observation, Box>();
-  const depth = currentPhaseDepth();
+  const depth = shallowestDepth(phaseDelivered ?? []);
   // The root's broadcast reaches every depth below it.
   if (depth === 0) return boxes;
   for (const obs of observations) {
@@ -299,13 +317,17 @@ function settle(): void {
   }
 }
 
-function currentPhaseDepth(): number {
-  if (phaseDepth === null) {
+/** The last delivery's shallowest depth, kept for as long as that delivery is
+ * the one asked about: a delivery that starts no observation walks nothing. */
+let depthMemo: { of: readonly Element[]; depth: number } | null = null;
+
+function shallowestDepth(delivered: readonly Element[]): number {
+  if (depthMemo?.of !== delivered) {
     let min = Infinity;
-    for (const el of phaseDelivered ?? []) min = Math.min(min, depthOf(el));
-    phaseDepth = min;
+    for (const el of delivered) min = Math.min(min, depthOf(el));
+    depthMemo = { of: delivered, depth: min };
   }
-  return phaseDepth;
+  return depthMemo.depth;
 }
 
 /** The element's depth in the flat tree (the root is 0), shadow hosts included
@@ -368,6 +390,32 @@ function drain(): void {
   }
 }
 
+/**
+ * Get queued reads run. Normally that is the root trigger's delivery at the
+ * next rendering step. But inside a delivery the phase did not open — a
+ * library observer's callback, or a commit in its microtasks (floating-ui
+ * positioning a popup mounts the readers of what it shows) — observing the
+ * root now is exactly what the browser holds back: the root is at or above
+ * every delivery, so the step would end with "ResizeObserver loop completed
+ * with undelivered notifications" and the reads would wait a frame. Layout is
+ * already computed there, so the reads run as a phase of that delivery
+ * instead, in a microtask: after the commit that queued them returns, still
+ * inside the step.
+ */
+function schedulePhase(): void {
+  if (delivery === null) {
+    arm();
+    return;
+  }
+  if (drainQueued) return;
+  drainQueued = true;
+  const delivered = delivery;
+  queueMicrotask(() => {
+    drainQueued = false;
+    if (pending.length > 0) runAsAfterLayout(noop, delivered);
+  });
+}
+
 function arm(): void {
   if (armed) return;
   armed = true;
@@ -380,3 +428,57 @@ function arm(): void {
 }
 
 function noop(): void {}
+
+/**
+ * Make the page's `ResizeObserver` report every delivery to the phase: each
+ * callback, whoever created the observer, opens {@link delivery} with its
+ * targets before it runs, and the step's end (the first task after it) closes
+ * it. The app's observers all start through {@link observeInPhase}, but a
+ * library creates its own — floating-ui's `autoUpdate` in every popup — and a
+ * delivery the phase cannot see is one whose commits arm the root trigger and
+ * start shallow observations where the browser holds them back. Installed once
+ * when this module evaluates, so whatever uses after-layout has it — there is
+ * no install step to forget. Returns the uninstall (tests).
+ */
+export function installDeliveryWatch(): () => void {
+  const Native = globalThis.ResizeObserver;
+  class DeliveryWatchedResizeObserver extends Native {
+    constructor(callback: ResizeObserverCallback) {
+      super((entries, observer) => {
+        openDelivery(entries);
+        callback.call(observer, entries, observer);
+      });
+    }
+  }
+  globalThis.ResizeObserver = DeliveryWatchedResizeObserver;
+  return () => {
+    globalThis.ResizeObserver = Native;
+    endDelivery();
+  };
+}
+
+function openDelivery(entries: readonly ResizeObserverEntry[]): void {
+  delivery = entries.map((e) => e.target);
+  if (deliveryEndScheduled) return;
+  deliveryEndScheduled = true;
+  // Every callback of a rendering step, and their microtasks, run inside one
+  // task: the step ends with the next task, or at the latest with the next
+  // frame's animation callbacks — this one runs before any a delivery
+  // scheduled (observeInPhase's next-frame start), so they see no delivery.
+  const timer = setTimeout(closeDelivery, 0);
+  const frame = requestAnimationFrame(closeDelivery);
+  function closeDelivery(): void {
+    clearTimeout(timer);
+    cancelAnimationFrame(frame);
+    endDelivery();
+  }
+}
+
+function endDelivery(): void {
+  deliveryEndScheduled = false;
+  delivery = null;
+}
+
+if (!atOnce && typeof globalThis.ResizeObserver === "function") {
+  installDeliveryWatch();
+}

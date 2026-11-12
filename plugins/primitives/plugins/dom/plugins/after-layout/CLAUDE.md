@@ -82,11 +82,21 @@ resize-loop tracer (`element-size/resize-loop-trace`) names it.
 - **Reads wait for a rendered frame.** In a hidden tab the rendering step does
   not run, so a read queued there runs when the page is shown again (the
   synchronous read it replaces would have measured a page nobody sees).
-- **A `ResizeObserver` callback outside element-size** that commits a reader
-  without `runAsAfterLayout`, or commits without `commitInPhase`, escapes the
-  phase: the browser defers what it resizes a frame and reports a loop. Every
-  observer in the app is element-size's (`no-raw-resize-observer`), which
-  wraps its callbacks and commits through `commitInPhase`.
+- **A library's own `ResizeObserver` commits with a raw `flushSync`.** Base
+  UI positions every popup with floating-ui, whose `autoUpdate` observes the
+  trigger and floating element itself and commits from a microtask of its
+  callback (`computePosition(...).then(() => flushSync(...))`); the lint
+  (`no-raw-resize-observer`) cannot see `node_modules`. The phase therefore
+  watches every delivery on the page, not only its own: this module replaces
+  the page's `ResizeObserver` when it evaluates (`installDeliveryWatch`, no
+  install step to forget), so each callback — whoever created the observer —
+  marks a delivery with its targets until the rendering step ends (the next
+  task, or the next frame's first animation callback). Inside one, the root
+  trigger is never armed (queued reads run as a phase of that delivery, in a
+  microtask) and `observeInPhase` starts a target the delivery can no longer
+  reach at the next frame. What a library's own commit RESIZES above its
+  delivery is still the browser's to report (it never goes through
+  `commitInPhase`); the resize-loop tracer names the observer and the element.
 
 Who reads through it: `dom/element-size` (initial measure, target resolution)
 and `dom/layout-host` (`useHostFlowAxis`).
