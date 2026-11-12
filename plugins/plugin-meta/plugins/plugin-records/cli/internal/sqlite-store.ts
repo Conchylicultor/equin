@@ -127,10 +127,16 @@ const PROBE_BATCH = 200;
 const RECLAIM_PAGE = 5_000;
 // The store's earlier files, unlinked on the daily reclaim so their gigabytes
 // go once every checkout reads this one: the first (text keys, a value per
-// row), then v2 — the same schema, written by code that took the lock with no
-// place in the writer line.
-const LEGACY_FILES = ["records.sqlite", "records.v2.sqlite"];
-const FILE = "records.v3.sqlite";
+// row), then v2 — v3's schema, written by code that took the lock with no
+// place in the writer line — then v3, whose values sat in a WITHOUT ROWID
+// table keyed by their hash and were found by a keys_vid index (see
+// openDatabase).
+const LEGACY_FILES = [
+  "records.sqlite",
+  "records.v2.sqlite",
+  "records.v3.sqlite",
+];
+const FILE = "records.v4.sqlite";
 // A record key is a sha256 (`recordKey`), stored as its 32 bytes.
 const KEY = /^[0-9a-f]{64}$/;
 
@@ -138,15 +144,20 @@ const Count = z.object({ n: z.number() });
 const KeyPage = z.array(
   z.object({
     key: z.instanceof(Uint8Array),
-    vid: z.instanceof(Uint8Array),
     used: z.number(),
   }),
 );
+const ValuePage = z.array(
+  z.object({ id: z.number(), vid: z.instanceof(Uint8Array), used: z.number() }),
+);
+const ValueRow = z.object({ id: z.number(), used: z.number() }).nullable();
+const InsertedValue = z.object({ id: z.number() });
 const RecordRows = z.array(
   z.object({
     key: z.instanceof(Uint8Array),
-    value: z.string(),
+    body: z.instanceof(Uint8Array),
     used: z.number(),
+    vused: z.number(),
   }),
 );
 
@@ -208,14 +219,49 @@ function openDatabase(
   if (fresh) db.exec("PRAGMA auto_vacuum = INCREMENTAL");
   db.exec("PRAGMA journal_mode = WAL");
   db.exec("PRAGMA synchronous = NORMAL");
+  // THE LAYOUT IS SIZED FOR A LOOKUP OF A STORE THAT DOES NOT FIT THE CACHE.
+  // A lookup is one probe of `keys` and one of `vals` by rowid. Measured on
+  // the 24M-row v2 store (2026-11-12,
+  // research/2026-11-12-global-plugin-records-store-layout.md), the layout
+  // before it held 8.86 GB (this one: 2.10 GB), and its values tree was 8
+  // levels deep (this one: 3):
+  // - `keys` names its value by `vals`' integer rowid (2–4 bytes), not by the
+  //   value's 32-byte hash, and there is no index of the keys by value: the
+  //   reclaim needs none (each value's own `used` day, below), and that index
+  //   was a quarter of the file and a third B-tree every insert descended.
+  // - `vals` is a rowid table. As a WITHOUT ROWID table keyed by its hash, its
+  //   interior pages held copies of whole ~1 KB rows (an index B-tree's cells
+  //   are the row), ~6 per page: 15k interior pages, 8 levels, for 633k values.
+  //   A rowid table's interior cells are rowids, and the hash → rowid lookup a
+  //   write needs is the UNIQUE index's 40-byte cells.
+  // - a value's body is zstd-compressed (JSON — and a group record's list of
+  //   them — shrinks ~6x): most fit in their leaf, where the text needed a
+  //   chain of overflow pages (1M of the v2 store's 2.2M pages).
+  // - `vals.used` is at least the `used` of every key naming the value: every
+  //   write and every last-read refresh of a key moves its value's day in the
+  //   same transaction (the refresh reaches the value THROUGH the key, under
+  //   the lock, never by an id read before it). So a value unread for
+  //   KEEP_DAYS has no key left once the reclaim deleted the keys unread for
+  //   KEEP_DAYS.
+  // - a value's id is never reused (AUTOINCREMENT): a key naming a value that
+  //   is gone — which no write leaves, but nothing else would catch — reads
+  //   as a miss and is written again, never as another record's value.
   db.exec(
-    "CREATE TABLE IF NOT EXISTS keys (tbl TEXT NOT NULL, key BLOB NOT NULL, vid BLOB NOT NULL, used INTEGER NOT NULL, PRIMARY KEY (tbl, key)) WITHOUT ROWID",
+    "CREATE TABLE IF NOT EXISTS keys (tbl TEXT NOT NULL, key BLOB NOT NULL, val INTEGER NOT NULL, used INTEGER NOT NULL, PRIMARY KEY (tbl, key)) WITHOUT ROWID",
   );
-  db.exec("CREATE INDEX IF NOT EXISTS keys_vid ON keys (vid)");
   db.exec(
-    "CREATE TABLE IF NOT EXISTS vals (vid BLOB PRIMARY KEY, value TEXT NOT NULL) WITHOUT ROWID",
+    "CREATE TABLE IF NOT EXISTS vals (id INTEGER PRIMARY KEY AUTOINCREMENT, vid BLOB NOT NULL UNIQUE, used INTEGER NOT NULL, body BLOB NOT NULL)",
   );
   return db;
+}
+
+/** A value as `vals` stores it. */
+function encodeValue(value: string): Uint8Array {
+  return Bun.zstdCompressSync(Buffer.from(value));
+}
+
+function decodeValue(body: Uint8Array): string {
+  return Buffer.from(Bun.zstdDecompressSync(body)).toString("utf8");
 }
 
 /** The writer line of the store at `path`: every process writing it shares it. */
@@ -455,16 +501,20 @@ export interface ReclaimResult {
 }
 
 /**
- * Deletes the key rows unread for {@link KEEP_DAYS}, every value only they
- * named, then returns the freed pages to the filesystem — never holding the
- * store long: the key rows are read a page at a time in primary-key order
- * with no lock, and each stale row and the value it alone named go in the
- * same {@link writeBounded} transaction (so an interrupted reclaim leaves no
- * value no row names). Every transaction waits its turn in the writer line, so
- * a build's write queued behind the reclaim goes next, not after all of it.
- * O(key rows) to read,
- * O(what it deletes) to write: a value can only lose its last name when a row
- * naming it is deleted, so no scan of the values is needed.
+ * Deletes the key rows unread for {@link KEEP_DAYS}, then the values unread
+ * for as long, then returns the freed pages to the filesystem — never holding
+ * the store long: rows are read a page at a time in primary-key order with no
+ * lock, and deleted through {@link writeBounded} (each re-checked under the
+ * lock: a build may have read or written it since). Every transaction waits
+ * its turn in the writer line, so a build's write queued behind the reclaim
+ * goes next, not after all of it.
+ *
+ * Two passes, keys first: a value's `used` is at least that of every key
+ * naming it (`openDatabase`), so once no key unread for KEEP_DAYS is left, a
+ * value unread for as long is named by none — and a key written or read
+ * meanwhile moved its value's day in the same transaction, which the value's
+ * re-check sees. A run that fails in the first pass never starts the second.
+ * O(rows) to read, O(what it deletes) to write.
  */
 export async function reclaimRecordStore(
   opts?: StoreOptions,
@@ -474,19 +524,19 @@ export async function reclaimRecordStore(
   const line = writerLine(path);
   const timing = emptyWriteTiming();
   const cutoff = today() - KEEP_DAYS;
-  const page = db.query(
-    "SELECT key, vid, used FROM keys WHERE tbl = ? AND key > ? ORDER BY key LIMIT ?",
+  const keyPage = db.query(
+    "SELECT key, used FROM keys WHERE tbl = ? AND key > ? ORDER BY key LIMIT ?",
   );
-  // Re-checked under the lock: a build may have read the row (refreshing its
-  // day) since the page was read.
   const deleteKey = db.query(
     "DELETE FROM keys WHERE tbl = ? AND key = ? AND used < ?",
   );
-  const deleteOrphan = db.query(
-    "DELETE FROM vals WHERE vid = ? AND NOT EXISTS (SELECT 1 FROM keys WHERE keys.vid = ?)",
+  const valuePage = db.query(
+    "SELECT id, vid, used FROM vals WHERE id > ? ORDER BY id LIMIT ?",
   );
-  const valueAt = db.query("SELECT 1 FROM vals WHERE vid = ?");
-  const keyNaming = db.query("SELECT 1 FROM keys WHERE vid = ? LIMIT 1");
+  const deleteValue = db.query("DELETE FROM vals WHERE id = ? AND used < ?");
+  // A value's delete also drops its `vid` index entry: a random leaf the
+  // scan did not read, read here before the lock.
+  const vidAt = db.query("SELECT 1 FROM vals WHERE vid = ?");
   const result: Omit<ReclaimResult, "timing"> = {
     keysRead: 0,
     keysDeleted: 0,
@@ -508,34 +558,43 @@ export async function reclaimRecordStore(
   for (const tbl of tables) {
     let after: Uint8Array = new Uint8Array(0);
     for (;;) {
-      const rows = KeyPage.parse(page.all(tbl, after, RECLAIM_PAGE));
+      const rows = KeyPage.parse(keyPage.all(tbl, after, RECLAIM_PAGE));
       const last = rows.at(-1);
       if (last === undefined) break;
       result.keysRead += rows.length;
       after = last.key;
-      // Each stale row and its value, if it named it alone, in the same
-      // transaction (a row sharing the value deleted later deletes it then);
-      // the value's pages read first, with no lock (its keys row was just
-      // read with the page).
+      // The rows' pages were just read with the page: nothing to probe.
       await writeBounded(
         db,
         line,
         rows.filter((r) => r.used < cutoff),
-        (batch) => {
-          for (const r of batch) {
-            valueAt.get(r.vid);
-            keyNaming.get(r.vid);
-          }
-          return batch;
-        },
+        (batch) => batch,
         (r) => {
-          if (deleteKey.run(tbl, r.key, cutoff).changes === 0) return;
-          result.keysDeleted++;
-          result.valuesDeleted += deleteOrphan.run(r.vid, r.vid).changes;
+          result.keysDeleted += deleteKey.run(tbl, r.key, cutoff).changes;
         },
         timing,
       );
     }
+  }
+  let afterId = 0;
+  for (;;) {
+    const rows = ValuePage.parse(valuePage.all(afterId, RECLAIM_PAGE));
+    const last = rows.at(-1);
+    if (last === undefined) break;
+    afterId = last.id;
+    await writeBounded(
+      db,
+      line,
+      rows.filter((r) => r.used < cutoff),
+      (batch) => {
+        for (const r of batch) vidAt.get(r.vid);
+        return batch;
+      },
+      (r) => {
+        result.valuesDeleted += deleteValue.run(r.id, cutoff).changes;
+      },
+      timing,
+    );
   }
   // Only a file created with auto_vacuum = INCREMENTAL can return its pages
   // (`openDatabase`); on any other, incremental_vacuum does nothing, so the
@@ -634,9 +693,16 @@ function recordReader(path: string): (req: ReadRequest) => [string, string][] {
   const line = writerLine(path);
   const select = (n: number) =>
     db.query(
-      `SELECT k.key AS key, v.value AS value, k.used AS used FROM keys k JOIN vals v ON v.vid = k.vid WHERE k.tbl = ? AND k.key IN (${Array(n).fill("?").join(",")})`,
+      `SELECT k.key AS key, v.body AS body, k.used AS used, v.used AS vused FROM keys k JOIN vals v ON v.id = k.val WHERE k.tbl = ? AND k.key IN (${Array(n).fill("?").join(",")})`,
     );
-  const touch = db.query("UPDATE keys SET used = ? WHERE tbl = ? AND key = ?");
+  // A key's day and its value's, together (the value's is at least the
+  // key's: what the reclaim relies on).
+  const touchKey = db.query(
+    "UPDATE keys SET used = ? WHERE tbl = ? AND key = ? AND used < ?",
+  );
+  const touchValue = db.query(
+    "UPDATE vals SET used = ?1 WHERE id = (SELECT val FROM keys WHERE tbl = ?2 AND key = ?3) AND used < ?1",
+  );
   // The last-read days still to refresh, and whether a refresh is running.
   // One refresh write at a time per reader, folding in whatever stale rows
   // the reads found meanwhile: a pass's ~64 read batches are a handful of
@@ -653,7 +719,10 @@ function recordReader(path: string): (req: ReadRequest) => [string, string][] {
         line,
         rows,
         (batch) => batch,
-        (r) => touch.run(r.day, r.tbl, r.key),
+        (r) => {
+          touchKey.run(r.day, r.tbl, r.key, r.day);
+          touchValue.run(r.day, r.tbl, r.key);
+        },
       );
       if (outcome.kind === "lost")
         console.error(
@@ -667,8 +736,9 @@ function recordReader(path: string): (req: ReadRequest) => [string, string][] {
     for (const row of RecordRows.parse(
       select(keys.length).all(tbl, ...keys.map(keyBytes)),
     )) {
-      found.push([Buffer.from(row.key).toString("hex"), row.value]);
-      if (row.used < day) stale.push({ tbl, key: row.key, day });
+      found.push([Buffer.from(row.key).toString("hex"), decodeValue(row.body)]);
+      if (row.used < day || row.vused < day)
+        stale.push({ tbl, key: row.key, day });
     }
     // Refreshed soon after their read, so the pages the updates touch are
     // the ones it just brought in: no read before the lock is needed. Not
@@ -705,14 +775,20 @@ export function openRecordStore(opts?: StoreOptions): RecordStore {
   };
   // The reads before the lock (writeBounded's probe): each ends on the page
   // its write goes into.
-  const keyAt = db.query("SELECT 1 FROM keys WHERE tbl = ? AND key = ?");
-  const valueAt = db.query("SELECT 1 FROM vals WHERE vid = ?");
-  const keyNaming = db.query("SELECT 1 FROM keys WHERE vid = ? LIMIT 1");
-  const insertValue = db.query(
-    "INSERT INTO vals (vid, value) VALUES (?, ?) ON CONFLICT (vid) DO NOTHING",
+  // A key counts as stored only with its value: one naming a value that is
+  // gone (no write leaves one; this is the backstop) is written again.
+  const keyAt = db.query(
+    "SELECT 1 FROM keys k JOIN vals v ON v.id = k.val WHERE k.tbl = ? AND k.key = ?",
   );
-  const insertKey = db.query(
-    "INSERT INTO keys (tbl, key, vid, used) VALUES (?, ?, ?, ?) ON CONFLICT (tbl, key) DO NOTHING",
+  const valueAt = db.query("SELECT id, used FROM vals WHERE vid = ?");
+  const insertValue = db.query(
+    "INSERT INTO vals (vid, used, body) VALUES (?, ?, ?) RETURNING id",
+  );
+  const touchValue = db.query(
+    "UPDATE vals SET used = ? WHERE id = ? AND used < ?",
+  );
+  const upsertKey = db.query(
+    "INSERT INTO keys (tbl, key, val, used) VALUES (?, ?, ?, ?) ON CONFLICT (tbl, key) DO UPDATE SET val = excluded.val, used = excluded.used WHERE NOT EXISTS (SELECT 1 FROM vals WHERE vals.id = keys.val)",
   );
 
   // What `putMany` has held back, per table, until the next `flush`.
@@ -759,6 +835,8 @@ export function openRecordStore(opts?: StoreOptions): RecordStore {
       key: Buffer;
       vid: Buffer;
       value: string;
+      // Encoded at the probe, with no lock, when the value was not stored.
+      body?: Uint8Array;
     }[] = [];
     for (const [tbl, records] of held)
       for (const [k, value] of records)
@@ -773,19 +851,28 @@ export function openRecordStore(opts?: StoreOptions): RecordStore {
       line,
       rows,
       // A key already stored (by another build that computed the same
-      // record) is dropped: its value is the same. The value is still
-      // inserted with each new key, never skipped on a read: the reclaim may
-      // delete an unnamed value between this read and the write.
+      // record) is dropped: its value is the same. The value is looked up
+      // again under the lock, never trusted from this read: the reclaim may
+      // delete it in between.
       (batch) =>
         batch.filter((r) => {
           if (keyAt.get(r.tbl, r.key) !== null) return false;
-          valueAt.get(r.vid);
-          keyNaming.get(r.vid);
+          if (ValueRow.parse(valueAt.get(r.vid)) === null)
+            r.body ??= encodeValue(r.value);
           return true;
         }),
       (r) => {
-        insertValue.run(r.vid, r.value);
-        insertKey.run(r.tbl, r.key, r.vid, day);
+        const stored = ValueRow.parse(valueAt.get(r.vid));
+        let val: number;
+        if (stored === null)
+          val = InsertedValue.parse(
+            insertValue.get(r.vid, day, (r.body ??= encodeValue(r.value))),
+          ).id;
+        else {
+          val = stored.id;
+          touchValue.run(day, val, day);
+        }
+        upsertKey.run(r.tbl, r.key, val, day);
       },
     );
     if (outcome.kind === "lost") await sayLost(outcome);

@@ -19,6 +19,35 @@ afterAll(() => rmSync(dir, { recursive: true, force: true }));
 
 const k = (name: string): string => recordKey(name);
 
+/**
+ * Ages every key row but `keep` by 30 days, and each value to the newest day
+ * of the keys naming it — the invariant every write keeps (a value's day is
+ * at least that of each key naming it).
+ */
+function age(path: string, keep: string[] = []): void {
+  const db = new Database(path);
+  const kept = keep.map((key) => Buffer.from(key, "hex"));
+  db.query(
+    `UPDATE keys SET used = used - 30 WHERE key NOT IN (${kept.map(() => "?").join(",")})`,
+  ).run(...kept);
+  db.exec(
+    "UPDATE vals SET used = (SELECT max(used) FROM keys WHERE keys.val = vals.id)",
+  );
+  db.close();
+}
+
+/** Every value's text, as the store holds it. */
+function storedValues(path: string): string[] {
+  const db = new Database(path, { readonly: true });
+  const rows = db.query("SELECT body FROM vals ORDER BY id").all() as {
+    body: Uint8Array;
+  }[];
+  db.close();
+  return rows.map((r) =>
+    Buffer.from(Bun.zstdDecompressSync(r.body)).toString("utf8"),
+  );
+}
+
 test("records survive a reopen, per table, and a present key keeps its value", async () => {
   const path = join(dir, "records.sqlite");
   const a = openRecordStore({ path });
@@ -96,12 +125,10 @@ test("the reclaim drops unread keys, then the values only they named", async () 
   ]);
   s.putMany("facet", [[k("old-facet"), "only-old-facet"]]);
   await s.flush();
-  const db = new Database(path);
-  db.query("UPDATE keys SET used = used - 30 WHERE key != ?").run(
-    Buffer.from(k("new"), "hex"),
-  );
+  age(path, [k("new")]);
   // An open reclaims nothing: that is the daily job's, off every open's path.
   openRecordStore({ path });
+  const db = new Database(path, { readonly: true });
   expect(db.query("SELECT count(*) AS n FROM keys").get()).toEqual({ n: 4 });
   db.close();
   expect(await reclaimRecordStore({ path })).toMatchObject({
@@ -114,10 +141,8 @@ test("the reclaim drops unread keys, then the values only they named", async () 
     ...(await again.getMany("file", [k("old"), k("shared-old"), k("new")])),
   ]).toEqual([[k("new"), "shared"]]);
   expect((await again.getMany("facet", [k("old-facet")])).size).toBe(0);
+  expect(storedValues(path)).toEqual(["shared"]);
   const check = new Database(path, { readonly: true });
-  expect(check.query("SELECT value FROM vals").all()).toEqual([
-    { value: "shared" },
-  ]);
   // Its marker, read by a checkout still on the code that reclaimed inside
   // an open.
   expect(check.query("SELECT name FROM meta").all()).toEqual([
@@ -137,9 +162,7 @@ test("a reclaim pages through more rows than one page holds", async () => {
     ),
   );
   await s.flush();
-  const db = new Database(path);
-  db.exec("UPDATE keys SET used = used - 30");
-  db.close();
+  age(path);
   const r = await reclaimRecordStore({ path });
   expect(r).toMatchObject({
     keysRead: 12_345,
@@ -166,9 +189,7 @@ test("a reclaim of a file without incremental auto_vacuum ends, keeping its page
     Array.from({ length: 3_000 }, (_, i) => [k(`n${i}`), `v${i}`] as const),
   );
   await s.flush();
-  const db = new Database(path);
-  db.exec("UPDATE keys SET used = used - 30");
-  db.close();
+  age(path);
   expect(await reclaimRecordStore({ path })).toMatchObject({
     keysDeleted: 3_000,
     valuesDeleted: 3_000,
@@ -265,7 +286,7 @@ test("a bounded write commits once it has held the lock its budget, and every it
   const visible = (): number =>
     (other.query("SELECT count(*) AS n FROM keys").get() as { n: number }).n;
   const insert = db.query(
-    "INSERT INTO keys (tbl, key, vid, used) VALUES ('file', ?, x'00', 0)",
+    "INSERT INTO keys (tbl, key, val, used) VALUES ('file', ?, 0, 0)",
   );
   // Each item costs ITEM_MS on the clock writeBounded reads: the rule is
   // tested, not how long the host takes to sleep.
@@ -389,4 +410,92 @@ test("a write a lock outside the line keeps busy is lost, as an outcome — neve
   expect((await openRecordStore({ path }).getMany("file", [k("x")])).size).toBe(
     0,
   );
+});
+
+test("a key written or read since a value went stale keeps the value through the reclaim", async () => {
+  const path = join(dir, "reclaim-revived.sqlite");
+  const s = openRecordStore({ path });
+  s.putMany("file", [
+    [k("written-old"), "written"],
+    [k("read-old"), "read"],
+  ]);
+  await s.flush();
+  age(path);
+  // Another build stores a new key naming one stale value, and reads the
+  // other's key: each moves its value's day with it.
+  const writer = openRecordStore({ path });
+  writer.putMany("facet", [[k("written-new"), "written"]]);
+  await writer.flush();
+  const reader = openRecordStore({ path });
+  expect(
+    (await reader.getMany("file", [k("read-old")])).get(k("read-old")),
+  ).toBe("read");
+  // The refresh is written off the read's path: wait for it to land.
+  const db = new Database(path, { readonly: true });
+  const day = (key: string) =>
+    db
+      .query(
+        "SELECT k.used AS key, v.used AS value FROM keys k JOIN vals v ON v.id = k.val WHERE k.key = ?",
+      )
+      .get(Buffer.from(key, "hex")) as { key: number; value: number };
+  const fresh = day(k("written-new")).key;
+  for (let i = 0; i < 200 && day(k("read-old")).value < fresh; i++)
+    await Bun.sleep(10);
+  expect(day(k("read-old"))).toEqual({ key: fresh, value: fresh });
+  expect(day(k("written-new"))).toEqual({ key: fresh, value: fresh });
+  db.close();
+  expect(await reclaimRecordStore({ path })).toMatchObject({
+    keysDeleted: 1,
+    valuesDeleted: 0,
+  });
+  const after = openRecordStore({ path });
+  expect([
+    ...(await after.getMany("file", [k("written-old"), k("read-old")])),
+  ]).toEqual([[k("read-old"), "read"]]);
+  expect(
+    (await after.getMany("facet", [k("written-new")])).get(k("written-new")),
+  ).toBe("written");
+});
+
+test("a key whose value is gone is written again, not dropped as stored", async () => {
+  const path = join(dir, "dangling.sqlite");
+  const s = openRecordStore({ path });
+  s.putMany("file", [[k("d"), "v"]]);
+  await s.flush();
+  const db = new Database(path);
+  db.exec("DELETE FROM vals");
+  db.close();
+  const again = openRecordStore({ path });
+  // A new value never takes the gone one's id: the key reads as a miss,
+  // never as another record's value.
+  again.putMany("file", [[k("other"), "other"]]);
+  await again.flush();
+  expect((await again.getMany("file", [k("d")])).size).toBe(0);
+  again.putMany("file", [[k("d"), "v"]]);
+  await again.flush();
+  expect(
+    (await openRecordStore({ path }).getMany("file", [k("d")])).get(k("d")),
+  ).toBe("v");
+});
+
+test("a value reclaimed and put again is a fresh row, read under its key", async () => {
+  const path = join(dir, "reclaim-reput.sqlite");
+  const s = openRecordStore({ path });
+  s.putMany("file", [[k("r"), "same"]]);
+  await s.flush();
+  age(path);
+  expect(await reclaimRecordStore({ path })).toMatchObject({
+    keysDeleted: 1,
+    valuesDeleted: 1,
+  });
+  const writer = openRecordStore({ path });
+  writer.putMany("file", [[k("r"), "same"]]);
+  await writer.flush();
+  expect(
+    (await openRecordStore({ path }).getMany("file", [k("r")])).get(k("r")),
+  ).toBe("same");
+  const db = new Database(path, { readonly: true });
+  // Ids are never reused: the fresh row is the second.
+  expect(db.query("SELECT id FROM vals").all()).toEqual([{ id: 2 }]);
+  db.close();
 });

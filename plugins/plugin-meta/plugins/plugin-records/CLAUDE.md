@@ -81,14 +81,26 @@ plugin) therefore spreads its FACET misses over worker threads
 `core` defines `RecordStore` (batched; async reads, synchronous writes) and a per-process memory
 store (`currentRecordStore()` without an install). The build, `regen-generated`
 and **every check pass** install the shared one, `cli`'s `openRecordStore()`:
-one SQLite file (`<data root>/cache/plugin-records/records.v3.sqlite`, WAL), so
+one SQLite file (`<data root>/cache/plugin-records/records.v4.sqlite`, WAL), so
 a pass computes only the records no checkout has made yet.
 
+- **The layout is sized for a store larger than the page cache.** A lookup is
+  one probe of `keys` (`tbl`, `key` → `val`, `used`; WITHOUT ROWID, ~50 B a
+  row) and one of `vals` by its integer rowid (`id`, `vid` UNIQUE, `used`,
+  `body` = the value zstd-compressed). Measured on the 24M-row v2 store
+  (`research/2026-11-12-global-plugin-records-store-layout.md`), the layout
+  before it was 8.8 GB, half of it values: `vals` was a WITHOUT ROWID table
+  keyed by the value's hash, whose interior pages hold whole ~1 KB rows (8
+  levels deep, a chain of overflow pages per value), and a `keys_vid` index —
+  a quarter of the file, and a third B-tree under every insert — existed only
+  so the reclaim could tell a value no key names. Never put large rows in a
+  WITHOUT ROWID table, and never index the keys by value: the reclaim has
+  `vals.used` (Reclaim, below).
 - **Values are content-addressed too.** A key moves whenever anything in its
   producer's code closure moves, while the value almost never does (measured
   2026-11-05: 8.7M rows held 30k distinct values — 99% duplicates, 4.4 GB in
-  two days). A key row names its value by the value's sha256, and each
-  distinct value is stored once.
+  two days). Each distinct value is stored once, found by its sha256
+  (`vid`) when written, and a key row names it by its rowid.
 - **No read holds the caller's thread.** `getMany` is async: lookups run
   on reader threads (`bin/record-reader.ts`, each its own connection, lazy,
   unref-ed when idle); what the process holds or read answers in-process, and
@@ -171,19 +183,25 @@ a pass computes only the records no checkout has made yet.
     through the report outbox. The caller's verdict is untouched;
   - **one file version per write protocol.** A writer on code before the
     line takes the lock with no ticket (and one before the time bound held it
-    44–58 s a chunk), so the line came with `records.v3.sqlite`: older code
-    writes `records.v2.sqlite`, which the reclaim unlinks. A future change to
-    how writers take the lock bumps the file again.
+    44–58 s a chunk), so the line came with `records.v3.sqlite` (older code
+    writes `records.v2.sqlite`), and the layout above with `records.v4.sqlite`
+    (older code writes v3); the reclaim unlinks both. A future change to how
+    writers take the lock, or to the schema, bumps the file again.
 - **Reclaim** is main's daily `plugin-records.reclaim` job (the `reclaim`
   sub-plugin, a supervised `./equin plugin-records-reclaim`), never an open:
   key rows unread for 7 days are deleted a page at a time (read in key order
-  with no lock; each row and the value only it named in the same transaction,
-  through `writeBounded`; a row read since is kept), then the freed pages are
+  with no lock, through `writeBounded`; a row read since is kept), then the
+  values unread for 7 days the same way. That is safe with no index of keys by
+  value because a value's `used` is at least that of every key naming it:
+  every write of a key and every last-read refresh moves both in one
+  transaction, so once the stale keys are gone a stale value is named by none
+  (and one named again meanwhile fails the re-check). Then the freed pages are
   returned in steps sized to hold the lock ~`HOLD_MS`, each transaction taking
   its own turn in the writer line (so a build's write goes next, not after
   the whole reclaim) — on a file created with `auto_vacuum = INCREMENTAL`; any other keeps them
   for reuse, and the run says so. The earlier stores' files
-  (`records.sqlite`, `records.v2.sqlite`) are unlinked by the same pass.
+  (`records.sqlite`, `records.v2.sqlite`, `records.v3.sqlite`) are unlinked by
+  the same pass.
 
 ## Every input in the key — and a verifier
 
