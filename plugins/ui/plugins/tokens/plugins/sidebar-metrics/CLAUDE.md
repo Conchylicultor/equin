@@ -64,7 +64,6 @@ agent manager's conversation rows and view switcher) sizes it with the same
     - `primitives/app-shell`
     - `primitives/css/ui-kit`
     - `primitives/data-view/view-core`
-    - `reorder/node-types/header`
     - `ui/sidebar-framing/floating`
     - `ui/sidebar-framing/flush`
     - `ui/sidebar-framing/inset`

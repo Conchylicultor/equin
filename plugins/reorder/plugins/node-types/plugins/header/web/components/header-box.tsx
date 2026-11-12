@@ -1,8 +1,6 @@
 import {
   cn,
   SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
   useInSidebarPanel,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { ReactNode } from "react";
@@ -15,6 +13,7 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
+import { SectionHeaderRow } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 
 type HeaderPayload = { label?: string; collapsed?: boolean };
@@ -41,31 +40,29 @@ export function HeaderBox({
   children: ReactNode;
 }) {
   const inSidebar = useInSidebarPanel();
-  const { open, triggerProps, contentProps } = useCollapsible({
+  const { open, toggle, triggerProps, contentProps } = useCollapsible({
     open: !(payload.collapsed ?? false),
     onOpenChange: (next) => onPatch({ collapsed: !next }),
   });
 
-  // In a sidebar panel the group is one of the sidebar's own rows — the
-  // chevron in the icon column, the label muted — and its members fold in
-  // below at the sidebar's rail, with no frame: a "More" that tucks
-  // secondary nav entries away, not a card in the middle of the list.
+  // In a sidebar panel the group is a QUIET section head, not one more nav
+  // row: the label alone, set as the sidebar's own group heads ("Queue 6"),
+  // starting on the rows' rail, its chevron trailing it and shown on hover or
+  // while the group is shut. Its members fold in below with no frame — a
+  // "More" that tucks secondary nav entries away.
   if (inSidebar) {
     return (
       <>
         <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              {...triggerProps}
-              className="text-sidebar-foreground/70"
-            >
-              <CollapsibleChevron
-                open={open}
-                className="size-sidebar-icon text-sidebar-icon group-hover/menu-button:text-current"
-              />
-              <span>{payload.label || "Group"}</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
+          <SectionHeaderRow
+            variant="group"
+            disclosure="trailing"
+            open={open}
+            onClick={toggle}
+            aria-controls={triggerProps["aria-controls"]}
+          >
+            {payload.label || "Group"}
+          </SectionHeaderRow>
         </SidebarMenu>
         <FoldMotion {...contentProps}>{children}</FoldMotion>
       </>

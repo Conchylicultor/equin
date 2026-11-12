@@ -37,7 +37,6 @@
     - `primitives/app-shell`
     - `primitives/css/theme-boundary`
     - `primitives/css/ui-kit`
-    - `reorder/node-types/header`
   - Imported by:
     - `apps-core/chrome-theme`
     - `apps/agent-manager/shell`

@@ -222,7 +222,7 @@ genuine transient-chrome list escapes with
     - `ui/tokens/color-palette` ×6
     - `ui/tokens/density` ×4
     - `ui/tokens/shape` ×2
-  - Imported by: 69 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 70 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×15
     - `ui` ×14
     - `page` ×11
@@ -230,12 +230,12 @@ genuine transient-chrome list escapes with
     - `conversations` ×6
     - `plugin-meta` ×3
     - `tasks` ×3
+    - `reorder` ×2
     - `shell` ×2
     - `code-explorer/file-resolve`
     - `config_v2/settings`
     - `debug/trace/pane`
     - `menu-bar`
-    - `reorder/editor`
     - `search/quick-find`
 - Exemptions:
   - Exempts itself from:
