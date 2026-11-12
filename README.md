@@ -4,7 +4,7 @@ A personal self-evolving operating system for the agentic era.
 
 <a href="https://equin.ai/about"><img width="1920" height="1080" alt="equin, the showcase film — watch it on equin.ai" src="https://github.com/Conchylicultor/equin/releases/download/website-media/equin-readme-thumbnail.jpg" /></a>
 
-https://equin.ai/ (website under construction)
+https://equin.ai/
 
 ## What is equin?
 
