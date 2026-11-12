@@ -41040,7 +41040,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `withForegroundPriority`
     - **`string-hash`** — Portable string hashes in plain JS (no node:crypto, no Bun.hash), so every host — the Bun server, central and a browser page — computes the same value: hash53 (cyrb53, a 53-bit number, optionally seeded), hashHex (two seeded cyrb53s, ~106 bits as hex), hash64 (a 64-bit bigint), sha256Hex (a synchronous SHA-256, identical to node:crypto's hex digest), createSha256 (the same SHA-256, incremental over strings and bytes) and sha1Hex (SHA-1 for values already stored as one).
       - Cross-plugin:
-        - Imported by: 43 plugins — full list in [`plugins/packages/plugins/string-hash/REFERENCE.md`](../plugins/packages/plugins/string-hash/REFERENCE.md)
+        - Imported by: 44 plugins — full list in [`plugins/packages/plugins/string-hash/REFERENCE.md`](../plugins/packages/plugins/string-hash/REFERENCE.md)
           - `apps` ×13
           - `database` ×5
           - `network` ×5
@@ -41053,6 +41053,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `plugin-meta` ×2
           - `map`
           - `menu-bar`
+          - `primitives/dom/web-storage`
           - `tasks/orchestration/watch`
       - Core:
         - Exports (types): `Sha256Hasher`
@@ -41241,6 +41242,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live/live-state`
           - `network/live/query-resource`
           - `packages/list-bound`
+          - `primitives/dom/web-storage`
           - `ui/icons/saved-names`
       - Exemptions:
         - Exempts itself from: `zod-introspect/no-zod-internals` — `core/internal`, `lint` (sanctioned)

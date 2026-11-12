@@ -218,7 +218,7 @@ describe("defineStore", () => {
     expect(seen).toHaveLength(1);
   });
 
-  it("an entry another schema wrote is left in place, unreported (a tab on another build)", () => {
+  it("an entry another schema wrote is left in place and announced once (a tab on another build)", () => {
     const seen = failures();
     const o = owner("skew");
     // What a newer build's schema wrote: an enum value this build lacks.
@@ -240,7 +240,18 @@ describe("defineStore", () => {
     expect(s.read("b")).toEqual({ kind: "none", why: "other-schema" });
     expect(JSON.parse(local.getItem(`s:${o}:a`)!)).toEqual(newer);
     expect(JSON.parse(local.getItem(`s:${o}:b`)!)).toEqual(unstamped);
-    expect(seen).toEqual([]);
+    // Announced for the reports pipeline to judge — once per entry, however
+    // often it is read again.
+    expect(s.read("a")).toEqual({ kind: "none", why: "other-schema" });
+    expect(seen).toEqual([
+      expect.objectContaining({ owner: o, reason: "other-schema" }),
+      expect.objectContaining({ owner: o, reason: "other-schema" }),
+    ]);
+    // Another build rewrites it: a new value, announced again.
+    local.setItem(`s:${o}:a`, JSON.stringify({ ...newer, v: "d" }));
+    s.read("a");
+    expect(seen).toHaveLength(3);
+    expect(storageUsage().find((u) => u.owner === o)?.refusedByBrowser).toBe(0);
     // A readable entry from another schema is still read.
     local.setItem(
       `s:${o}:c`,

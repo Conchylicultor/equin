@@ -88,9 +88,14 @@ Tests outside React use `storageScopeOf(id)` from `web/testing`.
   — our bytes failing our schema, a bug — dropped and reported; written under
   ANOTHER schema (a tab on an older or newer build — an enum value added, a
   field renamed) it reads as `{kind:"none", why:"other-schema"}` and is left
-  in place, unreported, for the builds that can read it. An entry from before
-  stamps existed has no `s`: its writer is unknown, so it counts as another
-  schema's. (Before stamps, a stale tab read a newer build's entry as corrupt
+  in place for the builds that can read it — and announced (once per entry
+  per page load) as an `other-schema` failure. Which build is behind it the
+  tab cannot know (it does not know whether it is the outdated one); the
+  reports pipeline does: `reports/web-storage` files it under its own source,
+  which the engine judges by the tab's bundle — from an outdated tab it is
+  version skew (muted), from a current tab an older schema's entry this build
+  neither reads nor migrates (loud). An entry from before stamps existed has
+  no `s`: its writer is unknown, so it counts as another schema's. (Before stamps, a stale tab read a newer build's entry as corrupt
   and deleted it for every tab — 2026-11-11, `demo-scope.host-generation`.)
 - **Accounting is O(1) per write.** An owner's keys are scanned once, on first
   touch — that scan is also the TTL sweep and the legacy migration — then kept

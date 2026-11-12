@@ -51,8 +51,10 @@ export interface StoreSpec<T> {
   /**
    * Decodes a stored value. Every entry is stamped with the schema that wrote
    * it: one stamped with this schema that fails it is corrupt (dropped,
-   * reported); one another schema wrote (a tab on another build) is left alone
-   * — read as `other-schema`, never dropped.
+   * reported); one another schema wrote (a tab on another build) and this
+   * one cannot read is left alone — read as `other-schema`, never dropped,
+   * and announced as an `other-schema` failure for the reports pipeline to
+   * judge (skew from a stale tab; an unmigrated old schema from a current one).
    */
   schema: z.ZodType<T>;
   /**
@@ -94,7 +96,8 @@ export type StoreRead<T> =
         /**
          * Written under ANOTHER schema of this owner (a tab on an older or newer
          * build), and this one cannot read it: left in place for the builds
-         * that can — never dropped, never reported.
+         * that can — never dropped. Announced once per entry per page load
+         * (`reason: "other-schema"`).
          */
         | "other-schema"
         | "unavailable";
@@ -116,7 +119,16 @@ export interface StorageFailure {
   owner: string;
   label: string;
   area: StorageArea;
-  reason: WriteFailureReason | "corrupt";
+  /**
+   * A refused write, or an entry this tab cannot read: `corrupt` (its own
+   * schema wrote it — a bug in this code) or `other-schema` (another build's
+   * schema wrote it). Which build is behind an `other-schema` is not knowable
+   * here — the tab does not know whether it is the outdated one; the reports
+   * pipeline does (the bundle's graph against the one the server serves):
+   * from an outdated tab it is version skew, from a current one an older
+   * schema's entry this build neither reads nor migrates.
+   */
+  reason: WriteFailureReason | "corrupt" | "other-schema";
   /** For `quota` / `blocked`, the DOMException's name. */
   error?: string;
 }
@@ -223,6 +235,11 @@ interface OwnerState<T> {
   spec: StoreSpec<T>;
   /** `schemaStamp(spec.schema)`, computed on first need. */
   stamp: string | null;
+  /**
+   * `<key>\0<hash of its bytes>` of every other-schema entry announced in this page load: a
+   * kept entry is read again on every render, and announced once.
+   */
+  announcedOtherSchema: Set<string>;
   cap: number;
   /**
    * The most the page's own scope may hold: the cap less the scopes' reserve
@@ -275,7 +292,8 @@ function fail(
   f: Omit<StorageFailure, "owner" | "label" | "area">,
 ): void {
   if (f.reason === "over-cap") state.refusedOverCap++;
-  else if (f.reason !== "corrupt") state.refusedByBrowser++;
+  else if (f.reason !== "corrupt" && f.reason !== "other-schema")
+    state.refusedByBrowser++;
   const failure: StorageFailure = {
     owner: state.spec.owner,
     label: state.spec.label,
@@ -562,6 +580,7 @@ export function defineStore<T>(spec: StoreSpec<T>): Store<T> | ScopedStore<T> {
   const state: OwnerState<T> = {
     spec,
     stamp: null,
+    announcedOtherSchema: new Set(),
     cap,
     pageCap: spec.pageWide ? cap : cap - Math.floor(cap * NESTED_SHARE),
     prefix: ownerPrefix(spec.owner),
@@ -706,8 +725,14 @@ function bind<T>(state: OwnerState<T>, scope: string | null): Store<T> {
       // A valid envelope from another schema: a tab on another build wrote
       // what that build reads. Not ours to judge, so never ours to drop — the
       // user's value stays for every tab that can read it.
-      if (env && env.s !== schemaStamp(state))
+      if (env && env.s !== schemaStamp(state)) {
+        const seen = `${k}\0${hash53(raw)}`;
+        if (!state.announcedOtherSchema.has(seen)) {
+          state.announcedOtherSchema.add(seen);
+          fail(state, { reason: "other-schema" });
+        }
         return { kind: "none", why: "other-schema" };
+      }
       // Our own schema wrote it (or no build could have: not an envelope):
       // our bytes failing our schema, a bug — dropped and reported.
       removeKey(state, k);

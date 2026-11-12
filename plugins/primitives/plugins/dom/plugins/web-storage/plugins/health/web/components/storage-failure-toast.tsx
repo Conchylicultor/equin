@@ -18,6 +18,7 @@ function describe(f: StorageFailure): string {
     case "blocked":
       return `Browser storage refused the write${f.error ? ` (${f.error})` : ""}: what changes now is lost on reload.`;
     case "corrupt":
+    case "other-schema":
       return "";
   }
 }
@@ -31,7 +32,12 @@ export function StorageFailureToast() {
   useEffect(
     () =>
       onStorageFailure((f) => {
-        if (f.reason === "corrupt" || warned.has(f.owner)) return;
+        if (
+          f.reason === "corrupt" ||
+          f.reason === "other-schema" ||
+          warned.has(f.owner)
+        )
+          return;
         warned.add(f.owner);
         showToast({
           title: `${f.label} are not being saved`,

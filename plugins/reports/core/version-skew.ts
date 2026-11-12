@@ -10,7 +10,8 @@ import type { CLIENT_REPORT_SOURCES } from "./sources";
  * running an outdated bundle can explain it.
  *
  * - `load` — the tab loading what the server serves NOW with the bundle it
- *   booted: a chunk of its graph, the boot snapshot's values. Its graph and the server's no longer match, so the outdated
+ *   booted: a chunk of its graph, the boot snapshot's values, an entry another
+ *   build's schema stored. Its graph and the server's no longer match, so the outdated
  *   bundle may be the whole cause, and reloading the tab the whole fix. The
  *   ONLY subject version skew can explain.
  * - `page` — the tab's own code doing something by itself: an exception, a
@@ -73,6 +74,10 @@ export const CLIENT_REPORT_SUBJECT: Record<
   // schema wrote failing that schema: web-storage leaves another build's
   // entries alone (stamped with their writer's schema), so neither is skew.
   "client-storage": "page",
+  // Reading what another build stored: the subject skew can explain. From a
+  // current tab it is no skew (`staleOrigin` cleared) — an older schema's
+  // entry this build cannot read, loud.
+  "client-storage-other-schema": "load",
 };
 
 /**

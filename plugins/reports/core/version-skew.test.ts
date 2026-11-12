@@ -22,9 +22,22 @@ describe("fromOutdatedBundle", () => {
 
 describe("versionSkewMayExplain", () => {
   test("an outdated tab failing to load what the server serves now: skew may explain it", () => {
-    for (const source of ["plugin-load", "boot-snapshot"]) {
+    for (const source of [
+      "plugin-load",
+      "boot-snapshot",
+      "client-storage-other-schema",
+    ]) {
       expect(versionSkewMayExplain({ source, staleOrigin: true })).toBe(true);
     }
+  });
+
+  test("a CURRENT tab unable to read an older schema's stored entry is never skew", () => {
+    expect(
+      versionSkewMayExplain({
+        source: "client-storage-other-schema",
+        staleOrigin: false,
+      }),
+    ).toBe(false);
   });
 
   test("an outdated tab dropping a stored entry it cannot read is its own code destroying data, not skew (2026-11-12: demo-scope.host-generation dropped by a stale tab)", () => {
