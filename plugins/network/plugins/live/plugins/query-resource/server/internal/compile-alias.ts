@@ -50,7 +50,7 @@ import {
   checkSetBudget,
 } from "@plugins/network/plugins/live/plugins/query-resource/core";
 import { routedReads } from "./arm-plan";
-import { canonicalTextOf } from "./canonical-text";
+import { canonicalTextOf, exactIdOf } from "./canonical-text";
 import {
   followablePoint,
   followableScope,
@@ -846,7 +846,16 @@ export function compileAllCollection<
       idsOf: (params) => point.decode(params),
       // The rows of the ids alone (`scopedSql(ids, …, null)` reads no
       // param), so every tuple is one family (resource-runtime's `PointBatch`).
-      batch: { familyOf: () => "", maxIds: point.maxIds },
+      batch: {
+        familyOf: () => "",
+        maxIds: point.maxIds,
+        // A composite id is composed in JS from its parts, which the batch
+        // does not check one by one: an absent one is re-read alone.
+        exactId:
+          hostPk === undefined
+            ? () => false
+            : exactIdOf(canonicalSqlType(hostPk.getSQLType())),
+      },
     },
   };
   const rows = {

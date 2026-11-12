@@ -42,13 +42,18 @@ import { tapSharedSocket } from "@plugins/primitives/plugins/networking/e2e";
 import type { SocketTap } from "@plugins/primitives/plugins/networking/e2e";
 import { ProfilingDataSchema } from "@plugins/debug/plugins/profiling/plugins/boot/core";
 import type { ProfilingData } from "@plugins/debug/plugins/profiling/plugins/boot/core";
-import { runtimeProfileSchema } from "@plugins/debug/plugins/profiling/plugins/runtime/core";
+import {
+  FLIGHT_WINDOW_COMPLETED_MAX,
+  flightWindowResponseSchema,
+  runtimeProfileSchema,
+} from "@plugins/debug/plugins/profiling/plugins/runtime/core";
 import type { Page } from "playwright";
 import { writeFileSync } from "node:fs";
 import { loadavg } from "node:os";
 import type { z } from "zod";
 
 type RuntimeProfile = z.infer<typeof runtimeProfileSchema>;
+type FlightWindow = z.infer<typeof flightWindowResponseSchema>;
 
 const WS = "/ws/notifications";
 const HANDOFF = arg("handoff", "off");
@@ -232,6 +237,106 @@ async function runtimeProfile(): Promise<RuntimeProfile> {
   return runtimeProfileSchema.parse(await res.json());
 }
 
+/** The successor's recent spans (in flight and completed), the last `windowMs`. */
+async function flightWindow(windowMs: number): Promise<FlightWindow> {
+  const ms = Math.min(120_000, Math.max(1_000, Math.ceil(windowMs)));
+  const res = await agentFetch(
+    `/api/debug/profiling/flight-window?windowMs=${ms}&maxCompleted=${FLIGHT_WINDOW_COMPLETED_MAX}`,
+  );
+  if (!res.ok)
+    throw new Error(`GET /api/debug/profiling/flight-window → ${res.status}`);
+  return flightWindowResponseSchema.parse(await res.json());
+}
+
+/**
+ * The replay's read path on the server, per key: every `sub` origin span (a
+ * replayed sub's read — the flight it started or joined; ≥ 5 ms, the ring's
+ * floor) that started after the first socket closed, with its wall split into
+ * gate waits by layer, child work (the loader) and own work, and where it sat
+ * on the wall clock: from the replay leaving the tab to the span's start (the
+ * frame's transit plus everything the server's thread ran before handling it)
+ * and from the span's end to the answer reaching the tab (the send and the
+ * thread's backlog after the read).
+ */
+interface SubSplit {
+  key: string;
+  n: number;
+  wallMax: number;
+  wallSum: number;
+  selfSum: number;
+  childSum: number;
+  waits: Record<string, number>;
+  /** Replay sent (earliest tab) → span start, ms: mean and max. */
+  startDelaySum: number;
+  startDelayMax: number;
+}
+
+function splitSubs(
+  fw: FlightWindow,
+  from: number,
+  replayAt: number,
+): SubSplit[] {
+  const toWall = (t: number) =>
+    Date.parse(fw.wallAnchor.wallTime) + (t - fw.wallAnchor.atMs);
+  const by = new Map<string, SubSplit>();
+  for (const s of fw.window.completed) {
+    if (s.kind !== "sub" || s.t1 === null) continue;
+    const t0 = toWall(s.t0);
+    if (t0 < from) continue;
+    const k =
+      by.get(s.label) ??
+      ({
+        key: s.label,
+        n: 0,
+        wallMax: 0,
+        wallSum: 0,
+        selfSum: 0,
+        childSum: 0,
+        waits: {},
+        startDelaySum: 0,
+        startDelayMax: 0,
+      } satisfies SubSplit);
+    const wall = s.t1 - s.t0;
+    k.n++;
+    k.wallMax = Math.max(k.wallMax, wall);
+    k.wallSum += wall;
+    k.selfSum += s.selfMs;
+    k.childSum += s.childMs;
+    for (const [layer, ms] of Object.entries(s.waits ?? {}))
+      k.waits[layer] = (k.waits[layer] ?? 0) + ms;
+    const delay = t0 - replayAt;
+    k.startDelaySum += delay;
+    k.startDelayMax = Math.max(k.startDelayMax, delay);
+    by.set(s.label, k);
+  }
+  return [...by.values()];
+}
+
+/**
+ * The event-loop stalls the successor's loop probe registered between the
+ * replay leaving the first tab and the last tab settling, as wall offsets
+ * from the replay: how long its thread ran one piece of work while every
+ * replayed read waited to be handled or answered.
+ */
+function stallsDuring(
+  fw: FlightWindow,
+  from: number,
+  to: number,
+): { coveredMs: number; stalls: Array<{ at: number; ms: number }> } {
+  const toWall = (t: number) =>
+    Date.parse(fw.wallAnchor.wallTime) + (t - fw.wallAnchor.atMs);
+  const stalls: Array<{ at: number; ms: number }> = [];
+  let coveredMs = 0;
+  for (const s of fw.loopStalls) {
+    const t0 = Math.max(toWall(s.t0), from);
+    const t1 = Math.min(toWall(s.t1), to);
+    if (t1 <= t0) continue;
+    coveredMs += t1 - t0;
+    stalls.push({ at: Math.round(t0 - from), ms: Math.round(t1 - t0) });
+  }
+  return { coveredMs, stalls };
+}
+
 /** Waits until the serving process is a new one and its settled phase ended. */
 async function awaitSettledBoot(
   notStartedBefore: number,
@@ -263,6 +368,10 @@ interface IterationResult {
   cpu: Record<string, number | null>;
   boot: ProfilingData;
   runtime: RuntimeProfile;
+  subs: SubSplit[];
+  loop: { coveredMs: number; stalls: Array<{ at: number; ms: number }> };
+  /** The raw flight window read right after the tabs settled (for `--out`). */
+  flight: FlightWindow;
   loadavg: number[];
 }
 
@@ -303,6 +412,24 @@ function printIteration(it: IterationResult): void {
     r.note(
       `    ${k.padEnd(48)} ${fmt(v.max).padStart(6)} / ${fmt(v.sum / v.n).padStart(6)}  ×${v.n}`,
     );
+  r.note(
+    "  replay read path on the server, per key (sub spans ≥5 ms after the socket closed): n, replay→span start mean/max, span wall mean/max, self / child / waits by layer (sums)",
+  );
+  for (const k of [...it.subs]
+    .sort((a, b) => b.startDelayMax + b.wallMax - (a.startDelayMax + a.wallMax))
+    .slice(0, 20)) {
+    const waits = Object.entries(k.waits)
+      .filter(([, v]) => v > 0)
+      .sort((a, b) => b[1] - a[1])
+      .map(([l, v]) => `${l}=${Math.round(v)}`)
+      .join(" ");
+    r.note(
+      `    ${k.key.padEnd(44)} ×${String(k.n).padStart(3)}  start ${fmt(k.startDelaySum / k.n).padStart(5)}/${fmt(k.startDelayMax).padStart(5)}  wall ${fmt(k.wallSum / k.n).padStart(5)}/${fmt(k.wallMax).padStart(5)}  self ${fmt(k.selfSum)} child ${fmt(k.childSum)} ${waits}`,
+    );
+  }
+  r.note(
+    `  event-loop stalls between the first replay and the last tab settled: ${fmt(it.loop.coveredMs)} ms in ${it.loop.stalls.length} (@offset from replay:ms) ${it.loop.stalls.map((x) => `@${x.at}:${x.ms}`).join(" ")}`,
+  );
   r.note("  CPU (process user+system ms, from the successor's checkpoints):");
   for (const [name, v] of Object.entries(it.cpu))
     r.note(`    ${name.padEnd(40)} ${fmt(v)}`);
@@ -436,6 +563,16 @@ await withBrowser(async (h) => {
     // Read right away: the runtime profile counts from process start, and
     // what runs after the tabs settled is not the storm.
     const runtime = await runtimeProfile();
+    const firstClosed = Math.min(
+      ...runs.map((x) => x.closedAt ?? Number.POSITIVE_INFINITY),
+    );
+    const firstReplay = Math.min(
+      ...runs.map((x) => x.replayAt ?? Number.POSITIVE_INFINITY),
+    );
+    const fw = await flightWindow(Date.now() - firstClosed + 2_000);
+    const subs = splitSubs(fw, firstClosed, firstReplay);
+    const lastSettled = Math.max(...runs.map((x) => x.settledAt ?? 0));
+    const loop = stallsDuring(fw, firstReplay, lastSettled);
     const bootNow = await bootProfile();
     const cpuNowMs = bootNow.cpuMsNow ?? null;
     // Then let the successor finish its post-ready work before the next restart.
@@ -507,6 +644,9 @@ await withBrowser(async (h) => {
       cpu,
       boot: settledBoot,
       runtime,
+      subs,
+      loop,
+      flight: fw,
       loadavg: loadavg(),
     };
     results.push(it);
@@ -574,6 +714,7 @@ await withBrowser(async (h) => {
       it.runtime.gates.find((g) => g.layer === "background-acquire")?.totalMs ??
       0,
   );
+  row("event-loop stalls, replay → settled (ms)", (it) => it.loop.coveredMs);
   row("CPU process start → onReadyBlocking done", (it) =>
     it.cpu["boot-start → onReadyBlocking done"] !== null &&
     it.cpu["process start → boot-start"] !== null

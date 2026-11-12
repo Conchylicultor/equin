@@ -48,6 +48,9 @@ function defineRows(
   h: Harness,
   o: { maxIds?: number; batch?: boolean; fail?: boolean } = {},
 ) {
+  // The database's spelling rule: an id matches the row named by its
+  // lower-case spelling (as a uuid column matches an upper-case uuid), so
+  // only a lower-case id is the key a row is served under.
   const calls: Array<{ params: string; ids: readonly string[] | null }> = [];
   defineRoutedTable<Row>(h, {
     key: "rows",
@@ -58,11 +61,19 @@ function defineRows(
       if (o.fail) throw new Error("boom");
       const ids = ctx?.affectedIds ?? (params.ids ?? "").split(",");
       // `missing` names no row, as an unknown id reads.
-      return ids.filter((id) => id !== "missing").map((id) => ({ id }));
+      return ids
+        .filter((id) => id.toLowerCase() !== "missing")
+        .map((id) => ({ id: id.toLowerCase() }));
     },
     ...(o.batch === false
       ? {}
-      : { batch: { familyOf: () => "", maxIds: o.maxIds ?? 3 } }),
+      : {
+          batch: {
+            familyOf: () => "",
+            maxIds: o.maxIds ?? 3,
+            exactId: (id: string) => id === id.toLowerCase(),
+          },
+        }),
   });
   return calls;
 }
@@ -104,7 +115,7 @@ describe("point batch: reads queued together load as one", () => {
     expect(h.runtime.readGateStats()).toMatchObject({ active: 0, queued: 0 });
   });
 
-  test("a member an id of which named no row is read alone, in the same slot", async () => {
+  test("an id under its own spelling that named no row is absent: answered from the batch, no re-read", async () => {
     const h = createHarness();
     const gate = fillGate(h);
     const calls = defineRows(h);
@@ -115,14 +126,36 @@ describe("point batch: reads queued together load as one", () => {
     expect(h.runtime.readGateStats().queued).toBe(1);
     gate.ctl.release();
     await settle();
-    // An absent id and one the database spells differently look alike in
-    // the union's rows: only the member's own read can tell them apart.
-    expect(calls).toEqual([
-      { params: "a", ids: ["a", "missing"] },
-      { params: "missing", ids: null },
-    ]);
+    // `missing` is the key's own spelling (`exactId`): the union's read
+    // matched no row for it, so there is none — one load for both.
+    expect(calls).toEqual([{ params: "a", ids: ["a", "missing"] }]);
     expect(ackOf(h, "a")).toEqual([{ id: "a" }]);
     expect(ackOf(h, "missing")).toEqual([]);
+  });
+
+  test("a member with an id under another spelling that named no row is read alone, in the same slot", async () => {
+    const h = createHarness();
+    const gate = fillGate(h);
+    const calls = defineRows(h);
+    await gate.fill();
+
+    await h.subscribe("rows", { ids: "b" });
+    await h.subscribe("rows", { ids: "A" });
+    await h.subscribe("rows", { ids: "MISSING" });
+    expect(h.runtime.readGateStats().queued).toBe(1);
+    gate.ctl.release();
+    await settle();
+    // `A` matches row `a`, served under `a`: in the union's rows it looks
+    // like an absent id, which only the member's own read can tell apart —
+    // as `MISSING`, which really is absent.
+    expect(calls).toEqual([
+      { params: "b", ids: ["b", "A", "MISSING"] },
+      { params: "A", ids: null },
+      { params: "MISSING", ids: null },
+    ]);
+    expect(ackOf(h, "b")).toEqual([{ id: "b" }]);
+    expect(ackOf(h, "A")).toEqual([{ id: "a" }]);
+    expect(ackOf(h, "MISSING")).toEqual([]);
   });
 
   test("a member whose subscriber left is dropped at the slot; the rest still load", async () => {

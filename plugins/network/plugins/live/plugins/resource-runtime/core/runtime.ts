@@ -291,6 +291,16 @@ export type KeyedMembership<P extends ResourceParams = ResourceParams> =
 export interface PointBatch<P extends ResourceParams = ResourceParams> {
   familyOf: (params: P) => string;
   maxIds: number;
+  /**
+   * Whether the loader matches `id` under that spelling alone — the spelling
+   * `keyOf` reads off the row it names (query-resource: the key column's
+   * canonical text). For such an id, the batch's read returning no row PROVES
+   * the row absent, and its member is answered from the batch. An id it
+   * answers false for may match a row served under another spelling (an
+   * upper-case uuid), which only that member's own read can tell: it is
+   * re-read alone, in the batch's slot.
+   */
+  exactId: (id: string) => boolean;
 }
 
 /**
@@ -4480,7 +4490,7 @@ export function createResourceRuntime(
       if (end) void value.then(end, end);
     } else {
       openPointBatches.set(slot, target);
-      startPointBatch(entry, slot, target, read.pk);
+      startPointBatch(entry, batch, slot, target, read.pk);
     }
     return value;
   }
@@ -4499,6 +4509,7 @@ export function createResourceRuntime(
   // is dropped (`ReadAbandoned`, as a lone read is), and the rest load as one.
   function startPointBatch(
     entry: RegistryEntry,
+    point: PointBatch,
     slot: string,
     batch: OpenPointBatch,
     firstPk: string,
@@ -4516,7 +4527,7 @@ export function createResourceRuntime(
     // A rejection the members did not see yet (the loader's, the gate's)
     // settles every one; a settled member ignores it.
     void admitRead(entry, { pk: firstPk, probe: false }, wanted, () =>
-      runPointBatch(entry, batch.members),
+      runPointBatch(entry, point, batch.members),
     ).then(undefined, (err: unknown) => {
       if (openPointBatches.get(slot) === batch) openPointBatches.delete(slot);
       for (const m of batch.members) m.reject(err);
@@ -4530,6 +4541,7 @@ export function createResourceRuntime(
   // ids' rows in the loader's order.
   async function runPointBatch(
     entry: RegistryEntry,
+    point: PointBatch,
     members: readonly PointBatchMember[],
   ): Promise<void> {
     pointBatchStatsOf(entry.key).runs++;
@@ -4585,12 +4597,17 @@ export function createResourceRuntime(
       for (const i of byId.get(id) ?? []) served[i]!.push(row);
     }
     for (const [i, m] of members.entries()) {
-      // A member an id of which named no row is read alone, in this slot:
-      // the id may be absent, or the database may match it under another
-      // spelling than the row's key (a uuid in upper case) — which only its
-      // own read can tell apart. Never the herd's case: there every id is
-      // a row's key as served.
-      if (m.ids.some((id) => !found.has(id))) {
+      // An id that named no row is absent when the loader matches it under
+      // its own spelling alone (`exactId`): the batch's read already
+      // answered it. Otherwise the database may match it under another
+      // spelling than the row's key (a uuid in upper case) — which only the
+      // member's own read can tell apart — so that member is read alone, in
+      // this slot. A herd of per-row tuples mostly names rows that do not
+      // exist (a chip per conversation reading a side table most have no row
+      // in): each such id re-read alone held the slot for one query per
+      // member, one after another (2026-11-12 restart storm: 21–44 lone
+      // re-reads of conversation-preprompts per restart, up to 1.3 s).
+      if (m.ids.some((id) => !found.has(id) && !point.exactId(id))) {
         const own: { raw: unknown; heldFollows?: boolean } = { raw: undefined };
         const value = await timedLoad(entry, m.params, undefined, own);
         m.resolve({

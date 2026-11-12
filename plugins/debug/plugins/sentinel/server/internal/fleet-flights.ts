@@ -3,7 +3,10 @@ import { z } from "zod";
 import { defineTraceEventClass } from "@plugins/debug/plugins/trace/plugins/engine/server";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import { callEndpoint } from "@plugins/infra/plugins/endpoints/server";
-import { getFlightWindow } from "@plugins/debug/plugins/profiling/plugins/runtime/core";
+import {
+  FLIGHT_WINDOW_COMPLETED_DEFAULT,
+  getFlightWindow,
+} from "@plugins/debug/plugins/profiling/plugins/runtime/core";
 import {
   asNamespace,
   namespaceUrl,
@@ -56,7 +59,10 @@ async function fetchFlightWindow(name: Namespace): Promise<FleetFlightCell> {
       {},
       {
         origin: namespaceUrl(name),
-        query: { windowMs: FLIGHT_WINDOW_MS },
+        query: {
+          windowMs: FLIGHT_WINDOW_MS,
+          maxCompleted: FLIGHT_WINDOW_COMPLETED_DEFAULT,
+        },
         signal: AbortSignal.timeout(PER_BACKEND_TIMEOUT_MS),
       },
     );

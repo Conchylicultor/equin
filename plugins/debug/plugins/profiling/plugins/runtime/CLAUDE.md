@@ -47,6 +47,8 @@
     - `packages/list-bound.wholeList`
     - `packages/list-bound.wholeRecord`
   - Exports (values):
+    - `FLIGHT_WINDOW_COMPLETED_DEFAULT`
+    - `FLIGHT_WINDOW_COMPLETED_MAX`
     - `FLIGHT_WINDOW_MS_DEFAULT`
     - `FLIGHT_WINDOW_MS_MAX`
     - `FLIGHT_WINDOW_MS_MIN`

@@ -58,6 +58,20 @@ socket closed, tabs reconnected, onReady done, tabs settled, settled phase done.
 - Boot spans: the slowest onReadyBlocking / onReady / warm-up / onSettled.
 - Gates and loaders: wait vs own work — a loader with high wait and low self is
   head-of-line blocked, not slow.
+- **The replay's read path, per key** — from the successor's flight window
+  (`GET /api/debug/profiling/flight-window?maxCompleted=4096`, read right after
+  the tabs settled): every `sub` span (≥ 5 ms, the ring's floor) that started
+  after the socket closed, as replay → span start (the frame's transit plus
+  everything the server's thread ran before handling it), span wall, and the
+  wall split into own work, child work and gate waits by layer. A tab's
+  replay → answer minus those two is the send and the thread's backlog after
+  the read.
+- **Event-loop stalls** between the first replay and the last tab settled —
+  the loop probe's registered stalls (a turn > 100 ms late), from the same
+  window: how long the thread ran one piece of work at a time.
+- `--out` also keeps each iteration's raw flight window (`flight`), for a
+  split the printout does not make (gate occupancy over time, the background
+  work sharing the thread).
 
 ## What a worktree restart does not reproduce
 

@@ -1,4 +1,7 @@
-import { captureFlightWindow } from "@plugins/infra/plugins/runtime-profiler/core";
+import {
+  captureFlightWindow,
+  loopStallsSince,
+} from "@plugins/infra/plugins/runtime-profiler/core";
 import { implement } from "@plugins/infra/plugins/endpoints/server";
 import { getFlightWindow } from "../../core";
 
@@ -14,7 +17,8 @@ export const handleFlightWindow = implement(getFlightWindow, ({ query }) => {
     window: captureFlightWindow({
       windowStartMs: atMs - windowMs,
       maxOpen: 100,
-      maxCompleted: 200,
+      maxCompleted: query.maxCompleted,
     }),
+    loopStalls: loopStallsSince(atMs - windowMs),
   };
 });

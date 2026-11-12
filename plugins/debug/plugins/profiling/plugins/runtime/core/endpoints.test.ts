@@ -1,6 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { SPAN_KINDS } from "@plugins/infra/plugins/runtime-profiler/core";
 import {
+  FLIGHT_WINDOW_COMPLETED_DEFAULT,
+  FLIGHT_WINDOW_COMPLETED_MAX,
   FLIGHT_WINDOW_MS_DEFAULT,
   FLIGHT_WINDOW_MS_MAX,
   FLIGHT_WINDOW_MS_MIN,
@@ -15,24 +17,28 @@ describe("flightWindowQuerySchema", () => {
   test("defaults when windowMs is absent", () => {
     expect(flightWindowQuerySchema.parse({})).toEqual({
       windowMs: FLIGHT_WINDOW_MS_DEFAULT,
+      maxCompleted: FLIGHT_WINDOW_COMPLETED_DEFAULT,
     });
   });
 
   test("coerces a numeric string", () => {
     expect(flightWindowQuerySchema.parse({ windowMs: "30000" })).toEqual({
       windowMs: 30_000,
+      maxCompleted: FLIGHT_WINDOW_COMPLETED_DEFAULT,
     });
   });
 
   test("clamps below the minimum", () => {
     expect(flightWindowQuerySchema.parse({ windowMs: "5" })).toEqual({
       windowMs: FLIGHT_WINDOW_MS_MIN,
+      maxCompleted: FLIGHT_WINDOW_COMPLETED_DEFAULT,
     });
   });
 
   test("clamps above the maximum", () => {
     expect(flightWindowQuerySchema.parse({ windowMs: "999999999" })).toEqual({
       windowMs: FLIGHT_WINDOW_MS_MAX,
+      maxCompleted: FLIGHT_WINDOW_COMPLETED_DEFAULT,
     });
   });
 
@@ -45,6 +51,15 @@ describe("flightWindowQuerySchema", () => {
       flightWindowQuerySchema.parse({ windowMs: String(FLIGHT_WINDOW_MS_MAX) })
         .windowMs,
     ).toBe(FLIGHT_WINDOW_MS_MAX);
+  });
+
+  test("maxCompleted is clamped to the flight ring", () => {
+    expect(
+      flightWindowQuerySchema.parse({ maxCompleted: "999999" }).maxCompleted,
+    ).toBe(FLIGHT_WINDOW_COMPLETED_MAX);
+    expect(
+      flightWindowQuerySchema.parse({ maxCompleted: "0" }).maxCompleted,
+    ).toBe(1);
   });
 
   test("rejects non-numeric input", () => {

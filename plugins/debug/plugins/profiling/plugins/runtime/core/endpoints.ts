@@ -165,6 +165,11 @@ export const FLIGHT_WINDOW_MS_MAX = 120_000;
 // Out-of-range values are CLAMPED, not rejected: the caller is another
 // backend's enrich pass mid-incident — a mis-tuned windowMs should still yield
 // a bounded capture, not a 400. Non-numeric input still fails validation.
+export const FLIGHT_WINDOW_COMPLETED_DEFAULT = 200;
+// The flight ring's capacity (runtime-profiler's FLIGHT_RING_CAPACITY): a
+// window never holds more completed spans than the ring keeps.
+export const FLIGHT_WINDOW_COMPLETED_MAX = 4096;
+
 export const flightWindowQuerySchema = z.object({
   windowMs: z.coerce
     .number()
@@ -172,6 +177,16 @@ export const flightWindowQuerySchema = z.object({
     .prefault(FLIGHT_WINDOW_MS_DEFAULT)
     .transform((v) =>
       Math.min(FLIGHT_WINDOW_MS_MAX, Math.max(FLIGHT_WINDOW_MS_MIN, v)),
+    ),
+  // How many completed spans, newest first (clamped like `windowMs`): a
+  // trace's capture keeps the default; a benchmark reading every span of a
+  // burst (restart-storm's replay split) asks for the ring.
+  maxCompleted: z.coerce
+    .number()
+    .finite()
+    .prefault(FLIGHT_WINDOW_COMPLETED_DEFAULT)
+    .transform((v) =>
+      Math.min(FLIGHT_WINDOW_COMPLETED_MAX, Math.max(1, Math.floor(v))),
     ),
 });
 
@@ -215,6 +230,14 @@ export const flightWindowResponseSchema = z.object({
     open: z.array(flightSpanSchema),
     completed: z.array(flightSpanSchema),
   }),
+  // The event-loop stalls the loop probe registered in the window (a turn
+  // more than its tolerance late: `[due, turn]`), oldest first — how long the
+  // thread ran nothing else. Defaulted: an older backend sends none.
+  // At most the profiler's own bound (runtime-profiler's LOOP_STALL_CAP, the
+  // last 64 it keeps).
+  loopStalls: cappedList(z.object({ t0: z.number(), t1: z.number() }), {
+    max: 64,
+  }).default([]),
 });
 
 // Per-backend flight window (in-flight + recently-completed spans). Fetched

@@ -1570,7 +1570,8 @@
             "idsOf": "$function",
             "batch": {
               "familyOf": "$function",
-              "maxIds": 500
+              "maxIds": 500,
+              "exactId": "$function"
             }
           }
         },
@@ -1781,7 +1782,8 @@
             "idsOf": "$function",
             "batch": {
               "familyOf": "$function",
-              "maxIds": 500
+              "maxIds": 500,
+              "exactId": "$function"
             }
           }
         },
@@ -1986,7 +1988,8 @@
             "idsOf": "$function",
             "batch": {
               "familyOf": "$function",
-              "maxIds": 500
+              "maxIds": 500,
+              "exactId": "$function"
             }
           }
         },
@@ -3566,7 +3569,8 @@
             "idsOf": "$function",
             "batch": {
               "familyOf": "$function",
-              "maxIds": 50
+              "maxIds": 50,
+              "exactId": "$function"
             }
           }
         },
@@ -5390,7 +5394,8 @@
             "idsOf": "$function",
             "batch": {
               "familyOf": "$function",
-              "maxIds": 50
+              "maxIds": 50,
+              "exactId": "$function"
             }
           }
         },
@@ -6877,7 +6882,8 @@
             "idsOf": "$function",
             "batch": {
               "familyOf": "$function",
-              "maxIds": 50
+              "maxIds": 50,
+              "exactId": "$function"
             }
           }
         },
@@ -8599,7 +8605,8 @@
             "idsOf": "$function",
             "batch": {
               "familyOf": "$function",
-              "maxIds": 30
+              "maxIds": 30,
+              "exactId": "$function"
             }
           }
         },
@@ -9782,7 +9789,8 @@
             "idsOf": "$function",
             "batch": {
               "familyOf": "$function",
-              "maxIds": 50
+              "maxIds": 50,
+              "exactId": "$function"
             }
           }
         },
@@ -10622,7 +10630,8 @@
             "idsOf": "$function",
             "batch": {
               "familyOf": "$function",
-              "maxIds": 30
+              "maxIds": 30,
+              "exactId": "$function"
             }
           }
         },
@@ -10799,7 +10808,8 @@
             "idsOf": "$function",
             "batch": {
               "familyOf": "$function",
-              "maxIds": 500
+              "maxIds": 500,
+              "exactId": "$function"
             }
           }
         },
@@ -11158,7 +11168,8 @@
             "idsOf": "$function",
             "batch": {
               "familyOf": "$function",
-              "maxIds": 500
+              "maxIds": 500,
+              "exactId": "$function"
             }
           }
         },
@@ -12710,7 +12721,8 @@
             "idsOf": "$function",
             "batch": {
               "familyOf": "$function",
-              "maxIds": 500
+              "maxIds": 500,
+              "exactId": "$function"
             }
           }
         },
@@ -17010,7 +17022,8 @@
             "idsOf": "$function",
             "batch": {
               "familyOf": "$function",
-              "maxIds": 30
+              "maxIds": 30,
+              "exactId": "$function"
             }
           }
         },
@@ -18338,7 +18351,8 @@
             "idsOf": "$function",
             "batch": {
               "familyOf": "$function",
-              "maxIds": 500
+              "maxIds": 500,
+              "exactId": "$function"
             }
           }
         },
@@ -19507,7 +19521,8 @@
             "idsOf": "$function",
             "batch": {
               "familyOf": "$function",
-              "maxIds": 500
+              "maxIds": 500,
+              "exactId": "$function"
             }
           }
         },

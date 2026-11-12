@@ -38,3 +38,19 @@ export function canonicalTextOf(
   }
   return null;
 }
+
+/**
+ * Which ids a point read over `sqlType` (canonicalised, as `canonicalSqlType`
+ * spells it) matches under their own spelling alone: an id that IS the key
+ * column's canonical text equals a row's `col::text` — the key the row is
+ * served under — or no row's. So a batched point read that returned no row
+ * for such an id proves the row absent (resource-runtime's
+ * `PointBatch.exactId`). Any other id (an upper-case uuid, `"007"` for an
+ * integer key) may still match a row served under another spelling, and so
+ * does every id of a type with no canonical text (`false` throughout).
+ */
+export function exactIdOf(sqlType: string): (id: string) => boolean {
+  const canonical = canonicalTextOf(sqlType);
+  if (canonical === null) return () => false;
+  return (id) => canonical(id) === null;
+}

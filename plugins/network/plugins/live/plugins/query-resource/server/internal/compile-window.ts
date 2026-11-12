@@ -35,6 +35,8 @@ import type { ReadColumn } from "./joins";
 import { compiledRoutePlan, routedBase } from "./routes";
 import { followablePoint, type FollowablePlan } from "./follow";
 import { pointDefinition } from "./point-definition";
+import { exactIdOf } from "./canonical-text";
+import { canonicalSqlType } from "./raw-sql";
 import type {
   BoundedQueryResourceSpec,
   PointQueryResourceSpec,
@@ -558,7 +560,13 @@ function planBounded<Row, P extends WindowParams | PointParams>(
         ),
         ...(typeof spec.where === "function"
           ? {}
-          : { batch: { familyOf: () => "", maxIds: codec.maxIds } }),
+          : {
+              batch: {
+                familyOf: () => "",
+                maxIds: codec.maxIds,
+                exactId: exactIdOf(canonicalSqlType(arm.pkColumn.getSQLType())),
+              },
+            }),
         ...encodeRow,
         ...debounceMs,
       },
