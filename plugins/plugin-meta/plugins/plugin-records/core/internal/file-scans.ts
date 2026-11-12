@@ -60,14 +60,14 @@ export interface FileScan<T> {
  */
 const SCAN_MODULE_SUFFIX = ".scan.ts";
 
-function assertScanModule(url: string): void {
+export function assertScanModule(url: string): void {
   if (!new URL(url).pathname.endsWith(SCAN_MODULE_SUFFIX))
     throw new Error(
       `[plugin-records] a file scan is defined in ${url}: define it in a module of its own named *${SCAN_MODULE_SUFFIX}, holding only the scan and the code it runs — its records are keyed by that module's whole import closure, so a scan defined inside its consumer is re-keyed by every edit to the consumer's closure`,
     );
 }
 
-function isSnapshot(repo: RepoFiles): repo is RepoSnapshot {
+export function isSnapshot(repo: RepoFiles): repo is RepoSnapshot {
   return typeof (repo as Partial<RepoSnapshot>).blobOf === "function";
 }
 
@@ -94,7 +94,7 @@ export function repoModuleOf(repo: RepoFiles, url: string): string {
   );
 }
 
-function scannerIdentity(
+export function scannerIdentity(
   input: ModuleGraphInput & { snapshot: RepoSnapshot },
   url: string,
 ): Promise<string> {

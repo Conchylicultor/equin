@@ -58,6 +58,35 @@ anywhere, and no global fingerprint: a change costs the records it touches.
   re-runs the live declaration pass over every barrel (and throws if any other
   barrel changed across it).
 
+## Folds: a small answer about every file, O(changes)
+
+A reader over the whole tree that wants a SMALL answer — a check's
+violations, the mentions of a few names — folds its per-file scan along the
+directory tree (`foldFilesCached` / `foldRepoFiles`, `core/internal/tree-fold.ts`,
+records in the `fold` table) instead of scanning every file:
+
+- a file's part is keyed by the fold's module Merkle key (`FileFold.url`, a
+  `*.scan.ts` module, as a `FileScan`'s), the fold's context (plain data,
+  keyed by its JSON; the scan is handed that JSON parsed back, so it sees
+  nothing the key does not hold), its path and its blob;
+- a directory's part is `combine` of its members' (sorted by name), keyed by
+  its path and its members' keys — a Merkle tree over the selected files.
+
+The store is asked top-down, one batch per depth: a hit answers its whole
+subtree, a miss hands its members to the next batch. So an unchanged tree is
+one lookup, and an edit costs the fan-out of the edited path's directories
+(~80 lookups for a one-file edit under `plugins/`) and the scan of the edited
+files alone — never one lookup per plugin, never a re-read of the tree. Every
+ancestor of an edit writes a new record holding its whole subtree's answer, so
+a fold is for answers far smaller than the files; a reader that needs every
+file's own value is a `FileScan`. `combine` must be associative
+(`combine([combine([a, b]), c])` = `combine([a, b, c])`), so the per-directory
+fold equals the flat one.
+
+Adopters: `boundary-rules` (`boundaries/core/boundary-rules.scan.ts`) and
+`relocate:moved-plugins-unnamed` (`plugin-refs/core/mentions.scan.ts`).
+Measurements: `research/2026-11-12-global-plugin-records-store-layout.md`.
+
 ## Misses on worker threads
 
 A record is a pure function of its key, so which thread makes it cannot change
@@ -309,12 +338,15 @@ its docblock records — and then lowered as readily as raised.
     - `infra/deps/npm/lock-resolutions.lockfileNpmResolutions`
     - `infra/host-fs/user-path.AppPath`
     - `infra/host-fs/user-path.joinAppPath`
+    - `packages/macrotask-yield.yieldMacrotask`
     - `packages/string-hash.sha1Hex`
     - `packages/string-hash.sha256Hex`
     - `packages/timed-fs.readFile`
   - Exports (types):
     - `BundledClosure`
+    - `FileFold`
     - `FileScan`
+    - `FoldContext`
     - `ModuleGraph`
     - `ModuleGraphInput`
     - `ModuleNode`
@@ -332,6 +364,8 @@ its docblock records — and then lowered as readily as raised.
     - `currentRecordStore`
     - `defineRecordJob`
     - `emptyWriteTiming`
+    - `foldFilesCached`
+    - `foldRepoFiles`
     - `gitBlobId`
     - `groupedByOwner`
     - `installRecordStore`

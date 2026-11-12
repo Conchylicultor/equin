@@ -68,6 +68,7 @@ runtime-neutral `core`.
     - `network/live/change-feed`
     - `packages/source-digest`
     - `plugin-meta/barrel-import`
+    - `plugin-meta/plugin-records`
     - `plugin-meta/plugin-refs`
     - `plugin-meta/plugin-tree/faceted`
     - `plugin-meta/token-usage`

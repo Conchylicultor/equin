@@ -18,6 +18,8 @@ export { findPluginRefs } from "./find";
 export type { FindPluginRefsOptions, ScanFiles } from "./find";
 export { findPluginMentions } from "./mentions";
 export type { PluginMention } from "./mentions";
+export { pluginMentionsFold } from "./mentions.scan";
+export type { PluginMentionsContext } from "./mentions.scan";
 export {
   scanAsPluginIdRefs,
   scanCompositionSourceRefs,

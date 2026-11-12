@@ -18,7 +18,6 @@ const tree: PluginDirs = {
 };
 
 const zoneMap = buildZoneMap(
-  "/repo",
   [zone("plugin", { match: "plugins", discover: "plugin-tree" })],
   tree,
 );

@@ -81,6 +81,18 @@ decide what is in scope (`zoneMap.resolveFile`). Don't add a source-root list or
 a directory deny-list beside them. A second statement drifts. The last one
 hid the tracked `build` plugins while still scanning gitignored `.cache/` files.
 
+## `boundary-rules` judges only what an edit moved
+
+Each file's judgement (its violations and the cross-plugin edges it realizes)
+is a fold kept along the directory tree (`core/boundary-rules.scan.ts`,
+plugin-records' `foldRepoFiles`): keyed by the file's blob, the judgement's
+code and the plugin directories (the zone map's only input besides the
+config), so a pass after an edit reads and judges the edited files alone and
+every other directory is one record. The cycle graph is the folded edge set,
+checked whole each run. Keep every input of the judgement in
+`BoundaryContext` or in the scan module's closure — anything else it read
+would be an input no key names.
+
 ## Platform APIs and host-only values
 
 `core/platform-apis.ts` is the one definition of what needs the computer. Two
@@ -183,11 +195,11 @@ takes a `debt` exemption on the check's id.
 
 - Description: Boundary-rules checker: zone DSL, edge evaluator, and project boundary config
 - Core:
-  - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 27 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `framework/plugin-id` ×6
     - `plugin-meta/parse-utils` ×6
+    - `plugin-meta/plugin-records` ×5
     - `framework/tooling/import-closure` ×4
-    - `plugin-meta/plugin-records` ×4
     - `framework/tooling/boundaries/runtime-exception.parseRuntimeException`
     - `infra/host-fs/user-path.joinAppPath`
     - `infra/spawn.getWorktreeRoot`
@@ -206,7 +218,6 @@ takes a `debt` exemption on the check's id.
     - `allow`
     - `boundaryRulesCheck`
     - `compositionRoots`
-    - `createBoundaryCheck`
     - `defineBoundaries`
     - `deny`
     - `isPlatformApi`

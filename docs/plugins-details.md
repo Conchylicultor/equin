@@ -30744,11 +30744,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Plugins:
         - **`boundaries`** — Boundary-rules checker: zone DSL, edge evaluator, and project boundary config
           - Core:
-            - Uses: 26 symbols — full list in [`plugins/framework/plugins/tooling/plugins/boundaries/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/boundaries/REFERENCE.md)
+            - Uses: 27 symbols — full list in [`plugins/framework/plugins/tooling/plugins/boundaries/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/boundaries/REFERENCE.md)
               - `framework/plugin-id` ×6
               - `plugin-meta/parse-utils` ×6
+              - `plugin-meta/plugin-records` ×5
               - `framework/tooling/import-closure` ×4
-              - `plugin-meta/plugin-records` ×4
               - `framework/tooling/boundaries/runtime-exception.parseRuntimeException`
               - `infra/host-fs/user-path.joinAppPath`
               - `infra/spawn.getWorktreeRoot`
@@ -30767,7 +30767,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `allow`
               - `boundaryRulesCheck`
               - `compositionRoots`
-              - `createBoundaryCheck`
               - `defineBoundaries`
               - `deny`
               - `isPlatformApi`
@@ -40704,6 +40703,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live/change-feed`
           - `packages/source-digest`
           - `plugin-meta/barrel-import`
+          - `plugin-meta/plugin-records`
           - `plugin-meta/plugin-refs`
           - `plugin-meta/plugin-tree/faceted`
           - `plugin-meta/token-usage`
@@ -45427,12 +45427,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/deps/npm/lock-resolutions.lockfileNpmResolutions`
           - `infra/host-fs/user-path.AppPath`
           - `infra/host-fs/user-path.joinAppPath`
+          - `packages/macrotask-yield.yieldMacrotask`
           - `packages/string-hash.sha1Hex`
           - `packages/string-hash.sha256Hex`
           - `packages/timed-fs.readFile`
         - Exports (types):
           - `BundledClosure`
+          - `FileFold`
           - `FileScan`
+          - `FoldContext`
           - `ModuleGraph`
           - `ModuleGraphInput`
           - `ModuleNode`
@@ -45450,6 +45453,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `currentRecordStore`
           - `defineRecordJob`
           - `emptyWriteTiming`
+          - `foldFilesCached`
+          - `foldRepoFiles`
           - `gitBlobId`
           - `groupedByOwner`
           - `installRecordStore`
@@ -45608,6 +45613,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PathRef`
           - `PathRefSyntax`
           - `PluginMention`
+          - `PluginMentionsContext`
           - `PluginRef`
           - `PluginRefKind`
           - `RefRange`
@@ -45626,6 +45632,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `pluginDirOfPath`
           - `pluginDirOfRef`
           - `pluginDirPrefix`
+          - `pluginMentionsFold`
           - `pluginPathFromLiteral`
           - `relativeLinkFrom`
           - `resolveRelativeRef`

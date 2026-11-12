@@ -184,3 +184,67 @@ On 11-12 no v2 row was older than 7 days, `meta.pruned` was today's, and
 0.02M, 4.56M, 3.09M, 1.00M, 1.25M, 0.42M. The dead 95% is churn × 7-day
 retention (the section above). Random sha256 keys spread the live rows over
 nearly every page.
+
+## Re-measured on the v4 store, and the first fold (task: check pass O(changes))
+
+Measured 2026-11-12 on a worktree check pass at host load ~22–25, after the v4
+layout and the narrowed scan keys landed. Same one-line edit as above (a
+comment appended to `hints/help-menu/web/index.ts`), `getMany` traced by caller
+(temporary instrumentation, reverted).
+
+### Split of a one-line-edit pass
+
+- **173 of 192 checks re-ran**, 73 s from the host grant to the verdict.
+- **The check thread was the bottleneck**: ~63 s of its 73 s busy (14.5k
+  samples at 230 Hz). Process CPU 95 s user + 77 s system.
+- **~278k file reads** by the checks' own bodies (`fs` on each `end` record):
+  the re-run checks each re-read the tree (plugin-boundaries 52.9k,
+  relocate:moved-plugins-unnamed 24.7k, boundary-rules 20.3k, parse-utils:mask-sync
+  16.9k, sql-writes:fit 14.0k, pre-barrel-manifests-complete 13.1k, …).
+- **29.6k record lookups** (down from 32.2k on v2), off the thread: waited on
+  ~15 s of union wall time in a pass at load ~25, overlapping the thread's
+  work. Top callers unchanged: module-graph `walkLevels` (6.9k), `scanFilesCached`
+  for plugin-refs `find` (4.4k), the registry generator (4.5k), facet groups
+  (1.8k), icons (3.4k), evaluated barrels (1.9k).
+- **Thread owners** (top 10 of the pass): shared TS parse
+  (`parsedTsSource`) 7.3 s, plugin-boundaries 5.7 s, boundary-rules' run 5.4 s,
+  grep-index `select` 5.1 s, semaphore 3.4 s, plugin-refs `findPluginMentions`
+  3.0 s, `platformOffenders` 1.9 s.
+
+So the cost is not the lookups but the re-run checks' whole-tree work: a check
+keyed on the whole tree re-runs on any edit, and its body then re-reads and
+re-judges every file. A lookup count is one symptom of it.
+
+### Fix: per-file work folded along the directory tree
+
+`plugin-records`' `foldFilesCached` / `foldRepoFiles` (`core/internal/tree-fold.ts`):
+a per-file scan whose answers are folded per directory, each directory's fold a
+record keyed by its members' keys (a Merkle tree over the selected files). A
+pass asks top-down and recomputes only the files whose key moved: an
+unchanged tree is one lookup, a one-file edit ~80 lookups and one scan. This
+is O(changes) by construction — no fingerprint is consulted, every record is a
+pure function of its key — and it reuses the store, the scan-module identity
+and the verifier of the existing records.
+
+Adopted by the two largest file-local checks of the split:
+
+| one-line edit | before | after |
+| --- | ---: | ---: |
+| boundary-rules: files read by its body | 20,269 | 3,733 (the shared plugin tree it builds first) |
+| boundary-rules: thread owner `run @ boundaries/core/check.ts` | 5.4 s | gone from the top 10 |
+| relocate:moved-plugins-unnamed: files read | 24,738 | 335 |
+| relocate: thread owner `findPluginMentions` | 3.0 s | gone from the top 10 |
+| fold lookups (both checks) | — | 159 |
+| whole pass: files read by check bodies | 277.6k | 230.8k |
+| whole pass: record lookups | 29.6k | 26.3k |
+
+The pass's wall time is dominated by the other 171 re-run checks and was
+noise-bound at this host load (73 s → 89 s from grant, with the sampler's rate
+dropping 230 → 170 Hz, i.e. a busier host), so it is not the measure here.
+
+### Next
+
+The same fold for the next file-local whole-tree reader by cost:
+plugin-boundaries (52.9k reads, ~6 s of thread). Then the shared TS parse
+(sourceAnalysis checks), parse-utils:mask-sync, sql-writes:fit and the grep
+selections, each needing its per-file part separated from its cross-file part.

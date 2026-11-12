@@ -6,8 +6,7 @@ export type {
   AllowEdge,
   DenyEdge,
 } from "./types";
-export { createBoundaryCheck } from "./check";
-export { boundaryRulesCheck } from "./boundary-rules-check";
+export { boundaryRulesCheck } from "./check";
 export { runtimeNames } from "./runtimes";
 export { compositionRoots } from "./composition-roots";
 export { isPlatformApi, platformValueUsesIn } from "./platform-apis";

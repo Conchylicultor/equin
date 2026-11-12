@@ -35,7 +35,7 @@ export function checkRuntime(
 }
 
 export function isRuntimeException(
-  exceptions: Set<string>,
+  exceptions: ReadonlySet<string>,
   sourceZone: string,
   source: PluginFolder,
   targetZone: string,
@@ -71,7 +71,7 @@ export type ImportVerdict =
  */
 export function judgeImport(
   folders: BoundaryConfig["folders"],
-  exceptions: Set<string>,
+  exceptions: ReadonlySet<string>,
   source: InFolder,
   target: InFolder,
 ): ImportVerdict {

@@ -3,7 +3,8 @@ import {
   type PluginId,
 } from "@plugins/framework/plugins/plugin-id/core";
 import type { Check } from "@plugins/framework/plugins/tooling/core";
-import { findPluginMentions } from "@plugins/plugin-meta/plugins/plugin-refs/core";
+import { pluginMentionsFold } from "@plugins/plugin-meta/plugins/plugin-refs/core";
+import { foldRepoFiles } from "@plugins/plugin-meta/plugins/plugin-records/core";
 import {
   movedPluginId,
   parsePluginMoves,
@@ -70,7 +71,15 @@ const movedPluginsUnnamed: Check = {
         );
       }
     }
-    for (const m of await findPluginMentions(repo, [...gone.keys()])) {
+    // Folded along the directory tree: after an edit only the edited files
+    // are read and scanned. A file out of scope is never read.
+    const mentions = await foldRepoFiles(
+      repo,
+      repo.all().filter((f) => ctx.inScope(f)),
+      pluginMentionsFold,
+      { ids: [...gone.keys()].sort() },
+    );
+    for (const m of mentions) {
       if (exempt.skips(m.file)) continue;
       const now = gone.get(m.id)!;
       const spelled =

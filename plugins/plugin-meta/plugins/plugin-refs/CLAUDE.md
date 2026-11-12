@@ -116,6 +116,7 @@ links **into** research from anywhere else are.
     - `PathRef`
     - `PathRefSyntax`
     - `PluginMention`
+    - `PluginMentionsContext`
     - `PluginRef`
     - `PluginRefKind`
     - `RefRange`
@@ -134,6 +135,7 @@ links **into** research from anywhere else are.
     - `pluginDirOfPath`
     - `pluginDirOfRef`
     - `pluginDirPrefix`
+    - `pluginMentionsFold`
     - `pluginPathFromLiteral`
     - `relativeLinkFrom`
     - `resolveRelativeRef`

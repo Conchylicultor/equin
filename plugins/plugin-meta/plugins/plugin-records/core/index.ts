@@ -40,4 +40,6 @@ export {
   scanRepoFiles,
 } from "./internal/file-scans";
 export type { FileScan } from "./internal/file-scans";
+export { foldFilesCached, foldRepoFiles } from "./internal/tree-fold";
+export type { FileFold, FoldContext } from "./internal/tree-fold";
 export type { BundledClosure } from "./internal/module-graph";

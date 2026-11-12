@@ -117,7 +117,6 @@ export interface PluginDirs {
 }
 
 export function buildZoneMap(
-  _root: string,
   zones: ZoneDefinition[],
   pluginTree: PluginDirs | null,
 ): ZoneMap {
