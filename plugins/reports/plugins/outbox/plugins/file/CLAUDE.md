@@ -63,6 +63,7 @@ is documented in the parent's CLAUDE.md.
     - `framework/tooling/checks/type-check/backstop`
     - `infra/launcher`
     - `infra/launcher/gateway-drift`
+    - `plugin-meta/plugin-records`
     - `reports/interaction-budget`
     - `reports/outbox`
 - Exemptions:

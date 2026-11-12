@@ -12,7 +12,7 @@ import {
   createThreadPool,
   serveThreadPool,
 } from "@plugins/packages/plugins/thread-pool/cli";
-import { fileReportFromProcess } from "@plugins/reports/plugins/outbox/core";
+import { fileReportFromProcess } from "@plugins/reports/plugins/outbox/plugins/file/core";
 import {
   RECORDS_WRITE_LOST_KIND,
   recordsWriteLostMessage,

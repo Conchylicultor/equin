@@ -29899,6 +29899,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses: `framework/product-name.PRODUCT_NAME`
         - Exports (types):
           - `HostId`
+          - `HostRoot`
           - `LeafFolder`
           - `PluginFolder`
           - `PluginId`
@@ -29907,6 +29908,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `asFsPath`
           - `asPath`
           - `asPluginId`
+          - `HOST_ROOTS`
+          - `hostRootFoldersOf`
           - `hostRuntimeFolders`
           - `HOSTS`
           - `isMachineNode`
@@ -30545,7 +30548,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `release/bundles` (3 debt)
               - `release/source-checkout` (1 debt)
               - `reports/engine` (2 debt)
-              - `reports/outbox` (2 debt)
+              - `reports/outbox` (1 debt)
+              - `reports/outbox/file` (1 debt)
               - `review/plugin-changes` (1 debt)
               - `stats/cost` (3 debt)
               - `toolchain` (1 debt)
@@ -30576,7 +30580,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `packages/macrotask-yield` ×2
               - `packages/owned-fd` ×2
               - `packages/thread-cpu-clock` ×2
-              - `reports/outbox` ×2
+              - `reports/outbox/file` ×2
               - `infra/file-sink.defineFileSink`
               - `infra/paths/repo-root.REPO_ROOT`
               - `packages/flock.flockTry`
@@ -35197,7 +35201,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/runtime-sdk`
               - `integrations/youtube/audio-fetch`
               - `menu-bar`
-              - `reports/outbox`
+              - `reports/outbox/file`
               - `review/plugin-changes`
               - `toolchain`
               - `ui/icons/icon-sets`
@@ -36747,14 +36751,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/host-fs/user-path.asAppPath`
             - Exports (values): `REPO_ROOT`
           - Cross-plugin:
-            - Imported by: 48 plugins — full list in [`plugins/infra/plugins/paths/plugins/repo-root/REFERENCE.md`](../plugins/infra/plugins/paths/plugins/repo-root/REFERENCE.md)
+            - Imported by: 49 plugins — full list in [`plugins/infra/plugins/paths/plugins/repo-root/REFERENCE.md`](../plugins/infra/plugins/paths/plugins/repo-root/REFERENCE.md)
               - `framework` ×14
               - `infra` ×8
               - `apps` ×7
               - `build` ×6
               - `debug` ×3
               - `plugin-meta` ×3
-              - `reports` ×2
+              - `reports` ×3
               - `code-explorer`
               - `config_v2`
               - `conversations/workspace/scratch`
@@ -37183,7 +37187,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `spawnPassthrough`
           - `spawnToFile`
       - Cross-plugin:
-        - Imported by: 92 plugins — full list in [`plugins/infra/plugins/spawn/REFERENCE.md`](../plugins/infra/plugins/spawn/REFERENCE.md)
+        - Imported by: 93 plugins — full list in [`plugins/infra/plugins/spawn/REFERENCE.md`](../plugins/infra/plugins/spawn/REFERENCE.md)
           - `framework` ×30
           - `infra` ×25
           - `apps` ×9
@@ -37195,10 +37199,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `plugin-meta` ×2
           - `primitives` ×2
           - `release` ×2
+          - `reports` ×2
           - `auth/apple-signing`
           - `backup`
           - `hints/ask`
-          - `reports/outbox`
           - `review/plugin-changes`
           - `stats/commits`
           - `tasks`
@@ -40675,7 +40679,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from: `boundaries/no-platform-api` — `core/internal/ticket-line.ts` (debt)
     - **`timed-fs`** — The file reads, listings, stats and glob scans every non-browser process makes, timed: node:fs's read calls under their own names and types (readFile / readdir / stat / lstat / access / realpath / readlink and their *Sync twins, existsSync) plus scanGlob / scanGlobSync over a Bun.Glob, each call metered while it runs (installFsWaitMeter — the backend's profiler shows one past FS_WAIT_FLOOR_MS in progress and charges it) and, once it returns past the floor, handed to onSlowFsCall subscribers, under a named wait layer (fs-read / fs-readdir / fs-stat / fs-glob) — so a disk stall names itself instead of reading as the caller's own work. A leaf (node builtins only), enforced by the timed-fs/no-untimed-fs-read lint.
       - Cross-plugin:
-        - Imported by: 165 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
+        - Imported by: 166 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
           - `infra` ×47
           - `framework` ×25
           - `apps` ×15
@@ -40686,9 +40690,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `database` ×5
           - `packages` ×5
           - `plugin-meta` ×5
+          - `reports` ×4
           - `config_v2` ×3
           - `release` ×3
-          - `reports` ×3
           - `integrations` ×2
           - `primitives` ×2
           - `code-explorer`
@@ -43816,8 +43820,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`closure`**
       - Core:
         - Uses:
+          - `framework/plugin-id.asPluginId`
+          - `framework/plugin-id.HOST_ROOTS`
           - `framework/plugin-id.HostId`
           - `framework/plugin-id.hostRuntimeFolders`
+          - `framework/plugin-id.HOSTS`
+          - `framework/plugin-id.parseHosts`
           - `framework/plugin-id.PluginId`
           - `framework/plugin-id.RuntimeFolder`
           - `framework/plugin-id.SHIPPED_RUNTIME_FOLDERS`
@@ -43942,7 +43950,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `plugin-meta/plugin-tree.getFacetsTreeCached`
           - `plugin-meta/plugin-tree.onPluginFacetsChanged`
           - `plugin-meta/plugin-tree.pluginFacetsGeneration`
-        - Resources: `composition.data` (invalidate, notified, whole: the plugin graph of this checkout — one entry per plugin (about 1.5k) and per edge between two, which the closure engine walks whole client-side, whole: the host-service bindings one plugin's server barrel provides, whole: the folders one edge holds through — a closed set of a dozen)
+        - Resources: `composition.data` (invalidate, notified, whole: the plugin graph of this checkout — one entry per plugin (about 1.5k) and per edge between two, which the closure engine walks whole client-side, whole: the host-service bindings one plugin's server barrel provides, whole: one entry per host (a closed set of two), whole: the folders one edge holds through — a closed set of a dozen)
       - Core:
         - Uses:
           - `config_v2.defineConfig`
@@ -44222,6 +44230,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Core:
             - Uses:
               - `framework/plugin-id.asPath`
+              - `framework/plugin-id.LeafFolder`
               - `framework/plugin-id.PluginId`
               - `framework/plugin-id.RUNTIME_FOLDERS`
               - `framework/plugin-id.RuntimeFolder`
@@ -54936,6 +54945,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `renderReportTask`
           - `reportOutboxFatalSink`
           - `reportOutboxSink`
+          - `ReportOutboxWriter`
           - `reportWorklist`
           - `reportWorklistCounts`
           - `restateReportOccurrence`
@@ -55233,6 +55243,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `OptimisticRejectionPayloadSchema`
     - **`outbox`** — Report outbox writer and drain: writes every report recordReport hands to the engine's reportOutboxSink (a process that cannot write reports — an exec child, a CLI) into the outbox, in every boot mode, awaiting the writes on shutdown, and every fatal report (reportOutboxFatalSink) synchronously, before the process exits; and on main only, records every report a process with no server (a CLI run, a supervised child) wrote into the host-global outbox — once at boot, then on each file change (no polling). An entry whose code main has changed since the writer's branch point (git diff of its paths) is dropped and logged; one from another repository (the writer stamps its own) is filed without that check, its message saying where it came from; an entry that cannot be filed (bad JSON, unknown kind, rejected payload, undecidable staleness) becomes a server-caught crash report and is deleted.
       - Server:
+        - Contributes: `reports-outbox-writer` "reports/outbox attaches the writers of reportOutboxSink (async) and reportOutboxFatalSink (sync) in every boot mode, so a process that cannot write reports files them into the outbox main drains"
         - Uses:
           - `infra/file-watcher.defineFileWatcher`
           - `infra/file-watcher.FileWatcher`
@@ -55240,55 +55251,61 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `reports/engine.recordReport`
           - `reports/engine.reportOutboxFatalSink`
           - `reports/engine.reportOutboxSink`
+          - `reports/engine.ReportOutboxWriter`
         - Register: `defineFileWatcher('reports-outbox.outbox-dir')`
-      - Core:
-        - Uses:
-          - `infra/host-fs/user-path.AppPath`
-          - `infra/host-fs/user-path.joinAppPath`
-          - `infra/paths/repo-root.REPO_ROOT`
-          - `infra/spawn.getMainRepoRoot`
-          - `infra/spawn.spawnCaptured`
-          - `packages/timed-fs.readdir`
-          - `packages/timed-fs.readdirSync`
-          - `packages/timed-fs.realpath`
-        - Exports (types):
-          - `FileReportOutcome`
-          - `MergeBaseResult`
-          - `OutboxCode`
-          - `OutboxEntry`
-          - `ProcessReport`
-        - Exports (values):
-          - `fileReportFromProcess`
-          - `fileReportFromProcessSync`
-          - `headCommitOf`
-          - `isOutboxEntryName`
-          - `isOutboxTempName`
-          - `mergeBaseWithMain`
-          - `OUTBOX_MAX_PENDING`
-          - `OutboxCodeSchema`
-          - `OutboxEntrySchema`
-          - `repositoryOf`
-      - Cross-plugin:
-        - Imported by:
-          - `backup`
-          - `build/step-baseline`
-          - `database/fork`
-          - `debug/backend-liveness`
-          - `debug/boot-events`
-          - `debug/worktree-cleanup`
-          - `framework/cli/build`
-          - `framework/cli/check`
-          - `framework/tooling/checks`
-          - `framework/tooling/checks/type-check`
-          - `framework/tooling/checks/type-check/backstop`
-          - `infra/launcher`
-          - `infra/launcher/gateway-drift`
-          - `plugin-meta/plugin-records`
-          - `reports/interaction-budget`
       - Exemptions:
         - Exempts itself from:
-          - `boundaries/no-platform-api` — `core/internal/file-report.ts`, `server/internal/drain.ts` (debt)
+          - `boundaries/no-platform-api` — `server/internal/drain.ts` (debt)
           - `blocking-fs/no-sync-fs` — `server/internal/writer.ts` (sanctioned)
+      - Plugins:
+        - **`file`** — Writing a report into the report outbox, for a process with no server (a CLI run, a supervised child, a backend before it is ready): fileReportFromProcess / fileReportFromProcessSync, the entry format the drain reads, and the outbox's data-dir declaration. Core-only and light, so a writer bundles the writer and never the drain (reports/outbox's server, which reaches the reports engine).
+          - Core:
+            - Uses:
+              - `infra/host-fs/user-path.AppPath`
+              - `infra/host-fs/user-path.joinAppPath`
+              - `infra/paths/repo-root.REPO_ROOT`
+              - `infra/spawn.getMainRepoRoot`
+              - `infra/spawn.spawnCaptured`
+              - `packages/timed-fs.readdir`
+              - `packages/timed-fs.readdirSync`
+              - `packages/timed-fs.realpath`
+            - Exports (types):
+              - `FileReportOutcome`
+              - `MergeBaseResult`
+              - `OutboxCode`
+              - `OutboxEntry`
+              - `ProcessReport`
+            - Exports (values):
+              - `fileReportFromProcess`
+              - `fileReportFromProcessSync`
+              - `headCommitOf`
+              - `isOutboxEntryName`
+              - `isOutboxTempName`
+              - `mergeBaseWithMain`
+              - `OUTBOX_MAX_PENDING`
+              - `OutboxCodeSchema`
+              - `OutboxEntrySchema`
+              - `repositoryOf`
+          - Cross-plugin:
+            - Imported by:
+              - `backup`
+              - `build/step-baseline`
+              - `database/fork`
+              - `debug/backend-liveness`
+              - `debug/boot-events`
+              - `debug/worktree-cleanup`
+              - `framework/cli/build`
+              - `framework/cli/check`
+              - `framework/tooling/checks`
+              - `framework/tooling/checks/type-check`
+              - `framework/tooling/checks/type-check/backstop`
+              - `infra/launcher`
+              - `infra/launcher/gateway-drift`
+              - `plugin-meta/plugin-records`
+              - `reports/interaction-budget`
+              - `reports/outbox`
+          - Exemptions:
+            - Exempts itself from: `boundaries/no-platform-api` — `core/internal/file-report.ts` (debt)
     - **`page-doc-rank-drift`** — Page doc-rank drift report kind: files the page editor's docRankDriftSink — a boot reconcile that had to re-mint `page_blocks.doc_rank` the structural-write chokepoint should already have kept in document order (a writer bypassed the doc-order marks, or an old backend wrote during a hot-swap) — deduped on the kind alone, with an investigation task naming the bypass to find.
       - Server:
         - Contributes: `report-kind` "page-doc-rank-drift"
