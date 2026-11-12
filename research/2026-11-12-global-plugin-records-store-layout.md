@@ -89,7 +89,14 @@ keys B-tree, at ~57 B a row, is now two thirds of the file).
   by the module's Merkle key under the evaluator's key, so a change to any
   widely-imported module, or to the evaluator's 346-module closure (88 of 484
   main commits), re-keys every module above it — per worktree base. Filed as a
-  sidequest.
+  sidequest. **Done:** a module's facts (slots created, subscribes) are a
+  function of its closure, which every barrel above it already keys, so they
+  now ride on the barrel's `evaluated` record and the `module` table is gone.
+  Over the last 484 main commits that is ~3,245 module keys per commit no
+  longer minted, against ~643 barrel keys per commit both schemes mint (−83%
+  of evaluation keys); `--verify-records`: 139,208 agree, 0 disagree. The
+  evaluator's own closure (361 modules, 76/484 commits, mostly
+  barrel-import's stubs) is the next rung — filed as a sidequest.
 - **file records**: 1.25M new keys a day for ~40–54k distinct values: every
   move of a scan's own closure re-keys every file's record for that scan.
   Filed as a sidequest.

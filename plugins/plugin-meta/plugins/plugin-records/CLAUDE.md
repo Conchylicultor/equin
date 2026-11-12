@@ -19,7 +19,7 @@ anywhere, and no global fingerprint: a change costs the records it touches.
 | --- | --- | --- |
 | `file` | a module's import specifiers | its blob id |
 | `facet` | one facet's extract of one plugin (`plugin-tree/core/internal/facet-records.ts`) | the plugin's own files (what its snapshot holds), the facet's module Merkle key, the extraction harness, the lockfile's npm resolutions |
-| `evaluated` / `module` | what importing a barrel produced, as data; the slots one module created | the barrel's (module's) Merkle key, the evaluator's |
+| `evaluated` | what importing a barrel produced, as data, and the slots its closure's modules created | the barrel's Merkle key, the evaluator's |
 
 - **Module graph** (`core/internal/module-graph.ts`): file facts + resolution
   against the snapshot give every module's **Merkle key** — its blob plus the
@@ -42,6 +42,16 @@ anywhere, and no global fingerprint: a change costs the records it touches.
   `importBarrel`) — and what cannot be data (a zod schema, a React element) is
   a value that throws when read. Readers (`codegen/core/evaluated-barrels.ts`)
   settle the slot naming over those stand-ins with `settleSlotNaming`.
+- **Module facts ride on the barrel's record.** What a module's top-level
+  evaluation did (the slots it created, whether it subscribes to declaration
+  passes) is a function of its closure, which every barrel above it keys.
+  So an evaluated record lists the slots created in its barrel's static
+  closure, and there is no per-module record: keyed per module, a change to
+  a widely-imported module (or to the evaluator) re-keyed every module above
+  it — ~0.5M keys a day for 48 distinct values, ~4× the evaluated records'
+  own churn (`research/2026-11-12-global-plugin-records-store-layout.md`).
+  Never key a fact by a unit finer than the record that already re-keys on
+  the same closure.
 - **Declaration-dependent barrels**: a plugin whose own modules subscribe to
   declaration passes (reorder, pane) fills its contributions from the whole
   declared set; its declared record is keyed also by that set, and a miss
@@ -121,9 +131,8 @@ a pass computes only the records no checkout has made yet.
   group key, and only that plugin's group misses. A missing group is read
   member by member and written once every member exists. A lookup is two
   random B-tree probes (~20 µs); a no-change build asked ~83k of them,
-  0.43 s of SQLite (build pipeline step 13), now ~0.15–0.2 s: module
-  records group by plugin too; evaluated records (one per barrel) stay per
-  key.
+  0.43 s of SQLite (build pipeline step 13), now ~0.15–0.2 s; evaluated
+  records (one per barrel) stay per key.
 - **No write holds the store long.** Every build, push and check pass on the
   host shares the file, and SQLite has one writer: a long write transaction
   queues every other writer, and one past the 30 s busy timeout makes theirs

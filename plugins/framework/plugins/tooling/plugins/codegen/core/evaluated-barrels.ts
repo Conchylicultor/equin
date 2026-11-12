@@ -256,7 +256,7 @@ export async function bundledWebBarrels(
 /**
  * The slots the browser's modules create that no bundled plugin declares —
  * `created \ declared` over the records: what each bundled web barrel's
- * modules created (the module records), minus what the registry naming
+ * modules created (their evaluated records), minus what the registry naming
  * declares. Identities, so a factory used by ten panes cannot hide one
  * missing declaration behind another.
  */

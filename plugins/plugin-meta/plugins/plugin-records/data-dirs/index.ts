@@ -2,7 +2,7 @@ import { defineDataDir } from "@plugins/infra/plugins/paths/core";
 
 /**
  * The plugin-record store: one SQLite file of content-addressed records (file
- * facts, facet extracts, evaluated barrels, module facts), shared by every
+ * facts, facet extracts, evaluated barrels), shared by every
  * worktree — a record's key is the hash of its inputs, so any build of any
  * checkout reads what another computed.
  *

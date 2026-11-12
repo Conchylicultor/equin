@@ -27,8 +27,6 @@ export const RECORD_TABLES = [
   "facet",
   // One barrel's evaluated facts, keyed by its module Merkle key.
   "evaluated",
-  // The slots one module's top-level evaluation created, keyed by its Merkle key.
-  "module",
   // A tool's answer that only one outcome is ever stored for (drizzle-kit's
   // "no schema change"), keyed by everything the tool reads.
   "verdict",

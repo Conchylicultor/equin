@@ -87,11 +87,11 @@ test("a batch larger than one statement's parameters is read whole", async () =>
     { length: 1234 },
     (_, i) => [k(`${i}`), `v${i}`] as const,
   );
-  s.putMany("module", entries);
+  s.putMany("evaluated", entries);
   expect(
     (
       await s.getMany(
-        "module",
+        "evaluated",
         entries.map(([key]) => key),
       )
     ).size,
@@ -155,7 +155,7 @@ test("a reclaim pages through more rows than one page holds", async () => {
   const path = join(dir, "reclaim-pages.sqlite");
   const s = openRecordStore({ path });
   s.putMany(
-    "module",
+    "evaluated",
     Array.from(
       { length: 12_345 },
       (_, i) => [k(`p${i}`), `v${i % 7}`] as const,

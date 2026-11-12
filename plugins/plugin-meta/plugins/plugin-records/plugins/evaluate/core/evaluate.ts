@@ -19,8 +19,6 @@ import type { RepoSnapshot } from "@plugins/framework/plugins/tooling/core";
 import {
   buildModuleGraph,
   npmResolutionsKey,
-  groupedByOwner,
-  readGrouped,
   recordKey,
   type ModuleGraph,
   type ModuleGraphInput,
@@ -40,10 +38,12 @@ import { reviveValue, serializeValue, type Json } from "./serialize";
  * naming (which plugin owns a slot, and so its id) is settled over the records
  * by the reader, exactly as a declaration pass settles it over live barrels.
  *
- * Two facts are not a function of one barrel's closure, and are recorded per
- * MODULE instead: the slots it created (what the orphan guard compares with
- * what is declared) and whether it subscribes to declaration passes. A barrel
- * whose own plugin subscribes (reorder's config registrations, pane's header
+ * What each module's top-level evaluation did — the slots it created (what
+ * the orphan guard compares with what is declared) and whether it subscribes
+ * to declaration passes — is a function of that module's closure, so it rides
+ * on the record of every barrel above it (`EvaluatedRecord.created`), never on
+ * a record of its own: keyed per module, every change to a widely-imported
+ * module re-keyed every module above it. A barrel whose own plugin subscribes (reorder's config registrations, pane's header
  * titles) fills its contributions from the WHOLE declared set; its declared
  * facts are a second record, keyed also by that set (see
  * {@link EvaluatedBarrels.resolveDeclarationDependent}).
@@ -63,13 +63,22 @@ interface EvaluatedRecord {
   module: Json;
   /** Its own plugin's modules subscribe to declaration passes. */
   dependent: boolean;
+  /**
+   * The slots the top-level evaluation of every module in its static closure
+   * created, by module and ordinal. A module's facts are a function of its
+   * own closure — inside this barrel's key — so they ride on the barrel's
+   * record: kept per module under the module's own Merkle key, a change to a
+   * widely-imported module re-keyed every module above it (3.6M keys for 48
+   * distinct values, `research/2026-11-12-global-plugin-records-store-layout.md`).
+   */
+  created: CreatedEntry[];
 }
 
-/** One module's evaluation facts, as stored. */
-interface ModuleRecord {
-  /** The slots its top-level evaluation created, by ordinal. */
-  created: { ordinal: number; meta: Json }[];
-  subscribes: boolean;
+/** A slot one module's top-level evaluation created, as stored. */
+interface CreatedEntry {
+  module: string;
+  ordinal: number;
+  meta: Json;
 }
 
 /** A slot created by an evaluated module, as the orphan guard reads it. */
@@ -101,7 +110,10 @@ export interface EvaluationInput extends ModuleGraphInput {
 export interface EvaluatedBarrels {
   /** The revived module of an evaluated barrel: its `default` and its slot-bearing exports. */
   module(path: string): Record<string, unknown>;
-  /** The slots the modules loaded with `paths` created (their static closure). */
+  /**
+   * The slots the modules loaded with the barrels at `paths` (barrels of this
+   * evaluation) created — their static closure — read from their records.
+   */
   createdSlots(paths: Iterable<string>): CreatedSlot[];
   /** The identity of a slot stand-in this evaluation revived. */
   identityOf(slot: unknown): string | undefined;
@@ -182,9 +194,6 @@ export async function evaluateBarrels(
     };
   };
   const keyOf = memo((b) => recordKey(evaluator, "barrel", b, graph.keyOf(b)));
-  const moduleKeyOf = memo((m) =>
-    recordKey(evaluator, "module", m, graph.keyOf(m)),
-  );
 
   // A barrel's exports may name its checkout (a path built from
   // `import.meta.dir` or REPO_ROOT): an input its key cannot name, since
@@ -204,29 +213,7 @@ export async function evaluateBarrels(
   ))
     records.set(k, parseRecord(v));
 
-  const loaded = graph.staticClosureOf(barrels.map((b) => b.path));
-  const moduleRecords = new Map<string, ModuleRecord>();
-  // A plugin's module records at a time (`readGrouped`): ~10k keys asked one
-  // by one were most of an evaluation's store time.
-  for (const [k, v] of await readGrouped(
-    store,
-    "module",
-    groupedByOwner([...loaded], [...loaded].map(moduleKeyOf)),
-  ))
-    moduleRecords.set(k, JSON.parse(v) as ModuleRecord);
-
-  // A barrel misses when its record does, or when a module it loads has no
-  // module record (a store that lost one rebuilds it from the barrel).
-  const unrecorded = new Set(
-    [...loaded].filter((m) => !moduleRecords.has(moduleKeyOf(m))),
-  );
-  const missed = barrels.filter((b) => {
-    if (!records.has(keyOf(b.path))) return true;
-    if (unrecorded.size === 0) return false;
-    for (const m of graph.staticClosure(b.path))
-      if (unrecorded.has(m)) return true;
-    return false;
-  });
+  const missed = barrels.filter((b) => !records.has(keyOf(b.path)));
 
   const rel = (abs: string): string => {
     const prefix = `${input.realRoot}/`;
@@ -318,38 +305,35 @@ export async function evaluateBarrels(
   if (missed.length > 0) {
     registerBarrelStubs(input.realRoot);
     for (const b of missed) await importLive(b);
-    // Module facts for every module these imports loaded that has none yet.
-    const fresh: [string, string][] = [];
-    for (const b of missed) {
-      for (const m of graph.staticClosure(b.path)) {
-        const k = moduleKeyOf(m);
-        if (moduleRecords.has(k)) continue;
-        if (!slotSitesTracked())
-          throw new Error("[plugin-records] slot sites are not tracked");
+    if (!slotSitesTracked())
+      throw new Error("[plugin-records] slot sites are not tracked");
+    // What each loaded module's top-level evaluation did, read once a module.
+    const facts = new Map<string, { created: Json[]; subscribes: boolean }>();
+    const factsOf = (m: string) => {
+      let f = facts.get(m);
+      if (!f) {
         const o = moduleEvaluation(`${input.realRoot}/${m}`);
-        const rec: ModuleRecord = {
-          created: o.created.map((slot, ordinal) => ({
-            ordinal,
-            meta: metaOf(slot),
-          })),
-          subscribes: o.subscribes,
-        };
-        moduleRecords.set(k, rec);
-        fresh.push([k, JSON.stringify(rec)]);
+        f = { created: o.created.map(metaOf), subscribes: o.subscribes };
+        facts.set(m, f);
       }
-    }
-    store.putMany("module", fresh);
+      return f;
+    };
     const freshBarrels: [string, string][] = [];
     for (const b of missed) {
       const dir = pluginDirOf(b.path);
       let dependent = false;
-      for (const m of graph.staticClosure(b.path)) {
-        if (!m.startsWith(`${dir}/`)) continue;
-        if (moduleRecords.get(moduleKeyOf(m))!.subscribes) dependent = true;
+      const created: CreatedEntry[] = [];
+      for (const m of [...graph.staticClosure(b.path)].sort()) {
+        const f = factsOf(m);
+        if (f.subscribes && m.startsWith(`${dir}/`)) dependent = true;
+        f.created.forEach((meta, ordinal) =>
+          created.push({ module: m, ordinal, meta }),
+        );
       }
       const rec: EvaluatedRecord = {
         module: serializeBarrel(live.get(b.path)!),
         dependent,
+        created,
       };
       records.set(keyOf(b.path), rec);
       // A dependent barrel's module holds what the last declaration pass of
@@ -418,21 +402,26 @@ export async function evaluateBarrels(
         ? identities.get(slot)
         : undefined,
     createdSlots(paths) {
-      const modules = graph.staticClosureOf(paths);
-      const out: CreatedSlot[] = [];
-      for (const m of [...modules].sort()) {
-        const rec = moduleRecords.get(moduleKeyOf(m));
-        if (!rec) throw new Error(`[plugin-records] no module record for ${m}`);
-        for (const c of rec.created)
-          out.push({
-            identity: `${m}#${c.ordinal}`,
-            module: m,
-            meta: reviveValue(c.meta, {
-              slot: () => undefined,
-            }) as CreatedSlot["meta"],
-          });
-      }
-      return out;
+      // The union of the barrels' closures, each module's slots once.
+      const byIdentity = new Map<string, CreatedEntry>();
+      for (const p of paths)
+        for (const c of recordOf(p).created)
+          byIdentity.set(`${c.module}#${c.ordinal}`, c);
+      return [...byIdentity.values()]
+        .sort((a, b) =>
+          a.module === b.module
+            ? a.ordinal - b.ordinal
+            : a.module < b.module
+              ? -1
+              : 1,
+        )
+        .map((c) => ({
+          identity: `${c.module}#${c.ordinal}`,
+          module: c.module,
+          meta: reviveValue(c.meta, {
+            slot: () => undefined,
+          }) as CreatedSlot["meta"],
+        }));
     },
     async resolveDeclarationDependent(all) {
       const dependents = all.filter((b) => recordOf(b.path).dependent);
@@ -504,6 +493,8 @@ export async function evaluateBarrels(
         const rec: EvaluatedRecord = {
           module: serializeBarrel(mods.get(b.path)!),
           dependent: true,
+          // A declaration pass fills contributions, never creates a slot.
+          created: recordOf(b.path).created,
         };
         resolved.set(b.path, rec);
         revived.delete(b.path);
