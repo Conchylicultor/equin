@@ -333,20 +333,89 @@ withReplicaSchema(replicaId, (dbx) => runAnalyticsQuery(dbx, q, asOf));  // read
 
 ### Sizes and batching
 
-- **Page bounds.** At most `maxRows = 2000` and `maxBytes = 4 MB` per page, whichever comes first.
-  The answer cap is enforced on the box (the running byte sum) and here (`maxAnswerBytes`
-  re-checked). One page must answer within curl's 10 s deadline. The log index makes a page an
-  index range scan, and the copy is a PK keyset.
-- **Rough cost.** One SSH session per page, about 1 s. At about 1k visits/day × 5 hits, the 90-day
-  raw window is about 550k rows, which is about 275 pages, which is about 5 min of pulls in 20-page
-  chunks. The forever tables add more.
-- **Measure before building.** Phase 1's first step counts rows and bytes per table on the real
-  site's box. If the copy is too slow, the fix is a streaming transport (one SSH session carrying
-  many pages as ndjson). That changes only `site-mirror/pull`'s `fetch`, not the primitive.
-- **Incremental pulls.** An hour of changes is usually one page.
+- **Page bounds.** At most `maxRows = 10000` and `maxBytes = 4 MB` per page, whichever comes first
+  (revised from 2000 after measuring, see § Measured sizes: at 2000 rows the row cap bound at
+  ~450 KB, a ninth of the byte cap, on every analytics table). The answer cap is enforced on the
+  box (the running byte sum) and here (`maxAnswerBytes` re-checked). One page must answer within
+  curl's 10 s deadline. The log index makes a page an index range scan, and the copy is a PK
+  keyset.
+- **Measured cost** (§ Measured sizes). The whole `analytics` set on the real box is ~27k rows and
+  ~6.3 MB of row JSON today, 85% of it `analytics_daily`. A first copy is ~5 pages (~16 at the
+  old 2000-row cap), about 5–20 s of SSH sessions at ~1 s each. A day's changes are ~1.5k keys
+  and ~350 KB, one page.
+- **Streaming transport is not needed** at these sizes (open decision 3 confirmed). If it ever
+  is, the fix is one SSH session carrying many pages as ndjson. That changes only
+  `site-mirror/pull`'s `fetch`, not the primitive.
+- **Incremental pulls.** An hour of changes is one page, except right after the nightly rollup
+  (00:15 UTC), which rewrites two days of `analytics_daily` and `analytics_visit_members`: still
+  one page at 10000 rows on today's traffic.
 - **Trigger cost on the box.** One extra `INSERT … SELECT … ON CONFLICT` per write statement on a
   mirrored table. A pageview already updates its visit row in the same transaction, so the log's
   row lock adds no new contention.
+
+### Measured sizes
+
+Measured 2026-11-12 on the one real deployed site (composition `website`, server
+`srv-1784718612584-q17b8x`, Hetzner, Postgres 18.6), read-only: an SSH session as root piping
+the release's Postgres socket (`nc -U`, inside the `equin@website` unit's private `/tmp`) to a
+local `pg` client in a `default_transaction_read_only` session. No deploy, no new route, nothing
+written. (The box has no `psql`, and the socket path is too long for `ssh -L`; the one-off
+script lived in the session's scratch dir.)
+
+The data starts on 2026-09-18 (56 days), so the 90-day raw window is not full yet. The whole
+`website` database is 26 MB.
+
+| Table | Rows | Row JSON (sum) | Max row | On disk (heap + idx) | Kept |
+| --- | ---: | ---: | ---: | ---: | --- |
+| `analytics_visits` | 180 | 131 KB (~730 B/row) | 786 B | 197 KB | 90 days |
+| `analytics_hits` | 1,244 | 393 KB (~316 B/row) | 1.1 KB | 377 KB | 90 days (cascade) |
+| `analytics_daily` | 23,144 | 5.26 MB (~227 B/row) | 326 B | 5.7 MB | forever |
+| `analytics_visit_members` | 2,656 | 497 KB (~187 B/row) | 235 B | 745 KB | forever |
+| **`analytics` set** | **27,224** | **6.28 MB** | | **7.0 MB** | |
+| `site_messages` (minus `ip_hash`) | 4 | 1.8 KB | 595 B | 98 KB | spam 30 days |
+| `site_reports` | 8 | 10 KB | 3.1 KB | 82 KB | 30 days unseen |
+
+Never-mirrored tables, for scale: `analytics_salts` 30 rows, `analytics_visitor_links` 100,
+`site_messages_salt` 1.
+
+**Traffic and change rate** (the last 14 days, per day; peak in brackets):
+
+| Table | New / changed rows per day | How it changes |
+| --- | --- | --- |
+| `analytics_visits` | ~5 visits (11) | Inserted, then updated on every hit: ~12 updates per visit (`pg_stat` lifetime 2,248 updates / 180 rows). One log row per visit either way. |
+| `analytics_hits` | ~60 (264) | Inserted, then ~0.8 updates each (engagement beacons). ~7 hits per visit. |
+| `analytics_daily` | ~640 rows per rolled-up day (1,589) | **Delete + insert of a whole day** by the nightly rollup, which re-rolls the last `ROLLUP_RECOMPUTE_DAYS` = 2 days. So each night touches ~1,300 keys (two days), every day's keys are rewritten twice, and a value that vanished from a day is a tombstone. Never `UPDATE`d. |
+| `analytics_visit_members` | ~70 per day (194) | Same delete + insert per day as `analytics_daily`: ~140 keys a night. |
+| `site_messages` | 4 in 56 days | Inserted, then updated by notify / confirm (3 updates per row). |
+| `site_reports` | 8 fingerprints in 2 days, 43 occurrences | Upserted per occurrence (`count`, `last_seen_at`). |
+
+So a day of changes on the `analytics` set is **~1.5k distinct keys and ~350 KB of row JSON**
+(peak ~3k keys, ~0.8 MB), ~85% of it the rollup's rewrite of `analytics_daily`. The rest of the
+day's writes are a handful of rows.
+
+**What this means for the defaults:**
+
+- **The plan's original estimate was wrong in two ways.** It assumed ~1k visits/day × 5 hits
+  (a ~550k-row raw window). The real site has ~5 visits/day and ~60 hits/day, about 200× less.
+  And it treated the forever tables as an add-on, but `analytics_daily` *is* the set: 85% of the
+  rows and bytes, and most of the daily churn.
+- **Page bounds: `maxRows` 2000 → 10000** (above). `maxBytes = 4 MB` stays: it is what bounds a
+  page of `site_reports` rows (3 KB each) or a future wide table. 10000 rows of
+  `analytics_daily` are ~2.3 MB.
+- **Transport (open decision 3): one SSH session per page is confirmed.** The first copy is ~5
+  pages today. At today's traffic `analytics_daily` grows ~230k rows (~53 MB) a year, still
+  ~25 pages (~30 s) for a first copy after a year.
+- **Log horizon (open decision 1): 30 days is kept.** The log holds one row per key changed in
+  the window: ~30 × (640 + 70 + 60 + 5) ≈ 23k rows, about the size of the mirrored data itself
+  today (a few MB with its index, against a 26 MB database). A reconciliation sends ~27k keys and
+  hashes today (~3 MB, one or two key pages), ~250k after a year.
+- **site-reports' `maxRows = 50`, one page per run, and the 1 MB `maxAnswerBytes` stay.** 50
+  rows at the largest measured row (3.1 KB) are ~160 KB.
+- **The nightly rollup is the change stream's main producer**, so a pull just after 00:15 UTC
+  carries ~1.3k `analytics_daily` keys whose values are mostly unchanged (yesterday re-rolled
+  with the same visits). That is harmless (applied as upserts) and fits one page. Making the
+  rollup diff instead of delete + insert would cut it to the rows that actually change. It is
+  not needed at these sizes, so it is not part of this plan.
 
 ## Phase 1: the primitive, with collect's tables as its first set
 
@@ -515,18 +584,21 @@ Nothing reads the mirror yet. It fills, and its freshness line can be checked in
 
 1. **Tombstone / log retention on the box** (`TOMBSTONE_RETENTION_DAYS`). Proposed: 30 days,
    meaning a computer off for longer reconciles (keys and hashes, plus the rows that differ).
+   Measured (§ Measured sizes): the log holds ~23k rows at 30 days, and a reconciliation ~27k
+   keys, so 30 days is kept.
 2. **Forks.** Proposed: exclude the mirror from forks; a worktree pulls its own copy on open.
    Alternative: copy the mirror with the fork.
-3. **Transport.** Proposed: one SSH session per page (reuses host-query unchanged). Upgrade to a
-   streaming transport only if the measured initial copy is too slow.
+3. **Transport.** One SSH session per page (reuses host-query unchanged). **Confirmed by the
+   measurement** (§ Measured sizes): a first copy is ~5 pages today, ~25 after a year.
 4. **Report clock.** Proposed: `asOf` = the source's `now` at the last applied page, for exact
    parity. Alternative: this computer's clock, which shows "today" moving although no data has
    arrived.
 
 ## Implementation tasks (ordered)
 
-1. **Measure**: row and byte counts per collect / site-messages / site-reports table on the real
-   site's box. This picks the page bounds and confirms open decision 3.
+1. ~~**Measure**: row and byte counts per collect / site-messages / site-reports table on the real
+   site's box. This picks the page bounds and confirms open decision 3.~~ Done 2026-11-12
+   (§ Measured sizes): `maxRows` raised to 10000, open decisions 1 and 3 confirmed.
 2. **`database/table-mirror` core + source**: log, generated triggers, identity, readers
    (changes, copy, keys, rows; the row hash), horizon prune job, `NeverMirrored`, and tests
    including cascade and in-flight.
