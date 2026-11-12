@@ -16,17 +16,27 @@ import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 export const SYSTEM_ACCOUNT_ID = "system";
 
 /**
- * The credentials an added account can hold, as data: what each one starts
- * with, and the environment variable it reaches Claude Code in. A credential's
- * kind is derived from its prefix — never stated separately — so the variable
- * an agent signs in through cannot disagree with what was pasted.
+ * The credentials an added account can hold, as data: the prefixes each one
+ * starts with, and the environment variable it reaches Claude Code in. A
+ * credential's kind is derived from its prefix — never stated separately — so
+ * the variable an agent signs in through cannot disagree with what was pasted.
  */
 export const CLAUDE_CREDENTIALS = {
   /** A plan sign-in (the in-app sign-in's `setup-token`): draws on the plan's limits. */
-  token: { prefix: "sk-ant-oat", env: "CLAUDE_CODE_OAUTH_TOKEN" },
-  /** A Console API key: billed per use to its organization, no plan limits. */
-  "api-key": { prefix: "sk-ant-api", env: "ANTHROPIC_API_KEY" },
-} as const;
+  token: { prefixes: ["sk-ant-oat"], env: "CLAUDE_CODE_OAUTH_TOKEN" },
+  /**
+   * A Console API key: billed per use to its organization, no plan limits.
+   * `sk-ant-api` is the original shape; keys the Console creates since
+   * ~2026-10 (personal / workspace keys) start with `sk-ant-usr`.
+   */
+  "api-key": {
+    prefixes: ["sk-ant-api", "sk-ant-usr"],
+    env: "ANTHROPIC_API_KEY",
+  },
+} as const satisfies Record<
+  string,
+  { prefixes: readonly [string, ...string[]]; env: string }
+>;
 export type ClaudeCredentialKind = keyof typeof CLAUDE_CREDENTIALS;
 const CREDENTIAL_KINDS = Object.keys(CLAUDE_CREDENTIALS) as [
   ClaudeCredentialKind,
@@ -42,14 +52,14 @@ export const CLAUDE_CREDENTIAL_ENVS: readonly string[] = CREDENTIAL_KINDS.map(
 function credentialKindOf(secret: string): ClaudeCredentialKind | null {
   return (
     CREDENTIAL_KINDS.find((k) =>
-      secret.startsWith(CLAUDE_CREDENTIALS[k].prefix),
+      CLAUDE_CREDENTIALS[k].prefixes.some((p) => secret.startsWith(p)),
     ) ?? null
   );
 }
 
 /**
  * What a user pastes: a plan token (`sk-ant-oat…`) or an API key
- * (`sk-ant-api…`). Checked for its shape only: whether it still signs in shows
+ * (`sk-ant-api…` / `sk-ant-usr…`). Checked for its shape only: whether it still signs in shows
  * on the first agent launched with it.
  */
 export const ClaudeCredentialSchema = z
@@ -58,7 +68,7 @@ export const ClaudeCredentialSchema = z
   .regex(/^sk-ant-[A-Za-z0-9_-]{20,}$/, "Not a Claude credential (sk-ant-…)")
   .refine(
     (s) => credentialKindOf(s) !== null,
-    "Neither a Claude sign-in token (sk-ant-oat…) nor an API key (sk-ant-api…)",
+    "Neither a Claude sign-in token (sk-ant-oat…) nor an API key (sk-ant-api… / sk-ant-usr…)",
   );
 
 /** The kind of a credential that passed {@link ClaudeCredentialSchema}; throws on any other string. */

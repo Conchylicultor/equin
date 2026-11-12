@@ -230,7 +230,9 @@ function ApiKeySteps({ input }: { input: ReactNode }) {
   );
 }
 
-const API_KEY_PREFIX = CLAUDE_CREDENTIALS["api-key"].prefix;
+const API_KEY_PREFIXES = CLAUDE_CREDENTIALS["api-key"].prefixes;
+const isApiKey = (key: string) =>
+  API_KEY_PREFIXES.some((p) => key.startsWith(p));
 
 /**
  * Add an API key: get one from the Console, then paste it with a name. A plan
@@ -248,7 +250,7 @@ function AddApiKeyForm({
   const [error, setError] = useState<string | null>(null);
   const fetchEndpoint = useFetchEndpoint();
   const key = credential.trim();
-  const notAKey = key !== "" && !key.startsWith(API_KEY_PREFIX);
+  const notAKey = key !== "" && !isApiKey(key);
   const add = async () => {
     setError(null);
     let added;
@@ -282,7 +284,7 @@ function AddApiKeyForm({
             <Input
               type="password"
               autoComplete="off"
-              placeholder={`${API_KEY_PREFIX}03-…`}
+              placeholder="sk-ant-…"
               value={credential}
               onChange={(e) => setCredential(e.target.value)}
               className="font-mono"
@@ -292,7 +294,8 @@ function AddApiKeyForm({
       />
       {error || notAKey ? (
         <Text variant="caption" tone="destructive">
-          {error ?? `Not an API key (${API_KEY_PREFIX}…)`}
+          {error ??
+            `Not an API key (${API_KEY_PREFIXES.map((p) => `${p}…`).join(" / ")})`}
         </Text>
       ) : null}
       <Line className="gap-xs">

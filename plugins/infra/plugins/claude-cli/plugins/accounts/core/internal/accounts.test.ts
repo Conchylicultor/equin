@@ -8,11 +8,14 @@ import {
 
 const TOKEN = `sk-ant-oat01-${"a".repeat(40)}`;
 const KEY = `sk-ant-api03-${"b".repeat(40)}`;
+const USER_KEY = `sk-ant-usr-${"d".repeat(40)}`;
 
 describe("credentials", () => {
   test("the kind is derived from the prefix; anything else is refused", () => {
     expect(claudeCredentialKind(TOKEN)).toBe("token");
     expect(claudeCredentialKind(KEY)).toBe("api-key");
+    expect(claudeCredentialKind(USER_KEY)).toBe("api-key");
+    expect(ClaudeCredentialSchema.safeParse(USER_KEY).success).toBe(true);
     expect(ClaudeCredentialSchema.safeParse(` ${KEY} `).success).toBe(true);
     expect(
       ClaudeCredentialSchema.safeParse(`sk-ant-admin01-${"c".repeat(40)}`)
