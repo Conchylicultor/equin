@@ -598,6 +598,7 @@ yes/no guard: `useConfirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `trackInputModality`
     - `useControlSize`
     - `useHoldPopoverOpen`
+    - `useInSidebarPanel`
     - `useMenuSurface`
     - `usePinOnClick`
     - `usePortalForward`

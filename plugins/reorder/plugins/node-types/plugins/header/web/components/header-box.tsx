@@ -1,4 +1,10 @@
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  cn,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  useInSidebarPanel,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { ReactNode } from "react";
 import {
   CollapsibleChevron,
@@ -19,6 +25,9 @@ type HeaderPayload = { label?: string; collapsed?: boolean };
  * group box (border + chevron header row) but without the drag handle, rename
  * input, delete button, or any endpoint/DB calls — collapse is the only
  * affordance, written back through `onPatch`. Label is display-only this pass.
+ *
+ * Inside a sidebar panel (`useInSidebarPanel`) it drops the frame and draws as
+ * a sidebar row instead (see below), so a sidebar layout can fold entries away.
  */
 export function HeaderBox({
   payload,
@@ -31,10 +40,37 @@ export function HeaderBox({
   onPatch: (next: Partial<HeaderPayload>) => void;
   children: ReactNode;
 }) {
+  const inSidebar = useInSidebarPanel();
   const { open, triggerProps, contentProps } = useCollapsible({
     open: !(payload.collapsed ?? false),
     onOpenChange: (next) => onPatch({ collapsed: !next }),
   });
+
+  // In a sidebar panel the group is one of the sidebar's own rows — the
+  // chevron in the icon column, the label muted — and its members fold in
+  // below at the sidebar's rail, with no frame: a "More" that tucks
+  // secondary nav entries away, not a card in the middle of the list.
+  if (inSidebar) {
+    return (
+      <>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              {...triggerProps}
+              className="text-sidebar-foreground/70"
+            >
+              <CollapsibleChevron
+                open={open}
+                className="size-sidebar-icon text-sidebar-icon group-hover/menu-button:text-current"
+              />
+              <span>{payload.label || "Group"}</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+        <FoldMotion {...contentProps}>{children}</FoldMotion>
+      </>
+    );
+  }
 
   return (
     <div className="rounded-md border border-border/50">

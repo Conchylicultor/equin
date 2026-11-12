@@ -48173,6 +48173,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `trackInputModality`
               - `useControlSize`
               - `useHoldPopoverOpen`
+              - `useInSidebarPanel`
               - `useMenuSurface`
               - `usePinOnClick`
               - `usePortalForward`
@@ -54972,6 +54973,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/spacing.Inset`
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.cn`
+              - `primitives/css/ui-kit.SidebarMenu`
+              - `primitives/css/ui-kit.SidebarMenuButton`
+              - `primitives/css/ui-kit.SidebarMenuItem`
+              - `primitives/css/ui-kit.useInSidebarPanel`
               - `reorder/node-types.ReorderNodes`
           - Cross-plugin:
             - Uses tokens:
@@ -54982,6 +54987,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density --space-xs`
               - `ui/tokens/shape --radius`
               - `ui/tokens/shape --spacing`
+              - `ui/tokens/sidebar-metrics --sidebar-icon-size`
+              - `ui/tokens/sidebar-palette --sidebar-foreground`
+              - `ui/tokens/sidebar-palette --sidebar-icon`
         - **`overflow`** — Overflow reorder node type: a container whose authored members all relocate behind one ⋯ panel, via AdaptiveBar.Collapsed — each rendering the form it declared, so a plain action becomes a labelled row and a richer widget stays itself, one live instance either way. In edit mode it is a labelled inline box so the bucket stays draggable. Owns the label payload schema.
           - Web:
             - Contributes: `ReorderNodes.NodeType` "overflow"
@@ -62444,6 +62452,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/app-shell`
               - `primitives/css/ui-kit`
               - `primitives/data-view/view-core`
+              - `reorder/node-types/header`
               - `ui/sidebar-framing/floating`
               - `ui/sidebar-framing/flush`
               - `ui/sidebar-framing/inset`
@@ -62484,6 +62493,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/app-shell`
               - `primitives/css/theme-boundary`
               - `primitives/css/ui-kit`
+              - `reorder/node-types/header`
             - Imported by:
               - `apps-core/chrome-theme`
               - `apps/agent-manager/shell`

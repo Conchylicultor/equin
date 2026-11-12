@@ -50,10 +50,18 @@
   "items": [
     "apps.agent-manager.welcome:new-conversation",
     "tasks.task-detail:tasks",
-    "conversations.agents:agents",
-    "tasks.automations:automations",
-    "conversations.all-conversations:all-conversations",
-    "stats:stats",
+    {
+      "type": "header",
+      "id": "more",
+      "label": "More",
+      "collapsed": true,
+      "items": [
+        "conversations.agents:agents",
+        "tasks.automations:automations",
+        "conversations.all-conversations:all-conversations",
+        "stats:stats"
+      ]
+    },
     "conversations.conversations-view:conversations",
     { "type": "divider", "id": "claude-account-rule" },
     "conversations.runtime-sdk:claude-account"

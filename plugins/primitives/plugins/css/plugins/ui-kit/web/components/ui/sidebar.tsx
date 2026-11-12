@@ -77,6 +77,18 @@ function useSidebar() {
   return context;
 }
 
+/**
+ * True below a {@link Sidebar} panel (not merely below a `SidebarProvider`,
+ * which also wraps the main area): a generic part drawn into a sidebar — a
+ * reorder group, say — reads it to wear the sidebar's own row look instead of
+ * its standalone one.
+ */
+const InSidebarPanelContext = React.createContext(false);
+
+function useInSidebarPanel(): boolean {
+  return React.useContext(InSidebarPanelContext);
+}
+
 function SidebarProvider({
   defaultOpen = true,
   open: openProp,
@@ -200,7 +212,9 @@ function Sidebar({
         )}
         {...props}
       >
-        {children}
+        <InSidebarPanelContext.Provider value>
+          {children}
+        </InSidebarPanelContext.Provider>
       </div>
     );
   }
@@ -225,7 +239,11 @@ function Sidebar({
             <SheetTitle>Sidebar</SheetTitle>
             <SheetDescription>Displays the mobile sidebar.</SheetDescription>
           </SheetHeader>
-          <div className="flex h-full w-full flex-col">{children}</div>
+          <div className="flex h-full w-full flex-col">
+            <InSidebarPanelContext.Provider value>
+              {children}
+            </InSidebarPanelContext.Provider>
+          </div>
         </SheetContent>
       </Sheet>
     );
@@ -281,7 +299,9 @@ function Sidebar({
           data-slot="sidebar-inner"
           className="flex size-full flex-col bg-sidebar group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:shadow-sm group-data-[variant=floating]:ring-1 group-data-[variant=floating]:ring-sidebar-border"
         >
-          {children}
+          <InSidebarPanelContext.Provider value>
+            {children}
+          </InSidebarPanelContext.Provider>
         </div>
       </div>
     </div>
@@ -820,4 +840,5 @@ export {
   SidebarSeparator,
   SidebarTrigger,
   useSidebar,
+  useInSidebarPanel,
 };

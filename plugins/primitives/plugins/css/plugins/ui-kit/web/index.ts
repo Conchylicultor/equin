@@ -159,6 +159,7 @@ export {
   SidebarSeparator,
   SidebarTrigger,
   useSidebar,
+  useInSidebarPanel,
   type SidebarToggleGlyph,
   type SidebarToggleIcons,
 } from "./components/ui/sidebar";
