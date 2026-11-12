@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { statusOfInitialize } from "./probe";
+import { statusOfInitialize } from "./status";
 
 const VERSION = "2.1.308";
 

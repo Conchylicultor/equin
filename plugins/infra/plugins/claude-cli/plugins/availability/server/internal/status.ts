@@ -6,21 +6,8 @@ import {
 } from "../../core";
 import { probeClaudeCode } from "./probe";
 
-/**
- * How long a `ready` answer is trusted by the launch gate before it asks again.
- * A signed-in Claude Code can sign out on its own (a token expires, the user
- * signs out elsewhere) and nothing announces it, so a launch that
- * finds an old `ready` re-probes: one Node process per launch at most every
- * five minutes. A NOT-ready answer is never trusted — see {@link checkClaudeCode}.
- */
-const READY_MAX_AGE_MS = 5 * 60_000;
-
-interface Checked {
-  status: ClaudeCodeStatus;
-  at: number;
-}
-
-let last: Checked | null = null;
+/** The last probe's answer; null until the first lands. */
+let last: ClaudeCodeStatus | null = null;
 let inflight: Promise<ClaudeCodeStatus> | null = null;
 const readyListeners = new Set<() => void>();
 const probedListeners = new Set<(status: ClaudeCodeStatus) => void>();
@@ -44,19 +31,15 @@ function probe(): Promise<ClaudeCodeStatus> {
 }
 
 function record(status: ClaudeCodeStatus): void {
-  const before = last?.status;
-  last = { status, at: Date.now() };
+  const before = last;
+  last = status;
   for (const fn of probedListeners) fn(status);
-  if (before !== undefined && JSON.stringify(before) === JSON.stringify(status))
+  if (before !== null && JSON.stringify(before) === JSON.stringify(status))
     return;
   for (const fn of changedListeners) fn();
   // Only a real transition wakes the listeners: the first answer after boot has
   // nothing to catch up on (whatever runs at boot asked for itself).
-  if (
-    before !== undefined &&
-    before.kind !== "ready" &&
-    status.kind === "ready"
-  ) {
+  if (before !== null && before.kind !== "ready" && status.kind === "ready") {
     for (const fn of readyListeners) fn();
   }
 }
@@ -66,7 +49,7 @@ function record(status: ClaudeCodeStatus): void {
  * claude-code-status live value (served by this plugin's machine half) loads.
  */
 export function currentClaudeCodeStatus(): Promise<ClaudeCodeStatus> {
-  return last ? Promise.resolve(last.status) : probe();
+  return last ? Promise.resolve(last) : probe();
 }
 
 /**
@@ -81,19 +64,21 @@ export function onClaudeCodeStatusChanged(fn: () => void): () => void {
 }
 
 /**
- * Claude Code's status, fresh enough to act on: a `ready` answer younger than
- * {@link READY_MAX_AGE_MS} is reused; anything else is probed again. So a user
- * who just signed in is never refused by a stale `signed-out`,
- * and a normal launch costs nothing extra.
+ * Claude Code's status for a launch to act on: a `ready` answer is reused,
+ * whatever its age; anything else (none yet, signed out, unreadable) is probed
+ * again, so a user who just signed in is never refused by a stale block.
+ *
+ * Why an old `ready` is enough: the probe reads one `initialize` answer, and
+ * every agent's own Claude Code answers the same `initialize` seconds later,
+ * on the launch's path (the launch waits for it) — an agent that finds itself
+ * signed out ends before `ready`, failing its launch with
+ * {@link claudeCodeBlockMessage}, and the failure re-probes
+ * ({@link noteClaudeCodeFailure}) so the next launch is refused up front.
+ * Probing again here would start a second Claude Code (1–4 s) on the user's
+ * critical path to ask what the agent is about to answer anyway.
  */
 export async function checkClaudeCode(): Promise<ClaudeCodeStatus> {
-  if (
-    last &&
-    last.status.kind === "ready" &&
-    Date.now() - last.at < READY_MAX_AGE_MS
-  ) {
-    return last.status;
-  }
+  if (last?.kind === "ready") return last;
   return probe();
 }
 

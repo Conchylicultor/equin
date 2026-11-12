@@ -38,14 +38,24 @@ its tooltip, and `useClaudeCodeLaunchBlock()` adds no block (Launch is gated on
 the launch endpoint's own availability). It is re-asked:
 
 - on first read (lazy — nothing probes at boot);
-- by the launch gate, when the last answer is not a `ready` younger than five
-  minutes (a token can expire and nothing announces it);
+- by the launch gate, when the last answer is not `ready` (none yet, or a
+  block — so a sign-in elsewhere is seen at once);
 - on `POST /api/claude-code/recheck` (the health row's Check again);
 - when the user returns to the window while it is blocked (`RecheckOnReturn` —
   the login can change outside the app);
 - when an in-app sign-in finishes (`claude-cli/sign-in` calls
   `recheckClaudeCodeNow()`);
 - after evidence: a one-shot generation failing (`noteClaudeCodeFailure`).
+
+A `ready` answer is never re-probed for its age. The probe reads one
+`initialize` answer, and every agent's own Claude Code answers the same
+`initialize` seconds later, on the launch's path (the launch waits for it):
+the agent checks it (`statusOfInitialize`, core) and, signed out, ends before
+`ready` — the launch fails with `claudeCodeBlockMessage`, and the start
+failure re-probes (`noteClaudeCodeFailure`) so the next launch is refused up
+front. A TTL re-probe here started a second Claude Code (1–4 s) on every
+launch and resume after five quiet minutes, to ask what the agent was about to
+answer anyway.
 
 `~/.claude.json` is deliberately not watched: every running agent rewrites it
 constantly, and login state lives in the macOS Keychain anyway.
@@ -120,6 +130,7 @@ constantly, and login state lives in the macOS Keychain anyway.
     - `claudeCodeStatus`
     - `ClaudeCodeStatusSchema`
     - `recheckClaudeCode`
+    - `statusOfInitialize`
 - Cross-plugin:
   - Imported by:
     - `apps/agent-manager/welcome`

@@ -52,6 +52,10 @@ import {
 } from "@plugins/infra/plugins/claude-cli/plugins/sdk/server";
 import { disclaimArgv } from "@plugins/packages/plugins/spawn-disclaim/core";
 import {
+  claudeCodeBlockMessage,
+  statusOfInitialize,
+} from "@plugins/infra/plugins/claude-cli/plugins/availability/core";
+import {
   backgroundShellPrefix,
   leaveDarwinBackground,
 } from "@plugins/packages/plugins/spawn-priority/core";
@@ -544,6 +548,19 @@ const startedWritten = new Promise<void>((resolve) => {
 });
 void Promise.all([session.initializationResult(), startedWritten]).then(
   ([init]) => {
+    // The sign-in check of every launch: this initialize is the same answer
+    // the availability probe reads (version and account), on the account this
+    // agent runs as. Not signed in, the agent ends before `ready`, so the
+    // launch waiting on it fails with this sentence (`AgentStartError`) —
+    // instead of a first turn the API refuses. The backend's gate trusts its
+    // last `ready` rather than starting a second Claude Code to ask the same
+    // question (infra/claude-cli/availability § Freshness).
+    // An answer without a version (`unreadable`) is no verdict on the sign-in.
+    const claudeCode = statusOfInitialize(init);
+    if (claudeCode.kind === "signed-out") {
+      shutdown(claudeCodeBlockMessage(claudeCode));
+      return;
+    }
     cliVersion = init.claude_code_version ?? null;
     ready = true;
     emit({ kind: "agent", payload: { event: "ready", cliVersion } });

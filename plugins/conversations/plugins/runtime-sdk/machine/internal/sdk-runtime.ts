@@ -12,6 +12,7 @@ import { agentLaunchPolicy } from "@plugins/conversations/plugins/agent-launch/s
 import { compactionHookEntry } from "@plugins/conversations/plugins/compaction-context/machine";
 import { stopGateHookEntry } from "@plugins/conversations/plugins/stop-gate/machine";
 import { recordReport } from "@plugins/reports/plugins/engine/server";
+import { noteClaudeCodeFailure } from "@plugins/infra/plugins/claude-cli/plugins/availability/server";
 import {
   type AgentLaunchIntent,
   DismissReplySchema,
@@ -440,6 +441,10 @@ async function launchAgent(
     // An agent can initialize and exit before this backend applied its
     // `ready` (closed at once): applied now, it ran.
     if (cli.kind === "exited" && !(await initializedAfterAll(id))) {
+      // Its Claude Code died or found itself signed out (the agent's own
+      // sign-in check): what the app last knew about Claude Code is older
+      // than this evidence, so the status is re-asked — off this launch.
+      noteClaudeCodeFailure();
       throw new AgentStartError(id, cli.reason, await started.output());
     }
   });

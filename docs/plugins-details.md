@@ -32907,6 +32907,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `claudeCodeStatus`
               - `ClaudeCodeStatusSchema`
               - `recheckClaudeCode`
+              - `statusOfInitialize`
           - Cross-plugin:
             - Imported by:
               - `apps/agent-manager/welcome`

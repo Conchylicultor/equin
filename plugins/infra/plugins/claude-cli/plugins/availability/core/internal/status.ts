@@ -1,3 +1,4 @@
+import type { SDKControlInitializeResponse } from "@anthropic-ai/claude-agent-sdk";
 import { z } from "zod";
 
 /**
@@ -50,4 +51,42 @@ export function claudeCodeBlockMessage(block: ClaudeCodeBlock): string {
       ? " Sign in from the Claude Code row of the health report."
       : "";
   return `${claudeCodeProblem(block)}, so no agent can start.${where}`;
+}
+
+/**
+ * What one `initialize` says about the computer's sign-in. Signed in (Claude
+ * Code 2.1.308): `account: {email, organization, subscriptionType: "Claude
+ * Max", apiProvider: "firstParty"}`; signed out: `account: {tokenSource:
+ * "none", apiProvider: "firstParty"}`. A third-party provider (Bedrock,
+ * Vertex, …) signs in outside Claude Code, so it counts as signed in.
+ */
+export function statusOfInitialize(
+  init: Pick<SDKControlInitializeResponse, "account" | "claude_code_version">,
+): ClaudeCodeStatus {
+  const version = init.claude_code_version;
+  if (version === undefined)
+    return {
+      kind: "unreadable",
+      error: "Claude Code's initialize answer carried no version",
+    };
+  const { account } = init;
+  const has = (source: string | undefined) =>
+    source !== undefined && source !== "none";
+  const signedIn =
+    (account.apiProvider !== undefined &&
+      account.apiProvider !== "firstParty") ||
+    account.email !== undefined ||
+    has(account.tokenSource) ||
+    has(account.apiKeySource);
+  if (!signedIn) return { kind: "signed-out", version };
+  const authMethod =
+    account.subscriptionType ??
+    [account.tokenSource, account.apiKeySource].find(has) ??
+    (account.apiProvider !== "firstParty" ? account.apiProvider : undefined);
+  return {
+    kind: "ready",
+    version,
+    authMethod: authMethod ?? null,
+    email: account.email ?? null,
+  };
 }

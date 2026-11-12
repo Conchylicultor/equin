@@ -724,7 +724,7 @@ async function preflightResume(
     };
   }
   // Last: the only check that may start a process (a re-probe when the last
-  // answer is not a recent `ready`).
+  // answer is not `ready`).
   const claude = await checkClaudeCode();
   if (claude.kind !== "ready") {
     return {
