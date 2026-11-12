@@ -63,8 +63,17 @@ others — there is no leader to lose. Design:
   (a bfcache'd page must not look alive); a persisted `pageshow` re-attaches.
 - **Last will.** `setLastWill(frame)` — the worker sends it to the server when
   the port leaves, however it leaves. live-state registers its `unsub-tab` there.
-- **Fail loudly.** No SharedWorker / Web Locks, a worker load error, or a
-  protocol mismatch throws; there is no fallback transport.
+- **Without SharedWorker or Web Locks, the worker runs in the page.** Chrome
+  for Android before 148 and Android System WebView (Instagram's, Facebook's
+  in-app browsers) have no SharedWorker. `SharedWebSocket`'s default seams
+  (`defaultSeams`, the one capability check — no consumer makes its own) then
+  run the SAME host (`createSharedWsHost`) in the page (`web/in-page-ws-host.ts`:
+  a real `MessageChannel` per tab handle, an in-page exclusive lock for
+  liveness, the socket opened past the request guard): one socket per URL per
+  page, and everything a consumer sees — queue-until-open, reconnects, `onopen`
+  once per connection, addressed frames, wills, bfcache detach — unchanged.
+  Only the cross-tab sharing is lost.
+- **Fail loudly.** A worker load error or a protocol mismatch throws.
 
 ## `Transport` — where a subtree's server traffic goes
 
@@ -250,7 +259,7 @@ built on them — see
   - Exempts itself from:
     - `no-raw-websocket` — `web/shared-ws.worker.ts` (sanctioned)
     - `endpoints/no-raw-web-fetch` — `web` (sanctioned)
-    - `networking/no-request-guard-capability` — `web/use-reconnecting-ws.ts` (sanctioned)
+    - `networking/no-request-guard-capability` — `web/use-reconnecting-ws.ts`, `web/shared-websocket.ts` (sanctioned)
     - `dom-access-safety/no-module-scope-dom` — `web/shared-ws.worker.ts` (sanctioned)
   - Exempted by:
     - `apps-core/app-usage` (0 debt)

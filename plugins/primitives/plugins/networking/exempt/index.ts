@@ -17,10 +17,10 @@ export default [
   },
   {
     rule: "networking/no-request-guard-capability",
-    paths: ["web/use-reconnecting-ws.ts"],
+    paths: ["web/use-reconnecting-ws.ts", "web/shared-websocket.ts"],
     kind: "sanctioned",
     reason:
-      "useReconnectingWebSocket is the per-tab socket primitive (opened on the subtree's transport, refused where no URL reaches it): it opens its socket past the request guard with nativeWebSocket.",
+      "useReconnectingWebSocket is the per-tab socket primitive (opened on the subtree's transport, refused where no URL reaches it), and SharedWebSocket's in-page host (a browser without SharedWorker / Web Locks) is the page's shared socket run in the page: both open their socket past the request guard with nativeWebSocket.",
   },
   {
     rule: "dom-access-safety/no-module-scope-dom",

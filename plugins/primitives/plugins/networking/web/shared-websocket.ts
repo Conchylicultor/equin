@@ -1,6 +1,11 @@
 import { wsTestHook, type WsTestHook } from "../core";
 import { publishWsStatus, type WsStatus } from "./ws-status-bus";
+import { nativeWebSocket } from "@plugins/primitives/plugins/networking/plugins/request-guard/web";
 import { publishNetDiag } from "./net-diag-bus";
+import {
+  createInPageLocks,
+  createInPageSharedWorkers,
+} from "./in-page-ws-host";
 import {
   SHARED_WS_PROTO,
   portLivenessLockName,
@@ -79,28 +84,51 @@ export interface SharedWebSocketOptions {
   address?: string;
 }
 
-function defaultMakeSharedWorker(name: string): SharedWorkerLike {
-  if (typeof SharedWorker === "undefined") {
-    throw new Error(
-      "SharedWebSocket needs SharedWorker, which this browser does not provide " +
-        "(Chrome for Android before 148, some embedded webviews).",
-    );
-  }
+/** The OS seams a socket's tab client and its worker host run on. */
+interface WorkerSeams {
+  makeSharedWorker: MakeSharedWorker;
+  locks: LockManagerLike;
+}
+
+function realSharedWorker(name: string): SharedWorkerLike {
   return new SharedWorker(new URL("./shared-ws.worker.ts", import.meta.url), {
     type: "module",
     name,
   });
 }
 
-function defaultLocks(): LockManagerLike {
+/** This page's in-page workers (one host per name), made on first need. */
+let inPageSeams: WorkerSeams | null = null;
+
+/**
+ * Where this page's sockets live — the one capability check, so no consumer
+ * makes its own. With SharedWorker AND Web Locks (the worker needs both: the
+ * locks tell it a tab is gone): in a SharedWorker, one socket per URL shared by
+ * every tab of the origin. Without one of them (Chrome for Android before 148,
+ * Android System WebView — Instagram's in-app browser): the same worker logic
+ * run in this page (`in-page-ws-host.ts`), one socket per URL per page, with
+ * the same behaviour for every consumer.
+ */
+function defaultSeams(): WorkerSeams {
   const locks =
     typeof navigator !== "undefined"
       ? (navigator as Navigator & { locks?: LockManagerLike }).locks
       : undefined;
-  if (!locks) {
-    throw new Error("SharedWebSocket needs navigator.locks (Web Locks API).");
+  if (typeof SharedWorker !== "undefined" && locks !== undefined) {
+    return { makeSharedWorker: realSharedWorker, locks };
   }
-  return locks;
+  if (inPageSeams === null) {
+    const inPageLocks = createInPageLocks();
+    inPageSeams = {
+      makeSharedWorker: createInPageSharedWorkers({
+        // Past the page request guard: this socket IS the sanctioned channel.
+        makeWebSocket: (url) => nativeWebSocket(url),
+        locks: inPageLocks,
+      }),
+      locks: inPageLocks,
+    };
+  }
+  return inPageSeams;
 }
 
 /**
@@ -135,7 +163,9 @@ interface PortSession {
 // API, shared across all tabs of the same origin: the real socket lives in a
 // SharedWorker (one per URL per networking build), and every tab talks to it
 // through a MessagePort. No tab owns the socket, so closing or freezing any tab
-// never interrupts the others.
+// never interrupts the others. In a browser without SharedWorker or Web Locks
+// the same worker logic runs in the page (`defaultSeams`): a socket per page,
+// everything else alike.
 export class SharedWebSocket {
   static readonly CONNECTING = 0;
   static readonly OPEN = 1;
@@ -181,8 +211,9 @@ export class SharedWebSocket {
     this.url = typeof url === "string" ? url : url.toString();
     this.dialect = options?.dialect;
     this.address = options?.address ?? null;
-    this.makeSharedWorker = hooks?.makeSharedWorker ?? defaultMakeSharedWorker;
-    this.locks = hooks?.locks ?? defaultLocks();
+    this.makeSharedWorker =
+      hooks?.makeSharedWorker ?? defaultSeams().makeSharedWorker;
+    this.locks = hooks?.locks ?? defaultSeams().locks;
     this.lifecycle =
       hooks?.pageLifecycle !== undefined
         ? hooks.pageLifecycle
