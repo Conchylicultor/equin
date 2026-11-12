@@ -265,7 +265,10 @@ test("a bounded write commits once it has held the lock its budget, and every it
   const insert = db.query(
     "INSERT INTO keys (tbl, key, vid, used) VALUES ('file', ?, x'00', 0)",
   );
+  // Each item costs ITEM_MS on the clock writeBounded reads: the rule is
+  // tested, not how long the host takes to sleep.
   const ITEM_MS = 30;
+  let clock = 0;
   const committedBefore: number[] = [];
   const probed: number[][] = [];
   writeBounded(
@@ -280,18 +283,22 @@ test("a bounded write commits once it has held the lock its budget, and every it
     (i) => {
       committedBefore.push(visible());
       insert.run(Buffer.from(k(`b${i}`), "hex"));
-      Bun.sleepSync(ITEM_MS);
+      clock += ITEM_MS;
     },
+    { now: () => clock },
   );
   expect(visible()).toBe(40);
   // Items in one transaction all saw the same committed count.
   const sizes = new Map<number, number>();
   for (const n of committedBefore) sizes.set(n, (sizes.get(n) ?? 0) + 1);
   const perTransaction = [...sizes.values()];
-  expect(perTransaction.length).toBeGreaterThan(1);
-  expect(Math.max(...perTransaction)).toBeLessThanOrEqual(
-    Math.ceil(HOLD_MS / ITEM_MS) + 1,
-  );
+  // Each transaction commits at the first item that brings its hold to
+  // HOLD_MS — not before, not after — and the last takes what is left.
+  const full = Math.ceil(HOLD_MS / ITEM_MS);
+  expect(perTransaction).toEqual([
+    ...Array.from({ length: Math.floor(40 / full) }, () => full),
+    ...(40 % full > 0 ? [40 % full] : []),
+  ]);
   // What one transaction left is probed again before the next.
   expect(probed[1]![0]).toBe(perTransaction[0]);
   other.close();

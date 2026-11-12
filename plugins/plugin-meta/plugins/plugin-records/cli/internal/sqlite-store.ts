@@ -185,8 +185,19 @@ export function writeBounded<T>(
   items: readonly T[],
   probe: (batch: readonly T[]) => readonly T[],
   apply: (item: T) => void,
-  opts?: { pace?: boolean },
+  opts?: {
+    pace?: boolean;
+    /**
+     * The clock the hold is measured on (ms; `performance.now` by default).
+     * The rule under test is "commit once held ≥ HOLD_MS", a function of
+     * the times this clock reads — so a test passes its own instead of
+     * sleeping, whose real duration is the host scheduler's (a sleep of
+     * 30 ms took ~220 ms in a background-priority test process).
+     */
+    now?: () => number;
+  },
 ): void {
+  const now = opts?.now ?? (() => performance.now());
   let next = 0;
   let carry: readonly T[] = [];
   while (next < items.length || carry.length > 0) {
@@ -197,13 +208,10 @@ export function writeBounded<T>(
     let held = 0;
     if (batch.length > 0)
       write(db, () => {
-        const start = performance.now();
+        const start = now();
         do apply(batch[done++]!);
-        while (
-          done < batch.length &&
-          (held = performance.now() - start) < HOLD_MS
-        );
-        held = performance.now() - start;
+        while (done < batch.length && (held = now() - start) < HOLD_MS);
+        held = now() - start;
       });
     carry = batch.slice(done);
     // A background writer (the reclaim) leaves the lock free as long as it

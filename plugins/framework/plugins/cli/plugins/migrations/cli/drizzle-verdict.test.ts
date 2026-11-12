@@ -26,6 +26,27 @@ function withBlob(
   };
 }
 
+// The checkout's own snapshot, with one file's text rewritten (and its blob
+// id moved with it, as an edit would).
+function withText(
+  snapshot: RepoSnapshot,
+  path: string,
+  edit: (text: string) => string,
+): RepoSnapshot {
+  if (!snapshot.has(path)) throw new Error(`${path} is not in the snapshot`);
+  return {
+    ...withBlob(snapshot, path, OTHER_BLOB),
+    read: async (p) => {
+      const text = await snapshot.read(p);
+      if (p !== path) return text;
+      if (text === null) throw new Error(`cannot read ${path}`);
+      const edited = edit(text);
+      if (edited === text) throw new Error(`the edit left ${path} unchanged`);
+      return edited;
+    },
+  };
+}
+
 // A file set with one extra member (a new schema file).
 function withFile(snapshot: RepoSnapshot, path: string): RepoSnapshot {
   const all = [...snapshot.all(), path].sort();
@@ -82,14 +103,33 @@ describe("drizzleVerdictKey", () => {
     }
   });
 
-  test("moves with the lockfile and the drizzle config", async () => {
-    for (const f of [
-      "bun.lock",
+  test("moves with the drizzle config", async () => {
+    const s = withBlob(
+      snapshot,
       "plugins/database/plugins/migrations/core/drizzle.config.ts",
-    ]) {
-      const s = withBlob(snapshot, f, OTHER_BLOB);
-      expect((await drizzleVerdictKey(s, store)).key).not.toBe(base);
-    }
+      OTHER_BLOB,
+    );
+    expect((await drizzleVerdictKey(s, store)).key).not.toBe(base);
+  });
+
+  // The npm code is keyed by the lockfile's npm resolutions, not its blob
+  // (plugin-records' npmResolutionsKey): a new plugin's workspace stanza
+  // installs nothing, so it must not re-key the verdict.
+  test("moves with an npm resolution in the lockfile", async () => {
+    const s = withText(snapshot, "bun.lock", (text) =>
+      text.replace(/"zod": \["zod@[^"]+"/, '"zod": ["zod@0.0.0-verdict-probe"'),
+    );
+    expect((await drizzleVerdictKey(s, store)).key).not.toBe(base);
+  });
+
+  test("does not move with a workspace-only lockfile edit", async () => {
+    const s = withText(snapshot, "bun.lock", (text) =>
+      text.replace(
+        '  "workspaces": {\n',
+        '  "workspaces": {\n    "plugins/verdict-probe": {\n      "name": "@equin/plugin-verdict-probe",\n    },\n',
+      ),
+    );
+    expect((await drizzleVerdictKey(s, store)).key).toBe(base);
   });
 
   test("moves with a new schema file, and nothing else", async () => {
