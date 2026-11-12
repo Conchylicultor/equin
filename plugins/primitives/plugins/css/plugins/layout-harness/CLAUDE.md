@@ -195,14 +195,14 @@ through the catalog's generic `loadExhibits()`, filtered by `measurableExhibits(
    reconcile, which is what a measure-then-decide primitive (`AdaptiveBar`)
    needs — it must see a width change, not a first mount.
 2. **the contributed check** (`check/index.ts`, id `layout-geometry`) — shells out
-   to (1), gated by a sidecar marker keyed on a sha256 of the WORKING-TREE
-   content (tracked + untracked-not-ignored) of the css subtree, ui-kit
-   `app.css`, the catalog's own `core/`, and **every exhibit contributor's whole
-   plugin subtree**. An
-   unchanged input set ⇒ ZERO browser launches; a touched css primitive re-runs.
-   It folds the same sig into `cacheSignature()` so the runner's own cache also
-   short-circuits identical full-tree reruns. Fails loudly (no auto-install) if
-   Chromium is unprovisioned.
+   to (1) only when what (1) loads changed. Its key is the **static import
+   closure** of the harness plugin and every contributor's exhibits barrel
+   (`check/page-inputs.ts`), with `bun.lock` for the packages, every byte read
+   through `ctx.repo()`. The check is `inputKeyed`, so that closure IS its
+   read-set: an edit outside it replays the cached pass and runs nothing; an
+   edit inside it re-runs, and a host-global sidecar marker per closure digest
+   skips the Chromium launch when any worktree already passed those exact
+   bytes. Fails loudly (no auto-install) if Chromium is unprovisioned.
 
    When the marker IS absent the suite actually launches a browser, which used to
    flake under load ("hook timed out / headless-launch timeout"). Four guards now
@@ -268,16 +268,32 @@ The human-eyeball complement (no measurement) is not here: it is the catalog's
 exhibit — measured ones included — at each of its widths, each (exhibit, width)
 cell inside its own error boundary.
 
-### The signature covers the primitive, not just the exhibit
+### The key is what the page loads, not a guess at it
 
-An exhibit is a few lines of JSX; what it measures is the primitive it renders.
-So `check/index.ts` derives each contributor's plugin root from its
-`exhibits/` leaf folder (`<root>/exhibits/…` ⇒ `<root>`, matched only as a
-plugin's own leaf folder — so neither the catalog plugin `plugin-meta/exhibits`
-nor a test's `fixtures/` directory counts) and hashes that whole subtree.
-Derived, not listed, so a plugin that starts contributing exhibits is covered
-the day it does. Keep `computeSig` sync and cheap —
-`cacheSignature()` calls it on every check run.
+An exhibit is a few lines of JSX; what it measures is the primitive it renders,
+wherever that lives. So the key follows imports, the way the bundle does: the
+static closure of every file of this plugin (the suite, the page entry, the Vite
+build script it spawns by path, the oracle) and of every `exhibits/index.ts` the
+generated registry loads, plus the stylesheet chain (`@import` / `@reference` /
+`@plugin` / `@config`). Measured against Vite's own module graph of the page:
+every module it loads statically is in the closure.
+
+Two things are deliberately not followed:
+
+- **a dynamic `import()`** outside the registry — in an exhibits barrel, an
+  `appExhibit`'s `load()`, which the measurer page never calls. Following it
+  (or keying whole contributor subtrees, as the key used to) pulled whole apps
+  in: an edit to `hints/help-menu` re-ran the ~40 s suite and set a one-line-
+  edit check pass's critical path, while a primitive a measured exhibit imports
+  from another plugin was not keyed at all.
+- **Tailwind's `@source` scan** (all of `plugins/`): a class spelled only
+  outside the closure generates a rule for a class no loaded module puts on a
+  measured box.
+
+The check's own files are keyed by their bytes, not their imports (spawn, host
+admission and the deps engine run the suite but shape no geometry). An import
+the walk cannot place throws: a key that skipped it could not be invalidated by
+the code it names.
 
 ### How the measurer page is served
 

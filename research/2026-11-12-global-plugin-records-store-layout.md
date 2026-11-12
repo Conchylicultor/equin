@@ -619,3 +619,79 @@ Making an unbounded whole-tree read in a check's `run()` a declared, visible
 property, and migrating its readers (theme-bridge-reads,
 negated-complex-selector / script-state:no-stylesheet-reads,
 pre-barrel-manifests-complete, boot:closure-digestable, plugins-doc-in-sync).
+
+## The critical path of a one-line-edit pass (task: check pass O(changes), 7)
+
+Measured 2026-11-12, same one-line edit (a comment appended to
+`hints/help-menu/web/index.ts`), `./equin check --scope tree` after a warm
+pass of the same code; split from the run's `check-progress.jsonl` records
+and its op-log entry.
+
+### Split before (host load 8–12)
+
+| part | wall |
+| --- | ---: |
+| host CPU grant wait (memory window, other agents' ops) | 29.7 s |
+| every check but one, grant → last end | 25.8 s |
+| `layout-geometry` alone past that (it ran 43.6 s) | +26.6 s |
+| **command, end to end** | **84.0 s** (runner 52.4 s) |
+
+The grant wait is the host's, not the pass's (0.1 s on the next run). Of the
+pass's own 52.4 s, half was one check: `layout-geometry` launched its Chromium
+suite (Vite build + measuring every exhibit, ~37–44 s) on an edit to a file no
+measured exhibit loads. In the progress log it launched in 3 of 35 recent
+passes, each time setting the pass's end.
+
+Root cause: its key was a guess at the page's inputs — the css subtree plus
+**every exhibit contributor's whole plugin subtree** — and the check was keyed
+on the whole tree (re-run, 1.2k reads and a hash, on every edit). `hints`
+contributes an *app* exhibit (never measured, never loaded by the page), so
+all of `hints/**` was keyed; and a primitive a measured exhibit imports from
+another plugin (`primitives/dom`, `network/live`, `ui/icons`) was not keyed at
+all — over- and under-invalidating at once.
+
+### Fix
+
+The key is the page's code, read from the code
+(`layout-harness/check/page-inputs.ts`): the static import closure of the
+harness plugin (the suite, page entry, the Vite build script it spawns by
+path, the oracle) and of every `exhibits/index.ts` the generated registry
+loads, plus the stylesheet chain (`@import`/`@reference`/`@plugin`/`@config`)
+and `bun.lock` for packages. An app exhibit's `load()` (a dynamic import the
+page never calls) and Tailwind's `@source` scan (a class spelled only outside
+the closure is on no measured box) are not followed; the check's own files are
+keyed by bytes, not imports. Every byte goes through `ctx.repo()`, and the
+check is now `inputKeyed`: the closure is its read-set, so an edit outside it
+replays and runs nothing. An import the walk cannot place throws.
+
+Equivalence: Vite's own module graph of the page (a build with a probe
+plugin, reverted) loads 742 repo modules statically from the entry and the
+exhibit barrels — all 742 are in the closure (862 files; the rest is the
+suite's Node side and the lockfile). Verified: an edit to `help-menu` replays
+(1.8 s for the whole command); an edit to `css/text/web/index.ts` re-runs the
+suite.
+
+| one-line edit (help-menu) | before | after |
+| --- | ---: | ---: |
+| layout-geometry: duration / reads | 43.6 s / 1,204 | 6 ms / 2 (read-set replay) |
+| layout-geometry steady state (closure unchanged): reads | 1,182 + a hash every pass | 0 (replay) |
+| key computation when it does run | ~1.2k reads + sha256 | 862 reads + imports scanned, 0.25 s |
+| runner, grant → verdict | 52.4 s (load 8–12) | 23.7 s (load 13) |
+| command, end to end | 84.0 s (29.7 s grant wait) | 26.5 s (0.1 s grant wait) |
+| check-thread samples | 2,974 at 73 Hz | 2,754 at 92 Hz |
+| files read by check bodies | 215.5k | 202.7k |
+| bytes written to the plugin-records store by it | 0 | 0 (its read-set lives in the check cache, rewritten only when it runs) |
+
+Cold: a closure change costs the walk (0.25 s) plus the suite once per closure
+digest host-wide (36.5 s here), as before; a peer worktree with the same
+closure reuses the marker.
+
+### Next
+
+The pass now ends when ~20 checks end together at ~22–25 s
+(`boundaries:web-loads-portable`, `config-v2:registrations-paired`,
+`plugins-registry-in-sync`, `page.editor:*` reading one file each): they wait
+on the same shared inputs (barrel evaluation, registry codegen;
+`platformOffenders` ~2.8 s and the semaphore ~2.5 s are the check thread's top
+owners). sql-writes:fit spends ~16.5 s per pass in its schema probe. Then the
+declared whole-tree read.

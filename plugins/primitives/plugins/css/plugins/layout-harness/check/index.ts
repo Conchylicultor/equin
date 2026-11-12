@@ -12,84 +12,25 @@ import type {
   Check,
   CheckContext,
   CheckResult,
-  RepoFiles,
 } from "@plugins/framework/plugins/tooling/core";
+import { sourceAnalysis } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import { ensureDepViaCli } from "@plugins/infra/plugins/deps/deps";
 import { chromium } from "@plugins/infra/plugins/safe-fetch/plugins/browser-fetch/deps";
 import { layoutLabDir } from "../data-dirs";
 import { classifyFailure } from "./classify";
+import { pageInputs } from "./page-inputs";
 
 // The contributed `layout-geometry` check. It gates the layout-primitive geometry
 // invariants (no track collision / no overlap / truncation-onset) by shelling out
-// to the bun:test geometry suite — but only when the inputs the suite depends on
-// have changed. Steady-state cost is ZERO browser launches via a sidecar marker
-// keyed on a tree hash of the css subtree, app.css, and every exhibit
-// contributor's whole plugin subtree.
-
-// The seed paths whose content is the suite's real input, expressed as a
-// predicate over the run's own file set (`ctx.repo()`) instead of git
-// pathspecs: every css primitive subtree, the ui-kit stylesheet, and —
-// repo-wide, not just under css/plugins — every exhibit contributor's
-// `exhibits/` path (see `exhibitContributorRoots` below for why "repo-wide"
-// matters: `exhibits/` is a collected dir, so a contributor need not be a css
-// primitive at all).
+// to the bun:test geometry suite — but only when what the suite and its page
+// load has changed (`page-inputs.ts`: the static import closure of the harness
+// and every exhibits barrel, read through the run's file set).
 //
-// Every `exhibits/` folder counts, app exhibits included: the suite loads the
-// whole catalog (strict — one broken contribution fails the load), so any
-// exhibit edit can change its verdict, and a contributor's plugin subtree is
-// cheap to hash next to a Chromium launch.
-const CSS_PLUGINS_PREFIX = "plugins/primitives/plugins/css/plugins/";
-// The catalog's own core: the loader and the generated registry the suite
-// reads every exhibit through.
-const CATALOG_CORE_PREFIX = "plugins/plugin-meta/plugins/exhibits/core/";
-// A plugin's own `exhibits/` leaf folder — `plugins/<a>(/plugins/<b>)*/exhibits/`
-// — and nothing else named `exhibits` (the catalog plugin itself is
-// `plugin-meta/plugins/exhibits`, a child plugin, not a leaf folder). Capture
-// group 1 is the contributor's plugin root.
-const EXHIBITS_FOLDER_RE = /^(plugins\/[^/]+(?:\/plugins\/[^/]+)*)\/exhibits\//;
-const APP_CSS_PATH =
-  "plugins/primitives/plugins/css/plugins/ui-kit/web/theme/app.css";
-
-/**
- * `RepoFiles.all()` is the exact tracked+untracked-not-ignored universe
- * `git ls-files` (+ `--others --exclude-standard`) covers, so filtering it
- * this way matches the old pathspec globs file-for-file: none of the three
- * used a git wildmatch feature (char classes, negation) a prefix/substring
- * test can't express.
- */
-function isSeedPath(path: string): boolean {
-  return (
-    path.startsWith(CSS_PLUGINS_PREFIX) ||
-    path === APP_CSS_PATH ||
-    path.startsWith(CATALOG_CORE_PREFIX) ||
-    EXHIBITS_FOLDER_RE.test(path)
-  );
-}
-
-/**
- * The plugin roots of the exhibit contributors, derived from the exhibit paths
- * themselves — `<root>/exhibits/<anything>` ⇒ `<root>`.
- *
- * An exhibit is not the thing under test. It is a few lines of JSX; what it
- * measures is the PRIMITIVE it renders. Hashing `adaptive-bar/exhibits/**` and
- * not `adaptive-bar/web/**` therefore covered the cheap half and missed the
- * expensive one: an edit to the primitive changed every box the gate measures
- * and left the marker valid, so the check answered `ok (cached)` about geometry
- * it had never seen. That is how a primitive whose guard took the Layout Lab
- * down shipped past a green gate.
- *
- * Derived rather than listed, so a plugin that starts contributing exhibits
- * tomorrow is covered the day it does — with no glob to remember to add, which
- * is the maintenance failure that opened the hole the first time.
- */
-function exhibitContributorRoots(exhibitPaths: readonly string[]): string[] {
-  const roots = new Set<string>();
-  for (const rel of exhibitPaths) {
-    const root = EXHIBITS_FOLDER_RE.exec(rel)?.[1];
-    if (root !== undefined) roots.add(root);
-  }
-  return [...roots].sort();
-}
+// Input-keyed: every byte the key is made of is read through `ctx.repo()`, so
+// the runner records exactly that closure as the check's read-set, and an edit
+// outside it replays the cached pass without running the check at all. When
+// the closure did change, a host-global sidecar marker per closure digest still
+// skips the Chromium launch when any worktree already passed those exact bytes.
 
 const SUITE_REL =
   "plugins/primitives/plugins/css/plugins/layout-harness/web/internal/layout-geometry.test.ts";
@@ -123,33 +64,17 @@ function sha256(s: string): string {
   return createHash("sha256").update(s).digest("hex");
 }
 
-// Two passes, because the second root set is not knowable up front: filter the
-// seed from the run's already-loaded file set, read the exhibit contributors
-// OUT of what came back, then pull their whole plugin subtrees too via
-// `repo.under()`. Pure lookups over `RepoFiles` — no git spawn, no I/O of its
-// own — so this can run on every check run for free.
-function listFiles(repo: RepoFiles): string[] {
-  const seed = repo.all().filter(isSeedPath);
-  const set = new Set(seed);
-  for (const root of exhibitContributorRoots(seed)) {
-    for (const rel of repo.under(root)) set.add(rel);
-  }
-  return [...set].sort();
-}
-
-async function computeSig(repo: RepoFiles): Promise<string> {
-  const files = listFiles(repo);
-  // Read concurrently (repo.read() is already bounded/memoized per run) but
-  // hash in the SORTED order above, so the digest never depends on read
-  // completion order.
-  const contents = await Promise.all(files.map((rel) => repo.read(rel)));
+async function computeSig(ctx: CheckContext): Promise<string> {
+  const repo = await ctx.repo();
+  const analysis = await sourceAnalysis(ctx);
+  const { files, contents } = await pageInputs(repo, (from, spec) =>
+    analysis.resolveModule(from, spec),
+  );
   const h = createHash("sha256");
   for (let i = 0; i < files.length; i++) {
     h.update(files[i]!);
     h.update("\0");
-    // A path the run's file set no longer has (vanished, or unreadable)
-    // contributes nothing — same as the old ENOENT-swallow.
-    if (contents[i] !== null) h.update(contents[i]!);
+    h.update(contents[i]!);
     h.update("\0");
   }
   return h.digest("hex");
@@ -166,16 +91,13 @@ const check: Check = {
   id: "layout-geometry",
   description:
     "layout primitives hold their geometry invariants (no track collision / overlap regressions)",
-  // No `cacheSignature()`: this check is `scope: "tree"` (the default), and the
-  // runner's own tree hash — tracked + untracked-not-ignored — already covers
-  // the exact universe `computeSig` reads via `ctx.repo()` below. A signature
-  // here could never separate two states the tree hash doesn't; see
-  // checks/CLAUDE.md, "A scope: 'tree' verdict must not depend on the process
-  // that produced it."
+  // Every input is read through `ctx.repo()` (`computeSig`), its own code
+  // included (`page-inputs.ts` seeds the whole harness plugin), so the
+  // recorded read-set is the whole of what the verdict depends on.
+  inputKeyed: true,
   async run(ctx: CheckContext): Promise<CheckResult> {
     const root = await getWorktreeRoot();
-    const repo = await ctx.repo();
-    const sig = await computeSig(repo);
+    const sig = await computeSig(ctx);
 
     // Steady state: an unchanged css subtree ⇒ the sidecar marker exists ⇒ return
     // OK WITHOUT launching Chromium, regardless of unrelated edits elsewhere. This
