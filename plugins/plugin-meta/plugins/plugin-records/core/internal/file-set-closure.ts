@@ -79,13 +79,18 @@ export async function fileSetImports(
  * pass after an edit scans the edited modules alone, and no reader of what a
  * process loads parses or resolves imports itself.
  *
+ * With `dynamic: false`, only what loads WITH the entries — static imports
+ * (and `require()`), no `import()`: what their module-load evaluates.
+ *
  * An import of a reached module that resolves to no file of the set throws,
  * naming the module — skipping it would pass whatever it loads.
  */
 export async function fileSetRuntimeReach(
   repo: RepoFiles | RepoSnapshot,
   entries: readonly string[],
+  opts?: { dynamic?: boolean },
 ): Promise<Map<string, string | null>> {
+  const dynamic = opts?.dynamic ?? true;
   const sorted = [...new Set(entries)].sort();
   const graph = await buildModuleGraph(sharedInput(repo, undefined), sorted);
   const parent = new Map<string, string | null>();
@@ -97,7 +102,10 @@ export async function fileSetRuntimeReach(
       throw new Error(
         `${m} imports ${node.unresolved.map((u) => JSON.stringify(u)).join(", ")}, which resolves to no file of the checkout.`,
       );
-    for (const d of [...node.staticDeps, ...node.dynamicDeps]) {
+    const deps = dynamic
+      ? [...node.staticDeps, ...node.dynamicDeps]
+      : node.staticDeps;
+    for (const d of deps) {
       if (parent.has(d) || !SCRIPT_MODULE.test(d)) continue;
       parent.set(d, m);
       queue.push(d);

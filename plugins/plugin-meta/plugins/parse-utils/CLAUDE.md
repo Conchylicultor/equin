@@ -189,6 +189,7 @@ snapshot they read the disk and compute, unchanged.
     - `framework/tooling/test-layout`
     - `network/live/resource-vocabulary`
     - `plugin-meta/parse-utils/source-files`
+    - `plugin-meta/plugin-records/bindings`
     - `plugin-meta/plugin-refs`
     - `plugin-meta/plugin-tree`
     - `plugin-meta/plugin-tree/faceted`

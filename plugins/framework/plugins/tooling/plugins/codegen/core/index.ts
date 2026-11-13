@@ -228,14 +228,6 @@ export {
   type PreBarrelManifest,
 } from "./pre-barrel-manifests";
 
-// Static module-import-graph helpers used by the `pre-barrel-manifests-complete`
-// check to prove no barrel reaches an unregistered `*.generated.ts` at load.
-export {
-  collectImportGraph,
-  extractRuntimeImportSpecifiers,
-  resolveImportSpecifier,
-} from "./import-graph";
-
 // The ONE write seam for every generated artifact. The emitters write through
 // `writeGenerated`; the `*-in-sync` checks compare disk against
 // `formatGenerated({ file, content: renderX(...) })`. Both call the same one, so

@@ -1,13 +1,14 @@
 /**
  * A lint rule group's members are its import closure, walked from its root
  * over the check's view of the tree (`../shared/repo-view.ts`) — no whole-repo
- * graph, no disk probes. What the walk this replaced did, kept:
- *   1. relative and `@plugins/` imports resolve to a `.ts` / `.tsx` / index in
- *      the tree; a bare package, a missing target and an escape do not;
+ * graph, no disk probes. Its edges are the plugin-records module graph's
+ * (`fileSetBindings`), so:
+ *   1. relative and `@plugins/` imports resolve as the graph resolves them; a
+ *      bare package is no edge, and a missing target throws;
  *   2. a generated registry is never entered, and a `stop` file (the engine,
  *      for a contribution) is not descended into;
  *   3. a non-lintable member (`prototypes/`) is a member, not a way through;
- *   4. a file the tree does not hold is invisible, though it is on disk.
+ *   4. a file the tree does not hold does not exist, though it is on disk.
  * And: each file on a walk is parsed once, however many closures reach it; a
  * type-only import is no edge (erased before a rule runs); and the real
  * engine's closure holds no process plumbing.
@@ -41,9 +42,33 @@ import {
   computeLintGroups,
   lintClosures,
   lintEngineRoots,
+  lintWorkerModules,
 } from "./lint-groups";
 
 const TREE = "0".repeat(40);
+
+/**
+ * The plugin-records modules whose code keys the module graph's file facts
+ * and the bindings scan: every view the graph reads holds them (from this
+ * checkout), as a checked tree does.
+ */
+const RECORD_SCANNERS: Record<string, string> = Object.fromEntries(
+  [
+    "plugins/plugin-meta/plugins/plugin-records/core/internal/scan-imports.ts",
+    "plugins/plugin-meta/plugins/plugin-records/plugins/bindings/core/bindings.scan.ts",
+    ...[
+      "index",
+      "endpoint-exports",
+      "find-imports",
+      "find-marker-calls",
+      "helpers",
+      "host-services",
+      "mask-source",
+      "server-contribution-kinds",
+      "snapshot-scope",
+    ].map((f) => `plugins/plugin-meta/plugins/parse-utils/core/${f}.ts`),
+  ].map((rel) => [rel, readFileSync(join(codeCheckoutRoot(), rel), "utf8")]),
+);
 const roots: string[] = [];
 afterAll(() => {
   for (const r of roots) rmSync(r, { recursive: true, force: true });
@@ -57,39 +82,35 @@ function viewOf(
   const root = mkdtempSync(join(tmpdir(), "lint-groups-"));
   roots.push(root);
   const blobs = new Map<string, string>();
-  for (const [rel, text] of Object.entries({ ...files, ...offTree })) {
+  const tree = { ...RECORD_SCANNERS, ...files };
+  for (const [rel, text] of Object.entries({ ...tree, ...offTree })) {
     mkdirSync(dirname(join(root, rel)), { recursive: true });
     writeFileSync(join(root, rel), text);
-    if (rel in files) blobs.set(rel, gitBlobSha(Buffer.from(text), TREE));
+    if (rel in tree) blobs.set(rel, gitBlobSha(Buffer.from(text), TREE));
   }
   return repoViewOver(
     asAppPath(root),
     TREE,
     blobs,
-    blobSourceOf(Object.values(files), TREE),
+    blobSourceOf(Object.values(tree), TREE),
   );
 }
 
 const sorted = (s: Set<string>): string[] => [...s].sort();
 
-test("a closure follows relative and @plugins imports through the tree, and nothing else", () => {
-  const view = viewOf(
-    {
-      "plugins/shell/lint/index.ts":
-        'import { b } from "./b";\nimport { c } from "@plugins/search/core";\nimport x from "eslint";\nimport { m } from "./missing";\nimport { u } from "../../../../up";\n',
-      "plugins/shell/lint/b.ts":
-        'import { d } from "./d";\nexport const b = 1;\n',
-      "plugins/shell/lint/d.tsx": "export const d = 1;\n",
-      "plugins/search/core/index.ts": 'export * from "./c";\n',
-      "plugins/search/core/c.ts": "export const c = 1;\n",
-      "plugins/ids/unrelated.ts": "export const u = 1;\n",
-    },
-    // On disk, not in the tree: invisible to the walk.
-    { "plugins/shell/lint/missing.ts": "export const m = 1;\n" },
-  );
-  expect(
-    sorted(lintClosures(view).of("plugins/shell/lint/index.ts", new Set())),
-  ).toEqual([
+test("a closure follows relative and @plugins imports through the tree, and nothing else", async () => {
+  const view = viewOf({
+    "plugins/shell/lint/index.ts":
+      'import { b } from "./b";\nimport { c } from "@plugins/search/core";\nimport x from "eslint";\n',
+    "plugins/shell/lint/b.ts":
+      'import { d } from "./d";\nexport const b = 1;\n',
+    "plugins/shell/lint/d.tsx": "export const d = 1;\n",
+    "plugins/search/core/index.ts": 'export * from "./c";\n',
+    "plugins/search/core/c.ts": "export const c = 1;\n",
+    "plugins/ids/unrelated.ts": "export const u = 1;\n",
+  });
+  const walks = await lintClosures(view, ["plugins/shell/lint/index.ts"]);
+  expect(sorted(walks.of("plugins/shell/lint/index.ts", new Set()))).toEqual([
     "plugins/search/core/c.ts",
     "plugins/search/core/index.ts",
     "plugins/shell/lint/b.ts",
@@ -98,7 +119,17 @@ test("a closure follows relative and @plugins imports through the tree, and noth
   ]);
 });
 
-test("a registry is never entered, a stop file is not descended, a non-lintable member is not a way through", () => {
+test("an import of a file the tree does not hold fails loudly, though the file is on disk", () => {
+  const view = viewOf(
+    { "plugins/shell/lint/index.ts": 'import { m } from "./missing";\n' },
+    { "plugins/shell/lint/missing.ts": "export const m = 1;\n" },
+  );
+  expect(lintClosures(view, ["plugins/shell/lint/index.ts"])).rejects.toThrow(
+    "resolves to no file of the checkout",
+  );
+});
+
+test("a registry is never entered, a stop file is not descended, a non-lintable member is not a way through", async () => {
   const view = viewOf({
     "plugins/shell/lint/index.ts":
       'import "./lint.generated";\nimport "../../history/core";\nimport "../../../prototypes/p";\n',
@@ -109,7 +140,7 @@ test("a registry is never entered, a stop file is not descended, a non-lintable 
     "prototypes/p.ts": 'import "../plugins/shell/lint/behind-prototype";\n',
     "plugins/shell/lint/behind-prototype.ts": "export {};\n",
   });
-  const walks = lintClosures(view);
+  const walks = await lintClosures(view, ["plugins/shell/lint/index.ts"]);
   expect(
     sorted(
       walks.of(
@@ -127,14 +158,17 @@ test("a registry is never entered, a stop file is not descended, a non-lintable 
   ]);
 });
 
-test("each file is parsed once across closures, and only files on a walk are", () => {
+test("each file is read once across closures, and only files on a walk are", async () => {
   const view = viewOf({
     "plugins/ui/shared.ts": "export const s = 1;\n",
     "plugins/map/lint/index.ts": 'import "../../ui/shared";\n',
     "plugins/music/lint/index.ts": 'import "../../ui/shared";\n',
     "plugins/ids/read.ts": "export const r = 1;\n",
   });
-  const walks = lintClosures(view);
+  const walks = await lintClosures(view, [
+    "plugins/map/lint/index.ts",
+    "plugins/music/lint/index.ts",
+  ]);
   walks.of("plugins/map/lint/index.ts", new Set());
   walks.of("plugins/music/lint/index.ts", new Set());
   expect(walks.parsed()).toBe(3);
@@ -142,12 +176,12 @@ test("each file is parsed once across closures, and only files on a walk are", (
 
 test("a group root the tree does not hold fails loudly", () => {
   const view = viewOf({ "plugins/ui/a.ts": "export {};\n" });
-  expect(() =>
-    lintClosures(view).of("plugins/review/lint/index.ts", new Set()),
-  ).toThrow("is not in the checked tree");
+  expect(lintClosures(view, ["plugins/review/lint/index.ts"])).rejects.toThrow(
+    "is not in the checked tree",
+  );
 });
 
-test("a type-only import is no edge; a value, side-effect or inline import is", () => {
+test("a type-only import is no edge; a value, side-effect or inline import is", async () => {
   const view = viewOf({
     "plugins/shell/lint/index.ts": [
       'import type { T } from "./typed";',
@@ -163,9 +197,8 @@ test("a type-only import is no edge; a value, side-effect or inline import is", 
     "plugins/shell/lint/side.ts": "export {};\n",
     "plugins/shell/lint/dynamic.ts": "export {};\n",
   });
-  expect(
-    sorted(lintClosures(view).of("plugins/shell/lint/index.ts", new Set())),
-  ).toEqual([
+  const walks = await lintClosures(view, ["plugins/shell/lint/index.ts"]);
+  expect(sorted(walks.of("plugins/shell/lint/index.ts", new Set()))).toEqual([
     "plugins/shell/lint/dynamic.ts",
     "plugins/shell/lint/index.ts",
     "plugins/shell/lint/mixed.ts",
@@ -204,7 +237,10 @@ async function realEngine() {
   const code = viewOfSnapshot(
     await readTreeSnapshot(asAppPath(codeCheckoutRoot())),
   );
-  const walks = lintClosures(code);
+  const walks = await lintClosures(code, [
+    LINT_CONFIG_SOURCE,
+    ...lintWorkerModules(code),
+  ]);
   const roots = lintEngineRoots(walks, code);
   const engine = new Set<string>();
   for (const r of roots) for (const f of walks.of(r, new Set())) engine.add(f);
@@ -235,7 +271,7 @@ test("the lint engine reaches only its declared folders", async () => {
   expect([...folders].sort()).toEqual([...ENGINE_FOLDERS].sort());
 });
 
-test("a lint loop moved into a module of its own is engine the moment it imports ESLint", () => {
+test("a lint loop moved into a module of its own is engine the moment it imports ESLint", async () => {
   const shared =
     "plugins/framework/plugins/tooling/plugins/checks/plugins/type-check/shared";
   const files = {
@@ -253,8 +289,12 @@ test("a lint loop moved into a module of its own is engine the moment it imports
     "plugins/review/core/index.ts": "export const spawn = 1;\n",
   };
   const view = viewOf(files);
-  const walks = lintClosures(view);
-  const roots = lintEngineRoots(walks, { files: () => Object.keys(files) });
+  const code = { files: () => Object.keys(files) };
+  const walks = await lintClosures(view, [
+    LINT_CONFIG_SOURCE,
+    ...lintWorkerModules(code),
+  ]);
+  const roots = lintEngineRoots(walks, code);
   expect(roots).toEqual([LINT_CONFIG_SOURCE, `${shared}/loop.ts`].sort());
   // By name through the barrel: the loop's helper, not the barrel's reader.
   expect(sorted(walks.of(`${shared}/loop.ts`, new Set()))).toEqual([
@@ -264,7 +304,7 @@ test("a lint loop moved into a module of its own is engine the moment it imports
   ]);
 });
 
-test("a barrel the engine entered by name still leads a contribution to the names the engine did not ask", () => {
+test("a barrel the engine entered by name still leads a contribution to the names the engine did not ask", async () => {
   const view = viewOf({
     "plugins/audience/core/builder.ts":
       'import { build } from "@plugins/runs/core";\n',
@@ -281,7 +321,10 @@ test("a barrel the engine entered by name still leads a contribution to the name
     "plugins/shell/lint/index.ts":
       'import { creator, build, ns } from "@plugins/runs/core";\n',
   });
-  const walks = lintClosures(view);
+  const walks = await lintClosures(view, [
+    "plugins/audience/core/builder.ts",
+    "plugins/shell/lint/index.ts",
+  ]);
   const engine = walks.of("plugins/audience/core/builder.ts", new Set());
   expect(sorted(engine)).toEqual([
     "plugins/audience/core/builder.ts",
@@ -300,7 +343,7 @@ test("a barrel the engine entered by name still leads a contribution to the name
   ]);
 });
 
-test("a closure enters a pure barrel by name, and an impure one whole", () => {
+test("a closure enters a pure barrel by name, and an impure one whole", async () => {
   const view = viewOf({
     "plugins/shell/lint/index.ts": [
       'import { a, type T } from "@plugins/wish/core";',
@@ -333,9 +376,8 @@ test("a closure enters a pure barrel by name, and an impure one whole", () => {
     "plugins/hints/core/r2.ts": "export const r2 = 1;\n",
     "plugins/history/core/index.ts": "export const heavy = 1;\n",
   });
-  expect(
-    sorted(lintClosures(view).of("plugins/shell/lint/index.ts", new Set())),
-  ).toEqual(
+  const walks = await lintClosures(view, ["plugins/shell/lint/index.ts"]);
+  expect(sorted(walks.of("plugins/shell/lint/index.ts", new Set()))).toEqual(
     [
       "plugins/wish/core/index.ts",
       "plugins/wish/core/star.ts",
@@ -350,7 +392,7 @@ test("a closure enters a pure barrel by name, and an impure one whole", () => {
   );
 });
 
-test("a closure's npm packages are what its files import by name, builtins aside", () => {
+test("a closure's npm packages are what its files import by name, builtins aside", async () => {
   const view = viewOf({
     "plugins/shell/lint/index.ts": [
       'import { b } from "./b";',
@@ -360,13 +402,12 @@ test("a closure's npm packages are what its files import by name, builtins aside
       'import { join } from "node:path";',
       'import { test } from "bun:test";',
       'import { $ } from "bun";',
-      'import { m } from "./missing";',
       'import type { T } from "zod";',
       "",
     ].join("\n"),
     "plugins/shell/lint/b.ts": 'import picomatch from "picomatch/posix";\n',
   });
-  const walks = lintClosures(view);
+  const walks = await lintClosures(view, ["plugins/shell/lint/index.ts"]);
   const closure = walks.of("plugins/shell/lint/index.ts", new Set());
   expect(sorted(walks.packagesOf(closure))).toEqual([
     "@typescript-eslint/utils",

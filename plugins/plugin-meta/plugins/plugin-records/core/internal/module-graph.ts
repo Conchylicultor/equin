@@ -75,6 +75,12 @@ export interface ModuleNode {
   blob: string;
   /** The repo modules it loads with it (static imports), repo-relative. */
   staticDeps: string[];
+  /**
+   * Each static import of a repo module, as written and as resolved — what a
+   * reader that knows something per specifier (the names a statement binds)
+   * joins on, so it never resolves a specifier itself.
+   */
+  staticImports: { spec: string; target: string }[];
   /** The subset of {@link staticDeps} a bundler keeps (see `ImportSpec.unused`). */
   bundledDeps: string[];
   /** The repo modules it can load later (`import()`, `require()`). */
@@ -428,6 +434,7 @@ async function growGraph(
             path,
             blob,
             staticDeps: [],
+            staticImports: [],
             bundledDeps: [],
             dynamicDeps: [],
             dynamicImports: [],
@@ -459,6 +466,7 @@ async function growGraph(
               node.dynamicImports.push({ spec: imp.spec, target });
             } else {
               node.staticDeps.push(target);
+              node.staticImports.push({ spec: imp.spec, target });
               if (!imp.unused) node.bundledDeps.push(target);
             }
           }

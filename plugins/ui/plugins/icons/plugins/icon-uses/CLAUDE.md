@@ -21,6 +21,8 @@ records of the shared store. Keep it free of imports.
 - Description: Where a module uses the icon constructors: iconUsesIn (each symbol / brand / seti import followed through ESLint's scope analysis) and isIconRefModule (does an import specifier name the module exporting them). A leaf with no imports, so the icon scans (the manifest's and manifest-covers-uses') and the icons lint rules read icon uses without loading the icons core — a file scan's record key follows these two modules, not the icons barrel and its glyph tables.
 - Cross-plugin:
   - Imported by: `framework/tooling/codegen`
+- Exemptions:
+  - Exempts itself from: `import-scan-safety/no-hand-import-resolution` — `core/icon-module.ts` (debt)
 - Core:
   - Exports (types):
     - `DeclaredVariable`

@@ -31480,7 +31480,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/tooling/boundaries` (2 debt)
               - `framework/tooling/checks` (11 debt)
               - `framework/tooling/checks/type-check` (16 debt)
-              - `framework/tooling/codegen` (21 debt)
+              - `framework/tooling/codegen` (20 debt)
               - `framework/tooling/codegen/composition-registries` (1 debt)
               - `framework/tooling/collected-dir/discovery` (1 debt)
               - `framework/tooling/format` (5 debt)
@@ -31781,6 +31781,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Exempts itself from:
                   - `marker-scan-safety/no-adhoc-marker-scan` — `check/parse.ts` (sanctioned)
                   - `check-thread-safety/no-blocking-check-work` — `check/parse.ts` (debt)
+                  - `import-scan-safety/no-hand-import-resolution` — `check/test-only-exports.ts` (debt)
                 - Exempted by: `framework/web-core` (0 debt)
             - **`plugin-refs-resolve`**
             - **`plugins-doc-in-sync`**
@@ -31894,7 +31895,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Exempts itself from:
                   - `boundaries/no-platform-api` — `shared/batch-processes.ts`, `shared/batch-worker.ts`, `shared/full-check.ts`, `shared/keys.ts`, `shared/launch.ts`, `shared/name-check.ts`, `shared/name-host.ts`, `shared/name-records.ts`, `shared/name-resolve.ts`, `shared/name-run.ts`, `shared/name-store.ts`, `shared/name-walk.ts`, `shared/pass-set.ts`, `shared/repo-view.ts`, `shared/tsc-engine.ts`, `shared/worker.ts` (debt)
                   - `user-path/no-unproven-claim` — `shared/batch-worker.ts` (sanctioned)
-                  - `check-thread-safety/no-blocking-check-work` — `check/import-graph.ts` (debt)
                   - `blocking-fs/sync-named` — `shared/batch-processes.ts`, `shared/batch-worker.ts`, `shared/name-store.ts`, `shared/pass-set.ts`, `shared/repo-view.ts`, `shared/tsc-engine.ts`, `shared/worker.ts` (sanctioned)
               - Cli:
                 - Exports (values): `readTypeCheckTree`
@@ -31997,7 +31997,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `collectExemptRuleIds`
               - `collectFieldEagerBarrels`
               - `collectIconManifest`
-              - `collectImportGraph`
               - `collectTokenGroups`
               - `collectTokenGroupVars`
               - `collectWebSlotContributions`
@@ -32017,7 +32016,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `evaluateWebBarrels`
               - `EXEMPT_RULE_IDS_REL_PATH`
               - `exemptRuleIdsPath`
-              - `extractRuntimeImportSpecifiers`
               - `fieldsEagerManifestPath`
               - `formatGenerated`
               - `generateBarrelStubs`
@@ -32089,7 +32087,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `reorderableSlotsManifestPath`
               - `resolveHostConfigCoverage`
               - `resolveHostContributionCoverage`
-              - `resolveImportSpecifier`
               - `resolveMainComposition`
               - `resolveOriginAnnotations`
               - `resolveOriginDefaults`
@@ -32117,10 +32114,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `plugin-meta/relocate`
           - Exemptions:
             - Exempts itself from:
-              - `boundaries/no-platform-api` — `core/authored-override-seed.ts`, `core/barrel-stubs-gen.ts`, `core/claude-settings-gen.ts`, `core/config-origin-gen.ts`, `core/custom-utilities-gen.ts`, `core/data-views-gen.ts`, `core/declared-apps.ts`, `core/docgen.ts`, `core/evaluated-barrels.ts`, `core/fields-eager-gen.ts`, `core/file-config-proxy.ts`, `core/git-layer-config.ts`, `core/icon-manifest-gen.ts`, `core/import-graph.ts`, `core/override-legend-stamp.ts`, `core/package-names.ts`, `core/pre-barrel-guard.ts`, `core/slot-declaration-guard.ts`, `core/space-ramp-gen.ts`, `core/test-helpers-doc.ts`, `core/write-generated.ts` (debt)
+              - `boundaries/no-platform-api` — `core/authored-override-seed.ts`, `core/barrel-stubs-gen.ts`, `core/claude-settings-gen.ts`, `core/config-origin-gen.ts`, `core/custom-utilities-gen.ts`, `core/data-views-gen.ts`, `core/declared-apps.ts`, `core/docgen.ts`, `core/evaluated-barrels.ts`, `core/fields-eager-gen.ts`, `core/file-config-proxy.ts`, `core/git-layer-config.ts`, `core/icon-manifest-gen.ts`, `core/override-legend-stamp.ts`, `core/package-names.ts`, `core/pre-barrel-guard.ts`, `core/slot-declaration-guard.ts`, `core/space-ramp-gen.ts`, `core/test-helpers-doc.ts`, `core/write-generated.ts` (debt)
               - `marker-scan-safety/no-adhoc-marker-scan` — `core/browser-host-coverage.scan.ts` (sanctioned)
               - `user-path/no-unproven-claim` — `core/test-helpers-doc.ts` (sanctioned)
               - `blocking-fs/sync-named` — `core/authored-override-seed.ts`, `core/barrel-stubs-gen.ts`, `core/claude-settings-gen.ts`, `core/config-origin-gen.ts`, `core/custom-utilities-gen.ts`, `core/declared-apps.ts`, `core/docgen.ts`, `core/evaluated-barrels.ts`, `core/fields-eager-gen.ts`, `core/file-config-proxy.ts`, `core/git-layer-config.ts`, `core/override-legend-stamp.ts`, `core/pre-barrel-guard.ts`, `core/slot-declaration-guard.ts`, `core/space-ramp-gen.ts`, `core/symbol-names-gen.ts`, `core/test-helpers-doc.ts`, `core/write-generated.ts` (sanctioned)
+              - `import-scan-safety/no-hand-import-resolution` — `core/browser-host-coverage.ts` (debt)
           - Plugins:
             - **`composition-registries`** — The per-composition registry files' grammar and listing: where a composition's `<dir>` registry lives (main's is the committed `<dir>.generated.ts`, any other's the gitignored `<dir>.composition.<id>.generated.ts`), which collected dirs get one, and every per-name registry and backend entry on disk — without the build pipeline, so a serving backend (worktree reclaim) can list them.
               - Core:
@@ -32562,7 +32560,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `framework/tooling/checks/plugin-boundaries` (1 debt)
                   - `framework/tooling/checks/plugins-have-claudemd` (1 debt)
                   - `framework/tooling/checks/table-defs-in-schema-glob` (1 debt)
-                  - `framework/tooling/checks/type-check` (1 debt)
                   - `framework/tooling/test-layout` (1 debt)
                   - `infra/launcher` (1 debt)
                   - `infra/paths/data-files` (1 debt)
@@ -32607,7 +32604,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - **`icon-safety`** — icon-safety lint rules: no-lucide-react
             - **`import-scan-safety`** — import-scan-safety lint rule: no-adhoc-import-scan
               - Exemptions:
-                - Exempted by: `plugin-meta/parse-utils` (0 debt)
+                - Exempted by:
+                  - `framework/tooling/checks/plugin-boundaries` (1 debt)
+                  - `framework/tooling/codegen` (1 debt)
+                  - `network/live/live-state` (0 debt)
+                  - `network/live/resource-vocabulary` (1 debt)
+                  - `plugin-meta/parse-utils` (0 debt)
+                  - `plugin-meta/plugin-records` (0 debt)
+                  - `primitives/css/layout-harness` (1 debt)
+                  - `primitives/pane` (1 debt)
+                  - `ui/icons/icon-uses` (1 debt)
             - **`intersection-observer-safety`** — intersection-observer-safety lint rule: no-raw-intersection-observer
               - Exemptions:
                 - Exempted by: `primitives/dom/in-view` (0 debt)
@@ -40574,6 +40580,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `endpoints/no-raw-web-fetch` — `web/notifications-client.ts` (sanctioned)
               - `live/no-legacy-resource-spelling` — `.` (sanctioned)
               - `live/no-endpoint-read` — `web` (sanctioned)
+              - `import-scan-safety/no-hand-import-resolution` — `lint/result-constructors.ts` (sanctioned)
             - Exempted by: `apps/file-explorer/git` (0 debt)
           - Test helpers:
             - Web: `@plugins/network/plugins/live/plugins/live-state/web/testing`
@@ -41047,6 +41054,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `SERVER_CORE`
           - Cross-plugin:
             - Imported by: `framework/tooling/codegen`
+          - Exemptions:
+            - Exempts itself from:
+              - `import-scan-safety/no-hand-import-resolution` — `check/index.ts` (debt)
+              - `import-scan-safety/no-hand-import-resolution` — `core/vocabulary.ts` (sanctioned)
 
 - **`packages`** — Umbrella for package management utilities.
   - Plugins:
@@ -45865,6 +45876,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework/tooling/test-layout`
           - `network/live/resource-vocabulary`
           - `plugin-meta/parse-utils/source-files`
+          - `plugin-meta/plugin-records/bindings`
           - `plugin-meta/plugin-refs`
           - `plugin-meta/plugin-tree`
           - `plugin-meta/plugin-tree/faceted`
@@ -46111,6 +46123,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework/tooling/codegen`
           - `framework/tooling/import-closure`
           - `framework/tooling/web-artifacts`
+          - `plugin-meta/plugin-records/bindings`
           - `plugin-meta/plugin-records/evaluate`
           - `plugin-meta/plugin-records/key-width`
           - `plugin-meta/plugin-records/reclaim`
@@ -46120,7 +46133,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from:
           - `imperative-create-table-allowlisted` — `cli/internal/sqlite-store.ts` (sanctioned)
           - `boundaries/no-platform-api` — `core/internal/outside-files.ts` (debt)
+          - `import-scan-safety/no-hand-import-resolution` — `core/internal/module-graph.ts` (sanctioned)
       - Plugins:
+        - **`bindings`** — Each module's imports as the module graph resolves them, with the names each statement binds and a pure re-export module's re-exports (fileSetBindings): a per-blob bindings.scan record joined onto the graph's edges by specifier, for a reader walking a closure by name through barrels without parsing or resolving an import.
+          - Core:
+            - Uses:
+              - `plugin-meta/parse-utils.findImports`
+              - `plugin-meta/parse-utils.maskSource`
+              - `plugin-meta/plugin-records.buildModuleGraph`
+              - `plugin-meta/plugin-records.currentRecordStore`
+              - `plugin-meta/plugin-records.NO_OUTSIDE_FILES`
+              - `plugin-meta/plugin-records.scanFilesCached`
+            - Exports (types):
+              - `BoundNames`
+              - `ModuleBindings`
+              - `ReexportFacts`
+            - Exports (values): `fileSetBindings`
         - **`evaluate`** — Evaluated records: what importing a plugin barrel produced (its definition, slots, contributions), serialized as data under the barrel's module Merkle key, so a build reads it without importing anything. Apart from plugin-records' core so a record producer that only makes keys and stores records (the facet harness) does not key on barrel-import's stubs and the slot-declaration engine.
           - Core:
             - Uses:
@@ -47766,6 +47794,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `boundaries:web-loads-portable` — `web/internal/build-measurer-page.ts`, `web/internal/measure-page.ts` (debt)
               - `check-thread-safety/no-blocking-check-work` — `check/index.ts` (debt)
               - `dom-access-safety/no-module-scope-dom` — `web/internal/entry.tsx` (sanctioned)
+              - `import-scan-safety/no-hand-import-resolution` — `check/page-inputs.ts` (debt)
           - Core:
             - Exports (types):
               - `MeasuredBox`
@@ -53236,6 +53265,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `pane/no-core-define-route-in-web` — `.` (sanctioned)
           - `pane/no-pane-header-bar` — `.` (sanctioned)
           - `check-thread-safety/no-blocking-check-work` — `check/identity-manifest.ts`, `check/index.ts` (debt)
+          - `import-scan-safety/no-hand-import-resolution` — `check/identity-manifest.ts` (debt)
         - Exempted by:
           - `apps/browser/bookmarks` (0 debt)
           - `primitives/bar` (0 debt)
@@ -61655,6 +61685,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`icon-uses`** — Where a module uses the icon constructors: iconUsesIn (each symbol / brand / seti import followed through ESLint's scope analysis) and isIconRefModule (does an import specifier name the module exporting them). A leaf with no imports, so the icon scans (the manifest's and manifest-covers-uses') and the icons lint rules read icon uses without loading the icons core — a file scan's record key follows these two modules, not the icons barrel and its glyph tables.
           - Cross-plugin:
             - Imported by: `framework/tooling/codegen`
+          - Exemptions:
+            - Exempts itself from: `import-scan-safety/no-hand-import-resolution` — `core/icon-module.ts` (debt)
           - Core:
             - Exports (types):
               - `DeclaredVariable`

@@ -29,7 +29,7 @@
 //
 // NPM CODE counts by what a closure LOADS: the packages its files import by
 // name, closed over their dependencies in `bun.lock`, with the patch files
-// `bun.lock` applies to any of them (`lockfileNpmClosure`, `infra/deps/npm/lock-closure`). The whole
+// `bun.lock` applies to any of them (`npmClosureOf`, `infra/deps/npm/lock-closure`). The whole
 // lockfile and every `patches/` file used to be engine: a patch of
 // graphile-worker or @parcel/watcher — which no rule loads — or a dependency
 // added for a server feature re-linted every group of every file (8 of 20
@@ -60,7 +60,7 @@
 // before, every rule edit re-linted all ~470 directive files whole in one
 // program (+3.2 GB of worker peak, ~100 CPU-s; research/2026-11-12-global-type-check-worker-memory-split.md).
 //
-// A closure follows RUNTIME imports only (`runtimeImportSpecifiers`): an
+// A closure follows RUNTIME imports only (the module graph's edges): an
 // `import type` is erased before a rule runs, so what sits behind it cannot
 // change a message. Followed, the engine took in the process plumbing a type
 // named (host admission, spawn): 53 files on 2026-11-05, most of them unable
@@ -69,11 +69,11 @@
 // Every file in a group is hashed by its VERSION — its git blob sha in the
 // run's tree (`../shared/repo-view.ts`) — so hashing a group reads nothing. Its
 // MEMBERS are found by walking the import closures of the config builder and
-// of each contribution's entry alone, parsing only the files on them and
-// resolving specifiers against the tree (never the disk). They used to be read
-// off an import graph of the whole repo — every lintable file read and parsed,
-// up to five `existsSync` per specifier — built every run for these few
-// closures (3 CPU-s per run, measured on 2026-10-21).
+// of each contribution's entry alone, over the plugin-records module graph of
+// the tree (`fileSetBindings`: each module's edges resolved by the graph, the
+// names each binds a file record per blob). Nothing here parses or resolves an
+// import: it used to, with its own specifier → file resolution beside the
+// graph every other reader of imports shares.
 //
 // See research/2026-10-15-global-lint-cache-per-contribution.md and
 // research/2026-10-17-global-lint-keyed-on-what-it-reads.md.
@@ -87,17 +87,24 @@ import {
   lintDataKey,
 } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 import { LINT_GROUP_ALL, LINT_GROUP_BASE } from "../core";
-import { lockfileNpmClosure } from "@plugins/infra/plugins/deps/plugins/npm/plugins/lock-closure/core";
+import {
+  type BunLock,
+  npmClosureOf,
+  parseBunLock,
+} from "@plugins/infra/plugins/deps/plugins/npm/plugins/lock-closure/core";
+import {
+  type BoundNames,
+  fileSetBindings,
+  type ReexportFacts,
+} from "@plugins/plugin-meta/plugins/plugin-records/plugins/bindings/core";
+import {
+  repoSnapshotOver,
+  type RepoSnapshot,
+} from "@plugins/framework/plugins/tooling/core";
 import type { TypeAwareGroups } from "../shared/lint-results";
 import type { RepoView } from "../shared/repo-view";
 import { producerSources } from "../shared/tsc-engine";
-import {
-  type ImportedNames,
-  isLintable,
-  pureBarrelReexports,
-  resolveSpecifier,
-  runtimeImports,
-} from "./import-graph";
+import { isLintable } from "./lint-universe";
 
 function sha256(s: string): string {
   return createHash("sha256").update(s).digest("hex");
@@ -146,14 +153,6 @@ function npmPackageOf(spec: string): string | undefined {
   return spec.startsWith("@") ? parts.slice(0, 2).join("/") : parts[0];
 }
 
-/** A specifier resolved against the repo, not `node_modules`. */
-const isRepoSpecifier = (spec: string): boolean =>
-  spec.startsWith("./") ||
-  spec.startsWith("../") ||
-  spec.startsWith("@plugins/") ||
-  spec === "@" ||
-  spec.startsWith("@/");
-
 /** This file, repo-relative: how the checkout whose code RUNS is found. */
 const OWN_PATH =
   "plugins/framework/plugins/tooling/plugins/checks/plugins/type-check/check/lint-groups.ts";
@@ -193,20 +192,8 @@ function ownSources(files: readonly string[]): string[] {
  */
 const LINTER_PACKAGE = "eslint";
 
-/**
- * The modules this check's worker processes load that run ESLint: every
- * module in the run-time closure of `shared/` (where the worker and its batch
- * processes live) importing {@link LINTER_PACKAGE}, plus the config builder.
- * Derived, never listed: a lint loop moved into a new module, here or in
- * another plugin `shared/` reaches, is a root the moment it imports the
- * linter. (A hand-written list of the worker's files went stale when the loop
- * moved out of `worker.ts`, and an edit to the `--quiet` filter re-linted
- * nothing.)
- */
-export function lintEngineRoots(
-  closures: ReturnType<typeof lintClosures>,
-  code: Pick<RepoView, "files">,
-): string[] {
+/** The run-time modules of this check's `shared/`: where its worker and batch processes live. */
+export function lintWorkerModules(code: Pick<RepoView, "files">): string[] {
   const shared = `${ownSources(["../shared"])[0]!}/`;
   const runtime = code
     .files()
@@ -222,8 +209,28 @@ export function lintEngineRoots(
       `type-check: no worker module under ${shared} in the code checkout — the lint engine has no roots`,
     );
   }
+  return runtime;
+}
+
+/** The closures {@link lintClosures} loaded. */
+export type LintClosures = Awaited<ReturnType<typeof lintClosures>>;
+
+/**
+ * The modules this check's worker processes load that run ESLint: every
+ * module in the run-time closure of `shared/` (where the worker and its batch
+ * processes live) importing {@link LINTER_PACKAGE}, plus the config builder.
+ * Derived, never listed: a lint loop moved into a new module, here or in
+ * another plugin `shared/` reaches, is a root the moment it imports the
+ * linter. (A hand-written list of the worker's files went stale when the loop
+ * moved out of `worker.ts`, and an edit to the `--quiet` filter re-linted
+ * nothing.)
+ */
+export function lintEngineRoots(
+  closures: LintClosures,
+  code: Pick<RepoView, "files">,
+): string[] {
   const reach = new Set<string>();
-  for (const f of runtime)
+  for (const f of lintWorkerModules(code))
     for (const m of closures.of(f, new Set())) reach.add(m);
   const roots = new Set([LINT_CONFIG_SOURCE]);
   for (const m of reach) {
@@ -313,75 +320,157 @@ export function rawTypedFps(
 }
 
 /**
- * The import closures of a tree, walked on demand: each file on a walk is
- * parsed once (its specifiers resolved against the view), every other file
- * never. Only a LINTABLE file's imports are followed — a generated registry or
- * a `prototypes/` file is a member of a closure that reaches it, not a way
- * through it — matching the graph this replaced, which held edges out of
- * lintable files alone.
- *
- * A closure is walked BY NAME through pure barrels (`pureBarrelReexports`): a
- * module importing `{ a }` from a barrel reaches the barrel and the module
- * that exports `a`, not every module the barrel re-exports. So a closure is
- * the code its files can call, not every module the runtime evaluates beside
- * it: a builder importing one helper from `lint/core` does not take in that
- * barrel's file readers and process plumbing. What a module only EVALUATES
- * (an unused re-export's top-level code) is out — a module whose evaluation
- * changes a message must be reached by a name it exports.
+ * The repo modules `roots` can load (static and dynamic edges) whose facts a
+ * closure walk reads: the lintable ones — a generated registry or a
+ * `prototypes/` file is a member of a closure that reaches it, not a way
+ * through it.
  */
-export function lintClosures(
-  view: Pick<RepoView, "isFile" | "readText" | "treeHash">,
-) {
-  interface Facts {
-    /** Each run-time import resolved into the repo, with the names it asks. */
-    edges: readonly { to: string; names: ImportedNames }[];
-    /** A pure barrel's re-exports, resolved; null for any other file. */
-    barrel:
-      | readonly {
-          to: string;
-          exports: ReadonlyMap<string, string | null> | "all";
-        }[]
-      | null;
-    /** The npm packages it imports by name. */
-    packages: readonly string[];
+type ClosureFacts = {
+  /** Each run-time import resolved into the repo, with the names it asks. */
+  edges: readonly { to: string; names: ImportedNames }[];
+  /** A pure barrel's re-exports, resolved; null for any other file. */
+  barrel:
+    | readonly {
+        to: string;
+        exports: ReadonlyMap<string, string | null> | "all";
+      }[]
+    | null;
+  /** The npm packages it imports by name. */
+  packages: readonly string[];
+};
+
+/** The names an edge asks: a set, or `"all"`. */
+type ImportedNames = ReadonlySet<string> | "all";
+
+const NO_FACTS: ClosureFacts = { edges: [], barrel: null, packages: [] };
+
+/** A pure barrel is an `index.ts(x)` that re-exports and declares types only. */
+const BARREL_FILE = /(^|\/)index\.tsx?$/;
+
+/** The view as a file set the module graph reads, one per view (the graph is shared by identity). */
+const snapshots = new WeakMap<RepoView, RepoSnapshot>();
+function snapshotOf(view: RepoView): RepoSnapshot {
+  let s = snapshots.get(view);
+  if (s === undefined) {
+    const over = repoSnapshotOver(
+      view.root,
+      view.files(),
+      (p) => view.version(p) ?? null,
+    );
+    // The bytes are the view's — its blob's, never whatever is on disk now.
+    s = {
+      ...over,
+      read: async (p) => (view.isFile(p) ? view.readText(p) : null),
+    };
+    snapshots.set(view, s);
   }
-  const facts = new Map<string, Facts>();
-  const factsOf = (rel: string): Facts => {
-    let f = facts.get(rel);
-    if (f === undefined) {
-      const edges: { to: string; names: ImportedNames }[] = [];
-      const pkgs = new Set<string>();
-      let barrel: Facts["barrel"] = null;
-      if (isLintable(rel)) {
-        const src = view.readText(rel);
-        for (const { specifier: spec, names } of runtimeImports(src)) {
-          const to = resolveSpecifier(rel, spec, view.isFile);
-          if (to !== null) {
-            if (to !== rel) edges.push({ to, names });
-            continue;
-          }
-          // A missing repo file is no npm code, and neither is a computed
-          // `import(\`${…}\`)` (the builder's load of a registry by path).
-          if (isRepoSpecifier(spec) || spec.includes("${")) continue;
-          const pkg = npmPackageOf(spec);
-          if (pkg !== undefined) pkgs.add(pkg);
-        }
-        const reexports = pureBarrelReexports(rel, src);
-        if (reexports !== null) {
-          barrel = reexports.flatMap(({ specifier, exports }) => {
-            const to = resolveSpecifier(rel, specifier, view.isFile);
-            return to === null || to === rel ? [] : [{ to, exports }];
-          });
-        }
-      }
-      f = { edges, barrel, packages: [...pkgs] };
+  return s;
+}
+
+function asFacts(
+  rel: string,
+  b: {
+    imports: readonly { target: string; names: BoundNames }[];
+    reexports:
+      readonly { target: string; exports: ReexportFacts["exports"] }[] | null;
+    packages: readonly string[];
+  },
+): ClosureFacts {
+  const edges = b.imports
+    .filter((e) => e.target !== rel)
+    .map((e) => ({
+      to: e.target,
+      names: e.names === "all" ? ("all" as const) : new Set(e.names),
+    }));
+  const barrel =
+    b.reexports === null || !BARREL_FILE.test(rel)
+      ? null
+      : b.reexports
+          .filter((r) => r.target !== rel)
+          .map((r) => ({
+            to: r.target,
+            exports:
+              r.exports === "all"
+                ? ("all" as const)
+                : new Map<string, string | null>(r.exports),
+          }));
+  const packages = b.packages.flatMap((spec) => {
+    const pkg = npmPackageOf(spec);
+    return pkg === undefined ? [] : [pkg];
+  });
+  return { edges, barrel, packages };
+}
+
+/**
+ * The import closures of a tree from `roots`, each walk reading the module
+ * graph's resolved edges and the names each binds (plugin-records'
+ * `fileSetBindings`: one file record per blob). The preparation thread
+ * installs no shared record store, so a run builds the graph of the roots'
+ * reach in memory — Bun's native import scan, ~1 CPU-s cold on the real tree
+ * against ~3 for the parse-and-resolve walk plus per-group lockfile parses it
+ * replaced. Nothing here parses or resolves an import. Only a
+ * LINTABLE file's imports are followed — a generated registry or a
+ * `prototypes/` file is a member of a closure that reaches it, not a way
+ * through it.
+ *
+ * A closure is walked BY NAME through pure barrels: a module importing `{ a }`
+ * from a barrel reaches the barrel and the module that exports `a`, not every
+ * module the barrel re-exports. So a closure is the code its files can call,
+ * not every module the runtime evaluates beside it: a builder importing one
+ * helper from `lint/core` does not take in that barrel's file readers and
+ * process plumbing. What a module only EVALUATES (an unused re-export's
+ * top-level code) is out — a module whose evaluation changes a message must
+ * be reached by a name it exports.
+ *
+ * Throws on a root the tree does not hold, and on an import of a walked
+ * module that resolves to no file of the tree.
+ */
+export async function lintClosures(view: RepoView, roots: readonly string[]) {
+  for (const r of roots) {
+    if (!view.isFile(r)) {
+      throw new Error(
+        `type-check: lint group root ${r} is not in the checked tree ${view.treeHash}`,
+      );
+    }
+  }
+  // Every lintable module the roots can load: a superset of what the walks
+  // below visit, read in one batch.
+  const repo = snapshotOf(view);
+  const loaded = new Set(roots);
+  const facts = new Map<string, ClosureFacts>();
+  let level = roots.filter(isLintable);
+  while (level.length > 0) {
+    const bindings = await fileSetBindings(repo, level);
+    const next: string[] = [];
+    for (const [rel, b] of bindings) {
+      const f = asFacts(rel, b);
       facts.set(rel, f);
+      for (const t of [
+        ...f.edges.map((e) => e.to),
+        ...(f.barrel ?? []).map((r) => r.to),
+      ]) {
+        if (loaded.has(t)) continue;
+        loaded.add(t);
+        if (isLintable(t) && !t.endsWith(".generated.ts")) next.push(t);
+      }
+    }
+    level = next;
+  }
+  const visited = new Set<string>();
+  const factsOf = (rel: string): ClosureFacts => {
+    visited.add(rel);
+    if (!isLintable(rel)) return NO_FACTS;
+    const f = facts.get(rel);
+    if (f === undefined) {
+      throw new Error(
+        `type-check: ${rel} is on a lint closure walk but was not loaded from its roots`,
+      );
     }
     return f;
   };
   return {
-    /** How many files the walks have parsed so far. */
-    parsed: (): number => facts.size,
+    /** How many files the walks have read so far. */
+    parsed: (): number => visited.size,
     /** The npm packages the files of a closure (`of`'s answer) import by name. */
     packagesOf(files: Iterable<string>): Set<string> {
       const out = new Set<string>();
@@ -389,8 +478,9 @@ export function lintClosures(
       return out;
     },
     /**
-     * Forward import closure of `start`, not descending into `stop` (files the
-     * engine already covers) nor into a generated registry. Cycle-safe.
+     * Forward import closure of `start` (one of the roots, or a module they
+     * reach), not descending into `stop` (files the engine already covers)
+     * nor into a generated registry. Cycle-safe.
      *
      * Registries are skipped because what they enumerate is keyed elsewhere:
      * the lint contributions are groups of their own, the exemption manifests
@@ -400,9 +490,9 @@ export function lintClosures(
      * again.
      */
     of(start: string, stop: ReadonlySet<string>): Set<string> {
-      if (!view.isFile(start)) {
+      if (!loaded.has(start)) {
         throw new Error(
-          `type-check: lint group root ${start} is not in the checked tree ${view.treeHash}`,
+          `type-check: lint group root ${start} was not among the roots the closures were loaded from`,
         );
       }
       // The names asked of each visited file so far; `"all"` once it is
@@ -493,7 +583,8 @@ function body(files: Iterable<string>, view: RepoView): string {
 
 /**
  * The npm code a closure loads, as text to hash: the lock entries its
- * packages reach (`lockfileNpmClosure`) and each patch applied to one of them,
+ * packages reach (`npmClosureOf`, over `lock` — the code tree's `bun.lock`,
+ * parsed once per computation: ~16 ms a parse, ~130 groups) and each patch applied to one of them,
  * by version — read from the CODE checkout's tree, whose `node_modules` the
  * rules run with (the checked tree itself on a check run). Throws on a package the lockfile does not hold — code that
  * imports it cannot run, and a key that left it out would not move when it
@@ -503,6 +594,7 @@ function npmKey(
   label: string,
   packages: ReadonlySet<string>,
   view: RepoView,
+  lock: () => BunLock,
 ): string {
   if (packages.size === 0) return "";
   if (!view.isFile("bun.lock")) {
@@ -510,7 +602,7 @@ function npmKey(
       `type-check: lint ${label} imports npm packages (${[...packages].sort().slice(0, 3).join(", ")}) and the checked tree ${view.treeHash} has no bun.lock`,
     );
   }
-  const closure = lockfileNpmClosure(view.readText("bun.lock"), packages);
+  const closure = npmClosureOf(lock(), packages);
   if (closure.missing.length > 0) {
     throw new Error(
       `type-check: lint ${label} imports ${closure.missing.join(", ")}, which bun.lock does not hold`,
@@ -531,7 +623,16 @@ export async function computeLintGroups(
   view: RepoView,
   code: RepoView = view,
 ): Promise<LintGroups> {
-  const closures = lintClosures(code);
+  const contributions = await lintContributionPaths();
+  const entries = contributions.map((p) => `plugins/${p}/lint/index.ts`);
+  const closures = await lintClosures(code, [
+    LINT_CONFIG_SOURCE,
+    ...lintWorkerModules(code),
+    ...entries,
+  ]);
+  let parsedLock: BunLock | undefined;
+  const lock = (): BunLock =>
+    (parsedLock ??= parseBunLock(code.readText("bun.lock")));
 
   // The engine: the closure of every module that runs ESLint (the config
   // builder, the lint engine) and the npm code they load (code), plus the
@@ -544,18 +645,18 @@ export async function computeLintGroups(
   const engineConfig = view.files().filter(isEngineConfigFile);
   const engine = new Set([...engineCode, ...engineConfig]);
   const engineFp = sha256(
-    `npm:${npmKey("engine", closures.packagesOf(engineCode), code)}\ndata:${lintDataKey(view.root)}\n${body(engineCode, code)}\n${body(engineConfig, view)}`,
+    `npm:${npmKey("engine", closures.packagesOf(engineCode), code, lock)}\ndata:${lintDataKey(view.root)}\n${body(engineCode, code)}\n${body(engineConfig, view)}`,
   );
 
   const fps = new Map<string, string>();
   fps.set(LINT_GROUP_BASE, groupHash(`${LINT_GROUP_BASE}\n${engineFp}`));
-  for (const pluginPath of await lintContributionPaths()) {
-    const entry = `plugins/${pluginPath}/lint/index.ts`;
+  for (const [i, pluginPath] of contributions.entries()) {
+    const entry = entries[i]!;
     const closure = closures.of(entry, engine);
     fps.set(
       pluginPath,
       groupHash(
-        `${pluginPath}\n${engineFp}\n${body(closure, code)}\nnpm:${npmKey(pluginPath, closures.packagesOf(closure), code)}`,
+        `${pluginPath}\n${engineFp}\n${body(closure, code)}\nnpm:${npmKey(pluginPath, closures.packagesOf(closure), code, lock)}`,
       ),
     );
   }

@@ -923,6 +923,7 @@ Details:
     - `endpoints/no-raw-web-fetch` — `web/notifications-client.ts` (sanctioned)
     - `live/no-legacy-resource-spelling` — `.` (sanctioned)
     - `live/no-endpoint-read` — `web` (sanctioned)
+    - `import-scan-safety/no-hand-import-resolution` — `lint/result-constructors.ts` (sanctioned)
   - Exempted by: `apps/file-explorer/git` (0 debt)
 - Test helpers:
   - Web: `@plugins/network/plugins/live/plugins/live-state/web/testing`

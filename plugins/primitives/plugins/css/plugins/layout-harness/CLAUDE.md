@@ -479,6 +479,7 @@ somehow is not.
     - `boundaries:web-loads-portable` — `web/internal/build-measurer-page.ts`, `web/internal/measure-page.ts` (debt)
     - `check-thread-safety/no-blocking-check-work` — `check/index.ts` (debt)
     - `dom-access-safety/no-module-scope-dom` — `web/internal/entry.tsx` (sanctioned)
+    - `import-scan-safety/no-hand-import-resolution` — `check/page-inputs.ts` (debt)
 - Core:
   - Exports (types):
     - `MeasuredBox`

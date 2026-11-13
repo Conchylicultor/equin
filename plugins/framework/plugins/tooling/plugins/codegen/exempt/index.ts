@@ -17,7 +17,6 @@ export default [
       "core/file-config-proxy.ts",
       "core/git-layer-config.ts",
       "core/icon-manifest-gen.ts",
-      "core/import-graph.ts",
       "core/override-legend-stamp.ts",
       "core/package-names.ts",
       "core/pre-barrel-guard.ts",
@@ -69,5 +68,13 @@ export default [
     kind: "sanctioned",
     reason:
       "Host tooling only: no backend loads this module (blocking-fs:sync-named-reach measures the backends' import graph), so its blocking helpers hold only the CLI's, a check's or a script's own thread.",
+  },
+  {
+    rule: "import-scan-safety/no-hand-import-resolution",
+    paths: ["core/browser-host-coverage.ts"],
+    kind: "debt",
+    task: "task-1794573514-c7sfqg",
+    reason:
+      "Resolves an `@plugins/\u2026` import specifier to a repo file by hand, beside the plugin-records module graph; to read resolved imports off the graph instead.",
   },
 ] satisfies Exemptions;

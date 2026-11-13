@@ -94,7 +94,7 @@ import {
   type ShardRef,
 } from "../shared/run-base";
 import { hasLintDirective } from "./fingerprint";
-import { lintableFiles } from "./import-graph";
+import { lintableFiles } from "./lint-universe";
 import {
   codeCheckoutRoot,
   computeLintGroups,

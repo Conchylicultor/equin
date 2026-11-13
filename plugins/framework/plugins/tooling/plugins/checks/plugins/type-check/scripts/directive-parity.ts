@@ -37,7 +37,7 @@ const arg = (name: string): string | undefined => {
 const chunk = Number(arg("chunk") ?? "40");
 const only = arg("only");
 
-// `check/fingerprint.ts` `hasLintDirective` and `check/import-graph.ts`
+// `check/fingerprint.ts` `hasLintDirective` and `check/lint-universe.ts`
 // `isLintable` (a leaf folder: restated, not imported).
 const hasLintDirective = (src: string): boolean =>
   /eslint-(?:disable|enable)|\/\*\s*eslint\s/.test(src);

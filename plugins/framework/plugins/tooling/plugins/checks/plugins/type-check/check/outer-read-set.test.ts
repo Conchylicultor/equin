@@ -22,7 +22,7 @@ import {
   createReadSetRepo,
   type ReadSetRepo,
 } from "@plugins/framework/plugins/tooling/plugins/checks/core/testing";
-import { lintableFiles } from "./import-graph";
+import { lintableFiles } from "./lint-universe";
 import { recordOuterReadSet } from "./outer-read-set";
 
 let repo: ReadSetRepo;

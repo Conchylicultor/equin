@@ -7,7 +7,6 @@ import type {
 } from "@plugins/framework/plugins/tooling/core";
 import {
   barrelStubsPath,
-  collectImportGraph,
   discoverBrowserHosts,
   postWebManifests,
   preBarrelManifests,
@@ -15,6 +14,7 @@ import {
 import { discoverCollectedDirsIn } from "@plugins/framework/plugins/tooling/plugins/collected-dir/plugins/discovery/core";
 import { collectedDirRegistryPath } from "@plugins/framework/plugins/tooling/plugins/codegen/plugins/composition-registries/core";
 import { buildStructureTreeOnce } from "@plugins/plugin-meta/plugins/plugin-tree/core";
+import { fileSetRuntimeReach } from "@plugins/plugin-meta/plugins/plugin-records/core";
 
 const RUNTIMES = ["web", "server", "machine", "central"] as const;
 
@@ -81,30 +81,25 @@ async function enumerateBarrels(
 }
 
 /**
- * Every file ending in `.generated.ts` that `roots` reach over `graph`, which
- * `collectImportGraph` built from a superset of the same roots — so it holds
- * every file they reach. Absolute, normalized paths.
+ * Every file ending in `.generated.ts` that `roots` (absolute) load WITH them
+ * — their static reach, what a barrel's module-load evaluates — read off the
+ * plugin-records module graph (`fileSetRuntimeReach`), the one source of a
+ * module's resolved imports: a pass after an edit scans the edited modules
+ * alone, and the web closure asked first is part of the same shared graph the
+ * full reach grows. Absolute, normalized paths.
  */
-function reachableGenerated(
-  graph: Map<string, readonly string[]>,
+async function reachableGenerated(
+  repo: RepoFiles,
   roots: readonly string[],
-): Set<string> {
-  const seen = new Set<string>();
+): Promise<Set<string>> {
+  const reach = await fileSetRuntimeReach(
+    repo,
+    roots.map((r) => relative(repo.root, r)),
+    { dynamic: false },
+  );
   const generated = new Set<string>();
-  const stack = roots.map((r) => resolve(r));
-  while (stack.length > 0) {
-    const file = stack.pop()!;
-    if (seen.has(file)) continue;
-    seen.add(file);
-    if (file.endsWith(".generated.ts")) generated.add(file);
-    const targets = graph.get(file);
-    if (targets === undefined) {
-      throw new Error(
-        `${file} is reachable but absent from the import graph collected from the same roots`,
-      );
-    }
-    stack.push(...targets);
-  }
+  for (const m of reach.keys())
+    if (m.endsWith(".generated.ts")) generated.add(resolve(repo.root, m));
   return generated;
 }
 
@@ -117,11 +112,10 @@ const check: Check = {
     const { root } = repo;
     const allow = await buildAllowSet(repo);
     const { web, rest } = await enumerateBarrels(repo);
-    // ONE reach from every barrel, read once; both questions below are asked
-    // of it, so the web closure is not read and parsed a second time.
-    const graph = await collectImportGraph(repo, [...web, ...rest]);
-    const fromWeb = reachableGenerated(graph, web);
-    const reachable = reachableGenerated(graph, [...web, ...rest]);
+    // Both questions grow ONE module graph of the set: the full reach walks
+    // only what the web reach did not.
+    const fromWeb = await reachableGenerated(repo, web);
+    const reachable = await reachableGenerated(repo, [...web, ...rest]);
 
     const offenders = [...reachable]
       .filter((f) => !allow.has(f))

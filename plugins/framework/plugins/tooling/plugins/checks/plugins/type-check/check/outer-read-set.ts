@@ -14,7 +14,7 @@
 // run() is never called.
 
 import type { FileSystemView } from "@plugins/framework/plugins/tooling/plugins/checks/core";
-import { lintableFiles } from "./import-graph";
+import { lintableFiles } from "./lint-universe";
 import { findGlobalTriggerFiles } from "./fingerprint";
 
 /**

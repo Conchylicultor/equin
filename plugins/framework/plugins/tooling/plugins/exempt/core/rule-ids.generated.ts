@@ -83,6 +83,7 @@ export type ExemptableRuleId =
   | "ids:pk-declared"
   | "imperative-create-table-allowlisted"
   | "import-scan-safety/no-adhoc-import-scan"
+  | "import-scan-safety/no-hand-import-resolution"
   | "install-sink/no-adhoc-install-sink"
   | "install-sink/no-laundered-peek"
   | "install-sink/no-render-phase-peek"

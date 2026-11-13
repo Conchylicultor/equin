@@ -59,47 +59,6 @@ export interface KeyWidth {
   barrels: readonly BarrelWaste[];
 }
 
-const RESOLVED_SUFFIXES = [
-  "",
-  ".ts",
-  ".tsx",
-  ".js",
-  ".jsx",
-  ".mjs",
-  ".cjs",
-  "/index.ts",
-  "/index.tsx",
-  "/index.js",
-];
-
-function normalize(path: string): string | null {
-  const out: string[] = [];
-  for (const seg of path.split("/")) {
-    if (seg === "" || seg === ".") continue;
-    if (seg === "..") {
-      if (out.length === 0) return null;
-      out.pop();
-    } else out.push(seg);
-  }
-  return out.join("/");
-}
-
-/** The module of the graph `spec` names from `from`, among its resolved deps. */
-function resolveIn(
-  from: string,
-  spec: string,
-  deps: ReadonlySet<string>,
-): string | null {
-  const base = spec.startsWith("@plugins/")
-    ? `plugins/${spec.slice("@plugins/".length)}`
-    : spec.startsWith(".")
-      ? normalize(`${from.slice(0, from.lastIndexOf("/"))}/${spec}`)
-      : null;
-  if (base === null) return null;
-  for (const s of RESOLVED_SUFFIXES) if (deps.has(base + s)) return base + s;
-  return null;
-}
-
 function parseModule(
   graph: ModuleGraph,
   path: string,
@@ -107,6 +66,14 @@ function parseModule(
 ): ParsedModule {
   const node = graph.modules.get(path)!;
   const deps = new Set([...node.staticDeps, ...node.dynamicDeps]);
+  // The graph's own resolution of each specifier: this walk never resolves one.
+  const targetOf = new Map(
+    [...node.staticImports, ...node.dynamicImports].map((i) => [
+      i.spec,
+      i.target,
+    ]),
+  );
+  const resolveIn = (spec: string): string | null => targetOf.get(spec) ?? null;
   const sf = ts.createSourceFile(
     path,
     src,
@@ -125,7 +92,7 @@ function parseModule(
   const specOf = (e: ts.Expression): string => (e as ts.StringLiteral).text;
   for (const st of sf.statements) {
     if (ts.isImportDeclaration(st)) {
-      const target = resolveIn(path, specOf(st.moduleSpecifier), deps);
+      const target = resolveIn(specOf(st.moduleSpecifier));
       if (target === null) continue;
       const clause = st.importClause;
       if (clause?.isTypeOnly) continue;
@@ -155,7 +122,7 @@ function parseModule(
           }
         continue;
       }
-      const target = resolveIn(path, specOf(st.moduleSpecifier), deps);
+      const target = resolveIn(specOf(st.moduleSpecifier));
       if (target === null) continue;
       reached.add(target);
       if (st.exportClause && ts.isNamedExports(st.exportClause)) {

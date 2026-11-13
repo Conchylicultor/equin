@@ -5766,6 +5766,10 @@
       "name": "@equin/plugin-plugin-meta-plugin-records",
       "version": "0.0.1",
     },
+    "plugins/plugin-meta/plugins/plugin-records/plugins/bindings": {
+      "name": "@equin/plugin-plugin-meta-plugin-records-bindings",
+      "version": "0.0.1",
+    },
     "plugins/plugin-meta/plugins/plugin-records/plugins/evaluate": {
       "name": "@equin/plugin-plugin-meta-plugin-records-evaluate",
       "version": "0.0.1",
@@ -10541,6 +10545,8 @@
     "@equin/plugin-plugin-meta-plugin-health": ["@equin/plugin-plugin-meta-plugin-health@workspace:plugins/plugin-meta/plugins/plugin-health"],
 
     "@equin/plugin-plugin-meta-plugin-records": ["@equin/plugin-plugin-meta-plugin-records@workspace:plugins/plugin-meta/plugins/plugin-records"],
+
+    "@equin/plugin-plugin-meta-plugin-records-bindings": ["@equin/plugin-plugin-meta-plugin-records-bindings@workspace:plugins/plugin-meta/plugins/plugin-records/plugins/bindings"],
 
     "@equin/plugin-plugin-meta-plugin-records-evaluate": ["@equin/plugin-plugin-meta-plugin-records-evaluate@workspace:plugins/plugin-meta/plugins/plugin-records/plugins/evaluate"],
 

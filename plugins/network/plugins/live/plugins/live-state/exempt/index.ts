@@ -29,4 +29,11 @@ export default [
     reason:
       "The substrate: the live-state client's own HTTP read (useResource's fallback / on-demand fetch over TanStack queries) that every live read compiles to, and useQueryResource, the local-async-load adapter (a code-split module, never a server read).",
   },
+  {
+    rule: "import-scan-safety/no-hand-import-resolution",
+    paths: ["lint/result-constructors.ts"],
+    kind: "sanctioned",
+    reason:
+      "Maps a sanctioned constructor's barrel specifier to its PLUGIN's directory fragment (`/plugins/<p>/`), to tell whether a linted file belongs to the plugin owning the result shape \u2014 a plugin path, never a module file, so there is no import to resolve.",
+  },
 ] satisfies Exemptions;

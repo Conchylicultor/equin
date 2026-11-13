@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-plugin-meta-plugin-records-bindings",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Each module's imports as the module graph resolves them, with the names each statement binds and a pure re-export module's re-exports (fileSetBindings): a per-blob bindings.scan record joined onto the graph's edges by specifier, for a reader walking a closure by name through barrels without parsing or resolving an import."
+}
