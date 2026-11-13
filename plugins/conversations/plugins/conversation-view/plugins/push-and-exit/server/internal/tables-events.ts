@@ -1,12 +1,13 @@
 import { text } from "drizzle-orm/pg-core";
 import { defineTriggerEvent } from "@plugins/infra/plugins/events/server";
+import type { FlagItem } from "../../core";
 
 export interface ConversationFlagRaisedPayload {
   conversationId: string;
   taskId: string;
   /** What the user must act on (`Flag.items`). */
-  items: string[];
-  /** The evidence behind them, when the agent gave any. */
+  items: FlagItem[];
+  /** Notes belonging to no one item, when the agent gave any. */
   details: string | null;
   [key: string]: unknown;
 }

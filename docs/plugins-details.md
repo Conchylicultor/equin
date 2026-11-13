@@ -19240,6 +19240,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `primitives/collapsible.CollapsibleChevron`
                       - `primitives/collapsible.CollapsibleContent`
                       - `primitives/collapsible.CollapsibleTrigger`
+                      - `primitives/collapsible.FoldMotion`
+                      - `primitives/collapsible.useCollapsible`
+                      - `primitives/css/badge.Badge`
+                      - `primitives/css/fill.fillClasses`
                       - `primitives/css/rigid.rigidClass`
                       - `primitives/css/spacing.FirstLine`
                       - `primitives/css/spacing.Stack`
@@ -20436,11 +20440,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `hints.defineHint`
               - `hints.defineHintAnchor`
               - `ids.defineIdKind`
-            - Exports (types): `Flag`
+            - Exports (types):
+              - `Flag`
+              - `FlagItem`
             - Exports (values):
               - `closeHint`
               - `conversationFlagIdKind`
               - `dropAndCloseHint`
+              - `FLAG_CATEGORY_MAX_CHARS`
               - `FLAG_ITEM_MAX_CHARS`
               - `FlagItemsSchema`
               - `FlagSchema`
@@ -46910,10 +46917,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×6
               - `ui/tokens/shape` ×3
               - `ui/tokens/font-family --font-mono`
-            - Imported by: 187 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
+            - Imported by: 188 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
               - `apps` ×39
               - `debug` ×39
-              - `conversations` ×28
+              - `conversations` ×29
               - `reports` ×19
               - `primitives` ×10
               - `tasks` ×10
@@ -47272,10 +47279,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Fill`
               - `fillClasses`
           - Cross-plugin:
-            - Imported by: 178 plugins — full list in [`plugins/primitives/plugins/css/plugins/fill/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/fill/REFERENCE.md)
+            - Imported by: 179 plugins — full list in [`plugins/primitives/plugins/css/plugins/fill/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/fill/REFERENCE.md)
               - `apps` ×51
               - `primitives` ×31
-              - `conversations` ×25
+              - `conversations` ×26
               - `debug` ×18
               - `page` ×11
               - `ui` ×9

@@ -6,5 +6,10 @@ export {
   pushAndCloseHint,
 } from "./hints";
 export { conversationFlagIdKind } from "./id-kind";
-export { FLAG_ITEM_MAX_CHARS, FlagItemsSchema, FlagSchema } from "./flag";
-export type { Flag } from "./flag";
+export {
+  FLAG_CATEGORY_MAX_CHARS,
+  FLAG_ITEM_MAX_CHARS,
+  FlagItemsSchema,
+  FlagSchema,
+} from "./flag";
+export type { Flag, FlagItem } from "./flag";

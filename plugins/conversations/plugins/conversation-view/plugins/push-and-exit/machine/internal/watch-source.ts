@@ -10,7 +10,9 @@ export const flagWatchSource = watchSource({
       kind: "flagged",
       taskId: p.taskId,
       actorConversationId: p.conversationId,
-      summary: p.items.join("\n"),
+      summary: p.items
+        .map((item) => `${item.category}: ${item.text}`)
+        .join("\n"),
     },
   ],
 });

@@ -12,8 +12,8 @@ import { exitCleanFinalizeJob } from "./exit-clean-finalize-job";
 import { _conversationFlags } from "./tables";
 import {
   conversationFlagIdKind,
+  FLAG_CATEGORY_MAX_CHARS,
   FLAG_ITEM_MAX_CHARS,
-  FlagItemsSchema,
   FlagSchema,
 } from "../../core";
 import { conversationFlagRaised } from "./tables-events";
@@ -64,18 +64,40 @@ export const flagRaiseTool = Mcp.tool({
   when: granted(flagRaise),
   description: `Raise a flag: your work is over, but the user must act on or decide something (the push didn't land, a failure you could not resolve, a choice only they can make). The conversation stays open for them, and whoever watches your task is told.
 
-The user reads \`items\` at a glance, without the context you have. Each item is one plain sentence saying what needs them ("Some database tests fail, probably not from this change"), never how you found it: no ids, paths, error text or jargon. Put that evidence in \`details\`, along with any note that needs no action. If nothing needs the user, call \`exit_clean\` instead, even if you have notes: they belong in your wrap-up.
+Each item has a \`category\`. The user reads its \`text\` at a glance, without the context you have: one plain sentence saying what needs them ("Some database tests fail, probably not from this change"), never how you found it — no ids, paths, error text or jargon. Put that item's context (errors, ids, paths, what you checked) in its own \`detail\`: the user unfolds it under the item. Notes that belong to no one item and need no action go in \`details\`. If nothing needs the user, call \`exit_clean\` instead, even if you have notes: they belong in your wrap-up.
 
 Call it in response to the push-and-exit prompt, or whenever your instructions tell you to raise a flag.`,
   inputSchema: {
-    items: FlagItemsSchema.describe(
-      `What the user must act on or decide, one per item (at most ${FLAG_ITEM_MAX_CHARS} characters each): a plain sentence they understand at a glance, with no ids, paths, error text or jargon.`,
-    ),
+    items: z
+      .array(
+        z.object({
+          category: z
+            .string()
+            .max(FLAG_CATEGORY_MAX_CHARS)
+            .describe(
+              `What kind of item it is, in a word or two (at most ${FLAG_CATEGORY_MAX_CHARS} characters): e.g. "bug", "caveat", "decision", "follow-up".`,
+            ),
+          text: z
+            .string()
+            .max(FLAG_ITEM_MAX_CHARS)
+            .describe(
+              `What the user must act on or decide (at most ${FLAG_ITEM_MAX_CHARS} characters): a plain sentence they understand at a glance, with no ids, paths, error text or jargon.`,
+            ),
+          detail: z
+            .string()
+            .optional()
+            .describe(
+              "The context behind this item (errors, ids, paths, what you checked). Shown folded under it.",
+            ),
+        }),
+      )
+      .min(1)
+      .describe("What the user must act on or decide, one per item."),
     details: z
       .string()
       .optional()
       .describe(
-        "The evidence behind the items (errors, ids, paths, what you checked) and notes that need no action. Shown folded under the items.",
+        "Notes that belong to no one item and need no action. Shown folded under the items.",
       ),
   },
   async handler({ items, details }, { conversationId }) {
@@ -83,9 +105,11 @@ Call it in response to the push-and-exit prompt, or whenever your instructions t
     if (conversation === null)
       throw new Error(`Conversation ${conversationId} not found.`);
     const { taskId } = conversation;
-    // An empty `details` is no details.
+    // An empty `detail` / `details` is none.
     const flag = FlagSchema.parse({
-      items,
+      items: items.map(({ category, text, detail }) =>
+        detail?.trim() ? { category, text, detail } : { category, text },
+      ),
       details: details?.trim() ? details : null,
     });
     await db.transaction(async (tx) => {

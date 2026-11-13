@@ -14,6 +14,10 @@
     - `primitives/collapsible.CollapsibleChevron`
     - `primitives/collapsible.CollapsibleContent`
     - `primitives/collapsible.CollapsibleTrigger`
+    - `primitives/collapsible.FoldMotion`
+    - `primitives/collapsible.useCollapsible`
+    - `primitives/css/badge.Badge`
+    - `primitives/css/fill.fillClasses`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/spacing.FirstLine`
     - `primitives/css/spacing.Stack`

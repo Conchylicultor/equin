@@ -72,11 +72,14 @@
     - `hints.defineHint`
     - `hints.defineHintAnchor`
     - `ids.defineIdKind`
-  - Exports (types): `Flag`
+  - Exports (types):
+    - `Flag`
+    - `FlagItem`
   - Exports (values):
     - `closeHint`
     - `conversationFlagIdKind`
     - `dropAndCloseHint`
+    - `FLAG_CATEGORY_MAX_CHARS`
     - `FLAG_ITEM_MAX_CHARS`
     - `FlagItemsSchema`
     - `FlagSchema`
