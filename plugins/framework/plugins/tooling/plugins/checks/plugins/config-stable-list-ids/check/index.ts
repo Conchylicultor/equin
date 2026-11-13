@@ -35,6 +35,11 @@ const HINT =
 
 const check: Check = {
   id: "config-stable-list-ids",
+  wholeTreeRead: {
+    kind: "debt",
+    task: "task-1794579727-rjy6wx",
+    reason: "reads and stats every config origin (1.1k)",
+  },
   description:
     "Every identity-bearing config listField (stableIdentity) row carries an explicit, unique id",
   async run(ctx: CheckContext) {

@@ -1,3 +1,5 @@
+import { sharedWork } from "@plugins/packages/plugins/shared-work/core";
+import { judgeOwnFileCalls, meterOwnFileCalls } from "./whole-tree-read";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import { worktreeArtifacts } from "@plugins/infra/plugins/paths/core";
 import {
@@ -505,7 +507,9 @@ export async function runChecks(
   // `openCheckExemptions`), which is what records them in its read-set.
   let exemptionsLoad: Promise<readonly ResolvedExemption[]> | null = null;
   const loadRunExemptions = (): Promise<readonly ResolvedExemption[]> =>
-    (exemptionsLoad ??= repo().then(loadExemptions));
+    (exemptionsLoad ??= sharedWork("check exemptions", () =>
+      repo().then(loadExemptions),
+    ));
 
   // One check body: `run()` with the exemption context, then the verdict on
   // its exemptions that suppressed nothing. Both cache paths go through here,
@@ -515,8 +519,12 @@ export async function runChecks(
     base: Omit<CheckContext, "exempt" | "inScope">,
   ): Promise<CheckResult> => {
     const session = openCheckExemptions(check, base.repo, loadRunExemptions);
-    const result = await check.run({ ...base, ...session.ctx });
-    return session.finish(result);
+    // The body's own file calls, judged against its declaration: an O(tree)
+    // body is either declared (`wholeTreeRead`) or fails (`whole-tree-read.ts`).
+    const { result, own } = await meterOwnFileCalls(() =>
+      check.run({ ...base, ...session.ctx }),
+    );
+    return session.finish(judgeOwnFileCalls(check, own, result));
   };
 
   // Shadow mode (opt-in via the env var): an input-keyed check logs the
@@ -538,8 +546,10 @@ export async function runChecks(
       throw new Error(
         `check "${check.id}" has no module: every check the runner runs comes from options.loadChecks()`,
       );
-    codeKeys ??= repo().then((files) =>
-      checkCodeKeys(files, import.meta.url, new Set(checkModules.values())),
+    codeKeys ??= sharedWork("check code keys", () =>
+      repo().then((files) =>
+        checkCodeKeys(files, import.meta.url, new Set(checkModules.values())),
+      ),
     );
     return (await codeKeys)(module);
   };

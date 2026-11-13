@@ -1,11 +1,7 @@
-import type { Check, RepoFiles } from "@plugins/framework/plugins/tooling/core";
-import { sliceCheckThread } from "@plugins/framework/plugins/tooling/plugins/checks/core";
-import {
-  declarations,
-  stripCssComments,
-  stylesheetReads,
-  type Hit,
-} from "./scan";
+import { foldRepoFiles } from "@plugins/plugin-meta/plugins/plugin-records/core";
+import { defineFoldCheck } from "@plugins/framework/plugins/tooling/plugins/checks/core";
+import { declarationsFold } from "./declarations.scan";
+import { stylesheetReadsFold } from "./stylesheet-reads.scan";
 
 /**
  * No stylesheet selects on a script-only state attribute — one declared with
@@ -24,66 +20,50 @@ import {
 /** A runtime folder's script, where state is declared (not check/, lint/, e2e/). */
 const RUNTIME_SOURCE = /\/(web|core|shared)\/.*\.tsx?$/;
 
-function lineOf(src: string, index: number): number {
-  return src.slice(0, index).split("\n").length;
+/** What becomes a stylesheet: plugin CSS and the Tailwind classes in script. */
+function stylesheetSources(paths: readonly string[]): string[] {
+  return paths.filter(
+    (p) => /\.(css|tsx?)$/.test(p) && !/\.test\.tsx?$/.test(p),
+  );
 }
 
-/** `rel`'s text; `rel` came from `repo`'s own listing, so null means the tree moved under the run. */
-async function readListed(repo: RepoFiles, rel: string): Promise<string> {
-  const text = await repo.read(rel);
-  if (text === null) {
-    throw new Error(
-      `${rel} is in the repo's file set but could not be read — it was removed after the set was listed.`,
-    );
-  }
-  return text;
-}
-
-const check: Check = {
+// A fold check over two folds, each kept along the directory tree so a pass
+// after an edit reads only the edited files: the declared attributes
+// (./declarations.scan.ts, over runtime sources) are the context of the reads
+// fold (./stylesheet-reads.scan.ts, over every stylesheet source).
+const check = defineFoldCheck({
   id: "script-state:no-stylesheet-reads",
+  // INPUT-KEYED: the verdict is a function of the listed files' bytes (each
+  // folded file's blob is recorded through the recording file set) and of
+  // the listing under plugins/ — both replayed on the next run.
+  inputKeyed: true,
   description:
     "No stylesheet (plugin CSS, Tailwind variant) selects on a script-only state attribute declared with defineScriptState — each flip would restyle every element the rule could match",
-  async run(ctx) {
+  async context(ctx) {
     const repo = await ctx.repo();
-    const files = repo
-      .under("plugins")
-      .filter((p) => /\.(css|tsx?)$/.test(p) && !/\.test\.tsx?$/.test(p));
-    const texts = await Promise.all(files.map((rel) => readListed(repo, rel)));
-
-    const attributes = new Set<string>();
-    const unreadable: string[] = [];
-    for (const [i, rel] of files.entries()) {
-      // A declaration is runtime code; tooling (this check's own hint, a lint
-      // rule's message) only names the call.
-      if (!RUNTIME_SOURCE.test(rel)) continue;
-      const src = texts[i]!;
-      for (const d of declarations(src)) {
-        if (d.ok) attributes.add(d.attribute);
-        else unreadable.push(`  ${rel}:${lineOf(src, d.index)} — ${d.text}`);
-      }
-    }
-    if (unreadable.length > 0) {
+    const declared = await foldRepoFiles(
+      repo,
+      stylesheetSources(repo.under("plugins")).filter((p) =>
+        RUNTIME_SOURCE.test(p),
+      ),
+      declarationsFold,
+      null,
+    );
+    return {
+      attributes: [...new Set(declared.attributes)].sort(),
+      unreadable: declared.unreadable,
+    };
+  },
+  files: (repo) => stylesheetSources(repo.under("plugins")),
+  facts: () => null,
+  fold: stylesheetReadsFold,
+  verdict(offenders, { context }) {
+    if (context.unreadable.length > 0) {
       return {
         ok: false,
-        message: `defineScriptState called without a string-literal attribute:\n${unreadable.join("\n")}`,
+        message: `defineScriptState called without a string-literal attribute:\n${context.unreadable.join("\n")}`,
         hint: 'Pass the attribute as a literal (`defineScriptState("data-x")`): the check reads it from the source.',
       };
-    }
-
-    const offenders: string[] = [];
-    for (const [i, rel] of files.entries()) {
-      await sliceCheckThread();
-      const raw = texts[i]!;
-      const css = rel.endsWith(".css");
-      const src = css ? stripCssComments(raw) : raw;
-      for (const attribute of attributes) {
-        if (!src.includes(attribute.slice("data-".length))) continue;
-        const hits: Hit[] = stylesheetReads(src, attribute, { css });
-        for (const h of hits)
-          offenders.push(
-            `  ${rel}:${lineOf(src, h.index)} — ${h.text} (reads ${attribute})`,
-          );
-      }
     }
     if (offenders.length === 0) return { ok: true };
     return {
@@ -96,6 +76,6 @@ const check: Check = {
         "not `data-input-modality` off <html>). See plugins/primitives/plugins/css/plugins/script-state.",
     };
   },
-};
+});
 
 export default check;

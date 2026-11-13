@@ -1,3 +1,4 @@
+import { sharedWork } from "@plugins/packages/plugins/shared-work/core";
 // A browser host's PAGE scope — the web plugins of the composition its worker
 // boots (`bundle ∩ web barrels`), the scope a page renders the host's subtree
 // in (`<PluginScope>`) — and what a composition bundling the host's declaring
@@ -113,7 +114,9 @@ export function resolveHostScope(
     memo = {};
     ctx.browserHostGraphs.set(host.declaration, memo);
   }
-  return (memo.scope ??= resolveScopeUncached(ctx, host));
+  return (memo.scope ??= sharedWork("registry codegen context", () =>
+    resolveScopeUncached(ctx, host),
+  ));
 }
 
 async function resolveScopeUncached(

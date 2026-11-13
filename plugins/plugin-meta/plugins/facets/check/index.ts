@@ -50,6 +50,11 @@ const RENDER_SURFACES = [
 
 const check: Check = {
   id: "facets:render-complete",
+  wholeTreeRead: {
+    kind: "debt",
+    task: "task-1794579727-rjy6wx",
+    reason: "stats a file in every plugin (1.8k)",
+  },
   description:
     "Every facet from loadFacets() has a render contributor in each web render slot (diff, detail, contributions) with a matching facet id",
   async run(ctx: CheckContext) {

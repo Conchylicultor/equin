@@ -391,6 +391,7 @@ its docblock records — and then lowered as readily as raised.
     - `infra/host-fs/user-path.AppPath`
     - `infra/host-fs/user-path.joinAppPath`
     - `packages/macrotask-yield.yieldMacrotask`
+    - `packages/shared-work.sharedWork`
     - `packages/string-hash.sha1Hex`
     - `packages/string-hash.sha256Hex`
     - `packages/timed-fs.readFile`

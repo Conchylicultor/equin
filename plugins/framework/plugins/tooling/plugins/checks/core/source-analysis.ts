@@ -1,3 +1,4 @@
+import { sharedWork } from "@plugins/packages/plugins/shared-work/core";
 import type TS from "typescript";
 import type { CheckContext } from "@plugins/framework/plugins/tooling/core";
 import {
@@ -5,6 +6,7 @@ import {
   readRepoCompilerOptions,
   type SourceAnalysis,
 } from "@plugins/framework/plugins/tooling/plugins/checks/plugins/source-analysis/core";
+import { isOneCheckRepo } from "./repo-set";
 import { parsedTsSource } from "./source-work";
 
 // A check's handle on the shared source analysis
@@ -30,13 +32,24 @@ export async function sourceAnalysis(
   const repo = await ctx.repo();
   let pending = byRepo.get(repo);
   if (pending === undefined) {
+    // Over the run's set the analysis is shared by every check asking: a file
+    // it reads is read once for all of them, so the read is no check's own.
+    // Over one check's own (recording) set it serves that check alone, and
+    // its reads are that check's.
+    const files = isOneCheckRepo(repo)
+      ? repo
+      : {
+          has: (rel: string) => repo.has(rel),
+          read: (rel: string) =>
+            sharedWork("source analysis", () => repo.read(rel)),
+        };
     pending = (async () => {
       const ts = await loadTs();
       return createSourceAnalysis({
         ts,
-        files: repo,
+        files,
         parse: (source) => parsedTsSource(ts, source),
-        compilerOptions: await readRepoCompilerOptions(ts, repo),
+        compilerOptions: await readRepoCompilerOptions(ts, files),
       });
     })();
     byRepo.set(repo, pending);

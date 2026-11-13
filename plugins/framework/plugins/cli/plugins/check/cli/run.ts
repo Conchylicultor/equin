@@ -356,8 +356,15 @@ const run: CliAction<
     const all = await listAllChecks();
     // Print the scope: it decides whether `push` asserts a check at all, so
     // the classification has to be auditable without reading every barrel.
-    for (const c of all)
+    // And a declared whole-tree read: what a pass after any edit pays for it.
+    for (const c of all) {
       console.log(`  [${scopeOf(c)}] ${c.id} — ${c.description}`);
+      const w = c.wholeTreeRead;
+      if (w !== undefined)
+        console.log(
+          `      whole-tree read (${w.kind === "debt" ? `debt, ${w.task}` : "sanctioned"}): ${w.reason}`,
+        );
+    }
     return;
   }
   if (opts.status) {

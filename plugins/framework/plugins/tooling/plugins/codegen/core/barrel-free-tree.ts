@@ -1,3 +1,4 @@
+import { sharedWork } from "@plugins/packages/plugins/shared-work/core";
 import { joinAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import type { PluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import { buildFacetedPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/plugins/faceted/core";
@@ -24,9 +25,11 @@ const barrelFreeTrees = new WeakMap<CodegenPass, Promise<PluginTree>>();
 export function buildBarrelFreeTree(pass: CodegenPass): Promise<PluginTree> {
   let cached = barrelFreeTrees.get(pass);
   if (!cached) {
-    cached = buildFacetedPluginTree(joinAppPath(pass.root, "plugins"), {
-      repo: pass.repo,
-    });
+    cached = sharedWork("barrel-free plugin tree", () =>
+      buildFacetedPluginTree(joinAppPath(pass.root, "plugins"), {
+        repo: pass.repo,
+      }),
+    );
     barrelFreeTrees.set(pass, cached);
   }
   return cached;

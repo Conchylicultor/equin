@@ -1,5 +1,6 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import { homedir } from "node:os";
+import { installSharedWorkScope } from "@plugins/packages/plugins/shared-work/core";
 import type { FsWaitLayer } from "./timed-fs";
 
 // How MANY file calls a piece of work makes — the other half of a stalled disk.
@@ -100,6 +101,36 @@ const scopes = new AsyncLocalStorage<ScopeFrame>();
  */
 export function withFsCallTally<T>(tally: FsCallTally, fn: () => T): T {
   return scopes.run({ tally, parent: scopes.getStore() }, fn);
+}
+
+const sharedTallies = new Map<string, FsCallTally>();
+
+/**
+ * Run `fn` as SHARED work: work one caller starts but every later caller
+ * reuses — a per-process memo (the plugin tree a check pass builds once), a
+ * content-keyed record a host-wide store keeps. Its file calls are counted into
+ * the process tally and into the shared tally named `name`, and into NO
+ * enclosing scope: which caller happens to start shared work is an accident of
+ * order (and of what the store already held), so counting it into that
+ * caller's scope would make a per-unit count — a check's own calls — depend on
+ * what ran before it.
+ *
+ * A scope opened inside `fn` counts as usual; `fn`'s calls are never counted
+ * into a scope outside it.
+ */
+export function withSharedFsWork<T>(name: string, fn: () => T): T {
+  let tally = sharedTallies.get(name);
+  if (tally === undefined) sharedTallies.set(name, (tally = newFsCallTally()));
+  return scopes.run({ tally, parent: undefined }, fn);
+}
+
+// Every `sharedWork` call (packages/shared-work) runs in this scope from now
+// on: no file call can be counted before this module is loaded.
+installSharedWorkScope(withSharedFsWork);
+
+/** Every shared tally this process counted into, by name (`withSharedFsWork`). */
+export function sharedFsCallTallies(): ReadonlyMap<string, FsCallTally> {
+  return sharedTallies;
 }
 
 const HOME = homedir();

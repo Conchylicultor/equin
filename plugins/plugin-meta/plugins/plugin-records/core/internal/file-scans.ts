@@ -1,3 +1,4 @@
+import { sharedWork } from "@plugins/packages/plugins/shared-work/core";
 import type {
   RepoFiles,
   RepoSnapshot,
@@ -129,7 +130,11 @@ export async function scanFilesCached<T>(
   assertScanModule(scanner.url);
   const repo = input.snapshot;
   const read = async (rel: string): Promise<string> => {
-    const src = await repo.read(rel);
+    // Read to compute a record when the set has blob ids (the store's work,
+    // shared host-wide), the caller's own read otherwise.
+    const src = isSnapshot(repo)
+      ? await sharedWork("plugin records", () => repo.read(rel))
+      : await repo.read(rel);
     if (src === null)
       throw new Error(`[plugin-records] cannot read ${rel} to scan it`);
     return src;

@@ -232,6 +232,21 @@ export const CHECKOUT_SCOPES = [
   "deploy",
 ] as const satisfies readonly CheckScope[];
 
+/**
+ * How many file calls (reads, stats, listings, globs) a check's own body may
+ * make in one run before it is a whole-tree read it must declare
+ * (`Check.wholeTreeRead`). An absolute count, not a share of the tree: a body
+ * that touches every file of a kind grows with the repo, and the bound is
+ * where that cost stops being incidental — the measured O(tree) bodies made
+ * 2k–17k on a ~24k-file tree, a bounded one well under a few hundred.
+ */
+export const WHOLE_TREE_FILE_CALLS = 1000;
+
+/** `Check.wholeTreeRead`: why a check's body is O(tree), and what removes it. */
+export type WholeTreeRead =
+  | { kind: "debt"; task: string; reason: string }
+  | { kind: "sanctioned"; reason: string };
+
 export interface Check {
   id: string;
   description: string;
@@ -328,6 +343,28 @@ export interface Check {
    * need it, a scope added later would silently owe nothing.
    */
   scope?: CheckScope;
+  /**
+   * DECLARES that this check's own body touches an unbounded set of files on
+   * every pass it runs — every file of a kind, read and judged whatever
+   * changed — so its cost is O(tree), not O(changes).
+   *
+   * The runner meters every check's own file calls (`packages/timed-fs`'s
+   * tally around `run()`; shared work — a per-pass memo, a plugin record — is
+   * counted under its own name, never into the check that happened to start
+   * it). A check over {@link WHOLE_TREE_FILE_CALLS} without this declaration
+   * FAILS, naming its count and where the calls went; one that declares it and
+   * makes at most half the bound fails too, so a declaration cannot outlive
+   * the read it declares (half, so a body near the bound cannot flip between
+   * the two failures from one tree to the next). So an O(tree) body has no silent spelling: it is either made
+   * O(changes) — a fold (`defineFoldCheck` / `foldRepoFiles`: per-file work
+   * kept along the directory tree), or an input-keyed check over a narrow
+   * read-set — or declared here, which `./equin check --list` prints.
+   *
+   *   - `debt`: not yet O(changes); `task` names the task that makes it so.
+   *   - `sanctioned`: reading every file each pass is the check's subject and
+   *     cannot be folded; `reason` says why.
+   */
+  wholeTreeRead?: WholeTreeRead;
   /**
    * Run even when `./equin build --skip-checks` is passed (and, as always,
    * during a normal build and `push`). For cheap, structural, codegen-coupled

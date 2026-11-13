@@ -1,3 +1,4 @@
+import { sharedWork } from "@plugins/packages/plugins/shared-work/core";
 // A browser host's plugin graph, generated: the registry entries a page's Web
 // Worker boots (`server-core`'s `bootBrowserHost`), and which plugin provides
 // each host service there.
@@ -407,7 +408,10 @@ export function deriveBrowserHostGraph(
   ctx: RegistryGenContext,
   host: BrowserHostDecl,
 ): Promise<DerivedBrowserHostGraph> {
-  return (hostMemo(ctx, host).derived ??= deriveUncached(ctx, host));
+  return (hostMemo(ctx, host).derived ??= sharedWork(
+    "registry codegen context",
+    () => deriveUncached(ctx, host),
+  ));
 }
 
 async function deriveUncached(
@@ -444,7 +448,10 @@ export function inferBrowserHostGraph(
   ctx: RegistryGenContext,
   host: BrowserHostDecl,
 ): Promise<InferredBrowserHostGraph> {
-  return (hostMemo(ctx, host).inferred ??= inferUncached(ctx, host));
+  return (hostMemo(ctx, host).inferred ??= sharedWork(
+    "registry codegen context",
+    () => inferUncached(ctx, host),
+  ));
 }
 
 async function inferUncached(

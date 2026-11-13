@@ -1,4 +1,7 @@
-import type { CheckContext } from "@plugins/framework/plugins/tooling/core";
+import type {
+  CheckContext,
+  WholeTreeRead,
+} from "@plugins/framework/plugins/tooling/core";
 import {
   buildRegistryGenContext,
   readCompositionManifestsFromDisk,
@@ -41,6 +44,7 @@ type Check = {
   id: string;
   description: string;
   run(ctx: CheckContext): Promise<CheckResult>;
+  wholeTreeRead?: WholeTreeRead;
 };
 
 const fail = (message: string, hint?: string): CheckResult => ({
@@ -51,6 +55,11 @@ const fail = (message: string, hint?: string): CheckResult => ({
 
 const check: Check = {
   id: "composition-closure",
+  wholeTreeRead: {
+    kind: "debt",
+    task: "task-1794579727-rjy6wx",
+    reason: "reads, stats and lists every plugin's manifests (4.6k)",
+  },
   description:
     "Every declared composition is valid: unique name, all entry/contributor ids resolve, the reserved main row and the exclusion sets (`base-exclusions`, `all-exclusions`, every `exclusions` row) are well-formed and every row inherits one, every declared exclusion actually took effect, no negative is dead everywhere, each selected contributor is a genuine load-bearing soft option (no redundant selections), every `excludes` bundle stays disjoint from the composition's hard closure (self-containment guard), and every deployable composition's `home` is an app its bundle holds.",
   async run(ctx) {

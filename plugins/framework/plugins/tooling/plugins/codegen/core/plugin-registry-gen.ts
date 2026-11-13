@@ -1,3 +1,4 @@
+import { sharedWork } from "@plugins/packages/plugins/shared-work/core";
 import {
   joinAppPath,
   type AppPath,
@@ -194,7 +195,9 @@ export function buildRegistryGenContext(
   }
   let ctx = contextsByRepo.get(repo);
   if (ctx === undefined) {
-    ctx = buildContext(pass, repo);
+    ctx = sharedWork("registry codegen context", () =>
+      buildContext(pass, repo),
+    );
     contextsByRepo.set(repo, ctx);
   }
   return ctx;
@@ -238,7 +241,10 @@ async function buildContext(
     repo: files,
     dirScans: new Map(),
     browserHostGraphs: new Map(),
-    sourceScans: () => (scans ??= files().then(createSourceScans)),
+    sourceScans: () =>
+      (scans ??= sharedWork("registry codegen context", () =>
+        files().then(createSourceScans),
+      )),
   };
 }
 
@@ -265,7 +271,9 @@ export async function scanCollectedDir(
 function scanDir(ctx: RegistryGenContext, dir: string): Promise<DirEntryScan> {
   let scan = ctx.dirScans.get(dir);
   if (scan === undefined) {
-    scan = computeDirScan(ctx, dir);
+    scan = sharedWork("registry codegen context", () =>
+      computeDirScan(ctx, dir),
+    );
     ctx.dirScans.set(dir, scan);
   }
   return scan;

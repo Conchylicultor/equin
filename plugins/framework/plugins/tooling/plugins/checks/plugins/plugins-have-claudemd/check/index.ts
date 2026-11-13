@@ -9,6 +9,11 @@ import type {
 
 const check: Check = {
   id: "plugins-have-claudemd",
+  wholeTreeRead: {
+    kind: "debt",
+    task: "task-1794579727-rjy6wx",
+    reason: "stats every plugin's CLAUDE.md (1.8k)",
+  },
   description:
     "every plugin has a CLAUDE.md (auto-generated, optionally with hand-written prose above the AUTOGEN fence)",
   async run(ctx: CheckContext) {

@@ -105,6 +105,11 @@ async function reachableGenerated(
 
 const check: Check = {
   id: "pre-barrel-manifests-complete",
+  wholeTreeRead: {
+    kind: "debt",
+    task: "task-1794579727-rjy6wx",
+    reason: "reads every barrel (2.0k)",
+  },
   description:
     "every *.generated.ts reachable from a plugin barrel at module-load is a registered pre-barrel manifest (or a registry-phase output), and no web barrel reaches a post-web manifest",
   async run(ctx: CheckContext) {

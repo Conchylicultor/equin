@@ -1,3 +1,4 @@
+import { sharedWork } from "@plugins/packages/plugins/shared-work/core";
 import type { RepoFiles } from "@plugins/framework/plugins/tooling/core";
 import { yieldMacrotask } from "@plugins/packages/plugins/macrotask-yield/core";
 import { sha256Hex } from "@plugins/packages/plugins/string-hash/core";
@@ -213,7 +214,11 @@ export async function foldFilesCached<C extends FoldContext, F>(
       const window = nodes.slice(i, i + READ_WINDOW);
       const texts = await Promise.all(
         window.map(async (node) => {
-          const src = await repo.read(node.rel);
+          // Read to compute a record (a snapshot's files are keyed by blob):
+          // a cold store's scan is the store's work, not the caller's own.
+          const src = isSnapshot(repo)
+            ? await sharedWork("plugin records", () => repo.read(node.rel))
+            : await repo.read(node.rel);
           if (src === null)
             throw new Error(
               `[plugin-records] cannot read ${node.rel} to fold it`,

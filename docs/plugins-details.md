@@ -31351,6 +31351,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `RepoFiles`
           - `RepoSnapshot`
           - `RepoView`
+          - `WholeTreeRead`
         - Exports (values):
           - `assertRepoPath`
           - `CHECK_SCOPES`
@@ -31371,6 +31372,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `repoFilesOver`
           - `repoSnapshotNow`
           - `repoSnapshotOver`
+          - `WHOLE_TREE_FILE_CALLS`
       - Cross-plugin:
         - Imported by:
           - `framework/cli/build`
@@ -31509,7 +31511,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/cli/test` (1 debt)
               - `framework/tooling` (1 debt)
               - `framework/tooling/boundaries` (2 debt)
-              - `framework/tooling/checks` (11 debt)
+              - `framework/tooling/checks` (12 debt)
               - `framework/tooling/checks/type-check` (16 debt)
               - `framework/tooling/codegen` (20 debt)
               - `framework/tooling/codegen/composition-registries` (1 debt)
@@ -31602,9 +31604,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Exports (values): `parseRuntimeException`
         - **`checks`** — Check runner and built-in checks for ./equin check
           - Core:
-            - Uses: 83 symbols — full list in [`plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md)
-              - `framework/tooling` ×11
-              - `packages/timed-fs` ×10
+            - Uses: 86 symbols — full list in [`plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md)
+              - `framework/tooling` ×12
+              - `packages/timed-fs` ×11
               - `plugin-meta/plugin-records` ×10
               - `framework/tooling/exempt` ×7
               - `reports/check-thread-stall` ×7
@@ -31623,6 +31625,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/paths/repo-root.REPO_ROOT`
               - `packages/flock.flockTry`
               - `packages/semaphore.createSemaphore`
+              - `packages/shared-work.sharedWork`
               - `packages/single-flight.singleFlight`
               - `packages/string-hash.sha256Hex`
               - `plugin-meta/plugin-tree.buildStructureTreeOnce`
@@ -31702,7 +31705,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `imperative-create-table-allowlisted` — `cli/internal/grep-index-store.ts` (sanctioned)
               - `repo-walk-safety/no-adhoc-repo-walk` — `core/scripts/fix-shared-to-relative.ts` (sanctioned)
               - `user-path/no-unproven-claim` — `core/tree-hash.ts` (sanctioned)
-              - `boundaries/no-platform-api` — `core/cache.ts`, `core/content-hash.ts`, `core/discover.ts`, `core/grep-code.ts`, `core/progress-log.ts`, `core/read-set.ts`, `core/scan-context.ts`, `core/thread-attribution.ts`, `core/thrown-outcome.ts`, `core/transcript.ts`, `core/tree-hash.ts` (debt)
+              - `boundaries/no-platform-api` — `core/cache.ts`, `core/content-hash.ts`, `core/discover.ts`, `core/grep-code.ts`, `core/progress-log.ts`, `core/read-set.ts`, `core/scan-context.ts`, `core/thread-attribution.ts`, `core/thrown-outcome.ts`, `core/transcript.ts`, `core/tree-hash.ts`, `core/whole-tree-read.ts` (debt)
               - `repo-walk-safety/no-adhoc-repo-listing` — `core/repo-set.ts` (sanctioned)
               - `repo-walk-safety/no-adhoc-repo-listing` — `core/repo-files.ts` (sanctioned)
               - `repo-walk-safety/no-adhoc-repo-listing` — `core/tree-hash.ts` (sanctioned)
@@ -31944,7 +31947,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                     - Uses: `framework/tooling/checks/type-check.readTypeCheckTree`
         - **`codegen`** — Plugin doc generation and registry codegen
           - Core:
-            - Uses: 152 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
+            - Uses: 153 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
               - `plugin-meta/parse-utils` ×17
               - `config_v2` ×16
               - `framework/plugin-id` ×13
@@ -31975,6 +31978,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/tooling.noteRepoWrites`
               - `infra/namespace.MAIN_COMPOSITION_ID`
               - `packages/macrotask-yield.yieldMacrotask`
+              - `packages/shared-work.sharedWork`
               - `plugin-meta/facets/contributions.contributionsFacetDef`
               - `plugin-meta/facets/exemptions.exemptionsFacetDef`
               - `plugin-meta/facets/slots.slotsFacetDef`
@@ -41478,6 +41482,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `createSemaphore`
           - `installLeaseContextRuntime`
           - `whileWaiting`
+    - **`shared-work`** — Marks work as SHARED — started by one caller, reused by every later one (a per-process memo, a content-keyed record): sharedWork(name, fn) runs fn in the scope a per-unit meter installed with installSharedWorkScope, so the work is counted under its own name and not into whichever unit happened to start it. Portable: with no scope installed it just runs fn.
+      - Cross-plugin:
+        - Imported by:
+          - `framework/tooling/checks`
+          - `framework/tooling/codegen`
+          - `packages/timed-fs`
+          - `plugin-meta/plugin-records`
+          - `plugin-meta/plugin-tree`
+      - Core:
+        - Exports (types): `SharedWorkScope`
+        - Exports (values):
+          - `installSharedWorkScope`
+          - `sharedWork`
     - **`signal-origin`** — Native SA_SIGINFO signal tap: records WHO sent a fatal signal (sender pid/uid, executable path, and the sender's ancestry captured inside the handler before it is reaped) and chains to the previously installed handler. armSignalOrigin(ready, signos) arms from the compiled shim (the signal-origin-shim dependency, a build kind declared in its deps barrel) and fails open and quiet; readSignalOrigin is a synchronous pure read safe from an exit hook.
       - Deps:
         - Uses:
@@ -41743,41 +41760,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Exemptions:
         - Exempts itself from: `boundaries/no-platform-api` — `core/internal/ticket-line.ts` (debt)
     - **`timed-fs`** — The file reads, listings, stats and glob scans every non-browser process makes, timed: node:fs's read calls under their own names and types (readFile / readdir / stat / lstat / access / realpath / readlink and their *Sync twins, existsSync) plus scanGlob / scanGlobSync over a Bun.Glob, each call metered while it runs (installFsWaitMeter — the backend's profiler shows one past FS_WAIT_FLOOR_MS in progress and charges it) and, once it returns past the floor, handed to onSlowFsCall subscribers, under a named wait layer (fs-read / fs-readdir / fs-stat / fs-glob) — so a disk stall names itself instead of reading as the caller's own work. A leaf (node builtins only), enforced by the timed-fs/no-untimed-fs-read lint.
-      - Cross-plugin:
-        - Imported by: 171 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
-          - `infra` ×49
-          - `framework` ×25
-          - `apps` ×15
-          - `debug` ×15
-          - `backup` ×12
-          - `conversations` ×12
-          - `build` ×6
-          - `database` ×5
-          - `packages` ×5
-          - `plugin-meta` ×5
-          - `reports` ×4
-          - `config_v2` ×3
-          - `release` ×3
-          - `integrations` ×2
-          - `primitives` ×2
-          - `stats` ×2
-          - `apps-core/app-preload`
-          - `code-explorer`
-          - `companions/browser-extension`
-          - `hints/ask`
-          - `toolchain`
-          - `ui/icons/icon-sets`
-      - Exemptions:
-        - Exempts itself from:
-          - `boundaries/no-platform-api` — `core/internal/timed-fs.ts`, `core/internal/fs-call-count.ts` (sanctioned)
-          - `timed-fs/no-untimed-fs-read` — `core/internal/timed-fs.ts` (sanctioned)
-          - `paths:no-hardcoded-paths` — `core/internal/fs-call-count.ts`, `core/internal/fs-call-count.test.ts` (sanctioned)
-        - Exempted by:
-          - `framework/tooling/guards` (0 debt)
-          - `infra/host/io-health/monitor` (0 debt)
-          - `infra/runtime-profiler` (0 debt)
-          - `packages/timed-fs` (0 debt)
       - Core:
+        - Uses: `packages/shared-work.installSharedWorkScope`
         - Exports (types):
           - `FsCallCounts`
           - `FsCallSnapshot`
@@ -41812,12 +41796,47 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `realpathSync`
           - `scanGlob`
           - `scanGlobSync`
+          - `sharedFsCallTallies`
           - `snapshotFsCalls`
           - `stat`
           - `statSync`
           - `summarizeFsCalls`
           - `TIMED_FS_CALLS`
           - `withFsCallTally`
+      - Cross-plugin:
+        - Imported by: 171 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
+          - `infra` ×49
+          - `framework` ×25
+          - `apps` ×15
+          - `debug` ×15
+          - `backup` ×12
+          - `conversations` ×12
+          - `build` ×6
+          - `database` ×5
+          - `packages` ×5
+          - `plugin-meta` ×5
+          - `reports` ×4
+          - `config_v2` ×3
+          - `release` ×3
+          - `integrations` ×2
+          - `primitives` ×2
+          - `stats` ×2
+          - `apps-core/app-preload`
+          - `code-explorer`
+          - `companions/browser-extension`
+          - `hints/ask`
+          - `toolchain`
+          - `ui/icons/icon-sets`
+      - Exemptions:
+        - Exempts itself from:
+          - `boundaries/no-platform-api` — `core/internal/timed-fs.ts`, `core/internal/fs-call-count.ts` (sanctioned)
+          - `timed-fs/no-untimed-fs-read` — `core/internal/timed-fs.ts` (sanctioned)
+          - `paths:no-hardcoded-paths` — `core/internal/fs-call-count.ts`, `core/internal/fs-call-count.test.ts` (sanctioned)
+        - Exempted by:
+          - `framework/tooling/guards` (0 debt)
+          - `infra/host/io-health/monitor` (0 debt)
+          - `infra/runtime-profiler` (0 debt)
+          - `packages/timed-fs` (0 debt)
     - **`value-patch`** — A JSON value's change as what changed: diffValue(prev, next) → set / append / push ops at paths (null when the root itself changed), applyValuePatch(base, ops) → the next value, copy-on-write so every untouched subtree keeps its identity. What a pushed live value declared `patches: true` ships instead of its whole value.
       - Cross-plugin:
         - Imported by:
@@ -46079,6 +46098,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/host-fs/user-path.AppPath`
           - `infra/host-fs/user-path.joinAppPath`
           - `packages/macrotask-yield.yieldMacrotask`
+          - `packages/shared-work.sharedWork`
           - `packages/string-hash.sha1Hex`
           - `packages/string-hash.sha256Hex`
           - `packages/timed-fs.readFile`
@@ -46382,6 +46402,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/host-fs/user-path.appPathParent`
           - `infra/host-fs/user-path.joinAppPath`
           - `packages/list-bound.wholeRecord`
+          - `packages/shared-work.sharedWork`
           - `plugin-meta/parse-utils.defaultExportObjectBody`
           - `plugin-meta/parse-utils.parseBoolField`
           - `plugin-meta/parse-utils.parseStringField`

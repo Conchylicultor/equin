@@ -11,6 +11,11 @@ interface Offender {
 
 const check: Check = {
   id: "no-plugin-workspace-deps",
+  wholeTreeRead: {
+    kind: "debt",
+    task: "task-1794579727-rjy6wx",
+    reason: "reads every package.json (1.8k)",
+  },
   description:
     "Plugin package.jsons must not declare `workspace:*` deps — cross-plugin imports go through `@plugins/*` path aliases, not npm workspaces",
   async run(ctx: CheckContext) {

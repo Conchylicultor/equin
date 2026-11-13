@@ -1,3 +1,4 @@
+import { sharedWork } from "@plugins/packages/plugins/shared-work/core";
 import { joinAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import type { PluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import { buildFacetedPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/plugins/faceted/core";
@@ -30,7 +31,7 @@ const enrichedTrees = new WeakMap<CodegenPass, Promise<PluginTree>>();
 export function buildEnrichedTree(pass: CodegenPass): Promise<PluginTree> {
   let cached = enrichedTrees.get(pass);
   if (!cached) {
-    cached = (async () => {
+    cached = sharedWork("enriched plugin tree", async () => {
       const evaluation = await evaluateAllBarrels(pass);
       const naming = await recordSlotNaming(pass, "source");
       // The set the barrel-free tree was read off: its records are this
@@ -42,7 +43,7 @@ export function buildEnrichedTree(pass: CodegenPass): Promise<PluginTree> {
           modulesOf: (node) => evaluation.modulesOf(node),
         },
       });
-    })();
+    });
     enrichedTrees.set(pass, cached);
   }
   return cached;

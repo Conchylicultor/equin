@@ -27,6 +27,11 @@ import type {
  */
 const check: Check = {
   id: "generated-artifacts-normalized",
+  wholeTreeRead: {
+    kind: "debt",
+    task: "task-1794579727-rjy6wx",
+    reason: "reads every package.json (1.8k)",
+  },
   description:
     "no merge-driver auto-resolve is left un-normalized, and no plugin CLAUDE.md carries a conflict marker",
   // Reads git-dir state (the marker dir), which is outside the working-tree

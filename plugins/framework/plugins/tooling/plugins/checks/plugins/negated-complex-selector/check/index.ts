@@ -1,6 +1,5 @@
-import type { Check, RepoFiles } from "@plugins/framework/plugins/tooling/core";
-import { sliceCheckThread } from "@plugins/framework/plugins/tooling/plugins/checks/core";
-import { arbitraryVariants, complexNegations } from "./scan";
+import { defineFoldCheck } from "@plugins/framework/plugins/tooling/plugins/checks/core";
+import { negatedComplexSelectorFold } from "./negated-complex-selector.scan";
 
 /**
  * Rejects a `:not()` around a complex selector (`:not(.boundary *)`,
@@ -17,64 +16,25 @@ import { arbitraryVariants, complexNegations } from "./scan";
  * positive ancestor form costs only the rule's subjects.
  */
 
-function stripCssComments(src: string): string {
-  // Keep the newlines, so line numbers still point at the source.
-  return src.replace(/\/\*[\s\S]*?\*\//g, (c) => c.replace(/[^\n]/g, " "));
-}
-
-function lineOf(src: string, index: number): number {
-  return src.slice(0, index).split("\n").length;
-}
-
-/** Whether the line holding `index` is a comment line (`//`, `/*`, ` * `). */
-function onCommentLine(src: string, index: number): boolean {
-  const start = src.lastIndexOf("\n", index) + 1;
-  return /^\s*(\/\/|\/\*|\*)/.test(src.slice(start, index));
-}
-
-/** `rel`'s text; `rel` came from `repo`'s own listing, so null means the tree moved under the run. */
-async function readListed(repo: RepoFiles, rel: string): Promise<string> {
-  const text = await repo.read(rel);
-  if (text === null) {
-    throw new Error(
-      `${rel} is in the repo's file set but could not be read — it was removed after the set was listed.`,
-    );
-  }
-  return text;
-}
-
-const check: Check = {
+// A fold check: each file's offending `:not()`s are its record
+// (./negated-complex-selector.scan.ts), kept along the directory tree, so a
+// pass after an edit reads only the edited files.
+const check = defineFoldCheck({
   id: "negated-complex-selector",
+  // INPUT-KEYED: the verdict is a function of the listed files' bytes (each
+  // folded file's blob is recorded through the recording file set) and of
+  // the listing under plugins/ — both replayed on the next run.
+  inputKeyed: true,
   description:
     "No `:not()` around a complex selector (`:not(.x *)`) — Chrome restyles the whole subtree on every change of what it names; write the positive ancestor form",
-  async run(ctx) {
-    const repo = await ctx.repo();
-    const files = repo
+  context: () => null,
+  files: (repo) =>
+    repo
       .under("plugins")
-      .filter((p) => /\.(css|tsx?)$/.test(p) && !/\.test\.tsx?$/.test(p));
-    const texts = await Promise.all(files.map((rel) => readListed(repo, rel)));
-    const offenders: string[] = [];
-    for (const [i, rel] of files.entries()) {
-      await sliceCheckThread();
-      const raw = texts[i]!;
-      if (!raw.includes(":not(")) continue;
-      const css = rel.endsWith(".css");
-      const src = css ? stripCssComments(raw) : raw;
-      // Tailwind variants: class strings, and `@apply` in CSS.
-      const variants = arbitraryVariants(src)
-        .filter((v) => css || !onCommentLine(src, v.index))
-        .flatMap((v) =>
-          complexNegations(v.text, { underscoreIsSpace: true }).map((n) => ({
-            index: v.index + n.index,
-            text: n.text,
-          })),
-        );
-      const hits = css
-        ? [...complexNegations(src, { underscoreIsSpace: false }), ...variants]
-        : variants;
-      for (const n of hits)
-        offenders.push(`  ${rel}:${lineOf(src, n.index)} — ${n.text}`);
-    }
+      .filter((p) => /\.(css|tsx?)$/.test(p) && !/\.test\.tsx?$/.test(p)),
+  facts: () => null,
+  fold: negatedComplexSelectorFold,
+  verdict(offenders) {
     if (offenders.length === 0) return { ok: true };
     return {
       ok: false,
@@ -87,6 +47,6 @@ const check: Check = {
         "rule (`.boundary .y`) that undoes the base rule.",
     };
   },
-};
+});
 
 export default check;

@@ -58,10 +58,44 @@ Migrating a check: move its per-file body into the scan (returning what the
 cross-file part needs of the file, not the bytes), make the cross-file part
 the verdict. A rule that needs another file's bytes is cross-file — fold what
 it reads of each file (plugin-boundaries' `summarizeExports`). Users:
-`plugin-boundaries`, `relocate:moved-plugins-unnamed`, `parse-utils:mask-sync`.
+`plugin-boundaries`, `relocate:moved-plugins-unnamed`, `parse-utils:mask-sync`,
+`theme-bridge-reads`, `negated-complex-selector`,
+`script-state:no-stylesheet-reads` (two folds: the declared attributes, a
+fold's result, are the context of the reads fold).
 `sql-writes:fit` folds its per-file sites with `foldRepoFiles` directly: a
 few of its holes name another file, followed after the fold through the
 source analysis (what they name, never the tree).
+
+## A check's own O(tree) work is declared, or it fails (`wholeTreeRead`)
+
+Whether a check costs O(changes) or O(tree) per pass is a property of the
+check, so it is in its declaration. The runner meters each body's OWN file
+calls (`core/whole-tree-read.ts`: a `packages/timed-fs` tally around `run()`)
+and judges them against `Check.wholeTreeRead`:
+
+- over `WHOLE_TREE_FILE_CALLS` (1,000 reads, stats, listings and globs)
+  undeclared → the check FAILS, naming its count and the prefixes the calls
+  went to;
+- declared (`{ kind: "debt", task, reason }` or `{ kind: "sanctioned",
+  reason }`) and at most half the bound on a passing run → it fails too: the
+  declaration outlived the read it declared. Half, not the bound itself, so
+  a body near the line (one file more or fewer on some branch) cannot flip
+  between the two failures.
+
+So an O(tree) body has no silent spelling. Make it O(changes) — a fold
+(`defineFoldCheck` / `foldRepoFiles`, above), or input-keyed over a narrow
+read-set — or declare it, where `./equin check --list` prints it.
+
+**Shared work is nobody's own.** Work one check starts and every later check
+reuses — a per-pass memo (the plugin tree, the codegen pass's trees and
+registry context, the source analysis) or a plugin record (a fold's scan, the
+module graph) — runs under `sharedWork(name, …)` (`packages/shared-work`) and is counted under
+that name, on the run's `done` record (`sharedFs`), never into the check that
+happened to start it. Without that, a check's count would depend on which
+check reached the memo first and what the record store already held, and a
+verdict on it would not be a function of the tree. **A new per-run memo that
+reads files must run its producer under `sharedWork`**, or the first
+check to ask is charged for it.
 
 ## Reading code: `sourceAnalysis`, not regexes
 
@@ -593,9 +627,9 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
 
 - Description: Check runner and built-in checks for ./equin check
 - Core:
-  - Uses: 83 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `framework/tooling` ×11
-    - `packages/timed-fs` ×10
+  - Uses: 86 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `framework/tooling` ×12
+    - `packages/timed-fs` ×11
     - `plugin-meta/plugin-records` ×10
     - `framework/tooling/exempt` ×7
     - `reports/check-thread-stall` ×7
@@ -614,6 +648,7 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
     - `infra/paths/repo-root.REPO_ROOT`
     - `packages/flock.flockTry`
     - `packages/semaphore.createSemaphore`
+    - `packages/shared-work.sharedWork`
     - `packages/single-flight.singleFlight`
     - `packages/string-hash.sha256Hex`
     - `plugin-meta/plugin-tree.buildStructureTreeOnce`
@@ -693,7 +728,7 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
     - `imperative-create-table-allowlisted` — `cli/internal/grep-index-store.ts` (sanctioned)
     - `repo-walk-safety/no-adhoc-repo-walk` — `core/scripts/fix-shared-to-relative.ts` (sanctioned)
     - `user-path/no-unproven-claim` — `core/tree-hash.ts` (sanctioned)
-    - `boundaries/no-platform-api` — `core/cache.ts`, `core/content-hash.ts`, `core/discover.ts`, `core/grep-code.ts`, `core/progress-log.ts`, `core/read-set.ts`, `core/scan-context.ts`, `core/thread-attribution.ts`, `core/thrown-outcome.ts`, `core/transcript.ts`, `core/tree-hash.ts` (debt)
+    - `boundaries/no-platform-api` — `core/cache.ts`, `core/content-hash.ts`, `core/discover.ts`, `core/grep-code.ts`, `core/progress-log.ts`, `core/read-set.ts`, `core/scan-context.ts`, `core/thread-attribution.ts`, `core/thrown-outcome.ts`, `core/transcript.ts`, `core/tree-hash.ts`, `core/whole-tree-read.ts` (debt)
     - `repo-walk-safety/no-adhoc-repo-listing` — `core/repo-set.ts` (sanctioned)
     - `repo-walk-safety/no-adhoc-repo-listing` — `core/repo-files.ts` (sanctioned)
     - `repo-walk-safety/no-adhoc-repo-listing` — `core/tree-hash.ts` (sanctioned)

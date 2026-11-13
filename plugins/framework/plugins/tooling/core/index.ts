@@ -7,8 +7,9 @@ export type {
   GitTreeSnapshot,
   RepoFiles,
   RepoSnapshot,
+  WholeTreeRead,
 } from "./types";
-export { CHECK_SCOPES, CHECKOUT_SCOPES } from "./types";
+export { CHECK_SCOPES, CHECKOUT_SCOPES, WHOLE_TREE_FILE_CALLS } from "./types";
 export { InconclusiveCheckError } from "./inconclusive";
 export {
   assertRepoPath,

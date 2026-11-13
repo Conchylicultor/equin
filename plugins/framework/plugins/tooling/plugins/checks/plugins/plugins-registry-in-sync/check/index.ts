@@ -33,6 +33,11 @@ function registryIds(content: string): Set<string> {
 
 const check: Check = {
   id: "plugins-registry-in-sync",
+  wholeTreeRead: {
+    kind: "debt",
+    task: "task-1794579727-rjy6wx",
+    reason: "reads every barrel (2.0k)",
+  },
   description:
     "All collected dir registries (web, server, central, check, lint, ...) are exactly what the main composition's closure renders from the current plugin source",
   async run(checkCtx: CheckContext) {

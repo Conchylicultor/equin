@@ -914,3 +914,93 @@ parse modules the graph did not list, so the miss-path assertion throws.
 
 Not keyed: a `sideEffects` field in a repo `package.json`. No repo
 `package.json` has one today.
+
+## A check's own O(tree) work is declared (task: check pass O(changes), 9)
+
+Measured 2026-11-13, the same one-line edit (a comment appended to
+`hints/help-menu/web/index.ts`), `./equin check --scope tree --jobs 1`
+after a warm pass of the same code, read from `check-progress.jsonl`.
+
+### Split before
+
+The pass's check bodies made 168.4k file calls. The top was checks that
+read every file of a kind whatever changed: theme-bridge-reads 16.9k,
+negated-complex-selector and script-state:no-stylesheet-reads 14.1k each
+(the same files), plugins-doc-in-sync 20.6k (stats), boot:closure-digestable
+19.7k. And the per-check counts were not the checks' own: a per-pass memo
+(the plugin tree, the codegen trees, the registry context) was charged to
+whichever check reached it first — config-v2:registrations-paired read 13.1k
+in one pass and 5.4k in another, the difference being the enriched tree.
+
+**Root cause.** Whether a check costs O(changes) or O(tree) was nowhere in
+its declaration: a `run()` that lists `under("plugins")` and reads every
+member looks the same as one that reads one file, and the only signal (the
+`fs` count on each `end` record) was polluted by shared work, so it could
+not be judged on.
+
+### Fix
+
+- **Shared work is nobody's own.** `packages/shared-work`'s
+  `sharedWork(name, fn)` (portable: `core/` code marks its memos with it;
+  `packages/timed-fs` installs itself as its scope) counts `fn`'s file calls
+  into a named shared tally and into no enclosing scope. Every per-pass memo a check reaches (plugin
+  tree, barrel-free / enriched trees, evaluated barrels, slot naming, the
+  registry codegen context and its inner memos, the source analysis, the
+  runner's exemption and code-key loads) and every plugin-records producer
+  (the module graph, a fold's or file scan's read on a snapshot, the npm
+  identity) runs under it. The run's `done` record carries `sharedFs` by
+  name, so shared O(tree) work stays visible as its own line.
+- **The declaration.** `Check.wholeTreeRead` (`{ kind: "debt", task,
+  reason }` or `{ kind: "sanctioned", reason }`). The runner meters each
+  body's own calls (`checks/core/whole-tree-read.ts`) and fails a check over
+  `WHOLE_TREE_FILE_CALLS` (1,000) that does not declare it, and one that
+  declares it but stays under on a passing run. `./equin check --list`
+  prints the declarations. An O(tree) body now has no silent spelling.
+- **Migrated** the three largest readers to folds (`defineFoldCheck`, each
+  input-keyed): theme-bridge-reads (a file's bridges and `var(--color-*)`
+  reads; the verdict matches them across files), negated-complex-selector
+  (per file), script-state:no-stylesheet-reads (two folds: the declared
+  attributes, themselves a fold over runtime sources, are the context of the
+  reads fold, so declaring one re-judges every stylesheet and nothing else
+  does). Equivalence: an injected fixture of each violation shape reports the
+  same lines under the old and new code. Pinned by `script-state/check/
+  folds.test.ts`: a stylesheet whose bytes did not move is re-judged when
+  another file declares the attribute it reads.
+- **Declared** the 26 remaining checks over the bound as debt on
+  task-1794579727-rjy6wx (largest: plugins-doc-in-sync 20.6k stats,
+  boot:closure-digestable 19.3k, config-v2:registrations-paired and
+  companions-visible 5.4k stats each, composition-closure 4.6k; six checks
+  each read every package.json, 1.8k; three each read every barrel, 2.0k;
+  no-db-backed-notify 1.3k — input-keyed, its own source analysis is its
+  own work, not shared).
+
+| one-line edit, serial, whole pass | before | after |
+| --- | ---: | ---: |
+| wall, start to verdict | 54.0 s (load 16–18) | 37.0 s (load 5–10) |
+| process CPU (user + sys) | 37.9 s | 25.0 s |
+| file calls by check bodies | 168.4k | 104.0k (+ 19.5k shared, counted once) |
+| theme-bridge-reads: own calls / wall | 16,891 / 362 ms | 3 / 39 ms |
+| negated-complex-selector | 14,135 / 196 ms | 3 / 37 ms |
+| script-state:no-stylesheet-reads | 14,135 / 341 ms | 3 / 46 ms |
+
+The wall and CPU rows ran at different host loads; the call counts do not
+depend on load.
+
+Cold (each scan module edited, so every record misses; the three alone,
+serial, load ~5): 473 / 534 / 588 ms, the folds reading 53.9k files through
+plugin records (`sharedFs`) — each file once per fold, about what the old
+bodies read on EVERY pass (45.1k, 196–362 ms at load 16–18). That cost is now
+paid once per scan-module change, host-wide; an edit pays its own files.
+
+**Is the count a function of the tree?** Checks run alone in a fresh process
+(first to every memo) against the same checks inside a pass: composition-closure
+4,584 / 4,584, plugin-boundaries 2,340 / 2,340, release:fixed-entrypoints-bundle
+2,002 / 2,002, no-reexport-default 1,964 / 1,964, config-v2:registrations-paired
+5,439 / 5,433 — six calls of some small unwrapped memo, far from the bound.
+A memo added later without `sharedWork` charges the first check to
+reach it; if that pushes a check over the bound it fails naming the
+prefixes the calls went to.
+
+### Next
+
+task-1794579727-rjy6wx: the 25 declared checks by cost.

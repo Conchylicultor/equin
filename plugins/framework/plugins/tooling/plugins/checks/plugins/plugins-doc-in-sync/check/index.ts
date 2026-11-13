@@ -1,4 +1,7 @@
-import type { CheckContext } from "@plugins/framework/plugins/tooling/core";
+import type {
+  CheckContext,
+  WholeTreeRead,
+} from "@plugins/framework/plugins/tooling/core";
 import { existsSync, readFile } from "@plugins/packages/plugins/timed-fs/core";
 
 import {
@@ -22,6 +25,7 @@ type Check = {
   id: string;
   description: string;
   run(ctx: CheckContext): Promise<CheckResult>;
+  wholeTreeRead?: WholeTreeRead;
 };
 
 /** A file's text, or null when it does not exist. */
@@ -36,6 +40,11 @@ async function readIfPresent(file: string): Promise<string | null> {
 
 const check: Check = {
   id: "plugins-doc-in-sync",
+  wholeTreeRead: {
+    kind: "debt",
+    task: "task-1794579727-rjy6wx",
+    reason: "stats every plugin's files to render the docs (20.6k calls)",
+  },
   description:
     "docs/plugins-compact.md, docs/plugins-details.md, every plugin's CLAUDE.md AUTOGEN block, and every plugin's REFERENCE.md (present exactly when a list is summarized) match the current plugin source",
   async run(ctx) {

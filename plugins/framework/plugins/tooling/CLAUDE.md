@@ -21,6 +21,7 @@
     - `RepoFiles`
     - `RepoSnapshot`
     - `RepoView`
+    - `WholeTreeRead`
   - Exports (values):
     - `assertRepoPath`
     - `CHECK_SCOPES`
@@ -41,6 +42,7 @@
     - `repoFilesOver`
     - `repoSnapshotNow`
     - `repoSnapshotOver`
+    - `WHOLE_TREE_FILE_CALLS`
 - Cross-plugin:
   - Imported by:
     - `framework/cli/build`

@@ -18,6 +18,11 @@ const ANY_DEFAULT_RE =
 
 const check: Check = {
   id: "no-reexport-default",
+  wholeTreeRead: {
+    kind: "debt",
+    task: "task-1794579727-rjy6wx",
+    reason: "reads every barrel (2.0k)",
+  },
   description:
     "Every plugin barrel (web|server|machine|central)/index.ts must use inline `export default { ... } satisfies *PluginDefinition` — no re-exports, no missing defaults",
   async run(ctx: CheckContext) {

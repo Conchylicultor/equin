@@ -12,6 +12,7 @@ import {
 import { checkProgressLogDir } from "../data-dirs";
 import {
   newFsCallTally,
+  sharedFsCallTallies,
   summarizeFsCalls,
   withFsCallTally,
   type FsCallSummary,
@@ -137,8 +138,10 @@ export type ProgressRecord =
       sharedFrom?: string;
       /**
        * The file calls the check's own body made (`packages/timed-fs`, counted
-       * under its async context): per kind, and the path prefixes most went
-       * to. Absent on every line written before it was counted, which the
+       * under its async context; shared work — `sharedWork` — is not
+       * the body's, and is on the run's `done` record instead): per kind, and
+       * the path prefixes most went to. What `Check.wholeTreeRead` is judged
+       * on. Absent on every line written before it was counted, which the
        * reader returns as null (not measured), never zeros.
        */
       fs?: FsCallSummary;
@@ -174,7 +177,18 @@ export type ProgressRecord =
     })
   | (RecordBase & { phase: "stall" } & ProgressStall)
   | (RecordBase & { phase: "thread" } & ProgressThread)
-  | (RecordBase & { phase: "done"; elapsedMs: number; allOk: boolean });
+  | (RecordBase & {
+      phase: "done";
+      elapsedMs: number;
+      allOk: boolean;
+      /**
+       * The file calls of the process's SHARED work (`sharedWork`: the
+       * plugin tree, the codegen pass, plugin records, …), by name — counted
+       * once here and never into the check that happened to start it, so each
+       * check's `fs` is its own body's. Missing on older records.
+       */
+      sharedFs?: Record<string, FsCallSummary>;
+    });
 
 /** An owner as a record carries it; `detail` is empty for all but `import`. */
 interface RecordOwner {
@@ -634,6 +648,12 @@ export function startProgressRun(
         phase: "done",
         elapsedMs: Math.round(performance.now() - startedAt),
         allOk,
+        sharedFs: Object.fromEntries(
+          [...sharedFsCallTallies()].map(([name, tally]) => [
+            name,
+            summarizeFsCalls(tally),
+          ]),
+        ),
       });
       return thread;
     },

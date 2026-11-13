@@ -1,3 +1,4 @@
+import { sharedWork } from "@plugins/packages/plugins/shared-work/core";
 import {
   buildPluginTree,
   type PluginNode,
@@ -45,7 +46,11 @@ export function buildStructureTreeOnce(
 ): Promise<PluginTree> {
   let cached = structureTreeCache.get(pluginsRoot);
   if (!cached) {
-    cached = buildPluginTree(pluginsRoot, { repo }).then(freezePluginTree);
+    // Shared: built for every caller of the pass, so its file calls are
+    // nobody's own (`sharedWork`).
+    cached = sharedWork("plugin tree", () =>
+      buildPluginTree(pluginsRoot, { repo }),
+    ).then(freezePluginTree);
     structureTreeCache.set(pluginsRoot, cached);
   }
   return cached;

@@ -1,3 +1,4 @@
+import { sharedWork } from "@plugins/packages/plugins/shared-work/core";
 import { realpathSync } from "@plugins/packages/plugins/timed-fs/core";
 import { relative } from "path";
 import {
@@ -147,7 +148,11 @@ export function evaluateWebBarrels(
   pass: CodegenPass,
 ): Promise<BarrelEvaluation> {
   let e = webByPass.get(pass);
-  if (!e) webByPass.set(pass, (e = evaluate(pass, ["web"])));
+  if (!e)
+    webByPass.set(
+      pass,
+      (e = sharedWork("evaluated barrels", () => evaluate(pass, ["web"]))),
+    );
   return e;
 }
 
@@ -161,14 +166,14 @@ export function evaluateAllBarrels(
 ): Promise<BarrelEvaluation> {
   let e = allByPass.get(pass);
   if (!e) {
-    e = (async () => {
+    e = sharedWork("evaluated barrels", async () => {
       // The web phase first: its slot naming is what a later reader (and the
       // orphan guard) settled, and its records are hits for this one.
       await evaluateWebBarrels(pass);
       const all = await evaluate(pass, RUNTIMES);
       await all.barrels.resolveDeclarationDependent(all.refs);
       return all;
-    })();
+    });
     allByPass.set(pass, e);
   }
   return e;
@@ -197,13 +202,13 @@ export function recordSlotNaming(
   if (!byScope) namingByPass.set(pass, (byScope = new Map()));
   let n = byScope.get(scope);
   if (!n) {
-    n = (async () => {
+    n = sharedWork("slot naming", async () => {
       const ev =
         scope === "registry"
           ? await evaluateWebBarrels(pass)
           : await evaluateAllBarrels(pass);
       return settleSlotNaming(declaringPlugins(ev, pass.root, scope), scope);
-    })();
+    });
     byScope.set(scope, n);
   }
   return n;

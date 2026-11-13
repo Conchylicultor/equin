@@ -5129,6 +5129,10 @@
       "name": "@equin/plugin-packages-semaphore",
       "version": "0.0.1",
     },
+    "plugins/packages/plugins/shared-work": {
+      "name": "@equin/plugin-packages-shared-work",
+      "version": "0.0.1",
+    },
     "plugins/packages/plugins/signal-origin": {
       "name": "@equin/plugin-packages-signal-origin",
       "version": "0.0.1",
@@ -10269,6 +10273,8 @@
     "@equin/plugin-packages-retry": ["@equin/plugin-packages-retry@workspace:plugins/packages/plugins/retry"],
 
     "@equin/plugin-packages-semaphore": ["@equin/plugin-packages-semaphore@workspace:plugins/packages/plugins/semaphore"],
+
+    "@equin/plugin-packages-shared-work": ["@equin/plugin-packages-shared-work@workspace:plugins/packages/plugins/shared-work"],
 
     "@equin/plugin-packages-signal-origin": ["@equin/plugin-packages-signal-origin@workspace:plugins/packages/plugins/signal-origin"],
 

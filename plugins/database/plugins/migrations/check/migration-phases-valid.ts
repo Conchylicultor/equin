@@ -31,6 +31,7 @@ type Check = {
   description: string;
   run(): Promise<CheckResult>;
   cacheSignature?(): string | null | Promise<string | null>;
+  wholeTreeRead?: { kind: "debt"; task: string; reason: string };
 };
 
 const DATA_DIR = asAppPath(join(import.meta.dir, "..", "data"));
@@ -158,6 +159,11 @@ export function findPhaseErrors(
 
 const check: Check = {
   id: "migration-phases-valid",
+  wholeTreeRead: {
+    kind: "debt",
+    task: "task-1794579727-rjy6wx",
+    reason: "reads every migration file (1.0k)",
+  },
   description:
     "branch-local schema migrations are phased (expand / contract re-classify), and the runner's planner accepts every claim on disk",
   // Impure: reads the published refs via git. The data/ dir CONTENT is covered

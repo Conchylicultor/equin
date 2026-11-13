@@ -36,6 +36,7 @@ export default [
       "core/thrown-outcome.ts",
       "core/transcript.ts",
       "core/tree-hash.ts",
+      "core/whole-tree-read.ts",
     ],
     kind: "debt",
     task: "task-1792338443-riwqev",

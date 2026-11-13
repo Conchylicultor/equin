@@ -66,6 +66,11 @@ const VITEST_CONFIG = "vitest.config.ts";
  */
 const check: Check = {
   id: "test-layout:runner-split",
+  wholeTreeRead: {
+    kind: "debt",
+    task: "task-1794579727-rjy6wx",
+    reason: "reads every test file (2.8k)",
+  },
   description:
     "bun:test and vitest scopes stay exact complements: no test file imports the other runner, no stray `__tests__/` suite, both scope literals survive in bunfig.toml / vitest.config.ts, the shared vitest setup still pins the clock, and vitest.config.ts still pins the workers' locale and timezone",
   async run(ctx: CheckContext): Promise<CheckResult> {

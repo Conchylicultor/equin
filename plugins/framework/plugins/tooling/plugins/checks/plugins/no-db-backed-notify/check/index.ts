@@ -17,6 +17,12 @@ function loadTs(): Promise<typeof TS> {
 
 const check: Check = {
   id: ID,
+  wholeTreeRead: {
+    kind: "debt",
+    task: "task-1794579727-rjy6wx",
+    reason:
+      "input-keyed, but a run reads the ~1.3k sources its use search selects",
+  },
   // INPUT-KEYED: every byte the verdict reads goes through `ctx.repo()` (the
   // source analysis's files and module resolution, the exemption manifests)
   // or `listCandidateSources` (each grep selection and its candidates), both

@@ -8,7 +8,9 @@ import {
   newFsCallTally,
   snapshotFsCalls,
   summarizeFsCalls,
+  sharedFsCallTallies,
   withFsCallTally,
+  withSharedFsWork,
 } from "./fs-call-count";
 import {
   readFile,
@@ -52,6 +54,36 @@ test("a scope counts only its own async context, nested scopes count into both",
   expect(summarizeFsCalls(outer).total).toBe(2);
   expect(summarizeFsCalls(inner).total).toBe(1);
   expect(summarizeFsCalls(other)).toMatchObject({ read: 2, total: 2 });
+});
+
+test("shared work counts into its own tally and into no enclosing scope, whoever starts it", async () => {
+  const first = newFsCallTally();
+  const second = newFsCallTally();
+  let memo: Promise<void> | null = null;
+  // A per-process memo: whichever unit asks first starts the work.
+  const shared = () =>
+    (memo ??= withSharedFsWork("test-memo", async () => {
+      await readFile(join(dir, "a.txt"));
+      await readFile(join(dir, "a.txt"));
+    }));
+  await withFsCallTally(first, async () => {
+    await shared();
+    await stat(dir);
+  });
+  await withFsCallTally(second, async () => {
+    await shared();
+    await stat(dir);
+  });
+  // Both units made the same own call, so they count the same.
+  expect(summarizeFsCalls(first)).toMatchObject({ read: 0, stat: 1, total: 1 });
+  expect(summarizeFsCalls(second)).toMatchObject({
+    read: 0,
+    stat: 1,
+    total: 1,
+  });
+  expect(
+    summarizeFsCalls(sharedFsCallTallies().get("test-memo")!),
+  ).toMatchObject({ read: 2, total: 2 });
 });
 
 test("a prefix keeps the first three directories under its base, never the file", () => {

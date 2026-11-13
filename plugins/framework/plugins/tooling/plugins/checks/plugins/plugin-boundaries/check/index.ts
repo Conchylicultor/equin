@@ -74,6 +74,12 @@ function foldedFiles(repo: RepoPaths): string[] {
 // and the file paths alone: the verdict is handed no `read`.
 const check = defineFoldCheck({
   id: "plugin-boundaries",
+  wholeTreeRead: {
+    kind: "debt",
+    task: "task-1794579727-rjy6wx",
+    reason:
+      "its inputs outside the fold (plugin tree discovery, exemption manifests) read 2.3k files",
+  },
   description:
     "Plugin module boundaries: barrel purity, cross-plugin import grammar, DAG, package naming, directory structure",
   // INPUT-KEYED via validate-by-replay. Its verdict depends on the membership of

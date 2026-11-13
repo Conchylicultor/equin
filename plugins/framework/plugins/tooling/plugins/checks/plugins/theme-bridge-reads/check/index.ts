@@ -1,6 +1,5 @@
-import { matchBracket } from "@plugins/plugin-meta/plugins/parse-utils/core";
-import type { Check, RepoFiles } from "@plugins/framework/plugins/tooling/core";
-import { sliceCheckThread } from "@plugins/framework/plugins/tooling/plugins/checks/core";
+import { defineFoldCheck } from "@plugins/framework/plugins/tooling/plugins/checks/core";
+import { themeBridgeFold } from "./theme-bridge-reads.scan";
 
 /**
  * Enforces that a Tailwind `@theme inline` BRIDGE copy (`--color-input:
@@ -23,96 +22,37 @@ import { sliceCheckThread } from "@plugins/framework/plugins/tooling/plugins/che
  * palette (`--color-red-500`) is a literal, the same at every scope.
  */
 
-function stripCssComments(src: string): string {
-  return src.replace(/\/\*[\s\S]*?\*\//g, "");
-}
-
-/** The interiors of every `@theme` block, and the source with them blanked. */
-function splitThemeBlocks(src: string): { themes: string[]; rest: string } {
-  const themes: string[] = [];
-  let rest = src;
-  const re = /@theme\b[^{]*\{/g;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(rest))) {
-    const braceStart = rest.indexOf("{", m.index);
-    if (braceStart < 0) break;
-    const braceEnd = matchBracket(rest, braceStart, "{", "}");
-    if (braceEnd < 0) break;
-    themes.push(rest.slice(braceStart + 1, braceEnd));
-    rest =
-      rest.slice(0, braceStart + 1) +
-      " ".repeat(braceEnd - braceStart - 1) +
-      rest.slice(braceEnd);
-    re.lastIndex = braceEnd;
-  }
-  return { themes, rest };
-}
-
-function lineOf(src: string, index: number): number {
-  return src.slice(0, index).split("\n").length;
-}
-
-/** `rel`'s text; `rel` came from `repo`'s own listing, so null means the tree moved under the run. */
-async function readListed(repo: RepoFiles, rel: string): Promise<string> {
-  const text = await repo.read(rel);
-  if (text === null) {
-    throw new Error(
-      `${rel} is in the repo's file set but could not be read — it was removed after the set was listed.`,
-    );
-  }
-  return text;
-}
-
-const check: Check = {
+// A fold check: each file's bridges and `var(--color-*)` reads are its record
+// (./theme-bridge-reads.scan.ts), kept along the directory tree, so a pass
+// after an edit reads only the edited files; the verdict matches reads to
+// bridges across files.
+const check = defineFoldCheck({
   id: "theme-bridge-reads",
+  // INPUT-KEYED: the verdict is a function of the listed files' bytes (each
+  // folded file's blob is recorded through the recording file set) and of
+  // the listing under plugins/ — both replayed on the next run.
+  inputKeyed: true,
   description:
     "No `var(--color-*)` read of an `@theme inline` bridge outside `@theme` — the bridge resolves at :root and ignores scoped app themes; read the runtime var it copies",
-  async run(ctx) {
-    const repo = await ctx.repo();
-    const files = repo.under("plugins");
-    const cssFiles = files.filter((p) => p.endsWith(".css"));
-    const codeFiles = files.filter(
-      (p) => p.endsWith(".ts") || p.endsWith(".tsx"),
-    );
-    // Every read through the run's gated async set, never one blocking read
-    // per file on the thread every check shares.
-    const [cssTexts, codeTexts] = await Promise.all([
-      Promise.all(cssFiles.map((rel) => readListed(repo, rel))),
-      Promise.all(codeFiles.map((rel) => readListed(repo, rel))),
-    ]);
-
-    // Pass 1: every bridge, `--color-<name>` → the runtime var it copies.
-    const bridges = new Map<string, string>();
-    const cssRest = new Map<string, string>();
-    for (const [i, rel] of cssFiles.entries()) {
-      await sliceCheckThread();
-      const { themes, rest } = splitThemeBlocks(stripCssComments(cssTexts[i]!));
-      cssRest.set(rel, rest);
-      for (const body of themes) {
-        for (const bm of body.matchAll(
-          /(--color-[\w-]+)\s*:\s*var\(\s*(--[\w-]+)\s*\)/g,
-        )) {
-          bridges.set(bm[1]!, bm[2]!);
-        }
-      }
-    }
-
-    // Pass 2: every read of one outside `@theme`.
-    const offenders: string[] = [];
-    const scan = async (rel: string, src: string) => {
-      await sliceCheckThread();
-      for (const vm of src.matchAll(/var\(\s*(--color-[\w-]+)/g)) {
-        const runtime = bridges.get(vm[1]!);
-        if (runtime) {
-          offenders.push(
-            `  ${rel}:${lineOf(src, vm.index)} — var(${vm[1]}) → read var(${runtime})`,
-          );
-        }
-      }
-    };
-    for (const [rel, rest] of cssRest) await scan(rel, rest);
-    for (const [i, rel] of codeFiles.entries()) await scan(rel, codeTexts[i]!);
-
+  context: () => null,
+  files: (repo) =>
+    repo
+      .under("plugins")
+      .filter(
+        (p) => p.endsWith(".css") || p.endsWith(".ts") || p.endsWith(".tsx"),
+      ),
+  facts: () => null,
+  fold: themeBridgeFold,
+  verdict({ bridges, cssReads, codeReads }) {
+    // Every bridge, `--color-<name>` → the runtime var it copies (a later
+    // file's declaration wins, in path order).
+    const runtimeOf = new Map(bridges);
+    const offenders = [...cssReads, ...codeReads].flatMap((r) => {
+      const runtime = runtimeOf.get(r.name);
+      return runtime === undefined
+        ? []
+        : [`  ${r.rel}:${r.line} — var(${r.name}) → read var(${runtime})`];
+    });
     if (offenders.length === 0) return { ok: true };
     return {
       ok: false,
@@ -123,6 +63,6 @@ const check: Check = {
         "desktop theme's value inside a scoped app theme ([data-theme-scope]).",
     };
   },
-};
+});
 
 export default check;

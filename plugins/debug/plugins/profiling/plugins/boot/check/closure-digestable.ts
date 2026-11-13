@@ -38,6 +38,12 @@ const ID = "boot:closure-digestable";
  */
 const check: Check = {
   id: ID,
+  wholeTreeRead: {
+    kind: "debt",
+    task: "task-1794579727-rjy6wx",
+    reason:
+      "source-digest walks the backend closure itself (19.3k stats, listings, reads)",
+  },
   description:
     "the serving backend's and central's closures (each bin plus every server/machine/central registry barrel, literal dynamic imports followed) hold no dynamic import or require with a computed path, and every import in them resolves as source-digest's walk answers it — so the code a backend or central runs is measurable (sourceDigest, restart-skip)",
   exemptable: {

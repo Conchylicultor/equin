@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-packages-shared-work",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Marks work as SHARED — started by one caller, reused by every later one (a per-process memo, a content-keyed record): sharedWork(name, fn) runs fn in the scope a per-unit meter installed with installSharedWorkScope, so the work is counted under its own name and not into whichever unit happened to start it. Portable: with no scope installed it just runs fn."
+}

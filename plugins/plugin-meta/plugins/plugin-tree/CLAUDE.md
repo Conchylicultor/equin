@@ -210,6 +210,7 @@ dynamic value.
     - `infra/host-fs/user-path.appPathParent`
     - `infra/host-fs/user-path.joinAppPath`
     - `packages/list-bound.wholeRecord`
+    - `packages/shared-work.sharedWork`
     - `plugin-meta/parse-utils.defaultExportObjectBody`
     - `plugin-meta/parse-utils.parseBoolField`
     - `plugin-meta/parse-utils.parseStringField`

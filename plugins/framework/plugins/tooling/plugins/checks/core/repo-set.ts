@@ -18,7 +18,11 @@ import {
   repoSnapshotOver,
   type RepoSnapshot,
 } from "@plugins/framework/plugins/tooling/core";
+import { sharedWork } from "@plugins/packages/plugins/shared-work/core";
 import type { FileSystemView, TreeSnapshot } from "./read-set";
+
+/** The file sets `recordingRepoFiles` made: each is one check's own. */
+const oneCheckSets = new WeakSet<object>();
 
 /**
  * `base`, with every fact an input-keyed check reads through it recorded into
@@ -52,7 +56,7 @@ export function recordingRepoFiles(
   base: RepoSnapshot,
   view: FileSystemView,
 ): RepoSnapshot {
-  return {
+  const recording: RepoSnapshot = {
     root: base.root,
     all: () => view.glob("**"),
     has: (path) => {
@@ -75,6 +79,18 @@ export function recordingRepoFiles(
       return base.blobOf(path);
     },
   };
+  oneCheckSets.add(recording);
+  return recording;
+}
+
+/**
+ * Whether `repo` is ONE check's own file set (an input-keyed check's recording
+ * set) rather than the run's, which every check shares. A memo keyed on a file
+ * set serves only its one check when the set is one check's: its work is that
+ * check's own, and must not be counted as shared (`packages/shared-work`).
+ */
+export function isOneCheckRepo(repo: object): boolean {
+  return oneCheckSets.has(repo);
 }
 
 /**
@@ -121,5 +137,5 @@ export function runRepoFiles(source: {
     return loadRepoSnapshot(await source.root());
   };
   let loaded: Promise<RepoSnapshot> | null = null;
-  return () => (loaded ??= load());
+  return () => (loaded ??= sharedWork("run file set", load));
 }

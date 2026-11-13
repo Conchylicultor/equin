@@ -1,3 +1,4 @@
+import { sharedWork } from "@plugins/packages/plugins/shared-work/core";
 import type { RepoFiles } from "@plugins/framework/plugins/tooling/core";
 import {
   npmClosureOf,
@@ -33,10 +34,10 @@ const keys = new WeakMap<RepoFiles, Promise<string>>();
 export function npmResolutionsKey(set: RepoFiles): Promise<string> {
   let key = keys.get(set);
   if (key === undefined) {
-    key = (async () => {
+    key = sharedWork("plugin records", async () => {
       if (!set.has("bun.lock")) return "-";
       return sha256Hex(lockfileNpmResolutions(await readLock(set)));
-    })();
+    });
     keys.set(set, key);
   }
   return key;
@@ -92,7 +93,7 @@ export function npmCodeKey(
   const listKey = npm.join("\0");
   let key = byList.get(listKey);
   if (key === undefined) {
-    key = (async () => {
+    key = sharedWork("plugin records", async () => {
       if (!set.has("bun.lock")) return sha256Hex(`no-lock\0${listKey}`);
       let lock = locks.get(set);
       if (!lock) {
@@ -119,7 +120,7 @@ export function npmCodeKey(
           ...closure.missing,
         ].join("\n"),
       );
-    })();
+    });
     byList.set(listKey, key);
   }
   return key;

@@ -1,4 +1,7 @@
-import type { CheckContext } from "@plugins/framework/plugins/tooling/core";
+import type {
+  CheckContext,
+  WholeTreeRead,
+} from "@plugins/framework/plugins/tooling/core";
 import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
 import { join, relative } from "path";
 import {
@@ -19,6 +22,7 @@ type Check = {
   id: string;
   description: string;
   run(ctx: CheckContext): Promise<CheckResult>;
+  wholeTreeRead?: WholeTreeRead;
 };
 
 /**
@@ -46,6 +50,11 @@ type Check = {
  */
 export const companionsVisible: Check = {
   id: "companions-visible",
+  wholeTreeRead: {
+    kind: "debt",
+    task: "task-1794579727-rjy6wx",
+    reason: "stats a file in every plugin (5.4k)",
+  },
   description:
     "Every `companion: true` contribution a web or server barrel carries at runtime is written inline in its `contributions: [ … ]` literal, where the closure engine's static parse reads it (and none sits in a `machine/` barrel)",
   async run(ctx) {

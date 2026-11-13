@@ -1,3 +1,4 @@
+import { sharedWork } from "@plugins/packages/plugins/shared-work/core";
 import type {
   RepoFiles,
   RepoSnapshot,
@@ -193,8 +194,12 @@ export async function buildModuleGraph(
   entries: readonly string[],
 ): Promise<ModuleGraph> {
   const state = sharedState(input);
-  const grown = state.growing.then(async () =>
-    growGraph(state, input, entries, await fileFactsIdentity(input)),
+  // The graph is shared by every caller over this set, so what growing it
+  // reads is no caller's own (`sharedWork`).
+  const grown = state.growing.then(() =>
+    sharedWork("plugin records", async () =>
+      growGraph(state, input, entries, await fileFactsIdentity(input)),
+    ),
   );
   // The next growth waits for this one to SETTLE: a failed walk is rolled back
   // (`growGraph`) and its error is this caller's, delivered by the await below.
@@ -214,7 +219,9 @@ function fileFactsIdentity(input: ModuleGraphInput): Promise<string> {
   let id = factsIdentities.get(input.snapshot);
   if (!id) {
     const own = newState();
-    id = growGraph(own, input, [SCAN_MODULE], null).then(async () => {
+    id = sharedWork("plugin records", () =>
+      growGraph(own, input, [SCAN_MODULE], null),
+    ).then(async () => {
       const view = viewOf(own, [SCAN_MODULE]);
       return recordKey(
         "file-facts",

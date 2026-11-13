@@ -32,6 +32,7 @@ export {
   newFsCallTally,
   processFsCallTally,
   withFsCallTally,
+  sharedFsCallTallies,
   snapshotFsCalls,
   fsCallsSince,
   summarizeFsCalls,

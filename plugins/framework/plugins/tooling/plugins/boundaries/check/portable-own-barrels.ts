@@ -72,6 +72,11 @@ export function deepOwnTarget(
  */
 export const portableOwnBarrelsCheck: Check = {
   id: PORTABLE_OWN_BARRELS,
+  wholeTreeRead: {
+    kind: "debt",
+    task: "task-1794579727-rjy6wx",
+    reason: "reads every portable barrel (1.5k)",
+  },
   description:
     "in a plugin whose server barrel is portable (derived from its closure), `server/` files reach the plugin's other folders only through their barrels (`../core`, never `../core/x`) — the browser host loads each as its barrel artifact",
   async run(ctx): Promise<CheckResult> {

@@ -60,6 +60,11 @@ function validateSchema(
 
 const check: Check = {
   id: "config-origins-in-sync",
+  wholeTreeRead: {
+    kind: "debt",
+    task: "task-1794579727-rjy6wx",
+    reason: "reads and stats every config origin (2.6k)",
+  },
   description:
     "config/ origin files match defineConfig defaults, overwrite hashes are consistent, and all content validates against its schema",
   async run(ctx: CheckContext) {
