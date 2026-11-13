@@ -58669,7 +58669,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - Test helpers:
                 - Core: `@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/policy/core/testing`
                   - `rawPolicy` — A policy as raw grants, unchecked by any capability — for a test of how a reader handles a value its capability's schema refuses, which `mandatePolicy` (parsing every grant) can never build.
-        - **`message`** — Message the agents of a task tree, granted by message.tree: list_agents (every task of the caller's mandate tree an agent ran on, with its latest conversation and how it stands) and message_agent (an event turn typed into a task's latest conversation now — a working agent reads it at its next step — resuming it first when it stopped, a closed one only when the call says reopen; refused outside the tree, to oneself, or where no agent ran). The capability's describe joins the Mandate section. Names no workflow.
+        - **`message`** — Agents messaging agents: message_agent, visible to every agent (an event turn typed into the latest conversation of the task a task id or conversation id names, any task — a working agent reads it at its next step — resuming it first when it stopped; refused to oneself or where no agent ran; a closed one only with reopen, which needs the message.tree grant and a task of the caller's mandate tree), and list_agents, granted by message.tree (every task of the caller's mandate tree an agent ran on, with its latest conversation and how it stands). The capability's describe joins the Mandate section. Names no workflow.
           - Server:
             - Contributes: `mandateCapability` "message.tree"
             - Uses:
@@ -58680,6 +58680,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `database.DbExecutor`
               - `infra/mcp.Mcp`
               - `tasks/orchestration/mandate.granted`
+              - `tasks/orchestration/mandate.grantOf`
               - `tasks/orchestration/mandate.Mandate`
               - `tasks/orchestration/mandate.mandateOf`
               - `tasks/tasks-core._attempts`

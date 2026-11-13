@@ -1,9 +1,9 @@
 import { STUCK_TURN_WAITING_FOR } from "@plugins/conversations/core";
-import type { TreeAgent, TreeAgents } from "./agents";
+import type { TreeAgent } from "./agents";
 import { formatMessageAnswer, type Delivery } from "../../core";
 
-/** What sending a message does outside the tree read: ports, so a test drives
- * the policy with a fake agent. */
+/** What sending a message does outside the target read: ports, so a test
+ * drives the policy with a fake agent. */
 export interface MessagePorts {
   /** Bring a stopped (`gone`, or `done` when reopening) conversation back. Returns a refusal's
    * message when the resume is blocked (its checkout reclaimed…); throws on
@@ -13,17 +13,23 @@ export interface MessagePorts {
   ): Promise<{ ok: true } | { ok: false; message: string }>;
   /** Type one event turn into the conversation (held while it starts). */
   submit(conversationId: string, text: string): Promise<void>;
+  /** Whether the sender may reopen the closed agent of `taskId`: only an
+   * agent granted `message.tree`, and only on a task of its own mandate tree.
+   * Asked only when a send needs it. */
+  mayReopen(
+    taskId: string,
+  ): Promise<{ ok: true } | { ok: false; message: string }>;
 }
 
 export type MessageOutcome =
   | {
       kind: "refused";
       reason:
-        | "no-tree"
-        | "not-in-tree"
+        | "not-found"
         | "self"
         | "no-agent"
         | "closed"
+        | "reopen-denied"
         | "resume-blocked";
       message: string;
     }
@@ -37,52 +43,54 @@ export type MessageOutcome =
 
 /** The turn the target reads: who wrote, then what they wrote. */
 export function messageText(
-  sender: TreeAgent | undefined,
+  sender: TreeAgent | null,
   fromConversationId: string,
   text: string,
 ): string {
   const who =
-    sender === undefined
+    sender === null
       ? `the agent of ${fromConversationId}`
       : `the agent on ${sender.taskId} "${sender.title}" (${fromConversationId})`;
   return `Message from ${who}:\n\n${text}`;
 }
 
+export interface MessageRequest {
+  fromConversationId: string;
+  /** The sender's own task and title, for the message's header. */
+  sender: TreeAgent | null;
+  /** What the sender wrote in `to`. */
+  to: string;
+  /** The agent `to` names (`agentOf`), or `null` when it names nothing. */
+  target: TreeAgent | null;
+  text: string;
+  reopen?: boolean;
+}
+
 /**
- * Send `text` from `fromConversationId` to the agent of `to` — a task id (its
- * latest conversation) or a conversation id — in the sender's tree. Typed now,
- * as a person's turn would be: a busy agent reads it at its next step. A
- * stopped (`gone`) one is resumed first, the message held until it is up.
+ * Send `text` from `fromConversationId` to the agent `to` names — a task id
+ * (its latest conversation) or a conversation id (its task's latest), any
+ * task: every agent may message any other. Typed now, as a person's turn would
+ * be: a busy agent reads it at its next step. A stopped (`gone`) one is resumed
+ * first, the message held until it is up.
  *
- * A CLOSED (`done`) one is refused unless `reopen` says so. Closing is the
- * agent's own deliberate end, and a sender usually writes from a view of the
- * tree taken before it — "landed, now close" arriving just after it closed.
+ * A CLOSED (`done`) one is refused unless `reopen` says so — and reopening is
+ * a supervisor's power over its own tree only (`ports.mayReopen`). Closing is
+ * the agent's own deliberate end, and a sender usually writes from a view
+ * taken before it — "landed, now close" arriving just after it closed.
  * Resuming it on that message reopened its settled task only for the agent to
  * close it again: a second `settled` for the same work, every time
  * (conv-1793313534-903j7g, three times in one tree).
  */
 export async function sendAgentMessage(
-  tree: TreeAgents,
-  fromConversationId: string,
-  to: string,
-  text: string,
+  req: MessageRequest,
   ports: MessagePorts,
-  { reopen = false }: { reopen?: boolean } = {},
 ): Promise<MessageOutcome> {
-  if (tree.kind === "no-tree")
+  const { target, to } = req;
+  if (target === null)
     return {
       kind: "refused",
-      reason: "no-tree",
-      message: "Your conversation has no task tree to message into.",
-    };
-  const target = tree.agents.find(
-    (a) => a.taskId === to || a.conversation?.id === to,
-  );
-  if (target === undefined)
-    return {
-      kind: "refused",
-      reason: "not-in-tree",
-      message: `${to} is not a task or conversation of your tree (see \`list_agents\`).`,
+      reason: "not-found",
+      message: `${to} is neither a task id nor a conversation id.`,
     };
   if (target.conversation === null)
     return {
@@ -97,12 +105,21 @@ export async function sendAgentMessage(
       message: "That is your own conversation.",
     };
   const was = target.conversation;
-  if (was.status === "done" && !reopen)
-    return {
-      kind: "refused",
-      reason: "closed",
-      message: `${was.id} has closed — its agent ended it — so nothing was sent and its task stays as it is. If it still has work to do, send again with \`reopen: true\` to resume it with your message.`,
-    };
+  if (was.status === "done") {
+    if (req.reopen !== true)
+      return {
+        kind: "refused",
+        reason: "closed",
+        message: `${was.id} has closed — its agent ended it — so nothing was sent and its task stays as it is. If it still has work to do, its supervisor can send again with \`reopen: true\` to resume it.`,
+      };
+    const may = await ports.mayReopen(target.taskId);
+    if (!may.ok)
+      return {
+        kind: "refused",
+        reason: "reopen-denied",
+        message: `${was.id} has closed and you may not reopen it: ${may.message}`,
+      };
+  }
   const stopped = was.status === "gone" || was.status === "done";
   if (stopped) {
     const resumed = await ports.resume(was.id);
@@ -113,8 +130,10 @@ export async function sendAgentMessage(
         message: `${was.id} is stopped and cannot be resumed: ${resumed.message}`,
       };
   }
-  const sender = tree.agents.find((a) => a.self);
-  await ports.submit(was.id, messageText(sender, fromConversationId, text));
+  await ports.submit(
+    was.id,
+    messageText(req.sender, req.fromConversationId, req.text),
+  );
   return { kind: "sent", conversationId: was.id, was, resumed: stopped };
 }
 

@@ -11,6 +11,10 @@ Outcome: two MCP tools, granted by a new mandate capability:
 - `list_agents`: the agents in my mandate's tree and how each stands.
 - `message_agent`: send one of them a turn. It arrives now. A stopped agent is resumed first.
 
+## Amendment (2026-11-12): every agent may message
+
+User decision: `message_agent` is visible to every agent, and `to` may name ANY task or conversation id (a conversation id resolves to its task's latest conversation). `reopen` (resuming a closed agent) stays a supervisor's power: it needs the `message.tree` grant and a target under the caller's mandate root. `list_agents` stays granted by `message.tree`. The tree-scoped resolution below (`treeAgents` for a send) is replaced by `agentOf(ref)` + `isUnder(task, root)`; see the plugin's CLAUDE.md.
+
 ## User decisions (2026-10-30)
 
 - **Inject now.** A message is typed in the same way a user turn is. A busy worker's CLI folds it into the running turn at its next tool boundary. A held AskUserQuestion is withdrawn by it, as `submitTurn` does for any non-answer turn. There is no store and no hold-until-idle.

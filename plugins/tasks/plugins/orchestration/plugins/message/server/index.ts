@@ -4,7 +4,7 @@ import { listAgentsTool, messageAgentTool } from "./internal/tools";
 
 export default {
   description:
-    "Message the agents of a task tree, granted by message.tree: list_agents (every task of the caller's mandate tree an agent ran on, with its latest conversation and how it stands) and message_agent (an event turn typed into a task's latest conversation now — a working agent reads it at its next step — resuming it first when it stopped, a closed one only when the call says reopen; refused outside the tree, to oneself, or where no agent ran). The capability's describe joins the Mandate section. Names no workflow.",
+    "Agents messaging agents: message_agent, visible to every agent (an event turn typed into the latest conversation of the task a task id or conversation id names, any task — a working agent reads it at its next step — resuming it first when it stopped; refused to oneself or where no agent ran; a closed one only with reopen, which needs the message.tree grant and a task of the caller's mandate tree), and list_agents, granted by message.tree (every task of the caller's mandate tree an agent ran on, with its latest conversation and how it stands). The capability's describe joins the Mandate section. Names no workflow.",
   contributions: [messageTreeCapability],
   register: [listAgentsTool, messageAgentTool],
 } satisfies ServerPluginDefinition;

@@ -1,9 +1,11 @@
 /**
  * The tree's agents against the REAL worktree DB, inside rolled-back
  * transactions (`worktreeDbScenario`): every task under the root with its
- * latest conversation, the caller's own marked; and the send policy over that
- * read with a fake agent (resume only a stopped one — a closed one only when
- * reopened — refuse outside the tree, oneself, or a task no agent ran on).
+ * latest conversation, the caller's own marked; one agent by task or
+ * conversation id, anywhere; and the send policy over that read with a fake
+ * agent (resume only a stopped one — a closed one only when reopened, and
+ * only when the sender may — refuse an unknown id, oneself, or a task no agent
+ * ran on).
  *
  * Run: `./equin test plugins/tasks/plugins/orchestration/plugins/message`.
  */
@@ -15,11 +17,12 @@ import {
 } from "@plugins/database/plugins/db-test-fixture/plugins/worktree-db/server/testing";
 import { FALLBACK_MODEL } from "@plugins/conversations/plugins/model-provider/core";
 import {
+  agentOf,
   agentsUnder,
+  isUnder,
   renderAgents,
   SETTLED_SHOWN,
   type TreeAgent,
-  type TreeAgents,
 } from "./agents";
 import { sendAgentMessage, type MessagePorts } from "./send";
 
@@ -75,11 +78,13 @@ async function tree(tx: DbExecutor) {
   return { root, a, b, c, sup, aOld, aNew, bConv };
 }
 
-function fakeAgent() {
+function fakeAgent({ mayReopen = true }: { mayReopen?: boolean } = {}) {
   const resumed: string[] = [];
   const sent: { to: string; text: string }[] = [];
   const blocked = new Set<string>();
   const ports: MessagePorts = {
+    mayReopen: async () =>
+      mayReopen ? { ok: true } : { ok: false, message: "not a supervisor" },
     resume: async (id) => {
       if (blocked.has(id)) return { ok: false, message: "checkout reclaimed" };
       resumed.push(id);
@@ -124,23 +129,83 @@ describe("message: tree agents", () => {
   });
 });
 
+describe("message: agent by ref", () => {
+  test("a task id or any of its conversation ids → its latest conversation; unknown → null", async () => {
+    const got = await worktreeDbScenario(async (tx) => {
+      const t = await tree(tx);
+      const elsewhere = await task(tx, "Elsewhere", null);
+      const eConv = await conversation(
+        tx,
+        elsewhere,
+        "waiting",
+        "2026-01-01T00:05:00Z",
+      );
+      return {
+        t,
+        eConv,
+        byTask: await agentOf(tx, t.a, t.sup),
+        byOldConv: await agentOf(tx, t.aOld, t.sup),
+        noAgent: await agentOf(tx, t.c, t.sup),
+        outside: await agentOf(tx, elsewhere, t.sup),
+        self: await agentOf(tx, t.root, t.sup),
+        unknown: await agentOf(tx, "task-nowhere", t.sup),
+        underRoot: await isUnder(tx, t.c, t.root),
+        rootItself: await isUnder(tx, t.root, t.root),
+        notUnder: await isUnder(tx, elsewhere, t.root),
+      };
+    });
+    const { t } = got;
+    expect(got.byTask).toMatchObject({
+      taskId: t.a,
+      title: "A",
+      conversation: { id: t.aNew },
+      self: false,
+    });
+    expect(got.byOldConv?.conversation?.id).toBe(t.aNew);
+    expect(got.noAgent).toMatchObject({ taskId: t.c, conversation: null });
+    expect(got.outside?.conversation?.id).toBe(got.eConv);
+    expect(got.self?.self).toBe(true);
+    expect(got.unknown).toBeNull();
+    expect([got.underRoot, got.rootItself, got.notUnder]).toEqual([
+      true,
+      true,
+      false,
+    ]);
+  });
+});
+
 describe("message: send", () => {
-  async function scenario(
-    run: (agents: TreeAgents, t: Tree) => Promise<unknown>,
+  /** A send from the tree's supervisor to `to`, read the way the tool does. */
+  async function send(
+    agent: ReturnType<typeof fakeAgent>,
+    to: (t: Tree) => string,
+    opts: {
+      reopen?: boolean;
+      setup?: (tx: DbExecutor, t: Tree) => Promise<void>;
+    } = {},
   ) {
     return worktreeDbScenario(async (tx) => {
       const t = await tree(tx);
-      const agents = await agentsUnder(tx, t.root, t.sup);
-      return run({ kind: "found", rootTaskId: t.root, agents }, t);
+      await opts.setup?.(tx, t);
+      const ref = to(t);
+      const out = await sendAgentMessage(
+        {
+          fromConversationId: t.sup,
+          sender: await agentOf(tx, t.root, t.sup),
+          to: ref,
+          target: await agentOf(tx, ref, t.sup),
+          text: "push it",
+          reopen: opts.reopen,
+        },
+        agent.ports,
+      );
+      return { t, out };
     });
   }
 
   test("by task id: the latest conversation, typed now, no resume", async () => {
     const agent = fakeAgent();
-    const got = (await scenario(async (tr, t) => ({
-      t,
-      out: await sendAgentMessage(tr, t.sup, t.a, "push it", agent.ports),
-    }))) as { t: Tree; out: unknown };
+    const got = await send(agent, (t) => t.a);
     expect(got.out).toMatchObject({
       kind: "sent",
       conversationId: got.t.aNew,
@@ -155,93 +220,86 @@ describe("message: send", () => {
     expect(agent.sent[0]?.text).toContain("push it");
   });
 
+  test("any task, not only the sender's tree", async () => {
+    const agent = fakeAgent({ mayReopen: false });
+    let eConv = "";
+    let elsewhere = "";
+    const got = await send(agent, () => elsewhere, {
+      setup: async (tx) => {
+        elsewhere = await task(tx, "Elsewhere", null);
+        eConv = await conversation(
+          tx,
+          elsewhere,
+          "working",
+          "2026-01-01T00:05:00Z",
+        );
+      },
+    });
+    expect(got.out).toMatchObject({ kind: "sent", conversationId: eConv });
+  });
+
   test("a stopped agent is resumed first; a blocked resume is refused, nothing typed", async () => {
-    const ok = fakeAgent();
-    const okOut = await scenario(async (tr, t) => ({
-      t,
-      out: await sendAgentMessage(tr, t.sup, t.bConv, "redo", ok.ports),
-    }));
-    expect(okOut).toMatchObject({ out: { kind: "sent", resumed: true } });
+    const ok = fakeAgent({ mayReopen: false });
+    expect((await send(ok, (t) => t.bConv)).out).toMatchObject({
+      kind: "sent",
+      resumed: true,
+    });
     expect(ok.resumed).toHaveLength(1);
     expect(ok.sent).toHaveLength(1);
 
     const blocked = fakeAgent();
-    const blockedOut = await scenario(async (tr, t) => {
-      blocked.blocked.add(t.bConv);
-      return sendAgentMessage(tr, t.sup, t.b, "redo", blocked.ports);
+    const got = await send(blocked, (t) => t.b, {
+      setup: async (_tx, t) => {
+        blocked.blocked.add(t.bConv);
+      },
     });
-    expect(blockedOut).toMatchObject({
+    expect(got.out).toMatchObject({
       kind: "refused",
       reason: "resume-blocked",
     });
     expect(blocked.sent).toEqual([]);
   });
 
-  test("a closed agent is refused unless reopened; reopen resumes it first", async () => {
-    async function closed(
-      agent: ReturnType<typeof fakeAgent>,
-      opts?: { reopen?: boolean },
-    ) {
-      return worktreeDbScenario(async (tx) => {
-        const t = await tree(tx);
-        const d = await task(tx, "D", t.root);
-        const dConv = await conversation(tx, d, "done", "2026-01-01T00:04:00Z");
-        const agents = await agentsUnder(tx, t.root, t.sup);
-        return {
-          dConv,
-          out: await sendAgentMessage(
-            { kind: "found", rootTaskId: t.root, agents },
-            t.sup,
-            d,
-            "close with exit_clean",
-            agent.ports,
-            opts,
-          ),
-        };
-      });
-    }
+  test("a closed agent is refused unless reopened, and reopened only when the sender may", async () => {
+    let d = "";
+    let dConv = "";
+    const setup = async (tx: DbExecutor, t: Tree) => {
+      d = await task(tx, "D", t.root);
+      dConv = await conversation(tx, d, "done", "2026-01-01T00:04:00Z");
+    };
 
     const refused = fakeAgent();
-    expect((await closed(refused)).out).toMatchObject({
+    expect((await send(refused, () => d, { setup })).out).toMatchObject({
       kind: "refused",
       reason: "closed",
     });
     expect(refused.resumed).toEqual([]);
     expect(refused.sent).toEqual([]);
 
+    const denied = fakeAgent({ mayReopen: false });
+    expect(
+      (await send(denied, () => d, { setup, reopen: true })).out,
+    ).toMatchObject({ kind: "refused", reason: "reopen-denied" });
+    expect(denied.resumed).toEqual([]);
+    expect(denied.sent).toEqual([]);
+
     const reopened = fakeAgent();
-    const got = await closed(reopened, { reopen: true });
+    const got = await send(reopened, () => d, { setup, reopen: true });
     expect(got.out).toMatchObject({ kind: "sent", resumed: true });
-    expect(reopened.resumed).toEqual([got.dConv]);
+    expect(reopened.resumed).toEqual([dConv]);
     expect(reopened.sent).toHaveLength(1);
   });
 
-  test("refused: outside the tree, oneself, a task no agent ran on, no tree", async () => {
+  test("refused: an unknown id, oneself, a task no agent ran on", async () => {
     const agent = fakeAgent();
-    const got = await scenario(async (tr, t) => ({
-      outside: await sendAgentMessage(
-        tr,
-        t.sup,
-        "task-elsewhere",
-        "x",
-        agent.ports,
-      ),
-      self: await sendAgentMessage(tr, t.sup, t.root, "x", agent.ports),
-      noAgent: await sendAgentMessage(tr, t.sup, t.c, "x", agent.ports),
-      noTree: await sendAgentMessage(
-        { kind: "no-tree" },
-        t.sup,
-        t.a,
-        "x",
-        agent.ports,
-      ),
-    }));
-    expect(got).toMatchObject({
-      outside: { kind: "refused", reason: "not-in-tree" },
-      self: { kind: "refused", reason: "self" },
-      noAgent: { kind: "refused", reason: "no-agent" },
-      noTree: { kind: "refused", reason: "no-tree" },
-    });
+    const [unknown, self, noAgent] = await Promise.all([
+      send(agent, () => "task-nowhere"),
+      send(agent, (t) => t.root),
+      send(agent, (t) => t.c),
+    ]);
+    expect(unknown.out).toMatchObject({ kind: "refused", reason: "not-found" });
+    expect(self.out).toMatchObject({ kind: "refused", reason: "self" });
+    expect(noAgent.out).toMatchObject({ kind: "refused", reason: "no-agent" });
     expect(agent.sent).toEqual([]);
     expect(agent.resumed).toEqual([]);
   });

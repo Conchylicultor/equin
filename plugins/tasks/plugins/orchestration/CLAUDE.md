@@ -5,7 +5,7 @@ Building blocks that state and enforce what agents may do inside a task subtree:
 `tasks.folder_id`), `tree-digest` (what an agent is shown of that subtree; each
 line's words are `TreeDigest.Annotation` contributions), `watch` (events in
 a subtree reach the nearest live watcher, as one turn per batch) and `message`
-(an agent lists the tree's agents and sends one a turn — the way down that
+(any agent sends another a turn by task or conversation id, and a supervisor lists its tree's agents — the way down that
 watch events are the way up).
 
 ## The one rule: names no workflow, automation or track
@@ -31,7 +31,7 @@ Plans: `research/2026-10-28-tasks-mandate-building-block.md`,
 - Description: Umbrella for the workflow-agnostic building blocks agents are orchestrated by inside a task subtree: the mandate (what an agent may do, resolved nearest-wins up the folder tree), the tree digest and watchers. Names no workflow, automation or track.
 - Sub-plugins:
   - **`mandate`** — The mandate's server half: the Mandate.Capability registry (each owner contributes how its granted value reads), mandateOf (the named mandate nearest-wins up the folder tree, resolved to its…
-  - **`message`** — Message the agents of a task tree, granted by message.tree: list_agents (every task of the caller's mandate tree an agent ran on, with its latest conversation and how it stands) and message_agent…
+  - **`message`** — Agents messaging agents: message_agent, visible to every agent (an event turn typed into the latest conversation of the task a task id or conversation id names, any task — a working agent reads it…
   - **`tree-digest`** — The tree digest: what an agent is shown of its mandate's task subtree — treeDigest (the whole subtree the first time, then only the tasks created or changed since the conversation's digest_cursors…
   - **`watch`** — Watch, web half: registers the watch and watch-event id kinds, so their ids are recognised in the browser as on the server; presents the exposed `managedBy` field (Agent / You — whether another…
 

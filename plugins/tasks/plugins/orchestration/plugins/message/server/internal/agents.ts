@@ -87,7 +87,14 @@ export async function agentsUnder(
          ORDER BY l.created_at ASC NULLS LAST, t.id`,
     row: Row,
   });
-  return rows.map((r) => ({
+  return rows.map((r) => toAgent(r, selfConversationId));
+}
+
+function toAgent(
+  r: z.infer<typeof Row>,
+  selfConversationId: string,
+): TreeAgent {
+  return {
     taskId: r.task_id,
     title: r.title,
     taskStatus: r.task_status,
@@ -102,7 +109,68 @@ export async function agentsUnder(
             unverified: r.unverified === true,
           },
     self: r.conversation_id === selfConversationId,
-  }));
+  };
+}
+
+/**
+ * The agent `ref` names, anywhere — a task id, or a conversation id standing
+ * for its task: the task and its LATEST conversation (the one a message
+ * reaches, as `list_agents` and event turns name it). `null` when `ref` names
+ * neither.
+ */
+export async function agentOf(
+  exec: DbExecutor,
+  ref: string,
+  selfConversationId: string,
+): Promise<TreeAgent | null> {
+  const rows = await executeRows(exec, {
+    label: "message agent by ref",
+    query: sql`WITH target(id) AS (
+          SELECT t.id FROM ${_tasks} t WHERE t.id = ${ref}
+          UNION
+          SELECT a.task_id FROM ${_conversations} c
+            JOIN ${_attempts} a ON a.id = c.attempt_id
+           WHERE c.id = ${ref}
+        )
+        SELECT t.id AS task_id, t.title, tv.status::text AS task_status,
+               l.id AS conversation_id, l.status, l.waiting_for, l.hibernated, l.unverified
+          FROM target
+          JOIN ${_tasks} t ON t.id = target.id
+          JOIN ${tasksView} tv ON tv.id = target.id
+          LEFT JOIN LATERAL (
+            SELECT c.id, c.status::text AS status, c.waiting_for,
+                   c.hibernated_at IS NOT NULL AS hibernated,
+                   c.status_unverified_since IS NOT NULL AS unverified
+              FROM ${_attempts} a
+              JOIN ${_conversations} c ON c.attempt_id = a.id
+             WHERE a.task_id = target.id
+             ORDER BY c.created_at DESC, c.id DESC
+             LIMIT 1
+          ) l ON true`,
+    row: Row,
+  });
+  const r = rows[0];
+  return r === undefined ? null : toAgent(r, selfConversationId);
+}
+
+/** Whether `taskId` is `rootTaskId` or sits under it (up `folder_id`). */
+export async function isUnder(
+  exec: DbExecutor,
+  taskId: string,
+  rootTaskId: string,
+): Promise<boolean> {
+  const rows = await executeRows(exec, {
+    label: "message task under root",
+    query: sql`WITH RECURSIVE up(id) AS (
+          SELECT ${taskId}::text
+          UNION
+          SELECT t.folder_id FROM ${_tasks} t JOIN up ON t.id = up.id
+           WHERE t.folder_id IS NOT NULL
+        )
+        SELECT EXISTS (SELECT 1 FROM up WHERE id = ${rootTaskId}) AS under`,
+    row: z.object({ under: z.boolean() }),
+  });
+  return rows[0]?.under === true;
 }
 
 /** The agents of the caller's mandate tree — the whole tree, from the

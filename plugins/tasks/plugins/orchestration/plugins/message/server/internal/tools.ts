@@ -1,42 +1,77 @@
 import { z } from "zod";
 import { Mcp } from "@plugins/infra/plugins/mcp/server";
-import { granted } from "@plugins/tasks/plugins/orchestration/plugins/mandate/server";
+import { db } from "@plugins/database/server";
+import { getConversation } from "@plugins/tasks/plugins/tasks-core/server";
+import {
+  granted,
+  grantOf,
+  mandateOf,
+} from "@plugins/tasks/plugins/orchestration/plugins/mandate/server";
 import {
   ResumeBlockedError,
   resumeConversation,
   submitTurn,
 } from "@plugins/conversations/server";
 import { messageTree } from "@plugins/tasks/plugins/orchestration/plugins/message/plugins/capability/core";
-import { renderAgents, SETTLED_SHOWN, treeAgents } from "./agents";
+import {
+  agentOf,
+  isUnder,
+  renderAgents,
+  SETTLED_SHOWN,
+  treeAgents,
+} from "./agents";
 import { renderOutcome, sendAgentMessage, type MessagePorts } from "./send";
 
-const productionPorts: MessagePorts = {
-  async resume(conversationId) {
-    try {
-      await resumeConversation(conversationId);
+/** The ports a send from `fromConversationId` runs on. */
+function productionPorts(fromConversationId: string): MessagePorts {
+  return {
+    async resume(conversationId) {
+      try {
+        await resumeConversation(conversationId);
+        return { ok: true };
+      } catch (err) {
+        if (err instanceof ResumeBlockedError)
+          return { ok: false, message: err.message };
+        throw err;
+      }
+    },
+    async submit(conversationId, text) {
+      const out = await submitTurn(conversationId, {
+        kind: "event",
+        text,
+        typedText: text,
+      });
+      if (out.kind === "not-found")
+        throw new Error(`message: conversation ${conversationId} not found`);
+      // `sendAgentMessage` resumed a stopped target before this: only a target
+      // that stopped again in between is still one.
+      if (out.kind === "stopped")
+        throw new Error(
+          `message: conversation ${conversationId} is ${out.status}`,
+        );
+    },
+    async mayReopen(taskId) {
+      if ((await grantOf(messageTree, fromConversationId)) === null)
+        return {
+          ok: false,
+          message:
+            "only a supervisor reopens a closed agent, on its own tree. Tell whoever supervises it, or file a task.",
+        };
+      const self = await getConversation(fromConversationId);
+      const mandate = self === null ? null : await mandateOf(self.taskId);
+      if (
+        mandate === null ||
+        mandate.kind === "none" ||
+        !(await isUnder(db, taskId, mandate.rootTaskId))
+      )
+        return {
+          ok: false,
+          message: `${taskId} is not in your task tree (see \`list_agents\`), and you reopen only your own tree's agents.`,
+        };
       return { ok: true };
-    } catch (err) {
-      if (err instanceof ResumeBlockedError)
-        return { ok: false, message: err.message };
-      throw err;
-    }
-  },
-  async submit(conversationId, text) {
-    const out = await submitTurn(conversationId, {
-      kind: "event",
-      text,
-      typedText: text,
-    });
-    if (out.kind === "not-found")
-      throw new Error(`message: conversation ${conversationId} not found`);
-    // `sendAgentMessage` resumed a stopped target before this: only a target
-    // that stopped again in between is still one.
-    if (out.kind === "stopped")
-      throw new Error(
-        `message: conversation ${conversationId} is ${out.status}`,
-      );
-  },
-};
+    },
+  };
+}
 
 export const listAgentsTool = Mcp.tool({
   name: "list_agents",
@@ -62,10 +97,9 @@ export const listAgentsTool = Mcp.tool({
 
 export const messageAgentTool = Mcp.tool({
   name: "message_agent",
-  when: granted(messageTree),
-  description: `Send a message to the agent of a task in your tree — a reply to its report, a correction, "push it", "redo X". It goes in now: a working agent reads it at its next step, an idle one starts on it, a stopped one is resumed first. One that has closed is refused (it ended its own work — often just before your message) unless you pass \`reopen: true\`, which resumes it with your message. It does not wait for an answer: the agent answers the way it already reports back to you.
+  description: `Send a message to another agent — a reply to its report, a correction, a question, "push it", "redo X". It goes in now: a working agent reads it at its next step, an idle one starts on it, a stopped one is resumed first. One that has closed is refused (it ended its own work — often just before your message); its supervisor may pass \`reopen: true\` to resume it with the message, on a task of its own tree only. It does not wait for an answer: the agent answers the way it already reports back.
 
-\`to\` is a task id (its latest conversation) or a conversation id, as \`list_agents\` and your event turns name them.`,
+\`to\` is a task id (its latest conversation) or a conversation id (its task's latest conversation) — any task, not only your tree's.`,
   inputSchema: {
     to: z
       .string()
@@ -76,17 +110,26 @@ export const messageAgentTool = Mcp.tool({
       .boolean()
       .optional()
       .describe(
-        "Resume an agent that has closed, to give it more work. Without it, a closed agent is not messaged.",
+        "Supervisors only, on their own tree: resume an agent that has closed, to give it more work. Without it, a closed agent is not messaged.",
       ),
   },
   async handler({ to, text, reopen }, { conversationId }) {
+    const ref = to.trim();
+    const self = await getConversation(conversationId);
+    const [target, sender] = await Promise.all([
+      agentOf(db, ref, conversationId),
+      self === null ? null : agentOf(db, self.taskId, conversationId),
+    ]);
     const outcome = await sendAgentMessage(
-      await treeAgents(conversationId),
-      conversationId,
-      to.trim(),
-      text,
-      productionPorts,
-      { reopen: reopen === true },
+      {
+        fromConversationId: conversationId,
+        sender,
+        to: ref,
+        target,
+        text,
+        reopen: reopen === true,
+      },
+      productionPorts(conversationId),
     );
     return { content: [{ type: "text", text: renderOutcome(outcome) }] };
   },
