@@ -5,6 +5,7 @@
 import { describe, expect, it } from "vitest";
 import type { FetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import type { TaskChainSubmitBody } from "@plugins/tasks/core";
+import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { submitChain } from "../internal/submit";
 
 async function filedUrls(
@@ -28,6 +29,7 @@ async function filedUrls(
       },
     ],
     target: { kind: "root" },
+    filedFrom: asPluginId("tasks.task-draft-form"),
     relate: undefined,
     url,
     captureUrlDefault,

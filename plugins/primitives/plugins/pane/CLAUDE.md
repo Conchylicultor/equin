@@ -1039,7 +1039,7 @@ with an empty route.
     - `ui/tokens/density --space-md`
     - `ui/tokens/density --space-sm`
     - `ui/tokens/shape --spacing`
-  - Imported by: 207 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 208 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×77
     - `conversations` ×32
     - `debug` ×29
@@ -1049,6 +1049,7 @@ with an empty route.
     - `plugin-meta` ×6
     - `primitives` ×6
     - `layouts` ×4
+    - `companions` ×2
     - `infra` ×2
     - `page` ×2
     - `reports` ×2
@@ -1062,7 +1063,6 @@ with an empty route.
     - `framework/web-core`
     - `hints/ask`
     - `integrations/google-maps`
-    - `menu-bar`
     - `review`
     - `runs`
     - `screenshot`

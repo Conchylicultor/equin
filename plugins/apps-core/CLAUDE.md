@@ -123,8 +123,8 @@ so ⌘/middle-click opens a desktop in a new browser tab.
     - `Apps.TabBar`
     - `Apps.TabBarActions`
     - `Apps.Overlay`
-  - Slot contributors: 26 contributors — full list in [REFERENCE.md](./REFERENCE.md)
-    - `Apps.App` ×21
+  - Slot contributors: 27 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `Apps.App` ×22
     - `Apps.Overlay` ← `apps-core.app-launcher`
     - `Apps.RailFraming` ← `apps-core.app-rail-framing`
     - `Apps.Surface` ← `apps-core.surface`
@@ -182,13 +182,13 @@ so ⌘/middle-click opens a desktop in a new browser tab.
     - `APP_RAIL_WIDTH`
     - `documentTitle`
 - Cross-plugin:
-  - Imported by: 61 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 62 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×29
     - `apps-core` ×15
     - `ui` ×6
+    - `companions` ×3
     - `config_v2` ×2
     - `hints` ×2
-    - `menu-bar` ×2
     - `debug/icons`
     - `plugin-meta/exhibits`
     - `reports/main-thread-stall`

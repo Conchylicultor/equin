@@ -27,7 +27,9 @@ export function ExtensionWishSection() {
   return (
     <PanelSection label="Wish">
       <DraftPageProvider value={page}>
-        <WishField filedFrom={asPluginId("companions.browser-extension.wish")} />
+        <WishField
+          filedFrom={asPluginId("companions.browser-extension.wish")}
+        />
       </DraftPageProvider>
     </PanelSection>
   );

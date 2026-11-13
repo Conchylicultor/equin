@@ -83,8 +83,8 @@ className="max-h-96">` and a full-height one is `<Scroll className="h-full">`.
     - `debug` ×10
     - `page` ×5
     - `build` ×2
+    - `companions` ×2
     - `infra` ×2
-    - `menu-bar` ×2
     - `plugin-meta` ×2
     - `review` ×2
     - `code-explorer/file-resolve`

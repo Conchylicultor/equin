@@ -1,4 +1,4 @@
-// @hash 42903baa6380
+// @hash 80989804af35
 {
   "manifests": [
     {
@@ -242,10 +242,9 @@
         "apps.settings.shell",
         "apps.settings.config",
         "apps.places.**",
-        "!menu-bar.**",
-        "menu-bar.app-window",
-        "!conversations.menu-bar-status.**",
-        "!tasks.menu-bar-task.**",
+        "!companions.menu-bar.**",
+        "companions.menu-bar.app-window",
+        "!conversations.companion-status.**",
         "!shell.notifications.native.**",
         "!active-data.event-source.**"
       ],

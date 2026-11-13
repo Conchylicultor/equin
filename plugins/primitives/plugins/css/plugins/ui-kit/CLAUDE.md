@@ -632,7 +632,7 @@ yes/no guard: `useConfirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `page` ×27
     - `debug` ×25
     - `ui` ×23
-    - `tasks` ×19
+    - `tasks` ×18
     - `fields` ×12
     - `apps-core` ×10
     - `plugin-meta` ×10
@@ -645,11 +645,11 @@ yes/no guard: `useConfirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `config_v2` ×4
     - `integrations` ×4
     - `active-data` ×3
+    - `companions` ×3
     - `framework` ×3
     - `backup` ×2
     - `hints` ×2
     - `layouts` ×2
-    - `menu-bar` ×2
     - `screenshot` ×2
     - `audience/developer-mark`
     - `code-explorer/commit-detail`

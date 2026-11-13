@@ -110,7 +110,7 @@ its boot journal attribute that.
 
 - Description: The file reads, listings, stats and glob scans every non-browser process makes, timed: node:fs's read calls under their own names and types (readFile / readdir / stat / lstat / access / realpath / readlink and their *Sync twins, existsSync) plus scanGlob / scanGlobSync over a Bun.Glob, each call metered while it runs (installFsWaitMeter — the backend's profiler shows one past FS_WAIT_FLOOR_MS in progress and charges it) and, once it returns past the floor, handed to onSlowFsCall subscribers, under a named wait layer (fs-read / fs-readdir / fs-stat / fs-glob) — so a disk stall names itself instead of reading as the caller's own work. A leaf (node builtins only), enforced by the timed-fs/no-untimed-fs-read lint.
 - Cross-plugin:
-  - Imported by: 170 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 171 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra` ×49
     - `framework` ×25
     - `apps` ×15
@@ -129,6 +129,7 @@ its boot journal attribute that.
     - `stats` ×2
     - `apps-core/app-preload`
     - `code-explorer`
+    - `companions/browser-extension`
     - `hints/ask`
     - `toolchain`
     - `ui/icons/icon-sets`

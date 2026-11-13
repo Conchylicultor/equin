@@ -209,10 +209,7 @@ function companionThemeFor(
       shape,
       materialGroup.fragment({
         light: {
-          popoverFill:
-            material === "solid"
-              ? "var(--popover)"
-              : "transparent",
+          popoverFill: material === "solid" ? "var(--popover)" : "transparent",
           popoverBackdrop: "none",
         },
         dark: { popoverFill: "var(--popover)", popoverBackdrop: "none" },

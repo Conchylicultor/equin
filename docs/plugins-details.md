@@ -5130,7 +5130,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/link-gesture` ×2
               - `primitives/networking` ×2
               - `primitives/persistent-draft` ×2
-              - `menu-bar/app-window.useNativeFileDrag`
+              - `companions/menu-bar/app-window.useNativeFileDrag`
               - `primitives/bar.Bar`
               - `primitives/css/center.Center`
               - `primitives/css/column.Column`
@@ -12797,7 +12797,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/website/crawlable.WEBSITE_BASE_PATH`
               - `framework/product-name.SOURCE_REPO`
               - `framework/product-name.SOURCE_REPO_URL`
+              - `infra/namespace.GATEWAY_PORT`
               - `infra/namespace.MAIN_WORKTREE_NAME`
+              - `infra/namespace.namespaceFromHost`
               - `infra/namespace.namespaceHost`
               - `infra/namespace.namespaceUrl`
               - `primitives/pane.defineApp`
@@ -12806,10 +12808,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `CONTACT_EMAIL`
               - `CONTACT_MAILTO`
               - `INSTALL_COMMAND`
+              - `isLocalAppUrl`
+              - `isPublicSiteUrl`
               - `ISSUES_URL`
               - `landingPage`
               - `LOCAL_APP_HOST`
               - `LOCAL_APP_URL`
+              - `localSiteUrl`
+              - `PUBLIC_SITE_ORIGIN`
+              - `publicSiteUrl`
               - `websiteApp`
           - Cross-plugin:
             - Uses tokens:
@@ -12844,6 +12851,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/website/pages/story`
               - `apps/website/pages/story/essay`
               - `apps/website/pages/vision`
+              - `companions/browser-extension/equin-site`
+              - `hints/help-menu`
 
 - **`apps-core`** — App switcher rail. Wraps per-app shells; plugins contribute via Apps.App. Every app the browser registers, readable on the server: declaredApps() — each Apps.App contribution of the plugins the backend's composition loads: whole AppRef (id, name, base path, icon, tile colour) and its launch kind (tab or surface mode), generated at build time from the web contributions; declaredAppPlugins() — the same, each with the web plugin that contributes it.
   - Web:
@@ -12854,8 +12863,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `Apps.TabBar`
       - `Apps.TabBarActions`
       - `Apps.Overlay`
-    - Slot contributors: 26 contributors — full list in [`plugins/apps-core/REFERENCE.md`](../plugins/apps-core/REFERENCE.md)
-      - `Apps.App` ×21
+    - Slot contributors: 27 contributors — full list in [`plugins/apps-core/REFERENCE.md`](../plugins/apps-core/REFERENCE.md)
+      - `Apps.App` ×22
       - `Apps.Overlay` ← `apps-core.app-launcher`
       - `Apps.RailFraming` ← `apps-core.app-rail-framing`
       - `Apps.Surface` ← `apps-core.surface`
@@ -12913,13 +12922,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `APP_RAIL_WIDTH`
       - `documentTitle`
   - Cross-plugin:
-    - Imported by: 61 plugins — full list in [`plugins/apps-core/REFERENCE.md`](../plugins/apps-core/REFERENCE.md)
+    - Imported by: 62 plugins — full list in [`plugins/apps-core/REFERENCE.md`](../plugins/apps-core/REFERENCE.md)
       - `apps` ×29
       - `apps-core` ×15
       - `ui` ×6
+      - `companions` ×3
       - `config_v2` ×2
       - `hints` ×2
-      - `menu-bar` ×2
       - `debug/icons`
       - `plugin-meta/exhibits`
       - `reports/main-thread-stall`
@@ -13001,9 +13010,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps-core/app-rail`
           - `apps/desktop/shell`
           - `apps/home/shell`
+          - `companions/panel`
           - `config_v2/settings`
           - `framework/cli/release`
-          - `menu-bar`
     - **`app-launcher`** — The app brand every app shell draws (AppShell.Brand): the launcher — the current app's own mark — click for the composition's home app (the app gallery on main), hover or ArrowDown for a grid of every other installed app (switching exactly as the rail does) — plus, as the sidebar header, the current app's name linking to its own home. Where no app switcher frames the surface — solo (fullscreen), or an AppEmbed, which draws no rail or tab bar — a surface that draws no brand gets the launcher floating at the top-left of its box, revealed as the pointer nears that corner.
       - Web:
         - Slots: `AppLauncherSlots.ReturnTip`
@@ -13080,7 +13089,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/desktop/windows`
           - `apps/home/app-cards`
           - `apps/home/usage-fields`
-          - `menu-bar/app-grid`
+          - `companions/menu-bar/app-grid`
     - **`app-manifest`** — Makes every listed app installable as its own OS app: serves GET /api/apps/:appId/manifest.webmanifest (id / start_url / scope = the app's base path, its tile colour, its icon PNGs) from the generated app declarations, and links it from each app's pages through a DocumentHead.Fragment (manifest, theme-color, apple-touch-icon). A surface-mode app (the desktop) installs at its base path, the route prefix of every page it shows.
       - Server:
         - Contributes: `DocumentHead.Fragment` "app-manifest"
@@ -13117,7 +13126,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `parseAppIconFile`
           - `WebAppManifestSchema`
       - Cross-plugin:
-        - Imported by: `menu-bar`
+        - Imported by: `companions/menu-bar`
     - **`app-preload`** — Starts the active app's code downloading at t0: a DocumentHead.Fragment that puts, per app base path, a <link rel=modulepreload> for every module of that app's deferred plugins — read from the served dist's .app-preloads.json, which web-artifacts' compose writes — so the boot's priority batch is in the HTTP cache by the time it is imported, instead of being fetched after the eager tier. Desktop-only: the head is published by document-head's machine half, from the dist the gateway serves. In every served composition through the served-baseline row.
       - Server:
         - Contributes:
@@ -13490,9 +13499,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `shell` ×2
           - `tasks` ×2
           - `build`
+          - `companions/menu-bar/app-grid`
           - `config_v2/config-link`
           - `conversations/runtime-sdk`
-          - `menu-bar/app-grid`
           - `ui/theme-engine/quick-theme`
     - **`theme-scope`** — Theme-scope helpers: the single definition of the focused full-surface app's theme scope, which decides the document's light/dark and canvas (never the :root tokens, always the desktop's) (useRootThemeScopeState: a state that keeps the not-registered-yet window apart from 'no app owns the surface'), and useAppSettingsScope — the app:<id> config scope per-app theme settings (variants) are read in: the nearest app theme boundary's (a pane's home app), else the focused app's.
       - Web:
@@ -13601,6 +13610,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `Auth.Provider` ← `auth.hooktheory`
       - `Auth.Provider` ← `auth.notion`
       - `Auth.Integration` ← `auth.apple-signing.setup-wizard`
+      - `Auth.Integration` ← `companions.browser-extension.accounts-row`
       - `Auth.Integration` ← `integrations.google-maps`
       - `Auth.Integration` ← `integrations.google-maps.usage`
       - `Auth.ScopeRequirement` ← `backup.targets.google-drive`
@@ -13782,6 +13792,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `auth/notion`
       - `backup/runs-arm`
       - `backup/targets/google-drive`
+      - `companions/browser-extension/accounts-row`
       - `integrations/gmail`
       - `integrations/google-maps`
       - `integrations/google-maps/usage`
@@ -14476,8 +14487,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `build/converge`
       - `build/runs-arm`
       - `build/serve-composition`
+      - `companions/menu-bar`
       - `debug/reports`
-      - `menu-bar`
     - Endpoint callers: `restart-skip`
   - Plugins:
     - **`build-commits`** — Commits included since the previous build, shown in the build detail pane.
@@ -15246,6 +15257,354 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `RESOLVE_MAX_MATCHES`
           - `resolvedFile`
+
+- **`companions`** — Umbrella for equin's companions — the surfaces equin shows outside its own tab (the OS menu-bar tray and the Chrome extension): each a thin native or extension shell that loads an equin route and adds a versioned bridge, plus the panel primitive they share.
+  - Plugins:
+    - **`browser-extension`** — The browser extension's panel: the browser-extension app (unlisted, colorMode system, in the companions' `companion` theme) mounted at /home/browser-extension, whose whole layout is the companions' panel over the BrowserExtension.Section slot (chromeless under ?embed=1) — the companions' header (its Companion.Status attention mirrored to the toolbar badge), the page actions, and the footer (opening equin in a new tab). useExtensionHost() reads the popup's bridge (a MessagePort accepted only from the extension's own origin): pending, absent (a plain tab — the route then says it runs inside the extension), or present with the shell's info, the tab the popup is about and its methods. BrowserExtension.PageAction is an action an app offers on the pages its site matches; the page-actions section groups the matching ones by site (one labelled section each), each a gradient tile, title and subtitle with its ⌘N, a spinner while it runs, then a check. The panel reports its height to the popup, records each open, and reloads the extension when the served shell's digest differs from its own.
+      - Web:
+        - Slots:
+          - `BrowserExtension.Section`
+          - `BrowserExtension.PageAction`
+        - Slot contributors:
+          - `BrowserExtension.Section` ← `companions.browser-extension`
+          - `BrowserExtension.Section` ← `companions.browser-extension.wish`
+          - `BrowserExtension.PageAction` ← `companions.browser-extension.equin-site`
+        - Contributes:
+          - `Apps.App` "Browser extension" → `BrowserExtensionPanel`
+          - `BrowserExtension.Section` "Header" → `CompanionHeader`
+          - `BrowserExtension.Section` "Page actions" → `PageActionsSection`
+          - `BrowserExtension.Section` "Footer" → `ExtensionFooter`
+        - Uses: 28 symbols — full list in [`plugins/companions/plugins/browser-extension/REFERENCE.md`](../plugins/companions/plugins/browser-extension/REFERENCE.md)
+          - `companions/panel` ×4
+          - `primitives/slot-render` ×3
+          - `primitives/avatar` ×2
+          - `apps-core.Apps`
+          - `infra/endpoints.useFetchEndpoint`
+          - `network/live/live-state.foldResource`
+          - `network/live.useLive`
+          - `primitives/css/center.Center`
+          - `primitives/css/rigid.rigidClass`
+          - `primitives/css/row.Row`
+          - `primitives/css/spacing.Stack`
+          - `primitives/css/spinner.Spinner`
+          - `primitives/css/surface.Surface`
+          - `primitives/css/text.Text`
+          - `primitives/css/ui-kit.cn`
+          - `primitives/dom/web-storage.defineStore`
+          - `primitives/latest-ref.useLatestRef`
+          - `primitives/loading.Loading`
+          - `primitives/log-channels.clientLog`
+          - `primitives/shortcuts.usePageShortcuts`
+          - `ui/icons.Icon`
+          - `ui/logo.Logo`
+        - Exports (types): `ExtensionHost`
+        - Exports (values):
+          - `BrowserExtension`
+          - `useExtensionHost`
+      - Server:
+        - Contributes:
+          - `resource.declare` "browser-extension.connection"
+          - `resource.declare` "browser-extension.shell"
+        - Resources:
+          - `browser-extension.connection` (push, notified)
+          - `browser-extension.shell` (push, notified)
+      - Machine:
+        - Uses:
+          - `infra/endpoints.implementMachine`
+          - `network/live.serveValue`
+        - Register: `defineFileWatcher('companions.browser-extension')`
+        - Routes: `POST /api/browser-extension/connection`
+      - Core:
+        - Uses:
+          - `infra/endpoints.defineEndpoint`
+          - `network/live.liveValue`
+          - `packages/string-hash.createSha256`
+          - `primitives/pane.defineApp`
+          - `ui/icons.symbol`
+        - Exports (types):
+          - `ActiveTab`
+          - `BridgeCall`
+          - `BridgeMethod`
+          - `BridgePortMessage`
+          - `BridgeRequest`
+          - `BridgeResponse`
+          - `BridgeResult`
+          - `ConnectionState`
+          - `ExtensionCapabilities`
+          - `ExtensionHostInfo`
+          - `PageAction`
+          - `PageActionGroup`
+          - `PageActionHost`
+          - `PageActionSite`
+          - `ShellState`
+        - Exports (values):
+          - `acceptBridgePort`
+          - `ActiveTabSchema`
+          - `BRIDGE_HELLO`
+          - `BRIDGE_PORT`
+          - `BRIDGE_RESULTS`
+          - `BridgeCallSchema`
+          - `BridgeHelloSchema`
+          - `BridgeRequestSchema`
+          - `BridgeResponseSchema`
+          - `browserExtensionApp`
+          - `browserExtensionConnection`
+          - `browserExtensionShell`
+          - `ConnectionStateSchema`
+          - `EXTENSION_ID`
+          - `EXTENSION_ORIGIN`
+          - `EXTENSION_PUBLIC_KEY`
+          - `ExtensionCapabilitiesSchema`
+          - `ExtensionHostInfoSchema`
+          - `extensionIdFromKey`
+          - `groupPageActions`
+          - `recordExtensionOpen`
+          - `ShellStateSchema`
+      - Cross-plugin:
+        - Uses tokens:
+          - `ui/tokens/color-palette --destructive`
+          - `ui/tokens/color-palette --success`
+          - `ui/tokens/shape --spacing`
+          - `ui/tokens/type-scale --font-weight-semibold`
+        - Imported by:
+          - `companions/browser-extension/accounts-row`
+          - `companions/browser-extension/equin-site`
+          - `companions/browser-extension/wish`
+          - `framework/cli/build`
+      - Exemptions:
+        - Exempts itself from: `frame/no-raw-frame` — `browser-extension/popup.ts` (sanctioned)
+      - Cli:
+        - Exports (types): `ShellWrite`
+        - Exports (values): `writeExtensionShell`
+      - Plugins:
+        - **`accounts-row`** — The browser extension's row in Settings → Accounts (Auth.Integration, service equin): not built / not connected / connected · up to date / update pending — read live from the served shell's digest and the record the popup writes on each open — and, in its pane, the folder to load it unpacked from once.
+          - Web:
+            - Contributes: `Auth.Integration` "Browser extension"
+            - Uses:
+              - `auth.Auth`
+              - `network/live.useLive`
+              - `network/live/live-state.foldResource`
+              - `network/live/live-state.mapResource`
+              - `network/live/live-state.ResourceResult`
+              - `network/live/live-state.ResourceUnavailable`
+              - `network/live/live-state.useCombinedResources`
+              - `primitives/copy-to-clipboard.CopyButton`
+              - `primitives/css/spacing.Stack`
+              - `primitives/css/text.Text`
+              - `primitives/loading.Loading`
+              - `primitives/relative-time.formatRelativeTime`
+          - Cross-plugin:
+            - Uses tokens: `ui/tokens/shape --spacing`
+        - **`equin-site`** — The equin site's page actions in the browser extension: on equin.ai, 'Open locally' (the same page on the local instance — the site's paths are the website app's, so it is an origin swap); on any local equin page, 'Open on equin.ai' (a website page at the same path, any other page at the site's home). The mapping is the website's own (apps/website/shell core); this leaf only offers it, so the website's composition never carries the extension.
+          - Web:
+            - Contributes:
+              - `BrowserExtension.PageAction` "equin (local): Open on equin.ai"
+              - `BrowserExtension.PageAction` "equin.ai: Open locally"
+            - Uses: `companions/browser-extension.BrowserExtension`
+        - **`wish`** — The browser extension's Wish section (BrowserExtension.Section 'wish'): wish's WishField under a 'Wish' title — the task composer with its own ↑, filing one task under Wishes and confirming inline — about the tab the popup was opened on (DraftPage: that tab's URL for the Page URL toggle, no element picker).
+          - Web:
+            - Contributes: `BrowserExtension.Section` "Wish" → `ExtensionWishSection`
+            - Uses:
+              - `companions/browser-extension.BrowserExtension`
+              - `companions/browser-extension.useExtensionHost`
+              - `companions/panel.PanelSection`
+              - `tasks/task-draft-form.DraftPage`
+              - `tasks/task-draft-form.DraftPageProvider`
+              - `wish.WishField`
+    - **`menu-bar`** — The menu-bar panel the native helper opens: the menu-bar app (unlisted, colorMode system — light or dark with the OS, in the companions' `companion` theme) mounted at /home/menu-bar, whose whole layout is the companions' panel (no pane; chromeless under ?embed=1) over the MenuBar.Section slot, with the companions' header (whose Companion.Status attention lights the menu-bar icon's dot) and footer ('Running · <host>', opening equin in the default browser through the helper). useNativeHost() reads the helper's bridge (window.equinNative): pending, absent (a plain browser), or present with its platform, capabilities and methods — a capability the host lacks has no method. useNativeApps() reads the device's installed and pinned apps from the helper that keeps them (pending / unavailable / ready / error), re-read on panel focus and after a pin. MenuBar.Mount runs headless work while the panel page is alive; the panel reports its content height to the helper, shows no toasts, and reloads itself while hidden once main serves a newer web bundle.
+      - Web:
+        - Slots:
+          - `MenuBar.Section`
+          - `MenuBar.Mount`
+        - Slot contributors:
+          - `MenuBar.Section` ← `companions.menu-bar`
+          - `MenuBar.Section` ← `companions.menu-bar.app-grid`
+          - `MenuBar.Section` ← `companions.menu-bar.wish`
+          - `MenuBar.Section` ← `shell.notifications.native`
+          - `MenuBar.Mount` ← `shell.notifications.native`
+        - Contributes:
+          - `Apps.App` "Menu bar" → `MenuBarPanel`
+          - `MenuBar.Section` "Header" → `CompanionHeader`
+          - `MenuBar.Section` "Footer" → `PanelFooter`
+        - Uses:
+          - `apps-core.Apps`
+          - `build.useStaleFrontend`
+          - `companions/panel.CompanionFooter`
+          - `companions/panel.CompanionHeader`
+          - `companions/panel.CompanionPanel`
+          - `primitives/loading.Loading`
+          - `primitives/log-channels.clientLog`
+          - `primitives/slot-render.defineMountSlot`
+          - `primitives/slot-render.defineRenderSlot`
+        - Exports (types):
+          - `NativeAppsState`
+          - `NativeHost`
+        - Exports (values):
+          - `MenuBar`
+          - `useNativeApps`
+          - `useNativeHost`
+      - Machine:
+        - Uses:
+          - `apps-core/app-manifest.appIconSvg`
+          - `infra/endpoints.implementMachine`
+        - Routes: `GET /api/menu-bar/apps`
+      - Core:
+        - Uses:
+          - `infra/endpoints.defineEndpoint`
+          - `packages/list-bound.wholeList`
+          - `primitives/pane.defineApp`
+          - `ui/icons.symbol`
+        - Exports (types):
+          - `AppCatalog`
+          - `CatalogApp`
+          - `EquinNativeBridge`
+          - `NativeApps`
+          - `NativeCapabilities`
+          - `NativeHostInfo`
+          - `NativeMaterial`
+          - `NativeNotification`
+        - Exports (values):
+          - `AppCatalogSchema`
+          - `BRIDGE_METHODS`
+          - `CatalogAppSchema`
+          - `getAppCatalog`
+          - `menuBarApp`
+          - `NativeAppsSchema`
+          - `NativeHostInfoSchema`
+          - `OPEN_LINK_SCHEME`
+          - `openLink`
+      - Deps:
+        - Uses:
+          - `infra/deps.defineDep`
+          - `infra/deps.Ready`
+          - `infra/deps/rust.cargoBuild`
+          - `infra/deps/rust.CargoSource`
+        - Exports (values):
+          - `menuBarHelper`
+          - `menuBarHelperIcon`
+      - Cross-plugin:
+        - Uses tokens: `ui/tokens/shape --spacing`
+        - Imported by:
+          - `companions/menu-bar/app-grid`
+          - `companions/menu-bar/open-in-window`
+          - `companions/menu-bar/wish`
+          - `shell/notifications/native`
+      - Plugins:
+        - **`app-grid`** — The menu-bar panel's app grid (MenuBar.Section 'apps'): every Apps.App but the current app and the home app (the desktop included: its URL is its base path as a route prefix) — as the icons DataView over the installedApp row kind, laid out as a menu's grid (viewOptions.icons.menu: four cells sharing the panel's width) (the tile and name Home and the launcher draw), each tile wearing its app's badge. Scrolling past four rows; drag reorders it, persisted per view (defineDataView('menu-bar.apps')). A tile opens its app in its own OS window through the helper (launchApp) — every app has its shim, kept by the helper ahead of any click (useNativeApps, the helper's installed set); in the default browser (openUrl) only for an app with no shim (a helper that keeps no apps); in this tab when the panel is not inside the helper. On hover a tile offers a pin (AppGridActions 'pin'): keeps the app in the Dock / GNOME dash through the helper's bridge (pinApp — a device power, never the server's) — hidden once pinned (re-read on each panel open, so it follows the Dock itself) or where the helper cannot pin, a spinner while pending, an error mark when the pin failed.
+          - Web:
+            - Slots: `item-actions`
+            - Slot contributors: `item-actions` ← `companions.menu-bar.app-grid`
+            - Contributes:
+              - `MenuBar.Section` "Apps" → `MenuBarAppGrid`
+              - `item-actions` "pin" → `PinAppAction`
+            - Uses: 25 symbols — full list in [`plugins/companions/plugins/menu-bar/plugins/app-grid/REFERENCE.md`](../plugins/companions/plugins/menu-bar/plugins/app-grid/REFERENCE.md)
+              - `primitives/data-view` ×5
+              - `companions/menu-bar` ×4
+              - `apps-core/app-launcher` ×3
+              - `apps-core` ×3
+              - `primitives/css/ui-kit` ×2
+              - `apps-core/tabs.useActivateApp`
+              - `companions/panel.PanelSection`
+              - `network/live/live-state.mapResource`
+              - `primitives/css/pin.Pin`
+              - `primitives/css/scroll.Scroll`
+              - `primitives/css/spacing.insetClass`
+              - `primitives/icon-button.IconButton`
+              - `primitives/loading.Loading`
+          - Cross-plugin:
+            - Uses tokens:
+              - `ui/tokens/color-palette --destructive`
+              - `ui/tokens/color-palette --primary`
+              - `ui/tokens/color-palette --primary-foreground`
+              - `ui/tokens/density --space-xs`
+              - `ui/tokens/shape --spacing`
+        - **`app-window`** — An installed app window's bridge to the native helper (window.equinWindow), read once per document: useNativeFileDrag() is the window's native file drag — drag host paths out as real files, the drag Finder starts, so any app or website takes them — or null in a browser tab, on a platform without it, or before the window has answered. inAppWindow() says whether this document is such a window at all.
+          - Cross-plugin:
+            - Imported by:
+              - `apps/file-explorer/browser`
+              - `companions/menu-bar/open-in-window`
+          - Web:
+            - Exports (types): `NativeFileDrag`
+            - Exports (values):
+              - `inAppWindow`
+              - `useNativeFileDrag`
+          - Core:
+            - Exports (types):
+              - `AppWindowInfo`
+              - `EquinWindowBridge`
+              - `FileDragOutcome`
+            - Exports (values):
+              - `AppWindowInfoSchema`
+              - `FileDragOutcomeSchema`
+              - `WINDOW_BRIDGE_METHODS`
+        - **`open-in-window`** — Open in app window: a row in the action bar's view-options popover that hands this browser tab's page to the menu-bar helper as an equin://open link, which opens it in a new window of the installed app (macOS and desktop Linux). Never shown inside an app window.
+          - Web:
+            - Contributes: `ActionBar.ViewOption` → `OpenInWindowRow`
+            - Uses:
+              - `companions/menu-bar/app-window.inAppWindow`
+              - `primitives/css/control-panel.ControlPanel`
+              - `shell/action-bar.ActionBar`
+              - `ui/icons.Icon`
+        - **`wish`** — The menu-bar panel's Wish section (MenuBar.Section 'wish'): wish's WishField under a 'Wish' title — the task composer with its own ↑, filing one task under Wishes and confirming inline. The tray is about no page (DraftPage NO_DRAFT_PAGE: no Page URL toggle, no element picker). The field keeps its own draft text.
+          - Web:
+            - Contributes: `MenuBar.Section` "Wish" → `MenuBarWishSection`
+            - Uses:
+              - `companions/menu-bar.MenuBar`
+              - `companions/panel.PanelSection`
+              - `tasks/task-draft-form.DraftPageProvider`
+              - `tasks/task-draft-form.NO_DRAFT_PAGE`
+              - `wish.WishField`
+    - **`panel`** — The panel every companion draws (the menu-bar tray and the browser extension). CompanionPanel is a companion's whole page — the panel filling its window, its body the host's own section slot passed as `sections` (each companion orders its own), showing no toasts; what only the host can do comes in as props (corner clip style, onContentHeight for a window that fits the content, onAttention for an icon dot or badge, headless children). PanelSection is the one labelled section (a caption title, then its body), so section titles match everywhere. CompanionHeader (the logo and a status line joined from every Companion.Status part, pending until each part is known) and CompanionFooter ('Running · <host>', opening equin through the host's `open`, else a plain link). The companion themes: a native menu's look (system font, 13px rows, a 2–16px spacing ramp, the menu palette) in light and dark, one per window material — `companion` (translucent: light, the panel at 86% over a vibrancy window, the menu bar) and `companion-solid` (an opaque window with nothing to blur, the Chrome popup: light, the solid #e2e6ea panel) — selected per companion app, which declares colorMode 'system' so it follows the OS.
+      - Web:
+        - Slots: `Companion.Status`
+        - Slot contributors: `Companion.Status` ← `conversations.companion-status`
+        - Contributes:
+          - `ThemeEngine.Theme` "Companion (solid)"
+          - `ThemeEngine.Theme` "Companion"
+        - Uses:
+          - `primitives/css/clip.Clip`
+          - `primitives/css/fill.Fill`
+          - `primitives/css/rigid.rigidClass`
+          - `primitives/css/row.Row`
+          - `primitives/css/scroll.Scroll`
+          - `primitives/css/spacing.Inset`
+          - `primitives/css/spacing.insetClass`
+          - `primitives/css/spacing.Stack`
+          - `primitives/css/status-dot.StatusDot`
+          - `primitives/css/surface.Surface`
+          - `primitives/css/text.Text`
+          - `primitives/css/ui-kit.cn`
+          - `primitives/dom/element-size.useResizeObserver`
+          - `primitives/dom/render-mode.useBrowserValue`
+          - `primitives/loading.Loading`
+          - `primitives/slot-render.defineRenderSlot`
+          - `shell/toast.useSuppressToasts`
+          - `ui/logo.Logo`
+          - `ui/theme-engine.ThemeEngine`
+        - Exports (types):
+          - `CompanionSectionProps`
+          - `CompanionStatus`
+        - Exports (values):
+          - `Companion`
+          - `CompanionFooter`
+          - `CompanionHeader`
+          - `CompanionPanel`
+          - `PanelSection`
+      - Cross-plugin:
+        - Uses tokens:
+          - `ui/tokens/color-palette --popover`
+          - `ui/tokens/color-palette --success`
+          - `ui/tokens/density --space-md`
+          - `ui/tokens/shape --spacing`
+          - `ui/tokens/type-scale --font-weight-semibold`
+        - Imported by:
+          - `companions/browser-extension`
+          - `companions/browser-extension/wish`
+          - `companions/menu-bar`
+          - `companions/menu-bar/app-grid`
+          - `companions/menu-bar/wish`
+          - `conversations/companion-status`
+          - `shell/notifications/native`
 
 - **`config_v2`** — Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins: the registry over the user-layer store (the ConfigStore host service) and the committed layer (ConfigGitLayer), its live values and the scope routes.
   - Web:
@@ -16561,6 +16920,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`delivery-check`** — Reads back from the agent's transcript whether the context handed back after a compaction (compaction_context_sends) reached it whole — the first SessionStart context written since must hold the exact text — rather than trusting a copy of the Claude CLI's hook-output cap. When it did not, files compaction-context-cut and sends the whole context to the agent as a turn.
           - Server:
             - Contributes: `report-kind` "compaction-context-cut"
+    - **`companion-status`** — The agents' part of every companion's status line (Companion.Status 'agents' — the menu-bar tray's header, later the browser extension's): from useConversations(), partitioned like the agent manager's home — working or starting → 'N agents working', waiting → 'N need you' — with attention while any agent waits on the user, which the companion shows as its attention (the menu-bar icon's dot).
+      - Web:
+        - Contributes: `Companion.Status` "Agents"
+        - Uses:
+          - `companions/panel.Companion`
+          - `conversations.useConversations`
     - **`context-usage`** — Each conversation's last context reading — what fills its agent's context window, as the harness measured it — in the conversations_ext_context_usage table: recordContextUsage, which a conversation runtime calls with each reading its agent reports, and the lookup-only conversations.context-usage collection the context ring reads. No read ever asks the agent.
       - Server:
         - Contributes: `resource.declare` "conversations.context-usage:rows"
@@ -21236,12 +21601,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/tasks-core._conversations`
           - `tasks/tasks-core.conversationStatusChanged`
         - Register: `defineJob('conversations.idle-blocker.notify')`
-    - **`menu-bar-status`** — The agents' part of the menu-bar panel's status line (MenuBar.Status 'agents'): from useConversations(), partitioned like the agent manager's home — working or starting → 'N agents working', waiting → 'N need you' — with attention while any agent waits on the user, which lights the menu-bar icon's dot.
-      - Web:
-        - Contributes: `MenuBar.Status` "Agents"
-        - Uses:
-          - `conversations.useConversations`
-          - `menu-bar.MenuBar`
     - **`model-provider`** — Model pickers and labels over the live model catalog: useModelCatalog (the pushed, preloaded catalog), useVisibleModels / useModelItems / ModelSelect / ModelChoiceLabel (families with today's version as a hint, pinned versions the user turned on), and the corruption reporter for malformed stored models. Model ids, families and choices: the id grammar every concrete version follows (flag, label and family derive from the id alone), the catalog shape and its pure readers (resolveModel, choiceHint, selectableChoices), and the model-provider config.
       - Web:
         - Contributes:
@@ -30086,7 +30445,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `takeReexecBudget`
         - **`build`** — `./equin build` — the deploy command: codegen, migrations, web dist and backend restart for this checkout, or a composition's hermetic artifact set.
           - Cli:
-            - Uses: 58 symbols — full list in [`plugins/framework/plugins/cli/plugins/build/REFERENCE.md`](../plugins/framework/plugins/cli/plugins/build/REFERENCE.md)
+            - Uses: 59 symbols — full list in [`plugins/framework/plugins/cli/plugins/build/REFERENCE.md`](../plugins/framework/plugins/cli/plugins/build/REFERENCE.md)
               - `framework/cli/op-runtime` ×31
               - `framework/tooling/web-artifacts` ×6
               - `framework/cli/bootstrap` ×4
@@ -30097,6 +30456,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `build/converge.decideConvergence`
               - `build/run-ledger.createBuildRunRecorder`
               - `build/step-baseline.judgeBuildSteps`
+              - `companions/browser-extension.writeExtensionShell`
               - `framework/cli/doctor.assertPrerequisites`
               - `framework/cli/git-artifacts.registerMergeDrivers`
               - `framework/tooling/checks/type-check.readTypeCheckTree`
@@ -30564,11 +30924,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `UNDOCUMENTED_RUNTIME_FOLDERS`
           - `VERIFYING_FOLDERS`
       - Cross-plugin:
-        - Imported by: 94 plugins — full list in [`plugins/framework/plugins/plugin-id/REFERENCE.md`](../plugins/framework/plugins/plugin-id/REFERENCE.md)
+        - Imported by: 95 plugins — full list in [`plugins/framework/plugins/plugin-id/REFERENCE.md`](../plugins/framework/plugins/plugin-id/REFERENCE.md)
           - `plugin-meta` ×21
           - `apps` ×15
-          - `tasks` ×12
           - `framework` ×11
+          - `tasks` ×11
           - `conversations` ×7
           - `debug` ×5
           - `build` ×3
@@ -30577,6 +30937,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `page` ×3
           - `active-data` ×2
           - `apps-core` ×2
+          - `companions` ×2
           - `hints/ask`
           - `primitives/data-view`
           - `reorder`
@@ -31838,7 +32199,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: `framework/tooling/guards/module-extension.MODULE_EXTENSION`
             - Exports (values): `isE2eScriptPath`
           - Cross-plugin:
-            - Imported by: 195 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
+            - Imported by: 196 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
               - `apps` ×58
               - `primitives` ×29
               - `conversations` ×26
@@ -31852,6 +32213,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `reports` ×3
               - `shell` ×3
               - `ui` ×3
+              - `companions` ×2
               - `hints` ×2
               - `infra` ×2
               - `network` ×2
@@ -31860,7 +32222,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `database/admin`
               - `map/google`
               - `media/film`
-              - `menu-bar`
               - `release`
               - `reorder/node-types`
               - `runs`
@@ -34041,16 +34402,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/color-palette --muted-foreground`
           - `ui/tokens/font-family --font-mono`
-        - Imported by: 30 plugins — full list in [`plugins/infra/plugins/deps/REFERENCE.md`](../plugins/infra/plugins/deps/REFERENCE.md)
+        - Imported by: 31 plugins — full list in [`plugins/infra/plugins/deps/REFERENCE.md`](../plugins/infra/plugins/deps/REFERENCE.md)
           - `infra` ×11
           - `apps` ×5
           - `framework` ×5
+          - `companions` ×2
           - `integrations` ×2
           - `media` ×2
           - `packages` ×2
           - `conversations/runtime-sdk`
           - `debug/profiling/tab-memory`
-          - `menu-bar`
       - Deps:
         - Exports (types):
           - `BundleSpec`
@@ -34232,6 +34593,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Imported by:
               - `apps/prototypes/thumbnails`
+              - `companions/browser-extension`
               - `debug/profiling/tab-memory`
               - `framework/tooling/e2e-harness`
               - `infra/safe-fetch/browser-fetch`
@@ -34305,8 +34667,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `crateTargetDir`
           - Cross-plugin:
             - Imported by:
+              - `companions/menu-bar`
               - `infra/deps/rust/cargo-updater`
-              - `menu-bar`
           - Plugins:
             - **`cargo-updater`** — The `cargo` updater: moves every rust/ crate's Cargo.lock to the newest crates.io releases past a 3-day cooldown (within each Cargo.toml's requirements), contributed to the infra/deps updater registry.
               - Server:
@@ -34487,13 +34849,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `unmatchedApiResponse`
           - `unsupportedEndpointResponse`
       - Cross-plugin:
-        - Imported by: 257 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
+        - Imported by: 258 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
           - `apps` ×76
           - `conversations` ×35
           - `infra` ×23
           - `debug` ×20
-          - `tasks` ×20
           - `page` ×19
+          - `tasks` ×19
           - `primitives` ×15
           - `reports` ×6
           - `ui` ×6
@@ -34504,6 +34866,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network` ×3
           - `active-data` ×2
           - `apps-core` ×2
+          - `companions` ×2
           - `config_v2` ×2
           - `history` ×2
           - `screenshot` ×2
@@ -34511,10 +34874,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `backup`
           - `code-explorer`
           - `hints`
-          - `menu-bar`
           - `release`
           - `search/engine`
           - `shell/notifications`
+          - `wish`
       - Exemptions:
         - Exempts itself from:
           - `endpoints/no-raw-web-fetch` — `web` (sanctioned)
@@ -34987,12 +35350,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Register: `file-sink-exit-flush`
     - **`file-watcher`** — defineFileWatcher: the one declared in-process file watcher — a named, described declaration (static policy: extensions, ignore, debounce, ceiling, writesWhileOpen, depth, mainOnly) whose start({dirs, label, onChange, onLost}) — start({files, …}) for a writesWhileOpen one, which follows writes to the named files only (kqueue on darwin, one descriptor per file; every follow of a directory shares one subscription) — opens instances over one @parcel/watcher engine (debounce + ceiling flush; no timer — a dropped event is reported to onLost, the one backstop). Records per declaration its open instances, last change batch and a ring of handler runs for the Background activity catalog (onWatcherActivity / listFileWatchers / fileWatcherRecentRuns). The cli barrel's watchForCommand is the same engine for a foreground command, with no registry. acquireDirWatch({dir, scope, onChange}) is the shared directory-watch hub: refcounted native watches, a dir under a watched root riding its watch (a watcher never moved off a live root: a root opening above leaves it where it is), with subtree or children (depth-1 listing) scope — a children request with no root above it opening only a single-directory watch (depth children), never a recursive one. On macOS a children watch is kqueue's (a descriptor on the dir and each entry, budgeted — a dir past the budget rides FSEvents), so watching / or ~ puts nothing on fseventsd; every other FSEvents watch with no ignore rides the process's stream pool — one stream per watched root, a dir under an open recursive stream riding it, whatever declaration asks (fsEventsStreams reads it).
       - Cross-plugin:
-        - Imported by: 44 plugins — full list in [`plugins/infra/plugins/file-watcher/REFERENCE.md`](../plugins/infra/plugins/file-watcher/REFERENCE.md)
+        - Imported by: 45 plugins — full list in [`plugins/infra/plugins/file-watcher/REFERENCE.md`](../plugins/infra/plugins/file-watcher/REFERENCE.md)
           - `infra` ×15
           - `debug` ×10
           - `build` ×5
           - `conversations` ×5
           - `apps` ×2
+          - `companions/browser-extension`
           - `config_v2`
           - `framework/cli/await`
           - `integrations/google-maps/browser-config`
@@ -35885,7 +36249,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exempts itself from: `boundaries/no-platform-api` — `server/internal/sweep.ts` (debt)
         - **`user-path`** — Which host paths a synchronous fs call may touch: AppPath (a path the app owns — its data dirs, its checkout; the only kind a sync fs call in runtime code may take) and UserPath (one the user or their config chose), with the type-aware lint that refuses a sync fs call on any path not proven app-owned — so a macOS Files & Folders prompt can never freeze a backend's JS thread, whether or not anyone marked the user's path.
           - Cross-plugin:
-            - Imported by: 107 plugins — full list in [`plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md`](../plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md)
+            - Imported by: 108 plugins — full list in [`plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md`](../plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md)
               - `infra` ×38
               - `framework` ×20
               - `apps` ×8
@@ -35896,12 +36260,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `database` ×3
               - `release` ×3
               - `code-explorer` ×2
+              - `companions` ×2
               - `fields` ×2
               - `primitives` ×2
               - `backup/sources/project-memory`
               - `conversations/runtime-sdk`
               - `integrations/youtube/audio-fetch`
-              - `menu-bar`
               - `reports/outbox/file`
               - `review/plugin-changes`
               - `toolchain`
@@ -36941,7 +37305,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `namespaceUrl`
           - `resolveNamespaceAlias`
       - Cross-plugin:
-        - Imported by: 79 plugins — full list in [`plugins/infra/plugins/namespace/REFERENCE.md`](../plugins/infra/plugins/namespace/REFERENCE.md)
+        - Imported by: 80 plugins — full list in [`plugins/infra/plugins/namespace/REFERENCE.md`](../plugins/infra/plugins/namespace/REFERENCE.md)
           - `apps` ×13
           - `framework` ×13
           - `debug` ×12
@@ -36951,12 +37315,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `plugin-meta` ×3
           - `primitives` ×3
           - `tasks` ×3
+          - `companions` ×2
           - `database` ×2
           - `release` ×2
           - `reports` ×2
           - `auth`
           - `backup`
-          - `menu-bar`
       - Exemptions:
         - Exempts itself from:
           - `namespace:no-hand-built-url` — `core/namespace.ts`, `check/index.ts` (sanctioned)
@@ -37068,7 +37432,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `worktreeDataDir`
           - `worktreesDir`
       - Cross-plugin:
-        - Imported by: 130 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
+        - Imported by: 131 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
           - `infra` ×31
           - `framework` ×20
           - `apps` ×18
@@ -37082,12 +37446,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `release` ×3
           - `reports` ×3
           - `code-explorer` ×2
+          - `companions` ×2
           - `database` ×2
           - `integrations` ×2
           - `stats` ×2
           - `apps-core/app-preload`
           - `config_v2`
-          - `menu-bar`
           - `review/plugin-changes`
           - `shell/document-head`
           - `tasks`
@@ -37627,7 +37991,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `runtimeNamespace`
           - `servingSocketPath`
       - Cross-plugin:
-        - Imported by: 72 plugins — full list in [`plugins/infra/plugins/runtime-identity/REFERENCE.md`](../plugins/infra/plugins/runtime-identity/REFERENCE.md)
+        - Imported by: 73 plugins — full list in [`plugins/infra/plugins/runtime-identity/REFERENCE.md`](../plugins/infra/plugins/runtime-identity/REFERENCE.md)
           - `infra` ×16
           - `debug` ×14
           - `conversations` ×9
@@ -37639,6 +38003,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework` ×2
           - `release` ×2
           - `reports` ×2
+          - `companions/browser-extension`
           - `config_v2`
           - `plugin-meta/barrel-import`
           - `primitives/log-channels/log-files`
@@ -37718,7 +38083,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SPAN_MEASURES`
           - `waitSplit`
       - Cross-plugin:
-        - Imported by: 77 plugins — full list in [`plugins/infra/plugins/runtime-profiler/REFERENCE.md`](../plugins/infra/plugins/runtime-profiler/REFERENCE.md)
+        - Imported by: 78 plugins — full list in [`plugins/infra/plugins/runtime-profiler/REFERENCE.md`](../plugins/infra/plugins/runtime-profiler/REFERENCE.md)
           - `infra` ×22
           - `debug` ×21
           - `apps` ×7
@@ -37730,6 +38095,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives` ×2
           - `reports` ×2
           - `auth`
+          - `companions/browser-extension`
           - `config_v2`
           - `integrations/google-maps/browser-config`
           - `network/live/change-feed`
@@ -37800,6 +38166,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/browser/engine`
               - `apps/events/sources/url-extract`
               - `apps/prototypes/thumbnails`
+              - `companions/browser-extension`
               - `debug/profiling/tab-memory`
               - `framework/tooling/e2e-harness`
               - `infra/mcp/browser`
@@ -39302,163 +39669,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `page/video`
           - `primitives/file-viewer/media`
 
-- **`menu-bar`** — The menu-bar panel the native helper opens: the menu-bar app (unlisted, colorMode light — the panel is designed light) mounted at /home/menu-bar, whose whole layout is the panel (no pane; chromeless under ?embed=1), whose body is the MenuBar.Section slot, drawn in its own theme (a native menu's: the system font, 13px rows, a 2–16px spacing ramp, the menu palette), plus the header (the spiral and a status line joined from MenuBar.Status parts, whose attention lights the menu-bar icon's dot) and the footer ('Running · <host>', opening equin). useNativeHost() reads the helper's bridge (window.equinNative): pending, absent (a plain browser), or present with its platform, capabilities and methods — a capability the host lacks has no method. useNativeApps() reads the device's installed and pinned apps from the helper that keeps them (pending / unavailable / ready / error), re-read on panel focus and after a pin. usePanelInput() is the panel's typed text (the task field writes it, the app grid filters by it), kept as a draft across reloads. MenuBar.Mount runs headless work while the panel page is alive; the panel reports its content height to the helper, shows no toasts, and reloads itself while hidden once main serves a newer web bundle.
-  - Web:
-    - Slots:
-      - `MenuBar.Section`
-      - `MenuBar.Status`
-      - `MenuBar.Mount`
-    - Slot contributors:
-      - `MenuBar.Section` ← `menu-bar`
-      - `MenuBar.Section` ← `menu-bar.app-grid`
-      - `MenuBar.Section` ← `shell.notifications.native`
-      - `MenuBar.Section` ← `tasks.menu-bar-task`
-      - `MenuBar.Status` ← `conversations.menu-bar-status`
-      - `MenuBar.Mount` ← `shell.notifications.native`
-    - Contributes:
-      - `Apps.App` "Menu bar" → `MenuBarPanel`
-      - `ThemeEngine.Theme` "Menu bar"
-      - `MenuBar.Section` "Header" → `PanelHeader`
-      - `MenuBar.Section` "Footer" → `PanelFooter`
-    - Uses: 26 symbols — full list in [`plugins/menu-bar/REFERENCE.md`](../plugins/menu-bar/REFERENCE.md)
-      - `primitives/css/spacing` ×3
-      - `primitives/persistent-draft` ×2
-      - `primitives/slot-render` ×2
-      - `apps-core.Apps`
-      - `build.useStaleFrontend`
-      - `primitives/css/clip.Clip`
-      - `primitives/css/fill.Fill`
-      - `primitives/css/rigid.rigidClass`
-      - `primitives/css/row.Row`
-      - `primitives/css/scroll.Scroll`
-      - `primitives/css/status-dot.StatusDot`
-      - `primitives/css/surface.Surface`
-      - `primitives/css/text.Text`
-      - `primitives/css/ui-kit.cn`
-      - `primitives/dom/element-size.useResizeObserver`
-      - `primitives/dom/render-mode.useBrowserValue`
-      - `primitives/dom/web-storage.defineStore`
-      - `primitives/loading.Loading`
-      - `primitives/log-channels.clientLog`
-      - `shell/toast.useSuppressToasts`
-      - `ui/logo.Logo`
-      - `ui/theme-engine.ThemeEngine`
-    - Exports (types):
-      - `MenuBarStatus`
-      - `NativeAppsState`
-      - `NativeHost`
-    - Exports (values):
-      - `MenuBar`
-      - `useNativeApps`
-      - `useNativeHost`
-      - `usePanelInput`
-  - Machine:
-    - Uses:
-      - `apps-core/app-manifest.appIconSvg`
-      - `infra/endpoints.implementMachine`
-    - Routes: `GET /api/menu-bar/apps`
-  - Core:
-    - Uses:
-      - `infra/endpoints.defineEndpoint`
-      - `packages/list-bound.wholeList`
-      - `primitives/pane.defineApp`
-      - `ui/icons.symbol`
-    - Exports (types):
-      - `AppCatalog`
-      - `CatalogApp`
-      - `EquinNativeBridge`
-      - `NativeApps`
-      - `NativeCapabilities`
-      - `NativeHostInfo`
-      - `NativeMaterial`
-      - `NativeNotification`
-    - Exports (values):
-      - `AppCatalogSchema`
-      - `BRIDGE_METHODS`
-      - `CatalogAppSchema`
-      - `getAppCatalog`
-      - `menuBarApp`
-      - `NativeAppsSchema`
-      - `NativeHostInfoSchema`
-      - `OPEN_LINK_SCHEME`
-      - `openLink`
-  - Deps:
-    - Uses:
-      - `infra/deps.defineDep`
-      - `infra/deps.Ready`
-      - `infra/deps/rust.cargoBuild`
-      - `infra/deps/rust.CargoSource`
-    - Exports (values):
-      - `menuBarHelper`
-      - `menuBarHelperIcon`
-  - Cross-plugin:
-    - Uses tokens:
-      - `ui/tokens/color-palette --success`
-      - `ui/tokens/density --space-md`
-      - `ui/tokens/shape --spacing`
-      - `ui/tokens/type-scale --font-weight-semibold`
-    - Imported by:
-      - `conversations/menu-bar-status`
-      - `menu-bar/app-grid`
-      - `menu-bar/open-in-window`
-      - `shell/notifications/native`
-      - `tasks/menu-bar-task`
-  - Plugins:
-    - **`app-grid`** — The menu-bar panel's app grid (MenuBar.Section 'apps'): every Apps.App but the current app and the home app (the desktop included: its URL is its base path as a route prefix) — as the icons DataView over the installedApp row kind, laid out as a menu's grid (viewOptions.icons.menu: four cells sharing the panel's width) (the tile and name Home and the launcher draw), each tile wearing its app's badge, filtered by name as the panel's field is typed (usePanelInput). Scrolling past four rows; drag reorders it, persisted per view (defineDataView('menu-bar.apps')). A tile opens its app in its own OS window through the helper (launchApp) — every app has its shim, kept by the helper ahead of any click (useNativeApps, the helper's installed set); in the default browser (openUrl) only for an app with no shim (a helper that keeps no apps); in this tab when the panel is not inside the helper. On hover a tile offers a pin (AppGridActions 'pin'): keeps the app in the Dock / GNOME dash through the helper's bridge (pinApp — a device power, never the server's) — hidden once pinned (re-read on each panel open, so it follows the Dock itself) or where the helper cannot pin, a spinner while pending, an error mark when the pin failed.
-      - Web:
-        - Slots: `item-actions`
-        - Slot contributors: `item-actions` ← `menu-bar.app-grid`
-        - Contributes:
-          - `MenuBar.Section` "Apps" → `MenuBarAppGrid`
-          - `item-actions` "pin" → `PinAppAction`
-        - Uses: 25 symbols — full list in [`plugins/menu-bar/plugins/app-grid/REFERENCE.md`](../plugins/menu-bar/plugins/app-grid/REFERENCE.md)
-          - `menu-bar` ×5
-          - `primitives/data-view` ×5
-          - `apps-core/app-launcher` ×3
-          - `apps-core` ×3
-          - `primitives/css/ui-kit` ×2
-          - `apps-core/tabs.useActivateApp`
-          - `network/live/live-state.mapResource`
-          - `primitives/css/pin.Pin`
-          - `primitives/css/scroll.Scroll`
-          - `primitives/css/spacing.insetClass`
-          - `primitives/icon-button.IconButton`
-          - `primitives/loading.Loading`
-      - Cross-plugin:
-        - Uses tokens:
-          - `ui/tokens/color-palette --destructive`
-          - `ui/tokens/color-palette --primary`
-          - `ui/tokens/color-palette --primary-foreground`
-          - `ui/tokens/density --space-xs`
-          - `ui/tokens/shape --spacing`
-    - **`app-window`** — An installed app window's bridge to the native helper (window.equinWindow), read once per document: useNativeFileDrag() is the window's native file drag — drag host paths out as real files, the drag Finder starts, so any app or website takes them — or null in a browser tab, on a platform without it, or before the window has answered. inAppWindow() says whether this document is such a window at all.
-      - Cross-plugin:
-        - Imported by:
-          - `apps/file-explorer/browser`
-          - `menu-bar/open-in-window`
-      - Web:
-        - Exports (types): `NativeFileDrag`
-        - Exports (values):
-          - `inAppWindow`
-          - `useNativeFileDrag`
-      - Core:
-        - Exports (types):
-          - `AppWindowInfo`
-          - `EquinWindowBridge`
-          - `FileDragOutcome`
-        - Exports (values):
-          - `AppWindowInfoSchema`
-          - `FileDragOutcomeSchema`
-          - `WINDOW_BRIDGE_METHODS`
-    - **`open-in-window`** — Open in app window: a row in the action bar's view-options popover that hands this browser tab's page to the menu-bar helper as an equin://open link, which opens it in a new window of the installed app (macOS and desktop Linux). Never shown inside an app window.
-      - Web:
-        - Contributes: `ActionBar.ViewOption` → `OpenInWindowRow`
-        - Uses:
-          - `menu-bar/app-window.inAppWindow`
-          - `primitives/css/control-panel.ControlPanel`
-          - `shell/action-bar.ActionBar`
-          - `ui/icons.Icon`
-
 - **`music`** — Umbrella for music building blocks shared across apps, knowing pitch classes and strings only: the chord box (a chord's degree colour, numeral and tile).
   - Plugins:
     - **`chord-box`** — The chord box: <ChordBox> (a frame painted in the colour of its numeral's number — filled tile, given or empty — holding its numeral and name, with a full-bleed hit button behind the content and now / selected states), <ChordNumeral> (the Roman numeral in the display serif, its mark raised in the sans), chordToneStyle / chordColour (the degree's --chord-N colour and tile depth as the --fn custom properties the .chord-tone paint reads), and chordPaint — the four named paints (tile, tint, tint-quiet, ghost) every chord surface applies by name instead of re-stating a chord colour, with .chord-caption for a reading under a numeral (V/V, I/3) in the paint's own ink. Knows degrees and strings only, so any app can draw a chord the same way.
@@ -39903,7 +40113,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveValueOn`
           - `sliceRange`
       - Cross-plugin:
-        - Imported by: 349 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+        - Imported by: 351 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
           - `apps` ×87
           - `conversations` ×74
           - `debug` ×36
@@ -39923,6 +40133,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui` ×3
           - `apps-core` ×2
           - `backup` ×2
+          - `companions` ×2
           - `config_v2` ×2
           - `database` ×2
           - `hints` ×2
@@ -40318,7 +40529,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `unresolved`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/color-palette --destructive`
-            - Imported by: 308 plugins — full list in [`plugins/network/plugins/live/plugins/live-state/REFERENCE.md`](../plugins/network/plugins/live/plugins/live-state/REFERENCE.md)
+            - Imported by: 310 plugins — full list in [`plugins/network/plugins/live/plugins/live-state/REFERENCE.md`](../plugins/network/plugins/live/plugins/live-state/REFERENCE.md)
               - `apps` ×84
               - `conversations` ×49
               - `debug` ×31
@@ -40332,6 +40543,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `plugin-meta` ×5
               - `auth` ×4
               - `apps-core` ×3
+              - `companions` ×3
               - `integrations` ×3
               - `network` ×3
               - `review` ×3
@@ -40345,7 +40557,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `code-explorer/commit-detail`
               - `fields/secret/config`
               - `history/dialog`
-              - `menu-bar/app-grid`
               - `reorder`
               - `screenshot`
               - `search/quick-find`
@@ -41046,8 +41257,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps-core/app-usage`
           - `auth`
           - `backup`
+          - `companions/menu-bar`
           - `config_v2`
-          - `menu-bar`
           - `network/live`
           - `release`
           - `review/plugin-changes`
@@ -41414,19 +41625,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `withForegroundPriority`
     - **`string-hash`** — Portable string hashes in plain JS (no node:crypto, no Bun.hash), so every host — the Bun server, central and a browser page — computes the same value: hash53 (cyrb53, a 53-bit number, optionally seeded), hashHex (two seeded cyrb53s, ~106 bits as hex), hash64 (a 64-bit bigint), sha256Hex (a synchronous SHA-256, identical to node:crypto's hex digest), createSha256 (the same SHA-256, incremental over strings and bytes) and sha1Hex (SHA-1 for values already stored as one).
       - Cross-plugin:
-        - Imported by: 44 plugins — full list in [`plugins/packages/plugins/string-hash/REFERENCE.md`](../plugins/packages/plugins/string-hash/REFERENCE.md)
+        - Imported by: 45 plugins — full list in [`plugins/packages/plugins/string-hash/REFERENCE.md`](../plugins/packages/plugins/string-hash/REFERENCE.md)
           - `apps` ×13
           - `database` ×5
           - `network` ×5
           - `framework` ×3
           - `reports` ×3
           - `ui` ×3
+          - `companions` ×2
           - `debug` ×2
           - `infra` ×2
           - `page` ×2
           - `plugin-meta` ×2
           - `map`
-          - `menu-bar`
           - `primitives/dom/web-storage`
           - `tasks/orchestration/watch`
       - Core:
@@ -41482,7 +41693,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from: `boundaries/no-platform-api` — `core/internal/ticket-line.ts` (debt)
     - **`timed-fs`** — The file reads, listings, stats and glob scans every non-browser process makes, timed: node:fs's read calls under their own names and types (readFile / readdir / stat / lstat / access / realpath / readlink and their *Sync twins, existsSync) plus scanGlob / scanGlobSync over a Bun.Glob, each call metered while it runs (installFsWaitMeter — the backend's profiler shows one past FS_WAIT_FLOOR_MS in progress and charges it) and, once it returns past the floor, handed to onSlowFsCall subscribers, under a named wait layer (fs-read / fs-readdir / fs-stat / fs-glob) — so a disk stall names itself instead of reading as the caller's own work. A leaf (node builtins only), enforced by the timed-fs/no-untimed-fs-read lint.
       - Cross-plugin:
-        - Imported by: 170 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
+        - Imported by: 171 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
           - `infra` ×49
           - `framework` ×25
           - `apps` ×15
@@ -41501,6 +41712,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `stats` ×2
           - `apps-core/app-preload`
           - `code-explorer`
+          - `companions/browser-extension`
           - `hints/ask`
           - `toolchain`
           - `ui/icons/icon-sets`
@@ -46361,10 +46573,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/shape --spacing`
     - **`relocate`** — `./equin plugin move <from> <to>` — relocate or rename a plugin (and every descendant) in one step: git mv the folder and its config dir, then rewrite every reference the plugin-refs locator finds (path literals, @plugins specifiers, dot ids, relative links) by exact range. Records each move in a committed ledger that every build replays onto its namespace's saved user config (folder moved, reorder keys re-rooted, hash chain kept).
       - Core:
-        - Uses: 25 symbols — full list in [`plugins/plugin-meta/plugins/relocate/REFERENCE.md`](../plugins/plugin-meta/plugins/relocate/REFERENCE.md)
+        - Uses: 27 symbols — full list in [`plugins/plugin-meta/plugins/relocate/REFERENCE.md`](../plugins/plugin-meta/plugins/relocate/REFERENCE.md)
           - `config_v2` ×8
-          - `config_v2/ledger` ×6
-          - `framework/plugin-id` ×3
+          - `config_v2/ledger` ×7
+          - `framework/plugin-id` ×4
           - `infra/host-fs/user-path` ×3
           - `packages/timed-fs` ×3
           - `framework/tooling.noteRepoWrites`
@@ -46659,6 +46871,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps-core/app-launcher`
           - `apps/mail/reading-pane`
           - `apps/website/pages/apps`
+          - `companions/browser-extension`
           - `conversations/agents`
           - `conversations/conversation-category`
           - `conversations/conversation-ui/item`
@@ -46972,7 +47185,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `CopyButton`
           - `useCopyToClipboard`
       - Cross-plugin:
-        - Imported by: 34 plugins — full list in [`plugins/primitives/plugins/copy-to-clipboard/REFERENCE.md`](../plugins/primitives/plugins/copy-to-clipboard/REFERENCE.md)
+        - Imported by: 35 plugins — full list in [`plugins/primitives/plugins/copy-to-clipboard/REFERENCE.md`](../plugins/primitives/plugins/copy-to-clipboard/REFERENCE.md)
           - `apps` ×10
           - `primitives` ×5
           - `conversations` ×4
@@ -46981,6 +47194,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra` ×2
           - `review` ×2
           - `build/build-logs`
+          - `companions/browser-extension/accounts-row`
           - `fields/identifier/table`
           - `plugin-meta/exhibits`
           - `tasks/worktree-identity`
@@ -47128,13 +47342,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui` ×5
               - `apps-core` ×4
               - `plugin-meta` ×3
-              - `tasks` ×3
               - `fields` ×2
               - `framework` ×2
               - `integrations` ×2
               - `map` ×2
               - `shell` ×2
+              - `tasks` ×2
               - `active-data/go`
+              - `companions/browser-extension`
               - `config_v2/settings`
               - `layouts/route-fallback`
               - `network/live/live-state`
@@ -47161,10 +47376,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `review` ×2
               - `active-data/go`
               - `apps-core/surface`
+              - `companions/panel`
               - `config_v2/settings`
               - `hints/ask`
               - `integrations/google-maps`
-              - `menu-bar`
               - `plugin-meta/plugin-view/file-tree`
               - `screenshot`
               - `tasks/task-graph`
@@ -47351,9 +47566,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `hints` ×2
               - `ui` ×2
               - `apps-core/surface`
+              - `companions/menu-bar/open-in-window`
               - `framework/cli/build/experimental-marks`
               - `fullscreen`
-              - `menu-bar/open-in-window`
               - `reports/panel-overflow`
               - `shell/global-action-bar`
               - `tag-tree/picker`
@@ -47403,14 +47618,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Fill`
               - `fillClasses`
           - Cross-plugin:
-            - Imported by: 179 plugins — full list in [`plugins/primitives/plugins/css/plugins/fill/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/fill/REFERENCE.md)
+            - Imported by: 178 plugins — full list in [`plugins/primitives/plugins/css/plugins/fill/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/fill/REFERENCE.md)
               - `apps` ×51
               - `primitives` ×31
               - `conversations` ×26
               - `debug` ×18
               - `page` ×11
               - `ui` ×9
-              - `tasks` ×8
+              - `tasks` ×7
               - `infra` ×4
               - `plugin-meta` ×3
               - `review` ×3
@@ -47422,7 +47637,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps-core/app-launcher`
               - `auth`
               - `code-explorer/commit-detail`
-              - `menu-bar`
+              - `companions/panel`
               - `tag-tree/picker`
         - **`grid`** — Responsive/uniform grid layout primitive: <Grid minCellWidth> lays out a wrapping, equal-width card grid via a closed prop surface — not a raw grid-template passthrough.
           - Web:
@@ -47753,8 +47968,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tasks` ×2
               - `apps-core/app-rail`
               - `audience/developer-mark`
+              - `companions/menu-bar/app-grid`
               - `map`
-              - `menu-bar/app-grid`
               - `plugin-meta/exhibits`
               - `reorder/editor`
               - `screenshot/draw-on-app`
@@ -47850,12 +48065,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives` ×20
               - `debug` ×13
               - `page` ×8
-              - `tasks` ×8
+              - `tasks` ×7
               - `ui` ×6
               - `plugin-meta` ×4
               - `review` ×4
               - `build` ×3
               - `backup` ×2
+              - `companions` ×2
               - `config_v2` ×2
               - `infra` ×2
               - `shell` ×2
@@ -47863,7 +48079,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `auth`
               - `code-explorer/commit-detail`
               - `hints/ask`
-              - `menu-bar`
               - `reorder/node-types/header`
               - `stats/commits`
         - **`row`** — Generic interactive row primitive (list, menu, nav, tree, and collapsible section-header rows) with a sanctioned home so ad-hoc rounded+padded interactive markup routes through one primitive.
@@ -47900,7 +48115,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette` ×6
               - `ui/tokens/density` ×4
               - `ui/tokens/shape` ×2
-            - Imported by: 71 plugins — full list in [`plugins/primitives/plugins/css/plugins/row/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/row/REFERENCE.md)
+            - Imported by: 72 plugins — full list in [`plugins/primitives/plugins/css/plugins/row/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/row/REFERENCE.md)
               - `apps` ×15
               - `ui` ×14
               - `page` ×11
@@ -47908,12 +48123,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations` ×7
               - `plugin-meta` ×3
               - `tasks` ×3
+              - `companions` ×2
               - `reorder` ×2
               - `shell` ×2
               - `code-explorer/file-resolve`
               - `config_v2/settings`
               - `debug/trace/pane`
-              - `menu-bar`
               - `search/quick-find`
           - Exemptions:
             - Exempts itself from:
@@ -47949,8 +48164,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `debug` ×10
               - `page` ×5
               - `build` ×2
+              - `companions` ×2
               - `infra` ×2
-              - `menu-bar` ×2
               - `plugin-meta` ×2
               - `review` ×2
               - `code-explorer/file-resolve`
@@ -48070,7 +48285,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Stack`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Imported by: 443 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
+            - Imported by: 445 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
               - `apps` ×109
               - `conversations` ×77
               - `primitives` ×54
@@ -48078,13 +48293,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui` ×31
               - `page` ×27
               - `plugin-meta` ×16
-              - `tasks` ×15
+              - `tasks` ×14
               - `fields` ×9
               - `infra` ×7
               - `apps-core` ×6
               - `stats` ×6
               - `build` ×5
               - `auth` ×4
+              - `companions` ×4
               - `review` ×4
               - `shell` ×4
               - `integrations` ×3
@@ -48095,7 +48311,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `config_v2` ×2
               - `framework` ×2
               - `layouts` ×2
-              - `menu-bar` ×2
               - `screenshot` ×2
               - `hints/ask`
               - `history/dialog`
@@ -48105,6 +48320,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `reports/launch-fix`
               - `search/quick-find`
               - `tag-tree/picker`
+              - `wish`
         - **`spinner`** — Spinner for loading states: the spinning refresh glyph (default) or, with shape="ring", a thin ring (hover-tone track, current-colour arc). Always spinning by default; spinning={false} pauses.
           - Web:
             - Uses:
@@ -48113,27 +48329,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `SpinnerProps`
             - Exports (values): `Spinner`
           - Cross-plugin:
-            - Imported by:
-              - `apps/browser/tabs`
-              - `apps/deploy/remote-deploy`
-              - `apps/mail/attachments`
-              - `apps/mail/sync-status`
-              - `apps/pages/page-tree`
-              - `apps/places/places-map`
-              - `apps/sonata/sources/ultimate-guitar`
-              - `apps/sonata/sources/ultimate-guitar/alignment`
-              - `apps/sonata/transcription`
-              - `apps/website/improve`
+            - Imported by: 21 plugins — full list in [`plugins/primitives/plugins/css/plugins/spinner/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spinner/REFERENCE.md)
+              - `apps` ×10
+              - `primitives` ×3
+              - `conversations` ×2
               - `build`
-              - `conversations/agent-thread`
-              - `conversations/conversation-view/op-status`
+              - `companions/browser-extension`
               - `debug/worktree-cleanup`
               - `hints/ask`
               - `infra/claude-cli/sign-in`
               - `page/place`
-              - `primitives/folder-picker`
-              - `primitives/loading`
-              - `primitives/sync-status`
         - **`status-dot`** — Status-indicator dot primitive: a rounded inline-block span painted either FILLED (colorClass) or as a HOLLOW 1px ring (ringClass), so an empty dot keeps its size in running text as well as in a flex row. Its diameter follows the ambient ControlSize through the density group's status-dot tokens (defaults: xs 4px, sm 6px, md 8px, lg 10px).
           - Web:
             - Uses:
@@ -48161,10 +48366,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `build` ×2
               - `shell` ×2
               - `tasks` ×2
+              - `companions/panel`
               - `config_v2/settings`
               - `hints/ask`
               - `infra/claude-cli`
-              - `menu-bar`
               - `primitives/data-view/view-core`
               - `runs/run-outcome`
         - **`sticky`** — Sticky positioning layout primitive: <Sticky edge offset layer> pins a header/footer to a scroll edge with a z-layer-aware stacking level; stickyOffsetPx turns a measured height into the exact offset a box stacked under it pins at.
@@ -48242,15 +48447,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives` ×8
               - `page` ×4
               - `infra` ×3
+              - `companions` ×2
               - `map` ×2
               - `conversations/agents`
               - `debug/queue`
               - `fields/json/config`
               - `hints/ask`
-              - `menu-bar`
               - `shell/notifications`
               - `stats`
-              - `tasks/menu-bar-task`
           - Exemptions:
             - Exempted by: `primitives/css/ui-kit` (0 debt)
         - **`switch`** — On/off switch primitive: SwitchIndicator is the presentational track+knob (a span with no role or handler, safe inside something that is already the click target), and Switch wraps it in its own role=switch button for standalone use.
@@ -48313,7 +48517,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×37
               - `ui/tokens/color-palette` ×6
               - `ui/tokens/font-family` ×2
-            - Imported by: 428 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+            - Imported by: 430 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
               - `apps` ×112
               - `conversations` ×85
               - `primitives` ×47
@@ -48321,7 +48525,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `page` ×25
               - `ui` ×18
               - `plugin-meta` ×15
-              - `tasks` ×15
+              - `tasks` ×14
               - `fields` ×11
               - `infra` ×8
               - `stats` ×6
@@ -48329,6 +48533,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `auth` ×4
               - `integrations` ×4
               - `review` ×4
+              - `companions` ×3
               - `reorder` ×3
               - `shell` ×3
               - `active-data` ×2
@@ -48343,9 +48548,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `history/dialog`
               - `layouts/route-fallback`
               - `media/player`
-              - `menu-bar`
               - `search/quick-find`
               - `tag-tree/picker`
+              - `wish`
           - Core:
             - Exports (types):
               - `CssUtility`
@@ -48642,7 +48847,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `page` ×27
               - `debug` ×25
               - `ui` ×23
-              - `tasks` ×19
+              - `tasks` ×18
               - `fields` ×12
               - `apps-core` ×10
               - `plugin-meta` ×10
@@ -48655,11 +48860,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `config_v2` ×4
               - `integrations` ×4
               - `active-data` ×3
+              - `companions` ×3
               - `framework` ×3
               - `backup` ×2
               - `hints` ×2
               - `layouts` ×2
-              - `menu-bar` ×2
               - `screenshot` ×2
               - `audience/developer-mark`
               - `code-explorer/commit-detail`
@@ -49431,10 +49636,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps-core/app-launcher`
           - `auth`
           - `build/build-logs`
+          - `companions/menu-bar/app-grid`
           - `config_v2/settings`
           - `history/dialog`
           - `integrations/google-maps/usage`
-          - `menu-bar/app-grid`
           - `page/links`
           - `runs`
           - `shell/notifications`
@@ -50258,10 +50463,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps` ×14
               - `shell` ×2
               - `active-data/go`
+              - `companions/panel`
               - `conversations/conversation-view/jsonl-viewer`
               - `hints`
               - `layouts/miller`
-              - `menu-bar`
               - `page/editor`
               - `screenshot`
               - `ui/ambient-field`
@@ -50365,12 +50570,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by: 22 plugins — full list in [`plugins/primitives/plugins/dom/plugins/render-mode/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/render-mode/REFERENCE.md)
               - `primitives` ×11
               - `apps` ×2
+              - `companions/panel`
               - `conversations/conversation-view/jsonl-viewer/steady-reveal`
               - `debug/timeline`
               - `fullscreen`
               - `map/google`
               - `media/player`
-              - `menu-bar`
               - `screenshot/draw-on-app`
               - `tasks/worktree-identity`
               - `ui/theme-engine`
@@ -50491,23 +50696,24 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useStore`
               - `WebStorageSlots`
           - Cross-plugin:
-            - Imported by: 50 plugins — full list in [`plugins/primitives/plugins/dom/plugins/web-storage/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/web-storage/REFERENCE.md)
+            - Imported by: 51 plugins — full list in [`plugins/primitives/plugins/dom/plugins/web-storage/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/web-storage/REFERENCE.md)
               - `primitives` ×15
               - `apps` ×13
               - `conversations` ×6
               - `apps-core` ×2
               - `framework` ×2
               - `reports` ×2
+              - `companions/browser-extension`
               - `config_v2`
               - `hints/ask`
               - `layouts/miller`
               - `map`
-              - `menu-bar`
               - `network/live/live-state`
               - `page/editor`
               - `shell/global-action-bar`
               - `tasks/task-draft-form`
               - `ui/theme-engine`
+              - `wish`
           - Exemptions:
             - Exempts itself from: `web-storage/no-raw-web-storage` — `web/internal/store.ts` (sanctioned)
             - Exempted by: `primitives/dom/web-storage` (0 debt)
@@ -50649,7 +50855,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exempts itself from:
               - `frame/no-raw-frame` — `web/components/frames.tsx` (sanctioned)
               - `namespace:no-hand-built-url` — `core/classify-url.ts` (sanctioned)
-            - Exempted by: `primitives/embed/frame` (0 debt)
+            - Exempted by:
+              - `companions/browser-extension` (0 debt)
+              - `primitives/embed/frame` (0 debt)
           - Plugins:
             - **`agent`** — The content-frame channel's protocol and its frame agent: the script injected into every content document, answering the parent's closed set of requests over a MessagePort.
               - Cross-plugin:
@@ -51159,8 +51367,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps` ×46
           - `conversations` ×22
           - `primitives` ×22
-          - `tasks` ×8
           - `page` ×7
+          - `tasks` ×7
           - `debug` ×5
           - `config_v2` ×4
           - `infra` ×3
@@ -51170,14 +51378,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui` ×2
           - `apps-core/tab-bar`
           - `build`
+          - `companions/menu-bar/app-grid`
           - `fields/enum/column-config`
           - `fullscreen`
           - `map/google`
           - `media/player`
-          - `menu-bar/app-grid`
           - `network/live/live-state`
           - `plugin-meta/exhibits`
           - `tag-tree/picker`
+          - `wish/element-picker`
     - **`icon-picker`** — Searchable, categorized picker over the Material Symbols set: a windowed grid of runtime-symbol cells browsing and searching Google's vendored Material Symbols metadata; onSelect hands back the picked SavedSymbolName. avatar, the page icon button and the callout panel compose it.
       - Web:
         - Uses:
@@ -51259,7 +51468,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `seekPredicate`
     - **`latest-ref`** — Latest-value ref idiom as a primitive: useLatestRef(value) mirrors the latest value into a ref written in render (read only in callbacks/effects), and useEventCallback(fn) is the stable-identity callback built on it. The single sanctioned home + exemption for the idiom, so react-hooks/refs can be enforced at error.
       - Cross-plugin:
-        - Imported by: 83 plugins — full list in [`plugins/primitives/plugins/latest-ref/REFERENCE.md`](../plugins/primitives/plugins/latest-ref/REFERENCE.md)
+        - Imported by: 84 plugins — full list in [`plugins/primitives/plugins/latest-ref/REFERENCE.md`](../plugins/primitives/plugins/latest-ref/REFERENCE.md)
           - `primitives` ×33
           - `apps` ×24
           - `page` ×5
@@ -51269,6 +51478,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network` ×2
           - `shell` ×2
           - `build/serve-composition`
+          - `companions/browser-extension`
           - `debug/slow-ops`
           - `framework/browser-server/demo/scope`
           - `hints`
@@ -51499,7 +51709,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-size-body`
           - `ui/tokens/type-scale --font-weight-normal`
           - `ui/tokens/type-scale --line-height-body`
-        - Imported by: 231 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
+        - Imported by: 234 plugins — full list in [`plugins/primitives/plugins/loading/REFERENCE.md`](../plugins/primitives/plugins/loading/REFERENCE.md)
           - `apps` ×72
           - `conversations` ×23
           - `ui` ×23
@@ -51508,6 +51718,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks` ×14
           - `page` ×11
           - `build` ×6
+          - `companions` ×5
           - `plugin-meta` ×5
           - `review` ×4
           - `apps-core` ×3
@@ -51517,7 +51728,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `active-data` ×2
           - `integrations` ×2
           - `map` ×2
-          - `menu-bar` ×2
           - `network` ×2
           - `audience/view-option`
           - `backup`
@@ -51602,7 +51812,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-xs`
           - `ui/tokens/shape --radius`
           - `ui/tokens/shape --spacing`
-        - Imported by: 76 plugins — full list in [`plugins/primitives/plugins/log-channels/REFERENCE.md`](../plugins/primitives/plugins/log-channels/REFERENCE.md)
+        - Imported by: 77 plugins — full list in [`plugins/primitives/plugins/log-channels/REFERENCE.md`](../plugins/primitives/plugins/log-channels/REFERENCE.md)
           - `apps` ×14
           - `debug` ×14
           - `infra` ×10
@@ -51611,6 +51821,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework` ×5
           - `network` ×4
           - `build` ×2
+          - `companions` ×2
           - `plugin-meta` ×2
           - `reports` ×2
           - `tasks` ×2
@@ -51618,7 +51829,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps-core/app-preload`
           - `backup`
           - `integrations/youtube/audio-fetch`
-          - `menu-bar`
           - `primitives/log-channels/memory-persistence`
           - `release`
           - `stats/cost`
@@ -52984,7 +53194,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-md`
           - `ui/tokens/density --space-sm`
           - `ui/tokens/shape --spacing`
-        - Imported by: 207 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+        - Imported by: 208 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
           - `apps` ×77
           - `conversations` ×32
           - `debug` ×29
@@ -52994,6 +53204,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `plugin-meta` ×6
           - `primitives` ×6
           - `layouts` ×4
+          - `companions` ×2
           - `infra` ×2
           - `page` ×2
           - `reports` ×2
@@ -53007,7 +53218,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework/web-core`
           - `hints/ask`
           - `integrations/google-maps`
-          - `menu-bar`
           - `review`
           - `runs`
           - `screenshot`
@@ -53264,9 +53474,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives` ×7
           - `hints/ask`
           - `map`
-          - `menu-bar`
           - `page/editor`
           - `tasks/task-draft-form`
+          - `wish`
     - **`prompt-editor`** — Conversation-scoped prompt editor. Wraps the generic text-editor primitive and adds a FloatingAction slot for conversation-specific toolbar contributions (e.g. prompt templates).
       - Web:
         - Slots: `PromptEditorSlots.FloatingAction`
@@ -53394,7 +53604,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from: `sortable-list/no-raw-dnd-kit` — `web` (sanctioned)
     - **`relative-time`** — Formats a Date as a human-readable relative string (just now, Nm ago, Nh ago, Nd ago — or the short now / Nm / Nh / Nd), and a running duration as a clock (m:ss). Exposes formatRelativeTime(), <RelativeTime date={…} />, formatElapsed(), useNow() and <ElapsedTime since={…} />.
       - Cross-plugin:
-        - Imported by: 69 plugins — full list in [`plugins/primitives/plugins/relative-time/REFERENCE.md`](../plugins/primitives/plugins/relative-time/REFERENCE.md)
+        - Imported by: 70 plugins — full list in [`plugins/primitives/plugins/relative-time/REFERENCE.md`](../plugins/primitives/plugins/relative-time/REFERENCE.md)
           - `apps` ×24
           - `debug` ×15
           - `conversations` ×10
@@ -53403,6 +53613,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `build` ×3
           - `primitives` ×2
           - `active-data/commit-link`
+          - `companions/browser-extension/accounts-row`
           - `fields/date/table`
           - `framework/web-core`
           - `page/annotations/agent-notes/authorship`
@@ -53794,10 +54005,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useSurfaceShortcuts`
           - `useSurfaceSignal`
       - Cross-plugin:
-        - Imported by: 32 plugins — full list in [`plugins/primitives/plugins/shortcuts/REFERENCE.md`](../plugins/primitives/plugins/shortcuts/REFERENCE.md)
+        - Imported by: 33 plugins — full list in [`plugins/primitives/plugins/shortcuts/REFERENCE.md`](../plugins/primitives/plugins/shortcuts/REFERENCE.md)
           - `apps` ×16
           - `primitives` ×10
           - `apps-core` ×2
+          - `companions/browser-extension`
           - `hints`
           - `layouts/miller`
           - `media/player`
@@ -53871,13 +54083,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useDispatchOutcome`
           - `useSlotOrder`
       - Cross-plugin:
-        - Imported by: 95 plugins — full list in [`plugins/primitives/plugins/slot-render/REFERENCE.md`](../plugins/primitives/plugins/slot-render/REFERENCE.md)
+        - Imported by: 97 plugins — full list in [`plugins/primitives/plugins/slot-render/REFERENCE.md`](../plugins/primitives/plugins/slot-render/REFERENCE.md)
           - `apps` ×31
           - `primitives` ×15
           - `conversations` ×13
           - `apps-core` ×5
           - `ui` ×5
           - `shell` ×4
+          - `companions` ×3
           - `page` ×3
           - `tasks` ×3
           - `config_v2` ×2
@@ -53887,7 +54100,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `hints/help-menu`
           - `integrations/google-maps`
           - `map`
-          - `menu-bar`
           - `network/live`
           - `reorder/slot-middleware`
           - `review/plugin-changes`
@@ -55252,8 +55464,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 
 - **`reorder`** — Generic reorder primitive: every defineRenderSlot is unconditionally reorderable; use defineMountSlot for headless slots. Applies each slot's committed layout (order, hidden items, spacers, dividers, groups) everywhere slots render; a layout is edited in its config file or the Config pane's reorder-tree field. Generic reorder primitive: per-slot config_v2 directives for contribution order/visibility.
   - Web:
-    - Contributes: 287 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×287
+    - Contributes: 289 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×289
     - Uses:
       - `config_v2.ConfigV2`
       - `config_v2.useConfigResult`
@@ -55277,8 +55489,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `useLayoutOrder`
       - `useReorderedEntries`
   - Server:
-    - Contributes: 286 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.Register` ×286
+    - Contributes: 288 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.Register` ×288
     - Uses: `config_v2.ConfigV2`
     - Exports (values): `reorderDirectiveDescriptor`
   - Cross-plugin:
@@ -57144,10 +57356,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ActionBar.Item` ← `wish`
           - `ActionBar.ViewOption` ← `apps-core.surface`
           - `ActionBar.ViewOption` ← `audience.view-option`
+          - `ActionBar.ViewOption` ← `companions.menu-bar.open-in-window`
           - `ActionBar.ViewOption` ← `config_v2.git-defaults-preview`
           - `ActionBar.ViewOption` ← `framework.cli.build.experimental-marks`
           - `ActionBar.ViewOption` ← `fullscreen`
-          - `ActionBar.ViewOption` ← `menu-bar.open-in-window`
           - `ActionBar.Lead` ← `shell.health-report`
           - `ActionBar.Activity` ← `build`
           - `ActionBar.Glance` ← `build`
@@ -57161,11 +57373,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps-core/surface`
           - `audience/view-option`
           - `build`
+          - `companions/menu-bar/open-in-window`
           - `config_v2/git-defaults-preview`
           - `framework/cli/build/experimental-marks`
           - `fullscreen`
           - `hints/help-menu`
-          - `menu-bar/open-in-window`
           - `screenshot`
           - `screenshot/draw-on-app`
           - `shell/global-action-bar`
@@ -57534,11 +57746,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `MenuBar.Section` "Notifications" → `NativeNotificationsSwitch`
               - `MenuBar.Mount` "native-notifications" → `NativeNotificationsForwarder`
             - Uses:
+              - `companions/menu-bar.MenuBar`
+              - `companions/menu-bar.useNativeHost`
+              - `companions/panel.PanelSection`
               - `config_v2.ConfigV2`
               - `config_v2.useConfig`
               - `config_v2.useSetConfig`
-              - `menu-bar.MenuBar`
-              - `menu-bar.useNativeHost`
               - `primitives/css/fill.Fill`
               - `primitives/css/row.Row`
               - `primitives/css/spacing.Inset`
@@ -57606,7 +57819,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `active-data/show-me`
           - `apps-core/app-embed`
           - `build/serve-composition`
-          - `menu-bar`
+          - `companions/panel`
           - `reports/optimistic-rejection`
           - `shell/notifications`
       - Core:
@@ -58291,7 +58504,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `hints/ask`
       - `primitives/launch`
     - Endpoint callers:
-      - `menu-bar-task`
       - `supervisor-roles`
       - `task-mandate`
   - Plugins:
@@ -58820,12 +59032,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/launch`
           - `tasks`
           - `tasks/auto-start/launch-option`
-          - `tasks/menu-bar-task`
           - `tasks/supervisor-run`
           - `tasks/task-description`
           - `tasks/task-draft-form`
           - `tasks/task-effort`
           - `tasks/task-preprompt`
+          - `wish`
       - Core:
         - Exports (types): `LaunchOptionDef`
         - Exports (values): `defineLaunchOption`
@@ -58859,39 +59071,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/supervisor-roles`
           - `tasks/supervisor-run`
           - `tasks/task-triage`
-    - **`menu-bar-task`** — The menu-bar panel's task field (MenuBar.Section 'task'): an autogrowing textarea (up to six lines, then it scrolls) — Enter files the text as one top-level task through the task-draft form's submitChain (POST /api/tasks/chain) with every launch option at its default, so auto-start behaves as in Improve; Shift+Enter adds a line, Escape clears. Its text is the panel's input (usePanelInput): the app grid filters by it as it is typed, and it is kept as a draft across reloads. The field confirms inline ('Filed — …') or shows why the submit failed.
-      - Web:
-        - Contributes: `MenuBar.Section` "Task" → `MenuBarTaskField`
-        - Uses:
-          - `infra/endpoints.useFetchEndpoint`
-          - `menu-bar.MenuBar`
-          - `menu-bar.usePanelInput`
-          - `primitives/css/center.Center`
-          - `primitives/css/fill.fillClasses`
-          - `primitives/css/rigid.rigidClass`
-          - `primitives/css/spacing.insetClass`
-          - `primitives/css/spacing.Stack`
-          - `primitives/css/surface.Surface`
-          - `primitives/css/text.Text`
-          - `primitives/css/ui-kit.cn`
-          - `primitives/css/ui-kit.ControlSizeProvider`
-          - `primitives/icon-button.IconButton`
-          - `tasks/launch-options.TaskLaunch`
-          - `tasks/task-draft-form.submitChain`
-          - `ui/icons.Icon`
-      - Cross-plugin:
-        - Uses tokens:
-          - `ui/tokens/color-palette --faint-foreground`
-          - `ui/tokens/color-palette --foreground`
-          - `ui/tokens/color-palette --ring`
-          - `ui/tokens/color-palette --success`
-          - `ui/tokens/density --space-2xs`
-          - `ui/tokens/shape --radius`
-          - `ui/tokens/shape --spacing`
-          - `ui/tokens/type-scale --font-scale`
-          - `ui/tokens/type-scale --font-size-body`
-          - `ui/tokens/type-scale --font-weight-normal`
-          - `ui/tokens/type-scale --line-height-body`
     - **`orchestration`** — Umbrella for the workflow-agnostic building blocks agents are orchestrated by inside a task subtree: the mandate (what an agent may do, resolved nearest-wins up the folder tree), the tree digest and watchers. Names no workflow, automation or track.
       - Plugins:
         - **`mandate`** — The mandate's server half: the Mandate.Capability registry (each owner contributes how its granted value reads), mandateOf (the named mandate nearest-wins up the folder tree, resolved to its definition's current policy through mandate/definitions) and grantOf (per conversation, collapsed per request burst), granted(cap) for Mcp.tool.when, the `## Mandate` system-prompt section (only the lines no tool already says), the mandate.capabilities catalog value, and MandateReach (a predicate on tasks widening what a mandate may manage beyond its own tree — reachesBeyondTree).
@@ -59833,21 +60012,29 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (types):
           - `ActiveRelateContext`
           - `CardDraft`
+          - `DraftPage`
+          - `DraftPagePicker`
           - `SubmitArgs`
           - `SubmitOutcome`
           - `TaskDraftActionProps`
+          - `TaskDraftComposerProps`
           - `TaskDraftHintAnchors`
           - `TaskDraftInsert`
           - `TaskDraftPopoverProps`
           - `TaskDraftRelate`
         - Exports (values):
           - `draftInsert`
+          - `DraftPageProvider`
           - `draftSeed`
+          - `NO_DRAFT_PAGE`
           - `submitChain`
+          - `TaskDraftComposer`
           - `TaskDraftFormSlots`
           - `TaskDraftPopover`
           - `useActiveRelateContext`
           - `useActiveRelateTask`
+          - `useCaptureUrlDefault`
+          - `useDraftPage`
       - Server:
         - Contributes: `ConfigV2.Register` "config"
         - Uses: `config_v2.ConfigV2`
@@ -59866,9 +60053,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-weight-medium`
           - `ui/tokens/type-scale --font-weight-semibold`
         - Imported by:
+          - `companions/browser-extension/wish`
+          - `companions/menu-bar/wish`
           - `conversations/conversation-view`
           - `conversations/conversation-view/new-child-task`
-          - `tasks/menu-bar-task`
           - `tasks/task-dependencies`
           - `wish`
           - `wish/element-picker`
@@ -61241,20 +61429,21 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useWantedStyleKeys`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
-        - Imported by: 588 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+        - Imported by: 591 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
           - `apps` ×155
           - `conversations` ×123
           - `primitives` ×53
           - `page` ×52
           - `fields` ×41
           - `debug` ×30
-          - `tasks` ×23
+          - `tasks` ×22
           - `plugin-meta` ×16
           - `active-data` ×11
           - `ui` ×11
           - `infra` ×8
           - `apps-core` ×6
           - `auth` ×6
+          - `companions` ×6
           - `config_v2` ×5
           - `shell` ×5
           - `build` ×4
@@ -61262,13 +61451,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `review` ×4
           - `audience` ×3
           - `hints` ×3
-          - `menu-bar` ×3
           - `reorder` ×3
           - `backup` ×2
           - `framework` ×2
           - `integrations` ×2
           - `map` ×2
           - `screenshot` ×2
+          - `wish` ×2
           - `fullscreen`
           - `layouts/miller`
           - `media/player`
@@ -61277,7 +61466,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `stats`
           - `tag-tree/picker`
           - `upstream`
-          - `wish`
       - Exemptions:
         - Exempts itself from:
           - `icons/reserved-nav-icon` — `core/nav-icons.ts` (sanctioned)
@@ -61653,7 +61841,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps-core/tab-bar`
           - `apps/agent-manager/shell`
           - `apps/demo/chrome`
-          - `menu-bar`
+          - `companions/browser-extension`
+          - `companions/panel`
     - **`segmented-progress-bar`** — Pluggable segmented progress bar with switchable visual variants.
       - Web:
         - Slots: `SegmentedProgressBarSlots.Variant`
@@ -62169,10 +62358,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui` ×29
           - `apps` ×18
           - `apps-core/chrome-theme`
+          - `companions/panel`
           - `hints`
           - `map`
           - `media/player`
-          - `menu-bar`
           - `reports/theme-resolution`
       - Exemptions:
         - Exempts itself from: `check-thread-safety/no-blocking-check-work` — `check/index.ts` (debt)
@@ -62451,7 +62640,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `apps/home/shell`
               - `apps/places/shell`
-              - `menu-bar`
+              - `companions/panel`
         - **`chart`** — Chart color token group: the chart-1…5 ramp and its customizer section.
           - Web:
             - Contributes:
@@ -62559,8 +62748,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `page` ×33
               - `plugin-meta` ×28
               - `ui` ×26
-              - `tasks` ×17
               - `reports` ×16
+              - `tasks` ×16
               - `fields` ×12
               - `active-data` ×8
               - `apps-core` ×6
@@ -62571,11 +62760,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `review` ×5
               - `shell` ×5
               - `auth` ×4
+              - `companions` ×3
               - `hints` ×3
               - `backup` ×2
               - `code-explorer` ×2
               - `integrations` ×2
-              - `menu-bar` ×2
               - `runs` ×2
               - `screenshot` ×2
               - `audience/developer-mark`
@@ -62607,9 +62796,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/sonata/shell`
               - `apps/website/pages/foundations`
               - `apps/website/shell`
+              - `companions/panel`
               - `hints`
               - `media/player`
-              - `menu-bar`
               - `ui/theme-engine/theme-gallery`
         - **`color-ref`** — ColorTokenRef: a typed reference to a declared palette colour token (its CSS var, drawn as var(<ref>)) — a GENERATED string-literal union of every var the palette token groups declare, in a zero-import leaf so data-view, network/live and apps can carry a tint without importing theme-engine.
           - Core:
@@ -62697,7 +62886,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `densityGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --radius`
-            - Tokens used by: 350 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
+            - Tokens used by: 349 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
               - `apps` ×73
               - `primitives` ×72
               - `conversations` ×51
@@ -62705,8 +62894,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui` ×24
               - `page` ×21
               - `plugin-meta` ×13
-              - `tasks` ×9
               - `fields` ×8
+              - `tasks` ×8
               - `reorder` ×5
               - `review` ×5
               - `infra` ×4
@@ -62717,10 +62906,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `active-data` ×2
               - `backup` ×2
               - `code-explorer` ×2
+              - `companions` ×2
               - `config_v2` ×2
               - `framework` ×2
               - `map` ×2
-              - `menu-bar` ×2
               - `screenshot` ×2
               - `auth`
               - `hints/ask`
@@ -62744,9 +62933,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/website/pages/apps`
               - `apps/website/pages/download`
               - `apps/website/shell`
+              - `companions/panel`
               - `hints`
               - `media/player`
-              - `menu-bar`
         - **`file-type-palette`** — File-type colour token group: the closed --file-<tone> tints file-type glyphs are drawn in (Seti's palette on dark, darkened on light) and the --folder tint, with their customizer section.
           - Web:
             - Contributes:
@@ -62827,8 +63016,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/prototypes/shell`
               - `apps/sonata/shell`
               - `apps/website/shell`
+              - `companions/panel`
               - `hints`
-              - `menu-bar`
               - `ui/tokens/font-family/google-fonts`
           - Plugins:
             - **`google-fonts`** — Loads the Google Fonts that the theme each scope selects asks for (the desktop's and every app's own), so a per-app font loads whether or not that app is focused.
@@ -62922,8 +63111,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/desktop/shell`
               - `apps/prototypes/shell`
               - `apps/sonata/shell`
+              - `companions/panel`
               - `media/player`
-              - `menu-bar`
         - **`overlay`** — Overlay token group (how a floating panel enters — instant by default — and the tooltip's fill, ink, ring, corners, padding, shadow, distance and arrow) with its customizer section.
           - Web:
             - Contributes:
@@ -63125,18 +63314,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/density --radius-chip-compact`
               - `ui/tokens/density --space-sm`
-            - Tokens used by: 408 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
+            - Tokens used by: 411 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
               - `conversations` ×96
               - `apps` ×82
               - `primitives` ×60
               - `page` ×36
               - `debug` ×28
               - `ui` ×26
-              - `tasks` ×12
+              - `tasks` ×11
               - `plugin-meta` ×9
               - `fields` ×8
               - `infra` ×6
               - `reorder` ×6
+              - `companions` ×5
               - `apps-core` ×4
               - `review` ×4
               - `shell` ×4
@@ -63145,7 +63335,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `active-data` ×2
               - `backup` ×2
               - `config_v2` ×2
-              - `menu-bar` ×2
               - `screenshot` ×2
               - `audience/developer-mark`
               - `auth`
@@ -63158,6 +63347,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `reports/launch-fix`
               - `search/quick-find`
               - `tag-tree/picker`
+              - `wish`
             - Imported by:
               - `apps-core/chrome-theme`
               - `apps/agent-manager/shell`
@@ -63173,9 +63363,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/website/pages/apps`
               - `apps/website/pages/download`
               - `apps/website/shell`
+              - `companions/panel`
               - `hints`
               - `media/player`
-              - `menu-bar`
         - **`sidebar-metrics`** — Sidebar metrics token group (panel width, nav row height, padding, icon size, icon gap — no type: the nav label is the `label` role) with its customizer section.
           - Web:
             - Contributes:
@@ -63288,7 +63478,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `debug` ×15
               - `plugin-meta` ×14
               - `page` ×11
-              - `tasks` ×9
+              - `tasks` ×8
               - `ui` ×8
               - `fields` ×4
               - `review` ×4
@@ -63297,6 +63487,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `stats` ×3
               - `build` ×2
               - `code-explorer` ×2
+              - `companions` ×2
               - `config_v2` ×2
               - `shell` ×2
               - `apps-core/app-launcher`
@@ -63306,7 +63497,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `integrations/youtube`
               - `layouts/miller`
               - `media/player`
-              - `menu-bar`
               - `screenshot`
               - `search/quick-find`
               - `tag-tree/picker`
@@ -63324,9 +63514,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/website/pages/apps`
               - `apps/website/pages/download`
               - `apps/website/shell`
+              - `companions/panel`
               - `hints`
               - `media/player`
-              - `menu-bar`
           - Exemptions:
             - Exempts itself from:
               - `type-scale:closed-role-ladder:raw-vars` — `.` (sanctioned)
@@ -63564,7 +63754,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
   - Cross-plugin:
     - Imported by: `framework/cli/upstream`
 
-- **`wish`** — The Wish toolbar button: the entry point for anything the user wants done — a fix, a change, a new app. Files a task under "Wishes" with the current URL. Companion actions join it as segments of one split pill via WishSlots.Segment; WishSlots.HeaderAction adds actions to its popover header (Ask equin). Task category of the Wish toolbar button. Files tasks stamped "Wishes" via the shared task-draft-form primitive.
+- **`wish`** — The Wish toolbar button: the entry point for anything the user wants done — a fix, a change, a new app. Files a task under "Wishes" with the current URL. Companion actions join it as segments of one split pill via WishSlots.Segment; WishSlots.HeaderAction adds actions to its popover header (Ask equin). WishField is the same wish as a companion’s section — the task composer with its own ↑, filing one task under Wishes about the page the DraftPage around it names, confirming inline (“Filed — an agent is on …”). Task category of the Wish toolbar button. Files tasks stamped "Wishes" via the shared task-draft-form primitive.
   - Web:
     - Slots:
       - `WishSlots.Segment`
@@ -63573,17 +63763,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `WishSlots.Segment` ← `wish.element-picker`
       - `WishSlots.HeaderAction` ← `hints.ask`
     - Contributes: `ActionBar.Item` → `WishButton`
-    - Uses:
-      - `hints.emitHintSignal`
-      - `hints.useHintAnchor`
-      - `primitives/css/ui-kit.Button`
-      - `primitives/css/ui-kit.ButtonGroup`
+    - Uses: 25 symbols — full list in [`plugins/wish/REFERENCE.md`](../plugins/wish/REFERENCE.md)
+      - `tasks/task-draft-form` ×8
+      - `primitives/css/ui-kit` ×3
+      - `hints` ×2
+      - `primitives/css/spacing` ×2
+      - `primitives/persistent-draft` ×2
+      - `tasks/launch-options` ×2
+      - `infra/endpoints.useFetchEndpoint`
+      - `primitives/css/text.Text`
+      - `primitives/dom/web-storage.defineStore`
       - `primitives/slot-render.renderIsolated`
       - `shell/action-bar.ActionBar`
-      - `tasks/task-draft-form.draftInsert`
-      - `tasks/task-draft-form.draftSeed`
-      - `tasks/task-draft-form.TaskDraftInsert`
-      - `tasks/task-draft-form.TaskDraftPopover`
       - `ui/icons.Icon`
     - Exports (types):
       - `WishHeaderActionContribution`
@@ -63592,6 +63783,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Exports (values):
       - `insertIntoWishDraft`
       - `openWish`
+      - `WishField`
       - `WishSlots`
   - Server:
     - Contributes:
@@ -63621,10 +63813,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Uses tokens:
       - `ui/tokens/color-palette --foreground`
       - `ui/tokens/color-palette --muted-foreground`
+      - `ui/tokens/color-palette --ring`
+      - `ui/tokens/color-palette --success`
+      - `ui/tokens/shape --radius-card`
+      - `ui/tokens/shape --spacing`
     - Imported by:
       - `apps/home/tour`
       - `apps/website/demos/workspace/story`
       - `apps/website/promo-film/seed`
+      - `companions/browser-extension/wish`
+      - `companions/menu-bar/wish`
       - `conversations/conversation-view/jsonl-viewer/investigate-event`
       - `hints/ask`
       - `screenshot/draw-on-app`
@@ -63636,8 +63834,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `WishSlots.Segment` "element-picker" → `ElementPickerButton`
           - `TaskDraftFormSlots.Action` → `TaskDraftPickerButton`
         - Uses:
+          - `primitives/icon-button.IconButton`
           - `primitives/ui-context/element-picker.PickerButton`
+          - `tasks/task-draft-form.TaskDraftActionProps`
           - `tasks/task-draft-form.TaskDraftFormSlots`
+          - `tasks/task-draft-form.useDraftPage`
           - `wish.insertIntoWishDraft`
           - `wish.WishSlots`
       - Core:
