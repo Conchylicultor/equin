@@ -111,8 +111,8 @@ offsets expressible on the semantic ramp.
     - `tasks` ×2
     - `apps-core/app-rail`
     - `audience/developer-mark`
+    - `companions/menu-bar/app-grid`
     - `map`
-    - `menu-bar/app-grid`
     - `plugin-meta/exhibits`
     - `reorder/editor`
     - `screenshot/draw-on-app`

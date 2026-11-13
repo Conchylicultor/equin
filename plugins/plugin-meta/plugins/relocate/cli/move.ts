@@ -41,6 +41,7 @@ import {
 } from "./internal/plan";
 import {
   judgeDirt,
+  newUmbrellaFiles,
   parsePorcelainZ,
   readTouched,
   recordTouched,
@@ -189,6 +190,18 @@ const run: CliAction<[string, string], { dryRun?: boolean }> = async (
   // Absolute: in a linked worktree `--git-dir` is already an absolute path,
   // which `join(root, …)` would graft under the checkout.
   const gitDir = (await git(root, ["rev-parse", "--absolute-git-dir"])).trim();
+  const toParentId = to.id.includes(".")
+    ? to.id.slice(0, to.id.lastIndexOf("."))
+    : null;
+  const toParentDir =
+    toParentId === null ? null : locationOf(asPluginId(toParentId)).dir;
+  // A parent with nothing tracked under it is a brand-new umbrella, written
+  // for this move: its own files may be the dirt (judgeDirt).
+  const newUmbrella =
+    toParentDir !== null &&
+    (await git(root, ["ls-files", "--", toParentDir])).trim() === ""
+      ? toParentDir
+      : null;
   const verdict = judgeDirt({
     dirty: parsePorcelainZ(
       await git(root, [
@@ -201,6 +214,7 @@ const run: CliAction<[string, string], { dryRun?: boolean }> = async (
     uncommitted: await uncommittedMoves(root),
     touched: readTouched(gitDir),
     always: [PLUGIN_MOVES_FILE],
+    newUmbrella,
   });
   if (verdict.kind === "unexplained") {
     const message =
@@ -214,7 +228,12 @@ const run: CliAction<[string, string], { dryRun?: boolean }> = async (
     console.log(
       `note: ${message} (dry run — continuing, nothing is written)\n`,
     );
-  } else if (verdict.kind === "chained") {
+  } else if (verdict.kind === "chained" && verdict.newUmbrella !== null) {
+    console.log(
+      `Moving into the new umbrella ${verdict.newUmbrella} (its package.json and CLAUDE.md, and the lockfile, are the only other dirt).\n`,
+    );
+  }
+  if (verdict.kind === "chained" && verdict.moves.length > 0) {
     console.log(
       `Chaining after ${plural(verdict.moves.length, "uncommitted move")} (${verdict.moves
         .map((m) => `${m.from} → ${m.to}`)
@@ -241,9 +260,6 @@ const run: CliAction<[string, string], { dryRun?: boolean }> = async (
     );
   }
   if (existsSync(join(root, to.dir))) refuse(`${to.dir} already exists`);
-  const toParentId = to.id.includes(".")
-    ? to.id.slice(0, to.id.lastIndexOf("."))
-    : null;
   if (
     toParentId !== null &&
     ![...tree.byDir.values()].some((n) => n.id === toParentId)
@@ -338,6 +354,8 @@ const run: CliAction<[string, string], { dryRun?: boolean }> = async (
       ...plan.packages.map((p) => p.newFile),
       PLUGIN_MOVES_FILE,
       "bun.lock",
+      // A new umbrella's own files stay dirty for the next chained move.
+      ...(newUmbrella === null ? [] : newUmbrellaFiles(newUmbrella)),
     ]);
   }
   const holding = namespacesHolding(configDir.path, from.id);

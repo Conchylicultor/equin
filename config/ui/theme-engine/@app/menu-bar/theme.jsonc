@@ -1,11 +1,11 @@
 // @hash 81ba03048557
 {
-  // The menu-bar panel is drawn in its own theme, `menu-bar` (a native menu's
-  // look: the system font, 13px rows, the menu palette; its app tiles keep the
-  // launcher's colours), contributed by the menu-bar plugin
-  // (`plugins/menu-bar/web/internal/theme.ts`) and selected here because the
-  // panel is an app of its own (`menuBarApp`). Its light/dark is not here: the
-  // app declares `colorMode: "light"` and the user's override lives in
-  // `color-mode.jsonc`, a separate document.
-  "theme": "menu-bar"
+  // The menu-bar panel is drawn in the companions' theme, `companion` (a
+  // native menu's look: the system font, 13px rows, the menu palette, light
+  // and dark; its app tiles keep the launcher's colours), contributed by
+  // `plugins/companions/plugins/panel/web/internal/theme.ts` and selected here
+  // because the panel is an app of its own (`menuBarApp`). Its light/dark is
+  // not here: the app declares `colorMode: "system"` (it follows the OS) and
+  // the user's override lives in `color-mode.jsonc`, a separate document.
+  "theme": "companion"
 }

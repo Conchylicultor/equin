@@ -77,6 +77,7 @@ const headed = await launchChromium(ready, { headless: false });  // headed bina
 - Cross-plugin:
   - Imported by:
     - `apps/prototypes/thumbnails`
+    - `companions/browser-extension`
     - `debug/profiling/tab-memory`
     - `framework/tooling/e2e-harness`
     - `infra/safe-fetch/browser-fetch`

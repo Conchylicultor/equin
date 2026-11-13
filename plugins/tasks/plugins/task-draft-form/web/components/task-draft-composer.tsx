@@ -8,12 +8,15 @@ import {
   LaunchOptionPills,
   type LaunchOptionValues,
 } from "@plugins/tasks/plugins/launch-options/web";
+import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { DependencyPill, type DependencyExtras } from "./dependency-pill";
 import { TaskDraftFormSlots } from "../slots";
+import { useDraftPage } from "../draft-page";
 import type { TaskChainRelateMode } from "@plugins/tasks/core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
 const linkIcon = symbol("link");
+const launchIcon = symbol("arrow-upward");
 
 export interface TaskDraftComposerProps {
   /** Scopes the editor's namespace; unique per mounted composer. */
@@ -38,6 +41,13 @@ export interface TaskDraftComposerProps {
   // Whether the drafted task attaches the current page URL.
   includeUrl: boolean;
   onToggleUrl: (v: boolean) => void;
+  /**
+   * The composer's own launch control — an ↑ at the end of its bar, disabled
+   * while the field is empty, pressing it the same as ⌘↵ (`onSubmitChord`).
+   * For a host with no footer of its own (a companion's Wish section); omitted,
+   * submitting is the host's button and the chord alone.
+   */
+  submit?: { pending: boolean } | undefined;
   /** The head card's relate toggle, or null for none. */
   relate: {
     value: TaskChainRelateMode | undefined;
@@ -68,6 +78,7 @@ export function TaskDraftComposer({
   insertRef: hostInsertRef,
   includeUrl,
   onToggleUrl,
+  submit,
   relate,
 }: TaskDraftComposerProps) {
   // Drives the action slot (e.g. the element picker): the snippet lands at the
@@ -110,12 +121,25 @@ export function TaskDraftComposer({
         />
       }
       barEnd={
-        <LaunchOptionPills
-          side="end"
-          values={launchOptions}
-          onChange={onLaunchOptionsChange}
-          disabled={disabled}
-        />
+        <>
+          <LaunchOptionPills
+            side="end"
+            values={launchOptions}
+            onChange={onLaunchOptionsChange}
+            disabled={disabled}
+          />
+          {submit && (
+            <IconButton
+              icon={launchIcon}
+              label="Launch"
+              shortcut="mod+enter"
+              variant="default"
+              loading={submit.pending}
+              disabled={disabled || text.trim() === ""}
+              onClick={onSubmitChord}
+            />
+          )}
+        </>
       }
     />
   );
@@ -124,8 +148,8 @@ export function TaskDraftComposer({
 /**
  * The leading half of the card's bar: what the agent will see — the
  * contributed actions that write into the prose (the element picker) and the
- * page-URL toggle — then, past a hairline, the pills that configure what
- * submitting it does.
+ * page-URL toggle, offered only when the draft is about a page (`DraftPage`) —
+ * then, past a hairline, the pills that configure what submitting it does.
  *
  * Every card carries the action slot, not just the head: each card owns its own
  * caret-insert handle, so a picked element lands in the prose you are actually
@@ -149,19 +173,22 @@ function CardBarStart({
   disabled: boolean;
   relate: TaskDraftComposerProps["relate"];
 }) {
+  const page = useDraftPage();
   return (
     <>
       <TaskDraftFormSlots.Action.Render>
         {(item) => <item.component insertText={insertText} />}
       </TaskDraftFormSlots.Action.Render>
-      <ComposerAttachButton
-        icon={linkIcon}
-        label="Page URL"
-        description="Record the page you are on with the task, so the agent knows which screen it is about."
-        active={includeUrl}
-        onToggle={onToggleUrl}
-        disabled={disabled}
-      />
+      {page.readUrl !== null && (
+        <ComposerAttachButton
+          icon={linkIcon}
+          label="Page URL"
+          description="Record the page you are on with the task, so the agent knows which screen it is about."
+          active={includeUrl}
+          onToggle={onToggleUrl}
+          disabled={disabled}
+        />
+      )}
       <ComposerRule />
       <LaunchOptionPills
         side="start"

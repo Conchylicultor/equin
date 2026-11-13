@@ -14,7 +14,7 @@ export type LogoFile =
   | { path: string; kind: "png"; from: string; px: number };
 
 const WEB = "plugins/framework/plugins/web-core/web/public";
-const HELPER = "plugins/menu-bar/rust/icons";
+const HELPER = "plugins/companions/plugins/menu-bar/rust/icons";
 
 export const LOGO_FILES: readonly LogoFile[] = [
   {

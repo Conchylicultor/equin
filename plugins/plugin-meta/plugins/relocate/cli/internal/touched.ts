@@ -61,28 +61,61 @@ export function parsePorcelainZ(out: string): string[] {
 
 export type DirtVerdict =
   | { kind: "clean" }
-  | { kind: "chained"; moves: PluginMove[] }
+  | {
+      kind: "chained";
+      moves: PluginMove[];
+      /** The brand-new umbrella this move lands in, when its files are dirt. */
+      newUmbrella: string | null;
+    }
   | { kind: "unexplained"; paths: string[] };
+
+/** The lockfile: a new workspace (umbrella) is written into it on install. */
+export const LOCKFILE = "bun.lock";
+
+/** The files a brand-new umbrella may hold before a move fills it: its
+ * package.json and CLAUDE.md — no runtime folder, no child. */
+export function newUmbrellaFiles(dir: string): string[] {
+  return [`${dir}/package.json`, `${dir}/CLAUDE.md`];
+}
 
 /**
  * Whether the dirty paths are exactly the work of earlier uncommitted moves.
  * `uncommitted` are the ledger entries the working tree has and HEAD does not;
  * `always` are paths any move may leave dirty (the ledger itself).
+ *
+ * `newUmbrella` is the directory of `<to>`'s parent when nothing under it is
+ * tracked yet: a move into a brand-new umbrella has to find the umbrella on
+ * disk, so its two files ({@link newUmbrellaFiles}) — and, with them, the
+ * lockfile the install wrote its workspace into — are the one dirt a move
+ * accepts with no earlier move behind it. Anything else in it still blocks.
  */
 export function judgeDirt(input: {
   dirty: readonly string[];
   uncommitted: readonly PluginMove[];
   touched: Touched;
   always: readonly string[];
+  newUmbrella: string | null;
 }): DirtVerdict {
   if (input.dirty.length === 0) return { kind: "clean" };
+  const umbrellaFiles = new Set(
+    input.newUmbrella === null ? [] : newUmbrellaFiles(input.newUmbrella),
+  );
+  const umbrellaDirty = input.dirty.some((p) => umbrellaFiles.has(p));
+  // The umbrella is a workspace: the first install writes it into the
+  // lockfile, so the lockfile is its dirt too — only alongside its files.
+  if (umbrellaDirty) umbrellaFiles.add(LOCKFILE);
+  const dirty = input.dirty.filter((p) => !umbrellaFiles.has(p));
   const allowed = new Set(input.always);
   for (const m of input.uncommitted)
     for (const p of input.touched[pluginMoveKey(m)] ?? []) allowed.add(p);
   const paths =
     input.uncommitted.length === 0
-      ? [...input.dirty]
-      : input.dirty.filter((p) => !allowed.has(p));
+      ? [...dirty]
+      : dirty.filter((p) => !allowed.has(p));
   if (paths.length > 0) return { kind: "unexplained", paths };
-  return { kind: "chained", moves: [...input.uncommitted] };
+  return {
+    kind: "chained",
+    moves: [...input.uncommitted],
+    newUmbrella: umbrellaDirty ? input.newUmbrella : null,
+  };
 }

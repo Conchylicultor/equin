@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-companions",
+  "description": "Umbrella for equin's companions — the surfaces equin shows outside its own tab (the OS menu-bar tray and the Chrome extension): each a thin native or extension shell that loads an equin route and adds a versioned bridge, plus the panel primitive they share.",
+  "private": true,
+  "version": "0.0.1"
+}

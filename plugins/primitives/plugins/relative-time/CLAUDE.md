@@ -11,7 +11,7 @@ dense-list spelling for a trailing time column, where "ago" is implied.
 
 - Description: Formats a Date as a human-readable relative string (just now, Nm ago, Nh ago, Nd ago — or the short now / Nm / Nh / Nd), and a running duration as a clock (m:ss). Exposes formatRelativeTime(), <RelativeTime date={…} />, formatElapsed(), useNow() and <ElapsedTime since={…} />.
 - Cross-plugin:
-  - Imported by: 69 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 70 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×24
     - `debug` ×15
     - `conversations` ×10
@@ -20,6 +20,7 @@ dense-list spelling for a trailing time column, where "ago" is implied.
     - `build` ×3
     - `primitives` ×2
     - `active-data/commit-link`
+    - `companions/browser-extension/accounts-row`
     - `fields/date/table`
     - `framework/web-core`
     - `page/annotations/agent-notes/authorship`

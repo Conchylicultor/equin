@@ -1,5 +1,6 @@
 import { useConfig, useSetConfig } from "@plugins/config_v2/web";
-import { useNativeHost } from "@plugins/menu-bar/web";
+import { useNativeHost } from "@plugins/companions/plugins/menu-bar/web";
+import { PanelSection } from "@plugins/companions/plugins/panel/web";
 import { useNotificationArrivals } from "@plugins/shell/plugins/notifications/web";
 import { Separator } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
@@ -33,7 +34,8 @@ export function NativeNotificationsSwitch() {
       <Inset x="md">
         <Separator />
       </Inset>
-      <Row
+      <PanelSection label="Notifications">
+        <Row
         role="switch"
         aria-checked={enabled}
         className="gap-md"
@@ -46,10 +48,11 @@ export function NativeNotificationsSwitch() {
         onClick={() => setConfig("enabled", !enabled)}
       >
         <Fill>
-          <Text>Notifications</Text>
+            <Text>Show as system notifications</Text>
         </Fill>
         <SwitchIndicator checked={enabled} />
-      </Row>
+        </Row>
+      </PanelSection>
     </Stack>
   );
 }

@@ -69,7 +69,7 @@ follow.
     - `debug` ×15
     - `plugin-meta` ×14
     - `page` ×11
-    - `tasks` ×9
+    - `tasks` ×8
     - `ui` ×8
     - `fields` ×4
     - `review` ×4
@@ -78,6 +78,7 @@ follow.
     - `stats` ×3
     - `build` ×2
     - `code-explorer` ×2
+    - `companions` ×2
     - `config_v2` ×2
     - `shell` ×2
     - `apps-core/app-launcher`
@@ -87,7 +88,6 @@ follow.
     - `integrations/youtube`
     - `layouts/miller`
     - `media/player`
-    - `menu-bar`
     - `screenshot`
     - `search/quick-find`
     - `tag-tree/picker`
@@ -105,9 +105,9 @@ follow.
     - `apps/website/pages/apps`
     - `apps/website/pages/download`
     - `apps/website/shell`
+    - `companions/panel`
     - `hints`
     - `media/player`
-    - `menu-bar`
 - Exemptions:
   - Exempts itself from:
     - `type-scale:closed-role-ladder:raw-vars` — `.` (sanctioned)

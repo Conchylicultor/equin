@@ -37,7 +37,7 @@ import {
   useTransport,
   type Transport,
 } from "@plugins/primitives/plugins/networking/web";
-import { useNativeFileDrag } from "@plugins/menu-bar/plugins/app-window/web";
+import { useNativeFileDrag } from "@plugins/companions/plugins/menu-bar/plugins/app-window/web";
 import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { FileTypeIcon } from "@plugins/primitives/plugins/file-type/web";

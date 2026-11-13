@@ -380,13 +380,14 @@ the outcome too, with no separate code path.
     - `useDispatchOutcome`
     - `useSlotOrder`
 - Cross-plugin:
-  - Imported by: 95 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 97 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×31
     - `primitives` ×15
     - `conversations` ×13
     - `apps-core` ×5
     - `ui` ×5
     - `shell` ×4
+    - `companions` ×3
     - `page` ×3
     - `tasks` ×3
     - `config_v2` ×2
@@ -396,7 +397,6 @@ the outcome too, with no separate code path.
     - `hints/help-menu`
     - `integrations/google-maps`
     - `map`
-    - `menu-bar`
     - `network/live`
     - `reorder/slot-middleware`
     - `review/plugin-changes`

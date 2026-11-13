@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-companions-menu-bar-app-window",
+  "description": "An installed app window's bridge to the native helper (window.equinWindow): the contract, and useNativeFileDrag — dragging host paths out of the window as real files.",
+  "private": true,
+  "version": "0.0.1"
+}

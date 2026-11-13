@@ -81,6 +81,16 @@ still refuses, and is named. The record sits in the git dir, not in the
 committed ledger: it describes one uncommitted diff and means nothing once that
 diff is committed.
 
+## Moving into a new umbrella
+
+A move needs `<to>`'s parent to be a plugin on disk, so moving into a brand-new
+umbrella means writing that umbrella first. When nothing under `<to>`'s parent
+is tracked yet, its `package.json` and `CLAUDE.md` (and, with them, `bun.lock`,
+which the first install writes its workspace into) are the one dirt a move
+accepts with no earlier move behind it (`judgeDirt`'s `newUmbrella`); any other
+file in it (a runtime folder, a child) or anywhere else still refuses. The move
+records those two files as touched, so further moves chain after it.
+
 ## Committed overrides follow the move
 
 A committed override (`config/**/<name>.jsonc`) anchors its `// @hash` to its
@@ -115,6 +125,14 @@ namespace has not applied (recorded in its `.plugin-moves-applied.json`):
   the one propagation stamps next — so the re-stamped override survives
   propagation instead of turning into a conflict.
 
+And on EVERY pass (idempotent, not once per entry), the namespace's applied
+config-migration markers (`.config-migrations-applied.json`, keyed
+`<config path>/<name>:<migration>`) under a moved plugin's old slash path are
+re-rooted to its new one (`rerootMigrationKey`) — the migrations already ran on
+the files that moved, and a marker left behind made them look un-migrated at
+the new path, so the build re-ran them. A move whose old directory is a plugin
+again is skipped: a reused id's markers are its own.
+
 The marker, the fresh-namespace rule and the hash re-stamping are the shared
 config ledger's (`config_v2/plugins/ledger`), which config migrations
 (`defineConfigMigration`) ride too.
@@ -132,10 +150,10 @@ moving anything.
 
 - Description: `./equin plugin move <from> <to>` — relocate or rename a plugin (and every descendant) in one step: git mv the folder and its config dir, then rewrite every reference the plugin-refs locator finds (path literals, @plugins specifiers, dot ids, relative links) by exact range. Records each move in a committed ledger that every build replays onto its namespace's saved user config (folder moved, reorder keys re-rooted, hash chain kept).
 - Core:
-  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 27 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `config_v2` ×8
-    - `config_v2/ledger` ×6
-    - `framework/plugin-id` ×3
+    - `config_v2/ledger` ×7
+    - `framework/plugin-id` ×4
     - `infra/host-fs/user-path` ×3
     - `packages/timed-fs` ×3
     - `framework/tooling.noteRepoWrites`

@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-companions-panel",
+  "description": "The panel every companion draws: CompanionPanel over the host's own section slot, PanelSection, the header and footer, the Companion.Status slot and the companion theme (light and dark, following the OS).",
+  "private": true,
+  "version": "0.0.1"
+}

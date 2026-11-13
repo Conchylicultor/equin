@@ -161,15 +161,14 @@ never be clobbered.
     - `primitives` ×8
     - `page` ×4
     - `infra` ×3
+    - `companions` ×2
     - `map` ×2
     - `conversations/agents`
     - `debug/queue`
     - `fields/json/config`
     - `hints/ask`
-    - `menu-bar`
     - `shell/notifications`
     - `stats`
-    - `tasks/menu-bar-task`
 - Exemptions:
   - Exempted by: `primitives/css/ui-kit` (0 debt)
 

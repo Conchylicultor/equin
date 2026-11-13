@@ -1,0 +1,11 @@
+// @hash 81ba03048557
+{
+  // The browser extension's panel is drawn in the companions' theme for a
+  // SOLID window, `companion-solid` (the tray's look, light and dark; light
+  // paints the opaque #e2e6ea panel, since Chrome's popup has nothing behind
+  // it to blur), contributed by
+  // `plugins/companions/plugins/panel/web/internal/theme.ts` and selected here
+  // because the panel is an app of its own (`browserExtensionApp`). Its
+  // light/dark follows the OS: the app declares `colorMode: "system"`.
+  "theme": "companion-solid"
+}

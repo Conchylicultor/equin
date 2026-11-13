@@ -120,6 +120,7 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
     - `Auth.Provider` ← `auth.hooktheory`
     - `Auth.Provider` ← `auth.notion`
     - `Auth.Integration` ← `auth.apple-signing.setup-wizard`
+    - `Auth.Integration` ← `companions.browser-extension.accounts-row`
     - `Auth.Integration` ← `integrations.google-maps`
     - `Auth.Integration` ← `integrations.google-maps.usage`
     - `Auth.ScopeRequirement` ← `backup.targets.google-drive`
@@ -301,6 +302,7 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
     - `auth/notion`
     - `backup/runs-arm`
     - `backup/targets/google-drive`
+    - `companions/browser-extension/accounts-row`
     - `integrations/gmail`
     - `integrations/google-maps`
     - `integrations/google-maps/usage`

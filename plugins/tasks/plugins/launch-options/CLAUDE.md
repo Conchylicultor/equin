@@ -92,12 +92,12 @@ Ordering for both surfaces lives in
     - `primitives/launch`
     - `tasks`
     - `tasks/auto-start/launch-option`
-    - `tasks/menu-bar-task`
     - `tasks/supervisor-run`
     - `tasks/task-description`
     - `tasks/task-draft-form`
     - `tasks/task-effort`
     - `tasks/task-preprompt`
+    - `wish`
 - Core:
   - Exports (types): `LaunchOptionDef`
   - Exports (values): `defineLaunchOption`

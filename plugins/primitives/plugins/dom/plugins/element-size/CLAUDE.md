@@ -134,10 +134,10 @@ different need, extend the primitive rather than allowlisting a copy.
     - `apps` ×14
     - `shell` ×2
     - `active-data/go`
+    - `companions/panel`
     - `conversations/conversation-view/jsonl-viewer`
     - `hints`
     - `layouts/miller`
-    - `menu-bar`
     - `page/editor`
     - `screenshot`
     - `ui/ambient-field`

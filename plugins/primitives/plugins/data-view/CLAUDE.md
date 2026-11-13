@@ -2833,10 +2833,10 @@ restyled 20.6k elements before, 10.4k after (`fullscreen-budget` cases unchanged
     - `apps-core/app-launcher`
     - `auth`
     - `build/build-logs`
+    - `companions/menu-bar/app-grid`
     - `config_v2/settings`
     - `history/dialog`
     - `integrations/google-maps/usage`
-    - `menu-bar/app-grid`
     - `page/links`
     - `runs`
     - `shell/notifications`

@@ -10,13 +10,14 @@ import {
 } from "@plugins/hints/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
+import { PUBLIC_SITE_ORIGIN } from "@plugins/apps/plugins/website/plugins/shell/core";
 import { useCloseHelpMenu } from "../internal/close-menu";
 
 const replayIcon = symbol("replay");
 const lightbulbIcon = symbol("lightbulb");
 const guideIcon = symbol("menu-book");
 
-const GUIDE_URL = "https://equin.ai/about/guide";
+const GUIDE_URL = `${PUBLIC_SITE_ORIGIN}/about/guide`;
 
 /**
  * Starts the primary tour (`defineTour({ primary: true })`) — the engine

@@ -24,6 +24,13 @@ export type { TaskDraftActionProps } from "./slots";
 
 export { draftInsert, draftSeed } from "./insert-request";
 
+export { TaskDraftComposer } from "./components/task-draft-composer";
+export type { TaskDraftComposerProps } from "./components/task-draft-composer";
+
+export { DraftPageProvider, NO_DRAFT_PAGE, useDraftPage } from "./draft-page";
+export type { DraftPage, DraftPagePicker } from "./draft-page";
+export { useCaptureUrlDefault } from "./use-capture-url-default";
+
 export { submitChain } from "./internal/submit";
 export type { SubmitArgs, SubmitOutcome } from "./internal/submit";
 export type { TaskDraftInsert } from "./insert-request";

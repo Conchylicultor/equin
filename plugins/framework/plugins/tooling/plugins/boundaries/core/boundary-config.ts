@@ -146,6 +146,11 @@ export default defineBoundaries({
     // typed by `defineLoginService`, which lives in a `machine` barrel beside
     // the service managers it feeds.
     "login-services": ["core", "data-dirs", "deps", "machine"],
+    // A browser extension's shell (`companions/browser-extension`): bundled by
+    // its owner's `cli/` into a page that runs in the browser, at the
+    // extension's own origin. It may reach `core` only (the bridge contract it
+    // shares with the page); nothing imports it.
+    "browser-extension": ["core"],
   },
 
   // Which folders may import a platform API (a Node builtin, `bun`, `pg`,
@@ -183,6 +188,8 @@ export default defineBoundaries({
     exempt: "allowed",
     guard: "allowed",
     "login-services": "allowed",
+    // Runs in the browser, like `web`.
+    "browser-extension": "forbidden",
   },
 
   runtimeExceptions: [

@@ -27,7 +27,8 @@ export interface SubmitArgs {
   /** The plugin id of the surface filing the chain (`filedFrom`). */
   filedFrom: PluginId;
   relate: TaskChainRelate | undefined;
-  url: string;
+  /** The URL of the page the draft is about; null when it is about none. */
+  url: string | null;
   /** The open app's URL default, for cards whose URL toggle was never touched. */
   captureUrlDefault: boolean;
   /**
@@ -71,7 +72,10 @@ export async function submitChain(
         options: Object.fromEntries(
           args.options.map((o) => [o.id, launchOptionValue(c.options, o)]),
         ),
-        url: (c.includeUrl ?? args.captureUrlDefault) ? args.url : undefined,
+        url:
+          args.url !== null && (c.includeUrl ?? args.captureUrlDefault)
+            ? args.url
+            : undefined,
         attachmentIds: attachmentIds.length > 0 ? attachmentIds : undefined,
         linkedToPrev: i > 0 && !c.linkedToPrev ? false : undefined,
       };

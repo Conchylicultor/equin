@@ -169,7 +169,7 @@ const grammarInSyncCheck: Check = {
       {
         // The menu-bar helper loads main's panel (and points its app shims) at
         // the host main is handed out under, not its internal name.
-        path: "plugins/menu-bar/rust/src/cli.rs",
+        path: "plugins/companions/plugins/menu-bar/rust/src/cli.rs",
         expect: `MAIN_HOST_LABEL: &str = "${NAMESPACE_HOST_LABELS[MAIN_WORKTREE_NAME]}";`,
         what: "main's host label (MAIN_HOST_LABEL)",
       },

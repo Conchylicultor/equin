@@ -98,5 +98,15 @@
     "at": "2026-11-06T11:55:37.302Z",
     "from": "apps.website.demos.lumen",
     "to": "apps.website.demos.workspace"
+  },
+  {
+    "at": "2026-11-13T05:33:03.198Z",
+    "from": "menu-bar",
+    "to": "companions.menu-bar"
+  },
+  {
+    "at": "2026-11-13T05:34:44.579Z",
+    "from": "conversations.menu-bar-status",
+    "to": "conversations.companion-status"
   }
 ]

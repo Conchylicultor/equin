@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-conversations-companion-status",
+  "description": "The agents' part of every companion's status line: how many agents are working and how many need you; one waiting is the companion's attention (the menu-bar icon's dot).",
+  "private": true,
+  "version": "0.0.1"
+}

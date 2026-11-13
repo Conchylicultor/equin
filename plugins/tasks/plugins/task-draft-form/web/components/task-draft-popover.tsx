@@ -43,6 +43,7 @@ import {
 import { TaskLaunch } from "@plugins/tasks/plugins/launch-options/web";
 import { useActiveRelateContext } from "../active-relate-context";
 import { useCaptureUrlDefault } from "../use-capture-url-default";
+import { useDraftPage } from "../draft-page";
 import { appendSnippet, type TaskDraftInsert } from "../insert-request";
 
 /**
@@ -207,7 +208,7 @@ function TaskDraftFormContent({
   setAutoFocusId: (id: string | null) => void;
   submitting: boolean;
   setSubmitting: (v: boolean) => void;
-  url: string;
+  url: string | null;
   setOpen: (next: boolean) => void;
   closeAfterSubmit: () => void;
   resetForm: () => void;
@@ -405,7 +406,10 @@ export function TaskDraftPopover({
   );
 
   const [autoFocusId, setAutoFocusId] = useState<string | null>(null);
-  const [url, setUrl] = useState("");
+  // The URL of the page the draft is about, snapshotted on open; null when it
+  // is about no page.
+  const [url, setUrl] = useState<string | null>(null);
+  const page = useDraftPage();
   const [submitting, setSubmitting] = useState(false);
 
   const activeRelate = useActiveRelateContext();
@@ -490,17 +494,18 @@ export function TaskDraftPopover({
     setOpen(false);
   };
 
-  // On the open transition, snapshot the current URL (what the "Page URL" toggle
-  // attaches), focus the last card, and re-arm focus return for this session.
+  // On the open transition, snapshot the draft page's URL (what the "Page URL"
+  // toggle attaches — this document's unless a DraftPageProvider says
+  // otherwise), focus the last card, and re-arm focus return for this session.
   const wasOpenRef = useRef(false);
   useEffect(() => {
     if (open && !wasOpenRef.current) {
       returnFocusOnCloseRef.current = true;
-      setUrl(window.location.href);
+      setUrl(page.readUrl?.() ?? null);
       setAutoFocusId(cards.at(-1)?.localId ?? null);
     }
     wasOpenRef.current = open;
-  }, [open, cards]);
+  }, [open, cards, page]);
 
   const setOpen = (next: boolean) => {
     if (isControlled) {

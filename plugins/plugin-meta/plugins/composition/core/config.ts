@@ -663,13 +663,12 @@ export const compositionsConfig = defineConfig({
               "apps.places.**",
               // The OS menu-bar panel and its sections: a page the native
               // helper opens on the computer, meaningless in a demo.
-              "!menu-bar.**",
+              "!companions.menu-bar.**",
               // Kept under that negative: the installed-window bridge Files'
               // browser drags files out through. It answers null in a browser
               // tab, and negating it cascades the file-peek pane out with Files.
-              "menu-bar.app-window",
-              "!conversations.menu-bar-status.**",
-              "!tasks.menu-bar-task.**",
+              "companions.menu-bar.app-window",
+              "!conversations.companion-status.**",
               "!shell.notifications.native.**",
             ],
           }),

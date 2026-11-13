@@ -58,12 +58,12 @@ into the markup. `renderMode()` is how a building block knows to.
   - Imported by: 22 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives` ×11
     - `apps` ×2
+    - `companions/panel`
     - `conversations/conversation-view/jsonl-viewer/steady-reveal`
     - `debug/timeline`
     - `fullscreen`
     - `map/google`
     - `media/player`
-    - `menu-bar`
     - `screenshot/draw-on-app`
     - `tasks/worktree-identity`
     - `ui/theme-engine`

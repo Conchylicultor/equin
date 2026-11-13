@@ -1,0 +1,43 @@
+import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import {
+  Stack,
+  insetClass,
+} from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Logo } from "@plugins/ui/plugins/logo/web";
+import { useStatusLine } from "../internal/status-line";
+
+/**
+ * A companion's header: the equin logo (`ui/logo`)
+ * and one status line joined from every `Companion.Status` part.
+ */
+export function CompanionHeader() {
+  const line = useStatusLine();
+  return (
+    <Stack
+      direction="row"
+      gap="lg"
+      align="center"
+      className={insetClass({ x: "md", t: "md", b: "lg" })}
+    >
+      <Logo className={cn("size-7.5", rigidClass())} />
+      <Fill>
+        <Stack gap="none">
+          <Text as="div" variant="label" className="font-semibold">
+            equin
+          </Text>
+          {line.kind === "pending" ? (
+            <Loading variant="block" className="h-3 w-40" />
+          ) : (
+            <Text as="div" variant="caption" tone="muted">
+              {line.text ?? "All quiet"}
+            </Text>
+          )}
+        </Stack>
+      </Fill>
+    </Stack>
+  );
+}

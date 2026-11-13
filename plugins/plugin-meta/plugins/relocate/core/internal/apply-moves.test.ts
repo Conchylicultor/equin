@@ -10,7 +10,16 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { computeHash, type JsonValue } from "@plugins/config_v2/core";
-import { APPLIED_MOVES_FILE, applyPluginMoves } from "./apply-moves";
+import {
+  APPLIED_MOVES_FILE,
+  applyPluginMoves,
+  rerootMigrationKey,
+} from "./apply-moves";
+import { APPLIED_CONFIG_MIGRATIONS_FILE } from "@plugins/config_v2/plugins/ledger/core";
+import {
+  asFsPath,
+  asPluginId,
+} from "@plugins/framework/plugins/plugin-id/core";
 import { PLUGIN_MOVES_FILE } from "./ledger";
 import {
   type AppPath,
@@ -199,5 +208,70 @@ describe("applyPluginMoves", () => {
     expect(
       JSON.parse(readFileSync(join(fresh, APPLIED_MOVES_FILE), "utf8")),
     ).toEqual({ applied: [`${MOVE.at} ${MOVE.from} ${MOVE.to}`] });
+  });
+});
+
+describe("applied config-migration markers follow the move", () => {
+  const markers = (keys: string[]) =>
+    writeFileSync(
+      join(ns, APPLIED_CONFIG_MIGRATIONS_FILE),
+      JSON.stringify({ applied: keys }),
+    );
+  const readMarkers = (): string[] =>
+    (
+      JSON.parse(
+        readFileSync(join(ns, APPLIED_CONFIG_MIGRATIONS_FILE), "utf8"),
+      ) as { applied: string[] }
+    ).applied;
+
+  test("rerootMigrationKey swaps the moved path prefix, in ledger order", () => {
+    const moves = [
+      { at: "t1", from: asPluginId("a.b"), to: asPluginId("x.b") },
+      { at: "t2", from: asPluginId("x.b"), to: asPluginId("y") },
+    ];
+    expect(rerootMigrationKey("a/b/child/v:m1", moves)).toBe("y/child/v:m1");
+    expect(rerootMigrationKey("a/bc/v:m1", moves)).toBe("a/bc/v:m1");
+  });
+
+  test("a key under the moved path is re-rooted with the files", () => {
+    ledger([MOVE]);
+    put("a/b/view.origin.jsonc", { v: 0 }, "a1");
+    markers(["a/b/view:m1", "a/other/view:m1"]);
+
+    applyPluginMoves({ root, userConfigDir: ns });
+
+    expect(readMarkers()).toEqual(["x/b/view:m1", "a/other/view:m1"]);
+  });
+
+  test("an already-applied move still heals stale markers (idempotent)", () => {
+    ledger([MOVE]);
+    put("x/b/view.origin.jsonc", { v: 0 }, "a1");
+    applyPluginMoves({ root, userConfigDir: ns });
+    // Markers left under the old path by a replay that predates the re-root.
+    markers(["a/b/view:m1", "x/b/view:m1"]);
+
+    applyPluginMoves({ root, userConfigDir: ns });
+    expect(readMarkers()).toEqual(["x/b/view:m1"]);
+    applyPluginMoves({ root, userConfigDir: ns });
+    expect(readMarkers()).toEqual(["x/b/view:m1"]);
+  });
+
+  test("a reused old id keeps its own markers", () => {
+    ledger([MOVE]);
+    // The old directory is a plugin again (its fs path, built from the id).
+    const pkg = join(
+      root,
+      "plugins",
+      asFsPath(asPluginId(MOVE.from)),
+      "package.json",
+    );
+    mkdirSync(dirname(pkg), { recursive: true });
+    writeFileSync(pkg, "{}");
+    put("a/b/view.origin.jsonc", { v: 0 }, "a1");
+    markers(["a/b/view:m1"]);
+
+    applyPluginMoves({ root, userConfigDir: ns });
+
+    expect(readMarkers()).toEqual(["a/b/view:m1"]);
   });
 });

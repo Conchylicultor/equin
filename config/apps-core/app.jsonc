@@ -1,4 +1,4 @@
-// @hash 2ae4043ce7ef
+// @hash b2f5597772ba
 // @legend — how to write this file (rewritten by ./equin build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -41,6 +41,8 @@
     "apps.debug.shell:debug",
     // The menu-bar panel is an app only so it can wear its own light/dark; it
     // is unlisted (`defineApp({ listed: false })`) — the native helper opens it.
-    { "item": "menu-bar:menu-bar", "hidden": true }
+    { "item": "companions.menu-bar:menu-bar", "hidden": true },
+    // The browser extension's panel likewise: the extension's popup opens it.
+    { "item": "companions.browser-extension:browser-extension", "hidden": true }
   ]
 }

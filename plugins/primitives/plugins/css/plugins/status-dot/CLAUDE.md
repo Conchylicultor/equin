@@ -56,10 +56,10 @@ same paint through `statusDotPaintClass(paint)`.
     - `build` ×2
     - `shell` ×2
     - `tasks` ×2
+    - `companions/panel`
     - `config_v2/settings`
     - `hints/ask`
     - `infra/claude-cli`
-    - `menu-bar`
     - `primitives/data-view/view-core`
     - `runs/run-outcome`
 

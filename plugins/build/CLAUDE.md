@@ -428,8 +428,8 @@ fills to navy and oxblood — see `apps-core/chrome-theme`.
     - `build/converge`
     - `build/runs-arm`
     - `build/serve-composition`
+    - `companions/menu-bar`
     - `debug/reports`
-    - `menu-bar`
   - Endpoint callers: `restart-skip`
 - Sub-plugins:
   - **`build-commits`** — Commits included since the previous build, shown in the build detail pane.

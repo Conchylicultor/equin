@@ -1,4 +1,4 @@
-// @hash 4656c5bd440b
+// @hash a4409ea74341
 // @legend — how to write this file (rewritten by ./equin build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -17,7 +17,7 @@
     "audience.view-option:developer-mode",
     "apps-core.surface:placement-control",
     "fullscreen:fullscreen-toggle",
-    "menu-bar.open-in-window:open-in-window",
+    "companions.menu-bar.open-in-window:open-in-window",
     "framework.cli.build.experimental-marks:experimental-marks",
     "config_v2.git-defaults-preview:git-defaults-preview"
   ]

@@ -1767,6 +1767,50 @@
       "name": "@equin/plugin-code-explorer-file-resolve",
       "version": "0.0.1",
     },
+    "plugins/companions": {
+      "name": "@equin/plugin-companions",
+      "version": "0.0.1",
+    },
+    "plugins/companions/plugins/browser-extension": {
+      "name": "@equin/plugin-companions-browser-extension",
+      "version": "0.0.1",
+    },
+    "plugins/companions/plugins/browser-extension/plugins/accounts-row": {
+      "name": "@equin/plugin-companions-browser-extension-accounts-row",
+      "version": "0.0.1",
+    },
+    "plugins/companions/plugins/browser-extension/plugins/equin-site": {
+      "name": "@equin/plugin-companions-browser-extension-equin-site",
+      "version": "0.0.1",
+    },
+    "plugins/companions/plugins/browser-extension/plugins/wish": {
+      "name": "@equin/plugin-companions-browser-extension-wish",
+      "version": "0.0.1",
+    },
+    "plugins/companions/plugins/menu-bar": {
+      "name": "@equin/plugin-companions-menu-bar",
+      "version": "0.0.1",
+    },
+    "plugins/companions/plugins/menu-bar/plugins/app-grid": {
+      "name": "@equin/plugin-companions-menu-bar-app-grid",
+      "version": "0.0.1",
+    },
+    "plugins/companions/plugins/menu-bar/plugins/app-window": {
+      "name": "@equin/plugin-companions-menu-bar-app-window",
+      "version": "0.0.1",
+    },
+    "plugins/companions/plugins/menu-bar/plugins/open-in-window": {
+      "name": "@equin/plugin-companions-menu-bar-open-in-window",
+      "version": "0.0.1",
+    },
+    "plugins/companions/plugins/menu-bar/plugins/wish": {
+      "name": "@equin/plugin-companions-menu-bar-wish",
+      "version": "0.0.1",
+    },
+    "plugins/companions/plugins/panel": {
+      "name": "@equin/plugin-companions-panel",
+      "version": "0.0.1",
+    },
     "plugins/config_v2": {
       "name": "@equin/plugin-config_v2",
     },
@@ -1839,6 +1883,10 @@
     },
     "plugins/conversations/plugins/compaction-context/plugins/delivery-check": {
       "name": "@equin/plugin-conversations-compaction-context-delivery-check",
+      "version": "0.0.1",
+    },
+    "plugins/conversations/plugins/companion-status": {
+      "name": "@equin/plugin-conversations-companion-status",
       "version": "0.0.1",
     },
     "plugins/conversations/plugins/context-usage": {
@@ -2465,10 +2513,6 @@
     },
     "plugins/conversations/plugins/idle-blocker": {
       "name": "@equin/plugin-conversations-idle-blocker",
-      "version": "0.0.1",
-    },
-    "plugins/conversations/plugins/menu-bar-status": {
-      "name": "@equin/plugin-conversations-menu-bar-status",
       "version": "0.0.1",
     },
     "plugins/conversations/plugins/model-provider": {
@@ -4937,22 +4981,6 @@
       "name": "@equin/plugin-media-player",
       "version": "0.0.1",
     },
-    "plugins/menu-bar": {
-      "name": "@equin/plugin-menu-bar",
-      "version": "0.0.1",
-    },
-    "plugins/menu-bar/plugins/app-grid": {
-      "name": "@equin/plugin-menu-bar-app-grid",
-      "version": "0.0.1",
-    },
-    "plugins/menu-bar/plugins/app-window": {
-      "name": "@equin/plugin-menu-bar-app-window",
-      "version": "0.0.1",
-    },
-    "plugins/menu-bar/plugins/open-in-window": {
-      "name": "@equin/plugin-menu-bar-open-in-window",
-      "version": "0.0.1",
-    },
     "plugins/music": {
       "name": "@equin/plugin-music",
       "version": "0.0.1",
@@ -7168,10 +7196,6 @@
       "name": "@equin/plugin-tasks-mandate-presets",
       "version": "0.0.1",
     },
-    "plugins/tasks/plugins/menu-bar-task": {
-      "name": "@equin/plugin-tasks-menu-bar-task",
-      "version": "0.0.1",
-    },
     "plugins/tasks/plugins/orchestration": {
       "name": "@equin/plugin-tasks-orchestration",
       "version": "0.0.1",
@@ -8614,6 +8638,28 @@
 
     "@equin/plugin-code-explorer-file-resolve": ["@equin/plugin-code-explorer-file-resolve@workspace:plugins/code-explorer/plugins/file-resolve"],
 
+    "@equin/plugin-companions": ["@equin/plugin-companions@workspace:plugins/companions"],
+
+    "@equin/plugin-companions-browser-extension": ["@equin/plugin-companions-browser-extension@workspace:plugins/companions/plugins/browser-extension"],
+
+    "@equin/plugin-companions-browser-extension-accounts-row": ["@equin/plugin-companions-browser-extension-accounts-row@workspace:plugins/companions/plugins/browser-extension/plugins/accounts-row"],
+
+    "@equin/plugin-companions-browser-extension-equin-site": ["@equin/plugin-companions-browser-extension-equin-site@workspace:plugins/companions/plugins/browser-extension/plugins/equin-site"],
+
+    "@equin/plugin-companions-browser-extension-wish": ["@equin/plugin-companions-browser-extension-wish@workspace:plugins/companions/plugins/browser-extension/plugins/wish"],
+
+    "@equin/plugin-companions-menu-bar": ["@equin/plugin-companions-menu-bar@workspace:plugins/companions/plugins/menu-bar"],
+
+    "@equin/plugin-companions-menu-bar-app-grid": ["@equin/plugin-companions-menu-bar-app-grid@workspace:plugins/companions/plugins/menu-bar/plugins/app-grid"],
+
+    "@equin/plugin-companions-menu-bar-app-window": ["@equin/plugin-companions-menu-bar-app-window@workspace:plugins/companions/plugins/menu-bar/plugins/app-window"],
+
+    "@equin/plugin-companions-menu-bar-open-in-window": ["@equin/plugin-companions-menu-bar-open-in-window@workspace:plugins/companions/plugins/menu-bar/plugins/open-in-window"],
+
+    "@equin/plugin-companions-menu-bar-wish": ["@equin/plugin-companions-menu-bar-wish@workspace:plugins/companions/plugins/menu-bar/plugins/wish"],
+
+    "@equin/plugin-companions-panel": ["@equin/plugin-companions-panel@workspace:plugins/companions/plugins/panel"],
+
     "@equin/plugin-config_v2": ["@equin/plugin-config_v2@workspace:plugins/config_v2"],
 
     "@equin/plugin-config_v2-browser-store": ["@equin/plugin-config_v2-browser-store@workspace:plugins/config_v2/plugins/browser-store"],
@@ -8653,6 +8699,8 @@
     "@equin/plugin-conversations-compaction-context": ["@equin/plugin-conversations-compaction-context@workspace:plugins/conversations/plugins/compaction-context"],
 
     "@equin/plugin-conversations-compaction-context-delivery-check": ["@equin/plugin-conversations-compaction-context-delivery-check@workspace:plugins/conversations/plugins/compaction-context/plugins/delivery-check"],
+
+    "@equin/plugin-conversations-companion-status": ["@equin/plugin-conversations-companion-status@workspace:plugins/conversations/plugins/companion-status"],
 
     "@equin/plugin-conversations-context-usage": ["@equin/plugin-conversations-context-usage@workspace:plugins/conversations/plugins/context-usage"],
 
@@ -8965,8 +9013,6 @@
     "@equin/plugin-conversations-hibernation": ["@equin/plugin-conversations-hibernation@workspace:plugins/conversations/plugins/hibernation"],
 
     "@equin/plugin-conversations-idle-blocker": ["@equin/plugin-conversations-idle-blocker@workspace:plugins/conversations/plugins/idle-blocker"],
-
-    "@equin/plugin-conversations-menu-bar-status": ["@equin/plugin-conversations-menu-bar-status@workspace:plugins/conversations/plugins/menu-bar-status"],
 
     "@equin/plugin-conversations-model-provider": ["@equin/plugin-conversations-model-provider@workspace:plugins/conversations/plugins/model-provider"],
 
@@ -10130,14 +10176,6 @@
 
     "@equin/plugin-media-player": ["@equin/plugin-media-player@workspace:plugins/media/plugins/player"],
 
-    "@equin/plugin-menu-bar": ["@equin/plugin-menu-bar@workspace:plugins/menu-bar"],
-
-    "@equin/plugin-menu-bar-app-grid": ["@equin/plugin-menu-bar-app-grid@workspace:plugins/menu-bar/plugins/app-grid"],
-
-    "@equin/plugin-menu-bar-app-window": ["@equin/plugin-menu-bar-app-window@workspace:plugins/menu-bar/plugins/app-window"],
-
-    "@equin/plugin-menu-bar-open-in-window": ["@equin/plugin-menu-bar-open-in-window@workspace:plugins/menu-bar/plugins/open-in-window"],
-
     "@equin/plugin-music": ["@equin/plugin-music@workspace:plugins/music"],
 
     "@equin/plugin-music-chord-box": ["@equin/plugin-music-chord-box@workspace:plugins/music/plugins/chord-box"],
@@ -11167,8 +11205,6 @@
     "@equin/plugin-tasks-launch-options": ["@equin/plugin-tasks-launch-options@workspace:plugins/tasks/plugins/launch-options"],
 
     "@equin/plugin-tasks-mandate-presets": ["@equin/plugin-tasks-mandate-presets@workspace:plugins/tasks/plugins/mandate-presets"],
-
-    "@equin/plugin-tasks-menu-bar-task": ["@equin/plugin-tasks-menu-bar-task@workspace:plugins/tasks/plugins/menu-bar-task"],
 
     "@equin/plugin-tasks-orchestration": ["@equin/plugin-tasks-orchestration@workspace:plugins/tasks/plugins/orchestration"],
 

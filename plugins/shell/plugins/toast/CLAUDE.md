@@ -55,7 +55,7 @@
     - `active-data/show-me`
     - `apps-core/app-embed`
     - `build/serve-composition`
-    - `menu-bar`
+    - `companions/panel`
     - `reports/optimistic-rejection`
     - `shell/notifications`
 - Core:

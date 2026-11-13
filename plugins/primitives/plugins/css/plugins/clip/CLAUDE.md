@@ -44,10 +44,10 @@ truncation leaf (it ellipsizes via the ambient single-line context).
     - `review` ×2
     - `active-data/go`
     - `apps-core/surface`
+    - `companions/panel`
     - `config_v2/settings`
     - `hints/ask`
     - `integrations/google-maps`
-    - `menu-bar`
     - `plugin-meta/plugin-view/file-tree`
     - `screenshot`
     - `tasks/task-graph`

@@ -11,11 +11,12 @@
     - `MenuBar.Section` "Notifications" → `NativeNotificationsSwitch`
     - `MenuBar.Mount` "native-notifications" → `NativeNotificationsForwarder`
   - Uses:
+    - `companions/menu-bar.MenuBar`
+    - `companions/menu-bar.useNativeHost`
+    - `companions/panel.PanelSection`
     - `config_v2.ConfigV2`
     - `config_v2.useConfig`
     - `config_v2.useSetConfig`
-    - `menu-bar.MenuBar`
-    - `menu-bar.useNativeHost`
     - `primitives/css/fill.Fill`
     - `primitives/css/row.Row`
     - `primitives/css/spacing.Inset`

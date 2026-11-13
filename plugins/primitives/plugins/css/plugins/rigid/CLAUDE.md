@@ -71,12 +71,13 @@ slots-as-props, which is what `<Frame>` did before it was deleted.
     - `primitives` ×20
     - `debug` ×13
     - `page` ×8
-    - `tasks` ×8
+    - `tasks` ×7
     - `ui` ×6
     - `plugin-meta` ×4
     - `review` ×4
     - `build` ×3
     - `backup` ×2
+    - `companions` ×2
     - `config_v2` ×2
     - `infra` ×2
     - `shell` ×2
@@ -84,7 +85,6 @@ slots-as-props, which is what `<Frame>` did before it was deleted.
     - `auth`
     - `code-explorer/commit-detail`
     - `hints/ask`
-    - `menu-bar`
     - `reorder/node-types/header`
     - `stats/commits`
 

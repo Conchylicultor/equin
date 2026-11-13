@@ -135,7 +135,10 @@ export type RuntimeFolder = (typeof RUNTIME_FOLDERS)[number];
  *  the Claude Code hook guards a plugin adds for its own files, collected by
  *  `tooling/guards`; `login-services/` holds the per-user OS services a plugin
  *  runs at login (`defineLoginService`), collected by `infra/launcher`'s
- *  `login-services` and brought up by `./equin start`.
+ *  `login-services` and brought up by `./equin start`; `browser-extension/`
+ *  holds a browser extension's shell (its `manifest.json`, `popup.html` and
+ *  the entry the build bundles), which the owning plugin's `cli/` builds into
+ *  the data root and Chrome loads from there.
  *
  *  Together with `RUNTIME_FOLDERS` this is the whole folder vocabulary a
  *  plugin may contain (plus `plugins/`, which holds child plugins, not code).
@@ -155,6 +158,7 @@ export const LEAF_FOLDERS = [
   "exempt",
   "guard",
   "login-services",
+  "browser-extension",
 ] as const;
 export type LeafFolder = (typeof LEAF_FOLDERS)[number];
 

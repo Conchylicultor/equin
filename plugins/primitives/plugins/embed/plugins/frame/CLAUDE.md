@@ -131,7 +131,9 @@ must be the new one (`./equin start --force`).
   - Exempts itself from:
     - `frame/no-raw-frame` — `web/components/frames.tsx` (sanctioned)
     - `namespace:no-hand-built-url` — `core/classify-url.ts` (sanctioned)
-  - Exempted by: `primitives/embed/frame` (0 debt)
+  - Exempted by:
+    - `companions/browser-extension` (0 debt)
+    - `primitives/embed/frame` (0 debt)
 - Sub-plugins:
   - **`agent`** — The content-frame channel's protocol and its frame agent: the script injected into every content document, answering the parent's closed set of requests over a MessagePort.
 

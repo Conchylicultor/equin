@@ -31,7 +31,7 @@
 // shared config ledger's (`config_v2/plugins/ledger`), which config
 // migrations ride too.
 
-import { mkdirSync, renameSync, rmdirSync } from "node:fs";
+import { mkdirSync, renameSync, rmdirSync, writeFileSync } from "node:fs";
 import {
   existsSync,
   readdirSync,
@@ -51,9 +51,11 @@ import {
   type CommittedFiles,
   type JsonValue,
 } from "@plugins/config_v2/core";
-import { asPath } from "@plugins/framework/plugins/plugin-id/core";
+import { z } from "zod";
+import { asFsPath, asPath } from "@plugins/framework/plugins/plugin-id/core";
 import { scanReorderItemRefs } from "@plugins/plugin-meta/plugins/plugin-refs/core";
 import {
+  APPLIED_CONFIG_MIGRATIONS_FILE,
   rewriteConfigFiles,
   runConfigLedger,
   walkConfigFiles,
@@ -153,6 +155,58 @@ function upstreamAwareHash(
 }
 
 /**
+ * A config-migration marker key (`<hierarchy path>/<config name>:<migration
+ * id>`, `applyConfigMigrations`) re-rooted through `moves`, in ledger order:
+ * a key under a moved plugin's slash path names the same config at its new
+ * path. Unchanged when no move covers it.
+ */
+export function rerootMigrationKey(
+  key: string,
+  moves: readonly PluginMove[],
+): string {
+  let out = key;
+  for (const m of moves) {
+    const from = `${asPath(m.from)}/`;
+    if (out.startsWith(from)) out = `${asPath(m.to)}/${out.slice(from.length)}`;
+  }
+  return out;
+}
+
+const appliedMigrationsSchema = z.object({ applied: z.array(z.string()) });
+
+/**
+ * The config migrations a namespace applied are recorded by config path, so
+ * they must follow a move with the files they rewrote — else the moved files
+ * look un-migrated at their new path and the migration runs on them again.
+ * Run on EVERY pass, not once per entry: it is idempotent (a re-rooted key is
+ * under no moved path), so a namespace whose files moved before this existed
+ * heals on its next build. Only moves whose old directory is not a plugin
+ * again count — a reused id's markers are its own. Returns the re-rooted keys.
+ */
+function rerootMigrationMarkers(
+  root: AppPath,
+  userConfigDir: AppPath,
+  moves: readonly PluginMove[],
+): string[] {
+  const file = joinAppPath(userConfigDir, APPLIED_CONFIG_MIGRATIONS_FILE);
+  if (!existsSync(file)) return [];
+  const gone = moves.filter(
+    (m) =>
+      !existsSync(
+        joinAppPath(root, "plugins", asFsPath(m.from), "package.json"),
+      ),
+  );
+  const { applied } = appliedMigrationsSchema.parse(
+    JSON.parse(readFileSync(file, "utf8")),
+  );
+  const rerooted = applied.filter((k) => rerootMigrationKey(k, gone) !== k);
+  if (rerooted.length === 0) return [];
+  const next = [...new Set(applied.map((k) => rerootMigrationKey(k, gone)))];
+  writeFileSync(file, `${JSON.stringify({ applied: next }, null, 2)}\n`);
+  return rerooted;
+}
+
+/**
  * Apply every ledger entry of the checkout at `root` that the namespace config
  * dir `userConfigDir` has not applied yet, in ledger order. Throws (failing the
  * build) on anything unreadable; the marker is written after each entry, so a
@@ -169,11 +223,12 @@ export function applyPluginMoves(opts: {
     readFileSync,
     readdirSync,
   });
-  return runConfigLedger({
+  const moves = readPluginMoves(root);
+  const applied = runConfigLedger({
     userConfigDir,
     markerFile: APPLIED_MOVES_FILE,
     fresh: !existsSync(userConfigDir),
-    entries: readPluginMoves(root).map((move) => ({
+    entries: moves.map((move) => ({
       key: pluginMoveKey(move),
       apply: (dir): AppliedMove => {
         const { moved, kept } = moveTree(
@@ -188,6 +243,9 @@ export function applyPluginMoves(opts: {
       },
     })),
   }).map(({ result }) => result);
+  // After the files moved: the migrations they carry follow them.
+  rerootMigrationMarkers(root, userConfigDir, moves);
+  return applied;
 }
 
 /** Namespaces under `configRoot` with user config still at `from`'s slash path. */

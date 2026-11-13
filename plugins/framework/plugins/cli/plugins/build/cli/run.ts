@@ -122,6 +122,7 @@ import {
 } from "@plugins/build/plugins/run-ledger/core";
 import { runAttached } from "@plugins/infra/plugins/jobs/plugins/supervised-job/cli";
 import { linkParcelWatcherAddon } from "@plugins/infra/plugins/file-watcher/plugins/parcel-addon/cli";
+import { writeExtensionShell } from "@plugins/companions/plugins/browser-extension/cli";
 import { BUILD_EXIT_SUPERSEDED } from "@plugins/build/plugins/build-status/core";
 
 // Wedge-breaker for the local `git` metadata reads in this file — orders of
@@ -1707,6 +1708,28 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
         // never rewrite a published namespace's receipt as `failed`.
         closeReceipt(target.namespace, "ok", 0);
         deployedUrls.push(namespaceUrl(target.namespace));
+      }
+
+      // 6b. The browser extension's shell framing this checkout's own app:
+      // main's into the installed data dir (Chrome loads it from there), a
+      // worktree's beside its build artifacts. Rewritten only when its digest
+      // moved; the backend's watch on the digest file tells every open popup to
+      // reload the extension onto it. See companions/browser-extension.
+      const ownTarget = targets.find((t) => t.isMainComposition);
+      if (ownTarget !== undefined) {
+        endSpan = buildProfilerStart(
+          "browserExtension",
+          "build:setup",
+          "browser extension shell",
+        );
+        const shell = await writeExtensionShell({
+          root,
+          namespace: ownTarget.namespace,
+        });
+        endSpan();
+        console.log(
+          `browser extension: ${shell.kind === "written" ? "wrote" : "unchanged"} ${shell.path} (${shell.digest.slice(0, 12)})`,
+        );
       }
 
       // 6c. Re-register the `central` worktree spec for idempotency. Path is

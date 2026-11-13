@@ -99,7 +99,7 @@ export const LEGACY_ID_NOTES: Readonly<Record<LegacyIdKey, LegacyIdNote>> = {
       "gateway/proxy.go",
       "gateway/worktree.go",
       "install.sh",
-      "plugins/menu-bar/rust/src/cli.rs",
+      "plugins/companions/plugins/menu-bar/rust/src/cli.rs",
       "sidequests/claude-web/session-picker.sh",
       "sidequests/clean-install/steps.sh",
       "sidequests/clean-install/steps-install.sh",

@@ -1,0 +1,22 @@
+{
+  "manifest_version": 3,
+  "name": "equin",
+  "description": "equin from any tab: send a wish, jump between equin.ai and your own equin, and run the actions your apps offer on the page.",
+  "version": "1.0.0",
+  "action": {
+    "default_title": "equin",
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icon-16.png",
+      "32": "icon-32.png",
+      "128": "icon-128.png"
+    }
+  },
+  "icons": {
+    "16": "icon-16.png",
+    "32": "icon-32.png",
+    "128": "icon-128.png"
+  },
+  "permissions": ["activeTab", "tabs"],
+  "host_permissions": ["http://*.localhost/*"]
+}

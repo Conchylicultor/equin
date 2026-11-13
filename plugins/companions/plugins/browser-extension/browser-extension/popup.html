@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <!-- Written by the build: the equin page this popup frames, and this
+         shell's own digest (what the page compares with the served one). -->
+    <meta name="equin-origin" content="{{ORIGIN}}" />
+    <meta name="equin-shell-digest" content="{{SHELL_DIGEST}}" />
+    <title>equin</title>
+    <style>
+      /* Chrome draws the popup's frame and corners; the page inside paints
+         the panel, opaque, edge to edge. */
+      :root {
+        color-scheme: light dark;
+      }
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        width: 440px;
+        overflow: hidden;
+        background: Canvas;
+      }
+      iframe {
+        display: block;
+        width: 440px;
+        height: 360px;
+        border: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>

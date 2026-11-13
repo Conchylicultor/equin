@@ -56,7 +56,7 @@
     - `primitives/link-gesture` ×2
     - `primitives/networking` ×2
     - `primitives/persistent-draft` ×2
-    - `menu-bar/app-window.useNativeFileDrag`
+    - `companions/menu-bar/app-window.useNativeFileDrag`
     - `primitives/bar.Bar`
     - `primitives/css/center.Center`
     - `primitives/css/column.Column`

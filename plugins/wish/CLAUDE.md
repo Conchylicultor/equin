@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: The Wish toolbar button: the entry point for anything the user wants done — a fix, a change, a new app. Files a task under "Wishes" with the current URL. Companion actions join it as segments of one split pill via WishSlots.Segment; WishSlots.HeaderAction adds actions to its popover header (Ask equin). Task category of the Wish toolbar button. Files tasks stamped "Wishes" via the shared task-draft-form primitive.
+- Description: The Wish toolbar button: the entry point for anything the user wants done — a fix, a change, a new app. Files a task under "Wishes" with the current URL. Companion actions join it as segments of one split pill via WishSlots.Segment; WishSlots.HeaderAction adds actions to its popover header (Ask equin). WishField is the same wish as a companion’s section — the task composer with its own ↑, filing one task under Wishes about the page the DraftPage around it names, confirming inline (“Filed — an agent is on …”). Task category of the Wish toolbar button. Files tasks stamped "Wishes" via the shared task-draft-form primitive.
 - Web:
   - Slots:
     - `WishSlots.Segment`
@@ -13,17 +13,18 @@
     - `WishSlots.Segment` ← `wish.element-picker`
     - `WishSlots.HeaderAction` ← `hints.ask`
   - Contributes: `ActionBar.Item` → `WishButton`
-  - Uses:
-    - `hints.emitHintSignal`
-    - `hints.useHintAnchor`
-    - `primitives/css/ui-kit.Button`
-    - `primitives/css/ui-kit.ButtonGroup`
+  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `tasks/task-draft-form` ×8
+    - `primitives/css/ui-kit` ×3
+    - `hints` ×2
+    - `primitives/css/spacing` ×2
+    - `primitives/persistent-draft` ×2
+    - `tasks/launch-options` ×2
+    - `infra/endpoints.useFetchEndpoint`
+    - `primitives/css/text.Text`
+    - `primitives/dom/web-storage.defineStore`
     - `primitives/slot-render.renderIsolated`
     - `shell/action-bar.ActionBar`
-    - `tasks/task-draft-form.draftInsert`
-    - `tasks/task-draft-form.draftSeed`
-    - `tasks/task-draft-form.TaskDraftInsert`
-    - `tasks/task-draft-form.TaskDraftPopover`
     - `ui/icons.Icon`
   - Exports (types):
     - `WishHeaderActionContribution`
@@ -32,6 +33,7 @@
   - Exports (values):
     - `insertIntoWishDraft`
     - `openWish`
+    - `WishField`
     - `WishSlots`
 - Server:
   - Contributes:
@@ -61,10 +63,16 @@
   - Uses tokens:
     - `ui/tokens/color-palette --foreground`
     - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/color-palette --ring`
+    - `ui/tokens/color-palette --success`
+    - `ui/tokens/shape --radius-card`
+    - `ui/tokens/shape --spacing`
   - Imported by:
     - `apps/home/tour`
     - `apps/website/demos/workspace/story`
     - `apps/website/promo-film/seed`
+    - `companions/browser-extension/wish`
+    - `companions/menu-bar/wish`
     - `conversations/conversation-view/jsonl-viewer/investigate-event`
     - `hints/ask`
     - `screenshot/draw-on-app`

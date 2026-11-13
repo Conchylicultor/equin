@@ -13,8 +13,8 @@ export interface CollectedEntry {
 }
 
 export const loginServicesEntries: CollectedEntry[] = [
+  { pluginPath: "companions/plugins/menu-bar", id: "companions.menu-bar", loader: () => import("@plugins/companions/plugins/menu-bar/login-services"), dependsOn: [] },
   { pluginPath: "infra/plugins/host/plugins/io-health/plugins/monitor", id: "infra.host.io-health.monitor", loader: () => import("@plugins/infra/plugins/host/plugins/io-health/plugins/monitor/login-services"), dependsOn: [] },
-  { pluginPath: "menu-bar", id: "menu-bar", loader: () => import("@plugins/menu-bar/login-services"), dependsOn: [] },
 ];
 
 export interface CompositionIdentity {

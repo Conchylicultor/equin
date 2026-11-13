@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-companions-browser-extension",
+  "description": "equin in Chrome's toolbar: the extension shell (browser-extension/, built by ./equin build into the data root) and the panel its popup frames — the /home/browser-extension route, rendered chromeless, whose body is the BrowserExtension.Section slot.",
+  "private": true,
+  "version": "0.0.1"
+}

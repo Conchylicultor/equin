@@ -518,9 +518,9 @@ surface isn't viewport-capped, it fails loudly.
     - `hints` ×2
     - `ui` ×2
     - `apps-core/surface`
+    - `companions/menu-bar/open-in-window`
     - `framework/cli/build/experimental-marks`
     - `fullscreen`
-    - `menu-bar/open-in-window`
     - `reports/panel-overflow`
     - `shell/global-action-bar`
     - `tag-tree/picker`

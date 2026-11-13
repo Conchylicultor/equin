@@ -46,8 +46,11 @@ gets `source`/`owner` from it).
     - `WishSlots.Segment` "element-picker" → `ElementPickerButton`
     - `TaskDraftFormSlots.Action` → `TaskDraftPickerButton`
   - Uses:
+    - `primitives/icon-button.IconButton`
     - `primitives/ui-context/element-picker.PickerButton`
+    - `tasks/task-draft-form.TaskDraftActionProps`
     - `tasks/task-draft-form.TaskDraftFormSlots`
+    - `tasks/task-draft-form.useDraftPage`
     - `wish.insertIntoWishDraft`
     - `wish.WishSlots`
 - Core:

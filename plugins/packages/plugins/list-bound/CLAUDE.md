@@ -114,8 +114,8 @@ tuples, intersections, malformed tags).
     - `apps-core/app-usage`
     - `auth`
     - `backup`
+    - `companions/menu-bar`
     - `config_v2`
-    - `menu-bar`
     - `network/live`
     - `release`
     - `review/plugin-changes`

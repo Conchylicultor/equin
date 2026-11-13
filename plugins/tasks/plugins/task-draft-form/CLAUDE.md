@@ -28,11 +28,30 @@ The head card honors one extra knob:
   don't inherit existing dependencies". The form builds them as the head card's
   `DependencyExtras`; nothing about them renders under the card.
 
-Every card carries one context toggle — **URL**, which attaches
-`window.location.href` to the filed task. It is not configurable per host: every
-surface that drafts a task is somewhere, and that somewhere is worth recording.
-Whether the box starts checked is per-app config (`captureUrlByDefault`, read
-through `useCaptureUrlDefault`).
+Every card carries one context toggle — **URL**, which attaches the URL of
+the page the draft is about to the filed task. Whether the box starts checked is
+per-app config (`captureUrlByDefault`, read through `useCaptureUrlDefault`).
+
+## The page a draft is about: `DraftPage`
+
+Which page that is comes from the `DraftPage` context (`draft-page.ts`):
+`{ readUrl, picker }`. Without a provider it is THIS document —
+`window.location.href`, read when the popover opens, and elements picked in
+place — so every surface inside the app says nothing. A surface that is not
+itself the page wraps its drafts in `DraftPageProvider`: a companion about
+another tab supplies that tab's URL and a `remote` picker (`pick()` resolving
+the element's `UiContextMeta`); one about no page (the menu-bar tray) passes
+`NO_DRAFT_PAGE`. The composer shows the Page URL toggle only when there is a
+`readUrl`, and the element picker (`wish/element-picker`'s
+`TaskDraftFormSlots.Action`) renders only when there is a `picker` — each reads
+the context itself, so no host passes a prop and the form names no contributor.
+
+## The composer alone
+
+`TaskDraftComposer` is exported for a host with no popover around it (wish's
+`WishField`, a companion's Wish section). Its optional `submit={{ pending }}`
+adds the composer's own ↑ launch button at the end of the tool row, disabled
+while the field is empty; ⌘↵ still submits (`onSubmitChord`).
 
 ## The draft stores choices, never defaults
 
@@ -157,21 +176,29 @@ it is handed and knows no tour.
   - Exports (types):
     - `ActiveRelateContext`
     - `CardDraft`
+    - `DraftPage`
+    - `DraftPagePicker`
     - `SubmitArgs`
     - `SubmitOutcome`
     - `TaskDraftActionProps`
+    - `TaskDraftComposerProps`
     - `TaskDraftHintAnchors`
     - `TaskDraftInsert`
     - `TaskDraftPopoverProps`
     - `TaskDraftRelate`
   - Exports (values):
     - `draftInsert`
+    - `DraftPageProvider`
     - `draftSeed`
+    - `NO_DRAFT_PAGE`
     - `submitChain`
+    - `TaskDraftComposer`
     - `TaskDraftFormSlots`
     - `TaskDraftPopover`
     - `useActiveRelateContext`
     - `useActiveRelateTask`
+    - `useCaptureUrlDefault`
+    - `useDraftPage`
 - Server:
   - Contributes: `ConfigV2.Register` "config"
   - Uses: `config_v2.ConfigV2`
@@ -190,9 +217,10 @@ it is handed and knows no tour.
     - `ui/tokens/type-scale --font-weight-medium`
     - `ui/tokens/type-scale --font-weight-semibold`
   - Imported by:
+    - `companions/browser-extension/wish`
+    - `companions/menu-bar/wish`
     - `conversations/conversation-view`
     - `conversations/conversation-view/new-child-task`
-    - `tasks/menu-bar-task`
     - `tasks/task-dependencies`
     - `wish`
     - `wish/element-picker`

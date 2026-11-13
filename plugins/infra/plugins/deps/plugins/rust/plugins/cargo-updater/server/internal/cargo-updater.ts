@@ -61,7 +61,7 @@ export function cargoCutoff(now: Date, cooldown: Cooldown): string {
 
 /** One crate, found by its tracked `rust/Cargo.lock`. */
 interface Crate {
-  /** Repo-relative crate dir, e.g. `plugins/menu-bar/rust`. */
+  /** Repo-relative crate dir, e.g. `plugins/companions/plugins/menu-bar/rust`. */
   dir: string;
   /** The owning plugin's folder name — the prefix of a move's name. */
   label: string;

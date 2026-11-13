@@ -483,10 +483,10 @@ the `""` entry.
     - `ui` ×29
     - `apps` ×18
     - `apps-core/chrome-theme`
+    - `companions/panel`
     - `hints`
     - `map`
     - `media/player`
-    - `menu-bar`
     - `reports/theme-resolution`
 - Exemptions:
   - Exempts itself from: `check-thread-safety/no-blocking-check-work` — `check/index.ts` (debt)

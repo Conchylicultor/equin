@@ -1,0 +1,345 @@
+# menu-bar
+
+## Native helper
+
+`rust/` is the Tauri 2 crate `equin-desktop`, built by `deps/` (`menu-bar-helper`,
+the rust deps kind: `./equin deps install menu-bar-helper`; macOS gets the
+binary beside the app icon, `macos/{equin-desktop,equin.icns}`, which the login
+service installs into the ONE equin app bundle — `equin.app`, `dev.equin`
+(also the crate's Tauri `identifier`, which its notifications use),
+`LSUIElement`, signed with the machine's identity — so notifications and every
+other permission are the app's; Linux the bare binary). Generic: it knows
+namespaces and URLs, never an app.
+
+- `equin-desktop tray [--namespace <ns>]` (default the main namespace, the main
+  checkout): the status icon — macOS an NSStatusItem (Tauri's tray, the mono
+  spiral as a template image, accessory activation policy so no Dock icon);
+  Linux a StatusNotifierItem through `ksni` (left click = `Activate` = the
+  panel; no SNI watcher → `tray: unavailable`, exit 1). A click toggles the
+  hidden `panel` window (360 × 560, borderless, always on top, hides on blur,
+  kept alive while hidden) on `http://<ns>.localhost:9000/home/menu-bar?embed=1`,
+  under the icon on macOS, top-right on Linux. When nothing answers on :9000
+  (probed at start and on every show) it shows the bundled `frontend/index.html`
+  instead, whose Start runs `launchctl kickstart -k gui/$UID/<gateway-label>`
+  / `systemctl --user start <gateway-label>.service` (the label its job carries in
+  `EQUIN_GATEWAY_LABEL`, written by `login-services/index.ts` from the bound
+  gateway service) and loads the panel once the port answers.
+- **Window mode** — an installed app's process (`rust/src/window.rs`): on macOS
+  the binary inside a shim bundle whose Info.plist has `EquinAppId` (its
+  arguments then only carry an optional in-scope `--url`, a hand-off); on
+  Linux `equin-desktop window --app <id> --url <url>` (the `.desktop` Exec),
+  which sets the glib prgname / gdk program class to `equin-<id>` (the
+  `StartupWMClass`). A regular app (own Dock icon), its windows titled with the
+  shim's name, the first on `<url>` (never `?embed=`: the window is the app's own
+  document, not an embed — it keeps its tab set across a reload and the
+  floating global action bar; a relaunch starts fresh), frame remembered per app
+  (`<app config dir of dev.equin.app.<id>>/window.json`). One process
+  per app: a per-user Unix socket `equin-app-<id>.sock` ($TMPDIR /
+  $XDG_RUNTIME_DIR) — a later launch hands its URL over and exits; the
+  running window comes forward and navigates when the URL is in scope.
+  **Window scope** = the app URL's whole origin (its namespace), not its base
+  path: the app's own ways to other apps (the launcher, a link into another
+  app) stay in the window. (Routing a launch or hand-off *to* an app still
+  uses the app's base path — `shim::in_scope` against the shim URL.)
+  **The holder decides, before the fact** (`rust/src/main_frame.rs`): a
+  main-frame load off the origin — a link, a form, `location.*`, a server
+  redirect — is cancelled natively before it loads (macOS: a per-webview proxy
+  in front of wry's `WKNavigationDelegate` answering from
+  `targetFrame.isMainFrame` and, for redirects, `isForMainFrame`; Linux:
+  WebKitGTK's response decision, `is_main_frame_main_resource`, so the request
+  goes out but nothing renders), and handed to the installed app owning the
+  URL (read from the shims on disk — `rust/src/shim.rs`; the shim set is the
+  installed set), else the default browser; every new-window request is
+  handed off and denied. Tauri's `on_navigation` cannot do this — wry passes
+  it only the URL, not the frame — and frames are untouched (an app frames
+  content origins and foreign sites). Every hand-off goes through one burst gate
+  (`rust/src/scope_gate.rs`: the same URL within 2 s once; 3 at once, then one
+  per 3 s; the rest logged as collapsed). A main frame that still lands off the
+  origin is a bug: logged, and the window goes home natively
+  (`window.navigate`), never by script in that page. **Window probe**:
+  `equin-desktop probe-window --namespace <ns>` builds the real window hidden
+  and judges a navigator script's rows (`rust/src/probe_window.{rs,js}`);
+  `./equin run plugins/companions/plugins/menu-bar/e2e/window-probe.ts` runs it. macOS bundles need an ATS exception for
+  `localhost` + subdomains (`NSExceptionAllowsInsecureHTTPLoads`), else
+  WKWebView never loads `http://*.localhost` — the equin app bundle and every shim carry it.
+- **App-window bridge** (`rust/src/window_bridge.js`, the contract
+  `plugins/app-window/core` mirrors; `useNativeFileDrag()` reads it): the
+  window's one script, on its main frame, defines `window.equinWindow` on
+  pages of the window's origin only — `hostInfo()` (`{ version: 1, platform,
+  capabilities: { fileDrag } }`) and `startFileDrag(paths)` (`rust/src/file_drag.rs`,
+  macOS: an `NSDraggingSession` of file URLs from under the pointer, drawn
+  as Finder's list view drags — per file a row of its small icon and name; copy-only outside the app, every operation over its own
+  window; refused for a relative or missing path; resolves `"dropped"` /
+  `"cancelled"` when the drag ends, or `"denied"` without starting when macOS
+  does not let the app read a path — a receiver gets only files the dragging
+  app can read, and each shim is its own app to macOS's folder privacy
+  (Downloads, Documents, Desktop, volumes): the drag opens every path first,
+  which is what asks the user once per folder; the shim's `Info.plist` carries
+  the `NS*FolderUsageDescription` / `NS*VolumesUsageDescription` reason).
+  Shims are signed with the machine's identity (below), so a grant
+  survives a new helper. Held natively like the panel's: the ACL
+  grants `APP_WINDOW_COMMANDS` to windows `app` / `app-*` on its origin
+  (`window::Scope::capability`), and the command gate checks the shown page
+  against that origin. The origin is the owner's instance, whose pages
+  already read and serve any host file, so the bridge adds no reach. Tauri's
+  own drop handler is off on the window (`disable_drag_drop_handler`): drags
+  over it are the page's HTML drag and drop, as in a browser — with it on,
+  Tauri swallowed every drag, the page's own row drags included.
+- **Open link** (`rust/src/open_link.rs`; `openLink` / `OPEN_LINK_SCHEME` in
+  `core/` mirror its grammar): `equin://open?url=<page>` — a browser tab
+  asking for its page in the installed app's own window (the
+  `open-in-window` sub-plugin's view-options row). The login service declares
+  the scheme (`urlSchemes`), so on macOS `equin.app`'s `Info.plist` carries
+  `CFBundleURLTypes` and the link reaches the running tray
+  (`RunEvent::Opened`). The page goes to the installed app owning it
+  (`shim::owner_of` + `shim::launch`) through the hand-off burst gate —
+  **never the default browser**: any website can build such a link, so it
+  opens only a page an installed app owns, and a page none owns is refused
+  with a notification ("Cannot open in a window"). The page opens in a new
+  window of its app (Window mode above). Linux: the keeper writes a hidden
+  `dev.equin.open-link.desktop` (`Exec=<stable helper> open-link %u`,
+  `MimeType=x-scheme-handler/equin;`) and makes it the scheme's default
+  (`xdg-mime default`, only when it is (re)written), so each link runs
+  `equin-desktop open-link <link>` — no burst gate; a failure is a
+  `notify-send`. On macOS that command is the same path from a shell. Plan:
+  `research/2026-11-09-menu-bar-open-in-window-link.md`.
+- **Bridge** (`rust/src/bridge.js`, the contract `core/` mirrors): an
+  initialization script on the panel's main frame defines `window.equinNative`
+  — `hostInfo()` (`{ version: 1, platform,
+  capabilities: { notify, attention, launchApp: true, openUrl, apps, pin } }`),
+  `setAttention(on)`, `notify({ title, body?, tag? })`, `openUrl(url)` (http(s),
+  default browser), `launchApp(appId)` (the installed app's running window comes forward, else
+  its shim launches — macOS `open <bundle>`, Linux `gtk-launch equin-<id>`;
+  rejects `"not-installed"` without a shim), `hidePanel()`,
+  `setPanelHeight(px)` (clamped 200–720), `apps()` / `pinApp(appId)` (the
+  device's installed apps, below — capabilities `apps` / `pin`).
+  **The bridge answers ONE page: the pin** (`panel::Pin`, `rust/src/panel.rs`
+  — the panel app's route `/home/menu-bar` at the configured instance's exact
+  origin, `http://<ns>.localhost:9000`). Tauri's ACL sees only the caller's
+  origin (the IPC fetch's `Origin` header), and a same-origin frame calling
+  `top`'s `invoke` is indistinguishable from the page, so the pin is held at
+  three native points, all reading the pin:
+  - **ACL** — the bridge's capability is granted at runtime
+    (`Pin::capability`, `add_capability`) to window `panel` on that one origin,
+    never a pattern over namespaces (so the invoke key Tauri logs on a bad call
+    is useless elsewhere); `capabilities/panel-offline.json` grants only
+    `start_gateway` to the bundled page.
+  - **Navigation** — the panel's `on_navigation` admits the pin and the
+    bundled offline page and refuses every other load before it happens
+    (`panel refused <url>` in the log). The callback sees every frame's loads,
+    so this also keeps every frame out of the panel (a prototype, `srcdoc`,
+    `<object>`, another namespace): the panel route can render none. A
+    new-window request (`target=_blank`) goes to the default browser; the
+    panel's own ways out are `openUrl` / `launchApp`.
+  - **Command gate** — `commands::handler` checks, before dispatch, the page
+    the calling window shows NOW against the command's row in
+    `rust/src/command_table.rs` (bridge commands: the pin; `start_gateway`: the
+    offline page) — which also catches a `pushState` to another route.
+  `bridge.js`'s own origin guard (the pin's origin, injected) is a courtesy.
+  A new command = the Rust fn (in `generate_handler!`), its row in
+  `command_table.rs` (which feeds `build.rs`'s ACL manifest and the runtime
+  grant), the `bridge.js` method, and the web side's `core/` contract.
+  **Probe**: `equin-desktop probe --namespace <ns>` builds the real panel with
+  no tray icon, runs `rust/src/probe.js` natively in its main frame and judges
+  the matrix (frames of every kind, another namespace, `pushState`,
+  `window.open`, a navigated panel); `./equin run
+  plugins/companions/plugins/menu-bar/e2e/bridge-probe.ts` runs it on this checkout's helper and
+  deploy.
+- Icons: `rust/icons/*.svg` are the source; `build.rs` renders them (resvg)
+  into the tray PNGs (`OUT_DIR`) and `icons/icon.png` (gitignored — Tauri's
+  codegen requires it; `deps/`'s macOS step makes the `.icns` from it).
+- Iterate on the crate with `cargo build --release` in `rust/` (its own
+  `target/`, gitignored); the deps install uses the shared cargo-target cache.
+
+(`<gateway-label>` is the gateway's launchd label / systemd unit name, `dev.equin.gateway` (`GATEWAY_SERVICE` in `infra/launcher/core`); an install from before the rename keeps `LEGACY_IDS.launchdLabel` until `./equin data-dir migrate` relabels it — the service stays bound to whichever label is installed (`installedAs`).)
+
+## Installed apps — the helper's device power (`rust/src/apps.rs`)
+
+**Installing and pinning an app acts on the device, so the helper does it,
+never the server** (Trust boundaries, principle 2: a power lives on the
+machine it acts on). The instance only says which apps exist and what they
+look like: `GET /api/menu-bar/apps` (`getAppCatalog`, `machine/`, owner-only —
+the helper is a local tool with no browser headers, which the gateway stamps
+as the owner) lists every installable app's id, name, base path, icon PNG
+paths (every iconset size, from `app-manifest`'s icon route) and a
+fingerprint (`hash`: id, name, base path, icon picture). Plan:
+`research/2026-10-29-menu-bar-device-powers-in-helper.md`.
+
+**Every installable app is an OS app, ahead of any click.** The helper keeps
+one launcher **shim** per catalog app, on its instance's origin + base path,
+so a menu-bar tile always opens the app's own window at once. (A shim's own
+bundle id is what gives a window its own Dock icon / Cmd-Tab entry, so it
+cannot be skipped.)
+
+- **Who keeps them** — only the tray of the main instance (`tray` with no
+  `--namespace`, or the main namespace): it manages an `apps::Keeper`. A dev
+  tray on another namespace, the probes and a worktree's build never write a
+  shim (`hostInfo().capabilities.apps` is `false` there), so nothing but the
+  installed helper decides what every installed app runs.
+- **When** — the keeper syncs each time the pinned panel page *starts*
+  loading (`on_page_load` `Started`): the tray's start, and the panel's own
+  reload once main serves a newer web bundle — which is what a changed app set
+  or icon is. Nothing polls. It is marked pending before the page's scripts
+  run, so the page's first `apps()` answers after it.
+- **Sync** — fetch the catalog; write a missing or stale shim (stale: another
+  `EquinShimHash`, `EquinHelperDigest` — a digest of the helper's own
+  executable, so a new helper rewrites them all — or URL); remove shims of
+  renamed apps (the old bundle name) and of apps no longer in the catalog.
+  Only equin's own shims are touched (read by their `EquinAppId`, `shim.rs`).
+  A current shim runs no command and fetches no icon.
+- **macOS** — `~/Applications/equin <Name>.app`: `Contents/MacOS/equin-desktop`
+  (an APFS clone, `cp -c`, of the helper's OWN executable — the process must
+  live in the shim's bundle to get its own Dock icon), `Info.plist`
+  (`CFBundleIdentifier dev.equin.app.<id>`, `CFBundleExecutable
+  equin-desktop`, `CFBundleIconFile app`, `EquinAppId`, `EquinUrl`,
+  `EquinNamespace`, `EquinShimHash`, `EquinHelperDigest`, the `localhost` ATS
+  exception, the folder / volume usage descriptions; no `LSUIElement`),
+  `Resources/app.icns` (each iconset size fetched from the icon route, packed
+  by `iconutil`), **signed with this machine's code-signing identity** — the
+  one `equin.app` is signed with — and verified: macOS keys an app's folder
+  grants to its designated requirement, which an ad-hoc signature ties to the
+  binary's hash, so every new helper was a new app that asked again. The tray
+  never resolves the identity: its login service hands it `infra/codesign`'s
+  `bundleSigner` as `EQUIN_SHIM_SIGNER` (JSON: the certificate's SHA-1 and the
+  `sign` / `verify` commands, each run with the staged bundle's path
+  appended); without it a macOS sync fails rather than sign ad hoc. The SHA-1
+  is folded into `EquinHelperDigest`, so a new identity re-signs every shim. A
+  configured keychain identity is used through `/usr/bin/codesign` from the
+  tray's process: the keychain may ask once to let it use the key.
+  Assembled in `<bundle>.staging` and swapped in whole, so a running app's
+  executable is never overwritten in place.
+- **Linux** — `~/.local/share/applications/equin-<id>.desktop` (`Exec=<stable
+  helper> window --app <id> --url <url>`, `StartupWMClass=equin-<id>`,
+  `Icon=equin-<id>`, `X-Equin-AppId`, `X-Equin-ShimHash`,
+  `X-Equin-HelperDigest`), PNG at
+  `~/.local/share/icons/hicolor/512x512/apps/equin-<id>.png`. The stable
+  helper is the helper's own copy at `~/.local/share/equin/equin-desktop`
+  (the deps cache it is built into may be swept).
+- **Names** — a bundle is named from the app's name only when it is a safe
+  path segment (no `/`, `:`, `\`, control character or leading dot, at most
+  64 characters); otherwise from its id.
+- **Pin** — `equinNative.pinApp(appId)` (writing its shim first when it is not
+  there yet): macOS appends a `persistent-apps` tile with `defaults write
+  com.apple.dock`, then `killall Dock`; GNOME appends to `gsettings
+  org.gnome.shell favorite-apps` (pin capability probed once: does `gsettings
+  get` answer). Already pinned → nothing runs.
+- **Read** — `equinNative.apps()` → `{ installed, pinned }` (the shims on
+  disk; the Dock's `persistent-apps` / the dash's favorites matched against
+  them), after the sync in flight. A failed sync is its failure.
+  `useNativeApps()` (web) reads it on mount, on each panel focus (so an app
+  dragged out of the Dock offers its pin again on the next open) and after a
+  pin; pins in flight / failed are its `requests`.
+- **Verify** — `HOME=$(mktemp -d) equin-desktop sync-apps --namespace <ns>`
+  runs one sync against a scratch home (real `iconutil` / `codesign`, never
+  the real `~/Applications` or Dock) and prints what it wrote and removed.
+- The `state/menu-bar` data dir is legacy (the server's old stable copy):
+  nothing writes it; Linux entries written before still name it until the
+  helper's first sync rewrites them.
+
+The app grid (`plugins/app-grid`) opens a tile's app through `launchApp` (its
+window) whenever it has a shim — every app, once the helper's first sync ran —
+and draws the **Keep in Dock** pin as a hover item action on each tile
+(data-view's icons view corner), hidden once pinned or where the helper cannot
+pin.
+
+`login-services/` declares `dev.equin.menu-bar` (`graphical`): the helper run
+as `tray` — on macOS from the equin app bundle, as its main executable
+(`executable: { name: "equin-desktop", main: true }`; the bundle is the one
+every login service runs from, `infra/launcher/login-services`), on Linux the
+bare build — its stdio in
+`logs/menu-bar/helper-stdio.log`. Once a `./equin start` has registered it, the
+tray follows main by itself: main's backend (on the advance of a push
+changing `rust/`, whether or not its build restarts the backend) requests the
+helper build and reloads the tray onto it
+(`infra/launcher/login-services`, which names no service). `./equin start
+--only dev.equin.menu-bar --force` restarts the tray alone.
+
+<!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./equin build` -->
+
+## Plugin reference
+
+- Description: The menu-bar panel the native helper opens: the menu-bar app (unlisted, colorMode system — light or dark with the OS, in the companions' `companion` theme) mounted at /home/menu-bar, whose whole layout is the companions' panel (no pane; chromeless under ?embed=1) over the MenuBar.Section slot, with the companions' header (whose Companion.Status attention lights the menu-bar icon's dot) and footer ('Running · <host>', opening equin in the default browser through the helper). useNativeHost() reads the helper's bridge (window.equinNative): pending, absent (a plain browser), or present with its platform, capabilities and methods — a capability the host lacks has no method. useNativeApps() reads the device's installed and pinned apps from the helper that keeps them (pending / unavailable / ready / error), re-read on panel focus and after a pin. MenuBar.Mount runs headless work while the panel page is alive; the panel reports its content height to the helper, shows no toasts, and reloads itself while hidden once main serves a newer web bundle.
+- Web:
+  - Slots:
+    - `MenuBar.Section`
+    - `MenuBar.Mount`
+  - Slot contributors:
+    - `MenuBar.Section` ← `companions.menu-bar`
+    - `MenuBar.Section` ← `companions.menu-bar.app-grid`
+    - `MenuBar.Section` ← `companions.menu-bar.wish`
+    - `MenuBar.Section` ← `shell.notifications.native`
+    - `MenuBar.Mount` ← `shell.notifications.native`
+  - Contributes:
+    - `Apps.App` "Menu bar" → `MenuBarPanel`
+    - `MenuBar.Section` "Header" → `CompanionHeader`
+    - `MenuBar.Section` "Footer" → `PanelFooter`
+  - Uses:
+    - `apps-core.Apps`
+    - `build.useStaleFrontend`
+    - `companions/panel.CompanionFooter`
+    - `companions/panel.CompanionHeader`
+    - `companions/panel.CompanionPanel`
+    - `primitives/loading.Loading`
+    - `primitives/log-channels.clientLog`
+    - `primitives/slot-render.defineMountSlot`
+    - `primitives/slot-render.defineRenderSlot`
+  - Exports (types):
+    - `NativeAppsState`
+    - `NativeHost`
+  - Exports (values):
+    - `MenuBar`
+    - `useNativeApps`
+    - `useNativeHost`
+- Machine:
+  - Uses:
+    - `apps-core/app-manifest.appIconSvg`
+    - `infra/endpoints.implementMachine`
+  - Routes: `GET /api/menu-bar/apps`
+- Core:
+  - Uses:
+    - `infra/endpoints.defineEndpoint`
+    - `packages/list-bound.wholeList`
+    - `primitives/pane.defineApp`
+    - `ui/icons.symbol`
+  - Exports (types):
+    - `AppCatalog`
+    - `CatalogApp`
+    - `EquinNativeBridge`
+    - `NativeApps`
+    - `NativeCapabilities`
+    - `NativeHostInfo`
+    - `NativeMaterial`
+    - `NativeNotification`
+  - Exports (values):
+    - `AppCatalogSchema`
+    - `BRIDGE_METHODS`
+    - `CatalogAppSchema`
+    - `getAppCatalog`
+    - `menuBarApp`
+    - `NativeAppsSchema`
+    - `NativeHostInfoSchema`
+    - `OPEN_LINK_SCHEME`
+    - `openLink`
+- Deps:
+  - Uses:
+    - `infra/deps.defineDep`
+    - `infra/deps.Ready`
+    - `infra/deps/rust.cargoBuild`
+    - `infra/deps/rust.CargoSource`
+  - Exports (values):
+    - `menuBarHelper`
+    - `menuBarHelperIcon`
+- Cross-plugin:
+  - Uses tokens: `ui/tokens/shape --spacing`
+  - Imported by:
+    - `companions/menu-bar/app-grid`
+    - `companions/menu-bar/open-in-window`
+    - `companions/menu-bar/wish`
+    - `shell/notifications/native`
+- Sub-plugins:
+  - **`app-grid`** — The menu-bar panel's app grid (MenuBar.Section 'apps'): every Apps.App but the current app and the home app (the desktop included: its URL is its base path as a route prefix) — as the icons DataView…
+  - **`app-window`** — An installed app window's bridge to the native helper (window.equinWindow), read once per document: useNativeFileDrag() is the window's native file drag — drag host paths out as real files, the drag…
+  - **`open-in-window`** — Open in app window: a row in the action bar's view-options popover that hands this browser tab's page to the menu-bar helper as an equin://open link, which opens it in a new window of the installed…
+  - **`wish`** — The menu-bar panel's Wish section (MenuBar.Section 'wish'): wish's WishField under a 'Wish' title — the task composer with its own ↑, filing one task under Wishes and confirming inline. The tray is…
+
+<!-- AUTOGENERATED:END -->

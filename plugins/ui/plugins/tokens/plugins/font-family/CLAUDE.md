@@ -62,8 +62,8 @@
     - `apps/prototypes/shell`
     - `apps/sonata/shell`
     - `apps/website/shell`
+    - `companions/panel`
     - `hints`
-    - `menu-bar`
     - `ui/tokens/font-family/google-fonts`
 - Sub-plugins:
   - **`google-fonts`** — Loads the Google Fonts that the theme each scope selects asks for (the desktop's and every app's own), so a per-app font loads whether or not that app is focused.
