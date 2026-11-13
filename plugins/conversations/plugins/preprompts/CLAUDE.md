@@ -10,7 +10,10 @@
   - Uses:
     - `config_v2.ConfigV2`
     - `config_v2.useConfig`
+    - `config_v2.useSetConfig`
     - `config_v2/config-link.ConfigSelectContent`
+    - `conversations/prompt-snippets.SnippetListEdit`
+    - `conversations/prompt-snippets.useSnippetListEdit`
     - `primitives/css/ui-kit.cn`
     - `primitives/css/ui-kit.Select`
     - `primitives/css/ui-kit.SelectItem`
@@ -24,6 +27,7 @@
     - `PrepromptGlyph`
     - `prepromptsConfig`
     - `PrepromptSelect`
+    - `useEditPrepromptLibrary`
     - `usePreprompt`
     - `usePrepromptItems`
 - Server:

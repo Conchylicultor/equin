@@ -20330,10 +20330,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes:
               - `PromptEditorSlots.FloatingAction` → `FloatingTemplateChips`
               - `ConfigV2.WebRegister` "config"
-            - Uses: 31 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/prompt-templates/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/prompt-templates/REFERENCE.md)
-              - `primitives/css/ui-kit` ×6
+            - Uses: 29 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/prompt-templates/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/prompt-templates/REFERENCE.md)
+              - `primitives/css/ui-kit` ×4
               - `config_v2` ×3
               - `conversations/conversation-view/pending-turn` ×2
+              - `conversations/prompt-snippets` ×2
               - `primitives/overlay/floating-action` ×2
               - `primitives/usage-rank` ×2
               - `config_v2/config-link.ConfigGearButton`
@@ -20347,9 +20348,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/scroll.Scroll`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
-              - `primitives/dom/scroll-reveal.focusElement`
               - `primitives/icon-button.IconButton`
-              - `primitives/overlay/popup-open.useReportPopupOpen`
               - `primitives/prompt-editor.PromptEditorSlots`
               - `ui/icons.Icon`
             - Exports (types):
@@ -20364,7 +20363,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: `config_v2.ConfigV2`
           - Cross-plugin:
             - Uses tokens:
-              - `ui/tokens/color-palette --destructive`
               - `ui/tokens/color-palette --muted-foreground`
               - `ui/tokens/density --pad-split-arrow-x`
               - `ui/tokens/density --space-xs`
@@ -21352,7 +21350,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `config_v2.ConfigV2`
           - `config_v2.useConfig`
+          - `config_v2.useSetConfig`
           - `config_v2/config-link.ConfigSelectContent`
+          - `conversations/prompt-snippets.SnippetListEdit`
+          - `conversations/prompt-snippets.useSnippetListEdit`
           - `primitives/css/ui-kit.cn`
           - `primitives/css/ui-kit.Select`
           - `primitives/css/ui-kit.SelectItem`
@@ -21366,6 +21367,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PrepromptGlyph`
           - `prepromptsConfig`
           - `PrepromptSelect`
+          - `useEditPrepromptLibrary`
           - `usePreprompt`
           - `usePrepromptItems`
       - Server:
@@ -21386,6 +21388,35 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/task-preprompt`
       - Shared:
         - Exports (values): `prepromptsConfig`
+    - **`prompt-snippets`** — Named prompt snippets ({ title, prompt }) edited in place inside the popup that lists them: SnippetEditor (a name and a prompt, Add / Save / Delete / Cancel, holding its popup open) and useSnippetListEdit (which editor is open, and the list rewritten from what it hands back). Shared by the prompt templates panel and the preprompt picker.
+      - Web:
+        - Uses:
+          - `primitives/css/spacing.Stack`
+          - `primitives/css/ui-kit.Button`
+          - `primitives/css/ui-kit.Input`
+          - `primitives/css/ui-kit.Textarea`
+          - `primitives/dom/scroll-reveal.focusElement`
+          - `primitives/overlay/popup-open.useReportPopupOpen`
+        - Exports (types):
+          - `OpenSnippetEditor`
+          - `Snippet`
+          - `SnippetDraft`
+          - `SnippetEditing`
+          - `SnippetEditorProps`
+          - `SnippetListEdit`
+          - `SnippetListEditOptions`
+        - Exports (values):
+          - `SnippetEditor`
+          - `useSnippetListEdit`
+      - Cross-plugin:
+        - Uses tokens:
+          - `ui/tokens/color-palette --destructive`
+          - `ui/tokens/density --space-xs`
+          - `ui/tokens/shape --spacing`
+        - Imported by:
+          - `conversations/conversation-view/prompt-templates`
+          - `conversations/preprompts`
+          - `tasks/task-preprompt`
     - **`question-relay`** — Answers a held AskUserQuestion from the web: owns the transcript's `"question"` pending prompt — the held question's form, answered as the tool's real result. The AskUserQuestion relay's backend: the pending_questions table (one row per held call: open → answered | abandoned), onQuestionResolved, the open-questions live collection and the 7-day retention sweep of resolved rows. Holding a question (the runtime parks the call in-process), the question-hold source the status reconciler reads (and its dead-holder retirement) are the machine half's.
       - Web:
         - Contributes: `JsonlViewer.PendingPrompt` "question" → `RelayQuestionCard`
@@ -47946,15 +47977,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Stack`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Imported by: 442 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
+            - Imported by: 444 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
               - `apps` ×109
-              - `conversations` ×76
+              - `conversations` ×77
               - `primitives` ×54
               - `debug` ×40
               - `ui` ×31
               - `page` ×27
               - `plugin-meta` ×16
-              - `tasks` ×14
+              - `tasks` ×15
               - `fields` ×9
               - `infra` ×7
               - `apps-core` ×6
@@ -48511,10 +48542,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/chart` ×5
               - `ui/tokens/font-family` ×4
               - `ui/tokens/scrollbar --scrollbar-color`
-            - Imported by: 467 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Imported by: 468 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `primitives` ×111
               - `apps` ×110
-              - `conversations` ×53
+              - `conversations` ×54
               - `page` ×27
               - `debug` ×25
               - `ui` ×23
@@ -52490,7 +52521,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Imported by:
               - `apps/prototypes/present`
-              - `conversations/conversation-view/prompt-templates`
+              - `conversations/prompt-snippets`
               - `hints`
               - `primitives/adaptive-bar`
               - `primitives/css/ui-kit`
@@ -59736,14 +59767,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/preprompts.PrepromptGlyph`
           - `conversations/preprompts.prepromptsConfig`
           - `conversations/preprompts.PrepromptSelect`
+          - `conversations/preprompts.useEditPrepromptLibrary`
           - `conversations/preprompts.usePrepromptItems`
+          - `conversations/prompt-snippets.SnippetEditor`
           - `infra/endpoints.useFetchEndpoint`
           - `network/live.LiveRowResult`
           - `network/live.mapRow`
           - `network/live.useLive`
+          - `primitives/css/spacing.Stack`
           - `primitives/text-editor/composer/picker-pill.PickerPill`
           - `shell/notifications.useToast`
           - `tasks/launch-options.TaskLaunch`
+          - `ui/icons.Icon`
         - Exports (values): `useTaskPreprompt`
       - Server:
         - Contributes:
@@ -59770,7 +59805,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses: `tasks/launch-options.defineLaunchOption`
         - Exports (values): `prepromptLaunchOption`
       - Cross-plugin:
-        - Uses tokens: `ui/tokens/color-palette --muted-foreground`
+        - Uses tokens:
+          - `ui/tokens/color-palette --muted-foreground`
+          - `ui/tokens/density --space-xs`
+          - `ui/tokens/shape --spacing`
         - Imported by: `conversations`
       - Shared:
         - Exports (types): `TaskPreprompt`
@@ -62123,9 +62161,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/density --space-sm`
               - `ui/tokens/shape --spacing`
-            - Tokens used by: 547 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
+            - Tokens used by: 548 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
               - `apps` ×123
-              - `conversations` ×97
+              - `conversations` ×98
               - `primitives` ×74
               - `debug` ×42
               - `page` ×33
@@ -62269,16 +62307,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `densityGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --radius`
-            - Tokens used by: 348 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
+            - Tokens used by: 350 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
               - `apps` ×73
               - `primitives` ×72
-              - `conversations` ×50
+              - `conversations` ×51
               - `debug` ×28
               - `ui` ×24
               - `page` ×21
               - `plugin-meta` ×13
+              - `tasks` ×9
               - `fields` ×8
-              - `tasks` ×8
               - `reorder` ×5
               - `review` ×5
               - `infra` ×4
@@ -62697,14 +62735,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/density --radius-chip-compact`
               - `ui/tokens/density --space-sm`
-            - Tokens used by: 406 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
-              - `conversations` ×95
+            - Tokens used by: 408 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
+              - `conversations` ×96
               - `apps` ×82
               - `primitives` ×60
               - `page` ×36
               - `debug` ×28
               - `ui` ×26
-              - `tasks` ×11
+              - `tasks` ×12
               - `plugin-meta` ×9
               - `fields` ×8
               - `infra` ×6

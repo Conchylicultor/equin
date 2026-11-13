@@ -72,7 +72,7 @@ still reported to the scope at once (that is what opens the bar). Default
 - Cross-plugin:
   - Imported by:
     - `apps/prototypes/present`
-    - `conversations/conversation-view/prompt-templates`
+    - `conversations/prompt-snippets`
     - `hints`
     - `primitives/adaptive-bar`
     - `primitives/css/ui-kit`

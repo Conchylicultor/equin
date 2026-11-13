@@ -86,6 +86,16 @@ export interface PickerPillItemProps {
    * can still explain its choices. Data, laid out by the card.
    */
   info?: HoverCardContent;
+  /**
+   * The row's own action, revealed while it is highlighted — e.g. ✎ to edit
+   * the library entry the row picks. A click on it never selects the row.
+   */
+  action?: MenuRowAction;
+  /**
+   * Leave the menu open on select: a row that changes what the menu shows
+   * (+ New … opening an inline editor) rather than picking a value.
+   */
+  keepOpen?: boolean;
   onSelect: () => void;
   disabled?: boolean;
   children: React.ReactNode;
@@ -197,12 +207,20 @@ function PickerPillItem({
   selected,
   note,
   info,
+  action,
+  keepOpen,
   onSelect,
   disabled,
   children,
 }: PickerPillItemProps) {
   const row = (
-    <DropdownMenuItem disabled={disabled} onClick={onSelect} className="gap-lg">
+    <DropdownMenuItem
+      disabled={disabled}
+      onClick={onSelect}
+      closeOnClick={!keepOpen}
+      action={action}
+      className="gap-lg"
+    >
       {/* The label is the row's one flexible cell, so the check / note below
           sits in its own track flush right instead of floating over it. */}
       <Stack

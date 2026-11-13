@@ -11,14 +11,18 @@
     - `conversations/preprompts.PrepromptGlyph`
     - `conversations/preprompts.prepromptsConfig`
     - `conversations/preprompts.PrepromptSelect`
+    - `conversations/preprompts.useEditPrepromptLibrary`
     - `conversations/preprompts.usePrepromptItems`
+    - `conversations/prompt-snippets.SnippetEditor`
     - `infra/endpoints.useFetchEndpoint`
     - `network/live.LiveRowResult`
     - `network/live.mapRow`
     - `network/live.useLive`
+    - `primitives/css/spacing.Stack`
     - `primitives/text-editor/composer/picker-pill.PickerPill`
     - `shell/notifications.useToast`
     - `tasks/launch-options.TaskLaunch`
+    - `ui/icons.Icon`
   - Exports (values): `useTaskPreprompt`
 - Server:
   - Contributes:
@@ -45,7 +49,10 @@
   - Uses: `tasks/launch-options.defineLaunchOption`
   - Exports (values): `prepromptLaunchOption`
 - Cross-plugin:
-  - Uses tokens: `ui/tokens/color-palette --muted-foreground`
+  - Uses tokens:
+    - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/density --space-xs`
+    - `ui/tokens/shape --spacing`
   - Imported by: `conversations`
 - Shared:
   - Exports (types): `TaskPreprompt`

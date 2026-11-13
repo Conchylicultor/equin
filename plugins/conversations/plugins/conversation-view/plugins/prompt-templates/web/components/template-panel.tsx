@@ -1,4 +1,3 @@
-import { useCallback, useState } from "react";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
@@ -11,8 +10,12 @@ import type { ConfigDescriptor } from "@plugins/config_v2/core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
+import {
+  SnippetEditor,
+  useSnippetListEdit,
+} from "@plugins/conversations/plugins/prompt-snippets/web";
+
 import type { TemplateChipItem } from "./template-chip";
-import { TemplateEditor, type TemplateDraft } from "./template-editor";
 
 const editIcon = symbol("edit");
 const sendIcon = symbol("send");
@@ -42,11 +45,6 @@ export interface TemplatePanelProps {
   configLabel: string;
 }
 
-type Editing =
-  | { kind: "none" }
-  | { kind: "new"; prompt: string }
-  | { kind: "edit"; id: string };
-
 /**
  * The ✎ panel: every template as a row (click inserts, ✎ edits it in place,
  * ➤ sends), and a footer with + New template and the config gear. With `edit`,
@@ -63,24 +61,11 @@ export function TemplatePanel({
   config,
   configLabel,
 }: TemplatePanelProps) {
-  const [editing, setEditing] = useState<Editing>({ kind: "none" });
-  const close = useCallback(() => setEditing({ kind: "none" }), []);
-
-  function saveNew(d: TemplateDraft) {
-    // Appended last: the authored order is the never-used tie-break, so a new
-    // template sits after the ones already there.
-    if (edit?.onChange([...templates, { id: crypto.randomUUID(), ...d }]))
-      close();
-  }
-  function saveEdit(id: string, d: TemplateDraft) {
-    if (
-      edit?.onChange(templates.map((t) => (t.id === id ? { ...t, ...d } : t)))
-    )
-      close();
-  }
-  function remove(id: string) {
-    if (edit?.onChange(templates.filter((t) => t.id !== id))) close();
-  }
+  const { editing, startNew, startEdit, editor } = useSnippetListEdit({
+    items: templates,
+    onChange: (next) => edit?.onChange(next) ?? false,
+    create: (d) => d,
+  });
 
   return (
     <Stack gap="xs" className="w-80">
@@ -89,14 +74,11 @@ export function TemplatePanel({
           <Stack gap="none">
             {/* eslint-disable-next-line data-view/no-adhoc-row-list -- a hover picker's menu rows (insert / edit / send), transient chrome over a handful of configured templates */}
             {ordered.map((t) =>
-              editing.kind === "edit" && editing.id === t.id ? (
-                <TemplateEditor
-                  key={t.id}
-                  mode="edit"
-                  initial={t}
-                  onSave={(d) => saveEdit(t.id, d)}
-                  onDelete={() => remove(t.id)}
-                  onClose={close}
+              editor && editing.kind === "edit" && editing.id === t.id ? (
+                <SnippetEditor
+                  key={editor.key}
+                  {...editor.props}
+                  noun="Template"
                 />
               ) : (
                 <Row
@@ -112,7 +94,7 @@ export function TemplatePanel({
                           icon={editIcon}
                           label={`Edit: ${t.title}`}
                           onMouseDown={(e) => e.preventDefault()}
-                          onClick={() => setEditing({ kind: "edit", id: t.id })}
+                          onClick={() => startEdit(t.id)}
                         />
                       )}
                       <IconButton
@@ -130,12 +112,11 @@ export function TemplatePanel({
                 </Row>
               ),
             )}
-            {editing.kind === "new" && (
-              <TemplateEditor
-                mode="new"
-                initial={{ title: "", prompt: editing.prompt }}
-                onSave={saveNew}
-                onClose={close}
+            {editor && editing.kind === "new" && (
+              <SnippetEditor
+                key={editor.key}
+                {...editor.props}
+                noun="Template"
               />
             )}
           </Stack>
@@ -146,12 +127,7 @@ export function TemplatePanel({
           <Button
             variant="ghost"
             onMouseDown={(e) => e.preventDefault()}
-            onClick={() =>
-              setEditing({
-                kind: "new",
-                prompt: edit.initialPrompt?.().trim() ?? "",
-              })
-            }
+            onClick={() => startNew(edit.initialPrompt?.())}
           >
             <Icon icon={addIcon} className="size-3.5" />
             <span>New template</span>

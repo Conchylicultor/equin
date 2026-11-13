@@ -352,6 +352,7 @@ export const browserHost = {
     "conversations.model-provider",
     "conversations.pane-restore",
     "conversations.preprompts",
+    "conversations.prompt-snippets",
     "conversations.question-relay",
     "conversations.recover",
     "conversations.runtime-sdk",

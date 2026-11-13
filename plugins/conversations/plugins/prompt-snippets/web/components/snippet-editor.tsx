@@ -8,49 +8,57 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { useReportPopupOpen } from "@plugins/primitives/plugins/overlay/plugins/popup-open/web";
 import { focusElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 
-/** A template's editable content: what the editor reads and hands back. */
-export interface TemplateDraft {
+/** A snippet's editable content: what the editor reads and hands back. */
+export interface SnippetDraft {
   title: string;
   prompt: string;
 }
 
-export interface TemplateEditorProps {
-  /** What it opens with: the template being edited, or a new one's start. */
-  initial: TemplateDraft;
+export interface SnippetEditorProps {
+  /** What it opens with: the snippet being edited, or a new one's start. */
+  initial: SnippetDraft;
   /** `new` adds (its button reads Add); `edit` saves and can delete. */
   mode: "new" | "edit";
-  onSave: (t: TemplateDraft) => void;
-  /** Edit only: remove the template. */
+  /** What a snippet is called here ("Template", "Preprompt"): the fields' accessible names. */
+  noun: string;
+  onSave: (d: SnippetDraft) => void;
+  /** Edit only: remove the snippet. */
   onDelete?: () => void;
   /** Leave without saving (Cancel, Escape, a press outside it). */
   onClose: () => void;
 }
 
 /**
- * The template panel's inline editor: a name and a prompt, edited in place —
- * no dialog, no trip to Settings.
+ * The inline editor of a named prompt snippet (a prompt template, a
+ * preprompt): a name and a prompt, edited in place inside whatever popup lists
+ * them — no dialog, no trip to Settings.
  *
- * While it is open it holds the hover panel around it open (it reports itself
- * as an open popup to the panel's `PopupOpenScope`), so the panel does not fold
- * up under a half-typed template when the pointer drifts off. The hold also
+ * While it is open it holds the popup around it open (it reports itself as an
+ * open popup to the nearest `PopupOpenScope`), so a hover panel does not fold
+ * up under a half-typed snippet when the pointer drifts off. The hold also
  * hands Escape and outside presses to this editor, which is why it handles
  * both itself.
+ *
+ * Every key typed into it stays in it: a menu host (the preprompt pill) reads
+ * keys for its own navigation and typeahead, which would otherwise take the
+ * letters of a name as jumps between rows.
  */
-export function TemplateEditor({
+export function SnippetEditor({
   initial,
   mode,
+  noun,
   onSave,
   onDelete,
   onClose,
-}: TemplateEditorProps) {
+}: SnippetEditorProps) {
   const [title, setTitle] = useState(initial.title);
   const [prompt, setPrompt] = useState(initial.prompt);
   const rootRef = useRef<HTMLElement>(null);
   const promptRef = useRef<HTMLTextAreaElement>(null);
   useReportPopupOpen(true);
 
-  // A press anywhere outside the editor leaves it — the panel's own outside
-  // press is suspended while the editor holds it open.
+  // A press anywhere outside the editor leaves it — a hover panel's own
+  // outside press is suspended while the editor holds it open.
   useEffect(() => {
     function onPointerDown(e: PointerEvent) {
       const root = rootRef.current;
@@ -75,9 +83,9 @@ export function TemplateEditor({
       gap="xs"
       className="py-xs"
       onKeyDown={(e) => {
+        e.stopPropagation();
         if (e.key === "Escape") {
           e.preventDefault();
-          e.stopPropagation();
           onClose();
         }
       }}
@@ -85,14 +93,15 @@ export function TemplateEditor({
       <Input
         autoFocus
         placeholder="Name"
-        aria-label="Template name"
+        aria-label={`${noun} name`}
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         onKeyDown={(e) => {
           if (e.key !== "Enter") return;
           e.preventDefault();
-          // Enter on the name saves when the prompt is already there (the
-          // draft, or the template being edited), and otherwise moves on.
+          // Enter on the name saves when the prompt is already there (a
+          // prefilled draft, or the snippet being edited), and otherwise
+          // moves on.
           if (canSave) save();
           else focusElement(promptRef.current, { reveal: true });
         }}
@@ -101,7 +110,7 @@ export function TemplateEditor({
         ref={promptRef}
         fitContent
         placeholder="Prompt"
-        aria-label="Template prompt"
+        aria-label={`${noun} prompt`}
         className="min-h-18 max-h-40"
         value={prompt}
         onChange={(e) => setPrompt(e.target.value)}

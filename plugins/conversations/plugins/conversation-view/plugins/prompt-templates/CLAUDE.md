@@ -9,10 +9,11 @@
   - Contributes:
     - `PromptEditorSlots.FloatingAction` → `FloatingTemplateChips`
     - `ConfigV2.WebRegister` "config"
-  - Uses: 31 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/css/ui-kit` ×6
+  - Uses: 29 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/css/ui-kit` ×4
     - `config_v2` ×3
     - `conversations/conversation-view/pending-turn` ×2
+    - `conversations/prompt-snippets` ×2
     - `primitives/overlay/floating-action` ×2
     - `primitives/usage-rank` ×2
     - `config_v2/config-link.ConfigGearButton`
@@ -26,9 +27,7 @@
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
-    - `primitives/dom/scroll-reveal.focusElement`
     - `primitives/icon-button.IconButton`
-    - `primitives/overlay/popup-open.useReportPopupOpen`
     - `primitives/prompt-editor.PromptEditorSlots`
     - `ui/icons.Icon`
   - Exports (types):
@@ -43,7 +42,6 @@
   - Uses: `config_v2.ConfigV2`
 - Cross-plugin:
   - Uses tokens:
-    - `ui/tokens/color-palette --destructive`
     - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/density --pad-split-arrow-x`
     - `ui/tokens/density --space-xs`

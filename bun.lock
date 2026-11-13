@@ -2487,6 +2487,10 @@
       "name": "@equin/plugin-conversations-preprompts",
       "version": "0.0.1",
     },
+    "plugins/conversations/plugins/prompt-snippets": {
+      "name": "@equin/plugin-conversations-prompt-snippets",
+      "version": "0.0.1",
+    },
     "plugins/conversations/plugins/question-relay": {
       "name": "@equin/plugin-conversations-question-relay",
       "version": "0.0.1",
@@ -8947,6 +8951,8 @@
     "@equin/plugin-conversations-pane-restore": ["@equin/plugin-conversations-pane-restore@workspace:plugins/conversations/plugins/pane-restore"],
 
     "@equin/plugin-conversations-preprompts": ["@equin/plugin-conversations-preprompts@workspace:plugins/conversations/plugins/preprompts"],
+
+    "@equin/plugin-conversations-prompt-snippets": ["@equin/plugin-conversations-prompt-snippets@workspace:plugins/conversations/plugins/prompt-snippets"],
 
     "@equin/plugin-conversations-question-relay": ["@equin/plugin-conversations-question-relay@workspace:plugins/conversations/plugins/question-relay"],
 
