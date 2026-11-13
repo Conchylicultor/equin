@@ -10,7 +10,7 @@
         "presentation": "outline",
         "columnCaptions": "shown",
         "groupBy": "category",
-        "properties": [{ "id": "status" }, { "id": "title" }, { "id": "updatedAt" }],
+        "properties": [{ "id": "status" }, { "id": "title" }, { "id": "supervisor" }, { "id": "updatedAt" }],
         "filter": {
           "kind": "group",
           "id": "hide-completed",
@@ -39,6 +39,7 @@
           { "id": "status" },
           { "id": "title" },
           { "id": "track" },
+          { "id": "supervisor" },
           { "id": "triage" },
           { "id": "priority" },
           { "id": "taskType" },

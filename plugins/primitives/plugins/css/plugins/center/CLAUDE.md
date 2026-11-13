@@ -41,7 +41,7 @@ layout set orthogonal (each primitive owns one distinct mechanic, no overlap).
     - `CenterProps`
   - Exports (values): `Center`
 - Cross-plugin:
-  - Imported by: 138 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 139 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×46
     - `primitives` ×25
     - `page` ×18
@@ -50,12 +50,12 @@ layout set orthogonal (each primitive owns one distinct mechanic, no overlap).
     - `ui` ×5
     - `apps-core` ×4
     - `plugin-meta` ×3
+    - `tasks` ×3
     - `fields` ×2
     - `framework` ×2
     - `integrations` ×2
     - `map` ×2
     - `shell` ×2
-    - `tasks` ×2
     - `active-data/go`
     - `companions/browser-extension`
     - `config_v2/settings`

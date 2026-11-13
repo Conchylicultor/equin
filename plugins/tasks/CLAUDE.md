@@ -131,8 +131,8 @@
     - `updateTask`
     - `UpdateTaskBodySchema`
 - Cross-plugin:
-  - Imported by: 22 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `tasks` ×13
+  - Imported by: 23 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `tasks` ×14
     - `conversations` ×6
     - `active-data/task`
     - `hints/ask`

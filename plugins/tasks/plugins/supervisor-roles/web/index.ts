@@ -1,8 +1,7 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { ConfigV2 } from "@plugins/config_v2/web";
 import { IdKinds } from "@plugins/ids/web";
-import { supervisorRoleIdKind } from "../core";
-import { supervisorPromptConfig } from "../shared";
+import { supervisorPromptConfig, supervisorRoleIdKind } from "../core";
 import { supervisorPresentation } from "./internal/presentation";
 
 export default {

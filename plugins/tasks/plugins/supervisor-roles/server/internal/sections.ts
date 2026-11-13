@@ -7,7 +7,7 @@ import {
 import { tasksFile } from "@plugins/tasks/plugins/tasks-core/core";
 import { supervisorMandate } from "@plugins/tasks/plugins/mandate-presets/core";
 import { supervisorRoleMandate } from "../../core";
-import { supervisorPromptConfig } from "../../shared/config";
+import { supervisorPromptConfig } from "../../core";
 import {
   FALLBACK_ROLE_REF,
   getSupervisorRole,

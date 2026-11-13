@@ -531,14 +531,14 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
     - `useWantedStyleKeys`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shadow --shadow`
-  - Imported by: 591 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 593 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×155
     - `conversations` ×123
     - `primitives` ×53
     - `page` ×52
     - `fields` ×41
     - `debug` ×30
-    - `tasks` ×22
+    - `tasks` ×24
     - `plugin-meta` ×16
     - `active-data` ×11
     - `ui` ×11

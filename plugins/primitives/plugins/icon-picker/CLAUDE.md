@@ -119,6 +119,7 @@ host owns its own inset, through `className`.
     - `page/callout`
     - `primitives/avatar`
     - `tag-tree/picker`
+    - `tasks/supervisor-roles/pane`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `shared/symbols-metadata.ts` (debt)
 

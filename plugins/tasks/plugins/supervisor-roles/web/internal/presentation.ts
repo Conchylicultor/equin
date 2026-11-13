@@ -6,6 +6,7 @@ import {
   type LiveFieldOptionsRead,
 } from "@plugins/network/plugins/live/web";
 import { mapResource } from "@plugins/network/plugins/live/plugins/live-state/web";
+import { runtimeSymbol } from "@plugins/ui/plugins/icons/core";
 import {
   supervisorRoles,
   taskSupervisorShape,
@@ -13,10 +14,16 @@ import {
 } from "../../core";
 
 // Stable (module-level), so the mapped read changes only with the roles.
+// Each option carries the role's icon, so a cell, a chip and a group header
+// draw the role the way the Supervisors pane does.
 function toOptions(
   roles: readonly SupervisorRole[],
 ): readonly LiveFieldOption[] {
-  return roles.map((r) => ({ value: r.id, label: r.name }));
+  return roles.map((r) =>
+    r.icon === null
+      ? { value: r.id, label: r.name }
+      : { value: r.id, label: r.name, icon: runtimeSymbol(r.icon) },
+  );
 }
 
 /**

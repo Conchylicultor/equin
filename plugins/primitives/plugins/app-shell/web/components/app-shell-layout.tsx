@@ -63,7 +63,9 @@ export function opensPane<Params>(
  * ({@link SidebarItem}), so every nav entry in every app shares one inset,
  * height, icon size and hover by construction. `badge` is an optional
  * attention overlay pinned to the icon's corner; it renders `null` when there
- * is nothing to flag. `component` is forbidden.
+ * is nothing to flag. `trail` is an optional quiet summary drawn at the row's
+ * trailing edge (a count, a live dot) — it renders `null` when there is
+ * nothing to say. `component` is forbidden.
  *
  * What a click does is one of two arms: `opens` (a pane, as data — the shell
  * opens it as the route root AND highlights the row while that pane is the
@@ -74,6 +76,7 @@ export type AppShellSidebarNav = {
   title: string;
   icon: IconRef;
   badge?: React.ComponentType;
+  trail?: React.ComponentType;
   component?: never;
 } & (
   | { opens: SidebarNavTarget; onClick?: never }
@@ -93,6 +96,7 @@ export type AppShellSidebarComponent = {
   onClick?: never;
   opens?: never;
   badge?: never;
+  trail?: never;
 };
 
 /**

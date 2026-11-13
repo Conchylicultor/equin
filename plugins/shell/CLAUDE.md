@@ -18,6 +18,7 @@
     - `Shell.Sidebar` ← `conversations.runtime-sdk`
     - `Shell.Sidebar` ← `stats`
     - `Shell.Sidebar` ← `tasks.automations`
+    - `Shell.Sidebar` ← `tasks.supervisor-roles.pane`
     - `Shell.Sidebar` ← `tasks.task-detail`
   - Uses: `primitives/slot-render.defineRenderSlot`
   - Exports (values): `Shell`
@@ -31,6 +32,7 @@
     - `conversations/runtime-sdk`
     - `stats`
     - `tasks/automations`
+    - `tasks/supervisor-roles/pane`
     - `tasks/task-detail`
 - Sub-plugins:
   - **`action-bar`** — Shared cross-app action set. Defines the ActionBar.Item slot that plugins contribute their toolbar actions to, and the ActionBar.ViewOption slot for view options (surface mode, fullscreen, layout…

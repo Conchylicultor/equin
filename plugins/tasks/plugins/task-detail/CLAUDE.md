@@ -58,6 +58,7 @@
     - `hints/ask`
     - `tasks/automations`
     - `tasks/sidequest-autopilot`
+    - `tasks/supervisor-roles/pane`
     - `tasks/task-attachments`
     - `tasks/task-dependencies`
     - `tasks/task-deps-tree`

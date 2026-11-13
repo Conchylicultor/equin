@@ -2339,8 +2339,8 @@ restyled 20.6k elements before, 10.4k after (`fullscreen-budget` cases unchanged
     - `DataViewSlots.Control` ← `primitives.data-view`
     - `DataViewSlots.FieldExtension` ← `primitives.data-view.custom-columns`
     - `DataViewSlots.RowOrder` ← `primitives.data-view.view-order`
-  - Contributes: 105 contributions — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ConfigV2.WebRegister` ×95
+  - Contributes: 109 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ConfigV2.WebRegister` ×99
     - `DataViewSlots.Control` ×4
     - `DataViewSlots.Setting` ×4
     - `IdKinds.Kind` ×2
@@ -2620,8 +2620,8 @@ restyled 20.6k elements before, 10.4k after (`fullscreen-budget` cases unchanged
     - `useViewRowCounts`
     - `wearsTimeInk`
 - Server:
-  - Contributes: 97 contributions — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ConfigV2.Register` ×95
+  - Contributes: 101 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ConfigV2.Register` ×99
     - `ids.kind` ×2
   - Uses:
     - `config_v2.getAllDescriptors`
@@ -2821,14 +2821,14 @@ restyled 20.6k elements before, 10.4k after (`fullscreen-budget` cases unchanged
     - `ui/tokens/type-scale` ×6
     - `ui/tokens/shadow` ×4
     - `ui/tokens/shape` ×3
-  - Imported by: 125 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 126 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `fields` ×39
     - `apps` ×29
     - `debug` ×17
     - `primitives` ×10
     - `conversations` ×8
+    - `tasks` ×5
     - `infra` ×4
-    - `tasks` ×4
     - `plugin-meta` ×2
     - `apps-core/app-launcher`
     - `auth`

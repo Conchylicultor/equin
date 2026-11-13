@@ -5,6 +5,9 @@ import {
   SidebarMenuItem,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
+import { fillClasses } from "@plugins/primitives/plugins/css/plugins/fill/web";
+import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
+import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import {
   useOpenPane,
   usePaneMatch,
@@ -78,11 +81,12 @@ function SidebarNavRow({
   icon,
   title,
   badge: Badge,
+  trail: Trail,
   isActive,
   onClick,
   onAuxClick,
   onMouseDown,
-}: Pick<AppShellSidebarNav, "icon" | "title" | "badge"> &
+}: Pick<AppShellSidebarNav, "icon" | "title" | "badge" | "trail"> &
   // The row's click gesture: a plain `onClick`, or a pane link's click /
   // aux-click / mousedown trio (see primitives/link-gesture).
   Pick<
@@ -112,7 +116,16 @@ function SidebarNavRow({
           ) : (
             <Icon icon={icon} active={isActive} className={iconClass} />
           )}
-          <span>{title}</span>
+          {Trail ? (
+            <>
+              <span className={`${fillClasses("x")} truncate`}>{title}</span>
+              <Inline gap="xs" className={rigidClass()}>
+                <Trail />
+              </Inline>
+            </>
+          ) : (
+            <span>{title}</span>
+          )}
         </SidebarMenuButton>
       </SidebarMenuItem>
     </SidebarMenu>

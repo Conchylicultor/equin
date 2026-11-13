@@ -721,6 +721,24 @@
       "parent": null
     },
     {
+      "paneId": "supervisor-role",
+      "segment": "role/:roleId",
+      "appIndex": false,
+      "parent": "supervisors"
+    },
+    {
+      "paneId": "supervisors",
+      "segment": "supervisors",
+      "appIndex": false,
+      "parent": null
+    },
+    {
+      "paneId": "supervisors-shared",
+      "segment": "all",
+      "appIndex": false,
+      "parent": "supervisors"
+    },
+    {
       "paneId": "table-detail",
       "segment": "t/:pluginId/:tableName",
       "appIndex": false,

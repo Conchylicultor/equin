@@ -1,1 +1,0 @@
-export { supervisorPromptConfig } from "./config";

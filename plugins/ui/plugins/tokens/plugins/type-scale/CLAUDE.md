@@ -62,14 +62,14 @@ follow.
   - Exports (values): `typeScaleGroup`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/density --space-sm`
-  - Tokens used by: 230 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Tokens used by: 231 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×59
     - `conversations` ×40
     - `primitives` ×38
     - `debug` ×15
     - `plugin-meta` ×14
     - `page` ×11
-    - `tasks` ×8
+    - `tasks` ×9
     - `ui` ×8
     - `fields` ×4
     - `review` ×4

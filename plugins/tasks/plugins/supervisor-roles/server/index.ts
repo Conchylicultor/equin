@@ -8,8 +8,8 @@ import {
   setTaskSupervisor,
   supervisorRoleIdKind,
   updateSupervisorRole,
+  supervisorPromptConfig,
 } from "../core";
-import { supervisorPromptConfig } from "../shared/config";
 import { supervisorRoleDefinition } from "./internal/mandate";
 import {
   supervisorRoleCapability,

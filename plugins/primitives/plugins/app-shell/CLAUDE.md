@@ -55,7 +55,7 @@ reads what is on screen rather than a per-app flag.
   - Slot contributors:
     - `AppShell.Framing` ← `ui.sidebar-framing`
     - `AppShell.Brand` ← `apps-core.app-launcher`
-  - Uses: 31 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 33 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×13
     - `primitives/pane` ×4
     - `primitives/collapsible` ×3
@@ -63,6 +63,8 @@ reads what is on screen rather than a per-app flag.
     - `ui/icons` ×2
     - `primitives/bar.Bar`
     - `primitives/css/clip.Clip`
+    - `primitives/css/fill.fillClasses`
+    - `primitives/css/inline.Inline`
     - `primitives/css/pin.Pin`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/spacing.Stack`
@@ -102,10 +104,10 @@ reads what is on screen rather than a per-app flag.
     - `ui/tokens/sidebar-palette --sidebar-accent`
     - `ui/tokens/sidebar-palette --sidebar-foreground`
     - `ui/tokens/sidebar-palette --sidebar-icon`
-  - Imported by: 30 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 31 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×23
+    - `tasks` ×3
     - `conversations` ×2
-    - `tasks` ×2
     - `apps-core/app-launcher`
     - `stats`
     - `ui/sidebar-framing`

@@ -140,6 +140,7 @@ self-echo behavior that must keep holding.
     - `fields/multiline-text/config`
     - `fields/text/config`
     - `tasks/automations`
+    - `tasks/supervisor-roles/pane`
     - `tasks/task-description`
     - `tasks/task-header`
     - `tasks/task-triage`

@@ -886,12 +886,12 @@ Details:
     - `unresolved`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/color-palette --destructive`
-  - Imported by: 310 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 311 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×84
     - `conversations` ×49
     - `debug` ×31
     - `ui` ×25
-    - `tasks` ×23
+    - `tasks` ×24
     - `page` ×16
     - `primitives` ×15
     - `infra` ×10

@@ -83,9 +83,9 @@ Design rationale lives in:
     - `ui/tokens/type-scale` ×4
     - `ui/tokens/shape` ×3
     - `ui/tokens/font-family --font-mono`
-  - Imported by: 24 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 25 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations` ×16
-    - `tasks` ×3
+    - `tasks` ×4
     - `active-data` ×2
     - `debug` ×2
     - `primitives/file-viewer/markdown`

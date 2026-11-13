@@ -265,9 +265,9 @@ is the pure `planConversationUpdate` (`plan-update.ts`).
     - `SYSTEM_CATEGORY_ID`
     - `withdrawConversationTurn`
 - Cross-plugin:
-  - Imported by: 87 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 88 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations` ×61
-    - `tasks` ×8
+    - `tasks` ×9
     - `apps` ×6
     - `infra` ×3
     - `review` ×3

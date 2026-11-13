@@ -1,21 +1,9 @@
 import { z } from "zod";
-import { and, eq, inArray, isNull, ne, sql } from "drizzle-orm";
-import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
-import { withNotifyBatch } from "@plugins/framework/plugins/server-core/core";
 import { Mcp } from "@plugins/infra/plugins/mcp/server";
 import {
-  assertChoiceLaunchable,
   DEFAULT_MODEL_CHOICE,
   ModelChoiceSchema,
 } from "@plugins/conversations/plugins/model-provider/core";
-import { getModelCatalog } from "@plugins/conversations/plugins/model-provider/plugins/catalog/server";
-import {
-  _tasks,
-  clearMandate,
-  tasksView,
-  updateTask,
-  withTaskStatusBatch,
-} from "@plugins/tasks/plugins/tasks-core/server";
 import { tasksFile } from "@plugins/tasks/plugins/tasks-core/core";
 import { getTaskTrack } from "@plugins/tasks/plugins/task-track/server";
 import {
@@ -24,12 +12,7 @@ import {
 } from "@plugins/tasks/plugins/orchestration/plugins/mandate/server";
 import { watchTask } from "@plugins/tasks/plugins/orchestration/plugins/watch/server";
 import { watchChildren } from "@plugins/tasks/plugins/orchestration/plugins/watch/plugins/capabilities/core";
-import { armTaskAutoStart } from "@plugins/tasks/server";
-import {
-  BACKLOG_STATUSES,
-  supervisorRole,
-  supervisorRoleMandate,
-} from "@plugins/tasks/plugins/supervisor-roles/core";
+import { supervisorRole } from "@plugins/tasks/plugins/supervisor-roles/core";
 import {
   BACKLOG_READ_LIMIT,
   FALLBACK_ROLE_REF,
@@ -40,8 +23,8 @@ import {
   roleOfConversation,
   setTaskSupervisorRole,
   supervisorOfTask,
-  tasksSupervisor,
 } from "@plugins/tasks/plugins/supervisor-roles/server";
+import { adoptIntoSession } from "./adopt";
 
 function text(t: string) {
   return { content: [{ type: "text" as const, text: t }] };
@@ -99,53 +82,22 @@ export const adoptTaskTool = Mcp.tool({
     const track = await getTaskTrack(taskId);
     const grant = await grantOf(tasksFile, conversationId);
     const model = input.model ?? grant?.[track]?.model ?? DEFAULT_MODEL_CHOICE;
-    assertChoiceLaunchable(model, getModelCatalog());
-    // One transaction, the task row locked first so a concurrent launch,
-    // hold or route is seen: still in the backlog → it joins the tree,
-    // inherits the session's mandate (its own — the interactive one every
-    // root states — dropped, or it would stay a root of its own), and its
-    // owner row goes (the tree's root carries the role from now on).
-    const refusal = await withNotifyBatch(() =>
-      withTaskStatusBatch(async (tx) => {
-        await tx.execute(
-          sql`SELECT 1 FROM ${_tasks} WHERE ${_tasks.id} = ${taskId} FOR UPDATE`,
-        );
-        const [row] = await tx
-          .select({ status: tasksView.status })
-          .from(tasksView)
-          .innerJoin(_tasks, eq(_tasks.id, tasksView.id))
-          .innerJoin(
-            tasksSupervisor.table,
-            eq(tasksSupervisor.table.taskId, tasksView.id),
-          )
-          .where(
-            and(
-              eq(tasksView.id, taskId),
-              eq(tasksSupervisor.table.supervisor, roleId),
-              isNull(tasksView.folderId),
-              ne(_tasks.mandateRef, supervisorRoleMandate.id),
-              inArray(tasksView.status, [...BACKLOG_STATUSES]),
-            ),
-          )
-          .limit(1);
-        if (!row)
-          return `${taskId} is not in your role's backlog (\`backlog\` lists what is).`;
-        if (row.status === "held")
-          return `${taskId} is held by a person: it stays in the backlog.`;
-        await updateTask(taskId, { folderId: rootTaskId }, tx);
-        await clearMandate(taskId, tx);
-        await tasksSupervisor.delete(taskId, tx);
-        return null;
-      }),
-    );
-    if (refusal !== null) return text(refusal);
-    if ((await grantOf(watchChildren, conversationId)) !== null)
-      await watchTask(taskId, { kind: "conversation", conversationId });
-    await armTaskAutoStart({
+    const adopted = await adoptIntoSession({
       taskId,
+      roleId,
+      rootTaskId,
       model,
-      armedFrom: asPluginId("tasks.supervisor-roles.sessions"),
+      beforeArm: async () => {
+        if ((await grantOf(watchChildren, conversationId)) !== null)
+          await watchTask(taskId, { kind: "conversation", conversationId });
+      },
     });
+    if (!adopted.ok)
+      return text(
+        adopted.refusal === "held"
+          ? `${taskId} is held by a person: it stays in the backlog.`
+          : `${taskId} is not in your role's backlog (\`backlog\` lists what is).`,
+      );
     return text(
       `Adopted ${taskId} into your session (under ${rootTaskId}), armed with ${model}.`,
     );

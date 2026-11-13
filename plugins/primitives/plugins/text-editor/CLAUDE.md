@@ -142,6 +142,7 @@ registry readers are headless.
     - `primitives/text-editor/inline-chip`
     - `primitives/text-editor/paste-images`
     - `screenshot`
+    - `tasks/supervisor-roles/pane`
     - `tasks/task-description`
 - Sub-plugins:
   - **`caret-motion`** — The caret-crossing channel for Lexical editors: a mover that relocates a caret ACROSS something announces it in the direction of travel, and every consumer of a synthesized caret position observes…

@@ -7,24 +7,20 @@
 - Description: Top section of the task detail pane: editable title, status chip, hold/drop buttons, track (main | sidequest, click to switch), author, and timestamps. Launch configuration (auto-start, preprompt, thinking mode) lives in the Prompt card, not here.
 - Web:
   - Contributes: `TaskDetailSlots.Section` "Task" → `TaskHeader`
-  - Uses:
+  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `tasks/task-detail` ×3
+    - `network/live/live-state` ×2
+    - `primitives/css/text` ×2
+    - `tasks` ×2
     - `conversations.useConversationById`
     - `network/live.rowOrStale`
-    - `network/live/live-state.foldResource`
-    - `network/live/live-state.ResourceErrorInline`
     - `primitives/css/fill.Fill`
     - `primitives/css/spacing.Stack`
-    - `primitives/css/text.SectionLabel`
-    - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
     - `primitives/editable-field.useEditableField`
     - `primitives/pane.useOpenPane`
     - `primitives/relative-time.RelativeTime`
-    - `tasks.usePatchTask`
-    - `tasks.useTask`
-    - `tasks/task-detail.taskDetailPane`
-    - `tasks/task-detail.TaskDetailSlots`
-    - `tasks/task-detail.useRegisterFlush`
+    - `tasks/supervisor-roles/pane.TaskSupervisorControl`
     - `tasks/task-mandate.TaskMandateControl`
     - `tasks/task-status.StatusSignal`
     - `tasks/task-track.TaskTrackControl`

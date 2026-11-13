@@ -71,10 +71,10 @@
     - `ui/tokens/density --space-xl`
     - `ui/tokens/density --space-xs`
     - `ui/tokens/type-scale --measure-reading`
-  - Imported by: 64 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 65 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations` ×50
     - `active-data` ×5
-    - `tasks` ×3
+    - `tasks` ×4
     - `apps/home/tour`
     - `debug/profiling/ops`
     - `hints/ask`

@@ -14,6 +14,7 @@ import { useRegisterFlush } from "@plugins/tasks/plugins/task-detail/web";
 import { StatusSignal } from "@plugins/tasks/plugins/task-status/web";
 import { TaskTrackControl } from "@plugins/tasks/plugins/task-track/web";
 import { TaskMandateControl } from "@plugins/tasks/plugins/task-mandate/web";
+import { TaskSupervisorControl } from "@plugins/tasks/plugins/supervisor-roles/plugins/pane/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { AuthorDisplay } from "./author-display";
@@ -80,6 +81,14 @@ export function TaskHeader({ taskId }: { taskId: string }) {
         <SectionLabel as="span">Track</SectionLabel>
         <TaskTrackControl taskId={taskId} />
       </Stack>
+      {task.folderId === null ? (
+        // Who owns a root task (a backlog task, a session): picking another
+        // role re-routes it. A nested task belongs to its tree's root.
+        <Stack direction="row" align="center" gap="md">
+          <SectionLabel as="span">Supervisor</SectionLabel>
+          <TaskSupervisorControl taskId={taskId} />
+        </Stack>
+      ) : null}
       <Stack direction="row" align="center" gap="md">
         <SectionLabel as="span">Mandate</SectionLabel>
         <TaskMandateControl taskId={taskId} />

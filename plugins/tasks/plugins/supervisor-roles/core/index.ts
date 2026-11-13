@@ -36,3 +36,4 @@ export type {
   SetTaskSupervisorBody,
   UpdateSupervisorRoleBody,
 } from "./internal/endpoints";
+export { supervisorPromptConfig } from "./internal/config";
