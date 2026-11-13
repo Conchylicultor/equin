@@ -32468,11 +32468,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `packages/timed-fs.readdirSync`
               - `packages/timed-fs.readFileSync`
               - `packages/timed-fs.realpathSync`
+              - `plugin-meta/plugin-records.buildModuleGraph`
               - `plugin-meta/plugin-records.fileSetClosure`
               - `plugin-meta/plugin-records.scanFilesCached`
             - Exports (types):
               - `CommandRunEdge`
               - `DynamicImportPolicy`
+              - `FileSetImportClosure`
               - `ImportClosure`
               - `UnionImportClosure`
             - Exports (values):

@@ -49,11 +49,15 @@ export function scanModuleImports(src: string, path: string): ImportSpec[] {
   const loader = LOADERS[ext];
   if (loader === undefined)
     throw new Error(`[plugin-records] ${path} is not a script module`);
+  // A hashbang line (`#!/usr/bin/env bun`, an executable entry point) is
+  // legal at the start of a module for the runtime and the bundler, but the
+  // transpiler's scan rejects it; it holds no import either way.
+  const code = src.startsWith("#!") ? src.replace(/^#![^\n]*/, "") : src;
   let all: ReturnType<Bun.Transpiler["scanImports"]>;
   let kept: ReturnType<Bun.Transpiler["scanImports"]>;
   try {
-    all = transpiler(loader, false).scanImports(src);
-    kept = transpiler(loader, true).scanImports(src);
+    all = transpiler(loader, false).scanImports(code);
+    kept = transpiler(loader, true).scanImports(code);
   } catch (err) {
     throw new Error(`[plugin-records] cannot scan the imports of ${path}`, {
       cause: err,

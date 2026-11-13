@@ -1,5 +1,11 @@
-import { afterEach, describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { callsFunction, measureManifestFreeze } from "./manifest-freeze";
@@ -7,6 +13,14 @@ import {
   type AppPath,
   asAppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import {
+  repoFilesOver,
+  type RepoFiles,
+} from "@plugins/framework/plugins/tooling/core";
+import {
+  createMemoryRecordStore,
+  installRecordStore,
+} from "@plugins/plugin-meta/plugins/plugin-records/core";
 
 /**
  * A miniature CLI with the real one's shape: a bootstrap that dynamically
@@ -64,6 +78,21 @@ const BASE: Record<string, string> = {
   "lint-reader.ts": `export async function lintEntries() { return (await import("./lint.generated")).lintEntries; }\n`,
 };
 
+/**
+ * The module graph's own scanners, as a checkout holds them: the graph keys a
+ * file's facts by its scanner's Merkle key, so the fixture's set carries the
+ * real ones at their paths.
+ */
+const SCANNERS = Object.fromEntries(
+  [
+    "plugins/plugin-meta/plugins/plugin-records/core/internal/scan-imports.ts",
+    "plugins/framework/plugins/tooling/plugins/import-closure/core/command-runs.scan.ts",
+  ].map((rel) => [
+    rel,
+    readFileSync(join(import.meta.dir, "../../../../..", rel), "utf8"),
+  ]),
+);
+
 const MANIFEST = "manifest.generated.ts";
 const REGISTRY = "lint.generated.ts";
 
@@ -72,19 +101,40 @@ afterEach(() => {
   for (const r of roots.splice(0)) rmSync(r, { recursive: true, force: true });
 });
 
-function fixture(overrides: Record<string, string> = {}): AppPath {
+// Each test starts from an empty record store: a regenerators record of an
+// earlier test's identical closure would otherwise answer for this one.
+beforeEach(() => installRecordStore(createMemoryRecordStore()));
+
+/** The fixture's file set, written under a fresh root. */
+function fixture(overrides: Record<string, string> = {}): RepoFiles {
   const root = asAppPath(mkdtempSync(join(tmpdir(), "manifest-freeze-fx-")));
   roots.push(root);
-  for (const [rel, content] of Object.entries({ ...BASE, ...overrides })) {
+  const files = { ...SCANNERS, ...BASE, ...overrides };
+  for (const [rel, content] of Object.entries(files)) {
     mkdirSync(dirname(join(root, rel)), { recursive: true });
     writeFileSync(join(root, rel), content);
   }
-  return root;
+  return repoFilesOver(root, Object.keys(files).sort());
 }
 
-function measure(root: AppPath) {
+/** The same root's file set after writing `edits` into it. */
+function edited(repo: RepoFiles, edits: Record<string, string>): RepoFiles {
+  for (const [rel, content] of Object.entries(edits)) {
+    mkdirSync(dirname(join(repo.root, rel)), { recursive: true });
+    writeFileSync(join(repo.root, rel), content);
+  }
+  return repoFilesOver(
+    repo.root,
+    [...new Set([...repo.all(), ...Object.keys(edits)])].sort(),
+  );
+}
+
+function measure(repo: RepoFiles) {
   return measureManifestFreeze({
-    root,
+    repo,
+    // The fixture holds none of the real producer's code; the record's
+    // producer keying is closureRecord's own (its tests).
+    producers: [],
     entry: "bin/index.ts",
     hazards: new Map([[MANIFEST, "fx"]]),
     registries: new Map([[REGISTRY, "lint"]]),
@@ -243,6 +293,86 @@ describe("measureManifestFreeze", () => {
       "pipeline.ts": `export function regenerate(): void {}\n`,
     });
     expect(measure(root)).rejects.toThrow("No command's run closure");
+  });
+});
+
+describe("recorded regenerators", () => {
+  test("a pass bundles only the command bodies an edit reaches", async () => {
+    const repo = fixture({ "web/help-menu.ts": `export const x = 1;\n` });
+    expect((await measure(repo)).bundled).toEqual([
+      "cmds/build/run.ts",
+      "cmds/deploy/converge.ts",
+    ]);
+    // Same tree: every body is a lookup.
+    expect((await measure(edited(repo, {}))).bundled).toEqual([]);
+    // A file no command's closure holds.
+    const web = edited(repo, { "web/help-menu.ts": `export const x = 2;\n` });
+    expect((await measure(web)).bundled).toEqual([]);
+    // A module only `deploy converge` loads (`helper.ts` is not one: the
+    // barrel `build` imports re-exports it).
+    const own = edited(web, {
+      "cmds/deploy/converge.ts": `// edited\n${BASE["cmds/deploy/converge.ts"]}`,
+    });
+    expect((await measure(own)).bundled).toEqual(["cmds/deploy/converge.ts"]);
+    // A module both load.
+    const shared = edited(own, {
+      "helper.ts": `export function helper(): number { return 2; }\n`,
+    });
+    expect((await measure(shared)).bundled).toEqual([
+      "cmds/build/run.ts",
+      "cmds/deploy/converge.ts",
+    ]);
+  });
+
+  test("an edit that makes a command call the writer answers again, never the stale record", async () => {
+    const repo = fixture();
+    expect((await measure(repo)).regenerating).toEqual(["build"]);
+    // `deploy converge` already loads the barrel; now it CALLS `regenerate`.
+    const calls = edited(repo, {
+      "cmds/deploy/converge.ts":
+        `import { regenerate } from "../../codegen";\n` +
+        `export default async () => { regenerate(); };\n`,
+    });
+    const report = await measure(calls);
+    expect(report.bundled).toEqual(["cmds/deploy/converge.ts"]);
+    expect(report.regenerating).toEqual(["build", "deploy converge"]);
+  });
+
+  test("an edit to the alias owner (tsconfig.base.json) answers again", async () => {
+    const repo = fixture();
+    await measure(repo);
+    const report = await measure(
+      edited(repo, {
+        "tsconfig.base.json": JSON.stringify({
+          compilerOptions: { paths: { "@fx/*": ["./*"], "@gx/*": ["./*"] } },
+        }),
+      }),
+    );
+    expect(report.bundled).toEqual([
+      "cmds/build/run.ts",
+      "cmds/deploy/converge.ts",
+    ]);
+  });
+
+  test("a specifier that comes to resolve to another file answers again", async () => {
+    const repo = fixture({
+      "cmds/deploy/converge.ts":
+        `import { helper } from "../../lib";\n` +
+        `export default async () => { helper(); };\n`,
+      "lib.ts": `export { helper } from "./helper";\n`,
+      "lib/index.ts": `export { regenerate as helper } from "../pipeline";\n`,
+    });
+    expect((await measure(repo)).regenerating).toEqual(["build"]);
+    // `../../lib` now resolves to `lib/index.ts`, whose `helper` is the writer's
+    // caller: no file of the old closure was edited, one was removed.
+    rmSync(join(repo.root, "lib.ts"));
+    const moved = repoFilesOver(
+      repo.root,
+      repo.all().filter((f) => f !== "lib.ts"),
+    );
+    const report = await measure(moved);
+    expect(report.bundled).toEqual(["cmds/deploy/converge.ts"]);
+    expect(report.regenerating).toEqual(["build", "deploy converge"]);
   });
 });
 

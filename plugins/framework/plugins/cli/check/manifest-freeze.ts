@@ -1,22 +1,33 @@
-import { readFile } from "@plugins/packages/plugins/timed-fs/core";
-import { join } from "node:path";
 import type TS from "typescript";
 import { parsedTsSource } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
+import type { RepoFiles } from "@plugins/framework/plugins/tooling/core";
 import {
+  closureRecord,
+  gitBlobId,
+} from "@plugins/plugin-meta/plugins/plugin-records/core";
+import {
+  fileSetImportClosures,
   importClosure,
-  importClosures,
   loadTypescript,
-  type ImportClosure,
-  type UnionImportClosure,
+  type FileSetImportClosure,
 } from "@plugins/framework/plugins/tooling/plugins/import-closure/core";
-import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+
+/** The repo's single alias owner, which `Bun.build` resolves every alias through. */
+const TSCONFIG_BASE = "tsconfig.base.json";
 
 /** How many module reads one measurement holds open at once. */
 const READ_CONCURRENCY = 32;
 
 export interface ManifestFreezeInput {
-  root: AppPath;
+  /** The checkout's file set: every closure is read off its module graph. */
+  repo: RepoFiles;
+  /**
+   * The modules of `repo` whose code computes a command's regenerators (this
+   * module, by `repoModuleOf`) — Merkle-keyed into each recorded answer, so
+   * an edit to how it is computed answers again.
+   */
+  producers: readonly string[];
   /** The CLI's one entrypoint, repo-relative (`bin/index.ts`). */
   entry: string;
   /** Repo-relative manifest path → manifest id, so a hit can name itself. */
@@ -73,6 +84,11 @@ export interface FreezeFinding {
 export interface ManifestFreezeReport {
   findings: FreezeFinding[];
   /**
+   * The command bodies bundled this pass (their recorded regenerators missed),
+   * sorted — every other one was a lookup.
+   */
+  bundled: string[];
+  /**
    * Every verb path whose run closure regenerates in-process, sorted — the set
    * the per-command rule was applied to. Never empty (see
    * {@link measureManifestFreeze}).
@@ -100,10 +116,11 @@ export interface ManifestFreezeReport {
 export async function measureManifestFreeze(
   input: ManifestFreezeInput,
 ): Promise<ManifestFreezeReport> {
-  const { root, entry, hazards, registries, startupRoots, writer } = input;
+  const { repo, producers, entry, hazards, registries, startupRoots, writer } =
+    input;
   const policy = { dynamicImports: "follow-except-command-runs" } as const;
 
-  const startup = await importClosure(root, entry, policy);
+  const startup = await fileSetImportClosures(repo, [entry], policy);
   if (startup.commandRuns.length === 0) {
     throw new Error(
       `The startup closure of ${entry} cut NO command \`run\` thunk, so there is no command body to ` +
@@ -133,32 +150,89 @@ export async function measureManifestFreeze(
     if (hit === undefined) {
       hit = /\.[cm]?[jt]sx?$/.test(module)
         ? reads
-            .run(() => readFile(join(root, module), "utf8"))
-            .then((source) => callsFunction(module, source, writer))
+            .run(() => repo.read(module))
+            .then((source) => {
+              if (source === null)
+                throw new Error(
+                  `${module} is in a command's bundle but not readable from the checkout's file set`,
+                );
+              return callsFunction(module, source, writer);
+            })
         : Promise.resolve(false);
       callers.set(module, hit);
     }
     return hit;
   };
 
+  // Which LIVE modules of a command body call the writer — the bundle's
+  // tree-shaking, which no module graph answers — is recorded per body, keyed
+  // on exactly what its `Bun.build` parses (`bundled`: each module of its
+  // closure by content and edges) and on the code computing it (`producers`).
+  // So a pass bundles only the bodies whose closure an edit reaches; an edit
+  // outside every one (a web plugin) bundles none.
+  //
   // Sequential on purpose: each `Bun.build` already fans out across cores, and
-  // running ~20 of them at once holds every closure's parse in memory together
+  // running ~40 of them at once holds every closure's parse in memory together
   // for no gain in wall time.
+  const tsconfigText = await repo.read(TSCONFIG_BASE);
+  if (tsconfigText === null)
+    throw new Error(
+      `${TSCONFIG_BASE} is not in the checkout's file set: the bundler resolves every alias through it`,
+    );
+  const tsconfigBlob = gitBlobId(tsconfigText);
+  const bundled: string[] = [];
   const runs: {
     target: string;
     commands: string[];
-    closure: ImportClosure;
+    closure: FileSetImportClosure;
     regenerators: string[];
   }[] = [];
   for (const [target, commands] of byTarget) {
-    const closure = await importClosure(root, target, policy);
-    const liveModules = [...closure.live];
-    const hits = await Promise.all(liveModules.map((m) => callsWriter(m)));
+    const closure = await fileSetImportClosures(repo, [target], policy);
+    const recorded = await closureRecord<string[], never>(
+      repo,
+      {
+        name: "cli:manifest-freeze-regenerators",
+        modules: producers,
+        bundled: closure,
+        // The bundler also reads the alias owner (its `paths`, its compiler
+        // options) — an input no module of the closure names.
+        input: { target, writer, tsconfig: tsconfigBlob },
+      },
+      async () => {
+        bundled.push(target);
+        const built = await importClosure(repo.root, target, policy);
+        // The record is keyed on the graph's closure; it may stand for the
+        // build's answer only when the build parsed exactly that.
+        const graphOnly = [...closure.modules].filter(
+          (m) => !built.modules.has(m),
+        );
+        const buildOnly = [...built.modules].filter(
+          (m) => !closure.modules.has(m),
+        );
+        if (graphOnly.length > 0 || buildOnly.length > 0) {
+          throw new Error(
+            `The module graph and Bun.build disagree on what ${target} loads ` +
+              `(graph only: ${graphOnly.slice(0, 3).join(", ") || "none"}; ` +
+              `build only: ${buildOnly.slice(0, 3).join(", ") || "none"}) — a record keyed on the ` +
+              "graph's closure would not cover what the build read, so refusing to record it.",
+          );
+        }
+        const liveModules = [...built.live];
+        const hits = await Promise.all(liveModules.map((m) => callsWriter(m)));
+        return {
+          ok: true,
+          value: liveModules.filter((_, i) => hits[i]).sort(),
+        };
+      },
+    );
+    if (!recorded.ok)
+      throw new Error(`recording ${target}'s regenerators failed`);
     runs.push({
       target,
       commands: [...new Set(commands)].sort(),
       closure,
-      regenerators: liveModules.filter((_, i) => hits[i]).sort(),
+      regenerators: recorded.value,
     });
   }
 
@@ -175,7 +249,7 @@ export async function measureManifestFreeze(
   const hits = (
     set: ReadonlyMap<string, string>,
     hazard: FrozenManifest["hazard"],
-    closure: ImportClosure | UnionImportClosure,
+    closure: FileSetImportClosure,
   ): FrozenManifest[] =>
     [...set]
       .filter(([path]) => closure.modules.has(path))
@@ -196,8 +270,8 @@ export async function measureManifestFreeze(
   // the closure" reading would be wrong here (every registry is reached by
   // some reader's `import()`, and the registry of commands is evaluated at
   // startup by design).
-  const atLoad = (entries: readonly string[]): Promise<UnionImportClosure> =>
-    importClosures(root, entries, { dynamicImports: "cut" });
+  const atLoad = (entries: readonly string[]): Promise<FileSetImportClosure> =>
+    fileSetImportClosures(repo, entries, { dynamicImports: "cut" });
   const declarations = [
     ...new Set(startup.commandRuns.map((e) => e.declaration)),
   ];
@@ -236,6 +310,7 @@ export async function measureManifestFreeze(
 
   return {
     findings,
+    bundled: bundled.sort(),
     regenerating: regeneratingRuns.flatMap((r) => r.commands).sort(),
   };
 }

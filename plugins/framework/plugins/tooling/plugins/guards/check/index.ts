@@ -7,8 +7,8 @@ import {
   CLAUDE_SETTINGS_REL_PATH,
   renderClaudeSettings,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
-import { importClosure } from "@plugins/framework/plugins/tooling/plugins/import-closure/core";
-import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
+import { isBuiltin } from "node:module";
+import { fileSetImportClosures } from "@plugins/framework/plugins/tooling/plugins/import-closure/core";
 import { loadGuards } from "../core/load-guards";
 import {
   agentPolicySettings,
@@ -128,21 +128,21 @@ const bootstrapStandsAlone: Check = {
   id: "guards:bootstrap-builtins-only",
   description:
     "the hook entry points (guards/bin/guard.ts, bin/stop-guard.ts) statically load no repo module but bin/bootstrap.ts — the hook proper is a dynamic import behind the install check and the fallback",
-  async run() {
-    const root = await getWorktreeRoot();
+  async run(ctx) {
+    const repo = await ctx.repo();
     const lines: string[] = [];
     for (const name of ["guard.ts", "stop-guard.ts"]) {
       const entry = `${GUARDS_BIN}/${name}`;
       const allowed = new Set([entry, `${GUARDS_BIN}/bootstrap.ts`]);
-      const closure = await importClosure(root, entry, {
+      const closure = await fileSetImportClosures(repo, [entry], {
         dynamicImports: "cut",
       });
       const extra = [...closure.modules].filter((m) => !allowed.has(m));
       lines.push(
         ...extra.map((m) => closure.importChain(m).join(" → ")),
-        ...[...closure.external.keys()].map(
-          (spec) => `npm: ${spec} (${entry})`,
-        ),
+        ...[...closure.external.keys()]
+          .filter((spec) => !isBuiltin(spec))
+          .map((spec) => `npm: ${spec} (${entry})`),
       );
     }
     if (lines.length === 0) return { ok: true };

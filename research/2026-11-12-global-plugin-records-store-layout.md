@@ -840,3 +840,77 @@ modules per file, and no longer sees the conflicts drizzle-kit hits.
 | edit reaching no schema file (64% of commits) | 1.5–3.3 s, a full load each | 0.5–1.4 s, a lookup (one shared graph walk) |
 | edit to one schema file | 3 full loads + 4 disk walks | one shared load (1.1–1.7 s for all four checks) |
 | cold (new question code) | — | 4.7–6 s, two batched loads |
+
+### The checks still bundling every pass (2026-11-13)
+
+**Before.** Five checks measured closures with a `Bun.build` on every pass,
+whatever the edit. Per-check process CPU, serial (`--jobs 1`), load 18–30:
+
+| check | before (CPU-s) | why |
+| --- | ---: | --- |
+| cli:codegen-manifests-not-frozen | 10.8–12.0 | startup + 42 command bodies (`importClosure`, follow) + 4 at-load unions |
+| cli:command-declarations-light | 0.3 | one tiny `importClosure` per declaration |
+| sentinel:worker-closure-lean / status-file-lean | 0.03–0.2 | tiny closures |
+| cli:bootstrap-package-free, guards:bootstrap-builtins-only | ~0.01 | tiny closures |
+
+So the cost was one check: 42 command-body bundles at 0.15–0.8 CPU-s each
+(`check`'s body: 1,950 modules, 0.8 CPU-s). The `Bun.build`s were there for
+`live`, the bundle's tree-shaking: a module that CALLS the manifest writer
+marks its command as regenerating only when it is live. That cannot be swapped
+for `modules`. Measured, `codegen`, `plugin move` and `release` load a
+writer-calling module that is not live, so they would wrongly become
+regenerators.
+
+**Root cause.** The closures (modules, chains, command-run edges, at-load sets)
+are facts of the module graph, and the graph already answers them per edited
+module. Only the regenerators need a bundle, and each one is a function of
+exactly the files its bundle parses. Nothing kept that answer, so every pass
+rebuilt all 42.
+
+**Fix.**
+- Every closure is read off the module graph (`fileSetImportClosures`). It
+  now also reports the `commandRuns` it cuts, equal to `Bun.build`'s on the
+  real tree: 42 edges, 873 startup modules.
+- Each command body's regenerators are a `closureRecord` with a new `bundled`
+  part. The key holds every module the bundle parses (path, blob and
+  out-edges, not the modules behind a cut `import()`) and the producer's own
+  code (its Merkle key). A miss asserts that the build parsed exactly the
+  graph's closure, so the record cannot stand for an answer its key did not
+  cover. Tests pin the key: an edit inside the closure, an edit to the
+  producer, and a specifier that comes to resolve to another file each answer
+  again, while an edit behind a cut `import()` does not. Removing `bundled`
+  from the key fails all three manifest-freeze record tests.
+- The other four checks read the graph (builtins filtered from `external`,
+  which a bundle's resolver never reported).
+- `followDynamic` scans only the modules that have a repo `import()` for run
+  thunks, not the whole reach. That brought 42 warm body closures from 1.8 to
+  0.3 CPU-s, with the same answer.
+- The graph's import scan read a hashbang entry (`guards/bin/guard.ts`) as a
+  syntax error. It now skips the `#!` line, as the runtime and the bundler do.
+
+| cli:codegen-manifests-not-frozen, serial | before | after |
+| --- | ---: | ---: |
+| one-line help-menu web edit | 11.5 CPU-s | 0.84 CPU-s (0 bundles) |
+| same tree again | 11.5 | 1.2–1.5 |
+| edit to a module every command loads (`plugin-id/core`) | 11.5 | 9.6 (all 42 bundled) |
+| cold (new producer code) | 11.5 | 8–11 |
+
+Of the last 400 main commits, 53% reach no command body (0 bundles). The mean
+is 7.9 of 42 bodies, and p90 is 36. Expected cost per commit is about
+2 CPU-s plus about 1 CPU-s of graph walks.
+
+**Review follow-up.** The record is only as sound as the graph's resolution.
+Two gaps in it were fixed:
+- The graph tried `.ts` before `.tsx`. Bun, at runtime and in its bundler,
+  tries `.tsx .jsx .ts .mjs .js .cjs .json`, so adding `a.tsx` beside `a.ts`
+  would have left a stale record. The order is now Bun's, pinned by
+  `module-graph.bun.test.ts` against a real `Bun.build` for every sibling pair.
+- Bun resolves a directory through its `package.json` before `index.*`. The
+  graph now refuses such an import instead of guessing.
+
+`tsconfig.base.json` (aliases, compiler options) is in each record's input. An
+alias the graph treats as npm but Bun resolves into the repo makes the build
+parse modules the graph did not list, so the miss-path assertion throws.
+
+Not keyed: a `sideEffects` field in a repo `package.json`. No repo
+`package.json` has one today.

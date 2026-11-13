@@ -1,6 +1,5 @@
-import type { Check } from "@plugins/framework/plugins/tooling/core";
-import { importClosure } from "@plugins/framework/plugins/tooling/plugins/import-closure/core";
-import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
+import type { Check, RepoFiles } from "@plugins/framework/plugins/tooling/core";
+import { fileSetImportClosures } from "@plugins/framework/plugins/tooling/plugins/import-closure/core";
 
 const WORKER_ENTRY =
   "plugins/debug/plugins/sentinel/server/internal/worker/entry.ts";
@@ -43,8 +42,12 @@ const workerClosureLeanCheck: Check = {
   id: "sentinel:worker-closure-lean",
   description:
     "the sentinel worker's static import closure reaches no config_v2/server or config_v2/machine, jobs/server, database/server or server-core module — the worker thread has no plugin runtime to evaluate them in",
-  async run() {
-    const found = await findForbiddenModules(WORKER_ENTRY, FORBIDDEN_PREFIXES);
+  async run(ctx) {
+    const found = await findForbiddenModules(
+      await ctx.repo(),
+      WORKER_ENTRY,
+      FORBIDDEN_PREFIXES,
+    );
     if (found === null) return { ok: true };
     return {
       ok: false,
@@ -90,10 +93,12 @@ const statusFileLeanCheck: Check = {
   id: "sentinel:status-file-lean",
   description:
     "the sentinel status-file leaf's core and server barrels load no config_v2, live-state, jobs, database or parent-sentinel module — the build CLI imports them",
-  async run() {
+  async run(ctx) {
+    const repo = await ctx.repo();
     const failures: string[] = [];
     for (const entry of STATUS_FILE_ENTRIES) {
       const found = await findForbiddenModules(
+        repo,
         entry,
         STATUS_FILE_FORBIDDEN_PREFIXES,
       );
@@ -116,11 +121,11 @@ const statusFileLeanCheck: Check = {
  * else a message naming the shortest import chain into each one it reaches.
  */
 async function findForbiddenModules(
+  repo: RepoFiles,
   entry: string,
   forbidden: readonly string[],
 ): Promise<string | null> {
-  const root = await getWorktreeRoot();
-  const closure = await importClosure(root, entry, {
+  const closure = await fileSetImportClosures(repo, [entry], {
     dynamicImports: "cut",
   });
 

@@ -15,7 +15,8 @@ import {
   isCliEntryPresent,
   type CliCommand,
 } from "../core";
-import { importClosure } from "@plugins/framework/plugins/tooling/plugins/import-closure/core";
+import { fileSetImportClosures } from "@plugins/framework/plugins/tooling/plugins/import-closure/core";
+import { repoModuleOf } from "@plugins/plugin-meta/plugins/plugin-records/core";
 import { measureManifestFreeze, type FreezeFinding } from "./manifest-freeze";
 
 const BOOTSTRAP = "plugins/framework/plugins/cli/bin/index.ts";
@@ -140,8 +141,8 @@ function resolvesWithoutNodeModules(spec: string): boolean {
  * separate process has a separate module cache, so that is not a hole.
  *
  * MEASURED ON WHAT THE RUNTIME LOADS, not on what survives tree-shaking. The
- * manifest test reads `importClosure`'s `modules` (every module the bundler
- * parsed), because Bun's runtime does no tree-shaking: `fieldsEager` is nothing
+ * manifest test reads the closure's `modules` (every module a bundler parses),
+ * because Bun's runtime does no tree-shaking: `fieldsEager` is nothing
  * but bare side-effect imports, contributes no code of its own, and so never
  * appears in the tree-shaken set at all — while it is evaluated, and frozen,
  * all the same. (This check previously read the tree-shaken set. Measured alone,
@@ -203,8 +204,18 @@ function resolvesWithoutNodeModules(spec: string): boolean {
  *     so a false positive costs a small correct edit rather than an argument
  *     about phases.
  *
- * `alwaysRun: true` — cheap (~1.3 s: one bundler pass for startup plus one per
- * command body), structural, codegen-coupled, and decisively: the hermetic build
+ * WHAT A PASS COSTS. Every closure — startup, each command body, the at-load
+ * sets — is read off the plugin-records module graph (`fileSetImportClosures`),
+ * so after an edit only the edited modules are scanned. Liveness is the one
+ * reading a graph cannot give (it is the bundle's tree-shaking), so each
+ * command body's regenerators are a record (`closureRecord`'s `bundled`) keyed
+ * on exactly what its `Bun.build` parses — every module of its closure by
+ * content and edges — and on this check's own code: a pass bundles only the
+ * bodies an edit reaches (none for an edit outside every command, a web
+ * plugin's), and a miss asserts the build parsed exactly the graph's closure.
+ *
+ * `alwaysRun: true` — cheap (graph walks, plus one `Bun.build` per command body
+ * an edit reaches), structural, codegen-coupled, and decisively: the hermetic build
  * path runs stage 2 (and therefore `pruneOrphanedConfigFiles`) while running
  * ONLY the always-run set. A check that guards stage 2 but is skipped whenever
  * stage 2 runs without a full check pass guards nothing. The check this replaces
@@ -244,8 +255,9 @@ const manifestFreezeCheck: Check = {
 
     // Every collected dir's committed registry, discovered (not listed), so a
     // new registry is held to the rule the moment it exists.
+    const repo = await ctx.repo();
     const registries = new Map<string, string>();
-    for (const def of await discoverCollectedDirsIn(await ctx.repo())) {
+    for (const def of await discoverCollectedDirsIn(repo)) {
       registries.set(relative(root, collectedDirRegistryPath(def)), def.dir);
     }
     if (registries.size === 0) {
@@ -259,7 +271,13 @@ const manifestFreezeCheck: Check = {
     const exempt = await ctx.exempt(REGISTRY_RULE);
     const findings = (
       await measureManifestFreeze({
-        root,
+        repo,
+        producers: [
+          repoModuleOf(
+            repo,
+            new URL("./manifest-freeze.ts", import.meta.url).href,
+          ),
+        ],
         entry: CLI_ENTRY,
         hazards,
         registries,
@@ -351,11 +369,12 @@ function describeFreezeFinding(f: FreezeFinding): string {
  * identity are two separate requirements; this check measures the first.
  * `bin/reexec.ts` owns the second.
  *
- * Measured off the same `Bun.build` closure as the check above, from the opposite
- * side: the set of specifiers the resolver declared external IS the set the
- * entrypoint needs `node_modules` for. No independent scanner, and the alias
- * prefixes come from `tsconfig.base.json`, so a new alias cannot turn a repo
- * subtree into a false "npm package" (nor the reverse).
+ * Measured off the module graph (`fileSetImportClosures`, the same closure a
+ * `Bun.build` measures), from the opposite side: the bare specifiers the
+ * closure keeps ARE the set the entrypoint needs `node_modules` for, runtime
+ * builtins aside (`resolvesWithoutNodeModules`). No independent scanner, and
+ * aliases resolve as the graph resolves every import, so a new alias cannot
+ * turn a repo subtree into a false "npm package" (nor the reverse).
  *
  * Measured with `dynamicImports: "cut"`, which is the whole subtlety. The hazard is
  * HOISTING, so the subject is the static graph only: `bin/index.ts`'s deliberate
@@ -380,11 +399,12 @@ const bootstrapPackageFreeCheck: Check = {
   id: "cli:bootstrap-package-free",
   description:
     "the CLI bootstrap (bin/index.ts) must statically import no npm package — it is the process that RUNS bun install, so its import closure has to resolve with node_modules absent",
-  async run() {
-    const root = await getWorktreeRoot();
-    const { external } = await importClosure(root, BOOTSTRAP, {
-      dynamicImports: "cut",
-    });
+  async run(ctx) {
+    const { external } = await fileSetImportClosures(
+      await ctx.repo(),
+      [BOOTSTRAP],
+      { dynamicImports: "cut" },
+    );
 
     const offenders = [...external]
       .filter(([spec]) => !resolvesWithoutNodeModules(spec))
@@ -455,8 +475,9 @@ const declarationsLightCheck: Check = {
   id: "cli:command-declarations-light",
   description:
     "every plugin's cli/index.ts must reach no npm package and no web/server barrel through its static imports — a command DECLARATION loads on every ./equin invocation, only its implementation is deferred",
-  async run() {
+  async run(ctx) {
     const root = await getWorktreeRoot();
+    const repo = await ctx.repo();
     const { cliEntries } = await import("../core/cli.generated");
 
     // An empty registry means the collected-dir scan found no command at all,
@@ -477,7 +498,7 @@ const declarationsLightCheck: Check = {
     for (const entry of cliEntries) {
       if (!isCliEntryPresent(root, entry)) continue;
       const rel = cliEntrySourcePath(entry);
-      const { modules, external } = await importClosure(root, rel, {
+      const { modules, external } = await fileSetImportClosures(repo, [rel], {
         dynamicImports: "cut",
       });
 

@@ -37,13 +37,16 @@ const SCAN_MODULE =
 
 const SCANNED = /\.(m?[jt]sx?|c[jt]s)$/;
 const PLUGINS_ALIAS = "@plugins/";
-// What an extensionless specifier may name, in the order the runtime tries.
+// What an extensionless specifier may name, in the order Bun tries — its
+// runtime and its bundler alike (measured: `.tsx` wins over a sibling `.ts`,
+// `.jsx` too). `module-graph.bun.test.ts` pins it against a real `Bun.build`:
+// a record keyed on the graph's edges is only as sound as this order.
 const RESOLVED_EXTENSIONS = [
-  ".ts",
   ".tsx",
-  ".js",
   ".jsx",
+  ".ts",
   ".mjs",
+  ".js",
   ".cjs",
   ".json",
 ];
@@ -361,7 +364,20 @@ async function growGraph(
     // The file set first: a probe of the disk is only for a gitignored
     // module (a generated file a barrel imports), never the common case.
     for (const c of candidates)
-      if (input.written?.has(c) || snapshot.has(c)) return c;
+      if (input.written?.has(c) || snapshot.has(c)) {
+        // Bun resolves a directory through its package.json (`main`,
+        // `exports`) before `index.*`; the graph does not read manifests, so
+        // it refuses rather than answer a module Bun would not load.
+        if (
+          c.startsWith(`${base}/index.`) &&
+          (input.written?.has(`${base}/package.json`) ||
+            snapshot.has(`${base}/package.json`))
+        )
+          throw new Error(
+            `[plugin-records] ${fromRel} imports the directory ${base}, which has a package.json: Bun resolves it through the manifest, which the module graph does not read — import a file of it instead`,
+          );
+        return c;
+      }
     // One at a time, stopping at the first: each probe reads the file.
     for (const c of candidates)
       if ((await contentOutside(c)) !== null) return c;
