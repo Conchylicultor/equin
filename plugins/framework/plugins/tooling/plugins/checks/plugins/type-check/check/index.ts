@@ -372,8 +372,6 @@ const check: Check = {
           programsLine(`type-check worker ${program.name}`, result.stats),
           "stderr",
         );
-;
-        }
         for (const line of result.tscLines) ctx.log?.(line, "stderr");
       }
 
