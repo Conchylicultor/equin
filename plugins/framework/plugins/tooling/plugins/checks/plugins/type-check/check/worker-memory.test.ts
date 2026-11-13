@@ -40,7 +40,9 @@ describe("judgeWorkerWeight", () => {
     const heavier = MEASURED.map((p) => p * 1.3); // mean ~9 GB
     expect(judgeWorkerWeight(heavier, C).ok).toBe(false);
     // Re-derived: 9 GB is 3 units of 3.6, 3.0 GB a unit — within the quantum.
-    expect(judgeWorkerWeight(heavier, { ...C, peakBytes: 9.0e9, units: 3 })).toEqual({ ok: true });
+    expect(
+      judgeWorkerWeight(heavier, { ...C, peakBytes: 9.0e9, units: 3 }),
+    ).toEqual({ ok: true });
   });
   test("the old maxRSS-sized peak would still pass, a far one fails", () => {
     expect(judgeWorkerWeight(MEASURED, { ...C, peakBytes: 7.2e9 }).ok).toBe(
