@@ -21154,6 +21154,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses:
               - `network/live.mapRow`
               - `network/live.useLive`
+              - `network/live/live-state.combineResources`
+              - `network/live/live-state.mapResource`
               - `network/live/live-state.ResourceErrorInline`
               - `network/live/live-state.ResourceResult`
               - `primitives/css/badge.Badge`
@@ -59347,7 +59349,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `tasks/tasks-core.listActiveConversations`
                   - `tasks/tasks-core.taskMandateChanged`
                 - Register: `defineJob('mandate-change-notice.on-change')`
-            - **`definitions`** — The named-mandate registry's web presence: eagerly registers the boot-preloaded mandate.definitions live value (every named mandate's id and label) so boot-snapshot hydrates it before first paint. The named-mandate registry: MandateDefinitions.Definition (what one named mandate grants) and MandateDefinitions.Source (a runtime family of them — one per automation), read at every resolution through mandateDefinitionEntries, and the mandate.definitions value (every named mandate's id and label).
+            - **`definitions`** — The named-mandate registry's web presence: eagerly registers the boot-preloaded mandate.definitions live value (every named mandate's id, label and the mandates it is a kind of) so boot-snapshot hydrates it before first paint. The named-mandate registry: MandateDefinitions.Definition (what one named mandate grants) and MandateDefinitions.Source (a runtime family of them — one per automation), read at every resolution through mandateDefinitionEntries, mandateIsKindOf (is a stored mandate id a kind of a base mandate — its lineage, declared by defineMandate extends), and the mandate.definitions value (every named mandate's id, label and the mandates it is a kind of).
               - Server:
                 - Contributes: `resource.declare` "mandate.definitions"
                 - Uses: `network/live.serveValue`
@@ -59357,6 +59359,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Exports (values):
                   - `mandateDefinitionEntries`
                   - `MandateDefinitions`
+                  - `mandateIsKindOf`
                 - Resources: `mandate.definitions` (push, fixed, whole: one entry per named mandate the code defines — the presets and one per automation, a handful)
               - Core:
                 - Uses:
@@ -59366,12 +59369,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Exports (values):
                   - `mandateDefinitions`
                   - `MandateDefinitionsSchema`
+                  - `mandateIsKindOf`
+                  - `mandatesOfKind`
               - Cross-plugin:
                 - Imported by:
+                  - `conversations/conversation-view/supervisor-done-count`
                   - `tasks/automations`
                   - `tasks/mandate-presets`
                   - `tasks/orchestration/mandate`
                   - `tasks/supervisor-roles`
+                  - `tasks/supervisor-roles/pane`
                   - `tasks/task-mandate`
                   - `tasks/tasks-core`
             - **`policy`** — The mandate's value types, as a leaf: defineCapability (a capability's id, schema and label, and grant(value)), the branded MandatePolicy built only by mandatePolicy(grants) — a capability granted twice throws — and MandatePolicySchema, the tasks.mandate column decoder. Imports nothing from tasks, so tasks-core can store a policy and the mandate server can read tasks-core.
@@ -59383,6 +59390,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `tasks/automations`
                   - `tasks/mandate-presets`
                   - `tasks/orchestration/mandate`
+                  - `tasks/orchestration/mandate/definitions`
                   - `tasks/orchestration/message/capability`
                   - `tasks/orchestration/watch/capabilities`
                   - `tasks/outcome-report/capability`
@@ -59406,6 +59414,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `defineMandate`
                   - `GRANT_SCOPES`
                   - `MandateIdSchema`
+                  - `mandateKinds`
                   - `mandatePolicy`
                   - `scopeKey`
               - Test helpers:
@@ -59806,7 +59815,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations.system-prompt.section` "supervisor-prompt"
           - `conversations.system-prompt.section` "supervisor-roles"
           - `trigger` "supervisor-roles.icon"
-        - Uses: 27 symbols — full list in [`plugins/tasks/plugins/supervisor-roles/REFERENCE.md`](../plugins/tasks/plugins/supervisor-roles/REFERENCE.md)
+        - Uses: 28 symbols — full list in [`plugins/tasks/plugins/supervisor-roles/REFERENCE.md`](../plugins/tasks/plugins/supervisor-roles/REFERENCE.md)
           - `tasks/tasks-core` ×5
           - `tasks/orchestration/mandate` ×4
           - `config_v2` ×2
@@ -59814,12 +59823,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/endpoints` ×2
           - `infra/entities` ×2
           - `network/live` ×2
+          - `tasks/orchestration/mandate/definitions` ×2
           - `conversations/system-prompt.SystemPrompt`
           - `ids.IdKinds`
           - `infra/entity-extensions.defineExtension`
           - `infra/events.defineTriggerEvent`
           - `tasks/mandate-presets.supervisorPolicy`
-          - `tasks/orchestration/mandate/definitions.MandateDefinitions`
           - `tasks/task-track.setTaskTrack`
           - `ui/icons/saved-sources.defineSavedIconSource`
         - DB schema:
@@ -59856,9 +59865,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DELETE /api/supervisor-roles/:id`
           - `PUT /api/tasks/:taskId/supervisor`
       - Core:
-        - Uses: 21 symbols — full list in [`plugins/tasks/plugins/supervisor-roles/REFERENCE.md`](../plugins/tasks/plugins/supervisor-roles/REFERENCE.md)
+        - Uses: 27 symbols — full list in [`plugins/tasks/plugins/supervisor-roles/REFERENCE.md`](../plugins/tasks/plugins/supervisor-roles/REFERENCE.md)
+          - `tasks/tasks-core` ×4
           - `fields` ×3
           - `ids` ×3
+          - `network/live` ×3
           - `fields/text/config` ×2
           - `tasks/orchestration/mandate/policy` ×2
           - `ui/icons/saved-names` ×2
@@ -59869,8 +59880,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/endpoints.defineEndpoint`
           - `infra/entities.entityRef`
           - `infra/entity-extensions.defineExtensionShape`
-          - `network/live.liveCollection`
-          - `tasks/tasks-core.tasksEntityRef`
+          - `tasks/mandate-presets.supervisorMandate`
         - Exports (types):
           - `CreateSupervisorRoleBody`
           - `SetTaskSupervisorBody`

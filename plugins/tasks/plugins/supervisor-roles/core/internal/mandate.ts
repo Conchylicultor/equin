@@ -3,17 +3,20 @@ import {
   defineCapability,
   defineMandate,
 } from "@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/policy/core";
+import { supervisorMandate } from "@plugins/tasks/plugins/mandate-presets/core";
 
 /**
  * The mandate of a supervisor role's session root: the supervisor preset
  * (`tasks/mandate-presets`) plus the role powers ({@link supervisorRole} on
  * the root). ONE named mandate for every role: which role a session works
  * for is its root task's `supervisor` field — never a second copy of it in
- * the mandate id, which could disagree with the field.
+ * the mandate id, which could disagree with the field. A kind of supervisor
+ * (`extends`), so whatever asks "is this a supervisor?" counts its sessions.
  */
 export const supervisorRoleMandate = defineMandate({
   id: "supervisor-role",
   label: "Supervisor role",
+  extends: supervisorMandate,
 });
 
 /**

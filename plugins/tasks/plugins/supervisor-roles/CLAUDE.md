@@ -40,7 +40,8 @@ tools — are `plugins/sessions`.
   `dropped` (`isLiveSessionStatus`); one live session per role (the launch
   endpoint, `plugins/sessions`, serializes on an advisory lock and answers the
   live one instead of launching a second).
-- **Mandate** — ONE named mandate, `supervisor-role` (`supervisorRoleMandate`):
+- **Mandate** — ONE named mandate, `supervisor-role` (`supervisorRoleMandate`,
+  a kind of `supervisor`: `extends: supervisorMandate`):
   `supervisorPolicy({ root: [supervisorRole.grant(true)] })`, computed at each
   resolution. WHICH role a session works for is its root task's `supervisor`
   field (`roleOfConversation`), never encoded in the mandate id — two sources
@@ -59,7 +60,8 @@ tools — are `plugins/sessions`.
 - **System prompt** — `supervisor-roles` section: the listed roles (name, id,
   description) and how to file, for a conversation whose grant has
   `backlog`. `supervisor-prompt` section: for the conversation at the ROOT of
-  a `supervisor` or `supervisor-role` mandate (never a worker), a role
+  a mandate that is a kind of `supervisor` (`mandateIsKindOf` over the
+  definitions' lineage — `supervisor-role` among them; never a worker), a role
   session's role line plus the shared supervisor prompt
   (`supervisorPromptConfig` in `core/`, so the pane edits it too — Settings
   → Config → Supervisors, or the pane's All supervisors entry). Order seen by a
@@ -104,7 +106,7 @@ tools — are `plugins/sessions`.
     - `conversations.system-prompt.section` "supervisor-prompt"
     - `conversations.system-prompt.section` "supervisor-roles"
     - `trigger` "supervisor-roles.icon"
-  - Uses: 27 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 28 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `tasks/tasks-core` ×5
     - `tasks/orchestration/mandate` ×4
     - `config_v2` ×2
@@ -112,12 +114,12 @@ tools — are `plugins/sessions`.
     - `infra/endpoints` ×2
     - `infra/entities` ×2
     - `network/live` ×2
+    - `tasks/orchestration/mandate/definitions` ×2
     - `conversations/system-prompt.SystemPrompt`
     - `ids.IdKinds`
     - `infra/entity-extensions.defineExtension`
     - `infra/events.defineTriggerEvent`
     - `tasks/mandate-presets.supervisorPolicy`
-    - `tasks/orchestration/mandate/definitions.MandateDefinitions`
     - `tasks/task-track.setTaskTrack`
     - `ui/icons/saved-sources.defineSavedIconSource`
   - DB schema:
@@ -154,9 +156,11 @@ tools — are `plugins/sessions`.
     - `DELETE /api/supervisor-roles/:id`
     - `PUT /api/tasks/:taskId/supervisor`
 - Core:
-  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 27 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `tasks/tasks-core` ×4
     - `fields` ×3
     - `ids` ×3
+    - `network/live` ×3
     - `fields/text/config` ×2
     - `tasks/orchestration/mandate/policy` ×2
     - `ui/icons/saved-names` ×2
@@ -167,8 +171,7 @@ tools — are `plugins/sessions`.
     - `infra/endpoints.defineEndpoint`
     - `infra/entities.entityRef`
     - `infra/entity-extensions.defineExtensionShape`
-    - `network/live.liveCollection`
-    - `tasks/tasks-core.tasksEntityRef`
+    - `tasks/mandate-presets.supervisorMandate`
   - Exports (types):
     - `CreateSupervisorRoleBody`
     - `SetTaskSupervisorBody`

@@ -1,4 +1,5 @@
 import { serveValue } from "@plugins/network/plugins/live/server";
+import { mandateKinds } from "@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/policy/core";
 import { mandateDefinitions } from "../../core";
 import { mandateDefinitionEntries } from "./contribution";
 
@@ -14,6 +15,10 @@ export const mandateDefinitionsServed = serveValue(mandateDefinitions, {
   },
   loader: async () =>
     [...mandateDefinitionEntries().values()]
-      .map((d) => ({ id: d.mandate.id, label: d.mandate.label }))
+      .map((d) => ({
+        id: d.mandate.id,
+        label: d.mandate.label,
+        kinds: [...mandateKinds(d.mandate)],
+      }))
       .sort((a, b) => a.label.localeCompare(b.label)),
 });

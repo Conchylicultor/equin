@@ -34,6 +34,7 @@ by `MandatePolicySchema`), and the mandate's server half resolves it through
     - `tasks/automations`
     - `tasks/mandate-presets`
     - `tasks/orchestration/mandate`
+    - `tasks/orchestration/mandate/definitions`
     - `tasks/orchestration/message/capability`
     - `tasks/orchestration/watch/capabilities`
     - `tasks/outcome-report/capability`
@@ -57,6 +58,7 @@ by `MandatePolicySchema`), and the mandate's server half resolves it through
     - `defineMandate`
     - `GRANT_SCOPES`
     - `MandateIdSchema`
+    - `mandateKinds`
     - `mandatePolicy`
     - `scopeKey`
 - Test helpers:

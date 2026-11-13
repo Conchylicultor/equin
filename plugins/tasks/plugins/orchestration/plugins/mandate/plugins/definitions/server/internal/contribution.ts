@@ -1,7 +1,8 @@
 import { defineServerContribution } from "@plugins/framework/plugins/server-core/core";
-import type {
-  MandatePolicy,
-  MandateRef,
+import {
+  mandateKinds,
+  type MandatePolicy,
+  type MandateRef,
 } from "@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/policy/core";
 
 /**
@@ -66,4 +67,20 @@ export function mandateDefinitionEntries(): Map<
     byId.set(entry.mandate.id, entry);
   }
   return byId;
+}
+
+/**
+ * Whether the mandate stored as `mandateId` is `base` or a kind of it
+ * (extends it, however deep — `MandateRef.extends`), so a mandate built on
+ * `base` later answers yes with no change at the asker. An id no plugin
+ * defines throws, as resolving it does.
+ */
+export function mandateIsKindOf(mandateId: string, base: MandateRef): boolean {
+  const entry = mandateDefinitionEntries().get(mandateId);
+  if (entry === undefined) {
+    throw new Error(
+      `Mandate "${mandateId}" is stored on a task but no plugin defines it (MandateDefinitions)`,
+    );
+  }
+  return mandateKinds(entry.mandate).includes(base.id);
 }

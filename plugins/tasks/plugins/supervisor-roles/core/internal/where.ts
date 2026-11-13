@@ -1,5 +1,24 @@
-import type { TaskStatus } from "@plugins/tasks/plugins/tasks-core/core";
+import {
+  exposedColumns,
+  type LiveWhereOf,
+} from "@plugins/network/plugins/live/core";
+import {
+  taskMandateShape,
+  type taskWindow,
+  type TaskStatus,
+} from "@plugins/tasks/plugins/tasks-core/core";
 import { supervisorRoleMandate } from "./mandate";
+import { taskSupervisorShape } from "./supervisor-field";
+
+const supervisorColumns = exposedColumns(taskSupervisorShape.exposure);
+const mandateColumns = exposedColumns(taskMandateShape.exposure);
+
+/** A `taskWindow` where over the supervisor and mandate column sets, declared
+ * so tsc checks its columns where it is written. */
+type RoleWhere = LiveWhereOf<
+  typeof taskWindow,
+  [typeof supervisorColumns, typeof mandateColumns]
+>;
 
 // How a role's backlog and its sessions read off the task tree (tasks-core's
 // `taskWindow`, `tasks.tree.v2`) — the ONE definition, read by the server
@@ -35,22 +54,22 @@ export const ENDED_SESSION_STATUSES = [
  * roots and have not run. (A backlog root states the interactive mandate —
  * every root names one — so a person can still launch it by hand.)
  */
-export function roleBacklogWhere(roleId: string) {
+export function roleBacklogWhere(roleId: string): RoleWhere {
   return {
     "tasks_ext_supervisor.supervisor": roleId,
     folderId: { isEmpty: true },
     "tasks_ext_mandate.mandateId": { ne: supervisorRoleMandate.id },
     status: { in: [...BACKLOG_STATUSES] },
-  } as const;
+  };
 }
 
 /** Every session of role `roleId` (live or ended): its session roots. */
-export function roleSessionsWhere(roleId: string) {
+export function roleSessionsWhere(roleId: string): RoleWhere {
   return {
     "tasks_ext_supervisor.supervisor": roleId,
     folderId: { isEmpty: true },
     "tasks_ext_mandate.mandateId": supervisorRoleMandate.id,
-  } as const;
+  };
 }
 
 /** Whether a session root's status means the session is still live. */

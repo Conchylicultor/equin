@@ -13,6 +13,10 @@ import {
 } from "@plugins/tasks/plugins/tasks-core/core";
 import { supervisorMandate } from "@plugins/tasks/plugins/mandate-presets/core";
 import {
+  mandateDefinitions,
+  mandatesOfKind,
+} from "@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/definitions/core";
+import {
   BACKLOG_STATUSES,
   ENDED_SESSION_STATUSES,
   roleBacklogWhere,
@@ -133,21 +137,42 @@ export function useLiveRoleSessions(): ResourceResult<
 }
 
 /**
- * The ad-hoc supervisors running now: root tasks stating the plain
- * supervisor mandate (the Supervisor launch option) whose agent is at work —
- * no backlog, gone with their session.
+ * The ad-hoc supervisors running now: root tasks stating a kind of supervisor
+ * mandate (the Supervisor launch option's, or any built on it) other than a
+ * role session's, whose agent is at work — no backlog, gone with their
+ * session. Which mandates are supervisors is the definitions' lineage, so a
+ * new one built on the preset is listed with no change here.
  */
 export function useAdhocSupervisors(): ResourceResult<readonly TaskTreeRow[]> {
-  return useLive(taskWindow, {
+  const definitions = useLive(mandateDefinitions);
+  const adhocIds = useMemo(
+    () =>
+      mapResource(definitions, (defs) =>
+        mandatesOfKind(defs, supervisorMandate).filter(
+          (id) => id !== supervisorRoleMandate.id,
+        ),
+      ),
+    [definitions],
+  );
+  // Boot-hydrated (`boot-and-keep`), so the definitions are known on first
+  // render; until then the read asks for the plain preset and the result
+  // stays loading (masked by the combine below), never a partial answer.
+  const ids =
+    adhocIds.status === "ready" ? adhocIds.data : [supervisorMandate.id];
+  const rows = useLive(taskWindow, {
     columns: [mandateColumns],
     where: {
       folderId: { isEmpty: true },
-      "tasks_ext_mandate.mandateId": supervisorMandate.id,
+      "tasks_ext_mandate.mandateId": { in: ids },
       status: { in: ["in_progress", "in_progress_blocked", "need_action"] },
     },
     orderBy: [["createdAt", "desc"]],
     limit: ADHOC_SHOWN,
   });
+  return useMemo(
+    () => mapResource(combineResources({ adhocIds, rows }), (d) => d.rows),
+    [adhocIds, rows],
+  );
 }
 
 /** One role's backlog, oldest first. */

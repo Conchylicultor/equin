@@ -15,8 +15,36 @@ export interface MandateRef {
   readonly id: MandateId;
   /** What a person reads in a list's Mandate field. */
   readonly label: string;
+  /**
+   * The mandate this one is a kind of — built on its grants, adding its own —
+   * or `null`. What makes "is this tree a <kind>?" one question over the
+   * lineage ({@link mandateKinds}) rather than a list of ids every asker
+   * keeps in step.
+   */
+  readonly extends: MandateRef | null;
 }
 
-export function defineMandate(def: { id: string; label: string }): MandateRef {
-  return Object.freeze({ id: MandateIdSchema.parse(def.id), label: def.label });
+export function defineMandate(def: {
+  id: string;
+  label: string;
+  /** The mandate this one is a kind of ({@link MandateRef.extends}). */
+  extends?: MandateRef;
+}): MandateRef {
+  return Object.freeze({
+    id: MandateIdSchema.parse(def.id),
+    label: def.label,
+    extends: def.extends ?? null,
+  });
+}
+
+/**
+ * Every mandate `mandate` is a kind of: itself first, then each one it
+ * extends, nearest first. `isKindOf(base)` is `kinds.includes(base.id)`.
+ */
+export function mandateKinds(mandate: MandateRef): readonly MandateId[] {
+  const kinds: MandateId[] = [];
+  for (let m: MandateRef | null = mandate; m !== null; m = m.extends) {
+    kinds.push(m.id);
+  }
+  return kinds;
 }

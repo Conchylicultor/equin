@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: The named-mandate registry's web presence: eagerly registers the boot-preloaded mandate.definitions live value (every named mandate's id and label) so boot-snapshot hydrates it before first paint. The named-mandate registry: MandateDefinitions.Definition (what one named mandate grants) and MandateDefinitions.Source (a runtime family of them — one per automation), read at every resolution through mandateDefinitionEntries, and the mandate.definitions value (every named mandate's id and label).
+- Description: The named-mandate registry's web presence: eagerly registers the boot-preloaded mandate.definitions live value (every named mandate's id, label and the mandates it is a kind of) so boot-snapshot hydrates it before first paint. The named-mandate registry: MandateDefinitions.Definition (what one named mandate grants) and MandateDefinitions.Source (a runtime family of them — one per automation), read at every resolution through mandateDefinitionEntries, mandateIsKindOf (is a stored mandate id a kind of a base mandate — its lineage, declared by defineMandate extends), and the mandate.definitions value (every named mandate's id, label and the mandates it is a kind of).
 - Server:
   - Contributes: `resource.declare` "mandate.definitions"
   - Uses: `network/live.serveValue`
@@ -14,6 +14,7 @@
   - Exports (values):
     - `mandateDefinitionEntries`
     - `MandateDefinitions`
+    - `mandateIsKindOf`
   - Resources: `mandate.definitions` (push, fixed, whole: one entry per named mandate the code defines — the presets and one per automation, a handful)
 - Core:
   - Uses:
@@ -23,12 +24,16 @@
   - Exports (values):
     - `mandateDefinitions`
     - `MandateDefinitionsSchema`
+    - `mandateIsKindOf`
+    - `mandatesOfKind`
 - Cross-plugin:
   - Imported by:
+    - `conversations/conversation-view/supervisor-done-count`
     - `tasks/automations`
     - `tasks/mandate-presets`
     - `tasks/orchestration/mandate`
     - `tasks/supervisor-roles`
+    - `tasks/supervisor-roles/pane`
     - `tasks/task-mandate`
     - `tasks/tasks-core`
 

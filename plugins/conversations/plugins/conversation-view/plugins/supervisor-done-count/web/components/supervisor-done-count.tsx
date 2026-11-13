@@ -1,9 +1,15 @@
 import { exposedColumns } from "@plugins/network/plugins/live/core";
 import { mapRow, useLive } from "@plugins/network/plugins/live/web";
 import {
+  combineResources,
+  mapResource,
   ResourceErrorInline,
   type ResourceResult,
 } from "@plugins/network/plugins/live/plugins/live-state/web";
+import {
+  mandateDefinitions,
+  mandateIsKindOf,
+} from "@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/definitions/core";
 import {
   taskMandates,
   taskMandateShape,
@@ -15,27 +21,33 @@ import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { useMemo } from "react";
 
 /**
- * Whether `taskId` is a supervisor's root — its task STATES the supervisor
- * mandate (a worker below it inherits the mandate and is not one). Loading
- * until the mandate is known; read live, so a mandate changed mid-conversation
- * moves it.
+ * Whether `taskId` is a supervisor's root — its task STATES a mandate that is
+ * a kind of supervisor (the plain one, a role session's, any mandate built on
+ * it), read from the mandate definitions' lineage; a worker below it inherits
+ * the mandate and is not one. Loading until the mandate is known; read live,
+ * so a mandate changed mid-conversation moves it.
  */
 export function useIsSupervisorRoot(
   taskId: string | null | undefined,
 ): ResourceResult<boolean> {
   const id = taskId ?? null;
   const mandate = useLive(taskMandates, { id });
+  const definitions = useLive(mandateDefinitions);
   return useMemo(
     () =>
-      mapRow(
-        mandate,
-        (r) =>
-          id !== null &&
-          r != null &&
-          r.mandateId === supervisorMandate.id &&
-          r.sourceTaskId === id,
+      mapResource(
+        combineResources({
+          stated: mapRow(mandate, (r) =>
+            id !== null && r != null && r.sourceTaskId === id
+              ? r.mandateId
+              : null,
+          ),
+          definitions,
+        }),
+        ({ stated, definitions: defs }) =>
+          stated !== null && mandateIsKindOf(defs, stated, supervisorMandate),
       ),
-    [mandate, id],
+    [mandate, definitions, id],
   );
 }
 

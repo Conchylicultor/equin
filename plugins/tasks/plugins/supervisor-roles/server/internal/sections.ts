@@ -5,6 +5,7 @@ import {
   grantOf,
 } from "@plugins/tasks/plugins/orchestration/plugins/mandate/server";
 import { tasksFile } from "@plugins/tasks/plugins/tasks-core/core";
+import { mandateIsKindOf } from "@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/definitions/server";
 import { supervisorMandate } from "@plugins/tasks/plugins/mandate-presets/core";
 import { supervisorRoleMandate } from "../../core";
 import { supervisorPromptConfig } from "../../core";
@@ -58,8 +59,8 @@ export async function renderSupervisorPrompt(
 ): Promise<string | null> {
   const mandate = await conversationMandate(conversationId);
   if (mandate.kind === "none" || mandate.at !== "root") return null;
+  if (!mandateIsKindOf(mandate.mandateId, supervisorMandate)) return null;
   const isRole = mandate.mandateId === supervisorRoleMandate.id;
-  if (!isRole && mandate.mandateId !== supervisorMandate.id) return null;
   const parts: string[] = [];
   if (isRole) {
     const roleId = await supervisorOfTask(mandate.rootTaskId);

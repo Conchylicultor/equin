@@ -9,6 +9,8 @@
   - Uses:
     - `network/live.mapRow`
     - `network/live.useLive`
+    - `network/live/live-state.combineResources`
+    - `network/live/live-state.mapResource`
     - `network/live/live-state.ResourceErrorInline`
     - `network/live/live-state.ResourceResult`
     - `primitives/css/badge.Badge`
