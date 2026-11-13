@@ -25,7 +25,7 @@
 // a function of the text and the problems (`apply-disable-directives.js`).
 
 import ts from "typescript";
-import { Linter } from "eslint";
+import { ESLint, Linter } from "eslint";
 import {
   buildLintConfig,
   loadLintContributions,
@@ -83,6 +83,12 @@ export interface LintEngine {
     specs: ReadonlyMap<string, LintSpec>,
     read: (file: string) => string,
   ): Promise<Map<string, LintOut>>;
+}
+
+/** Whether a resolved rule entry is off (`0` / `"off"`, alone or with options). */
+function isOff(entry: Linter.RuleEntry): boolean {
+  const severity = Array.isArray(entry) ? entry[0] : entry;
+  return severity === 0 || severity === "off";
 }
 
 /**
@@ -176,6 +182,36 @@ export function createLintEngine(
     return config;
   };
   const linter = new Linter({ configType: "flat" });
+  // Whether any rule of a syntactic config is on for a file — read off the
+  // config alone (the file's scope blocks: test/e2e files, a rule's
+  // `outOfScope` categories), with no parse. ESLint parses a file even when
+  // every rule is off for it, and the parse is the whole cost of a syntactic
+  // lint (TS scan, ESTree conversion, tokens, scope analysis; the rules
+  // themselves are ~free), so one rule's edit re-parsed the ~20% of the tree
+  // its scope excludes, to answer nothing. `ESLint` here only resolves
+  // configs: it lints nothing, and holds the config normalized once.
+  const resolvers = new WeakMap<Linter.Config[], ESLint>();
+  const anyRuleOn = async (
+    file: string,
+    config: Linter.Config[],
+  ): Promise<boolean> => {
+    let resolver = resolvers.get(config);
+    if (resolver === undefined) {
+      resolver = new ESLint({
+        cwd: process.cwd(),
+        overrideConfigFile: true,
+        overrideConfig: config,
+      });
+      resolvers.set(config, resolver);
+    }
+    const resolved = (await resolver.calculateConfigForFile(file)) as
+      Linter.Config | undefined;
+    // An ignored file: verify decides, as it always has.
+    if (resolved === undefined) return true;
+    return Object.values(resolved.rules ?? {}).some(
+      (entry) => entry !== undefined && !isOff(entry),
+    );
+  };
   const raw = (m: Linter.LintMessage): RawLintMessage => ({
     ruleId: m.ruleId,
     fatal: m.fatal === true,
@@ -248,14 +284,24 @@ export function createLintEngine(
     async syntactic(file, code, groups) {
       const out: Record<string, RawLintMessage[]> = {};
       for (const g of groups) out[g] = [];
+      const config = await configFor(undefined, "syntactic", groups);
+      // Every selected rule off for this file: its answer is no message,
+      // known without parsing it. Exact for a split file (the only kind
+      // linted here): it has no directive and no inline rule config
+      // (`hasLintDirective` sends such a file whole), so nothing but the
+      // config decides which rules run, and no unused-directive report can
+      // arise. Not with the base group: its parse failure (a null-id
+      // message) is the base part's answer, and only a parse finds it.
+      if (
+        !groups.includes(LINT_GROUP_BASE) &&
+        !(await anyRuleOn(file, config))
+      ) {
+        return out;
+      }
       // A message outside the selection can only be a null-id one (a parse
       // failure) on a run without the base group, whose stored result
       // already holds it.
-      for (const m of verify(
-        file,
-        code,
-        await configFor(undefined, "syntactic", groups),
-      )) {
+      for (const m of verify(file, code, config)) {
         out[groupOf(m.ruleId)]?.push(m);
       }
       return out;

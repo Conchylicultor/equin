@@ -112,6 +112,44 @@ its group re-linted over all ~16.5k files with no program (35 CPU-s of
 lint). Its ~3 GB of RSS is not split yet (live heap vs. heap pacing's
 growth); filed as a follow-up.
 
+**Split (2026-11-13, task-1794520941).** The rule edit alone, replayed on a
+captured job, with heap probes and a heap snapshot at the start of the
+syntactic phase:
+
+| the worker, one-line edit of one syntactic rule | live heap | RSS |
+| --- | --- | --- |
+| job parsed | 0.13 GB (1.08 M strings: every file's ~65 typed keys) | 0.25 GB |
+| after the walk (1 source + 90 `.d.ts` checked) | 0.48 GB | 0.66 GB |
+| after the whole-tree syntactic re-lint | 0.58 GB | 1.7–2.5 GB peak |
+
+- **CPU is the parse, not the rule.** Per 3,000 files: TS scan+parse ~1 s,
+  ESTree conversion ~2 s, tokens ~1.2 s, scope analysis ~0.6 s, ESLint's per
+  call overhead ~1 s (it re-normalizes a plain config array on every
+  `verify`, ~0.2–0.3 ms a file). The rule's own listeners cost ~0. A rule
+  edit must re-parse every file the rule runs on, and ESLint also parsed
+  every file the rule is OFF for (test / e2e files, `outOfScope`
+  categories: 3,379 of 16,562 for this rule, ~20% for nearly every group).
+  Of 183 syntactic rules, only 9 narrow themselves to < 5% of files inside
+  `create()`; most listen to node types every file has, so neither a
+  node-type nor a self-scope skip would help in general.
+- **Memory is GC headroom over what is live.** The same re-lint run alone
+  (~50 MB live) peaks at ~0.45 GB; in the worker (~0.48 GB live) at
+  2.2–2.5 GB. The live heap is the job (~0.13 GB of typed keys, sent for
+  every file although no typed part moved), program 1 (~0.15 GB: JSC's
+  compiled `createProgram` code — `processSourceFile`'s code block, a GC
+  root — holds the program's closure scope after every reference of ours
+  is gone), and the runtime's code and shapes. The walk state is NOT
+  retained: freeing it in its own frame (and the typed-config cache by
+  program) measured no change, so neither was shipped.
+
+Fixed: a split file whose selected syntactic rules are all off by the
+config is answered with no parse (`lint-engine.ts`, `anyRuleOn`, resolved by
+`ESLint#calculateConfigForFile` in ~0.07 ms a file). Exact: a split file has
+no directive and no inline config, so the config alone decides which rules
+run. The whole-tree re-lint of the group: 70.8 → 48.3 CPU-s (same host,
+same files, the HEAD engine against this one). Filed: the job's typed keys
+on a rules-only move (task-1794569143).
+
 ## Tried and rejected: freeing programs and the walk earlier
 
 Two lifetime bugs exist, but neither moves the peak:

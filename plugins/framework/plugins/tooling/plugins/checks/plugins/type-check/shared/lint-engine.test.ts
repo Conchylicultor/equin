@@ -238,3 +238,65 @@ describe("a directive file's verdict, combined with no program", () => {
     ]);
   }, 120_000);
 });
+
+// A split file's syntactic groups, answered with no parse when every selected
+// rule is off for it by the config's scope: the answer must be exactly what
+// ESLint gives that file, the skip only saving the parse.
+describe("a split file's syntactic groups", () => {
+  const GROUP = "framework/plugins/tooling/plugins/checks/plugins/type-check";
+  const CODE = `declare global {
+  interface Window {
+    probe?: number;
+  }
+}
+export const a = 1;
+`;
+  const PATHS = [
+    // In scope: the rule reports.
+    "plugins/apps/plugins/home/web/probe.ts",
+    // A test file and an e2e script: the rule is off by its scope.
+    "plugins/apps/plugins/home/web/probe.test.ts",
+    "plugins/apps/plugins/home/e2e/probe.ts",
+  ];
+
+  it("equals one ESLint run of the group's rules, file by file", async () => {
+    const engine = createLintEngine(ROOT, readDeclaredUtilities(ROOT));
+    const config = await buildLintConfig({
+      root: ROOT,
+      typeSource: { none: true },
+      exemptions: { mode: "report" },
+      declaredUtilities: readDeclaredUtilities(ROOT),
+      rules: {
+        base: false,
+        contributions: new Set([GROUP]),
+        kind: "syntactic",
+      },
+    });
+    const linter = new Linter({ configType: "flat" });
+    const answers: number[] = [];
+    for (const path of PATHS) {
+      const file = join(ROOT, path);
+      const expected = linter
+        .verify(CODE, config, { filename: file })
+        .filter((m) => m.severity === 2 && m.ruleId !== null)
+        .map((m) => `${m.ruleId}@${m.line}:${m.column}`);
+      const got = (await engine.syntactic(file, CODE, [GROUP]))[GROUP]!.map(
+        (m) => `${m.ruleId}@${m.line}:${m.column}`,
+      );
+      expect(got).toEqual(expected);
+      answers.push(got.length);
+    }
+    // The fixture exercises both sides: reported in scope, off outside it.
+    expect(answers).toEqual([1, 0, 0]);
+  });
+
+  it("still parses a file with the base group, whose parse failure it owns", async () => {
+    const engine = createLintEngine(ROOT, readDeclaredUtilities(ROOT));
+    const out = await engine.syntactic(
+      join(ROOT, "plugins/apps/plugins/home/web/probe.test.ts"),
+      "export const = ;\n",
+      [LINT_GROUP_BASE],
+    );
+    expect(out[LINT_GROUP_BASE]!.some((m) => m.fatal)).toBe(true);
+  });
+});
