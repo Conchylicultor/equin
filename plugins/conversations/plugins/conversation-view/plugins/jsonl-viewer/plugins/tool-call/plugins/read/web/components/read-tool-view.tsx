@@ -8,6 +8,7 @@ import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversationById } from "@plugins/conversations/web";
+import { isAttachmentDiskPath } from "@plugins/conversations/core";
 import { CatNListing } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/code-listing/web";
 import { ReadImageView } from "./read-image-view";
 
@@ -72,16 +73,20 @@ export function ReadToolView({
   );
 
   const isImage = isImagePath(file_path);
+  // A picture the user attached to their message is already drawn there
+  // (`attachmentRefsOf`): the agent reading it is a second copy, so its card
+  // stays closed. Any other picture the agent opened is news — shown open.
+  const defaultOpen = isImage && !isAttachmentDiskPath(file_path);
 
   return (
-    <ToolCallCard event={event} aside={aside} defaultOpen={isImage}>
+    <ToolCallCard event={event} aside={aside} defaultOpen={defaultOpen}>
       {event.result && (
         <>
           {event.result.isError ? (
             <Text as="p" variant="caption" className="text-destructive">
               {event.result.content}
             </Text>
-          ) : isImagePath(file_path) ? (
+          ) : isImage ? (
             <RowView
               row={conversation}
               subject="the conversation"
