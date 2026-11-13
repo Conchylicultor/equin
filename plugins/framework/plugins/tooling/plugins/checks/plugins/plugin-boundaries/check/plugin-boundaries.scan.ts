@@ -1,4 +1,3 @@
-import { dirname, posix } from "path";
 import type { FileFold } from "@plugins/plugin-meta/plugins/plugin-records/core";
 import {
   packageNameFor,
@@ -6,10 +5,8 @@ import {
   RUNTIME_FOLDERS,
   TESTING_FOLDER,
 } from "@plugins/framework/plugins/plugin-id/core";
-import {
-  findImports,
-  maskSource,
-} from "@plugins/plugin-meta/plugins/parse-utils/core";
+import { findImports } from "@plugins/plugin-meta/plugins/parse-utils/core";
+import { specifierPath } from "@plugins/plugin-meta/plugins/plugin-records/plugins/specifier/core";
 import { splitTopLevelStatements } from "./parse";
 import { summarizeExports, type FileExports } from "./reexport-provenance";
 import { findTestSupportInBarrel } from "./test-exports";
@@ -196,7 +193,8 @@ function judgeImports(
   part: PluginBoundariesPart,
 ): void {
   const { violations } = part;
-  const imports = findImports(src);
+  const found = findImports(src, undefined, { dynamic: true });
+  const imports = found.filter((imp) => !imp.dynamic);
 
   // R7: forbid direct workspace-name imports (`@equin/plugin-*`).
   // Cross-plugin imports must go through `@plugins/...` so R4/R5/R6 can
@@ -220,8 +218,9 @@ function judgeImports(
   if (sourcePlugin) {
     for (const { specifier } of imports) {
       if (!specifier.startsWith("./") && !specifier.startsWith("../")) continue;
-      const resolved = posix.normalize(posix.join(dirname(rel), specifier));
-      const targetPlugin = pluginForPath(resolved, pluginSet);
+      const resolved = specifierPath(rel, specifier);
+      const targetPlugin =
+        resolved === null ? null : pluginForPath(resolved, pluginSet);
       if (!targetPlugin || targetPlugin === sourcePlugin) continue;
       violations.push({
         rule: "relative-cross-plugin",
@@ -238,7 +237,8 @@ function judgeImports(
   // Framework files (plugin registries) are exempt — their dynamic imports
   // are the resilient-loading mechanism, not accidental boundary bypasses.
   if (!rel.endsWith(".generated.ts")) {
-    for (const inlinePath of extractInlineImports(src)) {
+    for (const { specifier: inlinePath, dynamic } of found) {
+      if (!dynamic || !inlinePath.startsWith("@plugins/")) continue;
       const resolved = resolveImport(inlinePath, pluginSet);
       if (!resolved) continue;
       if (sourcePlugin && sourcePlugin === resolved.pluginPath) continue;
@@ -458,22 +458,6 @@ type ImportKind = "default" | "named" | "namespace" | "side-effect";
 interface Imp {
   path: string;
   kind: ImportKind;
-}
-
-function extractInlineImports(rawSrc: string): string[] {
-  const masked = maskSource(rawSrc);
-  const results: string[] = [];
-  const re = /\bimport\s*\(\s*(["'`])/g;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(masked))) {
-    const openQuoteIdx = m.index + m[0].length - 1;
-    const quote = masked[openQuoteIdx]!;
-    const closeIdx = masked.indexOf(quote, openQuoteIdx + 1);
-    if (closeIdx < 0) continue;
-    const spec = rawSrc.slice(openQuoteIdx + 1, closeIdx);
-    if (spec.startsWith("@plugins/")) results.push(spec);
-  }
-  return results;
 }
 
 function extractPluginImports(imports: ReturnType<typeof findImports>): Imp[] {

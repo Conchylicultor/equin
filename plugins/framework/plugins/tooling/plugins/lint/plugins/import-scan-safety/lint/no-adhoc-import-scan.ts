@@ -8,10 +8,13 @@ const createRule = lintRuleCreator(import.meta.url);
 // would defeat the real case). We match `from`, then any run of regex
 // whitespace/anchor/group tokens (`\s*`, `\b`, `(`, `?:`, …), then a "quote
 // indicator": a literal quote/backtick OR a character class containing one
-// (e.g. `["']`). `import(`/`require(` (dynamic import, CJS) have no `from` and
-// are intentionally out of scope — `findImports` doesn't cover them, so they
-// stay hand-rolled over fully-masked source.
+// (e.g. `["']`). `require(` (CJS) has no `from` and is out of scope.
 const FROM_QUOTE = /from(?:\\s[*+?]?|\\[bB]|[\s()?:])*(?:["'`]|\[[^\]]*["'`])/;
+// The tell of a whole-file `import("…")` scanner: `import`, an escaped `(`,
+// then the same run of whitespace/group tokens and a quote indicator —
+// `findImports(src, masked, { dynamic: true })` covers it.
+const DYNAMIC_QUOTE =
+  /import(?:\\s[*+?]?)*\\\((?:\\s[*+?]?|[\s(?:])*(?:["'`]|\[[^\]]*["'`])/;
 // Require the `import`/`export` keyword too, so a `from "<table>"` in a SQL
 // parser (or any other non-module `from "…"` DSL) is NOT mistaken for an import
 // scanner. The keyword is what makes this specifically an ES-module statement
@@ -30,7 +33,10 @@ const IMPORT_KEYWORD = /\b(?:import|export)\b/;
  * intentionally not flagged — rare, and `findImports` covers them once switched.
  */
 export function isImportScanSource(src: string): boolean {
-  return IMPORT_KEYWORD.test(src) && FROM_QUOTE.test(src);
+  return (
+    (IMPORT_KEYWORD.test(src) && FROM_QUOTE.test(src)) ||
+    DYNAMIC_QUOTE.test(src)
+  );
 }
 
 export default createRule({
@@ -39,8 +45,8 @@ export default createRule({
     type: "problem",
     docs: {
       description:
-        "Disallow hand-rolled whole-file `import … from \"…\"` scanner regexes " +
-        "— route static-import scanning through the `findImports` primitive.",
+        'Disallow hand-rolled whole-file `import … from "…"` / `import("…")` scanner regexes ' +
+        "— route import scanning through the `findImports` primitive.",
     },
     schema: [],
     messages: {
@@ -52,8 +58,9 @@ export default createRule({
         "codegen template) — a silent false positive. Use `findImports(src)` " +
         "from @plugins/plugin-meta/plugins/parse-utils/core: it masks strings " +
         "fully and reads each specifier back by offset. For `git grep`-style " +
-        "checks use `grepImports` from the checks core. For a construct outside " +
-        "its scope (dynamic `import()`, `require()`) mask fully with " +
+        'checks use `grepImports` from the checks core. For dynamic `import("…")` ' +
+        "pass `{ dynamic: true }` (`findImports(src, undefined, { dynamic: true })`). " +
+        "For a construct outside its scope (`require()`) mask fully with " +
         "`maskSource(src)` and read the quote span by offset.",
     },
   },

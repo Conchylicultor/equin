@@ -17,6 +17,7 @@
  */
 import { relative } from "path";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
+import { loadRepoFiles } from "@plugins/framework/plugins/tooling/core";
 import {
   SNAPSHOT_FILE,
   scanPaneIdentities,
@@ -24,7 +25,7 @@ import {
 } from "./identity-manifest";
 
 const root = await getWorktreeRoot();
-const scan = await scanPaneIdentities();
+const scan = await scanPaneIdentities(await loadRepoFiles(root));
 
 if (!scan.ok) {
   // Refuse to write a manifest that covers fewer panes than the repo has — a

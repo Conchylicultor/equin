@@ -25,16 +25,19 @@ lint rule (in `framework/tooling/lint/plugins/marker-scan-safety`) — route it
 through `markerCallSpans(maskSource(src), …)` and read the binding name + string
 value back from the original by offset. Route through one of:
 
-- **`findImports(src)`** — the single static-import scanner: every
+- **`findImports(src, masked?, { dynamic? })`** — the single import scanner: every
   `import … from "…"`, `export … from "…"`, and bare `import "…"` not in a
-  comment/string/regex. Returns `ImportRef[]` (`specifier`, `index`, `keyword`,
-  `clause`, `typeOnly`, `sideEffect`). It masks strings FULLY and reads each
+  comment/string/regex — and, with `{ dynamic: true }`, every `import("…")`
+  (a lazy load or an inline type). Returns `ImportRef[]` (`specifier`, `index`,
+  `keyword`, `clause`, `typeOnly`, `sideEffect`, `dynamic`). It masks strings FULLY and reads each
   specifier back by offset, so an import written *inside* a string/template
   literal (a test fixture, docs snippet, codegen template) can never be mistaken
   for a real import. **Always scan static imports with this — never hand-roll an
-  `import … from "…"` regex** (enforced by the `no-adhoc-import-scan` lint rule).
-  Dynamic `import()` / `require()` are calls, not static imports, and are out of
-  scope — mask fully with `maskSource(src)` and read the quote span by offset.
+  `import … from "…"` or `import("…")` regex** (enforced by the
+  `no-adhoc-import-scan` lint rule). `require()` is out of scope — mask fully
+  with `maskSource(src)` and read the quote span by offset. It reads the
+  GRAMMAR; for what a specifier resolves to, read the plugin-records module
+  graph (`fileSetImportTargets`).
 - **`maskSource(src, { strings })`** — returns a same-length copy (offsets +
   newlines preserved 1:1) with comments, regex literals, and — when
   `strings !== false` (default `true`) — string interiors blanked to spaces.

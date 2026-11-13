@@ -16,11 +16,4 @@ export default [
     reason:
       "not yet split into server/ + machine/: the module graph's disk reader of gitignored files, moved here from the four core readers that held it (faceted, codegen file-scans and evaluated-barrels), each under the same debt.",
   },
-  {
-    rule: "import-scan-safety/no-hand-import-resolution",
-    paths: ["core/internal/module-graph.ts"],
-    kind: "sanctioned",
-    reason:
-      "The module graph IS the one import resolver: every other reader takes resolved imports from it (`fileSetImports`, `fileSetRuntimeReach`, `fileSetBindings`, `ModuleNode.staticImports`).",
-  },
 ] satisfies Exemptions;

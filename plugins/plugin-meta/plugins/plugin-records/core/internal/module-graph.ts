@@ -6,7 +6,10 @@ import { groupedByOwner, readGrouped } from "./grouped";
 import { gitBlobId, recordKey } from "./keys";
 import { npmCodeKey } from "./npm-identity";
 import type { RecordStore } from "./store";
-import { relDirname, relJoin } from "./rel-path";
+import {
+  isRepoSpecifier,
+  specifierCandidates,
+} from "@plugins/plugin-meta/plugins/plugin-records/plugins/specifier/core";
 import { scanModuleImports, type ImportSpec } from "./scan-imports";
 
 /**
@@ -36,21 +39,6 @@ const SCAN_MODULE =
   "plugins/plugin-meta/plugins/plugin-records/core/internal/scan-imports.ts";
 
 const SCANNED = /\.(m?[jt]sx?|c[jt]s)$/;
-const PLUGINS_ALIAS = "@plugins/";
-// What an extensionless specifier may name, in the order Bun tries — its
-// runtime and its bundler alike (measured: `.tsx` wins over a sibling `.ts`,
-// `.jsx` too). `module-graph.bun.test.ts` pins it against a real `Bun.build`:
-// a record keyed on the graph's edges is only as sound as this order.
-const RESOLVED_EXTENSIONS = [
-  ".tsx",
-  ".jsx",
-  ".ts",
-  ".mjs",
-  ".js",
-  ".cjs",
-  ".json",
-];
-
 /**
  * The npm package a bare specifier loads: `@scope/name` or `name`, whatever
  * subpath follows (`@typescript-eslint/parser/dist/x` → `@typescript-eslint/parser`).
@@ -61,14 +49,6 @@ function packageOf(spec: string): string {
   return path.startsWith("@") && parts.length > 1
     ? `${parts[0]}/${parts[1]}`
     : parts[0]!;
-}
-
-function isInternal(spec: string): boolean {
-  return (
-    spec.startsWith("./") ||
-    spec.startsWith("../") ||
-    spec.startsWith(PLUGINS_ALIAS)
-  );
 }
 
 export interface ModuleNode {
@@ -346,21 +326,12 @@ async function growGraph(
   };
   const resolveFrom = async (
     fromRel: string,
-    rawSpec: string,
+    spec: string,
   ): Promise<string | null> => {
-    // A bundler query (`./clip.mp4?inline`, `?raw`, `?url`) loads the file it
-    // names: the module is that file, keyed by its bytes like any other.
-    const query = rawSpec.indexOf("?");
-    const spec = query === -1 ? rawSpec : rawSpec.slice(0, query);
-    const base = spec.startsWith(PLUGINS_ALIAS)
-      ? relJoin("plugins", spec.slice(PLUGINS_ALIAS.length))
-      : relJoin(relDirname(fromRel), spec);
-    if (base === null) return null;
-    const candidates = [
-      base,
-      ...RESOLVED_EXTENSIONS.map((e) => `${base}${e}`),
-      ...RESOLVED_EXTENSIONS.map((e) => `${base}/index${e}`),
-    ];
+    // The one resolver's candidates (`plugin-records/specifier`); a bundler
+    // query (`./clip.mp4?inline`, `?raw`) names the file it loads.
+    const candidates = specifierCandidates(fromRel, spec);
+    if (candidates === null) return null;
     // The file set first: a probe of the disk is only for a gitignored
     // module (a generated file a barrel imports), never the common case.
     for (const c of candidates)
@@ -460,7 +431,7 @@ async function growGraph(
             dynamicExternals: [],
           };
           for (const imp of facts.imports) {
-            if (!isInternal(imp.spec)) {
+            if (!isRepoSpecifier(imp.spec)) {
               const pkg = packageOf(imp.spec);
               if (!node.packages.includes(pkg)) node.packages.push(pkg);
               const list = imp.dynamic

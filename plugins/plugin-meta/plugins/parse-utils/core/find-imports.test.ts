@@ -130,9 +130,29 @@ test("real import is still found alongside an embedded-string fixture", () => {
 
 // === non-imports are not matched ============================================
 
-test("dynamic import() is NOT matched", () => {
+test("dynamic import() is NOT matched by default", () => {
   const src = `const m = await import("@plugins/a/web");`;
   expect(specs(src)).toEqual([]);
+});
+
+test('{ dynamic: true } adds every import("…"), in source order, masked like the rest', () => {
+  const src = [
+    `import { a } from "@plugins/a/core";`,
+    `type T = typeof import("@plugins/b/core");`,
+    `const m = () => import ( './lazy' );`,
+    'const fixture = `import("@plugins/fake/web")`;',
+    `// import("@plugins/comment/web")`,
+  ].join("\n");
+  const refs = findImports(src, undefined, { dynamic: true });
+  expect(refs.map((r) => [r.specifier, r.dynamic])).toEqual([
+    ["@plugins/a/core", false],
+    ["@plugins/b/core", true],
+    ["./lazy", true],
+  ]);
+  const lazy = refs[2]!;
+  expect(src.slice(lazy.index, lazy.index + lazy.specifier.length)).toBe(
+    "./lazy",
+  );
 });
 
 test("import.meta is NOT matched", () => {

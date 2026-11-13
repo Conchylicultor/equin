@@ -3,13 +3,20 @@ import {
   existsSync,
   readFileSync,
 } from "@plugins/packages/plugins/timed-fs/core";
-import { join, posix, relative } from "path";
+import { join, relative } from "path";
 import type TS from "typescript";
+import type { RepoFiles } from "@plugins/framework/plugins/tooling/core";
 import { listCandidateSources } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
+import { fileSetImportTargets } from "@plugins/plugin-meta/plugins/plugin-records/core";
+import { fileSetBindings } from "@plugins/plugin-meta/plugins/plugin-records/plugins/bindings/core";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
-type Check = { id: string; description: string; run(): Promise<CheckResult> };
+type Check = {
+  id: string;
+  description: string;
+  run(ctx: { repo(): Promise<RepoFiles> }): Promise<CheckResult>;
+};
 
 // `typescript`'s module object is invariant for the process's lifetime — not a
 // tree-derived fact — so a per-process memo is safe. Loaded lazily so this
@@ -392,48 +399,75 @@ function scanFile(
 // of the repo. The join mirrors what the contributions facet already does for
 // pane ids (`facets/plugins/contributions/facet/internal/static-parse.ts`):
 // resolve the local name to the name it is EXPORTED under, then look that up
-// across every scanned file. The specifier disambiguates when one exported name
-// is declared twice.
+// across every scanned file. When one exported name is declared twice, the
+// import's module — as the plugin-records module graph resolves it, and what
+// it loads — disambiguates.
 // ---------------------------------------------------------------------------
 
 interface GlobalIndex {
   byExportName: Map<string, RouteDecl[]>;
   byFile: Map<string, FileScan>;
+  /** The run's file set: the module graph an ambiguous name is narrowed over. */
+  repo: RepoFiles;
 }
 
 /**
- * The repo-relative directory (or module file stem) a specifier points at, or
- * null when it names a package rather than a path. Used only to DISAMBIGUATE a
- * name declared more than once — never to resolve one, so the barrel hop
- * (`@plugins/x/core` → `core/index.ts` → `./routes`) it cannot follow costs
- * nothing.
+ * The modules `name`, imported from `module` into `fromFile`, can come from:
+ * the module the import resolves to, then each module it hands that name on
+ * from (a pure re-export module's `export … from`, renamed as it renames it;
+ * any other module's import edges binding the name) — read off the
+ * plugin-records module graph (`fileSetImportTargets`, `fileSetBindings`),
+ * never resolved here. Used only to DISAMBIGUATE a name declared more than
+ * once, so a chain it cannot follow costs nothing.
  */
-function specifierTarget(spec: string, fromFile: string): string | null {
-  if (spec.startsWith("@plugins/")) {
-    return `plugins/${spec.slice("@plugins/".length)}`;
+async function nameChain(
+  name: string,
+  module: string,
+  fromFile: string,
+  repo: RepoFiles,
+): Promise<Set<string>> {
+  const chain = new Set<string>();
+  const target = (await fileSetImportTargets(repo, [fromFile]))
+    .get(fromFile)!
+    .static.get(module);
+  if (target === undefined) return chain;
+  const seen = new Set<string>();
+  let level: [module: string, name: string][] = [[target, name]];
+  while (level.length > 0) {
+    const fresh = level.filter(([m, n]) => !seen.has(`${m}\0${n}`));
+    for (const [m, n] of fresh) seen.add(`${m}\0${n}`);
+    const bindings = await fileSetBindings(repo, [
+      ...new Set(fresh.map(([m]) => m)),
+    ]);
+    const next: [string, string][] = [];
+    for (const [m, n] of fresh) {
+      chain.add(m);
+      const b = bindings.get(m)!;
+      if (b.reexports !== null) {
+        for (const r of b.reexports) {
+          if (r.exports === "all") next.push([r.target, n]);
+          else
+            for (const [exported, own] of r.exports)
+              if (exported === n && own !== null) next.push([r.target, own]);
+        }
+        continue;
+      }
+      for (const i of b.imports)
+        if (i.names === "all" || i.names.includes(n)) next.push([i.target, n]);
+    }
+    level = next;
   }
-  if (spec.startsWith(".")) {
-    return posix.normalize(posix.join(posix.dirname(fromFile), spec));
-  }
-  return null;
-}
-
-function declaredUnder(decl: RouteDecl, target: string): boolean {
-  return (
-    decl.file === `${target}.ts` ||
-    decl.file === `${target}.tsx` ||
-    decl.file.startsWith(`${target}/`)
-  );
+  return chain;
 }
 
 type Resolved<T> = { ok: true; value: T } | { ok: false; why: string };
 
 /** The `const <name> = defineRoute(…)` a name refers to, from `ctx`'s scope. */
-function resolveDecl(
+async function resolveDecl(
   name: string,
   ctx: FileScan,
   index: GlobalIndex,
-): Resolved<RouteDecl> {
+): Promise<Resolved<RouteDecl>> {
   const local = ctx.routesByName.get(name);
   if (local) return { ok: true, value: local };
 
@@ -457,15 +491,16 @@ function resolveDecl(
   }
   if (candidates.length === 1) return { ok: true, value: candidates[0]! };
 
-  const target = specifierTarget(imported.module, ctx.file);
-  const narrowed =
-    target === null
-      ? candidates
-      : candidates.filter((d) => declaredUnder(d, target));
+  const chain = await nameChain(
+    imported.original,
+    imported.module,
+    ctx.file,
+    index.repo,
+  );
+  const narrowed = candidates.filter((d) => chain.has(d.file));
   if (narrowed.length === 1) return { ok: true, value: narrowed[0]! };
-  // Nothing under the specifier's directory means the narrowing told us nothing
-  // (a barrel hop this reader does not follow), so name every candidate rather
-  // than the empty narrowed set.
+  // No module along the name's chain declares it: name every candidate
+  // rather than the empty narrowed set.
   const ambiguous = narrowed.length === 0 ? candidates : narrowed;
   return {
     ok: false,
@@ -478,12 +513,12 @@ function resolveDecl(
 }
 
 /** A route expression's fields, plus the file scope its `parent:` resolves in. */
-function resolveRoute(
+async function resolveRoute(
   ts: typeof TS,
   expr: TS.Expression,
   ctx: FileScan,
   index: GlobalIndex,
-): Resolved<{ read: RouteRead; scope: FileScan }> {
+): Promise<Resolved<{ read: RouteRead; scope: FileScan }>> {
   // Inline: `route: defineRoute({ … })`. Nothing to join — the identity is right
   // here, and its `parent:` resolves in the pane's own file.
   if (ts.isCallExpression(expr) && isDefineRouteCall(ts, expr)) {
@@ -505,7 +540,7 @@ function resolveRoute(
     };
   }
 
-  const decl = resolveDecl(expr.text, ctx, index);
+  const decl = await resolveDecl(expr.text, ctx, index);
   if (!decl.ok) return decl;
   if (decl.value.read === null) {
     return {
@@ -538,7 +573,7 @@ export type PaneScan =
  * still carries an id and a segment that a refactor can change, so it belongs in
  * the manifest.
  */
-export async function scanPaneIdentities(): Promise<PaneScan> {
+export async function scanPaneIdentities(repo: RepoFiles): Promise<PaneScan> {
   const ts = await loadTypescript();
   const sources = await listCandidateSources({
     grepArg: GREP_ARG,
@@ -551,6 +586,7 @@ export async function scanPaneIdentities(): Promise<PaneScan> {
   const index: GlobalIndex = {
     byExportName: new Map(),
     byFile: new Map(scans.map((s) => [s.file, s])),
+    repo,
   };
   for (const scan of scans) {
     for (const decl of scan.routesByName.values()) {
@@ -566,7 +602,7 @@ export async function scanPaneIdentities(): Promise<PaneScan> {
   for (const scan of scans) {
     for (const site of scan.panes) {
       const where = `${site.file}:${site.line}`;
-      const resolved = resolveRoute(ts, site.route, scan, index);
+      const resolved = await resolveRoute(ts, site.route, scan, index);
       if (!resolved.ok) {
         problems.push(`${where}  ${resolved.why}`);
         continue;
@@ -575,7 +611,7 @@ export async function scanPaneIdentities(): Promise<PaneScan> {
 
       let parent: string | null = null;
       if (read.parentName !== null) {
-        const parentDecl = resolveDecl(read.parentName, scope, index);
+        const parentDecl = await resolveDecl(read.parentName, scope, index);
         if (!parentDecl.ok) {
           problems.push(
             `${where}  its route's \`parent: ${read.parentName}\` is unreadable: ${parentDecl.why}`,
@@ -708,12 +744,12 @@ const check: Check = {
   id: "pane:identity-manifest",
   description:
     "every pane's id, URL segment, appIndex and parent route match the committed identity manifest",
-  async run() {
+  async run(ctx) {
     const root = await getWorktreeRoot();
     const regen = regenCommand(root);
     const snapshotRel = relative(root, SNAPSHOT_FILE);
 
-    const scan = await scanPaneIdentities();
+    const scan = await scanPaneIdentities(await ctx.repo());
     if (!scan.ok) {
       return {
         ok: false,

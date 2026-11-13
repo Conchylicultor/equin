@@ -198,7 +198,10 @@ through the catalog's generic `loadExhibits()`, filtered by `measurableExhibits(
    to (1) only when what (1) loads changed. Its key is the **static import
    closure** of the harness plugin and every contributor's exhibits barrel
    (`check/page-inputs.ts`), with `bun.lock` for the packages, every byte read
-   through `ctx.repo()`. The check is `inputKeyed`, so that closure IS its
+   through `ctx.repo()`. Its own static-only walk (the plugin-records graph
+   would also walk every `import()`, putting the apps behind app exhibits in
+   the read-set), each specifier resolved by the graph's own resolver
+   (`plugin-records/specifier`). The check is `inputKeyed`, so that closure IS its
    read-set: an edit outside it replays the cached pass and runs nothing; an
    edit inside it re-runs, and a host-global sidecar marker per closure digest
    skips the Chromium launch when any worktree already passed those exact
@@ -479,7 +482,6 @@ somehow is not.
     - `boundaries:web-loads-portable` — `web/internal/build-measurer-page.ts`, `web/internal/measure-page.ts` (debt)
     - `check-thread-safety/no-blocking-check-work` — `check/index.ts` (debt)
     - `dom-access-safety/no-module-scope-dom` — `web/internal/entry.tsx` (sanctioned)
-    - `import-scan-safety/no-hand-import-resolution` — `check/page-inputs.ts` (debt)
 - Core:
   - Exports (types):
     - `MeasuredBox`

@@ -14,9 +14,9 @@
 // per source file, summarized and combined by `combineBarrelUses`), so the
 // unit test needs no repo.
 
-import { dirname, join } from "path";
 import { isTestCodePath } from "@plugins/framework/plugins/plugin-id/core";
 import { findImports } from "@plugins/plugin-meta/plugins/parse-utils/core";
+import { resolveSpecifier } from "@plugins/plugin-meta/plugins/plugin-records/plugins/specifier/core";
 import { parseBindingList, splitTopLevelStatements } from "./parse";
 import { exportedNames } from "./test-exports";
 import type { Violation } from "./unknown-dirs";
@@ -59,6 +59,12 @@ export function barrelExportNames(src: string): string[] {
  * Every use `importer` makes of a public barrel. `isBarrel` says which
  * `index.ts` paths are public barrels; a specifier reaches one either as
  * `@plugins/<p>/<runtime>` or as a relative path landing on `<runtime>/index`.
+ *
+ * Resolved by the module graph's own resolver (`plugin-records/specifier`)
+ * against the set of public barrels, not read off the graph: R13 counts an
+ * `import type` as a use, and the graph (the runtime's reading) has no edge
+ * for one; and a fold part is a function of the file's bytes and the plugin
+ * set alone, which the barrel set is.
  */
 export function collectBarrelUses(
   importer: string,
@@ -69,7 +75,7 @@ export function collectBarrelUses(
   const out: BarrelUse[] = [];
   for (const imp of findImports(src)) {
     if (imp.sideEffect) continue;
-    const barrel = resolveBarrel(importer, imp.specifier, isBarrel);
+    const barrel = resolveSpecifier(importer, imp.specifier, isBarrel);
     if (barrel === null || barrel === importer) continue;
     const clause = imp.clause.trim();
     if (/^(?:type\s+)?\*/.test(clause)) {
@@ -83,24 +89,6 @@ export function collectBarrelUses(
     if (names.length > 0) out.push({ barrel, importer, names });
   }
   return out;
-}
-
-function resolveBarrel(
-  importer: string,
-  specifier: string,
-  isBarrel: (path: string) => boolean,
-): string | null {
-  let target: string;
-  if (specifier.startsWith("@plugins/")) {
-    target = `plugins/${specifier.slice("@plugins/".length)}`;
-  } else if (specifier.startsWith(".")) {
-    target = join(dirname(importer), specifier);
-  } else {
-    return null;
-  }
-  target = target.replace(/\/index(\.tsx?)?$/, "");
-  const barrel = `${target}/index.ts`;
-  return isBarrel(barrel) ? barrel : null;
 }
 
 /**

@@ -61,6 +61,33 @@ function landsInPluginsDir(n: Node): boolean {
   return false;
 }
 
+/** A name that holds an import specifier: `spec`, `specifier`, `importSpec`, `rawSpecifier`, … */
+const SPECIFIER_NAME = /spec(ifier)?$/i;
+
+/** The name `n` reads: an identifier, or a member's property (`imp.specifier`). */
+function nameOf(n: Node | undefined): string | undefined {
+  if (n?.type === "Identifier") return n.name;
+  if (
+    n?.type === "MemberExpression" &&
+    !n.computed &&
+    n.property.type === "Identifier"
+  )
+    return n.property.name;
+  return undefined;
+}
+
+/** The name a call's callee reads (`join`, `posix.join`, `relJoin`). */
+const calleeName = (n: Node | undefined): string | undefined =>
+  n?.type === "CallExpression" ? nameOf(n.callee) : undefined;
+
+/** A directory-of-a-file call: `dirname(x)`, `posix.dirname(x)`, `relDirname(x)`. */
+const isDirnameCall = (n: Node | undefined): boolean =>
+  /dirname$/i.test(calleeName(n) ?? "");
+
+/** A directory-of-a-file value: a {@link isDirnameCall}, or a name ending in `dir` / `dirname`. */
+const isDirValue = (n: Node | undefined): boolean =>
+  isDirnameCall(n) || /dir(name)?$/i.test(nameOf(n) ?? "");
+
 export default createRule({
   name: "no-hand-import-resolution",
   meta: {
@@ -78,6 +105,11 @@ export default createRule({
         "`fileSetImports` / `fileSetRuntimeReach` / `fileSetClosure` for which modules a file loads, " +
         "`fileSetBindings` (`plugin-records/plugins/bindings/core`) for each edge's bound names, or a `ModuleNode`'s `staticImports` / `dynamicImports` for spec → file. " +
         "A specifier read for its own text (a plugin id, a barrel folder) is not resolution: keep it a plugin path, not a file path.",
+      relativeResolution:
+        "This joins an import specifier onto its importer's directory — a hand-rolled relative import resolver beside the module graph. " +
+        "Read resolved imports off the plugin-records module graph (`fileSetImportTargets` / `fileSetImports` / `fileSetBindings`). " +
+        "For a specifier the graph has no edge for (an `import type`, a CSS `@import`, a lint rule's one file), use the graph's own resolver: " +
+        "`specifierPath` (the path a specifier names) or `resolveSpecifier` (the file of a set it resolves to) from `@plugins/plugin-meta/plugins/plugin-records/plugins/specifier/core`.",
     },
   },
   defaultOptions: [],
@@ -103,7 +135,31 @@ export default createRule({
         return undefined;
       };
     return {
+      // `${dir}/${specifier}`: a specifier appended to a directory.
+      TemplateLiteral(node) {
+        node.expressions.forEach((e, i) => {
+          if (
+            i > 0 &&
+            SPECIFIER_NAME.test(nameOf(e) ?? "") &&
+            node.quasis[i]!.value.cooked === "/" &&
+            isDirValue(node.expressions[i - 1])
+          )
+            context.report({ node, messageId: "relativeResolution" });
+        });
+      },
       CallExpression(node) {
+        // `join(dirname(importer), spec)`, `posix.join(posix.dirname(f), specifier)`,
+        // `relJoin(relDirname(from), spec)`, `resolve(dir, spec)`.
+        if (
+          /(join|resolve)$/i.test(calleeName(node) ?? "") &&
+          isDirValue(node.arguments[0]) &&
+          node.arguments
+            .slice(1)
+            .some((a) => SPECIFIER_NAME.test(nameOf(a) ?? ""))
+        ) {
+          context.report({ node, messageId: "relativeResolution" });
+          return;
+        }
         const callee = node.callee;
         if (
           callee.type !== "MemberExpression" ||

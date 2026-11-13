@@ -13,7 +13,6 @@ import type {
   CheckContext,
   CheckResult,
 } from "@plugins/framework/plugins/tooling/core";
-import { sourceAnalysis } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import { ensureDepViaCli } from "@plugins/infra/plugins/deps/deps";
 import { chromium } from "@plugins/infra/plugins/safe-fetch/plugins/browser-fetch/deps";
 import { layoutLabDir } from "../data-dirs";
@@ -66,10 +65,7 @@ function sha256(s: string): string {
 
 async function computeSig(ctx: CheckContext): Promise<string> {
   const repo = await ctx.repo();
-  const analysis = await sourceAnalysis(ctx);
-  const { files, contents } = await pageInputs(repo, (from, spec) =>
-    analysis.resolveModule(from, spec),
-  );
+  const { files, contents } = await pageInputs(repo);
   const h = createHash("sha256");
   for (let i = 0; i < files.length; i++) {
     h.update(files[i]!);

@@ -29,10 +29,11 @@ export { buildModuleGraph, NO_OUTSIDE_FILES } from "./internal/module-graph";
 export {
   fileSetClosure,
   fileSetImports,
+  fileSetImportTargets,
   fileSetRuntimeReach,
 } from "./internal/file-set-closure";
 export { closureRecord } from "./internal/closure-record";
-export type { FollowDynamic } from "./internal/file-set-closure";
+export type { FollowDynamic, ImportTargets } from "./internal/file-set-closure";
 export { outsideFilesAt } from "./internal/outside-files";
 export { npmCodeKey, npmResolutionsKey } from "./internal/npm-identity";
 export type {

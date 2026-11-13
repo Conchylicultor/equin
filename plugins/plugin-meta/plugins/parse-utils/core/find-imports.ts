@@ -25,10 +25,12 @@ import { maskSource } from "./mask-source";
  * ## Scope
  *
  * Matches static `import … from "…"`, `export … from "…"`, and bare side-effect
- * `import "…"`. Dynamic `import("…")` is a call, not a static import, and is
- * intentionally NOT matched (scan those with `markerCallSpans` if ever needed).
- * The bindings clause is excluded from crossing a `;` or a quote, so a match can
- * never span two statements.
+ * `import "…"`. With `{ dynamic: true }`, also every `import("…")` with a
+ * literal specifier — a lazy load, or an inline type (`typeof import("…")`,
+ * `import("…").X` in a type position): the same masked-scan / read-by-offset,
+ * so a scanner that wants them never hand-rolls the regex. The bindings
+ * clause is excluded from crossing a `;` or a quote, so a match can never
+ * span two statements.
  */
 export interface ImportRef {
   /** The module specifier text (between the quotes), read from the ORIGINAL source. */
@@ -47,6 +49,11 @@ export interface ImportRef {
   typeOnly: boolean;
   /** Bare side-effect import (`import "x"`): no bindings, no `from`. */
   sideEffect: boolean;
+  /**
+   * An `import("…")` (only with `{ dynamic: true }`): no clause, keyword
+   * `import`, never `typeOnly` — a type-position `import("…")` reads the same.
+   */
+  dynamic: boolean;
 }
 
 // `import`/`export … from "<spec>"`, capturing the keyword, the bindings clause
@@ -61,6 +68,10 @@ const FROM_RE = /\b(import|export)\b([^"'`;]*?)\bfrom\s*(["'`])/g;
 // whose `import` is always followed by a binding clause, not a quote.
 const SIDE_EFFECT_RE = /\bimport\b\s*(["'`])/g;
 
+// `import("<spec>")` — a call (a lazy load, or an inline type). Disjoint from
+// both above: its `import` is followed by `(`, never by a clause or a quote.
+const DYNAMIC_RE = /\bimport\s*\(\s*(["'`])/g;
+
 /**
  * Extract every static import/export-from and bare side-effect import from
  * `src`, in source order. `src` is the RAW (unmasked) source — masking happens
@@ -71,6 +82,7 @@ const SIDE_EFFECT_RE = /\bimport\b\s*(["'`])/g;
 export function findImports(
   src: string,
   masked: string = maskSource(src),
+  opts?: { dynamic?: boolean },
 ): ImportRef[] {
   const out: ImportRef[] = [];
 
@@ -102,6 +114,7 @@ export function findImports(
       // itself NAMED `type` (`import type from`, `import type, { a } from`).
       typeOnly: /^\s*type\b\s*[^\s,]/.test(clause),
       sideEffect: false,
+      dynamic: false,
     });
   }
 
@@ -117,7 +130,25 @@ export function findImports(
       clause: "",
       typeOnly: false,
       sideEffect: true,
+      dynamic: false,
     });
+  }
+
+  if (opts?.dynamic === true) {
+    DYNAMIC_RE.lastIndex = 0;
+    while ((m = DYNAMIC_RE.exec(masked))) {
+      const spec = readSpec(m.index + m[0].length - 1);
+      if (!spec) continue;
+      out.push({
+        specifier: spec.specifier,
+        index: spec.index,
+        keyword: "import",
+        clause: "",
+        typeOnly: false,
+        sideEffect: false,
+        dynamic: true,
+      });
+    }
   }
 
   out.sort((a, b) => a.index - b.index);

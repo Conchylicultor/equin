@@ -2,8 +2,8 @@
 // pure functions over source text — so each is tested on literals, and the
 // check only supplies the files.
 
-import { posix } from "node:path";
 import type TS from "typescript";
+import { specifierPath } from "@plugins/plugin-meta/plugins/plugin-records/plugins/specifier/core";
 
 const MACHINE_BARREL =
   "@plugins/infra/plugins/paths/plugins/data-files/machine";
@@ -145,8 +145,8 @@ function serverPluginOf(fromModule: string, spec: string): string | null {
     const m = /^@plugins\/(.+)\/server$/.exec(spec);
     return m === null ? null : m[1]!;
   }
-  if (!spec.startsWith(".")) return null;
-  const target = posix.join(posix.dirname(fromModule), spec);
+  const target = specifierPath(fromModule, spec);
+  if (target === null) return null;
   const owner = pluginOfModule(`${target}/`);
   return owner !== null && owner.folder === "server" ? owner.plugin : null;
 }

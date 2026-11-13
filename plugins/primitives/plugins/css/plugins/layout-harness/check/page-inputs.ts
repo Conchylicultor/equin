@@ -1,6 +1,8 @@
-import { posix } from "node:path";
 import type { RepoFiles } from "@plugins/framework/plugins/tooling/core";
-import type { ModuleResolution } from "@plugins/framework/plugins/tooling/plugins/checks/plugins/source-analysis/core";
+import {
+  resolveSpecifier,
+  specifierPath,
+} from "@plugins/plugin-meta/plugins/plugin-records/plugins/specifier/core";
 
 // What the geometry suite's verdict is a function of, read from the code
 // itself: the files the suite and the page it builds actually load.
@@ -33,7 +35,12 @@ import type { ModuleResolution } from "@plugins/framework/plugins/tooling/plugin
 //
 // Every read goes through the run's `RepoFiles`, so in an input-keyed check
 // the read-set is exactly this closure: an edit outside it replays the cached
-// pass without running the check.
+// pass without running the check. That is why the walk is its own, not the
+// plugin-records module graph's: the graph grows every module's whole reach,
+// `import()`s included — an app exhibit's `load()` would put whole apps back
+// in the read-set. Each specifier (script, asset or `@import`) is resolved by
+// the graph's own resolver (`plugin-records/specifier`), so the walk and the
+// graph cannot place one differently.
 
 export const HARNESS_ROOT =
   "plugins/primitives/plugins/css/plugins/layout-harness";
@@ -44,17 +51,8 @@ const EXHIBITS_BARREL_RE =
 
 const SCRIPT_RE = /\.(?:tsx?|mts|cts|jsx?|mjs|cjs)$/;
 const CSS_RE = /\.css$/;
-// What the bundler inlines by path rather than resolving as a module.
-const ASSET_RE =
-  /\.(?:css|svg|png|jpe?g|gif|webp|avif|woff2?|ttf|otf|txt|md|html|wasm)$/i;
 const LOCKFILE = "bun.lock";
 const CHECK_DIR = `${HARNESS_ROOT}/check/`;
-
-/** Resolves an import the way the repo project does (`sourceAnalysis(ctx).resolveModule`). */
-export type ResolveModule = (
-  fromRel: string,
-  specifier: string,
-) => ModuleResolution;
 
 /** One import a file makes: its specifier and whether it is a dynamic `import()`. */
 export interface ScannedImport {
@@ -80,12 +78,23 @@ function cssImports(src: string): string[] {
   return [...src.matchAll(CSS_IMPORT_RE)].map((m) => m[1]!);
 }
 
-/** The repo path a non-script asset specifier names, or null for a package. */
-function assetPath(fromRel: string, specifier: string): string | null {
-  if (specifier.startsWith("@plugins/")) return `plugins/${specifier.slice(9)}`;
-  if (specifier.startsWith("./") || specifier.startsWith("../"))
-    return posix.normalize(posix.join(posix.dirname(fromRel), specifier));
-  return null;
+/**
+ * The repo file `specifier` (written in `rel`) names — or null for a package,
+ * keyed by the lockfile. A repo specifier naming no file of the run throws: a
+ * key that skipped it could not be invalidated by the code it names.
+ */
+function repoTarget(
+  rel: string,
+  specifier: string,
+  repo: Pick<RepoFiles, "has">,
+): string | null {
+  if (specifierPath(rel, specifier) === null) return null;
+  const target = resolveSpecifier(rel, specifier, (p) => repo.has(p));
+  if (target === null)
+    throw new PageInputError(
+      `${rel}: imports "${specifier}", which names no file of the run`,
+    );
+  return target;
 }
 
 export class PageInputError extends Error {}
@@ -104,7 +113,6 @@ export interface PageInputs {
  */
 export async function pageInputs(
   repo: Pick<RepoFiles, "under" | "glob" | "read" | "has">,
-  resolve: ResolveModule,
   scan: ScanImports = bunScanImports,
 ): Promise<PageInputs> {
   const seeds = [
@@ -130,7 +138,7 @@ export async function pageInputs(
       // The check's own code is keyed by its bytes; what it imports (spawn,
       // host admission, the deps engine) runs the suite but shapes no geometry.
       if (rel.startsWith(CHECK_DIR)) continue;
-      for (const target of importsOf(rel, src, resolve, scan, repo)) {
+      for (const target of importsOf(rel, src, scan, repo)) {
         if (!content.has(target)) next.add(target);
       }
     }
@@ -144,45 +152,23 @@ export async function pageInputs(
 function importsOf(
   rel: string,
   src: string,
-  resolve: ResolveModule,
   scan: ScanImports,
   repo: Pick<RepoFiles, "has">,
 ): string[] {
-  if (CSS_RE.test(rel)) {
-    const out: string[] = [];
-    for (const spec of cssImports(src)) {
-      const target = assetPath(rel, spec);
-      if (target === null) continue; // a package: keyed by the lockfile
-      if (!repo.has(target))
-        throw new PageInputError(
-          `${rel}: @import "${spec}" names no file of the run (${target})`,
-        );
-      out.push(target);
-    }
-    return out;
-  }
-  if (!SCRIPT_RE.test(rel) || rel.endsWith(".d.ts")) return [];
+  const specifiers = CSS_RE.test(rel)
+    ? cssImports(src)
+    : !SCRIPT_RE.test(rel) || rel.endsWith(".d.ts")
+      ? []
+      : scan(rel, src)
+          // The registry's loaders are the exhibits barrels, already seeded;
+          // any other `import()` is code the measurer page never runs (see
+          // above).
+          .filter((i) => !i.dynamic)
+          .map((i) => i.path);
   const out: string[] = [];
-  for (const { path, dynamic } of scan(rel, src)) {
-    // The registry's loaders are the exhibits barrels, already seeded; any
-    // other `import()` is code the measurer page never runs (see above).
-    if (dynamic) continue;
-    const spec = path.replace(/\?.*$/, "");
-    if (ASSET_RE.test(spec)) {
-      // A stylesheet or another asset the bundle inlines, by path.
-      const target = assetPath(rel, spec);
-      if (target === null) continue;
-      if (!repo.has(target))
-        throw new PageInputError(
-          `${rel}: imports "${path}", which names no file of the run (${target})`,
-        );
-      out.push(target);
-      continue;
-    }
-    const resolved = resolve(rel, spec);
-    if (resolved.kind === "repo") out.push(resolved.rel);
-    else if (resolved.kind === "missing")
-      throw new PageInputError(`${rel}: cannot resolve "${path}"`);
+  for (const spec of specifiers) {
+    const target = repoTarget(rel, spec, repo);
+    if (target !== null) out.push(target);
   }
   return out;
 }

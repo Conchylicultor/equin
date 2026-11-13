@@ -34,14 +34,21 @@ anywhere, and no global fingerprint: a change costs the records it touches.
   distinct ones (build pipeline step 12).
 - **The one import resolver.** Every reader of a module's resolved imports
   reads them off the graph — `fileSetImports` (one module's script imports),
-  `fileSetRuntimeReach` (what entries load; `dynamic: false` for what their
-  module-load evaluates), `fileSetClosure` (the bundler's view),
-  `fileSetBindings` (each edge with the names its statements bind, and a pure
-  re-export module's re-exports — the `bindings` sub-plugin: a per-blob
-  `bindings.scan.ts` record joined onto the graph's edges by specifier), or a `ModuleNode`'s `staticImports` /
-  `dynamicImports` (spec → file). A reader never maps a specifier to a file
-  itself: `import-scan-safety/no-hand-import-resolution` flags an `@plugins/`
-  specifier mapped onto the `plugins/` directory anywhere else.
+  `fileSetImportTargets` (each import's specifier → the module it resolves
+  to, static and `import()`), `fileSetRuntimeReach` (what entries load;
+  `dynamic: false` for what their module-load evaluates), `fileSetClosure`
+  (the bundler's view), `fileSetBindings` (each edge with the names its
+  statements bind, and a pure re-export module's re-exports — the `bindings`
+  sub-plugin: a per-blob `bindings.scan.ts` record joined onto the graph's
+  edges by specifier), or a `ModuleNode`'s `staticImports` / `dynamicImports`
+  (spec → file). The graph resolves each edge with the `specifier`
+  sub-plugin (`specifierPath`, `specifierCandidates`, `resolveSpecifier`), a
+  leaf with no imports; a reader holding a specifier the graph has no edge for
+  (an `import type`, a CSS `@import`, a barrel named as data, a lint rule
+  judging one file) resolves it with that same function. A reader never maps
+  a specifier to a file itself: `import-scan-safety/no-hand-import-resolution`
+  flags an `@plugins/` specifier mapped onto the `plugins/` directory, or a
+  specifier joined onto its importer's directory, anywhere else.
 - **Evaluation** (the `evaluate` sub-plugin, apart so a producer that only
   makes keys and stores records does not key on barrel-import and
   slot-declaration): a barrel is imported live only
@@ -387,12 +394,15 @@ its docblock records — and then lowered as readily as raised.
     - `packages/string-hash.sha1Hex`
     - `packages/string-hash.sha256Hex`
     - `packages/timed-fs.readFile`
+    - `plugin-meta/plugin-records/specifier.isRepoSpecifier`
+    - `plugin-meta/plugin-records/specifier.specifierCandidates`
   - Exports (types):
     - `BundledClosure`
     - `FileFold`
     - `FileScan`
     - `FoldContext`
     - `FollowDynamic`
+    - `ImportTargets`
     - `ModuleGraph`
     - `ModuleGraphInput`
     - `ModuleNode`
@@ -413,6 +423,7 @@ its docblock records — and then lowered as readily as raised.
     - `emptyWriteTiming`
     - `fileSetClosure`
     - `fileSetImports`
+    - `fileSetImportTargets`
     - `fileSetRuntimeReach`
     - `foldFilesCached`
     - `foldRepoFiles`
@@ -474,12 +485,12 @@ its docblock records — and then lowered as readily as raised.
   - Exempts itself from:
     - `imperative-create-table-allowlisted` — `cli/internal/sqlite-store.ts` (sanctioned)
     - `boundaries/no-platform-api` — `core/internal/outside-files.ts` (debt)
-    - `import-scan-safety/no-hand-import-resolution` — `core/internal/module-graph.ts` (sanctioned)
 - Sub-plugins:
   - **`bindings`** — Each module's imports as the module graph resolves them, with the names each statement binds and a pure re-export module's re-exports (fileSetBindings): a per-blob bindings.scan record joined onto…
   - **`evaluate`** — Evaluated records: what importing a plugin barrel produced (its definition, slots, contributions), serialized as data under the barrel's module Merkle key, so a build reads it without importing…
   - **`key-width`** — How much of a record producer's key is code it never calls: keyWidths walks a producer's closure through the names it actually imports from each barrel and attributes the rest to the barrel imports…
   - **`reclaim`** — The daily plugin-records.reclaim job: on main, deletes the shared record store's key rows unread for 7 days and the values only they named, then returns the freed pages — a page at a time, off every…
+  - **`specifier`**
   - **`verify`** — The daily plugin-records.verify job: on main, recomputes every plugin record a tree check pass reads (`./equin check --verify-records`) and fails when one disagrees with the shared store under the…
   - **`write-lost`** — plugin-records-write-lost report kind: validates the shared record store's lost-write payloads (filed through the report outbox by the store itself, one row per cause) and renders a task naming the…
 

@@ -8,6 +8,11 @@ const bad = (code: string) => ({
   filename: FILE,
   errors: [{ messageId: "handResolution" as const }],
 });
+const relative = (code: string) => ({
+  code,
+  filename: FILE,
+  errors: [{ messageId: "relativeResolution" as const }],
+});
 
 ruleTester.run("no-hand-import-resolution", rule, {
   valid: [
@@ -26,6 +31,11 @@ ruleTester.run("no-hand-import-resolution", rule, {
       code: `const p = \`plugins/\${spec.slice("@other/".length)}\`;`,
       filename: FILE,
     },
+    // A directory joined with a literal, or with a name that is no specifier.
+    { code: `const p = join(dirname(file), "x.json");`, filename: FILE },
+    { code: `const p = join(dirname(file), entry.name);`, filename: FILE },
+    { code: `const p = \`\${dir}/\${name}\`;`, filename: FILE },
+    { code: `const p = \`\${root}/\${spec}\`;`, filename: FILE },
     // A const that is not the alias.
     {
       code: `const A = "@x/"; const p = \`plugins/\${spec.slice(A.length)}\`;`,
@@ -44,5 +54,12 @@ ruleTester.run("no-hand-import-resolution", rule, {
     bad(`const rel = spec.slice(9); const p = \`\${root}/plugins/\${rel}\`;`),
     bad(`const p = spec.replace("@plugins/", "plugins/");`),
     bad(`const p = spec.replace(/^@plugins\\//, "plugins/");`),
+    relative(`const p = join(dirname(importer), specifier);`),
+    relative(`const p = posix.join(posix.dirname(fromFile), spec);`),
+    relative(`const p = relJoin(relDirname(fromRel), imp.specifier);`),
+    relative(`const p = \`\${dir}/\${specifier}\`;`),
+    relative(`const dir = dirname(f); const p = join(dir, spec);`),
+    relative(`const p = resolve(dirname(importer), specifier);`),
+    relative(`const p = \`\${dirname(f)}/\${spec}\`;`),
   ],
 });

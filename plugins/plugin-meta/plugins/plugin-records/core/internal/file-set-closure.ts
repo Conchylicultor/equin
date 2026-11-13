@@ -69,6 +69,45 @@ export async function fileSetImports(
   return out;
 }
 
+/** One module's imports of repo modules, each as written and as the graph resolved it. */
+export interface ImportTargets {
+  /** Its static imports (and `require()`s): specifier → module. */
+  static: ReadonlyMap<string, string>;
+  /** Its `import()`s: specifier → module. */
+  dynamic: ReadonlyMap<string, string>;
+}
+
+/**
+ * Each of `modules`' imports of repo modules, specifier → the module it
+ * resolves to, read off the same shared module graph as
+ * {@link fileSetImports} — for a reader that knows something per specifier
+ * (the names a statement binds, what an import is for) and must never resolve
+ * one itself. Assets a module imports (`./x.css`, `./clip.mp4?inline`) are
+ * edges like any other. The runtime's reading: an `import type`, an
+ * all-`type` binding list is erased and has no edge.
+ *
+ * An import that resolves to no file of the set throws, naming the module.
+ */
+export async function fileSetImportTargets(
+  repo: RepoFiles | RepoSnapshot,
+  modules: readonly string[],
+): Promise<Map<string, ImportTargets>> {
+  const graph = await buildModuleGraph(sharedInput(repo, undefined), modules);
+  const out = new Map<string, ImportTargets>();
+  for (const m of modules) {
+    const node = graph.modules.get(m)!;
+    if (node.unresolved.length > 0)
+      throw new Error(
+        `${m} imports ${node.unresolved.map((u) => JSON.stringify(u)).join(", ")}, which resolves to no file of the checkout.`,
+      );
+    out.set(m, {
+      static: new Map(node.staticImports.map((i) => [i.spec, i.target])),
+      dynamic: new Map(node.dynamicImports.map((i) => [i.spec, i.target])),
+    });
+  }
+  return out;
+}
+
 /**
  * Every repo script module `entries` can load at runtime — static imports as
  * the runtime reads them (type-only erased, an import used only in a type

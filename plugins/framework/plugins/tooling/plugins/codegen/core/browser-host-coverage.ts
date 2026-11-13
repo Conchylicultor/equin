@@ -65,7 +65,11 @@ import {
   type FileBindings,
   type ImportedDescriptorResolver,
 } from "@plugins/network/plugins/live/plugins/resource-vocabulary/core";
-import { scanRepoFiles } from "@plugins/plugin-meta/plugins/plugin-records/core";
+import {
+  fileSetImportTargets,
+  scanRepoFiles,
+  type ImportTargets,
+} from "@plugins/plugin-meta/plugins/plugin-records/core";
 import {
   coverageFactsScan,
   locate,
@@ -139,43 +143,6 @@ function pluginFiles(repo: ScanRepo, plugin: string): string[] {
     .filter((p) => isSource(p) && locate(p)?.plugin === plugin);
 }
 
-function normalize(path: string): string {
-  const out: string[] = [];
-  for (const seg of path.split("/")) {
-    if (seg === "" || seg === ".") continue;
-    if (seg === "..") out.pop();
-    else out.push(seg);
-  }
-  return out.join("/");
-}
-
-/** The repo module a specifier names from `importer`, or null (an npm package, an asset). */
-function resolveModule(
-  repo: ScanRepo,
-  importer: string,
-  specifier: string,
-): string | null {
-  let base: string;
-  if (specifier.startsWith("@plugins/")) {
-    base = `plugins/${specifier.slice("@plugins/".length)}`;
-  } else if (specifier.startsWith(".")) {
-    const dir = importer.slice(0, importer.lastIndexOf("/"));
-    base = normalize(`${dir}/${specifier}`);
-  } else {
-    return null;
-  }
-  for (const candidate of [
-    base,
-    `${base}.ts`,
-    `${base}.tsx`,
-    `${base}/index.ts`,
-    `${base}/index.tsx`,
-  ]) {
-    if (SOURCE_RE.test(candidate) && repo.has(candidate)) return candidate;
-  }
-  return null;
-}
-
 // ── Source reading ────────────────────────────────────────────────────────
 
 /** What a module declares and imports, resolved against the file set. */
@@ -193,8 +160,9 @@ interface ModuleShape {
 /**
  * One file of the snapshot: its facts — a file record
  * (`browser-host-coverage.scan.ts`), so an unchanged file is never read or
- * masked — and their reading against the file set (what its specifiers
- * resolve to), computed on first ask.
+ * masked — and its resolved imports, read off the plugin-records module graph
+ * (`fileSetImportTargets`: what each specifier resolves to, never resolved
+ * here), joined on first ask.
  */
 class Module {
   #shape: ModuleShape | undefined;
@@ -205,6 +173,7 @@ class Module {
     private readonly repo: ScanRepo,
     readonly path: string,
     readonly facts: CoverageFacts,
+    private readonly targets: ImportTargets,
   ) {}
 
   get reexports(): ModuleShape["reexports"] {
@@ -235,7 +204,7 @@ class Module {
   }
 
   #parsed(): ModuleShape {
-    return (this.#shape ??= resolveShape(this.repo, this.path, this.facts));
+    return (this.#shape ??= resolveShape(this.facts, this.targets));
   }
 
   /**
@@ -270,10 +239,22 @@ class Module {
   }
 }
 
+/**
+ * The repo source module a specifier names, as the graph resolved it — or
+ * null: a package, an asset, or an edge the runtime erases (an `import type`,
+ * an all-`type` binding list), which names no value anyway.
+ */
+function sourceTarget(
+  targets: ImportTargets,
+  specifier: string,
+): string | null {
+  const target = targets.static.get(specifier);
+  return target !== undefined && SOURCE_RE.test(target) ? target : null;
+}
+
 function resolveShape(
-  repo: ScanRepo,
-  path: string,
   facts: CoverageFacts,
+  targets: ImportTargets,
 ): ModuleShape {
   const locals = new Set(facts.locals);
   const reexports = new Map<string, { from: string; name: string }>();
@@ -283,7 +264,7 @@ function resolveShape(
     { from: string; name: string; line: number }
   >();
   for (const ref of facts.imports) {
-    const target = resolveModule(repo, path, ref.specifier);
+    const target = sourceTarget(targets, ref.specifier);
     if (ref.reexport) {
       if (target === null || ref.typeOnly) continue;
       if (ref.star) {
@@ -350,16 +331,22 @@ export class SourceScans {
     const fresh = [...new Set(paths.filter((p) => !this.#files.has(p)))];
     if (fresh.length > 0) {
       const members = fresh.filter((p) => this.repo.has(p));
-      const batch = scanRepoFiles(this.repo, members, coverageFactsScan).then(
-        (facts) => new Map(members.map((p, i) => [p, facts[i]!])),
+      const batch = Promise.all([
+        scanRepoFiles(this.repo, members, coverageFactsScan),
+        fileSetImportTargets(this.repo, members),
+      ]).then(
+        ([facts, targets]) =>
+          new Map(
+            members.map((p, i) => [
+              p,
+              new Module(this.repo, p, facts[i]!, targets.get(p)!),
+            ]),
+          ),
       );
       for (const p of fresh)
         this.#files.set(
           p,
-          batch.then((byPath) => {
-            const f = byPath.get(p);
-            return f === undefined ? null : new Module(this.repo, p, f);
-          }),
+          batch.then((byPath) => byPath.get(p) ?? null),
         );
     }
     return Promise.all(paths.map((p) => this.#files.get(p)!));

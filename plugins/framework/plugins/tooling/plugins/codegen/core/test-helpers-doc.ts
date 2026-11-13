@@ -1,10 +1,10 @@
-import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
+import { statSync } from "@plugins/packages/plugins/timed-fs/core";
+import { resolveSpecifier } from "@plugins/plugin-meta/plugins/plugin-records/plugins/specifier/core";
 import {
   asAppPath,
   joinAppPath,
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { join, dirname } from "path";
 import {
   RUNTIME_FOLDERS,
   TESTING_FOLDER,
@@ -53,7 +53,7 @@ export function collectTestHelpers(p: {
     const raw = readIfExistsSync(barrelFile);
     if (raw === null) continue;
     const masked = maskSource(raw);
-    const sources = reExportSources(raw, asAppPath(dirname(barrelFile)));
+    const sources = reExportSources(raw, barrelFile);
     const symbols = parseBarrelExports(masked);
     out.push({
       runtime,
@@ -105,14 +105,18 @@ export function renderTestHelpers(
  * Exported name → the file its `export { … } from "./x"` re-exports it from,
  * read through parse-utils' shared import scanner.
  */
-function reExportSources(raw: string, fromDir: AppPath): Map<string, AppPath> {
+function reExportSources(
+  raw: string,
+  barrelFile: AppPath,
+): Map<string, AppPath> {
   const out = new Map<string, AppPath>();
   for (const ref of findImports(raw)) {
     if (ref.keyword !== "export" || !ref.specifier.startsWith(".")) continue;
     const braces = /\{([^}]*)\}/.exec(ref.clause);
     if (!braces) continue;
-    const file = resolveModule(asAppPath(join(fromDir, ref.specifier)));
-    if (file === undefined) continue;
+    const resolved = resolveSpecifier(barrelFile, ref.specifier, isFileOnDisk);
+    if (resolved === null) continue;
+    const file = asAppPath(resolved);
     for (const item of braces[1]!.split(",")) {
       const s = item.trim().replace(/^type\s+/, "");
       if (!s) continue;
@@ -123,16 +127,11 @@ function reExportSources(raw: string, fromDir: AppPath): Map<string, AppPath> {
   return out;
 }
 
-function resolveModule(base: AppPath): AppPath | undefined {
-  for (const c of [
-    asAppPath(`${base}.ts`),
-    asAppPath(`${base}.tsx`),
-    joinAppPath(base, "index.ts"),
-    joinAppPath(base, "index.tsx"),
-  ]) {
-    if (existsSync(c)) return c;
-  }
-  return undefined;
+/** Whether `path` (absolute) is a file: the disk is this generator's file set. */
+function isFileOnDisk(path: string): boolean {
+  return (
+    statSync(asAppPath(path), { throwIfNoEntry: false })?.isFile() ?? false
+  );
 }
 
 /**

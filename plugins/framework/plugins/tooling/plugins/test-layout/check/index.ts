@@ -197,34 +197,15 @@ interface RunnerImport {
 }
 
 /**
- * Every module specifier the file imports, static or dynamic.
- *
- * `findImports` covers `import …`, `import type …`, `export … from` and bare
- * side-effect imports, all string-masked so a specifier inside a comment or a
- * docs snippet cannot match. Dynamic `import("…")` is added here with the same
- * masked-scan / read-from-original technique: the opening quote is located in
- * the MASKED text (where a quote inside a string or comment has been blanked)
- * and the specifier is then read back out of the original bytes.
+ * Every module specifier the file imports, static or dynamic: `findImports`
+ * with its `import("…")`s — string-masked, so a specifier inside a comment or
+ * a docs snippet cannot match.
  */
 function runnerImports(src: string): RunnerImport[] {
-  const out: RunnerImport[] = findImports(src).map((imp) => ({
+  return findImports(src, undefined, { dynamic: true }).map((imp) => ({
     specifier: imp.specifier,
     index: imp.index,
   }));
-
-  const masked = maskSource(src);
-  const dynamic = /\bimport\s*\(\s*(["'`])/g;
-  let m: RegExpExecArray | null;
-  while ((m = dynamic.exec(masked))) {
-    const openQuote = m.index + m[0].length - 1;
-    const close = masked.indexOf(masked[openQuote]!, openQuote + 1);
-    if (close < 0) continue;
-    out.push({
-      specifier: src.slice(openQuote + 1, close),
-      index: openQuote + 1,
-    });
-  }
-  return out;
 }
 
 /**

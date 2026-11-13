@@ -204,8 +204,9 @@ export clauses (specifiers unresolved), locals, page-bound, its descriptors
 and endpoints, raw `/api/` prefixes, register calls, each function's
 "hands its first parameter to" names, a barrel's `httpRoutes` keys (or the
 error naming why one cannot be read) — and an unchanged file is a lookup,
-never read or masked. Resolution against the file set, re-export chains, the
-serving-wrapper fixpoint, `registerCallTarget` and the verdict stay in the
+never read or masked. Each import's target is read off the plugin-records
+module graph (`fileSetImportTargets`, asked with the same batch), never
+resolved here; re-export chains, the serving-wrapper fixpoint, `registerCallTarget` and the verdict stay in the
 guard, over the facts; the one text it still reads is a call of a serving
 wrapper, off the source of the few files making one (which names are
 wrappers is the repo's answer, not a file's). Files are asked in batches
@@ -222,18 +223,18 @@ wrapper fixpoint reads.
 
 - Description: Plugin doc generation and registry codegen
 - Core:
-  - Uses: 148 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 152 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `plugin-meta/parse-utils` ×17
     - `config_v2` ×16
     - `framework/plugin-id` ×13
     - `network/live/resource-vocabulary` ×11
-    - `plugin-meta/plugin-records` ×7
+    - `plugin-meta/plugin-records` ×9
     - `framework/slot-declaration` ×6
+    - `packages/timed-fs` ×6
     - `plugin-meta/barrel-import` ×6
     - `plugin-meta/closure` ×6
     - `plugin-meta/composition` ×6
     - `framework/tooling/checks/source-analysis` ×5
-    - `packages/timed-fs` ×5
     - `plugin-meta/facets` ×5
     - `plugin-meta/plugin-records/evaluate` ×5
     - `framework/tooling/codegen/composition-registries` ×4
@@ -256,6 +257,7 @@ wrapper fixpoint reads.
     - `plugin-meta/facets/contributions.contributionsFacetDef`
     - `plugin-meta/facets/exemptions.exemptionsFacetDef`
     - `plugin-meta/facets/slots.slotsFacetDef`
+    - `plugin-meta/plugin-records/specifier.resolveSpecifier`
     - `plugin-meta/plugin-tree/faceted.buildFacetedPluginTree`
     - `primitives/css/ui-kit.APP_STYLESHEET_PATH`
     - `ui/icons/icon-sets.renderSymbolNameFilesSync`
@@ -429,7 +431,6 @@ wrapper fixpoint reads.
     - `marker-scan-safety/no-adhoc-marker-scan` — `core/browser-host-coverage.scan.ts` (sanctioned)
     - `user-path/no-unproven-claim` — `core/test-helpers-doc.ts` (sanctioned)
     - `blocking-fs/sync-named` — `core/authored-override-seed.ts`, `core/barrel-stubs-gen.ts`, `core/claude-settings-gen.ts`, `core/config-origin-gen.ts`, `core/custom-utilities-gen.ts`, `core/declared-apps.ts`, `core/docgen.ts`, `core/evaluated-barrels.ts`, `core/fields-eager-gen.ts`, `core/file-config-proxy.ts`, `core/git-layer-config.ts`, `core/override-legend-stamp.ts`, `core/pre-barrel-guard.ts`, `core/slot-declaration-guard.ts`, `core/space-ramp-gen.ts`, `core/symbol-names-gen.ts`, `core/test-helpers-doc.ts`, `core/write-generated.ts` (sanctioned)
-    - `import-scan-safety/no-hand-import-resolution` — `core/browser-host-coverage.ts` (debt)
 - Sub-plugins:
   - **`composition-registries`** — The per-composition registry files' grammar and listing: where a composition's `<dir>` registry lives (main's is the committed `<dir>.generated.ts`, any other's the gitignored…
 

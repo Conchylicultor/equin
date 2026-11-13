@@ -24,11 +24,10 @@ export default [
       "Per-file synchronous work on the shared check thread (a blocking fs/process call made per item, or a direct maskSource / createSourceFile) that predates the rule; move it onto ctx.repo() / fs/promises and checks/core's maskedSource / parsedTsSource.",
   },
   {
-    rule: "import-scan-safety/no-hand-import-resolution",
-    paths: ["check/identity-manifest.ts"],
-    kind: "debt",
-    task: "task-1794573514-c7sfqg",
+    rule: "repo-walk-safety/no-adhoc-repo-listing",
+    paths: ["check/write-identity-snapshot.ts"],
+    kind: "sanctioned",
     reason:
-      "Resolves an `@plugins/\u2026` import specifier to a repo file by hand, beside the plugin-records module graph; to read resolved imports off the graph instead.",
+      "A standalone regenerator run by hand (`./equin run …/write-identity-snapshot.ts`), outside any check pass: it is its own pass root, lists the working tree once and hands that set to scanPaneIdentities.",
   },
 ] satisfies Exemptions;
