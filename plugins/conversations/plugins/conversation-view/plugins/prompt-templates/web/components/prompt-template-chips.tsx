@@ -7,7 +7,7 @@ import {
   useSendConversationTurn,
   useTurnSendAvailability,
 } from "@plugins/conversations/plugins/conversation-view/plugins/pending-turn/web";
-import { useConfig } from "@plugins/config_v2/web";
+import { useConfig, useSetConfig } from "@plugins/config_v2/web";
 import { promptTemplatesConfig } from "../../shared/config";
 import { TemplateChipBar } from "./template-chip-bar";
 import type { TemplateChipItem } from "./template-chip";
@@ -15,11 +15,13 @@ import type { TemplateChipItem } from "./template-chip";
 export function FloatingTemplateChips({
   insertText,
   takeDraftWith,
+  readDraft,
 }: PromptEditorActionProps) {
   const { convId } = conversationPane.useParams();
   // `useConversationById` answers with the live row (its by-id read).
   const live = rowOrStale(useConversationById(convId));
   const { templates, pinnedCount } = useConfig(promptTemplatesConfig);
+  const setConfig = useSetConfig(promptTemplatesConfig);
   const sendConversationTurn = useSendConversationTurn();
   const sendAvailability = useTurnSendAvailability();
 
@@ -49,6 +51,17 @@ export function FloatingTemplateChips({
       canSend={canSend}
       config={promptTemplatesConfig}
       configLabel="Configure: Prompt templates"
+      add={{
+        // Appended last: the list's authored order is the never-used
+        // tie-break, so a new template sits after the ones already there.
+        onAdd: (t) =>
+          setConfig("templates", [
+            ...templates,
+            { id: crypto.randomUUID(), ...t },
+          ]),
+        // The draft is the natural first prompt — "save this as a template".
+        initialPrompt: readDraft,
+      }}
     />
   );
 }

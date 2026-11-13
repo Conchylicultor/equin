@@ -8,6 +8,7 @@ import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext
 import {
   TextEditor,
   useInsertMarkdown,
+  useReadMarkdown,
   useTakeMarkdownWith,
 } from "@plugins/primitives/plugins/text-editor/web";
 import { AttachFilesButton } from "@plugins/primitives/plugins/text-editor/plugins/paste-images/web";
@@ -79,6 +80,9 @@ function ToolbarRow({
   // the insert-only path would have put it.
   const takeDraftWith = useTakeMarkdownWith();
 
+  // The draft as it stands, untouched — e.g. to save it as a template.
+  const readDraft = useReadMarkdown();
+
   const focusEditor = useCallback(
     (e: React.MouseEvent) => {
       if (e.target === e.currentTarget) {
@@ -95,7 +99,11 @@ function ToolbarRow({
       const dimmed =
         !editable && !item.alwaysActive ? disabledPartCls : undefined;
       const action = (
-        <item.component insertText={insertText} takeDraftWith={takeDraftWith} />
+        <item.component
+          insertText={insertText}
+          takeDraftWith={takeDraftWith}
+          readDraft={readDraft}
+        />
       );
       // This box carries the disabled dimming, and it sits INSIDE the slot's own
       // per-contribution cell — so it is also where that cell's chain continues.
@@ -115,7 +123,7 @@ function ToolbarRow({
         </GrowRelay>
       );
     },
-    [editable, insertText, takeDraftWith, workspace],
+    [editable, insertText, takeDraftWith, readDraft, workspace],
   );
 
   const hasAlwaysActive = !editable && items.some((i) => i.alwaysActive);

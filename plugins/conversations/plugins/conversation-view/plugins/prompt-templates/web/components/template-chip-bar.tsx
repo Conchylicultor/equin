@@ -1,8 +1,9 @@
 import {
+  Button,
   ControlSizeProvider,
   cn,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   FloatingAction,
   FloatingActionFadeIn,
@@ -24,8 +25,10 @@ import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
 import { TemplateChip, type TemplateChipItem } from "./template-chip";
+import { NewTemplateForm, type NewTemplate } from "./new-template-form";
 
 const editIcon = symbol("edit");
+const addIcon = symbol("add");
 
 export interface TemplateChipBarProps {
   /** Every template, in the authored (config) order — the never-used tie-break. */
@@ -58,6 +61,15 @@ export interface TemplateChipBarProps {
   /** The config the panel's gear opens. */
   config: ConfigDescriptor;
   configLabel: string;
+  /**
+   * Add a template in place, from the panel — a `+ New template` chip that
+   * opens an inline editor. Left out, the panel only offers the config gear.
+   */
+  add?: {
+    onAdd: (t: NewTemplate) => void;
+    /** The prompt the editor opens with, read when it opens (e.g. the draft). */
+    initialPrompt?: () => string;
+  };
 }
 
 /**
@@ -77,7 +89,12 @@ export function TemplateChipBar({
   host,
   config,
   configLabel,
+  add,
 }: TemplateChipBarProps) {
+  // The inline editor's prompt, read once when it opens; null while closed.
+  const [newPrompt, setNewPrompt] = useState<string | null>(null);
+  const closeEditor = useCallback(() => setNewPrompt(null), []);
+
   // Most-used first, frozen for as long as `freezeKey` holds (the primitive
   // owns the freeze). The authored config order stays the tie-break for
   // anything never used, so an untouched install looks exactly as before.
@@ -113,8 +130,6 @@ export function TemplateChipBar({
     onSend(t);
   };
 
-  if (templates.length === 0) return null;
-
   // The panel: every template, ranked, under the config gear — the same
   // content whichever way it opens.
   const panel = (
@@ -124,19 +139,40 @@ export function TemplateChipBar({
       <div className={selfClass("end")}>
         <ConfigGearButton descriptor={config} label={configLabel} />
       </div>
-      <Scroll className="max-h-40">
-        <Cluster gap="xs" align="center">
-          {ordered.map((t) => (
-            <TemplateChip
-              key={t.id}
-              template={t}
-              onInsert={insert}
-              onSend={send}
-              canSend={canSend}
-            />
-          ))}
-        </Cluster>
-      </Scroll>
+      {add && newPrompt !== null ? (
+        <NewTemplateForm
+          initialPrompt={newPrompt}
+          onAdd={(t) => {
+            add.onAdd(t);
+            closeEditor();
+          }}
+          onClose={closeEditor}
+        />
+      ) : (
+        <Scroll className="max-h-40">
+          <Cluster gap="xs" align="center">
+            {ordered.map((t) => (
+              <TemplateChip
+                key={t.id}
+                template={t}
+                onInsert={insert}
+                onSend={send}
+                canSend={canSend}
+              />
+            ))}
+            {add && (
+              <Button
+                variant="dashed"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => setNewPrompt(add.initialPrompt?.().trim() ?? "")}
+              >
+                <Icon icon={addIcon} className="size-3" />
+                <span>New template</span>
+              </Button>
+            )}
+          </Cluster>
+        </Scroll>
+      )}
     </Stack>
   );
 
@@ -154,8 +190,10 @@ export function TemplateChipBar({
   return (
     <ControlSizeProvider size="xs">
       <Stack direction="row" gap="xs" align="center">
-        {pinnedTemplates.length > 0 &&
-          (host === "row" ? (
+        {host === "row" ? (
+          // Drawn even with nothing pinned: the bar is what asks the row for
+          // its slack, so without it the ✎ would drift to the row's start.
+          //
             // `clip`, not a second `⋯`: a chip that doesn't fit is simply
             // dropped from the strip, because every template is already one
             // hover away in the panel beside it.
@@ -189,7 +227,7 @@ export function TemplateChipBar({
                 canSend={canSend}
               />
             ))
-          ))}
+        )}
         {/* `FloatingAction` is not density-participating, so its collapsed box
             can't read the provider above — these numbers are hand-matched to the
             xs chip height (1.5rem) it sits beside. */}

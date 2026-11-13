@@ -113,6 +113,7 @@ registry readers are headless.
     - `TextEditor`
     - `TextEditorSlots`
     - `useInsertMarkdown`
+    - `useReadMarkdown`
     - `useTakeMarkdownWith`
 - Cross-plugin:
   - Uses tokens:

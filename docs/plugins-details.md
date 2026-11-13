@@ -20319,14 +20319,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `useSetConversationPromptDraft`
           - Cross-plugin:
             - Imported by: `conversations/conversation-view/rewind`
-        - **`prompt-templates`** — Template chips inside the prompt editor that prepend text to the draft. A floating icon expands on hover to reveal available templates. Exports the chip bar itself (TemplateChipBar: usage-ranked pinned split chips plus the hover panel of every template and the config gear) and its one split chip (TemplateChip: ✎ name inserts, ➤ sends) for other template-like surfaces. Named template chips that prepend text to the conversation prompt editor for editing before sending.
+        - **`prompt-templates`** — Template chips inside the prompt editor that prepend text to the draft. A floating icon expands on hover to reveal available templates. Exports the chip bar itself (TemplateChipBar: usage-ranked pinned split chips plus the hover panel of every template and the config gear, always drawn — even with no templates — and, where the host lets it, a + New template chip that opens an inline name + prompt editor, prefilled from the draft) and its one split chip (TemplateChip: ✎ name inserts, ➤ sends) for other template-like surfaces. Named template chips that prepend text to the conversation prompt editor for editing before sending.
           - Web:
             - Contributes:
               - `PromptEditorSlots.FloatingAction` → `FloatingTemplateChips`
               - `ConfigV2.WebRegister` "config"
-            - Uses: 23 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/prompt-templates/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/prompt-templates/REFERENCE.md)
-              - `primitives/css/ui-kit` ×4
-              - `config_v2` ×2
+            - Uses: 28 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/prompt-templates/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/prompt-templates/REFERENCE.md)
+              - `primitives/css/ui-kit` ×6
+              - `config_v2` ×3
               - `conversations/conversation-view/pending-turn` ×2
               - `primitives/css/spacing` ×2
               - `primitives/overlay/floating-action` ×2
@@ -20338,6 +20338,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/adaptive-bar.AdaptiveBar`
               - `primitives/css/cluster.Cluster`
               - `primitives/css/scroll.Scroll`
+              - `primitives/dom/scroll-reveal.focusElement`
+              - `primitives/overlay/popup-open.useReportPopupOpen`
               - `primitives/prompt-editor.PromptEditorSlots`
               - `ui/icons.Icon`
             - Exports (types):
@@ -50245,12 +50247,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `revealElement`
               - `useRevealOnActive`
           - Cross-plugin:
-            - Imported by: 49 plugins — full list in [`plugins/primitives/plugins/dom/plugins/scroll-reveal/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/scroll-reveal/REFERENCE.md)
+            - Imported by: 50 plugins — full list in [`plugins/primitives/plugins/dom/plugins/scroll-reveal/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/scroll-reveal/REFERENCE.md)
               - `apps` ×18
               - `primitives` ×16
               - `page` ×6
+              - `conversations` ×3
               - `apps-core` ×2
-              - `conversations` ×2
               - `hints`
               - `layouts/miller`
               - `media/player`
@@ -52453,6 +52455,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Imported by:
               - `apps/prototypes/present`
+              - `conversations/conversation-view/prompt-templates`
               - `hints`
               - `primitives/adaptive-bar`
               - `primitives/css/ui-kit`
@@ -53115,6 +53118,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/slot-render.defineRenderSlot`
           - `primitives/text-editor.TextEditor`
           - `primitives/text-editor.useInsertMarkdown`
+          - `primitives/text-editor.useReadMarkdown`
           - `primitives/text-editor.useTakeMarkdownWith`
           - `primitives/text-editor/paste-images.AttachFilesButton`
         - Exports (types): `PromptEditorActionProps`
@@ -54011,6 +54015,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TextEditor`
           - `TextEditorSlots`
           - `useInsertMarkdown`
+          - `useReadMarkdown`
           - `useTakeMarkdownWith`
       - Cross-plugin:
         - Uses tokens:

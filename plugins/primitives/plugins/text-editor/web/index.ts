@@ -11,6 +11,7 @@ export {
 } from "./internal/node-extensions";
 export { useInsertMarkdown } from "./internal/use-insert-markdown";
 export { useTakeMarkdownWith } from "./internal/use-take-markdown-with";
+export { useReadMarkdown } from "./internal/use-read-markdown";
 
 export default {
   description:

@@ -10,6 +10,8 @@ export interface PromptEditorActionProps {
    * empty the editor — for an action that inserts and sends in one click.
    */
   takeDraftWith: (text: string) => string;
+  /** The whole draft as markdown, read without changing it. */
+  readDraft: () => string;
 }
 
 export const PromptEditorSlots = {

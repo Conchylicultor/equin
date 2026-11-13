@@ -4,14 +4,14 @@
 
 ## Plugin reference
 
-- Description: Template chips inside the prompt editor that prepend text to the draft. A floating icon expands on hover to reveal available templates. Exports the chip bar itself (TemplateChipBar: usage-ranked pinned split chips plus the hover panel of every template and the config gear) and its one split chip (TemplateChip: ✎ name inserts, ➤ sends) for other template-like surfaces. Named template chips that prepend text to the conversation prompt editor for editing before sending.
+- Description: Template chips inside the prompt editor that prepend text to the draft. A floating icon expands on hover to reveal available templates. Exports the chip bar itself (TemplateChipBar: usage-ranked pinned split chips plus the hover panel of every template and the config gear, always drawn — even with no templates — and, where the host lets it, a + New template chip that opens an inline name + prompt editor, prefilled from the draft) and its one split chip (TemplateChip: ✎ name inserts, ➤ sends) for other template-like surfaces. Named template chips that prepend text to the conversation prompt editor for editing before sending.
 - Web:
   - Contributes:
     - `PromptEditorSlots.FloatingAction` → `FloatingTemplateChips`
     - `ConfigV2.WebRegister` "config"
-  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/css/ui-kit` ×4
-    - `config_v2` ×2
+  - Uses: 28 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/css/ui-kit` ×6
+    - `config_v2` ×3
     - `conversations/conversation-view/pending-turn` ×2
     - `primitives/css/spacing` ×2
     - `primitives/overlay/floating-action` ×2
@@ -23,6 +23,8 @@
     - `primitives/adaptive-bar.AdaptiveBar`
     - `primitives/css/cluster.Cluster`
     - `primitives/css/scroll.Scroll`
+    - `primitives/dom/scroll-reveal.focusElement`
+    - `primitives/overlay/popup-open.useReportPopupOpen`
     - `primitives/prompt-editor.PromptEditorSlots`
     - `ui/icons.Icon`
   - Exports (types):
