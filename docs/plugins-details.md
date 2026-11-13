@@ -31890,8 +31890,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - Core:
                 - Uses: `infra/host/host-admission.PER_UNIT_BYTES`
                 - Exports (types):
+                  - `LintBaseRef`
                   - `LintFileJob`
                   - `LintFileResult`
+                  - `LintTarget`
+                  - `MovedLintParts`
                   - `ProgramSize`
                   - `RawLintMessage`
                   - `TscDivergence`

@@ -188,6 +188,8 @@ function lintMessages(
 /** What one stand-in worker run did. */
 interface Worked {
   outcome: ProgramOutcome;
+  /** The paths the decisions are asked about whatever their key. */
+  jobs: string[];
   /**
    * Files whose syntactic groups ran, whose typed parts ran, and whose
    * directive verdict was combined.
@@ -213,6 +215,17 @@ async function resultKeys(plan: Plan): Promise<Map<string, string>> {
   return keys;
 }
 
+/** The run base a plan names, as the worker reads it. */
+function baseOf(plan: Plan) {
+  if (plan.lintBase === null) return undefined;
+  const files = loadRunBaseFiles(openRunBaseStore(), plan.lintBase.hash);
+  return {
+    get: (p: string) => files.get(p),
+    paths: () => files.keys(),
+    moved: plan.lintBase.moved,
+  };
+}
+
 /**
  * The worker, standing in: the real decisions over the plan and its base,
  * asked for every file as the type check asks (`wants` under each key), a
@@ -226,10 +239,7 @@ async function work(plan: Plan): Promise<Worked> {
   const decisions = createLintDecisions({
     lintFiles: plan.lintFiles,
     typedParts: plan.typedParts,
-    base:
-      plan.lintBase === null
-        ? undefined
-        : loadRunBaseFiles(openRunBaseStore(), plan.lintBase),
+    base: baseOf(plan),
     knownTyped: (p, v) => {
       const e = lintStore.read(p, v);
       return { keys: e?.typed ?? [], messages: e?.messages ?? {} };
@@ -288,6 +298,7 @@ async function work(plan: Plan): Promise<Worked> {
   );
   return {
     outcome: { tscClean: true, lint: results, keys: lintKeys, walkRoot: null },
+    jobs: [...decisions.jobs].sort(),
     syntactic: syntactic.sort(),
     typed: typed.sort(),
     combined: combined.sort(),
@@ -419,34 +430,167 @@ test(
     expect(moved.plan.baseLine).toContain(
       "rules moved (1 groups, 0 typed parts)",
     );
-    expect(moved.plan.lintBase).toBeNull();
-    for (const job of moved.plan.lintFiles) {
-      const rel = relative(root, job.file);
-      if (rel === D) {
-        // A directive file has one verdict, its old key not current.
-        expect(job.unit).toBe("whole");
-      } else {
-        expect(job.unit).toBe("split");
-        expect(job.syntactic).toEqual([group]);
-      }
-    }
+    // The job names the base and what moved — no file's state: nothing's
+    // text moved, so nothing is sent.
+    expect(moved.plan.lintBase?.moved).toEqual({
+      syntactic: [group],
+      typed: [],
+      raw: [],
+      all: true,
+    });
+    expect(moved.plan.lintFiles).toEqual([]);
     // Every typed part stands — a directive file's raw ones too: their keys
-    // are among the known. So no program lints anything, and the directive
-    // file's verdict is re-combined without one.
+    // are the base's. So no program lints anything, every split file runs
+    // the moved group alone, and the directive file's verdict is re-combined
+    // without a program.
     const worked = await work(moved.plan);
     expect(worked.typed).toEqual([]);
     expect(worked.combined).toEqual([D]);
+    // ... and none needs a program: the type check keys none of them.
+    expect(worked.jobs).toEqual([]);
+    expect(worked.syntactic).toEqual([A, B, CLEAN, V].sort());
+    for (const r of worked.outcome.lint) {
+      expect(Object.keys(r.syntactic)).toEqual(
+        r.unit === "split" ? [group] : [],
+      );
+    }
     const done = await moved.finalize(worked.outcome);
     expect(done.lintViolations).toBe(before.done.lintViolations);
     // What the moved rules re-ran is in the next base only: no per-file
     // entry is rewritten for a text the base held.
-    expect(done.lintLine).toContain(
-      `0 entries written, ${moved.plan.lintFiles.length} left to the base`,
-    );
+    expect(done.lintLine).toContain(`0 entries written, 5 left to the base`);
     // ... and the next run carries every file from it.
     const again = await run();
     expect(sent(again.plan)).toEqual([]);
     expect(again.done.lintViolations).toBe(before.done.lintViolations);
+  },
+  TIMEOUT_MS,
+);
+
+test(
+  "a moved typed part re-lints every file it covers, in a program, and ships no file's state",
+  async () => {
+    const before = await run();
+    const typedGroups = before.plan.typedParts.split.map((p) => p.group);
+    const group = typedGroups[0];
+    if (group === undefined) throw new Error("no type-aware group");
+    // Re-record this tree's base as if one type-aware group's rules had
+    // another value when it was taken: its group, typed and raw
+    // fingerprints, and so the directive fingerprint, all differ.
+    const store = openRunBaseStore();
+    const treeHash = (await computeTreeHash(root))!;
+    const base = store.root(store.pointer(treeHash)!)!;
+    const forged = {
+      ...base,
+      lint: {
+        ...base.lint,
+        fps: { ...base.lint.fps, [group]: "2".repeat(16) },
+        typed: { ...base.lint.typed, [group]: "3".repeat(16) },
+        allFp: "4".repeat(16),
+      },
+    };
+    const forgedHash = store.putRoot(forged).hash;
+    store.setPointer(treeHash, forgedHash);
+    store.setRulesPointer(base.lint, { root: forgedHash, treeHash });
+    rmSync(lintResultsV3Dir.path, { recursive: true, force: true });
+
+    const moved = await prepare();
+    expect(moved.plan.baseLine).toContain(
+      "rules moved (1 groups, 1 typed parts)",
+    );
+    expect(moved.plan.lintBase?.moved).toEqual({
+      syntactic: [group],
+      typed: [group],
+      raw: [group],
+      all: true,
+    });
+    expect(moved.plan.lintFiles).toEqual([]);
+    const worked = await work(moved.plan);
+    // Every carried file is decided — and so held by a program — and runs
+    // the moved typed part (a directive file its raw one), and that one only.
+    expect(worked.jobs).toEqual([A, B, CLEAN, V, D].sort());
+    expect(worked.typed).toEqual(worked.jobs);
+    for (const r of worked.outcome.lint) {
+      expect(
+        r.typed.filter((p) => p.kind === "ran").map((p) => p.group),
+      ).toEqual(r.unit === "split" ? [group] : [group, LINT_GROUP_ALL]);
+      expect(r.typed.filter((p) => p.kind === "cached")).toEqual([]);
+    }
+    expect(worked.combined).toEqual([D]);
+    const done = await moved.finalize(worked.outcome);
+    expect(done.lintViolations).toBe(before.done.lintViolations);
+    expect(done.lintLine).toContain(
+      `0 entries written, ${worked.jobs.length} left to the base`,
+    );
+    // The next run carries every file from the base it wrote.
+    const again = await run();
+    expect(sent(again.plan)).toEqual([]);
+    expect(again.worked.typed).toEqual([]);
+    expect(again.done.lintViolations).toBe(before.done.lintViolations);
+  },
+  TIMEOUT_MS,
+);
+
+test(
+  "a group the base has and the rules no longer do leaves every carried file's state",
+  async () => {
+    const before = await run();
+    expect(before.done.lintViolations).not.toContain("GONE");
+    // Re-record this tree's base as if a contribution since removed had
+    // linted v: its group in the base's rules, its message in v's state.
+    const store = openRunBaseStore();
+    const treeHash = (await computeTreeHash(root))!;
+    const base = store.root(store.pointer(treeHash)!)!;
+    const gone = "(a removed contribution)";
+    const [id, ref] = Object.entries(base.shards).find(
+      ([, r]) => store.shard(r[0])?.files[V] !== undefined,
+    )!;
+    const shard = store.shard(ref[0])!;
+    const v = shard.files[V]!;
+    const message = {
+      ruleId: "gone/rule",
+      fatal: false,
+      line: 1,
+      column: 1,
+      message: "GONE",
+    };
+    const patched = store.putShard({
+      files: {
+        ...shard.files,
+        [V]: { ...v, s: { ...v.s, [gone]: [message] } },
+      },
+    }).hash;
+    const forged = {
+      ...base,
+      lint: {
+        ...base.lint,
+        fps: { ...base.lint.fps, [gone]: "5".repeat(16) },
+        allFp: "6".repeat(16),
+      },
+      shards: {
+        ...base.shards,
+        [id]: [patched, ref[1], 1, ref[3]] as typeof ref,
+      },
+    };
+    const forgedHash = store.putRoot(forged).hash;
+    store.setPointer(treeHash, forgedHash);
+    store.setRulesPointer(base.lint, { root: forgedHash, treeHash });
+
+    const moved = await prepare();
+    expect(moved.plan.lintBase?.moved).toEqual({
+      syntactic: [],
+      typed: [],
+      raw: [],
+      all: true,
+    });
+    expect(moved.plan.lintFiles).toEqual([]);
+    const worked = await work(moved.plan);
+    expect(worked.syntactic).toEqual([]);
+    expect(worked.typed).toEqual([]);
+    expect(worked.combined).toEqual([D]);
+    const done = await moved.finalize(worked.outcome);
+    expect(done.lintViolations).toBe(before.done.lintViolations);
+    expect((await recordedState()).get(V)?.s?.[gone]).toBeUndefined();
   },
   TIMEOUT_MS,
 );

@@ -463,6 +463,8 @@ export function loadRunBaseFiles(
 /** A base's files, read shard by shard as they are asked for. */
 export interface RunBaseLookup {
   get(path: string): FileBase | undefined;
+  /** Every path the base holds — reading every shard. */
+  paths(): Iterable<string>;
   /** How many shards were read. */
   readonly shardsRead: number;
 }
@@ -484,25 +486,30 @@ export function runBaseLookup(
     );
   }
   const shards = new Map<string, Record<string, FileBase>>();
-  return {
-    get(path) {
-      const id = shardOf(path);
-      let files = shards.get(id);
-      if (files === undefined) {
-        const ref = root.shards[id];
-        if (ref === undefined) files = {};
-        else {
-          const shard = store.shard(ref[0]);
-          if (shard === undefined) {
-            throw new Error(
-              `type-check: the run base ${hash}'s shard ${id} (${ref[0]}) is not stored (pruned under a running check?)`,
-            );
-          }
-          files = shard.files;
+  const shard = (id: string): Record<string, FileBase> => {
+    let files = shards.get(id);
+    if (files === undefined) {
+      const ref = root.shards[id];
+      if (ref === undefined) files = {};
+      else {
+        const got = store.shard(ref[0]);
+        if (got === undefined) {
+          throw new Error(
+            `type-check: the run base ${hash}'s shard ${id} (${ref[0]}) is not stored (pruned under a running check?)`,
+          );
         }
-        shards.set(id, files);
+        files = got.files;
       }
-      return files[path];
+      shards.set(id, files);
+    }
+    return files;
+  };
+  return {
+    get: (path) => shard(shardOf(path))[path],
+    *paths() {
+      for (const id of Object.keys(root.shards)) {
+        yield* Object.keys(shard(id));
+      }
     },
     get shardsRead() {
       return shards.size;

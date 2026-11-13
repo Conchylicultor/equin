@@ -16,7 +16,10 @@ export {
 export type { TypeCheckDivergencePayload } from "./divergence";
 export type {
   LintFileJob,
+  LintBaseRef,
   LintFileResult,
+  LintTarget,
+  MovedLintParts,
   RawLintMessage,
   TypeCheckTree,
   TypeCheckWorkerJob,

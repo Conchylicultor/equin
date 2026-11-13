@@ -113,6 +113,14 @@ export type TypedPartOutcome =
   | { group: string; kind: "cached"; key: string }
   | { group: string; kind: "ran"; key: string; messages: RawLintMessage[] };
 
+/** What the worker lints of one file: its unit and its stale syntactic groups. */
+export interface LintTarget {
+  /** Absolute path. */
+  file: string;
+  unit: "split" | "whole";
+  syntactic: string[];
+}
+
 /**
  * One job's results, part by part — returned only for a file where something
  * happened: a part ran, or a typed key it reused is not already among the
@@ -126,7 +134,10 @@ export interface LintFileResult {
   unit: "split" | "whole";
   /** Every syntactic group the job named, each with its messages (possibly none). */
   syntactic: Record<string, RawLintMessage[]>;
-  /** One per typed part the job named. */
+  /**
+   * One per typed part the file has — except, for a file the run base
+   * carries, a part reused under the base's own key (the base holds it).
+   */
   typed: TypedPartOutcome[];
 }
 
@@ -191,6 +202,28 @@ export interface TscPredictionMiss {
   name: string;
 }
 
+/**
+ * Which parts' rules moved between a run base and this run: stale in every
+ * file the base carries. Empty when the base was taken under this run's rules.
+ */
+export interface MovedLintParts {
+  /** Syntactic groups whose fingerprint moved, or which the base did not have. */
+  syntactic: string[];
+  /** Typed groups (`TypedParts.split`) whose fingerprint moved. */
+  typed: string[];
+  /** Raw typed groups (`TypedParts.whole`) whose fingerprint moved. */
+  raw: string[];
+  /** Whether a directive file's verdict fingerprint (`TypedParts.all`) moved. */
+  all: boolean;
+}
+
+/** The run base a job's lint carries from (`TypeCheckWorkerJob.lintBase`). */
+export interface LintBaseRef {
+  /** The base's root, by content hash. */
+  hash: string;
+  moved: MovedLintParts;
+}
+
 /** The job handed to the worker on stdin (see `../shared/launch.ts`). */
 export interface TypeCheckWorkerJob {
   root: AppPath;
@@ -214,23 +247,24 @@ export interface TypeCheckWorkerJob {
   onMiss: "throw" | "whole";
   /**
    * The files to lint — their stale syntactic parts, and every typed part to
-   * decide. With a `lintBase`, only the files whose base state does not carry
-   * (changed, added, or under a rule that moved).
+   * decide. With a `lintBase`, only the files whose text the base does not
+   * hold (changed or added) — whatever moved in the rules.
    */
   lintFiles: LintFileJob[];
   typedParts: TypedParts;
   /**
-   * The RUN BASE the lint was planned against (`../shared/run-base.ts`), by
-   * its root's content hash — or null when `lintFiles` names every lintable
-   * file (no base, or one under other rules). Every lintable file NOT in
-   * `lintFiles` carries its base state: same version, same rules, so its
-   * syntactic results stand, and its typed parts stand iff its result key is
-   * the base's. The worker reads the base for each such file's key and unit;
-   * one whose key moved has every typed part decided like a job's, with
-   * `known` its stored typed keys (the per-file lint store, read by the
-   * worker), and is answered like one.
+   * The RUN BASE the lint was planned against (`../shared/run-base.ts`) and
+   * which parts' rules moved since it — or null when `lintFiles` names every
+   * lintable file (no base). Every lintable file NOT in `lintFiles` is a text
+   * the base holds (same version), and a text the base holds is never in
+   * `lintFiles` (the worker throws): its state is the base's, read by the
+   * worker, never shipped. Its syntactic groups stand unless `moved` names
+   * them; its typed parts stand iff its result key is the base's and `moved`
+   * does not name them. One whose key moved has every typed part decided like
+   * a job's, with `known` its stored typed keys (the per-file lint store, read
+   * by the worker).
    */
-  lintBase: string | null;
+  lintBase: LintBaseRef | null;
   /**
    * The walk base the type check's walk starts from. With a `lintBase`, only
    * `root` (the one bound to it) or `none`: the files the walk does not visit

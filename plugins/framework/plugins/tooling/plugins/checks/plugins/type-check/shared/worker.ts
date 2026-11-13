@@ -133,19 +133,29 @@ async function lintRunner(job: Job, view: RepoView) {
   // The base the plan carried files from: each file's key and unit, read
   // shard by shard for the files the type check keys (the preparation checked
   // every shard is stored) — only those can have moved.
-  const base =
-    job.lintBase === null
-      ? undefined
-      : runBaseLookup(openRunBaseStore(), job.lintBase);
+  const ref = job.lintBase;
+  const lookup =
+    ref === null ? undefined : runBaseLookup(openRunBaseStore(), ref.hash);
+  const movedLine = (): string => {
+    if (ref === null) return "";
+    const m = ref.moved;
+    const n = m.syntactic.length + m.typed.length + m.raw.length;
+    return n === 0 && !m.all
+      ? "every file carried unless its key moved"
+      : `rules moved (${m.syntactic.length} syntactic, ${m.typed.length} typed, ${m.raw.length} raw parts${m.all ? ", verdicts" : ""}): every file carried runs its moved parts`;
+  };
   const baseLine = (): string | null =>
-    base === undefined
+    lookup === undefined
       ? null
-      : `type-check: lint base ${job.lintBase!.slice(0, 12)}: every file carried unless its key moved, ${job.lintFiles.length} sent; ${base.shardsRead} shards read`;
+      : `type-check: lint base ${ref!.hash.slice(0, 12)}: ${movedLine()}, ${job.lintFiles.length} sent; ${lookup.shardsRead} shards read`;
   let lintStore: LintResultStore | undefined;
   const decisions = createLintDecisions({
     lintFiles: job.lintFiles,
     typedParts: job.typedParts,
-    base,
+    base:
+      lookup === undefined
+        ? undefined
+        : { get: lookup.get, paths: lookup.paths, moved: ref!.moved },
     knownTyped: (path, version) => {
       const e = (lintStore ??= openLintResultStore()).read(path, version);
       return { keys: e?.typed ?? [], messages: e?.messages ?? {} };

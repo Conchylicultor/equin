@@ -231,7 +231,7 @@ What a change costs:
 4. the merge-base with `main`;
 5. the latest root written under this run's rules, on any tree (the **rules pointer**, `lintInputsKey`).
 
-- Rules first: a base under other rules sends every file, and on a busy host the per-file store has long evicted most results (2026-11-05: main's current base-group key held by 172 of 15,002 files).
+- Rules first: a base under other rules re-runs every file's moved parts, and on a busy host the per-file store has long evicted most results (2026-11-05: main's current base-group key held by 172 of 15,002 files).
   - After a rebase onto a main whose rules moved, the hint is such a base. The merge-base's base, written by the pusher's check of that tree, carries every unchanged file.
   - First-stored-wins re-linted the whole tree (~500 CPU-s) on every such rebase.
 - The rules pointer is last (its tree can be far, so more files differ) and is the only same-rules candidate when no nearby tree has a base under these rules: a fresh worktree off a main tree nobody checked (`base none`), a rebase onto a main whose merged tree nobody checked. So a rules move is re-linted once per HOST, by the first run under the new rules; every later run carries from it.
@@ -239,8 +239,9 @@ What a change costs:
 
 **Planning**:
 
-- Same rules → only files in a moved-listing shard whose version moved (or new) are sent; the job names the base (`lintBase`).
-- Rules moved → every file is sent with the base's state as `known` (`baseEntry`), no base named.
+- With a base, whatever the rules → only files in a moved-listing shard whose version moved (or new) are sent; the job names the base and which parts' rules moved (`lintBase: { hash, moved }`, `MovedLintParts`: syntactic groups, typed parts, raw parts, the verdict).
+  - **A text the base holds is never in the job** (the worker throws): the worker reads its state from the base and runs only its moved parts — a moved syntactic group with no program, a moved typed part in program 2 (every carried file is then in `LintHook.jobs`) — and its typed parts where its key moved. Every other part stands under the base's own key and is not even named in the answer.
+  - Before (rules moved → every file sent with the base's state as `known`), a one-line syntactic rule edit shipped 16,562 files × ~65 typed keys: a 30 MB job, ~130 MB of worker heap alive through the whole re-lint, and 11 s of per-file store reads in prepare. Now the job is the changed texts (2026-11-13: syntactic rule edit, live heap at the start of the syntactic phase 548 → 430 MB, prepare 18 → 2.7 s; typed rule edit 603 → 486 MB, 17 → 4 s).
 - No base → every file.
 
 **Recording** (`finalize`):
@@ -316,7 +317,7 @@ Sizes: `research/2026-10-15-global-push-typecheck-lane-priority-and-cap.md`.
 | `type-check worker repo: lane …, priority foreground (slot holder)` | lane and tier (`unknown (<reason>)` without darwinbg) |
 | `type-check: input: tree … (N files)` | the worker's input load |
 | `type-check: prepared off-thread in …` | prepare's phases with CPU, the base carried from (or `base none (<why>)` / `rules moved (…)`), files sent, what finalize wrote; `(finalize skipped: coverage gate failed)` |
-| `type-check: lint base …: every file carried unless its key moved` | the lint base the worker compares keys with |
+| `type-check: lint base …: every file carried unless its key moved` / `rules moved (…): every file carried runs its moved parts` | the lint base the worker compares keys with, and what moved since it |
 
 **Use `cpu`, not wall clock** — wall measures the neighbours (the same build: 105 s vs 266 s at similar load). Per-check cost claims need `./equin check --jobs 1`.
 
@@ -334,8 +335,11 @@ Sizes: `research/2026-10-15-global-push-typecheck-lane-priority-and-cap.md`.
 - Core:
   - Uses: `infra/host/host-admission.PER_UNIT_BYTES`
   - Exports (types):
+    - `LintBaseRef`
     - `LintFileJob`
     - `LintFileResult`
+    - `LintTarget`
+    - `MovedLintParts`
     - `ProgramSize`
     - `RawLintMessage`
     - `TscDivergence`

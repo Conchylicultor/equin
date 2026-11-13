@@ -32,11 +32,12 @@
 // worktree's last, HEAD's, the merge-base's — the first stored under this
 // run's rules, else the first stored), compares each
 // shard's listing (paths and versions, hashed from the current tree with no
-// read) with the base's, and sends the worker only the files whose state does
-// not carry: changed, added, or — when the rules moved — every file, with the
-// base's results counted as known. Every other file carries; the worker, which
-// alone knows each file's result key, re-lints a carried file's typed parts
-// only where its key moved. `finalize` patches the base with what came back,
+// read) with the base's, and sends the worker only the files whose text the
+// base does not hold: changed or added. Every other file carries, whatever
+// moved in the rules: the job names the base and which parts' rules moved
+// (`MovedLintParts`), never a carried file's state. The worker, which alone
+// knows each file's result key, reads a carried file's state from the base and
+// re-lints only its moved parts, and its typed parts where its key moved. `finalize` patches the base with what came back,
 // writes the shards that changed and a new root, and assembles the verdict
 // from the shards that hold messages.
 
@@ -59,8 +60,10 @@ import {
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import {
   LINT_GROUP_ALL,
+  type LintBaseRef,
   type LintFileJob,
   type LintFileResult,
+  type MovedLintParts,
   type RawLintMessage,
   type TypeCheckTree,
   type TypeCheckWorkerJob,
@@ -135,18 +138,18 @@ export type Plan =
       /** The tsconfig the worker type-checks. */
       program: TscProgram;
       /**
-       * The lintable files whose state does not carry from the base: their
-       * stale syntactic groups and their typed keys known. Every lintable
-       * file when there is no base, or the rules moved.
+       * The lintable files whose text the base does not hold: their stale
+       * syntactic groups and their typed keys known. Every lintable file when
+       * there is no base.
        */
       lintFiles: LintFileJob[];
       /** The typed parts every split / directive file decides. */
       typedParts: TypedParts;
       /**
-       * The run base every other lintable file carries from, by its root's
-       * hash — null when `lintFiles` names them all.
+       * The run base every other lintable file carries from, and which
+       * parts' rules moved since it — null when `lintFiles` names them all.
        */
-      lintBase: string | null;
+      lintBase: LintBaseRef | null;
       /**
        * The walk base the worker's walk starts from: the one the chosen
        * base's run ended in (bound to it, `TypeCheckWorkerJob.walkBase`), or
@@ -223,20 +226,8 @@ interface JobState {
   directive: boolean;
   /** The per-file store's entry under the file's version, when there is one. */
   stored: LintEntry | undefined;
-  /**
-   * Every result known for this text: the stored entry, plus — when the rules
-   * moved since the base — the base's state of the same text, under the
-   * base's keys.
-   */
-  known: LintEntry | undefined;
-  /** The syntactic keys of `known` this run reuses (one per fresh group). */
+  /** The syntactic keys of `stored` this run reuses (one per fresh group). */
   reusedSyntactic: Set<string>;
-  /**
-   * The base held this very text, under other rules: it is sent because the
-   * rules moved, and what it re-runs for that is left to the next base, not
-   * written to the per-file store (`finalize`).
-   */
-  carriedText: boolean;
 }
 
 /** The base a run carries from. */
@@ -399,6 +390,30 @@ async function chooseBase(
 }
 
 /**
+ * Which parts' rules moved between a base's lint inputs and this run's: what
+ * every file the base carries re-runs, and nothing else of it.
+ */
+function movedLintParts(was: RunBaseLint, now: RunBaseLint): MovedLintParts {
+  const movedIn = (a: Record<string, string>, b: Record<string, string>) =>
+    Object.keys(b).filter((k) => a[k] !== b[k]);
+  const raw = (l: RunBaseLint) =>
+    Object.fromEntries(rawTypedFps(new Map(Object.entries(l.typed))));
+  return {
+    syntactic: movedIn(was.fps, now.fps),
+    typed: movedIn(was.typed, now.typed),
+    raw: movedIn(raw(was), raw(now)),
+    all: was.allFp !== now.allFp,
+  };
+}
+
+/** Whether a split file the base carries has a moved part. */
+const movedSplit = (m: MovedLintParts): boolean =>
+  m.syntactic.length > 0 || m.typed.length > 0;
+/** Whether a directive file the base carries has a moved part. */
+const movedWhole = (m: MovedLintParts): boolean => m.raw.length > 0 || m.all;
+const anyMoved = (m: MovedLintParts): boolean => movedSplit(m) || movedWhole(m);
+
+/**
  * A base file's state as a lint entry under the base's keys — what a run
  * whose rules moved counts as known for the same text, so a group whose
  * fingerprint did not move is not re-run.
@@ -435,26 +450,6 @@ function baseEntry(f: FileBase, lint: RunBaseLint): LintEntry {
     if (m !== undefined) messages[k] = m;
   }
   return { directive: false, syntactic, typed, messages };
-}
-
-/** The union of two entries for one text: `a`'s keys first. */
-function unionEntry(a: LintEntry | undefined, b: LintEntry): LintEntry {
-  if (a === undefined) return b;
-  if (a.directive !== b.directive) {
-    throw new Error(
-      `type-check: the lint store says directive=${a.directive} and the run base ${b.directive} for one text — a key does not name one text`,
-    );
-  }
-  const union = (x: string[], y: string[]) => [
-    ...x,
-    ...y.filter((k) => !x.includes(k)),
-  ];
-  return {
-    directive: a.directive,
-    syntactic: union(a.syntactic, b.syntactic),
-    typed: union(a.typed, b.typed),
-    messages: { ...b.messages, ...a.messages },
-  };
 }
 
 /** Prepare one run: the plan, and the session its record phase closes over. */
@@ -576,7 +571,9 @@ export async function openPreparation({
   const choice = await chooseBase(root, worktree, treeHash, bases, lint);
   const base: ChosenBase | undefined =
     choice.kind === "base" ? choice : undefined;
-  const same = base !== undefined && sameLintInputs(base.root.lint, lint);
+  const moved: MovedLintParts | undefined =
+    base === undefined ? undefined : movedLintParts(base.root.lint, lint);
+  const rulesMoved = moved !== undefined && anyMoved(moved);
 
   /** Base shards read, by id: where a carried file's state comes from. */
   const baseShards = new Map<string, Record<string, FileBase>>();
@@ -605,13 +602,15 @@ export async function openPreparation({
     return b !== undefined && b.v === view.version(rel) ? b : undefined;
   };
 
-  // The files to send. Same rules: a shard whose listing is the base's
-  // carries whole; in any other, each file whose version moved (or is new) is
-  // sent. Other rules: every file is sent, its base state counted as known.
+  // The files to send: those whose text the base does not hold. A shard
+  // whose listing is the base's holds every text; in any other, each file
+  // whose version moved (or is new) is sent. Whatever moved in the rules, a
+  // held text is never sent: the worker reads its state from the base, and
+  // runs only its parts whose rules moved (`moved`).
   let jobPaths: string[];
   let changed = 0;
   let removed = 0;
-  if (base !== undefined && same) {
+  if (base !== undefined) {
     const sent = new Set<string>();
     for (const [s, rels] of shardFiles) {
       if (base.root.shards[s]?.[1] === listings.get(s)) continue;
@@ -626,9 +625,6 @@ export async function openPreparation({
     changed = jobPaths.length;
   } else {
     jobPaths = files;
-    if (base !== undefined) {
-      changed = files.filter((rel) => carriedOf(rel) === undefined).length;
-    }
   }
   const goneShards =
     base === undefined
@@ -642,41 +638,32 @@ export async function openPreparation({
   // with the keys known for them — the worker, which alone knows the file's
   // result key, runs the ones whose key is not among them. A file with an
   // eslint directive is one unit and goes whole; whether it has one is in its
-  // entry (or its base state), so only a text with neither — which is linted
-  // anyway — is read here.
+  // entry, so only a text with none — which is linted anyway — is read here.
   const states = new Map<string, JobState>();
   const lintFiles: LintFileJob[] = [];
   let read = 0;
   for (const rel of jobPaths) {
     const v = version(rel);
     const stored = store.read(rel, v);
-    const carried = same ? undefined : carriedOf(rel);
     let directive: boolean;
     if (stored !== undefined) directive = stored.directive;
-    else if (carried !== undefined) directive = carried.d === 1;
     else {
       read++;
       directive = hasLintDirective(view.readText(rel));
     }
-    const known =
-      carried === undefined
-        ? stored
-        : unionEntry(stored, baseEntry(carried, base!.root.lint));
     const state: JobState = {
       version: v,
       directive,
       stored,
-      known,
       reusedSyntactic: new Set(),
-      carriedText: carried !== undefined,
     };
     states.set(rel, state);
-    const typed = { known: known?.typed ?? [] };
+    const typed = { known: stored?.typed ?? [] };
     if (directive) {
       // What its verdict replays of a raw part reused under its key.
       const knownMessages: Record<string, RawLintMessage[]> = {};
       for (const k of typed.known) {
-        const m = known?.messages[k];
+        const m = stored?.messages[k];
         if (m !== undefined) knownMessages[k] = m;
       }
       lintFiles.push({
@@ -688,7 +675,7 @@ export async function openPreparation({
       });
       continue;
     }
-    const knownSyntactic = new Set(known?.syntactic);
+    const knownSyntactic = new Set(stored?.syntactic);
     const syntactic: string[] = [];
     for (const [g, fp] of groups.fps) {
       if (knownSyntactic.has(fp)) state.reusedSyntactic.add(fp);
@@ -703,15 +690,10 @@ export async function openPreparation({
   }
   lap(`store reads, ${jobPaths.length} entries, ${read} texts read`);
 
-  const movedRules = (): string => {
-    if (base === undefined || same) return "";
-    const l = base.root.lint;
-    const g = Object.keys(lint.fps).filter((k) => l.fps[k] !== lint.fps[k]);
-    const t = Object.keys(lint.typed).filter(
-      (k) => l.typed[k] !== lint.typed[k],
-    );
-    return `, rules moved (${g.length} groups, ${t.length} typed parts)`;
-  };
+  const movedRules = (): string =>
+    moved === undefined || !rulesMoved
+      ? ""
+      : `, rules moved (${moved.syntactic.length} groups, ${moved.typed.length} typed parts)`;
   const baseLine =
     base === undefined
       ? `base none (${choice.kind === "none" ? choice.reason : ""})`
@@ -722,13 +704,15 @@ export async function openPreparation({
     program,
     lintFiles,
     typedParts: { split: typedParts, whole: rawParts, all: allPart },
-    lintBase: base !== undefined && same ? base.hash : null,
+    lintBase: base === undefined ? null : { hash: base.hash, moved: moved! },
+    // A lint base binds the walk to the walk base its run ended in: every
+    // file the walk does not visit keeps the key the lint base holds.
     walkBase:
-      base?.root.walk !== undefined
-        ? { kind: "root", root: base.root.walk }
-        : base !== undefined && same
-          ? { kind: "none" }
-          : { kind: "hint" },
+      base === undefined
+        ? { kind: "hint" }
+        : base.root.walk !== undefined
+          ? { kind: "root", root: base.root.walk }
+          : { kind: "none" },
     tree,
     phaseMs,
     baseLine,
@@ -932,7 +916,7 @@ export async function openPreparation({
             s[g] = m;
             count(g);
           } else if (st.reusedSyntactic.has(fp)) {
-            s[g] = st.known!.messages[fp] ?? [];
+            s[g] = st.stored!.messages[fp] ?? [];
           } else {
             throw new Error(
               `type-check: ${rel}'s lint group "${g}" is stale and the worker did not lint it`,
@@ -941,7 +925,7 @@ export async function openPreparation({
         }
       }
       const freshT = new Map<string, RawLintMessage[]>();
-      const t = typedOf(rel, st.directive, r, res, st.known, freshT);
+      const t = typedOf(rel, st.directive, r, res, st.stored, freshT);
       if (st.directive) {
         tallyDirective(r, freshT);
         const split = verdictAndRaw(t);
@@ -949,42 +933,6 @@ export async function openPreparation({
       } else {
         tally(freshS.size, freshT.size);
         next.set(rel, fileBase(st.version, false, r, s, t));
-      }
-      if (st.carriedText) {
-        // A text the base held, re-run because the rules moved. Its results
-        // under the new rules go into the next base — content-addressed, so a
-        // shard whose messages did not change is not even rewritten — and
-        // that base is found by every later run under these rules, on any
-        // tree (the rules pointer). Written per file as well, they were one
-        // store rewrite per lintable file for every rule edit: ~15k entries,
-        // each a tmp file, a rename and a counter (2026-11-08: 18 such runs in
-        // 6.5 h, 58 % of a minute's file events). Only a typed part whose
-        // rules did NOT move is recorded: it ran because the file's result
-        // key moved, as it would have under unchanged rules.
-        const baseLint = base!.root.lint;
-        // A raw part moves with its typed part's fingerprint.
-        const typedUnmoved = (g: string) =>
-          baseLint.typed[g] === typedFps.get(g);
-        const unmoved = new Set(
-          (st.directive
-            ? [
-                ...rawParts.filter((p) => typedUnmoved(p.group)),
-                ...(baseLint.allFp === lint.allFp ? [allPart] : []),
-              ]
-            : typedParts.filter((p) => typedUnmoved(p.group))
-          ).map((p) => typedResultKey(p.fp, r)),
-        );
-        const keptT = new Map([...freshT].filter(([k]) => unmoved.has(k)));
-        if (freshS.size + freshT.size > keptT.size) leftToBase++;
-        if (keptT.size === 0) continue;
-        record(rel, st.version, st.stored, {
-          directive: st.directive,
-          syntactic: new Map(),
-          typed: keptT,
-          keepSyntactic,
-          keepTyped,
-        });
-        continue;
       }
       // Fresh results first, then the stored keys — or, for a text the store
       // has no entry for, its whole result, so the next run on this text in
@@ -1020,45 +968,139 @@ export async function openPreparation({
       );
     }
 
-    // Every carried file whose result key moved: its syntactic results
-    // stand, its typed parts are what the worker ran or reused for the new key.
+    // Every file the base carries that the worker decided: one whose result
+    // key moved, and — when rules moved — every one. Its state is the
+    // base's, with what ran in place of the parts that were stale: its moved
+    // syntactic groups, and the typed parts whose rules or key moved. Every
+    // other part stands under the base's own key.
     let movedKeys = 0;
-    for (const [rel, r] of Object.entries(keys)) {
+    for (const rel of Object.keys(keys)) {
       if (states.has(rel)) continue;
-      const b = same ? carriedOf(rel) : undefined;
-      if (b === undefined) {
+      if (carriedOf(rel) === undefined) {
         throw new Error(
           `type-check: the worker keyed ${rel}, which the plan neither sent nor carried`,
         );
       }
-      if (b.r === r) continue;
-      movedKeys++;
-      const res = results.get(rel);
-      results.delete(rel);
-      if (res !== undefined && Object.keys(res.syntactic).length > 0) {
+    }
+    const decided = rulesMoved
+      ? files.filter((rel) => !states.has(rel))
+      : Object.keys(keys).filter((rel) => !states.has(rel));
+    const baseLint = base?.root.lint;
+    // A group the base has and this run does not (a contribution removed or
+    // renamed, a rule no longer type-aware) has no part any more: its
+    // messages leave every carried file's state, or the verdict would keep
+    // reporting a rule that is gone.
+    const dropped =
+      baseLint !== undefined &&
+      (Object.keys(baseLint.fps).some((g) => !groups.fps.has(g)) ||
+        Object.keys(baseLint.typed).some((g) => !typedFps.has(g)));
+    const current = (
+      x: Record<string, RawLintMessage[]> | undefined,
+      has: (g: string) => boolean,
+    ): Record<string, RawLintMessage[]> =>
+      Object.fromEntries(Object.entries(x ?? {}).filter(([g]) => has(g)));
+    const isGroup = (g: string) => groups.fps.has(g);
+    const isTyped = (g: string) => typedFps.has(g) || g === LINT_GROUP_ALL;
+    for (const rel of decided) {
+      const b = carriedOf(rel);
+      if (b === undefined) {
         throw new Error(
-          `type-check: the worker returned syntactic groups for carried file ${rel}`,
+          `type-check: ${rel} was neither sent nor carried from the run base`,
         );
       }
-      const stored = store.read(rel, b.v);
-      const freshT = new Map<string, RawLintMessage[]>();
       const directive = b.d === 1;
-      const t = typedOf(rel, directive, r, res, stored, freshT);
-      record(rel, b.v, stored, {
-        directive,
-        syntactic: new Map(),
-        typed: freshT,
-        keepSyntactic,
-        keepTyped,
-      });
+      const r = keys[rel] ?? b.r;
+      const res = results.get(rel);
+      results.delete(rel);
+      if (r === b.r && !(directive ? movedWhole(moved!) : movedSplit(moved!))) {
+        if (res !== undefined) {
+          throw new Error(
+            `type-check: the worker answered ${rel}, which the base carries whole`,
+          );
+        }
+        if (dropped) {
+          next.set(
+            rel,
+            fileBase(
+              b.v,
+              directive,
+              r,
+              current(b.s, isGroup),
+              current(b.t, isTyped),
+              current(b.w, isTyped),
+            ),
+          );
+        }
+        continue;
+      }
+      if (r !== b.r) movedKeys++;
+      if (res !== undefined && res.unit !== (directive ? "whole" : "split")) {
+        throw new Error(
+          `type-check: the worker linted ${rel} as ${res.unit}, which the base does not hold it as`,
+        );
+      }
+      // Its syntactic groups: the base's, the moved ones from the worker.
+      const s = current(b.s, isGroup);
+      const want = directive ? [] : moved!.syntactic;
+      const answered = Object.keys(res?.syntactic ?? {});
+      if (answered.some((g) => !want.includes(g))) {
+        throw new Error(
+          `type-check: the worker returned syntactic groups ${answered.join(", ")} for carried file ${rel}, and only ${want.join(", ") || "none"} moved`,
+        );
+      }
+      for (const g of want) {
+        const m = res?.syntactic[g];
+        if (m === undefined) {
+          throw new Error(
+            `type-check: ${rel}'s lint group "${g}" moved and the worker did not lint it`,
+          );
+        }
+        s[g] = m;
+        count(g);
+      }
+      // Its typed parts: what ran, else known under its key — the base's
+      // (same key: every part whose rules did not move), or the store's.
+      const stored = r === b.r ? undefined : store.read(rel, b.v);
+      const known = r === b.r ? baseEntry(b, baseLint!) : stored;
+      const freshT = new Map<string, RawLintMessage[]>();
+      const t = typedOf(rel, directive, r, res, known, freshT);
       if (directive) {
         tallyDirective(r, freshT);
         const split = verdictAndRaw(t);
-        next.set(rel, fileBase(b.v, true, r, b.s ?? {}, split.t, split.w));
+        next.set(rel, fileBase(b.v, true, r, s, split.t, split.w));
       } else {
-        tally(0, freshT.size);
-        next.set(rel, fileBase(b.v, false, r, b.s ?? {}, t));
+        tally(want.length, freshT.size);
+        next.set(rel, fileBase(b.v, false, r, s, t));
       }
+      // What it re-ran because rules moved goes into the next base only —
+      // content-addressed, so a shard whose messages did not change is not
+      // even rewritten — and that base is found by every later run under
+      // these rules, on any tree (the rules pointer). Written per file as
+      // well, they were one store rewrite per lintable file for every rule
+      // edit: ~15k entries, each a tmp file, a rename and a counter
+      // (2026-11-08: 18 such runs in 6.5 h, 58 % of a minute's file events).
+      // Only a typed part whose rules did NOT move is recorded: it ran
+      // because the file's result key moved, as it would have under
+      // unchanged rules.
+      const unmoved = new Set(
+        (directive
+          ? [
+              ...rawParts.filter((p) => !moved!.raw.includes(p.group)),
+              ...(moved!.all ? [] : [allPart]),
+            ]
+          : typedParts.filter((p) => !moved!.typed.includes(p.group))
+        ).map((p) => typedResultKey(p.fp, r)),
+      );
+      const keptT = new Map([...freshT].filter(([k]) => unmoved.has(k)));
+      if (want.length + freshT.size > keptT.size) leftToBase++;
+      if (keptT.size === 0) continue;
+      record(rel, b.v, stored, {
+        directive,
+        syntactic: new Map(),
+        typed: keptT,
+        keepSyntactic,
+        keepTyped,
+      });
     }
     if (results.size > 0) {
       throw new Error(
@@ -1081,12 +1123,7 @@ export async function openPreparation({
     for (const [s, rels] of shardFiles) {
       const listing = listings.get(s)!;
       const prev = base?.root.shards[s];
-      if (
-        same &&
-        prev !== undefined &&
-        prev[1] === listing &&
-        !touchedIds.has(s)
-      ) {
+      if (prev !== undefined && prev[1] === listing && !touchedIds.has(s)) {
         carriedShards++;
         if (today - prev[3] < TOUCH_AFTER_DAYS) {
           shardsOut[s] = prev;
