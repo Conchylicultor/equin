@@ -862,6 +862,11 @@ export const compositionsConfig = defineConfig({
         //   the first render, so every slot's layout (and anything else a
         //   config decides) is not known on the first frame: equin.ai painted
         //   its header nav in raw order, then jumped to its layout.
+        // - the active app's code preloads (apps-core.app-preload): its head
+        //   fragment lists, per app base path, the modules that app's
+        //   deferred plugins load, so they download from t0. Left out, the
+        //   page fetches its app's code only once the eager tier has run —
+        //   equin.ai drew its header without its nav for ~1 s that way.
         //
         // What a CAPABILITY needs at runtime is never listed here: it is a
         // derived edge. A plugin that paints with a token group's var gets a hard
@@ -886,6 +891,7 @@ export const compositionsConfig = defineConfig({
             "ui.theme-engine.**",
             "primitives.dom.overscroll-hint.**",
             "network.live.boot-snapshot.**",
+            "apps-core.app-preload.**",
           ],
         }),
 

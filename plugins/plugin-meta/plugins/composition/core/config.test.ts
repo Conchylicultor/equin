@@ -127,12 +127,14 @@ test("served-baseline lists only what BEING SERVED needs", () => {
   // below is a requirement of being served at all: the app surface, the
   // gateway's health probe (which brings the toast host by import), the runtime
   // theme engine, and the rubber-band that keeps the near-black `html` floor
-  // from showing above the page (equin.ai shipped that way), and the boot
-  // snapshot that makes config (slot layouts) known on the first frame.
+  // from showing above the page (equin.ai shipped that way), the boot
+  // snapshot that makes config (slot layouts) known on the first frame, and
+  // the head's per-app code preloads (the app's code downloads from t0).
   const baseline = byName("served-baseline");
   expect([...baseline.entryPoints].map(String).sort()).toEqual(
     [
       "apps-core.layout.**",
+      "apps-core.app-preload.**",
       "network.live.boot-snapshot.**",
       "infra.health.**",
       "primitives.dom.overscroll-hint.**",

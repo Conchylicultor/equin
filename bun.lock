@@ -161,6 +161,10 @@
         "@resvg/resvg-js": "^2.6.2",
       },
     },
+    "plugins/apps-core/plugins/app-preload": {
+      "name": "@equin/plugin-apps-core-app-preload",
+      "version": "0.0.1",
+    },
     "plugins/apps-core/plugins/app-rail": {
       "name": "@equin/plugin-apps-core-app-rail",
       "version": "0.0.1",
@@ -7883,6 +7887,8 @@
     "@equin/plugin-apps-core-app-launcher": ["@equin/plugin-apps-core-app-launcher@workspace:plugins/apps-core/plugins/app-launcher"],
 
     "@equin/plugin-apps-core-app-manifest": ["@equin/plugin-apps-core-app-manifest@workspace:plugins/apps-core/plugins/app-manifest"],
+
+    "@equin/plugin-apps-core-app-preload": ["@equin/plugin-apps-core-app-preload@workspace:plugins/apps-core/plugins/app-preload"],
 
     "@equin/plugin-apps-core-app-rail": ["@equin/plugin-apps-core-app-rail@workspace:plugins/apps-core/plugins/app-rail"],
 

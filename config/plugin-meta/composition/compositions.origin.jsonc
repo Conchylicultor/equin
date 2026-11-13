@@ -1,4 +1,4 @@
-// @hash 4ce970700b9f
+// @hash 42903baa6380
 {
   "manifests": [
     {
@@ -736,7 +736,8 @@
         "infra.health.**",
         "ui.theme-engine.**",
         "primitives.dom.overscroll-hint.**",
-        "network.live.boot-snapshot.**"
+        "network.live.boot-snapshot.**",
+        "apps-core.app-preload.**"
       ],
       "selectedContributors": [],
       "extends": [],

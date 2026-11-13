@@ -22,6 +22,10 @@ import {
 } from "../import-map";
 import { sha256Hex } from "../hash";
 import {
+  APP_PRELOADS_FILE,
+  type AppPreloads,
+} from "@plugins/apps-core/plugins/app-preload/core";
+import {
   CENTRAL_BUILD_GLOBAL,
   COMMIT_GLOBAL,
   GRAPH_GLOBAL,
@@ -92,6 +96,13 @@ export interface ComposeOptions {
   entryUrl: string;
   /** Seed URLs for the modulepreload closure (entry + registry + eager tier). */
   preloadSeeds: string[];
+  /**
+   * Per app root (`apps/plugins/<app>/`): the artifact URLs of that app's
+   * deferred plugins — seeds of the app's own preload closure, written to the
+   * dist's `.app-preloads.json` (`apps-core/app-preload`), which the backend
+   * splices into the head of that app's pages.
+   */
+  appPreloadSeeds: Record<string, string[]>;
 }
 
 const MAIN_SCRIPT_TAG = '<script type="module" src="/main.tsx"></script>';
@@ -322,6 +333,18 @@ export function composeDist(opts: ComposeOptions): {
     map: importMap.imports,
   });
 
+  // 4b. Per app: the modules its deferred plugins load that the shell does not
+  // already preload — what a page of that app needs from t0 besides the shell.
+  const shellPreloads = new Set(preloads);
+  const appPreloads: AppPreloads = { v: 1, apps: {} };
+  for (const [root, seeds] of Object.entries(opts.appPreloadSeeds)) {
+    appPreloads.apps[root] = computePreloadClosure({
+      seeds,
+      imports: opts.staticImportsByUrl,
+      map: importMap.imports,
+    }).filter((url) => !shellPreloads.has(url));
+  }
+
   // 5. index.html: keep the source head (theme replay + DevTools-hook inline
   // scripts, icons, title), inject the two bundle pins + import map + global CSS
   // + preloads, and swap the /main.tsx module script for the entry artifact.
@@ -385,11 +408,17 @@ export function composeDist(opts: ComposeOptions): {
       opts.centralBuild + "\n",
     );
 
+  writeFileSync(
+    joinAppPath(stagingDir, APP_PRELOADS_FILE),
+    JSON.stringify(appPreloads),
+  );
+
   // 6. HARD verification: every URL the page will request must resolve to a
   // real file through the staged tree (following the store symlinks).
   const urls = new Set<string>([
     ...Object.values(importMap.imports),
     ...preloads,
+    ...Object.values(appPreloads.apps).flat(),
     opts.entryUrl,
     opts.cssHref,
   ]);

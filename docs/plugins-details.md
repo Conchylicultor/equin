@@ -12845,7 +12845,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/website/pages/story/essay`
               - `apps/website/pages/vision`
 
-- **`apps-core`** — App switcher rail. Wraps per-app shells; plugins contribute via Apps.App. Every app the browser registers, readable on the server: declaredApps() — each Apps.App contribution of the plugins the backend's composition loads: whole AppRef (id, name, base path, icon, tile colour) and its launch kind (tab or surface mode), generated at build time from the web contributions.
+- **`apps-core`** — App switcher rail. Wraps per-app shells; plugins contribute via Apps.App. Every app the browser registers, readable on the server: declaredApps() — each Apps.App contribution of the plugins the backend's composition loads: whole AppRef (id, name, base path, icon, tile colour) and its launch kind (tab or surface mode), generated at build time from the web contributions; declaredAppPlugins() — the same, each with the web plugin that contributes it.
   - Web:
     - Slots:
       - `Apps.App`
@@ -12913,9 +12913,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `APP_RAIL_WIDTH`
       - `documentTitle`
   - Cross-plugin:
-    - Imported by: 60 plugins — full list in [`plugins/apps-core/REFERENCE.md`](../plugins/apps-core/REFERENCE.md)
+    - Imported by: 61 plugins — full list in [`plugins/apps-core/REFERENCE.md`](../plugins/apps-core/REFERENCE.md)
       - `apps` ×29
-      - `apps-core` ×14
+      - `apps-core` ×15
       - `ui` ×6
       - `config_v2` ×2
       - `hints` ×2
@@ -12928,7 +12928,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
   - Exemptions:
     - Exempted by: `apps-core/layout` (0 debt)
   - Server:
-    - Exports (values): `declaredApps`
+    - Exports (types): `DeclaredAppOf`
+    - Exports (values):
+      - `declaredAppPlugins`
+      - `declaredApps`
   - Test helpers:
     - Web: `@plugins/apps-core/web/testing`
       - `getFocusedAppId`
@@ -13115,6 +13118,21 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `WebAppManifestSchema`
       - Cross-plugin:
         - Imported by: `menu-bar`
+    - **`app-preload`** — Starts the active app's code downloading at t0: a DocumentHead.Fragment that puts, per app base path, a <link rel=modulepreload> for every module of that app's deferred plugins — read from the served dist's .app-preloads.json, which web-artifacts' compose writes — so the boot's priority batch is in the HTTP cache by the time it is imported, instead of being fetched after the eager tier. Desktop-only: the head is published by document-head's machine half, from the dist the gateway serves. In every served composition through the served-baseline row.
+      - Server:
+        - Contributes:
+          - `DocumentHead.Fragment` "app-preload"
+          - `restart-skip.adopted` "the per-app module preloads of the served dist"
+      - Cross-plugin:
+        - Imported by:
+          - `framework/tooling/web-artifacts`
+          - `framework/web-core`
+      - Core:
+        - Exports (types): `AppPreloads`
+        - Exports (values):
+          - `APP_PRELOADS_FILE`
+          - `AppPreloadsSchema`
+          - `appRootOf`
     - **`app-rail`** — App rail: the far-left icon strip that switches the focused tab between apps, deriving its own active-app highlight and chrome theme scope.
       - Web:
         - Uses:
@@ -14825,6 +14843,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`hooks`** — Restart-skip's contribution kinds, a leaf every contributor imports (so contributing never pulls in the judgement and its imports): RestartSkip.BootInput (files a backend reads once and holds — a restart may be skipped only while they are untouched since it started) and RestartSkip.Adopted (what a backend re-reads when it adopts a deploy instead of being restarted: its commit pin, the web graph it judges tabs against). The judgement and the endpoint are restart-skip's machine half.
           - Cross-plugin:
             - Imported by:
+              - `apps-core/app-preload`
               - `build/deployment`
               - `build/restart-skip`
               - `build/server-build-id`
@@ -30545,7 +30564,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `UNDOCUMENTED_RUNTIME_FOLDERS`
           - `VERIFYING_FOLDERS`
       - Cross-plugin:
-        - Imported by: 93 plugins — full list in [`plugins/framework/plugins/plugin-id/REFERENCE.md`](../plugins/framework/plugins/plugin-id/REFERENCE.md)
+        - Imported by: 94 plugins — full list in [`plugins/framework/plugins/plugin-id/REFERENCE.md`](../plugins/framework/plugins/plugin-id/REFERENCE.md)
           - `plugin-meta` ×21
           - `apps` ×15
           - `tasks` ×12
@@ -30557,7 +30576,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra` ×3
           - `page` ×3
           - `active-data` ×2
-          - `apps-core/tabs`
+          - `apps-core` ×2
           - `hints/ask`
           - `primitives/data-view`
           - `reorder`
@@ -32335,13 +32354,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `check-thread-safety/no-blocking-check-work` — `check/index.ts` (debt)
         - **`web-artifacts`** — Per-plugin web build artifacts: content-addressed vite lib-mode builds composed via an import map
           - Core:
-            - Uses: 44 symbols — full list in [`plugins/framework/plugins/tooling/plugins/web-artifacts/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/web-artifacts/REFERENCE.md)
+            - Uses: 47 symbols — full list in [`plugins/framework/plugins/tooling/plugins/web-artifacts/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/web-artifacts/REFERENCE.md)
               - `packages/timed-fs` ×8
               - `framework/import-map-names` ×5
               - `framework/plugin-id` ×4
               - `framework/web-core` ×4
               - `infra/host-fs/user-path` ×4
               - `packages/flock` ×4
+              - `apps-core/app-preload` ×3
               - `plugin-meta/plugin-records` ×3
               - `framework/tooling` ×2
               - `packages/owned-fd` ×2
@@ -37048,7 +37068,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `worktreeDataDir`
           - `worktreesDir`
       - Cross-plugin:
-        - Imported by: 129 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
+        - Imported by: 130 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
           - `infra` ×31
           - `framework` ×20
           - `apps` ×18
@@ -37065,6 +37085,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `database` ×2
           - `integrations` ×2
           - `stats` ×2
+          - `apps-core/app-preload`
           - `config_v2`
           - `menu-bar`
           - `review/plugin-changes`
@@ -41461,7 +41482,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from: `boundaries/no-platform-api` — `core/internal/ticket-line.ts` (debt)
     - **`timed-fs`** — The file reads, listings, stats and glob scans every non-browser process makes, timed: node:fs's read calls under their own names and types (readFile / readdir / stat / lstat / access / realpath / readlink and their *Sync twins, existsSync) plus scanGlob / scanGlobSync over a Bun.Glob, each call metered while it runs (installFsWaitMeter — the backend's profiler shows one past FS_WAIT_FLOOR_MS in progress and charges it) and, once it returns past the floor, handed to onSlowFsCall subscribers, under a named wait layer (fs-read / fs-readdir / fs-stat / fs-glob) — so a disk stall names itself instead of reading as the caller's own work. A leaf (node builtins only), enforced by the timed-fs/no-untimed-fs-read lint.
       - Cross-plugin:
-        - Imported by: 169 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
+        - Imported by: 170 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
           - `infra` ×49
           - `framework` ×25
           - `apps` ×15
@@ -41478,6 +41499,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `integrations` ×2
           - `primitives` ×2
           - `stats` ×2
+          - `apps-core/app-preload`
           - `code-explorer`
           - `hints/ask`
           - `toolchain`
@@ -51580,7 +51602,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-xs`
           - `ui/tokens/shape --radius`
           - `ui/tokens/shape --spacing`
-        - Imported by: 75 plugins — full list in [`plugins/primitives/plugins/log-channels/REFERENCE.md`](../plugins/primitives/plugins/log-channels/REFERENCE.md)
+        - Imported by: 76 plugins — full list in [`plugins/primitives/plugins/log-channels/REFERENCE.md`](../plugins/primitives/plugins/log-channels/REFERENCE.md)
           - `apps` ×14
           - `debug` ×14
           - `infra` ×10
@@ -51593,6 +51615,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `reports` ×2
           - `tasks` ×2
           - `active-data/show-me`
+          - `apps-core/app-preload`
           - `backup`
           - `integrations/youtube/audio-fetch`
           - `menu-bar`
@@ -57154,6 +57177,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Imported by:
           - `apps-core/app-manifest`
+          - `apps-core/app-preload`
           - `apps/demo/shell`
           - `framework/cli/build/experimental-marks`
           - `ui/theme-engine`

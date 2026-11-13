@@ -113,7 +113,7 @@ so ⌘/middle-click opens a desktop in a new browser tab.
 
 ## Plugin reference
 
-- Description: App switcher rail. Wraps per-app shells; plugins contribute via Apps.App. Every app the browser registers, readable on the server: declaredApps() — each Apps.App contribution of the plugins the backend's composition loads: whole AppRef (id, name, base path, icon, tile colour) and its launch kind (tab or surface mode), generated at build time from the web contributions.
+- Description: App switcher rail. Wraps per-app shells; plugins contribute via Apps.App. Every app the browser registers, readable on the server: declaredApps() — each Apps.App contribution of the plugins the backend's composition loads: whole AppRef (id, name, base path, icon, tile colour) and its launch kind (tab or surface mode), generated at build time from the web contributions; declaredAppPlugins() — the same, each with the web plugin that contributes it.
 - Load-bearing: yes
 - Web:
   - Slots:
@@ -182,9 +182,9 @@ so ⌘/middle-click opens a desktop in a new browser tab.
     - `APP_RAIL_WIDTH`
     - `documentTitle`
 - Cross-plugin:
-  - Imported by: 60 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 61 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×29
-    - `apps-core` ×14
+    - `apps-core` ×15
     - `ui` ×6
     - `config_v2` ×2
     - `hints` ×2
@@ -197,7 +197,10 @@ so ⌘/middle-click opens a desktop in a new browser tab.
 - Exemptions:
   - Exempted by: `apps-core/layout` (0 debt)
 - Server:
-  - Exports (values): `declaredApps`
+  - Exports (types): `DeclaredAppOf`
+  - Exports (values):
+    - `declaredAppPlugins`
+    - `declaredApps`
 - Test helpers:
   - Web: `@plugins/apps-core/web/testing`
     - `getFocusedAppId`
@@ -206,6 +209,7 @@ so ⌘/middle-click opens a desktop in a new browser tab.
   - **`app-icon`** — Canonical, serializable app-icon descriptor (a Material Symbols glyph now, image variant later), drawn by the icons primitive.
   - **`app-launcher`** — The app brand every app shell draws (AppShell.Brand): the launcher — the current app's own mark — click for the composition's home app (the app gallery on main), hover or ArrowDown for a grid of…
   - **`app-manifest`** — Makes every listed app installable as its own OS app: serves GET /api/apps/:appId/manifest.webmanifest (id / start_url / scope = the app's base path, its tile colour, its icon PNGs) from the…
+  - **`app-preload`** — Starts the active app's code downloading at t0: a DocumentHead.Fragment that puts, per app base path, a <link rel=modulepreload> for every module of that app's deferred plugins — read from the…
   - **`app-rail`** — App rail: the far-left icon strip that switches the focused tab between apps, deriving its own active-app highlight and chrome theme scope.
   - **`app-rail-framing`** — App-rail framing region (rail / hidden). Contributes its variant-region host into Apps.RailFraming.
   - **`app-usage`** — Records per-app usage from the browser — a launch whenever the focused app changes to another, active time while the app is focused, the page visible, the window focused and the user not idle for 5…

@@ -7,6 +7,7 @@
 - Description: Restart-skip's contribution kinds, a leaf every contributor imports (so contributing never pulls in the judgement and its imports): RestartSkip.BootInput (files a backend reads once and holds — a restart may be skipped only while they are untouched since it started) and RestartSkip.Adopted (what a backend re-reads when it adopts a deploy instead of being restarted: its commit pin, the web graph it judges tabs against). The judgement and the endpoint are restart-skip's machine half.
 - Cross-plugin:
   - Imported by:
+    - `apps-core/app-preload`
     - `build/deployment`
     - `build/restart-skip`
     - `build/server-build-id`

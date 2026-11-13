@@ -48,6 +48,7 @@ import {
   webEntries,
   webScopedEntries,
 } from "@composition-web-registry";
+import { appRootOf } from "@plugins/apps-core/plugins/app-preload/core";
 import { PluginLoadErrors } from "./components/plugin-load-errors";
 import { BootScreen } from "./components/boot-screen";
 import {
@@ -73,6 +74,8 @@ const DEFERRED_BATCH_SIZE = 24;
 // contributions because PluginProvider (and useContributions) isn't mounted yet.
 // `runBootTasks` bounds them by a deadline and tracks each one's status, which
 // the boot screen renders.
+type LoadResult = Awaited<ReturnType<typeof loadPlugins>>;
+
 function bootTasksOf(plugins: LoadedPlugin[]): BootTask[] {
   return plugins.flatMap((p) =>
     (p.contributions ?? [])
@@ -268,10 +271,10 @@ function resolveActiveAppPrefix(
     );
   if (!matched) return null;
   // The matched contribution's pluginPath is the app's shell dir
-  // (apps/plugins/<app>/plugins/shell); the app root prefix is
-  // apps/plugins/<app>/ — all its deferred content lives under it.
-  const m = /^(apps\/plugins\/[^/]+)\//.exec(matched.pluginPath);
-  return m ? m[1] + "/" : null;
+  // (apps/plugins/<app>/plugins/shell); its root apps/plugins/<app>/ holds all
+  // its deferred content — the same root the served head preloads it by
+  // (apps-core/app-preload).
+  return appRootOf(matched.pluginPath);
 }
 
 // Publish a batch's load failures on the deferred-load signal (so consumers can
@@ -335,6 +338,17 @@ function PageApp() {
   const [onDemand] = useState(() =>
     createOnDemandPlugins(webScopedEntries, registry),
   );
+  // Resolves once the first app frame has committed: the deferred tier's
+  // drain waits on it, so its evaluation never competes with that render.
+  const [appCommitted] = useState(() => {
+    let resolve!: () => void;
+    const promise = new Promise<void>((r) => (resolve = r));
+    return { promise, resolve };
+  });
+  const ready = state.phase === "ready";
+  useEffect(() => {
+    if (ready) appCommitted.resolve();
+  }, [ready, appCommitted]);
 
   useEffect(() => {
     let cancelled = false;
@@ -349,11 +363,9 @@ function PageApp() {
       markDeferredPluginsLoaded(plugins.map((p) => p.id));
     };
 
-    // The active app's content is on screen at the commit that appends its
-    // priority batch — or at the first render, when it has none. That commit is
-    // the re-render of the readers of the slots the batch changed (the pane
-    // router's `Pane.Register`, …); a batch that changed no rendered slot shows
-    // nothing new, and the mark lands on whatever commits next.
+    // The active app's content is on screen at the first render: its priority
+    // batch registers with the eager tier, before the boot screen gives way
+    // (or, past Continue anyway, at the commit that registers it).
     const markRouteContentAtNextCommit = () =>
       markBootInstantAtNextCommit(
         ROUTE_CONTENT_COMMIT_ID,
@@ -372,29 +384,29 @@ function PageApp() {
         loader: () => traceBootPluginLoad(e.pluginPath, tier, e.loader),
       }));
 
-    const loadDeferredBatch = async (
-      batch: WebEntry[],
-      { routeContent = false } = {},
-    ): Promise<void> => {
-      if (batch.length === 0) return;
-      // Partial failure is tolerable (loadPlugins uses allSettled + collects
-      // errors), so a broken app-content chunk never aborts the tier.
-      const { plugins, errors } = await loadPlugins(
-        traced(batch, routeContent ? "priority" : "deferred"),
-      );
-      if (cancelled) return;
-      // Run any Core.Boot tasks these plugins contribute (none under apps/ today,
-      // but correct + future-proof) before they register, mirroring the eager
-      // path so hydration lands before the slot re-render. The app is already
-      // on screen, so nothing holds here: a failed / overdue task is reported.
+    // Register a loaded app-content batch: run any Core.Boot tasks its
+    // plugins contribute (none under apps/ today, but correct + future-proof)
+    // before they register, mirroring the eager path so hydration lands before
+    // the slot re-render. Nothing holds here: a failed / overdue task is
+    // reported. Its load failures are deferred ones — published (the app's own
+    // "Couldn't load" pane, the Reload chip), never the core-error banner.
+    const registerBatch = async ({ plugins, errors }: LoadResult) => {
       await runBootTasks(bootTasksOf(plugins), {
         holdOnBlocking: false,
         onProblem: reportBootProblem,
       }).settled;
       if (cancelled) return;
-      if (routeContent) markRouteContentAtNextCommit();
       appendPlugins(plugins);
       recordErrors(errors);
+    };
+
+    const loadDeferredBatch = async (batch: WebEntry[]): Promise<void> => {
+      if (batch.length === 0) return;
+      // Partial failure is tolerable (loadPlugins uses allSettled + collects
+      // errors), so a broken app-content chunk never aborts the tier.
+      const loaded = await loadPlugins(traced(batch, "deferred"));
+      if (cancelled) return;
+      await registerBatch(loaded);
     };
 
     // Whether the app has rendered: a throw before that leaves nothing on screen
@@ -423,21 +435,62 @@ function PageApp() {
       );
       const eagerResult = await loadPlugins(traced(eager, "eager"));
       endLoad();
+
+      // Layer 3 — the active app's content, loaded NOW, alongside the boot
+      // tasks, and committed with the first frame: the page's head preloads
+      // its modules from t0 (apps-core/app-preload), so importing them is
+      // mostly evaluation, and the app paints whole — never its chrome first
+      // and its content a beat later. Only the rest of the deferred tier waits
+      // for after the first paint. It is a boot task of its own ("App code"),
+      // so the boot screen names it while it is pending, an overdue one is
+      // reported, and Continue anyway paints without it.
+      const activePrefix = resolveActiveAppPrefix(eagerResult.plugins, eager);
+      const priority: WebEntry[] = [];
+      const rest: WebEntry[] = [];
+      for (const e of deferred) {
+        if (activePrefix && e.pluginPath.startsWith(activePrefix))
+          priority.push(e);
+        else rest.push(e);
+      }
+      // No app content (a path outside every app) is loaded from the start.
+      // Partial failure is tolerable (allSettled + collected errors): a broken
+      // app-content chunk is reported, never fails the boot.
+      const appCode: { loaded: LoadResult | null } = {
+        loaded: priority.length === 0 ? { plugins: [], errors: [] } : null,
+      };
+      const appCodeLoad = loadPlugins(traced(priority, "priority")).then(
+        (loaded) => (appCode.loaded = loaded),
+      );
+      const appCodeTask: BootTask[] =
+        priority.length === 0
+          ? []
+          : [
+              {
+                label: "App code",
+                ifUnavailable: "block",
+                run: async () => {
+                  await appCodeLoad;
+                },
+              },
+            ];
       const endBoot = startBootSpan(
         "boot-tasks",
         "boot-tasks",
         "runBootTasks (eager)",
       );
-      const bootRun = runBootTasks(bootTasksOf(eagerResult.plugins), {
+      const bootRun = runBootTasks(
+        [...bootTasksOf(eagerResult.plugins), ...appCodeTask],
+        {
         holdOnBlocking: true,
         onProblem: reportBootProblem,
-        onChange: (tasks) => {
-          if (cancelled) return;
-          setState((prev) =>
-            prev.phase === "boot-tasks" ? { ...prev, tasks } : prev,
-          );
+          onChange: (tasks) => {
+            if (cancelled) return;
+            setState((prev) =>
+              prev.phase === "boot-tasks" ? { ...prev, tasks } : prev,
+            );
+          },
         },
-      });
+      );
       if (!cancelled) {
         setState({
           phase: "boot-tasks",
@@ -447,6 +500,14 @@ function PageApp() {
       }
       await bootRun.settled;
       endBoot();
+      if (cancelled) return;
+      // Nothing reads the registry before the first render below (the boot
+      // screen mounts no PluginProvider), so these appends notify no one.
+      registry.append(eagerResult.plugins);
+      // Loaded, unless the user chose Continue anyway first: then the app's
+      // content registers when it lands, after the first paint.
+      const appCodeAtPaint = appCode.loaded;
+      if (appCodeAtPaint !== null) await registerBatch(appCodeAtPaint);
       markBootInstant("set-state", "paint", "App setState (first render)");
       if (cancelled) return;
       // The first render that can show data: the commit that swaps the boot
@@ -459,27 +520,22 @@ function PageApp() {
         "First commit after boot snapshot",
       );
 
-      // Layer 3 — deferred tier, AFTER first paint (never blocks chrome).
-      // Active-app-first: front-load the deep-linked app's content as one awaited
-      // priority batch, then drain the rest in yielding idle batches.
-      const activePrefix = resolveActiveAppPrefix(eagerResult.plugins, eager);
-      const priority: WebEntry[] = [];
-      const rest: WebEntry[] = [];
-      for (const e of deferred) {
-        if (activePrefix && e.pluginPath.startsWith(activePrefix))
-          priority.push(e);
-        else rest.push(e);
-      }
-
-      if (priority.length === 0) markRouteContentAtNextCommit();
-      // Nothing reads the registry before the first render below (the boot
-      // screen mounts no PluginProvider), so this append notifies no one.
-      registry.append(eagerResult.plugins);
+      // The active app's content is on screen at this first commit — or, past
+      // Continue anyway, at the commit that registers it.
+      if (appCodeAtPaint !== null) markRouteContentAtNextCommit();
       setState({ phase: "ready", coreErrors: eagerResult.errors });
       rendered = true;
       recordErrors(eagerResult.errors);
+      if (appCodeAtPaint === null) {
+        const late = await appCodeLoad;
+        if (cancelled) return;
+        markRouteContentAtNextCommit();
+        await registerBatch(late);
+      }
 
-      await loadDeferredBatch(priority, { routeContent: true });
+      // The rest of the deferred tier, AFTER the first app frame has
+      // committed (never competing with it): drained in yielding idle batches.
+      await appCommitted.promise;
       for (let i = 0; i < rest.length && !cancelled; i += DEFERRED_BATCH_SIZE) {
         await loadDeferredBatch(rest.slice(i, i + DEFERRED_BATCH_SIZE));
         // Breathe between batches so the queued socket grant + input + paint can
@@ -513,7 +569,7 @@ function PageApp() {
     return () => {
       cancelled = true;
     };
-  }, [registry]);
+  }, [registry, appCommitted]);
 
   if (state.phase === "loading-code")
     return <BootScreen phase="loading-code" />;

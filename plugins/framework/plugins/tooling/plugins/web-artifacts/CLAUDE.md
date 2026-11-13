@@ -478,13 +478,14 @@ Key invariants:
 
 - Description: Per-plugin web build artifacts: content-addressed vite lib-mode builds composed via an import map
 - Core:
-  - Uses: 44 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 47 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `packages/timed-fs` ×8
     - `framework/import-map-names` ×5
     - `framework/plugin-id` ×4
     - `framework/web-core` ×4
     - `infra/host-fs/user-path` ×4
     - `packages/flock` ×4
+    - `apps-core/app-preload` ×3
     - `plugin-meta/plugin-records` ×3
     - `framework/tooling` ×2
     - `packages/owned-fd` ×2

@@ -82,6 +82,7 @@ import {
   workerTreeOf,
 } from "./worker-link";
 import { composeDist } from "./compose";
+import { appRootOf } from "@plugins/apps-core/plugins/app-preload/core";
 import {
   crawlSnapshotDirName,
   ensureCrawlSnapshot,
@@ -758,6 +759,16 @@ async function runPipeline(
         artifactUrl(plan.registryTarget.dirName),
         ...eagerSeeds,
       ];
+      // The boot's priority batch per app: every deferred plugin under the
+      // app's root (the same partition web-core's App.tsx loads by).
+      const appPreloadSeeds: Record<string, string[]> = {};
+      for (const t of plan.webTargets) {
+        if (t.pluginPath === null || !plan.deferredPaths.has(t.pluginPath))
+          continue;
+        const root = appRootOf(t.pluginPath);
+        if (root === null) continue;
+        (appPreloadSeeds[root] ??= []).push(artifactUrl(t.dirName));
+      }
 
       if (crawl !== null) {
         links.push({
@@ -784,6 +795,7 @@ async function runPipeline(
         emitted,
         entryUrl,
         preloadSeeds,
+        appPreloadSeeds,
       });
       if (crawl !== null) {
         const staged = stageCrawlSnapshot({
