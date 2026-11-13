@@ -24,6 +24,7 @@ import {
   mountNewFriction,
 } from "../internal/figures";
 import { UPDATE_SKILL } from "../internal/update-skill";
+import type { ImportedImage } from "@plugins/framework/plugins/image-import/core";
 import terminalShot from "../shots/terminal-manager.png";
 import firstUiShot from "../shots/ui-2026-04-11.png";
 import "./story-essay.css";
@@ -279,7 +280,7 @@ function AndBeyond() {
         the mental overhead.
       </p>
       <Shot
-        src={terminalShot}
+        image={terminalShot}
         name="My first terminal-based agent manager"
         alt="A terminal list of Claude Code sessions, with New session and Resume session"
       />
@@ -290,7 +291,7 @@ function AndBeyond() {
         freedom.
       </p>
       <Shot
-        src={firstUiShot}
+        image={firstUiShot}
         name="The first versions of the UI were just wrappers around Claude Code"
         alt="April 11: a sidebar of Claude sessions next to a Claude Code terminal"
       />
@@ -406,11 +407,33 @@ function UpdateSkill() {
 }
 
 /** A screenshot with its caption; a click opens it whole in the app's image viewer. */
-function Shot({ src, name, alt }: { src: string; name: string; alt: string }) {
-  const trigger = useImageViewerTrigger<HTMLImageElement>({ src, name, alt });
+function Shot({
+  image,
+  name,
+  alt,
+}: {
+  image: ImportedImage;
+  name: string;
+  alt: string;
+}) {
+  const trigger = useImageViewerTrigger<HTMLImageElement>({
+    src: image.src,
+    name,
+    alt,
+  });
   return (
     <figure className="shot">
-      <img src={src} alt={alt} {...trigger} />
+      {/* The size reserves the box (CSS scales it to the column, keeping the
+          ratio), so the essay does not jump when the picture lands. */}
+      <img
+        src={image.src}
+        width={image.width}
+        height={image.height}
+        alt={alt}
+        loading="lazy"
+        decoding="async"
+        {...trigger}
+      />
       <figcaption>{name}</figcaption>
     </figure>
   );

@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-framework-image-import",
+  "version": "0.0.1",
+  "private": true,
+  "description": "What `import shot from \"./x.png\"` evaluates to on every host: an ImportedImage — its URL and its pixel size, read from the file at build time so a page reserves the image's box before it loads. The web build emits the file beside the artifact (content-hashed, fetched like any image: cached, decoded off-thread, lazy-loadable), never base64 in the JS; a Bun render and a jsdom test get a data: URL. A leaf over packages/image-size, so web code can name the type without reaching the build."
+}

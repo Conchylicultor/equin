@@ -111,8 +111,9 @@ it. Three parts:
   covers it as a web barrel of the take's own plugin subtree. `crawlable`
   itself has no `web/`.
 
-An imported image is the `data:` URL the browser build gives it (vite's
-library mode inlines every asset): the take calls barrel-import's
+An imported image is an `ImportedImage` (`framework/image-import`) whose
+`src` is a `data:` URL — the browser build's is a file of the artifact, at a
+URL only the deployed import map knows: the take calls barrel-import's
 `inlineAssetImports()` before loading anything, so a render never holds a
 path on this machine — and `semanticHtml` keeps no `data:` image, only its
 alt (a figure caption, or a link's text), so a fragment is the page's words,

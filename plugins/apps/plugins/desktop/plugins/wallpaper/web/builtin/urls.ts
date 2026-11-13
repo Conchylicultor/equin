@@ -1,3 +1,4 @@
+import type { ImportedImage } from "@plugins/framework/plugins/image-import/core";
 import elarun from "./elarun.jpg";
 import shell from "./shell.jpg";
 import fold from "./fold.jpg";
@@ -6,10 +7,11 @@ import opal from "./opal.jpg";
 import kokkini from "./kokkini.jpg";
 
 /**
- * Built-in wallpaper id → bundled image URL. Keyed by the ids of
+ * Built-in wallpaper id → bundled image URL (a wallpaper covers the screen,
+ * so only its URL matters, not its size). Keyed by the ids of
  * `BUILTIN_WALLPAPERS` (core); the gradient has no entry (it is drawn).
  */
-const BUILTIN_WALLPAPER_URLS: Record<string, string> = {
+const BUILTIN_WALLPAPER_URLS: Record<string, ImportedImage> = {
   elarun,
   shell,
   fold,
@@ -19,5 +21,5 @@ const BUILTIN_WALLPAPER_URLS: Record<string, string> = {
 };
 
 export function builtinWallpaperUrl(id: string): string | undefined {
-  return BUILTIN_WALLPAPER_URLS[id];
+  return BUILTIN_WALLPAPER_URLS[id]?.src;
 }

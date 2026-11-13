@@ -87,6 +87,10 @@ barrel written after its folder was first read would not be found.
 - Description: Bun runtime stubs for importing web/server barrels outside the browser (docgen, introspection).
 - Core:
   - Uses:
+    - `framework/image-import.IMAGE_IMPORT_RE`
+    - `framework/image-import.imageDataUrl`
+    - `framework/image-import.imageModuleCode`
+    - `framework/image-import.importedImageSize`
     - `framework/slot-declaration.trackSlotSites`
     - `infra/launcher/env-names.envName`
     - `infra/namespace.asNamespace`

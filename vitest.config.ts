@@ -7,6 +7,7 @@ import type { isBrowserHostSpecifier as IsBrowserHostSpecifier } from "@plugins/
 import type { domTestExactInclude as DomTestExactInclude } from "@plugins/framework/plugins/tooling/plugins/test-layout/core";
 import type { readEnv as ReadEnv } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import type { readFileSync as ReadFileSync } from "@plugins/packages/plugins/timed-fs/core";
+import type * as ImageImport from "@plugins/framework/plugins/image-import/core";
 
 // The config loader knows nothing of the tsconfig `@plugins/*` alias, so plugin
 // code is loaded through a jiti that does (the same pattern as eslint.config.ts).
@@ -48,6 +49,13 @@ export default defineConfig(async () => {
   }>(
     path.resolve(__dirname, "plugins/packages/plugins/timed-fs/core/index.ts"),
   );
+  const { IMAGE_IMPORT_RE, imageDataUrl, imageModuleCode, importedImageSize } =
+    await jiti.import<typeof ImageImport>(
+      path.resolve(
+        __dirname,
+        "plugins/framework/plugins/image-import/core/index.ts",
+      ),
+    );
   const exactList = readEnv("TEST_DOM_FILES");
   return {
     plugins: [
@@ -61,6 +69,20 @@ export default defineConfig(async () => {
         enforce: "pre",
         resolveId: (id: string) =>
           isBrowserHostSpecifier(id) ? { id, external: true } : null,
+      },
+      // An image import is an ImportedImage (`framework/image-import`), as the
+      // web build and a Bun render give it — here with a `data:` URL.
+      {
+        name: "image-imports",
+        enforce: "pre",
+        load(id: string) {
+          if (id.includes("?") || !IMAGE_IMPORT_RE.test(id)) return null;
+          const bytes = new Uint8Array(readFileSync(id));
+          return imageModuleCode(
+            JSON.stringify(imageDataUrl(id, bytes)),
+            importedImageSize(id, bytes),
+          );
+        },
       },
       react(),
       tailwindcss(),

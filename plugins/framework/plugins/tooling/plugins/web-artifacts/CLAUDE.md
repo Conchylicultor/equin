@@ -248,6 +248,15 @@ Key invariants:
   static base is a glob root (`globRootsOf`, `own-files.ts`): its files join the
   address and the inline audit's allowed roots. A non-literal pattern, or a
   base as wide as the repo or `plugins/`, throws.
+- **An imported image is a file of its artifact, never base64 in its JS.**
+  vite's library mode inlines every imported asset whatever
+  `assetsInlineLimit` says; `imageAssetsPlugin` (`core/internal/image-assets.ts`)
+  takes image imports first and emits each file into the artifact beside its
+  modules (served from the content-addressed store dir like a worker chunk,
+  its URL `new URL("<file>", import.meta.url)`), the module evaluating to
+  `framework/image-import`'s `ImportedImage` (`{ src, width, height }`, the
+  size read at build time so the page reserves the box). An image it cannot
+  size (`.svg`, `.avif`, `.ico`) fails the build.
 - **Vendor assets follow their module.** A bundled npm module fetching a file by
   `new URL("./x.wasm", import.meta.url)` gets it beside every output holding it
   (`internal/package-assets.ts`), hard-linked from a per-content store entry
@@ -478,7 +487,7 @@ Key invariants:
 
 - Description: Per-plugin web build artifacts: content-addressed vite lib-mode builds composed via an import map
 - Core:
-  - Uses: 47 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 50 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `packages/timed-fs` ×8
     - `framework/import-map-names` ×5
     - `framework/plugin-id` ×4
@@ -486,6 +495,7 @@ Key invariants:
     - `infra/host-fs/user-path` ×4
     - `packages/flock` ×4
     - `apps-core/app-preload` ×3
+    - `framework/image-import` ×3
     - `plugin-meta/plugin-records` ×3
     - `framework/tooling` ×2
     - `packages/owned-fd` ×2

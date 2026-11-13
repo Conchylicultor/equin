@@ -5,6 +5,7 @@ import { symbol, type SymbolRef } from "@plugins/ui/plugins/icons/core";
 // imports, so the files stay small. An app the live demo carries is shot in the
 // demo, at the place its card opens (`APP_DEMO_PLACES`); only apps whose
 // screenshot is fit to publish have one; the rest are drawn.
+import type { ImportedImage } from "@plugins/framework/plugins/image-import/core";
 import agentsShot from "../shots/app-agents.jpg";
 import chordShot from "../shots/app-chord.jpg";
 import filesShot from "../shots/app-files.jpg";
@@ -31,8 +32,8 @@ export interface CatalogApp {
   /** The tile's colour, one categorical palette slot. */
   color: AvatarColor;
   description: string;
-  /** The app's screenshot (an image URL); the card draws a stand-in without one. */
-  shot?: string;
+  /** The app's screenshot (its URL and size); the card draws a stand-in without one. */
+  shot?: ImportedImage;
   /** Not built yet: drawn dimmed, with no Install. */
   soon?: boolean;
 }

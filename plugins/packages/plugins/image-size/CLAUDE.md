@@ -9,6 +9,7 @@
   - Imported by:
     - `conversations/transcript-source`
     - `conversations/transcript-watcher`
+    - `framework/image-import`
 - Core:
   - Exports (types):
     - `ImageSize`

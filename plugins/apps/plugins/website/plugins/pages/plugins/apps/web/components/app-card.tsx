@@ -144,9 +144,12 @@ function AppThumb({ app, live }: { app: CatalogApp; live: boolean }) {
       <div className="website-app-thumb">
         <img
           className="website-app-shot"
-          src={app.shot}
+          src={app.shot.src}
+          width={app.shot.width}
+          height={app.shot.height}
           alt={app.name}
           loading="lazy"
+          decoding="async"
         />
         {live && <TryLiveChip />}
       </div>

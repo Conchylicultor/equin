@@ -38,6 +38,7 @@ import { babelContributionsPlugin } from "./babel-transform";
 import { makeArtifactExternal } from "../externals";
 import { inlinedRootsFor } from "../own-roots";
 import { createInlineAudit } from "./inline-audit";
+import { imageAssetsPlugin } from "./image-assets";
 import { hashedRootsFor } from "./own-files";
 import { artifactSourcemaps } from "./sourcemaps";
 import type { ArtifactMeta } from "./store";
@@ -464,7 +465,13 @@ export async function buildArtifact(
     kind: target.kind,
   });
 
-  const plugins: VitePlugin[] = [audit.plugin, chunkCssPlugin(target.dirName)];
+  const readImage = async (path: string) =>
+    new Uint8Array(await readFile(path));
+  const plugins: VitePlugin[] = [
+    audit.plugin,
+    chunkCssPlugin(target.dirName),
+    imageAssetsPlugin(readImage),
+  ];
   if (target.kind === "entry") plugins.push(stripGlobalCssPlugin());
   if (target.pluginPath) {
     plugins.push(
@@ -505,7 +512,7 @@ export async function buildArtifact(
       base: "./",
       worker: {
         format: "es",
-        plugins: () => [workerAudit.plugin],
+        plugins: () => [workerAudit.plugin, imageAssetsPlugin(readImage)],
         rolldownOptions: { output: keepNamesOutput },
       },
       build: {

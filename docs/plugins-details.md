@@ -30879,6 +30879,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `readServerTiming`
           - `SERVER_TIMING_METRIC`
           - `serverTimingValue`
+    - **`image-import`** — What `import shot from "./x.png"` evaluates to on every host: an ImportedImage — its URL and its pixel size, read from the file at build time so a page reserves the image's box before it loads. The web build emits the file beside the artifact (content-hashed, fetched like any image: cached, decoded off-thread, lazy-loadable), never base64 in the JS; a Bun render and a jsdom test get a data: URL. A leaf over packages/image-size, so web code can name the type without reaching the build.
+      - Core:
+        - Uses:
+          - `packages/image-size.ImageSize`
+          - `packages/image-size.readImageSize`
+        - Exports (types): `ImportedImage`
+        - Exports (values):
+          - `IMAGE_IMPORT_MIME`
+          - `IMAGE_IMPORT_RE`
+          - `imageDataUrl`
+          - `imageModuleCode`
+          - `importedImageSize`
+      - Cross-plugin:
+        - Imported by:
+          - `framework/tooling/web-artifacts`
+          - `plugin-meta/barrel-import`
     - **`import-map-names`** — The bare-specifier namespaces only a page's import map answers — a browser host (`@browser-host/`), its worker entry (`@browser-host-worker/`) and its starting snapshot (`@browser-host-snapshot/`), served by web-artifacts: external to every artifact build, never an npm package, never resolved by Bun. A leaf with no imports directly under framework (not under web-artifacts, whose closure a child would carry into every composition), so source-digest's closure walk — which a server reaches a lazy `import("@browser-host/…")` through — knows them for free.
       - Cross-plugin:
         - Imported by:
@@ -32729,7 +32745,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `check-thread-safety/no-blocking-check-work` — `check/index.ts` (debt)
         - **`web-artifacts`** — Per-plugin web build artifacts: content-addressed vite lib-mode builds composed via an import map
           - Core:
-            - Uses: 47 symbols — full list in [`plugins/framework/plugins/tooling/plugins/web-artifacts/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/web-artifacts/REFERENCE.md)
+            - Uses: 50 symbols — full list in [`plugins/framework/plugins/tooling/plugins/web-artifacts/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/web-artifacts/REFERENCE.md)
               - `packages/timed-fs` ×8
               - `framework/import-map-names` ×5
               - `framework/plugin-id` ×4
@@ -32737,6 +32753,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/host-fs/user-path` ×4
               - `packages/flock` ×4
               - `apps-core/app-preload` ×3
+              - `framework/image-import` ×3
               - `plugin-meta/plugin-records` ×3
               - `framework/tooling` ×2
               - `packages/owned-fd` ×2
@@ -41191,6 +41208,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `conversations/transcript-source`
           - `conversations/transcript-watcher`
+          - `framework/image-import`
       - Core:
         - Exports (types):
           - `ImageSize`
@@ -44834,6 +44852,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`barrel-import`** — Bun runtime stubs for importing web/server barrels outside the browser (docgen, introspection).
       - Core:
         - Uses:
+          - `framework/image-import.IMAGE_IMPORT_RE`
+          - `framework/image-import.imageDataUrl`
+          - `framework/image-import.imageModuleCode`
+          - `framework/image-import.importedImageSize`
           - `framework/slot-declaration.trackSlotSites`
           - `infra/launcher/env-names.envName`
           - `infra/namespace.asNamespace`

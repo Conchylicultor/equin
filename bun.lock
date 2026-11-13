@@ -3790,6 +3790,10 @@
       "name": "@equin/plugin-framework-http-router",
       "version": "0.0.1",
     },
+    "plugins/framework/plugins/image-import": {
+      "name": "@equin/plugin-framework-image-import",
+      "version": "0.0.1",
+    },
     "plugins/framework/plugins/import-map-names": {
       "name": "@equin/plugin-framework-import-map-names",
       "version": "0.0.1",
@@ -9627,6 +9631,8 @@
     "@equin/plugin-framework-hook-value": ["@equin/plugin-framework-hook-value@workspace:plugins/framework/plugins/hook-value"],
 
     "@equin/plugin-framework-http-router": ["@equin/plugin-framework-http-router@workspace:plugins/framework/plugins/http-router"],
+
+    "@equin/plugin-framework-image-import": ["@equin/plugin-framework-image-import@workspace:plugins/framework/plugins/image-import"],
 
     "@equin/plugin-framework-import-map-names": ["@equin/plugin-framework-import-map-names@workspace:plugins/framework/plugins/import-map-names"],
 
