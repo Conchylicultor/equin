@@ -1,21 +1,13 @@
-import {
-  sharedMemo,
-  sharedWork,
-} from "@plugins/packages/plugins/shared-work/core";
+import { sharedWork } from "@plugins/packages/plugins/shared-work/core";
 import type {
   RepoFiles,
   RepoSnapshot,
 } from "@plugins/framework/plugins/tooling/core";
 import { groupedByOwner, readGrouped } from "./grouped";
 import { recordKey } from "./keys";
-import { npmCodeKey } from "./npm-identity";
 import { currentRecordStore } from "./store";
-import {
-  buildModuleGraph,
-  NO_OUTSIDE_FILES,
-  type ModuleGraphInput,
-} from "./module-graph";
-import { codeCheckoutOf } from "./code-checkout";
+import { NO_OUTSIDE_FILES, type ModuleGraphInput } from "./module-graph";
+import { codeIdentity } from "./code-identity";
 
 /**
  * A per-file scan as FILE RECORDS: what a reader takes out of one file (the
@@ -76,62 +68,16 @@ export function isSnapshot(repo: RepoFiles): repo is RepoSnapshot {
   return typeof (repo as Partial<RepoSnapshot>).blobOf === "function";
 }
 
-// Per set: each scan module's identity, by its URL.
-const identitiesOf = sharedMemo(
-  "plugin records",
-  (_set: RepoFiles) => new Map<string, Promise<string>>(),
-);
-
 /**
- * The repo-relative path of the module at `url`: the longest of its path's
- * `plugins/…` suffixes that is a member of the set — so a checkout reached
- * through another spelling of its root (a symlink, a realpath) resolves the
- * same.
- */
-export function repoModuleOf(repo: RepoFiles, url: string): string {
-  const path = decodeURIComponent(new URL(url).pathname);
-  for (
-    let i = path.indexOf("/plugins/");
-    i >= 0;
-    i = path.indexOf("/plugins/", i + 1)
-  ) {
-    const rel = path.slice(i + 1);
-    if (repo.has(rel)) return rel;
-  }
-  throw new Error(
-    `[plugin-records] ${url} is not a module of the checkout at ${repo.root}: a scan's identity is its defining module`,
-  );
-}
-
-/**
- * A scan's (or fold's) identity: the Merkle key of the module at `url` and of
- * the npm code its closure imports, read from the checkout that module lives
- * in (`codeCheckoutOf`) — the set being scanned when it is that checkout, this
- * process's own otherwise, so a fixture needs no copy of the scanner.
+ * A scan's (or fold's) identity: its defining module's code identity
+ * (`codeIdentity`) — read from the checkout that module lives in, so a
+ * fixture needs no copy of the scanner.
  */
 export function scannerIdentity(
   input: ModuleGraphInput,
   url: string,
 ): Promise<string> {
-  const byModule = identitiesOf(input.snapshot);
-  let id = byModule.get(url);
-  if (!id) {
-    // The npm code is what the scan's closure imports, closed over the
-    // lockfile — never the whole lockfile, which moved every scan's records
-    // on any package bump though most scans load no package.
-    id = codeCheckoutOf(input, url).then(async ({ input: code, module }) => {
-      const graph = await buildModuleGraph(code, [module]);
-      return recordKey(
-        "scan",
-        module,
-        graph.keyOf(module),
-        code.store.environment,
-        await npmCodeKey(code.snapshot, graph.packages),
-      );
-    });
-    byModule.set(url, id);
-  }
-  return id;
+  return codeIdentity(input, url, "scan");
 }
 
 /** Each of `files` (repo-relative members of the set) scanned, in order. Results must be JSON. */

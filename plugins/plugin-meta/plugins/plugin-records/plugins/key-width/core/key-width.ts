@@ -175,7 +175,13 @@ export async function keyWidths(
     if (!p)
       parsed.set(
         path,
-        (p = input.snapshot.read(path).then((src) => {
+        // A module outside the set (a producer's code read from the
+        // checkout it runs from) is read the way the graph read it.
+        (p = (
+          input.snapshot.has(path)
+            ? input.snapshot.read(path)
+            : input.readOutside(path)
+        ).then((src) => {
           if (src === null)
             throw new Error(`[key-width] cannot read module ${path}`);
           return parseModule(graph, path, src);

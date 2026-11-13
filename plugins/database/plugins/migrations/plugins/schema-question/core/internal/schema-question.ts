@@ -1,10 +1,7 @@
 import type { RepoFiles } from "@plugins/framework/plugins/tooling/core";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { createKeyedCoalescer } from "@plugins/packages/plugins/coalesce/core";
-import {
-  closureRecord,
-  repoModuleOf,
-} from "@plugins/plugin-meta/plugins/plugin-records/core";
+import { closureRecord } from "@plugins/plugin-meta/plugins/plugin-records/core";
 import {
   MIGRATIONS_PLUGIN_DIR,
   schemaFilesIn,
@@ -22,6 +19,13 @@ import {
  * record every checkout shares). Import what it reads through the SAME
  * specifiers the schema files use, so the host holds one instance of each
  * module.
+ *
+ * The question and the host are CODE: they run from the checkout they live in
+ * (their URL), whatever the set asked about — only the schema files are read
+ * from the set. Asked about another checkout's set, a question's imports are
+ * its own checkout's modules, so a registry it reads is not the one that
+ * set's schema files filled: one instance per module holds only when the set
+ * is the checkout the question lives in (every caller today).
  */
 export interface SchemaQuestion<A, I = null> {
   answer(file: string, exports: Record<string, unknown>, input: I): A;
@@ -45,7 +49,9 @@ export type SchemaAnswers<A> =
 // The host's wire format (`scripts/schema-question-host.ts` spells it again:
 // it imports nothing, being in every answer's key).
 interface HostRequest {
+  /** Repo-relative schema files of the checkout the host is handed. */
   files: string[];
+  /** Each ask's question module by absolute path: code, run where it lives. */
   asks: { question: string; inputs: Record<string, unknown> }[];
 }
 interface HostResponse {
@@ -56,17 +62,17 @@ interface HostResponse {
   )[];
 }
 
-// The host's repo-relative path: fixed by this plugin's layout, whatever the
-// checkout (a test's throwaway root holds it at the same place).
-const HOST_MODULE = `${MIGRATIONS_PLUGIN_DIR}/plugins/schema-question/scripts/schema-question-host.ts`;
+/** The absolute path of a `file:` module URL. */
+function pathOfUrl(url: string): string {
+  return decodeURIComponent(new URL(url).pathname);
+}
+
+// The probe host: code, run from the checkout this module lives in, whatever
+// checkout's schema files it loads.
 const HOST_URL = new URL(
   "../../scripts/schema-question-host.ts",
   import.meta.url,
 ).href;
-if (!HOST_URL.endsWith(`/${HOST_MODULE}`))
-  throw new Error(
-    `schema-question: the probe host is not at ${HOST_MODULE} (${HOST_URL})`,
-  );
 
 type Outcome =
   | { kind: "ok"; answers: Record<string, SchemaFileAnswer<unknown>> }
@@ -101,7 +107,7 @@ const probes = createKeyedCoalescer<string, Ask>({
       asks: asks.map((a) => ({ question: a.question, inputs: a.inputs })),
     };
     const result = await spawnCaptured(
-      [process.execPath, "--bun", `${root}/${HOST_MODULE}`, root],
+      [process.execPath, "--bun", pathOfUrl(HOST_URL), root],
       {
         // drizzle-kit's cwd and environment: a schema file loads here exactly
         // as migration generation loads it.
@@ -159,8 +165,9 @@ const probes = createKeyedCoalescer<string, Ask>({
  * plugin's dir with drizzle-kit's environment.
  *
  * The answer — every file's — is ONE plugin record (`closureRecord`), keyed by
- * the Merkle keys of the probe host, the question module and every asked file
- * (each over its import closure), plus the inputs. Not one record per file:
+ * the code identity of the probe host and the question module (read from the
+ * checkout each lives in), the Merkle key of every asked file of the set (each
+ * over its import closure), plus the inputs. Not one record per file:
  * the files share a process, and so their module eval shares registries — a
  * table declared twice throws in whichever file loads second — so a file's
  * answer is a function of the whole set loaded with it, as it is for
@@ -185,7 +192,7 @@ export async function askSchemaFiles<A, I = null>(
   },
 ): Promise<SchemaAnswers<A>> {
   const files = [...(question.files ?? schemaFilesIn(repo))].sort();
-  const questionModule = repoModuleOf(repo, question.module);
+  const questionModule = pathOfUrl(question.module);
   const inputs: Record<string, unknown> = {};
   for (const f of files) inputs[f] = question.input?.(f) ?? null;
   const record = await closureRecord<
@@ -195,7 +202,8 @@ export async function askSchemaFiles<A, I = null>(
     repo,
     {
       name: `schema-question:${question.name}`,
-      modules: [HOST_MODULE, questionModule, ...files],
+      code: [HOST_URL, question.module],
+      data: files,
       input: { files, inputs },
     },
     async () => {

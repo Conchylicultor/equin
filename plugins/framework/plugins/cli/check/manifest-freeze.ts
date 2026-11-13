@@ -22,12 +22,6 @@ const READ_CONCURRENCY = 32;
 export interface ManifestFreezeInput {
   /** The checkout's file set: every closure is read off its module graph. */
   repo: RepoFiles;
-  /**
-   * The modules of `repo` whose code computes a command's regenerators (this
-   * module, by `repoModuleOf`) — Merkle-keyed into each recorded answer, so
-   * an edit to how it is computed answers again.
-   */
-  producers: readonly string[];
   /** The CLI's one entrypoint, repo-relative (`bin/index.ts`). */
   entry: string;
   /** Repo-relative manifest path → manifest id, so a hit can name itself. */
@@ -116,8 +110,7 @@ export interface ManifestFreezeReport {
 export async function measureManifestFreeze(
   input: ManifestFreezeInput,
 ): Promise<ManifestFreezeReport> {
-  const { repo, producers, entry, hazards, registries, startupRoots, writer } =
-    input;
+  const { repo, entry, hazards, registries, startupRoots, writer } = input;
   const policy = { dynamicImports: "follow-except-command-runs" } as const;
 
   const startup = await fileSetImportClosures(repo, [entry], policy);
@@ -167,7 +160,8 @@ export async function measureManifestFreeze(
   // Which LIVE modules of a command body call the writer — the bundle's
   // tree-shaking, which no module graph answers — is recorded per body, keyed
   // on exactly what its `Bun.build` parses (`bundled`: each module of its
-  // closure by content and edges) and on the code computing it (`producers`).
+  // closure by content and edges) and on the code computing it (this module,
+  // read from the checkout it runs from — never from the set measured).
   // So a pass bundles only the bodies whose closure an edit reaches; an edit
   // outside every one (a web plugin) bundles none.
   //
@@ -193,7 +187,7 @@ export async function measureManifestFreeze(
       repo,
       {
         name: "cli:manifest-freeze-regenerators",
-        modules: producers,
+        code: [import.meta.url],
         bundled: closure,
         // The bundler also reads the alias owner (its `paths`, its compiler
         // options) — an input no module of the closure names.

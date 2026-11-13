@@ -14,8 +14,13 @@ environment, in path order — then loads each question module and asks it about
 each file that loaded; a file whose load threw answers with its error.
 
 - **One record per question, keyed by the whole set** (`plugin-records`'
-  `closureRecord`): the Merkle keys of the host, the question module and every
-  schema file (each over its import closure), the inputs and the npm code. Over
+  `closureRecord`): the host and the question module as CODE (by URL, read
+  and run from the checkout they live in, never from the set asked about),
+  every schema file of the set as DATA (each over its import closure), the
+  inputs and the npm code. Asked about another checkout's set, a question's
+  imports are its own checkout's, so a registry it reads is not the one that
+  set's schema files filled — one instance per module holds only over the
+  question's own checkout (every caller today). Over
   400 main commits, 64% reach no schema file's closure — a lookup.
 - **Why not one record per file** (tried, and wrong): the files load in ONE
   process, as under drizzle-kit, so their module eval shares registries — two
@@ -68,7 +73,6 @@ record after an edit outside every schema file's closure.
     - `infra/spawn.spawnCaptured`
     - `packages/coalesce.createKeyedCoalescer`
     - `plugin-meta/plugin-records.closureRecord`
-    - `plugin-meta/plugin-records.repoModuleOf`
   - Exports (types):
     - `SchemaAnswers`
     - `SchemaFileAnswer`

@@ -8,10 +8,7 @@ import type {
 } from "@plugins/framework/plugins/tooling/core";
 import { exemptManifestPaths } from "@plugins/framework/plugins/tooling/plugins/exempt/core";
 import { LINT_DATA_FILES } from "@plugins/framework/plugins/tooling/plugins/lint/core";
-import {
-  closureRecord,
-  repoModuleOf,
-} from "@plugins/plugin-meta/plugins/plugin-records/core";
+import { closureRecord } from "@plugins/plugin-meta/plugins/plugin-records/core";
 
 /**
  * A cold load transpiles the whole lint closure through jiti (~25 s on a busy
@@ -99,12 +96,14 @@ type LoadVerdict = { ok: true };
  * reaches is a lookup, not a Node start that transpiles the lint closure
  * through jiti (0.8–2.5 s warm, every pass):
  *
- *   - `modules` — the code it LOADS. `eslint.config.ts` (its static closure is
- *     npm only), the IDE entry it imports through its aliased jiti by a
- *     computed path (whose closure holds the builder, `lint.generated.ts` and,
- *     through its `import()`s, every lint barrel and rule), every exemption
- *     manifest `loadExemptions` imports by a computed path, and this module
- *     (the producer: the argv and the verdict's reading of the output).
+ *   - `code` — this module (the producer: the argv and the verdict's reading
+ *     of the output), read from the checkout this process runs from.
+ *   - `data` — the set's modules the load LOADS. `eslint.config.ts` (its
+ *     static closure is npm only), the IDE entry it imports through its
+ *     aliased jiti by a computed path (whose closure holds the builder,
+ *     `lint.generated.ts` and, through its `import()`s, every lint barrel and
+ *     rule), and every exemption manifest `loadExemptions` imports by a
+ *     computed path.
  *   - `input` — what it reads that is not a module: the root `package.json`
  *     (Node reads its `type` to load the config), the lint data files
  *     (`app.css`), and the Node version (the runtime the editor stands for).
@@ -114,15 +113,11 @@ type LoadVerdict = { ok: true };
 function loadRecordSpec(
   repo: RepoSnapshot,
   nodeVersion: string,
-): { name: string; modules: string[]; input: unknown } {
+): { name: string; code: string[]; data: string[]; input: unknown } {
   return {
     name: "lint:eslint-config-loads",
-    modules: [
-      ESLINT_CONFIG,
-      IDE_ENTRY,
-      ...exemptManifestPaths(repo),
-      repoModuleOf(repo, import.meta.url),
-    ],
+    code: [import.meta.url],
+    data: [ESLINT_CONFIG, IDE_ENTRY, ...exemptManifestPaths(repo)],
     input: {
       node: nodeVersion,
       read: ["package.json", ...LINT_DATA_FILES].map((p) => [

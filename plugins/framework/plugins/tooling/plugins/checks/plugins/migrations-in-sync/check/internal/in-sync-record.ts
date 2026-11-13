@@ -8,25 +8,29 @@ import {
 import {
   closureRecord,
   gitBlobId,
-  repoModuleOf,
 } from "@plugins/plugin-meta/plugins/plugin-records/core";
 import { readdir, readFile } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "path";
 import { runDrizzleGenerate, type DrizzleVerdict } from "./drizzle-generate";
 
-const PRODUCER = new URL("./drizzle-generate.ts", import.meta.url).href;
+/** The producer that stages and spawns drizzle-kit: code, read from the checkout it runs from. */
+export const IN_SYNC_PRODUCER = new URL(
+  "./drizzle-generate.ts",
+  import.meta.url,
+).href;
 
 /**
  * What `drizzle-kit generate` over the committed migrations depends on, as a
  * `closureRecord` spec:
  *
- *   - `modules` — the code it LOADS: every schema-glob file (each keyed over
- *     its import closure, so an edit to a helper a `tables.ts` imports moves
- *     it), the drizzle config drizzle-kit `require()`s (and through it the
- *     glob patterns), and the producer that stages and spawns it (its closure
- *     holds the staging, the argv and the verdict's reading of the output).
- *     drizzle-kit and drizzle-orm are npm code the closures import: the
- *     record keys them (`npmCodeKey`).
+ *   - `code` — the producer that stages and spawns it (its closure holds the
+ *     staging, the argv and the verdict's reading of the output), read from
+ *     the checkout this process runs from.
+ *   - `data` — the set's modules drizzle-kit LOADS: every schema-glob file
+ *     (each keyed over its import closure, so an edit to a helper a
+ *     `tables.ts` imports moves it) and the drizzle config it `require()`s
+ *     (and through it the glob patterns). drizzle-kit and drizzle-orm are npm
+ *     code the closures import: the record keys them (`npmCodeKey`).
  *   - `input` — every file of `data/` by blob id: the stage reads the
  *     snapshot DAG (every `.sql` header, `legacy-snapshots.json`), the tip
  *     snapshot and the journal.
@@ -37,7 +41,8 @@ const PRODUCER = new URL("./drizzle-generate.ts", import.meta.url).href;
  */
 export function inSyncRecordSpec(repo: RepoSnapshot): {
   name: string;
-  modules: string[];
+  code: string[];
+  data: string[];
   input: { data: [string, string][] };
 } {
   const schema = schemaFilesIn(repo);
@@ -47,11 +52,8 @@ export function inSyncRecordSpec(repo: RepoSnapshot): {
     );
   return {
     name: "migrations-in-sync:drizzle-generate",
-    modules: [
-      ...schema,
-      `${MIGRATIONS_PLUGIN_DIR}/${DRIZZLE_CONFIG_PATH}`,
-      repoModuleOf(repo, PRODUCER),
-    ],
+    code: [IN_SYNC_PRODUCER],
+    data: [...schema, `${MIGRATIONS_PLUGIN_DIR}/${DRIZZLE_CONFIG_PATH}`],
     input: {
       data: repo
         .under(MIGRATIONS_DATA_DIR)

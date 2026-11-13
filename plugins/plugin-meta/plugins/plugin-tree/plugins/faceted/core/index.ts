@@ -1,8 +1,5 @@
-export {
-  facetExtractionHarness,
-  facetRecordProducers,
-  facetRecordsModule,
-} from "./internal/facet-records";
+export { facetCode, facetRecordProducers } from "./internal/facet-records";
+export type { FacetCode } from "./internal/facet-records";
 export { buildFacetedPluginTree } from "./internal/faceted-tree";
 export { openFacetedIndex } from "./internal/faceted-index";
 export type {

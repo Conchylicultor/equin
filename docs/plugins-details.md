@@ -23811,7 +23811,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/spawn.spawnCaptured`
               - `packages/coalesce.createKeyedCoalescer`
               - `plugin-meta/plugin-records.closureRecord`
-              - `plugin-meta/plugin-records.repoModuleOf`
             - Exports (types):
               - `SchemaAnswers`
               - `SchemaFileAnswer`
@@ -31614,10 +31613,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Exports (values): `parseRuntimeException`
         - **`checks`** — Check runner and built-in checks for ./equin check
           - Core:
-            - Uses: 89 symbols — full list in [`plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md)
+            - Uses: 88 symbols — full list in [`plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md)
               - `framework/tooling` ×12
               - `packages/timed-fs` ×11
-              - `plugin-meta/plugin-records` ×10
+              - `plugin-meta/plugin-records` ×9
               - `framework/tooling/exempt` ×7
               - `reports/check-thread-stall` ×7
               - `infra/stack-sampler` ×5
@@ -46184,6 +46183,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `buildModuleGraph`
           - `closureRecord`
+          - `codeCheckoutOf`
           - `createMemoryRecordStore`
           - `currentRecordStore`
           - `defineRecordJob`
@@ -46206,7 +46206,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `RECORD_TABLES`
           - `recordKey`
           - `recordWorkerCount`
-          - `repoModuleOf`
           - `runRecordJobRequest`
           - `runRecordJobs`
           - `scanFilesCached`
@@ -46496,8 +46495,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Plugins:
         - **`faceted`** — The faceted plugin tree, build tooling: buildFacetedPluginTree (the structure tree plus every facet extracted — plugin records from a snapshot — enriched and related), and the faceted index a backend keeps in a worker thread (FacetedTreeSource's desktop provider): built once, then refreshed by the watcher's paths — only the plugins owning them re-keyed, only moved records extracted, relate only when a record text changed.
           - Core:
-            - Uses: 43 symbols — full list in [`plugins/plugin-meta/plugins/plugin-tree/plugins/faceted/REFERENCE.md`](../plugins/plugin-meta/plugins/plugin-tree/plugins/faceted/REFERENCE.md)
-              - `plugin-meta/plugin-records` ×13
+            - Uses: 44 symbols — full list in [`plugins/plugin-meta/plugins/plugin-tree/plugins/faceted/REFERENCE.md`](../plugins/plugin-meta/plugins/plugin-tree/plugins/faceted/REFERENCE.md)
+              - `plugin-meta/plugin-records` ×14
               - `plugin-meta/plugin-tree` ×8
               - `framework/tooling` ×6
               - `plugin-meta/facets` ×4
@@ -46510,15 +46509,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `plugin-meta/plugin-tree/structure-records.buildRecordedPluginTree`
             - Exports (types):
               - `BuildFacetedTreeOptions`
+              - `FacetCode`
               - `FacetedIndex`
               - `FacetedRefresh`
               - `OpenFacetedIndexOptions`
               - `TreeEnrichment`
             - Exports (values):
               - `buildFacetedPluginTree`
-              - `facetExtractionHarness`
+              - `facetCode`
               - `facetRecordProducers`
-              - `facetRecordsModule`
               - `openFacetedIndex`
           - Cross-plugin:
             - Imported by:

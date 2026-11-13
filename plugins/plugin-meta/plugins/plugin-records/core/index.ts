@@ -42,11 +42,8 @@ export type {
   OutsideFiles,
   ModuleNode,
 } from "./internal/module-graph";
-export {
-  repoModuleOf,
-  scanFilesCached,
-  scanRepoFiles,
-} from "./internal/file-scans";
+export { codeCheckoutOf } from "./internal/code-checkout";
+export { scanFilesCached, scanRepoFiles } from "./internal/file-scans";
 export type { FileScan } from "./internal/file-scans";
 export { foldFilesCached, foldRepoFiles } from "./internal/tree-fold";
 export type { FileFold, FoldContext } from "./internal/tree-fold";

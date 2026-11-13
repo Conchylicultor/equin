@@ -1,7 +1,4 @@
-import type {
-  RepoFiles,
-  RepoSnapshot,
-} from "@plugins/framework/plugins/tooling/core";
+import type { RepoSnapshot } from "@plugins/framework/plugins/tooling/core";
 import { setFacet, type Facet } from "@plugins/plugin-meta/plugins/facets/core";
 import {
   loadFacets,
@@ -14,8 +11,9 @@ import {
   readGrouped,
   recordKey,
   recordWorkerCount,
-  repoModuleOf,
+  codeCheckoutOf,
   runRecordJobs,
+  type ModuleGraphInput,
   type OutsideFiles,
   type RecordStore,
 } from "@plugins/plugin-meta/plugins/plugin-records/core";
@@ -47,23 +45,52 @@ import {
  */
 
 /**
- * Every module whose Merkle key keys facet records: the extraction harness
- * and each facet's own module — the producers the facet key-width check
- * measures.
+ * Where facet code is read from: the checkout the extraction harness lives in
+ * (`codeCheckoutOf` — the set itself when it is that checkout, this process's
+ * otherwise), never assumed to be the set whose plugins are extracted. Its
+ * modules are repo-relative in that checkout: the harness, this module (the
+ * record plumbing the harness must never load) and each facet's own module
+ * (the facets this process loaded from its own registry).
  */
-export async function facetRecordProducers(repo: RepoFiles): Promise<string[]> {
-  const sources = await loadFacetSources(await loadFacets());
-  return [facetExtractionHarness(repo), ...sources.values()];
+export interface FacetCode {
+  code: ModuleGraphInput;
+  harness: string;
+  recordsModule: string;
+  /** Facet id → its module. */
+  sources: Map<string, string>;
 }
 
-/** This module, repo-relative: the record plumbing the harness must never load. */
-export function facetRecordsModule(repo: RepoFiles): string {
-  return repoModuleOf(repo, import.meta.url);
+export async function facetCode(
+  input: ModuleGraphInput,
+  facets?: readonly Facet[],
+): Promise<FacetCode> {
+  const { input: code, module: harness } = await codeCheckoutOf(
+    input,
+    FACET_EXTRACTION_URL,
+  );
+  const self = await codeCheckoutOf(input, import.meta.url);
+  if (self.input.snapshot.root !== code.snapshot.root)
+    throw new Error(
+      `[faceted] the facet records module (${import.meta.url}) and the extraction harness (${FACET_EXTRACTION_URL}) are read from different checkouts`,
+    );
+  return {
+    code,
+    harness,
+    recordsModule: self.module,
+    sources: await loadFacetSources(facets ?? (await loadFacets())),
+  };
 }
 
-/** The extraction harness's module, repo-relative: the one producer keyed into every facet record. */
-export function facetExtractionHarness(repo: RepoFiles): string {
-  return repoModuleOf(repo, FACET_EXTRACTION_URL);
+/**
+ * Every module whose Merkle key keys facet records — the extraction harness
+ * and each facet's own module, the producers the facet key-width check
+ * measures — with the checkout they are read from.
+ */
+export async function facetRecordProducers(
+  input: ModuleGraphInput,
+): Promise<{ code: ModuleGraphInput; modules: string[] }> {
+  const { code, harness, sources } = await facetCode(input);
+  return { code, modules: [harness, ...sources.values()] };
 }
 
 export interface FacetRecordsInput {
@@ -75,24 +102,24 @@ export interface FacetRecordsInput {
 
 /**
  * Each facet's identity: the Merkle key of its own module and of the
- * extraction harness, plus the lockfile's npm resolutions (the npm code a facet runs: the
+ * extraction harness (read from the checkout they live in, `facetCode`), plus the lockfile's npm resolutions (the npm code a facet runs: the
  * transpiler, Tailwind) and the store's environment (the runtime's version).
  */
 async function facetIdentities(
   input: FacetRecordsInput,
   facets: readonly Facet[],
 ): Promise<Map<string, string>> {
-  const sources = await loadFacetSources(facets);
-  const harnessModule = facetExtractionHarness(input.snapshot);
-  const graph = await buildModuleGraph(input, [
+  const {
+    code,
+    harness: harnessModule,
+    sources,
+  } = await facetCode(input, facets);
+  const graph = await buildModuleGraph(code, [
     harnessModule,
     ...sources.values(),
   ]);
   const harness = [graph.keyOf(harnessModule)];
-  const env = [
-    input.store.environment,
-    await npmResolutionsKey(input.snapshot),
-  ];
+  const env = [code.store.environment, await npmResolutionsKey(code.snapshot)];
   const out = new Map<string, string>();
   for (const f of facets) {
     out.set(

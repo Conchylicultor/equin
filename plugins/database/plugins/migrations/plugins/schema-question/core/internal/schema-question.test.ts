@@ -1,31 +1,25 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import {
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  symlinkSync,
-  writeFileSync,
-} from "fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
-import { dirname, join, resolve } from "path";
+import { dirname, join } from "path";
 import { repoFilesOver } from "@plugins/framework/plugins/tooling/core";
 import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { askSchemaFiles, type SchemaFileAnswer } from "./schema-question";
 import { MIGRATIONS_PLUGIN_DIR } from "@plugins/database/plugins/migrations/core";
+import { askSchemaFiles, type SchemaFileAnswer } from "./schema-question";
 
 // A throwaway checkout: schema files (one importing a helper, one that throws
 // at load, two registering a name in one shared registry — the way two tables
-// declaring one derived updatedAt collide), a question module, this plugin's
-// real probe host, and the module-graph's file-facts scan (every graph keys its
-// facts by it). Each
-// `repo()` is a fresh file set over the disk as it is now — the way every
-// check pass takes one — so an edit between two asks is seen by the second.
+// declaring one derived updatedAt collide) and a question module. No copy of
+// the probe host or of the module graph's scan: those are code, read and run
+// from the checkout this test runs from. Each `repo()` is a fresh file set
+// over the disk as it is now — the way every check pass takes one — so an
+// edit between two asks is seen by the second.
 const root = mkdtempSync(join(tmpdir(), "schema-question-"));
 afterAll(() => rmSync(root, { recursive: true, force: true }));
+// The host runs from the migrations plugin's dir, as drizzle-kit does: every
+// checkout has it.
+mkdirSync(join(root, MIGRATIONS_PLUGIN_DIR), { recursive: true });
 
-const SCAN_PATH =
-  "plugins/plugin-meta/plugins/plugin-records/core/internal/scan-imports.ts";
 // The fixture checkout's plugins, built from its plugins dir as data (no
 // plugin of this checkout is named).
 const P = "plugins";
@@ -44,20 +38,6 @@ function write(rel: string, text: string): void {
   writeFileSync(join(root, rel), text);
 }
 
-const HOST_DIR = `${MIGRATIONS_PLUGIN_DIR}/plugins/schema-question/scripts`;
-const HOST = `${HOST_DIR}/schema-question-host.ts`;
-mkdirSync(dirname(join(root, HOST_DIR)), { recursive: true });
-symlinkSync(resolve(import.meta.dir, "../../scripts"), join(root, HOST_DIR));
-write(
-  SCAN_PATH,
-  readFileSync(
-    resolve(
-      import.meta.dir,
-      "../../../../../../../plugin-meta/plugins/plugin-records/core/internal/scan-imports.ts",
-    ),
-    "utf8",
-  ),
-);
 write(
   QUESTION,
   "export default { answer: (_file, exports, input) => ({ value: exports.value, input }) };\n",
@@ -84,8 +64,6 @@ function repo() {
   return repoFilesOver(
     asAppPath(root),
     [
-      SCAN_PATH,
-      HOST,
       QUESTION,
       A,
       A_DEP,

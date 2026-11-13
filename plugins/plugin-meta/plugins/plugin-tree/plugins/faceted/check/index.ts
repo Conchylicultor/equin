@@ -5,20 +5,26 @@ import type {
 } from "@plugins/framework/plugins/tooling/core";
 import {
   buildModuleGraph,
+  codeCheckoutOf,
   currentRecordStore,
   NO_OUTSIDE_FILES,
-  repoModuleOf,
+  type ModuleGraphInput,
 } from "@plugins/plugin-meta/plugins/plugin-records/core";
 import {
   describeWideKeys,
   keyWidths,
   MAX_UNUSED_KEY_MODULES,
 } from "@plugins/plugin-meta/plugins/plugin-records/plugins/key-width/core";
-import {
-  facetExtractionHarness,
-  facetRecordProducers,
-  facetRecordsModule,
-} from "../core";
+import { facetCode, facetRecordProducers } from "../core";
+
+/** The check's file set as the module graph reads it (the code read from the checkout it lives in). */
+function graphInput(repo: ModuleGraphInput["snapshot"]): ModuleGraphInput {
+  return {
+    snapshot: repo,
+    store: currentRecordStore(),
+    readOutside: NO_OUTSIDE_FILES,
+  };
+}
 
 /**
  * A facet record is keyed by its facet's module and the extraction harness,
@@ -30,17 +36,10 @@ const keyWidth: Check = {
   id: "faceted:facet-key-width",
   description: `every facet module and the facet extraction harness are keyed by at most ${MAX_UNUSED_KEY_MODULES} modules they never call`,
   async run(ctx: CheckContext): Promise<CheckResult> {
-    const repo = await ctx.repo();
-    const failure = describeWideKeys(
-      await keyWidths(
-        {
-          snapshot: repo,
-          store: currentRecordStore(),
-          readOutside: NO_OUTSIDE_FILES,
-        },
-        await facetRecordProducers(repo),
-      ),
+    const { code, modules } = await facetRecordProducers(
+      graphInput(await ctx.repo()),
     );
+    const failure = describeWideKeys(await keyWidths(code, modules));
     return failure === null ? { ok: true } : { ok: false, message: failure };
   },
 };
@@ -61,24 +60,17 @@ const harnessPlumbing: Check = {
   description:
     "the facet extraction harness (keyed into every facet record) loads no record key/store/worker code",
   async run(ctx: CheckContext): Promise<CheckResult> {
-    const repo = await ctx.repo();
-    const harness = facetExtractionHarness(repo);
-    const recordsBarrel = repoModuleOf(
-      repo,
+    const input = graphInput(await ctx.repo());
+    const { code, harness, recordsModule } = await facetCode(input);
+    const { module: recordsBarrel } = await codeCheckoutOf(
+      input,
       import.meta.resolve(RECORDS_BARREL),
     );
     // The plugin-records plugin's folder: the barrel's, two levels up.
     const recordsDir = recordsBarrel.split("/").slice(0, -2).join("/") + "/";
     const plumbing = (m: string): boolean =>
-      m.startsWith(recordsDir) || m === facetRecordsModule(repo);
-    const graph = await buildModuleGraph(
-      {
-        snapshot: repo,
-        store: currentRecordStore(),
-        readOutside: NO_OUTSIDE_FILES,
-      },
-      [harness],
-    );
+      m.startsWith(recordsDir) || m === recordsModule;
+    const graph = await buildModuleGraph(code, [harness]);
     // The key's closure: static and dynamic imports alike.
     const seen = new Set<string>();
     const stack = [harness];
@@ -93,7 +85,7 @@ const harnessPlumbing: Check = {
     if (bad.length === 0) return { ok: true };
     return {
       ok: false,
-      message: `${harness} is keyed into every facet record, yet loads record plumbing that cannot shape a value — move the call into ${facetRecordsModule(repo)}:\n${bad.map((m) => `  ${m}`).join("\n")}`,
+      message: `${harness} is keyed into every facet record, yet loads record plumbing that cannot shape a value — move the call into ${recordsModule}:\n${bad.map((m) => `  ${m}`).join("\n")}`,
     };
   },
 };

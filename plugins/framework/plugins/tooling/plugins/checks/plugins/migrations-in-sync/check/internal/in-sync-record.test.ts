@@ -1,13 +1,7 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import {
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from "fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
-import { dirname, join, resolve } from "path";
+import { dirname, join } from "path";
 import { repoSnapshotOver } from "@plugins/framework/plugins/tooling/core";
 import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import {
@@ -19,20 +13,17 @@ import {
   closureRecord,
   gitBlobId,
 } from "@plugins/plugin-meta/plugins/plugin-records/core";
-import { inSyncRecordSpec } from "./in-sync-record";
+import { IN_SYNC_PRODUCER, inSyncRecordSpec } from "./in-sync-record";
 
-// A throwaway checkout holding what the record is keyed by: schema files (one
-// importing a helper), the drizzle config, the producer (at its real path, so
-// the spec names it), `data/`, and the module graph's file-facts scan. The
-// record's answer here is a counter: each `verdict()` says whether drizzle-kit
-// would have run again (a miss) or the stored answer stood (a hit).
+// A throwaway checkout holding the DATA the record is keyed by: schema files
+// (one importing a helper), the drizzle config and `data/`. No code: the
+// producer (and the module graph's file-facts scan) is read from the checkout
+// this test runs from, never from a copy in the fixture. The record's answer
+// here is a counter: each `verdict()` says whether drizzle-kit would have run
+// again (a miss) or the stored answer stood (a hit).
 const root = mkdtempSync(join(tmpdir(), "migrations-in-sync-"));
 afterAll(() => rmSync(root, { recursive: true, force: true }));
 
-const SCAN_PATH =
-  "plugins/plugin-meta/plugins/plugin-records/core/internal/scan-imports.ts";
-const PRODUCER =
-  "plugins/framework/plugins/tooling/plugins/checks/plugins/migrations-in-sync/check/internal/drizzle-generate.ts";
 const CONFIG = `${MIGRATIONS_PLUGIN_DIR}/${DRIZZLE_CONFIG_PATH}`;
 // The fixture checkout's plugins, built from its plugins dir as data (no
 // plugin of this checkout is named).
@@ -51,17 +42,6 @@ function write(rel: string, text: string): void {
   writeFileSync(join(root, rel), text);
 }
 
-write(
-  SCAN_PATH,
-  readFileSync(
-    resolve(
-      import.meta.dir,
-      "../../../../../../../../../plugin-meta/plugins/plugin-records/core/internal/scan-imports.ts",
-    ),
-    "utf8",
-  ),
-);
-write(PRODUCER, "export const producer = 1;\n");
 write(CONFIG, 'export default { schema: ["x"] };\n');
 write(A_DEP, 'export const col = "id";\n');
 write(A, 'import { col } from "./columns";\nexport const a = col;\n');
@@ -94,9 +74,13 @@ async function verdict(): Promise<"ran" | "hit"> {
 }
 
 describe("migrations-in-sync record", () => {
-  test("the spec names every schema file, the config and the producer", () => {
+  test("the spec names every schema file and the config as data, the producer as code", () => {
     const spec = inSyncRecordSpec(repo());
-    expect([...spec.modules].sort()).toEqual([A, B, CONFIG, PRODUCER].sort());
+    expect([...spec.data].sort()).toEqual([A, B, CONFIG].sort());
+    expect(spec.code).toEqual([IN_SYNC_PRODUCER]);
+    expect(
+      new URL(IN_SYNC_PRODUCER).pathname.endsWith("/drizzle-generate.ts"),
+    ).toBe(true);
     expect(spec.input.data.map(([p]) => p)).toEqual([DATA_SQL, SNAPSHOT]);
   });
 
@@ -130,10 +114,10 @@ describe("migrations-in-sync record", () => {
     expect(await verdict()).toBe("ran");
   });
 
-  test("an edit to the drizzle config or the producer runs it again", async () => {
+  // The producer's own edit moving the key is closureRecord's (its tests: a
+  // producer is keyed by its code identity, read where it lives).
+  test("an edit to the drizzle config runs it again", async () => {
     write(CONFIG, 'export default { schema: ["y"] };\n');
-    expect(await verdict()).toBe("ran");
-    write(PRODUCER, "export const producer = 2;\n");
     expect(await verdict()).toBe("ran");
     expect(await verdict()).toBe("hit");
   });

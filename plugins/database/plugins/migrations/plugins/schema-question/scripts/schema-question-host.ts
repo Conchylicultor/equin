@@ -7,8 +7,9 @@
 // Run as: bun --bun schema-question-host.ts <checkout root>, with
 // `{ files, asks: { question, inputs }[] }` on stdin; writes
 // `{ loadFailures, answers }` to stdout, one answer per ask in request order.
-// Every path in and out is repo-relative: each answer is a record every
-// checkout shares.
+// `files` are repo-relative to the checkout root (the data); each `question`
+// is an absolute module path (code, run from the checkout it lives in). Every
+// path out is repo-relative: each answer is a record every checkout shares.
 //
 // Every file loads first, and only then is a question module loaded and
 // asked: a registry a schema file's module eval fills (derived updatedAt, id
@@ -48,7 +49,18 @@ if (!cwd.endsWith(`/${MIGRATIONS_DIR}`))
     `schema-question-host: run from ${MIGRATIONS_DIR}, not ${cwd}`,
   );
 const resolvedRoot = cwd.slice(0, -MIGRATIONS_DIR.length - 1);
-const roots = [...new Set([root, resolvedRoot])].map((r) => `${r}/`);
+// The checkout this host (and so the question code) runs from, which an
+// error may name too: this script's own dir, less its place in the repo.
+const OWN_DIR = `${MIGRATIONS_DIR}/plugins/schema-question/scripts`;
+if (!import.meta.dir.endsWith(`/${OWN_DIR}`))
+  throw new Error(
+    `schema-question-host: expected to live in ${OWN_DIR}, not ${import.meta.dir}`,
+  );
+const ownRoot = import.meta.dir.slice(0, -OWN_DIR.length - 1);
+const roots = [...new Set([root, resolvedRoot, ownRoot])]
+  .map((r) => `${r}/`)
+  // Longest first: a worktree's root sits inside main's.
+  .sort((a, b) => b.length - a.length);
 const relative = (text: string): string =>
   roots.reduce((t, r) => t.split(r).join(""), text);
 
@@ -64,9 +76,7 @@ for (const file of request.files) {
 
 const answers = request.asks.map((ask) => {
   try {
-    const question = (
-      require(join(root, ask.question)) as { default: Question }
-    ).default;
+    const question = (require(ask.question) as { default: Question }).default;
     const files: Record<string, unknown> = {};
     for (const [file, exports] of modules)
       files[file] = question.answer(file, exports, ask.inputs[file] ?? null);

@@ -132,9 +132,6 @@ function edited(repo: RepoFiles, edits: Record<string, string>): RepoFiles {
 function measure(repo: RepoFiles) {
   return measureManifestFreeze({
     repo,
-    // The fixture holds none of the real producer's code; the record's
-    // producer keying is closureRecord's own (its tests).
-    producers: [],
     entry: "bin/index.ts",
     hazards: new Map([[MANIFEST, "fx"]]),
     registries: new Map([[REGISTRY, "lint"]]),

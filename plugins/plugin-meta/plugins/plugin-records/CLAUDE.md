@@ -297,7 +297,16 @@ and nothing names that code by hand:
   the scanned set, so every fixture read through the module graph or a cached
   scan threw "entry module …/scan-imports.ts does not exist".) A fixture that
   stands for the code's checkout — to test that editing a scan re-keys its
-  records — takes the scan URL's root as its own;
+  records — takes the scan URL's root as its own. It holds for every record
+  producer, not just scans: code is named by URL only (`codeIdentity`,
+  `core/internal/code-identity.ts`), and `closureRecord` takes it apart from
+  the data — `code` (the producer's module URLs, keyed by their code
+  identity) and `data` (the set's modules the process loads, keyed by their
+  Merkle key in the set). There is no call that maps a URL to a path of the
+  processed set (the old `repoModuleOf`), so no producer can be read from
+  the files it processes. Check code keys (`checks/core/check-code-key.ts`)
+  and facet identities (`faceted`'s `facetCode`) read their runner, harness
+  and modules from the checkout `codeCheckoutOf` resolves the same way;
 - a facet record by its facet's module and the harness that runs it
   (`facet-records.ts`), evaluated records by the evaluator's modules — each a
   Merkle key over its whole closure — plus the runtime and the lockfile's npm
@@ -430,6 +439,7 @@ its docblock records — and then lowered as readily as raised.
   - Exports (values):
     - `buildModuleGraph`
     - `closureRecord`
+    - `codeCheckoutOf`
     - `createMemoryRecordStore`
     - `currentRecordStore`
     - `defineRecordJob`
@@ -452,7 +462,6 @@ its docblock records — and then lowered as readily as raised.
     - `RECORD_TABLES`
     - `recordKey`
     - `recordWorkerCount`
-    - `repoModuleOf`
     - `runRecordJobRequest`
     - `runRecordJobs`
     - `scanFilesCached`

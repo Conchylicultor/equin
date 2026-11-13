@@ -16,7 +16,6 @@ import {
   type CliCommand,
 } from "../core";
 import { fileSetImportClosures } from "@plugins/framework/plugins/tooling/plugins/import-closure/core";
-import { repoModuleOf } from "@plugins/plugin-meta/plugins/plugin-records/core";
 import { measureManifestFreeze, type FreezeFinding } from "./manifest-freeze";
 
 const BOOTSTRAP = "plugins/framework/plugins/cli/bin/index.ts";
@@ -272,12 +271,6 @@ const manifestFreezeCheck: Check = {
     const findings = (
       await measureManifestFreeze({
         repo,
-        producers: [
-          repoModuleOf(
-            repo,
-            new URL("./manifest-freeze.ts", import.meta.url).href,
-          ),
-        ],
         entry: CLI_ENTRY,
         hazards,
         registries,
