@@ -28,6 +28,7 @@
     - `tasks/automations`
     - `tasks/mandate-presets`
     - `tasks/orchestration/mandate`
+    - `tasks/supervisor-roles`
     - `tasks/task-mandate`
     - `tasks/tasks-core`
 

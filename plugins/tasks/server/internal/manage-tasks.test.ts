@@ -25,6 +25,7 @@ const roots: Record<string, string> = {
   M: "N",
   X: "X",
   Y: "X",
+  Z: "Z",
 };
 
 const DEFAULT = ModelChoiceSchema.parse("opus");
@@ -47,6 +48,8 @@ function store(callerRoot: string | null = "R") {
       id in roots
         ? { kind: "found", rootTaskId: roots[id]! }
         : { kind: "not-found" },
+    // The caller's mandate reaches Z (another tree's root) beyond its tree.
+    reaches: async (conv, id) => conv === SUP && id === "Z",
     unarmable: async (id) => unarmable[id] ?? null,
     trackOf: async (id) => tracks[id] ?? "main",
     defaultModel: async (_conv, track) =>
@@ -276,5 +279,29 @@ describe("drop_task", () => {
       reason: "not-in-tree",
     });
     expect(s.dropped).toEqual(["B"]);
+  });
+});
+
+describe("a mandate's reach beyond its tree", () => {
+  test("a task outside the tree that a reach covers is managed; others are still refused", async () => {
+    const s = store();
+    expect(await dropTask({ task_id: "Z" }, SUP, s.ports)).toEqual({
+      kind: "dropped",
+      taskId: "Z",
+    });
+    expect(
+      await editTask({ task_id: "A", add_after: ["Z"] }, SUP, s.ports),
+    ).toMatchObject({ kind: "edited" });
+    expect(await dropTask({ task_id: "X" }, SUP, s.ports)).toMatchObject({
+      reason: "not-in-tree",
+    });
+  });
+
+  test("a reached task is never armed: that would launch it outside the tree", async () => {
+    const s = store();
+    expect(
+      await editTask({ task_id: "Z", start: "armed" }, SUP, s.ports),
+    ).toMatchObject({ kind: "refused", reason: "not-in-tree" });
+    expect(s.applied).toEqual([]);
   });
 });

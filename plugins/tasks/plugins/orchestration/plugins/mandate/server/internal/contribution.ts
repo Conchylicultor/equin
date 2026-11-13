@@ -53,3 +53,35 @@ export function capabilityEntries(): Map<
   }
   return byId;
 }
+
+/**
+ * A mandate's reach beyond its own tree: whether the conversation may manage
+ * (edit, drop, depend on) `taskId` although the task is not under its
+ * mandate's root. Contributed by the plugin whose workflow widens the scope
+ * (a predicate on tasks it owns); the mandate plugin names none, and the
+ * caller's own root stays out of reach whatever a predicate says.
+ */
+export interface MandateReachEntry {
+  /** Unique (diagnostics). */
+  id: string;
+  reaches: (conversationId: string, taskId: string) => Promise<boolean>;
+}
+
+const ReachToken = defineServerContribution<MandateReachEntry>("mandateReach", {
+  docLabel: (r) => r.id,
+});
+
+/** Registers a reach predicate — `MandateReach({ id, reaches })`. */
+export const MandateReach = ReachToken;
+
+/** Whether any contributed reach lets `conversationId` manage `taskId`
+ * outside its own tree. */
+export async function reachesBeyondTree(
+  conversationId: string,
+  taskId: string,
+): Promise<boolean> {
+  for (const entry of ReachToken.getContributions()) {
+    if (await entry.reaches(conversationId, taskId)) return true;
+  }
+  return false;
+}

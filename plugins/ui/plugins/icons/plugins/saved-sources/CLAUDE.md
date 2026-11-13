@@ -24,6 +24,7 @@ It is not a `sprites/core` export: `SavedIconSource.tables` names
     - `page/callout`
     - `primitives/data-view`
     - `tag-tree/engine`
+    - `tasks/supervisor-roles`
     - `ui/icons/sprites`
 - Server:
   - Exports (types):

@@ -151,6 +151,7 @@ it over the real tables with a fake agent.
     - `tasks`
     - `tasks/automations`
     - `tasks/outcome-report`
+    - `tasks/supervisor-roles/sessions`
 - Machine:
   - Exports (values): `watchSource`
   - Register:

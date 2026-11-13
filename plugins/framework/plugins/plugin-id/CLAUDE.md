@@ -44,11 +44,11 @@
     - `UNDOCUMENTED_RUNTIME_FOLDERS`
     - `VERIFYING_FOLDERS`
 - Cross-plugin:
-  - Imported by: 91 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 93 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `plugin-meta` ×21
     - `apps` ×15
+    - `tasks` ×12
     - `framework` ×11
-    - `tasks` ×10
     - `conversations` ×7
     - `debug` ×5
     - `build` ×3

@@ -30,9 +30,11 @@ import { rewireDependencies } from "../../server/internal/rewire-dependencies";
 import {
   describeFilingGrant,
   fileAddTask,
+  fileIntoBacklog,
   type AddTaskPorts,
 } from "./add-task-filing";
 import { digestFor } from "./tree-digest";
+import { fileToBacklog } from "@plugins/tasks/plugins/supervisor-roles/server";
 import { watchTask } from "@plugins/tasks/plugins/orchestration/plugins/watch/server";
 import { watchChildren } from "@plugins/tasks/plugins/orchestration/plugins/watch/plugins/capabilities/core";
 
@@ -59,6 +61,10 @@ const ports: AddTaskPorts = {
     await watchTask(taskId, { kind: "conversation", conversationId });
   },
   modelCatalog: getModelCatalog,
+  async fileToBacklog(filing) {
+    const { taskId, role } = await fileToBacklog(filing);
+    return { taskId, role: { id: role.id, name: role.name } };
+  },
 };
 
 // Named from the code's family set, so a family added there is offered here
@@ -245,6 +251,13 @@ nothing unless you name an \`after\`).`,
           "`followup` (default): new task depends on it, its dependents rewired (main) or left alone (sidequest). " +
           "`prerequisite` (main only): it depends on the new task, its deps transfer.",
       ),
+    supervisor: z
+      .string()
+      .min(1)
+      .optional()
+      .describe(
+        "File into a supervisor role's backlog instead of under your task: a listed role's id (your system prompt's Supervisor roles), or \"fallback\" when none fits. Needs start `manual`; no `after` / `relation` / `model`. Only when your mandate allows it.",
+      ),
     model: ModelChoiceSchema.optional().describe(
       `The model the task launches with (an error with start \`manual\`): a family (${FAMILIES}) runs that family's newest version ` +
         "when the task launches — use one unless a specific version is required. " +
@@ -253,7 +266,15 @@ nothing unless you name an \`after\`).`,
     ),
   },
   async handler(input, { conversationId }) {
-    const result = await fileAddTask(input, conversationId, ports);
+    const { supervisor, ...filing } = input;
+    const result =
+      supervisor === undefined
+        ? await fileAddTask(filing, conversationId, ports)
+        : await fileIntoBacklog(
+            { ...filing, supervisor },
+            conversationId,
+            ports,
+          );
     const digest = await digestFor(conversationId);
     return {
       content: [

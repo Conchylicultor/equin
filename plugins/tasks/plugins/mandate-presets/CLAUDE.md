@@ -32,12 +32,14 @@ the orchestration umbrella never does.
 
 ## Plugin reference
 
-- Description: Defines the named presets: what the interactive and supervisor mandates grant (MandateDefinitions.Definition), computed at every resolution — so a capability added here reaches every tree under them, running ones included.
+- Description: Defines the named presets: what the interactive and supervisor mandates grant (MandateDefinitions.Definition), computed at every resolution — so a capability added here reaches every tree under them, running ones included. Exports supervisorPolicy(extra) for a mandate that inherits the supervisor preset (a supervisor role's).
 - Server:
   - Contributes:
     - `mandateDefinition` "interactive"
     - `mandateDefinition` "supervisor"
   - Uses: `tasks/orchestration/mandate/definitions.MandateDefinitions`
+  - Exports (types): `SupervisorExtraGrants`
+  - Exports (values): `supervisorPolicy`
 - Core:
   - Uses: `tasks/orchestration/mandate/policy.defineMandate`
   - Exports (values):
@@ -57,6 +59,7 @@ the orchestration umbrella never does.
     - `plugin-meta/plugin-health`
     - `tasks`
     - `tasks/reports-investigation`
+    - `tasks/supervisor-roles`
     - `tasks/supervisor-run`
     - `tasks/task-triage`
 

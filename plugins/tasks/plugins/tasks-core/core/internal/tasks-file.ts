@@ -42,13 +42,17 @@ export type DefaultAfter = z.infer<typeof DefaultAfterSchema>;
  * task tracks (`tasks/task-track`'s `TASK_TRACKS`, which this leaf cannot
  * import: task-track imports tasks-core) — `tasks`' describe pins them equal
  * at compile time. `defaultAfter` (absent = `caller`) is what a task filed
- * with no `after` waits on.
+ * with no `after` waits on. `backlog` (absent = no) lets the agent file into
+ * a supervisor role's backlog instead of its own subtree (`add_task`'s
+ * `supervisor`): the task waits there, unlaunched, until a session of that
+ * role adopts it — whatever the track grants say.
  */
 export const TasksFileGrantSchema = z
   .object({
     main: TrackFilingGrantSchema.optional(),
     sidequest: TrackFilingGrantSchema.optional(),
     defaultAfter: DefaultAfterSchema.optional(),
+    backlog: z.literal(true).optional(),
   })
   .strict();
 export type TasksFileGrant = z.infer<typeof TasksFileGrantSchema>;

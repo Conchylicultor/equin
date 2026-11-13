@@ -14,7 +14,9 @@ import type { TaskTrack } from "@plugins/tasks/plugins/task-track/core";
 import type { TasksFileGrant } from "@plugins/tasks/plugins/tasks-core/core";
 import {
   fileAddTask,
+  fileIntoBacklog,
   type AddTaskInput,
+  type BacklogAddTaskInput,
   type AddTaskPorts,
 } from "./add-task-filing";
 import {
@@ -57,6 +59,9 @@ function makeStore(
   /** Tasks that are done or dropped. */
   const settled = new Set<string>();
   let seq = 0;
+  /** Tasks filed into a role's backlog. */
+  const backlog: Array<{ id: string; supervisor: string; fromTaskId: string }> =
+    [];
 
   const graph: DependencyGraph = {
     add: async (a, b) => {
@@ -107,6 +112,14 @@ function makeStore(
       watches.push([taskId, conversationId]);
     },
     modelCatalog: () => catalog,
+    fileToBacklog: async (filing) => {
+      if (filing.supervisor !== "srole-1" && filing.supervisor !== "fallback")
+        throw new Error(`No listed supervisor role "${filing.supervisor}"`);
+      const id = `backlog-${++seq}`;
+      tasks.add(id);
+      backlog.push({ id, ...filing });
+      return { taskId: id, role: { id: "srole-1", name: "Harness" } };
+    },
   };
 
   // The interactive defaults: main after, sidequest manual.
@@ -120,7 +133,21 @@ function makeStore(
       ports,
     );
 
-  return { tasks, edges, armed, tracks, watches, settled, file };
+  const fileBacklog = (
+    input: Omit<BacklogAddTaskInput, "start"> & Partial<BacklogAddTaskInput>,
+  ) => fileIntoBacklog({ start: "manual", ...input }, CONV, ports);
+
+  return {
+    tasks,
+    edges,
+    armed,
+    tracks,
+    watches,
+    settled,
+    backlog,
+    file,
+    fileBacklog,
+  };
 }
 
 describe("add_task filing: main track vs sidequest", () => {
@@ -481,5 +508,75 @@ describe("add_task filing: watch.children", () => {
     const s = makeStore();
     await s.file({ title: "Main", track: "main" });
     expect(s.watches).toEqual([]);
+  });
+});
+
+describe("add_task with supervisor", () => {
+  const BACKLOG: TasksFileGrant = { ...INTERACTIVE, backlog: true };
+
+  test("files a root task into the role's backlog: no edge, never armed, the filer kept", async () => {
+    const s = makeStore(BASELINE_MODELS, BACKLOG);
+    const r = await s.fileBacklog({
+      title: "Flaky build cache",
+      track: "sidequest",
+      supervisor: "srole-1",
+    });
+    expect(r).toMatchObject({
+      start: "manual",
+      supervisor: { id: "srole-1", name: "Harness" },
+    });
+    expect(s.backlog).toEqual([
+      expect.objectContaining({
+        id: r.task_id,
+        supervisor: "srole-1",
+        fromTaskId: T,
+      }),
+    ]);
+    expect([...s.edges].some((e) => e.includes(r.task_id))).toBe(false);
+    expect(s.armed.has(r.task_id)).toBe(false);
+  });
+
+  test("is refused without the backlog grant", () => {
+    const s = makeStore(BASELINE_MODELS, INTERACTIVE);
+    expect(
+      s.fileBacklog({ title: "X", track: "main", supervisor: "srole-1" }),
+    ).rejects.toThrow(/backlog/);
+    expect(s.backlog).toEqual([]);
+  });
+
+  test("needs start manual, and takes no after / relation / model", () => {
+    const s = makeStore(BASELINE_MODELS, BACKLOG);
+    expect(
+      s.fileBacklog({
+        title: "X",
+        track: "main",
+        supervisor: "srole-1",
+        start: "after",
+      }),
+    ).rejects.toThrow(/manual/);
+    expect(
+      s.fileBacklog({
+        title: "X",
+        track: "main",
+        supervisor: "srole-1",
+        after: [T],
+      }),
+    ).rejects.toThrow(/after/);
+    expect(
+      s.fileBacklog({
+        title: "X",
+        track: "main",
+        supervisor: "srole-1",
+        model: ModelChoiceSchema.parse("opus"),
+      }),
+    ).rejects.toThrow(/model/);
+    expect(s.backlog).toEqual([]);
+  });
+
+  test("an unknown role is refused by the filer", () => {
+    const s = makeStore(BASELINE_MODELS, BACKLOG);
+    expect(
+      s.fileBacklog({ title: "X", track: "main", supervisor: "srole-nope" }),
+    ).rejects.toThrow(/No listed supervisor role/);
   });
 });

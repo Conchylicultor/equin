@@ -14,6 +14,13 @@
  * ends of each dependency — is checked before anything is written, and the
  * write is one transaction, so a refused edit changes nothing.
  *
+ * A mandate may REACH further than its tree (`MandateReach`, orchestration's
+ * generic predicate on tasks — a supervisor role's backlog and earlier session
+ * trees): a task outside the tree that a reach covers may be edited and
+ * dropped as if it were in it, but never ARMED (that launches an agent outside
+ * the caller's tree, unwatched). The caller's own root stays out of reach
+ * whatever a predicate says.
+ *
  * `start` decides how the task launches: `armed` queues it for auto-start
  * (it launches once nothing it runs after is unresolved), whatever its track
  * — a sidequest is never armed when filed, but its supervisor may start it
@@ -94,6 +101,9 @@ export interface ManageTasksPorts {
     | { kind: "none" }
     | { kind: "not-found" }
   >;
+  /** Whether the caller's mandate reaches `taskId` although it is outside
+   * its tree (`MandateReach`). */
+  reaches: (conversationId: string, taskId: string) => Promise<boolean>;
   /** Why `taskId` cannot be armed (dropped, or an open attempt already IS
    * its launch), or `null` when it can. */
   unarmable: (taskId: string) => Promise<string | null>;
@@ -142,11 +152,12 @@ async function checkInTree(
     if (id === root) continue;
     const of = await ports.rootOf(id);
     if (of.kind === "not-found") return refused("not-found", `No task ${id}.`);
-    if (of.kind === "none" || of.rootTaskId !== root)
-      return refused(
-        "not-in-tree",
-        `${id} is not in your task tree (root ${root}) — you may only edit or drop the tasks of your own tree.`,
-      );
+    if (of.kind === "found" && of.rootTaskId === root) continue;
+    if (await ports.reaches(conversationId, id)) continue;
+    return refused(
+      "not-in-tree",
+      `${id} is not in your task tree (root ${root}) — you may only edit or drop the tasks of your own tree.`,
+    );
   }
   return null;
 }
@@ -197,7 +208,19 @@ export async function editTask(
   if (scope) return scope;
 
   let start: TaskEdit["start"];
+  // Arming launches an agent, so it stays a power over the caller's OWN tree:
+  // a task only reached (a role's backlog task, an earlier session's root)
+  // is edited or dropped, never armed from here — a backlog task joins the
+  // tree first (a role session's `adopt_task`), so it runs watched, under the
+  // session's mandate.
   if (input.start === "armed") {
+    const root = await ports.callerRoot(conversationId);
+    const of = await ports.rootOf(taskId);
+    if (!(of.kind === "found" && of.rootTaskId === root))
+      return refused(
+        "not-in-tree",
+        `${taskId} is outside your task tree: only a task of your tree can be armed (a supervisor role adopts a backlog task with \`adopt_task\`).`,
+      );
     const why = await ports.unarmable(taskId);
     if (why !== null) return refused("not-armable", why);
     const model =

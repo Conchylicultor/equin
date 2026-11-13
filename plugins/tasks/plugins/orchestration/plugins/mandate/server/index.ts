@@ -4,13 +4,25 @@ import { mandateSection } from "./internal/instructions";
 
 export { renderMandateInstructions } from "./internal/instructions";
 
-export { Mandate } from "./internal/contribution";
-export type { MandateCapabilityEntry } from "./internal/contribution";
-export { granted, grantOf, mandateOf } from "./internal/resolve";
-export type { EffectiveMandate } from "./internal/resolve";
+export {
+  Mandate,
+  MandateReach,
+  reachesBeyondTree,
+} from "./internal/contribution";
+export type {
+  MandateCapabilityEntry,
+  MandateReachEntry,
+} from "./internal/contribution";
+export {
+  conversationMandate,
+  granted,
+  grantOf,
+  mandateOf,
+} from "./internal/resolve";
+export type { ConversationMandate, EffectiveMandate } from "./internal/resolve";
 
 export default {
   description:
-    "The mandate's server half: the Mandate.Capability registry (each owner contributes how its granted value reads), mandateOf (the named mandate nearest-wins up the folder tree, resolved to its definition's current policy through mandate/definitions) and grantOf (per conversation, collapsed per request burst), granted(cap) for Mcp.tool.when, the `## Mandate` system-prompt section (only the lines no tool already says), and the mandate.capabilities catalog value.",
+    "The mandate's server half: the Mandate.Capability registry (each owner contributes how its granted value reads), mandateOf (the named mandate nearest-wins up the folder tree, resolved to its definition's current policy through mandate/definitions) and grantOf (per conversation, collapsed per request burst), granted(cap) for Mcp.tool.when, the `## Mandate` system-prompt section (only the lines no tool already says), the mandate.capabilities catalog value, and MandateReach (a predicate on tasks widening what a mandate may manage beyond its own tree — reachesBeyondTree).",
   contributions: [...capabilityCatalogServed.declare, mandateSection],
 } satisfies ServerPluginDefinition;

@@ -1,0 +1,5 @@
+// @hash 9d338e7674c0
+{
+  // What every supervisor session is told at its root (ad-hoc supervisors and every role's sessions), ahead of the role's own prompt. Empty: nothing.
+  "prompt": ""
+}

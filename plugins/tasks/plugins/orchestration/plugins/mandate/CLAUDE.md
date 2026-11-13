@@ -64,7 +64,7 @@ automations define theirs through `defineAutomation({ mandate })`.
 
 ## Plugin reference
 
-- Description: The mandate's server half: the Mandate.Capability registry (each owner contributes how its granted value reads), mandateOf (the named mandate nearest-wins up the folder tree, resolved to its definition's current policy through mandate/definitions) and grantOf (per conversation, collapsed per request burst), granted(cap) for Mcp.tool.when, the `## Mandate` system-prompt section (only the lines no tool already says), and the mandate.capabilities catalog value.
+- Description: The mandate's server half: the Mandate.Capability registry (each owner contributes how its granted value reads), mandateOf (the named mandate nearest-wins up the folder tree, resolved to its definition's current policy through mandate/definitions) and grantOf (per conversation, collapsed per request burst), granted(cap) for Mcp.tool.when, the `## Mandate` system-prompt section (only the lines no tool already says), the mandate.capabilities catalog value, and MandateReach (a predicate on tasks widening what a mandate may manage beyond its own tree — reachesBeyondTree).
 - Server:
   - Contributes:
     - `resource.declare` "mandate.capabilities"
@@ -77,13 +77,18 @@ automations define theirs through `defineAutomation({ mandate })`.
     - `tasks/tasks-core.getConversation`
     - `tasks/tasks-core.nearestMandate`
   - Exports (types):
+    - `ConversationMandate`
     - `EffectiveMandate`
     - `MandateCapabilityEntry`
+    - `MandateReachEntry`
   - Exports (values):
+    - `conversationMandate`
     - `granted`
     - `grantOf`
     - `Mandate`
     - `mandateOf`
+    - `MandateReach`
+    - `reachesBeyondTree`
     - `renderMandateInstructions`
   - Resources: `mandate.capabilities` (push, fixed, whole: every capability the code contributes — fixed for the process, a handful)
 - Core:
@@ -104,6 +109,8 @@ automations define theirs through `defineAutomation({ mandate })`.
     - `tasks/orchestration/tree-digest`
     - `tasks/orchestration/watch`
     - `tasks/outcome-report`
+    - `tasks/supervisor-roles`
+    - `tasks/supervisor-roles/sessions`
 - Sub-plugins:
   - **`change-notice`** — A running agent follows a change of its task's mandate without a restart: on tasks.mandateChanged each live agent on those tasks reconnects the equin MCP server (its tools are the new mandate's at…
   - **`definitions`** — The named-mandate registry's web presence: eagerly registers the boot-preloaded mandate.definitions live value (every named mandate's id and label) so boot-snapshot hydrates it before first paint.…

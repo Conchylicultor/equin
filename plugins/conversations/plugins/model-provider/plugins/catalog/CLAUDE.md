@@ -40,6 +40,7 @@ The host-global model catalog — which model versions this machine knows, which
     - `infra/claude-cli`
     - `tasks`
     - `tasks/auto-start/launch-option`
+    - `tasks/supervisor-roles/sessions`
     - `tasks/task-triage`
 - Machine:
   - Register:

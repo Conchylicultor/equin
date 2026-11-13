@@ -1,5 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import { scopeKey } from "@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/policy/core";
+import { z } from "zod";
+import {
+  defineCapability,
+  scopeKey,
+} from "@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/policy/core";
 import { exitClean } from "@plugins/conversations/plugins/conversation-view/plugins/push-and-exit/plugins/capabilities/core";
 import { tasksFile, tasksManage } from "@plugins/tasks/plugins/tasks-core/core";
 import { interactivePolicy, supervisorPolicy } from "./policies";
@@ -44,5 +48,39 @@ describe("tasks.file in the presets", () => {
     expect(
       (policy[scopeKey("below")] as Record<string, unknown>)[tasksFile.id],
     ).not.toHaveProperty("defaultAfter");
+  });
+});
+
+describe("the backlog destination in the presets", () => {
+  test("an interactive agent and every supervisor conversation may file into a role's backlog", () => {
+    expect(
+      (interactivePolicy()[tasksFile.id] as Record<string, unknown>).backlog,
+    ).toBe(true);
+    const policy = supervisorPolicy() as Record<string, unknown>;
+    for (const scope of ["root", "below"] as const) {
+      const scoped = policy[scopeKey(scope)] as Record<string, unknown>;
+      expect((scoped[tasksFile.id] as Record<string, unknown>).backlog).toBe(
+        true,
+      );
+    }
+  });
+});
+
+describe("supervisorPolicy(extra)", () => {
+  test("adds the extra grants to their scope, and refuses one the preset already grants", () => {
+    const extra = defineCapability<true>({
+      id: "test.extra",
+      schema: z.literal(true),
+      label: "Extra",
+    });
+    const policy = supervisorPolicy({ root: [extra.grant(true)] }) as Record<
+      string,
+      unknown
+    >;
+    expect(policy[scopeKey("root")]).toMatchObject({ "test.extra": true });
+    expect(policy[scopeKey("below")]).not.toHaveProperty("test.extra");
+    expect(() => supervisorPolicy({ root: [tasksManage.grant(true)] })).toThrow(
+      /granted twice/,
+    );
   });
 });

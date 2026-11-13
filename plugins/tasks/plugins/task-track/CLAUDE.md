@@ -138,6 +138,8 @@ sidequest's ops at low host-admission priority, behind the main track.
     - `framework/cli/op-runtime`
     - `tasks`
     - `tasks/sidequest-autopilot`
+    - `tasks/supervisor-roles`
+    - `tasks/supervisor-roles/sessions`
     - `tasks/task-header`
 - Exemptions:
   - Exempts itself from: `ids:pk-declared` — `server/internal/tables-events.ts` (debt)

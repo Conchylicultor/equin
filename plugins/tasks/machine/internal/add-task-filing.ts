@@ -38,6 +38,13 @@ export interface AddTaskInput {
   model?: ModelChoice;
 }
 
+/** `add_task` with `supervisor`: file into this supervisor role's backlog (a
+ * listed role's id, or `"fallback"`) instead of under the caller's task —
+ * needs the grant's `backlog`, and start `manual`. */
+export interface BacklogAddTaskInput extends AddTaskInput {
+  supervisor: string;
+}
+
 /**
  * Everything `add_task` reads and writes, as ports: production binds them to
  * the real mutations (mcp-tools.ts); a test binds them to an in-memory store,
@@ -67,6 +74,16 @@ export interface AddTaskPorts {
   watch(taskId: string, conversationId: string): Promise<void>;
   /** The live model catalog the `model` choice is checked against. */
   modelCatalog(): ModelCatalog;
+  /** File a root task into a supervisor role's backlog (owned by the role,
+   * never armed); throws for a role the caller may not name. */
+  fileToBacklog(filing: {
+    title: string;
+    description: string | null;
+    track: TaskTrack;
+    supervisor: string;
+    conversationId: string;
+    fromTaskId: string;
+  }): Promise<{ taskId: string; role: { id: string; name: string } }>;
 }
 
 export interface AddTaskResult {
@@ -85,6 +102,16 @@ export interface AddTaskResult {
   after_default?: string;
 }
 
+/** What `add_task` answers for a task filed into a role's backlog. */
+export interface BacklogFilingResult {
+  task_id: string;
+  track: TaskTrack;
+  start: "manual";
+  /** The role whose backlog it waits in. */
+  supervisor: { id: string; name: string };
+  note: string;
+}
+
 /** The tracks and start modes a grant allows, as the agent reads them (the
  * tool's live description and every refusal). */
 export function describeFilingGrant(grant: TasksFileGrant): string {
@@ -101,7 +128,11 @@ export function describeFilingGrant(grant: TasksFileGrant): string {
     grant.defaultAfter === "none"
       ? '; with no `after`, an "after" / "manual" task depends on nothing (not on your own task, which stays in progress while the tasks you file run)'
       : "";
-  return `${tracks.join("; ")}${after}`;
+  const backlog =
+    grant.backlog === true
+      ? "; or, with `supervisor`, into a supervisor role's backlog"
+      : "";
+  return `${tracks.join("; ")}${after}${backlog}`;
 }
 
 /** Refuse, before anything is written, a filing the grant or the parameters
@@ -163,6 +194,54 @@ function checkFiling(
   // the version is checked here, and the refusal lists what can run today.
   assertChoiceLaunchable(model, catalog);
   return model;
+}
+
+/**
+ * `add_task` with `supervisor`: the task goes to that role's backlog — a root
+ * task the role owns, never armed, kept apart from the caller's tree — and
+ * waits there until a session of the role adopts it. The track grants do not
+ * apply (the `backlog` grant does); it never launches on its own, so `start`
+ * must say `manual`, and nothing is wired to it.
+ */
+export async function fileIntoBacklog(
+  input: BacklogAddTaskInput,
+  conversationId: string,
+  ports: AddTaskPorts,
+): Promise<BacklogFilingResult> {
+  const grant = await ports.grant(conversationId);
+  if (grant?.backlog !== true)
+    throw new Error(
+      "Your mandate does not allow filing into a supervisor role's backlog (`tasks.file` without `backlog`): drop `supervisor`.",
+    );
+  if (input.start !== "manual")
+    throw new Error(
+      'A task filed with `supervisor` waits in the role\'s backlog until a session adopts it: pass start "manual".',
+    );
+  if (input.after !== undefined || input.relation !== undefined)
+    throw new Error(
+      "A task filed with `supervisor` sits in no tree, so it runs after nothing: drop `after` / `relation`.",
+    );
+  if (input.model !== undefined)
+    throw new Error(
+      "`model` is meaningless with `supervisor`: the session that adopts the task picks the model.",
+    );
+  const conv = await ports.getConversation(conversationId);
+  if (!conv) throw new Error(`Unknown conversation "${conversationId}"`);
+  const { taskId, role } = await ports.fileToBacklog({
+    title: input.title,
+    description: input.description ?? null,
+    track: input.track,
+    supervisor: input.supervisor,
+    conversationId,
+    fromTaskId: conv.taskId,
+  });
+  return {
+    task_id: taskId,
+    track: input.track,
+    start: "manual",
+    supervisor: role,
+    note: `Filed into ${role.name}'s backlog — not under your task, and not in your tree: a session of the role adopts it.`,
+  };
 }
 
 export async function fileAddTask(

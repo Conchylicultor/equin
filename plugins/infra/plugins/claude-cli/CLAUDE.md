@@ -258,6 +258,7 @@ block keep taking a plain `ClaudeCliCall`.
     - `conversations/conversation-view/turn-summary`
     - `debug/claude-cli-calls`
     - `debug/read-set`
+    - `tasks/supervisor-roles`
     - `tasks/task-title`
 - Exemptions:
   - Exempts itself from:

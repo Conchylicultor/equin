@@ -781,9 +781,9 @@ serves them.
     - `TRAILER_LOG_FORMAT`
     - `UNATTRIBUTED_TRAILER_KEY`
 - Cross-plugin:
-  - Imported by: 121 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 123 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations` ×51
-    - `tasks` ×36
+    - `tasks` ×38
     - `debug` ×6
     - `active-data` ×5
     - `apps` ×3
@@ -825,6 +825,7 @@ serves them.
     - `tasks/task-title` (table `tasks_ext_short_title`)
     - `tasks/task-source-url` (table `tasks_ext_source_url`)
     - `tasks/task-subject` (table `tasks_ext_subject`)
+    - `tasks/supervisor-roles` (table `tasks_ext_supervisor`)
     - `tasks/task-track` (table `tasks_ext_track`)
     - `tasks/task-triage` (table `tasks_ext_triage`)
     - `tasks/task-triage` (table `tasks_ext_triage_note`)

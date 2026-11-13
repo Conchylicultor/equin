@@ -7216,6 +7216,14 @@
       "name": "@equin/plugin-tasks-sidequest-autopilot",
       "version": "0.0.1",
     },
+    "plugins/tasks/plugins/supervisor-roles": {
+      "name": "@equin/plugin-tasks-supervisor-roles",
+      "version": "0.0.1",
+    },
+    "plugins/tasks/plugins/supervisor-roles/plugins/sessions": {
+      "name": "@equin/plugin-tasks-supervisor-roles-sessions",
+      "version": "0.0.1",
+    },
     "plugins/tasks/plugins/supervisor-run": {
       "name": "@equin/plugin-tasks-supervisor-run",
       "version": "0.0.1",
@@ -11171,6 +11179,10 @@
     "@equin/plugin-tasks-reports-investigation": ["@equin/plugin-tasks-reports-investigation@workspace:plugins/tasks/plugins/reports-investigation"],
 
     "@equin/plugin-tasks-sidequest-autopilot": ["@equin/plugin-tasks-sidequest-autopilot@workspace:plugins/tasks/plugins/sidequest-autopilot"],
+
+    "@equin/plugin-tasks-supervisor-roles": ["@equin/plugin-tasks-supervisor-roles@workspace:plugins/tasks/plugins/supervisor-roles"],
+
+    "@equin/plugin-tasks-supervisor-roles-sessions": ["@equin/plugin-tasks-supervisor-roles-sessions@workspace:plugins/tasks/plugins/supervisor-roles/plugins/sessions"],
 
     "@equin/plugin-tasks-supervisor-run": ["@equin/plugin-tasks-supervisor-run@workspace:plugins/tasks/plugins/supervisor-run"],
 

@@ -39,6 +39,7 @@ by `MandatePolicySchema`), and the mandate's server half resolves it through
     - `tasks/outcome-report/capability`
     - `tasks/reports-investigation`
     - `tasks/sidequest-autopilot`
+    - `tasks/supervisor-roles`
     - `tasks/tasks-core`
     - `upstream`
 - Core:

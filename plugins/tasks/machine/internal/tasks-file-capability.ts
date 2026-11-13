@@ -10,7 +10,7 @@ import { describeFilingGrant } from "./add-task-filing";
 // task-track): a track added to one side and not the other fails here.
 type Same<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
 const tracksMatch: Same<
-  Exclude<keyof TasksFileGrant, "defaultAfter">,
+  Exclude<keyof TasksFileGrant, "defaultAfter" | "backlog">,
   TaskTrack
 > = true;
 void tracksMatch;

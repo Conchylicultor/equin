@@ -21,9 +21,9 @@
     - `trigger` "watch.ingest"
     - `trigger` "watch.ingest"
     - `trigger` "watch.ingest"
-  - Uses: 40 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 41 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `tasks/tasks-core` ×20
-    - `tasks/orchestration/mandate` ×3
+    - `tasks/orchestration/mandate` ×4
     - `tasks/task-track` ×3
     - `infra/endpoints` ×2
     - `primitives/rank` ×2
@@ -131,14 +131,15 @@
     - `updateTask`
     - `UpdateTaskBodySchema`
 - Cross-plugin:
-  - Imported by: 21 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `tasks` ×12
+  - Imported by: 22 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `tasks` ×13
     - `conversations` ×6
     - `active-data/task`
     - `hints/ask`
     - `primitives/launch`
   - Endpoint callers:
     - `menu-bar-task`
+    - `supervisor-roles`
     - `task-mandate`
 - Sub-plugins:
   - **`attempt-status`** — Single source of truth for Attempt status display metadata — badge tint, dot tint and sentence-case label, so a chip and a badge for the same attempt cannot disagree.
@@ -153,6 +154,7 @@
   - **`outcome-report`** — The outcome report an automated task's agent submitted: a card at the end of the transcript of the conversation that wrote it (scrolling with it, not pinned over it) (markdown body, pushed /…
   - **`reports-investigation`** — The Report investigations automation in the Automations pane: registers its config (trigger, push policy, model, prompt, scope) and contributes its Which reports section — severity, recurrence…
   - **`sidequest-autopilot`** — The Sidequest autopilot in the Automations pane: registers its config (enabled, at once, in total, push policy, model, prompt, triage) and contributes its sections — Launch list (a DataView of every…
+  - **`supervisor-roles`** — Supervisor roles, web half: registers the srole id kind, the shared supervisor prompt config (Settings → Config) and the exposed `supervisor` field of every task list, its options the live roles by…
   - **`supervisor-run`** — The Supervisor launch option on every new-task composer (Home prompt, Make a wish, menu bar): Interactive (unset — the pill rests as its icon) or Supervisor. Draft-only — it decides how a task's…
   - **`task-attachments`** — Renders the task's attachments (images, files) in the detail pane.
   - **`task-category`** — Per-task category (registry-driven, system-set only): presents the exposed `category` field of every list whose rows reach a task (the task list groups by it), its options read from the live…

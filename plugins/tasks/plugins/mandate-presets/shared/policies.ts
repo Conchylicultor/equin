@@ -1,5 +1,6 @@
 import {
   mandatePolicy,
+  type Grant,
   type MandatePolicy,
 } from "@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/policy/core";
 import {
@@ -30,6 +31,7 @@ export function interactivePolicy(): MandatePolicy {
     tasksFile.grant({
       main: { start: ["after"] },
       sidequest: { start: ["manual"] },
+      backlog: true,
     }),
     pushPolicy.grant("on-request"),
     exitClean.grant("on-request"),
@@ -37,13 +39,27 @@ export function interactivePolicy(): MandatePolicy {
   ]);
 }
 
-/** What `supervisorMandate` (core) grants — its definition's body. */
-export function supervisorPolicy(): MandatePolicy {
+/** Grants a mandate built on the supervisor preset adds to it, per scope. */
+export interface SupervisorExtraGrants {
+  whole?: readonly Grant[];
+  root?: readonly Grant[];
+  below?: readonly Grant[];
+}
+
+/**
+ * What `supervisorMandate` (core) grants — its definition's body — plus, for
+ * a mandate that inherits it (a supervisor role's), the grants `extra` adds.
+ * A capability granted twice (in the preset and in `extra`) throws.
+ */
+export function supervisorPolicy(
+  extra: SupervisorExtraGrants = {},
+): MandatePolicy {
   // Granted the root and the workers alike; only what a task filed with no
   // `after` waits on differs.
   const filing: TasksFileGrant = {
     main: { start: ["now", "after", "manual"] },
     sidequest: { start: ["manual"] },
+    backlog: true,
   };
   return mandatePolicy(
     [
@@ -51,6 +67,7 @@ export function supervisorPolicy(): MandatePolicy {
       messageTree.grant(true),
       flagRaise.grant(true),
       contextCompact.grant(true),
+      ...(extra.whole ?? []),
     ],
     {
       root: [
@@ -61,11 +78,13 @@ export function supervisorPolicy(): MandatePolicy {
         exitClean.grant("on-request"),
         watchTree.grant(true),
         tasksManage.grant(true),
+        ...(extra.root ?? []),
       ],
       below: [
         tasksFile.grant(filing),
         reportRequired.grant(true),
         exitClean.grant("when-done"),
+        ...(extra.below ?? []),
       ],
     },
   );

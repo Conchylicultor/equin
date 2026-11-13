@@ -79,6 +79,7 @@ Design: `research/2026-11-12-conversations-system-prompt-sections.md`.
     - `page/annotations/agent-access`
     - `tasks`
     - `tasks/orchestration/mandate`
+    - `tasks/supervisor-roles`
 - Server:
   - Exports (types): `SystemPromptSection`
   - Exports (values): `SystemPrompt`

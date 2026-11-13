@@ -32,6 +32,7 @@ import {
   granted,
   grantOf,
   Mandate,
+  reachesBeyondTree,
 } from "@plugins/tasks/plugins/orchestration/plugins/mandate/server";
 import { armTaskAutoStart } from "./arm-auto-start";
 import {
@@ -58,6 +59,7 @@ const ports: ManageTasksPorts = {
       ? { kind: "found", rootTaskId: nearest.rootTaskId }
       : { kind: "none" };
   },
+  reaches: reachesBeyondTree,
   async unarmable(taskId) {
     const task = await getTask(taskId);
     if (task?.droppedAt) return `${taskId} is dropped — it will not run.`;
@@ -128,7 +130,7 @@ const ports: ManageTasksPorts = {
   },
 };
 
-const SCOPE = `Only the tasks of your own task tree (those under your mandate's root, as \`task_tree\` lists them) — never a task elsewhere, nor your tree's root (your own task) itself; anything else is refused.`;
+const SCOPE = `Only the tasks of your own task tree (those under your mandate's root, as \`task_tree\` lists them), plus any your mandate reaches beyond it (a supervisor role's backlog and its earlier sessions) — never a task elsewhere, nor your tree's root (your own task) itself; anything else is refused.`;
 
 export const editTaskTool = Mcp.tool({
   name: "edit_task",
