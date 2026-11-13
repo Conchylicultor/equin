@@ -4,8 +4,8 @@ import type { ResourceError } from "@plugins/network/plugins/live/plugins/live-s
  * What a refused content-addressed read (`icons.sprite`,
  * `icons.runtime-symbols`) means to the host reading it.
  *
- * Every such tuple carries the hash the tab holds — the resident value's
- * `manifestHash` / `symbolsHash`, or a scope's `icons.sprite-hash`. A server
+ * Every such tuple carries the hash the tab holds — `icons.sprite-hash` /
+ * `icons.symbols-hash` of the server it reads. A server
  * that restarted with another manifest (any deploy adding a `symbol("…")`), or
  * whose saved-name list moved (a user picked a new icon), refuses the old hash
  * (`stale-manifest` / `stale-symbols`). That is not a fault: the value the hash

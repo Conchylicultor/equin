@@ -32914,9 +32914,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Slots:
           - `Core.Root`
           - `Core.Boot`
-        - Slot contributors: 39 contributors — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
+        - Slot contributors: 40 contributors — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
           - `Core.Root` ×38
-          - `Core.Boot` ← `network.live.boot-snapshot`
+          - `Core.Boot` ×2
       - Core:
         - Uses:
           - `framework/plugin-id.asPluginId`
@@ -32984,10 +32984,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `webCollectedDir`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
-        - Imported by: 106 plugins — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
+        - Imported by: 107 plugins — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
           - `primitives` ×23
           - `apps` ×18
-          - `ui` ×7
+          - `ui` ×8
           - `apps-core` ×6
           - `debug` ×6
           - `reports` ×6
@@ -34894,7 +34894,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `unmatchedApiResponse`
           - `unsupportedEndpointResponse`
       - Cross-plugin:
-        - Imported by: 259 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
+        - Imported by: 260 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
           - `apps` ×76
           - `conversations` ×35
           - `infra` ×23
@@ -34902,8 +34902,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks` ×20
           - `page` ×19
           - `primitives` ×15
+          - `ui` ×7
           - `reports` ×6
-          - `ui` ×6
           - `auth` ×5
           - `framework` ×4
           - `build` ×3
@@ -53543,6 +53543,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `debug/slow-ops`
               - `framework/web-core`
               - `network/live/boot-snapshot`
+              - `ui/icons/sprites`
           - Web:
             - Exports (types):
               - `AssetTiming`
@@ -57576,6 +57577,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/demo/shell`
           - `framework/cli/build/experimental-marks`
           - `network/live/boot-snapshot`
+          - `ui/icons/sprites`
           - `ui/theme-engine`
       - Server:
         - Exports (types):
@@ -61951,7 +61953,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tag-tree/engine`
               - `tasks/supervisor-roles`
               - `ui/icons/sprites`
-        - **`saved-sources`** — The saved-icon source registry: defineSavedIconSource registers a place that stores user-picked icons (its tables, its names, a watch for a non-DB store), and savedIconSources lists them for the sprites plugin's resident icons.saved-sprites value. Pure and portable, so a plugin whose server half runs in the browser host can register its source without reaching the sprites builder.
+        - **`saved-sources`** — The saved-icon source registry: defineSavedIconSource registers a place that stores user-picked icons (its tables, its names, a watch for a non-DB store), and savedIconSources lists them for the sprites plugin's saved-sprite asset (every saved name, drawn for the first paint). Pure and portable, so a plugin whose server half runs in the browser host can register its source without reaching the sprites builder.
           - Cross-plugin:
             - Imported by:
               - `apps/places/places-core`
@@ -61974,11 +61976,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `defineSavedIconSource`
               - `savedIconSources`
               - `savedIconSourcesCode`
-        - **`sprites`** — Mounts the page's icon sprites inline: the resident default-style sprites from the boot snapshot (present at first paint) plus, on demand, the sprite of every other style a theme scope picks, and the page's saved-icon symbols. ScopeIconSymbols gives a plugin scope (a demo) saved icons of its own, read from the scope's server and drawn in a sheet inside it. The build's sprites on demand, on every host: icons.sprite (one sprite by key, immutable, content-addressed by icons.sprite-hash) drawn through the host's SpriteDrawer — the computer's installed sets (this plugin's machine half) or the Seti and Lucide sets bundled with a browser host (plugins/bundled-sprites) — so a scope reads its sprites from its own server. Saved (user-picked) icons as runtime symbols, on every host: the resident icons.saved-sprites value draws every name a saved-icon source (ui/icons/saved-sources) reports in the default style, and the on-demand icons.runtime-symbols value serves any saved names in any style, immutable (content-addressed by symbolsHash). Both draw through the host's RuntimeSymbolDrawer — the icon sets installed on the computer (this plugin's machine half), or a set bundled with the page (plugins/bundled-symbols, a browser host) — so a demo's icons come from its own server.
+        - **`sprites`** — Mounts the page's icon sprites inline. The resident default-style sprites and the saved-icon symbols the first paint needs are fetched by the SPA shell's head at t0 (content-addressed assets the browser caches) and provided by a Core.Boot task before the first render — never carried by the boot snapshot; every other sprite (another style a theme scope picks, the Seti and Lucide sprites, a resident one the head did not provide) and every other saved name are read live, on demand. ScopeIconSymbols gives a plugin scope (a demo) saved icons of its own, read from the scope's server and drawn in a sheet inside it. The build's sprites, on every host, drawn through the host's SpriteDrawer — the computer's installed sets (this plugin's machine half) or the Seti and Lucide sets bundled with a browser host (plugins/bundled-sprites): icons.sprite (one sprite by key on demand, immutable, content-addressed by icons.sprite-hash, preloaded) and GET /api/icons/sprite-assets/:hash/:key, the same sprite as an asset the browser caches for good. Saved (user-picked) icons as runtime symbols, drawn through the host's RuntimeSymbolDrawer (the installed sets, or a set bundled with the page — plugins/bundled-symbols): icons.runtime-symbols serves any saved names in any style on demand (immutable, content-addressed by icons.symbols-hash, preloaded), and GET /api/icons/saved-sprite-assets/:hash the default styles' drawing of every name a saved-icon source (ui/icons/saved-sources) reports, revalidated by an ETag over the names. A DocumentHead.Fragment starts both asset requests in the SPA shell's head, so the sprites a first paint needs never ride the boot snapshot.
           - Web:
-            - Contributes: `Icons.Root` → `IconSpriteHost`
+            - Contributes:
+              - `Core.Boot`
+              - `Icons.Root` → `IconSpriteHost`
             - Uses:
               - `network/live.useLive`
+              - `primitives/perfs/boot-trace.recordBootSpan`
               - `ui/icons.createScopedRuntimeSymbols`
               - `ui/icons.Icons`
               - `ui/icons.IconSpriteSheet`
@@ -61993,20 +61998,21 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `ScopeIconSymbols`
           - Server:
             - Contributes:
+              - `DocumentHead.Fragment` "icon-sprites"
               - `resource.declare` "icons.manifest"
               - `resource.declare` "icons.runtime-symbols"
-              - `resource.declare` "icons.saved-icons-changed"
-              - `resource.declare` "icons.saved-sprites"
               - `resource.declare` "icons.sprite"
               - `resource.declare` "icons.sprite-hash"
-              - `resource.declare` "icons.sprites"
+              - `resource.declare` "icons.symbols-hash"
               - `host-service:icons.sprite-drawer` "icons.sprite-drawer"
               - `host-service:icons.runtime-symbol-drawer` "icons.runtime-symbol-drawer"
             - Uses:
+              - `infra/endpoints.endpointPath`
+              - `infra/endpoints.rawEndpointHandler`
               - `network/live.serveValue`
+              - `shell/document-head.DocumentHead`
               - `ui/icons/saved-sources.SavedIconSource`
               - `ui/icons/saved-sources.savedIconSources`
-              - `ui/icons/saved-sources.savedIconSourcesCode`
             - Exports (types):
               - `DrawnSprite`
               - `RuntimeSymbolDrawerImpl`
@@ -62024,32 +62030,36 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Resources:
               - `icons.manifest` (push, fixed, whole: the symbol names the build scanned from the code — fixed for the process, and the Icons pane lists them all)
               - `icons.runtime-symbols` (invalidate, immutable)
-              - `icons.saved-icons-changed` (push, notified)
-              - `icons.saved-sprites` (push, whole: every saved icon name — each picked by hand, and every one must be drawable at first paint, whole: one sprite per default style key — a handful)
               - `icons.sprite` (invalidate, immutable)
               - `icons.sprite-hash` (push, fixed)
-              - `icons.sprites` (push, fixed, whole: the resident sprites — the default style's two and the brands)
+              - `icons.symbols-hash` (push, fixed)
+            - Routes:
+              - `GET /api/icons/sprite-assets/:hash/:key`
+              - `GET /api/icons/saved-sprite-assets/:hash`
           - Machine:
             - Uses: `network/live.serveValue`
             - Exports (values): `manifestSymbolBody`
           - Core:
             - Uses:
+              - `infra/endpoints.blob`
+              - `infra/endpoints.defineEndpoint`
               - `network/live.liveValue`
               - `packages/list-bound.wholeList`
               - `packages/list-bound.wholeRecord`
-            - Exports (types):
-              - `IconSprites`
-              - `SavedIconSprites`
+              - `ui/icons.BRANDS_SPRITE`
+              - `ui/icons.DEFAULT_STYLE_KEYS`
+              - `ui/icons.SpriteKey`
+            - Exports (types): `SavedSpriteAsset`
             - Exports (values):
+              - `getSavedSpriteAsset`
+              - `getSpriteAsset`
               - `iconManifest`
               - `iconSprite`
-              - `IconSpritesSchema`
               - `MAX_RUNTIME_SYMBOLS_PER_READ`
-              - `residentSprites`
+              - `RESIDENT_SPRITE_KEYS`
               - `runtimeSymbolsValue`
-              - `savedIconsChanged`
-              - `savedIconSprites`
-              - `SavedIconSpritesSchema`
+              - `SavedSpriteAssetSchema`
+              - `savedSymbolsHash`
               - `spriteHash`
           - Cross-plugin:
             - Imported by:

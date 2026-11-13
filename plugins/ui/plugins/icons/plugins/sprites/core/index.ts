@@ -1,13 +1,13 @@
 export {
-  IconSpritesSchema,
-  iconSprite,
-  SavedIconSpritesSchema,
+  getSavedSpriteAsset,
+  getSpriteAsset,
   iconManifest,
-  residentSprites,
+  iconSprite,
   MAX_RUNTIME_SYMBOLS_PER_READ,
+  RESIDENT_SPRITE_KEYS,
   runtimeSymbolsValue,
-  savedIconSprites,
-  savedIconsChanged,
+  SavedSpriteAssetSchema,
+  savedSymbolsHash,
   spriteHash,
 } from "./sprites";
-export type { IconSprites, SavedIconSprites } from "./sprites";
+export type { SavedSpriteAsset } from "./sprites";

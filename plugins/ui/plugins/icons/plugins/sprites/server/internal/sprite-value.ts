@@ -1,6 +1,7 @@
 import { serveValue } from "@plugins/network/plugins/live/server";
+import { rawEndpointHandler } from "@plugins/infra/plugins/endpoints/server";
 import { isSpriteKey } from "@plugins/ui/plugins/icons/core";
-import { iconSprite, spriteHash } from "../../core";
+import { getSpriteAsset, iconSprite, spriteHash } from "../../core";
 import { SpriteDrawer } from "./sprite-drawer";
 
 /**
@@ -61,3 +62,36 @@ export const spriteHashServed = serveValue(spriteHash, {
   },
   loader: () => Promise.resolve(SpriteDrawer.get().manifestHash),
 });
+
+/**
+ * `GET /api/icons/sprite-assets/:hash/:key` — one sprite as an asset the
+ * browser caches for good: the path carries the drawer's hash, so a changed
+ * manifest is a different URL, never a stale hit. The shell's head fetches
+ * the resident ones at t0 (`head.ts`).
+ */
+export const handleSpriteAsset = rawEndpointHandler(
+  getSpriteAsset,
+  async (_req, params) => {
+    const drawer = SpriteDrawer.get();
+    const key = params.key ?? "";
+    if (params.hash !== drawer.manifestHash) {
+      return new Response(
+        `Sprite version ${params.hash} is not this server's (${drawer.manifestHash})`,
+        { status: 409, headers: { "cache-control": "no-store" } },
+      );
+    }
+    const drawn = isSpriteKey(key) ? await drawer.draw(key) : null;
+    if (drawn === null || drawn.kind === "not-drawn-here") {
+      return new Response(`This host draws no sprite named "${key}"`, {
+        status: 404,
+        headers: { "cache-control": "no-store" },
+      });
+    }
+    return new Response(drawn.markup, {
+      headers: {
+        "content-type": "image/svg+xml",
+        "cache-control": "public, max-age=31536000, immutable",
+      },
+    });
+  },
+);

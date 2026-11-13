@@ -1,133 +1,91 @@
-import {
-  type FollowMap,
-  followsAtBind,
-} from "@plugins/network/plugins/live/core";
 import { serveValue } from "@plugins/network/plugins/live/server";
+import { rawEndpointHandler } from "@plugins/infra/plugins/endpoints/server";
 import {
   DEFAULT_STYLE_KEYS,
   type SavedSymbolName,
 } from "@plugins/ui/plugins/icons/core";
-import { savedIconSprites, savedIconsChanged } from "../../core";
+import {
+  getSavedSpriteAsset,
+  savedSymbolsHash,
+  type SavedSpriteAsset,
+} from "../../core";
+import { sha256Hex } from "@plugins/packages/plugins/string-hash/core";
 import { runtimeSymbols, symbolsHash } from "./drawer";
 import {
   savedIconSources,
-  savedIconSourcesCode,
   type SavedIconSource,
 } from "@plugins/ui/plugins/icons/plugins/saved-sources/server";
 
-type Followed = Readonly<Record<string, readonly unknown[]>>;
-
-/**
- * Every saved name some saved-icon source holds right now, sorted, once each.
- * A followed source's rows come from `followed` inside the sprites' loader
- * (the follow's own read), or are read through its collection's set
- * otherwise (a warm-up).
- */
-export async function savedIconNames(
-  followed?: Followed,
-): Promise<readonly SavedSymbolName[]> {
+/** Every saved name some saved-icon source holds right now, sorted, once each. */
+export async function savedIconNames(): Promise<readonly SavedSymbolName[]> {
   const names = new Set<SavedSymbolName>();
   for (const source of savedIconSources()) {
-    for (const name of await namesOf(source, followed)) names.add(name);
+    for (const name of await namesOf(source)) names.add(name);
   }
   return [...names].sort();
 }
 
 async function namesOf(
   source: SavedIconSource,
-  followed: Followed | undefined,
 ): Promise<readonly SavedSymbolName[]> {
   switch (source.kind) {
-    case "followed": {
-      if (followed === undefined) {
-        return source.namesOf(await source.collection.all.load(source.where));
-      }
-      const rows = followed[source.id];
-      if (rows === undefined) {
-        throw new Error(
-          `[icons] the saved-icon source "${source.id}" was not followed — it registered after the sprites bound`,
-        );
-      }
-      return source.namesOf(rows);
-    }
+    case "followed":
+      return source.namesOf(await source.collection.all.load(source.where));
     case "tables":
     case "watched":
       return source.names();
   }
 }
 
-let changes = 0;
-
-/** The tick non-DB sources bump; nothing but {@link savedIconSpritesServed} reads it. */
-export const savedIconsChangedServed = serveValue(savedIconsChanged, {
+/** The drawer's symbols hash: fixed for the host's life. */
+export const savedSymbolsHashServed = serveValue(savedSymbolsHash, {
   source: "external",
-  changes: "notified",
-  loader: () => changes,
+  readCost: "memory",
+  changes: {
+    fixed: {
+      reason:
+        "a pure function of the drawer's sets, the savable-name list and the symbol build",
+    },
+  },
+  loader: () => Promise.resolve(symbolsHash()),
 });
 
-function bump(): void {
-  changes++;
-  savedIconsChangedServed.notify();
-}
-
 /**
- * The resident saved-icon sprites. DB-backed: each followed source's scope is
- * a follow (a write reaches the value only when it touches a row of that
- * scope and a column its collection reads), each whole-table source's tables
- * are reads (both built at the bind — sources register at module eval, after
- * this value is declared); a config source
- * bumps the tick while the value has a subscriber. The first subscriber also
- * bumps it once — a value restored from the persisted snapshot is recomputed
- * against config that changed while the backend was down.
+ * `GET /api/icons/saved-sprite-assets/:hash` — the default styles' drawing of
+ * every saved name, for the shell's head to fetch at t0 (`head.ts`), so saved
+ * icons are drawable at the first paint without riding the boot snapshot.
+ * Revalidated, never stored stale: `no-cache` with an ETag over the names
+ * (and the hash, which pins what each drawing is), so a page load whose names
+ * did not move is a 304 before anything is drawn.
  */
-export const savedIconSpritesServed = serveValue(savedIconSprites, {
-  source: "db",
-  // Its loader runs every source's `names()`, reached through the registry.
-  code: [import.meta, savedIconSourcesCode],
-  // One follow per followed source, by its id — built at the bind, once
-  // every source has registered.
-  follows: followsAtBind<unknown, FollowMap>((follow) =>
-    Object.fromEntries(
-      savedIconSources().flatMap((s) =>
-        s.kind === "followed"
-          ? [[s.id, follow(s.collection, () => ({ where: s.where }))]]
-          : [],
-      ),
-    ),
-  ),
-  reads: () => ({
-    tables: [
-      ...new Set(
-        savedIconSources().flatMap((s) =>
-          s.kind === "tables" ? s.tables : [],
-        ),
-      ),
-    ],
-    reason:
-      "one resident value draws every name a whole-table saved-icon source holds, so a write to any row of its table may change it",
-  }),
-  recomputeOn: [savedIconsChangedServed],
-  loader: async (_params, { followed }) => {
-    const sorted = await savedIconNames(followed as Followed);
-    return {
-      symbolsHash: symbolsHash(),
-      names: [...sorted],
+export const handleSavedSpriteAsset = rawEndpointHandler(
+  getSavedSpriteAsset,
+  async (req, params) => {
+    const hash = symbolsHash();
+    if (params.hash !== hash) {
+      return new Response(
+        `Symbols version ${params.hash} is not this server's (${hash})`,
+        { status: 409, headers: { "cache-control": "no-store" } },
+      );
+    }
+    const names = await savedIconNames();
+    const etag = `"${sha256Hex(`${hash}\n${names.join(",")}`).slice(0, 32)}"`;
+    const headers = { "cache-control": "no-cache", etag };
+    if (req.headers.get("if-none-match") === etag) {
+      return new Response(null, { status: 304, headers });
+    }
+    const asset: SavedSpriteAsset = {
+      names: [...names],
       sprites: Object.fromEntries(
         await Promise.all(
           DEFAULT_STYLE_KEYS.map(
-            async (key) => [key, await runtimeSymbols(key, sorted)] as const,
+            async (key) => [key, await runtimeSymbols(key, names)] as const,
           ),
         ),
       ),
     };
+    return new Response(JSON.stringify(asset), {
+      headers: { ...headers, "content-type": "application/json" },
+    });
   },
-  whileSubscribed: () => {
-    const stops = savedIconSources().flatMap((s) =>
-      s.kind === "watched" ? [s.watch(bump)] : [],
-    );
-    bump();
-    return () => {
-      for (const stop of stops) stop();
-    };
-  },
-});
+);

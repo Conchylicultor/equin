@@ -4,44 +4,33 @@ import {
   wholeList,
   wholeRecord,
 } from "@plugins/packages/plugins/list-bound/core";
+import { blob, defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
+import {
+  BRANDS_SPRITE,
+  DEFAULT_STYLE_KEYS,
+  type SpriteKey,
+} from "@plugins/ui/plugins/icons/core";
 
-// The manifest's sprites are built from the icon sets installed on the
-// computer (and the manifest compiled into the desktop's backend), so their
-// declarations need it: a host without the computer answers them unavailable.
-// The page's come from the page's own server (`web/internal/sprite-host.tsx`).
-// The SAVED-icon values below are portable: a host draws them through its
-// `RuntimeSymbolDrawer` (the installed sets on the computer, a bundled set on
+// The icon manifest is compiled into the desktop's backend, so its declaration
+// needs the computer: a host without it answers it unavailable. Every sprite
+// value below is portable: a host draws through its `SpriteDrawer` /
+// `RuntimeSymbolDrawer` (the installed sets on the computer, bundled sets on
 // a browser host), and every scope reads them from its own server.
 const SPRITES = { feature: "Icon sprites" } as const;
 
-export const IconSpritesSchema = z.object({
-  /**
-   * What the sprites are a function of: the manifest's names and the installed
-   * Iconify sets. Every on-demand {@link iconSprite} read carries it, which
-   * is what makes that read immutable: a tab whose resident sprites came from
-   * another process's manifest is refused, not sent a mismatched sprite.
-   */
-  manifestHash: z.string(),
-  /** Sprite key → a whole `<svg>…</svg>` of `<symbol>`s. */
-  sprites: wholeRecord(z.string(), {
-    reason: "the resident sprites — the default style's two and the brands",
-  }),
-});
-export type IconSprites = z.infer<typeof IconSpritesSchema>;
-
 /**
- * The RESIDENT sprites: the default style's two (at rest and active) plus the
- * brands. Preloaded, so the boot snapshot hydrates them before first paint and
- * no icon ever renders against a missing symbol in the default theme. A scope
- * themed to another style reads that style's sprite from {@link iconSprite} on
- * demand. External: the truth is the manifest compiled into this process
- * and node_modules, neither of which changes while it runs.
+ * The sprites the page holds from its first paint: the default style's two
+ * (at rest and active) plus the brands. Their markup is never in the boot
+ * snapshot (it was most of it, re-sent on every load): the shell's head
+ * fetches each as a content-addressed asset ({@link getSpriteAsset}, which the
+ * browser caches `immutable`) and the sprites plugin's boot task provides them
+ * before the first render. A key the head did not provide (no head, or one
+ * written for another hash) is read as {@link iconSprite} like any other.
  */
-export const residentSprites = liveValue("icons.sprites", {
-  schema: IconSpritesSchema,
-  preload: "boot-and-keep",
-  needsMachine: SPRITES,
-});
+export const RESIDENT_SPRITE_KEYS: readonly SpriteKey[] = [
+  ...DEFAULT_STYLE_KEYS,
+  BRANDS_SPRITE,
+];
 
 /**
  * One sprite, by key: a whole `<svg>…</svg>` of `<symbol>`s. `key` is a style
@@ -49,8 +38,7 @@ export const residentSprites = liveValue("icons.sprites", {
  * sprite covers (a scope themed to rounded, say) and for a sprite that is never
  * resident (the Seti file-type glyphs, the Lucide glyphs: wanted the first
  * time one mounts). Content-addressed by `hash`, the serving host's
- * {@link spriteHash} (the page's resident sprites carry the same value as
- * {@link IconSprites.manifestHash}), so a tuple's answer never changes:
+ * {@link spriteHash}, so a tuple's answer never changes:
  * `immutable`. Read over HTTP (on demand), as the endpoint it replaces was: a
  * sprite is a whole style's symbols, asked for once per page, so it never
  * rides the socket.
@@ -62,7 +50,7 @@ export const residentSprites = liveValue("icons.sprites", {
  *
  * Refused `unknown-key` — a key that names no sprite — `stale-manifest` —
  * `hash` is not the serving host's (the tab predates a restart that changed
- * the manifest: the resident value is pushed again with the new hash and the
+ * the manifest: {@link spriteHash} is pushed again with the new hash and the
  * read re-keys off it — never a fault, the host waits) — and `not-drawn-here` — a
  * sprite this host's drawer holds no set for (a browser host draws the Seti
  * and Lucide sprites only).
@@ -77,56 +65,71 @@ export const iconSprite = liveValue("icons.sprite", {
 /**
  * The hash every {@link iconSprite} tuple read from this host carries: what
  * its drawer's sprites are a function of. Fixed for the host's life. A scope
- * reads it from its own server before asking for a sprite; the page reads the
- * same value off its resident sprites.
+ * reads it from its own server before asking for a sprite; so does the page.
  */
 export const spriteHash = liveValue("icons.sprite-hash", {
   schema: z.string(),
-});
-
-export const SavedIconSpritesSchema = z.object({
-  /**
-   * What a runtime symbol's answer is a function of: the serving host's
-   * drawer (the Material Symbols set it draws from), the saved-name list and
-   * the symbol build's version. Every
-   * {@link runtimeSymbolsValue} tuple carries it.
-   */
-  symbolsHash: z.string(),
-  /** Every saved name some saved-icon source reports, sorted. */
-  names: wholeList(z.string(), {
-    reason:
-      "every saved icon name — each picked by hand, and every one must be drawable at first paint",
-  }),
-  /**
-   * Default style key → a whole `<svg>` of `<symbol id="msr-<key>-<name>">`s,
-   * one per name: the saved icons drawable at first paint in the default style
-   * (and, under any other style, until that style's symbols load).
-   */
-  sprites: wholeRecord(z.string(), {
-    reason: "one sprite per default style key — a handful",
-  }),
-});
-export type SavedIconSprites = z.infer<typeof SavedIconSpritesSchema>;
-
-/**
- * The RESIDENT saved-icon symbols: the default style's drawing of every name a
- * saved-icon source (`defineSavedIconSource`, saved-sources/server) reports — agents' avatars,
- * page icons, configured category and preprompt avatars. Preloaded, so stored
- * icons are on screen at first paint. Recomputed when a source's tables change
- * (DB-backed) or a source's config changes (the {@link savedIconsChanged} tick).
- */
-export const savedIconSprites = liveValue("icons.saved-sprites", {
-  schema: SavedIconSpritesSchema,
+  // The page's resident sprites are addressed by it: known at the first
+  // render, so a resident key the head did not provide is asked for at once.
   preload: "boot-and-keep",
 });
 
 /**
- * A counter a saved-icon source that is NOT in Postgres (a config) bumps when
- * its names may have changed; {@link savedIconSprites} recomputes on it. Read by
- * nothing else.
+ * What a runtime symbol's drawing is a function of — the serving host's
+ * drawer (the Material Symbols set it draws from), the savable-name list and
+ * the symbol build's version. Every {@link runtimeSymbolsValue} tuple and every
+ * {@link getSavedSpriteAsset} path carries it. Fixed for the host's life;
+ * preloaded, so the page's runtime-symbol loader can ask at once.
  */
-export const savedIconsChanged = liveValue("icons.saved-icons-changed", {
-  schema: z.number(),
+export const savedSymbolsHash = liveValue("icons.symbols-hash", {
+  schema: z.string(),
+  preload: "boot-and-keep",
+});
+
+/**
+ * The saved-icon sprites, as {@link getSavedSpriteAsset} answers them: every
+ * name a saved-icon source (`defineSavedIconSource`, saved-sources/server)
+ * reports — agents' avatars, configured category and preprompt avatars, tags'
+ * icons — and, per default style key, one `<svg>` of their
+ * `<symbol id="msr-<key>-<name>">`s.
+ */
+export const SavedSpriteAssetSchema = z.object({
+  names: wholeList(z.string(), {
+    reason:
+      "every saved icon name — each picked by hand, and every one must be drawable at first paint",
+  }),
+  sprites: wholeRecord(z.string(), {
+    reason: "one sprite per default style key — a handful",
+  }),
+});
+export type SavedSpriteAsset = z.infer<typeof SavedSpriteAssetSchema>;
+
+/**
+ * `GET /api/icons/sprite-assets/:hash/:key` — one sprite (`image/svg+xml`),
+ * content-addressed by the host's {@link spriteHash}: served
+ * `public, max-age=31536000, immutable`, so a warm page load reads it from the
+ * browser's cache and a cold one fetches it in parallel with the code. A hash
+ * that is not the host's is a 409 (the head that named it predates a restart
+ * that changed the manifest), a key the host's drawer does not draw a 404.
+ * Requested by the shell's head script only — page code reads a sprite as
+ * {@link iconSprite}.
+ */
+export const getSpriteAsset = defineEndpoint({
+  route: "GET /api/icons/sprite-assets/:hash/:key",
+  response: blob("image/svg+xml"),
+});
+
+/**
+ * `GET /api/icons/saved-sprite-assets/:hash` — the saved-icon sprites of the
+ * default style keys ({@link SavedSpriteAsset}, JSON) under the host's
+ * {@link savedSymbolsHash}. Its names move whenever a user picks an icon, so
+ * it is served `no-cache` with an ETag over them: a warm page load
+ * revalidates (a 304, no body) instead of downloading it again. A hash that is
+ * not the host's is a 409. Requested by the shell's head script only.
+ */
+export const getSavedSpriteAsset = defineEndpoint({
+  route: "GET /api/icons/saved-sprite-assets/:hash",
+  response: blob("application/json"),
 });
 
 /**
@@ -141,15 +144,15 @@ export const MAX_RUNTIME_SYMBOLS_PER_READ = 200;
  * `<symbol id="msr-<key>-<name>">`s. `names` is a comma-separated, sorted,
  * duplicate-free list of at most {@link MAX_RUNTIME_SYMBOLS_PER_READ} saved
  * symbol names — one spelling per set, so the tuple is content-addressed with
- * `hash` ({@link SavedIconSprites.symbolsHash}) and its answer never
+ * `hash` ({@link savedSymbolsHash}) and its answer never
  * changes: `immutable`. `key` is a style key. Read on demand (over HTTP), one
  * tuple per style per frame of wants (the sprites plugin's runtime-symbol
  * loader batches `<Icon>`'s wants).
  *
  * Refused `unknown-key` (no such style key), `stale-symbols` (`hash` is not
  * the serving process's: the tab predates a restart that changed the sets or
- * the symbol build, or the saved-name list moved — the resident saved
- * sprites are pushed again with the new hash and the read re-keys off it), `invalid-names` (empty, unsorted, duplicated or
+ * the symbol build, or the saved-name list moved — the page reads the
+ * new hash from {@link savedSymbolsHash} and the read re-keys off it), `invalid-names` (empty, unsorted, duplicated or
  * over the cap) and `unknown-name` (a name that is not a saved symbol name).
  */
 export const runtimeSymbolsValue = liveValue("icons.runtime-symbols", {

@@ -37,6 +37,7 @@ rebuilt by `./equin start`, so a change to the Go half needs that restart.
     - `apps/demo/shell`
     - `framework/cli/build/experimental-marks`
     - `network/live/boot-snapshot`
+    - `ui/icons/sprites`
     - `ui/theme-engine`
 - Server:
   - Exports (types):

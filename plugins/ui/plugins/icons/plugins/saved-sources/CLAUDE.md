@@ -13,7 +13,7 @@ It is not a `sprites/core` export: `SavedIconSource.tables` names
 
 ## Plugin reference
 
-- Description: The saved-icon source registry: defineSavedIconSource registers a place that stores user-picked icons (its tables, its names, a watch for a non-DB store), and savedIconSources lists them for the sprites plugin's resident icons.saved-sprites value. Pure and portable, so a plugin whose server half runs in the browser host can register its source without reaching the sprites builder.
+- Description: The saved-icon source registry: defineSavedIconSource registers a place that stores user-picked icons (its tables, its names, a watch for a non-DB store), and savedIconSources lists them for the sprites plugin's saved-sprite asset (every saved name, drawn for the first paint). Pure and portable, so a plugin whose server half runs in the browser host can register its source without reaching the sprites builder.
 - Cross-plugin:
   - Imported by:
     - `apps/places/places-core`

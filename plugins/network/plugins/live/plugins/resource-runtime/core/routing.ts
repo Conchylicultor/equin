@@ -449,7 +449,7 @@ export interface ReachPlanInput<
   /**
    * No L2 fingerprint: a hand-written loader (a served value) has no compiled
    * SQL to fingerprint, and a `:groups` aggregate is never persisted. A
-   * persisted reach value (`notifications.unread`, `icons.saved-sprites`) keeps
+   * persisted reach value (`notifications.unread`) keeps
    * rows with a NULL definition, which the L2 usable-row predicate matches
    * against the NULL it expects (NULL matches NULL).
    */

@@ -76,7 +76,7 @@ function brandSprite(brands: IconifyJSON): Map<SpriteKey, string> {
 
 /**
  * The Seti file-type sprite, for the manifest's Seti names. Never resident
- * (see `resident.ts`): fetched the first time a Seti icon mounts, so it costs
+ * (see `RESIDENT_SPRITE_KEYS`): fetched the first time a Seti icon mounts, so it costs
  * nothing until a file is shown.
  */
 async function setiSprite(): Promise<Map<SpriteKey, string>> {

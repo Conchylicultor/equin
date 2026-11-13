@@ -163,13 +163,15 @@ stateIcons.working }`); its colour stays its own.
   `@iconify-json/material-symbols-light` (300) — all 12 sprites in one pass
   over both sets (a fallback may cross weights), memoized; the sets are parsed
   once per process and dropped — plus a `brands` sprite from `@iconify-json/simple-icons`.
-- **Resident**: `icons.sprites` (a `liveValue`, `preload: "boot-and-keep"`)
-  carries the default style's two sprites and the brands, with the
-  `manifestHash`. The boot snapshot hydrates it, so the sheet is in the first
-  commit.
+- **Resident**: the default style's two sprites and the brands
+  (`RESIDENT_SPRITE_KEYS`) are on screen at the first paint without riding the
+  boot snapshot: the shell's head fetches each as a content-addressed asset
+  (immutable, cached by the browser) at t0 and the sprites plugin's boot task
+  provides them before the first render (`plugins/sprites/CLAUDE.md`). A key
+  the head did not provide is read on demand, like any other.
 - **On demand**: a style some scope wants that is not resident is read as the
   `icons.sprite` live value (`iconSprite`, params `{ hash, key }` — `hash` the
-  resident value's `manifestHash` — `load: "on-demand"`, external `immutable`:
+  host's `icons.sprite-hash` — `load: "on-demand"`, external `immutable`:
   content-addressed by the manifest). An unknown key is refused
   (`unknown-key`), and so is a hash that is not the serving process's
   (`stale-manifest`: the tab predates a restart that changed the manifest).
@@ -384,8 +386,8 @@ glyph a file gets and its colour; a direct `seti()` elsewhere is rare.
   Its sprite id is `seti-<name>`.
 - **Manifest-scanned** like `symbol` / `brand`: the `seti` sprite holds exactly
   the names some code writes (in practice, the file-type table).
-- **Never resident.** The `seti` sprite is not in `icons.sprites` (the boot
-  snapshot). The first `<Icon icon={seti(…)}>` to mount calls `wantSprite("seti")`
+- **Never resident.** The `seti` sprite is not a resident one
+  (`RESIDENT_SPRITE_KEYS`). The first `<Icon icon={seti(…)}>` to mount calls `wantSprite("seti")`
   (`web/internal/sprite-store.ts`); the sprite host reads every wanted sprite
   as `icons.sprite` `{ hash, key: "seti" }` (the same on-demand value as a
   non-default style). Until it lands a Seti icon is an empty box at
@@ -423,14 +425,15 @@ import { runtimeSymbol } from "@plugins/ui/plugins/icons/core";
 - **Every host serves them:** the saved-icon values are portable, drawn through
   the host's `RuntimeSymbolDrawer` (the computer's installed sets; a browser
   host's bundled set — see `plugins/sprites`).
-- **Resident at boot:** `icons.saved-sprites` (sprites plugin, `boot-and-keep`)
-  carries the default style's drawing of every name a saved-icon source
-  reports. A source is `defineSavedIconSource({ id, tables, names, watch? })`
+- **Drawable at the first paint:** the default style's drawing of every name
+  a saved-icon source reports is fetched by the shell's head at t0 (the
+  sprites plugin's saved-sprite asset, revalidated by an ETag over the names)
+  and provided to the page's store by its boot task — never in the boot
+  snapshot. A source is `defineSavedIconSource({ id, tables, names, watch? })`
   (`plugins/saved-sources` server barrel — portable, so a browser-hosted server
-  half can register one; the sprites plugin knows no source): DB-backed ones read
-  through `db` and list their `tables` (the value's declared reads) so changes recompute the value (agents, callout
-  blocks, preprompt launch snapshots, every tag tree's tags — `serveTagTree`
-  registers one per tree — and Places' places), config ones pass `tables: []`
+  half can register one; the sprites plugin knows no source): agents, callout
+  blocks, preprompt launch snapshots, every tag tree's tags (`serveTagTree`
+  registers one per tree) and Places' places; config ones pass `tables: []`
   and `watch` (conversation-category, preprompts).
 - **On demand:** a name/style no chunk holds is a want; the sprites plugin's
   loader batches every want of a frame into one `icons.runtime-symbols` live
@@ -438,8 +441,7 @@ import { runtimeSymbol } from "@plugins/ui/plugins/icons/core";
   content-addressed and `immutable`; refused `unknown-key`, `stale-symbols`,
   `invalid-names`, `unknown-name`), read with `useLive` until it lands; a
   contract-refused batch throws into its error boundary (`stale-symbols` waits
-  for the new hash instead — the name list moves whenever a user picks an
-  icon).
+  for the new hash instead).
 - **Fallback:** while the wanted style's symbol loads `<Icon>` draws the default
   style's symbol for the same name, like a code icon — so a theme switch never
   blanks a saved icon. Only a name with no drawing in any style yet renders an
@@ -681,6 +683,6 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
   - **`icon-uses`** — Where a module uses the icon constructors: iconUsesIn (each symbol / brand / seti import followed through ESLint's scope analysis) and isIconRefModule (does an import specifier name the module…
   - **`saved-names`** — The membership-checked SavedSymbolName: a user-picked Material Symbols name, parsed against the installed sets before anything stores it.
   - **`saved-sources`** — The saved-icon source registry: defineSavedIconSource registers a place that stores user-picked icons (its tables, its names, a watch for a non-DB store), and savedIconSources lists them for the…
-  - **`sprites`** — Mounts the page's icon sprites inline: the resident default-style sprites from the boot snapshot (present at first paint) plus, on demand, the sprite of every other style a theme scope picks, and…
+  - **`sprites`** — Mounts the page's icon sprites inline. The resident default-style sprites and the saved-icon symbols the first paint needs are fetched by the SPA shell's head at t0 (content-addressed assets the…
 
 <!-- AUTOGENERATED:END -->
