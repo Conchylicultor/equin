@@ -31549,7 +31549,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/host-fs/zip` (1 debt)
               - `infra/host/contention` (1 debt)
               - `infra/host/duress/latch` (1 debt)
-              - `infra/host/host-admission` (3 debt)
+              - `infra/host/host-admission` (4 debt)
               - `infra/host/host-read-pool` (1 debt)
               - `infra/jobs` (2 debt)
               - `infra/jobs/supervised-job` (3 debt)
@@ -35384,6 +35384,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `debug/profiling/op-log`
           - `framework/cli/op-runtime`
           - `framework/tooling/checks`
+          - `infra/host/host-admission`
           - `packages/signal-origin/sink`
           - `primitives/log-channels`
           - `primitives/log-channels/log-files`
@@ -35809,12 +35810,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`host-admission`** — Host-admission registry: one place a host-wide concurrency pool comes into existence, wrapping createHostSemaphore with a summed CPU/RAM ceiling and true host occupancy.
           - Server:
             - Uses:
+              - `packages/flock.flockTry`
               - `packages/host-semaphore.AcquireHooks`
               - `packages/host-semaphore.createHostSemaphore`
               - `packages/host-semaphore.HostShare`
               - `packages/spawn-priority.withForegroundPriority`
             - Exports (types):
               - `ForegroundSlot`
+              - `HolderPeaks`
               - `HostPool`
               - `HostPoolSpec`
               - `InheritSlot`
@@ -35828,8 +35831,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `e2ePool`
               - `hostOccupancy`
               - `inheritedGrant`
+              - `listCpuHolders`
               - `publishFleetMemory`
               - `pushPool`
+              - `readHolderPeaks`
+              - `recordHolderPeak`
               - `repoPushLock`
               - `withE2eGrant`
               - `withHostGrant`
@@ -35853,17 +35859,21 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Exemptions:
             - Exempts itself from:
               - `host-pools-declared` — `server` (sanctioned)
-              - `boundaries/no-platform-api` — `core/internal/budget.ts`, `server/internal/pool.ts`, `server/internal/fleet-memory.ts` (debt)
+              - `boundaries/no-platform-api` — `core/internal/budget.ts`, `server/internal/pool.ts`, `server/internal/fleet-memory.ts`, `server/internal/holders.ts` (debt)
               - `watcher-safety/no-raw-fs-watch` — `server/internal/fleet-memory.ts` (sanctioned)
           - Core:
             - Exports (types):
               - `CpuBudget`
+              - `CpuHolderMarker`
               - `FleetAdmission`
               - `FleetMemoryReading`
               - `FleetMemoryUnmeasuredPayload`
               - `FleetWindow`
               - `Grant`
               - `GrantHooks`
+              - `HolderPeakRecord`
+              - `HolderReading`
+              - `HolderWork`
               - `HostFacts`
               - `HostPoolEntry`
               - `HostPoolId`
@@ -35873,6 +35883,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values):
               - `admissionSlots`
               - `cpuBudget`
+              - `CpuHolderMarkerSchema`
+              - `describeHolders`
               - `FLEET_MEMORY_LEASE_MS`
               - `FLEET_MEMORY_UNMEASURED_KIND`
               - `fleetAdmission`
@@ -35881,11 +35893,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `fleetMemoryUnmeasuredMessage`
               - `FleetMemoryUnmeasuredPayloadSchema`
               - `fleetWindow`
+              - `HOLDER_PEAK_WINDOW_MS`
+              - `HolderPeakRecordSchema`
+              - `holderReserve`
               - `HOST_POOLS`
               - `hostCpuCeiling`
               - `hostPoolsFor`
               - `hostRamCeiling`
               - `laneCapacity`
+              - `peaksByWork`
               - `PER_UNIT_BYTES`
               - `rawFleetCeiling`
               - `unmeasuredWindow`
@@ -41170,8 +41186,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `holdParentLifeline`
           - `waitForFlock`
       - Cross-plugin:
-        - Imported by: 23 plugins — full list in [`plugins/packages/plugins/flock/REFERENCE.md`](../plugins/packages/plugins/flock/REFERENCE.md)
-          - `infra` ×9
+        - Imported by: 24 plugins — full list in [`plugins/packages/plugins/flock/REFERENCE.md`](../plugins/packages/plugins/flock/REFERENCE.md)
+          - `infra` ×10
           - `framework` ×5
           - `packages` ×4
           - `apps/chord/song-index`

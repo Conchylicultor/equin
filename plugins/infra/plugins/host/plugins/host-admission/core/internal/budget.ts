@@ -108,9 +108,12 @@ export type Priority = "normal" | "low";
  * afternoon (81 readings with a slot held): ops used p50 1.0 GB per held slot
  * (p90 1.5, max 2.1) — a held slot reserves 3.6, so reservations, not use,
  * closed the window in 24 of them (a queued build read "6 slots held, 2.0 GB
- * measured, charged 21.6 GB"). That is how a share is charged (every held
- * slot reserves a whole quantum until measured use exceeds the total), not a
- * wrong quantum: a smaller one would re-size `B` and every weight with it.
+ * measured, charged 21.6 GB"). That was how a share was charged (every held
+ * slot reserved a whole quantum until measured use exceeded the total), not a
+ * wrong quantum: a smaller one would re-size `B` and every weight with it. A
+ * share is now reserved what holders of its kind of work were measured to
+ * peak at (`holders.ts`, `holderReserve`); this quantum stays the slot
+ * arithmetic, and the reservation of work nobody has measured yet.
  */
 export const PER_UNIT_BYTES = 3.6e9;
 

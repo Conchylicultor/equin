@@ -1,7 +1,10 @@
 import { cpus, totalmem } from "node:os";
 import {
   cpuPool,
+  listCpuHolders,
   publishFleetMemory,
+  readHolderPeaks,
+  recordHolderPeak,
 } from "@plugins/infra/plugins/host/plugins/host-admission/server";
 import { spawnExpectOk } from "@plugins/infra/plugins/spawn/core";
 import {
@@ -13,6 +16,7 @@ import { defineTimer } from "@plugins/infra/plugins/background/plugins/timer/ser
 import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
 import { summarizeOwners, type CpuBaseline } from "../../core";
 import { readAttributedProcesses } from "./sample";
+import { createHolderLedger, measureHolderTrees } from "./holder-ledger";
 
 // Where the machine's CPU and memory went, by owner, persisted every 30 s to
 // main's `health-owners` log beside the 10 s host sample (`health-host`,
@@ -37,8 +41,24 @@ const channel = defineLogSink({
 
 let baseline: CpuBaseline | null = null;
 
+// Each holder's peak, kept across ticks; a holder that ends is written to the
+// holder-peak ledger, which the reservations are derived from.
+const holderLedger = createHolderLedger({
+  readPeaks: async (sinceMs) => {
+    const { records, unreadable } = await readHolderPeaks(sinceMs);
+    if (unreadable > 0)
+      console.error(
+        `[machine-usage] the cpu holder-peak ledger has ${unreadable} line(s) this version cannot read (torn, or another version's); reservations are derived from the ${records.length} it can.`,
+      );
+    return records;
+  },
+  recordPeak: recordHolderPeak,
+  nowMs: () => Date.now(),
+});
+
 async function tick(): Promise<void> {
-  const { procs, owner, memBytesOf } = await readAttributedProcesses();
+  const attributed = await readAttributedProcesses();
+  const { procs, owner, memBytesOf } = attributed;
   const next = summarizeOwners({
     procs,
     owner,
@@ -49,7 +69,7 @@ async function tick(): Promise<void> {
   });
   baseline = next.baseline;
   channel.publish(JSON.stringify(next.sample));
-  await publishFleetReading({ procs, owner, memBytesOf });
+  await publishFleetReading(attributed);
 }
 
 // Handed to host admission: what the agent ops use (holders and children alike
@@ -66,15 +86,35 @@ async function tick(): Promise<void> {
 // shrank the window to one slot (no background op ran) with 21 GB available.
 // The ops' share is still their footprint: an op's tree is what admission
 // attributes, and over-counting it errs toward the fleet, never the machine.
+//
+// Each `cpu` share's holder (its marker: pid, kind of work, units) is measured
+// on its own process tree, and reserved what its kind of work has been
+// recorded to peak at (`holderLedger`) — so admission charges a held slot what
+// its holder will use, not a whole quantum (host-admission `fleetCharge`).
 async function publishFleetReading({
   procs,
+  holders,
   owner,
   memBytesOf,
+  peakBytesOf,
 }: Awaited<ReturnType<typeof readAttributedProcesses>>): Promise<void> {
   let opsBytes = 0;
   for (const p of procs) {
     if (owner.get(p.pid) === "agent-ops") opsBytes += memBytesOf(p);
   }
+  // The holders charged are those listed BEFORE the slot count and still
+  // listed AFTER it, alive in this `ps`: a share released or taken in
+  // between, or a marker of a dead pid another reader is reaping, is left to
+  // the unrecorded term (a whole quantum per slot `held()` counted) — never
+  // credited with slots it may not hold.
+  const heldUnits = await cpuPool.held();
+  const after = new Set(
+    (await listCpuHolders()).map((h) => `${h.pid}:${h.since}`),
+  );
+  const listed = new Set(procs.map((p) => p.pid));
+  const charged = holders.filter(
+    (h) => listed.has(h.pid) && after.has(`${h.pid}:${h.since}`),
+  );
   const vm = parseVmStat(
     (await spawnExpectOk(["vm_stat"], { timeoutMs: VM_STAT_MS })).stdout,
   );
@@ -88,7 +128,10 @@ async function publishFleetReading({
     // already exceeds the real total, so the window stays bounded.
     otherBytes: Math.max(0, processMemBytes(vm) - opsBytes),
     opsBytes,
-    heldUnits: await cpuPool.held(),
+    heldUnits,
+    holders: await holderLedger.observe(
+      measureHolderTrees(procs, charged, memBytesOf, peakBytesOf),
+    ),
   });
 }
 

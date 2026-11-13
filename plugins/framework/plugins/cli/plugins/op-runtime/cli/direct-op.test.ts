@@ -73,6 +73,7 @@ function makeHarness(
     inheritedGrant: () => opts.inherited,
     withHostGrant: async (o, fn) => {
       events.push(`acquire:${o.lane}:${o.priority}:${o.max}`);
+      events.push(`work:${o.work}`);
       o.hooks?.onWaitStart?.();
       o.hooks?.onAcquired?.(0);
       try {
@@ -189,6 +190,8 @@ describe("withDirectOp — top-level path", () => {
       "log:requested",
       "signals:armed",
       "acquire:background:normal:4",
+      // A cpu share names its work: the test kind's memory reservation.
+      "work:test",
       // The wait is announced on both ends, so a queued run never reads as hung.
       "log-line:Waiting for a host c",
       "log-line:Got a host cpu slot ",

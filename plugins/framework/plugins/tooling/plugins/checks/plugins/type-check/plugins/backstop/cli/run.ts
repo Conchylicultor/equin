@@ -66,6 +66,7 @@ const run: CliAction<[], object> = async () => {
           lane: "background",
           priority: "normal",
           max: TYPE_CHECK_WORKER_UNITS,
+          work: "type-check-backstop",
         },
         spawn,
       );

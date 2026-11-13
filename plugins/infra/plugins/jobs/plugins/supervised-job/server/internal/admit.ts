@@ -22,7 +22,8 @@ import {
 export function admitBackground<T>(fn: () => Promise<T>): Promise<T> {
   const inherited = inheritedGrant();
   if (inherited) return inherited.run(fn);
-  return withHostGrant({ lane: "background", priority: "normal", max: 1 }, () =>
-    fn(),
+  return withHostGrant(
+    { lane: "background", priority: "normal", max: 1, work: "job" },
+    () => fn(),
   );
 }

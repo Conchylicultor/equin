@@ -22,6 +22,9 @@ export interface ProcMemory {
    * ~6× (Gigacage etc., see `bin/phys-footprint.ts`), which makes the
    * difference negative and meaningless. */
   residentSizeBytes: number;
+  /** ri_lifetime_max_phys_footprint — the highest `physFootprintBytes` the
+   * process has had over its life, kept after it gives the memory back. */
+  peakPhysFootprintBytes: number;
 }
 
 /** A host's reading of `pid`'s memory (this process when omitted); `null` where

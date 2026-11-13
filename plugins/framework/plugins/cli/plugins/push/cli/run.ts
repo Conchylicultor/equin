@@ -338,6 +338,7 @@ async function withPushLock<T>(
           lane: "interactive",
           priority: "normal",
           max: cpuBudget().B,
+          work: "push",
           hooks: profiler.grantHooks(),
         },
         fn,

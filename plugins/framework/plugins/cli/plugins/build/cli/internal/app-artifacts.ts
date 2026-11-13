@@ -1064,6 +1064,7 @@ export async function withBuildAdmission<T>(
           lane: admission.lane,
           priority: admission.priority,
           max: cpuBudget().B,
+          work: "build",
           hooks: admission.grantHooks,
         },
         async (grant) => {

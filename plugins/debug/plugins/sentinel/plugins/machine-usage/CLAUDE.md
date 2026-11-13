@@ -13,10 +13,17 @@ attribution (`core/internal/attribute.ts`):
   and by CPU, named. Debug → Health charts it beside the host sample
   (`health-host`), so a contention window reads as who, not only how much.
   Read it on demand with `scripts/owners-now.ts`.
+- **Admission** — the same tick hands host admission its fleet reading
+  (`publishFleetReading`): each `cpu` share's holder measured on its own
+  process tree, its peak appended to host-admission's holder-peak ledger when
+  it ends, and its reservation derived from that ledger
+  (`machine/internal/holder-ledger.ts`).
 
 **Who owns a process.** Roots claim their whole subtree, in precedence order:
 the agent browser host, each running op's CLI process (op markers — so an
-agent's build is the op's), then processes heading a bucket by name — Postgres
+agent's build is the op's) and each `cpu` share's holder (host-admission's
+holder markers — a backend's supervised job child holding a grant is admitted
+work, so it is an agent op too), then processes heading a bucket by name — Postgres
 and PgBouncer (executable name), the app bundle (`equin.app`: the gateway, and
 through it every backend), a `equin · server · …` / `equin · central` backend,
 an `equin · agent` agent (and its `equin · conv-… · <title>` Claude

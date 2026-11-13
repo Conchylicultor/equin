@@ -38,6 +38,7 @@ function readingFor(slots: number, sampledAt = Date.now()): FleetMemoryReading {
     otherBytes: 1_000e9 - slots * PER_UNIT_BYTES - 1,
     opsBytes: 0,
     heldUnits: 0,
+    holders: [],
   };
 }
 

@@ -89,8 +89,10 @@ So every `cpu` acquire is capped to a **measured window** of `B`
 (`core/internal/fleet-memory.ts`), counting every byte two ways:
 
 ```
-allowed = RAM − wired − otherBytes                 // the rest of the machine, measured
-charged = max(heldUnits × PER_UNIT_BYTES, opsBytes) // the fleet: reserved, or measured if larger
+allowed = RAM − wired − otherBytes                    // the rest of the machine, measured
+charged = Σ holders max(reserve(work), treeBytes)      // each share: reserved, or measured if larger
+        + max(unmarkedUnits × PER_UNIT_BYTES,          // slots no holder marker accounts for
+              opsBytes − Σ holders treeBytes)          // ops holding no share (scripts, e2e, waiters)
 window  = clamp(heldUnits + floor((allowed − charged) / PER_UNIT_BYTES), 1, B)
 ```
 
@@ -106,10 +108,29 @@ window  = clamp(heldUnits + floor((allowed − charged) / PER_UNIT_BYTES), 1, B)
   footprint. Main's owner sampler (`debug/sentinel/machine-usage`, 30 s)
   attributes them, probes the held `cpu` slots, and writes the reading to
   `locks/fleet-memory/fleet-memory.json` (`publishFleetMemory`).
-- **Holders are charged by measurement.** A held slot reserves a quantum from
-  the moment it is taken (a just-started build has not grown); once the ops'
-  measured footprint is larger — a 1-slot build whose `build` + `check` +
-  worker measure 6.5 GB — that is what the fleet is charged.
+- **Holders are charged per holder, by what their work was measured to use**
+  (`core/internal/holders.ts`, `fleetCharge`). Every `withHostGrant` names
+  its kind of work (`work: HolderWork` — `build`, `check`, `test`, `push`,
+  `job`, `type-check-backstop`; required, so no share is taken without
+  saying what it is) and publishes a **holder marker** for the share's life
+  (`locks/cpu-holders/<pid>-<n>.json`: pid, work, units, lane — flocked, the
+  lock is the liveness, like an op marker). Main's owner sampler measures each
+  holder's process tree every 30 s, appends its peak to the **holder-peak
+  ledger** when it ends (`logs/cpu-holder-peaks/holder-peaks.jsonl`, a file
+  sink), and publishes each holder with its reservation: the 95th percentile
+  of its work's recorded peaks over 14 days (`holderReserve`), or — under 10
+  records — `units × PER_UNIT_BYTES`, the whole quantum per slot, as every
+  share was charged before. A holder reserves from the moment it is taken
+  (a just-started build has not grown) and is charged its measured tree
+  once that is larger. The charge is never below the ops' measured
+  footprint, and a reservation only drops by a record of holders that used
+  less — so it follows what the work does instead of a number someone picks.
+  Why: a held slot used to reserve a whole quantum, the heavy type-check
+  worker's footprint per unit, while the fleet's slots used p50 1.0 GB
+  (2026-11-13: 24 of 81 readings closed by reservations, "6 slots held,
+  2.0 GB measured, ops charged 21.6 GB").
+  Holder trees count as agent ops wherever they run (a backend's supervised
+  job child too), so their memory leaves `otherBytes`.
 - `withHostGrant` hands the acquire a **capacity feed** (`fleetCapacity`):
   `laneCapacity(window, lane)` (`AcquireHooks.capacity`,
   `packages/host-semaphore`), so the acquire only touches the low `capacity`
@@ -162,7 +183,12 @@ window  = clamp(heldUnits + floor((allowed − charged) / PER_UNIT_BYTES), 1, B)
 Limits, stated rather than hidden:
 
 - **Lag.** Readings are 30 s apart. Ops admitted inside one window reserve their
-  slots at once, but their holders' growth is seen at the next reading.
+  slots at once — a quantum per slot until the next reading shows their
+  marker — but their holders' growth is seen at the next reading.
+- **A holder's peak is the largest of its 30 s readings.** A spike between
+  two readings is missed, and a holder shorter than one reading is never
+  recorded; both bias a work's reservation low, never its charge (which is
+  never below what is measured).
 - **A shrink drains, it does not evict.** Holders above a shrunken window keep
   their slots until they release; no acquire takes a slot at index ≥ capacity
   (bar one granted in the instant the shrink lands).
@@ -431,12 +457,14 @@ See `research/2026-07-10-global-host-admission-unified-budget.md`.
 - Description: Host-admission registry: one place a host-wide concurrency pool comes into existence, wrapping createHostSemaphore with a summed CPU/RAM ceiling and true host occupancy.
 - Server:
   - Uses:
+    - `packages/flock.flockTry`
     - `packages/host-semaphore.AcquireHooks`
     - `packages/host-semaphore.createHostSemaphore`
     - `packages/host-semaphore.HostShare`
     - `packages/spawn-priority.withForegroundPriority`
   - Exports (types):
     - `ForegroundSlot`
+    - `HolderPeaks`
     - `HostPool`
     - `HostPoolSpec`
     - `InheritSlot`
@@ -450,8 +478,11 @@ See `research/2026-07-10-global-host-admission-unified-budget.md`.
     - `e2ePool`
     - `hostOccupancy`
     - `inheritedGrant`
+    - `listCpuHolders`
     - `publishFleetMemory`
     - `pushPool`
+    - `readHolderPeaks`
+    - `recordHolderPeak`
     - `repoPushLock`
     - `withE2eGrant`
     - `withHostGrant`
@@ -475,17 +506,21 @@ See `research/2026-07-10-global-host-admission-unified-budget.md`.
 - Exemptions:
   - Exempts itself from:
     - `host-pools-declared` — `server` (sanctioned)
-    - `boundaries/no-platform-api` — `core/internal/budget.ts`, `server/internal/pool.ts`, `server/internal/fleet-memory.ts` (debt)
+    - `boundaries/no-platform-api` — `core/internal/budget.ts`, `server/internal/pool.ts`, `server/internal/fleet-memory.ts`, `server/internal/holders.ts` (debt)
     - `watcher-safety/no-raw-fs-watch` — `server/internal/fleet-memory.ts` (sanctioned)
 - Core:
   - Exports (types):
     - `CpuBudget`
+    - `CpuHolderMarker`
     - `FleetAdmission`
     - `FleetMemoryReading`
     - `FleetMemoryUnmeasuredPayload`
     - `FleetWindow`
     - `Grant`
     - `GrantHooks`
+    - `HolderPeakRecord`
+    - `HolderReading`
+    - `HolderWork`
     - `HostFacts`
     - `HostPoolEntry`
     - `HostPoolId`
@@ -495,6 +530,8 @@ See `research/2026-07-10-global-host-admission-unified-budget.md`.
   - Exports (values):
     - `admissionSlots`
     - `cpuBudget`
+    - `CpuHolderMarkerSchema`
+    - `describeHolders`
     - `FLEET_MEMORY_LEASE_MS`
     - `FLEET_MEMORY_UNMEASURED_KIND`
     - `fleetAdmission`
@@ -503,11 +540,15 @@ See `research/2026-07-10-global-host-admission-unified-budget.md`.
     - `fleetMemoryUnmeasuredMessage`
     - `FleetMemoryUnmeasuredPayloadSchema`
     - `fleetWindow`
+    - `HOLDER_PEAK_WINDOW_MS`
+    - `HolderPeakRecordSchema`
+    - `holderReserve`
     - `HOST_POOLS`
     - `hostCpuCeiling`
     - `hostPoolsFor`
     - `hostRamCeiling`
     - `laneCapacity`
+    - `peaksByWork`
     - `PER_UNIT_BYTES`
     - `rawFleetCeiling`
     - `unmeasuredWindow`

@@ -6,6 +6,7 @@ import {
 import type {
   Grant,
   GrantHooks,
+  HolderWork,
   Lane,
   Priority,
 } from "@plugins/infra/plugins/host/plugins/host-admission/core";
@@ -176,6 +177,18 @@ type GrantAcquire = <T>(
   fn: (grant: Grant) => Promise<T>,
 ) => Promise<T>;
 
+/** A `cpu` acquire: it names its kind of work, which sets its memory reservation. */
+type CpuGrantAcquire = <T>(
+  opts: {
+    lane: Lane;
+    priority: Priority;
+    max: number;
+    work: HolderWork;
+    hooks?: GrantHooks;
+  },
+  fn: (grant: Grant) => Promise<T>,
+) => Promise<T>;
+
 /**
  * The host pool a direct op's grant comes from. An `e2e` run — one browser,
  * p50 21 s — has a pool of its own: in `cpu` it shared the 6-slot background
@@ -183,6 +196,13 @@ type GrantAcquire = <T>(
  * ≥ 100 s for a 20 s screenshot (`HOST_POOLS.e2e`).
  */
 type GrantPool = "cpu" | "e2e";
+
+/**
+ * How one kind is admitted: a `cpu` share of the kind of work it is (its memory
+ * reservation is what that work was measured to peak at — `holderReserve`), an
+ * `e2e` slot, or nothing.
+ */
+type OpAdmission = { pool: "cpu"; work: HolderWork } | { pool: "e2e" };
 
 /**
  * Which pool each kind's grant comes from, or `null` for a kind that is
@@ -194,13 +214,13 @@ type GrantPool = "cpu" | "e2e";
  * admission rather than inheriting one.
  */
 const OP_POOL = {
-  build: "cpu",
-  push: "cpu",
-  check: "cpu",
-  test: "cpu",
-  e2e: "e2e",
+  build: { pool: "cpu", work: "build" },
+  push: { pool: "cpu", work: "push" },
+  check: { pool: "cpu", work: "check" },
+  test: { pool: "cpu", work: "test" },
+  e2e: { pool: "e2e" },
   script: null,
-} as const satisfies Record<OpKind, GrantPool | null>;
+} as const satisfies Record<OpKind, OpAdmission | null>;
 
 /**
  * What a direct op's body is handed: the grant it runs under, or `null` for an
@@ -211,7 +231,7 @@ export type OpGrant<K extends OpKind> = (typeof OP_POOL)[K] extends null
   ? null
   : Grant;
 
-function poolFor(kind: OpKind): GrantPool | null {
+function admissionFor(kind: OpKind): OpAdmission | null {
   return OP_POOL[kind];
 }
 
@@ -229,7 +249,7 @@ function describeQueueFromOpLog(pool: GrantPool, selfOpId: string): string {
   for (const st of readOpStates().values()) {
     const id = st.identity;
     if (st.opId === selfOpId || st.closedBy !== null || !id) continue;
-    if (poolFor(id.kind) !== pool) continue;
+    if (admissionFor(id.kind)?.pool !== pool) continue;
     const who = `${id.kind} ${id.opSlug ?? "?"}`;
     if (st.openWait?.kind === "host-grant") queued++;
     else if (st.grantedAt !== null) {
@@ -251,7 +271,7 @@ function describeQueueFromOpLog(pool: GrantPool, selfOpId: string): string {
  */
 export interface DirectOpDeps {
   inheritedGrant: () => Grant | undefined;
-  withHostGrant: GrantAcquire;
+  withHostGrant: CpuGrantAcquire;
   /** The `e2e` pool's grant — what an `e2e` op acquires instead of `cpu`. */
   withE2eGrant: GrantAcquire;
   /**
@@ -461,13 +481,13 @@ export async function withDirectOp<K extends OpKind>(
   };
 
   try {
-    const pool = poolFor(kind);
+    const admission = admissionFor(kind);
     const runUnder = async (grant: Grant | null): Promise<OutcomeByKind[K]> => {
       // The grant is now held (or, for an unadmitted kind, there is none to
       // wait for). The host grant IS a direct op's entry ticket: it does no
       // further waiting after this point.
       profiler?.markGranted();
-      // `grant` is null exactly when `pool` is, which is what `OpGrant<K>`
+      // `grant` is null exactly when `admission` is, which is what `OpGrant<K>`
       // spells; tsc cannot follow that through the generic.
       const outcome = await body(grant as OpGrant<K>, ctx);
       profiler?.complete(outcome);
@@ -506,20 +526,22 @@ export async function withDirectOp<K extends OpKind>(
     };
     const run = async (): Promise<OutcomeByKind[K]> => {
       // Recorded, not admitted: no slot to wait for, none to hold.
-      if (pool === null) return await runUnder(null);
+      if (admission === null) return await runUnder(null);
       if (inherited) return await runUnder(inherited);
-      const acquire = pool === "e2e" ? deps.withE2eGrant : deps.withHostGrant;
-      return await acquire(
-        {
-          lane,
-          priority: opportunistic
-            ? "low"
-            : await deps.priority(kind, isInteractiveOrigin),
-          max: opts.max,
-          hooks: grantHooks(pool),
-        },
-        runUnder,
-      );
+      const acquireOpts = {
+        lane,
+        priority: opportunistic
+          ? "low"
+          : await deps.priority(kind, isInteractiveOrigin),
+        max: opts.max,
+        hooks: grantHooks(admission.pool),
+      };
+      return admission.pool === "e2e"
+        ? await deps.withE2eGrant(acquireOpts, runUnder)
+        : await deps.withHostGrant(
+            { ...acquireOpts, work: admission.work },
+            runUnder,
+          );
     };
     const { flight } = opts;
     if (!flight) return await run();

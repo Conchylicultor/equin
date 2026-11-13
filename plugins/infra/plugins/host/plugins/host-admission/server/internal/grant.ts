@@ -5,6 +5,7 @@ import {
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import {
   cpuBudget,
+  describeHolders,
   FLEET_MEMORY_UNMEASURED_KIND,
   fleetMemoryUnmeasuredMessage,
   HOST_POOLS,
@@ -13,6 +14,7 @@ import {
   type FleetMemoryUnmeasuredPayload,
   type Grant,
   type GrantHooks,
+  type HolderWork,
   type Lane,
   type Priority,
 } from "@plugins/infra/plugins/host/plugins/host-admission/core";
@@ -21,6 +23,7 @@ import { defineHostPool, type HostPool } from "./pool";
 import type { CapacityFeed } from "@plugins/packages/plugins/host-semaphore/server";
 import { fileReportFromProcess } from "@plugins/reports/plugins/outbox/plugins/file/core";
 import { claimUnmeasuredEpisode, fleetCapacity } from "./fleet-memory";
+import { publishCpuHolder } from "./holders";
 
 // The laned host CPU pool + the grant that subdivides it. This is where the fleet
 // ceiling `B` — host cores vs. how many worker-sized resident sets fit under the
@@ -118,7 +121,19 @@ function spendOf(want: number | undefined, held: number): number {
  * codegen) stays darwinbg. There is no spelling for a demoted grant holder.
  */
 export async function withHostGrant<T>(
-  opts: { lane: Lane; priority: Priority; max: number; hooks?: GrantHooks },
+  opts: {
+    lane: Lane;
+    priority: Priority;
+    max: number;
+    /**
+     * What kind of work this share is: required, because the share's memory
+     * reservation is what holders of that work were measured to peak at
+     * (`holderReserve`). Published as the share's holder marker for its
+     * whole life, which is how main's owner sampler measures it.
+     */
+    work: HolderWork;
+    hooks?: GrantHooks;
+  },
   fn: (grant: Grant) => Promise<T>,
 ): Promise<T> {
   // Filed at most once per acquire, at the first unmeasured state it acts on;
@@ -138,7 +153,26 @@ export async function withHostGrant<T>(
   });
   let result: T;
   try {
-    result = await withPoolGrant(cpuPool, { ...opts, capacity }, fn);
+    result = await withPoolGrant(
+      cpuPool,
+      { ...opts, capacity },
+      async (grant) => {
+        // Published once the slots are held and removed before they are
+        // released, so a marker never claims slots nobody holds; between the
+        // two, the slots are charged as unrecorded (a whole quantum each).
+        const held = await publishCpuHolder({
+          work: opts.work,
+          units: grant.units,
+          lane: opts.lane,
+          since: Date.now(),
+        });
+        try {
+          return await fn(grant);
+        } finally {
+          await held.release();
+        }
+      },
+    );
   } catch (err) {
     await unmeasuredReport;
     throw err;
@@ -194,7 +228,11 @@ function describeAdmission(admission: FleetAdmission, lane: Lane): string {
     `memory window ${window.slots} of ${cpuBudget().B} slots: ${none}` +
     `${gb(window.allowedBytes)} left for agent ops beside the rest of the machine ` +
     `(${gb(reading.otherBytes)} + ${gb(reading.wiredBytes)} wired), ` +
-    `ops charged ${gb(window.chargedBytes)} (${reading.heldUnits} slots held, ${gb(reading.opsBytes)} measured)`
+    `ops charged ${gb(window.chargedBytes)} (${reading.heldUnits} slots held, ${gb(reading.opsBytes)} measured` +
+    (reading.holders.length > 0
+      ? `; holders measured/charged: ${describeHolders(reading.holders)}`
+      : "") +
+    `)`
   );
 }
 

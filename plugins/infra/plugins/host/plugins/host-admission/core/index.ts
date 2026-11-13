@@ -17,6 +17,20 @@ export {
 } from "./internal/budget";
 export type { Grant, GrantHooks } from "./internal/grant";
 export {
+  CpuHolderMarkerSchema,
+  HOLDER_PEAK_WINDOW_MS,
+  HolderPeakRecordSchema,
+  holderReserve,
+  peaksByWork,
+} from "./internal/holders";
+export type {
+  CpuHolderMarker,
+  HolderPeakRecord,
+  HolderReading,
+  HolderWork,
+} from "./internal/holders";
+export {
+  describeHolders,
   FleetMemoryReadingSchema,
   FLEET_MEMORY_LEASE_MS,
   admissionSlots,

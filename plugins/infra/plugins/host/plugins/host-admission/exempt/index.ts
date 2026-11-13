@@ -14,6 +14,7 @@ export default [
       "core/internal/budget.ts",
       "server/internal/pool.ts",
       "server/internal/fleet-memory.ts",
+      "server/internal/holders.ts",
     ],
     kind: "debt",
     task: "task-1792338443-riwqev",

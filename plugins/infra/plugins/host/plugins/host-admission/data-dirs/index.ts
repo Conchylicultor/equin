@@ -68,4 +68,42 @@ export const fleetMemoryDir = defineDataDir({
   reclaim: { kind: "restart" },
 });
 
-export default [...byId.values(), fleetMemoryDir];
+/**
+ * One marker per live `cpu` share (`<pid>-<n>.json`: the holding process, its
+ * kind of work, its units), written by `withHostGrant` and flocked for the
+ * share's life — the lock is the liveness. Main's owner sampler reads them to
+ * measure each holder's process tree and charge it (`fleetCharge`).
+ */
+export const cpuHoldersDir = defineDataDir({
+  kind: "locks",
+  name: "cpu-holders",
+  owner: "infra/host/host-admission",
+  description:
+    "One flocked marker per live cpu grant share (holding pid, kind of work, units) — what main's owner sampler measures each holder's process tree by",
+  reclaim: { kind: "restart" },
+});
+
+/**
+ * The holder-peak ledger (`holder-peaks.jsonl` + rotations): per finished
+ * `cpu` share, its kind of work, units and the largest footprint its process
+ * tree was read at. What each work's reservation is derived from
+ * (`holderReserve`).
+ */
+export const holderPeaksLogDir = defineDataDir({
+  kind: "logs",
+  name: "cpu-holder-peaks",
+  owner: "infra/host/host-admission",
+  description:
+    "Per finished cpu grant share on this host (`holder-peaks.jsonl` + rotations): its kind of work, units and peak process-tree footprint — what each kind of work's memory reservation is derived from",
+  // A record of past holders, not state anything needs to run: lost, every
+  // work is reserved the whole quantum per slot again until it re-accrues.
+  reclaim: { kind: "safe" },
+  logs: [{ pattern: "holder-peaks.jsonl", bound: { kind: "file-sink" } }],
+});
+
+export default [
+  ...byId.values(),
+  fleetMemoryDir,
+  cpuHoldersDir,
+  holderPeaksLogDir,
+];

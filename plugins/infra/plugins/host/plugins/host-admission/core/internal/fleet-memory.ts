@@ -7,6 +7,7 @@ import {
   type HostFacts,
   type Lane,
 } from "./budget";
+import { HolderReadingSchema, type HolderReading } from "./holders";
 
 // The fleet's MEASURED memory window: how many of the `cpu` pool's `B` slots the
 // agent fleet may hold right now, given what the rest of the machine actually
@@ -32,13 +33,20 @@ import {
 //   machine by ~11 GB on 2026-11-13. `wiredBytes` is the kernel's wired memory;
 //   the file cache is reclaimable and not charged. What is left of RAM is what
 //   the fleet can have.
-// - **The fleet, by the larger of what it reserved and what it uses.** A held
-//   slot reserves `PER_UNIT_BYTES` from the moment it is taken (a just-started
-//   build has not grown yet); the fleet's measured footprint (`opsBytes`: every
-//   running op's whole process tree — holders, nested checks, workers, tests)
-//   replaces that reservation whenever it is larger. That is where a holder's
-//   own memory is charged: a build holding one slot whose `build` + `check` +
-//   worker measure 6.5 GB is charged 6.5, not 3.6.
+// - **The fleet, holder by holder: what each share is reserved, or what it
+//   uses if larger.** A share is reserved from the moment it is taken (a
+//   just-started build has not grown yet), and what it is reserved is what
+//   holders of its kind of work have been MEASURED to peak at
+//   (`holderReserve`, from main's holder-peak ledger) — not a whole
+//   `PER_UNIT_BYTES` quantum per slot, which is the heavy type-check worker's
+//   footprint per unit and ~3.6× what the fleet's slots used (p50 1.0 GB per
+//   held slot, 2026-11-13). A holder whose tree measures more than its
+//   reservation is charged the measurement. Ops holding no recorded share
+//   (scripts, e2e runs, ops waiting for their grant) and slots held with no
+//   holder marker (an older CLI) are charged as before: the larger of a
+//   quantum per such slot and what those ops measure. So the charge is never
+//   below the fleet's measured use, and a reservation can only be lowered by
+//   a record of holders that used less.
 //
 // The window is then the slots already held plus as many more quanta as fit in
 // what is left — never above `B`, never below 1 (one op can always run, so the
@@ -62,6 +70,13 @@ export const FleetMemoryReadingSchema = z.object({
   opsBytes: z.number().nonnegative(),
   /** `cpu` pool slots held host-wide at the reading. */
   heldUnits: z.number().int().nonnegative(),
+  /**
+   * Every live share with a holder marker: its work, units, measured tree and
+   * reservation. Defaulted, not optional: a reading from a sampler that
+   * predates holder markers has none, and then every held slot is charged as
+   * unrecorded — a whole quantum — exactly as before.
+   */
+  holders: z.array(HolderReadingSchema).default([]),
 });
 export type FleetMemoryReading = z.infer<typeof FleetMemoryReadingSchema>;
 
@@ -77,7 +92,7 @@ export const FLEET_MEMORY_LEASE_MS = 120_000;
 export interface FleetWindow {
   /** RAM left for the fleet: RAM − wired − every non-op process's footprint. */
   allowedBytes: number;
-  /** The fleet's charge: max(held slots × quantum, its measured footprint). */
+  /** The fleet's charge: each holder's max(reservation, measured), plus the rest of the ops (`fleetCharge`). */
   chargedBytes: number;
   /** Slots the fleet may hold now, held ones included: `1 … B`. */
   slots: number;
@@ -90,16 +105,79 @@ export function fleetWindow(
 ): FleetWindow {
   const allowedBytes =
     reading.ramBytes - reading.wiredBytes - reading.otherBytes;
-  const chargedBytes = Math.max(
-    reading.heldUnits * PER_UNIT_BYTES,
-    reading.opsBytes,
-  );
+  const chargedBytes = fleetCharge(reading).bytes;
   const more = Math.floor((allowedBytes - chargedBytes) / PER_UNIT_BYTES);
   const slots = Math.min(
     cpuBudget(host).B,
     Math.max(1, reading.heldUnits + more),
   );
   return { allowedBytes, chargedBytes, slots };
+}
+
+/** The fleet's charge, split as `fleetWindow` sums it. */
+export interface FleetCharge {
+  bytes: number;
+  /** Σ over recorded holders of max(reservation, measured tree). */
+  holdersBytes: number;
+  /** Their reservations not yet grown into: Σ max(0, reservation − measured). */
+  headroomBytes: number;
+  /** Held slots no holder marker accounts for. */
+  unrecordedUnits: number;
+  /** max(unrecorded slots × quantum, what the ops outside recorded holders measure). */
+  restBytes: number;
+}
+
+/**
+ * What the fleet is charged at one reading: every recorded holder at the
+ * larger of its reservation and its measured tree, plus everything else the
+ * ops hold — measured, or a whole quantum per held slot no marker accounts
+ * for if that is larger. With no holder marker this is exactly the old
+ * `max(heldUnits × quantum, opsBytes)`; it is never below `opsBytes`.
+ */
+export function fleetCharge(reading: FleetMemoryReading): FleetCharge {
+  let holdersBytes = 0;
+  let measuredHolders = 0;
+  let recordedUnits = 0;
+  for (const h of reading.holders) {
+    holdersBytes += Math.max(h.reserveBytes, h.bytes);
+    measuredHolders += h.bytes;
+    recordedUnits += h.units;
+  }
+  const unrecordedUnits = Math.max(0, reading.heldUnits - recordedUnits);
+  const restBytes = Math.max(
+    unrecordedUnits * PER_UNIT_BYTES,
+    Math.max(0, reading.opsBytes - measuredHolders),
+  );
+  return {
+    bytes: holdersBytes + restBytes,
+    holdersBytes,
+    headroomBytes: holdersBytes - measuredHolders,
+    unrecordedUnits,
+    restBytes,
+  };
+}
+
+/** The holders of a reading, grouped by work, for the words a waiter reads. */
+export function describeHolders(holders: readonly HolderReading[]): string {
+  const byWork = new Map<
+    string,
+    { n: number; units: number; reserved: number; used: number }
+  >();
+  for (const h of holders) {
+    const g = byWork.get(h.work) ?? { n: 0, units: 0, reserved: 0, used: 0 };
+    g.n++;
+    g.units += h.units;
+    g.reserved += Math.max(h.reserveBytes, h.bytes);
+    g.used += h.bytes;
+    byWork.set(h.work, g);
+  }
+  const gb = (b: number): string => `${(b / 1e9).toFixed(1)}`;
+  return [...byWork]
+    .map(
+      ([work, g]) =>
+        `${g.n} ${work} (${g.units} slot${g.units === 1 ? "" : "s"}, ${gb(g.used)}/${gb(g.reserved)} GB)`,
+    )
+    .join(", ");
 }
 
 /**
