@@ -30,7 +30,8 @@ import {
   hasArtifact,
   loadGlobPatternMemo,
   readPublishedArtifactMeta,
-  type ArtifactMeta,
+  type GlobPatternMemo,
+  type ArtifactEdges,
 } from "./store";
 import {
   readVendorSetMeta,
@@ -62,7 +63,7 @@ export interface ExpectedHost {
 export function composedHostsOf(opts: {
   hosts: readonly ExpectedHost[];
   targets: readonly PlannedTarget[];
-  metas: ReadonlyMap<string, ArtifactMeta>;
+  metas: ReadonlyMap<string, ArtifactEdges>;
   vendorSetHash: string;
   /** The hosts' snapshots the tree links (`host-snapshots.ts`'s `hostSnapshotLinks`). */
   snapshotLinks: readonly HostSnapshotLink[];
@@ -93,6 +94,30 @@ export function composedHostsOf(opts: {
   }));
 }
 
+/** How a plan obtains a published artifact's edges: `null` when the store lacks it. */
+export type EdgesReader = (dirName: string) => Promise<ArtifactEdges | null>;
+
+/** The store's own answer: each address's `meta.json`, read without blocking. */
+export const readStoredEdges: EdgesReader = readPublishedArtifactMeta;
+
+/**
+ * Edges read from what a deployed dist recorded (`DIST_EDGES_FILE`) first,
+ * from `store` only for an address the dist does not name.
+ *
+ * Exact, not a cache: an address is a content address, so its edges are the
+ * same whichever build read them, and the dist names the edges of exactly the
+ * addresses it composed. A tree in sync with the dist therefore reads nothing
+ * from the store; an edit re-addresses the artifacts it touches, and only
+ * those are read (absent ⇒ the dist predates the tree) — O(changes), where
+ * reading every address made the check's body O(fleet) on every run.
+ */
+export function deployedEdgesReader(
+  recorded: ReadonlyMap<string, ArtifactEdges>,
+  store: EdgesReader,
+): EdgesReader {
+  return async (dirName) => recorded.get(dirName) ?? (await store(dirName));
+}
+
 export type ExpectedComposition =
   | { kind: "computed"; imports: Record<string, string>; entryUrl: string }
   | { kind: "missing-artifacts"; missing: string[] };
@@ -104,12 +129,16 @@ export async function planExpectedFleet(opts: {
   minify: boolean;
   /** Which registry + entry set to plan; defaults to the committed full registry. */
   source?: FleetSource;
+  /** Where an address's edges come from; defaults to the store ({@link readStoredEdges}). */
+  readEdges?: EdgesReader;
+  /** The glob-pattern memo the plan reads and persists; defaults to the store's. */
+  globs?: GlobPatternMemo;
 }): Promise<{
   targets: PlannedTarget[];
   registryDirName: string;
   entryDirName: string;
   hosts: ExpectedHost[];
-  metas: Map<string, ArtifactMeta>;
+  metas: Map<string, ArtifactEdges>;
   missing: string[];
   builderSource: string;
   identityHash: string;
@@ -118,7 +147,7 @@ export async function planExpectedFleet(opts: {
   const pluginsRoot = joinAppPath(root, "plugins");
   const sources: OwnSources = {
     snapshot: opts.repo,
-    globs: loadGlobPatternMemo(),
+    globs: opts.globs ?? loadGlobPatternMemo(),
   };
   const plan = await planFleet({
     root,
@@ -127,19 +156,20 @@ export async function planExpectedFleet(opts: {
     source: opts.source,
   });
 
-  const metas = new Map<string, ArtifactMeta>();
+  const readEdges = opts.readEdges ?? readStoredEdges;
+  const metas = new Map<string, ArtifactEdges>();
   const missing: string[] = [];
-  // Every store read is one non-blocking `meta.json` read (absent ⇒ missing):
-  // this runs on the check runner's shared thread, ~3k artifacts per plan.
-  // Bounded, so a plan never holds thousands of descriptors open at once.
+  // A store read is one non-blocking `meta.json` read (absent ⇒ missing):
+  // this runs on the check runner's shared thread. Bounded, so a plan never
+  // holds thousands of descriptors open at once.
   const gate = createSemaphore(16);
-  const record = (dirName: string, meta: ArtifactMeta | null) => {
+  const record = (dirName: string, meta: ArtifactEdges | null) => {
     if (meta === null) missing.push(dirName);
     else metas.set(dirName, meta);
     return meta;
   };
-  const read = async (dirName: string): Promise<ArtifactMeta | null> =>
-    record(dirName, await gate.run(() => readPublishedArtifactMeta(dirName)));
+  const read = async (dirName: string): Promise<ArtifactEdges | null> =>
+    record(dirName, await gate.run(() => readEdges(dirName)));
 
   // The seeds are read concurrently, then recorded in plan order, so the
   // closure below sees them exactly as a sequential read would.
@@ -147,7 +177,7 @@ export async function planExpectedFleet(opts: {
     (t) => t.dirName,
   );
   const seedMetas = await Promise.all(
-    seeds.map((dirName) => gate.run(() => readPublishedArtifactMeta(dirName))),
+    seeds.map((dirName) => gate.run(() => readEdges(dirName))),
   );
   seeds.forEach((dirName, i) => record(dirName, seedMetas[i]!));
   const barrelTargets = await resolveBarrelClosure({
@@ -203,6 +233,8 @@ export async function computeExpectedComposition(opts: {
   /** The pass's file set (a check run's `ctx.repo()`, a pass root's snapshot). */
   repo: RepoSnapshot;
   minify: boolean;
+  /** Where an address's edges come from; defaults to the store. */
+  readEdges?: EdgesReader;
 }): Promise<ExpectedComposition> {
   const fleet = await planExpectedFleet(opts);
   if (fleet.missing.length > 0) {

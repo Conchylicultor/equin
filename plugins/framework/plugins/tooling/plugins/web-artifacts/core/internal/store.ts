@@ -69,8 +69,28 @@ export interface ArtifactMeta {
   builtAtMs: number;
 }
 
+/**
+ * What planning reads of an artifact: its emitted imports, the edges the
+ * barrel closure, the worker closure and the vendor requests follow. A
+ * function of the artifact's address like the whole meta, so a dist records
+ * the edges of every address it composed (`DIST_EDGES_FILE`) and a later plan
+ * reads from the store only the addresses that dist does not name.
+ */
+export type ArtifactEdges = Pick<
+  ArtifactMeta,
+  "staticImportsByFile" | "dynamicImports"
+>;
+
+/** `meta`'s edges alone — what a dist records (never its Tailwind candidates). */
+export function edgesOf(meta: ArtifactEdges): ArtifactEdges {
+  return {
+    staticImportsByFile: meta.staticImportsByFile,
+    dynamicImports: meta.dynamicImports,
+  };
+}
+
 /** Union of every emitted file's static imports (coverage / closure / vendors). */
-export function allStaticImports(meta: ArtifactMeta): string[] {
+export function allStaticImports(meta: ArtifactEdges): string[] {
   const specs = new Set<string>();
   for (const imports of Object.values(meta.staticImportsByFile)) {
     for (const s of imports) specs.add(s);

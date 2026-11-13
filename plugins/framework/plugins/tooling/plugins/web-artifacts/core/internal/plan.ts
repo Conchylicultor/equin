@@ -37,7 +37,8 @@ import {
 } from "../own-roots";
 import { computeBuilderIdentity, type BuilderIdentity } from "./identity";
 import { ownHashFor, type OwnSources } from "./own-files";
-import { allStaticImports, artifactDirName, type ArtifactMeta } from "./store";
+import type { RepoFiles } from "@plugins/framework/plugins/tooling/core";
+import { allStaticImports, artifactDirName, type ArtifactEdges } from "./store";
 import {
   coEntryFileName,
   type ArtifactBuildTarget,
@@ -201,13 +202,24 @@ export function coEntriesFor(
   kind: ArtifactKind,
   pluginPath: string,
   pluginDir: AppPath,
+  files: RepoFiles,
 ): CoEntry[] {
   return cobuiltFoldersOf(kind).flatMap((folder) => {
     const entryFile = joinAppPath(pluginDir, folder, "index.ts");
-    return existsSync(entryFile)
+    return hasFile(files, entryFile)
       ? [{ folder, entryFile, specifier: `@plugins/${pluginPath}/${folder}` }]
       : [];
   });
+}
+
+/**
+ * Whether `file` (absolute) is in the pass's file set. Planning asks the tree
+ * snapshot it hashes, never the disk: the answer is the same set the addresses
+ * were computed from, and a fleet plan asks it ~2.5k times — one `stat` each
+ * made the map-in-sync check's body O(fleet) on every run.
+ */
+function hasFile(files: RepoFiles, file: AppPath): boolean {
+  return files.has(relative(files.root, file));
 }
 
 /** Every import-map specifier `targets` serve: each primary one plus its co-entries'. */
@@ -308,7 +320,9 @@ export async function planFleet(opts: {
       globRoots,
       ownFiles,
       globFiles,
-      coEntries: pluginPath ? coEntriesFor(kind, pluginPath, pluginDir) : [],
+      coEntries: pluginPath
+        ? coEntriesFor(kind, pluginPath, pluginDir, sources.snapshot)
+        : [],
     };
   };
 
@@ -362,6 +376,7 @@ export async function planFleet(opts: {
   const hosts = await step("browser-hosts", async () =>
     planBrowserHosts({
       root,
+      files: sources.snapshot,
       pluginPaths: webEntries.map((e) => e.pluginPath),
       identityHash: identity.identityHash,
     }),
@@ -392,7 +407,7 @@ export async function planFleet(opts: {
  * registries and the icon picker's icon map are real browser loads, and
  * leaving dynamic edges out of the closure broke both.
  */
-export function closureSpecsOf(meta: ArtifactMeta): string[] {
+export function closureSpecsOf(meta: ArtifactEdges): string[] {
   return [
     ...allStaticImports(meta),
     ...meta.dynamicImports.filter((s) => !isBrowserUnreachableDynamic(s)),
@@ -427,8 +442,8 @@ export async function resolveBarrelClosure(opts: {
   identityHash: string;
   sources: OwnSources;
   servedSpecs: ReadonlySet<string | null>;
-  seedMetas: ArtifactMeta[];
-  ensure: (t: PlannedTarget) => Promise<ArtifactMeta | null>;
+  seedMetas: ArtifactEdges[];
+  ensure: (t: PlannedTarget) => Promise<ArtifactEdges | null>;
 }): Promise<Map<string, PlannedTarget>> {
   const barrelTargets = new Map<string, PlannedTarget>(); // primary spec → target
   const covered = new Set<string | null>(opts.servedSpecs);
@@ -438,7 +453,9 @@ export async function resolveBarrelClosure(opts: {
     for (const meta of frontier) {
       for (const spec of closureSpecsOf(meta)) {
         if (!spec.startsWith("@plugins/") || covered.has(spec)) continue;
-        nextSpecs.add(hostSpecOf(spec, opts.pluginsRoot));
+        nextSpecs.add(
+          hostSpecOf(spec, opts.pluginsRoot, opts.sources.snapshot),
+        );
       }
     }
     for (const spec of nextSpecs) if (covered.has(spec)) nextSpecs.delete(spec);
@@ -452,12 +469,7 @@ export async function resolveBarrelClosure(opts: {
         const kind = rel.slice(slash + 1);
         const pluginDir = joinAppPath(opts.pluginsRoot, pluginPath);
         const barrelFile = joinAppPath(pluginDir, kind, "index.ts");
-        if (
-          slash <= 0 ||
-          !opts.sources.snapshot.has(
-            relative(opts.sources.snapshot.root, barrelFile),
-          )
-        ) {
+        if (slash <= 0 || !hasFile(opts.sources.snapshot, barrelFile)) {
           throw new Error(
             `artifact closure: emitted static import "${spec}" is not a folder barrel ` +
               `(expected ${barrelFile}) — cannot compose it into the import map.`,
@@ -482,7 +494,7 @@ export async function resolveBarrelClosure(opts: {
       wave.push(t);
     }
     const waveMetas = await Promise.all(wave.map(opts.ensure));
-    frontier = waveMetas.filter((m): m is ArtifactMeta => m !== null);
+    frontier = waveMetas.filter((m): m is ArtifactEdges => m !== null);
   }
   return barrelTargets;
 }
@@ -523,7 +535,7 @@ export async function planBarrelTarget(opts: {
     globRoots,
     ownFiles,
     globFiles,
-    coEntries: coEntriesFor(kind, pluginPath, pluginDir),
+    coEntries: coEntriesFor(kind, pluginPath, pluginDir, opts.sources.snapshot),
   };
 }
 
@@ -541,7 +553,7 @@ export async function planHostClosure(opts: {
   identityHash: string;
   sources: OwnSources;
   servedSpecs: ReadonlySet<string | null>;
-  ensure: (t: PlannedTarget) => Promise<ArtifactMeta | null>;
+  ensure: (t: PlannedTarget) => Promise<ArtifactEdges | null>;
 }): Promise<{ entry: PlannedTarget; added: PlannedTarget[] }> {
   const entry = await planBarrelTarget({
     pluginsRoot: opts.pluginsRoot,
@@ -571,7 +583,11 @@ export async function planHostClosure(opts: {
  * specifier is its own. Throws when a co-built folder has no host barrel —
  * `exhibits/` without `web/` has nothing to be co-built into.
  */
-export function hostSpecOf(spec: string, pluginsRoot: AppPath): string {
+export function hostSpecOf(
+  spec: string,
+  pluginsRoot: AppPath,
+  files: RepoFiles,
+): string {
   const rel = spec.slice("@plugins/".length);
   const slash = rel.lastIndexOf("/");
   if (slash <= 0) return spec;
@@ -580,14 +596,16 @@ export function hostSpecOf(spec: string, pluginsRoot: AppPath): string {
   const host = cobuildHostOf(folder);
   if (host === null) return spec;
   const hostBarrel = joinAppPath(pluginsRoot, pluginPath, host, "index.ts");
-  if (!existsSync(hostBarrel)) {
+  if (!hasFile(files, hostBarrel)) {
     throw new Error(
       `artifact closure: "${spec}" is imported, but plugins/${pluginPath} has ${folder}/ ` +
         `without ${host}/ (expected ${hostBarrel}). ${folder}/ is built as a second entry ` +
         `of its plugin's ${host} artifact, so a plugin contributing one must have a ${host}/ barrel.`,
     );
   }
-  if (!existsSync(joinAppPath(pluginsRoot, pluginPath, folder, "index.ts"))) {
+  if (
+    !hasFile(files, joinAppPath(pluginsRoot, pluginPath, folder, "index.ts"))
+  ) {
     throw new Error(
       `artifact closure: emitted import "${spec}" is not a folder barrel ` +
         `(expected ${joinAppPath(pluginsRoot, pluginPath, folder, "index.ts")}).`,
@@ -607,7 +625,7 @@ export async function collectVendorRequests(opts: {
   pluginsRoot: AppPath;
   /** web + core-closure + entry targets (NOT the registry). */
   targets: PlannedTarget[];
-  metaOf: (dirName: string) => ArtifactMeta;
+  metaOf: (dirName: string) => ArtifactEdges;
 }): Promise<VendorSpecRequest[]> {
   const requests = new Map<string, AppPath>();
   for (const t of [...opts.targets].sort((a, b) =>
@@ -666,7 +684,7 @@ export interface ComposedHost {
 export function workerClosure(opts: {
   entry: PlannedTarget;
   targets: readonly PlannedTarget[];
-  metaOf: (dirName: string) => ArtifactMeta;
+  metaOf: (dirName: string) => ArtifactEdges;
 }): PlannedTarget[] {
   const bySpec = new Map<string, PlannedTarget>();
   for (const t of opts.targets) {

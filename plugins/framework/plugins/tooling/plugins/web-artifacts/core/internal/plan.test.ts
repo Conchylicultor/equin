@@ -338,28 +338,39 @@ describe("co-built folders (exhibits/ is a second entry of the web artifact)", (
   barrel("webonly/web/index.ts");
   barrel("orphan/exhibits/index.ts");
 
-  test("a web target carries one co-entry per co-built barrel present", () => {
-    expect(coEntriesFor("web", "both", joinAppPath(tmp, "both"))).toEqual([
+  test("a web target carries one co-entry per co-built barrel present", async () => {
+    const files = (await sourcesOf(tmp)).snapshot;
+    expect(
+      coEntriesFor("web", "both", joinAppPath(tmp, "both"), files),
+    ).toEqual([
       {
         folder: "exhibits",
         entryFile: joinAppPath(tmp, "both/exhibits/index.ts"),
         specifier: "@plugins/both/exhibits",
       },
     ]);
-    expect(coEntriesFor("web", "webonly", joinAppPath(tmp, "webonly"))).toEqual(
-      [],
-    );
+    expect(
+      coEntriesFor("web", "webonly", joinAppPath(tmp, "webonly"), files),
+    ).toEqual([]);
     // Only the host kind carries them.
-    expect(coEntriesFor("core", "both", joinAppPath(tmp, "both"))).toEqual([]);
+    expect(
+      coEntriesFor("core", "both", joinAppPath(tmp, "both"), files),
+    ).toEqual([]);
   });
 
-  test("a co-built specifier names its host's artifact; others name their own", () => {
-    expect(hostSpecOf("@plugins/both/exhibits", tmp)).toBe("@plugins/both/web");
-    expect(hostSpecOf("@plugins/both/core", tmp)).toBe("@plugins/both/core");
+  test("a co-built specifier names its host's artifact; others name their own", async () => {
+    const files = (await sourcesOf(tmp)).snapshot;
+    expect(hostSpecOf("@plugins/both/exhibits", tmp, files)).toBe(
+      "@plugins/both/web",
+    );
+    expect(hostSpecOf("@plugins/both/core", tmp, files)).toBe(
+      "@plugins/both/core",
+    );
   });
 
-  test("exhibits/ without web/ fails loudly — there is nothing to co-build it into", () => {
-    expect(() => hostSpecOf("@plugins/orphan/exhibits", tmp)).toThrow(
+  test("exhibits/ without web/ fails loudly — there is nothing to co-build it into", async () => {
+    const files = (await sourcesOf(tmp)).snapshot;
+    expect(() => hostSpecOf("@plugins/orphan/exhibits", tmp, files)).toThrow(
       "has exhibits/ without web/",
     );
   });

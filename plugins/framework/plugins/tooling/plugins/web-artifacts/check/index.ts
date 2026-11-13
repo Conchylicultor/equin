@@ -62,8 +62,16 @@ import {
   worktreeArtifacts,
 } from "@plugins/infra/plugins/paths/core";
 import { diffImportMaps } from "../core/import-map";
-import { computeExpectedComposition } from "../core/internal/expected";
-import { WEB_ARTIFACTS_STORE_DIR } from "../core/internal/store";
+import { DIST_EDGES_FILE } from "../core/internal/compose";
+import {
+  computeExpectedComposition,
+  deployedEdgesReader,
+  readStoredEdges,
+} from "../core/internal/expected";
+import {
+  WEB_ARTIFACTS_STORE_DIR,
+  type ArtifactEdges,
+} from "../core/internal/store";
 import { extractEntryScriptSrc, extractImportMap } from "./scan";
 
 const MARKER_NAME = ".web-artifacts.json";
@@ -247,9 +255,27 @@ const mapInSync: Check = {
       };
     }
 
+    // The edges of every address the dist composed, as its compose recorded
+    // them: the plan below reads from the store only the addresses this tree
+    // gives that the dist does not name — the ones an edit re-addressed.
+    const edgesRaw = readIfExists(join(dist.dir, DIST_EDGES_FILE));
+    if (edgesRaw === null) {
+      return {
+        ok: false,
+        message:
+          `the deployed dist at ${dist.dir} carries no ${DIST_EDGES_FILE} — it was composed ` +
+          `before the dist recorded its artifacts' edges, so it predates the current pipeline.`,
+        hint: BUILD_HINT,
+      };
+    }
+    const recorded = new Map(
+      Object.entries(JSON.parse(edgesRaw) as Record<string, ArtifactEdges>),
+    );
+
     const expected = await computeExpectedComposition({
       repo: await ctx.repo(),
       minify: markerMinify(markerRaw),
+      readEdges: deployedEdgesReader(recorded, readStoredEdges),
     });
     if (expected.kind === "missing-artifacts") {
       return {

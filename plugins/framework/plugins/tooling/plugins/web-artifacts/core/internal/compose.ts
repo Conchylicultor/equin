@@ -30,6 +30,15 @@ import {
   COMMIT_GLOBAL,
   GRAPH_GLOBAL,
 } from "./vite-builder";
+import type { ArtifactEdges } from "./store";
+
+/**
+ * The dist's record of the edges of every artifact it composed, by address
+ * (`ArtifactEdges`): what `map-in-sync` re-plans the tree from without reading
+ * each address's `meta.json` out of the store (`expected.ts`'s
+ * `deployedEdgesReader`).
+ */
+export const DIST_EDGES_FILE = ".web-artifacts-edges.json";
 
 export interface ComposeOptions {
   stagingDir: AppPath;
@@ -103,6 +112,8 @@ export interface ComposeOptions {
    * splices into the head of that app's pages.
    */
   appPreloadSeeds: Record<string, string[]>;
+  /** Every planned artifact's edges, by address — written as {@link DIST_EDGES_FILE}. */
+  edges: Record<string, ArtifactEdges>;
 }
 
 const MAIN_SCRIPT_TAG = '<script type="module" src="/main.tsx"></script>';
@@ -434,6 +445,11 @@ export function composeDist(opts: ComposeOptions): {
         .join("\n")}`,
     );
   }
+
+  writeFileSync(
+    joinAppPath(stagingDir, DIST_EDGES_FILE),
+    JSON.stringify(opts.edges),
+  );
 
   // 7. Manifest — doubles as the marker the web-artifacts checks detect a
   // composed dist by; its absence means nothing was ever composed here.

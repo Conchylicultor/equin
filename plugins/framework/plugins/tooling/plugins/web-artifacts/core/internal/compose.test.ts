@@ -202,6 +202,7 @@ describe("composeDist with an address dir", () => {
         entryUrl: `/artifacts/${links[0]!.linkName}/index.js`,
         preloadSeeds: [],
         appPreloadSeeds: {},
+        edges: {},
       });
     return { base, entry, compose };
   }

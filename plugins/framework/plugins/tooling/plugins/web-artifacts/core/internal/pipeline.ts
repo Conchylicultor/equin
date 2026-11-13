@@ -37,6 +37,7 @@ import {
 import { precompressFiles } from "./precompress";
 import {
   allStaticImports,
+  edgesOf,
   artifactStorePath,
   ensureStoreDirs,
   loadGlobPatternMemo,
@@ -796,6 +797,12 @@ async function runPipeline(
         entryUrl,
         preloadSeeds,
         appPreloadSeeds,
+        edges: Object.fromEntries(
+          [...buildOut.metas].map(([dirName, meta]) => [
+            dirName,
+            edgesOf(meta),
+          ]),
+        ),
       });
       if (crawl !== null) {
         const staged = stageCrawlSnapshot({

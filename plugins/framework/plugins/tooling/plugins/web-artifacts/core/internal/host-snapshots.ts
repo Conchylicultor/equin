@@ -71,6 +71,7 @@ import {
   hasArtifact,
   publishArtifact,
   touchArtifact,
+  type ArtifactEdges,
   type ArtifactMeta,
 } from "./store";
 import { workerClosure, type PlannedTarget } from "./plan";
@@ -289,7 +290,7 @@ export async function hostSnapshotLinks(opts: {
   repo: RepoSnapshot;
   hosts: ReadonlyArray<{ pluginPath: string; entry: PlannedTarget }>;
   targets: readonly PlannedTarget[];
-  metaOf: (dirName: string) => ArtifactMeta;
+  metaOf: (dirName: string) => ArtifactEdges;
 }): Promise<HostSnapshotLink[]> {
   const closureOf = (entry: PlannedTarget) =>
     workerClosure({ entry, targets: opts.targets, metaOf: opts.metaOf });

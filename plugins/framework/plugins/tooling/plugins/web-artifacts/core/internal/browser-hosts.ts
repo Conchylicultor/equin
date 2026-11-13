@@ -29,6 +29,7 @@
 // "externalized for browser compatibility") fails it.
 
 import { createHash } from "node:crypto";
+import type { RepoFiles } from "@plugins/framework/plugins/tooling/core";
 import {
   joinAppPath,
   type AppPath,
@@ -284,18 +285,19 @@ function hostIdentity(identityHash: string, hostSource: string): string {
  */
 export function planBrowserHosts(opts: {
   root: AppPath;
+  /**
+   * The pass's file set: which fleet plugin has a host entry is asked of it,
+   * never the disk — one `stat` per web plugin (~1.2k) on every plan.
+   */
+  files: RepoFiles;
   pluginPaths: readonly string[];
   identityHash: string;
 }): BrowserHostPlan[] {
   const plans: BrowserHostPlan[] = [];
   for (const pluginPath of opts.pluginPaths) {
-    const entryFile = joinAppPath(
-      opts.root,
-      "plugins",
-      pluginPath,
-      HOST_ENTRY_REL,
-    );
-    if (!existsSync(entryFile)) continue;
+    const entryRel = `plugins/${pluginPath}/${HOST_ENTRY_REL}`;
+    if (!opts.files.has(entryRel)) continue;
+    const entryFile = joinAppPath(opts.root, entryRel);
     const hostSource = hostModuleSource(pluginPath);
     const match = matchHostRecord(
       storedHostRecords(pluginPath),
