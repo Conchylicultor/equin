@@ -37,6 +37,10 @@ export const RECORD_TABLES = [
   // record (a file keyed by its blob, a directory by its members' keys) names
   // its value by ref, and a value record holds it, keyed by that ref.
   "fold",
+  // What a process that loads a set of repo modules answered (a schema probe:
+  // `closureRecord`), keyed by every loaded module's Merkle key, its input,
+  // the runtime and the npm code those modules import.
+  "closure",
 ] as const;
 export type RecordTable = (typeof RECORD_TABLES)[number];
 

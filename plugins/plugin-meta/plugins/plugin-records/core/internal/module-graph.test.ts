@@ -118,6 +118,57 @@ describe("buildModuleGraph", () => {
     expect(edited.keyOf("x/a.ts")).not.toBe(g.keyOf("x/a.ts"));
   });
 
+  test("a bundled closure follows exactly the dynamic edges the caller picks, and lists the bare specifiers it keeps", async () => {
+    const files = {
+      "x/a.ts": [
+        'import { s } from "./s";',
+        'import type { T } from "./t";',
+        'import "pkg-static";',
+        'import { unused } from "pkg-unused";',
+        'export const lazy = () => import("./lazy");',
+        'export const cmd = () => import("./cmd");',
+        'export const npm = () => import("pkg-dynamic");',
+        "export const v: T = s;",
+      ].join("\n"),
+      "x/s.ts": "export const s = 1;",
+      "x/t.ts": "export type T = number;",
+      "x/lazy.ts": 'import "./deep";\nexport {};',
+      "x/deep.ts": "export {};",
+      "x/cmd.ts": "export {};",
+    };
+    const g = await graphOf(files, ["x/a.ts"]);
+    expect(g.modules.get("x/a.ts")!.dynamicImports).toEqual([
+      { spec: "./lazy", target: "x/lazy.ts" },
+      { spec: "./cmd", target: "x/cmd.ts" },
+    ]);
+
+    const cut = g.bundledClosure(["x/a.ts"]);
+    expect([...cut.modules].sort()).toEqual(["x/a.ts", "x/s.ts"]);
+    // Kept static bare imports only: a type-erased or unused one is not loaded.
+    expect([...cut.external.keys()]).toEqual(["pkg-static"]);
+
+    const followed = g.bundledClosure(["x/a.ts"], {
+      followDynamic: (module, spec) =>
+        !(module === "x/a.ts" && spec === "./cmd"),
+    });
+    expect([...followed.modules].sort()).toEqual([
+      "x/a.ts",
+      "x/deep.ts",
+      "x/lazy.ts",
+      "x/s.ts",
+    ]);
+    expect(followed.children("x/a.ts")).toEqual(["x/lazy.ts", "x/s.ts"]);
+    expect(followed.importChain("x/deep.ts")).toEqual([
+      "x/a.ts",
+      "x/lazy.ts",
+      "x/deep.ts",
+    ]);
+    expect([...followed.external.keys()].sort()).toEqual([
+      "pkg-dynamic",
+      "pkg-static",
+    ]);
+  });
+
   test("a gitignored module is read from outside the snapshot and keyed by its content", async () => {
     const files = { "x/a.ts": 'import "./gen.generated";' };
     const g1 = await graphOf(files, ["x/a.ts"], {

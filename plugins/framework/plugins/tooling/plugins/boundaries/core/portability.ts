@@ -31,7 +31,6 @@
 import type { RepoFiles } from "@plugins/framework/plugins/tooling/core";
 import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import {
-  importClosure,
   importClosures,
   loadTypescript,
   type UnionImportClosure,
@@ -42,14 +41,12 @@ import {
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import { yieldMacrotask } from "@plugins/packages/plugins/macrotask-yield/core";
 import {
-  buildModuleGraph,
-  currentRecordStore,
-  NO_OUTSIDE_FILES,
+  fileSetClosure,
   scanFilesCached,
+  type BundledClosure,
 } from "@plugins/plugin-meta/plugins/plugin-records/core";
 import {
   factsOf,
-  moduleNeeds,
   SERVER_BARREL_RE,
   type ModulePortabilityFacts,
 } from "./portability-facts";
@@ -81,44 +78,6 @@ export interface ServerPortability {
    * barrel — there is nothing to explain.
    */
   offenders(barrel: string): Offender[];
-}
-
-/**
- * Rules 1 and 2 over ONE entry's static closure (dynamic imports cut): every
- * module in it that imports a platform API or uses a host-only value, with the
- * chain from the entry. For an arbitrary module — `machine/` files included,
- * which are not server barrels (`boundaries:machine-portable-declaration`).
- * `needs` memoizes each module's reading across calls.
- */
-export async function platformOffenders(
-  root: AppPath,
-  entry: string,
-  read: (path: string) => Promise<string | null>,
-  needs: Map<string, string[]>,
-): Promise<{ modules: number; offenders: Offender[] }> {
-  const closure = await importClosure(root, entry, { dynamicImports: "cut" });
-  const ts = await loadTypescript();
-  const offenders: Offender[] = [];
-  for (const module of [...closure.modules].sort()) {
-    let found = needs.get(module);
-    if (found === undefined) {
-      const src = await read(module);
-      if (src === null) {
-        throw new Error(
-          `${entry}'s closure loads ${module}, which the run's file set cannot read.`,
-        );
-      }
-      found = moduleNeeds(ts, module, src);
-      needs.set(module, found);
-    }
-    if (found.length === 0) continue;
-    offenders.push({
-      module,
-      needs: found,
-      chain: closure.importChain(module),
-    });
-  }
-  return { modules: closure.modules.size, offenders };
 }
 
 /** The plugin (`plugins/a/plugins/b`) a repo path sits in, or the path itself outside one. */
@@ -345,30 +304,20 @@ export interface PlatformTaint {
  * Rules 1 and 2 (no host services: rule 3 is a server-barrel question) over
  * an already-measured union closure — every module that imports a platform
  * API or uses a host-only value, propagated to every module that loads one.
- * What `boundaries:web-loads-portable` asks of the modules a browser realm
- * loads.
+ * Each module's facts are read and computed here unless `facts` hands them
+ * in (as {@link platformTaintOf} does, from their file records).
  */
 export async function platformTaint(
   closure: Pick<UnionImportClosure, "modules" | "children">,
   read: (path: string) => Promise<string | null>,
+  facts: (
+    modules: readonly string[],
+  ) => Promise<ModulePortabilityFacts[]> = readFacts(read),
 ): Promise<PlatformTaint> {
-  const ts = await loadTypescript();
   const modules = [...closure.modules].sort();
   const seeds = new Map<string, string[]>();
-  let lastYield = performance.now();
-  for (const module of modules) {
-    if (performance.now() - lastYield > 10) {
-      await yieldMacrotask();
-      lastYield = performance.now();
-    }
-    const src = await read(module);
-    if (src === null) {
-      throw new Error(
-        `The closure loads ${module}, which the run's file set cannot read.`,
-      );
-    }
-    const needs = moduleNeeds(ts, module, src);
-    if (needs.length > 0) seeds.set(module, needs);
+  for (const [i, f] of (await facts(modules)).entries()) {
+    if (f.needs.length > 0) seeds.set(modules[i]!, f.needs);
   }
   const tainted = reverseTaint(closure, modules)(seeds.keys());
   const assertIn = (module: string): void => {
@@ -389,6 +338,46 @@ export async function platformTaint(
         );
       }
       return frontierOffenders(closure, seeds, tainted, module);
+    },
+  };
+}
+
+/**
+ * Rules 1 and 2 over the static closure of `entries` in `repo` (dynamic
+ * imports cut): what `boundaries:web-loads-portable` asks of the modules a
+ * browser realm loads, and `boundaries:machine-portable-declaration` of one
+ * declaring module. The closure is the module graph's bundler view and each
+ * module's facts its file record ({@link measuredClosure}), so a pass after an
+ * edit reads and scans the edited modules alone — never a `Bun.build` of the
+ * closure, never a re-read of it.
+ */
+export async function platformTaintOf(
+  repo: RepoFiles,
+  entries: readonly string[],
+): Promise<PlatformTaint> {
+  const { closure, facts } = await measuredClosure(repo, entries);
+  return platformTaint(closure, (path) => repo.read(path), facts);
+}
+
+/**
+ * The bundler's static closure of `entries` over `repo` (plugin-records'
+ * `fileSetClosure`: one module graph per file set, shared with codegen), and
+ * the portability facts of its modules as file records.
+ */
+async function measuredClosure(
+  repo: RepoFiles,
+  entries: readonly string[],
+): Promise<{
+  closure: BundledClosure;
+  facts: (modules: readonly string[]) => Promise<ModulePortabilityFacts[]>;
+}> {
+  const { closure, input } = await fileSetClosure(repo, entries);
+  return {
+    closure,
+    facts: async (modules) => {
+      const { PORTABILITY_FACTS_SCAN } =
+        await import("./portability-facts.scan");
+      return scanFilesCached(input, modules, PORTABILITY_FACTS_SCAN);
     },
   };
 }
@@ -433,30 +422,12 @@ export function serverPortabilityOf(
         .all()
         .filter((path) => SERVER_BARREL_RE.test(path))
         .sort();
-      // Every module a server barrel loads is a member of the file set: a
-      // gitignored one would resolve to nothing, which throws below.
-      const input = {
-        snapshot: repo,
-        store: currentRecordStore(),
-        readOutside: NO_OUTSIDE_FILES,
-      };
-      const graph = await buildModuleGraph(input, barrels);
-      const closure = graph.bundledClosure(barrels);
-      for (const m of closure.modules) {
-        const unresolved = graph.modules.get(m)!.unresolved;
-        if (unresolved.length > 0)
-          throw new Error(
-            `${m} imports ${unresolved.map((u) => JSON.stringify(u)).join(", ")}, which resolves to no file of the checkout: a server barrel's closure is measured over the file set.`,
-          );
-      }
-      const { PORTABILITY_FACTS_SCAN } =
-        await import("./portability-facts.scan");
+      const { closure, facts } = await measuredClosure(repo, barrels);
       return derivePortability({
         barrels,
         closure,
         read: (path) => repo.read(path),
-        facts: (modules) =>
-          scanFilesCached(input, modules, PORTABILITY_FACTS_SCAN),
+        facts,
       });
     })();
     memo.set(repo, p);

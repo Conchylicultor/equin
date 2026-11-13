@@ -89,6 +89,14 @@ No hand-kept list. Two sources:
   `PgTable`: physical columns, which are required, which are unwritten (a
   generated column, or the column `registeredDerivedUpdatedAt()` names).
   `IMPERATIVE_PUBLIC_TABLES` names the public tables made outside drizzle.
+  Its answer is a plugin record (`closureRecord`, `check/internal/run-probe.ts`):
+  keyed by the probe script's and every schema file's module Merkle key (each
+  over its import closure), its input and the npm code they import — so the
+  subprocess runs once per distinct schema closure host-wide, and a pass after
+  an edit no schema file reaches is a lookup (~0.5 s of graph walk, against a
+  1–20 s subprocess depending on host load). Its input and answer name files
+  repo-relative (the probe is handed the checkout root as its argument), since
+  a record is shared by every checkout.
 - **Hand-written DDL** found in source: `CREATE TABLE` (temp included) declares
   a table and its columns; `ALTER TABLE … ADD / DROP COLUMN` and `RENAME
   COLUMN` apply after every CREATE. An imperative table whose DDL is generated

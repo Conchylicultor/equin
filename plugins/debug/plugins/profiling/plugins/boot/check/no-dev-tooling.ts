@@ -2,7 +2,7 @@ import type {
   Check,
   CheckResult,
 } from "@plugins/framework/plugins/tooling/core";
-import { importClosures } from "@plugins/framework/plugins/tooling/plugins/import-closure/core";
+import { fileSetImportClosures } from "@plugins/framework/plugins/tooling/plugins/import-closure/core";
 import { backendEntries } from "./backend-entries";
 
 /**
@@ -45,7 +45,9 @@ function isDevTooling(specifier: string): boolean {
  * tooling at runtime loads it where it runs, with `await import(…)`.
  *
  * Measured with dynamic imports cut: the subject is what evaluates before a
- * barrel's `register` runs.
+ * barrel's `register` runs. Read off the module graph
+ * (`fileSetImportClosures`: per-blob import records), so a pass after an edit
+ * scans the edited modules, never a `Bun.build` of the whole boot closure.
  */
 const check: Check = {
   id: "boot:closure-no-dev-tooling",
@@ -55,7 +57,7 @@ const check: Check = {
     const repo = await ctx.repo();
     const found = await backendEntries(repo);
     if (!found.ok) return found.result;
-    const closure = await importClosures(repo.root, found.entries, {
+    const closure = await fileSetImportClosures(repo, found.entries, {
       dynamicImports: "cut",
     });
     const findings: string[] = [];

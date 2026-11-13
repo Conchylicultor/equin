@@ -13,10 +13,13 @@
 //     column, a string), so `${sdkAgentStops.table}` in a hand-written statement
 //     names the table it renders.
 //
-// Run as: bun --bun schema-probe.ts, with `ProbeInput` JSON on stdin.
+// Run as: bun --bun schema-probe.ts <checkout root>, with `ProbeInput` JSON on
+// stdin. Every path in and out is repo-relative (resolved against the root):
+// the answer is a record every checkout shares (`closureRecord`).
 // Emits `ProbeOutput` JSON (`probe-types.ts`).
 import { getTableColumns, getTableName, is } from "drizzle-orm";
 import { getTableConfig, PgColumn, PgTable } from "drizzle-orm/pg-core";
+import { join } from "node:path";
 import { registeredDerivedUpdatedAt } from "@plugins/database/plugins/derived-updated-at/server";
 import { IMPERATIVE_PUBLIC_TABLES } from "@plugins/database/plugins/derived-views/core";
 import type {
@@ -27,13 +30,16 @@ import type {
   ResolvedRef,
 } from "./probe-types";
 
+const root = process.argv[2];
+if (root === undefined)
+  throw new Error("schema-probe: the checkout root is its first argument");
 const input = JSON.parse(await Bun.stdin.text()) as ProbeInput;
 
 const modules = new Map<string, Record<string, unknown>>();
 const loadFailures: { file: string; error: string }[] = [];
 for (const file of input.files) {
   try {
-    modules.set(file, require(file) as Record<string, unknown>);
+    modules.set(file, require(join(root, file)) as Record<string, unknown>);
   } catch (e) {
     loadFailures.push({ file, error: String(e) });
   }

@@ -121,8 +121,9 @@ readings use it:
 Whether a server barrel can run on a host without the computer (a page's
 worker) is a fact of its static import closure, never a flag a plugin writes.
 `serverPortabilityOf(repo)` answers it for every `server/index.ts` at once:
-ONE `importClosures` build over all of them (dynamic imports cut), then a
-reverse BFS over the reversed edges (`UnionImportClosure.children`) from the
+ONE union closure over all of them (dynamic imports cut — plugin-records'
+`fileSetClosure`, the module graph's bundler view, each module's facts a file
+record), then a reverse BFS over the reversed edges (`UnionImportClosure.children`) from the
 modules that need the computer. A module needs it when it:
 
 1. imports a platform API at runtime (`isPlatformApi`; `import type` and an
@@ -157,7 +158,7 @@ build's size and time, the derivation's cost, and the barrels made
 non-portable by rule 3 alone.
 
 `boundaries:machine-portable-declaration` reads the same matcher (rules 1 and 2,
-`platformOffenders`, per module) the other way
+`platformTaintOf`, per module) the other way
 round: a `machine/` module that declares a retention (`defineRetention`,
 `markCascadeBounded`) or a warm-up (`defineWarmup`) must have a closure that
 reaches a platform API. Those declarations are portable — every host runs
@@ -177,8 +178,10 @@ jsdom suite, then crashed at module eval.
 
 `boundaries:web-loads-portable` checks the fact, not the folder label. It
 collects every module outside `web/` / `exhibits/` that a browser-realm module
-loads at runtime. It measures them as one union closure (`importClosures`,
-dynamic imports cut; ~600 entries, a few seconds) and taints it with rules 1
+loads at runtime. It measures them as one union closure (`platformTaintOf`:
+the module graph's bundler view, dynamic imports cut, ~800 entries; each
+module's facts its file record, so a pass after an edit scans the edited
+modules only — 8.7 s → 1.6 s warm) and taints it with rules 1
 and 2 (`platformTaint`, the same seeds, reverse BFS and frontier offenders as
 `derivePortability`). Each tainted one is reported with its loaders and the
 chain to what needs the computer. Browser realm =
@@ -195,11 +198,11 @@ takes a `debt` exemption on the check's id.
 
 - Description: Boundary-rules checker: zone DSL, edge evaluator, and project boundary config
 - Core:
-  - Uses: 27 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `framework/plugin-id` ×6
     - `plugin-meta/parse-utils` ×6
-    - `plugin-meta/plugin-records` ×5
-    - `framework/tooling/import-closure` ×4
+    - `plugin-meta/plugin-records` ×4
+    - `framework/tooling/import-closure` ×3
     - `framework/tooling/boundaries/runtime-exception.parseRuntimeException`
     - `infra/host-fs/user-path.joinAppPath`
     - `infra/spawn.getWorktreeRoot`

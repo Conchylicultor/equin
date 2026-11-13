@@ -108,7 +108,7 @@ function issuesOf(s: ReturnType<typeof site>) {
   const parsed = parseSite(s.site, s.refs);
   if (parsed.kind !== "parsed")
     throw new Error(`did not parse: ${parsed.error}`);
-  const model = SchemaModel.fromProbe(PROBE, (f) => f);
+  const model = SchemaModel.fromProbe(PROBE);
   return validateStatements(parsed.stmts, model).map((i) => i.kind);
 }
 
@@ -242,7 +242,7 @@ describe("writes against the declared schema", () => {
   });
 
   test("hand-written DDL declares a table", () => {
-    const model = SchemaModel.fromProbe(PROBE, (f) => f);
+    const model = SchemaModel.fromProbe(PROBE);
     const ddl = parseSite(
       // (The table's IMPERATIVE_PUBLIC_TABLES constant, as a real create site names it.)
       site`CREATE TABLE IF NOT EXISTS ${{ kind: "text", text: LIVE_STATE_CHANGELOG_TABLE }} (id bigserial PRIMARY KEY, tbl text NOT NULL, note text)`

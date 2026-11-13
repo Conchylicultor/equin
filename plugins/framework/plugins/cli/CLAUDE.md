@@ -466,8 +466,8 @@ ui-kit's `theme/app.css` (JS-sets / CSS-styles split, as with `.dark`).
     - `readMergeMarkers`
     - `resolveGitDir`
 - Cross-plugin:
-  - Imported by: 38 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `framework` ×27
+  - Imported by: 37 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `framework` ×26
     - `infra` ×5
     - `apps` ×3
     - `plugin-meta` ×2

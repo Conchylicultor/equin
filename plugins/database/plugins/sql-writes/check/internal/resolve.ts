@@ -1,5 +1,4 @@
 import ts from "typescript";
-import { resolve as resolvePath } from "path";
 import type { SourceAnalysis } from "@plugins/framework/plugins/tooling/plugins/checks/plugins/source-analysis/core";
 import type { ExportRef } from "./probe-types";
 import {
@@ -30,12 +29,10 @@ const MAX_DEPTH = 20;
 
 export function createHoleResolver(opts: {
   analysis: SourceAnalysis;
-  /** The checkout's root: an `export` hole names its schema file absolutely, as the probe takes it. */
-  root: string;
   /** Repo-relative schema-glob files: the exports the probe can evaluate. */
   schemaFiles: ReadonlySet<string>;
 }): { resolveSite(site: ScannedSite): Promise<SqlSite> } {
-  const { analysis, root, schemaFiles } = opts;
+  const { analysis, schemaFiles } = opts;
 
   /** `v`, read in file `rel`, followed into the files it names. */
   const resolve = async (
@@ -59,7 +56,7 @@ export function createHoleResolver(opts: {
           ? {
               kind: "export",
               ref: {
-                file: resolvePath(root, rel),
+                file: rel,
                 exportName: v.name,
                 path: [...v.path],
               },

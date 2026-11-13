@@ -3,6 +3,7 @@ export {
   importClosures,
   loadTypescript,
 } from "./import-closure";
+export { fileSetImportClosures } from "./file-set-closures";
 export type {
   CommandRunEdge,
   DynamicImportPolicy,

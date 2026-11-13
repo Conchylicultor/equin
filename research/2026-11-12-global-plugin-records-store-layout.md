@@ -695,3 +695,111 @@ on the same shared inputs (barrel evaluation, registry codegen;
 `platformOffenders` ~2.8 s and the semaphore ~2.5 s are the check thread's top
 owners). sql-writes:fit spends ~16.5 s per pass in its schema probe. Then the
 declared whole-tree read.
+
+## The cluster is CPU, not a shared wait (task: check pass O(changes), 8)
+
+Measured 2026-11-12/13, same one-line edit (a comment appended to
+`hints/help-menu/web/index.ts`), `./equin check --scope tree`.
+
+### Split
+
+- **The pass is CPU-bound, and the CPU is in the check process.** One
+  unbounded pass after the edit: 25.6 s wall at load 12, **177 CPU-s** (92 user
+  + 85 sys, 627%). A process-tree sample put 117 CPU-s in the check process
+  itself (its threads: `Bun.build`'s parser pool, the fs pool, record readers)
+  and only a few in subprocesses (each schema probe ~0.6 CPU-s).
+- **Why ~20 checks end together.** The `page.editor:*` checks read 0–32 files
+  and take 2–3 ms in a serial pass, yet 16 s in the unbounded one: they wait
+  on `buildEnrichedTree` (6 s alone, ~3.3 s with nothing changed: the
+  barrel-free tree 1.4 s, evaluation 1.1 s, the enriched tree 0.7 s; an edited
+  web barrel misses its evaluated record, +2–4 s of live import), and that
+  shared input finishes when the host gives it CPU. With every check started
+  at once, every one ends when the pass's total work drains: the tail is the
+  pass's CPU, not one input. `sql-writes:fit`'s "16.5 s" was the same thing:
+  0.39 s in a serial pass, its probe 1.2 s alone at load 4.
+- **Who spends the CPU** — per-check process CPU (`process.cpuUsage()` around
+  each check in a `--jobs 1` pass; a temporary instrument, not committed):
+  93 CPU-s in all, the top being whole-closure `Bun.build`s run on every pass
+  whatever was edited:
+
+| check (serial, help-menu edit) | CPU-s | why |
+| --- | ---: | --- |
+| boot:closure-digestable | 13.9 | `importClosures` (follow) of the 5.8k-module backend closure, + every module read |
+| cli:codegen-manifests-not-frozen | 11.4 | ~20 `importClosure`s (startup + each command body), reads `live` |
+| boot:closure-no-dev-tooling | 8.0 | `importClosures` (cut) of the same closure |
+| snapshot-chain-intact | 7.1 | migrations data, a subprocess |
+| theme-bridge-reads | 4.6 | 16.7k reads |
+| active-data:document-chip-has-server-token | 4.3 | first to ask the enriched tree |
+| boundaries:machine-portable-declaration | 3.9 | one `importClosure` per declaring module |
+| pre-barrel-manifests-complete | 3.7 | 13k reads |
+| boundaries:web-loads-portable | 2.6 | `importClosures` over ~800 entries + every module read |
+
+`platformOffenders` (the check thread's top owner, ~3.4 s) was the
+machine-portable one re-reading and re-parsing each closure module per pass.
+
+### Fix
+
+The import-closure readers that need modules, edges, chains and externals —
+not `live` — read them off the plugin-records module graph, whose per-module
+import facts are records keyed by blob:
+
+- **`fileSetClosure`** (plugin-records core): the bundler's closure over a
+  file set, one graph per set, an unresolved import loud — the three copies
+  (codegen's browser host, server portability, now the checks) are one.
+  `bundledClosure` takes a `followDynamic(module, spec)` predicate, and
+  `external` (each module's kept bare specifiers, dynamic ones when followed),
+  both derived from the facts the graph already reads: no file record re-keys.
+- **`fileSetImportClosures`** (tooling/import-closure): `importClosures`' answer
+  over a file set, both dynamic-import policies; a command's `run` thunk is a
+  per-blob `FileScan` (`command-runs.scan.ts`, the old `scanCommandRuns`
+  moved there).
+- **`platformTaintOf`** (boundaries): rules 1–2 over that closure, each
+  module's facts the portability file record `serverPortabilityOf` already
+  kept. `platformOffenders` is gone.
+- Readers moved: `boot:closure-digestable`, `boot:closure-no-dev-tooling`,
+  `boundaries:web-loads-portable`, `boundaries:machine-portable-declaration`.
+
+Equivalence, on the real tree against `Bun.build` (scratch scripts): boot
+closures, cut and followed (5,768 / 5,810 modules) — identical modules, edges,
+chain lengths and externals (builtins aside: a bundle's resolver never sees
+them); the CLI bin followed (1,959 modules, 42 command runs cut) identical;
+web-loads-portable's 791 entries — identical violations, taint and offenders;
+machine-portable-declaration's 8 declaring modules — identical.
+
+**sql-writes:fit's probe is a record** (`closureRecord`, plugin-records core,
+new `closure` table): keyed by the probe script's and every schema file's
+module Merkle key, the input and the npm code they import; only a success is
+stored. The probe's wire format names files repo-relative (the root is its
+argument). Same answer (164 write sites, 22 fit issues, 41 declared). A pass
+whose edit reaches no schema closure is a lookup (0.5–1.3 s of graph walk);
+a miss is the subprocess (1.2 s at load 4, 9–21 s at load 25). The "slower
+cold fold" (25.0 s vs 16.2 s) is the same host contention: the scan module's
+first fold ran in a pass at load 10–12; alone it was 6.3 s vs 10.0 s.
+
+| one-line edit (help-menu), serial, per-check process CPU | before | after |
+| --- | ---: | ---: |
+| boot:closure-digestable | 13.9 | 1.9 |
+| boot:closure-no-dev-tooling | 8.0 | 0.0 |
+| boundaries:machine-portable-declaration | 3.9 | 0.2 |
+| boundaries:web-loads-portable | 2.6 | 0.9 |
+| **all checks** | **93.2 CPU-s** (load 10) | **60.3 CPU-s** (load 25) |
+| closure walk alone, backend (cut / follow) | 8.3 s / 6.8 s | 0.44 s / 0.39 s |
+| web-loads-portable taint, warm | 8.7 s | 1.6 s |
+| sql-writes schema probe, edit outside every schema closure | subprocess every pass | lookup |
+
+Bytes written to the shared store per edit: a closure record only when the
+probe input or a schema closure moves (one value, the probe's ~100 KB JSON);
+command-run scan records only for edited modules (a few bytes each).
+
+Wall time under these loads (10–25) is set by contention, not by any one
+input; the lever is the pass's total work.
+
+### Next
+
+Filed: the four other schema probes (`derived-updated-at:declared`,
+`ids:pk-declared`, `table-defs-in-schema-glob`, `schema-files-loadable`) onto
+`closureRecord`; the checks still `Bun.build`ing per pass
+(`cli:codegen-manifests-not-frozen`, 12 CPU-s now the largest, needs `live`;
+the cli bootstrap / declaration checks, guards, sentinel); then the declared
+whole-tree read. Sidequests: `snapshot-chain-intact`'s ~7 CPU-s per pass,
+`web-loads-portable`'s 8.5k-file import scan.

@@ -2,7 +2,7 @@ import type {
   Check,
   CheckResult,
 } from "@plugins/framework/plugins/tooling/core";
-import { importClosures } from "@plugins/framework/plugins/tooling/plugins/import-closure/core";
+import { fileSetImportClosures } from "@plugins/framework/plugins/tooling/plugins/import-closure/core";
 import { join } from "node:path";
 import {
   closureRefusal,
@@ -53,7 +53,10 @@ const check: Check = {
     const central = await centralEntries(repo);
     if (!central.ok) return central.result;
     const entries = [...backend.entries, ...central.entries];
-    const closure = await importClosures(repo.root, entries, {
+    // Read off the module graph: every module's imports (and which of its
+    // `import()` edges are command runs) are file records, so a pass after
+    // an edit scans the edited modules — never a `Bun.build` of the closure.
+    const closure = await fileSetImportClosures(repo, entries, {
       dynamicImports: "follow-except-command-runs",
     });
 

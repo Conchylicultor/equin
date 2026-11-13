@@ -2,13 +2,11 @@ import type {
   Check,
   CheckResult,
 } from "@plugins/framework/plugins/tooling/core";
-import { importClosures } from "@plugins/framework/plugins/tooling/plugins/import-closure/core";
 import { isBunTestPath } from "@plugins/framework/plugins/tooling/plugins/test-layout/core";
 import { findImports } from "@plugins/plugin-meta/plugins/parse-utils/core";
-import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import { resolveRepoModule } from "../core/repo-module";
 import {
-  platformTaint,
+  platformTaintOf,
   type Offender,
   type PlatformTaint,
 } from "../core/portability";
@@ -140,18 +138,13 @@ export const webLoadsPortableCheck: Check = {
       "a web/ or exhibits/ module that loads host-only code because it never runs in a browser realm (a Node driver not yet moved out of web/)",
   },
   async run(ctx): Promise<CheckResult> {
-    const root = await getWorktreeRoot();
     const repo = await ctx.repo();
     const exempt = await ctx.exempt(WEB_LOADS_PORTABLE);
     const read = (p: string): Promise<string | null> => repo.read(p);
     const violations = await webLoadViolations({
       paths: repo.all(),
       read,
-      taint: async (entries) =>
-        platformTaint(
-          await importClosures(root, entries, { dynamicImports: "cut" }),
-          read,
-        ),
+      taint: (entries) => platformTaintOf(repo, entries),
       skips: (p) => exempt.skips(p),
     });
     if (violations.length === 0) return { ok: true };

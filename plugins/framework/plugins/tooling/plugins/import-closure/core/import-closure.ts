@@ -9,7 +9,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
 import type { BunPlugin } from "bun";
 import type TS from "typescript";
-import { defineCliCommand } from "@plugins/framework/plugins/cli/core";
+import type { CommandRunScan } from "./command-runs.scan";
 import {
   type AppPath,
   asAppPath,
@@ -77,7 +77,7 @@ function aliasSpecifiers(root: AppPath): {
  *     `cli.generated.ts` loaders execute on every invocation, so they are
  *     followed; a `run` body executes only when commander routes to THAT
  *     command, so it belongs to that command's process and not to every
- *     process. See {@link scanCommandRuns} for how a `run` edge is told apart
+ *     process. See `scanCommandRuns` (`command-runs.scan.ts`) for how a `run` edge is told apart
  *     from every other dynamic edge.
  *
  * There is deliberately no "follow everything" policy any more: following every
@@ -160,152 +160,6 @@ export interface ImportClosure {
   importChain: (module: string) => string[];
 }
 
-/**
- * The run thunks and the other `import()` sites of one module, by specifier.
- *
- * `runs` maps a specifier to the verb path(s) whose `run` it is; `other` holds
- * every specifier some NON-run `import()` in the same file also names.
- */
-interface CommandRunScan {
-  runs: Map<string, string[]>;
-  other: Set<string>;
-}
-
-const DEFINE_CLI_COMMAND = defineCliCommand.name;
-
-/**
- * Which of a module's `import()` edges are command `run` thunks.
- *
- * A `run` edge is recognised by its SHAPE in the source, not by which file it is
- * in: an `import(<string literal>)` that is the entire body of a parameterless
- * arrow, assigned to the property `run` of the object literal passed to a
- * `defineCliCommand(…)` call. That is the canonical spelling every declaration
- * uses, and it is precisely the value `bin/register-commands.ts` — the sole
- * caller of `run()` — awaits once commander has routed to that command. Nothing
- * else in the tree invokes it: the checks that load declarations
- * (`cli:command-names-unique`, `cli:command-declarations-light`) read `name` and
- * `subcommands` and never call `run`.
- *
- * Every departure is CONSERVATIVE, never a hole. A thunk written any other way
- * (a block body, a wrapper, an aliased `defineCliCommand`) is not recognised, so
- * its edge is followed like any dynamic import and its body is charged to every
- * process that loads the declaration — a false positive at worst. A specifier
- * that ALSO appears in a non-`run` `import()` of the same file is followed too,
- * since `onResolve` cannot tell two same-specifier edges apart.
- *
- * Reads the source rather than the evaluated declaration because the bundler
- * hook sees only `(importer, specifier)`, and because the verb path a thunk
- * belongs to (`deploy converge`) is right there in the enclosing calls' `name`
- * literals. A `name` that is not a string literal is reported as `<computed>`;
- * it only labels the message.
- */
-export async function scanCommandRuns(
-  file: string,
-  source: string,
-): Promise<CommandRunScan> {
-  const runs = new Map<string, string[]>();
-  const other = new Set<string>();
-  if (!source.includes(DEFINE_CLI_COMMAND)) return { runs, other };
-
-  const ts = await loadTypescript();
-  const sf = ts.createSourceFile(
-    file,
-    source,
-    ts.ScriptTarget.Latest,
-    true,
-    file.endsWith("x") ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
-  );
-  const visit = (node: TS.Node): void => {
-    if (
-      ts.isCallExpression(node) &&
-      node.expression.kind === ts.SyntaxKind.ImportKeyword
-    ) {
-      const arg = node.arguments[0];
-      if (arg !== undefined && ts.isStringLiteralLike(arg)) {
-        const command = runThunkCommand(ts, node);
-        if (command === undefined) other.add(arg.text);
-        else runs.set(arg.text, [...(runs.get(arg.text) ?? []), command]);
-      }
-    }
-    ts.forEachChild(node, visit);
-  };
-  visit(sf);
-  return { runs, other };
-}
-
-/**
- * The verb path whose `run` thunk `importCall` is, or `undefined` when it is
- * not one — see {@link scanCommandRuns} for the recognised shape.
- */
-function runThunkCommand(
-  ts: typeof TS,
-  importCall: TS.CallExpression,
-): string | undefined {
-  const arrow = importCall.parent;
-  if (
-    !ts.isArrowFunction(arrow) ||
-    arrow.body !== importCall ||
-    arrow.parameters.length > 0
-  ) {
-    return undefined;
-  }
-  const prop = arrow.parent;
-  if (
-    !ts.isPropertyAssignment(prop) ||
-    prop.initializer !== arrow ||
-    propertyName(ts, prop) !== "run"
-  ) {
-    return undefined;
-  }
-  if (defineCallOf(ts, prop.parent) === undefined) return undefined;
-
-  // Walk out from the leaf's own object literal through every enclosing
-  // `defineCliCommand` (a group's `subcommands`), so a leaf reads as the verb
-  // path a user types.
-  const names: string[] = [];
-  for (let n: TS.Node = prop.parent; !ts.isSourceFile(n); n = n.parent) {
-    if (ts.isObjectLiteralExpression(n) && defineCallOf(ts, n) !== undefined) {
-      const nameProp = n.properties.find(
-        (p): p is TS.PropertyAssignment =>
-          ts.isPropertyAssignment(p) && propertyName(ts, p) === "name",
-      );
-      names.unshift(
-        nameProp !== undefined && ts.isStringLiteralLike(nameProp.initializer)
-          ? nameProp.initializer.text
-          : "<computed>",
-      );
-    }
-  }
-  return names.join(" ");
-}
-
-/** The `defineCliCommand(obj)` call `obj` is the first argument of, if any. */
-function defineCallOf(
-  ts: typeof TS,
-  obj: TS.Node,
-): TS.CallExpression | undefined {
-  if (!ts.isObjectLiteralExpression(obj)) return undefined;
-  const call = obj.parent;
-  if (
-    ts.isCallExpression(call) &&
-    call.arguments[0] === obj &&
-    ts.isIdentifier(call.expression) &&
-    call.expression.text === DEFINE_CLI_COMMAND
-  ) {
-    return call;
-  }
-  return undefined;
-}
-
-function propertyName(
-  ts: typeof TS,
-  p: TS.PropertyAssignment,
-): string | undefined {
-  return ts.isIdentifier(p.name) || ts.isStringLiteralLike(p.name)
-    ? p.name.text
-    : undefined;
-}
-
 /** What one closure build records, shared by the single- and multi-entry readings. */
 interface ClosureRecord {
   external: Map<string, string[]>;
@@ -343,7 +197,8 @@ function closurePlugin(
   const scanOf = async (file: AppPath): Promise<CommandRunScan> => {
     let scan = scans.get(file);
     if (scan === undefined) {
-      scan = await scanCommandRuns(file, readFileSync(file, "utf8"));
+      const { scanCommandRuns } = await import("./command-runs.scan");
+      scan = scanCommandRuns(file, readFileSync(file, "utf8"));
       scans.set(file, scan);
     }
     return scan;
@@ -361,8 +216,8 @@ function closurePlugin(
           // A module the bundler parsed from the app's entry graph (a
           // hoisted or linked dependency may sit outside `root`).
           const scan = await scanOf(asAppPath(args.importer));
-          const commands = scan.runs.get(spec);
-          if (commands !== undefined && !scan.other.has(spec)) {
+          const commands = scan.runs[spec];
+          if (commands !== undefined && !scan.other.includes(spec)) {
             commandRuns.push({
               commands,
               declaration: relative(root, args.importer),

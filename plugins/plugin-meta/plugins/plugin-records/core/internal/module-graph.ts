@@ -79,6 +79,12 @@ export interface ModuleNode {
   bundledDeps: string[];
   /** The repo modules it can load later (`import()`, `require()`). */
   dynamicDeps: string[];
+  /**
+   * Each `import("…")` of a repo module, as written and as resolved — what a
+   * reader deciding per edge which dynamic imports to follow reads
+   * ({@link ModuleGraph.bundledClosure}'s `followDynamic`).
+   */
+  dynamicImports: { spec: string; target: string }[];
   /** Internal specifiers that resolve to no file — part of its key, so a file appearing moves it. */
   unresolved: string[];
   /**
@@ -87,6 +93,15 @@ export interface ModuleNode {
    * A function of its blob, so its Merkle key already covers the list.
    */
   packages: string[];
+  /**
+   * The bare specifiers (npm and runtime builtins, as written: `typescript`,
+   * `typescript/lib/tsserverlibrary`, `node:fs`) it imports statically and a
+   * bundler keeps — what `Bun.build` externalizes for it with dynamic imports
+   * cut. Derived from its file facts, so its Merkle key covers it.
+   */
+  bundledExternals: string[];
+  /** The bare specifiers it imports with `import("…")`, as written. */
+  dynamicExternals: string[];
 }
 
 export interface ModuleGraph {
@@ -110,11 +125,29 @@ export interface ModuleGraph {
    * `importClosures`: the modules, each one's out-edges, and the chain to a
    * module from the first entry reaching it.
    */
-  bundledClosure(entries: readonly string[]): BundledClosure;
+  bundledClosure(
+    entries: readonly string[],
+    opts?: {
+      /**
+       * Whether to follow `module`'s `import(spec)` (its
+       * {@link ModuleNode.dynamicImports}) as an edge of the closure — none
+       * by default, as a bundler measuring the static graph cuts them all.
+       */
+      followDynamic?: (module: string, spec: string) => boolean;
+    },
+  ): BundledClosure;
 }
 
 export interface BundledClosure {
   modules: Set<string>;
+  /**
+   * Every bare specifier a module of the closure imports statically and keeps
+   * ({@link ModuleNode.bundledExternals}) — and, when the closure follows
+   * dynamic imports, every one it imports with `import("…")` — with its
+   * importers in the order the closure reached them: `importClosures`'
+   * `external`, builtins included.
+   */
+  external: Map<string, string[]>;
   children(module: string): string[];
   importChain(module: string): string[];
 }
@@ -397,13 +430,23 @@ async function growGraph(
             staticDeps: [],
             bundledDeps: [],
             dynamicDeps: [],
+            dynamicImports: [],
             unresolved: [],
             packages: [],
+            bundledExternals: [],
+            dynamicExternals: [],
           };
           for (const imp of facts.imports) {
             if (!isInternal(imp.spec)) {
               const pkg = packageOf(imp.spec);
               if (!node.packages.includes(pkg)) node.packages.push(pkg);
+              const list = imp.dynamic
+                ? node.dynamicExternals
+                : imp.unused
+                  ? null
+                  : node.bundledExternals;
+              if (list !== null && !list.includes(imp.spec))
+                list.push(imp.spec);
               continue;
             }
             const target = await resolveFrom(path, imp.spec);
@@ -411,8 +454,10 @@ async function growGraph(
               node.unresolved.push(imp.spec);
               continue;
             }
-            if (imp.dynamic) node.dynamicDeps.push(target);
-            else {
+            if (imp.dynamic) {
+              node.dynamicDeps.push(target);
+              node.dynamicImports.push({ spec: imp.spec, target });
+            } else {
               node.staticDeps.push(target);
               if (!imp.unused) node.bundledDeps.push(target);
             }
@@ -494,7 +539,25 @@ function viewOf(state: GraphState, entries: readonly string[]): ModuleGraph {
       return c;
     },
     staticClosureOf: (paths) => walk([...paths]),
-    bundledClosure(entries) {
+    bundledClosure(entries, opts) {
+      const follow = opts?.followDynamic;
+      // A module's edges: its kept static imports, plus the dynamic ones the
+      // caller follows — sorted, once per module.
+      const edges = new Map<string, string[]>();
+      const childrenOf = (m: string): string[] => {
+        let c = edges.get(m);
+        if (c === undefined) {
+          const n = modules.get(m);
+          if (!n)
+            throw new Error(`[plugin-records] ${m} is not in the module graph`);
+          const all = new Set(n.bundledDeps);
+          if (follow !== undefined)
+            for (const d of n.dynamicImports)
+              if (follow(m, d.spec)) all.add(d.target);
+          edges.set(m, (c = [...all].sort()));
+        }
+        return c;
+      };
       // BFS from each entry in order: the first entry reaching a module, and
       // the shortest chain from it, as the bundler's record answers.
       const parent = new Map<string, string | null>();
@@ -503,10 +566,7 @@ function viewOf(state: GraphState, entries: readonly string[]): ModuleGraph {
         parent.set(e, null);
         const queue = [e];
         for (const p of queue) {
-          const n = modules.get(p);
-          if (!n)
-            throw new Error(`[plugin-records] ${p} is not in the module graph`);
-          for (const d of [...new Set(n.bundledDeps)].sort()) {
+          for (const d of childrenOf(p)) {
             if (parent.has(d)) continue;
             parent.set(d, p);
             queue.push(d);
@@ -514,15 +574,28 @@ function viewOf(state: GraphState, entries: readonly string[]): ModuleGraph {
         }
       }
       const members = new Set(parent.keys());
+      const external = new Map<string, string[]>();
+      for (const m of members)
+        for (const spec of follow === undefined
+          ? modules.get(m)!.bundledExternals
+          : [
+              ...modules.get(m)!.bundledExternals,
+              ...modules.get(m)!.dynamicExternals,
+            ]) {
+          const importers = external.get(spec);
+          if (importers === undefined) external.set(spec, [m]);
+          else importers.push(m);
+        }
       const assertIn = (m: string): void => {
         if (!members.has(m))
           throw new Error(`[plugin-records] ${m} is not in the closure`);
       };
       return {
         modules: members,
+        external,
         children(m) {
           assertIn(m);
-          return [...new Set(modules.get(m)!.bundledDeps)].sort();
+          return [...childrenOf(m)];
         },
         importChain(m) {
           assertIn(m);

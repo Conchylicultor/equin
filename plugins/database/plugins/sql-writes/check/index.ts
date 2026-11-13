@@ -2,7 +2,6 @@ import type { Check } from "@plugins/framework/plugins/tooling/core";
 import { schemaFilesIn } from "@plugins/database/plugins/migrations/core";
 import { sourceAnalysis } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import { foldRepoFiles } from "@plugins/plugin-meta/plugins/plugin-records/core";
-import { resolve } from "path";
 import { createHoleResolver } from "./internal/resolve";
 import { scanSqlWrites } from "./internal/scan";
 import { sqlWritesFold } from "./internal/sites.scan";
@@ -50,7 +49,6 @@ const check: Check = {
   outOfScope: ["test", "research", "generated"],
   async run(ctx) {
     const repo = await ctx.repo();
-    const root = repo.root;
     const schemaFiles = schemaFilesIn(repo);
     const candidates = repo
       .under("plugins")
@@ -63,14 +61,13 @@ const check: Check = {
     // analysis — what those holes name, never the tree.
     const folded = await foldRepoFiles(repo, candidates, sqlWritesFold, null);
     const scan = await scanSqlWrites({
-      root,
+      repo,
       folded,
       resolver: createHoleResolver({
         analysis: await sourceAnalysis(ctx),
-        root,
         schemaFiles: new Set(schemaFiles),
       }),
-      schemaFiles: schemaFiles.map((f) => resolve(root, f)),
+      schemaFiles,
     });
     if (scan.kind === "failed") return { ok: false, message: scan.message };
 

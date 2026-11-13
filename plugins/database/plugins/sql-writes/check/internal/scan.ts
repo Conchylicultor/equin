@@ -1,5 +1,5 @@
 import { loadModule, type Node } from "libpg-query";
-import { relative } from "path";
+import type { RepoFiles } from "@plugins/framework/plugins/tooling/core";
 import { SchemaModel } from "./model";
 import type { ExportRef } from "./probe-types";
 import { runSchemaProbe } from "./run-probe";
@@ -52,12 +52,13 @@ export type ScanResult =
   | { readonly kind: "failed"; readonly message: string };
 
 export async function scanSqlWrites(opts: {
-  readonly root: string;
+  /** The run's file set: the probe's answer is keyed over it. */
+  readonly repo: RepoFiles;
   /** Every candidate file's sites and markers (`sites.scan.ts`, folded). */
   readonly folded: SqlWritesPart;
   /** Follows the holes another file decides (`resolve.ts`). */
   readonly resolver: { resolveSite(site: ScannedSite): Promise<SqlSite> };
-  /** Absolute schema-glob files. */
+  /** The schema-glob files, repo-relative. */
   readonly schemaFiles: readonly string[];
 }): Promise<ScanResult> {
   await loadModule();
@@ -74,7 +75,7 @@ export async function scanSqlWrites(opts: {
     for (const h of s.holes)
       if (h.kind === "export")
         refs.set(refIdOf(h.ref), { id: refIdOf(h.ref), ...h.ref });
-  const probe = await runSchemaProbe(opts.root, {
+  const probe = await runSchemaProbe(opts.repo, {
     files: opts.schemaFiles,
     refs: [...refs.values()],
   });
@@ -85,9 +86,7 @@ export async function scanSqlWrites(opts: {
       kind: "failed",
       message:
         `${probe.loadFailures.length} schema file(s) failed to load, so their tables are unknown:\n` +
-        probe.loadFailures
-          .map((f) => `  ${relative(opts.root, f.file)} — ${f.error}`)
-          .join("\n"),
+        probe.loadFailures.map((f) => `  ${f.file} — ${f.error}`).join("\n"),
     };
 
   const parsed: { site: SqlSite; parsed: Parsed }[] = sites.map((site) => ({
@@ -100,7 +99,7 @@ export async function scanSqlWrites(opts: {
 
   // The declared schema: the probe's tables, then every hand-written CREATE,
   // then every ALTER (in file order).
-  const model = SchemaModel.fromProbe(probe, (abs) => relative(opts.root, abs));
+  const model = SchemaModel.fromProbe(probe);
   for (const { site, parsed: p } of parsed)
     if (p.kind === "parsed")
       for (const stmt of p.stmts)

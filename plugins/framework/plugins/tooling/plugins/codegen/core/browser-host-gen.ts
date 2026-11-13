@@ -39,10 +39,8 @@
 import type { RepoFiles } from "@plugins/framework/plugins/tooling/core";
 import { joinAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import {
-  buildModuleGraph,
+  fileSetClosure,
   type BundledClosure,
-  currentRecordStore,
-  NO_OUTSIDE_FILES,
 } from "@plugins/plugin-meta/plugins/plugin-records/core";
 import {
   asFsPath,
@@ -780,22 +778,5 @@ export async function bundledClosureOf(
   entries: readonly string[],
   written: ReadonlyMap<string, string>,
 ): Promise<BundledClosure> {
-  const graph = await buildModuleGraph(
-    {
-      snapshot: repo,
-      written,
-      store: currentRecordStore(),
-      readOutside: NO_OUTSIDE_FILES,
-    },
-    entries,
-  );
-  const closure = graph.bundledClosure(entries);
-  for (const m of closure.modules) {
-    const unresolved = graph.modules.get(m)!.unresolved;
-    if (unresolved.length > 0)
-      throw new Error(
-        `${m} imports ${unresolved.map((u) => JSON.stringify(u)).join(", ")}, which resolves to no file of the checkout: a browser host's closure is measured over the file set.`,
-      );
-  }
-  return closure;
+  return (await fileSetClosure(repo, entries, { written })).closure;
 }

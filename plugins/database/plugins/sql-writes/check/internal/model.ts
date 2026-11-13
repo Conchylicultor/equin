@@ -30,10 +30,7 @@ export interface TableModel {
 export class SchemaModel {
   private readonly tables = new Map<string, TableModel>();
 
-  static fromProbe(
-    probe: ProbeOutput,
-    rel: (abs: string) => string,
-  ): SchemaModel {
+  static fromProbe(probe: ProbeOutput): SchemaModel {
     const m = new SchemaModel();
     for (const t of probe.tables) {
       m.tables.set(key(t.schema, t.name), {
@@ -47,7 +44,7 @@ export class SchemaModel {
             },
           ]),
         ),
-        declaredBy: rel(t.file),
+        declaredBy: t.file,
       });
     }
     for (const name of probe.imperative) {

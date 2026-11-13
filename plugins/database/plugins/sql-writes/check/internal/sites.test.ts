@@ -10,7 +10,6 @@ import { scanFileSites as scanParsed } from "./sites";
 // The per-file scan (what a file's fold records), then the cross-file
 // resolution of its deferred holes over an in-memory repo: imports followed
 // with the repo project's own module resolution.
-const ROOT = "/checkout";
 const FILES: Record<string, string> = {
   "tsconfig.json": `{ "compilerOptions": { "module": "ESNext", "moduleResolution": "bundler" } }`,
   "tables.ts":
@@ -32,7 +31,6 @@ const resolver = createHoleResolver({
       ),
     compilerOptions: await readRepoCompilerOptions(ts, repo),
   }),
-  root: ROOT,
   schemaFiles: new Set(["tables.ts"]),
 });
 
@@ -56,7 +54,7 @@ describe("hole resolution", () => {
       {
         kind: "export",
         ref: {
-          file: `${ROOT}/tables.ts`,
+          file: "tables.ts",
           exportName: "things",
           path: ["table"],
         },
@@ -101,7 +99,7 @@ describe("hole resolution", () => {
       {
         kind: "export",
         ref: {
-          file: `${ROOT}/tables.ts`,
+          file: "tables.ts",
           exportName: "things",
           path: ["table"],
         },

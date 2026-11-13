@@ -382,6 +382,7 @@ its docblock records — and then lowered as readily as raised.
     - `FileFold`
     - `FileScan`
     - `FoldContext`
+    - `FollowDynamic`
     - `ModuleGraph`
     - `ModuleGraphInput`
     - `ModuleNode`
@@ -395,10 +396,12 @@ its docblock records — and then lowered as readily as raised.
     - `RecordWriteTiming`
   - Exports (values):
     - `buildModuleGraph`
+    - `closureRecord`
     - `createMemoryRecordStore`
     - `currentRecordStore`
     - `defineRecordJob`
     - `emptyWriteTiming`
+    - `fileSetClosure`
     - `foldFilesCached`
     - `foldRepoFiles`
     - `gitBlobId`
@@ -446,6 +449,7 @@ its docblock records — and then lowered as readily as raised.
     - `framework/tooling/boundaries`
     - `framework/tooling/checks`
     - `framework/tooling/codegen`
+    - `framework/tooling/import-closure`
     - `framework/tooling/web-artifacts`
     - `plugin-meta/plugin-records/evaluate`
     - `plugin-meta/plugin-records/key-width`

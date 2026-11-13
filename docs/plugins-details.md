@@ -29987,8 +29987,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `readMergeMarkers`
           - `resolveGitDir`
       - Cross-plugin:
-        - Imported by: 38 plugins — full list in [`plugins/framework/plugins/cli/REFERENCE.md`](../plugins/framework/plugins/cli/REFERENCE.md)
-          - `framework` ×27
+        - Imported by: 37 plugins — full list in [`plugins/framework/plugins/cli/REFERENCE.md`](../plugins/framework/plugins/cli/REFERENCE.md)
+          - `framework` ×26
           - `infra` ×5
           - `apps` ×3
           - `plugin-meta` ×2
@@ -30965,11 +30965,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Plugins:
         - **`boundaries`** — Boundary-rules checker: zone DSL, edge evaluator, and project boundary config
           - Core:
-            - Uses: 27 symbols — full list in [`plugins/framework/plugins/tooling/plugins/boundaries/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/boundaries/REFERENCE.md)
+            - Uses: 25 symbols — full list in [`plugins/framework/plugins/tooling/plugins/boundaries/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/boundaries/REFERENCE.md)
               - `framework/plugin-id` ×6
               - `plugin-meta/parse-utils` ×6
-              - `plugin-meta/plugin-records` ×5
-              - `framework/tooling/import-closure` ×4
+              - `plugin-meta/plugin-records` ×4
+              - `framework/tooling/import-closure` ×3
               - `framework/tooling/boundaries/runtime-exception.parseRuntimeException`
               - `infra/host-fs/user-path.joinAppPath`
               - `infra/spawn.getWorktreeRoot`
@@ -31509,12 +31509,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                     - Uses: `framework/tooling/checks/type-check.readTypeCheckTree`
         - **`codegen`** — Plugin doc generation and registry codegen
           - Core:
-            - Uses: 149 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
+            - Uses: 148 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
               - `plugin-meta/parse-utils` ×17
               - `config_v2` ×16
               - `framework/plugin-id` ×13
               - `network/live/resource-vocabulary` ×11
-              - `plugin-meta/plugin-records` ×8
+              - `plugin-meta/plugin-records` ×7
               - `framework/slot-declaration` ×6
               - `plugin-meta/barrel-import` ×6
               - `plugin-meta/closure` ×6
@@ -32031,19 +32031,21 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`import-closure`** — Static import-closure measurement (importClosure): the exact repo modules an entrypoint loads, the tree-shaken live subset, the npm specifiers it reaches, and the import chain to any one module — measured with Bun.build so it cannot drift from what actually loads.
           - Core:
             - Uses:
-              - `framework/cli.defineCliCommand`
               - `infra/host-fs/user-path.AppPath`
               - `infra/host-fs/user-path.asAppPath`
               - `infra/host-fs/user-path.joinAppPath`
               - `packages/timed-fs.readdirSync`
               - `packages/timed-fs.readFileSync`
               - `packages/timed-fs.realpathSync`
+              - `plugin-meta/plugin-records.fileSetClosure`
+              - `plugin-meta/plugin-records.scanFilesCached`
             - Exports (types):
               - `CommandRunEdge`
               - `DynamicImportPolicy`
               - `ImportClosure`
               - `UnionImportClosure`
             - Exports (values):
+              - `fileSetImportClosures`
               - `importClosure`
               - `importClosures`
               - `loadTypescript`
@@ -45778,6 +45780,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `FileFold`
           - `FileScan`
           - `FoldContext`
+          - `FollowDynamic`
           - `ModuleGraph`
           - `ModuleGraphInput`
           - `ModuleNode`
@@ -45791,10 +45794,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `RecordWriteTiming`
         - Exports (values):
           - `buildModuleGraph`
+          - `closureRecord`
           - `createMemoryRecordStore`
           - `currentRecordStore`
           - `defineRecordJob`
           - `emptyWriteTiming`
+          - `fileSetClosure`
           - `foldFilesCached`
           - `foldRepoFiles`
           - `gitBlobId`
@@ -45842,6 +45847,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework/tooling/boundaries`
           - `framework/tooling/checks`
           - `framework/tooling/codegen`
+          - `framework/tooling/import-closure`
           - `framework/tooling/web-artifacts`
           - `plugin-meta/plugin-records/evaluate`
           - `plugin-meta/plugin-records/key-width`

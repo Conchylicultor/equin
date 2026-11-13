@@ -4,8 +4,7 @@ import type {
 } from "@plugins/framework/plugins/tooling/core";
 import { isTestCodePath } from "@plugins/framework/plugins/plugin-id/core";
 import { findImports } from "@plugins/plugin-meta/plugins/parse-utils/core";
-import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
-import { platformOffenders } from "../core/portability";
+import { platformTaintOf } from "../core/portability";
 import { loadsAtRuntime } from "../core/portability-facts";
 
 const MACHINE_PORTABLE_DECLARATION = "boundaries:machine-portable-declaration";
@@ -99,8 +98,8 @@ export async function misplacedMachineDeclarations(
  *
  * Read per declaring module, not per barrel, so a machine half that holds both
  * a real platform job and a portable sweep is still caught: each declaring
- * module's static closure (`importClosure`, dynamic imports cut) is scanned
- * with the server-portability matcher (rules 1 and 2 of `core/portability.ts`), and a module whose closure is
+ * module's static closure (dynamic imports cut, read off the module graph:
+ * `platformTaintOf`) is scanned with the server-portability matcher (rules 1 and 2 of `core/portability.ts`), and a module whose closure is
  * clean is reported.
  *
  * Exemptable per module, for a declaration that is desktop-only by policy
@@ -115,23 +114,14 @@ export const machinePortableDeclarationCheck: Check = {
       "declares a portable retention / warm-up in machine/ though its closure needs no platform API (desktop-only by policy)",
   },
   async run(ctx): Promise<CheckResult> {
-    const root = await getWorktreeRoot();
     const repo = await ctx.repo();
     const exempt = await ctx.exempt(MACHINE_PORTABLE_DECLARATION);
 
-    const needs = new Map<string, string[]>();
     const failures = await misplacedMachineDeclarations({
       paths: repo.all(),
       read: (p) => repo.read(p),
-      reachesPlatform: async (module) => {
-        const { offenders } = await platformOffenders(
-          root,
-          module,
-          (p) => repo.read(p),
-          needs,
-        );
-        return offenders.length > 0;
-      },
+      reachesPlatform: async (module) =>
+        (await platformTaintOf(repo, [module])).needsComputer(module),
       skips: (module) => exempt.skips(module),
     });
     if (failures.length === 0) return { ok: true };
