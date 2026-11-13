@@ -1,5 +1,5 @@
-// @hash 560f97a3547a
+// @hash aeb9470d458d
 {
   // Prompt sent to Claude when the Push & Exit button is pressed.
-  "prompt": "Please wrap up this conversation:\n\n1. Push this branch to main using the CLI.\n2. Then call exactly one MCP tool to signal the outcome:\n   - `exit_clean` — everything went smoothly, nothing I need to know. The conversation will close automatically.\n   - `flag_raise({ reason })` — something needs my attention (caveats, partial outcomes, follow-ups, skipped work, or the push didn't land). Use `reason` for short bullets describing what I should know.\n3. Write your final wrap up message, including things like summary, issues encountered, existing caveats, follow ups."
+  "prompt": "Push and exit"
 }
