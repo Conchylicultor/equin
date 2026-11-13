@@ -23,9 +23,10 @@ export type { RewindMode };
  * (`"rewind"`) or in a new one (`"fork"`). Previews the cut, confirms first when
  * something cannot be brought back, and refuses with a toast.
  *
- * `onBack(conversationId, messageText)` runs once the target conversation stands
- * just before the message — `conversationId` is this conversation for a rewind
- * and the new one for a fork. The caller decides where the removed text goes
+ * `onBack(conversationId, messageText)` hands the message's text back — for a
+ * rewind as soon as it starts (`conversationId` is this conversation: the
+ * message leaves the transcript at once, so its text must not wait on the
+ * agent's respawn), for a fork once the new conversation exists. The caller decides where the removed text goes
  * (the prompt editor, a question's answer form, …).
  *
  * `available` is false when there is nothing to go back to: no message uuid
@@ -74,7 +75,13 @@ export function useGoBackToMessage({
       return;
     const model = normalizeModel(conversation.model);
 
-    const rewind = async () => {
+    // The text goes back the moment the rewind starts, not when it answers:
+    // the server cuts the transcript (the message leaves the view at once)
+    // and only then respawns the agent, which takes seconds. The preview's
+    // text is the same cut's (`cutTranscriptAt` answers both), so nothing
+    // waits on the respawn to know it.
+    const rewind = async (messageText: string) => {
+      onBack(convId, messageText);
       const result = await fetchEndpoint(
         rewindConversationEndpoint,
         { id: convId },
@@ -83,7 +90,6 @@ export function useGoBackToMessage({
       if (result.kind === "unavailable") throw new Error(result.message);
       const outcome = result.value;
       if (!outcome.ok) throw new Error(outcome.message);
-      onBack(convId, outcome.rewindText);
     };
 
     setBusy(true);
@@ -100,7 +106,10 @@ export function useGoBackToMessage({
         );
       }
       setForkText(preview.messageText);
-      const act = mode === "rewind" ? rewind : () => launch(model);
+      const act =
+        mode === "rewind"
+          ? () => rewind(preview.messageText)
+          : () => launch(model);
       const lines = describeLosses(preview, mode);
       if (lines.length === 0) return await act();
       void confirmDialog({

@@ -10,6 +10,9 @@ by default — placement is the row-actions config, not code):
   point. The original is untouched.
 
 Either way the message's text lands in the prompt editor, ready to be rewritten.
+A rewind puts it there the moment it starts, from the preview's text (the same
+cut's): the message leaves the transcript as soon as the server cuts the file,
+while the agent's respawn after it takes seconds.
 
 The same flow is exported as `useGoBackToMessage` for a surface that stands for
 a message the transcript hides (an AskUserQuestion answer): the caller decides
