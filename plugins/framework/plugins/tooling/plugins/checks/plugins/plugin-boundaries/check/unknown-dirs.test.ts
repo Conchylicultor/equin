@@ -24,7 +24,7 @@ import { test, expect, beforeAll, afterAll } from "bun:test";
 import { mkdtempSync, rmSync, writeFileSync, mkdirSync } from "fs";
 import { tmpdir } from "os";
 import { join, dirname } from "path";
-import { listRepoFiles } from "@plugins/framework/plugins/tooling/plugins/checks/core";
+import { listRepoFiles } from "@plugins/framework/plugins/tooling/plugins/checks/core/testing";
 import { repoTree } from "./repo-tree";
 import { collectUnknownDirViolations } from "./unknown-dirs";
 

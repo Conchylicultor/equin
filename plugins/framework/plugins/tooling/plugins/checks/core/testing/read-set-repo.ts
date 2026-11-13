@@ -12,6 +12,14 @@ import {
   type TreeSnapshot,
   type ValidateResult,
 } from "../read-set";
+import type { CheckCodeKey } from "../check-code-key";
+
+/**
+ * The code key a fixture's read-sets are recorded and replayed under, unless a
+ * test names another: these repos test the TREE side of a read-set, so the
+ * code is held fixed. (`check-code-key.test.ts` tests the code side.)
+ */
+const FIXTURE_CODE_KEY = "fixture-code" as CheckCodeKey;
 
 const GIT_TIMEOUT_MS = 30_000;
 
@@ -27,12 +35,13 @@ export interface ReadSetRepo {
   write(rel: string, content: string): void;
   /** Delete a repo-relative file or directory. */
   remove(rel: string): void;
-  /** Run `recordReads` under a recording view of the current tree. */
+  /** Run `recordReads` under a recording view of the current tree, by the code `codeKey` names. */
   record(
     recordReads: (view: FileSystemView) => void | Promise<void>,
+    codeKey?: CheckCodeKey,
   ): Promise<ReadSet>;
-  /** Validate `readSet` against a fresh snapshot of the current tree. */
-  revalidate(readSet: ReadSet): Promise<ValidateResult>;
+  /** Validate `readSet` against a fresh snapshot of the current tree, for the code `codeKey` names. */
+  revalidate(readSet: ReadSet, codeKey?: CheckCodeKey): Promise<ValidateResult>;
   /** A fresh snapshot of the current tree — what `ctx.snapshot()` hands a check. */
   snapshot(): Promise<TreeSnapshot>;
   /** Delete the repo. */
@@ -74,13 +83,13 @@ export async function createReadSetRepo(
     root,
     write,
     remove: (rel) => rmSync(join(root, rel), { recursive: true, force: true }),
-    async record(recordReads) {
-      const view = (await snapshot()).createRecordingView();
+    async record(recordReads, codeKey = FIXTURE_CODE_KEY) {
+      const view = (await snapshot()).createRecordingView(codeKey);
       await recordReads(view);
       return view.readSet();
     },
-    async revalidate(readSet) {
-      return validate(readSet, await snapshot());
+    async revalidate(readSet, codeKey = FIXTURE_CODE_KEY) {
+      return validate(readSet, await snapshot(), codeKey);
     },
     snapshot,
     dispose: () => rmSync(root, { recursive: true, force: true }),

@@ -21,7 +21,6 @@ import { cpuBudget } from "@plugins/infra/plugins/host/plugins/host-admission/co
 import { worktreeArtifacts } from "@plugins/infra/plugins/paths/server";
 import {
   computeTreeHash,
-  listAllChecks,
   readCheckProgress,
   readTranscriptVerdict,
   runChecks,
@@ -30,6 +29,10 @@ import {
   type CheckRunProgress,
   type RunChecksOptions,
 } from "@plugins/framework/plugins/tooling/plugins/checks/core";
+import {
+  listAllChecks,
+  loadChecks,
+} from "@plugins/framework/plugins/tooling/plugins/checks/plugins/registry/core";
 import {
   CHECK_SCOPES,
   CHECKOUT_SCOPES,
@@ -436,6 +439,7 @@ const run: CliAction<
       const inconclusive: string[] = [];
       const runOpts: RunChecksOptions = {
         grant,
+        loadChecks,
         // One step per individual check, so a `check` bar drills in to
         // `type-check` / `eslint` / … — the affordance `build` already has
         // via the same hook (build.ts → `pushBuildSpan`). Gated on the

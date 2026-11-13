@@ -1,4 +1,3 @@
-import { loadCollectedDir } from "@plugins/framework/plugins/tooling/plugins/collected-dir/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import { worktreeArtifacts } from "@plugins/infra/plugins/paths/core";
 import {
@@ -36,10 +35,9 @@ import { gitGrepList } from "./grep-code";
 import { openProgressRun } from "./progress-log";
 import { openCheckTranscript, provenance, renderStallLine } from "./transcript";
 import { isBuildProcess } from "./run-context";
-import {
-  assertExemptableInvariant,
-  openCheckExemptions,
-} from "./check-exemptions";
+import { openCheckExemptions } from "./check-exemptions";
+import { scopeOf } from "./scope";
+import { checkCodeKeys, type CheckCodeKey } from "./check-code-key";
 import {
   loadExemptions,
   type ResolvedExemption,
@@ -49,69 +47,6 @@ import {
   type CheckObservation,
   type CheckOutcome,
 } from "./thrown-outcome";
-
-function isCheck(value: unknown): value is Check {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    typeof (value as Check).id === "string" &&
-    typeof (value as Check).description === "string" &&
-    typeof (value as Check).run === "function"
-  );
-}
-
-/**
- * A check's scope, with the default applied. THE one place `?? "tree"` is
- * written — every consumer (the scope filter below, `--list`) reads it through
- * here, so an unclassified check can never mean two different things in two
- * places.
- */
-export function scopeOf(check: Check): CheckScope {
-  return check.scope ?? "tree";
-}
-
-/**
- * Enforce the `Check.scope` invariant at LOAD, not at run: a non-tree check's
- * subject is outside the tree hash, so without a `cacheSignature()` the runner
- * would record its verdict under a tree-only key and replay that pass for every
- * later state of that subject — a green that can never go red again. Throwing
- * here fires for `runChecks` and `--list` alike, so the violation surfaces the
- * moment the check is written rather than as an inexplicably-passing check
- * months later.
- *
- * Written as "anything but `tree`" rather than as a list of the scopes that owe
- * a signature. The condition used to be `=== "deploy"`, which was the same set
- * while `deploy` was the only non-tree scope — and would have silently exempted
- * `host` the moment it was added, which is exactly the class of hole this
- * assertion exists to close.
- */
-function assertScopeInvariant(checks: Check[]): void {
-  for (const check of checks) {
-    const scope = scopeOf(check);
-    // `alwaysRun` means "run even under `build --skip-checks`" — it is defined
-    // entirely in terms of the ops (build, push) that a `host` verdict is not
-    // theirs to assert. The pair is a contradiction, so it has no spelling
-    // rather than being quietly filtered out at each call site.
-    if (scope === "host" && check.alwaysRun === true) {
-      throw new Error(
-        `Check "${check.id}" is scope: "host" and alwaysRun: true, which cannot both hold. ` +
-          `alwaysRun means "run during a build even with --skip-checks", and a build cannot ` +
-          `assert a host-scoped verdict: its subject is the machine, shared with every other ` +
-          `checkout on this box and ahead of any one branch. Drop alwaysRun, or reclassify ` +
-          `the check if its subject really is this tree or this build's deploy.`,
-      );
-    }
-    if (scope !== "tree" && check.cacheSignature === undefined) {
-      throw new Error(
-        `Check "${check.id}" is scope: "${scope}" but supplies no cacheSignature(). ` +
-          `A ${scope}-scoped verdict is not covered by the working-tree hash, so caching it ` +
-          `under the tree hash alone would record a permanently stale pass. Add a ` +
-          `cacheSignature() that covers the ${scope} state it inspects (or returns null to ` +
-          `opt out of caching entirely).`,
-      );
-    }
-  }
-}
 
 /**
  * The requested scopes as a set, or `null` for "every scope". ONE normalisation,
@@ -125,29 +60,24 @@ function normalizeScopes(
   return typeof scope === "string" ? [scope] : scope;
 }
 
-async function loadAllChecks(): Promise<Check[]> {
-  const { checkEntries } = await import("./check.generated");
-  // `strict`: a check whose module fails to load (or exports no check) is not
-  // a check that passed — skipped with a warning, it would read as green.
-  // A registry line whose `check/` was deleted fails here too (naming it)
-  // until `./equin build` regenerates the registry, which a build does before
-  // it checks.
-  const checks = await loadCollectedDir<Check>(checkEntries, {
-    isItem: isCheck,
-    dedupeKey: (c) => c.id,
-    label: "check",
-    strict: true,
-  });
-  assertScopeInvariant(checks);
-  assertExemptableInvariant(checks);
-  return checks;
-}
-
-export async function listAllChecks(): Promise<Check[]> {
-  return loadAllChecks();
+/** A registered check and the repo module (repo-relative) that exports it. */
+export interface LoadedCheck {
+  check: Check;
+  /**
+   * The check's `check/index.ts`, repo-relative — the entry of the code the
+   * check runs, whose import closure keys its input-keyed verdict.
+   */
+  module: string;
 }
 
 export interface RunChecksOptions {
+  /**
+   * The check registry, loaded (`checks/plugins/registry`'s `loadChecks`):
+   * every check with the module its code lives in. Handed in rather than
+   * imported, so the runner's own import closure — part of every input-keyed
+   * check's code key — does not reach every check of the repo.
+   */
+  loadChecks: () => Promise<readonly LoadedCheck[]>;
   /**
    * The host CPU grant the invoking build/check/push already holds, passed to
    * every `check.run(ctx)`. REQUIRED because the runner lives in the `core`
@@ -377,7 +307,11 @@ export async function runChecks(
       })
     : null;
 
-  const all = await progress.bootstrap("load-checks", () => listAllChecks());
+  const loaded = await progress.bootstrap("load-checks", () =>
+    options.loadChecks(),
+  );
+  const all = loaded.map((l) => l.check);
+  const checkModules = new Map(loaded.map((l) => [l.check, l.module]));
 
   const named =
     ids && ids.length > 0 ? all.filter((c) => ids.includes(c.id)) : all;
@@ -592,6 +526,24 @@ export async function runChecks(
   // live on every run, so this is the one part that is genuinely opt-in.
   const shadow = readEnv("CHECK_SHADOW") === "1";
 
+  // Each input-keyed check's code key, over the run's own file set — the
+  // tree its read-set is recorded against — so the code a PASS is keyed on is
+  // the code at that tree. The runner's own module is part of every key: it
+  // builds the check's context and interprets its read-set.
+  let codeKeys: Promise<(module: string) => Promise<CheckCodeKey>> | null =
+    null;
+  const codeKeyOf = async (check: Check): Promise<CheckCodeKey> => {
+    const module = checkModules.get(check);
+    if (module === undefined)
+      throw new Error(
+        `check "${check.id}" has no module: every check the runner runs comes from options.loadChecks()`,
+      );
+    codeKeys ??= repo().then((files) =>
+      checkCodeKeys(files, import.meta.url, new Set(checkModules.values())),
+    );
+    return (await codeKeys)(module);
+  };
+
   // One check, start to settle. Extracted from the `Promise.all` callback ONLY
   // so the progress log can wrap it in a try/finally — a `finally` cannot see a
   // return value, and the callback has several return sites.
@@ -651,6 +603,11 @@ export async function runChecks(
     // is not wired yet and falls through to the legacy path until its stage
     // lands. LEGACY: the whole-tree slot. NONE: no cache (`--no-cache`, no tree
     // hash, or a check whose signature opts out) — the body just runs.
+    //
+    // An input-keyed mode carries the check's CODE KEY (`check-code-key.ts`):
+    // the identity of the code its verdict is a function of, recorded in the
+    // read-set and compared on replay, so a PASS never survives an edit to the
+    // logic that produced it.
     const mode =
       cache === null || treeHash === null || sig === null
         ? ({ kind: "none" } as const)
@@ -661,6 +618,7 @@ export async function runChecks(
               treeHash,
               sig,
               snapshot,
+              codeKey: await codeKeyOf(check),
             } as const)
           : ({ kind: "legacy", cache, treeHash, sig } as const);
 
@@ -682,7 +640,7 @@ export async function runChecks(
           reasons.push(`${checkout}: none recorded`);
           continue;
         }
-        const verdict = await validateStored(stored, snap);
+        const verdict = await validateStored(stored, snap, mode.codeKey);
         if (verdict.hit) {
           if (shadow)
             observations.push({
@@ -705,6 +663,7 @@ export async function runChecks(
     const validateStored = async (
       stored: ReadSet,
       snap: TreeSnapshot,
+      codeKey: CheckCodeKey,
     ): Promise<ValidateResult> => {
       // Replay a recorded `git grep -l` query against the CURRENT snapshot
       // tree — called by `validate` ONLY when a query's pathspec fingerprint
@@ -722,7 +681,7 @@ export async function runChecks(
       // unnecessary re-run, not a stale PASS.
       let verdict: ValidateResult;
       try {
-        verdict = await validate(stored, snap, {
+        verdict = await validate(stored, snap, codeKey, {
           replayQuery: (q: QueryFact) =>
             grep !== null && snap.treeHash === treeHash
               ? grep.select(q.grepArg, q.fixed, q.pathspecs)
@@ -753,7 +712,7 @@ export async function runChecks(
         // and reads through it is part of what a later HIT replays. Its set is
         // this same snapshot's (one memoized load), which `recordingRepo`
         // requires.
-        const view = mode.snapshot.createRecordingView();
+        const view = mode.snapshot.createRecordingView(mode.codeKey);
         const recordingCtx = { ...ctx, repo: recordingRepo(repo, view) };
         const result = await withScanView(mode.treeHash, view, grep, () =>
           runBody(check, recordingCtx),

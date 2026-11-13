@@ -5,12 +5,13 @@
  * snapshot of a mutated tree with the SAME `gitGrepList` replay hook the runner
  * wires. Stands up a throwaway git repo so the git plumbing is real.
  *
- * Covers the four soundness cases that make the cache trustworthy:
+ * Covers the three soundness cases that make the cache trustworthy:
  *   1. an UNRELATED change (a non-.ts file outside the read-set) is a HIT;
  *   2. a MATCHED file whose content moves (still matches `git grep -l`, but the
  *      blobSha changed — the WHERE-in-file hazard) is a MISS;
  *   3. a BRAND-NEW file that newly matches the grep predicate (H9) is a MISS;
- *   4. a check-logic change under a CHECK_SOURCE_PREFIX (parse-utils) is a MISS.
+ * (The code side — a read-set replayed under other check code — is
+ * `check-code-key.test.ts`.)
  * Plus: a .ts change that does NOT add/remove a matcher stays a HIT via the grep
  * replay (proving the replay hook, not just the in-memory pathspec gate).
  */
@@ -27,13 +28,12 @@ import { grepCode, gitGrepList } from "./grep-code";
 import { withScanView } from "./scan-context";
 import { computeTreeHash } from "./tree-hash";
 import { loadTreeSnapshot, validate, type ReadSet, type QueryFact } from "./read-set";
+import type { CheckCodeKey } from "./check-code-key";
 
 let root!: AppPath;
 
-// A check-logic file under a CHECK_SOURCE_PREFIX (parse-utils), so its content
-// folds into the snapshot's checkSourceHash — the widened H0 coverage.
-const PARSE_UTILS_FILE =
-  "plugins/plugin-meta/plugins/parse-utils/core/mask-source.ts";
+// The tree side is under test here: the code is held fixed.
+const CODE_KEY = "roundtrip-code" as CheckCodeKey;
 
 async function git(...args: string[]): Promise<void> {
   const proc = Bun.spawn(["git", ...args], { cwd: root, stdout: "pipe", stderr: "pipe" });
@@ -49,11 +49,10 @@ function write(rel: string, content: string): void {
 beforeAll(async () => {
   root = asAppPath(mkdtempSync(join(tmpdir(), "read-set-roundtrip-")));
   // a.ts: the sole real `new WebSocket(` match. b.ts: an unrelated .ts (no
-  // match). README.md: an unrelated non-.ts file. mask-source.ts: check-logic.
+  // match). README.md: an unrelated non-.ts file.
   write("a.ts", "foo();\nconst ws = new WebSocket(url);\n");
   write("b.ts", "const x = 1;\n");
   write("README.md", "# hello\n");
-  write(PARSE_UTILS_FILE, "export function maskSource(s: string) { return s; }\n");
   await git("init", "-q");
   await git("config", "user.email", "t@t.t");
   await git("config", "user.name", "t");
@@ -71,7 +70,7 @@ async function record(): Promise<ReadSet> {
   expect(treeHash).toBeTruthy();
   const snap = await loadTreeSnapshot(root, treeHash!);
   expect(snap).not.toBeNull();
-  const view = snap!.createRecordingView();
+  const view = snap!.createRecordingView(CODE_KEY);
   const matches = await withScanView(treeHash!, view, null, () =>
     grepCode({ root, pattern: /new WebSocket\(/, grepArg: "new WebSocket(", fixed: true }),
   );
@@ -86,7 +85,7 @@ async function revalidate(readSet: ReadSet) {
   expect(treeHash).toBeTruthy();
   const snap = await loadTreeSnapshot(root, treeHash!);
   expect(snap).not.toBeNull();
-  return validate(readSet, snap!, {
+  return validate(readSet, snap!, CODE_KEY, {
     replayQuery: (q: QueryFact) =>
       gitGrepList(snap!.root, q.grepArg, q.fixed, q.pathspecs, snap!.treeHash),
   });
@@ -98,8 +97,7 @@ test("recorded read-set captures the query selection AND per-candidate content",
   expect(rs.queries.map((q) => q.grepArg)).toEqual(["new WebSocket("]);
   expect(rs.queries[0]!.matches).toEqual(["a.ts"]);
   expect(rs.files.map((f) => f.path)).toEqual(["a.ts"]);
-  // sourceHash is non-trivial: parse-utils IS under a CHECK_SOURCE_PREFIX.
-  expect(rs.sourceHash).toMatch(/^[0-9a-f]{64}$/);
+  expect(rs.codeKey).toBe(CODE_KEY);
 });
 
 test("case 1: an unrelated (non-.ts) change is a HIT", async () => {
@@ -151,17 +149,5 @@ test("case 3 (H9): a brand-new file that newly matches the predicate is a MISS",
     if (!v.hit) expect(v.reason).toContain("query match set changed");
   } finally {
     rmSync(join(root, "c.ts"), { force: true });
-  }
-});
-
-test("case 4: a check-logic (parse-utils) change flips sourceHash → MISS", async () => {
-  const rs = await record();
-  write(PARSE_UTILS_FILE, "export function maskSource(s: string) { return s.trim(); }\n");
-  try {
-    const v = await revalidate(rs);
-    expect(v.hit).toBe(false);
-    if (!v.hit) expect(v.reason).toContain("source");
-  } finally {
-    write(PARSE_UTILS_FILE, "export function maskSource(s: string) { return s; }\n");
   }
 });

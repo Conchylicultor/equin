@@ -27,6 +27,7 @@ export const checkEntries: CollectedEntry[] = [
   { pluginPath: "debug/plugins/profiling/plugins/boot", id: "debug.profiling.boot", loader: () => import("@plugins/debug/plugins/profiling/plugins/boot/check"), dependsOn: [] },
   { pluginPath: "debug/plugins/sentinel", id: "debug.sentinel", loader: () => import("@plugins/debug/plugins/sentinel/check"), dependsOn: [] },
   { pluginPath: "framework/plugins/cli", id: "framework.cli", loader: () => import("@plugins/framework/plugins/cli/check"), dependsOn: ["framework/plugins/tooling/plugins/codegen"] },
+  { pluginPath: "framework/plugins/cli/plugins/cli-name", id: "framework.cli.cli-name", loader: () => import("@plugins/framework/plugins/cli/plugins/cli-name/check"), dependsOn: [] },
   { pluginPath: "framework/plugins/cli/plugins/release", id: "framework.cli.release", loader: () => import("@plugins/framework/plugins/cli/plugins/release/check"), dependsOn: ["framework/plugins/tooling/plugins/codegen"] },
   { pluginPath: "framework/plugins/principal", id: "framework.principal", loader: () => import("@plugins/framework/plugins/principal/check"), dependsOn: [] },
   { pluginPath: "framework/plugins/product-name", id: "framework.product-name", loader: () => import("@plugins/framework/plugins/product-name/check"), dependsOn: [] },

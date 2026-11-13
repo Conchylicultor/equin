@@ -56,7 +56,7 @@ relative specifier inside this leaf would resolve against the wrong module.
     - `framework/central-core`
     - `framework/cli`
     - `framework/server-core`
-    - `framework/tooling/checks`
+    - `framework/tooling/checks/registry`
     - `framework/tooling/guards`
     - `framework/tooling/lint`
     - `framework/tooling/provision`
@@ -73,11 +73,13 @@ relative specifier inside this leaf would resolve against the wrong module.
     - `CollectedDirDef`
     - `CollectedDirMembership`
     - `CollectedEntry`
+    - `CollectedItem`
     - `LoadCollectedDirOptions`
   - Exports (values):
     - `defineCollectedDir`
     - `isCollectedDirDef`
     - `loadCollectedDir`
+    - `loadCollectedDirEntries`
 - Sub-plugins:
   - **`discovery`** — Collected-dir discovery: which `defineCollectedDir("<dir>")` markers the checkout declares, read from its file set (discoverCollectedDirsIn over a RepoFiles, discoverCollectedDirs with one blocking…
 

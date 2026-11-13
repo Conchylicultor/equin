@@ -9,7 +9,7 @@ import {
   renderExemptRuleIds,
   exemptRuleIdsPath,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
-import { listAllChecks } from "@plugins/framework/plugins/tooling/plugins/checks/core";
+import { listAllChecks } from "@plugins/framework/plugins/tooling/plugins/checks/plugins/registry/core";
 import {
   isLintScopeExcluded,
   lintRuleIds,

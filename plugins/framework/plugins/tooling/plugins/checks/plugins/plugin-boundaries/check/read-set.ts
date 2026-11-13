@@ -18,15 +18,12 @@
 // The superset can only ever OVER-invalidate (an unnecessary re-run), never
 // UNDER-invalidate (which would be the catastrophic stale PASS).
 //
-// SOUNDNESS — the check-LOGIC surface (sourceHash). A grepless membership+content
-// read-set is only sound if the check's OWN logic is also pinned: buildPluginTree
-// (the plugin-set + compositionRoot detector) lives in
-// plugins/plugin-meta/plugins/plugin-tree/, which `CHECK_SOURCE_PREFIXES`
-// (read-set.ts) was widened to cover — else a change to the plugin-position walk
-// or the compositionRoot marker could flip the verdict with no recorded tree-fact
-// change. Everything else the check calls (standardPluginDirsIn / discoverCollected-
-// DirsIn in codegen/, runtimeNames in boundaries/, findImports/maskSource in
-// parse-utils/) is already under a covered prefix.
+// SOUNDNESS — the check-LOGIC surface. A grepless membership+content read-set is
+// only sound if the check's OWN logic is also pinned: buildPluginTree (the
+// plugin-set + compositionRoot detector), standardPluginDirsIn, runtimeNames,
+// findImports/maskSource. The runner pins it: a read-set carries the check's
+// code key (checks/core `check-code-key.ts`), the Merkle key of this check's
+// whole import closure, so an edit to any of them is a MISS.
 
 import type { FileSystemView } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 

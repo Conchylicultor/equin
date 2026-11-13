@@ -274,6 +274,27 @@ the others' facts, so a replay almost always compared against someone else's
 edits: 5 hits in 57 type-check runs (2026-11-05). The checkout picks which
 read-set is tried; `validate` alone decides the hit.
 
+**A read-set is keyed on the check's code, derived — never on a path list.**
+Replay first compares the read-set's `codeKey` (`core/check-code-key.ts`): the
+plugin-records module graph's Merkle key of the check's own `check/index.ts`
+and of `core/runner.ts` (each module's blob plus the keys of every module it
+imports, static or literal `import()`), plus the npm code they load. So an edit
+to a check's logic, or to any helper it imports from anywhere in the repo, is a
+MISS, and an edit no check loads replays. It replaced `CHECK_SOURCE_PREFIXES`,
+a hand-listed set of directories (tooling/, parse-utils/, …) that missed every
+check living elsewhere (network/live, product-name, layout-harness, …): their
+logic edits replayed the PASS the old logic recorded. Two consequences:
+
+- **Neither the runner nor a check reaches the check registry.** The
+  registry's `import()` reaches every check, so a closure holding it re-keys on
+  any check's edit. It lives in its own sub-plugin
+  ([`registry`](plugins/registry/CLAUDE.md)), not in `checks/core`; the `check`
+  command loads it and hands it to `runChecks`, and the runner throws when a
+  check's closure reaches another check's module.
+- **What a key cannot see is a read, and belongs in the read-set**: an
+  `import()` whose path is not a literal, a file read at run time. Go through
+  `ctx.repo()`.
+
 Three checks document why they stay off it; read them before adopting:
 [`format-clean`](plugins/format-clean/check/index.ts) and
 [`lint-directives-stable`](plugins/lint-directives-stable/check/index.ts) start
@@ -558,9 +579,10 @@ Slot names carry `CACHE_KEY_VERSION` ([`core/cache.ts`](core/cache.ts)). Bump it
 when the **meaning** of a recorded entry changes but its key would not — e.g.
 entries recorded under a weaker guarantee must stop being trusted.
 
-Never bump for a change in check logic: `ReadSet.sourceHash` covers that (it
-hashes the check-system source, rides inside the read-set payload, and is
-verified on read). It cannot help the legacy slot, whose `has()` is a bare
+Never bump for a change in check logic: `ReadSet.codeKey` covers that (the
+check's code key — see "`inputKeyed` carries an extra rule" above; it rides
+inside the read-set payload and is verified on read), and a legacy slot's key
+is the whole tree, code included. The code key cannot help the legacy slot, whose `has()` is a bare
 `existsSync` that never opens the file — renaming is the only way to retire one.
 Never revert a bump either: returning to a retired version re-addresses the
 entries it was raised to abandon. To undo `v2`, go to `v3`.
@@ -571,9 +593,10 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
 
 - Description: Check runner and built-in checks for ./equin check
 - Core:
-  - Uses: 78 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 83 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `framework/tooling` ×11
     - `packages/timed-fs` ×10
+    - `plugin-meta/plugin-records` ×10
     - `framework/tooling/exempt` ×7
     - `reports/check-thread-stall` ×7
     - `infra/stack-sampler` ×5
@@ -582,8 +605,6 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
     - `infra/launcher/env-names` ×3
     - `infra/spawn` ×3
     - `plugin-meta/parse-utils` ×3
-    - `plugin-meta/plugin-records` ×3
-    - `framework/tooling/collected-dir` ×2
     - `infra/paths` ×2
     - `packages/macrotask-yield` ×2
     - `packages/owned-fd` ×2
@@ -613,6 +634,7 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
     - `GrepIndexStore`
     - `ImportMatch`
     - `ListCandidateSourcesOptions`
+    - `LoadedCheck`
     - `OutstandingCheck`
     - `ProgressRecord`
     - `QueryFact`
@@ -624,8 +646,7 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
     - `ValidateOptions`
     - `ValidateResult`
   - Exports (values):
-    - `checkCollectedDir`
-    - `computeCheckSourceHash`
+    - `assertExemptableInvariant`
     - `computeTreeHash`
     - `currentScanView`
     - `defineFoldCheck`
@@ -638,9 +659,7 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
     - `hashFileCached`
     - `isBuildInProgress`
     - `isBuildProcess`
-    - `listAllChecks`
     - `listCandidateSources`
-    - `listRepoFiles`
     - `loadTreeSnapshot`
     - `markBuildInProgress`
     - `maskedSource`
@@ -665,6 +684,7 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
     - `framework/cli/test`
     - `framework/cli/test/digest`
     - `framework/tooling/checks/cache-prune`
+    - `framework/tooling/checks/registry`
     - `framework/tooling/checks/type-check`
     - `framework/tooling/checks/type-check/backstop`
     - `infra/deps/updates`
@@ -683,6 +703,7 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
 - Test helpers:
   - Core: `@plugins/framework/plugins/tooling/plugins/checks/core/testing`
     - `createReadSetRepo` — Create the repo holding `files` (repo-relative path → content), committed.
+    - `listRepoFiles` — Every repo-relevant path, repo-relative and sorted: tracked + untracked-not- ignored, minus index entries whose file is gone from the worktree — EXACTLY the membership `computeTreeHash` folds into the check cache key.
     - Types: `ReadSetRepo`
 - Sub-plugins:
   - **`app-css-utilities-in-sync`**
@@ -732,6 +753,7 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
   - **`plugins-have-claudemd`** [exempt]
   - **`plugins-registry-in-sync`**
   - **`pre-barrel-manifests-complete`**
+  - **`registry`** — The check registry: the check collected-dir marker, its generated check.generated.ts, and loadChecks / listAllChecks — every registered check with the module its code lives in. Apart from…
   - **`reorderable-slots-in-sync`**
   - **`snapshot-chain-intact`**
   - **`source-analysis`**

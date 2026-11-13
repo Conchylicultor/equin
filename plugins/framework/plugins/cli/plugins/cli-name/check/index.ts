@@ -1,9 +1,6 @@
 import type { Check } from "@plugins/framework/plugins/tooling/core";
 import { listCandidateSources } from "@plugins/framework/plugins/tooling/plugins/checks/core";
-import {
-  CLI_NAME,
-  CLI_NAMES,
-} from "@plugins/framework/plugins/cli/plugins/cli-name/core";
+import { CLI_NAME, CLI_NAMES } from "../core";
 
 const RULE = "cli:legacy-cli-name";
 

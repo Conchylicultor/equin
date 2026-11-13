@@ -6,7 +6,7 @@ import {
   loadLintContributions,
   readDeclaredUtilities,
 } from "@plugins/framework/plugins/tooling/plugins/lint/core";
-import type * as ChecksCore from "@plugins/framework/plugins/tooling/plugins/checks/core";
+import type * as CheckRegistry from "@plugins/framework/plugins/tooling/plugins/checks/plugins/registry/core";
 import { writeGenerated } from "./write-generated";
 
 /**
@@ -43,7 +43,8 @@ const HEADER = [
 // that regenerates would then load a manifest before writing it
 // (`cli:codegen-manifests-not-frozen`). Deferred, the fleet loads only when
 // this step runs: the last step of the manifest pipeline, after every write.
-const CHECKS_CORE = "@plugins/framework/plugins/tooling/plugins/checks/core";
+const CHECK_REGISTRY =
+  "@plugins/framework/plugins/tooling/plugins/checks/plugins/registry/core";
 
 /** The rule-id sets the generated unions are rendered from, each sorted. */
 interface ExemptRuleIdSets {
@@ -57,7 +58,9 @@ interface ExemptRuleIdSets {
 export async function collectExemptRuleIds(
   root: AppPath,
 ): Promise<ExemptRuleIdSets> {
-  const { listAllChecks } = (await import(CHECKS_CORE)) as typeof ChecksCore;
+  const { listAllChecks } = (await import(
+    CHECK_REGISTRY
+  )) as typeof CheckRegistry;
   const [contributions, checks] = await Promise.all([
     loadLintContributions(readDeclaredUtilities(root)),
     listAllChecks(),

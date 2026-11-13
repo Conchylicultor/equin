@@ -228,7 +228,7 @@ export default defineBoundaries({
     "plugins/framework/plugins/server-core/bin/serve.ts",
     "plugins/framework/plugins/central-core/core/central.generated.ts",
     "plugins/framework/plugins/central-core/bin/index.ts",
-    "plugins/framework/plugins/tooling/plugins/checks/core/check.generated.ts",
+    "plugins/framework/plugins/tooling/plugins/checks/plugins/registry/core/check.generated.ts",
     "plugins/framework/plugins/tooling/plugins/lint/core/lint.generated.ts",
     "eslint.config.ts",
   ],

@@ -1,6 +1,10 @@
-export { loadCollectedDir } from "./load-collected-dir";
+export {
+  loadCollectedDir,
+  loadCollectedDirEntries,
+} from "./load-collected-dir";
 export type {
   CollectedEntry,
+  CollectedItem,
   LoadCollectedDirOptions,
 } from "./load-collected-dir";
 export { defineCollectedDir, isCollectedDirDef } from "./define";

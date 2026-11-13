@@ -112,13 +112,14 @@ function publishAtomic(file: AppPath, contents: string): void {
  * process that had already imported every plugin barrel; those verdicts were
  * not transferable and a later push read them anyway.
  *
- * NOT the same thing as `ReadSet.sourceHash`. That hashes the check-system
- * source, lives INSIDE the read-set payload and is verified on read, so it
- * invalidates on a change to check LOGIC. It cannot help the legacy slot at
+ * NOT the same thing as `ReadSet.codeKey`. That is the Merkle key of the
+ * check's import closure and the runner's (`check-code-key.ts`), lives INSIDE
+ * the read-set payload and is verified on read, so it invalidates on a change
+ * to check LOGIC. It cannot help the legacy slot at
  * all: `has()` is a bare `existsSync` that never opens the file, so nothing
  * inside a legacy entry is ever read. The only way to retire one is to change
  * its NAME — which is what this constant does. So: never bump for a change in
- * check logic (that is `sourceHash`'s job), only for a change in what a
+ * check logic (that is `codeKey`'s job), only for a change in what a
  * recorded entry means.
  *
  * NEVER REVERT A BUMP. Going back to a retired version re-addresses the exact

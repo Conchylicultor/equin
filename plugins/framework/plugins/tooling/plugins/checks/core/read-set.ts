@@ -11,7 +11,8 @@
 // projections of the tree snapshot it consulted (content of a path, existence,
 // directory membership, glob/pathspec expansion, grep selection). Validity =
 // replaying those projections against the NEXT snapshot and confirming they are
-// byte-identical. `git write-tree` (already paid by `computeTreeHash`) has
+// byte-identical — under the same CODE: a read-set carries the check's code key
+// (`check-code-key.ts`), and replay is a MISS when it moved. `git write-tree` (already paid by `computeTreeHash`) has
 // hashed every blob; one `git ls-tree -r` turns that into a complete
 // content-addressed view of the whole scan surface, from which all four
 // projections derive with zero further git calls.
@@ -45,6 +46,7 @@ import {
 } from "@plugins/framework/plugins/tooling/core";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { computeTreeHash } from "./tree-hash";
+import type { CheckCodeKey } from "./check-code-key";
 
 // Wedge-breaker for a metadata-only git read: far above any real duration,
 // because starvation under a saturated check run is what these suffer, not
@@ -103,10 +105,11 @@ export interface QueryFact {
  */
 export interface ReadSet {
   /**
-   * sha256 over the check-system source (see `checkSourceHash`). Editing check
-   * logic flips this so a stored PASS never survives a code change.
+   * The code the verdict was computed by (`check-code-key.ts`: the Merkle key
+   * of the check's module closure and the runner's). Replay compares it first,
+   * so a stored PASS never survives an edit to the code that produced it.
    */
-  sourceHash: string;
+  codeKey: CheckCodeKey;
   treeHashAtRecord: string;
   recordedAt: number;
   /** Positive content reads. */
@@ -147,12 +150,10 @@ export interface TreeSnapshot extends GitTreeSnapshot {
   matchPathspecs(pathspecs: string[]): string[];
   /** sha256 over the `(path, blobSha)` of every file under `pathspecs`. */
   pathspecFingerprint(pathspecs: string[]): string;
-  /** sha256 over the check-system source blobs (memoised). See `computeCheckSourceHash`. */
-  checkSourceHash(): string;
   /** Blob content of `path` as text, or null if absent. One `git cat-file` per call. */
   readBlobText(path: string): Promise<string | null>;
-  /** A fresh recording view over this snapshot. */
-  createRecordingView(): FileSystemView;
+  /** A fresh recording view over this snapshot, for a check run by the code `codeKey` names. */
+  createRecordingView(codeKey: CheckCodeKey): FileSystemView;
 }
 
 async function gitStdout(
@@ -240,93 +241,6 @@ export async function readTreeSnapshot(
   return snapshot;
 }
 
-// The check-logic source surface. `checkSourceHash` folds every file under ANY
-// of these prefixes (the runner, the shared grep/cache/read-set helpers, every
-// check's own `check/` dir, AND the shared parse helpers a grepCode verdict
-// depends on) into one hash. Hardcoded because read-set.ts LIVES in the first of
-// them, so this list is its own home.
-//
-// SOUNDNESS (H0 — widened in Stage 1). A grepCode check's verdict is not a pure
-// function of the tree bytes it reads: it is `mask/parse(bytes)` where the
-// masking/parsing logic lives in `plugin-meta/plugins/parse-utils`
-// (`maskSource`, `findImports`, `markerCallSpans`, `lineAt`, …). If that logic
-// changes, a previously-masked occurrence can become a real match (or vice
-// versa) and the verdict flips WITH NO recorded tree-fact change → a stale PASS.
-// So the source hash must cover those helpers too, not just the checks subtree.
-//
-// We deliberately hash a GENEROUS SUPERSET — the whole `tooling/` tree (the
-// runner + every check + all build tooling), all of `parse-utils/`, and all of
-// `plugin-tree/` — rather than a precise per-check import closure. A superset is
-// strictly SOUND: it can only OVER-invalidate (an unrelated tooling edit re-runs
-// a flipped check once), never UNDER-invalidate (which would be the stale PASS).
-// These dirs change rarely, so the over-invalidation cost is negligible, and
-// covering the whole surface means later stages (which route more helpers through
-// the view) inherit coverage with no further widening. `sourceHash` is opaque in
-// the stored read-set, so this can still be tightened to a real import closure
-// later WITHOUT a read-set format change. Any path under ANY prefix contributes.
-//
-// `plugin-tree/` (Stage 3, plugin-boundaries). plugin-boundaries' verdict is a
-// pure function of the tree bytes it reads AND of `buildPluginTree`'s logic — the
-// plugin-position walk + the compositionRoot/package.json marker parsing that
-// decide the plugin set. That logic lives in
-// `plugins/plugin-meta/plugins/plugin-tree/`, OUTSIDE `tooling/`, so a change to
-// it (e.g. how a hollow-shell dir is gated, or how compositionRoot is detected)
-// could flip the verdict with NO recorded tree-fact change → a stale PASS. Adding
-// the prefix pins it. (Its runtime-facet code path is skipped by boundaries'
-// the barrel-free tree, but hashing the whole subtree is the sound superset.)
-//
-// `migrations/core/` (which holds `drizzle.config.ts`). `schema-files-loadable` and
-// `table-defs-in-schema-glob` enumerate their scan surface through
-// `schemaGlobFiles()`, whose glob patterns are now a CONSTANT in
-// `plugins/database/plugins/migrations/core/internal/schema-glob-patterns.ts` —
-// code, invisible to the `FileSystemView`. Narrowing a pattern would shrink the
-// inspected file set with NO recorded tree-fact change → a stale PASS on a
-// narrowed domain. Scoped to `core/` specifically, NOT the whole migrations
-// plugin: that would swallow `data/*.sql`, flipping `sourceHash`
-// on every migration commit and over-invalidating every input-keyed check
-// (`type-check` included) for a reason unrelated to their verdicts. (Neither check
-// is `inputKeyed` today — this closes the landmine before someone flips them.)
-//
-// `derived-views/core/`. Exactly the same shape, one plugin over.
-// `table-defs-in-schema-glob` exempts a `pgTable(<CONST>)` read handle whose name
-// argument is in `IMPERATIVE_PUBLIC_TABLE_CONSTS`, and
-// `imperative-create-table-allowlisted` requires a CREATE TABLE line to name one
-// of those constants. Both now IMPORT that list
-// (`derived-views/core/internal/imperative-tables.ts`) instead of regexing it out
-// of the file's text — so adding an entry widens an exemption as CODE, invisible
-// to the `FileSystemView`, with no recorded tree-fact change → a stale PASS on a
-// widened allowlist. Scoped to `core/` only: this plugin's `server/` holds the
-// view-rebuild logic, which no check's verdict depends on. (Neither check is
-// `inputKeyed` today either.)
-//
-// `plugin-id/`. The repo's path vocabulary — which plugin a path belongs to
-// (`pluginDirOfRepoPath`), what is test code (`isTestCodePath`), the folder
-// kinds — is code that input-keyed verdicts call (`no-db-backed-notify` reads
-// a feed exclusion per plugin and skips test code by it; `plugin-boundaries`'
-// rules are written in it), invisible to the `FileSystemView`. It changes
-// rarely, so keying on it costs little.
-const CHECK_SOURCE_PREFIXES = [
-  "plugins/framework/plugins/tooling/",
-  "plugins/framework/plugins/plugin-id/",
-  "plugins/plugin-meta/plugins/parse-utils/",
-  "plugins/plugin-meta/plugins/plugin-tree/",
-  "plugins/database/plugins/migrations/core/",
-  "plugins/database/plugins/derived-views/core/",
-];
-
-/**
- * sha256 over the sorted `"<path>\0<blobSha>"` of every file under the
- * check-logic prefixes — see `CHECK_SOURCE_PREFIXES` above for the exact set and
- * the soundness argument for each entry. Any edit to the runner, a shared check
- * helper, an individual check's code, OR any non-tree logic a check's verdict
- * depends on flips it → a stored PASS keyed on it is invalidated. A thin wrapper over
- * `TreeSnapshot.checkSourceHash()` (which memoises), exposed as a free function
- * so `validate`/tests can name it directly.
- */
-export function computeCheckSourceHash(snapshot: TreeSnapshot): string {
-  return snapshot.checkSourceHash();
-}
-
 function buildSnapshot(
   root: AppPath,
   treeHash: string,
@@ -359,8 +273,6 @@ function buildSnapshot(
     [...blobSha.keys()].sort(),
   );
 
-  let checkSourceHashMemo: string | undefined;
-
   // Record and replay alike go through here: one matcher with the plain set's.
   const glob = (pattern: string): string[] => globPaths(sortedPaths, pattern);
   const matchPathspecs = (pathspecs: string[]): string[] => {
@@ -389,17 +301,6 @@ function buildSnapshot(
         matches.map((p) => `${p}\0${blobSha.get(p) ?? ""}`).join("\n"),
       );
     },
-    checkSourceHash: () => {
-      if (checkSourceHashMemo === undefined) {
-        const parts = sortedPaths
-          .filter((p) =>
-            CHECK_SOURCE_PREFIXES.some((prefix) => p.startsWith(prefix)),
-          )
-          .map((p) => `${p}\0${blobSha.get(p)!}`);
-        checkSourceHashMemo = sha256(parts.join("\n"));
-      }
-      return checkSourceHashMemo;
-    },
     readBlobText: async (path) => {
       if (!blobSha.has(path)) return null;
       const { code, bytes } = await gitStdout(root, [
@@ -410,7 +311,7 @@ function buildSnapshot(
       if (code !== 0) return null;
       return new TextDecoder().decode(bytes);
     },
-    createRecordingView: () => createRecordingView(snapshot),
+    createRecordingView: (codeKey) => createRecordingView(snapshot, codeKey),
   };
   return snapshot;
 }
@@ -454,7 +355,10 @@ export interface FileSystemView {
   readSet(): ReadSet;
 }
 
-function createRecordingView(snapshot: TreeSnapshot): FileSystemView {
+function createRecordingView(
+  snapshot: TreeSnapshot,
+  codeKey: CheckCodeKey,
+): FileSystemView {
   const files = new Map<string, string>(); // path → blobSha
   const absent = new Set<string>();
   const dirs = new Map<string, string[]>(); // dir → members
@@ -501,7 +405,7 @@ function createRecordingView(snapshot: TreeSnapshot): FileSystemView {
     },
     readSet: () =>
       canonicalize({
-        sourceHash: snapshot.checkSourceHash(),
+        codeKey,
         treeHashAtRecord: snapshot.treeHash,
         recordedAt: Date.now(),
         files: [...files].map(([path, blobSha]) => ({ path, blobSha })),
@@ -543,7 +447,7 @@ function canonicalize(rs: ReadSet): ReadSet {
 
 /**
  * Content-addressed fingerprint of a read-set: sha256 over the canonicalised
- * facts + `sourceHash`. Two read-sets with the same fingerprint depend on an
+ * facts + `codeKey`. Two read-sets with the same fingerprint depend on an
  * identical set of tree facts. (Not used as the cache lookup key — the read-set
  * is only known AFTER running — but exposed for shadow-mode logging and tests.)
  */
@@ -551,7 +455,7 @@ export function fingerprint(readSet: ReadSet): string {
   const c = canonicalize(readSet);
   return sha256(
     JSON.stringify({
-      sourceHash: c.sourceHash,
+      codeKey: c.codeKey,
       files: c.files,
       absent: c.absent,
       dirs: c.dirs,
@@ -596,17 +500,20 @@ function sortedEqual(a: string[], b: string[]): boolean {
 }
 
 /**
- * Replay a recorded read-set against a fresh snapshot. HIT iff EVERY recorded
+ * Replay a recorded read-set against a fresh snapshot, for a check whose code
+ * is now `codeKey`. HIT iff it was recorded by that same code and EVERY recorded
  * fact still holds; otherwise MISS with a human reason. Any doubt is a MISS —
  * the cache can never CAUSE a stale PASS.
  */
 export async function validate(
   readSet: ReadSet,
   snapshot: TreeSnapshot,
+  codeKey: CheckCodeKey,
   opts?: ValidateOptions,
 ): Promise<ValidateResult> {
-  if (snapshot.checkSourceHash() !== readSet.sourceHash) {
-    return { hit: false, reason: "check source changed (sourceHash mismatch)" };
+  // A read-set recorded before the code key existed carries none: a MISS.
+  if (readSet.codeKey !== codeKey) {
+    return { hit: false, reason: "check code changed (codeKey mismatch)" };
   }
   for (const f of readSet.files) {
     if (snapshot.blobSha(f.path) !== f.blobSha) {

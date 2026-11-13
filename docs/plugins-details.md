@@ -31139,9 +31139,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Exports (values): `parseRuntimeException`
         - **`checks`** — Check runner and built-in checks for ./equin check
           - Core:
-            - Uses: 78 symbols — full list in [`plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md)
+            - Uses: 83 symbols — full list in [`plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md)
               - `framework/tooling` ×11
               - `packages/timed-fs` ×10
+              - `plugin-meta/plugin-records` ×10
               - `framework/tooling/exempt` ×7
               - `reports/check-thread-stall` ×7
               - `infra/stack-sampler` ×5
@@ -31150,8 +31151,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/launcher/env-names` ×3
               - `infra/spawn` ×3
               - `plugin-meta/parse-utils` ×3
-              - `plugin-meta/plugin-records` ×3
-              - `framework/tooling/collected-dir` ×2
               - `infra/paths` ×2
               - `packages/macrotask-yield` ×2
               - `packages/owned-fd` ×2
@@ -31181,6 +31180,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `GrepIndexStore`
               - `ImportMatch`
               - `ListCandidateSourcesOptions`
+              - `LoadedCheck`
               - `OutstandingCheck`
               - `ProgressRecord`
               - `QueryFact`
@@ -31192,8 +31192,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ValidateOptions`
               - `ValidateResult`
             - Exports (values):
-              - `checkCollectedDir`
-              - `computeCheckSourceHash`
+              - `assertExemptableInvariant`
               - `computeTreeHash`
               - `currentScanView`
               - `defineFoldCheck`
@@ -31206,9 +31205,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `hashFileCached`
               - `isBuildInProgress`
               - `isBuildProcess`
-              - `listAllChecks`
               - `listCandidateSources`
-              - `listRepoFiles`
               - `loadTreeSnapshot`
               - `markBuildInProgress`
               - `maskedSource`
@@ -31233,6 +31230,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/cli/test`
               - `framework/cli/test/digest`
               - `framework/tooling/checks/cache-prune`
+              - `framework/tooling/checks/registry`
               - `framework/tooling/checks/type-check`
               - `framework/tooling/checks/type-check/backstop`
               - `infra/deps/updates`
@@ -31251,6 +31249,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Test helpers:
             - Core: `@plugins/framework/plugins/tooling/plugins/checks/core/testing`
               - `createReadSetRepo` — Create the repo holding `files` (repo-relative path → content), committed.
+              - `listRepoFiles` — Every repo-relevant path, repo-relative and sorted: tracked + untracked-not- ignored, minus index entries whose file is gone from the worktree — EXACTLY the membership `computeTreeHash` folds into the check cache key.
               - Types: `ReadSetRepo`
           - Plugins:
             - **`app-css-utilities-in-sync`**
@@ -31358,6 +31357,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Exempts itself from: `check-thread-safety/no-blocking-check-work` — `check/index.ts` (debt)
             - **`plugins-registry-in-sync`**
             - **`pre-barrel-manifests-complete`**
+            - **`registry`** — The check registry: the check collected-dir marker, its generated check.generated.ts, and loadChecks / listAllChecks — every registered check with the module its code lives in. Apart from checks/core so a check importing checks/core does not reach every check.
+              - Core:
+                - Uses:
+                  - `framework/tooling/checks.assertExemptableInvariant`
+                  - `framework/tooling/checks.LoadedCheck`
+                  - `framework/tooling/checks.scopeOf`
+                  - `framework/tooling/collected-dir.defineCollectedDir`
+                  - `framework/tooling/collected-dir.loadCollectedDirEntries`
+                - Exports (values):
+                  - `checkCollectedDir`
+                  - `listAllChecks`
+                  - `loadChecks`
+              - Cross-plugin:
+                - Imported by: `framework/cli/check`
             - **`reorderable-slots-in-sync`**
             - **`snapshot-chain-intact`**
             - **`source-analysis`**
@@ -31712,7 +31725,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/central-core`
               - `framework/cli`
               - `framework/server-core`
-              - `framework/tooling/checks`
+              - `framework/tooling/checks/registry`
               - `framework/tooling/guards`
               - `framework/tooling/lint`
               - `framework/tooling/provision`
@@ -31729,11 +31742,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `CollectedDirDef`
               - `CollectedDirMembership`
               - `CollectedEntry`
+              - `CollectedItem`
               - `LoadCollectedDirOptions`
             - Exports (values):
               - `defineCollectedDir`
               - `isCollectedDirDef`
               - `loadCollectedDir`
+              - `loadCollectedDirEntries`
           - Plugins:
             - **`discovery`** — Collected-dir discovery: which `defineCollectedDir("<dir>")` markers the checkout declares, read from its file set (discoverCollectedDirsIn over a RepoFiles, discoverCollectedDirs with one blocking git ls-files, standardPluginDirsFromSnapshot over a tree build's snapshot) — no directory walk and no build tooling, so a serving backend can ask too.
               - Core:

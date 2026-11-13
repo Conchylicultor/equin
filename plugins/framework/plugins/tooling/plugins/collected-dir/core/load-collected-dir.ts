@@ -91,6 +91,24 @@ export async function loadCollectedDir<T>(
   entries: CollectedEntry[],
   opts: LoadCollectedDirOptions<T>,
 ): Promise<T[]> {
+  return (await loadCollectedDirEntries(entries, opts)).map((l) => l.item);
+}
+
+/** One loaded item and the registry entry whose module exported it. */
+export interface CollectedItem<T> {
+  item: T;
+  entry: CollectedEntry;
+}
+
+/**
+ * {@link loadCollectedDir}, each item paired with the entry that exported it —
+ * for a consumer that must know WHICH module an item's code lives in (the
+ * check runner keys an input-keyed check's verdict on its module's closure).
+ */
+export async function loadCollectedDirEntries<T>(
+  entries: CollectedEntry[],
+  opts: LoadCollectedDirOptions<T>,
+): Promise<CollectedItem<T>[]> {
   const label = opts.label ?? "collected-dir";
   const present: CollectedEntry[] = [];
   const stale: string[] = [];
@@ -106,7 +124,7 @@ export async function loadCollectedDir<T>(
   }
   const ordered = opts.ordered ? topoSort(present) : present;
   const results = await Promise.allSettled(ordered.map((e) => e.loader()));
-  const out: T[] = [];
+  const out: CollectedItem<T>[] = [];
   const seen = opts.dedupeKey ? new Set<string>() : null;
   // Only populated under `strict`; every failure is collected so one pass
   // reports all of the breakage rather than the first item of it.
@@ -151,7 +169,7 @@ export async function loadCollectedDir<T>(
         if (seen.has(key)) continue;
         seen.add(key);
       }
-      out.push(item);
+      out.push({ item, entry: ordered[i]! });
     }
   }
   if (failures.length > 0) {

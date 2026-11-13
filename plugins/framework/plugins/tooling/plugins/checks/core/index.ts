@@ -1,11 +1,11 @@
-export { checkCollectedDir } from "./collected-dir";
-export { runChecks, listAllChecks, scopeOf, requestedJobs } from "./runner";
-export type { RunChecksOptions } from "./runner";
+export { runChecks, requestedJobs } from "./runner";
+export type { LoadedCheck, RunChecksOptions } from "./runner";
+export { scopeOf } from "./scope";
+export { assertExemptableInvariant } from "./check-exemptions";
 export { repoProgram } from "./discover";
 export type { TscProgram } from "./discover";
 export { hashFileBytes, hashFileCached } from "./content-hash";
 export type { ContentHashMemo } from "./content-hash";
-export { listRepoFiles } from "./repo-files";
 export { computeTreeHash } from "./tree-hash";
 export { readTranscriptVerdict } from "./transcript";
 export { openCheckCache, pruneCheckCache } from "./cache";
@@ -16,12 +16,7 @@ export type {
   OutstandingCheck,
   ProgressRecord,
 } from "./progress-log";
-export {
-  fingerprint,
-  computeCheckSourceHash,
-  loadTreeSnapshot,
-  readTreeSnapshot,
-} from "./read-set";
+export { fingerprint, loadTreeSnapshot, readTreeSnapshot } from "./read-set";
 export type {
   TreeSnapshot,
   FileSystemView,

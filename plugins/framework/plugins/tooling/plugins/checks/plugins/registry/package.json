@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-framework-tooling-checks-registry",
+  "description": "The check registry: the check collected-dir marker, its generated check.generated.ts, and loadChecks / listAllChecks — every registered check with the module its code lives in. Apart from checks/core so a check importing checks/core does not reach every check.",
+  "version": "0.0.1",
+  "private": true
+}

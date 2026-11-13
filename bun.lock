@@ -3977,6 +3977,10 @@
       "name": "@equin/plugin-framework-tooling-checks-pre-barrel-manifests-complete",
       "version": "0.0.1",
     },
+    "plugins/framework/plugins/tooling/plugins/checks/plugins/registry": {
+      "name": "@equin/plugin-framework-tooling-checks-registry",
+      "version": "0.0.1",
+    },
     "plugins/framework/plugins/tooling/plugins/checks/plugins/reorderable-slots-in-sync": {
       "name": "@equin/plugin-framework-tooling-checks-reorderable-slots-in-sync",
       "version": "0.0.1",
@@ -9665,6 +9669,8 @@
     "@equin/plugin-framework-tooling-checks-plugins-registry-in-sync": ["@equin/plugin-framework-tooling-checks-plugins-registry-in-sync@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/plugins-registry-in-sync"],
 
     "@equin/plugin-framework-tooling-checks-pre-barrel-manifests-complete": ["@equin/plugin-framework-tooling-checks-pre-barrel-manifests-complete@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/pre-barrel-manifests-complete"],
+
+    "@equin/plugin-framework-tooling-checks-registry": ["@equin/plugin-framework-tooling-checks-registry@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/registry"],
 
     "@equin/plugin-framework-tooling-checks-reorderable-slots-in-sync": ["@equin/plugin-framework-tooling-checks-reorderable-slots-in-sync@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/reorderable-slots-in-sync"],
 

@@ -17,7 +17,6 @@ import {
 } from "../core";
 import { importClosure } from "@plugins/framework/plugins/tooling/plugins/import-closure/core";
 import { measureManifestFreeze, type FreezeFinding } from "./manifest-freeze";
-import legacyCliNameCheck from "./legacy-cli-name";
 
 const BOOTSTRAP = "plugins/framework/plugins/cli/bin/index.ts";
 /**
@@ -604,5 +603,4 @@ export default [
   bootstrapPackageFreeCheck,
   declarationsLightCheck,
   commandNamesUniqueCheck,
-  legacyCliNameCheck,
 ];

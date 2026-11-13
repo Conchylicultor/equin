@@ -20,6 +20,10 @@ import {
 import { computeTreeHash } from "./tree-hash";
 import { loadTreeSnapshot, validate, type TreeSnapshot } from "./read-set";
 import { recordingRepoFiles, runRepoFiles } from "./repo-set";
+import type { CheckCodeKey } from "./check-code-key";
+
+// The tree side is under test: the code is held fixed.
+const CODE_KEY = "repo-set-code" as CheckCodeKey;
 
 let root!: AppPath;
 
@@ -157,7 +161,7 @@ describe("recording (input-keyed checks)", () => {
 
   test("what a check reads through ctx.repo() lands in its read-set", async () => {
     const snap = await snapshot();
-    const view = snap.createRecordingView();
+    const view = snap.createRecordingView(CODE_KEY);
     const repo = recordingRepoFiles(
       repoSnapshotOver(snap.root, snap.paths(), (p) => snap.blobSha(p)),
       view,
@@ -176,7 +180,7 @@ describe("recording (input-keyed checks)", () => {
 
   test("blobOf answers the snapshot's id and records a content fact", async () => {
     const snap = await snapshot();
-    const view = snap.createRecordingView();
+    const view = snap.createRecordingView(CODE_KEY);
     const repo = recordingRepoFiles(
       repoSnapshotOver(snap.root, snap.paths(), (p) => snap.blobSha(p)),
       view,
@@ -190,7 +194,7 @@ describe("recording (input-keyed checks)", () => {
 
   test("all() records the whole tree's membership", async () => {
     const snap = await snapshot();
-    const view = snap.createRecordingView();
+    const view = snap.createRecordingView(CODE_KEY);
     const repo = recordingRepoFiles(
       repoSnapshotOver(snap.root, snap.paths(), (p) => snap.blobSha(p)),
       view,
@@ -201,7 +205,7 @@ describe("recording (input-keyed checks)", () => {
 
   test("replay: unrelated edit HITs; a new file under the subtree, an edited read, a created probe each MISS", async () => {
     const snap = await snapshot();
-    const view = snap.createRecordingView();
+    const view = snap.createRecordingView(CODE_KEY);
     const repo = recordingRepoFiles(
       repoSnapshotOver(snap.root, snap.paths(), (p) => snap.blobSha(p)),
       view,
@@ -213,7 +217,7 @@ describe("recording (input-keyed checks)", () => {
 
     write("README.md", "# edited, unrelated\n");
     try {
-      expect((await validate(rs, await snapshot())).hit).toBe(true);
+      expect((await validate(rs, await snapshot(), CODE_KEY)).hit).toBe(true);
     } finally {
       write("README.md", "// README.md\n");
     }
@@ -225,7 +229,7 @@ describe("recording (input-keyed checks)", () => {
     ) => {
       mutate();
       try {
-        const v = await validate(rs, await snapshot());
+        const v = await validate(rs, await snapshot(), CODE_KEY);
         expect(v.hit).toBe(false);
         if (!v.hit) expect(v.reason).toContain(reason);
       } finally {

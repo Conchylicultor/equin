@@ -148,7 +148,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
         - **`boundaries`** [exempt] — Boundary-rules checker: zone DSL, edge evaluator, and project boundary config
           - Plugins:
             - **`runtime-exception`** — The boundary config's runtimeExceptions entry grammar ("<zone>.<plugin id>.<folder> -> <zone>.<plugin id>.<folder>"): parseRuntimeException splits one into its two sides. A leaf with no imports, so…
-        - **`checks`** [test helpers] [exempt] [59 sub-plugins] — Check runner and built-in checks for ./equin check
+        - **`checks`** [test helpers] [exempt] [60 sub-plugins] — Check runner and built-in checks for ./equin check
         - **`codegen`** [exempt] — Plugin doc generation and registry codegen
           - Plugins:
             - **`composition-registries`** [exempt] — The per-composition registry files' grammar and listing: where a composition's `<dir>` registry lives (main's is the committed `<dir>.generated.ts`, any other's the gitignored…

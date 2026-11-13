@@ -178,7 +178,7 @@ export const LINT_CONFIG_SOURCE =
  * `ExemptableRuleId` until a second build (`exempt:rule-ids-in-sync` red).
  * Every reader goes through this function and is called after stage 1, so the
  * evaluation it triggers reads what stage 1 wrote — the same pattern as
- * `checks/core`'s `check.generated.ts`.
+ * `checks/plugins/registry/core`'s `check.generated.ts`.
  */
 async function loadLintEntries(): Promise<CollectedEntry[]> {
   return (await import("./lint.generated")).lintEntries;
