@@ -1751,7 +1751,9 @@ function declareRows<Row>(
     mode: rows.mode,
     preload: "boot",
     // Like `serveValue`'s enumeration: the resource's own `load` (no flight,
-    // no commit watermark), the one tuple settling on its own.
+    // no commit watermark), the one tuple settling on its own. Its one tuple
+    // is read wherever `idsOf`'s preloaded value is, so it ships with it in
+    // every composition (the composed set is not consulted).
     preloadTuples: async () => {
       const params = point.encode(await bootIdsOf(source, field));
       try {

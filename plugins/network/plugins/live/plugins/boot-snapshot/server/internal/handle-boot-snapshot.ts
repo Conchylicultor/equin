@@ -1,6 +1,7 @@
 import { implement } from "@plugins/infra/plugins/endpoints/server";
 import { crashFieldsOf } from "@plugins/packages/plugins/error-subject/core";
 import {
+  composedWebPlugins,
   keptSnapshotValue,
   loadResourceByKey,
   reportServerError,
@@ -51,16 +52,23 @@ function reportOmitted(key: string, what: string, err: unknown): void {
 // L2-persisted: its served half names and loads its tuples (`preloadTuples` —
 // the loader alone, no flight and no commit watermark, sequential per key),
 // shipped under `tuples[key]`. A tuple whose loader fails is omitted and
-// reported; the rest of the key still ships.
-export async function assembleBootSnapshot(
-  opts: {
-    /**
-     * Serve persisted aliases from memory (default true). Boot-bench's cold
-     * mode turns it off, so a cleared L2 really measures the loaders.
-     */
-    memory?: boolean;
-  } = {},
-): Promise<{
+// reported; the rest of the key still ships. Only the tuples a web plugin of
+// the page's composition reads are loaded (`webPlugins`): the public website's
+// page never reads the mail app's config documents. The serving backend passes
+// its own composition's (`composedWebPlugins()`); a host rendering another
+// composition's pages (the crawlable static host) passes that one's.
+export async function assembleBootSnapshot(opts: {
+  /**
+   * The web plugins (dot-form ids) of the composition whose page boots from
+   * this snapshot — what decides which enumerated tuples it carries.
+   */
+  webPlugins: ReadonlySet<string>;
+  /**
+   * Serve persisted aliases from memory (default true). Boot-bench's cold
+   * mode turns it off, so a cleared L2 really measures the loaders.
+   */
+  memory?: boolean;
+}): Promise<{
   resources: Record<string, unknown>;
   tuples: Record<string, { params: Params; value: unknown }[]>;
   timings: Record<string, { source: BootSnapshotSource; workMs: number }>;
@@ -88,7 +96,7 @@ export async function assembleBootSnapshot(
     enumerated.map(async ({ key, preloadTuples }) => {
       const s = performance.now();
       try {
-        const loaded = await preloadTuples();
+        const loaded = await preloadTuples(opts.webPlugins);
         const ok: { params: Params; value: unknown }[] = [];
         const failed: { params: Params; error: unknown }[] = [];
         for (const t of loaded) {
@@ -183,5 +191,5 @@ export async function assembleBootSnapshot(
 }
 
 export const handleBootSnapshot = implement(bootSnapshot, () =>
-  assembleBootSnapshot(),
+  assembleBootSnapshot({ webPlugins: composedWebPlugins() }),
 );

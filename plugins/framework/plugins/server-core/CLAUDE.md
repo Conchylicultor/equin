@@ -599,6 +599,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `boundedMembershipKeys`
     - `collectContributions`
     - `composedOnly`
+    - `composedWebPlugins`
     - `defineDeferredResource`
     - `defineExternalResource`
     - `defineHostService`

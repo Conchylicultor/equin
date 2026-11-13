@@ -1087,7 +1087,12 @@ export const configValuesServed = serveValue(configValues, {
   source: "external",
   changes: "notified", // → .notify(params)
   loader: ({ path, scopeId }) => resolve(path, scopeId),
-  preloadParams: () => [{ path: "a" }, { path: "a", scopeId: "app:x" }],
+  // each boot tuple with the web plugin whose page reads it: a composition
+  // whose browser does not load that plugin does not carry the tuple
+  preloadParams: () => [
+    { plugin: "x.reader", value: { path: "a" } },
+    { plugin: "x.reader", value: { path: "a", scopeId: "app:x" } },
+  ],
 });
 
 // web/
@@ -1137,8 +1142,9 @@ useLive(folderListing, expanded.map((dir) => ({ dir })));
   refusal.
 - **Preload.** `"boot"`: hydrated before first paint, owning plugin eager, a
   DB-backed param-less one L2-persisted (its serve call names its `code`). A param'd one is ENUMERATED by
-  `preloadParams` (every tuple loaded on every page load — enumerate exactly
-  what first paint reads; never L2-persisted). Central values never preload.
+  `preloadParams` (every tuple loaded on every page load of a composition
+  whose browser loads the tuple's `plugin` — enumerate exactly what first
+  paint reads; never L2-persisted). Central values never preload.
   `"boot-and-keep"`: also never GC'd — for small values read by late mounts.
 
 ### Serve

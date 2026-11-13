@@ -1,4 +1,5 @@
 import { serveValue } from "@plugins/network/plugins/live/server";
+import type { ComposedEntry } from "@plugins/framework/plugins/server-core/core";
 import {
   configValues,
   configGitValues,
@@ -39,6 +40,10 @@ type ConfigGetter = <F extends FieldsRecord>(
 ) => ConfigValues<F>;
 
 const descriptorByPath = new Map<string, ConfigDescriptor>();
+// The plugin each storePath is registered under (dot-form id — the registering
+// plugin, or the one a `pluginId` override plants it under): the plugin whose
+// page reads the document, named per boot tuple (`preloadParams`).
+const pluginByPath = new Map<string, string>();
 // hierarchyPath per descriptor (storePath minus the trailing `/<name>.jsonc`),
 // captured at registration so scope helpers can rebuild scoped dirs.
 const hierarchyByDescriptor = new WeakMap<ConfigDescriptor, string>();
@@ -142,7 +147,13 @@ function redactSecrets(
 // `{ path, scopeId }` with its own config — named by `preloadParams` from the
 // SAME `scopeMembers` map the `config-v2.scopes` value is read from, so the
 // scopes a reader decides on and the scoped documents hydrated for it cannot
-// disagree. Pushed by the registry's one document fan-out (`notifyDocument`),
+// disagree. Each tuple names the plugin its document is registered under — the
+// plugin whose page reads it (a reorder directive's slot owner, a DataView's
+// defining plugin) — so a composition whose browser never loads that plugin
+// does not carry the document (the website's snapshot held 412 documents, ~60
+// of them its own). A web read resolves its storePath through a
+// `ConfigV2.WebRegister` in the page, at the same pluginId (the pairing check),
+// so a document of an unloaded plugin has no reader there. Pushed by the registry's one document fan-out (`notifyDocument`),
 // together with the conflicts and tiers of the same tuple.
 export const configValuesServed = serveValue(configValues, {
   source: "external",
@@ -179,11 +190,17 @@ export const configValuesServed = serveValue(configValues, {
   }),
   preloadParams: async () => {
     await registryReady;
-    const tuples: { path: string; scopeId?: string }[] = [];
+    const tuples: ComposedEntry<{ path: string; scopeId?: string }>[] = [];
     for (const path of descriptorByPath.keys()) {
-      tuples.push({ path });
+      const plugin = pluginByPath.get(path);
+      if (plugin === undefined) {
+        throw new Error(
+          `[config-v2] "${path}" is registered without the plugin it belongs to`,
+        );
+      }
+      tuples.push({ plugin, value: { path } });
       for (const scopeId of scopeMembers.get(path) ?? []) {
-        tuples.push({ path, scopeId });
+        tuples.push({ plugin, value: { path, scopeId } });
       }
     }
     return tuples;
@@ -639,8 +656,10 @@ export function registerDescriptorPath(
   path: string,
   descriptor: ConfigDescriptor,
   hierarchyPath: string,
+  pluginId: string,
 ): void {
   descriptorByPath.set(path, descriptor);
+  pluginByPath.set(path, pluginId);
   hierarchyByDescriptor.set(descriptor, hierarchyPath);
 }
 

@@ -153,7 +153,10 @@ export interface PersistedCode {
 // enumerated preload: the boot snapshot ships every tuple it returns, and L2
 // neither persists nor force-recomputes the key (its rows are one param-less
 // tuple per key). Each tuple settles on its own — a failed one is omitted and
-// reported, never the whole key.
+// reported, never the whole key. It is asked for the web plugins the serving
+// composition's browser loads (`composedWebPlugins()`), and loads only the
+// tuples one of them reads: a tuple read by a plugin that composition's page
+// never loads would only ride every page load unread.
 //
 // `code` is the code that produces the key's PERSISTED value (L2): the source
 // sets (packages/source-digest's `SourceSet`, structurally — that plugin
@@ -167,7 +170,9 @@ type ResourceDeclarePayload = {
   mode: ResourceMode;
   preload?: "boot" | "boot-and-keep";
   code?: readonly PersistedCode[];
-  preloadTuples?: () => Promise<
+  preloadTuples?: (
+    composedWebPlugins: ReadonlySet<string>,
+  ) => Promise<
     (
       | { params: ResourceParams; ok: true; value: unknown }
       | { params: ResourceParams; ok: false; error: unknown }

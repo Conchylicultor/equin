@@ -1,5 +1,6 @@
 import { implement } from "@plugins/infra/plugins/endpoints/server";
 import {
+  composedWebPlugins,
   measureSubscribeCycle,
   type ResourceParams,
 } from "@plugins/framework/plugins/server-core/core";
@@ -131,7 +132,10 @@ export const handleBootBenchRun = implement(bootBenchRun, async ({ body }) => {
         const t = performance.now();
         // Cold mode bypasses the memory path too: a cleared L2 must measure the
         // loaders, not a persisted alias's kept in-memory snapshot.
-        const r = await assembleBootSnapshot({ memory: !cold });
+        const r = await assembleBootSnapshot({
+          webPlugins: composedWebPlugins(),
+          memory: !cold,
+        });
         return {
           totalMs: performance.now() - t,
           perKey: r.timings,
@@ -197,7 +201,12 @@ export const handleBootBenchRun = implement(bootBenchRun, async ({ body }) => {
   // set's warmup iterations absorb whatever it warmed). The same path the mode
   // measures, so a cold capture reads no kept in-memory snapshot.
   const measureBytes = async (cold: boolean): Promise<SnapshotBytes> =>
-    measureSnapshotBytes(await assembleBootSnapshot({ memory: !cold }));
+    measureSnapshotBytes(
+      await assembleBootSnapshot({
+        webPlugins: composedWebPlugins(),
+        memory: !cold,
+      }),
+    );
 
   // WARM iterations run BEFORE any cold-clear (the snapshot is naturally warm on a
   // running backend). Discard the first `warmup` of each set to absorb GC. Capture

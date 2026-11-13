@@ -842,10 +842,12 @@ describe("serveValue", () => {
         return { n: scopeId === undefined ? 0 : 1 };
       },
       preloadParams: () => [
-        { path: "a" },
-        { path: "a", scopeId: "" },
-        { path: "a", scopeId: "s" },
-        { path: "a", scopeId: "broken" },
+        { plugin: "p.reader", value: { path: "a" } },
+        { plugin: "p.reader", value: { path: "a", scopeId: "" } },
+        { plugin: "p.reader", value: { path: "a", scopeId: "s" } },
+        { plugin: "p.reader", value: { path: "a", scopeId: "broken" } },
+        // Read by a plugin the composition's browser does not load: never loaded.
+        { plugin: "p.elsewhere", value: { path: "b" } },
       ],
     });
     expect(served.declare[0]).toMatchObject({
@@ -854,11 +856,11 @@ describe("serveValue", () => {
     });
     // A contribution's payload fields read back as `unknown`.
     const load = served.declare[0]!.preloadTuples as
-      (() => Promise<unknown[]>) | undefined;
+      ((composed: ReadonlySet<string>) => Promise<unknown[]>) | undefined;
     expect(load).toBeDefined();
     // The same canonical tuples a read subscribes (`""` is an absent optional),
-    // each loaded and settled on its own.
-    expect(await load!()).toEqual([
+    // each loaded and settled on its own — only those a composed plugin reads.
+    expect(await load!(new Set(["p.reader"]))).toEqual([
       { params: { path: "a" }, ok: true, value: { n: 0 } },
       { params: { path: "a" }, ok: true, value: { n: 0 } },
       { params: { path: "a", scopeId: "s" }, ok: true, value: { n: 1 } },
@@ -881,7 +883,7 @@ describe("serveValue", () => {
         changes: "notified",
         loader: () => ({ n: 1 }),
         // @ts-expect-error — only a param'd value declared `preload` names boot tuples
-        preloadParams: () => [{ id: "a" }],
+        preloadParams: () => [{ plugin: "p", value: { id: "a" } }],
       });
     expect(typeof typeOnly).toBe("function");
     expect(() =>
@@ -889,7 +891,7 @@ describe("serveValue", () => {
         source: "external",
         changes: "notified",
         loader: () => ({ n: 1 }),
-        preloadParams: () => [{ id: "a" }],
+        preloadParams: () => [{ plugin: "p", value: { id: "a" } }],
       }),
     ).toThrow(/only for a/);
   });

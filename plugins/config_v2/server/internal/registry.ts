@@ -600,7 +600,7 @@ export async function initRegistry(): Promise<void> {
       }
       const hierarchyPath = asPath(asPluginId(pluginId));
       const storePath = `${hierarchyPath}/${descriptor.name}.jsonc`;
-      registerDescriptorPath(storePath, descriptor, hierarchyPath);
+      registerDescriptorPath(storePath, descriptor, hierarchyPath, pluginId);
       registered.push({ descriptor, storePath });
     }
 

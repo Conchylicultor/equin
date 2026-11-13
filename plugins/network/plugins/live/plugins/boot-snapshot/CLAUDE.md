@@ -83,7 +83,13 @@ Two kinds of preload, told apart by the `Resource.Declare` payload alone:
   `preloadTuples`, which loads each through the resource's own `load` (the
   loader alone, sequential per key — no flight, no commit watermark: nothing
   compares these values causally). Shipped in `tuples[key]` as
-  `{ params, value }`; the client hydrates each. Never L2-persisted. Config's
+  `{ params, value }`; the client hydrates each. Never L2-persisted.
+  **Per composition:** each enumerated tuple names the web plugin whose page
+  reads it, and `assembleBootSnapshot({ webPlugins })` loads only those of the
+  page's composition — the endpoint passes its backend's
+  `composedWebPlugins()`, the crawlable static host its composition's. A
+  config document of the mail app never rides the public website's snapshot
+  (2026-11-13: website snapshot 134 KB → 35 KB raw, 412 config documents → 59). Config's
   documents are the first user. A collection's `:rows` sibling served with
   `preloadRows: { idsOf }` is one too: its one tuple is the id set of another
   preloaded collection's boot value (network/live's *Preload*).

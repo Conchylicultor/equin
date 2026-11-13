@@ -3,6 +3,7 @@ import {
   defineExternalResource,
   defineResource,
   Resource as ResourceContribution,
+  type ComposedEntry,
 } from "@plugins/framework/plugins/server-core/core";
 import type {
   ReachPlan,
@@ -260,10 +261,19 @@ type PlainValue<T, P extends Record<string, string>> = LiveValue<T, P> & {
  * (the loader stays the only source of the value) and the client hydrates it
  * before first paint. Enumerate exactly what first paint reads — every tuple is
  * loaded on every page load.
+ *
+ * Each tuple names the web plugin whose page reads it (`plugin`, dot-form id;
+ * `value` the params): the boot snapshot ships only the tuples of plugins the
+ * serving composition's browser loads, so a composition never carries a tuple
+ * no surface of it can read.
  */
 interface PreloadParamsOption<P> {
-  preloadParams: () => P[] | Promise<P[]>;
+  preloadParams: PreloadParams<P>;
 }
+
+/** {@link PreloadParamsOption}'s enumeration: each boot tuple with its reader. */
+type PreloadParams<P> = () =>
+  readonly ComposedEntry<P>[] | Promise<readonly ComposedEntry<P>[]>;
 
 /**
  * The `needsMachine` a host serves paged values of, as every value: `live/server`
@@ -544,7 +554,7 @@ export function serveAnyValue<T, P extends Record<string, string>>(
     // biome-ignore lint/suspicious/noExplicitAny: a generic item's schema is invariant — erased, as page-source's `AnyPagedValue` is.
     | LivePagedPages<any, any, any>,
   opts: AnyServeOptions & {
-    preloadParams?: () => P[] | Promise<P[]>;
+    preloadParams?: PreloadParams<P>;
     reads?: AnyServedValueReads;
     code?: ServedCode;
   },
@@ -589,17 +599,20 @@ export function serveAnyValue<T, P extends Record<string, string>>(
   // resource's own `load` (the loader + schema parse), sequentially and settled
   // on its own. Deliberately NOT the runtime's flight path: that captures a
   // commit watermark (one DB query) per load, a floor nothing reads for a value
-  // that is only hydrated.
+  // that is only hydrated. Only the tuples a plugin of the composition's
+  // browser reads are loaded at all (`composedWebPlugins`, handed by the boot
+  // snapshot).
   const preloadTuples =
     enumerate === undefined
       ? undefined
-      : async () => {
+      : async (composedWebPlugins: ReadonlySet<string>) => {
           const out: (
             | { params: P; ok: true; value: unknown }
             | { params: P; ok: false; error: unknown }
           )[] = [];
-          for (const raw of await enumerate()) {
-            const params = canonicalParams(raw, optional);
+          for (const tuple of await enumerate()) {
+            if (!composedWebPlugins.has(tuple.plugin)) continue;
+            const params = canonicalParams(tuple.value, optional);
             try {
               out.push({
                 params,

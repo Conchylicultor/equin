@@ -62,6 +62,11 @@ type RenderSiteSnapshot = (opts: {
 const RENDER_BARREL =
   "apps/plugins/website/plugins/crawlable/plugins/snapshot-render/web/index.ts";
 
+/** A web plugin's dot-form id, from its plugin path (`a/plugins/b` → `a.b`). */
+function webPluginId(pluginPath: string): string {
+  return pluginPath.split("/plugins/").join(".");
+}
+
 const [composition, outDir, cluster] = process.argv.slice(2);
 if (outDir === undefined || cluster === undefined) {
   throw new Error(
@@ -82,7 +87,11 @@ const booted = await bootBrowserHost({
   onUnmatched: unmatchedApiResponse,
 });
 await booted.settled;
-const bootSnapshot = await assembleBootSnapshot();
+// The composition's own page boots from this snapshot: its tuples are those
+// the composition's web plugins read.
+const bootSnapshot = await assembleBootSnapshot({
+  webPlugins: new Set(host.webPlugins.map(webPluginId)),
+});
 const pages = [...WebsitePages.Page.getContributions()].sort((a, b) =>
   a.path.localeCompare(b.path),
 );
@@ -105,7 +114,7 @@ if (typeof render !== "function") {
 const { manifest, fragments, timings } = await render({
   entries: host.webPlugins.map((pluginPath) => ({
     pluginPath,
-    id: pluginPath.split("/plugins/").join("."),
+    id: webPluginId(pluginPath),
     loader: () =>
       importBarrel(
         join(REPO_ROOT, "plugins", pluginPath, "web/index.ts"),

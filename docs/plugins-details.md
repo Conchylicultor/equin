@@ -31162,6 +31162,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `boundedMembershipKeys`
           - `collectContributions`
           - `composedOnly`
+          - `composedWebPlugins`
           - `defineDeferredResource`
           - `defineExternalResource`
           - `defineHostService`
