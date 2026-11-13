@@ -130,6 +130,27 @@ describe("doctor.sh", () => {
     expect(out).toContain("go@1.27.1 rust@1.95.0");
   });
 
+  test("every release on disk but one not answering: names what mise said", async () => {
+    const m = machine();
+    healthy(m);
+    stub(
+      m.bin,
+      "mise",
+      [
+        'case "$1 $2" in',
+        '  "install --dry-run-code") echo "mise would install rust@1.99.1"; exit 1 ;;',
+        '  "ls --missing") ;;',
+        "esac",
+      ].join("\n"),
+    );
+    const { code, out } = await doctor(m);
+    expect(code).toBe(1);
+    expect(out).toContain("1 missing");
+    expect(out).toContain("Toolchain not usable");
+    expect(out).toContain("mise would install rust@1.99.1");
+    expect(out).toContain("$ mise install");
+  });
+
   test("shims that do not resolve are named, with the reshim fix", async () => {
     const m = machine();
     healthy(m);

@@ -119,11 +119,23 @@ else
 
   # The ceiling keeps a worktree from also reading main's mise.toml (see
   # plugins/infra/plugins/deps/plugins/mise/core/internal/mise.ts).
-  if ! MISE_CEILING_PATHS="${PWD%/*}" "$mise_bin" install --dry-run-code >/dev/null 2>&1; then
+  if ! dry="$(MISE_CEILING_PATHS="${PWD%/*}" "$mise_bin" install --dry-run-code 2>&1)"; then
     tools="$(MISE_CEILING_PATHS="${PWD%/*}" "$mise_bin" ls --missing 2>/dev/null | while read -r name version _; do printf '%s ' "$name@$version"; done)"
-    miss "Toolchain not installed: ${tools:-see \`mise ls --missing\`}" \
-      "The releases mise.lock records for this checkout." \
-      "mise install"
+    # `ls --missing` reads only the install dirs; the dry run also asks each
+    # tool whether it works (rust runs ~/.cargo/bin/rustup). When the dirs are
+    # all there but a tool did not answer — endpoint security (WithSecure
+    # XFENCE) holding the run while it asks the user — name what mise said,
+    # not a list that comes back empty.
+    if [ -n "$tools" ]; then
+      miss "Toolchain not installed: $tools" \
+        "The releases mise.lock records for this checkout." \
+        "mise install"
+    else
+      said="$(printf '%s\n' "$dry" | { n=0; while IFS= read -r line && [ "$n" -lt 5 ]; do printf '\n        %s' "$line"; n=$((n + 1)); done; })"
+      miss "Toolchain not usable: every release is on disk, but mise says:$said" \
+        "mise could not run a release of this checkout's toolchain." \
+        "mise install"
+    fi
   fi
 fi
 

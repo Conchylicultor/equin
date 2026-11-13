@@ -44,12 +44,14 @@ run = '''
 # hook. Registering the directory is path-glob based, so it covers worktrees
 # created by the server, by config-staging, AND by the Claude Code harness
 # alike. `settings add` does NOT dedupe (verified: a repeated setup run
-# appends a duplicate) — guarded below by checking first.
+# appends a duplicate) — guarded below by checking first. `settings get` has
+# no --json flag: passing one made the check always fail, so every run
+# appended another copy (hundreds, on a machine that has run setup for months).
 # Derive the MAIN checkout from git (worktrees live at <main>/.claude/worktrees)
 # so this is correct whether setup runs from the main clone or from a worktree.
 main_root="$(cd "$(dirname "$(git rev-parse --git-common-dir)")" && pwd)"
 trusted_wt_path="$main_root/.claude/worktrees"
-if ! mise settings get trusted_config_paths --json 2>/dev/null | grep -qF "\"$trusted_wt_path\""; then
+if ! mise settings get trusted_config_paths 2>/dev/null | grep -qF "\"$trusted_wt_path\""; then
   mise settings add trusted_config_paths "$trusted_wt_path"
 fi
 # Shims never install. With this on (mise's default), a `bun` run inside any

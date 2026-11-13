@@ -20,7 +20,9 @@ shim resolving (a symlink loop or a missing target is named with
 `mise reshim --force`); shims NOT installing tools on first use
 (`not_found_auto_install` off — `mise run setup` sets it); the
 locked toolchain installed (`mise install --dry-run-code`, tools named by
-`mise ls --missing`). Every one is a `miss` and fails the run.
+`mise ls --missing`; when every release is on disk but the dry run still fails — a tool
+mise could not run, e.g. endpoint security holding `~/.cargo/bin/rustup` on a prompt — it
+prints what mise said instead). Every one is a `miss` and fails the run.
 
 Claude Code is **not** checked: the app runs the build the Agent SDK ships
 (installed with the dependencies, after the doctor runs), and the user signs in

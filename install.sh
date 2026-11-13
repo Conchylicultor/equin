@@ -174,7 +174,10 @@ EOF
   # which fails this step if anything required is still missing.
   say "Installing the toolchain mise.lock records"
   "$MISE" trust
-  "$MISE" install
+  # A failed install keeps every release it did install, so re-running resumes.
+  if ! "$MISE" install; then
+    die "the toolchain did not install (above). Re-run the installer: it resumes where it stopped (cd $INSTALL_DIR && ./install.sh)."
+  fi
 
   # ── 5. Start, 6. build ─────────────────────────────────────────────────────
   # No Claude Code install: the app runs the build the Agent SDK ships (with
