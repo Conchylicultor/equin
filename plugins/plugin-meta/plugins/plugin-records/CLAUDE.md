@@ -442,6 +442,7 @@ its docblock records — and then lowered as readily as raised.
     - `verifyRecordsAgainst`
 - Cross-plugin:
   - Imported by:
+    - `database/migrations/schema-question`
     - `framework/cli/build`
     - `framework/cli/check`
     - `framework/cli/migrations`

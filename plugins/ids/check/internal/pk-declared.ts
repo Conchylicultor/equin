@@ -1,13 +1,16 @@
-import { relative, resolve } from "path";
 import type {
   Check,
   CheckResult,
 } from "@plugins/framework/plugins/tooling/core";
-import { schemaGlobFiles } from "@plugins/database/plugins/migrations/core";
-import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
-import { runPkProbe } from "./run-pk-probe";
+import {
+  askSchemaFiles,
+  firstFileOfEachTable,
+  splitSchemaAnswers,
+} from "@plugins/database/plugins/migrations/plugins/schema-question/core";
+import type { PkAnswer } from "./pk.question";
 
 const ID = "ids:pk-declared";
+const QUESTION = new URL("./pk.question.ts", import.meta.url).href;
 
 /**
  * Every table keyed by a single `id` column says what that id IS: a declared
@@ -15,9 +18,11 @@ const ID = "ids:pk-declared";
  * (`externalIdColumn("id", { reason })`). A bare `text("id").primaryKey()` is an
  * id nothing declares — no mint, no recognition, no chip.
  *
- * Read off the BUILT tables, not their source: a probe subprocess loads every
- * schema file the way drizzle-kit does and asks each table's id column how it
- * was declared (`idColumnDeclaration`). So a `defineEntity` whose field record
+ * Read off the BUILT tables, not their source: the schema question host loads
+ * the schema files the way drizzle-kit does and asks each table's id column
+ * how it was declared (`idColumnDeclaration`, `pk.question.ts`) — a record
+ * keyed by every schema file's closure, so a pass whose edit reaches none
+ * loads nothing. So a `defineEntity` whose field record
  * lives in another module counts the same as an inline `idColumn`. A table not
  * yet migrated is declared as `debt` in its own plugin's `exempt/index.ts`
  * (the schema file's path), so the rule is on from day one and the debt is
@@ -33,28 +38,28 @@ export const pkDeclared: Check = {
   },
   async run(ctx): Promise<CheckResult> {
     const exempt = await ctx.exempt(ID);
-    const root = await getWorktreeRoot();
-    const absFiles = (await schemaGlobFiles(root)).map((f) => resolve(root, f));
-    const probe = await runPkProbe(root, absFiles);
+    const probe = await askSchemaFiles<PkAnswer>(await ctx.repo(), {
+      name: ID,
+      module: QUESTION,
+    });
     if (probe.kind === "probe-failed") {
       return { ok: false, message: probe.message };
     }
+    const { loaded, loadFailures } = splitSchemaAnswers(probe.answers);
     const problems: string[] = [];
-    if (probe.loadFailures.length > 0) {
+    if (loadFailures.length > 0) {
       problems.push(
-        `${probe.loadFailures.length} schema file(s) failed to load, so their tables were not inspected:\n  ` +
-          probe.loadFailures
-            .map((f) => `${relative(root, f.file)} — ${f.error}`)
-            .join("\n  "),
+        `${loadFailures.length} schema file(s) failed to load, so their tables were not inspected:\n  ` +
+          loadFailures.map((f) => `${f.file} — ${f.error}`).join("\n  "),
       );
     }
-    const offenders = probe.undeclared
-      .map((u) => ({ ...u, rel: relative(root, u.file) }))
-      .filter((u) => !exempt.skips(u.rel));
+    const offenders = firstFileOfEachTable(loaded).filter(
+      (u) => !exempt.skips(u.file),
+    );
     if (offenders.length > 0) {
       problems.push(
         `${offenders.length} table id primary key(s) that name no id kind:\n  ` +
-          offenders.map((u) => `${u.table} — ${u.rel}`).join("\n  "),
+          offenders.map((u) => `${u.table} — ${u.file}`).join("\n  "),
       );
     }
     if (problems.length === 0) return { ok: true };

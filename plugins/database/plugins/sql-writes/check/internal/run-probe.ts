@@ -1,70 +1,73 @@
-import { resolve } from "path";
-import { MIGRATIONS_PLUGIN_DIR } from "@plugins/database/plugins/migrations/core";
+import { askSchemaFiles } from "@plugins/database/plugins/migrations/plugins/schema-question/core";
+import { IMPERATIVE_PUBLIC_TABLES } from "@plugins/database/plugins/derived-views/core";
 import type { RepoFiles } from "@plugins/framework/plugins/tooling/core";
-import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
-import {
-  closureRecord,
-  repoModuleOf,
-} from "@plugins/plugin-meta/plugins/plugin-records/core";
-import type { ProbeInput, ProbeOutput } from "./probe-types";
+import type {
+  FileRef,
+  ProbeFileAnswer,
+  ProbeInput,
+  ProbeOutput,
+  ProbeTable,
+  ResolvedRef,
+} from "./probe-types";
 
 export type ProbeResult =
   | ({ readonly kind: "ok" } & ProbeOutput)
   | { readonly kind: "probe-failed"; readonly message: string };
 
-const PROBE_URL = new URL("./schema-probe.ts", import.meta.url).href;
+const QUESTION = new URL("./schema.question.ts", import.meta.url).href;
 
 /**
- * Run `schema-probe.ts` in one subprocess, the way `derived-updated-at:declared`
- * runs its probe: from the migrations plugin dir (drizzle-kit's cwd) with
- * drizzle-kit's own environment, so a schema file loads exactly as migration
- * generation loads it, into a fresh derived-updatedAt registry.
- *
- * Its answer is a function of the code it loads — the probe script and every
- * schema file, each with its import closure — and of its input, so it is a
- * plugin record (`closureRecord`): the probe runs once per distinct schema
- * closure host-wide, and a pass after an edit no schema file reaches is a
- * lookup. A probe that failed to run (a crash, a timeout) is not stored.
+ * The database the code declares: `schema.question.ts` asked of every schema
+ * file by the schema question host (`askSchemaFiles`), which loads them the
+ * way drizzle-kit does — a record keyed by every schema file's closure and the
+ * refs asked, so a pass whose edit reaches no schema file is a lookup —
+ * assembled here: a table exported by two
+ * files is the first file's, and the imperative public tables are read in
+ * this process (plain data, `derived-views/core`).
  */
 export async function runSchemaProbe(
   repo: RepoFiles,
   input: ProbeInput,
 ): Promise<ProbeResult> {
-  const probe = repoModuleOf(repo, PROBE_URL);
-  const answer = await closureRecord<ProbeOutput, string>(
+  const refsOf = new Map<string, FileRef[]>();
+  for (const { file, ...ref } of input.refs)
+    refsOf.set(file, [...(refsOf.get(file) ?? []), ref]);
+  const probe = await askSchemaFiles<ProbeFileAnswer, readonly FileRef[]>(
     repo,
     {
       name: "sql-writes:schema-probe",
-      modules: [probe, ...input.files],
-      input,
-    },
-    async () => {
-      const result = await spawnCaptured(
-        [process.execPath, "--bun", resolve(repo.root, probe), repo.root],
-        {
-          cwd: resolve(repo.root, MIGRATIONS_PLUGIN_DIR),
-          env: { ...process.env, NO_COLOR: "1" },
-          stdin: JSON.stringify(input),
-          // Seconds of module loading; three minutes only bounds a schema file whose
-          // module scope never returns (same bound as schema-files-loadable).
-          timeoutMs: 180_000,
-        },
-      );
-      try {
-        if (result.exitCode !== 0)
-          throw new Error(`exit code ${result.exitCode}`);
-        return { ok: true, value: JSON.parse(result.stdout) as ProbeOutput };
-      } catch (err) {
-        return {
-          ok: false,
-          error:
-            `sql-writes schema probe failed (${String(err)}).\n` +
-            `exit code: ${result.exitCode}\nstderr:\n${result.stderr}\nstdout:\n${result.stdout.slice(0, 4000)}`,
-        };
-      }
+      module: QUESTION,
+      files: input.files,
+      input: (file) => refsOf.get(file) ?? [],
     },
   );
-  return answer.ok
-    ? { kind: "ok", ...answer.value }
-    : { kind: "probe-failed", message: answer.error };
+  if (probe.kind === "probe-failed") return probe;
+
+  const tables = new Map<string, ProbeTable>();
+  const refs: Record<string, ResolvedRef> = {};
+  const loadFailures: { file: string; error: string }[] = [];
+  for (const [file, answer] of probe.answers) {
+    if (answer.kind === "load-failed") {
+      loadFailures.push({ file, error: answer.error });
+      continue;
+    }
+    for (const t of answer.answer.tables) {
+      const key = `${t.schema}.${t.name}`;
+      if (!tables.has(key)) tables.set(key, t);
+    }
+    Object.assign(refs, answer.answer.refs);
+  }
+  // A ref into a file that did not load (or is no schema file) evaluates to nothing.
+  for (const ref of input.refs)
+    refs[ref.id] ??= {
+      kind: "other",
+      what: "a module the probe did not load",
+    };
+  return {
+    kind: "ok",
+    tables: [...tables.values()],
+    imperative: Object.values(IMPERATIVE_PUBLIC_TABLES),
+    refs,
+    loadFailures,
+  };
 }

@@ -8,12 +8,9 @@ import {
   markerCallSpans,
   maskSource,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
-import { schemaGlobFiles } from "@plugins/database/plugins/migrations/core";
+import { schemaFilesIn } from "@plugins/database/plugins/migrations/core";
 import { IMPERATIVE_PUBLIC_TABLE_CONSTS } from "@plugins/database/plugins/derived-views/core";
-import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
-
-type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
-type Check = { id: string; description: string; run(): Promise<CheckResult> };
+import type { Check } from "@plugins/framework/plugins/tooling/core";
 
 /**
  * Table factories — functions that wrap `pgTable()` with a dynamic name and
@@ -122,12 +119,13 @@ const check: Check = {
   id: "table-defs-in-schema-glob",
   description:
     "Every concrete table definition (pgTable / table-factory call) must live in a drizzle schema-glob file, or it silently vanishes from migration generation",
-  async run() {
-    const root = await getWorktreeRoot();
+  async run(ctx) {
+    const repo = await ctx.repo();
+    const root = repo.root;
 
-    // 1. Glob-matched file set — derived from drizzle.config.ts (single source),
-    // enumerated by the shared migrations/core helper (fails loud if unparseable).
-    const globFiles = new Set(await schemaGlobFiles(root));
+    // 1. Glob-matched file set — the same patterns drizzle.config.ts reads,
+    // matched over the run's file set (no walk of the disk).
+    const globFiles = new Set(schemaFilesIn(repo));
 
     const offenders = new Map<string, string>(); // key `path:line` → formatted line
 

@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-database-migrations-schema-question",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Schema questions: askSchemaFiles asks a question module about every drizzle schema file, loaded the way drizzle-kit loads them (require() under bun --bun from the migrations dir) by one probe host; each (question, file) answer is a plugin record keyed by that file's own closure, so a check pass loads only the schema files an edit reaches, and every check's misses share one process. Build tooling, apart from migrations/core so the browser hosts that import that barrel never reach the record store."
+}

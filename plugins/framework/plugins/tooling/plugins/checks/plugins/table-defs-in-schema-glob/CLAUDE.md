@@ -6,7 +6,8 @@ drizzle-kit's schema glob (`server/**/internal/tables.ts`, `tables-*.ts`,
 a `pgTable(...)` — or a table-factory call like `defineLink(...)` — in any other
 server file is invisible to migration generation: drizzle treats the table as
 dropped and emits a spurious `DROP TABLE` with no error. The glob-matched file
-set is enumerated by `schemaGlobFiles()` from **`SCHEMA_GLOBS`**
+set is matched by `schemaFilesIn(ctx.repo())` (the run's file set, no disk
+walk) from **`SCHEMA_GLOBS`**
 (`plugins/database/plugins/migrations/core/internal/schema-glob-patterns.ts`) —
 the one declaration `drizzle.config.ts` also builds its `schema:` array from, so
 this check and migration generation provably scan the same file set (the

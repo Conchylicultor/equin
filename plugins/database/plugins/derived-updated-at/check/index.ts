@@ -1,12 +1,13 @@
-import { relative, resolve } from "path";
-import { schemaGlobFiles } from "@plugins/database/plugins/migrations/core";
-import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
-import { runDeclaredProbe } from "./internal/run-probe";
+import type { Check } from "@plugins/framework/plugins/tooling/core";
+import {
+  askSchemaFiles,
+  firstFileOfEachTable,
+  splitSchemaAnswers,
+} from "@plugins/database/plugins/migrations/plugins/schema-question/core";
+import type { DeclaredAnswer } from "./internal/declared.question";
 
-// Inlined minimal Check shape (mirrors the database/migrations checks) to avoid
-// a cross-plugin import of the framework Check type from a check file.
-type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
-type Check = { id: string; description: string; run(): Promise<CheckResult> };
+const QUESTION = new URL("./internal/declared.question.ts", import.meta.url)
+  .href;
 
 // Closes the derived-updatedAt set: a column named `updated_at` means "derived",
 // with no exceptions. Static (the schema globs are the complete,
@@ -17,29 +18,28 @@ const declaredCheck: Check = {
   id: "derived-updated-at:declared",
   description:
     "every drizzle schema table with an updated_at column declares how it moves (defineEntity meta.updatedAt / deriveUpdatedAt)",
-  async run() {
-    const root = await getWorktreeRoot();
-    const absFiles = (await schemaGlobFiles(root)).map((f) => resolve(root, f));
-    const probe = await runDeclaredProbe(root, absFiles);
+  async run(ctx) {
+    const probe = await askSchemaFiles<DeclaredAnswer>(await ctx.repo(), {
+      name: "derived-updated-at:declared",
+      module: QUESTION,
+    });
     if (probe.kind === "probe-failed") {
       return { ok: false, message: probe.message };
     }
+    const { loaded, loadFailures } = splitSchemaAnswers(probe.answers);
+    const undeclared = firstFileOfEachTable(loaded);
     const problems: string[] = [];
-    if (probe.loadFailures.length > 0) {
+    if (loadFailures.length > 0) {
       problems.push(
-        `${probe.loadFailures.length} schema file(s) failed to load, so their tables were not inspected:\n` +
-          probe.loadFailures
-            .map((f) => `  ${relative(root, f.file)} — ${f.error}`)
-            .join("\n"),
+        `${loadFailures.length} schema file(s) failed to load, so their tables were not inspected:\n` +
+          loadFailures.map((f) => `  ${f.file} — ${f.error}`).join("\n"),
       );
     }
-    if (probe.undeclared.length > 0) {
+    if (undeclared.length > 0) {
       problems.push(
-        `${probe.undeclared.length} table(s) have an updated_at column with no derived-updatedAt declaration ` +
+        `${undeclared.length} table(s) have an updated_at column with no derived-updatedAt declaration ` +
           `(it is stamped by hand, so a no-op write moves it and a forgotten stamp does not):\n` +
-          probe.undeclared
-            .map((u) => `  ${u.table} — ${relative(root, u.file)}`)
-            .join("\n"),
+          undeclared.map((u) => `  ${u.table} — ${u.file}`).join("\n"),
       );
     }
     if (problems.length === 0) return { ok: true };

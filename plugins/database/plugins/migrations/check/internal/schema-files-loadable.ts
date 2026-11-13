@@ -1,15 +1,10 @@
-import { schemaLoadFailures } from "@plugins/database/plugins/migrations/core";
-import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
+import type { Check } from "@plugins/framework/plugins/tooling/core";
+import {
+  askSchemaFiles,
+  splitSchemaAnswers,
+} from "@plugins/database/plugins/migrations/plugins/schema-question/core";
 
-// Inlined minimal Check shape (mirrors the sibling migration checks) to avoid a
-// cross-plugin import of the framework Check type from a check file.
-type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
-type Check = {
-  id: string;
-  description: string;
-  alwaysRun?: boolean;
-  run(): Promise<CheckResult>;
-};
+const QUESTION = new URL("./loads.question.ts", import.meta.url).href;
 
 const schemaFilesLoadableCheck: Check = {
   id: "schema-files-loadable",
@@ -17,11 +12,19 @@ const schemaFilesLoadableCheck: Check = {
     "every drizzle schema-glob file loads synchronously (drizzle-kit require())",
   // Cheap structural invariant: guard even `./equin build --skip-checks`.
   alwaysRun: true,
-  async run() {
-    // The probe is shared with `generateMigration`, which runs it before every
-    // drizzle-kit generation; this check is the same question asked on every
-    // check pass, so a broken file is named before anyone generates.
-    const failures = await schemaLoadFailures(await getWorktreeRoot());
+  async run(ctx) {
+    // Every file loaded the way drizzle-kit loads them, by the schema question
+    // host — a record keyed by every schema file's closure, so a pass whose
+    // edit reaches none loads nothing. `generateMigration` still loads every file itself (`probeSchema`)
+    // before it trusts a drizzle-kit run; this check names a broken file on
+    // every pass, before anyone generates.
+    const probe = await askSchemaFiles<null>(await ctx.repo(), {
+      name: "schema-files-loadable",
+      module: QUESTION,
+    });
+    if (probe.kind === "probe-failed")
+      return { ok: false, message: probe.message };
+    const failures = splitSchemaAnswers(probe.answers).loadFailures;
 
     if (failures.length > 0) {
       return {

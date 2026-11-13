@@ -803,3 +803,40 @@ Filed: the four other schema probes (`derived-updated-at:declared`,
 the cli bootstrap / declaration checks, guards, sentinel); then the declared
 whole-tree read. Sidequests: `snapshot-chain-intact`'s ~7 CPU-s per pass,
 `web-loads-portable`'s 8.5k-file import scan.
+
+### The four other schema probes (2026-11-13)
+
+**Before.** `derived-updated-at:declared`, `ids:pk-declared` and
+`schema-files-loadable` each spawned a bun subprocess that `require()`d all
+145 schema files (their static union is 1,887 modules) on every pass, whatever
+the edit; each also walked the disk for the schema files (`schemaGlobFiles`,
+3.6 s at load ~20). `table-defs-in-schema-glob` runs no probe; its cost was that
+walk plus its git greps. Measured directly at load ~22: the three probes took
+7.4 s, 4.4 s and 11.6 s; in the check log at load ~20, 1.5–3.3 s each.
+
+**Root cause.** The answer of each probe is a function of the schema files'
+code, but nothing kept it: every pass loaded the whole closure three times.
+
+**Fix.** `database/migrations/schema-question` (`askSchemaFiles`): a check is a
+question module (`answer(file, exports, input)`) and one call. One probe host
+loads the files drizzle-kit's way, in one process, and answers every question
+asked; each question's answer is ONE `closureRecord` keyed by the host's, the
+question's and every schema file's module Merkle key. Misses of all questions
+in a pass share one load (a coalescer per checkout and file set). The checks
+read the schema files from `ctx.repo()` (no disk walk).
+
+**Why the whole set, not a record per file.** Measured: of 400 main commits,
+36% reach some schema file's closure, but a median of only 3 of 145 files —
+per-file keys looked O(changes). They are wrong: the files share one process
+(as under drizzle-kit), so module eval shares registries — two tables declaring
+one derived updatedAt differently make the SECOND file to load throw. A file's
+answer is a function of the whole set loaded with it (pinned by the test
+"fixing one schema file re-answers another whose load it broke"). Loading each
+file alone would be sound per file but costs a bun start plus ~475 shared
+modules per file, and no longer sees the conflicts drizzle-kit hits.
+
+| (load 18–28, per check, wall) | before | after |
+| --- | ---: | ---: |
+| edit reaching no schema file (64% of commits) | 1.5–3.3 s, a full load each | 0.5–1.4 s, a lookup (one shared graph walk) |
+| edit to one schema file | 3 full loads + 4 disk walks | one shared load (1.1–1.7 s for all four checks) |
+| cold (new question code) | — | 4.7–6 s, two batched loads |

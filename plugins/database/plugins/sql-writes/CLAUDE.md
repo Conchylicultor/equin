@@ -79,24 +79,23 @@ barrels, so the server's typed tables are unreachable from them, and an
 out-of-band row is often what the script verifies (the change feed carrying
 it to the page).
 
-## The declared schema (`check/internal/model.ts`, `schema-probe.ts`)
+## The declared schema (`check/internal/model.ts`, `schema.question.ts`)
 
 No hand-kept list. Two sources:
 
-- **Drizzle** — a subprocess (`schema-probe.ts`, run like
-  `derived-updated-at:declared`'s probe: `bun --bun` from the migrations plugin
-  dir) `require()`s every schema-glob file and reports every exported
-  `PgTable`: physical columns, which are required, which are unwritten (a
-  generated column, or the column `registeredDerivedUpdatedAt()` names).
-  `IMPERATIVE_PUBLIC_TABLES` names the public tables made outside drizzle.
-  Its answer is a plugin record (`closureRecord`, `check/internal/run-probe.ts`):
-  keyed by the probe script's and every schema file's module Merkle key (each
-  over its import closure), its input and the npm code they import — so the
-  subprocess runs once per distinct schema closure host-wide, and a pass after
-  an edit no schema file reaches is a lookup (~0.5 s of graph walk, against a
-  1–20 s subprocess depending on host load). Its input and answer name files
-  repo-relative (the probe is handed the checkout root as its argument), since
-  a record is shared by every checkout.
+- **Drizzle** — a schema question (`schema.question.ts`, through migrations'
+  `askSchemaFiles`: the probe host `require()`s each schema-glob file the way
+  drizzle-kit does) reports every `PgTable` each file exports: physical
+  columns, which are required, which are unwritten (a generated column, or the
+  column `registeredDerivedUpdatedAt()` names), and what the export refs the
+  holes name in that file evaluate to. `IMPERATIVE_PUBLIC_TABLES` names the
+  public tables made outside drizzle (read in the check process,
+  `run-probe.ts`). The answer is a plugin record keyed by the probe host's,
+  the question's and every schema file's module Merkle key (each over its
+  import closure), the refs asked and the npm code — so a pass whose edit
+  reaches no schema file is a lookup, and the misses of every schema check of
+  the pass share one load. A table exported by two
+  files is the first file's (path order).
 - **Hand-written DDL** found in source: `CREATE TABLE` (temp included) declares
   a table and its columns; `ALTER TABLE … ADD / DROP COLUMN` and `RENAME
   COLUMN` apply after every CREATE. An imperative table whose DDL is generated

@@ -1,4 +1,4 @@
-export { schemaFilesIn, schemaGlobFiles } from "./internal/schema-glob";
+export { schemaFilesIn } from "./internal/schema-glob";
 // "Does every schema-glob file load the way drizzle-kit loads it?" — asked by
 // the `schema-files-loadable` check and by the CLI's `generateMigration` before
 // it trusts a drizzle-kit run (which drops an unloadable file silently).

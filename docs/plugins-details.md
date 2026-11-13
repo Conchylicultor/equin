@@ -23332,7 +23332,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `renderStatements`
           - `SCHEMA_SNAPSHOT_FILE`
           - `schemaFilesIn`
-          - `schemaGlobFiles`
           - `schemaLoadFailures`
           - `schemaMigrationFiles`
           - `schemaSnapshotPath`
@@ -23346,6 +23345,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `database`
           - `database/migrations/bundled-source`
+          - `database/migrations/schema-question`
           - `framework/browser-server/bun-host`
           - `framework/cli/migrations`
           - `framework/cli/regen-migrations`
@@ -23401,6 +23401,23 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `database/migrations`
               - `framework/cli/migrations`
+        - **`schema-question`** — Schema questions: askSchemaFiles asks a question module about every drizzle schema file, loaded the way drizzle-kit loads them (require() under bun --bun from the migrations dir) by one probe host; each (question, file) answer is a plugin record keyed by that file's own closure, so a check pass loads only the schema files an edit reaches, and every check's misses share one process. Build tooling, apart from migrations/core so the browser hosts that import that barrel never reach the record store.
+          - Core:
+            - Uses:
+              - `database/migrations.MIGRATIONS_PLUGIN_DIR`
+              - `database/migrations.schemaFilesIn`
+              - `infra/spawn.spawnCaptured`
+              - `packages/coalesce.createKeyedCoalescer`
+              - `plugin-meta/plugin-records.closureRecord`
+              - `plugin-meta/plugin-records.repoModuleOf`
+            - Exports (types):
+              - `SchemaAnswers`
+              - `SchemaFileAnswer`
+              - `SchemaQuestion`
+            - Exports (values):
+              - `askSchemaFiles`
+              - `firstFileOfEachTable`
+              - `splitSchemaAnswers`
     - **`pgbouncer`** — PgBouncer connection pooler for the embedded Postgres cluster: path constants for connection routing, and this machine's config rendered from the lane table (one server pool per connection lane).
       - Server:
         - Uses:
@@ -37891,13 +37908,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `spawnPassthrough`
           - `spawnToFile`
       - Cross-plugin:
-        - Imported by: 94 plugins — full list in [`plugins/infra/plugins/spawn/REFERENCE.md`](../plugins/infra/plugins/spawn/REFERENCE.md)
+        - Imported by: 95 plugins — full list in [`plugins/infra/plugins/spawn/REFERENCE.md`](../plugins/infra/plugins/spawn/REFERENCE.md)
           - `framework` ×30
           - `infra` ×25
           - `apps` ×9
           - `debug` ×5
+          - `database` ×4
           - `build` ×3
-          - `database` ×3
           - `code-explorer` ×2
           - `conversations` ×2
           - `plugin-meta` ×2
@@ -40795,11 +40812,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
   - Plugins:
     - **`coalesce`** — Trigger coalescer: createCoalescer / createKeyedCoalescer run a reaction at most once at a time per key and fold every trigger that lands mid-run into ONE trailing run (its items merged), so however many triggers arrive the work is bounded to one running plus one pending per key — and a trigger never joins a run that started before it.
       - Cross-plugin:
-        - Imported by: 24 plugins — full list in [`plugins/packages/plugins/coalesce/REFERENCE.md`](../plugins/packages/plugins/coalesce/REFERENCE.md)
+        - Imported by: 25 plugins — full list in [`plugins/packages/plugins/coalesce/REFERENCE.md`](../plugins/packages/plugins/coalesce/REFERENCE.md)
           - `infra` ×11
           - `conversations` ×3
           - `debug` ×3
           - `apps` ×2
+          - `database/migrations/schema-question`
           - `framework/tooling/web-artifacts`
           - `packages/watched-memo`
           - `plugin-meta/plugin-tree`
@@ -45839,6 +45857,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `verifyRecordsAgainst`
       - Cross-plugin:
         - Imported by:
+          - `database/migrations/schema-question`
           - `framework/cli/build`
           - `framework/cli/check`
           - `framework/cli/migrations`

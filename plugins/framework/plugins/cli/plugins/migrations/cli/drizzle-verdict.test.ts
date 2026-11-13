@@ -2,7 +2,6 @@ import { beforeAll, describe, expect, test } from "bun:test";
 import {
   MIGRATIONS_DATA_DIR,
   schemaFilesIn,
-  schemaGlobFiles,
 } from "@plugins/database/plugins/migrations/core";
 import {
   loadRepoSnapshot,
@@ -79,10 +78,6 @@ beforeAll(async () => {
 const OTHER_BLOB = "0".repeat(40);
 
 describe("drizzleVerdictKey", () => {
-  test("the snapshot's schema files are the ones drizzle-kit globs", async () => {
-    expect(schema).toEqual(await schemaGlobFiles(snapshot.root));
-  });
-
   test("is stable for the same inputs", async () => {
     expect((await drizzleVerdictKey(snapshot, store)).key).toBe(base);
   });

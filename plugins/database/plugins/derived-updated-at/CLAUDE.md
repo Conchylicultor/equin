@@ -102,14 +102,16 @@ the declaration site in the totality error.
 
 ## The check: `derived-updated-at:declared`
 
-`check/index.ts` closes the set. A subprocess (`check/internal/declared-probe.ts`,
-run like `schema-files-loadable`'s probe: `bun --bun`, from the migrations
-plugin dir, drizzle-kit's environment) `require()`s every schema-glob file
-(`schemaGlobFiles`), walks their top-level exports for drizzle `PgTable`s with a
-column physically named `updated_at`, and fails for any whose table is not in
-`registeredDerivedUpdatedAt()` — naming the table and its file. The probe
-imports the registry through the same `@plugins/…/derived-updated-at/server`
-specifier the schema files use, so it reads the one registry they filled. A
+`check/index.ts` closes the set. It asks a schema question
+(`check/internal/declared.question.ts`, through migrations' `askSchemaFiles`:
+the probe host `require()`s each schema-glob file the way drizzle-kit does)
+of every schema file: its top-level drizzle `PgTable`s with a column
+physically named `updated_at` whose table is not in
+`registeredDerivedUpdatedAt()` — and fails naming each such table and its
+file. The question imports the registry through the same
+`@plugins/…/derived-updated-at/server` specifier the schema files use, so it
+reads the one registry they filled. The answer is a plugin record keyed
+by every schema file's closure: a pass whose edit reaches none is a lookup. A
 schema file that fails to load fails the check too (its tables went unseen).
 
 It is static rather than a boot assert because a composition namespace loads
