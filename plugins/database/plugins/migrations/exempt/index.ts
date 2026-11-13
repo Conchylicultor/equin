@@ -24,7 +24,7 @@ export default [
       "core/internal/schema-load-probe.ts",
       "core/internal/schema-snapshot.ts",
       "core/internal/snapshot-bodies.ts",
-      "core/internal/snapshot-dag.ts",
+      "core/internal/migration-data.ts",
     ],
     kind: "debt",
     task: "task-1792338443-riwqev",
@@ -48,7 +48,6 @@ export default [
     paths: [
       "core/internal/drizzle-stage.ts",
       "core/internal/schema-snapshot.ts",
-      "core/internal/snapshot-bodies.ts",
     ],
     kind: "sanctioned",
     reason:

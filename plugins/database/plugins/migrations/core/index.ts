@@ -39,8 +39,14 @@ export {
   NULL_SNAPSHOT_ID,
   readSnapshotNodes,
   schemaSnapshotState,
+  schemaSnapshotStateIn,
   snapshotAncestors,
 } from "./internal/snapshot-dag";
+// The data dir's files as the snapshot readers read them: off disk, or a
+// caller's own file set (a check's recorded `ctx.repo()`, so its read-set
+// covers every file the verdict read).
+export { legacySnapshotFilesIn } from "./internal/migration-data";
+export type { MigrationData } from "./internal/migration-data";
 export type {
   SnapshotDag,
   SnapshotDagProblem,
@@ -115,6 +121,7 @@ export {
   publishedMigrationOrigins,
   publishedMigrationRefs,
   publishedMigrationRefsSignature,
+  publishedMigrationTreesSignature,
 } from "./internal/published";
 export type { PublishedMergeBase, PublishedRef } from "./internal/published";
 export {

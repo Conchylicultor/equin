@@ -13,6 +13,11 @@ import {
   type ValidateResult,
 } from "../read-set";
 import type { CheckCodeKey } from "../check-code-key";
+import { recordingRepoFiles } from "../repo-set";
+import {
+  repoSnapshotOver,
+  type RepoSnapshot,
+} from "@plugins/framework/plugins/tooling/core";
 
 /**
  * The code key a fixture's read-sets are recorded and replayed under, unless a
@@ -40,6 +45,15 @@ export interface ReadSetRepo {
     recordReads: (view: FileSystemView) => void | Promise<void>,
     codeKey?: CheckCodeKey,
   ): Promise<ReadSet>;
+  /**
+   * Run `check` with what a check's `ctx.repo()` is under the runner: the
+   * current tree's file set, every listing and read recorded into the
+   * returned read-set. Hands back what `check` returned, too.
+   */
+  recordRepo<T>(
+    check: (repo: RepoSnapshot) => Promise<T>,
+    codeKey?: CheckCodeKey,
+  ): Promise<{ readSet: ReadSet; result: T }>;
   /** Validate `readSet` against a fresh snapshot of the current tree, for the code `codeKey` names. */
   revalidate(readSet: ReadSet, codeKey?: CheckCodeKey): Promise<ValidateResult>;
   /** A fresh snapshot of the current tree — what `ctx.snapshot()` hands a check. */
@@ -87,6 +101,15 @@ export async function createReadSetRepo(
       const view = (await snapshot()).createRecordingView(codeKey);
       await recordReads(view);
       return view.readSet();
+    },
+    async recordRepo(check, codeKey = FIXTURE_CODE_KEY) {
+      const snap = await snapshot();
+      const view = snap.createRecordingView(codeKey);
+      const base = repoSnapshotOver(snap.root, snap.paths(), (p) =>
+        snap.blobSha(p),
+      );
+      const result = await check(recordingRepoFiles(base, view));
+      return { readSet: view.readSet(), result };
     },
     async revalidate(readSet, codeKey = FIXTURE_CODE_KEY) {
       return validate(readSet, await snapshot(), codeKey);

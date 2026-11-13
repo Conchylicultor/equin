@@ -29,11 +29,8 @@
  * answered throws, naming the id and what to do (a shallow clone has to fetch
  * its history) — a missing body is never stood in for.
  */
-import {
-  existsSync,
-  readFileSync,
-} from "@plugins/packages/plugins/timed-fs/core";
 import { relative } from "path";
+import { yieldMacrotask } from "@plugins/packages/plugins/macrotask-yield/core";
 import {
   spawnCaptured,
   spawnExpectOk,
@@ -48,13 +45,10 @@ import {
   legacySnapshotFileOf,
   parseSnapshotHead,
   SCHEMA_SNAPSHOT_FILE,
-  schemaSnapshotPath,
 } from "./schema-snapshot";
+import { diskMigrationData, type MigrationData } from "./migration-data";
 import type { Snapshot } from "./snapshot-merge";
-import {
-  joinAppPath,
-  type AppPath,
-} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
 /**
  * No source holds snapshot `id`'s body: not the working tree, not git (an
@@ -95,10 +89,66 @@ export interface SnapshotBodies {
 const GIT_TIMEOUT_MS = 120_000;
 
 /**
+ * The text of each git object `specs` names (`<rev>:<path>`), in order, read
+ * with one `git cat-file --batch`; null for one git does not have. The batch
+ * protocol frames each object as `<sha> <type> <size>\n<size bytes>\n`, or
+ * `<spec> missing\n`, in request order.
+ */
+async function readBlobs(
+  root: string,
+  specs: readonly string[],
+): Promise<(string | null)[]> {
+  const argv = ["git", "cat-file", "--batch"];
+  const r = await spawnCaptured(argv, {
+    cwd: root,
+    stdin: specs.map((spec) => `${spec}\n`).join(""),
+    timeoutMs: GIT_TIMEOUT_MS,
+  });
+  if (r.timedOut)
+    throw new Error(`${argv.join(" ")} timed out (${specs.length} object(s))`);
+  if (r.exitCode !== 0)
+    throw new Error(
+      `${argv.join(" ")} failed (exit ${r.exitCode}): ${r.stderr.trim()}`,
+    );
+  const buf = r.stdoutBytes;
+  const decoder = new TextDecoder();
+  const out: (string | null)[] = [];
+  let i = 0;
+  for (const spec of specs) {
+    const nl = buf.indexOf(0x0a, i);
+    if (nl < 0)
+      throw new Error(`git cat-file --batch: output ends before ${spec}`);
+    const header = decoder.decode(buf.subarray(i, nl));
+    i = nl + 1;
+    if (header.endsWith(" missing") || header.endsWith(" ambiguous")) {
+      out.push(null);
+      continue;
+    }
+    const size = Number.parseInt(header.split(" ")[2] ?? "", 10);
+    if (!Number.isFinite(size) || i + size > buf.length)
+      throw new Error(
+        `git cat-file --batch: unreadable header "${header}" for ${spec}`,
+      );
+    out.push(decoder.decode(buf.subarray(i, i + size)));
+    i += size + 1;
+  }
+  return out;
+}
+
+/**
  * The resolver for the data dir `dataDir` of the git checkout at `root`.
  * Nothing is read until a body is asked for.
+ *
+ * `files`: where the data dir's working-tree files are read — off disk by
+ * default, or a check's recorded file set (`./migration-data`), so every
+ * working-tree read the resolver makes is one the check's read-set holds.
+ * Git paths are always `dataDir`'s.
  */
-export function snapshotBodies(root: string, dataDir: AppPath): SnapshotBodies {
+export function snapshotBodies(
+  root: string,
+  dataDir: AppPath,
+  files: MigrationData = diskMigrationData(dataDir),
+): SnapshotBodies {
   const cache = new Map<string, string>();
   const dataRel = relative(root, dataDir);
   const repoPath = (rel: string) =>
@@ -134,15 +184,31 @@ export function snapshotBodies(root: string, dataDir: AppPath): SnapshotBodies {
   const headId = (text: string, where: string) =>
     parseSnapshotHead(text.slice(0, 1024), where).id;
 
-  // `<rev>:<path>`, or null when git has no such object at that rev.
-  const show = async (rev: string, path: string): Promise<string | null> => {
-    const r = await spawnCaptured(["git", "show", `${rev}:${path}`], {
-      cwd: root,
-      timeoutMs: GIT_TIMEOUT_MS,
-    });
-    if (r.timedOut) throw new Error(`git show ${rev}:${path} timed out`);
-    return r.exitCode === 0 ? r.stdout : null;
+  // `<rev>:<path>`, or null when git has no such object at that rev. Every
+  // read asked for before the next macrotask goes into ONE `git cat-file
+  // --batch`: a git start costs ~40 ms of CPU in this repo, and a body read
+  // with the others shares git's delta-base cache (each tip file is a delta of
+  // the last), so 72 bodies cost one start (~0.1 s), not 72 (~3 CPU-s).
+  const pending: {
+    spec: string;
+    resolve: (text: string | null) => void;
+    reject: (err: unknown) => void;
+  }[] = [];
+  const flush = (): void => {
+    const batch = pending.splice(0);
+    void readBlobs(
+      root,
+      batch.map((b) => b.spec),
+    ).then(
+      (texts) => batch.forEach((b, i) => b.resolve(texts[i]!)),
+      (err: unknown) => batch.forEach((b) => b.reject(err)),
+    );
   };
+  const show = (rev: string, path: string): Promise<string | null> =>
+    new Promise((resolve, reject) => {
+      if (pending.length === 0) void yieldMacrotask().then(flush);
+      pending.push({ spec: `${rev}:${path}`, resolve, reject });
+    });
 
   const shallowHint = async (): Promise<string> => {
     const r = await git(["rev-parse", "--is-shallow-repository"]);
@@ -228,7 +294,7 @@ export function snapshotBodies(root: string, dataDir: AppPath): SnapshotBodies {
       );
     computing.add(node.id);
     try {
-      const dag = analyzeSnapshotDag(await readSnapshotNodes(dataDir));
+      const dag = analyzeSnapshotDag(await readSnapshotNodes(files));
       const fold = await foldMergeParents(
         dag,
         parents,
@@ -254,29 +320,25 @@ export function snapshotBodies(root: string, dataDir: AppPath): SnapshotBodies {
     const cached = cache.get(id);
     if (cached !== undefined) return cached;
 
-    const tipPath = schemaSnapshotPath(dataDir);
-    if (existsSync(tipPath)) {
-      const tip = readFileSync(tipPath, "utf8");
-      if (headId(tip, tipPath) === id) {
+    const tipRel = `meta/${SCHEMA_SNAPSHOT_FILE}`;
+    // The head first: every body asked for reads it, and only one is the tip.
+    const tipStart = await files.start(tipRel);
+    if (tipStart !== null && headId(tipStart, tipRel) === id) {
+      const tip = await files.text(tipRel);
+      if (tip !== null && headId(tip, tipRel) === id) {
         cache.set(id, tip);
         return tip;
       }
     }
     // Read fresh each miss: the generator adds and deletes nodes as it runs.
     const node =
-      known ?? (await readSnapshotNodes(dataDir)).find((n) => n.id === id);
+      known ?? (await readSnapshotNodes(files)).find((n) => n.id === id);
     if (node === undefined)
       throw new Error(`snapshot ${id} is not a node of the snapshot DAG`);
-    const legacyPath = joinAppPath(
-      dataDir,
-      "meta",
-      legacySnapshotFileOf(node.file),
-    );
+    const legacyRel = `meta/${legacySnapshotFileOf(node.file)}`;
     let found: string | null = null;
-    if (existsSync(legacyPath)) {
-      const legacy = readFileSync(legacyPath, "utf8");
-      if (headId(legacy, legacyPath) === id) found = legacy;
-    }
+    const legacy = await files.text(legacyRel);
+    if (legacy !== null && headId(legacy, legacyRel) === id) found = legacy;
     found ??=
       node.mergeParents !== null
         ? await recomputeMerge(node, node.mergeParents)

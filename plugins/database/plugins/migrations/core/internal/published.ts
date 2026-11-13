@@ -103,6 +103,51 @@ export async function publishedMigrationRefsSignature(
   return refs.map((r) => `${r.ref}=${r.sha}`).join(",");
 }
 
+/**
+ * The published set's migration CONTENT, as a cache-signature spelling: each
+ * published ref and the tree id of `MIGRATIONS_DATA_DIR` in it (`-` where it
+ * has none). Unlike `publishedMigrationRefsSignature`, a `main` that moves
+ * without touching a migration keeps it — so a check whose verdict depends on
+ * the published files (not on the commits around them) is re-run only when a
+ * migration lands, not on every push. One `git cat-file` for every ref.
+ */
+export async function publishedMigrationTreesSignature(
+  root: string,
+): Promise<string> {
+  const refs = await publishedMigrationRefs(root);
+  const result = await spawnCaptured(
+    ["git", "cat-file", "--batch-check=%(objectname) %(objecttype)"],
+    {
+      cwd: root,
+      timeoutMs: GIT_TIMEOUT_MS,
+      stdin: refs.map((r) => `${r.sha}:${MIGRATIONS_DATA_DIR}\n`).join(""),
+    },
+  );
+  if (result.timedOut || result.exitCode !== 0)
+    throw new Error(
+      `git cat-file --batch-check failed in ${root} (exit ${result.exitCode}${result.timedOut ? ", timed out" : ""}): ${result.stderr.trim()}`,
+    );
+  const lines = result.stdout.split("\n").filter(Boolean);
+  if (lines.length !== refs.length)
+    throw new Error(
+      `git cat-file --batch-check answered ${lines.length} line(s) for ${refs.length} ref(s): ${result.stdout}`,
+    );
+  return refs
+    .map((r, i) => {
+      const line = lines[i]!;
+      // `<object> tree`, or `<input> missing` for a ref with no data dir.
+      const tree = line.endsWith(" tree")
+        ? line.slice(0, -" tree".length)
+        : "-";
+      if (tree === "-" && !line.endsWith(" missing"))
+        throw new Error(
+          `${r.ref}:${MIGRATIONS_DATA_DIR} is not a tree: ${line}`,
+        );
+      return `${r.ref}=${tree}`;
+    })
+    .join(",");
+}
+
 /** The paths under `MIGRATIONS_DATA_DIR` at `rev`, with their blob ids. */
 export async function migrationTreeAt(
   root: string,

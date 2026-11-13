@@ -19,8 +19,35 @@ Last, every header id that must have a body resolves to one through
 `snapshotBodies`: every merge node (recomputed from its parents — never read
 from git), every published header node (git) and the tip (the working tree).
 A branch-local ordinary node below the tip is skipped: push's regen
-consolidates it into the one migration whose body is committed as the tip. The
-cache signature folds in the published refs.
+consolidates it into the one migration whose body is committed as the tip.
+Every body is asked at once, with its node (so the data dir is not re-read per
+body), and the resolver reads all the ones git holds with one `git cat-file
+--batch`.
+
+## Input-keyed: re-run only when a migration changes
+
+The verdict reads the working tree only through `ctx.repo()` — the data dir's
+membership and every file it opens (`check/verify.ts`, `repoMigrationData`,
+handed to the migrations core readers as a `MigrationData`) — so its read-set
+holds exactly those, and an edit anywhere else replays the PASS. An edit to a
+migration, `legacy-snapshots.json` or the tip file, or a file added or removed
+under the data dir, re-runs it (`check/verify.test.ts`).
+
+What the tree does not hold is git, keyed by the signature,
+`publishedMigrationTreesSignature`: the data dir's tree id at each published
+`main`. The published set is a function of those trees, so a migration landing
+on `main` re-runs the check and a push that adds none does not (keying on the
+refs' commit shas re-ran it after every push anywhere). The bodies it reads
+from git are immutable objects of that history, found from HEAD's log; a
+rewrite of HEAD that loses a published commit while the data dir and every
+`main` stay put is the one change no key sees — the tree-hash slot this check
+used before did not see it either.
+
+Measured 2026-11-13 (one pass, this repo, 72 bodies): before, 4.9 s wall /
+7.1 CPU-s on every pass whatever changed (72 `git show` starts, ~3 CPU-s, and
+each body ask re-reading the 430-file data dir). After: a pass that touches no
+migration replays (two git reads for the signature, ~20 ms CPU); a pass that
+does runs in ~0.6–1.3 s wall, ~0.15 CPU-s plus one `git cat-file`.
 
 A fork with several tips gets one of two hints. If a tip is branch-local, it is a
 rebase Y-fork: use `--reset-migration`. If every tip is published, two `main`s

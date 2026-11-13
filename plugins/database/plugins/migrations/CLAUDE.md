@@ -58,7 +58,10 @@ files the generator may reset (`--reset-migration`, push's `regen-migrations`),
 re-hash, or claim. Every consumer (the CLI generate pipeline, `regen-migrations`,
 `migration-phases-valid`, `migration-hashes-unique`) reads the set through
 `publishedMigrationBasenames`, and a check whose verdict depends on it folds
-`publishedMigrationRefsSignature` into its cache signature. No local `main` is a
+`publishedMigrationRefsSignature` into its cache signature — or, when it
+depends only on the published FILES (not the commits around them),
+`publishedMigrationTreesSignature` (the data dir's tree id at each published
+ref), which does not move on a push that adds no migration. No local `main` is a
 loud error, never an empty set.
 
 **A published migration is immutable.** Its sha8 is in deployed ledgers and its
@@ -653,6 +656,7 @@ only agreement that matters.
     - `infra/host-fs/user-path.joinAppPath`
     - `infra/spawn.spawnCaptured`
     - `infra/spawn.spawnExpectOk`
+    - `packages/macrotask-yield.yieldMacrotask`
     - `packages/owned-fd.openOwnedFdSync`
     - `packages/owned-fd.OwnedFd`
     - `packages/semaphore.createSemaphore`
@@ -668,6 +672,7 @@ only agreement that matters.
     - `DrizzleStage`
     - `EmittedSnapshot`
     - `ExpandOp`
+    - `MigrationData`
     - `PhasedStatements`
     - `PublishedMergeBase`
     - `PublishedMigrationViolation`
@@ -697,6 +702,7 @@ only agreement that matters.
     - `formatSnapshotConflict`
     - `isSchemaMigration`
     - `legacySnapshotFiles`
+    - `legacySnapshotFilesIn`
     - `legacySnapshotsPath`
     - `LOCAL_MAIN_REF`
     - `mergeNodeSnapshotText`
@@ -714,6 +720,7 @@ only agreement that matters.
     - `publishedMigrationOrigins`
     - `publishedMigrationRefs`
     - `publishedMigrationRefsSignature`
+    - `publishedMigrationTreesSignature`
     - `readLegacySnapshots`
     - `readSnapshotHead`
     - `readSnapshotNodes`
@@ -725,6 +732,7 @@ only agreement that matters.
     - `schemaMigrationFiles`
     - `schemaSnapshotPath`
     - `schemaSnapshotState`
+    - `schemaSnapshotStateIn`
     - `snapshotAncestors`
     - `snapshotBodies`
     - `splitStatements`
@@ -742,9 +750,9 @@ only agreement that matters.
   - Exempts itself from:
     - `product-name:legacy-id` — `data` (sanctioned)
     - `imperative-create-table-allowlisted` — `check/imperative-create-table-allowlisted.ts` (sanctioned)
-    - `boundaries/no-platform-api` — `core/internal/schema-glob.ts`, `core/internal/drizzle-stage.ts`, `core/internal/published-immutable.ts`, `core/internal/schema-load-probe.ts`, `core/internal/schema-snapshot.ts`, `core/internal/snapshot-bodies.ts`, `core/internal/snapshot-dag.ts` (debt)
+    - `boundaries/no-platform-api` — `core/internal/schema-glob.ts`, `core/internal/drizzle-stage.ts`, `core/internal/published-immutable.ts`, `core/internal/schema-load-probe.ts`, `core/internal/schema-snapshot.ts`, `core/internal/snapshot-bodies.ts`, `core/internal/migration-data.ts` (debt)
     - `check-thread-safety/no-blocking-check-work` — `check/fork-schema-drift.ts`, `check/internal/declared-schema-inputs.ts`, `check/migration-phases-valid.ts`, `check/orphaned-tables.ts` (debt)
-    - `blocking-fs/sync-named` — `core/internal/drizzle-stage.ts`, `core/internal/schema-snapshot.ts`, `core/internal/snapshot-bodies.ts` (sanctioned)
+    - `blocking-fs/sync-named` — `core/internal/drizzle-stage.ts`, `core/internal/schema-snapshot.ts` (sanctioned)
     - `sql-writes:fit:hand-written` — `server/internal/runner.ts` (sanctioned)
   - Exempted by:
     - `database/migrations` (0 debt)

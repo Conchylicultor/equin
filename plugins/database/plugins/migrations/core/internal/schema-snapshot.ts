@@ -207,15 +207,6 @@ export function readSnapshotLineage(
   return start === null ? null : snapshotLineage(start);
 }
 
-/** `readSnapshotLineage`, read with `readStartAsync`. */
-export async function readSnapshotLineageAsync(
-  dataDir: AppPath,
-  file: string,
-): Promise<SnapshotLineage | null> {
-  const start = await readStartAsync(join(dataDir, file));
-  return start === null ? null : snapshotLineage(start);
-}
-
 /**
  * Whether `data/<file>` is a schema migration, given `legacy` (the tree's
  * `readLegacySnapshots`): a snapshot header, a legacy key, or — until the next

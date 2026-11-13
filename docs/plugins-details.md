@@ -23650,6 +23650,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/host-fs/user-path.joinAppPath`
           - `infra/spawn.spawnCaptured`
           - `infra/spawn.spawnExpectOk`
+          - `packages/macrotask-yield.yieldMacrotask`
           - `packages/owned-fd.openOwnedFdSync`
           - `packages/owned-fd.OwnedFd`
           - `packages/semaphore.createSemaphore`
@@ -23665,6 +23666,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DrizzleStage`
           - `EmittedSnapshot`
           - `ExpandOp`
+          - `MigrationData`
           - `PhasedStatements`
           - `PublishedMergeBase`
           - `PublishedMigrationViolation`
@@ -23694,6 +23696,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `formatSnapshotConflict`
           - `isSchemaMigration`
           - `legacySnapshotFiles`
+          - `legacySnapshotFilesIn`
           - `legacySnapshotsPath`
           - `LOCAL_MAIN_REF`
           - `mergeNodeSnapshotText`
@@ -23711,6 +23714,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `publishedMigrationOrigins`
           - `publishedMigrationRefs`
           - `publishedMigrationRefsSignature`
+          - `publishedMigrationTreesSignature`
           - `readLegacySnapshots`
           - `readSnapshotHead`
           - `readSnapshotNodes`
@@ -23722,6 +23726,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `schemaMigrationFiles`
           - `schemaSnapshotPath`
           - `schemaSnapshotState`
+          - `schemaSnapshotStateIn`
           - `snapshotAncestors`
           - `snapshotBodies`
           - `splitStatements`
@@ -23739,9 +23744,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from:
           - `product-name:legacy-id` — `data` (sanctioned)
           - `imperative-create-table-allowlisted` — `check/imperative-create-table-allowlisted.ts` (sanctioned)
-          - `boundaries/no-platform-api` — `core/internal/schema-glob.ts`, `core/internal/drizzle-stage.ts`, `core/internal/published-immutable.ts`, `core/internal/schema-load-probe.ts`, `core/internal/schema-snapshot.ts`, `core/internal/snapshot-bodies.ts`, `core/internal/snapshot-dag.ts` (debt)
+          - `boundaries/no-platform-api` — `core/internal/schema-glob.ts`, `core/internal/drizzle-stage.ts`, `core/internal/published-immutable.ts`, `core/internal/schema-load-probe.ts`, `core/internal/schema-snapshot.ts`, `core/internal/snapshot-bodies.ts`, `core/internal/migration-data.ts` (debt)
           - `check-thread-safety/no-blocking-check-work` — `check/fork-schema-drift.ts`, `check/internal/declared-schema-inputs.ts`, `check/migration-phases-valid.ts`, `check/orphaned-tables.ts` (debt)
-          - `blocking-fs/sync-named` — `core/internal/drizzle-stage.ts`, `core/internal/schema-snapshot.ts`, `core/internal/snapshot-bodies.ts` (sanctioned)
+          - `blocking-fs/sync-named` — `core/internal/drizzle-stage.ts`, `core/internal/schema-snapshot.ts` (sanctioned)
           - `sql-writes:fit:hand-written` — `server/internal/runner.ts` (sanctioned)
         - Exempted by:
           - `database/migrations` (0 debt)
@@ -41310,6 +41315,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/deploy/analytics/ip-country`
           - `apps/prototypes/files`
           - `conversations/transcript-source`
+          - `database/migrations`
           - `framework/tooling/boundaries`
           - `framework/tooling/checks`
           - `framework/tooling/codegen`

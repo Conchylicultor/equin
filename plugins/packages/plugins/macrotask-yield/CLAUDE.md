@@ -58,6 +58,7 @@ runtime-neutral `core`.
     - `apps/deploy/analytics/ip-country`
     - `apps/prototypes/files`
     - `conversations/transcript-source`
+    - `database/migrations`
     - `framework/tooling/boundaries`
     - `framework/tooling/checks`
     - `framework/tooling/codegen`
