@@ -1,3 +1,4 @@
+import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web";
 import { InvestigateAction } from "@plugins/primitives/plugins/launch/plugins/investigate/web";
 import type { EntryRun } from "@plugins/infra/plugins/background/plugins/catalog/web";
@@ -20,6 +21,7 @@ export function InvestigateRun({ row }: ItemActionProps<EntryRun>) {
         id: `${entry.kind}:${entry.name}@${run.startedAt}`,
       }}
       categoryId={BACKGROUND_CATEGORY_ID}
+      filedFrom={asPluginId("debug.background.investigate")}
       description={`Launch an agent briefed on this failed run of ${entry.name} — its error, what the ${entry.kind} does, and where to dig.`}
       brief={(userText) => runBrief(row, userText)}
     />

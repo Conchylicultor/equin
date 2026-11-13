@@ -1,3 +1,4 @@
+import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { interactiveMandate } from "@plugins/tasks/plugins/mandate-presets/core";
 import { db } from "@plugins/database/server";
 import { insertWithUpdatedAt } from "@plugins/database/plugins/derived-updated-at/server";
@@ -148,6 +149,10 @@ export async function seed(
     await createTask({
       id: taskId,
       title: story.task,
+      filing: {
+        author: { kind: "human" },
+        filedFrom: asPluginId("apps.website.demos.workspace"),
+      },
       titleAuto: false,
       ...(story.prompt === undefined ? {} : { description: story.prompt }),
       mandate: interactiveMandate,

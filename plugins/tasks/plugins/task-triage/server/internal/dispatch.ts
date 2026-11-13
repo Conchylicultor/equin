@@ -1,3 +1,4 @@
+import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { interactiveMandate } from "@plugins/tasks/plugins/mandate-presets/core";
 import { z } from "zod";
 import { getConfig } from "@plugins/config_v2/server";
@@ -38,7 +39,7 @@ import {
 } from "./state";
 import { tasksTriage } from "./tables";
 
-/** Who launches triage runs (`spawnedBy`, the run task's author). */
+/** Who launches triage runs (the run conversation's `spawnedBy`). */
 export const TRIAGE_AUTHOR = "task-triage";
 
 /** The task category a triage run's own task is filed under. */
@@ -108,7 +109,10 @@ async function runTaskFor(taskId: string, task: TriagedTask): Promise<string> {
       title: `Triage: ${task.title.trim() || "Untitled"}`,
       titleAuto: false,
       description: `Read-only triage of task \`${taskId}\`. Its result is the task's Triage card.`,
-      author: TRIAGE_AUTHOR,
+      filing: {
+        author: { kind: "system" },
+        filedFrom: asPluginId("tasks.task-triage"),
+      },
       // Interactive: the triage profile allowlists exit_clean / flag_raise,
       // and the tool gates still apply on top.
       mandate: interactiveMandate,

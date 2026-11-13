@@ -1,3 +1,4 @@
+import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 /**
  * The proof that task-category's whole server closure is portable: it BOOTS,
  * with no desktop machine half in the graph, on PGlite.
@@ -37,6 +38,11 @@ import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { createTask } from "@plugins/tasks/plugins/tasks-core/server";
 import { setTaskCategory } from "./mutations";
+
+const TEST_FILING = {
+  author: { kind: "human" },
+  filedFrom: asPluginId("tasks.task-category"),
+} as const;
 
 // Any registered mandate id: these tests never resolve it.
 const TEST_MANDATE = defineMandate({ id: "interactive", label: "Interactive" });
@@ -82,14 +88,17 @@ describe.if(IN_CHILD)("task-category's server closure boots portably", () => {
 
   test("seeded categories come back through the real task-categories.by-id collection", async () => {
     const a = await createTask({
+      filing: TEST_FILING,
       title: "portable boot: categorized",
       mandate: TEST_MANDATE,
     });
     const b = await createTask({
+      filing: TEST_FILING,
       title: "portable boot: also categorized",
       mandate: TEST_MANDATE,
     });
     const c = await createTask({
+      filing: TEST_FILING,
       title: "portable boot: uncategorized",
       mandate: TEST_MANDATE,
     });

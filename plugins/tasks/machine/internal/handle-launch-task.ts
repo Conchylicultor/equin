@@ -1,3 +1,4 @@
+import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { interactiveMandate } from "@plugins/tasks/plugins/mandate-presets/core";
 import { createTask, getTask } from "@plugins/tasks/plugins/tasks-core/server";
 import { setTaskCategory } from "@plugins/tasks/plugins/task-category/server";
@@ -42,21 +43,24 @@ export const handleLaunchTask = implementMachine(
     // became ready — long after the user was told it failed.
     await assertClaudeCodeReady();
 
-  let taskId: string;
-  if ("id" in body.task) {
-    // Fail loudly on a dangling id: otherwise it reads as unarmed below and
-    // answers `started: false` for a task that does not exist.
-    const existing = await getTask(body.task.id);
-    if (!existing) throw new HttpError(400, `task ${body.task.id} not found`);
-    taskId = existing.id;
-  } else {
-    const { title, categoryId, subject } = body.task;
-    const file = async (): Promise<string> => {
-      const task = await createTask({
-        title,
-        titleAuto: true,
-        description: body.prompt,
-        author: "user",
+    let taskId: string;
+    if ("id" in body.task) {
+      // Fail loudly on a dangling id: otherwise it reads as unarmed below and
+      // answers `started: false` for a task that does not exist.
+      const existing = await getTask(body.task.id);
+      if (!existing) throw new HttpError(400, `task ${body.task.id} not found`);
+      taskId = existing.id;
+    } else {
+      const { title, categoryId, subject, filedFrom } = body.task;
+      const file = async (): Promise<string> => {
+        const task = await createTask({
+          title,
+          titleAuto: true,
+          description: body.prompt,
+          filing: {
+            author: { kind: "human" },
+            filedFrom: asPluginId(filedFrom),
+          },
           mandate: interactiveMandate,
       });
       await setTaskCategory(task.id, categoryId);

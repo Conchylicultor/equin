@@ -15,7 +15,6 @@ import {
   type TaskStatus,
 } from "@plugins/tasks/plugins/tasks-core/core";
 import type { WatchEventInput } from "@plugins/tasks/plugins/orchestration/plugins/watch/core";
-import { conversationIdKind } from "@plugins/tasks/plugins/task-ids/core";
 
 // What a watcher hears about the tasks themselves. Contributed here, not by
 // conversations: both facts are task semantics, and the watch plugin imports
@@ -30,8 +29,8 @@ const createdSource = watchSource({
     {
       kind: "created",
       taskId: p.taskId,
-      ...(p.author !== null && conversationIdKind.is(p.author)
-        ? { actorConversationId: p.author }
+      ...(p.authorConversationId !== null
+        ? { actorConversationId: p.authorConversationId }
         : {}),
       summary: `filed: ${p.title}`,
     },

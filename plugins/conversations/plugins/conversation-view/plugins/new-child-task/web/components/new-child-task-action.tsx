@@ -1,3 +1,4 @@
+import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { rowOrStale } from "@plugins/network/plugins/live/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
@@ -14,6 +15,7 @@ export function NewChildTaskAction() {
   if (!conversation) return null;
   return (
     <TaskDraftPopover
+      filedFrom={asPluginId("conversations.conversation-view.new-child-task")}
       trigger={
         <Button
           variant="ghost"

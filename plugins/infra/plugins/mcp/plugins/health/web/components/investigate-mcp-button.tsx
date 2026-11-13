@@ -1,3 +1,4 @@
+import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { SYSTEM_CATEGORY_ID } from "@plugins/conversations/core";
 import { mcpHealth } from "@plugins/infra/plugins/mcp/core";
 import { useLive } from "@plugins/network/plugins/live/web";
@@ -61,6 +62,7 @@ export function InvestigateMcpButton() {
           userText,
         ),
         categoryId: SYSTEM_CATEGORY_ID,
+        filedFrom: asPluginId("infra.mcp.health"),
       })}
     />
   );

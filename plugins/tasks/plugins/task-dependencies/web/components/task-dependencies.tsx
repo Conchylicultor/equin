@@ -1,3 +1,4 @@
+import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
@@ -103,12 +104,14 @@ export function TaskDependenciesActions({ taskId }: { taskId: string }) {
         </Button>
       )}
       <TaskDraftPopover
+        filedFrom={asPluginId("tasks.task-dependencies")}
         trigger={<Button variant="outline">+ Prerequisite</Button>}
         target={target}
         relate={{ taskId, defaultMode: "prerequisite" }}
         heading="Add prerequisite"
       />
       <TaskDraftPopover
+        filedFrom={asPluginId("tasks.task-dependencies")}
         trigger={<Button variant="outline">+ Follow-up</Button>}
         target={target}
         relate={{ taskId, defaultMode: "followup" }}

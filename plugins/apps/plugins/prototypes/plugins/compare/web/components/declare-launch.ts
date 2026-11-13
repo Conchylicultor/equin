@@ -1,3 +1,4 @@
+import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { PROTOTYPES_DIR_DISPLAY } from "@plugins/infra/plugins/paths/plugins/display/core";
 import type { PrototypeMeta } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import type { FrameLaunch } from "@plugins/apps/plugins/prototypes/plugins/canvas/web";
@@ -27,7 +28,11 @@ export function declareCounterpartLaunch(
         declarePrompt(meta, kinds),
         ...(userText.trim() ? [`Additional context: ${userText.trim()}`] : []),
       ];
-      return { prompt: parts.join("\n\n"), categoryId: PROTOTYPES_CATEGORY_ID };
+      return {
+        prompt: parts.join("\n\n"),
+        categoryId: PROTOTYPES_CATEGORY_ID,
+        filedFrom: asPluginId("apps.prototypes.compare"),
+      };
     },
   };
 }

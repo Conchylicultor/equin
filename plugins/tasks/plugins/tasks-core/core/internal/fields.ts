@@ -22,6 +22,7 @@ import {
   ConversationStatusSchema,
   ConversationWorkingOnSchema,
 } from "../conversation-status";
+import { TASK_AUTHOR_KINDS, TASK_AUTHOR_KIND_OPTIONS } from "../task-author";
 
 // Web-safe field records for the tasks / attempts / task_dependencies / pushes /
 // conversations FK cluster. One `FieldsRecord` per table, keyed by JS prop name
@@ -55,8 +56,19 @@ export const taskFields = {
   // Whether `title` is a machine-generated label rather than human-authored.
   titleAuto: boolField(),
   description: nullable(textField()),
-  // "user" for UI-created tasks, a conversation id for agent-created ones.
-  author: nullable(textField()),
+  // Who decided the task should exist (`../task-author.ts`): every task
+  // list's "Created by" field. An agent author names its conversation in
+  // `authorConversationId` (the CHECK `tasks_author_agent_has_conversation`
+  // ties the two).
+  authorKind: enumTextField(TASK_AUTHOR_KINDS, {
+    label: "Created by",
+    options: TASK_AUTHOR_KIND_OPTIONS,
+  }),
+  authorConversationId: nullable(textField({ label: "Author" })),
+  // The plugin id of the surface that filed the task (Wish, the task list,
+  // `add_task`, triage, an automation, …). Null only for tasks filed before
+  // it was recorded.
+  filedFrom: nullable(textField({ label: "Filed from" })),
   droppedAt: nullable(dateField()),
   heldAt: nullable(dateField()),
   rank: rankField(),

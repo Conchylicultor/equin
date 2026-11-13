@@ -1,3 +1,4 @@
+import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 /**
  * The mandate column against the REAL worktree DB, inside a rolled-back
  * transaction (`worktreeDbScenario`): nearest-wins resolution up `folder_id`,
@@ -23,6 +24,11 @@ import { tasksMandate } from "../tables-mandate";
 import type { DbExecutor } from "../status-batch";
 import { nearestMandate } from "./tasks";
 
+const TEST_FILING = {
+  author: { kind: "human" },
+  filedFrom: asPluginId("tasks.tasks-core"),
+} as const;
+
 // Never resolved here: tasks-core stores and walks ids only.
 const ROOT = defineMandate({ id: "test-root", label: "Root" });
 const NESTED = defineMandate({ id: "test-nested", label: "Nested" });
@@ -40,10 +46,16 @@ async function effective(
 describe("nearestMandate", () => {
   test("a task with no mandate of its own inherits its nearest ancestor's", async () => {
     const found = await worktreeDbScenario(async (tx) => {
-      const root = await createTask({ title: "root", mandate: ROOT }, tx);
-      const child = await createTask({ folderId: root.id, title: "c" }, tx);
+      const root = await createTask(
+        { filing: TEST_FILING, title: "root", mandate: ROOT },
+        tx,
+      );
+      const child = await createTask(
+        { filing: TEST_FILING, folderId: root.id, title: "c" },
+        tx,
+      );
       const grandchild = await createTask(
-        { folderId: child.id, title: "gc" },
+        { filing: TEST_FILING, folderId: child.id, title: "gc" },
         tx,
       );
       return { root: root.id, got: await nearestMandate(grandchild.id, tx) };
@@ -57,10 +69,16 @@ describe("nearestMandate", () => {
 
   test("a nested mandate wins over its ancestors' — for its whole subtree", async () => {
     const found = await worktreeDbScenario(async (tx) => {
-      const root = await createTask({ title: "root", mandate: ROOT }, tx);
-      const child = await createTask({ folderId: root.id, title: "c" }, tx);
+      const root = await createTask(
+        { filing: TEST_FILING, title: "root", mandate: ROOT },
+        tx,
+      );
+      const child = await createTask(
+        { filing: TEST_FILING, folderId: root.id, title: "c" },
+        tx,
+      );
       const grandchild = await createTask(
-        { folderId: child.id, title: "gc" },
+        { filing: TEST_FILING, folderId: child.id, title: "gc" },
         tx,
       );
       await setMandate(child.id, NESTED, tx);
@@ -80,8 +98,14 @@ describe("nearestMandate", () => {
 
   test("clearing a nested mandate falls back to the ancestor's", async () => {
     const got = await worktreeDbScenario(async (tx) => {
-      const root = await createTask({ title: "root", mandate: ROOT }, tx);
-      const child = await createTask({ folderId: root.id, title: "c" }, tx);
+      const root = await createTask(
+        { filing: TEST_FILING, title: "root", mandate: ROOT },
+        tx,
+      );
+      const child = await createTask(
+        { filing: TEST_FILING, folderId: root.id, title: "c" },
+        tx,
+      );
       await setMandate(child.id, NESTED, tx);
       await clearMandate(child.id, tx);
       return nearestMandate(child.id, tx);
@@ -100,8 +124,14 @@ describe("nearestMandate", () => {
 describe("root mandate invariant", () => {
   test("re-filing a task to the root copies its effective mandate onto it", async () => {
     const found = await worktreeDbScenario(async (tx) => {
-      const root = await createTask({ title: "root", mandate: ROOT }, tx);
-      const child = await createTask({ folderId: root.id, title: "c" }, tx);
+      const root = await createTask(
+        { filing: TEST_FILING, title: "root", mandate: ROOT },
+        tx,
+      );
+      const child = await createTask(
+        { filing: TEST_FILING, folderId: root.id, title: "c" },
+        tx,
+      );
       await updateTask(child.id, { folderId: null }, tx);
       return { child: child.id, got: await nearestMandate(child.id, tx) };
     });
@@ -115,7 +145,10 @@ describe("root mandate invariant", () => {
   test("clearMandate refuses on a root", async () => {
     expect(
       worktreeDbScenario(async (tx) => {
-        const root = await createTask({ title: "root", mandate: ROOT }, tx);
+        const root = await createTask(
+          { filing: TEST_FILING, title: "root", mandate: ROOT },
+          tx,
+        );
         await clearMandate(root.id, tx);
       }),
     ).rejects.toThrow(/is a root/);
@@ -125,8 +158,8 @@ describe("root mandate invariant", () => {
     expect(
       worktreeDbScenario((tx) =>
         tx.execute(sql`
-          INSERT INTO tasks (id, cluster_id, title, title_auto, rank)
-          VALUES ('mandate-test-bare-root', 'mandate-test-bare-root', 'bare', false, 'a0')`),
+          INSERT INTO tasks (id, cluster_id, title, title_auto, rank, author_kind)
+          VALUES ('mandate-test-bare-root', 'mandate-test-bare-root', 'bare', false, 'a0', 'human')`),
       ),
     ).rejects.toThrow(/tasks_root_has_mandate/);
   });
@@ -135,11 +168,20 @@ describe("root mandate invariant", () => {
 describe("effective mandate", () => {
   test("follows create, a nested mandate, its clearing and a re-file", async () => {
     const got = await worktreeDbScenario(async (tx) => {
-      const root = await createTask({ title: "root", mandate: ROOT }, tx);
-      const other = await createTask({ title: "other", mandate: NESTED }, tx);
-      const child = await createTask({ folderId: root.id, title: "c" }, tx);
+      const root = await createTask(
+        { filing: TEST_FILING, title: "root", mandate: ROOT },
+        tx,
+      );
+      const other = await createTask(
+        { filing: TEST_FILING, title: "other", mandate: NESTED },
+        tx,
+      );
+      const child = await createTask(
+        { filing: TEST_FILING, folderId: root.id, title: "c" },
+        tx,
+      );
       const grandchild = await createTask(
-        { folderId: child.id, title: "gc" },
+        { filing: TEST_FILING, folderId: child.id, title: "gc" },
         tx,
       );
       const ids = [child.id, grandchild.id];

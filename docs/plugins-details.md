@@ -30363,19 +30363,24 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `UNDOCUMENTED_RUNTIME_FOLDERS`
           - `VERIFYING_FOLDERS`
       - Cross-plugin:
-        - Imported by: 47 plugins — full list in [`plugins/framework/plugins/plugin-id/REFERENCE.md`](../plugins/framework/plugins/plugin-id/REFERENCE.md)
+        - Imported by: 82 plugins — full list in [`plugins/framework/plugins/plugin-id/REFERENCE.md`](../plugins/framework/plugins/plugin-id/REFERENCE.md)
           - `plugin-meta` ×21
+          - `apps` ×15
           - `framework` ×11
-          - `apps` ×4
-          - `build` ×2
-          - `config_v2` ×2
-          - `active-data/plugin-link`
+          - `tasks` ×8
+          - `conversations` ×4
+          - `debug` ×4
+          - `build` ×3
+          - `config_v2` ×3
+          - `infra` ×3
+          - `active-data` ×2
+          - `page` ×2
           - `apps-core/tabs`
-          - `debug/mcp-tools`
-          - `infra/background/catalog`
+          - `hints/ask`
           - `primitives/data-view`
           - `reorder`
-          - `tasks/automations`
+          - `runs`
+          - `wish`
     - **`plugin-loader`** — Pure plugin-graph algorithms: topological load-wave partitioning and dependsOn topo-sort, shared by the server/central/web plugin loaders.
       - Cross-plugin:
         - Imported by:
@@ -57887,6 +57892,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `network/live.liveValue`
       - `tasks/task-subject.TaskSubjectSchema`
       - `tasks/tasks-core.ConversationSchema`
+      - `tasks/tasks-core.TASK_AUTHOR_KINDS`
     - Exports (types):
       - `AddDependencyBody`
       - `CreateTaskBody`
@@ -59541,7 +59547,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `debug/read-set`
           - `hints/ask`
           - `infra/worktree`
-          - `tasks`
           - `tasks/tasks-core`
     - **`task-list`** — Tree view of all tasks rendered in the Tasks pane. Defines Tasks.List/TaskActions slots and ships the row actions (delete, child-count, launch-agent).
       - Web:
@@ -60095,7 +60100,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `conversations/conversation-view/jsonl-viewer/tool-call/task-triage`
           - `tasks/sidequest-autopilot`
-    - **`tasks-core`** — tasks-core web presence: eagerly registers the boot-critical conversations-* / tasks.v2 resource descriptors so boot-snapshot can hydrate them before first paint, and owns the client-side reads of them (useTaskAttempts / useTaskConversations, the one join from a task to the attempts and runs it produced, each a read of the task's own scope; useTaskCluster, a task's dependency cluster — its row, then its cluster's rows — with the dependency graph over them). Schema + repository layer for the tasks/attempts/conversations FK cluster.
+    - **`tasks-core`** — tasks-core web presence: eagerly registers the boot-critical conversations-* / tasks.v3 resource descriptors so boot-snapshot can hydrate them before first paint, and owns the client-side reads of them (useTaskAttempts / useTaskConversations, the one join from a task to the attempts and runs it produced, each a read of the task's own scope; useTaskCluster, a task's dependency cluster — its row, then its cluster's rows — with the dependency graph over them). Schema + repository layer for the tasks/attempts/conversations FK cluster.
       - Web:
         - Contributes:
           - `FieldPresentation.Register` "exposure:tasks_ext_mandate"
@@ -60328,20 +60333,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `pushes:groups` (push)
           - `pushes:rows` (keyed, point)
           - `task-active-dependents:rows` (keyed, point)
-          - `task-cluster` (keyed)
-          - `task-cluster:rows` (keyed, point)
+          - `task-cluster.v2` (keyed)
+          - `task-cluster.v2:rows` (keyed, point)
           - `task-descriptions:rows` (keyed, point)
           - `task-dropped-states:rows` (keyed, point)
           - `task-mandates:rows` (keyed, point)
           - `tasks.attachment-links` (keyed)
           - `tasks.attachment-links:rows` (keyed, point)
-          - `tasks.tree` (keyed, window)
-          - `tasks.tree:ancestors` (keyed, window)
-          - `tasks.tree:groups` (push)
-          - `tasks.tree:rows` (keyed, point)
-          - `tasks.v2` (keyed, window)
-          - `tasks.v2:groups` (push)
-          - `tasks.v2:rows` (keyed, point)
+          - `tasks.tree.v2` (keyed, window)
+          - `tasks.tree.v2:ancestors` (keyed, window)
+          - `tasks.tree.v2:groups` (push)
+          - `tasks.tree.v2:rows` (keyed, point)
+          - `tasks.v3` (keyed, window)
+          - `tasks.v3:groups` (push)
+          - `tasks.v3:rows` (keyed, point)
       - Core:
         - Uses: 35 symbols — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
           - `conversations/model-provider` ×3
@@ -60378,6 +60383,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ConversationWorkingOn`
           - `Push`
           - `Task`
+          - `TaskAuthor`
+          - `TaskAuthorKind`
+          - `TaskFiling`
           - `TaskFilingStart`
           - `TaskListItem`
           - `TaskNode`
@@ -60430,12 +60438,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PushSchema`
           - `RECENT_GONE_LIMIT`
           - `SETTLED_STATUSES`
+          - `TASK_AUTHOR_KIND_OPTIONS`
+          - `TASK_AUTHOR_KINDS`
           - `TASK_CLUSTER_MAX`
           - `TASK_FILING_STARTS`
           - `TASK_STATUS_OPTIONS`
           - `taskActiveDependentCounts`
           - `taskAttachmentLinks`
           - `taskAttachmentLinksEntityRef`
+          - `taskAuthorColumns`
+          - `taskAuthorOf`
           - `taskClusterRows`
           - `taskDependenciesEntityRef`
           - `taskDescriptions`

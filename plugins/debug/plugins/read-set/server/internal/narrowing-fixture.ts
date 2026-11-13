@@ -1,3 +1,4 @@
+import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { and, eq, like } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { isMain } from "@plugins/infra/plugins/runtime-identity/core";
@@ -86,15 +87,18 @@ async function fixtureVersion(id: string): Promise<void> {
     row?.sourceId === NARROWING_FIXTURE_SPAWNED_BY,
   );
 }
+/** What the fixture's task is filed from: this plugin. */
+const FIXTURE_FILED_FROM = "debug.read-set";
+
 async function fixtureTask(id: string): Promise<void> {
   const [row] = await db
-    .select({ author: _tasks.author, title: _tasks.title })
+    .select({ filedFrom: _tasks.filedFrom, title: _tasks.title })
     .from(_tasks)
     .where(eq(_tasks.id, id));
   refuseUnlessFixture(
     "Task",
     id,
-    row?.author === NARROWING_FIXTURE_SPAWNED_BY && row.title === FIXTURE_NAME,
+    row?.filedFrom === FIXTURE_FILED_FROM && row.title === FIXTURE_NAME,
   );
 }
 
@@ -156,7 +160,10 @@ async function createFixtureRow(
       const task = await createTask({
         title: FIXTURE_NAME,
         titleAuto: false,
-        author: NARROWING_FIXTURE_SPAWNED_BY,
+        filing: {
+          author: { kind: "system" },
+          filedFrom: asPluginId(FIXTURE_FILED_FROM),
+        },
         mandate: interactiveMandate,
       });
       return task.id;

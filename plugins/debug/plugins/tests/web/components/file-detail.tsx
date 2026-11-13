@@ -1,3 +1,4 @@
+import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { useMemo, type ReactElement } from "react";
 import { useLive, rowOrStale } from "@plugins/network/plugins/live/web";
 import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
@@ -156,6 +157,7 @@ function FileDetailBody({ file }: { file: TestFileStatusRow }): ReactElement {
               noun="test"
               subject={testFileSubject(file.path)}
               categoryId={TESTS_CATEGORY_ID}
+              filedFrom={asPluginId("debug.tests")}
               description="Launch an agent to find out why this test file fails and fix it."
               placeholder="Extra context (optional)…"
               brief={(userText) => testFileBrief(file, userText)}

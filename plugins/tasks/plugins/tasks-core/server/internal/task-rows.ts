@@ -35,7 +35,7 @@ import {
 import { _attempts, _taskDependencies, _tasks } from "./tables";
 
 // How the task row binds to the database — `taskRows` (core: the tasks window
-// `tasks.v2`, read by id), `taskClusterRows` (one cluster) and, with its child
+// `tasks.v3`, read by id), `taskClusterRows` (one cluster) and, with its child
 // count, `taskWindow` (the tree): the ONE spelling both the served
 // collections (`./resources.ts`) and the tests (`./tree-oracle.test.ts`, which
 // compiles it against a throwaway database; `./all-parity.test.ts`, which

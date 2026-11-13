@@ -1,7 +1,7 @@
 import { text } from "drizzle-orm/pg-core";
 import { defineTriggerEvent } from "@plugins/infra/plugins/events/server";
 import type { TaskStatus } from "./schema";
-import type { ConversationStatus } from "../../core";
+import type { ConversationStatus, TaskAuthorKind } from "../../core";
 import type { ConversationModel } from "@plugins/conversations/plugins/model-provider/core";
 
 export interface PushLandedPayload {
@@ -46,8 +46,12 @@ export interface TaskCreatedPayload {
   taskId: string;
   folderId: string | null;
   title: string;
-  /** Who filed it: a conversation id when an agent did, else a person. */
-  author: string | null;
+  /** Who decided it (`TaskAuthor`'s kind). */
+  authorKind: TaskAuthorKind;
+  /** The filing agent's conversation, when an agent filed it. */
+  authorConversationId: string | null;
+  /** The plugin id of the surface that filed it. */
+  filedFrom: string;
   [key: string]: unknown;
 }
 

@@ -157,11 +157,11 @@ async function seed(db: NodePgDatabase, n: number): Promise<void> {
     const id = `task-${++seq}`;
     const r = rand();
     await db.execute(sql`
-      INSERT INTO tasks (id, cluster_id, title, rank, held_at, dropped_at, created_at, mandate_ref)
+      INSERT INTO tasks (id, cluster_id, title, rank, held_at, dropped_at, created_at, mandate_ref, author_kind)
       VALUES (${id}, ${id}, ${`title ${id}`}, ${`a${String(seq).padStart(4, "0")}`},
               ${r < 0.15 ? instant() : null}::timestamptz,
               ${r > 0.85 ? instant() : null}::timestamptz,
-              ${instant()}::timestamptz, 'interactive')`);
+              ${instant()}::timestamptz, 'interactive', 'human')`);
     taskIds.push(id);
     fresh.push(id);
   }

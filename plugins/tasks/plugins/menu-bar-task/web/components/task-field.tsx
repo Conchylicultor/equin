@@ -1,3 +1,4 @@
+import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { useLayoutEffect, useRef, useState, type KeyboardEvent } from "react";
 import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { submitChain } from "@plugins/tasks/plugins/task-draft-form/web";
@@ -91,6 +92,7 @@ export function MenuBarTaskField() {
           },
         ],
         target: { kind: "root" },
+        filedFrom: asPluginId("tasks.menu-bar-task"),
         relate: undefined,
         url: "",
         captureUrlDefault: false,

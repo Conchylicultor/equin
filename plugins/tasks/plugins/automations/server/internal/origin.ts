@@ -1,3 +1,4 @@
+import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { and, desc, eq, inArray, isNull, notInArray } from "drizzle-orm";
 import { db, type DbExecutor } from "@plugins/database/server";
 import {
@@ -200,7 +201,10 @@ export async function fileAutomationTask(args: {
       {
         title: filing.title,
         titleAuto: false,
-        author: `automation:${automationId}`,
+        filing: {
+          author: { kind: "system" },
+          filedFrom: asPluginId("tasks.automations"),
+        },
         description,
         mandate,
       },

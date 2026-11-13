@@ -1,3 +1,4 @@
+import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
 import { LaunchAgentPopover } from "@plugins/primitives/plugins/launch/web";
 import { useDispatchOutcome } from "@plugins/primitives/plugins/slot-render/web";
@@ -71,7 +72,13 @@ export function InvestigateEventAction({ event }: { event: JsonlEvent }) {
           "```",
           ...(body ? ["", "## What the user asked for", "", body] : []),
         ].join("\n");
-        return { prompt, categoryId: WISHES_CATEGORY_ID };
+        return {
+          prompt,
+          categoryId: WISHES_CATEGORY_ID,
+          filedFrom: asPluginId(
+            "conversations.conversation-view.jsonl-viewer.investigate-event",
+          ),
+        };
       }}
     />
   );

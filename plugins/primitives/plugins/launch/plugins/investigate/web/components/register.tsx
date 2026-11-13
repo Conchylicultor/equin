@@ -1,3 +1,4 @@
+import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
 import type { ReactNode } from "react";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import type { FieldsRecord } from "@plugins/fields/core";
@@ -29,6 +30,8 @@ export interface InvestigateRegistration<Row> {
   noun: string;
   /** The task category the investigation is filed under. */
   categoryId: string;
+  /** The plugin id of the surface filing the task (its `filedFrom`). */
+  filedFrom: PluginId;
   /** The record the task is about — the dedupe key (`tasks/task-subject`). */
   subject: (row: Row) => TaskSubject;
   /** One or two lines on what the agent is told — the popover's description. */
@@ -59,6 +62,7 @@ function register<Row>(
         presentation="row-action"
         noun={reg.noun}
         categoryId={reg.categoryId}
+        filedFrom={reg.filedFrom}
         subject={reg.subject(row)}
         description={reg.description(row)}
         brief={(userText) => reg.brief(row, userText)}

@@ -1,3 +1,4 @@
+import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { Investigate } from "@plugins/primitives/plugins/launch/plugins/investigate/web";
 import { taskTriageReads, type TaskTriageRow } from "../../core";
 
@@ -12,6 +13,7 @@ export const investigateTriageRuns = Investigate.Register<TaskTriageRow>({
   failed: (row) => row.state === "failed",
   noun: "triage run",
   categoryId: "system",
+  filedFrom: asPluginId("tasks.task-triage"),
   subject: (row) => ({ kind: "task-triage-failure", id: row.taskId }),
   description: () =>
     "Launch an agent briefed on this failed triage run — its error verbatim, the conversation that ran it, and where to dig.",

@@ -1,3 +1,4 @@
+import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { useMemo } from "react";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
@@ -35,7 +36,13 @@ async function createTaskRow(
   const task = await fetchEndpoint(
     createTask,
     {},
-    { body: { folderId: args.parentId, afterId: args.afterId } },
+    {
+      body: {
+        folderId: args.parentId,
+        afterId: args.afterId,
+        filedFrom: asPluginId("tasks.task-list"),
+      },
+    },
   );
   return task.id;
 }

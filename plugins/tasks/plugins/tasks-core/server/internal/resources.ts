@@ -80,7 +80,7 @@ export const attemptRowsServed = serveCollection(
   attemptRowsServeOptions,
 );
 
-// The tasks window (`taskRows`, `tasks.v2`, read by id through `:rows`) — compiled
+// The tasks window (`taskRows`, `tasks.v3`, read by id through `:rows`) — compiled
 // from the base tables and the attempt rollups (`./task-rows.ts`), never
 // `tasks_v`. A routed alias: a task write refills its own row, an attempt /
 // conversation / push write its task's, an edge write its task's and every
@@ -102,7 +102,7 @@ export const taskClusterRowsServed = serveCollection(
   taskRowsServeOptions,
 );
 
-// The tasks tree (`taskWindow`, key `tasks.tree`): the stored aggregates
+// The tasks tree (`taskWindow`, key `tasks.tree.v2`): the stored aggregates
 // (`./task-rows.ts`) are side tables on the change feed, so a status move
 // anywhere in a task's closure is a write to its side row — one routed
 // refill, and an entrant / exit of a window filtered on it. Every row's

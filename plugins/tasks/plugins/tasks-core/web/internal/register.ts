@@ -4,7 +4,7 @@
 // on module evaluation).
 //
 // conversations-* (incl. the `conversations-gone:count` total) and the live
-// conversations' tasks (`tasks.v2:rows`, preloaded at their ids) are
+// conversations' tasks (`tasks.v3:rows`, preloaded at their ids) are
 // boot-critical (preloaded; served in ../server). boot-snapshot
 // resolves every boot-critical key to its client descriptor via
 // `resourceDescriptorByKey` BEFORE first paint — so the descriptor module must

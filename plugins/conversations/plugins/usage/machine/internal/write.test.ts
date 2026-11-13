@@ -58,6 +58,7 @@ beforeAll(async () => {
     titleAuto: false,
     rank: "a0",
     mandateRef: "interactive",
+    authorKind: "human",
   } as typeof _tasks.$inferInsert);
   await t.db.insert(_attempts).values({
     id: "att-w",

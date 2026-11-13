@@ -1,3 +1,4 @@
+import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { useState, type ReactNode } from "react";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
@@ -39,6 +40,8 @@ interface InvestigateCommon {
 export interface InvestigateSubjectProps extends InvestigateCommon {
   subject: TaskSubject;
   categoryId: string;
+  /** The plugin id of the surface filing the task (its `filedFrom`). */
+  filedFrom: PluginId;
   brief: (userText: string) => string;
 }
 
@@ -72,7 +75,7 @@ export function InvestigateAction(props: InvestigateActionProps) {
 }
 
 function SubjectInvestigate(props: InvestigateSubjectProps) {
-  const { subject, categoryId, brief } = props;
+  const { subject, categoryId, filedFrom, brief } = props;
   const read = useSubjectTask(subject);
   // Not known yet is not "no task": the trigger waits for the answer rather
   // than offering a launch that might duplicate the task it is about to show.
@@ -98,6 +101,7 @@ function SubjectInvestigate(props: InvestigateSubjectProps) {
         prompt: brief(userText),
         categoryId,
         subject,
+        filedFrom,
       })}
     />
   );

@@ -1,3 +1,4 @@
+import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import {
   Button,
   ButtonGroup,
@@ -49,6 +50,7 @@ export function WishButton() {
   return (
     <ButtonGroup shape="pill">
       <TaskDraftPopover
+        filedFrom={asPluginId("wish")}
         open={open}
         onOpenChange={setWishOpen}
         trigger={

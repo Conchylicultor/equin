@@ -584,8 +584,8 @@ async function writeThrowaway(i: number): Promise<void> {
   const conv = `${task}-conv`;
   await q(
     // A real task's rank: every reader decodes it, so it must be a valid one.
-    `INSERT INTO tasks (id, cluster_id, title, rank, title_auto, dropped_at, mandate_ref)
-     SELECT $1, $1, 'trigger-time throwaway', rank, false, now(), 'interactive' FROM tasks WHERE id = $2`,
+    `INSERT INTO tasks (id, cluster_id, title, rank, title_auto, dropped_at, mandate_ref, author_kind)
+     SELECT $1, $1, 'trigger-time throwaway', rank, false, now(), 'interactive', 'human' FROM tasks WHERE id = $2`,
     [task, attempt.task_id],
   );
   await q(

@@ -135,8 +135,8 @@ test("Stop waits for the agent to take the typed turn, then stops it and hands i
   const conv = "conv-stop-typed-1";
   const turnId = turnIdKind.mint();
   await t.db.execute(sql`
-    INSERT INTO tasks (id, cluster_id, title, rank, mandate_ref)
-    VALUES (${task}, ${task}, 'stop typed', 'a1', 'interactive')
+    INSERT INTO tasks (id, cluster_id, title, rank, mandate_ref, author_kind)
+    VALUES (${task}, ${task}, 'stop typed', 'a1', 'interactive', 'human')
   `);
   await t.db.execute(sql`
     INSERT INTO attempts (id, task_id, worktree_path)

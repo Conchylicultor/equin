@@ -13,7 +13,7 @@
  *    change as one upsert, a clear as one delete (checked on the socket's
  *    frames, not in the DOM).
  *
- *  - **19 `tasks.v2`** — the seeded task's own row (the detail pane reads
+ *  - **19 `tasks.v3`** — the seeded task's own row (the detail pane reads
  *    it by id; no whole set since the bounded-tasks step 5, so a task is never
  *    in the boot snapshot unless a live conversation's): a hold and a release
  *    each as one upsert of its row with the new status, an edge making it run
@@ -93,7 +93,7 @@ const SEED_PREFIX = "e2e-tree-";
 /** The live keys this script watches, and what an HTTP read of one looks like. */
 const TREE_KEYS = [
   "task-categories.by-id:rows",
-  "tasks.v2:rows",
+  "tasks.v3:rows",
   "attempts.v2",
 ] as const;
 
@@ -257,7 +257,7 @@ interface TaskRow {
 }
 
 /**
- * Step 19: `tasks.v2:rows` (the seeded task's own row) — a status flip each
+ * Step 19: `tasks.v3:rows` (the seeded task's own row) — a status flip each
  * way, an edge added and removed: each one scoped delta of the row, and over
  * the whole phase no frame re-sent the whole value.
  */
@@ -268,7 +268,7 @@ async function tasksPhase(
   taskId: string,
   measureFrom: number,
 ): Promise<void> {
-  const KEY = "tasks.v2:rows";
+  const KEY = "tasks.v3:rows";
   const otherId = `${taskId}-b`;
   const upsertWhere = async (
     id: string,
@@ -301,7 +301,7 @@ async function tasksPhase(
   // A second task the seeded one comes to run after: the edge moves the
   // seeded task's `dependencies` and status.
   await db.query(
-    "INSERT INTO tasks (id, cluster_id, title, title_auto, rank, mandate_ref) VALUES ($1, $1, $2, false, $3, 'interactive')",
+    "INSERT INTO tasks (id, cluster_id, title, title_auto, rank, mandate_ref, author_kind) VALUES ($1, $1, $2, false, $3, 'interactive', 'human')",
     [otherId, `${otherId} task`, `zz${otherId}`],
   );
   at = frames.length;
@@ -339,7 +339,7 @@ async function tasksPhase(
 
   const phase = framesOf(frames, KEY, measureFrom);
   r.ok(
-    "no `tasks.v2:rows` frame re-sent the whole value, over the whole phase",
+    "no `tasks.v3:rows` frame re-sent the whole value, over the whole phase",
     phase.every((f) => f.value === undefined),
     phase
       .map((f) => `${f.kind ?? "?"}${f.value !== undefined ? "(value)" : ""}`)
@@ -400,7 +400,7 @@ async function attemptsPhase(
   );
   // A pending attempt is `active` (its agent is expected to run).
   const started = await upsertWhere<TaskRow>(
-    "tasks.v2:rows",
+    "tasks.v3:rows",
     taskId,
     at,
     (row) => row.status === "in_progress",
@@ -476,7 +476,7 @@ async function attemptsPhase(
     completed.ok,
   );
   const done = await upsertWhere<TaskRow>(
-    "tasks.v2:rows",
+    "tasks.v3:rows",
     taskId,
     at,
     (row) => row.status === "done",
@@ -492,7 +492,7 @@ async function attemptsPhase(
   );
   r.ok("an attempt delete arrives as a delete", gone.ok);
   const fresh = await upsertWhere<TaskRow>(
-    "tasks.v2:rows",
+    "tasks.v3:rows",
     taskId,
     at,
     (row) => row.status === "new",
@@ -936,7 +936,7 @@ try {
   const taskId = `${SEED_PREFIX}${tag}`;
   const taskTitle = `${taskId} task`;
   await db.query(
-    "INSERT INTO tasks (id, cluster_id, title, title_auto, rank, mandate_ref) VALUES ($1, $1, $2, false, $3, 'interactive')",
+    "INSERT INTO tasks (id, cluster_id, title, title_auto, rank, mandate_ref, author_kind) VALUES ($1, $1, $2, false, $3, 'interactive', 'human')",
     [taskId, taskTitle, `zz${tag}`],
   );
 

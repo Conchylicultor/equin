@@ -1,3 +1,4 @@
+import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import type { LiveRowsCollection } from "@plugins/network/plugins/live/core";
 import { Investigate } from "@plugins/primitives/plugins/launch/plugins/investigate/web";
 import {
@@ -22,6 +23,7 @@ export const investigateReleaseHistory =
     failed: (run) => run.status === "failed",
     noun: "release",
     categoryId: RELEASE_CATEGORY_ID,
+    filedFrom: asPluginId("apps.studio.compositions.release"),
     subject: (run) => runSubject({ kind: RELEASE_RUN_KIND, id: run.id }),
     description: (run) =>
       `Launch an agent briefed on this failed ${run.target} release of ${run.composition} — its error verbatim, its provenance, and where the transcript is.`,

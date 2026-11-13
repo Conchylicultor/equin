@@ -363,6 +363,7 @@ async function insertTask(id: string, title: string): Promise<void> {
     titleAuto: false,
     rank: `r${id}`,
     mandateRef: TEST_MANDATE.id,
+    authorKind: "human",
   } as typeof _tasks.$inferInsert);
 }
 

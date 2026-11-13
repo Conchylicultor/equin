@@ -1,3 +1,4 @@
+import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import type { createTask } from "@plugins/tasks/plugins/tasks-core/server";
 import type {
   TaskFilingStart,
@@ -201,7 +202,10 @@ export async function fileAddTask(
     // The agent authored this title deliberately — keep it in the launch prompt.
     titleAuto: false,
     description: input.description ?? null,
-    author: conversationId,
+    filing: {
+      author: { kind: "agent", conversationId },
+      filedFrom: asPluginId("tasks"),
+    },
   });
 
   // A watching caller watches what it files — before anything can launch on

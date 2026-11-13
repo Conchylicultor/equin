@@ -1,3 +1,4 @@
+import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { interactiveMandate } from "@plugins/tasks/plugins/mandate-presets/core";
 import {
   createSongRow,
@@ -25,7 +26,6 @@ import {
   transcriptionWorkspace,
   resolveProfileSource,
   SONATA_CATEGORY_ID,
-  TRANSCRIPTION_AUTHOR,
 } from "./launch";
 
 export const handlePrepareTranscription = implement(
@@ -57,7 +57,11 @@ export const handlePrepareTranscription = implement(
     const task = await createTask({
       title: `Transcribe: ${title}`,
       description: prompt,
-      author: TRANSCRIPTION_AUTHOR,
+      // A person asked for the transcription: the task is theirs.
+      filing: {
+        author: { kind: "human" },
+        filedFrom: asPluginId("apps.sonata.transcription"),
+      },
       mandate: interactiveMandate,
     });
     await setTaskCategory(task.id, SONATA_CATEGORY_ID);

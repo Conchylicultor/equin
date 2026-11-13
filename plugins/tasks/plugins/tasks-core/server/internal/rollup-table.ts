@@ -86,7 +86,7 @@ export const _taskBlocking = pgTable(TASK_BLOCKING_TABLE, {
   has: boolean("has").notNull(),
 });
 
-// The `tasks.tree` tree's child count (`task-rows.ts`' `taskChildCount`):
+// The `tasks.tree.v2` tree's child count (`task-rows.ts`' `taskChildCount`):
 // per task, how many tasks name it as their folder.
 export const _taskChildCount = pgTable(TASK_CHILD_COUNT_TABLE, {
   hostId: text("host_id").primaryKey(),

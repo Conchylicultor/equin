@@ -35,7 +35,7 @@ export type TaskTrackRow = z.infer<typeof TaskTrackRowSchema>;
 // conversation header chip); `found: false` is main. Lookup-only (`:rows`
 // alone, never preloaded): no surface needs every task's track — a LIST of
 // tasks reads the track exposed into its rows (`exposes` above), and the
-// sidequest launch list filters `tasks.tree` by it on the server — so the
+// sidequest launch list filters `tasks.tree.v2` by it on the server — so the
 // set is bounded by construction, its cost one row per mounted reader.
 //
 // The key is `task-tracks.by-id`, not the old whole set's `task-tracks.all`: a

@@ -1,3 +1,4 @@
+import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
 import {
   useFetchEndpoint,
   useMachineAvailability,
@@ -20,7 +21,14 @@ import type { TaskSubject } from "@plugins/tasks/plugins/task-subject/core";
 
 /** The task a launch runs: one that exists, or a new one filed under a category. */
 export type TaskLaunchTarget =
-  { id: string } | { title: string; categoryId: string; subject?: TaskSubject };
+  | { id: string }
+  | {
+      title: string;
+      categoryId: string;
+      subject?: TaskSubject;
+      /** The plugin id of the surface filing it (the task's `filedFrom`). */
+      filedFrom: PluginId;
+    };
 
 export interface UseTaskLaunchOptions {
   /** Whether a launch that started also OPENS its conversation. Default `false`. */

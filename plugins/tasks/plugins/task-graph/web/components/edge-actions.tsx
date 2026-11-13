@@ -1,3 +1,4 @@
+import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { useCallback, useState } from "react";
 import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { removeTaskDependency, insertTaskBetween } from "@plugins/tasks/core";
@@ -35,7 +36,14 @@ export function EdgeActions({
         const newTask = await fetchEndpoint(
           insertTaskBetween,
           {},
-          { body: { sourceTaskId, targetTaskId, targetFolderId } },
+          {
+            body: {
+              sourceTaskId,
+              targetTaskId,
+              targetFolderId,
+              filedFrom: asPluginId("tasks.task-graph"),
+            },
+          },
         );
         onTaskCreated(newTask.id);
       } finally {

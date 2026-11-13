@@ -1,3 +1,4 @@
+import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { useConversations } from "@plugins/conversations/web";
 import {
   matchResource,
@@ -178,6 +179,7 @@ function HomePrompt() {
     const result = await launch(prompt, draft.picked, {
       title,
       categoryId: CONVERSATIONS_CATEGORY_ID,
+      filedFrom: asPluginId("apps.agent-manager.welcome"),
     });
     // Unreachable: the send button is disabled while launching is
     // unavailable, and a subtree's transport is fixed.

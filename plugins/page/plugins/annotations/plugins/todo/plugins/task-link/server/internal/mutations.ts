@@ -1,3 +1,4 @@
+import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { interactiveMandate } from "@plugins/tasks/plugins/mandate-presets/core";
 import { HttpError } from "@plugins/infra/plugins/endpoints/server";
 import {
@@ -135,7 +136,10 @@ export async function ensureTodoTask(
     // Synthesised summary, upgraded by Haiku.
     titleAuto: true,
     description: prompt,
-    author: "user",
+    filing: {
+      author: { kind: "human" },
+      filedFrom: asPluginId("page.annotations.todo.task-link"),
+    },
     mandate: interactiveMandate,
   });
   scheduleTaskTitleUpdate(task.id, seed, fallbackTitle);

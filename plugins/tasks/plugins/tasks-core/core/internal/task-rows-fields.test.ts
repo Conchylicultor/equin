@@ -1,9 +1,10 @@
 /**
  * The task list's fields, derived from the `tasks` entity (`taskRows` is
  * declared by fields): the ids every task list — and every saved view, filter
- * preset and group-by — names are unchanged, and the wire row is still
- * exactly `TaskListItem`'s keys (the C39 old-bundle contract: additive
- * `$columns` aside, nothing removed or renamed).
+ * preset and group-by — names are pinned here, and the wire row is exactly
+ * `TaskListItem`'s keys (a removed or renamed field renames the collection
+ * keys, C39: `author` → `authorKind` / `authorConversationId` / `filedFrom`
+ * moved `tasks.v2` → `tasks.v3`).
  *
  * Run: `./equin test plugins/tasks/plugins/tasks-core`.
  */
@@ -12,12 +13,16 @@ import { describe, expect, test } from "bun:test";
 import { taskRows, taskWindow } from "../resources";
 import { tasksEntityRef } from "../entity-refs";
 import { TaskListItemSchema, TASK_STATUS_OPTIONS } from "./schema";
+import { TASK_AUTHOR_KIND_OPTIONS } from "../task-author";
 
 describe("taskRows fields", () => {
   test("the listed field ids are the task list's", () => {
     expect(Object.keys(taskRows.fields)).toEqual([
       "title",
       "updatedAt",
+      "authorKind",
+      "authorConversationId",
+      "filedFrom",
       "status",
     ]);
     expect(taskRows.fields.title).toMatchObject({
@@ -32,6 +37,15 @@ describe("taskRows fields", () => {
       label: "Status",
       options: TASK_STATUS_OPTIONS,
     });
+    // Who filed the task and from where (`../task-author.ts`).
+    expect(taskRows.fields.authorKind).toMatchObject({
+      label: "Created by",
+      options: TASK_AUTHOR_KIND_OPTIONS,
+    });
+    expect(taskRows.fields.authorConversationId).toMatchObject({
+      label: "Author",
+    });
+    expect(taskRows.fields.filedFrom).toMatchObject({ label: "Filed from" });
   });
 
   test("the row is exactly TaskListItem's keys", () => {
@@ -54,6 +68,9 @@ describe("taskWindow — the tasks tree", () => {
     expect(Object.keys(taskWindow.fields)).toEqual([
       "title",
       "updatedAt",
+      "authorKind",
+      "authorConversationId",
+      "filedFrom",
       "folderId",
       "status",
     ]);

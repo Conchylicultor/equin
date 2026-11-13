@@ -23,6 +23,7 @@ import {
 } from "@plugins/tasks/plugins/tasks-core/server";
 import type { EmitTx } from "@plugins/infra/plugins/events/server";
 import type { MandateRef } from "@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/policy/core";
+import type { TaskFiling } from "@plugins/tasks/plugins/tasks-core/core";
 import { createKeyedMutex } from "@plugins/packages/plugins/keyed-mutex/core";
 import { withInlineLaunch } from "./inline-launch";
 import { Runtime } from "./runtime";
@@ -118,14 +119,20 @@ async function resolveTaskEffort(
  * What a launch runs under — exactly one of:
  * - `taskId`: a new attempt on that task;
  * - `mandate`: a new root task (titled "Untitled"), stating the mandate its
- *   agent works under — a root never goes without one;
+ *   agent works under — a root never goes without one — and who filed it
+ *   from where (`filing`);
  * - `attemptId` / `forkFromConversationId`: an existing attempt's workspace.
  */
 export type ConversationTarget =
-  | { taskId: string; mandate?: never }
-  | { mandate: MandateRef; taskId?: never }
-  | { attemptId: string; taskId?: never; mandate?: never }
-  | { forkFromConversationId: string; taskId?: never; mandate?: never };
+  | { taskId: string; mandate?: never; filing?: never }
+  | { mandate: MandateRef; filing: TaskFiling; taskId?: never }
+  | { attemptId: string; taskId?: never; mandate?: never; filing?: never }
+  | {
+      forkFromConversationId: string;
+      taskId?: never;
+      mandate?: never;
+      filing?: never;
+    };
 
 export type CreateConversationOpts = CreateConversationFields &
   ConversationTarget;
@@ -225,7 +232,7 @@ export interface PreparedConversation {
     | {
         kind: "new";
         attemptId: string;
-        task: { taskId: string } | { mandate: MandateRef };
+        task: { taskId: string } | { mandate: MandateRef; filing: TaskFiling };
       };
 }
 
@@ -249,13 +256,16 @@ async function taskPreprompt(
 
 // The mandate of the root task a new attempt with no task files. Only the
 // `mandate` arm reaches here (an `attemptId` / fork target reuses an attempt).
-function newRootMandate(opts: CreateConversationOpts): MandateRef {
+function newRootTask(opts: CreateConversationOpts): {
+  mandate: MandateRef;
+  filing: TaskFiling;
+} {
   if (!opts.mandate) {
     throw new Error(
       "prepareConversation: a new attempt needs a taskId or a mandate",
     );
   }
-  return opts.mandate;
+  return { mandate: opts.mandate, filing: opts.filing };
 }
 
 // Phase 1 of a launch: READS ONLY. Everything slow or off-DB (fork-source
@@ -407,9 +417,7 @@ export async function prepareConversation(
     target = {
       kind: "new",
       attemptId: newId,
-      task: opts.taskId
-        ? { taskId: opts.taskId }
-        : { mandate: newRootMandate(opts) },
+      task: opts.taskId ? { taskId: opts.taskId } : newRootTask(opts),
     };
   }
 
@@ -483,7 +491,7 @@ export async function commitConversation(
       const task = await createTask(
         {
           title: "Untitled",
-          author: p.spawnedBy,
+          filing: p.target.task.filing,
           mandate: p.target.task.mandate,
         },
         tx,

@@ -37,6 +37,10 @@ export type TaskChainCard = z.infer<typeof TaskChainCardSchema>;
 
 export const TaskChainSubmitBodySchema = z.object({
   target: TaskChainTargetSchema,
+  // The plugin id of the surface filing the chain (`TaskFiling.filedFrom`).
+  // The author is never sent: a drafted task is a person's, stamped by the
+  // server.
+  filedFrom: z.string().min(1),
   // Only the head card honors `relate`.
   relate: TaskChainRelateSchema.optional(),
   cards: z.array(TaskChainCardSchema).min(1),

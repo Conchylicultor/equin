@@ -1,3 +1,4 @@
+import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import {
   useLive,
   type LiveListResult,
@@ -224,6 +225,7 @@ function BuildFixButton({
       noun="build"
       subject={runSubject({ kind: BUILD_RUN_KIND, id: runId })}
       categoryId={BUILD_CATEGORY_ID}
+      filedFrom={asPluginId("build.build-fix")}
       description="Launch an agent to diagnose and fix the failing build — briefed with the build's info and the failed steps' output."
       placeholder="Extra context (optional) — e.g. what changed, suspected cause…"
       brief={(userText) => {

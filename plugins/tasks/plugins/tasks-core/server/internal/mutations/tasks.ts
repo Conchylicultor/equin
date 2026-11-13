@@ -2,7 +2,7 @@ import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { _taskDependencies, _tasks } from "../tables";
 import { tasks } from "../views";
-import { TaskGraph } from "../../../core";
+import { TaskGraph, taskAuthorColumns, type TaskFiling } from "../../../core";
 import { taskIdKind } from "@plugins/tasks/plugins/task-ids/core";
 import {
   findNextRankInFolder,
@@ -31,7 +31,8 @@ interface CreateTaskFields {
   // Defaults to true (machine-generated label). Pass false when the title is
   // human/agent-authored (explicit API/MCP title) so buildTaskPrompt keeps it.
   titleAuto?: boolean;
-  author?: string;
+  /** Who decided the task should exist, and the surface that filed it. */
+  filing: TaskFiling;
   rank?: Rank;
   description?: string | null;
 }
@@ -97,7 +98,8 @@ async function createTaskOn(input: CreateTaskInput, exec: DbExecutor) {
       groupId: input.groupId ?? null,
       title: input.title,
       titleAuto: input.titleAuto ?? true,
-      author: input.author,
+      ...taskAuthorColumns(input.filing.author),
+      filedFrom: input.filing.filedFrom,
       rank: rank.toJSON(),
       description: input.description ?? null,
     });
@@ -110,7 +112,13 @@ async function createTaskOn(input: CreateTaskInput, exec: DbExecutor) {
     exec === db ? undefined : { tx: exec as EmitTx },
   );
   await taskCreated.emit(
-    { taskId: id, folderId, title: input.title, author: input.author ?? null },
+    {
+      taskId: id,
+      folderId,
+      title: input.title,
+      ...taskAuthorColumns(input.filing.author),
+      filedFrom: input.filing.filedFrom,
+    },
     exec === db ? undefined : { tx: exec as EmitTx },
   );
   // No parent force-expand here: expand/collapse is device-local view state

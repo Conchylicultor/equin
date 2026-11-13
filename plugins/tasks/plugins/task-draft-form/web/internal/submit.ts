@@ -1,3 +1,4 @@
+import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
 import {
   getEndpointErrorMessage,
   type FetchEndpoint,
@@ -23,6 +24,8 @@ import {
 export interface SubmitArgs {
   cards: CardDraft[];
   target: TaskChainTarget;
+  /** The plugin id of the surface filing the chain (`filedFrom`). */
+  filedFrom: PluginId;
   relate: TaskChainRelate | undefined;
   url: string;
   /** The open app's URL default, for cards whose URL toggle was never touched. */
@@ -55,6 +58,7 @@ export async function submitChain(
 
   const body: TaskChainSubmitBody = {
     target: args.target,
+    filedFrom: args.filedFrom,
     relate: args.relate,
     cards: trimmed.map((c, i) => {
       const attachmentIds = Array.from(new Set(extractAttachmentIds(c.text)));

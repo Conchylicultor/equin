@@ -5,7 +5,7 @@ import {
   flagRaise,
   pushPolicy,
 } from "@plugins/conversations/plugins/conversation-view/plugins/push-and-exit/plugins/capabilities/core";
-import { and, eq, like } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { defineServerContribution } from "@plugins/framework/plugins/server-core/core";
@@ -44,8 +44,9 @@ export function declaredUpdaters(): Updater[] {
 
 /**
  * Upgrade tasks filed before automations recorded where a task came from:
- * authored `deps.upgrade` (batched) or `deps.<updater>` (one per updater), in
- * the Dependencies category. Transition only — delete once none can be open.
+ * filed by this plugin itself (`filedFrom`, migrated from their old
+ * `deps.upgrade` / `deps.<updater>` author), in the Dependencies category.
+ * Transition only — delete once none can be open.
  */
 async function legacyUpgradeTaskIds(): Promise<string[]> {
   const c = tasksCategory.table;
@@ -54,7 +55,10 @@ async function legacyUpgradeTaskIds(): Promise<string[]> {
     .from(c)
     .innerJoin(_tasks, eq(_tasks.id, c.taskId))
     .where(
-      and(eq(c.category, DEPS_CATEGORY_ID), like(_tasks.author, "deps.%")),
+      and(
+        eq(c.category, DEPS_CATEGORY_ID),
+        eq(_tasks.filedFrom, "infra.deps.updates"),
+      ),
     );
   return rows.map((r) => r.id);
 }

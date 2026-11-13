@@ -17,7 +17,7 @@ import { TRANSCRIPTION_PROFILE_ID, type ProfileInput } from "./profile-input";
 /** The task category transcription tasks are filed under. */
 export const SONATA_CATEGORY_ID = "sonata";
 
-/** Who launches the transcribing agents (`spawnedBy`, task author). */
+/** Who launches the transcribing agents (the conversation's `spawnedBy`). */
 export const TRANSCRIPTION_AUTHOR = "sonata-transcription";
 
 const PROMPT =

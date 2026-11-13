@@ -1,3 +1,4 @@
+import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { Investigate } from "@plugins/primitives/plugins/launch/plugins/investigate/web";
 import {
   EVENTS_CATEGORY_ID,
@@ -15,6 +16,7 @@ export const investigateSourceRuns = Investigate.Register<EventSourceRunRow>({
   failed: (run) => run.outcome === "failed",
   noun: "source run",
   categoryId: EVENTS_CATEGORY_ID,
+  filedFrom: asPluginId("apps.events.sources.source-detail.runs"),
   subject: (run) => ({ kind: "event-source-run", id: run.id }),
   description: () =>
     "Launch an agent briefed on this failed Events source run — its error verbatim, its counts, and where to dig.",

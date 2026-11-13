@@ -86,7 +86,11 @@ export function TaskHeader({ taskId }: { taskId: string }) {
       </Stack>
       <Stack direction="row" align="center" gap="md">
         <SectionLabel as="span">Author</SectionLabel>
-        <AuthorDisplay author={task.author ?? "user"} />
+        <AuthorDisplay
+          authorKind={task.authorKind}
+          authorConversationId={task.authorConversationId}
+          filedFrom={task.filedFrom}
+        />
       </Stack>
       <Stack direction="row" align="center" gap="md">
         <SectionLabel as="span">Created</SectionLabel>

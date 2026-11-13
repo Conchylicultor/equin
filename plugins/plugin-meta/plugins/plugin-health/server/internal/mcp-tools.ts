@@ -1,3 +1,4 @@
+import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { interactiveMandate } from "@plugins/tasks/plugins/mandate-presets/core";
 import { z } from "zod";
 import { db } from "@plugins/database/server";
@@ -80,7 +81,10 @@ Good: "Floating promise in sidebar refresh". Bad: "Add await to line 42".`,
         : { mandate: interactiveMandate }),
       title,
       description: description ?? null,
-      author: conversationId,
+      filing: {
+        author: { kind: "agent", conversationId: conversationId },
+        filedFrom: asPluginId("plugin-meta.plugin-health"),
+      },
     });
 
     await healthReviewExt.upsert(task.id, { reviewId: review!.id });

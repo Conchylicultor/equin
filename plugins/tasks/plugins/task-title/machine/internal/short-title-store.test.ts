@@ -36,6 +36,7 @@ beforeAll(async () => {
     titleAuto: false,
     rank: "a0",
     mandateRef: "interactive",
+    authorKind: "human",
   } as typeof _tasks.$inferInsert);
 });
 

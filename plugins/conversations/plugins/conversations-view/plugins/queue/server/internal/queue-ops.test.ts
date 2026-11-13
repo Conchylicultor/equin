@@ -52,8 +52,8 @@ function inTx<T>(fn: (tx: Exec) => Promise<T>): Promise<T> {
 async function seedTask(): Promise<string> {
   const id = `q-task-${++seq}`;
   await t.db.execute(sql`
-    INSERT INTO tasks (id, cluster_id, title, title_auto, rank, created_at, updated_at, mandate_ref)
-    VALUES (${id}, ${id}, 'a', true, ${id}, ${OLD}, ${OLD}, 'interactive')
+    INSERT INTO tasks (id, cluster_id, title, title_auto, rank, created_at, updated_at, mandate_ref, author_kind)
+    VALUES (${id}, ${id}, 'a', true, ${id}, ${OLD}, ${OLD}, 'interactive', 'human')
   `);
   return id;
 }

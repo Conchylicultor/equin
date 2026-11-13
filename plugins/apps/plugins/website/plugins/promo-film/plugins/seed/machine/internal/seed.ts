@@ -1,3 +1,4 @@
+import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { z } from "zod";
 import { count, desc, eq, or, sql } from "drizzle-orm";
 import {
@@ -162,6 +163,10 @@ export async function seedPromoFilm(): Promise<PromoFilmSeedReport> {
     await createTask({
       id: filmTaskId(task.n),
       title: task.task,
+      filing: {
+        author: { kind: "human" },
+        filedFrom: asPluginId("apps.website.promo-film.seed"),
+      },
       titleAuto: false,
       description: task.prompt,
       mandate: interactiveMandate,
@@ -416,6 +421,10 @@ async function writeRun(
     await createTask({
       id: run.taskId,
       title: run.task,
+      filing: {
+        author: { kind: "human" },
+        filedFrom: asPluginId("apps.website.promo-film.seed"),
+      },
       titleAuto: false,
       description: run.prompt,
       mandate: interactiveMandate,

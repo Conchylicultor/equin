@@ -1,3 +1,4 @@
+import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import {
   CreateButton,
   DataViewSwitcher,
@@ -124,6 +125,7 @@ export function PrototypeGallery() {
             return {
               prompt: parts.join("\n\n"),
               categoryId: PROTOTYPES_CATEGORY_ID,
+              filedFrom: asPluginId("apps.prototypes.gallery"),
             };
           }}
         />

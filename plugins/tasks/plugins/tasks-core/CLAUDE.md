@@ -194,7 +194,7 @@ Full design: `research/2026-08-20-tasks-attempt-status-positive-evidence.md`.
 readers import the declaration from `tasks-core/core`); `server/internal/resources.ts`
 serves them.
 
-- **`taskRows`** (`tasks.v2`) — the tasks as a bounded WINDOW (`rank` then
+- **`taskRows`** (`tasks.v3`) — the tasks as a bounded WINDOW (`rank` then
   `createdAt`, 100 / 500), read today by id with `useLive(taskRows, { id })` /
   `{ ids }` (chips, referents, the task pane, worktree identity, the queue);
   a window rather than lookup-only so its rows keep the task extensions'
@@ -222,7 +222,7 @@ serves them.
   (a conversation's `waiting_for`) nothing. `all-parity.test.ts` holds both
   shipped reads of the binding (every task by id, every cluster's scope)
   equal to `tasks_v`.
-- **`taskClusterRows`** (`task-cluster`) — one dependency cluster's tasks, a
+- **`taskClusterRows`** (`task-cluster.v2`) — one dependency cluster's tasks, a
   scoped `all` by `clusterId` over the same row and binding as `taskRows`
   (`taskRowsServeOptions`), capped at `TASK_CLUSTER_MAX` (`all: { max }`).
   `tasks.cluster_id` is the monotone union-find label, **kept by the database**
@@ -243,7 +243,7 @@ serves them.
   `where: null` until the row is known), with the `TaskGraph` built once per
   snapshot. Why clusters (and not per-task closures):
   `research/2026-11-05-tasks-bounded-task-rows.md` § Cluster bound.
-- **`taskWindow`** (`tasks.tree`) — the tasks TREE: the same row as a
+- **`taskWindow`** (`tasks.tree.v2`) — the tasks TREE: the same row as a
   WINDOW (`rank` then `createdAt`, 100 / 500, not preloaded), served with the
   same joins (`taskWindowServeOptions`), declared `tree: { parent:
   "folderId", rank: "rank" }` (network/live *Trees*). `status` and the other
@@ -256,10 +256,10 @@ serves them.
   `task_child_count` rollup (`taskChildCount`, a `materializeJoin` of the
   tasks counting their own rows by `folder_id`, backed by
   `tasks_folder_rank_idx`), so a filing, a move (both folders) or a delete
-  recounts the folders it touches; it mints `tasks.tree:ancestors`. Read by
+  recounts the folders it touches; it mints `tasks.tree.v2:ancestors`. Read by
   the task list (task-list's `TasksListView`, a live DataView tree) and the
   sidequest launch list (`{ status: "new", tasks_ext_track.track:
-  "sidequest" }`, its own `createdAt desc` order). Key `tasks.tree` (it was
+  "sidequest" }`, its own `createdAt desc` order). Key `tasks.tree.v2` (it was
   the flat `tasks.window`; the default read changed meaning, so a new key per
   C39). Pinned by
   `server/internal/task-tree-oracle.test.ts` (every level converges on the
@@ -284,7 +284,7 @@ serves them.
 - **`taskDescriptions`** (`task-descriptions`, lookup-only: `:rows`) — one
   task's `description`, the heavy text the set omits, by id
   (`useLive(taskDescriptions, { id })`). A description autosave is that row's
-  refill, and also the task's one-row refill in `tasks.v2` (the derived
+  refill, and also the task's one-row refill in `tasks.v3` (the derived
   `updated_at` moves).
 - **The ended-conversation total** is `conversationsGone`'s own `:count`
   (declared `count: true`, preloaded with the window):
@@ -403,7 +403,7 @@ serves them.
 
 ## Plugin reference
 
-- Description: tasks-core web presence: eagerly registers the boot-critical conversations-* / tasks.v2 resource descriptors so boot-snapshot can hydrate them before first paint, and owns the client-side reads of them (useTaskAttempts / useTaskConversations, the one join from a task to the attempts and runs it produced, each a read of the task's own scope; useTaskCluster, a task's dependency cluster — its row, then its cluster's rows — with the dependency graph over them). Schema + repository layer for the tasks/attempts/conversations FK cluster.
+- Description: tasks-core web presence: eagerly registers the boot-critical conversations-* / tasks.v3 resource descriptors so boot-snapshot can hydrate them before first paint, and owns the client-side reads of them (useTaskAttempts / useTaskConversations, the one join from a task to the attempts and runs it produced, each a read of the task's own scope; useTaskCluster, a task's dependency cluster — its row, then its cluster's rows — with the dependency graph over them). Schema + repository layer for the tasks/attempts/conversations FK cluster.
 - Load-bearing: yes
 - Web:
   - Contributes:
@@ -637,20 +637,20 @@ serves them.
     - `pushes:groups` (push)
     - `pushes:rows` (keyed, point)
     - `task-active-dependents:rows` (keyed, point)
-    - `task-cluster` (keyed)
-    - `task-cluster:rows` (keyed, point)
+    - `task-cluster.v2` (keyed)
+    - `task-cluster.v2:rows` (keyed, point)
     - `task-descriptions:rows` (keyed, point)
     - `task-dropped-states:rows` (keyed, point)
     - `task-mandates:rows` (keyed, point)
     - `tasks.attachment-links` (keyed)
     - `tasks.attachment-links:rows` (keyed, point)
-    - `tasks.tree` (keyed, window)
-    - `tasks.tree:ancestors` (keyed, window)
-    - `tasks.tree:groups` (push)
-    - `tasks.tree:rows` (keyed, point)
-    - `tasks.v2` (keyed, window)
-    - `tasks.v2:groups` (push)
-    - `tasks.v2:rows` (keyed, point)
+    - `tasks.tree.v2` (keyed, window)
+    - `tasks.tree.v2:ancestors` (keyed, window)
+    - `tasks.tree.v2:groups` (push)
+    - `tasks.tree.v2:rows` (keyed, point)
+    - `tasks.v3` (keyed, window)
+    - `tasks.v3:groups` (push)
+    - `tasks.v3:rows` (keyed, point)
 - Core:
   - Uses: 35 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations/model-provider` ×3
@@ -687,6 +687,9 @@ serves them.
     - `ConversationWorkingOn`
     - `Push`
     - `Task`
+    - `TaskAuthor`
+    - `TaskAuthorKind`
+    - `TaskFiling`
     - `TaskFilingStart`
     - `TaskListItem`
     - `TaskNode`
@@ -739,12 +742,16 @@ serves them.
     - `PushSchema`
     - `RECENT_GONE_LIMIT`
     - `SETTLED_STATUSES`
+    - `TASK_AUTHOR_KIND_OPTIONS`
+    - `TASK_AUTHOR_KINDS`
     - `TASK_CLUSTER_MAX`
     - `TASK_FILING_STARTS`
     - `TASK_STATUS_OPTIONS`
     - `taskActiveDependentCounts`
     - `taskAttachmentLinks`
     - `taskAttachmentLinksEntityRef`
+    - `taskAuthorColumns`
+    - `taskAuthorOf`
     - `taskClusterRows`
     - `taskDependenciesEntityRef`
     - `taskDescriptions`

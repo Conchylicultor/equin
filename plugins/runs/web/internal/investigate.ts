@@ -1,3 +1,4 @@
+import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import type { FieldsRecord } from "@plugins/fields/core";
 import type { LiveArm } from "@plugins/network/plugins/live/core";
@@ -33,6 +34,7 @@ export function investigateRuns(
     failed: (run) => run.kind === armKind(arm) && run.outcome === "failed",
     noun,
     categoryId,
+    filedFrom: asPluginId("runs"),
     subject: (run) => runSubject(run),
     description: (run) =>
       `Launch an agent briefed on this failed ${noun} — ${run.label}: its message, every field the run recorded, and where to dig.`,

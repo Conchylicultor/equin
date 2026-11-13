@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "answers": [
+    {
+      "key": "column:tasks.author_kind",
+      "entityType": "column",
+      "entityName": "author_kind",
+      "action": "create"
+    },
+    {
+      "key": "column:tasks.author_conversation_id",
+      "entityType": "column",
+      "entityName": "author_conversation_id",
+      "action": "create"
+    },
+    {
+      "key": "column:tasks.filed_from",
+      "entityType": "column",
+      "entityName": "filed_from",
+      "action": "create"
+    }
+  ]
+}

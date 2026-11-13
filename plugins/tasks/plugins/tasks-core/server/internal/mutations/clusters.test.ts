@@ -1,3 +1,4 @@
+import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 /**
  * Real-DB invariant suite for the monotone membership label (`tasks.cluster_id`)
  * — design: `research/2026-08-03-tasks-monotone-deps-tree-membership.md`.
@@ -64,6 +65,11 @@ import { taskClusterTriggers } from "../cluster-triggers";
 import { installDbTriggers } from "@plugins/database/plugins/db-triggers/server";
 import { TASK_CLUSTER_MAX } from "../../../core";
 
+const TEST_FILING = {
+  author: { kind: "human" },
+  filedFrom: asPluginId("tasks.tasks-core"),
+} as const;
+
 // Any registered mandate id: these tests never resolve it.
 const TEST_MANDATE = defineMandate({ id: "interactive", label: "Interactive" });
 
@@ -79,8 +85,8 @@ type Exec = DbExecutor | NodePgDatabase;
 async function seedTasks(exec: Exec, ids: string[]): Promise<void> {
   for (let i = 0; i < ids.length; i++) {
     await exec.execute(sql`
-      INSERT INTO tasks (id, cluster_id, title, title_auto, rank, dropped_at, created_at, updated_at, mandate_ref)
-      VALUES (${ids[i]}, ${ids[i]}, ${ids[i]}, true, ${"a" + i}, now(), now(), now(), 'interactive')
+      INSERT INTO tasks (id, cluster_id, title, title_auto, rank, dropped_at, created_at, updated_at, mandate_ref, author_kind)
+      VALUES (${ids[i]}, ${ids[i]}, ${ids[i]}, true, ${"a" + i}, now(), now(), now(), 'interactive', 'human')
     `);
   }
 }
@@ -250,8 +256,8 @@ describe("the cluster triggers", () => {
 
     const E = "clu-e";
     await t.db.execute(sql`
-      INSERT INTO tasks (id, cluster_id, folder_id, title, title_auto, rank, created_at, updated_at)
-      VALUES (${E}, ${E}, ${D}, ${E}, true, 'z', now(), now())
+      INSERT INTO tasks (id, cluster_id, folder_id, title, title_auto, rank, created_at, updated_at, author_kind)
+      VALUES (${E}, ${E}, ${D}, ${E}, true, 'z', now(), now(), 'human')
     `);
     expect(await expectOneCluster(t.db, [A, E])).toBe(A);
     expect(await clusterEdgeViolations(tdb)).toEqual([]);
@@ -281,8 +287,8 @@ describe("the cluster triggers", () => {
     // inserted (no edge between its members to check).
     const big = "clu-big";
     await t.db.execute(sql`
-      INSERT INTO tasks (id, cluster_id, title, title_auto, rank, created_at, updated_at, mandate_ref)
-      SELECT ${big} || '-' || lpad(n::text, 4, '0'), ${big} || '-0001', 'x', true, 'a', now(), now(), 'interactive'
+      INSERT INTO tasks (id, cluster_id, title, title_auto, rank, created_at, updated_at, mandate_ref, author_kind)
+      SELECT ${big} || '-' || lpad(n::text, 4, '0'), ${big} || '-0001', 'x', true, 'a', now(), now(), 'interactive', 'human'
         FROM generate_series(1, ${TASK_CLUSTER_MAX - 1}) n
     `);
     await union(t.db, C, D);
@@ -413,7 +419,10 @@ describe("union points", () => {
     const folderId = P + "f0";
     const labels = await worktreeDbScenario(async (tx) => {
       await seedTasks(tx, [folderId]);
-      const child = await createTask({ folderId, title: "child" }, tx);
+      const child = await createTask(
+        { filing: TEST_FILING, folderId, title: "child" },
+        tx,
+      );
       return readLabels(tx, [folderId, child.id]);
     });
 
@@ -423,7 +432,7 @@ describe("union points", () => {
   test("createTask with no folder starts as its own singleton (cluster_id = id)", async () => {
     const raw = await worktreeDbScenario(async (tx) => {
       const solo = await createTask(
-        { title: "solo", mandate: TEST_MANDATE },
+        { filing: TEST_FILING, title: "solo", mandate: TEST_MANDATE },
         tx,
       );
       return { id: solo.id, raw: await readRawLabels(tx, [solo.id]) };
@@ -498,7 +507,12 @@ describe("union points", () => {
     const labels = await worktreeDbScenario(async (tx) => {
       await seedTasks(tx, [group]);
       const member = await createTask(
-        { groupId: group, title: "member", mandate: TEST_MANDATE },
+        {
+          filing: TEST_FILING,
+          groupId: group,
+          title: "member",
+          mandate: TEST_MANDATE,
+        },
         tx,
       );
       return readLabels(tx, [group, member.id]);
@@ -522,9 +536,17 @@ describe("union points", () => {
     const clean = await worktreeDbScenario(async (tx) => {
       await seedTasks(tx, [a, b, c, folder, moved]);
       await addTaskDependency(b, a, tx);
-      const child = await createTask({ folderId: folder, title: "child" }, tx);
+      const child = await createTask(
+        { filing: TEST_FILING, folderId: folder, title: "child" },
+        tx,
+      );
       await createTask(
-        { groupId: c, title: "grouped", mandate: TEST_MANDATE },
+        {
+          filing: TEST_FILING,
+          groupId: c,
+          title: "grouped",
+          mandate: TEST_MANDATE,
+        },
         tx,
       );
       await updateTask(moved, { folderId: child.id }, tx);

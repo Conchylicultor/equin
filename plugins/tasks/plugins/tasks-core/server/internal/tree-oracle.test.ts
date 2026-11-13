@@ -16,7 +16,7 @@
  *
  * Step 19 adds the REAL task rows (`taskRows`, compiled with its shipped
  * serve options against the throwaway) — since the bounded-tasks step 5
- * (2026-11-05) a window, `tasks.v2`, read as a `:rows` point reader of
+ * (2026-11-05) a window, `tasks.v3`, read as a `:rows` point reader of
  * every scripted task — and pins ITS cost per step: a task write is its
  * own row (plus every transitive dependent when the write moves what the
  * blocking rule reads — `held_at`, `dropped_at`), an attempt / conversation /
@@ -330,7 +330,7 @@ interface SetCost {
 const NOTHING: SetCost = { loads: [], orderOf: 0, rowLoads: [] };
 
 /**
- * What each step must cost the `tasks.v2:rows` point reader of every
+ * What each step must cost the `tasks.v3:rows` point reader of every
  * scripted task (T1–T6; T6 is inserted mid-script, so the set holds its id
  * before its row): its loads. The edges at each step are the script's: T2 →
  * T1, T3 → T2, T4 → T1, then T6 → T3 (`edge.insert`), and T3 → T2 gone

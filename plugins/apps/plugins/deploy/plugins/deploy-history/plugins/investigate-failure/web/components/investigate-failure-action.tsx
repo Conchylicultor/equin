@@ -1,3 +1,4 @@
+import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import type { ReactElement } from "react";
 import {
   Investigate,
@@ -104,6 +105,7 @@ export const investigateDeployFailures = Investigate.Register<DeployRunRecord>({
   failed: (row) => row.status === "failed",
   noun: "deploy",
   categoryId: DEPLOY_CATEGORY_ID,
+  filedFrom: asPluginId("apps.deploy.deploy-history.investigate-failure"),
   subject,
   description,
   brief,
@@ -125,6 +127,7 @@ export function InvestigateRun({
       noun="deploy"
       subject={subject(run)}
       categoryId={DEPLOY_CATEGORY_ID}
+      filedFrom={asPluginId("apps.deploy.deploy-history.investigate-failure")}
       description={description(run)}
       brief={(userText) => brief(run, userText)}
     />

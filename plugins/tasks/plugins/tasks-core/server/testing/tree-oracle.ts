@@ -650,7 +650,7 @@ const [P1, P2] = TREE_IDS.pushes;
 const MODEL = FALLBACK_MODEL.replace(/'/g, "''");
 
 const task = (id: string, rank: string) =>
-  `INSERT INTO tasks (id, cluster_id, title, title_auto, rank, mandate_ref) VALUES ('${id}', '${id}', '${id} title', false, '${rank}', 'interactive')`;
+  `INSERT INTO tasks (id, cluster_id, title, title_auto, rank, mandate_ref, author_kind) VALUES ('${id}', '${id}', '${id} title', false, '${rank}', 'interactive', 'human')`;
 const edge = (from: string, to: string) =>
   `INSERT INTO task_dependencies (task_id, depends_on_task_id) VALUES ('${from}', '${to}')`;
 const attempt = (id: string, taskId: string) =>

@@ -1,3 +1,4 @@
+import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { useState } from "react";
 import type { MapBounds } from "@plugins/map/core";
 import { showToast } from "@plugins/shell/plugins/toast/web";
@@ -53,6 +54,7 @@ export function useAsk(bounds: MapBounds | null): AskState {
   const [shown, setShown] = useState(false);
   const [restored, setRestored] = useState(false);
   const { start: startThread, availability } = useStartThread({
+    filedFrom: asPluginId("apps.places.places-map"),
     profile: PLACES_ASK_PROFILE,
     categoryId: PLACES_CATEGORY_ID,
     model: "sonnet",

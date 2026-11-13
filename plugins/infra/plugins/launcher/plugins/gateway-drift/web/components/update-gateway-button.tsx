@@ -1,3 +1,4 @@
+import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { SYSTEM_CATEGORY_ID } from "@plugins/conversations/core";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
@@ -46,6 +47,7 @@ export function UpdateGatewayButton() {
       getRequest={(userText) => ({
         prompt: buildGatewayUpdatePrompt(differences, userText),
         categoryId: SYSTEM_CATEGORY_ID,
+        filedFrom: asPluginId("infra.launcher.gateway-drift"),
       })}
     />
   );

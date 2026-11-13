@@ -1,3 +1,4 @@
+import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { interactiveMandate } from "@plugins/tasks/plugins/mandate-presets/core";
 import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
@@ -50,10 +51,14 @@ export const handleLaunch = implementMachine(
   const model = body.model ?? agent.model ?? DEFAULT_MODEL_CHOICE;
   assertChoiceLaunchable(model, getModelCatalog());
 
-  const now = new Date();
-  const task = await createTask({
-    title: `Agent-${agent.name}-${formatLaunchTime(now)}`,
-    author: "agents-plugin",
+    const now = new Date();
+    const task = await createTask({
+      title: `Agent-${agent.name}-${formatLaunchTime(now)}`,
+      // A person clicked Launch on a saved agent: the task is theirs.
+      filing: {
+        author: { kind: "human" },
+        filedFrom: asPluginId("conversations.agents"),
+      },
       mandate: interactiveMandate,
   });
   await setTaskCategory(task.id, "agents");

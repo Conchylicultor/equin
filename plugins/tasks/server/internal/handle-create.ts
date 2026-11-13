@@ -1,3 +1,4 @@
+import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { interactivePlacement } from "./placement";
 import {
   _tasks,
@@ -55,7 +56,10 @@ export const handleCreate = implement(createTaskEndpoint, async ({ body }) => {
     // A caller-supplied title is human-authored; a synthesised fallback is not.
     titleAuto: !explicitTitle,
     description,
-    author: body.author ?? "user",
+    filing: {
+      author: { kind: "human" },
+      filedFrom: asPluginId(body.filedFrom),
+    },
     rank,
   });
 

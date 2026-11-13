@@ -1,3 +1,4 @@
+import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { useTaskLaunch } from "@plugins/primitives/plugins/launch/web";
 import type { MachineResult } from "@plugins/infra/plugins/endpoints/core";
 import { workspaceLaunchOption } from "@plugins/conversations/plugins/workspace/plugins/launch-option/core";
@@ -9,6 +10,8 @@ export interface StartThreadOptions {
   profile: string;
   /** The task category the run's task is filed under (shown in the Agent Manager). */
   categoryId: string;
+  /** The plugin id of the host filing the run's task (its `filedFrom`). */
+  filedFrom: PluginId;
   /** The model the agent runs on. */
   model: ModelChoice;
 }
@@ -38,6 +41,7 @@ export type StartThreadResult = MachineResult<{ conversationId: string }>;
 export function useStartThread({
   profile,
   categoryId,
+  filedFrom,
   model,
 }: StartThreadOptions) {
   const { launch, availability } = useTaskLaunch({
@@ -56,7 +60,7 @@ export function useStartThread({
         [workspaceLaunchOption.id]: { kind: "scratch", profile, input },
         [autoStartLaunchOption.id]: model,
       },
-      { title, categoryId },
+      { title, categoryId, filedFrom },
     );
     if (result.kind !== "ok") return result;
     if (!result.value.started)

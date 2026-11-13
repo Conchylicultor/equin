@@ -1,3 +1,4 @@
+import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { Investigate } from "@plugins/primitives/plugins/launch/plugins/investigate/web";
 import { DEPLOY_CATEGORY_ID } from "@plugins/apps/plugins/deploy/core";
 import { siteMessagesInbox } from "../../core";
@@ -12,6 +13,7 @@ export const investigateSiteMessages = Investigate.Register({
   failed: (m) => m.notifyState === "failed",
   noun: "notification email",
   categoryId: DEPLOY_CATEGORY_ID,
+  filedFrom: asPluginId("apps.deploy.site-messages.inbox"),
   subject: (m) => ({ kind: "site-message-notify", id: m.id }),
   description: () =>
     "Launch an agent briefed on why this message's notification email failed — the provider's error verbatim, and where to dig.",

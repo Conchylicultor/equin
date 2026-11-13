@@ -1,3 +1,4 @@
+import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 /**
  * The demo's browser host, booted in Bun: its generated plugin graph
  * (`./browser-host.generated.ts`) on PGlite with the real migrations, seeded by
@@ -136,6 +137,11 @@ import {
   type PrototypeMeta,
 } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import type { ThumbnailState } from "@plugins/apps/plugins/prototypes/plugins/thumbnails/core";
+
+const TEST_FILING = {
+  author: { kind: "human" },
+  filedFrom: asPluginId("apps.website.demos.workspace"),
+} as const;
 
 // Any registered mandate id: these tests never resolve it.
 const TEST_MANDATE = defineMandate({ id: "interactive", label: "Interactive" });
@@ -792,7 +798,14 @@ describe.if(IN_CHILD)("the demo's browser host", () => {
       await subscribe(taskRows.key, all);
 
       const created = await inTx((tx) =>
-        createTask({ title: "demo write: created", mandate: TEST_MANDATE }, tx),
+        createTask(
+          {
+            filing: TEST_FILING,
+            title: "demo write: created",
+            mandate: TEST_MANDATE,
+          },
+          tx,
+        ),
       );
       const id = created.value.id;
       // The created task reaches the collection's subscriber, acked by its xid.

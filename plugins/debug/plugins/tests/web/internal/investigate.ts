@@ -1,3 +1,4 @@
+import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { Investigate } from "@plugins/primitives/plugins/launch/plugins/investigate/web";
 import {
   TESTS_CATEGORY_ID,
@@ -37,6 +38,7 @@ export const investigateFailingFiles = Investigate.Register<TestFileStatusRow>({
   failed: (f) => f.status === "failing" || f.status === "flaky",
   noun: "test",
   categoryId: TESTS_CATEGORY_ID,
+  filedFrom: asPluginId("debug.tests"),
   subject: (f) => testFileSubject(f.path),
   description: () => DESCRIPTION,
   brief: (f, userText) => testFileBrief(f, userText),
@@ -48,6 +50,7 @@ export const investigateFailedRuns = Investigate.Register<TestFileRunRow>({
   failed: (r) => r.outcome !== "passed",
   noun: "test",
   categoryId: TESTS_CATEGORY_ID,
+  filedFrom: asPluginId("debug.tests"),
   subject: (r) => testFileSubject(r.path),
   description: () => DESCRIPTION,
   brief: (r, userText) =>

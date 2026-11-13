@@ -77,8 +77,8 @@ async function seedConversation(status: "done" | "gone"): Promise<string> {
   const attempt = `att-turns-stopped-${n}`;
   const conv = `conv-turns-stopped-${n}`;
   await t.db.execute(sql`
-    INSERT INTO tasks (id, cluster_id, title, rank, mandate_ref)
-    VALUES (${task}, ${task}, 'stopped', ${`a${n}`}, 'interactive')
+    INSERT INTO tasks (id, cluster_id, title, rank, mandate_ref, author_kind)
+    VALUES (${task}, ${task}, 'stopped', ${`a${n}`}, 'interactive', 'human')
   `);
   await t.db.execute(sql`
     INSERT INTO attempts (id, task_id, worktree_path)

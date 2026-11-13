@@ -4,7 +4,11 @@ export interface InvestigationTaskRequest {
   existingTaskId: string | null;
   title: string;
   description: string;
-  author: string;
+  /**
+   * The plugin id of the surface that asked (a task's `filedFrom`). The
+   * author is always the person who clicked Investigate.
+   */
+  filedFrom: string;
 }
 
 // reports emits here on its investigate path; the tasks domain registers the

@@ -1,3 +1,4 @@
+import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { interactivePlacement } from "./placement";
 import {
   taskAttachments,
@@ -88,7 +89,6 @@ export const handleCreateChain = implement(
       resolveLaunchOptions(card.options ?? {}, `card ${i}`),
     );
 
-    const author = body.target.kind === "category" ? "improve-plugin" : "user";
     const groupId = body.relate ? body.relate.taskId : null;
     const taskIds: string[] = [];
 
@@ -112,7 +112,10 @@ export const handleCreateChain = implement(
           // Draft-form titles are always a synthesised summary, upgraded by Haiku.
           titleAuto: true,
           description,
-          author,
+          filing: {
+            author: { kind: "human" },
+            filedFrom: asPluginId(body.filedFrom),
+          },
         });
         scheduleTaskTitleUpdate(newTask.id, card.text, fallbackTitle);
         taskIds.push(newTask.id);

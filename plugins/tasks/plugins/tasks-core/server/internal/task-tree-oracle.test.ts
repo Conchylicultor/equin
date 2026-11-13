@@ -1,5 +1,5 @@
 /**
- * The TASKS TREE (`taskWindow`, key `tasks.tree`, declared `tree: { parent:
+ * The TASKS TREE (`taskWindow`, key `tasks.tree.v2`, declared `tree: { parent:
  * "folderId", rank: "rank" }`) on a throwaway database through the REAL feed
  * (the tree oracle's harness, `../testing/tree-oracle.ts`), compiled with its
  * shipped serve options (`taskWindowServeOptions`: the materialized status
@@ -63,7 +63,7 @@ const T7 = "tree-t7";
 const T8 = "tree-t8";
 
 const child = (id: string, parent: string, rank: string) =>
-  `INSERT INTO tasks (id, cluster_id, title, title_auto, rank, folder_id) VALUES ('${id}', '${id}', '${id} title', false, '${rank}', '${parent}')`;
+  `INSERT INTO tasks (id, cluster_id, title, title_auto, rank, folder_id, author_kind) VALUES ('${id}', '${id}', '${id} title', false, '${rank}', '${parent}', 'human')`;
 
 /** The folder writes, each spliced right after the tree step it names. */
 const FOLDER_STEPS: Record<string, TreeStep[]> = {
@@ -136,7 +136,7 @@ async function childCounts(): Promise<Map<string, number>> {
   );
 }
 
-describe("tasks.tree — the tasks tree on the real feed", () => {
+describe("tasks.tree.v2 — the tasks tree on the real feed", () => {
   test("every level converges on every write, and every row's $childCount is its folder's count", async () => {
     for (const step of treeSeed()) await oracle.run(step);
 

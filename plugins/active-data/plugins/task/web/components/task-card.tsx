@@ -1,3 +1,4 @@
+import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { useLive, rowOrStale } from "@plugins/network/plugins/live/web";
 import { useId, useRef, useState } from "react";
 import { z } from "zod";
@@ -103,7 +104,13 @@ export function TaskCard({
     return fetchEndpoint(
       createTaskEndpoint,
       {},
-      { body: { folderId: hostTaskId, description: trimmed } },
+      {
+        body: {
+          folderId: hostTaskId,
+          description: trimmed,
+          filedFrom: asPluginId("active-data.task"),
+        },
+      },
     );
   };
 

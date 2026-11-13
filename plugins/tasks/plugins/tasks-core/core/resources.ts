@@ -48,7 +48,16 @@ export const RECENT_GONE_LIMIT = 30;
 // The task row both task collections deliver (`taskRows`, `taskClusterRows`),
 // one spelling each declaration names (the scanners read a spec's own keys,
 // so the pieces are shared rather than the spec spread).
-const TASK_ROW_PICK = ["title", "updatedAt"] as const;
+// Who filed it ("Created by", the agent's conversation as "Author") and from
+// which surface ("Filed from") are list fields: a list filters and groups by
+// them.
+const TASK_ROW_PICK = [
+  "title",
+  "updatedAt",
+  "authorKind",
+  "authorConversationId",
+  "filedFrom",
+] as const;
 // `status` is ordinal: a list sorts it by `TASK_STATUS_ORDER` (open to
 // settled), on the tree's server window and in memory alike.
 const TASK_ROW_FIELDS = {
@@ -65,7 +74,6 @@ const TASK_ROW_CARRY = {
     "groupId",
     "clusterId",
     "titleAuto",
-    "author",
     "droppedAt",
     "heldAt",
     "createdAt",
@@ -94,7 +102,6 @@ const TASK_TREE_CARRY = {
     "groupId",
     "clusterId",
     "titleAuto",
-    "author",
     "droppedAt",
     "heldAt",
     "createdAt",
@@ -126,7 +133,7 @@ const TASK_TREE_CARRY = {
 //
 // The wire row is `TaskListItem` — every `tasks_v` column but the heavy
 // `description` (read per task from `taskDescriptions` below) — plus the
-// additive `$columns`. Key `tasks.v2`: the old `tasks` was a param-less whole
+// additive `$columns`. Key `tasks.v3` (`tasks.v2` until `author` became `authorKind` / `authorConversationId` / `filedFrom`, 2026-11-13): the old `tasks` was a param-less whole
 // set (preloaded at boot), so a tab still running a bundle that declared it
 // subscribes a key no longer served and is refused (C39). A removed, renamed
 // or retyped field must rename the key.
@@ -134,7 +141,7 @@ const TASK_TREE_CARRY = {
 // Not preloaded; its `:rows` sibling is preloaded at the live conversations'
 // tasks (`../server/internal/resources.ts`). Named `taskRows` because `tasks`
 // is the server's view handle.
-export const taskRows = liveCollection("tasks.v2", {
+export const taskRows = liveCollection("tasks.v3", {
   from: tasksEntityRef,
   pick: TASK_ROW_PICK,
   fields: TASK_ROW_FIELDS,
@@ -170,7 +177,7 @@ export const TASK_CLUSTER_MAX = 500;
 // reads a stored per-task value by id instead (`taskActiveDependentCounts`). Bounded by TASK_CLUSTER_MAX, which
 // the union enforces. A union moves the loser's rows out of its tuple into the
 // winner's.
-export const taskClusterRows = liveCollection("task-cluster", {
+export const taskClusterRows = liveCollection("task-cluster.v2", {
   from: tasksEntityRef,
   pick: TASK_ROW_PICK,
   fields: TASK_ROW_FIELDS,
@@ -222,19 +229,19 @@ export type TaskRow =
 // from its pickers), `rank` orders siblings, so every level is an ordinary
 // bounded read (`{ folderId: { isEmpty: true } }` for the roots, `{ folderId:
 // x }` for a folder's children), every row carries `$childCount` (the stored
-// count of the tasks filed under it) and `tasks.tree:ancestors` answers a
+// count of the tasks filed under it) and `tasks.tree.v2:ancestors` answers a
 // set of tasks with their folder chains. The task list (task-list's
 // `TasksListView`) is a live DataView over it. Default order: the tree's,
 // `rank` then `createdAt`; a reader wanting another passes its own `orderBy`.
 // Not preloaded. The step towards `taskRows` as a window
 // (research/2026-11-05-tasks-bounded-task-rows.md, step 5).
 //
-// Key `tasks.tree` (it was `tasks.window`, the flat window): the default read
+// Key `tasks.tree.v2` (it was `tasks.window`, the flat window): the default read
 // changed meaning — tree order (`rank`, `createdAt`) instead of newest first —
 // so a tab on an older bundle reading the default window under the old key
 // would get a different set at its limit. A new key makes such a tab's read a
 // `skew` (the Reload prompt) instead (C39).
-export const taskWindow = liveCollection("tasks.tree", {
+export const taskWindow = liveCollection("tasks.tree.v2", {
   from: tasksEntityRef,
   pick: TASK_TREE_PICK,
   fields: TASK_ROW_FIELDS,

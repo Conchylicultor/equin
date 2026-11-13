@@ -1,3 +1,4 @@
+import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { useState } from "react";
 import { z } from "zod";
 import { useTaskLaunch } from "@plugins/primitives/plugins/launch/web";
@@ -99,6 +100,7 @@ export function NewAppPage() {
       // A placeholder the title model upgrades: the description's first line.
       title: description.split("\n")[0]!.slice(0, TITLE_CHARS),
       categoryId: APPS_CATEGORY_ID,
+      filedFrom: asPluginId("apps.home.new-app"),
     });
     // Unreachable: Create is disabled while launching is unavailable.
     if (result.kind === "unavailable") throw new Error(result.message);

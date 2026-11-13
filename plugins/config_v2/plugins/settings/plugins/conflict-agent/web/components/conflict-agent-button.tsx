@@ -1,3 +1,4 @@
+import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { LaunchAgentPopover } from "@plugins/primitives/plugins/launch/web";
 import { CONFIG_CATEGORY_ID } from "@plugins/config_v2/plugins/settings/core";
@@ -45,7 +46,11 @@ export function ConflictAgentButton({
         const prompt = extra
           ? `${buildConflictPrompt(conflict)}\n\n## Context\n\n${extra}`
           : buildConflictPrompt(conflict);
-        return { prompt, categoryId: CONFIG_CATEGORY_ID };
+        return {
+          prompt,
+          categoryId: CONFIG_CATEGORY_ID,
+          filedFrom: asPluginId("config_v2.settings.conflict-agent"),
+        };
       }}
     />
   );

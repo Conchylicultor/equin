@@ -1,3 +1,4 @@
+import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { interactiveMandate } from "@plugins/tasks/plugins/mandate-presets/core";
 import { Mcp } from "@plugins/infra/plugins/mcp/server";
 import { getConfig } from "@plugins/config_v2/server";
@@ -49,7 +50,10 @@ export const fileTaskTool = Mcp.tool({
       title,
       titleAuto: false,
       description,
-      author: conversationId,
+      filing: {
+        author: { kind: "agent", conversationId: conversationId },
+        filedFrom: asPluginId("hints.ask"),
+      },
       mandate: interactiveMandate,
     });
     await setTaskCategory(task.id, WISHES_CATEGORY_ID);

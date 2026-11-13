@@ -1,3 +1,4 @@
+import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
 import {
   type ReactElement,
   type ReactNode,
@@ -137,6 +138,11 @@ export interface TaskDraftPopoverProps {
   trigger: ReactElement;
   tooltip?: ReactNode;
   target: TaskChainTarget;
+  /**
+   * The plugin id of the surface hosting the form — what every task it files
+   * records as `filedFrom` (the task lists' "Filed from").
+   */
+  filedFrom: PluginId;
   relate?: TaskDraftRelate;
   /**
    * One-shot request to insert markdown into the head card, minted by
@@ -184,6 +190,7 @@ function TaskDraftFormContent({
   hasAmbientRelate,
   activeRelate,
   target,
+  filedFrom,
   heading,
   headerActions,
   placeholder,
@@ -208,6 +215,7 @@ function TaskDraftFormContent({
   hasAmbientRelate: boolean;
   activeRelate: { taskId: string } | null;
   target: TaskChainTarget;
+  filedFrom: PluginId;
   heading: string | undefined;
   headerActions: TaskDraftPopoverProps["headerActions"];
   placeholder: string | undefined;
@@ -301,6 +309,7 @@ function TaskDraftFormContent({
       const outcome = await submitChain(fetchEndpoint, {
         cards,
         target: effectiveTarget,
+        filedFrom,
         relate: effectiveRelate,
         url,
         captureUrlDefault,
@@ -365,6 +374,7 @@ export function TaskDraftPopover({
   trigger,
   tooltip,
   target,
+  filedFrom,
   relate,
   insert,
   open: controlledOpen,
@@ -536,6 +546,7 @@ export function TaskDraftPopover({
             hasAmbientRelate={hasAmbientRelate}
             activeRelate={activeRelate}
             target={target}
+            filedFrom={filedFrom}
             heading={heading}
             headerActions={headerActions}
             placeholder={placeholder}

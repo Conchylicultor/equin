@@ -65,7 +65,9 @@ const tasksEntity = defineEntity(tasksEntityRef, taskServerFields, {
       groupId: false,
       clusterId: false,
       titleAuto: false,
-      author: false,
+      authorKind: false,
+      authorConversationId: false,
+      filedFrom: false,
       createdAt: false,
       // Policy, not a fact a list shows; a re-file's mandate copy rides the
       // `folderId` write, which already counts.
@@ -100,6 +102,12 @@ const tasksEntity = defineEntity(tasksEntityRef, taskServerFields, {
     check(
       "tasks_root_has_mandate",
       sql`${t.folderId} IS NOT NULL OR ${t.mandateRef} IS NOT NULL`,
+    ),
+    // An agent author names its conversation; no other kind does
+    // (`core/task-author.ts`).
+    check(
+      "tasks_author_agent_has_conversation",
+      sql`(${t.authorKind} = 'agent') = (${t.authorConversationId} IS NOT NULL)`,
     ),
   ],
 });

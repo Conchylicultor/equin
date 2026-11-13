@@ -72,7 +72,7 @@ export async function investigateReport(
           existingTaskId: row.taskId,
           title,
           description: `${description}\n\n${DEBUG_SKILL_HINT}`,
-          author: "reports-plugin",
+          filedFrom: "reports.engine",
         });
         if (!result) {
           throw new Error(

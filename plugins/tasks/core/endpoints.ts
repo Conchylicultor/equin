@@ -2,7 +2,10 @@ import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 import { ModelChoiceSchema } from "@plugins/conversations/plugins/model-provider/core";
 import { dateString } from "@plugins/infra/plugins/endpoints/core";
-import { ConversationSchema } from "@plugins/tasks/plugins/tasks-core/core";
+import {
+  ConversationSchema,
+  TASK_AUTHOR_KINDS,
+} from "@plugins/tasks/plugins/tasks-core/core";
 import { TaskSubjectSchema } from "@plugins/tasks/plugins/task-subject/core";
 import {
   TaskChainSubmitBodySchema,
@@ -15,7 +18,10 @@ export const CreateTaskBodySchema = z.object({
   folderId: z.string().nullable().optional(),
   title: z.string().optional(),
   description: z.string().nullable().optional(),
-  author: z.string().optional(),
+  // The plugin id of the surface filing the task (`TaskFiling.filedFrom`).
+  // The author is never sent: a task filed through these endpoints is a
+  // person's (`{ kind: "human" }`), stamped by the server.
+  filedFrom: z.string().min(1),
   rank: z.string().optional(),
   // Positional intent: place the new task immediately after this sibling.
   // Resolved server-side against the complete sibling set (see rankAfterSibling)
@@ -59,6 +65,10 @@ export const MoveTaskBodySchema = z.object({
 export type MoveTaskBody = z.infer<typeof MoveTaskBodySchema>;
 
 export const InsertBetweenBodySchema = z.object({
+  // The plugin id of the surface filing the task (`TaskFiling.filedFrom`).
+  // The author is never sent: a task filed through these endpoints is a
+  // person's (`{ kind: "human" }`), stamped by the server.
+  filedFrom: z.string().min(1),
   sourceTaskId: z.string(),
   targetTaskId: z.string(),
   targetFolderId: z.string().nullable().optional(),
@@ -95,6 +105,9 @@ export const LaunchTaskBodySchema = z.object({
       title: z.string().min(1),
       categoryId: z.string().min(1),
       subject: TaskSubjectSchema.optional(),
+      // The plugin id of the surface filing it (`TaskFiling.filedFrom`); the
+      // author is the person, stamped by the server.
+      filedFrom: z.string().min(1),
     }),
   ]),
   // Whether the launcher itself shows the conversation it starts (opens its
@@ -124,7 +137,9 @@ export const TaskResponseSchema = z.object({
   groupId: z.string().nullable(),
   rank: z.string(),
   active: z.boolean(),
-  author: z.string().nullable(),
+  authorKind: z.enum(TASK_AUTHOR_KINDS),
+  authorConversationId: z.string().nullable(),
+  filedFrom: z.string().nullable(),
   createdAt: dateString(),
   updatedAt: dateString(),
   droppedAt: dateString().nullable(),

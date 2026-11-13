@@ -1,3 +1,4 @@
+import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { interactiveMandate } from "@plugins/tasks/plugins/mandate-presets/core";
 import { createTask } from "@plugins/tasks/plugins/tasks-core/server";
 import { setTaskCategory } from "@plugins/tasks/plugins/task-category/server";
@@ -30,7 +31,10 @@ export async function createTaskFromPromptBlock(
     // Synthesised summary, upgraded by Haiku.
     titleAuto: true,
     description: body.prompt,
-    author: "user",
+    filing: {
+      author: { kind: "human" },
+      filedFrom: asPluginId("page.prompt.link"),
+    },
     mandate: interactiveMandate,
   });
   scheduleTaskTitleUpdate(task.id, body.prompt, fallbackTitle);

@@ -1,3 +1,4 @@
+import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { useId, useRef, useState } from "react";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -64,6 +65,8 @@ export type LaunchAgentRequest = { prompt: string } & (
        * it has one, is reused instead of filing another (`tasks/task-subject`).
        */
       subject?: TaskSubject;
+      /** The plugin id of the surface filing the new task (its `filedFrom`). */
+      filedFrom: PluginId;
     }
 );
 
@@ -232,6 +235,7 @@ export function LaunchAgentForm({
             title: req.title ?? title,
             categoryId: req.categoryId,
             subject: req.subject,
+            filedFrom: req.filedFrom,
           },
     );
     // Unreachable: Launch is disabled while launching is unavailable, and a

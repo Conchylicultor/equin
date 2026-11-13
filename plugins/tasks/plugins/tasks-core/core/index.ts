@@ -19,6 +19,14 @@ export type {
   Conversation,
   ConversationKind,
 } from "./internal/schema";
+// Who decided a task should exist, and the surface that filed it.
+export {
+  TASK_AUTHOR_KINDS,
+  TASK_AUTHOR_KIND_OPTIONS,
+  taskAuthorColumns,
+  taskAuthorOf,
+} from "./task-author";
+export type { TaskAuthor, TaskAuthorKind, TaskFiling } from "./task-author";
 // The reader half of the commit-trailer grammar. Lives with the `pushes` table
 // it fills; `attempt-work` reads it from here. See ./internal/trailers.ts.
 export {

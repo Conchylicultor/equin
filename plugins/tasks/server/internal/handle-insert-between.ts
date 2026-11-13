@@ -1,3 +1,4 @@
+import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { interactivePlacement } from "./placement";
 import {
   createTask,
@@ -28,7 +29,10 @@ export const handleInsertBetween = implement(insertTaskBetween, async ({ body })
           ...interactivePlacement(targetFolderId),
           groupId,
           title: "Untitled",
-          author: "user",
+          filing: {
+            author: { kind: "human" },
+            filedFrom: asPluginId(body.filedFrom),
+          },
         },
         tx,
       );

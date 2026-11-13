@@ -1,3 +1,4 @@
+import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { sinkHandler } from "@plugins/framework/plugins/server-core/core";
 import { interactiveMandate } from "@plugins/tasks/plugins/mandate-presets/core";
 import { createTask, getTask } from "@plugins/tasks/plugins/tasks-core/server";
@@ -16,7 +17,7 @@ export const REPORTS_CATEGORY_ID = "reports";
 export const reportInvestigationHandler = sinkHandler(
   reportInvestigationSink,
   () =>
-    async ({ existingTaskId, title, description, author }) => {
+    async ({ existingTaskId, title, description, filedFrom }) => {
       if (existingTaskId) {
         const linked = await getTask(existingTaskId);
         if (linked && linked.status !== "dropped") return { taskId: linked.id };
@@ -24,8 +25,8 @@ export const reportInvestigationHandler = sinkHandler(
       const task = await createTask({
         title,
         description,
-        author,
         // A person clicked Investigate: the task is theirs.
+        filing: { author: { kind: "human" }, filedFrom: asPluginId(filedFrom) },
         mandate: interactiveMandate,
       });
       await setTaskCategory(task.id, REPORTS_CATEGORY_ID);

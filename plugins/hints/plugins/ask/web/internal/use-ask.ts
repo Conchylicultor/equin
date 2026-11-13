@@ -1,3 +1,4 @@
+import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { useEffect } from "react";
 import { showToast } from "@plugins/shell/plugins/toast/web";
 import { useActiveApp, usePathname } from "@plugins/apps-core/web";
@@ -117,6 +118,7 @@ export function useAskQuestion(): {
     }),
   });
   const { start, availability } = useStartThread({
+    filedFrom: asPluginId("hints.ask"),
     profile: HELP_ASK_PROFILE,
     categoryId: HELP_CATEGORY_ID,
     // Read only once the settings are known: `blocked` holds every send until then.

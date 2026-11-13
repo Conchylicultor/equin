@@ -1,3 +1,4 @@
+import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { recordReport } from "@plugins/reports/plugins/engine/server";
 import { crashFieldsOf } from "@plugins/packages/plugins/error-subject/core";
 import { HttpError } from "@plugins/infra/plugins/endpoints/core";
@@ -49,7 +50,13 @@ function launchTarget(body: CreateConversationBody): ConversationTarget {
   }
   if (body.attemptId !== undefined) return { attemptId: body.attemptId };
   if (body.taskId !== undefined) return { taskId: body.taskId };
-  return { mandate: interactiveMandate };
+  return {
+    mandate: interactiveMandate,
+    filing: {
+      author: { kind: "human" },
+      filedFrom: asPluginId("conversations"),
+    },
+  };
 }
 
 export const handleCreate = implementMachine(

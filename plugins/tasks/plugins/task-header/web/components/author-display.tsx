@@ -5,18 +5,44 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { foldResource } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { useTask } from "@plugins/tasks/web";
 import { taskDetailPane } from "@plugins/tasks/plugins/task-detail/web";
+import type { TaskAuthorKind } from "@plugins/tasks/plugins/tasks-core/core";
 
-export function AuthorDisplay({ author }: { author: string | null }) {
-  const isUser = !author || author === "user";
-  const authorConversation = rowOrStale(
-    useConversationById(isUser ? null : author),
-  );
+/**
+ * Who filed the task (`TaskAuthor`): "You", the filing agent's task (linked),
+ * or "System" with the plugin that filed it.
+ */
+export function AuthorDisplay({
+  authorKind,
+  authorConversationId,
+  filedFrom,
+}: {
+  authorKind: TaskAuthorKind;
+  authorConversationId: string | null;
+  filedFrom: string | null;
+}) {
+  if (authorKind === "human") return <Text variant="body">You</Text>;
+  if (authorKind === "system") {
+    return (
+      <Text variant="body">
+        System
+        {filedFrom !== null ? (
+          <Text as="span" variant="caption" tone="muted" className="font-mono">
+            {` · ${filedFrom}`}
+          </Text>
+        ) : null}
+      </Text>
+    );
+  }
+  if (authorConversationId === null) {
+    throw new Error("AuthorDisplay: an agent author has no conversation id");
+  }
+  return <AgentAuthor conversationId={authorConversationId} />;
+}
+
+function AgentAuthor({ conversationId }: { conversationId: string }) {
+  const authorConversation = rowOrStale(useConversationById(conversationId));
   const authorTask = useTask(authorConversation?.taskId);
   const openPane = useOpenPane();
-
-  if (isUser) {
-    return <Text variant="body">User</Text>;
-  }
 
   // Until the author's task is known — or when it could not be read, or the
   // author conversation has no task — the raw author id stands in: it is the
@@ -38,7 +64,7 @@ export function AuthorDisplay({ author }: { author: string | null }) {
             : undefined
         }
       >
-        {author}
+        {conversationId}
       </Text>
     );
   }
