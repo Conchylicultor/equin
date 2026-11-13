@@ -73,7 +73,8 @@ export type SetTaskSupervisorBody = z.infer<typeof SetTaskSupervisorBodySchema>;
 
 /**
  * Route a task to a role (the task header's Supervisor select): a backlog
- * task moves to that role's backlog. An unknown role is a 400.
+ * task moves to that role's backlog; `null` takes it out of every backlog.
+ * An unknown role is a 400.
  */
 export const setTaskSupervisor = defineEndpoint({
   route: "PUT /api/tasks/:taskId/supervisor",

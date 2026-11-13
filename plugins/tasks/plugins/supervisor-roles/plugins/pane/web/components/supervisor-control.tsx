@@ -35,6 +35,7 @@ import { RoleIcon } from "./role-icon";
 const chevronIcon = symbol("expand-more");
 const unlistedIcon = symbol("visibility-off");
 const checkIcon = symbol("check");
+const noneIcon = symbol("block");
 
 /**
  * A role as a pill: its icon and name — the task header's Supervisor value
@@ -55,8 +56,8 @@ export function SupervisorPill({
 /**
  * The task detail's Supervisor value: the role that owns the task, as a pill
  * that re-routes it — picking another role moves the task to that role's
- * backlog. A session's root keeps its role (the session works for it), so
- * there it is the pill alone.
+ * backlog, None takes the task out of every backlog. A session's root keeps
+ * its role (the session works for it), so there it is the pill alone.
  */
 export function TaskSupervisorControl({
   taskId,
@@ -100,7 +101,7 @@ export function TaskSupervisorControl({
   const current = all.find((r) => r.id === ownerId) ?? null;
   if (sessionRoot && current) return <SupervisorPill role={current} />;
 
-  const route = async (roleId: string) => {
+  const route = async (roleId: string | null) => {
     setOpen(false);
     if (roleId === ownerId) return;
     try {
@@ -113,7 +114,10 @@ export function TaskSupervisorControl({
       toast({
         type: "task",
         category: "other",
-        title: "Failed to re-route the task",
+        title:
+          roleId === null
+            ? "Failed to remove the supervisor"
+            : "Failed to re-route the task",
         description: err instanceof Error ? err.message : String(err),
         variant: "error",
       });
@@ -123,7 +127,10 @@ export function TaskSupervisorControl({
     toast({
       type: "task",
       category: "other",
-      title: `Moved to the ${to?.name ?? roleId} backlog`,
+      title:
+        roleId === null
+          ? "Supervisor removed"
+          : `Moved to the ${to?.name ?? roleId} backlog`,
       description: "",
       variant: "success",
     });
@@ -186,6 +193,17 @@ export function TaskSupervisorControl({
           </ControlPanel.Row>
         ))}
       </ControlPanel.Section>
+      {ownerId === null ? null : (
+        <ControlPanel.Section>
+          <ControlPanel.Row
+            icon={<Icon icon={noneIcon} />}
+            onSelect={() => void route(null)}
+            description="Take the task out of every backlog"
+          >
+            None
+          </ControlPanel.Row>
+        </ControlPanel.Section>
+      )}
     </ControlPanelPopover>
   );
 }

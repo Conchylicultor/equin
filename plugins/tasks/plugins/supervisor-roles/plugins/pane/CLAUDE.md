@@ -31,7 +31,7 @@ the task patch; re-route `PUT /api/tasks/:taskId/supervisor`.
 
 ## Plugin reference
 
-- Description: The Supervisors pane, in the agent manager: one sidebar entry (live sessions and the tasks waiting in every backlog at its edge) opening the list — the pinned All supervisors entry (the shared prompt, edited inline), every role (session state, backlog and its oldest age, Launch / Open session) and the ad-hoc supervisors at work — and a role's page: its name and icon (picked automatically, overridable) and every setting edited in place (listed to agents, the description agents get, the supervisor prompt), the Launch / Open session band, the backlog (Adopt — into the live session, launching one when none is live — and Drop) and the session history. Also the task detail's Supervisor pill (TaskSupervisorControl: picking another role re-routes the task) and SupervisorPill.
+- Description: The Supervisors pane, in the agent manager: one sidebar entry (live sessions and the tasks waiting in every backlog at its edge) opening the list — the pinned All supervisors entry (the shared prompt, edited inline), every role (session state, backlog and its oldest age, Launch / Open session) and the ad-hoc supervisors at work — and a role's page: its name and icon (picked automatically, overridable) and every setting edited in place (listed to agents, the description agents get, the supervisor prompt), the Launch / Open session band, the backlog (Adopt — into the live session, launching one when none is live — and Drop) and the session history. Also the task detail's Supervisor pill (TaskSupervisorControl: picking another role re-routes the task, None removes its role) and SupervisorPill.
 - Web:
   - Slots:
     - `supervisors.actions`
