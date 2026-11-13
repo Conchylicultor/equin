@@ -300,6 +300,7 @@ convergence mechanisms all missing it) and the design.
     - `ui/tokens/color-palette --primary`
     - `ui/tokens/color-palette --primary-text`
     - `ui/tokens/color-palette --success`
+    - `ui/tokens/density --chrome-pad-x`
     - `ui/tokens/density --space-md`
     - `ui/tokens/density --space-sm`
     - `ui/tokens/font-family --font-mono`

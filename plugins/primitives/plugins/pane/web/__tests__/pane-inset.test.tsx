@@ -16,12 +16,12 @@ import { SurfaceChromeContext } from "../surface-chrome-context";
 import { Pane as PaneSlots } from "../slots";
 import { createTestSurfaceStore, TestSurface } from "../testing";
 
-// `inset="content"` gives a pane ONE edge for its header title, a DataView's
-// toolbar and its content. jsdom resolves no custom properties and no container
-// queries, so what is pinned is the mechanism: the root is the container and
-// publishes `--pane-inset`, the header pads by it (keeping the floating-bar
-// reserve when it holds one), the default pane is untouched, and the header and
-// title carry their `data-part`s.
+// Every pane's header stands on ONE pane edge whatever its body is, and every
+// pane root publishes that edge as `--pane-inset` (a `content` pane its theme's
+// content inset instead). jsdom resolves no custom properties and no container
+// queries, so what is pinned is the mechanism: one header class for every
+// inset, the root's publication per inset, the document region's placement,
+// the floating-bar reserve, and the header and title `data-part`s.
 
 const panePlugin = {
   id: "primitives.pane",
@@ -51,7 +51,9 @@ const hostPlugin = {
 } as unknown as LoadedPlugin;
 
 const CONTAINER = "[container-type:inline-size]";
-const PUBLISH = "[--pane-inset:var(--content-inset)]";
+const PUBLISH = "[--pane-inset:var(--content-inset,var(--document-pad-x))]";
+const EDGE = "[--pane-inset:var(--document-pad-x)]";
+const INSETS = ["chrome", "content", "document"] as const;
 
 let store: PaneStore;
 
@@ -114,12 +116,21 @@ describe("PaneChrome inset", () => {
     expect(part(container, "pane.header").contains(title)).toBe(true);
   });
 
-  it("leaves a default pane exactly as it was", () => {
+  it("gives every pane's header the same classes, whatever its body", () => {
+    const classes = INSETS.map((inset) => {
+      const { container } = mount({ inset });
+      const header = part(container, "pane.header").className;
+      cleanup();
+      return header;
+    });
+    expect(classes[0]).toContain("px-chrome-pane");
+    expect(new Set(classes).size).toBe(1);
+  });
+
+  it("a default pane publishes the pane edge as its bands' floor", () => {
     const { container } = mount({});
-    const header = part(container, "pane.header");
-    expect(header.className).toContain("px-chrome-pane");
+    expect(root(container).className).toContain(EDGE);
     expect(root(container).className).not.toContain(CONTAINER);
-    expect(root(container).className).not.toContain(PUBLISH);
   });
 
   it('inset="content" makes the root the container that publishes the inset', () => {
@@ -127,13 +138,6 @@ describe("PaneChrome inset", () => {
     const r = root(container);
     expect(r.className).toContain(CONTAINER);
     expect(r.className).toContain(PUBLISH);
-  });
-
-  it('inset="content" leaves the header on its own tier inset (flush left)', () => {
-    const { container } = mount({ inset: "content" });
-    expect(part(container, "pane.header").className).toContain(
-      "px-chrome-pane",
-    );
   });
 
   it("keeps the floating-bar reserve on a content-inset header that holds it", () => {
@@ -147,8 +151,6 @@ describe("PaneChrome inset", () => {
     const { container } = mount({ inset: "document" });
     const header = part(container, "pane.header");
     expect(header.className).not.toContain("rail-document");
-    // The header stands on the document edge too (one token, no jog).
-    expect(header.className).toContain("pane-header-document");
     const owners = container.querySelectorAll(".rail-document");
     expect(owners).toHaveLength(1);
     expect(owners[0]?.textContent).toBe("body");
@@ -159,16 +161,14 @@ describe("PaneChrome inset", () => {
     expect(region.parentElement?.className ?? "").not.toContain(
       "rail-document",
     );
-    // Only the body's region: the root publishes no pane-wide inset.
+    // The root publishes the pane edge like any pane, not a content inset.
+    expect(root(container).className).toContain(EDGE);
     expect(root(container).className).not.toContain(PUBLISH);
   });
 
   it("a default pane opens no document region", () => {
     const { container } = mount({});
     expect(container.querySelector(".rail-document")).toBeNull();
-    expect(part(container, "pane.header").className).not.toContain(
-      "pane-header-document",
-    );
   });
 
   it("a card header keeps its own row inset; only the root changes", () => {

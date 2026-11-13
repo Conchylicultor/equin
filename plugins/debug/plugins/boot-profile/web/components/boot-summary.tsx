@@ -1,5 +1,5 @@
 import { type ReactElement } from "react";
-import { Stack, Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { DataTable, type ColumnDef } from "@plugins/primitives/plugins/data-table/web";
 import { formatDuration } from "@plugins/debug/plugins/profiling/web";
@@ -103,8 +103,12 @@ export function BootSummary({ trace }: { trace: BootTrace }): ReactElement {
     },
   ];
 
+  // The section opens a region on the pane edge (`rail-document`, the edge the
+  // pane header stands on): its tables bleed their rows to the pane and keep
+  // their text on the edge, instead of padding a box the tables' rows would
+  // then pay the pane edge inside a second time.
   return (
-    <Inset pad="lg">
+    <div className="rail-document">
       <Stack as="section" gap="lg">
         <Stack gap="sm">
           <SectionLabel>Boot milestones (request → first paint)</SectionLabel>
@@ -125,6 +129,6 @@ export function BootSummary({ trace }: { trace: BootTrace }): ReactElement {
           />
         </Stack>
       </Stack>
-    </Inset>
+    </div>
   );
 }

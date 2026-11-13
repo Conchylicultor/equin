@@ -197,13 +197,11 @@ const density = densityGroup.fragment(
     galleryCardMin: "13.75rem",
     galleryGapX: "1.125rem",
     galleryGapY: "1.5rem",
-    // The library's split header: a 48px pane header with no rule, flush on
-    // the pane's left (`.phead`, 16px in); ONE inset shared by the toolbar and
+    // The library's split header: a 48px pane header with no rule, on the
+    // pane edge every pane shares (`documentPadX`, 16px); ONE inset shared by the toolbar and
     // the content only — 3% of the pane (16–40px), widening to centre a
     // 1520px column on a wide pane.
     chromePaneH: "3rem",
-    chromePanePadStart: "1rem",
-    chromePanePadEnd: "1rem",
     chromePaneRule: "0px",
     // Its title: 15px bold (`.phead strong`).
     chromePaneTitleRole: "subheading",

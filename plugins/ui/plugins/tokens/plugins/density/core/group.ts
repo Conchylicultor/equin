@@ -81,6 +81,12 @@ export const densityGroup = defineTokenGroup("density", {
   // A rendered document's reading inset (the file viewer's Markdown body).
   // Defaults = the `py-md` / `px-lg` it always had; a theme (or a document
   // sub-theme) sets them to give the page its own margins.
+  //
+  // `documentPadX` is also THE pane edge: every pane header's inline inset
+  // (`px-chrome-pane`, its lead glyph hung onto it), a `PaneChrome
+  // inset="document"` body's rail, and the floor a DataView's bands follow in
+  // any pane (`--pane-inset`). One token, so no two panes can put their header
+  // on different edges; a theme moves every pane's edge at once.
   documentPadTop: { default: "var(--space-md)", label: "Document padding top" },
   documentPadX: { default: "var(--space-lg)", label: "Document padding X" },
   documentPadBottom: {
@@ -121,11 +127,12 @@ export const densityGroup = defineTokenGroup("density", {
   },
   // The inline inset a `PaneChrome inset="content"` pane shares between a
   // DataView's toolbar and its content (`--pane-inset`, read as
-  // `rail-follow`'s floor; the pane header keeps `chromePanePad*`). A length relative to the
+  // `rail-follow`'s floor; the pane header stays on the pane edge,
+  // `documentPadX`). A length relative to the
   // pane (`cqi`, the pane is its inline-size container), e.g.
   // `max(clamp(16px, 3cqi, 40px), calc((100cqi - 1520px) / 2))` for an inset
   // that also caps the content width. Default `initial` = UNSET: no pane
-  // publishes an inset and every rail falls back to today's chrome pad.
+  // overrides the pane edge and every rail falls back to `documentPadX`.
   contentInset: { default: "initial", label: "Pane content inset" },
   // A tree row (`TreeRowChrome`): its minimum height. Default = the old
   // `min-h-7`.
@@ -237,25 +244,14 @@ export const densityGroup = defineTokenGroup("density", {
     default: "var(--pad-row-y)",
     label: "Section header padding bottom",
   },
-  // A pane header's own inline insets (`Bar tier="pane"`): before its leading
-  // control and after its last one. Default = the shared `chromePadX`.
-  chromePanePadStart: {
-    default: "var(--chrome-pad-x)",
-    label: "Pane header padding start",
-  },
-  chromePanePadEnd: {
-    default: "var(--chrome-pad-x)",
-    label: "Pane header padding end",
-  },
-  // A `header="card"` pane row's insets — the bar's by default, so a theme
-  // widening the bar (a split header flush on the pane's left) keeps its card
-  // rows as they were.
+  // A `header="card"` pane row's insets: the card is its own box floating in
+  // the pane, so it pads by the chrome pad, not by the pane edge.
   chromePaneCardPadStart: {
-    default: "var(--chrome-pane-pad-start)",
+    default: "var(--chrome-pad-x)",
     label: "Pane header card padding start",
   },
   chromePaneCardPadEnd: {
-    default: "var(--chrome-pane-pad-end)",
+    default: "var(--chrome-pad-x)",
     label: "Pane header card padding end",
   },
   // The inline inset of a pane's secondary strip under its header

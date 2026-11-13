@@ -313,8 +313,6 @@ const density = densityGroup.fragment(
     controlIconSm: "0.8125rem",
     controlIconMd: "0.8125rem",
     chromePaneH: "2.8125rem",
-    chromePanePadStart: "0.5rem",
-    chromePanePadEnd: "1rem",
     subpanePadX: "0.875rem",
     padChipHeaderX: "0.6875rem",
     padChipHeaderY: "0.25rem",

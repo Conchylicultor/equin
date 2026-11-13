@@ -132,7 +132,6 @@ export const CUSTOM_UTILITY_REGISTRY = [
   { classes: ["pl-chrome"], extend: "pl" },
   { classes: ["px-chrome-pane", "px-chrome-pane-card"], extend: "px" },
   { classes: ["pr-floating-bar-pane"], extend: "pr" },
-  { classes: ["pane-header-document"], standalone: true, reason: "sets the pane header's text-edge vars; px-chrome-pane / pr-floating-bar-pane read them, so it composes with both." },
   { classes: ["px-subpane"], extend: "px" },
   { classes: ["border-b-chrome-pane"], extend: "border-w-b" },
   { classes: ["gap-tree-root"], extend: "gap" },

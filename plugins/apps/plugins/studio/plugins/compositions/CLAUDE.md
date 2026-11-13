@@ -119,12 +119,11 @@ are no per-interaction round-trips.
     - `Pane.Register` "compositions"
     - `item-actions` "delete" → `DeleteAction`
     - `Studio.Sidebar` "Compositions"
-  - Uses: 36 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 35 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `plugin-meta/composition` ×8
     - `primitives/pane` ×5
     - `primitives/data-view` ×3
     - `build/serve-composition` ×2
-    - `primitives/css/spacing` ×2
     - `primitives/css/text` ×2
     - `primitives/css/ui-kit` ×2
     - `apps/studio/explorer/membership.DIFF_LEGEND`
@@ -134,6 +133,7 @@ are no per-interaction round-trips.
     - `primitives/css/cluster.Cluster`
     - `primitives/css/link-chip.LinkChip`
     - `primitives/css/row.Row`
+    - `primitives/css/spacing.Stack`
     - `primitives/css/toggle-chip.ToggleChip`
     - `primitives/detail-sections.defineDetailSections`
     - `primitives/icon-button.IconButton`
@@ -153,7 +153,9 @@ are no per-interaction round-trips.
   - Uses tokens:
     - `ui/tokens/color-palette --border`
     - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/density --chrome-pad-x`
     - `ui/tokens/density --space-2xs`
+    - `ui/tokens/density --space-md`
     - `ui/tokens/density --space-xs`
     - `ui/tokens/font-family --font-mono`
     - `ui/tokens/shape --radius`

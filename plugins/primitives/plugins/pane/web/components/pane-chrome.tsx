@@ -82,20 +82,25 @@ type HeaderPresentation =
     };
 
 /**
- * Which inline edge the pane's header and content share.
+ * How the pane's BODY meets the pane edge. The header does not depend on it:
+ * every pane's header pads by the one pane edge (density `documentPadX`,
+ * `px-chrome-pane`, its lead glyph hung onto it), so a title never moves when
+ * the same slot switches between two kinds of pane. Every pane root publishes
+ * that edge as `--pane-inset`, the floor every `rail-follow` band in the body
+ * (a DataView's toolbar, its list rows, a table's rows) pads by — so with
+ * nothing else said the body's bands stand on the header's edge too.
  *
- * - `"chrome"` (the default): today's pane. The header pads by its own tier
- *   inset (density `chromePanePadStart` / `chromePanePadEnd`) and a DataView
- *   band inside the body by `rail-follow`'s fallback, the chrome pad.
+ * - `"chrome"` (the default): the body declares nothing; its bands follow the
+ *   pane edge, and a full-bleed body (a canvas, a map, an editor, a frame)
+ *   reads no rail at all.
  * - `"content"`: ONE pane-relative edge for a DataView's toolbar and its
  *   content. The pane root becomes an inline-size container (so a `cqi`
  *   length in the theme's inset is a fraction of the PANE, not the window)
  *   and publishes `--pane-inset: var(--content-inset)` (density
- *   `contentInset`), which every `rail-follow` band in the body floors at.
- *   The header keeps its own tier inset (`chromePanePad*`): its title sits
- *   flush at the pane's left, only the body takes the shared edge. While the theme leaves
- *   `contentInset` unset (`initial`) the var is invalid and every reader falls
- *   back to the chrome pad — the same edge as `"chrome"`.
+ *   `contentInset`) in place of the pane edge. The header stays on the pane
+ *   edge: only the body takes the theme's inset. While the theme leaves
+ *   `contentInset` unset (`initial`) it falls back to the pane edge — the same
+ *   as `"chrome"`.
  *
  * Opt-in per pane because a container changes more than the edge: it is the
  * containing block for `position: fixed` descendants (portaled overlays escape
@@ -104,24 +109,29 @@ type HeaderPresentation =
  *
  * - `"document"`: the body is read as a document (a detail, a form, a report),
  *   and the pane OWNS its inset: the body's scroller opens a `rail-document`
- *   region — it pays and publishes the density group's reading inset
- *   (`documentPadX`, default `lg`; block `documentPadTop` / `documentPadBottom`,
- *   default `md`). Content inside declares no padding of its own and lands on
- *   the rail by doing nothing; a rule strip reaches the pane edge with a
- *   `Band` / `rail-bleed`. The header's text edge is the same token
- *   (`pane-header-document`), so the title and the body never jog. Never for a DataView / DataTable pane (its rows are
- *   `rail-follow` bands with full-bleed fills — keep `"chrome"`), nor a
- *   full-bleed canvas, editor or frame.
+ *   region — it pays and publishes the pane edge (`documentPadX`; block
+ *   `documentPadTop` / `documentPadBottom`, default `md`). Content inside
+ *   declares no padding of its own and lands on the rail by doing nothing; a
+ *   rule strip reaches the pane edge with a `Band` / `rail-bleed`. Never for a
+ *   DataView / DataTable pane (its rows are `rail-follow` bands with
+ *   full-bleed fills — keep `"chrome"`, which puts them on the same edge),
+ *   nor a full-bleed canvas, editor or frame.
  */
 export type PaneInset = "chrome" | "content" | "document";
 
 /**
+ * Every pane root's floor for the `rail-follow` bands in its body: the pane
+ * edge, the header's own inset. A literal class (Tailwind only emits what its
+ * scanner sees).
+ */
+const PANE_EDGE_ROOT = "[--pane-inset:var(--document-pad-x)]";
+/**
  * The pane root's half of `inset="content"`: the inline-size container that
- * makes `cqi` pane-relative, and the published shared inset. Literal classes
- * (Tailwind only emits what its scanner sees).
+ * makes `cqi` pane-relative, and the theme's content inset in place of the
+ * pane edge (the edge again while the theme leaves it unset).
  */
 const CONTENT_INSET_ROOT =
-  "[container-type:inline-size] [--pane-inset:var(--content-inset)]";
+  "[container-type:inline-size] [--pane-inset:var(--content-inset,var(--document-pad-x))]";
 
 /**
  * `inset="document"`'s region: a box INSIDE the body's scroller, never the
@@ -140,13 +150,11 @@ const DOCUMENT_REGION = "rail-document";
  * pane instead of truncating or scrolling inside it.
  */
 const DOCUMENT_REGION_FILL = "min-h-full grid grid-cols-[minmax(0,1fr)]";
-/** `inset="document"`'s header: its text edge is the region's (`--document-pad-x`). */
-const DOCUMENT_HEADER = "pane-header-document";
 
 type PaneChromeProps = HeaderPresentation & {
   /**
-   * Which edge the header and the content share — see {@link PaneInset}.
-   * Default `"chrome"` (unchanged).
+   * How the body meets the pane edge — see {@link PaneInset}. Default
+   * `"chrome"`.
    */
   inset?: PaneInset;
   /**
@@ -285,18 +293,14 @@ export function PaneChrome({
         layoutCtx?.dragHandleProps && "cursor-grab active:cursor-grabbing",
         floatingHeader && "transition-colors",
         atTop && "border-transparent",
-        // A document body's edge is the header's too: one token, no jog.
-        documentRegion !== undefined && DOCUMENT_HEADER,
       )}
       onDoubleClick={onHeaderDoubleClick}
       {...layoutCtx?.dragHandleProps}
     >
-      {documentRegion === undefined ? (
-        lead
-      ) : lead === null ? null : (
-        // The lead control's glyph, not its button box, stands on the
-        // document edge: `pane-header-document` pulls this box left by the
-        // icon button's own inset.
+      {lead === null ? null : (
+        // The lead control's glyph, not its button box, stands on the pane
+        // edge: `px-chrome-pane` pulls this box left by the icon button's own
+        // inset.
         <Line data-pane-lead="" className="gap-sm">
           {lead}
         </Line>
@@ -346,7 +350,7 @@ export function PaneChrome({
       <div
         className={cn(
           "relative isolate h-full",
-          contentInset && CONTENT_INSET_ROOT,
+          contentInset ? CONTENT_INSET_ROOT : PANE_EDGE_ROOT,
         )}
       >
         {grounded(<PaneScroll>{documentBody}</PaneScroll>)}
@@ -414,7 +418,10 @@ export function PaneChrome({
   );
   return (
     <Column
-      className={cn("h-full", contentInset && CONTENT_INSET_ROOT)}
+      className={cn(
+        "h-full",
+        contentInset ? CONTENT_INSET_ROOT : PANE_EDGE_ROOT,
+      )}
       header={floatingHeader ? undefined : header(false)}
       // The pane body owns exactly one scroll, expressed via the shared
       // `PaneScroll` scaffold (`<Scroll axis="y" fill h-full>`) instead of

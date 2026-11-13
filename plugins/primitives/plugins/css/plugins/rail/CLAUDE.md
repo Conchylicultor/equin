@@ -96,7 +96,7 @@ is the model behind them.
 | --- | --- |
 | `rail-<step>` · `rail-x-` · `rail-y-` | open a region: publish **and** pay. `rail-x-none` is how *flush* is spelled — a region of width zero, which is a different state from no region at all |
 | `rail-panel` · `rail-document` | the same, at a role's token instead of a ramp step: a popover's `--popover-pad`; a document pane body's reading inset (`--document-pad-x` / `-top` / `-bottom`, worn by `PaneChrome inset="document"`) |
-| `rail-x-pane` | an inline region on the pane's own text edge (`--pane-inset`, else the pane header's pad), no block padding: `PaneMessage`, a message standing in for a pane's content, starts where the header title does |
+| `rail-x-pane` | an inline region on the pane's own text edge (`--pane-inset`, the pane edge its header pads by; `--document-pad-x` outside any pane), no block padding: `PaneMessage`, a message standing in for a pane's content, starts where the header title does |
 | `rail-owe-<step>` | open a region and hand the bill on: publish, pay nothing. The inverted topology; the app-shell sidebar is its live user |
 | `rail-follow` | pay what is owed, publish nothing. Falls back owed → rail → pane inset → chrome pad |
 | `rail-bleed` | the escape: cancel and re-apply, as one class |
@@ -119,13 +119,13 @@ flush. "Nobody opened a region here" must stay distinguishable from "someone
 opened one of width zero".
 
 **The pane-inset floor.** Between "no region" and the chrome pad sits
-`--pane-inset`, published only by a `PaneChrome inset="content"` pane (as
-`var(--content-inset)`, the density group's `contentInset`), so a follower band
-with nothing published above it lands on the pane's shared content edge (the
-pane header keeps its own inset). It is a floor, not a
-region: it says where a follower lands, never what has been applied, so a
-bleeder ignores it — and unset (`contentInset: initial`) it is invalid, falling
-through to the chrome pad exactly as before.
+`--pane-inset`, published by every `PaneChrome` root as the pane edge (the
+density group's `documentPadX` — the inset every pane header pads by), or by an
+`inset="content"` pane as its theme's `contentInset` when one is set. So a
+follower band with nothing published above it lands on its pane's header edge.
+It is a floor, not a region: it says where a follower lands, never what has
+been applied, so a bleeder ignores it. Outside every pane (an app sidebar) it
+is unset and a follower falls through to the chrome pad.
 
 ## Why a parallel ramp, and not publication folded into `p-*`
 

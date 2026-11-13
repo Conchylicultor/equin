@@ -411,6 +411,7 @@ fills to navy and oxblood — see `apps-core/chrome-theme`.
     - `ui/tokens/color-palette --info-solid`
     - `ui/tokens/color-palette --info-solid-foreground`
     - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/density --chrome-pad-x`
     - `ui/tokens/density --control-gap-sm`
     - `ui/tokens/density --space-md`
     - `ui/tokens/density --space-sm`

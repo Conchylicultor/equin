@@ -171,10 +171,9 @@ const shape = shapeGroup.fragment(
  */
 const density = densityGroup.fragment(
   both({
-    // The split header (`.phead`): flush on the pane's left, 16px in; the
-    // detail pane's header card keeps the card's 6px (`.top-l`).
-    chromePanePadStart: "1rem",
-    chromePanePadEnd: "1rem",
+    // The split header (`.phead`) stands on the pane edge every pane shares
+    // (`documentPadX`, 16px); the detail pane's header card keeps the card's
+    // 6px (`.top-l`).
     chromePaneCardPadStart: "0.375rem",
     chromePaneCardPadEnd: "0.375rem",
     controlHeightSm: "1.875rem",

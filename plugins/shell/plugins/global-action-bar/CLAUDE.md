@@ -154,7 +154,7 @@ tab bar, which an embed does not paint.
     - `ui/tokens/color-palette --foreground`
     - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/color-palette --primary`
-    - `ui/tokens/density --chrome-pane-pad-end`
+    - `ui/tokens/density --document-pad-x`
     - `ui/tokens/density --space-2xs`
     - `ui/tokens/density --space-sm`
     - `ui/tokens/shape --spacing`

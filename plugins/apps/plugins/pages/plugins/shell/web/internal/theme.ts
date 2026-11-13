@@ -108,8 +108,6 @@ const density = densityGroup.fragment(
   both({
     chromePaneH: "2.875rem",
     chromePaneRule: "0",
-    chromePanePadStart: "0.5rem",
-    chromePanePadEnd: "0.625rem",
     treeRowH: "1.875rem",
     treeIndent: "14px",
     // The mockup's 8px row inset, 18px icon box and 8px gap, on the tree's

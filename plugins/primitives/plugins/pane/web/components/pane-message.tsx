@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
  * failed state — the one owner of where such a message sits in any pane.
  *
  * Inline, it opens a region on the pane's own text edge (`rail-x-pane`: the
- * pane's `--pane-inset`, else its header's pad), so the message starts where
+ * pane's `--pane-inset`, the pane edge its header pads by), so the message starts where
  * the pane header's title does, whatever the pane's body is. Block, it adds
  * nothing: the message's room above and below is its own (`Placeholder`'s),
  * so a message sits the same distance under every pane header.

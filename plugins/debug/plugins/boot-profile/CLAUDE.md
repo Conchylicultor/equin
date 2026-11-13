@@ -85,12 +85,11 @@ unbounded.
     - `Pane.Register` "debug-boot-profiles-list"
     - `DebugApp.Sidebar` "Boot Profile"
     - `DebugApp.Sidebar` "Boot Profiles"
-  - Uses: 43 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 42 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `debug/profiling` ×8
     - `primitives/perfs/boot-trace` ×7
     - `primitives/pane` ×5
     - `primitives/data-view` ×4
-    - `primitives/css/spacing` ×2
     - `primitives/css/text` ×2
     - `primitives/css/ui-kit` ×2
     - `primitives/data-table` ×2
@@ -101,6 +100,7 @@ unbounded.
     - `primitives/css/center.Center`
     - `primitives/css/column.Column`
     - `primitives/css/placeholder.Placeholder`
+    - `primitives/css/spacing.Stack`
     - `primitives/loading.Loading`
     - `primitives/relative-time.RelativeTime`
     - `shell/notifications.useToast`
@@ -164,6 +164,9 @@ unbounded.
     - `ui/tokens/categorical --categorical-6`
     - `ui/tokens/categorical --categorical-7`
     - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/density --document-pad-bottom`
+    - `ui/tokens/density --document-pad-top`
+    - `ui/tokens/density --document-pad-x`
     - `ui/tokens/density --space-2xs`
     - `ui/tokens/density --space-lg`
     - `ui/tokens/density --space-sm`

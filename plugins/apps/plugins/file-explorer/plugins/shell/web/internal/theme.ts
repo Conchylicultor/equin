@@ -144,8 +144,6 @@ const density = densityGroup.fragment(
     chromePadX: "0.625rem",
     chromeBarH: "3rem",
     chromePaneH: "3rem",
-    chromePanePadStart: "0.5rem",
-    chromePanePadEnd: "0.5rem",
     treeRowH: "1.875rem",
     treeIndent: "24px",
     treeGuideX: "9px",

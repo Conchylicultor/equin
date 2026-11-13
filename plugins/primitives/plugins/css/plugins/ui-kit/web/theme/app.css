@@ -1169,32 +1169,27 @@
 @utility h-chrome-pane-card { height: var(--chrome-pane-card-h); } /* twmerge: extend h */
 @utility px-chrome { padding-left: var(--chrome-pad-x); padding-right: var(--chrome-pad-x); } /* twmerge: extend px */
 @utility pl-chrome { padding-left: var(--chrome-pad-x); } /* twmerge: extend pl */
-/* A pane header's own insets (`Bar tier="pane"`) — density `chromePanePadStart`
- * / `chromePanePadEnd`, both defaulting to `--chrome-pad-x`, so untouched this
- * is `px-chrome`. The end side, when the header reserves the floating bar's
- * safe area, is `pr-floating-bar-pane`: the safe area when one is published,
- * the header's own end inset otherwise. A sub-pane strip (`tier="subpane"`,
- * the conversation toolbar) insets by `subpanePadX` (default the `sm` step). */
-/* The header first reads its pane's own text edge (`--pane-header-pad-*`, set
- * on the header by `pane-header-document` when the pane's body is a document
- * region), so the title and the body text stand on ONE edge from one token. */
-@utility px-chrome-pane { padding-left: var(--pane-header-pad-start, var(--chrome-pane-pad-start)); padding-right: var(--pane-header-pad-end, var(--chrome-pane-pad-end)); } /* twmerge: extend px */
-/* A `header="card"` pane's row: its own insets (density `chromePaneCardPad*`,
- * default the bar's), so a theme widening the bar's keeps its card rows. */
-@utility px-chrome-pane-card { padding-left: var(--chrome-pane-card-pad-start); padding-right: var(--chrome-pane-card-pad-end); } /* twmerge: extend px */
-@utility pr-floating-bar-pane { padding-right: var(--floating-bar-safe-area, var(--pane-header-pad-end, var(--chrome-pane-pad-end))); transition: padding-right 280ms cubic-bezier(0.2, 0.8, 0.2, 1); } /* twmerge: extend pr */
-/* A `PaneChrome inset="document"` header: its text edge is the document
- * region's (`--document-pad-x`, the inset `rail-document` pays below it), so
- * the title never jogs against the body. On the header element itself, so a
- * pane nested in the body keeps its own. */
-@utility pane-header-document {
-  --pane-header-pad-start: var(--document-pad-x);
-  --pane-header-pad-end: var(--document-pad-x);
-  /* A leading icon button (sidebar toggle, Back) hangs into the header's inset
-   * by its own: its glyph, not its box, lands on the edge the title and the
-   * body text share. The header's controls are the `sm` size (`Bar`). */
+/* A pane header's insets (`Bar tier="pane"`): THE pane edge, density
+ * `documentPadX` (default the `lg` step) on both sides — the one edge every
+ * pane's header text, a document body (`rail-document`) and a DataView's bands
+ * (`--pane-inset`, which every `PaneChrome` root publishes) stand on. One token
+ * and no per-pane or per-header knob, so no two panes can put their titles on
+ * different edges. A leading icon control (sidebar toggle, Back — the
+ * `[data-pane-lead]` box) hangs into the inset by its own: its glyph, not its
+ * button box, lands on the edge (the header's controls are the `sm` size).
+ * The end side, when the header reserves the floating bar's safe area, is
+ * `pr-floating-bar-pane`: the safe area when one is published, the edge
+ * otherwise. A sub-pane strip (`tier="subpane"`, the conversation toolbar)
+ * insets by `subpanePadX` (default the `sm` step). */
+@utility px-chrome-pane {
+  padding-left: var(--document-pad-x);
+  padding-right: var(--document-pad-x);
   & > [data-pane-lead] { margin-inline-start: calc((var(--control-height-sm) - var(--control-icon-sm)) / -2); }
-} /* twmerge: standalone -- sets the pane header's text-edge vars; px-chrome-pane / pr-floating-bar-pane read them, so it composes with both. */
+} /* twmerge: extend px */
+/* A `header="card"` pane's row: its own insets (density `chromePaneCardPad*`,
+ * default the chrome pad) — the card is its own box, floating in the pane. */
+@utility px-chrome-pane-card { padding-left: var(--chrome-pane-card-pad-start); padding-right: var(--chrome-pane-card-pad-end); } /* twmerge: extend px */
+@utility pr-floating-bar-pane { padding-right: var(--floating-bar-safe-area, var(--document-pad-x)); transition: padding-right 280ms cubic-bezier(0.2, 0.8, 0.2, 1); } /* twmerge: extend pr */
 @utility px-subpane { padding-inline: var(--subpane-pad-x); } /* twmerge: extend px */
 /* A pane header's bottom rule width (`Bar tier="pane"`) — density
  * `chromePaneRule`, default `1px` (the `border-b` it always drew); a theme sets
@@ -1345,10 +1340,12 @@
 @utility rail-x-lg   { --rail-edge: closed; --rail-start: var(--space-lg);  --rail-end: var(--space-lg); --rail-text-start: calc(var(--rail-start) + var(--rail-row-pad)); --rail-text-end: calc(var(--rail-end) + var(--rail-row-pad));  --rail-owed-start: 0px; --rail-owed-end: 0px; padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail-x */
 /* The pane's own text edge as an inline region (`PaneMessage`): a message standing
  * in for a pane's content starts where the pane header's title does. It reads
- * `--pane-inset` (the pane's shared body edge), else the pane header's own pad,
- * so it follows the header by construction. Inline only: the message's block
+ * `--pane-inset` (the pane edge every `PaneChrome` root publishes — the header's
+ * own inset — or an `inset="content"` pane's content inset), else, outside any
+ * pane, the pane edge itself (`--document-pad-x`), so it follows the header by
+ * construction. Inline only: the message's block
  * room is its own (`Placeholder`'s `py-sm`), never stacked on a region's. */
-@utility rail-x-pane { --rail-edge: open; --rail-start: var(--pane-inset, var(--chrome-pane-pad-start)); --rail-end: var(--pane-inset, var(--chrome-pane-pad-end)); --rail-text-start: calc(var(--rail-start) + var(--rail-row-pad)); --rail-text-end: calc(var(--rail-end) + var(--rail-row-pad)); --rail-owed-start: 0px; --rail-owed-end: 0px; padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail-x */
+@utility rail-x-pane { --rail-edge: open; --rail-start: var(--pane-inset, var(--document-pad-x)); --rail-end: var(--pane-inset, var(--document-pad-x)); --rail-text-start: calc(var(--rail-start) + var(--rail-row-pad)); --rail-text-end: calc(var(--rail-end) + var(--rail-row-pad)); --rail-owed-start: 0px; --rail-owed-end: 0px; padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail-x */
 @utility rail-x-xl   { --rail-edge: closed; --rail-start: var(--space-xl);  --rail-end: var(--space-xl); --rail-text-start: calc(var(--rail-start) + var(--rail-row-pad)); --rail-text-end: calc(var(--rail-end) + var(--rail-row-pad));  --rail-owed-start: 0px; --rail-owed-end: 0px; padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail-x */
 @utility rail-x-2xl  { --rail-edge: closed; --rail-start: var(--space-2xl); --rail-end: var(--space-2xl); --rail-text-start: calc(var(--rail-start) + var(--rail-row-pad)); --rail-text-end: calc(var(--rail-end) + var(--rail-row-pad)); --rail-owed-start: 0px; --rail-owed-end: 0px; padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail-x */
 /* PUBLISH WITHOUT PAYING — open a region and hand the bill to the children.
@@ -1470,15 +1467,13 @@
  *                          inset once, not twice.
  *   - only the rail set  ⇒ a hand-published region (a style object). Treat the
  *                          rail as owed — see `rail-owe-<step>`.
- *   - neither            ⇒ no region at all. Fall back to the pane's shared
- *                          content inset (`--pane-inset`, published only by a
- *                          `PaneChrome inset="content"` pane whose theme sets
- *                          the density group's `contentInset`), else to the
- *                          pane header's own inset (12/10/8 by density) so a
- *                          band still lines up with the header with nothing
- *                          published anywhere, which is what the gutter class
- *                          this replaced did. Unset, `--pane-inset` is invalid,
- *                          so the floor changes nothing for any other pane.
+ *   - neither            ⇒ no region at all. Fall back to the pane's edge
+ *                          (`--pane-inset`, published by every `PaneChrome`
+ *                          root: the pane edge `documentPadX`, the header's own
+ *                          inset — or an `inset="content"` pane's
+ *                          `contentInset` when its theme sets one), so a band
+ *                          lines up with its pane's header; outside any pane,
+ *                          the chrome pad.
  * It is in the `px` group, not a rail group: it consumes a rail, never owns one
  * — and note it deliberately does NOT clear the debt for its own descendants.
  * It cannot: reading `--rail-owed-start` while also declaring it on the same
@@ -1540,9 +1535,6 @@
  * padding does when no rail is published at all. */
 @utility rail-band-region { --rail-start: var(--rail-text-start, var(--pane-inset, var(--chrome-pad-x))); --rail-end: var(--rail-text-end, var(--pane-inset, var(--chrome-pad-x))); --rail-owed-start: 0px; --rail-owed-end: 0px; } /* twmerge: standalone -- a band's content wrapper republishing the band's padding; no padding of its own. */
 
-/* The pane's shared content inset as padding — a `PaneChrome inset="content"`
- * pane's header pads by it, so its title starts where the DataView toolbar and
- * content (`rail-follow`, floored at the same var) do. Unset = the chrome pad. */
 
 /* The vertical half of `p-row`, for a row that takes its inline inset from the
  * rail but its block padding from the row density token. */

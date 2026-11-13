@@ -222,7 +222,7 @@ const ROW_HIGHLIGHT: Record<DataTablePresentation, string> = {
 };
 
 /** The inline inset every subgrid row takes (`rail-follow`'s, floor included:
- *  a `PaneChrome inset="content"` pane's `--pane-inset`, else the chrome pad). */
+ *  the pane's `--pane-inset` — its edge — else, outside any pane, the chrome pad). */
 const RAIL_START =
   "var(--rail-owed-start, var(--rail-start, var(--pane-inset, var(--chrome-pad-x))))";
 const RAIL_END =

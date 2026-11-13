@@ -420,3 +420,48 @@ Where the implementation diverged from the design above, and why:
   page / block-type / prototype pickers, servers, account detail, boot profile,
   plugin changes); the 11 `Center … p-2xl` states drop the padding.
 - **Exhibit**: `placeholder/hosts` (a region, a row host, a padded box).
+
+## The pane edge — one header edge for every pane (2026-11-13)
+
+Slice 2 put a document pane's header on the document edge (16px) while every
+other pane's header stayed on its own tier inset (`chromePanePadStart` /
+`End`: 12px by default, 8px in the agent manager and Pages, 16px in Sonata and
+Prototypes), so the same screen slot moved its title by up to 8px when it
+switched between a document pane and another one (task-1794571817-vkygud;
+the "Header jump" pairs of proto-1794490586-hbrirf). The user's decision: the
+edge is the same for every pane.
+
+- **One token, no knob.** The pane edge is the density group's `documentPadX`
+  (default `lg`, 16px). `px-chrome-pane` pads every pane header by it on both
+  sides; a `[data-pane-lead]` control (sidebar toggle, Back) hangs into it by
+  the `sm` icon button's inset, so its glyph stands on the edge — in every
+  pane, not only document ones. `pane-header-document` and the
+  `--pane-header-pad-*` vars are gone, and so are the `chromePanePadStart` /
+  `End` tokens (and the five app themes that set them): a theme can move every
+  pane's edge at once (`documentPadX`), never one kind of pane's. The website
+  sets `documentPadX` to its measure gutter, so its header (a pane header) is
+  unchanged.
+- **The body follows the header.** Every `PaneChrome` root publishes the edge
+  as `--pane-inset`, the floor `rail-follow` reads. So a DataView's toolbar,
+  its list rows and a DataTable's rows stand on the header's edge in any pane
+  (they were on the chrome pad, 12px); a document region pays the same edge;
+  an `inset="content"` pane publishes its theme's `contentInset` instead
+  (falling back to the edge when unset) and keeps its header on the edge.
+  Full-bleed bodies (canvases, maps, editors, frames) read no rail and do not
+  move. `--rail-edge` is unchanged.
+- **Card header rows** (`header="card"`) keep their own inset, now defaulting
+  to the chrome pad: the card is its own box floating in the pane.
+- **Hosts that padded around their bands** pay nothing now: a plain
+  `<Inset>` or `px-md` box pads without opening a region, so the `rail-follow`
+  bands inside it paid the (now larger) floor on top of it. Studio's
+  compositions list drops its `Inset` (the button row follows the edge like
+  the DataView); the boot summary opens a `rail-document` region (its tables
+  bleed, text on the edge); the build pane's Deployment strip and Build row
+  follow the edge (still the chrome pad in the build popover, which opens no
+  region yet).
+- **Known 2px:** where the lead control is the app launcher (Sonata,
+  Prototypes) its 20px brand mark is wider than the `sm` icon the hang
+  assumes, so its glyph lands at 14px.
+- **Review:** `rail/e2e/pane-header-review.ts` (every kind of pane, solo and
+  desktop surface modes, the header-jump pairs, px per pane header);
+  proto-1794578386-y7j2wb.

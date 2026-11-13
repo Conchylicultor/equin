@@ -430,8 +430,19 @@ It forwards `ref` and `Scroll`'s props (`hideScrollbar`, `isolate`, `as`,
   - `overlay` then spans the header too.
   - Goes with `headerTheme` (a `subThemeScope(…)`, may change on scroll; mask
     republished as `--chrome-mask`) and `headerGlass` (frosted mask).
+- **The pane edge** — every pane's header pads by ONE token, density
+  `documentPadX` (16px by default), whatever its body: its title (or its
+  leading glyph) never moves when a screen slot switches between two kinds
+  of pane. A leading icon control (the sidebar toggle, Back) hangs into that
+  inset by its own (`[data-pane-lead]`, pulled by the `sm` icon button's
+  inset), so its glyph — not its box — stands on the edge. Every pane root
+  publishes the same edge as `--pane-inset`, the floor every `rail-follow`
+  band in its body follows (a DataView's toolbar, list rows, a table's rows),
+  so with nothing said a body's bands stand on the header's edge too. There
+  is no per-pane or per-header inset to set; a theme moves every pane's edge
+  at once by setting `documentPadX`.
 - **`inset="content"`** — aligns a DataView toolbar and content on ONE
-  pane-relative edge (below). Default `"chrome"`.
+  pane-relative edge from the theme (below). Default `"chrome"`.
 - **`inset="document"`** — the pane owns its body's inset (below): for a
   detail / form / report body. Content inside declares no padding.
 - **`header="card"`** — same header row as a floating card (below). Excludes
@@ -445,10 +456,11 @@ What it does:
 
 - The pane root becomes an inline-size container (so `cqi` is a fraction of
   the pane).
-- It publishes `--pane-inset: var(--content-inset)` (density group's
-  `contentInset` token), and every `rail-follow` band in the body floors at it
+- It publishes `--pane-inset: var(--content-inset, <the pane edge>)`
+  (density group's `contentInset` token) in place of the pane edge, and every
+  `rail-follow` band in the body floors at it
   ([`rail`](../css/plugins/rail/CLAUDE.md)).
-- The header title stays on `chromePanePadStart`/`End`.
+- The header stays on the pane edge, like every pane's.
 - Unset `contentInset` ⇒ looks like any other pane.
 
 Why opt-in: a container is the containing block for `position: fixed`
@@ -467,7 +479,7 @@ Tokens and parts:
 
 The body's scroller opens a `rail-document` region
 ([`rail`](../css/plugins/rail/CLAUDE.md)): it pays and publishes the density
-group's reading inset — `documentPadX` (default `lg`, 16px) inline,
+group's reading inset — the pane edge `documentPadX` (default `lg`, 16px) inline,
 `documentPadTop` / `documentPadBottom` (default `md`) block — the margins a
 rendered Markdown file wears. So:
 
@@ -475,13 +487,8 @@ rendered Markdown file wears. So:
   it lands on the rail by doing nothing. `rail/no-pad-under-owner` flags a
   padded root written in the same file.
 - A strip that must reach the pane edge (a rule) is a `Band` or `rail-bleed`.
-- The header stands on the same edge: `PaneChrome` puts
-  `pane-header-document` on its header, which points the header's inline
-  inset (`px-chrome-pane`, and the end inset under the floating bar's safe
-  area) at `--document-pad-x` — one token for the title and the body text, so
-  they cannot jog. A leading icon control (the sidebar toggle, Back) hangs
-  into that inset by its own (`[data-pane-lead]`, pulled by the `sm` icon
-  button's inset), so its glyph — not its box — stands on the edge. A
+- The header is on the same edge, as every pane's is (the pane edge, above):
+  one token for the title and the body text, so they cannot jog. A
   `header="card"` row keeps its own inset (it floats).
 - A scroller nested in the body clips a table's bleed to its own box (rows
   then sit flush on the rail): the pane's scroller is the one scroll.
@@ -1033,11 +1040,7 @@ with an empty route.
     - `ui/tokens/density --chrome-pane-card-h`
     - `ui/tokens/density --chrome-pane-card-pad-end`
     - `ui/tokens/density --chrome-pane-card-pad-start`
-    - `ui/tokens/density --chrome-pane-pad-end`
-    - `ui/tokens/density --chrome-pane-pad-start`
     - `ui/tokens/density --content-inset`
-    - `ui/tokens/density --control-height-sm`
-    - `ui/tokens/density --control-icon-sm`
     - `ui/tokens/density --document-pad-bottom`
     - `ui/tokens/density --document-pad-top`
     - `ui/tokens/density --document-pad-x`

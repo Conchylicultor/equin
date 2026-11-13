@@ -179,10 +179,11 @@ const typeScale = typeScaleGroup.fragment(
  * two button sizes the page has (the header's pill, the contact cards' buttons),
  * and the pane-header height is the site header's 72px.
  *
- * `chromePadX` is the header's horizontal inset. It is a gutter computed from
- * the site's reading measure so the wordmark and the nav land on the same left
- * and right edges as every band below them — the one number that must agree
- * with `WebsiteBand`, so both read `--website-measure` (see `website-band.css`).
+ * `chromePadX` and `documentPadX` (the pane edge, which the site header — a
+ * pane header — pads by) are one gutter computed from the site's reading
+ * measure, so the wordmark and the nav land on the same left and right edges
+ * as every band below them — the one number that must agree with
+ * `WebsiteBand`, so both read `--website-measure` (see `website-band.css`).
  */
 const density = densityGroup.fragment(
   both({
@@ -206,6 +207,7 @@ const density = densityGroup.fragment(
     chromePaneH: "4.5rem",
     chromePadX:
       "max(var(--space-2xl), calc((100% - var(--website-measure)) / 2))",
+    documentPadX: "var(--chrome-pad-x)",
     "space-2xs": "0.125rem",
     // 4px — between two nav items.
     "space-xs": "0.25rem",

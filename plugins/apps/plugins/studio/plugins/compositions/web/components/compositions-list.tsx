@@ -1,10 +1,7 @@
 import { useMemo, type ReactElement } from "react";
 import type { LinkTarget } from "@plugins/primitives/plugins/link-gesture/core";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import {
-  Stack,
-  Inset,
-} from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
@@ -77,48 +74,51 @@ export function CompositionsList(): ReactElement {
     );
   }
 
+  // The pane edge is the host's: the DataView's bands follow it on their own,
+  // and the strips above them follow it the same way (`rail-follow`) — a box
+  // padding around them would make the bands pay the edge a second time.
   return (
-    <Inset pad="md">
-      <Stack gap="lg">
-        <Stack direction="row" align="center" gap="xs">
-          <Button variant="outline" onClick={newComposition}>
-            <Icon icon={addIcon} />
-            New
-          </Button>
-          <Button
-            variant="ghost"
-            {...openPane.link(comparePane, {}, { mode: "push", side: "right" })}
-          >
-            <Icon icon={compareIcon} />
-            Compare
-          </Button>
-        </Stack>
+    <Stack gap="lg" className="py-md">
+      <Stack direction="row" align="center" gap="xs" className="rail-follow">
+        <Button variant="outline" onClick={newComposition}>
+          <Icon icon={addIcon} />
+          New
+        </Button>
+        <Button
+          variant="ghost"
+          {...openPane.link(comparePane, {}, { mode: "push", side: "right" })}
+        >
+          <Icon icon={compareIcon} />
+          Compare
+        </Button>
+      </Stack>
 
-        {data.status === "loading" ? (
-          <Loading variant="text" />
-        ) : data.status === "error" ? (
+      {data.status === "loading" ? (
+        <Loading variant="text" className="rail-follow" />
+      ) : data.status === "error" ? (
+        <Stack gap="none" className="rail-follow">
           <ResourceErrorInline
             variant="block"
             subject="the composition graph"
             error={data.error}
             refetch={data.refetch}
           />
-        ) : (
-          <CompositionsDataView
-            items={items}
-            selectedId={selectedId ?? null}
-            onSetMode={setMode}
-            linkTo={(item) =>
-              openPane.to(
-                compositionDetailPane,
-                { id: item.id },
-                { mode: "push", side: "right" },
-              )
-            }
-          />
-        )}
-      </Stack>
-    </Inset>
+        </Stack>
+      ) : (
+        <CompositionsDataView
+          items={items}
+          selectedId={selectedId ?? null}
+          onSetMode={setMode}
+          linkTo={(item) =>
+            openPane.to(
+              compositionDetailPane,
+              { id: item.id },
+              { mode: "push", side: "right" },
+            )
+          }
+        />
+      )}
+    </Stack>
   );
 }
 

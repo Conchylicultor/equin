@@ -50,7 +50,7 @@ the same two pills, past the aside.
   - Exports (values): `floatingToolbar`
 - Cross-plugin:
   - Uses tokens:
-    - `ui/tokens/density --chrome-pane-pad-end`
+    - `ui/tokens/density --document-pad-x`
     - `ui/tokens/density --space-md`
   - Imported by: `apps/places/places-map`
 

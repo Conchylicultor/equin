@@ -16,9 +16,10 @@ export interface BarProps extends HTMLAttributes<HTMLElement> {
    *   sits on, page canvas by default). Reserves the floating-bar safe area by
    *   default (`endSafeArea`). Used by the app-shell toolbar and pane headers.
    * - `"pane"`: the **pane-header** tier — a `<div>` at the shorter `h-chrome-pane`
-   *   with its own start/end insets (`px-chrome-pane`, density
-   *   `chromePanePadStart` / `chromePanePadEnd`, both `chromePadX` by default)
-   *   and `min-w-0` (truncation-safe). Used by PaneChrome.
+   *   inset by the pane edge on both sides (`px-chrome-pane`, density
+   *   `documentPadX` — the edge every pane's header and body share; a
+   *   `[data-pane-lead]` box hangs its glyph onto it) and `min-w-0`
+   *   (truncation-safe). Used by PaneChrome.
    * - `"subpane"`: a pane's **secondary strip** under its header (the
    *   conversation toolbar) — a `<div>` as tall as its controls plus an `xs`
    *   block pad, inset by `px-subpane` (density `subpanePadX`, the `sm` step

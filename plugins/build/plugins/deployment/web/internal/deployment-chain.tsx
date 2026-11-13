@@ -75,7 +75,7 @@ function Section({
 }) {
   return (
     <Stack gap="none" className="border-b">
-      <Line className="gap-sm px-md py-sm">
+      <Line className="gap-sm rail-follow py-sm">
         <Text as="span" variant="label" className="text-muted-foreground">
           Deployment
         </Text>
@@ -116,7 +116,7 @@ function OffChain({
 }) {
   if (carriers.length === 0) return null;
   return (
-    <Stack gap="2xs" className="px-md py-sm">
+    <Stack gap="2xs" className="rail-follow py-sm">
       {carriers.map((c) => (
         <Line key={c.id} className="gap-sm">
           <Badge variant="muted">{CARRIER_LABEL[c.id]}</Badge>
@@ -186,7 +186,7 @@ function PinList({
   served: string | null;
 }) {
   return (
-    <Stack gap="2xs" className="px-md py-sm">
+    <Stack gap="2xs" className="rail-follow py-sm">
       {target !== null && (
         <Line className="gap-sm">
           <Badge variant="primary">HEAD</Badge>
@@ -394,7 +394,7 @@ function ChainArm({
         {/* A capped walk must say so INSIDE the list. A chain that simply stops
             reads as "this is all of it", which is the one thing it is not. */}
         {chain.truncated && (
-          <Line className="gap-sm px-md py-sm">
+          <Line className="gap-sm rail-follow py-sm">
             <Text as="span" variant="caption" tone="muted">
               …and older commits below — the chain stops at {CHAIN_CAP}.
             </Text>

@@ -85,7 +85,7 @@ function assertSameTokensInBothModes(
 /**
  * The values a sub-theme block writes for one group in one mode: the tokens the
  * fragment names, plus every token of the same group whose schema default is
- * DERIVED from one of them (`chromePanePadStart: var(--chrome-pad-x)`), at that
+ * DERIVED from one of them (`chromePaneCardPadStart: var(--chrome-pad-x)`), at that
  * default.
  *
  * Why the extra tokens: a custom property's `var()` is substituted where the

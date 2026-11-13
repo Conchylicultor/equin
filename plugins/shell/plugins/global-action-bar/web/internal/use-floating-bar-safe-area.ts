@@ -87,7 +87,7 @@ export function useFloatingBarSafeArea(
       // batch, not between two of them.
       return () =>
         sheet.replaceSync(
-          `${RESERVING_HEADERS} { ${SAFE_AREA_VAR}: calc(${Math.ceil(room)}px + var(--chrome-pane-pad-end)); } ` +
+          `${RESERVING_HEADERS} { ${SAFE_AREA_VAR}: calc(${Math.ceil(room)}px + var(--document-pad-x)); } ` +
             `${BOUNDED_HEADERS} { ${SAFE_AREA_VAR}: initial; }`,
         );
     },

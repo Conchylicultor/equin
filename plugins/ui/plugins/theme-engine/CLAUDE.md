@@ -149,7 +149,7 @@ It differs from a theme in three ways:
   even after the app's theme is switched. Its values are painted as written —
   the surrounding color adjustment does not apply to them.
 - **What derives from a token it names follows it.** A derived default
-  (`chromePanePadStart: var(--chrome-pad-x)`) is computed where it is declared
+  (`chromePaneCardPadStart: var(--chrome-pad-x)`) is computed where it is declared
   and inherited computed, so re-valuing only the base would not reach it. The
   block therefore also re-declares every token of the same group whose default
   reads a named one, transitively (`subThemeBlockValues`). Inside the region,
@@ -472,9 +472,9 @@ the `""` entry.
     - `tokenGroupMatchesSearch`
     - `transformValues`
 - Cross-plugin:
-  - Uses tokens: 68 vars — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ui/tokens/density` ×28
+  - Uses tokens: 66 vars — full list in [REFERENCE.md](./REFERENCE.md)
     - `ui/tokens/color-palette` ×26
+    - `ui/tokens/density` ×26
     - `ui/tokens/shadow` ×4
     - `ui/tokens/shape` ×4
     - `ui/tokens/type-scale` ×4

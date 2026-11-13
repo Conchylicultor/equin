@@ -178,6 +178,7 @@ hover.
     - `ui/tokens/color-palette --primary`
     - `ui/tokens/color-palette --primary-foreground`
     - `ui/tokens/color-palette --primary-text`
+    - `ui/tokens/density --chrome-pad-x`
     - `ui/tokens/density --space-2xl`
     - `ui/tokens/shape --spacing`
     - `ui/tokens/type-scale --font-weight-bold`

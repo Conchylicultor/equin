@@ -11315,12 +11315,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Pane.Register` "compositions"
               - `item-actions` "delete" → `DeleteAction`
               - `Studio.Sidebar` "Compositions"
-            - Uses: 36 symbols — full list in [`plugins/apps/plugins/studio/plugins/compositions/REFERENCE.md`](../plugins/apps/plugins/studio/plugins/compositions/REFERENCE.md)
+            - Uses: 35 symbols — full list in [`plugins/apps/plugins/studio/plugins/compositions/REFERENCE.md`](../plugins/apps/plugins/studio/plugins/compositions/REFERENCE.md)
               - `plugin-meta/composition` ×8
               - `primitives/pane` ×5
               - `primitives/data-view` ×3
               - `build/serve-composition` ×2
-              - `primitives/css/spacing` ×2
               - `primitives/css/text` ×2
               - `primitives/css/ui-kit` ×2
               - `apps/studio/explorer/membership.DIFF_LEGEND`
@@ -11330,6 +11329,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/cluster.Cluster`
               - `primitives/css/link-chip.LinkChip`
               - `primitives/css/row.Row`
+              - `primitives/css/spacing.Stack`
               - `primitives/css/toggle-chip.ToggleChip`
               - `primitives/detail-sections.defineDetailSections`
               - `primitives/icon-button.IconButton`
@@ -11349,7 +11349,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/color-palette --border`
               - `ui/tokens/color-palette --muted-foreground`
+              - `ui/tokens/density --chrome-pad-x`
               - `ui/tokens/density --space-2xs`
+              - `ui/tokens/density --space-md`
               - `ui/tokens/density --space-xs`
               - `ui/tokens/font-family --font-mono`
               - `ui/tokens/shape --radius`
@@ -12838,6 +12840,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette --primary`
               - `ui/tokens/color-palette --primary-foreground`
               - `ui/tokens/color-palette --primary-text`
+              - `ui/tokens/density --chrome-pad-x`
               - `ui/tokens/density --space-2xl`
               - `ui/tokens/shape --spacing`
               - `ui/tokens/type-scale --font-weight-bold`
@@ -14475,6 +14478,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `ui/tokens/color-palette --info-solid`
       - `ui/tokens/color-palette --info-solid-foreground`
       - `ui/tokens/color-palette --muted-foreground`
+      - `ui/tokens/density --chrome-pad-x`
       - `ui/tokens/density --control-gap-sm`
       - `ui/tokens/density --space-md`
       - `ui/tokens/density --space-sm`
@@ -14816,6 +14820,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/color-palette --primary`
           - `ui/tokens/color-palette --primary-text`
           - `ui/tokens/color-palette --success`
+          - `ui/tokens/density --chrome-pad-x`
           - `ui/tokens/density --space-md`
           - `ui/tokens/density --space-sm`
           - `ui/tokens/font-family --font-mono`
@@ -24450,12 +24455,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Pane.Register` "debug-boot-profiles-list"
           - `DebugApp.Sidebar` "Boot Profile"
           - `DebugApp.Sidebar` "Boot Profiles"
-        - Uses: 43 symbols — full list in [`plugins/debug/plugins/boot-profile/REFERENCE.md`](../plugins/debug/plugins/boot-profile/REFERENCE.md)
+        - Uses: 42 symbols — full list in [`plugins/debug/plugins/boot-profile/REFERENCE.md`](../plugins/debug/plugins/boot-profile/REFERENCE.md)
           - `debug/profiling` ×8
           - `primitives/perfs/boot-trace` ×7
           - `primitives/pane` ×5
           - `primitives/data-view` ×4
-          - `primitives/css/spacing` ×2
           - `primitives/css/text` ×2
           - `primitives/css/ui-kit` ×2
           - `primitives/data-table` ×2
@@ -24466,6 +24470,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/center.Center`
           - `primitives/css/column.Column`
           - `primitives/css/placeholder.Placeholder`
+          - `primitives/css/spacing.Stack`
           - `primitives/loading.Loading`
           - `primitives/relative-time.RelativeTime`
           - `shell/notifications.useToast`
@@ -24529,6 +24534,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/categorical --categorical-6`
           - `ui/tokens/categorical --categorical-7`
           - `ui/tokens/color-palette --muted-foreground`
+          - `ui/tokens/density --document-pad-bottom`
+          - `ui/tokens/density --document-pad-top`
+          - `ui/tokens/density --document-pad-x`
           - `ui/tokens/density --space-2xs`
           - `ui/tokens/density --space-lg`
           - `ui/tokens/density --space-sm`
@@ -47050,9 +47058,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --chrome-bar-h`
           - `ui/tokens/density --chrome-pad-x`
           - `ui/tokens/density --chrome-pane-h`
-          - `ui/tokens/density --chrome-pane-pad-end`
-          - `ui/tokens/density --chrome-pane-pad-start`
           - `ui/tokens/density --chrome-pane-rule`
+          - `ui/tokens/density --control-height-sm`
+          - `ui/tokens/density --control-icon-sm`
+          - `ui/tokens/density --document-pad-x`
           - `ui/tokens/density --space-sm`
           - `ui/tokens/density --space-xs`
           - `ui/tokens/density --subpane-pad-x`
@@ -48964,9 +48973,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useSingleLine`
               - `WithTooltip`
           - Cross-plugin:
-            - Uses tokens: 389 vars — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Uses tokens: 387 vars — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `ui/tokens/data-view` ×105
-              - `ui/tokens/density` ×92
+              - `ui/tokens/density` ×90
               - `ui/tokens/color-palette` ×62
               - `ui/tokens/type-scale` ×42
               - `ui/tokens/shape` ×15
@@ -49942,7 +49951,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `floatingToolbar`
           - Cross-plugin:
             - Uses tokens:
-              - `ui/tokens/density --chrome-pane-pad-end`
+              - `ui/tokens/density --document-pad-x`
               - `ui/tokens/density --space-md`
             - Imported by: `apps/places/places-map`
         - **`gallery`** — Gallery view child for the data-view primitive: a responsive grid of cover cards — the cover is the card, its fields three fixed lines under it, its actions on the cover.
@@ -53336,11 +53345,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --chrome-pane-card-h`
           - `ui/tokens/density --chrome-pane-card-pad-end`
           - `ui/tokens/density --chrome-pane-card-pad-start`
-          - `ui/tokens/density --chrome-pane-pad-end`
-          - `ui/tokens/density --chrome-pane-pad-start`
           - `ui/tokens/density --content-inset`
-          - `ui/tokens/density --control-height-sm`
-          - `ui/tokens/density --control-icon-sm`
           - `ui/tokens/density --document-pad-bottom`
           - `ui/tokens/density --document-pad-top`
           - `ui/tokens/density --document-pad-x`
@@ -57602,7 +57607,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/color-palette --foreground`
           - `ui/tokens/color-palette --muted-foreground`
           - `ui/tokens/color-palette --primary`
-          - `ui/tokens/density --chrome-pane-pad-end`
+          - `ui/tokens/density --document-pad-x`
           - `ui/tokens/density --space-2xs`
           - `ui/tokens/density --space-sm`
           - `ui/tokens/shape --spacing`
@@ -62593,9 +62598,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tokenGroupMatchesSearch`
           - `transformValues`
       - Cross-plugin:
-        - Uses tokens: 68 vars — full list in [`plugins/ui/plugins/theme-engine/REFERENCE.md`](../plugins/ui/plugins/theme-engine/REFERENCE.md)
-          - `ui/tokens/density` ×28
+        - Uses tokens: 66 vars — full list in [`plugins/ui/plugins/theme-engine/REFERENCE.md`](../plugins/ui/plugins/theme-engine/REFERENCE.md)
           - `ui/tokens/color-palette` ×26
+          - `ui/tokens/density` ×26
           - `ui/tokens/shadow` ×4
           - `ui/tokens/shape` ×4
           - `ui/tokens/type-scale` ×4
