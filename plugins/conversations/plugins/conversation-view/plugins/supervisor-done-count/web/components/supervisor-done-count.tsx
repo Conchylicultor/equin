@@ -1,7 +1,9 @@
 import { exposedColumns } from "@plugins/network/plugins/live/core";
 import { mapRow, useLive } from "@plugins/network/plugins/live/web";
-import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
-import type { ConversationItemConv } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
+import {
+  ResourceErrorInline,
+  type ResourceResult,
+} from "@plugins/network/plugins/live/plugins/live-state/web";
 import {
   taskMandates,
   taskMandateShape,
@@ -13,48 +15,28 @@ import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { useMemo } from "react";
 
 /**
- * The done-count chip of a supervisor's conversation: on the row of a
- * conversation whose task STATES the supervisor mandate (its root — a worker
- * below it inherits the mandate and gets no chip), how many tasks of the
- * supervisor's tree are done, however deep they were filed.
- *
- * The tree is every task whose effective mandate comes from this root (the
- * exposed `mandateSource`), read as ONE grouping by status — a few numbers,
- * never the tree's rows. The root itself is in that set; its own status is
- * taken back out.
- *
- * Renders nothing until both reads are known or for any other conversation;
- * an error glyph when one failed.
+ * Whether `taskId` is a supervisor's root — its task STATES the supervisor
+ * mandate (a worker below it inherits the mandate and is not one). Loading
+ * until the mandate is known; read live, so a mandate changed mid-conversation
+ * moves it.
  */
-export function SupervisorDoneCountChip({
-  conv,
-}: {
-  conv: ConversationItemConv;
-}) {
-  const taskId = conv.taskId ?? null;
-  const mandate = useLive(taskMandates, { id: taskId });
-  const isRoot = useMemo(
+export function useIsSupervisorRoot(
+  taskId: string | null | undefined,
+): ResourceResult<boolean> {
+  const id = taskId ?? null;
+  const mandate = useLive(taskMandates, { id });
+  return useMemo(
     () =>
       mapRow(
         mandate,
         (r) =>
+          id !== null &&
           r != null &&
           r.mandateId === supervisorMandate.id &&
-          r.sourceTaskId === taskId,
+          r.sourceTaskId === id,
       ),
-    [mandate, taskId],
+    [mandate, id],
   );
-  if (isRoot.status === "error")
-    return (
-      <ResourceErrorInline
-        variant="icon"
-        subject="the mandate"
-        error={isRoot.error}
-        refetch={isRoot.refetch}
-      />
-    );
-  if (isRoot.status !== "ready" || !isRoot.data || taskId === null) return null;
-  return <TreeDoneCount rootId={taskId} />;
 }
 
 // The mandate exposure's columns, so the read can filter by `sourceTaskId`.
@@ -64,7 +46,18 @@ const mandateColumns = exposedColumns(taskMandateShape.exposure);
 const R = 5;
 const CIRCUMFERENCE = 2 * Math.PI * R;
 
-function TreeDoneCount({ rootId }: { rootId: string }) {
+/**
+ * A supervisor's done count: how many tasks of its tree are done, however deep
+ * they were filed, with a ring filled by the done share of the whole tree
+ * (empty for a supervisor that has filed nothing yet). Hover for done / open /
+ * dropped.
+ *
+ * The tree is every task whose effective mandate comes from this root (the
+ * exposed `mandateSource`), read as ONE grouping by status — a few numbers,
+ * never the tree's rows. The root itself is in that set; its own status is
+ * taken back out.
+ */
+export function SupervisorDoneCount({ rootId }: { rootId: string }) {
   const groups = useLive(taskWindow, {
     columns: [mandateColumns],
     groupBy: "status",
@@ -98,7 +91,6 @@ function TreeDoneCount({ rootId }: { rootId: string }) {
     (status === rootStatus ? 1 : 0);
   const total =
     groups.data.reduce((n, g) => n + g.count, 0) - (root.data ? 1 : 0);
-  if (total === 0) return null;
   const done = countOf("done");
   const dropped = countOf("dropped");
   const open = total - done - dropped;
@@ -131,7 +123,7 @@ function TreeDoneCount({ rootId }: { rootId: string }) {
             fill="none"
             strokeWidth="2.2"
             strokeLinecap="round"
-            strokeDasharray={`${(done / total) * CIRCUMFERENCE} ${CIRCUMFERENCE}`}
+            strokeDasharray={`${total === 0 ? 0 : (done / total) * CIRCUMFERENCE} ${CIRCUMFERENCE}`}
             className="stroke-success"
           />
         </svg>

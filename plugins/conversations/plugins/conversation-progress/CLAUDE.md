@@ -45,6 +45,8 @@ has moved on. So it is NOT read per turn:
     - `conversations.useConversationById`
     - `conversations/conversation-ui/item.Item`
     - `conversations/conversation-view.conversationPane`
+    - `conversations/conversation-view/supervisor-done-count.SupervisorDoneCount`
+    - `conversations/conversation-view/supervisor-done-count.useIsSupervisorRoot`
     - `network/live.LiveRowResult`
     - `network/live.rowOrStale`
     - `network/live.useLive`

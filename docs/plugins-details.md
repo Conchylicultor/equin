@@ -16699,6 +16699,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations.useConversationById`
           - `conversations/conversation-ui/item.Item`
           - `conversations/conversation-view.conversationPane`
+          - `conversations/conversation-view/supervisor-done-count.SupervisorDoneCount`
+          - `conversations/conversation-view/supervisor-done-count.useIsSupervisorRoot`
           - `network/live.LiveRowResult`
           - `network/live.rowOrStale`
           - `network/live.useLive`
@@ -16774,7 +16776,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Item.Chips` ← `conversations.conversation-progress`
               - `Item.Chips` ← `conversations.conversation-view.dependent-count`
               - `Item.Chips` ← `conversations.conversation-view.op-status`
-              - `Item.Chips` ← `conversations.conversation-view.supervisor-done-count`
               - `Item.Avatar` ← `conversations.agents`
               - `Item.Avatar` ← `conversations.conversation-category`
             - Uses:
@@ -16837,7 +16838,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversation-view/dependencies`
               - `conversations/conversation-view/dependent-count`
               - `conversations/conversation-view/op-status`
-              - `conversations/conversation-view/supervisor-done-count`
               - `conversations/conversations-view/data-view`
               - `tasks/attempt-view`
         - **`row`** — A conversation as a full-width list line that opens its run: a Row around a ConversationItem, selected while that run is the column this surface opened.
@@ -20706,21 +20706,24 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette --primary-text`
               - `ui/tokens/color-palette --warning`
               - `ui/tokens/density --space-xs`
-        - **`supervisor-done-count`** — Per-row done-count chip on a supervisor's conversation (its task states the supervisor mandate): how many tasks of the supervisor's tree are done, with a ring filled by the done share of the whole tree; hover for done / running / dropped.
+        - **`supervisor-done-count`** — A supervisor's done count (SupervisorDoneCount): how many tasks of its tree are done, however deep, with a ring filled by the done share of the whole tree; hover for done / open / dropped. useIsSupervisorRoot(taskId) tells whether a task states the supervisor mandate. The conversation progress chip draws it in place of its step bar on a supervisor's conversation.
           - Web:
-            - Contributes: `Item.Chips` → `SupervisorDoneCountChip`
             - Uses:
-              - `conversations/conversation-ui/item.Item`
               - `network/live.mapRow`
               - `network/live.useLive`
               - `network/live/live-state.ResourceErrorInline`
+              - `network/live/live-state.ResourceResult`
               - `primitives/css/badge.Badge`
               - `tasks.useTask`
+            - Exports (values):
+              - `SupervisorDoneCount`
+              - `useIsSupervisorRoot`
           - Cross-plugin:
             - Uses tokens:
               - `ui/tokens/color-palette --muted-foreground`
               - `ui/tokens/color-palette --success`
               - `ui/tokens/shape --spacing`
+            - Imported by: `conversations/conversation-progress`
         - **`tasks-panel`** — Toolbar button that toggles the task pane (tree + detail) for the conversation's task.
           - Web:
             - Contributes: `Conversation.ActionBar` → `TasksButton`
