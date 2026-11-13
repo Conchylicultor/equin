@@ -94,7 +94,13 @@ charged = max(heldUnits × PER_UNIT_BYTES, opsBytes) // the fleet: reserved, or 
 window  = clamp(heldUnits + floor((allowed − charged) / PER_UNIT_BYTES), 1, B)
 ```
 
-- `otherBytes` — physical footprint of every process that is not an agent op;
+- `otherBytes` — RAM held by every process that is not an agent op: what
+  processes hold machine-wide (vm_stat `Anonymous pages` + `Pages occupied by
+  compressor`, `processMemBytes`) less `opsBytes`. Not a sum of footprints: a
+  footprint counts compressed pages at their uncompressed size, which on
+  2026-11-13 over-counted the machine by ~11 GB and held the window at one slot
+  (no background op) while 21 GB was available. The file cache is reclaimable
+  and not charged;
   `opsBytes` — every running op's whole process tree (holders, nested checks,
   workers, tests); `wiredBytes` — kernel wired memory (vm_stat), in no
   footprint. Main's owner sampler (`debug/sentinel/machine-usage`, 30 s)

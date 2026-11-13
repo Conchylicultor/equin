@@ -1,5 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import { availableMemBytes, parseVmStat, wiredMemBytes } from "./vm-stat";
+import {
+  availableMemBytes,
+  parseVmStat,
+  processMemBytes,
+  wiredMemBytes,
+} from "./vm-stat";
 
 // Trimmed real `vm_stat` output (Apple Silicon, 16 KB pages) — every counter
 // the host sampler reads, plus a multi-word key with parentheses to exercise
@@ -12,6 +17,7 @@ Pages speculative:                        18000.
 Pages wired down:                        307729.
 Pages occupied by compressor:            655360.
 File-backed pages:                       301234.
+Anonymous pages:                         544158.
 Pageins:                               12345678.
 Swapins:                                 424242.
 Swapouts:                                515151.
@@ -60,5 +66,19 @@ describe("wiredMemBytes", () => {
     expect(() => wiredMemBytes(parseVmStat("Pages free: 1.\n"))).toThrow(
       /Pages wired down/,
     );
+  });
+});
+
+describe("processMemBytes", () => {
+  test("counts anonymous pages and the compressor's pages", () => {
+    expect(processMemBytes(parseVmStat(FIXTURE))).toBe(
+      (544158 + 655360) * 16384,
+    );
+  });
+
+  test("throws when a counter is missing", () => {
+    expect(() =>
+      processMemBytes(parseVmStat("Pages occupied by compressor: 1.\n")),
+    ).toThrow(/Anonymous pages/);
   });
 });

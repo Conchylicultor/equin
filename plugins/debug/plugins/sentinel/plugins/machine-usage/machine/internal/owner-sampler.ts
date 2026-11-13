@@ -6,6 +6,7 @@ import {
 import { spawnExpectOk } from "@plugins/infra/plugins/spawn/core";
 import {
   parseVmStat,
+  processMemBytes,
   wiredMemBytes,
 } from "@plugins/packages/plugins/vm-stat/core";
 import { defineTimer } from "@plugins/infra/plugins/background/plugins/timer/server";
@@ -51,28 +52,41 @@ async function tick(): Promise<void> {
   await publishFleetReading({ procs, owner, memBytesOf });
 }
 
-// The same attribution, handed to host admission: what the agent ops use
-// (holders and children alike — every running op's whole tree) and what
-// everything else on the machine uses, beside the kernel's wired memory and the
-// `cpu` slots held. Every grant acquire sizes the fleet's window from it
-// (host-admission's `fleetWindow`), so the 30 s cadence is admission's too.
+// Handed to host admission: what the agent ops use (holders and children alike
+// — every running op's whole tree, by footprint) and what everything else on
+// the machine holds, beside the kernel's wired memory and the `cpu` slots held.
+// Every grant acquire sizes the fleet's window from it (host-admission's
+// `fleetWindow`), so the 30 s cadence is admission's too.
+//
+// "Everything else" is the RAM processes hold machine-wide (vm_stat's anonymous
+// + compressor pages) less the ops' share — NOT the sum of the other processes'
+// footprints. A footprint counts compressed pages at their uncompressed size,
+// so that sum over-counted by what the compressor saves: on 2026-11-13 it read
+// ~55 GB for the rest of the machine while processes held ~49 GB in all, and
+// shrank the window to one slot (no background op ran) with 21 GB available.
+// The ops' share is still their footprint: an op's tree is what admission
+// attributes, and over-counting it errs toward the fleet, never the machine.
 async function publishFleetReading({
   procs,
   owner,
   memBytesOf,
 }: Awaited<ReturnType<typeof readAttributedProcesses>>): Promise<void> {
   let opsBytes = 0;
-  let otherBytes = 0;
   for (const p of procs) {
     if (owner.get(p.pid) === "agent-ops") opsBytes += memBytesOf(p);
-    else otherBytes += memBytesOf(p);
   }
-  const vm = await spawnExpectOk(["vm_stat"], { timeoutMs: VM_STAT_MS });
+  const vm = parseVmStat(
+    (await spawnExpectOk(["vm_stat"], { timeoutMs: VM_STAT_MS })).stdout,
+  );
   await publishFleetMemory({
     sampledAt: Date.now(),
     ramBytes: totalmem(),
-    wiredBytes: wiredMemBytes(parseVmStat(vm.stdout)),
-    otherBytes,
+    wiredBytes: wiredMemBytes(vm),
+    // Floored at 0: ops whose footprints exceed what processes hold in all
+    // (their pages compressed or shared) leave the rest of the machine nothing
+    // to charge — the fleet is then charged that whole footprint, which
+    // already exceeds the real total, so the window stays bounded.
+    otherBytes: Math.max(0, processMemBytes(vm) - opsBytes),
     opsBytes,
     heldUnits: await cpuPool.held(),
   });

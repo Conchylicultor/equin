@@ -1,6 +1,6 @@
 // Pure `vm_stat` output parsing: the host sampler (debug/health-monitor) reads
 // its pressure counters, main's owner sampler (debug/sentinel/machine-usage) the
-// wired memory it hands host admission. No imports, so every runtime can.
+// wired and process memory it hands host admission. No imports, so every runtime can.
 
 export interface VmStat {
   pageSize: number;
@@ -47,4 +47,27 @@ export function wiredMemBytes(vm: VmStat): number {
   if (pages === undefined)
     throw new Error(`vm_stat has no "Pages wired down" line`);
   return pages * vm.pageSize;
+}
+
+/**
+ * The RAM processes hold, in bytes: anonymous pages resident in RAM plus the
+ * pages the compressor occupies ("Anonymous pages" + "Pages occupied by
+ * compressor") — what memory the machine's processes actually take, beside
+ * wired memory and the file cache (reclaimable, so not counted).
+ *
+ * Not the sum of process footprints: a footprint counts a process's compressed
+ * pages at their UNCOMPRESSED size, so the sum over-counts by whatever the
+ * compressor saves — measured 2026-11-13, footprints summed ~60 GB while the
+ * processes held ~49 GB (33.7 GB of compressed data in 15.6 GB of RAM).
+ * Throws when a counter is missing, like `availableMemBytes`.
+ */
+export function processMemBytes(vm: VmStat): number {
+  const pages = ["Anonymous pages", "Pages occupied by compressor"].map(
+    (key) => {
+      const n = vm.map[key];
+      if (n === undefined) throw new Error(`vm_stat has no "${key}" line`);
+      return n;
+    },
+  );
+  return pages.reduce((a, b) => a + b, 0) * vm.pageSize;
 }

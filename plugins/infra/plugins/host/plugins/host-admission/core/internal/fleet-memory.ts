@@ -23,12 +23,15 @@ import {
 //
 // So admission counts every byte, two ways:
 //
-// - **The rest of the machine, by measurement.** `otherBytes` is the physical
-//   footprint of every process that is not an agent op (Chrome, backends,
-//   agents, Postgres, the agent browser, everything else), as main's owner
-//   sampler attributes it every 30 s; `wiredBytes` is the kernel's wired memory,
-//   which no process footprint carries. What is left of RAM is what the fleet
-//   can have.
+// - **The rest of the machine, by measurement.** `otherBytes` is the RAM held
+//   by every process that is not an agent op (Chrome, backends, agents,
+//   Postgres, the agent browser, everything else): what processes hold
+//   machine-wide (vm_stat's anonymous + compressor pages) less the ops'
+//   footprint, as main's owner sampler reads it every 30 s — not a sum of
+//   footprints, which count compressed pages uncompressed and over-counted the
+//   machine by ~11 GB on 2026-11-13. `wiredBytes` is the kernel's wired memory;
+//   the file cache is reclaimable and not charged. What is left of RAM is what
+//   the fleet can have.
 // - **The fleet, by the larger of what it reserved and what it uses.** A held
 //   slot reserves `PER_UNIT_BYTES` from the moment it is taken (a just-started
 //   build has not grown yet); the fleet's measured footprint (`opsBytes`: every
@@ -53,7 +56,7 @@ export const FleetMemoryReadingSchema = z.object({
   ramBytes: z.number().positive(),
   /** Kernel wired memory (vm_stat "Pages wired down"): in no process's footprint. */
   wiredBytes: z.number().nonnegative(),
-  /** Physical footprint of every process that is not an agent op. */
+  /** RAM held by every process that is not an agent op: processes' anonymous + compressor pages, less `opsBytes`. */
   otherBytes: z.number().nonnegative(),
   /** Physical footprint of every running op's process tree (holders included). */
   opsBytes: z.number().nonnegative(),
