@@ -7,6 +7,7 @@ import { CONTACT_EMAIL, CONTACT_MAILTO } from "../../core";
 import { SOURCE_REPO_URL } from "@plugins/framework/plugins/product-name/core";
 import { WebsiteBand } from "./website-band";
 import { WordmarkText } from "./website-wordmark";
+import { Website } from "../slots";
 import { brand } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
@@ -18,7 +19,8 @@ const githubIcon = brand("github");
  *
  * Two ends. The wordmark signs the document off at the leading edge, small and
  * in the tertiary grey. The trailing edge is where the site can be reached: the
- * one address, and the source on GitHub. There is nothing to sell and nothing to
+ * one address, and the source on GitHub — after the small print a page
+ * contributes (`Website.FooterLink`: Privacy). There is nothing to sell and nothing to
  * download, so there is no reason for a footer with columns — and because every
  * page wears this one, the way to write is never more than a scroll away, which
  * is what lets the header spend its one call to action on something else.
@@ -33,6 +35,7 @@ export function WebsiteFooter() {
       <Cluster justify="between" gap="md">
         <WordmarkText variant="body" className="text-faint-foreground" />
         <Inline gap="lg">
+          <Website.FooterLink.Render />
           {/* A real `mailto:` link, so the reader can copy the address or read
               it off the status bar before committing to anything. In the small
               print's grey, coming up to full foreground on hover. */}

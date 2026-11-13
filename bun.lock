@@ -1516,6 +1516,10 @@
       "name": "@equin/plugin-apps-website-pages-guide",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/website/plugins/pages/plugins/privacy": {
+      "name": "@equin/plugin-apps-website-pages-privacy",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/website/plugins/pages/plugins/story": {
       "name": "@equin/plugin-apps-website-pages-story",
       "version": "0.0.1",
@@ -8453,6 +8457,8 @@
     "@equin/plugin-apps-website-pages-foundations": ["@equin/plugin-apps-website-pages-foundations@workspace:plugins/apps/plugins/website/plugins/pages/plugins/foundations"],
 
     "@equin/plugin-apps-website-pages-guide": ["@equin/plugin-apps-website-pages-guide@workspace:plugins/apps/plugins/website/plugins/pages/plugins/guide"],
+
+    "@equin/plugin-apps-website-pages-privacy": ["@equin/plugin-apps-website-pages-privacy@workspace:plugins/apps/plugins/website/plugins/pages/plugins/privacy"],
 
     "@equin/plugin-apps-website-pages-story": ["@equin/plugin-apps-website-pages-story@workspace:plugins/apps/plugins/website/plugins/pages/plugins/story"],
 

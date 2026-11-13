@@ -35,4 +35,21 @@ export const Website = {
   Section: defineRenderSlot<{ label: string; component: ComponentType }>({
     docLabel: (p) => p.label,
   }),
+  /**
+   * What floats over every page of the site, above the page that scrolls
+   * under it — the consent prompt. Rendered once by the app's surface
+   * (`WebsiteLayout`), so it stays put while the visitor moves between pages;
+   * each contribution places itself (a `Pin` in the surface's corner).
+   */
+  Layer: defineRenderSlot<{ label: string; component: ComponentType }>({
+    docLabel: (p) => p.label,
+  }),
+  /**
+   * The footer's quiet links, beside the address and the source — a page that
+   * belongs in the small print rather than in the header (Privacy). Each
+   * renders one `WebsiteFooterLink`.
+   */
+  FooterLink: defineRenderSlot<{ label: string; component: ComponentType }>({
+    docLabel: (p) => p.label,
+  }),
 };

@@ -714,8 +714,8 @@ with an empty route.
 - Load-bearing: yes
 - Web:
   - Slots: `Pane.Register`
-  - Slot contributors: 96 contributors — full list in [REFERENCE.md](./REFERENCE.md)
-    - `Pane.Register` ×96
+  - Slot contributors: 97 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `Pane.Register` ×97
   - Contributes: 127 contributions — full list in [REFERENCE.md](./REFERENCE.md)
     - `FileBrowserHeader` "title" → `PaneTitleItem`
     - `FilePreviewHeader` "title" → `PaneTitleItem`
@@ -995,8 +995,8 @@ with an empty route.
     - `ui/tokens/density --space-2xs`
     - `ui/tokens/density --space-md`
     - `ui/tokens/shape --spacing`
-  - Imported by: 205 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×75
+  - Imported by: 206 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×76
     - `conversations` ×32
     - `debug` ×29
     - `active-data` ×13

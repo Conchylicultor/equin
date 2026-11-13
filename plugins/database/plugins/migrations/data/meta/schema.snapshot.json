@@ -1,6 +1,6 @@
 {
-  "id": "775d7df0-5d4f-4f98-989e-1ffb44f91a08",
-  "prevId": "72e30f20-661f-4b9a-ba8b-be89e06cdbb8",
+  "id": "7b0b4dad-ff2a-46d5-b3dc-fff8a7b0e7e3",
+  "prevId": "775d7df0-5d4f-4f98-989e-1ffb44f91a08",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -994,6 +994,37 @@
           "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.analytics_consent_keys": {
+      "name": "analytics_consent_keys",
+      "schema": "",
+      "columns": {
+        "key_hash": {
+          "name": "key_hash",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "visitor_id": {
+          "name": "visitor_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "last_day": {
+          "name": "last_day",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
         }
       },
       "indexes": {},

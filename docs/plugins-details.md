@@ -1952,11 +1952,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Plugins:
         - **`analytics`** — Umbrella for cookieless site analytics on deployed compositions: the host-only route guard, the collect half that ships inside the deployed site (ingest, tables, nightly rollup, retention, the report and its mirror set), and the dashboard half in the local deploy app, which runs that report on its copy of the site's tables.
           - Plugins:
-            - **`collect`** — The cookieless visit tracker a deployed site mounts: <AnalyticsTracker app={…} /> records one pageview per path change under that app (landing referrer and utm tags on the first only) and the visible time on each; track(name, props?) records a custom event on the current page; useSectionReach(section) / observeSectionReach(el, section) record section_reach once when a section reaches the upper half of the screen, its section prop (<page>/<key>) giving a per-section reach funnel. Owns the analytics tables (daily salts kept 30 days with the hash → visitor links that let a returning visitor keep one id, 90-day visits and hits, forever daily totals at every single-filter level and forever per-visit memberships for exact unique visitors over any range), the public collect endpoint, the analytics mirror set, the report (runAnalyticsQuery) and the visit-list reads (a window of individual visits with their hits, filtered in the filter language) — both run by the deploy app on its local copy of the tables — the nightly analytics.rollup job and the visits retention sweep that refuses to delete a day not yet rolled up.
+            - **`collect`** — The visit tracker a deployed site mounts, cookieless unless the visitor consents: <AnalyticsTracker app={…} /> records one pageview per path change under that app (landing referrer and utm tags on the first only) and the visible time on each; track(name, props?) records a custom event on the current page; useSectionReach(section) / observeSectionReach(el, section) record section_reach once when a section reaches the upper half of the screen, its section prop (<page>/<key>) giving a per-section reach funnel; useAnalyticsConsent() / setAnalyticsConsent(accepted) read and answer the site's consent prompt — accepting keeps a random key in the browser for 13 months, sent with every pageview and event so a return is recognised on any network. Owns the analytics tables (daily salts kept 30 days with the hash → visitor links that let a returning visitor keep one id, 90-day visits and hits, forever daily totals at every single-filter level and forever per-visit memberships for exact unique visitors over any range), the public collect endpoint, the analytics mirror set, the report (runAnalyticsQuery) and the visit-list reads (a window of individual visits with their hits, filtered in the filter language) — both run by the deploy app on its local copy of the tables — the nightly analytics.rollup job and the visits retention sweep that refuses to delete a day not yet rolled up.
               - Server:
                 - Contributes:
                   - `table-mirror-set` "analytics"
+                  - `table-mirror-never` "analytics_consent_keys"
                   - `table-mirror-never` "analytics_salts, analytics_visitor_links"
+                  - `change-feed-exclusion` "analytics_consent_keys"
                   - `change-feed-exclusion` "analytics_hits"
                   - `change-feed-exclusion` "analytics_visit_members"
                   - `change-feed-exclusion` "analytics_visitor_links"
@@ -2009,10 +2011,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/pane.currentRoutePath`
                   - `primitives/pane.usePathname`
                   - `primitives/perfs/boot-trace.getBootTrace`
+                - Exports (types):
+                  - `AnalyticsConsent`
+                  - `ConsentState`
                 - Exports (values):
                   - `AnalyticsTracker`
                   - `observeSectionReach`
+                  - `setAnalyticsConsent`
                   - `track`
+                  - `useAnalyticsConsent`
                   - `useSectionReach`
               - Core:
                 - Uses:
@@ -2091,6 +2098,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `COLLECT_PLUGIN_ID`
                   - `collectEndpoint`
                   - `CollectResponseSchema`
+                  - `CONSENT_KEY_DAYS`
+                  - `ConsentKeySchema`
                   - `conversionRate`
                   - `DailyDimensionSchema`
                   - `DAY_PATTERN`
@@ -2185,6 +2194,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `apps/website/pages/apps`
                   - `apps/website/pages/download`
                   - `apps/website/pages/foundations`
+                  - `apps/website/pages/privacy`
                   - `apps/website/pages/vision`
                   - `apps/website/shell`
               - Exemptions:
@@ -11983,6 +11993,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/website/pages/download`
               - `apps/website/pages/foundations`
               - `apps/website/pages/guide`
+              - `apps/website/pages/privacy`
               - `apps/website/pages/story`
               - `apps/website/pages/vision`
               - `apps/website/shell`
@@ -12422,6 +12433,44 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Exports (values): `guidePage`
               - Cross-plugin:
                 - Imported by: `apps/website/pages/download`
+            - **`privacy`** — The privacy page of the equin website and the consent prompt that links to it: the /about/privacy pane (this browser's choice, what a visit records, the two ways a return is recognised — a random key kept in the browser when the visitor accepts, else the daily hash — and how long it is kept), its Privacy link in the footer, and the prompt floating over every page (Website.Layer) until the browser answers Reject or Accept. The privacy page of the equin website on the server: its sitemap entry (WebsitePages.Page).
+              - Web:
+                - Contributes:
+                  - `Pane.Register` "website-privacy"
+                  - `Website.Layer` "Consent prompt" → `ConsentPrompt`
+                  - `Website.FooterLink` "Privacy" → `PrivacyFooterLink`
+                - Uses:
+                  - `apps/deploy/analytics/collect.setAnalyticsConsent`
+                  - `apps/deploy/analytics/collect.track`
+                  - `apps/deploy/analytics/collect.useAnalyticsConsent`
+                  - `apps/website/shell.Website`
+                  - `apps/website/shell.WebsiteBand`
+                  - `apps/website/shell.WebsiteChrome`
+                  - `apps/website/shell.WebsiteFooterLink`
+                  - `apps/website/shell.WebsiteHeader`
+                  - `apps/website/shell.WebsiteHero`
+                  - `primitives/css/ui-kit.Button`
+                  - `primitives/pane.defineRoute`
+                  - `primitives/pane.Pane`
+                  - `primitives/pane.useOpenPane`
+                  - `primitives/pane.usePathname`
+                - Exports (values): `privacyPane`
+              - Server:
+                - Contributes: `apps.website.crawlable.page` "/about/privacy"
+                - Uses: `apps/website/crawlable.WebsitePages`
+              - Core:
+                - Uses: `apps/website/crawlable.defineWebsitePage`
+                - Exports (values): `privacyPage`
+              - Cross-plugin:
+                - Uses tokens:
+                  - `ui/tokens/color-palette --background`
+                  - `ui/tokens/color-palette --border`
+                  - `ui/tokens/color-palette --card`
+                  - `ui/tokens/color-palette --faint-foreground`
+                  - `ui/tokens/color-palette --foreground`
+                  - `ui/tokens/color-palette --muted-foreground`
+                  - `ui/tokens/color-palette --primary`
+                  - `ui/tokens/color-palette --success`
             - **`story`** — The story page of the equin website: the /about/story pane answering 'how did equin come to be?', its Story nav link, and the WebsiteStory.Section slot the story is written into. The story page of the equin website on the server: its sitemap entry (WebsitePages.Page).
               - Web:
                 - Slots: `WebsiteStory.Section`
@@ -12643,10 +12692,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Imported by: `apps/website/promo-film`
               - Structure:
                 - Non-standard folders: `data/`
-        - **`shell`** — App shell for the Website (equin public site). Registers the /about app entry, owns the shared site header (wordmark + nav) and the band/page/footer chrome every page wears, defines the Website.Section landing slot, and contributes the site's own theme (equin: palette, chart ramp, font), which the website app selects, plus the equin-document sub-theme (type scale, density, shape) every page wears and the equin-page-hero sub-theme an inner page's heading wears. The website's landing page on the server: its sitemap entry (WebsitePages.Page).
+        - **`shell`** — App shell for the Website (equin public site). Registers the /about app entry, owns the shared site header (wordmark + nav) and the band/page/footer chrome every page wears, defines the Website.Section landing slot, the Website.Layer slot for what floats over every page (rendered by the app's surface) and the Website.FooterLink slot for the footer's small print, and contributes the site's own theme (equin: palette, chart ramp, font), which the website app selects, plus the equin-document sub-theme (type scale, density, shape) every page wears and the equin-page-hero sub-theme an inner page's heading wears. The website's landing page on the server: its sitemap entry (WebsitePages.Page).
           - Web:
             - Slots:
               - `Website.Section`
+              - `Website.Layer`
+              - `Website.FooterLink`
               - `WebsiteHeader`
             - Slot contributors:
               - `Website.Section` ← `apps.website.landing.contact`
@@ -12654,6 +12705,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Website.Section` ← `apps.website.landing.layers`
               - `Website.Section` ← `apps.website.landing.screenshot`
               - `Website.Section` ← `apps.website.landing.story-link`
+              - `Website.Layer` ← `apps.website.pages.privacy`
+              - `Website.FooterLink` ← `apps.website.pages.privacy`
               - `WebsiteHeader` ← `apps.website.improve`
               - `WebsiteHeader` ← `apps.website.pages.apps`
               - `WebsiteHeader` ← `apps.website.pages.download`
@@ -12696,6 +12749,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `WebsiteArrow`
               - `WebsiteBand`
               - `WebsiteChrome`
+              - `WebsiteFooterLink`
               - `WebsiteHeader`
               - `WebsiteHero`
               - `WebsiteNavLink`
@@ -12752,6 +12806,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/website/pages/download`
               - `apps/website/pages/foundations`
               - `apps/website/pages/guide`
+              - `apps/website/pages/privacy`
               - `apps/website/pages/story`
               - `apps/website/pages/story/essay`
               - `apps/website/pages/vision`
@@ -48406,9 +48461,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/chart` ×5
               - `ui/tokens/font-family` ×4
               - `ui/tokens/scrollbar --scrollbar-color`
-            - Imported by: 466 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Imported by: 467 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `primitives` ×111
-              - `apps` ×109
+              - `apps` ×110
               - `conversations` ×53
               - `page` ×27
               - `debug` ×25
@@ -52464,8 +52519,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`pane`** — Unified pane primitive: Pane.define and chrome components.
       - Web:
         - Slots: `Pane.Register`
-        - Slot contributors: 96 contributors — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
-          - `Pane.Register` ×96
+        - Slot contributors: 97 contributors — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+          - `Pane.Register` ×97
         - Contributes: 127 contributions — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
           - `FileBrowserHeader` "title" → `PaneTitleItem`
           - `FilePreviewHeader` "title" → `PaneTitleItem`
@@ -52745,8 +52800,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-2xs`
           - `ui/tokens/density --space-md`
           - `ui/tokens/shape --spacing`
-        - Imported by: 205 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
-          - `apps` ×75
+        - Imported by: 206 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+          - `apps` ×76
           - `conversations` ×32
           - `debug` ×29
           - `active-data` ×13
@@ -55003,8 +55058,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 
 - **`reorder`** — Generic reorder primitive: every defineRenderSlot is unconditionally reorderable; use defineMountSlot for headless slots. Applies each slot's committed layout (order, hidden items, spacers, dividers, groups) everywhere slots render; a layout is edited in its config file or the Config pane's reorder-tree field. Generic reorder primitive: per-slot config_v2 directives for contribution order/visibility.
   - Web:
-    - Contributes: 284 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×284
+    - Contributes: 286 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×286
     - Uses:
       - `config_v2.ConfigV2`
       - `config_v2.useConfigResult`
@@ -55028,8 +55083,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `useLayoutOrder`
       - `useReorderedEntries`
   - Server:
-    - Contributes: 283 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.Register` ×283
+    - Contributes: 285 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.Register` ×285
     - Uses: `config_v2.ConfigV2`
     - Exports (values): `reorderDirectiveDescriptor`
   - Cross-plugin:
@@ -62021,8 +62076,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/density --space-sm`
               - `ui/tokens/shape --spacing`
-            - Tokens used by: 545 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
-              - `apps` ×122
+            - Tokens used by: 546 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
+              - `apps` ×123
               - `conversations` ×96
               - `primitives` ×74
               - `debug` ×42

@@ -91,6 +91,7 @@ import {
 import { assertDaysRolledUp } from "./retention";
 import { runRollup } from "./rollup";
 import {
+  analyticsConsentKeys,
   analyticsDaily,
   analyticsHits,
   analyticsSalts,
@@ -1737,5 +1738,76 @@ describe("mirror parity: the copy answers every report as the source does", () =
         tx.execute(sql`SELECT 1 FROM analytics_salts`),
       ),
     ).rejects.toThrow(/analytics_salts/);
+  });
+});
+
+describe("consent key", () => {
+  // Far past every other suite's days, so nothing here moves their counts.
+  const KEYDAY = "2028-02-01";
+  const KEY = "3b9c2f1e-7a4d-4c8e-b5f0-2d6a9e1c7b43";
+  const HOME = { ip: "192.0.2.10", ua: UA.chromeMac };
+  const MOBILE = { ip: "192.0.2.77", ua: UA.chromeMac };
+
+  async function visitsOn(path: string) {
+    return t.db
+      .select({
+        visitorId: analyticsVisits.visitorId,
+        returning: analyticsVisits.returning,
+      })
+      .from(analyticsVisits)
+      .where(eq(analyticsVisits.entryPath, path))
+      .orderBy(analyticsVisits.startedAt);
+  }
+
+  test("accepting mid-visit keeps the visit; a later visit from another network is a return", async () => {
+    // Before the answer: identified by the daily hash.
+    await hit(
+      { kind: "pageview", host, path: "/key-a" },
+      HOME,
+      at(KEYDAY, "10:00"),
+    );
+    // They accept: the next hit carries the key and joins the same visit.
+    await hit(
+      { kind: "pageview", host, path: "/key-b", consentKey: KEY },
+      HOME,
+      at(KEYDAY, "10:01"),
+    );
+    const [first] = await visitsOn("/key-a");
+    expect(first).toEqual({ visitorId: first!.visitorId, returning: false });
+    expect(await visitsOn("/key-b")).toEqual([]);
+
+    // The next day, on another network: the hash alone would not know them.
+    await hit(
+      { kind: "pageview", host, path: "/key-c", consentKey: KEY },
+      MOBILE,
+      at(addDays(KEYDAY, 1), "18:00"),
+    );
+    expect(await visitsOn("/key-c")).toEqual([
+      { visitorId: first!.visitorId, returning: true },
+    ]);
+
+    // Without the key, that network is a stranger.
+    await hit(
+      { kind: "pageview", host, path: "/key-d" },
+      MOBILE,
+      at(addDays(KEYDAY, 3), "18:00"),
+    );
+    const [stranger] = await visitsOn("/key-d");
+    expect(stranger!.visitorId).not.toBe(first!.visitorId);
+    expect(stranger!.returning).toBe(false);
+  });
+
+  test("only the key's hash is stored, and it is forgotten after CONSENT_KEY_DAYS unused", async () => {
+    const rows = await t.db.select().from(analyticsConsentKeys);
+    expect(rows.map((r) => r.keyHash)).not.toContain(KEY);
+    expect(rows.some((r) => r.keyHash.includes(KEY))).toBe(false);
+    expect(rows.filter((r) => r.lastDay === addDays(KEYDAY, 1))).toHaveLength(
+      1,
+    );
+
+    await runRollup(t.db, at(addDays(KEYDAY, 1 + 395), "00:15"));
+    expect(await t.db.select().from(analyticsConsentKeys)).toHaveLength(1);
+    await runRollup(t.db, at(addDays(KEYDAY, 1 + 396), "00:15"));
+    expect(await t.db.select().from(analyticsConsentKeys)).toHaveLength(0);
   });
 });

@@ -56,6 +56,25 @@ export const analyticsVisitorLinks = pgTable(
 );
 
 /**
+ * "This browser's consent key is this visitor." Written on the first hit that
+ * carries a key (the visitor accepted on the site's consent prompt), adopting
+ * the id the daily hash resolved to then — so the visit in progress, and the
+ * visits before it within the identity window, stay the same visitor's. Every
+ * later hit with the key finds the visitor here, on any network.
+ *
+ * Only the key's sha256 is stored. `lastDay` moves on the first hit of each
+ * day; the nightly rollup deletes a row unused for `CONSENT_KEY_DAYS`, the
+ * longest a browser keeps its key.
+ */
+export const analyticsConsentKeys = pgTable("analytics_consent_keys", {
+  /** sha256 of the browser's key and the site's host, hex. */
+  keyHash: text("key_hash").primaryKey(),
+  visitorId: text("visitor_id").notNull(),
+  /** UTC day of the key's latest hit. */
+  lastDay: date("last_day", { mode: "string" }).notNull(),
+});
+
+/**
  * One visit: a run of activity from the same visitor with no gap of 30
  * minutes or more. Kept 90 days (`retention.ts`); its hits cascade.
  *

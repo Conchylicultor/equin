@@ -75,10 +75,12 @@ hover.
 
 ## Plugin reference
 
-- Description: App shell for the Website (equin public site). Registers the /about app entry, owns the shared site header (wordmark + nav) and the band/page/footer chrome every page wears, defines the Website.Section landing slot, and contributes the site's own theme (equin: palette, chart ramp, font), which the website app selects, plus the equin-document sub-theme (type scale, density, shape) every page wears and the equin-page-hero sub-theme an inner page's heading wears. The website's landing page on the server: its sitemap entry (WebsitePages.Page).
+- Description: App shell for the Website (equin public site). Registers the /about app entry, owns the shared site header (wordmark + nav) and the band/page/footer chrome every page wears, defines the Website.Section landing slot, the Website.Layer slot for what floats over every page (rendered by the app's surface) and the Website.FooterLink slot for the footer's small print, and contributes the site's own theme (equin: palette, chart ramp, font), which the website app selects, plus the equin-document sub-theme (type scale, density, shape) every page wears and the equin-page-hero sub-theme an inner page's heading wears. The website's landing page on the server: its sitemap entry (WebsitePages.Page).
 - Web:
   - Slots:
     - `Website.Section`
+    - `Website.Layer`
+    - `Website.FooterLink`
     - `WebsiteHeader`
   - Slot contributors:
     - `Website.Section` ← `apps.website.landing.contact`
@@ -86,6 +88,8 @@ hover.
     - `Website.Section` ← `apps.website.landing.layers`
     - `Website.Section` ← `apps.website.landing.screenshot`
     - `Website.Section` ← `apps.website.landing.story-link`
+    - `Website.Layer` ← `apps.website.pages.privacy`
+    - `Website.FooterLink` ← `apps.website.pages.privacy`
     - `WebsiteHeader` ← `apps.website.improve`
     - `WebsiteHeader` ← `apps.website.pages.apps`
     - `WebsiteHeader` ← `apps.website.pages.download`
@@ -128,6 +132,7 @@ hover.
     - `WebsiteArrow`
     - `WebsiteBand`
     - `WebsiteChrome`
+    - `WebsiteFooterLink`
     - `WebsiteHeader`
     - `WebsiteHero`
     - `WebsiteNavLink`
@@ -184,6 +189,7 @@ hover.
     - `apps/website/pages/download`
     - `apps/website/pages/foundations`
     - `apps/website/pages/guide`
+    - `apps/website/pages/privacy`
     - `apps/website/pages/story`
     - `apps/website/pages/story/essay`
     - `apps/website/pages/vision`

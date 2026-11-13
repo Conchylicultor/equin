@@ -9,6 +9,7 @@ import { analyticsRollupJob } from "./internal/rollup";
 import { analyticsVisitsRetention } from "./internal/retention";
 import { handleCollect } from "./internal/routes";
 import {
+  analyticsConsentKeys,
   analyticsHits,
   analyticsVisitMembers,
   analyticsVisitorLinks,
@@ -66,6 +67,11 @@ export default {
       table: analyticsVisitorLinks,
       reason:
         "Written on a visitor's first public hit of each day; no live-state resource reads it — it only resolves visitor ids at collect time.",
+    }),
+    ExcludeFromChangeFeed({
+      table: analyticsConsentKeys,
+      reason:
+        "Written on a consenting visitor's first public hit of each day; no live-state resource reads it — it only resolves visitor ids at collect time.",
     }),
     ExcludeFromChangeFeed({
       table: analyticsVisitMembers,

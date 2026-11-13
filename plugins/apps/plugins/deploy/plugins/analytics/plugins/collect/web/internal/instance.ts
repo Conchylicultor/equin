@@ -9,6 +9,7 @@ import {
   stripQuery,
   type CollectBody,
 } from "../../core";
+import { consentKeyOf, consentStore } from "./consent";
 import { landingSource } from "./landing";
 import {
   applyOwnerFragment,
@@ -128,6 +129,7 @@ export function getTracker(): Tracker {
       siteHost: host,
     }),
     isOwner: () => isOwnerMarked(ownerMarkStore),
+    consentKey: () => consentKeyOf(consentStore),
     send,
     now: () => performance.now(),
     isVisible: () => document.visibilityState === "visible",

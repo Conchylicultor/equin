@@ -61,6 +61,9 @@ export const UtmTagsSchema = z
   })
   .strict();
 
+/** A consent key: a v4 UUID minted by the browser (`crypto.randomUUID()`). */
+export const ConsentKeySchema = z.string().uuid();
+
 export const EventPropsSchema = z
   .record(
     z.string().regex(EVENT_PROP_KEY_PATTERN),
@@ -88,6 +91,13 @@ export const PageviewBodySchema = z
      * theirs. Absent for everyone else — never `false`.
      */
     owner: z.literal(true).optional(),
+    /**
+     * The browser's consent key (`consent.ts`): a random id the site keeps in
+     * the browser once the visitor accepted, so a return is recognised on any
+     * network. Absent until they accept, and after they reject — the visit is
+     * then identified by the daily hash alone.
+     */
+    consentKey: ConsentKeySchema.optional(),
   })
   .strict();
 
@@ -103,6 +113,13 @@ export const EventBodySchema = z
      * theirs. Absent for everyone else — never `false`.
      */
     owner: z.literal(true).optional(),
+    /**
+     * The browser's consent key (`consent.ts`): a random id the site keeps in
+     * the browser once the visitor accepted, so a return is recognised on any
+     * network. Absent until they accept, and after they reject — the visit is
+     * then identified by the daily hash alone.
+     */
+    consentKey: ConsentKeySchema.optional(),
   })
   .strict();
 

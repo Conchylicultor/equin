@@ -6,6 +6,7 @@ import {
 import {
   analyticsDaily,
   analyticsHits,
+  analyticsConsentKeys,
   analyticsSalts,
   analyticsVisitMembers,
   analyticsVisitorLinks,
@@ -39,5 +40,10 @@ export const analyticsMirrorContributions = [
     tables: [analyticsSalts, analyticsVisitorLinks],
     reason:
       "the daily salts and the hash → visitor links are what makes a visitor's hash reproducible from their IP; they stay on the box and are forgotten after the identity window",
+  }),
+  NeverMirrored({
+    tables: [analyticsConsentKeys],
+    reason:
+      "a consent key's hash links a browser to its visitor id; it stays on the box and is forgotten when the browser forgets the key",
   }),
 ];

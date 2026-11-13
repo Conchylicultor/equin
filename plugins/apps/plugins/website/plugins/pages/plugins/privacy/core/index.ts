@@ -1,0 +1,1 @@
+export { privacyPage } from "./page";

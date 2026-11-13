@@ -26,6 +26,12 @@ export interface TrackerDeps {
    * on every pageview and event so a mark made mid-visit counts from then on.
    */
   isOwner: () => boolean;
+  /**
+   * The browser's consent key (`consent.ts`), or undefined until the visitor
+   * accepts — read on every pageview and event, so an answer given mid-visit
+   * counts from the next hit on.
+   */
+  consentKey: () => string | undefined;
   /** Posts one body. A rejection is left to surface; see `send` in instance.ts. */
   send: (body: CollectBody) => Promise<CollectResponse>;
   now: () => number;
@@ -139,9 +145,17 @@ export function createTracker(deps: TrackerDeps): Tracker {
 
   const offset = (page: CurrentPage, at: number) => at - page.startedAt;
 
-  /** `owner: true` on a marked browser's pageviews and events; nothing otherwise. */
-  const ownerFlag = (): { owner?: true } =>
-    deps.isOwner() ? { owner: true } : {};
+  /**
+   * What says who the visitor is on a pageview or event: `owner: true` on a
+   * marked browser, the consent key once they accepted; nothing otherwise.
+   */
+  const identity = (): { owner?: true; consentKey?: string } => {
+    const consentKey = deps.consentKey();
+    return {
+      ...(deps.isOwner() ? { owner: true as const } : {}),
+      ...(consentKey !== undefined ? { consentKey } : {}),
+    };
+  };
 
   /** Ends the running away stretch at `at`, keeping it if long enough. */
   const endAway = (page: CurrentPage, at: number) => {
@@ -294,7 +308,7 @@ export function createTracker(deps: TrackerDeps): Tracker {
           host: deps.host,
           path,
           ...source,
-          ...ownerFlag(),
+          ...identity(),
         })
         .then((response) => {
           // `ignored` (a bot) has no id: nothing to attach engagement to.
@@ -337,7 +351,7 @@ export function createTracker(deps: TrackerDeps): Tracker {
         path: current?.path ?? stripQuery(fallbackPath),
         name,
         ...(props !== undefined ? { props } : {}),
-        ...ownerFlag(),
+        ...identity(),
       });
     },
     currentPath: () => current?.path ?? null,

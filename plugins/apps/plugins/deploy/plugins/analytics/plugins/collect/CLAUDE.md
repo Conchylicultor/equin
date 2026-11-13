@@ -1,6 +1,7 @@
 # collect
 
-Cookieless visit analytics that ship **inside** a deployed site. The deploy app's
+Visit analytics that ship **inside** a deployed site — cookieless unless the
+visitor consents (see *Consent* below). The deploy app's
 dashboard (a sibling plugin) runs this plugin's own report on a local copy of the
 site's tables (see *The mirror* below); this plugin never knows about SSH, the
 deploy UI, or any particular site.
@@ -11,6 +12,10 @@ deploy UI, or any particular site.
   (30). The rollup deletes older ones, so those days' visitor hashes cannot be
   recomputed.
 - `analytics_visitor_links` — `(day, hash) → visitor_id`, pruned with its salt.
+  The hash is `sha256(salt ‖ network ‖ ua ‖ host)`, where the network is the
+  IPv4 address whole and an IPv6 address cut to its /64 (`identityNetwork`):
+  phones rotate the second half of their IPv6 address every few hours, so the
+  whole address made the same phone on the same wifi a new visitor each time.
   A visitor's first hit of a day hashes them under every retained salt and
   follows the newest link to their id (else mints a random UUID), then writes
   today's link. So a visitor keeps one id while they return within 30 days, and
@@ -29,6 +34,29 @@ deploy UI, or any particular site.
   over the whole period / row / bucket from these (plus raw rows for days not
   rolled up). `AdditiveMetrics` (core) leaves `visitors` out, so summing them
   across days is a type error.
+- `analytics_consent_keys` — `sha256(key ‖ host) → visitor_id` for browsers
+  whose visitor accepted (see *Consent*), touched once a day, deleted by the
+  rollup after `CONSENT_KEY_DAYS` (395) unused.
+
+## Consent
+
+A site asks its visitors once (the website's prompt, `apps/website/pages/privacy`)
+and answers through `setAnalyticsConsent(accepted)`; `useAnalyticsConsent()`
+reads the answer live (`undecided` / `accepted` / `rejected`, or `unknown` in a
+render without browser storage — the crawlable snapshot).
+
+- The answer lives in one page-wide web-storage entry (`web/internal/consent.ts`),
+  written when the visitor answers and never rewritten by a visit, so its TTL
+  (13 months) is the answer's age: the prompt asks again after it.
+- **Accepting** mints a random key (`crypto.randomUUID()`) the tracker sends as
+  `consentKey` on every pageview and event. The box finds the visitor by it on
+  any network (`resolveVisitor`): a known key is a return; a new key adopts the
+  id the daily hash resolves to at that moment, so the visit in progress — and
+  any visit within the identity window — stay the same visitor's. Only the
+  key's hash is stored, never mirrored.
+- **Rejecting** drops the key at once; the visit is identified by the daily
+  hash alone, exactly as before consent existed. A hit with a key holds the
+  hash's advisory lock, then the key's.
 
 ## One membership definition
 
@@ -207,7 +235,7 @@ Without it the box knows only the sections someone reached.
 The `analytics` mirror set (`server/internal/mirror.ts`, table-mirror's
 `defineMirrorSet`) is what the deploy app copies from a site's box
 (`apps/deploy/site-mirror`): visits, hits, daily totals and visit memberships.
-The salts and the visitor links never leave the box (`NeverMirrored`).
+The salts, the visitor links and the consent keys never leave the box (`NeverMirrored`).
 
 The report has **one implementation**: `runAnalyticsQuery(dbx, query, now)`,
 exported from the server barrel. It reads through `AnalyticsReadDb` (the `db`
@@ -252,11 +280,13 @@ after new visits, a rollup and a retention sweep arrive as deltas.
 
 ## Plugin reference
 
-- Description: The cookieless visit tracker a deployed site mounts: <AnalyticsTracker app={…} /> records one pageview per path change under that app (landing referrer and utm tags on the first only) and the visible time on each; track(name, props?) records a custom event on the current page; useSectionReach(section) / observeSectionReach(el, section) record section_reach once when a section reaches the upper half of the screen, its section prop (<page>/<key>) giving a per-section reach funnel. Owns the analytics tables (daily salts kept 30 days with the hash → visitor links that let a returning visitor keep one id, 90-day visits and hits, forever daily totals at every single-filter level and forever per-visit memberships for exact unique visitors over any range), the public collect endpoint, the analytics mirror set, the report (runAnalyticsQuery) and the visit-list reads (a window of individual visits with their hits, filtered in the filter language) — both run by the deploy app on its local copy of the tables — the nightly analytics.rollup job and the visits retention sweep that refuses to delete a day not yet rolled up.
+- Description: The visit tracker a deployed site mounts, cookieless unless the visitor consents: <AnalyticsTracker app={…} /> records one pageview per path change under that app (landing referrer and utm tags on the first only) and the visible time on each; track(name, props?) records a custom event on the current page; useSectionReach(section) / observeSectionReach(el, section) record section_reach once when a section reaches the upper half of the screen, its section prop (<page>/<key>) giving a per-section reach funnel; useAnalyticsConsent() / setAnalyticsConsent(accepted) read and answer the site's consent prompt — accepting keeps a random key in the browser for 13 months, sent with every pageview and event so a return is recognised on any network. Owns the analytics tables (daily salts kept 30 days with the hash → visitor links that let a returning visitor keep one id, 90-day visits and hits, forever daily totals at every single-filter level and forever per-visit memberships for exact unique visitors over any range), the public collect endpoint, the analytics mirror set, the report (runAnalyticsQuery) and the visit-list reads (a window of individual visits with their hits, filtered in the filter language) — both run by the deploy app on its local copy of the tables — the nightly analytics.rollup job and the visits retention sweep that refuses to delete a day not yet rolled up.
 - Server:
   - Contributes:
     - `table-mirror-set` "analytics"
+    - `table-mirror-never` "analytics_consent_keys"
     - `table-mirror-never` "analytics_salts, analytics_visitor_links"
+    - `change-feed-exclusion` "analytics_consent_keys"
     - `change-feed-exclusion` "analytics_hits"
     - `change-feed-exclusion` "analytics_visit_members"
     - `change-feed-exclusion` "analytics_visitor_links"
@@ -309,10 +339,15 @@ after new visits, a rollup and a retention sweep arrive as deltas.
     - `primitives/pane.currentRoutePath`
     - `primitives/pane.usePathname`
     - `primitives/perfs/boot-trace.getBootTrace`
+  - Exports (types):
+    - `AnalyticsConsent`
+    - `ConsentState`
   - Exports (values):
     - `AnalyticsTracker`
     - `observeSectionReach`
+    - `setAnalyticsConsent`
     - `track`
+    - `useAnalyticsConsent`
     - `useSectionReach`
 - Core:
   - Uses:
@@ -391,6 +426,8 @@ after new visits, a rollup and a retention sweep arrive as deltas.
     - `COLLECT_PLUGIN_ID`
     - `collectEndpoint`
     - `CollectResponseSchema`
+    - `CONSENT_KEY_DAYS`
+    - `ConsentKeySchema`
     - `conversionRate`
     - `DailyDimensionSchema`
     - `DAY_PATTERN`
@@ -485,6 +522,7 @@ after new visits, a rollup and a retention sweep arrive as deltas.
     - `apps/website/pages/apps`
     - `apps/website/pages/download`
     - `apps/website/pages/foundations`
+    - `apps/website/pages/privacy`
     - `apps/website/pages/vision`
     - `apps/website/shell`
 - Exemptions:

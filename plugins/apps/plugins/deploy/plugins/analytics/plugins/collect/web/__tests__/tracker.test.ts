@@ -21,7 +21,11 @@ const NO_LOAD = { ttfbMs: null, fcpMs: null, readyMs: null };
 
 /** A tracker over a fake clock and a recording send whose responses the test releases. */
 function harness(
-  opts: { landing?: TrackerDeps["landing"]; owner?: () => boolean } = {},
+  opts: {
+    landing?: TrackerDeps["landing"];
+    owner?: () => boolean;
+    consentKey?: () => string | undefined;
+  } = {},
 ) {
   let clock = 0;
   let visible = true;
@@ -41,6 +45,7 @@ function harness(
     host: "equin.dev",
     landing: opts.landing ?? {},
     isOwner: opts.owner ?? (() => false),
+    consentKey: opts.consentKey ?? (() => undefined),
     send: (body) => {
       sent.push(body);
       return new Promise((resolve) => pending.push(resolve));
@@ -122,6 +127,29 @@ describe("owner mark", () => {
         path: "/website/story",
         owner: true,
       },
+    ]);
+  });
+});
+
+describe("consent key", () => {
+  it("pageviews and events carry the key once the visitor accepts, and not after they reject", () => {
+    let key: string | undefined;
+    const h = harness({ consentKey: () => key });
+    h.tracker.pathChanged("/website");
+    key = "6f1c3b0e-8d4a-4f6e-9c2b-1a7d5e3f9b20";
+    h.tracker.track("film_play", undefined, "/website");
+    key = undefined;
+    h.tracker.pathChanged("/website/story");
+    expect(h.sent.filter((b) => b.kind !== "engagement")).toEqual([
+      { kind: "pageview", host: "equin.dev", path: "/website" },
+      {
+        kind: "event",
+        host: "equin.dev",
+        path: "/website",
+        name: "film_play",
+        consentKey: "6f1c3b0e-8d4a-4f6e-9c2b-1a7d5e3f9b20",
+      },
+      { kind: "pageview", host: "equin.dev", path: "/website/story" },
     ]);
   });
 });

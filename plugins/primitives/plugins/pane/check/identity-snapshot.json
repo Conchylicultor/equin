@@ -781,6 +781,12 @@
       "parent": null
     },
     {
+      "paneId": "website-privacy",
+      "segment": "privacy",
+      "appIndex": false,
+      "parent": null
+    },
+    {
       "paneId": "website-story",
       "segment": "story",
       "appIndex": false,

@@ -17,8 +17,14 @@ import {
   type Gap,
   type PageviewBody,
 } from "../../core";
-import { parseReferrer, primaryLanguage, visitorHash } from "./request-context";
 import {
+  consentKeyHash,
+  parseReferrer,
+  primaryLanguage,
+  visitorHash,
+} from "./request-context";
+import {
+  analyticsConsentKeys,
   analyticsHits,
   analyticsSalts,
   analyticsVisitorLinks,
@@ -152,13 +158,19 @@ interface VisitorKey {
   hash: string;
   /** The visitor's hash under every retained salt, newest day first. */
   hashes: { day: string; hash: string }[];
+  /**
+   * The sha256 of the browser's consent key (`consentKeyHash`), when the hit
+   * carries one: the visitor accepted, and is found by it on any network.
+   */
+  consentKeyHash: string | null;
 }
 
 async function visitorKeyFor(
   dbx: AnalyticsDb,
-  host: string,
+  body: { host: string; consentKey?: string },
   ctx: CollectContext,
 ): Promise<VisitorKey> {
+  const { host } = body;
   const today = utcDay(ctx.now);
   const hashes = (await windowSalts(dbx, today)).map(({ day, salt }) => ({
     day,
@@ -166,7 +178,15 @@ async function visitorKeyFor(
   }));
   const [first] = hashes;
   if (!first) throw new Error("analytics: no salt for today");
-  return { today, hash: first.hash, hashes };
+  return {
+    today,
+    hash: first.hash,
+    hashes,
+    consentKeyHash:
+      body.consentKey === undefined
+        ? null
+        : consentKeyHash({ key: body.consentKey, host }),
+  };
 }
 
 interface ResolvedVisitor {
@@ -185,7 +205,7 @@ interface ResolvedVisitor {
  * Runs under the visitor's advisory lock, so a burst of first hits of the day
  * agrees on one id.
  */
-async function resolveVisitor(
+async function resolveVisitorByHash(
   tx: Tx,
   key: VisitorKey,
 ): Promise<ResolvedVisitor> {
@@ -212,18 +232,68 @@ async function resolveVisitor(
   return { visitorId, known: found !== undefined };
 }
 
+/**
+ * The visitor's id, by their consent key when the hit carries one, else by the
+ * daily hash ({@link resolveVisitorByHash}).
+ *
+ * A key already linked is a visitor seen before: their id, `known`. A key
+ * seen for the first time (they just accepted) adopts the id the hash
+ * resolves to now, so the visit in progress goes on as the same visitor's and
+ * a return within the identity window still counts as one; `known` is then
+ * the hash's answer. A key's row is touched once a day, which is what keeps it
+ * from the nightly prune.
+ */
+async function resolveVisitor(
+  tx: Tx,
+  key: VisitorKey,
+): Promise<ResolvedVisitor> {
+  if (key.consentKeyHash === null) return resolveVisitorByHash(tx, key);
+  const [linked] = await tx
+    .select({
+      visitorId: analyticsConsentKeys.visitorId,
+      lastDay: analyticsConsentKeys.lastDay,
+    })
+    .from(analyticsConsentKeys)
+    .where(eq(analyticsConsentKeys.keyHash, key.consentKeyHash));
+  if (linked) {
+    if (linked.lastDay !== key.today)
+      await tx
+        .update(analyticsConsentKeys)
+        .set({ lastDay: key.today })
+        .where(eq(analyticsConsentKeys.keyHash, key.consentKeyHash));
+    return { visitorId: linked.visitorId, known: true };
+  }
+  const visitor = await resolveVisitorByHash(tx, key);
+  await tx.insert(analyticsConsentKeys).values({
+    keyHash: key.consentKeyHash,
+    visitorId: visitor.visitorId,
+    lastDay: key.today,
+  });
+  return visitor;
+}
+
 // ── visits ───────────────────────────────────────────────────────────────
 
+/**
+ * Runs `body` holding the visitor's advisory locks: their daily hash's, and
+ * their consent key's when they have one — so a burst of first hits agrees on
+ * one id, whether it races on the network (one hash) or across networks (one
+ * key). Always hash first, then key, so two holders never wait on each other.
+ */
 async function withVisitorLock<T>(
   dbx: AnalyticsDb,
-  hash: string,
+  key: VisitorKey,
   body: (tx: Tx) => Promise<T>,
 ): Promise<T> {
   return dbx.transaction(async (tx) => {
     // Transaction-scoped, so PgBouncer's transaction pooling keeps it sound.
     await tx.execute(
-      sql`SELECT pg_advisory_xact_lock(hashtextextended(${`analytics:${hash}`}, 0))`,
+      sql`SELECT pg_advisory_xact_lock(hashtextextended(${`analytics:${key.hash}`}, 0))`,
     );
+    if (key.consentKeyHash !== null)
+      await tx.execute(
+        sql`SELECT pg_advisory_xact_lock(hashtextextended(${`analytics:key:${key.consentKeyHash}`}, 0))`,
+      );
     return body(tx);
   });
 }
@@ -300,8 +370,8 @@ async function recordPageview(
   ctx: CollectContext,
   lookupCountry: CountryLookup,
 ): Promise<CollectResponse> {
-  const key = await visitorKeyFor(dbx, body.host, ctx);
-  return withVisitorLock(dbx, key.hash, async (tx) => {
+  const key = await visitorKeyFor(dbx, body, ctx);
+  return withVisitorLock(dbx, key, async (tx) => {
     const visitor = await resolveVisitor(tx, key);
     const visitId =
       (await findLiveVisitId(tx, visitor.visitorId, ctx.now)) ??
@@ -348,8 +418,8 @@ async function recordEvent(
   ctx: CollectContext,
   lookupCountry: CountryLookup,
 ): Promise<CollectResponse> {
-  const key = await visitorKeyFor(dbx, body.host, ctx);
-  return withVisitorLock(dbx, key.hash, async (tx) => {
+  const key = await visitorKeyFor(dbx, body, ctx);
+  return withVisitorLock(dbx, key, async (tx) => {
     const visitor = await resolveVisitor(tx, key);
     const visitId =
       (await findLiveVisitId(tx, visitor.visitorId, ctx.now)) ??

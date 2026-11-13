@@ -2,10 +2,14 @@ import { lt } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@plugins/database/server";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
-import { addDays, utcDay } from "../../core";
+import { CONSENT_KEY_DAYS, addDays, utcDay } from "../../core";
 import { daysMissingTotals, rollupDay } from "./aggregate-sql";
 import { firstIdentityDay, type AnalyticsDb } from "./collect";
-import { analyticsSalts, analyticsVisitorLinks } from "./tables";
+import {
+  analyticsConsentKeys,
+  analyticsSalts,
+  analyticsVisitorLinks,
+} from "./tables";
 
 /**
  * How many completed days every run recomputes, whether or not they already
@@ -20,7 +24,8 @@ export const ROLLUP_RECOMPUTE_DAYS = 2;
  * completed days, backfill any older completed day that has visits but no
  * totals or memberships, then delete every salt and hash → visitor link older
  * than the identity window, so a visitor absent that long can never be linked
- * again. Returns the days it summed.
+ * again, and every consent key unused for `CONSENT_KEY_DAYS` (its browser has
+ * forgotten it). Returns the days it summed.
  */
 export async function runRollup(
   dbx: AnalyticsDb,
@@ -41,6 +46,9 @@ export async function runRollup(
   await dbx
     .delete(analyticsVisitorLinks)
     .where(lt(analyticsVisitorLinks.day, oldest));
+  await dbx
+    .delete(analyticsConsentKeys)
+    .where(lt(analyticsConsentKeys.lastDay, addDays(today, -CONSENT_KEY_DAYS)));
   return { days };
 }
 

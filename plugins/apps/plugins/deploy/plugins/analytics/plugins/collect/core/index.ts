@@ -37,6 +37,7 @@ export {
 export type { Channel, UtmTags } from "./internal/channel";
 export {
   CollectResponseSchema,
+  ConsentKeySchema,
   EngagementBodySchema,
   EventBodySchema,
   EventPropsSchema,
@@ -88,6 +89,7 @@ export {
   DaySchema,
   GRANULARITIES,
   GranularitySchema,
+  CONSENT_KEY_DAYS,
   IDENTITY_WINDOW_DAYS,
   RAW_RETENTION_DAYS,
   addDays,

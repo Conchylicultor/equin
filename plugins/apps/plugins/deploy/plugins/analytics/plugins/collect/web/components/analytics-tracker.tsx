@@ -13,7 +13,8 @@ import { isWithinApp } from "../internal/scope";
  * component stays mounted in a background tab while the address shows another
  * app, and that app's pages are not this site's visits.
  *
- * Nothing is stored in cookies or browser storage; the dedup lives in module
+ * Nothing is stored in the browser unless the visitor accepts the site's
+ * consent prompt (`consent.ts`: one random key); the dedup lives in module
  * scope (instance.ts), so a remount never double counts.
  */
 export function AnalyticsTracker({ app }: { app: AppRef }) {

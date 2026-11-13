@@ -28,6 +28,14 @@ export const RAW_RETENTION_DAYS = 90;
  */
 export const IDENTITY_WINDOW_DAYS = 30;
 
+/**
+ * How long a consent key (`consent.ts`) is kept on the box after its last
+ * hit: 13 months, the longest a browser keeps the key itself (the site asks
+ * again once its answer is that old). Older keys are deleted by the nightly
+ * rollup, so a key the browser has forgotten can never link anything again.
+ */
+export const CONSENT_KEY_DAYS = 395;
+
 export const DAY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 export const DaySchema = z.string().regex(DAY_PATTERN);
 

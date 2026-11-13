@@ -1,6 +1,7 @@
 import { FullPane } from "@plugins/layouts/plugins/full-pane/web";
 import { AnalyticsTracker } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/web";
 import { websiteApp } from "../../core";
+import { Website } from "../slots";
 
 /**
  * The website's app surface. A pure full-surface app (like Sonata): the
@@ -13,13 +14,17 @@ import { websiteApp } from "../../core";
  * The visit tracker is mounted here, beside the pane renderer rather than inside
  * any pane's chrome: this component is the app's surface, which stays mounted
  * while the visitor moves between pages, whereas each page's `WebsiteChrome`
- * is replaced with the pane it wraps.
+ * is replaced with the pane it wraps. The same holds for what floats over the
+ * pages (`Website.Layer`: the consent prompt).
  */
 export function WebsiteLayout() {
   return (
-    <div className="h-full min-h-0">
+    // `relative`: the box a `Website.Layer` contribution pins itself in — the
+    // app's surface, so it floats over whichever page scrolls under it.
+    <div className="relative h-full min-h-0">
       <AnalyticsTracker app={websiteApp} />
       <FullPane />
+      <Website.Layer.Render />
     </div>
   );
 }

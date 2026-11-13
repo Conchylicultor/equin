@@ -155,7 +155,7 @@ export const RECORDED_FIELDS = [
   {
     name: "visitor_id",
     description:
-      "A random id, found again on each return through a hash of IP + browser + site + that day's salt, and whether the visit is such a return; forgotten after 30 days without a visit",
+      "A random id, and whether the visit is a return. Found again through a random key kept in the browser when the visitor accepted (forgotten 13 months after their answer), otherwise through a hash of the network (an IPv6 address cut to its /64) + browser + site + that day's salt (forgotten after 30 days without a visit)",
     columns: ["visitorId", "returning"],
   },
   {
@@ -169,7 +169,7 @@ export const RECORDED_FIELDS = [
 /** What is never stored, in the panel's words. */
 export const NEVER_RECORDED = [
   "IP addresses or the full user-agent string",
-  "Cookies, localStorage, or anything left on a visitor's device — only the owner's marked devices keep a flag",
-  "Who someone is after 30 days away: older salts are deleted, so a returning visitor gets a new id",
+  "Anything left on a visitor's device without their consent — only a visitor who accepted keeps a random key, and the owner's marked devices a flag",
+  "Who someone is after 30 days away without a key: older salts are deleted, so a returning visitor gets a new id",
   "Query strings, form input, or page content",
 ] as const;
