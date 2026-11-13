@@ -20861,6 +20861,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: `tasks/orchestration/watch.watchSource`
           - Core:
             - Uses:
+              - `conversations/conversation-view/push-and-exit/flag-categories.FlagCategorySchema`
               - `hints.defineHint`
               - `hints.defineHintAnchor`
               - `ids.defineIdKind`
@@ -20871,7 +20872,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `closeHint`
               - `conversationFlagIdKind`
               - `dropAndCloseHint`
-              - `FLAG_CATEGORY_MAX_CHARS`
               - `FLAG_ITEM_MAX_CHARS`
               - `FlagItemsSchema`
               - `FlagSchema`
@@ -20926,6 +20926,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `tasks/reports-investigation`
                   - `tasks/sidequest-autopilot`
                   - `upstream`
+            - **`flag-categories`** — What a raised flag's item asks of the user, as plain data: the closed category set (broken | decide | fyi | other), each with its chip's label and colour and the line the agent reads when choosing it. A leaf, so the transcript's flag card can draw the chip in a composition without push-and-exit.
+              - Cross-plugin:
+                - Imported by:
+                  - `conversations/conversation-view/jsonl-viewer/tool-call/flag-raise`
+                  - `conversations/conversation-view/push-and-exit`
+              - Core:
+                - Exports (types): `FlagCategory`
+                - Exports (values):
+                  - `FLAG_CATEGORIES`
+                  - `FlagCategorySchema`
         - **`push-counter`**
         - **`push-profiling`** — Toolbar button showing the op Gantt scoped to the conversation's worktree.
           - Web:

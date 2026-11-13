@@ -132,13 +132,13 @@ function FlagItems({ items }: { items: FlagRaiseItem[] }) {
   );
 }
 
+// A label, not content: never part of a text selection over the item.
+const chipClass = cn("select-none", rigidClass());
+
 /**
  * What the item asks of the user, as its chip: a known category in its own
  * label and colour; a free-form word from an older transcript as itself.
  */
-// A label, not content: never part of a text selection over the item.
-const chipClass = cn("select-none", rigidClass());
-
 function CategoryChip({ category }: { category: string }) {
   const known = FlagCategorySchema.safeParse(category);
   if (!known.success)
