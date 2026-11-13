@@ -51,6 +51,7 @@ import {
 } from "./batch-run";
 import { processBatches, type BatchSpend } from "./batch-processes";
 import { createLintDecisions } from "./lint-decisions";
+import { readDeclaredUtilities } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 import { createLintEngine, type LintOut } from "./lint-engine";
 import { openLintResultStore, type LintResultStore } from "./lint-results";
 import type { ProgramStats } from "./name-check";
@@ -170,7 +171,7 @@ async function lintRunner(job: Job, view: RepoView) {
       jobs: decisions.jobs,
     };
   }
-  const engine = createLintEngine(job.root);
+  const engine = createLintEngine(job.root, readDeclaredUtilities(job.root));
   // Through the view: the text checked against the version its results are
   // stored under, so a file edited mid-run fails the run instead of recording
   // a result under another text's key.

@@ -16,7 +16,6 @@
 import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { afterAll, expect, test } from "bun:test";
 import {
-  existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -41,6 +40,7 @@ import {
   codeCheckoutRoot,
   computeLintGroups,
   lintClosures,
+  lintEngineRoots,
 } from "./lint-groups";
 
 const TREE = "0".repeat(40);
@@ -192,17 +192,37 @@ const ENGINE_FOLDERS = [
   "plugins/framework/plugins/tooling/plugins/lint/core",
   // File categories: which rules are off in tests, e2e, and declared scopes.
   "plugins/framework/plugins/tooling/plugins/exempt/core",
+  // This check's lint engine: the configs per part, the `--quiet` filter,
+  // the message shape and the per-group bucketing (`shared/lint-engine.ts`).
+  "plugins/framework/plugins/tooling/plugins/checks/plugins/type-check/shared",
+  // The group names it buckets messages under (`core/worker-protocol.ts`).
+  "plugins/framework/plugins/tooling/plugins/checks/plugins/type-check/core",
 ];
 
-test("the lint engine reaches only its declared folders", () => {
-  const root = codeCheckoutRoot();
-  // The working tree as it stands, so the test sees the edit under review.
-  const disk = {
-    treeHash: "working tree",
-    isFile: (rel: string) => existsSync(join(root, rel)),
-    readText: (rel: string) => readFileSync(join(root, rel), "utf8"),
-  };
-  const engine = lintClosures(disk).of(LINT_CONFIG_SOURCE, new Set());
+/** The real engine as `computeLintGroups` derives it, over the working tree. */
+async function realEngine() {
+  const code = viewOfSnapshot(
+    await readTreeSnapshot(asAppPath(codeCheckoutRoot())),
+  );
+  const walks = lintClosures(code);
+  const roots = lintEngineRoots(walks, code);
+  const engine = new Set<string>();
+  for (const r of roots) for (const f of walks.of(r, new Set())) engine.add(f);
+  return { walks, roots, engine };
+}
+
+test("the lint engine is rooted at every module the worker loads that runs ESLint", async () => {
+  const { roots } = await realEngine();
+  expect(roots).toEqual(
+    [
+      LINT_CONFIG_SOURCE,
+      "plugins/framework/plugins/tooling/plugins/checks/plugins/type-check/shared/lint-engine.ts",
+    ].sort(),
+  );
+});
+
+test("the lint engine reaches only its declared folders", async () => {
+  const { engine } = await realEngine();
   // A file's folder: its path up to its barrel folder (`core/`, …).
   const folders = new Set(
     [...engine].map((f) => {
@@ -213,6 +233,121 @@ test("the lint engine reaches only its declared folders", () => {
     }),
   );
   expect([...folders].sort()).toEqual([...ENGINE_FOLDERS].sort());
+});
+
+test("a lint loop moved into a module of its own is engine the moment it imports ESLint", () => {
+  const shared =
+    "plugins/framework/plugins/tooling/plugins/checks/plugins/type-check/shared";
+  const files = {
+    [LINT_CONFIG_SOURCE]: 'const l = await import("eslint");\n',
+    [`${shared}/worker.ts`]: 'import { run } from "./loop";\n',
+    [`${shared}/loop.ts`]:
+      'import { quiet } from "@plugins/search/core";\nimport { Linter } from "eslint";\n',
+    [`${shared}/plumbing.ts`]:
+      'import { spawn } from "@plugins/review/core";\n',
+    "plugins/search/core/index.ts":
+      'export { quiet } from "./quiet";\nexport { read } from "./read";\n',
+    "plugins/search/core/quiet.ts": "export const quiet = 2;\n",
+    "plugins/search/core/read.ts":
+      'import { fs } from "@plugins/review/core";\n',
+    "plugins/review/core/index.ts": "export const spawn = 1;\n",
+  };
+  const view = viewOf(files);
+  const walks = lintClosures(view);
+  const roots = lintEngineRoots(walks, { files: () => Object.keys(files) });
+  expect(roots).toEqual([LINT_CONFIG_SOURCE, `${shared}/loop.ts`].sort());
+  // By name through the barrel: the loop's helper, not the barrel's reader.
+  expect(sorted(walks.of(`${shared}/loop.ts`, new Set()))).toEqual([
+    `${shared}/loop.ts`,
+    "plugins/search/core/index.ts",
+    "plugins/search/core/quiet.ts",
+  ]);
+});
+
+test("a barrel the engine entered by name still leads a contribution to the names the engine did not ask", () => {
+  const view = viewOf({
+    "plugins/audience/core/builder.ts":
+      'import { build } from "@plugins/runs/core";\n',
+    "plugins/runs/core/index.ts": [
+      'export { build } from "./build";',
+      'export { creator } from "./creator";',
+      'export * as ns from "./ns";',
+      "",
+    ].join("\n"),
+    "plugins/runs/core/build.ts": "export const build = 1;\n",
+    "plugins/runs/core/creator.ts": 'import { id } from "@plugins/ids/core";\n',
+    "plugins/runs/core/ns.ts": "export const n = 1;\n",
+    "plugins/ids/core/index.ts": "export const id = 1;\n",
+    "plugins/shell/lint/index.ts":
+      'import { creator, build, ns } from "@plugins/runs/core";\n',
+  });
+  const walks = lintClosures(view);
+  const engine = walks.of("plugins/audience/core/builder.ts", new Set());
+  expect(sorted(engine)).toEqual([
+    "plugins/audience/core/builder.ts",
+    "plugins/runs/core/build.ts",
+    "plugins/runs/core/index.ts",
+  ]);
+  // The engine's barrel is no wall: the contribution reaches `creator` and
+  // the namespace `ns` through it, and stops at `build`, which the engine
+  // covers.
+  expect(sorted(walks.of("plugins/shell/lint/index.ts", engine))).toEqual([
+    "plugins/ids/core/index.ts",
+    "plugins/runs/core/creator.ts",
+    "plugins/runs/core/index.ts",
+    "plugins/runs/core/ns.ts",
+    "plugins/shell/lint/index.ts",
+  ]);
+});
+
+test("a closure enters a pure barrel by name, and an impure one whole", () => {
+  const view = viewOf({
+    "plugins/shell/lint/index.ts": [
+      'import { a, type T } from "@plugins/wish/core";',
+      'import { z } from "@plugins/tasks/core";',
+      'import * as all from "@plugins/hints/core";',
+      "",
+    ].join("\n"),
+    // Pure: re-exports and a type alias. `a` is reached through `export *`.
+    "plugins/wish/core/index.ts": [
+      'export { b, c as d } from "./bc";',
+      'export * from "./star";',
+      'export type { T } from "./types";',
+      'import type { U } from "./types";',
+      "export type V = U;",
+      "",
+    ].join("\n"),
+    "plugins/wish/core/bc.ts":
+      'import { heavy } from "@plugins/history/core";\n',
+    "plugins/wish/core/star.ts": "export const a = 1;\n",
+    "plugins/wish/core/types.ts": "export type T = 1;\n",
+    // Impure: a local export, so every import of it is followed.
+    "plugins/tasks/core/index.ts":
+      'import { z } from "./z";\nimport { y } from "./y";\nexport { z };\n',
+    "plugins/tasks/core/z.ts": "export const z = 1;\n",
+    "plugins/tasks/core/y.ts": "export const y = 1;\n",
+    // A namespace import asks every name.
+    "plugins/hints/core/index.ts":
+      'export { r1 } from "./r1";\nexport { r2 } from "./r2";\n',
+    "plugins/hints/core/r1.ts": "export const r1 = 1;\n",
+    "plugins/hints/core/r2.ts": "export const r2 = 1;\n",
+    "plugins/history/core/index.ts": "export const heavy = 1;\n",
+  });
+  expect(
+    sorted(lintClosures(view).of("plugins/shell/lint/index.ts", new Set())),
+  ).toEqual(
+    [
+      "plugins/wish/core/index.ts",
+      "plugins/wish/core/star.ts",
+      "plugins/tasks/core/index.ts",
+      "plugins/tasks/core/y.ts",
+      "plugins/tasks/core/z.ts",
+      "plugins/hints/core/index.ts",
+      "plugins/hints/core/r1.ts",
+      "plugins/hints/core/r2.ts",
+      "plugins/shell/lint/index.ts",
+    ].sort(),
+  );
 });
 
 test("a closure's npm packages are what its files import by name, builtins aside", () => {
@@ -256,18 +391,8 @@ const ENGINE_PACKAGES = [
   "zod",
 ];
 
-test("the lint engine loads only its declared npm packages", () => {
-  const root = codeCheckoutRoot();
-  const disk = {
-    treeHash: "working tree",
-    isFile: (rel: string) => existsSync(join(root, rel)),
-    readText: (rel: string) => readFileSync(join(root, rel), "utf8"),
-  };
-  const walks = lintClosures(disk);
-  const engine = walks.of(LINT_CONFIG_SOURCE, new Set());
-  engine.add(
-    "plugins/framework/plugins/tooling/plugins/checks/plugins/type-check/shared/worker.ts",
-  );
+test("the lint engine loads only its declared npm packages", async () => {
+  const { walks, engine } = await realEngine();
   expect(sorted(walks.packagesOf(engine))).toEqual([...ENGINE_PACKAGES].sort());
 });
 

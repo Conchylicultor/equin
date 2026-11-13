@@ -25,6 +25,7 @@ import {
   type BatchLintOut,
   type BatchOutcome,
 } from "./batch-run";
+import { readDeclaredUtilities } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 import { createLintEngine } from "./lint-engine";
 import { runProgram, type DeclScope } from "./name-check";
 import { createSourceFileCache } from "./name-host";
@@ -88,7 +89,7 @@ async function run(job: BatchProcessJob): Promise<BatchOutcome> {
   const lint: Record<string, BatchLintOut> = {};
   const specs = Object.entries(job.lint);
   if (specs.length > 0) {
-    const engine = createLintEngine(job.root);
+    const engine = createLintEngine(job.root, readDeclaredUtilities(job.root));
     const rel = (abs: string): string =>
       relative(job.root, abs).split("\\").join("/");
     const out = await engine.files(

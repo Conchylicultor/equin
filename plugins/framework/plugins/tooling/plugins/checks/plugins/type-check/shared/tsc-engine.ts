@@ -158,11 +158,49 @@ export function producerSources(): string[] {
     );
     for (const imp of ts.preProcessFile(text, true, true).importedFiles) {
       const m = /^\.\/([^/]+?)(\.ts)?$/.exec(imp.fileName);
-      if (m !== null) stack.push(`${m[1]}.ts`);
+      if (m !== null) {
+        stack.push(`${m[1]}.ts`);
+        continue;
+      }
+      const repo = /^(\.|@plugins\/|@\/|@$)/.test(imp.fileName);
+      if (repo && !OUTSIDE_PRODUCER_IMPORTS.has(imp.fileName)) {
+        throw new Error(
+          `type-check: the producer ${f} imports ${imp.fileName}, outside the flat shared/ directory its hash covers. ` +
+            `Move the code into shared/ (flat) if it can change a stored result; ` +
+            `otherwise add it to OUTSIDE_PRODUCER_IMPORTS in tsc-engine.ts with why it cannot.`,
+        );
+      }
     }
   }
   return [...seen].sort();
 }
+
+/**
+ * The repo modules a producer imports from outside `shared/`, none of them in
+ * its hash, each because it cannot change what a result key stores. Declared,
+ * so a producer importing anything else throws (`producerSources`): the
+ * closure follows only flat `./` imports, and an import it could not follow
+ * used to fall out of the hash in silence — the way a lint loop that moved out
+ * of a hand-listed file fell out of the lint engine's.
+ */
+const OUTSIDE_PRODUCER_IMPORTS: ReadonlySet<string> = new Set([
+  // File reads, descriptors and path brands: how bytes are read, not which.
+  "@plugins/packages/plugins/timed-fs/core",
+  "@plugins/packages/plugins/owned-fd/core",
+  "@plugins/infra/plugins/host-fs/plugins/user-path/core",
+  // Where the stores live, not what they hold (a data dir is a location).
+  "../data-dirs",
+  "@plugins/infra/plugins/paths/core",
+  // The tree's listing and blob reads (repo-view): the input, by version.
+  "@plugins/framework/plugins/tooling/plugins/checks/core",
+  "@plugins/framework/plugins/tooling/core",
+  // Type-only: the worker's job and tree types.
+  "../core",
+  // Key formulas whose OUTPUT is hashed (the lockfile's resolutions, the
+  // files a patch touches): a change to them moves the key by itself.
+  "@plugins/infra/plugins/deps/plugins/npm/core",
+  "@plugins/infra/plugins/deps/plugins/npm/plugins/lock-resolutions/core",
+]);
 
 /**
  * The roots of the producer closure: the per-file check and its records
@@ -180,7 +218,18 @@ const PRODUCERS = ["name-check.ts", "name-store.ts", "emit-options.ts"];
  * key in silence. (Which is why new files go FLAT in `shared/`.)
  */
 export function engineSources(): string[] {
-  return readdirSync(import.meta.dir)
+  const entries = readdirSync(import.meta.dir, { withFileTypes: true });
+  // Test code's own folders (`testing/`, `__tests__/`) are never engine.
+  const sub = entries.find(
+    (e) => e.isDirectory() && e.name !== "testing" && e.name !== "__tests__",
+  );
+  if (sub !== undefined) {
+    throw new Error(
+      `type-check: shared/${sub.name}/ is a subdirectory — the engine hashes (engineSources, producerSources) cover shared/'s top level only; put its files flat in shared/`,
+    );
+  }
+  return entries
+    .map((e) => e.name)
     .filter(
       (f) => f.endsWith(".ts") && !f.endsWith(".test.ts") && !NOT_ENGINE.has(f),
     )

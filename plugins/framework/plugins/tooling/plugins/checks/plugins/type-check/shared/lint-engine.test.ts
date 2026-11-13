@@ -144,7 +144,7 @@ describe("a directive file's verdict, combined with no program", () => {
       ...(aware.base ? [LINT_GROUP_BASE] : []),
       ...aware.contributions,
     ];
-    const engine = createLintEngine(ROOT);
+    const engine = createLintEngine(ROOT, readDeclaredUtilities(ROOT));
     const linter = new Linter({ configType: "flat" });
     const seen: string[] = [];
     for (const [file, code] of sources) {
@@ -189,7 +189,7 @@ describe("a directive file's verdict, combined with no program", () => {
   }, 120_000);
 
   it("refuses an inline rule config, which the split cannot answer exactly", async () => {
-    const engine = createLintEngine(ROOT);
+    const engine = createLintEngine(ROOT, readDeclaredUtilities(ROOT));
     const file = join(DIR, "directive-inline-config.ts");
     // bun settles the promise inside the matcher: no await.
     expect(
@@ -211,7 +211,7 @@ describe("a directive file's verdict, combined with no program", () => {
 
   it("a raw typed part holds what its directives suppressed, warnings included", async () => {
     const prog = program();
-    const engine = createLintEngine(ROOT);
+    const engine = createLintEngine(ROOT, readDeclaredUtilities(ROOT));
     const aware = await typeAwareLintGroups(readDeclaredUtilities(ROOT));
     expect(aware.base).toBe(true);
     const suppressed = fileOf("typed problem suppressed", false);

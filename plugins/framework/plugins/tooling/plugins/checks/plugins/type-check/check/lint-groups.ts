@@ -11,10 +11,11 @@
 // commits in the 7 days to 2026-10-15 did that — and not one of the 37 lockfile
 // edits among them changed an npm resolution. So (c) is split:
 //
-//   - the ENGINE, what every rule's result depends on: the lint config builder
-//     and what it imports, this check's own worker, the npm code they load
-//     (below), the root tsconfigs and what rules read from the lint data
-//     files (`lintDataKey`). Folded into every group below.
+//   - the ENGINE, what every rule's result depends on: the import closure of
+//     every module that runs ESLint (`lintEngineRoots`: the config builder and
+//     this check's lint engine, found by what they import, never listed), the
+//     npm code they load (below), the root tsconfigs and what rules read from
+//     the lint data files (`lintDataKey`). Folded into every group below.
 //   - the TYPED ENGINE, what only a result that reads types depends on: the
 //     two-program check that computes each file's result key, and the emit
 //     options that decide what a `.d.ts` says. Folded into every typed part and
@@ -91,9 +92,11 @@ import type { TypeAwareGroups } from "../shared/lint-results";
 import type { RepoView } from "../shared/repo-view";
 import { producerSources } from "../shared/tsc-engine";
 import {
-  runtimeImportSpecifiers,
+  type ImportedNames,
   isLintable,
+  pureBarrelReexports,
   resolveSpecifier,
+  runtimeImports,
 } from "./import-graph";
 
 function sha256(s: string): string {
@@ -157,7 +160,7 @@ const OWN_PATH =
 
 /**
  * The root of the checkout this code runs from. The rules a group fingerprints
- * are CODE — the config builder, the contributions, this check's worker —
+ * are CODE — the config builder, the contributions, this check's lint engine —
  * loaded from here, so their versions are read from this checkout's tree. For
  * a check run that is the checked tree itself; a test checks a fixture with
  * the repo's own rules.
@@ -182,13 +185,57 @@ function ownSources(files: readonly string[]): string[] {
 }
 
 /**
- * This check's worker, whose lint loop is engine too, and the lint engine it
- * lints with (the configs per part, the `--quiet` filter, a directive file's
- * raw parts and the verdict combined from them). The files alone, not their
- * imports: those are the spawn protocol and process plumbing, which cannot
- * change a message — and the typed engine below.
+ * The package whose `Linter` turns a config and a text into messages. Every
+ * module that loads it is where messages are made — the config builder (its
+ * built-in rules), this check's lint engine (the `--quiet` filter, the message
+ * shape, the per-group bucketing) — so the engine is rooted there, wherever
+ * that code lives (`lintEngineRoots`).
  */
-const WORKER_SOURCES = ["../shared/worker.ts", "../shared/lint-engine.ts"];
+const LINTER_PACKAGE = "eslint";
+
+/**
+ * The modules this check's worker processes load that run ESLint: every
+ * module in the run-time closure of `shared/` (where the worker and its batch
+ * processes live) importing {@link LINTER_PACKAGE}, plus the config builder.
+ * Derived, never listed: a lint loop moved into a new module, here or in
+ * another plugin `shared/` reaches, is a root the moment it imports the
+ * linter. (A hand-written list of the worker's files went stale when the loop
+ * moved out of `worker.ts`, and an edit to the `--quiet` filter re-linted
+ * nothing.)
+ */
+export function lintEngineRoots(
+  closures: ReturnType<typeof lintClosures>,
+  code: Pick<RepoView, "files">,
+): string[] {
+  const shared = `${ownSources(["../shared"])[0]!}/`;
+  const runtime = code
+    .files()
+    .filter(
+      (f) =>
+        f.startsWith(shared) &&
+        isLintable(f) &&
+        !f.endsWith(".d.ts") &&
+        !/\.test\.tsx?$/.test(f),
+    );
+  if (runtime.length === 0) {
+    throw new Error(
+      `type-check: no worker module under ${shared} in the code checkout — the lint engine has no roots`,
+    );
+  }
+  const reach = new Set<string>();
+  for (const f of runtime)
+    for (const m of closures.of(f, new Set())) reach.add(m);
+  const roots = new Set([LINT_CONFIG_SOURCE]);
+  for (const m of reach) {
+    if (closures.packagesOf([m]).has(LINTER_PACKAGE)) roots.add(m);
+  }
+  if (roots.size === 1) {
+    throw new Error(
+      `type-check: no module the worker loads imports ${LINTER_PACKAGE} — the lint loop moved where the engine cannot find it`,
+    );
+  }
+  return [...roots].sort();
+}
 
 /**
  * The typed engine: what decides the types a typed rule reads — the modules
@@ -272,23 +319,45 @@ export function rawTypedFps(
  * a `prototypes/` file is a member of a closure that reaches it, not a way
  * through it — matching the graph this replaced, which held edges out of
  * lintable files alone.
+ *
+ * A closure is walked BY NAME through pure barrels (`pureBarrelReexports`): a
+ * module importing `{ a }` from a barrel reaches the barrel and the module
+ * that exports `a`, not every module the barrel re-exports. So a closure is
+ * the code its files can call, not every module the runtime evaluates beside
+ * it: a builder importing one helper from `lint/core` does not take in that
+ * barrel's file readers and process plumbing. What a module only EVALUATES
+ * (an unused re-export's top-level code) is out — a module whose evaluation
+ * changes a message must be reached by a name it exports.
  */
 export function lintClosures(
   view: Pick<RepoView, "isFile" | "readText" | "treeHash">,
 ) {
-  const deps = new Map<string, readonly string[]>();
-  /** The npm packages each parsed file imports by name. */
-  const packages = new Map<string, readonly string[]>();
-  const depsOf = (rel: string): readonly string[] => {
-    let d = deps.get(rel);
-    if (d === undefined) {
-      const out = new Set<string>();
+  interface Facts {
+    /** Each run-time import resolved into the repo, with the names it asks. */
+    edges: readonly { to: string; names: ImportedNames }[];
+    /** A pure barrel's re-exports, resolved; null for any other file. */
+    barrel:
+      | readonly {
+          to: string;
+          exports: ReadonlyMap<string, string | null> | "all";
+        }[]
+      | null;
+    /** The npm packages it imports by name. */
+    packages: readonly string[];
+  }
+  const facts = new Map<string, Facts>();
+  const factsOf = (rel: string): Facts => {
+    let f = facts.get(rel);
+    if (f === undefined) {
+      const edges: { to: string; names: ImportedNames }[] = [];
       const pkgs = new Set<string>();
+      let barrel: Facts["barrel"] = null;
       if (isLintable(rel)) {
-        for (const spec of runtimeImportSpecifiers(view.readText(rel))) {
+        const src = view.readText(rel);
+        for (const { specifier: spec, names } of runtimeImports(src)) {
           const to = resolveSpecifier(rel, spec, view.isFile);
           if (to !== null) {
-            if (to !== rel) out.add(to);
+            if (to !== rel) edges.push({ to, names });
             continue;
           }
           // A missing repo file is no npm code, and neither is a computed
@@ -297,23 +366,26 @@ export function lintClosures(
           const pkg = npmPackageOf(spec);
           if (pkg !== undefined) pkgs.add(pkg);
         }
+        const reexports = pureBarrelReexports(rel, src);
+        if (reexports !== null) {
+          barrel = reexports.flatMap(({ specifier, exports }) => {
+            const to = resolveSpecifier(rel, specifier, view.isFile);
+            return to === null || to === rel ? [] : [{ to, exports }];
+          });
+        }
       }
-      d = [...out];
-      deps.set(rel, d);
-      packages.set(rel, [...pkgs]);
+      f = { edges, barrel, packages: [...pkgs] };
+      facts.set(rel, f);
     }
-    return d;
+    return f;
   };
   return {
     /** How many files the walks have parsed so far. */
-    parsed: (): number => deps.size,
+    parsed: (): number => facts.size,
     /** The npm packages the files of a closure (`of`'s answer) import by name. */
     packagesOf(files: Iterable<string>): Set<string> {
       const out = new Set<string>();
-      for (const f of files) {
-        depsOf(f);
-        for (const p of packages.get(f)!) out.add(p);
-      }
+      for (const f of files) for (const p of factsOf(f).packages) out.add(p);
       return out;
     },
     /**
@@ -333,19 +405,72 @@ export function lintClosures(
           `type-check: lint group root ${start} is not in the checked tree ${view.treeHash}`,
         );
       }
-      const visited = new Set<string>();
-      const stack = [start];
+      // The names asked of each visited file so far; `"all"` once it is
+      // followed whole (every file but a pure barrel is, on its first visit).
+      const asked = new Map<string, Set<string> | "all">();
+      const stack: { file: string; names: ImportedNames }[] = [
+        { file: start, names: "all" },
+      ];
       while (stack.length) {
-        const cur = stack.pop()!;
-        if (visited.has(cur)) continue;
-        visited.add(cur);
-        for (const dep of depsOf(cur)) {
-          if (visited.has(dep) || stop.has(dep)) continue;
-          if (dep.endsWith(".generated.ts")) continue;
-          stack.push(dep);
+        const { file, names } = stack.pop()!;
+        const before = asked.get(file);
+        if (before === "all") continue;
+        const { edges, barrel } = factsOf(file);
+        const follow = (to: string, n: ImportedNames): void => {
+          if (to.endsWith(".generated.ts")) return;
+          // A stop file is covered whole — unless it is a pure barrel, which
+          // the stop's own walk entered for ITS names only: walked here by
+          // name, the re-exports it was not asked for are not covered.
+          if (stop.has(to) && factsOf(to).barrel === null) return;
+          if (n !== "all" && n.size === 0) return;
+          stack.push({ file: to, names: n });
+        };
+        if (barrel === null || names === "all") {
+          asked.set(file, "all");
+          if (barrel === null) {
+            for (const e of edges) follow(e.to, e.names);
+          } else {
+            for (const r of barrel) {
+              follow(
+                r.to,
+                r.exports === "all" || [...r.exports.values()].includes(null)
+                  ? "all"
+                  : new Set(r.exports.values() as Iterable<string>),
+              );
+            }
+          }
+          continue;
+        }
+        // A pure barrel asked for some names: follow only the re-exports
+        // that supply the ones not asked before. A name none supplies is a
+        // type (its re-export is `export type`), which runs no code.
+        const seen = before ?? new Set<string>();
+        const fresh = [...names].filter((n) => !seen.has(n));
+        if (before !== undefined && fresh.length === 0) continue;
+        for (const n of fresh) seen.add(n);
+        asked.set(file, seen);
+        for (const r of barrel) {
+          if (r.exports === "all") {
+            follow(r.to, new Set(fresh));
+            continue;
+          }
+          const exports = r.exports;
+          if (fresh.some((n) => exports.get(n) === null)) {
+            follow(r.to, "all");
+            continue;
+          }
+          follow(
+            r.to,
+            new Set(
+              fresh.flatMap((n) => {
+                const own = exports.get(n);
+                return own === undefined || own === null ? [] : [own];
+              }),
+            ),
+          );
         }
       }
-      return visited;
+      return new Set(asked.keys());
     },
   };
 }
@@ -408,11 +533,14 @@ export async function computeLintGroups(
 ): Promise<LintGroups> {
   const closures = lintClosures(code);
 
-  // The engine: the config builder's import closure and the worker, and the
-  // npm code they load (code), plus the config files no import names and
-  // what rules read from the lint data files (the checked tree).
-  const engineCode = closures.of(LINT_CONFIG_SOURCE, new Set());
-  for (const f of ownSources(WORKER_SOURCES)) engineCode.add(f);
+  // The engine: the closure of every module that runs ESLint (the config
+  // builder, the lint engine) and the npm code they load (code), plus the
+  // config files no import names and what rules read from the lint data
+  // files (the checked tree).
+  const engineCode = new Set<string>();
+  for (const root of lintEngineRoots(closures, code)) {
+    for (const f of closures.of(root, new Set())) engineCode.add(f);
+  }
   const engineConfig = view.files().filter(isEngineConfigFile);
   const engine = new Set([...engineCode, ...engineConfig]);
   const engineFp = sha256(

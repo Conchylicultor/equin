@@ -91,7 +91,7 @@ for (let i = 0; i < files.length; i += chunk) {
     declaredUtilities: declared,
   });
   // One engine per program: its typed configs hold the program.
-  const engine = createLintEngine(root);
+  const engine = createLintEngine(root, readDeclaredUtilities(root));
   for (const { rel, code } of batch) {
     const file = join(root, rel);
     const expected = linter

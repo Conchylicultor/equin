@@ -29,7 +29,6 @@ import { Linter } from "eslint";
 import {
   buildLintConfig,
   loadLintContributions,
-  readDeclaredUtilities,
 } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 import type { ReplayedProblem } from "@plugins/framework/plugins/tooling/plugins/lint/core";
 import { LINT_GROUP_BASE, type RawLintMessage } from "../core";
@@ -86,21 +85,27 @@ export interface LintEngine {
   ): Promise<Map<string, LintOut>>;
 }
 
-export function createLintEngine(root: AppPath): LintEngine {
+/**
+ * `declaredUtilities` is the stylesheet's `@utility` set every config is built
+ * with — what `lintDataKey` keyed the run's results on — read by the caller
+ * (`readDeclaredUtilities`) and handed in as data: this module is lint engine
+ * by its import closure (`check/lint-groups.ts` roots the engine at every
+ * module importing ESLint), so it reads no file, and the file reader stays out
+ * of every lint key.
+ */
+export function createLintEngine(
+  root: AppPath,
+  declaredUtilities: ReadonlySet<string>,
+): LintEngine {
   // A rule id's namespace is its contribution's `name`; anything else (the
   // config builder's own typescript-eslint / react-hooks / core rules) and a
   // null id (the linter itself: a parse failure) belong to the base group.
   // Loaded on the first file that lints: a run with nothing to lint (most)
   // never pays for the rules.
   let groupOfNamespace: Map<string, string> | undefined;
-  // The stylesheet's `@utility` set every config is built with, read once —
-  // what `lintDataKey` keyed this run's results on.
-  let declared: ReadonlySet<string> | undefined;
-  const declaredUtilities = (): ReadonlySet<string> =>
-    (declared ??= readDeclaredUtilities(root));
   const loadGroups = async (): Promise<void> => {
     groupOfNamespace ??= new Map(
-      (await loadLintContributions(declaredUtilities())).map(
+      (await loadLintContributions(declaredUtilities)).map(
         (c) => [c.name, c.relPath] as const,
       ),
     );
@@ -149,7 +154,7 @@ export function createLintEngine(root: AppPath): LintEngine {
               root,
               typeSource: { replayed: { answers } },
               exemptions: { mode: "report" },
-              declaredUtilities: declaredUtilities(),
+              declaredUtilities,
             })
           : buildLintConfig({
               root,
@@ -158,7 +163,7 @@ export function createLintEngine(root: AppPath): LintEngine {
                   ? { none: true }
                   : { programs: [program!] },
               exemptions: { mode: "report" },
-              declaredUtilities: declaredUtilities(),
+              declaredUtilities,
               rules: {
                 base: groups.includes(LINT_GROUP_BASE),
                 contributions: new Set(groups),
