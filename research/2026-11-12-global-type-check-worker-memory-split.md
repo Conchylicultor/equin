@@ -190,3 +190,71 @@ whole-tree re-lint for no measured gain.
   export), so register it where the lint hook receives it.
 - **For peaks, sample RSS from outside**, at 1 s. In-process
   `memoryUsage().rss` at phase marks misses the transient peaks.
+
+## The rule edit's remaining ~2 GB, split (2026-11-13, task-1794578922)
+
+After the job stopped shipping every file's typed keys, a one-line edit of one
+syntactic rule (`no-global-declaration-in-source`) still read **maxRSS
+1.9–2.1 GB** with ~0.36 GB live at the start of the syntactic phase. Replayed on
+a captured job (incremental walk, program 1: 1–2 sources + 90–104 `.d.ts` +
+559 env), resident size and physical footprint sampled every 50 ms from
+outside (`proc_pid_rusage`), heap probes (`Bun.gc(true)` + `heapStats()`) in a
+copy of the worker:
+
+| part of the ~1.8 GB maxRSS (replay) | size | what it is |
+| --- | --- | --- |
+| not charged by the kernel | ~0.55 GB | allocator pages already freed (`vmmap`: JSC/bmalloc `Memory Tag 240` resident 1.4 GB, dirty 0.94 GB) — counted in resident size until the kernel takes them back, never in the footprint |
+| shared library text | ~0.1 GB | file-backed, shared |
+| **physical footprint** | **1.11–1.17 GB** | JSC heap capacity ~1.0 GB + ~0.15 GB extra memory |
+| of which live at the syntactic phase | 0.36 GB (0.42 at its end) | the program's scope (largest dominator), JIT code and structures, the job's decisions |
+
+So **maxRSS over-states the worker by ~0.65 GB**; the footprint is what the
+host pays. The footprint is heap pacing over what is live: JSC lets a heap of
+H grow to (1 + 2·e^(−2H/4 GB))·H ≈ 2.6 × 0.4 GB ≈ 1.05 GB, the capacity
+measured. One factor at a time:
+
+| factor | footprint peak | worker CPU (replay, E-cores) |
+| --- | --- | --- |
+| pacing default (64 GB) | 1.42–1.61 GB | 90–113 s |
+| **pacing 4 GB (current)** | **1.15–1.17 GB** | 82–112 s |
+| pacing 2 GB | 1.21 GB | 100 s |
+| pacing 1 GB | 1.03 GB | 130 s |
+| typed engine and its configs dropped before the phase | 1.16 GB | — (program still alive) |
+| a second `createProgram` before the phase | 1.25 GB | — (program still alive) |
+| syntactic groups before the program, verdicts after | 1.01 GB | — |
+| **syntactic groups and carried verdicts before the program** | **0.58 GB** | same |
+
+- **Pacing is not the lever**: 4 GB is the knee (lower buys ≤0.1 GB for
+  +30–50 % CPU).
+- **The program cannot be freed in-process.** A heap snapshot at the
+  syntactic phase: the largest dominator is `createProgram`'s closure scope
+  (its `files` → every SourceFile), retained by `FunctionCodeBlock`s that are
+  GC roots (JSC's optimized code of its inner functions: `processSourceFile`,
+  `findSourceFile`, `toPath3`, …). Dropping every reference of ours, and
+  invalidating a singleton scope with a second `createProgram`, both leave it
+  alive (WeakRef after a full GC).
+- **The ~470 directive verdicts matter as much as the 16.3k syntactic
+  parses**: each runs every rule over the file, so with the program alive they
+  alone regrow the heap to ~1 GB.
+
+**Fixed:** what needs no program and no result key runs before the type check
+builds one (`LintDecisions.beforeProgram`): every stale syntactic group (a
+function of the text and the groups), and — when the verdicts moved and no raw
+part did — every carried directive file's verdict from the base's raw parts.
+A verdict is a function of its text and the raw messages it replays, so the
+answer uses an early one only for the same raw messages (a file whose key
+moved is combined again: exact by construction). A batch is not asked again
+for a syntactic group that already ran.
+
+Real check runs, same incremental rule-edit shape, alternating code:
+
+| | maxRSS | worker CPU (lint) |
+| --- | --- | --- |
+| before | 1.9, 2.0 GB | 31.6 s (29.0), 31.4 s (28.6) |
+| after | 1.4, 1.3, 1.4 GB | 30.5 s (28.7), 29.7 s (27.8), 31.0 s (29.1) |
+
+Replayed: footprint 1.11–1.17 → 0.61–0.63 GB. Results: the same captured job
+through the old and the new worker gives the same 16,770 lint results, lint
+keys and tsc output. What is left of the footprint is the program phase itself
+(~0.4 GB live) and the early phase (~0.42 GB for 16.3k parses with ~0.1 GB
+live).

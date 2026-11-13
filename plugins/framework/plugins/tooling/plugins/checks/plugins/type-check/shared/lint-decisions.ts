@@ -28,6 +28,17 @@
 // key of every job and of every base file decided: what the check keys typed
 // results by, and records in the next base.
 //
+// What needs neither a program nor a result key is named apart
+// (`beforeProgram`): every stale syntactic group, and the verdict of every
+// carried directive file whose raw parts are the base's. The worker runs it
+// before the type check builds any program, because a program, once built,
+// stays alive to the end of the process (JSC's optimized code of
+// `createProgram`'s inner functions holds its scope), and the collector paces
+// the heap at a multiple of what is live: a syntactic rule edit's ~16.5k
+// parses and ~470 verdicts after the program grew the worker to ~1.15 GB of
+// footprint, before it to ~0.6 GB, same results
+// (research/2026-11-12-global-type-check-worker-memory-split.md).
+//
 // A directive file's typed parts are raw (`TypedParts`): decided like a split
 // file's, in a program. Its verdict (`TypedParts.all`, keyed on R too) is
 // decided in `answer`, once R is known, and runs with NO program when its key
@@ -98,6 +109,20 @@ export interface LintDecisions {
    * file the base carries with a moved typed part.
    */
   jobs: readonly string[];
+  /**
+   * What runs with no program and under no result key, to run before the type
+   * check builds a program: the stale syntactic groups of every target that
+   * has some (a pure function of the text and the groups), and — when the
+   * verdicts moved and no raw part did — every carried directive file's
+   * verdict from the base's raw parts. A verdict is a function of the text
+   * and the raw messages it replays, so the worker uses an early one only
+   * when `answer` hands `combined` the same raw messages (the file's key
+   * stayed the base's); otherwise it is combined again.
+   */
+  beforeProgram(): {
+    syntactic: LintTarget[];
+    verdicts: { target: LintTarget; raw: RawLintMessage[] }[];
+  };
   /** What a path is linted as under result key `r`, if anything of it runs. */
   jobOf(path: string, r: string): LintTarget | undefined;
   /**
@@ -368,9 +393,33 @@ export function createLintDecisions(input: LintDecisionsInput): LintDecisions {
     };
   };
 
+  /** A carried directive file's raw messages under the base's key. */
+  const baseRaw = (b: BaseFileKey): RawLintMessage[] =>
+    partsOf("whole").flatMap((p) => b.w?.[p.group] ?? []);
+
   return {
     idle: byRel.size === 0 && base === undefined,
     jobs: [...byRel.keys(), ...programPaths],
+    beforeProgram() {
+      const syntactic: LintTarget[] = [];
+      const verdicts: { target: LintTarget; raw: RawLintMessage[] }[] = [];
+      for (const [path, f] of byRel) {
+        const { target } = ofJob(path, f);
+        if (target.unit === "split" && target.syntactic.length > 0) {
+          syntactic.push(target);
+        }
+      }
+      for (const path of carriedPaths) {
+        const b = base!.get(path)!;
+        const target = targetOf(path, b);
+        if (target.unit === "split") {
+          if (target.syntactic.length > 0) syntactic.push(target);
+        } else if (moved!.all && movedRaw.size === 0) {
+          verdicts.push({ target, raw: baseRaw(b) });
+        }
+      }
+      return { syntactic, verdicts };
+    },
     jobOf: (path, r) => decide(path, r)?.target,
     speculative(path) {
       const f = byRel.get(path);

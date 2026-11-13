@@ -188,6 +188,34 @@ async function lintRunner(job: Job, view: RepoView) {
   const read = (file: string): string => view.readText(rel(job.root, file));
   const counts = { typed: 0, syntactic: 0 };
 
+  // Before the type check builds any program: everything that needs neither
+  // a program nor a result key (`LintDecisions.beforeProgram`). A program
+  // stays alive to the end of this process — JSC's optimized code of
+  // `createProgram`'s inner functions holds its scope, whatever we drop —
+  // and the collector lets the heap grow to a multiple of what is live, so
+  // ~16.5k syntactic parses run after it cost the footprint of that multiple
+  // of the program (research/2026-11-12-global-type-check-worker-memory-split.md).
+  const early = decisions.beforeProgram();
+  /** Syntactic groups run before any program, by repo path. */
+  const earlySyntactic = new Map<string, Record<string, RawLintMessage[]>>();
+  for (const t of early.syntactic) {
+    earlySyntactic.set(
+      rel(job.root, t.file),
+      await engine.syntactic(t.file, read(t.file), t.syntactic),
+    );
+  }
+  // A verdict is a function of the text and the raw messages it replays: one
+  // run early is the answer only for the same raw messages.
+  const verdictKey = (file: string, raw: readonly RawLintMessage[]): string =>
+    `${file}\n${JSON.stringify(raw)}`;
+  const earlyVerdicts = new Map<string, RawLintMessage[]>();
+  for (const { target, raw } of early.verdicts) {
+    earlyVerdicts.set(
+      verdictKey(target.file, raw),
+      await engine.combined(target.file, read(target.file), raw),
+    );
+  }
+
   const hook: LintHook = {
     wants: (path, r) => decisions.wants(path, r),
     async run(program, files) {
@@ -218,7 +246,11 @@ async function lintRunner(job: Job, view: RepoView) {
       if (f === undefined) return undefined;
       return {
         unit: f.unit,
-        syntactic: f.unit === "split" ? [...f.syntactic] : [],
+        // Not again in a batch what already ran before the program.
+        syntactic:
+          f.unit === "split" && !earlySyntactic.has(path)
+            ? [...f.syntactic]
+            : [],
         typed: decisions.typedGroups(f),
       };
     },
@@ -282,13 +314,16 @@ async function lintRunner(job: Job, view: RepoView) {
         typedOut,
         async (f) => {
           counts.syntactic++;
-          const ran = syntacticRan.get(rel(job.root, f.file));
+          const path = rel(job.root, f.file);
+          const ran = earlySyntactic.get(path) ?? syntacticRan.get(path);
           if (ran !== undefined) return ran;
           return engine.syntactic(f.file, read(f.file), f.syntactic);
         },
         (f, raw) => {
           // A directive file's verdict: syntactic lint with no program.
           counts.syntactic++;
+          const ran = earlyVerdicts.get(verdictKey(f.file, raw));
+          if (ran !== undefined) return Promise.resolve(ran);
           return engine.combined(f.file, read(f.file), raw);
         },
       ),
@@ -446,7 +481,9 @@ async function run(job: Job): Promise<Result> {
   // 2. The two programs, with typed lint inside them — walking from the
   //    walk base (`./walk-base.ts`) when there is one.
   const engine = tscEngineFp(job.root, options);
+  const lintStart = cpuSeconds();
   const lint = await lintRunner(job, view);
+  lintCpu += cpuSeconds() - lintStart;
   const timedHook: LintHook | undefined = lint.hook && {
     wants: lint.hook.wants,
     async run(program, files) {

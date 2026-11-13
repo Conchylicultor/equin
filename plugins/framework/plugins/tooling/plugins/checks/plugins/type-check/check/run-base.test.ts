@@ -49,6 +49,7 @@ import { computeTreeHash } from "@plugins/framework/plugins/tooling/plugins/chec
 import {
   LINT_GROUP_ALL,
   LINT_GROUP_BASE,
+  type LintTarget,
   type RawLintMessage,
   type TypedPartOutcome,
 } from "../core";
@@ -197,6 +198,12 @@ interface Worked {
   syntactic: string[];
   typed: string[];
   combined: string[];
+  /**
+   * Of the syntactic and combined runs, the ones the answer had to make
+   * after the type check — everything else ran before any program
+   * (`LintDecisions.beforeProgram`), as the worker runs it.
+   */
+  afterProgram: string[];
 }
 
 /**
@@ -248,6 +255,52 @@ async function work(plan: Plan): Promise<Worked> {
     rel: (abs) => relative(root, abs),
     abs: (p) => join(root, p),
   });
+  const syntactic: string[] = [];
+  const combined: string[] = [];
+  const afterProgram: string[] = [];
+  const runSyntactic = (f: LintTarget): Record<string, RawLintMessage[]> => {
+    const rel = relative(root, f.file);
+    syntactic.push(rel);
+    const text = readRel(rel);
+    return Object.fromEntries(
+      f.syntactic.map((g) => [
+        g,
+        lintMessages(text, { kind: "syntactic", group: g }, firstTyped),
+      ]),
+    );
+  };
+  const runCombined = (
+    f: LintTarget,
+    raw: readonly RawLintMessage[],
+  ): RawLintMessage[] => {
+    const rel = relative(root, f.file);
+    combined.push(rel);
+    const text = readRel(rel);
+    return [
+      ...lintMessages(
+        text,
+        { kind: "syntactic", group: LINT_GROUP_ALL },
+        firstTyped,
+      ),
+      ...raw,
+    ];
+  };
+  // Before any program, as the worker: what needs no program and no key.
+  const early = decisions.beforeProgram();
+  const earlySyntactic = new Map(
+    early.syntactic.map((t) => [t.file, runSyntactic(t)] as const),
+  );
+  const verdictKey = (file: string, raw: readonly RawLintMessage[]) =>
+    `${file}\n${JSON.stringify(raw)}`;
+  const earlyVerdicts = new Map(
+    early.verdicts.map(
+      (v) =>
+        [
+          verdictKey(v.target.file, v.raw),
+          runCombined(v.target, v.raw),
+        ] as const,
+    ),
+  );
   const ran = new Map<string, TypedPartOutcome[]>();
   const typed: string[] = [];
   for (const [path, r] of keys) {
@@ -264,36 +317,20 @@ async function work(plan: Plan): Promise<Worked> {
       })),
     );
   }
-  const syntactic: string[] = [];
-  const combined: string[] = [];
   const { results, lintKeys } = await decisions.answer(
     keys,
     ran,
     (f) => {
-      const rel = relative(root, f.file);
-      syntactic.push(rel);
-      const text = readRel(rel);
-      return Promise.resolve(
-        Object.fromEntries(
-          f.syntactic.map((g) => [
-            g,
-            lintMessages(text, { kind: "syntactic", group: g }, firstTyped),
-          ]),
-        ),
-      );
+      const done = earlySyntactic.get(f.file);
+      if (done !== undefined) return Promise.resolve(done);
+      afterProgram.push(relative(root, f.file));
+      return Promise.resolve(runSyntactic(f));
     },
     (f, raw) => {
-      const rel = relative(root, f.file);
-      combined.push(rel);
-      const text = readRel(rel);
-      return Promise.resolve([
-        ...lintMessages(
-          text,
-          { kind: "syntactic", group: LINT_GROUP_ALL },
-          firstTyped,
-        ),
-        ...raw,
-      ]);
+      const done = earlyVerdicts.get(verdictKey(f.file, raw));
+      if (done !== undefined) return Promise.resolve(done);
+      afterProgram.push(relative(root, f.file));
+      return Promise.resolve(runCombined(f, raw));
     },
   );
   return {
@@ -302,6 +339,7 @@ async function work(plan: Plan): Promise<Worked> {
     syntactic: syntactic.sort(),
     typed: typed.sort(),
     combined: combined.sort(),
+    afterProgram: afterProgram.sort(),
   };
 }
 
@@ -449,6 +487,9 @@ test(
     // ... and none needs a program: the type check keys none of them.
     expect(worked.jobs).toEqual([]);
     expect(worked.syntactic).toEqual([A, B, CLEAN, V].sort());
+    // ... all of it before any program: the verdict's raw parts are the
+    // base's, so nothing waited for the type check.
+    expect(worked.afterProgram).toEqual([]);
     for (const r of worked.outcome.lint) {
       expect(Object.keys(r.syntactic)).toEqual(
         r.unit === "split" ? [group] : [],
@@ -517,6 +558,8 @@ test(
       expect(r.typed.filter((p) => p.kind === "cached")).toEqual([]);
     }
     expect(worked.combined).toEqual([D]);
+    // Its raw typed part moved, so its verdict waits for the program's.
+    expect(worked.afterProgram).toEqual([D]);
     const done = await moved.finalize(worked.outcome);
     expect(done.lintViolations).toBe(before.done.lintViolations);
     expect(done.lintLine).toContain(
