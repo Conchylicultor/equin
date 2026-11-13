@@ -10,7 +10,13 @@ import { granted } from "@plugins/tasks/plugins/orchestration/plugins/mandate/se
 import { flagRaise } from "@plugins/conversations/plugins/conversation-view/plugins/push-and-exit/plugins/capabilities/core";
 import { exitCleanFinalizeJob } from "./exit-clean-finalize-job";
 import { _conversationFlags } from "./tables";
-import { conversationFlagIdKind } from "../../core";
+import {
+  conversationFlagIdKind,
+  FLAG_ITEM_MAX_CHARS,
+  FLAG_MAX_ITEMS,
+  FlagItemsSchema,
+  FlagSchema,
+} from "../../core";
 import { conversationFlagRaised } from "./tables-events";
 
 // `exit_clean` and `flag_raise` are the model-facing terminus of the
@@ -57,30 +63,42 @@ Call it when the user asks you to wrap up (the push-and-exit prompt or an explic
 export const flagRaiseTool = Mcp.tool({
   name: "flag_raise",
   when: granted(flagRaise),
-  description:
-    "Signal that the push-and-exit flow finished but something needs the user's attention (called instead of `exit_clean`).",
+  description: `Raise a flag: your work is over, but the user must act on or decide something (the push didn't land, a failure you could not resolve, a choice only they can make). The conversation stays open for them, and whoever watches your task is told.
+
+The user reads \`items\` at a glance, without the context you have. Each item is one plain sentence saying what needs them ("Some database tests fail, probably not from this change"), never how you found it: no ids, paths, error text or jargon. Put that evidence in \`details\`, along with any note that needs no action. If nothing needs the user, call \`exit_clean\` instead, even if you have notes: they belong in your wrap-up.
+
+Call it in response to the push-and-exit prompt, or whenever your instructions tell you to raise a flag.`,
   inputSchema: {
-    reason: z
+    items: FlagItemsSchema.describe(
+      `What the user must act on or decide, one per item (at most ${FLAG_MAX_ITEMS}, ${FLAG_ITEM_MAX_CHARS} characters each): a plain sentence they understand at a glance, with no ids, paths, error text or jargon.`,
+    ),
+    details: z
       .string()
-      .min(1)
+      .optional()
       .describe(
-        "Bullet points of the items which require human attention. This field should not contain things that landed or went well.",
+        "The evidence behind the items (errors, ids, paths, what you checked) and notes that need no action. Shown folded under the items.",
       ),
   },
-  async handler({ reason }, { conversationId }) {
+  async handler({ items, details }, { conversationId }) {
     const conversation = await getConversation(conversationId);
     if (conversation === null)
       throw new Error(`Conversation ${conversationId} not found.`);
     const { taskId } = conversation;
+    // An empty `details` is no details.
+    const flag = FlagSchema.parse({
+      items,
+      details: details?.trim() ? details : null,
+    });
     await db.transaction(async (tx) => {
       await tx.insert(_conversationFlags).values({
         id: conversationFlagIdKind.mint(),
         conversationId,
         taskId,
-        reason,
+        items: flag.items,
+        details: flag.details,
       });
       await conversationFlagRaised.emit(
-        { conversationId, taskId, reason },
+        { conversationId, taskId, items: flag.items, details: flag.details },
         { tx: tx as unknown as EmitTx },
       );
     });

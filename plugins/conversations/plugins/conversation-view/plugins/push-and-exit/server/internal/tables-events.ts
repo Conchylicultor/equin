@@ -4,7 +4,10 @@ import { defineTriggerEvent } from "@plugins/infra/plugins/events/server";
 export interface ConversationFlagRaisedPayload {
   conversationId: string;
   taskId: string;
-  reason: string;
+  /** What the user must act on (`Flag.items`). */
+  items: string[];
+  /** The evidence behind them, when the agent gave any. */
+  details: string | null;
   [key: string]: unknown;
 }
 

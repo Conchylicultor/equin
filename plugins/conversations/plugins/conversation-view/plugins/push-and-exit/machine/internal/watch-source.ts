@@ -10,7 +10,7 @@ export const flagWatchSource = watchSource({
       kind: "flagged",
       taskId: p.taskId,
       actorConversationId: p.conversationId,
-      summary: p.reason,
+      summary: p.items.join("\n"),
     },
   ],
 });

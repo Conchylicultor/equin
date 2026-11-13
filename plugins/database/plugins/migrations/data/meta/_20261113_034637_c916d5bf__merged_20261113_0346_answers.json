@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "answers": [
+    {
+      "key": "column:conversation_flags.items",
+      "entityType": "column",
+      "entityName": "items",
+      "action": "create"
+    },
+    {
+      "key": "column:conversation_flags.details",
+      "entityType": "column",
+      "entityName": "details",
+      "action": "create"
+    }
+  ]
+}

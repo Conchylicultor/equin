@@ -19228,12 +19228,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `primitives/css/text.Text`
                   - Cross-plugin:
                     - Uses tokens: `ui/tokens/color-palette --destructive`
-                - **`flag-raise`** — Renders flag_raise MCP tool calls with the flagged reason displayed as a warning banner.
+                - **`flag-raise`** — Renders flag_raise MCP tool calls as a warning banner: the items the user must act on, and the details folded under them (or, for a flag raised before the split, its one reason).
                   - Web:
                     - Contributes: `renderer` "flag_raise$" → `ParsedToolView`
                     - Uses:
                       - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
                       - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`
+                      - `primitives/collapsible.Collapsible`
+                      - `primitives/collapsible.CollapsibleChevron`
+                      - `primitives/collapsible.CollapsibleContent`
+                      - `primitives/collapsible.CollapsibleTrigger`
                       - `primitives/css/rigid.rigidClass`
                       - `primitives/css/spacing.FirstLine`
                       - `primitives/css/spacing.Stack`
@@ -19243,9 +19247,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - Cross-plugin:
                     - Uses tokens:
                       - `ui/tokens/color-palette --destructive`
+                      - `ui/tokens/color-palette --muted-foreground`
                       - `ui/tokens/color-palette --warning`
                       - `ui/tokens/density --space-md`
                       - `ui/tokens/density --space-sm`
+                      - `ui/tokens/density --space-xs`
                       - `ui/tokens/shape --radius`
                       - `ui/tokens/shape --spacing`
                 - **`orchestration-tools`** — Renders the task-orchestration MCP tool calls an agent manages its task tree with: edit_task (the task's chip and the edit in words — renamed, prerequisites added or removed, armed or disarmed; the new title, description and dependency chips inside), drop_task (the dropped task's chip), task_tree (the tree as the agent read it — status icon, title, track and start words, indented, each row opening the task), list_agents (each agent's standing dot, task title and standing, each row opening its conversation) and message_agent (the recipient's chip, the message's first line, then the message and how it was delivered). A refusal turns the card to its error tone and shows the tool's reason.
@@ -20390,7 +20396,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `mandateCapability` "push.policy"
               - `watchSource` "flag"
               - `trigger` "watch.ingest"
-            - Uses: 22 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/push-and-exit/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/push-and-exit/REFERENCE.md)
+            - Uses: 23 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/push-and-exit/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/push-and-exit/REFERENCE.md)
               - `tasks/tasks-core` ×5
               - `conversations` ×3
               - `config_v2` ×2
@@ -20398,6 +20404,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/endpoints` ×2
               - `tasks/orchestration/mandate` ×2
               - `conversations/conversation-view/drop-and-exit.dropTaskOnExit`
+              - `database/sql-column.parsedJson`
               - `database.db`
               - `infra/events.defineTriggerEvent`
               - `infra/jobs.defineJob`
@@ -20419,10 +20426,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `hints.defineHint`
               - `hints.defineHintAnchor`
               - `ids.defineIdKind`
+            - Exports (types): `Flag`
             - Exports (values):
               - `closeHint`
               - `conversationFlagIdKind`
               - `dropAndCloseHint`
+              - `FLAG_ITEM_MAX_CHARS`
+              - `FLAG_MAX_ITEMS`
+              - `FlagItemsSchema`
+              - `FlagSchema`
               - `goHint`
               - `mainActionAnchor`
               - `pushAndCloseHint`
@@ -23421,11 +23433,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens: `ui/tokens/color-palette --muted-foreground`
     - **`sql-column`** — Decoded columns: `parsedText` / `parsedJson` derive a column's type from a zod schema that really decodes it — on every read and every write — so a column can no longer declare a string-literal union, or a jsonb shape, that nothing verifies. `withWire` declares a column type's JSON wire form (a codec applied in JS by whatever projects the column onto the wire), carried on the built column's type so a row schema must match it.
       - Cross-plugin:
-        - Imported by: 27 plugins — full list in [`plugins/database/plugins/sql-column/REFERENCE.md`](../plugins/database/plugins/sql-column/REFERENCE.md)
+        - Imported by: 28 plugins — full list in [`plugins/database/plugins/sql-column/REFERENCE.md`](../plugins/database/plugins/sql-column/REFERENCE.md)
           - `apps` ×7
           - `fields` ×5
           - `infra` ×4
-          - `conversations` ×2
+          - `conversations` ×3
           - `debug` ×2
           - `network` ×2
           - `database/table-mirror/replica`
@@ -46650,8 +46662,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-size-caption`
           - `ui/tokens/type-scale --font-weight-normal`
           - `ui/tokens/type-scale --line-height-caption`
-        - Imported by: 58 plugins — full list in [`plugins/primitives/plugins/collapsible/REFERENCE.md`](../plugins/primitives/plugins/collapsible/REFERENCE.md)
-          - `conversations` ×13
+        - Imported by: 59 plugins — full list in [`plugins/primitives/plugins/collapsible/REFERENCE.md`](../plugins/primitives/plugins/collapsible/REFERENCE.md)
+          - `conversations` ×14
           - `apps` ×12
           - `ui` ×12
           - `primitives` ×8

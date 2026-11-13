@@ -4,12 +4,16 @@
 
 ## Plugin reference
 
-- Description: Renders flag_raise MCP tool calls with the flagged reason displayed as a warning banner.
+- Description: Renders flag_raise MCP tool calls as a warning banner: the items the user must act on, and the details folded under them (or, for a flag raised before the split, its one reason).
 - Web:
   - Contributes: `renderer` "flag_raise$" → `ParsedToolView`
   - Uses:
     - `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`
     - `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`
+    - `primitives/collapsible.Collapsible`
+    - `primitives/collapsible.CollapsibleChevron`
+    - `primitives/collapsible.CollapsibleContent`
+    - `primitives/collapsible.CollapsibleTrigger`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/spacing.FirstLine`
     - `primitives/css/spacing.Stack`
@@ -19,9 +23,11 @@
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --destructive`
+    - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/color-palette --warning`
     - `ui/tokens/density --space-md`
     - `ui/tokens/density --space-sm`
+    - `ui/tokens/density --space-xs`
     - `ui/tokens/shape --radius`
     - `ui/tokens/shape --spacing`
 

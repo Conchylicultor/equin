@@ -8,7 +8,7 @@ import {
 
 export default {
   description:
-    "Renders flag_raise MCP tool calls with the flagged reason displayed as a warning banner.",
+    "Renders flag_raise MCP tool calls as a warning banner: the items the user must act on, and the details folded under them (or, for a flag raised before the split, its one reason).",
   contributions: [
     JsonlViewerTool.Renderer({
       match: /flag_raise$/,

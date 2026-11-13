@@ -42,7 +42,7 @@
     - `mandateCapability` "push.policy"
     - `watchSource` "flag"
     - `trigger` "watch.ingest"
-  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `tasks/tasks-core` ×5
     - `conversations` ×3
     - `config_v2` ×2
@@ -50,6 +50,7 @@
     - `infra/endpoints` ×2
     - `tasks/orchestration/mandate` ×2
     - `conversations/conversation-view/drop-and-exit.dropTaskOnExit`
+    - `database/sql-column.parsedJson`
     - `database.db`
     - `infra/events.defineTriggerEvent`
     - `infra/jobs.defineJob`
@@ -71,10 +72,15 @@
     - `hints.defineHint`
     - `hints.defineHintAnchor`
     - `ids.defineIdKind`
+  - Exports (types): `Flag`
   - Exports (values):
     - `closeHint`
     - `conversationFlagIdKind`
     - `dropAndCloseHint`
+    - `FLAG_ITEM_MAX_CHARS`
+    - `FLAG_MAX_ITEMS`
+    - `FlagItemsSchema`
+    - `FlagSchema`
     - `goHint`
     - `mainActionAnchor`
     - `pushAndCloseHint`
