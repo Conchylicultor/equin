@@ -1,7 +1,5 @@
 import { z } from "zod";
 
-/** The most items one flag holds: what needs the user, never a report. */
-export const FLAG_MAX_ITEMS = 4;
 /** The longest item: one plain sentence, read at a glance. */
 export const FLAG_ITEM_MAX_CHARS = 100;
 
@@ -10,15 +8,14 @@ export const FLAG_ITEM_MAX_CHARS = 100;
  * `conversation_flags` row, the `conversation.flagRaised` payload):
  *
  * - `items` — what the user must act on or decide, one plain sentence each,
- *   read at a glance with no context. Bounded in count and length, so a flag
- *   cannot be a wall of text.
+ *   read at a glance with no context. Each is bounded in length, so an item
+ *   cannot be a paragraph; how many there are is what the work left.
  * - `details` — the evidence behind them (errors, ids, paths, what was
  *   checked) and notes that need no action; drawn folded.
  */
 export const FlagItemsSchema = z
   .array(z.string().trim().min(1).max(FLAG_ITEM_MAX_CHARS))
-  .min(1)
-  .max(FLAG_MAX_ITEMS);
+  .min(1);
 
 export const FlagSchema = z.object({
   items: FlagItemsSchema,

@@ -13,7 +13,6 @@ import { _conversationFlags } from "./tables";
 import {
   conversationFlagIdKind,
   FLAG_ITEM_MAX_CHARS,
-  FLAG_MAX_ITEMS,
   FlagItemsSchema,
   FlagSchema,
 } from "../../core";
@@ -70,7 +69,7 @@ The user reads \`items\` at a glance, without the context you have. Each item is
 Call it in response to the push-and-exit prompt, or whenever your instructions tell you to raise a flag.`,
   inputSchema: {
     items: FlagItemsSchema.describe(
-      `What the user must act on or decide, one per item (at most ${FLAG_MAX_ITEMS}, ${FLAG_ITEM_MAX_CHARS} characters each): a plain sentence they understand at a glance, with no ids, paths, error text or jargon.`,
+      `What the user must act on or decide, one per item (at most ${FLAG_ITEM_MAX_CHARS} characters each): a plain sentence they understand at a glance, with no ids, paths, error text or jargon.`,
     ),
     details: z
       .string()

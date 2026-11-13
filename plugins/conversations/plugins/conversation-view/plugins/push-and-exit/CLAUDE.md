@@ -78,7 +78,6 @@
     - `conversationFlagIdKind`
     - `dropAndCloseHint`
     - `FLAG_ITEM_MAX_CHARS`
-    - `FLAG_MAX_ITEMS`
     - `FlagItemsSchema`
     - `FlagSchema`
     - `goHint`

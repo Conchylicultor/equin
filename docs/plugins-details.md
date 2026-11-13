@@ -20432,7 +20432,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversationFlagIdKind`
               - `dropAndCloseHint`
               - `FLAG_ITEM_MAX_CHARS`
-              - `FLAG_MAX_ITEMS`
               - `FlagItemsSchema`
               - `FlagSchema`
               - `goHint`
