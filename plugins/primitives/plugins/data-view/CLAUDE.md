@@ -1101,7 +1101,8 @@ new plugin (`capsule-toolbar`, `floating-toolbar`).
   size-contained band loses intrinsic width) the theme may narrow search / drop
   create words; no-op by default.
 - **Parts** (`dataPart`, core `DATA_VIEW_PARTS`): `dv.toolbar`, `dv.views-pill`,
-  `dv.view-chip` / `dv.view-chip-active`, `dv.view-add`, `dv.tools-pill`,
+  `dv.view-chip` / `dv.view-chip-active`, `dv.view-add`, `dv.quick-filters`,
+  `dv.tools-pill`,
   `dv.search`, `dv.control`, `dv.pill-divider`, `dv.create` — compare-tool selectors.
 
 ```ts
@@ -1120,6 +1121,7 @@ interface ToolbarArrangement {
 interface ToolbarParts {
   title;
   switcher: { strip; chip };
+  quickFilters; // null when the surface declares none
   search;
   query;
   controls;
@@ -1151,6 +1153,37 @@ interface ToolbarParts {
   hover (`CompactControls frame`).
 - **`spaceBelow`** renders as a sibling after the sticky band (scrolls away), dropped
   in compact. Views never pad their own top for a toolbar.
+
+### Quick filters (`quickFilters`)
+
+One-click toggles over the active view's filter — "whose visits:
+Visitors / You / All". `DataViewBaseProps.quickFilters?: QuickFilter[]`
+(core: `{ id, fieldId, label, options: { id, label, rule: { operatorId,
+value? } | null }[] }`), declared with the rows (a `DataViewSwitcher` source
+declares its own, over its own fields).
+
+- **A view onto the filter, never a second filter**
+  (`web/internal/quick-filter.ts`): the selected option is DERIVED
+  (`activeQuickOption`: the field's one top-level rule under an `and` root
+  equals an option's rule — operand compared canonically — or there is none,
+  the `rule: null` option); a pick rewrites the tree (`applyQuickOption`: the
+  field's top-level rules dropped, the option's rule in the first one's place
+  with its id — so picking the saved option back is a clean draft; an `or`
+  root wrapped in `and`; an empty tree is `null`) through the same
+  `FilterController.setFilter` the Filter panel uses. A pick is a draft under
+  `viewEdits: "draft"` and counts in the Filter badge.
+- **Custom state**: a rule no option names (hand-edited, nested, under `or`)
+  selects no segment (`SegmentedControl value={null}`).
+- **Rendered by the host** (`web/components/toolbar/quick-filters.tsx`, one
+  `SegmentedControl` each, read from `useDataViewControls()`), placed by the
+  arrangement as `ToolbarParts.quickFilters`: `PillsToolbar` in its own pill
+  (`dv.quick-filters`) on a row of its own UNDER the views and tools pills
+  (they narrow the view the row above picked — never squeezed between them),
+  the capsule after its chip. On a band the groups are parted by the pill divider
+  (`layout: "row"`); a panel stacks them (`"column"`). The
+  compact fold, a hosted frame's options and a section's `⋯` show them on the
+  options panel's first page, under the search.
+- A quick filter naming a field the schema lacks throws.
 
 ### Floating chrome: `overlay` arrangements and the `aside`
 
@@ -2711,6 +2744,8 @@ restyled 20.6k elements before, 10.4k after (`fullscreen-budget` cases unchanged
     - `PlacementSpec`
     - `PresetId`
     - `PropertyEntry`
+    - `QuickFilter`
+    - `QuickFilterOption`
     - `Recipe`
     - `RecipeRule`
     - `RowDragConfig`

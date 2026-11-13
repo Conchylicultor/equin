@@ -11,6 +11,7 @@ import { useDataViewControls } from "../controls/controls-context";
 import { DataViewControlPanel } from "./control-panel-host";
 import type { ToolbarControls } from "./use-toolbar-controls";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import type { SlotLayout } from "../../internal/slot-layout";
 import { ROUND_AT_REST } from "./round-form";
@@ -52,6 +53,7 @@ export function CompactControls({
   controls,
   searching,
   search,
+  quickFilters,
   revealOnHover = true,
   form = "ghost",
   frame,
@@ -70,6 +72,9 @@ export function CompactControls({
   searching: boolean;
   /** The search field, rendered full-width at the top of the first page. */
   search?: ReactNode;
+  /** The surface's quick filters (`ToolbarParts.quickFilters`), on the
+   *  first page under the search — the fold hides the band they sit in. */
+  quickFilters?: ReactNode;
   /**
    * `false` keeps the trigger visible at rest. The compact fold hides it until
    * the bar is pointed at (below); an arrangement that folds its controls to
@@ -172,7 +177,11 @@ export function CompactControls({
         )
       }
     >
-      <CompactRootPanel controls={controls} search={search} />
+      <CompactRootPanel
+        controls={controls}
+        search={search}
+        quickFilters={quickFilters}
+      />
     </ControlPanelPopover>
   );
   return frame === undefined ? popover : frame(popover, revealClass);
@@ -187,15 +196,23 @@ export function CompactControls({
 export function CompactRootPanel({
   controls,
   search,
+  quickFilters,
 }: {
   controls: SlotLayout<ToolbarControls>;
   search?: ReactNode;
+  /** The surface's quick filters, under the search. */
+  quickFilters?: ReactNode;
 }): ReactNode {
   const ctx = useDataViewControls();
 
   return (
     <>
       {search ? <ControlPanel.Section>{search}</ControlPanel.Section> : null}
+      {quickFilters ? (
+        <ControlPanel.Section>
+          <Stack gap="sm">{quickFilters}</Stack>
+        </ControlPanel.Section>
+      ) : null}
       <ControlPanel.Section>
         {controls.kind === "loading" ? (
           <Loading variant="rows" />

@@ -23,12 +23,13 @@ const NARROW = "@max-[560px]/capsule:hidden";
 const WIDE = "@min-[560px]/capsule:hidden";
 
 /**
- * One centred pill: [view chip | search (the grow cell) | divider | control
+ * One centred pill: [view chip | quick filters | search (the grow cell) | divider | control
  * circles | actions | round create]. The surface title is not drawn — a page
  * using the capsule states its own heading above it.
  */
 function CapsuleToolbar({
   switcher,
+  quickFilters,
   search,
   controls,
   foldedControls,
@@ -49,6 +50,7 @@ function CapsuleToolbar({
         <ControlSizeProvider size="md">
           <Line className="h-full gap-2xs">
             {switcher.chip}
+            {quickFilters}
             {/* The one grow cell: search takes whatever the rigid pieces leave. */}
             <Fill className="h-full">{search}</Fill>
             {/* A 20px box the line centres; the rule stretches to fill it.

@@ -2278,6 +2278,34 @@ export type DataViewDataOrigin<TRow> =
  * Every `DataViewProps` key except the data origin ({@link DataViewDataOrigin})
  * and the surface chrome ({@link DataViewSurfaceChrome}).
  */
+/**
+ * One option of a {@link QuickFilter}: the rule it puts on the quick filter's
+ * field, or `null` — no rule on the field.
+ */
+export interface QuickFilterOption {
+  id: string;
+  label: string;
+  /** The rule this option puts on the field (an operator of the field's type
+   *  and its operand); `null` = no rule on the field. */
+  rule: { operatorId: string; value?: unknown } | null;
+}
+
+/**
+ * A one-field segmented control in the toolbar — see
+ * {@link DataViewBaseProps.quickFilters}. Each option IS a top-level rule of
+ * the active view's filter: the selected one is read off the filter, and
+ * picking one rewrites the filter, so the control and the Filter panel can
+ * never disagree.
+ */
+export interface QuickFilter {
+  id: string;
+  /** The field every option's rule is on (a field of the source's schema). */
+  fieldId: string;
+  /** The segmented control's accessible name ("Whose visits"). */
+  label: string;
+  options: readonly QuickFilterOption[];
+}
+
 /** A controlled search query — see {@link DataViewBaseProps.search}. */
 export interface DataViewSearch {
   query: string;
@@ -2414,6 +2442,19 @@ export interface DataViewBaseProps<TRow> extends PlacementSpec {
    * Absent → the host owns the query (per browser tab), the default.
    */
   search?: DataViewSearch;
+  /**
+   * One-click toggles over the active view's filter: per field, a segmented
+   * control whose options are each a top-level rule on that field (or none).
+   * Not a second filter — the selected option is derived from the active
+   * view's filter (none selected when it holds something no option names: a
+   * hand-edited rule), and a pick rewrites that filter, as the Filter panel
+   * does (a draft under `viewEdits: "draft"`). Declared with the rows (a
+   * `DataViewSwitcher` source declares its own, over its own fields). Placed
+   * by the toolbar arrangement (`ToolbarParts.quickFilters`); the compact
+   * fold, a hosted frame's options and a section's `⋯` show them in the
+   * options panel.
+   */
+  quickFilters?: readonly QuickFilter[];
   /** Currently-selected row id (tree highlight + auto-expand-to-selected). */
   selectedRowId?: string;
   emptyState?: ReactNode;

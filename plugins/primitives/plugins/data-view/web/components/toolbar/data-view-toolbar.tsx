@@ -29,6 +29,7 @@ import {
   type CreateOption,
   type DataViewDensity,
   type DataViewSearchSuggestions,
+  type QuickFilter,
   type ToolbarArrangement,
   type ToolbarParts,
 } from "../../../core";
@@ -38,6 +39,7 @@ import { ControlTrigger } from "./control-trigger";
 import { CreatorsControl } from "../creators-control";
 import { barArrangement } from "./bar-arrangement";
 import { SearchWithSuggestions } from "./search-suggestions";
+import { QuickFilters } from "./quick-filters";
 import { PillsRow, ToolbarPill } from "./pills-toolbar";
 import { focusElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 
@@ -126,6 +128,8 @@ export interface DataViewToolbarProps {
   createLabel?: string | undefined;
   /** The view switcher, in both forms (strip / collapsed chip). */
   switcher: ToolbarParts["switcher"];
+  /** `DataViewProps.quickFilters`; absent or empty → none. */
+  quickFilters?: readonly QuickFilter[] | undefined;
   /** Number of view instances — the switcher is hidden when compact unless >1. */
   switcherCount: number;
   /**
@@ -177,6 +181,7 @@ export function DataViewToolbar({
   creators,
   createLabel,
   switcher,
+  quickFilters,
   switcherCount,
   density,
   arrangement = barArrangement,
@@ -340,6 +345,16 @@ export function DataViewToolbar({
       />
     );
 
+  // Placed by the arrangement (wide: one row, the groups divided) or on the
+  // fold's first page (a column). Only one of the two ever renders.
+  const hasQuickFilters = quickFilters !== undefined && quickFilters.length > 0;
+  const quickFiltersRow = hasQuickFilters ? (
+    <QuickFilters quickFilters={quickFilters} layout="row" />
+  ) : null;
+  const quickFiltersNode = hasQuickFilters ? (
+    <QuickFilters quickFilters={quickFilters} layout="column" />
+  ) : null;
+
   const titleNode = title ? (
     <Text as="div" variant="label">
       {title}
@@ -376,6 +391,7 @@ export function DataViewToolbar({
             {creatorsControl}
             <CompactControls
               search={searchInput}
+              quickFilters={quickFiltersNode}
               controls={controls}
               searching={query.length > 0}
             />
@@ -388,6 +404,7 @@ export function DataViewToolbar({
         toolsAtRest ? null : (
           <CompactControls
             search={searchInput}
+            quickFilters={quickFiltersNode}
             controls={controls}
             searching={query.length > 0}
             frame={(node, revealClass) => (
@@ -410,6 +427,7 @@ export function DataViewToolbar({
     <Arrangement
       title={titleNode}
       switcher={switcher}
+      quickFilters={quickFiltersRow}
       search={searchInput}
       query={query}
       controls={

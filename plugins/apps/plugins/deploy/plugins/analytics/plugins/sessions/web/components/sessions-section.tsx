@@ -2,6 +2,7 @@ import { useMemo, type ReactElement, type ReactNode } from "react";
 import {
   ANALYTICS_MIRROR_SET_ID,
   COLLECT_PLUGIN_ID,
+  DEVICE_FAMILIES,
   type Session,
 } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/core";
 import {
@@ -26,6 +27,10 @@ import {
   type DataViewPaging,
   type DataViewSourceProps,
 } from "@plugins/primitives/plugins/data-view/web";
+import type {
+  QuickFilter,
+  QuickFilterOption,
+} from "@plugins/primitives/plugins/data-view/core";
 import {
   Inset,
   Stack,
@@ -184,7 +189,7 @@ const NO_ROWS: readonly SessionRow[] = [];
 
 /**
  * A site's visits as live key-range pages of its copy, paged by the active
- * view's filter (`narrowBy`: the shape, whose visits, since when — run by
+ * view's filter (`narrowBy`: the shape, whose visits, the device — run by
  * collect's SQL on the copy), with the total it matches.
  */
 function SiteVisits({
@@ -243,6 +248,42 @@ function searchText(row: SessionRow): string {
   ].join(" ");
 }
 
+/**
+ * One click to narrow whose visits and on which kind of device — each option a
+ * top-level rule of the active view's filter (every saved view starts on
+ * Visitors), so a pick is a draft of the view, carried in the URL. No date
+ * range: the list pages back through time as it scrolls.
+ */
+const QUICK_FILTERS: readonly QuickFilter[] = [
+  {
+    id: "whose",
+    fieldId: "owner",
+    label: "Whose visits",
+    options: [
+      {
+        id: "visitors",
+        label: "Visitors",
+        rule: { operatorId: "is", value: false },
+      },
+      { id: "you", label: "You", rule: { operatorId: "is", value: true } },
+      { id: "all", label: "All", rule: null },
+    ],
+  },
+  {
+    id: "device",
+    fieldId: "device",
+    label: "Device",
+    options: [
+      { id: "any", label: "Any device", rule: null },
+      ...DEVICE_FAMILIES.map((d): QuickFilterOption => ({
+        id: d.toLowerCase(),
+        label: d,
+        rule: { operatorId: "is", value: d },
+      })),
+    ],
+  },
+];
+
 const VIEW_OPTIONS = {
   list: {
     renderRow: (row: SessionRow) => <SessionLane session={sessionOfRow(row)} />,
@@ -281,6 +322,7 @@ function VisitsBundle({
         readiness,
         ...(paging !== undefined ? { paging } : {}),
         searchAccessor: searchText,
+        quickFilters: QUICK_FILTERS,
         viewOptions: VIEW_OPTIONS,
         emptyState: <>No visit matches this view.</>,
       })}

@@ -186,7 +186,9 @@ export interface SegmentedControlProps<
   T extends string,
 > extends DensityControlled {
   options: readonly SegmentedOption<T>[];
-  value: T;
+  /** The selected option's id; `null` = none selected (the value is
+   *  something no option names — a hand-edited filter, say). */
+  value: T | null;
   onChange: (id: T) => void;
   /** The segments' look (see {@link SegmentedVariant}). Default "solid". */
   variant?: SegmentedVariant;

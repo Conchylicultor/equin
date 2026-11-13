@@ -5,9 +5,10 @@
   // per shape (All / With actions / 2+ pages / Bounced: the report's bounce,
   // one pageview), each a saved filter run on this computer's copy of the
   // site's analytics. Every view starts on the site's visitors (`owner` is
-  // false: the owner's own visits left out, as in the report) over the last
-  // 7 days; editing either (or any rule) is a draft of the view, carried in
-  // the page's URL.
+  // false: the owner's own visits left out, as in the report) — the toolbar's
+  // quick filters switch it (and the device); editing any rule is a draft of
+  // the view, carried in the page's URL. No date range: the list pages back
+  // through time as it scrolls.
 
   "views": [
     {
@@ -38,16 +39,6 @@
               "fieldId": "owner",
               "operatorId": "is",
               "value": false
-            },
-            {
-              "kind": "rule",
-              "id": "r-range",
-              "fieldId": "startedAt",
-              "operatorId": "is-within-past",
-              "value": {
-                "amount": 7,
-                "unit": "day"
-              }
             }
           ]
         }
@@ -81,16 +72,6 @@
               "fieldId": "owner",
               "operatorId": "is",
               "value": false
-            },
-            {
-              "kind": "rule",
-              "id": "r-range",
-              "fieldId": "startedAt",
-              "operatorId": "is-within-past",
-              "value": {
-                "amount": 7,
-                "unit": "day"
-              }
             },
             {
               "kind": "rule",
@@ -134,16 +115,6 @@
             },
             {
               "kind": "rule",
-              "id": "r-range",
-              "fieldId": "startedAt",
-              "operatorId": "is-within-past",
-              "value": {
-                "amount": 7,
-                "unit": "day"
-              }
-            },
-            {
-              "kind": "rule",
               "id": "r-multi",
               "fieldId": "pageviews",
               "operatorId": "≥",
@@ -181,16 +152,6 @@
               "fieldId": "owner",
               "operatorId": "is",
               "value": false
-            },
-            {
-              "kind": "rule",
-              "id": "r-range",
-              "fieldId": "startedAt",
-              "operatorId": "is-within-past",
-              "value": {
-                "amount": 7,
-                "unit": "day"
-              }
             },
             {
               "kind": "rule",

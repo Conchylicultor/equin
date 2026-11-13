@@ -23,6 +23,7 @@ describe("floatingToolbar", () => {
           strip: <span data-testid="strip" />,
           chip: <span data-testid="chip" />,
         }}
+        quickFilters={<span data-testid="quick" />}
         search={<span data-testid="search" />}
         query=""
         controls={<span data-testid="controls" />}
@@ -36,19 +37,28 @@ describe("floatingToolbar", () => {
     expect(screen.getByTestId("strip")).toBeTruthy();
     expect(screen.queryByTestId("chip")).toBeNull();
     expect(screen.queryByTestId("folded")).toBeNull();
-    for (const id of ["title", "search", "controls", "actions", "creators"]) {
+    for (const id of [
+      "title",
+      "quick",
+      "search",
+      "controls",
+      "actions",
+      "creators",
+    ]) {
       expect(screen.getByTestId(id)).toBeTruthy();
     }
     // The row starts past the aside's reach plus its own gutter.
     const row = container.firstElementChild as HTMLElement;
     expect(row.style.paddingLeft).toContain("240px");
-    // Both pills opt back into pointer events over the click-through band;
-    // the title rides the views pill (no band surface to read on).
+    // Every pill opts back into pointer events over the click-through band;
+    // the title rides the views pill (no band surface to read on), the quick
+    // filters in a pill of their own on the row under the views and tools.
     const cards = container.querySelectorAll(".pointer-events-auto");
-    expect(cards).toHaveLength(2);
+    expect(cards).toHaveLength(3);
     expect(cards[0]!.contains(screen.getByTestId("title"))).toBe(true);
     expect(cards[0]!.contains(screen.getByTestId("strip"))).toBe(true);
     expect(cards[1]!.contains(screen.getByTestId("search"))).toBe(true);
+    expect(cards[2]!.contains(screen.getByTestId("quick"))).toBe(true);
     // The create affordance follows a divider, inside the tools pill.
     expect(cards[1]!.contains(screen.getByTestId("creators"))).toBe(true);
     expect(cards[1]!.querySelector('[data-slot="separator"]')).not.toBeNull();

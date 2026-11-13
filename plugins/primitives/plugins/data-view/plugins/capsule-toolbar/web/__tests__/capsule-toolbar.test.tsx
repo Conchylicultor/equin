@@ -22,6 +22,7 @@ describe("capsuleToolbar", () => {
           strip: <span data-testid="strip" />,
           chip: <span data-testid="chip" />,
         }}
+        quickFilters={<span data-testid="quick" />}
         search={<span data-testid="search" />}
         query=""
         controls={<span data-testid="controls" />}
@@ -33,6 +34,7 @@ describe("capsuleToolbar", () => {
     );
 
     expect(screen.getByTestId("chip")).toBeTruthy();
+    expect(screen.getByTestId("quick")).toBeTruthy();
     expect(screen.queryByTestId("strip")).toBeNull();
     // The page states its own heading; the capsule draws no title.
     expect(screen.queryByTestId("title")).toBeNull();

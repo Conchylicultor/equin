@@ -2334,15 +2334,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `buildSnapshot` — Parse a DB-IP `start,end,CC` CSV (no header row) into snapshot bytes.
                   - `createIpCountryLookup` — A lookup over the snapshot file at `snapshotPath()`, read lazily on the first lookup (one ~16 MB read, shared by lookups that arrive while it runs) and then held in memory.
                   - Types: `IpCountryLookup`
-            - **`sessions`** — Sessions tab of a site's page, shown only when the deployment's composition ships the collect plugin: one row per anonymous visit (country, time, device and software, source, first visit or returning, channel), its journey on a shared log time axis (pages split by their share of the visit, the read line and section ticks, action icons, each named on hover) with its duration and actions; opening a row shows its timeline (each page, the sections reached and when, the actions in order, the exit). Read from this computer's copy of the site's analytics (site-mirror, its freshness line above the list; loading until a first whole copy is in place) as live key-range pages: the views (All / With actions / 2+ pages / Bounced) are saved filters, and every filter — whose visits, since when, any field — runs on the copy, a narrowed view carried in the URL. Serves a deployment's visits (deploy-analytics.sessions) from this computer's copy of the site's analytics tables (site-mirror's replica): collect's own visit-list SQL — the window, the rows by key, the groupings and the count, each filter compiled by collect — run on the copy, re-read whenever a pull applies a page to it.
+            - **`sessions`** — Sessions tab of a site's page, shown only when the deployment's composition ships the collect plugin: one row per anonymous visit (country, time, device and software, source, first visit or returning, channel), its journey on a shared log time axis (pages split by their share of the visit, the read line and section ticks, action icons, each named on hover) with its duration and actions; opening a row shows its timeline (each page, the sections reached and when, the actions in order, the exit). Read from this computer's copy of the site's analytics (site-mirror, its freshness line above the list; loading until a first whole copy is in place) as live key-range pages: the views (All / With actions / 2+ pages / Bounced) are saved filters, and every filter — whose visits, the device, any field — runs on the copy, a narrowed view carried in the URL. Serves a deployment's visits (deploy-analytics.sessions) from this computer's copy of the site's analytics tables (site-mirror's replica): collect's own visit-list SQL — the window, the rows by key, the groupings and the count, each filter compiled by collect — run on the copy, re-read whenever a pull applies a page to it.
               - Web:
                 - Slots: `sources`
                 - Slot contributors: `sources` ← `apps.deploy.analytics.sessions`
                 - Contributes:
                   - `SiteTabs.View` "Sessions" → `SessionsSection`
                   - `sources` "Visits" → `VisitsSource`
-                - Uses: 38 symbols — full list in [`plugins/apps/plugins/deploy/plugins/analytics/plugins/sessions/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/analytics/plugins/sessions/REFERENCE.md)
-                  - `primitives/data-view` ×7
+                - Uses: 39 symbols — full list in [`plugins/apps/plugins/deploy/plugins/analytics/plugins/sessions/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/analytics/plugins/sessions/REFERENCE.md)
+                  - `primitives/data-view` ×8
                   - `primitives/css/ui-kit` ×5
                   - `primitives/css/coords` ×4
                   - `apps/deploy/host-query` ×3
@@ -39865,6 +39865,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `network/live/live-state`
               - `network/live/optimistic-mutation`
               - `network/live/resource-runtime`
+              - `primitives/data-view`
           - Core:
             - Exports (values):
               - `canonicalJson`
@@ -49168,6 +49169,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PlacementSpec`
           - `PresetId`
           - `PropertyEntry`
+          - `QuickFilter`
+          - `QuickFilterOption`
           - `Recipe`
           - `RecipeRule`
           - `RowDragConfig`

@@ -13,6 +13,7 @@ export const DATA_VIEW_PARTS = [
   "dv.view-chip",
   "dv.view-chip-active",
   "dv.view-add",
+  "dv.quick-filters",
   "dv.tools-pill",
   "dv.search",
   "dv.control",

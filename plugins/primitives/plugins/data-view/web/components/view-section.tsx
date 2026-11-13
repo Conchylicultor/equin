@@ -29,6 +29,7 @@ import { Icon } from "@plugins/ui/plugins/icons/web";
 import {
   DATA_VIEW_HEADER_OFFSET_VAR,
   type CreateOption,
+  type QuickFilter,
   type SectionsToolbarForms,
 } from "../../core";
 import type { DataViewContribution } from "../slots";
@@ -41,6 +42,7 @@ import {
   type DataViewControlsContextValue,
 } from "./controls/controls-context";
 import { CompactRootPanel } from "./toolbar/compact-controls";
+import { QuickFilters } from "./toolbar/quick-filters";
 import { useToolbarControls } from "./toolbar/use-toolbar-controls";
 import { CreatorsControl } from "./creators-control";
 
@@ -87,6 +89,8 @@ export function ViewSection(props: {
   query: string;
   onQueryChange: (next: string) => void;
   searchPlaceholder: string | undefined;
+  /** `DataViewProps.quickFilters`, on the `⋯` panel's first page. */
+  quickFilters: readonly QuickFilter[] | undefined;
   actions: ViewActions;
   /** The host's own per-instance settings (the Sub-items section). */
   hostSettings: HostViewSettings<DataViewContribution> | undefined;
@@ -149,6 +153,7 @@ export function ViewSection(props: {
                   query={query}
                   onQueryChange={onQueryChange}
                   searchPlaceholder={searchPlaceholder}
+                  quickFilters={props.quickFilters}
                   instance={instance}
                   actions={actions}
                   hostSettings={props.hostSettings}
@@ -191,6 +196,8 @@ function SectionOptions(props: {
   query: string;
   onQueryChange: (next: string) => void;
   searchPlaceholder: string | undefined;
+  /** `DataViewProps.quickFilters`, on the `⋯` panel's first page. */
+  quickFilters: readonly QuickFilter[] | undefined;
   instance: ResolvedViewInstance<DataViewContribution>;
   actions: ViewActions;
   hostSettings: HostViewSettings<DataViewContribution> | undefined;
@@ -227,6 +234,8 @@ function SectionRootPanel(props: {
   query: string;
   onQueryChange: (next: string) => void;
   searchPlaceholder: string | undefined;
+  /** `DataViewProps.quickFilters`, on the `⋯` panel's first page. */
+  quickFilters: readonly QuickFilter[] | undefined;
   instance: ResolvedViewInstance<DataViewContribution>;
   actions: ViewActions;
   hostSettings: HostViewSettings<DataViewContribution> | undefined;
@@ -254,6 +263,12 @@ function SectionRootPanel(props: {
       ) : null}
       <CompactRootPanel
         controls={controls}
+        quickFilters={
+          props.quickFilters === undefined ||
+          props.quickFilters.length === 0 ? null : (
+            <QuickFilters quickFilters={props.quickFilters} layout="column" />
+          )
+        }
         search={
           <SearchInput
             value={query}

@@ -35,6 +35,7 @@ spelling, and a value with none is refused rather than encoded as another.
     - `network/live/live-state`
     - `network/live/optimistic-mutation`
     - `network/live/resource-runtime`
+    - `primitives/data-view`
 - Core:
   - Exports (values):
     - `canonicalJson`

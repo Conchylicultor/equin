@@ -2,6 +2,8 @@ import type { ReactNode } from "react";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
 import { CompactControls } from "./compact-controls";
 import { useToolbarControls } from "./use-toolbar-controls";
+import { QuickFilters } from "./quick-filters";
+import type { QuickFilter } from "../../../core";
 
 /**
  * A hosted surface's options trigger (`HostedToolbarParts.options`): the
@@ -20,12 +22,15 @@ export function HostedOptions({
   onQueryChange,
   searchPlaceholder = "Search…",
   revealOnHover = true,
+  quickFilters,
 }: {
   query: string;
   onQueryChange: (next: string) => void;
   searchPlaceholder?: string;
   /** `false`: visible at rest — the frame's `forms.options: "visible"`. */
   revealOnHover?: boolean;
+  /** `DataViewProps.quickFilters`, on the first page under the search. */
+  quickFilters?: readonly QuickFilter[] | undefined;
 }): ReactNode {
   const controls = useToolbarControls();
   const searching = query.length > 0;
@@ -38,6 +43,11 @@ export function HostedOptions({
           placeholder={searchPlaceholder}
           appearance="menu"
         />
+      }
+      quickFilters={
+        quickFilters === undefined || quickFilters.length === 0 ? null : (
+          <QuickFilters quickFilters={quickFilters} layout="column" />
+        )
       }
       controls={controls}
       searching={searching}

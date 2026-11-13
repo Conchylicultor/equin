@@ -59,18 +59,28 @@ Served `source: "external"` (`server/internal/served.ts`) on this computer's
 - **Views = the shapes** (`config/apps/deploy/analytics/sessions/deploy-sessions.jsonc`):
   All / With actions (`events > 0`) / 2+ pages (`pageviews ≥ 2`) / Bounced
   (`pageviews = 1`, the report's bounce), each a saved filter that also starts
-  on the site's visitors (`owner is false`) over the last 7 days
-  (`startedAt is-within-past 7 days`, the date type's relative operator).
-  `viewEdits: draft`: changing whose visits or since when (or any other rule)
+  on the site's visitors (`owner is false`). No date range: the list pages
+  back through time as it scrolls.
+  `viewEdits: draft`: changing whose visits or the device (or any other rule)
   is a draft of the view, and the drafted view rides in the URL
   (`;view.deploy-sessions=<id>~<draft>`, view-core's addressable drafts).
   The active view is in the URL too.
 - **Search** filters the loaded rows in memory (country, source, software,
   pages).
-- **Toolbar**: its own arrangement (`sessionsToolbar`): the view strip,
-  search, the controls (Filter / Sort / View), the summary (sessions = the
-  view's count; median duration, median load and "with actions" over the
-  LOADED visits) — and the axis row, in the sticky band.
+- **Toolbar**: its own arrangement (`sessionsToolbar`): the summary on its
+  own line (sessions = the view's count; median duration, median load and
+  "with actions" over the LOADED visits), then the standard DataView toolbar
+  (`PillsToolbar`: views pill, tools pill — search, Filter / Sort / View — and
+  the quick filters on the row under them) — and the axis row, all in the
+  sticky band.
+- **Quick filters** (data-view `quickFilters`, declared in the `visits`
+  bundle): whose visits — Visitors (`owner is false`) / You (`is true`) / All
+  (no rule) — and the device — Any device (no rule) / Desktop / Mobile /
+  Tablet (`device is <family>`, collect's `DEVICE_FAMILIES`). Each is a
+  top-level rule of the active view's filter, so the saved views
+  (`r-visitors`) read as Visitors + Any device, and a pick is a draft carried
+  in the URL; a hand-edited rule
+  selects no segment.
 - **Rows**: the list view's `renderRow` (`SessionLane`) and `detail`
   (`SessionTimeline`), with `detailOnActivate` and `frame: "card"`; a row is
   handed to them as collect's `Session` (`sessionOf`, kept per row object).
@@ -116,15 +126,15 @@ Background / idle stretches and load time are recorded but not drawn yet
 
 ## Plugin reference
 
-- Description: Sessions tab of a site's page, shown only when the deployment's composition ships the collect plugin: one row per anonymous visit (country, time, device and software, source, first visit or returning, channel), its journey on a shared log time axis (pages split by their share of the visit, the read line and section ticks, action icons, each named on hover) with its duration and actions; opening a row shows its timeline (each page, the sections reached and when, the actions in order, the exit). Read from this computer's copy of the site's analytics (site-mirror, its freshness line above the list; loading until a first whole copy is in place) as live key-range pages: the views (All / With actions / 2+ pages / Bounced) are saved filters, and every filter — whose visits, since when, any field — runs on the copy, a narrowed view carried in the URL. Serves a deployment's visits (deploy-analytics.sessions) from this computer's copy of the site's analytics tables (site-mirror's replica): collect's own visit-list SQL — the window, the rows by key, the groupings and the count, each filter compiled by collect — run on the copy, re-read whenever a pull applies a page to it.
+- Description: Sessions tab of a site's page, shown only when the deployment's composition ships the collect plugin: one row per anonymous visit (country, time, device and software, source, first visit or returning, channel), its journey on a shared log time axis (pages split by their share of the visit, the read line and section ticks, action icons, each named on hover) with its duration and actions; opening a row shows its timeline (each page, the sections reached and when, the actions in order, the exit). Read from this computer's copy of the site's analytics (site-mirror, its freshness line above the list; loading until a first whole copy is in place) as live key-range pages: the views (All / With actions / 2+ pages / Bounced) are saved filters, and every filter — whose visits, the device, any field — runs on the copy, a narrowed view carried in the URL. Serves a deployment's visits (deploy-analytics.sessions) from this computer's copy of the site's analytics tables (site-mirror's replica): collect's own visit-list SQL — the window, the rows by key, the groupings and the count, each filter compiled by collect — run on the copy, re-read whenever a pull applies a page to it.
 - Web:
   - Slots: `sources`
   - Slot contributors: `sources` ← `apps.deploy.analytics.sessions`
   - Contributes:
     - `SiteTabs.View` "Sessions" → `SessionsSection`
     - `sources` "Visits" → `VisitsSource`
-  - Uses: 38 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/data-view` ×7
+  - Uses: 39 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/data-view` ×8
     - `primitives/css/ui-kit` ×5
     - `primitives/css/coords` ×4
     - `apps/deploy/host-query` ×3

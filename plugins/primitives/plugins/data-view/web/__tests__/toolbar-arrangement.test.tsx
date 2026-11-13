@@ -7,6 +7,8 @@ import {
 import type {
   CreateOption,
   DataViewDensity,
+  FilterGroup,
+  QuickFilter,
   ToolbarArrangement,
   ToolbarParts,
 } from "../../core";
@@ -74,12 +76,16 @@ function renderToolbar(opts: {
   asideInset?: string;
   creators?: CreateOption[];
   createLabel?: string;
+  quickFilters?: readonly QuickFilter[];
+  controls?: Partial<DataViewControlsContextValue>;
 }) {
   lastParts = null;
   surfaceShortcuts.length = 0;
   return render(
     <PluginProvider plugins={[plugin]}>
-      <DataViewControlsProvider {...({} as DataViewControlsContextValue)}>
+      <DataViewControlsProvider
+        {...({ ...opts.controls } as DataViewControlsContextValue)}
+      >
         <DataViewToolbar
           query=""
           onQueryChange={() => {}}
@@ -90,6 +96,7 @@ function renderToolbar(opts: {
             chip: <div data-testid="chip" />,
           }}
           switcherCount={2}
+          quickFilters={opts.quickFilters}
           density={opts.density}
           arrangement={opts.arrangement}
           searchPlaceholder={opts.searchPlaceholder}
@@ -134,6 +141,66 @@ describe("DataViewToolbar arrangements", () => {
     expect(tools.contains(input)).toBe(true);
     expect(tools.contains(create)).toBe(true);
     expect(tools.querySelector('[data-slot="separator"]')).not.toBeNull();
+  });
+
+  it("places the quick filters on a row under the views and tools, reading and writing the filter", () => {
+    const owner: QuickFilter = {
+      id: "whose",
+      fieldId: "owner",
+      label: "Whose visits",
+      options: [
+        {
+          id: "visitors",
+          label: "Visitors",
+          rule: { operatorId: "is", value: false },
+        },
+        { id: "you", label: "You", rule: { operatorId: "is", value: true } },
+        { id: "all", label: "All", rule: null },
+      ],
+    };
+    const saved: FilterGroup = {
+      kind: "group",
+      id: "root",
+      conjunction: "and",
+      children: [
+        {
+          kind: "rule",
+          id: "r",
+          fieldId: "owner",
+          operatorId: "is",
+          value: false,
+        },
+      ],
+    };
+    const setFilter = vi.fn();
+    renderToolbar({
+      quickFilters: [owner],
+      controls: {
+        fields: [{ id: "owner", label: "Owner" }],
+        filter: { filter: saved, setFilter } as never,
+      },
+    });
+
+    const pill = screen.getByRole("group", { name: "Quick filters" });
+    const views = screen.getByRole("group", { name: "Views" });
+    const tools = screen.getByRole("group", { name: "Tools" });
+    // On a row of its own, under the row holding the views and tools pills.
+    const row = views.parentElement;
+    expect(row?.contains(tools)).toBe(true);
+    expect(row?.contains(pill)).toBe(false);
+    expect(row?.nextElementSibling?.contains(pill)).toBe(true);
+    const group = screen.getByRole("radiogroup", { name: "Whose visits" });
+    expect(pill.contains(group)).toBe(true);
+    const visitors = screen.getByRole("radio", { name: "Visitors" });
+    expect(visitors.getAttribute("aria-checked")).toBe("true");
+
+    act(() => screen.getByRole("radio", { name: "All" }).click());
+    expect(setFilter).toHaveBeenCalledWith(null);
+  });
+
+  it("draws no quick-filter pill when the surface declares none", () => {
+    renderToolbar({});
+    expect(screen.queryByRole("group", { name: "Quick filters" })).toBeNull();
   });
 
   it("drops the divider when the surface declares no creators", () => {

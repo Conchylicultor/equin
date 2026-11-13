@@ -1850,6 +1850,7 @@ function DataViewBodyInner<TRow>(
               query={activeState.query}
               onQueryChange={onQueryChange}
               searchPlaceholder={chrome.searchPlaceholder}
+              quickFilters={props.quickFilters}
               actions={viewModel.actions}
               hostSettings={subItemsSettingsFor(
                 hierarchy != null || liveTree != null
@@ -1877,6 +1878,7 @@ function DataViewBodyInner<TRow>(
                     query={activeState.query}
                     onQueryChange={onQueryChange}
                     searchPlaceholder={chrome.searchPlaceholder}
+                    quickFilters={props.quickFilters}
                     revealOnHover={
                       (chrome.toolbar.forms?.options ?? "revealed") ===
                       "revealed"
@@ -1951,6 +1953,7 @@ function DataViewBodyInner<TRow>(
                 query={activeState.query}
                 onQueryChange={onQueryChange}
                 switcher={chrome.switcher}
+                quickFilters={props.quickFilters}
                 switcherCount={chrome.switcherCount}
                 actions={chrome.actions}
                 creators={creators}

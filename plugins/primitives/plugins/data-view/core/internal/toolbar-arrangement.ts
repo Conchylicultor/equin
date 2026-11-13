@@ -38,6 +38,14 @@ export interface ToolbarParts {
    * so an arrangement must render one of them.
    */
   switcher: { strip: ReactNode; chip: ReactNode };
+  /**
+   * The surface's quick filters (`DataViewProps.quickFilters`) — one
+   * segmented control per declared quick filter, over the active view's
+   * filter — or `null` when it declares none. Render it: when declared it is
+   * the surface's one-click way to narrow the list (the default arrangement
+   * places it right after the views).
+   */
+  quickFilters: ReactNode;
   /** The search input, in `forms.search`. Always render it: a non-empty query
    *  must stay visible — and the host binds `/` to focus it. */
   search: ReactNode;

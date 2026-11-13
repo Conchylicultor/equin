@@ -7,6 +7,7 @@ import {
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Overlay } from "@plugins/primitives/plugins/css/plugins/overlay/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
@@ -118,7 +119,8 @@ const toolbarControlSize = {
 
 /**
  * The two-pill row every DataView toolbar is drawn as — wide and in the
- * compact fold alike: `[lead] [views pill] [fill] [tools pill]`. Both pills
+ * compact fold alike: `[lead] [views pill] [fill] [tools pill]` (quick filters,
+ * when declared, on a row of their own below). Both pills
  * (flat by default, see {@link ToolbarPill}) sit at ONE control size (`sm`,
  * its height the `toolbarControlH` token), so they are the same height and centred on one line at every width; the
  * views pill is the one cell that gives (it scrolls sideways), the row never
@@ -132,6 +134,9 @@ export function PillsRow(
   props: PillsLayoutProps & {
     lead?: ReactNode;
     views: ReactNode;
+    /** The quick filters (`ToolbarParts.quickFilters`), in their own pill
+     *  on a row under the views and tools; `null` ⇒ no row. */
+    quick?: ReactNode;
     tools: ReactNode;
     trailing?: ReactNode;
   },
@@ -142,39 +147,60 @@ export function PillsRow(
     style,
     lead,
     views,
+    quick,
     tools,
     trailing,
   } = props;
+  const row = (
+    <Line
+      className={cn("gap-toolbar", quick == null && className)}
+      style={quick == null ? { ...toolbarControlSize, ...style } : undefined}
+    >
+      {/* Over a click-through band there is no band surface for a bare
+          title to sit on (a map shows through), so it rides the views
+          pill; in flow it reads on the band, before the pill. */}
+      {overlay ? null : lead}
+      {views == null && !(overlay && lead) ? null : (
+        <ToolbarPill overlay={overlay} give label="Views" part="dv.views-pill">
+          {overlay ? lead : null}
+          {views}
+        </ToolbarPill>
+      )}
+      {/* The slack between the pills — click-through over an overlay band. */}
+      <Fill />
+      {tools == null ? null : (
+        <ToolbarPill overlay={overlay} label="Tools" part="dv.tools-pill">
+          {tools}
+        </ToolbarPill>
+      )}
+      {trailing}
+    </Line>
+  );
   return (
     <ControlSizeProvider size="sm">
-      <Line
-        className={cn("gap-toolbar", className)}
-        style={{ ...toolbarControlSize, ...style }}
-      >
-        {/* Over a click-through band there is no band surface for a bare
-            title to sit on (a map shows through), so it rides the views
-            pill; in flow it reads on the band, before the pill. */}
-        {overlay ? null : lead}
-        {views == null && !(overlay && lead) ? null : (
-          <ToolbarPill
-            overlay={overlay}
-            give
-            label="Views"
-            part="dv.views-pill"
-          >
-            {overlay ? lead : null}
-            {views}
-          </ToolbarPill>
-        )}
-        {/* The slack between the pills — click-through over an overlay band. */}
-        <Fill />
-        {tools == null ? null : (
-          <ToolbarPill overlay={overlay} label="Tools" part="dv.tools-pill">
-            {tools}
-          </ToolbarPill>
-        )}
-        {trailing}
-      </Line>
+      {quick == null ? (
+        row
+      ) : (
+        // The quick filters narrow the view the row above picked, so they
+        // read under it, on a row of their own — never squeezed between the
+        // views and the tools.
+        <Stack
+          gap="xsm"
+          className={className}
+          style={{ ...toolbarControlSize, ...style }}
+        >
+          {row}
+          <Line className="gap-toolbar">
+            <ToolbarPill
+              overlay={overlay}
+              label="Quick filters"
+              part="dv.quick-filters"
+            >
+              {quick}
+            </ToolbarPill>
+          </Line>
+        </Stack>
+      )}
     </ControlSizeProvider>
   );
 }
@@ -205,6 +231,7 @@ export type PillsToolbarProps = ToolbarParts & PillsLayoutProps;
  *
  *     [title] [views pill: the editable switcher strip, "+" on its hover]
  *     ··· [tools pill: search [/] · controls · actions | create]
+ *     [quick filters — on a row of their own, below]
  *
  * the default (`barArrangement`) and the floating arrangement
  * (`floating-toolbar`, `overlay`) alike — they differ only in the row's inset
@@ -214,6 +241,7 @@ export type PillsToolbarProps = ToolbarParts & PillsLayoutProps;
 export function PillsToolbar({
   title,
   switcher,
+  quickFilters,
   search,
   controls,
   actions,
@@ -232,6 +260,7 @@ export function PillsToolbar({
       // A surface that asked for the chip alone (`switcherForm="chip"`)
       // gets the chip.
       views={switcher.strip ?? switcher.chip}
+      quick={quickFilters}
       tools={
         <>
           {search}

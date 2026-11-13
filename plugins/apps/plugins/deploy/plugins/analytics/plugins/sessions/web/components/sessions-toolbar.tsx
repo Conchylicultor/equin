@@ -1,5 +1,4 @@
 import { useContext, type ReactNode } from "react";
-import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import {
   Inset,
@@ -14,6 +13,7 @@ import type {
   ToolbarArrangement,
   ToolbarParts,
 } from "@plugins/primitives/plugins/data-view/core";
+import { PillsToolbar } from "@plugins/primitives/plugins/data-view/web";
 import { axisFrac, axisTicks } from "../internal/axis";
 import { LANE_TRACKS, LaneWindowContext } from "../internal/lane-context";
 import { GAP_KINDS } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/core";
@@ -22,27 +22,19 @@ import { span } from "../internal/format";
 import { seconds } from "../internal/load";
 
 /**
- * The Sessions list's band: the views (All, With actions, 2+ pages, Bounced —
- * each a saved filter; narrowing whose visits and since when is a draft of it,
- * which the URL carries), the search and the controls (Filter, Sort, View),
- * the summary pushed right — and, under them, the axis row whose ticks stand
- * over every journey. One sticky band, so the axis stays on screen while the
- * visits scroll under it.
+ * The Sessions list's band: the summary on its own line, then the standard
+ * DataView toolbar (`PillsToolbar`: the views — All, With actions, 2+ pages,
+ * Bounced, each a saved filter — and the tools pill: search, Filter / Sort /
+ * View; the quick filters — whose visits, which device — on the row under
+ * it) — and, under them, the axis row whose ticks stand over every journey.
+ * One sticky band, so the axis stays on screen while the visits scroll under
+ * it.
  */
-function SessionsToolbar({
-  switcher,
-  search,
-  controls,
-}: ToolbarParts): ReactNode {
+function SessionsToolbar(parts: ToolbarParts): ReactNode {
   return (
-    <Stack gap="none" className="rail-follow">
-      <Line className="gap-smd py-smd">
-        {switcher.strip ?? switcher.chip}
-        <div className="w-[240px]">{search}</div>
-        {controls}
-        <Fill />
-        <Summary />
-      </Line>
+    <Stack gap="none" className="rail-follow pt-smd">
+      <Summary />
+      <PillsToolbar {...parts} className="pb-smd" />
       <AxisRow />
     </Stack>
   );
@@ -54,7 +46,7 @@ function Summary(): ReactNode {
   if (lane === null || lane.summary === null) return null;
   const { total, loaded, medianS, medianLoadMs, withActions } = lane.summary;
   return (
-    <Line className="gap-md">
+    <Line className="gap-md pb-xsm">
       <Text variant="caption" tone="muted">
         <Strong>{total ?? `${loaded}+`}</Strong> sessions
       </Text>
@@ -144,6 +136,7 @@ function AxisRow(): ReactNode {
 /** The Sessions list's toolbar arrangement — a value the surface passes, not a contribution. */
 export const sessionsToolbar: ToolbarArrangement = {
   id: "deploy-sessions",
-  forms: { search: "field", controls: "ghost", creators: "labelled" },
+  // The default bar's forms: the search a quiet well inside the tools pill.
+  forms: { search: "filled", controls: "ghost", creators: "labelled" },
   component: SessionsToolbar,
 };
