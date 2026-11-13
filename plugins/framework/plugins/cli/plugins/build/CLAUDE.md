@@ -57,6 +57,13 @@ failed every later main build. Left dirty, main's checkout made every push's `gi
 --ff-only` abort (2026-10-17;
 [`research/2026-10-17-global-main-checkout-read-only-build.md`](../../../../../../research/2026-10-17-global-main-checkout-read-only-build.md)).
 
+**Plugin-move leftovers fail first, by name** (`cli/internal/moved-plugin-leftovers.ts`).
+A move leaves a plugin's ignored build output at the old address, un-ignored
+once its `.gitignore` has moved, so discovery reads it as a plugin. Before the
+snapshot, main's build checks every ledger `from` address that git tracks
+nothing under, prints its untracked files with the move, and exits 1. It
+deletes nothing: whether a file is disposable output is the investigator's call.
+
 `build` is deliberately **not** `detachable`: the orphan guard exiting it when
 its invoking shell dies is what stops an abandoned build from sitting on the
 build lock and a host grant. The detached self-restart build exempts itself

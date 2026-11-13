@@ -38,6 +38,7 @@ import {
   assertMainTreeUntouched,
   snapshotTree,
 } from "./internal/main-tree-guard";
+import { assertNoMoveLeftovers } from "./internal/moved-plugin-leftovers";
 import {
   WEB_CORE_RELATIVE,
   actAsCheckoutNamespace,
@@ -1232,6 +1233,14 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
         log: (line) => console.log(line),
         recordFootprint,
       };
+
+      // What a plugin move left at the old address (output its moved
+      // `.gitignore` used to hide) stops main's build here, named with its
+      // move, before plugin discovery reads it as a plugin and the guard below
+      // reports only the docs that rewrote. See ./internal/moved-plugin-leftovers.ts.
+      if (checkout.kind === "main") {
+        await assertNoMoveLeftovers(root);
+      }
 
       // Main's tree as git sees it BEFORE the first writer below — compared after
       // the last one (the formatter), because main's build may write nothing git
