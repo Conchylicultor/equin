@@ -46,7 +46,9 @@ import {
  * What escapes the key, as for every record: a schema module that reads a
  * file or the environment at load (none does — drizzle.config.ts' own rule),
  * or a gitignored schema file (the snapshot holds git's set). Caught, not
- * prevented: `migrations-in-sync` runs drizzle-kit fresh on every push.
+ * prevented: `./equin check --verify-records` (daily on main) recomputes
+ * every record a check pass reads, `migrations-in-sync`'s own drizzle-kit
+ * answer included.
  */
 
 // Bump when what a verdict means changes without any keyed code changing.

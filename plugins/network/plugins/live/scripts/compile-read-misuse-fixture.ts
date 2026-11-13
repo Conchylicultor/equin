@@ -8,7 +8,11 @@
 // Run as: bun compile-read-misuse-fixture.ts <root> <absFile>
 // Stdin: the text to compile in place of <absFile>'s (its markers blanked —
 // the file on disk is never touched).
-// Emits JSON: { line, code, message }[] — `line` 0-based.
+// Emits JSON: { diagnostics: { line, code, message }[] — `line` 0-based;
+// touched: { read, exists, dirs } } — every repo-relative path tsc read, asked
+// the existence of, or asked whether it is a directory (outside `node_modules`,
+// which the lockfile pins): the check's read-set, so its verdict replays until
+// one of them moves.
 import * as path from "node:path";
 import ts from "typescript";
 
@@ -19,6 +23,51 @@ if (root === undefined || fixtureArg === undefined) {
 const fixture = path.resolve(fixtureArg);
 const text = await Bun.stdin.text();
 
+// Every file-system question the compile asks, recorded where every part of
+// it (the config parse, module resolution, source reads) asks it: `ts.sys`,
+// wrapped BEFORE any host is made (a host binds some of its methods at
+// creation).
+const touched = {
+  read: new Set<string>(),
+  exists: new Set<string>(),
+  dirs: new Set<string>(),
+};
+const inRepo = (p: string): string | null => {
+  const r = path.relative(root, path.resolve(p)).split(path.sep).join("/");
+  return r.startsWith("..") ||
+    path.isAbsolute(r) ||
+    r.split("/").includes("node_modules")
+    ? null
+    : r;
+};
+const sys = ts.sys;
+const note =
+  <A extends unknown[], R>(set: Set<string>, fn: (p: string, ...a: A) => R) =>
+  (p: string, ...a: A): R => {
+    const r = inRepo(p);
+    if (r !== null) set.add(r);
+    return fn.call(sys, p, ...a);
+  };
+// A file READ outside the repo and outside `node_modules` (pinned by the
+// lockfile) is an input no fact can name: refused below, loudly. Existence and
+// directory probes there (TypeScript walks up for `node_modules`) are not.
+const outside: string[] = [];
+const isNpm = (p: string): boolean =>
+  path.resolve(p).split(path.sep).includes("node_modules");
+const sysReadFile = sys.readFile;
+sys.readFile = (p, encoding) => {
+  if (inRepo(p) === null && !isNpm(p)) outside.push(p);
+  return note(touched.read, sysReadFile)(p, encoding);
+};
+sys.fileExists = note(touched.exists, sys.fileExists);
+sys.directoryExists = note(touched.dirs, sys.directoryExists);
+sys.getDirectories = note(touched.dirs, sys.getDirectories);
+sys.readDirectory = (p) => {
+  // A listing is an answer no recorded fact covers; the program has one root
+  // and never lists (the config parse below is handed no lister).
+  throw new Error(`compile-read-misuse-fixture: tsc listed ${p}`);
+};
+
 const cfgPath = path.join(root, "tsconfig.json");
 const cfg = ts.readConfigFile(cfgPath, ts.sys.readFile);
 if (cfg.error) {
@@ -26,9 +75,16 @@ if (cfg.error) {
     `tsconfig.json: ${ts.flattenDiagnosticMessageText(cfg.error.messageText, " / ")}`,
   );
 }
+// The options only: the program's one root is the fixture, so the files the
+// config's `include` would list (a walk of the whole repo) are never used.
 const parsed = ts.parseJsonConfigFileContent(
   cfg.config,
-  ts.sys,
+  {
+    useCaseSensitiveFileNames: sys.useCaseSensitiveFileNames,
+    fileExists: sys.fileExists,
+    readFile: sys.readFile,
+    readDirectory: () => [],
+  },
   root,
   undefined,
   cfgPath,
@@ -58,4 +114,17 @@ const diagnostics = [
   code: d.code,
   message: ts.flattenDiagnosticMessageText(d.messageText, " / ").slice(0, 300),
 }));
-process.stdout.write(JSON.stringify(diagnostics));
+if (outside.length > 0)
+  throw new Error(
+    `compile-read-misuse-fixture: the compile read ${outside.length} file(s) outside the repo and node_modules, which no read-set fact can key: ${outside.slice(0, 5).join(", ")}`,
+  );
+process.stdout.write(
+  JSON.stringify({
+    diagnostics,
+    touched: {
+      read: [...touched.read].sort(),
+      exists: [...touched.exists].sort(),
+      dirs: [...touched.dirs].sort(),
+    },
+  }),
+);

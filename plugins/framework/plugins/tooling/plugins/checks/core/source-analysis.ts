@@ -1,4 +1,7 @@
-import { sharedWork } from "@plugins/packages/plugins/shared-work/core";
+import {
+  isOwnInput,
+  sharedWork,
+} from "@plugins/packages/plugins/shared-work/core";
 import type TS from "typescript";
 import type { CheckContext } from "@plugins/framework/plugins/tooling/core";
 import {
@@ -6,7 +9,6 @@ import {
   readRepoCompilerOptions,
   type SourceAnalysis,
 } from "@plugins/framework/plugins/tooling/plugins/checks/plugins/source-analysis/core";
-import { isOneCheckRepo } from "./repo-set";
 import { parsedTsSource } from "./source-work";
 
 // A check's handle on the shared source analysis
@@ -36,7 +38,7 @@ export async function sourceAnalysis(
     // it reads is read once for all of them, so the read is no check's own.
     // Over one check's own (recording) set it serves that check alone, and
     // its reads are that check's.
-    const files = isOneCheckRepo(repo)
+    const files = isOwnInput(repo)
       ? repo
       : {
           has: (rel: string) => repo.has(rel),

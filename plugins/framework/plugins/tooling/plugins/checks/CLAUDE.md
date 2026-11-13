@@ -93,9 +93,15 @@ module graph) — runs under `sharedWork(name, …)` (`packages/shared-work`) an
 that name, on the run's `done` record (`sharedFs`), never into the check that
 happened to start it. Without that, a check's count would depend on which
 check reached the memo first and what the record store already held, and a
-verdict on it would not be a function of the tree. **A new per-run memo that
-reads files must run its producer under `sharedWork`**, or the first
-check to ask is charged for it.
+verdict on it would not be a function of the tree. **A per-run memo is a
+`sharedMemo(name, produce, { owner })`** (`packages/shared-work`): its
+producer runs as shared work by construction, and a hand-rolled module-level
+`Map` / `WeakMap` keyed by a file set (or a pass holding one) is a lint error
+(`shared-work-safety/per-run-memo`). The other way round, an input-keyed
+check's recording set is its own input (`markOwnInput`): every memo over it
+(its own codegen pass, registry context, source analysis) counts its work as
+that check's, so a check's private copy of the caches cannot hide its reads
+as shared.
 
 ## Reading code: `sourceAnalysis`, not regexes
 
@@ -627,7 +633,7 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
 
 - Description: Check runner and built-in checks for ./equin check
 - Core:
-  - Uses: 86 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 88 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `framework/tooling` ×12
     - `packages/timed-fs` ×11
     - `plugin-meta/plugin-records` ×10
@@ -638,6 +644,7 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
     - `framework/tooling/checks/source-analysis` ×3
     - `infra/launcher/env-names` ×3
     - `infra/spawn` ×3
+    - `packages/shared-work` ×3
     - `plugin-meta/parse-utils` ×3
     - `infra/paths` ×2
     - `packages/macrotask-yield` ×2
@@ -648,7 +655,6 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
     - `infra/paths/repo-root.REPO_ROOT`
     - `packages/flock.flockTry`
     - `packages/semaphore.createSemaphore`
-    - `packages/shared-work.sharedWork`
     - `packages/single-flight.singleFlight`
     - `packages/string-hash.sha256Hex`
     - `plugin-meta/plugin-tree/structure-records.buildStructureTreeOnce`

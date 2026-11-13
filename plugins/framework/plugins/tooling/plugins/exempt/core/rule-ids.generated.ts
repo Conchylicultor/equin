@@ -184,6 +184,7 @@ export type ExemptableRuleId =
   | "scroll-safety/no-adhoc-scroll-write"
   | "scroll-safety/no-scrolling-focus"
   | "server-core/no-process-crash-listener"
+  | "shared-work-safety/per-run-memo"
   | "shortcuts/no-window-key-listener"
   | "sink-safety/no-adhoc-file-sink"
   | "sink-safety/no-adhoc-profiler-seam"

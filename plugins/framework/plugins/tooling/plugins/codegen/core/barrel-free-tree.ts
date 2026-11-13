@@ -1,10 +1,8 @@
-import { sharedWork } from "@plugins/packages/plugins/shared-work/core";
+import { sharedMemo } from "@plugins/packages/plugins/shared-work/core";
 import { joinAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import type { PluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import { buildFacetedPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/plugins/faceted/core";
 import type { CodegenPass } from "./codegen-pass";
-
-const barrelFreeTrees = new WeakMap<CodegenPass, Promise<PluginTree>>();
 
 /**
  * The barrel-FREE plugin tree — a pure function of committed plugin source
@@ -22,15 +20,12 @@ const barrelFreeTrees = new WeakMap<CodegenPass, Promise<PluginTree>>();
  * Read off the pass's set (`CodegenPass.repo`): a snapshot (blob ids), which
  * makes the facets plugin records read from the shared store.
  */
-export function buildBarrelFreeTree(pass: CodegenPass): Promise<PluginTree> {
-  let cached = barrelFreeTrees.get(pass);
-  if (!cached) {
-    cached = sharedWork("barrel-free plugin tree", () =>
+export const buildBarrelFreeTree: (pass: CodegenPass) => Promise<PluginTree> =
+  sharedMemo(
+    "barrel-free plugin tree",
+    (pass) =>
       buildFacetedPluginTree(joinAppPath(pass.root, "plugins"), {
         repo: pass.repo,
       }),
-    );
-    barrelFreeTrees.set(pass, cached);
-  }
-  return cached;
-}
+    { owner: (pass) => pass.repo },
+  );

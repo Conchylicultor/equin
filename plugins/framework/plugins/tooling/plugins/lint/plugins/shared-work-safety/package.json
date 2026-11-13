@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-framework-tooling-lint-shared-work-safety",
+  "version": "0.0.1",
+  "private": true,
+  "description": "shared-work-safety lint rule: per-run-memo (a module-level Map / WeakMap keyed by a run's file set — a RepoFiles, or a value holding one such as a CodegenPass — is spelled sharedMemo(name, produce) from packages/shared-work, so the work it memoizes is shared work by construction and no check is charged for whatever it happened to ask first)"
+}

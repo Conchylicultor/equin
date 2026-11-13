@@ -1,14 +1,14 @@
-import { sharedWork } from "@plugins/packages/plugins/shared-work/core";
+import {
+  sharedMemo,
+  sharedWork,
+} from "@plugins/packages/plugins/shared-work/core";
 import type { RepoFiles } from "@plugins/framework/plugins/tooling/core";
 import {
   npmClosureOf,
   parseBunLock,
-  type BunLock,
 } from "@plugins/infra/plugins/deps/plugins/npm/plugins/lock-closure/core";
 import { lockfileNpmResolutions } from "@plugins/infra/plugins/deps/plugins/npm/plugins/lock-resolutions/core";
 import { sha256Hex } from "@plugins/packages/plugins/string-hash/core";
-
-const keys = new WeakMap<RepoFiles, Promise<string>>();
 
 /**
  * ALL the npm code a record producer can run, as one key part: the hash of
@@ -31,17 +31,11 @@ const keys = new WeakMap<RepoFiles, Promise<string>>();
  *
  * Memoized per set (by identity): every producer of one build reads it once.
  */
-export function npmResolutionsKey(set: RepoFiles): Promise<string> {
-  let key = keys.get(set);
-  if (key === undefined) {
-    key = sharedWork("plugin records", async () => {
-      if (!set.has("bun.lock")) return "-";
-      return sha256Hex(lockfileNpmResolutions(await readLock(set)));
-    });
-    keys.set(set, key);
-  }
-  return key;
-}
+export const npmResolutionsKey: (set: RepoFiles) => Promise<string> =
+  sharedMemo("plugin records", async (set) => {
+    if (!set.has("bun.lock")) return "-";
+    return sha256Hex(lockfileNpmResolutions(await readLock(set)));
+  });
 
 async function readLock(set: RepoFiles): Promise<string> {
   const text = await set.read("bun.lock");
@@ -59,8 +53,14 @@ function isBuiltin(pkg: string): boolean {
   return pkg === "bun" || pkg.startsWith("bun:") || pkg.startsWith("node:");
 }
 
-const locks = new WeakMap<RepoFiles, Promise<BunLock>>();
-const codeKeys = new WeakMap<RepoFiles, Map<string, Promise<string>>>();
+// Per set: its lockfile parsed once, and each package list's key.
+const lockOf = sharedMemo("plugin records", (set: RepoFiles) =>
+  readLock(set).then(parseBunLock),
+);
+const codeKeysOf = sharedMemo(
+  "plugin records",
+  (_set: RepoFiles) => new Map<string, Promise<string>>(),
+);
 
 /**
  * The npm code a closure LOADS, as one key part: the lock entries of the
@@ -88,19 +88,13 @@ export function npmCodeKey(
 ): Promise<string> {
   const npm = [...new Set(packages)].filter((p) => !isBuiltin(p)).sort();
   if (npm.length === 0) return Promise.resolve("");
-  let byList = codeKeys.get(set);
-  if (!byList) codeKeys.set(set, (byList = new Map()));
+  const byList = codeKeysOf(set);
   const listKey = npm.join("\0");
   let key = byList.get(listKey);
   if (key === undefined) {
     key = sharedWork("plugin records", async () => {
       if (!set.has("bun.lock")) return sha256Hex(`no-lock\0${listKey}`);
-      let lock = locks.get(set);
-      if (!lock) {
-        lock = readLock(set).then(parseBunLock);
-        locks.set(set, lock);
-      }
-      const closure = npmClosureOf(await lock, npm);
+      const closure = npmClosureOf(await lockOf(set), npm);
       const patches = await Promise.all(
         closure.patches.map(async (rel) => {
           const text = set.has(rel) ? await set.read(rel) : null;

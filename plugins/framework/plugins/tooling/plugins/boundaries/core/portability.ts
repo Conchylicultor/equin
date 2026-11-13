@@ -28,6 +28,7 @@
  * `machine/` is out of scope: no browser host boots it.
  */
 
+import { sharedMemo } from "@plugins/packages/plugins/shared-work/core";
 import type { RepoFiles } from "@plugins/framework/plugins/tooling/core";
 import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import {
@@ -398,8 +399,6 @@ export async function serverPortability(
   return derivePortability({ barrels, closure, read });
 }
 
-const memo = new WeakMap<RepoFiles, Promise<ServerPortability>>();
-
 /**
  * Every server barrel's portability in `repo`, derived once per file set: one
  * shared promise per `RepoFiles`, so codegen's consumers (through
@@ -412,25 +411,21 @@ const memo = new WeakMap<RepoFiles, Promise<ServerPortability>>();
  * and each module's facts are file records: from the build's snapshot, only a
  * module whose blob changed is read.
  */
-export function serverPortabilityOf(
+export const serverPortabilityOf: (
   repo: RepoFiles,
-): Promise<ServerPortability> {
-  let p = memo.get(repo);
-  if (p === undefined) {
-    p = (async () => {
-      const barrels = repo
-        .all()
-        .filter((path) => SERVER_BARREL_RE.test(path))
-        .sort();
-      const { closure, facts } = await measuredClosure(repo, barrels);
-      return derivePortability({
-        barrels,
-        closure,
-        read: (path) => repo.read(path),
-        facts,
-      });
-    })();
-    memo.set(repo, p);
-  }
-  return p;
-}
+) => Promise<ServerPortability> = sharedMemo(
+  "server portability",
+  async (repo) => {
+    const barrels = repo
+      .all()
+      .filter((path) => SERVER_BARREL_RE.test(path))
+      .sort();
+    const { closure, facts } = await measuredClosure(repo, barrels);
+    return derivePortability({
+      barrels,
+      closure,
+      read: (path) => repo.read(path),
+      facts,
+    });
+  },
+);

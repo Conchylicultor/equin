@@ -1,5 +1,6 @@
 import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import type { RepoSnapshot } from "@plugins/framework/plugins/tooling/core";
+import { sharedMemo } from "@plugins/packages/plugins/shared-work/core";
 
 /**
  * One pass of the codegen tree family over a checkout: the file set its trees
@@ -32,21 +33,20 @@ export interface CodegenPass {
   phaseRepo(): Promise<RepoSnapshot>;
 }
 
-// One pass per check run's set: every check of a run asking with the run's set
-// shares its memos. An input-keyed check's recording set is its own object, so
-// it gets its own pass, and every read its trees make is recorded.
-const passesBySet = new WeakMap<RepoSnapshot, CodegenPass>();
-
-/** The pass over one fixed set (a check run's `ctx.repo()`), memoized on it. */
-export function codegenPassOver(repo: RepoSnapshot): CodegenPass {
-  let pass = passesBySet.get(repo);
-  if (pass === undefined) {
+/**
+ * The pass over one fixed set (a check run's `ctx.repo()`), memoized on it:
+ * every check of a run asking with the run's set shares its memos. An
+ * input-keyed check's recording set is its own object (and its own input,
+ * `markOwnInput`), so it gets its own pass, every read its trees make is
+ * recorded, and the work is counted as that check's.
+ */
+export const codegenPassOver: (repo: RepoSnapshot) => CodegenPass = sharedMemo(
+  "codegen pass",
+  (repo) => {
     const phase = Promise.resolve(repo);
-    pass = { root: repo.root, repo, phaseRepo: () => phase };
-    passesBySet.set(repo, pass);
-  }
-  return pass;
-}
+    return { root: repo.root, repo, phaseRepo: () => phase };
+  },
+);
 
 /**
  * A writing pass: `repo` is the set the pass root listed first, `relist`

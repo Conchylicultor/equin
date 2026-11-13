@@ -384,13 +384,13 @@ its docblock records — and then lowered as readily as raised.
 - Core:
   - Uses:
     - `framework/plugin-id.pluginDirOfRepoPath`
-    - `infra/deps/npm/lock-closure.BunLock`
     - `infra/deps/npm/lock-closure.npmClosureOf`
     - `infra/deps/npm/lock-closure.parseBunLock`
     - `infra/deps/npm/lock-resolutions.lockfileNpmResolutions`
     - `infra/host-fs/user-path.AppPath`
     - `infra/host-fs/user-path.joinAppPath`
     - `packages/macrotask-yield.yieldMacrotask`
+    - `packages/shared-work.sharedMemo`
     - `packages/shared-work.sharedWork`
     - `packages/string-hash.sha1Hex`
     - `packages/string-hash.sha256Hex`

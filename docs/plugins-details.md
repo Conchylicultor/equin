@@ -31409,7 +31409,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Plugins:
         - **`boundaries`** — Boundary-rules checker: zone DSL, edge evaluator, and project boundary config
           - Core:
-            - Uses: 25 symbols — full list in [`plugins/framework/plugins/tooling/plugins/boundaries/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/boundaries/REFERENCE.md)
+            - Uses: 26 symbols — full list in [`plugins/framework/plugins/tooling/plugins/boundaries/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/boundaries/REFERENCE.md)
               - `framework/plugin-id` ×6
               - `plugin-meta/parse-utils` ×6
               - `plugin-meta/plugin-records` ×4
@@ -31418,6 +31418,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/host-fs/user-path.joinAppPath`
               - `infra/spawn.getWorktreeRoot`
               - `packages/macrotask-yield.yieldMacrotask`
+              - `packages/shared-work.sharedMemo`
               - `packages/timed-fs.existsSync`
               - `plugin-meta/plugin-tree/structure-records.buildStructureTreeOnce`
             - Exports (types):
@@ -31611,7 +31612,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Exports (values): `parseRuntimeException`
         - **`checks`** — Check runner and built-in checks for ./equin check
           - Core:
-            - Uses: 86 symbols — full list in [`plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md)
+            - Uses: 88 symbols — full list in [`plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md)
               - `framework/tooling` ×12
               - `packages/timed-fs` ×11
               - `plugin-meta/plugin-records` ×10
@@ -31622,6 +31623,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/tooling/checks/source-analysis` ×3
               - `infra/launcher/env-names` ×3
               - `infra/spawn` ×3
+              - `packages/shared-work` ×3
               - `plugin-meta/parse-utils` ×3
               - `infra/paths` ×2
               - `packages/macrotask-yield` ×2
@@ -31632,7 +31634,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/paths/repo-root.REPO_ROOT`
               - `packages/flock.flockTry`
               - `packages/semaphore.createSemaphore`
-              - `packages/shared-work.sharedWork`
               - `packages/single-flight.singleFlight`
               - `packages/string-hash.sha256Hex`
               - `plugin-meta/plugin-tree/structure-records.buildStructureTreeOnce`
@@ -31944,7 +31945,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                     - Uses: `framework/tooling/checks/type-check.readTypeCheckTree`
         - **`codegen`** — Plugin doc generation and registry codegen
           - Core:
-            - Uses: 159 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
+            - Uses: 162 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
               - `plugin-meta/parse-utils` ×17
               - `config_v2` ×16
               - `framework/plugin-id` ×13
@@ -31960,6 +31961,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `plugin-meta/plugin-records/evaluate` ×5
               - `framework/tooling/codegen/composition-registries` ×4
               - `infra/host-fs/user-path` ×4
+              - `packages/shared-work` ×4
               - `framework/tooling/format` ×3
               - `framework/tooling` ×3
               - `config_v2/ledger` ×2
@@ -31975,7 +31977,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `fields/reorder-tree.REORDER_NODE_LEGEND`
               - `framework/tooling/guards/agent-policy.agentPolicySettings`
               - `infra/namespace.MAIN_COMPOSITION_ID`
-              - `packages/shared-work.sharedWork`
               - `packages/string-hash.sha256Hex`
               - `plugin-meta/facets/contributions.contributionsFacetDef`
               - `plugin-meta/facets/exemptions.exemptionsFacetDef`
@@ -32695,6 +32696,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/dom/auto-scroll` (0 debt)
                   - `primitives/dom/scroll-reveal` (0 debt)
                   - `primitives/embed/frame/agent` (0 debt)
+            - **`shared-work-safety`** — shared-work-safety lint rule: per-run-memo (a module-level Map / WeakMap keyed by a run's file set — a RepoFiles, or a value holding one such as a CodegenPass — is spelled sharedMemo(name, produce) from packages/shared-work, so the work it memoizes is shared work by construction and no check is charged for whatever it happened to ask first)
             - **`sink-safety`** — sink-safety lint rules: no-adhoc-file-sink, no-adhoc-profiler-seam
               - Exemptions:
                 - Exempted by:
@@ -41526,6 +41528,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`shared-work`** — Marks work as SHARED — started by one caller, reused by every later one (a per-process memo, a content-keyed record): sharedWork(name, fn) runs fn in the scope a per-unit meter installed with installSharedWorkScope, so the work is counted under its own name and not into whichever unit happened to start it. Portable: with no scope installed it just runs fn.
       - Cross-plugin:
         - Imported by:
+          - `framework/tooling/boundaries`
           - `framework/tooling/checks`
           - `framework/tooling/codegen`
           - `packages/timed-fs`
@@ -41535,7 +41538,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (types): `SharedWorkScope`
         - Exports (values):
           - `installSharedWorkScope`
+          - `isOwnInput`
+          - `markOwnInput`
+          - `sharedMemo`
           - `sharedWork`
+          - `sharedWorkOver`
     - **`signal-origin`** — Native SA_SIGINFO signal tap: records WHO sent a fatal signal (sender pid/uid, executable path, and the sender's ancestry captured inside the handler before it is reaped) and chains to the previously installed handler. armSignalOrigin(ready, signos) arms from the compiled shim (the signal-origin-shim dependency, a build kind declared in its deps barrel) and fails open and quiet; readSignalOrigin is a synchronous pure read safe from an exit hook.
       - Deps:
         - Uses:
@@ -46138,13 +46145,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Core:
         - Uses:
           - `framework/plugin-id.pluginDirOfRepoPath`
-          - `infra/deps/npm/lock-closure.BunLock`
           - `infra/deps/npm/lock-closure.npmClosureOf`
           - `infra/deps/npm/lock-closure.parseBunLock`
           - `infra/deps/npm/lock-resolutions.lockfileNpmResolutions`
           - `infra/host-fs/user-path.AppPath`
           - `infra/host-fs/user-path.joinAppPath`
           - `packages/macrotask-yield.yieldMacrotask`
+          - `packages/shared-work.sharedMemo`
           - `packages/shared-work.sharedWork`
           - `packages/string-hash.sha1Hex`
           - `packages/string-hash.sha256Hex`

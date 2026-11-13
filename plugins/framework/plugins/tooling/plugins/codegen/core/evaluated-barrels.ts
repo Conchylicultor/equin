@@ -1,4 +1,4 @@
-import { sharedWork } from "@plugins/packages/plugins/shared-work/core";
+import { sharedMemo } from "@plugins/packages/plugins/shared-work/core";
 import { realpathSync } from "@plugins/packages/plugins/timed-fs/core";
 import { relative } from "path";
 import {
@@ -140,49 +140,55 @@ async function evaluate(
   };
 }
 
-const webByPass = new WeakMap<CodegenPass, Promise<BarrelEvaluation>>();
-const allByPass = new WeakMap<CodegenPass, Promise<BarrelEvaluation>>();
-
 /** Every web barrel, evaluated (memoized per pass). */
-export function evaluateWebBarrels(
+export const evaluateWebBarrels: (
   pass: CodegenPass,
-): Promise<BarrelEvaluation> {
-  let e = webByPass.get(pass);
-  if (!e)
-    webByPass.set(
-      pass,
-      (e = sharedWork("evaluated barrels", () => evaluate(pass, ["web"]))),
-    );
-  return e;
-}
+) => Promise<BarrelEvaluation> = sharedMemo(
+  "evaluated barrels",
+  (pass) => evaluate(pass, ["web"]),
+  { owner: (pass) => pass.repo },
+);
 
 /**
  * Every barrel of every runtime, evaluated — the declaration-dependent ones
  * (whose plugin fills its contributions from the whole declared set) resolved
  * against the full source-scope declaration (memoized per pass).
  */
-export function evaluateAllBarrels(
+export const evaluateAllBarrels: (
   pass: CodegenPass,
-): Promise<BarrelEvaluation> {
-  let e = allByPass.get(pass);
-  if (!e) {
-    e = sharedWork("evaluated barrels", async () => {
-      // The web phase first: its slot naming is what a later reader (and the
-      // orphan guard) settled, and its records are hits for this one.
-      await evaluateWebBarrels(pass);
-      const all = await evaluate(pass, RUNTIMES);
-      await all.barrels.resolveDeclarationDependent(all.refs);
-      return all;
-    });
-    allByPass.set(pass, e);
-  }
-  return e;
-}
+) => Promise<BarrelEvaluation> = sharedMemo(
+  "evaluated barrels",
+  async (pass) => {
+    // The web phase first: its slot naming is what a later reader (and the
+    // orphan guard) settled, and its records are hits for this one.
+    await evaluateWebBarrels(pass);
+    const all = await evaluate(pass, RUNTIMES);
+    await all.barrels.resolveDeclarationDependent(all.refs);
+    return all;
+  },
+  { owner: (pass) => pass.repo },
+);
 
-const namingByPass = new WeakMap<
-  CodegenPass,
-  Map<SlotScope, Promise<SlotNaming>>
->();
+/** The slot naming of one scope over the evaluated records, per pass. */
+function namingOf(
+  scope: SlotScope,
+): (pass: CodegenPass) => Promise<SlotNaming> {
+  return sharedMemo(
+    "slot naming",
+    async (pass) => {
+      const ev =
+        scope === "registry"
+          ? await evaluateWebBarrels(pass)
+          : await evaluateAllBarrels(pass);
+      return settleSlotNaming(declaringPlugins(ev, pass.root, scope), scope);
+    },
+    { owner: (pass) => pass.repo },
+  );
+}
+const namings: Record<SlotScope, (pass: CodegenPass) => Promise<SlotNaming>> = {
+  registry: namingOf("registry"),
+  source: namingOf("source"),
+};
 
 /**
  * The slot naming over the evaluated records — the build's twin of a live
@@ -198,20 +204,7 @@ export function recordSlotNaming(
   pass: CodegenPass,
   scope: SlotScope,
 ): Promise<SlotNaming> {
-  let byScope = namingByPass.get(pass);
-  if (!byScope) namingByPass.set(pass, (byScope = new Map()));
-  let n = byScope.get(scope);
-  if (!n) {
-    n = sharedWork("slot naming", async () => {
-      const ev =
-        scope === "registry"
-          ? await evaluateWebBarrels(pass)
-          : await evaluateAllBarrels(pass);
-      return settleSlotNaming(declaringPlugins(ev, pass.root, scope), scope);
-    });
-    byScope.set(scope, n);
-  }
-  return n;
+  return namings[scope](pass);
 }
 
 function declaringPlugins(

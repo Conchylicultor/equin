@@ -4273,6 +4273,10 @@
       "name": "@equin/plugin-framework-tooling-lint-scroll-safety",
       "version": "0.0.1",
     },
+    "plugins/framework/plugins/tooling/plugins/lint/plugins/shared-work-safety": {
+      "name": "@equin/plugin-framework-tooling-lint-shared-work-safety",
+      "version": "0.0.1",
+    },
     "plugins/framework/plugins/tooling/plugins/lint/plugins/sink-safety": {
       "name": "@equin/plugin-framework-tooling-lint-sink-safety",
       "version": "0.0.1",
@@ -9893,6 +9897,8 @@
     "@equin/plugin-framework-tooling-lint-runtime-isolation": ["@equin/plugin-framework-tooling-lint-runtime-isolation@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/runtime-isolation"],
 
     "@equin/plugin-framework-tooling-lint-scroll-safety": ["@equin/plugin-framework-tooling-lint-scroll-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/scroll-safety"],
+
+    "@equin/plugin-framework-tooling-lint-shared-work-safety": ["@equin/plugin-framework-tooling-lint-shared-work-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/shared-work-safety"],
 
     "@equin/plugin-framework-tooling-lint-sink-safety": ["@equin/plugin-framework-tooling-lint-sink-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/sink-safety"],
 

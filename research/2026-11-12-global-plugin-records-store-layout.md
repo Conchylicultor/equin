@@ -1149,3 +1149,82 @@ a function of the related tree), config-origins-in-sync rendering the 495
 origins (~160–250 ms), plugins-registry-in-sync (153 calls, ~0.5–1.1 s), the
 registry codegen context (1,278 shared calls), the faceted trees' facet reads +
 relate (~300 ms each).
+
+## drizzle-kit and the fixture compile, O(changes); shared work by construction (task: check pass O(changes), 12)
+
+Measured 2026-11-13, the same one-line edit to `hints/help-menu/web/index.ts`,
+`./equin check --scope tree --jobs 1` after a warm pass, read from
+`check-progress.jsonl`.
+
+### Split before (load ~5)
+
+| check | wall | why |
+| --- | ---: | --- |
+| migrations-in-sync | 4,052 ms | `drizzle-kit generate` spawned every pass, whatever changed |
+| live:read-misuse-diagnostics | 4,058 ms | a fresh TS program over one fixture every pass (28 CPU-s standalone), its config parse listing the whole repo for an `include` the single-root program never used |
+| active-data:document-chip-has-server-token | 2,719 ms | first in the serial order to await the shared enriched tree (below) |
+| type-check / lint:eslint-config-loads / no-plugin-imports-in-core | 2.6 / 2.5 / 1.6 s | out of scope here |
+| **pass** | **27.95 s elapsed, 29.9 s wall, 41.9 CPU-s** | |
+
+"descriptors live 19 s" did not reproduce: it was measured in a process with
+no record store installed (`currentRecordStore()`'s memory store — every
+record cold: barrel-free tree 7.7 s, evaluation 8.5 s). With the shared store
+the enriched tree is ~2.8 s and the live descriptor import ~2.6 s standalone,
+~0.8 s inside a pass (charged to `config-v2:registrations-paired`, the first
+to import the server barrels).
+
+### Fix
+
+- **migrations-in-sync is a `closureRecord`**
+  (`checks/plugins/migrations-in-sync/check/internal/in-sync-record.ts`):
+  drizzle-kit's verdict (in-sync / would add / ambiguous / unjoined), keyed by
+  every schema-glob file's module Merkle key, the drizzle config, the
+  producer that stages and spawns it (`drizzle-generate.ts`), every `data/`
+  file's blob and the npm code. Only a deterministic verdict is stored (a
+  non-zero exit or a diagnostic printed with exit 0 runs again). Tests pin
+  each input (`in-sync-record.test.ts`); a real column added to a raw
+  `pgTable` fails the check, reverting it passes. `--verify-records`
+  recomputes it daily like every record (the drizzle verdict's "caught by
+  migrations-in-sync on every push" now reads so).
+- **read-misuse-diagnostics is input-keyed**: the probe wraps `ts.sys` and
+  reports every repo path (outside `node_modules`) tsc read, probed or asked
+  about as a directory; the check puts them in its read-set (`blobOf` /
+  `has` / `under`), plus the probe's bytes and `bun.lock`. A read of a file
+  the set does not hold throws. The config parse is handed no lister.
+- **Meter gap 1 — shared work by construction.** `sharedMemo(name, produce,
+  { owner })` (`packages/shared-work`) is the one spelling of a per-run memo:
+  the producer runs under `sharedWork`. The type-aware lint
+  `shared-work-safety/per-run-memo` refuses a module-level `Map` / `WeakMap`
+  keyed by a file set (`RepoFiles`' members, structurally) or a value holding
+  one under `repo` (`CodegenPass`). Migrated: codegen pass, barrel-free and
+  enriched trees, both evaluations, slot namings, registry context, npm keys,
+  scan identities — and three that had no wrap at all and charged their
+  whole work to the first check to ask: `serverPortabilityOf`, the live slot
+  declaration pass (`declareSlotsFromBarrels`, every barrel imported) and the
+  token-group collection (the lint found the last two).
+- **Meter gap 2 — a check's own caches are its own.** `recordingRepoFiles`
+  marks an input-keyed check's set `markOwnInput`; `sharedMemo` (by the key's
+  owner — a pass's `repo`) and `sharedWorkOver` (the registry context's lazy
+  `<dir>` scans and browser-host derivations; a ctx over an own set is itself
+  own) run that check's work in its own scope, so its reads are in its meter
+  as well as its read-set. Source analysis reads the same mark.
+
+| one-line edit, serial | before (load ~5) | after (load ~5) | after (load 7–9) |
+| --- | ---: | ---: | ---: |
+| migrations-in-sync | 4,052 ms | 13 ms | — |
+| live:read-misuse-diagnostics | 4,058 ms | 2 ms (replay) | — |
+| pass, elapsed / wall | 27.95 / 29.9 s | 16.3 / 17.8 s | 21.7 / 26.5 s |
+| pass CPU (user + sys) | 41.9 s | 26.2 s | 30.9 s |
+
+Cold: a schema edit runs drizzle-kit once per distinct input host-wide (as
+before, per pass); an edit inside the fixture's type closure compiles it.
+
+### Next
+
+The serial pass now ends on: the shared enriched tree (~2.8 s, charged to
+`active-data:document-chip-has-server-token` as the first asker — its file
+calls are shared, its wall is not attributed), `no-plugin-imports-in-core`
+~1.6–2.1 s, type-check ~1.7–3.5 s, `config-v2:registrations-paired` ~0.7–1.4 s
+(the live server-barrel import), `lint:eslint-config-loads` 0.8–2.5 s (a Node
+/ jiti load whose read-set needs the load's own file reads), format-clean /
+lint-directives-stable ~1 s each, then the smaller O(set) items of section 11.

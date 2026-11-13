@@ -1,3 +1,4 @@
+import { sharedMemo } from "@plugins/packages/plugins/shared-work/core";
 import type { SlotHandle } from "@plugins/framework/plugins/slot-declaration/core";
 import {
   joinAppPath,
@@ -53,17 +54,6 @@ interface CollectedTokenGroup {
   schema: Record<string, { default?: unknown; values?: readonly string[] }>;
 }
 
-// Memoize per pass: the descriptors are immutable for a pass's lifetime, so
-// the (barrel-importing) collection runs at most once even though the codegen
-// step plus several checks (`token-group-vars-in-sync`, `css-vars-supplied`,
-// `css-vars-single-owner`, `type-scale:closed-role-ladder`) all consume it.
-// Promise-valued so concurrent callers share one in-flight pass; evicted on
-// rejection so a transient failure doesn't poison later retries.
-const collectCache = new WeakMap<
-  CodegenPass,
-  Promise<Record<string, CollectedTokenGroup>>
->();
-
 /**
  * Walk the plugin tree, import each plugin's web barrel, and collect — per token
  * group id — the CSS vars its descriptor declares. Generic: keyed on the
@@ -91,19 +81,19 @@ export async function collectTokenGroupVars(
  * {@link collectTokenGroupVars} — for a check that reads what a token declares
  * beyond its var (an enumerated token's `values`).
  */
-export function collectTokenGroups(
+//
+// Memoized per pass: the descriptors are immutable for a pass's lifetime, so
+// the (barrel-importing) collection runs at most once even though the codegen
+// step plus several checks (`token-group-vars-in-sync`, `css-vars-supplied`,
+// `css-vars-single-owner`, `type-scale:closed-role-ladder`) all consume it —
+// as shared work, and a failure is every caller's same failure.
+export const collectTokenGroups: (
   pass: CodegenPass,
-): Promise<Record<string, CollectedTokenGroup>> {
-  let cached = collectCache.get(pass);
-  if (!cached) {
-    cached = collectTokenGroupsUncached(pass).catch((err) => {
-      collectCache.delete(pass);
-      throw err;
-    });
-    collectCache.set(pass, cached);
-  }
-  return cached;
-}
+) => Promise<Record<string, CollectedTokenGroup>> = sharedMemo(
+  "token groups",
+  (pass: CodegenPass) => collectTokenGroupsUncached(pass),
+  { owner: (pass) => pass.repo },
+);
 
 async function collectTokenGroupsUncached(
   pass: CodegenPass,

@@ -568,8 +568,14 @@ cheaper questions first (`research/2026-11-04-global-build-pipeline-step5-migrat
 
 Only a "nothing to generate" answer is ever recorded; `--custom` and
 `--migration-answers` runs skip both. The probe refuses a `drizzle.config.ts`
-key the comparison does not pass on (casing, filters). `migrations-in-sync`
-still runs drizzle-kit itself on every check pass.
+key the comparison does not pass on (casing, filters).
+
+`migrations-in-sync` asks drizzle-kit itself (`generate` over the committed
+`data/`, staged), and keeps its answer as a `closureRecord` keyed by every
+schema file's closure, the drizzle config, the producer that runs it, every
+`data/` file's blob and the npm code: a pass after an edit none of them see is
+a lookup, a schema edit runs drizzle-kit (its `check/internal/in-sync-record.ts`).
+`--verify-records` recomputes that record like every other.
 
 ## Where drizzle-kit runs from
 

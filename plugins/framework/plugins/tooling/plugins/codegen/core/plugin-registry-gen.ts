@@ -1,4 +1,9 @@
-import { sharedWork } from "@plugins/packages/plugins/shared-work/core";
+import {
+  isOwnInput,
+  markOwnInput,
+  sharedMemo,
+  sharedWorkOver,
+} from "@plugins/packages/plugins/shared-work/core";
 import {
   joinAppPath,
   type AppPath,
@@ -170,10 +175,6 @@ interface DirEntryScan {
   rawDeps: Map<string, string[]>;
 }
 
-// One ctx per file set (a pass's, or a check's own): see
-// `buildRegistryGenContext`.
-const contextsByRepo = new WeakMap<RepoFiles, Promise<RegistryGenContext>>();
-
 /**
  * The shared registry-generation context of `pass`. A check passes its own
  * file set as `repo` (so the scans read through it — recorded, for an
@@ -185,8 +186,9 @@ const contextsByRepo = new WeakMap<RepoFiles, Promise<RegistryGenContext>>();
  * `browserHostGraphs`) are paid once per run rather than once per check. That
  * is the ctx's own lifetime argument — a ctx is a snapshot, and a file set is
  * the snapshot it is built over — so the memo never outlives what it
- * describes. (An input-keyed check's recording set is its own object, so it
- * gets its own ctx and every read it makes is recorded.)
+ * describes. (An input-keyed check's recording set is its own object and its
+ * own input, so it gets its own ctx, every read it makes is recorded, and the
+ * work is counted as that check's — `sharedMemo`.)
  */
 export function buildRegistryGenContext(
   pass: CodegenPass,
@@ -197,15 +199,13 @@ export function buildRegistryGenContext(
       `buildRegistryGenContext(${pass.root}) was handed the file set of ${repo.root}.`,
     );
   }
-  let ctx = contextsByRepo.get(repo);
-  if (ctx === undefined) {
-    ctx = sharedWork("registry codegen context", () =>
-      buildContext(pass, repo),
-    );
-    contextsByRepo.set(repo, ctx);
-  }
-  return ctx;
+  return contextOf(repo, pass);
 }
+
+const contextOf = sharedMemo(
+  "registry codegen context",
+  (repo: RepoFiles, pass: CodegenPass) => buildContext(pass, repo),
+);
 
 async function buildContext(
   pass: CodegenPass,
@@ -219,7 +219,7 @@ async function buildContext(
   const files = (): Promise<RepoFiles> => listing;
   let scans: Promise<SourceScans> | undefined;
   const declaredApps = await readDeclaredApps(tree);
-  return {
+  const ctx: RegistryGenContext = {
     root,
     tree,
     graph,
@@ -248,10 +248,14 @@ async function buildContext(
     dirScans: new Map(),
     browserHostGraphs: new Map(),
     sourceScans: () =>
-      (scans ??= sharedWork("registry codegen context", () =>
+      (scans ??= sharedWorkOver(repo, "registry codegen context", () =>
         files().then(createSourceScans),
       )),
   };
+  // A ctx over one check's own file set is that check's own: the work its
+  // lazy memos do (`dirScans`, the browser-host derivations) is the check's.
+  if (isOwnInput(repo)) markOwnInput(ctx);
+  return ctx;
 }
 
 /**
@@ -277,7 +281,7 @@ export async function scanCollectedDir(
 function scanDir(ctx: RegistryGenContext, dir: string): Promise<DirEntryScan> {
   let scan = ctx.dirScans.get(dir);
   if (scan === undefined) {
-    scan = sharedWork("registry codegen context", () =>
+    scan = sharedWorkOver(ctx, "registry codegen context", () =>
       computeDirScan(ctx, dir),
     );
     ctx.dirScans.set(dir, scan);

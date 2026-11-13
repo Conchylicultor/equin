@@ -31,3 +31,60 @@ export function sharedWork<T>(name: string, fn: () => T): T {
 export function installSharedWorkScope(next: SharedWorkScope): void {
   scope = next;
 }
+
+/**
+ * Inputs owned by ONE unit: a memo keyed on one of them serves that unit
+ * alone (an input-keyed check's recording file set — `ctx.repo()` records
+ * its reads into that check's read-set), so the work it does is that unit's
+ * own, never shared.
+ */
+const ownedByOneUnit = new WeakSet<object>();
+
+/** Mark `input` as one unit's own: work memoized on it is counted as that unit's. */
+export function markOwnInput(input: object): void {
+  ownedByOneUnit.add(input);
+}
+
+/** Whether `input` is one unit's own (see {@link markOwnInput}). */
+export function isOwnInput(input: object): boolean {
+  return ownedByOneUnit.has(input);
+}
+
+/**
+ * Run `fn` as work over `input`: shared work ({@link sharedWork}`(name, …)`)
+ * unless `input` is one unit's own ({@link markOwnInput}), in which case it is
+ * that unit's work and runs in its scope. For work a memo hung off an input
+ * does lazily (a scan a context runs on first ask).
+ */
+export function sharedWorkOver<T>(input: object, name: string, fn: () => T): T {
+  return isOwnInput(input) ? fn() : sharedWork(name, fn);
+}
+
+/**
+ * A memo of work keyed by an input object (a run's file set, a codegen pass
+ * over one): `produce(key, ...args)` runs once per key — with the first
+ * caller's `args` — and is shared work by construction: run under
+ * {@link sharedWork}`(name, …)`, so whichever unit asks first is not charged
+ * for it, unless the key's owner (the key itself, or `owner(key)`: the file
+ * set a pass is over) is one unit's own input ({@link markOwnInput}), in which
+ * case it IS that unit's work and runs in its scope.
+ *
+ * The one spelling of a per-run memo: a hand-rolled `WeakMap` / `Map` keyed by
+ * a run's file set is a lint error (`shared-work-safety/per-run-memo`), so no
+ * memo can forget the scope and charge a whole tree's reads to one check.
+ */
+export function sharedMemo<K extends object, A extends unknown[], V>(
+  name: string,
+  produce: (key: K, ...args: A) => V,
+  opts?: { owner?: (key: K) => object },
+): (key: K, ...args: A) => V {
+  const memo = new WeakMap<K, V>();
+  return (key, ...args) => {
+    if (memo.has(key)) return memo.get(key) as V;
+    const value = sharedWorkOver(opts?.owner?.(key) ?? key, name, () =>
+      produce(key, ...args),
+    );
+    memo.set(key, value);
+    return value;
+  };
+}

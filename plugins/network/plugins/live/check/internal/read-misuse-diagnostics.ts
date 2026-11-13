@@ -1,5 +1,8 @@
 import * as path from "node:path";
-import type { Check } from "@plugins/framework/plugins/tooling/core";
+import type {
+  Check,
+  RepoSnapshot,
+} from "@plugins/framework/plugins/tooling/core";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 
 // ── live:read-misuse-diagnostics ───────────────────────────────────────────
@@ -132,21 +135,41 @@ export function markerViolations(
   return out;
 }
 
-/** The probe that compiles the fixture, by path (spawned, never imported). */
-const PROBE = path.join(
-  import.meta.dir,
-  "../../scripts/compile-read-misuse-fixture.ts",
-);
+/**
+ * The probe that compiles the fixture, repo-relative (spawned, never imported
+ * — so the check's code key does not cover it: its bytes are in the read-set).
+ */
+const PROBE =
+  "plugins/network/plugins/live/scripts/compile-read-misuse-fixture.ts";
+if (
+  !path
+    .join(import.meta.dir, "../../scripts/compile-read-misuse-fixture.ts")
+    .endsWith(`/${PROBE}`)
+)
+  throw new Error(`live:read-misuse-diagnostics: the probe is not at ${PROBE}`);
 
-/** Compile the fixture (markers blanked) under the repo's tsconfig, in a subprocess, and return its own diagnostics. */
+/** Every repo path (outside `node_modules`) the compile asked about, by kind of question. */
+export interface TouchedPaths {
+  read: string[];
+  exists: string[];
+  dirs: string[];
+}
+
+/** Compile the fixture (markers blanked) under the repo's tsconfig, in a subprocess, and return its own diagnostics and what it read. */
 async function fixtureDiagnostics(
   root: string,
   stripped: string,
 ): Promise<
-  { ok: true; diagnostics: LineDiagnostic[] } | { ok: false; message: string }
+  | { ok: true; diagnostics: LineDiagnostic[]; touched: TouchedPaths }
+  | { ok: false; message: string }
 > {
   const run = await spawnCaptured(
-    [process.execPath, PROBE, root, path.join(root, READ_MISUSE_FIXTURE)],
+    [
+      process.execPath,
+      path.join(root, PROBE),
+      root,
+      path.join(root, READ_MISUSE_FIXTURE),
+    ],
     {
       cwd: root,
       env: { ...process.env, NO_COLOR: "1" },
@@ -162,11 +185,43 @@ async function fixtureDiagnostics(
       message: `the compile probe exited ${run.exitCode}:\n${run.stderr.slice(-4000)}`,
     };
   }
-  return { ok: true, diagnostics: JSON.parse(run.stdout) as LineDiagnostic[] };
+  const out = JSON.parse(run.stdout) as {
+    diagnostics: LineDiagnostic[];
+    touched: TouchedPaths;
+  };
+  return { ok: true, ...out };
+}
+
+/**
+ * Put what the compile read into the check's read-set, through the recording
+ * file set: each file read or probed by its content id (absent: its absence),
+ * each directory asked about by its subtree's membership, the probe's own
+ * bytes, and the lockfile (which pins everything under `node_modules`, the
+ * compiler included). So the PASS replays until one of them moves — the
+ * fixture's type closure, not the tree. A file the compile read that the file
+ * set does not hold (gitignored, on disk) is an input no fact could name: loud.
+ */
+export function recordCompileInputs(
+  repo: Pick<RepoSnapshot, "has" | "blobOf" | "under">,
+  touched: TouchedPaths,
+): void {
+  const unheld = touched.read.filter((p) => !repo.has(p));
+  if (unheld.length > 0)
+    throw new Error(
+      `live:read-misuse-diagnostics: the compile read ${unheld.length} file(s) outside the check's file set (gitignored?), which no read-set fact can key: ${unheld.slice(0, 5).join(", ")}`,
+    );
+  for (const p of [...touched.read, PROBE, "bun.lock"]) repo.blobOf(p);
+  // `has` records the file's content id when present, its absence when not.
+  for (const p of touched.exists) repo.has(p);
+  for (const d of touched.dirs) repo.under(d);
 }
 
 export const readMisuseDiagnostics: Check = {
   id: "live:read-misuse-diagnostics",
+  // Its verdict is a function of what the compile reads, which the probe
+  // reports and `recordCompileInputs` puts in the read-set: an edit outside
+  // the fixture's type closure replays the PASS and compiles nothing.
+  inputKeyed: true,
   description:
     "Every misuse in network/live's `use-live-query-types.test.ts` is reported on the line its `@ts-expect-error` marks with exactly the TS code(s) the marker names (`// @ts-expect-error TS2322 — <label>`) — so never as TS2769 (\"No overload matches this call\", which `@ts-expect-error` cannot tell apart) unless the marker lists it — with no unmarked diagnostic. Compiles the file, markers blanked in memory, under the repo's compiler options.",
   async run(ctx) {
@@ -187,6 +242,7 @@ export const readMisuseDiagnostics: Check = {
       fixtureDiagnostics(repo.root, stripped),
     );
     if (!compiled.ok) return { ok: false, message: compiled.message };
+    recordCompileInputs(repo, compiled.touched);
     ctx.log?.(
       `live:read-misuse-diagnostics: ${markers.length} markers, ${compiled.diagnostics.length} diagnostics, compiled in ${Math.round(performance.now() - started)} ms`,
       "stdout",

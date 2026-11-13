@@ -416,8 +416,11 @@ export interface Check {
    *     treated as a MISS (run), so the cache can never CAUSE a stale PASS.
    *   - `"declared"` → INPUT-KEYED via an explicit `declaredInputs()` spec rather
    *     than record-then-replay, for OPAQUE checks whose reads happen inside a
-   *     subprocess the view cannot observe (e.g. `migrations-in-sync` spawning
-   *     `drizzle-kit`). Wired in a later stage.
+   *     subprocess the view cannot observe. Wired in a later stage. (A check
+   *     whose subprocess answer is a function of loaded code keeps it as a
+   *     plugin record instead — `migrations-in-sync`'s drizzle-kit run is a
+   *     `closureRecord` — or has the subprocess report what it read and puts
+   *     that in its read-set — `live:read-misuse-diagnostics`.)
    *
    * Consumers (the runner) read this GENERICALLY and never name check ids
    * (collection-consumer rule). This flag is LIVE and runs on every check pass:

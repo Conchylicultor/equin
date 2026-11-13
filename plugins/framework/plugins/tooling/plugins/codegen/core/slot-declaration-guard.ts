@@ -1,3 +1,4 @@
+import { sharedMemo } from "@plugins/packages/plugins/shared-work/core";
 import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
 import { joinAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { relative } from "path";
@@ -80,23 +81,27 @@ import type { CodegenPass } from "./codegen-pass";
  * per root that preceded this one serialized them by accident; the lane states
  * it, for these two passes and for the five other loops in this process.
  */
-const declaredByPass = new WeakMap<
-  CodegenPass,
-  Map<SlotScope, Promise<SlotNaming>>
->();
+const declaredOf: Record<
+  SlotScope,
+  (pass: CodegenPass) => Promise<SlotNaming>
+> = {
+  registry: sharedMemo(
+    "slot naming",
+    (pass: CodegenPass) => runDeclarationPass(pass, "registry"),
+    { owner: (pass) => pass.repo },
+  ),
+  source: sharedMemo(
+    "slot naming",
+    (pass: CodegenPass) => runDeclarationPass(pass, "source"),
+    { owner: (pass) => pass.repo },
+  ),
+};
 
 export function declareSlotsFromBarrels(
   pass: CodegenPass,
   scope: SlotScope,
 ): Promise<SlotNaming> {
-  let byScope = declaredByPass.get(pass);
-  if (!byScope) declaredByPass.set(pass, (byScope = new Map()));
-  let cached = byScope.get(scope);
-  if (!cached) {
-    cached = runDeclarationPass(pass, scope);
-    byScope.set(scope, cached);
-  }
-  return cached;
+  return declaredOf[scope](pass);
 }
 
 async function runDeclarationPass(

@@ -1,4 +1,7 @@
-import { sharedWork } from "@plugins/packages/plugins/shared-work/core";
+import {
+  sharedMemo,
+  sharedWork,
+} from "@plugins/packages/plugins/shared-work/core";
 import type {
   RepoFiles,
   RepoSnapshot,
@@ -72,7 +75,11 @@ export function isSnapshot(repo: RepoFiles): repo is RepoSnapshot {
   return typeof (repo as Partial<RepoSnapshot>).blobOf === "function";
 }
 
-const identities = new WeakMap<RepoFiles, Map<string, Promise<string>>>();
+// Per set: each scan module's identity, by its URL.
+const identitiesOf = sharedMemo(
+  "plugin records",
+  (_set: RepoFiles) => new Map<string, Promise<string>>(),
+);
 
 /**
  * The repo-relative path of the module at `url`: the longest of its path's
@@ -99,8 +106,7 @@ export function scannerIdentity(
   input: ModuleGraphInput & { snapshot: RepoSnapshot },
   url: string,
 ): Promise<string> {
-  let byModule = identities.get(input.snapshot);
-  if (!byModule) identities.set(input.snapshot, (byModule = new Map()));
+  const byModule = identitiesOf(input.snapshot);
   let id = byModule.get(url);
   if (!id) {
     const module = repoModuleOf(input.snapshot, url);
