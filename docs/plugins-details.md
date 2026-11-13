@@ -23756,7 +23756,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `product-name:legacy-id` — `data` (sanctioned)
           - `imperative-create-table-allowlisted` — `check/imperative-create-table-allowlisted.ts` (sanctioned)
           - `boundaries/no-platform-api` — `core/internal/schema-glob.ts`, `core/internal/drizzle-stage.ts`, `core/internal/published-immutable.ts`, `core/internal/schema-load-probe.ts`, `core/internal/schema-snapshot.ts`, `core/internal/snapshot-bodies.ts`, `core/internal/migration-data.ts` (debt)
-          - `check-thread-safety/no-blocking-check-work` — `check/fork-schema-drift.ts`, `check/internal/declared-schema-inputs.ts`, `check/orphaned-tables.ts` (debt)
+          - `check-thread-safety/no-blocking-check-work` — `check/fork-schema-drift.ts`, `check/orphaned-tables.ts` (debt)
           - `blocking-fs/sync-named` — `core/internal/drizzle-stage.ts`, `core/internal/schema-snapshot.ts` (sanctioned)
           - `sql-writes:fit:hand-written` — `server/internal/runner.ts` (sanctioned)
         - Exempted by:
@@ -32586,7 +32586,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Exempted by:
                   - `active-data` (1 debt)
                   - `config_v2` (1 debt)
-                  - `database/migrations` (3 debt)
+                  - `database/migrations` (2 debt)
                   - `framework/tooling/checks/bun-runtime` (1 debt)
                   - `framework/tooling/checks/css-vars-single-owner` (1 debt)
                   - `framework/tooling/checks/css-vars-supplied` (1 debt)

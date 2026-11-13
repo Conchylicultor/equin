@@ -1,4 +1,3 @@
-import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
 import { join, relative } from "path";
 import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import type { ServerContribution } from "@plugins/framework/plugins/server-core/core";
@@ -48,8 +47,11 @@ export async function declaredSchemaInputs(
   const definitions: { contributions?: readonly ServerContribution[] }[] = [];
   for (const node of ctx.tree.byDir.values()) {
     if (!ctx.mainBundle.has(asPluginId(node.id))) continue;
+    // Whether it has a server barrel is already on the node (the tree read
+    // every key file to build it): a stat per plugin here was ~1.8k file
+    // calls of this check's own on every slow-path pass.
+    if (!node.runtimes.server) continue;
     const serverIndex = join(node.dir, "server", "index.ts");
-    if (!existsSync(serverIndex)) continue;
     let mod: Record<string, unknown>;
     try {
       mod = await importBarrel(serverIndex);

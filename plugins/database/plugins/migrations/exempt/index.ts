@@ -32,11 +32,7 @@ export default [
   },
   {
     rule: "check-thread-safety/no-blocking-check-work",
-    paths: [
-      "check/fork-schema-drift.ts",
-      "check/internal/declared-schema-inputs.ts",
-      "check/orphaned-tables.ts",
-    ],
+    paths: ["check/fork-schema-drift.ts", "check/orphaned-tables.ts"],
     kind: "debt",
     task: "task-1793375830-dv7cez",
     reason:
