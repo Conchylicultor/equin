@@ -150,10 +150,11 @@ function RoleDetailBody({
             </Text>
           </Stack>
         </SettingRow>
-        <SettingRow label="Description agents get" dim={!role.listed}>
+        <SettingRow label="Description agents get" dim={!role.listed} top>
           <InlineTextField
+            multiline
             label="Description agents get"
-            placeholder="What belongs here, in one line"
+            placeholder="What belongs here"
             value={role.description}
             disabled={!role.listed}
             onSave={(description) => save({ description })}

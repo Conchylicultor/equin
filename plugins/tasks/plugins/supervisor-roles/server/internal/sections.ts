@@ -18,8 +18,9 @@ import {
 
 /**
  * The listed roles, for an agent whose mandate lets it file into a backlog
- * (`tasks.file` with `backlog`): one line each — name, id, description — and
- * how to file. Nothing when no role is listed and none is the fallback.
+ * (`tasks.file` with `backlog`): one item each — name, id, description (its
+ * further lines indented under the item) — and how to file. Nothing when no
+ * role is listed and none is the fallback.
  */
 export async function renderSupervisorRoles(
   conversationId: string,
@@ -31,7 +32,8 @@ export async function renderSupervisorRoles(
   const fallback = roles.find((r) => r.fallback);
   if (listed.length === 0 && !fallback) return null;
   const lines = listed.map((r) => {
-    const description = r.description.trim();
+    // A multi-line description stays inside its list item.
+    const description = r.description.trim().replace(/\n/g, "\n  ");
     return `- **${r.name}** (\`${r.id}\`)${description ? ` — ${description}` : ""}`;
   });
   return [

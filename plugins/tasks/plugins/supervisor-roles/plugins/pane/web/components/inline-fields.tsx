@@ -10,9 +10,11 @@ import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 // blur), so a value typed is a value kept.
 
 /**
- * A one-line value edited in place: a field that reads as text at rest and
+ * A plain-text value edited in place: a field that reads as text at rest and
  * wraps a long value.
- * `variant="title"` for a heading (the role's name).
+ * `variant="title"` for a heading (the role's name). `multiline` keeps the
+ * line breaks typed (Enter adds one, Escape ends the edit); otherwise the
+ * value is one line and Enter ends the edit.
  */
 export function InlineTextField({
   value,
@@ -22,6 +24,7 @@ export function InlineTextField({
   disabled,
   variant = "body",
   autoFocus,
+  multiline,
 }: {
   value: string;
   onSave: (next: string) => void | Promise<void>;
@@ -30,11 +33,11 @@ export function InlineTextField({
   disabled?: boolean;
   variant?: "body" | "title";
   autoFocus?: boolean;
+  multiline?: boolean;
 }): ReactElement {
   const field = useEditableField({ value, onSave, label });
   // A textarea sized by its content (`field-sizing: content`), so a long
-  // value wraps instead of scrolling out of sight; Enter ends the edit
-  // (the value is one line).
+  // value wraps instead of scrolling out of sight.
   return (
     <textarea
       aria-label={label}
@@ -42,11 +45,15 @@ export function InlineTextField({
       value={field.value}
       disabled={disabled}
       autoFocus={autoFocus}
-      onChange={(e) => field.onChange(e.target.value.replace(/\n/g, " "))}
+      onChange={(e) =>
+        field.onChange(
+          multiline ? e.target.value : e.target.value.replace(/\n/g, " "),
+        )
+      }
       onFocus={field.onFocus}
       onBlur={field.onBlur}
       onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === "Escape") {
+        if (e.key === "Escape" || (e.key === "Enter" && !multiline)) {
           e.preventDefault();
           e.currentTarget.blur();
         }
