@@ -35,6 +35,19 @@ open extent is a per-call-site measurement. It is typed `ClassName`, so its valu
 comes out of `cn()` and `no-adhoc-layout` reads its tokens: a layout class
 written there is a lint error, not a silent override.
 
+### `fit="content"` — sized by what it holds
+
+`panelClassName`'s `max-w-*` / `max-h-*` caps animate towards a cap, not towards
+what is drawn: closing, nothing moves until the cap passes the content, and a
+content change (a row turning into an editor) jumps, since the cap does not
+move. `fit="content"` instead writes the panel's real width and height — the
+content's own box open, the trigger's closed, each plus the panel's frame —
+measured on every resize of either, so open, close and every change inside
+animate the panel's actual size. The content keeps its own size (it does not
+shrink with the panel) and is pinned to the anchor corner, so the panel grows
+away from the trigger; the content sizes itself (give it a width). First
+consumer: the prompt templates' ✎ panel.
+
 ## The panel IS the popover panel
 
 The morphing panel renders ui-kit's `OverlayPanel` — the one panel every

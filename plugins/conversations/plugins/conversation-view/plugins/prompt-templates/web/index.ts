@@ -14,7 +14,7 @@ export type {
 
 export default {
   description:
-    "Template chips inside the prompt editor that prepend text to the draft. A floating icon expands on hover to reveal available templates. Exports the chip bar itself (TemplateChipBar: usage-ranked pinned split chips plus the hover panel of every template and the config gear, always drawn — even with no templates — and, where the host lets it, a + New template chip that opens an inline name + prompt editor, prefilled from the draft) and its one split chip (TemplateChip: ✎ name inserts, ➤ sends) for other template-like surfaces.",
+    "Template chips inside the prompt editor that prepend text to the draft. A floating icon expands on hover to reveal available templates. Exports the chip bar itself (TemplateChipBar: usage-ranked pinned split chips plus the hover panel of every template and the config gear, always drawn — even with no templates; the panel lists every template (click inserts, ➤ sends) and, where the host lets it, manages them in place: + New template (prefilled from the draft) and ✎ on each row to rename, rewrite or delete it, sized to its content as it changes) and its one split chip (TemplateChip: ✎ name inserts, ➤ sends) for other template-like surfaces.",
   contributions: [
     PromptEditorSlots.FloatingAction({
       id: "prompt-templates",

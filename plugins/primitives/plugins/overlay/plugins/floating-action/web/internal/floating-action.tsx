@@ -54,6 +54,18 @@ const FLOW_CLASS: Record<
   col: { start: "flex-col", end: "flex-col-reverse" },
 };
 
+// `fit="content"`: the content box keeps its own size and the panel clips it
+// from the anchor corner — the content is pinned there, so the trigger stays
+// put while the panel grows away from it. A flex item larger than its box
+// overflows towards the START of an end-aligned axis, which is the side away
+// from the corner.
+const FIT_PIN_CLASS: Record<FloatingAnchor, string> = {
+  "top-left": "justify-start items-start",
+  "top-right": "justify-end items-start",
+  "bottom-left": "justify-start items-end",
+  "bottom-right": "justify-end items-end",
+};
+
 const ALIGN_CLASS: Record<StackAlign, string> = {
   start: "items-start",
   center: "items-center",
@@ -95,6 +107,17 @@ export interface FloatingActionProps extends Omit<
    * alignment, positioning or clipping class written here.
    */
   panelClassName?: ClassName;
+  /**
+   * How the open panel is sized.
+   * - `clamp` (the default): by `panelClassName`'s `max-w-*` / `max-h-*`, the
+   *   morph animating those caps.
+   * - `content`: exactly the content's own size, measured — open, close AND
+   *   every change of the content while open (an editor swapping in) animate
+   *   the panel's real width and height, so it never waits on a cap far from
+   *   what is drawn, nor jumps when the content changes. The content sizes
+   *   itself (give it a width); `panelClassName` is then not needed.
+   */
+  fit?: "clamp" | "content";
   /** Axis the panel's content flows along. Defaults to `row`. */
   direction?: StackDirection;
   /** Which end of `direction` the trigger sits at. Defaults to `start`. */
@@ -152,6 +175,7 @@ function FloatingActionPanel({
   held,
   className,
   panelClassName,
+  fit = "clamp",
   direction = "row",
   triggerAt = "start",
   align,
@@ -170,6 +194,7 @@ function FloatingActionPanel({
   const wrapperRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
   // How much bigger the collapsed panel is than its trigger, per axis: the
   // panel's padding + border, plus whatever the collapsed `children` and the
   // gap add along the flow. Read once, the first time the panel has a box while
@@ -221,6 +246,12 @@ function FloatingActionPanel({
       if (!wrapper || !panel || !triggerBox) return;
       const trig = triggerBox.getBoundingClientRect();
       let chrome = chromeRef.current;
+      // Sized to its content, the collapsed panel is the trigger plus its frame
+      // by construction (below) — no rest to wait for.
+      if (!chrome && fit === "content") {
+        chrome = panelFrame(panel);
+        chromeRef.current = chrome;
+      }
       if (!chrome) {
         const rest = panel.getBoundingClientRect();
         // No box yet (mounted under a `display: none` ancestor, e.g. a
@@ -243,6 +274,30 @@ function FloatingActionPanel({
       wrapper.style.height = `${(trig.height + chrome.height) / zoom}px`;
     },
     { deps: [open] },
+  );
+
+  // `fit="content"`: the panel's size, written — the content's own box open,
+  // the trigger's closed, each plus the panel's frame. The content keeps its
+  // size whatever the panel's (it does not shrink), so what is measured is
+  // what the content wants, and the CSS transition on width/height animates
+  // every change. offsetWidth/Height are layout px, unscaled by zoom, which is
+  // what the style takes.
+  useResizeObserver(
+    [contentRef, triggerRef],
+    () => {
+      if (fit !== "content") return;
+      const panel = panelRef.current;
+      const box = open ? contentRef.current : triggerRef.current;
+      if (!panel || !box) return;
+      const frame = panelFrame(panel);
+      const width = box.offsetWidth + frame.width;
+      const height = box.offsetHeight + frame.height;
+      return () => {
+        panel.style.width = `${width}px`;
+        panel.style.height = `${height}px`;
+      };
+    },
+    { deps: [open, fit] },
   );
 
   return (
@@ -287,8 +342,10 @@ function FloatingActionPanel({
             // own corner role.
             shape === "pill" &&
               "rounded-full [--radius-control:calc(infinity*1px)] [--radius-control-sm:calc(infinity*1px)] [--radius-control-xs:calc(infinity*1px)]",
-            FLOW_CLASS[direction][triggerAt],
-            "transition-[width,max-width,max-height,padding,background-color,box-shadow] duration-200 ease-out",
+            fit === "content"
+              ? FIT_PIN_CLASS[anchor]
+              : FLOW_CLASS[direction][triggerAt],
+            "transition-[width,height,max-width,max-height,padding,background-color,box-shadow] duration-200 ease-out",
             // Collapsed, `outlined` / `ghost` lay their resting look over the
             // popover paint; open, the popover paint is the whole look.
             !open &&
@@ -325,8 +382,14 @@ function FloatingActionPanel({
           {...props}
         >
           <div
+            ref={contentRef}
             className={cn(
-              "flex min-h-0 min-w-0 flex-1",
+              // Clamped, the content fills the panel and is clamped with it;
+              // sized to its content, it keeps its own size and the panel
+              // follows it.
+              fit === "content"
+                ? "flex shrink-0"
+                : "flex min-h-0 min-w-0 flex-1",
               FLOW_CLASS[direction][triggerAt],
               align && ALIGN_CLASS[align],
               gap && rampClass("gap", gap),
@@ -351,6 +414,24 @@ function FloatingActionPanel({
       </div>
     </div>
   );
+}
+
+/** The panel's padding + border per axis: what it adds around its content. */
+function panelFrame(panel: HTMLElement): { width: number; height: number } {
+  const cs = getComputedStyle(panel);
+  const px = (v: string) => parseFloat(v) || 0;
+  return {
+    width:
+      px(cs.paddingLeft) +
+      px(cs.paddingRight) +
+      px(cs.borderLeftWidth) +
+      px(cs.borderRightWidth),
+    height:
+      px(cs.paddingTop) +
+      px(cs.paddingBottom) +
+      px(cs.borderTopWidth) +
+      px(cs.borderBottomWidth),
+  };
 }
 
 /**

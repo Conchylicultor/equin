@@ -4,16 +4,15 @@
 
 ## Plugin reference
 
-- Description: Template chips inside the prompt editor that prepend text to the draft. A floating icon expands on hover to reveal available templates. Exports the chip bar itself (TemplateChipBar: usage-ranked pinned split chips plus the hover panel of every template and the config gear, always drawn — even with no templates — and, where the host lets it, a + New template chip that opens an inline name + prompt editor, prefilled from the draft) and its one split chip (TemplateChip: ✎ name inserts, ➤ sends) for other template-like surfaces. Named template chips that prepend text to the conversation prompt editor for editing before sending.
+- Description: Template chips inside the prompt editor that prepend text to the draft. A floating icon expands on hover to reveal available templates. Exports the chip bar itself (TemplateChipBar: usage-ranked pinned split chips plus the hover panel of every template and the config gear, always drawn — even with no templates; the panel lists every template (click inserts, ➤ sends) and, where the host lets it, manages them in place: + New template (prefilled from the draft) and ✎ on each row to rename, rewrite or delete it, sized to its content as it changes) and its one split chip (TemplateChip: ✎ name inserts, ➤ sends) for other template-like surfaces. Named template chips that prepend text to the conversation prompt editor for editing before sending.
 - Web:
   - Contributes:
     - `PromptEditorSlots.FloatingAction` → `FloatingTemplateChips`
     - `ConfigV2.WebRegister` "config"
-  - Uses: 28 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 31 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×6
     - `config_v2` ×3
     - `conversations/conversation-view/pending-turn` ×2
-    - `primitives/css/spacing` ×2
     - `primitives/overlay/floating-action` ×2
     - `primitives/usage-rank` ×2
     - `config_v2/config-link.ConfigGearButton`
@@ -21,9 +20,14 @@
     - `conversations.useConversationById`
     - `network/live.rowOrStale`
     - `primitives/adaptive-bar.AdaptiveBar`
-    - `primitives/css/cluster.Cluster`
+    - `primitives/css/center.Center`
+    - `primitives/css/rigid.rigidClass`
+    - `primitives/css/row.Row`
     - `primitives/css/scroll.Scroll`
+    - `primitives/css/spacing.Stack`
+    - `primitives/css/text.Text`
     - `primitives/dom/scroll-reveal.focusElement`
+    - `primitives/icon-button.IconButton`
     - `primitives/overlay/popup-open.useReportPopupOpen`
     - `primitives/prompt-editor.PromptEditorSlots`
     - `ui/icons.Icon`
@@ -39,8 +43,10 @@
   - Uses: `config_v2.ConfigV2`
 - Cross-plugin:
   - Uses tokens:
+    - `ui/tokens/color-palette --destructive`
     - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/density --pad-split-arrow-x`
+    - `ui/tokens/density --space-xs`
     - `ui/tokens/shape --spacing`
   - Imported by: `conversations/conversation-view/selection-actions`
 - Shared:

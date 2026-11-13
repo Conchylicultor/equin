@@ -1,21 +1,12 @@
-import {
-  Button,
-  ControlSizeProvider,
-  cn,
-} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { useCallback, useMemo, useState } from "react";
+import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { useMemo } from "react";
 import {
   FloatingAction,
   FloatingActionFadeIn,
 } from "@plugins/primitives/plugins/overlay/plugins/floating-action/web";
 import { AdaptiveBar } from "@plugins/primitives/plugins/adaptive-bar/web";
-import {
-  Stack,
-  selfClass,
-} from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
-import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
-import { ConfigGearButton } from "@plugins/config_v2/plugins/config-link/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import type { ConfigDescriptor } from "@plugins/config_v2/core";
 import {
   useRecordUsage,
@@ -25,10 +16,9 @@ import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
 import { TemplateChip, type TemplateChipItem } from "./template-chip";
-import { NewTemplateForm, type NewTemplate } from "./new-template-form";
+import { TemplatePanel, type TemplateListEdit } from "./template-panel";
 
 const editIcon = symbol("edit");
-const addIcon = symbol("add");
 
 export interface TemplateChipBarProps {
   /** Every template, in the authored (config) order — the never-used tie-break. */
@@ -62,14 +52,11 @@ export interface TemplateChipBarProps {
   config: ConfigDescriptor;
   configLabel: string;
   /**
-   * Add a template in place, from the panel — a `+ New template` chip that
-   * opens an inline editor. Left out, the panel only offers the config gear.
+   * Manage the templates in place, from the panel: + New template, and ✎ on
+   * each row to rename, rewrite or delete it — the bar hands the whole list
+   * back changed. Left out, the panel only lists them (and the config gear).
    */
-  add?: {
-    onAdd: (t: NewTemplate) => void;
-    /** The prompt the editor opens with, read when it opens (e.g. the draft). */
-    initialPrompt?: () => string;
-  };
+  edit?: TemplateListEdit;
 }
 
 /**
@@ -89,12 +76,8 @@ export function TemplateChipBar({
   host,
   config,
   configLabel,
-  add,
+  edit,
 }: TemplateChipBarProps) {
-  // The inline editor's prompt, read once when it opens; null while closed.
-  const [newPrompt, setNewPrompt] = useState<string | null>(null);
-  const closeEditor = useCallback(() => setNewPrompt(null), []);
-
   // Most-used first, frozen for as long as `freezeKey` holds (the primitive
   // owns the freeze). The authored config order stays the tie-break for
   // anything never used, so an untouched install looks exactly as before.
@@ -130,57 +113,15 @@ export function TemplateChipBar({
     onSend(t);
   };
 
-  // The panel: every template, ranked, under the config gear — the same
-  // content whichever way it opens.
-  const panel = (
-    <Stack gap="xs" align="start">
-      {/* The wrapper stays: ConfigGearButton takes only descriptor/label,
-          so this div is the flex item selfClass has to land on. */}
-      <div className={selfClass("end")}>
-        <ConfigGearButton descriptor={config} label={configLabel} />
-      </div>
-      {add && newPrompt !== null ? (
-        <NewTemplateForm
-          initialPrompt={newPrompt}
-          onAdd={(t) => {
-            add.onAdd(t);
-            closeEditor();
-          }}
-          onClose={closeEditor}
-        />
-      ) : (
-        <Scroll className="max-h-40">
-          <Cluster gap="xs" align="center">
-            {ordered.map((t) => (
-              <TemplateChip
-                key={t.id}
-                template={t}
-                onInsert={insert}
-                onSend={send}
-                canSend={canSend}
-              />
-            ))}
-            {add && (
-              <Button
-                variant="dashed"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => setNewPrompt(add.initialPrompt?.().trim() ?? "")}
-              >
-                <Icon icon={addIcon} className="size-3" />
-                <span>New template</span>
-              </Button>
-            )}
-          </Cluster>
-        </Scroll>
-      )}
-    </Stack>
-  );
-
+  // A chip-high square, so the closed panel is exactly the xs chip height
+  // it sits beside and, open, the ✎ lines up with the panel's footer row.
   const trigger = (
-    <Icon
-      icon={editIcon}
-      className="size-3 text-muted-foreground/40 group-data-open/fa:text-muted-foreground transition-colors"
-    />
+    <Center className="size-6">
+      <Icon
+        icon={editIcon}
+        className="size-3 text-muted-foreground/40 group-data-open/fa:text-muted-foreground transition-colors"
+      />
+    </Center>
   );
 
   // The chips are a sub-region of their host bar, not lone controls, so THIS
@@ -228,27 +169,32 @@ export function TemplateChipBar({
               />
             ))
         )}
-        {/* `FloatingAction` is not density-participating, so its collapsed box
-            can't read the provider above — these numbers are hand-matched to the
-            xs chip height (1.5rem) it sits beside. */}
+        {/* Sized to its content (`fit="content"`): opening, closing and every
+            change inside (a row turning into its editor) animate the panel's
+            real size. The ✎ sits at the bottom-right corner, beside the
+            panel's footer row; the panel grows up and to the left from it. */}
         <FloatingAction
-          className="relative size-6 z-popover"
+          className="relative z-popover"
           variant="ghost"
-          // A column with the gear at the BOTTOM of the opened stack, chips
-          // flush with the host bar's right edge.
-          direction="col"
+          fit="content"
+          direction="row"
           triggerAt="end"
           align="end"
           gap="xs"
-          pad="xs"
-          // The same panel's collapsed→open morph, which the primitive animates
-          // but does not size.
-          panelClassName={cn(
-            "max-w-6 group-data-open/fa:max-w-sm max-h-6 group-data-open/fa:max-h-56",
-          )}
           trigger={trigger}
         >
-          <FloatingActionFadeIn>{panel}</FloatingActionFadeIn>
+          <FloatingActionFadeIn className="pt-xs pl-xs">
+            <TemplatePanel
+              ordered={ordered}
+              templates={templates}
+              onInsert={insert}
+              onSend={send}
+              canSend={canSend}
+              edit={edit}
+              config={config}
+              configLabel={configLabel}
+            />
+          </FloatingActionFadeIn>
         </FloatingAction>
       </Stack>
     </ControlSizeProvider>

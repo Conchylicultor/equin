@@ -51,14 +51,8 @@ export function FloatingTemplateChips({
       canSend={canSend}
       config={promptTemplatesConfig}
       configLabel="Configure: Prompt templates"
-      add={{
-        // Appended last: the list's authored order is the never-used
-        // tie-break, so a new template sits after the ones already there.
-        onAdd: (t) =>
-          setConfig("templates", [
-            ...templates,
-            { id: crypto.randomUUID(), ...t },
-          ]),
+      edit={{
+        onChange: (next) => setConfig("templates", next),
         // The draft is the natural first prompt — "save this as a template".
         initialPrompt: readDraft,
       }}

@@ -12,7 +12,7 @@ import { announceRefusedWrite, useConfigPreview } from "./config-preview";
 export function useSetConfig<F extends FieldsRecord>(
   descriptor: ConfigDescriptor<F>,
   opts?: { scopeId?: string },
-): (key: keyof F & string, value: unknown) => void {
+): (key: keyof F & string, value: unknown) => boolean {
   const registrations = useRawContributions(ConfigV2.WebRegister);
   // Predicted (`setConfigField`'s effect): every read of the document shows the
   // write at once, and a refused write unwinds with the rejection toast.
@@ -42,13 +42,17 @@ export function useSetConfig<F extends FieldsRecord>(
     );
   }
 
+  // Answers whether the write was sent: `false` when it was refused here,
+  // before sending (the preview, a conflict) — already announced to the user.
+  // A caller holding the user's input (an inline editor) keeps it open on
+  // `false` instead of dropping what was typed.
   return useCallback(
-    (key: keyof F & string, value: unknown) => {
+    (key: keyof F & string, value: unknown): boolean => {
       // The preview shows the committed layer, read-only: a write would land
       // in the user's config, invisible behind the preview.
       if (preview) {
         announceRefusedWrite({ kind: "preview" });
-        return;
+        return false;
       }
       if (inConflict) {
         announceRefusedWrite(
@@ -56,13 +60,14 @@ export function useSetConfig<F extends FieldsRecord>(
             ? { kind: "conflict", storePath, scopeId }
             : { kind: "conflict", storePath },
         );
-        return;
+        return false;
       }
       mutate({
         body: scopeId
           ? { storePath, key, value, scopeId }
           : { storePath, key, value },
       });
+      return true;
     },
     [mutate, storePath, scopeId, preview, inConflict],
   );
