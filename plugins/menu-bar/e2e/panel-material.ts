@@ -2,7 +2,9 @@
  * The panel page on a transparent helper window: with a stand-in
  * `window.equinNative` whose `hostInfo()` reports the macOS material
  * (`{ cornerRadius: 12 }`), the page must paint NOTHING outside its rounded
- * panel — every corner pixel transparent — and its translucent fill inside.
+ * panel — every corner pixel transparent — and no fill inside it either: the
+ * system material is the panel (a page fill over it stacks a second light
+ * layer and the menu reads brighter than its prototype).
  * Captured with `omitBackground`, so the page's own paint is all there is,
  * which is what the native window composites over the vibrancy material.
  *
@@ -95,10 +97,10 @@ await withBrowser(async (h) => {
   r.note(`alpha: ${JSON.stringify(alphas)}`);
   r.eq("top-left corner is transparent", alphas.topLeft, 0);
   r.eq("top-right corner is transparent", alphas.topRight, 0);
-  r.ok(
-    "the panel's middle is a translucent fill",
-    alphas.middle > 0 && alphas.middle < 255,
-    `alpha ${alphas.middle}`,
+  r.eq(
+    "the panel's middle paints no fill (the material shows)",
+    alphas.middle,
+    0,
   );
   // Which elements still paint an opaque background behind the panel.
   const opaque = await page.evaluate(() => {

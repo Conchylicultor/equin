@@ -349,7 +349,6 @@ helper build and reloads the tray onto it
     - `menuBarHelperIcon`
 - Cross-plugin:
   - Uses tokens:
-    - `ui/tokens/color-palette --popover`
     - `ui/tokens/color-palette --success`
     - `ui/tokens/density --space-md`
     - `ui/tokens/shape --spacing`

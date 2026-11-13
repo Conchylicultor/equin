@@ -39271,7 +39271,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `menuBarHelperIcon`
   - Cross-plugin:
     - Uses tokens:
-      - `ui/tokens/color-palette --popover`
       - `ui/tokens/color-palette --success`
       - `ui/tokens/density --space-md`
       - `ui/tokens/shape --spacing`

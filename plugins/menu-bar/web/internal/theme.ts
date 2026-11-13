@@ -14,21 +14,25 @@ const ACCENT = "#e8643c";
 const ACCENT_RING = "rgb(232 100 60 / 45%)";
 
 /**
- * A macOS menu's palette — the prototype's tray menu (proto-1792791657-kzcrw3)
- * on an opaque panel: the menu material `#f6f6f8`, ink `#1d1d1f`, and every
- * quieter tone the black-at-N% the mock writes, composited over the panel so
- * the palette stays opaque. The same values in both colour modes: the panel is
- * designed light (`menuBarApp` is `colorMode: "light"`), so a dark arm would
- * claim a choice the design does not make.
+ * A macOS menu's palette — the prototype's tray menu (proto-1792791657-kzcrw3):
+ * the menu material `#f6f6f8`, ink `#1d1d1f`, and every quieter tone the
+ * black-at-N% the mock writes, kept translucent as the mock writes it — so
+ * that over the helper's vibrancy material the desktop tints them as it tints
+ * the panel (composited over an opaque panel colour they read as flat light
+ * greys, brighter than the menu around them). The same values in both colour
+ * modes: the panel is designed light (`menuBarApp` is `colorMode: "light"`),
+ * so a dark arm would claim a choice the design does not make.
  */
 const PANEL = "#f6f6f8";
 const INK = "#1d1d1f";
-/** black 6% over the panel: the task field's well, a hovered row. */
-const WELL = "#e7e7e9";
+/** black 6%: the task field's well, a hovered row. */
+const WELL = "rgb(0 0 0 / 6%)";
 /** black 60%: the status line, the footer. */
-const MUTED_INK = "#626263";
+const MUTED_INK = "rgb(0 0 0 / 60%)";
 /** black 42%: the field's placeholder and glyph. */
-const FAINT_INK = "#8f8f90";
+const FAINT_INK = "rgb(0 0 0 / 42%)";
+/** black 18%: the switch's track when off. */
+const SWITCH_TRACK = "rgb(0 0 0 / 18%)";
 
 const colorPalette = colorPaletteGroup.fragment(
   both({
@@ -51,7 +55,7 @@ const colorPalette = colorPaletteGroup.fragment(
     border: "oklch(0 0 0 / 10%)",
     input: "oklch(0 0 0 / 10%)",
     ring: ACCENT_RING,
-    switchTrack: "#cacacb",
+    switchTrack: SWITCH_TRACK,
     switchKnob: "#ffffff",
     switchKnobOn: "#ffffff",
   }),
@@ -117,15 +121,18 @@ const shape = shapeGroup.fragment(
 );
 
 /**
- * The menu material: the panel's fill is the prototype's `rgba(246,246,248,.86)`
- * — the panel colour at 86% — so that where the helper's window is a transparent
- * vibrancy (macOS, `useWindowMaterial`) the blurred desktop shows through. The
- * blur itself is the window's, so there is no backdrop filter. Anywhere else
- * the page sits on the same opaque colour and the fill reads as the panel.
+ * The menu material: the panel draws NO fill of its own. The prototype's
+ * `rgba(246,246,248,.86)` + `backdrop-filter: blur saturate` is its CSS stand-in
+ * for macOS's menu material — which the helper's window already IS (a
+ * transparent window over the `Menu` vibrancy, `useWindowMaterial`), so painting
+ * the 86% fill on top stacked a second light layer over the system's and the
+ * panel read near-opaque white, brighter than the mock over the same desktop.
+ * Anywhere else (a browser tab, an opaque window) the page's own background is
+ * the panel colour, so the clear fill reads as the panel.
  */
 const material = materialGroup.fragment(
   both({
-    popoverFill: "color-mix(in oklab, var(--popover) 86%, transparent)",
+    popoverFill: "transparent",
     popoverBackdrop: "none",
   }),
 );
