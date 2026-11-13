@@ -295,7 +295,7 @@ interface PrototypeDetailProviderProps {
   /**
    * The pane URL's `;variant=` key (only the detail pane passes it): present,
    * frame A opens on that variant without touching the shared record, and the
-   * key follows A's picks from then on; the Options popover's "In link" switch
+   * key follows A's picks from then on; the Options popover's "In URL" switch
    * puts it in or takes it out.
    */
   urlVariant?: UrlVariant;

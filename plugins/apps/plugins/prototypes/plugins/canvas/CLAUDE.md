@@ -137,7 +137,7 @@ not declare is dropped from its URL.
   is hovered, the accent while on) — value pills for a choice; for a color, one
   swatch per suggestion and a trailing custom swatch (the color on screen,
   ringed when it is no suggestion) that opens the color picker in its own
-  popover above the swatch. The header holds, on frame A only, the **In link**
+  popover above the swatch. The header holds, on frame A only, the **In URL**
   switch (the variant in the URL — see "The URL"), then the reset icon
   ("Reset to defaults") while the frame has a pick. (A presentation's tag is the very same box,
   `FrameShowsBox`, so its chip and stepper are these.) Options the page declares under a group
@@ -372,7 +372,7 @@ it change the link, not what the user sees on the plain link. The provider
 (`urlVariant` prop, passed by the detail pane only) follows the key into A on
 open and whenever it changes under the pane, and rewrites it (a history
 replace) after every dispatch whose A picks moved. The Options popover's
-**In link** switch (`setLinkVariant`) puts the key in — A keeps showing what
+**In URL** switch (`setLinkVariant`) puts the key in — A keeps showing what
 it shows, now as its own picks — or takes it out, A back on the shared
 record (what the plain link shows). A saved canvas carries `linkVariant`
 (older ones read as off); a saved canvas holding `"shared"` in that mode is

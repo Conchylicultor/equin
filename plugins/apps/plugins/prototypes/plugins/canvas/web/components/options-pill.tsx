@@ -282,7 +282,7 @@ function valueLabel(value: string): string {
 
 /**
  * The popover's header row (`.ph`): `Options · <frame>`, then — on frame A —
- * the "In link" switch (the frame's variant in the page's URL, so the link
+ * the "In URL" switch (the frame's variant in the page's URL, so the link
  * opens exactly it and picks under it leave the shared ones alone), then the
  * reset icon while the frame has a pick.
  */
@@ -306,8 +306,8 @@ function PopoverHeading({
         <WithTooltip
           content={
             linkVariant.on
-              ? "The link opens this variant. Your own picks stay as they are."
-              : "Put this variant in the link, without changing your own picks."
+              ? "The URL opens this variant. Your own picks stay as they are."
+              : "Put this variant in the URL, without changing your own picks."
           }
         >
           <Line
@@ -321,7 +321,7 @@ function PopoverHeading({
               linkVariant.on ? "text-foreground" : "text-faint-foreground",
             )}
           >
-            <span>In link</span>
+            <span>In URL</span>
             <SwitchIndicator checked={linkVariant.on} />
           </Line>
         </WithTooltip>
