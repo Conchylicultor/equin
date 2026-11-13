@@ -23,12 +23,3 @@ export const APP_TILE_PALETTE = {
   "categorical-9": "oklch(0.50 0.11 311)",
   "categorical-10": "oklch(0.48 0.02 250)",
 } as const;
-
-/**
- * A palette app tiles can be painted from: one CSS colour per
- * `--categorical-*` slot of {@link APP_TILE_PALETTE}. A launcher with a design
- * of its own (the menu-bar panel) hands one to `AppTilePaletteProvider`.
- */
-export type AppTilePalette = {
-  readonly [K in keyof typeof APP_TILE_PALETTE]: string;
-};

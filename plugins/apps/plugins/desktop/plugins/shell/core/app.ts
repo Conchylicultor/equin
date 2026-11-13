@@ -17,7 +17,6 @@ export const desktopApp = defineApp({
   name: "Desktop",
   basePath: "/desktop",
   icon: symbol("desktop-windows"),
-  iconColor: "indigo",
 });
 
 /**

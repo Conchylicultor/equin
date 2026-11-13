@@ -12942,7 +12942,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `AppIconAvatar`
           - `AppIconTile`
           - `AppIconView`
-          - `AppTilePaletteProvider`
           - `DEFAULT_APP_ICON`
       - Core:
         - Uses:
@@ -12953,7 +12952,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `AppIcon`
           - `AppIconGlyph`
           - `AppIconSvgOptions`
-          - `AppTilePalette`
         - Exports (values):
           - `APP_TILE_PALETTE`
           - `appIcon`
@@ -39200,11 +39198,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `ThemeEngine.Theme` "Menu bar"
       - `MenuBar.Section` "Header" → `PanelHeader`
       - `MenuBar.Section` "Footer" → `PanelFooter`
-    - Uses: 27 symbols — full list in [`plugins/menu-bar/REFERENCE.md`](../plugins/menu-bar/REFERENCE.md)
+    - Uses: 26 symbols — full list in [`plugins/menu-bar/REFERENCE.md`](../plugins/menu-bar/REFERENCE.md)
       - `primitives/css/spacing` ×3
       - `primitives/persistent-draft` ×2
       - `primitives/slot-render` ×2
-      - `apps-core/app-icon.AppTilePaletteProvider`
       - `apps-core.Apps`
       - `build.useStaleFrontend`
       - `primitives/css/clip.Clip`

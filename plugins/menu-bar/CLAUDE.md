@@ -276,11 +276,10 @@ helper build and reloads the tray onto it
     - `ThemeEngine.Theme` "Menu bar"
     - `MenuBar.Section` "Header" → `PanelHeader`
     - `MenuBar.Section` "Footer" → `PanelFooter`
-  - Uses: 27 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/spacing` ×3
     - `primitives/persistent-draft` ×2
     - `primitives/slot-render` ×2
-    - `apps-core/app-icon.AppTilePaletteProvider`
     - `apps-core.Apps`
     - `build.useStaleFrontend`
     - `primitives/css/clip.Clip`

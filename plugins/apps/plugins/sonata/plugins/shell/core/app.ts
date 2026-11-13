@@ -6,5 +6,4 @@ export const sonataApp = defineApp({
   name: "Sonata",
   basePath: "/sonata",
   icon: symbol("piano"),
-  iconColor: "violet",
 });

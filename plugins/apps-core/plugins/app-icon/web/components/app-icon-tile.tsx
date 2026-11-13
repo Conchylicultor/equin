@@ -3,8 +3,14 @@ import {
   AvatarPresentationProvider,
 } from "@plugins/primitives/plugins/avatar/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import type { AppIcon } from "../../core";
-import { useTilePaletteVars } from "../internal/tile-palette";
+import { APP_TILE_PALETTE, type AppIcon } from "../../core";
+
+/** The app-tile palette as the `--categorical-*` vars the avatar's tile
+ *  fill reads, set on the tile itself — so the tile is the colour the Home
+ *  gallery paints it, whatever theme scope the launcher sits in. */
+const TILE_PALETTE_VARS = Object.fromEntries(
+  Object.entries(APP_TILE_PALETTE).map(([k, v]) => [`--${k}`, v]),
+) as React.CSSProperties;
 
 /**
  * An app's icon as its launcher TILE: the glyph on a squircle in the app's
@@ -12,9 +18,8 @@ import { useTilePaletteVars } from "../internal/tile-palette";
  * none — the same tile the Home gallery draws, so an app looks the same in
  * every launcher. `className` sizes the tile (e.g. `size-9`); the glyph is a
  * fixed share of it. `appId` undefined (an app that cannot be resolved) and no
- * declared colour draws the neutral box. It paints in the app-tile palette
- * (`APP_TILE_PALETTE`, or the one an enclosing `AppTilePaletteProvider` hands
- * down), not the enclosing theme's categorical slots.
+ * declared colour draws the neutral box. It paints in `APP_TILE_PALETTE`, not the enclosing
+ * theme's categorical slots.
  */
 export function AppIconTile({
   icon,
@@ -26,14 +31,13 @@ export function AppIconTile({
   appId: string | undefined;
   className?: string;
 }) {
-  const paletteVars = useTilePaletteVars();
   switch (icon.kind) {
     case "symbol":
       return (
         <span
           aria-hidden
           className={cn("block", className)}
-          style={paletteVars}
+          style={TILE_PALETTE_VARS}
         >
           <AvatarPresentationProvider value="tile">
             <Avatar
@@ -62,11 +66,10 @@ export function AppIconAvatar({
   icon: AppIcon;
   appId: string;
 }) {
-  const paletteVars = useTilePaletteVars();
   switch (icon.kind) {
     case "symbol":
       return (
-        <span aria-hidden className="block size-full" style={paletteVars}>
+        <span aria-hidden className="block size-full" style={TILE_PALETTE_VARS}>
           <Avatar
             symbol={icon.symbol}
             color={icon.color ?? null}

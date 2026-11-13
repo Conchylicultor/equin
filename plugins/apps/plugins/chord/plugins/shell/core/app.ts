@@ -6,5 +6,4 @@ export const chordApp = defineApp({
   name: "Chord",
   basePath: "/chord",
   icon: symbol("queue-music"),
-  iconColor: "rose",
 });
