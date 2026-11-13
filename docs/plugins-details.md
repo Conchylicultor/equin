@@ -61182,12 +61182,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Core:
         - Uses: `packages/string-hash.sha256Hex`
         - Exports (types):
-          - `Knockout`
+          - `Dot`
           - `LogoFile`
           - `LogoMaster`
           - `LogoSvgOptions`
         - Exports (values):
-          - `arcStartClearing`
+          - `assertDotClear`
           - `hasPngText`
           - `LOGO`
           - `LOGO_FILES`

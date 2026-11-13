@@ -71,9 +71,8 @@ export const LOGO_FILES: readonly LogoFile[] = [
       size: 44,
       // build.rs folds the dot's colour (its ACCENT) into the template image too.
       attention: {
-        knockout: { cx: 84, cy: 16, r: 22 },
-        dotRadius: 14,
-        dotFill: LOGO.gradient.from,
+        dot: { cx: 18, cy: 18, r: 10 },
+        fill: LOGO.gradient.from,
       },
     },
   },

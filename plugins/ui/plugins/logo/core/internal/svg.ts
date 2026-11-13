@@ -1,12 +1,15 @@
 import {
   LOGO,
-  arcStartClearing,
+  assertDotClear,
   fmt,
   logoPath,
   logoStroke,
-  type Knockout,
+  type Dot,
   type LogoMaster,
 } from "./geometry";
+
+/** The least room, in view-box units, between the attention dot and the line. */
+const DOT_GAP = 6;
 
 export type LogoSvgOptions = {
   master: LogoMaster;
@@ -16,8 +19,8 @@ export type LogoSvgOptions = {
   size: number;
   /** A rounded tile behind the logo, the logo scaled into its middle. */
   tile?: { fill: `#${string}`; inset: number; radius: number; scale: number };
-  /** A dot in a cut-out at the top-right, the arc trimmed to clear it. */
-  attention?: { knockout: Knockout; dotRadius: number; dotFill: `#${string}` };
+  /** A dot in the outer arc's open (top-left) quarter, the logo left whole. */
+  attention?: { dot: Dot; fill: `#${string}` };
 };
 
 /** The logo as a standalone SVG document — what every generated file holds. */
@@ -32,17 +35,7 @@ export function logoSvg(o: LogoSvgOptions): string {
     );
     stroke = "url(#logo-gradient)";
   }
-  const start = o.attention
-    ? arcStartClearing(o.master, o.attention.knockout)
-    : LOGO.arcStartDeg;
-  let mark = `<path d="${logoPath(o.master, start)}" stroke="${stroke}" stroke-width="${fmt(logoStroke(o.master))}" stroke-linecap="round" stroke-linejoin="round"/>`;
-  if (o.attention) {
-    const k = o.attention.knockout;
-    defs.push(
-      `<mask id="logo-knockout"><rect width="100" height="100" fill="#ffffff"/><circle cx="${k.cx}" cy="${k.cy}" r="${k.r}" fill="#000000"/></mask>`,
-    );
-    mark = `<g mask="url(#logo-knockout)">${mark}</g>`;
-  }
+  let mark = `<path d="${logoPath(o.master)}" stroke="${stroke}" stroke-width="${fmt(logoStroke(o.master))}" stroke-linecap="round" stroke-linejoin="round"/>`;
   if (o.tile) {
     const t = o.tile;
     body.push(
@@ -53,9 +46,10 @@ export function logoSvg(o: LogoSvgOptions): string {
   }
   body.push(mark);
   if (o.attention) {
-    const k = o.attention.knockout;
+    const d = o.attention.dot;
+    assertDotClear(o.master, d, DOT_GAP);
     body.push(
-      `<circle cx="${k.cx}" cy="${k.cy}" r="${o.attention.dotRadius}" fill="${o.attention.dotFill}"/>`,
+      `<circle cx="${d.cx}" cy="${d.cy}" r="${d.r}" fill="${o.attention.fill}"/>`,
     );
   }
   return (

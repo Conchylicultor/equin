@@ -37,12 +37,12 @@ the check does not depend on the rasterizer's version.
 - Core:
   - Uses: `packages/string-hash.sha256Hex`
   - Exports (types):
-    - `Knockout`
+    - `Dot`
     - `LogoFile`
     - `LogoMaster`
     - `LogoSvgOptions`
   - Exports (values):
-    - `arcStartClearing`
+    - `assertDotClear`
     - `hasPngText`
     - `LOGO`
     - `LOGO_FILES`

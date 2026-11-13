@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { arcStartClearing, logoPath } from "./geometry";
+import { assertDotClear, logoPath } from "./geometry";
 
 describe("logoPath", () => {
   test("full master: ¾ arc, lift, three bowls", () => {
@@ -17,17 +17,15 @@ describe("logoPath", () => {
   });
 });
 
-describe("arcStartClearing", () => {
-  test("the attention dot's knockout trims the arc to start past it", () => {
-    const start = arcStartClearing("small", { cx: 84, cy: 16, r: 22 });
-    expect(start).toBeCloseTo(-11.6, 1);
-    expect(logoPath("small", start)).toStartWith(
-      "M87.22 42.36 A38 38 0 1 1 12 50",
-    );
+describe("assertDotClear", () => {
+  test("a dot in the open top-left quarter is clear", () => {
+    expect(() =>
+      assertDotClear("small", { cx: 18, cy: 18, r: 10 }, 6),
+    ).not.toThrow();
   });
-  test("a knockout off the arc is an error, not a full arc", () => {
-    expect(() => arcStartClearing("small", { cx: 50, cy: 50, r: 5 })).toThrow(
-      "does not cross",
+  test("a dot over the arc is an error, not a cut logo", () => {
+    expect(() => assertDotClear("small", { cx: 84, cy: 16, r: 14 }, 0)).toThrow(
+      "comes within",
     );
   });
 });

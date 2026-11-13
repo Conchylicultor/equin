@@ -70,25 +70,41 @@ export function logoPath(
   return d;
 }
 
-/** A circle cut out of the logo (the tray icon's attention dot sits in one). */
-export type Knockout = { cx: number; cy: number; r: number };
+/** A dot drawn beside the logo (the tray icon's attention dot). */
+export type Dot = { cx: number; cy: number; r: number };
 
 /**
- * Where the outer arc must start so a knockout leaves no detached stub of it:
- * the first angle, past where the arc enters the knockout, at which its line
- * (half a stroke wide) clears the knockout again. Tenth-of-a-degree steps.
+ * Asserts a dot sits in the outer arc's open quarter, clear of the line by at
+ * least `gap`: a dot over the line would need it cut away, and a logo missing
+ * a piece of its arc no longer reads as the logo (the tray's old attention dot
+ * cut the arc's whole top-right quarter). Checks the outer arc and the rise —
+ * the bowls hang below the rise, away from the open quarter.
  */
-export function arcStartClearing(
+export function assertDotClear(
   master: LogoMaster,
-  knockout: Knockout,
-): number {
-  const clear = knockout.r + logoStroke(master) / 2;
-  let entered = false;
-  for (let t = LOGO.arcStartDeg * 10; t < 1800; t++) {
-    const [x, y] = pointAt(t / 10);
-    const inside = Math.hypot(x - knockout.cx, y - knockout.cy) < clear;
-    if (inside) entered = true;
-    else if (entered) return t / 10;
+  dot: Dot,
+  gap: number,
+): void {
+  const { center: c, outerRadius: r, lift } = LOGO;
+  const reach = dot.r + logoStroke(master) / 2 + gap;
+  const points: (readonly [number, number])[] = [];
+  for (let t = LOGO.arcStartDeg; t <= 180; t += 0.5) points.push(pointAt(t));
+  for (let y = c; y >= c - lift; y -= 0.5) points.push([c - r, y]);
+  for (const [x, y] of points) {
+    if (Math.hypot(x - dot.cx, y - dot.cy) < reach) {
+      throw new Error(
+        `The dot at (${dot.cx}, ${dot.cy}) r${dot.r} comes within ${gap} of the logo's line at (${fmt(x)}, ${fmt(y)}).`,
+      );
+    }
   }
-  throw new Error("The knockout does not cross the outer arc.");
+  if (
+    dot.cx - dot.r < 0 ||
+    dot.cy - dot.r < 0 ||
+    dot.cx + dot.r > 100 ||
+    dot.cy + dot.r > 100
+  ) {
+    throw new Error(
+      `The dot at (${dot.cx}, ${dot.cy}) r${dot.r} leaves the view box.`,
+    );
+  }
 }

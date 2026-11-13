@@ -1,10 +1,10 @@
 export {
   LOGO,
-  arcStartClearing,
+  assertDotClear,
   logoPath,
   logoStroke,
 } from "./internal/geometry";
-export type { Knockout, LogoMaster } from "./internal/geometry";
+export type { Dot, LogoMaster } from "./internal/geometry";
 export { logoSvg } from "./internal/svg";
 export type { LogoSvgOptions } from "./internal/svg";
 export {
