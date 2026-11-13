@@ -59,7 +59,8 @@ describe("main-edits guard", () => {
       );
       expect(reason).toContain(`Edit \`${WT}/plugins/foo/core/index.ts\``);
       // The old bug composed the suggestion onto cwd: <wt>/gateway/.claude/worktrees/...
-      expect(reason).not.toContain(`${WT}/gateway/`);
+      expect(reason).not.toContain(`${WT}/gateway/.claude/`);
+      expect(reason).not.toContain(`${WT}/gateway/plugins/`);
     });
   });
 

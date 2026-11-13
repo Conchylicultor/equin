@@ -166,6 +166,11 @@ export interface GuardContext {
    * the disk (and a split install throws only there).
    */
   readonly dataRoot: DataRootView;
+  /**
+   * Where a bypass file counts: absolute, at the checkout root (not the cwd).
+   * The denial names it, so the agent creates the file the guard will read.
+   */
+  bypassPath(token: string): string;
   hasBypass(token: string): boolean;
   allow(): AllowVerdict;
   deny(reason: string): DenyVerdict;

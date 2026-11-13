@@ -110,6 +110,13 @@ export function createContext(
   /** The launch-delivered `EQUIN_SCRATCH` — see `GuardContext.scratch`. */
   scratchDir: string | null = null,
 ): GuardContext {
+  // At the checkout root, not the raw cwd: the hook's cwd follows the session
+  // shell's persistent `cd`, so a file created at the root would stop counting
+  // the moment the agent cd'd into a subdirectory.
+  const bypassPath = (token: string): string => {
+    const repo = classifyRepo(cwd);
+    return join(repo.kind === "not-a-repo" ? cwd : repo.root, token);
+  };
   const workRoot = workspaceRoot ?? worktreeContextOf(cwd)?.worktreeRoot ?? cwd;
   return {
     cwd,
@@ -141,13 +148,9 @@ export function createContext(
         };
       return readTail(transcriptPath);
     },
+    bypassPath,
     hasBypass(token: string): boolean {
-      // At the checkout root, not the raw cwd: the hook's cwd follows the
-      // session shell's persistent `cd`, so a file created at the root would
-      // stop counting the moment the agent cd'd into a subdirectory.
-      const repo = classifyRepo(cwd);
-      const root = repo.kind === "not-a-repo" ? cwd : repo.root;
-      return existsSync(join(root, token));
+      return existsSync(bypassPath(token));
     },
     allow(): AllowVerdict {
       return { kind: "allow" };

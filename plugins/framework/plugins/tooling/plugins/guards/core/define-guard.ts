@@ -59,21 +59,26 @@ export interface GuardDef<I> {
   check(input: I, ctx: GuardContext): Denial | Inform | Rewrite<I> | null;
 }
 
-function formatEpilogue(bypassToken?: BypassToken): string {
+/**
+ * A guard judges a call before any of it runs, so a bypass file created inside
+ * the blocked call itself (`touch .allow-x && psql …`) comes too late — the
+ * call is refused again. The epilogue says so, and names the exact file.
+ */
+function formatEpilogue(bypassPath: string | null): string {
   let epilogue =
     "If you believe this block is a false positive: STOP immediately, report the blocked command and your reasoning to the user, and wait for instructions. Do NOT attempt to work around this guard — not by restructuring the command, not by using alternative tools, not by any other means.";
-  if (bypassToken) {
-    epilogue += ` If the user explicitly approves, they will tell you to create ${bypassToken} at the root of your checkout (not the current directory) to bypass.`;
+  if (bypassPath !== null) {
+    epilogue += ` If the user explicitly approves, they will tell you to create the bypass file at the root of your checkout (not the current directory): run \`touch ${bypassPath}\` as its OWN tool call first, then retry the command unchanged. The guard checks for the file before any part of a call runs, so a \`touch\` chained into the blocked command itself comes too late and is blocked again.`;
   }
   return epilogue;
 }
 
-function formatDenyMessage(denial: Denial, bypassToken?: BypassToken): string {
+function formatDenyMessage(denial: Denial, bypassPath: string | null): string {
   let msg = denial.blocked;
   if (denial.why) msg += `\n\n${denial.why}`;
   msg += `\n\n${denial.hint}`;
   if (!denial.skipEpilogue && !denial.allowOnRepeat)
-    msg += `\n\n${formatEpilogue(bypassToken)}`;
+    msg += `\n\n${formatEpilogue(bypassPath)}`;
   return msg;
 }
 
@@ -88,7 +93,10 @@ export function defineGuard<I>(def: GuardDef<I>): Guard<I> {
       if (!result) return ctx.allow();
       if ("inform" in result) return ctx.inform(result.inform);
       if ("rewrite" in result) return ctx.rewrite(result.rewrite, result.note);
-      const message = formatDenyMessage(result, def.bypassToken);
+      const message = formatDenyMessage(
+        result,
+        def.bypassToken ? ctx.bypassPath(def.bypassToken) : null,
+      );
       if (result.allowOnRepeat) return ctx.warn(message);
       return result.fatal ? ctx.fatal(message) : ctx.deny(message);
     },
