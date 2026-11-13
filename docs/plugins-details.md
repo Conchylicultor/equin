@@ -40224,7 +40224,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `subscribeAsOldDescriptor` — Subscribe `old.key` on the server runtime as an old bundle's tab would — its own socket, `params` (default `{}`: a legacy param-less descriptor sent nothing), its `build` graph when given — and answer what that tab gets: the first `sub-ack` or `sub-error` for the tuple, the ack's value parsed with the OLD schema.
           - Types: `OldDescriptor`, `OldSubscription`, `PagedSourceCheck`
       - Plugins:
-        - **`boot-snapshot`** — Hydrates all boot-critical resources from a single boot snapshot before first paint. Single-request boot snapshot of all boot-critical resources, hydrated client-side before first paint.
+        - **`boot-snapshot`** — Hydrates all boot-critical resources from a single boot snapshot before first paint. Single-request boot snapshot of all boot-critical resources, hydrated client-side before first paint. The SPA shell's head starts the request (DocumentHead.Fragment), so it runs in parallel with the module downloads rather than after the eager tier.
           - Web:
             - Contributes: `Core.Boot`
             - Uses:
@@ -40238,9 +40238,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `BootSnapshotValues`
             - Exports (values): `hydrateBootSnapshot`
           - Server:
+            - Contributes: `DocumentHead.Fragment` "boot-snapshot"
             - Uses:
+              - `infra/endpoints.endpointPath`
               - `infra/endpoints.implement`
               - `network/live/live-state-snapshot.readPersistedSnapshots`
+              - `shell/document-head.DocumentHead`
             - Exports (values):
               - `assembleBootSnapshot`
               - `preloadedKeys`
@@ -57549,6 +57552,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps-core/app-preload`
           - `apps/demo/shell`
           - `framework/cli/build/experimental-marks`
+          - `network/live/boot-snapshot`
           - `ui/theme-engine`
       - Server:
         - Exports (types):

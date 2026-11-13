@@ -9,12 +9,18 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const hydrated: [string, unknown, unknown][] = [];
 const reports: { message: string }[] = [];
 let snapshot: unknown;
+let pageFetches = 0;
 
 vi.mock(
   "@plugins/primitives/plugins/networking/plugins/page-transport/web",
   async (importOriginal) => ({
     ...(await importOriginal<object>()),
-    pageTransport: { fetch: async () => Response.json(snapshot) },
+    pageTransport: {
+      fetch: async () => {
+        pageFetches += 1;
+        return Response.json(snapshot);
+      },
+    },
   }),
 );
 vi.mock(
@@ -45,11 +51,13 @@ vi.mock(
 );
 
 const { runBootSnapshot } = await import("../internal/boot");
+const { HEAD_REQUEST_GLOBAL } = await import("../../shared/head-request");
 
 describe("boot snapshot hydration", () => {
   beforeEach(() => {
     hydrated.length = 0;
     reports.length = 0;
+    pageFetches = 0;
     vi.spyOn(console, "error").mockImplementation(() => {});
   });
 
@@ -104,5 +112,35 @@ describe("boot snapshot hydration", () => {
     expect(reports[0]!.message).toMatch(
       /unresolved descriptor key\(s\): unknown/,
     );
+  });
+
+  it("reads the request the shell's head started, once; a second boot asks afresh", async () => {
+    snapshot = { resources: { plain: 1 }, tuples: {}, timings: {} };
+    Reflect.set(globalThis, HEAD_REQUEST_GLOBAL, {
+      response: Promise.resolve(
+        Response.json({ resources: { early: 0 }, tuples: {}, timings: {} }),
+      ),
+      startMs: 0,
+    });
+    await runBootSnapshot();
+    expect(pageFetches).toBe(0);
+    expect(hydrated).toEqual([["early", undefined, 0]]);
+    expect(Reflect.get(globalThis, HEAD_REQUEST_GLOBAL)).toBeUndefined();
+
+    await runBootSnapshot();
+    expect(pageFetches).toBe(1);
+    expect(hydrated).toEqual([
+      ["early", undefined, 0],
+      ["plain", undefined, 1],
+    ]);
+  });
+
+  it("a head request that failed fails the boot task", async () => {
+    Reflect.set(globalThis, HEAD_REQUEST_GLOBAL, {
+      response: Promise.reject(new TypeError("Failed to fetch")),
+      startMs: 0,
+    });
+    await expect(runBootSnapshot()).rejects.toThrow("Failed to fetch");
+    expect(pageFetches).toBe(0);
   });
 });

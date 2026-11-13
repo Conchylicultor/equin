@@ -28,6 +28,17 @@ plugin:
   there is no second list to keep in sync and the old silent-drift class (forget a
   client `Hydrate` and that list quietly loses pre-paint hydration) is gone.
 
+**The request starts at t0, in the shell's head.** The server half contributes a
+`DocumentHead.Fragment` (`server/internal/head-request.ts`): an inline async module
+script that sends the snapshot GET while the HTML is parsed — in parallel with the
+modulepreloads — and parks it on `globalThis[HEAD_REQUEST_GLOBAL]`
+(`shared/head-request.ts`). The boot task takes it once and reads its reply through
+the endpoint's codec; with no head request (a shell served without the fragment, or
+a second boot after Retry) it sends the request itself. The head script's request
+is pinned to the one `sendEndpointRequest` builds by `head-request.test.ts`. Before
+this the GET waited for the whole eager tier to download and evaluate (S1 of
+`research/2026-11-12-global-load-model-redesign.md`).
+
 **One hydrate path — `hydrateBootSnapshot(snapshot)`** (web): resolves every
 snapshot key, hydrates it, and returns `{ missing, failed }` for the caller to
 surface. The boot task reports them; a static render
@@ -114,7 +125,7 @@ How it works:
 
 ## Plugin reference
 
-- Description: Hydrates all boot-critical resources from a single boot snapshot before first paint. Single-request boot snapshot of all boot-critical resources, hydrated client-side before first paint.
+- Description: Hydrates all boot-critical resources from a single boot snapshot before first paint. Single-request boot snapshot of all boot-critical resources, hydrated client-side before first paint. The SPA shell's head starts the request (DocumentHead.Fragment), so it runs in parallel with the module downloads rather than after the eager tier.
 - Web:
   - Contributes: `Core.Boot`
   - Uses:
@@ -128,9 +139,12 @@ How it works:
     - `BootSnapshotValues`
   - Exports (values): `hydrateBootSnapshot`
 - Server:
+  - Contributes: `DocumentHead.Fragment` "boot-snapshot"
   - Uses:
+    - `infra/endpoints.endpointPath`
     - `infra/endpoints.implement`
     - `network/live/live-state-snapshot.readPersistedSnapshots`
+    - `shell/document-head.DocumentHead`
   - Exports (values):
     - `assembleBootSnapshot`
     - `preloadedKeys`

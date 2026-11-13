@@ -7,7 +7,45 @@ import { pageTransport } from "@plugins/primitives/plugins/networking/plugins/pa
 import { recordBootSpan } from "@plugins/primitives/plugins/perfs/plugins/boot-trace/web";
 import { report } from "@plugins/reports/web";
 import { bootSnapshot } from "../../core";
+import {
+  HEAD_REQUEST_GLOBAL,
+  type HeadRequest,
+} from "../../shared/head-request";
 import { hydrateBootSnapshot } from "./hydrate";
+
+/**
+ * The snapshot request the shell's head started (`server/internal/head-request.ts`),
+ * taken once: a second boot in the same page (Retry after a failed boot) asks
+ * afresh rather than re-reading a consumed body. `absent` when the shell was
+ * served without the head fragment — a backend that never published its
+ * document head, or a page that is not the gateway's shell — and the boot task
+ * then sends the request itself, as it did before the head started it.
+ */
+function takeHeadRequest():
+  { kind: "taken"; request: HeadRequest } | { kind: "absent" } {
+  const value: unknown = Reflect.get(globalThis, HEAD_REQUEST_GLOBAL);
+  if (value === undefined) return { kind: "absent" };
+  Reflect.deleteProperty(globalThis, HEAD_REQUEST_GLOBAL);
+  if (
+    typeof value !== "object" ||
+    value === null ||
+    !("response" in value) ||
+    !(value.response instanceof Promise) ||
+    !("startMs" in value) ||
+    typeof value.startMs !== "number"
+  ) {
+    throw new Error(
+      `boot-snapshot: globalThis.${HEAD_REQUEST_GLOBAL} is not the head script's request`,
+    );
+  }
+  return {
+    kind: "taken",
+    request: {
+      response: value.response as Promise<Response>,
+      startMs: value.startMs,
+    },
+  };
+}
 
 // Boot-readiness task: fetch every boot-critical resource in ONE request and seed the
 // live-state cache before first paint (no `pending` flash, no WS round-trip).
@@ -19,14 +57,20 @@ import { hydrateBootSnapshot } from "./hydrate";
 // descriptor was not in the eager web import graph — a real bug, surfaced loudly rather
 // than silently lost.
 export async function runBootSnapshot(): Promise<void> {
-  const reqStart = performance.now();
   // Boot belongs to the page: the snapshot always hydrates from the page's own
   // server. A substrate read of live itself (it seeds the cache `useLive`
   // reads), so it is the transport's raw fetch, kept on the contract: the
-  // request built and the reply decoded by the endpoint's own codec.
+  // request built and the reply decoded by the endpoint's own codec. Normally
+  // the shell's head already sent that same request at t0; only its reply is
+  // read here.
+  const head = takeHeadRequest();
+  const reqStart =
+    head.kind === "taken" ? head.request.startMs : performance.now();
   const { resources, tuples, timings } = await readEndpointResponse(
     bootSnapshot,
-    await sendEndpointRequest(pageTransport.fetch, bootSnapshot, {}),
+    await (head.kind === "taken"
+      ? head.request.response
+      : sendEndpointRequest(pageTransport.fetch, bootSnapshot, {})),
   );
   const reqMs = performance.now() - reqStart;
   recordBootSpan({
