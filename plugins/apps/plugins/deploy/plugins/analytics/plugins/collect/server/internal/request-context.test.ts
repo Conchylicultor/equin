@@ -47,9 +47,9 @@ describe("visitorHash", () => {
     expect(visitorHash({ ...parts, salt: "t" })).not.toBe(visitorHash(parts));
   });
   test("field boundaries cannot be shifted", () => {
-    expect(visitorHash({ ...parts, ip: "10.0.0.1", userAgent: "2ua" })).not.toBe(
-      visitorHash({ ...parts, ip: "10.0.0.12", userAgent: "ua" }),
-    );
+    expect(
+      visitorHash({ ...parts, ip: "10.0.0.1", userAgent: "2ua" }),
+    ).not.toBe(visitorHash({ ...parts, ip: "10.0.0.12", userAgent: "ua" }));
   });
 });
 
