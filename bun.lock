@@ -5822,6 +5822,10 @@
       "name": "@equin/plugin-plugin-meta-plugin-tree-faceted",
       "version": "0.0.1",
     },
+    "plugins/plugin-meta/plugins/plugin-tree/plugins/structure-records": {
+      "name": "@equin/plugin-plugin-meta-plugin-tree-structure-records",
+      "version": "0.0.1",
+    },
     "plugins/plugin-meta/plugins/plugin-view": {
       "name": "@equin/plugin-plugin-meta-plugin-view",
       "version": "0.0.1",
@@ -10597,6 +10601,8 @@
     "@equin/plugin-plugin-meta-plugin-tree": ["@equin/plugin-plugin-meta-plugin-tree@workspace:plugins/plugin-meta/plugins/plugin-tree"],
 
     "@equin/plugin-plugin-meta-plugin-tree-faceted": ["@equin/plugin-plugin-meta-plugin-tree-faceted@workspace:plugins/plugin-meta/plugins/plugin-tree/plugins/faceted"],
+
+    "@equin/plugin-plugin-meta-plugin-tree-structure-records": ["@equin/plugin-plugin-meta-plugin-tree-structure-records@workspace:plugins/plugin-meta/plugins/plugin-tree/plugins/structure-records"],
 
     "@equin/plugin-plugin-meta-plugin-view": ["@equin/plugin-plugin-meta-plugin-view@workspace:plugins/plugin-meta/plugins/plugin-view"],
 

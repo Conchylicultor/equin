@@ -1,6 +1,6 @@
 import { joinAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
-import { buildStructureTreeOnce } from "@plugins/plugin-meta/plugins/plugin-tree/core";
+import { buildStructureTreeOnce } from "@plugins/plugin-meta/plugins/plugin-tree/plugins/structure-records/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import { foldRepoFiles } from "@plugins/plugin-meta/plugins/plugin-records/core";
 import type {

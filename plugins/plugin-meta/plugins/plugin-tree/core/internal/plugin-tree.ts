@@ -148,7 +148,10 @@ export function pluginPositionsOf(relUnderRoot: string): string[] {
 }
 
 /** Every plugin directory (relative to `pluginsRoot`), read off the repo's file set — no `readdir`. */
-function findAllPluginDirs(pluginsRoot: AppPath, repo: RepoFiles): string[] {
+export function findAllPluginDirs(
+  pluginsRoot: AppPath,
+  repo: RepoFiles,
+): string[] {
   const rel = relative(repo.root, pluginsRoot);
   const found = new Set<string>();
   for (const path of repo.under(rel)) {
@@ -202,6 +205,105 @@ export function keyFileOwner(relUnderRoot: string): string | null {
 }
 
 /**
+ * What one key file says, parsed from its text alone: a runtime barrel's own
+ * `export default { … }` fields, or a `package.json`'s description and plugin
+ * flags. A function of the file's bytes and which key file it is — nothing
+ * else — so a reader holding records per file (`plugin-tree/structure-records`)
+ * parses only the key files an edit touched. `null` for an empty file, which
+ * counts as absent (no runtime, no fields), as it always has.
+ */
+export type KeyFileFacts =
+  | { kind: "barrel"; meta: BarrelMeta }
+  | {
+      kind: "package";
+      description?: string;
+      collapsed: boolean;
+      compositionRoot: boolean;
+    };
+
+/**
+ * Parse one key file. `keyFile` is its path relative to the plugin's folder
+ * (one of {@link PLUGIN_KEY_FILES}); `file` names it in an error. Throws when a
+ * barrel's fields cannot be read (`parsePluginBarrel`).
+ */
+export function parseKeyFile(
+  keyFile: string,
+  text: string,
+  file: string,
+): KeyFileFacts | null {
+  if (!text) return null;
+  if (keyFile !== "package.json") {
+    return { kind: "barrel", meta: parsePluginBarrel(text, file) };
+  }
+  let description: string | undefined;
+  let collapsed = false;
+  let compositionRoot = false;
+  try {
+    const pkg = JSON.parse(text);
+    if (typeof pkg.description === "string" && pkg.description)
+      description = pkg.description;
+    const own = pkg[PLUGIN_MANIFEST_KEY];
+    if (own?.collapsed === true) collapsed = true;
+    if (own?.compositionRoot === true) compositionRoot = true;
+    // eslint-disable-next-line promise-safety/no-bare-catch
+  } catch {}
+  return {
+    kind: "package",
+    ...(description === undefined ? {} : { description }),
+    collapsed,
+    compositionRoot,
+  };
+}
+
+function barrelMeta(facts: KeyFileFacts | null): BarrelMeta | null {
+  return facts?.kind === "barrel" ? facts.meta : null;
+}
+
+/**
+ * A plugin's {@link PluginFields} from its key files' facts, handed in
+ * {@link PLUGIN_KEY_FILES} order (`null` for a key file it does not have).
+ */
+export function pluginFieldsFrom(
+  facts: readonly (KeyFileFacts | null)[],
+): PluginFields {
+  const [web, server, machine, central, pkg] = facts;
+  const webMeta = barrelMeta(web ?? null);
+  const serverMeta = barrelMeta(server ?? null);
+  const machineMeta = barrelMeta(machine ?? null);
+  const centralMeta = barrelMeta(central ?? null);
+  const pkgFacts = pkg?.kind === "package" ? pkg : null;
+
+  const descriptions: Partial<Record<Runtime, string>> = {};
+  if (webMeta?.description) descriptions.web = webMeta.description;
+  if (serverMeta?.description) descriptions.server = serverMeta.description;
+  if (machineMeta?.description) descriptions.machine = machineMeta.description;
+  if (centralMeta?.description) descriptions.central = centralMeta.description;
+  let description =
+    webMeta?.description ??
+    serverMeta?.description ??
+    machineMeta?.description ??
+    centralMeta?.description;
+  if (!description && pkgFacts?.description) description = pkgFacts.description;
+
+  const metas = [webMeta, serverMeta, machineMeta, centralMeta];
+  return {
+    description,
+    descriptions,
+    loadBearing: metas.some((m) => m?.loadBearing ?? false),
+    collapsed:
+      metas.some((m) => m?.collapsed ?? false) ||
+      (pkgFacts?.collapsed ?? false),
+    compositionRoot: pkgFacts?.compositionRoot ?? false,
+    runtimes: {
+      web: webMeta !== null,
+      server: serverMeta !== null,
+      machine: machineMeta !== null,
+      central: centralMeta !== null,
+    },
+  };
+}
+
+/**
  * Read a plugin's {@link PluginFields}. `read` answers a key file's text by its
  * path relative to the plugin's folder, or null when it is not in the set.
  */
@@ -209,80 +311,12 @@ export async function collectPluginFields(
   dir: AppPath,
   read: (keyFile: string) => Promise<string | null>,
 ): Promise<PluginFields> {
-  const [webIndex, serverIndex, machineIndex, centralIndex, pkgSrc] =
-    await Promise.all(PLUGIN_KEY_FILES.map(read));
-
-  // Read each runtime barrel's OWN default-exported object literal from ORIGINAL
-  // source — never transpiler output, which re-quotes string literals and silently
-  // dropped descriptions containing an escaped quote.
-  const webMeta: BarrelMeta | null = webIndex
-    ? parsePluginBarrel(webIndex, join(dir, "web", "index.ts"))
-    : null;
-  const serverMeta: BarrelMeta | null = serverIndex
-    ? parsePluginBarrel(serverIndex, join(dir, "server", "index.ts"))
-    : null;
-  const machineMeta: BarrelMeta | null = machineIndex
-    ? parsePluginBarrel(machineIndex, join(dir, "machine", "index.ts"))
-    : null;
-  const centralMeta: BarrelMeta | null = centralIndex
-    ? parsePluginBarrel(centralIndex, join(dir, "central", "index.ts"))
-    : null;
-
-  const webDesc = webMeta?.description;
-  const serverDesc = serverMeta?.description;
-  const machineDesc = machineMeta?.description;
-  const centralDesc = centralMeta?.description;
-  const descriptions: Partial<Record<Runtime, string>> = {};
-  if (webDesc) descriptions.web = webDesc;
-  if (serverDesc) descriptions.server = serverDesc;
-  if (machineDesc) descriptions.machine = machineDesc;
-  if (centralDesc) descriptions.central = centralDesc;
-  let description = webDesc ?? serverDesc ?? machineDesc ?? centralDesc;
-  if (!description && pkgSrc) {
-    try {
-      const pkg = JSON.parse(pkgSrc);
-      if (typeof pkg.description === "string" && pkg.description)
-        description = pkg.description;
-      // eslint-disable-next-line promise-safety/no-bare-catch
-    } catch {}
-  }
-
-  const loadBearing =
-    (webMeta?.loadBearing ?? false) ||
-    (serverMeta?.loadBearing ?? false) ||
-    (machineMeta?.loadBearing ?? false) ||
-    (centralMeta?.loadBearing ?? false);
-
-  let collapsed =
-    (webMeta?.collapsed ?? false) ||
-    (serverMeta?.collapsed ?? false) ||
-    (machineMeta?.collapsed ?? false) ||
-    (centralMeta?.collapsed ?? false);
-  // package.json collapsed and compositionRoot markers.
-  let compositionRoot = false;
-  if (pkgSrc) {
-    try {
-      const pkg = JSON.parse(pkgSrc);
-      const own = pkg[PLUGIN_MANIFEST_KEY];
-      if (own?.collapsed === true) collapsed = true;
-      if (own?.compositionRoot === true) compositionRoot = true;
-      // eslint-disable-next-line promise-safety/no-bare-catch
-    } catch {}
-  }
-
-  return {
-    description,
-    descriptions,
-    loadBearing,
-    collapsed,
-    compositionRoot,
-    runtimes: {
-      web: !!webIndex,
-      server: !!serverIndex,
-      machine: !!machineIndex,
-      central: !!centralIndex,
-    },
-  };
+  const texts = await Promise.all(PLUGIN_KEY_FILES.map(read));
+  return pluginFieldsFrom(
+    PLUGIN_KEY_FILES.map((keyFile, i) =>
+      parseKeyFile(keyFile, texts[i] ?? "", join(dir, keyFile)),
+    ),
+  );
 }
 
 // ── Tree assembly ───────────────────────────────────────────────────

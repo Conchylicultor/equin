@@ -30,7 +30,7 @@ tree follows what changed") for the design and its measurements.
 - Core:
   - Uses: 42 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `plugin-meta/plugin-records` ×13
-    - `plugin-meta/plugin-tree` ×9
+    - `plugin-meta/plugin-tree` ×8
     - `framework/tooling` ×6
     - `plugin-meta/facets` ×4
     - `framework/plugin-id` ×3
@@ -38,6 +38,7 @@ tree follows what changed") for the design and its measurements.
     - `plugin-meta/facets/loader` ×2
     - `plugin-meta/parse-utils` ×2
     - `infra/host-fs/user-path.AppPath`
+    - `plugin-meta/plugin-tree/structure-records.buildRecordedPluginTree`
   - Exports (types):
     - `BuildFacetedTreeOptions`
     - `FacetedIndex`

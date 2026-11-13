@@ -20,11 +20,11 @@ import {
   createTimeSlicer,
   yieldMacrotask,
 } from "@plugins/packages/plugins/macrotask-yield/core";
-import {
-  buildPluginTree,
-  type PluginNode,
-  type PluginTree,
+import type {
+  PluginNode,
+  PluginTree,
 } from "@plugins/plugin-meta/plugins/plugin-tree/core";
+import { buildRecordedPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/plugins/structure-records/core";
 import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { buildFsSnapshot } from "./fs-snapshot";
 import { extractFacetRecords } from "./facet-records";
@@ -58,7 +58,7 @@ function isSnapshot(repo: RepoFiles): repo is RepoSnapshot {
 
 /**
  * The plugin tree under `pluginsRoot` with every facet extracted (and, with
- * `enrich`, enriched), then related: `buildPluginTree`'s structure plus the
+ * `enrich`, enriched), then related: `buildRecordedPluginTree`'s structure plus the
  * facet extractors.
  *
  * Build tooling: it loads every facet extractor (`facets/loader`), and through
@@ -71,7 +71,7 @@ export async function buildFacetedPluginTree(
   pluginsRoot: AppPath,
   opts: BuildFacetedTreeOptions,
 ): Promise<PluginTree> {
-  const tree = await buildPluginTree(pluginsRoot, { repo: opts.repo });
+  const tree = await buildRecordedPluginTree(pluginsRoot, { repo: opts.repo });
   const { repo } = tree;
   const facets = await loadFacets();
   tree.facets = facets;

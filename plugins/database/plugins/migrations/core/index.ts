@@ -45,8 +45,15 @@ export {
 // The data dir's files as the snapshot readers read them: off disk, or a
 // caller's own file set (a check's recorded `ctx.repo()`, so its read-set
 // covers every file the verdict read).
-export { legacySnapshotFilesIn } from "./internal/migration-data";
-export type { MigrationData } from "./internal/migration-data";
+export {
+  legacySnapshotFilesIn,
+  migrationDataIn,
+  schemaMigrationFilesIn,
+} from "./internal/migration-data";
+export type {
+  MigrationData,
+  MigrationFileSet,
+} from "./internal/migration-data";
 export type {
   SnapshotDag,
   SnapshotDagProblem,

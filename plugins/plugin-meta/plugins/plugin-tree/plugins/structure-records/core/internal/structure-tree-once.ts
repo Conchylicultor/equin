@@ -1,16 +1,16 @@
 import { sharedWork } from "@plugins/packages/plugins/shared-work/core";
-import {
-  buildPluginTree,
-  type PluginNode,
-  type PluginTree,
-} from "./plugin-tree";
+import type {
+  PluginNode,
+  PluginTree,
+} from "@plugins/plugin-meta/plugins/plugin-tree/core";
+import { buildRecordedPluginTree } from "./recorded-tree";
 import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import type { RepoFiles } from "@plugins/framework/plugins/tooling/core";
 
 const structureTreeCache = new Map<string, Promise<PluginTree>>();
 
 /**
- * The STRUCTURE-ONLY plugin tree (`buildPluginTree`: the walk,
+ * The STRUCTURE-ONLY plugin tree (`buildRecordedPluginTree`: the walk,
  * each barrel's description/flags, the hierarchy — no facets, no barrels
  * imported), built once per `pluginsRoot` for the life of the process and
  * handed to every caller as the SAME frozen value.
@@ -37,7 +37,7 @@ const structureTreeCache = new Map<string, Promise<PluginTree>>();
  * snapshot); the first call's builds the tree.
  *
  * Check code must come through here (or a codegen memo), never call
- * `buildPluginTree` itself — enforced by the `plugin-tree/no-uncached-tree-in-checks`
+ * `buildPluginTree` / `buildRecordedPluginTree` itself — enforced by the `plugin-tree/no-uncached-tree-in-checks`
  * lint rule.
  */
 export function buildStructureTreeOnce(
@@ -49,7 +49,7 @@ export function buildStructureTreeOnce(
     // Shared: built for every caller of the pass, so its file calls are
     // nobody's own (`sharedWork`).
     cached = sharedWork("plugin tree", () =>
-      buildPluginTree(pluginsRoot, { repo }),
+      buildRecordedPluginTree(pluginsRoot, { repo }),
     ).then(freezePluginTree);
     structureTreeCache.set(pluginsRoot, cached);
   }

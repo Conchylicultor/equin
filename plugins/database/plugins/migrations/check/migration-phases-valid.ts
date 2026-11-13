@@ -1,15 +1,11 @@
-import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import {
-  readdirSync,
-  readFileSync,
-} from "@plugins/packages/plugins/timed-fs/core";
-import { join } from "path";
 import {
   classifyStatement,
+  migrationDataIn,
   publishedMigrationBasenames,
   publishedMigrationRefsSignature,
-  schemaMigrationFiles,
+  schemaMigrationFilesIn,
   splitStatements,
+  type MigrationFileSet,
 } from "@plugins/database/plugins/migrations/core";
 import {
   parseMigration,
@@ -17,8 +13,11 @@ import {
 } from "@plugins/database/plugins/migrations/plugins/phases/core";
 // The runner's own planner validates the claims, so this check cannot drift
 // from what boot would refuse.
-import { planSchemaSteps } from "@plugins/database/plugins/migrations/server";
-import { listMigrationFiles } from "@plugins/database/plugins/migrations/machine";
+import {
+  isMigrationFileName,
+  migrationsFrom,
+  planSchemaSteps,
+} from "@plugins/database/plugins/migrations/server";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 
 // Inlined minimal Check shape (mirrors the sibling checks in this folder) to
@@ -29,12 +28,12 @@ type CheckResult =
 type Check = {
   id: string;
   description: string;
-  run(): Promise<CheckResult>;
+  run(ctx: {
+    repo(): Promise<MigrationFileSet & { root: string }>;
+  }): Promise<CheckResult>;
   cacheSignature?(): string | null | Promise<string | null>;
-  wholeTreeRead?: { kind: "debt"; task: string; reason: string };
+  inputKeyed?: boolean;
 };
-
-const DATA_DIR = asAppPath(join(import.meta.dir, "..", "data"));
 
 const MIGRATION_RE = /^(\d{8})_(\d{6})_([0-9a-f]{8})__(.+)\.sql$/;
 
@@ -159,35 +158,51 @@ export function findPhaseErrors(
 
 const check: Check = {
   id: "migration-phases-valid",
-  wholeTreeRead: {
-    kind: "debt",
-    task: "task-1794583359-1cuyg0",
-    reason: "reads every migration file (1.0k)",
-  },
+  // INPUT-KEYED: every file its verdict reads — the data dir's listing, each
+  // migration, `meta/legacy-snapshots.json`, `meta/`'s listing — comes through
+  // `ctx.repo()`, so an edit outside the data dir replays the verdict and
+  // reads nothing. The published set (git) is the signature below: the files
+  // on every published ref, a function of the refs' commits alone.
+  inputKeyed: true,
   description:
     "branch-local schema migrations are phased (expand / contract re-classify), and the runner's planner accepts every claim on disk",
-  // Impure: reads the published refs via git. The data/ dir CONTENT is covered
-  // by the runner's own tree hash — only the published refs need folding in.
+  // The published refs, read via git; the data dir's content is the read-set.
   async cacheSignature(): Promise<string | null> {
     return publishedMigrationRefsSignature(await getWorktreeRoot());
   },
-  async run() {
+  async run(ctx) {
+    const repo = await ctx.repo();
     const root = await getWorktreeRoot();
     const tracked = await publishedMigrationBasenames(root);
 
-    const schema = schemaMigrationFiles(DATA_DIR);
-    const files = readdirSync(DATA_DIR)
-      .filter((f) => MIGRATION_RE.test(f))
-      .map((file) => ({
-        file,
-        sql: readFileSync(join(DATA_DIR, file), "utf8"),
-        isSchema: schema.has(file),
-      }));
+    // Each file read once: the schema predicate reads a migration's header,
+    // the phase checks and the planner its whole text — the same read.
+    const reads = new Map<string, Promise<string | null>>();
+    const data = migrationDataIn({
+      under: (dir) => repo.under(dir),
+      read(rel) {
+        let text = reads.get(rel);
+        if (text === undefined) reads.set(rel, (text = repo.read(rel)));
+        return text;
+      },
+    });
+    const schema = await schemaMigrationFilesIn(data);
+    const files = await Promise.all(
+      (await data.files()).filter(isMigrationFileName).map(async (file) => {
+        const sql = await data.text(file);
+        if (sql === null)
+          throw new Error(`${file} was listed but cannot be read`);
+        return { file, sql, isSchema: schema.has(file) };
+      }),
+    );
     const errors = findPhaseErrors(files, tracked);
     // Claims: each resolves to exactly one earlier data migration, claimed once.
     // An empty applied set plans the whole history, as a fresh install would.
     try {
-      planSchemaSteps(await listMigrationFiles(DATA_DIR), new Set());
+      planSchemaSteps(
+        migrationsFrom(files.map((f) => ({ file: f.file, sqlText: f.sql }))),
+        new Set(),
+      );
     } catch (e) {
       errors.push((e as Error).message);
     }

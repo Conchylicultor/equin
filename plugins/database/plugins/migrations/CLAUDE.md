@@ -673,6 +673,7 @@ only agreement that matters.
     - `EmittedSnapshot`
     - `ExpandOp`
     - `MigrationData`
+    - `MigrationFileSet`
     - `PhasedStatements`
     - `PublishedMergeBase`
     - `PublishedMigrationViolation`
@@ -708,6 +709,7 @@ only agreement that matters.
     - `mergeNodeSnapshotText`
     - `mergeSnapshots`
     - `migrationContentHash`
+    - `migrationDataIn`
     - `MIGRATIONS_DATA_DIR`
     - `MIGRATIONS_PLUGIN_DIR`
     - `MissingSnapshotBodyError`
@@ -730,6 +732,7 @@ only agreement that matters.
     - `schemaFilesIn`
     - `schemaLoadFailures`
     - `schemaMigrationFiles`
+    - `schemaMigrationFilesIn`
     - `schemaSnapshotPath`
     - `schemaSnapshotState`
     - `schemaSnapshotStateIn`
@@ -751,7 +754,7 @@ only agreement that matters.
     - `product-name:legacy-id` — `data` (sanctioned)
     - `imperative-create-table-allowlisted` — `check/imperative-create-table-allowlisted.ts` (sanctioned)
     - `boundaries/no-platform-api` — `core/internal/schema-glob.ts`, `core/internal/drizzle-stage.ts`, `core/internal/published-immutable.ts`, `core/internal/schema-load-probe.ts`, `core/internal/schema-snapshot.ts`, `core/internal/snapshot-bodies.ts`, `core/internal/migration-data.ts` (debt)
-    - `check-thread-safety/no-blocking-check-work` — `check/fork-schema-drift.ts`, `check/internal/declared-schema-inputs.ts`, `check/migration-phases-valid.ts`, `check/orphaned-tables.ts` (debt)
+    - `check-thread-safety/no-blocking-check-work` — `check/fork-schema-drift.ts`, `check/internal/declared-schema-inputs.ts`, `check/orphaned-tables.ts` (debt)
     - `blocking-fs/sync-named` — `core/internal/drizzle-stage.ts`, `core/internal/schema-snapshot.ts` (sanctioned)
     - `sql-writes:fit:hand-written` — `server/internal/runner.ts` (sanctioned)
   - Exempted by:

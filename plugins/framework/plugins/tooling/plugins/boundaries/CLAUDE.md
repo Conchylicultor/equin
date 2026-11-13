@@ -208,7 +208,7 @@ takes a `debt` exemption on the check's id.
     - `infra/spawn.getWorktreeRoot`
     - `packages/macrotask-yield.yieldMacrotask`
     - `packages/timed-fs.existsSync`
-    - `plugin-meta/plugin-tree.buildStructureTreeOnce`
+    - `plugin-meta/plugin-tree/structure-records.buildStructureTreeOnce`
   - Exports (types):
     - `AllowEdge`
     - `BoundaryConfig`

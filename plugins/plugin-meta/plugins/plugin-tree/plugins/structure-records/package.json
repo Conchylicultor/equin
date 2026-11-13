@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-plugin-meta-plugin-tree-structure-records",
+  "version": "0.0.1",
+  "private": true,
+  "description": "The structure tree as build tooling reads it: buildRecordedPluginTree (each plugin key file's facts a fold record, so a pass re-parses only the barrels and package.json files an edit touched) and buildStructureTreeOnce, the one structure tree a check pass shares."
+}

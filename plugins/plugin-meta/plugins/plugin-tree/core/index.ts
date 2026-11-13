@@ -1,9 +1,14 @@
 export {
+  assemblePluginTree,
   buildPluginTree,
+  findAllPluginDirs,
+  keyFileOwner,
+  parseKeyFile,
+  pluginFieldsFrom,
+  PLUGIN_KEY_FILES,
   resolvePluginSpecifier,
 } from "./internal/plugin-tree";
 export { createStructureIndex } from "./internal/structure-index";
-export { buildStructureTreeOnce } from "./internal/structure-tree-once";
 export {
   pluginTreeDelta,
   pluginTreeFromDelta,
@@ -11,6 +16,8 @@ export {
 } from "./internal/tree-data";
 export type {
   BuildPluginTreeOptions,
+  KeyFileFacts,
+  PluginFields,
   Runtime,
   PluginNode,
   PluginTree,

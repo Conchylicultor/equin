@@ -1,5 +1,5 @@
 import { joinAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { buildStructureTreeOnce } from "@plugins/plugin-meta/plugins/plugin-tree/core";
+import { buildStructureTreeOnce } from "@plugins/plugin-meta/plugins/plugin-tree/plugins/structure-records/core";
 import { defineFoldCheck } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import { defaultExportFold } from "./no-reexport-default.scan";
 

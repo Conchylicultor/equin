@@ -24,7 +24,7 @@ const CHECK_COMMAND =
 ruleTester.run("no-uncached-tree-in-checks", rule, {
   valid: [
     {
-      code: `import { buildStructureTreeOnce } from "${CORE}"; buildStructureTreeOnce("/p");`,
+      code: `import { buildStructureTreeOnce } from "@plugins/plugin-meta/plugins/plugin-tree/plugins/structure-records/core"; buildStructureTreeOnce("/p");`,
       filename: CHECK,
     },
     {

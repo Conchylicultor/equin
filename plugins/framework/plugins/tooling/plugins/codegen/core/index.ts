@@ -20,6 +20,7 @@ export type { BarrelEvaluation } from "./evaluated-barrels";
 
 export {
   collectAllPlugins,
+  firstStalePluginDoc,
   generatePluginDocs,
   pluginClaudeMdPath,
   pluginCompactDocPath,

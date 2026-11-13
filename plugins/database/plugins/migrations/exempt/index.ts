@@ -35,7 +35,6 @@ export default [
     paths: [
       "check/fork-schema-drift.ts",
       "check/internal/declared-schema-inputs.ts",
-      "check/migration-phases-valid.ts",
       "check/orphaned-tables.ts",
     ],
     kind: "debt",

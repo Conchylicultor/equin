@@ -31,7 +31,7 @@ build())` — so the whole promise chain of the work runs in the scope.
     - `framework/tooling/codegen`
     - `packages/timed-fs`
     - `plugin-meta/plugin-records`
-    - `plugin-meta/plugin-tree`
+    - `plugin-meta/plugin-tree/structure-records`
 - Core:
   - Exports (types): `SharedWorkScope`
   - Exports (values):

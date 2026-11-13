@@ -1,6 +1,6 @@
 import type { SlotHandle } from "@plugins/framework/plugins/slot-declaration/core";
 import { join, relative } from "path";
-import { buildStructureTreeOnce } from "@plugins/plugin-meta/plugins/plugin-tree/core";
+import { buildStructureTreeOnce } from "@plugins/plugin-meta/plugins/plugin-tree/plugins/structure-records/core";
 import {
   declareSlotsFromBarrels,
   codegenPassOver,

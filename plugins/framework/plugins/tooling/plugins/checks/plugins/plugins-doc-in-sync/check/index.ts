@@ -1,40 +1,26 @@
-import type {
-  CheckContext,
-  WholeTreeRead,
-} from "@plugins/framework/plugins/tooling/core";
+import type { CheckContext } from "@plugins/framework/plugins/tooling/core";
 
 import {
   buildEnrichedTree,
+  firstStalePluginDoc,
   mainComposition,
-  pluginClaudeMdPath,
   pluginCompactDocPath,
   pluginDetailsDocPath,
-  pluginReferenceMdPath,
   renderCompactDoc,
   renderDetailsDoc,
-  renderPluginClaudeMd,
-  renderPluginReferenceMd,
   formatGenerated,
   codegenPassOver,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
-import { createTimeSlicer } from "@plugins/packages/plugins/macrotask-yield/core";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = {
   id: string;
   description: string;
   run(ctx: CheckContext): Promise<CheckResult>;
-  wholeTreeRead?: WholeTreeRead;
 };
 
 const check: Check = {
   id: "plugins-doc-in-sync",
-  wholeTreeRead: {
-    kind: "debt",
-    task: "task-1794583359-1cuyg0",
-    reason:
-      "reads every plugin's CLAUDE.md to splice its AUTOGEN block into the prose around it, and its REFERENCE.md (2.8k)",
-  },
   description:
     "docs/plugins-compact.md, docs/plugins-details.md, every plugin's CLAUDE.md AUTOGEN block, and every plugin's REFERENCE.md (present exactly when a list is summarized) match the current plugin source",
   async run(ctx) {
@@ -98,53 +84,16 @@ const check: Check = {
     // any other way would disagree with the generator it exists to check.
     const tree = await buildEnrichedTree(pass);
     const main = mainComposition(tree, root);
-    // One CLAUDE.md per plugin (~800): read each without blocking, and pause
-    // every ~10 ms of rendering, so the loop never holds the check runner's
-    // shared thread for the whole set.
-    const slice = createTimeSlicer();
-    for (const info of tree.byDir.values()) {
-      await slice();
-      const file = pluginClaudeMdPath(info);
-      const existing = await readIfPresent(file);
-      const expected = await formatGenerated({
-        file,
-        content: renderPluginClaudeMd(
-          info,
-          existing,
-          root,
-          tree.facets,
-          tree.repo,
-          main,
-        ),
-      });
-      if (existing !== expected) {
-        return {
-          ok: false,
-          message: `${file.replace(`${root}/`, "")} AUTOGEN block is out of sync with plugin source`,
-          hint: "Run `./equin build` and commit the regenerated file.",
-        };
-      }
-
-      const refFile = pluginReferenceMdPath(info);
-      const reference = renderPluginReferenceMd(info, root, tree.facets);
-      const refExisting = await readIfPresent(refFile);
-      const refExpected =
-        reference === null
-          ? null
-          : await formatGenerated({ file: refFile, content: reference });
-      if (refExisting !== refExpected) {
-        const rel = refFile.replace(`${root}/`, "");
-        return {
-          ok: false,
-          message:
-            refExpected === null
-              ? `${rel} is stale: the plugin's CLAUDE.md summarizes no list`
-              : refExisting === null
-                ? `${rel} is missing`
-                : `${rel} is out of sync with plugin source`,
-          hint: "Run `./equin build` and commit the regenerated file.",
-        };
-      }
+    // Each CLAUDE.md is judged from a fold record of its bytes (the block it
+    // already holds) and each REFERENCE.md by blob id — the verdict of
+    // re-rendering the file whole, reading only what an edit touched.
+    const stale = await firstStalePluginDoc(tree, repo, main);
+    if (stale !== null) {
+      return {
+        ok: false,
+        message: stale.message,
+        hint: "Run `./equin build` and commit the regenerated file.",
+      };
     }
 
     return { ok: true };

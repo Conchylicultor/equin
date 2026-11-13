@@ -38,10 +38,9 @@ const ID = "boot:closure-digestable";
 const check: Check = {
   id: ID,
   wholeTreeRead: {
-    kind: "debt",
-    task: "task-1794583359-1cuyg0",
+    kind: "sanctioned",
     reason:
-      "source-digest's own walk resolves the closure against node_modules and tsconfig paths on disk (13.4k stats, listings, reads)",
+      "the subject is source-digest's own walk, which answers what Bun loads FROM DISK — directory listings that include untracked and ignored files, node_modules entries, symlinks — so its verdict is a function of disk state no file-set read-set or record key holds (~13k stats, listings and reads, its facts reused by stat)",
   },
   description:
     "the serving backend's and central's closures (each bin plus every server/machine/central registry barrel, literal dynamic imports followed) hold no dynamic import or require with a computed path, and every import in them resolves as source-digest's walk answers it — so the code a backend or central runs is measurable (sourceDigest, restart-skip)",
@@ -117,9 +116,16 @@ const check: Check = {
 
 /**
  * The digest's own walk over the entries: whatever else it refuses. It runs
- * on every pass (the declared whole-tree read): the walk resolves against the
- * installed `node_modules` and `tsconfig.base.json`'s paths on disk, which no
- * plugin record's key covers, so its answer cannot be stored.
+ * on every pass (the declared, sanctioned whole-tree read), and that is the
+ * point of it: restart-skip runs this very walk on disk, and it resolves as
+ * Bun does — each import's candidates read off a directory LISTING (which
+ * holds untracked and ignored files the run's file set does not), packages
+ * found by walking up to a `node_modules` entry, symlinks made real. So its
+ * answer is a function of the disk, not of the checkout's file set: no
+ * record key and no read-set over that set covers it, and a stored answer
+ * would judge a different question than the one restart-skip asks. Its
+ * per-file facts are already reused by stat (`facts-store`); what it pays per
+ * pass is the stats and listings that make the answer the disk's.
  */
 async function walkRefusal(
   root: string,

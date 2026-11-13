@@ -13,6 +13,7 @@ import type {
 import {
   analyzeSnapshotDag,
   legacySnapshotFilesIn,
+  migrationDataIn,
   MIGRATIONS_DATA_DIR,
   NULL_SNAPSHOT_ID,
   publishedMigrationBasenames,
@@ -142,28 +143,6 @@ async function explain(
 }
 
 /**
- * The data dir as `repo` holds it — the check's `ctx.repo()`, so each listing
- * and read is a fact of its input-keyed read-set: the data dir's membership
- * (a migration added or removed) and the content of every file read (a header,
- * `legacy-snapshots.json`, the tip file).
- */
-export function repoMigrationData(repo: RepoFiles): MigrationData {
-  const prefix = `${MIGRATIONS_DATA_DIR}/`;
-  const under = () =>
-    repo.under(MIGRATIONS_DATA_DIR).map((p) => p.slice(prefix.length));
-  return {
-    files: async () => under().filter((rel) => !rel.includes("/")),
-    metaFiles: async () =>
-      under()
-        .filter((rel) => rel.startsWith("meta/"))
-        .map((rel) => rel.slice("meta/".length))
-        .filter((rel) => !rel.includes("/")),
-    start: (rel) => repo.read(`${prefix}${rel}`),
-    text: (rel) => repo.read(`${prefix}${rel}`),
-  };
-}
-
-/**
  * The verdict over the checkout `repo` lists. Every working-tree file it
  * reads comes through `repo`; git (the published set, the bodies of published
  * and merge nodes) is asked in `repo.root`.
@@ -172,7 +151,7 @@ export async function verifySnapshotChain(
   repo: RepoFiles,
 ): Promise<CheckResult> {
   const root = repo.root;
-  const data = repoMigrationData(repo);
+  const data = migrationDataIn(repo);
   const dag = analyzeSnapshotDag(await readSnapshotNodes(data));
   const first = dag.problems[0];
   if (!first) {

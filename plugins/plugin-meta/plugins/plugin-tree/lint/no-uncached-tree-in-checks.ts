@@ -10,6 +10,10 @@ const createRule = lintRuleCreator(import.meta.url);
 const BUILDERS = new Map<string, string>([
   ["@plugins/plugin-meta/plugins/plugin-tree/core", "buildPluginTree"],
   [
+    "@plugins/plugin-meta/plugins/plugin-tree/plugins/structure-records/core",
+    "buildRecordedPluginTree",
+  ],
+  [
     "@plugins/plugin-meta/plugins/plugin-tree/plugins/faceted/core",
     "buildFacetedPluginTree",
   ],
@@ -39,16 +43,16 @@ export default createRule({
     type: "problem",
     docs: {
       description:
-        "Disallow calling buildPluginTree() / buildFacetedPluginTree() from check code — a check reads the " +
+        "Disallow calling buildPluginTree() / buildRecordedPluginTree() / buildFacetedPluginTree() from check code — a check reads the " +
         "process-shared tree instead.",
     },
     schema: [],
     messages: {
       uncachedTree:
         "A check pass runs ~100 checks on ONE JS thread, so a check that calls " +
-        "buildPluginTree() or buildFacetedPluginTree() itself rebuilds a tree the run has already built — six " +
+        "buildPluginTree(), buildRecordedPluginTree() or buildFacetedPluginTree() itself rebuilds a tree the run has already built — six " +
         "checks used to do exactly that, back to back. Read the shared one: " +
-        "buildStructureTreeOnce(pluginsRoot) from the same barrel for the structure " +
+        "buildStructureTreeOnce(pluginsRoot, repo) from plugin-tree/structure-records for the structure " +
         "(paths, ids, runtimes, descriptions), or buildBarrelFreeTree(pass) / " +
         "buildEnrichedTree(pass) from the codegen core barrel when you need facets " +
         "(the pass: codegenPassOver(await ctx.repo())). " +

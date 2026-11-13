@@ -23673,6 +23673,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `EmittedSnapshot`
           - `ExpandOp`
           - `MigrationData`
+          - `MigrationFileSet`
           - `PhasedStatements`
           - `PublishedMergeBase`
           - `PublishedMigrationViolation`
@@ -23708,6 +23709,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `mergeNodeSnapshotText`
           - `mergeSnapshots`
           - `migrationContentHash`
+          - `migrationDataIn`
           - `MIGRATIONS_DATA_DIR`
           - `MIGRATIONS_PLUGIN_DIR`
           - `MissingSnapshotBodyError`
@@ -23730,6 +23732,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `schemaFilesIn`
           - `schemaLoadFailures`
           - `schemaMigrationFiles`
+          - `schemaMigrationFilesIn`
           - `schemaSnapshotPath`
           - `schemaSnapshotState`
           - `schemaSnapshotStateIn`
@@ -23751,7 +23754,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `product-name:legacy-id` — `data` (sanctioned)
           - `imperative-create-table-allowlisted` — `check/imperative-create-table-allowlisted.ts` (sanctioned)
           - `boundaries/no-platform-api` — `core/internal/schema-glob.ts`, `core/internal/drizzle-stage.ts`, `core/internal/published-immutable.ts`, `core/internal/schema-load-probe.ts`, `core/internal/schema-snapshot.ts`, `core/internal/snapshot-bodies.ts`, `core/internal/migration-data.ts` (debt)
-          - `check-thread-safety/no-blocking-check-work` — `check/fork-schema-drift.ts`, `check/internal/declared-schema-inputs.ts`, `check/migration-phases-valid.ts`, `check/orphaned-tables.ts` (debt)
+          - `check-thread-safety/no-blocking-check-work` — `check/fork-schema-drift.ts`, `check/internal/declared-schema-inputs.ts`, `check/orphaned-tables.ts` (debt)
           - `blocking-fs/sync-named` — `core/internal/drizzle-stage.ts`, `core/internal/schema-snapshot.ts` (sanctioned)
           - `sql-writes:fit:hand-written` — `server/internal/runner.ts` (sanctioned)
         - Exempted by:
@@ -31415,7 +31418,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/spawn.getWorktreeRoot`
               - `packages/macrotask-yield.yieldMacrotask`
               - `packages/timed-fs.existsSync`
-              - `plugin-meta/plugin-tree.buildStructureTreeOnce`
+              - `plugin-meta/plugin-tree/structure-records.buildStructureTreeOnce`
             - Exports (types):
               - `AllowEdge`
               - `BoundaryConfig`
@@ -31631,7 +31634,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `packages/shared-work.sharedWork`
               - `packages/single-flight.singleFlight`
               - `packages/string-hash.sha256Hex`
-              - `plugin-meta/plugin-tree.buildStructureTreeOnce`
+              - `plugin-meta/plugin-tree/structure-records.buildStructureTreeOnce`
             - Exports (types):
               - `CandidateSource`
               - `CheckCache`
@@ -31940,12 +31943,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                     - Uses: `framework/tooling/checks/type-check.readTypeCheckTree`
         - **`codegen`** — Plugin doc generation and registry codegen
           - Core:
-            - Uses: 154 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
+            - Uses: 159 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
               - `plugin-meta/parse-utils` ×17
               - `config_v2` ×16
               - `framework/plugin-id` ×13
               - `network/live/resource-vocabulary` ×11
-              - `plugin-meta/plugin-records` ×10
+              - `plugin-meta/plugin-records` ×11
               - `framework/slot-declaration` ×6
               - `plugin-meta/barrel-import` ×6
               - `plugin-meta/closure` ×6
@@ -31956,22 +31959,23 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `plugin-meta/plugin-records/evaluate` ×5
               - `framework/tooling/codegen/composition-registries` ×4
               - `infra/host-fs/user-path` ×4
+              - `framework/tooling/format` ×3
+              - `framework/tooling` ×3
               - `config_v2/ledger` ×2
               - `framework/tooling/boundaries` ×2
               - `framework/tooling/collected-dir/discovery` ×2
-              - `framework/tooling/format` ×2
               - `framework/tooling/lint` ×2
               - `framework/tooling/web-artifacts` ×2
-              - `framework/tooling` ×2
               - `infra/paths` ×2
               - `network/live/resource-protocol` ×2
+              - `packages/macrotask-yield` ×2
               - `plugin-meta/parse-utils/source-files` ×2
               - `plugin-meta/plugin-tree` ×2
               - `fields/reorder-tree.REORDER_NODE_LEGEND`
               - `framework/tooling/guards/agent-policy.agentPolicySettings`
               - `infra/namespace.MAIN_COMPOSITION_ID`
-              - `packages/macrotask-yield.yieldMacrotask`
               - `packages/shared-work.sharedWork`
+              - `packages/string-hash.sha256Hex`
               - `plugin-meta/facets/contributions.contributionsFacetDef`
               - `plugin-meta/facets/exemptions.exemptionsFacetDef`
               - `plugin-meta/facets/slots.slotsFacetDef`
@@ -32048,6 +32052,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `EXEMPT_RULE_IDS_REL_PATH`
               - `exemptRuleIdsPath`
               - `fieldsEagerManifestPath`
+              - `firstStalePluginDoc`
               - `formatGenerated`
               - `generateBarrelStubs`
               - `generateBrowserHosts`
@@ -32578,7 +32583,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Exempted by:
                   - `active-data` (1 debt)
                   - `config_v2` (1 debt)
-                  - `database/migrations` (4 debt)
+                  - `database/migrations` (3 debt)
                   - `framework/tooling/checks/bun-runtime` (1 debt)
                   - `framework/tooling/checks/css-vars-single-owner` (1 debt)
                   - `framework/tooling/checks/css-vars-supplied` (1 debt)
@@ -36289,13 +36294,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exempts itself from: `boundaries/no-platform-api` — `server/internal/sweep.ts` (debt)
         - **`user-path`** — Which host paths a synchronous fs call may touch: AppPath (a path the app owns — its data dirs, its checkout; the only kind a sync fs call in runtime code may take) and UserPath (one the user or their config chose), with the type-aware lint that refuses a sync fs call on any path not proven app-owned — so a macOS Files & Folders prompt can never freeze a backend's JS thread, whether or not anyone marked the user's path.
           - Cross-plugin:
-            - Imported by: 109 plugins — full list in [`plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md`](../plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md)
+            - Imported by: 110 plugins — full list in [`plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md`](../plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md)
               - `infra` ×38
               - `framework` ×20
               - `apps` ×8
               - `debug` ×7
               - `packages` ×7
-              - `plugin-meta` ×5
+              - `plugin-meta` ×6
               - `config_v2` ×3
               - `database` ×3
               - `release` ×3
@@ -41508,7 +41513,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework/tooling/codegen`
           - `packages/timed-fs`
           - `plugin-meta/plugin-records`
-          - `plugin-meta/plugin-tree`
+          - `plugin-meta/plugin-tree/structure-records`
       - Core:
         - Exports (types): `SharedWorkScope`
         - Exports (values):
@@ -41721,11 +41726,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `withForegroundPriority`
     - **`string-hash`** — Portable string hashes in plain JS (no node:crypto, no Bun.hash), so every host — the Bun server, central and a browser page — computes the same value: hash53 (cyrb53, a 53-bit number, optionally seeded), hashHex (two seeded cyrb53s, ~106 bits as hex), hash64 (a 64-bit bigint), sha256Hex (a synchronous SHA-256, identical to node:crypto's hex digest), createSha256 (the same SHA-256, incremental over strings and bytes) and sha1Hex (SHA-1 for values already stored as one).
       - Cross-plugin:
-        - Imported by: 45 plugins — full list in [`plugins/packages/plugins/string-hash/REFERENCE.md`](../plugins/packages/plugins/string-hash/REFERENCE.md)
+        - Imported by: 46 plugins — full list in [`plugins/packages/plugins/string-hash/REFERENCE.md`](../plugins/packages/plugins/string-hash/REFERENCE.md)
           - `apps` ×13
           - `database` ×5
           - `network` ×5
-          - `framework` ×3
+          - `framework` ×4
           - `reports` ×3
           - `ui` ×3
           - `companions` ×2
@@ -46195,27 +46200,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `verificationPassed`
           - `verifyRecordsAgainst`
       - Cross-plugin:
-        - Imported by:
+        - Imported by: 21 plugins — full list in [`plugins/plugin-meta/plugins/plugin-records/REFERENCE.md`](../plugins/plugin-meta/plugins/plugin-records/REFERENCE.md)
+          - `framework` ×12
+          - `plugin-meta` ×7
           - `database/migrations/schema-question`
-          - `framework/cli/build`
-          - `framework/cli/check`
-          - `framework/cli/migrations`
-          - `framework/cli/regen-generated`
-          - `framework/cli/test`
-          - `framework/cli/test/digest`
-          - `framework/tooling/boundaries`
-          - `framework/tooling/checks`
-          - `framework/tooling/codegen`
-          - `framework/tooling/collected-dir/discovery`
-          - `framework/tooling/import-closure`
-          - `framework/tooling/web-artifacts`
           - `infra/deps/npm`
-          - `plugin-meta/plugin-records/bindings`
-          - `plugin-meta/plugin-records/evaluate`
-          - `plugin-meta/plugin-records/key-width`
-          - `plugin-meta/plugin-records/reclaim`
-          - `plugin-meta/plugin-tree/faceted`
-          - `plugin-meta/relocate`
       - Exemptions:
         - Exempts itself from:
           - `imperative-create-table-allowlisted` — `cli/internal/sqlite-store.ts` (sanctioned)
@@ -46432,12 +46421,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/host-fs/user-path.appPathParent`
           - `infra/host-fs/user-path.joinAppPath`
           - `packages/list-bound.wholeRecord`
-          - `packages/shared-work.sharedWork`
           - `plugin-meta/parse-utils.defaultExportObjectBody`
           - `plugin-meta/parse-utils.parseBoolField`
           - `plugin-meta/parse-utils.parseStringField`
         - Exports (types):
           - `BuildPluginTreeOptions`
+          - `KeyFileFacts`
+          - `PluginFields`
           - `PluginNode`
           - `PluginNodeDelta`
           - `PluginNodeJson`
@@ -46449,9 +46439,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `StructureIndex`
           - `StructureIndexIo`
         - Exports (values):
+          - `assemblePluginTree`
           - `buildPluginTree`
-          - `buildStructureTreeOnce`
           - `createStructureIndex`
+          - `findAllPluginDirs`
+          - `keyFileOwner`
+          - `parseKeyFile`
+          - `PLUGIN_KEY_FILES`
+          - `pluginFieldsFrom`
           - `pluginTreeDelta`
           - `pluginTreeFromDelta`
           - `pluginTreeToJson`
@@ -46460,13 +46455,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `apps/deploy/deploy-secrets/approvals`
           - `framework/cli/release`
-          - `framework/tooling/boundaries`
-          - `framework/tooling/checks`
           - `framework/tooling/codegen`
           - `plugin-meta/composition`
           - `plugin-meta/plugin-tree/faceted`
+          - `plugin-meta/plugin-tree/structure-records`
           - `plugin-meta/plugin-view`
-          - `plugin-meta/relocate`
       - Exemptions:
         - Exempts itself from: `boundaries/no-platform-api` — `core/internal/plugin-tree.ts`, `server/internal/tree-change-signal.ts` (debt)
       - Machine:
@@ -46476,7 +46469,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Core:
             - Uses: 42 symbols — full list in [`plugins/plugin-meta/plugins/plugin-tree/plugins/faceted/REFERENCE.md`](../plugins/plugin-meta/plugins/plugin-tree/plugins/faceted/REFERENCE.md)
               - `plugin-meta/plugin-records` ×13
-              - `plugin-meta/plugin-tree` ×9
+              - `plugin-meta/plugin-tree` ×8
               - `framework/tooling` ×6
               - `plugin-meta/facets` ×4
               - `framework/plugin-id` ×3
@@ -46484,6 +46477,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `plugin-meta/facets/loader` ×2
               - `plugin-meta/parse-utils` ×2
               - `infra/host-fs/user-path.AppPath`
+              - `plugin-meta/plugin-tree/structure-records.buildRecordedPluginTree`
             - Exports (types):
               - `BuildFacetedTreeOptions`
               - `FacetedIndex`
@@ -46505,6 +46499,30 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exempts itself from:
               - `boundaries/no-platform-api` — `core/internal/fs-snapshot.ts`, `core/internal/faceted-tree.ts` (debt)
               - `repo-walk-safety/no-adhoc-repo-listing` — `core/internal/live-snapshot.ts` (sanctioned)
+        - **`structure-records`** — The structure tree as build tooling reads it: buildRecordedPluginTree (each plugin key file's facts a fold record, so a pass re-parses only the barrels and package.json files an edit touched) and buildStructureTreeOnce, the one structure tree a check pass shares.
+          - Core:
+            - Uses:
+              - `infra/host-fs/user-path.AppPath`
+              - `infra/host-fs/user-path.joinAppPath`
+              - `packages/shared-work.sharedWork`
+              - `plugin-meta/plugin-records.foldRepoFiles`
+              - `plugin-meta/plugin-tree.assemblePluginTree`
+              - `plugin-meta/plugin-tree.findAllPluginDirs`
+              - `plugin-meta/plugin-tree.KeyFileFacts`
+              - `plugin-meta/plugin-tree.keyFileOwner`
+              - `plugin-meta/plugin-tree.parseKeyFile`
+              - `plugin-meta/plugin-tree.PLUGIN_KEY_FILES`
+              - `plugin-meta/plugin-tree.pluginFieldsFrom`
+              - `plugin-meta/plugin-tree.PluginTree`
+            - Exports (values):
+              - `buildRecordedPluginTree`
+              - `buildStructureTreeOnce`
+          - Cross-plugin:
+            - Imported by:
+              - `framework/tooling/boundaries`
+              - `framework/tooling/checks`
+              - `plugin-meta/plugin-tree/faceted`
+              - `plugin-meta/relocate`
     - **`plugin-view`** — Reusable detail pane for inspecting a single plugin. Defines PluginView.Section slot for extensible sections.
       - Web:
         - Slots:

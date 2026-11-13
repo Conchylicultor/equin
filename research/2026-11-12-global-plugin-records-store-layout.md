@@ -1069,3 +1069,83 @@ Tests pin that each stored part re-answers after an edit to what it read
 task-1794583359-1cuyg0: boot's walk (13.4k), plugins-doc-in-sync (2.8k
 CLAUDE.md/REFERENCE.md reads, ~400 ms of rendering), migration-phases-valid
 (1.0k, every migration read twice) and no-db-backed-notify (~940, input-keyed).
+
+## The shared trees, the docs and the migrations, O(changes) (task: check pass O(changes), 11)
+
+Measured 2026-11-13: the same one-line edit to `hints/help-menu/web/index.ts`,
+`./equin check --scope tree --jobs 1` after a warm pass, read from
+`check-progress.jsonl` (host load 6–9 both times).
+
+### Split before
+
+| cost | own / shared file calls | wall in the pass |
+| --- | ---: | ---: |
+| the three per-pass plugin trees (structure, barrel-free, enriched) | 3,778 + 3,986 + 3,976 shared | ~170 ms structure build each, ×3 (parse ~92 ms, reads ~64 ms) |
+| plugins-doc-in-sync | 2,781 own | 1,132 ms — ~1,800 CLAUDE.md reads awaited one after another, ~160 ms rendering, ~330 ms the two docs |
+| boot:closure-digestable | 13,512 own | 248 ms |
+| config-origins-in-sync | 298 own | 208 ms (formatting the 495 origins: ~1 ms — the ~970 ms CPU of the brief is gone since origins are compared by blob id) |
+| migration-phases-valid | 1,014 own | 196 ms, every migration read twice, on every edit |
+| no-db-backed-notify | 8 own | its ~1.2k reads are the shared source analysis now: the declaration was stale |
+
+**Root causes.** (1) A plugin's structure node is a function of its key files
+alone, but every tree build re-read and re-parsed all ~3.8k of them, and the
+pass built it three times (the faceted builds each made their own). (2) A
+CLAUDE.md is in sync when splicing its rendered block leaves it unchanged; the
+check re-read every file to splice, though only the file's own bytes decide
+which block that is. (3) migration-phases-valid read `data/` from disk, so it
+could not be input-keyed and ran on every tree change.
+
+### Fix
+
+- **The structure tree from records** (`plugin-tree/structure-records`): each
+  key file's facts (`parseKeyFile`) are a fold record (`key-facts.scan.ts`);
+  `buildRecordedPluginTree` links them (`pluginFieldsFrom`,
+  `assemblePluginTree`). `buildStructureTreeOnce` and both faceted trees build
+  through it. Not in `plugin-tree/core`, which the backend loads and the record
+  store must not reach. Equal to the reading build over the real checkout and
+  across key-file edits (`recorded-tree.test.ts`).
+- **A CLAUDE.md is judged by its block** (`firstStalePluginDoc`): the fold
+  `claude-md-blocks.scan.ts` keeps each file's fixed-point block
+  (`autogenFixedPoint`: the one block `spliceAutogenBlock` leaves the file
+  unchanged with, confirmed by the splice itself), compared with the rendered
+  block's sha256; REFERENCE.md by blob id. Markdown is asserted unformattable
+  (the comparison assumes `formatGenerated` returns it as is). Pinned by
+  `autogen-block.test.ts` (over every real CLAUDE.md: the fixed point splices
+  back to the file, another block does not) and `plugin-doc-sync.test.ts` (a
+  block edit is stale after the synced bytes were folded, a prose edit is not,
+  a stray REFERENCE.md is stale).
+- **migration-phases-valid is input-keyed**: `data/` read through `ctx.repo()`
+  (`migrationDataIn`, moved from snapshot-chain-intact into migrations core;
+  `schemaMigrationFilesIn`, equal to `schemaMigrationFiles` on the real data
+  dir), each file read once, the planner fed the same texts (`migrationsFrom`).
+  The published set is a function of the published refs (its signature). An
+  edit outside `data/` replays.
+- **boot:closure-digestable stays a whole walk, sanctioned.** Its subject is
+  source-digest's walk as restart-skip runs it: Bun's resolution from disk —
+  directory listings that hold untracked and ignored files, `node_modules`
+  entries, symlinks. No read-set over the file set and no record key covers a
+  listing, so a stored answer would judge a different question than
+  restart-skip asks. Its facts are already reused by stat.
+
+| one-line edit, serial | before | after |
+| --- | ---: | ---: |
+| shared plugin-tree file calls | 11,740 | 406 |
+| plugins-doc-in-sync | 2,781 calls / 1,132 ms | 608 / 395 ms |
+| migration-phases-valid | 1,014 / 196 ms, every edit | replayed (0) outside `data/`; 442 / 136 ms when it runs |
+| structure tree build, warm | ~170–300 ms each, ×3 | ~250 ms first, ~50 ms each after |
+| own file calls, the 171 checks that ran | 22.7k | 20.1k (13.5k of it closure-digestable) |
+| declared checks | 5 (4 debt + 1 stale) | 1 (sanctioned) |
+
+The pass wall (47 s → 46 s) is dominated by checks outside this scope:
+migrations-in-sync 8–11 s (drizzle-kit), type-check 4–7 s, a few grep-heavy
+checks 4–6 s each.
+
+### Next
+
+Still O(set) per pass, all under the bound: plugins-doc-in-sync's test-helper
+section (~150 testing barrels and the files they re-export, read synchronously
+while rendering, ~600 calls), every plugin's block rendered (~160 ms; a block is
+a function of the related tree), config-origins-in-sync rendering the 495
+origins (~160–250 ms), plugins-registry-in-sync (153 calls, ~0.5–1.1 s), the
+registry codegen context (1,278 shared calls), the faceted trees' facet reads +
+relate (~300 ms each).

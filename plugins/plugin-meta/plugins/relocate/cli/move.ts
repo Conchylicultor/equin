@@ -21,7 +21,7 @@ import {
   findPluginMentions,
   findPluginRefs,
 } from "@plugins/plugin-meta/plugins/plugin-refs/core";
-import { buildStructureTreeOnce } from "@plugins/plugin-meta/plugins/plugin-tree/core";
+import { buildStructureTreeOnce } from "@plugins/plugin-meta/plugins/plugin-tree/plugins/structure-records/core";
 import {
   PLUGIN_MOVES_FILE,
   appendPluginMove,

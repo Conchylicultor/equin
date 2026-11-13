@@ -463,27 +463,11 @@ its docblock records — and then lowered as readily as raised.
     - `verificationPassed`
     - `verifyRecordsAgainst`
 - Cross-plugin:
-  - Imported by:
+  - Imported by: 21 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `framework` ×12
+    - `plugin-meta` ×7
     - `database/migrations/schema-question`
-    - `framework/cli/build`
-    - `framework/cli/check`
-    - `framework/cli/migrations`
-    - `framework/cli/regen-generated`
-    - `framework/cli/test`
-    - `framework/cli/test/digest`
-    - `framework/tooling/boundaries`
-    - `framework/tooling/checks`
-    - `framework/tooling/codegen`
-    - `framework/tooling/collected-dir/discovery`
-    - `framework/tooling/import-closure`
-    - `framework/tooling/web-artifacts`
     - `infra/deps/npm`
-    - `plugin-meta/plugin-records/bindings`
-    - `plugin-meta/plugin-records/evaluate`
-    - `plugin-meta/plugin-records/key-width`
-    - `plugin-meta/plugin-records/reclaim`
-    - `plugin-meta/plugin-tree/faceted`
-    - `plugin-meta/relocate`
 - Exemptions:
   - Exempts itself from:
     - `imperative-create-table-allowlisted` — `cli/internal/sqlite-store.ts` (sanctioned)

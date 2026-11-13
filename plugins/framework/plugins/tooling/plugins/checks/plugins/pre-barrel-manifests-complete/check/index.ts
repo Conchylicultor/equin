@@ -13,7 +13,7 @@ import {
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { discoverCollectedDirsIn } from "@plugins/framework/plugins/tooling/plugins/collected-dir/plugins/discovery/core";
 import { collectedDirRegistryPath } from "@plugins/framework/plugins/tooling/plugins/codegen/plugins/composition-registries/core";
-import { buildStructureTreeOnce } from "@plugins/plugin-meta/plugins/plugin-tree/core";
+import { buildStructureTreeOnce } from "@plugins/plugin-meta/plugins/plugin-tree/plugins/structure-records/core";
 import { fileSetRuntimeReach } from "@plugins/plugin-meta/plugins/plugin-records/core";
 
 const RUNTIMES = ["web", "server", "machine", "central"] as const;

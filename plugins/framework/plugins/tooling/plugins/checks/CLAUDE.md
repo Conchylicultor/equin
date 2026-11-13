@@ -651,7 +651,7 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
     - `packages/shared-work.sharedWork`
     - `packages/single-flight.singleFlight`
     - `packages/string-hash.sha256Hex`
-    - `plugin-meta/plugin-tree.buildStructureTreeOnce`
+    - `plugin-meta/plugin-tree/structure-records.buildStructureTreeOnce`
   - Exports (types):
     - `CandidateSource`
     - `CheckCache`

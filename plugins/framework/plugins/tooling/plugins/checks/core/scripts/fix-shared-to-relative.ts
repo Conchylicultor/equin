@@ -16,7 +16,7 @@ import {
   readdirSync,
 } from "@plugins/packages/plugins/timed-fs/core";
 import { dirname, join, relative, sep } from "path";
-import { buildStructureTreeOnce } from "@plugins/plugin-meta/plugins/plugin-tree/core";
+import { buildStructureTreeOnce } from "@plugins/plugin-meta/plugins/plugin-tree/plugins/structure-records/core";
 import { loadRepoFiles } from "@plugins/framework/plugins/tooling/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 
