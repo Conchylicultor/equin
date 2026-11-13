@@ -91,7 +91,9 @@ export interface AddressRetentionResult {
  * @param opts.live the graph the namespace serves right now (the previous
  *   build's, until this one publishes) with its names, or null when nothing is
  *   served yet. Kept whatever its age: a failed deploy reverts to it.
- * @param opts.now the clock (test seam).
+ * @param opts.now the clock (test seam). It must be the filesystem's: the first
+ *   trim ages links by their mtimes and a record's age is its mtime (an open
+ *   tab touches it in real time), so the first trim throws on a link from after it.
  */
 export function retainAddresses(opts: {
   addressDir: string;
@@ -126,7 +128,18 @@ export function retainAddresses(opts: {
       const st = lstatSync(join(opts.addressDir, name), {
         throwIfNoEntry: false,
       });
-      if (st) index.names[name] = st.mtimeMs;
+      if (!st) continue;
+      // Compose linked every name before this run, under the same lock, so a
+      // link from after `now` means `now` is not the filesystem's clock: every
+      // age below would compare two clocks (a fixed test instant against a
+      // link's real mtime kept a link a day past its window).
+      if (st.mtimeMs > now) {
+        throw new Error(
+          `retainAddresses: ${name} was linked at ${new Date(st.mtimeMs).toISOString()}, ` +
+            `after now (${new Date(now).toISOString()}) — the clock passed is not the filesystem's`,
+        );
+      }
+      index.names[name] = st.mtimeMs;
     }
   }
 
