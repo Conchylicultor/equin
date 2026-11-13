@@ -1,6 +1,6 @@
 # Load model: what loads, how and when — today and from scratch
 
-Status: design proposal (research only — no code changed). Prompted by the equin.ai first-visit audit
+Status: design proposal (research only — no code changed). M1 measurements in §12 (2026-11-13) contradict several sizing assumptions — read it first. Prompted by the equin.ai first-visit audit
 (deploy `dpl-1785501087837-xkt5u5`): ~5 s on emulated fast 4G + 4× CPU, 6.7 s in the field.
 Builds on [client lazy plugins](./2026-10-11-global-client-lazy-plugins.md) (its Phase 2 "load when
 needed" rule and its sizing), [eager tier from markers](./2026-07-02-global-eager-tier-derived-from-markers.md),
@@ -11,7 +11,7 @@ needed" rule and its sizing), [eager tier from markers](./2026-07-02-global-eage
 Contents: 0 Context · 1 Current model · 2 Today's observed paint behaviour · 3 Prior art ·
 4 Target model (with code) · 5 First paint: the smoothness contract, pre-render vs atomic ·
 6 Tradeoffs, gains, risks · 7 Background effects and prefetch · 8 Edge cases · 9 Migration path ·
-10 Open questions · 11 Verification.
+10 Open questions · 11 Verification · 12 M1 results.
 
 ## 0. Context
 
@@ -757,3 +757,214 @@ real `e2e/` script). Wins are estimates from the audit and §2 — *hypotheses u
 - Website after M7: every page hydrates with zero recoverable errors; a click on Wish / play during
   hydration is replayed.
 - Field: the website's boot reports, p75 time to route content.
+
+---
+
+## 12. M1 results — the assumptions, measured (2026-11-13)
+
+Measured on main's dist (`singularity/web`, 1,657 modulepreloads) and a website composition dist
+built from `96800db2` (614 modulepreloads, 1.944 MB br eager, matching the audit). Scripts are
+not committed (scratch: `dist_stats.py`, `preserve.ts`, `manifest.ts`, `coverage.ts`,
+`graph.py`/`q3.py`); each number below says how it was obtained. Sizes are oxc-minified bytes as
+the dists hold them; "br" is the store's precompressed `.br` unless marked *est.* (raw × the
+dist's first-party br/raw ratio, 0.274 website / 0.278 main).
+
+### 12.1 Q1 — module boundaries in the per-plugin build (M2)
+
+**Today: not kept.** Each plugin barrel is one rolldown lib-mode bundle (`index.js`, plus a shared
+chunk only for co-entries / dynamic imports): 1,786 of main's 1,827 mapped artifacts are a single
+file. Main's eager set is 5,583 first-party source modules in 1,518 artifacts (median 2 modules,
+p90 7, max 168 — `primitives/data-view`).
+
+**But they can be, at no structural cost.** Rebuilding real targets with the builder's own config
+plus `output.preserveModules: true, preserveModulesRoot: <plugin dir>` (rolldown via vite, `write:
+false`): 62 sampled web targets (stride sample of the fleet, plus website-shell and data-view)
+all built, **one source module per output file in every one**, original export names kept.
+The barrel becomes a facade of `import { X as t } from "./web/components/x.js"` + its
+`export default { contributions }` — exactly the `export { X } from "./y"` table §4.5's specifier
+rewrite needs. Costs: raw bytes +8 % (median; no scope hoisting), and **per-file brotli +24 %
+(median), +75 % for data-view (186 files)** — compressing modules one by one loses the
+cross-module dictionary. So module-granularity delivery needs M6's route chunks (re-coalescing a
+route's modules into a few files) for bytes, not only for request count.
+
+### 12.2 Q2 — always-loaded manifests
+
+Method: Bun.build of every web barrel's default export of the composition (902 website, 1,178
+main — from each dist's registry artifact), npm external, with **every `.tsx` module under a
+plugin replaced by lazy-ref stubs** (the §4.2 transform, approximated: all components move out;
+nothing else does). Sizes are Bun-minified as one file, so per-module delivery would be larger (§12.1).
+
+| | website | main |
+|---|---|---|
+| Manifest closure — modules | 4,651 | 5,866 |
+| — first-party code | 1.59 MB raw / **449 KB br** (one file) | 2.02 MB raw / **563 KB br** |
+| — npm it still imports (excl. react) | **432 KB br**: lexical + @lexical/* (~310 incl. overlap), zod 89, yjs 31, htmlparser2 28, drizzle-orm/pg-core 26, fast-xml-parser 25, dnd-kit 37, react-query 14, @tonejs/midi 9… | same set + more |
+| Today's eager set (for comparison) | 2,088 modules; 1,305 KB br first-party + 639 KB br vendor | 5,583 modules; 3,389 + 961 KB br |
+| Doc's placeholder budget | 60 KB | 150 KB |
+
+**This contradicts the doc's central assumption ("manifests are small enough to always load").**
+Stubbing components removes only ~1/3 of the code: the residue is `.ts` modules that barrels and
+`.ts` slot payloads reach — 62 % "other plugin `.ts`" (stores, parsers, helpers, data), 13 %
+runtime (framework, live, pane), 9 % icon-name tables (`icon-picker`'s classic symbol names 58 KB,
+`saved-names` symbol-names.json 57 KB, agent-icons 21 KB), 9 % slot/route/live/config/endpoint
+declarations (zod schemas: 368 manifest modules import zod), and **data contributions that hold
+heavy values** — Lexical node classes (26 `.ts` modules importing `lexical`), yjs, the MusicXML/MIDI
+parsers of sonata sources, `html-decode`'s htmlparser2, `rank`'s drizzle import. The module count
+(4,651) is *higher* than today's whole website eager set (2,088): a manifest per plugin for the
+whole composition is wider than today's eager tier, which is only one slice of it.
+
+What M3 must add to get there: (a) non-component values in payloads (node classes, parsers,
+schema-heavy descriptors) need the same lazy treatment as components, i.e. field kinds for
+"heavy data"; (b) a `manifest` budget check from day one that names the import chain (the residue
+is a long tail — no single plugin is above 82 KB raw); (c) icon-name tables out of the page.
+
+### 12.3 Q3 — per-route required sets
+
+Method (an empirical render probe): V8 precise coverage from navigation until the route's content
+is visible (website: `h1` visible, 1.7–3.5 s; main: content + 3 s settle), functions with
+count > 0 mapped through the artifacts' sourcemaps to source modules = **what ran**; then their
+static module closure resolved two ways — **barrel** (today: an `@plugins/x/web` import evaluates
+the whole barrel) and **M2** (a named import resolves through the barrel's re-export table to the
+defining module; type-only imports skipped; dynamic imports cut). Inlined images
+(`?inline` jpg/png) are counted apart.
+
+| Route | Today loaded at that moment | Ran (modules) | Barrel closure | **M2 closure** |
+|---|---|---|---|---|
+| website `/about` | 646 files, 1,990 KB br fp + 639 vendor | 561 | 2,049 mod, 900 KB br *est.* + 553 vendor | **1,074 mod, 532 KB br *est.* + 337 vendor** |
+| website `/about/apps`, `/foundations`, `/vision` | 646–649 files, same | 538–554 | 1,949 mod, 841 + 553 | 998 mod, 474 + 333 |
+| website `/about/story` | 649 files | 543 | 2,002 mod, 918 + 553 | 1,045 mod, 547 + 333 |
+| main `/agents` | 1,657 files, 3,390 KB br fp + 961 vendor | 915 | 3,142 mod, 1,316 + 799 | **2,092 mod, 1,076 + 707** |
+| main `/pages` | 1,671 files | 944 | 3,203 mod, 1,339 + 799 | 2,129 mod, 1,096 + 717 |
+| main `/settings` | 1,657 files | 803 | 3,072 mod, 1,287 + 799 | 1,991 mod, 1,025 + 707 |
+| main `/home` | 1,657 files | 908 | 3,114 mod, 1,303 + 799 | 2,069 mod, 1,070 + 707 |
+
+Plus, on every website route, **395 KB raw of base64 images** in the closure (`pages/apps/web/shots/*.jpg`,
+686 KB on `/story`) — Q3 (images out of JS) is independent of the model and worth it alone.
+
+Reading it:
+- **M2 halves the website route set** (modules −48 %, first-party bytes −41 %, vendors −39 %) and
+  cuts main's by a third in modules (−18 % bytes). Its value is real, and largest where barrels fan
+  out (website).
+- **The 220 KB website budget is out of reach by laziness alone.** The code that *ran* before the
+  heading was ~1.08 MB raw (~295 KB br *est.*) first-party before any closure, in: website pages
+  (108 KB raw), `primitives/css` (93), `network/live` (135), `media/player` (58 — the hero video),
+  `primitives/pane`, tokens/icons/theme-engine, `adaptive-bar`, `reports/main-thread-stall`,
+  `shell/notifications`, `infra/runtime-profiler`. Some of that is boot-root work §7.1 would gate
+  (reporters, profiler, notifications), most is the route itself. Vendors alone are 337 KB br
+  (react-dom, zod, base-ui, floating-ui, dnd-kit, lexical, react-query, sonner…).
+- Closure overhead is ~45 % of the M2 set (868 KB raw of statically imported but never-run modules on
+  `/about`: dropdown-menu, color-picker, control-panel rows, field views) — the render probe being
+  needed is confirmed, and so is the value of splitting at the *component* edge inside impls too.
+- **Route sets barely differ between website routes** (998–1,074 modules): the shared shell + runtime
+  dominate, so per-route sets buy little over one website-wide set; the win is versus the
+  composition, not between routes.
+
+### 12.4 Q4 — warm-cache first use of not-yet-evaluated code (main)
+
+Method: `/agents` loaded twice in one persistent context (HTTP cache on, no routing, deferred tier
+drained). Then, inside a fresh same-origin `srcdoc` iframe carrying only the page's import map,
+so it has an empty module map over the warm HTTP and code cache: `<link rel=modulepreload>` the
+set and await the `load` events (cache fetch + compile), then `import()` it (link + top-level
+evaluation). Every resource had `transferSize` 0 (all from cache). The host was loaded
+(load average 14–20): read medians, with the best case in brackets.
+
+| What | Modules | Raw | Preload (cache + compile) | `import()` (link + evaluate) |
+|---|---|---|---|---|
+| Today's eager set | 1,656 | 15.5 MB | 244 ms | **1,790 ms** (best 1,130) |
+| One deferred leaf (median of 10 sampled) | 1–17 | 1–790 KB | 16–41 ms | 1–13 ms |
+| All 199 deferred plugins together | 282 | 7.1 MB | 78 ms | 442 ms |
+
+- **On a warm load, evaluation costs 5–10× the cache fetch + compile.** Warm cost scales with the
+  number of modules evaluated (~1 ms per module for the eager set), not with bytes.
+- §1.3/§6.1 quote ~0.9 s for eager evaluation. Measured here: 1.1 s at best, 1.8 s median under
+  fleet load.
+- **First use of a not-yet-evaluated leaf costs ~20–55 ms**, mostly fixed per-load overhead.
+  That fits inside a navigation transition.
+- Extrapolating ~1 ms per module, a pane closing over ~100–300 new modules would cost ~0.1–0.4 s
+  warm. This is not measured directly: today's heavy apps (pages, studio, sonata) are not deferred.
+  They are pinned eager through the `dependsOn` closure, and `apps/studio/web` and `apps/sonata/web`
+  are not in main's import map at all. The deferred tier holds only leaves.
+- Target vs today for main `/agents`: the M2 route set (§12.3) is 2,092 source modules, against
+  5,583 in today's eager set. If evaluation tracks module count, warm boot evaluation drops by
+  roughly 1.1 s (est.). This is the largest warm-app win the numbers support.
+
+### 12.5 Q5 — protocol, and queueing on a cold local load (D0)
+
+- **Local gateway: HTTP/1.1 only** — `curl --http2` negotiates 1.1, `--http2-prior-knowledge` gets
+  no answer (no h2c), no TLS listener. Browsers would only use h2 over TLS anyway. **equin.ai:
+  HTTP/2** (Caddy), `alt-svc: h3=":443"` advertised. So the six-connection limit applies to every
+  local namespace and to nothing deployed.
+
+Measurement: a cold local load (CDP cache disabled, so every artifact URL is new, as right after
+a build), 6 runs per target, fleet load 13–48. Every request was `http/1.1`. Each run used 6
+connections with at most 6 in flight. Median [range], seconds from navigation:
+
+| | website `/about` | main `/agents` |
+|---|---|---|
+| Requests (preloads + later modules) | 662 (614 + 35) | 1,973 (1,657 + 293) |
+| Wait for a socket per request, p50 / p90 | 0.33 / 0.60 | 0.52 / 1.03 |
+| Last modulepreload done | 0.72 [0.26–1.78] | 1.45 [0.70–6.72] |
+| Route content painted | 2.16 [1.35–6.32] | 7.59 [3.76–17.2] |
+| Time ≥ 1 request queued, as a share of the preload phase | **97 %** | **99 %** |
+| … as a share of time to paint | **31 %** | **20 %** |
+| Unlimited-connection lower bound for the preload phase | 0.11 | 0.27 |
+| Upper bound on what h2 could save | 0.60 | 1.18 |
+
+- **The local preload phase is entirely bound by the 6-socket HTTP/1.1 pool.** It is still only
+  20–31 % of time to paint. On `/agents`, paint comes ~6 s after the last preload: evaluation,
+  boot, snapshot, and 293 later module requests.
+- **Sockets were only 47–61 % busy, at ~2 ms per request.** Chromium's per-request overhead stays
+  under h2, so the real h2 saving sits well under the upper bound (≈ the "never idle" figure:
+  0.29 s / 0.76 s).
+- **Request count is the cost, not bytes** (10.7 MB from localhost is cheap).
+
+D0 answer: local h2 (TLS on `*.localhost`) would buy at most ~0.6–1.2 s on a cold local load,
+likely about half that, and nothing on equin.ai, which is already h2. Fewer requests buy the same
+on both protocols. M2's module-granularity output would multiply requests (`/about`: ~1,130
+modules + vendor files vs 662 today), so **route chunks (M6) are a precondition of M2/M4**,
+not the optional "if request count shows up" the doc has.
+
+### 12.6 Verdict
+
+**Still worth it — but as "smaller eager sets + module-granular imports", not as "tiny manifests +
+~40-module route sets". Several of the doc's sizing assumptions are off by 5–25×.**
+
+Confirmed:
+- M2 is feasible with the existing builder (`preserveModules`; 62/62 targets, one module per file,
+  names kept). It cuts the website route set roughly in half (modules −48 %, bytes −41 %) and main's
+  `/agents` by a third in modules. Do it, together with route chunks.
+- Warm-app first use of a lazily evaluated leaf is cheap (~20–55 ms). Evaluation, not fetching,
+  is the warm cost, so shrinking the evaluated set is the win (~1.1 s est. on `/agents`).
+- Images out of JS (Q3) is worth doing on its own: 395–686 KB raw of base64 sits in every website
+  route's closure.
+
+Contradicted, so the doc should change:
+1. **"Manifests are small enough to always load" (§4.1, §4.4, §10)** is false as modelled.
+   - Stubbing every component leaves 449 KB br (website) / 563 KB br (main) of first-party code,
+     plus 432 KB br of npm (lexical, zod, yjs, parsers…), across 4,651 / 5,866 modules. That is more
+     modules than today's whole website eager set.
+   - M3 must make heavy *data* lazy too: node classes, parsers, schema-heavy descriptors, icon-name
+     tables.
+   - Alternatively, load manifests per drawn host rather than per composition.
+   - The `manifests` budget (60 / 150 KB) is ~8× under today's reality.
+2. **Route sets are ~1,000–2,100 modules, not "~40" (§4.4, §6.1).**
+   - Website: ≈ 530 KB br (est.) + 337 KB br vendors, against the 220 KB budget.
+   - The code that merely *ran* before the heading is already ~295 KB br (est.) + vendors. Laziness
+     alone cannot reach 220 KB: the shared shell, `network/live`, `primitives/css`, the player and
+     the boot roots have to shrink too.
+   - Reset §4.6's placeholders to measured values (website `*` ≈ 900 KB br incl. vendors, main
+     ≈ 1.8 MB), and ratchet down from there.
+3. **Per-route sets barely differ on the website** (998–1,074 modules across 5 pages). The win is
+   composition → website-wide set, not one route vs another. A single website set plus per-page
+   deltas is enough, and simpler than per-route sets spliced by the gateway.
+4. **Route chunks are a precondition, not M6's optional step.**
+   - Per-module files cost +24 % brotli (median; +75 % for data-view).
+   - On HTTP/1.1, the local preload phase is already 97–99 % queued.
+5. **D0:** keep HTTP/1.1 locally and fix the request count with route chunks. Local h2 would buy
+   ≤ 0.6–1.2 s cold, and nothing on equin.ai.
+6. **§7.1 matters more than it reads.** Boot-root work (reporters, runtime profiler, notifications,
+   main-thread-stall) runs on the website before the heading, so activation events are part of the
+   route-set budget, not a nicety.
+7. **For the website, pre-render (M7) is what fixes paint.** A ~0.9 MB hydration set makes the
+   "hydration window" of §5.3 seconds long on fast 4G rather than "short". Keep M7 behind M2 + route
+   chunks, but do not expect the window to close without the budget work above.
