@@ -13,7 +13,7 @@
 // The tiers are DERIVED, not hand-listed. `web-tiers.generated.ts` (produced by
 // `codegen/core/eager-tier-gen.ts`) is the committed source of truth: a plugin
 // is EAGER iff it is non-app-content / a shell subtree (structural), calls a
-// watched boot slot (Core.Root / Core.Boot / Apps.App / ActionBar.Item), owns a
+// watched boot slot (Core.Root / Core.Boot / Apps.App / ActionBar.Item / Shell.Sidebar), owns a
 // preloaded resource descriptor, or is pulled in by the transitive dependsOn
 // closure of any of those. Every app is deferrable by default; the historical
 // hand-maintained allowlists (DEFERRABLE_APPS / EAGER_EXCEPTIONS) are gone.

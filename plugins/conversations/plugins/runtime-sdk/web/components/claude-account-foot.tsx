@@ -131,7 +131,17 @@ export function ClaudeAccountFoot() {
   const now = useNow(60_000);
   switch (result.status) {
     case "loading":
-      return <Loading variant="rows" />;
+      // The trigger's own box (a `lg` sidebar row, h-12) in the same menu
+      // structure, so the foot holds its final height while its reads land —
+      // a skeleton list there was taller, and the sidebar list above it moved
+      // when the account replaced it.
+      return (
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <Loading variant="block" className="h-12 w-full" />
+          </SidebarMenuItem>
+        </SidebarMenu>
+      );
     case "error":
       return (
         <ResourceErrorInline

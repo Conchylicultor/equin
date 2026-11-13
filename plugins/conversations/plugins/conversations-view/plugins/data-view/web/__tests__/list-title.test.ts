@@ -10,6 +10,7 @@ const conv = {
   createdAt: new Date(),
   taskTitle: "Add a conversation list title setting",
 };
+const none = { shortTitle: null, sourceTitle: null };
 const fresh = {
   shortTitle: "List title setting",
   sourceTitle: conv.taskTitle,
@@ -17,7 +18,7 @@ const fresh = {
 
 describe("resolveListTitle", () => {
   it("conversation mode shows the conversation title", () => {
-    expect(resolveListTitle("conversation", conv, null)).toEqual({
+    expect(resolveListTitle("conversation", conv, none)).toEqual({
       label: conv.title,
       full: conv.title,
     });
@@ -28,14 +29,14 @@ describe("resolveListTitle", () => {
       resolveListTitle(
         "conversation",
         { ...conv, title: null, status: "starting" },
-        null,
+        none,
       ),
     ).toEqual({ label: "Starting…", full: "Starting…" });
   });
 
   it("an untitled conversation past starting is not called Starting…", () => {
     expect(
-      resolveListTitle("conversation", { ...conv, title: null }, null),
+      resolveListTitle("conversation", { ...conv, title: null }, none),
     ).toEqual({ label: "Untitled", full: "Untitled" });
   });
 
@@ -61,14 +62,14 @@ describe("resolveListTitle", () => {
     });
   });
 
-  it("short mode without a short title shows the task title", () => {
-    expect(resolveListTitle("short", conv, null)).toEqual({
+  it("short mode without a short title (none generated) shows the task title", () => {
+    expect(resolveListTitle("short", conv, none)).toEqual({
       label: conv.taskTitle,
       full: conv.taskTitle,
     });
   });
 
   it("throws on an unknown mode", () => {
-    expect(() => resolveListTitle("bogus", conv, null)).toThrow(/bogus/);
+    expect(() => resolveListTitle("bogus", conv, none)).toThrow(/bogus/);
   });
 });

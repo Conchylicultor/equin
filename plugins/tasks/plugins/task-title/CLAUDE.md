@@ -4,7 +4,13 @@ Two titles per task: the full title (generated from the description when the
 task was filed with a placeholder) and a ≤3-word short title for narrow rows
 (`tasks_ext_short_title`, current while its `sourceTitle` equals the title).
 
-- `server/` (portable) — the side-table, the `task-short-titles` collection,
+- `core/` — the side-table's shape, which EXPOSES `shortTitle` / `sourceTitle`
+  on every list whose rows reach a task (the conversation lists, the task
+  list): a list reads the short title with the row, through
+  `taskShortTitleColumns.read(row)`, in the same read and boot snapshot — so a
+  row is never drawn by its full title and then renamed when a second read
+  lands. There is no separate short-title read.
+- `server/` (portable) — the side-table (`LiveColumns.Expose`),
   `synthesiseTitleFallback` (the title a task is filed with) and
   `scheduleTaskTitleUpdate`, which hands the upgrade to the `TaskTitleGenerator`
   host service.
@@ -19,17 +25,20 @@ task was filed with a placeholder) and a ≤3-word short title for narrow rows
 
 ## Plugin reference
 
-- Description: Reads a task's Haiku-made short title (at most three words) with useTaskShortTitle; a row is current only while its sourceTitle equals the task's title. Task titles, every host's half: the tasks_ext_short_title side-table (a ≤3-word short title per task, current while its sourceTitle equals the task's title) served as the task-short-titles collection, the synthesised fallback title a task is filed with, and scheduleTaskTitleUpdate over the TaskTitleGenerator host service — which upgrades that fallback in the background where a model is available (machine/).
+- Description: Presents a task's Haiku-made short title (at most three words) and the full title it was made from, exposed on every list whose rows reach a task; a row's short title is current only while its source title equals the task's title (read through taskShortTitleColumns). Task titles, every host's half: the tasks_ext_short_title side-table (a ≤3-word short title per task, current while its sourceTitle equals the task's title) exposed to every list whose rows reach a task (LiveColumns.Expose), the synthesised fallback title a task is filed with, and scheduleTaskTitleUpdate over the TaskTitleGenerator host service — which upgrades that fallback in the background where a model is available (machine/).
+- Web:
+  - Contributes: `FieldPresentation.Register` "exposure:tasks_ext_short_title"
+  - Uses: `network/live.FieldPresentation`
 - Server:
   - Contributes:
-    - `resource.declare` "task-short-titles:rows"
+    - `live.columns.expose` "tasks ← tasks_ext_short_title"
     - `host-service:task-title.generator` "task-title.generator"
     - `trigger` "task-title.on-conversation-created"
     - `trigger` "task-title.on-user-turn-sent"
     - `trigger` "task-title.short-on-title-changed"
   - Uses:
     - `infra/entity-extensions.defineExtension`
-    - `network/live.serveCollection`
+    - `network/live.LiveColumns`
     - `tasks/tasks-core._tasks`
   - DB schema: `plugins/tasks/plugins/task-title/server/internal/tables.ts`
   - Entity extension of: `tasks/tasks-core` (table `tasks_ext_short_title`)
@@ -38,22 +47,16 @@ task was filed with a placeholder) and a ≤3-word short title for narrow rows
     - `scheduleTaskTitleUpdate`
     - `tasksShortTitle`
     - `TaskTitleGenerator`
-  - Resources: `task-short-titles:rows` (keyed, point)
-- Web:
-  - Uses:
-    - `network/live.LiveRowResult`
-    - `network/live.useLive`
-  - Exports (types): `TaskShortTitle`
-  - Exports (values): `useTaskShortTitle`
 - Core:
   - Uses:
     - `fields/text/config.textField`
     - `infra/entity-extensions.defineExtensionShape`
-    - `network/live.liveCollection`
+    - `network/live.exposedColumns`
+    - `tasks/tasks-core.tasksEntityRef`
   - Exports (types): `TaskShortTitle`
   - Exports (values):
     - `synthesiseTitleFallback`
-    - `taskShortTitles`
+    - `taskShortTitleColumns`
     - `taskShortTitleShape`
 - Cross-plugin:
   - Imported by:

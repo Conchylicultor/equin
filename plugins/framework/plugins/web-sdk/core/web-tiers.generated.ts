@@ -4,7 +4,7 @@
 // The DEFERRED web plugin-path set consumed by load-tiers.ts. A plugin is EAGER
 // (absent from this set, loaded before first paint) iff it is non-app-content /
 // a shell subtree (structural), calls a watched boot slot (Core.Root / Core.Boot
-// / Apps.App / ActionBar.Item), owns a preloaded resource descriptor, or is
+// / Apps.App / ActionBar.Item / Shell.Sidebar), owns a preloaded resource descriptor, or is
 // pulled in by the transitive dependsOn closure of any of those. Everything else
 // — app content that no eager surface needs at boot — defers.
 //
@@ -14,6 +14,7 @@
 // The `eager-tier-in-sync` check fails on drift.
 
 // App-content plugins pinned EAGER (would otherwise defer), and why:
+//   - apps/plugins/agent-manager/plugins/welcome: watched boot slot Shell.Sidebar
 //   - apps/plugins/demo/plugins/chrome: dependency closure (imported by an eager plugin)
 //   - apps/plugins/deploy/plugins/analytics/plugins/collect: dependency closure (imported by an eager plugin)
 //   - apps/plugins/events/plugins/events-core: dependency closure (imported by an eager plugin)
@@ -47,7 +48,6 @@
 export const DEFERRED_PLUGIN_PATHS: ReadonlySet<string> = new Set([
   "apps/plugins/agent-manager/plugins/icons",
   "apps/plugins/agent-manager/plugins/pages-nav",
-  "apps/plugins/agent-manager/plugins/welcome",
   "apps/plugins/browser/plugins/bookmarks",
   "apps/plugins/browser/plugins/history",
   "apps/plugins/browser/plugins/navigation",

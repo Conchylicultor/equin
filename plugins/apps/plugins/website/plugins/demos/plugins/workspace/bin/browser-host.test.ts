@@ -669,11 +669,18 @@ describe.if(IN_CHILD)("the demo's browser host", () => {
 
   test("the stories carry their short titles, tracks, progress and notes", async () => {
     const ids = DEMO_STORIES.map(demoTaskId).join(",");
-    const titles = (await loadResourceByKey("task-short-titles:rows", {
-      ids,
-    })) as { taskId: string; shortTitle: string; sourceTitle: string }[];
+    // The short title rides every row reaching its task (an exposed field).
+    const titles = (await loadResourceByKey("tasks.v3:rows", { ids })) as {
+      id: string;
+      $columns: Record<string, Record<string, unknown>>;
+    }[];
     expect(
-      new Map(titles.map((r) => [r.taskId, [r.shortTitle, r.sourceTitle]])),
+      new Map(
+        titles.map((r) => {
+          const short = r.$columns.tasks_ext_short_title!;
+          return [r.id, [short.shortTitle, short.sourceTitle]];
+        }),
+      ),
     ).toEqual(
       new Map(DEMO_STORIES.map((s) => [demoTaskId(s), [s.shortTitle, s.task]])),
     );

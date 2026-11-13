@@ -21320,7 +21320,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `SidebarSources` ← `conversations.conversations-view.data-view.history`
               - `SidebarSources` ← `conversations.conversations-view.data-view.queue`
             - Contributes: `ConfigV2.WebRegister` "config"
-            - Uses: 25 symbols — full list in [`plugins/conversations/plugins/conversations-view/plugins/data-view/REFERENCE.md`](../plugins/conversations/plugins/conversations-view/plugins/data-view/REFERENCE.md)
+            - Uses: 23 symbols — full list in [`plugins/conversations/plugins/conversations-view/plugins/data-view/REFERENCE.md`](../plugins/conversations/plugins/conversations-view/plugins/data-view/REFERENCE.md)
               - `conversations/conversation-ui/item` ×5
               - `primitives/css/ui-kit` ×3
               - `primitives/data-view` ×3
@@ -21328,14 +21328,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/spacing` ×2
               - `conversations/conversation-view/pending-turn.useOptimisticConversationStatus`
               - `hints.useHintAnchor`
-              - `network/live.rowOrStale`
               - `primitives/css/center.Center`
               - `primitives/css/fill.Fill`
               - `primitives/css/line.Line`
               - `primitives/css/rigid.rigidClass`
               - `primitives/css/scroll.Scroll`
               - `primitives/css/sticky.Sticky`
-              - `tasks/task-title.useTaskShortTitle`
             - Exports (types): `ConversationSidebarProps`
             - Exports (values):
               - `ConversationsSidebarDataView`
@@ -39767,8 +39765,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Slots:
           - `FieldPresentation.Register`
           - `ClientFields.Resolve`
-        - Slot contributors: 43 contributors — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
-          - `FieldPresentation.Register` ×40
+        - Slot contributors: 44 contributors — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+          - `FieldPresentation.Register` ×41
           - `ClientFields.Resolve` ×3
         - Uses:
           - `network/live/live-state.PagedResourceResult`
@@ -40154,9 +40152,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveValueOn`
           - `sliceRange`
       - Cross-plugin:
-        - Imported by: 352 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+        - Imported by: 351 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
           - `apps` ×87
-          - `conversations` ×74
+          - `conversations` ×73
           - `debug` ×36
           - `tasks` ×30
           - `infra` ×24
@@ -60746,17 +60744,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/launch/investigate`
           - `tasks`
           - `tasks/task-triage`
-    - **`task-title`** — Reads a task's Haiku-made short title (at most three words) with useTaskShortTitle; a row is current only while its sourceTitle equals the task's title. Task titles, every host's half: the tasks_ext_short_title side-table (a ≤3-word short title per task, current while its sourceTitle equals the task's title) served as the task-short-titles collection, the synthesised fallback title a task is filed with, and scheduleTaskTitleUpdate over the TaskTitleGenerator host service — which upgrades that fallback in the background where a model is available (machine/).
+    - **`task-title`** — Presents a task's Haiku-made short title (at most three words) and the full title it was made from, exposed on every list whose rows reach a task; a row's short title is current only while its source title equals the task's title (read through taskShortTitleColumns). Task titles, every host's half: the tasks_ext_short_title side-table (a ≤3-word short title per task, current while its sourceTitle equals the task's title) exposed to every list whose rows reach a task (LiveColumns.Expose), the synthesised fallback title a task is filed with, and scheduleTaskTitleUpdate over the TaskTitleGenerator host service — which upgrades that fallback in the background where a model is available (machine/).
+      - Web:
+        - Contributes: `FieldPresentation.Register` "exposure:tasks_ext_short_title"
+        - Uses: `network/live.FieldPresentation`
       - Server:
         - Contributes:
-          - `resource.declare` "task-short-titles:rows"
+          - `live.columns.expose` "tasks ← tasks_ext_short_title"
           - `host-service:task-title.generator` "task-title.generator"
           - `trigger` "task-title.on-conversation-created"
           - `trigger` "task-title.on-user-turn-sent"
           - `trigger` "task-title.short-on-title-changed"
         - Uses:
           - `infra/entity-extensions.defineExtension`
-          - `network/live.serveCollection`
+          - `network/live.LiveColumns`
           - `tasks/tasks-core._tasks`
         - DB schema: `plugins/tasks/plugins/task-title/server/internal/tables.ts`
         - Entity extension of: `tasks/tasks-core` (table `tasks_ext_short_title`)
@@ -60765,22 +60766,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `scheduleTaskTitleUpdate`
           - `tasksShortTitle`
           - `TaskTitleGenerator`
-        - Resources: `task-short-titles:rows` (keyed, point)
-      - Web:
-        - Uses:
-          - `network/live.LiveRowResult`
-          - `network/live.useLive`
-        - Exports (types): `TaskShortTitle`
-        - Exports (values): `useTaskShortTitle`
       - Core:
         - Uses:
           - `fields/text/config.textField`
           - `infra/entity-extensions.defineExtensionShape`
-          - `network/live.liveCollection`
+          - `network/live.exposedColumns`
+          - `tasks/tasks-core.tasksEntityRef`
         - Exports (types): `TaskShortTitle`
         - Exports (values):
           - `synthesiseTitleFallback`
-          - `taskShortTitles`
+          - `taskShortTitleColumns`
           - `taskShortTitleShape`
       - Cross-plugin:
         - Imported by:

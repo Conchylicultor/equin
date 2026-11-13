@@ -4,22 +4,30 @@ import {
   type ConvTitleOverride,
 } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 
-/** The part of a task short-title row the resolution reads. */
-export type ShortTitleRow = { shortTitle: string; sourceTitle: string };
+/**
+ * The task's short title as its row carries it (the exposed short-title
+ * fields): both NULL when none was generated for the task.
+ */
+export type ShortTitleRow = {
+  shortTitle: string | null;
+  sourceTitle: string | null;
+};
 
 /**
  * What a conversation-list row is named by, per the `titleMode` setting.
  *
  * `short` takes the short title only while it was made from the task's CURRENT
  * title (`sourceTitle === conv.taskTitle`): a stale one — the task was renamed
- * and its short title is not regenerated yet — never reaches the screen. A short
- * title not known yet (loading, never generated, generation refused) shows the
- * full task title, which is a true name for the row, not a stand-in for data.
+ * and its short title is not regenerated yet — never reaches the screen. A task
+ * with no current short title (never generated, generation refused, renamed
+ * since) shows its full title. The short title arrives WITH the row (an
+ * exposed field), so there is no not-known-yet state: what a row first shows
+ * is its name until the data changes.
  */
 export function resolveListTitle(
   mode: string,
   conv: ConversationItemConv & { taskTitle: string },
-  short: ShortTitleRow | null,
+  short: ShortTitleRow,
 ): ConvTitleOverride {
   switch (mode) {
     case "conversation": {
@@ -31,7 +39,7 @@ export function resolveListTitle(
     case "short":
       return {
         label:
-          short !== null && short.sourceTitle === conv.taskTitle
+          short.shortTitle !== null && short.sourceTitle === conv.taskTitle
             ? short.shortTitle
             : conv.taskTitle,
         full: conv.taskTitle,

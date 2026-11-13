@@ -19,14 +19,21 @@ import type { FileScan } from "@plugins/plugin-meta/plugins/plugin-records/core"
 // records are keyed by its module's whole closure (`FileScan.url`), so this
 // module holds the scan and the code it runs, and nothing else.
 
-// The slot factories whose contributions always-eager global chrome reads at
-// boot. Each is guarded on the file also importing `head` from an `@plugins/`
+// The slot factories whose contributions always-eager chrome draws at boot.
+// Each is guarded on the file also importing `head` from an `@plugins/`
 // specifier, so a bare textual mention of the member cannot false-positive.
+//
+// `Shell.Sidebar` is an app shell's sidebar (the agent manager's), drawn by the
+// eager shell in the first frame: a contribution left in the deferred tier
+// would be INSERTED into a sidebar already on screen once that tier lands,
+// pushing every row below it down (the "New conversation" row, CLS 0.128 on a
+// filmed cold load of /agents — research/2026-11-12-global-load-model-redesign.md §2).
 const WATCHED_SLOTS: { marker: string; head: string }[] = [
   { marker: "Core.Root", head: "Core" },
   { marker: "Core.Boot", head: "Core" },
   { marker: "Apps.App", head: "Apps" },
   { marker: "ActionBar.Item", head: "ActionBar" },
+  { marker: "Shell.Sidebar", head: "Shell" },
 ];
 
 // The descriptor factories that can carry a `preload:` field (in a trailing

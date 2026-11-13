@@ -1113,7 +1113,6 @@ export const hostReads: readonly {
   { key: "task-efforts", needsMachine: false },
   { key: "task-mandates", needsMachine: false },
   { key: "task-preprompts", needsMachine: false },
-  { key: "task-short-titles", needsMachine: false },
   { key: "task-source-url.by-attempt", needsMachine: false },
   { key: "task-subject.by-subject", needsMachine: false },
   { key: "task-supervisors.by-id", needsMachine: false },

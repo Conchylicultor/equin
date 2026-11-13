@@ -11,7 +11,7 @@
     - `SidebarSources` ← `conversations.conversations-view.data-view.history`
     - `SidebarSources` ← `conversations.conversations-view.data-view.queue`
   - Contributes: `ConfigV2.WebRegister` "config"
-  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations/conversation-ui/item` ×5
     - `primitives/css/ui-kit` ×3
     - `primitives/data-view` ×3
@@ -19,14 +19,12 @@
     - `primitives/css/spacing` ×2
     - `conversations/conversation-view/pending-turn.useOptimisticConversationStatus`
     - `hints.useHintAnchor`
-    - `network/live.rowOrStale`
     - `primitives/css/center.Center`
     - `primitives/css/fill.Fill`
     - `primitives/css/line.Line`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/sticky.Sticky`
-    - `tasks/task-title.useTaskShortTitle`
   - Exports (types): `ConversationSidebarProps`
   - Exports (values):
     - `ConversationsSidebarDataView`

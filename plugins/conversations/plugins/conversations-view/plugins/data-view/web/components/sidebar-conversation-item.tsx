@@ -1,4 +1,3 @@
-import { rowOrStale } from "@plugins/network/plugins/live/web";
 import type { ReactElement } from "react";
 import { useConfig } from "@plugins/config_v2/web";
 import {
@@ -6,7 +5,8 @@ import {
   ConvStatusDot,
   type ConversationItemConv,
 } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
-import { useTaskShortTitle } from "@plugins/tasks/plugins/task-title/web";
+import { taskShortTitleColumns } from "@plugins/tasks/plugins/task-title/core";
+import type { ContributedColumns } from "@plugins/network/plugins/live/core";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import {
@@ -21,12 +21,15 @@ import { conversationRowAnchor } from "../../core";
 
 /**
  * A row the list names: the item's own fields plus its task (id and current
- * title), and the `updatedAt` the shown status is reconciled against.
+ * title), the `updatedAt` the shown status is reconciled against, and the
+ * fields exposed on rows reaching a task (`$columns` — its short title among
+ * them, read with the row, never after it).
  */
 type SidebarConv = ConversationItemConv & {
   taskId: string;
   taskTitle: string;
   updatedAt: Date;
+  $columns: ContributedColumns;
 };
 
 /**
@@ -62,16 +65,6 @@ export function SidebarConversationItem({
   // The row's hint anchor (an onboarding tour points at the conversation it
   // started).
   const anchorRef = useHintAnchor(conversationRowAnchor.at(row.id));
-  // Split so only the short mode subscribes to the short-title rows.
-  if (titleMode === "short")
-    return (
-      <ShortTitleItem
-        conv={conv}
-        muted={muted}
-        dot={dot}
-        anchorRef={anchorRef}
-      />
-    );
   return (
     <ConversationItem
       ref={anchorRef}
@@ -79,7 +72,7 @@ export function SidebarConversationItem({
       layout="line"
       muted={muted}
       dot={dot}
-      title={resolveListTitle(titleMode, conv, null)}
+      title={resolveListTitle(titleMode, conv, taskShortTitleColumns.read(row))}
     />
   );
 }
@@ -108,29 +101,5 @@ export function SidebarConversationDot({
         <ConvStatusDot conv={conv} />
       </ControlSizeProvider>
     </Center>
-  );
-}
-
-function ShortTitleItem({
-  conv,
-  muted,
-  dot,
-  anchorRef,
-}: {
-  conv: SidebarConv;
-  muted?: boolean;
-  dot?: boolean;
-  anchorRef: (el: HTMLElement | null) => void;
-}): ReactElement {
-  const short = useTaskShortTitle(conv.taskId);
-  return (
-    <ConversationItem
-      ref={anchorRef}
-      conv={conv}
-      layout="line"
-      muted={muted}
-      dot={dot}
-      title={resolveListTitle("short", conv, rowOrStale(short) ?? null)}
-    />
   );
 }
