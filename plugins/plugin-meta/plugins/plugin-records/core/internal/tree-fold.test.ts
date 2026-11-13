@@ -1,6 +1,4 @@
 import { describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import type { RepoSnapshot } from "@plugins/framework/plugins/tooling/core";
 import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { gitBlobId } from "./keys";
@@ -12,12 +10,6 @@ import { foldFilesCached, type FileFold, type FoldLimits } from "./tree-fold";
 // its own path from the root (the lookups) and its own files (the scans).
 
 const P = "plugins";
-const SCAN_IMPORTS =
-  "plugins/plugin-meta/plugins/plugin-records/core/internal/scan-imports.ts";
-const SCAN_IMPORTS_SRC = readFileSync(
-  join(import.meta.dir, "scan-imports.ts"),
-  "utf8",
-);
 const FOLD_MODULE = `${P}/s/core/words.scan.ts`;
 
 /** 3 top directories × 4 subdirectories × 5 files, each holding its own path. */
@@ -32,14 +24,13 @@ function fixture(): Record<string, string> {
   return files;
 }
 
+// The fixture is the fold's checkout (root `/checkout`, the fold's URL under
+// it), so its records are keyed by the fixture's copy of the fold.
 function snapshotOf(files: Record<string, string>): RepoSnapshot {
-  const all: Record<string, string> = {
-    ...files,
-    [SCAN_IMPORTS]: SCAN_IMPORTS_SRC,
-  };
+  const all: Record<string, string> = files;
   const paths = Object.keys(all).sort();
   return {
-    root: asAppPath("/repo"),
+    root: asAppPath("/checkout"),
     all: () => paths,
     has: (p) => p in all,
     under: (dir) => paths.filter((p) => p.startsWith(`${dir}/`)),

@@ -1,6 +1,4 @@
 import { describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import type { RepoSnapshot } from "@plugins/framework/plugins/tooling/core";
 import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { closureRecord } from "./closure-record";
@@ -8,13 +6,7 @@ import { fileSetClosure } from "./file-set-closure";
 import { gitBlobId } from "./keys";
 import { createMemoryRecordStore, installRecordStore } from "./store";
 
-// The file-facts scan, as a checkout holds it (see module-graph.test.ts).
-const SCAN_PATH =
-  "plugins/plugin-meta/plugins/plugin-records/core/internal/scan-imports.ts";
-const SCAN = readFileSync(join(import.meta.dir, "scan-imports.ts"), "utf8");
-
-function snapshotOf(fixture: Record<string, string>): RepoSnapshot {
-  const files: Record<string, string> = { ...fixture, [SCAN_PATH]: SCAN };
+function snapshotOf(files: Record<string, string>): RepoSnapshot {
   const paths = Object.keys(files).sort();
   return {
     root: asAppPath("/repo"),

@@ -15,6 +15,7 @@ import {
   NO_OUTSIDE_FILES,
   type ModuleGraphInput,
 } from "./module-graph";
+import { codeCheckoutOf } from "./code-checkout";
 
 /**
  * A per-file scan as FILE RECORDS: what a reader takes out of one file (the
@@ -102,26 +103,32 @@ export function repoModuleOf(repo: RepoFiles, url: string): string {
   );
 }
 
+/**
+ * A scan's (or fold's) identity: the Merkle key of the module at `url` and of
+ * the npm code its closure imports, read from the checkout that module lives
+ * in (`codeCheckoutOf`) — the set being scanned when it is that checkout, this
+ * process's own otherwise, so a fixture needs no copy of the scanner.
+ */
 export function scannerIdentity(
-  input: ModuleGraphInput & { snapshot: RepoSnapshot },
+  input: ModuleGraphInput,
   url: string,
 ): Promise<string> {
   const byModule = identitiesOf(input.snapshot);
   let id = byModule.get(url);
   if (!id) {
-    const module = repoModuleOf(input.snapshot, url);
     // The npm code is what the scan's closure imports, closed over the
     // lockfile — never the whole lockfile, which moved every scan's records
     // on any package bump though most scans load no package.
-    id = buildModuleGraph(input, [module]).then(async (graph) =>
-      recordKey(
+    id = codeCheckoutOf(input, url).then(async ({ input: code, module }) => {
+      const graph = await buildModuleGraph(code, [module]);
+      return recordKey(
         "scan",
         module,
         graph.keyOf(module),
-        input.store.environment,
-        await npmCodeKey(input.snapshot, graph.packages),
-      ),
-    );
+        code.store.environment,
+        await npmCodeKey(code.snapshot, graph.packages),
+      );
+    });
     byModule.set(url, id);
   }
   return id;
@@ -154,10 +161,7 @@ export async function scanFilesCached<T>(
       ),
     );
   }
-  const identity = await scannerIdentity(
-    { ...input, snapshot: repo },
-    scanner.url,
-  );
+  const identity = await scannerIdentity(input, scanner.url);
   const params = scanner.params ?? [];
   const keys = files.map((rel) =>
     recordKey(identity, ...params, rel, repo.blobOf(rel)),

@@ -1,6 +1,4 @@
 import { describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import type { RepoSnapshot } from "@plugins/framework/plugins/tooling/core";
 import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { scanFilesCached, type FileScan } from "./file-scans";
@@ -16,13 +14,6 @@ import { createMemoryRecordStore, type RecordStore } from "./store";
 // (no plugin of this checkout is named).
 const P = "plugins";
 
-const SCAN_IMPORTS =
-  "plugins/plugin-meta/plugins/plugin-records/core/internal/scan-imports.ts";
-const SCAN_IMPORTS_SRC = readFileSync(
-  join(import.meta.dir, "scan-imports.ts"),
-  "utf8",
-);
-
 const SCAN_MODULE = `${P}/s/core/words.scan.ts`;
 const base: Record<string, string> = {
   [SCAN_MODULE]:
@@ -36,14 +27,13 @@ const base: Record<string, string> = {
   "docs/b.md": "three",
 };
 
+// The fixture is the scan's checkout (root `/checkout`, the scan's URL under
+// it), so its records are keyed by the fixture's copy of the scan.
 function snapshotOf(files: Record<string, string>): RepoSnapshot {
-  const all: Record<string, string> = {
-    ...files,
-    [SCAN_IMPORTS]: SCAN_IMPORTS_SRC,
-  };
+  const all: Record<string, string> = files;
   const paths = Object.keys(all).sort();
   return {
-    root: asAppPath("/repo"),
+    root: asAppPath("/checkout"),
     all: () => paths,
     has: (p) => p in all,
     under: (dir) => paths.filter((p) => p.startsWith(`${dir}/`)),

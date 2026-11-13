@@ -255,10 +255,7 @@ export async function foldFilesCached<C extends FoldContext, F>(
     return valueOf(root);
   }
 
-  const identity = await scannerIdentity(
-    { ...input, snapshot: repo },
-    fold.url,
-  );
+  const identity = await scannerIdentity(input, fold.url);
   // "fold-node": a node record holds a ref, never the value itself (as the
   // records under "fold" did), so the two can never be read for each other.
   // The limit decides the layout, so it keys it too.

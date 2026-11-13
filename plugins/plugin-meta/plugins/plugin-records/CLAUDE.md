@@ -281,12 +281,23 @@ and nothing names that code by hand:
 
 - file facts (the module graph's scan) are keyed by `scan-imports.ts`'s Merkle
   key, from a graph that reads no record (`fileFactsIdentity`);
-- a file scan names its code by `url: import.meta.url` (`FileScan`), resolved
-  to the repo module (`repoModuleOf`) — a scan moved to another file cannot go
-  on being keyed by the one it left. That module is a `*.scan.ts` file holding
-  only the scan and the code it runs (asserted on every scan): defined inside
-  its generator, a scan was keyed by the generator's 300+-module closure and
-  ~1 main commit in 4 re-keyed every file's record;
+- a file scan names its code by `url: import.meta.url` (`FileScan`) — a scan
+  moved to another file cannot go on being keyed by the one it left. That
+  module is a `*.scan.ts` file holding only the scan and the code it runs
+  (asserted on every scan): defined inside its generator, a scan was keyed by
+  the generator's 300+-module closure and ~1 main commit in 4 re-keyed every
+  file's record;
+- **a producer's code is read from the checkout it runs from, never assumed to
+  be in the set it reads** (`codeCheckoutOf`, `core/internal/code-checkout.ts`):
+  the set itself when its root is the checkout the module's URL lies in (a
+  build or check pass over its own tree — the same files, the build's written
+  overlay included), else this process's own checkout, snapshotted once. So a
+  fixture is data only: it needs no copy of `scan-imports.ts` or of a scanner,
+  and a copy it holds keys nothing. (Before, both identities were read from
+  the scanned set, so every fixture read through the module graph or a cached
+  scan threw "entry module …/scan-imports.ts does not exist".) A fixture that
+  stands for the code's checkout — to test that editing a scan re-keys its
+  records — takes the scan URL's root as its own;
 - a facet record by its facet's module and the harness that runs it
   (`facet-records.ts`), evaluated records by the evaluator's modules — each a
   Merkle key over its whole closure — plus the runtime and the lockfile's npm

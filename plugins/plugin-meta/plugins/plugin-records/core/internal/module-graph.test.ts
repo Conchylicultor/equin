@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { RepoSnapshot } from "@plugins/framework/plugins/tooling/core";
 import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { buildModuleGraph, NO_OUTSIDE_FILES } from "./module-graph";
 import { fileSetImports, fileSetRuntimeReach } from "./file-set-closure";
 import { gitBlobId } from "./keys";
@@ -12,17 +13,25 @@ import { createMemoryRecordStore, type RecordStore } from "./store";
 // (no plugin of this checkout is named).
 const P = "plugins";
 
-// The file-facts scan, as a checkout holds it: every graph keys its facts by
-// this module's Merkle key, so a fixture set carries the real one.
+// The file-facts scan, as a checkout holds it. Every graph keys its facts by
+// this module's Merkle key, read from the checkout the scan runs from: a
+// fixture of its own (root `/repo`) needs no copy of it, and one standing for
+// that checkout (`code: true` — its root, the scan's module in it) keys its
+// facts by its own copy and its own lockfile, as the checkout's build does.
 const SCAN = readFileSync(join(import.meta.dir, "scan-imports.ts"), "utf8");
 const SCAN_PATH =
   "plugins/plugin-meta/plugins/plugin-records/core/internal/scan-imports.ts";
 
-function snapshotOf(fixture: Record<string, string>): RepoSnapshot {
-  const files: Record<string, string> = { ...fixture, [SCAN_PATH]: SCAN };
+function snapshotOf(
+  fixture: Record<string, string>,
+  opts?: { code?: boolean },
+): RepoSnapshot {
+  const files: Record<string, string> = opts?.code
+    ? { [SCAN_PATH]: SCAN, ...fixture }
+    : fixture;
   const paths = Object.keys(files).sort();
   return {
-    root: asAppPath("/repo"),
+    root: opts?.code ? REPO_ROOT : asAppPath("/repo"),
     all: () => paths,
     has: (p) => p in files,
     under: (dir) => paths.filter((p) => p.startsWith(`${dir}/`)),
@@ -41,11 +50,15 @@ function snapshotOf(fixture: Record<string, string>): RepoSnapshot {
 function graphOf(
   files: Record<string, string>,
   entries: string[],
-  opts?: { store?: RecordStore; outside?: Record<string, string> },
+  opts?: {
+    store?: RecordStore;
+    outside?: Record<string, string>;
+    code?: boolean;
+  },
 ) {
   return buildModuleGraph(
     {
-      snapshot: snapshotOf(files),
+      snapshot: snapshotOf(files, { code: opts?.code ?? false }),
       store: opts?.store ?? createMemoryRecordStore(),
       readOutside: async (rel) => opts?.outside?.[rel] ?? null,
     },
@@ -242,7 +255,7 @@ describe("buildModuleGraph", () => {
     expect(g2.keyOf("x/a.ts")).not.toBe(g1.keyOf("x/a.ts"));
   });
 
-  test("file facts come from the store: a second build reads no source but the scan's own", async () => {
+  test("file facts come from the store: a second build reads no source", async () => {
     const store = createMemoryRecordStore();
     await graphOf(base, [`${P}/a/web/index.ts`], { store });
     const snap = snapshotOf(base);
@@ -255,22 +268,19 @@ describe("buildModuleGraph", () => {
       },
       [`${P}/a/web/index.ts`],
     );
-    // The facts' identity is the scan's Merkle key, from a graph that reads no
-    // record: its one module, read once per set.
-    expect(reads).toEqual([SCAN_PATH]);
+    // The facts' identity is the scan's Merkle key, read from the checkout the
+    // scan runs from — never from this fixture, which holds no copy of it.
+    expect(reads).toEqual([]);
   });
 
   test("editing the scan re-keys every file fact", async () => {
     const store = createMemoryRecordStore();
-    await graphOf(base, [`${P}/a/web/index.ts`], { store });
-    const snap = snapshotOf(base);
-    const edited: RepoSnapshot = {
-      ...snap,
-      read: (p) =>
-        p === SCAN_PATH ? Promise.resolve(`${SCAN}\n// edited`) : snap.read(p),
-      blobOf: (p) =>
-        p === SCAN_PATH ? gitBlobId(`${SCAN}\n// edited`) : snap.blobOf(p),
-    };
+    const entries = [`${P}/a/web/index.ts`];
+    await graphOf(base, entries, { store, code: true });
+    const edited = snapshotOf(
+      { ...base, [SCAN_PATH]: `${SCAN}\n// edited` },
+      { code: true },
+    );
     const reads: string[] = [];
     await buildModuleGraph(
       {
@@ -278,9 +288,27 @@ describe("buildModuleGraph", () => {
         store,
         readOutside: async () => null,
       },
-      [`${P}/a/web/index.ts`],
+      entries,
     );
     expect(reads).toContain(`${P}/a/web/index.ts`);
+  });
+
+  test("a set that is not the scan's checkout keys its facts by the running scan", async () => {
+    const store = createMemoryRecordStore();
+    const entries = [`${P}/a/web/index.ts`];
+    await graphOf(base, entries, { store });
+    // The fixture's own copy of the scan, edited, is data: it keys nothing.
+    const reads: string[] = [];
+    const snap = snapshotOf({ ...base, [SCAN_PATH]: `${SCAN}\n// edited` });
+    await buildModuleGraph(
+      {
+        snapshot: { ...snap, read: (p) => (reads.push(p), snap.read(p)) },
+        store,
+        readOutside: async () => null,
+      },
+      entries,
+    );
+    expect(reads).toEqual([]);
   });
 });
 
@@ -325,19 +353,31 @@ describe("the lockfile in the file-facts key", () => {
     expect(PLUGIN_ADDED).not.toBe(LOCK);
     const { store, written } = writes();
     const entries = [`${P}/a/web/index.ts`];
-    await graphOf({ ...base, "bun.lock": LOCK }, entries, { store });
+    await graphOf({ ...base, "bun.lock": LOCK }, entries, {
+      store,
+      code: true,
+    });
     const first = written();
     expect(first).toBeGreaterThan(0);
-    await graphOf({ ...base, "bun.lock": PLUGIN_ADDED }, entries, { store });
+    await graphOf({ ...base, "bun.lock": PLUGIN_ADDED }, entries, {
+      store,
+      code: true,
+    });
     expect(written()).toBe(first);
   });
 
   test("an npm resolution change re-keys no file record: the facts scan loads no package", async () => {
     const { store, written } = writes();
     const entries = [`${P}/a/web/index.ts`];
-    await graphOf({ ...base, "bun.lock": LOCK }, entries, { store });
+    await graphOf({ ...base, "bun.lock": LOCK }, entries, {
+      store,
+      code: true,
+    });
     const first = written();
-    await graphOf({ ...base, "bun.lock": NPM_BUMPED }, entries, { store });
+    await graphOf({ ...base, "bun.lock": NPM_BUMPED }, entries, {
+      store,
+      code: true,
+    });
     expect(written()).toBe(first);
   });
 });

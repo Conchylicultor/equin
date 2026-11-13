@@ -30,8 +30,24 @@ import {
 // such literal in source resolves to a real plugin, and these are synthetic.
 const pj = (rel: string): string => `plugins/${rel}`;
 
-/** A fixture repo over `files` (repo-relative path → source). */
-function repoOf(files: Record<string, string>): SourceScans["repo"] {
+// The library modules the fixtures import, as stubs: a fixture is a checkout,
+// and the coverage guard reads each import's target off the module graph,
+// which refuses an import that resolves to no file of the set.
+const LIBRARIES: Record<string, string> = {
+  [pj("network/plugins/live/core/index.ts")]: "export function liveValue() {}",
+  [pj("network/plugins/live/server/index.ts")]:
+    "export function serveValue() {}",
+  [pj("network/plugins/live/machine/index.ts")]:
+    "export function serveValue() {}",
+  [pj("infra/plugins/endpoints/core/index.ts")]:
+    "export function defineEndpoint() {}",
+  [pj("primitives/plugins/networking/plugins/page-transport/web/index.ts")]:
+    "export const pageTransport = {};",
+};
+
+/** A fixture repo over `files` (repo-relative path → source) and {@link LIBRARIES}. */
+function repoOf(fixture: Record<string, string>): SourceScans["repo"] {
+  const files = { ...LIBRARIES, ...fixture };
   const paths = Object.keys(files).sort();
   // No blob ids: every file is scanned, as from a check pass's file set.
   return {
@@ -83,6 +99,7 @@ export default { httpRoutes: { [ping.route]: handlePing } };
 
 const BASE: Record<string, string> = {
   [pj("app/core/index.ts")]: BARREL,
+  [pj("app/server/internal/ping.ts")]: "export function handlePing() {}",
   [pj("app/core/values.ts")]: VALUE,
   [pj("app/core/endpoints.ts")]: ENDPOINTS,
   [pj("app/server/index.ts")]: SERVER_BARREL,
@@ -278,7 +295,6 @@ describe("resolveHostCoverage", () => {
     for (const [key, why] of [
       ["[ROUTE_KEY]", "is not readable"],
       [`[\`GET \${BASE}/:id\`]`, "is not readable"],
-      [`\`GET \${BASE}/:id\``, "is a template with a substitution"],
       ["[other.path]", "is not readable"],
       ["[missing.route]", "names no endpoint declaration"],
     ] as const) {
@@ -295,6 +311,21 @@ describe("resolveHostCoverage", () => {
         `plugins/app/server/index.ts: \`httpRoutes\` key \`${key}\` ${why}`,
       );
     }
+    // A bare template key is not valid source: the module graph refuses the
+    // barrel (its imports cannot be scanned) before the guard reads its keys.
+    expect(
+      resolveHostCoverage(
+        inputs({
+          ...BASE,
+          [pj("app/server/index.ts")]:
+            `import { ping } from "../core";\nexport default { httpRoutes: { [ping.route]: h, \`GET \${BASE}/:id\`: h } };`,
+          [pj("app/web/view.tsx")]:
+            `import { ping } from "@plugins/app/core";\nuse(ping);`,
+        }),
+      ),
+    ).rejects.toThrow(
+      "[plugin-records] cannot scan the imports of plugins/app/server/index.ts",
+    );
     for (const entry of ["...more", "shorthand"]) {
       const rejected = resolveHostCoverage(
         inputs({

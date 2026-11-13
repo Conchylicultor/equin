@@ -13,6 +13,7 @@ import {
   specifierPath,
 } from "@plugins/plugin-meta/plugins/plugin-records/plugins/specifier/core";
 import { scanModuleImports, type ImportSpec } from "./scan-imports";
+import { codeCheckoutOf } from "./code-checkout";
 
 /**
  * The repo's module graph, read from records: each module's import specifiers
@@ -36,9 +37,10 @@ interface FileFacts {
 
 // The module whose code IS the file-facts scan: the facts are keyed by its
 // Merkle key (and the runtime's, whose transpiler it reads imports with), so
-// editing the scan re-scans every file and nothing is bumped by hand.
-const SCAN_MODULE =
-  "plugins/plugin-meta/plugins/plugin-records/core/internal/scan-imports.ts";
+// editing the scan re-scans every file and nothing is bumped by hand. Named by
+// its URL — the module this process loaded — and read from the checkout it
+// lives in (`codeCheckoutOf`), never assumed to be in the set being read.
+const SCAN_MODULE_URL = new URL("./scan-imports.ts", import.meta.url).href;
 
 const SCANNED = /\.(m?[jt]sx?|c[jt]s)$/;
 /**
@@ -212,25 +214,31 @@ export async function buildModuleGraph(
 const factsIdentities = new WeakMap<object, Promise<string>>();
 
 /**
- * The file facts' identity over `input`'s set: the Merkle key of the scan's own
+ * The file facts' identity for `input`'s set: the Merkle key of the scan's own
  * closure, from a graph that reads no record (its facts would need this very
- * identity) — a handful of files, scanned directly.
+ * identity) — a handful of files, scanned directly. The scan's code is read
+ * from the checkout it runs from: the set itself when it is that checkout,
+ * else this process's own (a fixture holds data, not the scanner).
  */
 function fileFactsIdentity(input: ModuleGraphInput): Promise<string> {
   let id = factsIdentities.get(input.snapshot);
   if (!id) {
-    const own = newState();
-    id = sharedWork("plugin records", () =>
-      growGraph(own, input, [SCAN_MODULE], null),
-    ).then(async () => {
-      const view = viewOf(own, [SCAN_MODULE]);
-      return recordKey(
-        "file-facts",
-        view.keyOf(SCAN_MODULE),
-        input.store.environment,
-        await npmCodeKey(input.snapshot, view.packages),
-      );
-    });
+    id = codeCheckoutOf(input, SCAN_MODULE_URL).then(
+      ({ input: code, module }) => {
+        const own = newState();
+        return sharedWork("plugin records", () =>
+          growGraph(own, code, [module], null),
+        ).then(async () => {
+          const view = viewOf(own, [module]);
+          return recordKey(
+            "file-facts",
+            view.keyOf(module),
+            code.store.environment,
+            await npmCodeKey(code.snapshot, view.packages),
+          );
+        });
+      },
+    );
     factsIdentities.set(input.snapshot, id);
   }
   return id;
