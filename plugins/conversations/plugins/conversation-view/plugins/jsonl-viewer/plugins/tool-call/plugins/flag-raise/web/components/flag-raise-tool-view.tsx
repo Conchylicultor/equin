@@ -18,6 +18,7 @@ import {
   FoldMotion,
   useCollapsible,
 } from "@plugins/primitives/plugins/collapsible/web";
+import { selectionIsCollapsed } from "@plugins/primitives/plugins/dom/plugins/dom-selection/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { fillClasses } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import type React from "react";
@@ -127,15 +128,18 @@ function FlagItems({ items }: { items: FlagRaiseItem[] }) {
 
 /**
  * One item: its category chip and sentence — and, when the agent gave it a
- * detail, that detail folded under it, unfolded by clicking the item.
+ * detail, that detail folded under it. The sentence stays selectable text (the
+ * chip does not: it is a label, not content), so the row is not a `<button>`:
+ * the chevron is the trigger, and a click anywhere else on the row toggles too —
+ * unless it ended a drag that selected text.
  */
 function FlagItem({ item }: { item: NormalizedItem }) {
-  const { open, triggerProps, contentProps } = useCollapsible();
+  const { open, toggle, triggerProps, contentProps } = useCollapsible();
   const line = (chevron: React.ReactNode) => (
     <Stack direction="row" gap="xs" align="start">
       {item.category ? (
         <FirstLine variant="body">
-          <Badge variant="warning" className={rigidClass()}>
+          <Badge variant="warning" className={cn("select-none", rigidClass())}>
             {item.category}
           </Badge>
         </FirstLine>
@@ -149,19 +153,29 @@ function FlagItem({ item }: { item: NormalizedItem }) {
   if (!item.detail) return line(null);
   return (
     <div>
-      <button
-        {...triggerProps}
-        className="block w-full rounded-sm text-left hover:bg-warning/10"
+      <div
+        className="cursor-pointer rounded-sm hover:bg-warning/10"
+        onClick={(e) => {
+          if (e.target instanceof Element && e.target.closest("button")) return;
+          if (!selectionIsCollapsed()) return;
+          toggle();
+        }}
       >
         {line(
           <FirstLine variant="body">
-            <CollapsibleChevron
-              open={open}
-              className={cn("size-3.5 text-muted-foreground", rigidClass())}
-            />
+            <button
+              {...triggerProps}
+              aria-label={open ? "Hide detail" : "Show detail"}
+              className={cn("rounded-sm", rigidClass())}
+            >
+              <CollapsibleChevron
+                open={open}
+                className="size-3.5 text-muted-foreground"
+              />
+            </button>
           </FirstLine>,
         )}
-      </button>
+      </div>
       <FoldMotion {...contentProps}>
         <Text
           as="p"

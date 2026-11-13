@@ -23,6 +23,7 @@
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.cn`
+    - `primitives/dom/dom-selection.selectionIsCollapsed`
     - `ui/icons.Icon`
 - Cross-plugin:
   - Uses tokens:
