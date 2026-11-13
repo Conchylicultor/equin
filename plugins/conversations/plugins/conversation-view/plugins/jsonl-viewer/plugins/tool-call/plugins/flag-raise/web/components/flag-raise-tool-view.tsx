@@ -21,6 +21,10 @@ import {
 import { selectionIsCollapsed } from "@plugins/primitives/plugins/dom/plugins/dom-selection/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { fillClasses } from "@plugins/primitives/plugins/css/plugins/fill/web";
+import {
+  FLAG_CATEGORIES,
+  FlagCategorySchema,
+} from "@plugins/conversations/plugins/conversation-view/plugins/push-and-exit/plugins/flag-categories/core";
 import type React from "react";
 
 const flagIcon = symbol("flag");
@@ -30,7 +34,9 @@ const flagIconClass = cn("size-4 text-warning", rigidClass());
 /**
  * One item as a transcript holds it: `{ category, text, detail? }`
  * (push-and-exit's `FlagItem`), or a bare sentence in a transcript written
- * before items carried their own category and detail.
+ * before items carried their own category and detail. The category is read
+ * as any string: a transcript written while it was free-form keeps its own
+ * word, drawn as a plain chip.
  */
 const FlagRaiseItemSchema = z.union([
   z.string(),
@@ -127,6 +133,29 @@ function FlagItems({ items }: { items: FlagRaiseItem[] }) {
 }
 
 /**
+ * What the item asks of the user, as its chip: a known category in its own
+ * label and colour; a free-form word from an older transcript as itself.
+ */
+// A label, not content: never part of a text selection over the item.
+const chipClass = cn("select-none", rigidClass());
+
+function CategoryChip({ category }: { category: string }) {
+  const known = FlagCategorySchema.safeParse(category);
+  if (!known.success)
+    return (
+      <Badge variant="muted" className={chipClass}>
+        {category}
+      </Badge>
+    );
+  const { label, badge } = FLAG_CATEGORIES[known.data];
+  return (
+    <Badge variant={badge} className={chipClass}>
+      {label}
+    </Badge>
+  );
+}
+
+/**
  * One item: its category chip and sentence — and, when the agent gave it a
  * detail, that detail folded under it. The sentence stays selectable text (the
  * chip does not: it is a label, not content), so the row is not a `<button>`:
@@ -139,9 +168,7 @@ function FlagItem({ item }: { item: NormalizedItem }) {
     <Stack direction="row" gap="xs" align="start">
       {item.category ? (
         <FirstLine variant="body">
-          <Badge variant="warning" className={cn("select-none", rigidClass())}>
-            {item.category}
-          </Badge>
+          <CategoryChip category={item.category} />
         </FirstLine>
       ) : null}
       <Text as="p" variant="body" className={fillClasses("x")}>

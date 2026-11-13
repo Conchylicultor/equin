@@ -609,6 +609,9 @@ export const compositionsConfig = defineConfig({
               // grants them from its `shared/`, so the features leave and the
               // capability ids they define stay.
               "conversations.conversation-view.push-and-exit.capabilities",
+              // …and the flag categories, which the transcript's flag card
+              // draws its chips from.
+              "conversations.conversation-view.push-and-exit.flag-categories",
               "tasks.outcome-report.capability",
               // Files, whole: it browses the browser's own file system — its
               // Home, which the seed fills (Documents, Music, Pictures, a few

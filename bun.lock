@@ -2428,6 +2428,10 @@
       "name": "@equin/plugin-conversations-conversation-view-push-and-exit-capabilities",
       "version": "0.0.1",
     },
+    "plugins/conversations/plugins/conversation-view/plugins/push-and-exit/plugins/flag-categories": {
+      "name": "@equin/plugin-conversations-conversation-view-push-and-exit-flag-categories",
+      "version": "0.0.1",
+    },
     "plugins/conversations/plugins/conversation-view/plugins/push-counter": {
       "name": "@equin/plugin-conversations-conversation-view-push-counter",
     },
@@ -8981,6 +8985,8 @@
     "@equin/plugin-conversations-conversation-view-push-and-exit": ["@equin/plugin-conversations-conversation-view-push-and-exit@workspace:plugins/conversations/plugins/conversation-view/plugins/push-and-exit"],
 
     "@equin/plugin-conversations-conversation-view-push-and-exit-capabilities": ["@equin/plugin-conversations-conversation-view-push-and-exit-capabilities@workspace:plugins/conversations/plugins/conversation-view/plugins/push-and-exit/plugins/capabilities"],
+
+    "@equin/plugin-conversations-conversation-view-push-and-exit-flag-categories": ["@equin/plugin-conversations-conversation-view-push-and-exit-flag-categories@workspace:plugins/conversations/plugins/conversation-view/plugins/push-and-exit/plugins/flag-categories"],
 
     "@equin/plugin-conversations-conversation-view-push-counter": ["@equin/plugin-conversations-conversation-view-push-counter@workspace:plugins/conversations/plugins/conversation-view/plugins/push-counter"],
 

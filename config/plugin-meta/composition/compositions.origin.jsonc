@@ -1,4 +1,4 @@
-// @hash 80989804af35
+// @hash 4f69ac892a4b
 {
   "manifests": [
     {
@@ -227,6 +227,7 @@
         "!tasks.task-triage",
         "!conversations.conversation-view.jsonl-viewer.tool-call.task-triage",
         "conversations.conversation-view.push-and-exit.capabilities",
+        "conversations.conversation-view.push-and-exit.flag-categories",
         "tasks.outcome-report.capability",
         "apps.file-explorer.**",
         "!conversations.workspace.worktree.**",

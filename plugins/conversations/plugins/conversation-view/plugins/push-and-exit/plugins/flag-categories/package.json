@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-conversations-conversation-view-push-and-exit-flag-categories",
+  "private": true,
+  "version": "0.0.1",
+  "description": "What a raised flag's item asks of the user, as plain data: the closed category set (broken | decide | fyi | other), each with its chip's label and colour and the line the agent reads when choosing it. A leaf, so the transcript's flag card can draw the chip in a composition without push-and-exit."
+}
