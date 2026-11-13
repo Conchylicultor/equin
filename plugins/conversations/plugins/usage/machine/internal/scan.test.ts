@@ -242,7 +242,11 @@ describe("totalsOf", () => {
     await writeFile(path, line("m1", { output: 5 }));
     const scan = await advanceFile(path, "session", undefined);
     const pricing = priceFile(undefined, scan!.buckets, NO_PRICES);
-    expect(pricing).toEqual({ costUsd: 0, unpricedModels: ["claude-test"] });
+    expect(pricing).toEqual({
+      costUsd: 0,
+      unpricedModels: ["claude-test"],
+      addedByDate: new Map(),
+    });
     const result = totalsOf([{ ...scan!, ...pricing }]);
     expect(result.tokens).toBe(5);
     expect(result.costUsd).toBe(0);
@@ -256,6 +260,7 @@ describe("priceFile", () => {
     const first = await advanceFile(path, "session", undefined);
     const firstPricing = priceFile(undefined, first!.buckets, TABLE);
     expect(firstPricing.costUsd).toBe(21);
+    expect(firstPricing.addedByDate).toEqual(new Map([["2026-10-08", 21]]));
 
     // The price doubles; the tokens already counted keep their cost.
     const doubled: PriceTable = {
@@ -265,13 +270,19 @@ describe("priceFile", () => {
       },
     };
     const stored = { ...first!, ...firstPricing };
-    expect(priceFile(stored, first!.buckets, doubled)).toEqual(firstPricing);
+    // Nothing new counted: nothing added, whatever the table says now.
+    expect(priceFile(stored, first!.buckets, doubled)).toEqual({
+      ...firstPricing,
+      addedByDate: new Map(),
+    });
 
     await appendFile(path, line("m2", { input: 2, output: 5 }));
     const second = await advanceFile(path, "session", first!);
     expect(priceFile(stored, second!.buckets, doubled)).toEqual({
       costUsd: 21 + 2 * 2 + 5 * 4,
       unpricedModels: [],
+      // Only the appended message, dated by its own bucket.
+      addedByDate: new Map([["2026-10-08", 2 * 2 + 5 * 4]]),
     });
   });
 
@@ -286,10 +297,13 @@ describe("priceFile", () => {
     expect(priceFile(unpriced, scan!.buckets, NO_PRICES)).toEqual({
       costUsd: 0,
       unpricedModels: ["claude-test"],
+      addedByDate: new Map(),
     });
+    // Priced now: added on this pass, dated by the bucket it was spent on.
     expect(priceFile(unpriced, scan!.buckets, TABLE)).toEqual({
       costUsd: 10,
       unpricedModels: [],
+      addedByDate: new Map([["2026-10-08", 10]]),
     });
   });
 
@@ -308,6 +322,7 @@ describe("priceFile", () => {
     expect(priceFile(undefined, [synthetic], TABLE)).toEqual({
       costUsd: 0,
       unpricedModels: [],
+      addedByDate: new Map(),
     });
   });
 

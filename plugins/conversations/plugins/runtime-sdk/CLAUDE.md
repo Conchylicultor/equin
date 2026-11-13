@@ -232,7 +232,10 @@ agents without tmux, per-namespace paths, the Claude Code health row:
 - The account menu lives in the agent manager's sidebar foot
   (`components/claude-account-foot.tsx`, a `Shell.Sidebar` item placed last
   in `config/shell/sidebar.jsonc`, under the filling conversation list): the
-  active account with its weekly quota; open, its session and week meters,
+  active account with its weekly quota — or, for an API-key account, what
+  equin's agents spent on it today and this UTC month
+  (`components/account-spend-glance.tsx`, conversations/usage's
+  `account-spend`); open, its session and week meters,
   then the account picker (`components/claude-accounts.tsx`: every account
   with its weekly room, Add account — sign in to another account in the app
   (`AddClaudeAccountSignIn`) or use an API key —, remove / switch,
@@ -337,7 +340,7 @@ Gotchas the spike hit:
     - `HealthReport.Row` "Claude Code" → `ClaudeCodeRowDetail`
     - `Shell.Sidebar` "Claude account" → `ClaudeAccountFoot`
     - `ConfigV2.WebRegister` "runtime-sdk-auto-resume"
-  - Uses: 56 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 57 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×7
     - `infra/claude-cli/availability` ×4
     - `infra/claude-cli/sign-in` ×4
@@ -348,10 +351,10 @@ Gotchas the spike hit:
     - `primitives/data-view` ×3
     - `apps-core/tabs` ×2
     - `network/live/live-state` ×2
+    - `network/live` ×2
     - `primitives/avatar` ×2
     - `primitives/css/control-panel` ×2
     - `conversations/conversation-view.conversationPane`
-    - `network/live.useLive`
     - `primitives/css/clip.Clip`
     - `primitives/css/fill.Fill`
     - `primitives/css/line.Line`

@@ -15735,6 +15735,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `TurnSubmission`
     - Exports (values):
       - `afterTurn`
+      - `conversationRunningAccount`
       - `conversationTurnCompleted`
       - `createConversation`
       - `deleteConversation`
@@ -15879,8 +15880,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `SYSTEM_CATEGORY_ID`
       - `withdrawConversationTurn`
   - Cross-plugin:
-    - Imported by: 86 plugins — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
-      - `conversations` ×60
+    - Imported by: 87 plugins — full list in [`plugins/conversations/REFERENCE.md`](../plugins/conversations/REFERENCE.md)
+      - `conversations` ×61
       - `tasks` ×8
       - `apps` ×6
       - `infra` ×3
@@ -21426,7 +21427,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `HealthReport.Row` "Claude Code" → `ClaudeCodeRowDetail`
           - `Shell.Sidebar` "Claude account" → `ClaudeAccountFoot`
           - `ConfigV2.WebRegister` "runtime-sdk-auto-resume"
-        - Uses: 56 symbols — full list in [`plugins/conversations/plugins/runtime-sdk/REFERENCE.md`](../plugins/conversations/plugins/runtime-sdk/REFERENCE.md)
+        - Uses: 57 symbols — full list in [`plugins/conversations/plugins/runtime-sdk/REFERENCE.md`](../plugins/conversations/plugins/runtime-sdk/REFERENCE.md)
           - `primitives/css/ui-kit` ×7
           - `infra/claude-cli/availability` ×4
           - `infra/claude-cli/sign-in` ×4
@@ -21437,10 +21438,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/data-view` ×3
           - `apps-core/tabs` ×2
           - `network/live/live-state` ×2
+          - `network/live` ×2
           - `primitives/avatar` ×2
           - `primitives/css/control-panel` ×2
           - `conversations/conversation-view.conversationPane`
-          - `network/live.useLive`
           - `primitives/css/clip.Clip`
           - `primitives/css/fill.Fill`
           - `primitives/css/line.Line`
@@ -22228,28 +22229,33 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/task-title`
       - Exemptions:
         - Exempts itself from: `ids:pk-declared` — `server/internal/tables-user-turn-sent-event.ts` (debt)
-    - **`usage`** — Cost, Tokens and Agents fields on every conversation list whose rows are conversations (the usage extension's exposed fields), sorting and filtering server-side. Per-conversation usage — cost, tokens and launched sub-agents — stored in conversations_ext_usage and exposed to every conversation list (LiveColumns.Expose) and read by id through the lookup-only conversations.usage collection. Counting it from the transcripts is the machine half's.
+    - **`usage`** — Cost, Tokens and Agents fields on every conversation list whose rows are conversations (the usage extension's exposed fields), sorting and filtering server-side. Per-conversation usage — cost, tokens and launched sub-agents — stored in conversations_ext_usage and exposed to every conversation list (LiveColumns.Expose) and read by id through the lookup-only conversations.usage collection; and what each Claude account spent per UTC day (conversation_usage_account_days), served as conversations.usage.account-spend. Counting it from the transcripts is the machine half's.
       - Web:
         - Contributes: `FieldPresentation.Register` "exposure:conversations_ext_usage"
         - Uses: `network/live.FieldPresentation`
       - Server:
         - Contributes:
           - `live.columns.expose` "conversations ← conversations_ext_usage"
+          - `resource.declare` "conversations.usage.account-spend"
           - `resource.declare` "conversations.usage:rows"
           - `change-feed-exclusion` "conversation_usage_files"
         - Uses:
+          - `database.db`
           - `database/sql-column.parsedJson`
           - `database/sql-column.parsedText`
           - `infra/entity-extensions.defineExtension`
           - `network/live.LiveColumns`
           - `network/live.serveCollection`
+          - `network/live.serveValue`
           - `tasks/tasks-core._conversations`
         - DB schema: `plugins/conversations/plugins/usage/server/internal/tables.ts`
         - Entity extension of: `tasks/tasks-core` (table `conversations_ext_usage`)
         - Exports (values):
           - `_conversationUsageExt`
           - `_conversationUsageFiles`
-        - Resources: `conversations.usage:rows` (keyed, point)
+        - Resources:
+          - `conversations.usage:rows` (keyed, point)
+          - `conversations.usage.account-spend` (push, capped: 31)
       - Machine:
         - Uses:
           - `conversations/conversation-view/jsonl-viewer/subagents.listSubagentEntries`
@@ -22265,13 +22271,21 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `fields/int/config.intField`
           - `fields/money/config.moneyField`
           - `infra/entity-extensions.defineExtensionShape`
+          - `network/live.clockParam`
           - `network/live.liveCollection`
+          - `network/live.liveValue`
+          - `packages/list-bound.cappedList`
           - `tasks/tasks-core.conversationsEntityRef`
+        - Exports (types): `AccountSpendDay`
         - Exports (values):
+          - `ACCOUNT_SPEND_MONTH`
+          - `claudeAccountSpend`
           - `conversationUsageById`
           - `conversationUsageShape`
       - Cross-plugin:
-        - Imported by: `conversations/conversation-view/jsonl-viewer/transcript-stats/cost`
+        - Imported by:
+          - `conversations/conversation-view/jsonl-viewer/transcript-stats/cost`
+          - `conversations/runtime-sdk`
     - **`workspace`** — Workspace web presence: eagerly registers the boot-preloaded workspace.catalog live value (every workspace a task can name) so boot-snapshot can hydrate it before first paint. Agent workspaces — where a conversation runs (a git worktree, or a scratch directory): the WorkspaceImpl contract and the per-kind registry the conversation lifecycle calls through (path, commit, prepare, finish, launch fragment, resumability), the scratch-profile registry feature plugins contribute to and parseWorkspaceSpec over it (a new attempt's spec, validated before any write), the workspace.catalog live value (every workspace a task can name), the conversation → workspace lookup, and the Workspace.Reclaimed announcement (every reaper calls announceWorkspacesReclaimed once it deleted attempts' workspaces; every plugin keeping per-attempt state contributes a handler that frees it).
       - Server:
         - Contributes: `resource.declare` "workspace.catalog"
@@ -40781,10 +40795,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `wholeRecord`
           - `wholeTuple`
       - Cross-plugin:
-        - Imported by: 131 plugins — full list in [`plugins/packages/plugins/list-bound/REFERENCE.md`](../plugins/packages/plugins/list-bound/REFERENCE.md)
+        - Imported by: 132 plugins — full list in [`plugins/packages/plugins/list-bound/REFERENCE.md`](../plugins/packages/plugins/list-bound/REFERENCE.md)
           - `apps` ×29
           - `debug` ×20
-          - `conversations` ×16
+          - `conversations` ×17
           - `infra` ×16
           - `tasks` ×8
           - `build` ×5

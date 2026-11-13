@@ -142,6 +142,17 @@ export interface FilePricing {
   unpricedModels: string[];
 }
 
+/**
+ * A pricing pass's result: the row's frozen pricing, and what this pass ADDED
+ * to its cost, per UTC day of the priced bucket (negative for tokens a chain
+ * re-read took back). Not stored on the row: the sync files it under the
+ * account that spent it (`conversation_usage_account_days`). Its values sum to
+ * the move of `costUsd`.
+ */
+export interface PricingPass extends FilePricing {
+  addedByDate: Map<string, number>;
+}
+
 /** A file row as stored: its scan state and its pricing (`null`: never priced). */
 export interface PricedFile extends FileScan {
   costUsd: number | null;
@@ -209,29 +220,35 @@ export function priceFile(
   prev: Pick<PricedFile, "buckets" | "costUsd" | "unpricedModels"> | undefined,
   nextBuckets: DayBucket[],
   table: PriceTable,
-): FilePricing {
+): PricingPass {
   const base: { buckets: DayBucket[] } & FilePricing =
     prev === undefined || prev.costUsd === null
       ? { buckets: [], costUsd: 0, unpricedModels: [] }
       : { ...prev, costUsd: prev.costUsd };
   let costUsd = base.costUsd;
+  const addedByDate = new Map<string, number>();
+  const add = (date: string, cost: number): void => {
+    if (cost === 0) return;
+    costUsd += cost;
+    addedByDate.set(date, (addedByDate.get(date) ?? 0) + cost);
+  };
   const unpriced = new Set<string>();
   const wasUnpriced = new Set(base.unpricedModels);
   for (const b of base.buckets) {
     if (!wasUnpriced.has(b.model)) continue;
     const priced = priceBucket(b, table);
-    if (priced.ok) costUsd += priced.cost;
+    if (priced.ok) add(b.date, priced.cost);
     else if (priced.tokens !== 0) unpriced.add(b.model);
   }
   for (const b of bucketDelta(base.buckets, nextBuckets)) {
     const priced = priceBucket(b, table);
-    if (priced.ok) costUsd += priced.cost;
+    if (priced.ok) add(b.date, priced.cost);
     // No tokens cost nothing, priced or not (here and above): Claude Code's
     // `<synthetic>` pseudo-model only ever carries zeros, and no table will
     // ever price it.
     else if (priced.tokens !== 0) unpriced.add(b.model);
   }
-  return { costUsd, unpricedModels: [...unpriced].sort() };
+  return { costUsd, unpricedModels: [...unpriced].sort(), addedByDate };
 }
 
 /** The totals a conversation's file rows add up to. */

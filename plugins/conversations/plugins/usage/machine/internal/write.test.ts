@@ -13,7 +13,7 @@ import {
   setDefaultTimeout,
   test,
 } from "bun:test";
-import { eq } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import {
   createTestDb,
   type TestDb,
@@ -30,6 +30,7 @@ import { FALLBACK_MODEL } from "@plugins/conversations/plugins/model-provider/co
 import type { FilePricing, FileScan, UsageTotals } from "./scan";
 import { writeUsage } from "./write";
 import {
+  _conversationUsageAccountDays,
   _conversationUsageExt,
   _conversationUsageFiles,
 } from "../../server/internal/tables";
@@ -173,5 +174,37 @@ describe("writeUsage", () => {
     await writeUsage(t.db, "conv-w", [], totals(1, 31));
     expect(await usageOf()).toMatchObject({ costUsd: 1, tokens: 31 });
     expect(await filesOf()).toHaveLength(2);
+  });
+
+  test("spend adds to each account's day, in the same statement as the files", async () => {
+    const spendOf = () =>
+      t.db
+        .select()
+        .from(_conversationUsageAccountDays)
+        .orderBy(
+          asc(_conversationUsageAccountDays.accountId),
+          asc(_conversationUsageAccountDays.date),
+        );
+    await writeUsage(
+      t.db,
+      "conv-w",
+      [fileRow("/c.jsonl", 7, 0.25)],
+      totals(1.25, 38),
+      [
+        { accountId: "api", date: "2026-11-04", costUsd: 0.25 },
+        { accountId: "max", date: "2026-11-04", costUsd: 1 },
+      ],
+    );
+    // A later pass adds to the day it already holds, and starts the next.
+    await writeUsage(t.db, "conv-w", [fileRow("/c.jsonl", 9, 0.75)], null, [
+      { accountId: "api", date: "2026-11-04", costUsd: 0.5 },
+      { accountId: "api", date: "2026-11-05", costUsd: 2 },
+    ]);
+    expect(await spendOf()).toEqual([
+      { accountId: "api", date: "2026-11-04", costUsd: 0.75 },
+      { accountId: "api", date: "2026-11-05", costUsd: 2 },
+      { accountId: "max", date: "2026-11-04", costUsd: 1 },
+    ]);
+    expect(await usageOf()).toMatchObject({ costUsd: 1.25, tokens: 38 });
   });
 });

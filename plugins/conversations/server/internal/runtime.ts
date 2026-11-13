@@ -184,6 +184,13 @@ export interface ConversationRuntime {
     conversationId: string,
     server: string,
   ): Promise<"reconnected" | "not-running" | "unsupported">;
+  /**
+   * The Claude account the conversation's running agent signs in as — whose
+   * credit or quota what it spends now is drawn from (the usage sync files
+   * each newly counted cost under it). `null` when no agent runs, or when the
+   * running one cannot say.
+   */
+  runningAccount(conversationId: string): Promise<string | null>;
 }
 
 const registry = new Map<string, ConversationRuntime>();
@@ -276,6 +283,25 @@ export async function conversationRuntime(id: string): Promise<{
   const row = await getConversationRuntime(id);
   if (!row) throw new Error(`Conversation ${id} not found`);
   return { waitingFor: row.waitingFor, runtime: Runtime.get(row.runtime) };
+}
+
+/**
+ * The Claude account the conversation's running agent signs in as (its
+ * runtime's `runningAccount`); null when no agent runs.
+ *
+ * Asks every runtime rather than reading the conversation's row: an agent runs
+ * under exactly one runtime, the others answer null from their own process
+ * state — and the usage sync asks on every priced transcript append, which
+ * this keeps free of a database read.
+ */
+export async function conversationRunningAccount(
+  id: string,
+): Promise<string | null> {
+  for (const runtime of Runtime.all()) {
+    const account = await runtime.runningAccount(id);
+    if (account !== null) return account;
+  }
+  return null;
 }
 
 export async function interruptConversation(id: string): Promise<void> {

@@ -43,6 +43,7 @@ import {
 } from "../internal/claude-usage";
 import { useClaudeCodeRowInputs } from "../internal/use-claude-code-row";
 import { LEVEL_CLASS, PACE_LABEL } from "./account-head";
+import { AccountSpendGlance } from "./account-spend-glance";
 import { ClaudeAccountMenu } from "./claude-accounts";
 import { UsageBar } from "./claude-usage-glance";
 
@@ -65,11 +66,7 @@ function WeekGlance({
   now: number;
 }) {
   if (account.metered)
-    return (
-      <Text variant="caption" tone="muted">
-        Billed to API credit
-      </Text>
-    );
+    return <AccountSpendGlance accountId={account.id} now={now} />;
   const reading = usage.byAccount[account.id];
   const reached = limitReached(reading, now);
   if (reached)

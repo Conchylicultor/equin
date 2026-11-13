@@ -63,6 +63,7 @@ export {
 export type { Turn } from "./internal/claude-transcript";
 export {
   Runtime,
+  conversationRunningAccount,
   getConversationRow,
   interruptConversation,
   readConversationTurns,

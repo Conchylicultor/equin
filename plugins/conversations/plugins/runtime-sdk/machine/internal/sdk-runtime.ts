@@ -682,4 +682,11 @@ export const sdkRuntime: ConversationRuntime = {
       throw err;
     }
   },
+
+  // The agent's own pid file is the one authority on its account (see
+  // `runningAgentAccount`).
+  async runningAccount(id: string) {
+    const agent = await runningAgentAccount(id);
+    return agent.kind === "running" ? agent.account : null;
+  },
 };

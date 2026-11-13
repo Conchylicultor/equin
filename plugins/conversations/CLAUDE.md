@@ -120,6 +120,7 @@ is the pure `planConversationUpdate` (`plan-update.ts`).
     - `TurnSubmission`
   - Exports (values):
     - `afterTurn`
+    - `conversationRunningAccount`
     - `conversationTurnCompleted`
     - `createConversation`
     - `deleteConversation`
@@ -264,8 +265,8 @@ is the pure `planConversationUpdate` (`plan-update.ts`).
     - `SYSTEM_CATEGORY_ID`
     - `withdrawConversationTurn`
 - Cross-plugin:
-  - Imported by: 86 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `conversations` ×60
+  - Imported by: 87 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `conversations` ×61
     - `tasks` ×8
     - `apps` ×6
     - `infra` ×3

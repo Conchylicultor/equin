@@ -2,6 +2,7 @@ import { basename } from "node:path";
 import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { resolveConversationTranscriptPaths } from "@plugins/conversations/plugins/transcript-watcher/server";
+import { conversationRunningAccount } from "@plugins/conversations/server";
 import {
   listSubagentEntries,
   subagentDirOf,
@@ -19,7 +20,7 @@ import {
   type PricedFile,
   type UsageTotals,
 } from "./scan";
-import { writeUsage } from "./write";
+import { writeUsage, type AccountSpend } from "./write";
 import {
   _conversationUsageFiles,
   conversationUsage,
@@ -43,7 +44,12 @@ import {
 //      never re-prices history — and price a model it could not price before
 //      once the table knows it;
 //   4. sum every file row (vanished files included — the totals never shrink
-//      when Claude Code sweeps a transcript) and write only what changed.
+//      when Claude Code sweeps a transcript) and write only what changed;
+//   5. file the cost this pass priced under the Claude account that spent it
+//      (`conversation_usage_account_days`): a live pass runs right after the
+//      agent's own append, so the account its runtime runs it on NOW is the
+//      one the tokens were drawn from. A job pass (backfill, reprice) files
+//      nothing — it cannot know which account spent what it counts.
 //
 // Counting and pricing are stats/cost's (`foldUsageEntry`, `priceBucket`), so a
 // conversation's Cost column and the Stats → Cost page agree while the price
@@ -66,6 +72,12 @@ interface UsageState {
   sessionPaths: string[];
   files: Map<string, PricedFile>;
   totals: UsageTotals | undefined;
+  /**
+   * The Claude account a live pass last found the conversation's agent on —
+   * the account for tokens appended just before the agent exited, which the
+   * pass after the exit counts with no agent left to ask.
+   */
+  account: string | null;
 }
 
 /**
@@ -110,6 +122,7 @@ async function loadState(conversationId: string): Promise<UsageState | null> {
     sessionPaths,
     files: new Map(stored.map((r) => [r.path, r])),
     totals,
+    account: null,
   };
 }
 
@@ -193,9 +206,17 @@ async function syncConversationUsage(
   const rows: (FileScan & FilePricing)[] = [];
   const toWrite: (FileScan & FilePricing)[] = [];
   const changedPaths = new Set(changed.map((scan) => scan.path));
+  const addedByDate = new Map<string, number>();
   for (const scan of byPath.values()) {
     const prev = storedByPath.get(scan.path);
-    const row = { ...scan, ...priceFile(prev, scan.buckets, table) };
+    const { addedByDate: added, ...pricing } = priceFile(
+      prev,
+      scan.buckets,
+      table,
+    );
+    for (const [date, cost] of added)
+      addedByDate.set(date, (addedByDate.get(date) ?? 0) + cost);
+    const row = { ...scan, ...pricing };
     rows.push(row);
     const repriced =
       prev === undefined ||
@@ -211,9 +232,16 @@ async function syncConversationUsage(
     current.tokens === totals.tokens &&
     current.cacheReadTokens === totals.cacheReadTokens &&
     current.agentCount === totals.agentCount;
+  const spend = await spendOf(conversationId, state, cause, addedByDate);
   if (toWrite.length > 0 || !same) {
     try {
-      await writeUsage(db, conversationId, toWrite, same ? null : totals);
+      await writeUsage(
+        db,
+        conversationId,
+        toWrite,
+        same ? null : totals,
+        spend,
+      );
     } catch (err) {
       // Whether it landed is unknown (or the conversation went: an FK
       // violation): the next pass reads the DB again rather than trust this.
@@ -230,6 +258,29 @@ async function syncConversationUsage(
   // none otherwise: a backfill reaches every conversation once.
   if (cause !== "reload" || held.has(conversationId))
     hold(conversationId, state);
+}
+
+/**
+ * The pass's newly priced cost as account spend — empty when nothing was
+ * priced, on a job's pass, or when no account is known. Asks the runtime only
+ * when there is cost to file (one pid-file read, no database read).
+ */
+async function spendOf(
+  conversationId: string,
+  state: UsageState,
+  cause: SyncCause,
+  addedByDate: ReadonlyMap<string, number>,
+): Promise<AccountSpend[]> {
+  if (cause === "reload" || addedByDate.size === 0) return [];
+  const running = await conversationRunningAccount(conversationId);
+  if (running !== null) state.account = running;
+  const accountId = state.account;
+  if (accountId === null) return [];
+  return [...addedByDate].map(([date, costUsd]) => ({
+    accountId,
+    date,
+    costUsd,
+  }));
 }
 
 // Per-conversation serialization: a sync already running for a conversation

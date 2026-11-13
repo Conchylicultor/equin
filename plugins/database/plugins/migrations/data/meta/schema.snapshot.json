@@ -1,6 +1,6 @@
 {
-  "id": "5dd8b139-d7b3-46b5-a5c1-6f619e9e4df7",
-  "prevId": "53e1d179-c084-4023-b5c5-1036f6b0e077",
+  "id": "72e30f20-661f-4b9a-ba8b-be89e06cdbb8",
+  "prevId": "5dd8b139-d7b3-46b5-a5c1-6f619e9e4df7",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -8076,6 +8076,45 @@
         }
       },
       "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.conversation_usage_account_days": {
+      "name": "conversation_usage_account_days",
+      "schema": "",
+      "columns": {
+        "account_id": {
+          "name": "account_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "date": {
+          "name": "date",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "cost_usd": {
+          "name": "cost_usd",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "conversation_usage_account_days_account_id_date_pk": {
+          "name": "conversation_usage_account_days_account_id_date_pk",
+          "columns": [
+            "account_id",
+            "date"
+          ]
+        }
+      },
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},

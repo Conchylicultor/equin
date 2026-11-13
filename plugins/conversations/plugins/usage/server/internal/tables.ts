@@ -115,3 +115,25 @@ export const _conversationUsageFiles = pgTable(
     index("conversation_usage_files_conv_idx").on(t.conversationId),
   ],
 );
+
+// What each Claude account spent, per UTC day: the cost the usage sync priced
+// on a pass, filed under the account of the agent running when the tokens were
+// counted (`conversationRunningAccount` — a live pass runs right after the
+// agent's own append). Accumulated (`cost_usd + excluded.cost_usd`) in the
+// same statement as the file rows it was priced from, so a failed write moves
+// neither and the next pass prices the same delta again.
+//
+// Not keyed to a conversation: an account's spend outlives the conversations
+// that spent it. Spend counted by a job (backfill, reprice) or with no account
+// to name is not filed — what an account spent before this table existed is
+// unknown, not zero.
+export const _conversationUsageAccountDays = pgTable(
+  "conversation_usage_account_days",
+  {
+    accountId: text("account_id").notNull(),
+    /** UTC day of the priced bucket, `YYYY-MM-DD` (stats/cost's bucket date). */
+    date: text("date").notNull(),
+    costUsd: doublePrecision("cost_usd").notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.accountId, t.date] })],
+);
