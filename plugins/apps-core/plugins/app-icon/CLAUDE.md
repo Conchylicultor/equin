@@ -59,6 +59,7 @@ changes to existing `kind: "symbol"` authors.
     - `AppIconAvatar`
     - `AppIconTile`
     - `AppIconView`
+    - `AppTilePaletteProvider`
     - `DEFAULT_APP_ICON`
 - Core:
   - Uses:
@@ -69,6 +70,7 @@ changes to existing `kind: "symbol"` authors.
     - `AppIcon`
     - `AppIconGlyph`
     - `AppIconSvgOptions`
+    - `AppTilePalette`
   - Exports (values):
     - `APP_TILE_PALETTE`
     - `appIcon`

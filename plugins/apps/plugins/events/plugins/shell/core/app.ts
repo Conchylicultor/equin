@@ -6,4 +6,5 @@ export const eventsApp = defineApp({
   name: "Events",
   basePath: "/events",
   icon: symbol("event"),
+  iconColor: "orange",
 });

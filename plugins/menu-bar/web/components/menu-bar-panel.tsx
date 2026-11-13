@@ -7,12 +7,14 @@ import {
   insetClass,
 } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { useResizeObserver } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
+import { AppTilePaletteProvider } from "@plugins/apps-core/plugins/app-icon/web";
 import { useSuppressToasts } from "@plugins/shell/plugins/toast/web";
 import { MenuBar } from "../slots";
 import { useNativeHost } from "../native-host";
 import { PanelStatus } from "../internal/panel-status";
 import { useWindowMaterial } from "../internal/window-material";
 import { StaleReload } from "../internal/stale-reload";
+import { MENU_TILE_PALETTE } from "../internal/theme";
 import "../internal/window-material.css";
 
 /**
@@ -45,9 +47,12 @@ export function MenuBarPanel() {
         className="size-full rounded-none shadow-none ring-0"
       >
         <PanelStatus>
-          <Scroll className="h-full">
-            <PanelSections />
-          </Scroll>
+          {/* The panel's app tiles are the prototype's vivid ones. */}
+          <AppTilePaletteProvider palette={MENU_TILE_PALETTE}>
+            <Scroll className="h-full">
+              <PanelSections />
+            </Scroll>
+          </AppTilePaletteProvider>
           <MenuBar.Mount.Mount />
           <StaleReload />
         </PanelStatus>

@@ -1,4 +1,4 @@
-import { APP_TILE_PALETTE } from "@plugins/apps-core/plugins/app-icon/core";
+import type { AppTilePalette } from "@plugins/apps-core/plugins/app-icon/core";
 import { both, defineTheme } from "@plugins/ui/plugins/theme-engine/core";
 import { colorPaletteGroup } from "@plugins/ui/plugins/tokens/plugins/color-palette/core";
 import { categoricalGroup } from "@plugins/ui/plugins/tokens/plugins/categorical/core";
@@ -130,7 +130,38 @@ const material = materialGroup.fragment(
   }),
 );
 
-const categorical = categoricalGroup.fragment(both(APP_TILE_PALETTE));
+/**
+ * The panel's app tiles: the prototype's vivid tiles (each the midpoint of
+ * the mock's 135° gradient — the tile presentation lights it from above), one
+ * per avatar colour slot, where the rest of equin paints the quieter ocean
+ * band (`APP_TILE_PALETTE`). Handed to the tiles by `AppTilePaletteProvider`
+ * at the panel's root, and the theme's categorical slots, so anything else
+ * categorical in the panel reads the same hues.
+ */
+export const MENU_TILE_PALETTE: AppTilePalette = {
+  /** sky — Mail, Browser */
+  "categorical-1": "#3489f0",
+  /** emerald — Places */
+  "categorical-2": "#2bb873",
+  /** amber — Prototypes */
+  "categorical-3": "#e7bb2f",
+  /** rose — Chord, Deploy */
+  "categorical-4": "#eb4d82",
+  /** violet — Sonata */
+  "categorical-5": "#8f5ef0",
+  /** indigo — Files, Desktop */
+  "categorical-6": "#628beb",
+  /** teal — Studio */
+  "categorical-7": "#20b198",
+  /** pink — Tap Tap Party */
+  "categorical-8": "#f065bb",
+  /** orange — Agent Manager (the ember accent), Events */
+  "categorical-9": "#f07b36",
+  /** slate — Settings, Pages, Debug */
+  "categorical-10": "#6e737b",
+};
+
+const categorical = categoricalGroup.fragment(both(MENU_TILE_PALETTE));
 
 /**
  * The menu-bar panel's own theme: a native menu's look (the prototype's tray

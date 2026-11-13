@@ -2,6 +2,7 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
 export { AppIconView } from "./components/app-icon-view";
 export { AppIconAvatar, AppIconTile } from "./components/app-icon-tile";
+export { AppTilePaletteProvider } from "./components/tile-palette-provider";
 export { DEFAULT_APP_ICON } from "./internal/app-icon";
 
 export default {
