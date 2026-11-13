@@ -2,7 +2,10 @@ import { describe, expect, test } from "bun:test";
 import type { ResourceResult } from "@plugins/network/plugins/live/plugins/live-state/web";
 import type { HealthStatus } from "@plugins/shell/plugins/health-report/web";
 import type { ClaudeCodeStatus } from "@plugins/infra/plugins/claude-cli/plugins/availability/core";
-import { NO_CLAUDE_ACCOUNTS } from "@plugins/infra/plugins/claude-cli/plugins/accounts/core";
+import {
+  NO_CLAUDE_ACCOUNTS,
+  SYSTEM_ACCOUNT_ID,
+} from "@plugins/infra/plugins/claude-cli/plugins/accounts/core";
 import type { ClaudeUsage } from "../../core";
 import {
   agentsPhrase,
@@ -57,6 +60,47 @@ describe("claudeCodeRowVerdict", () => {
     );
     const checking: HealthStatus = { state: "unknown" };
     expect(claudeCodeRowVerdict(checking, ready("2.1.1"), NOW)).toBe(checking);
+  });
+
+  test("signed out on the system account stays critical", () => {
+    const signedOut: HealthStatus = {
+      state: "critical",
+      summary: "signed out",
+    };
+    const inputs = loaded({ kind: "signed-out", version: "2.2.0" });
+    if (inputs.status !== "ready") throw new Error("unreachable");
+    expect(inputs.data.accounts.active).toBe(SYSTEM_ACCOUNT_ID);
+    expect(claudeCodeRowVerdict(signedOut, inputs, NOW)).toBe(signedOut);
+  });
+
+  test("the computer signed out does not redden the row while an added account is active", () => {
+    const signedOut: HealthStatus = {
+      state: "critical",
+      summary: "signed out",
+    };
+    const inputs = loaded(
+      { kind: "signed-out", version: "2.2.0" },
+      { here: 2, elsewhere: [], byAccount: {} },
+    );
+    if (inputs.status !== "ready") throw new Error("unreachable");
+    const onApiKey: typeof inputs = {
+      ...inputs,
+      data: {
+        ...inputs.data,
+        accounts: {
+          ...inputs.data.accounts,
+          accounts: [
+            { id: "acct-api", name: "API", addedAt: 1, kind: "api-key" },
+          ],
+          active: "acct-api",
+        },
+      },
+    };
+    expect(claudeCodeRowVerdict(signedOut, onApiKey, NOW)).toEqual({
+      state: "ok",
+      summary:
+        "v2.2.0 · 2 agents here · the computer's own login is signed out",
+    });
   });
 
   test("not known yet is unknown, never ok", () => {

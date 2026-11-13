@@ -217,7 +217,10 @@ agents without tmux, per-namespace paths, the Claude Code health row:
   [`research/2026-10-21-conversations-stream-every-block.md`](../../../../research/2026-10-21-conversations-stream-every-block.md).
 - `web/` — the health report's Claude Code row: Claude Code (its own verdict,
   with the in-app sign-in from `infra/claude-cli/sign-in` — the row's Sign in
-  remedy, the run's panel heading the detail, "Signing in…" while it runs),
+  remedy, the run's panel heading the detail, "Signing in…" while it runs —
+  except that the computer signed out is not critical while an added account
+  is active: agents launch on its own credential, so the row stays ok and its
+  summary says the computer's own login is signed out),
   and the agents running here and elsewhere
   (each other worktree as its task's chip, in the expanded detail) and on
   which Claude account (every worktree's, by account name), the

@@ -4,7 +4,10 @@ import type {
 } from "@plugins/network/plugins/live/plugins/live-state/web";
 import type { HealthStatus } from "@plugins/shell/plugins/health-report/web";
 import type { ClaudeCodeStatus } from "@plugins/infra/plugins/claude-cli/plugins/availability/core";
-import type { ClaudeAccounts } from "@plugins/infra/plugins/claude-cli/plugins/accounts/core";
+import {
+  SYSTEM_ACCOUNT_ID,
+  type ClaudeAccounts,
+} from "@plugins/infra/plugins/claude-cli/plugins/accounts/core";
 import {
   limitReached,
   type AgentProcesses,
@@ -49,7 +52,11 @@ export function agentsPhrase(agents: AgentProcesses): string {
  * Agent SDK ships) and the agent processes running.
  *
  * - Claude Code signed out, unreadable or still loading → its own verdict
- *   (`cli`), unchanged: nothing below it can be vouched for.
+ *   (`cli`), unchanged: nothing below it can be vouched for — except the
+ *   computer signed out while an added account (a plan token or an API key) is
+ *   active: agents launch on that account's own credential (the launch gate,
+ *   `checkLaunchReadiness`, asks the same), so the row reads on as below and
+ *   says the computer's login is signed out in its summary.
  * - The active account's usage limit reached → `attention`: its agents wait
  *   until it resets (or run on another account).
  * - Conversations an API error stopped (a usage limit, a server error, a
@@ -66,7 +73,11 @@ export function claudeCodeRowVerdict(
   result: ResourceResult<ClaudeCodeRowInputs> | ResourceUnavailable,
   now: number,
 ): HealthStatus {
-  if (cli.state !== "ok") return cli;
+  const onOwnCredential =
+    result.status === "ready" &&
+    result.data.claude.kind === "signed-out" &&
+    result.data.accounts.active !== SYSTEM_ACCOUNT_ID;
+  if (cli.state !== "ok" && !onOwnCredential) return cli;
   if (result.status === "unavailable") {
     return { state: "not-applicable", summary: result.message };
   }
@@ -79,7 +90,7 @@ export function claudeCodeRowVerdict(
     };
   }
   const { claude, agents, usage, accounts, stopped } = result.data;
-  if (claude.kind !== "ready") return cli;
+  if (claude.kind === "unreadable") return cli;
   const reached = limitReached(usage.byAccount[accounts.active], now);
   if (reached) {
     const { label } = USAGE_WINDOWS[reached.id];
@@ -94,8 +105,12 @@ export function claudeCodeRowVerdict(
       summary: `${plural(stopped.length, "conversation")} stopped by an API error`,
     };
   }
+  const computer =
+    claude.kind === "signed-out"
+      ? " · the computer's own login is signed out"
+      : "";
   return {
     state: "ok",
-    summary: `v${claude.version} · ${agentsPhrase(agents)}`,
+    summary: `v${claude.version} · ${agentsPhrase(agents)}${computer}`,
   };
 }
