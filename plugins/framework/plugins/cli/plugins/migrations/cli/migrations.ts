@@ -641,10 +641,12 @@ export async function generateMigration(opts: {
       "\ndrizzle-kit encountered ambiguous schema changes that require explicit answers.\n" +
         "Re-run with --migration-answers to provide choices. Example:\n" +
         `  ./equin build --migration-name <slug> --migration-answers '${JSON.stringify(result.detectedPrompts.map(() => ({ action: "create" })))}'\n\n` +
-        "AGENT: Stop here and report this to the user. Show them the detected prompts\n" +
-        "above and ask which action to take for each. Do not auto-select or retry\n" +
-        "without explicit user input. If this feature does not work as expected or\n" +
-        "has limitations, report that clearly rather than working around it.\n",
+        "AGENT: Decide each answer yourself from the schema change you made: \"rename\"\n" +
+        "(with its `from`) only when you renamed that column/table and its data must\n" +
+        "carry over, \"create\" when it is genuinely new. Re-run with one answer per\n" +
+        "prompt, in the order listed above, and name your choices in your summary. If\n" +
+        "this feature does not work as expected or has limitations, report that\n" +
+        "clearly rather than working around it.\n",
     );
     process.exit(2);
   }
