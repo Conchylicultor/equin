@@ -31,7 +31,11 @@ the registry's literal imports, so it reaches every central plugin):
   `CENTRAL_ENTRY`, so the two can only differ when the code does.
 
 The tab names it to central on every sub (`build`) and HTTP read, and judges
-every central value against it (live-state's `clientBuild(kind)`).
+every central value against it (live-state's `clientBuild(kind)`). Since a
+reload brings the tab the central build its page bakes, the page's identity
+covers it (compose's `pagePins`, `identity: "covered"` → the `.build-graph`
+every stale-tab comparison reads): a redeploy that changes only central code
+marks open tabs stale, and the Build tray advises a reload.
 
 Like the web graph, it is whole-closure: any central change is a new build.
 Compose also writes it beside the page as the dist's `.central-build`, which

@@ -19,6 +19,7 @@ import {
   composeDist,
   computeGraphHash,
   computePreloadClosure,
+  pagePins,
 } from "./compose";
 import { CENTRAL_BUILD_GLOBAL } from "./vite-builder";
 
@@ -33,6 +34,7 @@ const graph = {
   preloads: ["/artifacts/entry.3333333333333333/index.js"],
   entryUrl: "/artifacts/entry.3333333333333333/index.js",
   cssHref: "/global.4444444444444444.css",
+  pins: pagePins({ buildCommit: "commit-1", centralBuild: "central-1" }),
 };
 
 describe("computePreloadClosure", () => {
@@ -131,6 +133,31 @@ describe("computeGraphHash", () => {
     expect(
       computeGraphHash({ ...graph, cssHref: "/global.5555555555555555.css" }),
     ).not.toBe(base);
+  });
+
+  // A reload brings the tab the central build its page bakes, so a redeploy
+  // that changes only central code is a new page — its tabs are stale — while
+  // the commit, which moves with the tree even when the bytes do not, is not.
+  test("covers the central build the page bakes, not the commit", () => {
+    const base = computeGraphHash(graph);
+    expect(
+      computeGraphHash({
+        ...graph,
+        pins: pagePins({ buildCommit: "commit-1", centralBuild: "central-2" }),
+      }),
+    ).not.toBe(base);
+    expect(
+      computeGraphHash({
+        ...graph,
+        pins: pagePins({ buildCommit: "commit-1", centralBuild: null }),
+      }),
+    ).not.toBe(base);
+    expect(
+      computeGraphHash({
+        ...graph,
+        pins: pagePins({ buildCommit: "commit-2", centralBuild: "central-1" }),
+      }),
+    ).toBe(base);
   });
 
   test("is a 16-char hex digest", () => {

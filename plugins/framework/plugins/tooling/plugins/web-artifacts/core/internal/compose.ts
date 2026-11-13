@@ -167,16 +167,28 @@ export function computePreloadClosure(opts: {
  * If a `public/` file ever becomes something the tab executes at boot, it joins
  * the `shell` line and this paragraph is wrong.
  *
+ * - `pin` — every value compose bakes into the page that a reload changes
+ *   (`pagePins`, `identity: "covered"`): the central build the tab names to
+ *   central and judges central's values against. A redeploy that changes only
+ *   central code changes no URL, yet a reload brings the tab another central
+ *   build — so it is a new page, and its tabs are stale.
+ *
  * Also NOT the COMPOSED html: the commit injected into it moves with the tree
- * even when the graph does not, and hashing the output would reintroduce exactly
- * the per-build churn this replaced — the run-id nonce that made two byte-
- * identical deploys look like different bundles.
+ * even when the graph does not (`pagePins` says so, `identity: "excluded"`),
+ * and hashing the output would reintroduce exactly the per-build churn this
+ * replaced — the run-id nonce that made two byte-identical deploys look like
+ * different bundles.
  *
  * Entries are tagged and key-sorted so neither object-literal order nor a
  * URL that happens to look like a tag can shift the digest. 16 hex chars, the
  * same width the store uses for an artifact's address.
  */
 export function computeGraphHash(graph: {
+  /**
+   * Every value compose bakes into the page (`pagePins`) — the identity hashes
+   * the ones a reload changes (`identity: "covered"`) and skips the rest.
+   */
+  pins: readonly PagePin[];
   /** The SOURCE index.html, verbatim — never the composed output. */
   htmlSrc: string;
   importMap: { imports: Record<string, string> };
@@ -192,8 +204,53 @@ export function computeGraphHash(graph: {
       .sort()
       .map((spec) => `map\t${spec}\t${graph.importMap.imports[spec]}`),
     ...[...graph.preloads].sort().map((url) => `preload\t${url}`),
+    ...graph.pins
+      .filter((pin) => pin.identity === "covered")
+      .map((pin) => `pin\t${pin.global}\t${pin.value}`)
+      .sort(),
   ];
   return sha256Hex(lines.join("\n") + "\n").slice(0, 16);
+}
+
+/**
+ * A value compose bakes into index.html as a global the bundle reads
+ * (`import.meta.env.VITE_*`). Each says whether the page's identity covers it —
+ * a required choice, so a new pin cannot be baked into the page without
+ * deciding whether a tab holding another value of it is stale.
+ */
+export type PagePin = { global: string; value: string } & (
+  | {
+      /** A reload changes it: part of the page's identity (`computeGraphHash`). */
+      identity: "covered";
+    }
+  | {
+      identity: "excluded";
+      /** Why a tab holding another value of it is not stale. */
+      reason: string;
+    }
+);
+
+/** Every global compose bakes into the page beside the graph hash itself. */
+export function pagePins(opts: {
+  buildCommit: string | null;
+  centralBuild: string | null;
+}): PagePin[] {
+  // An unknown value is baked as "" rather than omitted, so the global always
+  // exists and reads as "unknown" instead of throwing at a consumer.
+  return [
+    {
+      global: COMMIT_GLOBAL,
+      value: opts.buildCommit ?? "",
+      identity: "excluded",
+      reason:
+        "the tree the graph was built from moves with every commit even when the bytes do not; a rebuild of unchanged code is the same page",
+    },
+    {
+      global: CENTRAL_BUILD_GLOBAL,
+      value: opts.centralBuild ?? "",
+      identity: "covered",
+    },
+  ];
 }
 
 export function composeDist(opts: ComposeOptions): {
@@ -276,8 +333,10 @@ export function composeDist(opts: ComposeOptions): {
     joinAppPath(opts.webSrcDir, "index.html"),
     "utf8",
   );
+  const pins = pagePins(opts);
   const graphHash = computeGraphHash({
     htmlSrc,
+    pins,
     importMap,
     preloads,
     entryUrl: opts.entryUrl,
@@ -293,13 +352,15 @@ export function composeDist(opts: ComposeOptions): {
   }
   const headInject = [
     // `var` in a classic script creates a global binding module code can read —
-    // artifacts compile `import.meta.env.VITE_BUILD_GRAPH` / `VITE_BUILD_COMMIT`
-    // to these identifiers. An unresolvable commit is injected as "" rather than
-    // omitted, so the global always exists and reads as "unknown" instead of
-    // throwing at a consumer that expected it.
-    `<script>var ${GRAPH_GLOBAL} = ${JSON.stringify(graphHash)}; window.${GRAPH_GLOBAL} = ${GRAPH_GLOBAL};` +
-      ` var ${COMMIT_GLOBAL} = ${JSON.stringify(opts.buildCommit ?? "")}; window.${COMMIT_GLOBAL} = ${COMMIT_GLOBAL};` +
-      ` var ${CENTRAL_BUILD_GLOBAL} = ${JSON.stringify(opts.centralBuild ?? "")}; window.${CENTRAL_BUILD_GLOBAL} = ${CENTRAL_BUILD_GLOBAL};</script>`,
+    // artifacts compile `import.meta.env.VITE_BUILD_GRAPH` / `VITE_*` to these
+    // identifiers. The graph hash, then every pin — the SAME list the hash
+    // read, so nothing reaches the page that the identity did not decide on.
+    `<script>${[{ global: GRAPH_GLOBAL, value: graphHash }, ...pins]
+      .map(
+        ({ global, value }) =>
+          `var ${global} = ${JSON.stringify(value)}; window.${global} = ${global};`,
+      )
+      .join(" ")}</script>`,
     `<script type="importmap">${JSON.stringify(importMap)}</script>`,
     `<link rel="stylesheet" href="${opts.cssHref}" />`,
     ...preloads.map((p) => `<link rel="modulepreload" href="${p}" />`),

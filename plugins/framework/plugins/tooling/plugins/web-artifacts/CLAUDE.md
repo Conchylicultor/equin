@@ -275,11 +275,17 @@ Key invariants:
   a compose link failure against an hour-old fossil, and the `prewarm` barrels
   inlined an unhashed `shared/` (`…/mirror`) the same way.
   (`research/2026-08-17-global-artifact-address-covers-content.md`)
-- **A dist names itself by its content, not by its run.** Compose injects two
+- **A dist names itself by its content, not by its run.** Compose injects
   globals into `index.html` — `the graph global (GRAPH_GLOBAL)` (`computeGraphHash`: a pure
-  function of the import map, entry, global CSS and preload closure, every one of
-  them already content-addressed) and the commit global (the tree the
-  caller sampled BEFORE it read a source file). The graph hash is what the
+  function of the source shell, import map, entry, global CSS and preload
+  closure, every one of them already content-addressed, plus every page pin a
+  reload changes) and the page pins (`pagePins`): the commit (the tree the
+  caller sampled BEFORE it read a source file) and the central build the tab
+  judges central's values against. Each pin must declare `identity: "covered"`
+  (hashed: a redeploy changing only central code is a new page, so its tabs
+  are stale and told to reload) or `"excluded"` with a reason (the commit moves
+  with the tree when the bytes do not); the hash and the injected script read
+  the one list, so no value reaches the page undecided. The graph hash is what the
   caller writes to `.build-graph` and what a tab compares itself against, so two
   builds of an unchanged tree don't ask every open tab to reload. The run id
   (`buildId`) stays out of the bundle: it changes on every build by construction,
