@@ -34,7 +34,7 @@ echo "== build profile: $prof"
 echo
 chk=$(ls -t "$dir"/check-*.log 2>/dev/null | head -1)
 echo "== check log: $chk"
-[ -n "$chk" ] && grep -E "type-check|tsc repo|maxRSS|cpu [0-9]" "$chk" | cut -c1-600
+[ -n "$chk" ] && grep -E "type-check|tsc repo|peak footprint|cpu [0-9]" "$chk" | cut -c1-600
 echo "== check log tail"
 [ -n "$chk" ] && tail -40 "$chk" | cut -c1-400
 '

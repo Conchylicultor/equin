@@ -21,7 +21,7 @@ interface BuildProfileFile {
     label: string;
     startMs: number;
     durationMs: number;
-    maxRssBytes?: number;
+    peakFootprintBytes?: number;
   }>;
   totalDurationMs: number;
 }

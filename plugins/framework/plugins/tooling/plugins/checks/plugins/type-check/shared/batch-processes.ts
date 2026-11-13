@@ -33,7 +33,10 @@ const BATCH_WORKER = fileURLToPath(
 export interface BatchSpend {
   count: number;
   cpuSeconds: number;
-  maxRssBytes: number;
+  /** The largest peak physical footprint a batch reported. */
+  peakFootprintBytes: number;
+  /** Batches that reported none. */
+  unmeasured: number;
 }
 
 export function processBatches(opts: {
@@ -83,18 +86,22 @@ export function processBatches(opts: {
               // The batch's heap — up to ~4.4 GB live — collected as it nears
               // that, not at ~2.7× it (`packages/heap-pacing`).
               env: pacedHeapEnv(process.env),
+              // A bun script: it reports its own peak footprint at exit.
+              peakFootprint: "report",
               unbounded:
                 "a batch holds up to K files of a cold type check: minutes of TS work on a loaded host, bounded by its parent worker, which owns no shorter deadline",
             },
           );
           const wallMs = performance.now() - startedAt;
-          const { cpuTimeMicros, maxRssBytes } = spawned.resourceUsage;
+          const { cpuTimeMicros, peakFootprint } = spawned.resourceUsage;
           opts.spend.count++;
           opts.spend.cpuSeconds += (cpuTimeMicros ?? 0) / 1e6;
-          opts.spend.maxRssBytes = Math.max(
-            opts.spend.maxRssBytes,
-            maxRssBytes ?? 0,
-          );
+          if (peakFootprint.kind === "measured") {
+            opts.spend.peakFootprintBytes = Math.max(
+              opts.spend.peakFootprintBytes,
+              peakFootprint.bytes,
+            );
+          } else opts.spend.unmeasured++;
           if (spawned.exitCode !== 0) {
             throw new Error(
               `type-check batch ${job.index} (${job.sources.length} files) exited ${spawned.exitCode}:\n${spawned.stderr.trim() || spawned.stdout.trim()}`,
@@ -104,7 +111,7 @@ export function processBatches(opts: {
           if (outcome.kind === "contract-missing") return outcome;
           return {
             ...outcome,
-            cost: { cpuMicros: cpuTimeMicros, maxRssBytes, wallMs },
+            cost: { cpuMicros: cpuTimeMicros, peakFootprint, wallMs },
           };
         },
         close() {

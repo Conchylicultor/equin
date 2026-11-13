@@ -1,8 +1,8 @@
 import { dlopen, ptr } from "bun:ffi";
 
-// One process's kernel usage record: libproc's proc_pid_rusage(RUSAGE_INFO_V1),
+// One process's kernel usage record: libproc's proc_pid_rusage(RUSAGE_INFO_V4),
 // which takes a pid directly (no mach_task_self() dance) and fills a
-// rusage_info_v1 struct:
+// rusage_info_v4 struct (v1's fields at the same offsets, then v2-v4's):
 //
 //   struct rusage_info_v1 {            // offset
 //     uint8_t  ri_uuid[16];            //  0
@@ -18,8 +18,23 @@ import { dlopen, ptr } from "bun:ffi";
 //     uint64_t ri_proc_exit_abstime;   // 88
 //     uint64_t ri_child_user_time;     // 96   (v1)
 //     uint64_t ri_child_system_time;   // 104  (v1)
-//     …                                //      (wakeups, pageins, elapsed)
-//   };                                 // size 144
+//     …                                //      (v1 wakeups, pageins, elapsed;
+//                                      //       v2 disk io; v3 qos times)
+//     uint64_t ri_logical_writes;              // 232  (v4)
+//     uint64_t ri_lifetime_max_phys_footprint; // 240  (v4)
+//     …                                //      (instructions, cycles, energy,
+//                                      //       interval max, runnable time)
+//   };                                 // size 296
+//
+// ri_lifetime_max_phys_footprint is the PEAK of ri_phys_footprint over the
+// process's whole life: the only honest "how much memory did this run need".
+// getrusage's ru_maxrss (Bun's `resourceUsage().maxRSS`) is the peak RESIDENT
+// size instead, which keeps counting allocator pages the process already freed
+// (MADV_FREE-reusable, JSC's "Memory Tag 240") and shared library text — on a
+// type-check worker 1.8 GB against a 1.15 GB footprint
+// (research/2026-11-12-global-type-check-worker-memory-split.md). Checked
+// 2026-11-13: a 1 GB allocation, freed, leaves the footprint at 33 MB, the
+// resident size at 1,044 MB and this peak at 1,034 MB.
 //
 // ri_phys_footprint is the memory the kernel charges against memory pressure
 // and what Activity Monitor shows (`process.memoryUsage().rss` over-counts Bun
@@ -31,7 +46,7 @@ import { dlopen, ptr } from "bun:ffi";
 // unit is 125/3 ns (`mach_timebase_info`), so they are scaled by the timebase.
 // Checked 2026-11-06: user + system, scaled, equals `ps -o time` to the 10 ms.
 
-const RUSAGE_INFO_V1 = 1;
+const RUSAGE_INFO_V4 = 4;
 const USER_TIME_OFFSET = 16;
 const SYSTEM_TIME_OFFSET = 24;
 const RESIDENT_SIZE_OFFSET = 64;
@@ -39,12 +54,18 @@ const PHYS_FOOTPRINT_OFFSET = 72;
 const PROC_START_ABSTIME_OFFSET = 80;
 const CHILD_USER_TIME_OFFSET = 96;
 const CHILD_SYSTEM_TIME_OFFSET = 104;
-const BUF_BYTES = 192; // ≥ sizeof(rusage_info_v1)=144, padded for forward-compat
+const LIFETIME_MAX_PHYS_FOOTPRINT_OFFSET = 240;
+const BUF_BYTES = 320; // ≥ sizeof(rusage_info_v4)=296, padded for forward-compat
 
 export type ProcRusage =
   | {
       kind: "read";
-      memory: { physFootprintBytes: number; residentSizeBytes: number };
+      memory: {
+        physFootprintBytes: number;
+        residentSizeBytes: number;
+        /** The highest `physFootprintBytes` the process has had, over its life. */
+        peakPhysFootprintBytes: number;
+      };
       /** CPU time, ns: the process's own (user + system), and its reaped children's. */
       cpu: { ownNs: number; reapedChildrenNs: number };
       /**
@@ -91,7 +112,7 @@ export function readProcRusage(pid: number): ProcRusage {
   if (process.platform !== "darwin") return { kind: "unsupported" };
   const { procPidRusage, nsPerTick } = bind();
   const buf = new Uint8Array(BUF_BYTES);
-  if (procPidRusage(pid, RUSAGE_INFO_V1, ptr(buf)) !== 0) {
+  if (procPidRusage(pid, RUSAGE_INFO_V4, ptr(buf)) !== 0) {
     return { kind: "refused" };
   }
   const view = new DataView(buf.buffer);
@@ -102,6 +123,7 @@ export function readProcRusage(pid: number): ProcRusage {
     memory: {
       physFootprintBytes: u64(PHYS_FOOTPRINT_OFFSET),
       residentSizeBytes: u64(RESIDENT_SIZE_OFFSET),
+      peakPhysFootprintBytes: u64(LIFETIME_MAX_PHYS_FOOTPRINT_OFFSET),
     },
     cpu: {
       ownNs: ns(USER_TIME_OFFSET) + ns(SYSTEM_TIME_OFFSET),

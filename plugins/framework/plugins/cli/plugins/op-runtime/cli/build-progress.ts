@@ -1,4 +1,5 @@
 import { defineFileSink } from "@plugins/infra/plugins/file-sink/core";
+import { readProcRusage } from "@plugins/packages/plugins/proc-rusage/core";
 import { buildProgressLogDir } from "@plugins/framework/plugins/cli/data-dirs";
 
 // Host-global, exactly like the check-progress log next door
@@ -17,7 +18,7 @@ const progressSink = defineFileSink({
   id: "build-progress",
   description:
     "Per-build progress log (`./equin build`): one JSONL line per build " +
-    "open, top-level span enter/leave (with RSS), 30s heartbeat, and completion — " +
+    "open, top-level span enter/leave (with physical footprint), 30s heartbeat, and completion — " +
     "so a wedged build names the phase it is stuck in AND whether its heap was " +
     "climbing. Host-global across worktrees.",
   path: PROGRESS_FILE,
@@ -36,45 +37,66 @@ interface RecordBase {
 }
 
 /**
- * `enter`/`leave` carry `rssMb` (this process's resident set) because the wedge
+ * `enter`/`leave` carry `footprintMb` (this process's physical footprint) because the wedge
  * this log exists to catch is a **GC/heap blowup**, not a stalled child — so the
- * culprit phase is named not only by `enter` without `leave` but by the RSS jump
+ * culprit phase is named not only by `enter` without `leave` but by the footprint jump
  * across it. That heap dimension is the one deliberate addition over copying the
  * check-progress grammar verbatim.
  */
 export type BuildProgressRecord =
-  | (RecordBase & { phase: "run"; buildId: string | null; rssMb: number })
+  | (RecordBase & {
+      phase: "run";
+      buildId: string | null;
+      footprintMb: number | null;
+    })
   | (RecordBase & {
       phase: "enter";
       token: number;
       id: string;
       step: string;
       label: string;
-      rssMb: number;
+      footprintMb: number | null;
     })
   | (RecordBase & {
       phase: "leave";
       token: number;
       id: string;
       durationMs: number;
-      rssMb: number;
+      footprintMb: number | null;
     })
   | (RecordBase & {
       phase: "pending";
       elapsedMs: number;
       inFlight: string[];
-      rssMb: number;
-      peakRssMb: number;
+      footprintMb: number | null;
+      peakFootprintMb: number | null;
     })
   | (RecordBase & {
       phase: "done";
       success: boolean;
       elapsedMs: number;
-      peakRssMb: number;
+      peakFootprintMb: number | null;
     });
 
-function rssMb(): number {
-  return Math.round(process.memoryUsage().rss / (1024 * 1024));
+/**
+ * This process's physical footprint now, MB — what the kernel charges against
+ * memory pressure (`packages/proc-rusage`). It was `process.memoryUsage().rss`,
+ * which also counts freed allocator pages and shared library text. Off macOS
+ * (no footprint), null — unknown, never a 0 that would read as a measurement.
+ */
+function footprintMb(): number | null {
+  const read = readProcRusage(process.pid);
+  if (read.kind === "refused")
+    throw new Error("proc_pid_rusage refused this process's own pid");
+  if (read.kind === "unsupported") return null;
+  return Math.round(read.memory.physFootprintBytes / (1024 * 1024));
+}
+
+/** The larger of two footprints, where `null` (not measured) is no claim. */
+function maxMb(a: number | null, b: number | null): number | null {
+  if (a === null) return b;
+  if (b === null) return a;
+  return Math.max(a, b);
 }
 
 interface OpenRun {
@@ -85,7 +107,7 @@ interface OpenRun {
   /** Spans currently open, keyed by the profiler's per-span token. */
   inFlight: Map<number, { label: string; startedAt: number }>;
   heartbeat: ReturnType<typeof setInterval>;
-  peakRssMb: number;
+  peakFootprintMb: number | null;
 }
 
 // Module-global single open build. buildProfilerStart is a module-level function
@@ -138,26 +160,31 @@ export function openBuildProgress(
     inFlight: new Map(),
     // Armed just below; real handle assigned before we return.
     heartbeat: undefined as unknown as ReturnType<typeof setInterval>,
-    peakRssMb: rssMb(),
+    peakFootprintMb: footprintMb(),
   };
   current = run;
 
-  writeRecord({ ...stamp(), phase: "run", buildId, rssMb: run.peakRssMb });
+  writeRecord({
+    ...stamp(),
+    phase: "run",
+    buildId,
+    footprintMb: run.peakFootprintMb,
+  });
 
   // `.unref()` so this timer can NEVER be the reason the process stays alive — the
   // heartbeat observes a hang, it must not cause one. (The wedge under study keeps
   // the loop alive via GC, not via this timer, but the discipline is non-negotiable.)
   run.heartbeat = setInterval(() => {
-    const now = rssMb();
-    if (now > run.peakRssMb) run.peakRssMb = now;
+    const now = footprintMb();
+    run.peakFootprintMb = maxMb(run.peakFootprintMb, now);
     if (run.inFlight.size === 0) return;
     writeRecord({
       ...stamp(),
       phase: "pending",
       elapsedMs: Math.round(performance.now() - run.startedAt),
       inFlight: [...run.inFlight.values()].map((s) => s.label),
-      rssMb: now,
-      peakRssMb: run.peakRssMb,
+      footprintMb: now,
+      peakFootprintMb: run.peakFootprintMb,
     });
   }, HEARTBEAT_MS);
   run.heartbeat.unref();
@@ -177,8 +204,8 @@ export function buildProgressSpanStart(
 ): void {
   const run = current;
   if (!run) return;
-  const now = rssMb();
-  if (now > run.peakRssMb) run.peakRssMb = now;
+  const now = footprintMb();
+  run.peakFootprintMb = maxMb(run.peakFootprintMb, now);
   run.inFlight.set(token, { label, startedAt: performance.now() });
   writeRecord({
     ...stamp(),
@@ -187,7 +214,7 @@ export function buildProgressSpanStart(
     id,
     step,
     label,
-    rssMb: now,
+    footprintMb: now,
   });
 }
 
@@ -210,7 +237,7 @@ export function buildProgressSpanEnd(
     token,
     id,
     durationMs,
-    rssMb: rssMb(),
+    footprintMb: footprintMb(),
   });
 }
 
@@ -231,7 +258,7 @@ export function finishBuildProgress(success: boolean): void {
     phase: "done",
     success,
     elapsedMs: Math.round(performance.now() - run.startedAt),
-    peakRssMb: run.peakRssMb,
+    peakFootprintMb: run.peakFootprintMb,
   });
   current = null;
 }
@@ -241,8 +268,8 @@ export interface OutstandingSpan {
   label: string;
   startedAt: string;
   elapsedMs: number;
-  /** RSS (MB) at the moment this span was entered. */
-  rssMb: number;
+  /** Physical footprint (MB) at the moment this span was entered. */
+  footprintMb: number | null;
 }
 
 /** A reconstructed build run, newest activity last. */
@@ -261,8 +288,8 @@ export interface BuildRunProgress {
    * child keeps heartbeating).
    */
   lastAdvanceAt: string;
-  /** Peak RSS seen across this run's markers/heartbeats. */
-  peakRssMb: number;
+  /** Peak physical footprint seen across this run's markers/heartbeats. */
+  peakFootprintMb: number | null;
   /** `enter − leave`: empty for a healthy run, the culprit set for a hung one. */
   outstanding: OutstandingSpan[];
   /** Present iff the run reached its `done` record (any graceful exit, not a wedge). */
@@ -270,7 +297,7 @@ export interface BuildRunProgress {
     at: string;
     success: boolean;
     elapsedMs: number;
-    peakRssMb: number;
+    peakFootprintMb: number | null;
   } | null;
 }
 
@@ -301,7 +328,7 @@ export function foldBuildProgress(
   const runs = new Map<string, BuildRunProgress>();
   const openByRun = new Map<
     string,
-    Map<number, { label: string; at: string; rssMb: number }>
+    Map<number, { label: string; at: string; footprintMb: number | null }>
   >();
 
   for (const record of records) {
@@ -314,7 +341,7 @@ export function foldBuildProgress(
         startedAt: record.t,
         lastActivityAt: record.t,
         lastAdvanceAt: record.t,
-        peakRssMb: record.rssMb,
+        peakFootprintMb: record.footprintMb,
         outstanding: [],
         done: null,
       });
@@ -330,23 +357,23 @@ export function foldBuildProgress(
       run.lastAdvanceAt = record.t;
     }
     if (record.phase === "enter") {
-      if (record.rssMb > run.peakRssMb) run.peakRssMb = record.rssMb;
+      run.peakFootprintMb = maxMb(run.peakFootprintMb, record.footprintMb);
       open.set(record.token, {
         label: record.label,
         at: record.t,
-        rssMb: record.rssMb,
+        footprintMb: record.footprintMb,
       });
     } else if (record.phase === "leave") {
       open.delete(record.token);
     } else if (record.phase === "pending") {
-      if (record.peakRssMb > run.peakRssMb) run.peakRssMb = record.peakRssMb;
+      run.peakFootprintMb = maxMb(run.peakFootprintMb, record.peakFootprintMb);
     } else if (record.phase === "done") {
-      if (record.peakRssMb > run.peakRssMb) run.peakRssMb = record.peakRssMb;
+      run.peakFootprintMb = maxMb(run.peakFootprintMb, record.peakFootprintMb);
       run.done = {
         at: record.t,
         success: record.success,
         elapsedMs: record.elapsedMs,
-        peakRssMb: record.peakRssMb,
+        peakFootprintMb: record.peakFootprintMb,
       };
     }
   }
@@ -358,7 +385,7 @@ export function foldBuildProgress(
       label: s.label,
       startedAt: s.at,
       elapsedMs: last - Date.parse(s.at),
-      rssMb: s.rssMb,
+      footprintMb: s.footprintMb,
     }));
   }
 

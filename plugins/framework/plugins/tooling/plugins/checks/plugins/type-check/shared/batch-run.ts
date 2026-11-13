@@ -21,6 +21,7 @@
 // parts were stale under the key (`LintHook.adopt`).
 
 import ts from "typescript";
+import type { PeakFootprint } from "@plugins/packages/plugins/proc-rusage/core";
 import type { RawLintMessage } from "../core";
 import { isRepoPath, needsContract } from "./keys";
 import {
@@ -106,7 +107,7 @@ export interface BatchJob {
 /** What a batch process cost, measured by its parent. */
 export interface BatchProcessCost {
   cpuMicros: number | undefined;
-  maxRssBytes: number | undefined;
+  peakFootprint: PeakFootprint;
   wallMs: number;
 }
 
@@ -168,10 +169,15 @@ export interface BatchStats {
   components: number;
   largest: number;
   depth: number;
-  /** Batch processes, summed / the largest one / an upper bound on the ones alive at once. */
+  /**
+   * Batch processes' CPU summed; the largest peak physical footprint and an
+   * upper bound on the peaks alive at once, over the batches that reported
+   * one; how many did not.
+   */
   cpuSeconds: number;
-  maxRssBytes: number;
-  concurrentRssBytes: number;
+  peakFootprintBytes: number;
+  concurrentFootprintBytes: number;
+  unmeasured: number;
   /** Planning: the import edges and the components, wall ms. */
   planMs: number;
 }
@@ -330,12 +336,13 @@ async function checkInBatches(
       largest: plan.largest,
       depth: plan.depth,
       cpuSeconds: 0,
-      maxRssBytes: 0,
-      concurrentRssBytes: 0,
+      peakFootprintBytes: 0,
+      concurrentFootprintBytes: 0,
+      unmeasured: 0,
       planMs,
     };
     /** Each batch process's lifetime and peak: the concurrent bound, at the end. */
-    const spans: { from: number; to: number; rss: number }[] = [];
+    const spans: { from: number; to: number; footprint: number }[] = [];
 
     const merge = (batch: readonly string[], o: BatchOutcome): void => {
       if (o.kind === "contract-missing") throw new ContractMissing(o.path);
@@ -374,7 +381,12 @@ async function checkInBatches(
       }
       if (o.cost !== undefined) {
         bs.cpuSeconds += (o.cost.cpuMicros ?? 0) / 1e6;
-        bs.maxRssBytes = Math.max(bs.maxRssBytes, o.cost.maxRssBytes ?? 0);
+        if (o.cost.peakFootprint.kind === "measured") {
+          bs.peakFootprintBytes = Math.max(
+            bs.peakFootprintBytes,
+            o.cost.peakFootprint.bytes,
+          );
+        } else bs.unmeasured++;
       }
       plan.done(batch);
     };
@@ -416,11 +428,11 @@ async function checkInBatches(
       const promise = runner
         .run(job)
         .then((o) => {
-          if (o.kind === "done" && o.cost?.maxRssBytes !== undefined) {
+          if (o.kind === "done" && o.cost?.peakFootprint.kind === "measured") {
             spans.push({
               from,
               to: performance.now(),
-              rss: o.cost.maxRssBytes,
+              footprint: o.cost.peakFootprint.bytes,
             });
           }
           merge(batch, o);
@@ -457,8 +469,8 @@ async function checkInBatches(
     for (const s of spans) {
       let sum = 0;
       for (const o of spans)
-        if (o.from <= s.from && s.from < o.to) sum += o.rss;
-      bs.concurrentRssBytes = Math.max(bs.concurrentRssBytes, sum);
+        if (o.from <= s.from && s.from < o.to) sum += o.footprint;
+      bs.concurrentFootprintBytes = Math.max(bs.concurrentFootprintBytes, sum);
     }
     for (const p of check) {
       if (!checked.has(p)) {

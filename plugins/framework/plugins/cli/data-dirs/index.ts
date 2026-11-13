@@ -16,7 +16,7 @@ export const buildProgressLogDir = defineDataDir({
   name: "build-progress",
   owner: "framework/cli",
   description:
-    "Per-build progress log (`build-progress.jsonl` + rotations): one JSONL line per build open, span enter/leave with RSS, 30s heartbeat and completion, host-global across worktrees",
+    "Per-build progress log (`build-progress.jsonl` + rotations): one JSONL line per build open, span enter/leave with physical footprint, 30s heartbeat and completion, host-global across worktrees",
   // Observability output. Losing it costs the record of a past build — the
   // build itself is re-runnable and its receipt lives elsewhere.
   reclaim: { kind: "safe" },

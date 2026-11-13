@@ -1,5 +1,6 @@
 import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import type { SpawnTier } from "@plugins/packages/plugins/spawn-priority/core";
+import type { PeakFootprint } from "@plugins/packages/plugins/proc-rusage/core";
 
 // The shared shapes of the wedge-proof spawn primitive.
 //
@@ -96,6 +97,15 @@ export interface SpawnBaseOptions {
    * it. Never for a checkout's own index; see `child-env.ts`.
    */
   privateIndexWrites?: true;
+  /**
+   * `"report"`: measure the child's peak physical footprint — what the run
+   * needed, as the kernel charges it — into `resourceUsage.peakFootprint`. The
+   * child reports it itself as it exits, through a `BUN_OPTIONS` preload, so
+   * the child MUST be a bun script run (`bun <file>`): `bun install`, `bun x`
+   * and `bun build` read the preload as their script name and fail. Omitted,
+   * the peak is `unmeasured: not-requested`.
+   */
+  peakFootprint?: "report";
 }
 
 /**
@@ -154,12 +164,14 @@ export type SpawnOptions = SpawnBaseOptions &
   );
 
 /**
- * What the kernel reports about a child once it has been reaped (`getrusage`).
+ * What a child cost, once it has been reaped.
  *
- * Both fields are the TRUE totals of the run — no sampling loop, no estimate —
- * and both are `undefined` when the runtime reported no rusage at all: an
- * unavailable measurement, not a failure. A caller omits the number it cannot
- * print and changes nothing else.
+ * Every field is the TRUE total of the run — no sampling loop, no estimate. The
+ * CPU times are getrusage's, `undefined` when the runtime reported no rusage at
+ * all: an unavailable measurement, not a failure. The peak memory is the
+ * child's own report of its physical footprint, or why there is none — there is
+ * no peak RSS here, because getrusage's counts pages the child already freed
+ * (a type-check worker: 1.8 GB maxRSS for a 1.15 GB footprint).
  *
  * CPU time is here beside peak RSS because wall clock on a shared host is not a
  * cost: the same type-check worker measured 2.5x apart at load 5.8 and load 14.
@@ -168,8 +180,11 @@ export type SpawnOptions = SpawnBaseOptions &
  * check fleet needs. See research/2026-09-08-global-type-check-per-target-program-skip.md.
  */
 export interface ChildResourceUsage {
-  /** Peak resident set of the child process, in bytes. */
-  maxRssBytes: number | undefined;
+  /**
+   * The child's peak physical footprint (`SpawnBaseOptions.peakFootprint`).
+   * The only peak-memory spelling a spawn has.
+   */
+  peakFootprint: PeakFootprint;
   /** User + system CPU consumed by the child, in MICROseconds. */
   cpuTimeMicros: number | undefined;
   /**
@@ -232,6 +247,15 @@ export interface SpawnPassthroughOptions {
    * stdin, and then only on the rare install path.
    */
   stdin?: "ignore" | "inherit";
+  /**
+   * `"report"`: measure the child's peak physical footprint — what the run
+   * needed, as the kernel charges it — into `resourceUsage.peakFootprint`. The
+   * child reports it itself as it exits, through a `BUN_OPTIONS` preload, so
+   * the child MUST be a bun script run (`bun <file>`): `bun install`, `bun x`
+   * and `bun build` read the preload as their script name and fail. Omitted,
+   * the peak is `unmeasured: not-requested`.
+   */
+  peakFootprint?: "report";
   /** Called synchronously after spawn with `{ pid, kill }` (signal forwarding). */
   onSpawn?: (child: SpawnedChild) => void;
   /**

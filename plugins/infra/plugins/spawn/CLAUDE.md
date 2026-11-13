@@ -124,11 +124,19 @@ spawns that are meant to outlive a call, each sanctioned by an exemption.
   legitimate result** — the caller branches. `stdout`/`stderr` are lazy cached
   utf8 decodes of `stdoutBytes`/`stderrBytes` (the raw bytes exist for
   byte-offset parsers like `git cat-file --batch` framing).
-  `resourceUsage` is the child's `getrusage`, read after exit: `maxRssBytes`
-  (true peak RSS), `cpuTimeMicros` (user+system CPU, microseconds) and
-  `cpuSystemMicros` (its system share — what memory pressure inflates: page
-  faults and compressor work are charged there). All are `undefined` when the
-  runtime reported no rusage. CPU time is the load-independent
+  `resourceUsage` is what the child cost: `cpuTimeMicros` (user+system CPU,
+  microseconds) and `cpuSystemMicros` (its system share — what memory pressure
+  inflates: page faults and compressor work are charged there), from
+  `getrusage` after exit (`undefined` when the runtime reported none), and
+  `peakFootprint` — the child's peak PHYSICAL FOOTPRINT (`packages/proc-rusage`'s
+  `PeakFootprint`: measured, or unmeasured with why). There is no peak RSS:
+  getrusage's `maxRSS` keeps counting pages the child already freed (a
+  type-check worker: 1.8 GB for a 1.15 GB footprint), and the
+  `process-memory/no-rss-memory` lint rejects reading it. The footprint is only
+  measured on request — `peakFootprint: "report"` — because the child reports
+  it itself at exit through a `BUN_OPTIONS` preload: the child must be a bun
+  SCRIPT run (`bun <file>`; `bun install` / `bun x` / `bun build` read the
+  preload as their script and fail). CPU time is the load-independent
   cost of a run — wall clock on a shared host varies 2.5x for the identical work.
   `timedOut` is `true` iff OUR deadline fired and we killed the child (never
   inferred from `signalCode` — anyone can SIGTERM a child).
@@ -285,6 +293,9 @@ presence only — **no re-exports**; import from `core/`.
     - `packages/flock.holdParentLifeline`
     - `packages/owned-fd.openOwnedFd`
     - `packages/owned-fd.OwnedFd`
+    - `packages/proc-rusage.PeakFootprint`
+    - `packages/proc-rusage.peakFootprintReportEnv`
+    - `packages/proc-rusage.readPeakFootprintReport`
     - `packages/sleep-clock.AwakeClockReading`
     - `packages/sleep-clock.readAwakeClock`
     - `packages/spawn-priority.spawnAtTier`
@@ -333,7 +344,7 @@ presence only — **no re-exports**; import from `core/`.
 - Exemptions:
   - Exempts itself from:
     - `spawn-safety/no-raw-bun-spawn` — `.` (sanctioned)
-    - `boundaries/no-platform-api` — `core/internal/git-roots.ts`, `core/internal/spawn-captured.ts`, `core/internal/spawn-passthrough.ts` (debt)
+    - `boundaries/no-platform-api` — `core/internal/git-roots.ts`, `core/internal/resource-usage.ts`, `core/internal/spawn-captured.ts`, `core/internal/spawn-passthrough.ts` (debt)
     - `user-path/no-unproven-claim` — `core/internal/git-roots.ts` (sanctioned)
   - Exempted by:
     - `framework/cli/migrations` (0 debt)

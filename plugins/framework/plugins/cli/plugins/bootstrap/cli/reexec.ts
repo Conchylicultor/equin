@@ -68,6 +68,7 @@ import {
   unsetEnv,
 } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { spawnPassthrough } from "@plugins/infra/plugins/spawn/core";
+import { handOffPeakFootprintReport } from "@plugins/packages/plugins/proc-rusage/core";
 
 /**
  * This invocation's re-exec budget: how many re-execs led to this process.
@@ -198,6 +199,9 @@ export async function reexecAfterInstall(
   const { exitCode } = await spawn([entry, ...args], {
     ...env,
     ...envEntries({ DEPS_REEXEC: String(prior + 1) }),
+    // The re-exec'd process does the work, so it owes the peak-footprint
+    // report this one was asked for (`infra/spawn`'s `peakFootprint`).
+    ...handOffPeakFootprintReport(),
   });
   return { reexeced: true, exitCode };
 }

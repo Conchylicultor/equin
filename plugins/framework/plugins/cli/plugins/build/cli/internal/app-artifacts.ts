@@ -103,6 +103,10 @@ import {
 } from "./dist-publish";
 import { stampExperimentalMarker } from "./experimental-marker";
 import {
+  peakFootprintText,
+  type PeakFootprint,
+} from "@plugins/packages/plugins/proc-rusage/core";
+import {
   MAIN_COMPOSITION_ID,
   type Namespace,
 } from "@plugins/infra/plugins/namespace/core";
@@ -243,7 +247,7 @@ export interface ArtifactHooks {
     phase: string,
     label: string,
     options?: { wait?: boolean },
-  ) => (info?: { maxRssBytes?: number }) => void;
+  ) => (info?: { peak?: PeakFootprint }) => void;
   /** `pushBuildSpan` — records an already-finished span retroactively. */
   pushSpan: (
     id: string,
@@ -253,8 +257,8 @@ export interface ArtifactHooks {
     wallStartMs?: number,
   ) => void;
   log: (line: string) => void;
-  /** Routes a phase's peak RSS into the caller's `maxRSS` line collector. */
-  recordFootprint: (label: string, maxRssBytes: number | undefined) => void;
+  /** Routes a phase's peak footprint into the caller's footprint line collector. */
+  recordFootprint: (label: string, peak: PeakFootprint) => void;
 }
 
 /** One step of the heavy section, run on the shared host CPU grant. */
@@ -268,24 +272,19 @@ export interface StepResult {
   success: boolean;
 }
 
-// One greppable line per measured build phase, e.g. "vite build: maxRSS 3.5 GB"
-// (console + build.log). The calibration input for host-admission's per-holder
-// footprint constants (@plugins/infra/plugins/host/plugins/host-admission/core PER_UNIT_BYTES)
-// and any future per-build memory budget.
+// One greppable line per measured build phase, e.g. "checks: peak footprint
+// 3.5 GB" (console + build.log) — the phase's peak PHYSICAL FOOTPRINT, what the
+// kernel charges against memory pressure, or why it has none. The calibration
+// input for host-admission's per-holder footprint constants
+// (@plugins/infra/plugins/host/plugins/host-admission/core PER_UNIT_BYTES) and
+// any future per-build memory budget.
 //
-// Units are DECIMAL (1 GB = 1e9 B, 1 MB = 1e6 B) — deliberately, because
-// PER_UNIT_BYTES is decimal (3.6e9). Dividing by 2**30 and labelling the result
-// "GB" (as this did) understates the true byte count by ~7 %, which silently
-// corrupts anyone calibrating the constant by reading these lines.
-export function maxRssLine(
-  label: string,
-  maxRssBytes: number | undefined,
-): string | null {
-  if (maxRssBytes == null) return null;
-  const gb = maxRssBytes / 1e9;
-  const amount =
-    gb >= 1 ? `${gb.toFixed(1)} GB` : `${Math.round(maxRssBytes / 1e6)} MB`;
-  return `${label}: maxRSS ${amount}`;
+// Until 2026-11-13 these lines read "maxRSS": getrusage's peak resident size,
+// which also counts pages a process already freed (~0.65 GB too high on a
+// 1.15 GB type-check worker), and for the orchestrator's own line, KiB printed
+// as bytes. Units are DECIMAL (`formatBytes`), because PER_UNIT_BYTES is.
+export function footprintLine(label: string, peak: PeakFootprint): string {
+  return `${label}: ${peakFootprintText(peak)}`;
 }
 
 /**
@@ -491,12 +490,10 @@ export async function prepareCompositionSources(opts: {
     }[deps.kind],
   );
   // No footprint to report: the install usually does not RUN here (fresh-skip),
-  // and when it does it is `ensureDeps`' own passthrough child, whose rusage it
-  // does not surface. Both sinks take `number | undefined`, so pass `undefined`
-  // — `maxRssLine` then prints nothing — rather than attributing a peak this
-  // phase did not measure. The seam stays wired for the day it can measure again.
-  endSpan({ maxRssBytes: undefined });
-  hooks.recordFootprint("bun install", undefined);
+  // and when it does it is `bun install`, which cannot load the preload a
+  // peak-footprint report needs (`spawn`'s `peakFootprint`). No line, rather
+  // than one attributing a peak this phase did not measure.
+  endSpan();
 
   // 1b–2a. Registry-level repo-tree codegen: barrel-import auto-stubs (from
   // .d.ts files) then the plugin registry. Must happen before central is
@@ -652,8 +649,11 @@ export async function generateAppSources(opts: {
     customMigration: opts.migration.custom,
     migrationAnswers: opts.migration.answers,
   });
-  endSpan({ maxRssBytes: migration.maxRssBytes });
-  hooks.recordFootprint("drizzle generate", migration.maxRssBytes);
+  if (migration.peakFootprint === null) endSpan();
+  else {
+    endSpan({ peak: migration.peakFootprint });
+    hooks.recordFootprint("drizzle generate", migration.peakFootprint);
+  }
   // Its phases as child spans: whether drizzle-kit ran (`drizzleKit`,
   // `schemaLoadProbe`) or its verdict answered (`migrationVerdict` alone).
   for (const p of migration.phases)
@@ -787,7 +787,7 @@ export async function fastValidationJobs(opts: {
         span.wallStartMs,
       );
     }
-    hooks.recordFootprint("checks (always-run)", result.maxRssBytes);
+    hooks.recordFootprint("checks (always-run)", result.peakFootprint);
     return {
       // `id: "checks"` is load-bearing — build's failure funnel keys on it.
       id: "checks",
@@ -836,7 +836,7 @@ export async function fastValidationJobs(opts: {
       lintFiles: [],
       grant,
     });
-    end({ maxRssBytes: run.maxRssBytes });
+    end({ peak: run.peakFootprint });
     for (const line of run.result.tscErrors.split("\n")) {
       if (line) lines.push({ text: line, stream: "stdout" });
     }
@@ -845,8 +845,10 @@ export async function fastValidationJobs(opts: {
     const success = run.result.tscErrors === "";
     for (const text of run.result.tscLines)
       lines.push({ text, stream: "stdout" });
-    const rss = maxRssLine(`tsc ${program.name}`, run.maxRssBytes);
-    if (rss) lines.push({ text: rss, stream: "stdout" });
+    lines.push({
+      text: footprintLine(`tsc ${program.name}`, run.peakFootprint),
+      stream: "stdout",
+    });
     // Where the step's wall goes (the parallel stage's longest job on a
     // no-change build): the host slot queue, the worker process spawn to
     // reap, and the CPU it burned — the rest is this process reading the tree.

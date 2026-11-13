@@ -59,6 +59,7 @@ import type { FsCallSummary } from "@plugins/packages/plugins/timed-fs/core";
 // change smuggled into a refactor.
 
 import type { Grant } from "@plugins/infra/plugins/host/plugins/host-admission/core";
+import type { PeakFootprint } from "@plugins/packages/plugins/proc-rusage/core";
 import type { CheckScope } from "@plugins/framework/plugins/tooling/core";
 import { readCheckProgress } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import {
@@ -125,8 +126,8 @@ export interface CheckSubprocessResult {
     /** The check's own file calls; null on a record that predates counting. */
     fs: FsCallSummary | null;
   }>;
-  /** Peak RSS of the child (bytes), when the runtime reported rusage. */
-  maxRssBytes: number | undefined;
+  /** The child's peak physical footprint, as it reported it at exit. */
+  peakFootprint: PeakFootprint;
 }
 
 /**
@@ -173,12 +174,17 @@ export async function runCheckSubprocess(
   // build's `Promise.all` exactly as a throwing `runChecks` did, and build's
   // exit backstop renders it as "aborted before completing".
   let exitCode: number;
-  let maxRssBytes: number | undefined;
+  let peakFootprint: PeakFootprint;
   const lines: CheckSubprocessResult["lines"] = [];
   if (output === "inherit") {
-    const result = await spawnPassthrough(argv, { cwd: root, env });
+    const result = await spawnPassthrough(argv, {
+      cwd: root,
+      env,
+      // A bun script (`bun …/bin/index.ts check`): it reports its own peak.
+      peakFootprint: "report",
+    });
     exitCode = result.exitCode;
-    maxRssBytes = result.resourceUsage.maxRssBytes;
+    peakFootprint = result.resourceUsage.peakFootprint;
   } else {
     // `mergeStderr: true`, not two buffers. Two separate captures would split
     // the `• <id> … FAIL` line (stdout) from the message that explains it
@@ -188,6 +194,7 @@ export async function runCheckSubprocess(
       cwd: root,
       env,
       mergeStderr: true,
+      peakFootprint: "report",
       // This child IS `./equin check` — the full type-check/lint/codegen
       // sweep. Its duration is the duration of the work, and nothing above it
       // owns a shorter deadline: the human at the terminal is the deadline, and
@@ -198,7 +205,7 @@ export async function runCheckSubprocess(
         "this child is the whole `./equin check` run; its duration is the work's, and the CLI invocation above it owns no shorter deadline",
     });
     exitCode = result.exitCode;
-    maxRssBytes = result.resourceUsage.maxRssBytes;
+    peakFootprint = result.resourceUsage.peakFootprint;
     for (const line of result.stdout.split("\n")) {
       if (line) lines.push({ text: line, stream: "stdout" });
     }
@@ -210,7 +217,7 @@ export async function runCheckSubprocess(
     lines,
     spans:
       runId === undefined ? [] : readSpans(runId, perfAtSpawn, epochAtSpawn),
-    maxRssBytes,
+    peakFootprint,
   };
 }
 

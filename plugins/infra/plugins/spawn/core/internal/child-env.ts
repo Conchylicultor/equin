@@ -29,6 +29,7 @@ export function childEnv(
   env: Record<string, string | undefined> | undefined,
   lifeline: ParentLifeline,
   privateIndexWrites?: true,
+  extra: Record<string, string> = {},
 ): Record<string, string | undefined> {
   const base = env ?? process.env;
   if (privateIndexWrites && base.GIT_INDEX_FILE === undefined) {
@@ -42,5 +43,6 @@ export function childEnv(
   return {
     ...(privateIndexWrites ? rest : { ...base, ...GIT_READS_TAKE_NO_LOCK }),
     ...lifeline.env,
+    ...extra,
   };
 }

@@ -52,10 +52,15 @@ import { recordOuterReadSet } from "./outer-read-set";
 import { openPrepareThread } from "./prepare-thread";
 import type { ProgramOutcome } from "./prepare";
 import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import {
+  formatBytes,
+  peakFootprintText,
+  type PeakFootprint,
+} from "@plugins/packages/plugins/proc-rusage/core";
 
 /** The worker's output plus what the parent measured about its process. */
 interface WorkerResult extends TypeCheckWorkerResult {
-  maxRssBytes: number | undefined;
+  peakFootprint: PeakFootprint;
   cpuTimeMicros: number | undefined;
   cpuSystemMicros: number | undefined;
   wallMs: number;
@@ -97,7 +102,7 @@ async function runWorker(
   });
   return {
     ...run.result,
-    maxRssBytes: run.maxRssBytes,
+    peakFootprint: run.peakFootprint,
     cpuTimeMicros: run.cpuTimeMicros,
     cpuSystemMicros: run.cpuSystemMicros,
     wallMs: run.wallMs,
@@ -146,7 +151,15 @@ function workerPriorityLine(
 }
 
 // One greppable line for the worker, e.g.
-// "type-check worker repo: cpu 186.6s (sys 12.0s), wall 95.2s, maxRSS 7.2 GB, slot wait 3.1s".
+// "type-check worker repo: cpu 186.6s (sys 12.0s), wall 95.2s, peak footprint 1.2 GB, slot wait 3.1s".
+//
+// The memory is the worker's peak PHYSICAL FOOTPRINT (its own report at exit),
+// what the kernel charges against memory pressure. Until 2026-11-13 this line
+// printed getrusage's maxRSS instead, which also counts allocator pages the
+// worker had already freed and shared library text — ~0.65 GB too high on a
+// 1.15 GB worker (research/2026-11-12-global-type-check-worker-memory-split.md).
+// Older transcripts' "maxRSS" numbers, and the constants calibrated on them,
+// read high by that much.
 // THIS process is the class host-admission's `PER_UNIT_BYTES` (3.6e9) claims to
 // size — "one type-check-class worker's resident set" — and it had never
 // actually been observed; the budget's RAM quantum was calibrated on vite
@@ -180,7 +193,7 @@ function workerPriorityLine(
 // more work from one that paid for a thrashing host.
 function workerCostLine(
   label: string,
-  maxRssBytes: number | undefined,
+  peakFootprint: PeakFootprint | undefined,
   cpuTimeMicros: number | undefined,
   cpuSystemMicros: number | undefined,
   wallMs: number | undefined,
@@ -192,12 +205,7 @@ function workerCostLine(
       `cpu ${(cpuTimeMicros / 1e6).toFixed(1)}s${cpuSystemMicros != null ? ` (sys ${(cpuSystemMicros / 1e6).toFixed(1)}s)` : ""}`,
     );
   if (wallMs != null) parts.push(`wall ${seconds(wallMs)}s`);
-  if (maxRssBytes != null) {
-    const gb = maxRssBytes / 1e9;
-    parts.push(
-      `maxRSS ${gb >= 1 ? `${gb.toFixed(1)} GB` : `${Math.round(maxRssBytes / 1e6)} MB`}`,
-    );
-  }
+  if (peakFootprint !== undefined) parts.push(peakFootprintText(peakFootprint));
   if (parts.length === 0) return null;
   // How long the run queued for its host-wide slot(s) — the cap's
   // cost, on the same line as what the worker then cost, so a wait that
@@ -320,7 +328,7 @@ const check: Check = {
         }
       }
 
-      // Peak RSS and CPU of the worker, when one ran. Emitted through the
+      // Peak footprint and CPU of the worker, when one ran. Emitted through the
       // runner's `ctx.log` observation seam, so the measurement is DURABLE
       // (check-<id>.log + the build's checks section) — a terminal-only write
       // would evaporate, and calibrating both host-admission's RAM quantum and
@@ -330,7 +338,7 @@ const check: Check = {
       // verdict below.
       const costLine = workerCostLine(
         `type-check worker ${program.name}`,
-        result?.maxRssBytes,
+        result?.peakFootprint,
         result?.cpuTimeMicros,
         result?.cpuSystemMicros,
         result?.wallMs,
@@ -355,7 +363,7 @@ const check: Check = {
             // child counts in its parent's rusage) and their memory.
             (b === null
               ? ""
-              : `; ${b.count} batch processes: cpu ${b.cpuSeconds.toFixed(1)}s (type check and lint), maxRSS ${(b.maxRssBytes / 1e9).toFixed(1)} GB each, ≤ ${(b.concurrentRssBytes / 1e9).toFixed(1)} GB at once`),
+              : `; ${b.count} batch processes: cpu ${b.cpuSeconds.toFixed(1)}s (type check and lint), peak footprint ${formatBytes(b.peakFootprintBytes)} each, ≤ ${formatBytes(b.concurrentFootprintBytes)} at once${b.unmeasured > 0 ? ` (${b.unmeasured} unmeasured)` : ""}`),
           "stderr",
         );
         ctx.log?.(

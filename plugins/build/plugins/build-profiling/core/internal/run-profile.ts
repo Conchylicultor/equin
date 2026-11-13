@@ -18,8 +18,8 @@ const BuildProfileSpanSchema = z.object({
   label: z.string(),
   startMs: z.number(),
   durationMs: z.number(),
-  /** Peak RSS (bytes) of the subprocess the span wrapped, when measured. */
-  maxRssBytes: z.number().optional(),
+  /** Peak physical footprint (bytes) of the process the span wrapped, when measured. */
+  peakFootprintBytes: z.number().optional(),
 });
 
 const BuildRunProfileSchema = z.object({

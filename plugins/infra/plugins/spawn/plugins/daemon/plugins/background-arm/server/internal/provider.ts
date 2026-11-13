@@ -4,6 +4,7 @@ import type {
 } from "@plugins/infra/plugins/background/plugins/catalog/core";
 import { defineBackgroundKind } from "@plugins/infra/plugins/background/plugins/catalog/server";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
+import { peerProcUsage } from "@plugins/framework/plugins/server-core/core";
 import {
   backoffPolicy,
   daemonRecentRuns,
@@ -26,18 +27,18 @@ const STATE_WORDS: Record<DaemonState, string> = {
   exited: "exited",
 };
 
-/** Memory and CPU per pid, from one `ps` over every pid listed. */
+/** CPU and uptime per pid, from one `ps` over every pid listed. */
 type Usage =
   | {
       kind: "read";
-      byPid: Map<number, { rssMb: number; cpu: number; uptime: string }>;
+      byPid: Map<number, { cpu: number; uptime: string }>;
     }
   | { kind: "unavailable"; why: string };
 
 async function readUsage(pids: number[]): Promise<Usage> {
   if (pids.length === 0) return { kind: "read", byPid: new Map() };
   const res = await spawnCaptured(
-    ["ps", "-o", "pid=,rss=,%cpu=,etime=", "-p", pids.join(",")],
+    ["ps", "-o", "pid=,%cpu=,etime=", "-p", pids.join(",")],
     { timeoutMs: PS_TIMEOUT_MS },
   );
   if (res.timedOut) {
@@ -48,21 +49,11 @@ async function readUsage(pids: number[]): Promise<Usage> {
   }
   // ps exits 1 when ANY listed pid is gone; the rows of the others are still
   // printed, so the output is the answer either way.
-  const byPid = new Map<
-    number,
-    { rssMb: number; cpu: number; uptime: string }
-  >();
+  const byPid = new Map<number, { cpu: number; uptime: string }>();
   for (const line of res.stdout.split("\n")) {
-    const [pid, rss, cpu, etime] = line.trim().split(/\s+/);
-    if (
-      pid === undefined ||
-      rss === undefined ||
-      cpu === undefined ||
-      etime === undefined
-    )
-      continue;
+    const [pid, cpu, etime] = line.trim().split(/\s+/);
+    if (pid === undefined || cpu === undefined || etime === undefined) continue;
     byPid.set(Number(pid), {
-      rssMb: Number(rss) / 1024,
       cpu: Number(cpu),
       uptime: etime,
     });
@@ -86,18 +77,36 @@ function usagePid(i: DaemonInstanceInfo): number | null {
   return i.arm === "worker" ? process.pid : i.pid;
 }
 
+/**
+ * A process's physical footprint, the memory the kernel charges it — not
+ * `ps`'s resident size, which also counts freed allocator pages and shared
+ * library text (~6x a Bun process's footprint).
+ */
+function memoryWords(pid: number): string {
+  const read = peerProcUsage(pid);
+  switch (read.kind) {
+    case "read":
+      return `${Math.round(read.memory.physFootprintBytes / 1048576)} MB`;
+    case "unreadable":
+      return "memory unknown (not readable)";
+    case "unsupported":
+      return "memory unknown (no footprint on this host)";
+  }
+}
+
 function usageWords(i: DaemonInstanceInfo, usage: Usage): string | null {
   const pid = usagePid(i);
   if (pid === null || i.state !== "running") return null;
   if (usage.kind === "unavailable") return `memory unknown (${usage.why})`;
   const u = usage.byPid.get(pid);
   if (u === undefined) return "memory unknown (not in ps)";
+  const mem = memoryWords(pid);
   if (i.arm === "worker") {
-    return `${Math.round(u.rssMb)} MB · ${u.cpu.toFixed(1)}% CPU (the whole backend)`;
+    return `${mem} · ${u.cpu.toFixed(1)}% CPU (the whole backend)`;
   }
   // ps's own uptime ([[dd-]hh:]mm:ss): the process's real age, which for an
   // attached or detached process predates this backend seeing it.
-  return `up ${u.uptime} · ${Math.round(u.rssMb)} MB · ${u.cpu.toFixed(1)}% CPU`;
+  return `up ${u.uptime} · ${mem} · ${u.cpu.toFixed(1)}% CPU`;
 }
 
 function instanceWords(i: DaemonInstanceInfo, usage: Usage): string {

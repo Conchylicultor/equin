@@ -12,7 +12,7 @@ import {
   withBuildAdmission,
   fastValidationJobs,
   generateAppSources,
-  maxRssLine,
+  footprintLine,
   prepareCompositionSources,
   webDistPath,
   type ArtifactHooks,
@@ -28,6 +28,10 @@ import {
   type AdoptVerdict,
 } from "@plugins/build/plugins/restart-skip/core";
 import { namedBackendCommand } from "./internal/named-backend";
+import {
+  readProcRusage,
+  type PeakFootprint,
+} from "@plugins/packages/plugins/proc-rusage/core";
 import { checkoutBun } from "@plugins/packages/plugins/process-name/machine";
 import {
   hermeticFlagConflicts,
@@ -1185,31 +1189,34 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
       // The non-heavy phases — `bun install`, drizzle generate, and the build
       // orchestrator process itself — spend no unit of the grant (they run
       // in the orchestrator's own share of it) and produce no StepResult; their
-      // maxRSS lines are printed like every other line, so
-      // `grep maxRSS <transcript>` finds every measured phase of a build in one
+      // peak footprint lines are printed like every other line, so
+      // `grep "peak footprint" <transcript>` finds every measured phase of a build in one
       // place, which is exactly what the calibration pass needs. See
       // research/2026-07-12-global-host-admission-memory-dimension.md (gap 0).
-      const recordFootprint = (
-        label: string,
-        maxRssBytes: number | undefined,
-      ): void => {
-        const line = maxRssLine(label, maxRssBytes);
-        if (line === null) return;
-        console.log(line);
+      const recordFootprint = (label: string, peak: PeakFootprint): void => {
+        console.log(footprintLine(label, peak));
       };
       // Flushed on every terminal path, before the verdict. Samples the
-      // orchestrator's own footprint here: `process.resourceUsage().maxRSS` is a
-      // TRUE peak (getrusage RUSAGE_SELF; Bun reports it in bytes), not an
-      // instantaneous sample, so it covers every in-process phase — registry /
-      // manifest / composition codegen, config propagation — no matter when it
-      // is read. The check pass is no longer among them: it is a child process
+      // orchestrator's own peak physical footprint here: the kernel's lifetime
+      // maximum (`ri_lifetime_max_phys_footprint`), not an instantaneous
+      // sample, so it covers every in-process phase — registry / manifest /
+      // composition codegen, config propagation — no matter when it is read.
+      // (It was `process.resourceUsage().maxRSS`, a peak RESIDENT size that
+      // counts freed pages — and in KiB, printed as bytes.) The check pass is no longer among them: it is a child process
       // now, and reports its own peak through this same seam. Idempotent.
       let footprintFlushed = false;
       const flushFootprint = (): void => {
         if (footprintFlushed) return;
         footprintFlushed = true;
-        const orchestratorRss = process.resourceUsage().maxRSS;
-        recordFootprint("build orchestrator", orchestratorRss);
+        const self = readProcRusage(process.pid);
+        // Our own process refused is a broken binding, never an answer.
+        if (self.kind === "refused")
+          throw new Error("proc_pid_rusage refused this process's own pid");
+        const orchestratorPeak: PeakFootprint =
+          self.kind === "read"
+            ? { kind: "measured", bytes: self.memory.peakPhysFootprintBytes }
+            : { kind: "unmeasured", why: "unsupported" };
+        recordFootprint("build orchestrator", orchestratorPeak);
         // The build profile carries spans only, and the profiling UI's phase set
         // is a closed list (debug/profiling/build/web/phases.ts), so the
         // orchestrator's peak rides a zero-width marker span in an existing
@@ -1218,14 +1225,12 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
           "buildOrchestrator",
           "build:deploy",
           "build orchestrator",
-        )({
-          maxRssBytes: orchestratorRss,
-        });
+        )({ peak: orchestratorPeak });
       };
 
       // build's observability seam into the shared app-artifact pipeline. These
       // ARE the profiler / console / footprint sinks used everywhere else in
-      // this action, so every span id, phase, label and `maxRSS` line the
+      // this action, so every span id, phase, label and footprint line the
       // pipeline emits is build's own, by construction rather than by copying.
       const hooks: ArtifactHooks = {
         span: buildProfilerStart,
@@ -1511,7 +1516,7 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
         // fleet used to run inside this process, where it was invisible in the
         // orchestrator's own `getrusage(RUSAGE_SELF)` peak. Now it is a child
         // with a footprint of its own, measured like every other heavy child.
-        recordFootprint("checks", result.maxRssBytes);
+        recordFootprint("checks", result.peakFootprint);
         return {
           // `id: "checks"` is load-bearing — the build's failure funnel keys on
           // it to add the check-log pointer.

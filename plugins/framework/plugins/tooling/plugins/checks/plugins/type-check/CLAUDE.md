@@ -32,7 +32,7 @@ A run's two programs are views of it (files to check as source, the rest as stor
 
 - **Nothing that reads file bytes or walks the tree goes in `index.ts`** — it goes in `prepare.ts`. That work is 70–130 s of sync CPU; on the runner's thread it froze every concurrent check (a pg connect elsewhere timed out).
 - Prepare is a thread, not a process, because the record phase reuses prepare's lint entries, versions and directive flags in memory.
-- The worker is a separate process so TS work gets its own core and its peak RSS is measurable.
+- The worker is a separate process so TS work gets its own core and its peak physical footprint is measurable (it reports it at exit).
 - **New files go FLAT in `shared/`** — both derived engine hashes cover its top level only, so a subdirectory throws (`engineSources`), and so does a producer import that leaves `shared/` unless `OUTSIDE_PRODUCER_IMPORTS` (`shared/tsc-engine.ts`) declares why it cannot change a stored result:
   - **producer** (`producerSources()`): the `shared/` import closure of what produces a stored result (`name-check`, `name-store`, emit options). In `tscEngineFp` (moving it re-checks every file) and in lint's typed engine.
   - **walk** (`engineSources()`: every top-level non-test `.ts` but the worker plumbing and the oracle): keys only the walk base store's namespace (`openWalkBaseStore`). Editing the walk, the bases or `name-run` re-checks nothing — at worst a full walk (~1–3 CPU-s).
@@ -310,7 +310,7 @@ Sizes: `research/2026-10-15-global-push-typecheck-lane-priority-and-cap.md`.
 | Line prefix | Says |
 | --- | --- |
 | `type-check: lint N/M files (… whole, … partial; syntactic, typed; groups, engine) — stale: …` | what the worker actually linted and the stalest parts: "did that edit cost its group, its importers, or the repo" |
-| `type-check worker repo: cpu …s (sys …), wall …, maxRSS …, slot wait …` | cost; what `TYPE_CHECK_WORKER_UNITS` is re-derived from. High `sys` = host memory pressure; `wall` = slot hold time |
+| `type-check worker repo: cpu …s (sys …), wall …, peak footprint …, slot wait …` | cost; what `TYPE_CHECK_WORKER_UNITS` is re-derived from. High `sys` = host memory pressure; `wall` = slot hold time |
 | `type-check worker repo phases: type check …, lint … (cpu)` | where the worker CPU went |
 | `type-check worker repo programs: 1: … 2: …; N checked of M` | what each program held |
 | `type-check: walk: incremental (…) / full (<why>)`, `program 1: …`, `program 2: …`, `walk base … written` | the walk's cost and reads, each program's build/check/record ms, what was left for the next run |

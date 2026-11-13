@@ -60,6 +60,7 @@ import {
   type Supersession,
 } from "@plugins/database/plugins/migrations/plugins/phases/core";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
+import type { PeakFootprint } from "@plugins/packages/plugins/proc-rusage/core";
 import {
   promptKey,
   runDrizzleKitWithPrompts,
@@ -257,8 +258,11 @@ const DRIZZLE_CUSTOM_PLACEHOLDER =
 
 /** What a completed `generateMigration` reports back to its caller. */
 export interface GenerateMigrationResult {
-  /** Peak RSS (bytes) of the drizzle-kit child, when the runtime reported rusage. */
-  maxRssBytes: number | undefined;
+  /**
+   * Peak physical footprint of the drizzle-kit child (always unmeasured: see
+   * `DrizzlePromptResult`); `null` when drizzle-kit did not run.
+   */
+  peakFootprint: PeakFootprint | null;
   /**
    * Whether drizzle-kit ran: `hit` — its "no schema change" verdict was already
    * recorded for these exact inputs (`drizzle-verdict.ts`), so neither the
@@ -305,7 +309,7 @@ export interface MigrationPhase {
  *   "create"), discards generated files, prints structured JSON, exits 2.
  * - With migrationAnswers: uses the provided semantic answers and proceeds.
  *
- * Returns the drizzle-kit child's peak RSS so the build can profile this phase
+ * Returns the drizzle-kit child's peak footprint (unmeasured: `bun x`) so the build can profile this phase
  * (it runs outside every host grant — see the memory-dimension plan doc).
  */
 export async function generateMigration(opts: {
@@ -467,7 +471,7 @@ export async function generateMigration(opts: {
       `  no schema input changed (${verdict.schemaFiles} schema files): drizzle-kit not run`,
     );
     await noSchemaChange({ migrationName, migrationsDir, resetPrior, bodies });
-    return { maxRssBytes: undefined, verdict: "hit", phases };
+    return { peakFootprint: null, verdict: "hit", phases };
   }
 
   // drizzle-kit loads every schema-glob file with a synchronous require() and,
@@ -502,7 +506,7 @@ export async function generateMigration(opts: {
     );
     verdict?.record();
     await noSchemaChange({ migrationName, migrationsDir, resetPrior, bodies });
-    return { maxRssBytes: undefined, verdict: "schema-equal", phases };
+    return { peakFootprint: null, verdict: "schema-equal", phases };
   }
 
   const before = new Set(readdirSync(migrationsDir));
@@ -683,7 +687,7 @@ export async function generateMigration(opts: {
     verdict?.record();
     await noSchemaChange({ migrationName, migrationsDir, resetPrior, bodies });
     return {
-      maxRssBytes: result.maxRssBytes,
+      peakFootprint: result.peakFootprint,
       verdict: verdict === null ? "bypassed" : "miss",
       phases,
     };
@@ -810,7 +814,7 @@ export async function generateMigration(opts: {
   regenerateJournal(migrationsDir);
 
   return {
-    maxRssBytes: result.maxRssBytes,
+    peakFootprint: result.peakFootprint,
     verdict: verdict === null ? "bypassed" : "miss",
     phases,
   };

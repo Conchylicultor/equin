@@ -11,7 +11,7 @@
  * during a pending stream pull); with fd redirection it must always complete.
  */
 
-import { test, expect } from "bun:test";
+import { describe, test, expect } from "bun:test";
 import { getEventListeners } from "node:events";
 import {
   existsSync,
@@ -173,11 +173,46 @@ test("a git status run through the primitive never rewrites the index", async ()
   }
 });
 
-test("resourceUsage reports the child's peak RSS", async () => {
+test("a peak footprint nobody asked for is unmeasured, never RSS", async () => {
   const result = await spawnCaptured(["echo", "rss"], BOUND);
   expect(result.exitCode).toBe(0);
-  // Bun reports rusage on darwin/linux; a positive byte count for any real child.
-  expect(result.resourceUsage.maxRssBytes).toBeGreaterThan(0);
+  expect(result.resourceUsage.peakFootprint).toEqual({
+    kind: "unmeasured",
+    why: "not-requested",
+  });
+});
+
+describe.if(process.platform === "darwin")("peakFootprint: report", () => {
+  test("a bun script reports its lifetime peak, freed pages excluded", async () => {
+    // 400 MB touched, then dropped: the peak keeps it, the exit-time
+    // footprint would not — so a number near 400 MB proves it is the peak.
+    const script =
+      "let b = new Uint8Array(400e6); b.fill(1); b = null; Bun.gc(true);" +
+      "if ((process.env.BUN_OPTIONS ?? '').includes('peak-footprint') ||" +
+      " Object.keys(process.env).some((k) => k.includes('PEAK_FOOTPRINT')))" +
+      " throw new Error('leaked to grandchildren');";
+    const result = await spawnCaptured([process.execPath, "-e", script], {
+      ...BOUND,
+      peakFootprint: "report",
+    });
+    expect(result.stderr).toBe("");
+    expect(result.exitCode).toBe(0);
+    const peak = result.resourceUsage.peakFootprint;
+    if (peak.kind !== "measured") throw new Error(JSON.stringify(peak));
+    expect(peak.bytes).toBeGreaterThan(400e6);
+    expect(peak.bytes).toBeLessThan(1e9);
+  });
+
+  test("a child that writes no report is unmeasured", async () => {
+    const result = await spawnCaptured(["echo", "x"], {
+      ...BOUND,
+      peakFootprint: "report",
+    });
+    expect(result.resourceUsage.peakFootprint).toEqual({
+      kind: "unmeasured",
+      why: "no-report",
+    });
+  });
 });
 
 test("resourceUsage reports the child's CPU time in microseconds", async () => {

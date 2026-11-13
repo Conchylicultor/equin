@@ -27,12 +27,12 @@
     - `setEnvDefault`
     - `unsetEnv`
 - Cross-plugin:
-  - Imported by: 50 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 51 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `framework` ×18
     - `infra` ×13
     - `debug` ×5
+    - `packages` ×5
     - `database` ×4
-    - `packages` ×4
     - `auth`
     - `build`
     - `conversations/agent-launch`

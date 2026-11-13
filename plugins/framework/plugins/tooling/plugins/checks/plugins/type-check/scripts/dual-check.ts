@@ -32,6 +32,10 @@ import { writeFileSync } from "fs";
 import { join, resolve } from "path";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import {
+  formatBytes,
+  peakFootprintText,
+} from "@plugins/packages/plugins/proc-rusage/core";
+import {
   NO_TYPED_PARTS,
   TYPE_CHECK_BATCH_FILES,
   type TypeCheckWorkerOutput,
@@ -84,6 +88,7 @@ const run = await launchTypeCheckWorker(job, (argv, io) =>
   spawnCaptured(argv, {
     ...io,
     cwd: root,
+    peakFootprint: "report",
     unbounded:
       "a measurement run by hand: two program builds and a full check, minutes long, owned by the person who started it",
   }),
@@ -103,10 +108,10 @@ const { check, full } = result.phaseCpuSeconds;
 const usage = run.resourceUsage;
 console.log(
   `dual-check: cpu two-program check ${check.toFixed(1)}s, full check ${full.toFixed(1)}s; ${result.stats.checked} files checked; ` +
-    `process cpu ${((usage.cpuTimeMicros ?? NaN) / 1e6).toFixed(1)}s, maxRSS ${((usage.maxRssBytes ?? NaN) / 1e9).toFixed(2)} GB` +
+    `process cpu ${((usage.cpuTimeMicros ?? NaN) / 1e6).toFixed(1)}s, ${peakFootprintText(usage.peakFootprint)}` +
     (result.batchProcesses === null
       ? ""
-      : `; ${result.batchProcesses.count} batch processes cpu ${result.batchProcesses.cpuSeconds.toFixed(1)}s, maxRSS ${(result.batchProcesses.maxRssBytes / 1e9).toFixed(2)} GB each, ≤ ${(result.batchProcesses.concurrentRssBytes / 1e9).toFixed(2)} GB at once`),
+      : `; ${result.batchProcesses.count} batch processes cpu ${result.batchProcesses.cpuSeconds.toFixed(1)}s, peak footprint ${formatBytes(result.batchProcesses.peakFootprintBytes)} each, ≤ ${formatBytes(result.batchProcesses.concurrentFootprintBytes)} at once, ${result.batchProcesses.unmeasured} unmeasured`),
 );
 for (const d of result.divergences) {
   console.log(

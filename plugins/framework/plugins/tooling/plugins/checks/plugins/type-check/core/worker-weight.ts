@@ -30,6 +30,13 @@ import { PER_UNIT_BYTES } from "@plugins/infra/plugins/host/plugins/host-admissi
  * (3.6, 7.2] GB is 2 units, so the weight is unchanged; the mean is to be
  * re-read from transcripts once paced runs dominate them
  * (research/2026-11-08-global-type-check-bun-heap-pacing.md).
+ *
+ * MEASURED AS maxRSS (getrusage), which over-states the physical footprint
+ * the kernel charges — 1.8 vs 1.15 GB on one worker, ~0.65 GB of freed
+ * allocator pages and library text
+ * (research/2026-11-12-global-type-check-worker-memory-split.md). The cost
+ * line prints the peak footprint since 2026-11-13; this mean is to be
+ * re-read from those lines, not adjusted by a guessed offset.
  */
 export const TYPE_CHECK_WORKER_PEAK_BYTES = 7.2e9;
 

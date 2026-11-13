@@ -28,6 +28,7 @@ import {
 import { fileReportFromProcess } from "@plugins/reports/plugins/outbox/plugins/file/core";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { pacedHeapEnv } from "@plugins/packages/plugins/heap-pacing/core";
+import type { PeakFootprint } from "@plugins/packages/plugins/proc-rusage/core";
 import {
   launchTypeCheckWorker,
   type TypeCheckWorkerRequest,
@@ -60,16 +61,17 @@ function outboxSink(root: string): MissReportSink {
 export interface TypeCheckWorkerRun {
   result: TypeCheckWorkerResult;
   /**
-   * Peak RSS of the worker PROCESS (bytes), measured by the parent after exit.
-   * `undefined` when the runtime reported no rusage — an unavailable
-   * measurement, not a failure: the footprint line is simply omitted.
+   * Peak physical footprint of the worker PROCESS — what it needed, as the
+   * kernel charges it — reported by the worker as it exits. Not getrusage's
+   * maxRSS, which counts pages the worker already freed (~0.65 GB too high on
+   * a 1.15 GB worker: research/2026-11-12-global-type-check-worker-memory-split.md).
    */
-  maxRssBytes: number | undefined;
+  peakFootprint: PeakFootprint;
   /**
    * User + system CPU the worker burned, in microseconds. THE cost unit for
    * this fleet: wall clock on this host varies 2.5x with load for the identical
    * program build, so a before/after comparison taken in wall clock measures
-   * whoever else was running. Same availability caveat as `maxRssBytes`.
+   * whoever else was running. `undefined` when the runtime reported no rusage.
    */
   cpuTimeMicros: number | undefined;
   /**
@@ -299,6 +301,8 @@ async function spawnWorker(opts: {
     // A multi-GB heap, paced against what one process may hold rather than
     // the machine's whole RAM; its batch processes inherit the same pacing.
     env: pacedHeapEnv(process.env),
+      // A bun script: it reports its own peak footprint at exit.
+      peakFootprint: "report",
     // A type-check worker builds a whole TypeScript program; cold, that is
     // minutes of unavoidable CPU, and on a saturated box it is longer still by
     // an amount nothing here can predict. There is no shorter deadline to
@@ -319,7 +323,7 @@ async function spawnWorker(opts: {
   // sampling loop) — getrusage reports the TRUE peak of the run.
   return {
     output: JSON.parse(spawned.stdout) as TypeCheckWorkerOutput,
-    maxRssBytes: spawned.resourceUsage.maxRssBytes,
+    peakFootprint: spawned.resourceUsage.peakFootprint,
     cpuTimeMicros: spawned.resourceUsage.cpuTimeMicros,
     cpuSystemMicros: spawned.resourceUsage.cpuSystemMicros,
     wallMs,

@@ -12,7 +12,7 @@ import { childEnv } from "./child-env";
 import { trackLiveChild } from "./live-children";
 import { killProcessGroup } from "./group-signal";
 import { endProcessGroup } from "./process-group";
-import { readResourceUsage } from "./resource-usage";
+import { peakFootprintRequest, readResourceUsage } from "./resource-usage";
 import { signalName } from "./signal-code";
 import type {
   SpawnGroupResult,
@@ -91,10 +91,11 @@ async function runToCompletion(
   try {
     const lifeline = await holdParentLifeline(dir);
     try {
+      const peak = peakFootprintRequest(dir, opts.peakFootprint, opts.env);
       const proc = spawnAtTier(opts.tier ?? "inherit", argv, (tiered) =>
         Bun.spawn(tiered, {
           cwd: opts.cwd,
-          env: childEnv(opts.env, lifeline),
+          env: childEnv(opts.env, lifeline, undefined, peak.env),
           stdin: opts.stdin ?? "ignore",
           stdout: output === "inherit" ? output : output.fd,
           stderr: output === "inherit" ? output : output.fd,
@@ -124,7 +125,7 @@ async function runToCompletion(
       const result: SpawnPassthroughResult = {
         exitCode,
         signalCode: signalName(proc.signalCode),
-        resourceUsage: readResourceUsage(proc),
+        resourceUsage: await readResourceUsage(proc, peak),
       };
       if (!ownGroup) return result;
       try {

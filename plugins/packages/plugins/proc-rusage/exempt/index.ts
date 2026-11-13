@@ -3,7 +3,7 @@ import type { Exemptions } from "@plugins/framework/plugins/tooling/plugins/exem
 export default [
   {
     rule: "boundaries/no-platform-api",
-    paths: ["core/internal/proc-rusage.ts"],
+    paths: ["core/internal/proc-rusage.ts", "core/internal/peak-footprint.ts"],
     kind: "debt",
     task: "task-1792338443-riwqev",
     reason: "not yet split into server/ + machine/",

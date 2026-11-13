@@ -24992,7 +24992,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Resources: `heap.stats` (invalidate, snapshot, capped: HEAP_TYPES_MAX)
         - Routes: `POST /api/debug/heap-snapshot`
       - Exemptions:
-        - Exempts itself from: `boundaries/no-platform-api` — `server/internal/handle-capture-snapshot.ts`, `server/internal/heap-stats.ts` (debt)
+        - Exempts itself from:
+          - `boundaries/no-platform-api` — `server/internal/handle-capture-snapshot.ts`, `server/internal/heap-stats.ts` (debt)
+          - `process-memory/no-rss-memory` — `server/internal/heap-stats.ts` (sanctioned)
     - **`icons`** — Debug → Icons: every icon name the app draws (the build's icon manifest), plus every inline family's app-only glyphs (family.icon names no Material name maps), as each icon family draws it — Material plus every contributed family — side by side (Matrix) or as one tile grid per family (By set), each cell a real <Icon> under an IconFamilyPreview, badged when it falls back (L / M: the initial of the family drawing it) and dashed when a strict family has a gap. The left list holds every app set (an app whose theme draws in an app-drawn family: own/total over the manifest, +N own glyphs, how far from strict) and every library; a click shows or hides its column. Search, size, Fallbacks only; the body is an icon motion region.
       - Web:
         - Slots:
@@ -31235,8 +31237,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `withNotifyBatch`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
-        - Imported by: 118 plugins — full list in [`plugins/framework/plugins/server-core/REFERENCE.md`](../plugins/framework/plugins/server-core/REFERENCE.md)
-          - `infra` ×28
+        - Imported by: 119 plugins — full list in [`plugins/framework/plugins/server-core/REFERENCE.md`](../plugins/framework/plugins/server-core/REFERENCE.md)
+          - `infra` ×29
           - `debug` ×14
           - `conversations` ×13
           - `tasks` ×11
@@ -31554,7 +31556,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/request-origin/agent-write-ledger` (1 debt)
               - `infra/runtime-profiler` (1 debt)
               - `infra/safe-fetch` (1 debt)
-              - `infra/spawn` (3 debt)
+              - `infra/spawn` (4 debt)
               - `infra/spawn/daemon` (1 debt)
               - `infra/ssh` (2 debt)
               - `infra/stack-sampler` (1 debt)
@@ -31564,7 +31566,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `packages/flock` (3 debt)
               - `packages/host-semaphore` (1 debt)
               - `packages/owned-fd` (0 debt)
-              - `packages/proc-rusage` (1 debt)
+              - `packages/proc-rusage` (2 debt)
               - `packages/signal-origin` (2 debt)
               - `packages/single-flight` (1 debt)
               - `packages/sleep-clock` (1 debt)
@@ -36285,12 +36287,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exempts itself from: `boundaries/no-platform-api` — `server/internal/sweep.ts` (debt)
         - **`user-path`** — Which host paths a synchronous fs call may touch: AppPath (a path the app owns — its data dirs, its checkout; the only kind a sync fs call in runtime code may take) and UserPath (one the user or their config chose), with the type-aware lint that refuses a sync fs call on any path not proven app-owned — so a macOS Files & Folders prompt can never freeze a backend's JS thread, whether or not anyone marked the user's path.
           - Cross-plugin:
-            - Imported by: 108 plugins — full list in [`plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md`](../plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md)
+            - Imported by: 109 plugins — full list in [`plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md`](../plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md)
               - `infra` ×38
               - `framework` ×20
               - `apps` ×8
               - `debug` ×7
-              - `packages` ×6
+              - `packages` ×7
               - `plugin-meta` ×5
               - `config_v2` ×3
               - `database` ×3
@@ -36956,12 +36958,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `setEnvDefault`
               - `unsetEnv`
           - Cross-plugin:
-            - Imported by: 50 plugins — full list in [`plugins/infra/plugins/launcher/plugins/env-names/REFERENCE.md`](../plugins/infra/plugins/launcher/plugins/env-names/REFERENCE.md)
+            - Imported by: 51 plugins — full list in [`plugins/infra/plugins/launcher/plugins/env-names/REFERENCE.md`](../plugins/infra/plugins/launcher/plugins/env-names/REFERENCE.md)
               - `framework` ×18
               - `infra` ×13
               - `debug` ×5
+              - `packages` ×5
               - `database` ×4
-              - `packages` ×4
               - `auth`
               - `build`
               - `conversations/agent-launch`
@@ -38307,6 +38309,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `packages/flock.holdParentLifeline`
           - `packages/owned-fd.openOwnedFd`
           - `packages/owned-fd.OwnedFd`
+          - `packages/proc-rusage.PeakFootprint`
+          - `packages/proc-rusage.peakFootprintReportEnv`
+          - `packages/proc-rusage.readPeakFootprintReport`
           - `packages/sleep-clock.AwakeClockReading`
           - `packages/sleep-clock.readAwakeClock`
           - `packages/spawn-priority.spawnAtTier`
@@ -38355,7 +38360,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Exemptions:
         - Exempts itself from:
           - `spawn-safety/no-raw-bun-spawn` — `.` (sanctioned)
-          - `boundaries/no-platform-api` — `core/internal/git-roots.ts`, `core/internal/spawn-captured.ts`, `core/internal/spawn-passthrough.ts` (debt)
+          - `boundaries/no-platform-api` — `core/internal/git-roots.ts`, `core/internal/resource-usage.ts`, `core/internal/spawn-captured.ts`, `core/internal/spawn-passthrough.ts` (debt)
           - `user-path/no-unproven-claim` — `core/internal/git-roots.ts` (sanctioned)
         - Exempted by:
           - `framework/cli/migrations` (0 debt)
@@ -41377,14 +41382,37 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `judgePidFile`
           - `psProbeArgv`
           - `readPsProbe`
-    - **`proc-rusage`** — One process's kernel usage record on macOS (proc_pid_rusage, read through bun:ffi): its physical footprint and resident size, and its CPU time — its own and that of every child it reaped, in ns. Says so where it cannot tell.
-      - Cross-plugin:
-        - Imported by: `debug/sentinel/machine-usage`
-      - Exemptions:
-        - Exempts itself from: `boundaries/no-platform-api` — `core/internal/proc-rusage.ts` (debt)
+    - **`proc-rusage`** — One process's kernel usage record on macOS (proc_pid_rusage, read through bun:ffi): its physical footprint, lifetime peak footprint and resident size, and its CPU time — its own and that of every child it reaped, in ns. A child's peak footprint, reported by the child at exit (PeakFootprint). Says so where it cannot tell.
       - Core:
-        - Exports (types): `ProcRusage`
-        - Exports (values): `readProcRusage`
+        - Uses:
+          - `infra/host-fs/user-path.AppPath`
+          - `infra/host-fs/user-path.asAppPath`
+          - `infra/launcher/env-names.envEntries`
+          - `infra/launcher/env-names.readEnv`
+          - `infra/launcher/env-names.readEnvPath`
+          - `infra/launcher/env-names.unsetEnv`
+          - `packages/timed-fs.readFile`
+        - Exports (types):
+          - `PeakFootprint`
+          - `ProcRusage`
+        - Exports (values):
+          - `armPeakFootprintReportSync`
+          - `formatBytes`
+          - `handOffPeakFootprintReport`
+          - `peakFootprintReportEnv`
+          - `peakFootprintText`
+          - `readPeakFootprintReport`
+          - `readProcRusage`
+      - Cross-plugin:
+        - Imported by:
+          - `debug/sentinel/machine-usage`
+          - `framework/cli/bootstrap`
+          - `framework/cli/build`
+          - `framework/cli/op-runtime`
+          - `infra/spawn`
+      - Exemptions:
+        - Exempts itself from: `boundaries/no-platform-api` — `core/internal/proc-rusage.ts`, `core/internal/peak-footprint.ts` (debt)
+        - Exempted by: `debug/heap-snapshot` (0 debt)
     - **`process-name`** — What a process is called in Activity Monitor and ps: processName(kind, id?) spells `equin · <kind> · <id>`, and cloneNamedBinary gives an executable that name as an APFS clone (same signed bytes, no disk cost, a file of its own — never a hardlink, whose many names let macOS's exec scan be handed a deleted one and SIGKILL the process — left alone while current, else swapped in with one rename) — macOS names a process by the file it executed, and process.title changes nothing. Also the checkout's Bun record (refreshCheckoutBun / checkoutBun) the build names backends from, and the checkout's `verbs` link to the machine-wide process-names data dir, where `./equin` runs each CLI verb as `equin · <verb>` — one clone per verb machine-wide, since macOS scans every fresh executable name on its first exec.
       - Core:
         - Uses: `framework/product-name.PRODUCT_NAME`
@@ -41799,7 +41827,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TIMED_FS_CALLS`
           - `withFsCallTally`
       - Cross-plugin:
-        - Imported by: 171 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
+        - Imported by: 172 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
           - `infra` ×49
           - `framework` ×25
           - `apps` ×15
@@ -41807,8 +41835,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `backup` ×12
           - `conversations` ×12
           - `build` ×6
+          - `packages` ×6
           - `database` ×5
-          - `packages` ×5
           - `plugin-meta` ×5
           - `reports` ×4
           - `config_v2` ×3

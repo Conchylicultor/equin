@@ -11,7 +11,7 @@ const at = (s: number): string =>
 // forever.
 test("a pending heartbeat moves lastActivityAt but not lastAdvanceAt", () => {
   const records: BuildProgressRecord[] = [
-    { ...base, t: at(0), phase: "run", buildId: "b1", rssMb: 1 },
+    { ...base, t: at(0), phase: "run", buildId: "b1", footprintMb: 1 },
     {
       ...base,
       t: at(1),
@@ -20,7 +20,7 @@ test("a pending heartbeat moves lastActivityAt but not lastAdvanceAt", () => {
       id: "checks",
       step: "s",
       label: "checks",
-      rssMb: 1,
+      footprintMb: 1,
     },
     {
       ...base,
@@ -28,8 +28,8 @@ test("a pending heartbeat moves lastActivityAt but not lastAdvanceAt", () => {
       phase: "pending",
       elapsedMs: 31_000,
       inFlight: ["checks"],
-      rssMb: 1,
-      peakRssMb: 1,
+      footprintMb: 1,
+      peakFootprintMb: 1,
     },
   ];
   const [run] = foldBuildProgress(records);
@@ -40,7 +40,7 @@ test("a pending heartbeat moves lastActivityAt but not lastAdvanceAt", () => {
 
 test("a leave advances the run", () => {
   const records: BuildProgressRecord[] = [
-    { ...base, t: at(0), phase: "run", buildId: "b1", rssMb: 1 },
+    { ...base, t: at(0), phase: "run", buildId: "b1", footprintMb: 1 },
     {
       ...base,
       t: at(1),
@@ -49,7 +49,7 @@ test("a leave advances the run", () => {
       id: "a",
       step: "s",
       label: "a",
-      rssMb: 1,
+      footprintMb: 1,
     },
     {
       ...base,
@@ -58,7 +58,7 @@ test("a leave advances the run", () => {
       token: 1,
       id: "a",
       durationMs: 8_000,
-      rssMb: 1,
+      footprintMb: 1,
     },
   ];
   expect(foldBuildProgress(records)[0]!.lastAdvanceAt).toBe(at(9));

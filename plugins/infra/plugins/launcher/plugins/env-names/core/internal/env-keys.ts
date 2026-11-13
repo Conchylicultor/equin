@@ -81,6 +81,10 @@ export const RUNTIME_FORWARDED_PREFIXES = {
  * would act as whichever process happened to start the gateway.
  */
 export const RUNTIME_WITHHELD_ENV = {
+  PEAK_FOOTPRINT_REPORT:
+    "the file one bun script child writes its peak physical footprint to at exit; set by infra/spawn for that one child (peakFootprint: \"report\") and removed by the child's preload (packages/proc-rusage bin/peak-footprint-preload.ts), never a backend's",
+  PEAK_FOOTPRINT_BASE_BUN_OPTIONS:
+    "the BUN_OPTIONS a peak-footprint child had before infra/spawn added its preload, restored by the preload for the child's own children (packages/proc-rusage)",
   CONVERSATION_ID:
     "agent-session identity; the agent launcher delivers it into that agent's own process environment, where the commit hook and op-log read it",
   DATA_ROOT_LAYOUT:

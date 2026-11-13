@@ -16,7 +16,7 @@ import { armAwakeDeadline } from "./awake-deadline";
 import { childEnv } from "./child-env";
 import { killProcessGroup } from "./group-signal";
 import { trackLiveChild } from "./live-children";
-import { readResourceUsage } from "./resource-usage";
+import { peakFootprintRequest, readResourceUsage } from "./resource-usage";
 import { signalName } from "./signal-code";
 import type { ChildResourceUsage, SpawnOptions, SpawnResult } from "./types";
 
@@ -152,7 +152,9 @@ export async function spawnCaptured(
     // child that called `exitWithParent()` dies with it. The tmpdir is private
     // to this spawn, so the lock cannot be contended.
     const lifeline = await holdParentLifeline(dir);
+    let peak: ReturnType<typeof peakFootprintRequest>;
     try {
+      peak = peakFootprintRequest(dir, opts.peakFootprint, opts.env);
       if (opts.stdin !== undefined) {
         const inPath = joinAppPath(dir, "in");
         await writeFile(inPath, opts.stdin);
@@ -172,7 +174,7 @@ export async function spawnCaptured(
       const child = spawnAtTier(opts.tier ?? "inherit", argv, (tiered) =>
         Bun.spawn(tiered, {
           cwd: opts.cwd,
-          env: childEnv(opts.env, lifeline, opts.privateIndexWrites),
+          env: childEnv(opts.env, lifeline, opts.privateIndexWrites, peak.env),
           stdin: inFd?.fd ?? "ignore",
           stdout: out.fd,
           stderr: err.fd,
@@ -300,7 +302,7 @@ export async function spawnCaptured(
       timedOut,
       stdoutBytes,
       stderrBytes,
-      readResourceUsage(proc),
+      await readResourceUsage(proc, peak),
     );
   } finally {
     await rm(dir, { recursive: true, force: true });

@@ -7,6 +7,7 @@ import {
 } from "@plugins/infra/plugins/paths/server";
 import { buildProgressSpanStart, buildProgressSpanEnd } from "./build-progress";
 import type { Namespace } from "@plugins/infra/plugins/namespace/core";
+import type { PeakFootprint } from "@plugins/packages/plugins/proc-rusage/core";
 import {
   fsCallsSince,
   snapshotFsCalls,
@@ -20,11 +21,11 @@ export interface BuildSpan {
   startMs: number;
   durationMs: number;
   /**
-   * Peak RSS (bytes) of the subprocess this span wrapped, when one was
-   * measured (exec/execBuffered in build.ts). Calibration input for the build
-   * pool's memory budget (host-semaphore.ts).
+   * Peak physical footprint (bytes) of the process this span wrapped, when it
+   * was measured (`packages/proc-rusage`'s `PeakFootprint`). Calibration input
+   * for host admission's memory budget.
    */
-  maxRssBytes?: number;
+  peakFootprintBytes?: number;
   /**
    * The file calls (`packages/timed-fs`) made while the span ran, by kind,
    * with the path prefixes most went to. A span this process ran counts every
@@ -75,7 +76,7 @@ interface SpanCollector {
     phase: string,
     label: string,
     options?: SpanOptions,
-  ): (extra?: { maxRssBytes?: number }) => void;
+  ): (extra?: { peak?: PeakFootprint }) => void;
   push(
     id: string,
     phase: string,
@@ -140,8 +141,8 @@ function makeSpanCollector(): SpanCollector {
           label,
           startMs: Math.round(start - t0),
           durationMs,
-          ...(extra?.maxRssBytes != null
-            ? { maxRssBytes: extra.maxRssBytes }
+          ...(extra?.peak?.kind === "measured"
+            ? { peakFootprintBytes: extra.peak.bytes }
             : {}),
           fs,
           ...(options?.wait === true ? { wait: true as const } : {}),
@@ -177,7 +178,7 @@ export function buildProfilerStart(
   phase: string,
   label: string,
   options?: SpanOptions,
-): (extra?: { maxRssBytes?: number }) => void {
+): (extra?: { peak?: PeakFootprint }) => void {
   return defaultCollector.start(id, phase, label, options);
 }
 

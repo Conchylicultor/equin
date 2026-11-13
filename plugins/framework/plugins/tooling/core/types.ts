@@ -27,7 +27,7 @@ export interface CheckContext {
    * It exists because a check had NO output channel of its own: `CheckResult`
    * carries a `message` only on `ok: false`, so a passing check writing to
    * `process.stderr` reached the terminal and nowhere else. Measurements that
-   * must survive the run (e.g. type-check's per-worker `maxRSS`, which calibrates
+   * must survive the run (e.g. type-check's per-worker peak footprint, which calibrates
    * host-admission's RAM quantum) evaporated.
    *
    * NOT an error channel, and NOT an escape hatch for silencing a failure: a

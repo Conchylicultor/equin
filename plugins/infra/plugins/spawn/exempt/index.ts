@@ -12,6 +12,7 @@ export default [
     rule: "boundaries/no-platform-api",
     paths: [
       "core/internal/git-roots.ts",
+      "core/internal/resource-usage.ts",
       "core/internal/spawn-captured.ts",
       "core/internal/spawn-passthrough.ts",
     ],

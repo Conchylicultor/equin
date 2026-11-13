@@ -6,6 +6,8 @@
 // nothing else). See plugins/infra/plugins/spawn/CLAUDE.md (exception policy)
 // and research/2026-07-22-global-spawn-plugin-wedge-mitigation.md.
 
+import type { PeakFootprint } from "@plugins/packages/plugins/proc-rusage/core";
+
 // ─── Types for interactive prompt handling ───────────────────────────────────
 
 export interface PromptOption {
@@ -46,12 +48,13 @@ export interface DrizzlePromptResult {
    * whose rename source was missing. Empty unless keyedAnswers was supplied. */
   unanswered: string[];
   /**
-   * Peak RSS (bytes) of the drizzle-kit child, when the runtime reported rusage.
-   * One of the non-heavy build phases that runs under no host admission — see
-   * research/2026-07-12-global-host-admission-memory-dimension.md (gap 0); the
-   * build threads it onto its `generateMigration` profiler span.
+   * Peak physical footprint of the drizzle-kit child — always unmeasured: it
+   * runs as `bun x`, which cannot load the report preload (`spawn`'s
+   * `peakFootprint`). One of the non-heavy build phases that runs under no host
+   * admission — see research/2026-07-12-global-host-admission-memory-dimension.md
+   * (gap 0); the build threads it onto its `generateMigration` profiler span.
    */
-  maxRssBytes: number | undefined;
+  peakFootprint: PeakFootprint;
 }
 
 // ─── ANSI / prompt parsing utilities ─────────────────────────────────────────
@@ -368,7 +371,8 @@ export async function runDrizzleKitWithPrompts(opts: {
     stderrBuf,
     detectedPrompts,
     unanswered,
-    // rusage is only populated once the child has exited.
-    maxRssBytes: proc.resourceUsage()?.maxRSS,
+    // `bun x` cannot load the preload a peak-footprint report needs, and
+    // getrusage's maxRSS counts freed pages: no honest number to give.
+    peakFootprint: { kind: "unmeasured", why: "not-requested" },
   };
 }

@@ -8,7 +8,7 @@
 // Replays kept batches (`../shared/batch-processes.ts` copies a run's spool —
 // every job file and the `.d.ts` its batches were served — into
 // `TYPE_CHECK_KEEP_BATCHES`) through the real batch process, once per variant,
-// one at a time, and prints each run's peak RSS, CPU and wall from rusage.
+// one at a time, and prints each run's peak footprint, CPU and wall from rusage.
 //
 // A variant is `+`-joined parts: `default` (nothing), `smol` (bun `--smol`) or
 // `NAME=value` (an environment variable, e.g. a `BUN_JSC_*` JSC option or
@@ -24,6 +24,7 @@
 // research/2026-11-08-global-type-check-bun-heap-pacing.md.
 
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
+import { peakFootprintText } from "@plugins/packages/plugins/proc-rusage/core";
 import { writeFileSync } from "fs";
 import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
 import { resolve } from "path";
@@ -75,8 +76,6 @@ function variant(spec: string): {
   return { flags, env };
 }
 
-const gb = (bytes: number | undefined): string =>
-  ((bytes ?? NaN) / 1e9).toFixed(2);
 const sec = (micros: number | undefined): string =>
   ((micros ?? NaN) / 1e6).toFixed(1);
 
@@ -95,6 +94,7 @@ for (const j of jobs) {
       {
         cwd: replay.root,
         env: { ...process.env, ...env },
+        peakFootprint: "report",
         unbounded:
           "a measurement run by hand: one batch of a cold type check, minutes long, owned by the person who started it",
       },
@@ -102,7 +102,7 @@ for (const j of jobs) {
     const wallS = (performance.now() - startedAt) / 1000;
     const u = run.resourceUsage;
     console.log(
-      `job ${j} (${job.sources.length} sources) ${spec}: exit ${run.exitCode}, maxRSS ${gb(u.maxRssBytes)} GB, ` +
+      `job ${j} (${job.sources.length} sources) ${spec}: exit ${run.exitCode}, ${peakFootprintText(u.peakFootprint)}, ` +
         `cpu ${sec(u.cpuTimeMicros)}s (sys ${sec(u.cpuSystemMicros)}), wall ${wallS.toFixed(1)}s`,
     );
     if (run.exitCode !== 0) console.log(run.stderr.trim().slice(-2000));

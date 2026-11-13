@@ -126,4 +126,4 @@ Design and the simulation behind the sizes: `research/2026-10-15-global-push-typ
 ## Reading the transcript
 
 - **Why `cpu`, not wall.** The identical program build measured 105 s at host load 12.8 and 266 s at load 14.0; wall clock on this host measures the neighbours.
-- **Why `TYPE_CHECK_WORKER_UNITS` is re-derived from these lines.** It is `ceil(mean peak RSS / PER_UNIT_BYTES)`, and the cost line's `maxRSS` across many runs is that mean.
+- **Why `TYPE_CHECK_WORKER_UNITS` is re-derived from these lines.** It is `ceil(mean peak RSS / PER_UNIT_BYTES)`, and the cost line's `peak footprint` across many runs is that mean (`maxRSS` before 2026-11-13, which over-states it: see worker-weight.ts).

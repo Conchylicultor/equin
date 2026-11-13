@@ -371,14 +371,16 @@ export interface TypeCheckWorkerResult {
    * The batch processes this run spawned (a set larger than `job.batch`'s `k`):
    * their CPU (type check and lint — already inside the
    * worker's rusage, which counts its reaped children), how many, the largest
-   * one's peak, and an upper bound on the peaks alive at once. Null when none
-   * ran.
+   * one's peak physical footprint, and an upper bound on the peaks alive at
+   * once — over the batches that reported one; `unmeasured` counts the rest.
+   * Null when none ran.
    */
   batchProcesses: {
     count: number;
     cpuSeconds: number;
-    maxRssBytes: number;
-    concurrentRssBytes: number;
+    peakFootprintBytes: number;
+    concurrentFootprintBytes: number;
+    unmeasured: number;
   } | null;
   /** What the type check did: program sizes, files checked and linted. */
   stats: TypeCheckStats;

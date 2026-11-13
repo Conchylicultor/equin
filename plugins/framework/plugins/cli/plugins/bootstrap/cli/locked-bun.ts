@@ -53,6 +53,7 @@ import {
 } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { spawnPassthrough } from "@plugins/infra/plugins/spawn/core";
 import { PRODUCT_NAME } from "@plugins/framework/plugins/product-name/core";
+import { handOffPeakFootprintReport } from "@plugins/packages/plugins/proc-rusage/core";
 
 /** The one exact bun release `mise.lock` records, or null when it does not. */
 export function lockedBunVersion(lockText: string): string | null {
@@ -179,6 +180,9 @@ export async function reexecUnderLockedBun(
       // the lock too rather than the caller's pinned install dir.
       PATH: runtimePath(env),
       ...envEntries({ LOCKED_BUN_REEXEC: "1" }),
+      // The re-exec'd process does the work, so it owes the peak-footprint
+      // report this one was asked for (`infra/spawn`'s `peakFootprint`).
+      ...handOffPeakFootprintReport(),
     },
   );
   return { kind: "reexeced", exitCode };

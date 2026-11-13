@@ -12,13 +12,13 @@ const run = (over: Partial<BuildRunProgress> = {}): BuildRunProgress => ({
   startedAt: "2026-09-16T22:00:08.414Z",
   lastActivityAt: "2026-09-16T22:16:39.799Z",
   lastAdvanceAt: "2026-09-16T22:02:03.911Z",
-  peakRssMb: 934,
+  peakFootprintMb: 934,
   outstanding: [
     {
       label: "wait for host CPU grant",
       startedAt: "2026-09-16T22:02:03.911Z",
       elapsedMs: 0,
-      rssMb: 934,
+      footprintMb: 934,
     },
   ],
   done: null,
@@ -34,7 +34,7 @@ test("no live run is unknown — nothing proves what the holder is doing", () =>
       at: "2026-09-16T22:27:19.611Z",
       success: false,
       elapsedMs: 1,
-      peakRssMb: 1,
+      peakFootprintMb: 1,
     },
   });
   expect(buildHolderObservation(finished, null, files).kind).toBe("unknown");
@@ -64,7 +64,12 @@ test("no open wait is working, judged by the last step boundary", () => {
   const obs = buildHolderObservation(
     run({
       outstanding: [
-        { label: "web artifacts", startedAt: "x", elapsedMs: 0, rssMb: 1 },
+        {
+          label: "web artifacts",
+          startedAt: "x",
+          elapsedMs: 0,
+          footprintMb: 1,
+        },
       ],
     }),
     null,

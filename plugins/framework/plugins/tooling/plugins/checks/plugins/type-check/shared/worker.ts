@@ -101,7 +101,7 @@ function reportLines(r: NameRunReport): string[] {
   const batched = (b: BatchStats | null): string =>
     b === null
       ? ""
-      : `; in ${b.batches} batches of ≤ ${b.k} (width ${b.width}; ${b.components} components, largest ${b.largest}, depth ${b.depth}; plan ${Math.round(b.planMs)}ms${b.cpuSeconds > 0 ? `; processes cpu ${b.cpuSeconds.toFixed(1)}s, peak ${gb(b.maxRssBytes)} each, ≤ ${gb(b.concurrentRssBytes)} at once` : ""})`;
+      : `; in ${b.batches} batches of ≤ ${b.k} (width ${b.width}; ${b.components} components, largest ${b.largest}, depth ${b.depth}; plan ${Math.round(b.planMs)}ms${b.cpuSeconds > 0 ? `; processes cpu ${b.cpuSeconds.toFixed(1)}s, peak footprint ${gb(b.peakFootprintBytes)} each, ≤ ${gb(b.concurrentFootprintBytes)} at once${b.unmeasured > 0 ? `, ${b.unmeasured} unmeasured` : ""}` : ""})`;
   const prog = (
     label: string,
     s: ProgramStats | null,
@@ -502,7 +502,12 @@ async function run(job: Job): Promise<Result> {
     discard: () => lint.hook!.discard(),
     jobs: lint.jobs,
   };
-  const spend: BatchSpend = { count: 0, cpuSeconds: 0, maxRssBytes: 0 };
+  const spend: BatchSpend = {
+    count: 0,
+    cpuSeconds: 0,
+    peakFootprintBytes: 0,
+    unmeasured: 0,
+  };
   // Each batch in its own process: a process's memory is what K bounds (in
   // this one, programs built one after another kept 11–15 GB resident). A
   // small run's worker batches nothing: past its bound it refuses.
@@ -696,10 +701,11 @@ async function run(job: Job): Promise<Result> {
         : {
             count: spend.count,
             cpuSeconds: spend.cpuSeconds,
-            maxRssBytes: spend.maxRssBytes,
-            concurrentRssBytes: Math.max(
-              r.p1Batches?.concurrentRssBytes ?? 0,
-              r.p2Batches?.concurrentRssBytes ?? 0,
+            peakFootprintBytes: spend.peakFootprintBytes,
+            unmeasured: spend.unmeasured,
+            concurrentFootprintBytes: Math.max(
+              r.p1Batches?.concurrentFootprintBytes ?? 0,
+              r.p2Batches?.concurrentFootprintBytes ?? 0,
             ),
           },
     stats: {

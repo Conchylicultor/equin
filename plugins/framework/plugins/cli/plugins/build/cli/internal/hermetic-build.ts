@@ -17,7 +17,7 @@ import {
   buildAndPublishWebDist,
   fastValidationJobs,
   generateAppSources,
-  maxRssLine,
+  footprintLine,
   prepareCompositionSources,
   webDistPath,
   withBuildAdmission,
@@ -214,10 +214,7 @@ export async function runHermeticBuild(opts: {
     span: () => () => undefined,
     pushSpan: () => undefined,
     log: (line) => console.log(line),
-    recordFootprint: (label, maxRssBytes) => {
-      const line = maxRssLine(label, maxRssBytes);
-      if (line !== null) console.log(line);
-    },
+    recordFootprint: (label, peak) => console.log(footprintLine(label, peak)),
   };
 
   // The build's admission — ONE host CPU grant, taken now that the lock is

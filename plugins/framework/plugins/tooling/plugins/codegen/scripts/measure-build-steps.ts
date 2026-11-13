@@ -22,7 +22,7 @@
  *
  * ONE order per invocation (a fresh process each: the memos make a second order
  * in the same process meaningless). Per step: wall ms (performance.now), CPU ms
- * (process.cpuUsage user+sys), RSS after, ESM/CJS modules newly loaded, fs block
+ * (process.cpuUsage user+sys), physical footprint after, ESM/CJS modules newly loaded, fs block
  * reads (process.resourceUsage), plus the step's own counts.
  *
  * Orders:
@@ -42,6 +42,7 @@
  * a run touched are listed (and a dirty `git status` is a finding to report).
  */
 import { writeFileSync } from "fs";
+import { readProcRusage } from "@plugins/packages/plugins/proc-rusage/core";
 import { statSync } from "@plugins/packages/plugins/timed-fs/core";
 import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { join, resolve } from "path";
@@ -123,12 +124,20 @@ interface Row {
   step: string;
   wallMs: number;
   cpuMs: number;
-  rssMb: number;
+  footprintMb: number;
   modulesLoaded: number;
   fsReads: number;
   counts: Record<string, number | string>;
 }
 const rows: Row[] = [];
+
+/** This process's physical footprint now, MB (`packages/proc-rusage`); NaN off macOS. */
+function footprintMbNow(): number {
+  const read = readProcRusage(process.pid);
+  return read.kind === "read"
+    ? read.memory.physFootprintBytes / 1048576
+    : Number.NaN;
+}
 
 // Module registry size. Bun mirrors loaded modules (ESM and CJS) into
 // require.cache; verified by the "modules" column moving at all.
@@ -150,7 +159,7 @@ async function step<T>(
     step: name,
     wallMs,
     cpuMs: (c.user + c.system) / 1000,
-    rssMb: process.memoryUsage().rss / 1048576,
+    footprintMb: footprintMbNow(),
     modulesLoaded: moduleCount() - m0,
     fsReads: process.resourceUsage().fsRead - f0,
     counts: counts?.(out) ?? {},
@@ -310,7 +319,7 @@ if (order === "migrations-only") {
           noChange: /No schema changes/i.test(r.stdout + r.stderr),
           // null = the platform reported no rusage for the child (not a zero).
           childCpuMs: scaled(r.resourceUsage.cpuTimeMicros, 1000),
-          childRssMb: scaled(r.resourceUsage.maxRssBytes, 1048576),
+          // No peak memory: `bun x` cannot load the peak-footprint preload.
         };
       } finally {
         stage.dispose();
@@ -383,11 +392,11 @@ console.log(
     .join(" ")})`,
 );
 console.log(
-  `${"step".padEnd(62)} ${"wall ms".padStart(8)} ${"cpu ms".padStart(8)} ${"rss MB".padStart(7)} ${"mods".padStart(6)} ${"fsRd".padStart(6)}  counts`,
+  `${"step".padEnd(62)} ${"wall ms".padStart(8)} ${"cpu ms".padStart(8)} ${"fp MB".padStart(7)} ${"mods".padStart(6)} ${"fsRd".padStart(6)}  counts`,
 );
 for (const r of rows) {
   console.log(
-    `${r.step.padEnd(62)} ${r.wallMs.toFixed(0).padStart(8)} ${r.cpuMs.toFixed(0).padStart(8)} ${r.rssMb.toFixed(0).padStart(7)} ${String(r.modulesLoaded).padStart(6)} ${String(r.fsReads).padStart(6)}  ${JSON.stringify(r.counts)}`,
+    `${r.step.padEnd(62)} ${r.wallMs.toFixed(0).padStart(8)} ${r.cpuMs.toFixed(0).padStart(8)} ${r.footprintMb.toFixed(0).padStart(7)} ${String(r.modulesLoaded).padStart(6)} ${String(r.fsReads).padStart(6)}  ${JSON.stringify(r.counts)}`,
   );
 }
 console.log(

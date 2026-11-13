@@ -88,8 +88,13 @@ export type Priority = "normal" | "low";
  * exactly ONE vite and MANY workers — so the count asymmetry means the worker
  * distribution, not vite, governs the fleet's memory.
  *
- * Units are DECIMAL bytes — the `maxRSS` log lines that calibrate it are decimal
- * too (a GiB/GB mismatch here silently understates the true peak by ~7 %).
+ * Units are DECIMAL bytes — the memory log lines that calibrate it are decimal
+ * too. NOTE: every measurement above is getrusage maxRSS, read before the
+ * 2026-11-13 switch to the peak PHYSICAL FOOTPRINT ("peak footprint" lines);
+ * maxRSS also counts freed allocator pages (~0.65 GB high on a 1.15 GB
+ * type-check worker), so these numbers over-state the charge. Not re-tuned:
+ * re-derive from footprint lines before moving it. (A GiB/GB mismatch here
+ * silently understates the true peak by ~7 %.)
  */
 export const PER_UNIT_BYTES = 3.6e9;
 
