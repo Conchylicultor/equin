@@ -104,6 +104,10 @@ export interface RegistryGenContext {
   // its resolved home app. Resolved (and validated) once here, alongside
   // `mainBundle`, so every committed render names the same composition.
   main: RegistryComposition;
+  // Every app `tree` declares, by app id (`readDeclaredApps`) — what each
+  // composition's `home` and `unlisted` resolve against. Read once here, so
+  // every composition, host graph and check that takes this ctx shares it.
+  declaredApps: ReadonlyMap<string, DeclaredApp>;
   // The repo's file set every scan below enumerates and reads — the check's
   // own set when a check built this ctx, else the pass's.
   repo(): Promise<RepoFiles>;
@@ -214,10 +218,12 @@ async function buildContext(
   const listing = Promise.resolve(repo);
   const files = (): Promise<RepoFiles> => listing;
   let scans: Promise<SourceScans> | undefined;
+  const declaredApps = await readDeclaredApps(tree);
   return {
     root,
     tree,
     graph,
+    declaredApps,
     // Throws rather than degrading when main's row is missing or its declared
     // exclusions did not take effect — see `resolveMainComposition`. A registry
     // that contradicts the manifest is worth failing the build for.
@@ -225,13 +231,13 @@ async function buildContext(
     main: {
       id: MAIN_COMPOSITION_ID,
       home: resolveRegistryHome(
-        tree,
+        declaredApps,
         main.bundle,
         MAIN_COMPOSITION_ID,
         main.home,
       ),
       unlisted: resolveRegistryUnlisted(
-        tree,
+        declaredApps,
         main.bundle,
         MAIN_COMPOSITION_ID,
         main.unlisted,
@@ -696,22 +702,6 @@ export interface RegistryComposition {
   unlisted: readonly string[];
 }
 
-// The apps a tree declares, per tree. `readDeclaredApps` reads every plugin's
-// `core/` from disk (~0.5 s), and one ctx resolves several homes against one
-// tree — main's, each named composition's, each browser host's. A tree is a
-// snapshot (`buildBarrelFreeTree` memoizes it per pass), so the answer lives
-// exactly as long as the tree it was read for.
-const declaredAppsByTree = new WeakMap<PluginTree, Map<string, DeclaredApp>>();
-
-function declaredAppsOf(tree: PluginTree): Map<string, DeclaredApp> {
-  let apps = declaredAppsByTree.get(tree);
-  if (apps === undefined) {
-    apps = readDeclaredApps(tree);
-    declaredAppsByTree.set(tree, apps);
-  }
-  return apps;
-}
-
 /**
  * A composition's manifest `home`, resolved against its bundle — THROWS on any
  * invalid home (missing, not an app, not bundled), so no build, `--skip-checks`
@@ -719,14 +709,14 @@ function declaredAppsOf(tree: PluginTree): Map<string, DeclaredApp> {
  * `composition-closure` reports the same `resolveCompositionHome` verdict.
  */
 export function resolveRegistryHome(
-  tree: PluginTree,
+  apps: ReadonlyMap<string, DeclaredApp>,
   bundle: ReadonlySet<string>,
   name: string,
   home: string,
 ): string | null {
   // Building a composition's registries IS deploying it: something must own `/`.
   const r = resolveCompositionHome({
-    apps: declaredAppsOf(tree),
+    apps,
     bundle,
     home,
     deployed: true,
@@ -747,14 +737,14 @@ export function resolveRegistryHome(
  * verdict.
  */
 export function resolveRegistryUnlisted(
-  tree: PluginTree,
+  apps: ReadonlyMap<string, DeclaredApp>,
   bundle: ReadonlySet<string>,
   name: string,
   unlisted: readonly string[],
   home: string,
 ): string[] {
   const r = resolveCompositionUnlisted({
-    apps: declaredAppsOf(tree),
+    apps,
     bundle,
     unlisted,
     home,
@@ -932,9 +922,14 @@ export async function generateCompositionRegistry(opts: {
   const { ctx } = opts;
   const composition: RegistryComposition = {
     id: opts.name,
-    home: resolveRegistryHome(ctx.tree, opts.bundle, opts.name, opts.home),
+    home: resolveRegistryHome(
+      ctx.declaredApps,
+      opts.bundle,
+      opts.name,
+      opts.home,
+    ),
     unlisted: resolveRegistryUnlisted(
-      ctx.tree,
+      ctx.declaredApps,
       opts.bundle,
       opts.name,
       opts.unlisted,

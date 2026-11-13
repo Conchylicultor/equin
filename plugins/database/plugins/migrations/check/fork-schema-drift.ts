@@ -25,7 +25,6 @@ type Check = {
   description: string;
   run(): Promise<CheckResult>;
   cacheSignature?(): string | null | Promise<string | null>;
-  wholeTreeRead?: { kind: "debt"; task: string; reason: string };
 };
 
 const MIGRATIONS_SUBDIR = "plugins/database/plugins/migrations/data";
@@ -82,11 +81,6 @@ function formatDetails(
 
 const check: Check = {
   id: "fork-schema-drift",
-  wholeTreeRead: {
-    kind: "debt",
-    task: "task-1794579727-rjy6wx",
-    reason: "reads every migration file (1.4k)",
-  },
   description:
     "worktree DB carries no destructive migration absent from this branch",
   // Impure: reads the main worktree's data/ dir, which is outside this tree.

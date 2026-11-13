@@ -26,11 +26,6 @@ function verdict(problems: readonly string[], hint: string): CheckResult {
  */
 const ranges: Check = {
   id: "deps-npm:ranges",
-  wholeTreeRead: {
-    kind: "debt",
-    task: "task-1794579727-rjy6wx",
-    reason: "reads every package.json (1.8k)",
-  },
   description:
     "every package.json dependency is a ^/~ range or a workspace link — bun.lock fixes the version, the npm updater moves it",
   async run(ctx: CheckContext) {
@@ -48,11 +43,6 @@ const ranges: Check = {
  */
 const policy: Check = {
   id: "deps-npm:policy",
-  wholeTreeRead: {
-    kind: "debt",
-    task: "task-1794579727-rjy6wx",
-    reason: "reads every package.json (1.8k)",
-  },
   description:
     "every package.json dependencyPolicy is well-formed, names declared packages, and holds no release longer than 90 days from today",
   async run(ctx: CheckContext) {
@@ -67,11 +57,6 @@ const policy: Check = {
 /** Every lockstep group is ONE copy per member, agreeing on its declared part of the version. */
 const groupsCoherent: Check = {
   id: "deps-npm:groups-coherent",
-  wholeTreeRead: {
-    kind: "debt",
-    task: "task-1794579727-rjy6wx",
-    reason: "reads every package.json (1.8k)",
-  },
   description:
     "every lockstep group in a dependencyPolicy resolves in bun.lock to one copy per member, the members agreeing on the group's version part",
   async run(ctx: CheckContext) {
@@ -91,11 +76,6 @@ const groupsCoherent: Check = {
  */
 const wrappersDeclared: Check = {
   id: "deps-npm:wrappers-declared",
-  wholeTreeRead: {
-    kind: "debt",
-    task: "task-1794579727-rjy6wx",
-    reason: "reads every package.json (1.8k)",
-  },
   description:
     "every dependency in a scope we publish belongs to a dependencyPolicy group declaring the upstream it wraps",
   async run(ctx: CheckContext) {

@@ -5,7 +5,6 @@ import type {
 import {
   buildRegistryGenContext,
   readCompositionManifestsFromDisk,
-  readDeclaredApps,
   codegenPassOver,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import {
@@ -55,11 +54,6 @@ const fail = (message: string, hint?: string): CheckResult => ({
 
 const check: Check = {
   id: "composition-closure",
-  wholeTreeRead: {
-    kind: "debt",
-    task: "task-1794579727-rjy6wx",
-    reason: "reads, stats and lists every plugin's manifests (4.6k)",
-  },
   description:
     "Every declared composition is valid: unique name, all entry/contributor ids resolve, the reserved main row and the exclusion sets (`base-exclusions`, `all-exclusions`, every `exclusions` row) are well-formed and every row inherits one, every declared exclusion actually took effect, no negative is dead everywhere, each selected contributor is a genuine load-bearing soft option (no redundant selections), every `excludes` bundle stays disjoint from the composition's hard closure (self-containment guard), and every deployable composition's `home` is an app its bundle holds.",
   async run(ctx) {
@@ -73,9 +67,8 @@ const check: Check = {
     // Going through the memo means one 840-plugin faceted walk and one
     // `classifyEdges` pass are shared with every other check in the run instead of
     // a private duplicate of each.
-    const { tree, graph } = await buildRegistryGenContext(
-      codegenPassOver(repo),
-    );
+    const registryCtx = await buildRegistryGenContext(codegenPassOver(repo));
+    const { tree, graph } = registryCtx;
     const allIds = new Set<PluginId>([...tree.byDir.values()].map((n) => n.id));
 
     // The committed git-layer `compositions` config, off disk — this check runs in
@@ -531,7 +524,7 @@ const check: Check = {
     //     into the web registry (and throws on). Required for deployed rows
     //     only (products and served rows); a pack (no entry points) is never
     //     deployed on its own, so it has no home to declare.
-    const declaredApps = readDeclaredApps(tree);
+    const declaredApps = registryCtx.declaredApps;
     for (const item of items) {
       const homeHint =
         "Set the composition's `home` to the `defineApp` id of the app that owns `/` (plugins/plugin-meta/plugins/composition/core/config.ts, or the Studio compositions pane).";

@@ -396,6 +396,7 @@ describe("the scan over a file set", () => {
       graph: classifyEdges(tree),
       mainBundle: new Set(nodes.map((n) => n.id)),
       main: { id: MAIN_COMPOSITION_ID, home: null, unlisted: [] },
+      declaredApps: new Map(),
       repo: () => Promise.resolve(repo),
       dirScans: new Map(),
       browserHostGraphs: new Map(),

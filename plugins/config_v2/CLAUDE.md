@@ -645,7 +645,7 @@ worker `ConfigV2.Register` is the coverage guard's config arm (run by
     - `reports`
     - `review/code-review`
 - Exemptions:
-  - Exempts itself from: `check-thread-safety/no-blocking-check-work` — `check/config-registrations.ts`, `check/overrides-authored.ts` (debt)
+  - Exempts itself from: `check-thread-safety/no-blocking-check-work` — `check/overrides-authored.ts` (debt)
 - Test helpers:
   - Server: `@plugins/config_v2/server/testing`
     - `diskConfigGitLayer` — The committed config layer a browser host bundles (`config_v2/bundled-layer`, which reads it through vite's `import.meta.glob` — absent under `bun test`), provided from the same files read off disk: for a suite booting a portable graph without the computer.

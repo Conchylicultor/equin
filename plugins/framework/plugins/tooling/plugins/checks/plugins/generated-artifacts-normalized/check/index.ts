@@ -1,8 +1,8 @@
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
-import {
-  findClaudeMdConflicts,
-  readMergeMarkers,
-} from "@plugins/framework/plugins/cli/core";
+import { join } from "node:path";
+import { readMergeMarkers } from "@plugins/framework/plugins/cli/core";
+import { foldRepoFiles } from "@plugins/plugin-meta/plugins/plugin-records/core";
+import { claudeMdConflictsFold } from "./claudemd-conflicts.scan";
 import type {
   Check,
   CheckContext,
@@ -27,11 +27,6 @@ import type {
  */
 const check: Check = {
   id: "generated-artifacts-normalized",
-  wholeTreeRead: {
-    kind: "debt",
-    task: "task-1794579727-rjy6wx",
-    reason: "reads every package.json (1.8k)",
-  },
   description:
     "no merge-driver auto-resolve is left un-normalized, and no plugin CLAUDE.md carries a conflict marker",
   // Reads git-dir state (the marker dir), which is outside the working-tree
@@ -57,7 +52,20 @@ const check: Check = {
       };
     }
 
-    const conflicted = await findClaudeMdConflicts(await ctx.repo());
+    // `findClaudeMdConflicts`' question, each file's answer a plugin record
+    // (./claudemd-conflicts.scan.ts), so a pass reads only the edited CLAUDE.md
+    // files rather than every one.
+    const repo = await ctx.repo();
+    const conflicted = (
+      await foldRepoFiles(
+        repo,
+        repo.under("plugins").filter((rel) => rel.endsWith("/CLAUDE.md")),
+        claudeMdConflictsFold,
+        null,
+      )
+    )
+      .sort()
+      .map((rel) => join(repo.root, rel));
     if (conflicted.length > 0) {
       return {
         ok: false,

@@ -474,8 +474,10 @@ its docblock records — and then lowered as readily as raised.
     - `framework/tooling/boundaries`
     - `framework/tooling/checks`
     - `framework/tooling/codegen`
+    - `framework/tooling/collected-dir/discovery`
     - `framework/tooling/import-closure`
     - `framework/tooling/web-artifacts`
+    - `infra/deps/npm`
     - `plugin-meta/plugin-records/bindings`
     - `plugin-meta/plugin-records/evaluate`
     - `plugin-meta/plugin-records/key-width`
@@ -486,6 +488,9 @@ its docblock records — and then lowered as readily as raised.
   - Exempts itself from:
     - `imperative-create-table-allowlisted` — `cli/internal/sqlite-store.ts` (sanctioned)
     - `boundaries/no-platform-api` — `core/internal/outside-files.ts` (debt)
+- Test helpers:
+  - Core: `@plugins/plugin-meta/plugins/plugin-records/core/testing`
+    - `overlaySnapshot` — `base` (normally the real checkout, `loadRepoSnapshot(REPO_ROOT)`) with `files` laid over it: each fixture path a member, its text its bytes, its blob id the id of that text — so a record keyed by it moves exactly when the fixture's text does.
 - Sub-plugins:
   - **`bindings`** — Each module's imports as the module graph resolves them, with the names each statement binds and a pure re-export module's re-exports (fileSetBindings): a per-blob bindings.scan record joined onto…
   - **`evaluate`** — Evaluated records: what importing a plugin barrel produced (its definition, slots, contributions), serialized as data under the barrel's module Merkle key, so a build reads it without importing…

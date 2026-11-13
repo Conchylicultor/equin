@@ -12,7 +12,7 @@
     - `infra/host-fs/user-path.AppPath`
     - `infra/host-fs/user-path.joinAppPath`
     - `plugin-meta/parse-utils.findMarkerCalls`
-    - `plugin-meta/parse-utils.FsSnapshot`
+    - `plugin-meta/plugin-records.foldRepoFiles`
   - Exports (types): `DiscoveredCollectedDir`
   - Exports (values):
     - `discoverCollectedDirsIn`

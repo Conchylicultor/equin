@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-packages-source-digest-computed-loads",
+  "version": "0.0.1",
+  "private": true,
+  "description": "How source-digest reads one module's loads: computedLoads(path, text) — the import(…) / require(…) calls whose path is not a literal, counted on Bun's transpiled output — plus the transpiler per extension and the unseen-load count the digest's walk shares. A leaf with no imports, so a file scan of it (boot:closure-digestable's) is keyed by this module, not the digest's whole barrel."
+}

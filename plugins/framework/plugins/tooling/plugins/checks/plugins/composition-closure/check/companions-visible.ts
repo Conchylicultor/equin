@@ -2,7 +2,6 @@ import type {
   CheckContext,
   WholeTreeRead,
 } from "@plugins/framework/plugins/tooling/core";
-import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
 import { join, relative } from "path";
 import {
   buildRegistryGenContext,
@@ -50,11 +49,6 @@ type Check = {
  */
 export const companionsVisible: Check = {
   id: "companions-visible",
-  wholeTreeRead: {
-    kind: "debt",
-    task: "task-1794579727-rjy6wx",
-    reason: "stats a file in every plugin (5.4k)",
-  },
   description:
     "Every `companion: true` contribution a web or server barrel carries at runtime is written inline in its `contributions: [ … ]` literal, where the closure engine's static parse reads it (and none sits in a `machine/` barrel)",
   async run(ctx) {
@@ -73,8 +67,9 @@ export const companionsVisible: Check = {
 
     const hidden: string[] = [];
     for (const node of tree.byDir.values()) {
+      // Which barrels exist is a fact of the run's file set, never a stat.
+      if (!repo.has(`plugins/${node.path}/web/index.ts`)) continue;
       const webIndex = join(node.dir, "web", "index.ts");
-      if (!existsSync(webIndex)) continue;
       let mod: Record<string, unknown>;
       try {
         mod = await importBarrel(webIndex);
@@ -141,8 +136,8 @@ export const companionsVisible: Check = {
     for (const node of tree.byDir.values()) {
       const facet = getFacet(node, contributionsFacetDef);
       for (const folder of ["server", "machine"] as const) {
+        if (!repo.has(`plugins/${node.path}/${folder}/index.ts`)) continue;
         const barrel = join(node.dir, folder, "index.ts");
-        if (!existsSync(barrel)) continue;
         if (!namesKind(node, folder)) continue;
         let mod: Record<string, unknown>;
         try {

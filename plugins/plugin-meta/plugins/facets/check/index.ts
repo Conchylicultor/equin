@@ -1,5 +1,4 @@
 import type { SlotHandle } from "@plugins/framework/plugins/slot-declaration/core";
-import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
 import { join, relative } from "path";
 import { buildStructureTreeOnce } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import {
@@ -50,11 +49,6 @@ const RENDER_SURFACES = [
 
 const check: Check = {
   id: "facets:render-complete",
-  wholeTreeRead: {
-    kind: "debt",
-    task: "task-1794579727-rjy6wx",
-    reason: "stats a file in every plugin (1.8k)",
-  },
   description:
     "Every facet from loadFacets() has a render contributor in each web render slot (diff, detail, contributions) with a matching facet id",
   async run(ctx: CheckContext) {
@@ -119,8 +113,9 @@ const check: Check = {
     const orphans: { surface: string; facetId: string; dir: string }[] = [];
 
     for (const node of tree.byDir.values()) {
+      // Which barrels exist is a fact of the run's file set, never a stat.
+      if (!repo.has(`plugins/${node.path}/web/index.ts`)) continue;
       const webIndex = join(node.dir, "web", "index.ts");
-      if (!existsSync(webIndex)) continue;
       let mod: Record<string, unknown>;
       try {
         mod = await importBarrel(webIndex);

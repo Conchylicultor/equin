@@ -34,6 +34,7 @@ import { serverPortabilityOf } from "@plugins/framework/plugins/tooling/plugins/
 import {
   bundledClosureOf,
   hostEntryLiteral,
+  hostServiceDeclarationsOf,
   resolveHostGraph,
 } from "./browser-host-gen";
 import { discoverStaticHostTake } from "@plugins/framework/plugins/tooling/plugins/web-artifacts/core";
@@ -113,14 +114,20 @@ export async function deriveStaticHostGraphs(
       candidateBarrels: hostProviderServerBarrels(ctx.graph),
       admitReached: true,
       read: async (path) => own.get(path) ?? (await repo.read(path)),
+      declarations: hostServiceDeclarationsOf(repo, own),
       portability: await serverPortabilityOf(repo),
       closure: (entries) => bundledClosureOf(repo, entries, own),
     });
     graphs.push({
       composition: row.name,
-      home: resolveRegistryHome(ctx.tree, resolved.bundle, row.name, row.home),
+      home: resolveRegistryHome(
+        ctx.declaredApps,
+        resolved.bundle,
+        row.name,
+        row.home,
+      ),
       unlisted: resolveRegistryUnlisted(
-        ctx.tree,
+        ctx.declaredApps,
         resolved.bundle,
         row.name,
         row.unlisted,

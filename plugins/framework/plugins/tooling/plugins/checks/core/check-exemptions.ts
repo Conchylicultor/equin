@@ -9,7 +9,7 @@ import type {
   Check,
   CheckContext,
   CheckResult,
-  RepoFiles,
+  RepoSnapshot,
 } from "@plugins/framework/plugins/tooling/core";
 import {
   createExemptionIndex,
@@ -55,15 +55,17 @@ export interface CheckExemptionSession {
  * `repo()` — the RECORDING one for an input-keyed check — and `load` the
  * run's memoized exemption load.
  *
- * The manifests are listed and read through `repo`
+ * The manifests are listed and their content ids taken through `repo`
  * before the index is built: the loaded VALUES come from the module loader,
- * but listing and reading them here is what puts their set and bytes in the
- * check's read-set, so adding, removing or editing a manifest invalidates a
- * cached PASS.
+ * but listing them and taking each one's blob id here is what puts their set
+ * and bytes in the check's read-set (a content id is a content fact), so
+ * adding, removing or editing a manifest invalidates a cached PASS. Their
+ * bytes are never read: the loader already parsed them, and reading them
+ * again per check was ~340 reads for every check that asked.
  */
 export function openCheckExemptions(
   check: Check,
-  repo: () => Promise<RepoFiles>,
+  repo: () => Promise<RepoSnapshot>,
   load: () => Promise<readonly ResolvedExemption[]>,
 ): CheckExemptionSession {
   const exemptable = check.exemptable ?? {};
@@ -72,7 +74,7 @@ export function openCheckExemptions(
   const ensure = (): Promise<ExemptionIndex> =>
     (index ??= (async () => {
       const files = await repo();
-      await Promise.all(exemptManifestPaths(files).map((p) => files.read(p)));
+      for (const p of exemptManifestPaths(files)) files.blobOf(p);
       const all = await load();
       return createExemptionIndex(all.filter((e) => e.rule in exemptable));
     })());

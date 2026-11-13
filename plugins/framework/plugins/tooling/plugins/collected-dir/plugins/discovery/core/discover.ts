@@ -3,16 +3,16 @@ import {
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { resolve } from "path";
-import {
-  findMarkerCalls,
-  type FsSnapshot,
-} from "@plugins/plugin-meta/plugins/parse-utils/core";
+import type { FsSnapshot } from "@plugins/plugin-meta/plugins/parse-utils/core";
+import { foldRepoFiles } from "@plugins/plugin-meta/plugins/plugin-records/core";
 import type { RepoFiles } from "@plugins/framework/plugins/tooling/core";
 import type { CollectedDirDef } from "@plugins/framework/plugins/tooling/plugins/collected-dir/core";
+import { PLUGIN_FOLDERS } from "@plugins/framework/plugins/plugin-id/core";
 import {
-  PLUGIN_FOLDERS,
-  type PluginFolder,
-} from "@plugins/framework/plugins/plugin-id/core";
+  collectedDirMarkersIn,
+  collectedDirsFold,
+  type CollectedDirMarker,
+} from "./collected-dirs.scan";
 
 export interface DiscoveredCollectedDir extends CollectedDirDef {
   ownerDir: AppPath;
@@ -72,94 +72,32 @@ function collectedDirCandidates(
   return out;
 }
 
-// First positional string argument of a `defineCollectedDir("<dir>")` call.
-const FIRST_STRING_ARG_RE = /^\s*["']([^"']+)["']/;
-// The optional second argument, `{ membership: "<m>" }`, spelled literally —
-// anything else after the first argument throws (see `membershipOf`).
-const MEMBERSHIP_ARG_RE =
-  /^\s*,\s*\{\s*membership\s*:\s*["'](composition|checkout)["']\s*,?\s*\}\s*,?\s*$/;
-
 /**
- * The membership the call's text declares. The marker is read by regex, so a
- * second argument this cannot read literally (an identifier, a spread) would
- * otherwise silently mean "composition" — it throws instead, naming the file.
- */
-function membershipOf(
-  rel: string,
-  rest: string,
-): CollectedDirDef["membership"] {
-  if (rest.trim() === "" || rest.trim() === ",") return "composition";
-  const m = MEMBERSHIP_ARG_RE.exec(rest);
-  if (!m) {
-    throw new Error(
-      `${rel}: defineCollectedDir's second argument must be the literal \`{ membership: "composition" | "checkout" }\` — codegen reads the marker by its text. Got: ${rest.trim()}`,
-    );
-  }
-  return m[1] as CollectedDirDef["membership"];
-}
-
-const PLUGIN_FOLDER_SET: ReadonlySet<string> = new Set(PLUGIN_FOLDERS);
-const isPluginFolder = (name: string): name is PluginFolder =>
-  PLUGIN_FOLDER_SET.has(name);
-
-/**
- * The collected dirs the candidates' `text` declares. Pure. A declared name
- * that is not a `PluginFolder` throws naming the file: a collected dir is a
- * plugin folder, and a plugin folder needs its row in the boundary table. The
- * typed marker already makes that a tsc error; this covers the untyped copy.
+ * The collected dirs `markers` declare, each owned by the plugin whose `core/`
+ * holds its file, ordered by file path (each file's in call order) — the
+ * order of the set's own listing, whatever order the markers were gathered in.
  */
 function collectedDirsFrom(
   root: AppPath,
-  sources: Iterable<CollectedDirCandidate & { text: string }>,
+  markers: readonly CollectedDirMarker[],
 ): DiscoveredCollectedDir[] {
   const pluginsRoot = joinAppPath(root, "plugins");
-  const out: DiscoveredCollectedDir[] = [];
-  for (const { rel, pluginPath, text } of sources) {
-    // Fast-path: skip files that can't contain the marker. Correctness still
-    // comes from `findMarkerCalls`, which ignores comment/string/regex matches.
-    if (!text.includes("defineCollectedDir")) continue;
-    for (const call of findMarkerCalls(text, "defineCollectedDir")) {
-      const arg = FIRST_STRING_ARG_RE.exec(call.argsText);
-      if (!arg) continue;
-      const dir = arg[1]!;
-      if (!isPluginFolder(dir)) {
-        throw new Error(
-          `${rel} declares collected dir "${dir}", which is not a plugin folder. ` +
-            `Declare it in LEAF_FOLDERS (plugin-id/core) and give it a row in the ` +
-            `boundary table (boundaries/core/boundary-config.ts). Known folders: ` +
-            `${PLUGIN_FOLDERS.join(", ")}.`,
-        );
-      }
-      out.push({
-        dir,
-        membership: membershipOf(rel, call.argsText.slice(arg[0].length)),
-        _brand: "CollectedDirDef",
-        ownerDir: joinAppPath(pluginsRoot, pluginPath),
-      });
-    }
-  }
-  return out;
-}
-
-/**
- * The text of `rel`, taken from `repo`'s own listing: null here means the file
- * vanished after the set was listed — the tree changed under the run, and a
- * discovery over a tree that moved is not an answer about any tree. Throw.
- */
-async function readListed(repo: RepoFiles, rel: string): Promise<string> {
-  const text = await repo.read(rel);
-  if (text === null) {
-    throw new Error(
-      `${rel} is in the repo's file set but could not be read — it was removed ` +
-        `after the set was listed. Re-run once the working tree is stable.`,
-    );
-  }
-  return text;
+  return [...markers]
+    .sort((a, b) => (a.rel < b.rel ? -1 : a.rel > b.rel ? 1 : 0))
+    .map((m) => ({
+      dir: m.dir,
+      membership: m.membership,
+      _brand: "CollectedDirDef" as const,
+      ownerDir: joinAppPath(pluginsRoot, CORE_FILE_RE.exec(m.rel)![1]!),
+    }));
 }
 
 /**
  * Every collected dir the tree declares, from the run's file set: no directory
- * walk, and every read asynchronous (the set's reader bounds the opens).
+ * walk, and each candidate's markers a plugin record (`collectedDirsFold`), so
+ * a pass reads only the candidates whose bytes it has not folded yet — the
+ * five checks and the codegen step that ask each read nothing after an edit
+ * that touched no `core/*.ts`.
  */
 export async function discoverCollectedDirsIn(
   repo: RepoFiles,
@@ -167,13 +105,13 @@ export async function discoverCollectedDirsIn(
   const candidates = collectedDirCandidates(repo.under("plugins"), (rel) =>
     repo.has(rel),
   );
-  const sources = await Promise.all(
-    candidates.map(async (c) => ({
-      ...c,
-      text: await readListed(repo, c.rel),
-    })),
+  const markers = await foldRepoFiles(
+    repo,
+    candidates.map((c) => c.rel),
+    collectedDirsFold,
+    null,
   );
-  return collectedDirsFrom(repo.root, sources);
+  return collectedDirsFrom(repo.root, markers);
 }
 
 // ── Standard plugin folders ────────────────────────────────────────
@@ -223,10 +161,7 @@ export function standardPluginDirsFromSnapshot(
     texts.has(rel),
   );
   // Throws on an undeclared name.
-  collectedDirsFrom(
-    root,
-    candidates.map((c) => ({ ...c, text: texts.get(c.rel)! })),
-  );
+  for (const c of candidates) collectedDirMarkersIn(c.rel, texts.get(c.rel)!);
   const std = new Set(STANDARD_DIRS);
   snapshotStandardDirs.set(fs, std);
   return std;

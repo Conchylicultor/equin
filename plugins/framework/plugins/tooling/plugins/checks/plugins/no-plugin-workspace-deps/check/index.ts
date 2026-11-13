@@ -2,56 +2,28 @@ import type {
   Check,
   CheckContext,
 } from "@plugins/framework/plugins/tooling/core";
-
-interface Offender {
-  file: string;
-  dep: string;
-  range: string;
-}
+import { readWorkspace } from "@plugins/infra/plugins/deps/plugins/npm/core";
 
 const check: Check = {
   id: "no-plugin-workspace-deps",
-  wholeTreeRead: {
-    kind: "debt",
-    task: "task-1794579727-rjy6wx",
-    reason: "reads every package.json (1.8k)",
-  },
   description:
     "Plugin package.jsons must not declare `workspace:*` deps — cross-plugin imports go through `@plugins/*` path aliases, not npm workspaces",
   async run(ctx: CheckContext) {
-    const repo = await ctx.repo();
-    const fileList = repo
-      .glob("plugins/**/package.json")
-      .filter((p) => p.endsWith("/package.json"));
-
-    const offenders: Offender[] = [];
-    for (const file of fileList) {
-      const text = await repo.read(file);
-      if (text === null) continue; // removed since the set was taken
-      let json: {
-        dependencies?: Record<string, string>;
-        devDependencies?: Record<string, string>;
-      };
-      try {
-        json = JSON.parse(text);
-      } catch (err) {
-        if (!(err instanceof SyntaxError)) throw err;
-        continue;
-      }
-      for (const section of ["dependencies", "devDependencies"] as const) {
-        const deps = json[section];
-        if (!deps) continue;
-        for (const [dep, range] of Object.entries(deps)) {
-          if (typeof range === "string" && range.startsWith("workspace:")) {
-            offenders.push({ file, dep, range });
-          }
-        }
-      }
-    }
+    // The workspace as the npm checks read it: every manifest a plugin record,
+    // so a pass parses only the package.jsons it has not folded yet.
+    const { declared } = await readWorkspace(await ctx.repo());
+    const offenders = declared.filter(
+      (d) =>
+        d.manifest.startsWith("plugins/") &&
+        d.section !== "optionalDependencies" &&
+        d.raw.startsWith("workspace:"),
+    );
 
     if (offenders.length === 0) return { ok: true };
 
-    const lines = offenders.map((o) => `${o.file}: "${o.dep}": "${o.range}"`);
+    const lines = offenders.map(
+      (o) => `${o.manifest}: "${o.name}": "${o.raw}"`,
+    );
     return {
       ok: false,
       message: `workspace:* dep declared in ${offenders.length} plugin package.json(s):\n    ${lines.join("\n    ")}`,

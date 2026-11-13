@@ -41,8 +41,10 @@ import type { RepoFiles } from "@plugins/framework/plugins/tooling/core";
 import { joinAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import {
   fileSetClosure,
+  scanRepoFiles,
   type BundledClosure,
 } from "@plugins/plugin-meta/plugins/plugin-records/core";
+import { HOST_SERVICE_DECLS_SCAN } from "./host-service-decls.scan";
 import {
   asFsPath,
   type PluginId,
@@ -113,6 +115,12 @@ export interface HostGraphInputs {
    */
   admitReached?: boolean;
   read(path: string): Promise<string | null>;
+  /**
+   * The host services each of `modules` declares, in order — by default read
+   * through {@link read} and parsed here; the generators hand their file
+   * records ({@link hostServiceDeclarationsOf}).
+   */
+  declarations?(modules: readonly string[]): Promise<HostServiceDecl[][]>;
   /**
    * Which server barrels are portable, and why one is not
    * (`serverPortabilityOf`) — an input like {@link closure}, so a test
@@ -219,6 +227,30 @@ const pluginOfBarrel = (barrel: string): string =>
   SERVER_BARREL_RE.exec(barrel)![1]!;
 
 /**
+ * {@link HostGraphInputs.declarations} over `repo`'s file records: each
+ * module's declarations a {@link HOST_SERVICE_DECLS_SCAN} record, so a
+ * derivation reads only the modules it has not scanned yet. A module the host
+ * renders itself (`own`) is parsed from that text, never from the file set.
+ */
+export function hostServiceDeclarationsOf(
+  repo: RepoFiles,
+  own: ReadonlyMap<string, string>,
+): (modules: readonly string[]) => Promise<HostServiceDecl[][]> {
+  return async (modules) => {
+    const fromRepo = modules.filter((m) => !own.has(m));
+    const scanned = await scanRepoFiles(
+      repo,
+      fromRepo,
+      HOST_SERVICE_DECLS_SCAN,
+    );
+    const byModule = new Map(fromRepo.map((m, i) => [m, scanned[i]!]));
+    return modules.map(
+      (m) => byModule.get(m) ?? HOST_SERVICE_DECLS_SCAN.scan(own.get(m)!, m),
+    );
+  };
+}
+
+/**
  * The graph rule over its read inputs (see the header): roots, providers to a
  * fixpoint, exactly one provider per declared service, and the closure guard.
  * Throws — naming the service and its candidates, or the import chain — rather
@@ -251,16 +283,23 @@ export async function resolveHostGraph(
   };
   const declared = new Map<string, HostServiceDecl & { module: string }>();
   const scanned = new Set<string>();
+  const declarationsOf =
+    inputs.declarations ??
+    ((modules: readonly string[]) =>
+      Promise.all(
+        modules.map(async (module) => {
+          const text = await source(module);
+          return text.includes("defineHostService")
+            ? parseHostServiceDeclarations(text)
+            : [];
+        }),
+      ));
   const scanDeclarations = async (): Promise<void> => {
-    for (const module of [...reached.keys()].sort()) {
-      if (scanned.has(module)) continue;
-      scanned.add(module);
-      const text = await source(module);
-      if (!text.includes("defineHostService")) continue;
-      for (const d of parseHostServiceDeclarations(text)) {
-        declared.set(d.id, { ...d, module });
-      }
-    }
+    const fresh = [...reached.keys()].sort().filter((m) => !scanned.has(m));
+    for (const m of fresh) scanned.add(m);
+    const decls = await declarationsOf(fresh);
+    for (const [i, module] of fresh.entries())
+      for (const d of decls[i]!) declared.set(d.id, { ...d, module });
   };
 
   const members = new Set<string>();
@@ -479,6 +518,7 @@ async function inferUncached(
       .sort(),
     candidateBarrels: hostProviderServerBarrels(ctx.graph),
     read: async (path) => own.get(path) ?? (await repo.read(path)),
+    declarations: hostServiceDeclarationsOf(repo, own),
     portability: await serverPortabilityOf(repo),
     // What the bundler loads from these modules, as the bundle will: the
     // record module graph's bundler view (`serverPortabilityOf`'s reading),
@@ -490,9 +530,14 @@ async function inferUncached(
     label,
     composition,
     bundle: resolved.bundle,
-    home: resolveRegistryHome(ctx.tree, resolved.bundle, composition, row.home),
+    home: resolveRegistryHome(
+      ctx.declaredApps,
+      resolved.bundle,
+      composition,
+      row.home,
+    ),
     unlisted: resolveRegistryUnlisted(
-      ctx.tree,
+      ctx.declaredApps,
       resolved.bundle,
       composition,
       row.unlisted,

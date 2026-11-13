@@ -1,4 +1,5 @@
-import { statSync } from "@plugins/packages/plugins/timed-fs/core";
+import { relative } from "node:path";
+import type { RepoFiles } from "@plugins/framework/plugins/tooling/core";
 import { resolveSpecifier } from "@plugins/plugin-meta/plugins/plugin-records/plugins/specifier/core";
 import {
   asAppPath,
@@ -42,18 +43,27 @@ export interface TestHelperBarrel {
   types: string[];
 }
 
-/** The plugin's testing barrels, in runtime order; empty when it publishes none. */
-export function collectTestHelpers(p: {
-  dir: AppPath;
-  path: string;
-}): TestHelperBarrel[] {
+/**
+ * The plugin's testing barrels, in runtime order; empty when it publishes none.
+ * Which files exist is `files`' answer (the set the plugin tree was read off),
+ * so only a barrel that exists, and the modules it re-exports from, are read.
+ */
+export function collectTestHelpers(
+  p: { dir: AppPath; path: string },
+  files: Pick<RepoFiles, "root" | "has">,
+): TestHelperBarrel[] {
+  const isFile = (path: string): boolean => {
+    const rel = relative(files.root, path);
+    return !rel.startsWith("..") && files.has(rel);
+  };
   const out: TestHelperBarrel[] = [];
   for (const runtime of RUNTIME_FOLDERS) {
     const barrelFile = joinAppPath(p.dir, runtime, TESTING_FOLDER, "index.ts");
+    if (!isFile(barrelFile)) continue;
     const raw = readIfExistsSync(barrelFile);
     if (raw === null) continue;
     const masked = maskSource(raw);
-    const sources = reExportSources(raw, barrelFile);
+    const sources = reExportSources(raw, barrelFile, isFile);
     const symbols = parseBarrelExports(masked);
     out.push({
       runtime,
@@ -108,13 +118,14 @@ export function renderTestHelpers(
 function reExportSources(
   raw: string,
   barrelFile: AppPath,
+  isFile: (path: string) => boolean,
 ): Map<string, AppPath> {
   const out = new Map<string, AppPath>();
   for (const ref of findImports(raw)) {
     if (ref.keyword !== "export" || !ref.specifier.startsWith(".")) continue;
     const braces = /\{([^}]*)\}/.exec(ref.clause);
     if (!braces) continue;
-    const resolved = resolveSpecifier(barrelFile, ref.specifier, isFileOnDisk);
+    const resolved = resolveSpecifier(barrelFile, ref.specifier, isFile);
     if (resolved === null) continue;
     const file = asAppPath(resolved);
     for (const item of braces[1]!.split(",")) {
@@ -125,13 +136,6 @@ function reExportSources(
     }
   }
   return out;
-}
-
-/** Whether `path` (absolute) is a file: the disk is this generator's file set. */
-function isFileOnDisk(path: string): boolean {
-  return (
-    statSync(asAppPath(path), { throwIfNoEntry: false })?.isFile() ?? false
-  );
 }
 
 /**

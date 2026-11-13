@@ -27,11 +27,6 @@ import {
  */
 const fixedEntrypointsBundleCheck: Check = {
   id: "release:fixed-entrypoints-bundle",
-  wholeTreeRead: {
-    kind: "debt",
-    task: "task-1794579727-rjy6wx",
-    reason: "reads every barrel (2.0k)",
-  },
   description:
     "the launcher, pg-start, pgbouncer-start and teardown bundle with every npm package resolved (composition registries empty) — what `release` compiles for every composition",
   async run(ctx) {

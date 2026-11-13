@@ -1004,3 +1004,68 @@ prefixes the calls went to.
 ### Next
 
 task-1794579727-rjy6wx: the 25 declared checks by cost.
+
+## The declared whole-tree reads, by shared cause (task: check pass O(changes), 10)
+
+Measured 2026-11-13: the same one-line edit, the 26 declared checks run serially
+(`--jobs 1`). Own calls were attributed to call sites by a temporary stack probe
+in `timed-fs`'s tally (reverted).
+
+### Split before
+
+Most of the ~117k own file calls came from a few inputs that several checks
+each paid for:
+
+| cause | own calls | checks paying |
+| --- | ---: | --- |
+| `discoverCollectedDirsIn` read every candidate `core/*.ts` | 2,005 each | cli manifest-freeze, release, plugin-boundaries, registry-in-sync, pre-barrel |
+| an existence stat per plugin that the run's file set already answers | 20k (docgen's test-helper probe), 5.4k, 5.4k, 1.8k, 1.8k | plugins-doc-in-sync, registrations-paired, companions-visible, facets, plugins-have-claudemd |
+| every package.json read | 1.8k each | the four `deps-npm:*`, no-plugin-workspace-deps |
+| every exemption manifest re-read to record it | 338 each | every check asking `ctx.exempt` |
+| `readDeclaredApps` stat + listing + read of every plugin's `core/` | 4.6k (and 2.6k more in the shared registry context) | composition-closure |
+| every reached module read for `defineHostService` | 1.2k | registry-in-sync (the static host graph) |
+| every git worktree's admin files read to find main's root | 1.4k | fork-schema-drift |
+| per-file rules re-run over every file of a kind | 1.5k–2.8k | portable-own-barrels, no-reexport-default, test-layout, CLAUDE.md conflict markers |
+| a closure record's miss computed in the caller's scope | up to 3k | cli manifest-freeze (the count depended on what the store held) |
+
+### Fix
+
+- Per-file work is a plugin record. Folds: collected-dir markers, package.json
+  manifests, declared apps, CLAUDE.md conflict markers, deep own-folder
+  imports, barrel default exports, test-runner offenses. File scans: host-service
+  declarations, computed loads. Each fold sits in a `*.scan.ts` whose closure is
+  narrow: `computedLoads` moved to a leaf plugin
+  (`source-digest/computed-loads`) because importing the digest's server barrel
+  keyed its records by 387 modules (`plugin-records:scan-key-width`).
+- Membership comes from the run's file set (`repo.has`), never `existsSync`.
+  Config origins are compared by blob id (`gitBlobId(expected)` against
+  `repo.blobOf`), so they are never read.
+- Declared apps are read once into `RegistryGenContext.declaredApps`. Home and
+  unlisted resolution take that map.
+- `closureRecord` computes a miss under `sharedWork`, so a check's own count no
+  longer depends on what the store held.
+- `ensureMainWorktreeRoot` is `dirname` of the common git dir.
+
+Not done: storing source-digest's `closureRefusal` walk as a record. It resolves
+against `node_modules` and `tsconfig.base.json` on disk, which no record key
+covers, and its refusal names absolute paths. An earlier version of this change
+recorded it; review caught it, and it was reverted.
+
+| one-line edit, serial, the 26 checks | before | after |
+| --- | ---: | ---: |
+| own file calls, summed | ~117k | ~4.6k (~18k with boot's disk walk) |
+| checks at ≤7 own calls | 0 | 21 |
+| shared "registry codegen context" | 8.6k | 1.3k |
+| boot:closure-digestable | 31.4k calls / 605 ms | ~13.4k (the walk) |
+| pass wall, start → verdict (load ~5) | 9.9 s | 6.7 s (before the boot revert) |
+
+Tests pin that each stored part re-answers after an edit to what it read
+(`discover.records.test.ts`, `workspace.records.test.ts`,
+`declared-apps.test.ts`), over the real checkout with fixtures laid in by
+`plugin-records/core/testing`'s `overlaySnapshot`.
+
+### Next
+
+task-1794583359-1cuyg0: boot's walk (13.4k), plugins-doc-in-sync (2.8k
+CLAUDE.md/REFERENCE.md reads, ~400 ms of rendering), migration-phases-valid
+(1.0k, every migration read twice) and no-db-backed-notify (~940, input-keyed).

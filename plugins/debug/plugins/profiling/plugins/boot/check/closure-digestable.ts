@@ -4,11 +4,10 @@ import type {
 } from "@plugins/framework/plugins/tooling/core";
 import { fileSetImportClosures } from "@plugins/framework/plugins/tooling/plugins/import-closure/core";
 import { join } from "node:path";
-import {
-  closureRefusal,
-  computedLoads,
-} from "@plugins/packages/plugins/source-digest/server";
+import { scanRepoFiles } from "@plugins/plugin-meta/plugins/plugin-records/core";
+import { closureRefusal } from "@plugins/packages/plugins/source-digest/server";
 import { backendEntries, centralEntries } from "./backend-entries";
+import { COMPUTED_LOADS_SCAN } from "./computed-loads.scan";
 
 const ID = "boot:closure-digestable";
 
@@ -40,9 +39,9 @@ const check: Check = {
   id: ID,
   wholeTreeRead: {
     kind: "debt",
-    task: "task-1794579727-rjy6wx",
+    task: "task-1794583359-1cuyg0",
     reason:
-      "source-digest walks the backend closure itself (19.3k stats, listings, reads)",
+      "source-digest's own walk resolves the closure against node_modules and tsconfig paths on disk (13.4k stats, listings, reads)",
   },
   description:
     "the serving backend's and central's closures (each bin plus every server/machine/central registry barrel, literal dynamic imports followed) hold no dynamic import or require with a computed path, and every import in them resolves as source-digest's walk answers it — so the code a backend or central runs is measurable (sourceDigest, restart-skip)",
@@ -66,17 +65,16 @@ const check: Check = {
       dynamicImports: "follow-except-command-runs",
     });
 
-    // Every module of the closure the digest would refuse.
+    // Every module of the closure the digest would refuse: each module's
+    // count a file record (./computed-loads.scan.ts), so a pass reads only the
+    // modules it has not scanned yet.
+    const modules = [...closure.modules];
+    const loads = await scanRepoFiles(repo, modules, COMPUTED_LOADS_SCAN);
     const computed = new Map<string, number>();
-    await Promise.all(
-      [...closure.modules].map(async (m) => {
-        const text = await repo.read(m);
-        if (text === null) return;
-        const loads = computedLoads(m, text);
-        const n = loads.import + loads.require;
-        if (n > 0) computed.set(m, n);
-      }),
-    );
+    for (const [i, m] of modules.entries()) {
+      const n = loads[i]!.import + loads[i]!.require;
+      if (n > 0) computed.set(m, n);
+    }
     if (computed.size === 0) return walkRefusal(repo.root, entries);
 
     const entrySet = new Set(entries);
@@ -117,7 +115,12 @@ const check: Check = {
   },
 };
 
-/** The digest's own walk over the entries: whatever else it refuses. */
+/**
+ * The digest's own walk over the entries: whatever else it refuses. It runs
+ * on every pass (the declared whole-tree read): the walk resolves against the
+ * installed `node_modules` and `tsconfig.base.json`'s paths on disk, which no
+ * plugin record's key covers, so its answer cannot be stored.
+ */
 async function walkRefusal(
   root: string,
   entries: readonly string[],

@@ -2,18 +2,13 @@ import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
 import type {
   Check,
-  CheckContext,
   CheckResult,
   RepoFiles,
 } from "@plugins/framework/plugins/tooling/core";
+import { defineFoldCheck } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
-import { createTimeSlicer } from "@plugins/packages/plugins/macrotask-yield/core";
-import {
-  findImports,
-  lineAt,
-  maskSource,
-} from "@plugins/plugin-meta/plugins/parse-utils/core";
-import { fakeDomInstalls } from "../core/fake-dom";
+import { maskSource } from "@plugins/plugin-meta/plugins/parse-utils/core";
+import { runnerSplitFold, type RunnerOffense } from "./runner-split.scan";
 import {
   BUN_TEST_IGNORE,
   DOM_TEST_CLOCK_PIN,
@@ -59,69 +54,35 @@ const VITEST_CONFIG = "vitest.config.ts";
  *       a process's default locale is fixed when it starts. Without it a suite
  *       passes on a laptop and fails under `LANG=C.UTF-8` with no code change.
  *
+ * A fold check: rules (a), (b) and (e) are per file, so each test file's
+ * offenses are a plugin record and a pass reads only the edited test files.
+ *
  * NOT `inputKeyed`: unlike the `grepCode`-only pattern checks, this one
  * reads `bunfig.toml` / `vitest.config.ts` directly, so its reads do NOT route through the recording
  * `FileSystemView`. Declaring it input-keyed would record an incomplete
  * read-set and could produce a stale PASS. It takes the legacy whole-tree key.
  */
-const check: Check = {
+const check: Check = defineFoldCheck({
   id: "test-layout:runner-split",
-  wholeTreeRead: {
-    kind: "debt",
-    task: "task-1794579727-rjy6wx",
-    reason: "reads every test file (2.8k)",
-  },
   description:
     "bun:test and vitest scopes stay exact complements: no test file imports the other runner, no stray `__tests__/` suite, both scope literals survive in bunfig.toml / vitest.config.ts, the shared vitest setup still pins the clock, and vitest.config.ts still pins the workers' locale and timezone",
-  async run(ctx: CheckContext): Promise<CheckResult> {
+  // A fold check: each test file's per-file offenses (rules a, b, e) are its
+  // record (./runner-split.scan.ts), kept along the directory tree, so a pass
+  // after an edit reads only the edited test files. Rule (c) is a fact of the
+  // paths; (d), (f) and (g) read three config files.
+  context: () => null,
+  files: (repo) => listTestFiles(repo),
+  facts: () => null,
+  fold: runnerSplitFold,
+  async verdict(offenses, _inputs, ctx): Promise<CheckResult> {
     const root = REPO_ROOT;
-    const repo = await ctx.repo();
+    const files = listTestFiles(await ctx.repo());
     const sections: string[] = [];
-
-    // ---- rules (a)–(c): the test-file sweep --------------------------------
-    const listed = listTestFiles(repo);
-
-    const crossVitest: string[] = [];
-    const crossBunTest: string[] = [];
-    const fakeDom: string[] = [];
-
-    // Read concurrently, then scan serially. Each scan is synchronous parsing;
-    // run inside the reads' callbacks, the scans of reads that settle together
-    // chained into one block on the check runner's shared thread. The slicer
-    // yields between files instead.
-    const read = await Promise.all(listed.map((rel) => repo.read(rel)));
-    // A null read: removed since the set was taken — no file, no offense.
-    const files = listed.filter((_, i) => read[i] != null);
-    const sources = read.filter((src): src is string => src != null);
-    const slice = createTimeSlicer();
-    for (let f = 0; f < files.length; f++) {
-      await slice();
-      const rel = files[f]!;
-      const src = sources[f]!;
-      const dom = isDomTestPath(rel);
-
-      // (e) A bun:test file installing a browser global onto `globalThis`.
-      if (isBunTestPath(rel)) {
-        for (const install of fakeDomInstalls(src)) {
-          fakeDom.push(
-            `${rel}:${lineAt(src, install.index)}  (installs \`${install.name}\`)`,
-          );
-        }
-      }
-
-      // A test file's runner is decided by WHERE it lives, so the banned
-      // specifier is whichever runner does not own this location.
-      const banned = dom ? "bun:test" : "vitest";
-      const lines = src.split("\n");
-      for (const ref of runnerImports(src)) {
-        if (ref.specifier !== banned && !ref.specifier.startsWith(`${banned}/`))
-          continue;
-        const line = lineAt(src, ref.index);
-        const entry = `${rel}:${line}:${(lines[line - 1] ?? "").trim()}`;
-        if (dom) crossBunTest.push(entry);
-        else crossVitest.push(entry);
-      }
-    }
+    const entries = (rule: RunnerOffense["rule"]): string[] =>
+      offenses.filter((o) => o.rule === rule).map((o) => o.entry);
+    const crossVitest = entries("a");
+    const crossBunTest = entries("b");
+    const fakeDom = entries("e");
 
     if (crossVitest.length > 0) {
       sections.push(
@@ -180,7 +141,7 @@ const check: Check = {
       hint: `The runner is chosen by where the file lives: pure-logic tests are \`*.test.ts(x)\` next to their source and run under \`bun:test\`; jsdom/React tests live in the plugin's \`web/__tests__/\` and run under vitest. Move the file to the folder that matches its runner rather than swapping the import (or stubbing the DOM it lacks) — and never introduce a \`__tests__/\` dir outside \`web/\`. The two scope literals in \`bunfig.toml\` and \`vitest.config.ts\` are a complementary pair; edit neither alone. And \`${DOM_TEST_SETUP_FILE}\` must keep pinning the clock: every jsdom suite starts on a fixed instant so none of them can depend on the day it is run on — a suite that reads the wall clock is green until the calendar moves, then red for everyone with no code change. Change the pinned instant if you must, but keep the pin. Likewise \`${VITEST_CONFIG}\` must keep starting its workers in a fixed locale and timezone (\`pool\` + \`env\`), or a date-formatting suite passes or fails according to the \`LANG\` of whoever runs it.`,
     };
   },
-};
+});
 
 /**
  * Every test file in the checkout, repo-relative: the run's file set (tracked +
@@ -189,28 +150,10 @@ const check: Check = {
  * worktrees are not. The git pathspecs `*.test.ts` / `*.test.tsx` (`*` spans
  * `/`), matched exactly.
  */
-function listTestFiles(repo: RepoFiles): string[] {
+function listTestFiles(repo: Pick<RepoFiles, "glob">): string[] {
   return [...repo.glob("*.test.ts"), ...repo.glob("*.test.tsx")]
     .filter((rel) => rel.endsWith(".test.ts") || rel.endsWith(".test.tsx"))
     .sort();
-}
-
-interface RunnerImport {
-  specifier: string;
-  /** Offset of the specifier's first character in the ORIGINAL source. */
-  index: number;
-}
-
-/**
- * Every module specifier the file imports, static or dynamic: `findImports`
- * with its `import("…")`s — string-masked, so a specifier inside a comment or
- * a docs snippet cannot match.
- */
-function runnerImports(src: string): RunnerImport[] {
-  return findImports(src, undefined, { dynamic: true }).map((imp) => ({
-    specifier: imp.specifier,
-    index: imp.index,
-  }));
 }
 
 /**

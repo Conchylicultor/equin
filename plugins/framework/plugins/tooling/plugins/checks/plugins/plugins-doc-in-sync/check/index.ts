@@ -2,7 +2,6 @@ import type {
   CheckContext,
   WholeTreeRead,
 } from "@plugins/framework/plugins/tooling/core";
-import { existsSync, readFile } from "@plugins/packages/plugins/timed-fs/core";
 
 import {
   buildEnrichedTree,
@@ -28,31 +27,28 @@ type Check = {
   wholeTreeRead?: WholeTreeRead;
 };
 
-/** A file's text, or null when it does not exist. */
-async function readIfPresent(file: string): Promise<string | null> {
-  try {
-    return await readFile(file, "utf8");
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === "ENOENT") return null;
-    throw err;
-  }
-}
-
 const check: Check = {
   id: "plugins-doc-in-sync",
   wholeTreeRead: {
     kind: "debt",
-    task: "task-1794579727-rjy6wx",
-    reason: "stats every plugin's files to render the docs (20.6k calls)",
+    task: "task-1794583359-1cuyg0",
+    reason:
+      "reads every plugin's CLAUDE.md to splice its AUTOGEN block into the prose around it, and its REFERENCE.md (2.8k)",
   },
   description:
     "docs/plugins-compact.md, docs/plugins-details.md, every plugin's CLAUDE.md AUTOGEN block, and every plugin's REFERENCE.md (present exactly when a list is summarized) match the current plugin source",
   async run(ctx) {
-    const pass = codegenPassOver(await ctx.repo());
+    const repo = await ctx.repo();
+    const pass = codegenPassOver(repo);
     const root = pass.root;
+    // Which files exist is the run's file set's answer, never a stat; a
+    // member's text is read through it.
+    const relOf = (file: string): string => file.replace(`${root}/`, "");
+    const readIfPresent = (file: string): Promise<string | null> =>
+      repo.has(relOf(file)) ? repo.read(relOf(file)) : Promise.resolve(null);
 
     const compactFile = pluginCompactDocPath(root);
-    if (!existsSync(compactFile)) {
+    if (!repo.has(relOf(compactFile))) {
       return {
         ok: false,
         message: "docs/plugins-compact.md is missing",
@@ -60,7 +56,7 @@ const check: Check = {
       };
     }
     const detailsFile = pluginDetailsDocPath(root);
-    if (!existsSync(detailsFile)) {
+    if (!repo.has(relOf(detailsFile))) {
       return {
         ok: false,
         message: "docs/plugins-details.md is missing",
@@ -69,7 +65,7 @@ const check: Check = {
     }
 
     if (
-      (await readFile(compactFile, "utf8")) !==
+      (await readIfPresent(compactFile)) !==
       (await formatGenerated({
         file: compactFile,
         content: await renderCompactDoc({ pass }),
@@ -82,7 +78,7 @@ const check: Check = {
       };
     }
     if (
-      (await readFile(detailsFile, "utf8")) !==
+      (await readIfPresent(detailsFile)) !==
       (await formatGenerated({
         file: detailsFile,
         content: await renderDetailsDoc({ pass }),
@@ -112,7 +108,14 @@ const check: Check = {
       const existing = await readIfPresent(file);
       const expected = await formatGenerated({
         file,
-        content: renderPluginClaudeMd(info, existing, root, tree.facets, main),
+        content: renderPluginClaudeMd(
+          info,
+          existing,
+          root,
+          tree.facets,
+          tree.repo,
+          main,
+        ),
       });
       if (existing !== expected) {
         return {

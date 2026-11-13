@@ -13,6 +13,11 @@ import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { allSourceSets, type ClosureSince, type SourceSet } from "../core";
 import { storedFacts, storeFacts } from "./facts-store";
 import {
+  isCodeFile,
+  transpilerFor,
+  unseenLoads,
+} from "@plugins/packages/plugins/source-digest/plugins/computed-loads/core";
+import {
   createImportResolver,
   UnresolvedImportError,
   type ImportResolver,
@@ -38,22 +43,7 @@ import {
 // - An import that does not resolve throws: a closure with a hole would vouch
 //   for code it never read.
 
-const CODE_FILE = /\.(?:[cm]?[jt]sx?)$/;
 const BUILTINS = new Set(builtinModules);
-
-const transpilers = {
-  ts: new Bun.Transpiler({ loader: "ts" }),
-  tsx: new Bun.Transpiler({ loader: "tsx" }),
-  js: new Bun.Transpiler({ loader: "js" }),
-  jsx: new Bun.Transpiler({ loader: "jsx" }),
-};
-
-function transpilerFor(path: string): Bun.Transpiler {
-  if (path.endsWith(".tsx")) return transpilers.tsx;
-  if (path.endsWith(".jsx")) return transpilers.jsx;
-  if (/\.[cm]?ts$/.test(path)) return transpilers.ts;
-  return transpilers.js;
-}
 
 const sha256 = (bytes: string | Uint8Array): string =>
   createHash("sha256").update(bytes).digest("hex");
@@ -142,7 +132,7 @@ interface FileFacts {
  * story of it.
  */
 function scanFacts(file: string, bytes: Buffer): FileFacts {
-  if (!CODE_FILE.test(file)) return { imports: [] };
+  if (!isCodeFile(file)) return { imports: [] };
   const transpiler = transpilerFor(file);
   const text = bytes.toString("utf8");
   const imports = transpiler.scanImports(text);
@@ -487,12 +477,6 @@ export async function closureRefusal(
   return { ok: true };
 }
 
-// A call that loads a module at runtime: `import(…)` / `require(…)`.
-const DYNAMIC_LOAD = /\b(import|require)\s*\(/g;
-// The same, as a stateless probe (a global regex's `test` moves the
-// `lastIndex` a later `matchAll` would start from).
-const HAS_DYNAMIC_LOAD = /\b(?:import|require)\s*\(/;
-
 /**
  * Throw when the file loads a module the scan did not report — an
  * `import(x)` / `require(x)` whose path is not a literal: the digest cannot
@@ -517,49 +501,6 @@ function assertEveryImportSeen(
       );
     }
   }
-}
-
-/** How many `import(…)` / `require(…)` calls of `text` the scan did not report. */
-function unseenLoads(
-  transpiler: Bun.Transpiler,
-  text: string,
-  imports: readonly { kind: string }[],
-): ComputedLoads {
-  // Most files hold no such call at all: no need to transpile them twice.
-  if (!HAS_DYNAMIC_LOAD.test(text)) return { import: 0, require: 0 };
-  const calls = { import: 0, require: 0 };
-  for (const m of transpiler.transformSync(text).matchAll(DYNAMIC_LOAD)) {
-    calls[m[1] as "import" | "require"]++;
-  }
-  return {
-    import: Math.max(
-      0,
-      calls.import - imports.filter((i) => i.kind === "dynamic-import").length,
-    ),
-    require: Math.max(
-      0,
-      calls.require - imports.filter((i) => i.kind === "require-call").length,
-    ),
-  };
-}
-
-/** A module's loads the digest cannot follow, by kind. */
-export interface ComputedLoads {
-  import: number;
-  require: number;
-}
-
-/**
- * The loads of the module at `path` (source `text`) whose path is not a
- * literal — exactly what makes {@link sourceDigest} refuse a closure holding
- * it. For a guard that keeps a closure digestable (`boot:closure-digestable`):
- * the same reading as the digest's, so the guard and the digest cannot
- * disagree on what counts.
- */
-export function computedLoads(path: string, text: string): ComputedLoads {
-  if (!CODE_FILE.test(path)) return { import: 0, require: 0 };
-  const transpiler = transpilerFor(path);
-  return unseenLoads(transpiler, text, transpiler.scanImports(text));
 }
 
 /** The deepest directory every path is under. */

@@ -7,10 +7,8 @@ import { prewarmSourceDigests } from "../shared/digest";
 export {
   closureChangedSince,
   closureRefusal,
-  computedLoads,
   sourceDigest,
 } from "../shared/digest";
-export type { ComputedLoads } from "../shared/digest";
 
 export default {
   description:

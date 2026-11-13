@@ -16,11 +16,6 @@ import {
 
 const check: Check = {
   id: "config-v2:registrations-paired",
-  wholeTreeRead: {
-    kind: "debt",
-    task: "task-1794579727-rjy6wx",
-    reason: "stats a file in every plugin (5.4k)",
-  },
   description:
     "Every ConfigV2.Register (server/ or machine/) must have a matching ConfigV2.WebRegister (web) at the same storePath, and vice versa — and every one a browser host's scoped page registers is served by a `server/` barrel of the host's worker graph",
   async run(checkCtx) {

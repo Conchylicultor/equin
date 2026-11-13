@@ -147,6 +147,7 @@ functions in `core/internal/coherence.ts` over `readWorkspace(files)` (a check r
     - `infra/deps/updates.Outdated`
     - `infra/deps/updates.OutdatedWaiting`
     - `infra/deps/updates.utcDay`
+    - `plugin-meta/plugin-records.foldRepoFiles`
   - Exports (types):
     - `Group`
     - `Packument`

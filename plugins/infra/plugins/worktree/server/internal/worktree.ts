@@ -306,10 +306,16 @@ export async function ensureMainWorktreeRoot(
   signal?: AbortSignal,
 ): Promise<AppPath> {
   if (cachedRepoRoot) return cachedRepoRoot;
-  const [mainPath] = await listWorktreePaths(signal);
-  if (!mainPath) throw new Error("Could not determine main worktree root");
-  // The first entry is the main worktree: the checkout the app runs from.
-  cachedRepoRoot = asAppPath(mainPath);
+  // The main worktree is the checkout whose `.git` IS the common git dir —
+  // `listWorktreeEntries`' first entry, read without reading every linked
+  // worktree's admin files (three reads each, ~1.4k on a host of ~460).
+  const common = await commonGitDir(undefined, signal);
+  if (basename(common) !== ".git") {
+    throw new Error(
+      `${common} is not a checkout's .git dir (a bare repo, or a separate git dir): the main worktree root is read from checkouts only`,
+    );
+  }
+  cachedRepoRoot = asAppPath(dirname(common));
   return cachedRepoRoot;
 }
 

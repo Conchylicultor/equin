@@ -15,7 +15,12 @@ import {
 const root = asAppPath(mkdtempSync(join(tmpdir(), "test-helpers-doc-")));
 afterAll(() => rmSync(root, { recursive: true, force: true }));
 
+// The file set the helpers are listed from: every file `write` made.
+const written = new Set<string>();
+const files = { root, has: (rel: string) => written.has(rel) };
+
 function write(rel: string, content: string): void {
+  written.add(rel);
   const file = join(root, rel);
   mkdirSync(dirname(file), { recursive: true });
   writeFileSync(file, content);
@@ -35,10 +40,13 @@ describe("collectTestHelpers", () => {
     write("db/web/testing/index.ts", `export { Fake } from "./fake";\n`);
     write("db/web/testing/fake.tsx", `/** A fake. */\nexport class Fake {}\n`);
 
-    const barrels = collectTestHelpers({
-      dir: joinAppPath(root, "db"),
-      path: "x/plugins/db",
-    });
+    const barrels = collectTestHelpers(
+      {
+        dir: joinAppPath(root, "db"),
+        path: "x/plugins/db",
+      },
+      files,
+    );
     expect(barrels).toEqual([
       {
         runtime: "web",
@@ -70,12 +78,26 @@ describe("collectTestHelpers", () => {
     ]);
   });
 
+  test("a barrel outside the file set is not read", () => {
+    write("ignored/web/testing/index.ts", `export { x } from "./x";\n`);
+    written.delete("ignored/web/testing/index.ts");
+    expect(
+      collectTestHelpers(
+        { dir: joinAppPath(root, "ignored"), path: "ignored" },
+        files,
+      ),
+    ).toEqual([]);
+  });
+
   test("a plugin without a testing barrel renders nothing", () => {
     write("plain/server/index.ts", `export const x = 1;\n`);
-    const barrels = collectTestHelpers({
-      dir: joinAppPath(root, "plain"),
-      path: "plain",
-    });
+    const barrels = collectTestHelpers(
+      {
+        dir: joinAppPath(root, "plain"),
+        path: "plain",
+      },
+      files,
+    );
     expect(barrels).toEqual([]);
     expect(renderTestHelpers(barrels, "")).toEqual([]);
   });

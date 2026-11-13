@@ -459,6 +459,7 @@ ui-kit's `theme/app.css` (JS-sets / CSS-styles split, as with `.dark`).
     - `cliEntrySourcePath`
     - `defineCliCommand`
     - `findClaudeMdConflicts`
+    - `hasConflictMarker`
     - `isCliCommand`
     - `isCliEntryPresent`
     - `MERGE_MARKER_KINDS`

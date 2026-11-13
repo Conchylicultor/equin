@@ -13,6 +13,11 @@ export interface ClaudeMdRepo {
 
 const CONFLICT_MARKER_RE = /^(<{7}|={7}|>{7}) /m;
 
+/** Whether a CLAUDE.md's text still carries a git conflict marker. */
+export function hasConflictMarker(src: string): boolean {
+  return CONFLICT_MARKER_RE.test(src);
+}
+
 /**
  * Every `plugins/**\/CLAUDE.md` still carrying a git conflict marker.
  *
@@ -38,7 +43,7 @@ export async function findClaudeMdConflicts(
   const hits = await Promise.all(
     files.map(async (rel) => {
       const src = await repo.read(rel);
-      return src !== null && CONFLICT_MARKER_RE.test(src) ? [rel] : [];
+      return src !== null && hasConflictMarker(src) ? [rel] : [];
     }),
   );
   return hits.flat().map((rel) => join(repo.root, rel));

@@ -15842,7 +15842,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `reports`
       - `review/code-review`
   - Exemptions:
-    - Exempts itself from: `check-thread-safety/no-blocking-check-work` — `check/config-registrations.ts`, `check/overrides-authored.ts` (debt)
+    - Exempts itself from: `check-thread-safety/no-blocking-check-work` — `check/overrides-authored.ts` (debt)
   - Test helpers:
     - Server: `@plugins/config_v2/server/testing`
       - `diskConfigGitLayer` — The committed config layer a browser host bundles (`config_v2/bundled-layer`, which reads it through vite's `import.meta.glob` — absent under `bun test`), provided from the same files read off disk: for a suite booting a portable graph without the computer.
@@ -30397,6 +30397,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `cliEntrySourcePath`
           - `defineCliCommand`
           - `findClaudeMdConflicts`
+          - `hasConflictMarker`
           - `isCliCommand`
           - `isCliEntryPresent`
           - `MERGE_MARKER_KINDS`
@@ -31736,14 +31737,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - **`class-token-walk-single-source`**
             - **`color-token-ref-in-sync`**
             - **`composition-closure`**
-              - Exemptions:
-                - Exempts itself from: `check-thread-safety/no-blocking-check-work` — `check/companions-visible.ts` (debt)
             - **`config-origins-in-sync`**
-              - Exemptions:
-                - Exempts itself from: `check-thread-safety/no-blocking-check-work` — `check/index.ts` (debt)
             - **`config-stable-list-ids`**
-              - Exemptions:
-                - Exempts itself from: `check-thread-safety/no-blocking-check-work` — `check/index.ts` (debt)
             - **`conversation-trailer`**
             - **`css-vars-single-owner`**
               - Exemptions:
@@ -31806,8 +31801,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/networking` (0 debt)
                   - `primitives/networking/request-guard` (0 debt)
             - **`no-reexport-default`**
-              - Exemptions:
-                - Exempts itself from: `check-thread-safety/no-blocking-check-work` — `check/index.ts` (debt)
             - **`no-relative-server-imports`**
             - **`no-use-resource-cast`**
             - **`plugin-boundaries`**
@@ -31819,8 +31812,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - **`plugin-refs-resolve`**
             - **`plugins-doc-in-sync`**
             - **`plugins-have-claudemd`**
-              - Exemptions:
-                - Exempts itself from: `check-thread-safety/no-blocking-check-work` — `check/index.ts` (debt)
             - **`plugins-registry-in-sync`**
             - **`pre-barrel-manifests-complete`**
             - **`registry`** — The check registry: the check collected-dir marker, its generated check.generated.ts, and loadChecks / listAllChecks — every registered check with the module its code lives in. Apart from checks/core so a check importing checks/core does not reach every check.
@@ -31947,18 +31938,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                     - Uses: `framework/tooling/checks/type-check.readTypeCheckTree`
         - **`codegen`** — Plugin doc generation and registry codegen
           - Core:
-            - Uses: 153 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
+            - Uses: 154 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
               - `plugin-meta/parse-utils` ×17
               - `config_v2` ×16
               - `framework/plugin-id` ×13
               - `network/live/resource-vocabulary` ×11
-              - `plugin-meta/plugin-records` ×9
+              - `plugin-meta/plugin-records` ×10
               - `framework/slot-declaration` ×6
-              - `packages/timed-fs` ×6
               - `plugin-meta/barrel-import` ×6
               - `plugin-meta/closure` ×6
               - `plugin-meta/composition` ×6
               - `framework/tooling/checks/source-analysis` ×5
+              - `packages/timed-fs` ×5
               - `plugin-meta/facets` ×5
               - `plugin-meta/plugin-records/evaluate` ×5
               - `framework/tooling/codegen/composition-registries` ×4
@@ -31969,13 +31960,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/tooling/format` ×2
               - `framework/tooling/lint` ×2
               - `framework/tooling/web-artifacts` ×2
+              - `framework/tooling` ×2
               - `infra/paths` ×2
               - `network/live/resource-protocol` ×2
               - `plugin-meta/parse-utils/source-files` ×2
               - `plugin-meta/plugin-tree` ×2
               - `fields/reorder-tree.REORDER_NODE_LEGEND`
               - `framework/tooling/guards/agent-policy.agentPolicySettings`
-              - `framework/tooling.noteRepoWrites`
               - `infra/namespace.MAIN_COMPOSITION_ID`
               - `packages/macrotask-yield.yieldMacrotask`
               - `packages/shared-work.sharedWork`
@@ -32225,7 +32216,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `infra/host-fs/user-path.AppPath`
                   - `infra/host-fs/user-path.joinAppPath`
                   - `plugin-meta/parse-utils.findMarkerCalls`
-                  - `plugin-meta/parse-utils.FsSnapshot`
+                  - `plugin-meta/plugin-records.foldRepoFiles`
                 - Exports (types): `DiscoveredCollectedDir`
                 - Exports (values):
                   - `discoverCollectedDirsIn`
@@ -32584,27 +32575,21 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - Exemptions:
                 - Exempted by:
                   - `active-data` (1 debt)
-                  - `config_v2` (2 debt)
+                  - `config_v2` (1 debt)
                   - `database/migrations` (4 debt)
                   - `framework/tooling/checks/bun-runtime` (1 debt)
-                  - `framework/tooling/checks/composition-closure` (1 debt)
-                  - `framework/tooling/checks/config-origins-in-sync` (1 debt)
-                  - `framework/tooling/checks/config-stable-list-ids` (1 debt)
                   - `framework/tooling/checks/css-vars-single-owner` (1 debt)
                   - `framework/tooling/checks/css-vars-supplied` (1 debt)
                   - `framework/tooling/checks/data-migration-dml-only` (1 debt)
                   - `framework/tooling/checks/inherited-theme-defaults-scoped` (1 debt)
                   - `framework/tooling/checks/migration-hashes-unique` (1 debt)
-                  - `framework/tooling/checks/no-reexport-default` (1 debt)
                   - `framework/tooling/checks/plugin-boundaries` (1 debt)
-                  - `framework/tooling/checks/plugins-have-claudemd` (1 debt)
                   - `framework/tooling/checks/table-defs-in-schema-glob` (1 debt)
                   - `framework/tooling/test-layout` (1 debt)
                   - `infra/launcher` (1 debt)
                   - `infra/paths/data-files` (1 debt)
                   - `page/annotations` (1 debt)
                   - `page/editor` (2 debt)
-                  - `plugin-meta/facets` (1 debt)
                   - `primitives/css/layout-harness` (1 debt)
                   - `primitives/pane` (2 debt)
                   - `ui/icons` (1 debt)
@@ -34578,6 +34563,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/deps/updates.Outdated`
               - `infra/deps/updates.OutdatedWaiting`
               - `infra/deps/updates.utcDay`
+              - `plugin-meta/plugin-records.foldRepoFiles`
             - Exports (types):
               - `Group`
               - `Packument`
@@ -41621,11 +41607,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `boundaries/no-platform-api` — `shared/digest.ts`, `shared/resolve.ts`, `shared/facts-store.ts` (sanctioned)
           - `imperative-create-table-allowlisted` — `shared/facts-store.ts` (sanctioned)
       - Server:
-        - Exports (types): `ComputedLoads`
         - Exports (values):
           - `closureChangedSince`
           - `closureRefusal`
-          - `computedLoads`
           - `sourceDigest`
       - Central:
         - Exports (values):
@@ -41638,6 +41622,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `allSourceSets`
           - `defineSourceSet`
+      - Plugins:
+        - **`computed-loads`** — How source-digest reads one module's loads: computedLoads(path, text) — the import(…) / require(…) calls whose path is not a literal, counted on Bun's transpiled output — plus the transpiler per extension and the unseen-load count the digest's walk shares. A leaf with no imports, so a file scan of it (boot:closure-digestable's) is keyed by this module, not the digest's whole barrel.
+          - Cross-plugin:
+            - Imported by: `packages/source-digest`
+          - Core:
+            - Exports (types): `ComputedLoads`
+            - Exports (values):
+              - `computedLoads`
+              - `isCodeFile`
+              - `transpilerFor`
+              - `unseenLoads`
     - **`spawn-disclaim`**
       - Core:
         - Uses: `infra/launcher/env-names.readEnv`
@@ -45253,8 +45248,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `plugin-meta/facets/slots`
           - `plugin-meta/facets/structure`
           - `plugin-meta/plugin-tree/faceted`
-      - Exemptions:
-        - Exempts itself from: `check-thread-safety/no-blocking-check-work` — `check/index.ts` (debt)
       - Core:
         - Exports (types):
           - `DocFact`
@@ -46181,8 +46174,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework/tooling/boundaries`
           - `framework/tooling/checks`
           - `framework/tooling/codegen`
+          - `framework/tooling/collected-dir/discovery`
           - `framework/tooling/import-closure`
           - `framework/tooling/web-artifacts`
+          - `infra/deps/npm`
           - `plugin-meta/plugin-records/bindings`
           - `plugin-meta/plugin-records/evaluate`
           - `plugin-meta/plugin-records/key-width`
@@ -46193,6 +46188,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from:
           - `imperative-create-table-allowlisted` — `cli/internal/sqlite-store.ts` (sanctioned)
           - `boundaries/no-platform-api` — `core/internal/outside-files.ts` (debt)
+      - Test helpers:
+        - Core: `@plugins/plugin-meta/plugins/plugin-records/core/testing`
+          - `overlaySnapshot` — `base` (normally the real checkout, `loadRepoSnapshot(REPO_ROOT)`) with `files` laid over it: each fixture path a member, its text its bytes, its blob id the id of that text — so a record keyed by it moves exactly when the fixture's text does.
       - Plugins:
         - **`bindings`** — Each module's imports as the module graph resolves them, with the names each statement binds and a pure re-export module's re-exports (fileSetBindings): a per-blob bindings.scan record joined onto the graph's edges by specifier, for a reader walking a closure by name through barrels without parsing or resolving an import.
           - Core:

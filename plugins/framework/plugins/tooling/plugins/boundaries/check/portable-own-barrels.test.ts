@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { deepOwnTarget } from "./portable-own-barrels";
+import { deepOwnTarget } from "./portable-own-barrels.scan";
 
 const plugin = "plugins/infra/plugins/jobs";
 const at = (rel: string) => `${plugin}/${rel}`;

@@ -1,5 +1,4 @@
 import { joinAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
 import { buildStructureTreeOnce } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import { pluginClaudeMdPath } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import type {
@@ -9,11 +8,6 @@ import type {
 
 const check: Check = {
   id: "plugins-have-claudemd",
-  wholeTreeRead: {
-    kind: "debt",
-    task: "task-1794579727-rjy6wx",
-    reason: "stats every plugin's CLAUDE.md (1.8k)",
-  },
   description:
     "every plugin has a CLAUDE.md (auto-generated, optionally with hand-written prose above the AUTOGEN fence)",
   async run(ctx: CheckContext) {
@@ -25,8 +19,10 @@ const check: Check = {
     );
     const missing: string[] = [];
     for (const info of tree.byDir.values()) {
-      const file = pluginClaudeMdPath(info);
-      if (!existsSync(file)) missing.push(file.replace(`${root}/`, ""));
+      // Membership of the run's file set — the tree the verdict is about —
+      // never a stat per plugin.
+      const file = pluginClaudeMdPath(info).replace(`${root}/`, "");
+      if (!repo.has(file)) missing.push(file);
     }
     if (missing.length > 0) {
       return {

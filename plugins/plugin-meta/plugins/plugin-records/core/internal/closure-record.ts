@@ -2,6 +2,7 @@ import type {
   RepoFiles,
   RepoSnapshot,
 } from "@plugins/framework/plugins/tooling/core";
+import { sharedWork } from "@plugins/packages/plugins/shared-work/core";
 import { recordKey } from "./keys";
 import {
   buildModuleGraph,
@@ -74,7 +75,10 @@ export async function closureRecord<T, E>(
   const stored = (await store.getMany("closure", [key])).get(key);
   if (stored !== undefined)
     return { ok: true, value: JSON.parse(stored) as T, hit: true };
-  const result = await run();
+  // Computing a record is shared work: its answer is every later caller's,
+  // host-wide, so its file calls are the store's, never the caller's that
+  // happened to miss first (`packages/shared-work`).
+  const result = await sharedWork("plugin records", run);
   if (!result.ok) return result;
   store.putMany("closure", [[key, JSON.stringify(result.value)]]);
   return { ok: true, value: result.value, hit: false };

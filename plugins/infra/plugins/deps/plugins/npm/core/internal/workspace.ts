@@ -5,18 +5,13 @@
 import { parse, printParseErrorCode, type ParseError } from "jsonc-parser";
 import { z } from "zod";
 import type { RepoFiles } from "@plugins/framework/plugins/tooling/core";
-import { POLICY_KEY, PolicySchema, type Policy } from "./policy";
+import { foldRepoFiles } from "@plugins/plugin-meta/plugins/plugin-records/core";
+import { PolicySchema, type Policy } from "./policy";
 import { parseSpec, type Spec } from "./spec";
+import { manifestsFold, SECTIONS } from "./manifests.scan";
 
-/**
- * The sections a workspace installs from. `peerDependencies` is not one: a peer
- * range states compatibility for consumers and is legitimately wide (`>=18`).
- */
-export const SECTIONS = [
-  "dependencies",
-  "devDependencies",
-  "optionalDependencies",
-] as const;
+export { SECTIONS };
+
 export type Section = (typeof SECTIONS)[number];
 
 /** One dependency as one package.json declares it. */
@@ -58,16 +53,6 @@ export interface Workspace {
   policyErrors: PolicyError[];
   lock: Lock;
 }
-
-const ManifestSchema = z
-  .object({
-    name: z.string().optional(),
-    dependencies: z.record(z.string(), z.string()).optional(),
-    devDependencies: z.record(z.string(), z.string()).optional(),
-    optionalDependencies: z.record(z.string(), z.string()).optional(),
-    [POLICY_KEY]: z.unknown().optional(),
-  })
-  .passthrough();
 
 const LockSchema = z.object({
   workspaces: z.record(
@@ -151,30 +136,31 @@ export async function readWorkspace(files: RepoFiles): Promise<Workspace> {
   const declared: Declared[] = [];
   const policies: DeclaredPolicy[] = [];
   const policyErrors: PolicyError[] = [];
-  // Read asynchronously through the set's bounded gate: a blocking read per
-  // manifest (a few hundred of them) held the check thread every check shares
-  // for seconds.
+  // Each manifest's part is a plugin record (`manifestsFold`): a pass parses
+  // only the manifests whose bytes it has not folded yet, where every reader
+  // of the workspace (four checks, the updater) read all ~1.8k on every pass.
+  // The fold hands its parts in tree order; they are put back in the order of
+  // `workspaceManifests` (the root first, then the set's own sort).
   const manifests = workspaceManifests(files);
-  const texts = await Promise.all(
-    manifests.map((manifest) => readMember(files, manifest)),
-  );
-  for (const [i, manifest] of manifests.entries()) {
-    const pkg = ManifestSchema.parse(JSON.parse(texts[i]!));
-    const workspace = pkg.name ?? manifest;
-    for (const section of SECTIONS) {
-      for (const [name, raw] of Object.entries(pkg[section] ?? {})) {
-        declared.push({
-          manifest,
-          workspace,
-          section,
-          name,
-          raw,
-          spec: parseSpec(raw),
-        });
-      }
+  const order = new Map(manifests.map((m, i) => [m, i]));
+  const parts = (
+    await foldRepoFiles(files, manifests, manifestsFold, null)
+  ).sort((a, b) => order.get(a.manifest)! - order.get(b.manifest)!);
+  for (const part of parts) {
+    const { manifest } = part;
+    const workspace = part.name ?? manifest;
+    for (const { section, name, raw } of part.deps) {
+      declared.push({
+        manifest,
+        workspace,
+        section,
+        name,
+        raw,
+        spec: parseSpec(raw),
+      });
     }
-    if (pkg[POLICY_KEY] !== undefined) {
-      const parsed = PolicySchema.safeParse(pkg[POLICY_KEY]);
+    if (part.policy !== undefined) {
+      const parsed = PolicySchema.safeParse(part.policy.raw);
       if (parsed.success) policies.push({ manifest, policy: parsed.data });
       else
         policyErrors.push({

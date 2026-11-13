@@ -8,8 +8,8 @@
 import { z } from "zod";
 import { HoldSchema } from "@plugins/infra/plugins/deps/plugins/updates/core";
 
-/** The package.json key. */
-export const POLICY_KEY = "dependencyPolicy";
+// The package.json key, spelled once with the manifest fold that reads it.
+export { POLICY_KEY } from "./manifests.scan";
 
 /**
  * Which part of the version every member of a group shares: `version` (the

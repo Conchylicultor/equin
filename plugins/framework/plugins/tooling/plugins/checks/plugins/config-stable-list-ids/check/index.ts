@@ -1,9 +1,4 @@
 import {
-  existsSync,
-  readFileSync,
-} from "@plugins/packages/plugins/timed-fs/core";
-import { join } from "path";
-import {
   loadConfigDescriptorsByOriginPath,
   codegenPassOver,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
@@ -35,18 +30,16 @@ const HINT =
 
 const check: Check = {
   id: "config-stable-list-ids",
-  wholeTreeRead: {
-    kind: "debt",
-    task: "task-1794579727-rjy6wx",
-    reason: "reads and stats every config origin (1.1k)",
-  },
   description:
     "Every identity-bearing config listField (stableIdentity) row carries an explicit, unique id",
   async run(ctx: CheckContext) {
-    const pass = codegenPassOver(await ctx.repo());
-    const root = pass.root;
-    const configDir = join(root, "config");
-    if (!existsSync(configDir)) return { ok: true };
+    const repo = await ctx.repo();
+    const pass = codegenPassOver(repo);
+    // The run's file set (tracked + untracked-not-ignored, minus files deleted
+    // in the working tree) — what a commit of this tree holds under config/.
+    // Membership is the set's, never a stat per file.
+    const allConfigFiles = repo.under("config");
+    if (allConfigFiles.length === 0) return { ok: true };
 
     // Map <hier>/<name>.origin.jsonc → ConfigDescriptor. Same discovery the
     // sibling check reuses.
@@ -57,15 +50,8 @@ const check: Check = {
       live: true,
     });
 
-    // The run's file set (tracked + untracked-not-ignored) — what a commit of
-    // this tree holds under config/.
-    const allConfigFiles = (await ctx.repo()).under("config");
-
     for (const relFromRoot of allConfigFiles) {
       if (!relFromRoot.endsWith(".jsonc")) continue;
-      const filePath = join(root, relFromRoot);
-      if (!existsSync(filePath)) continue;
-
       // Resolve the file to its owning descriptor via the same anchor trick the
       // sibling uses: a base override, an @app/<id>/ scoped delta, and an origin
       // all anchor to the base origin.
@@ -75,7 +61,9 @@ const check: Check = {
       const descriptor = descriptorsByOriginRel.get(originRel);
       if (!descriptor) continue;
 
-      const raw = readFileSync(filePath, "utf8");
+      const raw = await repo.read(relFromRoot);
+      // Removed since the set was taken: no file, nothing to judge.
+      if (raw === null) continue;
       const match = CONFIG_HASH_RE.exec(raw);
       const body = match ? raw.slice(match[0].length) : raw;
       const doc = parseJsonc(body) as Record<string, unknown> | undefined;

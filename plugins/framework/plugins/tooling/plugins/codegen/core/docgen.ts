@@ -1,4 +1,7 @@
-import { noteRepoWrites } from "@plugins/framework/plugins/tooling/core";
+import {
+  noteRepoWrites,
+  type RepoFiles,
+} from "@plugins/framework/plugins/tooling/core";
 import { unlinkSync } from "fs";
 import {
   existsSync,
@@ -210,16 +213,22 @@ type RenderMode = "detail" | "compact";
 
 // A plugin's testing barrels, read once per tree: the compact and detail
 // docs, its CLAUDE.md and every collapsed ancestor's subtree test each ask for
-// them (~4 asks per plugin, each 3 probes of the disk and a parse).
+// them (~4 asks per plugin). Which barrels exist is the tree's file set's
+// answer — `files`, the set the tree was read off — so a plugin without one
+// costs no disk call (it was 3 stats per plugin per ask, ~20k a docs pass).
 const testHelpersByNode = new WeakMap<PluginNode, TestHelperBarrel[]>();
-function testHelpersOf(p: PluginNode): TestHelperBarrel[] {
+function testHelpersOf(p: PluginNode, files: RepoFiles): TestHelperBarrel[] {
   let barrels = testHelpersByNode.get(p);
-  if (!barrels) testHelpersByNode.set(p, (barrels = collectTestHelpers(p)));
+  if (!barrels)
+    testHelpersByNode.set(p, (barrels = collectTestHelpers(p, files)));
   return barrels;
 }
 
-function subtreeHasTestHelpers(p: PluginNode): boolean {
-  return testHelpersOf(p).length > 0 || p.children.some(subtreeHasTestHelpers);
+function subtreeHasTestHelpers(p: PluginNode, files: RepoFiles): boolean {
+  return (
+    testHelpersOf(p, files).length > 0 ||
+    p.children.some((c) => subtreeHasTestHelpers(c, files))
+  );
 }
 
 /** Whether the plugin declares exemptions of its own (an `exempt/index.ts` with entries). */
@@ -243,6 +252,7 @@ function renderPluginTreeMd(
   root: AppPath,
   mode: RenderMode,
   facets: Facet[],
+  files: RepoFiles,
   main: MainComposition,
 ): string[] {
   const headerIndent = "  ".repeat(depth);
@@ -256,7 +266,9 @@ function renderPluginTreeMd(
   // plugin inside it publishes helpers.
   const thMarker =
     mode === "compact" &&
-    (p.collapsed ? subtreeHasTestHelpers(p) : testHelpersOf(p).length > 0)
+    (p.collapsed
+      ? subtreeHasTestHelpers(p, files)
+      : testHelpersOf(p, files).length > 0)
       ? " [test helpers]"
       : "";
   // Same rule for `[exempt]`: a plugin that exempts itself from a rule.
@@ -291,13 +303,15 @@ function renderPluginTreeMd(
       `[\`${relative(root, pluginReferenceMdPath(p))}\`](${refPath})`,
       lines,
     );
-    lines.push(...renderTestHelpers(testHelpersOf(p), bodyIndent));
+    lines.push(...renderTestHelpers(testHelpersOf(p, files), bodyIndent));
   }
 
   if (p.children.length > 0) {
     lines.push(`${bodyIndent}- Plugins:`);
     for (const c of p.children)
-      lines.push(...renderPluginTreeMd(c, depth + 2, root, mode, facets, main));
+      lines.push(
+        ...renderPluginTreeMd(c, depth + 2, root, mode, facets, files, main),
+      );
   }
 
   return lines;
@@ -319,12 +333,15 @@ function renderTreeBody(
   root: AppPath,
   mode: RenderMode,
   facets: Facet[],
+  files: RepoFiles,
   main: MainComposition,
 ): string {
   const lines: string[] = [];
   for (let i = 0; i < roots.length; i++) {
     if (i > 0) lines.push("");
-    lines.push(...renderPluginTreeMd(roots[i]!, 0, root, mode, facets, main));
+    lines.push(
+      ...renderPluginTreeMd(roots[i]!, 0, root, mode, facets, files, main),
+    );
   }
   return lines.join("\n") + "\n";
 }
@@ -364,6 +381,7 @@ function renderPluginClaudeAutogen(
   p: PluginNode,
   root: AppPath,
   facets: Facet[],
+  files: RepoFiles,
   main: MainComposition,
 ): string {
   const lines: string[] = [];
@@ -389,12 +407,14 @@ function renderPluginClaudeAutogen(
     "[REFERENCE.md](./REFERENCE.md)",
     lines,
   );
-  lines.push(...renderTestHelpers(testHelpersOf(p), ""));
+  lines.push(...renderTestHelpers(testHelpersOf(p, files), ""));
   if (p.children.length > 0) {
     if (p.collapsed) {
       lines.push("- Sub-plugins:");
       for (const c of p.children) {
-        lines.push(...renderPluginTreeMd(c, 1, root, "compact", facets, main));
+        lines.push(
+          ...renderPluginTreeMd(c, 1, root, "compact", facets, files, main),
+        );
       }
     } else {
       lines.push("- Sub-plugins:");
@@ -443,9 +463,10 @@ function renderPluginClaudeMd(
   existing: string | null,
   root: AppPath,
   facets: Facet[],
+  files: RepoFiles,
   main: MainComposition,
 ): string {
-  const autogen = renderPluginClaudeAutogen(p, root, facets, main);
+  const autogen = renderPluginClaudeAutogen(p, root, facets, files, main);
   const block = `${BEGIN}\n\n${autogen}\n${END}\n`;
 
   if (existing === null) {
@@ -521,7 +542,14 @@ export async function generatePluginDocs({
     const existing = readIfExists(file);
     await writeGenerated({
       file,
-      content: renderPluginClaudeMd(info, existing, root, tree.facets, main),
+      content: renderPluginClaudeMd(
+        info,
+        existing,
+        root,
+        tree.facets,
+        tree.repo,
+        main,
+      ),
     });
     // Written only for a plugin whose CLAUDE.md summarizes a list, and removed
     // once none does, so the file's presence tracks the source either way.
@@ -552,7 +580,14 @@ function renderCompactDocFromTree(
   root: AppPath,
   main: MainComposition,
 ): string {
-  const body = renderTreeBody(tree.roots, root, "compact", tree.facets, main);
+  const body = renderTreeBody(
+    tree.roots,
+    root,
+    "compact",
+    tree.facets,
+    tree.repo,
+    main,
+  );
   return `${COMPACT_HEADER}${BEGIN}\n\n${body}\n${END}\n`;
 }
 
@@ -561,7 +596,14 @@ function renderDetailsDocFromTree(
   root: AppPath,
   main: MainComposition,
 ): string {
-  const body = renderTreeBody(tree.roots, root, "detail", tree.facets, main);
+  const body = renderTreeBody(
+    tree.roots,
+    root,
+    "detail",
+    tree.facets,
+    tree.repo,
+    main,
+  );
   return `${DETAILS_HEADER}${BEGIN}\n\n${body}\n${END}\n`;
 }
 

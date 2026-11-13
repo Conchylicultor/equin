@@ -5157,6 +5157,10 @@
       "name": "@equin/plugin-packages-source-digest",
       "version": "0.0.1",
     },
+    "plugins/packages/plugins/source-digest/plugins/computed-loads": {
+      "name": "@equin/plugin-packages-source-digest-computed-loads",
+      "version": "0.0.1",
+    },
     "plugins/packages/plugins/spawn-disclaim": {
       "name": "@equin/plugin-packages-spawn-disclaim",
       "version": "0.0.1",
@@ -10287,6 +10291,8 @@
     "@equin/plugin-packages-smooth-clock": ["@equin/plugin-packages-smooth-clock@workspace:plugins/packages/plugins/smooth-clock"],
 
     "@equin/plugin-packages-source-digest": ["@equin/plugin-packages-source-digest@workspace:plugins/packages/plugins/source-digest"],
+
+    "@equin/plugin-packages-source-digest-computed-loads": ["@equin/plugin-packages-source-digest-computed-loads@workspace:plugins/packages/plugins/source-digest/plugins/computed-loads"],
 
     "@equin/plugin-packages-spawn-disclaim": ["@equin/plugin-packages-spawn-disclaim@workspace:plugins/packages/plugins/spawn-disclaim"],
 

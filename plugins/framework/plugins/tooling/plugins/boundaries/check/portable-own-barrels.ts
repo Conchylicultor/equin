@@ -1,61 +1,13 @@
-import type {
-  Check,
-  CheckResult,
-} from "@plugins/framework/plugins/tooling/core";
-import { findImports } from "@plugins/plugin-meta/plugins/parse-utils/core";
+import type { Check } from "@plugins/framework/plugins/tooling/core";
+import { defineFoldCheck } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import { isTestCodePath } from "@plugins/framework/plugins/plugin-id/core";
 import { serverPortabilityOf } from "../core/portability";
+import {
+  deepOwnImportsFold,
+  serverPluginOf,
+} from "./portable-own-barrels.scan";
 
 const PORTABLE_OWN_BARRELS = "boundaries:portable-own-barrels";
-
-/** Own folders a deep import may enter: inlined into the server artifact, or not own. */
-const OPEN_FOLDERS = new Set(["server", "shared", "plugins", "node_modules"]);
-
-const BARREL_TAILS = new Set(["index", "index.ts", "index.tsx", "index.js"]);
-
-/** Resolve a relative specifier against a repo-relative importer path. */
-function resolveRelative(fromFile: string, specifier: string): string {
-  const out = fromFile.split("/").slice(0, -1);
-  for (const seg of specifier.split("/")) {
-    if (seg === "" || seg === ".") continue;
-    if (seg === "..") out.pop();
-    else out.push(seg);
-  }
-  return out.join("/");
-}
-
-/**
- * Where an import of a `server/` file of plugin `pluginDir` lands inside the
- * plugin's own tree, when it enters another own folder below its barrel: the
- * folder and the barrel spelling. Null otherwise (outside the plugin, a bare
- * package, an open folder, the barrel itself).
- */
-export function deepOwnTarget(
-  pluginDir: string,
-  importer: string,
-  specifier: string,
-): { folder: string; barrel: string } | null {
-  let landed: string;
-  if (specifier.startsWith("./") || specifier.startsWith("../")) {
-    landed = resolveRelative(importer, specifier);
-  } else if (
-    specifier.startsWith(`@plugins/${pluginDir.slice("plugins/".length)}/`)
-  ) {
-    landed = `${pluginDir}/${specifier.slice(`@plugins/${pluginDir.slice("plugins/".length)}/`.length)}`;
-  } else return null;
-  if (!landed.startsWith(`${pluginDir}/`)) return null;
-  const [folder, ...rest] = landed.slice(pluginDir.length + 1).split("/");
-  if (folder === undefined || OPEN_FOLDERS.has(folder)) return null;
-  if (rest.length === 0 || (rest.length === 1 && BARREL_TAILS.has(rest[0]!)))
-    return null;
-  const segs = specifier.split("/");
-  const tail = segs.slice(segs.length - rest.length);
-  const barrel =
-    tail.join("/") === rest.join("/")
-      ? segs.slice(0, segs.length - rest.length).join("/")
-      : `<path to ${folder}/>`;
-  return { folder, barrel };
-}
 
 /**
  * A portable `server/` barrel is browser-built: the browser host's worker loads
@@ -70,44 +22,33 @@ export function deepOwnTarget(
  * the whole closure, which a per-file lint rule cannot see). The builder
  * throws on the same import as the backstop.
  */
-export const portableOwnBarrelsCheck: Check = {
+export const portableOwnBarrelsCheck: Check = defineFoldCheck({
   id: PORTABLE_OWN_BARRELS,
-  wholeTreeRead: {
-    kind: "debt",
-    task: "task-1794579727-rjy6wx",
-    reason: "reads every portable barrel (1.5k)",
-  },
   description:
     "in a plugin whose server barrel is portable (derived from its closure), `server/` files reach the plugin's other folders only through their barrels (`../core`, never `../core/x`) — the browser host loads each as its barrel artifact",
-  async run(ctx): Promise<CheckResult> {
-    const repo = await ctx.repo();
-    const portability = await serverPortabilityOf(repo);
-    const offenders: string[] = [];
-    for (const barrel of portability.barrels) {
-      if (!portability.isPortable(barrel)) continue;
-      const serverDir = barrel.slice(0, -"/index.ts".length);
-      const pluginDir = serverDir.slice(0, -"/server".length);
-      for (const file of repo.under(serverDir)) {
-        if (!/\.tsx?$/.test(file) || isTestCodePath(file.split("/"))) continue;
-        // A sub-plugin's files are its own plugin's business.
-        if (
-          file
-            .slice(serverDir.length + 1)
-            .split("/")
-            .includes("plugins")
-        )
-          continue;
-        const src = await repo.read(file);
-        if (src === null) continue;
-        for (const ref of findImports(src)) {
-          const target = deepOwnTarget(pluginDir, file, ref.specifier);
-          if (target === null) continue;
-          offenders.push(
-            `${file}: import "${ref.specifier}" enters ${target.folder}/ below its barrel — import "${target.barrel}"`,
-          );
-        }
-      }
-    }
+  // A fold check: each server file's deep own-folder imports are its record
+  // (./portable-own-barrels.scan.ts), whatever its plugin's portability; the
+  // verdict keeps those of the plugins whose server barrel is portable.
+  context: () => null,
+  files: (repo) =>
+    repo
+      .under("plugins")
+      .filter(
+        (f) =>
+          /\.tsx?$/.test(f) &&
+          !isTestCodePath(f.split("/")) &&
+          serverPluginOf(f) !== null,
+      ),
+  facts: async (ctx) => serverPortabilityOf(await ctx.repo()),
+  fold: deepOwnImportsFold,
+  verdict(found, { facts: portability }) {
+    const portable = new Set(
+      portability.barrels.filter((b) => portability.isPortable(b)),
+    );
+    const offenders = found
+      .filter((d) => portable.has(`${d.pluginDir}/server/index.ts`))
+      .map((d) => d.message)
+      .sort();
     if (offenders.length === 0) return { ok: true };
     return {
       ok: false,
@@ -115,4 +56,4 @@ export const portableOwnBarrelsCheck: Check = {
       hint: "Import the folder's barrel, and export what it lacks from its index.ts (or move a server-only helper into the plugin's shared/).",
     };
   },
-};
+});

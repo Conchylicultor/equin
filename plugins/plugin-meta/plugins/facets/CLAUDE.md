@@ -111,8 +111,6 @@ See `plugins/commands/` for the reference implementation.
     - `plugin-meta/facets/slots`
     - `plugin-meta/facets/structure`
     - `plugin-meta/plugin-tree/faceted`
-- Exemptions:
-  - Exempts itself from: `check-thread-safety/no-blocking-check-work` — `check/index.ts` (debt)
 - Core:
   - Exports (types):
     - `DocFact`

@@ -1,5 +1,4 @@
 import type { SlotHandle } from "@plugins/framework/plugins/slot-declaration/core";
-import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
 import { join, relative } from "path";
 import { asPath, asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import {
@@ -145,11 +144,14 @@ export async function loadConfigRegistrations(
     };
   }
 
+  // Which barrels exist is a fact of the run's file set, never a stat per
+  // plugin and runtime (5.4k of them a pass).
+  const repo = await ctx.repo();
   const barrels: RegistrationBarrel[] = [];
   for (const node of ctx.tree.byDir.values()) {
     for (const runtime of RUNTIMES) {
+      if (!repo.has(`plugins/${node.path}/${runtime}/index.ts`)) continue;
       const index = join(node.dir, runtime, "index.ts");
-      if (!existsSync(index)) continue;
       let mod: Record<string, unknown>;
       try {
         mod = await importBarrel(index);

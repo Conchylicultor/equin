@@ -223,18 +223,18 @@ wrapper fixpoint reads.
 
 - Description: Plugin doc generation and registry codegen
 - Core:
-  - Uses: 153 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 154 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `plugin-meta/parse-utils` ×17
     - `config_v2` ×16
     - `framework/plugin-id` ×13
     - `network/live/resource-vocabulary` ×11
-    - `plugin-meta/plugin-records` ×9
+    - `plugin-meta/plugin-records` ×10
     - `framework/slot-declaration` ×6
-    - `packages/timed-fs` ×6
     - `plugin-meta/barrel-import` ×6
     - `plugin-meta/closure` ×6
     - `plugin-meta/composition` ×6
     - `framework/tooling/checks/source-analysis` ×5
+    - `packages/timed-fs` ×5
     - `plugin-meta/facets` ×5
     - `plugin-meta/plugin-records/evaluate` ×5
     - `framework/tooling/codegen/composition-registries` ×4
@@ -245,13 +245,13 @@ wrapper fixpoint reads.
     - `framework/tooling/format` ×2
     - `framework/tooling/lint` ×2
     - `framework/tooling/web-artifacts` ×2
+    - `framework/tooling` ×2
     - `infra/paths` ×2
     - `network/live/resource-protocol` ×2
     - `plugin-meta/parse-utils/source-files` ×2
     - `plugin-meta/plugin-tree` ×2
     - `fields/reorder-tree.REORDER_NODE_LEGEND`
     - `framework/tooling/guards/agent-policy.agentPolicySettings`
-    - `framework/tooling.noteRepoWrites`
     - `infra/namespace.MAIN_COMPOSITION_ID`
     - `packages/macrotask-yield.yieldMacrotask`
     - `packages/shared-work.sharedWork`

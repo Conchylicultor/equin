@@ -1,8 +1,5 @@
-import {
-  existsSync,
-  readFileSync,
-} from "@plugins/packages/plugins/timed-fs/core";
 import { join, relative } from "path";
+import { gitBlobId } from "@plugins/plugin-meta/plugins/plugin-records/core";
 import {
   renderConfigOriginContent,
   loadConfigDescriptorsByOriginPath,
@@ -60,15 +57,11 @@ function validateSchema(
 
 const check: Check = {
   id: "config-origins-in-sync",
-  wholeTreeRead: {
-    kind: "debt",
-    task: "task-1794579727-rjy6wx",
-    reason: "reads and stats every config origin (2.6k)",
-  },
   description:
     "config/ origin files match defineConfig defaults, overwrite hashes are consistent, and all content validates against its schema",
   async run(ctx: CheckContext) {
-    const pass = codegenPassOver(await ctx.repo());
+    const repo = await ctx.repo();
+    const pass = codegenPassOver(repo);
     const root = pass.root;
     const configDir = join(root, "config");
     // `renderConfigOriginContent` resolves origin annotations through codegen's
@@ -83,24 +76,30 @@ const check: Check = {
       live: true,
     });
 
+    // Each origin is compared by content id: the file set already knows every
+    // member's blob id, so an origin whose id is the expected bytes' id IS
+    // those bytes — validated from memory, never read. (Every origin was read
+    // and compared on every pass: ~500 stats and reads.)
+    const originText = new Map<string, string>();
     for (const [relPath, content] of expected) {
       const filePath = join(configDir, relPath);
       const rel = `config/${relPath}`;
-      if (!existsSync(filePath)) {
+      if (!repo.has(rel)) {
         return {
           ok: false,
           message: `${rel} is missing`,
           hint: "Run `./equin build` to generate it.",
         };
       }
-      const raw = readFileSync(filePath, "utf8");
-      if (raw !== (await formatGenerated({ file: filePath, content }))) {
+      const raw = await formatGenerated({ file: filePath, content });
+      if (gitBlobId(raw) !== repo.blobOf(rel)) {
         return {
           ok: false,
           message: `${rel} is out of sync with defineConfig defaults`,
           hint: "Run `./equin build` and commit the regenerated file.",
         };
       }
+      originText.set(rel, raw);
       const descriptor = descriptorsByOriginRel.get(relPath);
       if (descriptor) {
         const valid = validateSchema(descriptor, raw, rel);
@@ -108,11 +107,10 @@ const check: Check = {
       }
     }
 
-    if (!existsSync(configDir)) return { ok: true };
-
-    // The run's file set (tracked + untracked-not-ignored) — what a commit of
-    // this tree holds under config/.
-    const allConfigFiles = (await ctx.repo()).under("config");
+    // The run's file set (tracked + untracked-not-ignored, minus files deleted
+    // in the working tree) — what a commit of this tree holds under config/.
+    const allConfigFiles = repo.under("config");
+    if (allConfigFiles.length === 0) return { ok: true };
 
     // Orphan pass: any `*.origin.jsonc` present in the WORKING TREE that
     // `renderConfigOriginContent` did not produce is no longer backed by a
@@ -123,15 +121,13 @@ const check: Check = {
     // working-tree presence, not the git index: a file `pruneOrphanedConfigFiles`
     // unlinked is still listed by `--cached` (the index entry lingers until the
     // deletion is committed), and flagging it there would make the build's prune
-    // unable to self-heal — the exact contradiction this `existsSync` guard
-    // closes, mirroring the working-tree guard the override-hash pass below
-    // already applies. A committed orphan never built is still caught: it remains
-    // checked out on disk. `expected` keys are relative to configDir;
+    // unable to self-heal. The run's file set is that working-tree presence: it
+    // drops an index entry whose file is gone. A committed orphan never built is
+    // still caught: it remains checked out on disk. `expected` keys are relative to configDir;
     // `allConfigFiles` are relative to root — normalize via relative().
     const orphans: string[] = [];
     for (const relFromRoot of allConfigFiles) {
       if (!relFromRoot.endsWith(".origin.jsonc")) continue;
-      if (!existsSync(join(root, relFromRoot))) continue;
       const relPath = relative(configDir, join(root, relFromRoot));
       if (!expected.has(relPath)) orphans.push(relFromRoot);
     }
@@ -151,9 +147,9 @@ const check: Check = {
         continue;
 
       const filePath = join(root, relFromRoot);
-      if (!existsSync(filePath)) continue;
-
-      const raw = readFileSync(filePath, "utf8");
+      const raw = await repo.read(relFromRoot);
+      // Removed since the set was taken: no file, nothing to judge.
+      if (raw === null) continue;
       const match = CONFIG_HASH_RE.exec(raw);
       if (!match) {
         return {
@@ -169,7 +165,7 @@ const check: Check = {
         ".origin.jsonc",
       );
       const originRel = relative(root, originPath);
-      if (!existsSync(originPath)) {
+      if (!repo.has(originRel)) {
         return {
           ok: false,
           message: `${relFromRoot} references a hash but ${originRel} does not exist`,
@@ -177,7 +173,13 @@ const check: Check = {
         };
       }
 
-      const originRaw = readFileSync(originPath, "utf8");
+      // Every committed origin is an expected one (an orphan failed above), and
+      // equal to its expected bytes, so its text is already in memory.
+      const originRaw = originText.get(originRel);
+      if (originRaw === undefined)
+        throw new Error(
+          `${originRel} is in the file set but was not rendered — the orphan pass above should have reported it`,
+        );
       const originMatch = CONFIG_HASH_RE.exec(originRaw);
       const originBody = originMatch
         ? originRaw.slice(originMatch[0].length)

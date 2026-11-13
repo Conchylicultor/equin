@@ -226,11 +226,6 @@ const REGISTRY_RULE = `${FREEZE_CHECK_ID}:registry`;
 
 const manifestFreezeCheck: Check = {
   id: FREEZE_CHECK_ID,
-  wholeTreeRead: {
-    kind: "debt",
-    task: "task-1794579727-rjy6wx",
-    reason: "reads every module of the command closures (2.3k)",
-  },
   description:
     "no registered pre-barrel or post-web codegen manifest may be loaded by the CLI's startup closure, nor by the run closure of a command that regenerates the manifests in-process — a manifest frozen before stage 2 regenerates it is never re-read, and pruneOrphanedConfigFiles then deletes a freshly-authored config override; and no stage-1 registry (<dir>.generated.ts) may be evaluated at load by either, so one build leaves every artifact read from a registry consistent",
   alwaysRun: true,

@@ -748,9 +748,9 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
   - **`cache-prune`** — The hourly checks.cache-prune job: ages out and caps the shared check-result cache and reclaims idle flight files, so no check run lists the whole cache.
   - **`class-token-walk-single-source`**
   - **`color-token-ref-in-sync`**
-  - **`composition-closure`** [exempt]
-  - **`config-origins-in-sync`** [exempt]
-  - **`config-stable-list-ids`** [exempt]
+  - **`composition-closure`**
+  - **`config-origins-in-sync`**
+  - **`config-stable-list-ids`**
   - **`conversation-trailer`**
   - **`css-vars-single-owner`** [exempt]
   - **`css-vars-supplied`** [exempt]
@@ -779,13 +779,13 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
   - **`no-raw-event-source`**
   - **`no-raw-sse`** [exempt]
   - **`no-raw-websocket`**
-  - **`no-reexport-default`** [exempt]
+  - **`no-reexport-default`**
   - **`no-relative-server-imports`**
   - **`no-use-resource-cast`**
   - **`plugin-boundaries`** [exempt]
   - **`plugin-refs-resolve`**
   - **`plugins-doc-in-sync`**
-  - **`plugins-have-claudemd`** [exempt]
+  - **`plugins-have-claudemd`**
   - **`plugins-registry-in-sync`**
   - **`pre-barrel-manifests-complete`**
   - **`registry`** — The check registry: the check collected-dir marker, its generated check.generated.ts, and loadChecks / listAllChecks — every registered check with the module its code lives in. Apart from…
