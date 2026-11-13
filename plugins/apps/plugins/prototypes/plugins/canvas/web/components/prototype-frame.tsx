@@ -41,6 +41,11 @@ import { PAGE_MOTION } from "../internal/geometry-motion";
  * the top. What the page holds in script (an open menu, a typed value) is not
  * carried: that lives in the old document, and only a reload shows the edit.
  *
+ * **A new `restart` starts the page over.** The document on screen first
+ * empties its origin's web storage (the channel's `clearStorage`), then a
+ * fresh copy loads the same way — behind the one on screen, no flash — but
+ * keeps no scroll offset: it opens exactly as a first visit would.
+ *
  * With `wholePage`, the document is first probed (`PageProbe`) for whether it
  * HAS a whole-page height. If it does, the frame is as tall as its own
  * document's content (reported by the channel's `watchHeight`); if the page sizes
@@ -61,6 +66,7 @@ import { PAGE_MOTION } from "../internal/geometry-motion";
  */
 export function PrototypeFrame({
   src,
+  restart,
   title,
   width,
   height,
@@ -72,6 +78,11 @@ export function PrototypeFrame({
 }: {
   /** The document's URL, from `useFrameSrc` — never built here. */
   src: ReadyContentUrl;
+  /**
+   * The frame's restart count (`PrototypeDetailContextValue.restarts`): each
+   * new value reloads the document from its initial state.
+   */
+  restart: number;
   /** The frame's accessible name: the prototype's `<title>`, never its id. */
   title: string;
   width: number;
@@ -84,9 +95,15 @@ export function PrototypeFrame({
   colorVars: Readonly<Record<string, string>>;
   onPageExtent: (extent: PageExtent) => void;
 }) {
-  // The document on screen. `src` differing from it means a new one is loading.
-  const [shown, setShown] = useState(src);
-  const frames = shown.url === src.url ? [src] : [shown, src];
+  // The restart the document's storage has been emptied for: the one the
+  // document asked for loads at. Behind `restart` while the storage empties.
+  const [cleared, setCleared] = useState(restart);
+  const wanted: FrameDoc = { src, restart: cleared };
+  // The document on screen. `wanted` differing from it means a new one is
+  // loading.
+  const [shown, setShown] = useState<FrameDoc>(wanted);
+  const shownRef = useLatestRef(shown);
+  const docs = docKey(shown) === docKey(wanted) ? [wanted] : [shown, wanted];
   // The document on screen once it has loaded, and its channel.
   const [ready, setReady] = useState<{
     frame: HTMLIFrameElement;
@@ -99,7 +116,7 @@ export function PrototypeFrame({
     url: string;
     extent: PageExtent;
   } | null>(null);
-  const extent = probed?.url === shown.url ? probed.extent : null;
+  const extent = probed?.url === shown.src.url ? probed.extent : null;
   const hasPage = wholePage && extent?.kind === "page";
   const report = useEventCallback(onPageExtent);
   const heightRef = useLatestRef(height);
@@ -142,10 +159,28 @@ export function PrototypeFrame({
     }
   }, [ready, colorVars]);
 
+  // A restart: the document on screen empties its origin's storage, then the
+  // fresh copy is asked for. One still loading has nothing to empty it with.
+  useEffect(() => {
+    if (restart === cleared) return;
+    const outgoing = readyRef.current;
+    let cancelled = false;
+    void (async () => {
+      if (outgoing) {
+        await settled(outgoing.channel.request({ op: "clearStorage" }));
+      }
+      if (!cancelled) setCleared(restart);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [restart, cleared, readyRef]);
+
   // An incoming document is painted (screen height, colors) before it is
-  // shown, and handed the outgoing one's scroll offsets once it is.
+  // shown, and handed the outgoing one's scroll offsets once it is — unless
+  // it is a restart, which opens at the top.
   const promote = async (
-    frameSrc: ReadyContentUrl,
+    doc: FrameDoc,
     frame: HTMLIFrameElement,
     channel: FrameChannel,
   ) => {
@@ -155,10 +190,10 @@ export function PrototypeFrame({
     await channel.request({ op: "setVars", vars: latestColors.current });
     const outgoing = readyRef.current;
     const scroll =
-      outgoing === null
+      outgoing === null || shownRef.current.restart !== doc.restart
         ? []
         : await settled(outgoing.channel.request({ op: "captureScroll" }));
-    setShown(frameSrc);
+    setShown(doc);
     setReady({ frame, channel });
     if (scroll !== null && scroll.length > 0) {
       await channel.request({ op: "restoreScroll", scroll });
@@ -179,13 +214,13 @@ export function PrototypeFrame({
         overflow: "hidden",
       }}
     >
-      {frames.map((frameSrc) => {
-        const loading = frameSrc.url !== shown.url;
+      {docs.map((doc) => {
+        const loading = docKey(doc) !== docKey(shown);
         return (
           <ContentFrame
-            key={frameSrc.url}
+            key={docKey(doc)}
             title={title}
-            src={frameSrc}
+            src={doc.src}
             width={width}
             height={docHeight}
             // The incoming frame is invisible and out of the accessibility
@@ -193,7 +228,7 @@ export function PrototypeFrame({
             aria-hidden={loading || undefined}
             tabIndex={loading ? -1 : undefined}
             onChannel={(channel, frame) =>
-              void settled(promote(frameSrc, frame, channel))
+              void settled(promote(doc, frame, channel))
             }
             // The incoming frame is a layer over the one on screen, and drops
             // back into flow when promoted — a class change, never a remount.
@@ -210,18 +245,29 @@ export function PrototypeFrame({
       })}
       {wholePage && extent === null ? (
         <PageProbe
-          key={shown.url}
-          src={shown}
+          key={shown.src.url}
+          src={shown.src}
           width={width}
           height={height}
           onExtent={(e) => {
-            setProbed({ url: shown.url, extent: e });
+            setProbed({ url: shown.src.url, extent: e });
             onPageExtent(e);
           }}
         />
       ) : null}
     </div>
   );
+}
+
+/** One document a frame shows: its url, at one restart. */
+interface FrameDoc {
+  src: ReadyContentUrl;
+  restart: number;
+}
+
+/** A frame document's identity — its React key: a restart is a new one. */
+function docKey(doc: FrameDoc): string {
+  return `${String(doc.restart)}:${doc.src.url}`;
 }
 
 /**

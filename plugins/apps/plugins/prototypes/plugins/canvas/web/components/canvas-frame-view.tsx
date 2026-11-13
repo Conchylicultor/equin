@@ -84,6 +84,7 @@ function PrototypeFrameView({
   children = justScreen,
 }: CanvasFrameViewProps & { frame: PrototypeFrameModel }): ReactElement {
   const src = useFrameSrc(frame, meta);
+  const { restarts } = usePrototypeDetail();
   const colorVars = useFrameColorVars(frame, meta);
   const screen = (
     <Screen
@@ -96,6 +97,7 @@ function PrototypeFrameView({
       {src.kind === "ready" ? (
         <PrototypeFrame
           src={src}
+          restart={restarts.get(frame.id) ?? 0}
           title={meta.title}
           width={layout.width}
           height={layout.height}

@@ -16,7 +16,7 @@ import { FRAME_PROTOCOL } from "./protocol";
  *
  * The agent trusts nothing either: a request it cannot read is answered with
  * an error, and it only ever touches its own document's custom properties,
- * scroll offsets and `resize` event.
+ * scroll offsets, `resize` event and (on request) its origin's web storage.
  */
 export function installFrameAgent(
   win: Window & typeof globalThis,
@@ -259,6 +259,10 @@ export function installFrameAgent(
       case "cancelRestore":
         stopRestore?.();
         stopRestore = null;
+        return null;
+      case "clearStorage":
+        win.localStorage.clear();
+        win.sessionStorage.clear();
         return null;
       default:
         throw new Error("unknown op " + String(req.op));

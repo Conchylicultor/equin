@@ -58,7 +58,12 @@ export type FrameRequest =
   | { op: "captureScroll" }
   /** Scroll to these offsets, retrying while the document grows (≤ 5 s). */
   | { op: "restoreScroll"; scroll: DocumentScroll }
-  | { op: "cancelRestore" };
+  | { op: "cancelRestore" }
+  /**
+   * Empty the document's origin's `localStorage` and `sessionStorage` — what a
+   * page keeps across reloads — so its next load starts from scratch.
+   */
+  | { op: "clearStorage" };
 
 export type FrameOp = FrameRequest["op"];
 
@@ -87,6 +92,7 @@ export const FRAME_REPLY_VALUES = {
   captureScroll: DocumentScrollSchema,
   restoreScroll: z.null(),
   cancelRestore: z.null(),
+  clearStorage: z.null(),
 } as const satisfies Record<FrameOp, z.ZodType>;
 
 export type FrameReplyValue<Op extends FrameOp> = z.infer<

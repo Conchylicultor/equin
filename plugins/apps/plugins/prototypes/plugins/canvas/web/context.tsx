@@ -194,6 +194,15 @@ export interface PrototypeDetailContextValue {
   dispatch: (action: CanvasAction) => void;
   /** Close every frame but `id`, with an Undo toast. */
   keepOnly: (id: FrameId) => void;
+  /**
+   * How many times each frame was restarted (absent: never). A prototype
+   * frame reloads its document from scratch whenever its count moves — its
+   * origin's storage emptied first — so it is back at its initial state.
+   * Not part of the saved canvas: a reload starts every frame fresh anyway.
+   */
+  restarts: ReadonlyMap<FrameId, number>;
+  /** Restart one frame (see `restarts`). */
+  restart: (id: FrameId) => void;
   /** Every contributed frame source, in registration order. */
   sources: readonly CanvasSourceEntry[];
 }
@@ -454,9 +463,27 @@ function DetailProvider({
     });
   });
 
+  const [restarts, setRestarts] = useState<ReadonlyMap<FrameId, number>>(
+    () => new Map(),
+  );
+  const restart = useCallback(
+    (id: FrameId) =>
+      setRestarts((prev) => new Map(prev).set(id, (prev.get(id) ?? 0) + 1)),
+    [],
+  );
+
   const value = useMemo<PrototypeDetailContextValue>(
-    () => ({ name, shared, canvas, dispatch, keepOnly, sources }),
-    [name, shared, canvas, dispatch, keepOnly, sources],
+    () => ({
+      name,
+      shared,
+      canvas,
+      dispatch,
+      keepOnly,
+      restarts,
+      restart,
+      sources,
+    }),
+    [name, shared, canvas, dispatch, keepOnly, restarts, restart, sources],
   );
   return (
     <PrototypeDetailContext.Provider value={value}>

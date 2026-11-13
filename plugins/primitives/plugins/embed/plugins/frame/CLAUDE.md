@@ -56,7 +56,8 @@ The parent can no longer read the document, so it asks. On every `load`,
 URL it framed) and hands `onChannel` a `FrameChannel`: `setVars`,
 `setScreenHeight`, `dispatchResize`, `settle`, `measure`, `watchHeight` /
 `unwatchHeight` (→ `height` events), `captureScroll` / `restoreScroll` /
-`cancelRestore`; plus `activity` events, re-fired on the frame element as
+`cancelRestore`, `clearStorage` (empty the origin's local and session
+storage, before a restart); plus `activity` events, re-fired on the frame element as
 `FRAME_ACTIVITY_EVENT` (bubbling) for whoever watches for the reader's input.
 
 - **Every answer is untrusted data.** The agent shares a realm with the
