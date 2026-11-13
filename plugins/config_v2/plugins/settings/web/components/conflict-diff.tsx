@@ -56,7 +56,9 @@ export function ConflictDiff({
       </Text>
       <Scroll axis="both" className="max-h-96">
         {override === origin ? (
-          <Placeholder>No differences in the raw files.</Placeholder>
+          <div className="rail-x-md">
+            <Placeholder>No differences in the raw files.</Placeholder>
+          </div>
         ) : (
           <TextDiff oldText={override} newText={origin} path="config.json" />
         )}

@@ -58,6 +58,7 @@ contributions: [
     - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
+    - `primitives/pane.PaneMessage`
     - `ui/icons.Icon`
   - Exports (types):
     - `ReviewProps`

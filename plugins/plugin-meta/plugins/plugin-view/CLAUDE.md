@@ -117,10 +117,10 @@ an empty titled card); a count goes in `summary`, via the shared `SectionCount`.
     - `pluginFacetsTree`
     - `pluginTree`
 - Cross-plugin:
-  - Uses tokens: 26 vars — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses tokens: 25 vars — full list in [REFERENCE.md](./REFERENCE.md)
     - `ui/tokens/categorical` ×10
     - `ui/tokens/type-scale` ×7
-    - `ui/tokens/density` ×5
+    - `ui/tokens/density` ×4
     - `ui/tokens/color-palette` ×3
     - `ui/tokens/shape --spacing`
   - Imported by: 25 plugins — full list in [REFERENCE.md](./REFERENCE.md)

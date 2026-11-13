@@ -1343,6 +1343,12 @@
 @utility rail-x-smd  { --rail-edge: closed; --rail-start: var(--space-smd);  --rail-end: var(--space-smd); --rail-text-start: calc(var(--rail-start) + var(--rail-row-pad)); --rail-text-end: calc(var(--rail-end) + var(--rail-row-pad));  --rail-owed-start: 0px; --rail-owed-end: 0px; padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail-x */
 @utility rail-x-md   { --rail-edge: closed; --rail-start: var(--space-md);  --rail-end: var(--space-md); --rail-text-start: calc(var(--rail-start) + var(--rail-row-pad)); --rail-text-end: calc(var(--rail-end) + var(--rail-row-pad));  --rail-owed-start: 0px; --rail-owed-end: 0px; padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail-x */
 @utility rail-x-lg   { --rail-edge: closed; --rail-start: var(--space-lg);  --rail-end: var(--space-lg); --rail-text-start: calc(var(--rail-start) + var(--rail-row-pad)); --rail-text-end: calc(var(--rail-end) + var(--rail-row-pad));  --rail-owed-start: 0px; --rail-owed-end: 0px; padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail-x */
+/* The pane's own text edge as an inline region (`PaneMessage`): a message standing
+ * in for a pane's content starts where the pane header's title does. It reads
+ * `--pane-inset` (the pane's shared body edge), else the pane header's own pad,
+ * so it follows the header by construction. Inline only: the message's block
+ * room is its own (`Placeholder`'s `py-sm`), never stacked on a region's. */
+@utility rail-x-pane { --rail-edge: open; --rail-start: var(--pane-inset, var(--chrome-pane-pad-start)); --rail-end: var(--pane-inset, var(--chrome-pane-pad-end)); --rail-text-start: calc(var(--rail-start) + var(--rail-row-pad)); --rail-text-end: calc(var(--rail-end) + var(--rail-row-pad)); --rail-owed-start: 0px; --rail-owed-end: 0px; padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail-x */
 @utility rail-x-xl   { --rail-edge: closed; --rail-start: var(--space-xl);  --rail-end: var(--space-xl); --rail-text-start: calc(var(--rail-start) + var(--rail-row-pad)); --rail-text-end: calc(var(--rail-end) + var(--rail-row-pad));  --rail-owed-start: 0px; --rail-owed-end: 0px; padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail-x */
 @utility rail-x-2xl  { --rail-edge: closed; --rail-start: var(--space-2xl); --rail-end: var(--space-2xl); --rail-text-start: calc(var(--rail-start) + var(--rail-row-pad)); --rail-text-end: calc(var(--rail-end) + var(--rail-row-pad)); --rail-owed-start: 0px; --rail-owed-end: 0px; padding-inline: var(--rail-start) var(--rail-end); } /* twmerge: sg-rail-x */
 /* PUBLISH WITHOUT PAYING — open a region and hand the bill to the children.
@@ -1498,6 +1504,15 @@
  * hand-published one) publishes no text rail; readers fall back to its rail. */
 @property --rail-row-pad { syntax: "<length>"; inherits: false; initial-value: 0px; }
 @utility rail-rows { --rail-row-pad: var(--pad-row-x); } /* twmerge: standalone -- a row host's text-rail declaration; it composes with whatever rail class the host wears. */
+
+/* TEXT INDENT — loose text (a `Placeholder`, an empty or loading state) that
+ * sits on the region's rail like any content, but must line up with the rows'
+ * TEXT in a row host. It pays only the gap between the two edges: the text
+ * rail minus the rail — 0 in a plain region, one row pad in a row host, 0
+ * outside any region. It never pays the rail itself, so unlike `rail-follow`
+ * it is safe anywhere (nested in a follower, in a hand-padded box): the rail
+ * is the region's to pay. */
+@utility rail-text-indent { padding-inline: max(0px, calc(var(--rail-text-start, var(--rail-start, 0px)) - var(--rail-start, 0px))) max(0px, calc(var(--rail-text-end, var(--rail-end, 0px)) - var(--rail-end, 0px))); } /* twmerge: extend px */
 
 /* BAND — a rule-bearing strip inside a region (`Band`, and an overlay
  * panel's `header` / `footer`). The `rail-bleed` escape with ONE difference:

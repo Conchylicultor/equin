@@ -11,6 +11,7 @@ import {
   ViewerThumbnail,
   type ViewerThumbnailProps,
 } from "./viewer-thumbnail";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 
 /**
  * What an image whose asset is not loadable yet (`useAssetSrc` answered
@@ -29,7 +30,11 @@ export function UnloadedAssetImage({
 }) {
   switch (src.kind) {
     case "loading":
-      return <Loading variant="spinner" />;
+      return (
+        <Center axis="both" className="size-full">
+          <Loading variant="spinner" />
+        </Center>
+      );
     case "unavailable":
       return (
         <MissingImage

@@ -9,6 +9,7 @@ import {
   TWENTY_MINUTES,
   windowOf,
 } from "../internal/op-groups";
+import { GanttMessage } from "./gantt-message";
 import { WindowOpGantt } from "./window-op-gantt";
 
 // One worktree's ops can span every other worktree's around them; the span is
@@ -21,7 +22,9 @@ import { WindowOpGantt } from "./window-op-gantt";
 /**
  * The op Gantt scoped to one worktree: its ops, and every other op that ran
  * alongside them (± 20 min), so contention reads in context. `empty` renders
- * when the worktree has no recorded op.
+ * when the worktree has no recorded op — a bare message: like every state of
+ * the Gantt, it sits on the Gantt's own edge (`GanttMessage`), so the caller
+ * gives it no inset.
  */
 export function WorktreeOpGantt({
   worktree,
@@ -34,21 +37,32 @@ export function WorktreeOpGantt({
     where: { opSlug: worktree },
     limit: OPS_READ_LIMIT,
   });
-  if (own.status === "loading") return <Loading label="Loading ops…" />;
+  if (own.status === "loading")
+    return (
+      <GanttMessage>
+        <Loading label="Loading ops…" />
+      </GanttMessage>
+    );
   if (own.status === "error")
     return (
-      <ResourceErrorInline
-        variant="inline"
-        subject="this worktree's ops"
-        error={own.error}
-        refetch={own.refetch}
-      />
+      <GanttMessage>
+        <ResourceErrorInline
+          variant="inline"
+          subject="this worktree's ops"
+          error={own.error}
+          refetch={own.refetch}
+        />
+      </GanttMessage>
     );
   // The ops are this machine's: a host without the computer says so.
   if (own.status === "unavailable")
-    return <Placeholder tone="muted">{own.message}</Placeholder>;
+    return (
+      <GanttMessage>
+        <Placeholder tone="muted">{own.message}</Placeholder>
+      </GanttMessage>
+    );
   const span = windowOf(own.data, TWENTY_MINUTES);
-  if (span === null) return <>{empty}</>;
+  if (span === null) return <GanttMessage>{empty}</GanttMessage>;
   return (
     <WindowOpGantt
       span={span}

@@ -50,6 +50,7 @@ this repository — a reaped attempt's commits stay readable.
     - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
+    - `primitives/pane.PaneMessage`
   - Exports (types): `CommitInfoState`
   - Exports (values):
     - `commitDetailPane`

@@ -226,9 +226,13 @@ function ReadPanel(
       <SourceFrame
         onClose={onClose}
         body={
-          <Placeholder>
-            This page no longer exists — there are no places to show.
-          </Placeholder>
+          // The panel's strips pad px-sm by hand until its Column owns the
+          // inset (task-1794239361-kagy27): the message opens the same edge.
+          <div className="rail-x-sm">
+            <Placeholder>
+              This page no longer exists — there are no places to show.
+            </Placeholder>
+          </div>
         }
       />
     );
@@ -328,9 +332,11 @@ function PanelList(
       }
       body={
         items.length === 0 ? (
-          <Placeholder>
-            No Google place on this page has a location yet.
-          </Placeholder>
+          <div className="rail-x-sm">
+            <Placeholder>
+              No Google place on this page has a location yet.
+            </Placeholder>
+          </div>
         ) : (
           <PageOverlayRows {...props} />
         )

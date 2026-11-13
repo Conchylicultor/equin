@@ -53,7 +53,11 @@ export function SongIndexGate({ children }: { children: ReactNode }) {
   }
 
   return matchResource(status, {
-    loading: () => <Loading />,
+    loading: () => (
+      <GateFrame>
+        <Loading />
+      </GateFrame>
+    ),
     error: (err) => (
       <GateFrame>
         <GateFailure
@@ -69,7 +73,11 @@ export function SongIndexGate({ children }: { children: ReactNode }) {
           return children;
         // `ensure` is on its way; the status moves to `loading` when it lands.
         case "not-requested":
-          return <Loading />;
+          return (
+            <GateFrame>
+              <Loading />
+            </GateFrame>
+          );
         case "loading":
           return (
             <GateFrame>

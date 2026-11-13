@@ -36,6 +36,9 @@ export function CaretTriggerMenu({
   return (
     <FloatingSurface
       open={open}
+      // A trigger menu is a list of menu rows: its strips and empty states sit
+      // on the rows' text edge.
+      rows
       // Fall back to the editor's root rect when the live caret rect is all-zero
       // — a collapsed caret in an EMPTY block yields no usable rect (the gutter-+
       // draft flow opens on a fresh empty block). Anchoring to the block's own

@@ -23,6 +23,7 @@
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
     - `primitives/pane.PaneExpandTarget`
+    - `primitives/pane.PaneMessage`
     - `primitives/pane.useOpenPane`
   - Exports (values):
     - `folderLocationParams`

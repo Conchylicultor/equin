@@ -36,6 +36,7 @@ import {
   useActiveViewId,
   ViewSwitcher,
 } from "@plugins/primitives/plugins/view-switcher/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 
 /** What a tab's `useBadge` draws after its title: a count pill. */
 export interface TabBadge {
@@ -205,14 +206,18 @@ export function defineTabbedView<ViewProps extends object>(
             variant="block"
           />
         ) : (
-          <Loading />
+          <Center axis="horizontal">
+            <Loading />
+          </Center>
         )
       ) : !gatesSettled ? (
         // Not every gate has answered: which tab shows is not known yet. Live,
         // this render is never painted (the probes report before paint); in a
         // static render no probe ever reports, and the loading state fails it
         // loudly rather than shipping an empty body.
-        <Loading />
+        <Center axis="horizontal">
+          <Loading />
+        </Center>
       ) : (
         activeView &&
         renderIsolated(

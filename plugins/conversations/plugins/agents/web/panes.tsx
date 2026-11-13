@@ -7,6 +7,7 @@ import {
   defineRoute,
   resolveRow,
   type ResolveResult,
+  PaneMessage,
 } from "@plugins/primitives/plugins/pane/web";
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -161,9 +162,11 @@ function SystemAgentDetailBody(): ReactElement {
   if (!descriptor) {
     return (
       <PaneChrome pane={systemAgentDetailPane}>
-        <Placeholder>
-          No system agent registered with id <code>{systemId}</code>.
-        </Placeholder>
+        <PaneMessage>
+          <Placeholder>
+            No system agent registered with id <code>{systemId}</code>.
+          </Placeholder>
+        </PaneMessage>
       </PaneChrome>
     );
   }

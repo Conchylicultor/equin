@@ -13,10 +13,10 @@
     - `ThemeCustomizer.Section` ×22
     - `themeCustomizerPane.Actions` ← `primitives.pane`
   - Contributes: `Pane.Register` "theme-customizer"
-  - Uses: 40 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 41 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×10
     - `ui/theme-engine` ×6
-    - `primitives/pane` ×3
+    - `primitives/pane` ×4
     - `config_v2` ×2
     - `infra/endpoints` ×2
     - `network/live/live-state` ×2

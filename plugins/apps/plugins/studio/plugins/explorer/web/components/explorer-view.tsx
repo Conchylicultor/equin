@@ -24,7 +24,7 @@ export function ExplorerView() {
   }
   if (tree.status === "error") {
     return (
-      <Center axis="both" className="h-full p-2xl">
+      <Center axis="both" className="h-full">
         <ResourceErrorInline
           variant="block"
           subject="the plugin tree"
@@ -38,7 +38,7 @@ export function ExplorerView() {
   if (tree.status === "unavailable") {
     // Read from this checkout's `plugins/`, which an in-browser server lacks.
     return (
-      <Center axis="both" className="h-full p-2xl">
+      <Center axis="both" className="h-full">
         <Text variant="caption" tone="muted">
           {tree.message}
         </Text>

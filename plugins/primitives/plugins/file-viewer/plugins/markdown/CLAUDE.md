@@ -26,6 +26,7 @@ host threads a renderer-specific option through `FileContent`.
     - `primitives/file-viewer.FileViewer`
     - `primitives/loading.Loading`
     - `primitives/markdown.Markdown`
+    - `primitives/pane.PaneMessage`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/density --document-pad-bottom`

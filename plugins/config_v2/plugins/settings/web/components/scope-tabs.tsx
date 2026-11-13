@@ -158,6 +158,7 @@ function AddScopeButton({
       tooltip="Customize for an app"
       width="sm"
       padding="2xs"
+      rows
       trigger={
         <ToggleChip
           active={false}

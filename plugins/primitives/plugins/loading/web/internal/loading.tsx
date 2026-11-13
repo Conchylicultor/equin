@@ -93,7 +93,7 @@ export function Loading({
           role="status"
           aria-busy="true"
           className={cn(
-            "loading-delayed px-md py-sm text-body text-muted-foreground",
+            "loading-delayed rail-text-indent py-sm text-body text-muted-foreground",
             className,
           )}
         >

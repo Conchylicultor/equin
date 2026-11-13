@@ -9,6 +9,7 @@ import type { PluginNode } from "../../core";
 import { PluginView } from "../slots";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
+import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 
 const boltIcon = symbol("bolt");
 
@@ -19,14 +20,12 @@ interface PluginDetailProps {
 export function PluginDetail({ node }: PluginDetailProps) {
   if (!node) {
     return (
-      <Center axis="both" className="h-full p-2xl text-center">
-        <Text
-          as="div"
-          variant="body"
-          className="max-w-sm text-muted-foreground"
-        >
-          Select a plugin to inspect what would be included in its release.
-        </Text>
+      <Center axis="both" className="h-full text-center">
+        <div className="max-w-sm">
+          <Placeholder>
+            Select a plugin to inspect what would be included in its release.
+          </Placeholder>
+        </div>
       </Center>
     );
   }

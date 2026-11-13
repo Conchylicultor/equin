@@ -43,12 +43,21 @@ export function SongPeek(): ReactNode {
   const { songId: songIdParam } = songPeekPane.useParams();
   const songId = songIdKind.key(songIdParam);
   const deferredComplete = useDeferredLoadComplete();
-  if (!deferredComplete) return <Loading />;
+  if (!deferredComplete)
+    return (
+      <Inset pad="lg">
+        <Loading />
+      </Inset>
+    );
   return (
     <SongHydrator songId={songId}>
       {(hydration) =>
         matchResource(hydration, {
-          loading: () => <Loading />,
+          loading: () => (
+            <Inset pad="lg">
+              <Loading />
+            </Inset>
+          ),
           error: (error) => (
             <Inset pad="lg">
               <ResourceErrorInline
@@ -59,7 +68,12 @@ export function SongPeek(): ReactNode {
             </Inset>
           ),
           ready: (h) => {
-            if (h.kind === "awaiting-owner") return <Loading />;
+            if (h.kind === "awaiting-owner")
+              return (
+                <Inset pad="lg">
+                  <Loading />
+                </Inset>
+              );
             if (h.pending.length > 0) {
               return (
                 <Inset pad="lg">

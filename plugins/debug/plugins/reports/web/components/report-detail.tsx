@@ -1,4 +1,4 @@
-import { PaneChrome } from "@plugins/primitives/plugins/pane/web";
+import { PaneChrome, PaneMessage } from "@plugins/primitives/plugins/pane/web";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
@@ -36,8 +36,10 @@ export function ReportDetail() {
 
   if (read.status === "loading") {
     return (
-      <PaneChrome pane={reportDetailPane} inset="document">
-        <Loading />
+      <PaneChrome pane={reportDetailPane}>
+        <PaneMessage>
+          <Loading />
+        </PaneMessage>
       </PaneChrome>
     );
   }
@@ -48,14 +50,16 @@ export function ReportDetail() {
     read.status === "error" ? read.stale : read.found ? read.row : undefined;
   if (report === undefined) {
     return (
-      <PaneChrome pane={reportDetailPane} inset="document">
+      <PaneChrome pane={reportDetailPane}>
         {read.status === "error" ? (
-          <ResourceErrorInline
-            variant="inline"
-            subject="this report"
-            error={read.error}
-            refetch={read.refetch}
-          />
+          <PaneMessage>
+            <ResourceErrorInline
+              variant="inline"
+              subject="this report"
+              error={read.error}
+              refetch={read.refetch}
+            />
+          </PaneMessage>
         ) : (
           <Center className="h-full">
             <Text as="div" variant="body" className="text-muted-foreground">

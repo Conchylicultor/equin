@@ -13,12 +13,15 @@ export function UnloadedFile({
 }: {
   src: Exclude<AssetSrc, { kind: "ready" }>;
 }) {
-  if (src.kind === "loading") return <Loading variant="spinner" />;
   return (
     <Center axis="both" className="h-full p-lg">
-      <Text as="p" variant="body" tone="muted">
-        {src.message}
-      </Text>
+      {src.kind === "loading" ? (
+        <Loading variant="spinner" />
+      ) : (
+        <Text as="p" variant="body" tone="muted">
+          {src.message}
+        </Text>
+      )}
     </Center>
   );
 }

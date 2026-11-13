@@ -71,6 +71,8 @@ import { Icon } from "@plugins/ui/plugins/icons/web";
 import type { TableViewOptions } from "../../core";
 import { mapPrimary } from "../internal/map-primary";
 import { tableHeaderOption } from "../internal/column-captions";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 
 /**
  * The slots a nested table draws: the lead in the tree head's icon box (a
@@ -404,7 +406,12 @@ export function NestedTableView(
   if (hierarchy.rows.length === 0 && props.emptyState !== undefined) {
     return (
       <DropBackground dnd={dnd} group={null} firstKey={null} lastKey={null}>
-        {props.emptyState}
+        {/* Framed like every other view's empty state: centred. */}
+        <Center axis="both" className="py-xl">
+          <Text as="div" variant="body" className="text-muted-foreground">
+            {props.emptyState}
+          </Text>
+        </Center>
       </DropBackground>
     );
   }

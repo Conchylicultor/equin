@@ -111,8 +111,11 @@ export function IconsPage(): ReactElement {
       <Fill>
         {manifest.status === "unavailable" ? (
           // A switcher source cannot carry the unavailable arm (data-view):
-          // the page says it in the switcher's place.
-          <Placeholder tone="muted">{manifest.message}</Placeholder>
+          // the page says it in the switcher's place, on the edge its row
+          // bands follow.
+          <div className="rail-follow">
+            <Placeholder tone="muted">{manifest.message}</Placeholder>
+          </div>
         ) : (
           <DataViewSwitcher
             storageKey={ICONS_VIEW}

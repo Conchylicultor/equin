@@ -25,6 +25,7 @@
     - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`
     - `primitives/pane.PaneChrome`
+    - `primitives/pane.PaneMessage`
   - Exports (values): `buildProfileDetailPane`
 - Cross-plugin:
   - Uses tokens:

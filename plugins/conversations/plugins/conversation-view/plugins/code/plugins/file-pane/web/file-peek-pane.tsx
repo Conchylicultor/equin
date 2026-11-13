@@ -5,9 +5,9 @@ import {
   useOpenPane,
   defineRoute,
   type PaneExpandTarget,
+  PaneMessage,
 } from "@plugins/primitives/plugins/pane/web";
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
-import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useEditedFile } from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
 import {
@@ -40,6 +40,7 @@ import {
   FilePeekHeaderProvider,
   FilePeekTitle,
 } from "./components/file-peek-header";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 
 /** The path as requested and its `:line` suffix, split. */
 function splitLine(rawFilePath: string): { filePath: string; line?: number } {
@@ -204,13 +205,9 @@ function FilePeekPaneContent() {
     return (
       <FilePeekHeaderProvider value={header}>
         <PaneChrome pane={filePeekPane}>
-          <Text
-            as="div"
-            variant="body"
-            className="px-md py-sm text-muted-foreground"
-          >
-            Resolving…
-          </Text>
+          <PaneMessage>
+            <Loading label="Resolving…" />
+          </PaneMessage>
         </PaneChrome>
       </FilePeekHeaderProvider>
     );
@@ -222,16 +219,18 @@ function FilePeekPaneContent() {
     return (
       <FilePeekHeaderProvider value={header}>
         <PaneChrome pane={filePeekPane}>
-          {resolved.status === "error" ? (
-            <ResourceErrorInline
-              variant="block"
-              subject={`where ${filePath} is`}
-              error={resolved.read.error}
-              refetch={resolved.read.refetch}
-            />
-          ) : (
-            <Placeholder>{resolved.message}</Placeholder>
-          )}
+          <PaneMessage>
+            {resolved.status === "error" ? (
+              <ResourceErrorInline
+                variant="block"
+                subject={`where ${filePath} is`}
+                error={resolved.read.error}
+                refetch={resolved.read.refetch}
+              />
+            ) : (
+              <Placeholder>{resolved.message}</Placeholder>
+            )}
+          </PaneMessage>
         </PaneChrome>
       </FilePeekHeaderProvider>
     );

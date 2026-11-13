@@ -53,6 +53,8 @@ import {
   type StackedTitle,
 } from "../internal/title-cell";
 import { NestedTableView } from "./nested-table-view";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 
 /** FieldValue → data-table's `string | number | undefined` comparable projection. */
 function coerce(value: FieldValue): string | number | undefined {
@@ -210,8 +212,16 @@ function FlatTableView(props: DataViewRenderProps<unknown>): ReactNode {
   const totalCount = sections.reduce((sum, s) => sum + s.count.n, 0);
   // DataTable's `emptyLabel` is string-only; render a custom empty node here so
   // the host-provided `emptyState` (ReactNode) is honored.
+  // Framed like every other view's empty state (list, gallery, icons): centred,
+  // so it needs no inline edge from the body, which opens no region.
   if (totalCount === 0 && props.emptyState !== undefined) {
-    return <>{props.emptyState}</>;
+    return (
+      <Center axis="both" className="py-xl">
+        <Text as="div" variant="body" className="text-muted-foreground">
+          {props.emptyState}
+        </Text>
+      </Center>
+    );
   }
 
   const drawn = (list: readonly FieldDef<unknown>[]) =>

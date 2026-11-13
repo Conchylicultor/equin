@@ -61,6 +61,7 @@
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/density --chrome-pad-x`
     - `ui/tokens/density --space-md`
     - `ui/tokens/font-family --font-mono`
     - `ui/tokens/type-scale --font-scale`

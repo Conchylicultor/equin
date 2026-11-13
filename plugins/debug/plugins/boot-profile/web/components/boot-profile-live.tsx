@@ -1,6 +1,5 @@
 import { type ReactElement } from "react";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { useToast } from "@plugins/shell/plugins/notifications/web";
 import {
@@ -12,6 +11,8 @@ import { saveBootTrace } from "../../shared/endpoints";
 import { BootProfileGantt } from "./boot-profile-gantt";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
+import { PaneMessage } from "@plugins/primitives/plugins/pane/web";
+import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 
 const refreshIcon = symbol("refresh");
 const replayIcon = symbol("replay");
@@ -72,13 +73,9 @@ export function BootProfileLive(): ReactElement {
 
   if (trace.spans.length === 0) {
     return (
-      <Text
-        as="div"
-        variant="caption"
-        className="px-lg py-sm text-muted-foreground"
-      >
-        No boot trace captured.
-      </Text>
+      <PaneMessage>
+        <Placeholder>No boot trace captured.</Placeholder>
+      </PaneMessage>
     );
   }
 

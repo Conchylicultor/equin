@@ -67,7 +67,12 @@ function LoadedImageView({
 
   // Until the folder's sizes are known, which copy to draw is not: waiting
   // (a few ms) beats starting the original's full decode.
-  if (pending) return <Loading variant="spinner" />;
+  if (pending)
+    return (
+      <Center axis="both" className="h-full p-lg">
+        <Loading variant="spinner" />
+      </Center>
+    );
 
   return (
     <Center axis="both" className="h-full p-lg">

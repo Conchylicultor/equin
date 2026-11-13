@@ -617,7 +617,13 @@ export function DemoScope({
     control === null ||
     scopePlugins.kind === "pending"
   ) {
-    if (boot === undefined) return <Loading />;
+    if (boot === undefined) {
+      return (
+        <Center axis="both" className="h-full">
+          <Loading />
+        </Center>
+      );
+    }
     return boot({
       kind: "starting",
       progress: state.kind === "booting" ? state.progress : null,

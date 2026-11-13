@@ -15,7 +15,13 @@ const PHONE_NOTICE = "Apps are only available on desktop, not mobile.";
 export function DemoLayout() {
   const isPhone = useIsPhone();
   // No screen to ask yet (a static render): what to mount is not known.
-  if (isPhone === null) return <Loading />;
+  if (isPhone === null) {
+    return (
+      <Center className="h-full bg-background p-lg">
+        <Loading />
+      </Center>
+    );
+  }
   if (isPhone) {
     return (
       <Center className="h-full bg-background p-lg">

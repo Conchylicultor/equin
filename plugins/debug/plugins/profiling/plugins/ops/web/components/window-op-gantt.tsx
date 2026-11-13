@@ -6,6 +6,7 @@ import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { opsHistory } from "@plugins/debug/plugins/profiling/plugins/op-log/plugins/op-store/core";
 import { OPS_READ_LIMIT, type OpWindow } from "../internal/op-groups";
+import { GanttMessage } from "./gantt-message";
 import { LiveOpGantt } from "./live-op-gantt";
 
 /**
@@ -57,25 +58,36 @@ export function WindowOpGantt({
           },
     limit: OPS_READ_LIMIT,
   });
-  if (result.status === "loading") return <Loading label="Loading ops…" />;
+  if (result.status === "loading")
+    return (
+      <GanttMessage>
+        <Loading label="Loading ops…" />
+      </GanttMessage>
+    );
   if (result.status === "error")
     return (
-      <ResourceErrorInline
-        variant="inline"
-        subject={subject}
-        error={result.error}
-        refetch={result.refetch}
-      />
+      <GanttMessage>
+        <ResourceErrorInline
+          variant="inline"
+          subject={subject}
+          error={result.error}
+          refetch={result.refetch}
+        />
+      </GanttMessage>
     );
   if (result.status === "unavailable")
-    return <Placeholder tone="muted">{result.message}</Placeholder>;
+    return (
+      <GanttMessage>
+        <Placeholder tone="muted">{result.message}</Placeholder>
+      </GanttMessage>
+    );
   return (
     <LiveOpGantt
       rows={result.data}
       span={span}
       highlightWorktree={highlightWorktree}
       highlightOpId={highlightOpId}
-      empty={empty}
+      empty={<GanttMessage>{empty}</GanttMessage>}
       capped={alsoCapped || result.data.length >= OPS_READ_LIMIT}
     />
   );

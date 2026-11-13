@@ -17,6 +17,7 @@ import {
   useOpenPane,
   resolveRow,
   type ResolveResult,
+  PaneMessage,
 } from "@plugins/primitives/plugins/pane/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
@@ -416,19 +417,25 @@ function BlockDetailBody(): ReactElement {
     case "pending":
       return (
         <PaneChrome pane={blockDetailPane}>
-          <Loading variant="text" />
+          <PaneMessage>
+            <Loading variant="text" />
+          </PaneMessage>
         </PaneChrome>
       );
     case "missing":
       return (
         <PaneChrome pane={blockDetailPane}>
-          <Placeholder>This block no longer exists</Placeholder>
+          <PaneMessage>
+            <Placeholder>This block no longer exists</Placeholder>
+          </PaneMessage>
         </PaneChrome>
       );
     case "error":
       return (
         <PaneChrome pane={blockDetailPane}>
-          <Placeholder tone="error">{target.error.message}</Placeholder>
+          <PaneMessage>
+            <Placeholder tone="error">{target.error.message}</Placeholder>
+          </PaneMessage>
         </PaneChrome>
       );
   }

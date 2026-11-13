@@ -5,6 +5,7 @@ import {
   PaneChrome,
   resolveRow,
   type ResolveResult,
+  PaneMessage,
 } from "@plugins/primitives/plugins/pane/web";
 import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
@@ -65,9 +66,18 @@ function BackupRunBody(): ReactElement {
   // last seen (`rowOrStale`). Without either it is a loading state, never an
   // empty one: the sections are handed a run or they are not rendered at all.
   const run = rowOrStale(useRun({ kind: BACKUP_RUN_KIND, id: runId }));
+  if (run === undefined) {
+    return (
+      <PaneChrome pane={backupRunPane}>
+        <PaneMessage>
+          <Loading />
+        </PaneMessage>
+      </PaneChrome>
+    );
+  }
   return (
     <PaneChrome pane={backupRunPane}>
-      {run !== undefined ? <BackupRunDetail.Host run={run} /> : <Loading />}
+      <BackupRunDetail.Host run={run} />
     </PaneChrome>
   );
 }

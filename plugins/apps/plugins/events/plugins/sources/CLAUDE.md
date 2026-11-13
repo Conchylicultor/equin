@@ -172,11 +172,11 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `EventSourceActions` "open" → `SourceOpenAction`
     - `EventSourceActions` "enabled" → `SourceToggleAction`
     - `EventSourceActions` "delete" → `SourceDeleteAction`
-  - Uses: 44 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 45 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/events/events-core` ×7
+    - `primitives/pane` ×6
     - `primitives/css/ui-kit` ×5
     - `primitives/data-view` ×5
-    - `primitives/pane` ×5
     - `network/live` ×3
     - `apps/events/shell.Events`
     - `config_v2/fields.FieldRenderer`

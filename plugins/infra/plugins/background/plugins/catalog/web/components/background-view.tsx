@@ -165,25 +165,29 @@ export function BackgroundView({
     [groupOptions],
   );
 
+  // The central runtime's own state, as a strip above the DataView: it sits
+  // on the edge the DataView's row bands follow.
+  const centralState =
+    central.status === "loading" ? (
+      <Loading variant="text" label="Loading what the central runtime runs…" />
+    ) : central.status === "error" ? (
+      <ResourceErrorInline
+        variant="inline"
+        subject="what the central runtime runs"
+        error={central.error}
+        refetch={central.refetch}
+      />
+    ) : central.status === "unavailable" ? (
+      <Text variant="caption" tone="muted">
+        {central.message}
+      </Text>
+    ) : null;
+
   return (
     <>
-      {central.status === "loading" ? (
-        <Loading
-          variant="text"
-          label="Loading what the central runtime runs…"
-        />
-      ) : central.status === "error" ? (
-        <ResourceErrorInline
-          variant="inline"
-          subject="what the central runtime runs"
-          error={central.error}
-          refetch={central.refetch}
-        />
-      ) : central.status === "unavailable" ? (
-        <Text variant="caption" tone="muted">
-          {central.message}
-        </Text>
-      ) : null}
+      {centralState !== null && (
+        <div className="rail-follow">{centralState}</div>
+      )}
       <DataView<BackgroundEntry>
         rows={rows}
         fields={fields}

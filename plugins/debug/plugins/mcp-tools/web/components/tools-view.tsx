@@ -67,7 +67,12 @@ export function ToolsView({
   const result = useLive(mcpCatalog);
   // The MCP server is the computer's: a host without it says so.
   if (result.status === "unavailable") {
-    return <Placeholder tone="muted">{result.message}</Placeholder>;
+    // In the DataView's place: on the edge its row bands follow.
+    return (
+      <div className="rail-follow">
+        <Placeholder tone="muted">{result.message}</Placeholder>
+      </div>
+    );
   }
   return (
     <ToolsList result={result} selectedName={selectedName} linkTo={linkTo} />

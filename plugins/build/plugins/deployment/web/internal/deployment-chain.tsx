@@ -52,6 +52,17 @@ const TONE_CLASS = {
   muted: "text-muted-foreground",
 } as const;
 
+/**
+ * A message in the chain's place, or among its evidence: on the same edge as
+ * the section's hand-padded lines (`px-md`). It opens a region rather than
+ * relying on its surroundings, because nothing around it pays an inset — the
+ * Build popover has none, and the section's own lines each pad themselves (its
+ * commit rows bleed full width, so the section cannot own one rail).
+ */
+function ChainMessage({ children }: { children: React.ReactNode }) {
+  return <div className="rail-x-md">{children}</div>;
+}
+
 /** The section shell: one label, one verdict, and whatever evidence the arm has. */
 function Section({
   summary,
@@ -429,17 +440,28 @@ export function DeploymentChain() {
 function DeploymentChainBody() {
   const reading = useDeployment();
 
-  if (reading.status === "loading") return <Loading variant="rows" count={2} />;
+  if (reading.status === "loading")
+    return (
+      <ChainMessage>
+        <Loading variant="rows" count={2} />
+      </ChainMessage>
+    );
   if (reading.status === "unavailable")
-    return <Placeholder>{reading.message}</Placeholder>;
+    return (
+      <ChainMessage>
+        <Placeholder>{reading.message}</Placeholder>
+      </ChainMessage>
+    );
   if (reading.status === "error") {
     return (
-      <ResourceErrorInline
-        variant="block"
-        subject="the deployment"
-        error={reading.error}
-        refetch={reading.refetch}
-      />
+      <ChainMessage>
+        <ResourceErrorInline
+          variant="block"
+          subject="the deployment"
+          error={reading.error}
+          refetch={reading.refetch}
+        />
+      </ChainMessage>
     );
   }
 
@@ -449,10 +471,12 @@ function DeploymentChainBody() {
   if (state.kind === "unknown") {
     return (
       <Section summary="No checkout" tone="muted">
-        <Placeholder>
-          {state.reason} — so there is no commit to converge toward. The pins
-          below are still facts.
-        </Placeholder>
+        <ChainMessage>
+          <Placeholder>
+            {state.reason} — so there is no commit to converge toward. The pins
+            below are still facts.
+          </Placeholder>
+        </ChainMessage>
         <PinList carriers={carriers} target={null} served={served} />
       </Section>
     );
@@ -461,12 +485,14 @@ function DeploymentChainBody() {
   if (state.kind === "diverged") {
     return (
       <Section summary="App diverged" tone="destructive">
-        <Placeholder>
-          A carrier is on a commit that is not on the way to{" "}
-          <span className="font-mono">{short(state.target)}</span> — the
-          checkout was rebased or force-pushed under the running app. There is
-          no line to draw, so here are the raw pins.
-        </Placeholder>
+        <ChainMessage>
+          <Placeholder>
+            A carrier is on a commit that is not on the way to{" "}
+            <span className="font-mono">{short(state.target)}</span> — the
+            checkout was rebased or force-pushed under the running app. There is
+            no line to draw, so here are the raw pins.
+          </Placeholder>
+        </ChainMessage>
         <PinList carriers={carriers} target={state.target} served={served} />
       </Section>
     );

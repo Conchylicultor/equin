@@ -3,6 +3,7 @@ import {
   Pane,
   PaneChrome,
   defineRoute,
+  PaneMessage,
 } from "@plugins/primitives/plugins/pane/web";
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 import {
@@ -58,7 +59,11 @@ function ConvReviewBody() {
             </Scroll>
           </Stack>
         }
-        missing={<Placeholder>This conversation no longer exists.</Placeholder>}
+        missing={
+          <PaneMessage>
+            <Placeholder>This conversation no longer exists.</Placeholder>
+          </PaneMessage>
+        }
       >
         {(conv) => (
           <Stack gap="none" className="h-full">

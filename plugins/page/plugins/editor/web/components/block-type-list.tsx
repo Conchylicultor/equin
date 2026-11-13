@@ -21,6 +21,7 @@ import {
   type InsertEntry,
   type InsertSection,
 } from "../internal/block-sections";
+import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 
 export { flattenSections } from "../internal/block-sections";
 export type {
@@ -256,15 +257,7 @@ export function BlockTypeList<E extends InsertEntry>({
 }) {
   const flatCount = sections.reduce((n, s) => n + s.entries.length, 0);
   if (flatCount === 0) {
-    return (
-      <Text
-        as="div"
-        variant="body"
-        className="text-muted-foreground px-sm py-xs"
-      >
-        No block types
-      </Text>
-    );
+    return <Placeholder>No block types</Placeholder>;
   }
 
   // Running index over selectable rows only — headers are skipped, so the

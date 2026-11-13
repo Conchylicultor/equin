@@ -32,9 +32,9 @@ reverse. The pane's id and segment predate this plugin (it moved out of
   - Contributes:
     - `Pane.Register` "conv-file-tree"
     - `Conversation.ActionBar` → `ConvTreeButton`
-  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/file-explorer/browser` ×9
-    - `primitives/pane` ×5
+    - `primitives/pane` ×6
     - `conversations` ×2
     - `conversations/conversation-view/action-bar.Conversation`
     - `conversations/conversation-view.conversationPane`

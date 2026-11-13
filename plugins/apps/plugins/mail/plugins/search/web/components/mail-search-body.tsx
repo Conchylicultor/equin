@@ -5,7 +5,11 @@ import {
   type ReactElement,
   type ReactNode,
 } from "react";
-import { PaneChrome, useOpenPane } from "@plugins/primitives/plugins/pane/web";
+import {
+  PaneChrome,
+  useOpenPane,
+  PaneMessage,
+} from "@plugins/primitives/plugins/pane/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
 import { Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
@@ -104,10 +108,12 @@ export function MailSearchBody(): ReactElement {
             a === null ? (
               <GmailAccessEmptyState whenReady="Gmail is connected — search opens once its first sync has run." />
             ) : trimmed.length === 0 ? (
-              <Placeholder>
-                Search all mail — including messages older than the 30-day sync
-                window.
-              </Placeholder>
+              <PaneMessage>
+                <Placeholder>
+                  Search all mail — including messages older than the 30-day
+                  sync window.
+                </Placeholder>
+              </PaneMessage>
             ) : (
               <SearchResults
                 key={`${a.id}\n${trimmed}\n${gmailReady}`}

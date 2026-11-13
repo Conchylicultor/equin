@@ -429,6 +429,7 @@ function PrototypePicker({
       onOpenChange={onOpenChange}
       width="lg"
       padding="sm"
+      rows
     >
       <Stack gap="sm">
         <SearchInput
@@ -461,13 +462,7 @@ function PrototypePicker({
             loading: () => <Loading variant="rows" />,
             ready: () =>
               options.length === 0 ? (
-                <Text
-                  as="div"
-                  variant="body"
-                  className="px-sm py-xs text-muted-foreground"
-                >
-                  No prototypes found
-                </Text>
+                <Placeholder>No prototypes found</Placeholder>
               ) : (
                 <Stack gap="none">
                   {/* eslint-disable-next-line data-view/no-adhoc-row-list -- prototype typeahead menu (transient chrome) */}

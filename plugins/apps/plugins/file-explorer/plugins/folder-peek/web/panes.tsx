@@ -5,6 +5,7 @@ import {
   defineRoute,
   useOpenPane,
   type PaneExpandTarget,
+  PaneMessage,
 } from "@plugins/primitives/plugins/pane/web";
 import type { LinkTarget } from "@plugins/primitives/plugins/link-gesture/core";
 import { fileExplorerApp } from "@plugins/apps/plugins/file-explorer/plugins/shell/core";
@@ -92,9 +93,11 @@ function FolderPeek(): ReactNode {
     return (
       <PendingFileBrowserProvider>
         <PaneChrome pane={folderPeekPane}>
-          <Placeholder tone="error">
-            {`"${fs}" is not a file system this app knows.`}
-          </Placeholder>
+          <PaneMessage>
+            <Placeholder tone="error">
+              {`"${fs}" is not a file system this app knows.`}
+            </Placeholder>
+          </PaneMessage>
         </PaneChrome>
       </PendingFileBrowserProvider>
     );

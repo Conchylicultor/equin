@@ -26,7 +26,11 @@ export function ShellOutputSection({
   if (output.status === "loading") {
     return (
       <ToolSection label="Output">
-        <Loading />
+        {/* The section pads nothing: the state opens a region on the
+            notices' edge (`px-smd`). */}
+        <div className="rail-x-smd">
+          <Loading />
+        </div>
       </ToolSection>
     );
   }

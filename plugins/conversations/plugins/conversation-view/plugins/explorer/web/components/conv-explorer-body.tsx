@@ -13,7 +13,11 @@ import { useConversation } from "@plugins/conversations/web";
 import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
-import { PaneChrome, useOpenPane } from "@plugins/primitives/plugins/pane/web";
+import {
+  PaneChrome,
+  useOpenPane,
+  PaneMessage,
+} from "@plugins/primitives/plugins/pane/web";
 import { convFileTreePane } from "../panes";
 import { useConvLocation } from "./conv-location";
 
@@ -36,7 +40,9 @@ export function ConvExplorerBody() {
 function Pending({ children }: { children: ReactNode }) {
   return (
     <PendingFileBrowserProvider>
-      <PaneChrome pane={convFileTreePane}>{children}</PaneChrome>
+      <PaneChrome pane={convFileTreePane}>
+        <PaneMessage>{children}</PaneMessage>
+      </PaneChrome>
     </PendingFileBrowserProvider>
   );
 }

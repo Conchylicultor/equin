@@ -96,7 +96,6 @@ descriptor the strip renders without knowing what produced it. Header: the
     - `ui/tokens/color-palette --muted`
     - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/color-palette --primary`
-    - `ui/tokens/density --space-2xl`
     - `ui/tokens/density --space-lg`
     - `ui/tokens/density --space-sm`
     - `ui/tokens/density --space-xs`

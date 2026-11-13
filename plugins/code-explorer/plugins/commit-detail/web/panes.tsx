@@ -3,6 +3,7 @@ import {
   Pane,
   PaneChrome,
   defineRoute,
+  PaneMessage,
 } from "@plugins/primitives/plugins/pane/web";
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
@@ -34,15 +35,20 @@ function CommitDetailBody() {
   const { worktree, sha } = commitDetailPane.useParams();
   const info = useCommitInfo(worktree, sha);
 
+  if (info.kind === "not-found" || info.kind === "unavailable") {
+    return (
+      <PaneChrome pane={commitDetailPane}>
+        <PaneMessage>
+          <Placeholder>
+            {info.kind === "not-found" ? info.reason : info.message}
+          </Placeholder>
+        </PaneMessage>
+      </PaneChrome>
+    );
+  }
   return (
     <PaneChrome pane={commitDetailPane}>
-      {info.kind === "not-found" ? (
-        <Placeholder>{info.reason}</Placeholder>
-      ) : info.kind === "unavailable" ? (
-        <Placeholder>{info.message}</Placeholder>
-      ) : (
-        <CommitDiffView worktree={worktree} sha={sha} />
-      )}
+      <CommitDiffView worktree={worktree} sha={sha} />
     </PaneChrome>
   );
 }

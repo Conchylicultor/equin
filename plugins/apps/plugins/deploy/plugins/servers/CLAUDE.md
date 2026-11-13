@@ -69,8 +69,8 @@ plus `sshKey`.
     - `ServerDetail.Section` "Connection" → `ServerEditForm`
     - `ServerDetail.Section` "Danger zone" → `ServerDeleteAction`
     - `item-actions` "open-console" → `OpenConsoleAction`
-  - Uses: 39 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/pane` ×5
+  - Uses: 41 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/pane` ×6
     - `primitives/data-view` ×4
     - `infra/endpoints` ×3
     - `network/live/live-state` ×3
@@ -83,6 +83,7 @@ plus `sshKey`.
     - `network/live.useLive`
     - `primitives/css/center.Center`
     - `primitives/css/inline.Inline`
+    - `primitives/css/placeholder.Placeholder`
     - `primitives/css/rigid.Rigid`
     - `primitives/css/surface.Surface`
     - `primitives/css/text.Text`
@@ -168,10 +169,10 @@ plus `sshKey`.
     - `serverFields`
     - `serversRoute`
 - Cross-plugin:
-  - Uses tokens: 23 vars — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses tokens: 22 vars — full list in [REFERENCE.md](./REFERENCE.md)
     - `ui/tokens/type-scale` ×9
     - `ui/tokens/color-palette` ×6
-    - `ui/tokens/density` ×5
+    - `ui/tokens/density` ×4
     - `ui/tokens/shape` ×2
     - `ui/tokens/font-family --font-mono`
   - Imported by:

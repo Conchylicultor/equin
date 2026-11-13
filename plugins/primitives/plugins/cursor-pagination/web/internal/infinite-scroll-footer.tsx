@@ -48,7 +48,11 @@ export function InfiniteScrollFooter({
   } = handle;
   return (
     <>
-      {isFetchingNextPage && <Loading variant="spinner" label={loadingLabel} />}
+      {isFetchingNextPage && (
+        <Center axis="horizontal">
+          <Loading variant="spinner" label={loadingLabel} />
+        </Center>
+      )}
       {isFetchNextPageError && (
         <Center axis="horizontal">
           <Inset pad="sm">

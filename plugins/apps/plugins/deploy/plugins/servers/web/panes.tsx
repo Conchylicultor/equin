@@ -10,14 +10,15 @@ import {
   useOpenPane,
   resolveFrom,
   type ResolveResult,
+  PaneMessage,
 } from "@plugins/primitives/plugins/pane/web";
-import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { deployApp } from "@plugins/apps/plugins/deploy/plugins/shell/core";
 import { serversRoute, serverDetailRoute } from "../core";
 import { servers, serverSshKey, type Server } from "../shared";
 import { ServersList } from "./components/servers-list";
 import { ServerCreateForm } from "./components/server-create-form";
 import { ServerPage } from "./components/server-page";
+import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 
 /**
  * Sentinel `:serverId` for the create state of the unified server pane. Real
@@ -135,9 +136,9 @@ function ExistingServerBody({ serverId }: { serverId: string }) {
   if (!row) {
     return (
       <PaneChrome pane={serverDetailPane}>
-        <Text as="div" variant="body" className="text-muted-foreground p-lg">
-          Server not found.
-        </Text>
+        <PaneMessage>
+          <Placeholder>Server not found.</Placeholder>
+        </PaneMessage>
       </PaneChrome>
     );
   }

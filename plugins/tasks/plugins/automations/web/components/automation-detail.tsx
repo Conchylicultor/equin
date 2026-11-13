@@ -33,6 +33,7 @@ import { AutomationHistory } from "./automation-history";
 import { BehaviorSection, SourcesSection } from "./behavior-section";
 import { TriggerSection } from "./trigger-section";
 import { PromptSection } from "./prompt-section";
+import { PaneMessage } from "@plugins/primitives/plugins/pane/web";
 
 const playIcon = symbol("play-arrow");
 
@@ -43,29 +44,42 @@ export function AutomationDetail({
   automationId: string;
 }): ReactElement {
   const result = useAutomation(automationId);
+  // A state stands in for the body: a PaneMessage, on the pane header's edge.
   switch (result.status) {
     case "loading":
-      return <Loading variant="rows" />;
+      return (
+        <PaneMessage>
+          <Loading variant="rows" />
+        </PaneMessage>
+      );
     case "error":
       return (
-        <ResourceErrorInline
-          variant="block"
-          subject="the automations"
-          error={result.error}
-          refetch={result.refetch}
-        />
+        <PaneMessage>
+          <ResourceErrorInline
+            variant="block"
+            subject="the automations"
+            error={result.error}
+            refetch={result.refetch}
+          />
+        </PaneMessage>
       );
     case "unavailable":
       // The catalog is the machine half's: an in-browser server has none.
-      return <Placeholder>{result.message}</Placeholder>;
+      return (
+        <PaneMessage>
+          <Placeholder>{result.message}</Placeholder>
+        </PaneMessage>
+      );
     case "ready":
       break;
   }
   if (result.data === null) {
     return (
-      <Placeholder tone="error">
-        No automation named {automationId} is installed any more.
-      </Placeholder>
+      <PaneMessage>
+        <Placeholder tone="error">
+          No automation named {automationId} is installed any more.
+        </Placeholder>
+      </PaneMessage>
     );
   }
   return <AutomationDetailBody entry={result.data} />;

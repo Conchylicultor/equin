@@ -6,6 +6,7 @@ import {
   PaneChrome,
   PaneInstanceContext,
   useOpenPane,
+  PaneMessage,
 } from "@plugins/primitives/plugins/pane/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import {
@@ -26,17 +27,14 @@ import {
   type AttemptWithConversations,
 } from "@plugins/tasks/plugins/tasks-core/core";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import {
-  Stack,
-  Inset,
-} from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import type { LinkTarget } from "@plugins/primitives/plugins/link-gesture/core";
 import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
 import { attemptPane } from "../panes";
 import { navIcons } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
+import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 
 function SideBySideButton({ convId }: { convId: string }) {
   const openPane = useOpenPane();
@@ -85,13 +83,7 @@ function AttemptSection({
         <Badge className={rigidClass()}>{attempt.conversations.length}</Badge>
       </Line>
       {attempt.conversations.length === 0 ? (
-        <Text
-          as="p"
-          variant="caption"
-          className="text-muted-foreground px-sm py-2xs italic"
-        >
-          No conversations
-        </Text>
+        <Placeholder>No conversations</Placeholder>
       ) : (
         <Stack as="ul" gap="2xs">
           {attempt.conversations.map((c) => {
@@ -211,7 +203,15 @@ function TaskAttemptsPane({
   const selectedConvId = openedConv?.params.convId;
   const convInstanceId = openedConv?.instanceId;
 
-  if (result.status === "loading") return <Loading />;
+  if (result.status === "loading") {
+    return (
+      <PaneChrome pane={attemptPane}>
+        <PaneMessage>
+          <Loading />
+        </PaneMessage>
+      </PaneChrome>
+    );
+  }
   if (result.status === "error") {
     return (
       <PaneChrome pane={attemptPane}>
@@ -232,15 +232,11 @@ function TaskAttemptsPane({
 
   return (
     <PaneChrome pane={attemptPane}>
-      <Inset pad="sm">
+      {/* A region of rows (each attempt header and conversation row pads
+          px-sm): the empty state lands on the rows' text edge. */}
+      <div className="rail-sm rail-rows">
         {taskAttempts.length === 0 ? (
-          <Text
-            as="p"
-            variant="body"
-            className="text-muted-foreground px-sm py-xs"
-          >
-            No attempts.
-          </Text>
+          <Placeholder>No attempts.</Placeholder>
         ) : (
           <Stack gap="sm">
             {taskAttempts.map((a) => (
@@ -255,7 +251,7 @@ function TaskAttemptsPane({
             ))}
           </Stack>
         )}
-      </Inset>
+      </div>
     </PaneChrome>
   );
 }

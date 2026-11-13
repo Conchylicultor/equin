@@ -15,7 +15,7 @@
     - `filePeekPane.Actions` "renderer-tabs" → `FilePeekTabs`
   - Uses: 31 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/file-viewer` ×6
-    - `primitives/pane` ×5
+    - `primitives/pane` ×6
     - `apps/file-explorer/browser` ×3
     - `apps/file-explorer/folder-peek` ×2
     - `code-explorer/file-resolve` ×2
@@ -26,7 +26,6 @@
     - `primitives/copy-to-clipboard.CopyButton`
     - `primitives/css/fill.fillClasses`
     - `primitives/css/placeholder.Placeholder`
-    - `primitives/css/text.Text`
     - `primitives/file-links.FileLinksWorkspaceProvider`
     - `primitives/filepath-breadcrumb.FilepathBreadcrumb`
     - `primitives/loading.Loading`
@@ -37,8 +36,6 @@
   - Uses tokens:
     - `ui/tokens/color-palette --foreground`
     - `ui/tokens/color-palette --muted-foreground`
-    - `ui/tokens/density --space-md`
-    - `ui/tokens/density --space-sm`
     - `ui/tokens/shape --spacing`
   - Imported by:
     - `conversations/conversation-view/artifacts/research`

@@ -4,6 +4,7 @@ import {
   PaneChrome,
   defineRoute,
   type ResolveResult,
+  PaneMessage,
 } from "@plugins/primitives/plugins/pane/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { eventsApp } from "@plugins/apps/plugins/events/plugins/shell/core";
@@ -86,7 +87,9 @@ function EventSourceDetailPaneView(): ReactNode {
   if (lookup.status === "error") {
     return (
       <PaneChrome pane={eventSourceDetailPane}>
-        <Placeholder tone="error">{lookup.error.message}</Placeholder>
+        <PaneMessage>
+          <Placeholder tone="error">{lookup.error.message}</Placeholder>
+        </PaneMessage>
       </PaneChrome>
     );
   }
@@ -94,7 +97,9 @@ function EventSourceDetailPaneView(): ReactNode {
   if (lookup.status === "missing") {
     return (
       <PaneChrome pane={eventSourceDetailPane}>
-        <Placeholder>This source no longer exists.</Placeholder>
+        <PaneMessage>
+          <Placeholder>This source no longer exists.</Placeholder>
+        </PaneMessage>
       </PaneChrome>
     );
   }

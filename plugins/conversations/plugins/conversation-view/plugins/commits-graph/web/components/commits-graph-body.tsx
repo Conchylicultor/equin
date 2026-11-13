@@ -1,6 +1,6 @@
 import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { RowView, useLive } from "@plugins/network/plugins/live/web";
-import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
+import { useOpenPane, PaneMessage } from "@plugins/primitives/plugins/pane/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import {
@@ -33,7 +33,16 @@ export function CommitsGraphBody() {
     <RowView
       row={conversation}
       subject="the conversation"
-      missing={<Placeholder>This conversation no longer exists.</Placeholder>}
+      fallback={
+        <PaneMessage>
+          <Loading />
+        </PaneMessage>
+      }
+      missing={
+        <PaneMessage>
+          <Placeholder>This conversation no longer exists.</Placeholder>
+        </PaneMessage>
+      }
     >
       {(conv) => <AttemptCommitsGraph attemptId={conv.attemptId} />}
     </RowView>
@@ -44,9 +53,18 @@ function AttemptCommitsGraph({ attemptId }: { attemptId: string }) {
   const openPane = useOpenPane();
   const result = useLive(commitsGraph, { attemptId });
 
-  if (result.status === "loading") return <Loading />;
+  if (result.status === "loading")
+    return (
+      <PaneMessage>
+        <Loading />
+      </PaneMessage>
+    );
   if (result.status === "unavailable")
-    return <Placeholder>{result.message}</Placeholder>;
+    return (
+      <PaneMessage>
+        <Placeholder>{result.message}</Placeholder>
+      </PaneMessage>
+    );
   if (result.status === "error")
     return (
       <ResourceErrorInline
@@ -59,13 +77,19 @@ function AttemptCommitsGraph({ attemptId }: { attemptId: string }) {
   const graph = result.data;
   // No worktree to measure ⇒ a determinate non-value; render its reason.
   if (!graph.resolved) {
-    return <Placeholder>{graph.reason}</Placeholder>;
+    return (
+      <PaneMessage>
+        <Placeholder>{graph.reason}</Placeholder>
+      </PaneMessage>
+    );
   }
   if (graph.value.mergeBase === null) {
     return (
-      <Placeholder>
-        No shared history with <span className="font-mono">main</span>.
-      </Placeholder>
+      <PaneMessage>
+        <Placeholder>
+          No shared history with <span className="font-mono">main</span>.
+        </Placeholder>
+      </PaneMessage>
     );
   }
 

@@ -27,7 +27,11 @@ import { Theme } from "@plugins/primitives/plugins/css/plugins/theme-boundary/we
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { CopyButton } from "@plugins/primitives/plugins/copy-to-clipboard/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { PaneChrome, type AnyPane } from "@plugins/primitives/plugins/pane/web";
+import {
+  PaneChrome,
+  type AnyPane,
+  PaneMessage,
+} from "@plugins/primitives/plugins/pane/web";
 import {
   fileStatOf,
   type BrowsableFileSystem,
@@ -442,7 +446,8 @@ function ReadyFilePreviewPane({
 
 /**
  * A preview pane whose file is not readable yet (its file system loading,
- * failed, or absent): the standard header, named by `name`, over `children`.
+ * failed, or absent): the standard header, named by `name`, over `children`
+ * — a state, never the file's content, so the pane owns its reading inset.
  */
 export function PendingFilePreviewPane({
   pane,
@@ -456,7 +461,9 @@ export function PendingFilePreviewPane({
   const preview = usePendingFilePreview(name);
   return (
     <FilePreviewProvider value={preview}>
-      <PaneChrome pane={pane}>{children}</PaneChrome>
+      <PaneChrome pane={pane}>
+        <PaneMessage>{children}</PaneMessage>
+      </PaneChrome>
     </FilePreviewProvider>
   );
 }

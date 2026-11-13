@@ -319,43 +319,58 @@ function SongLoader({
   ]);
 
   return matchResource(hydration, {
-    loading: () => <Loading />,
+    loading: () => (
+      <PlayerMessage>
+        <Loading />
+      </PlayerMessage>
+    ),
     error: (error) => (
-      <PaneChrome pane={sonataPlayerPane}>
-        <Inset pad="lg">
-          <ResourceErrorInline
-            error={error}
-            refetch={hydration.refetch}
-            variant="block"
-          />
-        </Inset>
-      </PaneChrome>
+      <PlayerMessage>
+        <ResourceErrorInline
+          error={error}
+          refetch={hydration.refetch}
+          variant="block"
+        />
+      </PlayerMessage>
     ),
     ready: (h) =>
       // Loading into the player (the pane swaps to it once the document is
       // this song's), or waiting for the song's own source's content.
       h.kind === "awaiting-owner" || h.pending.length === 0 ? (
-        <Loading />
+        <PlayerMessage>
+          <Loading />
+        </PlayerMessage>
       ) : (
         // A source is still preparing this song: show its Body in place of
         // the player, so an unfinished song is never mistaken for an empty
         // score. The song loads once the source is ready (its read changes).
-        <PaneChrome pane={sonataPlayerPane}>
-          <Inset pad="lg">
-            <Stack direction="col" gap="lg">
-              {h.pending.map(({ sourceId, label, Body }) => (
-                <Stack key={sourceId} direction="col" gap="sm">
-                  <Text variant="label" tone="muted">
-                    {label}
-                  </Text>
-                  <Body songId={songId} />
-                </Stack>
-              ))}
-            </Stack>
-          </Inset>
-        </PaneChrome>
+        <PlayerMessage>
+          <Stack direction="col" gap="lg">
+            {h.pending.map(({ sourceId, label, Body }) => (
+              <Stack key={sourceId} direction="col" gap="sm">
+                <Text variant="label" tone="muted">
+                  {label}
+                </Text>
+                <Body songId={songId} />
+              </Stack>
+            ))}
+          </Stack>
+        </PlayerMessage>
       ),
   });
+}
+
+/**
+ * The player pane while it has no player to show — loading, a failed read, a
+ * source's Body: the pane's header over the state, inset from the pane edge
+ * (the player itself is full-bleed, so nothing around a state pads it).
+ */
+function PlayerMessage({ children }: { children: ReactNode }): ReactNode {
+  return (
+    <PaneChrome pane={sonataPlayerPane}>
+      <Inset pad="lg">{children}</Inset>
+    </PaneChrome>
+  );
 }
 
 /**
@@ -394,7 +409,12 @@ function SonataPlayerSurface(): ReactElement {
   useBarSeek(songId, bar, hydrated, placedForRef);
 
   if (!hydrated) {
-    if (!deferredComplete) return <Loading />;
+    if (!deferredComplete)
+      return (
+        <PlayerMessage>
+          <Loading />
+        </PlayerMessage>
+      );
     return (
       <SongHydrator songId={songId}>
         {(hydration) => (

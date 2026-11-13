@@ -58,7 +58,7 @@ export function SlowOpDetail({ id }: { id: string }): ReactElement {
   }
   if (result.status === "error") {
     return (
-      <Center axis="both" className="h-full p-2xl text-center">
+      <Center axis="both" className="h-full text-center">
         <ResourceErrorInline
           variant="block"
           subject="the slow op"
@@ -70,7 +70,7 @@ export function SlowOpDetail({ id }: { id: string }): ReactElement {
   }
   if (!result.found) {
     return (
-      <Center axis="both" className="h-full p-2xl text-center">
+      <Center axis="both" className="h-full text-center">
         <Placeholder tone="muted">
           {`No slow op with id "${id}" — it may have aged out (30 days after its last occurrence).`}
         </Placeholder>

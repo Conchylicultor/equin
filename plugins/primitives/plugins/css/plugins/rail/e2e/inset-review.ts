@@ -47,7 +47,15 @@ type Step =
   /** Press a key (Playwright key spelling). */
   | { press: string }
   /** Type text into whatever has focus. */
-  | { type: string };
+  | { type: string }
+  /**
+   * Hold (true) or release (false) every MessagePort message the page receives
+   * — the live socket's frames arrive through its SharedWorker's port — so a
+   * route navigated to next stays on its loading state (`installFrameHold`).
+   */
+  | { holdFrames: boolean }
+  /** Navigate in-app (history + popstate): the app stays booted, nothing reloads. */
+  | { go: string };
 
 type Measure = (page: Page) => Promise<Record<string, number>>;
 
@@ -57,6 +65,23 @@ interface Surface {
   path: string;
   steps?: readonly Step[];
   measure?: Measure;
+  /**
+   * Which review the surface belongs to: none = slice 1's (the default run);
+   * `slice3` = the Placeholder / empty-state review (`--set slice3`).
+   */
+  set?: "slice3";
+  /** The viewport width for this surface (default 1280). */
+  width?: number;
+  /**
+   * Brings this checkout's database into the surface's state before it is
+   * opened (the worktree DB is a throwaway fork of main; never run on main).
+   */
+  setup?: () => Promise<void>;
+  /**
+   * Slice 3: the state's own text, and the text of the sibling it must line
+   * up with — measured as px from the nearest pane / overlay panel edge.
+   */
+  state?: { text: string; anchor?: string };
 }
 
 const SONG = "song-1791710976-b16ii1";
@@ -351,9 +376,275 @@ const measurePanelHead: Measure = async (page) =>
     return out;
   });
 
+// ── Slice 3: Placeholder / empty states (`--set slice3`) ────────────────
+//
+// Each surface reaches ONE state and names its text, plus the sibling text it
+// must line up with; `measureState` reports both as px from the nearest pane
+// or overlay-panel edge. Loading arms are held on screen by holding the live
+// socket's frames (`holdFrames`) across an in-app navigation.
+
+const SLICE3: readonly Surface[] = [
+  // PaneChrome inset="document" on a state-only arm.
+  {
+    name: "s3-doc-system-agent-missing",
+    path: "/agents/system/no-such-agent",
+    set: "slice3",
+    state: { text: "No system agent registered" },
+  },
+  // PaneMessage: a state in place of a list / viewer pane's content.
+  {
+    name: "s3-pane-message-commits-loading",
+    path: "/agents",
+    set: "slice3",
+    steps: [{ holdFrames: true }, { go: `/agents/c/${CONVERSATION}/commits` }],
+    state: { text: "Loading" },
+  },
+  {
+    name: "s3-pane-message-explorer-loading",
+    path: "/agents",
+    set: "slice3",
+    steps: [{ holdFrames: true }, { go: `/agents/c/${CONVERSATION}/files` }],
+    // Its loading arm is a rows skeleton (no text): the shot shows its edge.
+  },
+  // Center: a centred state that lost p-2xl, at a narrow width.
+  {
+    name: "s3-center-trace-missing-narrow",
+    path: "/debug/traces/x/trace-no-such",
+    set: "slice3",
+    width: 640,
+    state: { text: "No trace with id" },
+  },
+  // Row hosts (`rows`): the empty state on the rows' text edge.
+  {
+    name: "s3-rows-page-link-empty",
+    path: "blank-page",
+    set: "slice3",
+    steps: [
+      { type: "/link" },
+      { press: "Enter" },
+      { click: ':text("Select a page")' },
+      { type: "zzqxv" },
+    ],
+    state: { text: "No pages found" },
+  },
+  {
+    name: "s3-rows-prototype-empty",
+    path: "blank-page",
+    set: "slice3",
+    steps: [
+      { type: "/prototype" },
+      { press: "Enter" },
+      { click: ':text("Select a prototype")' },
+      { type: "zzqxv" },
+    ],
+    state: { text: "No prototypes found" },
+  },
+  // Small rail-x-* regions where the host still hand-pads.
+  {
+    name: "s3-rail-x-recovery-loading",
+    path: "/agents",
+    set: "slice3",
+    steps: [{ holdFrames: true }, { go: "/debug/recovery" }],
+    state: { text: "Loading", anchor: "Recently closed" },
+  },
+  {
+    name: "s3-rail-x-build-popover",
+    path: "/agents",
+    set: "slice3",
+    steps: [{ actionBar: true }, { button: "Builds" }],
+  },
+  // A DataView table view's emptyState (now framed like the list view's).
+  {
+    name: "s3-table-empty-state",
+    path: "/debug/queue/dead",
+    set: "slice3",
+    steps: [{ click: 'input[placeholder^="Search dead"]' }, { type: "zzqxv" }],
+    state: { text: "No dead jobs" },
+  },
+  // Moved empty text: the bell popover with nothing in it.
+  {
+    name: "s3-notifications-empty",
+    path: "/agents",
+    set: "slice3",
+    setup: async () => {
+      const res = await agentFetch("/api/notifications/dismiss-all", {
+        method: "POST",
+      });
+      if (!res.ok) throw new Error(`dismiss-all: HTTP ${res.status}`);
+    },
+    steps: [{ actionBar: true }, { button: /^Notifications/ }],
+    state: { text: "No notifications" },
+  },
+  // The Placeholder in each host kind (region, row host, padded box).
+  {
+    name: "s3-exhibit-placeholder-hosts",
+    path: "/debug/exhibit-stage/placeholder/hosts;width=320?embed=1",
+    set: "slice3",
+    width: 320,
+    state: { text: "No items yet", anchor: "Region (rail-md)" },
+  },
+  // Padded hosts: the state now lines up with its siblings.
+  {
+    name: "s3-padded-render-profiler",
+    path: "/debug/render-profiler",
+    set: "slice3",
+    state: { text: "Start a session and", anchor: "Off. Start" },
+  },
+  {
+    name: "s3-padded-read-set",
+    path: "/debug/read-set",
+    set: "slice3",
+    state: { text: "Read-sets and drift", anchor: "NOTIFY PROVENANCE" },
+  },
+];
+
+/** The state's text edge, and its anchor's, from the nearest pane / panel edge. */
+const measureState = async (
+  page: Page,
+  state: NonNullable<Surface["state"]>,
+): Promise<Record<string, number>> =>
+  page.evaluate(({ text, anchor }): Record<string, number> => {
+    const leaf = (needle: string, root: Node = document.body): Range | null => {
+      const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+      // The LAST visible match: a pane header's title ("Loading…") comes
+      // before the body's state in document order, and the newest pane last.
+      let found: Range | null = null;
+      while (walker.nextNode()) {
+        const t = walker.currentNode as Text;
+        const content = t.textContent ?? "";
+        const at = content.toLowerCase().indexOf(needle.toLowerCase());
+        if (at < 0 || !t.parentElement?.getBoundingClientRect().width) continue;
+        const r = document.createRange();
+        r.setStart(t, at);
+        r.setEnd(t, at + needle.length);
+        if (r.getBoundingClientRect().width > 0) found = r;
+      }
+      return found;
+    };
+    const s = leaf(text);
+    if (!s) return { stateFound: 0 };
+    const node = s.startContainer.parentElement;
+    const box =
+      node?.closest("[data-overlay-panel]") ?? node?.closest("[data-pane-id]");
+    const edge = box?.getBoundingClientRect().left ?? 0;
+    const stateFromEdge = Math.round(s.getBoundingClientRect().left - edge);
+    const out: Record<string, number> = { stateFromEdge };
+    // In a pane: the header title's text edge, and the room between the
+    // header's bottom and the state's text — where a top-of-pane message sits.
+    const pane = node?.closest("[data-pane-id]");
+    const header = pane?.querySelector('[data-part="pane.header"]');
+    const title = pane?.querySelector('[data-part="pane.title"]');
+    const titleText = title
+      ? leaf(title.textContent?.trim() ?? "", title)
+      : null;
+    if (header && titleText && pane) {
+      const titleFromEdge = Math.round(
+        titleText.getBoundingClientRect().left -
+          pane.getBoundingClientRect().left,
+      );
+      out.headerTitleFromEdge = titleFromEdge;
+      out.stateMinusHeaderTitle =
+        Math.round(
+          s.getBoundingClientRect().left - pane.getBoundingClientRect().left,
+        ) - titleFromEdge;
+      out.gapBelowHeader = Math.round(
+        s.getBoundingClientRect().top - header.getBoundingClientRect().bottom,
+      );
+      // The header's leading edge (its first item: a toggle, an icon or the
+      // title) — the pane's own text edge, which a pane-level message follows.
+      const lead = header.querySelector("[data-pane-lead]");
+      if (lead) {
+        out.headerLeadFromEdge = Math.round(
+          lead.getBoundingClientRect().left - pane.getBoundingClientRect().left,
+        );
+      }
+    }
+    // The anchor is the state's sibling: looked up inside the same box.
+    const a = anchor === undefined ? null : leaf(anchor, box ?? document.body);
+    if (a) {
+      const anchorFromEdge = Math.round(a.getBoundingClientRect().left - edge);
+      out.anchorFromEdge = anchorFromEdge;
+      out.stateMinusAnchor = stateFromEdge - anchorFromEdge;
+    }
+    return out;
+  }, state);
+
+/**
+ * Lets a step hold the page's MessagePort messages: the live socket lives in a
+ * SharedWorker, out of `routeWebSocket`'s reach, and its frames reach the page
+ * through the worker's port. Installed before any app code, inert until held.
+ */
+const installFrameHold = async (page: Page): Promise<void> => {
+  await page.addInitScript(() => {
+    type Handler = (this: MessagePort, ev: MessageEvent) => unknown;
+    const held: [Handler, MessageEvent, MessagePort][] = [];
+    let hold = false;
+    const wrapped = new WeakMap<Handler, Handler>();
+    const wrap = (fn: Handler): Handler => {
+      const known = wrapped.get(fn);
+      if (known) return known;
+      const w: Handler = function (ev) {
+        if (hold) {
+          held.push([fn, ev, this]);
+          return undefined;
+        }
+        return fn.call(this, ev);
+      };
+      wrapped.set(fn, w);
+      return w;
+    };
+    (window as unknown as Record<string, unknown>).__e2eHoldFrames = (
+      on: boolean,
+    ) => {
+      hold = on;
+      if (!on) for (const [fn, ev, port] of held.splice(0)) fn.call(port, ev);
+    };
+    const proto = MessagePort.prototype;
+    const add = proto.addEventListener;
+    const remove = proto.removeEventListener;
+    proto.addEventListener = function (
+      this: MessagePort,
+      type: string,
+      fn: EventListenerOrEventListenerObject | null,
+      opts?: boolean | AddEventListenerOptions,
+    ) {
+      const l =
+        type === "message" && typeof fn === "function"
+          ? wrap(fn as Handler)
+          : fn;
+      add.call(this, type, l as EventListener, opts);
+    } as typeof proto.addEventListener;
+    proto.removeEventListener = function (
+      this: MessagePort,
+      type: string,
+      fn: EventListenerOrEventListenerObject | null,
+      opts?: boolean | EventListenerOptions,
+    ) {
+      const l =
+        typeof fn === "function" ? (wrapped.get(fn as Handler) ?? fn) : fn;
+      remove.call(this, type, l as EventListener, opts);
+    } as typeof proto.removeEventListener;
+    const d = Object.getOwnPropertyDescriptor(proto, "onmessage");
+    if (d?.set && d.get) {
+      const { get, set } = d;
+      Object.defineProperty(proto, "onmessage", {
+        configurable: true,
+        get(this: MessagePort) {
+          return get.call(this);
+        },
+        set(this: MessagePort, fn: unknown) {
+          set.call(this, typeof fn === "function" ? wrap(fn as Handler) : fn);
+        },
+      });
+    }
+  });
+};
+
 const out = arg("out", "/tmp/inset-review");
 const suffix = arg("suffix", "shot");
 const only = arg("only")?.split(",");
+/** Which review to run: slice 1's surfaces (default) or `slice3`. */
+const set = arg("set");
 /** Extra page ids to remove with the run's own fixtures (a page left by a hand probe). */
 const removeExtra = arg("remove")?.split(",") ?? [];
 
@@ -424,6 +715,17 @@ async function perform(page: Page, step: Step): Promise<void> {
     await clickResilient(
       page.locator(step.click).filter({ visible: true }).first(),
     );
+  } else if ("holdFrames" in step) {
+    await page.evaluate((on) => {
+      (
+        window as unknown as { __e2eHoldFrames: (on: boolean) => void }
+      ).__e2eHoldFrames(on);
+    }, step.holdFrames);
+  } else if ("go" in step) {
+    await page.evaluate((to) => {
+      history.pushState({}, "", to);
+      dispatchEvent(new PopStateEvent("popstate"));
+    }, step.go);
   } else if ("type" in step) {
     await page.keyboard.type(step.type, { delay: 30 });
   } else {
@@ -440,11 +742,15 @@ await withBrowser(async (h) => {
     colorScheme: "light",
   });
   await answerTipsAsTheyShow(page);
+  await installFrameHold(page);
   try {
-    for (const s of SURFACES) {
+    for (const s of [...SURFACES, ...SLICE3]) {
       if (only && !only.includes(s.name)) continue;
+      if ((s.set ?? undefined) !== (set ?? undefined)) continue;
+      await page.setViewportSize({ width: s.width ?? 1280, height: 900 });
       let failed: string | null = null;
       try {
+        await s.setup?.();
         if (s.path === "blank-page") {
           const doc = await openBlankPage(page, { settleMs: 2000 });
           createdPages.push(doc.pageId);
@@ -478,11 +784,16 @@ await withBrowser(async (h) => {
         ...(await measurePanelHead(page)),
         ...(await measureMenuFields(page)),
         ...(s.measure ? await s.measure(page) : {}),
+        ...(s.state ? await measureState(page, s.state) : {}),
       };
       if (Object.keys(measured).length > 0) {
         console.log(`measure ${s.name} ${JSON.stringify(measured)}`);
       }
       const shot = await snap(page, `${out}/${s.name}`, suffix);
+      // A held surface lets the frames go before the next one navigates.
+      if (s.steps?.some((st) => "holdFrames" in st)) {
+        await perform(page, { holdFrames: false });
+      }
       console.log(`${s.name}: ${shot.ok ? "ok" : "FAILED (snap)"}`);
       if (!shot.ok) process.exitCode = 1;
     }

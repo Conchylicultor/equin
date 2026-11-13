@@ -16,7 +16,7 @@ import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { PaneChrome } from "@plugins/primitives/plugins/pane/web";
+import { PaneChrome, PaneMessage } from "@plugins/primitives/plugins/pane/web";
 import { BUILD_PHASE_ORDER, BUILD_PHASE_CONFIG } from "../phases";
 import { buildProfileDetailPane } from "../panes";
 
@@ -35,30 +35,43 @@ export function BuildProfileDetailBody(): ReactElement {
 
   return (
     <PaneChrome pane={buildProfileDetailPane}>
+      {/* The ready arm pads its own card (`Inset sm`); a state standing in
+          for it has nothing padding it, so it opens the pane's reading region. */}
       {foldResource(profile, {
-        loading: () => <Loading />,
-        unavailable: (message) => (
-          <Placeholder tone="muted">{message}</Placeholder>
+        loading: () => (
+          <PaneMessage>
+            <Loading />
+          </PaneMessage>
         ),
-        error: (error) =>
-          error.kind === "refused" && error.code === "missing" ? (
-            <Placeholder tone="muted">
-              No profile recorded for this build.
-            </Placeholder>
-          ) : (
-            <ResourceErrorInline
-              error={error}
-              refetch={refetch}
-              variant="block"
-              subject="the build profile"
-            />
-          ),
-        ready: (data) => {
-          if (data.spans.length === 0) {
-            return (
+        unavailable: (message) => (
+          <PaneMessage>
+            <Placeholder tone="muted">{message}</Placeholder>
+          </PaneMessage>
+        ),
+        error: (error) => (
+          <PaneMessage>
+            {error.kind === "refused" && error.code === "missing" ? (
               <Placeholder tone="muted">
                 No profile recorded for this build.
               </Placeholder>
+            ) : (
+              <ResourceErrorInline
+                error={error}
+                refetch={refetch}
+                variant="block"
+                subject="the build profile"
+              />
+            )}
+          </PaneMessage>
+        ),
+        ready: (data) => {
+          if (data.spans.length === 0) {
+            return (
+              <PaneMessage>
+                <Placeholder tone="muted">
+                  No profile recorded for this build.
+                </Placeholder>
+              </PaneMessage>
             );
           }
           const grouped = groupByPhase(data.spans);

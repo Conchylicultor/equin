@@ -11,12 +11,11 @@
   - Contributes:
     - `Pane.Register` "attempt"
     - `Conversation.ActionBar` → `AttemptSwitchButton`
-  - Uses: 32 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/pane` ×7
+  - Uses: 33 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/pane` ×8
     - `conversations/conversation-ui/item` ×2
     - `network/live` ×2
     - `primitives/css/fill` ×2
-    - `primitives/css/spacing` ×2
     - `primitives/css/ui-kit` ×2
     - `primitives/link-gesture` ×2
     - `conversations/conversation-view/action-bar.Conversation`
@@ -26,7 +25,9 @@
     - `primitives/css/badge.Badge`
     - `primitives/css/inline.Inline`
     - `primitives/css/line.Line`
+    - `primitives/css/placeholder.Placeholder`
     - `primitives/css/rigid.rigidClass`
+    - `primitives/css/spacing.Stack`
     - `primitives/css/status-dot.StatusDot`
     - `primitives/css/text.Text`
     - `primitives/launch.LaunchControl`
@@ -38,6 +39,7 @@
     - `ui/tokens/color-palette --accent`
     - `ui/tokens/color-palette --foreground`
     - `ui/tokens/color-palette --muted-foreground`
+    - `ui/tokens/density --pad-row-x`
     - `ui/tokens/density --space-2xs`
     - `ui/tokens/density --space-sm`
     - `ui/tokens/density --space-xs`

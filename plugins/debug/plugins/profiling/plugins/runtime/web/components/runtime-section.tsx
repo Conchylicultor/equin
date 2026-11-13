@@ -291,7 +291,12 @@ export function RuntimeSection(): ReactElement {
   }, [data]);
 
   if (profile.status === "loading") {
-    return <Loading variant="spinner" label="Reading the runtime profile…" />;
+    // In the DataView's place: on the edge its row bands follow.
+    return (
+      <div className="rail-follow">
+        <Loading variant="spinner" label="Reading the runtime profile…" />
+      </div>
+    );
   }
   if (profile.status === "error") {
     return (

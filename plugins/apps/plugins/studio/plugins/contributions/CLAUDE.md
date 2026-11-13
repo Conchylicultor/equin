@@ -31,7 +31,6 @@
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --foreground`
-    - `ui/tokens/density --space-2xl`
     - `ui/tokens/density --space-md`
     - `ui/tokens/density --space-sm`
     - `ui/tokens/shape --spacing`

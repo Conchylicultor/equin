@@ -47,7 +47,7 @@ export function TraceDetail({ id }: { id: string }): ReactElement {
   }
   if (result.status === "error") {
     return (
-      <Center axis="both" className="h-full p-2xl text-center">
+      <Center axis="both" className="h-full text-center">
         <ResourceErrorInline
           variant="block"
           subject="the trace"
@@ -59,7 +59,7 @@ export function TraceDetail({ id }: { id: string }): ReactElement {
   }
   if (!result.found) {
     return (
-      <Center axis="both" className="h-full p-2xl text-center">
+      <Center axis="both" className="h-full text-center">
         <Placeholder tone="muted">{`No trace with id "${id}".`}</Placeholder>
       </Center>
     );

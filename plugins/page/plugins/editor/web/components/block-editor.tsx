@@ -25,7 +25,10 @@ import {
   type ArrivalStep,
 } from "@plugins/primitives/plugins/css/plugins/motion/web";
 import { Overlay } from "@plugins/primitives/plugins/css/plugins/overlay/web";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import {
+  Inset,
+  Stack,
+} from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
@@ -119,6 +122,7 @@ import { SelectionBands } from "./selection-bands";
 import { TextSpanHighlight, type SpanLinePaint } from "./text-span-highlight";
 import {
   BLOCK_GUTTER,
+  BLOCK_INSET,
   SURFACE_WIDTH_VAR,
   blockContentLeft,
   framePadX,
@@ -647,7 +651,12 @@ function BlockEditorInner({
   );
 
   if (gone) {
-    return <Placeholder>This block no longer exists.</Placeholder>;
+    // In place of the blocks, on their edge: each block pads BLOCK_INSET.
+    return (
+      <Inset x={BLOCK_INSET}>
+        <Placeholder>This block no longer exists.</Placeholder>
+      </Inset>
+    );
   }
 
   return (

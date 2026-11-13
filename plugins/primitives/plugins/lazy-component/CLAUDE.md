@@ -6,7 +6,9 @@
 
 - Description: Pairs React.lazy with its own Suspense boundary so a heavy component is code-split off the eager plugin-boot wave, loading on first mount instead.
 - Web:
-  - Uses: `primitives/loading.Loading`
+  - Uses:
+    - `primitives/css/center.Center`
+    - `primitives/loading.Loading`
   - Exports (types): `LazyComponentOptions`
   - Exports (values):
     - `lazyComponent`

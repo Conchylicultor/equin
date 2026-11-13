@@ -52,7 +52,7 @@ trees; no ledger read). Refused `missing` (a sha names no commit) and `no-base`
     - `PluginChangesSlots.DiffRenderer` ← `plugin-meta.facets.slots.render-diff`
     - `PluginChangesSlots.DiffRenderer` ← `plugin-meta.facets.structure.render-diff`
   - Contributes: `ReviewSlots.Section` "Plugin Changes" → `PluginChangesSection`
-  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/collapsible` ×4
     - `network/live/live-state` ×2
     - `primitives/css/badge` ×2
@@ -61,6 +61,7 @@ trees; no ledger read). Refused `missing` (a sha names no commit) and `no-base`
     - `primitives/css/clip.Clip`
     - `primitives/css/fill.Fill`
     - `primitives/css/line.Line`
+    - `primitives/css/placeholder.Placeholder`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
@@ -106,7 +107,6 @@ trees; no ledger read). Refused `missing` (a sha names no commit) and `no-base`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --border`
-    - `ui/tokens/color-palette --destructive`
     - `ui/tokens/color-palette --info`
     - `ui/tokens/color-palette --muted`
     - `ui/tokens/color-palette --muted-foreground`

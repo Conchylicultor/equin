@@ -6,6 +6,7 @@ import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder
 import { useNow } from "@plugins/primitives/plugins/relative-time/web";
 import { opsHistory } from "@plugins/debug/plugins/profiling/plugins/op-log/plugins/op-store/core";
 import { FIVE_MINUTES, OPS_READ_LIMIT, floorTo } from "../internal/op-groups";
+import { GanttMessage } from "./gantt-message";
 import { LiveOpGantt } from "./live-op-gantt";
 
 const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
@@ -25,19 +26,30 @@ export function OpSection(): ReactElement | null {
     limit: OPS_READ_LIMIT,
   });
 
-  if (result.status === "loading") return <Loading label="Loading ops…" />;
+  if (result.status === "loading")
+    return (
+      <GanttMessage>
+        <Loading label="Loading ops…" />
+      </GanttMessage>
+    );
   if (result.status === "error")
     return (
-      <ResourceErrorInline
-        variant="inline"
-        subject="the ops"
-        error={result.error}
-        refetch={result.refetch}
-      />
+      <GanttMessage>
+        <ResourceErrorInline
+          variant="inline"
+          subject="the ops"
+          error={result.error}
+          refetch={result.refetch}
+        />
+      </GanttMessage>
     );
   // The ops are this machine's: a host without the computer says so.
   if (result.status === "unavailable")
-    return <Placeholder tone="muted">{result.message}</Placeholder>;
+    return (
+      <GanttMessage>
+        <Placeholder tone="muted">{result.message}</Placeholder>
+      </GanttMessage>
+    );
   return (
     <LiveOpGantt
       rows={result.data}

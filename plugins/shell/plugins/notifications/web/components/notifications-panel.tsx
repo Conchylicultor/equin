@@ -36,6 +36,8 @@ import {
   type NotificationStateTone,
 } from "../../core";
 import { NotificationView } from "./notification-view";
+import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 
 const markAllReadIcon = symbol("done-all");
 
@@ -407,13 +409,9 @@ function NotificationList({
   const rows = result.data;
   if (rows.length === 0) {
     return (
-      <Text
-        as="p"
-        variant="body"
-        className="px-md py-xl text-center text-muted-foreground"
-      >
-        No notifications for this filter
-      </Text>
+      <Center axis="horizontal" className="py-lg">
+        <Placeholder>No notifications for this filter</Placeholder>
+      </Center>
     );
   }
 
@@ -519,13 +517,9 @@ export function NotificationsBody({
 }) {
   if (empty) {
     return (
-      <Text
-        as="p"
-        variant="body"
-        className="px-md py-xl text-center text-muted-foreground"
-      >
-        No notifications
-      </Text>
+      <Center axis="horizontal" className="py-lg">
+        <Placeholder>No notifications</Placeholder>
+      </Center>
     );
   }
   return <NotificationList filter={filter} onClose={onClose} />;

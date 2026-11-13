@@ -114,7 +114,9 @@ function VersionPreview({
       {forest.length > 0 ? (
         <ReadOnlyBlocks forest={forest} diff={diff} />
       ) : (
-        <Placeholder tone="muted">This version had no content.</Placeholder>
+        <Inset x={BLOCK_INSET}>
+          <Placeholder tone="muted">This version had no content.</Placeholder>
+        </Inset>
       )}
     </Stack>
   );

@@ -41,11 +41,11 @@
     - `ConfigV2.WebRegister` "files"
     - `FileBrowserSlots.RowActions` "extract" → `ExtractAction`
     - `FileBrowserSlots.RowActions` "copy-path" → `CopyPathAction`
-  - Uses: 82 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 83 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/data-view` ×10
     - `primitives/css/ui-kit` ×8
+    - `primitives/pane` ×8
     - `primitives/file-viewer` ×7
-    - `primitives/pane` ×7
     - `network/live` ×4
     - `infra/endpoints` ×3
     - `infra/paths/file-systems` ×3

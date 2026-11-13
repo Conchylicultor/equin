@@ -17,6 +17,7 @@ import { useEntry } from "../internal/use-entries";
 import { SCOPE_LABEL, triggerWords } from "../internal/present";
 import { NextRun } from "./next-run";
 import { RecentRuns } from "./recent-runs";
+import { PaneMessage } from "@plugins/primitives/plugins/pane/web";
 
 /** The detail of one entry, read from the (already loaded) catalog. */
 export function EntryDetail({
@@ -27,17 +28,24 @@ export function EntryDetail({
   name: string;
 }): ReactElement {
   const result = useEntry(kind, name);
+  // A state stands in for the body: a PaneMessage, on the pane header's edge.
   switch (result.status) {
     case "loading":
-      return <Loading variant="rows" />;
+      return (
+        <PaneMessage>
+          <Loading variant="rows" />
+        </PaneMessage>
+      );
     case "error":
       return (
-        <ResourceErrorInline
-          variant="block"
-          subject="the background catalog"
-          error={result.error}
-          refetch={result.refetch}
-        />
+        <PaneMessage>
+          <ResourceErrorInline
+            variant="block"
+            subject="the background catalog"
+            error={result.error}
+            refetch={result.refetch}
+          />
+        </PaneMessage>
       );
     case "ready":
       break;
@@ -45,9 +53,11 @@ export function EntryDetail({
   const entry = result.data;
   if (entry === null) {
     return (
-      <Placeholder tone="error">
-        Nothing named {name} runs in this backend any more.
-      </Placeholder>
+      <PaneMessage>
+        <Placeholder tone="error">
+          Nothing named {name} runs in this backend any more.
+        </Placeholder>
+      </PaneMessage>
     );
   }
   return <EntryDetailBody entry={entry} />;

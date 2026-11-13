@@ -6,6 +6,7 @@ import {
 } from "@plugins/infra/plugins/paths/plugins/file-systems/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
+import { PaneMessage } from "@plugins/primitives/plugins/pane/web";
 import { InlineFrame } from "@plugins/primitives/plugins/embed/plugins/frame/web";
 import { isolateHtml } from "../internal/isolate";
 
@@ -18,20 +19,28 @@ export function HtmlView({ file }: FileRendererProps) {
   const state = useFileText(file);
 
   if (state.kind === "loading") {
-    return <Loading />;
+    return (
+      <PaneMessage>
+        <Loading />
+      </PaneMessage>
+    );
   }
   if (state.kind === "unavailable") {
     return (
-      <Placeholder tone="error">
-        {fileTextUnavailableMessage(state)}
-      </Placeholder>
+      <PaneMessage>
+        <Placeholder tone="error">
+          {fileTextUnavailableMessage(state)}
+        </Placeholder>
+      </PaneMessage>
     );
   }
   if (state.kind === "error") {
     return (
-      <Placeholder tone="error">
-        {state.message || "Failed to load file."}
-      </Placeholder>
+      <PaneMessage>
+        <Placeholder tone="error">
+          {state.message || "Failed to load file."}
+        </Placeholder>
+      </PaneMessage>
     );
   }
 

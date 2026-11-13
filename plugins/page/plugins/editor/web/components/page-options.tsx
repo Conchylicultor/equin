@@ -2,7 +2,6 @@ import { useMemo } from "react";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import {
   mapResource,
   type ResourceResult,
@@ -12,6 +11,7 @@ import { pagesTree, pageData, type Block } from "../../core";
 import { PageIcon } from "./page-icon";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
+import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 
 const addCircleIcon = symbol("add-circle");
 
@@ -106,15 +106,7 @@ export function PageOptionsList({
   onHoverIndex?: (index: number) => void;
 }) {
   if (options.length === 0) {
-    return (
-      <Text
-        as="div"
-        variant="body"
-        className="text-muted-foreground px-sm py-xs"
-      >
-        No pages found
-      </Text>
-    );
+    return <Placeholder>No pages found</Placeholder>;
   }
   // Caret menu → commit on pointerdown; focused picker → commit on mousedown.
   const pressProps = (i: number, act: () => void) =>

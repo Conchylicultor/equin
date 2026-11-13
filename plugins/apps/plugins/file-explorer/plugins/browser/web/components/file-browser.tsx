@@ -28,6 +28,7 @@ import {
   ResizablePanelGroup,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { PaneMessage } from "@plugins/primitives/plugins/pane/web";
 import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { Theme } from "@plugins/primitives/plugins/css/plugins/theme-boundary/web";
 import {
@@ -150,7 +151,7 @@ function FileBrowserBodyContent(): ReactNode {
           />
         );
       }
-      return <Placeholder>{state.message}</Placeholder>;
+      return <ListingProblem message={state.message} />;
     }
     case "ready":
       return <ReadyBody browser={browser} />;
@@ -182,7 +183,12 @@ function ReadyBody({ browser }: { browser: FileBrowserReady }): ReactNode {
     );
 
   // The split follows the viewport, which a server render does not have.
-  if (phone === null || narrow === null) return <Loading />;
+  if (phone === null || narrow === null)
+    return (
+      <PaneMessage>
+        <Loading />
+      </PaneMessage>
+    );
 
   // At 640px and under an open file replaces the listing.
   if (preview !== null && phone) return preview;

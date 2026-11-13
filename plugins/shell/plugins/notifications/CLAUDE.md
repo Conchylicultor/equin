@@ -233,7 +233,7 @@ DataView (`web/components/notifications-view.tsx`):
     - `notification-actions` "dismiss" → `DismissNotificationAction`
     - `Notifications.Action` "open"
     - `Notifications.Action` "reload"
-  - Uses: 55 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 56 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/data-view` ×5
     - `apps-core/tab-origin` ×4
     - `infra/endpoints` ×3
@@ -255,6 +255,7 @@ DataView (`web/components/notifications-view.tsx`):
     - `primitives/css/layer.Layer`
     - `primitives/css/line.Line`
     - `primitives/css/pin.Pin`
+    - `primitives/css/placeholder.Placeholder`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`

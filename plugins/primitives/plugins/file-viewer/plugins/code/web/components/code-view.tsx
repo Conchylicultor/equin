@@ -12,6 +12,7 @@ import {
 } from "@plugins/primitives/plugins/syntax-highlight/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
+import { PaneMessage } from "@plugins/primitives/plugins/pane/web";
 
 export function CodeView({ file, line }: FileRendererProps) {
   const state = useFileText(file);
@@ -21,7 +22,9 @@ export function CodeView({ file, line }: FileRendererProps) {
   if (state.kind === "loading")
     return (
       <CodePaneSurface>
-        <Loading />
+        <PaneMessage>
+          <Loading />
+        </PaneMessage>
       </CodePaneSurface>
     );
   if (state.kind === "unavailable") {
@@ -29,16 +32,20 @@ export function CodeView({ file, line }: FileRendererProps) {
     // "No preview" body the fallback renderer shows for known binary formats.
     if (state.reason === "binary") return <NoPreview file={file} />;
     return (
-      <Placeholder tone="error">
-        {fileTextUnavailableMessage(state)}
-      </Placeholder>
+      <PaneMessage>
+        <Placeholder tone="error">
+          {fileTextUnavailableMessage(state)}
+        </Placeholder>
+      </PaneMessage>
     );
   }
   if (state.kind === "error") {
     return (
-      <Placeholder tone="error">
-        {state.message || "Failed to load file."}
-      </Placeholder>
+      <PaneMessage>
+        <Placeholder tone="error">
+          {state.message || "Failed to load file."}
+        </Placeholder>
+      </PaneMessage>
     );
   }
   return (

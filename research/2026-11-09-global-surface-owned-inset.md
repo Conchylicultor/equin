@@ -385,3 +385,38 @@ Where the implementation diverged from the design above, and why:
   not the pane's, so its debt moved to the card follow-up (task-1794239361-kagy27).
 - The review prototype is a slider per migrated pane (light/dark as the
   worktree renders, 1280×900).
+
+## Slice 3 — as implemented (2026-11-12)
+
+- **`Placeholder` = `rail-text-indent py-sm`** (`Loading`'s `text` and
+  `spinner` variants likewise). `rail-text-indent` pads only *text rail − rail*:
+  0 in a plain region (the text inherits the region's edge, as designed), one
+  row pad in a row host (`rail-rows`), 0 outside any region. So "No results" in
+  a menu sits on the rows' text, not 8px left of it (principle 3), and — unlike
+  `rail-follow` — it never pays the rail, so it is safe nested anywhere.
+- **Audit.** Every `Placeholder` and text/spinner `Loading` site (≈400) was
+  classified by what its text lands on once it declares no inset: padded by an
+  ancestor (the large majority — SectionCard bodies, dialogs, popovers, `Inset`,
+  `p-*` boxes; these now line up with their siblings instead of sitting 12px
+  further in), centred, inside a control, or **region-less** (≈60: flush against
+  a pane or card edge). Region-less spots got an owner first:
+  - a state standing in for a pane's content — a render arm that is only the
+    state, or a state deeper in a list / viewer pane → **`PaneMessage`** (new,
+    `primitives/pane`): an inline-only region on the pane's own text edge
+    (`rail-x-pane`: `--pane-inset`, else the header's pad), so the message starts
+    where the header title does. Not `inset="document"`: its block padding
+    stacked on the Placeholder's own `py-sm` (round 2 of the review: the gap
+    under the header doubled to 25px); the message's vertical room is its own;
+  - a state in place of a DataView (its body opens no region; its bands follow)
+    → a `rail-follow` wrapper, the topology DataView's `rows` skeleton already uses;
+  - a state that appears in hosts of every kind (scroll-footer spinner, lazy
+    fallback, tabbed-view gate, canvases) → centred (`Center`), so it needs no edge;
+  - a few boxes still hand-padding their strips (Places overlay panel, config
+    raw-file diffs) → a `rail-x-<step>` region matching those strips, until
+    slice 1b / 2 give the boxes an owner;
+  - row hosts that did not say so (caret trigger menus, the prototype picker,
+    the add-app-scope popover) → `rows`.
+- **Empty-state text** moved onto `Placeholder` (notifications, attempt pane,
+  page / block-type / prototype pickers, servers, account detail, boot profile,
+  plugin changes); the 11 `Center … p-2xl` states drop the padding.
+- **Exhibit**: `placeholder/hosts` (a region, a row host, a padded box).

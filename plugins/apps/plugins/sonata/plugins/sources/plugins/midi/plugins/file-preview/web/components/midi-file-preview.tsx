@@ -31,6 +31,7 @@ import { useAppLink } from "@plugins/apps-core/plugins/tabs/web";
 import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { PaneMessage } from "@plugins/primitives/plugins/pane/web";
 import { showToast } from "@plugins/shell/plugins/toast/web";
 
 /**
@@ -45,18 +46,26 @@ export function MidiFilePreview({ file }: FileRendererProps): ReactNode {
   const state = useFileBytes(file);
   switch (state.kind) {
     case "loading":
-      return <Loading />;
+      return (
+        <PaneMessage>
+          <Loading />
+        </PaneMessage>
+      );
     case "unavailable":
       return (
-        <Placeholder tone="error">
-          {fileBytesUnavailableMessage(state)}
-        </Placeholder>
+        <PaneMessage>
+          <Placeholder tone="error">
+            {fileBytesUnavailableMessage(state)}
+          </Placeholder>
+        </PaneMessage>
       );
     case "error":
       return (
-        <Placeholder tone="error">
-          {state.message || "Failed to read the file."}
-        </Placeholder>
+        <PaneMessage>
+          <Placeholder tone="error">
+            {state.message || "Failed to read the file."}
+          </Placeholder>
+        </PaneMessage>
       );
     case "ok":
       return <ParsedPreview file={file} bytes={state.bytes} />;
@@ -88,7 +97,11 @@ function ParsedPreview({
   const rawById = useMemo(() => ({ [MIDI_SOURCE_ID]: bytes }), [bytes]);
   if (error !== null) {
     return (
-      <Placeholder tone="error">Not a readable MIDI file: {error}</Placeholder>
+      <PaneMessage>
+        <Placeholder tone="error">
+          Not a readable MIDI file: {error}
+        </Placeholder>
+      </PaneMessage>
     );
   }
   return (

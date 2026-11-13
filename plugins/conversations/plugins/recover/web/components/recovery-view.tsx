@@ -158,23 +158,27 @@ export function RecoveryView() {
       </Stack>
 
       <Scroll axis="both" fill>
+        {/* A state in the list's place opens a region on the header's edge
+            (its hand-padded `px-lg`): nothing else around it pays an inset. */}
         {gone.status === "loading" ? (
-          <Loading />
+          <div className="rail-x-lg">
+            <Loading />
+          </div>
         ) : gone.status === "error" && items === undefined ? (
-          <Stack gap="sm" align="start" className="py-sm">
+          <Stack gap="sm" align="start" className="rail-x-lg py-sm">
             <Placeholder tone="error">
               Couldn't load recently closed conversations: {gone.error.message}.
             </Placeholder>
-            <div className="px-md">
-              <ControlSizeProvider size="sm">
-                <Button variant="outline" onClick={() => void gone.refetch()}>
-                  Retry
-                </Button>
-              </ControlSizeProvider>
-            </div>
+            <ControlSizeProvider size="sm">
+              <Button variant="outline" onClick={() => void gone.refetch()}>
+                Retry
+              </Button>
+            </ControlSizeProvider>
           </Stack>
         ) : items === undefined || items.length === 0 ? (
-          <Placeholder>No recently closed conversations.</Placeholder>
+          <div className="rail-x-lg">
+            <Placeholder>No recently closed conversations.</Placeholder>
+          </div>
         ) : (
           <Stack gap="none">
             {groups.map((group) => {

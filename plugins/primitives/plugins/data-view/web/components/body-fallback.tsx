@@ -47,12 +47,16 @@ export function BodyFallback(props: {
   const { state } = props;
   switch (state.kind) {
     case "server-error":
+      // In place of the view, like the `rows` skeleton: a follower lands it on
+      // the bands' edge (the body opens no region of its own).
       return (
-        <Placeholder tone="error">
-          {state.error instanceof FilterError
-            ? `This filter is too large to run: ${state.error.message}`
-            : `Couldn't load: ${state.error.message}`}
-        </Placeholder>
+        <div className="rail-follow">
+          <Placeholder tone="error">
+            {state.error instanceof FilterError
+              ? `This filter is too large to run: ${state.error.message}`
+              : `Couldn't load: ${state.error.message}`}
+          </Placeholder>
+        </div>
       );
     case "rule-error": {
       const { error } = state;

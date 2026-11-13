@@ -11,6 +11,7 @@ import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { PaneMessage } from "@plugins/primitives/plugins/pane/web";
 import { SectionCard } from "@plugins/primitives/plugins/section-card/web";
 import { CopyButton } from "@plugins/primitives/plugins/copy-to-clipboard/web";
 import { HighlightedCode } from "@plugins/primitives/plugins/syntax-highlight/web";
@@ -44,28 +45,42 @@ export function useCatalogTool(
 /** The detail of one tool, read from the (already loaded) catalog. */
 export function ToolDetail({ name }: { name: string }): ReactElement {
   const result = useCatalogTool(name);
+  // The ready body opens its own region (`rail-lg`); a state standing in for
+  // it has nothing padding it, so it opens the pane's reading region.
   switch (result.status) {
     case "unavailable":
-      return <Placeholder tone="muted">{result.message}</Placeholder>;
+      return (
+        <PaneMessage>
+          <Placeholder tone="muted">{result.message}</Placeholder>
+        </PaneMessage>
+      );
     case "loading":
-      return <Loading variant="rows" />;
+      return (
+        <PaneMessage>
+          <Loading variant="rows" />
+        </PaneMessage>
+      );
     case "error":
       return (
-        <ResourceErrorInline
-          variant="block"
-          subject="the MCP tool catalog"
-          error={result.error}
-          refetch={result.refetch}
-        />
+        <PaneMessage>
+          <ResourceErrorInline
+            variant="block"
+            subject="the MCP tool catalog"
+            error={result.error}
+            refetch={result.refetch}
+          />
+        </PaneMessage>
       );
     case "ready":
       break;
   }
   if (result.data === null) {
     return (
-      <Placeholder tone="error">
-        No MCP tool named {name} is registered in this backend.
-      </Placeholder>
+      <PaneMessage>
+        <Placeholder tone="error">
+          No MCP tool named {name} is registered in this backend.
+        </Placeholder>
+      </PaneMessage>
     );
   }
   return <ToolDetailBody tool={result.data} />;

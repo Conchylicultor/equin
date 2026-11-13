@@ -6,6 +6,7 @@ import {
 import { DiffOrImageView } from "@plugins/primitives/plugins/diff-view/web";
 import type { EditedFile } from "@plugins/conversations/plugins/conversation-view/plugins/code/core";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { PaneMessage } from "@plugins/primitives/plugins/pane/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
@@ -32,10 +33,18 @@ export function CommitDiffView({
   const result = useLive(commitFiles, { worktree, sha });
 
   if (result.status === "loading") {
-    return <Loading />;
+    return (
+      <PaneMessage>
+        <Loading />
+      </PaneMessage>
+    );
   }
   if (result.status === "unavailable") {
-    return <Placeholder>{result.message}</Placeholder>;
+    return (
+      <PaneMessage>
+        <Placeholder>{result.message}</Placeholder>
+      </PaneMessage>
+    );
   }
   if (result.status === "error") {
     return (
@@ -86,7 +95,11 @@ function CommitFileList({
   }
 
   if (files.length === 0) {
-    return <Placeholder>No changes in this commit.</Placeholder>;
+    return (
+      <PaneMessage>
+        <Placeholder>No changes in this commit.</Placeholder>
+      </PaneMessage>
+    );
   }
 
   const totals = files.reduce(

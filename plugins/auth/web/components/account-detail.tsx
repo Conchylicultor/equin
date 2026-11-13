@@ -31,6 +31,8 @@ import {
   IntegrationHeader,
   IntegrationStatusBadge,
 } from "./integration-presentation";
+import { PaneMessage } from "@plugins/primitives/plugins/pane/web";
+import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 
 /**
  * One Accounts row's pane — a provider or an integration, the same shape for
@@ -49,9 +51,11 @@ export function AccountDetail({ accountId }: { accountId: string }) {
   if (provider) return <ProviderAccount provider={provider} />;
   if (integration) return <IntegrationAccount integration={integration} />;
   return (
-    <Text as="div" variant="body" className="p-xl text-muted-foreground">
-      No installed plugin provides the account &ldquo;{accountId}&rdquo;.
-    </Text>
+    <PaneMessage>
+      <Placeholder>
+        No installed plugin provides the account &ldquo;{accountId}&rdquo;.
+      </Placeholder>
+    </PaneMessage>
   );
 }
 

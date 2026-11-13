@@ -6,6 +6,7 @@ import {
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Markdown } from "@plugins/primitives/plugins/markdown/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
+import { PaneMessage } from "@plugins/primitives/plugins/pane/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { splitFrontmatter } from "../internal/frontmatter";
 import { FrontmatterCard } from "./frontmatter-card";
@@ -26,20 +27,28 @@ export function MarkdownView({ file }: FileRendererProps) {
   const state = useFileText(file);
 
   if (state.kind === "loading") {
-    return <Loading />;
+    return (
+      <PaneMessage>
+        <Loading />
+      </PaneMessage>
+    );
   }
   if (state.kind === "unavailable") {
     return (
-      <Placeholder tone="error">
-        {fileTextUnavailableMessage(state)}
-      </Placeholder>
+      <PaneMessage>
+        <Placeholder tone="error">
+          {fileTextUnavailableMessage(state)}
+        </Placeholder>
+      </PaneMessage>
     );
   }
   if (state.kind === "error") {
     return (
-      <Placeholder tone="error">
-        {state.message || "Failed to load file."}
-      </Placeholder>
+      <PaneMessage>
+        <Placeholder tone="error">
+          {state.message || "Failed to load file."}
+        </Placeholder>
+      </PaneMessage>
     );
   }
 

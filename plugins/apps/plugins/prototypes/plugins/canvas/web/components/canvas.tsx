@@ -58,6 +58,7 @@ import { CanvasShortcuts } from "./canvas-shortcuts";
 import { AddFrameRail } from "./add-frame-rail";
 import { LayoutToggle } from "./layout-toggle";
 import { CANVAS_GROUND } from "./canvas-ground";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 
 /**
  * The canvas: every frame side by side, each centred in its share of the room
@@ -74,7 +75,13 @@ export function Canvas({ meta }: { meta: PrototypeMeta }): ReactElement {
   // The layout reads the window's size (the This window size), which a server
   // render does not have.
   const browserWindow = useWindowSize();
-  if (browserWindow === null) return <Loading />;
+  if (browserWindow === null) {
+    return (
+      <Center axis="both" className="h-full">
+        <Loading />
+      </Center>
+    );
+  }
   return <CanvasBoard meta={meta} browserWindow={browserWindow} />;
 }
 

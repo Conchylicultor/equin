@@ -15,6 +15,7 @@
     - `primitives/file-viewer.FileViewer`
     - `primitives/file-viewer.NoPreview`
     - `primitives/loading.Loading`
+    - `primitives/pane.PaneMessage`
     - `primitives/syntax-highlight.CodeListing`
     - `primitives/syntax-highlight.CodePaneSurface`
 

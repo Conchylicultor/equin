@@ -984,6 +984,7 @@ with an empty route.
     - `PaneLayoutContext`
     - `PaneLoadScopeContext`
     - `PaneMatchContext`
+    - `PaneMessage`
     - `paneMorphSink`
     - `paneOwnerFor`
     - `PaneScroll`
@@ -1032,6 +1033,8 @@ with an empty route.
     - `ui/tokens/density --chrome-pane-card-h`
     - `ui/tokens/density --chrome-pane-card-pad-end`
     - `ui/tokens/density --chrome-pane-card-pad-start`
+    - `ui/tokens/density --chrome-pane-pad-end`
+    - `ui/tokens/density --chrome-pane-pad-start`
     - `ui/tokens/density --content-inset`
     - `ui/tokens/density --control-height-sm`
     - `ui/tokens/density --control-icon-sm`
@@ -1042,18 +1045,18 @@ with an empty route.
     - `ui/tokens/density --space-md`
     - `ui/tokens/density --space-sm`
     - `ui/tokens/shape --spacing`
-  - Imported by: 209 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×77
+  - Imported by: 214 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×78
     - `conversations` ×32
     - `debug` ×29
     - `active-data` ×13
     - `tasks` ×11
+    - `primitives` ×9
     - `apps-core` ×7
     - `plugin-meta` ×6
-    - `primitives` ×6
     - `layouts` ×4
+    - `infra` ×3
     - `companions` ×2
-    - `infra` ×2
     - `page` ×2
     - `reports` ×2
     - `stats` ×2

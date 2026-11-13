@@ -63,7 +63,6 @@ same `SlowEvents.View` slot; it fans out across every worktree DB fork.
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --muted-foreground`
-    - `ui/tokens/density --space-2xl`
     - `ui/tokens/density --space-lg`
     - `ui/tokens/density --space-sm`
     - `ui/tokens/font-family --font-mono`

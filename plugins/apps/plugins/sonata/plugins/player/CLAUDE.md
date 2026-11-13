@@ -121,7 +121,6 @@ the scope, so the player cannot import the shell).
   - Uses tokens:
     - `ui/tokens/color-palette --border`
     - `ui/tokens/color-palette --muted-foreground`
-    - `ui/tokens/density --space-2xl`
     - `ui/tokens/density --space-md`
     - `ui/tokens/density --space-sm`
     - `ui/tokens/density --space-xl`

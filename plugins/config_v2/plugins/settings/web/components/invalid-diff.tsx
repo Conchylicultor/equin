@@ -58,7 +58,9 @@ export function InvalidDiff({
       </Text>
       <Scroll axis="both" className="max-h-96">
         {stored === defaults ? (
-          <Placeholder>No differences in the raw files.</Placeholder>
+          <div className="rail-x-md">
+            <Placeholder>No differences in the raw files.</Placeholder>
+          </div>
         ) : (
           <TextDiff oldText={stored} newText={defaults} path="config.json" />
         )}

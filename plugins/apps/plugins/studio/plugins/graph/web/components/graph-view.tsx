@@ -27,6 +27,7 @@ import { parseEntryPattern } from "@plugins/plugin-meta/plugins/closure/plugins/
 import { STATE_LEGEND } from "@plugins/apps/plugins/studio/plugins/membership-tint/web";
 import { focusSubgraph, toCanvas, type Direction } from "../internal/subgraph";
 import { symbol } from "@plugins/ui/plugins/icons/core";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 
 const addIcon = symbol("add");
 const removeIcon = symbol("remove");
@@ -75,7 +76,7 @@ export function GraphView({ paneFocusId }: { paneFocusId?: PluginId }) {
     return { nodes, edges, hiddenCount: sub.hiddenCount };
   }, [graph, focusId, depth, direction, membership]);
 
-  if (data.status === "loading") return <Loading variant="spinner" />;
+  if (data.status === "loading") return <CentredSpinner />;
   if (data.status === "error") {
     return (
       <ResourceErrorInline
@@ -88,7 +89,7 @@ export function GraphView({ paneFocusId }: { paneFocusId?: PluginId }) {
   }
   // The store's graph is published from this read by an effect, so it lags the
   // ready arm by one commit.
-  if (!graph) return <Loading variant="spinner" />;
+  if (!graph) return <CentredSpinner />;
   const { allIds } = data.data;
 
   // Empty state: prompt + search over allIds to pick a focus node. Clear the
@@ -270,5 +271,14 @@ function FocusResults({
         );
       })}
     </Stack>
+  );
+}
+
+/** The canvas pane's loading state: centred, as the canvas has no edge to sit on. */
+function CentredSpinner() {
+  return (
+    <Center axis="both" className="h-full">
+      <Loading variant="spinner" />
+    </Center>
   );
 }

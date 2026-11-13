@@ -106,6 +106,7 @@ function PagePicker({
       onOpenChange={onOpenChange}
       width="lg"
       padding="sm"
+      rows
     >
       <Stack gap="sm">
         <SearchInput

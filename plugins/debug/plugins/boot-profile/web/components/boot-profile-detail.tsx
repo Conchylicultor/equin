@@ -31,7 +31,7 @@ export function BootProfileDetail({ id }: { id: string }): ReactElement {
 
   if (result.status === "error") {
     return (
-      <Center axis="both" className="h-full p-2xl text-center">
+      <Center axis="both" className="h-full text-center">
         <ResourceErrorInline
           variant="block"
           subject="the boot trace"
@@ -44,7 +44,7 @@ export function BootProfileDetail({ id }: { id: string }): ReactElement {
 
   if (!result.found) {
     return (
-      <Center axis="both" className="h-full p-2xl text-center">
+      <Center axis="both" className="h-full text-center">
         <Placeholder tone="muted">
           {`No saved boot trace with id "${id}".`}
         </Placeholder>

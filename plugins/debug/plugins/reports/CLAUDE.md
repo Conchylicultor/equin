@@ -61,9 +61,9 @@ All reports are listed — noise is surfaced via the badge, never filtered out.
     - `sources` "Fixed" → `ReportsSource`
     - `sources` "Website visitors" → `ReportsSource`
     - `sources` "All" → `ReportsSource`
-  - Uses: 34 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 35 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/data-view` ×7
-    - `primitives/pane` ×5
+    - `primitives/pane` ×6
     - `network/live` ×2
     - `primitives/launch/investigate` ×2
     - `primitives/relative-time` ×2

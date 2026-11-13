@@ -10,6 +10,7 @@ import {
 } from "react";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { renderMode } from "@plugins/primitives/plugins/dom/plugins/render-mode/core";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 
 export interface LazyComponentOptions {
   /**
@@ -100,7 +101,9 @@ export function lazyComponent<P extends object>(
   // the spinner an inline widget asked not to flash.
   const fallback =
     opts?.fallback === undefined ? (
-      <Loading variant="spinner" />
+      <Center axis="horizontal">
+        <Loading variant="spinner" />
+      </Center>
     ) : (
       opts.fallback
     );

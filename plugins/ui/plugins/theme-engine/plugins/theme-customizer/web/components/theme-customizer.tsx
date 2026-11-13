@@ -3,7 +3,7 @@ import {
   ResourceErrorInline,
 } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { useState } from "react";
-import { PaneChrome } from "@plugins/primitives/plugins/pane/web";
+import { PaneChrome, PaneMessage } from "@plugins/primitives/plugins/pane/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
 import { useScopeMembership } from "@plugins/config_v2/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
@@ -163,16 +163,18 @@ export function ThemeCustomizerBody() {
   if (forked === undefined) {
     return (
       <PaneChrome pane={themeCustomizerPane}>
-        {membership.status === "error" ? (
-          <ResourceErrorInline
-            variant="block"
-            subject="the theme scope"
-            error={membership.error}
-            refetch={membership.refetch}
-          />
-        ) : (
-          <Loading />
-        )}
+        <PaneMessage>
+          {membership.status === "error" ? (
+            <ResourceErrorInline
+              variant="block"
+              subject="the theme scope"
+              error={membership.error}
+              refetch={membership.refetch}
+            />
+          ) : (
+            <Loading />
+          )}
+        </PaneMessage>
       </PaneChrome>
     );
   }

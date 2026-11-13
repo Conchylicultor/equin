@@ -331,17 +331,33 @@ export function DiffView({
 
   switch (read.status) {
     case "unavailable":
-      return <Placeholder>{read.message}</Placeholder>;
+      return (
+        <DiffMessage>
+          <Placeholder>{read.message}</Placeholder>
+        </DiffMessage>
+      );
     case "loading":
-      return <Loading />;
+      return (
+        <DiffMessage>
+          <Loading />
+        </DiffMessage>
+      );
     case "error": {
       const { error } = read;
       if (error.kind === "refused" && error.code === "missing") {
-        return <Placeholder tone="error">File not found.</Placeholder>;
+        return (
+          <DiffMessage>
+            <Placeholder tone="error">File not found.</Placeholder>
+          </DiffMessage>
+        );
       }
       if (error.kind === "refused" && error.code === "too-large") {
         return (
-          <Placeholder tone="error">Diff is too large to preview.</Placeholder>
+          <DiffMessage>
+            <Placeholder tone="error">
+              Diff is too large to preview.
+            </Placeholder>
+          </DiffMessage>
         );
       }
       return (
@@ -494,7 +510,11 @@ function DiffBody({
   );
 
   if (diff.length === 0 || files.length === 0) {
-    return <Placeholder>No changes vs {base ?? "HEAD"}.</Placeholder>;
+    return (
+      <DiffMessage>
+        <Placeholder>No changes vs {base ?? "HEAD"}.</Placeholder>
+      </DiffMessage>
+    );
   }
 
   const renderer = (
@@ -585,4 +605,14 @@ function renderShikiToken(
       {typeof node.value === "string" ? node.value : null}
     </span>
   );
+}
+
+/**
+ * A state in the diff's place. DiffView is drawn in full-bleed panes and in
+ * per-file cards alike, and neither pads it, so the state opens its own small
+ * region (`md`, the edge the file headers above it pad by) rather than the
+ * pane's reading inset, which would be oversized in a card row.
+ */
+function DiffMessage({ children }: { children: ReactNode }) {
+  return <div className="rail-x-md">{children}</div>;
 }

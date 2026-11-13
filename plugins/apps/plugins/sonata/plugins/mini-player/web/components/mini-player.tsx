@@ -121,9 +121,11 @@ function MiniPlayerBody({
   const { content } = useSongDocument();
   if (content.kind === "failed") {
     return (
-      <Placeholder tone="error">
-        Failed to compose the song: {String(content.failure.error)}
-      </Placeholder>
+      <Center axis="both" className="h-full p-lg">
+        <Placeholder tone="error">
+          Failed to compose the song: {String(content.failure.error)}
+        </Placeholder>
+      </Center>
     );
   }
   return (

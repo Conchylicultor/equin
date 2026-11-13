@@ -11,13 +11,14 @@
   - Contributes:
     - `Pane.Register` "graph"
     - `Studio.Sidebar` "Plugin Graph"
-  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `plugin-meta/composition` ×4
     - `primitives/pane` ×3
     - `apps/studio/membership-tint` ×2
     - `primitives/css/spacing` ×2
     - `apps/studio/shell.Studio`
     - `network/live/live-state.ResourceErrorInline`
+    - `primitives/css/center.Center`
     - `primitives/css/clip.Clip`
     - `primitives/css/cluster.Cluster`
     - `primitives/css/column.Column`

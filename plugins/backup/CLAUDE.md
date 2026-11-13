@@ -119,26 +119,21 @@ row with a rising count and a new source starting to fail mints its own.
     - `Pane.Register` "backup"
     - `Pane.Register` "backup-run"
     - `DebugApp.Sidebar` "Backup"
-  - Uses:
+  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/pane` ×5
+    - `primitives/css/spacing` ×2
+    - `runs` ×2
     - `apps/debug/shell.DebugApp`
-    - `config_v2.ConfigV2`
     - `config_v2/config-link.ConfigGearButton`
+    - `config_v2.ConfigV2`
     - `infra/endpoints.useEndpointMutation`
     - `network/live.rowOrStale`
     - `primitives/css/rail.useRailGuard`
     - `primitives/css/rigid.rigidClass`
-    - `primitives/css/spacing.selfClass`
-    - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
     - `primitives/detail-sections.defineDetailSections`
     - `primitives/loading.Loading`
-    - `primitives/pane.Pane`
-    - `primitives/pane.PaneChrome`
-    - `primitives/pane.ResolveResult`
-    - `primitives/pane.resolveRow`
-    - `runs.RunsDataView`
-    - `runs.useRun`
     - `ui/icons.Icon`
   - Exports (values):
     - `backupPane`

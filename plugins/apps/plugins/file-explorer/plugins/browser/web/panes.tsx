@@ -6,6 +6,7 @@ import {
   defineRoute,
   useOpenPane,
   usePaneStore,
+  PaneMessage,
 } from "@plugins/primitives/plugins/pane/web";
 import {
   PLAIN_GESTURE,
@@ -334,7 +335,13 @@ function FilesHome(): ReactNode {
         />
       );
     case "none":
-      return <Placeholder>There are no files to browse here</Placeholder>;
+      return (
+        <PaneChrome pane={filesHomePane}>
+          <PaneMessage>
+            <Placeholder>There are no files to browse here</Placeholder>
+          </PaneMessage>
+        </PaneChrome>
+      );
     case "ready":
       return <FilesHomeForward fs={home.fs} />;
   }
@@ -386,7 +393,9 @@ function FilesFolder(): ReactNode {
     return (
       <PendingFileBrowserProvider>
         <PaneChrome pane={filesFolderPane}>
-          <Placeholder>No file system is called “{fsParam}”</Placeholder>
+          <PaneMessage>
+            <Placeholder>No file system is called “{fsParam}”</Placeholder>
+          </PaneMessage>
         </PaneChrome>
       </PendingFileBrowserProvider>
     );

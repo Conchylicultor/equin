@@ -70,6 +70,8 @@ export interface FloatingSurfaceProps {
   width?: PopoverWidth;
   /** Padding role (default `"xs"`). */
   padding?: PopoverPadding;
+  /** The content is padded rows: publish the text rail (see `OverlayPanel`'s `rows`). */
+  rows?: boolean;
   /**
    * Max-height COMFORT CAP on top of the unconditional viewport fit (default
    * `"viewport"` — fit the space Floating UI measured, and nothing tighter).
@@ -129,6 +131,7 @@ export function FloatingSurface({
   children,
   width = "content",
   padding = "xs",
+  rows = false,
   maxHeight = "viewport",
   scroll = true,
   side = "bottom",
@@ -244,6 +247,7 @@ export function FloatingSurface({
         style={floatingStyles}
         width={width}
         padding={padding}
+        rows={rows}
         maxHeight={maxHeight}
         scroll={scroll}
         onPointerEnter={onPointerEnter}

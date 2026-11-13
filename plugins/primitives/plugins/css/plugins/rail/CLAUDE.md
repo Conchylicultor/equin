@@ -96,11 +96,13 @@ is the model behind them.
 | --- | --- |
 | `rail-<step>` · `rail-x-` · `rail-y-` | open a region: publish **and** pay. `rail-x-none` is how *flush* is spelled — a region of width zero, which is a different state from no region at all |
 | `rail-panel` · `rail-document` | the same, at a role's token instead of a ramp step: a popover's `--popover-pad`; a document pane body's reading inset (`--document-pad-x` / `-top` / `-bottom`, worn by `PaneChrome inset="document"`) |
+| `rail-x-pane` | an inline region on the pane's own text edge (`--pane-inset`, else the pane header's pad), no block padding: `PaneMessage`, a message standing in for a pane's content, starts where the header title does |
 | `rail-owe-<step>` | open a region and hand the bill on: publish, pay nothing. The inverted topology; the app-shell sidebar is its live user |
 | `rail-follow` | pay what is owed, publish nothing. Falls back owed → rail → pane inset → chrome pad |
 | `rail-bleed` | the escape: cancel and re-apply, as one class |
 | `rail-band` | the escape for a rule strip: cancel the rail, re-apply the TEXT rail (`Band`, an overlay panel's `header` / `footer`) |
 | `rail-rows` | declare a row host: the text rail is one row pad past the rail |
+| `rail-text-indent` | loose text (a `Placeholder`, a loading or empty state) onto the TEXT rail without paying the rail: pads text rail − rail (0 in a plain region, one row pad in a row host, 0 outside any region) |
 | `rail-band-region` | a band's content box: republish the band's padding as the rail, so a child can `rail-bleed` to the region edge (a sideways-scrolling chip strip) |
 
 `core/` holds what CSS cannot: the var **spellings** (`RAIL_START_VAR`, …), for

@@ -40,6 +40,7 @@ import type { Agent } from "../../core";
 import { AgentLaunches } from "./agent-launches";
 import { symbol, type SavedSymbolName } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
+import { PaneMessage } from "@plugins/primitives/plugins/pane/web";
 
 const playArrowIcon = symbol("play-arrow");
 
@@ -65,9 +66,17 @@ export function AgentDetail({ agentId }: { agentId: string }) {
   return (
     <RowView
       row={useLive(agentRows, { id: agentId })}
-      fallback={<Loading variant="text" />}
+      fallback={
+        <PaneMessage>
+          <Loading variant="text" />
+        </PaneMessage>
+      }
       subject="the agent"
-      missing={<Placeholder>This agent no longer exists.</Placeholder>}
+      missing={
+        <PaneMessage>
+          <Placeholder>This agent no longer exists.</Placeholder>
+        </PaneMessage>
+      }
     >
       {(agent) => (
         <AgentDetailInner key={agentId} agentId={agentId} agent={agent} />

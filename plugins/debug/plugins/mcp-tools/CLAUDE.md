@@ -32,9 +32,9 @@ pane per tool (`/debug/mcp-tools/tool/<name>`).
     - `Pane.Register` "debug-mcp-tool"
     - `Pane.Register` "debug-mcp-tools"
     - `DebugApp.Sidebar` "MCP tools"
-  - Uses: 29 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 30 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/pane` ×7
     - `network/live/live-state` ×6
-    - `primitives/pane` ×6
     - `primitives/data-view` ×3
     - `primitives/css/spacing` ×2
     - `apps/debug/shell.DebugApp`
@@ -51,6 +51,7 @@ pane per tool (`/debug/mcp-tools/tool/<name>`).
     - `primitives/syntax-highlight.HighlightedCode`
 - Cross-plugin:
   - Uses tokens:
+    - `ui/tokens/density --chrome-pad-x`
     - `ui/tokens/density --space-lg`
     - `ui/tokens/shape --spacing`
 

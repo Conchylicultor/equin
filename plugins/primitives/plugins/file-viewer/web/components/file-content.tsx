@@ -2,6 +2,7 @@ import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
 import { ContentScope } from "@plugins/primitives/plugins/select-scope/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
+import { PaneMessage } from "@plugins/primitives/plugins/pane/web";
 import type { FileLocation } from "@plugins/infra/plugins/paths/plugins/file-systems/core";
 import { FileViewer } from "../slots";
 import { FileExpandContext } from "./file-expand";
@@ -24,7 +25,11 @@ export function FileContent({
 }) {
   const { active } = renderers;
   if (!active) {
-    return <Placeholder>No renderer available for this file.</Placeholder>;
+    return (
+      <PaneMessage>
+        <Placeholder>No renderer available for this file.</Placeholder>
+      </PaneMessage>
+    );
   }
   // Bespoke tiered selection (resolveRenderers) can't be expressed via
   // .Render/.Dispatch — render the chosen contribution through renderIsolated so

@@ -56,7 +56,8 @@ every file's bytes, so PDF, media and images preview wherever the file lives
     - `FileViewer.Renderer` ← `primitives.file-viewer.markdown`
     - `FileViewer.Renderer` ← `primitives.file-viewer.media`
     - `FileViewer.Renderer` ← `primitives.file-viewer.pdf`
-  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/pane` ×2
     - `infra/endpoints.useEndpointMutation`
     - `infra/paths/file-systems.useFileStat`
     - `primitives/css/center.Center`
@@ -75,7 +76,6 @@ every file's bytes, so PDF, media and images preview wherever the file lives
     - `primitives/icon-button.IconButton`
     - `primitives/link-gesture.gestureOf`
     - `primitives/loading.Loading`
-    - `primitives/pane.useMorphFromElement`
     - `primitives/select-scope.ContentScope`
     - `primitives/slot-render.renderIsolated`
     - `shell/toast.showToast`

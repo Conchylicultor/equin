@@ -3,11 +3,11 @@ import {
   useExpandAll,
   ExpandAllButton,
 } from "@plugins/primitives/plugins/collapsible/web";
-import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import type { PluginChangesResult } from "../use-plugin-changes";
 import { PluginChangeCard } from "./plugin-change-card";
+import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 
 export function PluginChangesList({
   conversationId,
@@ -28,24 +28,16 @@ export function PluginChangesList({
   } = useExpandAll(allPaths);
 
   if (isPending) {
-    return <Loading label="Loading plugins…" className="px-xs" />;
+    return <Loading label="Loading plugins…" />;
   }
   if (error) {
-    return (
-      <Text as="p" variant="body" className="text-destructive px-xs">
-        Error: {String(error)}
-      </Text>
-    );
+    return <Placeholder tone="error">Error: {String(error)}</Placeholder>;
   }
   if (!data) {
-    return <Loading label="Loading plugins…" className="px-xs" />;
+    return <Loading label="Loading plugins…" />;
   }
   if (data.plugins.length === 0) {
-    return (
-      <Text as="p" variant="body" className="text-muted-foreground px-xs">
-        No plugin API changes detected.
-      </Text>
-    );
+    return <Placeholder>No plugin API changes detected.</Placeholder>;
   }
 
   return (

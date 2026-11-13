@@ -32,6 +32,7 @@
   - Uses tokens:
     - `ui/tokens/color-palette --background`
     - `ui/tokens/color-palette --foreground`
+    - `ui/tokens/density --space-lg`
     - `ui/tokens/shape --spacing`
   - Imported by:
     - `apps/sonata/library`

@@ -82,7 +82,6 @@ naming the pane, the path and the component path.
     - `ui/tokens/color-palette --muted`
     - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/density --chrome-pad-x`
-    - `ui/tokens/density --space-md`
     - `ui/tokens/density --space-sm`
     - `ui/tokens/shape --radius`
     - `ui/tokens/shape --spacing`
@@ -90,9 +89,9 @@ naming the pane, the path and the component path.
     - `ui/tokens/type-scale --font-size-body`
     - `ui/tokens/type-scale --font-weight-normal`
     - `ui/tokens/type-scale --line-height-body`
-  - Imported by: 235 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 236 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×72
-    - `conversations` ×23
+    - `conversations` ×24
     - `ui` ×23
     - `debug` ×20
     - `primitives` ×19
