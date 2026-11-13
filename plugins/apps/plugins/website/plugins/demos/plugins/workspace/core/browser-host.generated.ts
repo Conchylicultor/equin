@@ -335,6 +335,7 @@ export const browserHost = {
     "conversations.conversation-view.running-agents",
     "conversations.conversation-view.selection-actions",
     "conversations.conversation-view.status",
+    "conversations.conversation-view.supervisor-done-count",
     "conversations.conversation-view.tasks-panel",
     "conversations.conversation-view.track",
     "conversations.conversation-view.turn-summary",

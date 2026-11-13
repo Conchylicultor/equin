@@ -49,6 +49,7 @@ the orchestration umbrella never does.
     - `apps/website/promo-film/seed`
     - `conversations`
     - `conversations/agents`
+    - `conversations/conversation-view/supervisor-done-count`
     - `debug/read-set`
     - `hints/ask`
     - `page/annotations/todo/task-link`

@@ -54,6 +54,7 @@ directly — it is no longer re-exported here.)
     - `Item.Chips` ← `conversations.conversation-progress`
     - `Item.Chips` ← `conversations.conversation-view.dependent-count`
     - `Item.Chips` ← `conversations.conversation-view.op-status`
+    - `Item.Chips` ← `conversations.conversation-view.supervisor-done-count`
     - `Item.Avatar` ← `conversations.agents`
     - `Item.Avatar` ← `conversations.conversation-category`
   - Uses:
@@ -116,6 +117,7 @@ directly — it is no longer re-exported here.)
     - `conversations/conversation-view/dependencies`
     - `conversations/conversation-view/dependent-count`
     - `conversations/conversation-view/op-status`
+    - `conversations/conversation-view/supervisor-done-count`
     - `conversations/conversations-view/data-view`
     - `tasks/attempt-view`
 

@@ -15,6 +15,8 @@ import { tasksEntityRef } from "./entity-refs";
  * EXPOSED to every list whose rows reach a task as `mandate`, so a list
  * filters and groups by it ("Mandate is Supervisor"). Its options are the
  * registered mandates, read live (the mandate plugin presents the field).
+ * `sourceTaskId` is exposed as `mandateSource`: filtering on it reads one
+ * mandate's whole tree (a supervisor's done-count chip groups it by status).
  */
 export const taskMandateShape = defineExtensionShape({
   key: "taskId",
@@ -27,7 +29,13 @@ export const taskMandateShape = defineExtensionShape({
   exposes: {
     parent: tasksEntityRef,
     name: "mandate",
-    fields: { mandateId: { as: "mandate" } },
+    // `sourceTaskId` too, so a list can read a whole mandate tree at once
+    // ("every task under this supervisor", however deep): each task in it
+    // names the root it inherits from, a nested restatement starting its own.
+    fields: {
+      mandateId: { as: "mandate" },
+      sourceTaskId: { as: "mandateSource" },
+    },
   },
 });
 

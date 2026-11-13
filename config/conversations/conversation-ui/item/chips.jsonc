@@ -1,4 +1,4 @@
-// @hash be1d68be9cd7
+// @hash e413a56e581d
 // @legend — how to write this file (rewritten by ./equin build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -9,6 +9,7 @@
 {
   "items": [
     "conversations.conversation-view.op-status:op-status",
+    "conversations.conversation-view.supervisor-done-count:supervisor-done-count",
     "conversations.conversation-view.dependent-count:dependent-count",
     "conversations.conversation-progress:progress",
     "conversations.conversation-preprompt:preprompt"

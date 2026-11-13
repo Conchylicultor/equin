@@ -28,9 +28,9 @@
   - Uses tokens:
     - `ui/tokens/density --space-sm`
     - `ui/tokens/shape --spacing`
-  - Tokens used by: 546 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Tokens used by: 547 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×123
-    - `conversations` ×96
+    - `conversations` ×97
     - `primitives` ×74
     - `debug` ×42
     - `page` ×33

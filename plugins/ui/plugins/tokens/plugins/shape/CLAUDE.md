@@ -38,8 +38,8 @@
   - Uses tokens:
     - `ui/tokens/density --radius-chip-compact`
     - `ui/tokens/density --space-sm`
-  - Tokens used by: 405 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `conversations` ×94
+  - Tokens used by: 406 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `conversations` ×95
     - `apps` ×82
     - `primitives` ×60
     - `page` ×36

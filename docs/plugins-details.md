@@ -16772,6 +16772,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Item.Chips` ← `conversations.conversation-progress`
               - `Item.Chips` ← `conversations.conversation-view.dependent-count`
               - `Item.Chips` ← `conversations.conversation-view.op-status`
+              - `Item.Chips` ← `conversations.conversation-view.supervisor-done-count`
               - `Item.Avatar` ← `conversations.agents`
               - `Item.Avatar` ← `conversations.conversation-category`
             - Uses:
@@ -16834,6 +16835,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversation-view/dependencies`
               - `conversations/conversation-view/dependent-count`
               - `conversations/conversation-view/op-status`
+              - `conversations/conversation-view/supervisor-done-count`
               - `conversations/conversations-view/data-view`
               - `tasks/attempt-view`
         - **`row`** — A conversation as a full-width list line that opens its run: a Row around a ConversationItem, selected while that run is the column this surface opened.
@@ -20702,6 +20704,21 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette --primary-text`
               - `ui/tokens/color-palette --warning`
               - `ui/tokens/density --space-xs`
+        - **`supervisor-done-count`** — Per-row done-count chip on a supervisor's conversation (its task states the supervisor mandate): how many tasks of the supervisor's tree are done, with a ring filled by the done share of the whole tree; hover for done / running / dropped.
+          - Web:
+            - Contributes: `Item.Chips` → `SupervisorDoneCountChip`
+            - Uses:
+              - `conversations/conversation-ui/item.Item`
+              - `network/live.mapRow`
+              - `network/live.useLive`
+              - `network/live/live-state.ResourceErrorInline`
+              - `primitives/css/badge.Badge`
+              - `tasks.useTask`
+          - Cross-plugin:
+            - Uses tokens:
+              - `ui/tokens/color-palette --muted-foreground`
+              - `ui/tokens/color-palette --success`
+              - `ui/tokens/shape --spacing`
         - **`tasks-panel`** — Toolbar button that toggles the task pane (tree + detail) for the conversation's task.
           - Web:
             - Contributes: `Conversation.ActionBar` → `TasksButton`
@@ -39754,9 +39771,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveValueOn`
           - `sliceRange`
       - Cross-plugin:
-        - Imported by: 347 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+        - Imported by: 348 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
           - `apps` ×87
-          - `conversations` ×73
+          - `conversations` ×74
           - `debug` ×36
           - `tasks` ×28
           - `infra` ×24
@@ -40169,9 +40186,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `unresolved`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/color-palette --destructive`
-            - Imported by: 306 plugins — full list in [`plugins/network/plugins/live/plugins/live-state/REFERENCE.md`](../plugins/network/plugins/live/plugins/live-state/REFERENCE.md)
+            - Imported by: 307 plugins — full list in [`plugins/network/plugins/live/plugins/live-state/REFERENCE.md`](../plugins/network/plugins/live/plugins/live-state/REFERENCE.md)
               - `apps` ×84
-              - `conversations` ×48
+              - `conversations` ×49
               - `debug` ×31
               - `ui` ×25
               - `tasks` ×22
@@ -46882,10 +46899,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×6
               - `ui/tokens/shape` ×3
               - `ui/tokens/font-family --font-mono`
-            - Imported by: 186 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
+            - Imported by: 187 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
               - `apps` ×39
               - `debug` ×39
-              - `conversations` ×27
+              - `conversations` ×28
               - `reports` ×19
               - `primitives` ×10
               - `tasks` ×10
@@ -58018,27 +58035,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `updateTask`
       - `UpdateTaskBodySchema`
   - Cross-plugin:
-    - Imported by:
+    - Imported by: 21 plugins — full list in [`plugins/tasks/REFERENCE.md`](../plugins/tasks/REFERENCE.md)
+      - `tasks` ×12
+      - `conversations` ×6
       - `active-data/task`
-      - `conversations/conversation-view/dependencies`
-      - `conversations/conversation-view/dependent-count`
-      - `conversations/conversation-view/drop-dependents`
-      - `conversations/conversation-view/jsonl-viewer/tool-call/orchestration-tools`
-      - `conversations/conversation-view/tasks-panel`
       - `hints/ask`
       - `primitives/launch`
-      - `tasks/auto-start/launch-option`
-      - `tasks/automations`
-      - `tasks/sidequest-autopilot`
-      - `tasks/task-dependencies`
-      - `tasks/task-deps-tree`
-      - `tasks/task-description`
-      - `tasks/task-draft-form`
-      - `tasks/task-events`
-      - `tasks/task-graph`
-      - `tasks/task-header`
-      - `tasks/task-list`
-      - `tasks/task-mandate`
     - Endpoint callers:
       - `menu-bar-task`
       - `task-mandate`
@@ -58594,6 +58596,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/website/promo-film/seed`
           - `conversations`
           - `conversations/agents`
+          - `conversations/conversation-view/supervisor-done-count`
           - `debug/read-set`
           - `hints/ask`
           - `page/annotations/todo/task-link`
@@ -60549,8 +60552,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TRAILER_LOG_FORMAT`
           - `UNATTRIBUTED_TRAILER_KEY`
       - Cross-plugin:
-        - Imported by: 120 plugins — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
-          - `conversations` ×50
+        - Imported by: 121 plugins — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
+          - `conversations` ×51
           - `tasks` ×36
           - `debug` ×6
           - `active-data` ×5
@@ -62096,9 +62099,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/density --space-sm`
               - `ui/tokens/shape --spacing`
-            - Tokens used by: 546 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
+            - Tokens used by: 547 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
               - `apps` ×123
-              - `conversations` ×96
+              - `conversations` ×97
               - `primitives` ×74
               - `debug` ×42
               - `page` ×33
@@ -62670,8 +62673,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/density --radius-chip-compact`
               - `ui/tokens/density --space-sm`
-            - Tokens used by: 405 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
-              - `conversations` ×94
+            - Tokens used by: 406 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
+              - `conversations` ×95
               - `apps` ×82
               - `primitives` ×60
               - `page` ×36
