@@ -130,11 +130,17 @@ never the surface box: moving the box would drag its clip over adjacent chrome.
 - **The scroll position never moves.** Scrollable overflow counts a transformed
   box where it is drawn, so pushing content up at the end edge shortens the
   range and the browser clamps the offset back — the bounce cancels itself and
-  leaves the page short of its end. An invisible anchor appended after the last
-  child, sized to reach the current end, holds it — sized, because the end is
-  often past the last child's box (a pane's `h-full` content box overflows). If
-  it cannot reach the end without adding extent, the bounce is skipped rather
-  than scroll the page.
+  leaves the page short of its end. An invisible 1px anchor whose far edge sits
+  exactly on the current end holds it — placed, because the end is often past
+  the last child's box (a pane's `h-full` content box overflows). It is
+  **absolutely positioned inside a moved layer** (cancelling the layer's offset
+  each frame), never an in-flow box of the surface: out of flow it moves no
+  sibling in any layout and can only grow the overflow, so placing it never
+  clamps the scroll offset (an in-flow one re-centred a centred flex row — a
+  markdown table's bleed scroller — and yanked it ~100px back on every push at
+  its end). If the anchor cannot reach
+  the end without adding extent, the bounce is skipped rather than scroll the
+  page.
 
 `e2e/overscroll-hint-verify.ts` checks all three on synthetic surfaces, once a
 probe gesture has shown the hint is installed (its `Core.Root` controller can

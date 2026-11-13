@@ -84,15 +84,19 @@ export function lockSurface(
   const layerNodes = candidates.filter((c) => !pinned.includes(c));
   if (layerNodes.length === 0) return null;
 
+  const layers = layerNodes.map((node) => toLayer(node, axis));
+
   // A push toward the start (scrolling down/right at the end) shortens a
   // scrollable surface's range unless something holds its end in place.
-  let anchor: HTMLElement | null = null;
+  let anchor: Anchor | null = null;
   if (delta > 0 && scrollRange(surface, axis) > 0) {
-    anchor = anchorExtent(surface, axis);
-    if (anchor === null) return null;
+    anchor = anchorExtent(surface, axis, layers);
+    if (anchor === null) {
+      for (const l of layers) restoreLayer(l);
+      return null;
+    }
   }
 
-  const layers = layerNodes.map((node) => toLayer(node, axis));
   const held: Held[] = pinned
     .filter((p) => !candidates.includes(p))
     .map((node) => ({ node, at: edgeOf(node, axis) }));
@@ -102,6 +106,7 @@ export function lockSurface(
     axis,
     draw(offset) {
       for (const l of layers) moveLayer(l, axis, offset);
+      anchor?.follow(offset);
       if (held.length === 0) return;
       // A held element is put back where it was MEASURED, not shifted by
       // `-offset`: under a relative inset a sticky re-resolves against its moved
@@ -118,7 +123,7 @@ export function lockSurface(
     release() {
       for (const l of layers) restoreLayer(l);
       for (const h of held) h.node.style.translate = "";
-      anchor?.remove();
+      anchor?.el.remove();
     },
   };
 }
@@ -303,44 +308,85 @@ function isStuck(
   );
 }
 
+/** The element holding a surface's scroll extent, and how it stays put. */
+interface Anchor {
+  el: HTMLElement;
+  /** Cancel its host layer's `offset`, so the end it marks never moves. */
+  follow(offset: number): void;
+}
+
+/** Elements that draw no children of theirs, so they cannot host the anchor. */
+const CHILDLESS = new Set([
+  "IMG",
+  "INPUT",
+  "TEXTAREA",
+  "SELECT",
+  "IFRAME",
+  "VIDEO",
+  "AUDIO",
+  "CANVAS",
+  "OBJECT",
+  "EMBED",
+  "BR",
+  "HR",
+  "svg",
+]);
+
+/** Whether a 1px box absolutely positioned in `node` counts for the surface's overflow. */
+function canHostAnchor(node: HTMLElement): boolean {
+  if (CHILDLESS.has(node.tagName)) return false;
+  const style = getComputedStyle(node);
+  // A clipping layer would clip the anchor out of the surface's overflow.
+  return (
+    style.overflowX === "visible" &&
+    style.overflowY === "visible" &&
+    !/paint|strict|content/.test(style.contain)
+  );
+}
+
 /**
- * Hold `surface`'s scroll extent on `axis` while its content is translated
- * toward the start, or return null when that cannot be done.
+ * Hold `surface`'s scroll extent on `axis` while its content is moved toward
+ * the start, or return null when that cannot be done.
  *
- * Scrollable overflow counts a transformed box where it is drawn, so content
- * pushed up by N px ends N px sooner: the range shrinks by N, and at the end
- * edge — the only place such a push happens — the browser clamps the scroll
- * offset back by N. The bounce then cancels itself out, and as it decays the
- * range grows back under an offset that stays put, leaving the page N px short
- * of its end. An untransformed, invisible element after the last child, sized to
- * reach exactly the current end, keeps the end where it was.
+ * Scrollable overflow counts a moved box where it is drawn, so content pushed
+ * up by N px ends N px sooner: the range shrinks by N, and at the end edge —
+ * the only place such a push happens — the browser clamps the scroll offset
+ * back by N. The bounce then cancels itself out, and as it decays the range
+ * grows back under an offset that stays put, leaving the page N px short of its
+ * end. An invisible 1px box whose far edge sits exactly on the current end
+ * keeps the end where it was.
  *
- * Sized, not merely placed last: the end is often not where the last child's
- * box ends — a pane's `h-full` content box is one viewport tall while the page
- * overflows out of it. Whether it holds is measured, not assumed: unless it
- * reaches the extent exactly and adds none of its own on either axis, it is
- * removed and the bounce is skipped — a missing bounce is cosmetic, a scrolled
- * page is not.
+ * OUT OF FLOW, so placing it cannot disturb the layout it measures: an
+ * absolutely positioned box moves no sibling in any formatting context, and
+ * can only grow scrollable overflow — never shrink it, so the browser never
+ * clamps the scroll offset while it is placed. An in-flow box appended after
+ * the last child (what this did until 2026-11) is laid out by the surface: in
+ * a centred flex row (a markdown table's bleed scroller) it re-centred the
+ * content and the range shrank under it, so every push at a table's end
+ * yanked it ~100 px back — the table shook as it was scrolled right. Reversed,
+ * wrapped, `space-*` or grid layouts each had their own way to move it.
+ *
+ * It lives in a moved layer (positioned by `toLayer`: its containing block, so
+ * it is counted in the surface's overflow) and cancels the layer's offset each
+ * frame. Whether it holds is measured, not assumed: unless it reaches the
+ * extent exactly and adds none of its own on either axis, it is removed and
+ * the bounce is skipped — a missing bounce is cosmetic, a scrolled page is not.
  */
-function anchorExtent(surface: HTMLElement, axis: Axis): HTMLElement | null {
-  const style = getComputedStyle(surface);
+function anchorExtent(
+  surface: HTMLElement,
+  axis: Axis,
+  layers: Layer[],
+): Anchor | null {
   const height = surface.scrollHeight;
   const width = surface.scrollWidth;
   const extent = axis === "y" ? height : width;
-  const end = document.createElement("div");
-  end.setAttribute("aria-hidden", "true");
-  end.style.cssText =
-    "display:block;flex:none;width:0;height:0;margin:0;padding:0;border:0;pointer-events:none;visibility:hidden";
-  // A flex or grid container puts its gap in front of every item, this one included.
-  const rowGap = parseFloat(style.rowGap);
-  const columnGap = parseFloat(style.columnGap);
-  if (rowGap > 0) end.style.marginTop = `${-rowGap}px`;
-  if (columnGap > 0) end.style.marginLeft = `${-columnGap}px`;
-  surface.appendChild(end);
+  const main = axis === "y" ? "top" : "left";
+  const style = getComputedStyle(surface);
 
-  // Where the anchor's far edge lands, in the surface's scroll coordinates.
-  const reach = (): number => {
-    const box = end.getBoundingClientRect();
+  // Where `el`'s far edge lands, in the surface's scroll coordinates (the end
+  // padding is part of the extent).
+  const reach = (el: HTMLElement): number => {
+    const box = el.getBoundingClientRect();
     const origin = surface.getBoundingClientRect();
     return axis === "y"
       ? box.bottom -
@@ -354,17 +400,29 @@ function anchorExtent(surface: HTMLElement, axis: Axis): HTMLElement | null {
           surface.scrollLeft +
           parseFloat(style.paddingRight);
   };
-  const short = extent - reach();
-  if (short > 0) {
-    end.style[axis === "y" ? "height" : "width"] = `${short}px`;
-  }
-  const holds =
-    Math.abs(reach() - extent) <= 1 &&
-    Math.abs(surface.scrollHeight - height) <= 1 &&
-    Math.abs(surface.scrollWidth - width) <= 1;
-  if (!holds) {
+
+  for (const layer of layers) {
+    if (!canHostAnchor(layer.node)) continue;
+    const end = document.createElement("div");
+    end.setAttribute("aria-hidden", "true");
+    end.style.cssText =
+      "position:absolute;top:0;left:0;width:1px;height:1px;margin:0;padding:0;border:0;pointer-events:none;visibility:hidden";
+    layer.node.appendChild(end);
+    const base = extent - reach(end);
+    end.style[main] = `${base}px`;
+    const holds =
+      Math.abs(reach(end) - extent) <= 1 &&
+      Math.abs(surface.scrollHeight - height) <= 1 &&
+      Math.abs(surface.scrollWidth - width) <= 1;
+    if (holds) {
+      return {
+        el: end,
+        follow(offset) {
+          end.style[main] = `${base - offset}px`;
+        },
+      };
+    }
     end.remove();
-    return null;
   }
-  return end;
+  return null;
 }

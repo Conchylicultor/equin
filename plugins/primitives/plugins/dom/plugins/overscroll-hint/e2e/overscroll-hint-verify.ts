@@ -14,7 +14,9 @@
 //     rows;
 //   - a header inside a `display: contents` wrapper (a theme boundary) stays on
 //     the edge, and a `position: fixed` widget inside the content stays where
-//     it is on the viewport.
+//     it is on the viewport;
+//   - a centred flex row (a markdown table's bleed scroller) bounces at its
+//     right end without its scroll position jumping back.
 //
 //   - on a phone: a touch drag the page claimed with `touch-action` never
 //     bounces, and a touch capture on an element that claims nothing is
@@ -270,7 +272,38 @@ await withBrowser(async (h) => {
       rail: rail.getBoundingClientRect().top,
     };
     site.remove();
+    await tick(500);
+
+    // --- a centred flex row scrolled to its right end (a markdown table's
+    // bleed scroller): the anchor must not re-centre the row ---
+    const row = scroller(80);
+    row.style.cssText +=
+      "overflow-x:auto;overflow-y:hidden;display:flex;justify-content:center;";
+    const rowContent = block("flex:none;width:280px;");
+    const wide = block("width:600px;height:50px;");
+    rowContent.appendChild(wide);
+    row.appendChild(rowContent);
+    row.scrollLeft = row.scrollWidth;
+    await frames(2);
+    const rowBefore = {
+      scrollLeft: row.scrollLeft,
+      wide: wide.getBoundingClientRect().left,
+    };
+    wide.dispatchEvent(
+      new WheelEvent("wheel", { deltaX: 150, bubbles: true, cancelable: true }),
+    );
+    await frames(2);
+    const rowDuring = {
+      scrollLeft: row.scrollLeft,
+      wide: wide.getBoundingClientRect().left,
+    };
+    await tick(700);
+    const rowAfter = { scrollLeft: row.scrollLeft };
+    row.remove();
     return {
+      rowBefore,
+      rowDuring,
+      rowAfter,
       installed,
       fits,
       realScroll,
@@ -301,6 +334,9 @@ await withBrowser(async (h) => {
     overflowAfter,
     siteBefore,
     siteDuring,
+    rowBefore,
+    rowDuring,
+    rowAfter,
   } = result;
   const same = (a: number, b: number): boolean => Math.abs(a - b) < 0.5;
 
@@ -399,6 +435,18 @@ await withBrowser(async (h) => {
     "…and a fixed widget inside the content stays on the viewport",
     same(siteDuring.rail, siteBefore.rail),
     `top ${siteBefore.rail} → ${siteDuring.rail}`,
+  );
+
+  r.ok(
+    "a centred flex row bounces at its right end",
+    rowDuring.wide < rowBefore.wide - 5,
+    `left ${rowBefore.wide} → ${rowDuring.wide}`,
+  );
+  r.ok(
+    "…without moving its scroll position",
+    same(rowDuring.scrollLeft, rowBefore.scrollLeft) &&
+      same(rowAfter.scrollLeft, rowBefore.scrollLeft),
+    `scrollLeft ${rowBefore.scrollLeft} → ${rowDuring.scrollLeft} → ${rowAfter.scrollLeft}`,
   );
 
   // --- touch: a drag the page claimed with `touch-action` is not wasted ---
