@@ -31812,7 +31812,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Exempts itself from:
                   - `marker-scan-safety/no-adhoc-marker-scan` — `check/parse.ts` (sanctioned)
                   - `check-thread-safety/no-blocking-check-work` — `check/parse.ts` (debt)
-                  - `import-scan-safety/no-hand-import-resolution` — `check/test-only-exports.ts` (debt)
                 - Exempted by: `framework/web-core` (0 debt)
             - **`plugin-refs-resolve`**
             - **`plugins-doc-in-sync`**
@@ -31945,18 +31944,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                     - Uses: `framework/tooling/checks/type-check.readTypeCheckTree`
         - **`codegen`** — Plugin doc generation and registry codegen
           - Core:
-            - Uses: 148 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
+            - Uses: 152 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
               - `plugin-meta/parse-utils` ×17
               - `config_v2` ×16
               - `framework/plugin-id` ×13
               - `network/live/resource-vocabulary` ×11
-              - `plugin-meta/plugin-records` ×7
+              - `plugin-meta/plugin-records` ×9
               - `framework/slot-declaration` ×6
+              - `packages/timed-fs` ×6
               - `plugin-meta/barrel-import` ×6
               - `plugin-meta/closure` ×6
               - `plugin-meta/composition` ×6
               - `framework/tooling/checks/source-analysis` ×5
-              - `packages/timed-fs` ×5
               - `plugin-meta/facets` ×5
               - `plugin-meta/plugin-records/evaluate` ×5
               - `framework/tooling/codegen/composition-registries` ×4
@@ -31979,6 +31978,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `plugin-meta/facets/contributions.contributionsFacetDef`
               - `plugin-meta/facets/exemptions.exemptionsFacetDef`
               - `plugin-meta/facets/slots.slotsFacetDef`
+              - `plugin-meta/plugin-records/specifier.resolveSpecifier`
               - `plugin-meta/plugin-tree/faceted.buildFacetedPluginTree`
               - `primitives/css/ui-kit.APP_STYLESHEET_PATH`
               - `ui/icons/icon-sets.renderSymbolNameFilesSync`
@@ -32152,7 +32152,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `marker-scan-safety/no-adhoc-marker-scan` — `core/browser-host-coverage.scan.ts` (sanctioned)
               - `user-path/no-unproven-claim` — `core/test-helpers-doc.ts` (sanctioned)
               - `blocking-fs/sync-named` — `core/authored-override-seed.ts`, `core/barrel-stubs-gen.ts`, `core/claude-settings-gen.ts`, `core/config-origin-gen.ts`, `core/custom-utilities-gen.ts`, `core/declared-apps.ts`, `core/docgen.ts`, `core/evaluated-barrels.ts`, `core/fields-eager-gen.ts`, `core/file-config-proxy.ts`, `core/git-layer-config.ts`, `core/override-legend-stamp.ts`, `core/pre-barrel-guard.ts`, `core/slot-declaration-guard.ts`, `core/space-ramp-gen.ts`, `core/symbol-names-gen.ts`, `core/test-helpers-doc.ts`, `core/write-generated.ts` (sanctioned)
-              - `import-scan-safety/no-hand-import-resolution` — `core/browser-host-coverage.ts` (debt)
           - Plugins:
             - **`composition-registries`** — The per-composition registry files' grammar and listing: where a composition's `<dir>` registry lives (main's is the committed `<dir>.generated.ts`, any other's the gitignored `<dir>.composition.<id>.generated.ts`), which collected dirs get one, and every per-name registry and backend entry on disk — without the build pipeline, so a serving backend (worktree reclaim) can list them.
               - Core:
@@ -32641,15 +32640,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - **`import-scan-safety`** — import-scan-safety lint rule: no-adhoc-import-scan
               - Exemptions:
                 - Exempted by:
-                  - `framework/tooling/checks/plugin-boundaries` (1 debt)
-                  - `framework/tooling/codegen` (1 debt)
                   - `network/live/live-state` (0 debt)
-                  - `network/live/resource-vocabulary` (1 debt)
+                  - `network/live/resource-vocabulary` (0 debt)
                   - `plugin-meta/parse-utils` (0 debt)
-                  - `plugin-meta/plugin-records` (0 debt)
-                  - `primitives/css/layout-harness` (1 debt)
-                  - `primitives/pane` (1 debt)
-                  - `ui/icons/icon-uses` (1 debt)
+                  - `plugin-meta/plugin-records/specifier` (0 debt)
             - **`intersection-observer-safety`** — intersection-observer-safety lint rule: no-raw-intersection-observer
               - Exemptions:
                 - Exempted by: `primitives/dom/in-view` (0 debt)
@@ -32685,6 +32679,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `infra/worktree` (0 debt)
                   - `infra/worktree/reclaim` (0 debt)
                   - `plugin-meta/plugin-tree/faceted` (0 debt)
+                  - `primitives/pane` (0 debt)
                   - `review/plugin-changes` (0 debt)
             - **`resize-observer-safety`** — resize-observer-safety lint rule: no-raw-resize-observer
               - Exemptions:
@@ -41092,9 +41087,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Imported by: `framework/tooling/codegen`
           - Exemptions:
-            - Exempts itself from:
-              - `import-scan-safety/no-hand-import-resolution` — `check/index.ts` (debt)
-              - `import-scan-safety/no-hand-import-resolution` — `core/vocabulary.ts` (sanctioned)
+            - Exempts itself from: `import-scan-safety/no-hand-import-resolution` — `core/vocabulary.ts` (sanctioned)
 
 - **`packages`** — Umbrella for package management utilities.
   - Plugins:
@@ -46089,12 +46082,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `packages/string-hash.sha1Hex`
           - `packages/string-hash.sha256Hex`
           - `packages/timed-fs.readFile`
+          - `plugin-meta/plugin-records/specifier.isRepoSpecifier`
+          - `plugin-meta/plugin-records/specifier.specifierCandidates`
         - Exports (types):
           - `BundledClosure`
           - `FileFold`
           - `FileScan`
           - `FoldContext`
           - `FollowDynamic`
+          - `ImportTargets`
           - `ModuleGraph`
           - `ModuleGraphInput`
           - `ModuleNode`
@@ -46115,6 +46111,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `emptyWriteTiming`
           - `fileSetClosure`
           - `fileSetImports`
+          - `fileSetImportTargets`
           - `fileSetRuntimeReach`
           - `foldFilesCached`
           - `foldRepoFiles`
@@ -46176,7 +46173,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from:
           - `imperative-create-table-allowlisted` — `cli/internal/sqlite-store.ts` (sanctioned)
           - `boundaries/no-platform-api` — `core/internal/outside-files.ts` (debt)
-          - `import-scan-safety/no-hand-import-resolution` — `core/internal/module-graph.ts` (sanctioned)
       - Plugins:
         - **`bindings`** — Each module's imports as the module graph resolves them, with the names each statement binds and a pure re-export module's re-exports (fileSetBindings): a per-blob bindings.scan record joined onto the graph's edges by specifier, for a reader walking a closure by name through barrels without parsing or resolving an import.
           - Core:
@@ -46250,6 +46246,23 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Register: `defineSupervisedJob('plugin-records.reclaim')`
           - Cli:
             - Uses: `plugin-meta/plugin-records.reclaimRecordStore`
+        - **`specifier`**
+          - Cross-plugin:
+            - Imported by:
+              - `framework/tooling/codegen`
+              - `plugin-meta/plugin-records`
+              - `ui/icons/icon-uses`
+          - Exemptions:
+            - Exempts itself from: `import-scan-safety/no-hand-import-resolution` — `core/specifier.ts` (sanctioned)
+          - Core:
+            - Exports (values):
+              - `isRepoSpecifier`
+              - `relDirname`
+              - `relJoin`
+              - `RESOLVED_EXTENSIONS`
+              - `resolveSpecifier`
+              - `specifierCandidates`
+              - `specifierPath`
         - **`verify`** — The daily plugin-records.verify job: on main, recomputes every plugin record a tree check pass reads (`./equin check --verify-records`) and fails when one disagrees with the shared store under the same key.
           - Server:
             - Uses:
@@ -47840,7 +47853,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `boundaries:web-loads-portable` — `web/internal/build-measurer-page.ts`, `web/internal/measure-page.ts` (debt)
               - `check-thread-safety/no-blocking-check-work` — `check/index.ts` (debt)
               - `dom-access-safety/no-module-scope-dom` — `web/internal/entry.tsx` (sanctioned)
-              - `import-scan-safety/no-hand-import-resolution` — `check/page-inputs.ts` (debt)
           - Core:
             - Exports (types):
               - `MeasuredBox`
@@ -53317,7 +53329,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `pane/no-core-define-route-in-web` — `.` (sanctioned)
           - `pane/no-pane-header-bar` — `.` (sanctioned)
           - `check-thread-safety/no-blocking-check-work` — `check/identity-manifest.ts`, `check/index.ts` (debt)
-          - `import-scan-safety/no-hand-import-resolution` — `check/identity-manifest.ts` (debt)
+          - `repo-walk-safety/no-adhoc-repo-listing` — `check/write-identity-snapshot.ts` (sanctioned)
         - Exempted by:
           - `apps/browser/bookmarks` (0 debt)
           - `primitives/bar` (0 debt)
@@ -61822,11 +61834,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Exemptions:
             - Exempts itself from: `boundaries/no-platform-api` — `core/internal/symbol-names.ts` (debt)
         - **`icon-uses`** — Where a module uses the icon constructors: iconUsesIn (each symbol / brand / seti import followed through ESLint's scope analysis) and isIconRefModule (does an import specifier name the module exporting them). A leaf with no imports, so the icon scans (the manifest's and manifest-covers-uses') and the icons lint rules read icon uses without loading the icons core — a file scan's record key follows these two modules, not the icons barrel and its glyph tables.
-          - Cross-plugin:
-            - Imported by: `framework/tooling/codegen`
-          - Exemptions:
-            - Exempts itself from: `import-scan-safety/no-hand-import-resolution` — `core/icon-module.ts` (debt)
           - Core:
+            - Uses: `plugin-meta/plugin-records/specifier.resolveSpecifier`
             - Exports (types):
               - `DeclaredVariable`
               - `DeclaredVariables`
@@ -61839,6 +61848,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values):
               - `iconUsesIn`
               - `isIconRefModule`
+          - Cross-plugin:
+            - Imported by: `framework/tooling/codegen`
         - **`saved-names`** — The membership-checked SavedSymbolName: a user-picked Material Symbols name, parsed against the installed sets before anything stores it.
           - Core:
             - Uses: `packages/zod-introspect.retype`

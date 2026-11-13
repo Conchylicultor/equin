@@ -1075,7 +1075,7 @@ with an empty route.
     - `pane/no-core-define-route-in-web` — `.` (sanctioned)
     - `pane/no-pane-header-bar` — `.` (sanctioned)
     - `check-thread-safety/no-blocking-check-work` — `check/identity-manifest.ts`, `check/index.ts` (debt)
-    - `import-scan-safety/no-hand-import-resolution` — `check/identity-manifest.ts` (debt)
+    - `repo-walk-safety/no-adhoc-repo-listing` — `check/write-identity-snapshot.ts` (sanctioned)
   - Exempted by:
     - `apps/browser/bookmarks` (0 debt)
     - `primitives/bar` (0 debt)

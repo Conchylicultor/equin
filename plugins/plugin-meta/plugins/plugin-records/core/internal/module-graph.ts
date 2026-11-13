@@ -332,6 +332,8 @@ async function growGraph(
     // query (`./clip.mp4?inline`, `?raw`) names the file it loads.
     const candidates = specifierCandidates(fromRel, spec);
     if (candidates === null) return null;
+    // The path the specifier names, before an extension or index is tried.
+    const base = candidates[0]!;
     // The file set first: a probe of the disk is only for a gitignored
     // module (a generated file a barrel imports), never the common case.
     for (const c of candidates)
