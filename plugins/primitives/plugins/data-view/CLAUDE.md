@@ -381,7 +381,11 @@ view's state:
   sections) is read with `useLive(c, { id, include: "ancestors" })` — started
   only once every open (or about-to-open) level has answered — and its path
   pinned into its levels at its place among the loaded siblings; the tree
-  model's reveal-on-select then opens the ancestors. Pins exist only while
+  model's reveal-on-select then opens the ancestors. The path is pinned only
+  when its root passes the root window's own test (the scope and the view's
+  filter, matched in memory — the body never filters a live tree's rows
+  again), so a row selected surface-wide is drawn only in the sections it
+  belongs to (the Pages sidebar's Private / Scratch). Pins exist only while
   that read is mounted (another selection, or the row drawn by a window,
   unpins them). A failed path read is a notice with Retry above the rows
   (`DataViewPaging.notices`), never the view's failure.

@@ -773,6 +773,26 @@ describe("DataView — a live tree in expand mode", () => {
     expect(reads(c).find((r) => r.query.id === "kid")).toBeUndefined();
   });
 
+  it("never pins a selected row whose root the scope leaves out", async () => {
+    // The Pages sidebar's Private / Scratch sections: one surface, the open
+    // page selected in both — drawn only in the section its root belongs to.
+    const c = nodes();
+    mount(c, base, { scope: { kind: "x" }, selectedRowId: "deep" });
+    await waitFor(() => expect(rootRead(c)).toBeDefined());
+    answer(rootRead(c), pages([]));
+    const pathRead = () => reads(c).find((r) => r.query.id === "deep");
+    await waitFor(() => expect(pathRead()).toBeDefined());
+    answer(pathRead(), {
+      status: "ready",
+      found: true,
+      row: row("deep", "r", "a0", 0, "x"),
+      ancestors: [row("r", null, "a0", 1, "y")],
+      refetch: async () => {},
+    });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(lines()).toEqual([]);
+  });
+
   it("a scope narrows the roots only: a subtree under a drawn root is whole", async () => {
     const c = nodes();
     mount(c, { ...base, expanded: { r: true } }, { scope: { kind: "x" } });

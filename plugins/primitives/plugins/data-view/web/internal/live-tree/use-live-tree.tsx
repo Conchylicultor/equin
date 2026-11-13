@@ -144,9 +144,12 @@ export function useLiveTree<TRow>(args: {
   // keystroke never flips to a hits read of no query), and whether the
   // filter narrows anything.
   const query = useDebounced(state.query, SEARCH_DEBOUNCE_MS).trim();
-  const filtering =
-    useRowFilter(state.filter, fields as FieldDef<TRow>[], resolveOperatorSet)
-      .kind !== "all";
+  const rowFilter = useRowFilter(
+    state.filter,
+    fields as FieldDef<TRow>[],
+    resolveOperatorSet,
+  );
+  const filtering = rowFilter.kind !== "all";
   const mode: LiveTreeMode =
     query !== "" || (filtering && (state.filterScope ?? "rows") === "rows")
       ? "hits"
@@ -505,13 +508,36 @@ export function useLiveTree<TRow>(args: {
   // in a window (or another row is selected) the reader goes, and its pins
   // with it.
   const backedPath = path !== null && path.id === revealId ? path.report : null;
+  // A path is pinned only under a root the root window would hold: the
+  // scope and the view's filter (in expand mode a filter tests the roots
+  // only, in SQL — the body never filters a live tree's rows again), so a
+  // selected row outside this view's roots is never drawn in it. Without
+  // this, every section of one surface (the Pages sidebar's Private /
+  // Scratch) drew the open page, whichever section it belongs to.
+  const scopeRootFilter =
+    source?.scope.kind === "where" ? source.scope.filter : undefined;
   const pathRows = useMemo((): readonly TRow[] => {
-    if (backedPath?.kind !== "found") return NO_ROWS_T<TRow>();
-    return [
+    if (backedPath?.kind !== "found" || !access || !source) {
+      return NO_ROWS_T<TRow>();
+    }
+    const chain = [
       ...(backedPath.ancestors as readonly TRow[]),
       backedPath.row as TRow,
     ];
-  }, [backedPath]);
+    // A chain reaching no root (an orphan) hangs under nothing the root
+    // window holds: nothing to pin it under.
+    const root = chain.find((r) => access.parentOf(r) === null);
+    if (root === undefined) return NO_ROWS_T<TRow>();
+    const inScope =
+      scopeRootFilter === undefined ||
+      matchesFilter(
+        root as Readonly<Record<string, unknown>>,
+        scopeRootFilter,
+        source.collection.filterable as unknown as Filterable,
+      );
+    const inFilter = rowFilter.kind !== "match" || rowFilter.matches(root);
+    return inScope && inFilter ? chain : NO_ROWS_T<TRow>();
+  }, [backedPath, access, source, scopeRootFilter, rowFilter]);
   // A failed reveal is the reveal's own state, beside a healthy tree: a
   // notice with its Retry, never the view's failure.
   const revealNotice = useMemo(
