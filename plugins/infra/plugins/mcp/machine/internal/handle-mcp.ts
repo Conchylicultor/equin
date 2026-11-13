@@ -1,8 +1,13 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { bodyMessages, hasToolsList } from "./messages";
-import { MCP_SERVER_NAME } from "../../core";
+import { MCP_SERVER_NAME, MCP_UNATTACHED_ID } from "../../core";
 import { runContribution } from "./isolate";
-import type { McpTool, McpToolCallContext, McpToolContext } from "../../server";
+import type {
+  McpConversationTool,
+  McpTool,
+  McpToolContext,
+  McpToolResult,
+} from "../../server";
 import { recordMcpRequest } from "./health";
 import { registry, scopeRegistry } from "../../server/internal/registry";
 import { toolsInScope } from "./scope";
@@ -43,7 +48,64 @@ async function answerMcpRequest(
   if (!conversationId) {
     return new Response("Missing conversationId", { status: 400 });
   }
+  const caller: McpCaller =
+    conversationId === MCP_UNATTACHED_ID
+      ? { kind: "unattached" }
+      : { kind: "conversation", conversationId };
 
+  const messages = await bodyMessages(req);
+  const sdk = await mcpSdk();
+  const server = newMcpServer(sdk);
+
+  const mounted =
+    caller.kind === "unattached"
+      ? unattachedTools()
+      : await conversationTools(caller.conversationId, messages);
+  for (const { tool, description } of mounted) {
+    mountTool(server, tool, description, caller);
+  }
+
+  const transport = new sdk.WebStandardStreamableHTTPServerTransport({
+    sessionIdGenerator: undefined,
+    enableJsonResponse: true,
+  });
+
+  await server.connect(transport);
+  try {
+    return await transport.handleRequest(req);
+  } finally {
+    void server.close();
+  }
+}
+
+/**
+ * Who a request is for: a conversation equin launched, or a session it did not
+ * (`MCP_UNATTACHED_ID` — a `claude` started in a terminal).
+ */
+export type McpCaller =
+  { kind: "conversation"; conversationId: string } | { kind: "unattached" };
+
+interface MountedTool {
+  tool: McpTool;
+  description: string;
+}
+
+/**
+ * An unattached session's tools: exactly those declared `unattached: true`.
+ * No scope resolver, gate or live description runs — each is a function of a
+ * conversation, and an unattached tool may declare none of them.
+ */
+function unattachedTools(): MountedTool[] {
+  return [...registry.values()]
+    .filter((tool) => tool.unattached === true)
+    .map((tool) => ({ tool, description: tool.description }));
+}
+
+/** A conversation's tools: its scope, then each tool's own `when`. */
+async function conversationTools(
+  conversationId: string,
+  messages: readonly unknown[],
+): Promise<MountedTool[]> {
   // The conversation's scope: a scratch profile sees exactly its allowlist;
   // everyone else every tool reserved for no profile.
   const ctx = { conversationId };
@@ -51,15 +113,11 @@ async function answerMcpRequest(
     ? await scopeRegistry.resolver(ctx)
     : { kind: "default" as const };
 
-  const messages = await bodyMessages(req);
   // Live description sections likewise render only for the request that lists
   // the tools; a tool call never pays for them.
   const descriptions = hasToolsList(messages)
-    ? await renderDescriptions({ conversationId })
+    ? await renderDescriptions(ctx)
     : null;
-
-  const sdk = await mcpSdk();
-  const server = newMcpServer(sdk);
 
   // Per-conversation visibility: first the scope, then each tool's own `when`.
   // A tool either says no to is never registered on this request's server, so
@@ -77,28 +135,12 @@ async function answerMcpRequest(
       return outcome.ok && outcome.value;
     }),
   );
-
-  for (const [i, tool] of tools.entries()) {
-    if (!visible[i]) continue;
-    mountTool(
-      server,
+  return tools
+    .filter((_, i) => visible[i])
+    .map((tool) => ({
       tool,
-      descriptions?.get(tool.name) ?? tool.description,
-      ctx,
-    );
-  }
-
-  const transport = new sdk.WebStandardStreamableHTTPServerTransport({
-    sessionIdGenerator: undefined,
-    enableJsonResponse: true,
-  });
-
-  await server.connect(transport);
-  try {
-    return await transport.handleRequest(req);
-  } finally {
-    void server.close();
-  }
+      description: descriptions?.get(tool.name) ?? tool.description,
+    }));
 }
 
 /**
@@ -117,20 +159,44 @@ export function mountTool(
   server: McpServer,
   tool: McpTool,
   description: string,
-  ctx: McpToolContext,
+  caller: McpCaller,
 ): void {
+  // The request path mounts only `unattached: true` tools for an unattached
+  // caller; reaching this is a bug in it, never an agent's doing.
+  if (caller.kind === "unattached" && tool.unattached !== true) {
+    throw new Error(
+      `MCP tool "${tool.name}" needs a conversation, but was mounted for an unattached session`,
+    );
+  }
   server.registerTool(
     tool.name,
     { description, inputSchema: tool.inputSchema },
-    async (args: Record<string, unknown>, extra: { _meta?: unknown }) => {
-      const callCtx: McpToolCallContext = {
-        ...ctx,
-        toolUseId: toolUseIdOf(extra._meta),
-      };
-      const result = await tool.handler(args, callCtx);
-      return result;
-    },
+    (args: Record<string, unknown>, extra: { _meta?: unknown }) =>
+      callTool(tool, args, caller, toolUseIdOf(extra._meta)),
   );
+}
+
+/** Runs one tool's handler with the context its kind declares. */
+async function callTool(
+  tool: McpTool,
+  args: Record<string, unknown>,
+  caller: McpCaller,
+  toolUseId: string | null,
+): Promise<McpToolResult> {
+  if (tool.unattached === true) {
+    const conversationId =
+      caller.kind === "conversation" ? caller.conversationId : null;
+    return await tool.handler(args, { conversationId, toolUseId });
+  }
+  if (caller.kind === "unattached") {
+    throw new Error(
+      `MCP tool "${tool.name}" needs a conversation, but was called by an unattached session`,
+    );
+  }
+  return await tool.handler(args, {
+    conversationId: caller.conversationId,
+    toolUseId,
+  });
 }
 
 /** Where Claude Code names the tool call a `tools/call` request answers. */
@@ -153,7 +219,10 @@ async function renderDescriptions(
   ctx: McpToolContext,
 ): Promise<Map<string, string>> {
   const live = [...registry.values()].filter(
-    (t): t is McpTool & Required<Pick<McpTool, "liveDescription">> =>
+    (
+      t,
+    ): t is McpConversationTool &
+      Required<Pick<McpConversationTool, "liveDescription">> =>
       t.liveDescription !== undefined,
   );
   const sections = await Promise.all(

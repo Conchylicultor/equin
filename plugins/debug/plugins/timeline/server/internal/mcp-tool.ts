@@ -12,6 +12,7 @@ const MAX_MAX_EVENTS = 1000;
 
 export const timelineTool = Mcp.tool({
   name: "get_timeline",
+  unattached: true,
   description: `Cross-worktree incident timeline: every worktree's traces, slow-ops, reports, builds, boots (incl. never-ready bars), host duress bands, and health peaks merged onto ONE wall-clock local-time axis. Use this — NOT raw jsonl logs — to reconstruct a slowness/freeze/memory-pressure incident across the cluster. Backend-independent, so no worktree arg. Window: lookbackMinutes (default ${DEFAULT_LOOKBACK_MIN}, max ${MAX_LOOKBACK_MIN}) ending now or at endIso. Filter with minSeverity / sources. Events are wall-clock-interleaved; per-source drops reported explicitly.`,
   inputSchema: {
     lookbackMinutes: z

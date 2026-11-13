@@ -10,13 +10,14 @@ import { z } from "zod";
 import { setServerErrorHandler } from "@plugins/framework/plugins/server-core/core/testing";
 import { handleMcpRequest } from "./handle-mcp";
 import { Mcp, type McpToolContext } from "../../server";
-import { registry } from "../../server/internal/registry";
+import { MCP_UNATTACHED_ID } from "../../core";
+import { registry, scopeRegistry } from "../../server/internal/registry";
 
 const CONVERSATION = "conv-test";
 
-function post(body: unknown): Promise<Response> {
+function post(body: unknown, conversation = CONVERSATION): Promise<Response> {
   return handleMcpRequest(
-    new Request(`http://localhost/api/mcp/${CONVERSATION}`, {
+    new Request(`http://localhost/api/mcp/${conversation}`, {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -24,7 +25,7 @@ function post(body: unknown): Promise<Response> {
       },
       body: JSON.stringify(body),
     }),
-    { conversationId: CONVERSATION },
+    { conversationId: conversation },
   );
 }
 
@@ -251,5 +252,98 @@ describe("Mcp.tool call context", () => {
   test("no id sent is null", async () => {
     expect(await toolUseIdSeen(undefined)).toBeNull();
     expect(await toolUseIdSeen({ other: 1 })).toBeNull();
+  });
+});
+
+describe("unattached sessions", () => {
+  let seen: Array<string | null> = [];
+  let gateRuns = 0;
+  let scopeRuns = 0;
+
+  beforeEach(() => {
+    seen = [];
+    gateRuns = 0;
+    scopeRuns = 0;
+    void Mcp.tool({
+      name: "anywhere",
+      description: "Answers without a conversation",
+      unattached: true,
+      inputSchema: {},
+      handler: (_args, ctx) => {
+        seen.push(ctx.conversationId);
+        return { content: [{ type: "text", text: "ok" }] };
+      },
+    }).register();
+    void Mcp.tool({
+      name: "gated",
+      description: "Mandate-gated",
+      inputSchema: {},
+      when: () => {
+        gateRuns += 1;
+        return true;
+      },
+      handler: () => ({ content: [{ type: "text", text: "gated" }] }),
+    }).register();
+    scopeRegistry.resolver = () => {
+      scopeRuns += 1;
+      return Promise.resolve({ kind: "default" });
+    };
+  });
+
+  afterEach(() => {
+    scopeRegistry.resolver = null;
+  });
+
+  async function listed(conversation: string): Promise<string[]> {
+    const res = await post(
+      { jsonrpc: "2.0", id: 10, method: "tools/list" },
+      conversation,
+    );
+    const json = (await res.json()) as {
+      result: { tools: Array<{ name: string }> };
+    };
+    return json.result.tools.map((t) => t.name).sort();
+  }
+
+  async function call(name: string, conversation: string): Promise<unknown> {
+    const res = await post(
+      {
+        jsonrpc: "2.0",
+        id: 11,
+        method: "tools/call",
+        params: { name, arguments: {} },
+      },
+      conversation,
+    );
+    return res.json();
+  }
+
+  test("lists only the tools declared unattached, running no scope or gate", async () => {
+    expect(await listed(MCP_UNATTACHED_ID)).toEqual(["anywhere"]);
+    expect(scopeRuns).toBe(0);
+    expect(gateRuns).toBe(0);
+  });
+
+  test("a conversation still sees every tool, unattached ones included", async () => {
+    expect(await listed(CONVERSATION)).toEqual(["anywhere", "echo", "gated"]);
+  });
+
+  test("the handler gets a null conversation unattached, the id otherwise", async () => {
+    await call("anywhere", MCP_UNATTACHED_ID);
+    await call("anywhere", CONVERSATION);
+    expect(seen).toEqual([null, CONVERSATION]);
+  });
+
+  test("a conversation-only tool is refused, its handler never run", async () => {
+    const json = (await call("gated", MCP_UNATTACHED_ID)) as {
+      result?: { isError?: boolean; content: Array<{ text: string }> };
+      error?: { message: string };
+    };
+    const refused =
+      json.error !== undefined ||
+      (json.result?.isError === true &&
+        json.result.content[0]?.text !== "gated");
+    expect(refused).toBe(true);
+    expect(gateRuns).toBe(0);
   });
 });

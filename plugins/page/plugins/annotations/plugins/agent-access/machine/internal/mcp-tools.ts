@@ -13,6 +13,7 @@ import { pageTools } from "../../server/internal/page-tools";
 
 export const readPageTool = Mcp.tool({
   name: "read_page",
+  unattached: true,
   description: `Read an equin page — or any block within one — as markdown.
 
 **This tool reads the SHARED instance (normally main), not your worktree** — the

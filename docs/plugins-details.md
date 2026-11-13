@@ -36524,12 +36524,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `resource.declare` "mcp.catalog"
           - `resource.declare` "mcp.health"
         - Exports (types):
+          - `McpCallerContext`
+          - `McpConversationTool`
           - `McpScope`
           - `McpScopeResolver`
           - `McpTool`
           - `McpToolCallContext`
           - `McpToolContext`
           - `McpToolResult`
+          - `McpUnattachedTool`
         - Exports (values): `Mcp`
         - Resources:
           - `mcp.catalog` (push, fixed, whole: every Mcp.tool the code registers — fixed for the process, a hundred or so, whole: the scratch profiles a tool is reserved for — one or two, whole: one JSON Schema object's top-level keywords (type, properties, required, …) — a handful)
@@ -36555,6 +36558,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `agentToolName`
           - `MCP_HEALTH_MAX_DEGRADED`
           - `MCP_SERVER_NAME`
+          - `MCP_UNATTACHED_ID`
           - `mcpCatalog`
           - `McpCatalogSchema`
           - `McpCatalogToolSchema`
@@ -36602,7 +36606,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/file-watcher.FileWatcher`
               - `infra/jobs.defineJob`
               - `infra/mcp.Mcp`
-              - `infra/mcp.McpToolCallContext`
+              - `infra/mcp.McpCallerContext`
               - `infra/spawn/daemon.DaemonInstance`
               - `infra/spawn/daemon.defineDaemon`
               - `infra/worktree.appCheckoutOf`

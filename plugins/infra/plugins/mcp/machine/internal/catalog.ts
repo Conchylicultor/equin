@@ -1,6 +1,6 @@
 import { serveValue } from "@plugins/network/plugins/live/machine";
 import { mcpCatalog, type McpCatalog } from "../../core";
-import { mountTool, newMcpServer } from "./handle-mcp";
+import { mountTool, newMcpServer, type McpCaller } from "./handle-mcp";
 import { mcpSdk } from "./sdk";
 import {
   registry,
@@ -10,7 +10,10 @@ import {
 
 /** Nothing reaches a handler from the catalog's listing; this only fills the
  * context argument `mountTool` binds. */
-const CATALOG_CTX = { conversationId: "(catalog)" };
+const CATALOG_CALLER: McpCaller = {
+  kind: "conversation",
+  conversationId: "(catalog)",
+};
 
 /**
  * Every registered tool's input schema as `tools/list` sends it, keyed by
@@ -24,7 +27,7 @@ async function listedInputSchemas(): Promise<
   const sdk = await mcpSdk();
   const server = newMcpServer(sdk);
   for (const tool of registry.values()) {
-    mountTool(server, tool, tool.description, CATALOG_CTX);
+    mountTool(server, tool, tool.description, CATALOG_CALLER);
   }
   const [clientSide, serverSide] = sdk.InMemoryTransport.createLinkedPair();
   const client = new sdk.Client({ name: "mcp-catalog", version: "0.0.1" });
@@ -56,6 +59,7 @@ async function loadCatalog(): Promise<McpCatalog> {
           description: tool.description,
           hasLiveDescription: tool.liveDescription !== undefined,
           gated: tool.when !== undefined,
+          unattached: tool.unattached === true,
           profiles: tool.profiles ? [...tool.profiles] : null,
           inputSchema,
         };

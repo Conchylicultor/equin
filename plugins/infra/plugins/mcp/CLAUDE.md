@@ -2,7 +2,9 @@
 
 HTTP MCP server at `POST /api/mcp/:conversationId`. Every request builds a
 fresh, stateless `McpServer`; the conversation id from the URL is the context
-(`McpToolContext`) handed to every contribution.
+(`McpToolContext`) handed to every contribution — or, as the reserved id
+`unattached` (`MCP_UNATTACHED_ID`), a session equin did not launch (see
+*Unattached sessions*).
 
 ## Two halves
 
@@ -34,6 +36,9 @@ Both factories return a `Registration` token that goes in the plugin's server
   For facts held in the database that an agent needs while using the tool (a
   vocabulary to pick from). `null` adds nothing; a throw is isolated (see
   *Failure isolation*).
+- `unattached: true` also serves the tool to a session equin did not launch
+  (see *Unattached sessions*); its handler's `conversationId` is then
+  `string | null`.
 - `profiles?: readonly string[]` on a tool reserves it for those scopes (scratch
   profiles): never listed in the default scope, listed for a profile only when
   that profile's allowlist also names it.
@@ -42,6 +47,32 @@ Both factories return a `Registration` token that goes in the plugin's server
   `conversations/workspace/scratch` (inverted so this plugin knows nothing of
   conversations). A profile scope sees exactly its `tools` (an unknown or
   foreign-reserved name throws); `when` still applies on top. Pure filter: `machine/internal/scope.ts`.
+
+## Unattached sessions
+
+A `claude` started in a terminal — the usual way to recover a broken main —
+carries none of the variables equin hands the agents it launches
+(`EQUIN_PARENT_URL`, `EQUIN_CONVERSATION_ID`). `.mcp.json` falls back to main's
+origin and the `unattached` id for them, so such a session still reaches the
+server (the gateway reads a request with no `Origin` / `Sec-Fetch-Site` as the
+owner — a local tool). The check `mcp:mcp-json-in-sync` pins `.mcp.json`'s URL
+to `MCP_UNATTACHED_ID` and main's `namespaceUrl`, since JSON cannot import them.
+
+- An unattached request is served exactly the tools declared
+  `unattached: true`. No scope resolver, `when` or live description runs: each
+  is a function of a conversation, and an unattached tool may declare none of
+  them (`?: never`).
+- Such a tool's handler gets `McpCallerContext` — `conversationId: string |
+  null`, `null` when unattached — so tsc makes it answer without a
+  conversation. Whatever it would read off the conversation (its worktree, its
+  deploy) defaults to main. Every other tool keeps `conversationId: string`.
+- Opt a tool in only when it is read-only and means something with no
+  conversation: the debug reads (`get_timeline`, `query_db`,
+  `get_queue_health`, `get_runtime_profile`), `read_page`, the `browser_*`
+  tools. Writes that are credited to a conversation (page notes, task filing)
+  and tools about the agent's own conversation or task tree stay out.
+- Making a terminal session a real equin conversation (task, worktree, mandate,
+  system-prompt sections) is a separate, parked idea (the Parking page).
 
 ## Catalog
 
@@ -102,12 +133,15 @@ and without it no tool set can be computed.
     - `resource.declare` "mcp.catalog"
     - `resource.declare` "mcp.health"
   - Exports (types):
+    - `McpCallerContext`
+    - `McpConversationTool`
     - `McpScope`
     - `McpScopeResolver`
     - `McpTool`
     - `McpToolCallContext`
     - `McpToolContext`
     - `McpToolResult`
+    - `McpUnattachedTool`
   - Exports (values): `Mcp`
   - Resources:
     - `mcp.catalog` (push, fixed, whole: every Mcp.tool the code registers — fixed for the process, a hundred or so, whole: the scratch profiles a tool is reserved for — one or two, whole: one JSON Schema object's top-level keywords (type, properties, required, …) — a handful)
@@ -133,6 +167,7 @@ and without it no tool set can be computed.
     - `agentToolName`
     - `MCP_HEALTH_MAX_DEGRADED`
     - `MCP_SERVER_NAME`
+    - `MCP_UNATTACHED_ID`
     - `mcpCatalog`
     - `McpCatalogSchema`
     - `McpCatalogToolSchema`

@@ -138,7 +138,10 @@ export function shownWholeByRead(
  * `pageId` is the page that id sits in, whose instructions apply.
  */
 export async function deliverWithRead(args: {
-  conversationId: string;
+  /** `null` for a session equin did not launch: with no conversation to
+   * record them against, every instructions block covering the page is handed
+   * over on every read. */
+  conversationId: string | null;
   pageId: string;
   readRootId: string;
   body: string;
@@ -147,6 +150,12 @@ export async function deliverWithRead(args: {
   const executor = args.executor ?? db;
   const refs = await instructionsInScope(args.pageId, executor);
   if (refs.length === 0) return "";
+  if (args.conversationId === null) {
+    const rendered = await renderInstructions(refs, executor);
+    return formatReceivedInstructions(
+      rendered.filter((b) => !shownWholeByRead(b, args.readRootId, args.body)),
+    );
+  }
   const delivery = await renderForDelivery(args.conversationId, refs, executor);
   const shown = delivery.pending.filter((b) =>
     shownWholeByRead(b, args.readRootId, args.body),

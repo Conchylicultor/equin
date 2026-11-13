@@ -22,6 +22,8 @@ export const McpCatalogToolSchema = z.object({
   hasLiveDescription: z.boolean(),
   /** Gated per conversation by its own `when`. */
   gated: z.boolean(),
+  /** Also served to a session with no conversation (`MCP_UNATTACHED_ID`). */
+  unattached: z.boolean(),
   /** The scratch profiles it is reserved for; `null` for a default-scope
    * tool. */
   profiles: wholeList(z.string(), {

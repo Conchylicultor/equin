@@ -2,7 +2,7 @@
   "mcpServers": {
     "equin": {
       "type": "http",
-      "url": "${EQUIN_PARENT_URL}/api/mcp/${EQUIN_CONVERSATION_ID}"
+      "url": "${EQUIN_PARENT_URL:-http://equin.localhost:9000}/api/mcp/${EQUIN_CONVERSATION_ID:-unattached}"
     }
   }
 }

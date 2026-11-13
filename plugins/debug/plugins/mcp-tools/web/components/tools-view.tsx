@@ -219,6 +219,7 @@ export function ToolBadges({ tool }: { tool: McpCatalogTool }): ReactElement {
         </Badge>
       ))}
       {tool.gated ? <Badge variant="warning">gated</Badge> : null}
+      {tool.unattached ? <Badge variant="muted">unattached</Badge> : null}
       {tool.hasLiveDescription ? <Badge variant="success">live</Badge> : null}
     </>
   );

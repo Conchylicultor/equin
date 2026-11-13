@@ -19,6 +19,18 @@ export interface McpToolCallContext extends McpToolContext {
   toolUseId: string | null;
 }
 
+/**
+ * What the handler of a tool declared `unattached: true` gets: the same, except
+ * that `conversationId` is `null` for a session equin did not launch (a
+ * `claude` started in a terminal — see `MCP_UNATTACHED_ID`). Such a tool must
+ * answer without a conversation: its "own" worktree, deploy or anything else
+ * read off the conversation defaults to main.
+ */
+export interface McpCallerContext {
+  conversationId: string | null;
+  toolUseId: string | null;
+}
+
 export type McpToolResult = {
   content: Array<
     | { type: "text"; text: string }
@@ -27,10 +39,20 @@ export type McpToolResult = {
   >;
 };
 
-export interface McpTool<T extends z.ZodRawShape = z.ZodRawShape> {
+type McpToolOutcome = Promise<McpToolResult> | McpToolResult;
+
+interface McpToolBase<T extends z.ZodRawShape> {
   name: string;
   /** The fixed text of the tool's description. */
   description: string;
+  inputSchema: T;
+}
+
+/** A tool only a conversation equin launched sees (the default). */
+export interface McpConversationTool<
+  T extends z.ZodRawShape = z.ZodRawShape,
+> extends McpToolBase<T> {
+  unattached?: false;
   /**
    * A LIVE section appended to {@link description} (after a blank line):
    * rendered per request, and only for a request that lists the tools
@@ -42,7 +64,6 @@ export interface McpTool<T extends z.ZodRawShape = z.ZodRawShape> {
    * section — never a silently missing section, never a failed listing.
    */
   liveDescription?: (ctx: McpToolContext) => Promise<string | null>;
-  inputSchema: T;
   /**
    * Whether this conversation sees the tool. Evaluated on every MCP request
    * (keep it to a cheap lookup); when false the tool is neither listed in
@@ -60,8 +81,29 @@ export interface McpTool<T extends z.ZodRawShape = z.ZodRawShape> {
   handler: (
     args: z.output<z.ZodObject<T>>,
     ctx: McpToolCallContext,
-  ) => Promise<McpToolResult> | McpToolResult;
+  ) => McpToolOutcome;
 }
+
+/**
+ * A tool also served to a session with no conversation (`MCP_UNATTACHED_ID`) —
+ * as well as to every default-scope conversation. It has no `when`, live
+ * description or profiles: each of those is a function of a conversation.
+ */
+export interface McpUnattachedTool<
+  T extends z.ZodRawShape = z.ZodRawShape,
+> extends McpToolBase<T> {
+  unattached: true;
+  liveDescription?: never;
+  when?: never;
+  profiles?: never;
+  handler: (
+    args: z.output<z.ZodObject<T>>,
+    ctx: McpCallerContext,
+  ) => McpToolOutcome;
+}
+
+export type McpTool<T extends z.ZodRawShape = z.ZodRawShape> =
+  McpConversationTool<T> | McpUnattachedTool<T>;
 
 /**
  * Which tools a conversation may see before any tool's own `when`:
@@ -80,27 +122,39 @@ export type McpScope =
  */
 export type McpScopeResolver = (ctx: McpToolContext) => Promise<McpScope>;
 
+/**
+ * Returns a {@link Registration} token. The actual `registry.set` (and the
+ * duplicate-name guard) fire when the framework invokes `.register()`
+ * during the plugin register phase. Plugins list the result in their
+ * `register` array on `ServerPluginDefinition`.
+ *
+ * Overloaded rather than taking the union, so each declaration's handler is
+ * typed from its own kind: `unattached: true` makes `ctx.conversationId`
+ * `string | null`, anything else keeps it a `string`.
+ */
+function tool<T extends z.ZodRawShape>(
+  decl: McpConversationTool<T>,
+): Registration;
+function tool<T extends z.ZodRawShape>(
+  decl: McpUnattachedTool<T>,
+): Registration;
+function tool<T extends z.ZodRawShape>(decl: McpTool<T>): Registration {
+  return {
+    _kind: "mcp-tool",
+    _factory: "mcpTool",
+    _doc: { label: decl.name, detail: decl.description.split("\n")[0] },
+    register() {
+      if (registry.has(decl.name)) {
+        throw new Error(`MCP tool "${decl.name}" already registered`);
+      }
+      registry.set(decl.name, decl as unknown as McpTool);
+      toolDeclaredIn.set(decl.name, registeringPlugin());
+    },
+  };
+}
+
 export const Mcp = {
-  /**
-   * Returns a {@link Registration} token. The actual `registry.set` (and the
-   * duplicate-name guard) fire when the framework invokes `.register()`
-   * during the plugin register phase. Plugins list the result in their
-   * `register` array on `ServerPluginDefinition`.
-   */
-  tool<T extends z.ZodRawShape>(tool: McpTool<T>): Registration {
-    return {
-      _kind: "mcp-tool",
-      _factory: "mcpTool",
-      _doc: { label: tool.name, detail: tool.description.split("\n")[0] },
-      register() {
-        if (registry.has(tool.name)) {
-          throw new Error(`MCP tool "${tool.name}" already registered`);
-        }
-        registry.set(tool.name, tool as unknown as McpTool);
-        toolDeclaredIn.set(tool.name, registeringPlugin());
-      },
-    };
-  },
+  tool,
   /**
    * Registers THE scope resolver ({@link McpScopeResolver}). Returns a
    * {@link Registration} token; a second resolver throws at register time.

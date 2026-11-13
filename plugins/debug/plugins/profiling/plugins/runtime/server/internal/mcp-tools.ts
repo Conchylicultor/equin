@@ -10,6 +10,7 @@ import {
   waitSplit,
 } from "@plugins/infra/plugins/runtime-profiler/core";
 import {
+  MAIN_WORKTREE_NAME,
   asNamespace,
   namespaceUrl,
   resolveNamespaceAlias,
@@ -23,6 +24,7 @@ const KIND_FILTER = [...SPAN_KINDS, "all"] as const;
 
 export const runtimeProfileTool = Mcp.tool({
   name: "get_runtime_profile",
+  unattached: true,
   description: `Slowest HTTP routes, DB queries, and live-state loaders in a worktree's server (in-memory window since last reset). Use to debug app/page slowness, N+1 patterns, and queueing/head-of-line blocking. Aggregates are sorted by \`recentMaxMs\` (max within a rolling ~5-min window — "is it slow NOW"); \`maxMs\` is the since-boot peak and \`maxAgeMs\` how long ago it was set, so an old spike reads as old instead of a live problem. Each db/loader aggregate includes a \`byParent\` breakdown attributing it to the enclosing request/loader that issued it, and each \`slowest\` span carries its immediate \`parent\`. Server-side only: browser-measured latency (a live update's change → applied, an optimistic write's dispatch → confirmed, page loads) is not here — read it in Debug → Slow Events or with \`get_timeline\`.
 
 Kinds: \`http\` (routes; the span encloses the per-route dedupe/concurrency gates, so its wall-clock matches client-observed latency), \`db\` (queries + the pool \`[acquire]\` connect-wait), \`loader\` (live-state resource loads), the origin entries \`sub\` (a tab subscribed) / \`push\` (a notify cascade) that trigger loaders — a loader's \`parent\` names which one triggered it — and \`job\` (background queue jobs). \`flush\` is the live-state notify-flush cycle (\`flushNotifies\`): its \`byParent\` names which resource dominated a cycle (head-of-line), and \`push\` carries \`deliver:<key>\` leaves whose duration is the first-notify→send delivery latency (the "UI is stale" window) for that resource. \`cascade\` is a routed resource's reverse-route resolve — the id-translation read mapping a changed lookup row to the host ids that reference it — run inside the flush before the refill; its label is that resource's key (a dependsOn / recomputeOn cascade records no \`cascade\`: the downstream's recompute is a \`push\` load), and it is gated as background work (routes through \`background-acquire\`) but does not contribute to any resource's read-set. \`route\` is the change-feed routing one Postgres change into the runtime (label = the changed table; \`detail.measures.ids\` = changed ids, \`sinceChangeMs\` = trigger → routed, which includes how long the writing transaction stayed open). \`membership\` is a window resource's ids-only membership query (label = resource key), under its \`push\` origin. The live-state HTTP fallback shows as \`http\` \`GET /api/resources/<key>\` (304s included).
@@ -49,13 +51,16 @@ Default: profiles the current conversation's worktree server. Pass \`worktree\` 
       .string()
       .optional()
       .describe(
-        "Target worktree name. Defaults to the conversation's own worktree.",
+        "Target worktree name. Defaults to the conversation's own worktree (main for a session equin did not launch).",
       ),
   },
   async handler({ kind = "all", limit = 15, worktree }, { conversationId }) {
     let raw: string;
     if (worktree) {
       raw = resolveNamespaceAlias(worktree);
+    } else if (conversationId === null) {
+      // A session equin did not launch has no worktree of its own: main.
+      raw = MAIN_WORKTREE_NAME;
     } else {
       const conv = await getConversation(conversationId);
       if (!conv) throw new Error(`Unknown conversation "${conversationId}"`);

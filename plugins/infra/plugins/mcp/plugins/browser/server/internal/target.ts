@@ -1,7 +1,10 @@
 import { appCheckoutOf } from "@plugins/infra/plugins/worktree/server";
 import { getConversation } from "@plugins/tasks/plugins/tasks-core/server";
 import { lookupCheckoutDeploy } from "@plugins/infra/plugins/paths/core";
-import { namespaceUrl } from "@plugins/infra/plugins/namespace/core";
+import {
+  MAIN_WORKTREE_NAME,
+  namespaceUrl,
+} from "@plugins/infra/plugins/namespace/core";
 import type { HostTarget } from "../../shared/protocol";
 
 /**
@@ -14,8 +17,17 @@ import type { HostTarget } from "../../shared/protocol";
  * nowhere to land, rather than silently driving main.
  */
 export async function resolveTarget(
-  conversationId: string,
+  conversationId: string | null,
 ): Promise<HostTarget> {
+  // A session equin did not launch has no checkout of its own: its routes land
+  // on main (read-only to agents, as for every agent session).
+  if (conversationId === null) {
+    return {
+      kind: "deploy",
+      origin: namespaceUrl(MAIN_WORKTREE_NAME),
+      namespace: MAIN_WORKTREE_NAME,
+    };
+  }
   const conv = await getConversation(conversationId);
   if (!conv) throw new Error(`Unknown conversation "${conversationId}".`);
   // The app's own checkout this conversation runs in, re-derived from the

@@ -47,7 +47,10 @@ Files: `services/agent-browser/` (`data-dirs`) — `host.sock`, `host.pid`,
 - **Host** — exits 5 min after its last session closes (Chromium with it), on
   `/shutdown`, or on SIGTERM/INT/HUP; each exit closes every session first and
   writes a final `exited` status.
-- **Session** — one `BrowserContext` per conversation. Closed after 10 idle
+- **Session** — one `BrowserContext` per conversation. A session equin did
+  not launch (`unattached`, see `infra/mcp`) browses under ONE shared session
+  keyed `unattached`, its routes land on main, and its calls are not recorded
+  (no transcript to show them under). Closed after 10 idle
   minutes, on `browser_close`, and when the conversation goes `done` or `gone`
   (`conversation-ended.ts`; `HAS_AGENT` names every status). Idle means no
   tool call — a page's own traffic never counts (our apps fetch on their own
@@ -207,7 +210,7 @@ nor closed under it. Bounded, because the host cannot see the script end.
     - `infra/file-watcher.FileWatcher`
     - `infra/jobs.defineJob`
     - `infra/mcp.Mcp`
-    - `infra/mcp.McpToolCallContext`
+    - `infra/mcp.McpCallerContext`
     - `infra/spawn/daemon.DaemonInstance`
     - `infra/spawn/daemon.defineDaemon`
     - `infra/worktree.appCheckoutOf`

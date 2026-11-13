@@ -2,6 +2,9 @@ import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-c
 
 export { Mcp } from "./internal/mcp";
 export type {
+  McpCallerContext,
+  McpConversationTool,
+  McpUnattachedTool,
   McpScope,
   McpScopeResolver,
   McpTool,

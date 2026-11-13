@@ -85,6 +85,14 @@ export interface PageToolCaller {
   conversationId: string;
 }
 
+/**
+ * Who is reading: a conversation, or `null` for a session equin did not launch
+ * (`read_page` is served to those too — reading needs no author).
+ */
+export interface PageReadCaller {
+  conversationId: string | null;
+}
+
 /** One text part of an MCP tool result. */
 interface TextPart {
   type: "text";
@@ -323,7 +331,7 @@ function opensWithHeader(text: string, readHeader: string): boolean {
 
 async function readPage(
   { block_id: blockId }: ReadPageInput,
-  { conversationId }: PageToolCaller,
+  { conversationId }: PageReadCaller,
 ): Promise<PageToolResult> {
   // The scope is loaded here to decide ABOUT the block (rule 2) and again
   // inside the engine to serialize it. Two reads, deliberately: the policy

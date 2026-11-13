@@ -3,6 +3,7 @@ import { basename } from "path";
 import { Mcp } from "@plugins/infra/plugins/mcp/server";
 import { getConversation } from "@plugins/tasks/plugins/tasks-core/server";
 import {
+  MAIN_WORKTREE_NAME,
   asNamespace,
   namespaceUrl,
   resolveNamespaceAlias,
@@ -48,6 +49,7 @@ const classLadder = HOLD_CLASSES.map(
 
 export const queueHealthTool = Mcp.tool({
   name: "get_queue_health",
+  unattached: true,
   description: `Attributed health of a worktree's graphile-worker job queue: how deep each hold class's backlog is, which jobs dominate it, which jobs are holding worker slots the longest, and which jobs are terminally dead. Use to diagnose why the queue is backed up or why newly-enqueued work is not running.
 
 **The worker is NOT one shared pool.** Every job declares a \`hold\` class — the timescale one run may occupy a worker slot — and that class decides which graphile task the row is inserted on. ${
@@ -82,13 +84,16 @@ Default: reads the current conversation's own worktree. Pass \`worktree\` to tar
       .string()
       .optional()
       .describe(
-        "Target worktree name. Defaults to the conversation's own worktree.",
+        "Target worktree name. Defaults to the conversation's own worktree (main for a session equin did not launch).",
       ),
   },
   async handler({ worktree }, { conversationId }) {
     let raw: string;
     if (worktree) {
       raw = resolveNamespaceAlias(worktree);
+    } else if (conversationId === null) {
+      // A session equin did not launch has no worktree of its own: main.
+      raw = MAIN_WORKTREE_NAME;
     } else {
       const conv = await getConversation(conversationId);
       if (!conv) throw new Error(`Unknown conversation "${conversationId}"`);

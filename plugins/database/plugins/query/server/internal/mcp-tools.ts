@@ -1,7 +1,10 @@
 import { z } from "zod";
 import { basename } from "path";
 import { Mcp } from "@plugins/infra/plugins/mcp/server";
-import { resolveNamespaceAlias } from "@plugins/infra/plugins/namespace/core";
+import {
+  MAIN_WORKTREE_NAME,
+  resolveNamespaceAlias,
+} from "@plugins/infra/plugins/namespace/core";
 import { getConversation } from "@plugins/tasks/plugins/tasks-core/server";
 import {
   openShortLivedClient,
@@ -28,6 +31,7 @@ const toldAliases = new Set<string>();
 
 export const queryDbTool = Mcp.tool({
   name: "query_db",
+  unattached: true,
   description: `Execute a read-only SQL query against a worktree's PostgreSQL database.
 For debugging and inspection only. All queries run in a READ ONLY transaction.
 One statement per call (multi-statement SQL is refused). Returns up to ${QUERY_DB_MAX_ROWS} rows.
@@ -43,13 +47,16 @@ Pass \`database\` to target a different worktree (e.g. "att-1778089188-7uvf", or
       .string()
       .optional()
       .describe(
-        'Target database: a worktree name, or "equin" for main. Defaults to the conversation\'s own worktree DB.',
+        "Target database: a worktree name, or \"equin\" for main. Defaults to the conversation's own worktree DB (main's for a session equin did not launch).",
       ),
   },
   async handler({ sql, database }, { conversationId }) {
     let dbName: string;
     if (database) {
       dbName = resolveNamespaceAlias(database);
+    } else if (conversationId === null) {
+      // A session equin did not launch has no worktree of its own: main.
+      dbName = MAIN_WORKTREE_NAME;
     } else {
       const conv = await getConversation(conversationId);
       if (!conv) throw new Error(`Unknown conversation "${conversationId}"`);
@@ -101,11 +108,16 @@ Pass \`database\` to target a different worktree (e.g. "att-1778089188-7uvf", or
         }
         await client.query("ROLLBACK");
         const rows = result.rows.slice(0, QUERY_DB_MAX_ROWS);
-        const named = toldAliases.has(conversationId)
-          ? []
-          : aliasesNamedIn(sql, aliases);
+        // Told once per conversation; a session equin did not launch has none
+        // to remember it by, so it is told every time.
+        const named =
+          conversationId !== null && toldAliases.has(conversationId)
+            ? []
+            : aliasesNamedIn(sql, aliases);
         const note = named.length > 0 ? describeAliases(named) : undefined;
-        if (note !== undefined) toldAliases.add(conversationId);
+        if (note !== undefined && conversationId !== null) {
+          toldAliases.add(conversationId);
+        }
         const columns = result.fields.map((f) => f.name);
         return {
           content: [

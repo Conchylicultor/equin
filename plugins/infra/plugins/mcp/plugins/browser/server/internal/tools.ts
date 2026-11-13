@@ -1,7 +1,5 @@
-import {
-  Mcp,
-  type McpToolCallContext,
-} from "@plugins/infra/plugins/mcp/server";
+import { Mcp, type McpCallerContext } from "@plugins/infra/plugins/mcp/server";
+import { MCP_UNATTACHED_ID } from "@plugins/infra/plugins/mcp/core";
 import { RECORDED_BROWSER_TOOLS } from "@plugins/debug/plugins/browser-recordings/core";
 import { browserToolSpecs } from "../../shared/tools";
 import { callHostTool } from "./host-client";
@@ -20,16 +18,23 @@ for (const name of RECORDED_BROWSER_TOOLS)
  * resolved here — it is a database read, and the host has no database. A
  * page-changing call is recorded under the agent's tool call (when the client
  * named it), so the conversation shows its frame under the call.
+ *
+ * Also served to a session equin did not launch (`unattached`): it browses
+ * under one shared session, keyed `MCP_UNATTACHED_ID` (closed when idle like
+ * any other), its routes land on main, and nothing is recorded — a recording
+ * is shown under a conversation's tool call, and there is none.
  */
 function forward(tool: string) {
-  return async (args: unknown, ctx: McpToolCallContext) => {
+  return async (args: unknown, ctx: McpCallerContext) => {
     const call = {
-      conversationId: ctx.conversationId,
+      conversationId: ctx.conversationId ?? MCP_UNATTACHED_ID,
       target: await resolveTarget(ctx.conversationId),
       tool,
       args,
     };
-    return ctx.toolUseId !== null && RECORDED_BROWSER_TOOLS.has(tool)
+    return ctx.conversationId !== null &&
+      ctx.toolUseId !== null &&
+      RECORDED_BROWSER_TOOLS.has(tool)
       ? recordedCall(call, ctx.toolUseId)
       : callHostTool(call);
   };
@@ -39,6 +44,7 @@ export const browserTools = Object.entries(browserToolSpecs).map(
   ([name, spec]) =>
     Mcp.tool({
       name,
+      unattached: true,
       description: spec.description,
       inputSchema: spec.inputSchema,
       handler: forward(name),

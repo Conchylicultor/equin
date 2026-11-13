@@ -9,6 +9,7 @@ function tool(over: Partial<McpCatalogTool>): McpCatalogTool {
     description: "",
     hasLiveDescription: false,
     gated: false,
+    unattached: false,
     profiles: null,
     inputSchema: { type: "object", properties: {} },
     ...over,
