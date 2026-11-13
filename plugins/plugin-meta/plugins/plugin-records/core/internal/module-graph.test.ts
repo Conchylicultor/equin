@@ -4,6 +4,7 @@ import { join } from "node:path";
 import type { RepoSnapshot } from "@plugins/framework/plugins/tooling/core";
 import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { buildModuleGraph, NO_OUTSIDE_FILES } from "./module-graph";
+import { fileSetImports } from "./file-set-closure";
 import { gitBlobId } from "./keys";
 import { createMemoryRecordStore, type RecordStore } from "./store";
 
@@ -338,5 +339,38 @@ describe("the lockfile in the file-facts key", () => {
     const first = written();
     await graphOf({ ...base, "bun.lock": NPM_BUMPED }, entries, { store });
     expect(written()).toBe(first);
+  });
+});
+
+describe("fileSetImports", () => {
+  test("each module's runtime repo imports: type-only erased, assets and npm aside", async () => {
+    const snap = snapshotOf({
+      [`${P}/a/web/index.ts`]: [
+        'import { b } from "@plugins/b/core";',
+        'import type { T } from "@plugins/t/core";',
+        'import { type U } from "@plugins/t/core";',
+        'import "./style.css";',
+        'import React from "react";',
+        'const lazy = () => import("@plugins/c/core");',
+        "export const x = [b, React, lazy];",
+      ].join("\n"),
+      [`${P}/a/web/style.css`]: "",
+      [`${P}/b/core/index.ts`]: "export const b = 1;",
+      [`${P}/c/core/index.ts`]: "export const c = 1;",
+      [`${P}/t/core/index.ts`]: "export type T = 1; export type U = 2;",
+    });
+    expect(await fileSetImports(snap, [`${P}/a/web/index.ts`])).toEqual(
+      new Map([[`${P}/a/web/index.ts`, [`${P}/b/core/index.ts`]]]),
+    );
+  });
+
+  test("an import that resolves to no file throws, naming the module", async () => {
+    const snap = snapshotOf({
+      [`${P}/a/web/index.ts`]:
+        'import { b } from "@plugins/b/core";\nexport const x = b;',
+    });
+    expect(fileSetImports(snap, [`${P}/a/web/index.ts`])).rejects.toThrow(
+      `${P}/a/web/index.ts imports "@plugins/b/core"`,
+    );
   });
 });

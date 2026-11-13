@@ -3,14 +3,12 @@ import type {
   CheckResult,
 } from "@plugins/framework/plugins/tooling/core";
 import { isBunTestPath } from "@plugins/framework/plugins/tooling/plugins/test-layout/core";
-import { findImports } from "@plugins/plugin-meta/plugins/parse-utils/core";
-import { resolveRepoModule } from "../core/repo-module";
+import { fileSetImports } from "@plugins/plugin-meta/plugins/plugin-records/core";
 import {
   platformTaintOf,
   type Offender,
   type PlatformTaint,
 } from "../core/portability";
-import { loadsAtRuntime } from "../core/portability-facts";
 
 const WEB_LOADS_PORTABLE = "boundaries:web-loads-portable";
 
@@ -36,7 +34,13 @@ export function runsInBrowserRealm(path: string): boolean {
 export interface WebLoadsScan {
   /** Every repo path in the run. */
   paths: readonly string[];
-  read: (path: string) => Promise<string | null>;
+  /**
+   * The repo modules each of `files` loads with it at runtime — the module
+   * graph's file records (`fileSetImports`), never a parse of its own.
+   */
+  imports: (
+    files: readonly string[],
+  ) => Promise<ReadonlyMap<string, readonly string[]>>;
   /** Rules 1 and 2 over the union closure of `entries`. */
   taint: (entries: readonly string[]) => Promise<PlatformTaint>;
   /** Whether a violation at the browser-realm module `path` is exempted. */
@@ -61,19 +65,18 @@ export interface WebLoadViolation {
 export async function webLoadViolations(
   scan: WebLoadsScan,
 ): Promise<WebLoadViolation[]> {
-  const files = new Set(scan.paths);
+  const browser = scan.paths.filter(runsInBrowserRealm).sort();
+  const imports = await scan.imports(browser);
   const loadedBy = new Map<string, string[]>();
-  for (const file of scan.paths.filter(runsInBrowserRealm).sort()) {
-    const src = await scan.read(file);
-    if (src === null) {
-      throw new Error(`${file} is in the run's file set but cannot be read.`);
-    }
-    for (const ref of findImports(src)) {
-      if (!loadsAtRuntime(ref)) continue;
-      const target = resolveRepoModule(file, ref.specifier, (p) =>
-        files.has(p),
+  for (const file of browser) {
+    const targets = imports.get(file);
+    if (targets === undefined) {
+      throw new Error(
+        `${file} is in the run's file set but has no imports read.`,
       );
-      if (target === null || BROWSER_FOLDER_RE.test(target)) continue;
+    }
+    for (const target of targets) {
+      if (BROWSER_FOLDER_RE.test(target)) continue;
       const list = loadedBy.get(target);
       if (list === undefined) loadedBy.set(target, [file]);
       else if (!list.includes(file)) list.push(file);
@@ -140,10 +143,9 @@ export const webLoadsPortableCheck: Check = {
   async run(ctx): Promise<CheckResult> {
     const repo = await ctx.repo();
     const exempt = await ctx.exempt(WEB_LOADS_PORTABLE);
-    const read = (p: string): Promise<string | null> => repo.read(p);
     const violations = await webLoadViolations({
       paths: repo.all(),
-      read,
+      imports: (files) => fileSetImports(repo, files),
       taint: (entries) => platformTaintOf(repo, entries),
       skips: (p) => exempt.skips(p),
     });

@@ -16,6 +16,54 @@ export type FollowDynamic = (reach: {
   input: ModuleGraphInput;
 }) => Promise<(module: string, spec: string) => boolean>;
 
+/** The graph input every reader of `repo` shares — each part by identity, so they grow ONE graph. */
+function sharedInput(
+  repo: RepoFiles | RepoSnapshot,
+  written: ReadonlyMap<string, string> | undefined,
+): ModuleGraphInput {
+  return {
+    snapshot: repo,
+    store: currentRecordStore(),
+    readOutside: NO_OUTSIDE_FILES,
+    ...(written === undefined ? {} : { written }),
+  };
+}
+
+/** A module the runtime loads as code (not an asset a bundler query or loader names). */
+const SCRIPT_MODULE = /\.(m?[jt]sx?|c[jt]s)$/;
+
+/**
+ * The repo script modules each of `modules` loads WITH it at runtime (its
+ * static imports, `import type` and all-`type` binding lists erased — the
+ * runtime's reading, through its own transpiler; an import used only in a type
+ * position still loads), read off the same shared module graph as
+ * {@link fileSetClosure}: each module's imports are a file record keyed by its
+ * blob, so a pass after an edit reads and scans the edited modules alone. The
+ * one source of a module's import facts — a reader asking which modules a file
+ * loads never parses its imports itself.
+ *
+ * An import that resolves to no file of the set throws, naming the module.
+ */
+export async function fileSetImports(
+  repo: RepoFiles | RepoSnapshot,
+  modules: readonly string[],
+): Promise<Map<string, string[]>> {
+  const graph = await buildModuleGraph(sharedInput(repo, undefined), modules);
+  const out = new Map<string, string[]>();
+  for (const m of modules) {
+    const node = graph.modules.get(m)!;
+    if (node.unresolved.length > 0)
+      throw new Error(
+        `${m} imports ${node.unresolved.map((u) => JSON.stringify(u)).join(", ")}, which resolves to no file of the checkout.`,
+      );
+    out.set(
+      m,
+      [...new Set(node.staticDeps)].filter((d) => SCRIPT_MODULE.test(d)),
+    );
+  }
+  return out;
+}
+
 /**
  * The bundler's closure of `entries` over a file set (dynamic imports cut,
  * unused TypeScript imports dropped — what `importClosures` measures with a
@@ -48,12 +96,7 @@ export async function fileSetClosure(
     followDynamic?: FollowDynamic;
   },
 ): Promise<{ closure: BundledClosure; input: ModuleGraphInput }> {
-  const input: ModuleGraphInput = {
-    snapshot: repo,
-    store: currentRecordStore(),
-    readOutside: NO_OUTSIDE_FILES,
-    ...(opts?.written === undefined ? {} : { written: opts.written }),
-  };
+  const input = sharedInput(repo, opts?.written);
   const graph = await buildModuleGraph(input, entries);
   const followDynamic =
     opts?.followDynamic === undefined

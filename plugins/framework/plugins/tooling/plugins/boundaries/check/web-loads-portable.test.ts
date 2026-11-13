@@ -50,6 +50,21 @@ describe("webLoadViolations", () => {
     ],
     "plugins/infra/plugins/paths/core/internal/home.ts": [],
   };
+  // What the module graph answers for each browser-realm file: its runtime
+  // imports (the type-only one erased; erasure is the graph's, tested there).
+  const loads: Record<string, string[]> = {
+    "plugins/audience/web/index.ts": [
+      "plugins/fullscreen/core/index.ts",
+      "plugins/audience/shared/helper.ts",
+      "plugins/audience/web/view.tsx",
+    ],
+    "plugins/audience/web/view.tsx": [],
+    "plugins/audience/web/__tests__/a.test.tsx": [
+      "plugins/infra/plugins/paths/core/index.ts",
+    ],
+  };
+  const imports = (files: readonly string[]) =>
+    Promise.resolve(new Map(files.map((f) => [f, loads[f]!] as const)));
   const read = (p: string): Promise<string | null> =>
     Promise.resolve(sources[p] ?? null);
   const closureOf = (entries: readonly string[]) => {
@@ -63,11 +78,11 @@ describe("webLoadViolations", () => {
     return { modules, children: (m: string) => edges[m]! };
   };
 
-  test("reports each host-only frontier module with who loads it, type-only imports and bun:test files aside", async () => {
+  test("reports each host-only frontier module with who loads it, bun:test files aside", async () => {
     const asked: string[][] = [];
     const violations = await webLoadViolations({
       paths: Object.keys(sources),
-      read,
+      imports,
       taint: (entries) => {
         asked.push([...entries]);
         return platformTaint(closureOf(entries), read);
@@ -118,7 +133,7 @@ describe("webLoadViolations", () => {
   test("an exempted loader is not reported", async () => {
     const violations = await webLoadViolations({
       paths: Object.keys(sources),
-      read,
+      imports,
       taint: (entries) => platformTaint(closureOf(entries), read),
       skips: (p) => p.includes("__tests__") || p.endsWith("index.ts"),
     });

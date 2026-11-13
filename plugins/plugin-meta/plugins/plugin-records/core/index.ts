@@ -26,7 +26,7 @@ export type {
   RecordWorkers,
 } from "./internal/workers";
 export { buildModuleGraph, NO_OUTSIDE_FILES } from "./internal/module-graph";
-export { fileSetClosure } from "./internal/file-set-closure";
+export { fileSetClosure, fileSetImports } from "./internal/file-set-closure";
 export { closureRecord } from "./internal/closure-record";
 export type { FollowDynamic } from "./internal/file-set-closure";
 export { outsideFilesAt } from "./internal/outside-files";

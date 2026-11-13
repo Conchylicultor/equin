@@ -402,6 +402,7 @@ its docblock records — and then lowered as readily as raised.
     - `defineRecordJob`
     - `emptyWriteTiming`
     - `fileSetClosure`
+    - `fileSetImports`
     - `foldFilesCached`
     - `foldRepoFiles`
     - `gitBlobId`
