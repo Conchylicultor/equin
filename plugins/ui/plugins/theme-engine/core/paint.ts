@@ -5,7 +5,9 @@
 // browser adopts the server's elements by id and rewrites only what differs, so
 // the two must agree byte for byte — which is why every block goes through the
 // functions below and neither painter spells a selector, a style id or a
-// serialization of its own.
+// serialization of its own. (One deliberate exception: the server paints an
+// app's scoped blocks as the subset that differs from `:root` — see
+// `paintScopeOverBase` — which the browser's first commit completes.)
 
 import {
   appThemeScope,
@@ -25,7 +27,7 @@ import {
   type SkippedThemeValue,
 } from "./resolve-theme";
 import { renderGroupBlock } from "./serialize-vars";
-import { subThemeBlockValues, type SubTheme } from "./sub-theme";
+import { subThemeBlockValues, varsReadBy, type SubTheme } from "./sub-theme";
 import {
   DEFAULT_THEME_ID,
   type ColorAdjustment,
@@ -237,7 +239,8 @@ export interface ThemePaintSelection {
   /**
    * The apps whose scoped blocks to paint, on `[data-theme-scope="app:<id>"]`
    * — each with its own theme document. The browser paints every themed app;
-   * the server's first frame only the one a page load opens (theme-head.ts).
+   * the server's first frame only the one a page load opens (theme-head.ts),
+   * and only what it declares differently from `:root` (`paintScopeOverBase`).
    */
   appThemes: readonly { appId: string; themeId: ThemeId }[];
   /**
@@ -278,9 +281,10 @@ export interface ThemePainter {
 /**
  * A painter of several selections over the same sources — the server's
  * first-frame head paints one per app path. A block is a function of the
- * sources and of its (theme, scope) alone, so each is rendered once per
- * painter however many selections hold it (the `:root` blocks every entry
- * holds, an app's blocks for a theme). Holds nothing past the painter: a new
+ * sources and of its (theme, scope) alone — an app's, of the base it is
+ * painted over too — so each is rendered once per painter however many
+ * selections hold it (the `:root` blocks every entry holds, an app's blocks
+ * for a theme). Holds nothing past the painter: a new
  * render makes a new one.
  *
  * Never the sub-themes' or fixed themes' blocks: those are code, so the
@@ -303,12 +307,30 @@ export function themePainter(sources: ThemePaintSources): ThemePainter {
     return painted;
   };
 
+  const appScopes = new Map<string, Record<string, string>>();
+  const appScope = (
+    themeId: ThemeId,
+    baseThemeId: ThemeId,
+    scopeToken: string,
+  ) => {
+    const key = JSON.stringify([themeId, baseThemeId, scopeToken]);
+    let painted = appScopes.get(key);
+    if (painted === undefined) {
+      painted = paintScopeOverBase(sources, themeId, baseThemeId, scopeToken);
+      appScopes.set(key, painted);
+    }
+    return painted;
+  };
+
   return {
     paint(selection) {
       const styles: Record<string, string> = {};
       Object.assign(styles, scope(selection.baseThemeId));
       for (const { appId, themeId } of selection.appThemes) {
-        Object.assign(styles, scope(themeId, appThemeScope(appId)));
+        Object.assign(
+          styles,
+          appScope(themeId, selection.baseThemeId, appThemeScope(appId)),
+        );
       }
       const canvasKey = `${selection.canvasThemeId}\u0000${selection.canvasColorMode}`;
       let canvas = canvases.get(canvasKey);
@@ -403,6 +425,102 @@ function paintScopeStyles(
       scopeToken,
     );
   }
+  return styles;
+}
+
+/**
+ * One app scope's FIRST-FRAME blocks: only what the app's theme declares
+ * differently from the base theme `:root` wears — every token whose value
+ * differs in either scheme, plus every token reading one of those (through
+ * `var()`, across groups, transitively), so a derived token is recomputed
+ * inside the scope rather than inherited as `:root` computed it. A group with
+ * nothing left paints no element.
+ *
+ * Wears exactly what the complete block does: a token left out has the same
+ * value in both themes and reads only tokens that do too, so the scope
+ * inherits — or, on a scheme carrier, re-declares from the `:root` blocks —
+ * the value its own block would have declared. Both halves declare the same
+ * tokens, because the light half applies in either scheme: a token kept for
+ * its light value alone, left out of the dark half, would wear that light
+ * value in dark.
+ *
+ * Only the server's head paints this. The browser paints every app's complete
+ * blocks in its first commit, under the same ids — adopting these elements and
+ * rewriting them — so the subset is what a page shows only while the app's
+ * theme is pending, and the head never carries the tokens `:root` already
+ * holds a second time (the website's: 39 KB → ~7 KB of its HTML).
+ */
+function paintScopeOverBase(
+  sources: ThemePaintSources,
+  themeId: ThemeId,
+  baseThemeId: ThemeId,
+  scopeToken: string,
+): Record<string, string> {
+  const { groups, themesById } = sources;
+  const resolved = (id: ThemeId) =>
+    resolveTheme(themesById.has(id) ? id : DEFAULT_THEME_ID, themesById, groups)
+      .theme;
+  const app = resolved(themeId);
+  const base = resolved(baseThemeId);
+  const painted = (theme: ResolvedTheme, group: TokenGroupSpec) => {
+    const values = theme.groups[group.id]!;
+    assertComplete(group, values.light, values.dark);
+    return {
+      light: transformValues(values.light, theme.colorAdjust),
+      dark: transformValues(values.dark, theme.colorAdjust),
+    };
+  };
+  const appValues = groups.map((g) => painted(app, g));
+
+  // The custom properties that differ, then everything reading them.
+  const kept = new Set<string>();
+  const readers = new Map<string, string[]>();
+  groups.forEach((group, i) => {
+    const mine = appValues[i]!;
+    const theirs = painted(base, group);
+    for (const [key, cssVar] of Object.entries(group.vars)) {
+      if (
+        mine.light[key] !== theirs.light[key] ||
+        mine.dark[key] !== theirs.dark[key]
+      ) {
+        kept.add(cssVar);
+      }
+      for (const value of [mine.light[key], mine.dark[key]]) {
+        for (const read of varsReadBy(value ?? "")) {
+          const list = readers.get(read);
+          if (list === undefined) readers.set(read, [cssVar]);
+          else list.push(cssVar);
+        }
+      }
+    }
+  });
+  const queue = [...kept];
+  while (queue.length > 0) {
+    for (const reader of readers.get(queue.pop()!) ?? []) {
+      if (kept.has(reader)) continue;
+      kept.add(reader);
+      queue.push(reader);
+    }
+  }
+
+  const styles: Record<string, string> = {};
+  groups.forEach((group, i) => {
+    const pick = (values: Record<string, string>) =>
+      Object.fromEntries(
+        Object.entries(values).filter(([key]) => {
+          const cssVar = group.vars[key];
+          return cssVar !== undefined && kept.has(cssVar);
+        }),
+      );
+    const light = pick(appValues[i]!.light);
+    if (Object.keys(light).length === 0) return;
+    styles[themeStyleId(group.id, scopeToken)] = renderGroupBlock(
+      group,
+      light,
+      pick(appValues[i]!.dark),
+      themeScopeSelectors(scopeToken),
+    );
+  });
   return styles;
 }
 

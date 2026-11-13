@@ -68,15 +68,55 @@ describe("paintThemeStyles", () => {
     expect(Object.keys(styles)).toEqual([
       "theme-engine-palette",
       "theme-engine-shape",
+      // The app's shape is the base's: `:root` already declares it.
       "theme-scope-app:home-palette",
-      "theme-scope-app:home-shape",
       "theme-engine-canvas",
     ]);
     expect(styles["theme-engine-palette"]).toBe(
       `${ROOT_LIGHT} {\n  --primary: red;\n  --background: white;\n}\n${ROOT_DARK} {\n  --primary: blue;\n  --background: black;\n}`,
     );
-    expect(styles["theme-scope-app:home-palette"]).toStartWith(
-      '[data-theme-scope="app:home"] {\n  --primary: blue;',
+    // Only what differs from `:root`, in both halves: the light half applies
+    // in dark too, so a token kept for its light value is declared in both.
+    const home = themeScopeSelectors("app:home");
+    expect(styles["theme-scope-app:home-palette"]).toBe(
+      `${home.light} {\n  --primary: blue;\n}\n${home.darkScope} {\n${home.dark} {\n  --primary: blue;\n}\n}`,
+    );
+  });
+
+  it("paints an app's scope as what differs from :root, plus every token reading it, across groups", () => {
+    const frame = defineTokenGroup("frame", {
+      edge: { default: "var(--primary)" },
+      gap: { default: "var(--radius)" },
+    });
+    const styles = paintThemeStyles(
+      { ...sources, groups: [palette, shape, frame] },
+      {
+        baseThemeId: DEFAULT_THEME_ID,
+        canvasThemeId: DEFAULT_THEME_ID,
+        canvasColorMode: "light" as const,
+        appThemes: [{ appId: "home", themeId: "red" }],
+      },
+    );
+    const home = themeScopeSelectors("app:home");
+    expect(styles["theme-scope-app:home-palette"]).toBe(
+      `${home.light} {\n  --primary: red;\n}\n${home.darkScope} {\n${home.dark} {\n  --primary: blue;\n}\n}`,
+    );
+    // `--edge` reads `--primary`: inherited, it would be `:root`'s blue.
+    expect(styles["theme-scope-app:home-frame"]).toBe(
+      `${home.light} {\n  --edge: var(--primary);\n}\n${home.darkScope} {\n${home.dark} {\n  --edge: var(--primary);\n}\n}`,
+    );
+    expect(styles["theme-scope-app:home-shape"]).toBeUndefined();
+  });
+
+  it("paints no scope for an app wearing the base theme", () => {
+    const styles = paintThemeStyles(sources, {
+      baseThemeId: "red",
+      canvasThemeId: "red",
+      canvasColorMode: "light" as const,
+      appThemes: [{ appId: "home", themeId: "red" }],
+    });
+    expect(Object.keys(styles).filter((id) => id.includes("app:home"))).toEqual(
+      [],
     );
   });
 

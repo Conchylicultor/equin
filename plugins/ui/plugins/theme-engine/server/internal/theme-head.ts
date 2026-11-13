@@ -50,7 +50,10 @@ export interface ThemeHeadApp {
  *   `ThemePaintSelection`), the base every region inherits;
  * - the canvas — `<body>`'s background, in the theme and scheme of the app the
  *   page opens;
- * - that app's own scoped blocks, when it has a theme document — what the
+ * - that app's own scoped blocks, when it has a theme document — only the
+ *   tokens its theme declares differently from `:root`'s (and those reading
+ *   them), never a second copy of what `:root` already holds
+ *   (`paintScopeOverBase`) — what the
  *   page's app wears should its theme still be pending at the first commit (a
  *   resident theme source not hydrated while the selections are: the
  *   painter then leaves the served CSS up — a boot snapshot that failed whole

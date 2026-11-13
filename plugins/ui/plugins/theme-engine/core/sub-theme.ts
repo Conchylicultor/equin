@@ -142,6 +142,11 @@ interface Derivations {
 /** A `var(--name` followed by its end (`,` fallback or `)`); the name is captured. */
 const VAR_READ = /var\(\s*(--[^\s,()]+)\s*[,)]/g;
 
+/** The custom properties a declared value reads (`var(--x)`, `var(--x, …)`), in order. */
+export function varsReadBy(value: string): string[] {
+  return [...value.matchAll(VAR_READ)].map(([, name]) => name!);
+}
+
 // A function of the group's spec alone, which is immutable data (declared in
 // code or generated at build), so it is derived once per spec object and held
 // as long as the spec is: nothing to invalidate. Before, every call compiled a

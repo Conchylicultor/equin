@@ -124,7 +124,8 @@ function usePaintedStyle(id: string, text: string | null): void {
 
   // Content update — writes textContent in place only when the rendered CSS
   // actually changed (the server painted the same bytes, so an adopted element
-  // is usually left alone). Runs after the lifecycle effect above (same commit,
+  // is usually left alone — except an app's scoped blocks, which the server
+  // paints as the subset that differs from `:root` and this completes). Runs after the lifecycle effect above (same commit,
   // declaration order), so the element exists. While `text` is null (theme
   // pending) it leaves the server-painted CSS untouched — painting a guess here
   // would overwrite it with wrong values for one window.
