@@ -247,10 +247,11 @@ pub fn create(app: &AppHandle, observer: Option<Observer>) -> tauri::Result<Webv
     let window = with_material(builder).build()?;
 
     let handle = app.clone();
-    window.on_window_event(move |event| {
-        if let WindowEvent::Focused(false) = event {
-            hide(&handle);
-        }
+    let shaped = window.clone();
+    window.on_window_event(move |event| match event {
+        WindowEvent::Focused(false) => hide(&handle),
+        WindowEvent::Resized(_) => reshadow(&shaped),
+        _ => {}
     });
     Ok(window)
 }
@@ -354,8 +355,33 @@ pub fn toggle(app: &AppHandle, anchor: Anchor) {
         let _ = window.set_position(pos);
     }
     let _ = window.show();
+    reshadow(&window);
     let _ = window.set_focus();
 }
+
+/// Recompute the window's shadow from what it shows now. macOS derives a
+/// transparent window's shadow from its alpha but never re-derives it by
+/// itself: a shadow taken from an earlier frame (another height, a page that
+/// had not painted its rounded material yet) outlived it, drawing square
+/// bottom corners under the rounded material until the helper restarted.
+/// Done on every resize and every show, so the shadow is always the current
+/// rounded shape.
+#[cfg(target_os = "macos")]
+fn reshadow(window: &WebviewWindow) {
+    let target = window.clone();
+    let queued = window.run_on_main_thread(move || match target.ns_window() {
+        // SAFETY: Tauri's NSWindow pointer for this live window, used on the
+        // main thread.
+        Ok(ptr) => unsafe { (*(ptr as *const objc2_app_kit::NSWindow)).invalidateShadow() },
+        Err(e) => eprintln!("equin-desktop: panel shadow not refreshed: {e}"),
+    });
+    if let Err(e) = queued {
+        eprintln!("equin-desktop: panel shadow not refreshed: {e}");
+    }
+}
+
+#[cfg(not(target_os = "macos"))]
+fn reshadow(_window: &WebviewWindow) {}
 
 pub fn set_height(window: &WebviewWindow, px: f64) -> tauri::Result<f64> {
     let h = if px.is_finite() { px.clamp(MIN_HEIGHT, MAX_HEIGHT) } else { INITIAL_HEIGHT };
