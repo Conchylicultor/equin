@@ -32,7 +32,7 @@ import {
 } from "@plugins/conversations/plugins/runtime-catalog/core";
 import {
   assertClaudeCodeReady,
-  checkClaudeCode,
+  checkLaunchReadiness,
 } from "@plugins/infra/plugins/claude-cli/plugins/availability/server";
 import { claudeCodeBlockMessage } from "@plugins/infra/plugins/claude-cli/plugins/availability/core";
 import { getModelCatalog } from "@plugins/conversations/plugins/model-provider/plugins/catalog/server";
@@ -715,12 +715,12 @@ async function preflightResume(
   }
   // Last: the only check that may start a process (a re-probe when the last
   // answer is not `ready`).
-  const claude = await checkClaudeCode();
-  if (claude.kind !== "ready") {
+  const launch = await checkLaunchReadiness();
+  if (launch.kind === "blocked") {
     return {
       kind: "blocked",
       reason: "claude-code-unavailable",
-      message: claudeCodeBlockMessage(claude),
+      message: claudeCodeBlockMessage(launch.block),
     };
   }
   return { kind: "ok" };

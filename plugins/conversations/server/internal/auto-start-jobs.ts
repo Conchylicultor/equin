@@ -25,7 +25,7 @@ import {
   prepareConversation,
   type PreparedConversation,
 } from "./lifecycle";
-import { checkClaudeCode } from "@plugins/infra/plugins/claude-cli/plugins/availability/server";
+import { checkLaunchReadiness } from "@plugins/infra/plugins/claude-cli/plugins/availability/server";
 import { resolveModel } from "@plugins/conversations/plugins/model-provider/core";
 import { getModelCatalog } from "@plugins/conversations/plugins/model-provider/plugins/catalog/server";
 import { reportAutoStartModelUnavailable } from "./auto-start-model-report";
@@ -267,14 +267,16 @@ export const maybeLaunchTaskJob = defineJob({
       );
       return;
     }
-    // Claude Code missing or signed out: leave the task armed rather than
-    // throw (graphile would retry into a dead letter). When Claude Code turns
-    // ready, `onClaudeCodeReady` re-runs the armed-task reconcile, which wakes
-    // this job again.
-    const claude = await checkClaudeCode();
-    if (claude.kind !== "ready") {
+    // The account it would launch on cannot run an agent (the computer's
+    // Claude Code missing or signed out, on the system account): leave the
+    // task armed rather than throw (graphile would retry into a dead letter).
+    // When launches can run again — Claude Code turns ready, or an account
+    // with its own credential is made active — `onClaudeCodeReady` re-runs
+    // the armed-task reconcile, which wakes this job again.
+    const launch = await checkLaunchReadiness();
+    if (launch.kind === "blocked") {
       console.warn(
-        `[tasks.maybe-launch] task ${taskId} stays armed: Claude Code is ${claude.kind}`,
+        `[tasks.maybe-launch] task ${taskId} stays armed: Claude Code is ${launch.block.kind}`,
       );
       return;
     }

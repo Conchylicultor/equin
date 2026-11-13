@@ -1,4 +1,6 @@
 import { HttpError } from "@plugins/infra/plugins/endpoints/core";
+import { SYSTEM_ACCOUNT_ID } from "@plugins/infra/plugins/claude-cli/plugins/accounts/core";
+import { activeClaudeAccountId } from "@plugins/infra/plugins/claude-cli/plugins/accounts/server";
 import {
   claudeCodeBlockMessage,
   type ClaudeCodeBlock,
@@ -82,6 +84,53 @@ export async function checkClaudeCode(): Promise<ClaudeCodeStatus> {
   return probe();
 }
 
+/** Whether an agent launched now can start, and if not, why. */
+export type LaunchReadiness =
+  { kind: "ready" } | { kind: "blocked"; block: ClaudeCodeBlock };
+
+/**
+ * Can an agent launched now start? It runs on the active Claude account, so
+ * that is the account asked about:
+ *
+ * - the computer's own login (the system account): its Claude Code status,
+ *   {@link checkClaudeCode};
+ * - an added account (a plan token or an API key): ready. It brings its own
+ *   credential, handed to Claude Code in the agent's environment with every
+ *   other one removed — the computer's login plays no part, so the computer
+ *   being signed out must not hold it back. Nothing is probed: Claude Code's
+ *   `initialize` only says a credential is present, never whether it works.
+ *   The agent's own start is the check — a credential Claude Code refuses
+ *   ends the agent before `ready`, failing the launch loudly with the reason.
+ *
+ * With auto-switch on, the runtime may start the agent on another account
+ * than the active one; that account's own start checks it the same way.
+ */
+export async function checkLaunchReadiness(): Promise<LaunchReadiness> {
+  if ((await activeClaudeAccountId()) !== SYSTEM_ACCOUNT_ID)
+    return { kind: "ready" };
+  const status = await checkClaudeCode();
+  return status.kind === "ready"
+    ? { kind: "ready" }
+    : { kind: "blocked", block: status };
+}
+
+/** The active account the last {@link noteActiveAccountChanged} saw; null before the first. */
+let lastActive: string | null = null;
+
+/**
+ * The accounts file was rewritten: when another account than before is now
+ * active and it brings its own credential, launches held back by the
+ * computer's sign-in can run — wake {@link onClaudeCodeReady}'s listeners.
+ * The first call only records the active account: nothing was switched.
+ */
+export async function noteActiveAccountChanged(): Promise<void> {
+  const active = await activeClaudeAccountId();
+  const before = lastActive;
+  lastActive = active;
+  if (before === null || before === active) return;
+  if (active !== SYSTEM_ACCOUNT_ID) for (const fn of readyListeners) fn();
+}
+
 /** Probe now, whatever the last answer was ("Check again"). */
 export function recheckClaudeCodeNow(): Promise<ClaudeCodeStatus> {
   return probe();
@@ -97,8 +146,10 @@ export function noteClaudeCodeFailure(): void {
 }
 
 /**
- * Run `fn` whenever Claude Code turns `ready` after having been blocked — the
- * cue for work that waited on it (armed auto-start tasks) to go again.
+ * Run `fn` whenever a launch that was blocked can run again — the cue for work
+ * that waited on it (armed auto-start tasks) to go again: the computer's
+ * Claude Code turned `ready` after a block, or the active account became one
+ * that brings its own credential ({@link noteActiveAccountChanged}).
  * Returns the unsubscribe.
  */
 export function onClaudeCodeReady(fn: () => void): () => void {
@@ -133,10 +184,12 @@ export class ClaudeCodeUnavailableError extends HttpError {
 }
 
 /**
- * Refuse, before anything is written, to start an agent that cannot run.
- * The call every launch and resume path makes up front.
+ * Refuse, before anything is written, to start an agent that cannot run on
+ * the account it launches on ({@link checkLaunchReadiness}). The call every
+ * launch and resume path makes up front.
  */
 export async function assertClaudeCodeReady(): Promise<void> {
-  const status = await checkClaudeCode();
-  if (status.kind !== "ready") throw new ClaudeCodeUnavailableError(status);
+  const launch = await checkLaunchReadiness();
+  if (launch.kind === "blocked")
+    throw new ClaudeCodeUnavailableError(launch.block);
 }

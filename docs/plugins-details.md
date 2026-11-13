@@ -33400,6 +33400,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `addClaudeAccountWithCredential`
               - `readClaudeAccounts`
               - `selectClaudeAccountById`
+              - `watchClaudeAccounts`
             - Routes:
               - `POST /api/claude-accounts/add`
               - `POST /api/claude-accounts/remove`
@@ -33441,7 +33442,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/claude-cli/availability`
               - `infra/claude-cli/sdk`
               - `infra/claude-cli/sign-in`
-        - **`availability`** — Claude Code availability, shown: the pieces of the health report's Claude Code row (useClaudeCodeHealth — critical while the computer is signed out — ClaudeCodeDetail with Claude Code's own note, ClaudeCodeActions' Check again; the row itself is the sdk runtime's, which adds the in-app sign-in, the Agent SDK and the running agents), useClaudeCodeLaunchBlock() for launch controls to disable themselves with where to sign in, and a re-check when the user returns to the window while it is blocked. Claude Code availability: probes whether the computer is signed in to Claude Code (the build the Agent SDK ships — one session on the computer's own login reading its initialize answer: version and account, no turn; the machine half serves the answer as the claude-code-status push value and POST /api/claude-code/recheck) and gives every launch path assertClaudeCodeReady() — so an agent that cannot run is refused up front, pointing at the in-app sign-in. onClaudeCodeProbed hands every fresh answer to work keyed off the Claude Code version (which moves only with an SDK upgrade).
+        - **`availability`** — Claude Code availability, shown: the pieces of the health report's Claude Code row (useClaudeCodeHealth — critical while the computer is signed out — ClaudeCodeDetail with Claude Code's own note, ClaudeCodeActions' Check again; the row itself is the sdk runtime's, which adds the in-app sign-in, the Agent SDK and the running agents), useClaudeCodeLaunchBlock() for launch controls to disable themselves with where to sign in, and a re-check when the user returns to the window while it is blocked. Claude Code availability: probes whether the computer is signed in to Claude Code (the build the Agent SDK ships — one session on the computer's own login reading its initialize answer: version and account, no turn; the machine half serves the answer as the claude-code-status push value and POST /api/claude-code/recheck) and gives every launch path checkLaunchReadiness() / assertClaudeCodeReady() — asked about the account the launch runs on (the computer's login is checked only for the system account; an added plan token or API key brings its own credential) — so an agent that cannot run is refused up front, pointing at the in-app sign-in. onClaudeCodeProbed hands every fresh answer to work keyed off the Claude Code version (which moves only with an SDK upgrade).
           - Web:
             - Contributes: `Core.Root` → `RecheckOnReturn`
             - Uses:
@@ -33462,11 +33463,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Server:
             - Contributes: `resource.declare` "claude-code-status"
             - Uses:
+              - `infra/claude-cli/accounts.activeClaudeAccountId`
               - `infra/claude-cli/sdk.claudeSessionEnv`
               - `infra/claude-cli/sdk.readClaudeInitialize`
+            - Exports (types): `LaunchReadiness`
             - Exports (values):
               - `assertClaudeCodeReady`
               - `checkClaudeCode`
+              - `checkLaunchReadiness`
               - `ClaudeCodeUnavailableError`
               - `noteClaudeCodeFailure`
               - `onClaudeCodeProbed`
@@ -33475,6 +33479,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Resources: `claude-code-status` (push, notified)
           - Machine:
             - Uses:
+              - `infra/claude-cli/accounts.watchClaudeAccounts`
               - `infra/endpoints.implementMachine`
               - `network/live.serveValue`
             - Routes: `POST /api/claude-code/recheck`

@@ -43,6 +43,7 @@ The Claude accounts agents can run on, and which one new agents launch on.
     - `addClaudeAccountWithCredential`
     - `readClaudeAccounts`
     - `selectClaudeAccountById`
+    - `watchClaudeAccounts`
   - Routes:
     - `POST /api/claude-accounts/add`
     - `POST /api/claude-accounts/remove`

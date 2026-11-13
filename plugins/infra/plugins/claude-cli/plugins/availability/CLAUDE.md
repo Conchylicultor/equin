@@ -60,14 +60,39 @@ answer anyway.
 `~/.claude.json` is deliberately not watched: every running agent rewrites it
 constantly, and login state lives in the macOS Keychain anyway.
 
+## The launch gate asks about the launch's account
+
+An agent runs on the active Claude account (`infra/claude-cli/accounts`), so
+the gate every launch path asks — `checkLaunchReadiness()` — is about that
+account, not about the computer:
+
+- the **system account** (the computer's own login): the probe's status above;
+- an **added account** (a plan token or an API key): `ready`, with no probe. It
+  brings its own credential, handed to Claude Code in the agent's environment
+  with every other one removed, so the computer being signed out plays no
+  part. A probe could not vouch for it anyway: `initialize` only says a
+  credential is present. The agent's own start is the check — a credential
+  Claude Code refuses ends the agent before `ready`, failing the launch with
+  the reason.
+
+Switching the active account to an added one wakes the launches the computer's
+sign-in held back: the machine half watches the accounts file
+(`watchClaudeAccounts`) and `noteActiveAccountChanged` runs the
+`onClaudeCodeReady` listeners. The web's `useClaudeCodeLaunchBlock()` follows
+the same rule. The health row and model discovery keep asking about the
+computer's login — that is what they are about.
+
 ## What consumers use
 
 - `assertClaudeCodeReady()` — the first thing every launch and resume path does,
-  before anything is written. Throws `ClaudeCodeUnavailableError`, an
+  before anything is written (over `checkLaunchReadiness()`). Throws `ClaudeCodeUnavailableError`, an
   `HttpError(409)` whose message carries the fix, so every endpoint answers with
-  it without knowing about it. Resume paths use `checkClaudeCode()` and return
-  the `claude-code-unavailable` resume-blocked reason instead.
-- `onClaudeCodeReady(fn)` — runs when the status turns `ready` after a block.
+  it without knowing about it. Resume paths and the auto-start queue use
+  `checkLaunchReadiness()` and return the `claude-code-unavailable`
+  resume-blocked reason / leave the task armed instead. `checkClaudeCode()` is
+  the computer's own status (model discovery reads it).
+- `onClaudeCodeReady(fn)` — runs when a blocked launch can run again: the
+  status turns `ready` after a block, or an added account is made active.
   The auto-start queue leaves tasks armed while blocked; tasks/server re-runs its
   armed-task reconcile on this.
 - web: the health report's **Claude Code** row (critical while signed out, with
@@ -80,7 +105,7 @@ constantly, and login state lives in the macOS Keychain anyway.
 
 ## Plugin reference
 
-- Description: Claude Code availability, shown: the pieces of the health report's Claude Code row (useClaudeCodeHealth — critical while the computer is signed out — ClaudeCodeDetail with Claude Code's own note, ClaudeCodeActions' Check again; the row itself is the sdk runtime's, which adds the in-app sign-in, the Agent SDK and the running agents), useClaudeCodeLaunchBlock() for launch controls to disable themselves with where to sign in, and a re-check when the user returns to the window while it is blocked. Claude Code availability: probes whether the computer is signed in to Claude Code (the build the Agent SDK ships — one session on the computer's own login reading its initialize answer: version and account, no turn; the machine half serves the answer as the claude-code-status push value and POST /api/claude-code/recheck) and gives every launch path assertClaudeCodeReady() — so an agent that cannot run is refused up front, pointing at the in-app sign-in. onClaudeCodeProbed hands every fresh answer to work keyed off the Claude Code version (which moves only with an SDK upgrade).
+- Description: Claude Code availability, shown: the pieces of the health report's Claude Code row (useClaudeCodeHealth — critical while the computer is signed out — ClaudeCodeDetail with Claude Code's own note, ClaudeCodeActions' Check again; the row itself is the sdk runtime's, which adds the in-app sign-in, the Agent SDK and the running agents), useClaudeCodeLaunchBlock() for launch controls to disable themselves with where to sign in, and a re-check when the user returns to the window while it is blocked. Claude Code availability: probes whether the computer is signed in to Claude Code (the build the Agent SDK ships — one session on the computer's own login reading its initialize answer: version and account, no turn; the machine half serves the answer as the claude-code-status push value and POST /api/claude-code/recheck) and gives every launch path checkLaunchReadiness() / assertClaudeCodeReady() — asked about the account the launch runs on (the computer's login is checked only for the system account; an added plan token or API key brings its own credential) — so an agent that cannot run is refused up front, pointing at the in-app sign-in. onClaudeCodeProbed hands every fresh answer to work keyed off the Claude Code version (which moves only with an SDK upgrade).
 - Web:
   - Contributes: `Core.Root` → `RecheckOnReturn`
   - Uses:
@@ -101,11 +126,14 @@ constantly, and login state lives in the macOS Keychain anyway.
 - Server:
   - Contributes: `resource.declare` "claude-code-status"
   - Uses:
+    - `infra/claude-cli/accounts.activeClaudeAccountId`
     - `infra/claude-cli/sdk.claudeSessionEnv`
     - `infra/claude-cli/sdk.readClaudeInitialize`
+  - Exports (types): `LaunchReadiness`
   - Exports (values):
     - `assertClaudeCodeReady`
     - `checkClaudeCode`
+    - `checkLaunchReadiness`
     - `ClaudeCodeUnavailableError`
     - `noteClaudeCodeFailure`
     - `onClaudeCodeProbed`
@@ -114,6 +142,7 @@ constantly, and login state lives in the macOS Keychain anyway.
   - Resources: `claude-code-status` (push, notified)
 - Machine:
   - Uses:
+    - `infra/claude-cli/accounts.watchClaudeAccounts`
     - `infra/endpoints.implementMachine`
     - `network/live.serveValue`
   - Routes: `POST /api/claude-code/recheck`

@@ -1,10 +1,9 @@
-import { acquireDirWatch } from "@plugins/infra/plugins/file-watcher/server";
 import { serveValue } from "@plugins/network/plugins/live/machine";
 import { getConfig, watchConfig } from "@plugins/config_v2/server";
 import { profileNameConfig } from "@plugins/infra/plugins/host-account/core";
 import { claudeAccounts, withStandInNames } from "../../core";
-import { claudeAccountsDir } from "../../data-dirs";
 import { readClaudeAccounts } from "./store";
+import { watchClaudeAccounts } from "./watch";
 
 /**
  * The name the added accounts are shown under while the user shows no name
@@ -29,11 +28,7 @@ export const claudeAccountsServed = serveValue(claudeAccounts, {
       getConfig(profileNameConfig).showName ? "" : GENERIC_ACCOUNT_NAME,
     ),
   whileSubscribed: async (_params, notify) => {
-    const release = await acquireDirWatch({
-      dir: await claudeAccountsDir.ensure(),
-      scope: "subtree",
-      onChange: () => notify(),
-    });
+    const release = await watchClaudeAccounts(() => notify());
     // A write between the first read and the watch opening produced no event.
     notify();
     const unwatch = watchConfig(profileNameConfig, () => notify());
