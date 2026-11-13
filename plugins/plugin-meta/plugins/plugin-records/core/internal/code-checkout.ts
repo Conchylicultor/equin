@@ -2,8 +2,8 @@ import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import type { RepoFiles } from "@plugins/framework/plugins/tooling/core";
 import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { parseBunLock } from "@plugins/infra/plugins/deps/plugins/npm/plugins/lock-closure/core";
-import type { ModuleGraphInput, OutsideFiles } from "./module-graph";
-import { outsideFilesAt } from "./outside-files";
+import type { ModuleGraphInput } from "./module-graph";
+import { outsideFilesOf } from "./outside-files";
 
 /**
  * Where a record producer's CODE is read from to key its records — never
@@ -31,7 +31,9 @@ function isUnder(root: string, path: string): boolean {
 
 // The running checkout as a module-graph input, once per process: its code
 // does not change under the process that loaded it.
-let running: Promise<ModuleGraphInput["snapshot"]> | undefined;
+let running:
+  | Promise<Pick<ModuleGraphInput, "snapshot" | "readOutside">>
+  | undefined;
 
 /**
  * The running checkout as the module graph reads a producer's code from it:
@@ -42,19 +44,12 @@ let running: Promise<ModuleGraphInput["snapshot"]> | undefined;
  */
 async function lockSetAt(
   root: AppPath,
-  readOutside: OutsideFiles,
-): Promise<RepoFiles> {
+): Promise<Pick<ModuleGraphInput, "snapshot" | "readOutside">> {
+  // The set's members are filled once read; its one reader (`outsideFilesOf`,
+  // by the set's identity) reads them and every module outside it.
   const members = new Map<string, string>();
-  const lock = await readOutside("bun.lock");
-  if (lock !== null) {
-    members.set("bun.lock", lock);
-    for (const patch of Object.values(parseBunLock(lock).patched)) {
-      const text = await readOutside(patch);
-      if (text !== null) members.set(patch, text);
-    }
-  }
-  const paths = [...members.keys()].sort();
-  return {
+  let paths: string[] = [];
+  const set: RepoFiles = {
     root,
     all: () => paths,
     has: (p) => members.has(p),
@@ -67,11 +62,18 @@ async function lockSetAt(
     },
     read: async (p) => members.get(p) ?? null,
   };
+  const readOutside = outsideFilesOf(set);
+  const lock = await readOutside("bun.lock");
+  if (lock !== null) {
+    members.set("bun.lock", lock);
+    for (const patch of Object.values(parseBunLock(lock).patched)) {
+      const text = await readOutside(patch);
+      if (text !== null) members.set(patch, text);
+    }
+  }
+  paths = [...members.keys()].sort();
+  return { snapshot: set, readOutside };
 }
-
-// One reader for the process, so every identity read from the running
-// checkout grows one module graph (the graph is shared by reader identity).
-const readRunning = outsideFilesAt(REPO_ROOT);
 
 /**
  * The module-graph input to read the code at `url` from, and the module's
@@ -97,16 +99,12 @@ export async function codeCheckoutOf(
       `[plugin-records] ${url} is neither in the set read (${input.snapshot.root}) nor in the checkout this process runs from (${root}): a producer's identity is its defining module`,
     );
   // A failed read is not kept: the next identity asks the disk again.
-  running ??= lockSetAt(root, readRunning).catch((err: unknown) => {
+  running ??= lockSetAt(root).catch((err: unknown) => {
     running = undefined;
     throw err;
   });
   return {
-    input: {
-      snapshot: await running,
-      store: input.store,
-      readOutside: readRunning,
-    },
+    input: { ...(await running), store: input.store },
     module: path.slice(root.length + 1),
   };
 }

@@ -399,6 +399,7 @@ its docblock records — and then lowered as readily as raised.
     - `infra/deps/npm/lock-closure.parseBunLock`
     - `infra/deps/npm/lock-resolutions.lockfileNpmResolutions`
     - `infra/host-fs/user-path.joinAppPath`
+    - `infra/paths/repo-root.REPO_ROOT`
     - `packages/macrotask-yield.yieldMacrotask`
     - `packages/shared-work.sharedMemo`
     - `packages/shared-work.sharedWork`

@@ -37923,13 +37923,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/host-fs/user-path.asAppPath`
             - Exports (values): `REPO_ROOT`
           - Cross-plugin:
-            - Imported by: 49 plugins — full list in [`plugins/infra/plugins/paths/plugins/repo-root/REFERENCE.md`](../plugins/infra/plugins/paths/plugins/repo-root/REFERENCE.md)
+            - Imported by: 50 plugins — full list in [`plugins/infra/plugins/paths/plugins/repo-root/REFERENCE.md`](../plugins/infra/plugins/paths/plugins/repo-root/REFERENCE.md)
               - `framework` ×14
               - `infra` ×8
               - `apps` ×7
               - `build` ×6
+              - `plugin-meta` ×4
               - `debug` ×3
-              - `plugin-meta` ×3
               - `reports` ×3
               - `code-explorer`
               - `config_v2`
@@ -46152,6 +46152,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/deps/npm/lock-closure.parseBunLock`
           - `infra/deps/npm/lock-resolutions.lockfileNpmResolutions`
           - `infra/host-fs/user-path.joinAppPath`
+          - `infra/paths/repo-root.REPO_ROOT`
           - `packages/macrotask-yield.yieldMacrotask`
           - `packages/shared-work.sharedMemo`
           - `packages/shared-work.sharedWork`
