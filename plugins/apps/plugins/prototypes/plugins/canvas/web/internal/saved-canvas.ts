@@ -59,6 +59,8 @@ export const SavedCanvasSchema = z.object({
   swipeAt: z.number().min(0).max(1),
   spread: z.string().nullable(),
   linked: z.array(z.string()),
+  /** Absent in a canvas saved before a variant could be in the URL: off. */
+  linkVariant: z.boolean().optional(),
 });
 
 export type SavedCanvas = z.infer<typeof SavedCanvasSchema>;
@@ -80,6 +82,7 @@ export function serializeCanvas(state: CanvasState): SavedCanvas {
     swipeAt: state.swipeAt,
     spread: state.spread,
     linked: [...state.linked],
+    linkVariant: state.linkVariant,
   };
 }
 
@@ -87,7 +90,7 @@ export function serializeCanvas(state: CanvasState): SavedCanvas {
  * What a saved canvas reopens as: `restored`, or `rejected` with why — a value
  * written by an older shape of the canvas, or one that breaks a rule the
  * reducer keeps (exactly one frame holds the shared picks and it is the first
- * prototype frame; ids are unique and below `nextId`; the selection is on the
+ * prototype frame — none, when the variant is in the URL; ids are unique and below `nextId`; the selection is on the
  * canvas). A Swipe layout without exactly two frames is settled, not rejected.
  */
 export type RestoredCanvas =
@@ -113,9 +116,20 @@ export function restoreCanvas(raw: unknown): RestoredCanvas {
       reason: "the selected frame is not on the canvas",
     };
   }
+  const linkVariant = saved.linkVariant ?? false;
   const protos = saved.frames.filter((f) => f.kind === "prototype");
   const sharedAt = protos.flatMap((f, i) => (f.picks === "shared" ? [i] : []));
-  if (protos.length > 0 && (sharedAt.length !== 1 || sharedAt[0] !== 0)) {
+  if (linkVariant && sharedAt.length > 0) {
+    return {
+      kind: "rejected",
+      reason: "a frame holds the shared picks while the variant is in the URL",
+    };
+  }
+  if (
+    !linkVariant &&
+    protos.length > 0 &&
+    (sharedAt.length !== 1 || sharedAt[0] !== 0)
+  ) {
     return {
       kind: "rejected",
       reason: "the shared picks are not held by frame A alone",
@@ -128,6 +142,7 @@ export function restoreCanvas(raw: unknown): RestoredCanvas {
     state: settleLayout({
       ...saved,
       linked: new Set(saved.linked),
+      linkVariant,
       preview: null,
     }),
   };

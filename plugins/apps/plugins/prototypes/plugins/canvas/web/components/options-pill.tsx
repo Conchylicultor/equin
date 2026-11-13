@@ -25,6 +25,7 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { ColorPicker } from "@plugins/primitives/plugins/css/plugins/color-picker/web";
+import { SwitchIndicator } from "@plugins/primitives/plugins/css/plugins/switch/web";
 import {
   Popover,
   PopoverContent,
@@ -46,6 +47,7 @@ import {
 import { documentOptions, useFramePicks, usePrototypeDetail } from "../context";
 import { frameChipsTheme, optionRowsTheme } from "../internal/sub-themes";
 import {
+  frameA,
   previewedValue,
   prototypeFrames,
   spreadValues,
@@ -62,6 +64,7 @@ const tuneIcon = symbol("tune");
 const viewColumnIcon = symbol("view-column");
 const paletteIcon = symbol("palette");
 const chevronDownIcon = symbol("keyboard-arrow-down");
+const resetIcon = symbol("restart-alt");
 
 /** Which frame's options a popover edits, and how it is named in its header. */
 interface OptionsTarget {
@@ -191,6 +194,19 @@ function OptionsPopover({
             <Stack gap="none" role="group" aria-label="Options">
               <PopoverHeading
                 title={title}
+                linkVariant={
+                  // The URL names frame A's variant: the switch is A's alone.
+                  frameA(canvas.frames)?.id === frame.id
+                    ? {
+                        on: canvas.linkVariant,
+                        toggle: () =>
+                          dispatch({
+                            type: "setLinkVariant",
+                            on: !canvas.linkVariant,
+                          }),
+                      }
+                    : null
+                }
                 onReset={
                   Object.keys(picks).length > 0
                     ? () => dispatch({ type: "resetPicks", id: frame.id })
@@ -264,36 +280,66 @@ function valueLabel(value: string): string {
   return value.startsWith("#") ? value : humanizeToken(value);
 }
 
-/** The popover's header row (`.ph`): `Options · <frame>`, and Reset when picked. */
+/**
+ * The popover's header row (`.ph`): `Options · <frame>`, then — on frame A —
+ * the "In link" switch (the frame's variant in the page's URL, so the link
+ * opens exactly it and picks under it leave the shared ones alone), then the
+ * reset icon while the frame has a pick.
+ */
 function PopoverHeading({
   title,
+  linkVariant,
   onReset,
 }: {
   title: string;
+  linkVariant: { on: boolean; toggle: () => void } | null;
   onReset: (() => void) | null;
 }): ReactElement {
   return (
-    <Line className="gap-sm p-row">
+    <Line className="gap-2xs p-row">
       <Fill>
         <Text as="h5" variant="group" tone="muted">
           {title}
         </Text>
       </Fill>
+      {linkVariant === null ? null : (
+        <WithTooltip
+          content={
+            linkVariant.on
+              ? "The link opens this variant. Your own picks stay as they are."
+              : "Put this variant in the link, without changing your own picks."
+          }
+        >
+          <Line
+            as="button"
+            type="button"
+            role="switch"
+            aria-checked={linkVariant.on}
+            onClick={linkVariant.toggle}
+            className={cn(
+              "focus-ring gap-xs rounded-control px-xs text-caption hover:text-foreground",
+              linkVariant.on ? "text-foreground" : "text-faint-foreground",
+            )}
+          >
+            <span>In link</span>
+            <SwitchIndicator checked={linkVariant.on} />
+          </Line>
+        </WithTooltip>
+      )}
       {/* Always laid out, hidden while there is nothing to reset: the row is
           as tall as the button either way, so a first pick or a reset never
           resizes the popover. `invisible` also takes it out of the tab order. */}
       <ControlSizeProvider size="xs">
-        <Button
-          variant="ghost"
+        <IconButton
+          icon={resetIcon}
+          label="Reset to defaults"
           className={cn(
             "text-faint-foreground",
             onReset === null && "invisible",
           )}
           onClick={onReset ?? undefined}
           aria-hidden={onReset === null}
-        >
-          Reset to defaults
-        </Button>
+        />
       </ControlSizeProvider>
     </Line>
   );

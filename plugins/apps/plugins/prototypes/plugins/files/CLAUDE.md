@@ -686,11 +686,13 @@ for the `checkpoints` plugin's end-of-turn job, and the history contract
     - `parseMocks`
     - `parseOptionColor`
     - `parseOptionDeclaration`
+    - `parseVariantQuery`
     - `parseViewport`
     - `pickedColor`
     - `pickedValue`
     - `PicksChangeSchema`
     - `picksFromQuery`
+    - `picksOfVariantParam`
     - `presetSize`
     - `problemsOf`
     - `protoIdKind`
@@ -723,6 +725,8 @@ for the `checkpoints` plugin's end-of-turn job, and the history contract
     - `StoredPicksSchema`
     - `UNTITLED_PROTOTYPE`
     - `validatePrototypeFolder`
+    - `VARIANT_QUERY_PATTERN`
+    - `variantParam`
     - `viewportProblemDetail`
     - `viewportRenderSize`
     - `viewportWord`

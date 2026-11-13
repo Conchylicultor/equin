@@ -25,6 +25,14 @@ contributions: [...idChipServer({ kind, surfaces, resolve })]
 A family keeps its `surfaces` in its own `core/` and passes it to both, so the
 two halves cannot disagree.
 
+- **`qualifier`** (both factories, the same RegExp from the family's `core/`):
+  a chip may name a VIEW of its referent after the id (a prototype's variant,
+  `proto-…?pane=floating`). The pattern becomes `idChipPattern(kind,
+  qualifier)` (the id, then the qualifier optionally); `splitIdChipToken`
+  splits a token back into id and qualifier. Web: `qualifier.usePane(id,
+  written)` is the pane it opens and `qualifier.label(written)` is added to the
+  title. Server: every token is resolved by its id. Generic chip only (a
+  custom `component` reads the token itself).
 - `idChipServer({ referentTag })` names the tag a model reads the resolved id
   as; it defaults to the kind's label lowercased. `page-link` passes `"page"`
   (a `block-…` resolves to its page) so model-facing text stayed byte-identical
@@ -55,10 +63,12 @@ derives from the kind; nothing here names a family.
     - `ids.IdKinds`
     - `ids.IdPresenter`
     - `primitives/css/link-chip.LinkChip`
+    - `primitives/pane.PaneTarget`
     - `primitives/pane.usePaneToggle`
     - `primitives/text-editor/inline-chip.inlineChip`
     - `primitives/text-editor/inline-chip.InlineChip`
     - `ui/icons.Icon`
+  - Exports (types): `IdChipQualifier`
   - Exports (values):
     - `idChip`
     - `rowReferent`
@@ -78,6 +88,7 @@ derives from the kind; nothing here names a family.
   - Exports (values):
     - `idChipPattern`
     - `idReferentTag`
+    - `splitIdChipToken`
 - Cross-plugin:
   - Imported by:
     - `active-data/attempt`

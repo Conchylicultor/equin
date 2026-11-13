@@ -341,10 +341,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ids.IdKinds`
           - `ids.IdPresenter`
           - `primitives/css/link-chip.LinkChip`
+          - `primitives/pane.PaneTarget`
           - `primitives/pane.usePaneToggle`
           - `primitives/text-editor/inline-chip.inlineChip`
           - `primitives/text-editor/inline-chip.InlineChip`
           - `ui/icons.Icon`
+        - Exports (types): `IdChipQualifier`
         - Exports (values):
           - `idChip`
           - `rowReferent`
@@ -364,6 +366,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `idChipPattern`
           - `idReferentTag`
+          - `splitIdChipToken`
       - Cross-plugin:
         - Imported by:
           - `active-data/attempt`
@@ -431,7 +434,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/icons.Icon`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/color-palette --muted-foreground`
-    - **`prototype`** — Renders raw `proto-<id>` strings inline as clickable chips (the generic id chip: the mock's title) that open the mock in the prototype-detail pane, and presents the prototype id kind to the id registry. Models emit the bare id, no tag wrapping needed. The first chip the user meets carries a one-time “Click to open the prototype” tip. The prototype id chip's server half (idChipServer): resolves a `proto-<id>` to its prototype's title for the id registry and for model-read text (so a task description holding the id is titled after the mock), and registers the page-editor inline token so a page block holding the chip stays agent-readable.
+    - **`prototype`** — Renders raw `proto-<id>` strings inline as clickable chips (the generic id chip: the mock's title) that open the mock in the prototype-detail pane — on one variant when the id is followed by its picks (`proto-…?pane=floating&accent=#10b981`, frame A showing it through the pane's ;variant= key, the user's shared picks untouched), and presents the prototype id kind to the id registry. Models emit the bare id, no tag wrapping needed. The first chip the user meets carries a one-time “Click to open the prototype” tip. The prototype id chip's server half (idChipServer): resolves a `proto-<id>` to its prototype's title for the id registry and for model-read text (so a task description holding the id is titled after the mock), and registers the page-editor inline token so a page block holding the chip stays agent-readable.
       - Web:
         - Contributes:
           - `Hints.Hint` "prototype.open-chip"
@@ -447,8 +450,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Server:
         - Contributes:
           - `ids.referent` "proto"
-          - `primitives.text-editor.inline-chip.referent` "(?<!\/)(?<![A-Za-z0-9_-])(?:proto-(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|\d{9,13}-[a-z0-9]{4,8}))(?!\/)(?!\.[0-9A-Za-z])\b"
-          - `page.inline-token` "(?<!\/)(?<![A-Za-z0-9_-])(?:proto-(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|\d{9,13}-[a-z0-9]{4,8}))(?!\/)(?!\.[0-9A-Za-z])\b"
+          - `primitives.text-editor.inline-chip.referent` "(?<!\/)(?:(?<![A-Za-z0-9_-])(?:proto-(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|\d{9,13}-[a-z0-9]{4,8})))(?:\?[a-z][a-z0-9-]*=(?:#[0-9a-fA-F]{6}|[a-z0-9][a-z0-9-]*)(?:&[a-z][a-z0-9-]*=(?:#[0-9a-fA-F]{6}|[a-z0-9][a-z0-9-]*))*)?(?!\/)(?!\.[0-9A-Za-z])\b"
+          - `page.inline-token` "(?<!\/)(?:(?<![A-Za-z0-9_-])(?:proto-(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|\d{9,13}-[a-z0-9]{4,8})))(?:\?[a-z][a-z0-9-]*=(?:#[0-9a-fA-F]{6}|[a-z0-9][a-z0-9-]*)(?:&[a-z][a-z0-9-]*=(?:#[0-9a-fA-F]{6}|[a-z0-9][a-z0-9-]*))*)?(?!\/)(?!\.[0-9A-Za-z])\b"
         - Uses:
           - `active-data/id-chip.idChipServer`
           - `apps/prototypes/files.readPrototypeTitle`
@@ -7728,11 +7731,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `parseMocks`
               - `parseOptionColor`
               - `parseOptionDeclaration`
+              - `parseVariantQuery`
               - `parseViewport`
               - `pickedColor`
               - `pickedValue`
               - `PicksChangeSchema`
               - `picksFromQuery`
+              - `picksOfVariantParam`
               - `presetSize`
               - `problemsOf`
               - `protoIdKind`
@@ -7765,6 +7770,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `StoredPicksSchema`
               - `UNTITLED_PROTOTYPE`
               - `validatePrototypeFolder`
+              - `VARIANT_QUERY_PATTERN`
+              - `variantParam`
               - `viewportProblemDetail`
               - `viewportRenderSize`
               - `viewportWord`

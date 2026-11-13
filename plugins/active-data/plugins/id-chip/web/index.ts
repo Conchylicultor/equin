@@ -1,6 +1,7 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
 export { idChip } from "./internal/id-chip";
+export type { IdChipQualifier } from "./internal/id-chip";
 export { rowReferent } from "./internal/row-referent";
 
 export default {

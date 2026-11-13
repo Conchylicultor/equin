@@ -81,6 +81,12 @@ export {
   setPrototypePicks,
 } from "./picks";
 export type { StoredPicks, PicksChange } from "./picks";
+export {
+  VARIANT_QUERY_PATTERN,
+  parseVariantQuery,
+  variantParam,
+  picksOfVariantParam,
+} from "./variant";
 export type {
   PrototypeOption,
   ChoiceOption,

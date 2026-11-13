@@ -1,6 +1,9 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { idChipServer } from "@plugins/active-data/plugins/id-chip/server";
-import { protoIdKind } from "@plugins/apps/plugins/prototypes/plugins/files/core";
+import {
+  protoIdKind,
+  VARIANT_QUERY_PATTERN,
+} from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import { readPrototypeTitle } from "@plugins/apps/plugins/prototypes/plugins/files/server";
 import { PROTOTYPE_CHIP_SURFACES } from "../core";
 
@@ -18,6 +21,8 @@ export default {
           "a prototype's title is its index.html on disk, outside the change feed",
       },
       surfaces: PROTOTYPE_CHIP_SURFACES,
+      // The web half's qualifier: a variant written after the id.
+      qualifier: VARIANT_QUERY_PATTERN,
       resolve: readPrototypeTitle,
     }),
   ],

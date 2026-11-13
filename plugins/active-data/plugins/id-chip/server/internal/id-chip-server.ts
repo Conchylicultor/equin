@@ -7,7 +7,12 @@ import {
   InlineTokenReferentSource,
   type InlineTokenLiveRead,
 } from "@plugins/primitives/plugins/text-editor/plugins/inline-chip/server";
-import { idChipPattern, idReferentTag, type IdChipSurface } from "../../core";
+import {
+  idChipPattern,
+  idReferentTag,
+  splitIdChipToken,
+  type IdChipSurface,
+} from "../../core";
 
 /**
  * A kind's id chip, server half — the twin of the web `idChip`, called from the
@@ -28,6 +33,11 @@ import { idChipPattern, idReferentTag, type IdChipSurface } from "../../core";
  * in `"document"` (stored text holds it); a transcript-only chip never sits
  * in stored text as a chip, so it is derived: `not-in-text`.
  *
+ * `qualifier` is the web half's `qualifier.pattern` (the same constant, from
+ * the family's `core/`): the chip's pattern then takes it after the id, and a
+ * token is resolved by its id — a model reads `<prototype
+ * id="proto-…?pane=floating" title="…"/>`, the qualifier kept in the id.
+ *
  * `referentTag` names the tag a model reads the resolved id as. It defaults to
  * the kind's label (`idReferentTag`); a family whose long-standing tag differs
  * (a `block-…` resolves to its PAGE, read as `<page …/>`) passes it, so the
@@ -43,9 +53,13 @@ export function idChipServer(spec: {
   live?: InlineTokenLiveRead;
   resolve(id: string): Promise<IdReferent>;
   referentTag?: string;
+  qualifier?: RegExp;
 }): ServerContribution[] {
-  const { kind, surfaces, resolve } = spec;
-  const pattern = idChipPattern(kind);
+  const { kind, surfaces, resolve, qualifier } = spec;
+  const pattern = idChipPattern(kind, qualifier);
+  // A token is the id, then (for a qualified chip) what it names of it.
+  const idOfToken = (token: string): string =>
+    qualifier === undefined ? token : splitIdChipToken(kind, token).id;
   const inDocuments = surfaces.includes("document");
   if (inDocuments && spec.live === undefined) {
     throw new Error(
@@ -57,17 +71,20 @@ export function idChipServer(spec: {
       `idChipServer(${kind.prefix}): a transcript-only chip never sits in stored text as a chip — its \`live\` read is derived (not-in-text); drop it.`,
     );
   }
-  const live: InlineTokenLiveRead = spec.live ?? {
-    kind: "not-in-text",
-    reason: "a transcript-only chip: no stored text holds it as a chip",
-  };
+  const live: InlineTokenLiveRead = qualifiedLive(
+    spec.live ?? {
+      kind: "not-in-text",
+      reason: "a transcript-only chip: no stored text holds it as a chip",
+    },
+    idOfToken,
+  );
   const out: ServerContribution[] = [
     IdKinds.Referent({ kind, resolve }),
     InlineTokenReferentSource({
       kind: spec.referentTag ?? idReferentTag(kind),
       pattern,
       live,
-      resolve,
+      resolve: (token) => resolve(idOfToken(token)),
     }),
   ];
   if (inDocuments) {
@@ -83,4 +100,13 @@ export function idChipServer(spec: {
     );
   }
   return out;
+}
+
+/** `live` reading a token's referent by the id the token starts with. */
+function qualifiedLive(
+  live: InlineTokenLiveRead,
+  idOfToken: (token: string) => string,
+): InlineTokenLiveRead {
+  if (live.kind !== "follow") return live;
+  return { ...live, idOf: (token) => live.idOf(idOfToken(token)) };
 }

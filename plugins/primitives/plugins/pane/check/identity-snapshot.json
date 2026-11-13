@@ -602,7 +602,7 @@
     },
     {
       "paneId": "prototypes-detail",
-      "segment": "proto/:name",
+      "segment": "proto/:name;variant",
       "appIndex": false,
       "parent": "prototypes-gallery"
     },

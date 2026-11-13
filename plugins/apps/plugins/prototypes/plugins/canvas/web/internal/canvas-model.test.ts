@@ -17,6 +17,7 @@ import {
   type CanvasAction,
   type CanvasState,
   type PrototypeFrame,
+  withLinkVariant,
 } from "./canvas-model";
 
 /** A canvas opened at the default size (the size is not what these pin). */
@@ -522,5 +523,72 @@ describe("canvas-wide settings", () => {
   it("clamps the swipe divider", () => {
     const s = run(initialCanvasState(), { type: "setSwipeAt", at: 3 }).state;
     expect(s.swipeAt).toBe(1);
+  });
+});
+
+describe("variant in the URL", () => {
+  it("switching on keeps what A shows, as its own, and writes nothing", () => {
+    const { state, effects } = run(
+      initialCanvasState(),
+      { type: "setLinkVariant", on: true },
+      { design: "slate" },
+    );
+    expect(effects).toEqual([]);
+    expect(state.linkVariant).toBe(true);
+    expect(proto(state, 0).picks).toEqual({ design: "slate" });
+  });
+
+  it("a pick under it stays local to A — the shared record is untouched", () => {
+    const linked = withLinkVariant(initialCanvasState(), {}, {});
+    const { state, effects } = run(linked, {
+      type: "setPick",
+      id: 1,
+      option: "design",
+      value: "paper",
+    });
+    expect(effects).toEqual([]);
+    expect(proto(state, 0).picks).toEqual({ design: "paper" });
+  });
+
+  it("switching off puts A back on the shared record, without writing it", () => {
+    const linked = withLinkVariant(
+      initialCanvasState(),
+      { design: "paper" },
+      {},
+    );
+    const { state, effects } = run(linked, {
+      type: "setLinkVariant",
+      on: false,
+    });
+    expect(effects).toEqual([]);
+    expect(state.linkVariant).toBe(false);
+    expect(proto(state, 0).picks).toBe("shared");
+  });
+
+  it("a frame becoming A keeps its own picks rather than writing the record", () => {
+    let state = withLinkVariant(initialCanvasState(), { design: "paper" }, {});
+    state = run(state, { type: "addPrototype" }).state;
+    state = run(state, {
+      type: "setPick",
+      id: 2,
+      option: "design",
+      value: "slate",
+    }).state;
+    const { state: next, effects } = run(state, { type: "remove", id: 1 });
+    expect(effects).toEqual([]);
+    expect(frameA(next.frames)?.picks).toEqual({ design: "slate" });
+  });
+
+  it("Undo of a Keep only under it writes nothing", () => {
+    let state = withLinkVariant(initialCanvasState(), { design: "paper" }, {});
+    state = run(state, { type: "addPrototype" }).state;
+    const before = state;
+    state = run(state, { type: "keepOnly", id: 2 }).state;
+    const { effects } = run(state, {
+      type: "restore",
+      state: before,
+      shared: {},
+    });
+    expect(effects).toEqual([]);
   });
 });

@@ -80,6 +80,15 @@ export interface CanvasState {
   /** Options kept the same in every prototype frame. */
   linked: ReadonlySet<string>;
   /**
+   * Frame A shows the variant the pane's URL names (`;variant=`), held as its
+   * own picks, instead of the shared record — so a link can open one variant,
+   * and picks made under it never rewrite what the user sees elsewhere. No
+   * frame holds `"shared"` then, and no transition writes the record. Off, the
+   * canvas is the ordinary one: A holds the shared record. See
+   * {@link withLinkVariant}.
+   */
+  linkVariant: boolean;
+  /**
    * A color being dragged, shown before it is picked: frame `id` (and every
    * frame, when the option is linked) paints `value` for `option` instead of
    * its pick. Local and never saved — `setPick` commits it (one write) and
@@ -130,6 +139,11 @@ export type CanvasAction =
   /** Drop the preview without picking anything. */
   | { type: "clearPreview" }
   | { type: "resetPicks"; id: FrameId }
+  /**
+   * Put frame A's variant in the URL (it keeps showing what it shows, as its
+   * own picks), or take it out (A shows the shared record again).
+   */
+  | { type: "setLinkVariant"; on: boolean }
   /** Link or unlink `option`; linking copies frame `id`'s value everywhere. */
   | { type: "toggleLink"; id: FrameId; option: PrototypeOption }
   /** Spread over `option` from frame `id` — or, when already spread, gather back to it. */
@@ -174,8 +188,29 @@ export function initialCanvasState({
     swipeAt: 0.5,
     spread: null,
     linked: new Set(),
+    linkVariant: false,
     preview: null,
   };
+}
+
+/**
+ * `state` with frame A on the variant a URL names — `picks`, held as A's own
+ * (`linkVariant` on) — or, for `null`, on the shared record (`linkVariant`
+ * off). Never a write: the record is not touched either way, which is the
+ * point. A frame other than A that held `"shared"` (none should) keeps a copy.
+ */
+export function withLinkVariant(
+  state: CanvasState,
+  picks: StoredPicks | null,
+  shared: StoredPicks,
+): CanvasState {
+  const a = frameA(state.frames);
+  const frames = state.frames.map((f): CanvasFrame => {
+    if (f.kind !== "prototype") return f;
+    if (f.id === a?.id) return { ...f, picks: picks ?? "shared" };
+    return f.picks === "shared" ? { ...f, picks: { ...shared } } : f;
+  });
+  return { ...state, frames, linkVariant: picks !== null };
 }
 
 /**
@@ -296,7 +331,7 @@ function transition(
             id: state.nextId,
             kind: "prototype",
             version: action.version ?? null,
-            picks: "shared",
+            picks: state.linkVariant ? { ...shared } : "shared",
           };
       return promoteA(
         {
@@ -373,10 +408,14 @@ function transition(
       // The shared record belongs to frame A. If the A being put back is not the
       // A on screen now, the record has since been rewritten for another frame:
       // put back what it held then.
+      // A canvas whose variant is in its URL never wrote the record.
       const now = frameA(state.frames);
       const then = frameA(action.state.frames);
       const effects: CanvasEffect[] =
-        then !== null && now?.id !== then.id
+        then !== null &&
+        now?.id !== then.id &&
+        !state.linkVariant &&
+        !action.state.linkVariant
           ? [{ kind: "replaceShared", picks: action.shared }]
           : [];
       return { state: action.state, effects };
@@ -464,6 +503,18 @@ function transition(
         ),
         preview,
       });
+    }
+
+    case "setLinkVariant": {
+      if (action.on === state.linkVariant) return unchanged(state);
+      const a = frameA(state.frames);
+      return unchanged(
+        withLinkVariant(
+          state,
+          action.on ? (a ? { ...picksOf(a, shared) } : {}) : null,
+          shared,
+        ),
+      );
     }
 
     case "toggleLink": {
@@ -620,13 +671,17 @@ function setPicks(
 
 /**
  * Keep the frame-A invariant: the first prototype frame holds the shared
- * record, and no other frame does. When a frame BECOMES A (the old A was
+ * record, and no other frame does (unless the variant is in the URL —
+ * `linkVariant` — when none does). When a frame BECOMES A (the old A was
  * closed, or a spread put another frame first), its own picks are written to
  * the shared record, so what is on screen does not change.
  */
 function promoteA(state: CanvasState, shared: StoredPicks): CanvasTransition {
   const a = frameA(state.frames);
   if (a === null) return unchanged(state);
+  // With the variant in the URL, every frame holds its own picks: the new A's
+  // are what the URL now names, and the record stays as it is.
+  if (state.linkVariant) return unchanged(state);
   const effects: CanvasEffect[] = [];
   const frames = state.frames.map((f): CanvasFrame => {
     if (f.kind !== "prototype") return f;

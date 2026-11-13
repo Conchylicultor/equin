@@ -137,8 +137,9 @@ not declare is dropped from its URL.
   is hovered, the accent while on) — value pills for a choice; for a color, one
   swatch per suggestion and a trailing custom swatch (the color on screen,
   ringed when it is no suggestion) that opens the color picker in its own
-  popover above the swatch. "Reset to defaults" sits in the header while the
-  frame has a pick. (A presentation's tag is the very same box,
+  popover above the swatch. The header holds, on frame A only, the **In link**
+  switch (the variant in the URL — see "The URL"), then the reset icon
+  ("Reset to defaults") while the frame has a pick. (A presentation's tag is the very same box,
   `FrameShowsBox`, so its chip and stepper are these.) Options the page declares under a group
   (`<meta name="prototype-option-group">`, `files`' `groupOptions`) sit in one
   collapsible section per group — folded, its header lists the group's picks —
@@ -356,9 +357,26 @@ reveal hides an action only while it sits in the row
 
 ## The URL
 
-The URL names only the prototype: `proto/<id>` (what the CLI prints). What is
-on its canvas is remembered for the pane (above), so the URL and the saved
-canvas can never disagree about it. The route lives in `shell/core/routes.ts`,
+The URL names the prototype, `proto/<id>` (what the CLI prints), and
+optionally the variant frame A shows: `proto/<id>;variant=pane.floating~accent.%2310b981`
+(`files/core/variant.ts`: only the picks that differ from the defaults A's
+document declares; `defaults` for none). The rest of the canvas is remembered
+for the pane (above).
+
+**A variant in the URL never touches the shared picks.** While the key is
+there the canvas is in `linkVariant` mode: frame A holds the variant as picks
+of its OWN (no frame holds `"shared"`, `promoteA` writes nothing, Undo writes
+nothing), so a link — a chip an agent wrote as `proto-…?pane=floating`
+(`active-data/prototype`) — opens exactly that variant, and picks made under
+it change the link, not what the user sees on the plain link. The provider
+(`urlVariant` prop, passed by the detail pane only) follows the key into A on
+open and whenever it changes under the pane, and rewrites it (a history
+replace) after every dispatch whose A picks moved. The Options popover's
+**In link** switch (`setLinkVariant`) puts the key in — A keeps showing what
+it shows, now as its own picks — or takes it out, A back on the shared
+record (what the plain link shows). A saved canvas carries `linkVariant`
+(older ones read as off); a saved canvas holding `"shared"` in that mode is
+rejected. The route lives in `shell/core/routes.ts`,
 so the gallery can open this pane without either plugin depending on the
 other.
 

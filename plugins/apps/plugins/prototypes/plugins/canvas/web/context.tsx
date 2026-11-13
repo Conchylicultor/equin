@@ -41,7 +41,9 @@ import {
   prototypeDocument,
   prototypeVersionDocument,
   pickedColor,
+  picksOfVariantParam,
   resolvePicks,
+  variantParam,
   setPrototypePicks,
   type OptionPicks,
   type PicksChange,
@@ -53,7 +55,9 @@ import {
 } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import {
   canvasReducer,
+  frameA,
   initialCanvasState,
+  withLinkVariant,
   isTransientAction,
   picksOf,
   previewedValue,
@@ -213,6 +217,37 @@ interface Held {
   /** Where it is saved (`<pane instance>:<prototype>`), or `null` when it is not. */
   slot: string | null;
   state: CanvasState;
+  /** The URL's `;variant=` this state follows (see `urlVariant`). */
+  urlParam: string | undefined;
+}
+
+/**
+ * The pane URL's `;variant=` key, read and written: the variant frame A shows
+ * when present (as its own picks, `linkVariant`), the shared record when absent.
+ */
+export interface UrlVariant {
+  param: string | undefined;
+  /** Rewrite the key (`undefined` removes it) — the URL entry replaced, not pushed. */
+  onChange: (param: string | undefined) => void;
+}
+
+/**
+ * The `;variant=` key `state` puts in the URL: frame A's picks that differ
+ * from the defaults its document declares, or none while the canvas follows
+ * the shared record.
+ */
+function variantParamOf(
+  state: CanvasState,
+  meta: PrototypeMeta | null,
+): string | undefined {
+  if (!state.linkVariant) return undefined;
+  const a = frameA(state.frames);
+  if (a === null || a.picks === "shared") return undefined;
+  return variantParam(
+    meta === null
+      ? a.picks
+      : resolvePicks(documentOptions(meta, a.version), a.picks),
+  );
 }
 const PrototypeDetailContext =
   createContext<PrototypeDetailContextValue | null>(null);
@@ -257,6 +292,13 @@ interface PrototypeDetailProviderProps {
    * "Responsive, in a new browser tab"). Not with `remember`.
    */
   initialSize?: PrototypeViewport;
+  /**
+   * The pane URL's `;variant=` key (only the detail pane passes it): present,
+   * frame A opens on that variant without touching the shared record, and the
+   * key follows A's picks from then on; the Options popover's "In link" switch
+   * puts it in or takes it out.
+   */
+  urlVariant?: UrlVariant;
   children: ReactNode;
 }
 
@@ -326,12 +368,12 @@ function DetailGate(props: PrototypeDetailProviderProps): ReactNode {
       />
     );
   }
-  const size =
-    list.data.find((p) => p.name === name)?.viewport ??
-    DEFAULT_PROTOTYPE_VIEWPORT;
+  const meta = list.data.find((p) => p.name === name) ?? null;
+  const size = meta?.viewport ?? DEFAULT_PROTOTYPE_VIEWPORT;
   return (
     <DetailProvider
       {...props}
+      meta={meta}
       size={size}
       stored={stored.data}
       writeShared={writeShared}
@@ -348,8 +390,11 @@ function DetailProvider({
   initialVersion = null,
   initialPicks,
   initialSize,
+  urlVariant,
+  meta,
   children,
 }: PrototypeDetailProviderProps & {
+  meta: PrototypeMeta | null;
   size: PrototypeViewport;
   stored: StoredPicks;
   writeShared: (change: PicksChange) => void;
@@ -378,10 +423,21 @@ function DetailProvider({
     remember !== undefined && !isEmbeddedDocument()
       ? `${remember}:${name}`
       : null;
+  const urlParam = urlVariant?.param;
+  // The canvas on the variant the URL names — or back on the shared record
+  // when it names none. Never a write of the record.
+  const followUrl = (state: CanvasState): CanvasState => {
+    if (urlVariant === undefined) return state;
+    if (urlParam === undefined) {
+      return state.linkVariant ? withLinkVariant(state, null, shared) : state;
+    }
+    return withLinkVariant(state, picksOfVariantParam(urlParam), shared);
+  };
   const open = (): Held => ({
     name,
     slot,
-    state:
+    urlParam,
+    state: followUrl(
       slot !== null
         ? openCanvas(canvases, slot, name, size)
         : initialCanvasState({
@@ -389,6 +445,7 @@ function DetailProvider({
             version: initialVersion,
             picks: initialPicks ?? "shared",
           }),
+    ),
   });
   const [held, setHeld] = useState<Held>(open);
   let current = held;
@@ -397,6 +454,11 @@ function DetailProvider({
     // (React's "adjust state on a prop change" pattern) rather than by an
     // effect after paint.
     current = open();
+    setHeld(current);
+  } else if (urlVariant !== undefined && held.urlParam !== urlParam) {
+    // The URL's variant changed under the pane (a chip naming another variant
+    // of this prototype, Back): frame A follows it.
+    current = { ...held, urlParam, state: followUrl(held.state) };
     setHeld(current);
   }
   const canvas = current.state;
@@ -439,7 +501,11 @@ function DetailProvider({
     const { state, effects } = canvasReducer(before, action, sharedSnapshot());
     if (state === before && effects.length === 0) return;
     latest.current = { from: current, state };
-    setHeld({ name, slot, state });
+    const param = variantParamOf(state, meta);
+    setHeld({ name, slot, state, urlParam: param });
+    if (urlVariant !== undefined && param !== urlParam) {
+      urlVariant.onChange(param);
+    }
     // A drag's preview changes every move and is never saved.
     if (slot !== null && !isTransientAction(action)) {
       writeDraft(canvases, serializeCanvas(state), { scope: slot });

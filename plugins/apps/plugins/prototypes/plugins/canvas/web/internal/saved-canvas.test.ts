@@ -146,4 +146,37 @@ describe("saved canvas", () => {
       if (back.kind === "restored") expect(back.state.layout).toBe("side");
     }
   });
+
+  it("reopens a canvas whose variant is in the URL, A on its own picks", () => {
+    const state = apply(
+      initialCanvasState({ size: DEFAULT_PROTOTYPE_VIEWPORT }),
+      { type: "setLinkVariant", on: true },
+    );
+    const back = roundTrip(state);
+    expect(back.kind).toBe("restored");
+    if (back.kind === "restored") {
+      expect(back.state.linkVariant).toBe(true);
+      expect(back.state.frames[0]).toMatchObject({
+        picks: { design: "slate" },
+      });
+    }
+  });
+
+  it("reads a canvas saved before the URL variant as off", () => {
+    const saved = serializeCanvas(
+      initialCanvasState({ size: DEFAULT_PROTOTYPE_VIEWPORT }),
+    );
+    const { linkVariant: _drop, ...older } = saved;
+    const back = restoreCanvas(older);
+    expect(back.kind === "restored" && back.state.linkVariant).toBe(false);
+  });
+
+  it("rejects a URL-variant canvas holding the shared record", () => {
+    const saved = serializeCanvas(
+      initialCanvasState({ size: DEFAULT_PROTOTYPE_VIEWPORT }),
+    );
+    expect(restoreCanvas({ ...saved, linkVariant: true }).kind).toBe(
+      "rejected",
+    );
+  });
 });

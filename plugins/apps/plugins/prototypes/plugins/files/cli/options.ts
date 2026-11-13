@@ -84,6 +84,15 @@ export const prototypeOptionsAction: CliAction<[string], object> = async (
     console.log(
       "Another variant: change the ?<option>=<value> query — never the user's picks.",
     );
+    // The same query after the id is a chip opening the mock on that variant
+    // (`active-data/prototype`), leaving the user's own picks alone.
+    const query = Object.entries(picks)
+      .map(([name, value]) => `${name}=${value}`)
+      .join("&");
+    console.log(
+      "Show the user one variant: write the id followed by its query — a chip opening exactly it:",
+    );
+    console.log(`  ${id}${query === "" ? "?<option>=<value>" : `?${query}`}`);
   }
 };
 

@@ -46,13 +46,26 @@ const deleteIcon = symbol("delete");
  * `prototypeDetailPane.Actions`, so any plugin can add to the header. The state
  * they share lives in {@link PrototypeDetailProvider}, which wraps `PaneChrome`
  * so the header renders inside it. The canvas is remembered for this pane
- * instance, so a reload reopens it as it was.
+ * instance, so a reload reopens it as it was. The URL's `;variant=` key, when
+ * present, is the variant frame A shows (a link to one variant).
  */
 export function PrototypeDetail(): ReactElement {
-  const { name } = prototypeDetailPane.useParams();
+  const { name, variant } = prototypeDetailPane.useParams();
   const instance = prototypeDetailPane.useRouteEntry()?.uuid;
+  const setParams = prototypeDetailPane.useSetParams();
   return (
-    <PrototypeDetailProvider name={name} remember={instance}>
+    <PrototypeDetailProvider
+      name={name}
+      remember={instance}
+      urlVariant={{
+        param: variant,
+        // A pick is not a navigation: the entry is rewritten, not pushed.
+        onChange: (next) =>
+          setParams(next === undefined ? { name } : { name, variant: next }, {
+            replace: true,
+          }),
+      }}
+    >
       <PaneChrome pane={prototypeDetailPane} header="card">
         <PrototypeCanvas />
       </PaneChrome>

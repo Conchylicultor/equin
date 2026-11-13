@@ -16,11 +16,13 @@ export const prototypesGalleryRoute = defineRoute({
 });
 
 /**
- * One prototype's canvas. The URL names only the prototype: what is on its
- * canvas (frames, size, zoom) is remembered by the browser, per prototype.
+ * One prototype's canvas. The URL names the prototype and, optionally, the
+ * variant frame A shows (`;variant=`, `files/core`'s `variantParam`) — a link
+ * to one variant, which leaves the user's shared picks alone. The rest of the
+ * canvas (frames, size, zoom) is remembered by the browser, per pane.
  */
 export const prototypeDetailRoute = defineRoute({
   id: "prototypes-detail",
-  segment: "proto/:name",
+  segment: "proto/:name;variant",
   parent: prototypesGalleryRoute,
 });

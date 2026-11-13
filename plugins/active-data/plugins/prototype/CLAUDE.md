@@ -21,7 +21,16 @@ recognition against real mints.
 
 The chip is id-chip's GENERIC one (no component of its own): this plugin only
 supplies the presenter — `usePrototypeReferent` (the title) and
-`usePrototypeTarget` — and the `dashboard-customize` icon.
+`usePrototypePane` — and the `dashboard-customize` icon.
+
+**A chip can name one variant**: the id followed by its picks, in the document
+URL's own query syntax — `proto-…?pane=floating&accent=#10b981`
+(`files/core`'s `VARIANT_QUERY_PATTERN`, handed to BOTH halves as id-chip's
+`qualifier`). It reads `<title> · Floating · #10b981` and opens the pane with
+the `;variant=` key (`usePrototypeVariantPane`), so frame A shows that variant
+without touching the user's shared picks (canvas CLAUDE.md § The URL). A model
+reading the text gets the id with its variant (`<prototype
+id="proto-…?pane=floating" …/>`).
 
 **Resolution is free.** `prototypesList` (`files`' live value, read with
 `useLive`) is an app-wide list re-broadcast on every file change under the
@@ -51,7 +60,7 @@ conversation.
 
 ## Plugin reference
 
-- Description: Renders raw `proto-<id>` strings inline as clickable chips (the generic id chip: the mock's title) that open the mock in the prototype-detail pane, and presents the prototype id kind to the id registry. Models emit the bare id, no tag wrapping needed. The first chip the user meets carries a one-time “Click to open the prototype” tip. The prototype id chip's server half (idChipServer): resolves a `proto-<id>` to its prototype's title for the id registry and for model-read text (so a task description holding the id is titled after the mock), and registers the page-editor inline token so a page block holding the chip stays agent-readable.
+- Description: Renders raw `proto-<id>` strings inline as clickable chips (the generic id chip: the mock's title) that open the mock in the prototype-detail pane — on one variant when the id is followed by its picks (`proto-…?pane=floating&accent=#10b981`, frame A showing it through the pane's ;variant= key, the user's shared picks untouched), and presents the prototype id kind to the id registry. Models emit the bare id, no tag wrapping needed. The first chip the user meets carries a one-time “Click to open the prototype” tip. The prototype id chip's server half (idChipServer): resolves a `proto-<id>` to its prototype's title for the id registry and for model-read text (so a task description holding the id is titled after the mock), and registers the page-editor inline token so a page block holding the chip stays agent-readable.
 - Web:
   - Contributes:
     - `Hints.Hint` "prototype.open-chip"
@@ -67,8 +76,8 @@ conversation.
 - Server:
   - Contributes:
     - `ids.referent` "proto"
-    - `primitives.text-editor.inline-chip.referent` "(?<!\/)(?<![A-Za-z0-9_-])(?:proto-(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|\d{9,13}-[a-z0-9]{4,8}))(?!\/)(?!\.[0-9A-Za-z])\b"
-    - `page.inline-token` "(?<!\/)(?<![A-Za-z0-9_-])(?:proto-(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|\d{9,13}-[a-z0-9]{4,8}))(?!\/)(?!\.[0-9A-Za-z])\b"
+    - `primitives.text-editor.inline-chip.referent` "(?<!\/)(?:(?<![A-Za-z0-9_-])(?:proto-(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|\d{9,13}-[a-z0-9]{4,8})))(?:\?[a-z][a-z0-9-]*=(?:#[0-9a-fA-F]{6}|[a-z0-9][a-z0-9-]*)(?:&[a-z][a-z0-9-]*=(?:#[0-9a-fA-F]{6}|[a-z0-9][a-z0-9-]*))*)?(?!\/)(?!\.[0-9A-Za-z])\b"
+    - `page.inline-token` "(?<!\/)(?:(?<![A-Za-z0-9_-])(?:proto-(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|\d{9,13}-[a-z0-9]{4,8})))(?:\?[a-z][a-z0-9-]*=(?:#[0-9a-fA-F]{6}|[a-z0-9][a-z0-9-]*)(?:&[a-z][a-z0-9-]*=(?:#[0-9a-fA-F]{6}|[a-z0-9][a-z0-9-]*))*)?(?!\/)(?!\.[0-9A-Za-z])\b"
   - Uses:
     - `active-data/id-chip.idChipServer`
     - `apps/prototypes/files.readPrototypeTitle`

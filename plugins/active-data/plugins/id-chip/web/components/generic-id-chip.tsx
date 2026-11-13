@@ -2,9 +2,15 @@ import type { ComponentType } from "react";
 import type { Hint } from "@plugins/hints/core";
 import { useHintAnchor, useHintMoment } from "@plugins/hints/web";
 import type { IdPresenter } from "@plugins/ids/web";
-import { usePaneToggle } from "@plugins/primitives/plugins/pane/web";
+import {
+  usePaneToggle,
+  type PaneTarget,
+} from "@plugins/primitives/plugins/pane/web";
+import type { Hook } from "@plugins/framework/plugins/hook-value/core";
 import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
 import { Icon } from "@plugins/ui/plugins/icons/web";
+import { splitIdChipToken } from "../../core";
+import type { IdChipQualifier } from "../internal/id-chip";
 
 /**
  * The chip a presenter renders by default: the referent's title, led by the
@@ -17,6 +23,10 @@ import { Icon } from "@plugins/ui/plugins/icons/web";
  * placeholder would move the prose as the read settles, and a chip that opens
  * nothing is worse than the text the model wrote.
  *
+ * With a `qualifier`, a token written with one (`proto-…?pane=floating`)
+ * opens the qualifier's pane and reads `<title> · <qualifier label>`; the id
+ * alone is the plain chip.
+ *
  * With a `hint`, every resolved chip anchors and requests it (the newest
  * rendered chip wins the anchor), so it shows on the first one the user meets.
  *
@@ -26,23 +36,33 @@ import { Icon } from "@plugins/ui/plugins/icons/web";
 export function genericIdChip(
   presenter: IdPresenter,
   hint?: Hint,
+  qualifier?: IdChipQualifier,
 ): ComponentType<{ content: string; attrs: Record<string, string> }> {
-  const { useReferent, usePane, icon } = presenter;
+  const { useReferent, icon, kind } = presenter;
+  // Chosen once per chip family (a module constant), so every render of the
+  // chip calls the same hook.
+  const useTarget: Hook<(id: string, written: string) => PaneTarget> =
+    qualifier?.usePane ?? presenter.usePane;
   function GenericIdChip({ content }: { content: string }) {
-    const id = content.trim();
+    const written = content.trim();
+    const { id, qualifier: rest } = splitIdChipToken(kind, written);
     const referent = useReferent(id);
-    const target = usePaneToggle()(usePane(id));
+    const target = usePaneToggle()(useTarget(id, rest));
     const anchorRef = useHintAnchor(hint?.anchor);
     useHintMoment(hint, referent.status === "found");
-    if (referent.status !== "found") return <>{id}</>;
+    if (referent.status !== "found") return <>{written}</>;
+    const title =
+      qualifier !== undefined && rest !== ""
+        ? `${referent.title} · ${qualifier.label(rest)}`
+        : referent.title;
     return (
       <LinkChip
         ref={anchorRef}
         activation={target}
-        tooltip={`${referent.title} · ${id}`}
+        tooltip={`${title} · ${id}`}
         leading={icon ? <Icon icon={icon} /> : undefined}
       >
-        {referent.title}
+        {title}
       </LinkChip>
     );
   }

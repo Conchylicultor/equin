@@ -19,7 +19,10 @@ the folder: they are per-instance DB state, set in the app.
   reader compares them by flipping one pill in place; separate prototypes
   become near-duplicate cards, each with its own history.
 - Write the id (`proto-…`) in your messages: it renders as a chip that opens
-  the prototype.
+  the prototype. To point at one variant, follow the id with its picks, as the
+  document URL's query: `proto-…?pane=floating&accent=#10b981`. That chip
+  opens the prototype on exactly that variant, and leaves the user's own
+  picks as they are.
 
 ## History
 
