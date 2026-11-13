@@ -5,12 +5,15 @@ import {
   type GapKind,
   type Session,
   type SessionHit,
+  type Viewport,
 } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/core";
 
 /** A section the visitor reached on a page, `atS` seconds into the page. */
 export interface SectionReach {
   /** The section's key as the site names it (`hero`), without its page prefix. */
   section: string;
+  /** Its full name as the site registered it (`landing/hero`): what the replay asks the page to scroll to. */
+  name: string;
   atS: number;
 }
 
@@ -51,6 +54,8 @@ export interface JourneyPage {
    * read is then estimated from other visits (`pageRead`).
    */
   sections: string[] | null;
+  /** The page's viewport in CSS pixels; `null` = not recorded (an older tracker). */
+  viewport: Viewport | null;
 }
 
 export interface Journey {
@@ -80,13 +85,11 @@ function sectionKey(full: string): string {
   return full.slice(full.lastIndexOf("/") + 1);
 }
 
-/** The section a `section_reach` hit names (its key), or `null` for another hit. */
+/** The section a `section_reach` hit names (its full name), or `null` for another hit. */
 function reachedSection(hit: SessionHit): string | null {
   if (hit.kind !== "event" || hit.eventName !== SECTION_REACH_EVENT)
     return null;
-  const full = hit.eventProps?.[SECTION_REACH_PROP];
-  if (full === undefined) return null;
-  return sectionKey(full);
+  return hit.eventProps?.[SECTION_REACH_PROP] ?? null;
 }
 
 /**
@@ -111,6 +114,7 @@ export function journeyOf(session: Session): Journey {
         actions: [],
         gaps: hit.gaps === null ? null : hit.gaps.map(gapOf),
         sections: hit.sections === null ? null : hit.sections.map(sectionKey),
+        viewport: hit.viewport,
       });
     }
     if (pages.length === 0) pending.push(hit);
@@ -126,6 +130,7 @@ export function journeyOf(session: Session): Journey {
       actions: [],
       gaps: null,
       sections: null,
+      viewport: null,
     });
   }
   for (const hit of pending) attach(pages[0]!, hit);
@@ -161,10 +166,11 @@ export function journeyOf(session: Session): Journey {
   function attach(page: JourneyPage, hit: SessionHit): void {
     if (hit.kind === "pageview") return;
     const atS = Math.max(0, (ms(hit.ts) - start) / 1000 - page.startS);
-    const section = reachedSection(hit);
-    if (section !== null) {
+    const name = reachedSection(hit);
+    if (name !== null) {
+      const section = sectionKey(name);
       if (!page.reached.some((r) => r.section === section))
-        page.reached.push({ section, atS });
+        page.reached.push({ section, name, atS });
       return;
     }
     page.actions.push({

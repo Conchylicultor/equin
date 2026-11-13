@@ -25,6 +25,7 @@ function pv(
     gaps: null,
     load: null,
     sections,
+    viewport: null,
   };
 }
 function ev(
@@ -43,6 +44,7 @@ function ev(
     gaps: null,
     load: null,
     sections: null,
+    viewport: null,
   };
 }
 const reach = (s: number, path: string, section: string) =>
@@ -113,8 +115,8 @@ describe("journeyOf", () => {
 
   it("puts reaches and actions on their page, timed from the page's start", () => {
     expect(j.pages[0]!.reached).toEqual([
-      { section: "hero", atS: 0 },
-      { section: "layers", atS: 9 },
+      { section: "hero", name: "landing/hero", atS: 0 },
+      { section: "layers", name: "landing/layers", atS: 9 },
     ]);
     expect(j.pages[0]!.actions).toEqual([
       { name: "film_play", atS: 24, props: { film: "promo" } },

@@ -326,6 +326,7 @@ code, that is the bug this section exists to prevent.
     - `network/live.serveValue`
 - Cross-plugin:
   - Imported by:
+    - `apps/deploy/analytics/sessions`
     - `apps/deploy/local-serve`
     - `apps/studio/compositions`
     - `apps/studio/compositions/draft-actions`

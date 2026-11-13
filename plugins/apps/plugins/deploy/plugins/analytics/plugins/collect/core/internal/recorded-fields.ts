@@ -42,6 +42,7 @@ export const RECORDED_COLUMNS = [
   "gaps",
   "load",
   "sections",
+  "viewport",
   "events",
   "eventName",
   "eventProps",
@@ -151,6 +152,12 @@ export const RECORDED_FIELDS = [
     description:
       "The names of the page's sections in page order, so how far it was read is measured against the whole page",
     columns: ["sections"],
+  },
+  {
+    name: "viewport",
+    description:
+      "The size of the browser window's page area on each page, in pixels, so the visit can be replayed at the size it was seen",
+    columns: ["viewport"],
   },
   {
     name: "visitor_id",

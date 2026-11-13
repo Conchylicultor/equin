@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { KeyboardEvent, ReactNode } from "react";
 import type { Session } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/core";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
@@ -39,6 +39,32 @@ import {
 } from "../internal/load";
 import { GAP_LABEL, GapSwatch } from "./gap-look";
 import { pageTitle } from "./journey-bar";
+import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
+import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { symbol } from "@plugins/ui/plugins/icons/core";
+import { replayPane } from "./replay-pane";
+
+const replayIcon = symbol("play-circle");
+
+/**
+ * Opens this visit's replay from page `page` (0 = the visit's start), or
+ * `null` for a visit with no site to play it on (the exhibit's made-up ones).
+ */
+function useOpenReplay(visitId: string): ((page: number) => void) | null {
+  const { deploymentId } = useLaneWindow();
+  const openPane = useOpenPane();
+  if (deploymentId === null) return null;
+  return (page) =>
+    openPane(
+      replayPane,
+      {
+        deploymentId,
+        visitId,
+        ...(page > 0 ? { page: String(page) } : {}),
+      },
+      { mode: "root" },
+    );
+}
 
 /** The timeline's three tracks: the step's time · its rail · its card. */
 const STEP = "grid grid-cols-[52px_18px_minmax(0,1fr)] gap-x-sm";
@@ -67,6 +93,7 @@ export function SessionTimeline({ session }: { session: Session }): ReactNode {
   if (!journey)
     throw new Error(`[sessions] no journey derived for visit ${session.id}`);
   const load = visitLoad(session);
+  const openReplay = useOpenReplay(session.id);
   return (
     <Stack gap="sm" className="max-w-[920px]">
       <PastRail>
@@ -91,6 +118,16 @@ export function SessionTimeline({ session }: { session: Session }): ReactNode {
           <Text variant="caption" tone="muted">
             from {sourceOf(session)}
           </Text>
+          {openReplay !== null && (
+            <Button
+              variant="outline"
+              onClick={() => openReplay(0)}
+              tooltip="Play the visit on the local serve, at the visitor's screen size"
+            >
+              <Icon icon={replayIcon} className="size-4" />
+              Replay
+            </Button>
+          )}
         </Cluster>
       </PastRail>
       {load !== null && loadPhases(load).length > 0 && (
@@ -106,6 +143,7 @@ export function SessionTimeline({ session }: { session: Session }): ReactNode {
               entry={i === 0}
               exit={i === journey.pages.length - 1}
               read={pageRead(page, sections)}
+              onReplay={openReplay === null ? null : () => openReplay(i)}
             />
           </Step>
         ))}
@@ -245,11 +283,14 @@ function PageCard({
   entry,
   exit,
   read,
+  onReplay,
 }: {
   page: JourneyPage;
   entry: boolean;
   exit: boolean;
   read: PageRead;
+  /** Replays the visit from this page; `null` when there is no site to play it on. */
+  onReplay: (() => void) | null;
 }): ReactNode {
   const known = read.sections;
   const reachedAt = new Map(page.reached.map((r) => [r.section, r.atS]));
@@ -263,7 +304,28 @@ function PageCard({
   ].sort((a, b) => a.at - b.at);
   return (
     <Inset y="2xs" b="sm">
-      <Surface level="raised" className="shadow-none">
+      <Surface
+        level="raised"
+        className={cn(
+          "shadow-none",
+          onReplay !== null &&
+            "cursor-pointer transition-shadow hover:shadow-[0_0_0_1px_var(--primary)]",
+        )}
+        {...(onReplay !== null
+          ? {
+              role: "button",
+              tabIndex: 0,
+              title: "Replay the visit from this page",
+              onClick: onReplay,
+              onKeyDown: (e: KeyboardEvent) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  onReplay();
+                }
+              },
+            }
+          : {})}
+      >
         <Inset x="md" t="smd" b="md">
           <Stack gap="smd">
             <Line className="gap-sm">

@@ -24,6 +24,7 @@ import {
   GapsSchema,
   LoadTimingSchema,
   PageSectionsSchema,
+  ViewportSchema,
   OsFamilySchema,
 } from "../../core";
 
@@ -179,6 +180,11 @@ export const analyticsHits = pgTable(
      * event, an older tracker, a page with no sections, no beacon yet).
      */
     sections: parsedJson("sections", PageSectionsSchema),
+    /**
+     * Pageviews only: the page's viewport in CSS pixels, as the pageview
+     * reported it. NULL = not recorded (an event, an older tracker).
+     */
+    viewport: parsedJson("viewport", ViewportSchema),
   },
   (t) => [index("analytics_hits_visit_idx").on(t.visitId)],
 );

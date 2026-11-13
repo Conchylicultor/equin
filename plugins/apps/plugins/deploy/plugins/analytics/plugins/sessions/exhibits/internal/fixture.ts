@@ -56,6 +56,13 @@ const PAGE_SECTIONS: Record<string, string[]> = {
   "/contact": ["hero", "form", "footer"],
 };
 
+/** The viewport each kind of device's pages report (a visit with `sectionsUnrecorded` predates it too). */
+const VIEWPORT: Record<Session["device"], { w: number; h: number }> = {
+  Desktop: { w: 1512, h: 857 },
+  Mobile: { w: 390, h: 664 },
+  Tablet: { w: 820, h: 1106 },
+};
+
 const VISITS: Visit[] = [
   {
     minutesAgo: 20,
@@ -339,6 +346,7 @@ export function fixtureSessions(now: number): Session[] {
         sections: v.sectionsUnrecorded
           ? null
           : PAGE_SECTIONS[path]!.map((key) => `${PAGE_KEY[path]}/${key}`),
+        viewport: v.sectionsUnrecorded ? null : VIEWPORT[v.device],
       });
       const events: [number, SessionHit][] = [
         ...reached.map(([key, t]): [number, SessionHit] => [
@@ -353,6 +361,7 @@ export function fixtureSessions(now: number): Session[] {
             gaps: null,
             load: null,
             sections: null,
+            viewport: null,
           },
         ]),
         ...actions.map(([name, t, props]): [number, SessionHit] => [
@@ -367,6 +376,7 @@ export function fixtureSessions(now: number): Session[] {
             gaps: null,
             load: null,
             sections: null,
+            viewport: null,
           },
         ]),
       ];

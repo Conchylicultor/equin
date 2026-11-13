@@ -387,7 +387,13 @@ async function recordPageview(
       }));
     const [hit] = await tx
       .insert(analyticsHits)
-      .values({ visitId, ts: ctx.now, kind: "pageview", path: body.path })
+      .values({
+        visitId,
+        ts: ctx.now,
+        kind: "pageview",
+        path: body.path,
+        ...(body.viewport ? { viewport: body.viewport } : {}),
+      })
       .returning({ id: analyticsHits.id });
     if (!hit) throw new Error("analytics: pageview insert returned no row");
     await tx

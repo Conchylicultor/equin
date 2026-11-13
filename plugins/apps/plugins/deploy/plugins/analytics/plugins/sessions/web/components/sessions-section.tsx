@@ -175,6 +175,7 @@ export function VisitsSource(
     <SiteVisits {...props} deploymentId={props.hostProps.deploymentId} />
   ) : (
     <VisitsBundle
+      deploymentId={null}
       render={props.render}
       rows={props.hostProps.rows}
       readiness={READY}
@@ -211,6 +212,7 @@ function SiteVisits({
   });
   return (
     <VisitsBundle
+      deploymentId={deploymentId}
       render={render}
       rows={pages.status === "ready" ? pages.rows : NO_ROWS}
       readiness={pages.status === "ready" ? READY : pages}
@@ -297,17 +299,20 @@ const VIEW_OPTIONS = {
 
 /** The loaded window handed to the surface, with what every lane shares. */
 function VisitsBundle({
+  deploymentId,
   render,
   rows,
   readiness,
   paging,
 }: {
+  deploymentId: string | null;
   render: DataViewSourceProps<SessionsHostProps>["render"];
   rows: readonly SessionRow[];
   readiness: ResourceReadiness;
   paging: Omit<DataViewPaging<SessionRow>, "isPaged"> | undefined;
 }): ReactElement {
   const laneWindow = useLaneWindow(
+    deploymentId,
     rows,
     readiness.status === "ready",
     paging?.total?.count ?? null,
@@ -332,6 +337,7 @@ function VisitsBundle({
 
 /** Everything the rows share, derived once per loaded window. */
 function useLaneWindow(
+  deploymentId: string | null,
   rows: readonly SessionRow[],
   known: boolean,
   total: number | null,
@@ -343,6 +349,7 @@ function useLaneWindow(
     );
     const all = [...journeys.values()];
     return {
+      deploymentId,
       journeys,
       sections: sectionsByPath(all),
       axisMaxS: axisMaxS(Math.max(0, ...all.map((j) => j.durationS))),
@@ -363,5 +370,5 @@ function useLaneWindow(
             withActions: all.filter((j) => j.actionCount > 0).length,
           },
     };
-  }, [rows, known, total]);
+  }, [deploymentId, rows, known, total]);
 }

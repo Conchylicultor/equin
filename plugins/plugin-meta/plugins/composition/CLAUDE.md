@@ -473,8 +473,8 @@ Run with `./equin test plugins/plugin-meta/plugins/composition`.
     - `SERVE_MODES`
     - `serveModeLabel`
 - Cross-plugin:
-  - Imported by: 28 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×16
+  - Imported by: 29 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×17
     - `framework` ×5
     - `build` ×3
     - `plugin-meta` ×2

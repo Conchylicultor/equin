@@ -36,6 +36,7 @@
     - `ui/tokens/shadow --shadow-md`
     - `ui/tokens/shadow --shadow-sm`
   - Imported by:
+    - `apps/deploy/analytics/sessions`
     - `apps/deploy/deploy-history`
     - `apps/deploy/deployments`
     - `apps/deploy/health`

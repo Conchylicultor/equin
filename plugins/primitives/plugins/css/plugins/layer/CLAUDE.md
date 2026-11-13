@@ -82,8 +82,8 @@ has the vocabulary for it.
     - `Layer`
     - `layerClasses`
 - Cross-plugin:
-  - Imported by: 27 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×15
+  - Imported by: 28 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×16
     - `primitives` ×7
     - `page` ×2
     - `integrations/youtube`

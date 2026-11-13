@@ -8,6 +8,7 @@ import {
 import { MAX_GAPS, MAX_GAP_OFFSET_MS, appendGap, type Gap } from "./gaps";
 import { MAX_LOAD_MS, loadMs } from "./load-timing";
 import { MAX_PAGE_SECTIONS, MAX_SECTION_NAME_LENGTH } from "./page-sections";
+import { MAX_VIEWPORT_PX } from "./viewport";
 
 describe("stripQuery", () => {
   test("removes query and fragment", () => {
@@ -52,6 +53,16 @@ describe("CollectBodySchema", () => {
         props,
       }).success,
     ).toBe(false);
+  });
+  test("a pageview's viewport is whole positive pixels, within a screen's bounds", () => {
+    const base = { kind: "pageview", host: "a.example", path: "/" };
+    const ok = (viewport: unknown) =>
+      CollectBodySchema.safeParse({ ...base, viewport }).success;
+    expect(ok({ w: 390, h: 844 })).toBe(true);
+    expect(ok({ w: 0, h: 844 })).toBe(false);
+    expect(ok({ w: 390.5, h: 844 })).toBe(false);
+    expect(ok({ w: MAX_VIEWPORT_PX + 1, h: 844 })).toBe(false);
+    expect(ok({ w: 390, h: 844, dpr: 3 })).toBe(false);
   });
   test("unknown fields are refused", () => {
     expect(

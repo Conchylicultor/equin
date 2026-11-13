@@ -52,8 +52,8 @@ the forms above — or, if the control does not open a browser tab, another glyp
     - `NewTabLink`
     - `NewTabMenuItem`
 - Cross-plugin:
-  - Imported by: 22 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×12
+  - Imported by: 23 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×13
     - `conversations` ×3
     - `page` ×2
     - `primitives` ×2

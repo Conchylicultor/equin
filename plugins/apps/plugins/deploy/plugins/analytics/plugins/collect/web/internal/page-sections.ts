@@ -21,6 +21,8 @@ export interface PageSectionRegistry {
   register: (path: string, el: Element, name: string) => () => void;
   /** `path`'s sections so far, in page order. */
   sectionsOf: (path: string) => readonly string[];
+  /** The element mounted as section `name` of `path` now, or null (not mounted, never registered). */
+  elementOf: (path: string, name: string) => Element | null;
 }
 
 interface Entry {
@@ -65,5 +67,9 @@ export function createPageSectionRegistry(): PageSectionRegistry {
       };
     },
     sectionsOf: (path) => byPath.get(path)?.map((e) => e.name) ?? [],
+    elementOf: (path, name) => {
+      const el = byPath.get(path)?.find((e) => e.name === name)?.el ?? null;
+      return el !== null && el.isConnected ? el : null;
+    },
   };
 }

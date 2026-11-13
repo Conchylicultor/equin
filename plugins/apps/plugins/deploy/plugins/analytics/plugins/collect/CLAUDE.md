@@ -230,6 +230,32 @@ Without it the box knows only the sections someone reached.
   newest, whatever order keepalive beacons land in). `NULL` = not recorded (an
   event, an older tracker, a page with no sections, no beacon yet).
 
+## Viewport
+
+Each pageview carries `viewport` (`core/internal/viewport.ts`): the layout
+viewport's CSS pixels (`innerWidth` × `innerHeight`) when the page opened,
+stored on the hit (`analytics_hits.viewport`; NULL = an event or an older
+tracker, never a guessed size) and returned in the sessions query — the size
+the Sessions tab's replay plays the page at.
+
+## Replay channel
+
+The Sessions tab replays a visit in a frame of the site's LOCAL serve and
+drives it over `postMessage` (`core/internal/replay.ts`, protocol
+`REPLAY_PROTOCOL`): `navigate` (in-app, through `apps-core/tabs`' `navigate`
+— no reload), `scroll-to` a section by its registered name, `scroll-top`
+(the page's first section). The framed page says `ready` once its tracker
+starts.
+
+`web/internal/replay-follow.ts` installs the listener only when the page is
+framed AND served on an app namespace of this computer's gateway
+(`namespaceFromHost`), so a deployed site on its public host never listens;
+a command is honoured only from the frame's parent on an app-namespace
+origin (never the content host), and only once it parses. Sections are found
+through the page-section registry (`elementOf`) and revealed with
+`scroll-reveal`'s `revealElement`; a section this build does not mount is
+skipped.
+
 ## The mirror
 
 The `analytics` mirror set (`server/internal/mirror.ts`, table-mirror's
@@ -280,7 +306,7 @@ after new visits, a rollup and a retention sweep arrive as deltas.
 
 ## Plugin reference
 
-- Description: The visit tracker a deployed site mounts, cookieless unless the visitor consents: <AnalyticsTracker app={…} /> records one pageview per path change under that app (landing referrer and utm tags on the first only) and the visible time on each; track(name, props?) records a custom event on the current page; useSectionReach(section) / observeSectionReach(el, section) record section_reach once when a section reaches the upper half of the screen, its section prop (<page>/<key>) giving a per-section reach funnel; useAnalyticsConsent() / setAnalyticsConsent(accepted) read and answer the site's consent prompt — accepting keeps a random key in the browser for 13 months, sent with every pageview and event so a return is recognised on any network. Owns the analytics tables (daily salts kept 30 days with the hash → visitor links that let a returning visitor keep one id, 90-day visits and hits, forever daily totals at every single-filter level and forever per-visit memberships for exact unique visitors over any range), the public collect endpoint, the analytics mirror set, the report (runAnalyticsQuery) and the visit-list reads (a window of individual visits with their hits, filtered in the filter language) — both run by the deploy app on its local copy of the tables — the nightly analytics.rollup job and the visits retention sweep that refuses to delete a day not yet rolled up.
+- Description: The visit tracker a deployed site mounts, cookieless unless the visitor consents: <AnalyticsTracker app={…} /> records one pageview per path change under that app (landing referrer and utm tags on the first only, the viewport on each) and the visible time on each; on a local serve framed by the Sessions tab's replay, follows its commands (navigate in-app, scroll a section into view); track(name, props?) records a custom event on the current page; useSectionReach(section) / observeSectionReach(el, section) record section_reach once when a section reaches the upper half of the screen, its section prop (<page>/<key>) giving a per-section reach funnel; useAnalyticsConsent() / setAnalyticsConsent(accepted) read and answer the site's consent prompt — accepting keeps a random key in the browser for 13 months, sent with every pageview and event so a return is recognised on any network. Owns the analytics tables (daily salts kept 30 days with the hash → visitor links that let a returning visitor keep one id, 90-day visits and hits, forever daily totals at every single-filter level and forever per-visit memberships for exact unique visitors over any range), the public collect endpoint, the analytics mirror set, the report (runAnalyticsQuery) and the visit-list reads (a window of individual visits with their hits, filtered in the filter language) — both run by the deploy app on its local copy of the tables — the nightly analytics.rollup job and the visits retention sweep that refuses to delete a day not yet rolled up.
 - Server:
   - Contributes:
     - `table-mirror-set` "analytics"
@@ -331,8 +357,10 @@ after new visits, a rollup and a retention sweep arrive as deltas.
   - Routes: `POST /api/analytics/collect`
 - Web:
   - Uses:
+    - `apps-core/tabs.navigate`
     - `infra/endpoints.fetchEndpointOver`
     - `primitives/dom/in-view.createInViewWatcher`
+    - `primitives/dom/scroll-reveal.revealElement`
     - `primitives/dom/web-storage.defineStore`
     - `primitives/dom/web-storage.Store`
     - `primitives/networking/page-transport.pageTransport`
@@ -387,6 +415,8 @@ after new visits, a rollup and a retention sweep arrive as deltas.
     - `PeriodReport`
     - `RecordedColumn`
     - `RecordedField`
+    - `ReplayCommand`
+    - `ReplayFrameMessage`
     - `ReportPeriod`
     - `ReportRow`
     - `ReportSource`
@@ -394,6 +424,7 @@ after new visits, a rollup and a retention sweep arrive as deltas.
     - `Session`
     - `SessionHit`
     - `UtmTags`
+    - `Viewport`
     - `VisitCut`
     - `VisitDimension`
     - `VisitFilterColumn`
@@ -468,6 +499,7 @@ after new visits, a rollup and a retention sweep arrive as deltas.
     - `MAX_SESSIONS_LIMIT`
     - `MAX_TOTALS_FILTERS`
     - `MAX_UTM_LENGTH`
+    - `MAX_VIEWPORT_PX`
     - `MetricsSchema`
     - `NEVER_RECORDED`
     - `NONE_VALUE`
@@ -487,6 +519,9 @@ after new visits, a rollup and a retention sweep arrive as deltas.
     - `RAW_RETENTION_DAYS`
     - `RECORDED_COLUMNS`
     - `RECORDED_FIELDS`
+    - `REPLAY_PROTOCOL`
+    - `ReplayCommandSchema`
+    - `ReplayFrameMessageSchema`
     - `REPORT_ROWS_PER_DIMENSION`
     - `REPORT_SOURCES`
     - `reportRowGroup`
@@ -504,6 +539,7 @@ after new visits, a rollup and a retention sweep arrive as deltas.
     - `UNFILTERED_LEVEL`
     - `utcDay`
     - `UtmTagsSchema`
+    - `ViewportSchema`
     - `viewsPerVisit`
     - `VISIT_DIMENSIONS`
     - `VISIT_FILTER_COLUMNS`

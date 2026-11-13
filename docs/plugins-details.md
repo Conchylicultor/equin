@@ -1952,7 +1952,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Plugins:
         - **`analytics`** — Umbrella for cookieless site analytics on deployed compositions: the host-only route guard, the collect half that ships inside the deployed site (ingest, tables, nightly rollup, retention, the report and its mirror set), and the dashboard half in the local deploy app, which runs that report on its copy of the site's tables.
           - Plugins:
-            - **`collect`** — The visit tracker a deployed site mounts, cookieless unless the visitor consents: <AnalyticsTracker app={…} /> records one pageview per path change under that app (landing referrer and utm tags on the first only) and the visible time on each; track(name, props?) records a custom event on the current page; useSectionReach(section) / observeSectionReach(el, section) record section_reach once when a section reaches the upper half of the screen, its section prop (<page>/<key>) giving a per-section reach funnel; useAnalyticsConsent() / setAnalyticsConsent(accepted) read and answer the site's consent prompt — accepting keeps a random key in the browser for 13 months, sent with every pageview and event so a return is recognised on any network. Owns the analytics tables (daily salts kept 30 days with the hash → visitor links that let a returning visitor keep one id, 90-day visits and hits, forever daily totals at every single-filter level and forever per-visit memberships for exact unique visitors over any range), the public collect endpoint, the analytics mirror set, the report (runAnalyticsQuery) and the visit-list reads (a window of individual visits with their hits, filtered in the filter language) — both run by the deploy app on its local copy of the tables — the nightly analytics.rollup job and the visits retention sweep that refuses to delete a day not yet rolled up.
+            - **`collect`** — The visit tracker a deployed site mounts, cookieless unless the visitor consents: <AnalyticsTracker app={…} /> records one pageview per path change under that app (landing referrer and utm tags on the first only, the viewport on each) and the visible time on each; on a local serve framed by the Sessions tab's replay, follows its commands (navigate in-app, scroll a section into view); track(name, props?) records a custom event on the current page; useSectionReach(section) / observeSectionReach(el, section) record section_reach once when a section reaches the upper half of the screen, its section prop (<page>/<key>) giving a per-section reach funnel; useAnalyticsConsent() / setAnalyticsConsent(accepted) read and answer the site's consent prompt — accepting keeps a random key in the browser for 13 months, sent with every pageview and event so a return is recognised on any network. Owns the analytics tables (daily salts kept 30 days with the hash → visitor links that let a returning visitor keep one id, 90-day visits and hits, forever daily totals at every single-filter level and forever per-visit memberships for exact unique visitors over any range), the public collect endpoint, the analytics mirror set, the report (runAnalyticsQuery) and the visit-list reads (a window of individual visits with their hits, filtered in the filter language) — both run by the deploy app on its local copy of the tables — the nightly analytics.rollup job and the visits retention sweep that refuses to delete a day not yet rolled up.
               - Server:
                 - Contributes:
                   - `table-mirror-set` "analytics"
@@ -2003,8 +2003,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Routes: `POST /api/analytics/collect`
               - Web:
                 - Uses:
+                  - `apps-core/tabs.navigate`
                   - `infra/endpoints.fetchEndpointOver`
                   - `primitives/dom/in-view.createInViewWatcher`
+                  - `primitives/dom/scroll-reveal.revealElement`
                   - `primitives/dom/web-storage.defineStore`
                   - `primitives/dom/web-storage.Store`
                   - `primitives/networking/page-transport.pageTransport`
@@ -2059,6 +2061,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `PeriodReport`
                   - `RecordedColumn`
                   - `RecordedField`
+                  - `ReplayCommand`
+                  - `ReplayFrameMessage`
                   - `ReportPeriod`
                   - `ReportRow`
                   - `ReportSource`
@@ -2066,6 +2070,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `Session`
                   - `SessionHit`
                   - `UtmTags`
+                  - `Viewport`
                   - `VisitCut`
                   - `VisitDimension`
                   - `VisitFilterColumn`
@@ -2140,6 +2145,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `MAX_SESSIONS_LIMIT`
                   - `MAX_TOTALS_FILTERS`
                   - `MAX_UTM_LENGTH`
+                  - `MAX_VIEWPORT_PX`
                   - `MetricsSchema`
                   - `NEVER_RECORDED`
                   - `NONE_VALUE`
@@ -2159,6 +2165,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `RAW_RETENTION_DAYS`
                   - `RECORDED_COLUMNS`
                   - `RECORDED_FIELDS`
+                  - `REPLAY_PROTOCOL`
+                  - `ReplayCommandSchema`
+                  - `ReplayFrameMessageSchema`
                   - `REPORT_ROWS_PER_DIMENSION`
                   - `REPORT_SOURCES`
                   - `reportRowGroup`
@@ -2176,6 +2185,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `UNFILTERED_LEVEL`
                   - `utcDay`
                   - `UtmTagsSchema`
+                  - `ViewportSchema`
                   - `viewsPerVisit`
                   - `VISIT_DIMENSIONS`
                   - `VISIT_FILTER_COLUMNS`
@@ -2334,33 +2344,49 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `buildSnapshot` — Parse a DB-IP `start,end,CC` CSV (no header row) into snapshot bytes.
                   - `createIpCountryLookup` — A lookup over the snapshot file at `snapshotPath()`, read lazily on the first lookup (one ~16 MB read, shared by lookups that arrive while it runs) and then held in memory.
                   - Types: `IpCountryLookup`
-            - **`sessions`** — Sessions tab of a site's page, shown only when the deployment's composition ships the collect plugin: one row per anonymous visit (country, time, device and software, source, first visit or returning, channel), its journey on a shared log time axis (pages split by their share of the visit, the read line and section ticks, action icons, each named on hover) with its duration and actions; opening a row shows its timeline (each page, the sections reached and when, the actions in order, the exit). Read from this computer's copy of the site's analytics (site-mirror, its freshness line above the list; loading until a first whole copy is in place) as live key-range pages: the views (All / With actions / 2+ pages / Bounced) are saved filters, and every filter — whose visits, the device, any field — runs on the copy, a narrowed view carried in the URL. Serves a deployment's visits (deploy-analytics.sessions) from this computer's copy of the site's analytics tables (site-mirror's replica): collect's own visit-list SQL — the window, the rows by key, the groupings and the count, each filter compiled by collect — run on the copy, re-read whenever a pull applies a page to it.
+            - **`sessions`** — Sessions tab of a site's page, shown only when the deployment's composition ships the collect plugin: one row per anonymous visit (country, time, device and software, source, first visit or returning, channel), its journey on a shared log time axis (pages split by their share of the visit, the read line and section ticks, action icons, each named on hover) with its duration and actions; opening a row shows its timeline (each page, the sections reached and when, the actions in order, the exit), and clicking a page — or Replay — opens the visit replayed on the site's local serve (replay/:deploymentId/:visitId/:page?): at the visitor's viewport, its recorded load as a veil, pages opened in-app, sections scrolled to when reached, actions as toasts, stretches away dimmed or skipped, with a scrubber, speeds and a step list. Read from this computer's copy of the site's analytics (site-mirror, its freshness line above the list; loading until a first whole copy is in place) as live key-range pages: the views (All / With actions / 2+ pages / Bounced) are saved filters, and every filter — whose visits, the device, any field — runs on the copy, a narrowed view carried in the URL. Serves a deployment's visits (deploy-analytics.sessions) from this computer's copy of the site's analytics tables (site-mirror's replica): collect's own visit-list SQL — the window, the rows by key, the groupings and the count, each filter compiled by collect — run on the copy, re-read whenever a pull applies a page to it.
               - Web:
-                - Slots: `sources`
-                - Slot contributors: `sources` ← `apps.deploy.analytics.sessions`
+                - Slots:
+                  - `sources`
+                  - `deploy-session-replay.actions`
+                - Slot contributors:
+                  - `sources` ← `apps.deploy.analytics.sessions`
+                  - `deploy-session-replay.actions` ← `primitives.pane`
                 - Contributes:
+                  - `Pane.Register` "deploy-session-replay"
                   - `SiteTabs.View` "Sessions" → `SessionsSection`
                   - `sources` "Visits" → `VisitsSource`
-                - Uses: 39 symbols — full list in [`plugins/apps/plugins/deploy/plugins/analytics/plugins/sessions/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/analytics/plugins/sessions/REFERENCE.md)
+                - Uses: 60 symbols — full list in [`plugins/apps/plugins/deploy/plugins/analytics/plugins/sessions/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/analytics/plugins/sessions/REFERENCE.md)
                   - `primitives/data-view` ×8
-                  - `primitives/css/ui-kit` ×5
+                  - `primitives/css/ui-kit` ×6
+                  - `primitives/pane` ×6
                   - `primitives/css/coords` ×4
                   - `apps/deploy/host-query` ×3
+                  - `build/serve-composition` ×2
                   - `network/live/live-state` ×2
+                  - `network/live` ×2
+                  - `primitives/css/clip` ×2
                   - `primitives/css/spacing` ×2
+                  - `primitives/css/toggle-chip` ×2
                   - `apps/deploy/deployments.SiteTabs`
                   - `apps/deploy/site-mirror/pull.MirrorFreshness`
-                  - `network/live.useLive`
+                  - `plugin-meta/composition.useManifestItemByName`
                   - `primitives/css/badge.Badge`
                   - `primitives/css/center.Center`
-                  - `primitives/css/clip.clipClasses`
                   - `primitives/css/cluster.Cluster`
                   - `primitives/css/fill.Fill`
+                  - `primitives/css/layer.Layer`
                   - `primitives/css/line.Line`
+                  - `primitives/css/pin.Pin`
+                  - `primitives/css/scroll.Scroll`
                   - `primitives/css/status-dot.StatusDot`
                   - `primitives/css/surface.Surface`
                   - `primitives/css/text.Text`
                   - `primitives/css/yield.yieldClass`
+                  - `primitives/dom/element-size.useElementSize`
+                  - `primitives/embed/frame.AppFrame`
+                  - `primitives/icon-button.IconButton`
+                  - `primitives/link-gesture/new-tab.NewTabButton`
                   - `primitives/loading.Loading`
                   - `ui/icons.Icon`
               - Server:
@@ -2407,11 +2433,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `sessionRowOf`
                   - `startedAtKeyText`
               - Cross-plugin:
-                - Uses tokens: 28 vars — full list in [`plugins/apps/plugins/deploy/plugins/analytics/plugins/sessions/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/analytics/plugins/sessions/REFERENCE.md)
+                - Uses tokens: 30 vars — full list in [`plugins/apps/plugins/deploy/plugins/analytics/plugins/sessions/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/analytics/plugins/sessions/REFERENCE.md)
                   - `ui/tokens/color-palette` ×14
                   - `ui/tokens/density` ×9
                   - `ui/tokens/type-scale` ×3
                   - `ui/tokens/shape` ×2
+                  - `ui/tokens/font-family --font-mono`
+                  - `ui/tokens/shadow --shadow-lg`
               - Exemptions:
                 - Exempts itself from: `no-db-backed-notify` — `server/internal/served.ts` (sanctioned)
         - **`composition`** — Composition section of the site page's Settings tab: which composition this deployment builds and ships, the shape of it (category, entry points, what it extends, how many contributors are opted in), and a cross-app link into that composition's Studio detail pane where its membership is actually edited.
@@ -3399,6 +3427,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/shadow --shadow-md`
               - `ui/tokens/shadow --shadow-sm`
             - Imported by:
+              - `apps/deploy/analytics/sessions`
               - `apps/deploy/deploy-history`
               - `apps/deploy/deployments`
               - `apps/deploy/health`
@@ -13430,8 +13459,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useSurfaceMode`
           - `useTabs`
       - Cross-plugin:
-        - Imported by: 41 plugins — full list in [`plugins/apps-core/plugins/tabs/REFERENCE.md`](../plugins/apps-core/plugins/tabs/REFERENCE.md)
-          - `apps` ×16
+        - Imported by: 42 plugins — full list in [`plugins/apps-core/plugins/tabs/REFERENCE.md`](../plugins/apps-core/plugins/tabs/REFERENCE.md)
+          - `apps` ×17
           - `apps-core` ×8
           - `debug` ×4
           - `hints` ×2
@@ -14943,6 +14972,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live.serveValue`
       - Cross-plugin:
         - Imported by:
+          - `apps/deploy/analytics/sessions`
           - `apps/deploy/local-serve`
           - `apps/studio/compositions`
           - `apps/studio/compositions/draft-actions`
@@ -36873,10 +36903,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `namespaceUrl`
           - `resolveNamespaceAlias`
       - Cross-plugin:
-        - Imported by: 77 plugins — full list in [`plugins/infra/plugins/namespace/REFERENCE.md`](../plugins/infra/plugins/namespace/REFERENCE.md)
+        - Imported by: 79 plugins — full list in [`plugins/infra/plugins/namespace/REFERENCE.md`](../plugins/infra/plugins/namespace/REFERENCE.md)
+          - `apps` ×13
           - `framework` ×13
           - `debug` ×12
-          - `apps` ×11
           - `infra` ×10
           - `conversations` ×7
           - `build` ×6
@@ -44750,8 +44780,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SERVE_MODES`
           - `serveModeLabel`
       - Cross-plugin:
-        - Imported by: 28 plugins — full list in [`plugins/plugin-meta/plugins/composition/REFERENCE.md`](../plugins/plugin-meta/plugins/composition/REFERENCE.md)
-          - `apps` ×16
+        - Imported by: 29 plugins — full list in [`plugins/plugin-meta/plugins/composition/REFERENCE.md`](../plugins/plugin-meta/plugins/composition/REFERENCE.md)
+          - `apps` ×17
           - `framework` ×5
           - `build` ×3
           - `plugin-meta` ×2
@@ -47442,8 +47472,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Layer`
               - `layerClasses`
           - Cross-plugin:
-            - Imported by: 27 plugins — full list in [`plugins/primitives/plugins/css/plugins/layer/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/layer/REFERENCE.md)
-              - `apps` ×15
+            - Imported by: 28 plugins — full list in [`plugins/primitives/plugins/css/plugins/layer/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/layer/REFERENCE.md)
+              - `apps` ×16
               - `primitives` ×7
               - `page` ×2
               - `integrations/youtube`
@@ -47667,9 +47697,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Pin`
               - `pinClasses`
           - Cross-plugin:
-            - Imported by: 61 plugins — full list in [`plugins/primitives/plugins/css/plugins/pin/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/pin/REFERENCE.md)
+            - Imported by: 62 plugins — full list in [`plugins/primitives/plugins/css/plugins/pin/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/pin/REFERENCE.md)
               - `primitives` ×20
-              - `apps` ×17
+              - `apps` ×18
               - `page` ×9
               - `conversations` ×4
               - `tasks` ×2
@@ -47864,9 +47894,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useScrollsSideways`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/density --space-sm`
-            - Imported by: 101 plugins — full list in [`plugins/primitives/plugins/css/plugins/scroll/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/scroll/REFERENCE.md)
+            - Imported by: 102 plugins — full list in [`plugins/primitives/plugins/css/plugins/scroll/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/scroll/REFERENCE.md)
               - `conversations` ×30
-              - `apps` ×21
+              - `apps` ×22
               - `primitives` ×15
               - `debug` ×14
               - `page` ×5
@@ -48363,8 +48393,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette` ×12
               - `ui/tokens/type-scale` ×6
               - `ui/tokens/shape --spacing`
-            - Imported by: 52 plugins — full list in [`plugins/primitives/plugins/css/plugins/toggle-chip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/toggle-chip/REFERENCE.md)
-              - `apps` ×19
+            - Imported by: 53 plugins — full list in [`plugins/primitives/plugins/css/plugins/toggle-chip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/toggle-chip/REFERENCE.md)
+              - `apps` ×20
               - `primitives` ×7
               - `debug` ×5
               - `stats` ×5
@@ -50175,9 +50205,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useResizeObserver`
               - `useResizeObserverSet`
           - Cross-plugin:
-            - Imported by: 48 plugins — full list in [`plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md)
+            - Imported by: 49 plugins — full list in [`plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md)
               - `primitives` ×25
-              - `apps` ×13
+              - `apps` ×14
               - `shell` ×2
               - `active-data/go`
               - `conversations/conversation-view/jsonl-viewer`
@@ -50328,8 +50358,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `revealElement`
               - `useRevealOnActive`
           - Cross-plugin:
-            - Imported by: 50 plugins — full list in [`plugins/primitives/plugins/dom/plugins/scroll-reveal/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/scroll-reveal/REFERENCE.md)
-              - `apps` ×18
+            - Imported by: 51 plugins — full list in [`plugins/primitives/plugins/dom/plugins/scroll-reveal/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/scroll-reveal/REFERENCE.md)
+              - `apps` ×19
               - `primitives` ×16
               - `page` ×6
               - `conversations` ×3
@@ -50559,6 +50589,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `classifyFrameUrl`
           - Cross-plugin:
             - Imported by:
+              - `apps/deploy/analytics/sessions`
               - `apps/prototypes/canvas`
               - `apps/prototypes/compare/route`
               - `apps/prototypes/present`
@@ -51078,8 +51109,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `IconButton`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
-        - Imported by: 134 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
-          - `apps` ×45
+        - Imported by: 135 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
+          - `apps` ×46
           - `conversations` ×22
           - `primitives` ×22
           - `tasks` ×8
@@ -51387,8 +51418,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `NewTabLink`
               - `NewTabMenuItem`
           - Cross-plugin:
-            - Imported by: 22 plugins — full list in [`plugins/primitives/plugins/link-gesture/plugins/new-tab/REFERENCE.md`](../plugins/primitives/plugins/link-gesture/plugins/new-tab/REFERENCE.md)
-              - `apps` ×12
+            - Imported by: 23 plugins — full list in [`plugins/primitives/plugins/link-gesture/plugins/new-tab/REFERENCE.md`](../plugins/primitives/plugins/link-gesture/plugins/new-tab/REFERENCE.md)
+              - `apps` ×13
               - `conversations` ×3
               - `page` ×2
               - `primitives` ×2
@@ -52618,9 +52649,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`pane`** — Unified pane primitive: Pane.define and chrome components.
       - Web:
         - Slots: `Pane.Register`
-        - Slot contributors: 97 contributors — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
-          - `Pane.Register` ×97
-        - Contributes: 127 contributions — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+        - Slot contributors: 98 contributors — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+          - `Pane.Register` ×98
+        - Contributes: 128 contributions — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
           - `FileBrowserHeader` "title" → `PaneTitleItem`
           - `FilePreviewHeader` "title" → `PaneTitleItem`
           - `SlotRender.ListMiddleware`
@@ -52667,6 +52698,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `dependencies.actions` "title" → `PaneTitleItem`
           - `deploy-activity.actions` "title" → `PaneTitleItem`
           - `deploy-deployment-detail.actions` "title" → `PaneTitleItem`
+          - `deploy-session-replay.actions` "title" → `PaneTitleItem`
           - `eventListPane.Actions` "title" → `PaneTitleItem`
           - `eventSourceDetailPane.Actions` "title" → `PaneTitleItem`
           - `eventSourceRunPane.Actions` "title" → `PaneTitleItem`
@@ -52899,8 +52931,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-2xs`
           - `ui/tokens/density --space-md`
           - `ui/tokens/shape --spacing`
-        - Imported by: 206 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
-          - `apps` ×76
+        - Imported by: 207 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+          - `apps` ×77
           - `conversations` ×32
           - `debug` ×29
           - `active-data` ×13
@@ -55159,8 +55191,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 
 - **`reorder`** — Generic reorder primitive: every defineRenderSlot is unconditionally reorderable; use defineMountSlot for headless slots. Applies each slot's committed layout (order, hidden items, spacers, dividers, groups) everywhere slots render; a layout is edited in its config file or the Config pane's reorder-tree field. Generic reorder primitive: per-slot config_v2 directives for contribution order/visibility.
   - Web:
-    - Contributes: 286 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×286
+    - Contributes: 287 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×287
     - Uses:
       - `config_v2.ConfigV2`
       - `config_v2.useConfigResult`
@@ -55184,8 +55216,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `useLayoutOrder`
       - `useReorderedEntries`
   - Server:
-    - Contributes: 285 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.Register` ×285
+    - Contributes: 286 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.Register` ×286
     - Uses: `config_v2.ConfigV2`
     - Exports (values): `reorderDirectiveDescriptor`
   - Cross-plugin:
@@ -62420,9 +62452,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `fontFamilyGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/density --space-sm`
-            - Tokens used by: 156 plugins — full list in [`plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md)
+            - Tokens used by: 157 plugins — full list in [`plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md)
               - `conversations` ×40
-              - `apps` ×24
+              - `apps` ×25
               - `plugin-meta` ×23
               - `debug` ×19
               - `primitives` ×14
@@ -62702,8 +62734,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-weight-normal`
               - `ui/tokens/type-scale --line-height-3xs`
               - `ui/tokens/type-scale --line-height-caption`
-            - Tokens used by: 54 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md)
-              - `apps` ×20
+            - Tokens used by: 55 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md)
+              - `apps` ×21
               - `primitives` ×11
               - `ui` ×5
               - `framework` ×4

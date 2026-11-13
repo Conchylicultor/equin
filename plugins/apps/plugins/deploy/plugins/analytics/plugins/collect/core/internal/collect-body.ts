@@ -2,6 +2,7 @@ import { z } from "zod";
 import { GapsSchema } from "./gaps";
 import { LoadTimingSchema } from "./load-timing";
 import { PageSectionsSchema } from "./page-sections";
+import { ViewportSchema } from "./viewport";
 
 /**
  * What the tracker sends to `POST /api/analytics/collect`, and the limits the
@@ -98,6 +99,11 @@ export const PageviewBodySchema = z
      * then identified by the daily hash alone.
      */
     consentKey: ConsentKeySchema.optional(),
+    /**
+     * The page's viewport in CSS pixels (`viewport.ts`), what the replay plays
+     * the page at. Absent from an older tracker.
+     */
+    viewport: ViewportSchema.optional(),
   })
   .strict();
 

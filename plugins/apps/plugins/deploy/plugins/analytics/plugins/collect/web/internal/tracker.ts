@@ -9,6 +9,7 @@ import {
   type Gap,
   type GapKind,
   type LoadTiming,
+  type Viewport,
 } from "../../core";
 import type { LandingSource } from "./landing";
 
@@ -56,6 +57,8 @@ export interface TrackerDeps {
    * page has rendered.
    */
   pageSections: (path: string) => readonly string[];
+  /** The page's viewport in CSS pixels right now, sent with each pageview. */
+  viewport: () => Viewport;
 }
 
 /** When the page load reached each phase of {@link LoadTiming}, on the `now()` clock. */
@@ -307,6 +310,7 @@ export function createTracker(deps: TrackerDeps): Tracker {
           kind: "pageview",
           host: deps.host,
           path,
+          viewport: deps.viewport(),
           ...source,
           ...identity(),
         })

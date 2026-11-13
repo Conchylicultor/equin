@@ -1,6 +1,6 @@
 {
-  "id": "969d851e-9a39-4cdb-972b-44c6d6126c36",
-  "prevId": "41eb71df-eab0-4952-8ede-5d13fff96fdd",
+  "id": "ea23997c-6529-4f14-9c75-f504e197bf19",
+  "prevId": "969d851e-9a39-4cdb-972b-44c6d6126c36",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -1228,6 +1228,12 @@
         },
         "sections": {
           "name": "sections",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "viewport": {
+          "name": "viewport",
           "type": "jsonb",
           "primaryKey": false,
           "notNull": false

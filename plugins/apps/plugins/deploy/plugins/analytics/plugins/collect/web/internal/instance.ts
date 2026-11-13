@@ -16,7 +16,9 @@ import {
   isOwnerMarked,
   ownerMarkStore,
 } from "./owner-mark";
+import { navigate } from "@plugins/apps-core/plugins/tabs/web";
 import { createPageSectionRegistry } from "./page-sections";
+import { followReplay } from "./replay-follow";
 import { createTracker, type LoadMilestones, type Tracker } from "./tracker";
 
 // Page-wide telemetry: page-view analytics always reach the page's own server (D3).
@@ -140,6 +142,10 @@ export function getTracker(): Tracker {
     isMediaPlaying,
     loadMilestones,
     pageSections: (path) => pageSections.sectionsOf(path),
+    viewport: () => ({
+      w: Math.max(1, Math.round(window.innerWidth)),
+      h: Math.max(1, Math.round(window.innerHeight)),
+    }),
   });
   const activity = () => tracker.activity();
   for (const type of [...INPUT_EVENTS, ...MEDIA_EVENTS])
@@ -154,6 +160,17 @@ export function getTracker(): Tracker {
     if (document.visibilityState === "visible") tracker.visible();
   });
   instance = tracker;
+  // A local serve framed by the Sessions tab's replay follows its commands;
+  // anywhere else this installs nothing.
+  followReplay({
+    host: window.location.host,
+    parent: window.parent === window ? null : window.parent,
+    navigate: (path) => navigate(path),
+    currentPath: currentRoutePath,
+    sectionElement: (path, name) => pageSections.elementOf(path, name),
+    sectionsOf: (path) => pageSections.sectionsOf(path),
+    addMessageListener: (fn) => window.addEventListener("message", fn),
+  });
   return tracker;
 }
 

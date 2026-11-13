@@ -33,7 +33,13 @@ function harness(
   /** The armed deadline: when it fires, and what it runs. One at a time. */
   let deadline: { at: number; fire: () => void } | null = null;
   let armed = 0;
+  /**
+   * Every body sent, a pageview's viewport left out (every pageview carries
+   * one; the viewport test reads `raw`) so the other tests compare the rest.
+   */
   const sent: CollectBody[] = [];
+  const raw: CollectBody[] = [];
+  let viewport = { w: 1280, h: 800 };
   const pending: ((r: CollectResponse) => void)[] = [];
   const sections = new Map<string, string[]>();
   let milestones: LoadMilestones = {
@@ -47,7 +53,11 @@ function harness(
     isOwner: opts.owner ?? (() => false),
     consentKey: opts.consentKey ?? (() => undefined),
     send: (body) => {
-      sent.push(body);
+      raw.push(body);
+      if (body.kind === "pageview") {
+        const { viewport: _viewport, ...rest } = body;
+        sent.push(rest);
+      } else sent.push(body);
       return new Promise((resolve) => pending.push(resolve));
     },
     now: () => clock,
@@ -64,10 +74,15 @@ function harness(
     isMediaPlaying: () => mediaPlaying,
     loadMilestones: () => milestones,
     pageSections: (path) => sections.get(path) ?? [],
+    viewport: () => viewport,
   });
   return {
     tracker,
     sent,
+    raw,
+    setViewport: (v: { w: number; h: number }) => {
+      viewport = v;
+    },
     /** Moves the clock, firing the deadline when its instant is passed (at that instant). */
     advance: (ms: number) => {
       const end = clock + ms;
@@ -103,6 +118,19 @@ function harness(
     },
   };
 }
+
+describe("viewport", () => {
+  it("every pageview carries the viewport as it is when the page opens", () => {
+    const h = harness();
+    h.tracker.pathChanged("/website");
+    h.setViewport({ w: 390, h: 844 });
+    h.tracker.track("film_play", undefined, "/website");
+    h.tracker.pathChanged("/website/story");
+    expect(
+      h.raw.map((b) => (b.kind === "pageview" ? b.viewport : b.kind)),
+    ).toEqual([{ w: 1280, h: 800 }, "event", { w: 390, h: 844 }]);
+  });
+});
 
 describe("owner mark", () => {
   it("a marked browser's pageviews and events carry owner, from the moment it is marked", () => {

@@ -117,6 +117,7 @@ must be the new one (`./equin start --force`).
   - Exports (values): `classifyFrameUrl`
 - Cross-plugin:
   - Imported by:
+    - `apps/deploy/analytics/sessions`
     - `apps/prototypes/canvas`
     - `apps/prototypes/compare/route`
     - `apps/prototypes/present`

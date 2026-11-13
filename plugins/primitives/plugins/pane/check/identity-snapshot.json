@@ -379,6 +379,12 @@
       "parent": "deploy-index"
     },
     {
+      "paneId": "deploy-session-replay",
+      "segment": "replay/:deploymentId/:visitId/:page?",
+      "appIndex": false,
+      "parent": "deploy-index"
+    },
+    {
       "paneId": "deploy-site",
       "segment": "site/:deploymentId/:tab?",
       "appIndex": false,

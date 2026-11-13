@@ -10,6 +10,8 @@ import type { Journey } from "./journey";
  * band and the expanded timeline alike.
  */
 export interface LaneWindow {
+  /** The site the visits are of — what a replay opens on; `null` for made-up visits (the exhibit), which have none. */
+  deploymentId: string | null;
   axisMaxS: number;
   sections: ReadonlyMap<string, readonly string[]>;
   journeys: ReadonlyMap<string, Journey>;

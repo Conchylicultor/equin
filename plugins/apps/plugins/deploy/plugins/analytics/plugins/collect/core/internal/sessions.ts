@@ -12,6 +12,7 @@ import {
 import { ChannelSchema } from "./channel";
 import { GapsSchema } from "./gaps";
 import { LoadTimingSchema } from "./load-timing";
+import { ViewportSchema } from "./viewport";
 import { PageSectionsSchema } from "./page-sections";
 import { MAX_EVENT_PROPS } from "./collect-body";
 /**
@@ -103,6 +104,11 @@ export const SessionHitSchema = z
      * beacon yet) — the reader then only knows the sections someone reached.
      */
     sections: PageSectionsSchema.nullable(),
+    /**
+     * Pageviews only: the page's viewport in CSS pixels. Null = not recorded
+     * (an event, an older tracker) — never a guessed size.
+     */
+    viewport: ViewportSchema.nullable(),
   })
   .strict();
 export type SessionHit = z.infer<typeof SessionHitSchema>;

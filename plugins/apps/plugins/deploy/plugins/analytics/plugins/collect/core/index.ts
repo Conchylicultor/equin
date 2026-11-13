@@ -73,6 +73,14 @@ export {
   PageSectionsSchema,
 } from "./internal/page-sections";
 export type { PageSections } from "./internal/page-sections";
+export { MAX_VIEWPORT_PX, ViewportSchema } from "./internal/viewport";
+export type { Viewport } from "./internal/viewport";
+export {
+  REPLAY_PROTOCOL,
+  ReplayCommandSchema,
+  ReplayFrameMessageSchema,
+} from "./internal/replay";
+export type { ReplayCommand, ReplayFrameMessage } from "./internal/replay";
 export { parseEventPropValue } from "./internal/event-prop";
 export type { EventProp } from "./internal/event-prop";
 export type {
