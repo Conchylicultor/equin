@@ -49,6 +49,8 @@ import {
   type DarwinBackground,
 } from "@plugins/packages/plugins/spawn-priority/server";
 import { recordOuterReadSet } from "./outer-read-set";
+import { recordWorkerMemory, workerWeightCheck } from "./worker-memory";
+import { checkoutWorktreeName } from "@plugins/infra/plugins/paths/core";
 import { openPrepareThread } from "./prepare-thread";
 import type { ProgramOutcome } from "./prepare";
 import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
@@ -370,6 +372,8 @@ const check: Check = {
           programsLine(`type-check worker ${program.name}`, result.stats),
           "stderr",
         );
+;
+        }
         for (const line of result.tscLines) ctx.log?.(line, "stderr");
       }
 
@@ -401,6 +405,32 @@ const check: Check = {
       );
     } finally {
       thread.close();
+    }
+
+    // The run's memory, as a host record: what the worker's grant weight and
+    // host admission's RAM quantum are judged against
+    // (`type-check:worker-weight-measured`, ./worker-memory.ts). After the
+    // record phase, so a failed append — which fails this check, loudly —
+    // never costs a returned run its lint results or bases. A run with any
+    // part unmeasured records nothing: a partial peak would read as a small one.
+    const batches = result?.batchProcesses ?? null;
+    if (
+      result?.peakFootprint.kind === "measured" &&
+      (batches === null || batches.unmeasured === 0)
+    ) {
+      await recordWorkerMemory({
+        t: new Date().toISOString(),
+        worktree: checkoutWorktreeName(root),
+        admission: result.admission.kind,
+        workerBytes: result.peakFootprint.bytes,
+        batches:
+          batches === null
+            ? null
+            : {
+                count: batches.count,
+                concurrentBytes: batches.concurrentFootprintBytes,
+              },
+      });
     }
 
     // Aggregate the two failure categories.
@@ -447,4 +477,4 @@ const check: Check = {
   },
 };
 
-export default check;
+export default [check, workerWeightCheck];

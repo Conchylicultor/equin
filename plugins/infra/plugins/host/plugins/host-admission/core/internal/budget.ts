@@ -89,12 +89,28 @@ export type Priority = "normal" | "low";
  * distribution, not vite, governs the fleet's memory.
  *
  * Units are DECIMAL bytes — the memory log lines that calibrate it are decimal
- * too. NOTE: every measurement above is getrusage maxRSS, read before the
- * 2026-11-13 switch to the peak PHYSICAL FOOTPRINT ("peak footprint" lines);
- * maxRSS also counts freed allocator pages (~0.65 GB high on a 1.15 GB
- * type-check worker), so these numbers over-state the charge. Not re-tuned:
- * re-derive from footprint lines before moving it. (A GiB/GB mismatch here
- * silently understates the true peak by ~7 %.)
+ * too. (A GiB/GB mismatch here silently understates the true peak by ~7 %.)
+ *
+ * **Re-derived on the physical footprint, 2026-11-13.** Every measurement
+ * above is getrusage maxRSS, which also counts freed allocator pages; the
+ * seven-target table describes workers that no longer exist (one repo-program
+ * worker since 2026-09-18). The class this quantum is defined on is now that
+ * worker, and its heavy run — worker plus its batches at once, footprint —
+ * measured mean 7.0 GB over n = 8 runs (p50 6.8, max 8.1;
+ * type-check `core/worker-weight.ts`), spent as 2 units: **3.5 GB per unit**,
+ * 3 % under this value and inside the `B = 9` interval. So it stays, now
+ * measured rather than inherited. `type-check:worker-weight-measured` (main's
+ * hourly host audit) fails when that worker's last 14 days of runs put the
+ * per-unit figure more than 20 % from this constant.
+ *
+ * What the quantum does NOT measure: the fleet's actual use per held slot.
+ * Admission's own fleet reading, copied on every change for 45 min the same
+ * afternoon (81 readings with a slot held): ops used p50 1.0 GB per held slot
+ * (p90 1.5, max 2.1) — a held slot reserves 3.6, so reservations, not use,
+ * closed the window in 24 of them (a queued build read "6 slots held, 2.0 GB
+ * measured, charged 21.6 GB"). That is how a share is charged (every held
+ * slot reserves a whole quantum until measured use exceeds the total), not a
+ * wrong quantum: a smaller one would re-size `B` and every weight with it.
  */
 export const PER_UNIT_BYTES = 3.6e9;
 
@@ -162,7 +178,9 @@ export function hostPoolsFor(host: HostFacts) {
     "browser-fetch": { size: 2 },
     "layout-geometry": { size: 1 },
     push: { size: 1 },
-    // One repo-program type-check worker (7–14 GB resident). The CPU grant
+    // One repo-program type-check worker (7–14 GB resident when sized on
+    // maxRSS; 6.4–8.1 GB physical footprint with its batches, an upper bound,
+    // 2026-11-13, type-check `core/worker-weight.ts`). The CPU grant
     // cannot bound these: its 2-unit weight clamps to each holder's own share, so
     // up to `B` holders ran one each — 2–4 at once on 2026-10-14, the box in
     // memory duress, every warm worker burning 718–2211 CPU-s instead of 29–162.
@@ -178,8 +196,10 @@ export function hostPoolsFor(host: HostFacts) {
     // Measured over 150 runs (2026-11-02..05): 63 % of runs fit, peak RSS ≤ 3.9
     // GB, ≤ 34 CPU-s — and they took 72 % of the heavy pool's slot wait,
     // queued behind whole-tree runs holding its one background slot 8–12 min
-    // (a 4 s run waited 977 s). Three of them (≤ ~12 GB) beside the two heavy
-    // ones; laned by its owner like the heavy pool (background may hold 2).
+    // (a 4 s run waited 977 s). Three of them beside the two heavy ones; laned
+    // by its owner like the heavy pool (background may hold 2). By physical
+    // footprint (2026-11-13, n = 14) a light run peaks at 0.2–3.4 GB, so three
+    // are ≤ ~10 GB (≤ ~12 GB by the maxRSS they were sized on).
     // A CONSTANT: the size names the slot files.
     "type-check-light": { size: 3 },
     // One e2e script run (`./equin run plugins/…/e2e/x.ts`): one bun

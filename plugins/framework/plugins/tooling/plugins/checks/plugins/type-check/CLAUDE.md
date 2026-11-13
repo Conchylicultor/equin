@@ -288,7 +288,8 @@ It takes the caller's `Grant`, so admission and priority cannot be skipped:
    - **Heavy:** a refused run — or one plainly not small (`heavyFromTheStart`: more lint files, a non-keyed mode, a caller-chosen batching) — takes a slot of the laned `type-check-worker` pool (size 2; background may hold one, interactive either) and batches past K. The two slots are taken one after the other, never nested.
    - Why split: a whole-tree run (typed re-lint of every file, 600+ CPU-s) held the heavy pool's one background slot 8–12 min while 4-s runs queued behind it (977 s measured). ≤ 100 sources covered 63 % of 150 measured runs at ≤ 3.9 GB, ≤ 34 CPU-s.
    - The transcript's `type-check worker repo: admitted …` line says which pool, and for an escalation what the refused attempt cost.
-2. **`TYPE_CHECK_WORKER_UNITS` of the grant** (`core/worker-weight.ts`: `ceil(7.2 GB mean peak / PER_UNIT_BYTES)` = 2) — CPU accounting.
+2. **`TYPE_CHECK_WORKER_UNITS` of the grant** (`core/worker-weight.ts`: `ceil(7.0 GB mean heavy-run footprint / PER_UNIT_BYTES)` = 2) — CPU accounting.
+   - Every run appends its measured footprints (admission, worker, batches at once) to the host log `~/.equin/logs/type-check-worker-memory/worker-memory.jsonl` (`check/worker-memory.ts`). The host check `type-check:worker-weight-measured` (main's hourly host audit) fails when `TYPE_CHECK_WORKER_PEAK_BYTES` sits more than 20 % from the last 14 days' mean heavy-run footprint, or `PER_UNIT_BYTES` more than 20 % from that mean per unit spent; re-derive from the log, never by a guessed offset.
    - The grant clamps it to its own size.
    - Batch processes run serially inside this share.
 3. **Foreground, as the slot's holder, in either lane**: the pool is `holder: "foreground"` and the worker spawns via `slot.spawn` (out of darwinbg even from a darwinbg session; no spelling for demoting it).

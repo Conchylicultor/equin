@@ -35,7 +35,7 @@ pool says can move any other pool's capacity:
 | `push` | 1 | foreground | the global push mutex |
 | `e2e` | 2 | inherit | concurrent e2e script runs (`./equin run …/e2e/x.ts`) — their own cap, so a 20 s screenshot never queues in `cpu`'s background window behind 40-min builds |
 | `type-check-worker` | 2 | foreground | live repo-program type-check workers (7–14 GB each); laned by its owner (`type-check/server`): background may hold 1 |
-| `type-check-light` | 3 | foreground | live SMALL type-check workers (every program ≤ 100 sources, ≤ 3.9 GB measured; the worker refuses a larger one and is re-admitted above); laned: background may hold 2 |
+| `type-check-light` | 3 | foreground | live SMALL type-check workers (every program ≤ 100 sources, ≤ 3.4 GB physical footprint measured; the worker refuses a larger one and is re-admitted above); laned: background may hold 2 |
 | `worktree-prepare` | 4 | inherit | booted `worktree.prepare` children (an agent checkout being made) — the job's `admission` pool, taken by the child BEFORE it boots and held until it exits, so a launch storm's queued checkouts hold no database connection (2026-10-28: twenty children at once ran pgbouncer out of `max_client_conn`) |
 
 The `holder` column is declared at each `defineHostPool` call (see *A scarce
@@ -211,7 +211,16 @@ memory or in the ceiling fraction cannot flip it. `3.8e9` also yields 9 but sits
 **0.04** from flipping to 8 — do not use it. Whoever re-tunes this next must
 recompute that interval rather than assume the margin is still there, and should
 know that nothing subtracts from the ceiling any more: a change to the constant
-moves the fleet ceiling directly and visibly. See the constant's own comment in
+moves the fleet ceiling directly and visibly.
+
+**Re-measured on the physical footprint (2026-11-13), unchanged.** The class
+it is defined on — the one repo-program type-check worker, heavy run with its
+batches at once — measured 7.0 GB mean over 8 runs, spent as 2 units: 3.5 GB
+per unit, inside the `B = 9` interval. The host check
+`type-check:worker-weight-measured` (main's hourly host audit) holds the
+constant to that worker's recorded runs. The fleet's actual use per held slot
+is far lower (p50 1.0 GB the same day): that is how a held share is charged,
+not the size of a quantum. See the constant's own comment in
 [`core/internal/budget.ts`](./core/internal/budget.ts) and
 [`research/2026-09-09-global-host-pools-stop-reserving-cpu.md`](../../../../../../research/2026-09-09-global-host-pools-stop-reserving-cpu.md).
 

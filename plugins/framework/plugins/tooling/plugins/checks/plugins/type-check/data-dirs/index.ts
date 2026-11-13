@@ -228,7 +228,27 @@ export const retiredContractRefsDir = defineDataDir({
   reclaim: { kind: "safe" },
 });
 
+/**
+ * The worker memory log: one JSONL line per type-check worker run on this
+ * host — how it was admitted, the worker's peak physical footprint and its
+ * batch processes' — the measurement `TYPE_CHECK_WORKER_PEAK_BYTES` and
+ * host-admission's `PER_UNIT_BYTES` are judged against
+ * (`type-check:worker-weight-measured`, `../check/worker-memory.ts`).
+ */
+export const workerMemoryLogDir = defineDataDir({
+  kind: "logs",
+  name: "type-check-worker-memory",
+  owner: "framework/tooling/checks/type-check",
+  description:
+    "Per type-check worker run on this host (`worker-memory.jsonl` + rotations): admission, the worker's peak physical footprint and its batch processes' — the measurement the worker's grant weight and the host's RAM quantum are checked against",
+  // Observability output: losing it loses the record of past runs' memory,
+  // never anything a run needs. The weight check then waits for new samples.
+  reclaim: { kind: "safe" },
+  logs: [{ pattern: "worker-memory.jsonl", bound: { kind: "file-sink" } }],
+});
+
 export default [
+  workerMemoryLogDir,
   lintResultsV3Dir,
   runBaseRootsDir,
   runBaseShardsDir,
