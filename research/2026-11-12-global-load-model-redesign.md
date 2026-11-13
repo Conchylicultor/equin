@@ -1,6 +1,6 @@
 # Load model: what loads, how and when — today and from scratch
 
-Status: design proposal (research only — no code changed). M1 measurements in §12 (2026-11-13) contradict several sizing assumptions — read it first. Prompted by the equin.ai first-visit audit
+Status: design proposal (research only — no code changed). M1 measurements in §12 (2026-11-13) contradict several sizing assumptions — read it first. §13 re-measures equin.ai after the quick wins (fast 4G ready 4.99 → 3.3 s). Prompted by the equin.ai first-visit audit
 (deploy `dpl-1785501087837-xkt5u5`): ~5 s on emulated fast 4G + 4× CPU, 6.7 s in the field.
 Builds on [client lazy plugins](./2026-10-11-global-client-lazy-plugins.md) (its Phase 2 "load when
 needed" rule and its sizing), [eager tier from markers](./2026-07-02-global-eager-tier-derived-from-markers.md),
@@ -11,7 +11,7 @@ needed" rule and its sizing), [eager tier from markers](./2026-07-02-global-eage
 Contents: 0 Context · 1 Current model · 2 Today's observed paint behaviour · 3 Prior art ·
 4 Target model (with code) · 5 First paint: the smoothness contract, pre-render vs atomic ·
 6 Tradeoffs, gains, risks · 7 Background effects and prefetch · 8 Edge cases · 9 Migration path ·
-10 Open questions · 11 Verification · 12 M1 results.
+10 Open questions · 11 Verification · 12 M1 results · 13 Re-measured after the quick wins.
 
 ## 0. Context
 
@@ -972,3 +972,144 @@ Contradicted, so the doc should change:
 7. **For the website, pre-render (M7) is what fixes paint.** A ~0.9 MB hydration set makes the
    "hydration window" of §5.3 seconds long on fast 4G rather than "short". Keep M7 behind M2 + route
    chunks, but do not expect the window to close without the budget work above.
+
+---
+
+## 13. Re-measured after the quick wins (2026-11-13, release `9663cec7`)
+
+equin.ai has served `9663cec7` since deploy run `drun-1794589940-qhsquh` (17:14 UTC). That release
+includes all seven quick wins: the snapshot request in the head (`bf3525cb`), the app code preloaded
+from the HTML (`5d788cd4`), reporters no longer pulling in the page editor (`e2df73ea`), images as
+files (`0030c51c`), theme CSS written once (`d73f2dc9`), sprites as cacheable assets (`85694084`),
+and the per-composition snapshot (`9663cec7`).
+
+**Method.** Cold loads of `https://equin.ai/about` and `/` (which answers 301 to `/about`) in
+headless Chromium:
+- a fresh context per run, CDP cache disabled, 1280×800, dark scheme, run in the foreground;
+- profiles: desktop (no throttling); fast 4G = 9 Mbps / 60 ms + 4× CPU (the §2 profile); slow 4G =
+  1.6 Mbps / 150 ms + 4× CPU (Lighthouse);
+- 5 runs per profile and page, plus 2 filmstrip runs (CDP screencast) for desktop and fast 4G.
+
+The numbers below are medians over those 5–7 runs. The host load average was 6–15, so CPU-bound
+phases are noisy (fast 4G `/about` ready ranged 3.14–5.41 s; the 5 quieter runs were all
+3.14–3.42 s). The audit's own script was not kept, so its throttling values are inferred.
+"Ready" is the `route-content-commit` boot instant, as in the audit. The scratch script is not
+committed.
+
+### 13.1 Before / after
+
+| | Audit (`96800db2` era) | Now (`9663cec7`) |
+|---|---|---|
+| **Desktop**: TTFB / preloads done / eval done / ready | 108 / 770 / 1,348 / **1,713 ms** | 70 / 266 / 395 / **457 ms** (`/`: 444) |
+| Desktop: FCP / LCP / CLS | — | 528 / 652 ms / 0 |
+| **Fast 4G + 4× CPU**: TTFB / preloads done / eval done / ready | 108 / 2,552 / 3,705 / **4,990 ms** | 103 / 2,464 / 3,037 / **3,302 ms** (`/`: 3,372) |
+| Fast 4G: first paint (themed canvas) / FCP / LCP / CLS | ~1,120 (§2) / 7,408 (§2) / 8,670 (§2) / 0.046 | **2,300** / 3,532 / 3,968 / **0** |
+| **Slow 4G + 4× CPU**: TTFB / preloads done / eval done / ready | 204 / 13,136 / 14,114 / **19,477 ms** | 194 / 13,238 / 13,688 / **13,911 ms** (`/`: 14,304) |
+| Slow 4G: first paint / FCP / LCP / CLS | — | 12,092 / 14,128 / 16,744 / 0 |
+| JS before ready (br on the wire) | eager 612 modules / 1.93 MB, **then** 33 app artifacts / 679 KB | **606 preloads / 1.86 MB**, the app code included; 621 JS requests / 1.91 MB by settle |
+| Requests by ready / by settle | ~650+ | 616 / 637 |
+| HTML | 343 KB raw | **309 KB raw / 63 KB gzip** (the import map is 194 KB of it; 606 preload tags are 59 KB) |
+| Boot snapshot | 102 KB br, requested after eval | **657 B**, requested at ~0.2 s, in by 0.26 s (desktop) / 0.88 s (fast 4G) |
+| Icon sprites | inside the snapshot | 3 immutable assets, 71 KB gzip, plus saved symbols 12 KB (`no-cache`) |
+
+### 13.2 Where the 3.3 s go now (fast 4G + 4× CPU, `/about`)
+
+| Phase | Ends at | Takes |
+|---|---|---|
+| HTML (63 KB gzip) | 0.16 s | 0.16 s |
+| Download the 606 preloads (1.86 MB br) | 2.46 s | **2.30 s (70 %)** |
+| Entry module + link, up to `load-plugins` | 2.65 s | 0.18 s |
+| Evaluate 309 eager + 18 app plugins | 3.04 s | **0.41 s** |
+| Boot tasks (the snapshot has been in since 0.88 s) | 3.10 s | 0.06 s |
+| First commit of the whole page (= ready) | 3.30 s | 0.20 s |
+| LCP: the hero video poster (210 KB jpg, requested only after render) | 3.97 s | +0.67 s |
+
+The two serial waits are gone (S1, S2 in §1.4): the snapshot no longer waits for evaluation, and the
+website's plugins no longer wait for the first commit. Evaluation is less than half the audit's
+0.9 s. The load is now **bandwidth-bound**: the preload phase still moves about the same bytes,
+because the app's own code now rides in it. On slow 4G the same download is 12.6 of the 13.9 s.
+
+### 13.3 Filmstrip (fast 4G)
+
+1. Browser-blank until 2.28 s.
+2. Themed dark canvas.
+3. At 3.39 s, the whole page in one frame: header with its nav and Wish, hero heading, text, and
+   the empty video box.
+4. The poster fills that box over 3.78–4.13 s.
+5. The cookie banner, a fixed overlay, appears at ~4.1 s.
+
+There is no chrome-only frame any more (§2's header without its nav is gone). Across 38 runs:
+- no text changed after it first appeared;
+- CLS was 0 in every run;
+- the rAF sampler, reading every frame, never saw `#equin-snapshot` painted. `html.js` was present
+  from the first frame, and the first heading ever drawn was the app's own 78 px Inter H1.
+
+So the suspected 16 px base-theme heading did not reproduce in Chromium. It cannot happen while the
+`html.js` style and class script stay in the `<head>`. Safari and Firefox were not tested.
+
+**New issue: the first paint got later.** The themed canvas now appears at 2.3 s on fast 4G (§2 saw
+1.12 s) and at 12.1 s on slow 4G. The only render-blocking resource is `/assets/style-*.css`
+(36 KB). It is requested at 0.18 s but finishes at 2.26 s, because it shares the HTTP/2 connection
+with the 606 modulepreloads and the sprite fetches. So on slow 4G a visitor stares at a blank tab
+for 12 s.
+
+### 13.4 What the 1.86 MB is (br sizes of every preloaded file)
+
+- **Vendors: 504 KB.** Shared chunks 183, zod 87, react-dom ~66, base-ui 57,
+  react-resizable-panels 37, tanstack 25, sonner 10, tailwind-merge 9. Lexical core is still
+  preloaded but small (~4 KB plus whatever sits in the chunks); yjs is gone.
+- **First-party: 1.36 MB.**
+  - website pages: 202 KB. **~170 KB of it is pages `/about` does not show** (foundations 47,
+    vision 31, story ~60, apps, download, privacy), because the app batch is picked by app path prefix;
+  - data-view and its views (web, list, table, view-core): ~150 KB;
+  - ui-kit: 30 KB;
+  - image-viewer: 29 KB;
+  - shell: 27 KB;
+  - network/live (core, live-state, web): 62 KB;
+  - media player: 26 KB;
+  - the composition registry: 26 KB;
+  - icon-name tables (`saved-names`): 18 KB;
+  - color-picker and control-panel: 27 KB;
+  - deploy analytics: 12 KB;
+  - the long tail of reorder, tree, data-table, rank-reorder and others.
+- 180 of the 606 files are tiny and served uncompressed (99 KB in all).
+
+### 13.5 Remaining causes, ranked (fast 4G)
+
+1. **Bytes on the wire: 1.86 MB br in 606 files, 2.3 s of 3.3 s** (12.6 of 13.9 s on slow 4G).
+   §12's M2 and route chunks are the structural fix. The cheapest single cut is preloading only the
+   current page's website plugins (~170 KB). After that come data-view off the landing (~150 KB)
+   and zod (87 KB).
+2. **Render-blocking CSS starved by the preloads**: the first paint is 2.3 s / 12 s instead of
+   ~0.3 s / ~1 s. This does not change "ready", but it is the "is anything happening?" signal on
+   slow networks.
+3. **Evaluation, ~0.4 s at 4× CPU** (309 eager plugins).
+4. **The LCP poster is discovered late**: +0.67 s fast, +2.8 s slow after ready.
+5. **The HTML is 309 KB, gzip not brotli.** Mostly the import map. It costs ~0.4 s on slow 4G and
+   little on fast 4G.
+
+### 13.6 Field data
+
+The deploy app's copy of the site's analytics was last synced at 17:12, before this release went
+live, so **there are no field loads of `9663cec7` yet**. Earlier releases, visitors only (the
+owner's own visits excluded):
+- before `96800db2`: desktop p50 ready 2.19 s (n = 12); mobile p50 2.36 s, p75 3.61 s (n = 17);
+- on `42fdc607` (app preload and reporter split): desktop 1.89 s (n = 2), mobile 2.07 s (n = 2).
+
+That is too few to compare. Re-read the Sessions tab after a few days of traffic.
+
+### 13.7 D1 (pre-render the website), revisited
+
+"Ready" went from 4.99 s to 3.3 s, and the rest is mostly bytes. A pre-render would paint real
+content at HTML + CSS time: ~0.3–0.6 s on fast 4G, once the stylesheet is no longer starved, against
+3.5 s FCP today. But interactivity would still arrive at ~3.3 s, and at ~14 s on slow 4G. That means
+a 3 s (fast) to 13 s (slow) "looks ready, answers late" window, which is §6.2's risk 4 at its worst.
+
+**Recommendation: not yet.**
+1. First take the cheap, risk-free wins: un-starve the stylesheet, preload only the current page's
+   website plugins, and preload the poster. Together they should bring the themed first paint under
+   ~0.5 s and ready to roughly 2.5 s on fast 4G (estimate).
+2. Then do M2 with route chunks.
+
+Pre-render remains the only way to get content up in under 1 s on 4G. Revisit it once the hydration
+set is under ~1 MB, when the window it opens is short.
