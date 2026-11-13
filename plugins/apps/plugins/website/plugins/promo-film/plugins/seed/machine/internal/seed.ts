@@ -452,6 +452,8 @@ async function writeRun(
       status: run.status,
       workingOn: null,
       model: run.model,
+      launchCause: "direct",
+      launchedFrom: "apps.website.promo-film.seed",
       claudeSessionId: run.sessionId,
       createdAt: ago(run.startedAgo),
       updatedAt: ago(run.updatedAgo),

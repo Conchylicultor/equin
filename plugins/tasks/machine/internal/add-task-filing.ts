@@ -1,4 +1,7 @@
-import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
+import {
+  asPluginId,
+  type PluginId,
+} from "@plugins/framework/plugins/plugin-id/core";
 import type { createTask } from "@plugins/tasks/plugins/tasks-core/server";
 import type {
   TaskFilingStart,
@@ -55,7 +58,7 @@ export interface AddTaskPorts {
   armAutoStart(args: {
     taskId: string;
     model: ModelChoice;
-    cause: string;
+    armedFrom: PluginId;
   }): Promise<void>;
   setTrack(taskId: string, track: TaskTrack): Promise<void>;
   /** Whether the caller's mandate grants `watch.children`. */
@@ -250,7 +253,7 @@ export async function fileAddTask(
     await ports.armAutoStart({
       taskId: task.id,
       model,
-      cause: "mcp-add-task",
+      armedFrom: asPluginId("tasks"),
     });
   }
 

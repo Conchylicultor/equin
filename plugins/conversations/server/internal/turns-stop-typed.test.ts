@@ -143,8 +143,8 @@ test("Stop waits for the agent to take the typed turn, then stops it and hands i
     VALUES (${attempt}, ${task}, ${`/tmp/${attempt}`})
   `);
   await t.db.execute(sql`
-    INSERT INTO conversations (id, attempt_id, status, runtime, model, spawned_by)
-    VALUES (${conv}, ${attempt}, 'working', 'sdk', ${FALLBACK_MODEL}, 'test')
+    INSERT INTO conversations (id, attempt_id, status, runtime, model, launch_cause)
+    VALUES (${conv}, ${attempt}, 'working', 'sdk', ${FALLBACK_MODEL}, 'direct')
   `);
   await t.db.execute(sql`
     INSERT INTO conversation_turns (id, conversation_id, kind, text, typed_text, state)

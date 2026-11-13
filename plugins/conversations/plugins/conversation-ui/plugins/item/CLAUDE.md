@@ -9,7 +9,7 @@ before hand-rolling a seventh clickable pill.
 `<ConversationItem conv layout? active?>` ships three layouts:
 
 - `layout="block"` (default) — `[●] [title] [sys]` with a relative-time
-  meta line below (`spawnedBy · time` for system conversations). Used by
+  meta line below (`launchedFrom · time` for system conversations — the plugin id that launched it). Used by
   the Attempts section in task detail.
 - `layout="inline"` — single line `[●] [title] [sys]`, no time. Used by
   the inline `conv-<id>` chip rendered inside assistant text.

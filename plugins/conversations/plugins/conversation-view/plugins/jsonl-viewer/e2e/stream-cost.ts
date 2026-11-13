@@ -115,6 +115,7 @@ try {
       body: JSON.stringify({
         attemptId,
         model: MODEL,
+        launchedFrom: "conversations.conversation-view.jsonl-viewer",
         prompt: "Reply with only OK.",
       }),
     });

@@ -18,7 +18,7 @@ export default {
       validate: (model) => {
         if (model) assertChoiceLaunchable(model, getModelCatalog());
       },
-      apply: async ({ taskId, cause, start }, model) => {
+      apply: async ({ taskId, armedFrom, start }, model) => {
         if (!model) {
           await setTaskAutoStart(taskId, null);
           return;
@@ -27,12 +27,12 @@ export default {
         // popover's inline start): record the model on the marker, but do NOT
         // enqueue — a queued `tasks.maybe-launch` would race the caller's claim.
         if (start === "now") {
-          await setTaskAutoStart(taskId, { model });
+          await setTaskAutoStart(taskId, { model, armedFrom });
           return;
         }
         // Arming (not a bare `setTaskAutoStart`) is what actually enqueues the
         // launch when no dependency blocks the task.
-        await armTaskAutoStart({ taskId, model, cause });
+        await armTaskAutoStart({ taskId, model, armedFrom });
       },
       // NO `inherit`, deliberately — and the omission is the declaration. This
       // apply ARMS a launch, so inheriting it would start an agent for every

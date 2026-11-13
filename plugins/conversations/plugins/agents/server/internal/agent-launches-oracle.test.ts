@@ -137,8 +137,8 @@ const LAUNCH_STEPS: Record<string, TreeStep[]> = {
            INSERT INTO attempts (id, task_id, worktree_path)
            VALUES ('${A4}', '${T1}', '/tmp/${A4}') RETURNING id
          )
-         INSERT INTO conversations (id, attempt_id, title, status, model, ended_at, created_at)
-         SELECT '${C4}', a.id, '${C4} title', 'done', '${MODEL}', now() - interval '1 day', now() - interval '1 day'
+         INSERT INTO conversations (id, attempt_id, title, status, model, ended_at, created_at, launch_cause)
+         SELECT '${C4}', a.id, '${C4} title', 'done', '${MODEL}', now() - interval '1 day', now() - interval '1 day', 'direct'
            FROM a`,
       ],
     },

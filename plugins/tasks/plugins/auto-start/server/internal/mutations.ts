@@ -4,6 +4,7 @@ import { _tasks, tasksView } from "@plugins/tasks/plugins/tasks-core/server";
 import { statusesDeciding } from "../../core";
 import { tasksAutoStart, _tasksAutoStartExt } from "./tables";
 import type { ModelChoice } from "@plugins/conversations/plugins/model-provider/core";
+import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
 
 export async function getTaskAutoStart(id: string) {
   return tasksAutoStart.get(id);
@@ -45,9 +46,14 @@ export async function listLaunchableArmedIn(
 // `prompt` absent stores `null`, so a re-arm that names no prompt (the user
 // picking a model, re-launching from the UI) launches with the task's own text
 // and never inherits a prompt an automation wrote for an earlier arm.
+// `armedFrom` is the plugin arming it — the launch's `launchedFrom`.
 export async function setTaskAutoStart(
   id: string,
-  autoStart: { model: ModelChoice; prompt?: string } | null,
+  autoStart: {
+    model: ModelChoice;
+    prompt?: string;
+    armedFrom: PluginId;
+  } | null,
 ): Promise<boolean> {
   const [task] = await db
     .select({ id: _tasks.id })
@@ -61,6 +67,7 @@ export async function setTaskAutoStart(
       autoStartAt: now,
       autoStartModel: autoStart.model,
       autoStartPrompt: autoStart.prompt ?? null,
+      armedFrom: autoStart.armedFrom,
     });
   } else {
     await tasksAutoStart.delete(id);

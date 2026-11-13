@@ -1,4 +1,5 @@
 import { LaunchControl } from "@plugins/primitives/plugins/launch/web";
+import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web";
 import type { TaskListItem } from "@plugins/tasks/plugins/tasks-core/core";
 
@@ -10,6 +11,11 @@ export function LaunchAgentAction({ row }: ItemActionProps<TaskListItem>) {
   });
 
   return (
-    <LaunchControl size="icon" openAfterLaunch={false} getRequest={getRequest} />
+    <LaunchControl
+      launchedFrom={asPluginId("tasks.task-list")}
+      size="icon"
+      openAfterLaunch={false}
+      getRequest={getRequest}
+    />
   );
 }

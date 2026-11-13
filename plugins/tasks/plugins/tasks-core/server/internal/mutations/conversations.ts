@@ -10,7 +10,11 @@ import {
 } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import type { ConversationModel } from "@plugins/conversations/plugins/model-provider/core";
-import type { ConversationStatus, ConversationWorkingOn } from "../../../core";
+import type {
+  ConversationLaunch,
+  ConversationStatus,
+  ConversationWorkingOn,
+} from "../../../core";
 import { _attempts, _conversations, _tasks } from "../tables";
 import { conversations } from "../views";
 import {
@@ -29,7 +33,8 @@ export interface InsertConversationInput {
   attemptId: string;
   runtime: string;
   model: ConversationModel;
-  spawnedBy: string;
+  /** Why it was launched now, and the plugin that launched it. */
+  launch: ConversationLaunch;
   kind?: "user" | "agent" | "system";
   /** Never `working`: only the status reconciler knows what a turn is busy on. */
   status?: Exclude<ConversationStatus, "working">;
@@ -180,7 +185,8 @@ export async function insertConversation(
       attemptId: input.attemptId,
       runtime: input.runtime,
       model: input.model,
-      spawnedBy: input.spawnedBy,
+      launchCause: input.launch.cause,
+      launchedFrom: input.launch.from,
       kind: input.kind ?? "user",
       status: input.status ?? "starting",
       title: input.title ?? task?.title ?? null,
@@ -211,7 +217,8 @@ export async function insertConversationOnConflictDoNothing(
         attemptId: input.attemptId,
         runtime: input.runtime,
         model: input.model,
-        spawnedBy: input.spawnedBy,
+        launchCause: input.launch.cause,
+        launchedFrom: input.launch.from,
         kind: input.kind ?? "user",
         status: input.status,
         title: input.title ?? task?.title ?? null,

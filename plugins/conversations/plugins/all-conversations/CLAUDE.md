@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: All-conversations app pane: a live DataView over the `conversations.all` collection (filter/sort/search over every conversation, kept fresh by the routed change feed) reachable from the agent-manager sidebar; and how the conversations entity's fields present in every conversation list (the optimistic status cell, the model filter's live catalog options). Serves the two conversation-list collections — `conversations.all` (system conversations hidden by a default scope) and `conversations.history` — over `_conversations` with the owner joins (attempt → task), routed: a conversation, attempt or task write refills only the rows it changes.
+- Description: All-conversations app pane: a live DataView over the `conversations.all.v2` collection (filter/sort/search over every conversation, kept fresh by the routed change feed) reachable from the agent-manager sidebar; and how the conversations entity's fields present in every conversation list (the optimistic status cell, the model filter's live catalog options). Serves the two conversation-list collections — `conversations.all.v2` (system conversations hidden by a default scope) and `conversations.history.v2` — over `_conversations` with the owner joins (attempt → task), routed: a conversation, attempt or task write refills only the rows it changes.
 - Web:
   - Slots: `allConversationsPane.Actions`
   - Slot contributors: `allConversationsPane.Actions` ← `primitives.pane`
@@ -35,28 +35,28 @@
   - Exports (values): `allConversationsPane`
 - Server:
   - Contributes:
-    - `resource.declare` "conversations.all"
-    - `resource.declare` "conversations.all:count"
-    - `resource.declare` "conversations.all:groups"
-    - `resource.declare` "conversations.all:rows"
-    - `resource.declare` "conversations.history"
-    - `resource.declare` "conversations.history:count"
-    - `resource.declare` "conversations.history:groups"
-    - `resource.declare` "conversations.history:rows"
+    - `resource.declare` "conversations.all.v2"
+    - `resource.declare` "conversations.all.v2:count"
+    - `resource.declare` "conversations.all.v2:groups"
+    - `resource.declare` "conversations.all.v2:rows"
+    - `resource.declare` "conversations.history.v2"
+    - `resource.declare` "conversations.history.v2:count"
+    - `resource.declare` "conversations.history.v2:groups"
+    - `resource.declare` "conversations.history.v2:rows"
   - Uses:
     - `network/live.serveCollection`
     - `tasks/tasks-core._conversations`
     - `tasks/tasks-core.conversationOwnerColumns`
     - `tasks/tasks-core.conversationOwnerJoins`
   - Resources:
-    - `conversations.all` (keyed, window)
-    - `conversations.all:count` (push)
-    - `conversations.all:groups` (push)
-    - `conversations.all:rows` (keyed, point)
-    - `conversations.history` (keyed, window)
-    - `conversations.history:count` (push)
-    - `conversations.history:groups` (push)
-    - `conversations.history:rows` (keyed, point)
+    - `conversations.all.v2` (keyed, window)
+    - `conversations.all.v2:count` (push)
+    - `conversations.all.v2:groups` (push)
+    - `conversations.all.v2:rows` (keyed, point)
+    - `conversations.history.v2` (keyed, window)
+    - `conversations.history.v2:count` (push)
+    - `conversations.history.v2:groups` (push)
+    - `conversations.history.v2:rows` (keyed, point)
 - Core:
   - Uses:
     - `conversations/model-provider.compareModelsNewestFirst`

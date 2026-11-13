@@ -54,6 +54,8 @@ export interface InvestigateLinkProps extends InvestigateCommon {
   linkedTaskId: string | null;
   /** Names what the launch is about, so an unsent draft survives (see `LaunchAgentForm`). */
   draftKey: string;
+  /** The plugin id of the surface launching it (the conversation's `launchedFrom`). */
+  launchedFrom: PluginId;
   resolve: (userText: string) => Promise<{ taskId: string; prompt: string }>;
 }
 
@@ -120,7 +122,7 @@ function LinkedInvestigate(props: InvestigateLinkProps) {
       getRequest={async (userText) => {
         const { taskId, prompt } = await props.resolve(userText);
         setJustLinked(taskId);
-        return { taskId, prompt };
+        return { taskId, prompt, launchedFrom: props.launchedFrom };
       }}
     />
   );

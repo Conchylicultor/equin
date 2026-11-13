@@ -7,6 +7,7 @@ import { assertChoiceLaunchable } from "@plugins/conversations/plugins/model-pro
 import { getModelCatalog } from "@plugins/conversations/plugins/model-provider/plugins/catalog/server";
 import { setTaskAutoStart } from "@plugins/tasks/plugins/auto-start/core";
 import { armTaskAutoStart } from "./arm-auto-start";
+import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 
 export const handleSetAutoStart = implement(
   setTaskAutoStart,
@@ -35,7 +36,9 @@ export const handleSetAutoStart = implement(
     await armTaskAutoStart({
       taskId: params.id,
       model: body.model,
-      cause: "user-launch",
+      // The only caller is the auto-start launch option's control on a
+      // filed task (its Prompt card).
+      armedFrom: asPluginId("tasks.auto-start.launch-option"),
     });
     // return undefined → implement() sends 204
   },

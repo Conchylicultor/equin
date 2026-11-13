@@ -656,8 +656,8 @@ const edge = (from: string, to: string) =>
 const attempt = (id: string, taskId: string) =>
   `INSERT INTO attempts (id, task_id, worktree_path) VALUES ('${id}', '${taskId}', '/tmp/${id}')`;
 const conversation = (id: string, attemptId: string, status: string) =>
-  `INSERT INTO conversations (id, attempt_id, title, status, model${status === "done" ? ", ended_at" : ""})
-   VALUES ('${id}', '${attemptId}', '${id} title', '${status}', '${MODEL}'${status === "done" ? ", now()" : ""})`;
+  `INSERT INTO conversations (id, attempt_id, title, status, model${status === "done" ? ", ended_at" : ""}, launch_cause)
+   VALUES ('${id}', '${attemptId}', '${id} title', '${status}', '${MODEL}'${status === "done" ? ", now()" : ""}, 'direct')`;
 const push = (id: string, attemptId: string, conversationId: string) =>
   `INSERT INTO pushes (id, sha, message, push_id, attempt_id, conversation_id)
    VALUES ('${id}', '${id}-sha', '${id} message', '${id}-push', '${attemptId}', '${conversationId}')`;

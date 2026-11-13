@@ -124,9 +124,10 @@ describe("conversation lists — routes", () => {
         "ended_at",
         "id",
         "kind",
+        "launch_cause",
+        "launched_from",
         "model",
         "runtime",
-        "spawned_by",
         "status",
         // The status-unverified mark: the status cell reads it. Written only
         // when a reconcile cannot check the row, and when it next can.

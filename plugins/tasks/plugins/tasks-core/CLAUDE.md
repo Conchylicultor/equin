@@ -315,7 +315,7 @@ serves them.
   to its conversations, a task write through `attempts` (never the changed
   `tasks`, A10). The conversation lists (`all-conversations`) serve through
   them; the tree's conversation collections reuse them.
-- **`attemptRows`** (`attempts.v2`) — one task's attempts with their
+- **`attemptRows`** (`attempts.v3`) — one task's attempts with their
   non-system conversations (`AttemptWithConversations`): a scoped set
   (`all: { by: ["taskId"] }`, `createdAt` order, no preload), read with
   `useLive(attemptRows, { where: { taskId } })` (`web/hooks.ts`'
@@ -377,8 +377,8 @@ serves them.
   tests compile — over the `conversations` table with
   `conversationOwnerJoins` (never `conversations_v`); every row is the full
   `Conversation` (`active` = `status <> 'done'`):
-  - **`conversationsActive`** (`conversations-active`) and
-    **`conversationsSystem`** (`conversations-system`) — the WHOLE ordered sets
+  - **`conversationsActive`** (`conversations-active.v2`) and
+    **`conversationsSystem`** (`conversations-system.v2`) — the WHOLE ordered sets
     of live conversations (`all`, `createdAt` desc, `preload: "boot"`), the
     non-`system` and the `system` ones, read with `useLive(c[, { select }])`.
     Same legacy-key C39 rule as the old whole `tasks` set had. Costs, pinned by the tree oracle: a
@@ -386,13 +386,13 @@ serves them.
     one-row refill a poller tick costs), a close an exit, an insert an
     entrant; a task rename or an attempt move the conversations it owns; any
     other task or attempt write nothing (W4).
-  - **`conversationsGone`** (`conversations-gone`) — a WINDOW of the ended
+  - **`conversationsGone`** (`conversations-gone.v2`) — a WINDOW of the ended
     conversations (`endedAt` desc, default `RECENT_GONE_LIMIT`, `maxLimit`
     500, `count`, `preload: "boot"`; nothing filters it), so it leaves L2:
     the welcome recents read the default, Recovery 50, and the queue's Done
     section pages through it as live key-range pages, its count the
     collection's `:count`.
-  - **`conversationsById`** (`conversations.by-id`, lookup-only: `:rows`) —
+  - **`conversationsById`** (`conversations.by-id.v2`, lookup-only: `:rows`) —
     any conversation by id, whatever its status or age
     (`useLive(conversationsById, { id })`; `conversations/web`'s
     `useConversation` / `useConversationById` and the conversation pane's
@@ -617,22 +617,22 @@ serves them.
     - `attempt-push-ids:rows` (keyed, point)
     - `attempt-tasks:rows` (keyed, point)
     - `attempt-workspaces:rows` (keyed, point)
-    - `attempts.v2` (keyed)
-    - `attempts.v2:rows` (keyed, point)
+    - `attempts.v3` (keyed)
+    - `attempts.v3:rows` (keyed, point)
     - `conversation-runtimes:rows` (keyed, point)
     - `conversation-session-tails:rows` (keyed, point)
     - `conversation-workspaces:rows` (keyed, point)
-    - `conversations-active` (keyed)
-    - `conversations-active:rows` (keyed, point)
-    - `conversations-gone` (keyed, window)
-    - `conversations-gone:count` (push)
-    - `conversations-gone:groups` (push)
-    - `conversations-gone:rows` (keyed, point)
-    - `conversations-system` (keyed)
-    - `conversations-system:rows` (keyed, point)
+    - `conversations-active.v2` (keyed)
+    - `conversations-active.v2:rows` (keyed, point)
+    - `conversations-gone.v2` (keyed, window)
+    - `conversations-gone.v2:count` (push)
+    - `conversations-gone.v2:groups` (push)
+    - `conversations-gone.v2:rows` (keyed, point)
+    - `conversations-system.v2` (keyed)
+    - `conversations-system.v2:rows` (keyed, point)
     - `conversations.attachment-links` (keyed)
     - `conversations.attachment-links:rows` (keyed, point)
-    - `conversations.by-id:rows` (keyed, point)
+    - `conversations.by-id.v2:rows` (keyed, point)
     - `pushes` (keyed, window)
     - `pushes:groups` (push)
     - `pushes:rows` (keyed, point)
@@ -680,8 +680,11 @@ serves them.
     - `Attempt`
     - `AttemptStatus`
     - `AttemptWithConversations`
+    - `AutoStartLaunchCause`
     - `Conversation`
     - `ConversationKind`
+    - `ConversationLaunch`
+    - `ConversationLaunchCause`
     - `ConversationStatus`
     - `ConversationSummary`
     - `ConversationWorkingOn`
@@ -712,8 +715,11 @@ serves them.
     - `AttemptStatusSchema`
     - `attemptTasks`
     - `attemptWorkspaces`
+    - `AUTO_START_LAUNCH_CAUSES`
     - `BLOCKED_STATUSES`
     - `buildTaskPrompt`
+    - `CONVERSATION_LAUNCH_CAUSE_OPTIONS`
+    - `CONVERSATION_LAUNCH_CAUSES`
     - `CONVERSATION_TRAILER_KEY`
     - `conversationAttachmentLinks`
     - `conversationAttachmentLinksEntityRef`

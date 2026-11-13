@@ -1,4 +1,5 @@
 import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
@@ -56,6 +57,7 @@ export function PromptFooter({ id, pageId, data, editor }: BlockRegionProps) {
       <ControlSizeProvider size="sm">
         <Line>
           <LaunchControl
+            launchedFrom={asPluginId("page.prompt.block")}
             size="icon"
             openMode="push"
             // An empty prompt would create a task with no description, so the

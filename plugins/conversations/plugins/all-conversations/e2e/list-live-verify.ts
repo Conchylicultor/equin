@@ -1,6 +1,6 @@
 /**
  * The All-conversations pane is a LIVE window over `conversations` joined to
- * its attempt and task (`conversations.all`, P7 of
+ * its attempt and task (`conversations.all.v2`, P7 of
  * research/2026-10-01-global-scoped-change-routing-p5-p8-v2.md) — no revision
  * tick, no HTTP refetch, no reload:
  *
@@ -13,7 +13,7 @@
  *     column relabels, live (the `tasks` reverse route);
  *  4. the conversation is retitled in the database: the row relabels, live;
  *  5. the task is deleted: its conversation leaves the list (the cascade);
- *  6. no HTTP read of `conversations.all` after the first listing — rows arrive
+ *  6. no HTTP read of `conversations.all.v2` after the first listing — rows arrive
  *     only over the socket — and the page never reloaded.
  *
  * Seeds go straight into the deploy's database (out of band, so anything on
@@ -67,7 +67,7 @@ async function shownOf(page: Page, texts: string[]): Promise<string[]> {
   }, texts);
 }
 
-const LIST_FRAME = frameOf("conversations.all");
+const LIST_FRAME = frameOf("conversations.all.v2");
 
 try {
   await sweepSeeded(db);

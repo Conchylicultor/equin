@@ -68,7 +68,7 @@ agent writes into it — that first writer then counts as the creator.
 
 Neither of the chip's two reads answers "nobody" for "not known yet": the
 authorship record, then the conversation it names (`useConversation`, its
-`conversations.by-id` read, which finds any conversation however old), each
+`conversations.by-id.v2` read, which finds any conversation however old), each
 wait as a chip-sized shimmer. A page whose creating conversation was deleted
 shows no chip; a failed read shows the inline error with Retry.
 

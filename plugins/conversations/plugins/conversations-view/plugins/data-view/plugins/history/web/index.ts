@@ -9,7 +9,7 @@ import { symbol } from "@plugins/ui/plugins/icons/core";
 
 export default {
   description:
-    "Contributes the History list (a live source over the `conversations.history` collection) as the History source of the merged conversation-sidebar DataView.",
+    "Contributes the History list (a live source over the `conversations.history.v2` collection) as the History source of the merged conversation-sidebar DataView.",
   contributions: [
     SidebarSources({
       id: "history",

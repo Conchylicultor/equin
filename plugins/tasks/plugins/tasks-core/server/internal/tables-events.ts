@@ -1,7 +1,11 @@
 import { text } from "drizzle-orm/pg-core";
 import { defineTriggerEvent } from "@plugins/infra/plugins/events/server";
 import type { TaskStatus } from "./schema";
-import type { ConversationStatus, TaskAuthorKind } from "../../core";
+import type {
+  ConversationLaunchCause,
+  ConversationStatus,
+  TaskAuthorKind,
+} from "../../core";
 import type { ConversationModel } from "@plugins/conversations/plugins/model-provider/core";
 
 export interface PushLandedPayload {
@@ -159,7 +163,10 @@ export interface ConversationCreatedPayload {
   conversationId: string;
   taskId: string;
   model: ConversationModel;
-  spawnedBy: string;
+  // Why it was launched now, and the plugin id that launched it (see
+  // tasks-core/core/launch-cause.ts).
+  launchCause: ConversationLaunchCause;
+  launchedFrom: string;
   // The launcher shows the conversation itself — the user is looking at it.
   shownByLauncher?: boolean;
   createdAt: string;

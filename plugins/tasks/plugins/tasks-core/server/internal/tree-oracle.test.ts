@@ -304,8 +304,8 @@ const TASK_STEPS: Record<string, TreeStep[]> = {
     {
       label: "conversation.system",
       statements: [
-        `INSERT INTO conversations (id, attempt_id, title, status, model, kind)
-         SELECT '${C4}', '${A3}', 'system', 'working', model, 'system'
+        `INSERT INTO conversations (id, attempt_id, title, status, model, kind, launch_cause)
+         SELECT '${C4}', '${A3}', 'system', 'working', model, 'system', 'direct'
            FROM conversations WHERE id = '${C3}'`,
       ],
     },
@@ -698,11 +698,11 @@ describe("tree oracle — the scripted workload over the real feed", () => {
     await oracle.run({
       label: "idle.conversations",
       statements: [
-        `INSERT INTO conversations (id, attempt_id, title, status, model)
-         SELECT 'tree-c5', 'tree-a4', 'live', 'working', model
+        `INSERT INTO conversations (id, attempt_id, title, status, model, launch_cause)
+         SELECT 'tree-c5', 'tree-a4', 'live', 'working', model, 'direct'
            FROM conversations WHERE id = '${C3}'`,
-        `INSERT INTO conversations (id, attempt_id, title, status, model, kind)
-         SELECT 'tree-c6', 'tree-a4', 'system', 'working', model, 'system'
+        `INSERT INTO conversations (id, attempt_id, title, status, model, kind, launch_cause)
+         SELECT 'tree-c6', 'tree-a4', 'system', 'working', model, 'system', 'direct'
            FROM conversations WHERE id = '${C3}'`,
       ],
     });
@@ -751,8 +751,8 @@ describe("tree oracle — the scripted workload over the real feed", () => {
     await oracle.run({
       label: "gone.live",
       statements: [
-        `INSERT INTO conversations (id, attempt_id, title, status, model)
-         SELECT '${C7}', 'tree-a4', 'gone', 'working', model
+        `INSERT INTO conversations (id, attempt_id, title, status, model, launch_cause)
+         SELECT '${C7}', 'tree-a4', 'gone', 'working', model, 'direct'
            FROM conversations WHERE id = '${C2}'`,
       ],
     });
@@ -896,7 +896,8 @@ const LegacyConversationsSchema = z.array(
     kind: z.enum(["user", "agent", "system"]),
     claudeSessionId: z.string().nullable(),
     waitingFor: z.string().nullable(),
-    spawnedBy: z.string().nullable(),
+    launchCause: z.string(),
+    launchedFrom: z.string().nullable(),
     createdAt: z.coerce.date(),
     updatedAt: z.coerce.date(),
     endedAt: z.coerce.date().nullable(),

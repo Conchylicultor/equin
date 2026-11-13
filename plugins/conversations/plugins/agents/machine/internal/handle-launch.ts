@@ -67,7 +67,7 @@ export const handleLaunch = implementMachine(
     taskId: task.id,
     prompt: agent.prompt,
     model,
-    spawnedBy: "agents-plugin",
+      launchedFrom: asPluginId("conversations.agents"),
     kind: "agent",
   });
 

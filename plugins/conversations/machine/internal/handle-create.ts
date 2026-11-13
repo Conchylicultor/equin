@@ -78,6 +78,7 @@ export const handleCreate = implementMachine(
         model: body.model,
         forkAtMessageUuid: body.forkAtMessageUuid,
         workspace: body.workspace,
+        launchedFrom: asPluginId(body.launchedFrom),
       });
     } catch (err) {
       // The message cannot be cut at (it is the first one, it left the

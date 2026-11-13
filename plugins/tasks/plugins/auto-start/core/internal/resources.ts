@@ -37,6 +37,11 @@ export const taskAutoStartShape = defineExtensionShape({
     // automation's prompt rather than inheriting it. Server-only: no reader
     // shows it, and it can be long.
     autoStartPrompt: nullable(textField()),
+    // The plugin id that armed it (`tasks` for add_task / edit_task,
+    // `tasks.automations`, a filing surface, …): the launched conversation's
+    // `launchedFrom` whichever wake-up launches it — armed, unblocked or the
+    // boot reconcile. Every arm writes it.
+    armedFrom: textField(),
   },
   serverOnly: ["autoStartPrompt"],
 });

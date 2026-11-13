@@ -56,8 +56,8 @@ async function conversation(
     VALUES (${attemptId}, ${taskId}, ${`/tmp/${attemptId}`})
   `);
   await tx.execute(sql`
-    INSERT INTO conversations (id, attempt_id, status, runtime, model, spawned_by, created_at)
-    VALUES (${id}, ${attemptId}, ${status}, 'sdk', ${FALLBACK_MODEL}, 'test', ${createdAt}::timestamptz)
+    INSERT INTO conversations (id, attempt_id, status, runtime, model, launch_cause, created_at)
+    VALUES (${id}, ${attemptId}, ${status}, 'sdk', ${FALLBACK_MODEL}, 'direct', ${createdAt}::timestamptz)
   `);
   return id;
 }

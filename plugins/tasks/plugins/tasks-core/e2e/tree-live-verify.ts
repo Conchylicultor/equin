@@ -94,7 +94,7 @@ const SEED_PREFIX = "e2e-tree-";
 const TREE_KEYS = [
   "task-categories.by-id:rows",
   "tasks.v3:rows",
-  "attempts.v2",
+  "attempts.v3",
 ] as const;
 
 const db = openDeployDb();
@@ -366,7 +366,7 @@ async function attemptsPhase(
   taskId: string,
   measureFrom: number,
 ): Promise<void> {
-  const KEY = "attempts.v2";
+  const KEY = "attempts.v3";
   const attemptId = `${taskId}-att`;
   const convId = `${taskId}-conv`;
   const upsertWhere = async <Row>(
@@ -409,8 +409,8 @@ async function attemptsPhase(
 
   at = frames.length;
   await db.query(
-    `INSERT INTO conversations (id, attempt_id, title, status, model, kind, ended_at)
-     VALUES ($1, $2, $3, 'done', $4, 'user', now())`,
+    `INSERT INTO conversations (id, attempt_id, title, status, model, kind, ended_at, launch_cause)
+     VALUES ($1, $2, $3, 'done', $4, 'user', now(), 'direct')`,
     [convId, attemptId, `${convId} run`, FALLBACK_MODEL],
   );
   const withConv = await upsertWhere<AttemptRow>(
@@ -590,8 +590,8 @@ async function launchesPhase(
        INSERT INTO attempts (id, task_id, worktree_path)
        VALUES ($1, $2, $3) RETURNING id
      )
-     INSERT INTO conversations (id, attempt_id, title, status, model, kind)
-     SELECT $4, a.id, $5, 'working', $6, 'user' FROM a`,
+     INSERT INTO conversations (id, attempt_id, title, status, model, kind, launch_cause)
+     SELECT $4, a.id, $5, 'working', $6, 'user', 'direct' FROM a`,
     [
       attemptId,
       taskId,
@@ -686,9 +686,9 @@ async function conversationsPhase(
   taskId: string,
   taskTitle: string,
 ): Promise<void> {
-  const ACTIVE = "conversations-active";
-  const GONE = "conversations-gone";
-  const BY_ID = "conversations.by-id:rows";
+  const ACTIVE = "conversations-active.v2";
+  const GONE = "conversations-gone.v2";
+  const BY_ID = "conversations.by-id.v2:rows";
   const attemptId = `${taskId}-catt`;
   const oldId = `${taskId}-old`;
   const oldTitle = `${oldId} long ago`;
@@ -700,8 +700,8 @@ async function conversationsPhase(
     [attemptId, taskId, `/tmp/${attemptId}`],
   );
   await db.query(
-    `INSERT INTO conversations (id, attempt_id, title, status, model, kind, created_at, ended_at)
-     VALUES ($1, $2, $3, 'done', $4, 'user', '2020-01-01T00:00:00Z', '2020-01-01T01:00:00Z')`,
+    `INSERT INTO conversations (id, attempt_id, title, status, model, kind, created_at, ended_at, launch_cause)
+     VALUES ($1, $2, $3, 'done', $4, 'user', '2020-01-01T00:00:00Z', '2020-01-01T01:00:00Z', 'direct')`,
     [oldId, attemptId, oldTitle, FALLBACK_MODEL],
   );
   const inWindow = await db.query<{ n: string }>(
@@ -720,7 +720,7 @@ async function conversationsPhase(
   const httpReads = recordHttpReads(page, [
     ACTIVE,
     GONE,
-    "conversations.by-id",
+    "conversations.by-id.v2",
   ]);
   // A REST read of the conversation (`GET /api/conversations/:id`) — the
   // fallback W9 deleted. Its sub-routes (the pane's `POST …/viewed`) are not.
@@ -770,8 +770,8 @@ async function conversationsPhase(
 
   let at = frames.length;
   await db.query(
-    `INSERT INTO conversations (id, attempt_id, title, status, model, kind)
-     VALUES ($1, $2, $3, 'working', $4, 'user')`,
+    `INSERT INTO conversations (id, attempt_id, title, status, model, kind, launch_cause)
+     VALUES ($1, $2, $3, 'working', $4, 'user', 'direct')`,
     [liveId, attemptId, `${liveId} run`, FALLBACK_MODEL],
   );
   const entered = await upsertWhere(ACTIVE, at, () => true);
@@ -868,8 +868,8 @@ async function bootCostOfByIdPane(
   const bootId = `${attemptId}-boot`;
   const bootTitle = `${bootId} reloaded`;
   await db.query(
-    `INSERT INTO conversations (id, attempt_id, title, status, model, kind)
-     VALUES ($1, $2, $3, 'working', $4, 'user')`,
+    `INSERT INTO conversations (id, attempt_id, title, status, model, kind, launch_cause)
+     VALUES ($1, $2, $3, 'working', $4, 'user', 'direct')`,
     [bootId, attemptId, bootTitle, FALLBACK_MODEL],
   );
   const { page } = await h.session();
@@ -893,7 +893,7 @@ async function bootCostOfByIdPane(
   tap.onFrame((f) => {
     if (!f.data.includes(bootId)) return;
     const frame = JSON.parse(f.data) as Frame;
-    if (frame.kind === "sub-ack" && frame.key === "conversations.by-id:rows")
+    if (frame.kind === "sub-ack" && frame.key === "conversations.by-id.v2:rows")
       answered("sub-ack");
   });
   await page.goto(pathUrl(`/agents/c/${bootId}`), {

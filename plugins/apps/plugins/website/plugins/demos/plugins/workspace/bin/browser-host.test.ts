@@ -257,7 +257,7 @@ describe.if(IN_CHILD)("the demo's browser host", () => {
 
   test("the queue holds the live conversations, the done list the finished ones", async () => {
     const active = (await loadResourceByKey(
-      "conversations-active",
+      "conversations-active.v2",
       {},
     )) as Row[];
     const live = DEMO_STORIES.filter((s) => s.status !== "done");

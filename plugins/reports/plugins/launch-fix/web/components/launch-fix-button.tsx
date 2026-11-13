@@ -1,4 +1,5 @@
 import type { BoundaryErrorReport } from "@plugins/primitives/plugins/error-boundary/web";
+import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { serializeUiContext } from "@plugins/primitives/plugins/ui-context/core";
 import type { ReportContext } from "@plugins/reports/web";
 import { investigate } from "@plugins/reports/web";
@@ -103,6 +104,7 @@ export function LaunchFixButton({
         return {
           taskId,
           prompt: parts.join("\n"),
+          launchedFrom: asPluginId("reports.launch-fix"),
         };
       }}
     />

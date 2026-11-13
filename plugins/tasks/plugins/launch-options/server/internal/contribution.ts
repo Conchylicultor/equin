@@ -1,5 +1,6 @@
 import { defineServerContribution } from "@plugins/framework/plugins/server-core/core";
 import type { LaunchOptionDef } from "../../core";
+import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
 
 /**
  * What an apply gets besides the value. Deliberately NOT the task's
@@ -8,8 +9,12 @@ import type { LaunchOptionDef } from "../../core";
  */
 export interface TaskLaunchContext {
   taskId: string;
-  /** Provenance threaded into whatever the apply enqueues (`user-launch`, …). */
-  cause: string;
+  /**
+   * The plugin the task is filed or launched from, threaded into whatever the
+   * apply arms (auto-start's marker `armedFrom` → the conversation's
+   * `launchedFrom`).
+   */
+  armedFrom: PluginId;
   /**
    * Who starts this task: the queue, once its dependencies clear — or the
    * caller, inline, immediately after this apply returns. An option that ARMS
@@ -54,7 +59,7 @@ export interface TaskLaunchServerEntry<V> {
    * control draft-only. See auto-start, whose apply *arms* a launch: inheriting
    * it would start an agent for every task an agent files.
    *
-   * Takes no {@link TaskLaunchContext}: `cause` exists to thread provenance
+   * Takes no {@link TaskLaunchContext}: `armedFrom` exists to thread provenance
    * into what an apply enqueues, and an inheritable option enqueues nothing.
    */
   inherit?: (fromTaskId: string, toTaskId: string) => Promise<void>;

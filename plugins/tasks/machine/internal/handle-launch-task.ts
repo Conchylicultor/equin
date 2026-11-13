@@ -38,6 +38,7 @@ export const handleLaunchTask = implementMachine(
     // Before any task exists, so an unknown id or a bad value leaves nothing
     // half-filed behind.
     const resolved = resolveLaunchOptions(body.options, "launch");
+    const launchedFrom = asPluginId(body.launchedFrom);
     // Likewise a machine that cannot run the agent: refused before the task is
     // filed, or its marker would launch it by itself the moment Claude Code
     // became ready — long after the user was told it failed.
@@ -81,20 +82,23 @@ export const handleLaunchTask = implementMachine(
       : await file();
   }
 
-  for (const { entry, value } of resolved) {
-    await entry.apply({ taskId, cause: "user-launch", start: "now" }, value);
-  }
+    for (const { entry, value } of resolved) {
+      await entry.apply(
+        { taskId, armedFrom: launchedFrom, start: "now" },
+        value,
+      );
+    }
 
     // `prepareConversation` reads the preprompt and thinking mode off the rows
-    // the applies just wrote, so they need no threading here. `user-launch` is
-    // also what lets `conversations.notify-created` announce the launch.
+    // the applies just wrote, so they need no threading here.
     // `launch`: the user is asking for a run, even of a task that already has
     // one — a second "Fix this crash" reuses the report's live task, and must
     // start a fresh attempt under it rather than being refused as "already
     // started".
     const result = await launchTaskNow(taskId, {
       prompt: body.prompt,
-      cause: "user-launch",
+      cause: "direct",
+      launchedFrom,
       ifAlreadyStarted: "launch",
       shownByLauncher: body.shownByLauncher,
     });

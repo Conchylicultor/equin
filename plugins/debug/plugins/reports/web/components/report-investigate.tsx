@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { useLive } from "@plugins/network/plugins/live/web";
 import { reportsList, type Report } from "@plugins/reports/core";
 import { investigationPrompt } from "../internal/investigation-prompt";
@@ -39,6 +40,7 @@ export function ReportInvestigate({
         </>
       }
       placeholder="Extra context (optional) — e.g. what you were doing, expected behaviour…"
+      launchedFrom={asPluginId("debug.reports")}
       resolve={async (userText) => {
         const answer = await investigate(fetchEndpoint, report.id);
         // Investigating needs the computer (`needsMachine`): a host without

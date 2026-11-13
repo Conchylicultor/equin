@@ -160,6 +160,7 @@ export function TaskCard({
           {creating ? "Creating…" : "Create"}
         </Button>
         <LaunchControl
+          launchedFrom={asPluginId("active-data.task")}
           size="icon"
           disabled={disabled}
           openAfterLaunch={false}

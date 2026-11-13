@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { db } from "@plugins/database/server";
 import { Mcp } from "@plugins/infra/plugins/mcp/server";
 import { withNotifyBatch } from "@plugins/framework/plugins/server-core/core";
@@ -116,7 +117,7 @@ const ports: ManageTasksPorts = {
       await armTaskAutoStart({
         taskId: edit.taskId,
         model: edit.start.model,
-        cause: "mcp-edit-task",
+        armedFrom: asPluginId("tasks"),
       });
     else if (edit.start?.kind === "manual")
       await setTaskAutoStart(edit.taskId, null);

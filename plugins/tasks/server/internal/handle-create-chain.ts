@@ -160,7 +160,11 @@ export const handleCreateChain = implement(
         // dependencies clear.
         for (const { entry, value } of cardLaunchValues[i]!) {
           await entry.apply(
-            { taskId: newTask.id, cause: "user-launch", start: "queued" },
+            {
+              taskId: newTask.id,
+              armedFrom: asPluginId(body.filedFrom),
+              start: "queued",
+            },
             value,
           );
         }

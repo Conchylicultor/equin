@@ -40,8 +40,8 @@ async function conversation(tx: DbExecutor): Promise<string> {
     VALUES (${attemptId}, ${taskId}, ${`/tmp/${attemptId}`})
   `);
   await tx.execute(sql`
-    INSERT INTO conversations (id, attempt_id, status, runtime, model, spawned_by)
-    VALUES (${id}, ${attemptId}, 'waiting', 'sdk', ${FALLBACK_MODEL}, 'test')
+    INSERT INTO conversations (id, attempt_id, status, runtime, model, launch_cause)
+    VALUES (${id}, ${attemptId}, 'waiting', 'sdk', ${FALLBACK_MODEL}, 'direct')
   `);
   return id;
 }

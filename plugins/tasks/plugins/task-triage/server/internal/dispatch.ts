@@ -39,9 +39,6 @@ import {
 } from "./state";
 import { tasksTriage } from "./tables";
 
-/** Who launches triage runs (the run conversation's `spawnedBy`). */
-export const TRIAGE_AUTHOR = "task-triage";
-
 /** The task category a triage run's own task is filed under. */
 const SYSTEM_CATEGORY_ID = "system";
 
@@ -146,7 +143,7 @@ async function launchTriageRun(taskId: string): Promise<void> {
     const conversation = await createConversation({
       taskId: runTaskId,
       kind: "system",
-      spawnedBy: TRIAGE_AUTHOR,
+      launchedFrom: asPluginId("tasks.task-triage"),
       model,
       prompt,
       workspace: { kind: "scratch", profile: TRIAGE_PROFILE_ID, input },

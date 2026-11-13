@@ -154,7 +154,7 @@ session chain are never written. Refused on main (403). Spawns nothing.
     - `ResourceShape`
   - Exports (values):
     - `NARROWING_FIXTURE_DATA_VIEW`
-    - `NARROWING_FIXTURE_SPAWNED_BY`
+    - `NARROWING_FIXTURE_MARK`
     - `NARROWING_FIXTURE_SUBJECT_KIND`
     - `narrowingFixture`
     - `NarrowingFixtureBodySchema`

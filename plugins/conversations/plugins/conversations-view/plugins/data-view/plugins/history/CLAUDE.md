@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: Contributes the History list (a live source over the `conversations.history` collection) as the History source of the merged conversation-sidebar DataView.
+- Description: Contributes the History list (a live source over the `conversations.history.v2` collection) as the History source of the merged conversation-sidebar DataView.
 - Web:
   - Slots: `history-actions`
   - Slot contributors: `history-actions` ← `conversations.conversations-view.data-view.history`

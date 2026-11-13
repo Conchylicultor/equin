@@ -1,4 +1,3 @@
-import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import {
   CONVERSATIONS_CATEGORY_ID,
   SYSTEM_CATEGORY_ID,
@@ -23,7 +22,11 @@ import {
 } from "@plugins/tasks/plugins/tasks-core/server";
 import type { EmitTx } from "@plugins/infra/plugins/events/server";
 import type { MandateRef } from "@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/policy/core";
-import type { TaskFiling } from "@plugins/tasks/plugins/tasks-core/core";
+import type {
+  ConversationLaunch,
+  TaskFiling,
+} from "@plugins/tasks/plugins/tasks-core/core";
+import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { createKeyedMutex } from "@plugins/packages/plugins/keyed-mutex/core";
 import { withInlineLaunch } from "./inline-launch";
 import { Runtime } from "./runtime";
@@ -134,8 +137,17 @@ export type ConversationTarget =
       filing?: never;
     };
 
+/**
+ * A direct launch (`createConversation`): the caller names the plugin it
+ * launches from, and the cause is always `direct` — only the auto-start
+ * launcher (`prepareConversation` with its own cause) launches under another.
+ */
 export type CreateConversationOpts = CreateConversationFields &
-  ConversationTarget;
+  ConversationTarget & { launchedFrom: PluginId };
+
+/** Any launch: why it happened now and from which plugin, stated by the caller. */
+export type PrepareConversationOpts = CreateConversationFields &
+  ConversationTarget & { launch: ConversationLaunch };
 
 interface CreateConversationFields {
   runtimeId?: ConversationRuntimeId;
@@ -143,7 +155,6 @@ interface CreateConversationFields {
   prompt?: string;
   /** A family ("opus") or a pinned version; resolved to what runs here, once. */
   model?: ModelChoice;
-  spawnedBy?: string;
   /**
    * The launcher shows this conversation itself (opened its pane, or embeds it
    * as a thread), so the user is already looking at it: carried on
@@ -207,7 +218,7 @@ export interface PreparedConversation {
   runtimeId: ConversationRuntimeId;
   conversationId: string;
   model: ConversationModel;
-  spawnedBy: string;
+  launch: ConversationLaunch;
   shownByLauncher: boolean;
   kind: ConversationKind;
   // The caller's raw prompt, for the `conversationCreated` payload.
@@ -256,7 +267,7 @@ async function taskPreprompt(
 
 // The mandate of the root task a new attempt with no task files. Only the
 // `mandate` arm reaches here (an `attemptId` / fork target reuses an attempt).
-function newRootTask(opts: CreateConversationOpts): {
+function newRootTask(opts: PrepareConversationOpts): {
   mandate: MandateRef;
   filing: TaskFiling;
 } {
@@ -273,7 +284,7 @@ function newRootTask(opts: CreateConversationOpts): {
 // happens here, before any transaction is open — so a hang here holds no lock
 // and has written nothing.
 export async function prepareConversation(
-  opts: CreateConversationOpts,
+  opts: PrepareConversationOpts,
 ): Promise<PreparedConversation> {
   // An agent that cannot run is refused here, with the fix, before a task,
   // attempt or job exists — not started as a pane that dies on `command not
@@ -364,11 +375,6 @@ export async function prepareConversation(
     getModelCatalog(),
   );
 
-  // The namespace of the backend doing the creating, unless the caller named
-  // one. `runtimeNamespace()` throws rather than answering with a guess, so
-  // there is no "no worktree" branch left to write.
-  const spawnedBy = opts.spawnedBy ?? runtimeNamespace();
-
   let workspace: WorkspaceAt;
   let target: PreparedConversation["target"];
   // The task this conversation belongs to, used to resolve a per-task preprompt
@@ -448,7 +454,7 @@ export async function prepareConversation(
     runtimeId,
     conversationId: conversationIdKind.mint(),
     model,
-    spawnedBy,
+    launch: opts.launch,
     shownByLauncher: opts.shownByLauncher ?? false,
     kind: opts.kind ?? "user",
     rawPrompt: opts.prompt,
@@ -523,7 +529,7 @@ export async function commitConversation(
       attemptId: p.target.attemptId,
       runtime: p.runtimeId,
       model: p.model,
-      spawnedBy: p.spawnedBy,
+      launch: p.launch,
       kind: p.kind,
     },
     tx,
@@ -560,7 +566,8 @@ export async function commitConversation(
       conversationId: conv.id,
       taskId: conv.taskId,
       model: conv.model,
-      spawnedBy: conv.spawnedBy!,
+      launchCause: p.launch.cause,
+      launchedFrom: p.launch.from,
       shownByLauncher: p.shownByLauncher,
       createdAt: conv.createdAt.toISOString(),
       prompt: p.rawPrompt?.trim() || undefined,
@@ -648,10 +655,14 @@ export async function finishConversation(
 }
 
 // prepare (reads) → commit (one transaction) → finish (post-commit effects).
-export async function createConversation(
-  opts: CreateConversationOpts,
-): Promise<Conversation> {
-  const prepared = await prepareConversation(opts);
+export async function createConversation({
+  launchedFrom,
+  ...opts
+}: CreateConversationOpts): Promise<Conversation> {
+  const prepared = await prepareConversation({
+    ...opts,
+    launch: { cause: "direct", from: launchedFrom },
+  });
   // Held from before the row exists `starting` until its inline create (a
   // reuse target) settled: the status sweep's "still coming" for a launch
   // with no spawn job (`inline-launch.ts`).

@@ -1,6 +1,6 @@
 /**
  * The sidebar History list is a LIVE source of the merged
- * `conversations-sidebar` DataView (`conversations.history`, P7 of
+ * `conversations-sidebar` DataView (`conversations.history.v2`, P7 of
  * research/2026-10-01-global-scoped-change-routing-p5-p8-v2.md) — the first
  * merged surface with a live origin:
  *
@@ -14,7 +14,7 @@
  *     the new task title for its rows, live (the `tasks` reverse route);
  *  4. a poller write sends History nothing;
  *  5. the task is deleted: both rows leave (the cascade);
- *  6. no HTTP read of `conversations.history` after the first listing — rows arrive
+ *  6. no HTTP read of `conversations.history.v2` after the first listing — rows arrive
  *     only over the socket — and the page never reloaded.
  *
  * A row is named per the user's "Conversation list title" setting, so the
@@ -70,7 +70,7 @@ async function countShown(page: Page, texts: string[]): Promise<number> {
   }, texts);
 }
 
-const HISTORY_FRAME = frameOf("conversations.history");
+const HISTORY_FRAME = frameOf("conversations.history.v2");
 
 try {
   await sweepSeeded(db);

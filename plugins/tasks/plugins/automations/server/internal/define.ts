@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import type { Registration } from "@plugins/framework/plugins/server-core/core";
 import { getConfig, setConfig } from "@plugins/config_v2/server";
 import { systemOrigin } from "@plugins/infra/plugins/request-origin/core";
@@ -120,7 +121,7 @@ async function runFiling(
     await armTaskAutoStart({
       taskId,
       model: settings.model,
-      cause: `automation:${spec.id}`,
+      armedFrom: asPluginId("tasks.automations"),
     });
     outcome = `${filing.title}; filed auto-started task ${taskId}`;
   }
@@ -203,7 +204,7 @@ async function runLaunch(
       taskId: pick.taskId,
       model: settings.model,
       prompt,
-      cause: `automation:${spec.id}`,
+      armedFrom: asPluginId("tasks.automations"),
     });
     launched.push(pick.taskId);
   }

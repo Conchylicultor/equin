@@ -19,9 +19,17 @@ import type { LaunchOptionDef } from "@plugins/tasks/plugins/launch-options/core
 import { launchTask, type LaunchTaskResponse } from "@plugins/tasks/core";
 import type { TaskSubject } from "@plugins/tasks/plugins/task-subject/core";
 
-/** The task a launch runs: one that exists, or a new one filed under a category. */
+/**
+ * The task a launch runs: one that exists, or a new one filed under a category.
+ * Either way the launch names the surface it comes from — the conversation's
+ * `launchedFrom` (a new task's is the surface filing it).
+ */
 export type TaskLaunchTarget =
-  | { id: string }
+  | {
+      id: string;
+      /** The plugin id of the surface launching it (the conversation's `launchedFrom`). */
+      launchedFrom: PluginId;
+    }
   | {
       title: string;
       categoryId: string;
@@ -97,8 +105,17 @@ export function useTaskLaunch({
         body: {
           prompt,
           options: pickKnownOptions(resolveOptions(picked), registered),
-          task,
+          task:
+            "id" in task
+              ? { id: task.id }
+              : {
+                  title: task.title,
+                  categoryId: task.categoryId,
+                  subject: task.subject,
+                  filedFrom: task.filedFrom,
+                },
           shownByLauncher: openAfterLaunch || hostShowsConversation,
+          launchedFrom: "id" in task ? task.launchedFrom : task.filedFrom,
         },
       },
     );

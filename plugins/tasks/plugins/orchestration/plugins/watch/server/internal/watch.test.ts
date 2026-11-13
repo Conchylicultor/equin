@@ -66,8 +66,8 @@ async function conversation(
     VALUES (${attemptId}, ${taskId}, ${`/tmp/${attemptId}`})
   `);
   await tx.execute(sql`
-    INSERT INTO conversations (id, attempt_id, status, runtime, model, spawned_by)
-    VALUES (${id}, ${attemptId}, ${status}, 'sdk', ${FALLBACK_MODEL}, 'test')
+    INSERT INTO conversations (id, attempt_id, status, runtime, model, launch_cause)
+    VALUES (${id}, ${attemptId}, ${status}, 'sdk', ${FALLBACK_MODEL}, 'direct')
   `);
   return id;
 }
@@ -80,8 +80,8 @@ async function setStatus(tx: Tx, conversationId: string, status: string) {
 
 async function arm(tx: Tx, taskId: string) {
   await tx.execute(sql`
-    INSERT INTO tasks_ext_auto_start (parent_id, auto_start_at, auto_start_model)
-    VALUES (${taskId}, now(), ${FALLBACK_MODEL})
+    INSERT INTO tasks_ext_auto_start (parent_id, auto_start_at, auto_start_model, armed_from)
+    VALUES (${taskId}, now(), ${FALLBACK_MODEL}, 'tasks')
   `);
 }
 

@@ -38,7 +38,8 @@ import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
  * conversation the fixture did not create; `clear-row-order` refuses a data
  * view outside the fixture's prefix. Refused on main (403). Spawns nothing.
  */
-export const NARROWING_FIXTURE_SPAWNED_BY = "narrowing-fixture";
+/** The mark the fixture's rows carry (a name / source / id prefix). */
+export const NARROWING_FIXTURE_MARK = "narrowing-fixture";
 
 /** The task-subject kind the by-id suite links its fixture tasks under. */
 export const NARROWING_FIXTURE_SUBJECT_KIND = "narrowing-fixture";

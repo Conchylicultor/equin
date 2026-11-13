@@ -347,6 +347,7 @@ const passed = await withBrowser(async (h) => {
     options: {},
     task: { id: task.id },
     shownByLauncher: false,
+    launchedFrom: "hints",
   })) as { started: boolean; conversation?: { id: string } };
   if (!launched.started || !launched.conversation) {
     r.fail("launch the filed task", JSON.stringify(launched));

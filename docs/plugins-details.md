@@ -16344,7 +16344,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --line-height-body`
           - `ui/tokens/type-scale --line-height-title`
         - Imported by: `apps/website/demos/workspace/story`
-    - **`all-conversations`** — All-conversations app pane: a live DataView over the `conversations.all` collection (filter/sort/search over every conversation, kept fresh by the routed change feed) reachable from the agent-manager sidebar; and how the conversations entity's fields present in every conversation list (the optimistic status cell, the model filter's live catalog options). Serves the two conversation-list collections — `conversations.all` (system conversations hidden by a default scope) and `conversations.history` — over `_conversations` with the owner joins (attempt → task), routed: a conversation, attempt or task write refills only the rows it changes.
+    - **`all-conversations`** — All-conversations app pane: a live DataView over the `conversations.all.v2` collection (filter/sort/search over every conversation, kept fresh by the routed change feed) reachable from the agent-manager sidebar; and how the conversations entity's fields present in every conversation list (the optimistic status cell, the model filter's live catalog options). Serves the two conversation-list collections — `conversations.all.v2` (system conversations hidden by a default scope) and `conversations.history.v2` — over `_conversations` with the owner joins (attempt → task), routed: a conversation, attempt or task write refills only the rows it changes.
       - Web:
         - Slots: `allConversationsPane.Actions`
         - Slot contributors: `allConversationsPane.Actions` ← `primitives.pane`
@@ -16375,28 +16375,28 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `allConversationsPane`
       - Server:
         - Contributes:
-          - `resource.declare` "conversations.all"
-          - `resource.declare` "conversations.all:count"
-          - `resource.declare` "conversations.all:groups"
-          - `resource.declare` "conversations.all:rows"
-          - `resource.declare` "conversations.history"
-          - `resource.declare` "conversations.history:count"
-          - `resource.declare` "conversations.history:groups"
-          - `resource.declare` "conversations.history:rows"
+          - `resource.declare` "conversations.all.v2"
+          - `resource.declare` "conversations.all.v2:count"
+          - `resource.declare` "conversations.all.v2:groups"
+          - `resource.declare` "conversations.all.v2:rows"
+          - `resource.declare` "conversations.history.v2"
+          - `resource.declare` "conversations.history.v2:count"
+          - `resource.declare` "conversations.history.v2:groups"
+          - `resource.declare` "conversations.history.v2:rows"
         - Uses:
           - `network/live.serveCollection`
           - `tasks/tasks-core._conversations`
           - `tasks/tasks-core.conversationOwnerColumns`
           - `tasks/tasks-core.conversationOwnerJoins`
         - Resources:
-          - `conversations.all` (keyed, window)
-          - `conversations.all:count` (push)
-          - `conversations.all:groups` (push)
-          - `conversations.all:rows` (keyed, point)
-          - `conversations.history` (keyed, window)
-          - `conversations.history:count` (push)
-          - `conversations.history:groups` (push)
-          - `conversations.history:rows` (keyed, point)
+          - `conversations.all.v2` (keyed, window)
+          - `conversations.all.v2:count` (push)
+          - `conversations.all.v2:groups` (push)
+          - `conversations.all.v2:rows` (keyed, point)
+          - `conversations.history.v2` (keyed, window)
+          - `conversations.history.v2:count` (push)
+          - `conversations.history.v2:groups` (push)
+          - `conversations.history.v2:rows` (keyed, point)
       - Core:
         - Uses:
           - `conversations/model-provider.compareModelsNewestFirst`
@@ -20922,7 +20922,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversations-view/data-view/history`
               - `conversations/conversations-view/data-view/queue`
           - Plugins:
-            - **`history`** — Contributes the History list (a live source over the `conversations.history` collection) as the History source of the merged conversation-sidebar DataView.
+            - **`history`** — Contributes the History list (a live source over the `conversations.history.v2` collection) as the History source of the merged conversation-sidebar DataView.
               - Web:
                 - Slots: `history-actions`
                 - Slot contributors: `history-actions` ← `conversations.conversations-view.data-view.history`
@@ -25969,7 +25969,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ResourceShape`
         - Exports (values):
           - `NARROWING_FIXTURE_DATA_VIEW`
-          - `NARROWING_FIXTURE_SPAWNED_BY`
+          - `NARROWING_FIXTURE_MARK`
           - `NARROWING_FIXTURE_SUBJECT_KIND`
           - `narrowingFixture`
           - `NarrowingFixtureBodySchema`
@@ -30463,23 +30463,25 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `UNDOCUMENTED_RUNTIME_FOLDERS`
           - `VERIFYING_FOLDERS`
       - Cross-plugin:
-        - Imported by: 82 plugins — full list in [`plugins/framework/plugins/plugin-id/REFERENCE.md`](../plugins/framework/plugins/plugin-id/REFERENCE.md)
+        - Imported by: 91 plugins — full list in [`plugins/framework/plugins/plugin-id/REFERENCE.md`](../plugins/framework/plugins/plugin-id/REFERENCE.md)
           - `plugin-meta` ×21
           - `apps` ×15
           - `framework` ×11
-          - `tasks` ×8
-          - `conversations` ×4
-          - `debug` ×4
+          - `tasks` ×10
+          - `conversations` ×7
+          - `debug` ×5
           - `build` ×3
           - `config_v2` ×3
           - `infra` ×3
+          - `page` ×3
           - `active-data` ×2
-          - `page` ×2
           - `apps-core/tabs`
           - `hints/ask`
           - `primitives/data-view`
           - `reorder`
+          - `reports/launch-fix`
           - `runs`
+          - `screenshot`
           - `wish`
     - **`plugin-loader`** — Pure plugin-graph algorithms: topological load-wave partitioning and dependsOn topo-sort, shared by the server/central/web plugin loaders.
       - Cross-plugin:
@@ -60406,22 +60408,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `attempt-push-ids:rows` (keyed, point)
           - `attempt-tasks:rows` (keyed, point)
           - `attempt-workspaces:rows` (keyed, point)
-          - `attempts.v2` (keyed)
-          - `attempts.v2:rows` (keyed, point)
+          - `attempts.v3` (keyed)
+          - `attempts.v3:rows` (keyed, point)
           - `conversation-runtimes:rows` (keyed, point)
           - `conversation-session-tails:rows` (keyed, point)
           - `conversation-workspaces:rows` (keyed, point)
-          - `conversations-active` (keyed)
-          - `conversations-active:rows` (keyed, point)
-          - `conversations-gone` (keyed, window)
-          - `conversations-gone:count` (push)
-          - `conversations-gone:groups` (push)
-          - `conversations-gone:rows` (keyed, point)
-          - `conversations-system` (keyed)
-          - `conversations-system:rows` (keyed, point)
+          - `conversations-active.v2` (keyed)
+          - `conversations-active.v2:rows` (keyed, point)
+          - `conversations-gone.v2` (keyed, window)
+          - `conversations-gone.v2:count` (push)
+          - `conversations-gone.v2:groups` (push)
+          - `conversations-gone.v2:rows` (keyed, point)
+          - `conversations-system.v2` (keyed)
+          - `conversations-system.v2:rows` (keyed, point)
           - `conversations.attachment-links` (keyed)
           - `conversations.attachment-links:rows` (keyed, point)
-          - `conversations.by-id:rows` (keyed, point)
+          - `conversations.by-id.v2:rows` (keyed, point)
           - `pushes` (keyed, window)
           - `pushes:groups` (push)
           - `pushes:rows` (keyed, point)
@@ -60469,8 +60471,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Attempt`
           - `AttemptStatus`
           - `AttemptWithConversations`
+          - `AutoStartLaunchCause`
           - `Conversation`
           - `ConversationKind`
+          - `ConversationLaunch`
+          - `ConversationLaunchCause`
           - `ConversationStatus`
           - `ConversationSummary`
           - `ConversationWorkingOn`
@@ -60501,8 +60506,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `AttemptStatusSchema`
           - `attemptTasks`
           - `attemptWorkspaces`
+          - `AUTO_START_LAUNCH_CAUSES`
           - `BLOCKED_STATUSES`
           - `buildTaskPrompt`
+          - `CONVERSATION_LAUNCH_CAUSE_OPTIONS`
+          - `CONVERSATION_LAUNCH_CAUSES`
           - `CONVERSATION_TRAILER_KEY`
           - `conversationAttachmentLinks`
           - `conversationAttachmentLinksEntityRef`

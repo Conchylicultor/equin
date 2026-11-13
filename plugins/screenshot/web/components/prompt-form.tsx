@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { LaunchControl, type LaunchRequest } from "@plugins/primitives/plugins/launch/web";
 import { TextEditor } from "@plugins/primitives/plugins/text-editor/web";
 import {
@@ -54,7 +55,10 @@ export function PromptForm({ id, getBlob }: { id: string; getBlob: () => Blob | 
         maxHeight="12rem"
         namespace="screenshot-prompt"
       />
-      <LaunchControl getRequest={getRequest} />
+      <LaunchControl
+        launchedFrom={asPluginId("screenshot")}
+        getRequest={getRequest}
+      />
     </Stack>
   );
 }

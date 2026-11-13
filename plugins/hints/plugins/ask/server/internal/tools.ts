@@ -57,7 +57,11 @@ export const fileTaskTool = Mcp.tool({
       mandate: interactiveMandate,
     });
     await setTaskCategory(task.id, WISHES_CATEGORY_ID);
-    await armTaskAutoStart({ taskId: task.id, model, cause: "help-ask" });
+    await armTaskAutoStart({
+      taskId: task.id,
+      model,
+      armedFrom: asPluginId("hints.ask"),
+    });
     return threadResultReply(askFiledTask, { taskId: task.id });
   },
 });

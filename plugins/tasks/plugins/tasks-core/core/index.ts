@@ -27,6 +27,17 @@ export {
   taskAuthorOf,
 } from "./task-author";
 export type { TaskAuthor, TaskAuthorKind, TaskFiling } from "./task-author";
+// Why a conversation was launched, and the plugin that launched it.
+export {
+  AUTO_START_LAUNCH_CAUSES,
+  CONVERSATION_LAUNCH_CAUSES,
+  CONVERSATION_LAUNCH_CAUSE_OPTIONS,
+} from "./launch-cause";
+export type {
+  AutoStartLaunchCause,
+  ConversationLaunch,
+  ConversationLaunchCause,
+} from "./launch-cause";
 // The reader half of the commit-trailer grammar. Lives with the `pushes` table
 // it fills; `attempt-work` reads it from here. See ./internal/trailers.ts.
 export {

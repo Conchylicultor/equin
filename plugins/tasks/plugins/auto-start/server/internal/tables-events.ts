@@ -2,8 +2,8 @@ import { defineTriggerEvent } from "@plugins/infra/plugins/events/server";
 
 export interface TaskAutoStartArmedPayload {
   taskId: string;
-  /** Why it was armed (the launcher's `cause`, for its logs). */
-  cause: string;
+  /** The plugin that armed it (also on the marker, as `armedFrom`). */
+  armedFrom: string;
   [key: string]: unknown;
 }
 

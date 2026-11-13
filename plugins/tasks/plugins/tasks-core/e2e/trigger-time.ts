@@ -593,7 +593,7 @@ async function writeThrowaway(i: number): Promise<void> {
     [att, task],
   );
   await q(
-    `INSERT INTO conversations (id, attempt_id, model, status, ended_at, title) VALUES ($1, $2, $3, 'done', now(), 'trigger-time throwaway')`,
+    `INSERT INTO conversations (id, attempt_id, model, status, ended_at, title, launch_cause) VALUES ($1, $2, $3, 'done', now(), 'trigger-time throwaway', 'direct')`,
     [conv, att, conversation.model],
   );
   await q(

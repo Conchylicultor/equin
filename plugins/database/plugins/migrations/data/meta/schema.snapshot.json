@@ -1,6 +1,6 @@
 {
-  "id": "41eb71df-eab0-4952-8ede-5d13fff96fdd",
-  "prevId": "937783c1-de47-4ea8-826c-abd247264374",
+  "id": "969d851e-9a39-4cdb-972b-44c6d6126c36",
+  "prevId": "41eb71df-eab0-4952-8ede-5d13fff96fdd",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -14217,6 +14217,12 @@
           "primaryKey": false,
           "notNull": true
         },
+        "armed_from": {
+          "name": "armed_from",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
         "auto_start_prompt": {
           "name": "auto_start_prompt",
           "type": "text",
@@ -15789,8 +15795,14 @@
           "primaryKey": false,
           "notNull": false
         },
-        "spawned_by": {
-          "name": "spawned_by",
+        "launch_cause": {
+          "name": "launch_cause",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "launched_from": {
+          "name": "launched_from",
           "type": "text",
           "primaryKey": false,
           "notNull": false

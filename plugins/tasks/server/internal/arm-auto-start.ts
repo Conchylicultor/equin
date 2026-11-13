@@ -6,6 +6,7 @@ import { autoStartDecision } from "@plugins/tasks/plugins/auto-start/core";
 import { getTask } from "@plugins/tasks/plugins/tasks-core/server";
 import { HttpError } from "@plugins/infra/plugins/endpoints/core";
 import type { ModelChoice } from "@plugins/conversations/plugins/model-provider/core";
+import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
 
 // Mark a task as queued for auto-launch, then wake the launcher.
 //
@@ -38,13 +39,17 @@ import type { ModelChoice } from "@plugins/conversations/plugins/model-provider/
 // `prompt` is what the agent starts with (an automation's filled template),
 // stored ON the marker so whichever path claims it launches with it; absent ⇒
 // the task's own text, and any prompt an earlier arm stored is cleared.
+//
+// `armedFrom` is the plugin arming it (`tasks` for add_task / edit_task,
+// `tasks.automations`, the filing surface, …), stored on the marker: it is the
+// launched conversation's `launchedFrom`, whatever wakes the launcher.
 export async function armTaskAutoStart(args: {
   taskId: string;
   model: ModelChoice;
   prompt?: string;
-  cause: string;
+  armedFrom: PluginId;
 }): Promise<void> {
-  const { taskId, model, prompt, cause } = args;
+  const { taskId, model, prompt, armedFrom } = args;
   const task = await getTask(taskId);
   if (!task) throw new HttpError(404, `task ${taskId} not found`);
   if (autoStartDecision(task.status) === "disarm") {
@@ -53,6 +58,6 @@ export async function armTaskAutoStart(args: {
       `Task ${taskId} is ${task.status}: auto-start cannot be armed (launch it explicitly to run it again)`,
     );
   }
-  await setTaskAutoStart(taskId, { model, prompt });
-  await taskAutoStartArmed.emit({ taskId, cause });
+  await setTaskAutoStart(taskId, { model, prompt, armedFrom });
+  await taskAutoStartArmed.emit({ taskId, armedFrom });
 }

@@ -1,4 +1,5 @@
 import { useRef } from "react";
+import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { DialogTitle } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { LaunchAgentForm } from "@plugins/primitives/plugins/launch/web";
@@ -40,7 +41,11 @@ export function TranscribeDialog({ onClose }: { onClose: () => void }) {
             { body: { text } },
           );
           prepared.current = res.song;
-          return { prompt: res.prompt, taskId: res.taskId };
+          return {
+            prompt: res.prompt,
+            taskId: res.taskId,
+            launchedFrom: asPluginId("apps.sonata.transcription"),
+          };
         }}
         onSubmitted={() => {
           const song = prepared.current;

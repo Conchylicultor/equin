@@ -1,4 +1,5 @@
 import { useCallback } from "react";
+import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { useEditableField } from "@plugins/primitives/plugins/editable-field/web";
 import {
   ResourceView,
@@ -59,6 +60,7 @@ function TaskDescriptionInner({
       <LaunchOptions taskId={taskId} />
       <Stack align="end" gap="none">
         <LaunchControl
+          launchedFrom={asPluginId("tasks.task-description")}
           getRequest={buildLaunchRequest}
           disabled={!task.title.trim()}
           className="w-auto"

@@ -46,13 +46,13 @@ import {
   narrowingFixture,
   NARROWING_FIXTURE_DATA_VIEW,
   NARROWING_FIXTURE_SUBJECT_KIND,
-  NARROWING_FIXTURE_SPAWNED_BY,
+  NARROWING_FIXTURE_MARK,
   type NarrowingFixtureBody,
 } from "../../core";
 
 // The conversation ids an author stamp is made under: minted here, never a
 // real conversation's (`conversation_id` has no foreign key).
-const AUTHOR_PREFIX = `${NARROWING_FIXTURE_SPAWNED_BY}-`;
+const AUTHOR_PREFIX = `${NARROWING_FIXTURE_MARK}-`;
 
 // What marks the by-id suite's rows: a server / task named so, a version's
 // source, and the id (or correlation id) prefix of an attachment, a claude call
@@ -81,11 +81,7 @@ async function fixtureVersion(id: string): Promise<void> {
     .select({ sourceId: _entityVersions.sourceId })
     .from(_entityVersions)
     .where(eq(_entityVersions.id, versionIdKind.parse(id)));
-  refuseUnlessFixture(
-    "Version",
-    id,
-    row?.sourceId === NARROWING_FIXTURE_SPAWNED_BY,
-  );
+  refuseUnlessFixture("Version", id, row?.sourceId === NARROWING_FIXTURE_MARK);
 }
 /** What the fixture's task is filed from: this plugin. */
 const FIXTURE_FILED_FROM = "debug.read-set";
@@ -108,10 +104,10 @@ async function fixtureTask(id: string): Promise<void> {
 async function fixtureConversation(id: string): Promise<void> {
   const row = await getConversation(id);
   if (row === null) throw new HttpError(404, `Unknown conversation "${id}"`);
-  if (row.spawnedBy !== NARROWING_FIXTURE_SPAWNED_BY) {
+  if (row.launchedFrom !== FIXTURE_FILED_FROM) {
     throw new HttpError(
       409,
-      `Conversation "${id}" is not a narrowing-fixture conversation (spawnedBy ${String(row.spawnedBy)})`,
+      `Conversation "${id}" is not a narrowing-fixture conversation (launched from ${String(row.launchedFrom)})`,
     );
   }
 }
@@ -139,7 +135,7 @@ async function createFixtureRow(
       const id = versionIdKind.mint();
       await db.insert(_entityVersions).values({
         id,
-        sourceId: NARROWING_FIXTURE_SPAWNED_BY,
+        sourceId: NARROWING_FIXTURE_MARK,
         entityId: row.entityId,
         snapshot: { value: "0" },
       });
@@ -214,7 +210,7 @@ async function writeFixtureRow(
       refuseUnlessFixture("Correlation id", id, isFixtureId(id));
       await recordClaudeCliCall({
         model: FALLBACK_MODEL,
-        sourceName: NARROWING_FIXTURE_SPAWNED_BY,
+        sourceName: NARROWING_FIXTURE_MARK,
         sourceContext: null,
         prompt: "",
         system: null,
@@ -306,7 +302,7 @@ export const handleNarrowingFixture = implement(
           attemptId: body.attemptId,
           runtime: DEFAULT_CONVERSATION_RUNTIME,
           model: FALLBACK_MODEL,
-          spawnedBy: NARROWING_FIXTURE_SPAWNED_BY,
+          launch: { cause: "direct", from: asPluginId(FIXTURE_FILED_FROM) },
           // Closed from the start: no runtime holds it, so the status
           // reconciler (which reads only active rows) never writes it.
           status: "done",

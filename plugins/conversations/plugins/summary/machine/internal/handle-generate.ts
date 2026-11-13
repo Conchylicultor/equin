@@ -1,4 +1,5 @@
 import fs from "node:fs/promises";
+import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import {
   createConversation,
   deleteConversation,
@@ -44,7 +45,7 @@ export const handleGenerate = implementMachine(
       prompt: payload.prompt,
       model: SUMMARY_MODEL_CHOICE,
       kind: "system",
-      spawnedBy: "conversation-summary",
+      launchedFrom: asPluginId("conversations.summary"),
       attemptId: parent.attemptId,
     });
 

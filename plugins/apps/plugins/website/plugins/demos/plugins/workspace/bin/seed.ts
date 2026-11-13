@@ -181,6 +181,8 @@ export async function seed(
         status: story.status,
         workingOn: story.status === "working" ? "turn" : null,
         model: story.model,
+        launchCause: "direct",
+        launchedFrom: "apps.website.demos.workspace",
         createdAt: ago(story.startedAgo),
         updatedAt: ago(story.updatedAgo),
         endedAt: story.endedAgo === undefined ? null : ago(story.endedAgo),

@@ -8,15 +8,13 @@ import {
 } from "../core";
 import { classifyQueue } from "./classify-queue";
 
-// The `spawnedBy` rows adopted by the retired runtime carry.
-const ADOPTED_SPAWNED_BY = "poller";
-
 const conv = (o: Partial<Conversation> & { id: string }): Conversation =>
   ({
     status: "waiting",
     waitingFor: null,
     taskId: `task-${o.id}`,
-    spawnedBy: "equin",
+    launchCause: "direct",
+    launchedFrom: null,
     createdAt: new Date(0),
     ...o,
   }) as Conversation;
@@ -35,11 +33,11 @@ const rankRow = (
 describe("classifyQueue — Lost", () => {
   test("adopted live conversations are Lost, whatever their rank or status", () => {
     const launched = conv({ id: "conv-1" });
-    const lostWaiting = conv({ id: "spike-a", spawnedBy: ADOPTED_SPAWNED_BY });
+    const lostWaiting = conv({ id: "spike-a", launchCause: "adopted" });
     const lostWorking = conv({
       id: "spike-b",
       status: "working",
-      spawnedBy: ADOPTED_SPAWNED_BY,
+      launchCause: "adopted",
     });
     const q = classifyQueue({
       active: [launched, lostWaiting, lostWorking],
@@ -60,9 +58,7 @@ describe("classifyQueue — Lost", () => {
 
   test("a closed adopted conversation is not Lost", () => {
     const q = classifyQueue({
-      active: [
-        conv({ id: "spike-a", status: "gone", spawnedBy: ADOPTED_SPAWNED_BY }),
-      ],
+      active: [conv({ id: "spike-a", status: "gone", launchCause: "adopted" })],
       gone: [],
       queue: { ranks: [] },
       tasks: [],

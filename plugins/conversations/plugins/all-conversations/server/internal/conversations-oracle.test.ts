@@ -1,6 +1,6 @@
 /**
  * Differential oracle for the two conversation-list collections
- * (`conversations.all`, `conversations.history` — P7 of
+ * (`conversations.all.v2`, `conversations.history.v2` — P7 of
  * research/2026-10-01-global-scoped-change-routing-p5-p8-v2.md) on a throwaway
  * database seeded with the real migration chain, through the REAL feed: the
  * real declarations compiled exactly as `collection.ts` serves them (the owner
@@ -395,6 +395,7 @@ async function insertConversation(
     attemptId,
     title: opts.title,
     status: opts.status,
+    launchCause: "direct",
     runtime: "sdk",
     model: FALLBACK_MODEL,
     kind: opts.kind,
@@ -413,9 +414,9 @@ async function seedOverCap(tag: string): Promise<void> {
   await insertAttempt(`${tag}-att`, `${tag}-task`, `/wt/${tag}`);
   await testDb.db.execute(
     sql.raw(
-      `INSERT INTO conversations (id, attempt_id, title, status, runtime, model, kind, created_at, updated_at)
+      `INSERT INTO conversations (id, attempt_id, title, status, runtime, model, kind, created_at, updated_at, launch_cause)
          SELECT '${tag}-conversation-' || g, '${tag}-att', '${tag} ' || g, 'working', 'sdk', '${FALLBACK_MODEL}', 'user',
-                now() + (g || ' seconds')::interval, now()
+                now() + (g || ' seconds')::interval, now(), 'direct'
            FROM generate_series(1, 520) g`,
     ),
   );

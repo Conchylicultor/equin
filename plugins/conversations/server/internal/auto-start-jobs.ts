@@ -11,9 +11,16 @@ import {
   type DbExecutor,
 } from "@plugins/tasks/plugins/tasks-core/server";
 import {
+  AUTO_START_LAUNCH_CAUSES,
   TaskStatusSchema,
+  type AutoStartLaunchCause,
   type Conversation,
+  type ConversationLaunch,
 } from "@plugins/tasks/plugins/tasks-core/core";
+import {
+  asPluginId,
+  type PluginId,
+} from "@plugins/framework/plugins/plugin-id/core";
 import {
   claimAutoStart,
   getTaskAutoStart,
@@ -135,11 +142,17 @@ export type LaunchTaskNowResult =
 // is `launchArmedTask`'s in queue mode — the queue must wait on it, while an
 // inline launch the user asked for has nothing to wait for. Likewise `ifAlreadyStarted` (see `launchArmedTask`):
 // required, because the queue and a user launch mean opposite things by it.
+//
+// Why it launches (`LaunchTaskNowCause`): a person's Launch (`direct`, from the
+// surface they launched from), or a wake-up of the queue — whose launch is
+// `launchedFrom` the plugin that ARMED the task, read off its marker.
+export type LaunchTaskNowCause =
+  { cause: "direct"; launchedFrom: PluginId } | { cause: AutoStartLaunchCause };
+
 export async function launchTaskNow(
   taskId: string,
-  opts: {
+  opts: LaunchTaskNowCause & {
     prompt?: string;
-    cause: string;
     ifAlreadyStarted: IfAlreadyStarted;
     /** The launcher shows the conversation itself (see `CreateConversationOpts`). */
     shownByLauncher?: boolean;
@@ -158,6 +171,11 @@ export async function launchTaskNow(
     },
   });
 
+  const launch: ConversationLaunch =
+    opts.cause === "direct"
+      ? { cause: "direct", from: opts.launchedFrom }
+      : { cause: opts.cause, from: asPluginId(ext.armedFrom) };
+
   // Reads first, outside any transaction: nothing slow runs while the
   // marker's row lock is held. A duplicate runner prepares too and then
   // loses the claim — it has written nothing, so that costs nothing.
@@ -165,7 +183,7 @@ export async function launchTaskNow(
     taskId,
     model: ext.autoStartModel,
     prompt,
-    spawnedBy: opts.cause,
+    launch,
     shownByLauncher: opts.shownByLauncher,
   });
 
@@ -226,7 +244,10 @@ export const maybeLaunchTaskJob = defineJob({
   hold: "instant",
   input: z.object({
     taskId: z.string(),
-    cause: z.string().default("dep-resolved"),
+    // What woke the launcher: the arm itself, a status change (what blocked
+    // the task cleared), or the boot reconcile. No default — every wake-up
+    // says which it is.
+    cause: z.enum(AUTO_START_LAUNCH_CAUSES),
   }),
   event: z.never(),
   dedup: { key: ({ taskId }) => taskId },
@@ -369,7 +390,7 @@ export const maybeLaunchOnStatusJob = defineJob({
     if (!(await getTaskAutoStart(event.taskId))) return;
     await maybeLaunchTaskJob.enqueue({
       taskId: event.taskId,
-      cause: "status-changed",
+      cause: "unblocked",
     });
   },
 });
@@ -386,12 +407,12 @@ export const maybeLaunchOnArmedJob = defineJob({
   hold: "instant",
   input: z.object({}),
   dedup: "none",
-  event: z.object({ taskId: z.string(), cause: z.string() }).passthrough(),
+  event: z.object({ taskId: z.string() }).passthrough(),
   run: async ({ event }) => {
     if (!event) return;
     await maybeLaunchTaskJob.enqueue({
       taskId: event.taskId,
-      cause: event.cause,
+      cause: "armed",
     });
   },
 });

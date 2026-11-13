@@ -295,7 +295,7 @@ export const taskDescriptions = liveCollection("task-descriptions", {
 // the key.
 //
 // Named `attemptRows` because `attempts` is the server's view handle.
-export const attemptRows = liveCollection("attempts.v2", {
+export const attemptRows = liveCollection("attempts.v3", {
   from: attemptsEntityRef,
   // `workspace` is left off: the workspace crosses the wire on its own lookup
   // (`attemptWorkspaces`), which the values computed from it follow.
@@ -599,7 +599,8 @@ const CONVERSATION_QUEUE_CARRY = {
     "workingOn",
     "statusUnverifiedSince",
     "statusSince",
-    "spawnedBy",
+    "launchCause",
+    "launchedFrom",
     "closeRequested",
     "hibernatedAt",
     "resumingSince",
@@ -608,7 +609,7 @@ const CONVERSATION_QUEUE_CARRY = {
   fields: { taskId: textField(), active: boolField() },
 } as const;
 
-export const conversationsActive = liveCollection("conversations-active", {
+export const conversationsActive = liveCollection("conversations-active.v2", {
   from: conversationsEntityRef,
   pick: CONVERSATION_QUEUE_PICK,
   fields: CONVERSATION_QUEUE_OWN_FIELDS,
@@ -629,7 +630,7 @@ export const conversationsActive = liveCollection("conversations-active", {
 });
 // The live `system` conversations (machine-spawned automation): the same
 // shape and routes as `conversationsActive`, the other half of `kind`.
-export const conversationsSystem = liveCollection("conversations-system", {
+export const conversationsSystem = liveCollection("conversations-system.v2", {
   from: conversationsEntityRef,
   pick: CONVERSATION_QUEUE_PICK,
   fields: CONVERSATION_QUEUE_OWN_FIELDS,
@@ -660,7 +661,7 @@ export const conversationsSystem = liveCollection("conversations-system", {
 // (`count: true`): `useLive(conversationsGone, { count: true })` is how many
 // conversations have ended in all — the welcome counts, and the Done
 // section's exact count — preloaded with the window, one COUNT per write.
-export const conversationsGone = liveCollection("conversations-gone", {
+export const conversationsGone = liveCollection("conversations-gone.v2", {
   from: conversationsEntityRef,
   pick: CONVERSATION_QUEUE_PICK,
   fields: CONVERSATION_QUEUE_OWN_FIELDS,
@@ -682,7 +683,7 @@ export const conversationsGone = liveCollection("conversations-gone", {
 // same full `Conversation` row as the lists, declared by the same fields; it
 // reaches no entity (a lookup-only read folds no exposure), so its rows carry
 // no `$columns`.
-export const conversationsById = liveCollection("conversations.by-id", {
+export const conversationsById = liveCollection("conversations.by-id.v2", {
   from: conversationsEntityRef,
   carry: {
     pick: [...CONVERSATION_QUEUE_PICK, ...CONVERSATION_QUEUE_CARRY.pick],

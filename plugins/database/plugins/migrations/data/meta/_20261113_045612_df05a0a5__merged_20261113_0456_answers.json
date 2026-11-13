@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "answers": [
+    {
+      "key": "column:conversations.launch_cause",
+      "entityType": "column",
+      "entityName": "launch_cause",
+      "action": "create"
+    },
+    {
+      "key": "column:conversations.launched_from",
+      "entityType": "column",
+      "entityName": "launched_from",
+      "action": "create"
+    }
+  ]
+}

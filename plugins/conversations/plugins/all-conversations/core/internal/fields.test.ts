@@ -17,6 +17,8 @@ const LIST_FIELD_IDS = [
   "status",
   "model",
   "kind",
+  "launchCause",
+  "launchedFrom",
   "runtime",
   "createdAt",
   "updatedAt",
@@ -59,7 +61,6 @@ describe("conversation list fields", () => {
     expect([...allConversations.rowKeys] as string[]).toEqual([
       ...LIST_FIELD_IDS,
       "id",
-      "spawnedBy",
       "statusUnverifiedSince",
       "taskId",
     ]);

@@ -96,7 +96,7 @@ export const handleCreate = implement(createTaskEndpoint, async ({ body }) => {
     await armTaskAutoStart({
       taskId: row.id,
       model: autoStartModel,
-      cause: "user-launch",
+      armedFrom: asPluginId(body.filedFrom),
     });
     // Re-fetch so the response reflects the autoStart columns and any
     // dependencies we just wrote.

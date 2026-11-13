@@ -85,8 +85,8 @@ async function seedConversation(status: "done" | "gone"): Promise<string> {
     VALUES (${attempt}, ${task}, ${`/tmp/${attempt}`})
   `);
   await t.db.execute(sql`
-    INSERT INTO conversations (id, attempt_id, status, runtime, model, spawned_by)
-    VALUES (${conv}, ${attempt}, ${status}, 'sdk', ${FALLBACK_MODEL}, 'test')
+    INSERT INTO conversations (id, attempt_id, status, runtime, model, launch_cause)
+    VALUES (${conv}, ${attempt}, ${status}, 'sdk', ${FALLBACK_MODEL}, 'direct')
   `);
   return conv;
 }

@@ -1,4 +1,5 @@
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
+import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -65,9 +66,10 @@ export function TodoDispatch({
         // and the prompt it composed from the card's CURRENT contents. Composing
         // the prompt here would mean re-deriving the card's markdown from rows
         // whose `data.text` projection lags their content docs.
-        getRequest={(context) =>
-          dispatchTodoAgent(fetchEndpoint, blockId, context)
-        }
+        getRequest={async (context) => ({
+          ...(await dispatchTodoAgent(fetchEndpoint, blockId, context)),
+          launchedFrom: asPluginId("page.annotations.todo.task-link"),
+        })}
         openAfterLaunch
         openMode="push"
         // The launched conversation opens in a column beside the page, so the

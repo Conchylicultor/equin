@@ -38,6 +38,7 @@ import { formatShortcutLabel } from "@plugins/primitives/plugins/shortcuts/web";
 import { useClaudeCodeLaunchBlock } from "@plugins/infra/plugins/claude-cli/plugins/availability/web";
 import { symbol, type IconRef } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
+import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
 
 const playArrowIcon = symbol("play-arrow");
 const keyboardArrowDownIcon = symbol("keyboard-arrow-down");
@@ -57,6 +58,12 @@ export type LaunchRequest = {
 };
 
 export type LaunchControlProps = {
+  /**
+   * The plugin id of the surface launching (the conversation's
+   * `launchedFrom`, tasks-core/core/launch-cause.ts). Required: a launch
+   * names where it comes from.
+   */
+  launchedFrom: PluginId;
   getRequest?: () => LaunchRequest | Promise<LaunchRequest>;
   openAfterLaunch?: boolean;
   /**
@@ -108,13 +115,14 @@ export type LaunchControlProps = {
  * with it — never resolves as if a conversation started.
  */
 export function useLaunchConversation({
+  launchedFrom,
   getRequest,
   openAfterLaunch = true,
   openMode = "push",
   onLaunched,
 }: Pick<
   LaunchControlProps,
-  "getRequest" | "openAfterLaunch" | "openMode" | "onLaunched"
+  "launchedFrom" | "getRequest" | "openAfterLaunch" | "openMode" | "onLaunched"
 >) {
   const fetchEndpoint = useFetchEndpoint();
   const availability = useMachineAvailability(createConversation);
@@ -130,7 +138,7 @@ export function useLaunchConversation({
       const result = await fetchEndpoint(
         createConversation,
         {},
-        { body: { model, ...request } },
+        { body: { model, ...request, launchedFrom } },
       );
       if (result.kind === "unavailable") throw new Error(result.message);
       const conversation = result.value;
@@ -208,6 +216,7 @@ export function LaunchModelMenuContent({
  * fires the current default.
  */
 export function LaunchControl({
+  launchedFrom,
   getRequest,
   openAfterLaunch = true,
   openMode = "push",
@@ -220,6 +229,7 @@ export function LaunchControl({
   action,
 }: LaunchControlProps) {
   const { launch, launching, availability } = useLaunchConversation({
+    launchedFrom,
     getRequest,
     openAfterLaunch,
     openMode,

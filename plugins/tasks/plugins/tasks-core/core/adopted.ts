@@ -1,15 +1,14 @@
+import type { ConversationLaunchCause } from "./launch-cause";
+
 /**
- * The `spawnedBy` of a conversation main ADOPTED: a live agent session a
- * retired runtime found running with no conversation row. Nothing
+ * Was this conversation ADOPTED (`launchCause: "adopted"`): a live agent
+ * session a retired runtime found running with no conversation row? Nothing
  * launched it on purpose, so the queue shows it in its own Lost section rather
  * than ranking it among the user's work. Nothing adopts any more; the rows it
- * made keep the value ("poller", from the 1 s poller that adopted first).
+ * made keep the cause.
  */
-const ADOPTED_SPAWNED_BY = "poller";
-
-/** Was this conversation adopted (see {@link ADOPTED_SPAWNED_BY})? */
 export function isAdoptedConversation(conv: {
-  spawnedBy: string | null;
+  launchCause: ConversationLaunchCause;
 }): boolean {
-  return conv.spawnedBy === ADOPTED_SPAWNED_BY;
+  return conv.launchCause === "adopted";
 }

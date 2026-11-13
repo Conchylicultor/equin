@@ -10,7 +10,7 @@ import {
 import { CONVERSATION_SORTABLE } from "./fields";
 
 // The two lists share one shape; each is its own collection because they are
-// served apart (`conversations.all` hides system conversations by a default
+// served apart (`conversations.all.v2` hides system conversations by a default
 // scope, the History list does not). Both take `scopedColumns`: the custom
 // columns of the surface listing one sort and filter it.
 // Declared by FIELDS: every list field — its label, type, options, filter
@@ -26,6 +26,10 @@ import { CONVERSATION_SORTABLE } from "./fields";
 // It does carry `statusUnverifiedSince`: the status cell renders Unknown while
 // it is set, and the reconciler writes it only on entering and leaving an
 // unverified stretch.
+//
+// Keys `conversations.all.v2` / `conversations.history.v2` (renamed when the
+// free-text `spawnedBy` became the listed `launchCause` / `launchedFrom`,
+// 2026-11-13 — a removed field renames the key, network/live C39).
 
 /** The conversation fields a list shows, in list order. */
 const CONVERSATION_LIST_PICK = [
@@ -33,6 +37,8 @@ const CONVERSATION_LIST_PICK = [
   "status",
   "model",
   "kind",
+  "launchCause",
+  "launchedFrom",
   "runtime",
   "createdAt",
   "updatedAt",
@@ -52,7 +58,7 @@ const CONVERSATION_LIST_OWN_FIELDS = {
 
 /** What a row carries that no list shows. */
 const CONVERSATION_LIST_CARRY = {
-  pick: ["id", "spawnedBy", "statusUnverifiedSince"],
+  pick: ["id", "statusUnverifiedSince"],
   fields: { taskId: textField() },
 } as const;
 
@@ -78,7 +84,7 @@ const CONVERSATION_LIST_RELATED = { task: tasksEntityRef } as const;
  * with `defaults: [{ unless: "kind", … }]`): a view that filters on Kind gets
  * exactly what it asks for, system rows included.
  */
-export const allConversations = liveCollection("conversations.all", {
+export const allConversations = liveCollection("conversations.all.v2", {
   from: conversationsEntityRef,
   pick: CONVERSATION_LIST_PICK,
   fields: CONVERSATION_LIST_OWN_FIELDS,
@@ -99,7 +105,7 @@ export const allConversations = liveCollection("conversations.all", {
  * system" filter preset is how a view drops them. Same shape and routes as
  * {@link allConversations}, no default scope.
  */
-export const conversationHistory = liveCollection("conversations.history", {
+export const conversationHistory = liveCollection("conversations.history.v2", {
   from: conversationsEntityRef,
   pick: CONVERSATION_LIST_PICK,
   fields: CONVERSATION_LIST_OWN_FIELDS,

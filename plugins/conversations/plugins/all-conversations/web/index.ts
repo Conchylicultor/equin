@@ -10,7 +10,7 @@ export { allConversationsPane } from "./panes";
 
 export default {
   description:
-    "All-conversations app pane: a live DataView over the `conversations.all` collection (filter/sort/search over every conversation, kept fresh by the routed change feed) reachable from the agent-manager sidebar; and how the conversations entity's fields present in every conversation list (the optimistic status cell, the model filter's live catalog options).",
+    "All-conversations app pane: a live DataView over the `conversations.all.v2` collection (filter/sort/search over every conversation, kept fresh by the routed change feed) reachable from the agent-manager sidebar; and how the conversations entity's fields present in every conversation list (the optimistic status cell, the model filter's live catalog options).",
   contributions: [
     conversationPresentation,
     Pane.Register({ pane: allConversationsPane }),

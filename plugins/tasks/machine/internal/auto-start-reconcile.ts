@@ -27,7 +27,7 @@ export async function reconcileArmedTasks(): Promise<void> {
   const ids = await listArmedTaskIds();
   await Promise.all(
     ids.map((taskId) =>
-      maybeLaunchTaskJob.enqueue({ taskId, cause: "boot-reconcile" }),
+      maybeLaunchTaskJob.enqueue({ taskId, cause: "reconcile" }),
     ),
   );
 }

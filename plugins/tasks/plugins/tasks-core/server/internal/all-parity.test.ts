@@ -179,11 +179,12 @@ async function seed(db: NodePgDatabase, n: number): Promise<void> {
         const kind = rand() < 0.15 ? "system" : pick(["user", "agent"]);
         const created = instant();
         await db.execute(sql`
-          INSERT INTO conversations (id, attempt_id, status, model, kind, title, created_at, ended_at, spawned_by)
+          INSERT INTO conversations (id, attempt_id, status, model, kind, title, created_at, ended_at, launch_cause, launched_from)
           VALUES (${`conv-${++seq}`}, ${id}, ${status}, ${FALLBACK_MODEL}, ${kind},
                   ${rand() < 0.2 ? null : `conv title ${seq}`}, ${created}::timestamptz,
                   ${status === "done" ? instant() : null}::timestamptz,
-                  ${rand() < 0.3 ? `conv-${seq - 1}` : null})`);
+                  ${rand() < 0.3 ? "unblocked" : "direct"},
+                  ${rand() < 0.3 ? "tasks" : null})`);
       }
       if (rand() < 0.4) {
         for (let p = 0; p < 1 + Math.floor(rand() * 2); p++) {
@@ -346,7 +347,8 @@ async function checkAttempts(): Promise<number> {
         status: _conversations.status,
         kind: _conversations.kind,
         createdAt: _conversations.createdAt,
-        spawnedBy: _conversations.spawnedBy,
+        launchCause: _conversations.launchCause,
+        launchedFrom: _conversations.launchedFrom,
         statusUnverifiedSince: _conversations.statusUnverifiedSince,
       })
       .from(_conversations);
@@ -364,7 +366,8 @@ async function checkAttempts(): Promise<number> {
           status: c.status,
           kind: c.kind,
           createdAt: c.createdAt.toISOString(),
-          spawnedBy: c.spawnedBy,
+          launchCause: c.launchCause,
+          launchedFrom: c.launchedFrom,
           statusUnverifiedSince: c.statusUnverifiedSince?.toISOString() ?? null,
         }));
     for (const row of full) {

@@ -115,6 +115,9 @@ export const LaunchTaskBodySchema = z.object({
   // the "Conversation started" notification is recorded quietly — in the bell,
   // no toast. A launch into the background announces itself.
   shownByLauncher: z.boolean(),
+  // The plugin id of the surface launching it: the conversation's
+  // `launchedFrom` (tasks-core/core/launch-cause.ts).
+  launchedFrom: z.string().min(1),
 });
 export type LaunchTaskBody = z.infer<typeof LaunchTaskBodySchema>;
 

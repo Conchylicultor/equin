@@ -135,7 +135,7 @@ The queue's live state is one bounded resource, not a push struct:
   extension handle (`serveCollection(queueRanks, { from: conversationsQueue })`,
   so there is no `select` map to keep in sync). The sidebar reads its `:rows`
   point sibling by the LIVE conversation id set it already tracks via
-  `conversations-active` (`useOptimisticResource(queueRanks, { ids }, …)`), so a
+  `conversations-active.v2` (`useOptimisticResource(queueRanks, { ids }, …)`), so a
   read costs O(live) (~26 rows), never O(2,726). `seedRankJob` on
   `conversationCreated` therefore ships a single-row point delta to the tuples
   containing that id (structurally none until it enters the live set), never a
@@ -145,7 +145,7 @@ The queue's live state is one bounded resource, not a push struct:
   reorder endpoint's returned `{ watermark }` is matched against the frame's
   `ackTx` (point deltas carry no snapshot watermark, so this is what replaces
   the watermark compare). Preloaded at ONE tuple, the boot id set of
-  `conversations-active` (`serveCollection(…, { preloadRows: { idsOf:
+  `conversations-active.v2` (`serveCollection(…, { preloadRows: { idsOf:
   conversationsActive } })`): the sidebar's tuple is exactly that set, so its
   ranks ship in the boot snapshot and the queue settles on its first render.
   Each row carries `{ conversationId, rank, section }`. The section rides the rank

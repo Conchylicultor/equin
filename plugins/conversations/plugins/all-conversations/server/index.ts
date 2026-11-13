@@ -6,7 +6,7 @@ import {
 
 export default {
   description:
-    "Serves the two conversation-list collections — `conversations.all` (system conversations hidden by a default scope) and `conversations.history` — over `_conversations` with the owner joins (attempt → task), routed: a conversation, attempt or task write refills only the rows it changes.",
+    "Serves the two conversation-list collections — `conversations.all.v2` (system conversations hidden by a default scope) and `conversations.history.v2` — over `_conversations` with the owner joins (attempt → task), routed: a conversation, attempt or task write refills only the rows it changes.",
   contributions: [
     ...allConversationsServed.declare,
     ...conversationHistoryServed.declare,

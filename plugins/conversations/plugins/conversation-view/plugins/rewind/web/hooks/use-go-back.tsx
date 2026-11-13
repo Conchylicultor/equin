@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { useConversationById } from "@plugins/conversations/web";
 import { normalizeModel } from "@plugins/conversations/plugins/model-provider/core";
 import { useLaunchConversation } from "@plugins/primitives/plugins/launch/web";
@@ -57,6 +58,7 @@ export function useGoBackToMessage({
   const [forkText, setForkText] = useState("");
 
   const { launch } = useLaunchConversation({
+    launchedFrom: asPluginId("conversations.conversation-view.rewind"),
     getRequest: () => ({
       forkFromConversationId: convId,
       forkAtMessageUuid: uuid,

@@ -51,7 +51,11 @@ export type LaunchToggle = {
  * always files a task, so a launch that must not mint one uses `LaunchControl`.
  */
 export type LaunchAgentRequest = { prompt: string } & (
-  | { taskId: string }
+  | {
+      taskId: string;
+      /** The plugin id of the surface launching it (the conversation's `launchedFrom`). */
+      launchedFrom: PluginId;
+    }
   | {
       categoryId: string;
       /**
@@ -230,7 +234,7 @@ export function LaunchAgentForm({
       req.prompt,
       picked,
       "taskId" in req
-        ? { id: req.taskId }
+        ? { id: req.taskId, launchedFrom: req.launchedFrom }
         : {
             title: req.title ?? title,
             categoryId: req.categoryId,

@@ -131,6 +131,7 @@ try {
   const conv = await post<{ id: string }>("/api/conversations", {
     attemptId,
     model: MODEL,
+    launchedFrom: "conversations.turn-ledger",
     prompt: "Reply with only OK.",
   });
   created.push(conv.id);

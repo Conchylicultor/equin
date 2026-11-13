@@ -1,4 +1,5 @@
 import type { Conversation as ConversationRecord } from "@plugins/tasks/plugins/tasks-core/core";
+import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { LaunchControl } from "@plugins/primitives/plugins/launch/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
@@ -16,6 +17,9 @@ export function ForkConversationButtons({
 }) {
   return (
     <LaunchControl
+      launchedFrom={asPluginId(
+        "conversations.conversation-view.fork-conversation",
+      )}
       size="icon"
       variant="outline"
       action={{

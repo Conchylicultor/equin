@@ -23,6 +23,10 @@ import {
   ConversationWorkingOnSchema,
 } from "../conversation-status";
 import { TASK_AUTHOR_KINDS, TASK_AUTHOR_KIND_OPTIONS } from "../task-author";
+import {
+  CONVERSATION_LAUNCH_CAUSES,
+  CONVERSATION_LAUNCH_CAUSE_OPTIONS,
+} from "../launch-cause";
 
 // Web-safe field records for the tasks / attempts / task_dependencies / pushes /
 // conversations FK cluster. One `FieldsRecord` per table, keyed by JS prop name
@@ -188,7 +192,14 @@ export const conversationFields = {
   // its first look, whoever was watching when the status moved. Null on a row
   // whose status has not changed since the column was added.
   statusSince: nullable(dateField()),
-  spawnedBy: nullable(textField()),
+  // Why it was launched now, and the plugin that launched it (for an
+  // auto-start launch, the one that armed the task). `launchedFrom` is null
+  // only on rows launched before it was tracked. See ../launch-cause.ts.
+  launchCause: enumTextField(CONVERSATION_LAUNCH_CAUSES, {
+    label: "Launched",
+    options: CONVERSATION_LAUNCH_CAUSE_OPTIONS,
+  }),
+  launchedFrom: nullable(textField({ label: "Launched from" })),
   createdAt: dateField({ label: "Created" }),
   // Last activity. Sortable in the lists: it is DERIVED (a DB trigger) and
   // moves only on a title / model edit and the working ⇄ reply status

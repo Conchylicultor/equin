@@ -40,6 +40,10 @@ export const CreateConversationBodySchema = z
     // Where a NEW attempt runs (default: a worktree). A scratch spec's input is
     // validated by its profile when the attempt is created.
     workspace: WorkspaceSpecSchema.optional(),
+    // The plugin id of the surface launching it: the conversation's
+    // `launchedFrom` (tasks-core/core/launch-cause.ts). Required — a launch
+    // names where it comes from.
+    launchedFrom: z.string().min(1),
   })
   .refine((b) => !b.forkAtMessageUuid || !!b.forkFromConversationId, {
     message: "forkAtMessageUuid requires forkFromConversationId",

@@ -1,4 +1,5 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { rowOrStale, useLive } from "@plugins/network/plugins/live/web";
 import {
@@ -136,6 +137,7 @@ function AttemptSection({
         </Stack>
       )}
       <LaunchControl
+        launchedFrom={asPluginId("tasks.attempt-view")}
         variant="outline"
         className="px-sm pt-xs"
         getRequest={() => ({ attemptId: attempt.id })}

@@ -60,6 +60,7 @@ export function LaunchPromptsButton({
             model: normalizeModelChoice(item.model),
             prompt: item.prompt,
             attemptId: conversation.attemptId,
+            launchedFrom: "conversations.conversation-view.launch-prompts",
           },
         },
       );

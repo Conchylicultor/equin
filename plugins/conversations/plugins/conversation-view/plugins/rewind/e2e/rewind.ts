@@ -132,6 +132,7 @@ try {
   const conv = await post<{ id: string }>("/api/conversations", {
     attemptId,
     model: MODEL,
+    launchedFrom: "conversations.conversation-view.rewind",
     prompt: "Remember the word APPLE. Reply with only OK.",
   });
   created.push(conv.id);
@@ -170,6 +171,7 @@ try {
     forkFromConversationId: conv.id,
     forkAtMessageUuid: banana.uuid,
     model: MODEL,
+    launchedFrom: "conversations.conversation-view.rewind",
   });
   created.push(fork.id);
   const forkAnswer = await ask(fork.id, RECALL, 2);
@@ -235,6 +237,7 @@ try {
     forkFromConversationId: conv.id,
     forkAtMessageUuid: apple.uuid,
     model: MODEL,
+    launchedFrom: "conversations.conversation-view.rewind",
   });
   created.push(blankFork.id);
   const blankForkAnswer = await ask(blankFork.id, RECALL, 1);

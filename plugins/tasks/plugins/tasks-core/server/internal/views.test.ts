@@ -130,9 +130,9 @@ async function seedConversation(
 ): Promise<string> {
   const id = nextId("conv");
   await t.db.execute(sql`
-    INSERT INTO conversations (id, attempt_id, status, model, ended_at)
+    INSERT INTO conversations (id, attempt_id, status, model, ended_at, launch_cause)
     VALUES (${id}, ${attemptId}, ${status}, ${FALLBACK_MODEL},
-            ${status === "done" ? sql`now()` : sql`NULL`})
+            ${status === "done" ? sql`now()` : sql`NULL`}, 'direct')
   `);
   return id;
 }

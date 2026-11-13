@@ -118,8 +118,8 @@ test("a spawn job that dead-letters takes its conversation out of starting, its 
     VALUES (${ATTEMPT}, ${TASK}, ${`/tmp/${ATTEMPT}`})
   `);
   await t.db.execute(sql`
-    INSERT INTO conversations (id, attempt_id, status, runtime, model, spawned_by)
-    VALUES (${CONV}, ${ATTEMPT}, 'starting', 'sdk', ${FALLBACK_MODEL}, 'test')
+    INSERT INTO conversations (id, attempt_id, status, runtime, model, launch_cause)
+    VALUES (${CONV}, ${ATTEMPT}, 'starting', 'sdk', ${FALLBACK_MODEL}, 'direct')
   `);
 
   const queue = createInProcessQueue();

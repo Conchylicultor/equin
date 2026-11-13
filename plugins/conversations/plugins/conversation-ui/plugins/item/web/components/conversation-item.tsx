@@ -63,7 +63,8 @@ export type ConversationItemConv = {
   statusUnverifiedSince: Date | null;
   kind: ConversationKind;
   createdAt: Date;
-  spawnedBy?: string | null;
+  /** The plugin id that launched it — what a system conversation's meta names. */
+  launchedFrom?: string | null;
   taskId?: string | null;
 };
 
@@ -198,7 +199,7 @@ export function ConvRelativeTime({
         className,
       )}
     >
-      {isSystem && conv.spawnedBy ? `${conv.spawnedBy} · ` : null}
+      {isSystem && conv.launchedFrom ? `${conv.launchedFrom} · ` : null}
       <RelativeTime date={conv.createdAt} format={format} />
     </span>
   );

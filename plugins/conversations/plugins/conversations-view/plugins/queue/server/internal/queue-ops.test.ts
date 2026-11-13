@@ -69,8 +69,8 @@ async function seedConversation(taskId?: string): Promise<FiledConversation> {
     VALUES (${attemptId}, ${task}, '/tmp/x', ${OLD}, ${OLD})
   `);
   await t.db.execute(sql`
-    INSERT INTO conversations (id, attempt_id, title, status, runtime, model, kind, created_at, updated_at)
-    VALUES (${id}, ${attemptId}, 'a', 'waiting', 'sdk', 'opus', 'user', ${OLD}, ${OLD})
+    INSERT INTO conversations (id, attempt_id, title, status, runtime, model, kind, created_at, updated_at, launch_cause)
+    VALUES (${id}, ${attemptId}, 'a', 'waiting', 'sdk', 'opus', 'user', ${OLD}, ${OLD}, 'direct')
   `);
   return { conversationId: id, taskId: task };
 }

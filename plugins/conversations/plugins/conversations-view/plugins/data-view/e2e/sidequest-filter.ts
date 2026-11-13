@@ -177,14 +177,14 @@ try {
         storageKey: "conversations-sidebar",
         view: HISTORY_VIEW,
         path: "/agents",
-        live: "conversations.history",
+        live: "conversations.history.v2",
       },
       {
         name: "all-conversations",
         storageKey: "all-conversations",
         view: ALL_VIEW,
         path: "/agents/all-conversations",
-        live: "conversations.all",
+        live: "conversations.all.v2",
       },
     ] as const;
     for (const list of lists) {
@@ -204,7 +204,7 @@ try {
           shownOf(
             page,
             [side.taskId, main.taskId],
-            list.live === "conversations.all" ? "table" : "page",
+            list.live === "conversations.all.v2" ? "table" : "page",
           ),
         (s) => s.length === 1 && s[0] === side.taskId,
         { timeoutMs: 60_000 },

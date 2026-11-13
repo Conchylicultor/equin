@@ -7,7 +7,8 @@ export const ConversationSummarySchema = ConversationSchema.pick({
   status: true,
   kind: true,
   createdAt: true,
-  spawnedBy: true,
+  launchCause: true,
+  launchedFrom: true,
   statusUnverifiedSince: true,
 });
 export type ConversationSummary = z.infer<typeof ConversationSummarySchema>;

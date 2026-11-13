@@ -1,3 +1,4 @@
+import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 /**
  * Real-DB suite for the atomic auto-launch (`launchArmedTask`): the auto-start
  * marker and the launch — attempt, conversation, fork + spawn jobs — commit
@@ -92,8 +93,8 @@ async function seedArmedTask(): Promise<string> {
     INSERT INTO tasks (id, cluster_id, title, rank, mandate_ref, author_kind) VALUES (${id}, ${id}, ${`title ${id}`}, ${`a${seq}`}, 'interactive', 'human')
   `);
   await t.db.execute(sql`
-    INSERT INTO tasks_ext_auto_start (parent_id, auto_start_at, auto_start_model)
-    VALUES (${id}, now(), ${DEFAULT_MODEL_CHOICE})
+    INSERT INTO tasks_ext_auto_start (parent_id, auto_start_at, auto_start_model, armed_from)
+    VALUES (${id}, now(), ${DEFAULT_MODEL_CHOICE}, 'tasks')
   `);
   return id;
 }
@@ -108,8 +109,8 @@ async function seedAttemptWithConversation(
     VALUES (${attemptId}, ${taskId}, ${`/tmp/${attemptId}`})
   `);
   await t.db.execute(sql`
-    INSERT INTO conversations (id, attempt_id, status, runtime, model, spawned_by)
-    VALUES (${conversationId}, ${attemptId}, 'working', 'sdk', ${MODEL}, 'test')
+    INSERT INTO conversations (id, attempt_id, status, runtime, model, launch_cause)
+    VALUES (${conversationId}, ${attemptId}, 'working', 'sdk', ${MODEL}, 'direct')
   `);
   return attemptId;
 }
@@ -141,7 +142,7 @@ function prepared(taskId: string): PreparedConversation {
     runtimeId: "sdk",
     conversationId: nextId("conv"),
     model: MODEL,
-    spawnedBy: "test",
+    launch: { cause: "armed", from: asPluginId("tasks") },
     shownByLauncher: false,
     kind: "user",
     rawPrompt: "do the thing",
