@@ -10,6 +10,7 @@ import type { RecordStore } from "./store";
 import {
   isRepoSpecifier,
   specifierCandidates,
+  specifierPath,
 } from "@plugins/plugin-meta/plugins/plugin-records/plugins/specifier/core";
 import { scanModuleImports, type ImportSpec } from "./scan-imports";
 
@@ -160,7 +161,7 @@ export interface ModuleGraphInput {
    * absent. Calls sharing this function (by identity) share one graph over
    * the same set: a reader with no file outside the set passes
    * {@link NO_OUTSIDE_FILES}, not a fresh `async () => null`, so they do; one
-   * reading the checkout passes `outsideFilesAt(root)`.
+   * reading the checkout passes `outsideFilesOf(set)`, one reader per set.
    */
   readOutside: OutsideFiles;
 }
@@ -246,6 +247,12 @@ interface GraphState {
   outsideContent: Map<string, Promise<string | null>>;
   /** A plain file set's members, read once: its blob id and its scan share it. */
   memberContent: Map<string, Promise<string | null>>;
+  /**
+   * Each specifier base path's resolution (see `resolveFrom`): a function of
+   * the base and the set alone, and most imports name one of a few hundred
+   * barrels — ~41k imports resolve ~4k distinct bases.
+   */
+  resolved: Map<string, Promise<string | null>>;
   /** Growth is one call at a time: a call's walk sees every earlier call's modules. */
   growing: Promise<void>;
 }
@@ -257,6 +264,7 @@ function newState(): GraphState {
     compKeys: new Map(),
     outsideContent: new Map(),
     memberContent: new Map(),
+    resolved: new Map(),
     growing: Promise.resolve(),
   };
 }
@@ -331,16 +339,29 @@ async function growGraph(
       throw new Error(`[plugin-records] module ${rel} does not exist`);
     return gitBlobId(c);
   };
-  const resolveFrom = async (
+  const resolveFrom = (
     fromRel: string,
     spec: string,
   ): Promise<string | null> => {
-    // The one resolver's candidates (`plugin-records/specifier`); a bundler
-    // query (`./clip.mp4?inline`, `?raw`) names the file it loads.
-    const candidates = specifierCandidates(fromRel, spec);
-    if (candidates === null) return null;
-    // The path the specifier names, before an extension or index is tried.
-    const base = candidates[0]!;
+    // The path the specifier names, before an extension or index is tried; a
+    // bundler query (`./clip.mp4?inline`, `?raw`) names the file it loads.
+    const base = specifierPath(fromRel, spec);
+    if (base === null) return Promise.resolve(null);
+    // Every candidate is derived from the base (`specifierCandidates`), so
+    // the base alone decides the answer — and the refusal below names the
+    // importer that asked first, whose throw fails the walk either way.
+    let r = state.resolved.get(base);
+    if (r === undefined)
+      state.resolved.set(base, (r = resolveBase(fromRel, spec, base)));
+    return r;
+  };
+  const resolveBase = async (
+    fromRel: string,
+    spec: string,
+    base: string,
+  ): Promise<string | null> => {
+    // The one resolver's candidates (`plugin-records/specifier`).
+    const candidates = specifierCandidates(fromRel, spec)!;
     // The file set first: a probe of the disk is only for a gitignored
     // module (a generated file a barrel imports), never the common case.
     for (const c of candidates)

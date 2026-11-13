@@ -2,7 +2,7 @@ import type { Facet } from "@plugins/plugin-meta/plugins/facets/core";
 import { loadFacets } from "@plugins/plugin-meta/plugins/facets/plugins/loader/core";
 import {
   currentRecordStore,
-  outsideFilesAt,
+  outsideFilesOf,
 } from "@plugins/plugin-meta/plugins/plugin-records/core";
 import {
   createStructureIndex,
@@ -98,7 +98,7 @@ export async function openFacetedIndex(
   const input: FacetRecordsInput = {
     snapshot,
     store,
-    readOutside: outsideFilesAt(root),
+    readOutside: outsideFilesOf(snapshot),
   };
   const keying: FacetKeying = await facetKeying(input, facets);
   const batchInputs = new Set(

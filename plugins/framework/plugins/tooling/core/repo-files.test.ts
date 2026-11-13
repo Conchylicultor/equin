@@ -13,6 +13,7 @@ import {
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { pathsUnder } from "./pathspec";
 import {
+  assertRepoPath,
   listAllRepoMembers,
   listRepoMembers,
   loadRepoFiles,
@@ -276,5 +277,52 @@ describe("pathsUnder", () => {
     const all = pathsUnder(sorted, "");
     all.pop();
     expect(pathsUnder(sorted, "")).toEqual(EXPECTED);
+  });
+});
+
+describe("assertRepoPath", () => {
+  // The segment-split reading it replaced, as the oracle.
+  const bySegments = (p: string) =>
+    p.split("/").every((s) => s !== "" && s !== "." && s !== "..");
+  const paths = [
+    "a",
+    "a/b.ts",
+    ".a/b",
+    "a/.b",
+    "..a/b",
+    "a/b..",
+    "a/...",
+    "a.b/c",
+    "",
+    "/",
+    "/a",
+    "a/",
+    "a//b",
+    ".",
+    "..",
+    "./a",
+    "../a",
+    "a/.",
+    "a/..",
+    "a/./b",
+    "a/../b",
+  ];
+  test("refuses exactly an empty, `.` or `..` segment", () => {
+    for (const p of paths) {
+      const accepted = (() => {
+        try {
+          assertRepoPath("has", p, false);
+          return true;
+        } catch (err) {
+          if (err instanceof Error) return false;
+          throw err;
+        }
+      })();
+      expect([p, accepted]).toEqual([p, bySegments(p)]);
+    }
+  });
+  test("admits the whole repo only where asked", () => {
+    expect(() => assertRepoPath("under", "", true)).not.toThrow();
+    expect(() => assertRepoPath("has", "", false)).toThrow();
   });
 });

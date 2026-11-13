@@ -87,13 +87,22 @@ async function lsFiles(
  * this on every path argument; `allowRoot` admits `""` (the whole repo) where
  * a directory is expected.
  */
+/**
+ * An empty, `.` or `..` segment anywhere in a path: what `assertRepoPath`
+ * refuses. One test, no allocation — every `has` / `read` / `under` of every
+ * file set calls it, and module-graph resolution alone asks `has` of up to 15
+ * candidates per import (hundreds of thousands per check pass); splitting each
+ * path into an array to look at its segments cost ~0.3 s of a pass.
+ */
+const BAD_SEGMENT = /(?:^|\/)(?:\.\.?)?(?:\/|$)/;
+
 export function assertRepoPath(
   method: string,
   path: string,
   allowRoot: boolean,
 ): void {
   if (path === "" && allowRoot) return;
-  if (path.split("/").every((s) => s !== "" && s !== "." && s !== "..")) return;
+  if (!BAD_SEGMENT.test(path)) return;
   throw new Error(
     `RepoFiles.${method}(${JSON.stringify(path)}): expected a repo-relative ` +
       `path with no leading "/" or "./", no trailing "/" and no "." or ".." ` +

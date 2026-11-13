@@ -15,7 +15,7 @@ import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core
 import {
   buildModuleGraph,
   createMemoryRecordStore,
-  outsideFilesAt,
+  outsideFilesOf,
 } from "../core";
 
 const root = asAppPath(realpathSync(await getWorktreeRoot()));
@@ -34,7 +34,7 @@ console.log(
 );
 
 const outside: string[] = [];
-const fromDisk = outsideFilesAt(root);
+const fromDisk = outsideFilesOf(snapshot);
 t = performance.now();
 const graph = await buildModuleGraph(
   {

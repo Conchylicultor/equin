@@ -103,6 +103,16 @@ check's recording set is its own input (`markOwnInput`): every memo over it
 that check's, so a check's private copy of the caches cannot hide its reads
 as shared.
 
+**Its wall is nobody's own either.** The runner times the outermost shared
+work each check starts, from its start to its settling (`core/shared-wall.ts`,
+installed as a second `sharedWork` scope), and splits the check's `end` record:
+`durationMs` stays the wall, `sharedMs` / `shared` (by name) is what of it
+went to shared work it happened to start, and the rest is its own. The run's
+`done` record sums them (`sharedWall`). So a serial table read on
+`durationMs - sharedMs` no longer blames the first check to ask for the
+enriched tree (`active-data:document-chip-has-server-token` "cost" 2–4 s that
+was the tree's).
+
 ## Reading code: `sourceAnalysis`, not regexes
 
 A check that asks a question about code — where a function is called, what an
@@ -633,7 +643,7 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
 
 - Description: Check runner and built-in checks for ./equin check
 - Core:
-  - Uses: 88 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 89 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `framework/tooling` ×12
     - `packages/timed-fs` ×11
     - `plugin-meta/plugin-records` ×10
@@ -641,10 +651,10 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
     - `reports/check-thread-stall` ×7
     - `infra/stack-sampler` ×5
     - `infra/host-fs/user-path` ×4
+    - `packages/shared-work` ×4
     - `framework/tooling/checks/source-analysis` ×3
     - `infra/launcher/env-names` ×3
     - `infra/spawn` ×3
-    - `packages/shared-work` ×3
     - `plugin-meta/parse-utils` ×3
     - `infra/paths` ×2
     - `packages/macrotask-yield` ×2
@@ -734,7 +744,7 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
     - `imperative-create-table-allowlisted` — `cli/internal/grep-index-store.ts` (sanctioned)
     - `repo-walk-safety/no-adhoc-repo-walk` — `core/scripts/fix-shared-to-relative.ts` (sanctioned)
     - `user-path/no-unproven-claim` — `core/tree-hash.ts` (sanctioned)
-    - `boundaries/no-platform-api` — `core/cache.ts`, `core/content-hash.ts`, `core/discover.ts`, `core/grep-code.ts`, `core/progress-log.ts`, `core/read-set.ts`, `core/scan-context.ts`, `core/thread-attribution.ts`, `core/thrown-outcome.ts`, `core/transcript.ts`, `core/tree-hash.ts`, `core/whole-tree-read.ts` (debt)
+    - `boundaries/no-platform-api` — `core/cache.ts`, `core/content-hash.ts`, `core/discover.ts`, `core/grep-code.ts`, `core/progress-log.ts`, `core/read-set.ts`, `core/scan-context.ts`, `core/shared-wall.ts`, `core/thread-attribution.ts`, `core/thrown-outcome.ts`, `core/transcript.ts`, `core/tree-hash.ts`, `core/whole-tree-read.ts` (debt)
     - `repo-walk-safety/no-adhoc-repo-listing` — `core/repo-set.ts` (sanctioned)
     - `repo-walk-safety/no-adhoc-repo-listing` — `core/repo-files.ts` (sanctioned)
     - `repo-walk-safety/no-adhoc-repo-listing` — `core/tree-hash.ts` (sanctioned)

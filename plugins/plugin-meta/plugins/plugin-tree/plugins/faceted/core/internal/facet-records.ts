@@ -19,6 +19,7 @@ import {
   type OutsideFiles,
   type RecordStore,
 } from "@plugins/plugin-meta/plugins/plugin-records/core";
+import { sharedMemo } from "@plugins/packages/plugins/shared-work/core";
 import { pluginFilesManifest } from "./fs-snapshot";
 import type { PluginNode } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import {
@@ -221,6 +222,47 @@ export async function facetRecordTexts(
 }
 
 /**
+ * Every plugin's facet record texts over one set, by plugin folder and facet
+ * id: keyed, read, and extracted where they missed ONCE per set. A check pass
+ * builds two faceted trees over its set (the barrel-free tree and the
+ * enriched one, which only adds each facet's `enrich` and relates again):
+ * both parse their data from these texts, so the second neither re-keys
+ * ~1.3k plugins nor reads their records again.
+ */
+const facetTextsOver = sharedMemo(
+  "facet records",
+  async (
+    _snapshot: RepoSnapshot,
+    input: FacetRecordsInput,
+    nodes: readonly PluginNode[],
+    facets: readonly Facet[],
+  ): Promise<{
+    facets: readonly Facet[];
+    byDir: Map<string, Map<string, string>>;
+  }> => {
+    const keying = await facetKeying(input, facets);
+    const keyed = new Map<PluginNode, Map<string, string>>();
+    for (const node of nodes)
+      keyed.set(node, nodeFacetKeys(input.snapshot, keying, facets, node));
+    const texts = await facetRecordTexts(input, facets, keyed);
+    const byDir = new Map<string, Map<string, string>>();
+    for (const [node, perFacet] of keyed) {
+      const own = new Map<string, string>();
+      for (const [facetId, key] of perFacet) {
+        const text = texts.get(key);
+        if (text === undefined)
+          throw new Error(
+            `[plugin-tree] no record for facet "${facetId}" of ${node.path}`,
+          );
+        own.set(facetId, text);
+      }
+      byDir.set(node.dir, own);
+    }
+    return { facets, byDir };
+  },
+);
+
+/**
  * Fill every node's facets from the records, extracting (and storing) only
  * the ones that missed.
  */
@@ -229,24 +271,28 @@ export async function extractFacetRecords(
   nodes: readonly PluginNode[],
   facets: readonly Facet[],
 ): Promise<void> {
-  const keying = await facetKeying(input, facets);
-  const keyed = new Map<PluginNode, Map<string, string>>();
-  for (const node of nodes)
-    keyed.set(node, nodeFacetKeys(input.snapshot, keying, facets, node));
-  const texts = await facetRecordTexts(input, facets, keyed);
+  const read = await facetTextsOver(input.snapshot, input, nodes, facets);
+  // The texts were read for the first caller's plugins and facets: a set's
+  // plugin tree is a function of the set, and the facets are the process's
+  // one registry — anything else is a caller holding another tree.
+  const ids = (fs: readonly Facet[]) => fs.map((f) => f.def.id).join("\n");
+  if (ids(read.facets) !== ids(facets) || read.byDir.size !== nodes.length)
+    throw new Error(
+      "[plugin-tree] the facet records of this set were read for another plugin tree or facet list",
+    );
 
   // Every node's data is parsed from its record's text, hit or fresh: one
   // spelling, so a fresh extraction and a stored one cannot differ by what
-  // JSON drops (an `undefined` field, a Map).
+  // JSON drops (an `undefined` field, a Map) — and each tree parses its own
+  // copy, so relating one never touches the other's data.
   for (const node of nodes) {
-    for (const f of facets) {
-      const text = texts.get(keyed.get(node)!.get(f.def.id)!);
-      if (text === undefined)
-        throw new Error(
-          `[plugin-tree] no record for facet "${f.def.id}" of ${node.path}`,
-        );
-      setFacet(node, f.def, JSON.parse(text) as unknown);
-    }
+    const own = read.byDir.get(node.dir);
+    if (own === undefined)
+      throw new Error(
+        `[plugin-tree] ${node.path} is not in the plugin tree its set's facet records were read for`,
+      );
+    for (const f of facets)
+      setFacet(node, f.def, JSON.parse(own.get(f.def.id)!) as unknown);
   }
 }
 

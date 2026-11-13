@@ -13,7 +13,7 @@ import {
 import { loadFacets } from "@plugins/plugin-meta/plugins/facets/plugins/loader/core";
 import {
   currentRecordStore,
-  outsideFilesAt,
+  outsideFilesOf,
 } from "@plugins/plugin-meta/plugins/plugin-records/core";
 import { runWithFsSnapshot } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import {
@@ -87,7 +87,7 @@ export async function buildFacetedPluginTree(
       {
         snapshot: repo,
         store: currentRecordStore(),
-        readOutside: outsideFilesAt(repo.root),
+        readOutside: outsideFilesOf(repo),
       },
       nodes,
       facets,

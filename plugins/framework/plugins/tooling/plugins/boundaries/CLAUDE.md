@@ -308,7 +308,7 @@ takes a `debt` exemption on the check's id.
     - `framework/cli/test` (1 debt)
     - `framework/tooling` (1 debt)
     - `framework/tooling/boundaries` (2 debt)
-    - `framework/tooling/checks` (12 debt)
+    - `framework/tooling/checks` (13 debt)
     - `framework/tooling/checks/type-check` (16 debt)
     - `framework/tooling/codegen` (20 debt)
     - `framework/tooling/codegen/composition-registries` (1 debt)

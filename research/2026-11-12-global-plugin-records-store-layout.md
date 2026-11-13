@@ -1228,3 +1228,91 @@ calls are shared, its wall is not attributed), `no-plugin-imports-in-core`
 (the live server-barrel import), `lint:eslint-config-loads` 0.8–2.5 s (a Node
 / jiti load whose read-set needs the load's own file reads), format-clean /
 lint-directives-stable ~1 s each, then the smaller O(set) items of section 11.
+
+## The shared trees' duplicate walks, the Node load and the core-import grep; shared wall attributed (task: check pass O(changes), 13)
+
+Measured 2026-11-13, the same one-line edit to `hints/help-menu/web/index.ts`,
+`./equin check --scope tree` after a warm pass, read from
+`check-progress.jsonl`. Before and after were measured back to back at host
+load ~4–5 (the change set aside in a stash, then restored).
+
+### Split before
+
+The enriched tree, timed standalone with every record a hit (a probe calling
+the codegen pass's memos in order, warm, load ~8):
+
+| part | wall | why |
+| --- | ---: | --- |
+| module graph growth | ~1.0 s | 11.7k modules walked per pass: group reads 0.31 s, parse + resolve 0.42 s, Merkle keys 0.17 s — **and walked more than once**: `outsideFilesAt(root)` returned a fresh reader per call and a graph is shared by its reader's identity, so the web evaluation, the all-runtime evaluation (re-walking every web closure), each faceted tree and the file scans each grew their own graph |
+| barrel-free tree | ~1.0 s | structure 0.24, facet modules loaded 0.25, facet keys + reads 0.33, relate 0.18 |
+| the enriched tree's facets | ~0.5 s | re-keyed every plugin and re-read every facet record the barrel-free tree had just read over the same set, then related again |
+| evaluation (revive, declaration-dependent) | ~0.4 s | |
+
+Resolution built 15 candidate strings for each of ~41k imports and asked
+`has` of them; every `has` ran `assertRepoPath`, which split the path into an
+array (~0.3 s self in a profile of the tree build).
+
+Other checks, serial:
+
+| check | wall | why |
+| --- | ---: | --- |
+| no-plugin-imports-in-core | 1.2–2.1 s | grepped and parsed every TS file importing `@plugins/` (nearly all) to judge only the ones outside `plugins/` |
+| lint:eslint-config-loads | 0.8–2.5 s | a Node start loading the lint closure through jiti on every pass |
+
+### Fix
+
+- **One outside-file reader per set** (`outsideFilesOf(repo)`, a `sharedMemo`
+  in `plugin-records/core`): every graph over a pass's set is one graph, as
+  `buildModuleGraph`'s "one graph per set" already intended.
+- **Resolution memoized by base path** (`GraphState.resolved`): every
+  candidate derives from `specifierPath`, so the base alone decides the
+  answer within a graph (one set, one outside reader).
+- **`assertRepoPath` is one regex test** (same accepted language, pinned
+  against the segment-split oracle in `repo-files.test.ts`).
+- **Facet record texts once per set** (`facetTextsOver` in
+  `faceted/core/internal/facet-records.ts`): both faceted trees parse their own
+  data from the same texts. Pinned by `facet-records.test.ts` (same data,
+  distinct objects; an edited plugin re-answers over the edited set).
+- **no-plugin-imports-in-core** greps `:(exclude)plugins/` — the set it
+  judges; the verdict is unchanged (an offender in `test/` still fails).
+- **lint:eslint-config-loads is a `closureRecord`**: keyed by the Merkle keys
+  of `eslint.config.ts`, the IDE entry (loaded by jiti through a computed
+  path; its closure holds `lint.generated.ts` and every lint barrel through
+  their `import()`s), every exemption manifest (imported by a computed path)
+  and the check's own module; its input is the root `package.json` and
+  `app.css` blobs and the Node version; the npm code by `npmCodeKey`. Only a
+  pass is stored (a failure's message names the checkout; a timeout is the
+  host's). A `bun:ffi` import added to a lint barrel moves the key and fails.
+- **Shared wall attributed** (`checks/core/shared-wall.ts`): `sharedWork`
+  scopes compose (`installSharedWorkScope` wraps the previous one), and the
+  runner's second scope times the outermost shared work a check starts. Each
+  `end` record carries `sharedMs` and `shared` by name; `done` carries
+  `sharedWall`.
+
+| one-line edit, load ~4–5 | before | after |
+| --- | ---: | ---: |
+| serial pass, elapsed | 15.8 s | 13.2–13.8 s |
+| serial pass, CPU (user + sys) | 26.2 s | 23.9 s |
+| default parallelism, elapsed | 7.75–7.9 s | 6.65–7.0 s |
+| default parallelism, CPU | 28.5 s | 26.7 s |
+| enriched tree (shared wall, serial) | 1.7–2.0 s charged to document-chip | 0.84–1.13 s enriched + 0.64–0.95 s slot naming (evaluation), as shared |
+| no-plugin-imports-in-core | 1.15–1.2 s | below the top 20 |
+| lint:eslint-config-loads | 0.8–1.35 s | a lookup |
+
+format-clean and lint-directives-stable read this branch's merge-base diff,
+so they measured 0.4 → 0.9 s here only because the branch carried ~30 changed
+files.
+
+### Next
+
+The serial pass's own costs now: type-check 1.6–1.9 s, format-clean /
+lint-directives-stable ~0.7–0.9 s each (from the merge-base read), the live
+server-barrel import charged to `config-v2:registrations-paired` 0.5–0.9 s
+(config-origins-in-sync and config-stable-list-ids read the same live
+descriptors), `paths:no-inlined-worktree-artifacts` ~0.5 s. Shared: the
+enriched tree ~0.8–1.1 s and the evaluation ~0.6–0.9 s, still O(tree) with
+every record a hit — the module graph is re-walked from records each pass
+(~1 s standalone: group reads, resolution, Merkle keys); carrying the
+previous pass's graph forward by the set's diff is the O(changes) form, but
+needs a per-checkout mutable head the content-addressed store has no shape
+for. Then the smaller O(set) items of sections 11–12.

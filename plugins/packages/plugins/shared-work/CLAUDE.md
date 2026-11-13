@@ -58,6 +58,7 @@ they are — so it must be O(changes) through records or declare
     - `framework/tooling/codegen`
     - `packages/timed-fs`
     - `plugin-meta/plugin-records`
+    - `plugin-meta/plugin-tree/faceted`
     - `plugin-meta/plugin-tree/structure-records`
 - Core:
   - Exports (types): `SharedWorkScope`

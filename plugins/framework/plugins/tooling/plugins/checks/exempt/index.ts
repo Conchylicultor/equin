@@ -32,6 +32,7 @@ export default [
       "core/progress-log.ts",
       "core/read-set.ts",
       "core/scan-context.ts",
+      "core/shared-wall.ts",
       "core/thread-attribution.ts",
       "core/thrown-outcome.ts",
       "core/transcript.ts",

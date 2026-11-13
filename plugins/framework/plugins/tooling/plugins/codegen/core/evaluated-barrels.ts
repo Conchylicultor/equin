@@ -15,7 +15,7 @@ import {
 import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import {
   currentRecordStore,
-  outsideFilesAt,
+  outsideFilesOf,
 } from "@plugins/plugin-meta/plugins/plugin-records/core";
 import {
   evaluateBarrels,
@@ -122,7 +122,7 @@ async function evaluate(
     {
       snapshot,
       store: currentRecordStore(),
-      readOutside: outsideFilesAt(root),
+      readOutside: outsideFilesOf(snapshot),
       realRoot,
     },
     refs,

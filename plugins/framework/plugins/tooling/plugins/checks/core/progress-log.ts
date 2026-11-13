@@ -18,6 +18,12 @@ import {
   type FsCallSummary,
   type FsCallTally,
 } from "@plugins/packages/plugins/timed-fs/core";
+import {
+  newSharedWallMeter,
+  sharedWallWithin,
+  withSharedWallMeter,
+  type SharedWallMeter,
+} from "./shared-wall";
 import { openStallReporter, type StallReportSink } from "./stall-report";
 import type { OwnerShare, StallKind } from "./thread-attribution";
 import {
@@ -145,6 +151,15 @@ export type ProgressRecord =
        * reader returns as null (not measured), never zeros.
        */
       fs?: FsCallSummary;
+      /**
+       * Of `durationMs`, the wall spent in SHARED work this check happened to
+       * start (`shared-wall.ts`: a per-pass memo it asked for first), and that
+       * time by the work's name. `durationMs - sharedMs` is the check's own.
+       * Absent when it started none, and on lines written before it was
+       * measured.
+       */
+      sharedMs?: number;
+      shared?: Record<string, number>;
     })
   /**
    * A started check found the same check (same signature, same tree) in flight
@@ -188,6 +203,11 @@ export type ProgressRecord =
        * check's `fs` is its own body's. Missing on older records.
        */
       sharedFs?: Record<string, FsCallSummary>;
+      /**
+       * The wall of the shared work the checks started, by name — what the
+       * checks' `sharedMs` add up to. Missing on older records.
+       */
+      sharedWall?: Record<string, number>;
     });
 
 /** An owner as a record carries it; `detail` is empty for all but `import`. */
@@ -521,6 +541,9 @@ export function startProgressRun(
   const inFlight = new Set<string>();
   // Each started check's own file calls, written on its `end`.
   const fsCalls = new Map<string, FsCallTally>();
+  // Each started check's shared-work intervals, split off its wall on `end`.
+  const sharedWalls = new Map<string, SharedWallMeter>();
+  const sharedWallTotal: Record<string, number> = {};
   const inBootstrap = new Set<string>();
   // Started checks waiting on another run's flight: out of `inFlight` (not on
   // the thread), but still outstanding for the heartbeat.
@@ -591,6 +614,7 @@ export function startProgressRun(
     },
     checkStarted(checkId) {
       fsCalls.set(checkId, newFsCallTally());
+      sharedWalls.set(checkId, newSharedWallMeter());
       inFlight.add(checkId);
       // Into the watch's current window too: a check that starts and blocks in
       // the same turn is never in a tick's snapshot of `inFlight`.
@@ -614,14 +638,24 @@ export function startProgressRun(
       const tally = fsCalls.get(checkId);
       if (tally === undefined)
         throw new Error(`inCheck(${checkId}) before checkStarted`);
-      return withFsCallTally(tally, fn);
+      const wall = sharedWalls.get(checkId)!;
+      return withFsCallTally(tally, () => withSharedWallMeter(wall, fn));
     },
     checkEnded(checkId, durationMs, ok, cached, queuedMs, sharedFrom) {
       const tally = fsCalls.get(checkId);
       fsCalls.delete(checkId);
+      const wall = sharedWalls.get(checkId);
+      sharedWalls.delete(checkId);
       inFlight.delete(checkId);
       joined.delete(checkId);
       const now = performance.now();
+      const shared =
+        wall === undefined
+          ? null
+          : sharedWallWithin(wall, now - durationMs, now);
+      if (shared !== null)
+        for (const [name, ms] of Object.entries(shared.byName))
+          sharedWallTotal[name] = (sharedWallTotal[name] ?? 0) + ms;
       deps.write({
         ...stamp(),
         phase: "end",
@@ -633,6 +667,17 @@ export function startProgressRun(
         stalledMs: watch.overlapMs(now - durationMs, now),
         ...(sharedFrom !== null ? { sharedFrom } : {}),
         ...(tally !== undefined ? { fs: summarizeFsCalls(tally) } : {}),
+        ...(shared !== null && shared.totalMs > 0
+          ? {
+              sharedMs: Math.round(shared.totalMs),
+              shared: Object.fromEntries(
+                Object.entries(shared.byName).map(([n, ms]) => [
+                  n,
+                  Math.round(ms),
+                ]),
+              ),
+            }
+          : {}),
       });
     },
     finish(allOk) {
@@ -653,6 +698,9 @@ export function startProgressRun(
             name,
             summarizeFsCalls(tally),
           ]),
+        ),
+        sharedWall: Object.fromEntries(
+          Object.entries(sharedWallTotal).map(([n, ms]) => [n, Math.round(ms)]),
         ),
       });
       return thread;

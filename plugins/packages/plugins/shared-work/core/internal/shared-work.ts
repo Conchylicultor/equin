@@ -24,12 +24,16 @@ export function sharedWork<T>(name: string, fn: () => T): T {
 }
 
 /**
- * Install the scope shared work runs in — once, by the meter that counts it
- * (`packages/timed-fs`, as it loads: a file call cannot be counted before the
- * module that counts it is loaded, so nothing it would count runs earlier).
+ * Install a scope shared work runs in — once per meter, by the meter that
+ * counts it, as it loads (a file call cannot be counted before the module that
+ * counts it is loaded, so nothing it would count runs earlier). Meters
+ * compose: each installed scope wraps the ones installed before it, so the
+ * file-call meter (`packages/timed-fs`) and the check runner's wall meter
+ * (`checks/core`'s `shared-wall.ts`) both see every piece of shared work.
  */
 export function installSharedWorkScope(next: SharedWorkScope): void {
-  scope = next;
+  const inner = scope;
+  scope = (name, fn) => next(name, () => inner(name, fn));
 }
 
 /**

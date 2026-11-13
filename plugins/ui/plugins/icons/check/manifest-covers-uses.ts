@@ -2,7 +2,7 @@ import type { Check, RepoFiles } from "@plugins/framework/plugins/tooling/core";
 import { isTestCodePath } from "@plugins/framework/plugins/plugin-id/core";
 import {
   currentRecordStore,
-  outsideFilesAt,
+  outsideFilesOf,
   scanFilesCached,
 } from "@plugins/plugin-meta/plugins/plugin-records/core";
 import { iconManifestPath } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
@@ -92,7 +92,7 @@ export const manifestCoversUses: Check = {
       {
         snapshot: repo,
         store: currentRecordStore(),
-        readOutside: outsideFilesAt(repo.root),
+        readOutside: outsideFilesOf(repo),
       },
       files,
       iconUsesScan,

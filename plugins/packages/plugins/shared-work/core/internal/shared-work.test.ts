@@ -3,6 +3,7 @@ import {
   installSharedWorkScope,
   markOwnInput,
   sharedMemo,
+  sharedWork,
   type SharedWorkScope,
 } from "./shared-work";
 
@@ -52,5 +53,19 @@ describe("sharedMemo", () => {
     const key = {};
     expect(memo(key, 1)).toBe(1);
     expect(memo(key, 2)).toBe(1);
+  });
+});
+
+describe("installSharedWorkScope", () => {
+  test("meters compose: each installed scope sees every piece of shared work", () => {
+    const second: string[] = [];
+    ranShared.length = 0;
+    installSharedWorkScope((name, fn) => {
+      second.push(name);
+      return fn();
+    });
+    expect(sharedWork("both", () => 7)).toBe(7);
+    expect(ranShared).toEqual(["both"]);
+    expect(second).toEqual(["both"]);
   });
 });

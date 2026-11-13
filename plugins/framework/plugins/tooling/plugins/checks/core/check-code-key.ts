@@ -24,7 +24,7 @@ import {
   buildModuleGraph,
   currentRecordStore,
   npmCodeKey,
-  outsideFilesAt,
+  outsideFilesOf,
   recordKey,
   repoModuleOf,
   type ModuleGraphInput,
@@ -54,7 +54,7 @@ export function checkCodeKeys(
   const input: ModuleGraphInput = {
     snapshot: repo,
     store: currentRecordStore(),
-    readOutside: outsideFilesAt(repo.root),
+    readOutside: outsideFilesOf(repo),
   };
   const runner = repoModuleOf(repo, runnerUrl);
   const keys = new Map<string, Promise<CheckCodeKey>>();

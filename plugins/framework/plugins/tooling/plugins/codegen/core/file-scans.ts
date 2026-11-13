@@ -1,7 +1,7 @@
 import type { RepoFiles } from "@plugins/framework/plugins/tooling/core";
 import {
   currentRecordStore,
-  outsideFilesAt,
+  outsideFilesOf,
   scanFilesCached,
   type FileScan,
 } from "@plugins/plugin-meta/plugins/plugin-records/core";
@@ -22,7 +22,7 @@ export function scanFiles<T>(
     {
       snapshot: repo,
       store: currentRecordStore(),
-      readOutside: outsideFilesAt(repo.root),
+      readOutside: outsideFilesOf(repo),
     },
     files,
     scanner,

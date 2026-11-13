@@ -31521,7 +31521,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/cli/test` (1 debt)
               - `framework/tooling` (1 debt)
               - `framework/tooling/boundaries` (2 debt)
-              - `framework/tooling/checks` (12 debt)
+              - `framework/tooling/checks` (13 debt)
               - `framework/tooling/checks/type-check` (16 debt)
               - `framework/tooling/codegen` (20 debt)
               - `framework/tooling/codegen/composition-registries` (1 debt)
@@ -31614,7 +31614,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Exports (values): `parseRuntimeException`
         - **`checks`** — Check runner and built-in checks for ./equin check
           - Core:
-            - Uses: 88 symbols — full list in [`plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md)
+            - Uses: 89 symbols — full list in [`plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md)
               - `framework/tooling` ×12
               - `packages/timed-fs` ×11
               - `plugin-meta/plugin-records` ×10
@@ -31622,10 +31622,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `reports/check-thread-stall` ×7
               - `infra/stack-sampler` ×5
               - `infra/host-fs/user-path` ×4
+              - `packages/shared-work` ×4
               - `framework/tooling/checks/source-analysis` ×3
               - `infra/launcher/env-names` ×3
               - `infra/spawn` ×3
-              - `packages/shared-work` ×3
               - `plugin-meta/parse-utils` ×3
               - `infra/paths` ×2
               - `packages/macrotask-yield` ×2
@@ -31715,7 +31715,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `imperative-create-table-allowlisted` — `cli/internal/grep-index-store.ts` (sanctioned)
               - `repo-walk-safety/no-adhoc-repo-walk` — `core/scripts/fix-shared-to-relative.ts` (sanctioned)
               - `user-path/no-unproven-claim` — `core/tree-hash.ts` (sanctioned)
-              - `boundaries/no-platform-api` — `core/cache.ts`, `core/content-hash.ts`, `core/discover.ts`, `core/grep-code.ts`, `core/progress-log.ts`, `core/read-set.ts`, `core/scan-context.ts`, `core/thread-attribution.ts`, `core/thrown-outcome.ts`, `core/transcript.ts`, `core/tree-hash.ts`, `core/whole-tree-read.ts` (debt)
+              - `boundaries/no-platform-api` — `core/cache.ts`, `core/content-hash.ts`, `core/discover.ts`, `core/grep-code.ts`, `core/progress-log.ts`, `core/read-set.ts`, `core/scan-context.ts`, `core/shared-wall.ts`, `core/thread-attribution.ts`, `core/thrown-outcome.ts`, `core/transcript.ts`, `core/tree-hash.ts`, `core/whole-tree-read.ts` (debt)
               - `repo-walk-safety/no-adhoc-repo-listing` — `core/repo-set.ts` (sanctioned)
               - `repo-walk-safety/no-adhoc-repo-listing` — `core/repo-files.ts` (sanctioned)
               - `repo-walk-safety/no-adhoc-repo-listing` — `core/tree-hash.ts` (sanctioned)
@@ -41535,6 +41535,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework/tooling/codegen`
           - `packages/timed-fs`
           - `plugin-meta/plugin-records`
+          - `plugin-meta/plugin-tree/faceted`
           - `plugin-meta/plugin-tree/structure-records`
       - Core:
         - Exports (types): `SharedWorkScope`
@@ -46150,7 +46151,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/deps/npm/lock-closure.npmClosureOf`
           - `infra/deps/npm/lock-closure.parseBunLock`
           - `infra/deps/npm/lock-resolutions.lockfileNpmResolutions`
-          - `infra/host-fs/user-path.AppPath`
           - `infra/host-fs/user-path.joinAppPath`
           - `packages/macrotask-yield.yieldMacrotask`
           - `packages/shared-work.sharedMemo`
@@ -46160,6 +46160,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `packages/timed-fs.readFile`
           - `plugin-meta/plugin-records/specifier.isRepoSpecifier`
           - `plugin-meta/plugin-records/specifier.specifierCandidates`
+          - `plugin-meta/plugin-records/specifier.specifierPath`
         - Exports (types):
           - `BundledClosure`
           - `FileFold`
@@ -46198,7 +46199,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `NO_OUTSIDE_FILES`
           - `npmCodeKey`
           - `npmResolutionsKey`
-          - `outsideFilesAt`
+          - `outsideFilesOf`
           - `readGrouped`
           - `RECORD_TABLES`
           - `recordKey`
@@ -46493,7 +46494,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Plugins:
         - **`faceted`** — The faceted plugin tree, build tooling: buildFacetedPluginTree (the structure tree plus every facet extracted — plugin records from a snapshot — enriched and related), and the faceted index a backend keeps in a worker thread (FacetedTreeSource's desktop provider): built once, then refreshed by the watcher's paths — only the plugins owning them re-keyed, only moved records extracted, relate only when a record text changed.
           - Core:
-            - Uses: 42 symbols — full list in [`plugins/plugin-meta/plugins/plugin-tree/plugins/faceted/REFERENCE.md`](../plugins/plugin-meta/plugins/plugin-tree/plugins/faceted/REFERENCE.md)
+            - Uses: 43 symbols — full list in [`plugins/plugin-meta/plugins/plugin-tree/plugins/faceted/REFERENCE.md`](../plugins/plugin-meta/plugins/plugin-tree/plugins/faceted/REFERENCE.md)
               - `plugin-meta/plugin-records` ×13
               - `plugin-meta/plugin-tree` ×8
               - `framework/tooling` ×6
@@ -46503,6 +46504,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `plugin-meta/facets/loader` ×2
               - `plugin-meta/parse-utils` ×2
               - `infra/host-fs/user-path.AppPath`
+              - `packages/shared-work.sharedMemo`
               - `plugin-meta/plugin-tree/structure-records.buildRecordedPluginTree`
             - Exports (types):
               - `BuildFacetedTreeOptions`

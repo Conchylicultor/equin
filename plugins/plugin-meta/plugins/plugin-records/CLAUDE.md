@@ -387,7 +387,6 @@ its docblock records — and then lowered as readily as raised.
     - `infra/deps/npm/lock-closure.npmClosureOf`
     - `infra/deps/npm/lock-closure.parseBunLock`
     - `infra/deps/npm/lock-resolutions.lockfileNpmResolutions`
-    - `infra/host-fs/user-path.AppPath`
     - `infra/host-fs/user-path.joinAppPath`
     - `packages/macrotask-yield.yieldMacrotask`
     - `packages/shared-work.sharedMemo`
@@ -397,6 +396,7 @@ its docblock records — and then lowered as readily as raised.
     - `packages/timed-fs.readFile`
     - `plugin-meta/plugin-records/specifier.isRepoSpecifier`
     - `plugin-meta/plugin-records/specifier.specifierCandidates`
+    - `plugin-meta/plugin-records/specifier.specifierPath`
   - Exports (types):
     - `BundledClosure`
     - `FileFold`
@@ -435,7 +435,7 @@ its docblock records — and then lowered as readily as raised.
     - `NO_OUTSIDE_FILES`
     - `npmCodeKey`
     - `npmResolutionsKey`
-    - `outsideFilesAt`
+    - `outsideFilesOf`
     - `readGrouped`
     - `RECORD_TABLES`
     - `recordKey`
