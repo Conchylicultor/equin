@@ -93,7 +93,9 @@ const sum = (xs: readonly number[]) => xs.reduce((s, x) => s + x, 0);
  *   and sit scrolled off to the left: the row's end puts the window's left
  *   edge on the viewport's — no column half-cut.
  *
- * An unmeasured row (`space ≤ 0`) lays every column at {@link SHARE_MIN}.
+ * A row with no width (`space ≤ 0`: laid out under a hidden tab) lays every
+ * column at {@link SHARE_MIN}. An unmeasured row is never laid out at all —
+ * MillerColumns draws no column before the row's first measure.
  */
 function balancedWidths(
   dragged: readonly (number | null)[],

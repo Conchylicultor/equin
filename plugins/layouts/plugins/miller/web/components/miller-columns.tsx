@@ -6,6 +6,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type RefObject,
 } from "react";
 import { prefersReducedMotion } from "@plugins/primitives/plugins/css/plugins/motion/web";
 import { DeferredRouteFallback } from "@plugins/layouts/plugins/route-fallback/web";
@@ -80,17 +81,25 @@ interface Hold {
   before: ReadonlyMap<string, ColumnBox>;
 }
 
+type Match = NonNullable<ReturnType<typeof usePaneMatch>>;
+
+/**
+ * The row and its measure. The columns are laid out from the row's width, so
+ * none is drawn before it is known: a column laid out at a stand-in width and
+ * corrected by the measure — even in the same frame, before paint — is a
+ * layout shift (Chrome counts a box the ResizeObserver delivery moves; the
+ * cold `/agents` load scored 0.095 for its Home pane jumping from 420px to its
+ * row). The measure comes in the frame's after-layout phase, so the columns
+ * mount in that same frame, at their width, as new content.
+ */
 export function MillerColumns() {
   // Label only — the match itself comes from the surface.
   const basePath = useContext(PaneBasePathContext);
-  const store = usePaneStore();
   const match = usePaneMatch();
-  const widths = useColumnWidths();
-  const collapsed = useCollapsedColumns();
-  const [zoomState, setZoom] = useColumnZoom();
 
   const ref = useRef<HTMLDivElement>(null);
-  const [rowWidth, setRowWidth] = useState(0);
+  // Null until measured: not known yet, never a width to lay out at.
+  const [rowWidth, setRowWidth] = useState<number | null>(null);
   useResizeObserver(
     ref,
     () => {
@@ -100,7 +109,54 @@ export function MillerColumns() {
     { beforePaint: true, deps: [match !== null] },
   );
 
-  const panes = useMemo(() => match?.panes ?? [], [match]);
+  // No matched route. During the post-paint deferred-load gap the pane the URL
+  // points at may not be registered yet, so show a loading placeholder while
+  // deferred loading is in progress; once it settles this falls back to null
+  // (genuinely-invalid URL). See route-fallback for the full rationale.
+  if (!match) return <DeferredRouteFallback />;
+
+  return (
+    <PluginErrorBoundary slot="layouts.miller" label={basePath}>
+      {/* The horizontal flex row IS the x-scroll container: the SortableItem
+          columns are its direct flex children, each as wide as its column box
+          (the layout above decides every width; the row scrolls when they
+          overflow it). `relative`: a closing column's ghost (ColumnMotion) is
+          drawn absolutely over its last rect, in this row's scroll
+          coordinates. flex-row + scroll-container can't be split without
+          breaking the direct-child flex relationship dnd-kit relies on. */}
+      {/* The row's scroll is this layout's alone: a pane revealing its own
+          content (a selected row, a focused field) moves its column's
+          scrollers, never the row under the user. */}
+      <div
+        ref={ref}
+        // eslint-disable-next-line layout/no-adhoc-layout -- flex-row x-scroll container holding the sortable columns as direct children
+        className="relative flex h-full overflow-x-auto"
+        {...revealBoundary}
+      >
+        {rowWidth !== null && (
+          <MillerRow match={match} rowRef={ref} rowWidth={rowWidth} />
+        )}
+      </div>
+    </PluginErrorBoundary>
+  );
+}
+
+/** The columns of a measured row. */
+function MillerRow({
+  match,
+  rowRef: ref,
+  rowWidth,
+}: {
+  match: Match;
+  rowRef: RefObject<HTMLDivElement | null>;
+  rowWidth: number;
+}) {
+  const store = usePaneStore();
+  const widths = useColumnWidths();
+  const collapsed = useCollapsedColumns();
+  const [zoomState, setZoom] = useColumnZoom();
+
+  const panes = match.panes;
   const ids = useMemo(() => panes.map((e) => e.uuid), [panes]);
   const route = routeKey(ids);
   const zoomed = effectiveZoom(zoomState, route, ids);
@@ -246,7 +302,17 @@ export function MillerColumns() {
       before: new Map(before.layout.columns.map((c) => [c.id, c])),
     });
     glideTo(row, target, motionKey);
-  }, [motionKey, route, zoomed, zoomState, setZoom, layout, rowWidth, moving]);
+  }, [
+    ref,
+    motionKey,
+    route,
+    zoomed,
+    zoomState,
+    setZoom,
+    layout,
+    rowWidth,
+    moving,
+  ]);
 
   useEffect(
     () => () => {
@@ -283,7 +349,7 @@ export function MillerColumns() {
       setZoom(
         toggleZoom(zoomState, id, route, ids, ref.current?.scrollLeft ?? 0),
       ),
-    [setZoom, zoomState, route, ids],
+    [ref, setZoom, zoomState, route, ids],
   );
 
   // Esc leaves a zoom — registered only while one is on, so the key is free
@@ -322,12 +388,6 @@ export function MillerColumns() {
     [store],
   );
 
-  // No matched route. During the post-paint deferred-load gap the pane the URL
-  // points at may not be registered yet, so show a loading placeholder while
-  // deferred loading is in progress; once it settles this falls back to null
-  // (genuinely-invalid URL). See route-fallback for the full rationale.
-  if (!match) return <DeferredRouteFallback />;
-
   const itemIds = match.panes.map((e) => String(e.instanceId));
   // Reordering only makes sense with 2+ columns. With a single pane there is
   // nowhere to drag it, so suppress the drag handle (and its grab cursor).
@@ -335,56 +395,39 @@ export function MillerColumns() {
   const held = moving && hold?.key === motionKey ? hold.before : null;
 
   return (
-    <PluginErrorBoundary slot="layouts.miller" label={basePath}>
-      {/* The horizontal flex row IS the x-scroll container: the SortableItem
-          columns are its direct flex children, each as wide as its column box
-          (the layout above decides every width; the row scrolls when they
-          overflow it). `relative`: a closing column's ghost (ColumnMotion) is
-          drawn absolutely over its last rect, in this row's scroll
-          coordinates. flex-row + scroll-container can't be split without
-          breaking the direct-child flex relationship dnd-kit relies on. */}
-      {/* The row's scroll is this layout's alone: a pane revealing its own
-          content (a selected row, a focused field) moves its column's
-          scrollers, never the row under the user. */}
-      <div
-        ref={ref}
-        // eslint-disable-next-line layout/no-adhoc-layout -- flex-row x-scroll container holding the sortable columns as direct children
-        className="relative flex h-full overflow-x-auto"
-        {...revealBoundary}
+    <ColumnMotion rowRef={ref} panes={match.panes}>
+      <SortableList
+        items={itemIds}
+        onMove={handleMove}
+        orientation="horizontal"
       >
-        <ColumnMotion rowRef={ref} panes={match.panes}>
-          <SortableList
-            items={itemIds}
-            onMove={handleMove}
-            orientation="horizontal"
-          >
-            {match.panes.map((entry, i) => {
-              const isLast = i === match.panes.length - 1;
-              const box = layout.columns[i]!;
-              const before = held?.get(entry.uuid);
-              const fadeIn =
-                before === undefined || before.bar === box.bar
-                  ? null
-                  : box.bar
-                    ? "bar"
-                    : "pane";
-              return (
-                <SortableItem
-                  key={entry.instanceId}
-                  id={String(entry.instanceId)}
-                  handle
-                  disabled={!canReorder}
-                  wrapperProps={{ [COLUMN_ATTR]: entry.uuid }}
-                  // A rigid flex child as wide as its column box (Column sets
-                  // the width). Drag state dims it, so it stays raw.
-                  // eslint-disable-next-line layout/no-adhoc-layout -- rigid column wrapper in miller's row, sized by its column box
-                  className={(state) =>
-                    `flex h-full shrink-0${state.isDragging ? " opacity-50" : ""}`
-                  }
-                >
-                  {(state) => (
-                    <PaneInstanceContext.Provider value={entry.instanceId}>
-                      {/* The column as a named lineage region, so a picked element
+        {match.panes.map((entry, i) => {
+          const isLast = i === match.panes.length - 1;
+          const box = layout.columns[i]!;
+          const before = held?.get(entry.uuid);
+          const fadeIn =
+            before === undefined || before.bar === box.bar
+              ? null
+              : box.bar
+                ? "bar"
+                : "pane";
+          return (
+            <SortableItem
+              key={entry.instanceId}
+              id={String(entry.instanceId)}
+              handle
+              disabled={!canReorder}
+              wrapperProps={{ [COLUMN_ATTR]: entry.uuid }}
+              // A rigid flex child as wide as its column box (Column sets
+              // the width). Drag state dims it, so it stays raw.
+              // eslint-disable-next-line layout/no-adhoc-layout -- rigid column wrapper in miller's row, sized by its column box
+              className={(state) =>
+                `flex h-full shrink-0${state.isDragging ? " opacity-50" : ""}`
+              }
+            >
+              {(state) => (
+                <PaneInstanceContext.Provider value={entry.instanceId}>
+                  {/* The column as a named lineage region, so a picked element
                         reports the pane that contains it AND the plugin that
                         owns it. Wrapped HERE rather than inside `Column`: the
                         region then covers the column body, its CollapsedBar and
@@ -392,58 +435,54 @@ export function MillerColumns() {
                         props. `label` carries the position — miller panes are
                         SIBLINGS, so an upward walk from column 3 can never infer
                         "3 of 3"; only the map site knows it. */}
-                      <UiRegion
-                        kind="pane"
-                        id={entry.pane.id}
-                        label={`column ${i + 1} of ${match.panes.length}`}
-                        pluginId={paneOwnerFor(entry.pane)}
-                      >
-                        {/* Per-column boundary: a crash inside one pane is
+                  <UiRegion
+                    kind="pane"
+                    id={entry.pane.id}
+                    label={`column ${i + 1} of ${match.panes.length}`}
+                    pluginId={paneOwnerFor(entry.pane)}
+                  >
+                    {/* Per-column boundary: a crash inside one pane is
                           contained to that column; sibling panes survive.
                           The outer boundary remains as a backstop for the
                           row scaffolding (SortableList, drag). */}
-                        <PluginErrorBoundary
-                          slot="layouts.miller"
-                          label={entry.pane.id}
-                        >
-                          <Column
-                            entry={entry}
-                            box={box}
-                            moving={moving}
-                            fadeIn={fadeIn}
-                            isFirst={i === 0}
-                            isLast={isLast}
-                            zoomed={zoomed === entry.uuid}
-                            zoomActive={zoomed !== null}
-                            onToggleZoom={onToggleZoom}
-                            onBarClick={() =>
-                              zoomed !== null
-                                ? setZoom(
-                                    moveZoom(zoomState, entry.uuid, route, ids),
-                                  )
-                                : collapsed.toggle(entry.uuid)
-                            }
-                            onCollapse={() => collapsed.toggle(entry.uuid)}
-                            onResizeStart={() =>
-                              startDrag(entry.uuid, box.width)
-                            }
-                            onResize={moveDrag}
-                            onResizeEnd={(dx) => endDrag(entry.pane.id, dx)}
-                            onResetWidth={() => resetWidth(entry.pane.id)}
-                            dragHandleProps={
-                              canReorder ? state.handleProps : undefined
-                            }
-                          />
-                        </PluginErrorBoundary>
-                      </UiRegion>
-                    </PaneInstanceContext.Provider>
-                  )}
-                </SortableItem>
-              );
-            })}
-          </SortableList>
-        </ColumnMotion>
-      </div>
-    </PluginErrorBoundary>
+                    <PluginErrorBoundary
+                      slot="layouts.miller"
+                      label={entry.pane.id}
+                    >
+                      <Column
+                        entry={entry}
+                        box={box}
+                        moving={moving}
+                        fadeIn={fadeIn}
+                        isFirst={i === 0}
+                        isLast={isLast}
+                        zoomed={zoomed === entry.uuid}
+                        zoomActive={zoomed !== null}
+                        onToggleZoom={onToggleZoom}
+                        onBarClick={() =>
+                          zoomed !== null
+                            ? setZoom(
+                                moveZoom(zoomState, entry.uuid, route, ids),
+                              )
+                            : collapsed.toggle(entry.uuid)
+                        }
+                        onCollapse={() => collapsed.toggle(entry.uuid)}
+                        onResizeStart={() => startDrag(entry.uuid, box.width)}
+                        onResize={moveDrag}
+                        onResizeEnd={(dx) => endDrag(entry.pane.id, dx)}
+                        onResetWidth={() => resetWidth(entry.pane.id)}
+                        dragHandleProps={
+                          canReorder ? state.handleProps : undefined
+                        }
+                      />
+                    </PluginErrorBoundary>
+                  </UiRegion>
+                </PaneInstanceContext.Provider>
+              )}
+            </SortableItem>
+          );
+        })}
+      </SortableList>
+    </ColumnMotion>
   );
 }

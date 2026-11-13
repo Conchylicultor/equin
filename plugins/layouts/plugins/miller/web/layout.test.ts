@@ -100,7 +100,7 @@ describe("layoutColumns — balanced", () => {
     expect(l.columns[0]!.handle).toBe(false);
   });
 
-  it("an unmeasured row lays every column at SHARE_MIN (a dragged one at its width)", () => {
+  it("a row with no width lays every column at SHARE_MIN (a dragged one at its width)", () => {
     const l = layoutColumns([col("a", 300), col("b")], 0, null);
     expect(widths(l.columns)).toEqual([300, SHARE_MIN]);
   });

@@ -87,6 +87,12 @@ The whole row is laid out by one pure function, `layoutColumns` in
 [`web/layout.ts`](web/layout.ts) (tested beside it); the components only draw
 what it decides. Prototype: `proto-1794189254-saewzy` (`open=balanced`).
 
+- **No column is drawn before the row is measured.** The row's width is
+  `null` until its first measure (`useResizeObserver`, before paint), and
+  only then is `MillerRow` mounted with a `rowWidth: number` — so a column is
+  never first laid out at a stand-in width and moved by the measure. Chrome
+  counts that move as a layout shift even when the measure lands in the same
+  frame, before paint (the cold `/agents` load scored 0.095 for it).
 - **Columns that fit share the row equally**: 50/50, 33/33/33, … A column
   "fits" while every shown column gets at least `SHARE_MIN` (420px) — so a
   1470px laptop row shows three, a 1920px one four. The width is the whole
