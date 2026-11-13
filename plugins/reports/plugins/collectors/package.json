@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-reports-collectors",
+  "description": "The browser's sink collectors, opted into as a set: owns ReportSinks.Collector (a companion keyed by its producer's plugin id) and the host that attaches every collector.",
+  "private": true,
+  "version": "0.0.1"
+}

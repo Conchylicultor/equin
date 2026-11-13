@@ -26,6 +26,7 @@ type Check = {
  *
  * - a `field-type` companion's key must be a type some plugin defines
  *   (`defineFieldType("<id>")`);
+ * - a `plugin` companion's key must be a plugin's id;
  * - a `view-type` key a plugin references (an authored config row, a
  *   `views={[…]}` whitelist) must be one some renderer serves.
  */
@@ -51,6 +52,13 @@ export const keysDefined: Check = {
       if (rule.space === "field-type" && !definedFieldTypes.has(rule.key))
         problems.push(
           `${asPath(rule.then)}: serves field type "${rule.key}", which no plugin defines`,
+        );
+    const pluginIds = new Set<string>();
+    for (const node of tree.byDir.values()) pluginIds.add(node.id);
+    for (const rule of graph.rules)
+      if (rule.space === "plugin" && !pluginIds.has(rule.key))
+        problems.push(
+          `${asPath(rule.then)}: ships with plugin "${rule.key}", which does not exist`,
         );
     for (const node of tree.byDir.values())
       for (const ref of getFacet(node, crossRefsFacetDef)?.keyRefs ?? [])

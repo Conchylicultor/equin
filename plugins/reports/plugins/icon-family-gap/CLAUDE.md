@@ -6,7 +6,8 @@ does not map it** (`coverage: "strict"`, see "Icon families" in
 Such a scope draws the family's gap glyph (a dashed rounded square) instead of
 borrowing Lucide or Material, and `<Icon>` emits an `IconFamilyGap` into
 `iconFamilyGapReportSink`, once per (family, name) per page. This plugin
-**drains that sink**: `IconFamilyGapCollector` (mounted via `Core.Root`) maps
+**drains that sink**: `collectIconFamilyGap` (a `ReportSinks.Collector` keyed by
+`ui.icons`) maps
 each gap onto `report({ kind: "icon-family-gap", … })`. The dependency runs one
 way — the icons leaf never imports `reports`.
 
@@ -20,13 +21,15 @@ has to draw), however many icons, scopes or pages show it.
 - Description: Icon-family-gap collector: drains the icons plugin's iconFamilyGapReportSink into a deduped report whenever a scope whose icon family is strict draws a symbol the family does not map (it shows the family's gap glyph), plus the Debug → Reports summary view. Icon-family-gap report kind: validates the payload <Icon> files when a scope whose icon family is strict draws a symbol the family does not map (the scope shows the family's gap glyph), fingerprints by (family, name), and renders a task asking for the missing glyph.
 - Web:
   - Contributes:
-    - `Core.Root` → `IconFamilyGapCollector`
+    - `ReportSinks.Collector` "ui.icons"
     - `Reports.KindView` → `IconFamilyGapKindView`
   - Uses:
     - `primitives/css/badge.Badge`
     - `primitives/css/inline.Inline`
+    - `primitives/report-sink.drain`
     - `reports.report`
     - `reports.Reports`
+    - `reports/collectors.ReportSinks`
     - `ui/icons.iconFamilyGapReportSink`
 - Server:
   - Contributes: `report-kind` "icon-family-gap"

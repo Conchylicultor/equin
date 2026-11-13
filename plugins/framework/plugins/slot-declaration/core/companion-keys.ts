@@ -14,11 +14,17 @@
  * - `view-type` — a DataView view renderer's type (`DataViewSlots.View({ type:
  *   "map" })`). Referenced by a plugin whose authored DataView config has a row
  *   of that view type, or whose call site whitelists it (`views={["map"]}`).
+ * - `plugin` — a plugin's id (`"page.editor"`). Referenced by that plugin
+ *   alone, so a companion keyed by it ships exactly where the plugin ships: an
+ *   optional dependency. A sink collector (`ReportSinks.Collector({ from:
+ *   "page.editor" })`) ships with the editor whose sink it drains, and a
+ *   composition without the editor does not carry the editor for its
+ *   collector (the slot's owner still has to ship too: the opt-in).
  *
  * Plain data, not a slot: the set is closed and both the slot declaration and
  * the build-time scanners need it.
  */
-export const KEY_SPACES = ["field-type", "view-type"] as const;
+export const KEY_SPACES = ["field-type", "view-type", "plugin"] as const;
 
 export type KeySpace = (typeof KEY_SPACES)[number];
 

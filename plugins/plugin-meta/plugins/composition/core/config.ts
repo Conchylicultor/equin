@@ -768,7 +768,8 @@ export const compositionsConfig = defineConfig({
         // secret) and hands it to the demo as a page input, so the demo's
         // Places draws its map. Map rendering only: the Places API client is
         // `machine/`, which the demo's worker never boots.
-        // `reporters` + `reports.crash`: the error collectors are page chrome
+        // `reporters` (which brings `reports.crash`, a sink-collector companion):
+        // the error collectors are page chrome
         // (`scope: "page"` root hosts listening page-wide), so the site holds
         // them as its own plugins — held only on demand they would never mount
         // on the site, and the errors a visitor hits in the live demo would be
@@ -782,7 +783,6 @@ export const compositionsConfig = defineConfig({
             "!apps.website.demos.workspace.story",
             "!apps.website.promo-film.**",
             "integrations.google-maps.browser-config",
-            "reports.crash",
             "apps.deploy.site-reports.intake",
             "apps.deploy.site-reports.channel",
           ],
@@ -901,26 +901,20 @@ export const compositionsConfig = defineConfig({
         // calls, …) and files a report. Reports feed the self-improvement loop,
         // so they ship with it — the pack below extends this row — and an app
         // released without self-improvement ships none of them.
+        //
+        // A collector of another plugin's sink is not named here: it is a
+        // companion of `reports.collectors` keyed by its producer
+        // (`ReportSinks.Collector({ from })`), so naming `reports.collectors`
+        // brings exactly the collectors whose producer the composition already
+        // holds. Named one by one, each carried its producer in with it — the
+        // page editor (Lexical, yjs) into the public website through the three
+        // editor collectors.
         subsystem("reporters", {
           entryPoints: [
-            "reports.adaptive-bar.**",
-            "reports.caret-flight.**",
-            "reports.collab-hydration.**",
-            "reports.endpoint-errors.**",
-            "reports.icon-family-gap.**",
-            "reports.icon-missing-glyph.**",
-            "reports.live-state-stale-drop.**",
+            "reports.collectors",
             "reports.main-thread-stall.**",
             "reports.mutation-errors.**",
-            "reports.optimistic-divergence.**",
-            "reports.optimistic-rejection.**",
-            "reports.page-undo-conflict.**",
-            "reports.panel-overflow.**",
-            "reports.plugin-load-errors.**",
             "reports.render-loop.**",
-            "reports.resource-errors.**",
-            "reports.theme-resolution.**",
-            "reports.viewport-escape.**",
           ],
         }),
         // Debug instrumentation mounted at the root: the render profiler, the
@@ -945,7 +939,6 @@ export const compositionsConfig = defineConfig({
             selectedContributors: [
               "wish.element-picker",
               "review",
-              "reports.crash",
               "reports.launch-fix",
               "screenshot.draw-on-app",
             ],

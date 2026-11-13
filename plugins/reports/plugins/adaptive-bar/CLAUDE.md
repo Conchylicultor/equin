@@ -86,8 +86,8 @@ inline, since a clip bar's evictions land in a hidden dock. A genuine resize
 re-arms either, capped per mount.
 
 This plugin **drains that sink**. The dependency deliberately runs one way: a
-primitive may never import `reports`, so `AdaptiveBarCollector` (mounted via
-`Core.Root`) registers the handler that maps the sink's body onto
+primitive may never import `reports`, so `collectAdaptiveBar` (a
+`ReportSinks.Collector` keyed by `primitives.adaptive-bar`) is the handler that maps the sink's body onto
 `report({ kind: "adaptive-bar", … })` — the same inversion `reports/crash` uses
 for `error-boundary`'s `boundaryReportSink`.
 
@@ -210,14 +210,16 @@ would re-alert every 10 minutes for one known problem.
 - Description: Adaptive-bar collector: drains the adaptive-bar primitive's adaptiveBarReportSink into a deduped report whenever a bar's layout contract is violated (it was given no slack, it was written inside another bar, its fit disagrees with the layout engine, its placement never converged, it refused to relocate an iframe, or one of its widgets declared a form it does not render), plus the Debug → Reports summary view. Adaptive-bar report kind: validates the adaptive-bar primitive's layout-contract fault payloads (no-slack = the bar was given no room to give, nested-bar = a measuring bar was written inside another bar's occupant so both claim the same row's slack, row-overflow = on a converged pass the fit blessed the row as fitting and the occupants still stick out of the bar's own content box, no-convergence = the placement never settled, iframe-relocation = a frame the browser cannot move without reloading, empty-rung = a widget declared a smaller form and rendered nothing as it), fingerprints by fault + origin (the innermost UI-context node above the bar's root, falling back to the label that several unrelated bars share) + overflow mode + the offending occupant's id, excluding the per-occurrence lineage path, round evidence and message so one broken bar = one row, and renders a per-fault task — what the bar did instead, the consumer-side fix, and for no-convergence the recorded rounds naming which occupant resized itself. Re-arms periodically (6h) since a broken host re-produces the fault on every mount.
 - Web:
   - Contributes:
-    - `Core.Root` → `AdaptiveBarCollector`
+    - `ReportSinks.Collector` "primitives.adaptive-bar"
     - `Reports.KindView` → `AdaptiveBarKindView`
   - Uses:
     - `primitives/adaptive-bar.adaptiveBarReportSink`
     - `primitives/css/badge.Badge`
     - `primitives/css/inline.Inline`
+    - `primitives/report-sink.drain`
     - `reports.report`
     - `reports.Reports`
+    - `reports/collectors.ReportSinks`
 - Server:
   - Contributes: `report-kind` "adaptive-bar"
   - Uses: `reports.ReportKind`

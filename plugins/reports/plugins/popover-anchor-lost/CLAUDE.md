@@ -12,7 +12,8 @@ it has a box and keeps the last rect while it has none, so the panel stays
 where it was. That cures the symptom only — the anchor vanishing under an open
 popover is the bug of whoever hid it — so each loss is emitted, as ELEMENTS,
 into `popoverAnchorLostSink`. This plugin **drains that sink**:
-`PopoverAnchorLostCollector` (mounted via `Core.Root`) reads the popover, the
+`collectPopoverAnchorLost` (a `ReportSinks.Collector` keyed by
+`primitives.css.ui-kit`) reads the popover, the
 anchor and the nearest `display: none` element up from it through ui-context's
 `collectMeta` (description, lineage, source line, owner) while they are still
 the live nodes, and files `report({ kind: "popover-anchor-lost", … })`. The
@@ -30,15 +31,17 @@ emission per loss (re-armed when the anchor gets its box back).
 - Description: Popover-anchor-lost collector: drains ui-kit's popoverAnchorLostSink into a deduped report whenever an open popover's anchor (its trigger, or the caller's anchor) leaves the document or is hidden under display: none — the moment the panel would have jumped to the screen's top-left corner — naming the popover, the anchor and the element that hid it (lineage, source line, owner), plus the Debug → Reports summary view. Popover-anchor-lost report kind: validates ui-kit's lost-anchor fault payloads (an open popover whose anchor left the document or went display: none, which used to throw the panel into the screen's top-left corner), fingerprints by cause + popover lineage + anchor + the element that hid it, and renders a task naming them. Re-arms every 6h.
 - Web:
   - Contributes:
-    - `Core.Root` → `PopoverAnchorLostCollector`
+    - `ReportSinks.Collector` "primitives.css.ui-kit"
     - `Reports.KindView` → `PopoverAnchorLostKindView`
   - Uses:
     - `primitives/css/badge.Badge`
     - `primitives/css/inline.Inline`
     - `primitives/css/ui-kit.popoverAnchorLostSink`
+    - `primitives/report-sink.drain`
     - `primitives/ui-context.collectMeta`
     - `reports.report`
     - `reports.Reports`
+    - `reports/collectors.ReportSinks`
 - Server:
   - Contributes: `report-kind` "popover-anchor-lost"
   - Uses: `reports.ReportKind`

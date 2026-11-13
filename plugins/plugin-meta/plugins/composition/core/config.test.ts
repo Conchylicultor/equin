@@ -115,6 +115,8 @@ test("the website app seed takes the whole site subtree", () => {
     "!apps.website.demos.workspace.story",
     "!apps.website.promo-film.**",
     "integrations.google-maps.browser-config",
+    "apps.deploy.site-reports.intake",
+    "apps.deploy.site-reports.channel",
   ]);
   expect(site.excludes).toContain("agent-runtime");
 });

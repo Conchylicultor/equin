@@ -714,7 +714,11 @@ real `e2e/` script). Wins are estimates from the audit and §2 — *hypotheses u
 4. **Q4 — Icon sprites out of the snapshot** into an immutable asset.
 5. **Q5 — Theme CSS once.**
 6. **Q6 — Cut reporters → page editor** (collab-hydration's collector behind a dynamic import, or
-   `onSink` by hand until §7.1 lands).
+   `onSink` by hand until §7.1 lands). *Done (att-1794568075), structurally rather than per
+   collector:* a browser collector of another plugin's sink is now a `ReportSinks.Collector`
+   companion keyed by its producer in a new `plugin` key space (`reports/collectors`), so it ships
+   only where its producer ships; `reporters` names `reports.collectors` instead of each collector,
+   and `report-sink/collect-through-companion` refuses a cross-plugin `sink.register` in `web/`.
 7. **Q7 — App CLS**: find why the queue's short titles land after first data (likely the
    `tasks/task-title` read not being boot-preloaded) and why the sidebar's "New conversation" row is
    drawn late (likely contributed by a deferred plugin) — *both causes are hypotheses from the §2

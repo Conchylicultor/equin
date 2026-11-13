@@ -45,8 +45,8 @@ endpoints (`fetchEndpoint` / `useEndpointMutation`)". Design:
 - **Loud.** Every violation is `console.error`ed, passed to `reportError`, and
   emitted on `requestGuardReportSink` — a library swallowing the rejection
   (frimousse catches its HEAD's) cannot hide it. The sink holds violations
-  raised before `reports/crash`'s `CrashCollector` registers, and replays them;
-  the collector files each once (`browser-error`, `errorType:
+  raised before `reports/crash`'s collector (a `ReportSinks.Collector` keyed by
+  this plugin) attaches, and replays them; the collector files each once (`browser-error`, `errorType:
   RawApiRequestError`) and ignores the `reportError` / rejection echo.
 - **Agents.** The error text points `browser_javascript` users at `query_db`,
   and e2e scripts at `pageFetch` (e2e-harness, over Playwright's

@@ -23,8 +23,8 @@ payload:
   which self-heals).
 
 This plugin **drains that sink**. The dependency deliberately runs one way: a primitive may
-never import `reports`, so `OptimisticDivergenceCollector` (mounted via `Core.Root`) registers
-the handler that maps the sink's body onto `report({ kind: "optimistic-divergence", … })`.
+never import `reports`, so `collectOptimisticDivergence` (a `ReportSinks.Collector` keyed by `network.live`)
+is the handler that maps the sink's body onto `report({ kind: "optimistic-divergence", … })`.
 This is the same inversion `reports/crash` uses for `error-boundary`'s `boundaryReportSink`.
 `renderTask` writes per-kind copy: superseded walks an agent through finding the competing
 writer; stalled walks it through checking `isConfirmedBy` against what the endpoint actually
@@ -62,14 +62,16 @@ re-alert every 10 minutes for one known problem.
 - Description: Optimistic-divergence collector: drains the optimistic-mutation primitive's report sink (a server-acked op superseded by newer truth, or stalled unconfirmed) into a deduped report, plus the Debug → Reports summary view. Optimistic-divergence report kind: validates divergence payloads (kind: superseded = dropped for newer server truth, stalled = kept rendered past the miss threshold), fingerprints by kind + resource + label + ops (excluding the volatile miss count), and renders per-kind tasks. Re-arms periodically (6h) since a still-present divergence is a recurring warning, not a one-shot crash.
 - Web:
   - Contributes:
-    - `Core.Root` → `OptimisticDivergenceCollector`
+    - `ReportSinks.Collector` "network.live"
     - `Reports.KindView` → `OptimisticDivergenceKindView`
   - Uses:
     - `network/live.optimisticDivergenceReportSink`
     - `primitives/css/badge.Badge`
     - `primitives/css/inline.Inline`
+    - `primitives/report-sink.drain`
     - `reports.report`
     - `reports.Reports`
+    - `reports/collectors.ReportSinks`
 - Server:
   - Contributes: `report-kind` "optimistic-divergence"
   - Uses: `reports.ReportKind`

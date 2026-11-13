@@ -1,14 +1,14 @@
 // The collector is the ONE mapping from the editor's neutral sink body to a
 // `page-undo-conflict` report. Two things are load-bearing: the mapping itself
 // (kind, source, a message that reads plainly, the body carried as `data`) and
-// the lifetime — a mounted collector drains the sink, an unmounted one leaves
-// it inert, so a body emitted after unmount reaches nothing.
+// the lifetime — an attached drain feeds the sink to it, a detached one leaves
+// the sink inert, so a body emitted after detach reaches nothing.
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render } from "@testing-library/react";
 import { undoConflictReportSink } from "@plugins/page/plugins/editor/web";
 import { report } from "@plugins/reports/web";
-import { PageUndoConflictCollector } from "../components/page-undo-conflict-collector";
+import { drain } from "@plugins/primitives/plugins/report-sink/web";
+import { collectUndoConflict } from "../internal/page-undo-conflict-collector";
 
 vi.mock("@plugins/reports/web", async (importOriginal) => ({
   ...(await importOriginal<object>()),
@@ -16,16 +16,18 @@ vi.mock("@plugins/reports/web", async (importOriginal) => ({
 }));
 
 const reportMock = vi.mocked(report);
+const collector = drain(undoConflictReportSink, collectUndoConflict);
+let detach: (() => void) | null = null;
 
 afterEach(() => {
-  cleanup();
-  undoConflictReportSink.register(null);
+  detach?.();
+  detach = null;
   reportMock.mockClear();
 });
 
-describe("PageUndoConflictCollector", () => {
+describe("collectUndoConflict", () => {
   it("maps a stale-entry body to a page-undo-conflict report", () => {
-    render(<PageUndoConflictCollector />);
+    detach = collector.attach();
     undoConflictReportSink.emit({
       reason: "stale-entry",
       blockId: "block-a",
@@ -50,7 +52,7 @@ describe("PageUndoConflictCollector", () => {
   });
 
   it("names the block for a run-aborted body", () => {
-    render(<PageUndoConflictCollector />);
+    detach = collector.attach();
     undoConflictReportSink.emit({
       reason: "run-aborted",
       blockId: "block-b",
@@ -64,9 +66,8 @@ describe("PageUndoConflictCollector", () => {
     );
   });
 
-  it("unregisters on unmount so a later emit reaches nothing", () => {
-    const { unmount } = render(<PageUndoConflictCollector />);
-    unmount();
+  it("unregisters on detach so a later emit reaches nothing", () => {
+    collector.attach()();
     undoConflictReportSink.emit({
       reason: "run-aborted",
       blockId: "block-c",

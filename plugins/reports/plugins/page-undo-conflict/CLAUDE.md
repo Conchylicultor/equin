@@ -34,8 +34,9 @@ situation into a row per keystroke.
 
 The page editor must not import `reports`, so it emits a neutral
 `UndoConflictReport` into `undoConflictReportSink` (exported from
-`@plugins/page/plugins/editor/web`) and `PageUndoConflictCollector` (mounted via
-`Core.Root`) maps it to a report — the same inversion `reports/collab-hydration`
+`@plugins/page/plugins/editor/web`) and `collectUndoConflict` (drained through a
+`ReportSinks.Collector` keyed by `page.editor`, so it ships only where the
+editor does) maps it to a report — the same inversion `reports/collab-hydration`
 and `reports/caret-flight` use.
 
 **Neither arm is a crash.** Each is the residual the design accepts under a
@@ -47,17 +48,19 @@ collector.
 
 ## Plugin reference
 
-- Description: Page-undo-conflict collector: drains the page editor's undoConflictReportSink into a report whenever a data-based text undo entry meets a second writer — a replay that found text other than what the entry recorded and applied the entry anyway (stale-entry), or a typing run dropped because a remote change landed inside it (run-aborted) — plus the Debug → Reports summary view. Page-undo-conflict report kind: validates the page editor's undo-conflict payloads (a text undo entry replayed over a block a second writer had changed since it was recorded, or a typing run dropped because a remote change landed inside it), fingerprints by reason alone (the block id, direction and the two lengths are per-occurrence noise), and renders an investigation task.
+- Description: Page-undo-conflict collector: drains the page editor's undoConflictReportSink into a report whenever a data-based text undo entry meets a second writer — a replay that found text other than what the entry recorded and applied the entry anyway (stale-entry), or a typing run dropped because a remote change landed inside it (run-aborted) — plus the Debug → Reports summary view. A companion of the page editor: it ships only where the editor (and the reports collectors) do. Page-undo-conflict report kind: validates the page editor's undo-conflict payloads (a text undo entry replayed over a block a second writer had changed since it was recorded, or a typing run dropped because a remote change landed inside it), fingerprints by reason alone (the block id, direction and the two lengths are per-occurrence noise), and renders an investigation task.
 - Web:
   - Contributes:
-    - `Core.Root` → `PageUndoConflictCollector`
+    - `ReportSinks.Collector` "page.editor"
     - `Reports.KindView` → `PageUndoConflictKindView`
   - Uses:
     - `page/editor.undoConflictReportSink`
     - `primitives/css/badge.Badge`
     - `primitives/css/inline.Inline`
+    - `primitives/report-sink.drain`
     - `reports.report`
     - `reports.Reports`
+    - `reports/collectors.ReportSinks`
 - Server:
   - Contributes: `report-kind` "page-undo-conflict"
   - Uses: `reports.ReportKind`

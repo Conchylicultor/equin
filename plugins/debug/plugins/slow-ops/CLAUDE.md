@@ -483,6 +483,7 @@ bar).
     - `sink-safety/no-adhoc-profiler-seam` — `.` (sanctioned)
     - `ids:pk-declared` — `server/internal/tables.ts` (debt)
     - `networking/no-page-transport` — `web/internal/slow-op-queue.ts` (sanctioned)
+    - `report-sink/collect-through-companion` — `web/components/slow-op-collector.tsx` (sanctioned)
 - Sub-plugins:
   - **`cluster`** [exempt] — Cross-worktree Cluster tab for the Slow Events pane: fans out across every worktree DB fork and merges them into one aggregate + a unified contention timeline. Cross-worktree cluster scan: every…
   - **`pane`** — Aggregates tab of the Slow Events pane: a live, paged ranking of slow operations, and the per-operation detail pane (callers, waits, variants, measures, recent samples).

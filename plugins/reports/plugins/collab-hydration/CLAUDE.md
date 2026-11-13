@@ -33,8 +33,9 @@ any of them would split one defect into a row per keystroke burst.
 
 The page editor must not import `reports`, so its hydration guard emits a neutral
 `CollabHydrationReport` into `collabHydrationReportSink` (exported from
-`@plugins/page/plugins/editor/web`) and `CollabHydrationCollector` (mounted via
-`Core.Root`) maps it to a report — the same inversion `reports/caret-flight` and
+`@plugins/page/plugins/editor/web`) and `collectCollabHydration` (drained through
+a `ReportSinks.Collector` keyed by `page.editor`, so it ships only where the
+editor does) maps it to a report — the same inversion `reports/caret-flight` and
 `reports/crash` use.
 
 **The editor recovers before it reports** (re-read the authoritative state,
@@ -47,17 +48,19 @@ recovery is a safety net, and the structural fix is tracked separately.
 
 ## Plugin reference
 
-- Description: Collab-hydration collector: drains the page editor's collabHydrationReportSink into a report whenever a block's rendered text stops agreeing with its content doc (a binding that never hydrated) or with the server (a doc that never received its push), plus the Debug → Reports summary view. Collab-hydration report kind: validates the page editor's hydration-guard payloads (a block whose rendered text stopped agreeing with its content doc, or whose doc fell behind the server), fingerprints by reason alone (the block id and the three lengths are per-occurrence noise), and renders an investigation task.
+- Description: Collab-hydration collector: drains the page editor's collabHydrationReportSink into a report whenever a block's rendered text stops agreeing with its content doc (a binding that never hydrated) or with the server (a doc that never received its push), plus the Debug → Reports summary view. A companion of the page editor: it ships only where the editor (and the reports collectors) do. Collab-hydration report kind: validates the page editor's hydration-guard payloads (a block whose rendered text stopped agreeing with its content doc, or whose doc fell behind the server), fingerprints by reason alone (the block id and the three lengths are per-occurrence noise), and renders an investigation task.
 - Web:
   - Contributes:
-    - `Core.Root` → `CollabHydrationCollector`
+    - `ReportSinks.Collector` "page.editor"
     - `Reports.KindView` → `CollabHydrationKindView`
   - Uses:
     - `page/editor.collabHydrationReportSink`
     - `primitives/css/badge.Badge`
     - `primitives/css/inline.Inline`
+    - `primitives/report-sink.drain`
     - `reports.report`
     - `reports.Reports`
+    - `reports/collectors.ReportSinks`
 - Server:
   - Contributes: `report-kind` "collab-hydration"
   - Uses: `reports.ReportKind`

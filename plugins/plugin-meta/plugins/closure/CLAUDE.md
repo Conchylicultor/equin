@@ -204,12 +204,17 @@ Two edge kinds, both indexed forward + reverse:
   name the key — for a field type, its definer (`defineFieldType("date")`) and
   every plugin spelling `type: "date"`; for a view type, every plugin whose
   DataView config authors a row of it or whose call site whitelists it
-  (`views={["map"]}`). `hardClosure` is the least fixpoint of edges plus
+  (`views={["map"]}`); for a `plugin`-space key, the plugin of that id alone
+  (seeded in `classifyEdges`, no facet spells it) — an optional dependency:
+  `ReportSinks.Collector({ from: "page.editor" })` ships with
+  `reports.collectors` AND the editor, so a pack naming the owner never carries
+  a producer in for its collector's sake. `hardClosure` is the least fixpoint of edges plus
   rules. A rule is also a backward hop for inclusion paths (`InclusionStep.usage`),
   so negating a used companion lands in `unsatisfiedExclusions` naming the user
   — drop a premise instead. The key must be a string literal at the call
   (throws otherwise); `companions-visible` compares runtime keys with the rules,
-  `keys-defined` fails on a key nothing defines or a view type nothing renders.
+  `keys-defined` fails on a key nothing defines, a view type nothing renders,
+  or a `plugin` key naming no plugin.
   This replaced the hand-listed `data-views` pack.
 - **soft** (prunable) — `A → B` when A *contributes* to a slot **group** B owns.
   Slot ownership comes from the `slots` facet (`groupName`, first-writer-wins,

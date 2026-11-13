@@ -7,7 +7,8 @@ the code draws (see "The rules" in
 `<Icon>` draws the missing-glyph marker (a crossed-out dashed square) instead of
 an empty box, and emits an `IconMissingGlyph` into
 `iconMissingGlyphReportSink`, once per (sprite, symbol id) per page. This plugin
-**drains that sink**: `IconMissingGlyphCollector` (mounted via `Core.Root`) maps
+**drains that sink**: `collectIconMissingGlyph` (a `ReportSinks.Collector` keyed by
+`ui.icons`) maps
 each onto `report({ kind: "icon-missing-glyph", … })`. The dependency runs one
 way — the icons leaf never imports `reports`.
 
@@ -23,13 +24,15 @@ before it ships, from an oracle independent of the manifest generator.
 - Description: Icon-missing-glyph collector: drains the icons plugin's iconMissingGlyphReportSink into a deduped report whenever a held sprite has no symbol for an icon <Icon> draws (the build's icon manifest missed the name; the icon shows the missing-glyph marker), plus the Debug → Reports summary view. Icon-missing-glyph report kind: validates the payload <Icon> files when a held sprite has no symbol for an icon it draws (the build's icon manifest missed the name; the icon shows the missing-glyph marker), fingerprints by (sprite, symbol id), and renders a task pointing at icons:manifest-covers-uses.
 - Web:
   - Contributes:
-    - `Core.Root` → `IconMissingGlyphCollector`
+    - `ReportSinks.Collector` "ui.icons"
     - `Reports.KindView` → `IconMissingGlyphKindView`
   - Uses:
     - `primitives/css/badge.Badge`
     - `primitives/css/inline.Inline`
+    - `primitives/report-sink.drain`
     - `reports.report`
     - `reports.Reports`
+    - `reports/collectors.ReportSinks`
     - `ui/icons.iconMissingGlyphReportSink`
 - Server:
   - Contributes: `report-kind` "icon-missing-glyph"

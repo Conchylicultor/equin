@@ -3705,7 +3705,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/networking/page-transport.pageTransport`
                   - `reports.reportChannel`
               - Exemptions:
-                - Exempts itself from: `networking/no-page-transport` — `web/internal/channel.ts` (sanctioned)
+                - Exempts itself from:
+                  - `networking/no-page-transport` — `web/internal/channel.ts` (sanctioned)
+                  - `report-sink/collect-through-companion` — `web/index.ts` (sanctioned)
             - **`import`** — Errors a deployed site's visitors hit, read hourly from the site's box over SSH (its mirror change stream, reduced as it arrives) into this computer's Reports as untrusted website-visitor reports (never auto-investigated, fenced as data when investigated by hand). Web half: the kind's Debug → Reports summary view — a Website visitors badge, then the site, the page and the visitor's error as plain text (never markup or a link) with the site's own occurrence count. Reads the errors a deployed site's visitors hit into this computer's Reports: the box's site_reports change stream (site-mirror, outbound SSH only) goes through the reduce step as the replica's sink — every row strictly parsed and reduced to typed, clamped fields, the site's payload never copied, no raw row stored here (only the mirror's content-free key index) — at most 50 rows per deployment per hourly run, each page ONE incident of the website-visitor-error kind (a reconciliation's catch-up rings no bell), source website-visitor — untrusted: never on the worklist automations read, fenced as data when investigated by hand.
               - Web:
                 - Contributes: `Reports.KindView` → `WebsiteVisitorSummary`
@@ -26598,6 +26600,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `sink-safety/no-adhoc-profiler-seam` — `.` (sanctioned)
           - `ids:pk-declared` — `server/internal/tables.ts` (debt)
           - `networking/no-page-transport` — `web/internal/slow-op-queue.ts` (sanctioned)
+          - `report-sink/collect-through-companion` — `web/components/slow-op-collector.tsx` (sanctioned)
       - Plugins:
         - **`cluster`** — Cross-worktree Cluster tab for the Slow Events pane: fans out across every worktree DB fork and merges them into one aggregate + a unified contention timeline. Cross-worktree cluster scan: every live worktree DB fork's heaviest slow_ops, served as the debug.slow-ops.cluster.scan live value — one scan per Refresh, pushed as each fork answers.
           - Web:
@@ -32478,8 +32481,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Slots:
           - `Core.Root`
           - `Core.Boot`
-        - Slot contributors: 56 contributors — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
-          - `Core.Root` ×55
+        - Slot contributors: 39 contributors — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
+          - `Core.Root` ×38
           - `Core.Boot` ← `network.live.boot-snapshot`
       - Core:
         - Uses:
@@ -32548,13 +32551,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `webCollectedDir`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
-        - Imported by: 122 plugins — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
+        - Imported by: 106 plugins — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
           - `primitives` ×23
-          - `reports` ×22
           - `apps` ×18
           - `ui` ×7
           - `apps-core` ×6
           - `debug` ×6
+          - `reports` ×6
           - `framework` ×4
           - `page` ×4
           - `shell` ×4
@@ -35258,6 +35261,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `networking/no-page-transport` — `web/internal/client.ts` (sanctioned)
           - `networking/no-page-transport` — `web/components/wedge-watchdog.tsx` (sanctioned)
           - `endpoints/no-raw-web-fetch` — `web/internal/client.ts` (sanctioned)
+          - `report-sink/collect-through-companion` — `web/components/wedge-watchdog.tsx` (sanctioned)
       - Plugins:
         - **`connection-row`** — The health report's Connection row: this worktree's server and central notification sockets folded into one status — critical when one is closed or every push stopped, attention while one reconnects or one resource's push is stuck.
           - Web:
@@ -50423,9 +50427,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`web-storage`** — The one door to browser storage (localStorage / sessionStorage): defineStore declares an owner — key prefix s:<owner>:, byte cap, TTL, what to do when full (evict-oldest for caches, refuse for what the user typed), a zod schema — and returns a typed read/write/remove/subscribe handle with one {v, ts} envelope — per composition scope by default (a ScopedStore, bound by useStore / in(useStorageScope()): a PluginScope subtree such as /demo writes s:<owner>@<scope>:, never the page's own s:<owner>: keys; pageWide: { reason } for state about the page itself), and clearStorageScope wipes one scope. The caps of an area's owners sum under the browser's quota (asserted at declaration and statically by the budget-fits check), so no owner can fill storage for another. Every refused write and unreadable entry is announced (onStorageFailure); useStorageUsage and scanArea feed the health row; the no-raw-web-storage lint rule bans touching Web Storage anywhere else.
           - Web:
             - Slots: `WebStorageSlots.Root`
-            - Slot contributors:
-              - `WebStorageSlots.Root` ← `primitives.dom.web-storage.health`
-              - `WebStorageSlots.Root` ← `reports.web-storage`
+            - Slot contributors: `WebStorageSlots.Root` ← `primitives.dom.web-storage.health`
             - Contributes: `Core.Root`
             - Exports (types):
               - `AreaBucket`
@@ -53374,20 +53376,28 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `formatRelativeTime`
           - `RelativeTime`
           - `useNow`
-    - **`report-sink`** — Web presence for the report-sink primitive; the runtime-agnostic factories live in ./core so both web and server can import them. defineReportSink() is fire-and-forget and holds reports emitted before a handler registers (bounded), replaying them on register; defineRequestSink() returns the handler's answer and never holds. emit() never throws — it is called on error paths.
+    - **`report-sink`** — Web presence for the report-sink primitive; the runtime-agnostic factories live in ./core so both web and server can import them. defineReportSink() is fire-and-forget and holds reports emitted before a handler registers (bounded), replaying them on register; defineRequestSink() returns the handler's answer and never holds. emit() never throws — it is called on error paths. drain(sink, handler) is how a browser collector of another plugin's sink is spelled (a reports.collectors Collector contribution), attached ref-counted per sink.
       - Cross-plugin:
-        - Imported by: 28 plugins — full list in [`plugins/primitives/plugins/report-sink/REFERENCE.md`](../plugins/primitives/plugins/report-sink/REFERENCE.md)
+        - Imported by: 48 plugins — full list in [`plugins/primitives/plugins/report-sink/REFERENCE.md`](../plugins/primitives/plugins/report-sink/REFERENCE.md)
+          - `reports` ×22
           - `primitives` ×10
           - `infra` ×4
           - `network` ×3
           - `framework` ×2
-          - `reports` ×2
           - `ui` ×2
           - `conversations/conversation-view/jsonl-viewer/tool-call`
           - `database/connection`
           - `debug/slow-ops/sink`
           - `page/editor`
           - `tasks/tasks-core`
+      - Exemptions:
+        - Exempted by:
+          - `apps/deploy/site-reports/channel` (0 debt)
+          - `debug/slow-ops` (0 debt)
+          - `infra/health` (0 debt)
+      - Web:
+        - Exports (types): `SinkDrain`
+        - Exports (values): `drain`
       - Core:
         - Exports (types):
           - `ObservationSink`
@@ -55604,14 +55614,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`adaptive-bar`** — Adaptive-bar collector: drains the adaptive-bar primitive's adaptiveBarReportSink into a deduped report whenever a bar's layout contract is violated (it was given no slack, it was written inside another bar, its fit disagrees with the layout engine, its placement never converged, it refused to relocate an iframe, or one of its widgets declared a form it does not render), plus the Debug → Reports summary view. Adaptive-bar report kind: validates the adaptive-bar primitive's layout-contract fault payloads (no-slack = the bar was given no room to give, nested-bar = a measuring bar was written inside another bar's occupant so both claim the same row's slack, row-overflow = on a converged pass the fit blessed the row as fitting and the occupants still stick out of the bar's own content box, no-convergence = the placement never settled, iframe-relocation = a frame the browser cannot move without reloading, empty-rung = a widget declared a smaller form and rendered nothing as it), fingerprints by fault + origin (the innermost UI-context node above the bar's root, falling back to the label that several unrelated bars share) + overflow mode + the offending occupant's id, excluding the per-occurrence lineage path, round evidence and message so one broken bar = one row, and renders a per-fault task — what the bar did instead, the consumer-side fix, and for no-convergence the recorded rounds naming which occupant resized itself. Re-arms periodically (6h) since a broken host re-produces the fault on every mount.
       - Web:
         - Contributes:
-          - `Core.Root` → `AdaptiveBarCollector`
+          - `ReportSinks.Collector` "primitives.adaptive-bar"
           - `Reports.KindView` → `AdaptiveBarKindView`
         - Uses:
           - `primitives/adaptive-bar.adaptiveBarReportSink`
           - `primitives/css/badge.Badge`
           - `primitives/css/inline.Inline`
+          - `primitives/report-sink.drain`
           - `reports.report`
           - `reports.Reports`
+          - `reports/collectors.ReportSinks`
       - Server:
         - Contributes: `report-kind` "adaptive-bar"
         - Uses: `reports.ReportKind`
@@ -55622,17 +55634,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `adaptiveBarFingerprint`
           - `AdaptiveBarPayloadSchema`
-    - **`caret-flight`** — Caret-flight collector: drains the page editor's caretFlightReportSink into a report whenever a claimed caret landing is abandoned and the keystrokes it was holding had to be replayed into the origin block (or were lost), plus the Debug → Reports summary view. Caret-flight report kind: validates the page editor's caret-authority abort payloads (a claimed caret landing that never happened, so the keystrokes it was holding were replayed back into the origin block — or lost), fingerprints by reason + recovered/lost (excluding the volatile block ids and buffer size, so one defect = one row), and renders an investigation task.
+    - **`caret-flight`** — Caret-flight collector: drains the page editor's caretFlightReportSink into a report whenever a claimed caret landing is abandoned and the keystrokes it was holding had to be replayed into the origin block (or were lost), plus the Debug → Reports summary view. A companion of the page editor: it ships only where the editor (and the reports collectors) do. Caret-flight report kind: validates the page editor's caret-authority abort payloads (a claimed caret landing that never happened, so the keystrokes it was holding were replayed back into the origin block — or lost), fingerprints by reason + recovered/lost (excluding the volatile block ids and buffer size, so one defect = one row), and renders an investigation task.
       - Web:
         - Contributes:
-          - `Core.Root` → `CaretFlightCollector`
+          - `ReportSinks.Collector` "page.editor"
           - `Reports.KindView` → `CaretFlightKindView`
         - Uses:
           - `page/editor.caretFlightReportSink`
           - `primitives/css/badge.Badge`
           - `primitives/css/inline.Inline`
+          - `primitives/report-sink.drain`
           - `reports.report`
           - `reports.Reports`
+          - `reports/collectors.ReportSinks`
       - Server:
         - Contributes: `report-kind` "caret-flight"
         - Uses: `reports.ReportKind`
@@ -55668,17 +55682,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `NO_SAMPLES_OWNER`
           - `STALL_REPORT_MS`
           - `TOTAL_REPORT_MS`
-    - **`collab-hydration`** — Collab-hydration collector: drains the page editor's collabHydrationReportSink into a report whenever a block's rendered text stops agreeing with its content doc (a binding that never hydrated) or with the server (a doc that never received its push), plus the Debug → Reports summary view. Collab-hydration report kind: validates the page editor's hydration-guard payloads (a block whose rendered text stopped agreeing with its content doc, or whose doc fell behind the server), fingerprints by reason alone (the block id and the three lengths are per-occurrence noise), and renders an investigation task.
+    - **`collab-hydration`** — Collab-hydration collector: drains the page editor's collabHydrationReportSink into a report whenever a block's rendered text stops agreeing with its content doc (a binding that never hydrated) or with the server (a doc that never received its push), plus the Debug → Reports summary view. A companion of the page editor: it ships only where the editor (and the reports collectors) do. Collab-hydration report kind: validates the page editor's hydration-guard payloads (a block whose rendered text stopped agreeing with its content doc, or whose doc fell behind the server), fingerprints by reason alone (the block id and the three lengths are per-occurrence noise), and renders an investigation task.
       - Web:
         - Contributes:
-          - `Core.Root` → `CollabHydrationCollector`
+          - `ReportSinks.Collector` "page.editor"
           - `Reports.KindView` → `CollabHydrationKindView`
         - Uses:
           - `page/editor.collabHydrationReportSink`
           - `primitives/css/badge.Badge`
           - `primitives/css/inline.Inline`
+          - `primitives/report-sink.drain`
           - `reports.report`
           - `reports.Reports`
+          - `reports/collectors.ReportSinks`
       - Server:
         - Contributes: `report-kind` "collab-hydration"
         - Uses: `reports.ReportKind`
@@ -55689,10 +55705,62 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `collabHydrationFingerprint`
           - `CollabHydrationPayloadSchema`
+    - **`collectors`** — The browser's sink collectors, opted into as a set: owns ReportSinks.Collector — a companion keyed by its producer's plugin id (`from`), so a collector ships only where this plugin (named by the reporters pack) AND the producer whose sink it drains both ship — and the host that attaches every collector it sees, at the page root and inside every plugin scope.
+      - Web:
+        - Slots: `ReportSinks.Collector`
+        - Slot contributors:
+          - `ReportSinks.Collector` ← `reports.adaptive-bar`
+          - `ReportSinks.Collector` ← `reports.caret-flight`
+          - `ReportSinks.Collector` ← `reports.collab-hydration`
+          - `ReportSinks.Collector` ← `reports.crash`
+          - `ReportSinks.Collector` ← `reports.endpoint-errors`
+          - `ReportSinks.Collector` ← `reports.icon-family-gap`
+          - `ReportSinks.Collector` ← `reports.icon-missing-glyph`
+          - `ReportSinks.Collector` ← `reports.live-state-stale-drop`
+          - `ReportSinks.Collector` ← `reports.optimistic-divergence`
+          - `ReportSinks.Collector` ← `reports.optimistic-rejection`
+          - `ReportSinks.Collector` ← `reports.page-undo-conflict`
+          - `ReportSinks.Collector` ← `reports.panel-overflow`
+          - `ReportSinks.Collector` ← `reports.plugin-load-errors`
+          - `ReportSinks.Collector` ← `reports.popover-anchor-lost`
+          - `ReportSinks.Collector` ← `reports.resource-errors`
+          - `ReportSinks.Collector` ← `reports.scoped-out-dispatch`
+          - `ReportSinks.Collector` ← `reports.theme-resolution`
+          - `ReportSinks.Collector` ← `reports.tool-input-drift`
+          - `ReportSinks.Collector` ← `reports.viewport-escape`
+          - `ReportSinks.Collector` ← `reports.web-storage`
+        - Contributes: `Core.Root` → `SinkCollectors`
+        - Exports (values): `ReportSinks`
+      - Cross-plugin:
+        - Imported by:
+          - `reports/adaptive-bar`
+          - `reports/caret-flight`
+          - `reports/collab-hydration`
+          - `reports/crash`
+          - `reports/endpoint-errors`
+          - `reports/icon-family-gap`
+          - `reports/icon-missing-glyph`
+          - `reports/live-state-stale-drop`
+          - `reports/optimistic-divergence`
+          - `reports/optimistic-rejection`
+          - `reports/page-undo-conflict`
+          - `reports/panel-overflow`
+          - `reports/plugin-load-errors`
+          - `reports/popover-anchor-lost`
+          - `reports/resource-errors`
+          - `reports/scoped-out-dispatch`
+          - `reports/theme-resolution`
+          - `reports/tool-input-drift`
+          - `reports/viewport-escape`
+          - `reports/web-storage`
     - **`crash`** — Crash report kind: browser crash collector and the Debug → Reports summary view. Crash report kind: validates crash payloads, fingerprints by error + stack, and renders per-crash tasks.
       - Web:
         - Contributes:
           - `Core.Root` → `CrashCollector`
+          - `ReportSinks.Collector` "infra.health"
+          - `ReportSinks.Collector` "primitives.dom.element-size.resize-loop-trace"
+          - `ReportSinks.Collector` "primitives.error-boundary"
+          - `ReportSinks.Collector` "primitives.networking.request-guard"
           - `Reports.KindView` → `CrashSummary`
         - Uses:
           - `infra/endpoints.EndpointAgentWriteRefusedError`
@@ -55702,10 +55770,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/error-boundary.boundaryReportSink`
           - `primitives/networking/request-guard.RawApiRequestError`
           - `primitives/networking/request-guard.requestGuardReportSink`
+          - `primitives/report-sink.drain`
           - `primitives/ui-context.nearestOwner`
           - `primitives/ui-context.nearestSource`
           - `reports.report`
           - `reports.Reports`
+          - `reports/collectors.ReportSinks`
       - Server:
         - Contributes: `report-kind` "crash"
         - Uses: `reports.ReportKind`
@@ -55729,11 +55799,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by: `infra/jobs/attempt-audit`
     - **`endpoint-errors`** — Files crash tasks for bug-shaped handled endpoint errors (validation 400s and 5xx).
       - Web:
-        - Contributes: `Core.Root` → `EndpointErrorReporter`
+        - Contributes: `ReportSinks.Collector` "infra.endpoints"
         - Uses:
-          - `infra/endpoints.EndpointErrorInfo`
           - `infra/endpoints.endpointErrorSink`
+          - `primitives/report-sink.drain`
           - `reports.report`
+          - `reports/collectors.ReportSinks`
     - **`engine`** — Records server/frontend crashes as deduped reports (recordReport: per-fingerprint velocity, per-kind fan-out ceiling, duress shedding, bell notifications), files investigation tasks on demand, files every crash the process's listeners catch (processCrashSink, in every boot mode: an uncaught exception synchronously — the crash buffer from a ready serving backend, the report outbox from anything else — and a survived rejection asynchronously), files server-core's typed reports (reportServer, async; exitWithFatalReport, synchronously on the way out) and replays the on-disk crash buffer, and owns the reports table's change producer, retention and fork exclusion.
       - Server:
         - Contributes:
@@ -55834,13 +55905,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`icon-family-gap`** — Icon-family-gap collector: drains the icons plugin's iconFamilyGapReportSink into a deduped report whenever a scope whose icon family is strict draws a symbol the family does not map (it shows the family's gap glyph), plus the Debug → Reports summary view. Icon-family-gap report kind: validates the payload <Icon> files when a scope whose icon family is strict draws a symbol the family does not map (the scope shows the family's gap glyph), fingerprints by (family, name), and renders a task asking for the missing glyph.
       - Web:
         - Contributes:
-          - `Core.Root` → `IconFamilyGapCollector`
+          - `ReportSinks.Collector` "ui.icons"
           - `Reports.KindView` → `IconFamilyGapKindView`
         - Uses:
           - `primitives/css/badge.Badge`
           - `primitives/css/inline.Inline`
+          - `primitives/report-sink.drain`
           - `reports.report`
           - `reports.Reports`
+          - `reports/collectors.ReportSinks`
           - `ui/icons.iconFamilyGapReportSink`
       - Server:
         - Contributes: `report-kind` "icon-family-gap"
@@ -55854,13 +55927,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`icon-missing-glyph`** — Icon-missing-glyph collector: drains the icons plugin's iconMissingGlyphReportSink into a deduped report whenever a held sprite has no symbol for an icon <Icon> draws (the build's icon manifest missed the name; the icon shows the missing-glyph marker), plus the Debug → Reports summary view. Icon-missing-glyph report kind: validates the payload <Icon> files when a held sprite has no symbol for an icon it draws (the build's icon manifest missed the name; the icon shows the missing-glyph marker), fingerprints by (sprite, symbol id), and renders a task pointing at icons:manifest-covers-uses.
       - Web:
         - Contributes:
-          - `Core.Root` → `IconMissingGlyphCollector`
+          - `ReportSinks.Collector` "ui.icons"
           - `Reports.KindView` → `IconMissingGlyphKindView`
         - Uses:
           - `primitives/css/badge.Badge`
           - `primitives/css/inline.Inline`
+          - `primitives/report-sink.drain`
           - `reports.report`
           - `reports.Reports`
+          - `reports/collectors.ReportSinks`
           - `ui/icons.iconMissingGlyphReportSink`
       - Server:
         - Contributes: `report-kind` "icon-missing-glyph"
@@ -55933,14 +56008,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`live-state-stale-drop`** — Live-state stale-drop collector: drains the live-state primitive's httpStaleDropReportSink into a deduped report when a resource wedges on a stale HTTP body (3 consecutive drops, never applied — the 'Close (state unknown)' bug), plus the Debug → Reports summary view. Live-state stale-drop report kind: validates stale-drop payloads (a live-state HTTP body dropped by the version/epoch guard while the query still holds only its placeholder — the 'Close (state unknown)' wedge), fingerprints by key + reason (excluding the volatile params/counts/versions/epochs so one wedge = one row), and renders an investigation task. Re-arms periodically (6h) since a still-wedged resource keeps dropping.
       - Web:
         - Contributes:
-          - `Core.Root` → `LiveStateStaleDropCollector`
+          - `ReportSinks.Collector` "network.live.live-state"
           - `Reports.KindView` → `LiveStateStaleDropKindView`
         - Uses:
           - `network/live/live-state.httpStaleDropReportSink`
           - `primitives/css/badge.Badge`
           - `primitives/css/inline.Inline`
+          - `primitives/report-sink.drain`
           - `reports.report`
           - `reports.Reports`
+          - `reports/collectors.ReportSinks`
       - Server:
         - Contributes: `report-kind` "live-state-stale-drop"
         - Uses: `reports.ReportKind`
@@ -56025,14 +56102,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`optimistic-divergence`** — Optimistic-divergence collector: drains the optimistic-mutation primitive's report sink (a server-acked op superseded by newer truth, or stalled unconfirmed) into a deduped report, plus the Debug → Reports summary view. Optimistic-divergence report kind: validates divergence payloads (kind: superseded = dropped for newer server truth, stalled = kept rendered past the miss threshold), fingerprints by kind + resource + label + ops (excluding the volatile miss count), and renders per-kind tasks. Re-arms periodically (6h) since a still-present divergence is a recurring warning, not a one-shot crash.
       - Web:
         - Contributes:
-          - `Core.Root` → `OptimisticDivergenceCollector`
+          - `ReportSinks.Collector` "network.live"
           - `Reports.KindView` → `OptimisticDivergenceKindView`
         - Uses:
           - `network/live.optimisticDivergenceReportSink`
           - `primitives/css/badge.Badge`
           - `primitives/css/inline.Inline`
+          - `primitives/report-sink.drain`
           - `reports.report`
           - `reports.Reports`
+          - `reports/collectors.ReportSinks`
       - Server:
         - Contributes: `report-kind` "optimistic-divergence"
         - Uses: `reports.ReportKind`
@@ -56049,14 +56128,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`optimistic-rejection`** — Optimistic-rejection collector: drains the optimistic-mutation primitive's rejection sink (a write the server permanently refused — the optimistic op already dropped, or a detached write lost) into an error toast telling the user their edit was not saved, and a deduped report, plus the Debug → Reports summary view. Optimistic-rejection report kind: validates rejected-write payloads (a write the server permanently refused, so the user's edit was lost), fingerprints by resource + label + status + op + normalized reason (excluding params), and renders the investigation task. Re-arms periodically (6h): a rejection recurs on every edit of the same shape.
       - Web:
         - Contributes:
-          - `Core.Root` → `OptimisticRejectionCollector`
+          - `ReportSinks.Collector` "network.live"
           - `Reports.KindView` → `OptimisticRejectionKindView`
         - Uses:
           - `network/live.optimisticRejectionSink`
           - `primitives/css/badge.Badge`
           - `primitives/css/inline.Inline`
+          - `primitives/report-sink.drain`
           - `reports.report`
           - `reports.Reports`
+          - `reports/collectors.ReportSinks`
           - `shell/toast.showToast`
       - Server:
         - Contributes: `report-kind` "optimistic-rejection"
@@ -56143,17 +56224,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `page/editor.docRankDriftSink`
           - `reports.ReportKind`
           - `reports/engine.recordReport`
-    - **`page-undo-conflict`** — Page-undo-conflict collector: drains the page editor's undoConflictReportSink into a report whenever a data-based text undo entry meets a second writer — a replay that found text other than what the entry recorded and applied the entry anyway (stale-entry), or a typing run dropped because a remote change landed inside it (run-aborted) — plus the Debug → Reports summary view. Page-undo-conflict report kind: validates the page editor's undo-conflict payloads (a text undo entry replayed over a block a second writer had changed since it was recorded, or a typing run dropped because a remote change landed inside it), fingerprints by reason alone (the block id, direction and the two lengths are per-occurrence noise), and renders an investigation task.
+    - **`page-undo-conflict`** — Page-undo-conflict collector: drains the page editor's undoConflictReportSink into a report whenever a data-based text undo entry meets a second writer — a replay that found text other than what the entry recorded and applied the entry anyway (stale-entry), or a typing run dropped because a remote change landed inside it (run-aborted) — plus the Debug → Reports summary view. A companion of the page editor: it ships only where the editor (and the reports collectors) do. Page-undo-conflict report kind: validates the page editor's undo-conflict payloads (a text undo entry replayed over a block a second writer had changed since it was recorded, or a typing run dropped because a remote change landed inside it), fingerprints by reason alone (the block id, direction and the two lengths are per-occurrence noise), and renders an investigation task.
       - Web:
         - Contributes:
-          - `Core.Root` → `PageUndoConflictCollector`
+          - `ReportSinks.Collector` "page.editor"
           - `Reports.KindView` → `PageUndoConflictKindView`
         - Uses:
           - `page/editor.undoConflictReportSink`
           - `primitives/css/badge.Badge`
           - `primitives/css/inline.Inline`
+          - `primitives/report-sink.drain`
           - `reports.report`
           - `reports.Reports`
+          - `reports/collectors.ReportSinks`
       - Server:
         - Contributes: `report-kind` "page-undo-conflict"
         - Uses: `reports.ReportKind`
@@ -56167,14 +56250,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`panel-overflow`** — Panel-overflow collector: drains the control-panel primitive's panelOverflowReportSink into a deduped report whenever a popover panel's showing page is wider than the panel — content needing a width bucket (picker, builder, described) nothing on the page declared — plus the Debug → Reports summary view. Panel-overflow report kind: validates the control-panel overflow guard's fault payloads (a popover panel whose showing page is wider than the panel, because its content needs a width bucket nothing on the page declared), fingerprints by panel label + page (excluding widths, which vary with theme and viewport), and renders a task naming the overflowing element and the `needs` declaration to add. Re-arms periodically (6h) since the page overflows on every open.
       - Web:
         - Contributes:
-          - `Core.Root` → `PanelOverflowCollector`
+          - `ReportSinks.Collector` "primitives.css.control-panel"
           - `Reports.KindView` → `PanelOverflowKindView`
         - Uses:
           - `primitives/css/badge.Badge`
           - `primitives/css/control-panel.panelOverflowReportSink`
           - `primitives/css/inline.Inline`
+          - `primitives/report-sink.drain`
           - `reports.report`
           - `reports.Reports`
+          - `reports/collectors.ReportSinks`
       - Server:
         - Contributes: `report-kind` "panel-overflow"
         - Uses: `reports.ReportKind`
@@ -56187,22 +56272,27 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PanelOverflowPayloadSchema`
     - **`plugin-load-errors`** — Files crash tasks for plugins whose chunk failed to load, each after a load probe: the tab walks the failing plugin's static import graph through its own import map and asks the server for each file, so the report says what failed (a 404 file of its build — named as missingFile, the server re-checks it as retired — every file served, a network error, another status) instead of the browser's one ambiguous message.
       - Web:
-        - Contributes: `Core.Root` → `PluginLoadErrorReporter`
-        - Uses: `reports.report`
+        - Contributes: `ReportSinks.Collector` "framework.web-sdk"
+        - Uses:
+          - `primitives/report-sink.drain`
+          - `reports.report`
+          - `reports/collectors.ReportSinks`
       - Exemptions:
         - Exempts itself from: `endpoints/no-raw-web-fetch` — `web/internal/load-probe.ts` (sanctioned)
     - **`popover-anchor-lost`** — Popover-anchor-lost collector: drains ui-kit's popoverAnchorLostSink into a deduped report whenever an open popover's anchor (its trigger, or the caller's anchor) leaves the document or is hidden under display: none — the moment the panel would have jumped to the screen's top-left corner — naming the popover, the anchor and the element that hid it (lineage, source line, owner), plus the Debug → Reports summary view. Popover-anchor-lost report kind: validates ui-kit's lost-anchor fault payloads (an open popover whose anchor left the document or went display: none, which used to throw the panel into the screen's top-left corner), fingerprints by cause + popover lineage + anchor + the element that hid it, and renders a task naming them. Re-arms every 6h.
       - Web:
         - Contributes:
-          - `Core.Root` → `PopoverAnchorLostCollector`
+          - `ReportSinks.Collector` "primitives.css.ui-kit"
           - `Reports.KindView` → `PopoverAnchorLostKindView`
         - Uses:
           - `primitives/css/badge.Badge`
           - `primitives/css/inline.Inline`
           - `primitives/css/ui-kit.popoverAnchorLostSink`
+          - `primitives/report-sink.drain`
           - `primitives/ui-context.collectMeta`
           - `reports.report`
           - `reports.Reports`
+          - `reports/collectors.ReportSinks`
       - Server:
         - Contributes: `report-kind` "popover-anchor-lost"
         - Uses: `reports.ReportKind`
@@ -56252,7 +56342,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`resource-errors`** — Resource-error collector: drains the live-state primitive's resourceErrorReportSink (one body per failing live read, however many hooks observe it) into a deduped resource-error report for the failures a developer must fix (loader-failed, not-found — never client-outdated or transport), the Debug → Reports summary view, and the health report's Live reads row (attention with 'N resources failing' while any read on the page is in error). Resource-error report kind: validates a failing live read's payload (key, params, the typed failure kind — loader-failed or not-found — and its message), fingerprints by key + kind (one failing resource = one row, whatever params or message), and renders an investigation task. Re-arms every 6h, since a standing failure re-fails on every retry.
       - Web:
         - Contributes:
-          - `Core.Root` → `ResourceErrorCollector`
+          - `ReportSinks.Collector` "network.live.live-state"
           - `Reports.KindView` → `ResourceErrorKindView`
           - `HealthReport.Row` "Live reads"
         - Uses:
@@ -56260,8 +56350,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live/live-state.useFailingResources`
           - `primitives/css/badge.Badge`
           - `primitives/css/inline.Inline`
+          - `primitives/report-sink.drain`
           - `reports.report`
           - `reports.Reports`
+          - `reports/collectors.ReportSinks`
           - `shell/health-report.HealthReport`
       - Server:
         - Contributes: `report-kind` "resource-error"
@@ -56279,14 +56371,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`scoped-out-dispatch`** — Scoped-out-dispatch collector: drains slot-render's scopedOutDispatchSink into a deduped report whenever a dispatch slot renders its fallback inside a PluginScope though the page holds a contribution for that key which the scope's composition neither bundles nor negates (the demo's tool cards falling back to the generic card), plus the Debug → Reports summary view. Scoped-out-dispatch report kind: validates slot-render's fault for a dispatch slot that rendered its fallback inside a PluginScope though the page holds a matching contribution the scope's composition neither bundles nor negates, fingerprints by scope + slot + plugin, and renders a task naming them. Re-arms daily.
       - Web:
         - Contributes:
-          - `Core.Root` → `ScopedOutDispatchCollector`
+          - `ReportSinks.Collector` "primitives.slot-render"
           - `Reports.KindView` → `ScopedOutDispatchKindView`
         - Uses:
           - `primitives/css/badge.Badge`
           - `primitives/css/inline.Inline`
+          - `primitives/report-sink.drain`
           - `primitives/slot-render.scopedOutDispatchSink`
           - `reports.report`
           - `reports.Reports`
+          - `reports/collectors.ReportSinks`
       - Server:
         - Contributes: `report-kind` "scoped-out-dispatch"
         - Uses: `reports.ReportKind`
@@ -56300,13 +56394,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`theme-resolution`** — Theme-resolution collector: drains theme-engine's themeResolutionReportSink into a report whenever a scope's theme cannot be painted as stored (its selected theme does not exist, or a stored theme carries values the token groups no longer declare), plus the Debug → Reports summary view. Theme-resolution report kind: validates the theme painter's fault payloads (a scope selecting a theme that does not exist, so it paints Default; a stored theme carrying values for an unregistered token group or unknown tokens, which are skipped), fingerprints each by what it is about, and renders a task naming the stored data to fix.
       - Web:
         - Contributes:
-          - `Core.Root` → `ThemeResolutionCollector`
+          - `ReportSinks.Collector` "ui.theme-engine"
           - `Reports.KindView` → `ThemeResolutionKindView`
         - Uses:
           - `primitives/css/badge.Badge`
           - `primitives/css/inline.Inline`
+          - `primitives/report-sink.drain`
           - `reports.report`
           - `reports.Reports`
+          - `reports/collectors.ReportSinks`
           - `ui/theme-engine.themeResolutionReportSink`
       - Server:
         - Contributes: `report-kind` "theme-resolution"
@@ -56319,14 +56415,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`tool-input-drift`** — Tool-input-drift collector: drains tool-call's toolInputDriftSink into a deduped report whenever a transcript tool card's input schema rejects an input its tool took (the call succeeded) — the renderer's schema is wrong, and the card falls back to the generic one — plus the Debug → Reports summary view. Tool-input-drift report kind: validates the drift a transcript tool card saw (its tool took an input the card's schema rejects), fingerprints by tool + issues, and renders a task naming the renderer schema to fix. Re-arms daily.
       - Web:
         - Contributes:
-          - `Core.Root` → `ToolInputDriftCollector`
+          - `ReportSinks.Collector` "conversations.conversation-view.jsonl-viewer.tool-call"
           - `Reports.KindView` → `ToolInputDriftKindView`
         - Uses:
           - `conversations/conversation-view/jsonl-viewer/tool-call.toolInputDriftSink`
           - `primitives/css/badge.Badge`
           - `primitives/css/inline.Inline`
+          - `primitives/report-sink.drain`
           - `reports.report`
           - `reports.Reports`
+          - `reports/collectors.ReportSinks`
       - Server:
         - Contributes: `report-kind` "tool-input-drift"
         - Uses: `reports.ReportKind`
@@ -56358,14 +56456,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`viewport-escape`** — Viewport-escape collector: drains the viewport-overlay primitive's viewportEscapeReportSink into a deduped report whenever an ancestor stops a viewport-filling box from reaching the viewport (a containing block) or from painting over the chrome beside it (a stacking context), plus the Debug → Reports summary view. Viewport-escape report kind: validates the viewport-overlay auditor's fault payloads (viewport-containing-block = an ancestor's transform/filter/contain made itself the frame of reference, so the box is clipped instead of full-viewport; viewport-stacking-context = an ancestor opened a stacking context, so the box's z-index is compared in the wrong bracket and it stops covering the chrome beside it), fingerprints by fault + subject + blocking element (excluding the message, whose quoted computed value changes every scroll), and renders a per-fault task naming the declaration to remove, scope or make conditional. Re-arms periodically (6h) since the offending declaration reproduces the fault on every activation.
       - Web:
         - Contributes:
-          - `Core.Root` → `ViewportEscapeCollector`
+          - `ReportSinks.Collector` "primitives.css.viewport-overlay"
           - `Reports.KindView` → `ViewportEscapeKindView`
         - Uses:
           - `primitives/css/badge.Badge`
           - `primitives/css/inline.Inline`
           - `primitives/css/viewport-overlay.viewportEscapeReportSink`
+          - `primitives/report-sink.drain`
           - `reports.report`
           - `reports.Reports`
+          - `reports/collectors.ReportSinks`
       - Server:
         - Contributes: `report-kind` "viewport-escape"
         - Uses: `reports.ReportKind`
@@ -56378,11 +56478,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ViewportEscapePayloadSchema`
     - **`web-storage`** — Web-storage failure collector: drains the web-storage primitive's storageFailureReportSink into a deduped crash report (source client-storage, one row per owner and reason) for every write refused by an owner's cap or by the browser, and every stored entry that failed its owner's schema.
       - Web:
-        - Contributes: `WebStorageSlots.Root` → `StorageFailureCollector`
+        - Contributes: `ReportSinks.Collector` "primitives.dom.web-storage"
         - Uses:
           - `primitives/dom/web-storage.storageFailureReportSink`
-          - `primitives/dom/web-storage.WebStorageSlots`
+          - `primitives/report-sink.drain`
           - `reports.report`
+          - `reports/collectors.ReportSinks`
 
 - **`review`** — Toolbar button that opens a side pane exposing agent modifications in a structured, extensible view.
   - Web:

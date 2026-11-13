@@ -32,6 +32,10 @@ Add a case there before changing any of this.
 - Web:
   - Contributes:
     - `Core.Root` → `CrashCollector`
+    - `ReportSinks.Collector` "infra.health"
+    - `ReportSinks.Collector` "primitives.dom.element-size.resize-loop-trace"
+    - `ReportSinks.Collector` "primitives.error-boundary"
+    - `ReportSinks.Collector` "primitives.networking.request-guard"
     - `Reports.KindView` → `CrashSummary`
   - Uses:
     - `infra/endpoints.EndpointAgentWriteRefusedError`
@@ -41,10 +45,12 @@ Add a case there before changing any of this.
     - `primitives/error-boundary.boundaryReportSink`
     - `primitives/networking/request-guard.RawApiRequestError`
     - `primitives/networking/request-guard.requestGuardReportSink`
+    - `primitives/report-sink.drain`
     - `primitives/ui-context.nearestOwner`
     - `primitives/ui-context.nearestSource`
     - `reports.report`
     - `reports.Reports`
+    - `reports/collectors.ReportSinks`
 - Server:
   - Contributes: `report-kind` "crash"
   - Uses: `reports.ReportKind`

@@ -9,7 +9,8 @@ A panel's width is the bucket its content declares (`data-cp-needs`). A page
 whose content needs more than it declares spills past the panel's edge; the
 control-panel overflow guard measures that and emits a `PanelOverflowFault`
 into `panelOverflowReportSink`. This plugin **drains that sink**:
-`PanelOverflowCollector` (mounted via `Core.Root`) maps each fault onto
+`collectPanelOverflow` (a `ReportSinks.Collector` keyed by
+`primitives.css.control-panel`) maps each fault onto
 `report({ kind: "panel-overflow", … })`. The dependency runs one way — a
 primitive never imports `reports` — the same inversion viewport-escape uses.
 
@@ -24,14 +25,16 @@ theme, data and viewport, and are excluded.
 - Description: Panel-overflow collector: drains the control-panel primitive's panelOverflowReportSink into a deduped report whenever a popover panel's showing page is wider than the panel — content needing a width bucket (picker, builder, described) nothing on the page declared — plus the Debug → Reports summary view. Panel-overflow report kind: validates the control-panel overflow guard's fault payloads (a popover panel whose showing page is wider than the panel, because its content needs a width bucket nothing on the page declared), fingerprints by panel label + page (excluding widths, which vary with theme and viewport), and renders a task naming the overflowing element and the `needs` declaration to add. Re-arms periodically (6h) since the page overflows on every open.
 - Web:
   - Contributes:
-    - `Core.Root` → `PanelOverflowCollector`
+    - `ReportSinks.Collector` "primitives.css.control-panel"
     - `Reports.KindView` → `PanelOverflowKindView`
   - Uses:
     - `primitives/css/badge.Badge`
     - `primitives/css/control-panel.panelOverflowReportSink`
     - `primitives/css/inline.Inline`
+    - `primitives/report-sink.drain`
     - `reports.report`
     - `reports.Reports`
+    - `reports/collectors.ReportSinks`
 - Server:
   - Contributes: `report-kind` "panel-overflow"
   - Uses: `reports.ReportKind`

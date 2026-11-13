@@ -114,9 +114,7 @@ for an id grammar one primitive owns the lifetime of (app-instance generations).
 - Description: The one door to browser storage (localStorage / sessionStorage): defineStore declares an owner — key prefix s:<owner>:, byte cap, TTL, what to do when full (evict-oldest for caches, refuse for what the user typed), a zod schema — and returns a typed read/write/remove/subscribe handle with one {v, ts} envelope — per composition scope by default (a ScopedStore, bound by useStore / in(useStorageScope()): a PluginScope subtree such as /demo writes s:<owner>@<scope>:, never the page's own s:<owner>: keys; pageWide: { reason } for state about the page itself), and clearStorageScope wipes one scope. The caps of an area's owners sum under the browser's quota (asserted at declaration and statically by the budget-fits check), so no owner can fill storage for another. Every refused write and unreadable entry is announced (onStorageFailure); useStorageUsage and scanArea feed the health row; the no-raw-web-storage lint rule bans touching Web Storage anywhere else.
 - Web:
   - Slots: `WebStorageSlots.Root`
-  - Slot contributors:
-    - `WebStorageSlots.Root` ← `primitives.dom.web-storage.health`
-    - `WebStorageSlots.Root` ← `reports.web-storage`
+  - Slot contributors: `WebStorageSlots.Root` ← `primitives.dom.web-storage.health`
   - Contributes: `Core.Root`
   - Exports (types):
     - `AreaBucket`

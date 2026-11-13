@@ -6854,6 +6854,10 @@
       "name": "@equin/plugin-reports-collab-hydration",
       "version": "0.0.1",
     },
+    "plugins/reports/plugins/collectors": {
+      "name": "@equin/plugin-reports-collectors",
+      "version": "0.0.1",
+    },
     "plugins/reports/plugins/crash": {
       "name": "@equin/plugin-reports-crash",
       "version": "0.0.1",
@@ -11007,6 +11011,8 @@
     "@equin/plugin-reports-check-thread-stall": ["@equin/plugin-reports-check-thread-stall@workspace:plugins/reports/plugins/check-thread-stall"],
 
     "@equin/plugin-reports-collab-hydration": ["@equin/plugin-reports-collab-hydration@workspace:plugins/reports/plugins/collab-hydration"],
+
+    "@equin/plugin-reports-collectors": ["@equin/plugin-reports-collectors@workspace:plugins/reports/plugins/collectors"],
 
     "@equin/plugin-reports-crash": ["@equin/plugin-reports-crash@workspace:plugins/reports/plugins/crash"],
 

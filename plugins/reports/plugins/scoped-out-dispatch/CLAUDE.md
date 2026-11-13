@@ -11,8 +11,9 @@ nothing said so.
 `useScopedOutContributions(slot)` (web-sdk: what the innermost scope left out,
 minus the composition's `negated` plugins) for a match, and emits a
 `ScopedOutDispatchFault` into `scopedOutDispatchSink` once per (slot, key,
-plugin, scope) per page. `ScopedOutDispatchCollector` (mounted via
-`Core.Root`, on the page outside every scope) files it as
+plugin, scope) per page. `collectScopedOutDispatch` (a
+`ReportSinks.Collector` keyed by `primitives.slot-render`; the sink has one
+handler for the whole page) files it as
 `report({ kind: "scoped-out-dispatch", … })` over the page's telemetry route.
 The fallback still renders.
 
@@ -31,14 +32,16 @@ plugin nothing asked for whose renderer the scope's data still needs.
 - Description: Scoped-out-dispatch collector: drains slot-render's scopedOutDispatchSink into a deduped report whenever a dispatch slot renders its fallback inside a PluginScope though the page holds a contribution for that key which the scope's composition neither bundles nor negates (the demo's tool cards falling back to the generic card), plus the Debug → Reports summary view. Scoped-out-dispatch report kind: validates slot-render's fault for a dispatch slot that rendered its fallback inside a PluginScope though the page holds a matching contribution the scope's composition neither bundles nor negates, fingerprints by scope + slot + plugin, and renders a task naming them. Re-arms daily.
 - Web:
   - Contributes:
-    - `Core.Root` → `ScopedOutDispatchCollector`
+    - `ReportSinks.Collector` "primitives.slot-render"
     - `Reports.KindView` → `ScopedOutDispatchKindView`
   - Uses:
     - `primitives/css/badge.Badge`
     - `primitives/css/inline.Inline`
+    - `primitives/report-sink.drain`
     - `primitives/slot-render.scopedOutDispatchSink`
     - `reports.report`
     - `reports.Reports`
+    - `reports/collectors.ReportSinks`
 - Server:
   - Contributes: `report-kind` "scoped-out-dispatch"
   - Uses: `reports.ReportKind`

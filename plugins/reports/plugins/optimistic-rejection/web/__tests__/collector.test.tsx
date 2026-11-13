@@ -1,14 +1,14 @@
 // The collector is the ONE place a server rejection reaches the user and the
 // developer: each sink body becomes exactly one error toast (the edit is gone,
-// and why) and one `optimistic-rejection` report. A collector that is not
-// mounted leaves the sink inert.
+// and why) and one `optimistic-rejection` report. A detached drain leaves the
+// sink inert.
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render } from "@testing-library/react";
 import { optimisticRejectionSink } from "@plugins/network/plugins/live/web";
 import { showToast } from "@plugins/shell/plugins/toast/web";
 import { report } from "@plugins/reports/web";
-import { OptimisticRejectionCollector } from "../components/optimistic-rejection-collector";
+import { drain } from "@plugins/primitives/plugins/report-sink/web";
+import { collectOptimisticRejection } from "../internal/optimistic-rejection-collector";
 
 vi.mock("@plugins/reports/web", async (importOriginal) => ({
   ...(await importOriginal<object>()),
@@ -21,6 +21,8 @@ vi.mock("@plugins/shell/plugins/toast/web", async (importOriginal) => ({
 
 const reportMock = vi.mocked(report);
 const toastMock = vi.mocked(showToast);
+const collector = drain(optimisticRejectionSink, collectOptimisticRejection);
+let detach: (() => void) | null = null;
 
 const body = {
   resourceKey: "page.blocks",
@@ -33,15 +35,15 @@ const body = {
 };
 
 afterEach(() => {
-  cleanup();
-  optimisticRejectionSink.register(null);
+  detach?.();
+  detach = null;
   reportMock.mockClear();
   toastMock.mockClear();
 });
 
-describe("OptimisticRejectionCollector", () => {
+describe("collectOptimisticRejection", () => {
   it("turns one rejection into one error toast and one report", () => {
-    render(<OptimisticRejectionCollector />);
+    detach = collector.attach();
     optimisticRejectionSink.emit(body);
 
     expect(toastMock).toHaveBeenCalledTimes(1);
@@ -63,7 +65,7 @@ describe("OptimisticRejectionCollector", () => {
   });
 
   it("an agent-write refusal on main is toasted but files no report", () => {
-    render(<OptimisticRejectionCollector />);
+    detach = collector.attach();
     optimisticRejectionSink.emit({
       ...body,
       status: 403,
@@ -74,7 +76,7 @@ describe("OptimisticRejectionCollector", () => {
   });
 
   it("titles an unlabelled surface generically", () => {
-    render(<OptimisticRejectionCollector />);
+    detach = collector.attach();
     optimisticRejectionSink.emit({ ...body, label: null, opSummary: null });
     expect(toastMock.mock.calls[0]![0]).toMatchObject({
       title: "Couldn't save edit",
@@ -84,9 +86,8 @@ describe("OptimisticRejectionCollector", () => {
     );
   });
 
-  it("unregisters on unmount so a later emit reaches nothing", () => {
-    const { unmount } = render(<OptimisticRejectionCollector />);
-    unmount();
+  it("unregisters on detach so a later emit reaches nothing", () => {
+    collector.attach()();
     optimisticRejectionSink.emit(body);
     expect(toastMock).not.toHaveBeenCalled();
     expect(reportMock).not.toHaveBeenCalled();

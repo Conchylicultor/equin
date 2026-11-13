@@ -7,13 +7,15 @@
 - Description: Theme-resolution collector: drains theme-engine's themeResolutionReportSink into a report whenever a scope's theme cannot be painted as stored (its selected theme does not exist, or a stored theme carries values the token groups no longer declare), plus the Debug → Reports summary view. Theme-resolution report kind: validates the theme painter's fault payloads (a scope selecting a theme that does not exist, so it paints Default; a stored theme carrying values for an unregistered token group or unknown tokens, which are skipped), fingerprints each by what it is about, and renders a task naming the stored data to fix.
 - Web:
   - Contributes:
-    - `Core.Root` → `ThemeResolutionCollector`
+    - `ReportSinks.Collector` "ui.theme-engine"
     - `Reports.KindView` → `ThemeResolutionKindView`
   - Uses:
     - `primitives/css/badge.Badge`
     - `primitives/css/inline.Inline`
+    - `primitives/report-sink.drain`
     - `reports.report`
     - `reports.Reports`
+    - `reports/collectors.ReportSinks`
     - `ui/theme-engine.themeResolutionReportSink`
 - Server:
   - Contributes: `report-kind` "theme-resolution"

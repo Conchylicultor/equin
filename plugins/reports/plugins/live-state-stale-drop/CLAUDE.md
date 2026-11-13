@@ -25,7 +25,7 @@ settling is the wedge.
 `live-state` is a primitive and must not import `reports`, so `fetchOverHttp` emits a neutral
 `HttpStaleDropReport` into a module-level `httpStaleDropReportSink` on **every** drop, carrying a
 running `consecutiveDrops` count (reset to zero on any successful apply — WS or HTTP).
-`LiveStateStaleDropCollector` (mounted via `Core.Root`) drains that sink; this is the same
+`collectStaleDrop` (a `ReportSinks.Collector` keyed by `network.live.live-state`) drains that sink; this is the same
 inversion `reports/crash` uses for `error-boundary`'s `boundaryReportSink` and
 `reports/optimistic-divergence` uses for the optimistic-mutation sink.
 
@@ -60,14 +60,16 @@ minutes for one known problem.
 - Description: Live-state stale-drop collector: drains the live-state primitive's httpStaleDropReportSink into a deduped report when a resource wedges on a stale HTTP body (3 consecutive drops, never applied — the 'Close (state unknown)' bug), plus the Debug → Reports summary view. Live-state stale-drop report kind: validates stale-drop payloads (a live-state HTTP body dropped by the version/epoch guard while the query still holds only its placeholder — the 'Close (state unknown)' wedge), fingerprints by key + reason (excluding the volatile params/counts/versions/epochs so one wedge = one row), and renders an investigation task. Re-arms periodically (6h) since a still-wedged resource keeps dropping.
 - Web:
   - Contributes:
-    - `Core.Root` → `LiveStateStaleDropCollector`
+    - `ReportSinks.Collector` "network.live.live-state"
     - `Reports.KindView` → `LiveStateStaleDropKindView`
   - Uses:
     - `network/live/live-state.httpStaleDropReportSink`
     - `primitives/css/badge.Badge`
     - `primitives/css/inline.Inline`
+    - `primitives/report-sink.drain`
     - `reports.report`
     - `reports.Reports`
+    - `reports/collectors.ReportSinks`
 - Server:
   - Contributes: `report-kind` "live-state-stale-drop"
   - Uses: `reports.ReportKind`

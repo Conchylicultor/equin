@@ -11,8 +11,8 @@ read's `error` arm still cannot hide a failure
 typed `ResourceError`) into `resourceErrorReportSink` **once per failing
 `(key, params)` tuple per episode** — it watches the query cache, not the hooks,
 so N observers of one read are one emit, a retry that fails again is the same
-episode, and a recovery re-arms it. `ResourceErrorCollector` (mounted via
-`Core.Root`) drains the sink — the inversion `live-state-stale-drop` uses.
+episode, and a recovery re-arms it. `collectResourceError` (a `ReportSinks.Collector`
+keyed by `network.live.live-state`) drains the sink — the inversion `live-state-stale-drop` uses.
 
 ## Policy
 
@@ -42,7 +42,7 @@ page-local, known from the first render.
 - Description: Resource-error collector: drains the live-state primitive's resourceErrorReportSink (one body per failing live read, however many hooks observe it) into a deduped resource-error report for the failures a developer must fix (loader-failed, not-found — never client-outdated or transport), the Debug → Reports summary view, and the health report's Live reads row (attention with 'N resources failing' while any read on the page is in error). Resource-error report kind: validates a failing live read's payload (key, params, the typed failure kind — loader-failed or not-found — and its message), fingerprints by key + kind (one failing resource = one row, whatever params or message), and renders an investigation task. Re-arms every 6h, since a standing failure re-fails on every retry.
 - Web:
   - Contributes:
-    - `Core.Root` → `ResourceErrorCollector`
+    - `ReportSinks.Collector` "network.live.live-state"
     - `Reports.KindView` → `ResourceErrorKindView`
     - `HealthReport.Row` "Live reads"
   - Uses:
@@ -50,8 +50,10 @@ page-local, known from the first render.
     - `network/live/live-state.useFailingResources`
     - `primitives/css/badge.Badge`
     - `primitives/css/inline.Inline`
+    - `primitives/report-sink.drain`
     - `reports.report`
     - `reports.Reports`
+    - `reports/collectors.ReportSinks`
     - `shell/health-report.HealthReport`
 - Server:
   - Contributes: `report-kind` "resource-error"

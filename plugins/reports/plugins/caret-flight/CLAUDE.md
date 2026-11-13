@@ -15,8 +15,9 @@ else: back into the origin block, or — if even that has no host — nowhere.
 
 The page editor must not import `reports`, so the authority emits a neutral
 `CaretFlightAbortReport` into `caretFlightReportSink` (exported from
-`@plugins/page/plugins/editor/web`) and `CaretFlightCollector` (mounted via
-`Core.Root`) maps it to a report — the same inversion `reports/crash` uses for
+`@plugins/page/plugins/editor/web`) and `collectCaretFlight` (drained through a
+`ReportSinks.Collector` keyed by `page.editor`, so it ships only where the
+editor does) maps it to a report — the same inversion `reports/crash` uses for
 `error-boundary`'s `boundaryReportSink`.
 
 **There is deliberately no threshold in the collector**, unlike
@@ -40,17 +41,19 @@ previous block, and it deserves its own row (and its own `destructive` badge).
 
 ## Plugin reference
 
-- Description: Caret-flight collector: drains the page editor's caretFlightReportSink into a report whenever a claimed caret landing is abandoned and the keystrokes it was holding had to be replayed into the origin block (or were lost), plus the Debug → Reports summary view. Caret-flight report kind: validates the page editor's caret-authority abort payloads (a claimed caret landing that never happened, so the keystrokes it was holding were replayed back into the origin block — or lost), fingerprints by reason + recovered/lost (excluding the volatile block ids and buffer size, so one defect = one row), and renders an investigation task.
+- Description: Caret-flight collector: drains the page editor's caretFlightReportSink into a report whenever a claimed caret landing is abandoned and the keystrokes it was holding had to be replayed into the origin block (or were lost), plus the Debug → Reports summary view. A companion of the page editor: it ships only where the editor (and the reports collectors) do. Caret-flight report kind: validates the page editor's caret-authority abort payloads (a claimed caret landing that never happened, so the keystrokes it was holding were replayed back into the origin block — or lost), fingerprints by reason + recovered/lost (excluding the volatile block ids and buffer size, so one defect = one row), and renders an investigation task.
 - Web:
   - Contributes:
-    - `Core.Root` → `CaretFlightCollector`
+    - `ReportSinks.Collector` "page.editor"
     - `Reports.KindView` → `CaretFlightKindView`
   - Uses:
     - `page/editor.caretFlightReportSink`
     - `primitives/css/badge.Badge`
     - `primitives/css/inline.Inline`
+    - `primitives/report-sink.drain`
     - `reports.report`
     - `reports.Reports`
+    - `reports/collectors.ReportSinks`
 - Server:
   - Contributes: `report-kind` "caret-flight"
   - Uses: `reports.ReportKind`

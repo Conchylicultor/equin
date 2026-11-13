@@ -15,14 +15,16 @@ report (fingerprint: tool + issues).
 - Description: Tool-input-drift collector: drains tool-call's toolInputDriftSink into a deduped report whenever a transcript tool card's input schema rejects an input its tool took (the call succeeded) — the renderer's schema is wrong, and the card falls back to the generic one — plus the Debug → Reports summary view. Tool-input-drift report kind: validates the drift a transcript tool card saw (its tool took an input the card's schema rejects), fingerprints by tool + issues, and renders a task naming the renderer schema to fix. Re-arms daily.
 - Web:
   - Contributes:
-    - `Core.Root` → `ToolInputDriftCollector`
+    - `ReportSinks.Collector` "conversations.conversation-view.jsonl-viewer.tool-call"
     - `Reports.KindView` → `ToolInputDriftKindView`
   - Uses:
     - `conversations/conversation-view/jsonl-viewer/tool-call.toolInputDriftSink`
     - `primitives/css/badge.Badge`
     - `primitives/css/inline.Inline`
+    - `primitives/report-sink.drain`
     - `reports.report`
     - `reports.Reports`
+    - `reports/collectors.ReportSinks`
 - Server:
   - Contributes: `report-kind` "tool-input-drift"
   - Uses: `reports.ReportKind`

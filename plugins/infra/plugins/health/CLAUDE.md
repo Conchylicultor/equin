@@ -73,6 +73,7 @@ Watches this page's connection to its backends and says so.
     - `networking/no-page-transport` — `web/internal/client.ts` (sanctioned)
     - `networking/no-page-transport` — `web/components/wedge-watchdog.tsx` (sanctioned)
     - `endpoints/no-raw-web-fetch` — `web/internal/client.ts` (sanctioned)
+    - `report-sink/collect-through-companion` — `web/components/wedge-watchdog.tsx` (sanctioned)
 - Sub-plugins:
   - **`connection-row`** — The health report's Connection row: this worktree's server and central notification sockets folded into one status — critical when one is closed or every push stopped, attention while one reconnects…
 

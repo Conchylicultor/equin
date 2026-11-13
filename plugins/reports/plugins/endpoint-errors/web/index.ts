@@ -1,11 +1,17 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { Core } from "@plugins/framework/plugins/web-sdk/core";
-import { EndpointErrorReporter } from "./components/endpoint-error-reporter";
+import { endpointErrorSink } from "@plugins/infra/plugins/endpoints/web";
+import { drain } from "@plugins/primitives/plugins/report-sink/web";
+import { ReportSinks } from "@plugins/reports/plugins/collectors/web";
+import { collectEndpointError } from "./internal/endpoint-error-reporter";
 
 export default {
   description:
     "Files crash tasks for bug-shaped handled endpoint errors (validation 400s and 5xx).",
   contributions: [
-    Core.Root({ component: EndpointErrorReporter, scope: "page" }),
+    ReportSinks.Collector({
+      from: "infra.endpoints",
+      collect: drain(endpointErrorSink, collectEndpointError),
+      companion: true,
+    }),
   ],
 } satisfies PluginDefinition;

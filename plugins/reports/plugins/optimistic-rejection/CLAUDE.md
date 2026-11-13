@@ -17,7 +17,7 @@ Design: `research/2026-10-08-global-rejected-optimistic-ops.md`.
 
 ## What the collector does
 
-`OptimisticRejectionCollector` (mounted via `Core.Root`) drains the sink — the primitive
+`collectOptimisticRejection` (a `ReportSinks.Collector` keyed by `network.live`) drains the sink — the primitive
 may import neither `reports` nor `shell` — and, per rejection:
 
 - **toasts** `Couldn't save <label> edit` with the server's reason, so the user knows the
@@ -39,14 +39,16 @@ re-arms every 6h, like `optimistic-divergence`.
 - Description: Optimistic-rejection collector: drains the optimistic-mutation primitive's rejection sink (a write the server permanently refused — the optimistic op already dropped, or a detached write lost) into an error toast telling the user their edit was not saved, and a deduped report, plus the Debug → Reports summary view. Optimistic-rejection report kind: validates rejected-write payloads (a write the server permanently refused, so the user's edit was lost), fingerprints by resource + label + status + op + normalized reason (excluding params), and renders the investigation task. Re-arms periodically (6h): a rejection recurs on every edit of the same shape.
 - Web:
   - Contributes:
-    - `Core.Root` → `OptimisticRejectionCollector`
+    - `ReportSinks.Collector` "network.live"
     - `Reports.KindView` → `OptimisticRejectionKindView`
   - Uses:
     - `network/live.optimisticRejectionSink`
     - `primitives/css/badge.Badge`
     - `primitives/css/inline.Inline`
+    - `primitives/report-sink.drain`
     - `reports.report`
     - `reports.Reports`
+    - `reports/collectors.ReportSinks`
     - `shell/toast.showToast`
 - Server:
   - Contributes: `report-kind` "optimistic-rejection"

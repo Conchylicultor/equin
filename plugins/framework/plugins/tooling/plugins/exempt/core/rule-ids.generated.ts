@@ -163,6 +163,8 @@ export type ExemptableRuleId =
   | "repo-root/no-depth-counted-path"
   | "repo-walk-safety/no-adhoc-repo-listing"
   | "repo-walk-safety/no-adhoc-repo-walk"
+  | "report-sink/collect-through-companion"
+  | "report-sink/collector-from-matches"
   | "report-sink/no-direct-sink-register"
   | "resize-observer-safety/no-raw-resize-observer"
   | "resource-runtime:compiled-routes"

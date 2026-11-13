@@ -1,4 +1,4 @@
-// @hash b244766819e6
+// @hash 4ce970700b9f
 {
   "manifests": [
     {
@@ -450,7 +450,6 @@
         "!apps.website.demos.workspace.story",
         "!apps.website.promo-film.**",
         "integrations.google-maps.browser-config",
-        "reports.crash",
         "apps.deploy.site-reports.intake",
         "apps.deploy.site-reports.channel"
       ],
@@ -756,24 +755,10 @@
         "desktop"
       ],
       "entryPoints": [
-        "reports.adaptive-bar.**",
-        "reports.caret-flight.**",
-        "reports.collab-hydration.**",
-        "reports.endpoint-errors.**",
-        "reports.icon-family-gap.**",
-        "reports.icon-missing-glyph.**",
-        "reports.live-state-stale-drop.**",
+        "reports.collectors",
         "reports.main-thread-stall.**",
         "reports.mutation-errors.**",
-        "reports.optimistic-divergence.**",
-        "reports.optimistic-rejection.**",
-        "reports.page-undo-conflict.**",
-        "reports.panel-overflow.**",
-        "reports.plugin-load-errors.**",
-        "reports.render-loop.**",
-        "reports.resource-errors.**",
-        "reports.theme-resolution.**",
-        "reports.viewport-escape.**"
+        "reports.render-loop.**"
       ],
       "selectedContributors": [],
       "extends": [],
@@ -836,7 +821,6 @@
       "selectedContributors": [
         "wish.element-picker",
         "review",
-        "reports.crash",
         "reports.launch-fix",
         "screenshot.draw-on-app"
       ],

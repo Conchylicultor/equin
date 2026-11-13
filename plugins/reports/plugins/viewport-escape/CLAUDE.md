@@ -21,8 +21,8 @@ rail still down the side — which is exactly why they survive review and need a
 report rather than a console line.
 
 This plugin **drains that sink**. The dependency deliberately runs one way: a
-primitive may never import `reports`, so `ViewportEscapeCollector` (mounted via
-`Core.Root`) registers the handler that maps the sink's body onto
+primitive may never import `reports`, so `collectViewportEscape` (a
+`ReportSinks.Collector` keyed by `primitives.css.viewport-overlay`) is the handler that maps the sink's body onto
 `report({ kind: "viewport-escape", … })` — the same inversion `reports/crash`
 uses for `error-boundary`'s `boundaryReportSink`.
 
@@ -78,14 +78,16 @@ the bell would re-alert every 10 minutes for one known problem.
 - Description: Viewport-escape collector: drains the viewport-overlay primitive's viewportEscapeReportSink into a deduped report whenever an ancestor stops a viewport-filling box from reaching the viewport (a containing block) or from painting over the chrome beside it (a stacking context), plus the Debug → Reports summary view. Viewport-escape report kind: validates the viewport-overlay auditor's fault payloads (viewport-containing-block = an ancestor's transform/filter/contain made itself the frame of reference, so the box is clipped instead of full-viewport; viewport-stacking-context = an ancestor opened a stacking context, so the box's z-index is compared in the wrong bracket and it stops covering the chrome beside it), fingerprints by fault + subject + blocking element (excluding the message, whose quoted computed value changes every scroll), and renders a per-fault task naming the declaration to remove, scope or make conditional. Re-arms periodically (6h) since the offending declaration reproduces the fault on every activation.
 - Web:
   - Contributes:
-    - `Core.Root` → `ViewportEscapeCollector`
+    - `ReportSinks.Collector` "primitives.css.viewport-overlay"
     - `Reports.KindView` → `ViewportEscapeKindView`
   - Uses:
     - `primitives/css/badge.Badge`
     - `primitives/css/inline.Inline`
     - `primitives/css/viewport-overlay.viewportEscapeReportSink`
+    - `primitives/report-sink.drain`
     - `reports.report`
     - `reports.Reports`
+    - `reports/collectors.ReportSinks`
 - Server:
   - Contributes: `report-kind` "viewport-escape"
   - Uses: `reports.ReportKind`

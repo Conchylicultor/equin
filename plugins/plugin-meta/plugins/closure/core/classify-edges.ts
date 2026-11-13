@@ -179,7 +179,12 @@ export function classifyEdges(tree: PluginTreeData): EdgeGraph {
   // bundle without dates carries no date cell, and one with dates can no
   // longer ship without it (the hand-listed `data-views` pack this replaces
   // missed six of them).
+  //
+  // A `plugin`-space key is a plugin's own id, referenced by that plugin alone
+  // (see `KeySpace`): no facet spells it, every node uses itself.
   const usersOf = new Map<string, PluginId[]>();
+  for (const node of tree.byDir.values())
+    usersOf.set(`plugin\0${node.id}`, [node.id]);
   for (const node of tree.byDir.values())
     for (const ref of getFacet(node, crossRefsFacetDef)?.keyRefs ?? []) {
       const k = `${ref.space}\0${ref.key}`;
