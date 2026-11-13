@@ -38,6 +38,7 @@ import {
   partitionByOwner,
   readForeignManifestsSync,
 } from "../core/internal/data-dirs-manifest";
+import type { ForeignManifests } from "../core/internal/data-dirs-manifest";
 import {
   legacyRootEntries,
   undeclaredLegacyTargets,
@@ -354,7 +355,8 @@ interface RootObservation {
    * `${kind}/${child}` → what that entry IS, for every listed kind child. A
    * listing says a name exists; a declared move's verdict turns on whether that
    * name is a symlink (settled) or a real directory (pending, or a split copy),
-   * so the node itself is part of what the verdict reads.
+   * so the node itself is part of what the verdict reads. Filled only when
+   * observed with `nodes` (the signature); the run inspects its moves itself.
    */
   kindNodes: Map<string, RootNode>;
   /**
@@ -379,7 +381,13 @@ interface RootObservation {
   unmigratedKinds: Map<string, string>;
 }
 
-function observeRoot(): RootObservation {
+/**
+ * `nodes`: also `lstat` every kind child (and resolve each symlinked one's
+ * target) into `kindNodes` / `linkTargets`. The signature folds them all in;
+ * the run needs a node only for a declared move's old location, which it
+ * inspects itself — a few, where the kind children are hundreds.
+ */
+function observeRoot({ nodes }: { nodes: boolean }): RootObservation {
   const root = dataRoot();
   const entries = readEntries(root);
   const kinds = new Map<string, string[]>();
@@ -403,6 +411,7 @@ function observeRoot(): RootObservation {
     const children = readEntries(join(root, kind));
     if (children === null) continue;
     kinds.set(kind, children);
+    if (!nodes) continue;
     for (const child of children) {
       const key = `${kind}/${child}`;
       const node = inspect(root, key);
@@ -611,7 +620,7 @@ const noUndeclaredDataDirsCheck: Check = {
     // specifically, how a pass recorded while another checkout excused an entry
     // would replay green after that checkout was deleted and the entry became a
     // real orphan. The root listing does not change when a namespace goes away.
-    const obs = observeRoot();
+    const obs = observeRoot({ nodes: true });
     if (obs.entries === null) return "no-root";
     const lines = [
       `manifests:${manifestStampsSync().join(",")}`,
@@ -649,7 +658,7 @@ const noUndeclaredDataDirsCheck: Check = {
     return createHash("sha256").update(lines.join("\n")).digest("hex");
   },
   async run(ctx: CheckContext): Promise<CheckResult> {
-    const obs = observeRoot();
+    const obs = observeRoot({ nodes: false });
     if (obs.entries === null) return { ok: true };
 
     // Loading the collected dir EVALUATES each owner's `data-dirs/index.ts`, and
@@ -683,15 +692,20 @@ const noUndeclaredDataDirsCheck: Check = {
     // Excluding the wrong namespace would leave OUR OWN possibly-stale manifest
     // in the foreign set, where it could excuse an entry this checkout has
     // stopped declaring — turning a real local orphan into someone else's.
-    const foreign = readForeignManifestsSync(
-      checkoutWorktreeName(await getWorktreeRoot()),
-    );
+    //
+    // Read only when an entry this checkout does not declare needs an owner:
+    // one manifest per namespace on the machine (hundreds), and a root whose
+    // every entry is declared here has no question for any of them.
+    const self = checkoutWorktreeName(await getWorktreeRoot());
+    let foreign: ForeignManifests | undefined;
     /** Attributed entries, collected across both rules for one log line. */
     const attributed = new Map<string, string[]>();
     const owned = (
       candidates: readonly string[],
       which: "keys" | "rootEntries",
     ): string[] => {
+      if (candidates.length === 0) return [];
+      foreign ??= readForeignManifestsSync(self);
       const split = partitionByOwner(candidates, foreign.manifests, which);
       for (const [name, owners] of split.attributed)
         attributed.set(name, owners);
@@ -763,7 +777,7 @@ const noUndeclaredDataDirsCheck: Check = {
         if (move !== undefined) {
           const verdict = verifyMove(
             key,
-            obs.kindNodes.get(key) ?? ABSENT,
+            inspect(obs.root, key),
             move,
             inspect(obs.root, move.destination),
           );
@@ -819,7 +833,7 @@ const noUndeclaredDataDirsCheck: Check = {
     // A namespace publishing an unusable manifest attributes nothing, so its
     // live directories would surface above as orphans. Say so, or that reads as
     // an unexplained failure in a checkout that owns neither end of it.
-    for (const bad of foreign.unreadable) {
+    for (const bad of foreign?.unreadable ?? []) {
       ctx.log?.(
         `paths:no-undeclared-data-dirs: ignoring ${bad.namespace}'s declaration manifest — ` +
           `${bad.reason}. Directories that namespace owns will be reported as undeclared ` +

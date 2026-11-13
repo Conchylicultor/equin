@@ -52,6 +52,25 @@ describe("openRecording", () => {
     expect((await readdir(join(rec.dir, "frames"))).length).toBe(2);
   });
 
+  test("a prune removes call directories empty for a minute, never a fresh one", async () => {
+    root = await mkdtemp(join(tmpdir(), "rec-"));
+    // Emptied long ago (debris) and just now (maybe a recording mid-create).
+    await mkdir(join(root, "toolu_emptied"), { recursive: true });
+    const long = new Date(Date.now() - 120_000);
+    await utimes(join(root, "toolu_emptied"), long, long);
+    await mkdir(join(root, "toolu_fresh"), { recursive: true });
+    const rec = openRecording({
+      root: asAppPath(root),
+      toolUseId: "toolu_1",
+      source: { kind: "mcp", tool: "browser_act" },
+      name: "browser_act",
+    });
+    await rec.close([]);
+    expect(
+      (await readdir(root)).filter((n) => n.startsWith("toolu_")).sort(),
+    ).toEqual(["toolu_1", "toolu_fresh"]);
+  });
+
   test("an id that is not a path segment is refused", () => {
     expect(() =>
       openRecording({
@@ -98,9 +117,14 @@ describe("openRecording", () => {
       source: { kind: "mcp", tool: "browser_act" },
       name: "browser_act",
     }).close([]);
+    // The calls the prune emptied stay until they have been empty a minute
+    // (a later prune removes them); the runs are at the bound.
     const calls = (await readdir(root, { withFileTypes: true })).filter((e) =>
       e.isDirectory(),
     );
-    expect(calls.length).toBe(200);
+    let runs = 0;
+    for (const call of calls)
+      runs += (await readdir(join(root, call.name))).length;
+    expect(runs).toBe(200);
   });
 });

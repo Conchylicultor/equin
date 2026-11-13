@@ -116,7 +116,7 @@ export {
   logPatternMatches,
   publishedLogClaim,
 } from "./internal/log-claims";
-export type { LogBound, LogClaim } from "./internal/log-claims";
+export type { LogBound, LogClaim, NotLogs } from "./internal/log-claims";
 
 // The one legacy table: where each declared directory USED to sit, and what has
 // to happen to it. Two consumers read it — `paths:no-undeclared-data-dirs`

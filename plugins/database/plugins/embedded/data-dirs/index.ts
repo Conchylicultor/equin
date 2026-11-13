@@ -33,6 +33,16 @@ export const pgClusterDir = defineDataDir({
   // Postgres and PgBouncer log through the gateway's service log relay now
   // (logs/gateway/services/). These are their pre-relay files, moved into that
   // rotation on the first fresh start under a relay-aware gateway.
+  // The PG data directory (`data-pg<major>`) is Postgres's own format: hundreds
+  // of database dirs, and no log — logging_collector is off, so the server
+  // logs only to the stderr the gateway's relay rotates.
+  notLogs: [
+    {
+      pattern: "data-pg*",
+      reason:
+        "Postgres's data directory: logging_collector is off, so the server writes no log here — its output goes through the gateway's service log relay",
+    },
+  ],
   logs: [
     {
       pattern: "postgres.log",

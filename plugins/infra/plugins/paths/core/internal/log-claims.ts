@@ -39,6 +39,18 @@ export interface LogClaim {
   bound: LogBound;
 }
 
+/**
+ * A subtree of a data dir that holds data, not logs: `paths:logs-claimed` does
+ * not enter a directory whose path (relative to the dir, `/`-separated) matches
+ * `pattern` (same grammar as a claim's, matched against directories). `reason`
+ * says why no log file can grow there — the format belongs to another program
+ * that logs elsewhere, or a retention deletes the subtree whole.
+ */
+export interface NotLogs {
+  pattern: string;
+  reason: string;
+}
+
 /** A file the scan treats as a log: `*.log` / `*.jsonl`, and their numbered rotations. */
 export const LOG_FILE_RE = /\.(log|jsonl)(\.[0-9]+)?$/;
 
@@ -51,6 +63,11 @@ const compiled = new Map<string, RegExp>();
 
 /** Whether `rel` (relative to the claiming dir, `/`-separated) is in `pattern`'s family. */
 export function logPatternMatches(pattern: string, rel: string): boolean {
+  return globMatches(pattern, liveLogPath(rel));
+}
+
+/** Whether `rel` (`/`-separated) matches `pattern`: `*` within a segment, `**` across. */
+export function globMatches(pattern: string, rel: string): boolean {
   let re = compiled.get(pattern);
   if (!re) {
     const body = pattern
@@ -65,7 +82,7 @@ export function logPatternMatches(pattern: string, rel: string): boolean {
     re = new RegExp(`^${body}$`);
     compiled.set(pattern, re);
   }
-  return re.test(liveLogPath(rel));
+  return re.test(rel);
 }
 
 /**

@@ -14,7 +14,7 @@ import { dirname, join, relative, sep } from "node:path";
 // Relative sibling import: this file lives INSIDE the `paths` plugin, so the
 // `@plugins/infra/plugins/paths/core` alias would cycle back through the barrel
 // that re-exports it.
-import type { LogClaim } from "./log-claims";
+import type { LogClaim, NotLogs } from "./log-claims";
 import { isHostSingleton, isRelease, resolveDataRoot } from "./paths";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 
@@ -130,6 +130,15 @@ export interface DataDirSpec {
    * claims — that no claim matches.
    */
   logs?: readonly LogClaim[];
+  /**
+   * Subdirectories that hold data, not logs, which `paths:logs-claimed` does
+   * not enter (see `./log-claims.ts`): a directory whose path relative to this
+   * dir matches `pattern` is skipped whole. Each says why no log file can grow
+   * there — the format belongs to another program that logs elsewhere, or a
+   * retention deletes the subtree whole. Only for subtrees that are many
+   * entries deep: a scan of them is the check's cost, not its question.
+   */
+  notLogs?: readonly NotLogs[];
 }
 
 /**

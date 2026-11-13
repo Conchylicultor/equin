@@ -19,6 +19,16 @@ export const browserRecordingsDir = defineDataDir({
   // Observability output: losing it blanks past filmstrips, never anything a
   // future run needs. The writer also keeps only the newest runs.
   reclaim: { kind: "safe" },
+  // A run holds frames and a manifest, never a log, and the writer's prune
+  // deletes it whole (newest KEEP_RUNS kept): the log scan has no question for
+  // the thousands of frame files inside the runs.
+  notLogs: [
+    {
+      pattern: "*/*",
+      reason:
+        "a run directory (<call>/<run>): frames and a manifest, deleted whole by the writer's prune, which keeps only the newest runs",
+    },
+  ],
 });
 
 export default [browserRecordingsDir];

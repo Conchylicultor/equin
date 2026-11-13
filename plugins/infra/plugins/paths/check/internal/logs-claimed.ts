@@ -16,8 +16,10 @@ import {
   type DataDirsManifest,
 } from "../../core/internal/data-dirs-manifest";
 import {
+  globMatches,
   LOG_FILE_RE,
   logPatternMatches,
+  type NotLogs,
   publishedLogClaim,
   type LogClaim,
 } from "../../core/internal/log-claims";
@@ -34,7 +36,9 @@ import {
 // `state`, `apps` (their files are data, bounded by reclaim and retention, not
 // rotation) and `worktrees` (a namespace's registry dir is deleted with it,
 // and its run artifacts are pruned by RUN_ARTIFACTS_RETENTION); a dir nested
-// inside another declared dir is scanned as its own.
+// inside another declared dir is scanned as its own, and a subtree a dir
+// declares `notLogs` (data in another program's format, or deleted whole by a
+// retention) is not entered.
 //
 // Host-scoped like `paths:no-undeclared-data-dirs`, for the same reason: the
 // root holds the union of every branch on the machine, so a claim another live
@@ -50,28 +54,31 @@ export interface ClaimingDir {
   claims: readonly LogClaim[];
 }
 
-/** A log file found under a dir, relative to it, with its size. */
+/** A log file found under a dir: relative to it, and where it is. */
 export interface FoundLog {
   rel: string;
-  bytes: number;
+  abs: string;
 }
 
 export interface LogAudit {
-  /** Files no claim matches, local or foreign: `<key>/<rel>` with their size. */
-  unclaimed: { path: string; bytes: number }[];
-  /** Debt-claimed families that hold files: what they hold and the task that bounds them. */
-  debt: { claim: string; task: string; files: number; bytes: number }[];
+  /** Files no claim matches, local or foreign: `<key>/<rel>` and where it is. */
+  unclaimed: { path: string; abs: string }[];
+  /** Debt-claimed families that hold files: the files and the task that bounds them. */
+  debt: { claim: string; task: string; files: string[] }[];
   /** Files another live branch claims and this checkout does not. */
   attributed: { path: string; owners: string[] }[];
 }
 
 /**
  * The decision, pure: each dir's files against its own claims first, then
- * against the claims other namespaces publish for the same dir.
+ * against the claims other namespaces publish for the same dir. `foreign` is
+ * asked for only when a file no local claim matches needs it — reading every
+ * other namespace's manifest is the expensive half, and a root whose files are
+ * all claimed here has no question for them.
  */
 export function auditLogs(
   dirs: readonly { dir: ClaimingDir; files: readonly FoundLog[] }[],
-  foreign: readonly DataDirsManifest[],
+  foreign: () => readonly DataDirsManifest[],
 ): LogAudit {
   const audit: LogAudit = { unclaimed: [], debt: [], attributed: [] };
   const debt = new Map<string, LogAudit["debt"][number]>();
@@ -86,17 +93,15 @@ export function auditLogs(
           const entry = debt.get(id) ?? {
             claim: id,
             task: claim.bound.task,
-            files: 0,
-            bytes: 0,
+            files: [],
           };
-          entry.files++;
-          entry.bytes += file.bytes;
+          entry.files.push(file.abs);
           debt.set(id, entry);
         }
         continue;
       }
       const path = `${dir.key}/${file.rel}`;
-      const owners = foreign
+      const owners = foreign()
         .filter((m) =>
           m.logClaims.some((published) => {
             const sep = published.indexOf(":");
@@ -108,7 +113,7 @@ export function auditLogs(
         )
         .map((m) => m.namespace);
       if (owners.length > 0) audit.attributed.push({ path, owners });
-      else audit.unclaimed.push({ path, bytes: file.bytes });
+      else audit.unclaimed.push({ path, abs: file.abs });
     }
   }
   audit.debt = [...debt.values()].sort((a, b) =>
@@ -119,12 +124,15 @@ export function auditLogs(
 
 /**
  * Every log file under `root`, relative to it: symlinks are never followed
- * (the root's compatibility links point back into `logs/`), and a subtree that
- * is another declared dir is left to that dir's own scan.
+ * (the root's compatibility links point back into `logs/`), a subtree that is
+ * another declared dir is left to that dir's own scan, and a subtree the dir
+ * declares `notLogs` is not entered. Listings only: a file's size is read
+ * later, for the files a message reports.
  */
-async function findLogs(
+export async function findLogs(
   root: string,
   skip: ReadonlySet<string>,
+  notLogs: readonly NotLogs[],
 ): Promise<FoundLog[]> {
   const found: FoundLog[] = [];
   const walk = async (dir: string, prefix: string): Promise<void> => {
@@ -140,14 +148,26 @@ async function findLogs(
       const abs = join(dir, e.name);
       const rel = prefix ? `${prefix}/${e.name}` : e.name;
       if (e.isDirectory()) {
-        if (!skip.has(abs)) await walk(abs, rel);
+        if (skip.has(abs)) continue;
+        if (notLogs.some((n) => globMatches(n.pattern, rel))) continue;
+        await walk(abs, rel);
       } else if (e.isFile() && LOG_FILE_RE.test(e.name)) {
-        found.push({ rel, bytes: (await stat(abs)).size });
+        found.push({ rel, abs });
       }
     }
   };
   await walk(root, "");
   return found;
+}
+
+/** A file's size, or 0 when it went between the listing and now (a rotation). */
+async function sizeOf(abs: string): Promise<number> {
+  try {
+    return (await stat(abs)).size;
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return 0;
+    throw err;
+  }
 }
 
 function mb(bytes: number): string {
@@ -180,18 +200,22 @@ export const logsClaimedCheck: Check = {
           const others = new Set([...roots].filter((r) => r !== root));
           return {
             dir: { key, root, claims: d.spec.logs ?? [] },
-            files: await findLogs(root, others),
+            files: await findLogs(root, others, d.spec.notLogs ?? []),
           };
         }),
     );
-    const foreign = readForeignManifestsSync(
-      checkoutWorktreeName(await getWorktreeRoot()),
+    const self = checkoutWorktreeName(await getWorktreeRoot());
+    let foreign: readonly DataDirsManifest[] | undefined;
+    const audit = auditLogs(
+      scanned,
+      () => (foreign ??= readForeignManifestsSync(self).manifests),
     );
-    const audit = auditLogs(scanned, foreign.manifests);
 
     for (const d of audit.debt) {
+      const sizes = await Promise.all(d.files.map(sizeOf));
+      const bytes = sizes.reduce((a, b) => a + b, 0);
       ctx.log?.(
-        `paths:logs-claimed: ${d.claim} — ${d.files} file(s), ${mb(d.bytes)}, unbounded until ${d.task}`,
+        `paths:logs-claimed: ${d.claim} — ${d.files.length} file(s), ${mb(bytes)}, unbounded until ${d.task}`,
         "stdout",
       );
     }
@@ -205,11 +229,14 @@ export const logsClaimedCheck: Check = {
       );
     }
     if (audit.unclaimed.length === 0) return { ok: true };
+    const sizes = await Promise.all(audit.unclaimed.map((u) => sizeOf(u.abs)));
     return {
       ok: false,
       message:
         `${audit.unclaimed.length} log file(s) under the data root no data dir claims:\n    ` +
-        audit.unclaimed.map((u) => `${u.path} (${mb(u.bytes)})`).join("\n    "),
+        audit.unclaimed
+          .map((u, i) => `${u.path} (${mb(sizes[i]!)})`)
+          .join("\n    "),
       hint:
         "Declare the file on the data dir that holds it — `logs: [{ pattern, bound }]` in its defineDataDir — naming what keeps it finite: " +
         '{ kind: "file-sink" } (written through defineFileSink), { kind: "gateway-rotating" } (the gateway\'s rotatingWriter), ' +

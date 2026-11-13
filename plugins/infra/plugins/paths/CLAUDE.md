@@ -382,8 +382,16 @@ and `services` dir — and any other dir that declares claims — and fails on
 each `*.log` / `*.jsonl` (and rotation) no claim matches, naming its size; it
 logs every debt claim with what it holds. `cache`, `state`, `apps` and
 `worktrees` are not scanned (data bounded by reclaim and retention, and a
-namespace's registry dir dies with it). Claims ride the data-dirs manifest
-(`logClaims`), so a claim another live branch declares excuses its file here.
+namespace's registry dir dies with it). Inside a scanned dir, a subtree that
+holds data, not logs, is declared `notLogs: [{ pattern, reason }]` and not
+entered — Postgres's data dir (`data-pg*`: its format, no log while
+`logging_collector` is off), a browser recording's runs (`*/*`: frames, deleted
+whole by the prune). Without it the scan's cost was the size of that data
+(~4.5k listings, 2026-11-13), not the number of log files. Claims ride the
+data-dirs manifest (`logClaims`), so a claim another live branch declares
+excuses its file here; those manifests (one per namespace, hundreds) are read
+only when a file no local claim matches needs an owner, and a file is
+`stat`ed only when a message reports its size.
 Written after `postgres.log` (1.7 GB), `pgbouncer.log` (1.4 GB) and 1.9 GB of
 reaped namespaces' gateway logs were each found by accident, months in.
 
@@ -423,6 +431,7 @@ reaped namespaces' gateway logs were each found by accident, months in.
     - `LogClaim`
     - `MigrationStep`
     - `MovedFrom`
+    - `NotLogs`
     - `ReclaimPolicy`
     - `ReleaseIdentity`
   - Exports (values):

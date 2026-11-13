@@ -237,6 +237,23 @@ function statManifestSync(
   }
 }
 
+/**
+ * A manifest's text, or `undefined` when there is no file to read there — one
+ * read, no `stat` first: the read answers "is there a file" by itself, and a
+ * scan of every namespace's manifest makes hundreds of these. ENOENT, ENOTDIR
+ * and EISDIR all answer no, for the reasons {@link statManifestSync} gives.
+ */
+function readManifestTextSync(path: AppPath): string | undefined {
+  try {
+    return readFileSync(path, "utf8");
+  } catch (err) {
+    const code = (err as NodeJS.ErrnoException).code;
+    if (code === "ENOENT" || code === "ENOTDIR" || code === "EISDIR")
+      return undefined;
+    throw err;
+  }
+}
+
 function parseManifest(raw: string): DataDirsManifest | string {
   let value: unknown;
   try {
@@ -283,9 +300,11 @@ export function readForeignManifestsSync(self: string): ForeignManifests {
 
   for (const name of listNamespacesSync()) {
     if (name === self) continue;
-    const path = worktreeArtifacts.dataDirs(asNamespace(name));
-    if (!statManifestSync(path)) continue;
-    const parsed = parseManifest(readFileSync(path, "utf8"));
+    const raw = readManifestTextSync(
+      worktreeArtifacts.dataDirs(asNamespace(name)),
+    );
+    if (raw === undefined) continue;
+    const parsed = parseManifest(raw);
     if (typeof parsed === "string") {
       unreadable.push({ namespace: name, reason: parsed });
       continue;

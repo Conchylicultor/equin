@@ -138,12 +138,43 @@ async function pruneRuns(root: AppPath, keep: number): Promise<void> {
   }
 }
 
+/**
+ * How long a call directory must have been empty before a prune removes it.
+ * A live recording's call dir is empty only inside the one recursive `mkdir`
+ * that creates `<call>/<run>/frames` (microseconds), and a writer takes no
+ * lock — removing the call between those two levels fails the recording's
+ * `mkdir` (measured: EINVAL under Bun). A call dir empty for this long is
+ * debris, never one being created.
+ */
+const EMPTY_CALL_MIN_AGE_MS = 60_000;
+
+/** `rmdir` an empty call dir once it is old enough to be nobody's in-flight create. */
+async function removeEmptyCallDir(callDir: string, now: number): Promise<void> {
+  if (now - (await stat(callDir)).mtimeMs < EMPTY_CALL_MIN_AGE_MS) return;
+  // `rmdir`, never a recursive rm: a run landing in it since the listing
+  // makes it ENOTEMPTY, and it stays.
+  await rmdir(callDir).catch((err: unknown) => {
+    if (!(err instanceof Error && "code" in err && err.code === "ENOTEMPTY"))
+      throw err;
+  });
+}
+
 async function pruneRunsLocked(root: AppPath, keep: number): Promise<void> {
+  const now = Date.now();
   const runs: { path: string; mtimeMs: number }[] = [];
   for (const call of await readdir(root, { withFileTypes: true })) {
     if (!call.isDirectory()) continue;
     const callDir = join(root, call.name);
-    for (const run of await readdir(callDir, { withFileTypes: true })) {
+    const entries = await readdir(callDir, { withFileTypes: true });
+    // A call whose last run a prune removed goes on a later prune, once it
+    // has stayed empty (removing it in the same pass could race a recording
+    // opening a run in it — see EMPTY_CALL_MIN_AGE_MS). The recorded-calls
+    // index below never lists it either way: it is built from the runs.
+    if (entries.length === 0) {
+      await removeEmptyCallDir(callDir, now);
+      continue;
+    }
+    for (const run of entries) {
       if (!run.isDirectory()) continue;
       const path = join(callDir, run.name);
       runs.push({ path, mtimeMs: (await stat(path)).mtimeMs });
@@ -152,16 +183,6 @@ async function pruneRunsLocked(root: AppPath, keep: number): Promise<void> {
   runs.sort((a, b) => b.mtimeMs - a.mtimeMs);
   for (const run of runs.slice(keep)) {
     await rm(run.path, { recursive: true, force: true });
-    // A call whose last run went goes too, so the directory lists only the
-    // calls that still have a recording (`browser-recordings.recorded-calls`).
-    // `rmdir`, never a recursive rm after a listing: a recording opening a
-    // run in this call (a writer takes no lock) may land between the two, and
-    // a recursive rm would delete that live run under it.
-    const callDir = dirname(run.path);
-    await rmdir(callDir).catch((err: unknown) => {
-      if (!(err instanceof Error && "code" in err && err.code === "ENOTEMPTY"))
-        throw err;
-    });
   }
   // The calls that still have a run, for the view's preloaded set
   // (`browser-recordings.recorded-calls`). Written whole and renamed into
