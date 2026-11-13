@@ -224,9 +224,7 @@ takes a `debt` exemption on the check's id.
     - `defineBoundaries`
     - `deny`
     - `isPlatformApi`
-    - `loadsAtRuntime`
     - `platformValueUsesIn`
-    - `resolveRepoModule`
     - `runtimeNames`
     - `serverPortabilityOf`
     - `zone`

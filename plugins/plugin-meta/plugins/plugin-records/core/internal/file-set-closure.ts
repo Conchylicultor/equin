@@ -42,11 +42,15 @@ const SCRIPT_MODULE = /\.(m?[jt]sx?|c[jt]s)$/;
  * one source of a module's import facts — a reader asking which modules a file
  * loads never parses its imports itself.
  *
+ * With `edges: "dynamic"`, its `import()`s of repo script
+ * modules instead, in source order — what a registry of lazy loaders names.
+ *
  * An import that resolves to no file of the set throws, naming the module.
  */
 export async function fileSetImports(
   repo: RepoFiles | RepoSnapshot,
   modules: readonly string[],
+  opts?: { edges?: "static" | "dynamic" },
 ): Promise<Map<string, string[]>> {
   const graph = await buildModuleGraph(sharedInput(repo, undefined), modules);
   const out = new Map<string, string[]>();
@@ -56,12 +60,50 @@ export async function fileSetImports(
       throw new Error(
         `${m} imports ${node.unresolved.map((u) => JSON.stringify(u)).join(", ")}, which resolves to no file of the checkout.`,
       );
+    const deps = opts?.edges === "dynamic" ? node.dynamicDeps : node.staticDeps;
     out.set(
       m,
-      [...new Set(node.staticDeps)].filter((d) => SCRIPT_MODULE.test(d)),
+      [...new Set(deps)].filter((d) => SCRIPT_MODULE.test(d)),
     );
   }
   return out;
+}
+
+/**
+ * Every repo script module `entries` can load at runtime — static imports as
+ * the runtime reads them (type-only erased, an import used only in a type
+ * position kept: it still loads; `require()` included) and its `import()`s, since a
+ * lazy load still runs on the importer's thread — each mapped to the module
+ * that first reached it, breadth-first in sorted entry order (null for an
+ * entry). Read off the same shared module graph as {@link fileSetImports}: a
+ * pass after an edit scans the edited modules alone, and no reader of what a
+ * process loads parses or resolves imports itself.
+ *
+ * An import of a reached module that resolves to no file of the set throws,
+ * naming the module — skipping it would pass whatever it loads.
+ */
+export async function fileSetRuntimeReach(
+  repo: RepoFiles | RepoSnapshot,
+  entries: readonly string[],
+): Promise<Map<string, string | null>> {
+  const sorted = [...new Set(entries)].sort();
+  const graph = await buildModuleGraph(sharedInput(repo, undefined), sorted);
+  const parent = new Map<string, string | null>();
+  for (const e of sorted) parent.set(e, null);
+  for (let i = 0, queue = [...sorted]; i < queue.length; i++) {
+    const m = queue[i]!;
+    const node = graph.modules.get(m)!;
+    if (node.unresolved.length > 0)
+      throw new Error(
+        `${m} imports ${node.unresolved.map((u) => JSON.stringify(u)).join(", ")}, which resolves to no file of the checkout.`,
+      );
+    for (const d of [...node.staticDeps, ...node.dynamicDeps]) {
+      if (parent.has(d) || !SCRIPT_MODULE.test(d)) continue;
+      parent.set(d, m);
+      queue.push(d);
+    }
+  }
+  return parent;
 }
 
 /**

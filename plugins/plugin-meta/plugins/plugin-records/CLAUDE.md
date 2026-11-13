@@ -403,6 +403,7 @@ its docblock records — and then lowered as readily as raised.
     - `emptyWriteTiming`
     - `fileSetClosure`
     - `fileSetImports`
+    - `fileSetRuntimeReach`
     - `foldFilesCached`
     - `foldRepoFiles`
     - `gitBlobId`

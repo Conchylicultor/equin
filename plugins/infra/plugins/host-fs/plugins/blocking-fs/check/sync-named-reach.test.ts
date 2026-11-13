@@ -1,19 +1,29 @@
 import { describe, expect, test } from "bun:test";
 import type { ResolvedExemption } from "@plugins/framework/plugins/tooling/plugins/exempt/core";
-import { backendReach, syncNamedReachViolations } from "./sync-named-reach";
+import { backendModules, syncNamedReachViolations } from "./sync-named-reach";
 
-const FILES: Record<string, string> = {
-  "plugins/audience/server/index.ts": `import { x } from "@plugins/fullscreen/core";\nimport type { T } from "@plugins/hints/core";\nexport const y = () => import("@plugins/ids/core");`,
-  "plugins/audience/server/a.test.ts": `import { t } from "@plugins/history/core";`,
-  "plugins/fullscreen/core/index.ts": `export { x } from "./internal/x";`,
-  "plugins/fullscreen/core/internal/x.ts": `export const x = 1;`,
-  "plugins/hints/core/index.ts": `export type T = number;`,
-  "plugins/ids/core/index.ts": `export const d = 1;`,
-  "plugins/history/core/index.ts": `export const t = 1;`,
-};
+// What the module graph answers for the run's backend modules: each reached
+// module and who first reached it (the reading itself is plugin-records'
+// `fileSetRuntimeReach`, tested there).
+const PATHS = [
+  "plugins/audience/server/index.ts",
+  "plugins/audience/server/a.test.ts",
+  "plugins/fullscreen/core/index.ts",
+  "plugins/fullscreen/core/internal/x.ts",
+  "plugins/history/core/index.ts",
+];
+const REACH = new Map<string, string | null>([
+  ["plugins/audience/server/index.ts", null],
+  ["plugins/fullscreen/core/index.ts", "plugins/audience/server/index.ts"],
+  ["plugins/fullscreen/core/internal/x.ts", "plugins/fullscreen/core/index.ts"],
+]);
+const asked: string[][] = [];
 const scan = {
-  paths: Object.keys(FILES),
-  read: (p: string) => Promise.resolve(FILES[p] ?? null),
+  paths: PATHS,
+  reach: (entries: readonly string[]) => {
+    asked.push([...entries]);
+    return Promise.resolve(REACH);
+  },
 };
 
 const sanctioned = (target: string): ResolvedExemption => ({
@@ -26,18 +36,9 @@ const sanctioned = (target: string): ResolvedExemption => ({
   reason: "host tooling only",
 });
 
-describe("backendReach", () => {
-  test("follows runtime and dynamic imports from backend modules, not type-only ones or tests", async () => {
-    const reach = await backendReach(scan);
-    expect([...reach.keys()].sort()).toEqual([
-      "plugins/audience/server/index.ts",
-      "plugins/fullscreen/core/index.ts",
-      "plugins/fullscreen/core/internal/x.ts",
-      "plugins/ids/core/index.ts",
-    ]);
-    expect(reach.get("plugins/fullscreen/core/internal/x.ts")).toBe(
-      "plugins/fullscreen/core/index.ts",
-    );
+describe("backendModules", () => {
+  test("backend runtime modules only, test code aside", () => {
+    expect(backendModules(PATHS)).toEqual(["plugins/audience/server/index.ts"]);
   });
 });
 
@@ -67,6 +68,7 @@ describe("syncNamedReachViolations", () => {
         ],
       ],
     ]);
+    expect(asked.at(-1)).toEqual(["plugins/audience/server/index.ts"]);
   });
 
   test("a debt exemption makes no claim", async () => {

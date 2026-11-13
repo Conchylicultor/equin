@@ -4,7 +4,7 @@ import { join } from "node:path";
 import type { RepoSnapshot } from "@plugins/framework/plugins/tooling/core";
 import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { buildModuleGraph, NO_OUTSIDE_FILES } from "./module-graph";
-import { fileSetImports } from "./file-set-closure";
+import { fileSetImports, fileSetRuntimeReach } from "./file-set-closure";
 import { gitBlobId } from "./keys";
 import { createMemoryRecordStore, type RecordStore } from "./store";
 
@@ -372,5 +372,48 @@ describe("fileSetImports", () => {
     expect(fileSetImports(snap, [`${P}/a/web/index.ts`])).rejects.toThrow(
       `${P}/a/web/index.ts imports "@plugins/b/core"`,
     );
+  });
+});
+
+describe("fileSetRuntimeReach", () => {
+  test("follows runtime and dynamic imports, each module mapped to who first reached it", async () => {
+    const snap = snapshotOf({
+      [`${P}/a/server/index.ts`]: [
+        'import { b } from "@plugins/b/core";',
+        'import type { T } from "@plugins/t/core";',
+        'import { u } from "@plugins/u/core";',
+        'import "./style.css";',
+        'export const y = () => import("@plugins/c/core");',
+        "export const x = b;",
+        "export type V = typeof u;",
+      ].join("\n"),
+      [`${P}/a/server/style.css`]: "",
+      [`${P}/b/core/index.ts`]: 'export { b } from "./internal/b";',
+      [`${P}/b/core/internal/b.ts`]: "export const b = 1;",
+      [`${P}/c/core/index.ts`]: "export const c = 1;",
+      [`${P}/t/core/index.ts`]: "export type T = 1;",
+      [`${P}/u/core/index.ts`]: "export const u = 1;",
+    });
+    const reach = await fileSetRuntimeReach(snap, [`${P}/a/server/index.ts`]);
+    expect(reach).toEqual(
+      new Map([
+        [`${P}/a/server/index.ts`, null],
+        // An import used only in a type position still loads.
+        [`${P}/b/core/index.ts`, `${P}/a/server/index.ts`],
+        [`${P}/u/core/index.ts`, `${P}/a/server/index.ts`],
+        [`${P}/c/core/index.ts`, `${P}/a/server/index.ts`],
+        [`${P}/b/core/internal/b.ts`, `${P}/b/core/index.ts`],
+      ]),
+    );
+  });
+
+  test("an unresolved import of a reached module throws, naming it", async () => {
+    const snap = snapshotOf({
+      [`${P}/a/server/index.ts`]: 'export { b } from "@plugins/b/core";',
+      [`${P}/b/core/index.ts`]: 'export { b } from "./gone";',
+    });
+    expect(
+      fileSetRuntimeReach(snap, [`${P}/a/server/index.ts`]),
+    ).rejects.toThrow(`${P}/b/core/index.ts imports "./gone"`);
   });
 });

@@ -30994,9 +30994,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `defineBoundaries`
               - `deny`
               - `isPlatformApi`
-              - `loadsAtRuntime`
               - `platformValueUsesIn`
-              - `resolveRepoModule`
               - `runtimeNames`
               - `serverPortabilityOf`
               - `zone`
@@ -45805,6 +45803,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `emptyWriteTiming`
           - `fileSetClosure`
           - `fileSetImports`
+          - `fileSetRuntimeReach`
           - `foldFilesCached`
           - `foldRepoFiles`
           - `gitBlobId`
