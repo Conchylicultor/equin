@@ -6216,7 +6216,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/color-palette --muted-foreground`
               - `ui/tokens/color-palette --warning`
-            - Imported by: `apps/mail/search`
+            - Imported by:
+              - `apps/mail/search`
+              - `primitives/css/rail`
     - **`pages`** — Notion-like pages app.
       - Plugins:
         - **`agent-origin`** — Agent-origin provenance for pages: presents the exposed `origin` field (Private / Scratch) of the Pages sidebar DataView, so pages written by an automated session land in their own Scratch section of the sidebar. Agent-origin provenance for pages (page_blocks_ext_origin): a create-hook contributor stamps every page written by an automated session (the origin header set to agent) with the script that minted it, the marker's presence is exposed as the `origin` field (agent | user) of every list whose rows are blocks — the Pages sidebar's Private / Scratch sections — and a 24h retention sweep trashes the marked pages.
@@ -19755,11 +19757,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `primitives/syntax-highlight.HighlightedCode`
                       - `ui/icons.Icon`
                   - Cross-plugin:
-                    - Uses tokens: 25 vars — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/workflow/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/workflow/REFERENCE.md)
+                    - Uses tokens: 24 vars — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/workflow/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/plugins/workflow/REFERENCE.md)
                       - `ui/tokens/type-scale` ×9
                       - `ui/tokens/color-palette` ×6
-                      - `ui/tokens/density` ×4
                       - `ui/tokens/categorical` ×3
+                      - `ui/tokens/density` ×3
                       - `ui/tokens/shape` ×2
                       - `ui/tokens/font-family --font-mono`
                     - Imported by:
@@ -24342,7 +24344,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Pane.Register` "claude-cli-call-detail"
           - `Pane.Register` "claude-cli-calls"
           - `DebugApp.Sidebar` "Claude CLI Calls"
-        - Uses: 23 symbols — full list in [`plugins/debug/plugins/claude-cli-calls/REFERENCE.md`](../plugins/debug/plugins/claude-cli-calls/REFERENCE.md)
+        - Uses: 21 symbols — full list in [`plugins/debug/plugins/claude-cli-calls/REFERENCE.md`](../plugins/debug/plugins/claude-cli-calls/REFERENCE.md)
           - `primitives/pane` ×6
           - `primitives/data-view` ×4
           - `infra/claude-cli` ×2
@@ -24350,8 +24352,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/debug/shell.DebugApp`
           - `conversations/model-provider.familyClass`
           - `primitives/css/badge.Badge`
-          - `primitives/css/scroll.Scroll`
-          - `primitives/css/spacing.Inset`
           - `primitives/css/status-dot.StatusDot`
           - `primitives/css/text.Text`
           - `primitives/loading.Loading`
@@ -24456,10 +24456,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Contributes:
           - `Pane.Register` "debug-health-monitor"
           - `DebugApp.Sidebar` "Health"
-        - Uses: 24 symbols — full list in [`plugins/debug/plugins/health-monitor/REFERENCE.md`](../plugins/debug/plugins/health-monitor/REFERENCE.md)
+        - Uses: 23 symbols — full list in [`plugins/debug/plugins/health-monitor/REFERENCE.md`](../plugins/debug/plugins/health-monitor/REFERENCE.md)
           - `stats/commits` ×7
           - `primitives/pane` ×3
-          - `primitives/css/spacing` ×2
           - `primitives/css/text` ×2
           - `apps/debug/shell.DebugApp`
           - `network/live/live-state.ResourceErrorInline`
@@ -24469,6 +24468,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/grid.Grid`
           - `primitives/css/placeholder.Placeholder`
           - `primitives/css/rigid.Rigid`
+          - `primitives/css/spacing.Stack`
           - `primitives/css/status-dot.StatusDot`
           - `primitives/relative-time.RelativeTime`
         - Exports (values): `healthMonitorPane`
@@ -24554,7 +24554,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live.useLive`
           - `network/live/live-state.matchResource`
           - `network/live/live-state.ResourceErrorInline`
-          - `primitives/css/spacing.Inset`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.SectionLabel`
           - `primitives/css/text.Text`
@@ -24766,18 +24765,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Pane.Register` "debug-live-state-emit"
               - `DebugApp.Sidebar` "Live-State Emit"
               - `Core.Root` → `EmitInstaller`
-            - Uses: 27 symbols — full list in [`plugins/debug/plugins/live-state-churn/plugins/emit/REFERENCE.md`](../plugins/debug/plugins/live-state-churn/plugins/emit/REFERENCE.md)
+            - Uses: 25 symbols — full list in [`plugins/debug/plugins/live-state-churn/plugins/emit/REFERENCE.md`](../plugins/debug/plugins/live-state-churn/plugins/emit/REFERENCE.md)
               - `primitives/css/ui-kit` ×7
               - `infra/endpoints` ×4
               - `network/live/live-state` ×3
               - `primitives/pane` ×3
-              - `primitives/css/spacing` ×2
               - `primitives/css/text` ×2
               - `apps/debug/shell.DebugApp`
               - `network/live.useLive`
               - `primitives/css/badge.Badge`
               - `primitives/css/placeholder.Placeholder`
-              - `primitives/css/scroll.Scroll`
+              - `primitives/css/spacing.Stack`
               - `ui/icons.Icon`
             - Exports (values): `liveStateEmitPane`
           - Server:
@@ -24845,7 +24843,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Contributes:
           - `Pane.Register` "live-state-health"
           - `DebugApp.Sidebar` "Live State"
-        - Uses: 25 symbols — full list in [`plugins/debug/plugins/live-state-health/REFERENCE.md`](../plugins/debug/plugins/live-state-health/REFERENCE.md)
+        - Uses: 24 symbols — full list in [`plugins/debug/plugins/live-state-health/REFERENCE.md`](../plugins/debug/plugins/live-state-health/REFERENCE.md)
           - `network/live/live-state` ×7
           - `primitives/pane` ×3
           - `primitives/css/text` ×2
@@ -24856,7 +24854,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/fill.Fill`
           - `primitives/css/inline.Inline`
           - `primitives/css/rigid.Rigid`
-          - `primitives/css/scroll.Scroll`
           - `primitives/css/spacing.Stack`
           - `primitives/css/status-dot.StatusDot`
           - `primitives/loading.Loading`
@@ -24868,7 +24865,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/color-palette --destructive`
           - `ui/tokens/color-palette --success`
           - `ui/tokens/color-palette --warning`
-          - `ui/tokens/density --space-lg`
           - `ui/tokens/density --space-md`
           - `ui/tokens/density --space-xs`
           - `ui/tokens/shape --spacing`
@@ -25647,12 +25643,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Core.Root` → `TabMemoryRecorder`
               - `Pane.Register` "debug-tab-memory"
               - `DebugApp.Sidebar` "Tab memory"
-            - Uses: 30 symbols — full list in [`plugins/debug/plugins/profiling/plugins/tab-memory/REFERENCE.md`](../plugins/debug/plugins/profiling/plugins/tab-memory/REFERENCE.md)
+            - Uses: 29 symbols — full list in [`plugins/debug/plugins/profiling/plugins/tab-memory/REFERENCE.md`](../plugins/debug/plugins/profiling/plugins/tab-memory/REFERENCE.md)
               - `stats/commits` ×7
               - `primitives/pane` ×4
               - `primitives/data-view` ×3
               - `infra/endpoints` ×2
-              - `primitives/css/spacing` ×2
               - `primitives/css/text` ×2
               - `apps-core/tabs.peekTabSets`
               - `apps/debug/shell.DebugApp`
@@ -25660,6 +25655,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `network/live/live-state.ResourceErrorInline`
               - `network/live.useLive`
               - `primitives/css/placeholder.Placeholder`
+              - `primitives/css/spacing.Stack`
               - `primitives/networking/page-transport.pageTransport`
               - `primitives/relative-time.RelativeTime`
               - `primitives/scope/automation.AUTOMATED_BROWSER`
@@ -25992,7 +25988,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/badge.Badge`
           - `primitives/css/cluster.Cluster`
           - `primitives/css/placeholder.Placeholder`
-          - `primitives/css/scroll.Scroll`
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.SectionLabel`
           - `primitives/css/text.Text`
@@ -26048,7 +26043,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Cross-plugin:
         - Uses tokens:
           - `ui/tokens/color-palette --muted-foreground`
-          - `ui/tokens/density --space-lg`
           - `ui/tokens/density --space-xs`
           - `ui/tokens/font-family --font-mono`
           - `ui/tokens/shape --spacing`
@@ -26176,7 +26170,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/color-palette --foreground`
           - `ui/tokens/color-palette --muted`
           - `ui/tokens/color-palette --muted-foreground`
-          - `ui/tokens/density --space-md`
           - `ui/tokens/density --space-sm`
           - `ui/tokens/font-family --font-mono`
           - `ui/tokens/shape --radius`
@@ -47908,11 +47901,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useScrollsSideways`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/density --space-sm`
-            - Imported by: 102 plugins — full list in [`plugins/primitives/plugins/css/plugins/scroll/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/scroll/REFERENCE.md)
+            - Imported by: 98 plugins — full list in [`plugins/primitives/plugins/css/plugins/scroll/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/scroll/REFERENCE.md)
               - `conversations` ×30
               - `apps` ×22
               - `primitives` ×15
-              - `debug` ×14
+              - `debug` ×10
               - `page` ×5
               - `build` ×2
               - `infra` ×2
@@ -48036,11 +48029,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Stack`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Imported by: 444 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
+            - Imported by: 443 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
               - `apps` ×109
               - `conversations` ×77
               - `primitives` ×54
-              - `debug` ×40
+              - `debug` ×39
               - `ui` ×31
               - `page` ×27
               - `plugin-meta` ×16
@@ -48586,9 +48579,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useSingleLine`
               - `WithTooltip`
           - Cross-plugin:
-            - Uses tokens: 386 vars — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Uses tokens: 389 vars — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `ui/tokens/data-view` ×105
-              - `ui/tokens/density` ×89
+              - `ui/tokens/density` ×92
               - `ui/tokens/color-palette` ×62
               - `ui/tokens/type-scale` ×42
               - `ui/tokens/shape` ×15
@@ -52940,8 +52933,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --chrome-pane-card-pad-end`
           - `ui/tokens/density --chrome-pane-card-pad-start`
           - `ui/tokens/density --content-inset`
+          - `ui/tokens/density --control-height-sm`
+          - `ui/tokens/density --control-icon-sm`
+          - `ui/tokens/density --document-pad-bottom`
+          - `ui/tokens/density --document-pad-top`
+          - `ui/tokens/density --document-pad-x`
           - `ui/tokens/density --space-2xs`
           - `ui/tokens/density --space-md`
+          - `ui/tokens/density --space-sm`
           - `ui/tokens/shape --spacing`
         - Imported by: 207 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
           - `apps` ×77

@@ -11,7 +11,6 @@ import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
-import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
 import {
   Collapsible,
@@ -179,22 +178,16 @@ export function ReadSetView(): ReactElement {
   const result = useLive(resourcesDebug);
 
   if (result.status === "loading") {
-    return (
-      <Scroll className="h-full p-lg">
-        <Loading variant="rows" />
-      </Scroll>
-    );
+    return <Loading variant="rows" />;
   }
   if (result.status === "error") {
     return (
-      <Scroll className="h-full p-lg">
-        <ResourceErrorInline
-          variant="block"
-          subject="the resource registry"
-          error={result.error}
-          refetch={result.refetch}
-        />
-      </Scroll>
+      <ResourceErrorInline
+        variant="block"
+        subject="the resource registry"
+        error={result.error}
+        refetch={result.refetch}
+      />
     );
   }
   return (
@@ -222,23 +215,21 @@ function ReadSetBody({
   const shapeEntries = useMemo(() => buildShapeEntries(resources), [resources]);
 
   return (
-    <Scroll className="h-full p-lg">
-      <Stack gap="xl">
-        <Stack gap="sm">
-          <Stack direction="row" gap="none" justify="end">
-            <Button variant="outline" onClick={() => refresh()}>
-              Refresh
-            </Button>
-          </Stack>
-          <Caveat />
+    <Stack gap="xl">
+      <Stack gap="sm">
+        <Stack direction="row" gap="none" justify="end">
+          <Button variant="outline" onClick={() => refresh()}>
+            Refresh
+          </Button>
         </Stack>
-        <NotifyProvenanceSection entries={notifyEntries} />
-        <CapturedIndexSection entries={captured} />
-        <CeilingSection ceiling={ceiling} />
-        <FreshnessSection entries={freshnessEntries} />
-        <ShapeSection entries={shapeEntries} />
+        <Caveat />
       </Stack>
-    </Scroll>
+      <NotifyProvenanceSection entries={notifyEntries} />
+      <CapturedIndexSection entries={captured} />
+      <CeilingSection ceiling={ceiling} />
+      <FreshnessSection entries={freshnessEntries} />
+      <ShapeSection entries={shapeEntries} />
+    </Stack>
   );
 }
 

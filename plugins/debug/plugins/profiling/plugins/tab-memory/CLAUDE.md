@@ -121,12 +121,11 @@ The bell re-rings at most every 6 h.
     - `Core.Root` → `TabMemoryRecorder`
     - `Pane.Register` "debug-tab-memory"
     - `DebugApp.Sidebar` "Tab memory"
-  - Uses: 30 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 29 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `stats/commits` ×7
     - `primitives/pane` ×4
     - `primitives/data-view` ×3
     - `infra/endpoints` ×2
-    - `primitives/css/spacing` ×2
     - `primitives/css/text` ×2
     - `apps-core/tabs.peekTabSets`
     - `apps/debug/shell.DebugApp`
@@ -134,6 +133,7 @@ The bell re-rings at most every 6 h.
     - `network/live/live-state.ResourceErrorInline`
     - `network/live.useLive`
     - `primitives/css/placeholder.Placeholder`
+    - `primitives/css/spacing.Stack`
     - `primitives/networking/page-transport.pageTransport`
     - `primitives/relative-time.RelativeTime`
     - `primitives/scope/automation.AUTOMATED_BROWSER`

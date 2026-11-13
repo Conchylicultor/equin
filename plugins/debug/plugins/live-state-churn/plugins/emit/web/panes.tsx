@@ -19,7 +19,7 @@ export const liveStateEmitPane = Pane.define({
 
 function LiveStateEmitBody(): ReactElement {
   return (
-    <PaneChrome pane={liveStateEmitPane}>
+    <PaneChrome pane={liveStateEmitPane} inset="document">
       <EmitPane />
     </PaneChrome>
   );

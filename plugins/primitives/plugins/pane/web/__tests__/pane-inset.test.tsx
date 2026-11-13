@@ -56,7 +56,7 @@ const PUBLISH = "[--pane-inset:var(--content-inset)]";
 let store: PaneStore;
 
 function mount(
-  props: { inset?: "chrome" | "content"; header?: "card" },
+  props: { inset?: "chrome" | "content" | "document"; header?: "card" },
   wrap: (node: ReactNode) => ReactNode = (n) => n,
 ) {
   return render(
@@ -141,6 +141,34 @@ describe("PaneChrome inset", () => {
     const header = part(container, "pane.header");
     expect(header.className).toContain("pr-floating-bar-pane");
     expect(header.className).toContain("anchor-floating-bar-band");
+  });
+
+  it('inset="document" opens the region inside the body scroller, never on it or the header', () => {
+    const { container } = mount({ inset: "document" });
+    const header = part(container, "pane.header");
+    expect(header.className).not.toContain("rail-document");
+    // The header stands on the document edge too (one token, no jog).
+    expect(header.className).toContain("pane-header-document");
+    const owners = container.querySelectorAll(".rail-document");
+    expect(owners).toHaveLength(1);
+    expect(owners[0]?.textContent).toBe("body");
+    // Not the scroller itself: a sticky offset counts from a scroller's padding
+    // edge, so the region is a box inside it, filling it.
+    const region = owners[0] as HTMLElement;
+    expect(region.className).toContain("min-h-full");
+    expect(region.parentElement?.className ?? "").not.toContain(
+      "rail-document",
+    );
+    // Only the body's region: the root publishes no pane-wide inset.
+    expect(root(container).className).not.toContain(PUBLISH);
+  });
+
+  it("a default pane opens no document region", () => {
+    const { container } = mount({});
+    expect(container.querySelector(".rail-document")).toBeNull();
+    expect(part(container, "pane.header").className).not.toContain(
+      "pane-header-document",
+    );
   });
 
   it("a card header keeps its own row inset; only the root changes", () => {

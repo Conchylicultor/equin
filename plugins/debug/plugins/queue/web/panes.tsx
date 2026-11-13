@@ -21,7 +21,6 @@ import {
   ResourceErrorInline,
 } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { SegmentedControl } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
-import { Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import { queueRoute } from "../core";
@@ -234,16 +233,14 @@ function JobDetailBody(): ReactElement {
   const { jobRowId } = jobDetailPane.useParams();
   const key = parseJobKey(jobRowId);
   return (
-    <PaneChrome pane={jobDetailPane}>
-      <Inset pad="md">
+    <PaneChrome pane={jobDetailPane} inset="document">
         {key === null ? (
           <Text tone="muted">This job is no longer listed.</Text>
         ) : key.kind === "live" ? (
           <QueueRowDetail graphileId={key.id} />
         ) : (
           <RunDetailById runId={key.id} />
-        )}
-      </Inset>
+      )}
     </PaneChrome>
   );
 }
@@ -372,10 +369,8 @@ function DeadDetailBody(): ReactElement {
   const { deadId } = deadDetailPane.useParams();
   const job = rowOrStale(useLive(deadJobs, { id: deadId }));
   return (
-    <PaneChrome pane={deadDetailPane}>
-      <Inset pad="md">
-        {job !== undefined ? <DeadJobDetail job={job} /> : <Loading />}
-      </Inset>
+    <PaneChrome pane={deadDetailPane} inset="document">
+      {job !== undefined ? <DeadJobDetail job={job} /> : <Loading />}
     </PaneChrome>
   );
 }
@@ -411,8 +406,7 @@ function EmissionDetailBody(): ReactElement {
   const emission = rowOrStale(useLive(eventEmissions, { id: emissionId }));
   const triggers = useLive(eventTriggers);
   return (
-    <PaneChrome pane={emissionDetailPane}>
-      <Inset pad="md">
+    <PaneChrome pane={emissionDetailPane} inset="document">
         {emission !== undefined ? (
           <EmissionDetail
             emission={emission}
@@ -425,8 +419,7 @@ function EmissionDetailBody(): ReactElement {
           />
         ) : (
           <Loading />
-        )}
-      </Inset>
+      )}
     </PaneChrome>
   );
 }
@@ -474,14 +467,12 @@ function TriggerDetailBody(): ReactElement {
     ready: (rows) => rows.find((t) => t.id === triggerId),
   });
   return (
-    <PaneChrome pane={triggerDetailPane}>
-      <Inset pad="md">
+    <PaneChrome pane={triggerDetailPane} inset="document">
         {trigger !== undefined ? (
           <TriggerDetail trigger={trigger} />
         ) : (
           <Loading />
-        )}
-      </Inset>
+      )}
     </PaneChrome>
   );
 }

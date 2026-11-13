@@ -16,6 +16,30 @@ in a plain pane looks unchanged. A table inside a host that opened a rail region
 (any `detail-sections` card body, the app-shell sidebar) follows that host's rail
 instead — which is the point: the table stops being the one band that ignores it.
 
+**In a region that already PAID its rail** (a `PaneChrome inset="document"`
+body, a `detail-sections` card body — `rail-<step>` / `rail-document` owe
+nothing), a follower would pay 0 and the rows would sit flush on the rail with
+no gutter for their fills. So a grid / outline table's box cancels what its
+region paid (`REGION_BLEED`: a negative inline margin of rail − owed, to the
+region's edge, published as `--dt-bleed-*`) and its grid hands it back as
+owed (`REGION_OWED`). In the grid look (`data-table.css`, `dt-grid`) the grid
+then pads itself by the bleed and every full-span row takes the same negative
+margin: a subgrid row's margin and padding add to its edge cells' margins, so
+the -bleed and the row's +rail cancel there and **no column moves or narrows**
+— rows, rules, fills and the sticky lead cell span the region, text on the
+rail. (Paying the rail on the row alone takes it out of the first and last
+tracks: Studio's fixed 2rem `#` column lost 16px and wrapped its label.) A
+grid table bleeding in a CLOSED region (`--rail-edge: closed` — a section card
+body, ending at the card's edge) draws no rule under its last row: edge to edge
+right above the region's block padding it would read as an empty row. In an
+OPEN region (`rail-document`: a pane body that runs on past the table) the
+closing rule stays (a container style query on the registered
+`--dt-bleed-start` and on `--rail-edge`). An outline row is a pill on the rail
+(its own margin), so it takes only the owed rail. Under a `rail-owe-` owner or
+with no region the paid amount is 0 and nothing changes. The owed half sits on
+the grid, not the box: declared on the box it would be what the box's own
+margin reads. A soft table keeps its own frame (`SOFT_BOX`).
+
 `density="compact"` swaps `py-row` for `py-row-compact` (the `padRowCompactY`
 density token) on every subgrid row — still one value for all rows, so
 alignment holds.

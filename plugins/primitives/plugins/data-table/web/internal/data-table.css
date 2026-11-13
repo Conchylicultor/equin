@@ -1,0 +1,52 @@
+/* A grid / outline table in a region that already PAID its rail (a document
+   pane body, a section card body): the table's box cancels that inset
+   (`REGION_BLEED`, a negative margin) and publishes what it cancelled as
+   `--dt-bleed-*`. The rows then reach the region's edge WITHOUT moving a
+   single column:
+
+   - the grid pads itself by the bleed, so its tracks keep the width and the
+     position they had before the box bled;
+   - every full-span row (header, data row, group band, footer) takes the same
+     negative margin, so its box — its rule, its fills — spans the region;
+   - the row pays the rail as padding (`rail-follow`, owed = the rail).
+
+   A subgrid row's margin and padding are added to the margins of the cells in
+   its edge tracks, so the -bleed and +rail cancel out on those cells: the
+   tracks are exactly the region's width as before. (Paying the rail on the
+   row alone, without the grid's padding and the row's margin, takes it out of
+   the first and last tracks: a fixed 2rem `#` column lost 16px and wrapped
+   its label.)
+
+   Registered as a length so an unpaid region reads 0px (nothing moves), and
+   so the last-rule query below can compare it. */
+@property --dt-bleed-start {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 0px;
+}
+@property --dt-bleed-end {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 0px;
+}
+
+.dt-grid {
+  padding-inline: var(--dt-bleed-start, 0px) var(--dt-bleed-end, 0px);
+}
+.dt-grid > * {
+  margin-inline: calc(-1 * var(--dt-bleed-start, 0px)) calc(-1 * var(--dt-bleed-end, 0px));
+}
+
+/* A table bleeding in a CLOSED region (a section card body: it ends at the
+   card's edge) draws no rule under its last row — edge to edge right above the
+   region's block padding and the card's border it would read as an empty row.
+   In an OPEN region (`rail-document`: a pane body that runs on into whatever
+   follows the table) the closing rule stays, as it does where the table does
+   not bleed at all. Every rail region publishes `--rail-edge` (`closed`, or
+   `open` for the document region); every element is a style container, so the
+   query reads the grid's values. */
+@container (not style(--dt-bleed-start: 0px)) and (not style(--rail-edge: open)) {
+  .dt-grid > :nth-last-child(1 of [data-row-key]) {
+    border-bottom-color: transparent;
+  }
+}

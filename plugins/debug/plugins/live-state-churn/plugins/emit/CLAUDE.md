@@ -12,18 +12,17 @@
     - `Pane.Register` "debug-live-state-emit"
     - `DebugApp.Sidebar` "Live-State Emit"
     - `Core.Root` → `EmitInstaller`
-  - Uses: 27 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×7
     - `infra/endpoints` ×4
     - `network/live/live-state` ×3
     - `primitives/pane` ×3
-    - `primitives/css/spacing` ×2
     - `primitives/css/text` ×2
     - `apps/debug/shell.DebugApp`
     - `network/live.useLive`
     - `primitives/css/badge.Badge`
     - `primitives/css/placeholder.Placeholder`
-    - `primitives/css/scroll.Scroll`
+    - `primitives/css/spacing.Stack`
     - `ui/icons.Icon`
   - Exports (values): `liveStateEmitPane`
 - Server:

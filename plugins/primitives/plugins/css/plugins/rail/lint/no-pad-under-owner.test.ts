@@ -30,8 +30,20 @@ ruleTester.run("no-pad-under-owner", rule, {
     {
       code: `const el = <PopoverContent><Stack><Row className="px-sm" /></Stack></PopoverContent>;`,
     },
+    // A pane on the default inset owns nothing: its body pads itself.
+    {
+      code: `const el = <PaneChrome pane={p}><Stack className="p-md" /></PaneChrome>;`,
+    },
+    {
+      code: `const el = <PaneChrome pane={p} inset="document"><Stack gap="sm" /></PaneChrome>;`,
+    },
   ],
   invalid: [
+    // A document pane already pays the body's inset.
+    {
+      code: `const el = <PaneChrome pane={p} inset="document"><Stack className="p-md" /></PaneChrome>;`,
+      errors: [{ messageId: "padUnderOwner" }],
+    },
     // Logical-side padding pays it too.
     {
       code: `const el = <Column inset="sm" footer={<div className="ps-md" />} />;`,

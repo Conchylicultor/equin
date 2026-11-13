@@ -60,7 +60,7 @@ function ConfigNavBody() {
 
 function ConfigDetailBody() {
   return (
-    <PaneChrome pane={configDetailPane}>
+    <PaneChrome pane={configDetailPane} inset="document">
       <ConfigDetail />
     </PaneChrome>
   );

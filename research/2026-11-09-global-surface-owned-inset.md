@@ -335,3 +335,53 @@ Where the implementation diverged from the design above, and why:
 - The menu search's room leaves control-panel hosts alone (the field-search
   list, hosted options, the dependency "+ Add" search stay at 4px): they bleed
   their rows instead (`.cp-panel &`).
+
+## Slice 2 — as implemented (2026-11-12)
+
+- **`PaneInset "document"`** (`pane-chrome.tsx`): a box inside the body's
+  `PaneScroll` wears `rail-document` (a new `@utility` beside `rail-panel`:
+  publishes and pays the rail at `--document-pad-x`, block
+  `--document-pad-top` / `--document-pad-bottom` — the density group's existing
+  document tokens, the Markdown view's margins). Inside the scroller, never on
+  it: a sticky offset counts from the scroller's padding edge, so a padded
+  scroller pinned a table's header and first column a rail in (the first cut
+  did; review caught the first column's text 16px off). The box is a one-row
+  grid at least as tall as the scroller, so a child's `h-full` still resolves.
+  No new prop, no new token.
+- **The header stands on the same edge**: `px-chrome-pane` /
+  `pr-floating-bar-pane` read `--pane-header-pad-*` first, which
+  `pane-header-document` (on a document pane's header element only, so a
+  nested pane keeps its own) points at `--document-pad-x`; a leading icon
+  control hangs into it by the `sm` icon button's inset, so its glyph is on
+  the edge. Before, the title
+  stayed at the chrome pad (12px) while the body moved to 16px — a 4px jog.
+- **Tables keep their gutter** (data-table "Row inset"): in a region that
+  paid its rail a `rail-follow` row owes 0, so rows sat flush on the rail with
+  no room for their fills. A grid / outline table's box now cancels what its
+  region paid (negative margin, rail − owed) and its grid hands it back as
+  owed: rows and rules full-bleed, cell text on the rail. In the grid look
+  the grid pads by the bleed and each row takes the matching negative margin,
+  so the bleed never comes out of the edge tracks (a first cut paid the rail
+  on the rows alone: Studio's fixed `#` column lost 16px, wrapped its label
+  and grew the header 28 → 44px). A bleeding table's last row draws no rule. Zero change where
+  nothing was paid (owe regions, plain panes). This also applies to tables in
+  `detail-sections` card bodies (`rail-lg`), which had the same flush rows.
+- **`rail/no-pad-under-owner`** covers `PaneChrome inset="document"`'s direct
+  children (same file).
+- **Migrated** (17 panes; each lost its own `p-*` / `<Inset>` and, where it
+  had one, the redundant inner `Scroll`): config detail, report detail,
+  read-set, queue job / dead / emission / trigger detail, Claude CLI call
+  detail, health monitor, heap, tab memory, live-state health, live-state
+  emit, op detail, Studio compare, mail message reader, conversation summary,
+  workflow node, server create form. Every arm of a migrated pane (loading,
+  error, empty) shares the region, so a pane no longer jumps between states.
+- **Left for a per-pane decision** (task-1794490549-cbyqt4): reading columns
+  (`mx-auto max-w-*` + `px-xl/2xl` — a document region would add to a
+  centred column), `xl` bodies, padded-pill row lists (attempt pane, agents
+  root, compositions list — DataView candidates, not documents), bodies
+  holding a DataView, split / tool-shaped panes (memory, profiling, recovery,
+  render profiler), and branch-only paddings. The profiling and recovery band
+  debts moved to that task; the config diffs' band is a bordered box's header,
+  not the pane's, so its debt moved to the card follow-up (task-1794239361-kagy27).
+- The review prototype is a slider per migrated pane (light/dark as the
+  worktree renders, 1280×900).

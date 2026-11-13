@@ -17,7 +17,6 @@
     - `network/live.useLive`
     - `network/live/live-state.matchResource`
     - `network/live/live-state.ResourceErrorInline`
-    - `primitives/css/spacing.Inset`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.SectionLabel`
     - `primitives/css/text.Text`

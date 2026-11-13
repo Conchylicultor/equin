@@ -10,10 +10,7 @@ import {
   SectionLabel,
   Text,
 } from "@plugins/primitives/plugins/css/plugins/text/web";
-import {
-  Stack,
-  Inset,
-} from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
   DataTable,
@@ -60,77 +57,75 @@ export function HeapPanel(): ReactElement {
   const result = capture.data;
 
   return (
-    <Inset pad="lg">
-      <Stack gap="xl">
-        <Stack as="section" gap="sm">
-          <Stack direction="row" align="center" gap="sm">
-            <SectionLabel>Heap (bun:jsc heapStats)</SectionLabel>
-            <Button variant="outline" onClick={() => stats.refresh()}>
-              Refresh
-            </Button>
-          </Stack>
-          {stats.status === "loading" ? (
-            <Loading variant="spinner" label="Measuring the heap…" />
-          ) : stats.status === "error" ? (
-            <ResourceErrorInline
-              variant="block"
-              subject="heap stats"
-              error={stats.error}
-              refetch={stats.refetch}
-            />
-          ) : (
-            <Text variant="caption" tone="muted">
-              {`${stats.data.physFootprintMb.toFixed(0)} MB footprint · ${stats.data.heapSizeMb.toFixed(
-                1,
-              )} MB heap (cap ${stats.data.heapCapacityMb.toFixed(
-                1,
-              )} MB) · ${stats.data.objectCount.toLocaleString()} objects · ${
-                stats.data.truncated
-                  ? `the ${HEAP_TYPES_MAX} most numerous types`
-                  : `${stats.data.types.length} types`
-              }`}
-            </Text>
-          )}
+    <Stack gap="xl">
+      <Stack as="section" gap="sm">
+        <Stack direction="row" align="center" gap="sm">
+          <SectionLabel>Heap (bun:jsc heapStats)</SectionLabel>
+          <Button variant="outline" onClick={() => stats.refresh()}>
+            Refresh
+          </Button>
         </Stack>
-
-        <Stack as="section" gap="sm">
-          <SectionLabel>Full heap snapshot (heavy)</SectionLabel>
+        {stats.status === "loading" ? (
+          <Loading variant="spinner" label="Measuring the heap…" />
+        ) : stats.status === "error" ? (
+          <ResourceErrorInline
+            variant="block"
+            subject="heap stats"
+            error={stats.error}
+            refetch={stats.refetch}
+          />
+        ) : (
           <Text variant="caption" tone="muted">
-            Walks the entire object graph synchronously — blocks the backend
-            event loop for seconds on a multi-GB heap and writes a large{" "}
-            .heapsnapshot file to disk (V8 format). Load it offline in Chrome
-            DevTools (Memory tab) or VS Code. Manual, on-demand only.
+            {`${stats.data.physFootprintMb.toFixed(0)} MB footprint · ${stats.data.heapSizeMb.toFixed(
+              1,
+            )} MB heap (cap ${stats.data.heapCapacityMb.toFixed(
+              1,
+            )} MB) · ${stats.data.objectCount.toLocaleString()} objects · ${
+              stats.data.truncated
+                ? `the ${HEAP_TYPES_MAX} most numerous types`
+                : `${stats.data.types.length} types`
+            }`}
           </Text>
-          <Stack direction="row" align="center" gap="sm">
-            <Button
-              variant="destructive"
-              onClick={() => void capture.mutateAsync({})}
-              disabled={capture.isPending}
-            >
-              {capture.isPending ? "Capturing…" : "Capture full snapshot"}
-            </Button>
-          </Stack>
-          {result ? (
-            <Text variant="caption" tone="muted">
-              {`Wrote ${formatBytes(result.sizeBytes)} → ${result.path}`}
-            </Text>
-          ) : null}
-        </Stack>
-
-        {/* The loading and failed states render in the summary above. */}
-        {matchResource(stats, {
-          loading: () => null,
-          error: () => null,
-          ready: (data) => (
-            <DataTable
-              data={data.types}
-              columns={COLUMNS}
-              rowKey={(r) => r.type}
-              emptyLabel="No objects on the heap."
-            />
-          ),
-        })}
+        )}
       </Stack>
-    </Inset>
+
+      <Stack as="section" gap="sm">
+        <SectionLabel>Full heap snapshot (heavy)</SectionLabel>
+        <Text variant="caption" tone="muted">
+          Walks the entire object graph synchronously — blocks the backend event
+          loop for seconds on a multi-GB heap and writes a large .heapsnapshot
+          file to disk (V8 format). Load it offline in Chrome DevTools (Memory
+          tab) or VS Code. Manual, on-demand only.
+        </Text>
+        <Stack direction="row" align="center" gap="sm">
+          <Button
+            variant="destructive"
+            onClick={() => void capture.mutateAsync({})}
+            disabled={capture.isPending}
+          >
+            {capture.isPending ? "Capturing…" : "Capture full snapshot"}
+          </Button>
+        </Stack>
+        {result ? (
+          <Text variant="caption" tone="muted">
+            {`Wrote ${formatBytes(result.sizeBytes)} → ${result.path}`}
+          </Text>
+        ) : null}
+      </Stack>
+
+      {/* The loading and failed states render in the summary above. */}
+      {matchResource(stats, {
+        loading: () => null,
+        error: () => null,
+        ready: (data) => (
+          <DataTable
+            data={data.types}
+            columns={COLUMNS}
+            rowKey={(r) => r.type}
+            emptyLabel="No objects on the heap."
+          />
+        ),
+      })}
+    </Stack>
   );
 }

@@ -105,7 +105,7 @@ function CompareBody(): ReactElement {
   }, [manifests]);
 
   return (
-    <PaneChrome pane={comparePane}>
+    <PaneChrome pane={comparePane} inset="document">
       <CompareView />
     </PaneChrome>
   );

@@ -58,6 +58,7 @@ below.
 | `--rail-start` / `--rail-end` | the inset **already applied** between my content and the region edge. What a bleeder cancels. |
 | `--rail-owed-start` / `--rail-owed-end` | the inset a follower must **still apply itself**. `0` when the owner paid; the rail when it published without paying. |
 | `--rail-block-start` / `--rail-block-end` | block padding, per edge — `scroll-fade`'s strips read them |
+| `--rail-edge` | `closed` (every region class: its content ends at a box edge — a card, a panel) or `open` (`rail-document`: a pane body that runs on). A grid table reads it to decide whether its bleeding last row keeps its closing rule |
 | `--rail-text-start` / `--rail-text-end` | where the region's TEXT starts: the rail, plus one row pad (`--pad-row-x`) in a row host. What a band or label re-applies |
 
 **The text rail.** In a region of padded rows (menu rows' `px-row`, `Row`'s
@@ -94,6 +95,7 @@ is the model behind them.
 | class | does |
 | --- | --- |
 | `rail-<step>` · `rail-x-` · `rail-y-` | open a region: publish **and** pay. `rail-x-none` is how *flush* is spelled — a region of width zero, which is a different state from no region at all |
+| `rail-panel` · `rail-document` | the same, at a role's token instead of a ramp step: a popover's `--popover-pad`; a document pane body's reading inset (`--document-pad-x` / `-top` / `-bottom`, worn by `PaneChrome inset="document"`) |
 | `rail-owe-<step>` | open a region and hand the bill on: publish, pay nothing. The inverted topology; the app-shell sidebar is its live user |
 | `rail-follow` | pay what is owed, publish nothing. Falls back owed → rail → pane inset → chrome pad |
 | `rail-bleed` | the escape: cancel and re-apply, as one class |
@@ -192,8 +194,9 @@ Three narrow rules, each naming its replacement
   `py-*`. A strip whose inline inset is the rail's (`rail-band`, `rail-bleed`,
   `rail-follow`) is not ad hoc.
 - `rail/no-pad-under-owner` — a `p-*` / `px-*` on the root of content placed in
-  a region owner (a `Column inset` region, a padded overlay panel's children
-  and strips), same file only.
+  a region owner (a `Column inset` region, a `PaneChrome inset="document"`
+  pane's children, a padded overlay panel's children and strips), same file
+  only.
 
 Sites that predate them carry `-- debt (task-…)` disables.
 

@@ -145,7 +145,7 @@ function ConfigDetailInner({
   });
 
   return (
-    <Stack gap="sm" className="p-md">
+    <Stack gap="sm">
       <ScopeTabs
         storePath={registration.storePath}
         scopeId={scopeId}

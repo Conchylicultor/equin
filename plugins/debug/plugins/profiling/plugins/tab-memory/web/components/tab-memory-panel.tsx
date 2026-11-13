@@ -23,10 +23,7 @@ import {
   SectionLabel,
   Text,
 } from "@plugins/primitives/plugins/css/plugins/text/web";
-import {
-  Inset,
-  Stack,
-} from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { formatDuration } from "@plugins/fields/plugins/duration/core";
@@ -326,22 +323,16 @@ export function TabMemoryPanel(): ReactElement {
 
   if (result.status === "error") {
     return (
-      <Inset pad="lg">
-        <ResourceErrorInline
-          variant="block"
-          subject="tab memory samples"
-          error={result.error}
-          refetch={result.refetch}
-        />
-      </Inset>
+      <ResourceErrorInline
+        variant="block"
+        subject="tab memory samples"
+        error={result.error}
+        refetch={result.refetch}
+      />
     );
   }
   if (result.status === "loading") {
-    return (
-      <Inset pad="lg">
-        <Placeholder>Loading…</Placeholder>
-      </Inset>
-    );
+    return <Placeholder>Loading…</Placeholder>;
   }
   const data = result.data;
   const domain: [number, number] = [
@@ -351,60 +342,57 @@ export function TabMemoryPanel(): ReactElement {
   const selectedPage = data.pages.find((p) => p.pageId === selected);
 
   return (
-    <Inset pad="lg">
-      <Stack gap="xl">
-        <Stack gap="sm">
-          <SectionLabel>Chrome renderers — footprint, last 12 h</SectionLabel>
-          <Text variant="caption" tone="muted">
-            Your Chrome's renderer processes among the machine's largest, by pid
-            (main's health-owners log, every 30 s). A climbing line is the
-            process to name; find the page climbing with it below.
-          </Text>
-          <SeriesChart
-            series={rendererSpecs(data.renderers)}
-            domain={domain}
-            format={fmtMb}
-            emptyText="No renderer readings with a pid yet."
-          />
-        </Stack>
-        <Stack gap="sm">
-          <SectionLabel>
-            Pages — JS heap (the {MAX_PAGE_LINES} largest, and the selected one)
-          </SectionLabel>
-          <Text variant="caption" tone="muted">
-            Each page (one load of one browser tab) samples itself every 5
-            minutes. Chrome refreshes the JS heap figure only about every 20
-            minutes; DOM nodes, canvases and images are exact. A renderer that
-            climbs while no page's heap does is growing natively — then the
-            pages alive through the climb, and what they held open, are the
-            candidates.
-          </Text>
-          <SeriesChart
-            series={pageSpecs(data.pages, selected)}
-            domain={domain}
-            format={fmtMb}
-            emptyText="No page has sampled itself yet (the first sample is 30 s after a page loads)."
-          />
-        </Stack>
-        {selectedPage !== undefined && <SelectedPage page={selectedPage} />}
-        <DataView<PageSeries>
-          storageKey={PAGES_VIEW}
-          rows={data.pages}
-          readiness={result}
-          rowKey={(p) => p.pageId}
-          searchAccessor={(p) =>
-            `${pageLabel(p.latest)} ${p.worktree} ${heldApps(p.latest)}`
-          }
-          fields={fields}
-          views={["table", "list"]}
-          density="compact"
-          selectedRowId={selected ?? undefined}
-          onRowActivate={(p) =>
-            setSelected((cur) => (cur === p.pageId ? null : p.pageId))
-          }
-          emptyState="No page sampled itself in the last 12 h."
+    <Stack gap="xl">
+      <Stack gap="sm">
+        <SectionLabel>Chrome renderers — footprint, last 12 h</SectionLabel>
+        <Text variant="caption" tone="muted">
+          Your Chrome's renderer processes among the machine's largest, by pid
+          (main's health-owners log, every 30 s). A climbing line is the process
+          to name; find the page climbing with it below.
+        </Text>
+        <SeriesChart
+          series={rendererSpecs(data.renderers)}
+          domain={domain}
+          format={fmtMb}
+          emptyText="No renderer readings with a pid yet."
         />
       </Stack>
-    </Inset>
+      <Stack gap="sm">
+        <SectionLabel>
+          Pages — JS heap (the {MAX_PAGE_LINES} largest, and the selected one)
+        </SectionLabel>
+        <Text variant="caption" tone="muted">
+          Each page (one load of one browser tab) samples itself every 5
+          minutes. Chrome refreshes the JS heap figure only about every 20
+          minutes; DOM nodes, canvases and images are exact. A renderer that
+          climbs while no page's heap does is growing natively — then the pages
+          alive through the climb, and what they held open, are the candidates.
+        </Text>
+        <SeriesChart
+          series={pageSpecs(data.pages, selected)}
+          domain={domain}
+          format={fmtMb}
+          emptyText="No page has sampled itself yet (the first sample is 30 s after a page loads)."
+        />
+      </Stack>
+      {selectedPage !== undefined && <SelectedPage page={selectedPage} />}
+      <DataView<PageSeries>
+        storageKey={PAGES_VIEW}
+        rows={data.pages}
+        readiness={result}
+        rowKey={(p) => p.pageId}
+        searchAccessor={(p) =>
+          `${pageLabel(p.latest)} ${p.worktree} ${heldApps(p.latest)}`
+        }
+        fields={fields}
+        views={["table", "list"]}
+        density="compact"
+        selectedRowId={selected ?? undefined}
+        onRowActivate={(p) =>
+          setSelected((cur) => (cur === p.pageId ? null : p.pageId))
+        }
+        emptyState="No page sampled itself in the last 12 h."
+      />
+    </Stack>
   );
 }

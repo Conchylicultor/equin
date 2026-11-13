@@ -25,10 +25,17 @@
     min-width: 100%;
   }
 
+  /* Pinned inside the region the path runs through: a region that APPLIED a
+     rail (a `PaneChrome inset="document"` body — rail less what it still
+     owes; 0 with no region or an owing one) pads the path by it, so the
+     pinned box keeps that inset on both sides instead of running into it. */
   :where([data-scroll-x-path] > :not([data-scroll-x-path], [data-scrolls-x])) {
     position: sticky;
-    left: 0;
-    max-width: 100cqi;
+    left: calc(var(--rail-start, 0px) - var(--rail-owed-start, var(--rail-start, 0px)));
+    max-width: calc(
+      100cqi - var(--rail-start, 0px) + var(--rail-owed-start, var(--rail-start, 0px)) -
+        var(--rail-end, 0px) + var(--rail-owed-end, var(--rail-end, 0px))
+    );
   }
 }
 

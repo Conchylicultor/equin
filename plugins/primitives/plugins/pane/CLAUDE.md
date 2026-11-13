@@ -432,6 +432,8 @@ It forwards `ref` and `Scroll`'s props (`hideScrollbar`, `isolate`, `as`,
     republished as `--chrome-mask`) and `headerGlass` (frosted mask).
 - **`inset="content"`** — aligns a DataView toolbar and content on ONE
   pane-relative edge (below). Default `"chrome"`.
+- **`inset="document"`** — the pane owns its body's inset (below): for a
+  detail / form / report body. Content inside declares no padding.
 - **`header="card"`** — same header row as a floating card (below). Excludes
   `floatingHeader` / `headerTheme` / `headerGlass` (type error).
 - **`titleOnly`** — only the title cell; the host paints its actions in its
@@ -460,6 +462,41 @@ Tokens and parts:
   the app); card rows use `chromePaneCardH` /
   `chromePaneCardPadStart`/`End`.
 - Header row is `data-part="pane.header"`, title box `data-part="pane.title"`.
+
+### `inset="document"`
+
+The body's scroller opens a `rail-document` region
+([`rail`](../css/plugins/rail/CLAUDE.md)): it pays and publishes the density
+group's reading inset — `documentPadX` (default `lg`, 16px) inline,
+`documentPadTop` / `documentPadBottom` (default `md`) block — the margins a
+rendered Markdown file wears. So:
+
+- The body's content declares **no** padding of its own (`p-*`, `<Inset>`):
+  it lands on the rail by doing nothing. `rail/no-pad-under-owner` flags a
+  padded root written in the same file.
+- A strip that must reach the pane edge (a rule) is a `Band` or `rail-bleed`.
+- The header stands on the same edge: `PaneChrome` puts
+  `pane-header-document` on its header, which points the header's inline
+  inset (`px-chrome-pane`, and the end inset under the floating bar's safe
+  area) at `--document-pad-x` — one token for the title and the body text, so
+  they cannot jog. A leading icon control (the sidebar toggle, Back) hangs
+  into that inset by its own (`[data-pane-lead]`, pulled by the `sm` icon
+  button's inset), so its glyph — not its box — stands on the edge. A
+  `header="card"` row keeps its own inset (it floats).
+- A scroller nested in the body clips a table's bleed to its own box (rows
+  then sit flush on the rail): the pane's scroller is the one scroll.
+- A grid / outline `DataTable` in the body still bleeds its rows to the pane
+  edge, text on the rail (data-table's "Row inset").
+- Never on a DataView / DataTable pane (its bands are `rail-follow` with
+  full-bleed fills: a paying owner would inset them) — keep `"chrome"` /
+  `"content"` there — nor on a full-bleed canvas, editor, frame or code view.
+- The region is a box INSIDE the body's scroller, never the scroller: a
+  sticky offset counts from its scroller's padding edge, so a padded scroller
+  pins a table's header row and first column a rail in, with content showing
+  past them. The box is a one-cell grid at least as tall as the scroller, so a
+  child's `h-full` (a centred empty state) still resolves; its column is
+  `minmax(0, 1fr)`, so a no-wrap line cannot widen it past the pane. Under
+  `floatingHeader` it only pads (the header shares the scroller).
 
 ### `header="card"`
 
@@ -993,8 +1030,14 @@ with an empty route.
     - `ui/tokens/density --chrome-pane-card-pad-end`
     - `ui/tokens/density --chrome-pane-card-pad-start`
     - `ui/tokens/density --content-inset`
+    - `ui/tokens/density --control-height-sm`
+    - `ui/tokens/density --control-icon-sm`
+    - `ui/tokens/density --document-pad-bottom`
+    - `ui/tokens/density --document-pad-top`
+    - `ui/tokens/density --document-pad-x`
     - `ui/tokens/density --space-2xs`
     - `ui/tokens/density --space-md`
+    - `ui/tokens/density --space-sm`
     - `ui/tokens/shape --spacing`
   - Imported by: 207 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×77

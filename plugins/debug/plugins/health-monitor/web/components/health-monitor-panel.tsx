@@ -28,10 +28,7 @@ import {
   SectionLabel,
   Text,
 } from "@plugins/primitives/plugins/css/plugins/text/web";
-import {
-  Stack,
-  Inset,
-} from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Rigid } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
@@ -559,28 +556,21 @@ export function HealthMonitorPanel(): ReactElement {
 
   if (result.status === "error") {
     return (
-      <Inset pad="lg">
-        <ResourceErrorInline
+      <ResourceErrorInline
           variant="block"
           subject="health samples"
           error={result.error}
           refetch={result.refetch}
-        />
-      </Inset>
+      />
     );
   }
   if (result.status === "loading") {
-    return (
-      <Inset pad="lg">
-        <Placeholder>Loading…</Placeholder>
-      </Inset>
-    );
+    return <Placeholder>Loading…</Placeholder>;
   }
   const data = result.data;
 
   return (
-    <Inset pad="lg">
-      <Stack gap="xl">
+    <Stack gap="xl">
         <HostSection samples={data.hostSamples} />
         <OwnersSection samples={data.ownerSamples} />
         <BackendsSection series={data.series} now={data.readAtMs} />
@@ -591,7 +581,6 @@ export function HealthMonitorPanel(): ReactElement {
         ) : (
           data.series.map((s) => <BackendSection key={s.worktree} series={s} />)
         )}
-      </Stack>
-    </Inset>
+    </Stack>
   );
 }

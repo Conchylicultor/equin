@@ -46,7 +46,7 @@ export function ConflictDiff({
         as="div"
         variant="caption"
         tone="muted"
-        // eslint-disable-next-line rail/no-adhoc-band -- debt (task-1794237886-rfwccn): a Band only once the config detail pane owns its inset — today it hand-pads, so a Band here would sit on a different edge than its content
+        // eslint-disable-next-line rail/no-adhoc-band -- debt (task-1794239361-kagy27): the header strip of a bordered box, not of the pane — a Band would bleed to the pane edge; it becomes the box's own header once a card owns its inset
         className="border-b border-border bg-muted/40 px-md py-xs font-medium"
       >
         <Stack direction="row" align="center" justify="between" gap="none">

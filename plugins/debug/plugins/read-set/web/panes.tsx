@@ -19,7 +19,7 @@ export const readSetPane = Pane.define({
 
 function ReadSetBody(): ReactElement {
   return (
-    <PaneChrome pane={readSetPane}>
+    <PaneChrome pane={readSetPane} inset="document">
       <ReadSetView />
     </PaneChrome>
   );

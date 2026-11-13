@@ -13,7 +13,6 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import { SingleLineProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { ServerResourcesSection } from "./server-resources-section";
@@ -43,14 +42,12 @@ export function LiveStateHealth(): ReactElement {
   );
 
   return (
-    <Scroll className="h-full p-lg">
-      <Stack gap="xl">
+    <Stack gap="xl">
         <SocketsSection sockets={snapshot.sockets} />
         <TransportSection transport={snapshot.transport} />
         <ResourcesSection subs={subs} />
         <ServerResourcesSection />
-      </Stack>
-    </Scroll>
+    </Stack>
   );
 }
 

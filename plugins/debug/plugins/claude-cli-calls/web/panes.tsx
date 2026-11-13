@@ -12,8 +12,6 @@ import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
 import { claudeCliCalls } from "@plugins/infra/plugins/claude-cli/core";
 import { ClaudeCliCallDetail } from "@plugins/infra/plugins/claude-cli/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
-import { Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { CallsView } from "./components/calls-view";
 
 const callsRoute = defineRoute({
@@ -75,16 +73,8 @@ function CallDetailBody(): ReactElement {
   // mounted; a failed re-read keeps the row as last seen (`rowOrStale`).
   const call = rowOrStale(useLive(claudeCliCalls, { id: callId }));
   return (
-    <PaneChrome pane={claudeCliCallDetailPane}>
-      {call !== undefined ? (
-        <Scroll axis="y" fill>
-          <Inset pad="md">
-            <ClaudeCliCallDetail call={call} />
-          </Inset>
-        </Scroll>
-      ) : (
-        <Loading />
-      )}
+    <PaneChrome pane={claudeCliCallDetailPane} inset="document">
+      {call !== undefined ? <ClaudeCliCallDetail call={call} /> : <Loading />}
     </PaneChrome>
   );
 }

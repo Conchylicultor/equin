@@ -5,10 +5,7 @@ import {
   type ReactNode,
 } from "react";
 import { PaneChrome } from "@plugins/primitives/plugins/pane/web";
-import {
-  Inset,
-  Stack,
-} from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
@@ -104,8 +101,8 @@ export function MailMessageBody(): ReactElement {
 
   return (
     <MessageSubjectContext.Provider value={subject}>
-      <PaneChrome pane={mailMessagePane}>
-        <Inset pad="lg">{content}</Inset>
+      <PaneChrome pane={mailMessagePane} inset="document">
+        {content}
       </PaneChrome>
     </MessageSubjectContext.Provider>
   );

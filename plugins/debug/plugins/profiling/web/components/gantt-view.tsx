@@ -24,7 +24,7 @@ export function GanttView(): ReactElement {
       <Column
         className="h-full"
         header={
-          // eslint-disable-next-line rail/no-adhoc-band -- debt (task-1794237886-rfwccn): a Band only once the profiling pane owns its inset — today it hand-pads, so a Band here would sit on a different edge than its content
+          // eslint-disable-next-line rail/no-adhoc-band -- debt (task-1794490549-cbyqt4): a Band only once the profiling pane owns its inset — today it hand-pads, so a Band here would sit on a different edge than its content
           <Line className="border-b px-lg py-sm">
             {/* Empty grow cell: it absorbs the slack so Refresh sits flush-right. */}
             <Fill />

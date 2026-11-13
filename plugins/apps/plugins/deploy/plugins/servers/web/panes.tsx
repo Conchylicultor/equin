@@ -82,7 +82,7 @@ function ServerDetailBody() {
 
   if (serverId === NEW_SERVER_ID) {
     return (
-      <PaneChrome pane={serverDetailPane}>
+      <PaneChrome pane={serverDetailPane} inset="document">
         <ServerCreateForm
           // `swap` replaces the create state with the real server in place — no
           // new column, so the pane transitions add → edit seamlessly.

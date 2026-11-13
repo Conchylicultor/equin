@@ -107,7 +107,6 @@ session chain are never written. Refused on main (403). Spawns nothing.
     - `primitives/css/badge.Badge`
     - `primitives/css/cluster.Cluster`
     - `primitives/css/placeholder.Placeholder`
-    - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.SectionLabel`
     - `primitives/css/text.Text`
@@ -163,7 +162,6 @@ session chain are never written. Refused on main (403). Spawns nothing.
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --muted-foreground`
-    - `ui/tokens/density --space-lg`
     - `ui/tokens/density --space-xs`
     - `ui/tokens/font-family --font-mono`
     - `ui/tokens/shape --spacing`

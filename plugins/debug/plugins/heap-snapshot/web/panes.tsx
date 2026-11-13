@@ -19,7 +19,7 @@ export const heapSnapshotPane = Pane.define({
 
 function HeapSnapshotBody(): ReactElement {
   return (
-    <PaneChrome pane={heapSnapshotPane}>
+    <PaneChrome pane={heapSnapshotPane} inset="document">
       <HeapPanel />
     </PaneChrome>
   );

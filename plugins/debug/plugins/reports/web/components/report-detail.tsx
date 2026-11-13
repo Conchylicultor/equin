@@ -36,7 +36,7 @@ export function ReportDetail() {
 
   if (read.status === "loading") {
     return (
-      <PaneChrome pane={reportDetailPane}>
+      <PaneChrome pane={reportDetailPane} inset="document">
         <Loading />
       </PaneChrome>
     );
@@ -48,7 +48,7 @@ export function ReportDetail() {
     read.status === "error" ? read.stale : read.found ? read.row : undefined;
   if (report === undefined) {
     return (
-      <PaneChrome pane={reportDetailPane}>
+      <PaneChrome pane={reportDetailPane} inset="document">
         {read.status === "error" ? (
           <ResourceErrorInline
             variant="inline"
@@ -68,82 +68,82 @@ export function ReportDetail() {
   }
 
   return (
-    <PaneChrome pane={reportDetailPane}>
+    <PaneChrome pane={reportDetailPane} inset="document">
+      {/* No scroller of its own: the pane's is the one scroll, and a nested
+          one would clip the Occurrences table's bleed to the pane edge. */}
       <ControlSizeProvider size="xs">
-        <Scroll axis="both" fill>
-          <Stack gap="lg" className="p-md">
-            <HeaderBadges report={report} serverGraph={serverGraph} />
+        <Stack gap="lg">
+          <HeaderBadges report={report} serverGraph={serverGraph} />
 
-            <Text
-              as="div"
-              variant="body"
-              className="whitespace-pre-wrap break-words text-foreground"
-            >
-              {report.message}
-            </Text>
+          <Text
+            as="div"
+            variant="body"
+            className="whitespace-pre-wrap break-words text-foreground"
+          >
+            {report.message}
+          </Text>
 
-            <Investigate key={report.id} report={report} />
+          <Investigate key={report.id} report={report} />
 
-            <Stack gap="sm">
-              <Field label="Kind" value={report.kind} mono />
-              <Field label="Source" value={report.source} mono />
-              <Field label="Worktree" value={report.worktree} mono />
-              <Field label="Fingerprint" value={report.fingerprint} mono />
-              {report.url && <Field label="URL" value={report.url} mono />}
-              {report.userAgent && (
-                <Field label="User agent" value={report.userAgent} />
-              )}
-              {report.fixCommit !== null && (
-                <Field label="Fix" value={report.fixCommit} mono />
-              )}
-              {report.fixStateAt !== null && (
-                <TimeField
-                  label={STATE_SINCE[report.fixState]}
-                  date={report.fixStateAt}
-                />
-              )}
-              {report.lastCommit !== null && (
-                <Field
-                  label="Latest occurrence ran"
-                  value={report.lastCommit}
-                  mono
-                />
-              )}
-              <TimeField label="First seen" date={report.firstSeenAt} />
-              <TimeField label="Last seen" date={report.lastSeenAt} />
-            </Stack>
-
-            <Stack gap="xs">
-              <Text as="div" variant="label" tone="muted">
-                {report.count > report.recent.length
-                  ? `Last ${report.recent.length} of ${report.count} occurrences`
-                  : "Occurrences"}
-              </Text>
-              <ReportOccurrences report={report} />
-            </Stack>
-
-            <Stack gap="xs">
-              <Text as="div" variant="label" tone="muted">
-                Details (latest occurrence)
-              </Text>
-              {/* Per-kind payload view, dispatched by report.kind. */}
-              <Reports.KindView.Dispatch report={report} />
-            </Stack>
-
-            <Stack gap="xs">
-              <Text as="div" variant="label" tone="muted">
-                Raw data
-              </Text>
-              <Scroll
-                as="pre"
-                axis="both"
-                className="rounded-md bg-muted p-sm text-caption"
-              >
-                {JSON.stringify(report.data, null, 2)}
-              </Scroll>
-            </Stack>
+          <Stack gap="sm">
+            <Field label="Kind" value={report.kind} mono />
+            <Field label="Source" value={report.source} mono />
+            <Field label="Worktree" value={report.worktree} mono />
+            <Field label="Fingerprint" value={report.fingerprint} mono />
+            {report.url && <Field label="URL" value={report.url} mono />}
+            {report.userAgent && (
+              <Field label="User agent" value={report.userAgent} />
+            )}
+            {report.fixCommit !== null && (
+              <Field label="Fix" value={report.fixCommit} mono />
+            )}
+            {report.fixStateAt !== null && (
+              <TimeField
+                label={STATE_SINCE[report.fixState]}
+                date={report.fixStateAt}
+              />
+            )}
+            {report.lastCommit !== null && (
+              <Field
+                label="Latest occurrence ran"
+                value={report.lastCommit}
+                mono
+              />
+            )}
+            <TimeField label="First seen" date={report.firstSeenAt} />
+            <TimeField label="Last seen" date={report.lastSeenAt} />
           </Stack>
-        </Scroll>
+
+          <Stack gap="xs">
+            <Text as="div" variant="label" tone="muted">
+              {report.count > report.recent.length
+                ? `Last ${report.recent.length} of ${report.count} occurrences`
+                : "Occurrences"}
+            </Text>
+            <ReportOccurrences report={report} />
+          </Stack>
+
+          <Stack gap="xs">
+            <Text as="div" variant="label" tone="muted">
+              Details (latest occurrence)
+            </Text>
+            {/* Per-kind payload view, dispatched by report.kind. */}
+            <Reports.KindView.Dispatch report={report} />
+          </Stack>
+
+          <Stack gap="xs">
+            <Text as="div" variant="label" tone="muted">
+              Raw data
+            </Text>
+            <Scroll
+              as="pre"
+              axis="both"
+              className="rounded-md bg-muted p-sm text-caption"
+            >
+              {JSON.stringify(report.data, null, 2)}
+            </Scroll>
+          </Stack>
+        </Stack>
       </ControlSizeProvider>
     </PaneChrome>
   );

@@ -1,4 +1,5 @@
 import { Icon } from "@plugins/ui/plugins/icons/web";
+import "./data-table.css";
 import {
   Fragment,
   useCallback,
@@ -270,6 +271,35 @@ const LEAD_CELL: CSSProperties = {
  * padding) and each row's own padding are the inset.
  */
 const SOFT_BOX: CSSProperties = { marginInline: `${RAIL_START} ${RAIL_END}` };
+/** The inline inset the enclosing region already PAID on each side: its rail
+ *  less what it still owes (0 under a `rail-owe-` owner or no region at all). */
+const PAID_START =
+  "calc(var(--rail-start, 0px) - var(--rail-owed-start, var(--rail-start, 0px)))";
+const PAID_END =
+  "calc(var(--rail-end, 0px) - var(--rail-owed-end, var(--rail-end, 0px)))";
+/**
+ * A grid / outline table's box in a region that paid its rail (a
+ * `PaneChrome inset="document"` body, a detail-sections card): it cancels what
+ * was paid (a negative margin, to the region's edge) and hands it back as OWED,
+ * so every `rail-follow` row spans the region — its fill and rules full-bleed —
+ * and pays the rail as padding, its text still on the rail. Where nothing was
+ * paid the margin is 0 and the owed value is the region's own (or invalid with
+ * no region, so rows fall back as before): the table is unchanged there.
+ */
+const REGION_BLEED = {
+  marginInline: `calc(-1 * ${PAID_START}) calc(-1 * ${PAID_END})`,
+  // What was cancelled, for the grid and its rows (data-table.css): the grid
+  // pads by it and every row bleeds by it, so no column moves.
+  "--dt-bleed-start": PAID_START,
+  "--dt-bleed-end": PAID_END,
+} as CSSProperties;
+/** The owed half, on the grid INSIDE the bled box: declared on the box itself
+ *  it would be what the box's own margin reads (a var resolves against its
+ *  element's declaration), cancelling nothing. */
+const REGION_OWED = {
+  "--rail-owed-start": "var(--rail-start)",
+  "--rail-owed-end": "var(--rail-end)",
+} as CSSProperties;
 const SOFT_GRID_RAIL = {
   "--rail-owed-start": "0px",
   "--rail-owed-end": "0px",
@@ -672,17 +702,23 @@ export function DataTable<TRow>({
         ref={fitContainerRef}
         data-part={parts?.table}
         className={soft ? SOFT_FRAME_CLASS : undefined}
-        style={soft ? SOFT_BOX : undefined}
+        style={soft ? SOFT_BOX : REGION_BLEED}
       >
         <div
+          // A grid table's rows bleed to a paid region's edge without moving a
+          // column (`dt-grid`, data-table.css). An outline row is a pill ON
+          // the rail (its own margin), so it takes only the owed rail.
           // eslint-disable-next-line layout/no-adhoc-layout -- subgrid table host: a dynamic gridTemplateColumns grid whose rows are full-span subgrids (no Frame/Grid equivalent)
-          className={soft ? "grid gap-x-soft" : "grid gap-x-sm"}
+          className={cn(
+            soft ? "grid gap-x-soft" : "grid gap-x-sm",
+            presentation === "grid" && "dt-grid",
+          )}
           style={{
             gridTemplateColumns: template,
             // A grid table never squeezes a column below its track's minimum
             // (a content-sized one: its label); past that it overflows.
             minWidth: pinLead ? "min-content" : undefined,
-            ...(soft ? SOFT_GRID_RAIL : undefined),
+            ...(soft ? SOFT_GRID_RAIL : REGION_OWED),
           }}
           // Nesting rows make the grid a treegrid, and the grid the keyboard
           // host: a key on a focused row walks the painted lines.

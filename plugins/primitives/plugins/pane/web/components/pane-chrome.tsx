@@ -101,8 +101,19 @@ type HeaderPresentation =
  * containing block for `position: fixed` descendants (portaled overlays escape
  * it; an un-portaled `fixed` box does not) and the nearest container for any
  * unnamed `@container` query / `cq*` length inside it that has no closer one.
+ *
+ * - `"document"`: the body is read as a document (a detail, a form, a report),
+ *   and the pane OWNS its inset: the body's scroller opens a `rail-document`
+ *   region — it pays and publishes the density group's reading inset
+ *   (`documentPadX`, default `lg`; block `documentPadTop` / `documentPadBottom`,
+ *   default `md`). Content inside declares no padding of its own and lands on
+ *   the rail by doing nothing; a rule strip reaches the pane edge with a
+ *   `Band` / `rail-bleed`. The header's text edge is the same token
+ *   (`pane-header-document`), so the title and the body never jog. Never for a DataView / DataTable pane (its rows are
+ *   `rail-follow` bands with full-bleed fills — keep `"chrome"`), nor a
+ *   full-bleed canvas, editor or frame.
  */
-export type PaneInset = "chrome" | "content";
+export type PaneInset = "chrome" | "content" | "document";
 
 /**
  * The pane root's half of `inset="content"`: the inline-size container that
@@ -111,6 +122,26 @@ export type PaneInset = "chrome" | "content";
  */
 const CONTENT_INSET_ROOT =
   "[container-type:inline-size] [--pane-inset:var(--content-inset)]";
+
+/**
+ * `inset="document"`'s region: a box INSIDE the body's scroller, never the
+ * scroller itself — a sticky offset (a table's pinned header row and first
+ * column) counts from its scroller's padding edge, so a padded scroller would
+ * pin them a rail in from the pane's edge with content showing past them.
+ */
+const DOCUMENT_REGION = "rail-document";
+/**
+ * The region box at least as tall as the scroller, as a one-cell grid: its one
+ * child (the content scope) is a grid item, whose stretched area is a definite
+ * height — so a child's `h-full` (a centred empty state) still means the
+ * visible box less the region's padding. The column is `minmax(0, 1fr)`: a
+ * grid item's automatic minimum is its min-content width, so with a plain
+ * `1fr` a no-wrap line (a code block, a chip) would widen the column past the
+ * pane instead of truncating or scrolling inside it.
+ */
+const DOCUMENT_REGION_FILL = "min-h-full grid grid-cols-[minmax(0,1fr)]";
+/** `inset="document"`'s header: its text edge is the region's (`--document-pad-x`). */
+const DOCUMENT_HEADER = "pane-header-document";
 
 type PaneChromeProps = HeaderPresentation & {
   /**
@@ -198,6 +229,7 @@ export function PaneChrome({
   children,
 }: PaneChromeProps) {
   const contentInset = inset === "content";
+  const documentRegion = inset === "document" ? DOCUMENT_REGION : undefined;
   const chrome = pane._internal.chrome;
   const entry = usePaneEntry(pane._internal);
   const layoutCtx = useContext(PaneLayoutContext);
@@ -223,6 +255,22 @@ export function PaneChrome({
   // leading, like a browser's — not a × closing a column beside it. And a
   // same-app promote has nothing on screen to detach from (PromoteControl).
   const ancestorsHidden = layoutCtx?.ancestorsHidden === true;
+  // The header's leading controls: the surface's (sidebar toggle) and Back.
+  const back =
+    ancestorsHidden && chrome.close && doBack ? (
+      <PaneIconAction
+        label="Back"
+        icon={arrowBackIcon}
+        onClick={(e) => doBack(gestureOf(e))}
+      />
+    ) : null;
+  const lead =
+    showLeading || back !== null ? (
+      <>
+        {showLeading && leadingControl}
+        {back}
+      </>
+    ) : null;
   // `atTop` is only ever true for a floating header resting over the top of the
   // body — nothing below it to separate, so the rule goes.
   const header = (atTop: boolean) => (
@@ -237,17 +285,21 @@ export function PaneChrome({
         layoutCtx?.dragHandleProps && "cursor-grab active:cursor-grabbing",
         floatingHeader && "transition-colors",
         atTop && "border-transparent",
+        // A document body's edge is the header's too: one token, no jog.
+        documentRegion !== undefined && DOCUMENT_HEADER,
       )}
       onDoubleClick={onHeaderDoubleClick}
       {...layoutCtx?.dragHandleProps}
     >
-      {showLeading && leadingControl}
-      {ancestorsHidden && chrome.close && doBack && (
-        <PaneIconAction
-          label="Back"
-          icon={arrowBackIcon}
-          onClick={(e) => doBack(gestureOf(e))}
-        />
+      {documentRegion === undefined ? (
+        lead
+      ) : lead === null ? null : (
+        // The lead control's glyph, not its button box, stands on the
+        // document edge: `pane-header-document` pulls this box left by the
+        // icon button's own inset.
+        <Line data-pane-lead="" className="gap-sm">
+          {lead}
+        </Line>
       )}
       {/* The bar IS the row's grow cell (`min-w-0 flex-1`), which is why
               there is no `Fill` beside it: a second claimant on the same slack
@@ -269,6 +321,14 @@ export function PaneChrome({
     </Bar>
   );
   const content = <ContentScope>{children}</ContentScope>;
+  // The document region, filling the scroller (see DOCUMENT_REGION_FILL).
+  const documentBody =
+    documentRegion === undefined ? (
+      content
+    ) : (
+      // eslint-disable-next-line layout/no-adhoc-layout -- a one-row grid is what makes the region's one child a definite-height box for its `h-full` descendants (DOCUMENT_REGION_FILL)
+      <div className={cn(documentRegion, DOCUMENT_REGION_FILL)}>{content}</div>
+    );
   // The body over its ground: the ground is Overlay's `behind` (painted first,
   // filling the box), the body its filling children — so the scroll sits on top
   // by DOM order and never scrolls the ground with it.
@@ -289,7 +349,7 @@ export function PaneChrome({
           contentInset && CONTENT_INSET_ROOT,
         )}
       >
-        {grounded(<PaneScroll>{content}</PaneScroll>)}
+        {grounded(<PaneScroll>{documentBody}</PaneScroll>)}
         {overlay}
         <Pin
           to="top-left"
@@ -341,10 +401,16 @@ export function PaneChrome({
       theme={headerTheme}
       glass={headerGlass}
     >
-      {content}
+      {/* Below the floating header in the same scroller: the region only
+          pads, it does not fill (the header already takes room). */}
+      {documentRegion === undefined ? (
+        content
+      ) : (
+        <div className={documentRegion}>{content}</div>
+      )}
     </FloatingHeaderScroll>
   ) : (
-    <PaneScroll>{content}</PaneScroll>
+    <PaneScroll>{documentBody}</PaneScroll>
   );
   return (
     <Column

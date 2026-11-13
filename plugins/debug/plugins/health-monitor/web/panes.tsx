@@ -16,7 +16,7 @@ export const healthMonitorPane = Pane.define({
 
 function HealthMonitorBody(): ReactElement {
   return (
-    <PaneChrome pane={healthMonitorPane}>
+    <PaneChrome pane={healthMonitorPane} inset="document">
       <HealthMonitorPanel />
     </PaneChrome>
   );

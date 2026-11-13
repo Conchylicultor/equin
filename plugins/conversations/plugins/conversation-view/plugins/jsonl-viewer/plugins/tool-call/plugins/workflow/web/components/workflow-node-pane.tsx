@@ -31,14 +31,14 @@ function WorkflowNodePaneContent({ convId }: { convId: string | undefined }) {
 
   if (state.phase === "loading") {
     return (
-      <PaneChrome pane={workflowNodePane}>
+      <PaneChrome pane={workflowNodePane} inset="document">
         <Loading />
       </PaneChrome>
     );
   }
   if (state.phase === "failed") {
     return (
-      <PaneChrome pane={workflowNodePane}>
+      <PaneChrome pane={workflowNodePane} inset="document">
         <ResourceErrorInline
           variant="block"
           subject="the transcript"
@@ -53,7 +53,7 @@ function WorkflowNodePaneContent({ convId }: { convId: string | undefined }) {
   // conversation in the route, the pane says so.
   if (state.phase === "no-conversation") {
     return (
-      <PaneChrome pane={workflowNodePane}>
+      <PaneChrome pane={workflowNodePane} inset="document">
         <Text as="div" variant="body" className="text-muted-foreground">
           Open this step from its conversation.
         </Text>
@@ -63,8 +63,8 @@ function WorkflowNodePaneContent({ convId }: { convId: string | undefined }) {
 
   if (state.phase === "unreadable-input") {
     return (
-      <PaneChrome pane={workflowNodePane}>
-        <Stack gap="xs" className="p-lg">
+      <PaneChrome pane={workflowNodePane} inset="document">
+        <Stack gap="xs">
           <Text as="div" variant="body" className="text-muted-foreground">
             This call's input is not a workflow: there is no script to trace.
           </Text>
@@ -83,8 +83,8 @@ function WorkflowNodePaneContent({ convId }: { convId: string | undefined }) {
   const { graph, status, node } = state;
 
   return (
-    <PaneChrome pane={workflowNodePane}>
-      <Stack gap="md" className="p-lg">
+    <PaneChrome pane={workflowNodePane} inset="document">
+      <Stack gap="md">
         {!node ? (
           <Text as="div" variant="body" className="text-muted-foreground">
             {status === "tracing" ? "Parsing workflow…" : "Step not found."}

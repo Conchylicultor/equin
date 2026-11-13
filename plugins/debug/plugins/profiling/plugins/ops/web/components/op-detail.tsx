@@ -270,7 +270,7 @@ export function OpDetailBody(): ReactElement {
   const result = useLive(opsHistory, { id: opId });
 
   return (
-    <PaneChrome pane={opDetailPane}>
+    <PaneChrome pane={opDetailPane} inset="document">
       {result.status === "loading" ? (
         <Loading />
       ) : result.status === "error" ? (
@@ -316,7 +316,7 @@ function OpDetailView({
   if (!data) return <Placeholder tone="muted">Op not found.</Placeholder>;
   const branchShort = stripAttemptBranchPrefix(data.branch);
   return (
-    <Stack gap="lg" className="p-lg">
+    <Stack gap="lg">
       <Cluster gap="sm">
         <Badge colorClass={`${opFillClass(data.kind)}/15`}>
           {formatStatusLabel(data.kind)}

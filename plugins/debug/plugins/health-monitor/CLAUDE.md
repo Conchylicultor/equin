@@ -152,10 +152,9 @@ measured overhead on a real worktree workload is still an open task.
   - Contributes:
     - `Pane.Register` "debug-health-monitor"
     - `DebugApp.Sidebar` "Health"
-  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `stats/commits` ×7
     - `primitives/pane` ×3
-    - `primitives/css/spacing` ×2
     - `primitives/css/text` ×2
     - `apps/debug/shell.DebugApp`
     - `network/live/live-state.ResourceErrorInline`
@@ -165,6 +164,7 @@ measured overhead on a real worktree workload is still an open task.
     - `primitives/css/grid.Grid`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/rigid.Rigid`
+    - `primitives/css/spacing.Stack`
     - `primitives/css/status-dot.StatusDot`
     - `primitives/relative-time.RelativeTime`
   - Exports (values): `healthMonitorPane`

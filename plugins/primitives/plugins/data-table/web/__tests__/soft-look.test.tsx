@@ -113,7 +113,20 @@ describe("DataTable grid presentation (unchanged by soft)", () => {
     expect(r.className).toContain("rail-follow");
     const box = document.querySelector<HTMLElement>('[data-part="t"]')!;
     expect(box.getAttribute("class")).toBe(null);
-    expect(box.getAttribute("style")).toBe(null);
-    expect(box.firstElementChild!.className).toBe("grid gap-x-sm");
+    // In a region that paid its rail the box bleeds back to the region's edge
+    // (what was paid: rail less owed — 0 with no region or an owing one)…
+    expect(box.getAttribute("style")).toContain("--rail-owed-start");
+    const grid = box.firstElementChild as HTMLElement;
+    // The grid look bleeds its rows without moving a column (data-table.css).
+    expect(grid.className.split(" ").sort()).toEqual([
+      "dt-grid",
+      "gap-x-sm",
+      "grid",
+    ]);
+    // …and its grid hands the rail back as owed, so the rows pay it inside the
+    // bled box (declared on the box, its own margin would read it).
+    expect(grid.style.getPropertyValue("--rail-owed-start")).toBe(
+      "var(--rail-start)",
+    );
   });
 });

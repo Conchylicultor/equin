@@ -19,7 +19,7 @@ export const liveStateHealthPane = Pane.define({
 
 function LiveStateHealthBody(): ReactElement {
   return (
-    <PaneChrome pane={liveStateHealthPane}>
+    <PaneChrome pane={liveStateHealthPane} inset="document">
       <LiveStateHealth />
     </PaneChrome>
   );

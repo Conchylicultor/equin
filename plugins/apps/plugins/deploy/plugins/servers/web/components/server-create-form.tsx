@@ -55,7 +55,7 @@ export function ServerCreateForm({
   }
 
   return (
-    <Stack as="form" onSubmit={handleSubmit} gap="lg" className="p-lg">
+    <Stack as="form" onSubmit={handleSubmit} gap="lg">
       <FieldShell label="Name">
         <input
           className={fieldInputClass}

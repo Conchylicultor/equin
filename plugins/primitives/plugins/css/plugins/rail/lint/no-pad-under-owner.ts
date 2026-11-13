@@ -7,15 +7,16 @@ const createRule = lintRuleCreator(import.meta.url);
 /**
  * Content inside a region that pays its own inset declares none.
  *
- * A `Column` with `inset` and a padded overlay panel are REGION OWNERS: each
+ * A `Column` with `inset`, a `PaneChrome inset="document"` pane and a padded
+ * overlay panel are REGION OWNERS: each
  * already moved its content edge, so content dropped in lands on the rail by
  * doing nothing (the rail contract's second rule). A `p-*` / `px-*` on the
  * root of that content pays the inset a second time — the double inset that
  * reads as reasonable at the call site and shows only as content indented
  * twice, the shape `useRailGuard` reports at runtime. This catches it at the
  * source, for the same-file case: the root element of a `Column inset`'s
- * `header` / `body` / `footer`, and of an overlay panel's `header` / `footer`
- * and direct children.
+ * `header` / `body` / `footer`, of a document pane's direct children, and of
+ * an overlay panel's `header` / `footer` and direct children.
  *
  * An overlay panel on `padding="none"` is no owner (that is
  * `rail/no-unowned-overlay`'s business), so its children are not checked.
@@ -98,7 +99,7 @@ export default function buildRule({
       type: "suggestion",
       docs: {
         description:
-          "Disallow an inline padding class on the root of content placed in a region owner (Column inset, a padded overlay panel): the host already pays the inset.",
+          'Disallow an inline padding class on the root of content placed in a region owner (Column inset, PaneChrome inset="document", a padded overlay panel): the host already pays the inset.',
       },
       schema: [],
       messages: {
@@ -145,6 +146,11 @@ export default function buildRule({
             for (const region of COLUMN_REGIONS) {
               check(rootsOf(attrNamed(open, region)?.value), "Column inset");
             }
+            return;
+          }
+          if (name === "PaneChrome") {
+            if (!isLiteral(attrNamed(open, "inset")?.value, "document")) return;
+            check(el.children.flatMap(rootsOf), 'PaneChrome inset="document"');
             return;
           }
           if (!OVERLAY_OWNERS.has(name) && !MENU_CONTENT.test(name)) return;

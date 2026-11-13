@@ -20,7 +20,7 @@ export const convSummaryPane = Pane.define({
 
 function ConvSummaryBody() {
   return (
-    <PaneChrome pane={convSummaryPane}>
+    <PaneChrome pane={convSummaryPane} inset="document">
       <SummaryPane />
     </PaneChrome>
   );

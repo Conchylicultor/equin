@@ -16,7 +16,7 @@ export const tabMemoryPane = Pane.define({
 
 function TabMemoryBody(): ReactElement {
   return (
-    <PaneChrome pane={tabMemoryPane}>
+    <PaneChrome pane={tabMemoryPane} inset="document">
       <TabMemoryPanel />
     </PaneChrome>
   );

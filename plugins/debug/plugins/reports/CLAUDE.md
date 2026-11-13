@@ -91,7 +91,6 @@ All reports are listed — noise is surfaced via the badge, never filtered out.
     - `ui/tokens/color-palette --foreground`
     - `ui/tokens/color-palette --muted`
     - `ui/tokens/color-palette --muted-foreground`
-    - `ui/tokens/density --space-md`
     - `ui/tokens/density --space-sm`
     - `ui/tokens/font-family --font-mono`
     - `ui/tokens/shape --radius`

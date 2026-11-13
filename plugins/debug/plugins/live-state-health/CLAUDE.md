@@ -25,7 +25,7 @@ instrumentation of its own.
   - Contributes:
     - `Pane.Register` "live-state-health"
     - `DebugApp.Sidebar` "Live State"
-  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `network/live/live-state` ×7
     - `primitives/pane` ×3
     - `primitives/css/text` ×2
@@ -36,7 +36,6 @@ instrumentation of its own.
     - `primitives/css/fill.Fill`
     - `primitives/css/inline.Inline`
     - `primitives/css/rigid.Rigid`
-    - `primitives/css/scroll.Scroll`
     - `primitives/css/spacing.Stack`
     - `primitives/css/status-dot.StatusDot`
     - `primitives/loading.Loading`
@@ -48,7 +47,6 @@ instrumentation of its own.
     - `ui/tokens/color-palette --destructive`
     - `ui/tokens/color-palette --success`
     - `ui/tokens/color-palette --warning`
-    - `ui/tokens/density --space-lg`
     - `ui/tokens/density --space-md`
     - `ui/tokens/density --space-xs`
     - `ui/tokens/shape --spacing`

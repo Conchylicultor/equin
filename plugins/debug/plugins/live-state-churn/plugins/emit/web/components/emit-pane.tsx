@@ -19,15 +19,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import {
-  Stack,
-  Inset,
-} from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import {
   SectionLabel,
   Text,
 } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import {
@@ -107,158 +103,151 @@ export function EmitPane() {
     null;
 
   return (
-    <Scroll axis="y" fill>
-      <Inset pad="lg">
-        <Stack gap="xl">
-          <Stack as="section" gap="sm">
-            <Stack direction="row" gap="sm" align="center">
-              <Icon icon={boltIcon} className="size-4 text-muted-foreground" />
-              <SectionLabel>Synthetic no-op push emitter</SectionLabel>
-            </Stack>
+    <Stack gap="xl">
+      <Stack as="section" gap="sm">
+        <Stack direction="row" gap="sm" align="center">
+          <Icon icon={boltIcon} className="size-4 text-muted-foreground" />
+          <SectionLabel>Synthetic no-op push emitter</SectionLabel>
+        </Stack>
+        <Text variant="caption" tone="muted">
+          Drives N no-op live-state pushes/sec for one resource through the real
+          change-feed code path, so re-render / DOM-churn bugs reproduce
+          deterministically. Auto-stops after the duration below; only keyed
+          resources with live subscribers produce an observable push.
+        </Text>
+      </Stack>
+
+      <Stack as="section" gap="sm">
+        <Stack direction="row" gap="sm" align="center" justify="between">
+          <SectionLabel>Resource</SectionLabel>
+          <Button variant="outline" onClick={() => resources.refresh()}>
+            Refresh
+          </Button>
+        </Stack>
+        {resources.status === "error" ? (
+          <ResourceErrorInline
+            variant="inline"
+            subject="the resource registry"
+            error={resources.error}
+            refetch={resources.refetch}
+          />
+        ) : null}
+        <Select
+          items={dropdownItems}
+          value={selectedKey || null}
+          onValueChange={(v: string | null) => {
+            setSelectedKey(v ?? "");
+            setManualKey("");
+          }}
+          disabled={locked || candidates.length === 0}
+        >
+          <SelectTrigger aria-label="Resource key" className="w-full">
+            <SelectValue>
+              {(v: string | null) => v ?? "Pick a subscribed keyed resource…"}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            {candidates.map((r) => (
+              <SelectItem key={r.key} value={r.key}>
+                {`${r.key} · ${r.subscribers} sub${r.subscribers === 1 ? "" : "s"}`}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Input
+          value={manualKey}
+          onChange={(e) => setManualKey(e.target.value)}
+          placeholder="…or type any resource key (off-screen / no subscribers)"
+          disabled={locked}
+          aria-label="Manual resource key"
+        />
+        {resources.status === "loading" ? (
+          <Text variant="caption" tone="muted">
+            Reading the resource registry…
+          </Text>
+        ) : resources.status === "ready" && candidates.length === 0 ? (
+          <Text variant="caption" tone="muted">
+            No keyed resources with live subscribers right now — open a view
+            that renders one, or type a key above.
+          </Text>
+        ) : null}
+      </Stack>
+
+      <Stack as="section" gap="sm">
+        <SectionLabel>Rate &amp; duration</SectionLabel>
+        <Stack direction="row" gap="md" align="end" wrap>
+          <Stack gap="2xs">
             <Text variant="caption" tone="muted">
-              Drives N no-op live-state pushes/sec for one resource through the
-              real change-feed code path, so re-render / DOM-churn bugs
-              reproduce deterministically. Auto-stops after the duration below;
-              only keyed resources with live subscribers produce an observable
-              push.
+              Pushes / sec (max {MAX_EMIT_RATE})
             </Text>
-          </Stack>
-
-          <Stack as="section" gap="sm">
-            <Stack direction="row" gap="sm" align="center" justify="between">
-              <SectionLabel>Resource</SectionLabel>
-              <Button variant="outline" onClick={() => resources.refresh()}>
-                Refresh
-              </Button>
-            </Stack>
-            {resources.status === "error" ? (
-              <ResourceErrorInline
-                variant="inline"
-                subject="the resource registry"
-                error={resources.error}
-                refetch={resources.refetch}
-              />
-            ) : null}
-            <Select
-              items={dropdownItems}
-              value={selectedKey || null}
-              onValueChange={(v: string | null) => {
-                setSelectedKey(v ?? "");
-                setManualKey("");
-              }}
-              disabled={locked || candidates.length === 0}
-            >
-              <SelectTrigger aria-label="Resource key" className="w-full">
-                <SelectValue>
-                  {(v: string | null) =>
-                    v ?? "Pick a subscribed keyed resource…"
-                  }
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {candidates.map((r) => (
-                  <SelectItem key={r.key} value={r.key}>
-                    {`${r.key} · ${r.subscribers} sub${r.subscribers === 1 ? "" : "s"}`}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
             <Input
-              value={manualKey}
-              onChange={(e) => setManualKey(e.target.value)}
-              placeholder="…or type any resource key (off-screen / no subscribers)"
+              type="number"
+              min={0.1}
+              max={MAX_EMIT_RATE}
+              step={0.1}
+              value={rate}
+              onChange={(e) => setRate(Number(e.target.value))}
               disabled={locked}
-              aria-label="Manual resource key"
+              aria-label="Pushes per second"
+              className="w-32"
             />
-            {resources.status === "loading" ? (
-              <Text variant="caption" tone="muted">
-                Reading the resource registry…
-              </Text>
-            ) : resources.status === "ready" && candidates.length === 0 ? (
-              <Text variant="caption" tone="muted">
-                No keyed resources with live subscribers right now — open a view
-                that renders one, or type a key above.
-              </Text>
-            ) : null}
           </Stack>
-
-          <Stack as="section" gap="sm">
-            <SectionLabel>Rate &amp; duration</SectionLabel>
-            <Stack direction="row" gap="md" align="end" wrap>
-              <Stack gap="2xs">
-                <Text variant="caption" tone="muted">
-                  Pushes / sec (max {MAX_EMIT_RATE})
-                </Text>
-                <Input
-                  type="number"
-                  min={0.1}
-                  max={MAX_EMIT_RATE}
-                  step={0.1}
-                  value={rate}
-                  onChange={(e) => setRate(Number(e.target.value))}
-                  disabled={locked}
-                  aria-label="Pushes per second"
-                  className="w-32"
-                />
-              </Stack>
-              <Stack gap="2xs">
-                <Text variant="caption" tone="muted">
-                  Auto-stop after (minutes)
-                </Text>
-                <Input
-                  type="number"
-                  min={0.1}
-                  step={0.5}
-                  value={durationMin}
-                  onChange={(e) => setDurationMin(Number(e.target.value))}
-                  disabled={locked}
-                  aria-label="Auto-stop minutes"
-                  className="w-32"
-                />
-              </Stack>
-            </Stack>
-          </Stack>
-
-          <Stack as="section" gap="sm">
-            <Stack direction="row" gap="sm" align="center">
-              {status.status === "ready" && status.data.active ? (
-                <Button
-                  variant="destructive"
-                  onClick={() => void stop.mutateAsync({})}
-                  disabled={stop.isPending}
-                >
-                  {stop.isPending ? "Stopping…" : "Stop"}
-                </Button>
-              ) : (
-                <Button
-                  variant="default"
-                  onClick={() =>
-                    void start.mutateAsync({
-                      body: {
-                        key: effectiveKey,
-                        rate,
-                        durationMs: Math.round(durationMin * 60_000),
-                      },
-                    })
-                  }
-                  disabled={start.isPending || !effectiveKey || locked}
-                >
-                  {start.isPending ? "Starting…" : "Start"}
-                </Button>
-              )}
-            </Stack>
-            {errorMessage ? (
-              <Placeholder tone="error">{errorMessage}</Placeholder>
-            ) : null}
-          </Stack>
-
-          <Stack as="section" gap="sm">
-            <SectionLabel>Status</SectionLabel>
-            <StatusView status={status} nowMs={nowMs} />
+          <Stack gap="2xs">
+            <Text variant="caption" tone="muted">
+              Auto-stop after (minutes)
+            </Text>
+            <Input
+              type="number"
+              min={0.1}
+              step={0.5}
+              value={durationMin}
+              onChange={(e) => setDurationMin(Number(e.target.value))}
+              disabled={locked}
+              aria-label="Auto-stop minutes"
+              className="w-32"
+            />
           </Stack>
         </Stack>
-      </Inset>
-    </Scroll>
+      </Stack>
+
+      <Stack as="section" gap="sm">
+        <Stack direction="row" gap="sm" align="center">
+          {status.status === "ready" && status.data.active ? (
+            <Button
+              variant="destructive"
+              onClick={() => void stop.mutateAsync({})}
+              disabled={stop.isPending}
+            >
+              {stop.isPending ? "Stopping…" : "Stop"}
+            </Button>
+          ) : (
+            <Button
+              variant="default"
+              onClick={() =>
+                void start.mutateAsync({
+                  body: {
+                    key: effectiveKey,
+                    rate,
+                    durationMs: Math.round(durationMin * 60_000),
+                  },
+                })
+              }
+              disabled={start.isPending || !effectiveKey || locked}
+            >
+              {start.isPending ? "Starting…" : "Start"}
+            </Button>
+          )}
+        </Stack>
+        {errorMessage ? (
+          <Placeholder tone="error">{errorMessage}</Placeholder>
+        ) : null}
+      </Stack>
+
+      <Stack as="section" gap="sm">
+        <SectionLabel>Status</SectionLabel>
+        <StatusView status={status} nowMs={nowMs} />
+      </Stack>
+    </Stack>
   );
 }
 

@@ -1,5 +1,5 @@
 import { type ReactElement } from "react";
-import { Stack, Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { SectionLabel, Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import {
@@ -31,17 +31,14 @@ export function CompareView(): ReactElement {
 
   if (manifests.length === 0) {
     return (
-      <Inset pad="md">
-        <Text variant="caption" tone="muted">
+      <Text variant="caption" tone="muted">
           No named compositions to compare.
-        </Text>
-      </Inset>
+      </Text>
     );
   }
 
   return (
-    <Inset pad="md">
-      <Stack gap="lg">
+    <Stack gap="lg">
         <Text variant="caption" tone="muted">
           Pick two compositions; the Explorer tints each plugin by which bundle it
           lands in. The delta below is the symmetric difference of the two bundles.
@@ -67,8 +64,7 @@ export function CompareView(): ReactElement {
             Select both A and B to see the delta.
           </Text>
         )}
-      </Stack>
-    </Inset>
+    </Stack>
   );
 }
 

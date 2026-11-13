@@ -139,7 +139,7 @@ function SummaryPaneInner({
   const isPending = pendingSince !== null;
 
   return (
-    <Stack gap="md" className="p-md text-body">
+    <Stack gap="md" className="text-body">
       <Button
         variant="outline"
         onClick={onSummarize}
