@@ -32,8 +32,7 @@ function isUnder(root: string, path: string): boolean {
 // The running checkout as a module-graph input, once per process: its code
 // does not change under the process that loaded it.
 let running:
-  | Promise<Pick<ModuleGraphInput, "snapshot" | "readOutside">>
-  | undefined;
+  Promise<Pick<ModuleGraphInput, "snapshot" | "readOutside">> | undefined;
 
 /**
  * The running checkout as the module graph reads a producer's code from it:
