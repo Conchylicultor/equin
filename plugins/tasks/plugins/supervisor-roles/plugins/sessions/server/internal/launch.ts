@@ -1,4 +1,3 @@
-import { sql } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import {
@@ -17,6 +16,7 @@ import {
 import {
   getSupervisorRole,
   liveSessionOf,
+  lockRoleSessions,
   setTaskSupervisorRole,
 } from "@plugins/tasks/plugins/supervisor-roles/server";
 import { adoptBacklogTask, launchRoleSession } from "../../core";
@@ -41,9 +41,7 @@ async function openRoleSession(
   const opened = await db.transaction(async (tx) => {
     // One live session per role: concurrent launches of one role
     // serialize here, and the second finds the first.
-    await tx.execute(
-      sql`SELECT pg_advisory_xact_lock(hashtext(${`supervisor-role-session:${role.id}`}))`,
-    );
+    await lockRoleSessions(role.id, tx);
     const live = await liveSessionOf(role.id, tx);
     // A live session that never ran (`new`) is (re)armed below: an arm
     // that failed after its launch committed would otherwise hold the

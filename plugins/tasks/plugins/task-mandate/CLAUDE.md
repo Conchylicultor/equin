@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: The task detail's Mandate control: the task's effective mandate (Interactive / Supervisor / an automation's) as a select, an inherited one marked so and linked to the ancestor it comes from; picking a mandate states it as the task's own (governing its subtree), Inherit from parent drops it again. The endpoints that change a task's mandate: PUT /api/tasks/:taskId/mandate states a named mandate as the task's own (refusing an id no definition names), DELETE drops it so the task inherits its nearest ancestor's again (refused on a root).
+- Description: The task detail's Mandate control: the task's effective mandate (Interactive / Supervisor / an automation's) as a select, an inherited one marked so and linked to the ancestor it comes from; picking a mandate states it as the task's own (governing its subtree), Inherit from parent drops it again. The endpoints that change a task's mandate: PUT /api/tasks/:taskId/mandate states a named mandate as the task's own (refusing an id no definition names, and an owned mandate — stated only by its owner's writes), DELETE drops it so the task inherits its nearest ancestor's again (refused on a root); both refuse a task that itself states an owned mandate.
 - Web:
   - Uses:
     - `infra/endpoints.useFetchEndpoint`
@@ -27,11 +27,13 @@
   - Exports (values): `TaskMandateControl`
 - Server:
   - Uses:
+    - `database.db`
     - `infra/endpoints.HttpError`
     - `infra/endpoints.implement`
     - `tasks/orchestration/mandate/definitions.mandateDefinitionEntries`
     - `tasks/tasks-core.clearMandate`
     - `tasks/tasks-core.getTask`
+    - `tasks/tasks-core.nearestMandate`
     - `tasks/tasks-core.setMandate`
   - Routes:
     - `PUT /api/tasks/:taskId/mandate`

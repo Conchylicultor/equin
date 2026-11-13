@@ -5,8 +5,8 @@ import type { MandateRef } from "@plugins/tasks/plugins/orchestration/plugins/ma
 
 /**
  * Every named mandate the code defines (`Mandate.Definition`): its id, label
- * and the mandates it is a kind of (`mandateKinds`: itself, then what it
- * extends) — the options of the `mandate` field every task list shows, and
+ * the mandates it is a kind of (`mandateKinds`: itself, then what it
+ * extends) and whether a person may state it — the options of the `mandate` field every task list shows, and
  * what {@link mandateIsKindOf} reads. Fixed for the process (contributions
  * register at boot), hydrated before first paint.
  */
@@ -17,6 +17,9 @@ export const MandateDefinitionsSchema = wholeList(
     kinds: wholeList(z.string(), {
       reason: "one mandate's lineage: itself and what it extends, a few",
     }),
+    /** Whether a person may state it on a task (the Mandate select offers
+     * it): false for an owned mandate, which only its owner's writes state. */
+    byHand: z.boolean(),
   }),
   {
     reason:

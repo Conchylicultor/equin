@@ -7,12 +7,14 @@ import {
   isNull,
   ne,
   notInArray,
+  sql,
 } from "drizzle-orm";
 import { db, type DbExecutor } from "@plugins/database/server";
 import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import {
   _tasks,
   createTask,
+  setMandate,
   tasksView,
 } from "@plugins/tasks/plugins/tasks-core/server";
 import type { TaskStatus } from "@plugins/tasks/plugins/tasks-core/core";
@@ -284,8 +286,9 @@ export async function fileToBacklog(
   return { taskId, role };
 }
 
-/** Whether `taskId` is a role session's root (a root stating the
- * supervisor-role mandate) — its role is fixed: the session works for it. */
+/** Whether `taskId` is a role session's root: it states the supervisor-role
+ * mandate itself (filed at the root, or since dragged under a folder) — its
+ * role is fixed: the session works for it, and the mandate needs it. */
 export async function isSessionRoot(
   taskId: string,
   exec: DbExecutor = db,
@@ -296,10 +299,69 @@ export async function isSessionRoot(
     .where(
       and(
         eq(_tasks.id, taskId),
-        isNull(_tasks.folderId),
         eq(_tasks.mandateRef, supervisorRoleMandate.id),
       ),
     )
     .limit(1);
   return row !== undefined;
+}
+
+/**
+ * Serializes everything that starts or ends a role's sessions on `exec`'s
+ * transaction: a launch (one live session per role) and the role's delete.
+ */
+export async function lockRoleSessions(
+  roleId: string,
+  exec: DbExecutor,
+): Promise<void> {
+  await exec.execute(
+    sql`SELECT pg_advisory_xact_lock(hashtext(${`supervisor-role-session:${roleId}`}))`,
+  );
+}
+
+/** Why a role could not be deleted. */
+export type RoleDeleteRefusal =
+  { kind: "live-session"; taskId: string } | { kind: "backlog"; count: number };
+
+/**
+ * Delete role `roleId` on `tx`, releasing what it owns. Refused while work
+ * waits on it or runs for it: a live session (end it first), or a backlog
+ * (route it to another role first). Otherwise its ended sessions and the
+ * other roots it owns are RELEASED, not deleted: each task stating the
+ * supervisor-role mandate itself (an ended session's root) states the
+ * interactive mandate instead — the role mandate needs a role, and a
+ * resumed session has none to work for any more — and every owner row
+ * goes, then the role. The tasks, their trees and their conversations stay.
+ */
+export async function deleteRoleReleasing(
+  roleId: string,
+  tx: DbExecutor,
+): Promise<RoleDeleteRefusal | null> {
+  await lockRoleSessions(roleId, tx);
+  const live = await liveSessionOf(roleId, tx);
+  if (live) return { kind: "live-session", taskId: live.id };
+  const backlog = await roleBacklog(roleId, tx);
+  if (backlog.length > 0) return { kind: "backlog", count: backlog.length };
+  const sessionRoots = await tx
+    .select({ id: _tasks.id })
+    .from(_tasks)
+    .innerJoin(
+      tasksSupervisor.table,
+      eq(tasksSupervisor.table.taskId, _tasks.id),
+    )
+    .where(
+      and(
+        eq(tasksSupervisor.table.supervisor, roleId),
+        eq(_tasks.mandateRef, supervisorRoleMandate.id),
+      ),
+    );
+  for (const { id } of sessionRoots)
+    await setMandate(id, interactiveMandate, tx);
+  await tx
+    .delete(tasksSupervisor.table)
+    .where(eq(tasksSupervisor.table.supervisor, roleId));
+  await tx
+    .delete(_supervisorRoles)
+    .where(eq(_supervisorRoles.id, supervisorRoleIdKind.key(roleId)));
+  return null;
 }

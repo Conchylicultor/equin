@@ -23094,11 +23094,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `loadedDatabaseConfig`
       - `readDatabaseConfigSync`
   - Cross-plugin:
-    - Imported by: 169 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
+    - Imported by: 170 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
       - `apps` ×47
       - `conversations` ×20
       - `infra` ×17
-      - `tasks` ×16
+      - `tasks` ×17
       - `page` ×14
       - `debug` ×10
       - `active-data` ×8
@@ -59349,7 +59349,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `tasks/tasks-core.listActiveConversations`
                   - `tasks/tasks-core.taskMandateChanged`
                 - Register: `defineJob('mandate-change-notice.on-change')`
-            - **`definitions`** — The named-mandate registry's web presence: eagerly registers the boot-preloaded mandate.definitions live value (every named mandate's id, label and the mandates it is a kind of) so boot-snapshot hydrates it before first paint. The named-mandate registry: MandateDefinitions.Definition (what one named mandate grants) and MandateDefinitions.Source (a runtime family of them — one per automation), read at every resolution through mandateDefinitionEntries, mandateIsKindOf (is a stored mandate id a kind of a base mandate — its lineage, declared by defineMandate extends), and the mandate.definitions value (every named mandate's id, label and the mandates it is a kind of).
+            - **`definitions`** — The named-mandate registry's web presence: eagerly registers the boot-preloaded mandate.definitions live value (every named mandate's id, label and the mandates it is a kind of) so boot-snapshot hydrates it before first paint. The named-mandate registry: MandateDefinitions.Definition (what one named mandate grants) and MandateDefinitions.Source (a runtime family of them — one per automation), read at every resolution through mandateDefinitionEntries, mandateIsKindOf (is a stored mandate id a kind of a base mandate — its lineage, declared by defineMandate extends), and the mandate.definitions value (every named mandate's id, label, the mandates it is a kind of and whether a person may state it — an owned mandate is stated only by its owner's writes, and a re-file to the root states its `refiledAs` instead).
               - Server:
                 - Contributes: `resource.declare` "mandate.definitions"
                 - Uses: `network/live.serveValue`
@@ -59360,6 +59360,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `mandateDefinitionEntries`
                   - `MandateDefinitions`
                   - `mandateIsKindOf`
+                  - `mandateRefiledAs`
                 - Resources: `mandate.definitions` (push, fixed, whole: one entry per named mandate the code defines — the presets and one per automation, a handful)
               - Core:
                 - Uses:
@@ -59815,8 +59816,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations.system-prompt.section` "supervisor-prompt"
           - `conversations.system-prompt.section` "supervisor-roles"
           - `trigger` "supervisor-roles.icon"
-        - Uses: 28 symbols — full list in [`plugins/tasks/plugins/supervisor-roles/REFERENCE.md`](../plugins/tasks/plugins/supervisor-roles/REFERENCE.md)
-          - `tasks/tasks-core` ×5
+        - Uses: 29 symbols — full list in [`plugins/tasks/plugins/supervisor-roles/REFERENCE.md`](../plugins/tasks/plugins/supervisor-roles/REFERENCE.md)
+          - `tasks/tasks-core` ×6
           - `tasks/orchestration/mandate` ×4
           - `config_v2` ×2
           - `database` ×2
@@ -59847,6 +59848,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `getSupervisorRole`
           - `isSessionRoot`
           - `liveSessionOf`
+          - `lockRoleSessions`
           - `resolveFilingRole`
           - `roleBacklog`
           - `roleOfConversation`
@@ -60008,8 +60010,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by: `tasks/task-header`
         - **`sessions`** — Supervisor role sessions: POST /api/supervisor-roles/:id/sessions opens the role's live session or launches one (one live session per role — a root task stating the supervisor-role mandate, owned by the role, its brief the role's prompt, armed at once), POST …/:id/backlog/:taskId/adopt (the Supervisors pane's Adopt: into the live session, launching one when none is live), and the role powers' MCP tools, gated on the role capability: backlog (list the role's backlog), adopt_task (move a backlog task under the live session's root and arm it) and route_task (hand a task the role owns to another role).
           - Server:
-            - Uses: 27 symbols — full list in [`plugins/tasks/plugins/supervisor-roles/plugins/sessions/REFERENCE.md`](../plugins/tasks/plugins/supervisor-roles/plugins/sessions/REFERENCE.md)
-              - `tasks/supervisor-roles` ×11
+            - Uses: 28 symbols — full list in [`plugins/tasks/plugins/supervisor-roles/plugins/sessions/REFERENCE.md`](../plugins/tasks/plugins/supervisor-roles/plugins/sessions/REFERENCE.md)
+              - `tasks/supervisor-roles` ×12
               - `tasks/tasks-core` ×6
               - `infra/endpoints` ×2
               - `tasks/orchestration/mandate` ×2
@@ -60598,7 +60600,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/auto-start`
           - `tasks/task-deps-tree`
           - `tasks/task-detail`
-    - **`task-mandate`** — The task detail's Mandate control: the task's effective mandate (Interactive / Supervisor / an automation's) as a select, an inherited one marked so and linked to the ancestor it comes from; picking a mandate states it as the task's own (governing its subtree), Inherit from parent drops it again. The endpoints that change a task's mandate: PUT /api/tasks/:taskId/mandate states a named mandate as the task's own (refusing an id no definition names), DELETE drops it so the task inherits its nearest ancestor's again (refused on a root).
+    - **`task-mandate`** — The task detail's Mandate control: the task's effective mandate (Interactive / Supervisor / an automation's) as a select, an inherited one marked so and linked to the ancestor it comes from; picking a mandate states it as the task's own (governing its subtree), Inherit from parent drops it again. The endpoints that change a task's mandate: PUT /api/tasks/:taskId/mandate states a named mandate as the task's own (refusing an id no definition names, and an owned mandate — stated only by its owner's writes), DELETE drops it so the task inherits its nearest ancestor's again (refused on a root); both refuse a task that itself states an owned mandate.
       - Web:
         - Uses:
           - `infra/endpoints.useFetchEndpoint`
@@ -60621,11 +60623,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `TaskMandateControl`
       - Server:
         - Uses:
+          - `database.db`
           - `infra/endpoints.HttpError`
           - `infra/endpoints.implement`
           - `tasks/orchestration/mandate/definitions.mandateDefinitionEntries`
           - `tasks/tasks-core.clearMandate`
           - `tasks/tasks-core.getTask`
+          - `tasks/tasks-core.nearestMandate`
           - `tasks/tasks-core.setMandate`
         - Routes:
           - `PUT /api/tasks/:taskId/mandate`
@@ -61148,7 +61152,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `db-trigger` "tasks.cluster"
           - `host-service:tasks-core.push-ledger` "tasks-core.push-ledger"
           - `live.columns.expose` "tasks ← tasks_ext_mandate"
-        - Uses: 21 symbols — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
+        - Uses: 22 symbols — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
           - `network/live` ×3
           - `primitives/rank` ×3
           - `database/db-triggers` ×2
@@ -61162,6 +61166,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/attachments.Attachments`
           - `infra/entity-extensions.defineExtension`
           - `infra/events.defineTriggerEvent`
+          - `tasks/orchestration/mandate/definitions.mandateRefiledAs`
         - DB schema:
           - `plugins/tasks/plugins/tasks-core/server/internal/mutations/cross-table.ts`
           - `plugins/tasks/plugins/tasks-core/server/internal/rollup-table.ts`

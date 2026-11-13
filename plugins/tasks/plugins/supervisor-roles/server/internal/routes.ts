@@ -2,7 +2,6 @@ import { count, eq, sql } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { HttpError, implement } from "@plugins/infra/plugins/endpoints/server";
 import { getTask } from "@plugins/tasks/plugins/tasks-core/server";
-import { isSessionRoot } from "./roles";
 import {
   createSupervisorRole,
   deleteSupervisorRole,
@@ -11,9 +10,14 @@ import {
   supervisorRoleIdKind,
   updateSupervisorRole,
 } from "../../core";
-import { _supervisorRoles, tasksSupervisor } from "./tables";
+import { _supervisorRoles } from "./tables";
 import { supervisorRoleIconStale } from "./tables-events";
-import { getSupervisorRole, setTaskSupervisorRole } from "./roles";
+import {
+  deleteRoleReleasing,
+  getSupervisorRole,
+  isSessionRoot,
+  setTaskSupervisorRole,
+} from "./roles";
 
 async function assertNameFree(name: string, exceptId?: string): Promise<void> {
   const [row] = await db
@@ -106,15 +110,6 @@ export const handleDeleteSupervisorRole = implement(
   async ({ params }) => {
     const role = await getSupervisorRole(params.id);
     if (!role) throw new HttpError(404, `No supervisor role "${params.id}".`);
-    const [{ owned } = { owned: 0 }] = await db
-      .select({ owned: count() })
-      .from(tasksSupervisor.table)
-      .where(eq(tasksSupervisor.table.supervisor, role.id));
-    if (owned > 0)
-      throw new HttpError(
-        409,
-        `"${role.name}" still owns ${owned} task(s): route them to another role first.`,
-      );
     if (role.fallback) {
       const [{ n } = { n: 0 }] = await db
         .select({ n: count() })
@@ -125,7 +120,19 @@ export const handleDeleteSupervisorRole = implement(
           `"${role.name}" is the fallback role: make another role the fallback first.`,
         );
     }
-    await db.delete(_supervisorRoles).where(eq(_supervisorRoles.id, role.id));
+    const refusal = await db.transaction((tx) =>
+      deleteRoleReleasing(role.id, tx),
+    );
+    if (refusal?.kind === "live-session")
+      throw new HttpError(
+        409,
+        `"${role.name}" has a live session (${refusal.taskId}): end it first.`,
+      );
+    if (refusal?.kind === "backlog")
+      throw new HttpError(
+        409,
+        `"${role.name}" still has ${refusal.count} task(s) in its backlog: route them to another role first.`,
+      );
   },
 );
 

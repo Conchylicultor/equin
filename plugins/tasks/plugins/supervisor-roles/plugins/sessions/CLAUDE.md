@@ -26,8 +26,8 @@ imports the parent.
 
 - Description: Supervisor role sessions: POST /api/supervisor-roles/:id/sessions opens the role's live session or launches one (one live session per role — a root task stating the supervisor-role mandate, owned by the role, its brief the role's prompt, armed at once), POST …/:id/backlog/:taskId/adopt (the Supervisors pane's Adopt: into the live session, launching one when none is live), and the role powers' MCP tools, gated on the role capability: backlog (list the role's backlog), adopt_task (move a backlog task under the live session's root and arm it) and route_task (hand a task the role owns to another role).
 - Server:
-  - Uses: 27 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `tasks/supervisor-roles` ×11
+  - Uses: 28 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `tasks/supervisor-roles` ×12
     - `tasks/tasks-core` ×6
     - `infra/endpoints` ×2
     - `tasks/orchestration/mandate` ×2

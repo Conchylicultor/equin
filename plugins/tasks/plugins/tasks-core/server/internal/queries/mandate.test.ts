@@ -9,10 +9,16 @@ import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
  *
  * Run: `./equin test plugins/tasks/plugins/tasks-core`.
  */
-import { describe, expect, test } from "bun:test";
+import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { clearCollectedContributions } from "@plugins/framework/plugins/server-core/core/testing";
+import { collectContributions } from "@plugins/framework/plugins/server-core/core";
+import { MandateDefinitions } from "@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/definitions/server";
 import { sql } from "drizzle-orm";
 import { worktreeDbScenario } from "@plugins/database/plugins/db-test-fixture/plugins/worktree-db/server/testing";
-import { defineMandate } from "@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/policy/core";
+import {
+  defineMandate,
+  mandatePolicy,
+} from "@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/policy/core";
 import {
   clearMandate,
   createTask,
@@ -32,6 +38,29 @@ const TEST_FILING = {
 // Never resolved here: tasks-core stores and walks ids only.
 const ROOT = defineMandate({ id: "test-root", label: "Root" });
 const NESTED = defineMandate({ id: "test-nested", label: "Nested" });
+// Owned: a re-file out of its tree states ROOT instead of copying it.
+const OWNED = defineMandate({ id: "test-owned", label: "Owned" });
+
+// A re-file to the root reads the mandate registry (an owned mandate is never
+// copied): this suite's definitions are its whole registry.
+beforeAll(() => {
+  const policy = () => mandatePolicy([]);
+  collectContributions([
+    {
+      id: "test",
+      contributions: [
+        MandateDefinitions.Definition({ mandate: ROOT, policy }),
+        MandateDefinitions.Definition({ mandate: NESTED, policy }),
+        MandateDefinitions.Definition({
+          mandate: OWNED,
+          policy,
+          owned: { refiledAs: ROOT },
+        }),
+      ],
+    },
+  ]);
+});
+afterAll(() => clearCollectedContributions());
 
 /** Each task's materialized effective mandate id (`tasks_ext_mandate`). */
 async function effective(
@@ -139,6 +168,44 @@ describe("root mandate invariant", () => {
       kind: "found",
       rootTaskId: found.child,
       mandateId: ROOT.id,
+    });
+  });
+
+  test("re-filing to the root never copies an OWNED mandate: it states the one its definition names", async () => {
+    const found = await worktreeDbScenario(async (tx) => {
+      const session = await createTask(
+        { filing: TEST_FILING, title: "session", mandate: OWNED },
+        tx,
+      );
+      const worker = await createTask(
+        { filing: TEST_FILING, folderId: session.id, title: "w" },
+        tx,
+      );
+      await updateTask(worker.id, { folderId: null }, tx);
+      // The owned root itself, moved under a folder and back, keeps it: it
+      // states it, it does not inherit it.
+      const folder = await createTask(
+        { filing: TEST_FILING, title: "folder", mandate: ROOT },
+        tx,
+      );
+      await updateTask(session.id, { folderId: folder.id }, tx);
+      await updateTask(session.id, { folderId: null }, tx);
+      return {
+        worker: worker.id,
+        session: session.id,
+        gotWorker: await nearestMandate(worker.id, tx),
+        gotSession: await nearestMandate(session.id, tx),
+      };
+    });
+    expect(found.gotWorker).toEqual({
+      kind: "found",
+      rootTaskId: found.worker,
+      mandateId: ROOT.id,
+    });
+    expect(found.gotSession).toEqual({
+      kind: "found",
+      rootTaskId: found.session,
+      mandateId: OWNED.id,
     });
   });
 

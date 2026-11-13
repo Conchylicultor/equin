@@ -14,6 +14,16 @@ import {
 export interface MandateDefinitionEntry {
   mandate: MandateRef;
   policy: () => MandatePolicy;
+  /**
+   * Set when the mandate is OWNED: a tree under it needs state of the
+   * defining plugin beside the mandate id (a role session's root needs the
+   * role it works for), so only that plugin's own writes state it. An owned
+   * mandate is never stated or unstated by hand (the Mandate select does not
+   * offer it, its endpoints refuse) and never copied: a task re-filed out of
+   * its tree to the root, which keeps the mandate it had, states `refiledAs`
+   * instead — so no task can come to state it without that state.
+   */
+  owned?: { refiledAs: MandateRef };
 }
 
 const DefinitionToken = defineServerContribution<MandateDefinitionEntry>(
@@ -47,6 +57,18 @@ export const MandateDefinitions = {
   Definition: DefinitionToken,
   Source: DefinitionSourceToken,
 };
+
+/**
+ * The mandate a task states when it is re-filed to the root from a tree
+ * stating `mandateId`: the same one, unless it is owned (see
+ * {@link MandateDefinitionEntry.owned}). An id no definition names (an
+ * automation since removed) is kept as it is.
+ */
+export function mandateRefiledAs(mandateId: string): string {
+  return (
+    mandateDefinitionEntries().get(mandateId)?.owned?.refiledAs.id ?? mandateId
+  );
+}
 
 /** Every defined mandate, by id; a second definition of an id throws. */
 export function mandateDefinitionEntries(): Map<

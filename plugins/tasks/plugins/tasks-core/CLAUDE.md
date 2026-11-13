@@ -436,7 +436,7 @@ serves them.
     - `db-trigger` "tasks.cluster"
     - `host-service:tasks-core.push-ledger` "tasks-core.push-ledger"
     - `live.columns.expose` "tasks ← tasks_ext_mandate"
-  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 22 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `network/live` ×3
     - `primitives/rank` ×3
     - `database/db-triggers` ×2
@@ -450,6 +450,7 @@ serves them.
     - `infra/attachments.Attachments`
     - `infra/entity-extensions.defineExtension`
     - `infra/events.defineTriggerEvent`
+    - `tasks/orchestration/mandate/definitions.mandateRefiledAs`
   - DB schema:
     - `plugins/tasks/plugins/tasks-core/server/internal/mutations/cross-table.ts`
     - `plugins/tasks/plugins/tasks-core/server/internal/rollup-table.ts`

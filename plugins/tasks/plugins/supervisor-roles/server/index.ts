@@ -39,6 +39,7 @@ export {
   getSupervisorRole,
   isSessionRoot,
   liveSessionOf,
+  lockRoleSessions,
   resolveFilingRole,
   roleBacklog,
   roleOfConversation,

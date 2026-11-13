@@ -12,6 +12,7 @@ import {
   taskDependsOn,
 } from "../queries/tasks";
 import type { MandateRef } from "@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/policy/core";
+import { mandateRefiledAs } from "@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/definitions/server";
 import { refreshEffectiveMandates } from "./mandate";
 import { withTaskStatusChange } from "../status-scope";
 import {
@@ -229,7 +230,11 @@ async function updateTaskOn(
  * The part of a re-file that is not the write itself, run before it on the
  * same executor (after the caller's self / descendant guards — a rejected
  * re-file must not write): filing to the root keeps the mandate the task had under its folder — a root names
- * one (the CHECK) — copied as its own. Returns the columns the write sets.
+ * one (the CHECK) — copied as its own; an OWNED mandate is never copied, the
+ * task states the one its definition names for a re-file instead
+ * (`mandateRefiledAs`: a task dragged out of a role session's tree must not
+ * become a role session root no role owns). Returns the columns the write
+ * sets.
  * After the write, the caller runs {@link finishRefile}. Shared by
  * `updateTask` and the tree's drag move, so no re-file path skips either half.
  */
@@ -249,7 +254,7 @@ export async function prepareRefile(
   }
   return own.rootTaskId === id
     ? { folderId }
-    : { folderId, mandateRef: own.mandateId };
+    : { folderId, mandateRef: mandateRefiledAs(own.mandateId) };
 }
 
 /**

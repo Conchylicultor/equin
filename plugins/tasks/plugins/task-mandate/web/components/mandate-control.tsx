@@ -108,6 +108,13 @@ export function TaskMandateControl({ taskId }: { taskId: string }) {
       : "Inherit from parent";
   const value =
     effective === null ? null : inherited ? INHERIT : effective.mandateId;
+  // An owned mandate (a role session's) is stated and changed only by its
+  // owner: a task stating it shows it, locked; no task is offered it.
+  const ownsOwned =
+    !inherited &&
+    effective !== null &&
+    definitions.data.some((d) => d.id === effective.mandateId && !d.byHand);
+  const offered = definitions.data.filter((d) => d.byHand || d.id === value);
 
   const fail = (err: unknown) => {
     toast({
@@ -142,6 +149,7 @@ export function TaskMandateControl({ taskId }: { taskId: string }) {
         }}
         value={value}
         onValueChange={onChange}
+        disabled={ownsOwned}
       >
         <SelectTrigger aria-label="Mandate">
           <SelectValue placeholder="None" />
@@ -150,7 +158,7 @@ export function TaskMandateControl({ taskId }: { taskId: string }) {
           {(isNested || inherited) && (
             <SelectItem value={INHERIT}>{inheritLabel}</SelectItem>
           )}
-          {definitions.data.map((d) => (
+          {offered.map((d) => (
             <SelectItem key={d.id} value={d.id}>
               {d.label}
             </SelectItem>

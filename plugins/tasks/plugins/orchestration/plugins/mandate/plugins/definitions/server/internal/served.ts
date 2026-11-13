@@ -19,6 +19,7 @@ export const mandateDefinitionsServed = serveValue(mandateDefinitions, {
         id: d.mandate.id,
         label: d.mandate.label,
         kinds: [...mandateKinds(d.mandate)],
+        byHand: d.owned === undefined,
       }))
       .sort((a, b) => a.label.localeCompare(b.label)),
 });

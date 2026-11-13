@@ -18,12 +18,16 @@ tools — are `plugins/sessions`.
   `supervisor-roles.all` (capped at `SUPERVISOR_ROLES_MAX`, the create
   endpoint refuses one more). Written through `POST /api/supervisor-roles`,
   `PATCH /api/supervisor-roles/:id` (`icon: null` hands the icon back to
-  Haiku; `fallback: true` moves the fallback) and `DELETE …/:id` (409 while the
-  role owns a task, or is the fallback with others left).
+  Haiku; `fallback: true` moves the fallback) and `DELETE …/:id`
+  (`deleteRoleReleasing`: 409 while the role has a live session or a
+  backlog, or is the fallback with others left; otherwise it RELEASES what it
+  owned — each ended session root states the interactive mandate instead,
+  every owner row goes, then the role; no task is deleted).
 - **Who owns a task** — `tasks_ext_supervisor` (`taskId → supervisor`, plus
   `filedFromTaskId`: the task whose agent filed it into a backlog), exposed
   as the `supervisor` field of every task list (options: the roles, by
-  name). The role is a FK, ON DELETE RESTRICT. The row sits on the ROOTS a
+  name). The role is a FK, ON DELETE RESTRICT (the delete releases the rows
+  first). The row sits on the ROOTS a
   role owns — its backlog tasks and its session roots; an adopted task's row
   is deleted (the tree's root carries the role). Routing a backlog task is
   just setting it: `PUT /api/tasks/:taskId/supervisor`, or the session tool
@@ -43,7 +47,14 @@ tools — are `plugins/sessions`.
 - **Mandate** — ONE named mandate, `supervisor-role` (`supervisorRoleMandate`,
   a kind of `supervisor`: `extends: supervisorMandate`):
   `supervisorPolicy({ root: [supervisorRole.grant(true)] })`, computed at each
-  resolution. WHICH role a session works for is its root task's `supervisor`
+  resolution. It is OWNED (`owned: { refiledAs: interactiveMandate }` on its
+  definition — orchestration/mandate/definitions): a task states it only with
+  an owner row beside it, so no path leaves a role-less session root. Only the
+  launch states it; the Mandate select does not offer it and its endpoints
+  refuse to state or unstate it; a task re-filed out of a session's tree to the
+  root states the interactive mandate instead of copying it (tasks-core's
+  `prepareRefile`), leaving the role; a session root's owner row is fixed
+  (`isSessionRoot` — any task stating the mandate, nested or not). WHICH role a session works for is its root task's `supervisor`
   field (`roleOfConversation`), never encoded in the mandate id — two sources
   of truth that could disagree. The role powers (`supervisorRole`, root only):
   the session tools (`plugins/sessions`) and a `MandateReach` — a role session
@@ -106,8 +117,8 @@ tools — are `plugins/sessions`.
     - `conversations.system-prompt.section` "supervisor-prompt"
     - `conversations.system-prompt.section` "supervisor-roles"
     - `trigger` "supervisor-roles.icon"
-  - Uses: 28 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `tasks/tasks-core` ×5
+  - Uses: 29 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `tasks/tasks-core` ×6
     - `tasks/orchestration/mandate` ×4
     - `config_v2` ×2
     - `database` ×2
@@ -138,6 +149,7 @@ tools — are `plugins/sessions`.
     - `getSupervisorRole`
     - `isSessionRoot`
     - `liveSessionOf`
+    - `lockRoleSessions`
     - `resolveFilingRole`
     - `roleBacklog`
     - `roleOfConversation`

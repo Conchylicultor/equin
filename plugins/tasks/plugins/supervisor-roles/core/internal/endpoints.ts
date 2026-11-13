@@ -55,9 +55,11 @@ export const updateSupervisorRole = defineEndpoint({
 });
 
 /**
- * Delete a role. Refused (409) while it owns a task — route its tasks to
- * another role first — and for the fallback while another role exists (move
- * the fallback first).
+ * Delete a role. Refused (409) while it has a live session (end it first) or
+ * a backlog (route it to another role first), and for the fallback while
+ * another role exists (move the fallback first). Otherwise what it owned is
+ * released, never deleted: its ended sessions' roots state the interactive
+ * mandate instead, and the tasks lose their owner.
  */
 export const deleteSupervisorRole = defineEndpoint({
   route: "DELETE /api/supervisor-roles/:id",

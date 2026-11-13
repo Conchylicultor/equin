@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: The named-mandate registry's web presence: eagerly registers the boot-preloaded mandate.definitions live value (every named mandate's id, label and the mandates it is a kind of) so boot-snapshot hydrates it before first paint. The named-mandate registry: MandateDefinitions.Definition (what one named mandate grants) and MandateDefinitions.Source (a runtime family of them — one per automation), read at every resolution through mandateDefinitionEntries, mandateIsKindOf (is a stored mandate id a kind of a base mandate — its lineage, declared by defineMandate extends), and the mandate.definitions value (every named mandate's id, label and the mandates it is a kind of).
+- Description: The named-mandate registry's web presence: eagerly registers the boot-preloaded mandate.definitions live value (every named mandate's id, label and the mandates it is a kind of) so boot-snapshot hydrates it before first paint. The named-mandate registry: MandateDefinitions.Definition (what one named mandate grants) and MandateDefinitions.Source (a runtime family of them — one per automation), read at every resolution through mandateDefinitionEntries, mandateIsKindOf (is a stored mandate id a kind of a base mandate — its lineage, declared by defineMandate extends), and the mandate.definitions value (every named mandate's id, label, the mandates it is a kind of and whether a person may state it — an owned mandate is stated only by its owner's writes, and a re-file to the root states its `refiledAs` instead).
 - Server:
   - Contributes: `resource.declare` "mandate.definitions"
   - Uses: `network/live.serveValue`
@@ -15,6 +15,7 @@
     - `mandateDefinitionEntries`
     - `MandateDefinitions`
     - `mandateIsKindOf`
+    - `mandateRefiledAs`
   - Resources: `mandate.definitions` (push, fixed, whole: one entry per named mandate the code defines — the presets and one per automation, a handful)
 - Core:
   - Uses:
