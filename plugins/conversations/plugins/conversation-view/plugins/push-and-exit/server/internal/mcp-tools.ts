@@ -57,15 +57,14 @@ Call it when the user asks you to wrap up (the push-and-exit prompt or an explic
 export const flagRaiseTool = Mcp.tool({
   name: "flag_raise",
   when: granted(flagRaise),
-  description: `Signal that the push-and-exit flow finished but something needs the user's attention — caveats, partial outcomes, follow-ups, skipped work, or the push didn't land. \`reason\` should be a short bullet list of what the user should know — only what is NEW: if everything worth surfacing is already in your last message, call \`exit_clean\` instead. The conversation stays open for the user to review, and whoever watches your task is told.
-
-Call it in response to the push-and-exit prompt, or whenever your instructions tell you to raise a flag.`,
+  description:
+    "Signal that the push-and-exit flow finished but something needs the user's attention (called instead of `exit_clean`).",
   inputSchema: {
     reason: z
       .string()
       .min(1)
       .describe(
-        "Short bullets describing what the user should know — caveats, partial outcomes, follow-ups, skipped work, or push failure details.",
+        "Bullet points of the items which require human attention. This field should not contain things that landed or went well.",
       ),
   },
   async handler({ reason }, { conversationId }) {

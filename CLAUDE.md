@@ -238,7 +238,7 @@ Independent projects that live in `sidequests/`, not directly related to equin. 
 - **Subagents: Opus for the work, Sonnet only for lookups.** Debugging, planning, design, implementation and synthesis run on Opus (`model: "opus"`). Pass `model: "sonnet"` only for lookup and exploration (locate code, read and report) and large mechanical refactors (the same edit applied across many files). Review: your judgment — weigh what a missed bug would cost.
 - **On breakage, rebase to HEAD first** (`git fetch origin main && git rebase origin/main`) — it may already be fixed.
 - **Don't memorize gotchas — report them so they get fixed structurally.** On a footgun (silent-`undefined` API, "you must also update X" coupling, boot-crash-if-misplaced, build trap), do NOT write a memory file; surface it to the user or `add_task` it, to be removed at the highest rung of the fix ladder (Coding Style). Durable how-it-works knowledge goes in `CLAUDE.md` / `docs/`, not personal memory.
-- **When the user explicitly says "Exit"**: call exactly one MCP tool — `exit_clean` (all smooth; the conversation closes) or `flag_raise({ reason })` (caveats, partial outcomes, follow-ups, skipped work, push didn't land; short bullets) — then write the final wrap-up (summary, issues, caveats, follow-ups).
+- **When the user explicitly says "Exit"**: call exactly one MCP tool — `exit_clean` (all smooth; the conversation closes) or `flag_raise({ reason })` (something needs the user's attention).
 
 ### Quotable choices: `<go>`
 
