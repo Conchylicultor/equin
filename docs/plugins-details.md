@@ -3431,6 +3431,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `apps/deploy/site-mirror/pull.onSiteMirrorApplied`
                   - `apps/deploy/site-mirror/pull.readSiteMirror`
                   - `database/sql-projection.parsed`
+                  - `database/table-mirror/replica.ReplicaTx`
+                  - `database/table-mirror/replica.tableMirrorReplicas`
                   - `network/live.serveCollection`
                   - `network/live/filter.filterSql`
                 - Resources:
@@ -23581,6 +23583,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `apps/deploy/analytics/dashboard`
               - `apps/deploy/analytics/sessions`
+              - `apps/deploy/site-messages/inbox`
               - `apps/deploy/site-mirror/pull`
           - Exemptions:
             - Exempts itself from:

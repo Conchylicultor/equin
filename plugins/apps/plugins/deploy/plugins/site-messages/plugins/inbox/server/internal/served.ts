@@ -1,11 +1,15 @@
 import type { LiveDecodedCountQuery } from "@plugins/network/plugins/live/core";
 import { serveCollection } from "@plugins/network/plugins/live/server";
-import type { ReplicaTx } from "@plugins/database/plugins/table-mirror/plugins/replica/server";
+import {
+  tableMirrorReplicas,
+  type ReplicaTx,
+} from "@plugins/database/plugins/table-mirror/plugins/replica/server";
 import {
   onSiteMirrorApplied,
   readSiteMirror,
 } from "@plugins/apps/plugins/deploy/plugins/site-mirror/plugins/pull/server";
 import { SITE_MESSAGES_MIRROR_SET_ID } from "@plugins/apps/plugins/deploy/plugins/site-messages/plugins/intake/core";
+import { siteMessages } from "@plugins/apps/plugins/deploy/plugins/site-messages/plugins/intake/server";
 import { siteMessagesInbox, type SiteMessageRow } from "../../core";
 import {
   deploymentOf,
@@ -43,6 +47,20 @@ async function onCopy<T>(
 export const siteMessagesInboxServed = serveCollection(siteMessagesInbox, {
   source: "external",
   changes: "notified",
+  // What the answers read: the copy's `site_messages` (named as the intake's
+  // own — the replica schema holds it under the same name) and the replica's
+  // state row. Every change to either arrives through the replica's NOTIFY
+  // (`whileSubscribed` below), in the transaction that applied it — never
+  // through the change feed, which does not cover the replica schema.
+  reads: {
+    tables: [],
+    reason: "a site's copy of its messages, read through its replica",
+    notified: {
+      relations: [tableMirrorReplicas, siteMessages],
+      reason:
+        "the copy (and whether it is whole) moves only when a pull applies a page, which the replica announces (onReplicaApplied)",
+    },
+  },
   window: async (q) => {
     const scope = deploymentOf(q.where);
     if (scope.kind === "none") return [];

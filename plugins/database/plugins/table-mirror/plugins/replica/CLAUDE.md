@@ -179,6 +179,7 @@ drop and sweep.
   - Imported by:
     - `apps/deploy/analytics/dashboard`
     - `apps/deploy/analytics/sessions`
+    - `apps/deploy/site-messages/inbox`
     - `apps/deploy/site-mirror/pull`
 - Exemptions:
   - Exempts itself from:

@@ -82,6 +82,8 @@ search, count, groups, `:rows`, an unscoped read refused).
     - `apps/deploy/site-mirror/pull.onSiteMirrorApplied`
     - `apps/deploy/site-mirror/pull.readSiteMirror`
     - `database/sql-projection.parsed`
+    - `database/table-mirror/replica.ReplicaTx`
+    - `database/table-mirror/replica.tableMirrorReplicas`
     - `network/live.serveCollection`
     - `network/live/filter.filterSql`
   - Resources:
