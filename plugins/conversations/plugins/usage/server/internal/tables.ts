@@ -14,7 +14,7 @@ import {
 import { defineExtension } from "@plugins/infra/plugins/entity-extensions/server";
 import { _conversations } from "@plugins/tasks/plugins/tasks-core/server";
 import type { DayBucket } from "@plugins/stats/plugins/cost/core";
-import { conversationUsageShape } from "../../shared/shape";
+import { conversationUsageShape } from "../../core";
 
 // The totals the conversation lists read (`conversations_ext_usage`, 1:1 on the
 // conversation, FK CASCADE). Every column defaults to 0, so a conversation with

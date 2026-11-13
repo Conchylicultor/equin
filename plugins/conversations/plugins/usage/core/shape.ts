@@ -1,3 +1,4 @@
+import { liveCollection } from "@plugins/network/plugins/live/core";
 import { floatField } from "@plugins/fields/plugins/float/plugins/config/core";
 import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
 import { moneyField } from "@plugins/fields/plugins/money/plugins/config/core";
@@ -37,4 +38,16 @@ export const conversationUsageShape = defineExtensionShape({
     name: "usage",
     fields: { costUsd: {}, tokens: {}, agentCount: {} },
   },
+});
+
+/**
+ * One conversation's usage totals by its id — lookup-only (the lists read the
+ * same numbers as exposed fields): `useLive(conversationUsageById, { id })`,
+ * where `found: false` is "not counted yet". A load is one primary-key seek,
+ * and a recount reaches only its own conversation's readers. Read by the
+ * transcript's cost stat.
+ */
+export const conversationUsageById = liveCollection("conversations.usage", {
+  from: conversationUsageShape,
+  id: "conversationId",
 });

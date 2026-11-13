@@ -2300,6 +2300,10 @@
       "name": "@equin/plugin-conversations-conversation-view-jsonl-viewer-transcript-stats-context",
       "version": "0.0.1",
     },
+    "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/transcript-stats/plugins/cost": {
+      "name": "@equin/plugin-conversations-conversation-view-jsonl-viewer-transcript-stats-cost",
+      "version": "0.0.1",
+    },
     "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/transcript-stats/plugins/token-budget": {
       "name": "@equin/plugin-conversations-conversation-view-jsonl-viewer-transcript-stats-token-budget",
       "version": "0.0.1",
@@ -8841,6 +8845,8 @@
     "@equin/plugin-conversations-conversation-view-jsonl-viewer-transcript-stats": ["@equin/plugin-conversations-conversation-view-jsonl-viewer-transcript-stats@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/transcript-stats"],
 
     "@equin/plugin-conversations-conversation-view-jsonl-viewer-transcript-stats-context": ["@equin/plugin-conversations-conversation-view-jsonl-viewer-transcript-stats-context@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/transcript-stats/plugins/context"],
+
+    "@equin/plugin-conversations-conversation-view-jsonl-viewer-transcript-stats-cost": ["@equin/plugin-conversations-conversation-view-jsonl-viewer-transcript-stats-cost@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/transcript-stats/plugins/cost"],
 
     "@equin/plugin-conversations-conversation-view-jsonl-viewer-transcript-stats-token-budget": ["@equin/plugin-conversations-conversation-view-jsonl-viewer-transcript-stats-token-budget@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/transcript-stats/plugins/token-budget"],
 

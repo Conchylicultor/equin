@@ -1,4 +1,4 @@
-// @hash be8a4b19b664
+// @hash 0c6f2dbc9574
 // @legend — how to write this file (rewritten by ./equin build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -23,6 +23,9 @@
     // After the usage chip: its total adds the sub-agents' output to the
     // conversation's own, which the usage chip beside it counts alone.
     "conversations.conversation-view.running-agents:agents",
+    // The session's API cost: the conversation and every sub-agent, so right
+    // after the agents chip whose output it prices.
+    "conversations.conversation-view.jsonl-viewer.transcript-stats.cost:cost",
     // Last, right of every token count: the context ring that opens the
     // breakdown and the Compact action.
     "conversations.conversation-view.jsonl-viewer.transcript-stats.context:context"

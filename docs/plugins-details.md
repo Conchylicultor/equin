@@ -17657,8 +17657,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-size-2xs`
               - `ui/tokens/type-scale --line-height-2xs`
               - `ui/tokens/type-scale --measure-reading`
-            - Imported by: 51 plugins — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
-              - `conversations` ×48
+            - Imported by: 52 plugins — full list in [`plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/REFERENCE.md)
+              - `conversations` ×49
               - `apps/places/places-map`
               - `network/live`
               - `tasks/outcome-report`
@@ -19690,6 +19690,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Slots: `TranscriptStats.Item`
                 - Slot contributors:
                   - `TranscriptStats.Item` ← `conversations.conversation-view.jsonl-viewer.transcript-stats.context`
+                  - `TranscriptStats.Item` ← `conversations.conversation-view.jsonl-viewer.transcript-stats.cost`
                   - `TranscriptStats.Item` ← `conversations.conversation-view.jsonl-viewer.transcript-stats.token-budget`
                   - `TranscriptStats.Item` ← `conversations.conversation-view.jsonl-viewer.transcript-stats.usage`
                   - `TranscriptStats.Item` ← `conversations.conversation-view.running-agents`
@@ -19742,6 +19743,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/type-scale --measure-reading`
                 - Imported by:
                   - `conversations/conversation-view/jsonl-viewer/transcript-stats/context`
+                  - `conversations/conversation-view/jsonl-viewer/transcript-stats/cost`
                   - `conversations/conversation-view/jsonl-viewer/transcript-stats/token-budget`
                   - `conversations/conversation-view/jsonl-viewer/transcript-stats/usage`
                   - `conversations/conversation-view/running-agents`
@@ -19785,6 +19787,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `ui/tokens/density --space-xs`
                       - `ui/tokens/shape --radius`
                       - `ui/tokens/shape --spacing`
+                - **`cost`** — The session's API cost as a transcript stat: what the whole conversation has cost at API prices — its own transcripts and every sub-agent it launched, workflow agents included — read live from the conversation's usage totals (conversations.usage), with the tokens behind it on hover.
+                  - Web:
+                    - Contributes: `TranscriptStats.Item` "cost" → `CostStat`
+                    - Uses:
+                      - `conversations/conversation-view/jsonl-viewer.useJsonlConversationId`
+                      - `conversations/conversation-view/jsonl-viewer.useTranscriptSubject`
+                      - `conversations/conversation-view/jsonl-viewer/transcript-stats.StatBadge`
+                      - `conversations/conversation-view/jsonl-viewer/transcript-stats.TranscriptStats`
+                      - `network/live.useLive`
                 - **`token-budget`** — The agent's work allowance as a transcript stat: how many tokens the harness has charged against it up to the reading position, summed across the re-anchor it performs on every new request. Reports the total spent rather than the number the harness prints, which is a padded per-request allowance handed to the model and so reads as a constant. Owns both halves of the move — the stat, and the filter that takes the harness's repeated reminder rows out of the transcript flow they were cluttering. Serves the token-budget stat's fold of a conversation's transcript before the page's window.
                   - Web:
                     - Contributes:
@@ -22217,25 +22228,28 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/task-title`
       - Exemptions:
         - Exempts itself from: `ids:pk-declared` — `server/internal/tables-user-turn-sent-event.ts` (debt)
-    - **`usage`** — Cost, Tokens and Agents fields on every conversation list whose rows are conversations (the usage extension's exposed fields), sorting and filtering server-side. Per-conversation usage — cost, tokens and launched sub-agents — stored in conversations_ext_usage and exposed to every conversation list (LiveColumns.Expose). Counting it from the transcripts is the machine half's.
+    - **`usage`** — Cost, Tokens and Agents fields on every conversation list whose rows are conversations (the usage extension's exposed fields), sorting and filtering server-side. Per-conversation usage — cost, tokens and launched sub-agents — stored in conversations_ext_usage and exposed to every conversation list (LiveColumns.Expose) and read by id through the lookup-only conversations.usage collection. Counting it from the transcripts is the machine half's.
       - Web:
         - Contributes: `FieldPresentation.Register` "exposure:conversations_ext_usage"
         - Uses: `network/live.FieldPresentation`
       - Server:
         - Contributes:
           - `live.columns.expose` "conversations ← conversations_ext_usage"
+          - `resource.declare` "conversations.usage:rows"
           - `change-feed-exclusion` "conversation_usage_files"
         - Uses:
           - `database/sql-column.parsedJson`
           - `database/sql-column.parsedText`
           - `infra/entity-extensions.defineExtension`
           - `network/live.LiveColumns`
+          - `network/live.serveCollection`
           - `tasks/tasks-core._conversations`
         - DB schema: `plugins/conversations/plugins/usage/server/internal/tables.ts`
         - Entity extension of: `tasks/tasks-core` (table `conversations_ext_usage`)
         - Exports (values):
           - `_conversationUsageExt`
           - `_conversationUsageFiles`
+        - Resources: `conversations.usage:rows` (keyed, point)
       - Machine:
         - Uses:
           - `conversations/conversation-view/jsonl-viewer/subagents.listSubagentEntries`
@@ -22245,6 +22259,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defineJob('conversations.usage.backfill')`
           - `defineJob('conversations.usage.reprice')`
           - `defineWarmup('conversations.usage.backfill')`
+      - Core:
+        - Uses:
+          - `fields/float/config.floatField`
+          - `fields/int/config.intField`
+          - `fields/money/config.moneyField`
+          - `infra/entity-extensions.defineExtensionShape`
+          - `network/live.liveCollection`
+          - `tasks/tasks-core.conversationsEntityRef`
+        - Exports (values):
+          - `conversationUsageById`
+          - `conversationUsageShape`
+      - Cross-plugin:
+        - Imported by: `conversations/conversation-view/jsonl-viewer/transcript-stats/cost`
     - **`workspace`** — Workspace web presence: eagerly registers the boot-preloaded workspace.catalog live value (every workspace a task can name) so boot-snapshot can hydrate it before first paint. Agent workspaces — where a conversation runs (a git worktree, or a scratch directory): the WorkspaceImpl contract and the per-kind registry the conversation lifecycle calls through (path, commit, prepare, finish, launch fragment, resumability), the scratch-profile registry feature plugins contribute to and parseWorkspaceSpec over it (a new attempt's spec, validated before any write), the workspace.catalog live value (every workspace a task can name), the conversation → workspace lookup, and the Workspace.Reclaimed announcement (every reaper calls announceWorkspacesReclaimed once it deleted attempts' workspaces; every plugin keeping per-attempt state contributes a handler that frees it).
       - Server:
         - Contributes: `resource.declare` "workspace.catalog"
@@ -39632,9 +39659,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveValueOn`
           - `sliceRange`
       - Cross-plugin:
-        - Imported by: 346 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+        - Imported by: 347 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
           - `apps` ×87
-          - `conversations` ×72
+          - `conversations` ×73
           - `debug` ×36
           - `tasks` ×28
           - `infra` ×24
