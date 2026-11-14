@@ -56,7 +56,7 @@ func TestBackendExitDuringHotRestartNeverLeavesRunningWithoutBackend(t *testing.
 	g2 := filepath.Join(dir, "g2")
 	pf.setGate(t, g2)
 	restartErr := make(chan error, 1)
-	go func() { restartErr <- pf.wt.Restart(ctx) }()
+	go func() { restartErr <- pf.wt.Restart(ctx, nil) }()
 	waitFor(t, "the successor to spawn", func() bool { return pf.spawnCount() == 2 })
 
 	// The serving backend crashes mid-restart: its waiters now wait on the
@@ -153,7 +153,7 @@ func TestHotRestartFailingAfterServingExitIsBroken(t *testing.T) {
 	gate := filepath.Join(t.TempDir(), "gate")
 	pf.setGate(t, gate)
 	restartErr := make(chan error, 1)
-	go func() { restartErr <- pf.wt.Restart(ctx) }()
+	go func() { restartErr <- pf.wt.Restart(ctx, nil) }()
 	waitFor(t, "the successor to spawn", func() bool { return pf.spawnCount() == 2 })
 	killBackend(t, old)
 
@@ -206,7 +206,7 @@ func TestBackendExitingRightAfterReadyIsNotPublished(t *testing.T) {
 		t.Fatal(err)
 	}
 	testHookBootReady = func(bk *backend) { killBackend(t, bk) }
-	if err := pf.wt.Restart(ctx); !errors.Is(err, errExitedAfterReady) {
+	if err := pf.wt.Restart(ctx, nil); !errors.Is(err, errExitedAfterReady) {
 		t.Fatalf("restart: %v, want errExitedAfterReady", err)
 	}
 	if bk, err := pf.wt.Ensure(ctx, StartBackground, "test"); err != nil || bk != old {
@@ -229,7 +229,7 @@ func TestDeployDuringABootWaitsThenRestarts(t *testing.T) {
 	}
 	done := make(chan deployed, 1)
 	go func() {
-		status, err := deployRestart(ctx, pf.wt, "test")
+		status, err := deployRestart(ctx, pf.wt, nil, "test")
 		done <- deployed{status, err}
 	}()
 	pf.openGate(t)

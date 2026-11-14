@@ -1,8 +1,7 @@
 import {
+  envName,
   readEnv,
   readEnvPath,
-  setEnv,
-  unsetEnv,
 } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { basename, join } from "node:path";
 import {
@@ -132,14 +131,14 @@ export interface ReleaseIdentity {
   composition: string | null;
 }
 
-// Where the identity rides: the same launch → gateway → backend env chain
-// `isRelease()` uses. Both names are forwarded names of the declared runtime
-// environment (`RUNTIME_FORWARDED_ENV` in `launcher/env-names`): the launcher spawns
-// the gateway with that subset of its live `process.env`, and the gateway hands
-// the same subset to the backend — so a name missing from that list would
-// silently never arrive. Private to this module on purpose —
-// `setReleaseIdentity` / `releaseIdentity` are the only surface, so the names
-// exist once and no consumer can spell one of them wrong.
+// Where the identity rides: the spec.json `env` of the backend it describes
+// (`releaseIdentityEnv`, written by the release launcher from the bundle that
+// backend runs). Never an inherited variable: the gateway outlives a backend
+// swap, so a value inherited from whoever started it would name the previous
+// release. Both names are per-release names of the declared environment
+// (`RUNTIME_WITHHELD_ENV` in `launcher/env-names`). Private to this module on
+// purpose — `releaseIdentityEnv` / `releaseIdentity` are the only surface, so
+// the names exist once and no consumer can spell one of them wrong.
 
 /**
  * Read which build is serving. This is a *propagation* of `RELEASE.json`, not a
@@ -156,21 +155,19 @@ export function releaseIdentity(): ReleaseIdentity {
 }
 
 /**
- * Stamp the release identity into the environment, for inheritance by every
- * process spawned after this call. Called by the launcher from the manifest,
- * BEFORE the gateway spawn — a child's env is snapshotted at spawn, so a later
- * write would never reach the backend.
+ * The environment entries that make a backend report `identity` — for the
+ * spec.json `env` of the backend spawned from that bundle. A null field is left
+ * out: an absent variable is how "not a release" is spelled.
  */
-export function setReleaseIdentity(identity: ReleaseIdentity): void {
-  for (const [key, value] of [
-    ["RELEASE_RUN_ID", identity.runId],
-    ["RELEASE_COMPOSITION", identity.composition],
-  ] as const) {
-    // A null field deletes rather than writes "null" / "": an absent var is how
-    // "not a release" is spelled, and a stale inherited value must not survive.
-    if (value === null) unsetEnv(key);
-    else setEnv(key, value);
+export function releaseIdentityEnv(
+  identity: ReleaseIdentity,
+): Record<string, string> {
+  const out: Record<string, string> = {};
+  if (identity.runId !== null) out[envName("RELEASE_RUN_ID")] = identity.runId;
+  if (identity.composition !== null) {
+    out[envName("RELEASE_COMPOSITION")] = identity.composition;
   }
+  return out;
 }
 
 /**

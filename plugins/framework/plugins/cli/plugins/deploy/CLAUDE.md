@@ -19,7 +19,7 @@ cli/internal/target.ts          `(composition, --server)` → everything both ve
 cli/internal/closure-guards.ts  converge's pre-mutation refusals
 cli/internal/converge-script.ts the generated host state (+ its test)
 cli/internal/secret-env.ts      the approved deploy secrets, fetched and rendered for stdin
-cli/internal/activate-script.ts the generated activation + health gate (+ its test)
+cli/internal/activate-script.ts the generated activation (extract, swap or host restart) + health gate (+ its test)
 ```
 
 `target.ts` is what the two verbs share, and it is not a grab-bag: both must
@@ -48,17 +48,35 @@ uploaded script or the transcript. Ship's health gate then asks the running app
 whether it can read every installed credential, and fails the ship if not
 (`apps/deploy/deploy-secrets` CLAUDE.md, *On the box*).
 
-**A restart never answers a visitor with a 502.** The install is one systemd
-unit, so every restart (ship's activation, converge's restart gate, a crash)
-closes the loopback port until the new gateway binds. Caddy holds a request
-whose dial is refused for `EDGE_RESTART_HOLD_SEC` (`caddySite`) instead of
-answering an empty 502 — a refused dial never reached the install, so it is
-sent once, not retried; a request cut mid-flight is re-sent only for GET.
-Past the bound the install is down and the 502 is the true answer. And
-converge restarts only when the configuration really changed: `put` stages
-in the script's private `$STAGE`, never beside its target, so a no-op converge
-moves no directory mtime the restart gate reads (it used to restart the site
-on every deploy, through the drop-in's `.new`).
+**A ship swaps the backend; it restarts the host only when the host changes.**
+The activate script extracts the bundle while the previous release serves, then
+runs the new release's `launch swap` (`infra/launcher` § A release host): the
+gateway boots the new backend beside the serving one and switches once it is
+ready, so no visitor waits and the old backend drains its in-flight requests.
+`current` flips after the gate passes. A release that changes the host
+(gateway, Postgres, PgBouncer, how they start) exits 3 and gets the old path,
+announced as `[host restart]`: flip, `systemctl restart`, gate — already
+extracted, so the gap is ~2 s rather than the ~6 s an extract-after-stop cost.
+A failed swap changes nothing; a swapped release failing the gate is swapped
+back to the previous release's extraction (`<release>/extract-dir`), falling
+back to a host restart on it. Extractions no process of the unit runs from are
+pruned after the gate. Design:
+`research/2026-11-14-global-zero-wait-site-deploys.md`.
+
+**A restart never answers a visitor with a 502.** Every restart of the unit (a
+host-changing ship, converge's restart gate, a crash) closes the loopback port
+until the new gateway binds. Caddy holds a request whose dial is refused for
+`EDGE_RESTART_HOLD_SEC` (`caddySite`) instead of answering an empty 502 — a
+refused dial never reached the install, so it is sent once, not retried; a
+request cut mid-flight is re-sent only for GET. Past the bound the install is
+down and the 502 is the true answer. The unit stops in order (`KillMode=mixed`,
+`TimeoutStopSec=RELEASE_STOP_TIMEOUT_S`): systemd signals only the
+self-extractor, which forwards to the launcher, which stops the gateway (drain,
+then the backend) before Postgres. And converge restarts only when the
+configuration really changed: `put` stages in the script's private `$STAGE`,
+never beside its target, so a no-op converge moves no directory mtime the
+restart gate reads (it used to restart the site on every deploy, through the
+drop-in's `.new`).
 
 Both generated scripts send their progress to **stderr** (`exec 1>&2`): a FAILED
 `sshRun` returns stderr only, and the failing run is the one whose log matters.

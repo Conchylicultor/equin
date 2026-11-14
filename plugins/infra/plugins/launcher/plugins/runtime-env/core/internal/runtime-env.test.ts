@@ -22,7 +22,7 @@ describe("pickRuntimeEnv", () => {
       PATH: "/usr/bin",
       ...envEntries({
         DIR: "/data",
-        RELEASE_RUN_ID: "run-1",
+        RELEASE: "1",
         AUTH_GOOGLE_CLIENT_ID: "id",
       }),
     });
@@ -31,7 +31,7 @@ describe("pickRuntimeEnv", () => {
       PATH: "home-value/.local/share/mise/shims:/usr/bin",
       ...envEntries({
         DIR: "/data",
-        RELEASE_RUN_ID: "run-1",
+        RELEASE: "1",
         AUTH_GOOGLE_CLIENT_ID: "id",
       }),
     });

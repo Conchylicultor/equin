@@ -343,7 +343,7 @@ takes a `debt` exemption on the check's id.
     - `infra/host/host-read-pool` (1 debt)
     - `infra/jobs` (2 debt)
     - `infra/jobs/supervised-job` (3 debt)
-    - `infra/launcher` (2 debt)
+    - `infra/launcher` (3 debt)
     - `infra/mcp/browser` (2 debt)
     - `infra/paths` (10 debt)
     - `infra/paths/data-root-layout` (2 debt)

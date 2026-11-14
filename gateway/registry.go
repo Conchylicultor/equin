@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -108,7 +107,7 @@ func (r *Registry) Resolve(name string) *Worktree {
 	if r.cfg.RegistryDir == "" || !validNamespace(name) {
 		return nil
 	}
-	specPath := filepath.Join(r.cfg.RegistryDir, name, "spec.json")
+	specPath := specFilePath(r.cfg.RegistryDir, name)
 	if _, err := os.Stat(specPath); err != nil {
 		return nil
 	}
@@ -134,7 +133,7 @@ func (r *Registry) RefreshSpec(name string) {
 	if r.cfg.RegistryDir == "" || !validNamespace(name) {
 		return
 	}
-	specPath := filepath.Join(r.cfg.RegistryDir, name, "spec.json")
+	specPath := specFilePath(r.cfg.RegistryDir, name)
 	fi, err := os.Stat(specPath)
 	if err != nil {
 		return
@@ -285,7 +284,7 @@ func (r *Registry) reconcileOnce() {
 		}
 		name := e.Name()
 		present[name] = true
-		specPath := filepath.Join(r.cfg.RegistryDir, name, "spec.json")
+		specPath := specFilePath(r.cfg.RegistryDir, name)
 		fi, serr := os.Stat(specPath)
 		if serr != nil {
 			// No readable spec.json. Never an eviction: unregistration is keyed
@@ -448,11 +447,12 @@ func (r *Registry) upsert(name string, spec *Spec) {
 	// something LoadAll / Watch / Resolve / Reconcile each have to remember: an
 	// unconditional loadFile is always safe, and the reconcile stat gate is a
 	// pure cost optimization on top, never a correctness dependency.
-	if wt.SpecRev() == spec.rev {
+	// adoptSpec also declines a revision that is no longer the one on disk:
+	// a deploy may have committed a newer spec.json since this one was read.
+	prev, adopted := wt.adoptSpec(spec, specFilePath(r.cfg.RegistryDir, name))
+	if !adopted {
 		return
 	}
-	prev := wt.Spec()
-	wt.UpdateSpec(spec)
 	slog.Info("worktree spec updated", "name", name,
 		"server", spec.Server, "web", spec.Web,
 		"prevServer", prev.Server, "prevWeb", prev.Web)
@@ -505,22 +505,12 @@ func loadSpec(path string) (*Spec, error) {
 	if err != nil {
 		return nil, err
 	}
-	var spec Spec
-	if err := json.Unmarshal(data, &spec); err != nil {
-		return nil, fmt.Errorf("parse: %w", err)
+	spec, err := parseSpec(data)
+	if err != nil {
+		return nil, err
 	}
 	spec.rev = specRevOf(fi)
-	if spec.Server == "" {
-		return nil, errors.New("server is required")
-	}
-	if !filepath.IsAbs(spec.Server) {
-		return nil, errors.New("server must be an absolute path")
-	}
-	// Web is optional — headless backends (e.g. central) have no UI bundle.
-	if spec.Web != "" && !filepath.IsAbs(spec.Web) {
-		return nil, errors.New("web must be an absolute path when provided")
-	}
-	return &spec, nil
+	return spec, nil
 }
 
 // nameFromPath extracts the worktree name from a path: <dir>/<name>/spec.json

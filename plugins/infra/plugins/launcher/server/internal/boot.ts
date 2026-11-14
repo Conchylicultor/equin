@@ -10,9 +10,8 @@ import { exists, readFile } from "@plugins/packages/plugins/timed-fs/core";
 import { execFileSync } from "node:child_process";
 import { join } from "node:path";
 import {
+  worktreeArtifacts,
   worktreesDir,
-  setReleaseIdentity,
-  type ReleaseIdentity,
 } from "@plugins/infra/plugins/paths/server";
 import { backendEntryFor } from "@plugins/infra/plugins/paths/core";
 import { DATABASE_CONFIG_PATH } from "@plugins/database/core";
@@ -20,7 +19,10 @@ import {
   ensureDatabase,
   getAdminPool,
 } from "@plugins/database/plugins/admin/server";
-import { writeWorktreeSpec } from "@plugins/infra/plugins/worktree/server";
+import {
+  writeWorktreeSpec,
+  type WorktreeSpec,
+} from "@plugins/infra/plugins/worktree/server";
 import {
   namespaceUrl,
   type Namespace,
@@ -364,10 +366,27 @@ export async function writeReleaseDatabaseConfig(
   opts: { pgStartBin: string; pgbouncerStartBin?: string },
   log: LogFn = noop,
 ): Promise<void> {
+  const config = releaseDatabaseConfig(opts);
+  await dbConfigDir.ensure();
+  await writeFile(DATABASE_CONFIG_PATH, JSON.stringify(config, null, 2) + "\n");
+  log(
+    `Generated release database config (embedded Postgres${opts.pgbouncerStartBin !== undefined ? " + PgBouncer" : ""})`,
+  );
+}
+
+/**
+ * The release `database.json` {@link writeReleaseDatabaseConfig} writes, as
+ * data — also what a release's host generation digests (`release-swap.ts`), so
+ * a release that would supervise Postgres differently is a host restart.
+ */
+export function releaseDatabaseConfig(opts: {
+  pgStartBin: string;
+  pgbouncerStartBin?: string;
+}): unknown {
   const { pgStartBin, pgbouncerStartBin } = opts;
   const hasPgBouncer = pgbouncerStartBin !== undefined;
 
-  const config = {
+  return {
     provider: "embedded" as const,
     connection: {
       host: PG_SOCKET_DIR,
@@ -398,12 +417,6 @@ export async function writeReleaseDatabaseConfig(
         : []),
     ],
   };
-
-  await dbConfigDir.ensure();
-  await writeFile(DATABASE_CONFIG_PATH, JSON.stringify(config, null, 2) + "\n");
-  log(
-    `Generated release database config (embedded Postgres${hasPgBouncer ? " + PgBouncer" : ""})`,
-  );
 }
 
 /**
@@ -472,6 +485,28 @@ export interface GatewayLaunchOptions {
    * unchanged). Omitted for a deployment with none.
    */
   publicHosts?: string[];
+}
+
+/**
+ * The gateway options of a self-contained app — the ONE derivation, shared by
+ * the boot that starts its gateway and by a release's host-generation digest
+ * (`release-swap.ts`), which asks whether a release would start it differently.
+ * Single-namespace: subdomain-less requests (a public Host, a desktop webview)
+ * reach the one app through `-default-namespace`.
+ */
+export function selfContainedGatewayOptions(opts: {
+  name: string;
+  listen: { host: string | null; port: number };
+  publicHosts: string[];
+  logLevel?: string;
+}): Omit<GatewayLaunchOptions, "executable" | "cwd"> {
+  return {
+    port: opts.listen.port,
+    bindHost: opts.listen.host,
+    logLevel: opts.logLevel ?? "info",
+    defaultNamespace: opts.name,
+    publicHosts: opts.publicHosts,
+  };
 }
 
 /**
@@ -842,11 +877,12 @@ export async function bootSelfContainedApp(opts: {
   /** Public hostnames of a deployed site; see `GatewayLaunchOptions.publicHosts`. */
   publicHosts?: string[];
   /**
-   * Which build this is (from the bundle's `RELEASE.json`), stamped into the env
-   * before the gateway spawn so it reaches the backend and `/api/health` can
-   * name the serving build. Omitted outside a release.
+   * Environment entries for the backend alone, written into its spec
+   * (`WorktreeSpec.env`): a release's bundle paths and identity
+   * (`releaseBackendEnv`), which must come from the bundle the backend runs,
+   * never from the gateway's environment. Omitted outside a release.
    */
-  releaseIdentity?: ReleaseIdentity;
+  backendEnv?: Record<string, string>;
   repoRoot: AppPath;
   /**
    * Explicit backend spawn argv (e.g. `["<abs>/server"]` for a compiled
@@ -875,35 +911,7 @@ export async function bootSelfContainedApp(opts: {
   const log = opts.log ?? noop;
 
   await ensureDatabaseConfig(repoRoot, log);
-  // Stamp the release identity BEFORE the gateway spawn: a child's env is
-  // snapshotted at spawn, and the backend gets its env from the gateway (both
-  // names are forwarded names of the declared runtime environment), so this is
-  // the last moment it can still reach the process that serves /api/health.
-  if (opts.releaseIdentity) setReleaseIdentity(opts.releaseIdentity);
-  // A self-contained app is single-namespace: route subdomain-less requests
-  // (the desktop webview, single-origin web) to it via the gateway default.
-  const gateway = await spawnGatewayDaemon({
-    // Where it was built: a self-contained app is not the machine's app bundle.
-    executable: unbundledExecutable(gatewayBuild(opts.gateway)),
-    cwd: repoRoot,
-    port,
-    bindHost,
-    logLevel,
-    defaultNamespace: name,
-    publicHosts: opts.publicHosts,
-  });
-  const pid = gateway.pid;
-  log(`Gateway started (PID ${pid}); waiting for it to serve...`);
-
-  await awaitGatewayReady({ pid, port });
-  log("Gateway is serving; waiting for Postgres...");
-
-  await awaitPgReady({ port });
-  await ensureDatabase(name);
-
-  // Spec last: the gateway's fsnotify watcher only discovers the namespace once
-  // its DB exists, so the backend's boot migrator never races DB creation.
-  await writeWorktreeSpec({
+  const spec: WorktreeSpec = {
     name,
     server,
     web,
@@ -916,7 +924,43 @@ export async function bootSelfContainedApp(opts: {
         ? undefined
         : ["bun", backendEntryFor(composition)]),
     composition,
+    env: opts.backendEnv,
+  };
+  // A spec already on disk is a PREVIOUS boot's: the gateway loads it at start
+  // and cold-starts a backend from it on the first request — before step 7
+  // below rewrites it. After a ship that is the previous release (its
+  // extraction maybe pruned, its env from an older launcher): a visitor's
+  // request booted it, it crashed, and the namespace sat broken until the next
+  // request (website box, 2026-11-14). That boot got past ensureDatabase, so
+  // the database exists and the spec can be refreshed before the gateway
+  // starts. A first boot has no spec and keeps the ordering below.
+  if (await exists(worktreeArtifacts.spec(name))) {
+    await writeWorktreeSpec(spec);
+  }
+  const gateway = await spawnGatewayDaemon({
+    // Where it was built: a self-contained app is not the machine's app bundle.
+    executable: unbundledExecutable(gatewayBuild(opts.gateway)),
+    cwd: repoRoot,
+    ...selfContainedGatewayOptions({
+      name,
+      listen: { host: bindHost, port },
+      publicHosts: opts.publicHosts ?? [],
+      logLevel,
+    }),
   });
+  const pid = gateway.pid;
+  log(`Gateway started (PID ${pid}); waiting for it to serve...`);
+
+  await awaitGatewayReady({ pid, port });
+  log("Gateway is serving; waiting for Postgres...");
+
+  await awaitPgReady({ port });
+  await ensureDatabase(name);
+
+  // Spec last on a first boot: the gateway's fsnotify watcher only discovers
+  // the namespace once its DB exists, so the backend's boot migrator never
+  // races DB creation. (A later boot refreshed it before the gateway started.)
+  await writeWorktreeSpec(spec);
   log(`Registered app "${name}"; waiting for backend to become ready...`);
 
   await awaitAppReady(name, port);
@@ -969,6 +1013,8 @@ function killListenerOnPort(port: number): void {
 }
 
 const GATEWAY_STOP_TIMEOUT_MS = 10_000;
+/** A fast shutdown is a checkpoint and session teardown: seconds, not tens. */
+const PG_FAST_STOP_TIMEOUT_MS = 15_000;
 
 /**
  * Tear down a self-contained app stack rooted at `root` (a preview's `/tmp/sgp-*`
@@ -982,9 +1028,16 @@ const GATEWAY_STOP_TIMEOUT_MS = 10_000;
  *      triggers the gateway's graceful shutdown, which kills the app backend.
  *      Backstop: killListenerOnPort(httpPort).
  *   2. PgBouncer: SIGTERM (Unix-socket-only — no TCP port to backstop).
- *   3. Postgres: SIGQUIT (immediate shutdown — the data dir is discarded, so no
- *      graceful drain is needed). Backstop: killListenerOnPort(pgPort) — PG
- *      TCP-binds the loopback override port.
+ *   3. Postgres, by `postgres`:
+ *      - `"immediate"` (a preview, whose data dir is discarded): SIGQUIT, no
+ *        drain. Backstop: killListenerOnPort(pgPort) — PG TCP-binds the
+ *        loopback override port.
+ *      - `"fast"` (a release, whose cluster IS the site's data): SIGINT — fast
+ *        shutdown, which ends sessions and writes a checkpoint, so the next
+ *        start needs no crash recovery — and WAIT for the postmaster to exit,
+ *        since under systemd's `KillMode=mixed` whatever is left when the
+ *        launcher exits is SIGKILLed. Past {@link PG_FAST_STOP_TIMEOUT_MS} it
+ *        falls back to SIGQUIT.
  *
  * Idempotent: a missing pidfile or already-dead process is a no-op, so it is safe
  * to call on an orphan stack or twice on the same one. `httpPort`/`pgPort` are the
@@ -992,7 +1045,12 @@ const GATEWAY_STOP_TIMEOUT_MS = 10_000;
  * to rely on the pidfiles alone.
  */
 export async function teardownSelfContainedApp(
-  opts: { root: AppPath; httpPort?: number; pgPort?: number },
+  opts: {
+    root: AppPath;
+    httpPort?: number;
+    pgPort?: number;
+    postgres: "fast" | "immediate";
+  },
   log: LogFn = noop,
 ): Promise<void> {
   const { root, httpPort, pgPort } = opts;
@@ -1017,9 +1075,25 @@ export async function teardownSelfContainedApp(
   const pgbPid = await readPidFile(asAppPath(pgbouncerPidFileUnder(root)));
   if (pgbPid !== null) signalPid(pgbPid, "SIGTERM");
 
-  // 3. Postgres — immediate shutdown; the cluster is thrown away.
+  // 3. Postgres.
   const pgPid = await readPidFile(asAppPath(pgPostmasterPidFile(root)));
-  if (pgPid !== null) signalPid(pgPid, "SIGQUIT");
+  if (pgPid !== null && opts.postgres === "immediate") {
+    signalPid(pgPid, "SIGQUIT");
+  }
+  if (pgPid !== null && opts.postgres === "fast" && isRunning(pgPid)) {
+    signalPid(pgPid, "SIGINT");
+    await retryUntil(async () => (isRunning(pgPid) ? null : true), {
+      delay: exponential({ initial: 50, max: 500 }),
+      deadline: PG_FAST_STOP_TIMEOUT_MS,
+      onDeadline: () => {
+        log(
+          `Postgres did not finish its fast shutdown in ${PG_FAST_STOP_TIMEOUT_MS / 1000}s — immediate shutdown`,
+        );
+        signalPid(pgPid, "SIGQUIT");
+        return true;
+      },
+    });
+  }
   if (pgPort !== undefined) killListenerOnPort(pgPort);
 
   log(`Tore down self-contained app at ${root}`);

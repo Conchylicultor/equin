@@ -401,10 +401,10 @@ reaped namespaces' gateway logs were each found by accident, months in.
 
 - Description: Canonical machine paths, plus the boot-time publication of this namespace's declared data-dir set so an audit running in another checkout can tell one of this branch's directories from an orphan.
 - Core:
-  - Uses: 36 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 35 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `packages/timed-fs` ×10
     - `infra/namespace` ×8
-    - `infra/launcher/env-names` ×5
+    - `infra/launcher/env-names` ×4
     - `infra/host-fs/user-path` ×3
     - `framework/product-name` ×2
     - `framework/tooling/collected-dir` ×2
@@ -478,11 +478,11 @@ reaped namespaces' gateway logs were each found by accident, months in.
     - `readCheckoutOwnerSync`
     - `relativeToDataRoot`
     - `releaseIdentity`
+    - `releaseIdentityEnv`
     - `repoConfigDir`
     - `resolveCheckoutDeploySync`
     - `RUN_TERMINAL_SUFFIX`
     - `SERVER_CORE_RELATIVE`
-    - `setReleaseIdentity`
     - `settleDeclaredDataDirMoves`
     - `stampCheckoutMinter`
     - `stampCheckoutMinterSync`
@@ -570,13 +570,13 @@ reaped namespaces' gateway logs were each found by accident, months in.
     - `publishDataDirsManifest`
     - `relativeToDataRoot`
     - `releaseIdentity`
+    - `releaseIdentityEnv`
     - `repoConfigDir`
     - `RUN_ARTIFACTS_RETENTION`
     - `RUN_TERMINAL_SUFFIX`
     - `RUN_TRANSCRIPT_SUFFIX`
     - `SAMPLE`
     - `SERVER_CORE_RELATIVE`
-    - `setReleaseIdentity`
     - `WEB_CORE_RELATIVE`
     - `webDistDir`
     - `worktreeArtifacts`

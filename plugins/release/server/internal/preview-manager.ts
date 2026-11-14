@@ -155,6 +155,8 @@ export async function stopPreview(runId: string): Promise<void> {
     root: entry.dataRoot,
     httpPort: entry.port,
     pgPort: entry.pgPort,
+    // A preview's cluster is thrown away with its data root just below.
+    postgres: "immediate",
   });
   await rm(entry.dataRoot, { recursive: true, force: true });
   await entry.daemon.stop();
@@ -200,7 +202,7 @@ export async function reconcileOrphanPreviews(): Promise<void> {
     const root = joinAppPath(PREVIEW_TMP_DIR, name);
     if (activeRoots.has(root)) continue;
     // Ports unknown for an orphan dir — pidfile-based teardown suffices.
-    await teardownSelfContainedApp({ root });
+    await teardownSelfContainedApp({ root, postgres: "immediate" });
     await rm(root, { recursive: true, force: true });
     releaseLog.publish(`Reaped orphan preview stack at ${root}`);
   }

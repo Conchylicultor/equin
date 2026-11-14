@@ -17,6 +17,7 @@ import { deploySecretsVisibilityEndpoint } from "@plugins/apps/plugins/deploy/pl
 import { endpointPath } from "@plugins/infra/plugins/endpoints/server";
 import type { HealthResponse } from "@plugins/infra/plugins/health/core";
 import { sq } from "./converge-script";
+import { envName } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import {
   READY_ATTEMPTS,
   READY_INTERVAL_SEC,
@@ -121,13 +122,19 @@ settle_gate() {
 // Ship's only job here is to turn its refusal into this command's exit.
 
 /**
- * Activate an uploaded bundle: entrypoint symlink → flip `current` → restart →
- * health gate, reverting on failure.
+ * Activate an uploaded bundle: extract it while the previous release serves,
+ * then either SWAP the backend through the running gateway (no restart — the
+ * new backend is up and ready before the old one stops) or, when the release
+ * changes the host itself (gateway, Postgres, PgBouncer, how they start),
+ * RESTART the host unit. Either way the same health gate follows, and a
+ * failure reverts to the previous release.
  *
  * This is ONE script on the host rather than a sequence of `sshRun`s for one
  * reason: the revert must run even if the CLI dies or the connection drops
  * mid-gate. A deploy command whose failure mode is "the site is now broken and
  * stays broken" is not shippable.
+ *
+ * Design: research/2026-11-14-global-zero-wait-site-deploys.md.
  */
 export function activateScript(opts: {
   install: InstallLayout;
@@ -154,13 +161,18 @@ RELEASE_DIR=${sq(dir)}
 BINARY=${sq(binaryName)}
 APP=${sq(releaseAppPath(install.compositionId, runId))}
 CURRENT=${sq(install.currentLink)}
+RUNTIME=${sq(install.runtimeDir)}
 CACHE=${sq(`${install.runtimeDir}/equin-release`)}
-STALE=${sq(`${install.runtimeDir}/.stale-`)}$$
+DATA=${sq(install.dataDir)}
+ENV_FILE=${sq(install.envFile)}
 READY_URL=${sq(`${base}/api/health/ready`)}
 HEALTH_URL=${sq(`${base}/api/health`)}
 SECRETS_URL=${sq(`${base}${endpointPath(deploySecretsVisibilityEndpoint, {})}`)}
 CRED_DIR=${sq(install.credentialsDir)}
 RUN_ID=${sq(runId)}
+# The file naming the dir a release's bundle is extracted to — written beside
+# each release by its own ship, read by a later ship's revert.
+EXTRACTED_AT=extract-dir
 
 if [ ! -s "$RELEASE_DIR/$BINARY" ]; then
   echo "activate: $RELEASE_DIR/$BINARY is missing or empty — the upload did not land" >&2
@@ -168,32 +180,101 @@ if [ ! -s "$RELEASE_DIR/$BINARY" ]; then
 fi
 chmod 755 "$RELEASE_DIR/$BINARY"
 
-# The fixed-name entrypoint, created BEFORE the flip so \`current\` never points
-# at a dir the unit cannot exec. Relative, so the release dir stays relocatable.
+# The fixed-name entrypoint, created BEFORE anything can point \`current\` at
+# this dir, so \`current\` never names a dir the unit cannot exec. Relative, so
+# the release dir stays relocatable.
 ln -sfn "$BINARY" "$APP.new"
 mv -fT "$APP.new" "$APP"
 chown -R "$RUN_USER:$RUN_USER" "$RELEASE_DIR"
 
-# What was serving, captured before the flip — this is what a failure restores.
-# Empty on a first ship, which is a state of its own below.
+# What was serving — what a failure restores. Empty on a first ship.
 PREV="$(readlink "$CURRENT" 2>/dev/null || true)"
 
-MOVED=0
+# Run a command as the run user, in the unit's environment (the converge env
+# file, the data root, the extraction cache root) — what the unit's own
+# processes see.
+as_app() {
+  (
+    set -a
+    . "$ENV_FILE"
+    set +a
+    exec runuser -u "$RUN_USER" -- env ${envName("DIR")}="$DATA" ${envName("RELEASE_DIR")}="$RUNTIME" "$@"
+  )
+}
+
+# ── 1. Extract while the previous release still serves. ──────────────────────
+# The extractor renames a complete extraction into place, so a dir that exists
+# is whole. It prints the dir as its last line.
+echo "[~] extracting the bundle"
+EXTRACT="$(as_app ${envName("RELEASE_EXTRACT_ONLY")}=1 "$APP" | tail -n 1)"
+if [ ! -x "$EXTRACT/launch" ]; then
+  echo "activate: the bundle did not extract (no launch under '$EXTRACT')" >&2
+  exit 1
+fi
+printf '%s\\n' "$EXTRACT" > "$RELEASE_DIR/$EXTRACTED_AT"
+echo "[+] extracted to $EXTRACT"
+
+journal_tail() {
+  echo "--- journalctl -u $UNIT -n 200 ---" >&2
+  journalctl -u "$UNIT" -n 200 --no-pager >&2 || true
+  local gw="$DATA/logs/gateway/gateway.log"
+  if [ -f "$gw" ]; then
+    echo "--- tail -n 60 $gw ---" >&2
+    tail -n 60 "$gw" >&2 || true
+  fi
+}
+
+# ── 2. Swap, or restart the host. ────────────────────────────────────────────
+# \`launch swap\` exits 0 once the gateway serves this release's backend (the
+# old one keeps serving until then, and a backend that never gets ready leaves
+# it serving and the gateway's spec unchanged), 3 when this release changes the
+# host itself, anything else when the swap failed with nothing changed.
+MODE=""
 FLIPPED=0
+SWAPPED=0
 GATE_OK=0
+swap_status=0
+as_app "$EXTRACT/launch" swap || swap_status=$?
+case "$swap_status" in
+  0)
+    MODE=swap
+    SWAPPED=1
+    echo "[+] swapped the backend (no restart): the previous one drains while this one serves"
+    ;;
+  3)
+    MODE=restart
+    echo "[host restart] this release changes the host (reason above): visitors wait while $UNIT restarts"
+    ;;
+  *)
+    echo "activate: the swap failed; the previous release still serves, unchanged" >&2
+    journal_tail
+    exit 1
+    ;;
+esac
 
 # EVERY failure after this point undoes itself, not just a failed gate: a unit
-# that will not restart (an un-converged host) or an ssh deadline mid-gate would
-# otherwise leave \`current\` pointing at a build that is not serving. The trap is
-# what makes "production is never left down by a bad ship" true for the whole
-# rest of the script rather than for the one branch that thought of it.
+# that will not restart or an ssh deadline mid-gate would otherwise leave the
+# site on a build that is not serving. The trap is what makes "production is
+# never left down by a bad ship" true for the whole rest of the script.
 undo() {
   set +e   # best-effort recovery; the script's own non-zero status still stands
-  if [ "$MOVED" -eq 1 ]; then
-    mkdir -p "$CACHE"
-    mv -- "$STALE"/* "$CACHE"/
-    rmdir "$STALE"
-    echo "reverted: restored the previous extraction cache" >&2
+  if [ "$SWAPPED" -eq 1 ]; then
+    # Swap the previous release's backend back in — the same zero-wait path.
+    # Its extraction is still on disk (pruning runs only after a passed gate).
+    prev_extract=""
+    if [ -n "$PREV" ] && [ -f "$PREV/$EXTRACTED_AT" ]; then
+      prev_extract="$(cat "$PREV/$EXTRACTED_AT")"
+    fi
+    if [ -n "$prev_extract" ] && [ -x "$prev_extract/launch" ] && as_app "$prev_extract/launch" swap; then
+      echo "reverted: swapped the backend back to $PREV" >&2
+    elif [ -n "$PREV" ]; then
+      # \`current\` still names PREV (a swap flips it only after the gate).
+      if systemctl restart "$UNIT"; then
+        echo "reverted: could not swap back, restarted $UNIT on $PREV" >&2
+      else
+        echo "reverted: could not swap back, and restarting $UNIT ALSO failed — the host is DOWN" >&2
+      fi
+    fi
   fi
   if [ "$FLIPPED" -eq 1 ]; then
     if [ -n "$PREV" ]; then
@@ -212,8 +293,7 @@ undo() {
       echo "reverted: nothing served before this ship — $UNIT stopped, current removed" >&2
     fi
   fi
-  echo "--- journalctl -u $UNIT -n 200 ---" >&2
-  journalctl -u "$UNIT" -n 200 --no-pager >&2
+  journal_tail
 }
 on_exit() {
   status=$?
@@ -222,31 +302,28 @@ on_exit() {
 }
 trap on_exit EXIT
 
-# Move the extraction cache aside rather than deleting it. The self-extractor
-# keys its extract dir on the tarball hash, so every ship would otherwise leave
-# a full extracted bundle behind forever — but a revert needs the PREVIOUS
-# bundle's cache, so it is only destroyed once the gate has passed.
-if [ -d "$CACHE" ] && [ -n "$(ls -A "$CACHE" 2>/dev/null || true)" ]; then
-  mkdir -p "$STALE"
-  mv -- "$CACHE"/* "$STALE"/
-  MOVED=1
+flip_current() {
+  # rename(2) over the existing symlink, so no window exists in which
+  # \`current\` is absent.
+  ln -sfn "$RELEASE_DIR" "$CURRENT.new"
+  mv -fT "$CURRENT.new" "$CURRENT"
+  echo "[+] current -> $RELEASE_DIR (was: \${PREV:-<none>})"
+}
+
+if [ "$MODE" = restart ]; then
+  # The host restart IS the flip: the unit runs \`current\`. Already extracted,
+  # so the gap is the stop and the boot, not the unpacking.
+  flip_current
+  FLIPPED=1
+  systemctl restart "$UNIT"
 fi
-
-# The flip IS the deploy. rename(2) over the existing symlink, so no window
-# exists in which \`current\` is absent.
-ln -sfn "$RELEASE_DIR" "$CURRENT.new"
-mv -fT "$CURRENT.new" "$CURRENT"
-FLIPPED=1
-echo "[+] current -> $RELEASE_DIR (was: \${PREV:-<none>})"
-
-systemctl restart "$UNIT"
 
 ${SETTLE_GATE_SH}
 
-# ── The health gate. Five outcomes, deliberately distinguished:
+# ── 3. The health gate. Five outcomes, deliberately distinguished:
 #     ok=1  ready, serving the runId we shipped, settled → success
 #     ok=0  never became ready within the window     → "not up"
-#     ok=2  ready, but /api/health names another build → the flip did not take
+#     ok=2  ready, but /api/health names another build → the switch did not take
 #     ok=3  serving, but a deploy secret is unreadable  → see below
 #     ok=4  ready, then died (or went silent) before its boot settled
 ok=0
@@ -257,7 +334,7 @@ for _ in $(seq 1 ${READY_ATTEMPTS}); do
 done
 if [ "$ok" -eq 1 ]; then
   body="$(curl -fsS -m 5 "$HEALTH_URL" || true)"
-  # Liveness alone would let a failed flip pass as success: the PREVIOUS build
+  # Liveness alone would let a failed switch pass as success: the PREVIOUS build
   # answers /api/health/ready perfectly happily. The runId is what makes "the
   # build I shipped is the build now answering" checkable.
   printf '%s' "$body" | grep -Eq '"${RUN_ID_FIELD}"[[:space:]]*:[[:space:]]*"'"$RUN_ID"'"' || ok=2
@@ -332,15 +409,37 @@ if [ "$ok" -ne 1 ]; then
 fi
 GATE_OK=1
 
-# Gate passed: the previous extraction cache has no rollback value now, and on a
-# box nobody SSHes into, disk-fill is the failure that takes the site down
-# silently. Exactly one extracted bundle is left behind.
-if [ "$MOVED" -eq 1 ]; then
-  rm -rf -- "$STALE"
-  echo "[=] pruned the previous extraction cache under $CACHE"
-fi
+# A swapped release becomes \`current\` once it passed: a later restart of the
+# unit (a crash, a reboot, a host restart) boots the release that serves.
+if [ "$MODE" = swap ]; then flip_current; fi
 
-echo "[ok] $UNIT is serving runId $RUN_ID"
+# ── 4. Prune extractions nothing runs from. ──────────────────────────────────
+# Kept: this release's, and every one a process of the unit still executes
+# from — the host generation's gateway and Postgres, a previous backend still
+# draining. On a box nobody SSHes into, disk-fill is the failure that takes the
+# site down silently.
+in_use=" $EXTRACT "
+cgroup="$(systemctl show -p ControlGroup --value "$UNIT" 2>/dev/null || true)"
+if [ -n "$cgroup" ] && [ -r "/sys/fs/cgroup$cgroup/cgroup.procs" ]; then
+  while read -r pid; do
+    exe="$(readlink "/proc/$pid/exe" 2>/dev/null || true)"
+    case "$exe" in
+      "$CACHE"/*)
+        rest="\${exe#"$CACHE"/}"
+        in_use="$in_use $CACHE/\${rest%%/*} "
+        ;;
+    esac
+  done < "/sys/fs/cgroup$cgroup/cgroup.procs"
+fi
+for d in "$CACHE"/*; do
+  [ -d "$d" ] || continue
+  case "$in_use" in
+    *" $d "*) ;;
+    *) rm -rf -- "$d"; echo "[=] pruned the unused extraction $d" ;;
+  esac
+done
+
+echo "[ok] $UNIT is serving runId $RUN_ID ($MODE)"
 printf '%s\\n' "$body"
 `;
 }

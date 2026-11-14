@@ -29,6 +29,7 @@ import {
   setEnvDefault,
 } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
 import { mkdtempSync } from "node:fs";
+import type { ReleaseManifest } from "@plugins/infra/plugins/launcher/server";
 import {
   existsSync,
   readFileSync,
@@ -70,64 +71,35 @@ setEnvDefault(
   "PGBOUNCER_BIN",
   join(bundleRoot, "pgbouncer", "native", "bin", "pgbouncer"),
 );
-// The backend spawns pg_dump / pg_restore for DB forks and backups; a compiled
-// backend's `import.meta.dir` is its virtual FS, so point it at the vendored
-// tools. A forwarded name, so the gateway hands it to the spawned backend.
-setEnvDefault("PG_CLIENT_BIN_DIR", join(bundleRoot, "pg-client", "bin"));
-// The migration runner reads its `.sql` files from disk; `import.meta.dir`
-// resolves into the compiled binary's virtual FS, so point it at the vendored
-// `migrations/data` tree. A forwarded name, so the gateway receives it and
-// hands it to the spawned backend, which is the process that actually runs
-// migrations.
-setEnvDefault("MIGRATIONS_DIR", join(bundleRoot, "migrations", "data"));
-// @parcel/watcher's native .node can't be embedded by `bun --compile`; point the
-// file-watcher loader at the vendored addon. A forwarded name, so the gateway
-// hands it to the spawned backend, which is the process that starts watchers.
-setEnvDefault(
-  "PARCEL_WATCHER_NODE",
-  join(bundleRoot, "parcel-watcher", "watcher.node"),
-);
-// The cluster sentinel's Bun Worker entry can't be embedded by `bun --compile`
-// (the `new Worker(new URL(...))` module is not traced), so release.ts vendors
-// it as a standalone bundled .js; point worker-host.ts at it. A forwarded
-// name, so the gateway hands it to the spawned backend, which spawns the worker.
-setEnvDefault("SENTINEL_WORKER_JS", join(bundleRoot, "sentinel", "worker.js"));
-// Same for machine-usage's fork-memory worker (the Postgres memory-map walk).
-setEnvDefault(
-  "FORK_MEMORY_WORKER_JS",
-  join(bundleRoot, "machine-usage", "fork-memory-worker.js"),
-);
-// The raw git-layer config tree is read by the config-v2.raw-file loader
-// (Settings "View raw") and gitBacksScope (per-app un-fork). REPO_ROOT resolves
-// into the compiled binary's virtual FS, so point these at the vendored tree.
-setEnvDefault("REPO_CONFIG_DIR", join(bundleRoot, "config"));
-// The served frontend. In dev this derives from the namespace
-// (`~/.equin/worktrees/<name>/web`); a release ships one bundle whose web
-// tree is vendored at `<bundleRoot>/web` (already carrying `.build-graph` /
-// `.build-commit` / `.build-id`, copied by release.ts), so point the backend's
-// readers — the stale-tab graph pin, the build-commit base, the producing run —
-// at it. Travels launch → gateway → backend, like every var above.
-setEnvDefault("WEB_DIST", join(bundleRoot, "web"));
+// What ONE backend reads of its own bundle — the vendored migrations, web tree,
+// workers, pg client tools and config tree, and which release it is — is NOT set
+// here: the gateway outlives a backend swap, so a value inherited through it
+// would run the next release's backend against this release's files. It travels
+// in the backend's spec (`releaseBackendSpec`, `WorktreeSpec.env`).
+
 // Reroot the embedded-PG / PgBouncer sockets AND the gateway's per-worktree
 // backend sockets onto short `/tmp` paths (each reads a single env override).
 // The data root above may be a long versioned `<out>/data`
 // (`releases/<wt>/<comp>-<target>/<run-id>/data`), which would blow the 104-byte
 // AF_UNIX socket-path cap; the socket dirs are decoupled so length never
 // constrains where a release is staged.
+//
+// `launch swap` starts nothing that listens on a socket: it only digests how
+// this release WOULD start the host, so it names the socket dir by the
+// placeholder the digest spells it as, instead of minting a dir under /tmp.
+const verb = process.argv[2];
+if (verb === "swap") {
+  setEnvDefault("PG_SOCKET_DIR", "/<pg-socket-dir>");
+} else if (verb !== undefined) {
+  throw new Error(
+    `launch: unknown verb "${verb}" — run with no argument to start the app, or "swap" to swap the running host's backend for this release's.`,
+  );
+}
 if (readEnv("PG_SOCKET_DIR") === undefined) {
   setEnvDefault("PG_SOCKET_DIR", mkdtempSync(join("/tmp", "sgs-")));
 }
-if (readEnv("SOCKETS_DIR") === undefined) {
+if (readEnv("SOCKETS_DIR") === undefined && verb === undefined) {
   setEnvDefault("SOCKETS_DIR", mkdtempSync(join("/tmp", "sgw-")));
-}
-
-interface ReleaseManifest {
-  composition: string;
-  target: string;
-  platform: string;
-  builtAt: string;
-  port: number;
-  runId?: string;
 }
 
 function readReleaseManifest(): ReleaseManifest {
@@ -152,6 +124,10 @@ async function main(): Promise<void> {
     seedReleaseAssetMirror,
     propagateReleaseConfig,
     resolveListenAddress,
+    releaseBackendSpec,
+    releaseHostGeneration,
+    writeHostGeneration,
+    swapReleaseBackend,
   } = await import("@plugins/infra/plugins/launcher/server");
 
   // Host preconditions first, before anything is read, written or spawned: a
@@ -176,7 +152,59 @@ async function main(): Promise<void> {
   // because `PORT` is the same knob minus the bind host, and the bind host is
   // what keeps a deployment's gateway off the public internet. See
   // `launcher/server/internal/listen.ts`.
-  const { host: bindHost, port } = resolveListenAddress(manifest.port);
+  const listen = resolveListenAddress(manifest.port);
+  const { host: bindHost, port } = listen;
+  const publicHosts = (readEnv("PUBLIC_HOSTS") ?? "")
+    .split(",")
+    .map((h) => h.trim())
+    .filter((h) => h !== "");
+  const gatewayReady = await bundledGateway(asAppPath(bundleRoot));
+  // How this release starts the host (gateway, Postgres, PgBouncer): recorded
+  // by a boot once it serves (digesting ~250 MB of binaries is no part of the
+  // restart gap), compared by a swap.
+  const hostGeneration = () =>
+    releaseHostGeneration({
+      bundleRoot,
+      gateway: gatewayReady,
+      name,
+      listen,
+      publicHosts,
+    });
+  const backendSpec = releaseBackendSpec(bundleRoot, manifest, name);
+
+  if (verb === "swap") {
+    // The per-release boot steps a running host still needs from this bundle,
+    // before its backend boots: the build-owned config layer and the
+    // pre-warmed asset mirror (copy-if-absent).
+    seedReleaseAssetMirror({
+      bundleRoot: asAppPath(bundleRoot),
+      dataDir: asAppPath(readEnv("DIR")!),
+      log: console.log,
+    });
+    await propagateReleaseConfig({
+      bundleRoot: asAppPath(bundleRoot),
+      dataDir: asAppPath(readEnv("DIR")!),
+      worktreeName: name,
+      log: console.log,
+    });
+    const outcome = await swapReleaseBackend({
+      next: await hostGeneration(),
+      spec: backendSpec,
+      listen,
+    });
+    switch (outcome.kind) {
+      case "swapped":
+        console.log(`Swapped "${name}"'s backend to ${bundleRoot}.`);
+        process.exit(0);
+      case "host-differs":
+        // Exit 3: not a failure — the caller restarts the host instead.
+        console.error(`host differs: ${outcome.reason}`);
+        process.exit(3);
+      case "failed":
+        console.error(`swap failed: ${outcome.reason}`);
+        process.exit(1);
+    }
+  }
 
   // Write the release database.json FIRST, so bootSelfContainedApp's internal
   // ensureDatabaseConfig sees the file already present and no-ops (a release has
@@ -221,32 +249,29 @@ async function main(): Promise<void> {
     name,
     // Sealed into the bundle by `release` (deps.sealed.json): read, never
     // built — this host has no Go toolchain and no source.
-    gateway: await bundledGateway(asAppPath(bundleRoot)),
-    // Which build is serving, for /api/health to report — see setReleaseIdentity.
-    // `runId` is absent on a bundle built outside a tracked release run.
-    releaseIdentity: { runId: manifest.runId ?? null, composition: name },
+    gateway: gatewayReady,
     // For a release the app's namespace IS its composition id (`name`), which is
     // also what `releaseIdentity` and `propagateReleaseConfig` above are keyed by.
     composition: name,
-    // The compiled backend's cwd. The binary is self-contained (closure bundled
-    // by `bun --compile`), so cwd is not load-bearing — bundleRoot is a stable
-    // existing dir.
-    server: bundleRoot,
-    // The gateway spawns the compiled backend via this argv (Spec.command),
-    // instead of its `bun bin/index.ts` convention.
-    command: [join(bundleRoot, "server")],
-    web: join(bundleRoot, "web"),
+    // The backend this bundle runs, and what it reads of its own bundle
+    // (`releaseBackendSpec`): the same spec a later release's swap posts.
+    server: backendSpec.server,
+    command: backendSpec.command,
+    web: backendSpec.web!,
+    backendEnv: backendSpec.env,
     port,
     bindHost,
     // A deployed site's own public hostnames (the converge env file); unset
     // everywhere else.
-    publicHosts: (readEnv("PUBLIC_HOSTS") ?? "")
-      .split(",")
-      .map((h) => h.trim())
-      .filter((h) => h !== ""),
+    publicHosts,
     repoRoot: asAppPath(bundleRoot),
     log: console.log,
   });
+
+  // The host generation now running — what the next release's swap compares
+  // its own against. Written once the stack serves, so a host that never came
+  // up names no generation a swap could join.
+  await writeHostGeneration(await hostGeneration());
 
   console.log("");
   console.log(`App "${name}" is serving.`);
@@ -277,7 +302,10 @@ async function main(): Promise<void> {
     stopping = true;
     console.log(`\n${reason} — shutting down...`);
     await teardownSelfContainedApp(
-      { root: asAppPath(root), httpPort: port },
+      // The cluster is the site's data: a fast shutdown with a checkpoint,
+      // waited out — under KillMode=mixed whatever outlives this process is
+      // SIGKILLed.
+      { root: asAppPath(root), httpPort: port, postgres: "fast" },
       console.log,
     );
     process.exit(code);

@@ -28,6 +28,7 @@ import {
   worktreeArtifacts,
 } from "@plugins/infra/plugins/paths/server";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
+import { toolchainPin } from "@plugins/infra/plugins/paths/core";
 import {
   loadRepoFiles,
   loadRepoSnapshot,
@@ -627,6 +628,10 @@ async function stageForeignNatives(opts: {
     );
     await run(["bun", "install", `--os=${os}`, `--cpu=${cpu}`], {
       cwd: staging,
+      // The staging dir is outside the checkout, so the `bun` shim finds no
+      // mise.toml above it and refuses ("No version is set for shim: bun"):
+      // pin it to this checkout's locked toolchain.
+      env: toolchainPin(),
     });
     // Prove the tree before publishing it. `bun install` exiting 0 is not the
     // same claim: these packages ship their binaries via postinstall, which a
@@ -1766,7 +1771,7 @@ async function packStagedTree(opts: {
   );
   const bootstrap = `
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync } from "node:fs";
+import { existsSync, mkdirSync, renameSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import tarball from ${JSON.stringify(tarPath)} with { type: "file" };
@@ -1786,24 +1791,48 @@ const extractDir = join(baseCache, "equin-release", ${JSON.stringify(
 const launchBin = join(extractDir, "launch");
 
 if (!existsSync(launchBin)) {
-  mkdirSync(extractDir, { recursive: true });
-  // tar preserves the exec bits set on the staged binaries, so no chmod pass is
-  // needed. Bun.embeddedFiles exposes the embedded tarball as a Blob; write it
-  // to a temp file the host tar can read, then extract.
-  const tmpTar = join(extractDir, ".bundle.tar");
+  // Extract beside the final dir and rename it into place, so the dir exists
+  // only complete: a ship extracts while the previous release serves, and an
+  // extraction cut short must never read as done on the next run. tar
+  // preserves the exec bits set on the staged binaries. Bun.embeddedFiles
+  // exposes the embedded tarball as a Blob; write it to a temp file the host
+  // tar can read, then extract.
+  const staging = extractDir + ".partial-" + process.pid;
+  rmSync(staging, { recursive: true, force: true });
+  mkdirSync(staging, { recursive: true });
+  const tmpTar = join(staging, ".bundle.tar");
   const bytes = new Uint8Array(await Bun.file(tarball).arrayBuffer());
   await Bun.write(tmpTar, bytes);
-  const res = spawnSync("tar", ["-xf", tmpTar, "-C", extractDir], {
+  const res = spawnSync("tar", ["-xf", tmpTar, "-C", staging], {
     stdio: "inherit",
   });
   if (res.status !== 0) {
     throw new Error("release: failed to extract bundle (tar exit " + res.status + ")");
   }
+  rmSync(tmpTar, { force: true });
+  rmSync(extractDir, { recursive: true, force: true });
+  renameSync(staging, extractDir);
 }
 
-// Hand off to the extracted launcher; inherit stdio + env, replace this process.
-const child = spawnSync(launchBin, process.argv.slice(2), { stdio: "inherit" });
-process.exit(child.status ?? 1);
+// Extract only (ship's activate script, before it swaps or restarts): name the
+// extracted dir and stop — the release is run from it by whoever asked.
+if (process.env.${envName("RELEASE_EXTRACT_ONLY")} === "1") {
+  console.log(extractDir);
+  process.exit(0);
+}
+
+// Hand off to the extracted launcher, inheriting stdio and env, and stay its
+// parent: a process cannot exec itself away under Bun, so it forwards the
+// signals a service manager stops it with. Under systemd's KillMode=mixed only
+// THIS process is signalled; without forwarding, the launcher would never hear
+// the stop and the rest of the unit would be SIGKILLed when this one exits.
+const child = Bun.spawn([launchBin, ...process.argv.slice(2)], {
+  stdio: ["inherit", "inherit", "inherit"],
+});
+for (const signal of ["SIGTERM", "SIGINT", "SIGHUP"] as const) {
+  process.on(signal, () => child.kill(signal));
+}
+process.exit(await child.exited);
 `;
   writeFileSync(bootstrapPath, bootstrap);
 

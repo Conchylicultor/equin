@@ -302,6 +302,12 @@ elif [ -e "$DROPIN" ]; then
 fi`;
 
 /**
+ * The release unit's stop bound: the launcher's ordered teardown (gateway wait
+ * 10 s + Postgres fast shutdown 15 s, `launcher/server` boot.ts) with margin.
+ */
+export const RELEASE_STOP_TIMEOUT_S = 45;
+
+/**
  * The systemd unit — ONE template file for every composition, so nothing
  * per-instance may appear in it. Its paths are `deriveInstall("%i")`, the same
  * function that derives the real instance's paths.
@@ -309,6 +315,20 @@ fi`;
  * `EQUIN_RELEASE_DIR` is explicit because `PrivateTmp=yes` gives the service its
  * own `/tmp`: without it the self-extractor falls back to `tmpdir()` and
  * re-extracts the whole bundle on every boot.
+ *
+ * `KillMode=mixed`: a stop signals the MAIN process only (the self-extractor,
+ * which forwards it to the launcher), so the stop runs in order — the gateway
+ * drains its requests and stops the backend while Postgres still serves it,
+ * then the launcher stops PgBouncer and fast-shuts Postgres down. systemd's
+ * default (`control-group`) signalled every process at once: the backend's
+ * Postgres sessions died before it heard its own SIGTERM, so in-flight writes
+ * failed and its live-state handoff could not be written (measured on the
+ * website box, 2026-11-13). Whatever is left when the main process exits is
+ * SIGKILLed, which is why the launcher waits Postgres out.
+ *
+ * `TimeoutStopSec` covers that ordered stop: the launcher's gateway wait (10 s,
+ * inside which the gateway's own budget runs) plus Postgres's fast shutdown
+ * (15 s, then immediate) — {@link RELEASE_STOP_TIMEOUT_S}.
  */
 export function unitTemplate(): string {
   const t = deriveInstall(SYSTEMD_INSTANCE);
@@ -326,6 +346,8 @@ Environment=${envName("DIR")}=${t.dataDir}
 Environment=${envName("RELEASE_DIR")}=${t.runtimeDir}
 Restart=always
 RestartSec=2
+KillMode=mixed
+TimeoutStopSec=${RELEASE_STOP_TIMEOUT_S}
 PrivateTmp=yes
 
 [Install]
@@ -337,11 +359,13 @@ WantedBy=multi-user.target
  * How long Caddy holds a visitor's request while nothing listens on the
  * install's loopback port, before answering 502.
  *
- * The install is ONE systemd unit (launcher → gateway → Postgres → backend),
- * and every restart of it — ship's activation, converge's restart gate, a
- * crash's `Restart=always` — leaves the loopback port closed from the moment
- * the old gateway stops listening (the start of its shutdown) until the new one
- * binds (after its self-extraction and Postgres are up): ~5–10 s on a warm box.
+ * The install is ONE systemd unit (launcher → gateway → Postgres → backend).
+ * A ship normally swaps only the backend, through the running gateway, and the
+ * port never closes. But every restart of the unit — a ship whose release
+ * changes the host, converge's restart gate, a crash's `Restart=always` —
+ * leaves the loopback port closed from the moment the old gateway stops
+ * listening (the start of its shutdown) until the new one binds (once Postgres
+ * is up): ~2 s on a warm, pre-extracted box.
  * Without a hold Caddy answered every request in that window with an empty
  * 502, which visitors' pages report as a crash (report-1794450182-hykohj: each
  * occurrence inside a deploy's restart).
@@ -352,9 +376,8 @@ WantedBy=multi-user.target
  * GET (Caddy's default `retry_match`), never a write.
  *
  * The bound is the restart, not a guess at a slow handler: the old gateway's
- * whole shutdown (15 s budget, SIGKILL at 20 s — `gateway/CLAUDE.md` §
- * "Shutdown fits one budget") plus a cold start that extracts the bundle and
- * starts Postgres. Past it the install is down, not restarting, and the 502 is
+ * whole ordered stop ({@link RELEASE_STOP_TIMEOUT_S} at most) plus a cold
+ * start that extracts the bundle and starts Postgres. Past it the install is down, not restarting, and the 502 is
  * the true answer.
  */
 export const EDGE_RESTART_HOLD_SEC = 60;

@@ -94,9 +94,14 @@ the gateway reads is a flag).
 next — the numbered docstring on it is the spec. Two orderings are load-bearing
 and easy to break:
 
-- **The worktree spec is written LAST**, after the DB exists. The gateway's
-  fsnotify watcher spawns the backend the moment it sees the spec, so writing it
-  earlier races the backend's boot migrator against DB creation.
+- **On a first boot the worktree spec is written LAST**, after the DB exists. The
+  gateway's fsnotify watcher spawns the backend the moment it sees the spec, so
+  writing it earlier races the backend's boot migrator against DB creation.
+  **On every later boot it is refreshed BEFORE the gateway starts**: the
+  gateway loads the spec on disk at start and cold-starts a backend from it on
+  the first request, and a previous boot's spec names the previous release
+  (after a ship, one whose extraction may be pruned). A spec on disk means a
+  previous boot got past `ensureDatabase`, so the DB exists.
 - **`assertSupportedHost()` runs before anything is read, written or spawned.**
   It is the home for host preconditions — facts about the machine that are
   knowable in microseconds but whose violation surfaces minutes later as an
@@ -161,6 +166,36 @@ that was built. Any future "install this from the bundle" step belongs beside
 this one, with the same question answered first: is this layer the build's or
 the user's?
 
+## A release host: one host generation, swapped backends
+
+A release host runs two generations at once (`server/internal/release-swap.ts`,
+design `research/2026-11-14-global-zero-wait-site-deploys.md`):
+
+- **The host generation** — the gateway, Postgres and PgBouncer, started by the
+  `launch` of whichever release last (re)started the systemd unit. Once the
+  stack serves, `launch` records it in the gateway's state dir
+  (`host-generation.json`): the extracted bundle it runs from and a digest per
+  host part (the gateway, Postgres and PgBouncer binaries and start binaries,
+  the gateway's flags and forwarded names, the generated `database.json`).
+- **The backend generation** — the compiled `server` the gateway spawns from
+  spec.json. `launch swap` (run from the NEXT release's extracted bundle by
+  ship's activate script) digests its own host parts the same way and, when
+  they match, posts its backend spec to the gateway's restart route: the new
+  backend boots beside the serving one, and the gateway commits the spec only
+  once it is ready. Exit 0 swapped, 3 the release changes the host (a host
+  restart instead), 1 failed with nothing changed.
+
+So **what one backend reads of its own bundle never travels through the
+gateway's environment**: the vendored migrations, web tree, workers, pg client
+tools, config tree and the release identity are per-release names
+(`RUNTIME_WITHHELD_ENV`), delivered in that backend's spec as
+`WorktreeSpec.env` (`releaseBackendSpec`). Inherited, they would run the next
+release's backend against the previous release's files. A release's stop is
+ordered (`KillMode=mixed`): the launcher stops the gateway (which drains and
+stops the backend), then PgBouncer, then Postgres with a FAST shutdown it waits
+out (`teardownSelfContainedApp({ postgres: "fast" })`); only a preview's
+throwaway cluster gets the immediate one.
+
 ## What the runtime tree carries
 
 The runtime tree is the gateway and everything it starts: every backend (main,
@@ -201,9 +236,9 @@ Two boundaries, one declaration:
    `pickRuntimeEnv(process.env)` — for the detached spawn, and baked into the
    launchd plist on macOS dev hosts (a change reaches that gateway on the
    next restart — main's follow-main, or `start --force`). It filters the **live** `process.env`, so the
-   release launcher's mutations (`launch.ts`'s relocation variables, the release
-   identity `bootSelfContainedApp` stamps) still arrive — each is a forwarded
-   name. Every launch path (`./equin start`, the release `launch` binary,
+   release launcher's mutations (`launch.ts`'s host relocation variables:
+   `DIR`, `PG_BIN_DIR`, `PGBOUNCER_BIN`, the socket dirs) still arrive — each
+   is a forwarded name. Every launch path (`./equin start`, the release `launch` binary,
    and through it the desktop app, the preview manager, systemd) goes through
    this one function.
 2. **Gateway → every child.** It also passes the required
@@ -309,14 +344,18 @@ Design: [`research/2026-09-15-global-declared-runtime-environment.md`](../../../
     - `database/pgbouncer.pgbouncerPidFileUnder`
     - `infra/asset-mirror/bundle.seedAssetMirrorCache`
     - `infra/endpoints.callEndpoint`
-    - `infra/paths.ReleaseIdentity`
-    - `infra/paths.setReleaseIdentity`
+    - `infra/paths.releaseIdentityEnv`
+    - `infra/paths.worktreeArtifacts`
     - `infra/paths.worktreesDir`
     - `infra/spawn/daemon.defineDaemon`
+    - `infra/worktree.WorktreeSpec`
     - `infra/worktree.writeWorktreeSpec`
   - Exports (types):
     - `GatewayLaunchOptions`
+    - `HostGeneration`
     - `ListenAddress`
+    - `ReleaseManifest`
+    - `SwapOutcome`
   - Exports (values):
     - `assertSupportedHost`
     - `awaitGatewayReady`
@@ -340,10 +379,14 @@ Design: [`research/2026-09-15-global-declared-runtime-environment.md`](../../../
     - `pgbouncerService`
     - `propagateReleaseConfig`
     - `readPid`
+    - `releaseBackendSpec`
+    - `releaseHostGeneration`
     - `resolveListenAddress`
     - `seedReleaseAssetMirror`
     - `spawnGatewayDaemon`
+    - `swapReleaseBackend`
     - `teardownSelfContainedApp`
+    - `writeHostGeneration`
     - `writeReleaseDatabaseConfig`
   - Register: `defineDaemon('launcher.gateway')`
 - Core:
@@ -382,7 +425,7 @@ Design: [`research/2026-09-15-global-declared-runtime-environment.md`](../../../
     - `paths:data-root-not-joined` — `bin/launch.ts` (sanctioned)
     - `marker-scan-safety/no-adhoc-marker-scan` — `check/internal/strip-comments.ts` (sanctioned)
     - `spawn-safety/no-raw-bun-spawn` — `server/internal/boot.ts` (sanctioned)
-    - `boundaries/no-platform-api` — `server/internal/boot.ts`, `server/internal/config-propagate.ts` (debt)
+    - `boundaries/no-platform-api` — `server/internal/boot.ts`, `server/internal/config-propagate.ts`, `server/internal/release-swap.ts` (debt)
     - `check-thread-safety/no-blocking-check-work` — `check/internal/strip-comments.ts` (debt)
     - `blocking-fs/no-sync-fs` — `server/internal/boot.ts` (sanctioned)
 - Sub-plugins:

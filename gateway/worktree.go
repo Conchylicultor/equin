@@ -91,6 +91,16 @@ type Spec struct {
 	// serializes as it always did.
 	Composition string `json:"composition,omitempty"`
 
+	// Env is this backend's own environment: full variable names → values,
+	// applied ON TOP of the declared child environment when it is spawned
+	// (ChildEnv.With — a same-named declared entry is replaced). It exists so
+	// what belongs to the code a spec runs (a release bundle's own paths —
+	// migrations, web dist, workers) travels with that spec, rather than being
+	// inherited from whoever started the gateway: a hot restart onto release
+	// N+1 must not run it against release N's tree. Keys must be non-empty and
+	// hold no `=` (validate). Omitted from the JSON when empty.
+	Env map[string]string `json:"env,omitempty"`
+
 	// rev identifies the spec.json revision this value was parsed from. It rides
 	// INSIDE Spec — rather than as a sibling field on Worktree — so a spec and
 	// the fingerprint asserting "this is what's on disk" travel through the same
@@ -294,6 +304,11 @@ type Worktree struct {
 
 	// spec is replaced atomically on file change. Lock-free reads.
 	spec atomic.Pointer[Spec]
+	// specMu serializes spec WRITES (a registry adoption, a deploy's commit)
+	// so a revision read from disk can never land after — and undo — a
+	// commit that replaced it (deploy_spec.go). Reads stay lock-free. Taken
+	// after mu when both are held; never the other way round.
+	specMu sync.Mutex
 
 	// All other fields below are guarded by mu.
 	mu sync.Mutex
@@ -359,8 +374,12 @@ func (w *Worktree) Spec() *Spec { return w.spec.Load() }
 //     stopped and respawned. Refreshing the spec alone does not restart
 //     anything; the build's write→restart sequence is what applies them, and
 //     the /gateway/worktrees/<name>/restart handler refreshes the spec first
-//     precisely so the restart it then performs uses the new values.
+//     precisely so the restart it then performs uses the new values. (A
+//     restart carrying its spec in the body never goes through here: it boots
+//     the candidate and commits it once ready — commitSpec.)
 func (w *Worktree) UpdateSpec(s *Spec) {
+	w.specMu.Lock()
+	defer w.specMu.Unlock()
 	w.spec.Store(s)
 }
 
@@ -464,8 +483,61 @@ func (w *Worktree) Ensure(ctx context.Context, reason StartReason, cause string)
 	att := newSpawnAttempt()
 	w.phase = phaseStarting{spawn: att}
 	spec := w.Spec()
-	socketPath := w.primarySocketPath()
 	w.mu.Unlock()
+	return w.coldStart(att, spec, nil, reason, cause)
+}
+
+// awaitBoot waits out a cold start in flight, if there is one, and returns
+// once it settles (its outcome is the phase it leaves) or ctx ends. Unlike
+// Ensure it never starts anything: a deploy waiting on traffic's boot must not
+// itself cold-start the spec it is about to replace.
+func (w *Worktree) awaitBoot(ctx context.Context) error {
+	w.mu.Lock()
+	p, ok := w.phase.(phaseStarting)
+	w.mu.Unlock()
+	if !ok {
+		return nil
+	}
+	select {
+	case <-p.spawn.done:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
+// errDeployRaced: DeployStart found the worktree no longer idle or broken
+// (traffic started it, or a restart began) — the caller re-reads the state.
+var errDeployRaced = errors.New("the backend's state changed before the deploy could start it")
+
+// DeployStart cold-starts an idle or broken worktree from a deploy's candidate
+// spec, committing the candidate (commitSpec) only once its backend is ready —
+// Ensure(StartDeploy) with the spec to boot handed in rather than read from
+// w.Spec(). Unlike Ensure it never joins or returns a backend it did not boot
+// from the candidate: in any other state it returns errDeployRaced.
+func (w *Worktree) DeployStart(ctx context.Context, cand *DeploySpec, cause string) error {
+	w.mu.Lock()
+	switch w.phase.(type) {
+	case phaseIdle, phaseBroken:
+		// a deploy releases a hold and skips the broken cooldown (see Ensure)
+	default:
+		w.mu.Unlock()
+		return errDeployRaced
+	}
+	att := newSpawnAttempt()
+	w.phase = phaseStarting{spawn: att}
+	w.mu.Unlock()
+	_, err := w.coldStart(att, cand.spec, cand, StartDeploy, cause)
+	return err
+}
+
+// coldStart boots spec on the primary socket for att, which its caller has
+// just made the phase (phaseStarting) under mu, and ends that phase. With a
+// candidate, the candidate is committed in the same critical section that
+// makes its backend the serving one; a commit that fails tears that backend
+// down and leaves the worktree idle on its previous spec.
+func (w *Worktree) coldStart(att *spawnAttempt, spec *Spec, cand *DeploySpec, reason StartReason, cause string) (*backend, error) {
+	socketPath := w.primarySocketPath()
 
 	// Who asked: the one record of which request a spawn answered — a backend
 	// that cannot boot is respawned by whoever keeps asking for it, and
@@ -507,6 +579,21 @@ func (w *Worktree) Ensure(ctx context.Context, reason StartReason, cause string)
 		att.settle(nil, spawnErr)
 		slog.Warn("backend spawn failed", "worktree", w.Name, "err", spawnErr)
 		return nil, spawnErr
+	}
+	if cand != nil {
+		if err := w.commitSpec(cand); err != nil {
+			// The candidate booted but cannot be made the spec: serve nothing
+			// from it. Idle, not broken — the previous spec boots on the next
+			// request, as it would have without this deploy.
+			w.phase = phaseIdle{}
+			w.mu.Unlock()
+			err = fmt.Errorf("commit spec: %w", err)
+			w.terminateBackend(context.Background(), bk, "deploy could not commit its spec")
+			w.releaseBackendArtifacts(bk)
+			att.settle(nil, err)
+			slog.Warn("deploy start: spec not committed; backend stopped", "worktree", w.Name, "err", err)
+			return nil, err
+		}
 	}
 	w.phase = runningOn(bk)
 	w.lastActivity = time.Now()
@@ -578,7 +665,12 @@ const postKillTimeout = 3 * time.Second
 // If the serving backend exits while its successor boots, the exit hands the
 // successor its waiters (phaseStarting): requests wait on this boot instead of
 // cold-spawning a second backend beside it, and this restart ends that phase.
-func (w *Worktree) Restart(ctx context.Context) error {
+//
+// cand nil boots the current spec. A candidate is booted instead, and
+// committed (commitSpec) in the critical section that swaps its backend in —
+// never earlier, so neither static serving nor a respawn sees it before its
+// backend is ready, and a failed restart leaves the spec as it was.
+func (w *Worktree) Restart(ctx context.Context, cand *DeploySpec) error {
 	w.restartMu.Lock()
 	defer w.restartMu.Unlock()
 
@@ -595,6 +687,9 @@ func (w *Worktree) Restart(ctx context.Context) error {
 	w.phase = phaseRestarting{serving: oldBk, next: att}
 	newSocketPath := w.restartTargetPath(oldBk)
 	spec := w.Spec()
+	if cand != nil {
+		spec = cand.spec
+	}
 	w.mu.Unlock()
 
 	// --- Step 2: spawn the successor on the alternate socket, await ready ---
@@ -610,6 +705,18 @@ func (w *Worktree) Restart(ctx context.Context) error {
 		spawnErr = errExitedAfterReady
 		exitedBk, newBk = newBk, nil
 	}
+	// The candidate becomes the spec in the same critical section its backend
+	// becomes the serving one; a commit that fails fails the restart.
+	var uncommittedBk *backend
+	commit := func() {
+		if spawnErr != nil || cand == nil {
+			return
+		}
+		if err := w.commitSpec(cand); err != nil {
+			spawnErr = fmt.Errorf("commit spec: %w", err)
+			uncommittedBk, newBk = newBk, nil
+		}
+	}
 	oldServing := false
 	switch p := w.phase.(type) {
 	case phaseRestarting:
@@ -619,6 +726,7 @@ func (w *Worktree) Restart(ctx context.Context) error {
 			return w.restartLost(att, newBk, found)
 		}
 		oldServing = true
+		commit()
 		if spawnErr == nil {
 			w.phase = runningOn(newBk)
 			w.lastActivity = time.Now()
@@ -632,6 +740,7 @@ func (w *Worktree) Restart(ctx context.Context) error {
 			return w.restartLost(att, newBk, found)
 		}
 		// The old backend exited mid-restart; its callers wait on this boot.
+		commit()
 		if spawnErr == nil {
 			w.phase = runningOn(newBk)
 			w.lastActivity = time.Now()
@@ -647,6 +756,10 @@ func (w *Worktree) Restart(ctx context.Context) error {
 	w.mu.Unlock()
 	if exitedBk != nil {
 		w.releaseBackendArtifacts(exitedBk)
+	}
+	if uncommittedBk != nil {
+		w.terminateBackend(context.Background(), uncommittedBk, "hot restart could not commit its spec")
+		w.releaseBackendArtifacts(uncommittedBk)
 	}
 	att.settle(newBk, spawnErr)
 
@@ -974,9 +1087,10 @@ func (w *Worktree) startBackend(spec *Spec, socketPath string, reason StartReaso
 	cmd := w.cfg.ChildEnv.Command(argv[0], argv[1:]...)
 	cmd.Dir = spec.Server
 	// The backend's environment is exactly the declared runtime environment
-	// (-child-env, captured once at boot — see env.go). Nothing the gateway's
-	// starter carried reaches a backend unless it was declared.
-	cmd.Env = w.cfg.ChildEnv.With()
+	// (-child-env, captured once at boot — see env.go) plus the spec's own
+	// entries (Spec.Env, which win). Nothing the gateway's starter carried
+	// reaches a backend unless it was declared.
+	cmd.Env = w.cfg.ChildEnv.With(spec.envEntries()...)
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 
 	stdout, err := cmd.StdoutPipe()

@@ -17,13 +17,13 @@ import (
 
 // TestHelperBackend is not a test: it is the backend the priority tests spawn,
 // by re-executing this test binary (argv: -test.run=^TestHelperBackend$ --
-// [spawns=F] [gate=F] [tiers=F] [crash] [die-after-ready] --namespace N --socket S). It records
-// its start in the spawns file (and, with crash, exits 1 right there), binds the socket, records the boot tier each
+// [spawns=F] [gate=F] [tiers=F] [envout=F] [crash] [die-after-ready] --namespace N --socket S). It records
+// its environment in the envout file (one entry per line), its start in the spawns file (and, with crash, exits 1 right there), binds the socket, records the boot tier each
 // readiness probe carries in the tiers file, answers 503 until the gate file
 // exists (no gate: ready at once) and 200 to everything after. Run directly,
 // it has no --socket and returns.
 func TestHelperBackend(t *testing.T) {
-	var socket, spawns, gate, tiers string
+	var socket, spawns, gate, tiers, envout string
 	crash, dieAfterReady := false, false
 	var dieOnce sync.Once
 	args := os.Args
@@ -37,6 +37,8 @@ func TestHelperBackend(t *testing.T) {
 			gate = strings.TrimPrefix(a, "gate=")
 		case strings.HasPrefix(a, "tiers="):
 			tiers = strings.TrimPrefix(a, "tiers=")
+		case strings.HasPrefix(a, "envout="):
+			envout = strings.TrimPrefix(a, "envout=")
 		case a == "crash":
 			crash = true
 		case a == "die-after-ready":
@@ -45,6 +47,11 @@ func TestHelperBackend(t *testing.T) {
 	}
 	if socket == "" {
 		return
+	}
+	if envout != "" {
+		if err := os.WriteFile(envout, []byte(strings.Join(os.Environ(), "\n")+"\n"), 0o644); err != nil {
+			os.Exit(2)
+		}
 	}
 	if spawns != "" {
 		f, err := os.OpenFile(spawns, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)

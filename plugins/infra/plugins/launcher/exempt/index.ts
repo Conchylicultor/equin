@@ -24,7 +24,11 @@ export default [
   },
   {
     rule: "boundaries/no-platform-api",
-    paths: ["server/internal/boot.ts", "server/internal/config-propagate.ts"],
+    paths: [
+      "server/internal/boot.ts",
+      "server/internal/config-propagate.ts",
+      "server/internal/release-swap.ts",
+    ],
     kind: "debt",
     task: "task-1792338443-riwqev",
     reason: "not yet split into server/ + machine/",

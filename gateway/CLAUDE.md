@@ -147,7 +147,7 @@ Location: `~/.equin/worktrees/<name>/spec.json`. Directory name = worktree ident
 }
 ```
 
-`server` is required and absolute; `web` is absolute when present (central has none). The gateway hardcodes the launch convention (`bun bin/index.ts --namespace <name> --socket <path> --principal-stamped`, escalating readiness timeout — see "Backend Contract"). No per-worktree overrides in v1. Other per-worktree files (build logs, profiling data) also live in the same subdirectory.
+`server` is required and absolute; `web` is absolute when present (central has none). Optional `command` (argv to spawn instead of the bun convention) and `env` (full variable names → values, applied on top of the declared child env when the backend is spawned — a same-named entry is replaced; keys non-empty, no `=`, else the spec is rejected). `env` is how what belongs to the code a spec runs (a release bundle's own paths) travels with that spec instead of being inherited from whoever started the gateway. The gateway hardcodes the launch convention (`bun bin/index.ts --namespace <name> --socket <path> --principal-stamped`, escalating readiness timeout — see "Backend Contract"). No per-worktree overrides in v1. Other per-worktree files (build logs, profiling data) also live in the same subdirectory.
 
 Composition namespaces (`http://<composition>.<checkout>.localhost:9000`, or `http://<composition>.localhost:9000` when the checkout is main — `./equin build --composition <name>`) are ordinary spec dirs written by the build: `server` points at the checkout that built it, `web` at a composed dist, plus a `composition.json` provenance marker the gateway ignores. No gateway changes; namespace identity flows the same way (dir name → the backend's `--namespace`). The `composition` field on the spec is carried through the gateway's round-trip but never interpreted or forwarded — the backend reads it back off the same file.
 
@@ -165,12 +165,13 @@ Net effect: `spec.json` on disk ⟺ worktree reachable. The watch is a latency o
 
 ### A rewritten `spec.json` is picked up
 
-A registered worktree re-reads its spec when — and only when — the file on disk is a revision it has not loaded. Each `Spec` carries the fingerprint of the file it was parsed from (`specRev`, an unexported field so spec and provenance ride one atomic pointer and cannot disagree). Triggered by `reconcileOnce` (stat per tick) and by `Registry.RefreshSpec`, which `POST /gateway/worktrees/<name>/restart` calls *before* restarting — so a build that writes `spec.json` then POSTs doesn't race the tick.
+A registered worktree re-reads its spec when — and only when — the file on disk is a revision it has not loaded. Each `Spec` carries the fingerprint of the file it was parsed from (`specRev`, an unexported field so spec and provenance ride one atomic pointer and cannot disagree). Triggered by `reconcileOnce` (stat per tick) and by `Registry.RefreshSpec`, which a body-less `POST /gateway/worktrees/<name>/restart` calls *before* restarting — so a build that writes `spec.json` then POSTs doesn't race the tick. (A restart carrying its spec in the body never refreshes — see "Zero-downtime restart".)
 
 - **Keyed on `(mtime, size, dev, ino)`, not mtime+size.** The writer uses atomic temp+rename, so on a coarse-mtime filesystem two same-length rewrites in one second look identical — but a renamed-into-place file always has a new inode. A content hash is equally exact and ~10× the cost (a read of every spec, every tick) for a question the stat already answers.
 - **`loadSpec` opens once and stats the fd, not the path** — the recorded revision must describe the bytes actually parsed. Statting the path could pair a new file's fingerprint with old content, recording as loaded a revision that never was.
 - **Cost:** one `os.Stat` per subdir per tick, ~12µs each ⇒ ~1ms at ~90 namespaces, 0.01% of a core at the default 10s. The `ReadDir` that pass already did costs a fifth of that.
 - **A load failure changes nothing and never evicts.** Malformed / truncated / absent / schema-invalid, or a rewrite naming a `server` path that doesn't exist: the previous spec stays live. Unregistration stays keyed on **dir** presence only.
+- **Spec writes are serialized** (`Worktree.specMu`): an adoption (`adoptSpec`) also re-stats the file and declines a revision that is no longer the one on disk, so a read that raced a deploy's commit can never undo it.
 - **The revision check lives in `upsert`**, not its callers — so `LoadAll`/`Watch`/`Resolve`/`Reconcile` may all call `loadFile` unconditionally with no churn, and the reconcile stat gate is purely a cost optimization.
 
 When a change applies (see `UpdateSpec`'s docblock): `web` on the **next request** (`handleStatic` re-reads it per request, no respawn); `server`/`command` on the **next spawn** — `Ensure`/`Restart` snapshot the spec before `startBackend`, so refreshing alone restarts nothing.
@@ -197,6 +198,7 @@ gateway/
 ├── worktree.go    # Worktree lifecycle transitions (Ensure, Restart, Stop, exit), spawn, readiness
 ├── lifecycle.go   # The lifecycle as one value: the phase union and the spawnAttempt every waiter shares
 ├── handler_panic.go # A request-handler panic recovered into a 500 and filed as a gateway-panic report
+├── deploy_spec.go # Spec parsing/validation, the restart route's candidate body, its commit to memory + spec.json
 ├── registry.go    # Map of worktrees: dir-level fsnotify watch + lazy Resolve + periodic Reconcile, idle sweeper, stale-socket sweep
 ├── supervisor.go  # Generic service supervisor: start commands, readiness probes, watchdog
 ├── logrelay.go    # Relay mode (`gateway -log-relay <path>`): a supervised daemon's output through a rotating writer
@@ -222,6 +224,11 @@ Logic belongs with the data it operates on: spawn/stop/readiness are methods on 
 Two socket paths per worktree: `<name>.sock` (primary) and `<name>.next.sock` (secondary). They alternate on each restart — the gateway always spawns on whichever socket the current backend is NOT using. The `backend` struct groups per-process state (cmd, exitCh, proxy, socket path, WS conn count) so two backends can coexist briefly during the swap window.
 
 If the new backend fails to start (bad code, broken migration), the old backend stays up and the restart returns an error. Failed deploys cause zero downtime.
+
+**The route, two forms** (`deployRestart`; `{"restarted":true}` on success, `500` + the reason on failure; idle/broken → a deploy cold start, a boot in flight waited out first):
+
+- **No body** — the build wrote `spec.json` first; the route `RefreshSpec`s, then restarts on it.
+- **`{"spec": <spec.json object>}`** (`deploy_spec.go`) — validated exactly as a file load (`400` otherwise, nothing spawned). The gateway boots the **candidate** (`Restart(ctx, cand)` / `DeployStart`) and commits it — `spec.json` by temp + rename (the bytes as sent, so unknown fields survive; the in-memory spec stamped with that file's revision, so no refresh re-adopts it) and the in-memory spec — in the same `w.mu` critical section that makes its backend the serving one. Before that, static serving (`wt.Spec().Web`) and any respawn still see the old spec; on any failure both stay exactly as they were, so the next cold start (idle sweep, then a request) boots what last worked, never the failed build.
 
 State machine during restart: `Running → Restarting → Running`. During `Restarting`, `Ensure()` returns the old proxy immediately (no blocking, no 502). The idle sweeper skips worktrees in `Restarting` state. `Stop()` waits for an in-flight restart to settle before proceeding.
 

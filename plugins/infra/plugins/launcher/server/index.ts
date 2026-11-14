@@ -25,6 +25,17 @@ export {
 } from "./internal/boot";
 export type { GatewayLaunchOptions } from "./internal/boot";
 export {
+  releaseBackendSpec,
+  releaseHostGeneration,
+  swapReleaseBackend,
+  writeHostGeneration,
+} from "./internal/release-swap";
+export type {
+  HostGeneration,
+  ReleaseManifest,
+  SwapOutcome,
+} from "./internal/release-swap";
+export {
   DEV_GATEWAY_LOG_LEVEL,
   DEV_GATEWAY_PORT,
   devGatewayLaunchOptions,

@@ -18,7 +18,7 @@ export {
   isRelease,
   isHostSingleton,
   releaseIdentity,
-  setReleaseIdentity,
+  releaseIdentityEnv,
   checkoutWorktreeName,
 } from "../core/internal/paths";
 export type { ReleaseIdentity } from "../core/internal/paths";

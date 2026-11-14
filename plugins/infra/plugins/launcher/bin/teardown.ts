@@ -86,6 +86,8 @@ async function main(): Promise<void> {
         pgPort !== undefined && Number.isInteger(pgPort) && pgPort > 0
           ? pgPort
           : undefined,
+      // A packaged install's songs and DB persist: stop the cluster cleanly.
+      postgres: "fast",
     },
     console.log,
   );

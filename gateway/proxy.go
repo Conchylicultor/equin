@@ -492,13 +492,23 @@ func (p *Proxy) handleGatewayAPI(w http.ResponseWriter, r *http.Request) {
 		switch {
 		case action == "restart" && r.Method == http.MethodPost:
 			ctx := r.Context()
-			// The caller is a build that just rewrote this worktree's spec.json
-			// (a new dist path, a new server argv). Adopt it BEFORE restarting:
-			// Restart snapshots wt.Spec() to spawn with, so refreshing after
-			// would apply the new argv only on some later respawn, and the
-			// build would report "deployed" against the previous spec.
-			p.reg.RefreshSpec(name)
-			if status, err := deployRestart(ctx, wt, startCause(r, "restart route")); err != nil {
+			// Optional body {"spec": …}: boot that candidate and commit it
+			// (memory + spec.json) only once its backend serves (deploy_spec.go).
+			cand, err := readRestartBody(r.Body)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+			if cand == nil {
+				// No body: the caller is a build that just rewrote this
+				// worktree's spec.json (a new dist path, a new server argv).
+				// Adopt it BEFORE restarting: Restart snapshots wt.Spec() to
+				// spawn with, so refreshing after would apply the new argv only
+				// on some later respawn, and the build would report "deployed"
+				// against the previous spec.
+				p.reg.RefreshSpec(name)
+			}
+			if status, err := deployRestart(ctx, wt, cand, startCause(r, "restart route")); err != nil {
 				http.Error(w, err.Error(), status)
 				return
 			}
@@ -560,26 +570,37 @@ func (p *Proxy) handleGatewayAPI(w http.ResponseWriter, r *http.Request) {
 // start traffic asked for, or a hot restart's successor taking over from a
 // backend that exited mid-restart) is waited out first and the deploy then
 // applied to what it settled to — joining it would answer the build with a
-// backend booted from the spec before this deploy. Returns the HTTP status of
-// a failure.
-func deployRestart(ctx context.Context, wt *Worktree, cause string) (int, error) {
-	for range 2 {
+// backend booted from the spec before this deploy. cand, when non-nil, is the
+// spec to boot, committed only once its backend is ready (Restart,
+// DeployStart); nil boots the current spec. Returns the HTTP status of a
+// failure.
+func deployRestart(ctx context.Context, wt *Worktree, cand *DeploySpec, cause string) (int, error) {
+	for range 3 {
 		switch state := wt.Snapshot().State; state {
 		case "running", "restarting":
-			if err := wt.Restart(ctx); err != nil {
+			if err := wt.Restart(ctx, cand); err != nil {
 				return http.StatusInternalServerError, fmt.Errorf("hot restart failed: %w", err)
 			}
 			return http.StatusOK, nil
 		case "idle", "broken":
-			if _, err := wt.Ensure(ctx, StartDeploy, cause); err != nil {
+			var err error
+			if cand == nil {
+				_, err = wt.Ensure(ctx, StartDeploy, cause)
+			} else {
+				err = wt.DeployStart(ctx, cand, cause)
+				if errors.Is(err, errDeployRaced) {
+					continue
+				}
+			}
+			if err != nil {
 				return http.StatusInternalServerError, fmt.Errorf("cold start failed: %w", err)
 			}
 			return http.StatusOK, nil
 		case "starting":
 			// Only a wait: its outcome is read back as the state the loop
 			// switches on next (running → restart, broken → a deploy start).
-			if _, err := wt.Ensure(ctx, StartDeploy, cause); err != nil && ctx.Err() != nil {
-				return http.StatusServiceUnavailable, fmt.Errorf("deploy gave up waiting on the boot in flight: %w", ctx.Err())
+			if err := wt.awaitBoot(ctx); err != nil {
+				return http.StatusServiceUnavailable, fmt.Errorf("deploy gave up waiting on the boot in flight: %w", err)
 			}
 		default:
 			return http.StatusServiceUnavailable, fmt.Errorf("backend is %s; retry shortly", state)

@@ -47,6 +47,15 @@ export interface WorktreeSpec {
    * knows, so the spec says it.
    */
   composition?: string;
+  /**
+   * Environment entries (full names) the gateway sets for THIS backend on top
+   * of the declared runtime environment it forwards. A release's backend gets
+   * its bundle-relative paths and identity here (`releaseBackendEnv` in
+   * launcher), from the bundle it runs — so a backend swapped in under a
+   * long-lived gateway never inherits the previous release's. Absent: nothing
+   * beyond the forwarded environment.
+   */
+  env?: Record<string, string>;
 }
 
 /**
@@ -69,6 +78,7 @@ export async function writeWorktreeSpec({
   web,
   command,
   composition,
+  env,
 }: WorktreeSpec): Promise<string> {
   // The path comes from `paths` (`worktreeArtifacts.spec`), not from a join
   // here: the backend this spec spawns reads the same file back at boot
@@ -87,10 +97,12 @@ export async function writeWorktreeSpec({
     web?: string;
     command?: string[];
     composition?: string;
+    env?: Record<string, string>;
   } = { server };
   if (web) spec.web = web;
   if (command) spec.command = command;
   if (composition) spec.composition = composition;
+  if (env && Object.keys(env).length > 0) spec.env = env;
   // Atomically publish the spec (temp + rename in the same dir) so a concurrent
   // reader — the gateway registry's loadFile, its periodic reconcile, or a lazy
   // resolve — never observes a truncated/partial spec.json and skips

@@ -26,32 +26,14 @@ export const RUNTIME_FORWARDED_ENV = {
     "short /tmp dir for backend sockets when the data root is too deep for the AF_UNIX cap; the launcher passes it as -sockets-dir and gateway/main.go reads it as that flag's default",
   RELEASE:
     "marks a compiled release, so its single backend takes the host-singleton work (paths/core isRelease())",
-  RELEASE_RUN_ID:
-    "which release run is serving, stamped by the launcher from RELEASE.json for /api/health (paths/core releaseIdentity())",
-  RELEASE_COMPOSITION:
-    "which composition is serving, stamped by the launcher from RELEASE.json for /api/health (paths/core releaseIdentity())",
   PG_BIN_DIR:
     "vendored Postgres binaries for the supervised start script (database/embedded/scripts/start.ts)",
   PGBOUNCER_BIN:
     "vendored PgBouncer binary for the supervised start script (database/pgbouncer/scripts/start.ts)",
-  PG_CLIENT_BIN_DIR:
-    "vendored pg_dump / pg_restore the backend spawns for DB forks and backups (database/client-tools server/internal/bin.ts)",
   PG_PORT:
     "the embedded cluster's port, which a preview moves off the default (database/embedded/shared/internal/paths.ts, database/pgbouncer/scripts/start.ts)",
   PG_SOCKET_DIR:
     "short /tmp dir for the Postgres / PgBouncer sockets under a deep release root (database/embedded/shared/internal/paths.ts, database/pgbouncer/shared/internal/paths.ts)",
-  MIGRATIONS_DIR:
-    "the vendored .sql tree, since a compiled backend cannot read its own (database/migrations/server/internal/runner.ts)",
-  PARCEL_WATCHER_NODE:
-    "the vendored @parcel/watcher addon, which `bun --compile` cannot embed (infra/file-watcher shared/engine.ts)",
-  SENTINEL_WORKER_JS:
-    "the vendored cluster-sentinel worker, which `bun --compile` does not trace (debug/sentinel worker-host.ts)",
-  FORK_MEMORY_WORKER_JS:
-    "the vendored machine-usage fork-memory worker (the Postgres memory-map walk), which `bun --compile` does not trace (debug/sentinel/machine-usage fork-memory/host.ts)",
-  REPO_CONFIG_DIR:
-    "the vendored git-layer config tree for a compiled backend (paths/core repoConfigDir())",
-  WEB_DIST:
-    "the release's vendored web bundle, which the backend reads its build pins from (paths/core webDistDir())",
   PROFILING:
     "operator kill-switch for the runtime profiler (infra/runtime-profiler/core recorder.ts)",
   NO_SPAWN_PRIORITY:
@@ -158,6 +140,31 @@ export const RUNTIME_WITHHELD_ENV = {
     "a deployed site's public hostnames, comma-separated, written into the install's env file by `deploy converge`; the release launcher reads it and passes the gateway -public-hosts, so the gateway counts them as its own hosts (gateway/principal.go)",
   RELEASE_DIR:
     "the release self-extractor's cache root, set by the systemd unit and read before the launcher runs (release/cli self-extractor); no runtime reads it",
+  RELEASE_EXTRACT_ONLY:
+    "asks the release self-extractor to extract its bundle, print the extracted dir and exit; set by ship's activate script for that one call (deploy/cli activate-script.ts, release/cli self-extractor); no runtime reads it",
+  // ── Per release: what ONE backend's own bundle holds. Delivered by that
+  //    backend's spec.json `env` (launcher releaseBackendEnv), written from the
+  //    bundle the backend runs — never inherited: the gateway outlives a
+  //    backend swap, so an inherited value would run the next release's backend
+  //    against the previous release's files.
+  RELEASE_RUN_ID:
+    "per release, delivered by the backend's spec env: which release run a backend serves, for /api/health (paths/core releaseIdentity())",
+  RELEASE_COMPOSITION:
+    "per release, delivered by the backend's spec env: which composition a backend serves, for /api/health (paths/core releaseIdentity())",
+  PG_CLIENT_BIN_DIR:
+    "per release, delivered by the backend's spec env: the vendored pg_dump / pg_restore a backend spawns for DB forks and backups (database/client-tools server/internal/bin.ts)",
+  MIGRATIONS_DIR:
+    "per release, delivered by the backend's spec env: the vendored .sql tree, since a compiled backend cannot read its own (database/migrations/server/internal/runner.ts)",
+  PARCEL_WATCHER_NODE:
+    "per release, delivered by the backend's spec env: the vendored @parcel/watcher addon, which `bun --compile` cannot embed (infra/file-watcher shared/engine.ts)",
+  SENTINEL_WORKER_JS:
+    "per release, delivered by the backend's spec env: the vendored cluster-sentinel worker, which `bun --compile` does not trace (debug/sentinel worker-host.ts)",
+  FORK_MEMORY_WORKER_JS:
+    "per release, delivered by the backend's spec env: the vendored machine-usage fork-memory worker, which `bun --compile` does not trace (debug/sentinel/machine-usage fork-memory/host.ts)",
+  REPO_CONFIG_DIR:
+    "per release, delivered by the backend's spec env: the vendored git-layer config tree for a compiled backend (paths/core repoConfigDir())",
+  WEB_DIST:
+    "per release, delivered by the backend's spec env: the release's vendored web bundle, which the backend reads its build pins from (paths/core webDistDir())",
 } as const satisfies Record<string, string>;
 
 type ForwardedKey = keyof typeof RUNTIME_FORWARDED_ENV;
