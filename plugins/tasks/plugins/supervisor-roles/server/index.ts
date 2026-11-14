@@ -31,12 +31,16 @@ import {
   supervisorRolesSection,
 } from "./internal/sections";
 import { tasksSupervisor } from "./internal/tables";
-import { supervisorRoleIconStale } from "./internal/tables-events";
+import {
+  supervisorRoleBacklogArrived,
+  supervisorRoleIconStale,
+} from "./internal/tables-events";
 
 export {
   FALLBACK_ROLE_REF,
   fileToBacklog,
   getSupervisorRole,
+  isInRoleBacklog,
   isSessionRoot,
   liveSessionOf,
   lockRoleSessions,
@@ -49,8 +53,14 @@ export {
 export type { BacklogFiling, RoleTaskRow } from "./internal/roles";
 export { BACKLOG_READ_LIMIT } from "./internal/roles";
 export { _supervisorRoles, tasksSupervisor } from "./internal/tables";
-export { supervisorRoleIconStale } from "./internal/tables-events";
-export type { SupervisorRoleIconStalePayload } from "./internal/tables-events";
+export {
+  supervisorRoleBacklogArrived,
+  supervisorRoleIconStale,
+} from "./internal/tables-events";
+export type {
+  SupervisorRoleBacklogArrivedPayload,
+  SupervisorRoleIconStalePayload,
+} from "./internal/tables-events";
 
 export default {
   description:
@@ -73,5 +83,5 @@ export default {
     supervisorRolesSection,
     supervisorPromptSection,
   ],
-  register: [supervisorRoleIconStale],
+  register: [supervisorRoleIconStale, supervisorRoleBacklogArrived],
 } satisfies ServerPluginDefinition;

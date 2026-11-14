@@ -10,6 +10,7 @@ import {
   sql,
 } from "drizzle-orm";
 import { db, type DbExecutor } from "@plugins/database/server";
+import type { EmitTx } from "@plugins/infra/plugins/events/server";
 import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import {
   _tasks,
@@ -34,6 +35,22 @@ import {
   supervisorRolesEntity,
   tasksSupervisor,
 } from "./tables";
+import { supervisorRoleBacklogArrived } from "./tables-events";
+
+/** Emit the backlog arrival on `exec`'s transaction, so it commits (or rolls
+ * back) with the owner row. Same PgTransaction ⇄ EmitTx cast as tasks-core's
+ * own emits. */
+async function emitBacklogArrived(
+  taskId: string,
+  roleId: string,
+  actorConversationId: string | null,
+  exec: DbExecutor,
+): Promise<void> {
+  await supervisorRoleBacklogArrived.emit(
+    { taskId, roleId, actorConversationId },
+    exec === db ? undefined : { tx: exec as EmitTx },
+  );
+}
 
 /** What `add_task`'s `supervisor` names: a listed role's id, or the fallback. */
 export const FALLBACK_ROLE_REF = "fallback";
@@ -126,6 +143,10 @@ export async function setTaskSupervisorRole(
     },
     exec,
   );
+  // A new owner hears of it (a session root's own write too: the source
+  // keeps only a task really in the backlog).
+  if (existing?.supervisor !== roleId)
+    await emitBacklogArrived(taskId, roleId, null, exec);
 }
 
 /**
@@ -281,9 +302,36 @@ export async function fileToBacklog(
       tx,
     );
     await setTaskTrack(task.id, filing.track, tx);
+    await emitBacklogArrived(task.id, role.id, filing.conversationId, tx);
     return task.id;
   });
   return { taskId, role };
+}
+
+/** Whether `taskId` waits in role `roleId`'s backlog now: a root it owns,
+ * not a session root, that has not run (`roleBacklogWhere`'s rule). */
+export async function isInRoleBacklog(
+  taskId: string,
+  roleId: string,
+  exec: DbExecutor = db,
+): Promise<boolean> {
+  const [row] = await exec
+    .select({ id: tasksView.id })
+    .from(tasksView)
+    .innerJoin(_tasks, eq(_tasks.id, tasksView.id))
+    .innerJoin(
+      tasksSupervisor.table,
+      eq(tasksSupervisor.table.taskId, tasksView.id),
+    )
+    .where(
+      and(
+        eq(tasksView.id, taskId),
+        roleRoots(roleId, false),
+        inArray(tasksView.status, [...BACKLOG_STATUSES]),
+      ),
+    )
+    .limit(1);
+  return row !== undefined;
 }
 
 /** Whether `taskId` is a role session's root: it states the supervisor-role

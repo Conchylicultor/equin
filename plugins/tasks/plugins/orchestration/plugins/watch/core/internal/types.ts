@@ -22,6 +22,10 @@ export type Watcher = z.infer<typeof WatcherSchema>;
 export interface WatchEventInput {
   kind: string;
   taskId: string;
+  /** The task whose watchers hear it, when not `taskId` itself: an event
+   * about a task outside any tree (a root filed into a backlog) routed to the
+   * tree that should hear it. Defaults to `taskId`. */
+  routeTaskId?: string;
   /** The conversation whose action this is; its own watches never hear it. */
   actorConversationId?: string;
   /** One line a watcher reads (a report's whole body for `reported`). */

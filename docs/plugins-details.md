@@ -59581,6 +59581,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tasks`
               - `tasks/automations`
               - `tasks/outcome-report`
+              - `tasks/supervisor-roles`
               - `tasks/supervisor-roles/sessions`
           - Machine:
             - Exports (values): `watchSource`
@@ -59818,7 +59819,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `mandateReach` "supervisor-roles"
           - `conversations.system-prompt.section` "supervisor-prompt"
           - `conversations.system-prompt.section` "supervisor-roles"
+          - `watchSource` "supervisor-roles.backlog"
           - `trigger` "supervisor-roles.icon"
+          - `trigger` "watch.ingest"
         - Uses: 29 symbols — full list in [`plugins/tasks/plugins/supervisor-roles/REFERENCE.md`](../plugins/tasks/plugins/supervisor-roles/REFERENCE.md)
           - `tasks/tasks-core` ×6
           - `tasks/orchestration/mandate` ×4
@@ -59842,6 +59845,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (types):
           - `BacklogFiling`
           - `RoleTaskRow`
+          - `SupervisorRoleBacklogArrivedPayload`
           - `SupervisorRoleIconStalePayload`
         - Exports (values):
           - `_supervisorRoles`
@@ -59849,6 +59853,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `FALLBACK_ROLE_REF`
           - `fileToBacklog`
           - `getSupervisorRole`
+          - `isInRoleBacklog`
           - `isSessionRoot`
           - `liveSessionOf`
           - `lockRoleSessions`
@@ -59857,9 +59862,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `roleOfConversation`
           - `setTaskSupervisorRole`
           - `supervisorOfTask`
+          - `supervisorRoleBacklogArrived`
           - `supervisorRoleIconStale`
           - `tasksSupervisor`
-        - Register: `defineTriggerEvent('supervisorRoles.iconStale')`
+        - Register:
+          - `defineTriggerEvent('supervisorRoles.iconStale')`
+          - `defineTriggerEvent('supervisorRoles.backlogArrived')`
         - Resources:
           - `supervisor-roles.all` (keyed)
           - `supervisor-roles.all:rows` (keyed, point)
@@ -59869,6 +59877,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PATCH /api/supervisor-roles/:id`
           - `DELETE /api/supervisor-roles/:id`
           - `PUT /api/tasks/:taskId/supervisor`
+      - Machine:
+        - Uses: `tasks/orchestration/watch.watchSource`
+        - Register: `defineJob('supervisor-roles.icon')`
       - Core:
         - Uses: 27 symbols — full list in [`plugins/tasks/plugins/supervisor-roles/REFERENCE.md`](../plugins/tasks/plugins/supervisor-roles/REFERENCE.md)
           - `tasks/tasks-core` ×4
@@ -59926,8 +59937,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Endpoint callers: `sessions`
       - Exemptions:
         - Exempts itself from: `ids:pk-declared` — `server/internal/tables-events.ts` (debt)
-      - Machine:
-        - Register: `defineJob('supervisor-roles.icon')`
       - Plugins:
         - **`pane`** — The Supervisors pane, in the agent manager: one sidebar entry (live sessions and the tasks waiting in every backlog at its edge) opening the list — the pinned All supervisors entry (the shared prompt, edited inline), every role (session state, backlog and its oldest age, Launch / Open session) and the ad-hoc supervisors at work — and a role's page: its name and icon (picked automatically, overridable) and every setting edited in place (listed to agents, the description agents get, the supervisor prompt), the Launch / Open session band, the backlog (Adopt — into the live session, launching one when none is live — and Drop) and the session history. Also the task detail's Supervisor pill (TaskSupervisorControl: picking another role re-routes the task, None removes its role) and SupervisorPill.
           - Web:

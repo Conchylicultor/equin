@@ -68,6 +68,15 @@ tools — are `plugins/sessions`.
   `backlog` (granted by the interactive and supervisor presets), `start:
   "manual"`, no `after` / `relation` / `model`. Only a LISTED role may be
   named; `"fallback"` reaches the fallback role listed or not.
+- **Arrival notice** — a task entering role R's backlog (`fileToBacklog`, or
+  `setTaskSupervisorRole` giving it a new owner: `route_task`, the pane's
+  Supervisor pill) emits `supervisorRoles.backlogArrived`, on the write's
+  transaction. The desktop's watch source (`machine/`) turns it into one
+  `backlog` event about the task, routed (`routeTaskId`) to R's live session
+  root — its tree watch delivers it as an event turn once the agent is idle,
+  batched with whatever else arrived. Checked when ingested: a task no longer
+  in the backlog, or a role with no live session, says nothing (the next
+  session reads its backlog). The filing agent never hears its own filing.
 - **System prompt** — `supervisor-roles` section: the listed roles (name, id,
   description) and how to file, for a conversation whose grant has
   `backlog`. `supervisor-prompt` section: for the conversation at the ROOT of
@@ -116,7 +125,9 @@ tools — are `plugins/sessions`.
     - `mandateReach` "supervisor-roles"
     - `conversations.system-prompt.section` "supervisor-prompt"
     - `conversations.system-prompt.section` "supervisor-roles"
+    - `watchSource` "supervisor-roles.backlog"
     - `trigger` "supervisor-roles.icon"
+    - `trigger` "watch.ingest"
   - Uses: 29 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `tasks/tasks-core` ×6
     - `tasks/orchestration/mandate` ×4
@@ -140,6 +151,7 @@ tools — are `plugins/sessions`.
   - Exports (types):
     - `BacklogFiling`
     - `RoleTaskRow`
+    - `SupervisorRoleBacklogArrivedPayload`
     - `SupervisorRoleIconStalePayload`
   - Exports (values):
     - `_supervisorRoles`
@@ -147,6 +159,7 @@ tools — are `plugins/sessions`.
     - `FALLBACK_ROLE_REF`
     - `fileToBacklog`
     - `getSupervisorRole`
+    - `isInRoleBacklog`
     - `isSessionRoot`
     - `liveSessionOf`
     - `lockRoleSessions`
@@ -155,9 +168,12 @@ tools — are `plugins/sessions`.
     - `roleOfConversation`
     - `setTaskSupervisorRole`
     - `supervisorOfTask`
+    - `supervisorRoleBacklogArrived`
     - `supervisorRoleIconStale`
     - `tasksSupervisor`
-  - Register: `defineTriggerEvent('supervisorRoles.iconStale')`
+  - Register:
+    - `defineTriggerEvent('supervisorRoles.iconStale')`
+    - `defineTriggerEvent('supervisorRoles.backlogArrived')`
   - Resources:
     - `supervisor-roles.all` (keyed)
     - `supervisor-roles.all:rows` (keyed, point)
@@ -167,6 +183,9 @@ tools — are `plugins/sessions`.
     - `PATCH /api/supervisor-roles/:id`
     - `DELETE /api/supervisor-roles/:id`
     - `PUT /api/tasks/:taskId/supervisor`
+- Machine:
+  - Uses: `tasks/orchestration/watch.watchSource`
+  - Register: `defineJob('supervisor-roles.icon')`
 - Core:
   - Uses: 27 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `tasks/tasks-core` ×4
@@ -224,8 +243,6 @@ tools — are `plugins/sessions`.
   - Endpoint callers: `sessions`
 - Exemptions:
   - Exempts itself from: `ids:pk-declared` — `server/internal/tables-events.ts` (debt)
-- Machine:
-  - Register: `defineJob('supervisor-roles.icon')`
 - Sub-plugins:
   - **`pane`** — The Supervisors pane, in the agent manager: one sidebar entry (live sessions and the tasks waiting in every backlog at its edge) opening the list — the pinned All supervisors entry (the shared…
   - **`sessions`** — Supervisor role sessions: POST /api/supervisor-roles/:id/sessions opens the role's live session or launches one (one live session per role — a root task stating the supervisor-role mandate, owned by…

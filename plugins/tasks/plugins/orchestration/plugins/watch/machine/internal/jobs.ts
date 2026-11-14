@@ -147,7 +147,11 @@ export const watchIngestJob = defineJob({
     await db.transaction(async (tx) => {
       for (const watchId of await routeEvents(tx, events))
         await watchDeliverJob.enqueue({ watchId }, enqueueOn(tx));
-      for (const taskId of new Set(events.map((e) => e.taskId)))
+      // The chain each event was routed up — its own task's, unless it names
+      // another.
+      for (const taskId of new Set(
+        events.map((e) => e.routeTaskId ?? e.taskId),
+      ))
         await enqueueQuietForChain(tx, taskId);
     });
   },

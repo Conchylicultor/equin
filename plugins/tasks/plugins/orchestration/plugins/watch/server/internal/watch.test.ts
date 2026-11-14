@@ -183,6 +183,38 @@ describe("routing", () => {
     expect(got.midInbox).toEqual(["flagged", "reported"]);
   });
 
+  test("an event naming routeTaskId goes up that task's chain, still about its own task", async () => {
+    const got = await worktreeDbScenario(async (tx) => {
+      const tree = await task(tx, null);
+      const loose = await task(tx, null);
+      const treeConv = await conversation(tx, tree, "waiting");
+      const treeW = await watchTask(
+        tree,
+        { kind: "conversation", conversationId: treeConv },
+        tx,
+      );
+      const routed = await routeEvents(tx, [
+        { kind: "queued", taskId: loose, routeTaskId: tree, summary: "q" },
+        // Its actor is the watcher: never hears its own action.
+        {
+          kind: "queued",
+          taskId: loose,
+          routeTaskId: tree,
+          actorConversationId: treeConv,
+          summary: "own",
+        },
+      ]);
+      return {
+        treeW: treeW.id,
+        loose,
+        routed: [...routed],
+        inbox: (await inbox(tx, treeW.id)).map((r) => [r.taskId, r.summary]),
+      };
+    });
+    expect(got.routed).toEqual([got.treeW]);
+    expect(got.inbox).toEqual([[got.loose, "q"]]);
+  });
+
   test("watchTask is idempotent per (task, watcher)", async () => {
     const got = await worktreeDbScenario(async (tx) => {
       const root = await task(tx, null);

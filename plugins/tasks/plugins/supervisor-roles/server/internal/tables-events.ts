@@ -18,3 +18,25 @@ export const {
   name: "supervisorRoles.iconStale",
   filters: {},
 });
+
+export interface SupervisorRoleBacklogArrivedPayload {
+  taskId: string;
+  roleId: string;
+  /** The agent whose filing it is, when one filed it (it never hears it). */
+  actorConversationId: string | null;
+  [key: string]: unknown;
+}
+
+/**
+ * A task entered role `roleId`'s backlog: filed into it, or routed to it from
+ * another role (or from none). The desktop tells the role's live session
+ * (`machine/`, a watch source routed to the session's tree watch); with no
+ * live session nobody hears it — the next session finds it in its backlog.
+ */
+export const {
+  event: supervisorRoleBacklogArrived,
+  table: _supervisorRoleBacklogArrivedTriggers,
+} = defineTriggerEvent<SupervisorRoleBacklogArrivedPayload>({
+  name: "supervisorRoles.backlogArrived",
+  filters: {},
+});

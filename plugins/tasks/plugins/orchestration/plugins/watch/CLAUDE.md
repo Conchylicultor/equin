@@ -20,7 +20,10 @@ an agent (one `event` turn per batch) or code (a `WatchHandler`). Plan:
 - **Routing** (`watch.ingest`) — each event goes to the nearest live watch up
   the folder chain (the task's own first), never one its actor owns, into
   `watch_inbox`, and `watch.deliver` is enqueued on the same transaction. No
-  live watch: dropped (the digest still shows ancestors what changed).
+  live watch: dropped (the digest still shows ancestors what changed). An
+  event may name `routeTaskId`: routed up THAT task's chain while still about
+  its own `taskId` — how a fact about a task in no tree (a root waiting in
+  a queue no tree holds) reaches the tree that should hear it.
 - **Quiet** (`watch.quiet`) — re-evaluated for every live watch on the chain
   on `tasks.statusChanged`, on a conversation entering or leaving a busy state,
   and after routing. Active = an agent `starting`/`working` on a subtree task
@@ -151,6 +154,7 @@ it over the real tables with a fake agent.
     - `tasks`
     - `tasks/automations`
     - `tasks/outcome-report`
+    - `tasks/supervisor-roles`
     - `tasks/supervisor-roles/sessions`
 - Machine:
   - Exports (values): `watchSource`
