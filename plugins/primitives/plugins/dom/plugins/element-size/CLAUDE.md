@@ -129,9 +129,9 @@ different need, extend the primitive rather than allowlisting a copy.
     - `useResizeObserver`
     - `useResizeObserverSet`
 - Cross-plugin:
-  - Imported by: 50 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 51 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives` ×25
-    - `apps` ×15
+    - `apps` ×16
     - `shell` ×2
     - `active-data/go`
     - `companions/panel`

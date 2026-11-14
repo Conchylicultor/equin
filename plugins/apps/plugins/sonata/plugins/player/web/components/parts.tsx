@@ -28,7 +28,8 @@ import { DisplayCoverContext, NO_COVER, type DisplayCover } from "../cover";
  * `cover` is what the host's floating chrome covers. A `bleed` display fills
  * the whole box and reads the cover (`useDisplayCover`) to keep its content
  * out of it while its ground runs under the chrome; any other display is laid
- * out beside the cover.
+ * out beside the cover — below the top chrome, left of the dock — so its first
+ * row never starts under the header or the capsule.
  */
 export function PlayerDisplay({
   displayId,
@@ -45,7 +46,10 @@ export function PlayerDisplay({
   const bleed = displays.find((d) => d.id === active)?.bleed === true;
   return (
     <Clip fill className="relative">
-      <Placed x={{ start: 0, end: bleed ? 0 : cover.right }} y="fill">
+      <Placed
+        x={{ start: 0, end: bleed ? 0 : cover.right }}
+        y={bleed ? "fill" : { start: cover.top, end: 0 }}
+      >
         {active === null ? (
           <NoDisplay />
         ) : (

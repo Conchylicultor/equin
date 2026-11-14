@@ -9154,7 +9154,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Pane.Register` "sonata-library"
               - `Pane.Register` "sonata-player"
               - `Pane.Register` "sonata-song-peek"
-            - Uses: 98 symbols — full list in [`plugins/apps/plugins/sonata/plugins/library/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/library/REFERENCE.md)
+            - Uses: 99 symbols — full list in [`plugins/apps/plugins/sonata/plugins/library/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/library/REFERENCE.md)
               - `primitives/pane` ×15
               - `primitives/data-view` ×7
               - `apps/sonata/shell` ×6
@@ -9189,6 +9189,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/rigid.rigidClass`
               - `primitives/css/text.Text`
               - `primitives/css/yield.yieldClass`
+              - `primitives/dom/element-size.useElementSize`
               - `primitives/dom/web-storage.defineStore`
               - `primitives/editable-field.useEditableField`
               - `primitives/icon-button.IconButton`
@@ -51433,9 +51434,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useResizeObserver`
               - `useResizeObserverSet`
           - Cross-plugin:
-            - Imported by: 50 plugins — full list in [`plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md)
+            - Imported by: 51 plugins — full list in [`plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md)
               - `primitives` ×25
-              - `apps` ×15
+              - `apps` ×16
               - `shell` ×2
               - `active-data/go`
               - `companions/panel`

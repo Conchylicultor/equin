@@ -17,10 +17,12 @@ into it with `useLoadDocument()` and composes only the parts it wants:
   over the session's score, with `TEMPO_MATH_FLOOR` applied to the tempo it
   hands the display. `displayId` defaults to the view's lens. While mounted it
   marks the player **shown** (see below). `cover` is what the host's floating
-  chrome covers (the immersive player's section dock): a display contributed
-  with `bleed: true` (the piano roll) fills the whole box — its ground and
-  rules run under the chrome — and reads `useDisplayCover()` to keep its
-  content beside it; any other display is laid out beside the cover.
+  chrome covers, in px from the top and right edges (the immersive player's
+  header band and progression capsule, its section dock): a display
+  contributed with `bleed: true` (the piano roll) fills the whole box — its
+  ground and rules run under the chrome — and reads `useDisplayCover()` to keep
+  its content beside it; any other display is laid out beside the cover (below
+  the top chrome, left of the dock).
 - `PlayerTransport` — the transport strip: one row (its own rule and inset)
   holding every `SonataPlayer.Transport` contribution in the slot's reorder
   order (`config/apps/sonata/player/transport.jsonc`) — play / pause

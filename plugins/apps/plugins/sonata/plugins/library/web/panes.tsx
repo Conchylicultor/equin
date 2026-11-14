@@ -38,6 +38,7 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { Placed } from "@plugins/primitives/plugins/css/plugins/coords/web";
 import { Glass } from "@plugins/apps/plugins/sonata/plugins/primitives/plugins/glass/web";
+import { useElementSize } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
 import {
   Inset,
   Stack,
@@ -467,6 +468,10 @@ function ImmersivePlayer() {
   // Eased on the dock's clock, so the notes (and the capsule over them) give
   // way as the panel unfolds instead of jumping.
   const right = useDockReserve(collapsed ? RAIL_RESERVE : PANEL_RESERVE);
+  // The capsule is the lowest of the top chrome: a display that does not bleed
+  // starts under it, so its first row is never drawn beneath the glass.
+  const [capsuleRef, capsule] = useElementSize();
+  const top = CAPSULE_TOP + capsule.height;
   return (
     <Clip className="relative isolate h-full bg-background text-foreground">
       {/* The whole window: a display that bleeds (the piano roll) runs its
@@ -474,7 +479,7 @@ function ImmersivePlayer() {
       <Placed x="fill" y="fill">
         {/* A column, so the display's filling clip takes the whole height. */}
         <Stack gap="none" className="h-full">
-          <PlayerDisplay cover={{ right }} />
+          <PlayerDisplay cover={{ top, right }} />
         </Stack>
       </Placed>
 
@@ -497,6 +502,7 @@ function ImmersivePlayer() {
         }}
         y={{ start: CAPSULE_TOP }}
         layer="float"
+        ref={capsuleRef}
       >
         <Glass tint="deep">
           <PlayerTransport variant="capsule" />

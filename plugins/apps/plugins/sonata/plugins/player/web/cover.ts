@@ -2,14 +2,16 @@ import { createContext, useContext } from "react";
 
 /**
  * The part of a display its host covers with floating chrome, in px from each
- * edge — the immersive player's section dock at the right. A host hands it to
- * `PlayerDisplay`; the display never sees the chrome itself.
+ * edge — the immersive player's header band and progression capsule at the
+ * top, its section dock at the right. A host hands it to `PlayerDisplay`; the
+ * display never sees the chrome itself.
  */
 export interface DisplayCover {
+  top: number;
   right: number;
 }
 
-export const NO_COVER: DisplayCover = { right: 0 };
+export const NO_COVER: DisplayCover = { top: 0, right: 0 };
 
 export const DisplayCoverContext = createContext<DisplayCover>(NO_COVER);
 

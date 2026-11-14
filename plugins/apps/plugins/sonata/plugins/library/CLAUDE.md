@@ -85,7 +85,10 @@ mockup's px, spelled once in `web/internal/player-geometry.ts`.
   display's content and the capsule keep to the part of the window it leaves
   (the rail's strip, or the open panel's width), so the panel sits BESIDE the
   notes. The display is handed that strip as its `cover` (`PlayerDisplay`), so
-  a bleeding display (the piano roll) still runs its ground and grid under it.
+  a bleeding display (the piano roll) still runs its ground and grid under it. The
+  top chrome's height (down to the capsule's measured bottom) is the cover's
+  `top`: every other display starts below it, so its first row is never drawn
+  under the glass.
 
 `useSongLink` opens the player with `openPane(sonataPlayerPane, { songId },
 { mode: "root", hint: { title } })`. The ← Library button calls `clearRoute()`
@@ -295,7 +298,7 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `Pane.Register` "sonata-library"
     - `Pane.Register` "sonata-player"
     - `Pane.Register` "sonata-song-peek"
-  - Uses: 98 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 99 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/pane` ×15
     - `primitives/data-view` ×7
     - `apps/sonata/shell` ×6
@@ -330,6 +333,7 @@ the title — a chord-grid save endpoint physically cannot carry one.
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/text.Text`
     - `primitives/css/yield.yieldClass`
+    - `primitives/dom/element-size.useElementSize`
     - `primitives/dom/web-storage.defineStore`
     - `primitives/editable-field.useEditableField`
     - `primitives/icon-button.IconButton`
