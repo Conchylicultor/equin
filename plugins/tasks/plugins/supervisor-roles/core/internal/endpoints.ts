@@ -22,8 +22,7 @@ export type CreateSupervisorRoleBody = z.infer<
 >;
 
 /**
- * Create a role. The first role becomes the fallback. A name another role
- * has (case-insensitive) is a 400, as is one past `SUPERVISOR_ROLES_MAX`.
+ * Create a role. A name another role has (case-insensitive) is a 400, as is one past `SUPERVISOR_ROLES_MAX`.
  */
 export const createSupervisorRole = defineEndpoint({
   route: "POST /api/supervisor-roles",
@@ -41,8 +40,6 @@ export const UpdateSupervisorRoleBodySchema = z.object({
    * which picks one again.
    */
   icon: SavedSymbolNameSchema.nullable().optional(),
-  /** `true` moves the fallback to this role (only `true`: it moves, never clears). */
-  fallback: z.literal(true).optional(),
 });
 export type UpdateSupervisorRoleBody = z.infer<
   typeof UpdateSupervisorRoleBodySchema
@@ -56,8 +53,7 @@ export const updateSupervisorRole = defineEndpoint({
 
 /**
  * Delete a role. Refused (409) while it has a live session (end it first) or
- * a backlog (route it to another role first), and for the fallback while
- * another role exists (move the fallback first). Otherwise what it owned is
+ * a backlog (route it to another role first). Otherwise what it owned is
  * released, never deleted: its ended sessions' roots state the interactive
  * mandate instead, and the tasks lose their owner.
  */

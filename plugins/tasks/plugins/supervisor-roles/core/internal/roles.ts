@@ -39,10 +39,6 @@ export const SUPERVISOR_ROLES_MAX = 50;
  *   whether `add_task` may name it).
  * - `description` — what agents read in that list to decide where to file.
  * - `prompt` — the brief each of the role's sessions is launched with.
- * - `fallback` — the role tasks filed with `supervisor: "fallback"` land in.
- *   At most one role holds it (a partial unique index); the first role
- *   created takes it, and it only ever MOVES (set on another role), so once
- *   a role exists exactly one is the fallback.
  */
 export const supervisorRoleFields = {
   id: idKindField(supervisorRoleIdKind),
@@ -57,7 +53,6 @@ export const supervisorRoleFields = {
   listed: boolField({ label: "Listed to agents", default: true }),
   description: textField({ label: "Description" }),
   prompt: textField({ label: "Prompt" }),
-  fallback: boolField({ label: "Fallback", default: false }),
   createdAt: dateField({ label: "Created" }),
 } satisfies FieldsRecord;
 
@@ -77,7 +72,7 @@ export type SupervisorRole = z.infer<typeof SupervisorRoleSchema>;
  */
 export const supervisorRoles = liveCollection("supervisor-roles.all", {
   from: supervisorRolesEntityRef,
-  pick: ["name", "listed", "description", "fallback", "createdAt"],
+  pick: ["name", "listed", "description", "createdAt"],
   carry: { pick: ["id", "icon", "iconByUser", "prompt"] },
   id: "id",
   all: {

@@ -35,8 +35,7 @@ export const handleCreateSupervisorRole = implement(
     await assertNameFree(body.name);
     const id = supervisorRoleIdKind.mint();
     await db.transaction(async (tx) => {
-      // Serialize creates: the cap and "the first role is the fallback" read
-      // the whole set.
+      // Serialize creates: the cap reads the whole set.
       await tx.execute(
         sql`LOCK TABLE ${_supervisorRoles} IN SHARE ROW EXCLUSIVE MODE`,
       );
@@ -56,7 +55,6 @@ export const handleCreateSupervisorRole = implement(
         listed: body.listed ?? true,
         icon: body.icon ?? null,
         iconByUser: body.icon !== undefined,
-        fallback: n === 0,
       });
       if (body.icon === undefined)
         await supervisorRoleIconStale.emit({ roleId: id }, { tx });
@@ -80,12 +78,6 @@ export const handleUpdateSupervisorRole = implement(
     // when a person hands the icon back (`icon: null`).
     const repick = !iconByUser && (textChanged || body.icon === null);
     await db.transaction(async (tx) => {
-      if (body.fallback === true && !role.fallback) {
-        await tx
-          .update(_supervisorRoles)
-          .set({ fallback: false })
-          .where(eq(_supervisorRoles.fallback, true));
-      }
       await tx
         .update(_supervisorRoles)
         .set({
@@ -96,7 +88,6 @@ export const handleUpdateSupervisorRole = implement(
           ...(body.prompt !== undefined ? { prompt: body.prompt } : {}),
           ...(body.listed !== undefined ? { listed: body.listed } : {}),
           ...(body.icon !== undefined ? { icon: body.icon, iconByUser } : {}),
-          ...(body.fallback === true ? { fallback: true } : {}),
         })
         .where(eq(_supervisorRoles.id, role.id));
       if (repick)
@@ -110,16 +101,6 @@ export const handleDeleteSupervisorRole = implement(
   async ({ params }) => {
     const role = await getSupervisorRole(params.id);
     if (!role) throw new HttpError(404, `No supervisor role "${params.id}".`);
-    if (role.fallback) {
-      const [{ n } = { n: 0 }] = await db
-        .select({ n: count() })
-        .from(_supervisorRoles);
-      if (n > 1)
-        throw new HttpError(
-          409,
-          `"${role.name}" is the fallback role: make another role the fallback first.`,
-        );
-    }
     const refusal = await db.transaction((tx) =>
       deleteRoleReleasing(role.id, tx),
     );

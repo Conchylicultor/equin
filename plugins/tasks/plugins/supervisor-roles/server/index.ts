@@ -37,7 +37,6 @@ import {
 } from "./internal/tables-events";
 
 export {
-  FALLBACK_ROLE_REF,
   fileSystemBacklogTask,
   fileToBacklog,
   getSupervisorRole,
@@ -45,7 +44,6 @@ export {
   isSessionRoot,
   liveSessionOf,
   lockRoleSessions,
-  resolveFilingRole,
   roleBacklog,
   roleOfConversation,
   setTaskSupervisorRole,
@@ -65,7 +63,7 @@ export type {
 
 export default {
   description:
-    "Supervisor roles, data half: the supervisor_roles table (name, Haiku-picked icon with a person's override, listed, description, prompt, the one fallback) served whole as supervisor-roles.all with its create / edit / delete endpoints; the per-task owner (tasks_ext_supervisor, a role id, exposed as the `supervisor` field of every task list, routed by PUT /api/tasks/:taskId/supervisor); filing into a role's backlog (fileToBacklog — a root task owned by the role, never armed); the supervisor-role mandate (the supervisor preset plus the role powers on the root) and its reach (a role session manages every task its role owns); the system-prompt sections listing the listed roles to agents that may file into a backlog, and the shared supervisor prompt (a config) for every supervisor root.",
+    "Supervisor roles, data half: the supervisor_roles table (name, Haiku-picked icon with a person's override, listed, description, prompt) served whole as supervisor-roles.all with its create / edit / delete endpoints; the per-task owner (tasks_ext_supervisor, a role id, exposed as the `supervisor` field of every task list, routed by PUT /api/tasks/:taskId/supervisor); filing into a role's backlog (fileToBacklog — a root task owned by the role, never armed); the supervisor-role mandate (the supervisor preset plus the role powers on the root) and its reach (a role session manages every task its role owns); the system-prompt sections listing the listed roles to agents that may file into a backlog, and the shared supervisor prompt (a config) for every supervisor root.",
   httpRoutes: {
     [createSupervisorRole.route]: handleCreateSupervisorRole,
     [updateSupervisorRole.route]: handleUpdateSupervisorRole,

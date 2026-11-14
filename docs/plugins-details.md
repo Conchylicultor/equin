@@ -59874,7 +59874,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defineJob('sidequest-autopilot.triage-on-task')`
           - `defineJob('sidequest-autopilot.triage-backfill')`
           - `defineWarmup('sidequest-autopilot.triage-backfill')`
-    - **`supervisor-roles`** — Supervisor roles, web half: registers the srole id kind, the shared supervisor prompt config (Settings → Config) and the exposed `supervisor` field of every task list, its options the live roles by name. Supervisor roles, data half: the supervisor_roles table (name, Haiku-picked icon with a person's override, listed, description, prompt, the one fallback) served whole as supervisor-roles.all with its create / edit / delete endpoints; the per-task owner (tasks_ext_supervisor, a role id, exposed as the `supervisor` field of every task list, routed by PUT /api/tasks/:taskId/supervisor); filing into a role's backlog (fileToBacklog — a root task owned by the role, never armed); the supervisor-role mandate (the supervisor preset plus the role powers on the root) and its reach (a role session manages every task its role owns); the system-prompt sections listing the listed roles to agents that may file into a backlog, and the shared supervisor prompt (a config) for every supervisor root.
+    - **`supervisor-roles`** — Supervisor roles, web half: registers the srole id kind, the shared supervisor prompt config (Settings → Config) and the exposed `supervisor` field of every task list, its options the live roles by name. Supervisor roles, data half: the supervisor_roles table (name, Haiku-picked icon with a person's override, listed, description, prompt) served whole as supervisor-roles.all with its create / edit / delete endpoints; the per-task owner (tasks_ext_supervisor, a role id, exposed as the `supervisor` field of every task list, routed by PUT /api/tasks/:taskId/supervisor); filing into a role's backlog (fileToBacklog — a root task owned by the role, never armed); the supervisor-role mandate (the supervisor preset plus the role powers on the root) and its reach (a role session manages every task its role owns); the system-prompt sections listing the listed roles to agents that may file into a backlog, and the shared supervisor prompt (a config) for every supervisor root.
       - Web:
         - Contributes:
           - `IdKinds.Kind` "srole"
@@ -59932,7 +59932,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `_supervisorRoles`
           - `BACKLOG_READ_LIMIT`
-          - `FALLBACK_ROLE_REF`
           - `fileSystemBacklogTask`
           - `fileToBacklog`
           - `getSupervisorRole`
@@ -59940,7 +59939,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `isSessionRoot`
           - `liveSessionOf`
           - `lockRoleSessions`
-          - `resolveFilingRole`
           - `roleBacklog`
           - `roleOfConversation`
           - `setTaskSupervisorRole`
@@ -60244,8 +60242,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by: `tasks/task-header`
         - **`sessions`** — Supervisor role sessions: POST /api/supervisor-roles/:id/sessions opens the role's live session or launches one (one live session per role — a root task stating the supervisor-role mandate, owned by the role, its brief the role's prompt, armed at once), POST …/:id/backlog/:taskId/adopt (the Supervisors pane's Adopt: into the live session, launching one when none is live), and the role powers' MCP tools, gated on the role capability: backlog (list the role's backlog), adopt_task (move a backlog task under the live session's root and arm it) and route_task (hand a task the role owns to another role).
           - Server:
-            - Uses: 28 symbols — full list in [`plugins/tasks/plugins/supervisor-roles/plugins/sessions/REFERENCE.md`](../plugins/tasks/plugins/supervisor-roles/plugins/sessions/REFERENCE.md)
-              - `tasks/supervisor-roles` ×12
+            - Uses: 26 symbols — full list in [`plugins/tasks/plugins/supervisor-roles/plugins/sessions/REFERENCE.md`](../plugins/tasks/plugins/supervisor-roles/plugins/sessions/REFERENCE.md)
+              - `tasks/supervisor-roles` ×10
               - `tasks/tasks-core` ×6
               - `infra/endpoints` ×2
               - `tasks/orchestration/mandate` ×2

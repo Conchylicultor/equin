@@ -15,10 +15,8 @@ import { watchChildren } from "@plugins/tasks/plugins/orchestration/plugins/watc
 import { supervisorRole } from "@plugins/tasks/plugins/supervisor-roles/core";
 import {
   BACKLOG_READ_LIMIT,
-  FALLBACK_ROLE_REF,
   getSupervisorRole,
   isSessionRoot,
-  resolveFilingRole,
   roleBacklog,
   roleOfConversation,
   setTaskSupervisorRole,
@@ -102,15 +100,13 @@ export const adoptTaskTool = Mcp.tool({
 export const routeTaskTool = Mcp.tool({
   name: "route_task",
   when: granted(supervisorRole),
-  description: `Hand a task of your role's backlog to another supervisor role: it moves to that role's backlog. \`supervisor\` is a role id, or "${FALLBACK_ROLE_REF}" for the fallback role. Only a backlog task of your own role — a session's root keeps its role, and an adopted task belongs to your session's tree.`,
+  description: `Hand a task of your role's backlog to another supervisor role: it moves to that role's backlog. \`supervisor\` is a role id. Only a backlog task of your own role — a session's root keeps its role, and an adopted task belongs to your session's tree.`,
   inputSchema: {
     task_id: z.string().min(1).describe("The task to route."),
     supervisor: z
       .string()
       .min(1)
-      .describe(
-        `The role that owns it from now on, or "${FALLBACK_ROLE_REF}".`,
-      ),
+      .describe("The role that owns it from now on."),
   },
   async handler(input, { conversationId }) {
     const { roleId, rootTaskId } = await callerRole(conversationId);
@@ -119,15 +115,9 @@ export const routeTaskTool = Mcp.tool({
       return text(`${taskId} is a session's root: it keeps its role.`);
     if ((await supervisorOfTask(taskId)) !== roleId)
       return text(`${taskId} is not in your role's backlog.`);
-    let target: string;
-    if (input.supervisor === FALLBACK_ROLE_REF) {
-      target = (await resolveFilingRole(FALLBACK_ROLE_REF)).id;
-    } else {
-      const role = await getSupervisorRole(input.supervisor);
-      if (!role) return text(`No supervisor role "${input.supervisor}".`);
-      target = role.id;
-    }
-    await setTaskSupervisorRole(taskId, target);
-    return text(`Routed ${taskId} to ${target}.`);
+    const role = await getSupervisorRole(input.supervisor);
+    if (!role) return text(`No supervisor role "${input.supervisor}".`);
+    await setTaskSupervisorRole(taskId, role.id);
+    return text(`Routed ${taskId} to ${role.id}.`);
   },
 });

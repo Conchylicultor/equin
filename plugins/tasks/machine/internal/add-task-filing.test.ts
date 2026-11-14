@@ -113,7 +113,7 @@ function makeStore(
     },
     modelCatalog: () => catalog,
     fileToBacklog: async (filing) => {
-      if (filing.supervisor !== "srole-1" && filing.supervisor !== "fallback")
+      if (filing.supervisor !== "srole-1")
         throw new Error(`No listed supervisor role "${filing.supervisor}"`);
       const id = `backlog-${++seq}`;
       tasks.add(id);

@@ -256,7 +256,7 @@ nothing unless you name an \`after\`).`,
       .min(1)
       .optional()
       .describe(
-        "File into a supervisor role's backlog instead of under your task: a listed role's id (your system prompt's Supervisor roles), or \"fallback\" when none fits. Needs start `manual`; no `after` / `relation` / `model`. Only when your mandate allows it.",
+        "File into a supervisor role's backlog instead of under your task: a listed role's id (your system prompt's Supervisor roles). Needs start `manual`; no `after` / `relation` / `model`. Only when your mandate allows it.",
       ),
     model: ModelChoiceSchema.optional().describe(
       `The model the task launches with (an error with start \`manual\`): a family (${FAMILIES}) runs that family's newest version ` +

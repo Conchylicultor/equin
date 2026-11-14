@@ -58,9 +58,6 @@ async function emitBacklogArrived(
   );
 }
 
-/** What `add_task`'s `supervisor` names: a listed role's id, or the fallback. */
-export const FALLBACK_ROLE_REF = "fallback";
-
 const parseRole = (row: unknown): SupervisorRole =>
   supervisorRolesEntity.schema.parse(row);
 
@@ -94,24 +91,16 @@ function describeRoles(roles: readonly SupervisorRole[]): string {
 }
 
 /**
- * The role a filing names: a LISTED role's id, or `"fallback"` — the fallback
- * role, listed or not. Anything else throws, naming what may be named.
+ * The role a filing names: a LISTED role's id. Anything else throws, naming
+ * what may be named.
  */
 export async function resolveFilingRole(ref: string): Promise<SupervisorRole> {
   const roles = await listSupervisorRoles();
   const listed = roles.filter((r) => r.listed);
-  if (ref === FALLBACK_ROLE_REF) {
-    const fallback = roles.find((r) => r.fallback);
-    if (!fallback)
-      throw new Error(
-        "No supervisor role is the fallback (no role exists yet): file the task without `supervisor`.",
-      );
-    return fallback;
-  }
   const role = listed.find((r) => r.id === ref);
   if (!role)
     throw new Error(
-      `No listed supervisor role "${ref}". Name one of: ${describeRoles(listed)} — or "${FALLBACK_ROLE_REF}" when none fits.`,
+      `No listed supervisor role "${ref}". Name one of: ${describeRoles(listed)}.`,
     );
   return role;
 }
@@ -269,7 +258,7 @@ export interface BacklogFiling {
   title: string;
   description: string | null;
   track: TaskTrack;
-  /** A listed role's id, or `"fallback"`. */
+  /** A listed role's id. */
   supervisor: string;
   /** The filing agent's conversation and task. */
   conversationId: string;

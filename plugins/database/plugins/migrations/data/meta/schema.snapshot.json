@@ -1,6 +1,6 @@
 {
-  "id": "610c209d-89ce-45c5-af92-9f273c47ec87",
-  "prevId": "ee056957-03b9-4e18-89ad-09543c3640d9",
+  "id": "1f7e2de8-b76b-43c5-b253-ea6d51c35845",
+  "prevId": "610c209d-89ce-45c5-af92-9f273c47ec87",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -15293,13 +15293,6 @@
           "notNull": true,
           "default": "''"
         },
-        "fallback": {
-          "name": "fallback",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -15309,22 +15302,6 @@
         }
       },
       "indexes": {
-        "supervisor_roles_one_fallback_idx": {
-          "name": "supervisor_roles_one_fallback_idx",
-          "columns": [
-            {
-              "expression": "fallback",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "where": "\"supervisor_roles\".\"fallback\"",
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
         "supervisor_roles_name_idx": {
           "name": "supervisor_roles_name_idx",
           "columns": [

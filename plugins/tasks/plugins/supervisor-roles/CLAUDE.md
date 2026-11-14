@@ -13,14 +13,13 @@ tools — are `plugins/sessions`.
 - **Roles** — `supervisor_roles` (`core/internal/roles.ts`): `name` (unique,
   case-insensitive), `icon` (Haiku's pick from name + description, re-picked
   when either changes, unless `iconByUser`; null until the first pick),
-  `listed`, `description`, `prompt`, `fallback` (at most one — a partial
-  unique index; the first role takes it, it only ever moves). Read whole as
+  `listed`, `description`, `prompt`. Read whole as
   `supervisor-roles.all` (capped at `SUPERVISOR_ROLES_MAX`, the create
   endpoint refuses one more). Written through `POST /api/supervisor-roles`,
   `PATCH /api/supervisor-roles/:id` (`icon: null` hands the icon back to
-  Haiku; `fallback: true` moves the fallback) and `DELETE …/:id`
+  Haiku) and `DELETE …/:id`
   (`deleteRoleReleasing`: 409 while the role has a live session or a
-  backlog, or is the fallback with others left; otherwise it RELEASES what it
+  backlog; otherwise it RELEASES what it
   owned — each ended session root states the interactive mandate instead,
   every owner row goes, then the role; no task is deleted).
 - **Who owns a task** — `tasks_ext_supervisor` (`taskId → supervisor`, plus
@@ -63,11 +62,12 @@ tools — are `plugins/sessions`.
   drop only: `edit_task` never ARMS a task outside the caller's tree (a
   backlog task is adopted, so it runs in the session's tree; an ended session
   is relaunched only through the launch endpoint).
-- **Filing** — `add_task` with `supervisor: "<role id>" | "fallback"` (tasks'
+- **Filing** — `add_task` with `supervisor: "<role id>"` (tasks'
   `machine/`) calls `fileToBacklog`: needs the `tasks.file` grant's
   `backlog` (granted by the interactive and supervisor presets), `start:
   "manual"`, no `after` / `relation` / `model`. Only a LISTED role may be
-  named; `"fallback"` reaches the fallback role listed or not.
+  named. There is no catch-all ref: work no specific role fits goes to a
+  listed general-purpose role, named like any other.
 - **Arrival notice** — a task entering role R's backlog (`fileToBacklog`, or
   `setTaskSupervisorRole` giving it a new owner: `route_task`, the pane's
   Supervisor pill) emits `supervisorRoles.backlogArrived`, on the write's
@@ -98,7 +98,7 @@ tools — are `plugins/sessions`.
 
 ## Plugin reference
 
-- Description: Supervisor roles, web half: registers the srole id kind, the shared supervisor prompt config (Settings → Config) and the exposed `supervisor` field of every task list, its options the live roles by name. Supervisor roles, data half: the supervisor_roles table (name, Haiku-picked icon with a person's override, listed, description, prompt, the one fallback) served whole as supervisor-roles.all with its create / edit / delete endpoints; the per-task owner (tasks_ext_supervisor, a role id, exposed as the `supervisor` field of every task list, routed by PUT /api/tasks/:taskId/supervisor); filing into a role's backlog (fileToBacklog — a root task owned by the role, never armed); the supervisor-role mandate (the supervisor preset plus the role powers on the root) and its reach (a role session manages every task its role owns); the system-prompt sections listing the listed roles to agents that may file into a backlog, and the shared supervisor prompt (a config) for every supervisor root.
+- Description: Supervisor roles, web half: registers the srole id kind, the shared supervisor prompt config (Settings → Config) and the exposed `supervisor` field of every task list, its options the live roles by name. Supervisor roles, data half: the supervisor_roles table (name, Haiku-picked icon with a person's override, listed, description, prompt) served whole as supervisor-roles.all with its create / edit / delete endpoints; the per-task owner (tasks_ext_supervisor, a role id, exposed as the `supervisor` field of every task list, routed by PUT /api/tasks/:taskId/supervisor); filing into a role's backlog (fileToBacklog — a root task owned by the role, never armed); the supervisor-role mandate (the supervisor preset plus the role powers on the root) and its reach (a role session manages every task its role owns); the system-prompt sections listing the listed roles to agents that may file into a backlog, and the shared supervisor prompt (a config) for every supervisor root.
 - Web:
   - Contributes:
     - `IdKinds.Kind` "srole"
@@ -156,7 +156,6 @@ tools — are `plugins/sessions`.
   - Exports (values):
     - `_supervisorRoles`
     - `BACKLOG_READ_LIMIT`
-    - `FALLBACK_ROLE_REF`
     - `fileSystemBacklogTask`
     - `fileToBacklog`
     - `getSupervisorRole`
@@ -164,7 +163,6 @@ tools — are `plugins/sessions`.
     - `isSessionRoot`
     - `liveSessionOf`
     - `lockRoleSessions`
-    - `resolveFilingRole`
     - `roleBacklog`
     - `roleOfConversation`
     - `setTaskSupervisorRole`

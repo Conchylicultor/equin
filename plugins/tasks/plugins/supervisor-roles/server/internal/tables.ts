@@ -19,15 +19,9 @@ export const supervisorRolesEntity = defineEntity(supervisorRolesEntityRef, {
     listed: { default: true },
     description: { default: "" },
     prompt: { default: "" },
-    fallback: { default: false },
     createdAt: { default: defaultNow() },
   },
   indexes: (t) => [
-    // At most one fallback role: the create / move writes keep it to exactly
-    // one once a role exists; the index makes a second unwritable.
-    uniqueIndex("supervisor_roles_one_fallback_idx")
-      .on(t.fallback)
-      .where(sql`${t.fallback}`),
     // Agents name a role by id, people by name: two roles of one name would
     // read as one in every list.
     uniqueIndex("supervisor_roles_name_idx").on(sql`lower(${t.name})`),

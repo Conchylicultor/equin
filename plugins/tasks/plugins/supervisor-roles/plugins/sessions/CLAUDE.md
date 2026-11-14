@@ -15,8 +15,8 @@ imports the parent.
   moves under the session root, its own interactive mandate cleared so it
   inherits the session's, its owner row dropped — the root carries the role
   — all under the task's row lock; then watched like a filed task and
-  armed), `route_task` (hand a backlog task to another role or the
-  fallback; never a session root).
+  armed), `route_task` (hand a backlog task to another role; never a
+  session root).
   Editing and dropping use `edit_task` / `drop_task`, whose scope the parent's
   `MandateReach` widens to the role's tasks.
 
@@ -26,8 +26,8 @@ imports the parent.
 
 - Description: Supervisor role sessions: POST /api/supervisor-roles/:id/sessions opens the role's live session or launches one (one live session per role — a root task stating the supervisor-role mandate, owned by the role, its brief the role's prompt, armed at once), POST …/:id/backlog/:taskId/adopt (the Supervisors pane's Adopt: into the live session, launching one when none is live), and the role powers' MCP tools, gated on the role capability: backlog (list the role's backlog), adopt_task (move a backlog task under the live session's root and arm it) and route_task (hand a task the role owns to another role).
 - Server:
-  - Uses: 28 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `tasks/supervisor-roles` ×12
+  - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `tasks/supervisor-roles` ×10
     - `tasks/tasks-core` ×6
     - `infra/endpoints` ×2
     - `tasks/orchestration/mandate` ×2

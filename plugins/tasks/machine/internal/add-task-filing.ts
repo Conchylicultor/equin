@@ -39,7 +39,7 @@ export interface AddTaskInput {
 }
 
 /** `add_task` with `supervisor`: file into this supervisor role's backlog (a
- * listed role's id, or `"fallback"`) instead of under the caller's task —
+ * listed role's id) instead of under the caller's task —
  * needs the grant's `backlog`, and start `manual`. */
 export interface BacklogAddTaskInput extends AddTaskInput {
   supervisor: string;

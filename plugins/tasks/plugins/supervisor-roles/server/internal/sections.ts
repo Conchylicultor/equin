@@ -10,7 +10,6 @@ import { supervisorMandate } from "@plugins/tasks/plugins/mandate-presets/core";
 import { supervisorRoleMandate } from "../../core";
 import { supervisorPromptConfig } from "../../core";
 import {
-  FALLBACK_ROLE_REF,
   getSupervisorRole,
   listSupervisorRoles,
   supervisorOfTask,
@@ -20,7 +19,7 @@ import {
  * The listed roles, for an agent whose mandate lets it file into a backlog
  * (`tasks.file` with `backlog`): one item each — name, id, description (its
  * further lines indented under the item) — and how to file. Nothing when no
- * role is listed and none is the fallback.
+ * role is listed.
  */
 export async function renderSupervisorRoles(
   conversationId: string,
@@ -29,8 +28,7 @@ export async function renderSupervisorRoles(
   if (grant?.backlog !== true) return null;
   const roles = await listSupervisorRoles();
   const listed = roles.filter((r) => r.listed);
-  const fallback = roles.find((r) => r.fallback);
-  if (listed.length === 0 && !fallback) return null;
+  if (listed.length === 0) return null;
   const lines = listed.map((r) => {
     // A multi-line description stays inside its list item.
     const description = r.description.trim().replace(/\n/g, "\n  ");
@@ -40,13 +38,9 @@ export async function renderSupervisorRoles(
     "## Supervisor roles",
     "",
     'Work that is not part of your own task — a problem you found, a follow-up some other area owns — can be handed to a supervisor role instead of filed under your task: `add_task` with `supervisor: "<role id>"` and `start: "manual"` files it into that role\'s backlog, where it waits until a session of the role adopts it.',
-    ...(lines.length > 0 ? ["", "Roles:", ...lines] : []),
-    ...(fallback
-      ? [
-          "",
-          `When no role fits, pass \`supervisor: "${FALLBACK_ROLE_REF}"\` (→ ${fallback.name}).`,
-        ]
-      : []),
+    "",
+    "Roles:",
+    ...lines,
   ].join("\n");
 }
 
