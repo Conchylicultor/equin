@@ -64,10 +64,24 @@ export type ProfilerLeafOptions =
       joinsOf?: { kind: string; label: string };
     };
 
+/**
+ * The profiler's `EntryCost`, seen through the seam: what one entry run cost —
+ * its wall, its subtree's wait union, and the `io` part of that union (a git
+ * child, a file call). runtime-profiler's install asserts the two shapes are
+ * equal at the type level.
+ */
+export interface ProfilerEntryCost {
+  wallMs: number;
+  waitMs: number;
+  ioMs: number;
+}
+
 /** The profiler's `EntrySpanOptions`, seen through the seam (the part server-core uses). */
 export interface ProfilerEntryOptions {
   /** Handed the entry's subtree join waits (ms) as it closes. */
   onJoined?: (joinedMs: number) => void;
+  /** Handed what the run cost as it closes. */
+  onCost?: (cost: ProfilerEntryCost) => void;
 }
 
 /**

@@ -41,6 +41,7 @@ import {
   runInBackgroundLane,
   runWithoutProfiling,
   type Aggregate,
+  type EntryCost,
   type EntryContext,
   type FlightSpan,
   type FlightWindow,
@@ -1148,6 +1149,42 @@ describe("joins — a delivery is not judged on its run's join waits", () => {
       { onJoined },
     );
     expect(joined).toEqual([600, 0]);
+  });
+
+  test("onCost hands an entry its wall, its subtree's wait union and the io part of it", async () => {
+    const costs: EntryCost[] = [];
+    const onCost = (c: EntryCost) => costs.push(c);
+    await recordEntrySpan(
+      "push",
+      "build.deployment",
+      async () => {
+        await recordEntrySpan("loader", "build.deployment", () => {
+          fakeNow = 300;
+          chargeWait("background-acquire", 100, "queue"); // [200, 300]
+          fakeNow = 800;
+          chargeWait("git:rev-parse", 400, "io"); // [400, 800]
+          chargeWait("read-coalesce", 100, "join"); // [700, 800] — inside the io
+        });
+        fakeNow = 1000;
+      },
+      undefined,
+      undefined,
+      { onCost },
+    );
+    await recordEntrySpan(
+      "push",
+      "plain",
+      () => {
+        fakeNow = 1050;
+      },
+      undefined,
+      undefined,
+      { onCost },
+    );
+    expect(costs).toEqual([
+      { wallMs: 1000, waitMs: 500, ioMs: 400 },
+      { wallMs: 50, waitMs: 0, ioMs: 0 },
+    ]);
   });
 });
 

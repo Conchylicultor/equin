@@ -33,8 +33,12 @@ const reach = mintReachPlan({
 function setup(
   opts: { patches?: true; sockets?: number; mutate?: boolean } = {},
 ) {
-  const pushes: Array<{ key: string; changed: boolean; subscribers: number }> =
-    [];
+  const pushes: Array<{
+    key: string;
+    changed: boolean;
+    subscribers: number;
+    cost: unknown;
+  }> = [];
   const h = createHarness({
     sockets: opts.sockets ?? 1,
     onPush: (key, info) => pushes.push({ key, ...info }),
@@ -186,8 +190,9 @@ describe("D8 — an equal recompute of any pushed value sends nothing", () => {
     t.r.notify();
     await tick();
     expect(t.pushes).toEqual([
-      { key: "r", changed: false, subscribers: 1 },
-      { key: "r", changed: true, subscribers: 1 },
+      // No `wrapOrigin` in the harness: nothing measured the cost.
+      { key: "r", changed: false, subscribers: 1, cost: null },
+      { key: "r", changed: true, subscribers: 1, cost: null },
     ]);
   });
 });

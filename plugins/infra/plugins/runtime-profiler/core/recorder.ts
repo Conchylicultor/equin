@@ -331,6 +331,28 @@ export interface EntrySpanOptions {
    * (`JOIN_BAND_CAP`), so it can only under-count.
    */
   onJoined?: (joinedMs: number) => void;
+  /**
+   * Handed, as the entry closes, what its run cost (`EntryCost`): its wall,
+   * the union of every wait in its subtree, and the part of that union spent
+   * on `io` waits (a git child, a file call) — work done on the run's behalf
+   * by someone else. For a caller that judges a run by what it cost rather
+   * than by how long it took (the live-state no-op detector).
+   */
+  onCost?: (cost: EntryCost) => void;
+}
+
+/**
+ * What one entry run cost, as `EntrySpanOptions.onCost` hands it. `waitMs` is
+ * the cross-layer wait union (≤ `wallMs`); `ioMs` the union of its `io` waits
+ * alone (≤ `waitMs`). So `wallMs − waitMs` is the run's own work (its thread
+ * and the database answering it), `ioMs` the git / file work it waited on, and
+ * `waitMs − ioMs` the time it queued on a gate or joined another run — no
+ * cost of its own.
+ */
+export interface EntryCost {
+  wallMs: number;
+  waitMs: number;
+  ioMs: number;
 }
 
 /**
@@ -767,6 +789,12 @@ export interface EntryContext {
    * `childJoins` (and to `EntrySpanOptions.onJoined`).
    */
   joinBands?: WaitBand[];
+  /**
+   * The union of the `io` waits in this entry's subtree (a git child, a file
+   * call): the part of `waitUnion` spent on work done on the run's behalf.
+   * Lazily created on the first `io` charge. Handed to `EntrySpanOptions.onCost`.
+   */
+  ioUnion?: Track;
   /**
    * Per closed child run (`<kind> <label>`): the join bands it handed up as it
    * closed — what a latency leaf naming that run (`joinsOf`) takes off its
@@ -2678,6 +2706,8 @@ function chargeWaitIn(
     contribute(a.waitUnion, start, end);
     contribute(a.busyUnion, start, end);
     contribute(a.excludedUnion, start, end);
+    if (kind === "io")
+      contribute((a.ioUnion ??= newTrack(a.startMs)), start, end);
     // Record a band merging the interval the layer track just counted into the
     // bands it reaches, so the bands stay the track's covered set. A charge
     // that covered nothing (a fully re-covered interval, or a 0 ms git-memo
@@ -3190,6 +3220,11 @@ export async function recordEntrySpan<T>(
     opts?.onJoined?.(
       ctx.joinBands ? bandsWithin(ctx.joinBands, t0, t1).unionMs : 0,
     );
+    opts?.onCost?.({
+      wallMs: wall,
+      waitMs,
+      ioMs: ctx.ioUnion ? ctx.ioUnion.unionMs : 0,
+    });
   }
 }
 

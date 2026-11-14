@@ -25866,6 +25866,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `fields/int/config.intField`
             - Exports (types): `LiveStateNoopPayload`
             - Exports (values):
+              - `describeNoopWaste`
               - `liveStateChurnConfig`
               - `LiveStateNoopPayloadSchema`
     - **`live-state-health`** — Live health inspector for the client live-state pipeline (sockets, shared transport, per-resource subscriptions), opened from the Debug sidebar.
@@ -31754,6 +31755,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ProcessCrash`
           - `ProcessCrashEvent`
           - `ProcMemory`
+          - `ProfilerEntryCost`
           - `ProfilerEntryOptions`
           - `ProfilerHooks`
           - `ProfilerLeafOptions`
@@ -38785,6 +38787,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (types):
           - `Aggregate`
           - `EntryContext`
+          - `EntryCost`
           - `FlightSpan`
           - `FlightWindow`
           - `GateGauge`
@@ -41723,6 +41726,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PointBatch`
               - `ReachPlan`
               - `ReadTags`
+              - `RecomputeCost`
               - `RelationRead`
               - `ReplayScope`
               - `Resource`

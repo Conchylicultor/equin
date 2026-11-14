@@ -14,6 +14,7 @@ import {
   recordLoaderReadSet,
   setProfilerHooks,
   type LoaderReadsSink,
+  type ProfilerEntryCost,
   type ProfilerEntryOptions,
   type ProfilerLeafOptions,
   type ProfilerMeasureName,
@@ -35,6 +36,7 @@ import {
   getRuntimeProfile,
   registerGateGauge,
   type EntryContext,
+  type EntryCost,
   type SpanKind,
   type SpanMeasure,
   type GateReading,
@@ -145,6 +147,12 @@ const _seamCoversMeasures: ProfilerMeasureName = null as unknown as SpanMeasure;
 const _measuresCoverSeam: SpanMeasure = null as unknown as ProfilerMeasureName;
 void _seamCoversMeasures;
 void _measuresCoverSeam;
+// Same for the cost an entry hands `onCost`: the seam's spelling and the
+// recorder's must stay one shape.
+const _seamCoversCost: ProfilerEntryCost = null as unknown as EntryCost;
+const _costCoversSeam: EntryCost = null as unknown as ProfilerEntryCost;
+void _seamCoversCost;
+void _costCoversSeam;
 
 setProfilerHooks({
   recordEntrySpan: <T>(

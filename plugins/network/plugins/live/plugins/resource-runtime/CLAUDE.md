@@ -1004,6 +1004,7 @@ Out of reach at this seam (DB-backed harness instead):
     - `PointBatch`
     - `ReachPlan`
     - `ReadTags`
+    - `RecomputeCost`
     - `RelationRead`
     - `ReplayScope`
     - `Resource`

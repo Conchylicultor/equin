@@ -11,7 +11,9 @@
 // epoch-second it currently represents (`sec`) so a stale bucket (left over from
 // >RING_SIZE seconds ago) is detected and cleared lazily on next touch — no
 // background sweeping. `total` counts every push, `noop` only the empty-diff
-// (`!changed`) ones. A window query sums buckets whose `sec` lies within the
+// (`!changed`) ones, and the `noop*Ms` sums what those no-ops cost (the
+// runtime's `RecomputeCost`: own work, io waited on, every wait) — a no-op whose
+// cost the host did not measure counts in `noopUnmeasured` instead. A window query sums buckets whose `sec` lies within the
 // trailing `windowSeconds`. Everything is O(1) per push and O(windowSeconds) per
 // snapshot per key — both bounded by the constants below.
 
@@ -27,6 +29,36 @@ interface Bucket {
   sec: number;
   total: number;
   noop: number;
+  noopOwnMs: number;
+  noopIoMs: number;
+  noopWaitMs: number;
+  noopUnmeasured: number;
+}
+
+/** What one recompute cost, as `onResourcePush` hands it (`null`: not measured). */
+export interface PushCost {
+  ownMs: number;
+  waitMs: number;
+  ioMs: number;
+}
+
+/** One push outcome, as `onResourcePush` hands it. */
+export interface PushInfo {
+  subscribers: number;
+  changed: boolean;
+  cost: PushCost | null;
+}
+
+function emptyBucket(sec: number): Bucket {
+  return {
+    sec,
+    total: 0,
+    noop: 0,
+    noopOwnMs: 0,
+    noopIoMs: 0,
+    noopWaitMs: 0,
+    noopUnmeasured: 0,
+  };
 }
 
 interface KeyState {
@@ -39,7 +71,7 @@ const states = new Map<string, KeyState>();
 
 function makeBuckets(): Bucket[] {
   const arr: Bucket[] = new Array(RING_SIZE);
-  for (let i = 0; i < RING_SIZE; i++) arr[i] = { sec: -1, total: 0, noop: 0 };
+  for (let i = 0; i < RING_SIZE; i++) arr[i] = emptyBucket(-1);
   return arr;
 }
 
@@ -61,20 +93,12 @@ function touchBucket(state: KeyState, nowMs: number): Bucket {
   const sec = Math.floor(nowMs / 1000);
   const idx = ((sec % RING_SIZE) + RING_SIZE) % RING_SIZE;
   const bucket = state.buckets[idx]!;
-  if (bucket.sec !== sec) {
-    bucket.sec = sec;
-    bucket.total = 0;
-    bucket.noop = 0;
-  }
+  if (bucket.sec !== sec) Object.assign(bucket, emptyBucket(sec));
   return bucket;
 }
 
 // Internal, clock-injectable core of recordPush (deterministic for tests).
-export function recordPushAt(
-  key: string,
-  info: { subscribers: number; changed: boolean },
-  nowMs: number,
-): void {
+export function recordPushAt(key: string, info: PushInfo, nowMs: number): void {
   let state = states.get(key);
   if (!state) {
     state = { buckets: makeBuckets(), subscribers: info.subscribers, lastActiveMs: nowMs };
@@ -85,7 +109,15 @@ export function recordPushAt(
   state.lastActiveMs = nowMs;
   const bucket = touchBucket(state, nowMs);
   bucket.total += 1;
-  if (!info.changed) bucket.noop += 1;
+  if (info.changed) return;
+  bucket.noop += 1;
+  if (info.cost === null) {
+    bucket.noopUnmeasured += 1;
+    return;
+  }
+  bucket.noopOwnMs += info.cost.ownMs;
+  bucket.noopIoMs += info.cost.ioMs;
+  bucket.noopWaitMs += info.cost.waitMs;
 }
 
 export interface KeySnapshot {
@@ -94,6 +126,16 @@ export interface KeySnapshot {
   totalCount: number;
   subscribers: number;
   noopRate: number;
+  /** The no-op recomputes' own work over the window (server thread + database), ms. */
+  noopOwnMs: number;
+  /** The git / file io they waited on, ms. */
+  noopIoMs: number;
+  /** Every wait they had (io included), ms. */
+  noopWaitMs: number;
+  /** No-ops whose cost the host did not measure (no profiler: a browser host). */
+  unmeasuredNoops: number;
+  /** `(noopOwnMs + noopIoMs)` per minute of window — what the monitor judges. */
+  wastedMsPerMinute: number;
 }
 
 // Internal, clock-injectable core of snapshot (deterministic for tests). Sums the
@@ -111,31 +153,36 @@ export function snapshotAt(windowSeconds: number, nowMs: number): KeySnapshot[] 
       states.delete(key);
       continue;
     }
-    let noopCount = 0;
-    let totalCount = 0;
+    const sum = emptyBucket(nowSec);
     for (const b of state.buckets) {
       if (b.sec >= cutoffSec && b.sec <= nowSec) {
-        noopCount += b.noop;
-        totalCount += b.total;
+        sum.noop += b.noop;
+        sum.total += b.total;
+        sum.noopOwnMs += b.noopOwnMs;
+        sum.noopIoMs += b.noopIoMs;
+        sum.noopWaitMs += b.noopWaitMs;
+        sum.noopUnmeasured += b.noopUnmeasured;
       }
     }
-    if (totalCount === 0) continue;
+    if (sum.total === 0) continue;
     out.push({
       resourceKey: key,
-      noopCount,
-      totalCount,
+      noopCount: sum.noop,
+      totalCount: sum.total,
       subscribers: state.subscribers,
-      noopRate: noopCount / win,
+      noopRate: sum.noop / win,
+      noopOwnMs: sum.noopOwnMs,
+      noopIoMs: sum.noopIoMs,
+      noopWaitMs: sum.noopWaitMs,
+      unmeasuredNoops: sum.noopUnmeasured,
+      wastedMsPerMinute: ((sum.noopOwnMs + sum.noopIoMs) * 60) / win,
     });
   }
   return out;
 }
 
 // Public API — real-clock wrappers. Normal server code may use Date.now() freely.
-export function recordPush(
-  key: string,
-  info: { subscribers: number; changed: boolean },
-): void {
+export function recordPush(key: string, info: PushInfo): void {
   recordPushAt(key, info, Date.now());
 }
 

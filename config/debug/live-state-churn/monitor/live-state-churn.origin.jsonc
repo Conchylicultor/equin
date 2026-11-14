@@ -1,11 +1,9 @@
-// @hash bace34e0ab3e
+// @hash 328117e4f9a6
 {
   // When off, the monitor job returns early and files no live-state churn reports.
   "enabled": true,
-  // File a live-state-noop report when a resource sustains this many no-op (empty-diff) pushes per second over the window.
-  "noopRateThreshold": 1,
-  // Sliding window over which the no-op push rate is measured.
-  "windowSeconds": 60,
-  // Minimum number of no-op pushes that must occur in the window before a report fires — avoids boot-time false positives.
-  "minNoopSamples": 30
+  // File a live-state-noop report when a resource's no-op (empty-diff) recomputes waste this much work per minute over the window — their own work (server thread + database) plus the git / file io they waited on. Time spent queued on a gate or joining another run is not counted.
+  "wastedMsPerMinuteThreshold": 1000,
+  // Sliding window over which the wasted work is measured.
+  "windowSeconds": 60
 }

@@ -39,6 +39,7 @@ export type {
   WsHandler,
   RuntimeSocket,
   ResourceDelivery,
+  RecomputeCost,
   ReadTags,
   RunCapture,
   FollowReached,

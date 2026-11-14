@@ -2,6 +2,7 @@ import { ReportKind } from "@plugins/reports/server";
 import type { ReportRow } from "@plugins/reports/server";
 import {
   LiveStateNoopPayloadSchema,
+  describeNoopWaste,
   type LiveStateNoopPayload,
 } from "../../core";
 
@@ -47,12 +48,14 @@ function renderDescription(row: ReportRow, d: LiveStateNoopPayload): string {
   );
   lines.push("");
   lines.push(
-    `Each such push carries zero information yet still costs a server recompute, ` +
-      `one WebSocket frame per subscriber, and a client wakeup. This is wasted ` +
-      `server CPU and network for no benefit.`,
+    `Each such recompute carries zero information yet still costs server work ` +
+      `(the loader, the database, any git / file reads it waits on). It filed ` +
+      `because that waste is material — the detector judges by wasted work per ` +
+      `minute, not by how often it happens.`,
   );
   lines.push("");
   lines.push(`**Resource key:** \`${d.resourceKey}\``);
+  lines.push(`**Wasted work:** ${describeNoopWaste(d)}`);
   lines.push(`**No-op rate:** ~${d.noopRate.toFixed(1)} no-op pushes/sec`);
   lines.push(
     `**No-op / total:** ${d.noopCount} / ${d.totalCount} pushes over ${d.windowSeconds}s`,

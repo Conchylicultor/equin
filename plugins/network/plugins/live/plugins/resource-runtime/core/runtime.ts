@@ -1896,6 +1896,30 @@ export interface LoadInfo {
 }
 
 /**
+ * What one recompute cost, summed over the `push` origins its drain ran (the
+ * value read, a window's ids query, a backfill), as the host's `wrapOrigin`
+ * measured them (`onCost`). `ownMs` = wall minus every wait: the serving
+ * thread's work and the database answering it. `ioMs` = the `io` waits (a git
+ * child, a file call): work done on the recompute's behalf by another process
+ * or the disk. `waitMs` = every wait, `ioMs` included — the rest of it queued
+ * on a gate or joined another run already in flight, which costs this
+ * recompute nothing of its own. Carried by `onPush`; `null` there when the
+ * host measures none (no `wrapOrigin` / no `onCost`: central, a browser host).
+ */
+export interface RecomputeCost {
+  ownMs: number;
+  waitMs: number;
+  ioMs: number;
+}
+
+/** What a host's `wrapOrigin` hands `onCost` as one origin closes. */
+export interface OriginCost {
+  wallMs: number;
+  waitMs: number;
+  ioMs: number;
+}
+
+/**
  * One delivered notify, as `ResourceRuntimeOptions.onDelivered` reports it.
  * `latencyMs` = first notify → send on this thread's monotonic clock (the "UI is
  * stale" window as the serving thread sees it); `subscribers` = how many sockets
@@ -2059,12 +2083,18 @@ export interface ResourceRuntimeOptions {
    * flight, a shared memo's pass: that run's time, judged on its own span. A
    * sub-ack carries it (`joinedMs`) so the browser does not judge the
    * resource on it. Central / a host without a profiler: never called (0).
+   *
+   * `onCost`, when given, is handed as the origin closes what its run cost
+   * (`OriginCost`) — a recompute's `push` origins are summed into the
+   * `RecomputeCost` its `onPush` carries. Must be called before the returned
+   * promise settles (the profiler calls it in its span's `finally`).
    */
   wrapOrigin?: <R>(
     kind: "sub" | "push" | "cascade" | "bg",
     key: string,
     fn: () => Promise<R>,
     onJoined?: (joinedMs: number) => void,
+    onCost?: (cost: OriginCost) => void,
   ) => Promise<R>;
   /**
    * Wrap the entire `flushNotifies` drain so the notify-flush cycle is measured
@@ -2188,10 +2218,14 @@ export interface ResourceRuntimeOptions {
   /** Per-key owner metadata for the _debug endpoint. server: from Resource.Declare; central: omit. */
   debugOwners?: () => Array<{ key: string; pluginId?: string }>;
   /** Fired once per keyed or pushed-value recompute for >=1 subscriber, with whether it
-   *  carried a content change. A `changed: false` one is a wasted no-op: an empty keyed
+   *  carried a content change and what the recompute cost (`RecomputeCost`, `null` when
+   *  the host measures none). A `changed: false` one is a wasted no-op: an empty keyed
    *  diff, or a value recompute equal to what every holder holds (D8 — no frame went out,
    *  but the loader ran for nothing). */
-  onPush?(key: string, info: { subscribers: number; changed: boolean }): void;
+  onPush?(
+    key: string,
+    info: { subscribers: number; changed: boolean; cost: RecomputeCost | null },
+  ): void;
   /**
    * Per-key automatic table read-set: the tables this resource's loader actually
    * read (captured at the DB pool chokepoint), unioned over every run. Display
@@ -3596,6 +3630,42 @@ export function createResourceRuntime(
       }),
     );
     return true;
+  }
+
+  // One recompute's cost meter (`RecomputeCost`): each `push` origin its drain
+  // runs adds what it cost, and `onPush` reads the sum. `measured` stays false
+  // when the host hands no cost (no `wrapOrigin`, or one that never calls
+  // `onCost`), so the cost reads `null` — never a made-up zero.
+  interface RecomputeMeter {
+    wallMs: number;
+    waitMs: number;
+    ioMs: number;
+    measured: boolean;
+  }
+  function newRecomputeMeter(): RecomputeMeter {
+    return { wallMs: 0, waitMs: 0, ioMs: 0, measured: false };
+  }
+  function recomputeCost(m: RecomputeMeter): RecomputeCost | null {
+    if (!m.measured) return null;
+    return {
+      ownMs: Math.max(0, m.wallMs - m.waitMs),
+      waitMs: m.waitMs,
+      ioMs: m.ioMs,
+    };
+  }
+  // A drain's `push` origin, metered into its recompute's `meter`.
+  function pushOrigin<R>(
+    meter: RecomputeMeter,
+    key: string,
+    fn: () => Promise<R>,
+  ): Promise<R> {
+    if (!opts.wrapOrigin) return fn();
+    return opts.wrapOrigin("push", key, fn, undefined, (c) => {
+      meter.wallMs += c.wallMs;
+      meter.waitMs += c.waitMs;
+      meter.ioMs += c.ioMs;
+      meter.measured = true;
+    });
   }
 
   function paramsKey(params: ResourceParams): string {
@@ -7718,6 +7788,9 @@ export function createResourceRuntime(
     entry: RegistryEntry,
     pendingEntry: PendingNotify,
     persisted: boolean,
+    // The recompute's meter — a scoped drain falling back here hands its own,
+    // so the fallback's `onPush` carries what the scoped attempt already cost.
+    meter: RecomputeMeter,
   ): Promise<void> {
     const { params } = pendingEntry;
     const pk = paramsKey(params);
@@ -7751,8 +7824,7 @@ export function createResourceRuntime(
           value,
           watermark: flightWatermark,
           ackTx: flightAckTx,
-        } = await (opts.wrapOrigin
-          ? opts.wrapOrigin("push", entry.key, () =>
+        } = await pushOrigin(meter, entry.key, () =>
               getResourceValue(
                 entry,
                 params,
@@ -7762,16 +7834,7 @@ export function createResourceRuntime(
                 seedAckTx,
                 pendingEntry.lastNotifyAt,
               ),
-            )
-          : getResourceValue(
-              entry,
-              params,
-              undefined,
-              undefined,
-              undefined,
-              seedAckTx,
-              pendingEntry.lastNotifyAt,
-            )));
+        ));
         valueComputed = true;
       } catch (err) {
         if (evictOnContractError(entry, params, err)) return;
@@ -7834,7 +7897,11 @@ export function createResourceRuntime(
           flightAckTx,
           pendingEntry,
         );
-        opts.onPush?.(entry.key, { subscribers: subs.length, changed: true });
+        opts.onPush?.(entry.key, {
+          subscribers: subs.length,
+          changed: true,
+          cost: recomputeCost(meter),
+        });
       } else {
         // A FULL-recompute keyed delta fully reconciles the client, so it may
         // carry the flight watermark (Rule B′). Scoped deltas never do. The
@@ -7860,6 +7927,7 @@ export function createResourceRuntime(
           subscribers: subs.length,
           changed:
             upserts.length > 0 || deletes.length > 0 || order !== undefined,
+          cost: recomputeCost(meter),
         });
       }
       opts.onDelivered?.(
@@ -7907,6 +7975,7 @@ export function createResourceRuntime(
     entry: RegistryEntry,
     pendingEntry: PendingNotify,
     persisted: boolean,
+    meter: RecomputeMeter,
   ): Promise<void> {
     const membership = entry.membership!;
     const keyOf = entry.keyOf!;
@@ -7930,11 +7999,9 @@ export function createResourceRuntime(
     if (requestedIds.size > 0) {
       try {
         const ctx = { affectedIds: [...requestedIds] };
-        const { value: v } = await (opts.wrapOrigin
-          ? opts.wrapOrigin("push", entry.key, () =>
+        const { value: v } = await pushOrigin(meter, entry.key, () =>
               getResourceValue(entry, params, ctx),
-            )
-          : getResourceValue(entry, params, ctx));
+        );
         if (!Array.isArray(v)) {
           throw new Error(
             `keyed resource "${entry.key}" loader must return an array`,
@@ -7944,7 +8011,7 @@ export function createResourceRuntime(
       } catch (err) {
         if (evictOnContractError(entry, params, err)) return;
         reportLoaderError(`loader failed for ${entry.key}`, err);
-        await drainMembershipFull(entry, pendingEntry, persisted); // never ship torn membership
+        await drainMembershipFull(entry, pendingEntry, persisted, meter); // never ship torn membership
         return;
       }
     }
@@ -8048,15 +8115,13 @@ export function createResourceRuntime(
       );
       if (entered || orderMoved || (exited && full)) {
         try {
-          orderedIds = await (opts.wrapOrigin
-            ? opts.wrapOrigin("push", entry.key, () =>
+          orderedIds = await pushOrigin(meter, entry.key, () =>
                 runWindowIds(entry, membership, params),
-              )
-            : runWindowIds(entry, membership, params));
+          );
         } catch (err) {
           if (evictOnContractError(entry, params, err)) return;
           reportLoaderError(`windowIdsOf failed for ${entry.key}`, err);
-          await drainMembershipFull(entry, pendingEntry, persisted);
+          await drainMembershipFull(entry, pendingEntry, persisted, meter);
           return;
         }
         // Tail backfill: window ids whose row bytes neither the client base
@@ -8070,11 +8135,9 @@ export function createResourceRuntime(
         if (missing.length > 0) {
           try {
             const ctx = { affectedIds: missing };
-            const { value: v } = await (opts.wrapOrigin
-              ? opts.wrapOrigin("push", entry.key, () =>
+            const { value: v } = await pushOrigin(meter, entry.key, () =>
                   getResourceValue(entry, params, ctx),
-                )
-              : getResourceValue(entry, params, ctx));
+            );
             if (!Array.isArray(v)) {
               throw new Error(
                 `keyed resource "${entry.key}" loader must return an array`,
@@ -8094,7 +8157,7 @@ export function createResourceRuntime(
           } catch (err) {
             if (evictOnContractError(entry, params, err)) return;
             reportLoaderError(`loader failed for ${entry.key}`, err);
-            await drainMembershipFull(entry, pendingEntry, persisted);
+            await drainMembershipFull(entry, pendingEntry, persisted, meter);
             return;
           }
         }
@@ -8111,15 +8174,13 @@ export function createResourceRuntime(
       // diff and healed by its own feed event — the recorded M5 semantics).
       if (entered || orderMoved) {
         try {
-          orderedIds = await (opts.wrapOrigin
-            ? opts.wrapOrigin("push", entry.key, () =>
+          orderedIds = await pushOrigin(meter, entry.key, () =>
                 runWindowIds(entry, membership, params),
-              )
-            : runWindowIds(entry, membership, params));
+          );
         } catch (err) {
           if (evictOnContractError(entry, params, err)) return;
           reportLoaderError(`orderOf failed for ${entry.key}`, err);
-          await drainMembershipFull(entry, pendingEntry, persisted);
+          await drainMembershipFull(entry, pendingEntry, persisted, meter);
           return;
         }
       }
@@ -8148,7 +8209,7 @@ export function createResourceRuntime(
       orderedIds !== undefined &&
       nextSnapshot.size < orderedIds.length
     ) {
-      await drainMembershipFull(entry, pendingEntry, persisted);
+      await drainMembershipFull(entry, pendingEntry, persisted, meter);
       return;
     }
     // The tracking span this drain started in ended while it read: its snapshot
@@ -8235,7 +8296,11 @@ export function createResourceRuntime(
     }
     // An empty diff is still a recorded no-op push (changed:false) to any subscriber.
     if (subs.length > 0) {
-      opts.onPush?.(entry.key, { subscribers: subs.length, changed });
+      opts.onPush?.(entry.key, {
+        subscribers: subs.length,
+        changed,
+        cost: recomputeCost(meter),
+      });
     }
   }
 
@@ -8501,6 +8566,8 @@ export function createResourceRuntime(
     for (const pendingEntry of pending) {
       const { params, affected } = pendingEntry;
       const pk = paramsKey(params);
+      // What this pending's recompute costs (its `push` origins), for `onPush`.
+      const meter = newRecomputeMeter();
       // A SCOPED pending (membership entries only — A25) that names nothing —
       // no row to refill, none deleted — changed nothing for this tuple: a
       // reverse route that resolved to no host. Skip it before the membership
@@ -8525,9 +8592,9 @@ export function createResourceRuntime(
       if (entry.membership) {
         const hasSnapshot = entry.snapshots?.get(pk) !== undefined;
         if (affected === null || !hasSnapshot) {
-          await drainMembershipFull(entry, pendingEntry, persisted);
+          await drainMembershipFull(entry, pendingEntry, persisted, meter);
         } else {
-          await drainMembershipScoped(entry, pendingEntry, persisted);
+          await drainMembershipScoped(entry, pendingEntry, persisted, meter);
         }
         continue;
       }
@@ -8604,8 +8671,7 @@ export function createResourceRuntime(
             raw,
             watermark: flightWatermark,
             ackTx: flightAckTx,
-          } = await (opts.wrapOrigin
-            ? opts.wrapOrigin("push", entry.key, () =>
+          } = await pushOrigin(meter, entry.key, () =>
                 getResourceValue(
                   entry,
                   params,
@@ -8615,16 +8681,7 @@ export function createResourceRuntime(
                   seedAckTx,
                   pendingEntry.lastNotifyAt,
                 ),
-              )
-            : getResourceValue(
-                entry,
-                params,
-                undefined,
-                undefined,
-                undefined,
-                seedAckTx,
-                pendingEntry.lastNotifyAt,
-              )));
+          ));
           valueComputed = true;
         } catch (err) {
           if (evictOnContractError(entry, params, err)) continue;
@@ -8748,6 +8805,7 @@ export function createResourceRuntime(
           opts.onPush?.(entry.key, {
             subscribers: holders,
             changed: !unchanged,
+            cost: recomputeCost(meter),
           });
       }
 

@@ -24,6 +24,7 @@ import type {
   SeedOutcome as RtSeedOutcome,
   PersistedValueCheck as RtPersistedValueCheck,
   ResourceDelivery as RtDelivery,
+  RecomputeCost as RtRecomputeCost,
   HandoffState as RtHandoffState,
   ResumeRecord as RtResumeRecord,
 } from "@plugins/network/plugins/live/plugins/resource-runtime/core";
@@ -443,9 +444,15 @@ function errorReport(context: string, err: unknown): ServerErrorReport {
 // keyed or value recompute for >=1 subscriber (an equal value recompute, which
 // ships no frame, as a `changed: false` no-op); we fan it out to every registered observer. A
 // debug plugin registers at boot via `onResourcePush` from this barrel.
+// `info.cost` is what the recompute cost (`RecomputeCost`: own work, waits, the
+// io part of the waits), `null` when nothing measured it.
 export type ResourcePushObserver = (
   key: string,
-  info: { subscribers: number; changed: boolean },
+  info: {
+    subscribers: number;
+    changed: boolean;
+    cost: RtRecomputeCost | null;
+  },
 ) => void;
 const pushObservers = new Set<ResourcePushObserver>();
 export function onResourcePush(cb: ResourcePushObserver): () => void {
@@ -540,14 +547,16 @@ const runtime = createResourceRuntime({
   // non-null `parent` naming the request class that triggered it, so head-of-line
   // blocking is attributable. See
   // research/2026-06-19-global-wait-attribution-instrumentation.md.
-  wrapOrigin: (kind, key, fn, onJoined) =>
+  // `onCost` hands each origin's cost back (a recompute's `push` origins sum
+  // into the `RecomputeCost` its `onPush` carries — the no-op detector's input).
+  wrapOrigin: (kind, key, fn, onJoined, onCost) =>
     recordEntrySpan(
       kind,
       key,
       fn,
       undefined,
       undefined,
-      onJoined && { onJoined },
+      onJoined || onCost ? { onJoined, onCost } : undefined,
     ),
   // The notify-flush cycle as one `flush` entry — the per-resource `push` loads
   // it triggers nest under it (byParent = head-of-line attribution). See

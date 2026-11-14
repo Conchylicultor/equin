@@ -549,6 +549,7 @@ remaining allocations are one flat band array per completed entry span, and what
   - Exports (types):
     - `Aggregate`
     - `EntryContext`
+    - `EntryCost`
     - `FlightSpan`
     - `FlightWindow`
     - `GateGauge`

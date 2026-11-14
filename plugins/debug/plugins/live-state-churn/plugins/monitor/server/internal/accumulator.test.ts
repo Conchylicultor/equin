@@ -5,6 +5,10 @@ import {
   _resetForTest,
 } from "./accumulator";
 
+// A tasks.tree.v2:groups-like recompute, as measured on main (2026-11-14):
+// ~3 ms of own work, no io, a sliver of gate wait.
+const CHEAP = { ownMs: 3, waitMs: 0.2, ioMs: 0 };
+
 beforeEach(() => {
   _resetForTest();
 });
@@ -16,7 +20,11 @@ describe("accumulator", () => {
     for (let s = 0; s < 60; s++) {
       const base = start + s * 1000;
       for (let i = 0; i < 5; i++) {
-        recordPushAt("res:a", { subscribers: 3, changed: false }, base + i * 100);
+        recordPushAt(
+          "res:a",
+          { subscribers: 3, changed: false, cost: CHEAP },
+          base + i * 100,
+        );
       }
     }
     // Snapshot at the last second of activity.
@@ -36,10 +44,18 @@ describe("accumulator", () => {
       const base = start + s * 1000;
       // 4 no-op + 2 changed per second.
       for (let i = 0; i < 4; i++) {
-        recordPushAt("res:b", { subscribers: 1, changed: false }, base + i * 50);
+        recordPushAt(
+          "res:b",
+          { subscribers: 1, changed: false, cost: CHEAP },
+          base + i * 50,
+        );
       }
       for (let i = 0; i < 2; i++) {
-        recordPushAt("res:b", { subscribers: 1, changed: true }, base + 500 + i * 50);
+        recordPushAt(
+          "res:b",
+          { subscribers: 1, changed: true, cost: CHEAP },
+          base + 500 + i * 50,
+        );
       }
     }
     const snap = snapshotAt(10, start + 9 * 1000 + 999);
@@ -56,7 +72,11 @@ describe("accumulator", () => {
     for (let s = 0; s < 60; s++) {
       const base = start + s * 1000;
       for (let i = 0; i < 5; i++) {
-        recordPushAt("res:c", { subscribers: 2, changed: false }, base + i * 100);
+        recordPushAt(
+          "res:c",
+          { subscribers: 2, changed: false, cost: CHEAP },
+          base + i * 100,
+        );
       }
     }
     const lastActivityMs = start + 59 * 1000 + 999;
@@ -79,10 +99,18 @@ describe("accumulator", () => {
     const start = 4_000_000_000_000;
     // Fill 512 keys, each active at a distinct (increasing) time.
     for (let k = 0; k < 512; k++) {
-      recordPushAt(`res:${k}`, { subscribers: 1, changed: false }, start + k);
+      recordPushAt(
+        `res:${k}`,
+        { subscribers: 1, changed: false, cost: CHEAP },
+        start + k,
+      );
     }
     // key 0 is the least-recently-active. Adding a 513th evicts it.
-    recordPushAt("res:overflow", { subscribers: 1, changed: false }, start + 1000);
+    recordPushAt(
+      "res:overflow",
+      { subscribers: 1, changed: false, cost: CHEAP },
+      start + 1000,
+    );
 
     // Snapshot at the overflow time over a wide window so surviving keys report.
     const snap = snapshotAt(600, start + 1000);
@@ -90,5 +118,68 @@ describe("accumulator", () => {
     expect(keys.has("res:0")).toBe(false);
     expect(keys.has("res:overflow")).toBe(true);
     expect(keys.has("res:511")).toBe(true);
+  });
+
+  it("judges wasted work, not the count: cheap churn stays far under the bar", () => {
+    const start = 5_000_000_000_000;
+    // 3.1 no-op/s at ~3 ms own — the worst tasks.tree.v2:groups report.
+    for (let i = 0; i < 186; i++)
+      recordPushAt(
+        "cheap",
+        { subscribers: 2, changed: false, cost: CHEAP },
+        start + i * 320,
+      );
+    const s = snapshotAt(60, start + 59_999)[0]!;
+    expect(s.noopRate).toBeCloseTo(3.1, 1);
+    expect(s.noopOwnMs).toBeCloseTo(558, 0);
+    expect(s.wastedMsPerMinute).toBeCloseTo(558, 0); // < the 1000 ms/min default
+  });
+
+  it("an expensive no-op recompute counts at a low rate, io included, queue/join waits not", () => {
+    const start = 6_000_000_000_000;
+    // Two no-ops in a minute, each 400 ms own + 900 ms of git io inside 1500 ms of waits.
+    const cost = { ownMs: 400, waitMs: 1500, ioMs: 900 };
+    recordPushAt("costly", { subscribers: 1, changed: false, cost }, start);
+    recordPushAt(
+      "costly",
+      { subscribers: 1, changed: false, cost },
+      start + 30_000,
+    );
+    // A changed recompute is not waste, whatever it cost.
+    recordPushAt(
+      "costly",
+      { subscribers: 1, changed: true, cost },
+      start + 40_000,
+    );
+    const s = snapshotAt(60, start + 59_999)[0]!;
+    expect(s.noopCount).toBe(2);
+    expect(s.totalCount).toBe(3);
+    expect(s.noopOwnMs).toBe(800);
+    expect(s.noopIoMs).toBe(1800);
+    expect(s.noopWaitMs).toBe(3000);
+    expect(s.wastedMsPerMinute).toBe(2600); // (800 + 1800) per 60 s
+  });
+
+  it("scales the waste to a minute over any window", () => {
+    const start = 7_000_000_000_000;
+    recordPushAt(
+      "k",
+      {
+        subscribers: 1,
+        changed: false,
+        cost: { ownMs: 100, waitMs: 0, ioMs: 0 },
+      },
+      start,
+    );
+    expect(snapshotAt(30, start)[0]!.wastedMsPerMinute).toBe(200);
+  });
+
+  it("counts a no-op the host did not measure apart, never as free", () => {
+    const start = 8_000_000_000_000;
+    recordPushAt("u", { subscribers: 1, changed: false, cost: null }, start);
+    const s = snapshotAt(60, start)[0]!;
+    expect(s.noopCount).toBe(1);
+    expect(s.unmeasuredNoops).toBe(1);
+    expect(s.wastedMsPerMinute).toBe(0);
   });
 });

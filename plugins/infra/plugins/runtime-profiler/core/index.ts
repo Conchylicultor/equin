@@ -57,6 +57,7 @@ export type {
   ParentBreakdown,
   WaitBreakdown,
   EntryContext,
+  EntryCost,
   Track,
   WaitBand,
   FlightSpan,

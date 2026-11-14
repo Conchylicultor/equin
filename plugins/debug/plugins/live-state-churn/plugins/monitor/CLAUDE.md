@@ -5,12 +5,28 @@ The *detect* half of live-state churn debugging.
 An in-process accumulator (`server/internal/accumulator.ts`) is fed by every keyed
 or pushed-value live-state recompute for a subscriber via `onResourcePush`. A
 value recompute equal to what its holders hold ships no frame (resource-runtime's
-D8) but still counts here as a no-op: the loader ran for nothing. A per-worktree scheduled job
-(`debug.live-state-churn-monitor`) samples that accumulator and, when a resource
-sustains a high rate of no-op (empty-diff) pushes over the window, files a deduped
-`live-state-noop` report through the reports engine (one report per distinct
-resource key). Thresholds are registered as runtime-editable config (`config`
-name `live-state-churn`).
+D8) but still counts here as a no-op: the loader ran for nothing. Each push
+carries what its recompute cost (resource-runtime's `RecomputeCost`: the `push`
+origins its drain ran, as the profiler measured them — own work, io waited on,
+every wait).
+
+A per-worktree scheduled job (`debug.live-state-churn-monitor`) samples that
+accumulator and files a deduped `live-state-noop` report (one per resource key)
+when a resource's no-op recomputes **waste material work** — own work (the
+server thread and the database answering it) plus the git / file io they waited
+on, per minute, at or over `wastedMsPerMinuteThreshold` (default 1000 ms/min ≈
+1.7% of a core). Time queued on a gate or joined to another run in flight is
+reported but not counted: it costs the recompute nothing of its own. A no-op
+whose cost the host did not measure (no profiler: a browser host) is never
+judged. The report states the waste next to the rate (`describeNoopWaste`, in
+its message, task and Debug → Reports row).
+
+Why work and not count: the count-based rule (≥ 1 no-op/s) filed
+`tasks.tree.v2:groups` and `tasks.tree.v2` on main at 1–3 no-op/s, whose
+recomputes cost ~2–3 ms each (~120–560 ms/min, well under a percent of a core);
+two investigations found nothing worth fixing. The default threshold and the
+data behind it are in `core/config.ts`. Thresholds are runtime-editable config
+(`config` name `live-state-churn`).
 
 The `live-state-noop` report kind renders a one-line Debug → Reports summary
 (`web/components/noop-summary.tsx`).
@@ -52,6 +68,7 @@ The `live-state-noop` report kind renders a one-line Debug → Reports summary
     - `fields/int/config.intField`
   - Exports (types): `LiveStateNoopPayload`
   - Exports (values):
+    - `describeNoopWaste`
     - `liveStateChurnConfig`
     - `LiveStateNoopPayloadSchema`
 
