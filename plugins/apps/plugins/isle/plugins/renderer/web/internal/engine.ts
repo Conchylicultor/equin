@@ -76,6 +76,12 @@ import {
   SIGN_FONT,
 } from "./paint";
 import { LABELS_HIDDEN, stepLabels, type LabelState } from "./labels";
+import {
+  BUBBLE_FONT,
+  drawBubble,
+  pickLine,
+  type ChatterPlace,
+} from "./chatter";
 import { PBOX, People, type Hero, type Villager } from "./people";
 import { realizeScene, TILE, type Scene, type Static } from "./scene";
 import { DOCK_LEN, makeSprites, type SpriteSet } from "./sprites";
@@ -206,6 +212,14 @@ const Z_MAX = 2.6;
 const STEP_PX = 30;
 /** Seconds a building's life takes to fade in. */
 const LIFE_FADE = 1.6;
+/** How close (px, y squashed ×1.4) the hero must come for a villager to stop and talk, and leave for it to go on. */
+const TALK_NEAR = 70;
+const TALK_LEAVE = 120;
+/** How long a line shows (s, plus a little per character), and the pause before the next while the hero stays. */
+const TALK_SHOW = 3;
+const TALK_PAUSE = 4;
+/** How near a building's door a villager must stand to talk about its app. */
+const TALK_APP_NEAR = 260;
 /** How lived-in an app must be for a villager to linger at its door, and how many may. */
 const LINGER_LIFE = 0.5;
 const LINGERERS = 2;
@@ -446,6 +460,9 @@ export class IsleEngine {
       dir: 1,
       wait: rnd() * 3,
       linger: null,
+      attending: false,
+      chat: null,
+      lastLine: null,
     }));
     this.cam.x = CX;
     this.cam.y = CY;
@@ -2228,7 +2245,7 @@ export class IsleEngine {
         world2screen();
       },
     });
-    this.walkVillagers(dt);
+    this.walkVillagers(dt, t, night);
     for (const v of this.villagers)
       if ((v.route || v.linger) && vis(v.x, v.y)) dyn.push(person(v));
     dyn.push(person(this.hero));
@@ -2436,6 +2453,7 @@ export class IsleEngine {
       g.globalAlpha = 1;
     }
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    this.drawChatter(t, z);
     this.drawLabels(dt, z, night);
     const vg = g.createRadialGradient(
       vw / 2,
@@ -2539,9 +2557,11 @@ export class IsleEngine {
     this.hooks.onWhere(name, district);
   }
 
-  private walkVillagers(dt: number): void {
+  private walkVillagers(dt: number, t: number, night: boolean): void {
     const rnd = this.rnd;
+    const hero = this.hero;
     for (const v of this.villagers) {
+      if (this.attendHero(v, hero, dt, t, night)) continue;
       if (v.linger) {
         // standing by the door: a glance to the street now and then, then back
         v.wait -= dt;
@@ -2590,6 +2610,87 @@ export class IsleEngine {
         d = Math.atan2(Math.sin(d), Math.cos(d));
         v.facing += d * Math.min(1, dt * 8);
       }
+    }
+  }
+
+  /**
+   * A villager the hero walks up to stops, turns to face them and says a line (another after a pause, while they
+   * stay); once the hero walks off its bubble fades and it goes back to what it was doing. True while it attends.
+   */
+  private attendHero(
+    v: Villager,
+    hero: Hero,
+    dt: number,
+    t: number,
+    night: boolean,
+  ): boolean {
+    if (!hero.placed || !(v.route || v.linger)) return false;
+    const d = Math.hypot(hero.x - v.x, (hero.y - v.y) * 1.4);
+    if (d > (v.attending ? TALK_LEAVE : TALK_NEAR)) {
+      if (v.attending) {
+        v.attending = false;
+        if (v.chat) v.chat.until = Math.min(v.chat.until, t);
+        // a lingerer looks back to its door a moment later
+        if (v.linger) v.wait = 1 + this.rnd() * 1.5;
+      }
+      return false;
+    }
+    v.attending = true;
+    v.walking = false;
+    v.speed = 0;
+    let dd = Math.atan2(hero.y - v.y, hero.x - v.x) - v.facing;
+    dd = Math.atan2(Math.sin(dd), Math.cos(dd));
+    v.facing += dd * Math.min(1, dt * 10);
+    if (!v.chat || t > v.chat.until + TALK_PAUSE) {
+      const line = pickLine(this.chatterPlace(v), night, this.rnd, v.lastLine);
+      v.lastLine = line;
+      v.chat = { line, t0: t, until: t + TALK_SHOW + line.length * 0.03 };
+    }
+    return true;
+  }
+
+  /** What a villager can talk about where it stands: the nearest building's app, its district. */
+  private chatterPlace(v: Villager): ChatterPlace {
+    let app: string | null = null;
+    let da = TALK_APP_NEAR;
+    for (const b of this.buildings) {
+      const d = Math.hypot(b.door[0] - v.x, b.door[1] - v.y);
+      if (d < da) {
+        da = d;
+        app = b.name;
+      }
+    }
+    let district: string | null = null;
+    let dd = Infinity;
+    for (const D of this.districts) {
+      const d = Math.hypot(D.x - v.x, D.y - v.y);
+      if (d < D.r + 120 && d < dd) {
+        dd = d;
+        district = D.name;
+      }
+    }
+    return { app, district };
+  }
+
+  /** The villagers' speech bubbles, over everything in the world (screen px). */
+  private drawChatter(t: number, z: number): void {
+    const zoomA = ss(0.3, 0.45, z);
+    if (zoomA < 0.01) return;
+    const g = this.g;
+    for (const v of this.villagers) {
+      const c = v.chat;
+      if (!c) continue;
+      const a =
+        Math.min(1, (t - c.t0) / 0.2) *
+        Math.max(0, Math.min(1, 1 - (t - c.until) / 0.35));
+      if (a <= 0) {
+        if (!v.attending) v.chat = null;
+        continue;
+      }
+      const s = this.toScreen(v.x, v.y + PBOX[1] + 4);
+      if (s.x < -200 || s.x > this.vw + 200 || s.y < -40 || s.y > this.vh + 200)
+        continue;
+      drawBubble(g, s.x, s.y, c.line, a * zoomA);
     }
   }
 
@@ -3026,6 +3127,7 @@ export class IsleEngine {
 /** The font specs the canvas draws text in: wait for them before the first frame. */
 export const ISLE_FONTS = [
   SIGN_FONT,
+  BUBBLE_FONT,
   "italic 500 15px Fraunces",
   "600 26px Fraunces",
 ] as const;

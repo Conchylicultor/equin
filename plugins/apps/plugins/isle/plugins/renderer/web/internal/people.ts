@@ -42,6 +42,12 @@ export interface Villager extends Walker {
   wait: number;
   /** Where it stands by a lived-in building's door, instead of walking a route. */
   linger: { readonly x: number; readonly y: number } | null;
+  /** The hero came close: it stopped and turned to face them. */
+  attending: boolean;
+  /** What it said to the hero, shown from `t0` until `until` (engine clock, s). */
+  chat: { readonly line: string; readonly t0: number; until: number } | null;
+  /** The line it said last, so it doesn't say it twice in a row. */
+  lastLine: string | null;
 }
 
 const SC = 3;
