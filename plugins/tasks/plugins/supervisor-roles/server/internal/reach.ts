@@ -10,9 +10,10 @@ import { roleOfConversation, supervisorOfTask } from "./roles";
 
 /**
  * A role session manages every task its role owns: a task is the role's when
- * the root of the tree it sits in (its nearest mandate's task — a backlog
- * task is its own root) is owned by the role. So the role's backlog and its
- * earlier session trees are in reach, never another role's tasks.
+ * the role owns it itself (a backlog task — a root, or nested in the tree a
+ * person routed it from) or owns the root of the tree it sits in (its nearest
+ * mandate's task). So the role's backlog and its earlier session trees are in
+ * reach, never another role's tasks.
  */
 export const supervisorRoleReach = MandateReach({
   id: "supervisor-roles",
@@ -20,6 +21,7 @@ export const supervisorRoleReach = MandateReach({
     if ((await grantOf(supervisorRole, conversationId)) === null) return false;
     const role = await roleOfConversation(conversationId);
     if (role === null) return false;
+    if ((await supervisorOfTask(taskId)) === role.roleId) return true;
     const root = await nearestMandate(taskId, db);
     if (root.kind === "none") return false;
     return (await supervisorOfTask(root.rootTaskId)) === role.roleId;

@@ -18,8 +18,12 @@ import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useToast } from "@plugins/shell/plugins/notifications/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
-import { taskMandates } from "@plugins/tasks/plugins/tasks-core/core";
 import {
+  taskMandates,
+  type TaskStatus,
+} from "@plugins/tasks/plugins/tasks-core/core";
+import {
+  BACKLOG_STATUSES,
   setTaskSupervisor,
   supervisorRoleMandate,
   taskSupervisors,
@@ -31,6 +35,7 @@ import {
   useRoles,
 } from "../internal/reads";
 import { RoleIcon } from "./role-icon";
+import { InheritedTaskSupervisor } from "./role-badge";
 
 const chevronIcon = symbol("expand-more");
 const unlistedIcon = symbol("visibility-off");
@@ -54,15 +59,24 @@ export function SupervisorPill({
 }
 
 /**
- * The task detail's Supervisor value: the role that owns the task, as a pill
- * that re-routes it — picking another role moves the task to that role's
- * backlog, None takes the task out of every backlog. A session's root keeps
- * its role (the session works for it), so there it is the pill alone.
+ * The task detail's Supervisor value, on every task: the role that owns it,
+ * as a pill that routes it — picking a role puts the task in that role's
+ * backlog, where it stays (nested or not) until a session adopts it. Only a
+ * task no agent has run can be routed (`BACKLOG_STATUSES` — the server
+ * refuses the rest), and a session's root keeps its role (the session works
+ * for it): there it is the owner alone, read-only. None takes the task out
+ * of every backlog. A task inside a role session's tree (an adopted one)
+ * belongs to the session: its role is the root's, read-only
+ * (`InheritedTaskSupervisor`).
  */
 export function TaskSupervisorControl({
   taskId,
+  folderId,
+  status,
 }: {
   taskId: string;
+  folderId: string | null;
+  status: TaskStatus;
 }): ReactElement | null {
   const owner = useLive(taskSupervisors, { id: taskId });
   const mandate = useLive(taskMandates, { id: taskId });
@@ -71,12 +85,12 @@ export function TaskSupervisorControl({
   const live = useLiveRoleSessions();
   const result = combineResources({
     owner: mapRow(owner, (r) => r?.supervisor ?? null),
-    sessionRoot: mapRow(
-      mandate,
-      (m) =>
-        m != null &&
-        m.mandateId === supervisorRoleMandate.id &&
-        m.sourceTaskId === taskId,
+    session: mapRow(mandate, (m) =>
+      m == null || m.mandateId !== supervisorRoleMandate.id
+        ? ("none" as const)
+        : m.sourceTaskId === taskId
+          ? ("root" as const)
+          : ("tree" as const),
     ),
     roles,
     counts,
@@ -97,9 +111,26 @@ export function TaskSupervisorControl({
         refetch={result.refetch}
       />
     );
-  const { owner: ownerId, sessionRoot, roles: all } = result.data;
+  const { owner: ownerId, session, roles: all } = result.data;
   const current = all.find((r) => r.id === ownerId) ?? null;
-  if (sessionRoot && current) return <SupervisorPill role={current} />;
+  if (session === "root" && current) return <SupervisorPill role={current} />;
+  if (session === "tree" && folderId !== null)
+    return <InheritedTaskSupervisor folderId={folderId} />;
+  if (!(BACKLOG_STATUSES as readonly TaskStatus[]).includes(status))
+    return (
+      <Inline gap="xs">
+        {current ? (
+          <SupervisorPill role={current} />
+        ) : (
+          <Text as="span" tone="muted">
+            None
+          </Text>
+        )}
+        <Text as="span" variant="caption" tone="muted">
+          Already run — can't go to a backlog
+        </Text>
+      </Inline>
+    );
 
   const route = async (roleId: string | null) => {
     setOpen(false);

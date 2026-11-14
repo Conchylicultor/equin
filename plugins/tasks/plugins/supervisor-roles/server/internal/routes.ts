@@ -1,7 +1,6 @@
 import { count, eq, sql } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { HttpError, implement } from "@plugins/infra/plugins/endpoints/server";
-import { getTask } from "@plugins/tasks/plugins/tasks-core/server";
 import { _conversationSections } from "@plugins/conversations/plugins/conversations-view/plugins/queue/server";
 import type { ConversationSectionId } from "@plugins/conversations/plugins/conversations-view/plugins/queue/core";
 import {
@@ -17,7 +16,7 @@ import { supervisorRoleIconStale } from "./tables-events";
 import {
   deleteRoleReleasing,
   getSupervisorRole,
-  isSessionRoot,
+  routeRefusal,
   setTaskSupervisorRole,
 } from "./roles";
 
@@ -133,12 +132,23 @@ export const handleDeleteSupervisorRole = implement(
 export const handleSetTaskSupervisor = implement(
   setTaskSupervisor,
   async ({ params, body }) => {
-    if ((await getTask(params.taskId)) === null)
+    const refusal = await routeRefusal(params.taskId);
+    if (refusal?.kind === "not-found")
       throw new HttpError(404, `No task "${params.taskId}".`);
-    if (await isSessionRoot(params.taskId))
+    if (refusal?.kind === "session-root")
       throw new HttpError(
         409,
         `${params.taskId} is a role session's root: its role is what the session works for, so it cannot change.`,
+      );
+    if (refusal?.kind === "in-session")
+      throw new HttpError(
+        409,
+        `${params.taskId} sits in the role session rooted at ${refusal.rootTaskId}: it belongs to that session, so its supervisor cannot change.`,
+      );
+    if (refusal?.kind === "has-run")
+      throw new HttpError(
+        409,
+        `${params.taskId} is ${refusal.status}: a backlog holds only tasks no agent has run, so its supervisor cannot change.`,
       );
     if (
       body.supervisor !== null &&

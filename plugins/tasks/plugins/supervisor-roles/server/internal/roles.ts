@@ -18,6 +18,7 @@ import {
 import {
   _tasks,
   createTask,
+  nearestMandate,
   setMandate,
   tasksView,
 } from "@plugins/tasks/plugins/tasks-core/server";
@@ -175,14 +176,19 @@ export interface RoleTaskRow {
 /** The most backlog rows one read returns (the oldest first). */
 export const BACKLOG_READ_LIMIT = 200;
 
-function roleRoots(roleId: string, sessions: boolean) {
-  return and(
-    eq(tasksSupervisor.table.supervisor, roleId),
-    isNull(tasksView.folderId),
-    sessions
-      ? eq(_tasks.mandateRef, supervisorRoleMandate.id)
-      : ne(_tasks.mandateRef, supervisorRoleMandate.id),
-  );
+/** The role's session roots, or every other task it owns (its backlog
+ * candidates, at any depth) — `roleSessionsWhere` / `roleBacklogWhere`. */
+function roleTasks(roleId: string, sessions: boolean) {
+  return sessions
+    ? and(
+        eq(tasksSupervisor.table.supervisor, roleId),
+        isNull(tasksView.folderId),
+        eq(_tasks.mandateRef, supervisorRoleMandate.id),
+      )
+    : and(
+        eq(tasksSupervisor.table.supervisor, roleId),
+        ne(_tasks.mandateRef, supervisorRoleMandate.id),
+      );
 }
 
 async function roleRootRows(
@@ -209,7 +215,7 @@ async function roleRootRows(
     )
     .where(
       and(
-        roleRoots(roleId, sessions),
+        roleTasks(roleId, sessions),
         "in" in statuses
           ? inArray(tasksView.status, [...statuses.in])
           : notInArray(tasksView.status, [...statuses.notIn]),
@@ -361,8 +367,9 @@ async function insertBacklogTask(
   return task.id;
 }
 
-/** Whether `taskId` waits in role `roleId`'s backlog now: a root it owns,
- * not a session root, that has not run (`roleBacklogWhere`'s rule). */
+/** Whether `taskId` waits in role `roleId`'s backlog now: a task it owns (at
+ * any depth), not a session root, that has not run (`roleBacklogWhere`'s
+ * rule). */
 export async function isInRoleBacklog(
   taskId: string,
   roleId: string,
@@ -379,7 +386,7 @@ export async function isInRoleBacklog(
     .where(
       and(
         eq(tasksView.id, taskId),
-        roleRoots(roleId, false),
+        roleTasks(roleId, false),
         inArray(tasksView.status, [...BACKLOG_STATUSES]),
       ),
     )
@@ -405,6 +412,45 @@ export async function isSessionRoot(
     )
     .limit(1);
   return row !== undefined;
+}
+
+/** Why a task's owner cannot be changed (`routeRefusal`). */
+export type RouteRefusal =
+  | { kind: "not-found" }
+  | { kind: "session-root" }
+  | { kind: "in-session"; rootTaskId: string }
+  | { kind: "has-run"; status: TaskStatus };
+
+/**
+ * Whether `taskId`'s owner may be changed — the ONE rule behind the route
+ * endpoint and the `route_task` tool. Routing puts a task in a backlog, and a
+ * backlog holds only tasks no agent has run (`BACKLOG_STATUSES`): a task that
+ * ran keeps its owner. A session's root keeps its role (`isSessionRoot`),
+ * and a task inside a session's tree (an adopted one, queued to start there)
+ * belongs to that session.
+ */
+export async function routeRefusal(
+  taskId: string,
+  exec: DbExecutor = db,
+): Promise<RouteRefusal | null> {
+  const [row] = await exec
+    .select({ status: tasksView.status, mandateRef: _tasks.mandateRef })
+    .from(tasksView)
+    .innerJoin(_tasks, eq(_tasks.id, tasksView.id))
+    .where(eq(tasksView.id, taskId))
+    .limit(1);
+  if (!row) return { kind: "not-found" };
+  if (row.mandateRef === supervisorRoleMandate.id)
+    return { kind: "session-root" };
+  const nearest = await nearestMandate(taskId, exec);
+  if (
+    nearest.kind === "found" &&
+    nearest.mandateId === supervisorRoleMandate.id
+  )
+    return { kind: "in-session", rootTaskId: nearest.rootTaskId };
+  if (!(BACKLOG_STATUSES as readonly TaskStatus[]).includes(row.status))
+    return { kind: "has-run", status: row.status };
+  return null;
 }
 
 /**

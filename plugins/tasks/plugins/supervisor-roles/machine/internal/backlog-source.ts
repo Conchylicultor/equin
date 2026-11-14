@@ -10,7 +10,8 @@ import {
 /**
  * What a role's live session hears of a task entering its backlog: one
  * `backlog` event about the task, routed to the session root's tree watch
- * (`routeTaskId` — a backlog task is a root, in no tree). Read when the
+ * (`routeTaskId` — a backlog task sits in no session's tree: a root, or
+ * nested in the tree a person routed it from). Read when the
  * ingest runs, so a task already adopted, routed on or launched by then, or a
  * role with no live session, says nothing: the next session reads its
  * backlog itself.

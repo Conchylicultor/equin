@@ -16,9 +16,9 @@ import { supervisorRole } from "@plugins/tasks/plugins/supervisor-roles/core";
 import {
   BACKLOG_READ_LIMIT,
   getSupervisorRole,
-  isSessionRoot,
   roleBacklog,
   roleOfConversation,
+  routeRefusal,
   setTaskSupervisorRole,
   supervisorOfTask,
 } from "@plugins/tasks/plugins/supervisor-roles/server";
@@ -111,9 +111,10 @@ export const routeTaskTool = Mcp.tool({
   async handler(input, { conversationId }) {
     const { roleId, rootTaskId } = await callerRole(conversationId);
     const taskId = input.task_id.trim();
-    if (taskId === rootTaskId || (await isSessionRoot(taskId)))
+    const refusal = await routeRefusal(taskId);
+    if (taskId === rootTaskId || refusal?.kind === "session-root")
       return text(`${taskId} is a session's root: it keeps its role.`);
-    if ((await supervisorOfTask(taskId)) !== roleId)
+    if (refusal !== null || (await supervisorOfTask(taskId)) !== roleId)
       return text(`${taskId} is not in your role's backlog.`);
     const role = await getSupervisorRole(input.supervisor);
     if (!role) return text(`No supervisor role "${input.supervisor}".`);

@@ -26,18 +26,24 @@ tools — are `plugins/sessions`.
   `filedFromTaskId`: the task whose agent filed it into a backlog), exposed
   as the `supervisor` field of every task list (options: the roles, by
   name). The role is a FK, ON DELETE RESTRICT (the delete releases the rows
-  first). The row sits on the ROOTS a
-  role owns — its backlog tasks and its session roots; an adopted task's row
-  is deleted (the tree's root carries the role). Routing a backlog task is
-  just setting it: `PUT /api/tasks/:taskId/supervisor`, or the session tool
-  `route_task`; a session root's role is fixed (409 / refused) — the session
-  works for it. Not the task category (the surface that filed it).
+  first). The row sits on the tasks a role owns — its backlog tasks (any
+  depth) and its session roots; an adopted task's row is deleted (the
+  session tree's root carries the role). Routing is just setting it, on any
+  task no agent has run: `PUT /api/tasks/:taskId/supervisor` (the task
+  detail's Supervisor pill, shown on every task), or the session tool
+  `route_task` — both behind `routeRefusal`: a session root's role is fixed
+  (the session works for it), a task inside a session's tree belongs to it
+  (the pill shows the root's role, `InheritedTaskSupervisor`), and a task that ran (`in_progress` /
+  `attempted` / `done` / `dropped`) cannot enter a backlog (409; the pill is
+  read-only there). Not the task category (the surface that filed it).
 - **Backlog** of role R (`roleBacklogWhere(R)` in `core/internal/where.ts`,
   the ONE definition the server and the pane share, over tasks-core's
-  `taskWindow`): root tasks owned by R that are not its session roots and
-  have not run (`new` / `blocked` / `held`). A backlog task states the
-  **interactive** mandate (every root names one; a person launching it by
-  hand gets an ordinary agent) and is never armed.
+  `taskWindow`): every task owned by R, at any depth, that is not one of its
+  session roots and has not run (`new` / `blocked` / `held`). A task FILED
+  into a backlog is a root stating the **interactive** mandate (a person
+  launching it by hand gets an ordinary agent); a task a person ROUTED there
+  stays where it sits in its tree until adopted. A backlog task is never
+  armed. Adopt moves it under the session's root (from wherever it sits).
 - **Sessions** of role R (`roleSessionsWhere(R)`): root tasks owned by R that
   state the `supervisor-role` mandate. Live until `attempted` / `done` /
   `dropped` (`isLiveSessionStatus`); one live session per role (the launch
@@ -57,8 +63,8 @@ tools — are `plugins/sessions`.
   field (`roleOfConversation`), never encoded in the mandate id — two sources
   of truth that could disagree. The role powers (`supervisorRole`, root only):
   the session tools (`plugins/sessions`) and a `MandateReach` — a role session
-  manages (edit_task / drop_task) every task whose tree root its role owns:
-  its backlog and its earlier session trees, never another role's — edit and
+  manages (edit_task / drop_task) every task its role owns, or whose tree
+  root its role owns: its backlog and its earlier session trees, never another role's — edit and
   drop only: `edit_task` never ARMS a task outside the caller's tree (a
   backlog task is adopted, so it runs in the session's tree; an ended session
   is relaunched only through the launch endpoint).
@@ -129,8 +135,8 @@ tools — are `plugins/sessions`.
     - `watchSource` "supervisor-roles.backlog"
     - `trigger` "supervisor-roles.icon"
     - `trigger` "watch.ingest"
-  - Uses: 31 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `tasks/tasks-core` ×6
+  - Uses: 30 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `tasks/tasks-core` ×5
     - `tasks/orchestration/mandate` ×4
     - `config_v2` ×2
     - `conversations/conversations-view/queue` ×2
@@ -153,6 +159,7 @@ tools — are `plugins/sessions`.
   - Exports (types):
     - `BacklogFiling`
     - `RoleTaskRow`
+    - `RouteRefusal`
     - `SupervisorRoleBacklogArrivedPayload`
     - `SupervisorRoleIconStalePayload`
   - Exports (values):
@@ -167,6 +174,7 @@ tools — are `plugins/sessions`.
     - `lockRoleSessions`
     - `roleBacklog`
     - `roleOfConversation`
+    - `routeRefusal`
     - `setTaskSupervisorRole`
     - `supervisorOfTask`
     - `supervisorRoleBacklogArrived`

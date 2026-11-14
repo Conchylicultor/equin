@@ -47,10 +47,15 @@ export {
   lockRoleSessions,
   roleBacklog,
   roleOfConversation,
+  routeRefusal,
   setTaskSupervisorRole,
   supervisorOfTask,
 } from "./internal/roles";
-export type { BacklogFiling, RoleTaskRow } from "./internal/roles";
+export type {
+  BacklogFiling,
+  RoleTaskRow,
+  RouteRefusal,
+} from "./internal/roles";
 export { BACKLOG_READ_LIMIT } from "./internal/roles";
 export { _supervisorRoles, tasksSupervisor } from "./internal/tables";
 export {

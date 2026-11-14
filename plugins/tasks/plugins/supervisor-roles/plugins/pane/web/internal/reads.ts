@@ -62,7 +62,7 @@ const BACKLOGS_COUNTED = 500;
 
 /**
  * What waits in each role's backlog — ONE bounded window over every role's
- * backlog roots, oldest first, folded by owner. A window, not a grouping: a
+ * backlog tasks, oldest first, folded by owner. A window, not a grouping: a
  * window is routed row by row (a task write reaches it only when the task is,
  * or becomes, a backlog task), where a grouping recomputes and re-pushes on
  * every write to the tasks tables — and the sidebar holds this read on every
@@ -77,7 +77,6 @@ export function useBacklogCounts(): ResourceResult<{
   const rows = useLive(taskWindow, {
     columns: [...COLUMNS],
     where: {
-      folderId: { isEmpty: true },
       "tasks_ext_supervisor.supervisor": { isNotEmpty: true },
       "tasks_ext_mandate.mandateId": { ne: supervisorRoleMandate.id },
       status: { in: [...BACKLOG_STATUSES] },

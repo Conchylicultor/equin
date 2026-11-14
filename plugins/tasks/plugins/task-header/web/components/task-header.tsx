@@ -14,10 +14,7 @@ import { useRegisterFlush } from "@plugins/tasks/plugins/task-detail/web";
 import { StatusSignal } from "@plugins/tasks/plugins/task-status/web";
 import { TaskTrackControl } from "@plugins/tasks/plugins/task-track/web";
 import { TaskMandateControl } from "@plugins/tasks/plugins/task-mandate/web";
-import {
-  InheritedTaskSupervisor,
-  TaskSupervisorControl,
-} from "@plugins/tasks/plugins/supervisor-roles/plugins/pane/web";
+import { TaskSupervisorControl } from "@plugins/tasks/plugins/supervisor-roles/plugins/pane/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { AuthorDisplay } from "./author-display";
@@ -84,17 +81,14 @@ export function TaskHeader({ taskId }: { taskId: string }) {
         <SectionLabel as="span">Track</SectionLabel>
         <TaskTrackControl taskId={taskId} />
       </Stack>
+      {/* Who owns the task: picking a role puts it in that role's backlog. */}
       <Stack direction="row" align="center" gap="md">
         <SectionLabel as="span">Supervisor</SectionLabel>
-        {task.folderId === null ? (
-          // Who owns a root task (a backlog task, a session): picking another
-          // role re-routes it.
-          <TaskSupervisorControl taskId={taskId} />
-        ) : (
-          // A nested task (an adopted backlog task among them) belongs to its
-          // tree's root: its role, read from there and naming it.
-          <InheritedTaskSupervisor folderId={task.folderId} />
-        )}
+        <TaskSupervisorControl
+          taskId={taskId}
+          folderId={task.folderId}
+          status={task.status}
+        />
       </Stack>
       <Stack direction="row" align="center" gap="md">
         <SectionLabel as="span">Mandate</SectionLabel>

@@ -60719,8 +60719,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `watchSource` "supervisor-roles.backlog"
           - `trigger` "supervisor-roles.icon"
           - `trigger` "watch.ingest"
-        - Uses: 31 symbols — full list in [`plugins/tasks/plugins/supervisor-roles/REFERENCE.md`](../plugins/tasks/plugins/supervisor-roles/REFERENCE.md)
-          - `tasks/tasks-core` ×6
+        - Uses: 30 symbols — full list in [`plugins/tasks/plugins/supervisor-roles/REFERENCE.md`](../plugins/tasks/plugins/supervisor-roles/REFERENCE.md)
+          - `tasks/tasks-core` ×5
           - `tasks/orchestration/mandate` ×4
           - `config_v2` ×2
           - `conversations/conversations-view/queue` ×2
@@ -60743,6 +60743,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (types):
           - `BacklogFiling`
           - `RoleTaskRow`
+          - `RouteRefusal`
           - `SupervisorRoleBacklogArrivedPayload`
           - `SupervisorRoleIconStalePayload`
         - Exports (values):
@@ -60757,6 +60758,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `lockRoleSessions`
           - `roleBacklog`
           - `roleOfConversation`
+          - `routeRefusal`
           - `setTaskSupervisorRole`
           - `supervisorOfTask`
           - `supervisorRoleBacklogArrived`
@@ -61572,11 +61574,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`task-header`** — Top section of the task detail pane: editable title, status chip, hold/drop buttons, track (main | sidequest, click to switch), author, and timestamps. Launch configuration (auto-start, preprompt, thinking mode) lives in the Prompt card, not here.
       - Web:
         - Contributes: `TaskDetailSlots.Section` "Task" → `TaskHeader`
-        - Uses: 22 symbols — full list in [`plugins/tasks/plugins/task-header/REFERENCE.md`](../plugins/tasks/plugins/task-header/REFERENCE.md)
+        - Uses: 21 symbols — full list in [`plugins/tasks/plugins/task-header/REFERENCE.md`](../plugins/tasks/plugins/task-header/REFERENCE.md)
           - `tasks/task-detail` ×3
           - `network/live/live-state` ×2
           - `primitives/css/text` ×2
-          - `tasks/supervisor-roles/pane` ×2
           - `tasks` ×2
           - `conversations.useConversationById`
           - `network/live.rowOrStale`
@@ -61586,6 +61587,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/editable-field.useEditableField`
           - `primitives/pane.useOpenPane`
           - `primitives/relative-time.RelativeTime`
+          - `tasks/supervisor-roles/pane.TaskSupervisorControl`
           - `tasks/task-mandate.TaskMandateControl`
           - `tasks/task-status.StatusSignal`
           - `tasks/task-track.TaskTrackControl`

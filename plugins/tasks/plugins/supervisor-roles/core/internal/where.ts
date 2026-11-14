@@ -50,14 +50,15 @@ export const ENDED_SESSION_STATUSES = [
 ] as const satisfies readonly TaskStatus[];
 
 /**
- * The backlog of role `roleId`: root tasks it owns that are not its session
- * roots and have not run. (A backlog root states the interactive mandate —
- * every root names one — so a person can still launch it by hand.)
+ * The backlog of role `roleId`: every task it owns, at any depth, that is
+ * not one of its session roots and has not run. A task filed into the
+ * backlog is a root (stating the interactive mandate, so a person can still
+ * launch it by hand); a task a person routed there stays where it is in its
+ * tree until a session adopts it.
  */
 export function roleBacklogWhere(roleId: string): RoleWhere {
   return {
     "tasks_ext_supervisor.supervisor": roleId,
-    folderId: { isEmpty: true },
     "tasks_ext_mandate.mandateId": { ne: supervisorRoleMandate.id },
     status: { in: [...BACKLOG_STATUSES] },
   };
