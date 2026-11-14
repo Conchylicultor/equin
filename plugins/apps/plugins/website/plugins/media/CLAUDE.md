@@ -40,14 +40,18 @@ Old assets stay on the release, so an older deploy keeps serving its film.
 
 ## Plugin reference
 
-- Description: The website's media (the showcase film and its poster), kept out of git: assets of the website-media GitHub release, pinned by sha256 and served same-origin through the asset mirror and bundled into a release by prewarm.
+- Description: The website's media (the showcase film and its poster), kept out of git: assets of the website-media GitHub release, pinned by sha256 and served same-origin through the asset mirror and bundled into a release by prewarm. showcasePosterPreload() is the head tag that starts the poster downloading at t0, for the page that shows it.
 - Server:
-  - Uses: `infra/asset-mirror.defineAssetMirror`
+  - Uses:
+    - `infra/asset-mirror.defineAssetMirror`
+    - `infra/endpoints.endpointPath`
+  - Exports (values): `showcasePosterPreload`
 - Core:
   - Uses:
     - `infra/asset-mirror.assetMirrorFile`
     - `infra/asset-mirror.defineAssetMirrorSource`
   - Exports (values):
+    - `FILM_POSTER_FILE`
     - `showcaseFilm`
     - `websiteMediaSource`
 - Cross-plugin:

@@ -23,7 +23,12 @@ export const websiteMediaSource = defineAssetMirrorSource({
 
 type MediaFile = keyof typeof WEBSITE_MEDIA_PINS;
 const FILM_FILE: MediaFile = "equin-v22-web.mp4";
-const FILM_POSTER_FILE: MediaFile = "equin-v22-web-poster.jpg";
+/**
+ * The poster's file name, exported for the server: the landing page's head
+ * preloads it (`showcasePosterPreload`, `server/`), as a URL built from the
+ * mirror's route rather than read out of the `AssetPath`.
+ */
+export const FILM_POSTER_FILE: MediaFile = "equin-v22-web-poster.jpg";
 
 /**
  * The showcase film — `apps/website/promo-film`'s web render (`-web.mp4`:

@@ -171,6 +171,7 @@ Run the take by hand (any initialized cluster file from the store):
 - Cross-plugin:
   - Imported by:
     - `apps/website/crawlable/snapshot-render`
+    - `apps/website/landing/hero`
     - `apps/website/pages/apps`
     - `apps/website/pages/download`
     - `apps/website/pages/foundations`

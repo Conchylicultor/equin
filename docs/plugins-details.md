@@ -12034,6 +12034,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Imported by:
               - `apps/website/crawlable/snapshot-render`
+              - `apps/website/landing/hero`
               - `apps/website/pages/apps`
               - `apps/website/pages/download`
               - `apps/website/pages/foundations`
@@ -12187,7 +12188,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/shape --spacing`
                   - `ui/tokens/type-scale --font-weight-medium`
                   - `ui/tokens/type-scale --font-weight-semibold`
-            - **`hero`** — Landing hero band: the site's one headline — what equin is — with the lede under it, the showcase film (its poster and the themed player, from apps/website/media), and the three properties the claim rests on (self-evolving, integrated, personal).
+            - **`hero`** — Landing hero band: the site's one headline — what equin is — with the lede under it, the showcase film (its poster and the themed player, from apps/website/media), and the three properties the claim rests on (self-evolving, integrated, personal). The landing page's head (DocumentHead.Fragment): preloads the showcase film's poster — the page's largest paint — from t0, on the landing page only, instead of once the hero has rendered.
               - Web:
                 - Contributes: `Website.Section` "Hero" → `HeroSection`
                 - Uses:
@@ -12204,6 +12205,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/css/status-dot.StatusDot`
                   - `primitives/css/text.Text`
                   - `primitives/loading.Loading`
+              - Server:
+                - Contributes: `DocumentHead.Fragment` "website-hero-poster"
+                - Uses:
+                  - `apps/website/crawlable.WebsitePages`
+                  - `apps/website/media.showcasePosterPreload`
+                  - `shell/document-head.DocumentHead`
+                  - `shell/document-head.HeadFragments`
               - Cross-plugin:
                 - Uses tokens:
                   - `ui/tokens/color-palette --border`
@@ -12288,14 +12296,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/color-palette --foreground`
                   - `ui/tokens/color-palette --muted-foreground`
                   - `ui/tokens/type-scale --font-weight-normal`
-        - **`media`** — The website's media (the showcase film and its poster), kept out of git: assets of the website-media GitHub release, pinned by sha256 and served same-origin through the asset mirror and bundled into a release by prewarm.
+        - **`media`** — The website's media (the showcase film and its poster), kept out of git: assets of the website-media GitHub release, pinned by sha256 and served same-origin through the asset mirror and bundled into a release by prewarm. showcasePosterPreload() is the head tag that starts the poster downloading at t0, for the page that shows it.
           - Server:
-            - Uses: `infra/asset-mirror.defineAssetMirror`
+            - Uses:
+              - `infra/asset-mirror.defineAssetMirror`
+              - `infra/endpoints.endpointPath`
+            - Exports (values): `showcasePosterPreload`
           - Core:
             - Uses:
               - `infra/asset-mirror.assetMirrorFile`
               - `infra/asset-mirror.defineAssetMirrorSource`
             - Exports (values):
+              - `FILM_POSTER_FILE`
               - `showcaseFilm`
               - `websiteMediaSource`
           - Cross-plugin:
@@ -34899,8 +34911,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `unmatchedApiResponse`
           - `unsupportedEndpointResponse`
       - Cross-plugin:
-        - Imported by: 260 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
-          - `apps` ×76
+        - Imported by: 261 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
+          - `apps` ×77
           - `conversations` ×35
           - `infra` ×23
           - `debug` ×20
@@ -57605,6 +57617,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps-core/app-manifest`
           - `apps-core/app-preload`
           - `apps/demo/shell`
+          - `apps/website/landing/hero`
           - `framework/cli/build/experimental-marks`
           - `network/live/boot-snapshot`
           - `ui/icons/sprites`

@@ -15,6 +15,15 @@ glow) is mixed from theme tokens. Never hardcode a colour here.
 button, then the themed controls — no copy around it. Its bytes are never in
 git; swapping the film is that plugin's job, not this band's.
 
+**The poster is the landing page's LCP, so the head announces it.** `server/`
+contributes a `DocumentHead.Fragment` that puts `<link rel="preload"
+as="image">` for the poster (`media/server`'s `showcasePosterPreload`) in the
+landing page's head, so it downloads from t0 instead of once React has drawn
+the `<video>`, and paints in the hero's first frame. A head key covers its
+path and everything under it, and the landing page is the app's base path
+(`/about`), so every other declared page (`WebsitePages.Page`) is keyed `""`
+— none of them downloads a poster it does not show.
+
 The register is an essay's, not a pricing page's: the headline makes one claim
 and the paragraph says what it means.
 
@@ -22,7 +31,7 @@ and the paragraph says what it means.
 
 ## Plugin reference
 
-- Description: Landing hero band: the site's one headline — what equin is — with the lede under it, the showcase film (its poster and the themed player, from apps/website/media), and the three properties the claim rests on (self-evolving, integrated, personal).
+- Description: Landing hero band: the site's one headline — what equin is — with the lede under it, the showcase film (its poster and the themed player, from apps/website/media), and the three properties the claim rests on (self-evolving, integrated, personal). The landing page's head (DocumentHead.Fragment): preloads the showcase film's poster — the page's largest paint — from t0, on the landing page only, instead of once the hero has rendered.
 - Web:
   - Contributes: `Website.Section` "Hero" → `HeroSection`
   - Uses:
@@ -39,6 +48,13 @@ and the paragraph says what it means.
     - `primitives/css/status-dot.StatusDot`
     - `primitives/css/text.Text`
     - `primitives/loading.Loading`
+- Server:
+  - Contributes: `DocumentHead.Fragment` "website-hero-poster"
+  - Uses:
+    - `apps/website/crawlable.WebsitePages`
+    - `apps/website/media.showcasePosterPreload`
+    - `shell/document-head.DocumentHead`
+    - `shell/document-head.HeadFragments`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --border`
