@@ -1,10 +1,6 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
-export {
-  ClaudeAfter,
-  ClaudeBefore,
-  NotionDataView,
-} from "./components/data-view-figure";
+export { ClaudeAfter, ClaudeBefore, NotionDataView } from "./figures";
 
 export default {
   description:

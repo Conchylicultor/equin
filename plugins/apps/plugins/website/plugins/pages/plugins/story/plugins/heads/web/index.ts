@@ -1,7 +1,6 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
-export { MindOverload } from "./components/mind-overload";
-export { ReviewDesk } from "./components/review-desk";
+export { MindOverload, ReviewDesk } from "./figures";
 
 export default {
   description:

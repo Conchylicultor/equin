@@ -443,7 +443,9 @@ An umbrella is a grouping shell that nests related sub-plugins under `plugins/`.
     - `defineSlot`
     - `defineSlotFacade`
     - `getDeferredLoadState`
+    - `hasFirstPaintHolds`
     - `hasLoadErrorUnder`
+    - `holdFirstPaint`
     - `isDeferredPluginPath`
     - `loadPlugins`
     - `markDeferredLoadComplete`
@@ -458,6 +460,7 @@ An umbrella is a grouping shell that nests related sub-plugins under `plugins/`.
     - `SLOT_READ_TIMING_PREFIX`
     - `slots`
     - `subscribeDeferredLoadState`
+    - `takeFirstPaintHolds`
     - `UNSAFE_unsealSlotComponent`
     - `useCompanionLookup`
     - `useComposition`
@@ -471,8 +474,8 @@ An umbrella is a grouping shell that nests related sub-plugins under `plugins/`.
     - `webCollectedDir`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shadow --shadow`
-  - Imported by: 107 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives` ×23
+  - Imported by: 108 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives` ×24
     - `apps` ×18
     - `ui` ×8
     - `apps-core` ×6

@@ -11,6 +11,7 @@ import {
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { renderMode } from "@plugins/primitives/plugins/dom/plugins/render-mode/core";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
+import { holdFirstPaint } from "@plugins/framework/plugins/web-sdk/core";
 
 export interface LazyComponentOptions {
   /**
@@ -27,10 +28,18 @@ export interface LazyComponentOptions {
    * mount renders synchronously instead of suspending. For a component that
    * appears in a surface whose size must not change once shown — an editor
    * inside a popover that opens on a click would otherwise open without it and
-   * grow when the chunk lands. Still off the boot path; omitted: load on first
-   * mount.
+   * grow when the chunk lands. Still off the boot path.
+   *
+   * `"first-paint"`: the page being opened draws this component in its first
+   * frame. Its chunk starts loading at once, when the component is defined
+   * (its module evaluates during the boot), and the first paint waits for it
+   * (web-sdk's `holdFirstPaint`), so the frame is drawn with it rather than
+   * with its fallback. Only for what the URL being opened is known to show:
+   * every such chunk is on that page's critical path.
+   *
+   * Omitted: load on first mount.
    */
-  preload?: "idle";
+  preload?: "idle" | "first-paint";
 }
 
 /**
@@ -96,6 +105,7 @@ export function lazyComponent<P extends object>(
   const readLoaded = () => loaded;
   loaders.add(load);
   if (opts?.preload === "idle") preloadWhenIdle(load);
+  if (opts?.preload === "first-paint") preloadForFirstPaint(load);
   const Lazy = lazy(load);
   // Not `??`: that reads an explicit `fallback: null` as "none given" and draws
   // the spinner an inline widget asked not to flash.
@@ -118,6 +128,16 @@ export function lazyComponent<P extends object>(
     // `loaded` does not exist.
     const [Loaded] = useState(readLoaded);
     if (Loaded) return <Loaded {...props} />;
+    // A static render (one render to HTML, never hydrated — `dom/render-mode`)
+    // has no later paint to pop the chunk into, and the prerender renders a
+    // Suspense fallback eagerly, so the loading state would ship as content:
+    // suspend on the load here instead (the prerender waits for Suspense) and
+    // render the component. `load` is memoized, so every retry reads the same
+    // promise; a failed load throws, like `useLazyReady`.
+    if (renderMode() === "static") {
+      const { default: Component } = use(load());
+      return <Component {...props} />;
+    }
     return (
       <Suspense fallback={fallback}>
         <Lazy {...props} />
@@ -170,6 +190,17 @@ export function useLazyReady<P extends object>(
     return true;
   }
   return false;
+}
+
+/**
+ * Start `load` at once and hold the first paint for it — only in a page, like
+ * {@link preloadWhenIdle}. A failed load fails the boot's "App code" task (the
+ * boot screen says so); the first mount shares the same rejected import and
+ * throws into its boundary.
+ */
+function preloadForFirstPaint(load: () => Promise<unknown>): void {
+  if (typeof document === "undefined") return;
+  holdFirstPaint(load());
 }
 
 /**

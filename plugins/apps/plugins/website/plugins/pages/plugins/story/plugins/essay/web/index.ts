@@ -1,6 +1,7 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { WebsiteStory } from "@plugins/apps/plugins/website/plugins/pages/plugins/story/web";
-import { StoryEssay } from "./components/story-essay";
+import { websitePagePart } from "@plugins/apps/plugins/website/plugins/shell/web";
+import { storyPage } from "@plugins/apps/plugins/website/plugins/pages/plugins/story/core";
 
 export default {
   description:
@@ -9,7 +10,12 @@ export default {
     WebsiteStory.Section({
       id: "essay",
       label: "Story essay",
-      component: StoryEssay,
+      // Its own chunk, fetched only where the story page is shown: the site's
+      // code loads as one app, so a static essay was downloaded and evaluated
+      // on every page of it.
+      component: websitePagePart(storyPage, () =>
+        import("./components/story-essay").then((m) => m.StoryEssay),
+      ),
     }),
   ],
 } satisfies PluginDefinition;

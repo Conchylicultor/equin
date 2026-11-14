@@ -54,6 +54,11 @@ export { loadPlugins } from "./loader";
 export type { PluginEntry, PluginLoadError } from "./loader";
 export { partitionWebEntries, isDeferredPluginPath } from "./load-tiers";
 export {
+  hasFirstPaintHolds,
+  holdFirstPaint,
+  takeFirstPaintHolds,
+} from "./first-paint-holds";
+export {
   useDeferredLoadComplete,
   useFailedPluginPaths,
   getDeferredLoadState,

@@ -53,8 +53,8 @@ shell never names this page. The homepage's applications layer opens it.
     - `WebsiteHeader` "apps" → `AppsNavItem`
     - `ThemeEngine.SubTheme` "equin closing"
     - `ThemeEngine.SubTheme` "equin gallery"
-  - Uses: 35 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps/website/shell` ×5
+  - Uses: 36 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps/website/shell` ×6
     - `primitives/css/ui-kit` ×4
     - `primitives/pane` ×4
     - `primitives/avatar` ×2

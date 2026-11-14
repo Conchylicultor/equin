@@ -31,8 +31,8 @@ installer beside another's source. The installer's steps are written out in
     - `ThemeEngine.SubTheme` "equin download note"
     - `ThemeEngine.SubTheme` "equin download tabs"
     - `ThemeEngine.SubTheme` "equin download"
-  - Uses: 33 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps/website/shell` ×6
+  - Uses: 34 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps/website/shell` ×7
     - `primitives/collapsible` ×4
     - `primitives/css/spacing` ×3
     - `primitives/pane` ×3

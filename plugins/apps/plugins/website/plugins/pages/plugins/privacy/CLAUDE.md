@@ -46,6 +46,7 @@ records or how long it keeps it is a change to this page.
     - `apps/website/shell.WebsiteFooterLink`
     - `apps/website/shell.WebsiteHeader`
     - `apps/website/shell.WebsiteHero`
+    - `apps/website/shell.websitePagePart`
     - `primitives/css/ui-kit.Button`
     - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`

@@ -47,6 +47,7 @@ equin".
     - `apps/website/shell.WebsiteHeader`
     - `apps/website/shell.WebsiteHero`
     - `apps/website/shell.WebsiteNavLink`
+    - `apps/website/shell.websitePagePart`
     - `primitives/pane.defineRoute`
     - `primitives/pane.Pane`
     - `primitives/pane.useOpenPane`

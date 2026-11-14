@@ -107,8 +107,8 @@ hover.
     - `ThemeEngine.Theme` "equin"
     - `ThemeEngine.SubTheme` "equin document"
     - `ThemeEngine.SubTheme` "equin page heading"
-  - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/pane` ×6
+  - Uses: 28 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/pane` ×7
     - `primitives/css/spacing` ×3
     - `apps/deploy/analytics/collect` ×2
     - `primitives/css/text` ×2
@@ -121,6 +121,7 @@ hover.
     - `primitives/css/inline.Inline`
     - `primitives/css/theme-boundary.Theme`
     - `primitives/icon-button.IconButton`
+    - `primitives/lazy-component.lazyComponent`
     - `primitives/slot-render.defineRenderSlot`
     - `ui/icons.Icon`
     - `ui/theme-engine.ThemeEngine`
@@ -136,6 +137,7 @@ hover.
     - `WebsiteHeader`
     - `WebsiteHero`
     - `WebsiteNavLink`
+    - `websitePagePart`
     - `WebsiteSoon`
 - Server:
   - Contributes: `apps.website.crawlable.page` "/about"
@@ -184,23 +186,8 @@ hover.
     - `ui/tokens/type-scale --font-weight-bold`
     - `ui/tokens/type-scale --font-weight-normal`
     - `ui/tokens/type-scale --font-weight-semibold`
-  - Imported by:
-    - `apps/deploy/site-messages/intake`
-    - `apps/website`
-    - `apps/website/improve`
-    - `apps/website/landing/contact`
-    - `apps/website/landing/hero`
-    - `apps/website/landing/layers`
-    - `apps/website/landing/screenshot`
-    - `apps/website/landing/story-link`
-    - `apps/website/pages/apps`
-    - `apps/website/pages/download`
-    - `apps/website/pages/foundations`
-    - `apps/website/pages/guide`
-    - `apps/website/pages/privacy`
-    - `apps/website/pages/story`
-    - `apps/website/pages/story/essay`
-    - `apps/website/pages/vision`
+  - Imported by: 21 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×19
     - `companions/browser-extension/equin-site`
     - `hints/help-menu`
 

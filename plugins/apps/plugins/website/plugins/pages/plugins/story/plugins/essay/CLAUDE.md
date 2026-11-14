@@ -27,7 +27,7 @@ the design reference: port a change from it rather than editing the copy here.
 
 - Description: The story essay on the story page (WebsiteStory.Section): first contact with agents and the skills that taught them to think more like us (the skills graph, the update skill in full), the friction loop that built the agent manager (Me → Friction → My job, a new friction landing on the line, a head full of agents, and the clickable friction chain that unwinds), a world without friction (the backlog that never fills, the review desk), the restart after Google (two screenshots, opened in the image viewer) and the data view as one primitive reused everywhere (a Notion-like reading list, Claude's two surfaces before, and rebuilt on one data view after).
 - Web:
-  - Contributes: `WebsiteStory.Section` "Story essay" → `StoryEssay`
+  - Contributes: `WebsiteStory.Section` "Story essay" → `LazyBoundary`
   - Uses:
     - `apps/website/pages/story.WebsiteStory`
     - `apps/website/pages/story/data-views.ClaudeAfter`
@@ -37,6 +37,7 @@ the design reference: port a change from it rather than editing the copy here.
     - `apps/website/pages/story/heads.ReviewDesk`
     - `apps/website/pages/story/skills-graph.SkillsGraph`
     - `apps/website/shell.WebsiteBand`
+    - `apps/website/shell.websitePagePart`
     - `primitives/collapsible.FoldMotion`
     - `primitives/collapsible.useCollapsible`
     - `primitives/dom/in-view.createInViewWatcher`

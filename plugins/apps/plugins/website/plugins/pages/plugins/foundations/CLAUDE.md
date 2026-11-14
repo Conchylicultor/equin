@@ -94,6 +94,7 @@ variables.
     - `apps/website/shell.WebsiteChrome`
     - `apps/website/shell.WebsiteHeader`
     - `apps/website/shell.WebsiteNavLink`
+    - `apps/website/shell.websitePagePart`
     - `primitives/dom/auto-scroll.findScrollParent`
     - `primitives/dom/auto-scroll.keepInPlace`
     - `primitives/dom/auto-scroll.scrollChildIntoView`

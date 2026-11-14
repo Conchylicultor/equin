@@ -49,3 +49,25 @@ describe("useLazyReady in a static render", () => {
     await expect(prerenderToHtml(<Host />)).rejects.toThrow("chunk failed");
   });
 });
+
+// Mounted on its own, a lazy component in a static render must not ship its
+// loading state (the prerender renders a Suspense fallback eagerly, and
+// `<Loading>` refuses a static render): it waits for its chunk instead.
+describe("a lazy component mounted on its own in a static render", () => {
+  test("waits for its chunk and renders it, never its fallback", async () => {
+    const Lazy = lazyComponent(
+      () =>
+        new Promise<{ default: typeof Body }>((resolve) =>
+          setTimeout(() => resolve({ default: Body }), 10),
+        ),
+    );
+    expect(await prerenderToHtml(<Lazy />)).toBe("<b>body</b>");
+  });
+
+  test("a failed load fails the render", async () => {
+    const Lazy = lazyComponent<object>(() =>
+      Promise.reject(new Error("chunk failed")),
+    );
+    await expect(prerenderToHtml(<Lazy />)).rejects.toThrow("chunk failed");
+  });
+});

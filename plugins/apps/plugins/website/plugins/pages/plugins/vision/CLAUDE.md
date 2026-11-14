@@ -122,6 +122,7 @@ renders below the zoom.
     - `apps/website/shell.WebsiteHeader`
     - `apps/website/shell.WebsiteHero`
     - `apps/website/shell.WebsiteNavLink`
+    - `apps/website/shell.websitePagePart`
     - `primitives/dom/auto-scroll.findScrollParent`
     - `primitives/dom/element-size.useResizeObserver`
     - `primitives/dom/in-view.createInViewWatcher`

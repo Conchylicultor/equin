@@ -10,6 +10,8 @@ import {
   markDeferredPluginsFailed,
   missingCompanions,
   pluginLoadReportSink,
+  hasFirstPaintHolds,
+  takeFirstPaintHolds,
 } from "@plugins/framework/plugins/web-sdk/core";
 import type {
   LoadedPlugin,
@@ -461,8 +463,11 @@ function PageApp() {
       const appCodeLoad = loadPlugins(traced(priority, "priority")).then(
         (loaded) => (appCode.loaded = loaded),
       );
+      // The task also waits for what the app's code, while it evaluates, asks
+      // the first frame to hold for (web-sdk's first-paint holds: a code-split
+      // page body the URL shows), so the app still paints whole.
       const appCodeTask: BootTask[] =
-        priority.length === 0
+        priority.length === 0 && !hasFirstPaintHolds()
           ? []
           : [
               {
@@ -470,6 +475,7 @@ function PageApp() {
                 ifUnavailable: "block",
                 run: async () => {
                   await appCodeLoad;
+                  await takeFirstPaintHolds();
                 },
               },
             ];

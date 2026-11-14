@@ -1,6 +1,6 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
-export { SkillsGraph } from "./components/skills-graph";
+export { SkillsGraph } from "./figures";
 
 export default {
   description:

@@ -12322,8 +12322,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `WebsiteHeader` "apps" → `AppsNavItem`
                   - `ThemeEngine.SubTheme` "equin closing"
                   - `ThemeEngine.SubTheme` "equin gallery"
-                - Uses: 35 symbols — full list in [`plugins/apps/plugins/website/plugins/pages/plugins/apps/REFERENCE.md`](../plugins/apps/plugins/website/plugins/pages/plugins/apps/REFERENCE.md)
-                  - `apps/website/shell` ×5
+                - Uses: 36 symbols — full list in [`plugins/apps/plugins/website/plugins/pages/plugins/apps/REFERENCE.md`](../plugins/apps/plugins/website/plugins/pages/plugins/apps/REFERENCE.md)
+                  - `apps/website/shell` ×6
                   - `primitives/css/ui-kit` ×4
                   - `primitives/pane` ×4
                   - `primitives/avatar` ×2
@@ -12381,8 +12381,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ThemeEngine.SubTheme` "equin download note"
                   - `ThemeEngine.SubTheme` "equin download tabs"
                   - `ThemeEngine.SubTheme` "equin download"
-                - Uses: 33 symbols — full list in [`plugins/apps/plugins/website/plugins/pages/plugins/download/REFERENCE.md`](../plugins/apps/plugins/website/plugins/pages/plugins/download/REFERENCE.md)
-                  - `apps/website/shell` ×6
+                - Uses: 34 symbols — full list in [`plugins/apps/plugins/website/plugins/pages/plugins/download/REFERENCE.md`](../plugins/apps/plugins/website/plugins/pages/plugins/download/REFERENCE.md)
+                  - `apps/website/shell` ×7
                   - `primitives/collapsible` ×4
                   - `primitives/css/spacing` ×3
                   - `primitives/pane` ×3
@@ -12437,6 +12437,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `apps/website/shell.WebsiteChrome`
                   - `apps/website/shell.WebsiteHeader`
                   - `apps/website/shell.WebsiteNavLink`
+                  - `apps/website/shell.websitePagePart`
                   - `primitives/dom/auto-scroll.findScrollParent`
                   - `primitives/dom/auto-scroll.keepInPlace`
                   - `primitives/dom/auto-scroll.scrollChildIntoView`
@@ -12507,6 +12508,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `apps/website/shell.WebsiteFooterLink`
                   - `apps/website/shell.WebsiteHeader`
                   - `apps/website/shell.WebsiteHero`
+                  - `apps/website/shell.websitePagePart`
                   - `primitives/css/ui-kit.Button`
                   - `primitives/pane.defineRoute`
                   - `primitives/pane.Pane`
@@ -12541,6 +12543,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `apps/website/shell.WebsiteHeader`
                   - `apps/website/shell.WebsiteHero`
                   - `apps/website/shell.WebsiteNavLink`
+                  - `apps/website/shell.websitePagePart`
                   - `primitives/pane.defineRoute`
                   - `primitives/pane.Pane`
                   - `primitives/pane.useOpenPane`
@@ -12576,6 +12579,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - **`data-views`** — The story's data-view figures, pictures drawn on invented data (never live collections): <NotionDataView> (a Notion-like reading list on the same data view as the Artifacts page — views, search, filter, sort, layout, group by, infinite scroll), <ClaudeBefore> (the Claude app's sidebar and Artifacts page, cloned from claude.ai's light theme, two partial reimplementations of a data view) and <ClaudeAfter> (the same two surfaces rebuilt on one data-view primitive). Under the Claude figures, one feature line per capability; hovering one opens that capability in both surfaces at once, boxed by one highlight per surface, lists scrolling it into view and back, menu trees that never move once open.
                   - Web:
                     - Uses:
+                      - `apps/website/shell.websitePagePart`
                       - `primitives/dom/auto-scroll.glideScroll`
                       - `primitives/dom/auto-scroll.restoreScrollOffset`
                       - `primitives/dom/auto-scroll.scrollToTop`
@@ -12593,7 +12597,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                     - Imported by: `apps/website/pages/story/essay`
                 - **`essay`** — The story essay on the story page (WebsiteStory.Section): first contact with agents and the skills that taught them to think more like us (the skills graph, the update skill in full), the friction loop that built the agent manager (Me → Friction → My job, a new friction landing on the line, a head full of agents, and the clickable friction chain that unwinds), a world without friction (the backlog that never fills, the review desk), the restart after Google (two screenshots, opened in the image viewer) and the data view as one primitive reused everywhere (a Notion-like reading list, Claude's two surfaces before, and rebuilt on one data view after).
                   - Web:
-                    - Contributes: `WebsiteStory.Section` "Story essay" → `StoryEssay`
+                    - Contributes: `WebsiteStory.Section` "Story essay" → `LazyBoundary`
                     - Uses:
                       - `apps/website/pages/story.WebsiteStory`
                       - `apps/website/pages/story/data-views.ClaudeAfter`
@@ -12603,6 +12607,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `apps/website/pages/story/heads.ReviewDesk`
                       - `apps/website/pages/story/skills-graph.SkillsGraph`
                       - `apps/website/shell.WebsiteBand`
+                      - `apps/website/shell.websitePagePart`
                       - `primitives/collapsible.FoldMotion`
                       - `primitives/collapsible.useCollapsible`
                       - `primitives/dom/in-view.createInViewWatcher`
@@ -12620,6 +12625,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - **`heads`** — The story's two head figures, drawn around one line-profile head with the same little robots: <MindOverload> (agents crowd in from every side, each pushing its conversation into the head, where the phrases jostle until an answer travels back out — the head is never clear) and <ReviewDesk> (ideas leave the head as agents working in the background, come back to wait in a line on the desk, and are reviewed one at a time — closed, or sent back to work). Each runs only while on screen; reduced motion gets a still.
                   - Web:
                     - Uses:
+                      - `apps/website/shell.websitePagePart`
                       - `primitives/dom/element-size.useResizeObserver`
                       - `primitives/dom/in-view.createInViewWatcher`
                     - Exports (values):
@@ -12631,6 +12637,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - **`skills-graph`** — The story's skills graph: <SkillsGraph> draws the author's skills as a program — AGENTS.md as main(), the everyday skills (complete a task, answer a question, fix a bug, write tests first) funnelling into the meta skills (self-improvement, meta-fix, think a level higher, update skill, write a skill) in the highlight colour — with one run of execution travelling down it while on screen, and each skill's file and purpose on hover.
                   - Web:
                     - Uses:
+                      - `apps/website/shell.websitePagePart`
                       - `primitives/dom/element-size.useResizeObserver`
                       - `primitives/dom/in-view.createInViewWatcher`
                     - Exports (values): `SkillsGraph`
@@ -12648,6 +12655,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `apps/website/shell.WebsiteHeader`
                   - `apps/website/shell.WebsiteHero`
                   - `apps/website/shell.WebsiteNavLink`
+                  - `apps/website/shell.websitePagePart`
                   - `primitives/dom/auto-scroll.findScrollParent`
                   - `primitives/dom/element-size.useResizeObserver`
                   - `primitives/dom/in-view.createInViewWatcher`
@@ -12782,8 +12790,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ThemeEngine.Theme` "equin"
               - `ThemeEngine.SubTheme` "equin document"
               - `ThemeEngine.SubTheme` "equin page heading"
-            - Uses: 26 symbols — full list in [`plugins/apps/plugins/website/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/website/plugins/shell/REFERENCE.md)
-              - `primitives/pane` ×6
+            - Uses: 28 symbols — full list in [`plugins/apps/plugins/website/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/website/plugins/shell/REFERENCE.md)
+              - `primitives/pane` ×7
               - `primitives/css/spacing` ×3
               - `apps/deploy/analytics/collect` ×2
               - `primitives/css/text` ×2
@@ -12796,6 +12804,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/inline.Inline`
               - `primitives/css/theme-boundary.Theme`
               - `primitives/icon-button.IconButton`
+              - `primitives/lazy-component.lazyComponent`
               - `primitives/slot-render.defineRenderSlot`
               - `ui/icons.Icon`
               - `ui/theme-engine.ThemeEngine`
@@ -12811,6 +12820,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `WebsiteHeader`
               - `WebsiteHero`
               - `WebsiteNavLink`
+              - `websitePagePart`
               - `WebsiteSoon`
           - Server:
             - Contributes: `apps.website.crawlable.page` "/about"
@@ -12859,23 +12869,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-weight-bold`
               - `ui/tokens/type-scale --font-weight-normal`
               - `ui/tokens/type-scale --font-weight-semibold`
-            - Imported by:
-              - `apps/deploy/site-messages/intake`
-              - `apps/website`
-              - `apps/website/improve`
-              - `apps/website/landing/contact`
-              - `apps/website/landing/hero`
-              - `apps/website/landing/layers`
-              - `apps/website/landing/screenshot`
-              - `apps/website/landing/story-link`
-              - `apps/website/pages/apps`
-              - `apps/website/pages/download`
-              - `apps/website/pages/foundations`
-              - `apps/website/pages/guide`
-              - `apps/website/pages/privacy`
-              - `apps/website/pages/story`
-              - `apps/website/pages/story/essay`
-              - `apps/website/pages/vision`
+            - Imported by: 21 plugins — full list in [`plugins/apps/plugins/website/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/website/plugins/shell/REFERENCE.md)
+              - `apps` ×19
               - `companions/browser-extension/equin-site`
               - `hints/help-menu`
 
@@ -32974,7 +32969,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defineSlot`
           - `defineSlotFacade`
           - `getDeferredLoadState`
+          - `hasFirstPaintHolds`
           - `hasLoadErrorUnder`
+          - `holdFirstPaint`
           - `isDeferredPluginPath`
           - `loadPlugins`
           - `markDeferredLoadComplete`
@@ -32989,6 +32986,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SLOT_READ_TIMING_PREFIX`
           - `slots`
           - `subscribeDeferredLoadState`
+          - `takeFirstPaintHolds`
           - `UNSAFE_unsealSlotComponent`
           - `useCompanionLookup`
           - `useComposition`
@@ -33002,8 +33000,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `webCollectedDir`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
-        - Imported by: 107 plugins — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
-          - `primitives` ×23
+        - Imported by: 108 plugins — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
+          - `primitives` ×24
           - `apps` ×18
           - `ui` ×8
           - `apps-core` ×6
@@ -51832,6 +51830,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/sonata/piano-roll/fx-core`
           - `apps/sonata/piano-roll/fx-ripples`
           - `apps/sonata/piano-roll/fx-shatter`
+          - `apps/website/shell`
           - `map/google`
           - `page/math/render`
           - `primitives/graph-canvas`

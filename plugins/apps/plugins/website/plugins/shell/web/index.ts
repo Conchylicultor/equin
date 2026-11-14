@@ -26,6 +26,7 @@ export type { WebsiteBandRhythm } from "./components/website-band";
 export { WebsiteChrome } from "./components/website-chrome";
 export { useWebsiteSectionReach } from "./internal/section-reach";
 export { landingPane } from "./panes";
+export { websitePagePart } from "./internal/page-part";
 
 export default {
   description:
