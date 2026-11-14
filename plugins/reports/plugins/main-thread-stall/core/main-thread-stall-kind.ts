@@ -120,6 +120,25 @@ export const StallStacksSchema = z.discriminatedUnion("kind", [
 ]);
 export type StallStacks = z.infer<typeof StallStacksSchema>;
 
+// The stalled tab's JS heap around the freeze (web/internal/heap-watch.ts):
+// in use at its last reading before the stall began (`beforeAgoMs` earlier;
+// null when it had none) and right after it, against the heap's ceiling. It
+// tells apart what sampled stacks with no JS cannot: V8 collecting garbage
+// near its limit (high before, near `limitMb`, lower after), a process starved
+// of CPU, or JS the profiler may not show. `measured` only for a stall the
+// stalled tab survived and filed; otherwise `unavailable` with the reason.
+export const StallMemorySchema = z.discriminatedUnion("kind", [
+  z.object({
+    kind: z.literal("measured"),
+    beforeMb: z.number().nullable(),
+    beforeAgoMs: z.number().nullable(),
+    afterMb: z.number(),
+    limitMb: z.number(),
+  }),
+  z.object({ kind: z.literal("unavailable"), reason: z.string() }),
+]);
+export type StallMemory = z.infer<typeof StallMemorySchema>;
+
 // The browser a stall happened in, coarsely: family and OS only — never the
 // user agent, a version or anything else that narrows who it was (a website
 // visitor's stall is filed by a stranger's browser). Read by the filing tab,
@@ -204,6 +223,12 @@ export const MainThreadStallPayloadSchema = StallTabSchema.extend({
     kind: "unavailable",
     reason: "filed before stall reports carried sampled stacks",
   }),
+  // The stalled tab's JS heap around it (see StallMemorySchema). Evidence
+  // only, like `stacks`.
+  memory: StallMemorySchema.default({
+    kind: "unavailable",
+    reason: "filed before stall reports carried the heap",
+  }),
   // The browser it happened in (see StallClientSchema). Evidence only, like
   // `stacks`: never part of the fingerprint or summary.
   client: StallClientSchema.default({ family: "unknown", os: "unknown" }),
@@ -213,15 +238,16 @@ export type MainThreadStallPayload = z.infer<
 >;
 
 /**
- * A stall as the watchdog knows it: everything but `stacks`, which only the
- * stalled tab can add (its profiler ran on its own thread) when it files, and
+ * A stall as the watchdog knows it: everything but `stacks` and `memory`,
+ * which only the stalled tab can add (its profiler ran on its own thread, its
+ * heap is its own) when it files, and
  * `client`, which the filing tab reads. It is also all the fingerprint and
  * summary may read — the same freeze stays one row whatever its sampled
  * stacks or browser were.
  */
 export type MainThreadStallDraft = Omit<
   MainThreadStallPayload,
-  "stacks" | "client"
+  "stacks" | "memory" | "client"
 >;
 
 /**

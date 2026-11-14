@@ -184,6 +184,37 @@ export const VisitorStallSchema = z.discriminatedUnion("kind", [
           })
           .strict(),
       ]),
+      /**
+       * The stalled tab's JS heap (MB) just before and right after the stall,
+       * and its limit: a heap near its limit means a stall with no JS sampled
+       * was V8 collecting garbage. Unavailable on a payload filed before it
+       * was kept.
+       */
+      memory: z
+        .discriminatedUnion("kind", [
+          z
+            .object({
+              kind: z.literal("measured"),
+              beforeMb: Ms.nullable(),
+              beforeAgoMs: Ms.nullable(),
+              afterMb: Ms,
+              limitMb: Ms,
+            })
+            .strict(),
+          z
+            .object({
+              kind: z.literal("unavailable"),
+              reason: plainLine(
+                "memory reason",
+                VISITOR_ERROR_LIMITS.maxStallReason,
+              ),
+            })
+            .strict(),
+        ])
+        .default({
+          kind: "unavailable",
+          reason: "filed before stall reports carried the heap",
+        }),
       /** Browser family and OS (`unknown` on a payload filed before it was kept). */
       client: z
         .object({ family: z.enum(CLIENT_FAMILIES), os: z.enum(CLIENT_OSES) })

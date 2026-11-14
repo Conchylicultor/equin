@@ -885,6 +885,7 @@ describe("sampled stacks", () => {
     if (!d) throw new Error("no stall delivered");
     expect("stacks" in d).toBe(false);
     expect("client" in d).toBe(false);
+    expect("memory" in d).toBe(false);
     return d;
   }
 
@@ -893,6 +894,13 @@ describe("sampled stacks", () => {
     const sampled: MainThreadStallPayload = {
       ...d,
       client: { family: "chrome", os: "android" },
+      memory: {
+        kind: "measured",
+        beforeMb: 3_900,
+        beforeAgoMs: 5,
+        afterMb: 1_200,
+        limitMb: 4_000,
+      },
       stacks: {
         kind: "sampled",
         sampleIntervalMs: 20,
@@ -906,6 +914,7 @@ describe("sampled stacks", () => {
     const unavailable: MainThreadStallPayload = {
       ...d,
       client: { family: "safari", os: "macos" },
+      memory: { kind: "unavailable", reason: "filed by another tab" },
       stacks: { kind: "unavailable", reason: "filed by another tab" },
     };
     expect(mainThreadStallFingerprint(sampled)).toBe(

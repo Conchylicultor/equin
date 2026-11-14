@@ -52,6 +52,12 @@ function stallLines(s: VisitorStall | null): string[] {
   } else {
     lines.push(`- **Sampled stacks:** unavailable — \`${st.reason}\``);
   }
+  const m = s.memory;
+  lines.push(
+    m.kind === "measured"
+      ? `- **JS heap:** ${m.beforeMb ?? "?"} MB before${m.beforeAgoMs !== null && m.beforeAgoMs > 1500 ? ` (read ${m.beforeAgoMs} ms before it began)` : ""}, ${m.afterMb} MB after, limit ${m.limitMb} MB — near the limit, a stall with no JS sampled is V8 collecting garbage`
+      : `- **JS heap:** unavailable — \`${m.reason}\``,
+  );
   return lines;
 }
 

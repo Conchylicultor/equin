@@ -12,6 +12,7 @@ import { stallInteraction, type InteractionBegin } from "./interaction-judge";
 import { fileStall } from "./file-stall";
 import { topFunction } from "./stall-machine";
 import { LOG_CHANNEL } from "./log-channel";
+import type { HeapWatch } from "./heap-watch";
 import type { StallProfiler } from "./stall-profiler";
 
 // The detector for a browser without SharedWorker (Chrome for Android before
@@ -37,7 +38,7 @@ const markerStore = defineStore({
 /** File what the previous page of this tab left open, then keep a heartbeat. Returns the disposer. */
 export function installInTabFallback(
   readTab: () => StallTab,
-  profiler: StallProfiler,
+  evidence: { profiler: StallProfiler; heap: HeapWatch },
 ): {
   /** `beganIn`: the interaction dispatched while the frame ran, if any. */
   onFrame(
@@ -55,7 +56,7 @@ export function installInTabFallback(
     if (gap >= STALL.REPORT_MIN_MS) {
       void fileStall(
         payload(left.value.tab, left.value.aliveAt, now, "unknown", null),
-        profiler,
+        evidence,
         readTab().tabId,
       );
     } else {
@@ -73,7 +74,8 @@ export function installInTabFallback(
   let timer: ReturnType<typeof setInterval> | null = null;
   const beat = (): void => {
     markerStore.write("", { tab: readTab(), aliveAt: Date.now() });
-    profiler.pulse();
+    evidence.profiler.pulse();
+    evidence.heap.pulse();
   };
   const sync = (): void => {
     const visible = document.visibilityState === "visible";
@@ -109,7 +111,7 @@ export function installInTabFallback(
           ...payload(tab, frame.startedAt, endedAt, "recovered", frame),
           interaction: begin ? stallInteraction(begin, [frame], endedAt) : null,
         },
-        profiler,
+        evidence,
         tab.tabId,
       );
     },

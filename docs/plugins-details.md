@@ -57368,6 +57368,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `StallFrame`
           - `StallFrameScript`
           - `StallInteraction`
+          - `StallMemory`
           - `StallStack`
           - `StallStacks`
           - `StallTab`

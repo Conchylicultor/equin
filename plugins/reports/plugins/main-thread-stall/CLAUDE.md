@@ -100,6 +100,32 @@ when the thread froze samples THROUGH the freeze.
   time, `truncated` when the buffer filled before the stall ended.
 - **Never identity**: the fingerprint and summary take `MainThreadStallDraft`,
   so they cannot read `stacks` (tsc) — the same freeze stays one row.
+- **No JS on the stack is ambiguous**: a sample has no stack in GC, style,
+  layout, paint or other native work, when the thread is not scheduled, and
+  for JS the profiler may not show (cross-origin without CORS, an extension,
+  CDP-evaluated code — measured: a 500 ms busy loop run through
+  `Runtime.evaluate` samples as no JS). Sampler gaps (`sampledMs` well under
+  the duration) mean the whole renderer was short of CPU.
+
+## The heap around it
+
+So a recovered stall also carries `memory` (`web/internal/heap-watch.ts`):
+the stalled tab's `performance.memory` in use at its last reading before the
+stall (read on each ping / heartbeat beside the profiler's rotation — no
+timer, a frozen thread reads nothing), right after it, and the heap limit.
+Near the limit, a stall with no visible JS is V8 collecting garbage at its
+ceiling: look for what holds memory, not the task it froze in. Same rules as
+`stacks`: only the stalled tab, recovered, has it (else `unavailable` with the
+reason), and never identity. The visitor import keeps it (whole MB).
+
+## Which MessagePort handler
+
+`(anonymous) (MessagePort.onmessage)` is not React: React's scheduler runs
+every render and commit from `performWorkUntilDeadline`, a NAMED
+`MessageChannel` handler (LoAF `sourceFunctionName` `performWorkUntilDeadline`,
+or its minified name). An anonymous one is one of the app's own port
+handlers (browser-server's `port.ts`, the shared socket, this watchdog) — and
+LoAF counts the microtasks a handler's resolved promises run in its time.
 
 ## A freeze a click started names the click
 
@@ -287,6 +313,7 @@ renderer forever — so the script kills it with CDP `Page.crash`.
     - `StallFrame`
     - `StallFrameScript`
     - `StallInteraction`
+    - `StallMemory`
     - `StallStack`
     - `StallStacks`
     - `StallTab`

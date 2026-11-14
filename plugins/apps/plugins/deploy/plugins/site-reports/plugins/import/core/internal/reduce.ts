@@ -225,6 +225,21 @@ export function reduceStall(data: unknown): VisitorStall {
             reason:
               sanitizeLine(d.stacks.reason, L.maxStallReason) || "(none given)",
           },
+    memory:
+      d.memory.kind === "measured"
+        ? {
+            kind: "measured",
+            beforeMb: d.memory.beforeMb === null ? null : ms(d.memory.beforeMb),
+            beforeAgoMs:
+              d.memory.beforeAgoMs === null ? null : ms(d.memory.beforeAgoMs),
+            afterMb: ms(d.memory.afterMb),
+            limitMb: ms(d.memory.limitMb),
+          }
+        : {
+            kind: "unavailable",
+            reason:
+              sanitizeLine(d.memory.reason, L.maxStallReason) || "(none given)",
+          },
     client: d.client,
   };
 }

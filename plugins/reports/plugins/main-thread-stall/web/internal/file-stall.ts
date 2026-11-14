@@ -10,6 +10,7 @@ import {
 import { STALL } from "./constants";
 import { coarseClient } from "./coarse-client";
 import { topFunction } from "./stall-machine";
+import type { HeapWatch } from "./heap-watch";
 import type { StallProfiler } from "./stall-profiler";
 
 // The slow-op every main-thread stall lands as: one row per (app, route
@@ -41,17 +42,18 @@ function emitSlowOp(opts: {
  * File one finished stall: the report (the alert) and its slow-op (the
  * interval). Its stacks are this tab's sampled profile of the stall when the
  * tab is the one that stalled and survived it (`stacksFor` says why not
- * otherwise); its client is this browser's family and OS. Resolves whether the report landed — the caller acks the
+ * otherwise), and so is its heap; its client is this browser's family and OS. Resolves whether the report landed — the caller acks the
  * watchdog with it, which keeps the stored record on a failure.
  */
 export async function fileStall(
   draft: MainThreadStallDraft,
-  profiler: StallProfiler,
+  evidence: { profiler: StallProfiler; heap: HeapWatch },
   ownTabId: string,
 ): Promise<boolean> {
   const payload: MainThreadStallPayload = {
     ...draft,
-    stacks: await profiler.stacksFor(draft, ownTabId),
+    stacks: await evidence.profiler.stacksFor(draft, ownTabId),
+    memory: evidence.heap.memoryFor(draft, ownTabId),
     // The filing tab is always of the stalled tab's browser (one origin's
     // SharedWorker, or the tab itself).
     client: coarseClient(navigator.userAgent),

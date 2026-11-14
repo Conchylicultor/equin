@@ -20,6 +20,7 @@ export type {
   StallInteraction,
   StallStack,
   StallStacks,
+  StallMemory,
   StallTab,
   TaskMark,
 } from "./main-thread-stall-kind";

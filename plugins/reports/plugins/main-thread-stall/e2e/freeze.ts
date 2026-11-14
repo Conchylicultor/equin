@@ -48,6 +48,12 @@ interface StallRow extends Record<string, unknown> {
     topFunction: string | null;
     tabId: string;
     durationIsLowerBound: boolean;
+    memory?: {
+      kind: string;
+      beforeMb?: number | null;
+      afterMb?: number;
+      limitMb?: number;
+    };
     frozenIn?: { source: string; what: string } | null;
   };
   fingerprint: string;
@@ -113,6 +119,14 @@ await withBrowser(async (h) => {
     "an unmarked loop names no frozen task",
     rec?.data.frozenIn === null,
     JSON.stringify(rec?.data.frozenIn),
+  );
+  r.ok(
+    "the recovered tab files its heap before and after the stall",
+    rec?.data.memory?.kind === "measured" &&
+      typeof rec.data.memory.beforeMb === "number" &&
+      (rec.data.memory.afterMb ?? 0) > 0 &&
+      (rec.data.memory.limitMb ?? 0) > 0,
+    JSON.stringify(rec?.data.memory),
   );
 
   // ── 1b. A freeze inside a marked task ──────────────────────────────────
@@ -196,6 +210,11 @@ await withBrowser(async (h) => {
     "an unmarked endless loop names no frozen task",
     g?.data.frozenIn === null,
     JSON.stringify(g?.data.frozenIn),
+  );
+  r.ok(
+    "a gone tab's heap is unavailable, with the reason",
+    g?.data.memory?.kind === "unavailable",
+    JSON.stringify(g?.data.memory),
   );
   r.ok(
     "it lasted ≥ 5 s",

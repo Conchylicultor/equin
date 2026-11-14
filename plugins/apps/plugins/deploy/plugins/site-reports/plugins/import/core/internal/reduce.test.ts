@@ -316,6 +316,10 @@ describe("reduceSiteReport: main-thread stalls", () => {
           { fn: null, ms: 20 },
         ],
       },
+      memory: {
+        kind: "unavailable",
+        reason: "filed before stall reports carried the heap",
+      },
       client: { family: "chrome", os: "android" },
     });
     // No URL, page or source position survives anywhere in the evidence.
@@ -346,6 +350,30 @@ describe("reduceSiteReport: main-thread stalls", () => {
     expect(r.stall?.kind === "stall" && r.stall.stacks).toEqual({
       kind: "unavailable",
       reason: "no 'Profiler' 'b'here'/b'",
+    });
+  });
+
+  test("the heap around the stall is kept as whole megabytes", () => {
+    const r = reduceSiteReport(
+      stallRecord(
+        stallData({
+          memory: {
+            kind: "measured",
+            beforeMb: 3_701.4,
+            beforeAgoMs: 120,
+            afterMb: 2_104,
+            limitMb: 3_760,
+          },
+        }),
+      ),
+      SITE,
+    );
+    expect(r.stall?.kind === "stall" && r.stall.memory).toEqual({
+      kind: "measured",
+      beforeMb: 3_701,
+      beforeAgoMs: 120,
+      afterMb: 2_104,
+      limitMb: 3_760,
     });
   });
 

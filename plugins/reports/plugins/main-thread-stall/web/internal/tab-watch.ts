@@ -23,6 +23,7 @@ import {
   type LoafEntry,
 } from "./loaf";
 import { LOG_CHANNEL } from "./log-channel";
+import { installHeapWatch } from "./heap-watch";
 import { installStallProfiler } from "./stall-profiler";
 
 // The prefix of every browser-visible name the watchdog takes; the worker reads
@@ -59,7 +60,10 @@ export function installStallWatch(readTab: () => StallTab): StallWatch {
   // Sampled while visible, rotated on each ping / heartbeat: the stacks a
   // recovered stall's report carries.
   const profiler = installStallProfiler();
-  const fallback = useWorker ? null : installInTabFallback(readTab, profiler);
+  // Read on the same clock: the heap just before and right after a stall.
+  const heap = installHeapWatch();
+  const evidence = { profiler, heap };
+  const fallback = useWorker ? null : installInTabFallback(readTab, evidence);
   if (!useWorker) {
     clientLog(
       LOG_CHANNEL,
@@ -100,9 +104,10 @@ export function installStallWatch(readTab: () => StallTab): StallWatch {
       case "ping":
         post({ kind: "pong" });
         profiler.pulse();
+        heap.pulse();
         return;
       case "file":
-        void fileStall(msg.payload, profiler, readTab().tabId).then((ok) => {
+        void fileStall(msg.payload, evidence, readTab().tabId).then((ok) => {
           if (s === session) post({ kind: "filed", id: msg.id, ok });
         });
         return;
