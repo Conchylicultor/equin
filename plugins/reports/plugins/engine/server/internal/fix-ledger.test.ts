@@ -26,7 +26,7 @@ import { collectContributions } from "@plugins/framework/plugins/server-core/cor
 import { clearCollectedContributions } from "@plugins/framework/plugins/server-core/core/testing";
 import { runGit } from "@plugins/primitives/plugins/commit-list/server";
 import { _notifications } from "@plugins/shell/plugins/notifications/server";
-import { _reports, ReportKind } from "@plugins/reports/server";
+import { _reports, ReportKind, ReportRecorded } from "@plugins/reports/server";
 import { reportIdKind, type ReportId } from "@plugins/reports/core";
 import { writeReport } from "./record-report";
 import { reportsProducer } from "./producer";
@@ -43,6 +43,10 @@ const REPORT = reportIdKind.key("report-fix-ledger-test");
 // one only from code before the fix, one also from code containing it.
 const BEFORE_ONLY = reportIdKind.key("report-fix-ledger-before-only");
 const SEEN_AFTER = reportIdKind.key("report-fix-ledger-seen-after");
+
+// The reports announced to ReportRecorded listeners (supervisor streams, the
+// investigations automation), in order.
+const announced: string[] = [];
 
 describe("fix ledger (real DB)", () => {
   let t: TestDb;
@@ -80,6 +84,10 @@ describe("fix ledger (real DB)", () => {
               category: "error",
             },
             renderTask: () => ({ title: "t", description: "d" }),
+          }),
+          ReportRecorded({
+            id: "test/recorded",
+            onRecorded: (id) => announced.push(id),
           }),
         ],
       },
@@ -189,7 +197,10 @@ describe("fix ledger (real DB)", () => {
 
   test("a regression files a new row on top in the kind's variant, restates the old one, and unlinks the task", async () => {
     const [old] = await notes();
+    announced.length = 0;
     await stampRegression(REPORT, fix, later, new Date(), t.db);
+    // Back on the worklist, so its listeners hear of it (once).
+    expect(announced).toEqual([REPORT]);
     expect(await report()).toMatchObject({
       fixState: "regressed",
       fixCommit: fix,
@@ -207,6 +218,7 @@ describe("fix ledger (real DB)", () => {
     // The first regression wins: a second one changes nothing.
     await stampRegression(REPORT, fix, later, new Date(), t.db);
     expect(await notes()).toHaveLength(2);
+    expect(announced).toEqual([REPORT]);
   });
 
   describe("a claim on an earlier commit (Report-fixed-by)", () => {

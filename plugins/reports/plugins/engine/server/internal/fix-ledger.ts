@@ -26,6 +26,7 @@ import { _reportFixes } from "./tables";
 import { readFixClaims, type FixClaim } from "./fix-trailers";
 import { fixNoticeOf } from "./fix-notice";
 import { ringRowBell } from "./bell";
+import { announceRecorded } from "./recorded";
 import { defineRefReaction } from "@plugins/infra/plugins/git/plugins/git-watcher/server";
 
 // The fix ledger (`report_fixes`) and the one writer of a report's derived
@@ -94,7 +95,12 @@ export async function deriveReportFixState(
     );
     if (!row) return;
     await restateByMetadata("reportId", reportId, fixNoticeOf(standing), conn);
-    if (regressed) await ringRowBell(row, conn);
+    if (regressed) {
+      await ringRowBell(row, conn);
+      // Back on the worklist: its listeners hear of it as of a fresh
+      // occurrence (the regressing one was written with the task linked).
+      announceRecorded(row);
+    }
   });
 }
 

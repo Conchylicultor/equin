@@ -22,12 +22,12 @@ import { reportsProducer } from "./producer";
 import { reportOutboxSink } from "./outbox-sink";
 import { bumpWindowAndCheck } from "./velocity";
 import { isNoiseReport } from "./noise";
+import { announceRecorded } from "./recorded";
 import { noiseInputOf } from "./noise-input";
 import {
   _reports,
   createFanOutGate,
   ReportKind,
-  ReportRecorded,
   type StormSummary,
 } from "@plugins/reports/server";
 import { pickIncidentBell } from "./incident";
@@ -456,9 +456,7 @@ async function fileReport(input: ReportInput): Promise<FiledReport> {
     );
   }
 
-  if (row.taskId === null && !row.noise) {
-    for (const l of ReportRecorded.getContributions()) l.onRecorded(row.id);
-  }
+  announceRecorded(row);
   // A report with a live or pending fix: does this occurrence's code contain
   // it? Judged off the recording path (a git read), and only for these rows.
   if (
