@@ -289,6 +289,47 @@ describe("sinkHandlers — attached in the ready barrier", () => {
   });
 });
 
+// Shutdown is the boot's mirror image: a plugin tears down only once every
+// plugin depending on it has finished its own `onShutdown` — a dependent's final
+// flush (a config read, a DB write) runs against dependencies still up.
+describe("runShutdownHooks — dependents before their dependencies", () => {
+  test("a dependency's onShutdown waits for its dependents' (async, failed or not)", async () => {
+    const log: string[] = [];
+    const errorSpy = spyOn(console, "error").mockImplementation(() => {});
+    const registry: LoadedServerPlugin = {
+      id: "test.registry",
+      onShutdown: () => {
+        log.push("registry down");
+      },
+    };
+    const middle: LoadedServerPlugin = {
+      id: "test.middle",
+      dependsOn: [registry],
+      onShutdown: () => {
+        throw new Error("middle teardown failed");
+      },
+    };
+    const flusher: LoadedServerPlugin = {
+      id: "test.flusher",
+      dependsOn: [middle],
+      onShutdown: async () => {
+        await new Promise((r) => setTimeout(r, 5));
+        log.push("flusher flushed");
+      },
+    };
+    const sibling: LoadedServerPlugin = {
+      id: "test.sibling",
+      dependsOn: [registry],
+      onShutdown: () => {
+        log.push("sibling down");
+      },
+    };
+    await runShutdownHooks([registry, middle, flusher, sibling]);
+    errorSpy.mockRestore();
+    expect(log).toEqual(["sibling down", "flusher flushed", "registry down"]);
+  });
+});
+
 describe("sinkHandler — one handler per sink", () => {
   test("a second handler on an attached sink throws; the same one re-attaches", () => {
     const sink = { register(_fn: ((body: string) => void) | null) {} };

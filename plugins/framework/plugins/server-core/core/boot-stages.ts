@@ -624,20 +624,42 @@ export async function runSettledPhase(
  * plugin's failed teardown must not prevent the others from running theirs.
  * Shared by `serve`'s signal handler and `exec`'s end-of-run teardown, so the
  * two cannot disagree about what "shut this process down" means.
+ *
+ * Graph-driven, the boot's mirror image: a plugin's `onShutdown` starts only
+ * once every plugin that `dependsOn` it has finished its own (settled, failed
+ * or not). So a dependent's teardown — a final flush that reads config, writes
+ * the DB — always runs against dependencies that are still up. Started all at
+ * once, `config_v2` dropped its registry while the latency ledger's flush was
+ * still on its way to a config read, and every shutdown logged "descriptor
+ * \"duress\" is not registered" with the last minute lost.
  */
 export async function runShutdownHooks(
   ordered: LoadedServerPlugin[],
 ): Promise<void> {
-  await Promise.all(
-    ordered.map((p) =>
-      // eslint-disable-next-line promise-safety/no-bare-catch
-      Promise.resolve()
+  const dependents = new Map<string, LoadedServerPlugin[]>();
+  for (const p of ordered) {
+    for (const d of p.dependsOn ?? []) {
+      const list = dependents.get(d.id) ?? [];
+      list.push(p);
+      dependents.set(d.id, list);
+    }
+  }
+  const done = new Map<string, Promise<void>>();
+  // `ordered` is topo-sorted (deps first), so walking it backwards reaches
+  // every dependent before the plugins it depends on.
+  for (const p of [...ordered].reverse()) {
+    const after = (dependents.get(p.id) ?? []).map((c) => done.get(c.id)!);
+    done.set(
+      p.id,
+      // eslint-disable-next-line promise-safety/no-bare-catch -- one failed teardown must not stop the others (logged, see above)
+      Promise.all(after)
         .then(() => p.onShutdown?.())
         .catch((err) =>
           console.error(`[plugin.${p.id}] onShutdown failed`, err),
         ),
-    ),
-  );
+    );
+  }
+  await Promise.all(done.values());
   // After every `onShutdown`: what a draining worker emits on its way out
   // still reaches its handler.
   detachSinkHandlers(ordered);
