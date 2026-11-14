@@ -94,7 +94,6 @@ describe("bridge schemas", () => {
         navigate: true,
         openTab: true,
         close: true,
-        attention: true,
       },
     };
     expect(ExtensionHostInfoSchema.parse(info)).toEqual(info);

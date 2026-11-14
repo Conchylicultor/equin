@@ -1,7 +1,7 @@
 /**
  * The extension's popup: frames the equin page (`/home/browser-extension`)
- * and serves its bridge calls with what only an extension has — the tabs, the
- * toolbar icon, the popup itself. It never calls equin: everything equin does
+ * and serves its bridge calls with what only an extension has — the tabs and
+ * the popup itself. It never calls equin: everything equin does
  * runs inside the frame, same-origin with its server.
  *
  * Bundled by the build (`cli/internal/write-shell.ts`), which writes the equin
@@ -32,28 +32,11 @@ declare const chrome: {
     update(id: number, props: { url: string }): Promise<unknown>;
     create(props: { url: string }): Promise<unknown>;
   };
-  action: {
-    setIcon(d: { path: Record<string, string> }): Promise<void>;
-  };
   runtime: { reload(): void };
 };
 
 /** Chrome's own cap on a popup's height. */
 const MAX_HEIGHT = 600;
-
-/**
- * The toolbar icon, at rest and while the panel needs the user: the logo with
- * a dot in its open quarter (`ui/logo`'s generated attention icons). Not a
- * badge — Chrome draws a badge as a filled box over half the icon.
- */
-const ICONS = {
-  rest: { "16": "icon-16.png", "32": "icon-32.png", "128": "icon-128.png" },
-  attention: {
-    "16": "icon-attention-16.png",
-    "32": "icon-attention-32.png",
-    "128": "icon-attention-128.png",
-  },
-};
 
 function meta(name: string): string {
   const value = document
@@ -101,7 +84,6 @@ const hostInfo: ExtensionHostInfo = {
     navigate: true,
     openTab: true,
     close: true,
-    attention: true,
   },
 };
 
@@ -121,11 +103,6 @@ async function answer(call: BridgeCall): Promise<unknown> {
       return null;
     case "close":
       window.close();
-      return null;
-    case "setAttention":
-      await chrome.action.setIcon({
-        path: call.params.on ? ICONS.attention : ICONS.rest,
-      });
       return null;
     case "setHeight":
       frame.style.height = `${Math.min(call.params.px, MAX_HEIGHT)}px`;

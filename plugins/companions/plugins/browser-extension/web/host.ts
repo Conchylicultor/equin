@@ -32,7 +32,6 @@ export type ExtensionHost =
       navigate: ((url: string) => Promise<void>) | null;
       openTab: ((url: string) => Promise<void>) | null;
       close: (() => Promise<void>) | null;
-      setAttention: ((on: boolean) => Promise<void>) | null;
       setHeight: (px: number) => Promise<void>;
       reload: () => Promise<void>;
     };
@@ -93,9 +92,6 @@ async function presentHost(call: Call): Promise<ExtensionHost> {
       : null,
     close: caps.close
       ? () => done(call({ method: "close", params: {} }))
-      : null,
-    setAttention: caps.attention
-      ? (on) => done(call({ method: "setAttention", params: { on } }))
       : null,
     setHeight: (px) => done(call({ method: "setHeight", params: { px } })),
     reload: () => done(call({ method: "reload", params: {} })),

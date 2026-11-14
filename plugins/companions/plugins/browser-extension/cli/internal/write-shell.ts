@@ -19,15 +19,11 @@ import {
 const SHELL_SOURCES =
   "plugins/companions/plugins/browser-extension/browser-extension";
 
-/** The icons the shell ships, each from the generated logo PNG at that path's
- *  end: the manifest's (at rest) and the attention ones the popup swaps in. */
+/** The icons the manifest names, each from the generated logo PNG at that path's end. */
 const ICONS: readonly { name: string; logo: string }[] = [
   { name: "icon-16.png", logo: "/icon_16x16.png" },
   { name: "icon-32.png", logo: "/icon_32x32.png" },
   { name: "icon-128.png", logo: "/icon_512x512.png" },
-  { name: "icon-attention-16.png", logo: "/attention_16x16.png" },
-  { name: "icon-attention-32.png", logo: "/attention_32x32.png" },
-  { name: "icon-attention-128.png", logo: "/attention_128x128.png" },
 ];
 
 export type ShellWrite =
