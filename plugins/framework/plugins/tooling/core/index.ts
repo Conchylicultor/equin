@@ -14,6 +14,7 @@ export { InconclusiveCheckError } from "./inconclusive";
 export {
   assertRepoPath,
   dropIgnoredPaths,
+  type IgnoredPathsDropped,
   listAllRepoMembers,
   listRepoMembers,
   loadRepoFiles,

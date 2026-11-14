@@ -32001,6 +32001,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `CheckResult`
           - `CheckScope`
           - `GitTreeSnapshot`
+          - `IgnoredPathsDropped`
           - `RepoFiles`
           - `RepoSnapshot`
           - `RepoView`
@@ -36118,6 +36119,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `JournalCursor`
           - `JournalCursorResult`
           - `JournalReplay`
+          - `JournalReplayOptions`
           - `ServerFileWatcherSpec`
           - `WatchDelivery`
           - `WatcherBackend`

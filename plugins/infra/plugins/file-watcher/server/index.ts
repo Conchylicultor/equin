@@ -34,6 +34,7 @@ export type {
   JournalCursor,
   JournalCursorResult,
   JournalReplay,
+  JournalReplayOptions,
 } from "../shared/journal";
 export type {
   FileWatcher,

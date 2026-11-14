@@ -82,7 +82,8 @@ export interface FacetedIndex {
   readonly start: FacetedStart;
   /**
    * How long each step of the first build took (ms, wall, from the build's
-   * start to the step's end): `snapshot` (from the checkpoint or git, with
+   * start to the step's end): `resume` (where to start from, decided —
+   * the caller's journal replay), `snapshot` (from the checkpoint or git, with
    * the membership rule's code identity), `facets` (the modules loaded),
    * `structure` (the key-file fold, with its code identity), `keying` (each
    * facet's code identity), `keys` (every node's record keys), `records`
@@ -173,6 +174,7 @@ function membershipIdentity(input: ModuleGraphInput): Promise<string> {
 async function startSnapshot(
   root: AppPath,
   opts: OpenFacetedIndexOptions,
+  mark: (step: string) => void,
 ): Promise<{
   snapshot: LiveRepoSnapshot;
   start: FacetedStart;
@@ -182,6 +184,7 @@ async function startSnapshot(
     kind: "cold",
     reason: "no checkpoint asked for",
   };
+  mark("resume");
   if (resume.kind === "checkpoint") {
     const snapshot = await openLiveSnapshot(root, {
       readConcurrency: opts.readConcurrency,
@@ -267,7 +270,7 @@ export async function openFacetedIndex(
   const facetsLoaded = attempt(timed("facets", loadFacets()));
   const { snapshot, start, listedAt } = await timed(
     "snapshot",
-    startSnapshot(root, opts),
+    startSnapshot(root, opts, mark),
   );
   const store = currentRecordStore();
   const input: FacetRecordsInput = {

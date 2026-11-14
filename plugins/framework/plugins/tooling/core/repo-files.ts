@@ -21,7 +21,7 @@ import { lstat, readFile } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
-import { globPaths, pathsUnder } from "./pathspec";
+import { globPaths, holdsAtOrUnder, pathsUnder } from "./pathspec";
 import type { RepoFiles, RepoSnapshot } from "./types";
 import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
@@ -396,13 +396,42 @@ export async function listRepoMembers(
   return membership(present, deleted);
 }
 
+/** What {@link dropIgnoredPaths} kept, and the ignored folders it found. */
+export interface IgnoredPathsDropped {
+  /** The paths that may be members: neither ignored nor in an ignored folder. */
+  kept: string[];
+  /**
+   * The folders git ignores that hold no member (repo-relative, none inside
+   * another): what was named in one is no change. A holder replaying the
+   * journal again may leave them out of the replay (`journalChangesSince`'s
+   * `ignore`) and hand them back as `folders`, to be asked again.
+   */
+  ignoredFolders: string[];
+}
+
 /**
  * `paths` (repo-relative) minus the ones git ignores and does not track —
- * never members, whatever happens to them (`git check-ignore`, which also
- * reports a path under an ignored folder). For a holder replaying a
+ * never members, whatever happens to them. For a holder replaying a
  * file-system journal: a build's output or a nested checkout under an
  * ignored folder is no change to ask `listRepoMembers` about. A path kept may
  * still be no member (gone, or a folder).
+ *
+ * Asked of git per FOLDER, not per path: `git check-ignore` costs about
+ * 0.5 ms a path, and a journal under main's root names every file the agents'
+ * checkouts (in its ignored `.claude/worktrees/`) wrote — thousands. A named
+ * path is asked about through the outermost folder above it that holds no
+ * member of `members` (the set the holder starts from, sorted): when git
+ * ignores that folder, nothing in it is a member, tracked or not. A path
+ * whose every folder holds a member is asked about itself. So one git child
+ * answers, for as many entries as there are such folders and paths. `folders`
+ * (an earlier call's `ignoredFolders`) are asked again with them, and kept
+ * while git still ignores them and they hold no member.
+ *
+ * A folder is asked with a trailing slash, so a pattern only folders match
+ * (`dist/`) matches it even once it is gone (a removed checkout). It counts
+ * as ignored only through a pattern that names the folder itself (no glob in
+ * its last segment): `logs/*` or `dist/**` also match `logs/`, yet git still
+ * looks inside those, where a `!logs/keep.ts` brings a file back.
  *
  * Throws on any git failure — never the paths unfiltered as if none were
  * ignored.
@@ -410,21 +439,77 @@ export async function listRepoMembers(
 export async function dropIgnoredPaths(
   root: AppPath,
   paths: readonly string[],
-): Promise<string[]> {
+  members: readonly string[],
+  folders: readonly string[] = [],
+): Promise<IgnoredPathsDropped> {
   for (const p of paths) assertRepoPath("dropIgnoredPaths", p, false);
-  if (paths.length === 0) return [];
-  const result = await spawnCaptured(["git", "check-ignore", "-z", "--stdin"], {
-    cwd: root,
-    timeoutMs: GIT_TIMEOUT_MS,
-    stdin: `${paths.join("\0")}\0`,
-  });
+  for (const f of folders) assertRepoPath("dropIgnoredPaths", f, false);
+  /** Per folder asked: whether it holds a member. */
+  const holds = new Map<string, boolean>();
+  const holdsMember = (dir: string): boolean => {
+    let held = holds.get(dir);
+    if (held === undefined) {
+      held = holdsAtOrUnder(members, dir);
+      holds.set(dir, held);
+    }
+    return held;
+  };
+  /** Folder → the named paths asked about through it. */
+  const byFolder = new Map<string, string[]>();
+  const alone: string[] = [];
+  for (const p of paths) {
+    let folder: string | null = null;
+    for (let i = p.indexOf("/"); i !== -1; i = p.indexOf("/", i + 1)) {
+      const dir = p.slice(0, i);
+      if (!holdsMember(dir)) {
+        folder = dir;
+        break;
+      }
+    }
+    if (folder === null) alone.push(p);
+    else
+      (byFolder.get(folder) ?? byFolder.set(folder, []).get(folder)!).push(p);
+  }
+  for (const f of folders)
+    if (!holdsMember(f) && !byFolder.has(f)) byFolder.set(f, []);
+  const asked = [...[...byFolder.keys()].map((f) => `${f}/`), ...alone];
+  if (asked.length === 0) return { kept: [], ignoredFolders: [] };
+  const result = await spawnCaptured(
+    ["git", "check-ignore", "-z", "-v", "--stdin"],
+    { cwd: root, timeoutMs: GIT_TIMEOUT_MS, stdin: `${asked.join("\0")}\0` },
+  );
   // 0: some are ignored, 1: none is — anything else is a failure.
   if (result.exitCode !== 0 && result.exitCode !== 1)
     throw new Error(
       `git check-ignore failed in ${root} (exit ${result.exitCode}): ${result.stderr.trim()}`,
     );
-  const ignored = new Set(result.stdout.split("\0").filter((p) => p !== ""));
-  return paths.filter((p) => !ignored.has(p));
+  // `-v -z`: source, line, pattern, path per match — a negated pattern's
+  // (`!…`) included, which re-includes the path.
+  const fields = result.stdout.split("\0");
+  const ignored = new Set<string>();
+  for (let i = 0; i + 3 < fields.length; i += 4) {
+    const pattern = fields[i + 2]!;
+    const path = fields[i + 3]!;
+    if (pattern.startsWith("!")) continue;
+    if (path.endsWith("/")) {
+      const last = pattern.replace(/\/+$/, "").split("/").pop()!;
+      if (/[*?[]/.test(last)) continue;
+    }
+    ignored.add(path);
+  }
+  const kept = alone.filter((p) => !ignored.has(p));
+  const ignoredFolders: string[] = [];
+  for (const [folder, named] of byFolder) {
+    if (ignored.has(`${folder}/`)) ignoredFolders.push(folder);
+    else kept.push(...named);
+  }
+  // Outermost only: a folder handed back may sit inside one found now.
+  ignoredFolders.sort();
+  const outermost = ignoredFolders.filter(
+    (f, i) =>
+      !ignoredFolders.slice(0, i).some((outer) => f.startsWith(`${outer}/`)),
+  );
+  return { kept, ignoredFolders: outermost };
 }
 
 /**

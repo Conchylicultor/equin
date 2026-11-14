@@ -49,6 +49,24 @@ test.if(onFsEvents)(
   },
 );
 
+test.if(onFsEvents)("a replay leaves out what the caller ignores", async () => {
+  await mkdir(join(dir, "kept"));
+  await mkdir(join(dir, "skipped", "deep"), { recursive: true });
+  const cursor = await cursorOf(dir);
+  await writeFile(join(dir, "kept", "a.ts"), "x");
+  await writeFile(join(dir, "skipped", "deep", "b.ts"), "x");
+
+  const replay = await journalChangesSince(cursor, {
+    ignore: [join(dir, "skipped")],
+  });
+  expect(replay.kind).toBe("changes");
+  if (replay.kind !== "changes") return;
+  expect(replay.paths).toContain(join(dir, "kept", "a.ts"));
+  expect(
+    replay.paths.filter((p) => p.startsWith(join(dir, "skipped"))),
+  ).toEqual([]);
+});
+
 test.if(onFsEvents)(
   "a folder replaced at its path cannot be vouched for",
   async () => {

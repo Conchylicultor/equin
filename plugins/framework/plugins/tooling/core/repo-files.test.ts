@@ -14,6 +14,7 @@ import {
 import { pathsUnder } from "./pathspec";
 import {
   assertRepoPath,
+  dropIgnoredPaths,
   listAllRepoMembers,
   listRepoMembers,
   loadRepoFiles,
@@ -190,6 +191,82 @@ describe("listAllRepoMembers", () => {
     } finally {
       rmSync(join(root, "fresh/d/late.ts"));
       rmSync(join(root, "later"), { recursive: true });
+    }
+  });
+});
+
+describe("dropIgnoredPaths", () => {
+  test("asks git per folder holding no member, and per path elsewhere", async () => {
+    const dropped = await dropIgnoredPaths(
+      root,
+      [
+        "ignored/i.ts",
+        "ignored/deep/never-written.ts",
+        "fresh/ignored/q.ts",
+        "new.ts",
+        "a/b/not-yet.ts",
+        "brand/new/x.ts",
+      ],
+      EXPECTED,
+    );
+    expect(dropped.kept.sort()).toEqual([
+      "a/b/not-yet.ts",
+      "brand/new/x.ts",
+      "new.ts",
+    ]);
+    expect(dropped.ignoredFolders).toEqual(["fresh/ignored", "ignored"]);
+  });
+
+  test("a folder handed back is asked again, and kept while git ignores it", async () => {
+    const dropped = await dropIgnoredPaths(root, [], EXPECTED, [
+      "ignored",
+      "ignored/inner",
+      "brand",
+      "a",
+    ]);
+    // `ignored/inner` is inside `ignored`; `brand` is not ignored; `a`
+    // holds members.
+    expect(dropped).toEqual({ kept: [], ignoredFolders: ["ignored"] });
+  });
+
+  test("a folder only its contents' pattern matches is asked per path", async () => {
+    write(".gitignore", "ignored/\nlogs/*\n!logs/keep.ts\ndist/**\n");
+    write("logs/keep.ts", "// re-included\n");
+    write("logs/x.log", "// ignored\n");
+    write("dist/out.js", "// ignored\n");
+    try {
+      const dropped = await dropIgnoredPaths(
+        root,
+        ["logs/keep.ts", "logs/x.log", "dist/out.js"],
+        EXPECTED,
+      );
+      // git looks inside `logs/` and `dist/`: no folder is dropped whole.
+      expect(dropped.ignoredFolders).toEqual([]);
+      expect(dropped.kept.sort()).toEqual([
+        "dist/out.js",
+        "logs/keep.ts",
+        "logs/x.log",
+      ]);
+    } finally {
+      write(".gitignore", "ignored/\n");
+      rmSync(join(root, "logs"), { recursive: true });
+      rmSync(join(root, "dist"), { recursive: true });
+    }
+  });
+
+  test("a folder git ignores is dropped whole even once it is gone", async () => {
+    write("gone-ignored/a.ts", "// soon removed\n");
+    write(".gitignore", "ignored/\ngone-ignored/\n");
+    rmSync(join(root, "gone-ignored"), { recursive: true });
+    try {
+      const dropped = await dropIgnoredPaths(
+        root,
+        ["gone-ignored/a.ts", "gone-ignored/b/c.ts"],
+        EXPECTED,
+      );
+      expect(dropped).toEqual({ kept: [], ignoredFolders: ["gone-ignored"] });
+    } finally {
+      write(".gitignore", "ignored/\n");
     }
   });
 });

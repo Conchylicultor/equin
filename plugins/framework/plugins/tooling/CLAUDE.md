@@ -18,6 +18,7 @@
     - `CheckResult`
     - `CheckScope`
     - `GitTreeSnapshot`
+    - `IgnoredPathsDropped`
     - `RepoFiles`
     - `RepoSnapshot`
     - `RepoView`

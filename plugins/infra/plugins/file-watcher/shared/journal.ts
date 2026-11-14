@@ -130,6 +130,18 @@ export async function journalCursor(
   };
 }
 
+/** What a replay leaves out. */
+export interface JournalReplayOptions {
+  /**
+   * Absolute folders (or globs over absolute paths, as the watcher's
+   * `ignore`) whose changes the caller does not need: nothing at or under
+   * them is named. Left out where the journal is read, before any per-event
+   * work — the replay's cost follows the events it names, and a folder like
+   * main's `.claude/worktrees/` (every agent's checkout) names thousands.
+   */
+  ignore?: readonly string[];
+}
+
 /**
  * Every path the journal names under `cursor.root` since `cursor` — or
  * `unknown` whenever the journal cannot vouch for that (see the module doc).
@@ -138,6 +150,7 @@ export async function journalCursor(
  */
 export async function journalChangesSince(
   cursor: JournalCursor,
+  opts: JournalReplayOptions = {},
 ): Promise<JournalReplay> {
   if (Date.now() - cursor.takenAt > MAX_CURSOR_AGE_MS)
     return { kind: "unknown", reason: "the cursor is too old to trust" };
@@ -157,6 +170,9 @@ export async function journalChangesSince(
       await writeFile(file, cursor.snapshot, "utf8");
       return await parcel.getEventsSince(cursor.root, file, {
         backend: "fs-events",
+        ...(opts.ignore && opts.ignore.length > 0
+          ? { ignore: [...opts.ignore] }
+          : {}),
       });
     });
     return { kind: "changes", paths: events.map((e) => e.path) };

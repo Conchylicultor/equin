@@ -37,6 +37,19 @@ export function pathsUnder(sorted: readonly string[], dir: string): string[] {
   );
 }
 
+/**
+ * Whether `sorted` holds `dir` itself or any path under it — `pathsUnder`'s
+ * question without the slice: two binary searches.
+ */
+export function holdsAtOrUnder(
+  sorted: readonly string[],
+  dir: string,
+): boolean {
+  if (sorted[lowerBound(sorted, dir)] === dir) return true;
+  const i = lowerBound(sorted, `${dir}/`);
+  return i < sorted.length && sorted[i]!.startsWith(`${dir}/`);
+}
+
 // `<dir>/**`: a literal directory — no glob magic, no leading `:` pathspec
 // magic — followed by `/**`. The subtree form `ctx.repo().under(dir)` records;
 // see `globPaths`.

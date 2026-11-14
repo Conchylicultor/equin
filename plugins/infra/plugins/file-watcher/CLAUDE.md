@@ -479,6 +479,7 @@ re-created is watched again (a `rescan` on each appearing or going).
     - `JournalCursor`
     - `JournalCursorResult`
     - `JournalReplay`
+    - `JournalReplayOptions`
     - `ServerFileWatcherSpec`
     - `WatchDelivery`
     - `WatcherBackend`
