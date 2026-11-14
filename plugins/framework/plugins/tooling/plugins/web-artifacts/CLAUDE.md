@@ -95,11 +95,13 @@ Key invariants:
   hashing over the repo snapshot; whether the store holds it is not part of
   the plan (`PlannedTarget` has no "is it published" bit — only a browser
   host's planning reads its stored records, `matchHostRecord`). The pipeline
-  asks the store after pinning, and
-  `map-in-sync` reads each meta once, without blocking
-  (`readPublishedArtifactMeta`, bounded concurrency) — it runs on the check
-  runner's shared thread, where a lookup in the ~80k-entry store dir is
-  ~0.3 ms of kernel time.
+  asks the store after pinning (`storeReads`). `map-in-sync` never asks it:
+  it plans over `deployedReads` — the edges the dist recorded
+  (`DIST_EDGES_FILE`) and the one host build its map serves — because a
+  planned address the dist does not name is one it did not compose, whatever
+  the shared store holds. Reading the store for those made the check's cost
+  and verdict grow with what every checkout on the machine had built (a
+  builder-identity change: ~2.5k store reads, over the check file-call budget).
 - **Across own folders, only the barrel is importable.** The rewrite above
   accepts only the barrel spelling (`../core`, `@plugins/<own>/core`) and
   throws on a deep path (`../core/x`). Rewriting a deep path made it mean the

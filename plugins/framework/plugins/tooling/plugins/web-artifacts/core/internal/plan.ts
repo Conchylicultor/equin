@@ -10,6 +10,7 @@ import {
   BROWSER_HOST_FILE,
   planBrowserHosts,
   type BrowserHostPlan,
+  type HostRecordSource,
 } from "./browser-hosts";
 import {
   asAppPath,
@@ -269,6 +270,8 @@ export async function planFleet(opts: {
    * `browser-hosts`) — the pipeline times them as `detect`'s sub-steps.
    */
   step?: PlanStep;
+  /** Which stored builds of each browser host to try (`browser-hosts.ts`); defaults to all. */
+  hostRecords?: HostRecordSource;
 }): Promise<FleetPlan> {
   const { root, sources } = opts;
   const step: PlanStep = opts.step ?? ((_id, run) => run());
@@ -379,6 +382,7 @@ export async function planFleet(opts: {
       files: sources.snapshot,
       pluginPaths: webEntries.map((e) => e.pluginPath),
       identityHash: identity.identityHash,
+      records: opts.hostRecords,
     }),
   );
 

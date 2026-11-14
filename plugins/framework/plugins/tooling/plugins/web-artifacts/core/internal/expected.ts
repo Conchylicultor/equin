@@ -1,15 +1,24 @@
 // The map-in-sync check's engine: recompute the EXACT import map the current
 // tree would compose — the same planning code the pipeline runs (plan.ts), with
-// `ensure` swapped from build-or-read to read-or-bail. Pure hashing plus store
-// meta reads; never builds, never mutates the store. If any expected artifact
-// (or the vendor set) is absent from the store, the deployed dist cannot have
-// been composed from the current tree — reported as `missing-artifacts` rather
-// than a URL diff, since the closure can't even be completed without the metas.
+// `ensure` swapped from build-or-read to read-or-bail. Pure hashing plus reads
+// from a `PlanReads` source — the store (`storeReads`), or one deployed dist's
+// own record (`deployedReads`, what map-in-sync uses); never builds, never
+// mutates the store. If any expected artifact (or the vendor set) is absent
+// from the source, the deployed dist cannot have been composed from the
+// current tree — reported as `missing-artifacts` rather than a URL diff, since
+// the closure can't even be completed without the metas.
 
 import { joinAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { BUILDER_VERSION } from "../constants";
 import { buildImportMap } from "../import-map";
-import { hostWorkerSpecifier, type BrowserHostPlan } from "./browser-hosts";
+import { BROWSER_HOST_SPECIFIER_PREFIX } from "@plugins/framework/plugins/import-map-names/core";
+import {
+  hostWorkerSpecifier,
+  readHostRecord,
+  storedHostRecords,
+  type BrowserHostPlan,
+  type HostRecordSource,
+} from "./browser-hosts";
 import type { OwnSources } from "./own-files";
 import type { RepoSnapshot } from "@plugins/framework/plugins/tooling/core";
 import {
@@ -94,28 +103,56 @@ export function composedHostsOf(opts: {
   }));
 }
 
-/** How a plan obtains a published artifact's edges: `null` when the store lacks it. */
+/** How a plan obtains a published artifact's edges: `null` when the source lacks it. */
 export type EdgesReader = (dirName: string) => Promise<ArtifactEdges | null>;
 
-/** The store's own answer: each address's `meta.json`, read without blocking. */
-export const readStoredEdges: EdgesReader = readPublishedArtifactMeta;
+/**
+ * Where a plan reads what the tree's addresses hold: each address's edges
+ * (`null` ⇒ missing), and which stored builds of each browser host to try.
+ */
+export interface PlanReads {
+  edges: EdgesReader;
+  hostRecords: HostRecordSource;
+}
+
+/** The store's own answers: each address's `meta.json`, every stored host build. */
+export const storeReads: PlanReads = {
+  edges: readPublishedArtifactMeta,
+  hostRecords: storedHostRecords,
+};
 
 /**
- * Edges read from what a deployed dist recorded (`DIST_EDGES_FILE`) first,
- * from `store` only for an address the dist does not name.
+ * The answers ONE deployed dist gives: the edges it recorded for exactly the
+ * addresses it composed (`DIST_EDGES_FILE`), and the one build of each host
+ * its import map serves. Nothing else is read — not the store.
  *
- * Exact, not a cache: an address is a content address, so its edges are the
- * same whichever build read them, and the dist names the edges of exactly the
- * addresses it composed. A tree in sync with the dist therefore reads nothing
- * from the store; an edit re-addresses the artifacts it touches, and only
- * those are read (absent ⇒ the dist predates the tree) — O(changes), where
- * reading every address made the check's body O(fleet) on every run.
+ * Exact for the question `map-in-sync` asks (is this dist the composition of
+ * the tree?). An address is content: a planned address the dist does not name
+ * is one it did not compose, so the dist is out of sync whatever the shared
+ * store holds — reading the store for it (as this once did, "for the
+ * re-addressed ones only") made the check's work and verdict depend on what
+ * every other checkout on the machine had built: a builder-identity change
+ * re-addresses the whole fleet, ~2.5k store reads. A host build other than
+ * the served one names another address too, so only the served one is tried.
  */
-export function deployedEdgesReader(
-  recorded: ReadonlyMap<string, ArtifactEdges>,
-  store: EdgesReader,
-): EdgesReader {
-  return async (dirName) => recorded.get(dirName) ?? (await store(dirName));
+export function deployedReads(dist: {
+  edges: ReadonlyMap<string, ArtifactEdges>;
+  /** The deployed import map's `imports`. */
+  imports: Readonly<Record<string, string>>;
+}): PlanReads {
+  return {
+    edges: async (dirName) => dist.edges.get(dirName) ?? null,
+    hostRecords: (pluginPath) => {
+      const url = dist.imports[`${BROWSER_HOST_SPECIFIER_PREFIX}${pluginPath}`];
+      const dirName =
+        url === undefined
+          ? undefined
+          : /^\/artifacts\/([^/]+)\//.exec(url)?.[1];
+      if (dirName === undefined) return [];
+      const record = readHostRecord(pluginPath, dirName);
+      return record === null ? [] : [record];
+    },
+  };
 }
 
 export type ExpectedComposition =
@@ -129,8 +166,8 @@ export async function planExpectedFleet(opts: {
   minify: boolean;
   /** Which registry + entry set to plan; defaults to the committed full registry. */
   source?: FleetSource;
-  /** Where an address's edges come from; defaults to the store ({@link readStoredEdges}). */
-  readEdges?: EdgesReader;
+  /** Where the plan reads edges and host builds; defaults to the store ({@link storeReads}). */
+  reads?: PlanReads;
   /** The glob-pattern memo the plan reads and persists; defaults to the store's. */
   globs?: GlobPatternMemo;
 }): Promise<{
@@ -149,14 +186,16 @@ export async function planExpectedFleet(opts: {
     snapshot: opts.repo,
     globs: opts.globs ?? loadGlobPatternMemo(),
   };
+  const reads = opts.reads ?? storeReads;
   const plan = await planFleet({
     root,
     minify: opts.minify,
     sources,
     source: opts.source,
+    hostRecords: reads.hostRecords,
   });
 
-  const readEdges = opts.readEdges ?? readStoredEdges;
+  const readEdges = reads.edges;
   const metas = new Map<string, ArtifactEdges>();
   const missing: string[] = [];
   // A store read is one non-blocking `meta.json` read (absent ⇒ missing):
@@ -194,8 +233,9 @@ export async function planExpectedFleet(opts: {
     plan.entryTarget,
   ];
 
-  // A host no stored build's recorded inputs describe (this tree hashes to
+  // A host no tried build's recorded inputs describe (this tree hashes to
   // none of their addresses) is missing until a build of this tree stores one.
+  // A matched record was read out of its store dir, so the build is there.
   // Its worker closure is planned exactly as the pipeline plans it.
   const hosts: ExpectedHost[] = [];
   const served = servedSpecsOf(pageTargets);
@@ -210,8 +250,7 @@ export async function planExpectedFleet(opts: {
     });
     for (const s of servedSpecsOf(added)) served.add(s);
     if (host.dirName === null) missing.push(`browser host ${host.pluginPath}`);
-    else if ((await read(host.dirName)) !== null)
-      hosts.push({ plan: host, dirName: host.dirName, entry, added });
+    else hosts.push({ plan: host, dirName: host.dirName, entry, added });
   }
   // Persist the glob patterns this plan read, so a later run reads none.
   sources.globs.save();
@@ -233,8 +272,8 @@ export async function computeExpectedComposition(opts: {
   /** The pass's file set (a check run's `ctx.repo()`, a pass root's snapshot). */
   repo: RepoSnapshot;
   minify: boolean;
-  /** Where an address's edges come from; defaults to the store. */
-  readEdges?: EdgesReader;
+  /** Where the plan reads edges and host builds; defaults to the store. */
+  reads?: PlanReads;
 }): Promise<ExpectedComposition> {
   const fleet = await planExpectedFleet(opts);
   if (fleet.missing.length > 0) {

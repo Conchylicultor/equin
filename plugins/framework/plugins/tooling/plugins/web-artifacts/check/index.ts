@@ -37,10 +37,7 @@ import {
   asAppPath,
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import {
-  readFileSync,
-  statSync,
-} from "@plugins/packages/plugins/timed-fs/core";
+import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
 
 import { join } from "node:path";
 import type {
@@ -65,13 +62,9 @@ import { diffImportMaps } from "../core/import-map";
 import { DIST_EDGES_FILE } from "../core/internal/compose";
 import {
   computeExpectedComposition,
-  deployedEdgesReader,
-  readStoredEdges,
+  deployedReads,
 } from "../core/internal/expected";
-import {
-  WEB_ARTIFACTS_STORE_DIR,
-  type ArtifactEdges,
-} from "../core/internal/store";
+import type { ArtifactEdges } from "../core/internal/store";
 import { extractEntryScriptSrc, extractImportMap } from "./scan";
 
 const MARKER_NAME = ".web-artifacts.json";
@@ -138,15 +131,6 @@ function sha256(s: string): string {
   return createHash("sha256").update(s).digest("hex");
 }
 
-function storeMtime(): string {
-  try {
-    return String(statSync(WEB_ARTIFACTS_STORE_DIR).mtimeMs);
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
-    return "no-store";
-  }
-}
-
 /**
  * The tail of the no-deploy message: what this checkout serves *instead*.
  *
@@ -193,9 +177,11 @@ const mapInSync: Check = {
     // build, which changes the dist but not the tree hash the runner keys on.
     if (marker === null) return null;
     const html = readIfExists(join(dist.dir, "index.html")) ?? "";
-    // The verdict depends on the deployed dist AND on which artifacts the store
-    // holds (the expected map is recomputed through store metas) — fold both in.
-    return sha256(`${marker}\n${html}\n${storeMtime()}`);
+    // The verdict depends on the tree (the runner's key) and the deployed dist,
+    // not on the shared store: the plan reads only what the dist recorded, and
+    // the store entries the dist itself serves (its vendor set, host builds,
+    // snapshots — prune roots while it links them, `deployedReads`).
+    return sha256(`${marker}\n${html}`);
   },
   async run(ctx: CheckContext): Promise<CheckResult> {
     // See run-context.ts: during `./equin build` the checks race the
@@ -256,8 +242,9 @@ const mapInSync: Check = {
     }
 
     // The edges of every address the dist composed, as its compose recorded
-    // them: the plan below reads from the store only the addresses this tree
-    // gives that the dist does not name — the ones an edit re-addressed.
+    // them: the plan below reads only these and the served host builds, never
+    // the shared store — an address this tree gives that the dist does not
+    // name is one it did not compose (`deployedReads`).
     const edgesRaw = readIfExists(join(dist.dir, DIST_EDGES_FILE));
     if (edgesRaw === null) {
       return {
@@ -275,14 +262,14 @@ const mapInSync: Check = {
     const expected = await computeExpectedComposition({
       repo: await ctx.repo(),
       minify: markerMinify(markerRaw),
-      readEdges: deployedEdgesReader(recorded, readStoredEdges),
+      reads: deployedReads({ edges: recorded, imports: deployed }),
     });
     if (expected.kind === "missing-artifacts") {
       return {
         ok: false,
         message:
-          `the deployed dist predates the current tree: ${expected.missing.length} artifact(s) the ` +
-          `current tree composes are absent from the store:\n${truncatedList(expected.missing)}`,
+          `the deployed dist predates the current tree: it does not compose ${expected.missing.length} ` +
+          `artifact(s) the current tree composes:\n${truncatedList(expected.missing)}`,
         hint: BUILD_HINT,
       };
     }

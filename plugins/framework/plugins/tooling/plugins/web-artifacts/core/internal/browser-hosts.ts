@@ -244,30 +244,59 @@ function hostGroup(slug: string): string {
   return `${slug}.browser-host.`;
 }
 
-/** The input records of every stored build of a host, most recently used first. */
-function* storedHostRecords(
+/** A build of a host as the store holds it: its recorded inputs, under its dir. */
+export type StoredHostRecord = HostInputsRecord & { dirName: string };
+
+/**
+ * Which stored builds of a host the planner tries, in order.
+ *
+ * A build tries every stored build ({@link storedHostRecords}) so it can reuse
+ * one any checkout made. A question about ONE dist (`map-in-sync`: is this the
+ * composition of the tree?) tries only the build that dist serves — any other
+ * match names another address, so the dist would be out of sync anyway, and
+ * walking the shared store would make that check's work grow with every build
+ * the machine ever made of the host.
+ */
+export type HostRecordSource = (
   pluginPath: string,
-): Generator<HostInputsRecord & { dirName: string }> {
+) => Iterable<StoredHostRecord>;
+
+/**
+ * The recorded inputs of the stored host build `dirName` of `pluginPath`, or
+ * `null` when the store does not hold that build (never published, pruned, or
+ * published before records moved under the address — never matchable).
+ */
+export function readHostRecord(
+  pluginPath: string,
+  dirName: string,
+): StoredHostRecord | null {
   const slug = slugOf(pluginPath);
-  for (const dirName of listArtifacts(hostGroup(slug))) {
-    const file = joinAppPath(artifactStorePath(dirName), HOST_INPUTS_FILE);
-    let text: string;
-    try {
-      text = readFileSync(file, "utf8");
-    } catch (err) {
-      if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
-      // No record: a dir published before records moved under the address
-      // (never matchable; ages out with the store), or one another checkout's
-      // prune removed after listArtifacts snapshotted the store.
-      continue;
-    }
-    const record = JSON.parse(text) as HostInputsRecord;
-    if (artifactDirName(slug, "browser-host", record.inputsHash) !== dirName) {
-      throw new Error(
-        `browser host record ${file} names address ${record.inputsHash}, not its own dir ${dirName}`,
-      );
-    }
-    yield { ...record, dirName };
+  const file = joinAppPath(artifactStorePath(dirName), HOST_INPUTS_FILE);
+  let text: string;
+  try {
+    text = readFileSync(file, "utf8");
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+    return null;
+  }
+  const record = JSON.parse(text) as HostInputsRecord;
+  if (artifactDirName(slug, "browser-host", record.inputsHash) !== dirName) {
+    throw new Error(
+      `browser host record ${file} names address ${record.inputsHash}, not its own dir ${dirName}`,
+    );
+  }
+  return { ...record, dirName };
+}
+
+/** The input records of every stored build of a host, most recently used first. */
+export function* storedHostRecords(
+  pluginPath: string,
+): Generator<StoredHostRecord> {
+  for (const dirName of listArtifacts(hostGroup(slugOf(pluginPath)))) {
+    // `null`: another checkout's prune removed it after listArtifacts
+    // snapshotted the store, or it predates records.
+    const record = readHostRecord(pluginPath, dirName);
+    if (record !== null) yield record;
   }
 }
 
@@ -292,7 +321,10 @@ export function planBrowserHosts(opts: {
   files: RepoFiles;
   pluginPaths: readonly string[];
   identityHash: string;
+  /** Which stored builds to try; defaults to every one ({@link storedHostRecords}). */
+  records?: HostRecordSource;
 }): BrowserHostPlan[] {
+  const records = opts.records ?? storedHostRecords;
   const plans: BrowserHostPlan[] = [];
   for (const pluginPath of opts.pluginPaths) {
     const entryRel = `plugins/${pluginPath}/${HOST_ENTRY_REL}`;
@@ -300,7 +332,7 @@ export function planBrowserHosts(opts: {
     const entryFile = joinAppPath(opts.root, entryRel);
     const hostSource = hostModuleSource(pluginPath);
     const match = matchHostRecord(
-      storedHostRecords(pluginPath),
+      records(pluginPath),
       hostInputsHasher(opts.root, hostIdentity(opts.identityHash, hostSource)),
     );
     const dirName = match?.dirName ?? null;

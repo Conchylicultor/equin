@@ -11,11 +11,7 @@ import {
   loadRepoSnapshot,
   type RepoSnapshot,
 } from "@plugins/framework/plugins/tooling/core";
-import {
-  deployedEdgesReader,
-  planExpectedFleet,
-  type EdgesReader,
-} from "./expected";
+import { deployedReads, planExpectedFleet, type PlanReads } from "./expected";
 import type { FleetSource } from "./plan";
 import type { ArtifactEdges, GlobPatternMemo } from "./store";
 
@@ -59,54 +55,49 @@ describe("map-in-sync re-plans the tree over the dist's recorded edges", () => {
     registryFile,
     registrySlug: "web-registry-edges",
   };
-  const plan = (repo: RepoSnapshot, readEdges: EdgesReader) =>
+  const plan = (repo: RepoSnapshot, reads: PlanReads) =>
     planExpectedFleet({
       repo,
       minify: true,
       source,
-      readEdges,
+      reads,
       globs: memoryGlobs(),
     });
 
-  /** A store holding nothing, counting what it is asked. */
-  function emptyStore(): { read: EdgesReader; asked: string[] } {
-    const asked: string[] = [];
-    return {
-      asked,
-      read: async (dirName) => {
-        asked.push(dirName);
-        return null;
-      },
-    };
-  }
-
-  test("a tree in sync with the dist reads nothing from the store; an edit reads — and misses — only what it re-addressed", async () => {
+  test("the plan reads only the dist's record: in sync ⇒ nothing missing; an edit ⇒ exactly what it re-addressed, whatever the store holds", async () => {
     const snapshot = await loadRepoSnapshot(REPO_ROOT);
+    // A store that holds every address the tree could plan, counting what it
+    // is asked: the shared, machine-wide state the verdict must not depend on.
+    const storeAsked: string[] = [];
+    const store: PlanReads = {
+      edges: async (dirName) => {
+        storeAsked.push(dirName);
+        return NO_EDGES;
+      },
+      hostRecords: () => [],
+    };
     // The deploy: every address the tree plans, with its edges recorded.
-    const deployed = await plan(snapshot, async () => NO_EDGES);
+    const deployed = await plan(snapshot, store);
     expect(deployed.missing).toEqual([]);
     const recorded = new Map(deployed.metas);
     expect(recorded.size).toBeGreaterThan(0);
+    storeAsked.length = 0;
 
-    const inSync = emptyStore();
-    const same = await plan(
-      snapshot,
-      deployedEdgesReader(recorded, inSync.read),
-    );
+    const dist = deployedReads({ edges: recorded, imports: {} });
+    const same = await plan(snapshot, dist);
     expect(same.missing).toEqual([]);
-    expect(inSync.asked).toEqual([]);
 
     // An edit to shell's web barrel re-addresses its web artifact: the dist
-    // does not name the new address, the store lacks it — the stale verdict.
-    const afterEdit = emptyStore();
+    // does not name the new address — the stale verdict, even though the
+    // store holds it.
     const stale = await plan(
       edited(snapshot, "plugins/shell/web/index.ts"),
-      deployedEdgesReader(recorded, afterEdit.read),
+      dist,
     );
     expect(stale.missing).toHaveLength(1);
     const [changed] = stale.missing;
     expect(changed!.startsWith("shell.web.")).toBe(true);
     expect(recorded.has(changed!)).toBe(false);
-    expect(afterEdit.asked).toEqual([changed!]);
+    expect(storeAsked).toEqual([]);
   });
 });
