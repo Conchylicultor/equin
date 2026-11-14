@@ -15,7 +15,10 @@ import type { CliAction } from "@plugins/framework/plugins/cli/core";
 import { MODULE_EXTENSION } from "@plugins/framework/plugins/tooling/plugins/guards/plugins/module-extension/core";
 import { isE2eScriptPath } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/core";
 import { withDirectOp } from "@plugins/framework/plugins/cli/plugins/op-runtime/cli";
-import { withForegroundPriority } from "@plugins/packages/plugins/spawn-priority/core";
+import {
+  readDarwinBackground,
+  withForegroundPriority,
+} from "@plugins/packages/plugins/spawn-priority/core";
 import { pacedHeapEnv } from "@plugins/packages/plugins/heap-pacing/core";
 import {
   envName,
@@ -49,6 +52,19 @@ function inOwnScratch(abs: string): boolean {
   if (!scratch || !existsSync(scratch)) return false;
   const rel = relative(realpathSync(scratch), realpathSync(abs));
   return rel !== "" && !rel.startsWith("..") && !rel.startsWith("/");
+}
+
+/**
+ * The warning an unlifted script prints when it runs at macOS background
+ * priority, or null in the foreground (or on a host with no darwinbg tier).
+ */
+function darwinbgNote(): string | null {
+  if (readDarwinBackground().kind !== "darwinbg") return null;
+  return (
+    "[./equin run] scheduling tier: darwinbg (macOS background priority, inherited from this session). " +
+    "CPU and I/O are throttled: wall times measured by this script are NOT foreground costs " +
+    "(a plugin-tree build read about 3× slower) and must not be reported as such."
+  );
 }
 
 const run: CliAction<[string, string[]], object> = async (script, args) => {
@@ -133,6 +149,13 @@ const run: CliAction<[string, string[]], object> = async (script, args) => {
   // nothing else while it waits on the script. An unadmitted script has no
   // bound, so it is not lifted.
   const kind = isE2eScriptPath(rel) ? "e2e" : "script";
+  // An unlifted script inherits the session's tier, and darwinbg throttles its
+  // CPU and I/O: on 2026-11-14 a plugin-tree bench run this way read 1.25–2.1 s
+  // for a build that takes 0.29–0.57 s in the foreground, and the false "main
+  // costs 4×" cost a whole task. So the tier a script ran at is printed next to
+  // its output, before and after, where whoever reads a timing reads it too.
+  const tierNote = kind === "script" ? darwinbgNote() : null;
+  if (tierNote !== null) console.error(tierNote);
   const outcome = await withDirectOp(kind, { max: 1 }, async (grant) => {
     const spawnScript = () =>
       spawnPassthrough(
@@ -163,6 +186,7 @@ const run: CliAction<[string, string[]], object> = async (script, args) => {
       grant === null
         ? await spawnScript()
         : await withForegroundPriority(spawnScript);
+    if (tierNote !== null) console.error(`\n${tierNote}`);
     // A signalled child can still report exit 0. Reporting that as success is
     // the absorbed failure this repo bans — the script did not finish, it was
     // killed.

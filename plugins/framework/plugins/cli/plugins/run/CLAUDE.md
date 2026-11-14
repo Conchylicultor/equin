@@ -143,6 +143,12 @@ with. Two kinds:
   "working" for as long as it lived — and a bare `./equin await` skips it for
   the same reason (`./equin await script` still waits on one).
 
+**A `script` run at darwinbg prints its tier on stderr, before and after its
+output.** It inherits the session's background tier, which throttles CPU and
+I/O (a plugin-tree bench read ~3× slow, and the false reading cost a task).
+Wall times it measures are not foreground costs: a bench must leave darwinbg
+(an admitted grant, as e2e does) or report the tier with its numbers.
+
 Non-e2e scripts used to leave no trace at all. On 2026-11-06 four agent-run
 `blocking-fs/scripts/inventory.ts` held 2.2–3.8 GB each (~11 GB) on a host
 under memory pressure, the largest processes on the machine, and nothing named
