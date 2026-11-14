@@ -64,7 +64,7 @@ added / an export added / the plugin removed seen in ~300 / ~280 / ~470 ms, an
 ordinary file or a body edit a 304, a worker module rewritten served again by
 a fresh worker in ~2.5 s.
 
-The session ends — and the next read opens a new one (from the last checkpoint, below) — when the worker
+The session ends — and the next read opens a new one — when the worker
 dies, a refresh fails, the watcher loses events or reports a batch over 2,000
 paths, or a changed path is code the worker loaded (`require.cache`: the
 extractors, the index; its records were made by code no longer on disk). On
@@ -107,8 +107,7 @@ throttle. The faceted tree has its own signal (`onPluginFacetsChanged`).
 The backend used to build the same index a second time, in process: the
 whole repo listed with git and ~3.8k key files read and parsed on its event
 loop (0.3–0.5 s alone on main's checkout; 0.65–2.5 s wall on main's boots,
-where it ran inside the restart's resubscribe burst and was, once the worker
-resumed from its checkpoint, the warm-up's tail — 2026-11-14). The two trees
+where it ran inside the restart's resubscribe burst — 2026-11-14). The two trees
 are equal (same nodes, same order).
 
 **The structure never fails with the facets.** It is built as soon as the
@@ -118,7 +117,7 @@ not load or an extraction that throws leaves the index holding the structure
 rejects with `FacetsUnavailable`, reported as a server error — and the next
 change ends the session by design (`facets-retry`): a fresh worker imports the
 facet modules anew (an import that threw throws again in the same process)
-and catches up from the checkpoint. Only the snapshot or the structure
+and lists the checkout again. Only the snapshot or the structure
 failing, or the worker dying, ends it on an error. A session that ends by
 design bumps the trees it had told a reader about (`onEnded`'s `held`); one
 that ends on an error is reported and bumps nothing, so `plugin-view.tree` —
@@ -153,66 +152,41 @@ through `fieldsOf` from the key-file fold records (`structure-records`'
 then node keys ~80 ms, record reads ~185 ms, parse ~50 ms and relate ~0.2 s.
 Snapshot and facet loading run together, then structure and keying.
 
-## The index starts from the last one's checkpoint (`bin/faceted-tree-worker.ts`)
+## Every worker lists the checkout with git — no checkpoint (`bin/faceted-tree-worker.ts`)
 
 The worker lives and dies with the backend, which restarts on every deploy,
-and its cold build asked git to list and hash the whole checkout (~24k files:
-0.2–0.45 s on a calm host, 0.6–4 s under load — the biggest step of the
-build) although almost nothing changed since the last one. So each build
-leaves a checkpoint, `~/.equin/worktrees/<ns>/faceted-index.json`
-(`worktreeArtifacts.facetedIndexCheckpoint`, temp + rename): the index's file
-set (`FacetedCheckpoint`: every member and its blob id) and a file-system
-journal cursor (`infra/file-watcher`'s `journalCursor`) taken BEFORE the build
-read anything. The next worker replays the journal since that cursor
-(`journalChangesSince`, O(changes)) and starts from the saved set, asking git
-only about the paths it names (`LiveRepoSnapshot.refresh`, the same code as a
-watcher batch). A path changed after the cursor is named again next time, so
-the set saved may be any state after its cursor: a re-check, never a miss.
+so each one starts by listing the checkout (`loadRepoSnapshot`: `ls-files -s`,
+the untracked delta, `diff-files`). On main git's `core.fsmonitor` is on, so
+that listing is already git's own incremental answer — its daemon's live
+FSEvents stream says which paths to stat: 0.35–0.7 s for ~25k files at host
+load ~20 (main's `plugin-tree` log, 2026-11-15).
 
-- **What is kept, and why only that.** The members are a fact about the
-  checkout; the rule that listed them is code, so they carry the code identity
-  of `REPO_MEMBERSHIP_URL` (tooling's `repo-files.ts`, through
-  `plugin-records`' `codeIdentity`), and a set listed by another rule starts
-  cold. Everything else is rebuilt from it with this process's code: the
-  structure (key-file fold records), the record keys and reads, relate. Those
-  are cheap once the code identities are computed, which every process does
-  once, and relate needs every plugin's data anyway.
-- **Cold, the answer that is always right**, whenever the journal cannot
-  vouch (not FSEvents, cursor over 7 days old, the root replaced, dropped
-  events — its own fail-closed rules), there is no checkpoint, it is not JSON
-  or in a format this code cannot read, it is another checkout's, git's
-  `.git/info/exclude` changed, the root itself is named, more than 2,000
-  paths changed (a checkout or rebase: one listing is cheaper), or the set was
-  last listed whole over a day ago (`listedAt`, carried from checkpoint to
-  checkpoint). That last bound is for what the journal cannot see and a
-  listing does: git's index alone (`git rm --cached`, `add -f`), a linked
-  worktree's exclude file (in the shared git dir, outside the checkout), a
-  binary file re-hashed as text by a refresh — at most a day wrong, one cold
-  listing among main's ~50 restarts. `.git` and `node_modules` paths are
-  skipped, and so is every path git ignores and does not track
-  (`dropIgnoredPaths`, `git check-ignore`): a build's output, and the agents'
-  checkouts under main's ignored `.claude/worktrees/`. A checkpoint that
-  cannot be written is reported (`reportServerError`); the session goes on. Each
-  build logs how it started to the `plugin-tree` log channel (`faceted index built in … ms,
-  resumed …` / `cold (…)`) and the `ready` frame carries it (`FacetedStart`).
-- **Measured** (`scripts/bench-faceted-index.ts`, 2026-11-14, this worktree,
-  host load 12–16; in-worker build): from the checkpoint with no change
-  0.83–0.98 s, against 1.38–1.77 s cold; the snapshot step 0.18–0.46 s
-  (cursor, read and replay 30–240 ms) against 1.0–4.1 s. The bench proves a
-  resumed tree equals a fresh build after edits made while no worker ran,
-  and — in a throwaway `git clone --shared` — after a branch switch (~490
-  paths) and a rebase; a cursor past the journal's age and a journal reset
-  start cold, saying why. The branch switch and the rebase first DIFFERED:
-  upstream parcel's history replay left out about half the files git
-  rewrote (unlink + create), fixed in the patched addon (file-watcher's
-  `parcel-addon`).
-- **What a resume costs on main** (2026-11-14, load ~1.6, main's checkout):
-  the replay is FSEvents scanning the machine's history since the cursor —
-  ~0.39 s for 276 paths 12 minutes later, almost all agents' checkouts and
-  `.git` — so on a calm host a resumed snapshot (0.76–0.9 s) is no faster
-  than main's cold listing (0.34–0.56 s); it pays off under load, where the
-  listing grows to seconds. Each build's steps are in its `plugin-tree` log
-  line (`steps`, ms from its start).
+**Why not resume from a checkpoint (what it did 2026-11-13 → 11-15).** Each
+build left its file set and an FSEvents journal cursor
+(`~/.equin/worktrees/<ns>/faceted-index.json`); the next worker replayed the
+journal since (`infra/file-watcher`'s `journalChangesSince`) and asked git
+only about the paths it named. The premise — a replay costs O(changes under
+the root) — does not hold on main: FSEvents' history is volume-wide, and
+fseventsd pays for every event under the stream's root, which on main holds
+every agent's checkout (`.claude/worktrees/`, ~8.5k events/s volume-wide
+with ~25 agents). Exclusion paths drop those events only after the cost is
+paid. Measured on main's checkout (2026-11-15, load 15–25):
+
+| replay of 3M journal ids (~6 min) | time | paths |
+|---|---|---|
+| main's root, no exclusion | 10.6 s | 108k |
+| main's root, the agents' folders excluded | ~1.5 s per 1M ids; 7–8 s for a 6-min-old cursor | 1 |
+| `plugins/` only | 0.85–1 s | 2 |
+| a quiet subtree | 0.64 s | 0 |
+
+So the replay was the build's biggest step on main's restarts — `resume`
+5.6–9.1 s in 6 of the last 40 builds, each 9–11 s total, against a 0.35–0.7 s
+listing — and a flooded replay reported "Events were dropped by the FSEvents
+client", started cold and paid both. Even scoped to `plugins/` it would cost
+the fseventsd history scan (O(the machine's file activity since the last
+boot), ~1 s at 3M ids): no cheaper than the listing it skipped. A calm host
+saved ~0.1 s with it. Each build's steps are in its `plugin-tree` log line
+(`steps`, ms from its start).
 
 What is still whole-tree per process: each record producer's code identity
 (the module graph over its closure, ~0.2 s, shared by the key-file fold and
@@ -314,7 +288,6 @@ dynamic value.
     - `plugin-meta/parse-utils.parseStringField`
   - Exports (types):
     - `BuildPluginTreeOptions`
-    - `FacetedStart`
     - `KeyFileFacts`
     - `PluginFields`
     - `PluginNode`

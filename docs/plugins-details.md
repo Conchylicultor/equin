@@ -32020,7 +32020,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `CheckResult`
           - `CheckScope`
           - `GitTreeSnapshot`
-          - `IgnoredPathsDropped`
           - `RepoFiles`
           - `RepoSnapshot`
           - `RepoView`
@@ -32029,7 +32028,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `assertRepoPath`
           - `CHECK_SCOPES`
           - `CHECKOUT_SCOPES`
-          - `dropIgnoredPaths`
           - `globPaths`
           - `InconclusiveCheckError`
           - `installedRepoView`
@@ -32042,7 +32040,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `openRepoView`
           - `pathspecToRegex`
           - `pathsUnder`
-          - `REPO_MEMBERSHIP_URL`
           - `repoFileReader`
           - `repoFilesOver`
           - `repoSnapshotNow`
@@ -38793,7 +38790,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `runtimeNamespace`
           - `servingSocketPath`
       - Cross-plugin:
-        - Imported by: 74 plugins — full list in [`plugins/infra/plugins/runtime-identity/REFERENCE.md`](../plugins/infra/plugins/runtime-identity/REFERENCE.md)
+        - Imported by: 73 plugins — full list in [`plugins/infra/plugins/runtime-identity/REFERENCE.md`](../plugins/infra/plugins/runtime-identity/REFERENCE.md)
           - `infra` ×16
           - `debug` ×14
           - `conversations` ×9
@@ -38803,11 +38800,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks` ×4
           - `backup` ×2
           - `framework` ×2
-          - `plugin-meta` ×2
           - `release` ×2
           - `reports` ×2
           - `companions/browser-extension`
           - `config_v2`
+          - `plugin-meta/barrel-import`
           - `primitives/log-channels/log-files`
           - `shell/document-head`
       - Test helpers:
@@ -47267,7 +47264,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `plugin-meta/parse-utils.parseStringField`
         - Exports (types):
           - `BuildPluginTreeOptions`
-          - `FacetedStart`
           - `KeyFileFacts`
           - `PluginFields`
           - `PluginNode`
@@ -47310,10 +47306,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Plugins:
         - **`faceted`** — The faceted plugin tree, build tooling: buildFacetedPluginTree (the structure tree plus every facet extracted — plugin records from a snapshot — enriched and related), and the faceted index a backend keeps in a worker thread (FacetedTreeSource's desktop provider): built once, then refreshed by the watcher's paths — only the plugins owning them re-keyed, only moved records extracted, relate only when a record text changed.
           - Core:
-            - Uses: 47 symbols — full list in [`plugins/plugin-meta/plugins/plugin-tree/plugins/faceted/REFERENCE.md`](../plugins/plugin-meta/plugins/plugin-tree/plugins/faceted/REFERENCE.md)
-              - `plugin-meta/plugin-records` ×15
-              - `plugin-meta/plugin-tree` ×8
-              - `framework/tooling` ×7
+            - Uses: 44 symbols — full list in [`plugins/plugin-meta/plugins/plugin-tree/plugins/faceted/REFERENCE.md`](../plugins/plugin-meta/plugins/plugin-tree/plugins/faceted/REFERENCE.md)
+              - `plugin-meta/plugin-records` ×14
+              - `plugin-meta/plugin-tree` ×7
+              - `framework/tooling` ×6
               - `plugin-meta/facets` ×4
               - `framework/plugin-id` ×3
               - `packages/macrotask-yield` ×2
@@ -47325,11 +47321,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types):
               - `BuildFacetedTreeOptions`
               - `FacetCode`
-              - `FacetedCheckpoint`
               - `FacetedFacets`
               - `FacetedIndex`
               - `FacetedRefresh`
-              - `FacetedResume`
               - `OpenFacetedIndexOptions`
               - `TreeEnrichment`
             - Exports (values):

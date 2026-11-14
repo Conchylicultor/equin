@@ -1,16 +1,12 @@
 import type { Facet } from "@plugins/plugin-meta/plugins/facets/core";
 import { loadFacets } from "@plugins/plugin-meta/plugins/facets/plugins/loader/core";
-import { REPO_MEMBERSHIP_URL } from "@plugins/framework/plugins/tooling/core";
 import {
-  codeIdentity,
   currentRecordStore,
   outsideFilesOf,
-  type ModuleGraphInput,
 } from "@plugins/plugin-meta/plugins/plugin-records/core";
 import {
   createStructureIndex,
   pluginTreeDelta,
-  type FacetedStart,
   type PluginNode,
   type PluginNodeDelta,
   type PluginTree,
@@ -28,7 +24,7 @@ import {
 } from "./facet-records";
 import { recordedPluginFields } from "@plugins/plugin-meta/plugins/plugin-tree/plugins/structure-records/core";
 import { relateFacets } from "./faceted-tree";
-import { openLiveSnapshot, type LiveRepoSnapshot } from "./live-snapshot";
+import { openLiveSnapshot } from "./live-snapshot";
 
 // The faceted tree kept up to date by what changed, for a reader that lives
 // across edits (the backend's faceted-tree worker, plugin-tree's `bin/`).
@@ -78,13 +74,10 @@ export type FacetedRefresh =
   | { kind: "code-changed"; path: string };
 
 export interface FacetedIndex {
-  /** How the index's snapshot was started (see {@link FacetedResume}). */
-  readonly start: FacetedStart;
   /**
    * How long each step of the first build took (ms, wall, from the build's
-   * start to the step's end): `resume` (where to start from, decided —
-   * the caller's journal replay), `snapshot` (from the checkpoint or git, with
-   * the membership rule's code identity), `facets` (the modules loaded),
+   * start to the step's end): `snapshot` (the checkout listed by git),
+   * `facets` (the modules loaded),
    * `structure` (the key-file fold, with its code identity), `keying` (each
    * facet's code identity), `keys` (every node's record keys), `records`
    * (read or extracted), `related` (parsed and related). Steps overlap:
@@ -93,12 +86,6 @@ export interface FacetedIndex {
   readonly steps: Readonly<Record<string, number>>;
   /** The facets now (see {@link FacetedFacets}). */
   facets(): FacetedFacets;
-  /**
-   * The index's file set as a later process can start from it (see
-   * {@link FacetedResume}): as of the last refresh applied. Not re-entrant
-   * with `refresh`.
-   */
-  checkpoint(): Promise<FacetedCheckpoint>;
   /**
    * Bring the index up to date (repo-relative paths, the watcher's batch —
    * see `LiveRepoSnapshot.refresh`). Not re-entrant.
@@ -115,120 +102,12 @@ export interface OpenFacetedIndexOptions {
   /** Repo-relative files of the code this process runs, asked at each refresh. */
   codeFiles(): Iterable<string>;
   /**
-   * Where the snapshot starts from (absent: git, whole). Settled while the
-   * facet modules load.
-   */
-  resume?: Promise<FacetedResume>;
-  /**
    * Hears the structure tree (no facets) as soon as it is built — before any
    * facet record is keyed or read — and again within each refresh that moved
    * it, before that refresh's facet work. So the index's holder is also the
    * structure's: a reader of the structure alone never waits for the facets.
    */
   onStructure(tree: PluginTreeData): void;
-}
-
-/**
- * The checkout's file set as an earlier index held it: every member and its
- * blob id, and the code identity of the membership rule that listed them
- * (`REPO_MEMBERSHIP_URL`) — plain JSON, for the caller to keep across
- * processes.
- *
- * Only the snapshot is kept. Everything else the cold build does is a
- * function of it and of code this process loads anew (the structure from the
- * key-file fold, each plugin's record keys, the records, relate), and costs
- * little once the code identities are computed — which every process does
- * once. The snapshot is the part git answers by walking the whole checkout.
- */
-export interface FacetedCheckpoint {
-  membership: string;
-  members: [string, string][];
-  /**
-   * When the set was last listed whole by git (epoch ms): carried over by
-   * every start from a checkpoint, so its holder can bound how long a set is
-   * only ever patched — the journal is blind to a few changes (git's index
-   * alone, a linked worktree's exclude file) that a whole listing sees.
-   */
-  listedAt: number;
-}
-
-/**
- * How to start the snapshot: from a checkpoint, refreshing every repo-relative
- * path that may have changed since it was taken (`changed`: a journal's replay
- * since a cursor taken before it), or cold (`reason` says why).
- */
-export type FacetedResume =
-  | { kind: "checkpoint"; checkpoint: FacetedCheckpoint; changed: string[] }
-  | { kind: "cold"; reason: string };
-
-/** The membership rule's code identity over `input`'s checkout. */
-function membershipIdentity(input: ModuleGraphInput): Promise<string> {
-  return codeIdentity(input, REPO_MEMBERSHIP_URL, "repo-membership");
-}
-
-/**
- * The snapshot the index starts from: the checkpoint refreshed by what
- * changed since, when the rule that listed its members is still this
- * process's — else whole, from git.
- */
-async function startSnapshot(
-  root: AppPath,
-  opts: OpenFacetedIndexOptions,
-  mark: (step: string) => void,
-): Promise<{
-  snapshot: LiveRepoSnapshot;
-  start: FacetedStart;
-  listedAt: number;
-}> {
-  const resume: FacetedResume = (await opts.resume) ?? {
-    kind: "cold",
-    reason: "no checkpoint asked for",
-  };
-  mark("resume");
-  if (resume.kind === "checkpoint") {
-    const snapshot = await openLiveSnapshot(root, {
-      readConcurrency: opts.readConcurrency,
-      from: resume.checkpoint.members,
-    });
-    await snapshot.refresh(resume.changed, []);
-    const membership = await membershipIdentity({
-      snapshot,
-      store: currentRecordStore(),
-      readOutside: outsideFilesOf(snapshot),
-    });
-    if (membership === resume.checkpoint.membership)
-      return {
-        snapshot,
-        start: { kind: "resumed", changed: resume.changed.length },
-        listedAt: resume.checkpoint.listedAt,
-      };
-    return await coldSnapshot(
-      root,
-      opts,
-      "the membership rule changed since the checkpoint",
-    );
-  }
-  return await coldSnapshot(root, opts, resume.reason);
-}
-
-/** The snapshot listed whole by git, `reason` saying why. */
-async function coldSnapshot(
-  root: AppPath,
-  opts: OpenFacetedIndexOptions,
-  reason: string,
-): Promise<{
-  snapshot: LiveRepoSnapshot;
-  start: FacetedStart;
-  listedAt: number;
-}> {
-  const listedAt = Date.now();
-  return {
-    snapshot: await openLiveSnapshot(root, {
-      readConcurrency: opts.readConcurrency,
-    }),
-    start: { kind: "cold", reason },
-    listedAt,
-  };
 }
 
 const PLUGINS_REL = "plugins";
@@ -268,9 +147,9 @@ export async function openFacetedIndex(
     );
 
   const facetsLoaded = attempt(timed("facets", loadFacets()));
-  const { snapshot, start, listedAt } = await timed(
+  const snapshot = await timed(
     "snapshot",
-    startSnapshot(root, opts, mark),
+    openLiveSnapshot(root, { readConcurrency: opts.readConcurrency }),
   );
   const store = currentRecordStore();
   const input: FacetRecordsInput = {
@@ -412,16 +291,8 @@ export async function openFacetedIndex(
       : { kind: "failed", message: facetsState.message };
 
   return {
-    start,
     steps,
     facets: facetsNow,
-    async checkpoint() {
-      return {
-        membership: await membershipIdentity(input),
-        members: snapshot.entries(),
-        listedAt,
-      };
-    },
     async refresh(paths, edited) {
       const code = new Set(opts.codeFiles());
       for (const p of [...paths, ...edited]) {

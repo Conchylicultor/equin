@@ -13,13 +13,10 @@ export { CHECK_SCOPES, CHECKOUT_SCOPES, WHOLE_TREE_FILE_CALLS } from "./types";
 export { InconclusiveCheckError } from "./inconclusive";
 export {
   assertRepoPath,
-  dropIgnoredPaths,
-  type IgnoredPathsDropped,
   listAllRepoMembers,
   listRepoMembers,
   loadRepoFiles,
   loadRepoSnapshot,
-  REPO_MEMBERSHIP_URL,
   repoFileReader,
   repoFilesOver,
   repoSnapshotOver,

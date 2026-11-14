@@ -305,6 +305,16 @@ event list dropped any path whose replayed events netted to created and
 deleted, even one still there — about half of a checkout's rewrites
 (`parcel-addon`'s patch to `src/Event.hh`; tested in `shared/journal.test.ts`). `infra/corpus-index` uses it for its boot catch-up.
 
+**A replay costs every event under the root since the cursor, not the ones you
+keep.** fseventsd scans the volume's history (~0.2 s per 1M ids even for a
+quiet folder) and delivers every event under the stream's root; `ignore`
+paths become FSEvents exclusions, which drop events only after that cost
+(main's checkout, whose root holds every agent's checkout: ~1.5 s per 1M ids
+excluded, 7–8 s for a 6-minute-old cursor, 2026-11-15). Use it for a root
+whose own activity is small; under a busy one a flood also comes back as
+"events dropped". The plugin tree stopped using it for that reason
+(`plugin-meta/plugin-tree` CLAUDE.md).
+
 ## `depth: "children"`: a folder's own entries, and the folder going
 
 A `children` watch (what `acquireDirWatch({ scope: "children" })` opens when no
