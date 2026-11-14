@@ -4,13 +4,6 @@ import { defineExtensionShape } from "@plugins/infra/plugins/entity-extensions/c
 import { jsonField } from "@plugins/fields/plugins/json/plugins/config/core";
 import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 
-/**
- * The tag every contributed section is wrapped in inside the system-prompt
- * append: `<equin-context id="mandate">…</equin-context>`. It keeps sections
- * attributable in the transcript's prompt snapshot.
- */
-export const SYSTEM_PROMPT_SECTION_TAG = "equin-context";
-
 /** The id the conversation's preprompt is recorded under (it is not contributed). */
 export const PREPROMPT_SECTION_ID = "preprompt";
 

@@ -284,7 +284,54 @@ describe("buildJsonlEvents — the launch preprompt", () => {
       "attachment",
       "attachment",
     ]);
-    expect(events[0]).toEqual({ kind: "preprompt", at: AT, text: "Be terse." });
+    expect(events[0]).toEqual({
+      kind: "preprompt",
+      at: AT,
+      parts: [{ kind: "preprompt", text: "Be terse." }],
+    });
+  });
+
+  test("every equin-context section rides with the preprompt, in order", async () => {
+    const append = [
+      BLOCK,
+      '<equin-context id="mandate" label="Mandate">\nYou may file tasks.\n</equin-context>',
+      '<equin-context id="tree-digest">\nThe tree.\n</equin-context>',
+    ].join("\n\n");
+    const events = await buildJsonlEvents(
+      [prompt("u1", "hi"), snapshot("s1", append)],
+      noImages,
+    );
+    expect(events[0]).toEqual({
+      kind: "preprompt",
+      at: AT,
+      parts: [
+        { kind: "preprompt", text: "Be terse." },
+        {
+          kind: "section",
+          id: "mandate",
+          label: "Mandate",
+          text: "You may file tasks.",
+        },
+        { kind: "section", id: "tree-digest", text: "The tree." },
+      ],
+    });
+  });
+
+  test("sections alone, with no preprompt, still make the card", async () => {
+    const events = await buildJsonlEvents(
+      [
+        prompt("u1", "hi"),
+        snapshot(
+          "s1",
+          '<equin-context id="mandate" label="Mandate">\nM\n</equin-context>',
+        ),
+      ],
+      noImages,
+    );
+    expect(events[0]).toMatchObject({
+      kind: "preprompt",
+      parts: [{ kind: "section", id: "mandate", text: "M" }],
+    });
   });
 
   test("a system prompt that does not end in the block carries none", async () => {

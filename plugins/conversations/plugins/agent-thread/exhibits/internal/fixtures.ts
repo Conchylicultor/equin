@@ -52,7 +52,11 @@ const say = (text: string): JsonlEvent => ({
 });
 
 const harness: JsonlEvent[] = [
-  { kind: "preprompt", at: at(), text: "You find places on the user's map." },
+  {
+    kind: "preprompt",
+    at: at(),
+    parts: [{ kind: "preprompt", text: "You find places on the user's map." }],
+  },
 ];
 
 const firstTurn: JsonlEvent[] = [

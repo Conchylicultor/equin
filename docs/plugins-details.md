@@ -19661,20 +19661,33 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `userTurnsOf`
               - Cross-plugin:
                 - Imported by: `network/live`
-            - **`preprompt`** — Renders the launch special-instructions (preprompt) block as a collapsible section in the JSONL viewer.
+            - **`preprompt`** — Renders everything equin appended to the agent's system prompt — the launch special instructions (preprompt) and every contributed section (mandate, page instructions, supervisor roles, task tree…) — as one Instructions card in the JSONL viewer, each part folding on its own.
               - Web:
                 - Contributes: `JsonlViewer.EventRenderer` "preprompt" → `PrepromptRow`
                 - Uses:
                   - `conversations/conversation-view/jsonl-viewer.JsonlViewer`
                   - `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`
+                  - `primitives/collapsible.Collapsible`
+                  - `primitives/collapsible.CollapsibleChevron`
+                  - `primitives/collapsible.CollapsibleContent`
+                  - `primitives/collapsible.CollapsibleTrigger`
+                  - `primitives/css/spacing.Stack`
                   - `primitives/css/text.Text`
                   - `ui/icons.Icon`
               - Cross-plugin:
                 - Uses tokens:
+                  - `ui/tokens/color-palette --foreground`
                   - `ui/tokens/color-palette --muted-foreground`
                   - `ui/tokens/color-palette --primary`
                   - `ui/tokens/color-palette --primary-text`
+                  - `ui/tokens/density --space-md`
+                  - `ui/tokens/density --space-xs`
+                  - `ui/tokens/shape --radius`
                   - `ui/tokens/shape --spacing`
+                  - `ui/tokens/type-scale --font-scale`
+                  - `ui/tokens/type-scale --font-size-caption`
+                  - `ui/tokens/type-scale --font-weight-normal`
+                  - `ui/tokens/type-scale --line-height-caption`
             - **`request-shape`** — Renders the system prompt and tool set Claude Code logs for model calls (api-request-shape): the agent's tools and prompt on first use, then one row per change — a deferred tool loaded, a tool dropped, the prompt edited. Folds with the harness context around it.
               - Web:
                 - Contributes:
@@ -23077,7 +23090,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversationSystemPromptShape`
           - `estimateTokens`
           - `PREPROMPT_SECTION_ID`
-          - `SYSTEM_PROMPT_SECTION_TAG`
           - `SystemPromptSectionRecordSchema`
       - Cross-plugin:
         - Imported by:
@@ -23169,6 +23181,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ForeignSessionPayload`
           - `HookOutcome`
           - `HookRecord`
+          - `InstructionPart`
           - `JsonlEvent`
           - `QuestionAnswer`
           - `RequestConfig`
@@ -23187,15 +23200,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `activeLineUuids`
           - `BranchForest`
+          - `CONTEXT_SECTION_TAG`
           - `createTurnEndTracker`
           - `crossSessionMessageOf`
           - `extractPreprompt`
           - `extractTeammateMessages`
           - `ForeignSessionPayloadSchema`
           - `hookRecordOf`
+          - `InstructionPartSchema`
           - `isInterruptContent`
           - `JsonlEventSchema`
           - `mergedSendUuids`
+          - `parseSystemPromptAppend`
           - `PREPROMPT_TAG`
           - `QuestionAnswerSchema`
           - `questionAnswerText`
@@ -23216,6 +23232,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `unwrapRelayEnvelopes`
           - `userPromptText`
           - `withPicksInResponse`
+          - `wrapContextSection`
           - `wrapPreprompt`
       - Cross-plugin:
         - Imported by:
@@ -48028,8 +48045,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-size-caption`
           - `ui/tokens/type-scale --font-weight-normal`
           - `ui/tokens/type-scale --line-height-caption`
-        - Imported by: 60 plugins — full list in [`plugins/primitives/plugins/collapsible/REFERENCE.md`](../plugins/primitives/plugins/collapsible/REFERENCE.md)
-          - `conversations` ×14
+        - Imported by: 61 plugins — full list in [`plugins/primitives/plugins/collapsible/REFERENCE.md`](../plugins/primitives/plugins/collapsible/REFERENCE.md)
+          - `conversations` ×15
           - `apps` ×12
           - `ui` ×12
           - `primitives` ×8
@@ -49298,9 +49315,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Stack`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Imported by: 446 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
+            - Imported by: 447 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
               - `apps` ×109
-              - `conversations` ×76
+              - `conversations` ×77
               - `primitives` ×54
               - `debug` ×39
               - `ui` ×31
@@ -64260,10 +64277,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `densityGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --radius`
-            - Tokens used by: 351 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
+            - Tokens used by: 352 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
               - `apps` ×74
               - `primitives` ×72
-              - `conversations` ×49
+              - `conversations` ×50
               - `debug` ×29
               - `ui` ×24
               - `page` ×21
@@ -64846,9 +64863,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `typeScaleGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/density --space-sm`
-            - Tokens used by: 230 plugins — full list in [`plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md)
+            - Tokens used by: 231 plugins — full list in [`plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md)
               - `apps` ×59
-              - `conversations` ×39
+              - `conversations` ×40
               - `primitives` ×38
               - `debug` ×15
               - `plugin-meta` ×14

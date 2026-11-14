@@ -10,16 +10,33 @@ import { RequestShapeChangeSchema, RequestShapeSchema } from "./request-shape";
 // Wire tag wrapping a conversation's preprompt. Named `special_instructions`
 // (not `preprompt`) so the model reads it as an imperative to follow. The
 // internal event kind stays `preprompt`; the UI label is "Instructions". This
-// constant is the SINGLE SOURCE OF TRUTH shared by the launch (lifecycle.ts),
-// which appends the wrapped block to the agent's system prompt, and the
-// transcript parser (parse-jsonl.ts), which finds it there (the system prompt
-// the CLI records in `prompt_snapshot`) — or in the first user turn of a
+// constant is the SINGLE SOURCE OF TRUTH shared by the launch (system-prompt's
+// composer), which appends the wrapped block to the agent's system prompt, and
+// the transcript parser (parse-jsonl.ts), which finds it there (the system
+// prompt the CLI records in `prompt_snapshot`) — or in the first user turn of a
 // conversation launched before that, when it was baked into the turn instead.
 export const PREPROMPT_TAG = "special_instructions";
+
+/**
+ * The tag every contributed system-prompt section is wrapped in:
+ * `<equin-context id="mandate" label="Mandate">…</equin-context>`. Written by
+ * system-prompt's composer, read back by the transcript parser, so the
+ * transcript's Instructions card shows each section on its own.
+ */
+export const CONTEXT_SECTION_TAG = "equin-context";
 
 /** Wrap preprompt text as the block the agent's system prompt is given. */
 export function wrapPreprompt(text: string): string {
   return `<${PREPROMPT_TAG}>\n${text}\n</${PREPROMPT_TAG}>`;
+}
+
+/** Wrap one contributed section as the block the agent's system prompt is given. */
+export function wrapContextSection(
+  id: string,
+  label: string,
+  text: string,
+): string {
+  return `<${CONTEXT_SECTION_TAG} id="${id}" label="${label}">\n${text.trim()}\n</${CONTEXT_SECTION_TAG}>`;
 }
 
 /** Lift the first preprompt block out of `text`. Returns the inner text (or null) + the remainder. */
@@ -37,6 +54,50 @@ export function extractPreprompt(text: string): {
     text.slice(0, m.index) + text.slice(m.index + m[0].length)
   ).trim();
   return { preprompt: inner ? inner : null, rest };
+}
+
+/** One part of what equin appended to an agent's system prompt. */
+export const InstructionPartSchema = z.discriminatedUnion("kind", [
+  // The task's preprompt (`<special_instructions>`).
+  z.object({ kind: z.literal("preprompt"), text: z.string() }),
+  // A contributed section (`<equin-context>`). `label` is absent on
+  // transcripts written before the wrapper carried it.
+  z.object({
+    kind: z.literal("section"),
+    id: z.string(),
+    label: z.string().optional(),
+    text: z.string(),
+  }),
+]);
+export type InstructionPart = z.infer<typeof InstructionPartSchema>;
+
+/**
+ * Every part of an equin system-prompt append, in order: its preprompt block
+ * and each `<equin-context>` section. Empty when the text holds none.
+ */
+export function parseSystemPromptAppend(text: string): InstructionPart[] {
+  const re = new RegExp(
+    `<${PREPROMPT_TAG}>([\\s\\S]*?)</${PREPROMPT_TAG}>` +
+      `|<${CONTEXT_SECTION_TAG} id="([^"]*)"(?: label="([^"]*)")?>([\\s\\S]*?)</${CONTEXT_SECTION_TAG}>`,
+    "g",
+  );
+  const parts: InstructionPart[] = [];
+  for (const m of text.matchAll(re)) {
+    if (m[1] !== undefined) {
+      const inner = m[1].trim();
+      if (inner) parts.push({ kind: "preprompt", text: inner });
+      continue;
+    }
+    const inner = (m[4] ?? "").trim();
+    if (!inner) continue;
+    parts.push({
+      kind: "section",
+      id: m[2]!,
+      ...(m[3] ? { label: m[3] } : {}),
+      text: inner,
+    });
+  }
+  return parts;
 }
 
 export const TokenUsageSchema = z.object({
@@ -304,9 +365,14 @@ export const JsonlEventSchema = z.discriminatedUnion("kind", [
     ),
   }),
   z.object({
+    // What equin appended to the agent's system prompt (its preprompt and
+    // every contributed section), or a preprompt baked into the first turn.
     kind: z.literal("preprompt"),
     at: z.string(),
-    text: z.string(),
+    parts: wholeList(InstructionPartSchema, {
+      reason:
+        "the preprompt plus one per contributed system-prompt section: a handful",
+    }),
   }),
   z.object({
     // An `event` turn the app delivered to a watching agent

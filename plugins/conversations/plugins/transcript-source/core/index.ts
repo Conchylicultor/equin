@@ -12,9 +12,14 @@ export {
   QuestionAnswerSchema,
   TokenUsageSchema,
   PREPROMPT_TAG,
+  CONTEXT_SECTION_TAG,
   wrapPreprompt,
+  wrapContextSection,
   extractPreprompt,
+  parseSystemPromptAppend,
+  InstructionPartSchema,
 } from "./protocol";
+export type { InstructionPart } from "./protocol";
 export { tokenUsageOf } from "./token-usage";
 export { withPicksInResponse, replyOf } from "./question-response";
 export { isInterruptContent } from "./interrupt";

@@ -1,11 +1,13 @@
 import { serveCollection } from "@plugins/network/plugins/live/server";
 import { reportServerError } from "@plugins/framework/plugins/server-core/core";
 import { crashFieldsOf } from "@plugins/packages/plugins/error-subject/core";
-import { wrapPreprompt } from "@plugins/conversations/plugins/transcript-source/core";
+import {
+  wrapContextSection,
+  wrapPreprompt,
+} from "@plugins/conversations/plugins/transcript-source/core";
 import {
   conversationSystemPrompt,
   PREPROMPT_SECTION_ID,
-  SYSTEM_PROMPT_SECTION_TAG,
   type SystemPromptSectionRecord,
 } from "@plugins/conversations/plugins/system-prompt/core";
 import {
@@ -20,11 +22,6 @@ export const conversationSystemPromptServed = serveCollection(
   conversationSystemPrompt,
   { from: conversationSystemPromptExt },
 );
-
-/** A contributed section as appended: its text inside its wrapper. */
-export function wrapSection(id: string, text: string): string {
-  return `<${SYSTEM_PROMPT_SECTION_TAG} id="${id}">\n${text.trim()}\n</${SYSTEM_PROMPT_SECTION_TAG}>`;
-}
 
 /**
  * What a section that threw is replaced by: the agent learns guidance is
@@ -97,7 +94,7 @@ export async function composeSystemPromptAppend(
   }
   for (const { section, text } of rendered) {
     if (text === null || text.trim() === "") continue;
-    const wrapped = wrapSection(section.id, text);
+    const wrapped = wrapContextSection(section.id, section.label, text);
     parts.push({
       record: { id: section.id, label: section.label, chars: wrapped.length },
       text: wrapped,

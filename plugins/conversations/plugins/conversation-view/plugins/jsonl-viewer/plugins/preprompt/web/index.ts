@@ -4,7 +4,7 @@ import { PrepromptRow } from "./components/preprompt-row";
 
 export default {
   description:
-    "Renders the launch special-instructions (preprompt) block as a collapsible section in the JSONL viewer.",
+    "Renders everything equin appended to the agent's system prompt — the launch special instructions (preprompt) and every contributed section (mandate, page instructions, supervisor roles, task tree…) — as one Instructions card in the JSONL viewer, each part folding on its own.",
   contributions: [
     JsonlViewer.EventRenderer({
       match: "preprompt",

@@ -101,6 +101,7 @@ Design: `research/2026-10-19-global-demo-story-from-browser-worker.md` §3.
     - `ForeignSessionPayload`
     - `HookOutcome`
     - `HookRecord`
+    - `InstructionPart`
     - `JsonlEvent`
     - `QuestionAnswer`
     - `RequestConfig`
@@ -119,15 +120,18 @@ Design: `research/2026-10-19-global-demo-story-from-browser-worker.md` §3.
   - Exports (values):
     - `activeLineUuids`
     - `BranchForest`
+    - `CONTEXT_SECTION_TAG`
     - `createTurnEndTracker`
     - `crossSessionMessageOf`
     - `extractPreprompt`
     - `extractTeammateMessages`
     - `ForeignSessionPayloadSchema`
     - `hookRecordOf`
+    - `InstructionPartSchema`
     - `isInterruptContent`
     - `JsonlEventSchema`
     - `mergedSendUuids`
+    - `parseSystemPromptAppend`
     - `PREPROMPT_TAG`
     - `QuestionAnswerSchema`
     - `questionAnswerText`
@@ -148,6 +152,7 @@ Design: `research/2026-10-19-global-demo-story-from-browser-worker.md` §3.
     - `unwrapRelayEnvelopes`
     - `userPromptText`
     - `withPicksInResponse`
+    - `wrapContextSection`
     - `wrapPreprompt`
 - Cross-plugin:
   - Imported by:

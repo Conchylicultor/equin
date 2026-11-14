@@ -3,6 +3,8 @@ import { z } from "zod";
 import { unwrapEventTurn } from "@plugins/conversations/plugins/turn-ledger/core";
 import {
   extractPreprompt,
+  parseSystemPromptAppend,
+  type InstructionPart,
   activeLineUuids,
   unwrapRelayEnvelopes,
   crossSessionMessageOf,
@@ -410,16 +412,17 @@ function extractQuestionAnswer(
 }
 
 /**
- * The preprompt a `prompt_snapshot` attachment's system prompt carries: the
- * <special_instructions> block the launch appends as the prompt's last segment
- * (`systemPrompt.append`), or null when it ends in anything else.
+ * What equin appended to the system prompt a `prompt_snapshot` attachment
+ * carries: the launch's append is the prompt's last segment
+ * (`systemPrompt.append`) — its <special_instructions> block and every
+ * <equin-context> section. Empty when it ends in anything else.
  */
-function snapshotPreprompt(att: Record<string, unknown>): string | null {
+function snapshotInstructions(att: Record<string, unknown>): InstructionPart[] {
   const segments = att.systemPrompt;
-  if (!Array.isArray(segments)) return null;
+  if (!Array.isArray(segments)) return [];
   const last: unknown = segments.at(-1);
-  if (typeof last !== "string") return null;
-  return extractPreprompt(last).preprompt;
+  if (typeof last !== "string") return [];
+  return parseSystemPromptAppend(last);
 }
 
 /**
@@ -619,18 +622,18 @@ export class JsonlEventBuilder {
    * prompt, which the snapshot recording it follows. With no prompt yet, at the
    * end, stamped with the snapshot's time.
    */
-  private insertBeforeFirstPrompt(text: string, ts: string): void {
+  private insertBeforeFirstPrompt(parts: InstructionPart[], ts: string): void {
     const i = this.working.findIndex(
       (e) => e.kind === "user-text" || e.kind === "user-image",
     );
     if (i === -1) {
-      this.emit({ kind: "preprompt", at: ts, text });
+      this.emit({ kind: "preprompt", at: ts, parts });
       return;
     }
     const event: JsonlEvent = {
       kind: "preprompt",
       at: this.working[i]!.at,
-      text,
+      parts,
     };
     this.working.splice(i, 0, event);
     // Once per transcript (the preprompt appears once): reindex the shifted tail.
@@ -675,7 +678,11 @@ export class JsonlEventBuilder {
       const { preprompt, rest } = extractPreprompt(body);
       if (preprompt) {
         this.seenPreprompt = true;
-        this.emit({ kind: "preprompt", at: ts, text: preprompt });
+        this.emit({
+          kind: "preprompt",
+          at: ts,
+          parts: [{ kind: "preprompt", text: preprompt }],
+        });
         body = rest;
       }
     }
@@ -1094,10 +1101,10 @@ export class JsonlEventBuilder {
             continue;
           }
           if (subtype === "prompt_snapshot" && !this.seenPreprompt) {
-            const preprompt = snapshotPreprompt(att as Record<string, unknown>);
-            if (preprompt) {
+            const parts = snapshotInstructions(att as Record<string, unknown>);
+            if (parts.length > 0) {
               this.seenPreprompt = true;
-              this.insertBeforeFirstPrompt(preprompt, ts);
+              this.insertBeforeFirstPrompt(parts, ts);
             }
           }
           // A hook record that names a call rides on that call, as its result

@@ -72,7 +72,11 @@ const say = (text: string, messageId?: string): JsonlEvent => ({
 
 const harness: JsonlEvent[] = [
   { kind: "system", at: at(), subtype: "init", text: "Session started" },
-  { kind: "preprompt", at: at(), text: "You find places." },
+  {
+    kind: "preprompt",
+    at: at(),
+    parts: [{ kind: "preprompt", text: "You find places." }],
+  },
   call("Read", { file_path: "/w/CLAUDE.md" }, { content: "# Places" }),
 ];
 

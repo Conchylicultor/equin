@@ -19,7 +19,11 @@ SystemPrompt.Section({ id: "mandate", label: "Mandate", render: (conversationId)
   restart starts on what is true now.
 - **Composed** as the preprompt (`<special_instructions>`, first — the
   transcript's prompt-snapshot reader lifts it from there) then every section in
-  id order, each wrapped `<equin-context id="…">`. `null` / blank adds nothing.
+  id order, each wrapped `<equin-context id="…" label="…">`
+  (transcript-source's `wrapContextSection`). `null` / blank adds nothing.
+- **Shown in the transcript**: the parser reads every part back out of the
+  `prompt_snapshot` (`parseSystemPromptAppend`) into the `preprompt` event, and
+  its Instructions card folds each part on its own.
 - **A section that throws** is reported (crash report) and replaced by a notice
   that its guidance is missing; the agent still starts.
 - **Recorded**: each spawn rewrites the conversation's
@@ -70,7 +74,6 @@ Design: `research/2026-11-12-conversations-system-prompt-sections.md`.
     - `conversationSystemPromptShape`
     - `estimateTokens`
     - `PREPROMPT_SECTION_ID`
-    - `SYSTEM_PROMPT_SECTION_TAG`
     - `SystemPromptSectionRecordSchema`
 - Cross-plugin:
   - Imported by:
