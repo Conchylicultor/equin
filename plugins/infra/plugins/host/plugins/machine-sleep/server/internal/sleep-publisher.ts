@@ -97,6 +97,30 @@ export function awakeSpanStartMs(
   return cursor - need;
 }
 
+/**
+ * The latest placed sleep that ENDED inside `[atMs - withinMs, atMs]` — the
+ * wake `atMs` came just after — or null when none did.
+ */
+export function wakeWithin(
+  sleeps: readonly SleepInterval[],
+  atMs: number,
+  withinMs: number,
+): SleepInterval | null {
+  let latest: SleepInterval | null = null;
+  for (const s of sleeps) {
+    if (s.endMs > atMs || s.endMs < atMs - withinMs) continue;
+    if (latest === null || s.endMs > latest.endMs) latest = s;
+  }
+  return latest;
+}
+
+/** What {@link SleepPublisher.wakeBefore} answers. */
+export type WakeBefore =
+  /** The platform cannot tell — NOT "the machine did not wake". */
+  | { supported: false }
+  /** The sleep whose wake came in the window, or null when this process saw none. */
+  | { supported: true; sleep: SleepInterval | null };
+
 export interface SleepPublisher {
   /** The last published reading, reading the clock first if nothing was yet. */
   current(): SleepNow;
@@ -114,6 +138,12 @@ export interface SleepPublisher {
    * so a wake moments ago counts. `null` where the platform cannot tell.
    */
   awakeSpanStart(endMs: number, awakeMs: number): number | null;
+  /**
+   * The sleep this process saw end in the `withinMs` before `atMs` (epoch ms)
+   * — "had the machine just woken?" — reading the clock first, so a wake
+   * moments ago counts.
+   */
+  wakeBefore(atMs: number, withinMs: number): WakeBefore;
   /** Run `fn` on every changed reading `publish` finds. Returns the unsubscribe. */
   subscribe(fn: () => void): () => void;
 }
@@ -151,6 +181,11 @@ export function createSleepPublisher(
       publish();
       if (last?.value === null) return null;
       return awakeSpanStartMs(sleeps, endMs, awakeMs);
+    },
+    wakeBefore(atMs, withinMs) {
+      publish();
+      if (last?.value === null) return { supported: false };
+      return { supported: true, sleep: wakeWithin(sleeps, atMs, withinMs) };
     },
     subscribe(fn) {
       listeners.add(fn);

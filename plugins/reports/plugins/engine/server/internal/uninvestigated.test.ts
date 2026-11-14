@@ -45,6 +45,7 @@ const values = (over: Partial<ReportUpsertValues>): ReportUpsertValues => ({
   buildId: null,
   commit: null,
   occurredAt: new Date("2026-11-12T10:00:00.000Z"),
+  afterWake: null,
   ...over,
 });
 
@@ -144,5 +145,22 @@ describe("untrusted report sources", () => {
     expect(renderReportTask(own!).description).not.toContain(
       "UNTRUSTED-REPORT",
     );
+  });
+
+  test("Investigate says the machine had just woken when it had, and only then", async () => {
+    const at = new Date("2026-11-14T16:23:58.400Z");
+    const [woke] = await writeReport(
+      values({
+        fingerprint: "w1",
+        occurredAt: at,
+        afterWake: { wokeAt: at.getTime() - 400, sleptMs: 268_000 },
+      }),
+      t.db,
+    );
+    const [awake] = await writeReport(values({ fingerprint: "w2" }), t.db);
+    expect(renderReportTask(woke!).description).toContain(
+      "**Machine wake:** Its occurrence came just after the machine woke from sleep (latest: 400ms after the machine woke from 4m 28s asleep",
+    );
+    expect(renderReportTask(awake!).description).not.toContain("Machine wake");
   });
 });

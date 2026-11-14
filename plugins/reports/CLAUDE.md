@@ -145,6 +145,7 @@ before it) beside the total, worded by `formatReportActivity`
     - `fields.nullable`
     - `fields/bool/config.boolField`
     - `fields/date/config.dateField`
+    - `fields/duration.formatDuration`
     - `fields/identifier/config.identifierField`
     - `fields/int/config.intField`
     - `fields/json/config.jsonField`
@@ -176,11 +177,13 @@ before it) beside the total, worded by `formatReportActivity`
     - `ReportResult`
     - `ReportSource`
   - Exports (values):
+    - `afterWakeSummary`
     - `CLIENT_REPORT_SOURCES`
     - `fenceUntrustedReport`
     - `fixedByClaim`
     - `FIXES_REPORT_TRAILER`
     - `fixStandingOf`
+    - `formatAfterWake`
     - `formatRecentCount`
     - `formatReportActivity`
     - `fromOutdatedBundle`
@@ -188,6 +191,7 @@ before it) beside the total, worded by `formatReportActivity`
     - `isUntrustedReportSource`
     - `normalizeMessage`
     - `regresses`
+    - `REPORT_AFTER_WAKE_WINDOW_MS`
     - `REPORT_CATEGORIES`
     - `REPORT_FIX_STATE_LABELS`
     - `REPORT_FIX_STATES`

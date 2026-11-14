@@ -66,6 +66,7 @@ const values = (
   buildId: null,
   commit: null,
   occurredAt: T1,
+  afterWake: null,
   ...over,
 });
 

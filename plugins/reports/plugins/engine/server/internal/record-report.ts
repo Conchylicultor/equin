@@ -30,14 +30,17 @@ import {
   ReportKind,
   type StormSummary,
 } from "@plugins/reports/server";
+import { wakeBefore } from "@plugins/infra/plugins/host/plugins/machine-sleep/server";
 import { pickIncidentBell } from "./incident";
 import { ringBell, type Bell } from "./bell";
 import { fixedReportOccurrenceSink } from "./occurrence-sink";
 import {
+  REPORT_AFTER_WAKE_WINDOW_MS,
   REPORT_HOURLY_MAX,
   REPORT_RECENT_MAX,
   reportHourOf,
   fromOutdatedBundle,
+  isUntrustedReportSource,
   skewProofOf,
   versionSkewExplains,
   reportIdKind,
@@ -46,6 +49,29 @@ import {
   type ReportInput,
   type ReportOccurrence,
 } from "@plugins/reports/core";
+
+// Whether the machine had just woken when this occurrence happened, as the
+// occurrence keeps it — a FACT stated on the report, never a reason to drop
+// it: a nap explains much of what fires on wake (PgBouncer's login and query
+// waits count the sleep and time out the moment the box wakes), and without
+// it each such report reads as a real crash. Read by THIS backend, which knows
+// only the sleeps it lived through (a crash-buffer line replayed by the next
+// boot finds none — null, the same "not known to follow a wake").
+// An untrusted source happened on ANOTHER machine (a website visitor's
+// browser, imported with the site server's instant): this machine's sleeps say
+// nothing about it.
+function afterWakeOf(
+  source: string,
+  at: number,
+): ReportOccurrence["afterWake"] {
+  if (isUntrustedReportSource(source)) return null;
+  const wake = wakeBefore(at, REPORT_AFTER_WAKE_WINDOW_MS);
+  if (!wake.supported || wake.sleep === null) return null;
+  return {
+    wokeAt: wake.sleep.endMs,
+    sleptMs: wake.sleep.endMs - wake.sleep.startMs,
+  };
+}
 
 // What became of one recordReport call. A discriminated union so "the engine
 // took ownership of this occurrence" can never be misread as "recorded, with
@@ -443,6 +469,7 @@ async function fileReport(input: ReportInput): Promise<FiledReport> {
         buildId: buildId ?? null,
         commit: commit ?? null,
         occurredAt,
+        afterWake: afterWakeOf(source, occurredAt.getTime()),
       });
     }),
   );
@@ -558,6 +585,8 @@ export interface ReportUpsertValues {
   // The event's true instant — under duress-shed replay this is EARLIER than
   // now (the in-freeze trip time carried through the buffer).
   occurredAt: Date;
+  /** The machine had just woken when it happened (see ReportOccurrence). */
+  afterWake: ReportOccurrence["afterWake"];
 }
 
 // The durable write of recordReport: one upsert through the reports producer,
@@ -609,6 +638,7 @@ function buildUpsert(
     url: v.url,
     buildId: v.buildId,
     commit: v.commit,
+    afterWake: v.afterWake,
   };
   const recent = sql`(
     select coalesce(jsonb_agg(o order by (o->>'at')::bigint desc), '[]'::jsonb)

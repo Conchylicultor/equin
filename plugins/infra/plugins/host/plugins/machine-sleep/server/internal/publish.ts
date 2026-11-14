@@ -1,6 +1,10 @@
 import { readSleepClock } from "@plugins/packages/plugins/sleep-clock/core";
 import type { SleepNow } from "../../core";
-import { armAwakeTimeout, createSleepPublisher } from "./sleep-publisher";
+import {
+  armAwakeTimeout,
+  createSleepPublisher,
+  type WakeBefore,
+} from "./sleep-publisher";
 
 // The one publisher of this process: the server half owns the reading (other
 // plugins' server code drives it through publishSleepReading), and the machine
@@ -60,4 +64,16 @@ export function setAwakeTimeout(fn: () => void, awakeMs: number): () => void {
     setTimeout: (f, ms) => setTimeout(f, ms),
     clearTimeout: (h) => clearTimeout(h as ReturnType<typeof setTimeout>),
   });
+}
+
+/**
+ * Whether the machine had just woken at `atMs` (epoch ms): the sleep this
+ * process saw end in the `withinMs` before it — for saying so on what a wake
+ * explains (a timer that counted the nap firing the moment the box woke). Reads
+ * the clock first, so a wake moments ago counts. A process knows only the
+ * sleeps it lived through: `sleep: null` is "none seen", and
+ * `{ supported: false }` where the platform cannot tell.
+ */
+export function wakeBefore(atMs: number, withinMs: number): WakeBefore {
+  return publisher.wakeBefore(atMs, withinMs);
 }

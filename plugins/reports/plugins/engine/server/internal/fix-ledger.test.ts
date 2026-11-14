@@ -135,6 +135,7 @@ describe("fix ledger (real DB)", () => {
         buildId: null,
         commit: before,
         occurredAt: new Date(),
+        afterWake: null,
       },
       t.db,
     );
@@ -242,6 +243,7 @@ describe("fix ledger (real DB)", () => {
           buildId: null,
           commit,
           occurredAt: at,
+          afterWake: null,
         },
         t.db,
       );

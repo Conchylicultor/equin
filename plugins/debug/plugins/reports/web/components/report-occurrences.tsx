@@ -7,7 +7,11 @@ import {
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { TabOriginBadge } from "@plugins/apps-core/plugins/tab-origin/web";
-import type { Report, ReportOccurrence } from "@plugins/reports/core";
+import {
+  formatAfterWake,
+  type Report,
+  type ReportOccurrence,
+} from "@plugins/reports/core";
 
 // Marker scraped by codegen (data-views.generated.ts). Must live in web/**.
 const REPORT_OCCURRENCES_VIEW = defineDataView("debug.report-occurrences");
@@ -48,6 +52,24 @@ const FIELDS: FieldDef<ReportOccurrence>[] = [
       <TabOriginBadge stamp={{ clientId: o.clientId, url: o.url }} />
     ),
     width: "11rem",
+  },
+  {
+    id: "afterWake",
+    label: "After wake",
+    type: "text",
+    // The machine had just woken: a nap explains much of what fires on wake,
+    // so it is said here rather than left for an investigation to find.
+    // Blank when it had not (or the backend could not tell).
+    value: (o) => formatAfterWake(o) ?? "",
+    cell: (o) => {
+      const words = formatAfterWake(o);
+      return words === null ? null : (
+        <Text variant="caption" tone="muted" className="truncate" title={words}>
+          {words}
+        </Text>
+      );
+    },
+    width: "9rem",
   },
   {
     id: "commit",

@@ -7,6 +7,7 @@ import {
   overlapMs,
   sleepBetween,
   sleepNowChanged,
+  wakeWithin,
 } from "./sleep-publisher";
 
 const BOOT = "B25F1FC6-798F-412D-B0DA-B41350248582";
@@ -268,5 +269,46 @@ describe("armAwakeTimeout", () => {
     armAwakeTimeout(h.p, () => fired++, 1000, t.env);
     t.advance(1000);
     expect(fired).toBe(1);
+  });
+});
+
+describe("wakeBefore", () => {
+  test("the latest sleep ending in the window before the instant", () => {
+    const sleeps = [
+      { startMs: 0, endMs: 1_000 },
+      { startMs: 2_000, endMs: 270_000 },
+    ];
+    // The 2026-11-14 incident: reports in the second after a 268 s sleep.
+    expect(wakeWithin(sleeps, 270_400, 30_000)).toEqual(sleeps[1]!);
+    // Long after the wake, or before it: not "just woke".
+    expect(wakeWithin(sleeps, 400_000, 30_000)).toBeNull();
+    expect(wakeWithin(sleeps, 269_000, 30_000)).toBeNull();
+  });
+
+  test("the publisher reads the clock first and says when it cannot tell", () => {
+    const h = harness({
+      supported: true,
+      boot: BOOT,
+      asleepMs: 0,
+      wakeAtMs: null,
+    });
+    h.p.publish();
+    h.set({
+      supported: true,
+      boot: BOOT,
+      asleepMs: 268_000,
+      wakeAtMs: 300_000,
+    });
+    expect(h.p.wakeBefore(300_500, 30_000)).toEqual({
+      supported: true,
+      sleep: { startMs: 32_000, endMs: 300_000 },
+    });
+    expect(h.p.wakeBefore(400_000, 30_000)).toEqual({
+      supported: true,
+      sleep: null,
+    });
+    expect(harness({ supported: false }).p.wakeBefore(1, 1)).toEqual({
+      supported: false,
+    });
   });
 });

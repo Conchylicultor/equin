@@ -350,6 +350,7 @@ describe("reports.list fed by the reports producer — differential oracle", () 
         commit: null,
         // Occasionally an out-of-order (replayed) occurrence.
         occurredAt: new Date(T0 + (clock - (rand() < 0.2 ? 7 : 0)) * 1000),
+        afterWake: null,
       };
       const [row] = await writeReport(v, testDb.db);
       present.set(fp, row!.id);

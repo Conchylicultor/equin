@@ -23,6 +23,14 @@ import { REPORT_FIX_STATES, REPORT_FIX_STATE_LABELS } from "./fix-state";
 export const REPORT_RECENT_MAX = 10;
 
 /**
+ * How soon after a wake an occurrence counts as "the machine had just woken":
+ * long enough for what a nap leaves behind to fire and clear (PgBouncer's
+ * server_login_retry, 15 s by default, fails a pool's logins that long after
+ * the login the sleep interrupted).
+ */
+export const REPORT_AFTER_WAKE_WINDOW_MS = 30_000;
+
+/**
  * One occurrence of a report, as `recent` keeps it: when, what it said, and
  * which tab (and page, and bundle) raised it — the attribution the row's
  * last-writer-wins columns overwrite on every repeat.
@@ -41,6 +49,18 @@ export const ReportOccurrenceSchema = z.object({
    * regression is judged on: does it descend from the fix?
    */
   commit: z.string().nullable().default(null),
+  /**
+   * The machine had just woken when it happened: the wake's instant (epoch ms)
+   * and how long it had slept — so a report a nap explains (a timer that
+   * counted the sleep, firing on wake) says so instead of reading as a crash.
+   * Null when the recording backend saw no wake in the window before it
+   * ({@link REPORT_AFTER_WAKE_WINDOW_MS}), could not tell, or the occurrence
+   * predates the field: never a claim that the machine did not sleep.
+   */
+  afterWake: z
+    .object({ wokeAt: z.number(), sleptMs: z.number() })
+    .nullable()
+    .default(null),
 });
 export type ReportOccurrence = z.infer<typeof ReportOccurrenceSchema>;
 

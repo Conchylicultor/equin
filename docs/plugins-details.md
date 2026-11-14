@@ -29175,6 +29175,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `fields/duration/storage`
           - `fields/duration/table`
           - `infra/claude-cli`
+          - `reports`
           - `runs`
       - Plugins:
         - **`config`** — Duration field type: the durationField factory for building field records.
@@ -36780,9 +36781,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Exports (values):
                   - `FS_LATENCY_MONITOR_LABEL`
                   - `START_MONITOR_COMMAND`
-        - **`machine-sleep`** — useSleepNow(): the machine.sleep live value (and useSleepNowForFold: the reading as op-log's `sleepNow` fold parameter, unknown while loading or where the computer cannot be read) — the box's sleep clock, so a live surface can count a nap as asleep rather than as work. The machine's sleep clock, read and published: publishSleepReading() re-reads it and tells its listeners only when it changed — called by an existing periodic observer, so a wake reaches the browser without a poller of its own — with currentSleepReading() and onSleepReadingChanged() for the machine half that serves it as the machine.sleep live value, sleptDuring(start, end) — the sleep this process saw inside a wall-clock span — and awakeSpanStart(end, awakeMs) — the wall-clock instant that much awake time before end, stepping over those sleeps — and setAwakeTimeout(fn, awakeMs), a timer that a sleep does not spend.
+        - **`machine-sleep`** — useSleepNow(): the machine.sleep live value (and useSleepNowForFold: the reading as op-log's `sleepNow` fold parameter, unknown while loading or where the computer cannot be read) — the box's sleep clock, so a live surface can count a nap as asleep rather than as work. The machine's sleep clock, read and published: publishSleepReading() re-reads it and tells its listeners only when it changed — called by an existing periodic observer, so a wake reaches the browser without a poller of its own — with currentSleepReading() and onSleepReadingChanged() for the machine half that serves it as the machine.sleep live value, sleptDuring(start, end) — the sleep this process saw inside a wall-clock span — awakeSpanStart(end, awakeMs) — the wall-clock instant that much awake time before end, stepping over those sleeps — setAwakeTimeout(fn, awakeMs), a timer that a sleep does not spend, and wakeBefore(at, within) — the sleep whose wake came just before an instant, so what a wake explains can say the machine had just woken.
           - Server:
             - Contributes: `resource.declare` "machine.sleep"
+            - Exports (types):
+              - `SleepInterval`
+              - `WakeBefore`
             - Exports (values):
               - `awakeSpanStart`
               - `currentSleepReading`
@@ -36790,6 +36794,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `publishSleepReading`
               - `setAwakeTimeout`
               - `sleptDuring`
+              - `wakeBefore`
             - Resources: `machine.sleep` (push, notified)
           - Web:
             - Uses:
@@ -36814,6 +36819,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `debug/queue-health`
               - `debug/slow-ops`
               - `infra/jobs`
+              - `reports/engine`
     - **`host-account`** — Host account, read: useHostAccount() — the account this instance runs as (login name and full name: the OS account on the desktop, a guest account on a host without the computer), loading until its value arrives; useProfileName() — the name to show for the user (the profile-name setting's name, else the account's), or anonymous when the user turned their name off. Registers that setting. Its home directory is the hostHome value (core, needsMachine), read with useLive. Host account: serves the host-account value — the account this instance runs as (login name and full name), read once through the HostAccountSource host service: the OS account on the desktop (machine/), a fixed guest account on a host without the computer. Its sibling host-account.home, the account's home directory, is the machine half's. Registers the profile-name setting (the name shown for the user, or none).
       - Web:
         - Contributes:
@@ -56791,6 +56797,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `fields.nullable`
       - `fields/bool/config.boolField`
       - `fields/date/config.dateField`
+      - `fields/duration.formatDuration`
       - `fields/identifier/config.identifierField`
       - `fields/int/config.intField`
       - `fields/json/config.jsonField`
@@ -56822,11 +56829,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `ReportResult`
       - `ReportSource`
     - Exports (values):
+      - `afterWakeSummary`
       - `CLIENT_REPORT_SOURCES`
       - `fenceUntrustedReport`
       - `fixedByClaim`
       - `FIXES_REPORT_TRAILER`
       - `fixStandingOf`
+      - `formatAfterWake`
       - `formatRecentCount`
       - `formatReportActivity`
       - `fromOutdatedBundle`
@@ -56834,6 +56843,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `isUntrustedReportSource`
       - `normalizeMessage`
       - `regresses`
+      - `REPORT_AFTER_WAKE_WINDOW_MS`
       - `REPORT_CATEGORIES`
       - `REPORT_FIX_STATE_LABELS`
       - `REPORT_FIX_STATES`
@@ -57082,7 +57092,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `fork-data-exclusion` "report_fixes"
           - `fork-data-exclusion` "reports"
           - `restart-skip.adopted` "the report fixes the adopted commit contains (deployed)"
-        - Uses: 32 symbols — full list in [`plugins/reports/plugins/engine/REFERENCE.md`](../plugins/reports/plugins/engine/REFERENCE.md)
+        - Uses: 33 symbols — full list in [`plugins/reports/plugins/engine/REFERENCE.md`](../plugins/reports/plugins/engine/REFERENCE.md)
           - `reports` ×10
           - `build/server-build-id` ×4
           - `shell/notifications` ×4
@@ -57094,6 +57104,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ids.idRef`
           - `infra/endpoints.implement`
           - `infra/git/git-watcher.defineRefReaction`
+          - `infra/host/machine-sleep.wakeBefore`
           - `infra/retention.defineRetention`
           - `infra/warmup.defineWarmup`
           - `network/live/change-feed.defineChangeProducer`

@@ -37,6 +37,7 @@
     - `fields/duration/storage`
     - `fields/duration/table`
     - `infra/claude-cli`
+    - `reports`
     - `runs`
 - Sub-plugins:
   - **`config`** — Duration field type: the durationField factory for building field records.

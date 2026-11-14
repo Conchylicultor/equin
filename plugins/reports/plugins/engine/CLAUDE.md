@@ -64,6 +64,27 @@ So never merge co-occurring reports into one fingerprint to quiet the bell:
 that puts unrelated incidents on one row and hides the member that only ever
 co-occurs. First user: slow-ops' per-batch bursts.
 
+## An occurrence says when the machine had just woken
+
+Each occurrence `recordReport` writes carries `afterWake` (reports/core's
+`ReportOccurrence`): the wake instant and how long the machine slept, when
+machine-sleep's `wakeBefore` finds a sleep this backend saw end in the
+`REPORT_AFTER_WAKE_WINDOW_MS` (30 s) before it — else null, and always null for
+an untrusted source (a website visitor's error happened on another machine). A nap explains
+much of what fires on wake: PgBouncer's timers count sleep, so a server login
+the sleep interrupted times out on wake and fails that pool's clients for
+`server_login_retry` (the 2026-11-14 incident: four "database crashes" in the
+second after a 268 s sleep). It is a stated fact, never a filter: the report is
+filed, counted and alerts exactly as otherwise. The occurrences table shows it
+(After wake), and `renderReportTask` adds a **Machine wake:** line
+(`afterWakeSummary`), so the investigator — and the report-investigations
+automation's agent, which reads the same body — knows before digging. Not
+de-prioritised in the worklist: "every kept occurrence followed a wake" is a
+judgement over `recent` the worklist's indexed read does not make.
+
+A backend knows only the sleeps it lived through, so a crash-buffer line
+replayed by the next boot finds none (null — "not known to follow a wake").
+
 ## Every write goes through the producer
 
 `reports` has no change-feed trigger. A crash loop UPDATEs its hot row thousands
@@ -255,7 +276,7 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
     - `fork-data-exclusion` "report_fixes"
     - `fork-data-exclusion` "reports"
     - `restart-skip.adopted` "the report fixes the adopted commit contains (deployed)"
-  - Uses: 32 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 33 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `reports` ×10
     - `build/server-build-id` ×4
     - `shell/notifications` ×4
@@ -267,6 +288,7 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
     - `ids.idRef`
     - `infra/endpoints.implement`
     - `infra/git/git-watcher.defineRefReaction`
+    - `infra/host/machine-sleep.wakeBefore`
     - `infra/retention.defineRetention`
     - `infra/warmup.defineWarmup`
     - `network/live/change-feed.defineChangeProducer`

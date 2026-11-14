@@ -13,6 +13,7 @@ import { _reports, ReportKind, type ReportRow } from "@plugins/reports/server";
 import { reportsProducer } from "./producer";
 import {
   fenceUntrustedReport,
+  afterWakeSummary,
   formatReportActivity,
   isUntrustedReportSource,
   reportActivity,
@@ -122,7 +123,12 @@ export function renderReportTask(row: ReportRow): {
   // Every kind's body states the lifetime count; this line says what it is
   // doing now, so an investigator can tell a live problem from an old one.
   const activity = formatReportActivity(reportActivity(row, Date.now()));
-  const body = `${description}\n\n**Activity:** ${activity}`;
+  // Said when the machine had just woken: a nap explains much of what fires
+  // on wake, and nothing else on the report would say it slept.
+  const wake = afterWakeSummary(row.recent);
+  const body =
+    `${description}\n\n**Activity:** ${activity}` +
+    (wake === null ? "" : `\n\n**Machine wake:** ${wake}`);
   // Strangers wrote an untrusted report's content: the agent reads it as
   // data, never instructions. (An untrusted kind builds its title from typed,
   // identifier-shaped fields only — it is not fenced.)

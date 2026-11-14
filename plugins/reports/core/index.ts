@@ -26,7 +26,9 @@ export {
   formatReportActivity,
 } from "./activity";
 export type { ReportActivity, ReportActivityInput } from "./activity";
+export { afterWakeSummary, formatAfterWake } from "./after-wake";
 export {
+  REPORT_AFTER_WAKE_WINDOW_MS,
   REPORT_HOURLY_MAX,
   REPORT_RECENT_MAX,
   reportFields,
