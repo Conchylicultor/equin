@@ -138,7 +138,9 @@ export type RuntimeFolder = (typeof RUNTIME_FOLDERS)[number];
  *  `login-services` and brought up by `./equin start`; `browser-extension/`
  *  holds a browser extension's shell (its `manifest.json`, `popup.html` and
  *  the entry the build bundles), which the owning plugin's `cli/` builds into
- *  the data root and Chrome loads from there.
+ *  the data root and Chrome loads from there; `build-step/` holds the steps a
+ *  plugin contributes to `./equin build` (`defineBuildStep`), collected by
+ *  `framework/cli/build/build-steps` and run at their build phase.
  *
  *  Together with `RUNTIME_FOLDERS` this is the whole folder vocabulary a
  *  plugin may contain (plus `plugins/`, which holds child plugins, not code).
@@ -159,6 +161,7 @@ export const LEAF_FOLDERS = [
   "guard",
   "login-services",
   "browser-extension",
+  "build-step",
 ] as const;
 export type LeafFolder = (typeof LEAF_FOLDERS)[number];
 

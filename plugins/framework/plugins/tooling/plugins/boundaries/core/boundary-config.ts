@@ -151,6 +151,18 @@ export default defineBoundaries({
     // extension's own origin. It may reach `core` only (the bridge contract it
     // shares with the page); nothing imports it.
     "browser-extension": ["core"],
+    // Contributed build steps (`framework/cli/build/build-steps`): run inside
+    // the `./equin build` process at their phase, so a step reaches what a CLI
+    // command body does — typically its own plugin's `cli/` machinery.
+    "build-step": [
+      "cli",
+      "core",
+      "shared",
+      "data-dirs",
+      "server",
+      "machine",
+      "deps",
+    ],
   },
 
   // Which folders may import a platform API (a Node builtin, `bun`, `pg`,
@@ -190,6 +202,8 @@ export default defineBoundaries({
     "login-services": "allowed",
     // Runs in the browser, like `web`.
     "browser-extension": "forbidden",
+    // Runs in the build process, like `cli`.
+    "build-step": "allowed",
   },
 
   runtimeExceptions: [

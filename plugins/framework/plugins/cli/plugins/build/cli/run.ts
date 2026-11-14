@@ -126,8 +126,7 @@ import {
   buildRunIdKind,
 } from "@plugins/build/plugins/run-ledger/core";
 import { runAttached } from "@plugins/infra/plugins/jobs/plugins/supervised-job/cli";
-import { linkParcelWatcherAddon } from "@plugins/infra/plugins/file-watcher/plugins/parcel-addon/cli";
-import { writeExtensionShell } from "@plugins/companions/plugins/browser-extension/cli";
+import { runBuildSteps } from "@plugins/framework/plugins/cli/plugins/build/plugins/build-steps/cli";
 import { BUILD_EXIT_SUPERSEDED } from "@plugins/build/plugins/build-status/core";
 
 // Wedge-breaker for the local `git` metadata reads in this file — orders of
@@ -1275,17 +1274,10 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
         hooks,
       });
 
-      // 1c. The patched @parcel/watcher addon (kqueue closes a deleted or
-      // renamed file's descriptor), into the `node_modules` stage 1 just made
-      // current: the backend this build restarts loads it. Cached per machine;
-      // a cold build compiles it once. See infra/file-watcher/parcel-addon.
-      endSpan = buildProfilerStart(
-        "parcelWatcherAddon",
-        "build:setup",
-        "parcel-watcher addon",
-      );
-      await linkParcelWatcherAddon({ root, log: hooks.log });
-      endSpan();
+      // 1c. Contributed build steps of the `dependencies` phase: stage 1 made
+      // `node_modules` and every registry current, and the backend this build
+      // restarts has not started yet. See build/build-steps.
+      await runBuildSteps("dependencies", { root, log: hooks.log });
 
       // 2b'. Write the central spec early too — otherwise the gateway has no
       // way to spawn central. (Repeated at end of build for idempotency.)
@@ -1724,26 +1716,16 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
         deployedUrls.push(namespaceUrl(target.namespace));
       }
 
-      // 6b. The browser extension's shell framing this checkout's own app:
-      // main's into the installed data dir (Chrome loads it from there), a
-      // worktree's beside its build artifacts. Rewritten only when its digest
-      // moved; the backend's watch on the digest file tells every open popup to
-      // reload the extension onto it. See companions/browser-extension.
+      // 6b. Contributed build steps of the `deployed` phase, once the
+      // checkout's own app is live (a build deploying only other compositions
+      // skips them). See build/build-steps.
       const ownTarget = targets.find((t) => t.isMainComposition);
       if (ownTarget !== undefined) {
-        endSpan = buildProfilerStart(
-          "browserExtension",
-          "build:setup",
-          "browser extension shell",
-        );
-        const shell = await writeExtensionShell({
+        await runBuildSteps("deployed", {
           root,
+          log: hooks.log,
           namespace: ownTarget.namespace,
         });
-        endSpan();
-        console.log(
-          `browser extension: ${shell.kind === "written" ? "wrote" : "unchanged"} ${shell.path} (${shell.digest.slice(0, 12)})`,
-        );
       }
 
       // 6c. Re-register the `central` worktree spec for idempotency. Path is

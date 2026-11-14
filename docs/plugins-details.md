@@ -15389,7 +15389,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `companions/browser-extension/accounts-row`
           - `companions/browser-extension/equin-site`
           - `companions/browser-extension/wish`
-          - `framework/cli/build`
       - Exemptions:
         - Exempts itself from: `frame/no-raw-frame` — `browser-extension/popup.ts` (sanctioned)
       - Cli:
@@ -30484,7 +30483,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `takeReexecBudget`
         - **`build`** — `./equin build` — the deploy command: codegen, migrations, web dist and backend restart for this checkout, or a composition's hermetic artifact set.
           - Cli:
-            - Uses: 59 symbols — full list in [`plugins/framework/plugins/cli/plugins/build/REFERENCE.md`](../plugins/framework/plugins/cli/plugins/build/REFERENCE.md)
+            - Uses: 58 symbols — full list in [`plugins/framework/plugins/cli/plugins/build/REFERENCE.md`](../plugins/framework/plugins/cli/plugins/build/REFERENCE.md)
               - `framework/cli/op-runtime` ×31
               - `framework/tooling/web-artifacts` ×6
               - `framework/cli/bootstrap` ×4
@@ -30495,13 +30494,27 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `build/converge.decideConvergence`
               - `build/run-ledger.createBuildRunRecorder`
               - `build/step-baseline.judgeBuildSteps`
-              - `companions/browser-extension.writeExtensionShell`
+              - `framework/cli/build/build-steps.runBuildSteps`
               - `framework/cli/doctor.assertPrerequisites`
               - `framework/cli/git-artifacts.registerMergeDrivers`
               - `framework/tooling/checks/type-check.readTypeCheckTree`
-              - `infra/file-watcher/parcel-addon.linkParcelWatcherAddon`
               - `infra/jobs/supervised-job.runAttached`
           - Plugins:
+            - **`build-steps`** — Build steps plugins contribute to `./equin build`: a plugin's build-step/index.ts default-exports defineBuildStep values, each run at one build phase (dependencies installed, own app deployed); the build runs every registered step of a phase and names none.
+              - Core:
+                - Uses: `framework/tooling/collected-dir.defineCollectedDir`
+                - Exports (types): `BuildPhase`
+                - Exports (values): `BUILD_PHASES`
+              - Cli:
+                - Uses: `framework/cli/op-runtime.buildProfilerStart`
+                - Exports (types):
+                  - `BuildPhaseContexts`
+                  - `BuildStep`
+                - Exports (values):
+                  - `defineBuildStep`
+                  - `runBuildSteps`
+              - Cross-plugin:
+                - Imported by: `framework/cli/build`
             - **`experimental-marks`** — The Show experimental marks setting (view-options popover and Settings → Config, on an experimental build): useShowExperimentalMarks() is true when the build stamped this document experimental and the marks are on; the frame and the Wish banner both follow it. Registers the Show experimental marks config and, while it is off, serves a head script that hides the marks before the first frame.
               - Web:
                 - Contributes:
@@ -30734,6 +30747,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `build/build-logs`
               - `framework/cli/await`
               - `framework/cli/build`
+              - `framework/cli/build/build-steps`
               - `framework/cli/check`
               - `framework/cli/push`
               - `framework/cli/release`
@@ -32201,6 +32215,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `framework/central-core`
               - `framework/cli`
+              - `framework/cli/build/build-steps`
               - `framework/server-core`
               - `framework/tooling/checks/registry`
               - `framework/tooling/guards`
@@ -35509,9 +35524,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `parcelWatcherAddon`
               - `parcelWatcherPackageDir`
           - Cross-plugin:
-            - Imported by:
-              - `framework/cli/build`
-              - `framework/cli/release`
+            - Imported by: `framework/cli/release`
     - **`git`** — Umbrella for the two plugins that answer 'has git state moved, and must I read it again?': the ref watcher that reports every advance, and the signature-keyed memo that skips a gated recompute when a cheap probe says nothing changed.
       - Plugins:
         - **`checkout-watch`** — The checkout watch hub: acquireCheckoutWatch(root, { refs, onChange }) hears every change that can move a git checkout's state — its working tree and its git dir (HEAD, index, and the refs the reader names beside its own branch; a linked worktree's git dir and the common refs live outside it) — each change tagged worktree or git, refcounted per checkout over the shared directory-watch hub, each reader's reaction coalesced (one running plus one pending).

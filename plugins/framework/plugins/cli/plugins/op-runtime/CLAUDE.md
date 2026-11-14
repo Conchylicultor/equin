@@ -253,6 +253,7 @@ the shared Playwright harness.
     - `build/build-logs`
     - `framework/cli/await`
     - `framework/cli/build`
+    - `framework/cli/build/build-steps`
     - `framework/cli/check`
     - `framework/cli/push`
     - `framework/cli/release`

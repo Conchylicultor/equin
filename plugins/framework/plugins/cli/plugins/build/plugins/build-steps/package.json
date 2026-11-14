@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-framework-cli-build-build-steps",
+  "description": "Build steps plugins contribute to `./equin build`: a plugin's build-step/index.ts default-exports defineBuildStep values, each run at one build phase (dependencies installed, own app deployed); the build runs every registered step of a phase and names none.",
+  "private": true,
+  "version": "0.0.1"
+}

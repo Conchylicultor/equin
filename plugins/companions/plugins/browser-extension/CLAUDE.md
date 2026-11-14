@@ -43,7 +43,7 @@ contributes from a leaf here (`plugins/equin-site`: the website's Open locally
 ## Shipping and self-update
 
 `./equin build` runs `writeExtensionShell` (`cli/`) for the checkout's own
-namespace: main's into `~/.equin/state/browser-extension/` (the installed
+namespace, as this plugin's `deployed` build step (`build-step/`): main's into `~/.equin/state/browser-extension/` (the installed
 one), a worktree's into `~/.equin/worktrees/<wt>/browser-extension/`. The root
 holds `shell/` (swapped whole by rename), `shell-digest.txt` (written last)
 and `connection.json`. Nothing is written when the digest is unchanged.
@@ -172,7 +172,6 @@ Install once: `chrome://extensions` → Developer mode → Load unpacked →
     - `companions/browser-extension/accounts-row`
     - `companions/browser-extension/equin-site`
     - `companions/browser-extension/wish`
-    - `framework/cli/build`
 - Exemptions:
   - Exempts itself from: `frame/no-raw-frame` — `browser-extension/popup.ts` (sanctioned)
 - Cli:

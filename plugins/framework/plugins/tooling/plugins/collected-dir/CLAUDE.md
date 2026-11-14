@@ -55,6 +55,7 @@ relative specifier inside this leaf would resolve against the wrong module.
   - Imported by:
     - `framework/central-core`
     - `framework/cli`
+    - `framework/cli/build/build-steps`
     - `framework/server-core`
     - `framework/tooling/checks/registry`
     - `framework/tooling/guards`
