@@ -9,5 +9,11 @@ export {
   originOf,
   systemOrigin,
   agentOriginHeaders,
+  pageOrigin,
+  markAgentContext,
 } from "./internal/origin";
-export type { WriteOrigin } from "./internal/origin";
+export type {
+  WriteOrigin,
+  PageOrigin,
+  AgentMarkableContext,
+} from "./internal/origin";

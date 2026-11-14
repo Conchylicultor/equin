@@ -19,7 +19,7 @@ import {
 import { readBrowserExecutablesSync } from "@plugins/infra/plugins/deps/plugins/playwright-browser/core";
 import { chromium } from "@plugins/infra/plugins/safe-fetch/plugins/browser-fetch/deps";
 import {
-  agentOriginHeaders,
+  markAgentContext,
   ORIGIN_HEADER,
   ORIGIN_SOURCE_HEADER,
 } from "@plugins/infra/plugins/request-origin/core";
@@ -412,19 +412,21 @@ async function runBrowser<T>(
             colorScheme: opts.colorScheme ?? detectOsColorScheme(),
             hasTouch: opts.touch === true,
             isMobile: opts.touch === true,
-            // Provenance, declared once for the whole harness. `extraHTTPHeaders`
-            // applies to EVERY request the context issues — including the SPA's
-            // own `fetch` calls — so this single line marks all existing scripts,
-            // every future script, and ad-hoc `screenshot.ts --click` drives, with
-            // nothing to opt into and nothing to remember. Server-side the mark
-            // drives two things: the agent-origin plugin turns it into a swept,
-            // segregated page, and every agent-write ledger (config documents,
-            // prototype option picks, …) records what a marked request
-            // overwrites so this harness can put it back (see `agent-writes.ts`).
-            // research/2026-07-29-global-agent-origin-provenance-for-pages.md
-            // research/2026-09-16-global-shared-prototype-option-picks.md
-            extraHTTPHeaders: agentOriginHeaders(originSource()),
           });
+          // Provenance, declared once for the whole harness. The headers
+          // apply to EVERY request the context issues — including the SPA's
+          // own `fetch` calls — so this single line marks all existing scripts,
+          // every future script, and ad-hoc `screenshot.ts --click` drives, with
+          // nothing to opt into and nothing to remember. Server-side the mark
+          // drives two things: the agent-origin plugin turns it into a swept,
+          // segregated page, and every agent-write ledger (config documents,
+          // prototype option picks, …) records what a marked request
+          // overwrites so this harness can put it back (see `agent-writes.ts`).
+          // research/2026-07-29-global-agent-origin-provenance-for-pages.md
+          // research/2026-09-16-global-shared-prototype-option-picks.md
+          // The page mark beside them keeps person-only recorders (app usage)
+          // from counting the drive as someone using the app.
+          await markAgentContext(context, originSource());
           await keepOriginHeadersOnTarget(context);
           // Before the first page, so every page is filmed from its first paint.
           recorder?.attach(context);

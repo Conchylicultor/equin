@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useFocusedAppId } from "@plugins/apps-core/web";
 import {
   EndpointError,
   fetchEndpointOver,
 } from "@plugins/infra/plugins/endpoints/web";
 import { pageTransport } from "@plugins/primitives/plugins/networking/plugins/page-transport/web";
+import { pageOrigin } from "@plugins/infra/plugins/request-origin/core";
 import { flushAppUsageEndpoint } from "../../core";
 import { createUsageTracker } from "../internal/usage-tracker";
 import { readLastApp, writeLastApp } from "../internal/last-app";
@@ -23,11 +24,22 @@ const INPUT_EVENTS = [
 ] as const;
 
 /**
- * Headless (`Core.Root`): feeds the focused app, page visibility, window focus
+ * Headless (`Core.Root`). App usage measures what a PERSON does, so a page an
+ * automated session drives (an e2e script, an agent's `browser_*` tab) records
+ * nothing — neither a launch nor active time. Decided once per page from the
+ * agent-origin page mark; the server's write gate is not the filter (on main it
+ * would refuse the flush, on a worktree it would count it).
+ */
+export function AppUsageRecorder(): ReactNode {
+  return pageOrigin().kind === "agent" ? null : <PersonUsageRecorder />;
+}
+
+/**
+ * Feeds the focused app, page visibility, window focus
  * and input into the usage tracker. Mounted once per page; a second window is
  * its own page, and only the window with OS focus accrues time.
  */
-export function AppUsageRecorder(): null {
+function PersonUsageRecorder(): null {
   const appId = useFocusedAppId();
   const [tracker] = useState(() =>
     createUsageTracker({

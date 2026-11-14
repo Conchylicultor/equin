@@ -4,7 +4,7 @@ import { createKeyedMutex } from "@plugins/packages/plugins/keyed-mutex/core";
 import { launchChromium } from "@plugins/infra/plugins/deps/plugins/playwright-browser/deps";
 import { chromium } from "@plugins/infra/plugins/safe-fetch/plugins/browser-fetch/deps";
 import {
-  agentOriginHeaders,
+  markAgentContext,
   ORIGIN_HEADER,
   ORIGIN_SOURCE_HEADER,
 } from "@plugins/infra/plugins/request-origin/core";
@@ -361,11 +361,12 @@ export async function getSession(
   const source = browserSessionSource(conversationId);
   const context = await b.newContext({
     viewport: DEFAULT_VIEWPORT,
-    // Every request is marked as THIS conversation's, so the durable writes a
-    // drive makes are attributable and reverted alone when the session closes.
-    extraHTTPHeaders: agentOriginHeaders(source),
     serviceWorkers: "block",
   });
+  // Every request is marked as THIS conversation's, so the durable writes a
+  // drive makes are attributable and reverted alone when the session closes;
+  // every page is marked too, so person-only recorders (app usage) skip it.
+  await markAgentContext(context, source);
   context.setDefaultTimeout(ACTION_MS);
   context.setDefaultNavigationTimeout(BOUND_MS);
   // The headers belong to the deploys only; strip them from every other origin.

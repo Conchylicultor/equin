@@ -93,3 +93,56 @@ export function systemOrigin(reason: string): WriteOrigin {
 export function agentOriginHeaders(source: string): Record<string, string> {
   return { [ORIGIN_HEADER]: AGENT_ORIGIN, [ORIGIN_SOURCE_HEADER]: source };
 }
+
+/**
+ * The page-side twin of the headers: a request carries {@link ORIGIN_HEADER},
+ * but the page that issues it cannot read its own request headers (the shell
+ * is a static file the gateway serves), so an automated session also marks
+ * every document it loads with this global before any of the page's scripts
+ * run. Its reader is {@link pageOrigin}; both are stamped together by
+ * {@link markAgentContext}, so a session cannot carry one without the other.
+ */
+const PAGE_ORIGIN_GLOBAL = "__equinAgentOrigin";
+
+/** Who drives this page — the browser-side reading of the agent-origin mark. */
+export type PageOrigin =
+  | { readonly kind: "user" }
+  | { readonly kind: "agent"; readonly source: string };
+
+/**
+ * Whether this page is driven by an automated session (an e2e script, an
+ * agent's `browser_*` tab) rather than a person. For "person-only" recorders —
+ * app usage, anything that measures what a human does — which must not record
+ * an automated drive. Not an authority: the server still decides from the
+ * request (`originOf`).
+ */
+export function pageOrigin(): PageOrigin {
+  const source: unknown = (globalThis as Record<string, unknown>)[
+    PAGE_ORIGIN_GLOBAL
+  ];
+  return typeof source === "string"
+    ? { kind: "agent", source }
+    : { kind: "user" };
+}
+
+/** The slice of a Playwright `BrowserContext` {@link markAgentContext} uses. */
+export interface AgentMarkableContext {
+  setExtraHTTPHeaders(headers: Record<string, string>): Promise<unknown>;
+  addInitScript(script: string): Promise<unknown>;
+}
+
+/**
+ * Mark a browser context as agent-driven, both halves at once: every request
+ * it issues carries {@link agentOriginHeaders} (what the server reads), and
+ * every document it loads carries the page mark (what {@link pageOrigin}
+ * reads). Call before the context's first page.
+ */
+export async function markAgentContext(
+  context: AgentMarkableContext,
+  source: string,
+): Promise<void> {
+  await context.setExtraHTTPHeaders(agentOriginHeaders(source));
+  await context.addInitScript(
+    `globalThis[${JSON.stringify(PAGE_ORIGIN_GLOBAL)}] = ${JSON.stringify(source)};`,
+  );
+}

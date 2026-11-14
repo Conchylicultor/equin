@@ -20,6 +20,15 @@ Read them with `originOf(req)`; send them with `agentOriginHeaders(source)`. A
 write with no request behind it (a job, boot propagation, a CLI verb) spells
 itself `systemOrigin("…")`.
 
+**The page mark.** A page cannot read its own request headers (the shell is a
+static file), so an automated session also marks every document it loads with
+a global set by an init script; `pageOrigin()` reads it in the browser
+(`user` | `agent { source }`). `markAgentContext(context, source)` stamps both
+halves on a Playwright context at once — the e2e harness and the agent browser
+host both use it, so a session cannot carry one without the other. It is for
+person-only recorders (app usage: `apps-core/app-usage` records nothing on a
+marked page), never an authority — the server still decides from `originOf`.
+
 ## Why this plugin exists
 
 The headers were written out independently in three places — the harness, the
@@ -106,17 +115,23 @@ own server half.)
 - Description: Who caused a request: the two provenance headers an automated browser session stamps on every request it issues, the WriteOrigin type a durable write records, and the single reading of those headers. A leaf — string literals and one Request read, no node:*, no db — so the e2e harness that SETS the headers and the server plugins that ACT on them share one spelling.
 - Core:
   - Uses: `framework/product-name.LEGACY_IDS`
-  - Exports (types): `WriteOrigin`
+  - Exports (types):
+    - `AgentMarkableContext`
+    - `PageOrigin`
+    - `WriteOrigin`
   - Exports (values):
     - `AGENT_ORIGIN`
     - `agentOriginHeaders`
+    - `markAgentContext`
     - `ORIGIN_HEADER`
     - `ORIGIN_SOURCE_HEADER`
     - `originOf`
+    - `pageOrigin`
     - `systemOrigin`
     - `UNREVERTED_WRITE_HEADER`
 - Cross-plugin:
   - Imported by:
+    - `apps-core/app-usage`
     - `apps/pages/agent-origin`
     - `apps/prototypes/files`
     - `apps/prototypes/files/snapshot-history`

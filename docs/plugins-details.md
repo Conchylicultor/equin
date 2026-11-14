@@ -38661,17 +38661,23 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`request-origin`** — Who caused a request: the two provenance headers an automated browser session stamps on every request it issues, the WriteOrigin type a durable write records, and the single reading of those headers. A leaf — string literals and one Request read, no node:*, no db — so the e2e harness that SETS the headers and the server plugins that ACT on them share one spelling.
       - Core:
         - Uses: `framework/product-name.LEGACY_IDS`
-        - Exports (types): `WriteOrigin`
+        - Exports (types):
+          - `AgentMarkableContext`
+          - `PageOrigin`
+          - `WriteOrigin`
         - Exports (values):
           - `AGENT_ORIGIN`
           - `agentOriginHeaders`
+          - `markAgentContext`
           - `ORIGIN_HEADER`
           - `ORIGIN_SOURCE_HEADER`
           - `originOf`
+          - `pageOrigin`
           - `systemOrigin`
           - `UNREVERTED_WRITE_HEADER`
       - Cross-plugin:
         - Imported by:
+          - `apps-core/app-usage`
           - `apps/pages/agent-origin`
           - `apps/prototypes/files`
           - `apps/prototypes/files/snapshot-history`
