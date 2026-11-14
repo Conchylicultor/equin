@@ -9,6 +9,7 @@ import {
   findAllPluginDirs,
   PLUGIN_KEY_FILES,
   pluginFieldsFrom,
+  type PluginFields,
   type PluginTree,
 } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import { keyFactsFold } from "./key-facts.scan";
@@ -37,20 +38,34 @@ export async function buildRecordedPluginTree(
     );
   }
   const dirs = findAllPluginDirs(pluginsRoot, repo);
+  const fields = await recordedPluginFields(repo, dirs);
+  const plugins = dirs.map((dir) => [dir, fields.get(dir)!] as const);
+  return { ...assemblePluginTree(pluginsRoot, plugins), repo, facets: [] };
+}
+
+/**
+ * The fields of each of `plugins` (paths under the repo's `plugins/`
+ * folder), from their key files' facts as folded records — a plugin whose key
+ * files no earlier process folded is the only one parsed. What a
+ * `StructureIndex` held by build tooling reads its fields through
+ * (`fieldsOf`): the faceted-tree worker's, whose snapshot knows every blob.
+ */
+export async function recordedPluginFields(
+  repo: RepoFiles,
+  plugins: readonly string[],
+): Promise<Map<string, PluginFields>> {
   const keyFilesOf = (dir: string) =>
-    PLUGIN_KEY_FILES.map((keyFile) => `${rootRel}/${dir}/${keyFile}`);
+    PLUGIN_KEY_FILES.map((keyFile) => `plugins/${dir}/${keyFile}`);
   const facts = await foldRepoFiles(
     repo,
-    dirs.flatMap(keyFilesOf).filter((rel) => repo.has(rel)),
+    plugins.flatMap(keyFilesOf).filter((rel) => repo.has(rel)),
     keyFactsFold,
     null,
   );
-  const plugins = dirs.map(
-    (dir) =>
-      [
-        dir,
-        pluginFieldsFrom(keyFilesOf(dir).map((rel) => facts[rel] ?? null)),
-      ] as const,
+  return new Map(
+    plugins.map((dir) => [
+      dir,
+      pluginFieldsFrom(keyFilesOf(dir).map((rel) => facts[rel] ?? null)),
+    ]),
   );
-  return { ...assemblePluginTree(pluginsRoot, plugins), repo, facets: [] };
 }

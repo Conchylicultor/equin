@@ -17,13 +17,17 @@ import {
 // facet CPU (once ~4–5 s of this thread's, 2026-10-31) runs off the event loop,
 // and is mostly record reads at that. After this cold build it follows edits by
 // what changed.
+//
+// The two are built side by side: neither reads the other (the worker takes
+// its own snapshot and structure), so starting the worker only once the
+// backend's structure was built added that build's wall time (0.2–0.8 s on
+// main's boots) to the warm-up's for nothing.
 export const pluginTreeWarmup = defineWarmup({
   name: "plugin-tree.trees",
   description:
     "Pre-builds the plugin trees after startup so Studio opens without a slow first load.",
   scope: "host",
   run: async () => {
-    await getStructureTreeCached();
-    await getFacetsTreeCached();
+    await Promise.all([getStructureTreeCached(), getFacetsTreeCached()]);
   },
 });

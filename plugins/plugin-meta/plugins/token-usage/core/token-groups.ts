@@ -1,4 +1,4 @@
-import ts from "typescript";
+import type * as TS from "typescript";
 import { tokenVarName } from "@plugins/ui/plugins/theme-engine/plugins/token-var-name/core";
 
 /** One token group a source file declares: its id and the CSS vars it supplies. */
@@ -7,9 +7,22 @@ export interface DeclaredTokenGroup {
   vars: string[];
 }
 
+// The TypeScript compiler (~0.15 s to load) is loaded by the first file that
+// declares a token group, never with this module: the cross-refs facet
+// imports it, and a faceted build whose records all hit — every boot of the
+// faceted-tree worker after an ordinary push — reads no source, yet paid for
+// the compiler. `require`, not `import()`: the reader is synchronous, as a
+// facet's `extract` is.
+let compiler: typeof TS | undefined;
+function typescript(): typeof TS {
+  compiler ??= require("typescript") as typeof TS;
+  return compiler;
+}
+
 // `e` without the type-only wrappers (`satisfies`, `as`, parentheses) that
 // leave its value unchanged.
-function unwrap(e: ts.Expression): ts.Expression {
+function unwrap(e: TS.Expression): TS.Expression {
+  const ts = typescript();
   while (
     ts.isSatisfiesExpression(e) ||
     ts.isAsExpression(e) ||
@@ -23,9 +36,10 @@ function unwrap(e: ts.Expression): ts.Expression {
 // `const` of the same file. `null` for anything else (a call, an import, a
 // spread) — the caller throws.
 function schemaLiteral(
-  arg: ts.Expression,
-  sf: ts.SourceFile,
-): ts.ObjectLiteralExpression | null {
+  arg: TS.Expression,
+  sf: TS.SourceFile,
+): TS.ObjectLiteralExpression | null {
+  const ts = typescript();
   const e = unwrap(arg);
   if (ts.isObjectLiteralExpression(e)) return e;
   if (!ts.isIdentifier(e)) return null;
@@ -62,9 +76,10 @@ export function tokenGroupsDeclaredIn(
   file: string,
 ): DeclaredTokenGroup[] {
   if (!source.includes("defineTokenGroup")) return [];
+  const ts = typescript();
   const sf = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, false);
   const groups: DeclaredTokenGroup[] = [];
-  const visit = (node: ts.Node): void => {
+  const visit = (node: TS.Node): void => {
     if (
       ts.isCallExpression(node) &&
       ts.isIdentifier(node.expression) &&

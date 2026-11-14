@@ -3,7 +3,13 @@
 import { describe, expect, test } from "bun:test";
 import { asAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { repoFilesOver } from "@plugins/framework/plugins/tooling/core";
-import { buildPluginTree, type PluginTreeData } from "./plugin-tree";
+import {
+  buildPluginTree,
+  parseKeyFile,
+  PLUGIN_KEY_FILES,
+  pluginFieldsFrom,
+  type PluginTreeData,
+} from "./plugin-tree";
 import { createStructureIndex, type StructureIndexIo } from "./structure-index";
 
 const ROOT = asAppPath("/repo");
@@ -226,5 +232,65 @@ describe("refresh: edited files", () => {
     asked.length = 0;
     await index.refresh([], ["pkgs/a/.gitignore"]);
     expect(asked).toEqual([["pkgs/a"]]);
+  });
+});
+
+// Build tooling hands the index each plugin's fields (key-file facts as
+// records) instead of the texts: the same tree, and a refresh asks only for
+// the plugins it touched.
+describe("createStructureIndex with fieldsOf", () => {
+  function fieldsRepo(files: Record<string, string>) {
+    const base = fakeRepo(files);
+    const askedFields: string[][] = [];
+    const io: StructureIndexIo = {
+      allMembers: base.io.allMembers,
+      membersIn: base.io.membersIn,
+      fieldsOf: async (plugins) => {
+        askedFields.push([...plugins]);
+        return new Map(
+          plugins.map((plugin) => [
+            plugin,
+            pluginFieldsFrom(
+              PLUGIN_KEY_FILES.map((keyFile) => {
+                const path = `pkgs/${plugin}/${keyFile}`;
+                const text = base.disk.get(path);
+                return text === undefined
+                  ? null
+                  : parseKeyFile(keyFile, text, path);
+              }),
+            ),
+          ]),
+        );
+      },
+    };
+    return { disk: base.disk, io, askedFields };
+  }
+
+  test("cold build equals buildPluginTree", async () => {
+    const { disk, io } = fieldsRepo(BASE);
+    const index = await createStructureIndex(ROOT, "pkgs", io);
+    expect(shape(index.tree())).toEqual(await coldShape(disk));
+  });
+
+  test("a barrel edit asks for that plugin's fields only", async () => {
+    const { disk, io, askedFields } = fieldsRepo(BASE);
+    const index = await createStructureIndex(ROOT, "pkgs", io);
+    askedFields.length = 0;
+    disk.set("pkgs/a/plugins/b/server/index.ts", barrel("B2"));
+    expect(await index.refresh(["pkgs/a/plugins/b/server/index.ts"])).toBe(
+      true,
+    );
+    expect(askedFields).toEqual([["a/plugins/b"]]);
+    expect(shape(index.tree())).toEqual(await coldShape(disk));
+  });
+
+  test("an unanswered plugin fails loudly", async () => {
+    const { io } = fieldsRepo(BASE);
+    expect(
+      createStructureIndex(ROOT, "pkgs", {
+        ...io,
+        fieldsOf: async () => new Map(),
+      }),
+    ).rejects.toThrow("answered no fields");
   });
 });

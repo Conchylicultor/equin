@@ -124,8 +124,23 @@ Both tree caches are in-memory and die with the process, so on main (which
 restarts on every deploy) the first Studio/plugin-view request of each process
 would wait for both. A `host`-scoped `defineWarmup` reads structure + facets in
 the throttled post-boot drain instead (the faceted one by starting its
-worker). Worktree backends keep the lazy cold path on purpose: their Studio
+worker), side by side: neither reads the other, and starting the worker only
+after the backend's structure added that build to the warm-up's wall time.
+Worktree backends keep the lazy cold path on purpose: their Studio
 surfaces are rarely opened.
+
+What the worker's cold build costs, and why (2026-11-14, main's checkout,
+host load 10–20, steps timed one after another): git snapshot ~0.3 s; the
+facet modules ~0.37 s → ~15 ms, since `token-usage` loads TypeScript and
+Tailwind on its first scan instead of at import (a build whose records all
+hit — every boot after an ordinary push — scans nothing); structure + facet
+keying ~0.48 → ~0.33 s, since the worker's `StructureIndex` takes its fields
+through `fieldsOf` from the key-file fold records (`structure-records`'
+`recordedPluginFields`) instead of reading and parsing all ~3.8k key files;
+then node keys ~80 ms, record reads ~185 ms, parse ~50 ms and relate ~0.2 s.
+Snapshot and facet loading run together, then structure and keying. What is
+left is whole-tree on every boot because the index lives and dies with the
+backend process.
 
 ## One structure tree per check pass (`structure-records`)
 

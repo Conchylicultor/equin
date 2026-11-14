@@ -51,11 +51,13 @@ loads record jobs by computed path, which `boot:closure-digestable` refuses.
     - `plugin-meta/plugin-tree.keyFileOwner`
     - `plugin-meta/plugin-tree.parseKeyFile`
     - `plugin-meta/plugin-tree.PLUGIN_KEY_FILES`
+    - `plugin-meta/plugin-tree.PluginFields`
     - `plugin-meta/plugin-tree.pluginFieldsFrom`
     - `plugin-meta/plugin-tree.PluginTree`
   - Exports (values):
     - `buildRecordedPluginTree`
     - `buildStructureTreeOnce`
+    - `recordedPluginFields`
 - Cross-plugin:
   - Imported by:
     - `framework/tooling/boundaries`

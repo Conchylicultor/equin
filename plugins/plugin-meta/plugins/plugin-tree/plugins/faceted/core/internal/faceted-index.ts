@@ -23,6 +23,7 @@ import {
   type FacetKeying,
   type FacetRecordsInput,
 } from "./facet-records";
+import { recordedPluginFields } from "@plugins/plugin-meta/plugins/plugin-tree/plugins/structure-records/core";
 import { relateFacets } from "./faceted-tree";
 import { openLiveSnapshot, type LiveRepoSnapshot } from "./live-snapshot";
 
@@ -78,29 +79,37 @@ export async function openFacetedIndex(
   root: AppPath,
   opts: OpenFacetedIndexOptions,
 ): Promise<FacetedIndex> {
-  const snapshot: LiveRepoSnapshot = await openLiveSnapshot(root, opts);
+  // The cold build's steps run as soon as their inputs are there, not one
+  // after another: the facet modules load while git lists the checkout, and
+  // the structure is built while the facets' code is keyed. Loading is this
+  // thread's CPU, the snapshot and the record reads mostly waits.
+  const [snapshot, facets]: [LiveRepoSnapshot, Facet[]] = await Promise.all([
+    openLiveSnapshot(root, opts),
+    loadFacets(),
+  ]);
   // The structure index answers membership from the snapshot, which each
   // refresh brings up to date first: one git question per batch, not two.
-  const structure: StructureIndex = await createStructureIndex(
-    root,
-    PLUGINS_REL,
-    {
-      allMembers: async () => snapshot.all(),
-      membersIn: async (paths) =>
-        paths.flatMap((p) =>
-          snapshot.has(p) ? [p, ...snapshot.under(p)] : snapshot.under(p),
-        ),
-      read: (path) => snapshot.read(path),
-    },
-  );
-  const facets = await loadFacets();
+  const structureBuilt = createStructureIndex(root, PLUGINS_REL, {
+    allMembers: async () => snapshot.all(),
+    membersIn: async (paths) =>
+      paths.flatMap((p) =>
+        snapshot.has(p) ? [p, ...snapshot.under(p)] : snapshot.under(p),
+      ),
+    // Each key file's facts as folded records (keyed by the blob the
+    // snapshot already knows): a cold build parses only the key files no
+    // earlier process folded, instead of reading all ~3.8k of them.
+    fieldsOf: (plugins) => recordedPluginFields(snapshot, plugins),
+  });
   const store = currentRecordStore();
   const input: FacetRecordsInput = {
     snapshot,
     store,
     readOutside: outsideFilesOf(snapshot),
   };
-  const keying: FacetKeying = await facetKeying(input, facets);
+  const [structure, keying]: [StructureIndex, FacetKeying] = await Promise.all([
+    structureBuilt,
+    facetKeying(input, facets),
+  ]);
   const batchInputs = new Set(
     facets.flatMap((f) => f.extractBatch?.inputs ?? []),
   );

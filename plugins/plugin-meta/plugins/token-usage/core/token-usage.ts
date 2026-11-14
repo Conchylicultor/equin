@@ -1,7 +1,6 @@
 import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
 import { dirname, extname, join } from "path";
-import { __unstable__loadDesignSystem } from "@tailwindcss/node";
-import { Scanner } from "@tailwindcss/oxide";
+import type { __unstable__loadDesignSystem } from "@tailwindcss/node";
 import { APP_STYLESHEET_PATH } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
 import {
   createTimeSlicer,
@@ -58,15 +57,33 @@ function codeOf({ file, content }: SourceText): string {
 // tree build after the first in one process reuses the compiled candidates.
 const resolvers = new Map<string, Promise<Resolver>>();
 
+// Tailwind (its compiler and oxide's native scanner) loads on the first scan,
+// never with this module: the cross-refs facet imports it, and a faceted
+// build whose records all hit — every boot of the faceted-tree worker after
+// an ordinary push — scans nothing, yet paid ~0.1 s (1.2 s from a cold disk)
+// to load it.
+const tailwind = (): Promise<{
+  loadDesignSystem: typeof __unstable__loadDesignSystem;
+  Scanner: typeof import("@tailwindcss/oxide").Scanner;
+}> =>
+  Promise.all([import("@tailwindcss/node"), import("@tailwindcss/oxide")]).then(
+    ([node, oxide]) => ({
+      loadDesignSystem: node.__unstable__loadDesignSystem,
+      Scanner: oxide.Scanner,
+    }),
+  );
+
 function resolverFor(root: AppPath): Promise<Resolver> {
   const cssPath = join(root, APP_STYLESHEET_PATH);
   const css = readFileSync(cssPath, "utf8");
   const key = `${dirname(cssPath)}\0${hash53(css)}`;
   let resolver = resolvers.get(key);
   if (!resolver) {
-    resolver = __unstable__loadDesignSystem(css, {
-      base: dirname(cssPath),
-    }).then((design) => ({ design, byCandidate: new Map() }));
+    resolver = tailwind()
+      .then(({ loadDesignSystem }) =>
+        loadDesignSystem(css, { base: dirname(cssPath) }),
+      )
+      .then((design) => ({ design, byCandidate: new Map() }));
     resolvers.set(key, resolver);
   }
   return resolver;
@@ -99,6 +116,7 @@ export async function tokenVarsUsedBy(
   groups: readonly (readonly SourceText[])[],
 ): Promise<Set<string>[]> {
   const { design, byCandidate } = await resolverFor(root);
+  const { Scanner } = await tailwind();
 
   const slice = createTimeSlicer();
   const scanned: { code: string[]; candidates: string[] }[] = [];

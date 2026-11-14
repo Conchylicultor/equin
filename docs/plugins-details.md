@@ -46534,7 +46534,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Plugins:
         - **`faceted`** — The faceted plugin tree, build tooling: buildFacetedPluginTree (the structure tree plus every facet extracted — plugin records from a snapshot — enriched and related), and the faceted index a backend keeps in a worker thread (FacetedTreeSource's desktop provider): built once, then refreshed by the watcher's paths — only the plugins owning them re-keyed, only moved records extracted, relate only when a record text changed.
           - Core:
-            - Uses: 44 symbols — full list in [`plugins/plugin-meta/plugins/plugin-tree/plugins/faceted/REFERENCE.md`](../plugins/plugin-meta/plugins/plugin-tree/plugins/faceted/REFERENCE.md)
+            - Uses: 45 symbols — full list in [`plugins/plugin-meta/plugins/plugin-tree/plugins/faceted/REFERENCE.md`](../plugins/plugin-meta/plugins/plugin-tree/plugins/faceted/REFERENCE.md)
               - `plugin-meta/plugin-records` ×14
               - `plugin-meta/plugin-tree` ×8
               - `framework/tooling` ×6
@@ -46543,9 +46543,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `packages/macrotask-yield` ×2
               - `plugin-meta/facets/loader` ×2
               - `plugin-meta/parse-utils` ×2
+              - `plugin-meta/plugin-tree/structure-records` ×2
               - `infra/host-fs/user-path.AppPath`
               - `packages/shared-work.sharedMemo`
-              - `plugin-meta/plugin-tree/structure-records.buildRecordedPluginTree`
             - Exports (types):
               - `BuildFacetedTreeOptions`
               - `FacetCode`
@@ -46580,11 +46580,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `plugin-meta/plugin-tree.keyFileOwner`
               - `plugin-meta/plugin-tree.parseKeyFile`
               - `plugin-meta/plugin-tree.PLUGIN_KEY_FILES`
+              - `plugin-meta/plugin-tree.PluginFields`
               - `plugin-meta/plugin-tree.pluginFieldsFrom`
               - `plugin-meta/plugin-tree.PluginTree`
             - Exports (values):
               - `buildRecordedPluginTree`
               - `buildStructureTreeOnce`
+              - `recordedPluginFields`
           - Cross-plugin:
             - Imported by:
               - `framework/tooling/boundaries`

@@ -27,7 +27,7 @@ import {
 // when a refresh actually changed a plugin.
 
 /** What the index reads through: the repo's file set, asked per path. */
-export interface StructureIndexIo {
+interface StructureMembershipIo {
   /**
    * Every member of the repo's file set (repo-relative, the `RepoFiles` rule),
    * for the cold build. Whole-repo rather than scoped to the plugins root:
@@ -40,9 +40,33 @@ export interface StructureIndexIo {
    * at or under each of `paths` — each a file or a folder, present or gone.
    */
   membersIn(paths: readonly string[]): Promise<readonly string[]>;
-  /** A member's working-tree text (repo-relative), or null when it vanished. */
-  read(path: string): Promise<string | null>;
 }
+
+/**
+ * How the index learns a plugin's fields, one of two ways:
+ *
+ * - `read` — each key file's working-tree text, parsed here (a backend: no
+ *   record store in its closure).
+ * - `fieldsOf` — the fields of the plugins asked (paths under the plugins
+ *   root), from a reader that already knows them: build tooling folding each
+ *   key file's facts as records keyed by its blob (`structure-records`), so a
+ *   cold build reads and parses only the key files no earlier process did,
+ *   not all ~3.8k. Asked after the membership it is given moved, so it must
+ *   answer from a file set at least as fresh. Every plugin asked must be
+ *   answered.
+ */
+export type StructureIndexIo = StructureMembershipIo &
+  (
+    | {
+        /** A member's working-tree text (repo-relative), or null when it vanished. */
+        read(path: string): Promise<string | null>;
+      }
+    | {
+        fieldsOf(
+          plugins: readonly string[],
+        ): Promise<ReadonlyMap<string, PluginFields>>;
+      }
+  );
 
 export interface StructureIndex {
   /** The current tree. A new value after each refresh that changed it. */
@@ -110,15 +134,33 @@ export async function createStructureIndex(
   const support = new Map<string, number>();
   const fields = new Map<string, PluginFields>();
 
-  const readFields = (plugin: string): Promise<PluginFields> =>
-    collectPluginFields(
-      joinAppPath(pluginsRoot, ...plugin.split("/")),
-      (keyFile) => {
-        const path = `${prefix}${plugin}/${keyFile}`;
-        const i = lowerBound(members, path);
-        return members[i] === path ? io.read(path) : Promise.resolve(null);
-      },
+  /** The fields of each of `plugins`, through whichever reader `io` has. */
+  const fieldsOf = async (
+    plugins: readonly string[],
+  ): Promise<ReadonlyMap<string, PluginFields>> => {
+    if ("fieldsOf" in io) {
+      const out = await io.fieldsOf(plugins);
+      for (const plugin of plugins)
+        if (!out.has(plugin))
+          throw new Error(
+            `[plugin-tree] the structure index's fieldsOf answered no fields for ${plugin}`,
+          );
+      return out;
+    }
+    const { read } = io;
+    const read1 = (plugin: string): Promise<PluginFields> =>
+      collectPluginFields(
+        joinAppPath(pluginsRoot, ...plugin.split("/")),
+        (keyFile) => {
+          const path = `${prefix}${plugin}/${keyFile}`;
+          const i = lowerBound(members, path);
+          return members[i] === path ? read(path) : Promise.resolve(null);
+        },
+      );
+    return new Map(
+      await Promise.all(plugins.map(async (p) => [p, await read1(p)] as const)),
     );
+  };
 
   const addSupport = (member: string, delta: number, moved: Set<string>) => {
     for (const plugin of pluginPositionsOf(member.slice(prefix.length))) {
@@ -136,11 +178,8 @@ export async function createStructureIndex(
   members.push(...listed);
   const coldMoved = new Set<string>();
   for (const m of members) addSupport(m, +1, coldMoved);
-  await Promise.all(
-    [...support.keys()].map(async (plugin) => {
-      fields.set(plugin, await readFields(plugin));
-    }),
-  );
+  for (const [plugin, f] of await fieldsOf([...support.keys()]))
+    fields.set(plugin, f);
   let tree = assemblePluginTree(pluginsRoot, fields);
 
   /** The members at or under `region`: the exact path, then its subtree. */
@@ -209,22 +248,19 @@ export async function createStructureIndex(
       }
 
       let changed = false;
-      const reads: Promise<void>[] = [];
+      const reread: string[] = [];
       for (const plugin of touched) {
-        if (!support.has(plugin)) {
-          if (fields.delete(plugin)) changed = true;
-          continue;
-        }
-        reads.push(
-          readFields(plugin).then((next) => {
-            const prev = fields.get(plugin);
-            if (prev !== undefined && sameFields(prev, next)) return;
-            fields.set(plugin, next);
-            changed = true;
-          }),
-        );
+        if (support.has(plugin)) reread.push(plugin);
+        else if (fields.delete(plugin)) changed = true;
       }
-      await Promise.all(reads);
+      if (reread.length > 0) {
+        for (const [plugin, next] of await fieldsOf(reread)) {
+          const prev = fields.get(plugin);
+          if (prev !== undefined && sameFields(prev, next)) continue;
+          fields.set(plugin, next);
+          changed = true;
+        }
+      }
       if (changed) tree = assemblePluginTree(pluginsRoot, fields);
       return changed;
     },
