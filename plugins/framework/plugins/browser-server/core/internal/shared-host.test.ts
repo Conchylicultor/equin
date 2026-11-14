@@ -120,8 +120,13 @@ interface FakeWorker {
 }
 
 let run = 0;
-/** One browser's SharedWorkers, by name; `base` is this test's own name (`h<n>`): locks are page-wide. */
-function sharedWorkers() {
+/**
+ * One browser's SharedWorkers, by name; `base` is this test's own name (`h<n>`): locks are page-wide.
+ * `bootFails(name, base)`: that worker's boot throws (a module of its graph failed to load).
+ */
+function sharedWorkers(
+  bootFails: (name: string, base: string) => boolean = () => false,
+) {
   const base = `h${run++}`;
   const live = new Map<string, FakeWorker>();
   const started: string[] = [];
@@ -153,7 +158,13 @@ function sharedWorkers() {
       w.served = serveHost({
         accept: (serve) => (w.serve = serve),
         boot: () =>
-          Promise.resolve({
+          bootFails(name, base)
+            ? Promise.reject(
+                new Error(
+                  `${name}: failed to fetch a dynamically imported module`,
+                ),
+              )
+            : Promise.resolve({
             server,
             keys: new Set<string>(),
             boot: { plugins: 0, stages: [], slowest: [] },
@@ -279,6 +290,33 @@ describe("a SharedWorker host's end of life", () => {
     old.closing.open();
     a.connection.leave();
     stale.connection.leave();
+  });
+
+  test("a host whose boot failed retires though a page still holds it: the next page boots a fresh worker", async () => {
+    const workers = sharedWorkers((name, base) => name === base);
+    const generation = { at: 0 };
+    const connection = await connectSharedHost({
+      open: workers.open,
+      name: () =>
+        generation.at === 0 ? workers.base : `${workers.base}@${generation.at}`,
+      passed: () => (generation.at += 1),
+    });
+    const serving = portBrowserServer(connection.port);
+    connection.port.start();
+    // The page that was waiting is told why — loud, once.
+    expect(serving).rejects.toThrow(
+      "failed to fetch a dynamically imported module",
+    );
+    const failed = workers.live.get(workers.base)!;
+    // Still held by that page's tab, it retires all the same: never handing
+    // the same failure to the next page that connects by its name.
+    await until(() => failed.retiring, "the failed host retires");
+    const next = await connect(workers, generation);
+    expect(next.connection.name).toBe(`${workers.base}@1`);
+    expect(workers.started).toEqual([workers.base, `${workers.base}@1`]);
+    failed.closing.open();
+    connection.leave();
+    next.connection.leave();
   });
 
   test("a request still being answered when its page leaves is finished first", async () => {

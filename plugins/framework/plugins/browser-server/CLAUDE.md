@@ -112,6 +112,9 @@ demo's PGlite runs with `relaxedDurability`; dropping it costs ~25 ms a write
 and ~8 ms a read — `research/2026-11-10-framework-browser-host-end-of-life.md`).
 Left alone, an extended worker never ends, so it RETIRES itself: when no page
 holds it, it finishes its requests, closes its storage and then the worker.
+A host whose boot threw retires at once, open tabs or not (after telling the
+waiting pages why): kept alive, it would replay that one failure — e.g. a
+module fetch lost to a gateway restart — to every later page and reload.
 
 A worker that has called `close()` is still matched by `new SharedWorker(url,
 name)` until the browser process hears of it, and a page matched to it waits

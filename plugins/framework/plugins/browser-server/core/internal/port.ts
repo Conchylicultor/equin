@@ -227,11 +227,23 @@ export function serveHost(opts: ServeHostOptions): ServedHost {
   });
   /** The boot settled: an end served from now on did not wait for it. */
   let bootSettled = false;
+  /**
+   * The boot threw (failed or refused): this host will never serve, so nothing
+   * holds it — it retires once it told the ends waiting for it. Kept alive, a
+   * SharedWorker would hand that one failure to every page connecting by its
+   * name for as long as any tab stays open (a module fetch lost to a gateway
+   * restart, replayed on every reload); retired, the next page moves to a
+   * fresh worker, which boots again.
+   */
+  let bootFailed = false;
   // Either way: a failed boot is reported above, and to each end below.
   const settle = (): void => {
     bootSettled = true;
   };
-  void booted.then(settle, settle);
+  void booted.then(settle, () => {
+    bootFailed = true;
+    settle();
+  });
 
   /** Every page end being served, and the sockets each opened. */
   const ends = new Map<PortEnd, Map<number, BrowserServerSocket>>();
@@ -416,8 +428,8 @@ export function serveHost(opts: ServeHostOptions): ServedHost {
 
   /**
    * Retire when nothing holds the host: no end, no request being answered,
-   * booted (a failed boot closed its storage itself; the worker retires all
-   * the same) — or once it ended, whatever ended it (a Reset's wipe done, or
+   * booted — or once its boot threw (it never serves: the ends waiting were
+   * told why, and a failed boot closed its storage itself) — or once it ended, whatever ended it (a Reset's wipe done, or
    * another worker took its storage over: its pages are told, and the worker
    * still has to go). Always under the retire lock, so a page connecting by
    * this name meanwhile — a stale tab — moves on to the next one instead of
@@ -430,7 +442,9 @@ export function serveHost(opts: ServeHostOptions): ServedHost {
     // Mid-Reset: the wipe is running; it ends the host, which retires then.
     if (stopping && ended === null) return;
     const held = (): boolean =>
-      ended === null && (ends.size > 0 || inFlight.size > 0 || !bootSettled);
+      ended === null &&
+      !bootFailed &&
+      (ends.size > 0 || inFlight.size > 0 || !bootSettled);
     if (held()) return;
     const ask = new AbortController();
     retiring = ask;
