@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 )
@@ -19,10 +20,15 @@ import (
 const documentHeadFile = "document-head.json"
 
 // documentHead is the file's schema: head HTML keyed by an app's base path
-// ("/home"), "" for every other path.
+// ("/home"), "" for every other path; and the pages that may frame an app's
+// shell, keyed by its base path (shell/document-head's
+// DocumentHead.FrameAncestors). A file from a backend that predates
+// frameAncestors has none, and every shell is served without the header, as
+// before.
 type documentHead struct {
-	V       int               `json:"v"`
-	Entries map[string]string `json:"entries"`
+	V              int                 `json:"v"`
+	Entries        map[string]string   `json:"entries"`
+	FrameAncestors map[string][]string `json:"frameAncestors"`
 }
 
 // documentHeadCache keeps each parsed file until its revision changes, so a
@@ -84,26 +90,61 @@ func readDocumentHead(file string) (documentHead, bool) {
 // segment boundary, else "". Repeated slashes are collapsed first, as the
 // router's normalizeRoutePath does, so `//home` still matches "/home".
 func matchDocumentHead(entries map[string]string, urlPath string) string {
+	if key, found := matchAppPath(entries, urlPath); found {
+		return entries[key]
+	}
+	return entries[""]
+}
+
+// matchAppPath is the longest non-"" key of m that urlPath is in — the key
+// itself or a path under it at a segment boundary, after collapsing repeated
+// slashes — or found=false.
+func matchAppPath[V any](m map[string]V, urlPath string) (key string, found bool) {
 	for strings.Contains(urlPath, "//") {
 		urlPath = strings.ReplaceAll(urlPath, "//", "/")
 	}
-	best := ""
-	found := false
-	for key := range entries {
-		if key == "" {
+	for k := range m {
+		if k == "" {
 			continue
 		}
-		if urlPath != key && !strings.HasPrefix(urlPath, key+"/") {
+		if urlPath != k && !strings.HasPrefix(urlPath, k+"/") {
 			continue
 		}
-		if !found || len(key) > len(best) {
-			best, found = key, true
+		if !found || len(k) > len(key) {
+			key, found = k, true
 		}
 	}
-	if found {
-		return entries[best]
+	return key, found
+}
+
+// cspSourceRe is one CSP source expression: nothing that would end the
+// directive (whitespace separates sources, but a source with any in it was
+// not written as one), start another (;) or another policy (,).
+var cspSourceRe = regexp.MustCompile(`^[^\s;,]+$`)
+
+// frameAncestorsPolicy is the Content-Security-Policy the shell for urlPath
+// is served under — `frame-ancestors <sources>` for the longest app path the
+// file names — or ok=false when none names it (the shell carries no CSP). A
+// policy the gateway cannot use as written (no sources, or one that is not a
+// single source expression; the backend's writer refuses both) fails closed,
+// `frame-ancestors 'none'`, logged: it was meant to restrict framing.
+func frameAncestorsPolicy(head documentHead, urlPath string) (string, bool) {
+	key, found := matchAppPath(head.FrameAncestors, urlPath)
+	if !found {
+		return "", false
 	}
-	return entries[""]
+	sources := head.FrameAncestors[key]
+	if len(sources) == 0 {
+		slog.Error("document head: frame-ancestors policy has no sources", "path", key)
+		return "frame-ancestors 'none'", true
+	}
+	for _, s := range sources {
+		if !cspSourceRe.MatchString(s) {
+			slog.Error("document head: frame-ancestors source is not one source expression", "path", key, "source", s)
+			return "frame-ancestors 'none'", true
+		}
+	}
+	return "frame-ancestors " + strings.Join(sources, " "), true
 }
 
 // spliceHead inserts fragment before the shell's </head>. ok=false when the
@@ -120,16 +161,19 @@ func spliceHead(index []byte, fragment string) ([]byte, bool) {
 	return out, true
 }
 
-// documentHeadFragment is the namespace's head fragment for this request path
-// (document-head.json's entry, matchDocumentHead), or "" when there is none to
-// splice: no file, one this gateway cannot read (logged), or no entry.
-func documentHeadFragment(wt *Worktree, urlPath string) string {
+// shellHead is what the namespace's document-head.json says about the shell
+// for this request path: the head fragment to splice (matchDocumentHead; ""
+// when there is none) and the Content-Security-Policy to serve it under
+// (frameAncestorsPolicy; "" when none). Both empty when there is no file or
+// one this gateway cannot read (logged).
+func shellHead(wt *Worktree, urlPath string) (fragment, csp string) {
 	if wt.cfg == nil || wt.cfg.RegistryDir == "" {
-		return ""
+		return "", ""
 	}
 	head, ok := readDocumentHead(filepath.Join(wt.cfg.RegistryDir, wt.Name, documentHeadFile))
 	if !ok {
-		return ""
+		return "", ""
 	}
-	return matchDocumentHead(head.Entries, urlPath)
+	csp, _ = frameAncestorsPolicy(head, urlPath)
+	return matchDocumentHead(head.Entries, urlPath), csp
 }

@@ -1,6 +1,10 @@
 import { describe, it, expect } from "bun:test";
 
-import { matchHeadFragment, mergeHeadFragments } from "./fragments";
+import {
+  frameAncestorsByPath,
+  matchHeadFragment,
+  mergeHeadFragments,
+} from "./fragments";
 
 describe("matchHeadFragment", () => {
   it('picks the longest app path the path is in, else the "" entry', () => {
@@ -26,5 +30,42 @@ describe("mergeHeadFragments", () => {
       "/home": "Hx",
       "/pages": "TxP",
     });
+  });
+});
+
+describe("frameAncestorsByPath", () => {
+  const ext = "chrome-extension://abc";
+  it("keys each policy's ancestors by its path", () => {
+    expect(
+      frameAncestorsByPath([
+        { id: "a", path: "/home/x", ancestors: [ext] },
+        { id: "b", path: "/y", ancestors: ["'self'", ext] },
+      ]),
+    ).toEqual({ "/home/x": [ext], "/y": ["'self'", ext] });
+  });
+  it("refuses a path named twice", () => {
+    expect(() =>
+      frameAncestorsByPath([
+        { id: "a", path: "/x", ancestors: [ext] },
+        { id: "b", path: "/x", ancestors: [ext] },
+      ]),
+    ).toThrow("a and b both name /x");
+  });
+  it("refuses an ancestor that would end the directive", () => {
+    for (const bad of [`${ext}; script-src *`, "a b", "a,b", ""]) {
+      expect(() =>
+        frameAncestorsByPath([{ id: "a", path: "/x", ancestors: [bad] }]),
+      ).toThrow("is not one CSP source expression");
+    }
+  });
+  it("refuses no ancestors and a path that is not an app path", () => {
+    expect(() =>
+      frameAncestorsByPath([{ id: "a", path: "/x", ancestors: [] }]),
+    ).toThrow("no ancestors");
+    for (const bad of ["x", "/", "/x/", "/x?y"]) {
+      expect(() =>
+        frameAncestorsByPath([{ id: "a", path: bad, ancestors: [ext] }]),
+      ).toThrow("is not an app path");
+    }
   });
 });

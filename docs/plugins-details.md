@@ -15324,6 +15324,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Contributes:
           - `resource.declare` "browser-extension.connection"
           - `resource.declare` "browser-extension.shell"
+          - `DocumentHead.FrameAncestors` "browser-extension (/home/browser-extension)"
         - Resources:
           - `browser-extension.connection` (push, notified)
           - `browser-extension.shell` (push, notified)
@@ -57648,23 +57649,27 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `shell/notifications`
           - `ui/theme-engine/quick-theme`
           - `wish`
-    - **`document-head`** — What the SPA shell's <head> must carry before the first frame, per app path: the DocumentHead.Fragment contribution a server plugin renders its head HTML through (the theme's CSS), and the merge of every source into one fragment per path.
+    - **`document-head`** — What the SPA shell must carry before the first frame, per app path: the DocumentHead.Fragment contribution a server plugin renders its head HTML through (the theme's CSS), and the merge of every source into one fragment per path; and DocumentHead.FrameAncestors, the pages that may frame an app's shell (served as its CSP frame-ancestors).
       - Cross-plugin:
         - Imported by:
           - `apps-core/app-manifest`
           - `apps-core/app-preload`
           - `apps/demo/shell`
           - `apps/website/landing/hero`
+          - `companions/browser-extension`
           - `framework/cli/build/experimental-marks`
           - `network/live/boot-snapshot`
           - `ui/icons/sprites`
           - `ui/theme-engine`
       - Server:
         - Exports (types):
+          - `FrameAncestorsByPath`
+          - `FrameAncestorsPolicy`
           - `HeadFragments`
           - `HeadFragmentSource`
         - Exports (values):
           - `DocumentHead`
+          - `frameAncestorsByPath`
           - `matchHeadFragment`
           - `mergeHeadFragments`
     - **`global-action-bar`** — Global action bar rendering the shared ActionBar.Item set on every app, with two mutually-exclusive mount points keyed on the surface mode: a docked right-aligned strip in the tab bar (Apps.TabBarActions) in desktop and tab modes, and a floating top-right overlay (Core.Root) in fullscreen (solo), where the tab bar is hidden. Shared cross-app action set: registers the action-bar config so the bar's enabled toggle persists.

@@ -4,10 +4,15 @@ import { dirname } from "node:path";
 import { worktreeArtifacts } from "@plugins/infra/plugins/paths/server";
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { createCoalescer } from "@plugins/packages/plugins/coalesce/core";
-import { DocumentHead, mergeHeadFragments } from "../../server";
+import {
+  DocumentHead,
+  frameAncestorsByPath,
+  mergeHeadFragments,
+} from "../../server";
 
 /**
- * Keep `document-head.json` — what the gateway splices into the SPA shell —
+ * Keep `document-head.json` — what the gateway splices into the SPA shell, and
+ * the `frameAncestors` policy it serves the shell under, per app path —
  * equal to what every `DocumentHead.Fragment` source answers now: rendered
  * once before this resolves (a failed first render fails the hook, loudly),
  * then again, coalesced, whenever a source says its answer changed (a failed
@@ -19,13 +24,22 @@ import { DocumentHead, mergeHeadFragments } from "../../server";
  */
 export async function publishDocumentHead(): Promise<void> {
   const sources = DocumentHead.Fragment.getContributions();
+  // Static: checked once, before anything is written, so a bad policy fails
+  // the hook instead of shipping a shell the gateway would refuse to frame.
+  const frameAncestors = frameAncestorsByPath(
+    DocumentHead.FrameAncestors.getContributions(),
+  );
   const file = worktreeArtifacts.documentHead(runtimeNamespace());
   const publish = createCoalescer({
     run: async () => {
       const rendered = await Promise.all(sources.map((s) => s.render()));
       await writeAtomic(
         file,
-        JSON.stringify({ v: 1, entries: mergeHeadFragments(rendered) }),
+        JSON.stringify({
+          v: 1,
+          entries: mergeHeadFragments(rendered),
+          frameAncestors,
+        }),
       );
     },
   });

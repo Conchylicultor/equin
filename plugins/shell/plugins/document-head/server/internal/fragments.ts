@@ -24,12 +24,84 @@ export interface HeadFragmentSource {
   subscribe(onChange: () => void): () => void;
 }
 
+/**
+ * Who may frame an app's pages: the shell the gateway serves under `path` (an
+ * app's base path, matched like a head fragment's key) carries
+ * `Content-Security-Policy: frame-ancestors <ancestors>`. Paths no policy names
+ * are served without one, as before.
+ *
+ * Static by design — who may embed a page is a fact of the code, not of the
+ * user's data. Two policies naming the same path are refused at publish: which
+ * of two framing rules wins is not something to settle silently.
+ */
+export interface FrameAncestorsPolicy {
+  /** Names the policy in errors. */
+  id: string;
+  /** The app's base path (`/home/browser-extension`). */
+  path: string;
+  /**
+   * CSP source expressions (`chrome-extension://<id>`, `'self'`); none of them
+   * may hold whitespace, `;` or `,`, which would end the directive.
+   */
+  ancestors: readonly string[];
+}
+
+/** document-head.json's `frameAncestors`: each policy's ancestors by its path. */
+export type FrameAncestorsByPath = Record<string, readonly string[]>;
+
 export const DocumentHead = {
   Fragment: defineServerContribution<HeadFragmentSource>(
     "DocumentHead.Fragment",
     { docLabel: (c) => c.id },
   ),
+  FrameAncestors: defineServerContribution<FrameAncestorsPolicy>(
+    "DocumentHead.FrameAncestors",
+    { docLabel: (c) => `${c.id} (${c.path})` },
+  ),
 };
+
+const CSP_SOURCE = /^[^\s;,]+$/;
+const APP_PATH = /^\/[^\s?#]*[^/\s?#]$/;
+
+/**
+ * Every policy, keyed by its path — after checking each: an app path (leading
+ * `/`, no trailing one), at least one ancestor, each a single source
+ * expression, and no path named twice. Throws naming the policy otherwise.
+ */
+export function frameAncestorsByPath(
+  policies: readonly FrameAncestorsPolicy[],
+): FrameAncestorsByPath {
+  const out: Record<string, readonly string[]> = {};
+  const owner = new Map<string, string>();
+  for (const p of policies) {
+    if (!APP_PATH.test(p.path)) {
+      throw new Error(
+        `frame-ancestors policy ${p.id}: ${JSON.stringify(p.path)} is not an app path`,
+      );
+    }
+    if (p.ancestors.length === 0) {
+      throw new Error(
+        `frame-ancestors policy ${p.id}: no ancestors (to forbid framing, say 'none')`,
+      );
+    }
+    for (const a of p.ancestors) {
+      if (!CSP_SOURCE.test(a)) {
+        throw new Error(
+          `frame-ancestors policy ${p.id}: ${JSON.stringify(a)} is not one CSP source expression`,
+        );
+      }
+    }
+    const prior = owner.get(p.path);
+    if (prior !== undefined) {
+      throw new Error(
+        `frame-ancestors policies ${prior} and ${p.id} both name ${p.path}`,
+      );
+    }
+    owner.set(p.path, p.id);
+    out[p.path] = p.ancestors;
+  }
+  return out;
+}
 
 /** The fragment `fragments` serves for `path`: its longest matching key, else `""`'s, else nothing. */
 export function matchHeadFragment(

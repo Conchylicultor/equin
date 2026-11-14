@@ -44,9 +44,13 @@ everything else  → static file from web/dist (SPA fallback for extensionless p
 `shell/document-head`) whose key is the longest app path the request is in
 (`""` otherwise) before `</head>`: the theme's CSS for the first frame
 (`document_head.go`). The bytes then vary by path and theme, so the response
-carries an ETag hashed from them (still `no-cache`: unchanged → 304). No file,
-or one this gateway cannot read (logged at error) → the plain shell. An
-explicit `/index.html` still gets `http.ServeFile`'s redirect.
+carries an ETag hashed from them (still `no-cache`: unchanged → 304). The same
+file's `frameAncestors` (app path → CSP sources, `DocumentHead.FrameAncestors`)
+puts `Content-Security-Policy: frame-ancestors …` on every shell response under
+the longest matching path (`/home/browser-extension` → the extension's origin
+only); a source that is not one source expression fails closed to `'none'`.
+No file, or one this gateway cannot read (logged at error) → the plain shell,
+no CSP. An explicit `/index.html` still gets `http.ServeFile`'s redirect.
 
 **A crawlable composition's shell carries its page's static snapshot**
 (`snapshot.go`; design: `research/2026-11-10-global-website-crawlable-v3.md`).

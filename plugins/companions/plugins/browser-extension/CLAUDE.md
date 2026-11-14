@@ -27,6 +27,11 @@ The page accepts a port only from `chrome-extension://<EXTENSION_ID>`
 gives the extension and the one the page trusts cannot drift. Never change
 the key.
 
+The gateway also refuses to let anything else frame the page: the machine
+half contributes `DocumentHead.FrameAncestors` for the app's base path, so
+the shell is served under `frame-ancestors chrome-extension://<EXTENSION_ID>`
+(defence in depth on top of the port check; a plain tab is unaffected).
+
 `useExtensionHost()` is pending / absent / present like the menu bar's
 `useNativeHost()`. Absent (a plain tab, or framed by anything else): the route
 says it runs inside the extension.
@@ -107,6 +112,7 @@ Install once: `chrome://extensions` → Developer mode → Load unpacked →
   - Contributes:
     - `resource.declare` "browser-extension.connection"
     - `resource.declare` "browser-extension.shell"
+    - `DocumentHead.FrameAncestors` "browser-extension (/home/browser-extension)"
   - Resources:
     - `browser-extension.connection` (push, notified)
     - `browser-extension.shell` (push, notified)

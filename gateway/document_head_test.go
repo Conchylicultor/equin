@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -135,5 +136,64 @@ func TestMatchDocumentHead(t *testing.T) {
 	}
 	if got := matchDocumentHead(map[string]string{"/a": "a"}, "/b"); got != "" {
 		t.Errorf("no \"\" entry and no match: got %q, want empty", got)
+	}
+}
+
+// An app path the backend gave a framing policy is served under it — the
+// page itself and every path under it, whatever the head entries say — and
+// every other path carries no CSP.
+func TestShellCarriesItsFrameAncestors(t *testing.T) {
+	f := newStaticProxy(t)
+	withShell(t, f, "<html><head></head><body></body></html>")
+	writeDocumentHead(t, f, "alpha", `{"v":1,"entries":{"":"<style>g</style>"},"frameAncestors":{"/home/ext":["chrome-extension://abc"],"/home/ext/deep":["'self'","chrome-extension://abc"]}}`)
+
+	cases := map[string]string{
+		"/home/ext":        "frame-ancestors chrome-extension://abc",
+		"/home/ext/x":      "frame-ancestors chrome-extension://abc",
+		"//home/ext":       "frame-ancestors chrome-extension://abc",
+		"/home/ext/deep/y": "frame-ancestors 'self' chrome-extension://abc",
+		"/home":            "",
+		"/home/extra":      "",
+		"/":                "",
+	}
+	for path, want := range cases {
+		rec := serve(f.proxy, "alpha.localhost:9000", path)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("%s: status = %d", path, rec.Code)
+		}
+		if got := rec.Header().Get("Content-Security-Policy"); got != want {
+			t.Fatalf("%s: Content-Security-Policy = %q, want %q", path, got, want)
+		}
+	}
+}
+
+// With no head entry to splice the shell takes the plain-file path; the
+// policy is still served there.
+func TestPlainShellCarriesItsFrameAncestors(t *testing.T) {
+	f := newStaticProxy(t)
+	withShell(t, f, "<html><head></head><body></body></html>")
+	writeDocumentHead(t, f, "alpha", `{"v":1,"entries":{},"frameAncestors":{"/home/ext":["chrome-extension://abc"]}}`)
+	rec := serve(f.proxy, "alpha.localhost:9000", "/home/ext")
+	if got := rec.Header().Get("Content-Security-Policy"); got != "frame-ancestors chrome-extension://abc" {
+		t.Fatalf("Content-Security-Policy = %q", got)
+	}
+}
+
+// A policy that cannot be served as written was still meant to restrict
+// framing: it fails closed to 'none' rather than to no header.
+func TestUnusableFrameAncestorsFailClosed(t *testing.T) {
+	for name, sources := range map[string]string{
+		"empty":     `[]`,
+		"injection": `["chrome-extension://abc; script-src *"]`,
+		"space":     `["a b"]`,
+	} {
+		head := documentHead{}
+		if err := json.Unmarshal([]byte(`{"v":1,"entries":{},"frameAncestors":{"/x":`+sources+`}}`), &head); err != nil {
+			t.Fatal(err)
+		}
+		got, ok := frameAncestorsPolicy(head, "/x")
+		if !ok || got != "frame-ancestors 'none'" {
+			t.Fatalf("%s: got %q, %v; want frame-ancestors 'none'", name, got, ok)
+		}
 	}
 }

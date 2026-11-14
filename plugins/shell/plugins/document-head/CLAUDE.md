@@ -11,15 +11,25 @@ theme's CSS (`ui/theme-engine/server`), instead of a copy kept in browser storag
   `subscribe` says when it would answer differently. `mergeHeadFragments`
   combines sources: each key gets every source's own longest match, in source
   order.
+- **Framing.** `DocumentHead.FrameAncestors({ id, path, ancestors })` names
+  who may frame an app's pages (its base path, matched like a fragment key):
+  the shell is then served under `Content-Security-Policy: frame-ancestors
+  <ancestors>` (a header — browsers ignore `frame-ancestors` in a `<meta>`).
+  Static; checked at publish (`frameAncestorsByPath`: one source expression
+  each, no path named twice). Paths no policy names carry no CSP. Today:
+  `/home/browser-extension`, framed only by the extension.
 - **`machine/`** — the desktop half. At `onReady` it renders every source and
   writes `~/.equin/worktrees/<ns>/document-head.json`
-  (`worktreeArtifacts.documentHead`, `{ v: 1, entries }`, temp + rename), then
+  (`worktreeArtifacts.documentHead`, `{ v: 1, entries, frameAncestors }`,
+  temp + rename), then
   re-renders, coalesced, on each source's change. A failed render is loud and
   leaves the last good file.
 - **The gateway** (`gateway/document_head.go`) reads that file on every shell
   request (cached by file revision), splices the entry whose key is the longest
   app path the request is in before `</head>`, and serves it `no-cache` with an
-  ETag hashed from the bytes. No file → the plain shell.
+  ETag hashed from the bytes — under the `frame-ancestors` policy of the
+  longest app path `frameAncestors` names, if any (a source it cannot serve as
+  written fails closed to `'none'`, logged). No file → the plain shell, no CSP.
 
 A file, not an endpoint, so a page load never waits for a backend: the gateway
 prestarts it and serves the last answer it wrote. The gateway binary is only
@@ -29,23 +39,27 @@ rebuilt by `./equin start`, so a change to the Go half needs that restart.
 
 ## Plugin reference
 
-- Description: What the SPA shell's <head> must carry before the first frame, per app path: the DocumentHead.Fragment contribution a server plugin renders its head HTML through (the theme's CSS), and the merge of every source into one fragment per path.
+- Description: What the SPA shell must carry before the first frame, per app path: the DocumentHead.Fragment contribution a server plugin renders its head HTML through (the theme's CSS), and the merge of every source into one fragment per path; and DocumentHead.FrameAncestors, the pages that may frame an app's shell (served as its CSP frame-ancestors).
 - Cross-plugin:
   - Imported by:
     - `apps-core/app-manifest`
     - `apps-core/app-preload`
     - `apps/demo/shell`
     - `apps/website/landing/hero`
+    - `companions/browser-extension`
     - `framework/cli/build/experimental-marks`
     - `network/live/boot-snapshot`
     - `ui/icons/sprites`
     - `ui/theme-engine`
 - Server:
   - Exports (types):
+    - `FrameAncestorsByPath`
+    - `FrameAncestorsPolicy`
     - `HeadFragments`
     - `HeadFragmentSource`
   - Exports (values):
     - `DocumentHead`
+    - `frameAncestorsByPath`
     - `matchHeadFragment`
     - `mergeHeadFragments`
 

@@ -184,6 +184,8 @@ func serveArtifact(w http.ResponseWriter, r *http.Request, file string) {
 //
 //   - the head the backend rendered for the first frame (document_head.go: the
 //     theme's CSS, before </head>);
+//   - who may frame it, when the backend named its app path
+//     (document_head.go: `Content-Security-Policy: frame-ancestors …`);
 //   - the page's static snapshot, when the dist's snapshot manifest lists the
 //     path (snapshot.go: title, description, canonical, the hiding rule, and
 //     the fragment after the root div).
@@ -216,7 +218,12 @@ func serveShell(w http.ResponseWriter, r *http.Request, wt *Worktree, webDir str
 		return
 	}
 
-	headFragment := documentHeadFragment(wt, r.URL.Path)
+	headFragment, csp := shellHead(wt, r.URL.Path)
+	if csp != "" {
+		// Before any answer below — a redirect, a 304, a 500 — so no response
+		// for this path goes out without it.
+		w.Header().Set("Content-Security-Policy", csp)
+	}
 	var page *snapshotPage
 	pagePath := snapshotRequestPath(r.URL.Path)
 	if set, ok := readSnapshot(webDir); ok {
