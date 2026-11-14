@@ -94,7 +94,9 @@ beforeEach(() => {
   reports.length = 0;
   // App's boot runs the real live-state pipeline over the page transport; only
   // the worktree socket it opens is stood in for (jsdom has no server).
-  vi.spyOn(NotificationsClient.prototype, "connect").mockImplementation(() => {});
+  vi.spyOn(NotificationsClient.prototype, "connect").mockImplementation(
+    () => {},
+  );
   pluginLoadReportSink.register((r) => reports.push(r));
   // The loader logs each failure; that is the product's own loud path, and
   // noise here.
