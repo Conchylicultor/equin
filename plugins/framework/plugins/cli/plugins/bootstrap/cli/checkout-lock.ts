@@ -1,4 +1,4 @@
-import { ftruncateSync, mkdirSync, openSync, writeSync } from "fs";
+import { mkdirSync, openSync, writeFileSync } from "fs";
 import { adoptFd, type OwnedFd } from "@plugins/packages/plugins/owned-fd/core";
 import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
 import { dirname } from "path";
@@ -153,10 +153,21 @@ export async function acquireCheckoutLock(
   for (;;) {
     if (flockTry(lock.fd)) {
       // Safe to rewrite only now: we hold the lock, so no other holder's pid can
-      // be clobbered. Truncate first so the file stays one line forever instead
-      // of growing by a pid per build.
-      ftruncateSync(lock.fd, 0);
-      writeSync(lock.fd, `${process.pid}\n`);
+      // be clobbered. Rewritten whole ("w"), so the file stays one line forever
+      // instead of growing by a pid per build.
+      //
+      // Through its OWN open, closed at once — never through the lock's fd. A
+      // file written through a descriptor is reported by FSEvents again when
+      // that descriptor closes (the kernel marks the open file written), and
+      // the lock's descriptor closes when the build exits, minutes later. A
+      // watch armed in between — main's backend, restarted by its own build —
+      // never saw the write, so it took that close for a fresh change and
+      // read the pid's ctime (the build's start) to the close as delivery lag:
+      // every main deploy filed `watch-delivery:fs-events` on the plugins-dir
+      // watcher (`.build.lock` sits in `plugins/framework/plugins/web-core/`)
+      // with the build's whole duration as its "lag". The lock's own fd, never
+      // written, closes unheard.
+      writeFileSync(lockPath, `${process.pid}\n`);
       return makeRelease(lock);
     }
 

@@ -133,6 +133,16 @@ arming (`createFileWatcher` entered), into three parts that sum to it
 A write made during the subscribe counts as delivery in full (when the native
 stream really started inside it is unknown): over, never under.
 
+**A file written through a descriptor held open is reported again at its
+close** (FSEvents; ctime stays at the write). A watch that heard the write
+drops it (parcel skips a known mtime), but one armed between the write and the
+close takes it for a fresh change of a pre-arm write: its `lagMs` is the
+writer's hold time. `.build.lock` (under `plugins/`) did that on every main
+deploy — the backend restarts mid-build, the lock fd closes at build exit — and
+filed `watch-delivery:fs-events` + `wait watch-arm`. Write a held file (a lock
+naming its holder) through its own short-lived open, never the held fd
+(`cli/bootstrap`'s `checkout-lock.ts`).
+
 - `recordSpan("bg", "watch-delivery:<backend>", arrivedAt − writtenAt, { variant: watcher }, { latency: true, waits?, queue? })`:
   slow-ops holds its own part (`lagMs`) to the live-update bar — one row and
   one report per backend (`watch-delivery:fs-events`), every watcher it
