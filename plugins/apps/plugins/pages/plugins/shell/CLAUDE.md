@@ -46,6 +46,7 @@
     - `ui/tokens/sidebar-metrics` ×2
   - Imported by:
     - `apps/pages/content-search`
+    - `apps/pages/isle-building`
     - `apps/pages/page-tree`
     - `apps/pages/trash`
     - `apps/pages/welcome`

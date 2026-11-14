@@ -37,10 +37,10 @@ None of those defends against a forged collision; they tell contents apart.
 
 ## Plugin reference
 
-- Description: Portable string hashes in plain JS (no node:crypto, no Bun.hash), so every host — the Bun server, central and a browser page — computes the same value: hash53 (cyrb53, a 53-bit number, optionally seeded), hashHex (two seeded cyrb53s, ~106 bits as hex), hash64 (a 64-bit bigint), sha256Hex (a synchronous SHA-256, identical to node:crypto's hex digest), createSha256 (the same SHA-256, incremental over strings and bytes) and sha1Hex (SHA-1 for values already stored as one).
+- Description: Portable string hashes in plain JS (no node:crypto, no Bun.hash), so every host — the Bun server, central and a browser page — computes the same value: hash53 (cyrb53, a 53-bit number, optionally seeded), hashHex (two seeded cyrb53s, ~106 bits as hex), hash64 (a 64-bit bigint), fnv1a32 (32-bit FNV-1a, for seeding), sha256Hex (a synchronous SHA-256, identical to node:crypto's hex digest), createSha256 (the same SHA-256, incremental over strings and bytes) and sha1Hex (SHA-1 for values already stored as one).
 - Cross-plugin:
-  - Imported by: 46 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×13
+  - Imported by: 50 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×17
     - `database` ×5
     - `network` ×5
     - `framework` ×4
@@ -58,6 +58,7 @@ None of those defends against a forged collision; they tell contents apart.
   - Exports (types): `Sha256Hasher`
   - Exports (values):
     - `createSha256`
+    - `fnv1a32`
     - `hash53`
     - `hash64`
     - `hashHex`

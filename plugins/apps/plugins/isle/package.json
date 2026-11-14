@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-apps-isle",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Isle — the island launcher: every installed app is a building on an illustrated archipelago you walk around; new apps get a generated building and are placed append-only, districts fill, then new islands appear."
+}

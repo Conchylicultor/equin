@@ -82,6 +82,7 @@ changes to existing `kind: "symbol"` authors.
     - `apps-core/app-rail`
     - `apps/desktop/shell`
     - `apps/home/shell`
+    - `apps/isle/world-view`
     - `companions/panel`
     - `config_v2/settings`
     - `framework/cli/release`

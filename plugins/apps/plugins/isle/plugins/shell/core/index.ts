@@ -1,0 +1,1 @@
+export { isleApp } from "./app";

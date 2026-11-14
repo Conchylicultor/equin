@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-apps-isle-buildings",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Isle's building contract (BuildingSpec: a declared footprint, preferred setting, sign, night lights, paint/animate on any 2D context), the watercolour-and-ink painting kit bespoke buildings reuse, and kitBuilding — a generated building per app, seeded from its id and shaped by its category. Its testing barrel measures a painter's ink without a canvas."
+}

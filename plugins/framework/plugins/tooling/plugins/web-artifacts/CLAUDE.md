@@ -139,20 +139,31 @@ Key invariants:
   artifact, addressed by its source. It sits behind a fixed bare specifier that
   is external to every build (`COMPOSITION_SPECIFIERS`) and mapped to the
   deployed composition's file.
-- **A page worker is bundled whole, from its own plugin only.** A
-  `new SharedWorker(new URL("./x.worker.ts", import.meta.url), { type: "module" })`
-  (networking's shared socket is the one user) is built by vite's nested
-  worker pass into `assets/<name>-<hash>.js` inside the artifact, its URL
-  resolved against `import.meta.url` (hence `base: "./"`; the default emitted an
-  origin-absolute `/assets/…` that 404s). Import maps do not reach workers, so
-  the worker build has no externals; the inline audit runs on it too
-  (`worker.plugins`), so a worker reaching another plugin's file fails the build
-  instead of fossilising unhashed bytes, and `assertWorkersSelfContained`
-  hard-fails on any import left in a worker chunk. Worker chunks never join the
-  import map or the preload closure (`parseEmittedImports` reads the top level
-  only); `scanStagedModules` still re-lexes them. Being inside the artifact's
-  content-addressed dir, a worker's URL changes exactly when its plugin's code
-  does — so a SharedWorker instance is per plugin version by construction.
+- **A page worker is bundled whole, and its whole closure is its address.** A
+  `new Worker(new URL("./x.worker.ts", import.meta.url), { type: "module" })`
+  (or a `SharedWorker`: networking's shared socket; Isle's bake workers) is
+  built by vite's nested worker pass into `assets/<name>-<hash>.js` inside the
+  artifact, its URL resolved against `import.meta.url` (hence `base: "./"`; the
+  default emitted an origin-absolute `/assets/…` that 404s). Import maps do not
+  reach workers, so the worker build has no externals: it inlines what it
+  imports, other plugins' barrels included (`@plugins/<p>/core`). So the entry
+  must be named `*.worker.ts(x)` — planning's `ownHashFor` (`own-files.ts`)
+  takes every own module so named as a WORKER ENTRY and folds its Merkle key in
+  the plugin-records module graph (its blob and the keys of everything it
+  loads, transitively) into the artifact's address, and lists the closure's
+  modules (`workerFiles`). The worker pass's inline audit allows exactly those
+  beside the own files (the page bundle's still allows only its own roots), so
+  a worker entry not named so, or one reaching a file the graph does not see (a
+  glob, a gitignored file), fails the build instead of fossilising unhashed
+  bytes; an import the graph cannot resolve fails planning. `assertWorkersSelfContained`
+  hard-fails on any import left in a worker chunk (no dynamic `import()` in a
+  worker). Worker chunks never join the import map or the preload closure
+  (`parseEmittedImports` reads the top level only); `scanStagedModules` still
+  re-lexes them. Being inside the artifact's content-addressed dir, a worker's
+  URL changes exactly when the code it bundles does — so a SharedWorker
+  instance is per worker version by construction. What a page worker cannot do
+  is load a module the page names at run time (another plugin's contribution):
+  that needs the worker link tree below, which only browser hosts have.
 - **A browser host's worker loads the page's own per-plugin artifacts,
   through a link tree.** A fleet plugin with a `bin/browser-host.ts` (a Web
   Worker booting a portable server graph — `server-core`'s `bootBrowserHost`)

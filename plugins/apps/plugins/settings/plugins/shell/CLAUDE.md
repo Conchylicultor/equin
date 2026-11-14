@@ -31,6 +31,7 @@
     - `apps/settings/accounts`
     - `apps/settings/appearance`
     - `apps/settings/config`
+    - `apps/settings/isle-building`
     - `auth`
     - `config_v2/settings`
     - `ui/theme-engine/theme-customizer`

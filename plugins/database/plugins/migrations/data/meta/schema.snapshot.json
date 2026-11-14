@@ -1,6 +1,6 @@
 {
-  "id": "1f7e2de8-b76b-43c5-b253-ea6d51c35845",
-  "prevId": "610c209d-89ce-45c5-af92-9f273c47ec87",
+  "id": "edaf80ef-b766-419b-bfdc-a74ea71d0885",
+  "prevId": "1f7e2de8-b76b-43c5-b253-ea6d51c35845",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -3254,6 +3254,118 @@
         }
       },
       "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.isle_plots": {
+      "name": "isle_plots",
+      "schema": "",
+      "columns": {
+        "world": {
+          "name": "world",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "plot_id": {
+          "name": "plot_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "slot": {
+          "name": "slot",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "n": {
+          "name": "n",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "seq": {
+          "name": "seq",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "category": {
+          "name": "category",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "geometry": {
+          "name": "geometry",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "occupant": {
+          "name": "occupant",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "moved_by_user": {
+          "name": "moved_by_user",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "isle_plots_world_occupant_idx": {
+          "name": "isle_plots_world_occupant_idx",
+          "columns": [
+            {
+              "expression": "world",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "occupant",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "isle_plots_world_plot_id_pk": {
+          "name": "isle_plots_world_plot_id_pk",
+          "columns": [
+            "world",
+            "plot_id"
+          ]
+        }
+      },
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},

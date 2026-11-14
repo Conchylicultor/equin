@@ -6,6 +6,7 @@
 
 - Description: Keyboard Party — a keyboard toy for a small child: every key answers with its own animation and sound.
 - Sub-plugins:
+  - **`isle-building`** — Keyboard Party's building on Isle: the schoolhouse, chalk writing Aa, Bb… on its slate.
   - **`party`** — Keyboard Party's stage: every key plays its own animation and sound (letters bring a picture, a word and speech; digits count; space, Enter, arrows, Backspace and modifiers each have their own…
   - **`shell`** — App shell for Keyboard Party: registers the /keyboard-party app entry, whose one page is the party stage.
 

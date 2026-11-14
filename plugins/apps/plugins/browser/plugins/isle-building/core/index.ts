@@ -1,0 +1,1 @@
+export { observatory } from "./observatory";

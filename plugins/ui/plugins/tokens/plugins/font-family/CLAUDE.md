@@ -58,6 +58,7 @@
     - `apps/deploy/shell`
     - `apps/desktop/shell`
     - `apps/file-explorer/shell`
+    - `apps/isle/shell`
     - `apps/pages/shell`
     - `apps/prototypes/shell`
     - `apps/sonata/shell`

@@ -6,5 +6,6 @@ export const studioApp = defineApp({
   name: "Studio",
   basePath: "/studio",
   icon: symbol("extension"),
+  category: "create",
   audience: "developer",
 });

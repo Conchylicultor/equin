@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-apps-isle-world",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Isle's world as pure data, deterministic from (seed, residents, stored placement): the archipelago (hand-shaped home plus generated island shapes), district slots and hills, append-only plot placement from each building's declared footprint, the revealed layout (roads, squares, buildings, lots, ferries), the walk grid with A*, and map labels."
+}

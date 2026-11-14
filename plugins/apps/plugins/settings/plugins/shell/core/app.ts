@@ -6,5 +6,6 @@ export const settingsApp = defineApp({
   name: "Settings",
   basePath: "/settings",
   icon: symbol("settings"),
+  category: "system",
   iconColor: "slate",
 });

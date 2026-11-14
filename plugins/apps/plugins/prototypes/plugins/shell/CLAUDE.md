@@ -59,6 +59,7 @@ documented with the mockup variable it is.
     - `apps/prototypes/canvas`
     - `apps/prototypes/files`
     - `apps/prototypes/gallery`
+    - `apps/prototypes/isle-building`
     - `apps/prototypes/present`
     - `conversations/conversation-view/artifacts/prototype`
     - `page/prototype`

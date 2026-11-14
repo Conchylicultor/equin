@@ -243,4 +243,49 @@ describe("ownHashFor", () => {
       snapshot = await loadRepoSnapshot(repo);
     }
   });
+
+  test("a page worker's whole closure joins the address, and only it", async () => {
+    // another plugin's barrel, outside p's own roots
+    write("q/core/index.ts", 'export { q } from "./q";\n');
+    write("q/core/q.ts", "export const q = 1;\n");
+    write(
+      "p/web/bake.worker.ts",
+      'import { q } from "../../q/core";\nself.postMessage(q);\n',
+    );
+    const plan = () =>
+      ownHashFor({
+        pluginDir: dir,
+        kind: "web",
+        sources: { snapshot, globs: countingMemo() },
+      });
+    try {
+      snapshot = await loadRepoSnapshot(repo);
+      const before = await plan();
+      expect(before.workerFiles).toEqual([
+        join(repo, "p/web/bake.worker.ts"),
+        join(repo, "q/core/index.ts"),
+        join(repo, "q/core/q.ts"),
+      ]);
+      // the closure is the worker pass's, never an own file of the page bundle
+      expect(before.ownFiles).not.toContain(join(repo, "q/core/q.ts"));
+
+      write("q/core/q.ts", "export const q = 2;\n");
+      snapshot = await loadRepoSnapshot(repo);
+      const after = await plan();
+      expect(after.ownHash).not.toBe(before.ownHash);
+    } finally {
+      rmSync(join(repo, "q"), { recursive: true, force: true });
+      rmSync(join(repo, "p/web/bake.worker.ts"));
+      snapshot = await loadRepoSnapshot(repo);
+    }
+  });
+
+  test("an artifact without a worker keeps the address of its files alone", async () => {
+    const a = await ownHashFor({
+      pluginDir: dir,
+      kind: "web",
+      sources: { snapshot, globs: countingMemo() },
+    });
+    expect(a.workerFiles).toEqual([]);
+  });
 });

@@ -56,6 +56,7 @@ function target(
     globRoots: [],
     ownFiles: [],
     globFiles: [],
+    workerFiles: [],
     coEntries: [],
   };
 }

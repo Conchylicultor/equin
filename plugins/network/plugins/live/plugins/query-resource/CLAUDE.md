@@ -961,8 +961,8 @@ query.
     - `liveSetOverBudgetSink`
     - `SQL_TYPE_RE`
 - Cross-plugin:
-  - Imported by: 28 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×6
+  - Imported by: 29 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×7
     - `page` ×4
     - `infra` ×3
     - `conversations` ×2

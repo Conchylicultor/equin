@@ -56,6 +56,7 @@ declared on the pane.**
     - `apps/demo/shell`
     - `apps/deploy/shell`
     - `apps/home/shell`
+    - `apps/isle/shell`
     - `apps/places/shell`
     - `apps/prototypes/shell`
     - `apps/sonata/shell`

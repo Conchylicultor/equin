@@ -47,3 +47,16 @@ export function hash64(str: string): bigint {
   const [h1, h2] = cyrb53Lanes(str, 0);
   return (BigInt(h2 >>> 0) << 32n) | BigInt(h1 >>> 0);
 }
+
+/**
+ * FNV-1a, 32-bit: a small, fast hash of `str` as an unsigned 32-bit integer.
+ * For seeding (a per-id random stream, a stable per-id pick) where 32 bits
+ * are plenty and the value must match what other FNV-1a code computes.
+ */
+export function fnv1a32(str: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < str.length; i++) {
+    h = Math.imul(h ^ str.charCodeAt(i), 16777619);
+  }
+  return h >>> 0;
+}

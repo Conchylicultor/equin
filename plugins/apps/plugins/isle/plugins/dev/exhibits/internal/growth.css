@@ -1,0 +1,25 @@
+.isle-growth-frame {
+  position: relative;
+  height: 720px;
+  width: 100%;
+  overflow: hidden;
+  border-radius: var(--radius-md, 8px);
+}
+.isle-growth-stage {
+  position: absolute;
+  inset: 0;
+}
+.isle-growth-digest {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+}
+.isle-growth-wait {
+  display: block;
+  padding: 16px;
+}
+.isle-growth-digest-text {
+  max-height: 160px;
+  overflow: auto;
+  font-size: 11px;
+}

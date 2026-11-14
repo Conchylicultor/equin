@@ -17,6 +17,7 @@ export const desktopApp = defineApp({
   name: "Desktop",
   basePath: "/desktop",
   icon: symbol("desktop-windows"),
+  category: "system",
 });
 
 /**

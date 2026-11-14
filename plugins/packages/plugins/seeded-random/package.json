@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-packages-seeded-random",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Seeded pseudo-random streams in plain JS: mulberry32(seed) returns a () => number in [0, 1) that yields the same sequence for the same 32-bit seed on every host — for generated art and worlds that must come out identical every time."
+}

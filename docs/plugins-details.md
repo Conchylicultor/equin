@@ -622,6 +622,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/icons.IconMotion`
             - Exports (types): `AgentGlyph`
             - Exports (values): `agentIcons`
+        - **`isle-building`** — The Agent Manager's building on Isle: the workshop forge, a brass automaton hammering at its bench.
+          - Web:
+            - Contributes: `Isle.Building` "agent-manager"
+            - Uses: `apps/isle/buildings.Isle`
+          - Core:
+            - Uses: 21 symbols — full list in [`plugins/apps/plugins/agent-manager/plugins/isle-building/REFERENCE.md`](../plugins/apps/plugins/agent-manager/plugins/isle-building/REFERENCE.md)
+              - `apps/isle/buildings` ×21
+            - Exports (values): `forge`
         - **`pages-nav`** — Pages entry point in the agent manager: a conversation-toolbar toggle that opens the Pages tree as a column beside the conversation.
           - Web:
             - Contributes: `Conversation.ActionBar` → `PagesTreeButton`
@@ -648,10 +656,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/icons.symbol`
             - Exports (values): `agentManagerApp`
           - Cross-plugin:
-            - Imported by: 34 plugins — full list in [`plugins/apps/plugins/agent-manager/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/agent-manager/plugins/shell/REFERENCE.md)
+            - Imported by: 35 plugins — full list in [`plugins/apps/plugins/agent-manager/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/agent-manager/plugins/shell/REFERENCE.md)
               - `conversations` ×17
               - `tasks` ×7
-              - `apps` ×3
+              - `apps` ×4
               - `active-data/plugin-link`
               - `build`
               - `code-explorer/commit-detail`
@@ -846,6 +854,31 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `browserVisitIdKind`
           - Cross-plugin:
             - Imported by: `apps/browser/start-page`
+        - **`isle-building`** — The Browser's building on Isle: the observatory, its dome slot and telescope slowly turning.
+          - Web:
+            - Contributes: `Isle.Building` "browser"
+            - Uses: `apps/isle/buildings.Isle`
+          - Core:
+            - Uses:
+              - `apps/isle/buildings.accent`
+              - `apps/isle/buildings.Box`
+              - `apps/isle/buildings.BuildingSpec`
+              - `apps/isle/buildings.castShadow`
+              - `apps/isle/buildings.Ctx2D`
+              - `apps/isle/buildings.doorArch`
+              - `apps/isle/buildings.grain`
+              - `apps/isle/buildings.hline`
+              - `apps/isle/buildings.ink`
+              - `apps/isle/buildings.jit`
+              - `apps/isle/buildings.moss`
+              - `apps/isle/buildings.shrub`
+              - `apps/isle/buildings.spill`
+              - `apps/isle/buildings.steps`
+              - `apps/isle/buildings.stones`
+              - `apps/isle/buildings.tufts`
+              - `apps/isle/buildings.wash`
+              - `apps/isle/buildings.windowRect`
+            - Exports (values): `observatory`
         - **`navigation`** — Browser navigation controls: back / forward / reload (stop while the page loads) buttons in the chrome bar.
           - Web:
             - Contributes: `Browser.NavControls` "Navigation controls" → `NavControls`
@@ -973,6 +1006,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/browser`
               - `apps/browser/bookmarks`
               - `apps/browser/history`
+              - `apps/browser/isle-building`
               - `apps/browser/navigation`
               - `apps/browser/omnibox`
               - `apps/browser/start-page`
@@ -1259,6 +1293,33 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exempts itself from:
               - `no-db-backed-notify` — `server/internal/loops-resource.ts` (sanctioned)
               - `ids:pk-declared` — `server/internal/tables.ts` (debt)
+        - **`isle-building`** — Chord's building on Isle: the bandstand, a guitar on its stand under an octagonal roof.
+          - Web:
+            - Contributes: `Isle.Building` "chord"
+            - Uses: `apps/isle/buildings.Isle`
+          - Core:
+            - Uses:
+              - `apps/isle/buildings.accent`
+              - `apps/isle/buildings.bbox`
+              - `apps/isle/buildings.Box`
+              - `apps/isle/buildings.BuildingSpec`
+              - `apps/isle/buildings.castShadow`
+              - `apps/isle/buildings.dark`
+              - `apps/isle/buildings.grain`
+              - `apps/isle/buildings.hline`
+              - `apps/isle/buildings.ink`
+              - `apps/isle/buildings.jit`
+              - `apps/isle/buildings.lantern`
+              - `apps/isle/buildings.planks`
+              - `apps/isle/buildings.poly`
+              - `apps/isle/buildings.Pt`
+              - `apps/isle/buildings.shingles`
+              - `apps/isle/buildings.shrub`
+              - `apps/isle/buildings.spill`
+              - `apps/isle/buildings.stones`
+              - `apps/isle/buildings.tufts`
+              - `apps/isle/buildings.wash`
+            - Exports (values): `bandstand`
         - **`piano`** — The Chord app's piano: usePiano (one AudioContext and one voice set per screen, striking a chord or a single note on Sonata's default instrument), <PianoCard> — the four-octave keyboard drawing the chord on show, its doubled bass greyed beside it, playable key by key — and the sound mix: the song and the piano as two channels, each on or off at its own level (useSoundMix, <SoundChannelControl channel/>), the piano following the song's playhead when on. The Chord app's piano, server side: registers the chord-sound config (the song and the piano, each on or off at its own level) so the learner's mix persists and shows in Settings.
           - Web:
             - Contributes: `ConfigV2.WebRegister` "config"
@@ -1393,6 +1454,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Imported by:
               - `apps/chord`
+              - `apps/chord/isle-building`
               - `apps/chord/trainer`
               - `apps/website`
         - **`song-index`** — The song index's web half: the settings registration for its load scope, and SongIndexGate — opens the index on mount and shows the load's progress (or its failure, with Retry) until the index is ready, then its children. The chord app's song index: the Sheet Sage download and snapshot build, the supervised load job, the ensure endpoint, the live load status, the live loop find (chord.loops), the loop counts, the snapshot's backup source, and the `hooktheory` song-video source (the videos transcribers synced a song to, by slug).
@@ -3135,6 +3197,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/deploy/fixtures`
               - `apps/deploy/site-messages/inbox`
               - `apps/deploy/site-mirror/pull`
+        - **`isle-building`** — Deploy's building on Isle: the timber launch tower and its rocket.
+          - Web:
+            - Contributes: `Isle.Building` "deploy"
+            - Uses: `apps/isle/buildings.Isle`
+          - Core:
+            - Uses:
+              - `apps/isle/buildings.BuildingSpec`
+              - `apps/isle/buildings.poly`
+              - `apps/isle/buildings.polyKit`
+              - `apps/isle/buildings.Pt`
+            - Exports (values): `launchTower`
         - **`local-serve`** — Test locally: the site page's header button that serves the site's composition on the shared gateway (opening it once live), plus the same one-button serve/open shortcut on the deployments list row.
           - Web:
             - Contributes:
@@ -3433,6 +3506,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/deploy/deploy-history`
               - `apps/deploy/deployments`
               - `apps/deploy/health`
+              - `apps/deploy/isle-building`
               - `apps/deploy/servers`
               - `apps/website`
         - **`site-messages`** — Umbrella for messages a deployed site's visitors send: the intake half that ships inside the site (table, public endpoint, abuse limits, notification email, the site_messages mirror set) and the inbox half in the local deploy app (a live window over this computer's copy of the site's messages).
@@ -4597,6 +4671,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Exemptions:
             - Exempts itself from: `events/no-raw-events-write` — `server/internal/events-repo.ts` (sanctioned)
             - Exempted by: `apps/events/events-core` (0 debt)
+        - **`isle-building`** — Events' building on Isle: the clock tower, its clock showing the real time.
+          - Web:
+            - Contributes: `Isle.Building` "events"
+            - Uses: `apps/isle/buildings.Isle`
+          - Core:
+            - Uses:
+              - `apps/isle/buildings.BuildingSpec`
+              - `apps/isle/buildings.poly`
+              - `apps/isle/buildings.polyKit`
+              - `apps/isle/buildings.Pt`
+            - Exports (values): `clockTower`
         - **`reanchor`** — Keeps a recurring event's occurrence columns (starts_at / ends_at / all_day) current as time passes: the hourly re-anchor tick plus the boot pass, so an 'upcoming' filter never drops a series that is still running just because its source has not been re-extracted since the last occurrence.
           - Server:
             - Uses:
@@ -4671,6 +4756,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/shape --spacing`
             - Imported by:
               - `apps/events/event-list`
+              - `apps/events/isle-building`
               - `apps/events/sources`
               - `apps/events/sources/source-detail/runs`
               - `apps/website`
@@ -5333,6 +5419,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens: `ui/tokens/color-palette --warning`
           - Exemptions:
             - Exempts itself from: `live-state/no-handrolled-result` — `web/components/git-fields.tsx` (sanctioned)
+        - **`isle-building`** — The File Explorer's building on Isle: the archive barn, its doors open on shelves of boxes and scrolls.
+          - Web:
+            - Contributes: `Isle.Building` "file-explorer"
+            - Uses: `apps/isle/buildings.Isle`
+          - Core:
+            - Uses:
+              - `apps/isle/buildings.BuildingSpec`
+              - `apps/isle/buildings.poly`
+              - `apps/isle/buildings.polyKit`
+              - `apps/isle/buildings.Pt`
+            - Exports (values): `archiveBarn`
         - **`places`** — The file explorer's Places sidebar: the places of every FileExplorer.Places source (its own: Home — of every file system this host serves —, Downloads, the equin checkout, the user's pinned favorites, the startup volume, Trash; each a folder of a file system) as a DataView list in Favorites / Worktrees / Locations sections with the current folder's place active, and the startup volume's storage meter at its foot. Files dragged onto Favorites (FILE_LOCATIONS_MIME, any file system) are pinned there — a folder opens itself, a file its folder with the file previewed — kept in the file-explorer places config; a pin's row offers Remove from Favorites, and the browser's row ⋯ menu Add to Favorites. The file explorer's places, portable half: registers the pinned-favorites config.
           - Web:
             - Slots: `row-actions`
@@ -5432,6 +5529,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/file-explorer/attachment-preview`
               - `apps/file-explorer/browser`
               - `apps/file-explorer/folder-peek`
+              - `apps/file-explorer/isle-building`
               - `apps/file-explorer/places`
               - `conversations/conversation-view/code/file-pane`
               - `conversations/conversation-view/explorer`
@@ -5600,8 +5698,407 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `fields/int/config.intField`
               - `network/live.clientFields`
             - Exports (values): `appUsageFields`
+    - **`isle`** — Isle — the island launcher: every installed app is a building on an illustrated archipelago you walk around; new apps get a generated building and are placed append-only, districts fill, then new islands appear.
+      - Plugins:
+        - **`buildings`** — Isle's building contract (BuildingSpec: a declared footprint, preferred setting, sign, night lights, paint/animate on any 2D context), the watercolour-and-ink painting kit bespoke buildings reuse, and kitBuilding — a generated building per app, seeded from its id and shaped by its category. Its testing barrel measures a painter's ink without a canvas. Isle.Building: the slot an app contributes its bespoke building to (keyed by its AppRef, from its own isle-building sub-plugin); useIsleBuildings reads them by app id, loading until the deferred tier has settled.
+          - Web:
+            - Slots: `Isle.Building`
+            - Slot contributors:
+              - `Isle.Building` ← `apps.agent-manager.isle-building`
+              - `Isle.Building` ← `apps.browser.isle-building`
+              - `Isle.Building` ← `apps.chord.isle-building`
+              - `Isle.Building` ← `apps.deploy.isle-building`
+              - `Isle.Building` ← `apps.events.isle-building`
+              - `Isle.Building` ← `apps.file-explorer.isle-building`
+              - `Isle.Building` ← `apps.keyboard-party.isle-building`
+              - `Isle.Building` ← `apps.mail.isle-building`
+              - `Isle.Building` ← `apps.pages.isle-building`
+              - `Isle.Building` ← `apps.places.isle-building`
+              - `Isle.Building` ← `apps.prototypes.isle-building`
+              - `Isle.Building` ← `apps.settings.isle-building`
+              - `Isle.Building` ← `apps.sonata.isle-building`
+              - `Isle.Building` ← `apps.studio.isle-building`
+            - Exports (types): `IsleBuildingContribution`
+            - Exports (values):
+              - `Isle`
+              - `useIsleBuildings`
+          - Core:
+            - Uses:
+              - `packages/seeded-random.mulberry32`
+              - `packages/string-hash.fnv1a32`
+              - `primitives/pane.APP_CATEGORIES`
+              - `primitives/pane.AppCategory`
+            - Exports (types):
+              - `Box`
+              - `BuildingSpec`
+              - `Chimney`
+              - `Ctx2D`
+              - `DoorArchOptions`
+              - `Footprint`
+              - `Light`
+              - `PaintState`
+              - `PlanksOptions`
+              - `Pt`
+              - `Rgb`
+              - `Rnd`
+              - `Setting`
+              - `ShinglesOptions`
+              - `StonesOptions`
+              - `WashOptions`
+              - `WindowOptions`
+            - Exports (values):
+              - `accent`
+              - `barrel`
+              - `bbox`
+              - `bench`
+              - `books`
+              - `cart`
+              - `castShadow`
+              - `categoryOfSeed`
+              - `chimneySmoke`
+              - `crate`
+              - `css`
+              - `dark`
+              - `doorArch`
+              - `draftingTable`
+              - `easel`
+              - `flowerBox`
+              - `gear`
+              - `grain`
+              - `GROUND_BAND`
+              - `hline`
+              - `ink`
+              - `ivy`
+              - `jit`
+              - `kitBuilding`
+              - `ladder`
+              - `lantern`
+              - `light`
+              - `lute`
+              - `mailbox`
+              - `mix`
+              - `moss`
+              - `planks`
+              - `poly`
+              - `polyKit`
+              - `rectPts`
+              - `rgb`
+              - `sack`
+              - `SETTINGS`
+              - `shade`
+              - `shingles`
+              - `shrub`
+              - `sketch`
+              - `spill`
+              - `steps`
+              - `stones`
+              - `swingFrame`
+              - `thatch`
+              - `toolRack`
+              - `tufts`
+              - `wash`
+              - `waterButt`
+              - `windowRect`
+          - Cross-plugin:
+            - Imported by:
+              - `apps/agent-manager/isle-building`
+              - `apps/browser/isle-building`
+              - `apps/chord/isle-building`
+              - `apps/deploy/isle-building`
+              - `apps/events/isle-building`
+              - `apps/file-explorer/isle-building`
+              - `apps/isle/plots`
+              - `apps/isle/renderer`
+              - `apps/isle/world`
+              - `apps/isle/world-view`
+              - `apps/keyboard-party/isle-building`
+              - `apps/mail/isle-building`
+              - `apps/pages/isle-building`
+              - `apps/places/isle-building`
+              - `apps/prototypes/isle-building`
+              - `apps/settings/isle-building`
+              - `apps/sonata/isle-building`
+              - `apps/studio/isle-building`
+          - Test helpers:
+            - Core: `@plugins/apps/plugins/isle/plugins/buildings/core/testing`
+              - `boxWithin` — Whether `inner` lies inside `outer`, give or take `tolerance` px on each side.
+              - `FOOTPRINT_SLACK` — How far a declared side may lie beyond the measured ink, px.
+              - `footprintProblems` — Every way a building's declared footprint disagrees with its ink (none: it holds).
+              - `measureBuilding` — All the ink a building paints and animates, in every light, split at the ground band.
+              - `paintedExtent` — Runs `draw` against a measuring context (no canvas needed) and returns where it put ink, in the coordinates `draw` starts in, split at `splitY`.
+              - `testBuildingFootprint` — Registers the footprint suite of one app's building: `testBuildingFootprint("places", lighthouse)`.
+              - Types: `PaintedExtent`
+        - **`characters`** — Isle's people: the hero and five villagers, inked and cel-shaded, with a skeletal walk cycle — characterFrame decides the pose (view, walk/idle frame, blink, turn cross-fade) from a character's state, paintCharacterPose paints one on any 2D context.
+          - Cross-plugin:
+            - Imported by: `apps/isle/renderer`
+          - Core:
+            - Exports (types):
+              - `CharacterFrame`
+              - `CharacterLayer`
+              - `CharacterPose`
+              - `CharacterState`
+              - `CharacterView`
+              - `HairStyle`
+              - `Look`
+              - `LookName`
+              - `TurnMemory`
+              - `ViewFlip`
+            - Exports (values):
+              - `CHARACTER_BOX`
+              - `characterFrame`
+              - `createTurnTracker`
+              - `IDLE_FRAMES`
+              - `isLookName`
+              - `LOOK_NAMES`
+              - `LOOKS`
+              - `paintCharacterPose`
+              - `paintCharacterShadow`
+              - `poseKey`
+              - `STRIDE`
+              - `TURN_SECONDS`
+              - `viewOf`
+              - `WALK_FRAMES`
+        - **`dev`** — Isle's dev tools, never part of the app: the growth exhibit (isle/growth) — the world drawn with N made-up apps (14…142; ±1, add to a category, remove one at random, another seed), placed in memory, never the real plots, with its stats (islands, districts, buildings, empty lots, rebuild time), a switch between baking in workers and on the page, and a fingerprint of what was baked to compare the two.
+        - **`plots`** — Isle's plots table (isle_plots: one row per plot of a world, keyed (world, plotId), its occupant unique per world, the geometry as jsonb) served as the isle.plots live collection, and the claim / move endpoints: one compare-and-set transaction per batch, answered stale when what the writer read no longer holds.
+          - Server:
+            - Contributes:
+              - `resource.declare` "isle.plots"
+              - `resource.declare` "isle.plots:rows"
+            - Uses:
+              - `database.db`
+              - `infra/endpoints.implement`
+              - `infra/entities.defaultNow`
+              - `infra/entities.defineEntity`
+              - `network/live.serveCollection`
+            - DB schema: `plugins/apps/plugins/isle/plugins/plots/server/internal/tables.ts`
+            - Exports (values): `_islePlots`
+            - Resources:
+              - `isle.plots` (keyed)
+              - `isle.plots:rows` (keyed, point)
+            - Routes:
+              - `POST /api/isle/plots/claim`
+              - `POST /api/isle/plots/move`
+          - Core:
+            - Uses:
+              - `apps/isle/buildings.SETTINGS`
+              - `fields.fieldsToZodObject`
+              - `fields.nullable`
+              - `fields/bool/config.boolField`
+              - `fields/int/config.intField`
+              - `fields/json/config.jsonField`
+              - `fields/text/config.textField`
+              - `infra/endpoints.defineEndpoint`
+              - `infra/entities.entityRef`
+              - `network/live.liveCollection`
+              - `network/live/query-resource.compositeKey`
+              - `packages/list-bound.cappedList`
+              - `packages/list-bound.wholeList`
+              - `primitives/pane.APP_CATEGORIES`
+              - `primitives/pane.AppCategory`
+            - Exports (types):
+              - `IslePlotRow`
+              - `PlotGeometry`
+              - `PlotWrite`
+              - `PlotWritesResult`
+            - Exports (values):
+              - `claimPlots`
+              - `geometryOf`
+              - `islePlotEntityRef`
+              - `islePlotFields`
+              - `IslePlotRowSchema`
+              - `islePlots`
+              - `movePlot`
+              - `placementOfRows`
+              - `placementWrites`
+              - `PlotGeometrySchema`
+              - `plotOfRow`
+              - `PlotSchema`
+              - `PlotWriteSchema`
+              - `PlotWritesResultSchema`
+              - `worldOfSeed`
+          - Cross-plugin:
+            - Imported by: `apps/isle/world-view`
+        - **`renderer`** — Isle's canvas engine (IsleEngine): the archipelago drawn from the pure world — 512 px tiles in a ground and an object layer with the animated water between, baked centre-first within a frame's budget (another zoom's tile standing in), scenery, buildings painted once per time of day with alpha hit masks and a hover glow, people cut out by what stands in front, signposts, map labels, the time of day's tint and lights, signs of life by how much each app is used (chimney smoke, windows lit at dusk, a villager lingering at the door; none while that is not known); sound hooks (footsteps, hover); input (drag with inertia, wheel / pinch / double-click zoom at the cursor, click to open or walk with A*, arrows / WASD, hold to move a building). React only mounts it. The expensive bakes run in a pool of module workers (bake.worker.ts, bundled whole by web-artifacts' worker pass): ground tiles' per-pixel colour and water mask, island previews, each island's furniture (coast, boulders, trees), buildings' hit masks (read in idle time) — and island shapes and the home carve, built ahead by useIslandShapes for what a placement reads — with the very same code as the page, so the pixels are identical; where workers cannot run, everything bakes on the page.
+          - Cross-plugin:
+            - Imported by: `apps/isle/world-view`
+          - Web:
+            - Exports (types):
+              - `ClickModifiers`
+              - `EngineHooks`
+              - `EngineOptions`
+              - `IslandShapes`
+              - `IsleApp`
+              - `IsleLife`
+              - `TimeOfDay`
+            - Exports (values):
+              - `ISLE_FONTS`
+              - `IsleEngine`
+              - `useIslandShapes`
+        - **`shell`** — The Isle app's rail entry and frame: a chromeless full-pane surface where the world view's index pane is shown, and the app's light-only theme naming its two faces (Nunito, Fraunces) so the font loader fetches them.
+          - Web:
+            - Contributes:
+              - `Apps.App` "Isle" → `IsleLayout`
+              - `ThemeEngine.Theme` "Isle"
+            - Uses:
+              - `apps-core.Apps`
+              - `layouts/full-pane.FullPane`
+              - `layouts/miller.PaneOverlayHost`
+              - `ui/theme-engine.ThemeEngine`
+          - Core:
+            - Uses:
+              - `primitives/pane.defineApp`
+              - `ui/icons.symbol`
+            - Exports (values): `isleApp`
+          - Cross-plugin:
+            - Imported by: `apps/isle/world-view`
+        - **`world`** — Isle's world as pure data, deterministic from (seed, residents, stored placement): the archipelago (hand-shaped home plus generated island shapes), district slots and hills, append-only plot placement from each building's declared footprint, the revealed layout (roads, squares, buildings, lots, ferries), the walk grid with A*, and map labels.
+          - Core:
+            - Uses:
+              - `apps/isle/buildings.Box`
+              - `apps/isle/buildings.Footprint`
+              - `apps/isle/buildings.GROUND_BAND`
+              - `apps/isle/buildings.Setting`
+              - `apps/isle/buildings.SETTINGS`
+              - `packages/seeded-random.mulberry32`
+              - `packages/string-hash.fnv1a32`
+            - Exports (types):
+              - `CoastPoint`
+              - `DistrictLabel`
+              - `Ferry`
+              - `Hill`
+              - `IslandKind`
+              - `IslandLabel`
+              - `IslandOptions`
+              - `IslandPlan`
+              - `IslandShape`
+              - `IslandShapeData`
+              - `Layout`
+              - `MoveTarget`
+              - `Pier`
+              - `PlacedBuilding`
+              - `Placement`
+              - `Plot`
+              - `PlotBoxes`
+              - `PointIndex`
+              - `Pt`
+              - `Resident`
+              - `Road`
+              - `RoadKind`
+              - `RoadSample`
+              - `Solid`
+              - `Square`
+              - `WalkGrid`
+            - Exports (values):
+              - `adoptHomeCarve`
+              - `applyMove`
+              - `arcsOf`
+              - `cutAt`
+              - `districtCategory`
+              - `districtLabels`
+              - `districtName`
+              - `DOCK_ROOT`
+              - `EMPTY_PLACEMENT`
+              - `fbm`
+              - `findPath`
+              - `hash`
+              - `HOME_CX`
+              - `HOME_CY`
+              - `HOME_RX`
+              - `HOME_RY`
+              - `homeAt`
+              - `homeCarveBuilt`
+              - `homeCarveGrid`
+              - `Island`
+              - `ISLAND_COUNT`
+              - `islandLabels`
+              - `islandsInPlay`
+              - `kindOf`
+              - `labelSpotScore`
+              - `LAKE`
+              - `layoutWorld`
+              - `moveTargets`
+              - `pickLabelSpot`
+              - `placeResidents`
+              - `planIsland`
+              - `plotBox`
+              - `plotBoxes`
+              - `plotById`
+              - `plotsClash`
+              - `pointIndex`
+              - `residentOf`
+              - `RIVER`
+              - `riverWidth`
+              - `roadHash`
+              - `segDist`
+              - `signHalfWidth`
+              - `Slot`
+              - `smoothstep`
+              - `spline`
+              - `vnoise`
+              - `WALK_CELL`
+              - `walkable`
+              - `walkGrid`
+              - `WorldModel`
+          - Cross-plugin:
+            - Imported by:
+              - `apps/isle/renderer`
+              - `apps/isle/world-view`
+        - **`world-view`** — Isle's index pane (/isle): the island drawn by the canvas engine from the listed apps and the stored plots (apps without a plot placed by the pure world and claimed), with the title card (Start held back while the world loads), the where-chip, the prompt card for the building at the hero's door (E opens it), the iris an app opens through (useActivateApp), drag-and-drop of buildings (the move endpoint), the time of day from the clock or the config, and a visually hidden list of links mirroring the buildings. Server registration of the Isle config (seed, time of day, music).
+          - Web:
+            - Slots: `isle.actions`
+            - Slot contributors: `isle.actions` ← `primitives.pane`
+            - Contributes:
+              - `Pane.Register` "isle"
+              - `ConfigV2.WebRegister` "isle"
+            - Uses: 30 symbols — full list in [`plugins/apps/plugins/isle/plugins/world-view/REFERENCE.md`](../plugins/apps/plugins/isle/plugins/world-view/REFERENCE.md)
+              - `apps/isle/renderer` ×6
+              - `config_v2` ×3
+              - `apps-core/tabs` ×2
+              - `apps-core` ×2
+              - `network/live/live-state` ×2
+              - `primitives/link-gesture` ×2
+              - `primitives/pane` ×2
+              - `ui/icons` ×2
+              - `apps-core/app-usage.useAppUsageSummary`
+              - `apps/isle/buildings.useIsleBuildings`
+              - `infra/endpoints.useEndpointMutation`
+              - `music/ambient.useAmbient`
+              - `network/live.useLive`
+              - `primitives/css/motion.prefersReducedMotion`
+              - `primitives/dom/element-size.useElementSize`
+              - `primitives/dom/scroll-reveal.focusElement`
+              - `primitives/latest-ref.useEventCallback`
+          - Server:
+            - Contributes: `ConfigV2.Register` "isle"
+            - Uses: `config_v2.ConfigV2`
+          - Core:
+            - Uses:
+              - `config_v2.defineConfig`
+              - `fields/bool/config.boolField`
+              - `fields/enum/config.enumField`
+              - `fields/int/config.intField`
+              - `music/ambient.AMBIENT_MOOD_LABELS`
+              - `music/ambient.AMBIENT_MOODS`
+            - Exports (types): `DayPhase`
+            - Exports (values):
+              - `DAY_PHASE_PHRASE`
+              - `dayPhaseAt`
+              - `isleConfig`
+              - `lifeOfSummary`
     - **`keyboard-party`** — Keyboard Party — a keyboard toy for a small child: every key answers with its own animation and sound.
       - Plugins:
+        - **`isle-building`** — Keyboard Party's building on Isle: the schoolhouse, chalk writing Aa, Bb… on its slate.
+          - Web:
+            - Contributes: `Isle.Building` "keyboard-party"
+            - Uses: `apps/isle/buildings.Isle`
+          - Core:
+            - Uses:
+              - `apps/isle/buildings.BuildingSpec`
+              - `apps/isle/buildings.Ctx2D`
+              - `apps/isle/buildings.poly`
+              - `apps/isle/buildings.polyKit`
+              - `apps/isle/buildings.Pt`
+            - Exports (values): `schoolhouse`
         - **`party`** — Keyboard Party's stage: every key plays its own animation and sound (letters bring a picture, a word and speech; digits count; space, Enter, arrows, Backspace and modifiers each have their own effect), with a bead trail of recent keys, a full-screen keyboard lock and the party settings. Server registration of the Keyboard Party config.
           - Web:
             - Contributes: `ConfigV2.WebRegister` "config"
@@ -5653,6 +6150,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/pane.defineApp`
               - `ui/icons.symbol`
             - Exports (values): `keyboardPartyApp`
+          - Cross-plugin:
+            - Imported by: `apps/keyboard-party/isle-building`
     - **`mail`** — Mail — a Gmail-class client.
       - Plugins:
         - **`attachments`** — Reading-pane attachment UI: the useMailAttachment() lazy-download hook (download → URL for a click, materialise → fire-and-forget for a reader of the live row; deduped, cached) and the AttachmentChip component (filename + size + MIME icon; downloads on click and opens in a new tab). Lazy Gmail attachment blob download: fetches an attachment's bytes on demand (reading-pane chip click or inline cid: image), caches them via infra/attachments, stamps mail_attachments.stored_attachment_id, and serves the same-origin URL.
@@ -5722,6 +6221,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values):
               - `GmailApiError`
               - `GmailHistoryExpiredError`
+        - **`isle-building`** — Mail's building on Isle: the post office, with a dovecote whose pigeon hops and flaps.
+          - Web:
+            - Contributes: `Isle.Building` "mail"
+            - Uses: `apps/isle/buildings.Isle`
+          - Core:
+            - Uses: 22 symbols — full list in [`plugins/apps/plugins/mail/plugins/isle-building/REFERENCE.md`](../plugins/apps/plugins/mail/plugins/isle-building/REFERENCE.md)
+              - `apps/isle/buildings` ×22
+            - Exports (values): `postOffice`
         - **`mail-core`** — Registers the mail app's own id kinds (mailacct, mailatt, maildraft, mailout) with the web id registry — the server barrel registers the same kinds. Schema + token wiring for the mail app (accounts, threads, messages, labels, attachments, drafts, sync-state, outbox), plus the shared connected-account and user-labels live values.
           - Web:
             - Contributes:
@@ -6041,6 +6548,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `mailApp`
           - Cross-plugin:
             - Imported by:
+              - `apps/mail/isle-building`
               - `apps/mail/reading-pane`
               - `apps/mail/search`
               - `apps/mail/sync-status`
@@ -6406,6 +6914,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-size-caption`
               - `ui/tokens/type-scale --font-weight-normal`
               - `ui/tokens/type-scale --line-height-caption`
+        - **`isle-building`** — Pages' building on Isle: the library, a pedimented stone hall with a carved open book.
+          - Web:
+            - Contributes: `Isle.Building` "pages"
+            - Uses: `apps/isle/buildings.Isle`
+          - Core:
+            - Uses: 22 symbols — full list in [`plugins/apps/plugins/pages/plugins/isle-building/REFERENCE.md`](../plugins/apps/plugins/pages/plugins/isle-building/REFERENCE.md)
+              - `apps/isle/buildings` ×22
+            - Exports (values): `library`
         - **`page-author`** — Page-kind control in the page-detail header: its icon names what the open page is to agents — an ordinary page, an agent page (agents may write all of it) or an instructions page (the human's standing instructions to agents working under the parent page) — and its panel changes the kind, with a Global switch on an instructions page.
           - Web:
             - Contributes: `pageDetailPane.Actions` "page-author" → `PageKindControl`
@@ -6673,6 +7189,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/sidebar-metrics` ×2
             - Imported by:
               - `apps/pages/content-search`
+              - `apps/pages/isle-building`
               - `apps/pages/page-tree`
               - `apps/pages/trash`
               - `apps/pages/welcome`
@@ -6894,6 +7411,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PlacesFixture`
               - `PlaceTagFixture`
               - `PlaceTagPath`
+        - **`isle-building`** — Places' building on Isle: the cartographer's lighthouse on its rocks, beams sweeping the sea at dusk and night.
+          - Web:
+            - Contributes: `Isle.Building` "places"
+            - Uses: `apps/isle/buildings.Isle`
+          - Core:
+            - Uses: 22 symbols — full list in [`plugins/apps/plugins/places/plugins/isle-building/REFERENCE.md`](../plugins/apps/plugins/places/plugins/isle-building/REFERENCE.md)
+              - `apps/isle/buildings` ×22
+            - Exports (values): `lighthouse`
         - **`mapstr-import`** — `./equin places import-mapstr <export>` — matches a Mapstr export's places to Google places (Text Search, scored by name, distance and area extent; hand decisions via --overrides and the search-place lookup verb) into a reviewable mapstr-matches.json, then with --apply replaces every place and tag with the seed tree and the matched places (Mapstr tags mapped onto seed tags, comments as notes, original save dates), in one transaction.
           - Cli:
             - Uses: `framework/server-core.runExec`
@@ -7314,6 +7839,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/categorical --categorical-foreground`
               - `ui/tokens/shadow --shadow-sm`
             - Imported by:
+              - `apps/places/isle-building`
               - `apps/places/page-overlay`
               - `apps/places/places-map`
     - **`prototypes`** — The Prototypes task category: the category tasks filed from the Prototypes gallery, such as creating or improving a prototype, are grouped under. Declares the app's data dir as the prototypesFiles file root (watched, its _picks ledgered).
@@ -7932,6 +8458,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `prototypesIcons`
           - Cross-plugin:
             - Imported by: `apps/prototypes/canvas`
+        - **`isle-building`** — Prototypes' building on Isle: the inventor's sketch cabin, blueprints and a half-built contraption.
+          - Web:
+            - Contributes: `Isle.Building` "prototypes"
+            - Uses: `apps/isle/buildings.Isle`
+          - Core:
+            - Uses:
+              - `apps/isle/buildings.BuildingSpec`
+              - `apps/isle/buildings.Ctx2D`
+              - `apps/isle/buildings.poly`
+              - `apps/isle/buildings.polyKit`
+              - `apps/isle/buildings.Pt`
+            - Exports (values): `inventorsCabin`
         - **`present`** — Open in a new tab on every gallery card (its live present page) and two frame actions on every prototype canvas frame: Open in a new tab (the frame's chromeless present page at the Responsive size, filling the tab at its own width; a source frame opens its own href) and Full screen (F, which presents the selected frame; the browser's Fullscreen API). While presenting, hovering shows the frame's tag (the canvas frame header's own box: options chip | version stepper) and 'i of n', Exit and the size & zoom chip, on the right edge + (add a frame) and Compare with each resolved frame source (the real app, swiped) — both adding the frame and leaving to the prototype's canvas in the app — and the left and right arrow keys flip through the canvas's frames. The new tab is present/<id>/<sha|live>/<declared|size word>/<picks?>, a one-frame page carrying the frame's version and own picks, with an Exit icon back to the prototype's canvas; its + / Compare open the app's canvas on the frame plus the new one.
           - Web:
             - Slots: `prototypes-present.actions`
@@ -8016,6 +8554,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/prototypes/canvas`
               - `apps/prototypes/files`
               - `apps/prototypes/gallery`
+              - `apps/prototypes/isle-building`
               - `apps/prototypes/present`
               - `conversations/conversation-view/artifacts/prototype`
               - `page/prototype`
@@ -8219,6 +8758,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/color-palette --warning`
               - `ui/tokens/shape --spacing`
+        - **`isle-building`** — Settings' building on Isle: the tower windmill, its sails and gears turning.
+          - Web:
+            - Contributes: `Isle.Building` "settings"
+            - Uses: `apps/isle/buildings.Isle`
+          - Core:
+            - Uses:
+              - `apps/isle/buildings.BuildingSpec`
+              - `apps/isle/buildings.Ctx2D`
+              - `apps/isle/buildings.poly`
+              - `apps/isle/buildings.polyKit`
+              - `apps/isle/buildings.Pt`
+            - Exports (values): `windmill`
         - **`shell`** — App shell for Settings. Registers the /settings app entry, defines the Settings.Sidebar + Settings.RailBadge slots, and surfaces an attention dot on the rail icon.
           - Web:
             - Slots:
@@ -8246,6 +8797,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/settings/accounts`
               - `apps/settings/appearance`
               - `apps/settings/config`
+              - `apps/settings/isle-building`
               - `auth`
               - `config_v2/settings`
               - `ui/theme-engine/theme-customizer`
@@ -8564,6 +9116,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `MidiSongFixture`
               - `MusicXmlSongFixture`
               - `SongFixture`
+        - **`isle-building`** — Sonata's building on Isle: the music hall, a grand piano in its great arched window.
+          - Web:
+            - Contributes: `Isle.Building` "sonata"
+            - Uses: `apps/isle/buildings.Isle`
+          - Core:
+            - Uses: 21 symbols — full list in [`plugins/apps/plugins/sonata/plugins/isle-building/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/isle-building/REFERENCE.md)
+              - `apps/isle/buildings` ×21
+            - Exports (values): `musicHall`
         - **`library`** — Source-agnostic song library landing for Sonata. Renders the gallery of saved songs (via Sonata.Home) and opens a song into the player by collecting every source's raw through the Library.Source registry. Sources contribute persistence/hydration + their own add affordances. Persists source-agnostic Sonata song rows (generic metadata) and serves the `sonata.songs` live collection (sortable and filterable by every field an extension exposes on the songs entity). Per-source raw lives in each source's own entity-extension; sources create songs via the exported `createSongRow` helper.
           - Web:
             - Slots:
@@ -10289,8 +10849,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/shadow --shadow-cover-hover`
               - `ui/tokens/shadow --shadow-float`
               - `ui/tokens/shadow --shadow-popover`
-            - Imported by: 32 plugins — full list in [`plugins/apps/plugins/sonata/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/shell/REFERENCE.md)
-              - `apps` ×32
+            - Imported by: 33 plugins — full list in [`plugins/apps/plugins/sonata/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/sonata/plugins/shell/REFERENCE.md)
+              - `apps` ×33
         - **`songsheet`** — Sonata Display: a chord-over-lyrics songsheet. Renders the score's lyric lines with chords printed over each column, grouped by section, highlighting and auto-scrolling the line under the playback cursor. A reading view (no time-axis / pitch-plane capabilities); click a line to seek.
           - Web:
             - Contributes: `SonataPlayer.Display` "Songsheet" → `Songsheet`
@@ -11954,6 +12514,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/shape --spacing`
               - `ui/tokens/type-scale --font-weight-medium`
             - Imported by: `apps/studio/explorer/membership`
+        - **`isle-building`** — Studio's building on Isle: the conservatory laboratory, a glasshouse of plants and jars.
+          - Web:
+            - Contributes: `Isle.Building` "studio"
+            - Uses: `apps/isle/buildings.Isle`
+          - Core:
+            - Uses:
+              - `apps/isle/buildings.BuildingSpec`
+              - `apps/isle/buildings.poly`
+              - `apps/isle/buildings.polyKit`
+              - `apps/isle/buildings.Pt`
+            - Exports (values): `conservatory`
         - **`membership-tint`** — Single source of truth for the membership-state tint + legend (shared by the Explorer membership band and the Studio graph pane).
           - Cross-plugin:
             - Uses tokens:
@@ -11998,6 +12569,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/studio/contributions/tables`
               - `apps/studio/explorer`
               - `apps/studio/graph`
+              - `apps/studio/isle-building`
               - `plugin-meta/plugin-view`
     - **`website`** — Website — the public-facing site of equin: the homepage's claim, a picture of it and the three layers of the project, a gallery of its apps, placeholder pages for the vision, the foundations and the story, and how to get in touch.
       - Plugins:
@@ -12881,8 +13453,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `Apps.TabBar`
       - `Apps.TabBarActions`
       - `Apps.Overlay`
-    - Slot contributors: 27 contributors — full list in [`plugins/apps-core/REFERENCE.md`](../plugins/apps-core/REFERENCE.md)
-      - `Apps.App` ×22
+    - Slot contributors: 28 contributors — full list in [`plugins/apps-core/REFERENCE.md`](../plugins/apps-core/REFERENCE.md)
+      - `Apps.App` ×23
       - `Apps.Overlay` ← `apps-core.app-launcher`
       - `Apps.RailFraming` ← `apps-core.app-rail-framing`
       - `Apps.Surface` ← `apps-core.surface`
@@ -12940,8 +13512,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `APP_RAIL_WIDTH`
       - `documentTitle`
   - Cross-plugin:
-    - Imported by: 62 plugins — full list in [`plugins/apps-core/REFERENCE.md`](../plugins/apps-core/REFERENCE.md)
-      - `apps` ×29
+    - Imported by: 64 plugins — full list in [`plugins/apps-core/REFERENCE.md`](../plugins/apps-core/REFERENCE.md)
+      - `apps` ×31
       - `apps-core` ×15
       - `ui` ×6
       - `companions` ×3
@@ -13028,6 +13600,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps-core/app-rail`
           - `apps/desktop/shell`
           - `apps/home/shell`
+          - `apps/isle/world-view`
           - `companions/panel`
           - `config_v2/settings`
           - `framework/cli/release`
@@ -13271,7 +13844,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `flushAppUsageEndpoint`
           - `LocalDaySchema`
       - Cross-plugin:
-        - Imported by: `apps/home/usage-fields`
+        - Imported by:
+          - `apps/home/usage-fields`
+          - `apps/isle/world-view`
       - Exemptions:
         - Exempts itself from:
           - `networking/no-page-transport` — `web/components/app-usage-recorder.tsx` (sanctioned)
@@ -13508,8 +14083,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useSurfaceMode`
           - `useTabs`
       - Cross-plugin:
-        - Imported by: 42 plugins — full list in [`plugins/apps-core/plugins/tabs/REFERENCE.md`](../plugins/apps-core/plugins/tabs/REFERENCE.md)
-          - `apps` ×17
+        - Imported by: 43 plugins — full list in [`plugins/apps-core/plugins/tabs/REFERENCE.md`](../plugins/apps-core/plugins/tabs/REFERENCE.md)
+          - `apps` ×18
           - `apps-core` ×8
           - `debug` ×4
           - `hints` ×2
@@ -15626,8 +16201,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 - **`config_v2`** — Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins: the registry over the user-layer store (the ConfigStore host service) and the committed layer (ConfigGitLayer), its live values and the scope routes.
   - Web:
     - Slots: `ConfigV2.WebRegister`
-    - Slot contributors: 101 contributors — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×101
+    - Slot contributors: 102 contributors — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×102
     - Uses:
       - `infra/endpoints.useEndpointMutation`
       - `network/live.useLive`
@@ -15826,8 +16401,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `validationIssues`
       - `withOverrideLegend`
   - Cross-plugin:
-    - Imported by: 150 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
-      - `apps` ×42
+    - Imported by: 151 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
+      - `apps` ×43
       - `debug` ×15
       - `conversations` ×14
       - `backup` ×13
@@ -23101,8 +23676,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `loadedDatabaseConfig`
       - `readDatabaseConfigSync`
   - Cross-plugin:
-    - Imported by: 172 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
-      - `apps` ×47
+    - Imported by: 173 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
+      - `apps` ×48
       - `conversations` ×20
       - `tasks` ×19
       - `infra` ×17
@@ -27936,9 +28511,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `Fields.Identity` ×35
     - Exports (values): `Fields`
   - Cross-plugin:
-    - Imported by: 140 plugins — full list in [`plugins/fields/REFERENCE.md`](../plugins/fields/REFERENCE.md)
+    - Imported by: 141 plugins — full list in [`plugins/fields/REFERENCE.md`](../plugins/fields/REFERENCE.md)
       - `fields` ×65
-      - `apps` ×23
+      - `apps` ×24
       - `conversations` ×10
       - `tasks` ×7
       - `infra` ×6
@@ -28109,8 +28684,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `boolField`
               - `boolSample`
           - Cross-plugin:
-            - Imported by: 84 plugins — full list in [`plugins/fields/plugins/bool/plugins/config/REFERENCE.md`](../plugins/fields/plugins/bool/plugins/config/REFERENCE.md)
-              - `apps` ×27
+            - Imported by: 86 plugins — full list in [`plugins/fields/plugins/bool/plugins/config/REFERENCE.md`](../plugins/fields/plugins/bool/plugins/config/REFERENCE.md)
+              - `apps` ×29
               - `debug` ×13
               - `backup` ×12
               - `conversations` ×7
@@ -28365,8 +28940,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `DateFieldDef`
             - Exports (values): `dateField`
           - Cross-plugin:
-            - Imported by: 64 plugins — full list in [`plugins/fields/plugins/date/plugins/config/REFERENCE.md`](../plugins/fields/plugins/date/plugins/config/REFERENCE.md)
-              - `apps` ×16
+            - Imported by: 65 plugins — full list in [`plugins/fields/plugins/date/plugins/config/REFERENCE.md`](../plugins/fields/plugins/date/plugins/config/REFERENCE.md)
+              - `apps` ×17
               - `conversations` ×10
               - `infra` ×7
               - `tasks` ×7
@@ -28759,8 +29334,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `enumField`
               - `enumSample`
           - Cross-plugin:
-            - Imported by: 21 plugins — full list in [`plugins/fields/plugins/enum/plugins/config/REFERENCE.md`](../plugins/fields/plugins/enum/plugins/config/REFERENCE.md)
-              - `apps` ×11
+            - Imported by: 22 plugins — full list in [`plugins/fields/plugins/enum/plugins/config/REFERENCE.md`](../plugins/fields/plugins/enum/plugins/config/REFERENCE.md)
+              - `apps` ×12
               - `conversations` ×2
               - `primitives` ×2
               - `tasks` ×2
@@ -29038,8 +29613,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `intField`
               - `intSample`
           - Cross-plugin:
-            - Imported by: 61 plugins — full list in [`plugins/fields/plugins/int/plugins/config/REFERENCE.md`](../plugins/fields/plugins/int/plugins/config/REFERENCE.md)
-              - `apps` ×17
+            - Imported by: 63 plugins — full list in [`plugins/fields/plugins/int/plugins/config/REFERENCE.md`](../plugins/fields/plugins/int/plugins/config/REFERENCE.md)
+              - `apps` ×19
               - `debug` ×14
               - `conversations` ×7
               - `tasks` ×6
@@ -29112,8 +29687,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/font-family --font-mono`
               - `ui/tokens/shape --radius`
               - `ui/tokens/shape --spacing`
-            - Imported by: 42 plugins — full list in [`plugins/fields/plugins/json/plugins/config/REFERENCE.md`](../plugins/fields/plugins/json/plugins/config/REFERENCE.md)
-              - `apps` ×8
+            - Imported by: 43 plugins — full list in [`plugins/fields/plugins/json/plugins/config/REFERENCE.md`](../plugins/fields/plugins/json/plugins/config/REFERENCE.md)
+              - `apps` ×9
               - `conversations` ×7
               - `debug` ×5
               - `infra` ×5
@@ -29998,8 +30573,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `textField`
               - `textSample`
           - Cross-plugin:
-            - Imported by: 113 plugins — full list in [`plugins/fields/plugins/text/plugins/config/REFERENCE.md`](../plugins/fields/plugins/text/plugins/config/REFERENCE.md)
-              - `apps` ×31
+            - Imported by: 114 plugins — full list in [`plugins/fields/plugins/text/plugins/config/REFERENCE.md`](../plugins/fields/plugins/text/plugins/config/REFERENCE.md)
+              - `apps` ×32
               - `conversations` ×20
               - `tasks` ×16
               - `infra` ×8
@@ -32278,8 +32853,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: `framework/tooling/guards/module-extension.MODULE_EXTENSION`
             - Exports (values): `isE2eScriptPath`
           - Cross-plugin:
-            - Imported by: 196 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
-              - `apps` ×58
+            - Imported by: 198 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
+              - `apps` ×60
               - `primitives` ×29
               - `conversations` ×26
               - `page` ×26
@@ -33043,9 +33618,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `webCollectedDir`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
-        - Imported by: 108 plugins — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
+        - Imported by: 109 plugins — full list in [`plugins/framework/plugins/web-sdk/REFERENCE.md`](../plugins/framework/plugins/web-sdk/REFERENCE.md)
           - `primitives` ×24
-          - `apps` ×18
+          - `apps` ×19
           - `ui` ×8
           - `apps-core` ×6
           - `debug` ×6
@@ -34953,8 +35528,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `unmatchedApiResponse`
           - `unsupportedEndpointResponse`
       - Cross-plugin:
-        - Imported by: 262 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
-          - `apps` ×77
+        - Imported by: 264 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
+          - `apps` ×79
           - `conversations` ×35
           - `infra` ×23
           - `tasks` ×21
@@ -35063,8 +35638,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `entityRef`
           - `wireSchema`
       - Cross-plugin:
-        - Imported by: 53 plugins — full list in [`plugins/infra/plugins/entities/REFERENCE.md`](../plugins/infra/plugins/entities/REFERENCE.md)
-          - `apps` ×10
+        - Imported by: 54 plugins — full list in [`plugins/infra/plugins/entities/REFERENCE.md`](../plugins/infra/plugins/entities/REFERENCE.md)
+          - `apps` ×11
           - `conversations` ×8
           - `infra` ×7
           - `page` ×7
@@ -39429,6 +40004,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/demo/shell`
           - `apps/deploy/shell`
           - `apps/home/shell`
+          - `apps/isle/shell`
           - `apps/places/shell`
           - `apps/prototypes/shell`
           - `apps/sonata/shell`
@@ -39486,6 +40062,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/debug/shell`
           - `apps/events/shell`
           - `apps/file-explorer/shell`
+          - `apps/isle/shell`
           - `apps/keyboard-party/shell`
           - `apps/mail/shell`
           - `apps/pages/shell`
@@ -39800,8 +40377,30 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `page/video`
           - `primitives/file-viewer/media`
 
-- **`music`** — Umbrella for music building blocks shared across apps, knowing pitch classes and strings only: the chord box (a chord's degree colour, numeral and tile).
+- **`music`** — Umbrella for music building blocks shared across apps, knowing pitch classes, strings and sound only: the chord box (a chord's degree colour, numeral and tile) and the ambient engine (generative WebAudio music and sound effects).
   - Plugins:
+    - **`ambient`** — Generative ambient music in WebAudio, no samples: createAmbient(ctx, { mood }) plays a mood (lofi — a swung 72 bpm Rhodes loop with drums and vinyl crackle; ambient — slow pads, bells, surf and birds) written bar by bar a little ahead of the audio clock, its look-ahead pump woken by the audio clock itself (a silent source's onended, never an interval), with start / stop / setMood / duck and sound effects (step, blip, enter, whoosh); useAmbient({ mood, on }) owns its own AudioContext, created or resumed by unlock() from a user gesture and closed on unmount.
+      - Cross-plugin:
+        - Imported by: `apps/isle/world-view`
+      - Web:
+        - Exports (types):
+          - `Ambient`
+          - `AmbientHandle`
+          - `AmbientSfx`
+          - `AmbientStatus`
+        - Exports (values):
+          - `createAmbient`
+          - `useAmbient`
+      - Core:
+        - Exports (types): `AmbientMood`
+        - Exports (values):
+          - `AMBIENT_MOOD_LABELS`
+          - `AMBIENT_MOODS`
+          - `AMBIENT_TRACKS`
+          - `ambientMoodOf`
+          - `barsDue`
+          - `LOOK_AHEAD_SEC`
+          - `PUMP_SEC`
     - **`chord-box`** — The chord box: <ChordBox> (a frame painted in the colour of its numeral's number — filled tile, given or empty — holding its numeral and name, with a full-bleed hit button behind the content and now / selected states), <ChordNumeral> (the Roman numeral in the display serif, its mark raised in the sans), chordToneStyle / chordColour (the degree's --chord-N colour and tile depth as the --fn custom properties the .chord-tone paint reads), and chordPaint — the four named paints (tile, tint, tint-quiet, ghost) every chord surface applies by name instead of re-stating a chord colour, with .chord-caption for a reading under a numeral (V/V, I/3) in the paint's own ink. Knows degrees and strings only, so any app can draw a chord the same way.
       - Web:
         - Uses:
@@ -40244,8 +40843,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveValueOn`
           - `sliceRange`
       - Cross-plugin:
-        - Imported by: 352 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
-          - `apps` ×87
+        - Imported by: 354 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+          - `apps` ×89
           - `conversations` ×73
           - `debug` ×36
           - `tasks` ×31
@@ -40663,8 +41262,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `unresolved`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/color-palette --destructive`
-            - Imported by: 311 plugins — full list in [`plugins/network/plugins/live/plugins/live-state/REFERENCE.md`](../plugins/network/plugins/live/plugins/live-state/REFERENCE.md)
-              - `apps` ×84
+            - Imported by: 312 plugins — full list in [`plugins/network/plugins/live/plugins/live-state/REFERENCE.md`](../plugins/network/plugins/live/plugins/live-state/REFERENCE.md)
+              - `apps` ×85
               - `conversations` ×49
               - `debug` ×31
               - `ui` ×25
@@ -40934,8 +41533,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `liveSetOverBudgetSink`
               - `SQL_TYPE_RE`
           - Cross-plugin:
-            - Imported by: 28 plugins — full list in [`plugins/network/plugins/live/plugins/query-resource/REFERENCE.md`](../plugins/network/plugins/live/plugins/query-resource/REFERENCE.md)
-              - `apps` ×6
+            - Imported by: 29 plugins — full list in [`plugins/network/plugins/live/plugins/query-resource/REFERENCE.md`](../plugins/network/plugins/live/plugins/query-resource/REFERENCE.md)
+              - `apps` ×7
               - `page` ×4
               - `infra` ×3
               - `conversations` ×2
@@ -41378,8 +41977,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `wholeRecord`
           - `wholeTuple`
       - Cross-plugin:
-        - Imported by: 133 plugins — full list in [`plugins/packages/plugins/list-bound/REFERENCE.md`](../plugins/packages/plugins/list-bound/REFERENCE.md)
-          - `apps` ×29
+        - Imported by: 134 plugins — full list in [`plugins/packages/plugins/list-bound/REFERENCE.md`](../plugins/packages/plugins/list-bound/REFERENCE.md)
+          - `apps` ×30
           - `debug` ×20
           - `conversations` ×17
           - `infra` ×16
@@ -41566,6 +42165,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `RetryDeadlineError`
           - `retryUntil`
           - `withJitter`
+    - **`seeded-random`** — Seeded pseudo-random streams in plain JS: mulberry32(seed) returns a () => number in [0, 1) that yields the same sequence for the same 32-bit seed on every host — for generated art and worlds that must come out identical every time.
+      - Cross-plugin:
+        - Imported by:
+          - `apps/isle/buildings`
+          - `apps/isle/renderer`
+          - `apps/isle/world`
+      - Core:
+        - Exports (values): `mulberry32`
     - **`semaphore`**
       - Cross-plugin:
         - Imported by: 31 plugins — full list in [`plugins/packages/plugins/semaphore/REFERENCE.md`](../plugins/packages/plugins/semaphore/REFERENCE.md)
@@ -41815,10 +42422,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `leaveDarwinBackground`
           - `readDarwinBackground`
           - `withForegroundPriority`
-    - **`string-hash`** — Portable string hashes in plain JS (no node:crypto, no Bun.hash), so every host — the Bun server, central and a browser page — computes the same value: hash53 (cyrb53, a 53-bit number, optionally seeded), hashHex (two seeded cyrb53s, ~106 bits as hex), hash64 (a 64-bit bigint), sha256Hex (a synchronous SHA-256, identical to node:crypto's hex digest), createSha256 (the same SHA-256, incremental over strings and bytes) and sha1Hex (SHA-1 for values already stored as one).
+    - **`string-hash`** — Portable string hashes in plain JS (no node:crypto, no Bun.hash), so every host — the Bun server, central and a browser page — computes the same value: hash53 (cyrb53, a 53-bit number, optionally seeded), hashHex (two seeded cyrb53s, ~106 bits as hex), hash64 (a 64-bit bigint), fnv1a32 (32-bit FNV-1a, for seeding), sha256Hex (a synchronous SHA-256, identical to node:crypto's hex digest), createSha256 (the same SHA-256, incremental over strings and bytes) and sha1Hex (SHA-1 for values already stored as one).
       - Cross-plugin:
-        - Imported by: 46 plugins — full list in [`plugins/packages/plugins/string-hash/REFERENCE.md`](../plugins/packages/plugins/string-hash/REFERENCE.md)
-          - `apps` ×13
+        - Imported by: 50 plugins — full list in [`plugins/packages/plugins/string-hash/REFERENCE.md`](../plugins/packages/plugins/string-hash/REFERENCE.md)
+          - `apps` ×17
           - `database` ×5
           - `network` ×5
           - `framework` ×4
@@ -41836,6 +42443,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (types): `Sha256Hasher`
         - Exports (values):
           - `createSha256`
+          - `fnv1a32`
           - `hash53`
           - `hash64`
           - `hashHex`
@@ -48180,9 +48788,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useTransitionHold`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/color-palette --primary`
-            - Imported by: 22 plugins — full list in [`plugins/primitives/plugins/css/plugins/motion/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/motion/REFERENCE.md)
+            - Imported by: 23 plugins — full list in [`plugins/primitives/plugins/css/plugins/motion/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/motion/REFERENCE.md)
               - `primitives` ×8
-              - `apps` ×5
+              - `apps` ×6
               - `map` ×2
               - `page` ×2
               - `apps-core/pane-morph`
@@ -50759,9 +51367,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useResizeObserver`
               - `useResizeObserverSet`
           - Cross-plugin:
-            - Imported by: 49 plugins — full list in [`plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md)
+            - Imported by: 50 plugins — full list in [`plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md)
               - `primitives` ×25
-              - `apps` ×14
+              - `apps` ×15
               - `shell` ×2
               - `active-data/go`
               - `companions/panel`
@@ -50913,8 +51521,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `revealElement`
               - `useRevealOnActive`
           - Cross-plugin:
-            - Imported by: 51 plugins — full list in [`plugins/primitives/plugins/dom/plugins/scroll-reveal/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/scroll-reveal/REFERENCE.md)
-              - `apps` ×19
+            - Imported by: 52 plugins — full list in [`plugins/primitives/plugins/dom/plugins/scroll-reveal/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/scroll-reveal/REFERENCE.md)
+              - `apps` ×20
               - `primitives` ×16
               - `page` ×6
               - `conversations` ×3
@@ -51775,9 +52383,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `seekPredicate`
     - **`latest-ref`** — Latest-value ref idiom as a primitive: useLatestRef(value) mirrors the latest value into a ref written in render (read only in callbacks/effects), and useEventCallback(fn) is the stable-identity callback built on it. The single sanctioned home + exemption for the idiom, so react-hooks/refs can be enforced at error.
       - Cross-plugin:
-        - Imported by: 85 plugins — full list in [`plugins/primitives/plugins/latest-ref/REFERENCE.md`](../plugins/primitives/plugins/latest-ref/REFERENCE.md)
+        - Imported by: 86 plugins — full list in [`plugins/primitives/plugins/latest-ref/REFERENCE.md`](../plugins/primitives/plugins/latest-ref/REFERENCE.md)
           - `primitives` ×33
-          - `apps` ×24
+          - `apps` ×25
           - `page` ×5
           - `conversations` ×3
           - `apps-core` ×2
@@ -51935,10 +52543,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `linkProps`
           - `openInBrowserTab`
       - Cross-plugin:
-        - Imported by: 79 plugins — full list in [`plugins/primitives/plugins/link-gesture/REFERENCE.md`](../plugins/primitives/plugins/link-gesture/REFERENCE.md)
+        - Imported by: 80 plugins — full list in [`plugins/primitives/plugins/link-gesture/REFERENCE.md`](../plugins/primitives/plugins/link-gesture/REFERENCE.md)
           - `conversations` ×21
           - `primitives` ×19
-          - `apps` ×12
+          - `apps` ×13
           - `tasks` ×5
           - `page` ×4
           - `apps-core` ×3
@@ -53216,9 +53824,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`pane`** — Unified pane primitive: Pane.define and chrome components.
       - Web:
         - Slots: `Pane.Register`
-        - Slot contributors: 99 contributors — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
-          - `Pane.Register` ×99
-        - Contributes: 131 contributions — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+        - Slot contributors: 100 contributors — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+          - `Pane.Register` ×100
+        - Contributes: 132 contributions — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
           - `FileBrowserHeader` "title" → `PaneTitleItem`
           - `FilePreviewHeader` "title" → `PaneTitleItem`
           - `SlotRender.ListMiddleware`
@@ -53285,6 +53893,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `heapSnapshotPane.Actions` "title" → `PaneTitleItem`
           - `homeRootPane.Actions` "title" → `PaneTitleItem`
           - `icons.actions` "title" → `PaneTitleItem`
+          - `isle.actions` "title" → `PaneTitleItem`
           - `liveStateEmitPane.Actions` "title" → `PaneTitleItem`
           - `liveStateHealthPane.Actions` "title" → `PaneTitleItem`
           - `logChannelPane.Actions` "title" → `PaneTitleItem`
@@ -53506,8 +54115,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-md`
           - `ui/tokens/density --space-sm`
           - `ui/tokens/shape --spacing`
-        - Imported by: 214 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
-          - `apps` ×78
+        - Imported by: 218 plugins — full list in [`plugins/primitives/plugins/pane/REFERENCE.md`](../plugins/primitives/plugins/pane/REFERENCE.md)
+          - `apps` ×82
           - `conversations` ×32
           - `debug` ×29
           - `active-data` ×13
@@ -53546,12 +54155,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/pane` (0 debt)
       - Core:
         - Exports (types):
+          - `AppCategory`
           - `AppColorMode`
           - `AppRef`
           - `PositionalRouteParams`
           - `RouteDef`
           - `RouteParams`
         - Exports (values):
+          - `APP_CATEGORIES`
           - `APP_COLOR_MODES`
           - `defineApp`
           - `defineRoute`
@@ -55780,8 +56391,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 
 - **`reorder`** — Generic reorder primitive: every defineRenderSlot is unconditionally reorderable; use defineMountSlot for headless slots. Applies each slot's committed layout (order, hidden items, spacers, dividers, groups) everywhere slots render; a layout is edited in its config file or the Config pane's reorder-tree field. Generic reorder primitive: per-slot config_v2 directives for contribution order/visibility.
   - Web:
-    - Contributes: 295 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×295
+    - Contributes: 296 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×296
     - Uses:
       - `config_v2.ConfigV2`
       - `config_v2.useConfigResult`
@@ -55805,8 +56416,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `useLayoutOrder`
       - `useReorderedEntries`
   - Server:
-    - Contributes: 294 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.Register` ×294
+    - Contributes: 295 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.Register` ×295
     - Uses: `config_v2.ConfigV2`
     - Exports (values): `reorderDirectiveDescriptor`
   - Cross-plugin:
@@ -62013,8 +62624,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useWantedSprites`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
-        - Imported by: 594 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
-          - `apps` ×155
+        - Imported by: 596 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+          - `apps` ×157
           - `conversations` ×123
           - `primitives` ×53
           - `page` ×52
@@ -62790,9 +63401,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ThemeEngine.SubTheme`
           - `ThemeEngine.FixedTheme`
           - `ThemeEngine.ThemeSource`
-        - Slot contributors: 53 contributors — full list in [`plugins/ui/plugins/theme-engine/REFERENCE.md`](../plugins/ui/plugins/theme-engine/REFERENCE.md)
+        - Slot contributors: 54 contributors — full list in [`plugins/ui/plugins/theme-engine/REFERENCE.md`](../plugins/ui/plugins/theme-engine/REFERENCE.md)
           - `ThemeEngine.TokenGroup` ×19
-          - `ThemeEngine.Theme` ×14
+          - `ThemeEngine.Theme` ×15
           - `ThemeEngine.SubTheme` ×8
           - `ThemeEngine.VariantGroup` ×6
           - `ThemeEngine.FixedTheme` ×4
@@ -62951,9 +63562,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/shape` ×4
           - `ui/tokens/type-scale` ×4
           - `ui/tokens/data-view` ×2
-        - Imported by: 53 plugins — full list in [`plugins/ui/plugins/theme-engine/REFERENCE.md`](../plugins/ui/plugins/theme-engine/REFERENCE.md)
+        - Imported by: 54 plugins — full list in [`plugins/ui/plugins/theme-engine/REFERENCE.md`](../plugins/ui/plugins/theme-engine/REFERENCE.md)
           - `ui` ×29
-          - `apps` ×18
+          - `apps` ×19
           - `apps-core/chrome-theme`
           - `companions/panel`
           - `hints`
@@ -63387,6 +63998,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/file-explorer/shell`
               - `apps/home/new-app`
               - `apps/home/shell`
+              - `apps/isle/shell`
               - `apps/pages/shell`
               - `apps/places/shell`
               - `apps/prototypes/shell`
@@ -63609,6 +64221,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/deploy/shell`
               - `apps/desktop/shell`
               - `apps/file-explorer/shell`
+              - `apps/isle/shell`
               - `apps/pages/shell`
               - `apps/prototypes/shell`
               - `apps/sonata/shell`

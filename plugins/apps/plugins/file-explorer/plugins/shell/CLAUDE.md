@@ -43,6 +43,7 @@
     - `apps/file-explorer/attachment-preview`
     - `apps/file-explorer/browser`
     - `apps/file-explorer/folder-peek`
+    - `apps/file-explorer/isle-building`
     - `apps/file-explorer/places`
     - `conversations/conversation-view/code/file-pane`
     - `conversations/conversation-view/explorer`

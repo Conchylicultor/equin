@@ -1,0 +1,13 @@
+// @hash c17b5f5b1eee
+{
+  // Which archipelago the apps are placed on. Each seed keeps its own town.
+  "seed": 1,
+  // Follow the clock, or hold the island at one time of day.
+  // Allowed values: "auto", "day", "dusk", "night"
+  "time": "auto",
+  // Play generative music while you walk the island.
+  "music": true,
+  // The kind of music the island plays.
+  // Allowed values: "lofi", "ambient"
+  "mood": "lofi"
+}

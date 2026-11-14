@@ -59,6 +59,7 @@ Auth state and affordances come only from
   - Exports (values): `mailApp`
 - Cross-plugin:
   - Imported by:
+    - `apps/mail/isle-building`
     - `apps/mail/reading-pane`
     - `apps/mail/search`
     - `apps/mail/sync-status`

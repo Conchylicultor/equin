@@ -25,6 +25,7 @@
     - `ui/tokens/categorical --categorical-foreground`
     - `ui/tokens/shadow --shadow-sm`
   - Imported by:
+    - `apps/places/isle-building`
     - `apps/places/page-overlay`
     - `apps/places/places-map`
 

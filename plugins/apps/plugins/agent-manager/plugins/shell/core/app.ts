@@ -6,4 +6,5 @@ export const agentManagerApp = defineApp({
   name: "Agent Manager",
   basePath: "/agents",
   icon: symbol("chat-bubble"),
+  category: "work",
 });

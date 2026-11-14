@@ -140,7 +140,31 @@ export interface AppRef {
    * URL. Omitted, the app is for everyone.
    */
   readonly audience?: "developer";
+  /**
+   * What kind of app it is (see {@link AppCategory}) — read by surfaces that
+   * group or place apps by kind (Isle's districts, a launcher's sections).
+   * Omitted, the app declares no kind and each surface picks its own default.
+   */
+  readonly category?: AppCategory;
 }
+
+/**
+ * The closed set of app kinds an app may declare on `defineApp`: `work`
+ * (getting things done), `create` (making things), `music`, `life` (everyday
+ * things), `data` (numbers and records), `play`, `system` (under the hood).
+ */
+export type AppCategory = (typeof APP_CATEGORIES)[number];
+
+/** Every {@link AppCategory}, in the order a picker or a legend lists them. */
+export const APP_CATEGORIES = [
+  "work",
+  "create",
+  "music",
+  "life",
+  "data",
+  "play",
+  "system",
+] as const;
 
 /**
  * An app's DEFAULT colour scheme, declared once on `defineApp`:
@@ -165,6 +189,7 @@ export function defineApp(def: {
   colorMode?: AppColorMode;
   listed?: false;
   audience?: "developer";
+  category?: AppCategory;
 }): AppRef {
   for (const former of def.formerBasePaths ?? []) {
     if (!/^\/[^/?#;]+(\/[^/?#;]+)*$/.test(former) || former === def.basePath) {
@@ -188,6 +213,7 @@ export function defineApp(def: {
       def.colorMode !== "global" && { colorMode: def.colorMode }),
     ...(def.listed === false && { listed: false as const }),
     ...(def.audience !== undefined && { audience: def.audience }),
+    ...(def.category !== undefined && { category: def.category }),
   });
 }
 

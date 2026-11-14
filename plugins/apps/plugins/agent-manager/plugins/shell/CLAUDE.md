@@ -22,10 +22,10 @@
     - `ui/icons.symbol`
   - Exports (values): `agentManagerApp`
 - Cross-plugin:
-  - Imported by: 34 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 35 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations` ×17
     - `tasks` ×7
-    - `apps` ×3
+    - `apps` ×4
     - `active-data/plugin-link`
     - `build`
     - `code-explorer/commit-detail`

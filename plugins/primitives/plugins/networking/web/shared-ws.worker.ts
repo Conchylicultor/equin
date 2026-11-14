@@ -1,8 +1,8 @@
 // SharedWorker entry: one instance per (this script's URL, worker name), i.e.
 // per server URL per networking build. Built by vite as its own self-contained
 // chunk (`new SharedWorker(new URL(...), …)` in `shared-websocket.ts`); import
-// maps do not reach workers, so everything it imports must be this plugin's own
-// files — the web-artifacts inline audit fails the build otherwise.
+// maps do not reach workers, so it inlines everything it imports — its closure
+// is part of the artifact's address (web-artifacts' `own-files.ts`).
 
 import { createSharedWsHost } from "./shared-ws-host";
 import type { LockManagerLike, MessagePortLike } from "./transport-types";

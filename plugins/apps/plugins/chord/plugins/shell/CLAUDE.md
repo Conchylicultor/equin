@@ -41,6 +41,7 @@ The Chord app's identity and frame.
 - Cross-plugin:
   - Imported by:
     - `apps/chord`
+    - `apps/chord/isle-building`
     - `apps/chord/trainer`
     - `apps/website`
 

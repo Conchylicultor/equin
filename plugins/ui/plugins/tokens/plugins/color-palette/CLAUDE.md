@@ -78,6 +78,7 @@
     - `apps/file-explorer/shell`
     - `apps/home/new-app`
     - `apps/home/shell`
+    - `apps/isle/shell`
     - `apps/pages/shell`
     - `apps/places/shell`
     - `apps/prototypes/shell`

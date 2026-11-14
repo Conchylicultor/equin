@@ -16,6 +16,17 @@
 // (`ownHashFor`) and the inline audit's allowed roots, so a new or changed file
 // there re-addresses the artifact that inlines it — and only that one.
 //
+// The other addition: a page worker (`new Worker(new URL("./x.worker.ts",
+// import.meta.url), { type: "module" })`) is bundled WHOLE by vite's nested
+// worker pass — import maps do not reach workers — so it inlines whatever its
+// closure reaches, other plugins' barrels included. Each own `*.worker.ts(x)`
+// is a WORKER ENTRY: its Merkle key in the plugin-records module graph (its
+// blob and the keys of everything it imports, transitively) joins the
+// address, and the closure's modules join the files the WORKER pass's inline
+// audit allows (never the page bundle's: it still inlines its own roots only).
+// So a worker reaching `@plugins/<other>/core` re-addresses its artifact
+// exactly when that code changes, and nothing it inlines is unaddressed.
+//
 // Every file list and content id comes from the build's repo snapshot
 // (`RepoSnapshot`): no directory walk, no stat, no read of a file to learn
 // whether it changed. A file outside the snapshot — gitignored, or written
@@ -34,6 +45,11 @@ import {
   TESTS_DIR,
   TESTING_FOLDER,
 } from "@plugins/framework/plugins/plugin-id/core";
+import {
+  buildModuleGraph,
+  currentRecordStore,
+  NO_OUTSIDE_FILES,
+} from "@plugins/plugin-meta/plugins/plugin-records/core";
 import { computeBlobListHash, sha256Hex } from "../hash";
 import { inlinedRootsFor, type ArtifactKind } from "../own-roots";
 import type { GlobPatternMemo } from "./store";
@@ -282,6 +298,52 @@ export interface OwnAddress {
    */
   ownFiles: string[];
   globFiles: string[];
+  /**
+   * Absolute paths of every module the artifact's page workers load (their
+   * whole closure, the entries included): what the worker pass's inline audit
+   * allows beside the hashed files. Empty for an artifact with no worker.
+   */
+  workerFiles: string[];
+}
+
+/** An own module that is a page worker's entry (bundled whole by vite's worker pass). */
+const WORKER_ENTRY_RE = /\.worker\.tsx?$/;
+
+/**
+ * The address part and the closure of `ownFiles`' worker entries
+ * ({@link WORKER_ENTRY_RE}): each entry's Merkle key in the module graph over
+ * the snapshot — a function of every module it loads — and the union of their
+ * closures. An import the graph cannot resolve throws: its code would be
+ * inlined (or 404) with no key covering it.
+ */
+async function workerAddressOf(
+  snapshot: RepoSnapshot,
+  pluginDir: string,
+  ownFiles: readonly string[],
+): Promise<{ part: string; files: string[] }> {
+  const entries = ownFiles
+    .filter((abs) => WORKER_ENTRY_RE.test(abs))
+    .map((abs) => relative(snapshot.root, abs).split(sep).join("/"));
+  if (entries.length === 0) return { part: "", files: [] };
+  const graph = await buildModuleGraph(
+    { snapshot, store: currentRecordStore(), readOutside: NO_OUTSIDE_FILES },
+    entries,
+  );
+  for (const [path, node] of graph.modules)
+    if (node.unresolved.length > 0)
+      throw new Error(
+        `${path} (in the closure of page worker ${entries.join(", ")}) imports ${node.unresolved.map((u) => JSON.stringify(u)).join(", ")}, which resolves to no file of the tree — the worker's address cannot cover what it bundles`,
+      );
+  const part = entries
+    .map(
+      (rel) =>
+        `worker\t${relative(pluginDir, join(snapshot.root, rel))}\t${graph.keyOf(rel)}`,
+    )
+    .join("\n");
+  const files = [...graph.staticClosureOf(entries)]
+    .map((rel) => join(snapshot.root, rel))
+    .sort();
+  return { part, files };
 }
 
 /**
@@ -298,10 +360,14 @@ export async function ownHashFor(opts: {
   const { snapshot } = opts.sources;
   const repoRoot = snapshot.root;
   const ownFiles = listOwnFiles(snapshot, opts.pluginDir, opts.kind);
-  const ownHash = blobHashOf(snapshot, opts.pluginDir, ownFiles);
+  const filesHash = blobHashOf(snapshot, opts.pluginDir, ownFiles);
+  const worker = await workerAddressOf(snapshot, opts.pluginDir, ownFiles);
+  const ownHash =
+    worker.part === "" ? filesHash : sha256Hex(`${filesHash}\n${worker.part}`);
+  const workerFiles = worker.files;
   const globRoots = await globRootsOfFiles(opts.sources, ownFiles);
   if (globRoots.length === 0) {
-    return { ownHash, globRoots: [], ownFiles, globFiles: [] };
+    return { ownHash, globRoots: [], ownFiles, globFiles: [], workerFiles };
   }
   const parts = [ownHash];
   const globFiles: string[] = [];
@@ -319,5 +385,6 @@ export async function ownHashFor(opts: {
     globRoots: globRoots.map((rel) => join(repoRoot, rel)),
     ownFiles,
     globFiles,
+    workerFiles,
   };
 }

@@ -85,6 +85,7 @@
     - `apps/browser`
     - `apps/browser/bookmarks`
     - `apps/browser/history`
+    - `apps/browser/isle-building`
     - `apps/browser/navigation`
     - `apps/browser/omnibox`
     - `apps/browser/start-page`

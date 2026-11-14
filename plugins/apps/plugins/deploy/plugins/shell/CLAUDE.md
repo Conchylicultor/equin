@@ -40,6 +40,7 @@
     - `apps/deploy/deploy-history`
     - `apps/deploy/deployments`
     - `apps/deploy/health`
+    - `apps/deploy/isle-building`
     - `apps/deploy/servers`
     - `apps/website`
 

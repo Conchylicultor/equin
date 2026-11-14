@@ -511,6 +511,12 @@
       "parent": null
     },
     {
+      "paneId": "isle",
+      "segment": "",
+      "appIndex": true,
+      "parent": null
+    },
+    {
       "paneId": "live-state-health",
       "segment": "live-state",
       "appIndex": false,

@@ -81,6 +81,13 @@ export interface ArtifactBuildTarget {
   ownFiles: readonly string[];
   globFiles: readonly string[];
   /**
+   * Every module the artifact's page workers load (`OwnAddress.workerFiles`):
+   * the worker pass's inline audit allows them beside `ownFiles` and
+   * `globFiles` — their code is in the address through each worker entry's
+   * module-graph key. Empty for an artifact with no worker.
+   */
+  workerFiles: readonly string[];
+  /**
    * Extra entries built into THIS artifact (a co-built folder such as
    * `exhibits/` of a `web` artifact — `COBUILT_FOLDERS` in `../own-roots.ts`).
    * Empty for every ordinary artifact. Required, so no target constructor can
@@ -456,12 +463,17 @@ export async function buildArtifact(
   // built by vite's own nested rollup pass, which runs `worker.plugins` — not
   // the main build's. It bundles its whole closure (no externals: import maps
   // do not reach workers), so the same address-covers-content audit must watch
-  // it: a worker reaching another plugin's file fails here instead of
-  // fossilising unhashed bytes.
+  // it: a worker may inline exactly its own files and the closure its
+  // entries' module-graph keys put in the address (`own-files.ts`); anything
+  // else fails here instead of fossilising unhashed bytes.
   const workerAudit = createInlineAudit({
     dirName: `${target.dirName} (worker)`,
     hashedRoots,
-    hashedFiles: [...target.ownFiles, ...target.globFiles],
+    hashedFiles: [
+      ...target.ownFiles,
+      ...target.globFiles,
+      ...target.workerFiles,
+    ],
     kind: target.kind,
   });
 

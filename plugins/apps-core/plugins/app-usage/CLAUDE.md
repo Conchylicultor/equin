@@ -83,7 +83,9 @@ every flush.
     - `flushAppUsageEndpoint`
     - `LocalDaySchema`
 - Cross-plugin:
-  - Imported by: `apps/home/usage-fields`
+  - Imported by:
+    - `apps/home/usage-fields`
+    - `apps/isle/world-view`
 - Exemptions:
   - Exempts itself from:
     - `networking/no-page-transport` — `web/components/app-usage-recorder.tsx` (sanctioned)

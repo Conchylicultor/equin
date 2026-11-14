@@ -302,7 +302,8 @@ export async function planFleet(opts: {
     const pluginDir = pluginPath
       ? joinAppPath(pluginsRoot, pluginPath)
       : webSrcDir;
-    const { ownHash, globRoots, ownFiles, globFiles } = await ownHashFor({
+    const { ownHash, globRoots, ownFiles, globFiles, workerFiles } =
+      await ownHashFor({
       pluginDir,
       kind,
       sources,
@@ -323,6 +324,7 @@ export async function planFleet(opts: {
       globRoots,
       ownFiles,
       globFiles,
+      workerFiles,
       coEntries: pluginPath
         ? coEntriesFor(kind, pluginPath, pluginDir, sources.snapshot)
         : [],
@@ -518,7 +520,8 @@ export async function planBarrelTarget(opts: {
 }): Promise<PlannedTarget> {
   const { pluginPath, kind } = opts;
   const pluginDir = joinAppPath(opts.pluginsRoot, pluginPath);
-  const { ownHash, globRoots, ownFiles, globFiles } = await ownHashFor({
+  const { ownHash, globRoots, ownFiles, globFiles, workerFiles } =
+    await ownHashFor({
     pluginDir,
     kind,
     sources: opts.sources,
@@ -539,6 +542,7 @@ export async function planBarrelTarget(opts: {
     globRoots,
     ownFiles,
     globFiles,
+    workerFiles,
     coEntries: coEntriesFor(kind, pluginPath, pluginDir, opts.sources.snapshot),
   };
 }

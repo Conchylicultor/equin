@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { hash53, hash64, hashHex } from "./string-hash";
+import { fnv1a32, hash53, hash64, hashHex } from "./string-hash";
 
 describe("hash53", () => {
   test("is the classic cyrb53 at seed 0 (pinned values)", () => {
@@ -51,5 +51,13 @@ describe("hash64", () => {
   test("its low 53 bits agree with hash53", () => {
     const s = "agreement";
     expect(Number(hash64(s) & ((1n << 53n) - 1n))).toBe(hash53(s));
+  });
+});
+
+describe("fnv1a32", () => {
+  test("matches the published FNV-1a 32-bit vectors", () => {
+    expect(fnv1a32("")).toBe(0x811c9dc5);
+    expect(fnv1a32("a")).toBe(0xe40c292c);
+    expect(fnv1a32("foobar")).toBe(0xbf9cf968);
   });
 });

@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-apps-isle-characters",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Isle's people: the hero and five villagers, inked and cel-shaded, with a skeletal walk cycle — characterFrame decides the pose (view, walk/idle frame, blink, turn cross-fade) from a character's state, paintCharacterPose paints one on any 2D context."
+}

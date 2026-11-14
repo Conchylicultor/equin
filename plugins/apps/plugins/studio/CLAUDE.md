@@ -40,6 +40,7 @@ future home of the plugin marketplace.
       - **`load-bearing`** — Load-bearing badge in the explorer plugin tree row.
       - **`membership`** — Tints each explorer tree row by its membership state in the active composition, with a pin-as-root affordance.
   - **`graph`** — Studio Plugin Graph pane: focused closure subgraph (deps + dependents) around a plugin, tinted by the active composition's membership, with depth / direction controls and click-to-recenter.
+  - **`isle-building`** — Studio's building on Isle: the conservatory laboratory, a glasshouse of plants and jars.
   - **`membership-tint`** — Single source of truth for the membership-state tint + legend (shared by the Explorer membership band and the Studio graph pane).
   - **`shell`** — App shell for Studio. Registers the /studio app entry and defines Studio.Sidebar/Toolbar slots.
 

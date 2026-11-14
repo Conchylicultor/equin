@@ -83,6 +83,7 @@ export const reorderableSlots: ReorderableSlot[] = [
   { slotId: "apps.home.new-app.new-app.actions", pluginId: "apps.home.new-app", configName: "new-app.actions" },
   { slotId: "apps.home.shell.home-root.actions", pluginId: "apps.home.shell", configName: "home-root.actions" },
   { slotId: "apps.home.shell.section", pluginId: "apps.home.shell", configName: "section" },
+  { slotId: "apps.isle.world-view.isle.actions", pluginId: "apps.isle.world-view", configName: "isle.actions" },
   { slotId: "apps.mail.reading-pane.mail-thread.actions", pluginId: "apps.mail.reading-pane", configName: "mail-thread.actions" },
   { slotId: "apps.mail.search.mail-message.actions", pluginId: "apps.mail.search", configName: "mail-message.actions" },
   { slotId: "apps.mail.search.mail-search.actions", pluginId: "apps.mail.search", configName: "mail-search.actions" },

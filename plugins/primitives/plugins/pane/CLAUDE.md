@@ -758,9 +758,9 @@ with an empty route.
 - Load-bearing: yes
 - Web:
   - Slots: `Pane.Register`
-  - Slot contributors: 99 contributors — full list in [REFERENCE.md](./REFERENCE.md)
-    - `Pane.Register` ×99
-  - Contributes: 131 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+  - Slot contributors: 100 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `Pane.Register` ×100
+  - Contributes: 132 contributions — full list in [REFERENCE.md](./REFERENCE.md)
     - `FileBrowserHeader` "title" → `PaneTitleItem`
     - `FilePreviewHeader` "title" → `PaneTitleItem`
     - `SlotRender.ListMiddleware`
@@ -827,6 +827,7 @@ with an empty route.
     - `heapSnapshotPane.Actions` "title" → `PaneTitleItem`
     - `homeRootPane.Actions` "title" → `PaneTitleItem`
     - `icons.actions` "title" → `PaneTitleItem`
+    - `isle.actions` "title" → `PaneTitleItem`
     - `liveStateEmitPane.Actions` "title" → `PaneTitleItem`
     - `liveStateHealthPane.Actions` "title" → `PaneTitleItem`
     - `logChannelPane.Actions` "title" → `PaneTitleItem`
@@ -1048,8 +1049,8 @@ with an empty route.
     - `ui/tokens/density --space-md`
     - `ui/tokens/density --space-sm`
     - `ui/tokens/shape --spacing`
-  - Imported by: 214 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×78
+  - Imported by: 218 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×82
     - `conversations` ×32
     - `debug` ×29
     - `active-data` ×13
@@ -1088,12 +1089,14 @@ with an empty route.
     - `primitives/pane` (0 debt)
 - Core:
   - Exports (types):
+    - `AppCategory`
     - `AppColorMode`
     - `AppRef`
     - `PositionalRouteParams`
     - `RouteDef`
     - `RouteParams`
   - Exports (values):
+    - `APP_CATEGORIES`
     - `APP_COLOR_MODES`
     - `defineApp`
     - `defineRoute`

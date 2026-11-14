@@ -57,6 +57,7 @@ Design: [`research/2026-08-03-apps-events-event-tracking-app.md`](../../../../..
     - `ui/tokens/shape --spacing`
   - Imported by:
     - `apps/events/event-list`
+    - `apps/events/isle-building`
     - `apps/events/sources`
     - `apps/events/sources/source-detail/runs`
     - `apps/website`

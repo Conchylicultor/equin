@@ -1,0 +1,334 @@
+/*
+ * Isle's HUD over the canvas: the title card, the where-chip, the radio chip,
+ * the prompt card and the iris an app opens through. The island is an illustration with its
+ * own fixed palette (the prototype's), in Nunito and Fraunces — the faces the
+ * Isle theme names, so the HUD and the canvas text match.
+ */
+
+.isle-root {
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+  background: #0d1420;
+  color: #fff7e8;
+  font-family: Nunito, system-ui, sans-serif;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.isle-stage {
+  position: absolute;
+  inset: 0;
+  outline: none;
+}
+
+.isle-hud {
+  position: absolute;
+  z-index: 20;
+}
+
+.isle-where {
+  top: 16px;
+  left: 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px 8px 8px;
+  border-radius: 999px;
+  background: rgb(20 22 30 / 0.55);
+  backdrop-filter: blur(10px) saturate(1.3);
+  border: 1px solid rgb(255 255 255 / 0.12);
+  box-shadow: 0 8px 30px rgb(0 0 0 / 0.25);
+  pointer-events: none;
+}
+.isle-where-dot {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, #ffb86b, #ff7a90);
+  color: #2a1520;
+  font-size: 18px;
+}
+.isle-where b {
+  display: block;
+  font-family: Fraunces, serif;
+  font-size: 15px;
+  letter-spacing: 0.01em;
+}
+.isle-where small {
+  display: block;
+  font-size: 11px;
+  opacity: 0.65;
+  font-weight: 700;
+  margin-top: 1px;
+}
+
+.isle-radio {
+  bottom: 16px;
+  left: 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px 8px 8px;
+  border-radius: 999px;
+  background: rgb(20 22 30 / 0.55);
+  backdrop-filter: blur(10px) saturate(1.3);
+  border: 1px solid rgb(255 255 255 / 0.12);
+  box-shadow: 0 8px 30px rgb(0 0 0 / 0.25);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  transition: opacity 0.3s;
+}
+.isle-radio-disc {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    #f3d9a4 0 18%,
+    #1b1b22 19% 56%,
+    #3a3a46 57% 60%,
+    #1b1b22 61%
+  );
+  animation: isle-spin 3.2s linear infinite;
+}
+.isle-radio.isle-off .isle-radio-disc {
+  animation-play-state: paused;
+  opacity: 0.5;
+}
+.isle-radio-eq {
+  display: flex;
+  gap: 2px;
+  align-items: flex-end;
+  height: 14px;
+}
+.isle-radio-eq i {
+  width: 3px;
+  background: #ffd79a;
+  border-radius: 2px;
+  animation: isle-eq 1s ease-in-out infinite;
+}
+.isle-radio-eq i:nth-child(2) {
+  animation-delay: -0.3s;
+}
+.isle-radio-eq i:nth-child(3) {
+  animation-delay: -0.6s;
+}
+.isle-radio-eq i:nth-child(4) {
+  animation-delay: -0.15s;
+}
+.isle-radio.isle-off .isle-radio-eq i {
+  animation: none;
+  height: 3px;
+}
+.isle-radio-track {
+  font-size: 12px;
+  font-weight: 700;
+  opacity: 0.85;
+}
+@keyframes isle-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes isle-eq {
+  0%,
+  100% {
+    height: 3px;
+  }
+  50% {
+    height: 14px;
+  }
+}
+
+.isle-prompt {
+  left: 50%;
+  bottom: 28px;
+  transform: translate(-50%, 20px);
+  opacity: 0;
+  transition:
+    transform 0.35s cubic-bezier(0.2, 1.4, 0.4, 1),
+    opacity 0.25s;
+  pointer-events: none;
+}
+.isle-prompt.isle-on {
+  transform: translate(-50%, 0);
+  opacity: 1;
+  pointer-events: auto;
+}
+.isle-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 12px 10px 10px;
+  border-radius: 18px;
+  cursor: pointer;
+  background: #fff4dd;
+  color: #3a2a1c;
+  border: 3px solid #3a2a1c;
+  box-shadow:
+    0 6px 0 #3a2a1c,
+    0 18px 40px rgb(0 0 0 / 0.35);
+  font: inherit;
+  text-align: left;
+}
+.isle-prompt-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-size: 26px;
+  background: var(--isle-hue, #8a7a5c);
+  box-shadow: inset 0 -3px 0 rgb(0 0 0 / 0.2);
+}
+.isle-prompt-text b {
+  display: block;
+  font-family: Fraunces, serif;
+  font-size: 18px;
+}
+.isle-prompt-text small {
+  font-size: 12px;
+  opacity: 0.7;
+  font-weight: 700;
+}
+.isle-card kbd {
+  margin-left: 8px;
+  font: 800 13px Nunito, sans-serif;
+  padding: 6px 10px;
+  border-radius: 9px;
+  background: #3a2a1c;
+  color: #fff4dd;
+  box-shadow: 0 3px 0 #170f08;
+}
+
+.isle-title {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  background: radial-gradient(ellipse at 50% 60%, rgb(10 14 24 / 0.15), rgb(10 14 24 / 0.75));
+  backdrop-filter: blur(3px);
+}
+.isle-title-inner {
+  text-align: center;
+  transform: translateY(-4vh);
+}
+.isle-title h1 {
+  font-family: Fraunces, serif;
+  font-weight: 700;
+  font-size: clamp(56px, 11vw, 132px);
+  margin: 0;
+  letter-spacing: -0.02em;
+  background: linear-gradient(180deg, #fff6df, #ffc98a);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 6px 0 rgb(60 30 20 / 0.55));
+  animation: isle-bob 4s ease-in-out infinite;
+}
+.isle-title p {
+  margin: 4px 0 40px;
+  font-weight: 700;
+  opacity: 0.8;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  font-size: 12px;
+}
+.isle-title button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font: 800 16px Nunito, sans-serif;
+  padding: 14px 26px 14px 20px;
+  border-radius: 16px;
+  cursor: pointer;
+  background: #fff4dd;
+  color: #3a2a1c;
+  border: 3px solid #3a2a1c;
+  box-shadow: 0 6px 0 #3a2a1c;
+  animation: isle-pulse 2s ease-in-out infinite;
+}
+.isle-title button svg {
+  font-size: 24px;
+}
+.isle-title.isle-wait {
+  cursor: progress;
+}
+.isle-title.isle-wait button {
+  opacity: 0.6;
+  animation: none;
+  cursor: progress;
+}
+@keyframes isle-bob {
+  50% {
+    transform: translateY(-8px);
+  }
+}
+@keyframes isle-pulse {
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+.isle-iris {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  background: var(--isle-hue, #000);
+  clip-path: circle(0% at var(--ix, 50%) var(--iy, 50%));
+  transition: clip-path 0.8s cubic-bezier(0.7, 0, 0.3, 1);
+}
+.isle-iris.isle-on {
+  clip-path: circle(150% at var(--ix, 50%) var(--iy, 50%));
+}
+.isle-iris-app {
+  text-align: center;
+  opacity: 0;
+  transform: scale(0.8);
+  transition: all 0.5s 0.45s cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+.isle-iris.isle-on .isle-iris-app {
+  opacity: 1;
+  transform: none;
+}
+.isle-iris-app svg {
+  font-size: 96px;
+  display: block;
+  margin: 0 auto 12px;
+}
+.isle-iris-app b {
+  font-family: Fraunces, serif;
+  font-size: 40px;
+}
+
+.isle-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .isle-title h1,
+  .isle-title button,
+  .isle-radio-disc,
+  .isle-radio-eq i {
+    animation: none;
+  }
+  .isle-prompt,
+  .isle-iris,
+  .isle-iris-app {
+    transition: none;
+  }
+}

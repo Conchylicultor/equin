@@ -6,5 +6,6 @@ export const keyboardPartyApp = defineApp({
   name: "Tap Tap Party",
   basePath: "/keyboard-party",
   icon: symbol("celebration"),
+  category: "play",
   iconColor: "pink",
 });
