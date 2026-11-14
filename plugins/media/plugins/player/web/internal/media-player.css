@@ -1008,23 +1008,30 @@ html[data-pip] .mp-fs {
   border-radius: 22px;
   opacity: 1;
   transform: translateY(calc(100% + 24px));
-  /* Closed, the sheet is parked just below the viewport — and not painted
-   * there once it has slid out: a translate alone leaves it in any capture
-   * wider than the viewport (a view transition's snapshot on a phone, whose
-   * root spans the collapsing URL bar), drawing its speed dial truncated at
-   * the bottom of the screen. Visibility flips at the end of the slide out
-   * and at the start of the slide in. */
-  visibility: hidden;
+  /* Closed, the sheet has no box at all (`display: none` once it has slid
+   * out), never one parked below the viewport. A parked box is still part of
+   * its ancestors' scrollable overflow — `visibility: hidden` and a translate
+   * change nothing there — and its `fixed` is caught by any transformed
+   * ancestor (an app surface is one), so it hung 277px below the website's
+   * surface on a phone: the page's root became scrollable, and the demo's
+   * Enter reveal scrolled the whole app 72px up. It also left the sheet in
+   * any capture wider than the viewport (a view transition's snapshot on a
+   * phone). `display` is animated discretely: it flips at the end of the
+   * slide out, and at the start of the slide in, which starts from the
+   * parked position (`@starting-style`). */
+  display: none;
   transition:
     transform 0.26s cubic-bezier(0.2, 0.8, 0.2, 1),
-    visibility 0s linear 0.26s;
+    display 0.26s allow-discrete;
 }
 .mp-settings[data-sheet][data-open] {
+  display: block;
   transform: none;
-  visibility: visible;
-  transition:
-    transform 0.26s cubic-bezier(0.2, 0.8, 0.2, 1),
-    visibility 0s;
+}
+@starting-style {
+  .mp-settings[data-sheet][data-open] {
+    transform: translateY(calc(100% + 24px));
+  }
 }
 .mp-settings[data-sheet] .mp-chip {
   height: 34px;

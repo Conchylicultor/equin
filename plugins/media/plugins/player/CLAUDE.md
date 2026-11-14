@@ -72,9 +72,14 @@ YouTube's model (`components/touch-controls.tsx`):
   controls.
 - **Settings** open as a sheet from the bottom of the screen, over a scrim
   (the inline player is too short to hold the panel): the same panel at
-  `--k: 1`, without key caps. Closed, it is parked below the viewport *and*
-  `visibility: hidden` — a translate alone leaves it in a view transition's
-  snapshot, which on a phone spans past the visible viewport.
+  `--k: 1`, without key caps. Closed, it has **no box** (`display: none`
+  once it has slid out, animated discretely; the slide in starts from
+  `@starting-style`). Never park it below the viewport instead: a parked box
+  still counts in its ancestors' scrollable overflow, and its `fixed` is
+  caught by a transformed ancestor (an app surface), so it made the page's
+  root scrollable on a phone and a reveal scrolled the whole app up. It also
+  showed in a view transition's snapshot, which on a phone spans past the
+  visible viewport.
 
 Audio keeps its bar on touch. Where the browser cannot put an element in full
 screen (`document.fullscreenEnabled` false — an iPhone), Full screen makes the
