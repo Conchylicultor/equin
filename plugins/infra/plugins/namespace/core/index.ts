@@ -9,6 +9,7 @@ export {
   namespaceFromHost,
   asNamespaceOrigin,
   contentUrl,
+  contentUrlParts,
   isContentHost,
   isContentReservedNamespace,
   CONTENT_HOST_LABEL,

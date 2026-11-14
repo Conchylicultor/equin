@@ -111,6 +111,7 @@ Design: `research/2026-08-18-global-namespace-identity.md`.
     - `CONTENT_HOST_LABEL`
     - `CONTENT_ITEM_RE`
     - `contentUrl`
+    - `contentUrlParts`
     - `GATEWAY_PORT`
     - `isContentHost`
     - `isContentReservedNamespace`

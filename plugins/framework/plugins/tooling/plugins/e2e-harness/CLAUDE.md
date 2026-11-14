@@ -18,6 +18,13 @@ naming the path you gave — it would otherwise pass, having tested a screen you
 did not ask for. And a helper never takes a `base` parameter: `openBlankPage`
 and `support/runs.ts` resolve their own target.
 
+A `--url` on a CONTENT host (`http://<item>.content.localhost:9000/<ns>/api/…`,
+the document URL `./equin prototype options` prints) opens the page there,
+but the deploy is the namespace its first path segment names: `pathUrl` — and
+so every control call the harness makes (the agent-write revert, the build-id
+probe, `agentFetch`) — goes to that namespace's APP origin, since the content
+host refuses every non-content route. Derived in `target()`, never per call.
+
 ## The default target is READ from the registry, never guessed from a name
 
 Pass no target flag and the script drives the deploy **this checkout

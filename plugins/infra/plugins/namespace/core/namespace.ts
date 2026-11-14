@@ -433,6 +433,35 @@ export function contentUrl(
   return `http://${item}.${CONTENT_HOST_LABEL}${NAMESPACE_HOST_SUFFIX}:${port}/${namespaceLabel(ns)}${path}`;
 }
 
+/**
+ * `contentUrl` read back: the content item, the namespace whose backend serves
+ * it (the first path segment, its label resolved), the path that backend is
+ * asked for and the port — or `null` for a URL that is not on a content host or
+ * names no namespace. For a caller holding a content page that needs the APP of
+ * the same namespace (`namespaceUrl(namespace, "", port)`): the content host serves
+ * content routes only, so anything else goes to the app origin.
+ */
+export function contentUrlParts(
+  raw: string,
+): { item: string; namespace: Namespace; path: string; port: number } | null {
+  if (!URL.canParse(raw)) return null;
+  const url = new URL(raw);
+  if (!isContentHost(url.host)) return null;
+  const item = url.hostname.split(".")[0]!;
+  const match = /^\/([^/]+)(\/.*)?$/.exec(url.pathname);
+  if (match === null) return null;
+  const ns = resolveNamespaceAlias(match[1]!.toLowerCase());
+  if (!isNamespace(ns)) return null;
+  const port =
+    url.port === "" ? (url.protocol === "https:" ? 443 : 80) : Number(url.port);
+  return {
+    item,
+    namespace: ns as Namespace,
+    path: `${match[2] ?? "/"}${url.search}${url.hash}`,
+    port,
+  };
+}
+
 /** Whether a browser `location.host` (or any Host header) is a content host. */
 export function isContentHost(host: string): boolean {
   const h = host.toLowerCase().replace(/:\d+$/, "").replace(/\.$/, "");

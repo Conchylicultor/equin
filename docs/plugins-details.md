@@ -38060,6 +38060,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `CONTENT_HOST_LABEL`
           - `CONTENT_ITEM_RE`
           - `contentUrl`
+          - `contentUrlParts`
           - `GATEWAY_PORT`
           - `isContentHost`
           - `isContentReservedNamespace`

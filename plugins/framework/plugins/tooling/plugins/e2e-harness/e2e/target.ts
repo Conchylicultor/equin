@@ -14,8 +14,11 @@
  *           builds every API call      opens the screen under test
  *
  * The origin is not a second input — it is the target URL with the path cut
- * off. There is never a run where "the origin" and "the page's origin" differ,
- * which is why there is ONE flag rather than one per half.
+ * off, which is why there is ONE flag rather than one per half. The one place
+ * the two differ is a page on a CONTENT host
+ * (`http://<item>.content.localhost:9000/<ns>/api/…`): the page opens there,
+ * and the origin is DERIVED from it — the app of the namespace its first path
+ * segment names — because the content host serves content routes only.
  *
  * This file used to hand the whole string to the half that only wanted the
  * origin. `screenshot.ts` read the same unsplit value as the page — and its own
@@ -84,6 +87,7 @@ import type {
   CheckoutDeployResolution,
 } from "@plugins/infra/plugins/paths/core";
 import {
+  contentUrlParts,
   MAIN_COMPOSITION_ID,
   namespaceFromHost,
   namespaceUrl,
@@ -102,8 +106,20 @@ import { arg, flag, harnessArg, usage, wasReadByScript } from "./args";
  * `deploy-identity.ts` leans on.
  */
 type Target =
-  | { kind: "derived"; origin: string; deploy: CheckoutDeploy; page?: string }
-  | { kind: "stated"; origin: string; flag: string; page?: string };
+  | {
+      kind: "derived";
+      origin: string;
+      deploy: CheckoutDeploy;
+      page?: string;
+      pageOrigin: string;
+    }
+  | {
+      kind: "stated";
+      origin: string;
+      flag: string;
+      page?: string;
+      pageOrigin: string;
+    };
 
 /** `Target` without the URL halves — what the identity assert is allowed to see. */
 export type TargetDeploy =
@@ -355,7 +371,11 @@ function describeBuild(namespace: Namespace): string {
 }
 
 function describeTarget(t: Target): string {
-  if (t.kind === "stated") return `target: ${t.origin}  (named by ${t.flag})`;
+  if (t.kind === "stated") {
+    const page =
+      t.pageOrigin === t.origin ? "" : `, page on content host ${t.pageOrigin}`;
+    return `target: ${t.origin}  (named by ${t.flag}${page})`;
+  }
   const build = describeBuild(t.deploy.namespace);
   // The main composition's id is a kept internal name: say "deploy", as the
   // address already names the app.
@@ -373,7 +393,9 @@ function describeTarget(t: Target): string {
  * anyone an origin string to navigate to or concatenate onto.
  */
 export function isTargetOrigin(url: string): boolean {
-  return new URL(url).origin === target().origin;
+  const { origin } = new URL(url);
+  const t = target();
+  return origin === t.origin || origin === t.pageOrigin;
 }
 
 let parsed: Target | undefined;
@@ -404,10 +426,24 @@ function target(): Target {
   }
 
   const page = fromUrl ?? fromFlag;
+  // A page on a CONTENT host (`http://<item>.content.localhost:9000/<ns>/api/…`,
+  // what `prototype options` prints) lives on another origin than the app that
+  // serves it: the content host answers content routes only, so every control
+  // call (the agent-write revert, the build-id probe, `agentFetch`) would be
+  // refused there. The deploy is the namespace the content URL names, so
+  // `origin` is that namespace's APP origin and only the page keeps the
+  // content origin — derived here, once, so no caller can send an API call to
+  // the page's origin.
+  const content = contentUrlParts(url.href);
+  const origin =
+    content === null
+      ? url.origin
+      : new URL(namespaceUrl(content.namespace, "", content.port)).origin;
+  const pageOrigin = fromUrl !== undefined ? url.origin : origin;
   const resolved: Target =
     raw.kind === "derived"
-      ? { kind: "derived", origin: url.origin, deploy: raw.deploy, page }
-      : { kind: "stated", origin: url.origin, flag: raw.flag, page };
+      ? { kind: "derived", origin, deploy: raw.deploy, page, pageOrigin }
+      : { kind: "stated", origin, flag: raw.flag, page, pageOrigin };
 
   // Named HERE, in the one resolution every path goes through, rather than at a
   // call site: 134 of the 165 scripts never bind `pathUrl` at module top level,
@@ -505,9 +541,19 @@ export function unconsumedPage(): string | undefined {
   return page;
 }
 
-/** The target's origin joined to an app path, with exactly one slash between. */
+/** An origin joined to a path, with exactly one slash between. */
+function joinUrl(origin: string, path: string): string {
+  return `${origin}/${path.replace(/^\/+/, "")}`;
+}
+
+/** The target's APP origin joined to an app path. */
 export function pathUrl(path: string): string {
-  return `${target().origin}/${path.replace(/^\/+/, "")}`;
+  return joinUrl(target().origin, path);
+}
+
+/** The caller's page on the origin it was named on (a content host's included). */
+function callerPageUrl(t: Target, page: string): string {
+  return joinUrl(t.pageOrigin, page);
 }
 
 /**
@@ -521,7 +567,10 @@ export function pathUrl(path: string): string {
  */
 export function pageUrl(fallbackPath = "/"): string {
   pageConsumed = true;
-  return pathUrl(target().page ?? fallbackPath);
+  const t = target();
+  return t.page === undefined
+    ? pathUrl(fallbackPath)
+    : callerPageUrl(t, t.page);
 }
 
 /**
@@ -534,7 +583,7 @@ export function pageUrl(fallbackPath = "/"): string {
  */
 export function requirePage(usageLine: string): string {
   pageConsumed = true;
-  const page = target().page;
-  if (page === undefined) usage(usageLine);
-  return pathUrl(page);
+  const t = target();
+  if (t.page === undefined) usage(usageLine);
+  return callerPageUrl(t, t.page);
 }
