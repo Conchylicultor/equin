@@ -2,6 +2,7 @@ import {
   useCallback,
   useEffect,
   useId,
+  useLayoutEffect,
   useMemo,
   useSyncExternalStore,
   type ComponentPropsWithRef,
@@ -19,13 +20,15 @@ import { useIconFamilyPreview, useIconScope } from "./icon-scope";
 import { useScopeIconStyle } from "./style-store";
 import { subscribeSprites } from "./sprite-store";
 import {
+  pageRuntimeSymbols,
+  useFamilyGlyphStore,
   useRuntimeSymbolStore,
-  type RuntimeSymbolStore,
 } from "./runtime-symbol-store";
 import {
   resolveIconDrawing,
   type DrawingSource,
   type DrawingWant,
+  type IconStores,
 } from "./icon-drawing";
 import { iconFamily, subscribeFamilies } from "./family-store";
 import { reportIconFamilyGap } from "./family-gap";
@@ -64,42 +67,52 @@ export function useIconStyle(): IconStyle {
 }
 
 /**
- * Subscribe to every icon store an icon drawing from `runtime` reads: a
- * sprite, one of its runtime-symbol chunks or the families landing.
+ * Subscribe to every icon store an icon drawing from `stores` reads: a
+ * sprite, a glyph chunk of any of its stores (the page's included — code
+ * Material symbols draw from it) or the families landing.
  */
 function subscribeIconStores(
-  runtime: RuntimeSymbolStore,
+  stores: IconStores,
   listener: () => void,
 ): () => void {
-  const offSprites = subscribeSprites(listener);
-  const offRuntime = runtime.subscribe(listener);
-  const offFamilies = subscribeFamilies(listener);
+  const offs = [
+    subscribeSprites(listener),
+    subscribeFamilies(listener),
+    ...[...new Set([pageRuntimeSymbols, stores.saved, stores.family])].map(
+      (store) => store.subscribe(listener),
+    ),
+  ];
   return () => {
-    offSprites();
-    offRuntime();
-    offFamilies();
+    for (const off of offs) off();
   };
 }
 
-/** `subscribeIconStores` over the caller's runtime-symbol store, stable while it is. */
+/** The glyph stores an icon rendered here draws from (`IconStores`), stable while they are. */
+export function useIconStores(): IconStores {
+  const saved = useRuntimeSymbolStore();
+  const family = useFamilyGlyphStore();
+  return useMemo(() => ({ saved, family }), [saved, family]);
+}
+
+/** `subscribeIconStores` over the caller's stores, stable while they are. */
 export function useSubscribeIconStores(
-  runtime: RuntimeSymbolStore,
+  stores: IconStores,
 ): (listener: () => void) => () => void {
   return useCallback(
-    (listener: () => void) => subscribeIconStores(runtime, listener),
-    [runtime],
+    (listener: () => void) => subscribeIconStores(stores, listener),
+    [stores],
   );
 }
 
-/** Hand one want to its store's loader: a sprite's, a saved icon's. */
-export function askFor(want: DrawingWant, runtime: RuntimeSymbolStore): void {
-  if (want.kind === "sprite") runtime.wantSprite(want.key);
-  else runtime.want(want.styleKey, want.name);
+/** Hand one want to its store's loader: a whole sprite's (Seti), a glyph's. */
+export function askFor(want: DrawingWant): void {
+  if (want.kind === "sprite") want.store.wantSprite(want.key);
+  else want.store.want(want.key, want.name);
 }
 
 function wantsKey(wants: readonly DrawingWant[]): string {
   return wants
-    .map((w) => (w.kind === "sprite" ? w.key : `${w.styleKey}/${w.name}`))
+    .map((w) => (w.kind === "sprite" ? w.key : `${w.key}/${w.name}`))
     .join(",");
 }
 
@@ -142,12 +155,14 @@ function inlineGlyphMarkup(source: DrawingSource | undefined): string | null {
 
 /**
  * Draws an `IconRef`: an `<svg>` at 1em (so `className="size-4"` and every
- * `[&_svg]:…` rule size it as before) that `<use>`s the sprite symbol for the
- * icon in its theme scope's style (`resolveIconDrawing`).
+ * `[&_svg]:…` rule size it as before) that `<use>`s the glyph for the icon in
+ * its theme scope's style (`resolveIconDrawing`), asking the page's glyph
+ * store for it (a layout effect, so the page's first paint waits for it).
  *
- * Until that style's sprite has loaded it draws the DEFAULT style's symbol —
- * the same glyph in the global style, in the same box, which is resident from
- * first paint. Brands have one mark and ignore the style.
+ * Until that style's glyph has loaded it draws the DEFAULT style's glyph when
+ * the page holds it — the same glyph in the global style, in the same box —
+ * and else an empty box at its final size (a loading state). Brands have one
+ * mark and ignore the style.
  *
  * A Seti file-type glyph has one style too, and its sprite is never resident:
  * the first Seti icon to mount asks the sprite host for it, and until it lands
@@ -155,8 +170,8 @@ function inlineGlyphMarkup(source: DrawingSource | undefined): string | null {
  *
  * In a scope whose icon family is a contributed one (`Icons.Family`), a symbol
  * draws from the first family of its fallback chain that maps it: an app-drawn
- * family's glyph at once; a sprite family's (Lucide) once its sprite — never
- * resident — has loaded, the next family's drawing until then. A symbol no
+ * family's glyph at once; a sprite family's (Lucide) once its glyph has
+ * loaded, nothing until then. A symbol no
  * family maps keeps its Material drawing.
  *
  * A custom glyph (`family.icon("…")`) draws from its family in every scope,
@@ -188,9 +203,9 @@ export function Icon({ icon, active = false, title, ...rest }: IconProps) {
   const style = useIconStyle();
   // A preview shows gaps on purpose: only an app drawing one is reported.
   const previewing = useIconFamilyPreview() !== undefined;
-  const runtime = useRuntimeSymbolStore();
-  const subscribe = useSubscribeIconStores(runtime);
-  const resolve = () => resolveIconDrawing(icon, style, active, runtime);
+  const stores = useIconStores();
+  const subscribe = useSubscribeIconStores(stores);
+  const resolve = () => resolveIconDrawing(icon, style, active, stores);
   // Plain strings out of the store: an icon re-renders only when what it
   // draws, or what it waits for, changes. Every store `resolve` reads is in
   // memory, so a server render (a static render to HTML) reads each as it
@@ -230,12 +245,17 @@ export function Icon({ icon, active = false, title, ...rest }: IconProps) {
     const [sprite, id] = missing.split("\0") as [SpriteKey, string];
     reportIconMissingGlyph({ sprite, id });
   }, [missing]);
-  useEffect(() => {
+  // A LAYOUT effect: every want of a commit is recorded before that commit
+  // paints, so the page's first frame can wait for exactly its own glyphs
+  // (the sprites plugin's first-frame gate) and a later frame's batch is
+  // asked for one frame sooner. Asking only records the want and schedules
+  // the batch — no render, no read.
+  useLayoutEffect(() => {
     if (wanted === "") return;
-    for (const w of resolveIconDrawing(icon, style, active, runtime).wants)
-      askFor(w, runtime);
+    for (const w of resolveIconDrawing(icon, style, active, stores).wants)
+      askFor(w);
     // `wanted` is the trigger; the rest is what it was computed from.
-  }, [wanted, icon, style, active, runtime]);
+  }, [wanted, icon, style, active, stores]);
   const named =
     title !== undefined ||
     rest["aria-label"] !== undefined ||

@@ -1,12 +1,6 @@
 import { useLayoutEffect, useSyncExternalStore } from "react";
 import { usePluginScopeId } from "@plugins/framework/plugins/web-sdk/core";
-import {
-  DEFAULT_ICON_STYLE,
-  DEFAULT_STYLE_KEYS,
-  styleKeyOf,
-  type IconStyle,
-  type StyleKey,
-} from "../../core";
+import { DEFAULT_ICON_STYLE, type IconStyle } from "../../core";
 
 /**
  * What each theme scope says about its icons, published by whoever resolves
@@ -39,8 +33,7 @@ type Published =
 
 const styles = new Map<string, Published>();
 const listeners = new Set<() => void>();
-// Bumped on every change; the wanted-keys snapshot is cached against it.
-// eslint-disable-next-line scoped-store/no-module-mutable-store -- page-global by design: a scope token names the same theme scope in every surface, and its icon style is the theme's, not a surface's
+// Bumped on every change; the per-scope style snapshots are cached against it.
 let version = 0;
 
 function emit(): void {
@@ -208,35 +201,4 @@ function scopeStylesSnapshot(key: string): readonly IconStyle[] {
   );
   scopeStylesCache.set(key, { version, styles });
   return styles;
-}
-
-// eslint-disable-next-line scoped-store/no-module-mutable-store -- a memo of the page-global style map above (see `version`)
-let wantedCache: { version: number; keys: readonly StyleKey[] } | undefined;
-
-function wantedStyleKeys(): readonly StyleKey[] {
-  if (wantedCache?.version === version) return wantedCache.keys;
-  const keys = new Set<StyleKey>(DEFAULT_STYLE_KEYS);
-  const add = (style: IconStyle) => {
-    keys.add(styleKeyOf(style, false));
-    keys.add(styleKeyOf(style, true));
-  };
-  // Every whole style, and every layer worn over each of them — a layer can
-  // sit in any scope (a media player's sub-theme inside any app).
-  const wholes = [DEFAULT_ICON_STYLE];
-  const layers: Partial<IconStyle>[] = [];
-  for (const entry of styles.values()) {
-    if (entry.layer) layers.push(entry.style);
-    else wholes.push(entry.style);
-  }
-  for (const whole of wholes) {
-    add(whole);
-    for (const layer of layers) add({ ...whole, ...layer });
-  }
-  wantedCache = { version, keys: [...keys].sort() };
-  return wantedCache.keys;
-}
-
-/** Every sprite some scope can draw from right now (always including the default style's). */
-export function useWantedStyleKeys(): readonly StyleKey[] {
-  return useSyncExternalStore(subscribe, wantedStyleKeys, wantedStyleKeys);
 }

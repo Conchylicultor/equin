@@ -45,7 +45,9 @@ const tsIcon = seti("typescript");         // { kind: "seti",   name: "typescrip
   imported under their own name and only ever called
   (lint `icons/literal-icon-name`). The build scans those literals into the
   icon manifest (`codegen/core/icon-manifest-gen.ts`, a pre-barrel manifest;
-  `icons:manifest-in-sync`), and the sprites ship exactly the manifest. The manifest sits beside
+  `icons:manifest-in-sync`); the machine drawer's whole sprites and the
+  Lucide map ship exactly the manifest (Material glyphs are drawn from the
+  installed sets by name and need no manifest). The manifest sits beside
   its one reader, `plugins/sprites/machine/internal/icon-manifest.generated.ts`,
   not in `core/`: the CLI loads the core barrel (through this plugin's checks)
   in the process that regenerates the manifest, which would freeze it.
@@ -57,8 +59,9 @@ const tsIcon = seti("typescript");         // { kind: "seti",   name: "typescrip
   icons lint rules use — and fails on any name the committed manifest lacks.
   Keep the two readers separate: the cross-check is worth only what it does
   not share with the generator.
-- **A missing glyph is loud at runtime.** A held sprite without the symbol an
-  `<Icon>` asks for (`spriteHolds`) resolves to a `missing` drawing: a
+- **A missing glyph is loud at runtime.** A glyph its batch did not carry, or
+  a held whole sprite without the symbol an `<Icon>` asks for (`spriteHolds`),
+  resolves to a `missing` drawing: a
   crossed-out dashed square, reported once per (sprite, id) per page into
   `iconMissingGlyphReportSink` (`reports/icon-missing-glyph`). `useIconMarkup`
   answers the same marker. A sprite not held yet is still a loading state.
@@ -101,17 +104,17 @@ cycle. So the pieces around it are wired in, not imported:
   applied over it — so a media player's filled icons keep the family of the
   app hosting it, as its CSS keeps that app's tokens. One publisher per scope
   — a second throws.
-- **Sprites** — the `sprites` sub-plugin fills the sprite store
-  (`provideSprite`) and mounts `IconSpriteSheet`, an inline container of
-  one `<svg>` per sprite (its symbols under `display: none`, so no style
+- **Glyphs and sprites** — the `sprites` sub-plugin fills the glyph stores
+  and the sprite store (`provideSprite`) and mounts `IconSpriteSheet`, an
+  inline container of one `<svg>` per chunk and sprite (its symbols under `display: none`, so no style
   recalc visits their thousands of elements; the masks they reference lifted
   into a zero-size rendered subtree, only while an `<Icon>` draws their symbol —
   `web/internal/symbol-sheet.tsx`, `sheet-resources.ts`), so `<use href="#id">` resolves in-document (portals
   and Fullscreen subtrees included).
 
-Until the wanted style's sprite has loaded, `<Icon>` draws the **default
-style's** symbol: the same glyph in the global style, in the same box — the
-default sprites are resident from first paint.
+Until the wanted style's glyph has loaded, `<Icon>` draws the **default
+style's** glyph when the page holds it: the same glyph in the global style, in
+the same box (see "Glyphs and sprites").
 
 ## Navigation icons (`navIcons`)
 
@@ -157,31 +160,50 @@ stateIcons.working }`); its colour stays its own.
   ordinary controls and banners (a confirm check, an error banner, a clear
   button), so they stay spellable.
 
-## Sprites (`plugins/sprites`)
+## Glyphs and sprites (`plugins/sprites`)
 
-- **Server** builds each sprite from `@iconify-json/material-symbols` (400) or
-  `@iconify-json/material-symbols-light` (300) — all 12 sprites in one pass
-  over both sets (a fallback may cross weights), memoized; the sets are parsed
-  once per process and dropped — plus a `brands` sprite from `@iconify-json/simple-icons`.
-- **Resident**: the default style's two sprites and the brands
-  (`RESIDENT_SPRITE_KEYS`) are on screen at the first paint without riding the
-  boot snapshot: the shell's head fetches each as a content-addressed asset
-  (immutable, cached by the browser) at t0 and the sprites plugin's boot task
-  provides them before the first render (`plugins/sprites/CLAUDE.md`). A key
-  the head did not provide is read on demand, like any other.
-- **On demand**: a style some scope wants that is not resident is read as the
-  `icons.sprite` live value (`iconSprite`, params `{ hash, key }` — `hash` the
-  host's `icons.sprite-hash` — `load: "on-demand"`, external `immutable`:
-  content-addressed by the manifest). An unknown key is refused
-  (`unknown-key`), and so is a hash that is not the serving process's
-  (`stale-manifest`: the tab predates a restart that changed the manifest).
-  A contract refusal (`unknown-key`) is thrown into the host's error boundary.
-  A hash-behind refusal (`stale-manifest`, `stale-symbols`) is NOT: the value
-  the hash comes from is pushed again with the new one and the reads re-key
-  off it, the sheet keeping what it holds (`sprites/web/internal/refusals.ts`)
-  — thrown, it unmounted the whole sheet, blanking every icon on each deploy
-  that changed the manifest. A transient failure is reported and leaves that
-  key's icons on their fallback.
+**A page downloads the glyphs it draws, never a set.** Every Material symbol
+(code `symbol("…")` and saved icons alike, in any style) and every Lucide
+glyph is a **glyph** — a `(GlyphKey, name)` pair (`GlyphKey`: a style key,
+`lucide` or `lucide-active`; `glyphId(key, name)` its `<symbol id>`:
+`msr-<styleKey>-<name>`, `lucide-<name>`, `lucide-active-<name>`).
+Design and measurements: `research/2026-11-14-ui-per-glyph-icon-loading.md`.
+
+- **Held in a glyph store** (`web/internal/runtime-symbol-store.ts`,
+  `RuntimeSymbolStore`): chunks of `<symbol>`s with the glyphs each was asked
+  for. `<Icon>` asks its store for each glyph it draws; a glyph no chunk holds
+  is a WANT, batched by the sprites plugin's loader (one content-addressed
+  `icons.runtime-symbols` tuple `{ hash, key, names }` per key per commit).
+  A glyph a batch was asked for and does not carry is **missing** (the
+  marker, reported).
+- **Which store**: code Material symbols always draw from the PAGE's store
+  (`pageRuntimeSymbols`) — the same drawing whichever server draws it, and a
+  plugin scope's server (a browser host) would load its whole bundled set for
+  a name it has not cached. Saved icons draw from their scope's store
+  (`useRuntimeSymbolStore`), sprite-family glyphs from the scope's own store
+  when it mounted one, else the page's (`useFamilyGlyphStore`).
+- **Asked in a layout effect**, so every want of a commit is recorded before
+  it paints: the sprites plugin holds the page's FIRST paint until the first
+  frame's glyphs are in (`plugins/sprites/web/internal/first-frame.ts`) — no
+  icon pops in after it. A warm load wants nothing: the shell's head fetched
+  the batches the page's last first frame drew (remembered in localStorage)
+  from the browser's cache.
+- **Fallback**: while a scope's Material style loads, `<Icon>` draws the
+  default style's glyph when held; a sprite family that maps the name draws
+  nothing until its glyph lands (never the Material drawing swapped out a
+  moment later).
+- **Hashes per key**: a Material glyph is addressed by `icons.symbols-hash`
+  (the drawer's sets, the drawable-name list, the build version — never the
+  code's manifest, so a new icon in the code re-addresses no Material glyph);
+  a Lucide glyph by `icons.sprite-hash` (its drawing is built from the
+  manifest's Lucide map). A hash the server moved past is refused
+  `stale-symbols`, which re-keys off the new hash instead of throwing
+  (`sprites/web/internal/refusals.ts`).
+- **Whole sprites** remain for two keys only: `brands` (six marks, resident:
+  fetched by the shell's head at t0) and `seti` (the file-type set, fetched the
+  first time a Seti icon mounts — `wantSprite`), read as `icons.sprite`
+  `{ hash, key }`. `icons.sprite` still answers every key its drawer draws;
+  no page reads a Material or Lucide one.
 
 ## Icon families
 
@@ -321,8 +343,8 @@ list) has no active form and draws the same; so does a `paint: "fill"` glyph.
   body wins — write one only where the derivation misses (a shape left open).
 - **Lucide** derives it at sprite build into its own sprite, `lucide-active`
   (`LUCIDE_ACTIVE_SPRITE`, `lucide-active-<material name>`; the drawing at
-  rest where nothing fills), fetched the first time an active Lucide icon
-  mounts — the rest drawing stands in until then.
+  rest where nothing fills), wanted per glyph the first time an active Lucide
+  icon mounts — the rest drawing stands in until then when held.
 - `ACTIVE_FORM_VERSION` is folded into the sprite hash: bump it with any
   change to the derivation's output.
 - A scope whose `iconActiveFill` is `outline` draws every family's active
@@ -342,21 +364,21 @@ the path bar, a search field) follows the scope it is drawn in.
   `MATERIAL_ONLY`. `icons:lucide-coverage` FAILS while any `symbol("…")` in the
   repo has no entry, so adding a symbol means deciding what it is in Lucide.
   `lucideNameOf(name)` is the one reader.
-- **The sprite** — one sprite key, `lucide` (`LUCIDE_SPRITE`; Lucide has no
-  shape, fill or weight; its active drawings are the `lucide-active` sprite,
-  see "Active forms"), holding
-  `<symbol id="lucide-<material name>">` for every mapped manifest symbol.
+- **The glyphs** — one glyph key, `lucide` (`LUCIDE_SPRITE`; Lucide has no
+  shape, fill or weight; its active drawings are the `lucide-active` key,
+  see "Active forms"): `<symbol id="lucide-<material name>">`, picked one by
+  one from the drawer's sprite of every mapped manifest symbol.
   Built from `@iconify-json/lucide` (embedded like the Material sets) and
   **tuned at build** (`plugins/sprites/server/internal/lucide.ts`): the glyph is
   scaled to 7/8 of its box about the centre
   (`translate(1.5 1.5) scale(0.875)` in the 24-unit box) and every stroke is
   `stroke-width="1.2"` with `vector-effect="non-scaling-stroke"` — a ~1.2px
   line at any icon size. `LUCIDE_TUNING_VERSION` and the map are folded into
-  the sprite hash. Never resident: the first icon in a Lucide scope with a
-  mapped name calls `wantSprite("lucide")`.
-- **Fallbacks** — while the sprite loads, and always for a `MATERIAL_ONLY`
-  (or not-yet-mapped) symbol, `<Icon>` draws the Material symbol in the
-  scope's Material style (`styleKeyOf` still names one: the Material axes keep
+  the sprite hash. Loaded per glyph: an icon in a Lucide scope with a mapped
+  name wants `("lucide", name)` and draws nothing until it lands (a first
+  frame waits for it).
+- **Fallbacks** — for a `MATERIAL_ONLY` (or not-yet-mapped) symbol, `<Icon>`
+  draws the Material symbol in the scope's Material style (`styleKeyOf` still names one: the Material axes keep
   applying in a Lucide scope). Saved (runtime) symbols are user-picked
   Material names and stay Material in every family.
 
@@ -399,8 +421,8 @@ An icon a USER picked and something stored (an agent avatar, a callout
 icon, a configured category avatar) is a Material Symbols name and nothing else —
 `SavedSymbolName`, minted only by `SavedSymbolNameSchema` (`plugins/saved-names`,
 a membership parse against the installed sets, used by every store: request
-bodies, DB columns, config, block data). Its name is not in the build's
-manifest, so the sprites do not carry it:
+bodies, DB columns, config, block data). It is a glyph like any code symbol
+(see "Glyphs and sprites"), drawn from its scope's store:
 
 ```ts
 import { runtimeSymbol } from "@plugins/ui/plugins/icons/core";
@@ -409,43 +431,26 @@ import { runtimeSymbol } from "@plugins/ui/plugins/icons/core";
 
 - `runtimeSymbol` is its own constructor (not `symbol`), outside
   `icons/literal-icon-name` by construction.
-- `<Icon>` asks its **runtime symbol store** (`web/internal/runtime-symbol-store.ts`,
-  `useRuntimeSymbolStore`) for (style key, name). Chunks of
-  `<symbol id="msr-<styleKey>-<name>">` are appended to the sheet (their own
-  id prefix, so a name also in the manifest never yields two elements with
-  one id).
+- `<Icon>` asks its **glyph store** (`useRuntimeSymbolStore`) for (style
+  key, name), under `msr-<styleKey>-<name>` — the same ids code Material
+  symbols draw under.
 - **One store per server, never shared across a scope.** Outside every
   `PluginScope` the store is the page's (`pageRuntimeSymbols`, filled from the
   page's server). Inside one it is the store mounted IN that scope
   (`RuntimeSymbolScope`, by the sprites plugin's `ScopeIconSymbols`, which
   `DemoScope` mounts), filled from the scope's own server; its ids carry a
-  per-store prefix (`rs<n>-msr-…`) and it has its own sheet. A saved icon in
-  a scope that mounted no store throws, naming the scope — it never falls
-  through to the page's store, whose loader reads the page's server.
-- **Every host serves them:** the saved-icon values are portable, drawn through
+  per-store prefix (`rs<n>-…`, every id and in-chunk reference of a chunk
+  rewritten) and it has its own sheet. A saved icon in a scope that mounted
+  no store throws, naming the scope — it never falls through to the page's
+  store, whose loader reads the page's server.
+- **Every host serves them:** the glyph values are portable, drawn through
   the host's `RuntimeSymbolDrawer` (the computer's installed sets; a browser
   host's bundled set — see `plugins/sprites`).
-- **Drawable at the first paint:** the default style's drawing of every name
-  a saved-icon source reports is fetched by the shell's head at t0 (the
-  sprites plugin's saved-sprite asset, revalidated by an ETag over the names)
-  and provided to the page's store by its boot task — never in the boot
-  snapshot. A source is `defineSavedIconSource({ id, tables, names, watch? })`
-  (`plugins/saved-sources` server barrel — portable, so a browser-hosted server
-  half can register one; the sprites plugin knows no source): agents, callout
-  blocks, preprompt launch snapshots, every tag tree's tags (`serveTagTree`
-  registers one per tree) and Places' places; config ones pass `tables: []`
-  and `watch` (conversation-category, preprompts).
-- **On demand:** a name/style no chunk holds is a want; the sprites plugin's
-  loader batches every want of a frame into one `icons.runtime-symbols` live
-  value tuple `{ hash, key, names }` per style (`names` sorted, at most 200, so
-  content-addressed and `immutable`; refused `unknown-key`, `stale-symbols`,
-  `invalid-names`, `unknown-name`), read with `useLive` until it lands; a
-  contract-refused batch throws into its error boundary (`stale-symbols` waits
-  for the new hash instead).
-- **Fallback:** while the wanted style's symbol loads `<Icon>` draws the default
-  style's symbol for the same name, like a code icon — so a theme switch never
-  blanks a saved icon. Only a name with no drawing in any style yet renders an
-  empty box at its final size (a loading state).
+- **Drawable at the first paint** like every glyph: the first frame waits for
+  them, and a warm load's head fetched them. Saved-icon sources
+  (`defineSavedIconSource`, `plugins/saved-sources`) are no longer read by the
+  page — only by a browser host's drawer to warm its stored drawings
+  (`plugins/sprites/plugins/bundled-symbols`).
 - **Theme changes are live:** only the name is stored and the style key is
   resolved from the scope at render, so saved icons restyle with their scope.
 
@@ -498,6 +503,7 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
     - `Icons.Root` → `IconFamilyHost`
     - `Icons.Family` "Lucide"
   - Exports (types):
+    - `GlyphEntry`
     - `IconFamilyContribution`
     - `IconFamilyGap`
     - `IconMarkup`
@@ -505,7 +511,6 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
     - `IconMissingGlyph`
     - `IconProps`
     - `IconSource`
-    - `RuntimeSymbolEntry`
     - `RuntimeSymbolStore`
   - Exports (values):
     - `createScopedRuntimeSymbols`
@@ -530,7 +535,6 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
     - `useScopeIconStyles`
     - `useWantedScopeSprites`
     - `useWantedSprites`
-    - `useWantedStyleKeys`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shadow --shadow`
   - Imported by: 593 plugins — full list in [REFERENCE.md](./REFERENCE.md)
@@ -587,6 +591,7 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
     - `BrandName`
     - `BrandRef`
     - `CustomRef`
+    - `GlyphKey`
     - `IconBody`
     - `IconFamily`
     - `IconFamilyCoverage`
@@ -630,11 +635,13 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
     - `familyGlyphId`
     - `familyGlyphMarkup`
     - `familyGlyphOf`
+    - `glyphId`
     - `ICON_FILLS`
     - `ICON_MOTIONS`
     - `ICON_SHAPES`
     - `ICON_WEIGHTS`
     - `iconifyName`
+    - `isGlyphKey`
     - `isIconFamilyId`
     - `isIconMotion`
     - `isSpriteKey`
@@ -683,6 +690,6 @@ A page icon is NOT a saved symbol: it is an emoji (`plugins/emoji`,
   - **`icon-uses`** — Where a module uses the icon constructors: iconUsesIn (each symbol / brand / seti import followed through ESLint's scope analysis) and isIconRefModule (does an import specifier name the module…
   - **`saved-names`** — The membership-checked SavedSymbolName: a user-picked Material Symbols name, parsed against the installed sets before anything stores it.
   - **`saved-sources`** — The saved-icon source registry: defineSavedIconSource registers a place that stores user-picked icons (its tables, its names, a watch for a non-DB store), and savedIconSources lists them for the…
-  - **`sprites`** — Mounts the page's icon sprites inline. The resident default-style sprites and the saved-icon symbols the first paint needs are fetched by the SPA shell's head at t0 (content-addressed assets the…
+  - **`sprites`** — Mounts the page's icons inline, loaded glyph by glyph: every Material and Lucide glyph an <Icon> wants is batched per commit and read live (icons.runtime-symbols), and the page's first paint waits…
 
 <!-- AUTOGENERATED:END -->

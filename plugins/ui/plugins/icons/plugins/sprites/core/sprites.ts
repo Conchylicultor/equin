@@ -1,13 +1,10 @@
 import { z } from "zod";
 import { liveValue } from "@plugins/network/plugins/live/core";
-import {
-  wholeList,
-  wholeRecord,
-} from "@plugins/packages/plugins/list-bound/core";
+import { wholeList } from "@plugins/packages/plugins/list-bound/core";
 import { blob, defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 import {
   BRANDS_SPRITE,
-  DEFAULT_STYLE_KEYS,
+  type GlyphKey,
   type SpriteKey,
 } from "@plugins/ui/plugins/icons/core";
 
@@ -19,25 +16,21 @@ import {
 const SPRITES = { feature: "Icon sprites" } as const;
 
 /**
- * The sprites the page holds from its first paint: the default style's two
- * (at rest and active) plus the brands. Their markup is never in the boot
- * snapshot (it was most of it, re-sent on every load): the shell's head
- * fetches each as a content-addressed asset ({@link getSpriteAsset}, which the
- * browser caches `immutable`) and the sprites plugin's boot task provides them
- * before the first render. A key the head did not provide (no head, or one
- * written for another hash) is read as {@link iconSprite} like any other.
+ * The whole sprites the page holds from its first paint: the brands (six
+ * marks). Never in the boot snapshot: the shell's head fetches it as a
+ * content-addressed asset ({@link getSpriteAsset}, cached `immutable`) and the
+ * sprites plugin's boot task provides it before the first render. Every
+ * Material and Lucide glyph is loaded glyph by glyph instead
+ * ({@link runtimeSymbolsValue}) — a page holds what it draws, never a set.
  */
-export const RESIDENT_SPRITE_KEYS: readonly SpriteKey[] = [
-  ...DEFAULT_STYLE_KEYS,
-  BRANDS_SPRITE,
-];
+export const RESIDENT_SPRITE_KEYS: readonly SpriteKey[] = [BRANDS_SPRITE];
 
 /**
- * One sprite, by key: a whole `<svg>…</svg>` of `<symbol>`s. `key` is a style
- * key, `brands`, `seti` or `lucide` — read on demand for a style no resident
- * sprite covers (a scope themed to rounded, say) and for a sprite that is never
- * resident (the Seti file-type glyphs, the Lucide glyphs: wanted the first
- * time one mounts). Content-addressed by `hash`, the serving host's
+ * One whole sprite, by key: a whole `<svg>…</svg>` of `<symbol>`s. The page
+ * reads `brands` (when the head did not provide it) and `seti` (the file-type
+ * glyphs, wanted the first time one mounts); every other key is loaded glyph
+ * by glyph ({@link runtimeSymbolsValue}), and the whole Material and Lucide
+ * sprites are kept for inspection and the desktop's own tools. Content-addressed by `hash`, the serving host's
  * {@link spriteHash}, so a tuple's answer never changes:
  * `immutable`. Read over HTTP (on demand), as the endpoint it replaces was: a
  * sprite is a whole style's symbols, asked for once per page, so it never
@@ -63,46 +56,31 @@ export const iconSprite = liveValue("icons.sprite", {
 });
 
 /**
- * The hash every {@link iconSprite} tuple read from this host carries: what
- * its drawer's sprites are a function of. Fixed for the host's life. A scope
- * reads it from its own server before asking for a sprite; so does the page.
+ * The hash every {@link iconSprite} tuple read from this host carries — and
+ * every {@link runtimeSymbolsValue} tuple of a Lucide key: what its drawer's
+ * sprites are a function of (the manifest, the sets, the Lucide map and
+ * tuning). Fixed for the host's life. A scope reads it from its own server
+ * before asking for a sprite; so does the page.
  */
 export const spriteHash = liveValue("icons.sprite-hash", {
   schema: z.string(),
-  // The page's resident sprites are addressed by it: known at the first
-  // render, so a resident key the head did not provide is asked for at once.
+  // The page's first-frame glyphs are addressed by it: known at the first
+  // render, so the first frame's batch is asked for at once.
   preload: "boot-and-keep",
 });
 
 /**
- * What a runtime symbol's drawing is a function of — the serving host's
- * drawer (the Material Symbols set it draws from), the savable-name list and
- * the symbol build's version. Every {@link runtimeSymbolsValue} tuple and every
- * {@link getSavedSpriteAsset} path carries it. Fixed for the host's life;
- * preloaded, so the page's runtime-symbol loader can ask at once.
+ * What a Material glyph's drawing is a function of — the serving host's
+ * drawer (the Material Symbols set it draws from), the drawable-name list and
+ * the symbol build's version; never the code's icon manifest. Every
+ * {@link runtimeSymbolsValue} / {@link getGlyphAsset} address of a Material
+ * style carries it. Fixed for the host's life; preloaded, so the page's glyph
+ * loader can ask at once.
  */
 export const savedSymbolsHash = liveValue("icons.symbols-hash", {
   schema: z.string(),
   preload: "boot-and-keep",
 });
-
-/**
- * The saved-icon sprites, as {@link getSavedSpriteAsset} answers them: every
- * name a saved-icon source (`defineSavedIconSource`, saved-sources/server)
- * reports — agents' avatars, configured category and preprompt avatars, tags'
- * icons — and, per default style key, one `<svg>` of their
- * `<symbol id="msr-<key>-<name>">`s.
- */
-export const SavedSpriteAssetSchema = z.object({
-  names: wholeList(z.string(), {
-    reason:
-      "every saved icon name — each picked by hand, and every one must be drawable at first paint",
-  }),
-  sprites: wholeRecord(z.string(), {
-    reason: "one sprite per default style key — a handful",
-  }),
-});
-export type SavedSpriteAsset = z.infer<typeof SavedSpriteAssetSchema>;
 
 /**
  * `GET /api/icons/sprite-assets/:hash/:key` — one sprite (`image/svg+xml`),
@@ -120,16 +98,18 @@ export const getSpriteAsset = defineEndpoint({
 });
 
 /**
- * `GET /api/icons/saved-sprite-assets/:hash` — the saved-icon sprites of the
- * default style keys ({@link SavedSpriteAsset}, JSON) under the host's
- * {@link savedSymbolsHash}. Its names move whenever a user picks an icon, so
- * it is served `no-cache` with an ETag over them: a warm page load
- * revalidates (a 304, no body) instead of downloading it again. A hash that is
- * not the host's is a 409. Requested by the shell's head script only.
+ * `GET /api/icons/glyph-assets/:hash/:key/:names` — one batch of glyphs
+ * (`image/svg+xml`): exactly what {@link runtimeSymbolsValue} answers for the
+ * same tuple, served `public, max-age=31536000, immutable` — the path is the
+ * content's address (`hash` the key's own hash, `names` sorted and
+ * duplicate-free). The shell's head fetches the batches the page's last first
+ * frame drew at t0 (a warm load reads them from the browser's cache); a hash
+ * that is not the host's is a 409. Requested by the head script only — page
+ * code reads a batch as {@link runtimeSymbolsValue}.
  */
-export const getSavedSpriteAsset = defineEndpoint({
-  route: "GET /api/icons/saved-sprite-assets/:hash",
-  response: blob("application/json"),
+export const getGlyphAsset = defineEndpoint({
+  route: "GET /api/icons/glyph-assets/:hash/:key/:names",
+  response: blob("image/svg+xml"),
 });
 
 /**
@@ -140,26 +120,33 @@ export const getSavedSpriteAsset = defineEndpoint({
 export const MAX_RUNTIME_SYMBOLS_PER_READ = 200;
 
 /**
- * Runtime (saved) symbols in one style: a whole `<svg>` of
- * `<symbol id="msr-<key>-<name>">`s. `names` is a comma-separated, sorted,
- * duplicate-free list of at most {@link MAX_RUNTIME_SYMBOLS_PER_READ} saved
- * symbol names — one spelling per set, so the tuple is content-addressed with
- * `hash` ({@link savedSymbolsHash}) and its answer never
- * changes: `immutable`. `key` is a style key. Read on demand (over HTTP), one
- * tuple per style per frame of wants (the sprites plugin's runtime-symbol
- * loader batches `<Icon>`'s wants).
+ * Glyphs, by name, in one {@link GlyphKey}: a whole `<svg>` of `<symbol>`s,
+ * ids as `glyphId` spells them (`msr-<styleKey>-<name>` for a Material style —
+ * code `symbol("…")`s and saved icons alike —, the Lucide sprite's own ids for
+ * `lucide` / `lucide-active`). `names` is a comma-separated, sorted,
+ * duplicate-free list of at most {@link MAX_RUNTIME_SYMBOLS_PER_READ} Material
+ * names — one spelling per set, so the tuple is content-addressed with
+ * `hash` and its answer never changes: `immutable`. `hash` is the KEY's own
+ * hash — {@link savedSymbolsHash} for a Material style (no manifest: a new
+ * icon in the code moves none of them), {@link spriteHash} for a Lucide key —
+ * so a change re-addresses only the glyphs it can change. A name the host
+ * draws no glyph for is answered without its symbol (the page draws the
+ * missing-glyph marker and reports it). Read on demand (over HTTP), one
+ * tuple per key per frame of wants (the sprites plugin's glyph loader
+ * batches `<Icon>`'s wants); a page's first frame reads them before it
+ * paints.
  *
- * Refused `unknown-key` (no such style key), `stale-symbols` (`hash` is not
- * the serving process's: the tab predates a restart that changed the sets or
- * the symbol build, or the saved-name list moved — the page reads the
- * new hash from {@link savedSymbolsHash} and the read re-keys off it), `invalid-names` (empty, unsorted, duplicated or
- * over the cap) and `unknown-name` (a name that is not a saved symbol name).
+ * Refused `unknown-key` (no glyph key), `stale-symbols` (`hash` is not the
+ * serving process's: the tab predates a restart that changed the sets, the
+ * build or — for Lucide — the manifest; the page reads the new hash and the
+ * read re-keys off it) and `invalid-names` (empty, unsorted, duplicated or over
+ * the cap).
  */
 export const runtimeSymbolsValue = liveValue("icons.runtime-symbols", {
   schema: z.string(),
   params: ["hash", "key", "names"],
   load: "on-demand",
-  refusals: ["unknown-key", "stale-symbols", "invalid-names", "unknown-name"],
+  refusals: ["unknown-key", "stale-symbols", "invalid-names"],
 });
 
 const IconManifestSchema = z.object({

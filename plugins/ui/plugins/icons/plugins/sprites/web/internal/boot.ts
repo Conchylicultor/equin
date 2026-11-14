@@ -1,17 +1,17 @@
 import { Core } from "@plugins/framework/plugins/web-sdk/core";
 import { recordBootSpan } from "@plugins/primitives/plugins/perfs/plugins/boot-trace/web";
 import {
+  isGlyphKey,
   isSpriteKey,
-  isStyleKey,
   type SpriteKey,
 } from "@plugins/ui/plugins/icons/core";
 import {
   pageRuntimeSymbols,
   provideSprite,
 } from "@plugins/ui/plugins/icons/web";
-import { SavedSpriteAssetSchema } from "../../core";
 import {
   HEAD_REQUEST_GLOBAL,
+  type GlyphBatchAddress,
   type HeadSpriteRequests,
 } from "../../shared/head-request";
 
@@ -34,6 +34,24 @@ export function headProvidedResident(): {
 }
 
 /**
+ * The remembered first-frame glyph batches the head provided (its 409s — a
+ * hash the server moved past — left out): the sprite host keeps them in the
+ * page's memory beside the batches its first frame had to ask for.
+ */
+let providedGlyphs: readonly GlyphBatchAddress[] = [];
+
+export function headProvidedGlyphs(): readonly GlyphBatchAddress[] {
+  return providedGlyphs;
+}
+
+/** The page whose first-frame memory the head read — `null` with no head (nothing to remember for). */
+let headPage: string | null = null;
+
+export function headFirstFramePage(): string | null {
+  return headPage;
+}
+
+/**
  * The head's requests (`server/internal/head.ts`), taken once. `absent` when
  * the shell was served without the head fragment (a backend that never
  * published its document head, a page that is not the gateway's shell, or a
@@ -53,8 +71,11 @@ function takeHeadRequests():
     !("resident" in value) ||
     typeof value.resident !== "object" ||
     value.resident === null ||
-    !("saved" in value) ||
-    !(value.saved instanceof Promise)
+    !("page" in value) ||
+    typeof value.page !== "string" ||
+    !("glyphs" in value) ||
+    !Array.isArray(value.glyphs) ||
+    !("memoryError" in value)
   ) {
     throw new Error(
       `icon sprites: globalThis.${HEAD_REQUEST_GLOBAL} is not the head script's requests`,
@@ -71,9 +92,10 @@ function takeHeadRequests():
 async function readHead(
   what: string,
   response: Promise<Response>,
+  staleStatuses: readonly number[] = [409],
 ): Promise<{ kind: "stale" } | { kind: "ok"; body: string }> {
   const res = await response;
-  if (res.status === 409) {
+  if (staleStatuses.includes(res.status)) {
     await res.body?.cancel();
     return { kind: "stale" };
   }
@@ -105,37 +127,47 @@ async function provideResident(
   providedResident = { hash: requests.hash, keys };
 }
 
-async function provideSaved(response: Promise<Response>): Promise<void> {
-  const read = await readHead("the saved-icon sprites", response);
-  if (read.kind === "stale") return;
-  const asset = SavedSpriteAssetSchema.parse(JSON.parse(read.body));
-  for (const [key, markup] of Object.entries(asset.sprites)) {
-    if (!isStyleKey(key)) {
-      throw new Error(
-        `icon sprites: the saved-icon sprites hold no "${key}" style`,
+async function provideGlyphs(
+  batches: HeadSpriteRequests["glyphs"],
+): Promise<void> {
+  // By index, so the memory keeps the head's order (oldest first).
+  const provided: (GlyphBatchAddress | null)[] = batches.map(() => null);
+  await Promise.all(
+    batches.map(async ({ hash, key, names, response }, i) => {
+      // A batch another build remembered (a key or address this server does
+      // not answer: a 400) is stale like a moved hash (a 409): left to the
+      // page's live reads, and out of the next memory.
+      const read = await readHead(
+        `glyphs ${key}/${names}`,
+        response,
+        [400, 409],
       );
-    }
-    pageRuntimeSymbols.provide(
-      `saved-${key}`,
-      markup,
-      asset.names.map((name) => ({ styleKey: key, name })),
-    );
-  }
+      if (read.kind === "stale" || !isGlyphKey(key)) return;
+      pageRuntimeSymbols.provide(
+        `head-${i}`,
+        read.body,
+        names.split(",").map((name) => ({ key, name })),
+      );
+      provided[i] = { hash, key, names };
+    }),
+  );
+  providedGlyphs = provided.filter((b) => b !== null);
 }
 
 /**
- * Provide the sprites the head started fetching at t0 — the resident ones and
- * the saved-icon symbols — before the first render, so no icon on the first
- * frame waits for one. Warm, both come from the browser's HTTP cache (the
- * resident ones are immutable, the saved ones a 304).
+ * Provide what the head started fetching at t0 — the resident sprites and the
+ * glyph batches the page's last first frame drew — before the first render,
+ * so a first frame that draws what it drew last time wants nothing. Warm,
+ * both come from the browser's HTTP cache (immutable addresses).
  */
 export async function runIconSpritesBoot(): Promise<void> {
   const head = takeHeadRequests();
   if (head.kind === "absent") return;
   const { requests } = head;
+  headPage = requests.page;
   await Promise.all([
     provideResident(requests.resident),
-    provideSaved(requests.saved),
+    provideGlyphs(requests.glyphs),
   ]);
   recordBootSpan({
     id: "icon-sprites",
@@ -144,6 +176,13 @@ export async function runIconSpritesBoot(): Promise<void> {
     startMs: requests.startMs,
     durationMs: performance.now() - requests.startMs,
   });
+  if (requests.memoryError !== null) {
+    // The head fetched no remembered glyph: this load's first frame asks for
+    // them live. Thrown after the providing, so the report costs nothing.
+    throw new Error(
+      `icon sprites: the head could not read the page's first-frame memory: ${requests.memoryError}`,
+    );
+  }
 }
 
 // `continue`: without them the page still paints, its icons arriving through

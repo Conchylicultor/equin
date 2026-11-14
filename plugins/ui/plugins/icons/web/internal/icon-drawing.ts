@@ -9,23 +9,27 @@ import {
   familyGlyphOf,
   setiId,
   styleKeyOf,
-  symbolId,
   type IconFamily,
   type IconFamilyId,
   type IconRef,
   type IconStyle,
+  type GlyphKey,
   type SpriteKey,
   type StyleKey,
   type SymbolName,
 } from "../../core";
 import { hasSprite, spriteHolds } from "./sprite-store";
-import type { RuntimeSymbolStore } from "./runtime-symbol-store";
+import {
+  pageRuntimeSymbols,
+  type RuntimeSymbolStore,
+} from "./runtime-symbol-store";
 import { iconFamily } from "./family-store";
 
 /** Where a drawn symbol's markup lives. */
 export type DrawingSource =
   | { kind: "sprite"; key: SpriteKey }
-  | { kind: "runtime" }
+  /** A glyph of `store` (a Material symbol in some style, a Lucide glyph). */
+  | { kind: "runtime"; store: RuntimeSymbolStore }
   /** `active`: the glyph's active form is drawn (it has one, and the icon is active). */
   | { kind: "family"; family: string; glyph: string; active: boolean }
   /** A strict family's gap glyph, standing in for `name` it does not map. */
@@ -34,14 +38,29 @@ export type DrawingSource =
    * Sprite `sprite` is held but has no `<symbol id="<id>">`: the build's icon
    * manifest is out of step with the code naming the icon. Drawn as the
    * missing-glyph marker and reported (`iconMissingGlyphReportSink`) — never a
-   * `<use>` of nothing, which draws an empty box and tells no one.
+   * `<use>` of nothing, which draws an empty box and tells no one. A glyph
+   * its server answered without a drawing is missing the same way.
    */
   | { kind: "missing"; sprite: SpriteKey; id: string };
 
 /** Something a drawing is still waiting for, to ask its loader for. */
 export type DrawingWant =
-  | { kind: "sprite"; key: SpriteKey }
-  | { kind: "runtime"; styleKey: StyleKey; name: string };
+  | { kind: "sprite"; key: SpriteKey; store: RuntimeSymbolStore }
+  | { kind: "glyph"; key: GlyphKey; name: string; store: RuntimeSymbolStore };
+
+/**
+ * The stores an icon's glyphs come from. `saved` — the store a saved icon of
+ * this part of the page draws from (a plugin scope's own, or one that refuses
+ * when the scope mounted none). `family` — where a sprite family's glyphs
+ * (Lucide) come from: the scope's own store when it mounted one, else the
+ * page's. Code Material symbols always come from the PAGE's store: the same
+ * drawing whichever server draws it, and a scope's server (a browser host)
+ * would load its whole bundled set for a name it has not cached.
+ */
+export interface IconStores {
+  readonly saved: RuntimeSymbolStore;
+  readonly family: RuntimeSymbolStore;
+}
 
 /**
  * Which symbol draws `icon` in `style` right now — the ONE answer `<Icon>` and
@@ -68,6 +87,31 @@ function fromSprite(key: SpriteKey, id: string): Drawing {
 }
 
 /**
+ * Glyph `name` of `key` from `store`: drawn once held, the missing-glyph marker
+ * when its server answered without it, `null` while it loads.
+ */
+function fromGlyph(
+  store: RuntimeSymbolStore,
+  key: GlyphKey,
+  name: string,
+): Drawing | null {
+  if (store.hasSymbol(key, name)) {
+    return {
+      id: store.symbolId(key, name),
+      source: { kind: "runtime", store },
+    };
+  }
+  if (store.isMissing(key, name)) {
+    const id = store.symbolId(key, name);
+    return {
+      id: MISSING_GLYPH_ID,
+      source: { kind: "missing", sprite: key, id },
+    };
+  }
+  return null;
+}
+
+/**
  * The families a scope of family `id` draws a symbol from, in order: the
  * family, its fallback, and so on. Material ends every chain and is not in it;
  * a family not (yet) contributed ends it early. A fallback cycle throws.
@@ -87,10 +131,9 @@ function familyChain(id: string): readonly IconFamily[] {
 }
 
 /**
- * The first family of the chain that draws `name` and holds its drawing, plus
- * the sprites wanted on the way (a sprite family that maps the name but has
- * not loaded yet: the next family draws until it lands). `strictEnd` is the
- * chain's last family when it is strict: past it, nothing else may draw.
+ * The first family of the chain that maps `name`, and its drawing — `null`,
+ * with the glyph wanted, while a sprite family's glyph loads. `strictEnd` is
+ * the chain's last family when it is strict: past it, nothing else may draw.
  *
  * `active` (the icon is active AND its scope fills active icons) draws the
  * family's active form: an inline glyph's own, a sprite family's from its
@@ -100,6 +143,7 @@ function familyDrawing(
   familyId: string,
   name: SymbolName,
   active: boolean,
+  store: RuntimeSymbolStore,
 ): {
   drawing: Drawing | null;
   wants: DrawingWant[];
@@ -117,25 +161,29 @@ function familyDrawing(
         strictEnd: undefined,
       };
     }
+    // A sprite family that maps the name draws it — or nothing yet while its
+    // glyph loads (the first frame waits for it): never another family's
+    // drawing to be swapped out a moment later, and no fallback glyph fetched
+    // for nothing.
     if (active && f.activeSprite !== undefined) {
-      const activeId = f.idOf(name, true);
-      if (activeId !== undefined && hasSprite(f.activeSprite)) {
+      const drawn = fromGlyph(store, f.activeSprite, name);
+      if (drawn !== null)
+        return { drawing: drawn, wants, strictEnd: undefined };
+      wants.push({ kind: "glyph", key: f.activeSprite, name, store });
+      // The drawing at rest stands in while the active form loads, if held.
+      if (store.hasSymbol(f.sprite, name)) {
         return {
-          drawing: fromSprite(f.activeSprite, activeId),
+          drawing: fromGlyph(store, f.sprite, name),
           wants,
           strictEnd: undefined,
         };
       }
-      wants.push({ kind: "sprite", key: f.activeSprite });
+      return { drawing: null, wants, strictEnd: undefined };
     }
-    if (hasSprite(f.sprite)) {
-      return {
-        drawing: fromSprite(f.sprite, id),
-        wants,
-        strictEnd: undefined,
-      };
-    }
-    wants.push({ kind: "sprite", key: f.sprite });
+    const drawn = fromGlyph(store, f.sprite, name);
+    if (drawn === null)
+      wants.push({ kind: "glyph", key: f.sprite, name, store });
+    return { drawing: drawn, wants, strictEnd: undefined };
   }
   const last = chain.at(-1);
   return {
@@ -201,7 +249,7 @@ export function resolveIconDrawing(
   icon: IconRef,
   style: IconStyle,
   active: boolean,
-  runtime: RuntimeSymbolStore,
+  stores: IconStores,
 ): {
   drawing: Drawing | null;
   wants: readonly DrawingWant[];
@@ -226,28 +274,10 @@ export function resolveIconDrawing(
           : null,
         wants: hasSprite(SETI_SPRITE)
           ? []
-          : [{ kind: "sprite", key: SETI_SPRITE }],
+          : [{ kind: "sprite", key: SETI_SPRITE, store: stores.saved }],
       };
-    case "runtime-symbol": {
-      const wants: DrawingWant[] = runtime.hasSymbol(key, icon.name)
-        ? []
-        : [{ kind: "runtime", styleKey: key, name: icon.name }];
-      const drawn = runtime.hasSymbol(key, icon.name)
-        ? key
-        : runtime.hasSymbol(defaultKey, icon.name)
-          ? defaultKey
-          : null;
-      return {
-        drawing:
-          drawn === null
-            ? null
-            : {
-                id: runtime.symbolId(drawn, icon.name),
-                source: { kind: "runtime" },
-              },
-        wants,
-      };
-    }
+    case "runtime-symbol":
+      return materialDrawing(stores.saved, key, defaultKey, icon.name);
     case "custom": {
       const f = iconFamily(icon.family);
       if (f === undefined) return { drawing: null, wants: [] };
@@ -270,32 +300,46 @@ export function resolveIconDrawing(
         style.family,
         icon.name,
         active && style.activeFill === "filled",
+        stores.family,
       );
-      if (family.drawing !== null) return family;
+      if (family.drawing !== null || family.wants.length > 0) {
+        return { drawing: family.drawing, wants: family.wants };
+      }
       if (family.strictEnd !== undefined) {
         // A strict family's scope never borrows another family's drawing: an
         // unmapped name is its gap glyph — or, while a sprite family earlier in
         // the chain that maps it is loading, nothing yet.
         return {
-          drawing:
-            family.wants.length > 0
-              ? null
-              : {
-                  id: familyGapId(family.strictEnd),
-                  source: {
-                    kind: "gap",
-                    family: family.strictEnd,
-                    name: icon.name,
-                  },
-                },
-          wants: family.wants,
+          drawing: {
+            id: familyGapId(family.strictEnd),
+            source: { kind: "gap", family: family.strictEnd, name: icon.name },
+          },
+          wants: [],
         };
       }
-      const drawnKey = hasSprite(key) ? key : defaultKey;
-      return {
-        drawing: fromSprite(drawnKey, symbolId(drawnKey, icon.name)),
-        wants: family.wants,
-      };
+      return materialDrawing(pageRuntimeSymbols, key, defaultKey, icon.name);
     }
   }
+}
+
+/**
+ * A Material glyph in style `key` from `store`: its own drawing once held;
+ * until then the default style's (resolved the same way) when held — so a
+ * theme switch never blanks an icon — and else nothing yet (a loading state).
+ * Wants the style's own glyph whenever it is not held.
+ */
+function materialDrawing(
+  store: RuntimeSymbolStore,
+  key: StyleKey,
+  defaultKey: StyleKey,
+  name: string,
+): { drawing: Drawing | null; wants: DrawingWant[] } {
+  const own = fromGlyph(store, key, name);
+  if (own !== null) return { drawing: own, wants: [] };
+  const wants: DrawingWant[] = [{ kind: "glyph", key, name, store }];
+  const stand = key === defaultKey ? null : fromGlyph(store, defaultKey, name);
+  return {
+    drawing: stand?.source.kind === "runtime" ? stand : null,
+    wants,
+  };
 }

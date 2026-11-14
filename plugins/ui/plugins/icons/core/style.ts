@@ -183,3 +183,30 @@ export function isSpriteKey(key: string): key is SpriteKey {
     isStyleKey(key)
   );
 }
+
+/**
+ * A key whose drawings are loaded GLYPH BY GLYPH (`icons.runtime-symbols`,
+ * `{ hash, key, names }`): every Material style — code symbols and saved
+ * icons alike — and the Lucide family's two sprites. A page downloads the
+ * glyphs it draws, never a whole set. (Brands and Seti stay whole sprites:
+ * six brand marks, resident; the Seti set, on demand in file views.)
+ */
+export type GlyphKey =
+  StyleKey | typeof LUCIDE_SPRITE | typeof LUCIDE_ACTIVE_SPRITE;
+
+export function isGlyphKey(key: string): key is GlyphKey {
+  return (
+    key === LUCIDE_SPRITE || key === LUCIDE_ACTIVE_SPRITE || isStyleKey(key)
+  );
+}
+
+/**
+ * The `<symbol id>` glyph `name` is drawn under in `key`, as the server draws
+ * it: `msr-<styleKey>-<name>` for a Material style, the Lucide sprite's own
+ * ids for the Lucide keys (keyed by the Material name).
+ */
+export function glyphId(key: GlyphKey, name: string): string {
+  if (key === LUCIDE_SPRITE) return lucideId(name);
+  if (key === LUCIDE_ACTIVE_SPRITE) return lucideActiveId(name);
+  return runtimeSymbolId(key, name);
+}

@@ -5,13 +5,12 @@ import {
 } from "../../core";
 import { spriteMarkup, useSprites } from "./sprite-store";
 import {
+  pageRuntimeSymbols,
   useRuntimeSymbolChunks,
-  useRuntimeSymbolStore,
-  type RuntimeSymbolStore,
 } from "./runtime-symbol-store";
 import { resolveIconDrawing, type DrawingSource } from "./icon-drawing";
 import { iconFamily, useIconFamilies } from "./family-store";
-import { askFor, useIconStyle } from "./icon";
+import { askFor, useIconStores, useIconStyle } from "./icon";
 import { reportIconFamilyGap } from "./family-gap";
 import { MISSING_GLYPH_BODY, reportIconMissingGlyph } from "./missing-glyph";
 import { useIconFamilyPreview } from "./icon-scope";
@@ -72,7 +71,6 @@ function markupOfFamily(family: InlineIconFamily): string {
 function symbolMarkup(
   id: string,
   source: DrawingSource,
-  runtime: RuntimeSymbolStore,
 ): IconMarkup | undefined {
   if (source.kind === "family" || source.kind === "gap") {
     const family = iconFamily(source.family);
@@ -84,7 +82,8 @@ function symbolMarkup(
     const markup = spriteMarkup(source.key);
     return markup === undefined ? undefined : indexSymbols(markup).get(id);
   }
-  for (const [, markup] of runtime.chunks()) {
+  if (source.kind !== "runtime") return undefined;
+  for (const [, markup] of source.store.chunks()) {
     const hit = indexSymbols(markup).get(id);
     if (hit !== undefined) return hit;
   }
@@ -103,14 +102,16 @@ export function useIconMarkup(): IconMarkupReader {
   const style = useIconStyle();
   // A preview shows gaps on purpose: only an app drawing one is reported.
   const previewing = useIconFamilyPreview() !== undefined;
-  const runtime = useRuntimeSymbolStore();
+  const stores = useIconStores();
   // Subscriptions only: the reader reads the stores themselves.
   useSprites();
-  useRuntimeSymbolChunks(runtime);
+  useRuntimeSymbolChunks(pageRuntimeSymbols);
+  useRuntimeSymbolChunks(stores.saved);
+  useRuntimeSymbolChunks(stores.family);
   useIconFamilies();
   return (icon, { active }) => {
-    const { drawing, wants } = resolveIconDrawing(icon, style, active, runtime);
-    for (const w of wants) queueMicrotask(() => askFor(w, runtime));
+    const { drawing, wants } = resolveIconDrawing(icon, style, active, stores);
+    for (const w of wants) queueMicrotask(() => askFor(w));
     if (drawing === null) return { kind: "pending" };
     const { source } = drawing;
     if (source.kind === "gap" && !previewing) {
@@ -124,7 +125,7 @@ export function useIconMarkup(): IconMarkupReader {
       );
       return { kind: "ready", viewBox: "0 0 24 24", body: MISSING_GLYPH_BODY };
     }
-    const markup = symbolMarkup(drawing.id, source, runtime);
+    const markup = symbolMarkup(drawing.id, source);
     if (markup === undefined) {
       // The resolver checked the held sprite has it (a missing one is the
       // `missing` source above): reaching here is a resolver bug.

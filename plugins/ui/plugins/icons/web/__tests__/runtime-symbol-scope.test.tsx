@@ -11,7 +11,7 @@ import {
   RuntimeSymbolScope,
   createScopedRuntimeSymbols,
   pageRuntimeSymbols,
-  type RuntimeSymbolEntry,
+  type GlyphEntry,
 } from "../internal/runtime-symbol-store";
 import { RuntimeSymbolSheet } from "../internal/sprite-sheet";
 
@@ -37,8 +37,8 @@ function hrefOf(container: HTMLElement): string | null {
 describe("runtime symbols in a plugin scope", () => {
   it("draws from the scope's own store, its wants going to that store's loader", () => {
     const store = createScopedRuntimeSymbols();
-    const scopeWants: RuntimeSymbolEntry[] = [];
-    const pageWants: RuntimeSymbolEntry[] = [];
+    const scopeWants: GlyphEntry[] = [];
+    const pageWants: GlyphEntry[] = [];
     const offScope = store.installLoader((e) => scopeWants.push(e));
     const offPage = pageRuntimeSymbols.installLoader((e) => pageWants.push(e));
     const { container } = render(
@@ -51,9 +51,7 @@ describe("runtime symbols in a plugin scope", () => {
         </PluginScope>,
       ),
     );
-    expect(scopeWants).toEqual([
-      { styleKey: "default-outline-400", name: "star" },
-    ]);
+    expect(scopeWants).toEqual([{ key: "default-outline-400", name: "star" }]);
     expect(pageWants).toEqual([]);
     act(() =>
       store.provide(

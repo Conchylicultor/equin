@@ -3,15 +3,17 @@ import { act, cleanup, render } from "@testing-library/react";
 import { brand, symbol } from "../../core/icon-ref";
 import { Icon } from "../internal/icon";
 import { provideSprite } from "../internal/sprite-store";
+import { pageRuntimeSymbols } from "../internal/runtime-symbol-store";
 import {
   iconMissingGlyphReportSink,
   type IconMissingGlyph,
 } from "../internal/missing-glyph";
 
 /**
- * A held sprite without the icon's symbol — the build's manifest missed a
- * name the code draws — is drawn as the missing-glyph marker and reported,
- * once per (sprite, id) per page: never a `<use>` of nothing.
+ * A glyph its batch was asked for and did not carry (the server draws no such
+ * glyph), or a held whole sprite without the icon's symbol, is drawn as the
+ * missing-glyph marker and reported, once per (key, id) per page: never a
+ * `<use>` of nothing.
  */
 
 afterEach(() => {
@@ -19,19 +21,23 @@ afterEach(() => {
   iconMissingGlyphReportSink.register(null);
 });
 
-describe("<Icon> whose sprite lacks its symbol", () => {
-  it("draws the marker and reports the missing symbol once", () => {
+describe("<Icon> whose glyph or sprite lacks its symbol", () => {
+  it("draws the marker and reports the missing glyph once", () => {
     const reported: IconMissingGlyph[] = [];
     iconMissingGlyphReportSink.register((m) => reported.push(m));
     act(() =>
-      provideSprite(
-        "default-outline-400",
-        '<svg><symbol id="ms-default-outline-400-forum" viewBox="0 0 24 24"></symbol></svg>',
+      pageRuntimeSymbols.provide(
+        "missing-test",
+        '<svg><symbol id="msr-default-outline-400-forum" viewBox="0 0 24 24"></symbol></svg>',
+        [
+          { key: "default-outline-400", name: "forum" },
+          { key: "default-outline-400", name: "progress-activity" },
+        ],
       ),
     );
     const held = render(<Icon icon={symbol("forum")} />).container;
     expect(held.querySelector("use")?.getAttribute("href")).toBe(
-      "#ms-default-outline-400-forum",
+      "#msr-default-outline-400-forum",
     );
 
     const { container } = render(
@@ -45,7 +51,7 @@ describe("<Icon> whose sprite lacks its symbol", () => {
     expect(reported).toEqual([
       {
         sprite: "default-outline-400",
-        id: "ms-default-outline-400-progress-activity",
+        id: "msr-default-outline-400-progress-activity",
       },
     ]);
   });

@@ -66,7 +66,7 @@ const hashes = new WeakMap<RuntimeSymbolDrawerImpl, string>();
 
 /**
  * What a runtime symbol's answer is a function of — this host's drawer, the
- * saved-name list (which decides the `unknown-name` refusal) and the build
+ * drawable-name list (a name outside it is answered without a glyph) and the build
  * ({@link RUNTIME_SYMBOL_BUILD_VERSION}) — so a runtime-symbols tuple
  * carrying it is `immutable`. Fixed for a drawer; computed on first use.
  */

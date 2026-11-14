@@ -173,9 +173,11 @@ describe("<Icon> in a strict scope", () => {
       ),
     );
     act(() =>
-      pageRuntimeSymbols.provide("cov-runtime", "<svg></svg>", [
-        { styleKey: "default-outline-400", name: "home" },
-      ]),
+      pageRuntimeSymbols.provide(
+        "cov-runtime",
+        '<svg><symbol id="msr-default-outline-400-home"></symbol></svg>',
+        [{ key: "default-outline-400", name: "home" }],
+      ),
     );
     expect(hrefOf(inScope("app:ex-1", "cov-strict", brand("github")))).toBe(
       "#si-github",

@@ -7,7 +7,12 @@ import {
   type ReactNode,
 } from "react";
 import { useLive } from "@plugins/network/plugins/live/web";
-import type { SpriteKey } from "@plugins/ui/plugins/icons/core";
+import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
+import {
+  isStyleKey,
+  type GlyphKey,
+  type SpriteKey,
+} from "@plugins/ui/plugins/icons/core";
 import {
   createScopedRuntimeSymbols,
   IconSpriteSheet,
@@ -17,7 +22,6 @@ import {
   RuntimeSymbolSheet,
   useWantedScopeSprites,
   useWantedSprites,
-  useWantedStyleKeys,
   type RuntimeSymbolStore,
 } from "@plugins/ui/plugins/icons/web";
 import {
@@ -28,27 +32,65 @@ import {
   spriteHash,
 } from "../../core";
 import { headProvidedResident } from "./boot";
-import { createRuntimeSymbolLoader } from "./runtime-symbol-loader";
+import {
+  createRuntimeSymbolLoader,
+  type RuntimeSymbolLoader,
+} from "./runtime-symbol-loader";
 import { throwContractRefusal } from "./refusals";
+import { useFirstFrameGate, type GlyphHashes } from "./first-frame";
+
+function hashOf(hashes: GlyphHashes, key: GlyphKey): string {
+  return isStyleKey(key) ? hashes.material : hashes.sprite;
+}
 
 /**
- * Keeps the page's sprites and renders the sheet. The resident sprites and the
- * saved-icon symbols the first paint needs were provided by the boot task, from
- * the requests the shell's head started (`boot.ts`); this reads, live, every
- * other sprite the page wants — and any resident one the head did not provide.
- * Until the sprite hash lands (it is preloaded, so never, normally) the sheet
- * draws what it holds.
+ * A loader flushing once the current commit is done: every `<Icon>` asks in a
+ * layout effect, so one commit's wants are one batch per key. Not a frame
+ * callback — a tab loaded in the background runs none, and its first frame
+ * would wait for nothing.
+ */
+function newLoader(): RuntimeSymbolLoader {
+  return createRuntimeSymbolLoader((flush) => queueMicrotask(flush));
+}
+
+/**
+ * Keeps the page's icons and renders the sheet. The brands and the glyph
+ * batches the page's last first frame drew were provided by the boot task,
+ * from the requests the shell's head started (`boot.ts`); this installs the
+ * page's glyph loader — every glyph an `<Icon>` wants that no chunk holds,
+ * read live in per-frame batches — reads the whole sprites the page wants
+ * (the brands when the head did not provide them, Seti once a file icon
+ * mounts), and holds the first paint until the first frame's glyphs are in
+ * (`first-frame.ts`). Until the hashes land (they are preloaded, so never,
+ * normally) the sheet draws what it holds.
  */
 export function IconSpriteHost() {
-  const hash = useLive(spriteHash);
-  const symbols = useLive(savedSymbolsHash);
+  const [loader] = useState(newLoader);
+  const sprite = useLive(spriteHash);
+  const material = useLive(savedSymbolsHash);
+  const hashes =
+    sprite.status === "ready" && material.status === "ready"
+      ? { material: material.data, sprite: sprite.data }
+      : null;
+  // The gate reads the hashes when the first frame settles — after this render.
+  const latest = useLatestRef(hashes);
+  // Without its hashes the page can ask for no glyph: the first frame shows.
+  useFirstFrameGate(
+    loader,
+    latest,
+    sprite.status === "error" || material.status === "error",
+  );
   // A failed read (live-state's resource-error sink reports it) leaves the
   // sheet with what the boot task provided.
   return (
     <>
-      {hash.status === "ready" && <LoadedSprites hash={hash.data} />}
-      {symbols.status === "ready" && (
-        <SavedSymbols hash={symbols.data} store={pageRuntimeSymbols} />
+      {sprite.status === "ready" && <LoadedSprites hash={sprite.data} />}
+      {sprite.status === "ready" && material.status === "ready" && (
+        <Glyphs
+          hashes={{ material: material.data, sprite: sprite.data }}
+          store={pageRuntimeSymbols}
+          loader={loader}
+        />
       )}
       <IconSpriteSheet />
     </>
@@ -56,25 +98,24 @@ export function IconSpriteHost() {
 }
 
 /**
- * Installs `store`'s runtime-symbol loader: every name `<Icon>` wants in a
- * style no chunk holds is batched (one batch per style key per frame), read as
- * one `icons.runtime-symbols` tuple per batch while it is in flight — from the
+ * Installs `loader` on `store`: every glyph `<Icon>` wants that no chunk
+ * holds is batched (one batch per glyph key per frame), read as one
+ * `icons.runtime-symbols` tuple per batch while it is in flight — from the
  * server of the subtree this renders in — and handed to the store. A
  * contract-refused batch is thrown into the caller's error boundary; any other
  * failure is reported by live-state's resource-error sink and leaves that
- * batch's icons on their fallback, like a failed sprite; a `stale-symbols`
- * refusal waits for the new hash (`refusals.ts`).
+ * batch's icons on their fallback; a `stale-symbols` refusal waits for the new
+ * hash (`refusals.ts`).
  */
-function SavedSymbols({
-  hash,
+function Glyphs({
+  hashes,
   store,
+  loader,
 }: {
-  hash: string;
+  hashes: GlyphHashes;
   store: RuntimeSymbolStore;
+  loader: RuntimeSymbolLoader;
 }) {
-  const [loader] = useState(() =>
-    createRuntimeSymbolLoader((flush) => void requestAnimationFrame(flush)),
-  );
   useEffect(() => store.installLoader(loader.request), [loader, store]);
 
   // In memory: a server render reads the batches asked for so far (none).
@@ -85,21 +126,33 @@ function SavedSymbols({
   );
   const reads = useLive(
     runtimeSymbolsValue,
-    batches.map((b) => ({ hash, key: b.styleKey, names: b.names.join(",") })),
+    batches.map((b) => ({
+      hash: hashOf(hashes, b.key),
+      key: b.key,
+      names: b.names.join(","),
+    })),
   );
   // One result per batch, in order.
   const landed = batches.map((batch, i) => ({ batch, read: reads[i] }));
-  // A contract refusal (an unknown style or name, unsorted names) is thrown;
-  // a symbols hash the server moved past re-keys once the new hash is pushed
-  // (`refusals.ts`).
+  // A contract refusal (an unknown key, unsorted names) is thrown; a hash the
+  // server moved past re-keys once the new hash is pushed (`refusals.ts`).
   for (const { read } of landed) throwContractRefusal(read);
   useLayoutEffect(() => {
     for (const { batch, read } of landed) {
+      if (read?.status === "error") {
+        // Reported by live-state's resource-error sink, and retried by it on
+        // the next online / visible event; meanwhile its glyphs are no
+        // longer awaited (the first frame shows without them).
+        store.settleFailed(
+          batch.names.map((name) => ({ key: batch.key, name })),
+        );
+        continue;
+      }
       if (read?.status !== "ready") continue;
       store.provide(
         batch.chunkId,
         read.data,
-        batch.names.map((name) => ({ styleKey: batch.styleKey, name })),
+        batch.names.map((name) => ({ key: batch.key, name })),
       );
       // The sheet keeps the chunk: the tuple need not stay read.
       loader.landed(batch.chunkId);
@@ -109,12 +162,11 @@ function SavedSymbols({
 }
 
 /**
- * Reads, on demand, every sprite the page wants that the head did not provide
- * under `hash`: the resident ones it did not (no head, a head written by an
- * earlier backend, a failed request — `boot.ts`), the sprite of every style
- * some theme scope wants, and every sprite some mounted icon asked for (the
- * Seti file-type glyphs and a Lucide scope's glyphs, never resident) — as one
- * live read per key (`icons.sprite`).
+ * Reads, on demand, every whole sprite the page wants that the head did not
+ * provide under `hash`: the resident brands when it did not (no head, a head
+ * written by an earlier backend, a failed request — `boot.ts`), and every
+ * sprite some mounted icon asked for (the Seti file-type glyphs) — as one live
+ * read per key (`icons.sprite`).
  *
  * A contract refusal is thrown from render, into this contribution's error
  * boundary (a `stale-manifest` one waits for the new hash — `refusals.ts`);
@@ -122,29 +174,41 @@ function SavedSymbols({
  * (its icons draw their fallback), so a blip never takes the sheet down.
  */
 function LoadedSprites({ hash }: { hash: string }) {
-  const wantedStyles = useWantedStyleKeys();
   const wantedSprites = useWantedSprites();
 
   // Every wanted key the head did not provide under this hash, once each. A
   // key stays read while it is wanted; the sheet keeps a sprite once provided.
   const onDemand = useMemo(() => {
     const head = headProvidedResident();
-    return [
-      ...new Set([...RESIDENT_SPRITE_KEYS, ...wantedStyles, ...wantedSprites]),
-    ].filter((key) => head.hash !== hash || !head.keys.has(key));
-  }, [wantedStyles, wantedSprites, hash]);
+    return [...new Set([...RESIDENT_SPRITE_KEYS, ...wantedSprites])].filter(
+      (key) => head.hash !== hash || !head.keys.has(key),
+    );
+  }, [wantedSprites, hash]);
+  return <SpriteReads hash={hash} keys={onDemand} />;
+}
+
+/**
+ * One live read per sprite key (`icons.sprite`) under `hash`, each provided to
+ * the document's sheet as it lands. A contract refusal (an unknown key) is
+ * thrown, into the caller's error boundary. A manifest the server moved past
+ * (it restarted on another build) is not one: the hash is pushed again and
+ * these reads re-key off it, the sheet keeping the sprites it holds meanwhile
+ * (`refusals.ts`). Any other failure leaves that key's icons on their
+ * fallback glyphs and is reported by live-state's resource-error sink.
+ */
+function SpriteReads({
+  hash,
+  keys,
+}: {
+  hash: string;
+  keys: readonly SpriteKey[];
+}) {
   const reads = useLive(
     iconSprite,
-    onDemand.map((key) => ({ hash, key })),
+    keys.map((key) => ({ hash, key })),
   );
   // One result per key, in order.
-  const sprites = onDemand.map((key, i) => ({ key, read: reads[i] }));
-  // A contract refusal (an unknown key) is thrown, into this contribution's
-  // error boundary. A manifest the server moved past (it restarted on another
-  // build) is not one: the hash is pushed again and these reads re-key off it,
-  // the sheet keeping the sprites it holds meanwhile (`refusals.ts`). Any other
-  // failure leaves that key's icons on their fallback glyphs and is reported
-  // by live-state's resource-error sink; the sheet stays up.
+  const sprites = keys.map((key, i) => ({ key, read: reads[i] }));
   for (const { read } of sprites) throwContractRefusal(read);
   useLayoutEffect(() => {
     for (const { key, read } of sprites) {
@@ -155,15 +219,16 @@ function LoadedSprites({ hash }: { hash: string }) {
 }
 
 /**
- * Gives a plugin scope icons of its own: a runtime-symbol store bound to the
- * scope (`RuntimeSymbolScope`), filled from the server the scope reads — its
- * `icons.symbols-hash` and every `icons.runtime-symbols` batch its
- * icons want — and drawn in a sheet of its own inside the scope; and every
- * never-resident sprite its icons want (the Seti file-type glyphs, a Lucide
- * scope's) read as `icons.sprite` from that server too
- * ({@link ScopeSprites}). Mount it INSIDE the scope's `<PluginScope>` and
- * transport (`DemoScope` does): a saved icon in a scope with no store of its
- * own throws, it never reaches the page's store and so the page's server.
+ * Gives a plugin scope icons of its own: a glyph store bound to the scope
+ * (`RuntimeSymbolScope`), filled from the server the scope reads — its hashes
+ * and every `icons.runtime-symbols` batch its saved icons and Lucide glyphs
+ * want — and drawn in a sheet of its own inside the scope; and every whole
+ * sprite its icons want (the Seti file-type glyphs) read as `icons.sprite`
+ * from that server too ({@link ScopeSprites}). Mount it INSIDE the scope's
+ * `<PluginScope>` and transport (`DemoScope` does): a saved icon in a scope
+ * with no store of its own throws, it never reaches the page's store and so
+ * the page's server. (Its code Material symbols are the page's: the same
+ * drawing, and a browser host's drawer would load its whole bundled set.)
  */
 export function ScopeIconSymbols({
   children,
@@ -173,7 +238,7 @@ export function ScopeIconSymbols({
   const [store] = useState(createScopedRuntimeSymbols);
   return (
     <RuntimeSymbolScope store={store}>
-      <ScopeSavedSymbols store={store} />
+      <ScopeGlyphs store={store} />
       <ScopeSprites store={store} />
       {children}
     </RuntimeSymbolScope>
@@ -181,17 +246,23 @@ export function ScopeIconSymbols({
 }
 
 /**
- * The scope's runtime-symbol loader, once its server answered the symbols
- * hash. Until then (or on a failed read, which live-state's resource-error
- * sink reports) its saved icons are empty boxes at their final size, as the
- * page's are before their symbols load.
+ * The scope's glyph loader, once its server answered both hashes. Until then
+ * (or on a failed read, which live-state's resource-error sink reports) its
+ * saved icons are empty boxes at their final size, as the page's are before
+ * their glyphs load.
  */
-function ScopeSavedSymbols({ store }: { store: RuntimeSymbolStore }) {
-  const hash = useLive(savedSymbolsHash);
+function ScopeGlyphs({ store }: { store: RuntimeSymbolStore }) {
+  const [loader] = useState(newLoader);
+  const sprite = useLive(spriteHash);
+  const material = useLive(savedSymbolsHash);
   return (
     <>
-      {hash.status === "ready" && (
-        <SavedSymbols hash={hash.data} store={store} />
+      {sprite.status === "ready" && material.status === "ready" && (
+        <Glyphs
+          hashes={{ material: material.data, sprite: sprite.data }}
+          store={store}
+          loader={loader}
+        />
       )}
       <RuntimeSymbolSheet store={store} />
     </>
@@ -199,13 +270,12 @@ function ScopeSavedSymbols({ store }: { store: RuntimeSymbolStore }) {
 }
 
 /**
- * The sprites a scope's icons asked for, read from the scope's server
+ * The whole sprites a scope's icons asked for, read from the scope's server
  * (`icons.sprite`, under the hash that server serves) and provided to the
  * document's sheet — the same ids the page's sprites draw under, so a sprite
  * either side loaded draws for both. Until the hash or a sprite lands its
  * icons draw their fallback (a Seti icon an empty box at its final size), as
- * on the page; a contract refusal is thrown into the caller's error boundary
- * (a `stale-manifest` one waits for the scope's new hash — `refusals.ts`).
+ * on the page.
  */
 function ScopeSprites({ store }: { store: RuntimeSymbolStore }) {
   const wanted = useWantedScopeSprites(store);
@@ -223,27 +293,6 @@ function ScopeSpriteHash({ wanted }: { wanted: readonly SpriteKey[] }) {
     case "error":
       return null;
     case "ready":
-      return <ScopeSpriteReads hash={hash.data} wanted={wanted} />;
+      return <SpriteReads hash={hash.data} keys={wanted} />;
   }
-}
-
-function ScopeSpriteReads({
-  hash,
-  wanted,
-}: {
-  hash: string;
-  wanted: readonly SpriteKey[];
-}) {
-  const reads = useLive(
-    iconSprite,
-    wanted.map((key) => ({ hash, key })),
-  );
-  const sprites = wanted.map((key, i) => ({ key, read: reads[i] }));
-  for (const { read } of sprites) throwContractRefusal(read);
-  useLayoutEffect(() => {
-    for (const { key, read } of sprites) {
-      if (read?.status === "ready") provideSprite(key, read.data);
-    }
-  });
-  return null;
 }

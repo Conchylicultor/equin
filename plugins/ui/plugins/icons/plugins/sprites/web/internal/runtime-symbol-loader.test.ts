@@ -20,53 +20,53 @@ function harness() {
     f?.();
   };
   const shape = () =>
-    loader.batches().map((b) => ({ styleKey: b.styleKey, names: b.names }));
+    loader.batches().map((b) => ({ key: b.key, names: b.names }));
   return { loader, frame, shape, notified: () => notified };
 }
 
 describe("createRuntimeSymbolLoader", () => {
-  it("batches every want of a frame into one sorted batch per style key", () => {
+  it("batches every want of a frame into one sorted batch per glyph key", () => {
     const h = harness();
-    h.loader.request({ styleKey: K, name: "rocket" });
-    h.loader.request({ styleKey: K, name: "home" });
-    h.loader.request({ styleKey: R, name: "home" });
+    h.loader.request({ key: K, name: "rocket" });
+    h.loader.request({ key: K, name: "home" });
+    h.loader.request({ key: R, name: "home" });
     expect(h.shape()).toEqual([]);
     h.frame();
     expect(h.shape()).toEqual([
-      { styleKey: K, names: ["home", "rocket"] },
-      { styleKey: R, names: ["home"] },
+      { key: K, names: ["home", "rocket"] },
+      { key: R, names: ["home"] },
     ]);
     expect(h.notified()).toBe(1);
   });
 
   it("dedupes within a batch and never re-batches a wanted name", () => {
     const h = harness();
-    h.loader.request({ styleKey: K, name: "home" });
-    h.loader.request({ styleKey: K, name: "home" });
+    h.loader.request({ key: K, name: "home" });
+    h.loader.request({ key: K, name: "home" });
     h.frame();
-    h.loader.request({ styleKey: K, name: "home" });
+    h.loader.request({ key: K, name: "home" });
     h.frame();
-    expect(h.shape()).toEqual([{ styleKey: K, names: ["home"] }]);
+    expect(h.shape()).toEqual([{ key: K, names: ["home"] }]);
   });
 
   it("leaves earlier batches untouched when a later frame adds one", () => {
     const h = harness();
-    h.loader.request({ styleKey: K, name: "home" });
+    h.loader.request({ key: K, name: "home" });
     h.frame();
     const [first] = h.loader.batches();
-    h.loader.request({ styleKey: K, name: "rocket" });
+    h.loader.request({ key: K, name: "rocket" });
     h.frame();
     expect(h.loader.batches()[0]).toBe(first);
     expect(h.shape()).toEqual([
-      { styleKey: K, names: ["home"] },
-      { styleKey: K, names: ["rocket"] },
+      { key: K, names: ["home"] },
+      { key: K, names: ["rocket"] },
     ]);
   });
 
   it("splits a batch past the read's cap", () => {
     const h = harness();
     for (let i = 0; i < MAX_RUNTIME_SYMBOLS_PER_READ + 5; i++) {
-      h.loader.request({ styleKey: K, name: `n${String(i).padStart(4, "0")}` });
+      h.loader.request({ key: K, name: `n${String(i).padStart(4, "0")}` });
     }
     h.frame();
     expect(h.shape().map((b) => b.names.length)).toEqual([
@@ -77,12 +77,12 @@ describe("createRuntimeSymbolLoader", () => {
 
   it("drops a landed batch, so only in-flight batches are read", () => {
     const h = harness();
-    h.loader.request({ styleKey: K, name: "home" });
-    h.loader.request({ styleKey: R, name: "home" });
+    h.loader.request({ key: K, name: "home" });
+    h.loader.request({ key: R, name: "home" });
     h.frame();
     const [first] = h.loader.batches();
     h.loader.landed(first!.chunkId);
-    expect(h.shape()).toEqual([{ styleKey: R, names: ["home"] }]);
+    expect(h.shape()).toEqual([{ key: R, names: ["home"] }]);
     expect(h.notified()).toBe(2);
     h.loader.landed(first!.chunkId);
     expect(h.notified()).toBe(2);

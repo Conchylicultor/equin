@@ -1,115 +1,93 @@
 # sprites
 
 Serves and mounts the icon sprites the icons primitive draws from. The design
-is in the parent's [`CLAUDE.md`](../../CLAUDE.md) (section "Sprites").
+is in the parent's [`CLAUDE.md`](../../CLAUDE.md) (section "Glyphs and sprites").
 
-## The first paint's sprites never ride the boot snapshot
+## A page downloads the glyphs it draws
 
-They were most of it (~280 KB resident sprites + up to ~200 KB saved-icon
-symbols, re-sent on every load because the snapshot is not cacheable). Now:
+Measured 2026-11-14 (`research/2026-11-14-ui-per-glyph-icon-loading.md`):
+`/agents` drew 25 icons and held 1.37 MB of sprite markup (every manifest name
+in two resident styles, every saved name, whole Lucide and rounded sprites
+re-downloaded on every load); `/about` drew 13 and held 926 symbols. The unit
+is now the glyph (`GlyphKey`, name — the parent's "Glyphs and sprites").
 
-- **Two assets** (`server/`, portable — every host draws through its drawer):
-  `GET /api/icons/sprite-assets/:hash/:key` (`getSpriteAsset`: one sprite,
-  `image/svg+xml`, under the drawer's `icons.sprite-hash`, served
-  `public, max-age=31536000, immutable` — the hash IS the content's address)
-  and `GET /api/icons/saved-sprite-assets/:hash` (`getSavedSpriteAsset`:
-  `SavedSpriteAsset` JSON — every name a saved-icon source reports and, per
-  default style key, their `<symbol id="msr-…">`s — under `icons.symbols-hash`,
-  served `no-cache` with an ETag over the names, since they move whenever a
-  user picks an icon: a warm load is a 304). A hash that is not the host's is
-  a 409.
-- **Started at t0 by the shell's head** (`server/internal/head.ts`, a
-  `DocumentHead.Fragment`): an inline async module script fetches the
-  resident keys (`RESIDENT_SPRITE_KEYS`: the default style's two + brands) and
-  the saved asset while the HTML parses, and parks the responses on
-  `globalThis.__equinIconSprites` (`shared/head-request.ts`) — the boot
-  snapshot's head-request shape. Both hashes are fixed for the backend's life,
-  so the fragment is a constant.
-- **Provided before the first render** by a `Core.Boot` task
-  (`web/internal/boot.ts`, `ifUnavailable: "continue"`): it takes the parked
-  responses, `provideSprite`s each resident sprite and `provide`s the saved
-  chunk to `pageRuntimeSymbols`, and records an `icon-sprites` boot span. A 409
-  (a head written by an earlier backend) is left to the live reads below; any
-  other failure throws (reported, boot goes on).
-- **Everything else is live, on demand**: `IconSpriteHost` reads
-  `icons.sprite-hash` (preloaded) and, as `useLive(iconSprite, [{ hash, key },
-  …])`, every resident key the head did NOT provide under that hash, every
-  other style key a scope wants and every sprite a mounted icon asked for
-  (`useWantedSprites` — the never-resident `seti`, `lucide`, `lucide-active`).
-  A refusal is thrown into its error boundary except a hash-behind one
-  (`web/internal/refusals.ts`), a transient failure reported and left
-  unprovided.
+- **One value, every glyph** (`server/internal/runtime-symbols-value.ts`,
+  portable): `icons.runtime-symbols` `{ hash, key, names }` — a Material style
+  key drawn by the host's `RuntimeSymbolDrawer`, `lucide` / `lucide-active`
+  picked from the host's `SpriteDrawer` sprite. `hash` is the KEY's own
+  (`glyphHash`: `icons.symbols-hash` for Material — no manifest in it —,
+  `icons.sprite-hash` for Lucide). External `immutable`; refused
+  `unknown-key`, `stale-symbols`, `invalid-names` (`glyphTupleRefusal`, shared
+  with the asset). A name the host draws no glyph for is left out of the
+  answer: the page marks it missing.
+- **The same batch as an asset**: `GET /api/icons/glyph-assets/:hash/:key/:names`
+  (`getGlyphAsset`, `server/internal/glyph-asset.ts`), served
+  `public, max-age=31536000, immutable` — the path is the content's address.
+  409 for a hash that is not the host's, 400 for a malformed address.
+- **The page's loader** (`web/internal/runtime-symbol-loader.ts`): every want of
+  a commit (flushed on a microtask — a background tab runs no frame callback)
+  becomes one batch per key, at most 200 sorted names, read as
+  `useLive(runtimeSymbolsValue, [{ hash, key, names }, …])` while in flight and
+  dropped once its chunk is in the store. `IconSpriteHost` installs one on the
+  page's store; `ScopeIconSymbols` gives a plugin scope a store and a loader of
+  its own, read from the scope's server (its saved icons and Lucide glyphs).
+- **The first frame waits for its glyphs** (`web/internal/first-frame.ts`):
+  the host hides the document in the layout effect of the app's first commit
+  (an adopted `html { visibility: hidden }` sheet), every `<Icon>` records its
+  wants in its own layout effect, and the host's passive effect shows the
+  document once the page's store has nothing pending — or past
+  `FIRST_FRAME_DEADLINE_MS` (3 s, a bound around the network; recorded on the
+  boot trace as `icon-first-frame`).
+- **Warm loads want nothing**: once settled, the batches the first frame used
+  (those the head provided + the new ones; at most 400 glyphs, oldest dropped)
+  are remembered per page in the `ui.icons.first-frame` web-storage store
+  (`pageWide`). The shell's head script (`server/internal/head.ts`, a
+  `DocumentHead.Fragment`) reads that entry (`ownerPrefix(owner) + page`, the
+  envelope's `v`) and fetches each batch's asset at t0 — from the browser's
+  cache on a warm load — beside the resident brands sprite; the boot task
+  (`web/internal/boot.ts`) provides them before the first render. A changed
+  first frame adds ONE batch; nothing cached is fetched again. A 409 (a hash
+  the server moved past) is dropped from the memory and asked live.
+- **Whole sprites** only for `brands` (resident, `RESIDENT_SPRITE_KEYS`, head
+  asset `GET /api/icons/sprite-assets/:hash/:key`) and `seti` (on demand), as
+  `icons.sprite` `{ hash, key }` — refused `unknown-key`, `stale-manifest`,
+  `not-drawn-here`.
 
-## Values and drawers
+## Drawers
 
-- **Portable sprites** (`icons.sprite`, `icons.sprite-hash`), drawn through
-  the host's `SpriteDrawer` host service: the installed sets on the computer
+- **Sprites** (`SpriteDrawer` host service): the installed sets on the computer
   (`machine/`'s `installedSetsSpriteDrawer`, every key), the Seti and Lucide
-  sets bundled with a browser host (`plugins/bundled-sprites`; any other key
-  is refused `not-drawn-here`). An icon asks its scope's store for a
-  never-resident sprite (`RuntimeSymbolStore.wantSprite`): the page's store
-  hands it to `IconSpriteHost`, a scope's (`ScopeIconSymbols`) reads it from
-  the scope's own server and provides it to the document's sheet — so a
-  demo's file-type and Lucide icons never reach the page's server. The Seti
-  and Lucide assembly (`buildSetiSprite`, `buildLucideSprites`,
-  `buildSprite`, the Lucide tuning) is `server/`'s, one build for both
-  drawers. `iconSprite` (`{ hash, key }`) is external `immutable` and refused
-  `unknown-key`, `stale-manifest`, `not-drawn-here`; its `revalidate` ETag is
-  the tuple while the hash is the host's.
-- **Desktop-only** (`machine/`): the per-weight memoized build from the
-  installed sets behind the desktop's `SpriteDrawer` (its `manifestHash` folds
-  in the manifest, the sets' identities, `SETI_SET`, `LUCIDE_MAP`,
-  `LUCIDE_TUNING_VERSION` and `ACTIVE_FORM_VERSION`), and `icons.manifest`
-  (`needsMachine`, Debug → Icons' rows).
-- **Saved (runtime) symbols** — see the parent's "Runtime symbols". Portable
-  (`server/`), drawn through the host's `RuntimeSymbolDrawer`
-  (`{ identity, draw(key, names) }`): the installed sets on the computer
-  (`machine/`'s `installedSetsDrawer`), the bundled set on a browser host
-  (`plugins/bundled-symbols`). `drawRuntimeSymbol(sets, key, name)` is the one
-  build every drawer runs; `symbolsHash()` (sha256 of the drawer's identity,
-  the savable-name list and `RUNTIME_SYMBOL_BUILD_VERSION`) is served as
-  `icons.symbols-hash` (`savedSymbolsHash`, external `fixed`, preloaded);
-  `savedIconNames()` reads every source's names, sorted. On demand,
-  `icons.runtime-symbols` (`{ hash, key, names }`: `names` a comma-joined,
-  sorted, duplicate-free list of at most `MAX_RUNTIME_SYMBOLS_PER_READ` saved
-  names, external `immutable`; refused `unknown-key`, `stale-symbols`,
-  `invalid-names`, `unknown-name`). Design:
-  `research/2026-11-06-global-scoped-runtime-symbols.md`.
-- `machine/`'s drawer keeps per-style symbol maps (`runtime-symbols.ts`: a
-  name's symbol is drawn the first time it is asked for, then kept — a boot
-  draws the handful of saved names, not all 4,240). The ~19 MB sets are parsed
-  under one shared lease (`withSymbolSets`) and dropped after.
-- `plugins/bundled-symbols` (a host provider, never booted by the desktop): a
-  browser host's drawer — `@iconify-json/material-symbols` (weight 400, every
-  shape and fill: 8.2 MB raw, 1.3 MB compressed) imported lazily, ONLY when a
-  drawing is missing; the light set is not bundled, so a light style draws
-  its 400 drawing (the nearest-style rule). Its warm-up draws every saved
-  name in every style and keeps those drawings in the host's storage
-  (`icon-symbols`, keyed by the set's identity) — so a visitor loads the set
-  only to pick a new one. Anything else (a picker's grid) is held in memory
-  only.
-- `web/`: the runtime-symbol loader (`createRuntimeSymbolLoader`: every want
-  of a frame becomes one immutable batch per style key, at most 200 sorted
-  names; a name is never batched twice), read as
-  `useLive(runtimeSymbolsValue, [{ hash, key, names }, …])` while in flight
-  and dropped once its chunk is in the sheet. `IconSpriteHost` installs it on
-  the page's store (`pageRuntimeSymbols`); `ScopeIconSymbols` (children) gives
-  a plugin scope a store of its own (`createScopedRuntimeSymbols` +
-  `RuntimeSymbolScope`), filled from the scope's server by the same loader and
-  drawn in a `RuntimeSymbolSheet` inside the scope (ids prefixed `rs<n>-`). A
-  scope has no head: its saved icons load through the loader as they mount.
+  sets bundled with a browser host (`plugins/bundled-sprites`). Its
+  `manifestHash` folds in the manifest, the sets' identities, `SETI_SET`,
+  `LUCIDE_MAP`, `LUCIDE_TUNING_VERSION` and `ACTIVE_FORM_VERSION`. The Seti
+  and Lucide assembly (`buildSetiSprite`, `buildLucideSprites`, `buildSprite`,
+  the Lucide tuning) is `server/`'s, one build for both drawers.
+- **Material glyphs** (`RuntimeSymbolDrawer`, `{ identity, draw(key, names) }`):
+  the installed sets on the computer (`machine/`'s `installedSetsDrawer`, a
+  per-style symbol map — a name is drawn the first time it is asked for, then
+  kept; the ~19 MB sets parsed under one shared lease and dropped after), the
+  bundled set on a browser host (`plugins/bundled-symbols`, weight 400 only,
+  imported lazily when a drawing is missing; its warm-up draws every saved
+  name — `savedIconNames()`, the saved-icon sources — and keeps them in the
+  host's storage). `drawRuntimeSymbol(sets, key, name)` is the one build every
+  drawer runs; `symbolsHash()` (the drawer's identity, the drawable-name list,
+  `RUNTIME_SYMBOL_BUILD_VERSION`) is served as `icons.symbols-hash`.
+- **Desktop-only** (`machine/`): `icons.manifest` (`needsMachine`, Debug →
+  Icons' rows).
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./equin build` -->
 
 ## Plugin reference
 
-- Description: Mounts the page's icon sprites inline. The resident default-style sprites and the saved-icon symbols the first paint needs are fetched by the SPA shell's head at t0 (content-addressed assets the browser caches) and provided by a Core.Boot task before the first render — never carried by the boot snapshot; every other sprite (another style a theme scope picks, the Seti and Lucide sprites, a resident one the head did not provide) and every other saved name are read live, on demand. ScopeIconSymbols gives a plugin scope (a demo) saved icons of its own, read from the scope's server and drawn in a sheet inside it. The build's sprites, on every host, drawn through the host's SpriteDrawer — the computer's installed sets (this plugin's machine half) or the Seti and Lucide sets bundled with a browser host (plugins/bundled-sprites): icons.sprite (one sprite by key on demand, immutable, content-addressed by icons.sprite-hash, preloaded) and GET /api/icons/sprite-assets/:hash/:key, the same sprite as an asset the browser caches for good. Saved (user-picked) icons as runtime symbols, drawn through the host's RuntimeSymbolDrawer (the installed sets, or a set bundled with the page — plugins/bundled-symbols): icons.runtime-symbols serves any saved names in any style on demand (immutable, content-addressed by icons.symbols-hash, preloaded), and GET /api/icons/saved-sprite-assets/:hash the default styles' drawing of every name a saved-icon source (ui/icons/saved-sources) reports, revalidated by an ETag over the names. A DocumentHead.Fragment starts both asset requests in the SPA shell's head, so the sprites a first paint needs never ride the boot snapshot.
+- Description: Mounts the page's icons inline, loaded glyph by glyph: every Material and Lucide glyph an <Icon> wants is batched per commit and read live (icons.runtime-symbols), and the page's first paint waits for its first frame's glyphs. The glyph batches a page's last first frame drew are remembered in localStorage and fetched by the SPA shell's head at t0 (content-addressed assets the browser caches), with the resident brands sprite, and provided by a Core.Boot task before the first render — a warm first frame wants nothing. The Seti sprite is read whole on demand. ScopeIconSymbols gives a plugin scope (a demo) a glyph store of its own, read from the scope's server and drawn in a sheet inside it. The build's icons, on every host, loaded glyph by glyph — a page downloads what it draws. icons.runtime-symbols serves any Material name in any style (code symbols and saved icons alike, drawn through the host's RuntimeSymbolDrawer: the computer's installed sets, or plugins/bundled-symbols on a browser host) and any Lucide glyph (picked from the host's SpriteDrawer: the installed sets, or plugins/bundled-sprites), batched per frame, immutable, content-addressed by the key's own hash (icons.symbols-hash for Material — never the code's manifest — icons.sprite-hash for Lucide); GET /api/icons/glyph-assets/:hash/:key/:names is the same batch as an asset the browser caches for good. Whole sprites remain for the six brand marks (resident) and the Seti file-type set (on demand): icons.sprite and GET /api/icons/sprite-assets/:hash/:key. A DocumentHead.Fragment starts, in the SPA shell's head, the brands and the glyph batches the page's last first frame drew (remembered in localStorage), so a warm first frame wants nothing and nothing rides the boot snapshot.
 - Web:
   - Contributes:
     - `Core.Boot`
     - `Icons.Root` → `IconSpriteHost`
   - Uses:
     - `network/live.useLive`
+    - `primitives/dom/web-storage.defineStore`
+    - `primitives/latest-ref.useLatestRef`
     - `primitives/perfs/boot-trace.recordBootSpan`
     - `ui/icons.createScopedRuntimeSymbols`
     - `ui/icons.Icons`
@@ -121,7 +99,6 @@ symbols, re-sent on every load because the snapshot is not cacheable). Now:
     - `ui/icons.RuntimeSymbolStore`
     - `ui/icons.useWantedScopeSprites`
     - `ui/icons.useWantedSprites`
-    - `ui/icons.useWantedStyleKeys`
   - Exports (values): `ScopeIconSymbols`
 - Server:
   - Contributes:
@@ -162,7 +139,7 @@ symbols, re-sent on every load because the snapshot is not cacheable). Now:
     - `icons.symbols-hash` (push, fixed)
   - Routes:
     - `GET /api/icons/sprite-assets/:hash/:key`
-    - `GET /api/icons/saved-sprite-assets/:hash`
+    - `GET /api/icons/glyph-assets/:hash/:key/:names`
 - Machine:
   - Uses: `network/live.serveValue`
   - Exports (values): `manifestSymbolBody`
@@ -172,20 +149,17 @@ symbols, re-sent on every load because the snapshot is not cacheable). Now:
     - `infra/endpoints.defineEndpoint`
     - `network/live.liveValue`
     - `packages/list-bound.wholeList`
-    - `packages/list-bound.wholeRecord`
     - `ui/icons.BRANDS_SPRITE`
-    - `ui/icons.DEFAULT_STYLE_KEYS`
+    - `ui/icons.GlyphKey`
     - `ui/icons.SpriteKey`
-  - Exports (types): `SavedSpriteAsset`
   - Exports (values):
-    - `getSavedSpriteAsset`
+    - `getGlyphAsset`
     - `getSpriteAsset`
     - `iconManifest`
     - `iconSprite`
     - `MAX_RUNTIME_SYMBOLS_PER_READ`
     - `RESIDENT_SPRITE_KEYS`
     - `runtimeSymbolsValue`
-    - `SavedSpriteAssetSchema`
     - `savedSymbolsHash`
     - `spriteHash`
 - Cross-plugin:

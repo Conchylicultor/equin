@@ -12,17 +12,20 @@ describe("icons.runtime-symbols", () => {
     ).rejects.toMatchObject({ code: "stale-symbols" });
   });
 
-  it("refuses an unknown style key or name", async () => {
+  it("refuses an unknown glyph key", async () => {
     expect(
       loadRuntimeSymbols({ hash: symbolsHash(), key: "nope", names: "home" }),
     ).rejects.toMatchObject({ code: "unknown-key" });
-    expect(
-      loadRuntimeSymbols({
-        hash: symbolsHash(),
-        key: K,
-        names: "home,not_a_symbol",
-      }),
-    ).rejects.toMatchObject({ code: "unknown-name" });
+  });
+
+  it("answers a name it draws no glyph for without its symbol (the page marks it missing)", async () => {
+    const svg = await loadRuntimeSymbols({
+      hash: symbolsHash(),
+      key: K,
+      names: "home,not_a_symbol",
+    });
+    expect(svg).toContain('id="msr-default-outline-400-home"');
+    expect(svg).not.toContain("not_a_symbol");
   });
 
   it("refuses names that are empty, unsorted, duplicated or over the cap", async () => {

@@ -50918,13 +50918,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useStore`
               - `WebStorageSlots`
           - Cross-plugin:
-            - Imported by: 51 plugins — full list in [`plugins/primitives/plugins/dom/plugins/web-storage/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/web-storage/REFERENCE.md)
+            - Imported by: 52 plugins — full list in [`plugins/primitives/plugins/dom/plugins/web-storage/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/web-storage/REFERENCE.md)
               - `primitives` ×15
               - `apps` ×13
               - `conversations` ×6
               - `apps-core` ×2
               - `framework` ×2
               - `reports` ×2
+              - `ui` ×2
               - `companions/browser-extension`
               - `config_v2`
               - `hints/ask`
@@ -50934,7 +50935,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `page/editor`
               - `shell/global-action-bar`
               - `tasks/task-draft-form`
-              - `ui/theme-engine`
               - `wish`
           - Exemptions:
             - Exempts itself from: `web-storage/no-raw-web-storage` — `web/internal/store.ts` (sanctioned)
@@ -51695,7 +51695,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `seekPredicate`
     - **`latest-ref`** — Latest-value ref idiom as a primitive: useLatestRef(value) mirrors the latest value into a ref written in render (read only in callbacks/effects), and useEventCallback(fn) is the stable-identity callback built on it. The single sanctioned home + exemption for the idiom, so react-hooks/refs can be enforced at error.
       - Cross-plugin:
-        - Imported by: 84 plugins — full list in [`plugins/primitives/plugins/latest-ref/REFERENCE.md`](../plugins/primitives/plugins/latest-ref/REFERENCE.md)
+        - Imported by: 85 plugins — full list in [`plugins/primitives/plugins/latest-ref/REFERENCE.md`](../plugins/primitives/plugins/latest-ref/REFERENCE.md)
           - `primitives` ×33
           - `apps` ×24
           - `page` ×5
@@ -51715,6 +51715,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `reorder`
           - `reports/main-thread-stall`
           - `screenshot`
+          - `ui/icons/sprites`
       - Web:
         - Exports (values):
           - `useEventCallback`
@@ -61748,6 +61749,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Icons.Root` → `IconFamilyHost`
           - `Icons.Family` "Lucide"
         - Exports (types):
+          - `GlyphEntry`
           - `IconFamilyContribution`
           - `IconFamilyGap`
           - `IconMarkup`
@@ -61755,7 +61757,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `IconMissingGlyph`
           - `IconProps`
           - `IconSource`
-          - `RuntimeSymbolEntry`
           - `RuntimeSymbolStore`
         - Exports (values):
           - `createScopedRuntimeSymbols`
@@ -61780,7 +61781,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useScopeIconStyles`
           - `useWantedScopeSprites`
           - `useWantedSprites`
-          - `useWantedStyleKeys`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
         - Imported by: 593 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
@@ -61837,6 +61837,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `BrandName`
           - `BrandRef`
           - `CustomRef`
+          - `GlyphKey`
           - `IconBody`
           - `IconFamily`
           - `IconFamilyCoverage`
@@ -61880,11 +61881,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `familyGlyphId`
           - `familyGlyphMarkup`
           - `familyGlyphOf`
+          - `glyphId`
           - `ICON_FILLS`
           - `ICON_MOTIONS`
           - `ICON_SHAPES`
           - `ICON_WEIGHTS`
           - `iconifyName`
+          - `isGlyphKey`
           - `isIconFamilyId`
           - `isIconMotion`
           - `isSpriteKey`
@@ -62060,13 +62063,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `defineSavedIconSource`
               - `savedIconSources`
               - `savedIconSourcesCode`
-        - **`sprites`** — Mounts the page's icon sprites inline. The resident default-style sprites and the saved-icon symbols the first paint needs are fetched by the SPA shell's head at t0 (content-addressed assets the browser caches) and provided by a Core.Boot task before the first render — never carried by the boot snapshot; every other sprite (another style a theme scope picks, the Seti and Lucide sprites, a resident one the head did not provide) and every other saved name are read live, on demand. ScopeIconSymbols gives a plugin scope (a demo) saved icons of its own, read from the scope's server and drawn in a sheet inside it. The build's sprites, on every host, drawn through the host's SpriteDrawer — the computer's installed sets (this plugin's machine half) or the Seti and Lucide sets bundled with a browser host (plugins/bundled-sprites): icons.sprite (one sprite by key on demand, immutable, content-addressed by icons.sprite-hash, preloaded) and GET /api/icons/sprite-assets/:hash/:key, the same sprite as an asset the browser caches for good. Saved (user-picked) icons as runtime symbols, drawn through the host's RuntimeSymbolDrawer (the installed sets, or a set bundled with the page — plugins/bundled-symbols): icons.runtime-symbols serves any saved names in any style on demand (immutable, content-addressed by icons.symbols-hash, preloaded), and GET /api/icons/saved-sprite-assets/:hash the default styles' drawing of every name a saved-icon source (ui/icons/saved-sources) reports, revalidated by an ETag over the names. A DocumentHead.Fragment starts both asset requests in the SPA shell's head, so the sprites a first paint needs never ride the boot snapshot.
+        - **`sprites`** — Mounts the page's icons inline, loaded glyph by glyph: every Material and Lucide glyph an <Icon> wants is batched per commit and read live (icons.runtime-symbols), and the page's first paint waits for its first frame's glyphs. The glyph batches a page's last first frame drew are remembered in localStorage and fetched by the SPA shell's head at t0 (content-addressed assets the browser caches), with the resident brands sprite, and provided by a Core.Boot task before the first render — a warm first frame wants nothing. The Seti sprite is read whole on demand. ScopeIconSymbols gives a plugin scope (a demo) a glyph store of its own, read from the scope's server and drawn in a sheet inside it. The build's icons, on every host, loaded glyph by glyph — a page downloads what it draws. icons.runtime-symbols serves any Material name in any style (code symbols and saved icons alike, drawn through the host's RuntimeSymbolDrawer: the computer's installed sets, or plugins/bundled-symbols on a browser host) and any Lucide glyph (picked from the host's SpriteDrawer: the installed sets, or plugins/bundled-sprites), batched per frame, immutable, content-addressed by the key's own hash (icons.symbols-hash for Material — never the code's manifest — icons.sprite-hash for Lucide); GET /api/icons/glyph-assets/:hash/:key/:names is the same batch as an asset the browser caches for good. Whole sprites remain for the six brand marks (resident) and the Seti file-type set (on demand): icons.sprite and GET /api/icons/sprite-assets/:hash/:key. A DocumentHead.Fragment starts, in the SPA shell's head, the brands and the glyph batches the page's last first frame drew (remembered in localStorage), so a warm first frame wants nothing and nothing rides the boot snapshot.
           - Web:
             - Contributes:
               - `Core.Boot`
               - `Icons.Root` → `IconSpriteHost`
             - Uses:
               - `network/live.useLive`
+              - `primitives/dom/web-storage.defineStore`
+              - `primitives/latest-ref.useLatestRef`
               - `primitives/perfs/boot-trace.recordBootSpan`
               - `ui/icons.createScopedRuntimeSymbols`
               - `ui/icons.Icons`
@@ -62078,7 +62083,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/icons.RuntimeSymbolStore`
               - `ui/icons.useWantedScopeSprites`
               - `ui/icons.useWantedSprites`
-              - `ui/icons.useWantedStyleKeys`
             - Exports (values): `ScopeIconSymbols`
           - Server:
             - Contributes:
@@ -62119,7 +62123,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `icons.symbols-hash` (push, fixed)
             - Routes:
               - `GET /api/icons/sprite-assets/:hash/:key`
-              - `GET /api/icons/saved-sprite-assets/:hash`
+              - `GET /api/icons/glyph-assets/:hash/:key/:names`
           - Machine:
             - Uses: `network/live.serveValue`
             - Exports (values): `manifestSymbolBody`
@@ -62129,20 +62133,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/endpoints.defineEndpoint`
               - `network/live.liveValue`
               - `packages/list-bound.wholeList`
-              - `packages/list-bound.wholeRecord`
               - `ui/icons.BRANDS_SPRITE`
-              - `ui/icons.DEFAULT_STYLE_KEYS`
+              - `ui/icons.GlyphKey`
               - `ui/icons.SpriteKey`
-            - Exports (types): `SavedSpriteAsset`
             - Exports (values):
-              - `getSavedSpriteAsset`
+              - `getGlyphAsset`
               - `getSpriteAsset`
               - `iconManifest`
               - `iconSprite`
               - `MAX_RUNTIME_SYMBOLS_PER_READ`
               - `RESIDENT_SPRITE_KEYS`
               - `runtimeSymbolsValue`
-              - `SavedSpriteAssetSchema`
               - `savedSymbolsHash`
               - `spriteHash`
           - Cross-plugin:

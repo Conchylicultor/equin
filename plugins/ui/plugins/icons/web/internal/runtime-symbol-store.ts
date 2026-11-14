@@ -6,46 +6,53 @@ import {
   type ReactNode,
 } from "react";
 import { usePluginScopeId } from "@plugins/framework/plugins/web-sdk/core";
-import { runtimeSymbolId, type SpriteKey, type StyleKey } from "../../core";
+import { glyphId, type GlyphKey, type SpriteKey } from "../../core";
 import { wantSprite as wantPageSprite } from "./sprite-store";
 
 /**
- * The RUNTIME symbols a server drew for the icons in one part of the page:
- * saved (user-picked) names, which are not in the build's manifest and so not
- * in any sprite. They arrive in chunks — the resident saved-icon sprites, and
- * each on-demand batch — read from THAT part's server by whoever installed the
- * loader (the sprites plugin), so a demo's saved icons come from the demo's
- * server and the page's from the page's.
+ * The GLYPHS a server drew for the icons in one part of the page, loaded one
+ * glyph at a time: every Material symbol in any style — code `symbol("…")`s
+ * and saved (user-picked) names alike — and the Lucide family's drawings
+ * (`GlyphKey`). A page holds the glyphs it drew, never a whole set. They
+ * arrive in chunks — those the shell's head fetched at t0 (the page's memory
+ * of its last first frame) and each on-demand batch — read from THAT part's
+ * server by whoever installed the loader (the sprites plugin), so a demo's
+ * saved icons come from the demo's server and the page's from the page's.
  *
- * `<Icon>` on a runtime symbol asks its store ({@link useRuntimeSymbolStore})
- * for (style key, name); a name no chunk holds yet is a WANT, handed to the
- * store's loader. This plugin sits below the network layer, so the loader is
- * installed from above rather than imported.
+ * `<Icon>` asks its store for (key, name); a glyph no chunk holds yet is a
+ * WANT, handed to the store's loader. A glyph a chunk was asked for and does
+ * not carry is MISSING: the server draws no such glyph (drawn as the
+ * missing-glyph marker and reported, never an empty box). This plugin sits
+ * below the network layer, so the loader is installed from above rather than
+ * imported.
  */
 
-export interface RuntimeSymbolEntry {
-  readonly styleKey: StyleKey;
+/** One glyph: a name in a key. */
+export interface GlyphEntry {
+  readonly key: GlyphKey;
   readonly name: string;
 }
 
-type WantListener = (entry: RuntimeSymbolEntry) => void;
+type WantListener = (entry: GlyphEntry) => void;
 
 export interface RuntimeSymbolStore {
-  /** The `<symbol id>` this store's chunks draw (style, name) under. */
-  symbolId(styleKey: StyleKey, name: string): string;
-  hasSymbol(styleKey: StyleKey, name: string): boolean;
-  /** Ask the installed loader for `name` in `styleKey` (a no-op once held or asked). */
-  want(styleKey: StyleKey, name: string): void;
+  /** The `<symbol id>` this store's chunks draw (key, name) under. */
+  symbolId(key: GlyphKey, name: string): string;
+  hasSymbol(key: GlyphKey, name: string): boolean;
+  /** A glyph a chunk was asked for and does not carry. */
+  isMissing(key: GlyphKey, name: string): boolean;
+  /** Ask the installed loader for `name` in `key` (a no-op once held, missing or asked). */
+  want(key: GlyphKey, name: string): void;
   /**
-   * Hold `markup` (a whole `<svg>` of `<symbol id="msr-<styleKey>-<name>">`s,
-   * as the server draws them) as chunk `chunkId`, replacing what that chunk
-   * held. `entries` are the symbols it carries. A no-op when the chunk already
-   * holds these bytes.
+   * Hold `markup` (a whole `<svg>` of `<symbol>`s, ids as `glyphId` spells
+   * them) as chunk `chunkId`, replacing what that chunk held. `entries` are
+   * the glyphs it was asked for; one it does not carry is missing. A no-op
+   * when the chunk already holds these bytes.
    */
   provide(
     chunkId: string,
     markup: string,
-    entries: readonly RuntimeSymbolEntry[],
+    entries: readonly GlyphEntry[],
   ): void;
   /**
    * Install the loader every want is handed to. Wants made before it was
@@ -56,11 +63,19 @@ export interface RuntimeSymbolStore {
   subscribe(listener: () => void): () => void;
   /** Every chunk's markup (ids as {@link symbolId} spells them), sorted by chunk id. */
   chunks(): readonly (readonly [string, string])[];
+  /** How many glyphs are wanted and neither landed, known missing nor failed. */
+  pendingCount(): number;
   /**
-   * Ask for a never-resident SPRITE (the Seti glyphs, a Lucide scope's) from
-   * this part's server: the page's store hands it to the page's sprite host;
-   * a scope's keeps it for the scope's own reader ({@link wantedSprites}), so
-   * a demo's file icons are drawn by the demo's server.
+   * The read asking for `entries` failed (a transient error its reader may
+   * still retry): they stop counting as pending — the first frame never waits
+   * on a failure — and stay asked, so a later answer still lands.
+   */
+  settleFailed(entries: readonly GlyphEntry[]): void;
+  /**
+   * Ask for a never-resident whole SPRITE (the Seti glyphs) from this part's
+   * server: the page's store hands it to the page's sprite host; a scope's
+   * keeps it for the scope's own reader ({@link wantedSprites}), so a demo's
+   * file icons are drawn by the demo's server.
    */
   wantSprite(key: SpriteKey): void;
   /** Every sprite asked for here, sorted (a scope's; the page's lives in the sprite store). */
@@ -69,14 +84,33 @@ export interface RuntimeSymbolStore {
   subscribeWantedSprites(listener: () => void): () => void;
 }
 
-function entryKey(styleKey: StyleKey, name: string): string {
-  return `${styleKey}\u0000${name}`;
+function entryKey(key: GlyphKey, name: string): string {
+  return `${key}\u0000${name}`;
+}
+
+/** The `<symbol id>`s a chunk carries — a regex over the server's own markup, so a static render answers the same. */
+function symbolIdsIn(markup: string): ReadonlySet<string> {
+  return new Set(
+    [...markup.matchAll(/<symbol\b[^>]*?\sid="([^"]+)"/g)].map((m) => m[1]!),
+  );
 }
 
 /**
- * A store whose symbol ids carry `idPrefix` before the server's own
- * (`msr-…`), so two stores' sheets in one document never hold one id twice.
- * The page's store has none.
+ * Prefix every id of a chunk and every in-chunk reference to one (an active
+ * form's masks: `url(#…)`, `href="#…"`), so a scope's sheet never repeats an
+ * id of the page's. The markup is the server's own, built from the icon sets.
+ */
+function prefixIds(raw: string, idPrefix: string): string {
+  return raw
+    .replace(/(\s)id="/g, `$1id="${idPrefix}`)
+    .replaceAll("url(#", `url(#${idPrefix}`)
+    .replace(/(\s)href="#/g, `$1href="#${idPrefix}`);
+}
+
+/**
+ * A store whose symbol ids carry `idPrefix` before the server's own, so two
+ * stores' sheets in one document never hold one id twice. The page's store
+ * has none.
  */
 function createStore(
   idPrefix: string,
@@ -87,44 +121,49 @@ function createStore(
   const spriteListeners = new Set<() => void>();
   const held = new Map<
     string,
-    { markup: string; entries: readonly RuntimeSymbolEntry[] }
+    {
+      markup: string;
+      carried: readonly string[];
+      absent: readonly string[];
+    }
   >();
   let provided = new Set<string>();
+  let missing = new Set<string>();
   let snapshot: readonly (readonly [string, string])[] = [];
   const listeners = new Set<() => void>();
-  const pendingWants = new Map<string, RuntimeSymbolEntry>();
+  const pendingWants = new Map<string, GlyphEntry>();
   let loader: WantListener | null = null;
   return {
-    symbolId: (styleKey, name) => idPrefix + runtimeSymbolId(styleKey, name),
-    hasSymbol: (styleKey, name) => provided.has(entryKey(styleKey, name)),
-    want(styleKey, name) {
-      const key = entryKey(styleKey, name);
-      if (provided.has(key) || pendingWants.has(key)) return;
-      const entry = { styleKey, name };
-      pendingWants.set(key, entry);
+    symbolId: (key, name) => idPrefix + glyphId(key, name),
+    hasSymbol: (key, name) => provided.has(entryKey(key, name)),
+    isMissing: (key, name) => missing.has(entryKey(key, name)),
+    want(key, name) {
+      const k = entryKey(key, name);
+      if (provided.has(k) || missing.has(k) || pendingWants.has(k)) return;
+      const entry = { key, name };
+      pendingWants.set(k, entry);
       loader?.(entry);
     },
     provide(chunkId, raw, entries) {
-      const markup =
-        idPrefix === ""
-          ? raw
-          : raw.replaceAll('id="msr-', `id="${idPrefix}msr-`);
-      // The prefix is applied by rewriting the server's own ids: a chunk whose
-      // symbols it did not reach would draw nothing under `symbolId`, silently.
-      if (idPrefix !== "" && entries.length > 0 && markup === raw) {
-        throw new Error(
-          `[icons] runtime-symbol chunk "${chunkId}" holds no id="msr-…" to scope`,
+      const markup = idPrefix === "" ? raw : prefixIds(raw, idPrefix);
+      if (held.get(chunkId)?.markup === markup) return;
+      const ids = symbolIdsIn(raw);
+      const carried: string[] = [];
+      const absent: string[] = [];
+      for (const e of entries) {
+        (ids.has(glyphId(e.key, e.name)) ? carried : absent).push(
+          entryKey(e.key, e.name),
         );
       }
-      if (held.get(chunkId)?.markup === markup) return;
-      held.set(chunkId, { markup, entries });
-      const next = new Set<string>();
-      for (const chunk of held.values()) {
-        for (const e of chunk.entries) next.add(entryKey(e.styleKey, e.name));
-      }
-      provided = next;
-      for (const key of [...pendingWants.keys()]) {
-        if (provided.has(key)) pendingWants.delete(key);
+      held.set(chunkId, { markup, carried, absent });
+      provided = new Set([...held.values()].flatMap((c) => c.carried));
+      missing = new Set(
+        [...held.values()]
+          .flatMap((c) => c.absent)
+          .filter((k) => !provided.has(k)),
+      );
+      for (const k of [...pendingWants.keys()]) {
+        if (provided.has(k) || missing.has(k)) pendingWants.delete(k);
       }
       snapshot = [...held.entries()]
         .map(([id, chunk]) => [id, chunk.markup] as const)
@@ -133,7 +172,7 @@ function createStore(
     },
     installLoader(listener) {
       if (loader !== null) {
-        throw new Error("[icons] a runtime symbol loader is already installed");
+        throw new Error("[icons] a glyph loader is already installed");
       }
       loader = listener;
       for (const entry of pendingWants.values()) listener(entry);
@@ -146,6 +185,14 @@ function createStore(
       return () => listeners.delete(listener);
     },
     chunks: () => snapshot,
+    pendingCount: () => pendingWants.size,
+    settleFailed(entries) {
+      let changed = false;
+      for (const e of entries) {
+        changed = pendingWants.delete(entryKey(e.key, e.name)) || changed;
+      }
+      if (changed) for (const l of listeners) l();
+    },
     wantSprite(key) {
       if (!ownSprites) {
         wantPageSprite(key);
@@ -211,6 +258,7 @@ function unsourced(scope: string): RuntimeSymbolStore {
   return {
     symbolId: refuse,
     hasSymbol: refuse,
+    isMissing: refuse,
     want: refuse,
     provide: refuse,
     installLoader: refuse,
@@ -218,6 +266,8 @@ function unsourced(scope: string): RuntimeSymbolStore {
     // saved icon asks for a symbol, which is what refuses.
     subscribe: () => () => {},
     chunks: () => NO_CHUNKS,
+    pendingCount: () => 0,
+    settleFailed: refuse,
     // A build sprite in a scope with no store of its own is the page's, as
     // before scopes had stores: a scope that must not reach the page's server
     // mounts one (`ScopeIconSymbols`).
@@ -271,4 +321,17 @@ export function useRuntimeSymbolStore(): RuntimeSymbolStore {
     unsourcedByScope.set(scope, refusing);
   }
   return refusing;
+}
+
+/**
+ * Where a sprite family's glyphs (Lucide) drawn here come from: the store
+ * mounted in this plugin scope when it mounted one (its server draws them),
+ * else the page's — never the refusing store of a scope that mounted none,
+ * since a family glyph is no saved data of the scope's.
+ */
+export function useFamilyGlyphStore(): RuntimeSymbolStore {
+  const scope = usePluginScopeId();
+  const mounted = useContext(RuntimeSymbolContext);
+  if (mounted !== null && mounted.scope === scope) return mounted.store;
+  return pageRuntimeSymbols;
 }

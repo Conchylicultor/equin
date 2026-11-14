@@ -30,7 +30,9 @@ export {
   ICON_SHAPES,
   ICON_WEIGHTS,
   brandId,
+  glyphId,
   iconifyName,
+  isGlyphKey,
   isSpriteKey,
   isStyleKey,
   lucideActiveId,
@@ -42,6 +44,7 @@ export {
   symbolId,
 } from "./style";
 export type {
+  GlyphKey,
   IconFill,
   IconShape,
   IconStyle,

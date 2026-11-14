@@ -13,7 +13,6 @@ export {
   usePublishIconStyle,
   usePublishIconStyleLayer,
   useScopeIconStyles,
-  useWantedStyleKeys,
 } from "./internal/style-store";
 export { provideSprite, useWantedSprites } from "./internal/sprite-store";
 export { IconSpriteSheet, RuntimeSymbolSheet } from "./internal/sprite-sheet";
@@ -36,7 +35,7 @@ export {
   useWantedScopeSprites,
 } from "./internal/runtime-symbol-store";
 export type {
-  RuntimeSymbolEntry,
+  GlyphEntry,
   RuntimeSymbolStore,
 } from "./internal/runtime-symbol-store";
 

@@ -1,7 +1,7 @@
 import type { CustomRef } from "./icon-ref";
 import { isIconMotion } from "./icon-motion";
 import { deriveActiveForm, placeActiveIds } from "./active-form";
-import type { SpriteKey } from "./style";
+import type { GlyphKey } from "./style";
 import type { SymbolName } from "./symbol-names.generated";
 
 /**
@@ -98,11 +98,12 @@ export type InlineIconFamily<G extends string = string> = {
 } & IconFamilyCoverage;
 
 /**
- * A family drawn from a server-built sprite, fetched the first time an icon in
- * one of its scopes mounts (Lucide: thousands of glyphs, so the server ships
- * only the manifest's). Until the sprite lands, a mapped symbol draws the next
- * family of the chain. Always `fallback` coverage: a strict family's gap glyph
- * lives in an inline family's sheet.
+ * A family drawn from a server-built set, loaded GLYPH BY GLYPH (Lucide):
+ * the first icon in one of its scopes asks for its glyph in `sprite`
+ * (`GlyphKey`), batched with every other want of the frame. Until the glyph
+ * lands, a mapped symbol draws the next family of the chain. Always
+ * `fallback` coverage: a strict family's gap glyph lives in an inline
+ * family's sheet.
  */
 export interface SpriteIconFamily {
   readonly kind: "sprite";
@@ -110,16 +111,16 @@ export interface SpriteIconFamily {
   readonly label: string;
   readonly coverage: "fallback";
   readonly fallback?: IconFamilyId;
-  readonly sprite: SpriteKey;
+  readonly sprite: GlyphKey;
   /**
-   * The sprite holding the family's active drawings (fetched on first use, like
+   * The key holding the family's active drawings (loaded per glyph, like
    * `sprite`); without one, an active icon draws as at rest.
    */
-  readonly activeSprite?: SpriteKey;
+  readonly activeSprite?: GlyphKey;
   /**
-   * The sprite `<symbol>` id drawing `name` — its active drawing, in
+   * The `<symbol>` id drawing `name` — its active drawing, in
    * `activeSprite`, when `active` — or `undefined` when the family does not
-   * draw it.
+   * draw it. Equal to `glyphId(sprite | activeSprite, name)` for a mapped name.
    */
   idOf(name: SymbolName, active: boolean): string | undefined;
 }
