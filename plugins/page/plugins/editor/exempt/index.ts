@@ -99,4 +99,12 @@ export default [
     reason:
       "Re-derives page_id over a moved subtree with one WITH RECURSIVE … UPDATE: the new value of each row depends on its ancestors' new values, which no typed update can express.",
   },
+  {
+    rule: "source-read-safety/no-text-source-read",
+    paths: ["check/no-token-identity-outside-owner.ts"],
+    kind: "debt",
+    task: "task-1794623832-1sr8c7",
+    reason:
+      "Written before sourceAnalysis(ctx): reads code through parse-utils' text helpers (regexes over masked source), which skip what they cannot guess.",
+  },
 ] satisfies Exemptions;

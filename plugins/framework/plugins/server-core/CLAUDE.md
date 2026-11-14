@@ -708,6 +708,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `detached-work-safety/no-raw-set-interval` — `bin/serve.ts` (sanctioned)
     - `live/no-legacy-resource-spelling` — `.` (sanctioned)
     - `server-core/no-process-crash-listener` — `core/process-crash-listeners.ts` (sanctioned)
+    - `source-read-safety/no-text-source-read` — `check/index.ts` (debt)
   - Exempted by:
     - `debug/boot-events` (0 debt)
     - `framework/server-core` (0 debt)

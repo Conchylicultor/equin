@@ -71,10 +71,21 @@ const BLOCKING = new Set([
   "scanGlobSync",
 ]);
 
-/** Whole-file synchronous parses, each with the thread-yielding, run-shared form to use. */
+/** Whole-file synchronous parses, each with what check code uses instead. */
 const SYNC_PARSE = new Map([
-  ["maskSource", "maskedSource"],
-  ["createSourceFile", "parsedTsSource"],
+  // A masked-text read is itself banned in check code
+  // (`source-read-safety/no-text-source-read`): read code through the AST.
+  [
+    "maskSource",
+    "`sourceAnalysis(ctx)` from checks/core (it parses through the " +
+      "thread-yielding, run-shared `parsedTsSource`)",
+  ],
+  [
+    "createSourceFile",
+    "`await parsedTsSource(…)` from checks/core: it yields the check " +
+      "thread's time slice first and keeps the result for the run, so the " +
+      "next pass or check reading the same file pays nothing",
+  ],
 ]);
 
 const LOOPS = new Set([
@@ -153,9 +164,7 @@ export default createRule({
       syncParse:
         "`{{name}}` is a whole-file synchronous parse; called per candidate it " +
         "holds the thread every check shares for the whole loop. Use " +
-        "`await {{replacement}}(…)` from checks/core: it yields the check " +
-        "thread's time slice first and keeps the result for the run, so the " +
-        "next pass or check reading the same file pays nothing.",
+        "{{replacement}}.",
     },
   },
   defaultOptions: [],

@@ -434,6 +434,7 @@ wrapper fixpoint reads.
     - `marker-scan-safety/no-adhoc-marker-scan` — `core/browser-host-coverage.scan.ts` (sanctioned)
     - `user-path/no-unproven-claim` — `core/test-helpers-doc.ts` (sanctioned)
     - `blocking-fs/sync-named` — `core/authored-override-seed.ts`, `core/barrel-stubs-gen.ts`, `core/claude-settings-gen.ts`, `core/config-origin-gen.ts`, `core/custom-utilities-gen.ts`, `core/declared-apps.ts`, `core/docgen.ts`, `core/evaluated-barrels.ts`, `core/fields-eager-gen.ts`, `core/file-config-proxy.ts`, `core/git-layer-config.ts`, `core/override-legend-stamp.ts`, `core/pre-barrel-guard.ts`, `core/slot-declaration-guard.ts`, `core/space-ramp-gen.ts`, `core/symbol-names-gen.ts`, `core/test-helpers-doc.ts`, `core/write-generated.ts` (sanctioned)
+    - `source-read-safety/no-text-source-read` — `check/index.ts` (debt)
 - Sub-plugins:
   - **`composition-registries`** — The per-composition registry files' grammar and listing: where a composition's `<dir>` registry lives (main's is the committed `<dir>.generated.ts`, any other's the gitignored…
 

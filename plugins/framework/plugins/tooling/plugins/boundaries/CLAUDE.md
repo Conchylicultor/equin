@@ -237,6 +237,7 @@ takes a `debt` exemption on the check's id.
   - Exempts itself from:
     - `boundaries/no-platform-api` — `core/check.ts`, `core/resolve.ts` (debt)
     - `blocking-fs/sync-named` — `core/check.ts` (sanctioned)
+    - `source-read-safety/no-text-source-read` — `check/machine-portable-declaration.ts`, `check/portable-own-barrels.scan.ts` (debt)
   - Exempted by:
     - `apps/browser/engine` (0 debt)
     - `apps/chord/song-index` (3 debt)

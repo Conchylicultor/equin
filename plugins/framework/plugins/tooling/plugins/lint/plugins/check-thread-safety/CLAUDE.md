@@ -11,9 +11,10 @@ per-file synchronous work (`checks/CLAUDE.md`, "The check thread is shared" and
   function handed to a call (`files.map(f => …)`); one call costs one syscall,
   per file it is the stall. Read through `ctx.repo()` or `node:fs/promises`,
   spawn with `spawnCaptured`. And no direct `maskSource` / `createSourceFile`
-  anywhere (a parse helper is called per file) —
-  `await maskedSource(…)` / `await parsedTsSource(…)` (checks/core) yield the
-  check thread's time slice first and keep the result for the run.
+  anywhere (a parse helper is called per file) — `await parsedTsSource(…)` or
+  `sourceAnalysis(ctx)` (checks/core) yield the check thread's time slice first
+  and keep the result for the run. (A masked-text read is banned in check code
+  outright: `source-read-safety/no-text-source-read`.)
 
   It sees only the check's own files. Blocking work inside a core helper a
   check calls is still named by the thread watch's `check-thread-stall`
@@ -24,7 +25,7 @@ per-file synchronous work (`checks/CLAUDE.md`, "The check thread is shared" and
 
 ## Plugin reference
 
-- Description: check-thread-safety lint rule: no-blocking-check-work (check/ code makes no blocking fs/process call and no direct maskSource / createSourceFile: it reads through ctx.repo() or fs/promises and masks/parses through checks/core's thread-yielding maskedSource / parsedTsSource, so no check holds the one thread every check shares)
+- Description: check-thread-safety lint rule: no-blocking-check-work (check/ code makes no blocking fs/process call and no direct maskSource / createSourceFile: it reads through ctx.repo() or fs/promises and parses through checks/core's thread-yielding parsedTsSource / sourceAnalysis, so no check holds the one thread every check shares)
 - Exemptions:
   - Exempted by:
     - `active-data` (1 debt)

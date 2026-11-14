@@ -31292,6 +31292,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `detached-work-safety/no-raw-set-interval` — `bin/serve.ts` (sanctioned)
           - `live/no-legacy-resource-spelling` — `.` (sanctioned)
           - `server-core/no-process-crash-listener` — `core/process-crash-listeners.ts` (sanctioned)
+          - `source-read-safety/no-text-source-read` — `check/index.ts` (debt)
         - Exempted by:
           - `debug/boot-events` (0 debt)
           - `framework/server-core` (0 debt)
@@ -31469,6 +31470,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exempts itself from:
               - `boundaries/no-platform-api` — `core/check.ts`, `core/resolve.ts` (debt)
               - `blocking-fs/sync-named` — `core/check.ts` (sanctioned)
+              - `source-read-safety/no-text-source-read` — `check/machine-portable-declaration.ts`, `check/portable-own-barrels.scan.ts` (debt)
             - Exempted by:
               - `apps/browser/engine` (0 debt)
               - `apps/chord/song-index` (3 debt)
@@ -31770,7 +31772,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - **`conversation-trailer`**
             - **`css-vars-single-owner`**
               - Exemptions:
-                - Exempts itself from: `check-thread-safety/no-blocking-check-work` — `check/index.ts` (debt)
+                - Exempts itself from:
+                  - `check-thread-safety/no-blocking-check-work` — `check/index.ts` (debt)
+                  - `source-read-safety/no-text-source-read` — `check/mask.ts` (debt)
             - **`css-vars-supplied`**
               - Exemptions:
                 - Exempts itself from: `check-thread-safety/no-blocking-check-work` — `check/index.ts` (debt)
@@ -31794,7 +31798,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Exempted by: `infra/host/host-admission` (0 debt)
             - **`inherited-theme-defaults-scoped`**
               - Exemptions:
-                - Exempts itself from: `check-thread-safety/no-blocking-check-work` — `check/index.ts` (debt)
+                - Exempts itself from:
+                  - `check-thread-safety/no-blocking-check-work` — `check/index.ts` (debt)
+                  - `source-read-safety/no-text-source-read` — `check/index.ts` (debt)
             - **`lint-directives-stable`**
             - **`migration-hashes-unique`**
               - Exemptions:
@@ -31829,6 +31835,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/networking` (0 debt)
                   - `primitives/networking/request-guard` (0 debt)
             - **`no-reexport-default`**
+              - Exemptions:
+                - Exempts itself from: `source-read-safety/no-text-source-read` — `check/no-reexport-default.scan.ts` (debt)
             - **`no-relative-server-imports`**
             - **`no-use-resource-cast`**
             - **`plugin-boundaries`**
@@ -31836,6 +31844,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Exempts itself from:
                   - `marker-scan-safety/no-adhoc-marker-scan` — `check/parse.ts` (sanctioned)
                   - `check-thread-safety/no-blocking-check-work` — `check/parse.ts` (debt)
+                  - `source-read-safety/no-text-source-read` — `check/parse.ts`, `check/test-only-exports.ts`, `check/plugin-boundaries.scan.ts` (debt)
                 - Exempted by: `framework/web-core` (0 debt)
             - **`plugin-refs-resolve`**
             - **`plugins-doc-in-sync`**
@@ -31895,9 +31904,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - **`space-ramp-in-sync`**
             - **`table-defs-in-schema-glob`**
               - Exemptions:
-                - Exempts itself from: `check-thread-safety/no-blocking-check-work` — `check/index.ts` (debt)
+                - Exempts itself from:
+                  - `check-thread-safety/no-blocking-check-work` — `check/index.ts` (debt)
+                  - `source-read-safety/no-text-source-read` — `check/index.ts` (debt)
             - **`tailwind-scan-covers-classes`**
             - **`theme-bridge-reads`**
+              - Exemptions:
+                - Exempts itself from: `source-read-safety/no-text-source-read` — `check/theme-bridge-reads.scan.ts` (debt)
             - **`theme-declarations-in-sync`**
             - **`token-group-vars-in-sync`**
             - **`tsconfig-alias-single-owner`**
@@ -32177,6 +32190,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `marker-scan-safety/no-adhoc-marker-scan` — `core/browser-host-coverage.scan.ts` (sanctioned)
               - `user-path/no-unproven-claim` — `core/test-helpers-doc.ts` (sanctioned)
               - `blocking-fs/sync-named` — `core/authored-override-seed.ts`, `core/barrel-stubs-gen.ts`, `core/claude-settings-gen.ts`, `core/config-origin-gen.ts`, `core/custom-utilities-gen.ts`, `core/declared-apps.ts`, `core/docgen.ts`, `core/evaluated-barrels.ts`, `core/fields-eager-gen.ts`, `core/file-config-proxy.ts`, `core/git-layer-config.ts`, `core/override-legend-stamp.ts`, `core/pre-barrel-guard.ts`, `core/slot-declaration-guard.ts`, `core/space-ramp-gen.ts`, `core/symbol-names-gen.ts`, `core/test-helpers-doc.ts`, `core/write-generated.ts` (sanctioned)
+              - `source-read-safety/no-text-source-read` — `check/index.ts` (debt)
           - Plugins:
             - **`composition-registries`** — The per-composition registry files' grammar and listing: where a composition's `<dir>` registry lives (main's is the committed `<dir>.generated.ts`, any other's the gitignored `<dir>.composition.<id>.generated.ts`), which collected dirs get one, and every per-name registry and backend entry on disk — without the build pipeline, so a serving backend (worktree reclaim) can list them.
               - Core:
@@ -32602,7 +32616,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - **`check-runner-safety`** — check-runner-safety lint rule: no-adhoc-check-runner
               - Exemptions:
                 - Exempted by: `framework/cli/check` (0 debt)
-            - **`check-thread-safety`** — check-thread-safety lint rule: no-blocking-check-work (check/ code makes no blocking fs/process call and no direct maskSource / createSourceFile: it reads through ctx.repo() or fs/promises and masks/parses through checks/core's thread-yielding maskedSource / parsedTsSource, so no check holds the one thread every check shares)
+            - **`check-thread-safety`** — check-thread-safety lint rule: no-blocking-check-work (check/ code makes no blocking fs/process call and no direct maskSource / createSourceFile: it reads through ctx.repo() or fs/promises and parses through checks/core's thread-yielding parsedTsSource / sourceAnalysis, so no check holds the one thread every check shares)
               - Exemptions:
                 - Exempted by:
                   - `active-data` (1 debt)
@@ -32733,6 +32747,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `infra/file-sink` (0 debt)
                   - `infra/host/io-health/monitor` (0 debt)
                   - `reports/engine` (0 debt)
+            - **`source-read-safety`** — source-read-safety lint rule: no-text-source-read (check/ code reads code through checks/core's fail-closed sourceAnalysis(ctx), never through parse-utils' regex-over-masked-text helpers — maskSource, matchBracket, findImports, findMarkerCalls, … — nor checks/core's maskedSource)
+              - Exemptions:
+                - Exempted by:
+                  - `framework/server-core` (1 debt)
+                  - `framework/tooling/boundaries` (2 debt)
+                  - `framework/tooling/checks/css-vars-single-owner` (1 debt)
+                  - `framework/tooling/checks/inherited-theme-defaults-scoped` (1 debt)
+                  - `framework/tooling/checks/no-reexport-default` (1 debt)
+                  - `framework/tooling/checks/plugin-boundaries` (3 debt)
+                  - `framework/tooling/checks/table-defs-in-schema-glob` (1 debt)
+                  - `framework/tooling/checks/theme-bridge-reads` (1 debt)
+                  - `framework/tooling/codegen` (1 debt)
+                  - `framework/tooling/test-layout` (2 debt)
+                  - `infra/launcher` (1 debt)
+                  - `network/live/resource-vocabulary` (1 debt)
+                  - `page/editor` (1 debt)
             - **`trigger-render-safety`** — trigger-render-safety lint rule: no-provider-trigger-render
             - **`vitest-mock-safety`** — vitest-mock-safety lint rules: a vi.mock of a plugin barrel is partial (spreads importOriginal), and a hoisted vi.mock / vi.hoisted callback reads none of the file's imports — the two ways a jsdom suite rots silently between runs
             - **`watcher-safety`** — watcher-safety lint rules: no-direct-parcel-watcher (only the file-watcher engine loads @parcel/watcher), no-raw-fs-watch (no fs.watch / watchFile / fs.promises.watch / chokidar in host-process code — declare a watcher with defineFileWatcher, or watchForCommand in the CLI) and no-detached-watch-reaction (a watch callback returns its async work instead of detaching it with void, so the watch coalesces it to one running plus one pending run)
@@ -32779,6 +32809,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exempts itself from:
               - `marker-scan-safety/no-adhoc-marker-scan` — `check/index.ts` (sanctioned)
               - `check-thread-safety/no-blocking-check-work` — `check/index.ts` (debt)
+              - `source-read-safety/no-text-source-read` — `check/index.ts`, `check/runner-split.scan.ts` (debt)
         - **`web-artifacts`** — Per-plugin web build artifacts: content-addressed vite lib-mode builds composed via an import map
           - Core:
             - Uses: 50 symbols — full list in [`plugins/framework/plugins/tooling/plugins/web-artifacts/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/web-artifacts/REFERENCE.md)
@@ -36978,6 +37009,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `boundaries/no-platform-api` — `server/internal/boot.ts`, `server/internal/config-propagate.ts`, `server/internal/release-swap.ts` (debt)
           - `check-thread-safety/no-blocking-check-work` — `check/internal/strip-comments.ts` (debt)
           - `blocking-fs/no-sync-fs` — `server/internal/boot.ts` (sanctioned)
+          - `source-read-safety/no-text-source-read` — `check/internal/strip-comments.ts` (debt)
       - Plugins:
         - **`agent-scratch`** — Where an agent session keeps its scratch files: agentScratchDir(owner) — one private directory per session (/tmp/equin-scratch/<conversation or Claude session id>), delivered to an app-launched agent's shell as EQUIN_SCRATCH — and foreignTempPath(path), which says whether an absolute path names a fixed file in a temp directory every session shares (/tmp, /var/tmp) outside that session's own. A leaf with no imports, so the guard (before anything is installed) and the agent launcher read the same rule.
           - Cross-plugin:
@@ -41143,7 +41175,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Imported by: `framework/tooling/codegen`
           - Exemptions:
-            - Exempts itself from: `import-scan-safety/no-hand-import-resolution` — `core/vocabulary.ts` (sanctioned)
+            - Exempts itself from:
+              - `import-scan-safety/no-hand-import-resolution` — `core/vocabulary.ts` (sanctioned)
+              - `source-read-safety/no-text-source-read` — `check/index.ts` (debt)
 
 - **`packages`** — Umbrella for package management utilities.
   - Plugins:
@@ -43397,6 +43431,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ids:pk-declared` — `server/internal/tables-events.ts` (debt)
           - `check-thread-safety/no-blocking-check-work` — `check/index.ts`, `check/no-token-identity-outside-owner.ts` (debt)
           - `sql-writes:fit:hand-written` — `server/internal/page-id.ts` (sanctioned)
+          - `source-read-safety/no-text-source-read` — `check/no-token-identity-outside-owner.ts` (debt)
         - Exempted by: `page/editor` (0 debt)
       - Test helpers:
         - Web: `@plugins/page/plugins/editor/web/testing`

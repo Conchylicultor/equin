@@ -428,6 +428,7 @@ Design: [`research/2026-09-15-global-declared-runtime-environment.md`](../../../
     - `boundaries/no-platform-api` — `server/internal/boot.ts`, `server/internal/config-propagate.ts`, `server/internal/release-swap.ts` (debt)
     - `check-thread-safety/no-blocking-check-work` — `check/internal/strip-comments.ts` (debt)
     - `blocking-fs/no-sync-fs` — `server/internal/boot.ts` (sanctioned)
+    - `source-read-safety/no-text-source-read` — `check/internal/strip-comments.ts` (debt)
 - Sub-plugins:
   - **`agent-scratch`** — Where an agent session keeps its scratch files: agentScratchDir(owner) — one private directory per session (/tmp/equin-scratch/<conversation or Claude session id>), delivered to an app-launched…
   - **`env-names`** — The app's own environment variables, declared by key (forwarded to the runtime tree or withheld from it, with why), and the one way to read and write them: readEnv / envEntries / setEnv /…

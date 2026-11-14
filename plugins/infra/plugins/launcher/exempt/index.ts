@@ -48,4 +48,12 @@ export default [
     reason:
       "killListenerOnPort's `lsof` and gatewayLaunchSpec's ensureSync of the gateway's dirs run only in the launcher's own process (`./equin start` / `stop`, the release `launch` binary) bringing the stack up or tearing it down \u2014 never on a serving backend.",
   },
+  {
+    rule: "source-read-safety/no-text-source-read",
+    paths: ["check/internal/strip-comments.ts"],
+    kind: "debt",
+    task: "task-1794623832-1sr8c7",
+    reason:
+      "Written before sourceAnalysis(ctx): reads code through parse-utils' text helpers (regexes over masked source), which skip what they cannot guess.",
+  },
 ] satisfies Exemptions;

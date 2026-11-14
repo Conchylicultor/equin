@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-framework-tooling-lint-source-read-safety",
+  "version": "0.0.1",
+  "private": true,
+  "description": "source-read-safety lint rule: no-text-source-read (check/ code reads code through checks/core's fail-closed sourceAnalysis(ctx), never through parse-utils' regex-over-masked-text helpers — maskSource, matchBracket, findImports, findMarkerCalls, … — nor checks/core's maskedSource)"
+}

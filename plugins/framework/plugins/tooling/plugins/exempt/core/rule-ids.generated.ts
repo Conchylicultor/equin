@@ -190,6 +190,7 @@ export type ExemptableRuleId =
   | "sink-safety/no-adhoc-profiler-seam"
   | "sortable-list/no-raw-dnd-kit"
   | "sortable-list/no-scaling-transform"
+  | "source-read-safety/no-text-source-read"
   | "space-ramp/no-dead-spacing"
   | "spacer/no-split-slot-row"
   | "spawn-safety/no-raw-bun-spawn"

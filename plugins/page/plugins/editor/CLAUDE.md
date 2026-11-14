@@ -2745,6 +2745,7 @@ status, which live in another table) in both directions; the CALLER supplies val
     - `ids:pk-declared` — `server/internal/tables-events.ts` (debt)
     - `check-thread-safety/no-blocking-check-work` — `check/index.ts`, `check/no-token-identity-outside-owner.ts` (debt)
     - `sql-writes:fit:hand-written` — `server/internal/page-id.ts` (sanctioned)
+    - `source-read-safety/no-text-source-read` — `check/no-token-identity-outside-owner.ts` (debt)
   - Exempted by: `page/editor` (0 debt)
 - Test helpers:
   - Web: `@plugins/page/plugins/editor/web/testing`

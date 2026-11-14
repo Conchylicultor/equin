@@ -123,7 +123,9 @@ regexes over masked text (`findImports` / `matchBracket` / an `importAliases`
 map / a `const x =` pattern). Text scanners guess, and what they cannot guess
 they skip: aliases, re-exports, `export *` barrels, namespace imports,
 ternaries, spreads and wrappers silently escape them, and the check passes over
-the case it exists for.
+the case it exists for. `source-read-safety/no-text-source-read` (lint) bans
+parse-utils' text helpers and `maskedSource` in `check/` code; the checks written before it are
+debt in their own `exempt/index.ts`.
 
 - **`usesOf({ key: { rel, name } }, (g) => listCandidateSources({ grepArg: g }))`**
   — every call / member call / re-export of a declaration, through every
@@ -795,7 +797,7 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
   - **`no-raw-event-source`**
   - **`no-raw-sse`** [exempt]
   - **`no-raw-websocket`**
-  - **`no-reexport-default`**
+  - **`no-reexport-default`** [exempt]
   - **`no-relative-server-imports`**
   - **`no-use-resource-cast`**
   - **`plugin-boundaries`** [exempt]
@@ -811,7 +813,7 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
   - **`space-ramp-in-sync`**
   - **`table-defs-in-schema-glob`** [exempt]
   - **`tailwind-scan-covers-classes`**
-  - **`theme-bridge-reads`**
+  - **`theme-bridge-reads`** [exempt]
   - **`theme-declarations-in-sync`**
   - **`token-group-vars-in-sync`**
   - **`tsconfig-alias-single-owner`**
