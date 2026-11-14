@@ -485,11 +485,11 @@ own `requestfailed` listener calls it too. Diagnosis:
   - Uses: `framework/tooling/guards/module-extension.MODULE_EXTENSION`
   - Exports (values): `isE2eScriptPath`
 - Cross-plugin:
-  - Imported by: 198 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 197 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×60
     - `primitives` ×29
-    - `conversations` ×26
     - `page` ×26
+    - `conversations` ×25
     - `debug` ×10
     - `apps-core` ×6
     - `tasks` ×5

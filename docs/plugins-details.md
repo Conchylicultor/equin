@@ -17946,7 +17946,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversationPane.Actions` ← `conversations.agents`
           - `conversationPane.Actions` ← `conversations.conversation-preprompt`
           - `conversationPane.Actions` ← `conversations.conversation-progress`
-          - `conversationPane.Actions` ← `conversations.conversation-view.allow-monitor`
           - `conversationPane.Actions` ← `conversations.conversation-view.dependencies`
           - `conversationPane.Actions` ← `conversations.conversation-view.model`
           - `conversationPane.Actions` ← `conversations.conversation-view.pin`
@@ -17994,8 +17993,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-xl`
           - `ui/tokens/density --space-xs`
           - `ui/tokens/type-scale --measure-reading`
-        - Imported by: 65 plugins — full list in [`plugins/conversations/plugins/conversation-view/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/REFERENCE.md)
-          - `conversations` ×50
+        - Imported by: 64 plugins — full list in [`plugins/conversations/plugins/conversation-view/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/REFERENCE.md)
+          - `conversations` ×49
           - `active-data` ×5
           - `tasks` ×4
           - `apps/home/tour`
@@ -18040,36 +18039,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversation-view/vscode`
               - `review`
               - `tasks/attempt-view`
-        - **`allow-monitor`** — Flags when an agent has created a guard-bypass file (.allow-main, .allow-postgres, …) in its worktree.
-          - Web:
-            - Contributes: `conversationPane.Actions` "allow-monitor" → `AllowMonitorChip`
-            - Uses:
-              - `conversations/conversation-view.conversationPane`
-              - `network/live.useLive`
-              - `network/live/live-state.ResourceErrorInline`
-              - `primitives/css/badge.Badge`
-              - `primitives/css/spacing.Stack`
-              - `primitives/css/text.Text`
-              - `ui/icons.Icon`
-          - Server:
-            - Contributes: `resource.declare` "allow-files"
-            - Resources: `allow-files` (push, notified, whole: the guard-bypass files present at one worktree root — at most one per bypass token, a handful)
-          - Machine:
-            - Uses:
-              - `infra/file-watcher.acquireEventualDirWatch`
-              - `network/live.serveValue`
-          - Core:
-            - Uses:
-              - `network/live.liveValue`
-              - `packages/list-bound.wholeList`
-            - Exports (types): `AllowFiles`
-            - Exports (values): `allowFiles`
-          - Cross-plugin:
-            - Uses tokens:
-              - `ui/tokens/color-palette --destructive`
-              - `ui/tokens/font-family --font-mono`
-              - `ui/tokens/type-scale --font-weight-semibold`
-            - Imported by: `network/live`
         - **`artifacts`** — Conversation toolbar button listing everything the conversation made, changed or looked at. Owns the ConversationArtifacts.Kind registry each kind of artifact contributes to (its own section; its pure extractor contributes to the server-side ConversationArtifactExtractor), the server-derived whole-transcript aggregation, the popover, and the shared row / section / relation-mark chrome every kind renders through. Names no kind. Serves what a conversation made, changed or looked at over its whole transcript (conversations.conversation-view.artifacts): owns the ConversationArtifactExtractor contribution each kind of artifact adds its pure extractor to, and runs every one over the transcript on the server.
           - Web:
             - Slots: `ConversationArtifacts.Kind`
@@ -31052,8 +31021,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `readMergeMarkers`
           - `resolveGitDir`
       - Cross-plugin:
-        - Imported by: 37 plugins — full list in [`plugins/framework/plugins/cli/REFERENCE.md`](../plugins/framework/plugins/cli/REFERENCE.md)
-          - `framework` ×26
+        - Imported by: 38 plugins — full list in [`plugins/framework/plugins/cli/REFERENCE.md`](../plugins/framework/plugins/cli/REFERENCE.md)
+          - `framework` ×27
           - `infra` ×5
           - `apps` ×3
           - `plugin-meta` ×2
@@ -31206,8 +31175,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `CLI_NAMES`
               - `isCliName`
           - Cross-plugin:
-            - Imported by: 26 plugins — full list in [`plugins/framework/plugins/cli/plugins/cli-name/REFERENCE.md`](../plugins/framework/plugins/cli/plugins/cli-name/REFERENCE.md)
-              - `framework` ×6
+            - Imported by: 27 plugins — full list in [`plugins/framework/plugins/cli/plugins/cli-name/REFERENCE.md`](../plugins/framework/plugins/cli/plugins/cli-name/REFERENCE.md)
+              - `framework` ×7
               - `infra` ×6
               - `debug` ×4
               - `apps` ×2
@@ -31903,10 +31872,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `withNotifyBatch`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
-        - Imported by: 121 plugins — full list in [`plugins/framework/plugins/server-core/REFERENCE.md`](../plugins/framework/plugins/server-core/REFERENCE.md)
+        - Imported by: 120 plugins — full list in [`plugins/framework/plugins/server-core/REFERENCE.md`](../plugins/framework/plugins/server-core/REFERENCE.md)
           - `infra` ×29
-          - `conversations` ×14
           - `debug` ×14
+          - `conversations` ×13
           - `tasks` ×12
           - `database` ×10
           - `apps` ×8
@@ -32921,11 +32890,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: `framework/tooling/guards/module-extension.MODULE_EXTENSION`
             - Exports (values): `isE2eScriptPath`
           - Cross-plugin:
-            - Imported by: 198 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
+            - Imported by: 197 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
               - `apps` ×60
               - `primitives` ×29
-              - `conversations` ×26
               - `page` ×26
+              - `conversations` ×25
               - `debug` ×10
               - `apps-core` ×6
               - `tasks` ×5
@@ -33023,8 +32992,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `blocking-fs/sync-named` — `core/internal/changed-files.ts` (sanctioned)
         - **`guards`** — Claude Code PreToolUse guards: safety checks that intercept tool calls before execution
           - Core:
-            - Uses: 35 symbols — full list in [`plugins/framework/plugins/tooling/plugins/guards/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/guards/REFERENCE.md)
+            - Uses: 39 symbols — full list in [`plugins/framework/plugins/tooling/plugins/guards/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/guards/REFERENCE.md)
               - `infra/paths` ×5
+              - `framework/tooling/guards/bypass` ×4
               - `packages/timed-fs` ×4
               - `framework/cli/cli-name` ×3
               - `infra/host-fs/user-path` ×3
@@ -33106,14 +33076,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `conversations/stop-gate`
                   - `conversations/workspace/scratch`
                   - `framework/tooling/codegen`
-            - **`bypass-tokens`** — BYPASS_TOKENS: every bypass file a guard may honour (.allow-main, …), declared as data, and the BypassToken type a guard's bypassToken must be — so a guard cannot name an undeclared file (tsc) and guards:bypass-tokens-declared fails on a declared one no guard honours. A leaf, so the conversation view's bypass chip reads the set without loading the guard registry.
-              - Cross-plugin:
-                - Imported by: `conversations/conversation-view/allow-monitor`
+            - **`bypass`** — The guard bypass grammar: a denied call's bypass id (<guard>#<call hash>), the `./equin guard bypass <id> --reason "…"` command that lets that one call through, and its parser — shared by the hook that records it and the CLI that confirms it. A leaf, so both read one spelling.
               - Core:
-                - Exports (types): `BypassToken`
+                - Uses: `framework/cli/cli-name.CLI_NAME`
+                - Exports (types):
+                  - `BypassParse`
+                  - `BypassRequest`
                 - Exports (values):
-                  - `BYPASS_TOKENS`
-                  - `isBypassToken`
+                  - `BYPASS_MIN_REASON`
+                  - `bypassCommand`
+                  - `bypassId`
+                  - `isBypassCall`
+                  - `parseBypassArgs`
+              - Cross-plugin:
+                - Imported by: `framework/tooling/guards`
             - **`module-extension`** — MODULE_EXTENSION: the extensions bun loads as a module (.ts/.tsx/.js/.jsx and their m/c forms) — the one set the bun-script guard denies and `./equin run` accepts. A leaf with no imports, so the e2e path convention (and the lint rule reading it) reaches the constant without the guard runtime.
               - Cross-plugin:
                 - Imported by:
@@ -36100,11 +36076,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Register: `file-sink-exit-flush`
     - **`file-watcher`** — defineFileWatcher: the one declared in-process file watcher — a named, described declaration (static policy: extensions, ignore, debounce, ceiling, writesWhileOpen, depth, mainOnly) whose start({dirs, label, onChange, onLost}) — start({files, …}) for a writesWhileOpen one, which follows writes to the named files only (kqueue on darwin, one descriptor per file; every follow of a directory shares one subscription) — opens instances over one @parcel/watcher engine (debounce + ceiling flush; no timer — a dropped event is reported to onLost, the one backstop). Records per declaration its open instances, last change batch and a ring of handler runs for the Background activity catalog (onWatcherActivity / listFileWatchers / fileWatcherRecentRuns). The cli barrel's watchForCommand is the same engine for a foreground command, with no registry. acquireDirWatch({dir, scope, onChange}) is the shared directory-watch hub: refcounted native watches, a dir under a watched root riding its watch (a watcher never moved off a live root: a root opening above leaves it where it is), with subtree or children (depth-1 listing) scope — a children request with no root above it opening only a single-directory watch (depth children), never a recursive one. On macOS a children watch is kqueue's (a descriptor on the dir and each entry, budgeted — a dir past the budget rides FSEvents), so watching / or ~ puts nothing on fseventsd; every other FSEvents watch with no ignore rides the process's stream pool — one stream per watched root, a dir under an open recursive stream riding it, whatever declaration asks (fsEventsStreams reads it).
       - Cross-plugin:
-        - Imported by: 45 plugins — full list in [`plugins/infra/plugins/file-watcher/REFERENCE.md`](../plugins/infra/plugins/file-watcher/REFERENCE.md)
+        - Imported by: 44 plugins — full list in [`plugins/infra/plugins/file-watcher/REFERENCE.md`](../plugins/infra/plugins/file-watcher/REFERENCE.md)
           - `infra` ×15
           - `debug` ×10
           - `build` ×5
-          - `conversations` ×5
+          - `conversations` ×4
           - `apps` ×2
           - `companions/browser-extension`
           - `config_v2`
@@ -38873,11 +38849,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SPAN_MEASURES`
           - `waitSplit`
       - Cross-plugin:
-        - Imported by: 78 plugins — full list in [`plugins/infra/plugins/runtime-profiler/REFERENCE.md`](../plugins/infra/plugins/runtime-profiler/REFERENCE.md)
+        - Imported by: 77 plugins — full list in [`plugins/infra/plugins/runtime-profiler/REFERENCE.md`](../plugins/infra/plugins/runtime-profiler/REFERENCE.md)
           - `infra` ×22
           - `debug` ×21
           - `apps` ×7
-          - `conversations` ×7
+          - `conversations` ×6
           - `build` ×3
           - `database` ×3
           - `tasks` ×3
@@ -40930,9 +40906,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveValueOn`
           - `sliceRange`
       - Cross-plugin:
-        - Imported by: 354 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+        - Imported by: 353 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
           - `apps` ×89
-          - `conversations` ×73
+          - `conversations` ×72
           - `debug` ×36
           - `tasks` ×31
           - `infra` ×24
@@ -41348,9 +41324,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `unresolved`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/color-palette --destructive`
-            - Imported by: 313 plugins — full list in [`plugins/network/plugins/live/plugins/live-state/REFERENCE.md`](../plugins/network/plugins/live/plugins/live-state/REFERENCE.md)
+            - Imported by: 312 plugins — full list in [`plugins/network/plugins/live/plugins/live-state/REFERENCE.md`](../plugins/network/plugins/live/plugins/live-state/REFERENCE.md)
               - `apps` ×85
-              - `conversations` ×49
+              - `conversations` ×48
               - `debug` ×31
               - `ui` ×25
               - `tasks` ×24
@@ -41899,9 +41875,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `withDeadline`
     - **`error-subject`** — What an error is about, carried by the error: SubjectError (a shared throw site — the migration runner, the trigger installer — names the one subject it failed for), errorSubject(err) (the subjects along the cause chain plus the innermost class code, ENOENT / SQLSTATE) and crashFieldsOf(err, scope?) — the errorType / stack / scope every crash filer derives from an error, so a shared throw site's failures land on one report row per cause instead of one for all. Enforced by error-subject/crash-fields-of.
       - Cross-plugin:
-        - Imported by: 31 plugins — full list in [`plugins/packages/plugins/error-subject/REFERENCE.md`](../plugins/packages/plugins/error-subject/REFERENCE.md)
+        - Imported by: 30 plugins — full list in [`plugins/packages/plugins/error-subject/REFERENCE.md`](../plugins/packages/plugins/error-subject/REFERENCE.md)
           - `infra` ×8
-          - `conversations` ×6
+          - `conversations` ×5
           - `database` ×5
           - `reports` ×3
           - `apps` ×2
@@ -42063,10 +42039,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `wholeRecord`
           - `wholeTuple`
       - Cross-plugin:
-        - Imported by: 134 plugins — full list in [`plugins/packages/plugins/list-bound/REFERENCE.md`](../plugins/packages/plugins/list-bound/REFERENCE.md)
+        - Imported by: 133 plugins — full list in [`plugins/packages/plugins/list-bound/REFERENCE.md`](../plugins/packages/plugins/list-bound/REFERENCE.md)
           - `apps` ×30
           - `debug` ×20
-          - `conversations` ×17
+          - `conversations` ×16
           - `infra` ×16
           - `tasks` ×9
           - `build` ×5
@@ -48227,10 +48203,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×6
               - `ui/tokens/shape` ×3
               - `ui/tokens/font-family --font-mono`
-            - Imported by: 189 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
+            - Imported by: 188 plugins — full list in [`plugins/primitives/plugins/css/plugins/badge/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/badge/REFERENCE.md)
               - `apps` ×39
               - `debug` ×39
-              - `conversations` ×29
+              - `conversations` ×28
               - `reports` ×19
               - `tasks` ×11
               - `primitives` ×10
@@ -49276,9 +49252,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Stack`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Imported by: 447 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
+            - Imported by: 446 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
               - `apps` ×109
-              - `conversations` ×77
+              - `conversations` ×76
               - `primitives` ×54
               - `debug` ×39
               - `ui` ×31
@@ -49509,9 +49485,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×37
               - `ui/tokens/color-palette` ×6
               - `ui/tokens/font-family` ×2
-            - Imported by: 430 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+            - Imported by: 429 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
               - `apps` ×112
-              - `conversations` ×83
+              - `conversations` ×82
               - `primitives` ×47
               - `debug` ×39
               - `page` ×25
@@ -62520,8 +62496,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TRAILER_LOG_FORMAT`
           - `UNATTRIBUTED_TRAILER_KEY`
       - Cross-plugin:
-        - Imported by: 125 plugins — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
-          - `conversations` ×51
+        - Imported by: 124 plugins — full list in [`plugins/tasks/plugins/tasks-core/REFERENCE.md`](../plugins/tasks/plugins/tasks-core/REFERENCE.md)
+          - `conversations` ×50
           - `tasks` ×40
           - `debug` ×6
           - `active-data` ×5
@@ -62759,9 +62735,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useWantedSprites`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
-        - Imported by: 597 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+        - Imported by: 596 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
           - `apps` ×157
-          - `conversations` ×123
+          - `conversations` ×122
           - `primitives` ×53
           - `page` ×52
           - `fields` ×41
@@ -64084,9 +64060,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/density --space-sm`
               - `ui/tokens/shape --spacing`
-            - Tokens used by: 550 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
+            - Tokens used by: 549 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
               - `apps` ×123
-              - `conversations` ×97
+              - `conversations` ×96
               - `primitives` ×75
               - `debug` ×42
               - `page` ×33
@@ -64329,8 +64305,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `fontFamilyGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/density --space-sm`
-            - Tokens used by: 158 plugins — full list in [`plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md)
-              - `conversations` ×40
+            - Tokens used by: 157 plugins — full list in [`plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md)
+              - `conversations` ×39
               - `apps` ×25
               - `plugin-meta` ×23
               - `debug` ×19
@@ -64817,9 +64793,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `typeScaleGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/density --space-sm`
-            - Tokens used by: 231 plugins — full list in [`plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md)
+            - Tokens used by: 230 plugins — full list in [`plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md)
               - `apps` ×59
-              - `conversations` ×40
+              - `conversations` ×39
               - `primitives` ×38
               - `debug` ×15
               - `plugin-meta` ×14

@@ -309,7 +309,6 @@ is the pure `planConversationUpdate` (`plan-update.ts`).
   - **`conversation-view`** — Conversation pane host. The header is the pane's own Actions slot (title plus chips); the prompt bar is slot-driven.
     - Plugins:
       - **`action-bar`** — Hosts the Conversation.ActionBar slot — action buttons rendered in the JSONL viewer header.
-      - **`allow-monitor`** — Flags when an agent has created a guard-bypass file (.allow-main, .allow-postgres, …) in its worktree.
       - **`artifacts`** — Conversation toolbar button listing everything the conversation made, changed or looked at. Owns the ConversationArtifacts.Kind registry each kind of artifact contributes to (its own section; its…
         - Plugins:
           - **`page`** — equin pages as a conversation artifact: every page the transcript's edit_page / write_agent_note / read_page calls acted on, listed as a row that opens the page beside the chat — or, for a call…
