@@ -149,12 +149,21 @@ install, at any tier. It ran per launch, and the reap then deleted the same
   `node_modules` takes the newest entry under 7 days old as its
   `node_modules/.bun`; the install (no stamp came with it) re-links it, cloning
   only what the lock changed.
-- **The last store stays, as the seed** — when the store taken is the only one
-  waiting, it goes back and the checkout gets a copy (`cloneSeed`: `cp -cR` —
-  per-file APFS clones, which hold no rename lock — staged under a transient
-  pool name, moved in by one rename). Without it the pool ran dry most days,
-  and the cold installs held renames for seconds. A copy of a seed claimed
-  mid-copy (gone from its name) is discarded. macOS only.
+- **The oldest store stays, as the seed** — when the only store waiting is
+  the oldest (adopters take newest first, so the last one left is), the
+  checkout gets a copy (`cloneSeed`: `cp -cR` — per-file APFS clones, which
+  hold no rename lock — staged under a transient pool name, moved in by one
+  rename). Without it the pool ran dry most days, and the cold installs held
+  renames for seconds. macOS only.
+- **No adopter ever renames the seed, not even to look**
+  (`takeNewestSparingOldest`): a copy of it may be in flight in another
+  process at any moment, and a rename moves its source from under that `cp`.
+  The first version claimed the newest entry, saw it was the last, and put it
+  back — 29 of 154 seed copies failed on ENOENT (11-11..11-15). Otherwise
+  only the sweep's expiry claims a seed (and, at the 7-day boundary, an
+  adopter whose clock already counts the old seed expired may take the next
+  one); a copy that ends with the seed gone is discarded (a cold install),
+  while one that failed with the seed in place throws.
 - **No count bound — supply is demand, 72 h late.** A store is made when its
   checkout is reaped, and the reaper takes a finished checkout only at 72 h
   old (all 260 harvests of 11-05..08 came from checkouts made 72–80 h before);

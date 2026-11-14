@@ -12,6 +12,7 @@ import {
   rmSync,
   symlinkSync,
   utimesSync,
+  watch,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -202,22 +203,49 @@ describe("adoptDepStore", () => {
     );
   });
 
-  test("two adopters of the last store: neither takes it, and each gets a copy or installs cold", async () => {
+  test("concurrent adopters of the last store: each gets a copy, none cold", async () => {
     await harvestDepStore(repo, installedCheckout("att-1"), 1000);
-    const a = emptyCheckout("a");
-    const b = emptyCheckout("b");
-    const results = await Promise.all([
-      adoptDepStore(repo, a, 2000),
-      adoptDepStore(repo, b, 2000),
-    ]);
-    expect(results.some((r) => r.kind === "cloned")).toBe(true);
-    for (const [r, c] of [
-      [results[0]!, a],
-      [results[1]!, b],
-    ] as const) {
-      expect(r.kind === "cloned" || r.kind === "none").toBe(true);
-      expect(existsSync(join(c, "node_modules"))).toBe(r.kind === "cloned");
+    const checkouts = ["a", "b", "c", "d"].map(emptyCheckout);
+    const results = await Promise.all(
+      checkouts.map((c) => adoptDepStore(repo, c, 2000)),
+    );
+    for (const [i, r] of results.entries()) {
+      expect(r.kind).toBe("cloned");
+      expect(existsSync(join(checkouts[i]!, "node_modules", ".bun"))).toBe(
+        true,
+      );
     }
+    expect(poolNames()).toEqual(["1000-att-1"]);
+  });
+
+  test("an adopter never renames the seed: a copy in flight keeps its source", async () => {
+    // The seed's dir stays at its published path for the whole adoption — the
+    // inode a `cp` in another process is walking. A claim-and-put-back (the
+    // old "was it the last one?" check) would give it a new path meanwhile.
+    await harvestDepStore(repo, installedCheckout("att-1"), 1000);
+    const seedStore = join(depStorePoolDir(repo), "1000-att-1", "store");
+    const watcher = watch(depStorePoolDir(repo));
+    const renamed: string[] = [];
+    watcher.on("change", (_kind, name) => {
+      if (typeof name === "string" && name.startsWith(".claimed-")) {
+        renamed.push(name);
+      }
+    });
+    await adoptDepStore(repo, emptyCheckout("fresh"), 2000);
+    await Bun.sleep(50);
+    watcher.close();
+    expect(renamed).toEqual([]);
+    expect(existsSync(seedStore)).toBe(true);
+  });
+
+  test("with a newer store waiting, the newest is moved and the oldest stays as the seed", async () => {
+    await harvestDepStore(repo, installedCheckout("att-1", "a@1.0.0"), 1000);
+    await harvestDepStore(repo, installedCheckout("att-2", "b@1.0.0"), 2000);
+    const [x, y] = await Promise.all([
+      adoptDepStore(repo, emptyCheckout("x"), 2500),
+      adoptDepStore(repo, emptyCheckout("y"), 2500),
+    ]);
+    expect([x.kind, y.kind].sort()).toEqual(["adopted", "cloned"]);
     expect(poolNames()).toEqual(["1000-att-1"]);
   });
 

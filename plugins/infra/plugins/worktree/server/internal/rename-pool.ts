@@ -97,14 +97,43 @@ export async function takeNewest(
   return null;
 }
 
-/** Whether any published entry within the age bound still waits. */
-export async function hasWaiting(
+/** What `takeNewestSparingOldest` found: an entry it took, or only the oldest. */
+export type SparingTake =
+  | { kind: "taken"; taken: TakenEntry }
+  /** Only the oldest entry within the age bound waits; it was not touched. */
+  | { kind: "oldest"; entry: string; ageMs: number }
+  | { kind: "none" };
+
+/**
+ * `takeNewest`, except the OLDEST entry within the age bound is never claimed:
+ * it is read in place by whoever needs it (a pool's seed, copied rather than
+ * moved), so nothing but the sweep's expiry ever renames it — and a reader
+ * walking it is never cut off by a claim. The decision needs no claim either:
+ * a claim taken only to learn "it was the last one" and put back (the old
+ * take-then-`putBack`) moved the seed away from under every copy in flight.
+ *
+ * Two takers that both see [newer, oldest] are told apart by the claim of
+ * `newer` as usual; the loser falls to `oldest`, never takes it.
+ */
+export async function takeNewestSparingOldest(
   pool: RenamePool,
   now: number,
-): Promise<boolean> {
-  return (await listPublished(pool.dir)).some(
-    (entry) => now - madeAtMs(entry)! <= pool.maxAgeMs,
+): Promise<SparingTake> {
+  const waiting = (await listPublished(pool.dir)).filter(
+    (entry) => now - madeAtMs(entry)! <= pool.maxAgeMs, // older: sweep deletes it
   );
+  const oldest = waiting.at(-1);
+  if (oldest === undefined) return { kind: "none" };
+  for (const entry of waiting.slice(0, -1)) {
+    const claimed = await claim(pool.dir, entry, now);
+    if (claimed !== null) {
+      return {
+        kind: "taken",
+        taken: { entry, ageMs: now - madeAtMs(entry)!, claimed },
+      };
+    }
+  }
+  return { kind: "oldest", entry: oldest, ageMs: now - madeAtMs(oldest)! };
 }
 
 /** Whether `entry` is still published under its own name (nobody has claimed it). */
