@@ -1,6 +1,6 @@
 import { readSleepClock } from "@plugins/packages/plugins/sleep-clock/core";
 import type { SleepNow } from "../../core";
-import { createSleepPublisher } from "./sleep-publisher";
+import { armAwakeTimeout, createSleepPublisher } from "./sleep-publisher";
 
 // The one publisher of this process: the server half owns the reading (other
 // plugins' server code drives it through publishSleepReading), and the machine
@@ -46,4 +46,18 @@ export function sleptDuring(startMs: number, endMs: number): number | null {
  */
 export function awakeSpanStart(endMs: number, awakeMs: number): number | null {
   return publisher.awakeSpanStart(endMs, awakeMs);
+}
+
+/**
+ * `setTimeout` on AWAKE time: `fn` runs once the machine has been awake for
+ * `awakeMs` since the call, however long it slept meanwhile — for a bound on
+ * work this machine does (a job's hold deadline) that a nap must not spend.
+ * A wall-clock timer where the platform cannot tell. Returns the cancel.
+ */
+export function setAwakeTimeout(fn: () => void, awakeMs: number): () => void {
+  return armAwakeTimeout(publisher, fn, awakeMs, {
+    now: () => Date.now(),
+    setTimeout: (f, ms) => setTimeout(f, ms),
+    clearTimeout: (h) => clearTimeout(h as ReturnType<typeof setTimeout>),
+  });
 }

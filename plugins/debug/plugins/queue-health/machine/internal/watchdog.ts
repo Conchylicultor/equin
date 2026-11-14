@@ -15,6 +15,7 @@ import {
   type QueueClassBacklogStat,
 } from "@plugins/infra/plugins/jobs/machine";
 import { getConfig } from "@plugins/config_v2/server";
+import { sleptDuring } from "@plugins/infra/plugins/host/plugins/machine-sleep/server";
 import { recordReport } from "@plugins/reports/plugins/engine/server";
 import { getRuntimeProfile } from "@plugins/infra/plugins/runtime-profiler/core";
 import { defineTimer } from "@plugins/infra/plugins/background/plugins/timer/server";
@@ -512,9 +513,13 @@ async function checkSlotHogs(
     }
   }
 
+  const now = Date.now();
   for (const [jobName, agg] of longestPerJob) {
     const thresholdMs = deadlineMsFor(agg.hold) * slotHogDeadlineFraction;
-    if (agg.lockedForMs <= thresholdMs) continue;
+    // AWAKE hold, like the deadline it is a fraction of: a slot held across a
+    // nap held it for no work at all (wall clock where the platform cannot tell).
+    const slept = sleptDuring(now - agg.lockedForMs, now) ?? 0;
+    if (agg.lockedForMs - slept <= thresholdMs) continue;
     await recordReport({
       kind: "queue-slot-hog",
       source: "server-queue-monitor",

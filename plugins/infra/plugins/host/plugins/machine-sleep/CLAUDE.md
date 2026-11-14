@@ -34,7 +34,7 @@ reaches the browser within one tick.
 
 ## Plugin reference
 
-- Description: useSleepNow(): the machine.sleep live value (and useSleepNowForFold: the reading as op-log's `sleepNow` fold parameter, unknown while loading or where the computer cannot be read) — the box's sleep clock, so a live surface can count a nap as asleep rather than as work. The machine's sleep clock, read and published: publishSleepReading() re-reads it and tells its listeners only when it changed — called by an existing periodic observer, so a wake reaches the browser without a poller of its own — with currentSleepReading() and onSleepReadingChanged() for the machine half that serves it as the machine.sleep live value, sleptDuring(start, end) — the sleep this process saw inside a wall-clock span — and awakeSpanStart(end, awakeMs) — the wall-clock instant that much awake time before end, stepping over those sleeps.
+- Description: useSleepNow(): the machine.sleep live value (and useSleepNowForFold: the reading as op-log's `sleepNow` fold parameter, unknown while loading or where the computer cannot be read) — the box's sleep clock, so a live surface can count a nap as asleep rather than as work. The machine's sleep clock, read and published: publishSleepReading() re-reads it and tells its listeners only when it changed — called by an existing periodic observer, so a wake reaches the browser without a poller of its own — with currentSleepReading() and onSleepReadingChanged() for the machine half that serves it as the machine.sleep live value, sleptDuring(start, end) — the sleep this process saw inside a wall-clock span — and awakeSpanStart(end, awakeMs) — the wall-clock instant that much awake time before end, stepping over those sleeps — and setAwakeTimeout(fn, awakeMs), a timer that a sleep does not spend.
 - Server:
   - Contributes: `resource.declare` "machine.sleep"
   - Exports (values):
@@ -42,6 +42,7 @@ reaches the browser within one tick.
     - `currentSleepReading`
     - `onSleepReadingChanged`
     - `publishSleepReading`
+    - `setAwakeTimeout`
     - `sleptDuring`
   - Resources: `machine.sleep` (push, notified)
 - Web:
@@ -64,6 +65,7 @@ reaches the browser within one tick.
     - `conversations/conversation-view/op-status`
     - `debug/health-monitor`
     - `debug/profiling/ops`
+    - `debug/queue-health`
     - `debug/slow-ops`
     - `infra/jobs`
 

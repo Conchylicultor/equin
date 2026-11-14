@@ -1,4 +1,5 @@
 import { reportServerError } from "@plugins/framework/plugins/server-core/core";
+import { setAwakeTimeout } from "@plugins/infra/plugins/host/plugins/machine-sleep/server";
 import { deadlineMsFor, type HoldClass } from "../../core/hold";
 import {
   jobDeadlineSink,
@@ -32,6 +33,13 @@ import { JobDeadlineExceededError } from "../../server/internal/deadline-error";
 // handler that ignores `ctx.signal` keeps running — which is why the second timer
 // exists: the point at which we say so out loud rather than assuming the first
 // one worked.
+//
+// Both timers count AWAKE time (machine-sleep's `setAwakeTimeout`). A deadline
+// bounds work this machine does, and a nap is not work — but the platform timer
+// counts sleep. On 2026-11-14 the laptop went to sleep as a
+// `supervisor-events.flush` run started and woke 918 s later: the 10 min `seconds`
+// deadline fired in the wake's first second, aborted a healthy run and filed
+// "exceeded its deadline — held 15m 18s"; the run finished 0.4 s later.
 
 /**
  * How long after the abort we wait before calling the run a zombie.
@@ -68,9 +76,9 @@ export function armDeadline(args: ArmDeadlineArgs): () => void {
   const deadlineMs = deadlineMsFor(hold);
   const startedAt = Date.now();
 
-  let zombieTimer: ReturnType<typeof setTimeout> | null = null;
+  let cancelZombie: (() => void) | null = null;
 
-  const deadlineTimer = setTimeout(() => {
+  const cancelDeadline = setAwakeTimeout(() => {
     // The abort comes FIRST. Everything after it is announcement, and a
     // failure to announce must not delay the one action that can actually stop
     // the handler.
@@ -96,7 +104,7 @@ export function armDeadline(args: ArmDeadlineArgs): () => void {
     // fires, and that is a materially different fact from "it overran" — so it
     // gets its own arm rather than being folded into a retry of the first.
     //
-    zombieTimer = setTimeout(() => {
+    cancelZombie = setAwakeTimeout(() => {
       // Write the slot off BEFORE announcing. The accounting is what the floor
       // check reads, and it must be true before anything acts on it — including
       // the floor check at the bottom of this callback, which may end this
@@ -125,14 +133,14 @@ export function armDeadline(args: ArmDeadlineArgs): () => void {
   }, deadlineMs);
 
   // Idempotent: `disarm()` is called from a `finally` that can run after either
-  // timer has already fired, and `clearTimeout` on an elapsed or already-cleared
-  // handle is a no-op. Nulling the handles keeps that true even if a caller ever
+  // timer has already fired, and cancelling an elapsed or already-cancelled
+  // timer is a no-op. Nulling the handle keeps that true even if a caller ever
   // calls it twice.
   return function disarm(): void {
-    clearTimeout(deadlineTimer);
-    if (zombieTimer !== null) {
-      clearTimeout(zombieTimer);
-      zombieTimer = null;
+    cancelDeadline();
+    if (cancelZombie !== null) {
+      cancelZombie();
+      cancelZombie = null;
     }
     // A handler that settled AFTER being written off gives its slot back — the
     // one thing short of a restart that does. `clearForfeit` returns null on

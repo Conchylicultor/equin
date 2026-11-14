@@ -379,6 +379,12 @@ the statement of how much gate wait we are willing to believe.
 `queue-slot-hog` reports at a fraction of the deadline (strictly below 1), so
 warn-before-kill holds for every class at every settable config value.
 
+Both the deadline and the zombie grace count **awake** hold (machine-sleep's
+`setAwakeTimeout`), and so does the slot-hog report: a nap is not hold the
+handler spent, and a wall-clock timer armed just before a sleep fires in the
+wake's first second, aborting a healthy run. Where the platform cannot tell,
+they fall back to the wall clock.
+
 ### What the deadline does, instant by instant
 
 - **at `deadlineMs`** — `ctx.signal` aborts with a `JobDeadlineExceededError`,
