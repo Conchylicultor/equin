@@ -2,6 +2,7 @@ import {
   $getNodeByKey,
   $getRoot,
   $isElementNode,
+  $isLineBreakNode,
   type ElementNode,
   type LexicalNode,
 } from "lexical";
@@ -96,5 +97,35 @@ export function $removeGoRegion(closeKey: string): void {
   for (const parent of parents) {
     if (parent.getChildrenSize() === 0 && $getRoot().getChildrenSize() > 1)
       parent.remove();
+  }
+}
+
+/**
+ * A block region's open marker draws nothing, so the line it ends looks empty
+ * and outside the box — yet a caret there sits INSIDE the region, after the
+ * marker. Whatever lands on that line (typed, pasted, or joined up by a
+ * Backspace) is moved in front of the marker: the line reads as the prose
+ * above the card, as the wire grammar has it (the open tag ends its line).
+ * Moving the nodes keeps their keys, so the caret follows the text.
+ */
+export function $liftOffOpenLine(node: LexicalNode): void {
+  let marker: LexicalNode | null = null;
+  for (let p = node.getPreviousSibling(); p; p = p.getPreviousSibling()) {
+    if ($isLineBreakNode(p)) return;
+    const token = markerToken(p);
+    if (token === "</go>") return;
+    if (token === "<go>") {
+      marker = p;
+      break;
+    }
+  }
+  if (!marker) return;
+  const key = marker.getKey();
+  if (!$scan().regions.some((r) => r.open === key && r.block)) return;
+  let next = marker.getNextSibling();
+  while (next && !$isLineBreakNode(next) && markerToken(next) === null) {
+    const after = next.getNextSibling();
+    marker.insertBefore(next);
+    next = after;
   }
 }

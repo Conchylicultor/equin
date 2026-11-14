@@ -1,8 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useResizeObserver } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
-import { $createTextNode, $getNodeByKey, type LexicalEditor } from "lexical";
-import { $scan, markerToken, type Region } from "./go-regions";
+import {
+  $createTextNode,
+  $getNodeByKey,
+  TextNode,
+  type LexicalEditor,
+} from "lexical";
+import {
+  $liftOffOpenLine,
+  $scan,
+  markerToken,
+  type Region,
+} from "./go-regions";
 import { GO_INLINE_BOX } from "../components/go-cap";
 import { RAIL_WIDTH, setRails, type RailBox } from "./go-rails";
 
@@ -87,7 +97,8 @@ function paintBoxes(
  * Paints each `<go>` region of a draft — the text between its two marker
  * tokens — in the suggestion highlight: a one-line region tinted in the line,
  * a multi-line one as a box. A marker whose partner was deleted turns back into
- * its literal text, so a region never leaves an invisible half behind.
+ * its literal text, so a region never leaves an invisible half behind, and text
+ * typed on a box's open-marker line goes above the box (`$liftOffOpenLine`).
  */
 export function GoRegionPlugin() {
   const [editor] = useLexicalComposerContext();
@@ -115,6 +126,12 @@ export function GoRegionPlugin() {
   }, [editor]);
 
   useEffect(() => editor.registerRootListener(setRoot), [editor]);
+
+  // Text never lands on a block region's (invisible) open-marker line.
+  useEffect(
+    () => editor.registerNodeTransform(TextNode, $liftOffOpenLine),
+    [editor],
+  );
 
   useEffect(
     () =>

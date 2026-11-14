@@ -117,7 +117,10 @@ place, several as a rounded box — a background layer on the editor root,
 measured from the markers, since the root scrolls its content and Lexical owns
 its children (an insert puts line breaks inside ONE paragraph, so there is no
 line element to box). It also turns a marker whose partner was deleted back
-into literal text, so a region never leaves an invisible half behind. Only the
+into literal text, so a region never leaves an invisible half behind. A box's
+open marker draws nothing, so its line looks empty and outside the box: text
+that lands there (typed, pasted, joined up by Backspace) is moved in front of
+the marker (`$liftOffOpenLine`), becoming the prose above the card. Only the
 picked items are in the draft: a line is dropped by deleting it.
 
 **In the sent message** an `InlineText` walker (`web/internal/go-walker.tsx`,
