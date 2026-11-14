@@ -43,9 +43,11 @@ import {
 import { useElementSize } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
 import { focusElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 import { isleApp } from "@plugins/apps/plugins/isle/plugins/shell/core";
+import { PRODUCT_NAME } from "@plugins/framework/plugins/product-name/core";
 import { DAY_PHASE_PHRASE, isleConfig, lifeOfSummary } from "../../core";
 import { useTimeOfDay } from "../internal/time";
 import { useIsleWorld, type Resident } from "../internal/use-isle-world";
+import { useStageDeadline } from "../internal/stage-deadline";
 import "./isle.css";
 
 const playIcon = symbol("play-arrow");
@@ -95,6 +97,14 @@ export function IsleView() {
     residents.find((r) => r.app.id === id) ?? null;
   const canStart = ready && drawn;
   const playing = started && canStart;
+  // the stage the title card waits on, failed once it outlasts its deadline
+  const waitingOn =
+    canStart || world.kind === "error"
+      ? null
+      : world.kind === "loading"
+        ? world.what
+        : "Drawing the island";
+  const stuck = useStageDeadline(waitingOn, focused);
   // the island's music: unlocked by Start (a user gesture), playing while the
   // config says so and this tab is the one on screen
   const ambient = useAmbient({
@@ -262,6 +272,7 @@ export function IsleView() {
   }
 
   if (world.kind === "error") throw world.error;
+  if (stuck) throw stuck;
   const nearR = near ? residentOfId(near) : null;
   const showTitle = !(started && canStart);
   return (
@@ -387,15 +398,17 @@ export function IsleView() {
           }}
         >
           <div className="isle-title-inner">
-            <h1>{isleApp.name}</h1>
+            <h1>{PRODUCT_NAME}</h1>
             <p>a small world of apps</p>
-            <button type="button" disabled={!canStart} aria-busy={!canStart}>
+            {/* the stage it waits on is the button's tooltip; its words stay Start */}
+            <button
+              type="button"
+              disabled={!canStart}
+              aria-busy={!canStart}
+              title={waitingOn ?? undefined}
+            >
               <Icon icon={playIcon} />
-              {canStart
-                ? "Start"
-                : world.kind === "loading"
-                  ? world.what
-                  : "Drawing the island"}
+              Start
             </button>
           </div>
         </div>

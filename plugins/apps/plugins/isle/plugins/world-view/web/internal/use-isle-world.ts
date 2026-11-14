@@ -91,7 +91,7 @@ const timeOf = (v: string): TimeOfDay | "auto" => {
  * the stored plots of this seed, every app's glyph and the canvas fonts. Apps
  * without a plot are placed by the pure world and claimed; the world shows as
  * loading until the claim's push comes back — the stored placement is what is
- * drawn, never a prediction of it.
+ * drawn, never a prediction of it. A failed claim is the world's `error`.
  */
 export function useIsleWorld(): IsleWorld {
   const config = useConfigResult(isleConfig);
@@ -157,7 +157,12 @@ export function useIsleWorld(): IsleWorld {
     const rs = residents.map((r) => residentOf(r.app, r.app.spec));
     return placementWrites(stored, placeResidents(model, stored, rs));
   }, [model, residents, stored, shapes]);
-  const claim = useEndpointMutation(claimPlots);
+  // A failed claim is the world's failure (below), shown by the pane's error
+  // boundary with its Retry — never a toast over a title card that would wait
+  // on "Building new houses" forever, since a placement read is claimed once.
+  const claim = useEndpointMutation(claimPlots, {
+    meta: { suppressError: true },
+  });
   const claimed = useRef<string | null>(null);
   useEffect(() => {
     if (!pending?.length || world === null) return;
@@ -174,6 +179,7 @@ export function useIsleWorld(): IsleWorld {
     loading: (): IsleWorld => ({ kind: "loading", what: "Reading the map" }),
     error: (error): IsleWorld => ({ kind: "error", error }),
     ready: (d): IsleWorld => {
+      if (claim.error) return { kind: "error", error: claim.error };
       if (glyphs.kind === "error")
         return { kind: "error", error: glyphs.error };
       if (typeof fonts === "object")

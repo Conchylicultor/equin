@@ -266,6 +266,9 @@
   animation: none;
   cursor: progress;
 }
+.isle-title.isle-wait button svg {
+  animation: isle-spin 1.2s linear infinite;
+}
 @keyframes isle-bob {
   50% {
     transform: translateY(-8px);
@@ -322,6 +325,7 @@
 @media (prefers-reduced-motion: reduce) {
   .isle-title h1,
   .isle-title button,
+  .isle-title button svg,
   .isle-radio-disc,
   .isle-radio-eq i {
     animation: none;

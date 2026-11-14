@@ -63,6 +63,11 @@ export function iconFamily(id: IconFamilyId): IconFamily | undefined {
   return families.get(id);
 }
 
+/** Every contributed family, sorted by id: the value `useIconFamilies` reads. */
+export function heldFamilies(): readonly IconFamily[] {
+  return snapshot;
+}
+
 /** Every contributed family, sorted by id. */
 export function useIconFamilies(): readonly IconFamily[] {
   // In memory: a server render reads the families published so far.

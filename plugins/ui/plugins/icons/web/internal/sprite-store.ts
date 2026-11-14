@@ -55,9 +55,9 @@ export function spriteHolds(key: SpriteKey, id: string): boolean | undefined {
   return ids.has(id);
 }
 
-/** The whole `<svg>` sprite `key` is held as, or `undefined` while it is not here. */
-export function spriteMarkup(key: SpriteKey): string | undefined {
-  return sprites.get(key);
+/** Every held sprite as `[key, markup]`, sorted: the value `useSprites` reads. */
+export function heldSprites(): readonly (readonly [SpriteKey, string])[] {
+  return snapshot;
 }
 
 // Every read here is of this module's in-memory state, so a server render (a

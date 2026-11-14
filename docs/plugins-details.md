@@ -6043,7 +6043,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `apps/isle/renderer`
               - `apps/isle/world-view`
-        - **`world-view`** — Isle's index pane (/isle): the island drawn by the canvas engine from the listed apps and the stored plots (apps without a plot placed by the pure world and claimed), with the title card (Start held back while the world loads), the where-chip, the prompt card for the building at the hero's door (E opens it), the iris an app opens through (useActivateApp), drag-and-drop of buildings (the move endpoint), the time of day from the clock or the config, and a visually hidden list of links mirroring the buildings. Server registration of the Isle config (seed, time of day, music).
+        - **`world-view`** — Isle's index pane (/isle): the island drawn by the canvas engine from the listed apps and the stored plots (apps without a plot placed by the pure world and claimed), with the title card (the product's name; Start held back while the world loads, a stage on screen past a minute or a failed claim failing into the pane's error boundary, which reports it), the where-chip, the prompt card for the building at the hero's door (E opens it), the iris an app opens through (useActivateApp), drag-and-drop of buildings (the move endpoint), the time of day from the clock or the config, and a visually hidden list of links mirroring the buildings. Server registration of the Isle config (seed, time of day, music).
           - Web:
             - Slots: `isle.actions`
             - Slot contributors: `isle.actions` ← `primitives.pane`
@@ -31680,10 +31680,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/launcher/gateway-drift`
     - **`product-name`** — The product's own name, as data: PRODUCT_NAME (`equin`, always lowercase — what every person and agent reads) and LEGACY_PRODUCT_NAMES (the names it went by before, never written again), enforced by the product-name:legacy check over every tracked file; and LEGACY_IDS, the identifiers built from the old name that are kept for good (stored state, cross-version contracts), the one place they are spelled — enforced by product-name:legacy-id (and its mirrors by product-name:legacy-ids-in-sync). A dependency-free leaf, so a browser bundle, a server or a script can import it.
       - Cross-plugin:
-        - Imported by: 65 plugins — full list in [`plugins/framework/plugins/product-name/REFERENCE.md`](../plugins/framework/plugins/product-name/REFERENCE.md)
+        - Imported by: 66 plugins — full list in [`plugins/framework/plugins/product-name/REFERENCE.md`](../plugins/framework/plugins/product-name/REFERENCE.md)
           - `infra` ×16
           - `framework` ×11
-          - `apps` ×9
+          - `apps` ×10
           - `conversations` ×4
           - `database` ×4
           - `primitives` ×4
@@ -41866,15 +41866,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `withDeadline`
     - **`error-subject`** — What an error is about, carried by the error: SubjectError (a shared throw site — the migration runner, the trigger installer — names the one subject it failed for), errorSubject(err) (the subjects along the cause chain plus the innermost class code, ENOENT / SQLSTATE) and crashFieldsOf(err, scope?) — the errorType / stack / scope every crash filer derives from an error, so a shared throw site's failures land on one report row per cause instead of one for all. Enforced by error-subject/crash-fields-of.
       - Cross-plugin:
-        - Imported by: 30 plugins — full list in [`plugins/packages/plugins/error-subject/REFERENCE.md`](../plugins/packages/plugins/error-subject/REFERENCE.md)
+        - Imported by: 31 plugins — full list in [`plugins/packages/plugins/error-subject/REFERENCE.md`](../plugins/packages/plugins/error-subject/REFERENCE.md)
           - `infra` ×8
           - `conversations` ×6
           - `database` ×5
           - `reports` ×3
+          - `apps` ×2
           - `debug` ×2
           - `framework` ×2
           - `network` ×2
-          - `apps/deploy/deployments`
           - `tasks/tasks-core`
       - Exemptions:
         - Exempts itself from: `error-subject/crash-fields-of` — `core/internal/error-subject.ts` (sanctioned)
