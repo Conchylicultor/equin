@@ -352,7 +352,7 @@
       "paneId": "deploy-activity",
       "segment": "activity",
       "appIndex": false,
-      "parent": "deploy-index"
+      "parent": null
     },
     {
       "paneId": "deploy-deployment-detail",
@@ -370,13 +370,13 @@
       "paneId": "deploy-server-detail",
       "segment": "server/:serverId",
       "appIndex": false,
-      "parent": "deploy-index"
+      "parent": null
     },
     {
       "paneId": "deploy-servers",
       "segment": "servers",
       "appIndex": false,
-      "parent": "deploy-index"
+      "parent": null
     },
     {
       "paneId": "deploy-session-replay",
@@ -388,7 +388,7 @@
       "paneId": "deploy-site",
       "segment": "site/:deploymentId/:tab?",
       "appIndex": false,
-      "parent": "deploy-index"
+      "parent": null
     },
     {
       "paneId": "event-list",

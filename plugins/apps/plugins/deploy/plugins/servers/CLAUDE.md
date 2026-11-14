@@ -151,7 +151,6 @@ plus `sshKey`.
     - `POST /api/deploy/servers/:id/ssh-keypair/import`
 - Core:
   - Uses:
-    - `apps/deploy/shell.deployIndexRoute`
     - `fields.nullable`
     - `fields/date/config.dateField`
     - `fields/int/config.intField`

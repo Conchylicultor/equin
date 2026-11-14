@@ -2879,7 +2879,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `POST /api/deploy/deployments/:id/run`
           - Core:
             - Uses:
-              - `apps/deploy/shell.deployIndexRoute`
               - `fields.nullable`
               - `fields/date/config.dateField`
               - `fields/identifier/config.identifierField`
@@ -3410,7 +3409,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `POST /api/deploy/servers/:id/ssh-keypair/import`
           - Core:
             - Uses:
-              - `apps/deploy/shell.deployIndexRoute`
               - `fields.nullable`
               - `fields/date/config.dateField`
               - `fields/int/config.intField`

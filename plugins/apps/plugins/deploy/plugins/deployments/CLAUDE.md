@@ -570,7 +570,6 @@ default, a left rail revealing each (`useRevealSection`).
     - `POST /api/deploy/deployments/:id/run`
 - Core:
   - Uses:
-    - `apps/deploy/shell.deployIndexRoute`
     - `fields.nullable`
     - `fields/date/config.dateField`
     - `fields/identifier/config.identifierField`

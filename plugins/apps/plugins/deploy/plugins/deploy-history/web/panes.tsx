@@ -4,21 +4,19 @@ import {
   Pane,
   PaneChrome,
 } from "@plugins/primitives/plugins/pane/web";
-import {
-  deployApp,
-  deployIndexRoute,
-} from "@plugins/apps/plugins/deploy/plugins/shell/core";
+import { deployApp } from "@plugins/apps/plugins/deploy/plugins/shell/core";
 import { ActivityPage } from "./components/activity-page";
 
 /**
  * `/deploy/activity` — declared here, beside the one pane that answers it,
  * rather than in a `core/`: only this plugin's own sidebar entry opens it, so
- * no other plugin builds the URL. Parented on the app's index, like a site.
+ * no other plugin builds the URL. A root of its own, like a site: opened from
+ * the sidebar, it replaces the page on screen (Miller draws a parent as a
+ * column).
  */
 const activityRoute = defineRoute({
   id: "deploy-activity",
   segment: "activity",
-  parent: deployIndexRoute,
 });
 
 /** Every deploy run across every site, as one multi-view list. */
