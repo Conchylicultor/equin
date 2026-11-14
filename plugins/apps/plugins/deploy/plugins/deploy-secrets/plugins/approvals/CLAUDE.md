@@ -56,6 +56,7 @@ Each Secrets row carries `lastWrite` — the store's last write of the value as 
     - `network/live.serveValue`
     - `plugin-meta/plugin-tree.getFacetsTreeCached`
     - `plugin-meta/plugin-tree.onPluginFacetsChanged`
+    - `plugin-meta/plugin-tree.pluginFacetsGeneration`
   - DB schema: `plugins/apps/plugins/deploy/plugins/deploy-secrets/plugins/approvals/server/internal/tables.ts`
   - Exports (values): `setAndApproveDeploySecret`
   - Resources: `deploy-secrets.status` (push, notified, whole: one row per deploy secret the deployment's composition closure declares — a handful, whole: the plugins in one closure declaring the same key — normally one)

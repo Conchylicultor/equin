@@ -7,15 +7,29 @@ import {
 import {
   compositionsConfig,
   manifestItemToManifest,
+  type CompositionManifestItem,
 } from "@plugins/plugin-meta/plugins/composition/core";
 import { getFacet } from "@plugins/plugin-meta/plugins/facets/core";
 import { deploySecretsFacetDef } from "@plugins/plugin-meta/plugins/facets/plugins/deploy-secrets/core";
 import type { PluginTreeData } from "@plugins/plugin-meta/plugins/plugin-tree/core";
-import { getFacetsTreeCached } from "@plugins/plugin-meta/plugins/plugin-tree/server";
+import {
+  getFacetsTreeCached,
+  onPluginFacetsChanged,
+  pluginFacetsGeneration,
+} from "@plugins/plugin-meta/plugins/plugin-tree/server";
+import { createWatchedMemo } from "@plugins/packages/plugins/watched-memo/core";
 import { mergeDeclarations, type RequiredSecret } from "./plan";
 
+/** What a composition's required set is computed over. */
+interface RequiredFacts {
+  /** The faceted tree's generation, read BEFORE the tree (see `facts`). */
+  readonly generation: string;
+  readonly tree: PluginTreeData;
+  readonly manifests: CompositionManifestItem[];
+}
+
 /**
- * Every deploy secret a composition's closure needs.
+ * Every deploy secret a composition's closure needs, per composition id.
  *
  * The closure is the one `resolveComposition` computes — the same static
  * closure converge's guards and the release build read — and the declarations
@@ -23,23 +37,76 @@ import { mergeDeclarations, type RequiredSecret } from "./plan";
  * `core/`). No plugin is named here: a second plugin declaring a secret is
  * picked up with no edit to this file.
  *
+ * A watched memo, because its one moving input — the faceted tree — moves on
+ * nearly every push to the checkout (each refresh that changed any facet of
+ * any of ~1.8k plugins), while what it yields — a handful of keys — almost
+ * never does. While the Secrets rows are watched, a tree change re-derives
+ * this list alone and tells the live value only when the list differs; the
+ * Secrets rows used to be recomputed whole on every tree change (store reads,
+ * this computer's values, the grants, a push), ~3 times a minute around a
+ * push to main, each result identical (report-1794696060-1esfpw). Unwatched
+ * (the gate, Approve, delivery), a read probes the tree's generation and the
+ * manifests, so an unchanged tree is not classified again.
+ *
+ * Not heard: an edit of the `compositions` config (as before) — a read made
+ * after it computes over it, a watched value moves with the next tree change.
+ */
+const requiredSecrets = createWatchedMemo<RequiredSecret[], RequiredFacts>({
+  name: "deploy-secrets.required",
+  facts: async () => {
+    // The generation first: a tree read after it is at least as new, so a
+    // value cached under this token can only be fresher than its token says.
+    const generation = await pluginFacetsGeneration();
+    const tree = await getFacetsTreeCached();
+    return {
+      generation,
+      tree,
+      manifests: getConfig(compositionsConfig).manifests,
+    };
+  },
+  signatureOf: async (_compositionId, f) =>
+    `${f.generation}\0${JSON.stringify(f.manifests)}`,
+  compute: async (compositionId, f) =>
+    requiredInTree(f.tree, f.manifests, compositionId),
+  changes: async (_compositionId, trigger) => {
+    // Arms the plugins-dir watcher, so every change after this is heard.
+    await pluginFacetsGeneration();
+    return onPluginFacetsChanged(() => trigger());
+  },
+});
+
+/**
+ * Every deploy secret a composition's closure needs (see
+ * {@link requiredSecrets}).
+ *
  * Throws for a composition the `compositions` config does not hold, one whose
  * closure resolves to no plugin, and a tree that could not be read (the
- * faceted tree is a child process's output — `plugin-tree`'s
- * `getFacetsTreeCached`): a gate that cannot compute the closure must not
- * pass the run.
+ * faceted tree is a worker's — `plugin-tree`'s `getFacetsTreeCached`): a gate
+ * that cannot compute the closure must not pass the run.
  */
-export async function requiredDeploySecrets(
+export function requiredDeploySecrets(
   compositionId: string,
 ): Promise<RequiredSecret[]> {
-  return requiredInTree(await getFacetsTreeCached(), compositionId);
+  return requiredSecrets.get(compositionId);
+}
+
+/**
+ * Hear every change of one composition's required set until the returned
+ * stop runs — and only those: a tree change that leaves the set as it was
+ * notifies nobody. Resolves once the tree's change signal is live.
+ */
+export function watchRequiredDeploySecrets(
+  compositionId: string,
+  changed: () => void,
+): Promise<() => void> {
+  return requiredSecrets.watch(compositionId, changed);
 }
 
 function requiredInTree(
   tree: PluginTreeData,
+  items: CompositionManifestItem[],
   compositionId: string,
 ): RequiredSecret[] {
-  const items = getConfig(compositionsConfig).manifests;
   const item = items.find((m) => m.name === compositionId);
   if (!item) {
     throw new Error(

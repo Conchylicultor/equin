@@ -2672,6 +2672,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `network/live.serveValue`
                   - `plugin-meta/plugin-tree.getFacetsTreeCached`
                   - `plugin-meta/plugin-tree.onPluginFacetsChanged`
+                  - `plugin-meta/plugin-tree.pluginFacetsGeneration`
                 - DB schema: `plugins/apps/plugins/deploy/plugins/deploy-secrets/plugins/approvals/server/internal/tables.ts`
                 - Exports (values): `setAndApproveDeploySecret`
                 - Resources: `deploy-secrets.status` (push, notified, whole: one row per deploy secret the deployment's composition closure declares — a handful, whole: the plugins in one closure declaring the same key — normally one)
@@ -42740,7 +42741,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `WatchedMemoOptions`
         - Exports (values): `createWatchedMemo`
       - Cross-plugin:
-        - Imported by: `conversations/conversation-view/code`
+        - Imported by:
+          - `apps/deploy/deploy-secrets/approvals`
+          - `conversations/conversation-view/code`
     - **`zod-introspect`** — The one owner of zod internals: inspect(schema) reads one level of a zod 4 schema (a zod 3 one is refused and named as such) as a repo-owned SchemaNode union in zod 4's model (refine a check, transform / preprocess a pipe, brand transparent, native enum an enum, passthrough an opaque object), with childrenOf, peel (strip optional / nullable / default / prefault / catch / readonly / nonoptional), valueSide (a pipe's value schema), isUncheckedBase (a bare base with no check), describeSchema (a version-independent description, function-bodied parts marked opaque) and defineSchemaTag (a namespaced tag stamped by clone, never mutation); plus the no-zod-internals and no-zod-subpath lint rules.
       - Cross-plugin:
         - Imported by:
