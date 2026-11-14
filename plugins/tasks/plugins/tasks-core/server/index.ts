@@ -375,7 +375,7 @@ export default {
     conversationStatusChanged,
     conversationCreated,
   ],
-  onReady: async () => {
+  onReady: async ({ step }) => {
     // The ledger's boot catch-up: whatever landed on `main` while this backend
     // was down. `onReady` and not a warm-up, because a warm-up is contractually
     // an OPTIMIZATION the executor may skip — and this is the cold half of a
@@ -384,10 +384,11 @@ export default {
     // The effective mandates are kept exact by every write that moves them;
     // this re-derivation (one statement, writes nothing when consistent) is
     // the backstop for a task written outside tasks-core (a raw seed).
+    // Concurrent, so each is its own step: overlapping wall times.
     await Promise.all([
-      sweepOrphanedAttempts(),
-      PushLedger.get().ensureFresh(),
-      reconcileEffectiveMandates(),
+      step("sweep-orphaned-attempts", () => sweepOrphanedAttempts()),
+      step("push-ledger", () => PushLedger.get().ensureFresh()),
+      step("effective-mandates", () => reconcileEffectiveMandates()),
     ]);
   },
 } satisfies ServerPluginDefinition;

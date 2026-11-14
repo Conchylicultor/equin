@@ -148,8 +148,8 @@ export default {
     conversationsStatusSweepJob,
   ],
   sinkHandlers: [orphanedAttemptReport],
-  onReady: async () => {
-    await startStatusReconciler();
-    await startTurnEmitter();
+  onReady: async ({ step }) => {
+    await step("status-reconciler", (inner) => startStatusReconciler(inner));
+    await step("turn-emitter", (inner) => startTurnEmitter(inner));
   },
 } satisfies ServerPluginDefinition;

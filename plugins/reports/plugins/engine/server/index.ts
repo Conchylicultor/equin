@@ -144,8 +144,8 @@ export default {
   // backend runs — a deploy restarts main, so this is where a fix goes live.
   // `onAllReady`: the backend serves by then; the ledger reads git and the
   // database, and nothing waits on it.
-  onAllReady: async () => {
-    await ingestFixClaims();
-    await stampDeployedFixes();
+  onAllReady: async ({ step }) => {
+    await step("ingest-fix-claims", (inner) => ingestFixClaims(inner));
+    await step("stamp-deployed-fixes", () => stampDeployedFixes());
   },
 } satisfies ServerPluginDefinition;

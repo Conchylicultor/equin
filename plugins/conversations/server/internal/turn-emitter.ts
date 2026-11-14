@@ -10,6 +10,7 @@ import { executeRows } from "@plugins/database/plugins/sql-rows/core";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
+import type { BootStep } from "@plugins/framework/plugins/server-core/core";
 import {
   readJsonlEventsFromChain,
   resolveConversationTranscriptPaths,
@@ -67,19 +68,22 @@ function reconcile(conversationId: string): Promise<void> {
 // Boot reconcile: subscriptions live in memory, so every restart rebuilds them
 // from one read. A transition missed while the process was down is caught here
 // too. Fails loudly — there is no later tick to retry.
-export function startTurnEmitter(): Promise<void> {
+export function startTurnEmitter(step: BootStep): Promise<void> {
   return reconcileGate.run(async () => {
-    const convs = await listConversationsForInfra();
-    const forkedAt = await databaseForkedAt();
-    for (const c of convs) {
-      if (
-        !isActiveStatus(c.status) ||
-        !isOwnConversation(c, forkedAt) ||
-        subscriptions.has(c.id)
-      )
-        continue;
-      subscriptions.set(c.id, subscribeToConversation(c.id));
-    }
+    const convs = await step("rows", () => listConversationsForInfra());
+    const forkedAt = await step("fork-point", () => databaseForkedAt());
+    const followed = convs.filter(
+      (c) =>
+        isActiveStatus(c.status) &&
+        isOwnConversation(c, forkedAt) &&
+        !subscriptions.has(c.id),
+    );
+    // Subscribing returns at once (what it reads runs detached): this step is
+    // the time the loop itself holds the event loop.
+    await step("subscribe", async () => {
+      for (const c of followed)
+        subscriptions.set(c.id, subscribeToConversation(c.id));
+    });
   });
 }
 

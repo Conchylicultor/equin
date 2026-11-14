@@ -22,6 +22,10 @@ import { isTransientDbError } from "@plugins/database/server";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
+import {
+  untimedStep,
+  type BootStep,
+} from "@plugins/framework/plugins/server-core/core";
 import { Runtime, type RuntimeInspection, type RuntimeSignal } from "./runtime";
 import { deliverHeldTurnsJob } from "./deliver-held-turns-job";
 import { spawnConversationJob } from "./spawn-job";
@@ -95,12 +99,15 @@ async function collectLive(
   rows: readonly Conversation[],
   /** `inlineLaunchMark()`, taken before `rows` were read. */
   mark: number,
+  step: BootStep,
   ids?: readonly string[],
 ): Promise<LiveSnapshot> {
   // Asked FIRST: a spawn that finishes after this read has a session the
   // runtimes below report, so a starting row is never seen with neither.
-  const spawnsInFlight = await spawnConversationJob.inFlight(
-    rows.filter((r) => r.status === "starting").map((r) => r.id),
+  const spawnsInFlight = await step("spawns-in-flight", () =>
+    spawnConversationJob.inFlight(
+      rows.filter((r) => r.status === "starting").map((r) => r.id),
+    ),
   );
   const inlineLaunchesInFlight = inlineLaunchesInFlightOf(
     rows
@@ -108,13 +115,15 @@ async function collectLive(
       .map((r) => r.id),
     mark,
   );
-  const forkedAt = await databaseForkedAt();
+  const forkedAt = await step("fork-point", () => databaseForkedAt());
   const merged = new Map<string, LiveEntry>();
   const failedRuntimes = new Set<string>();
   for (const runtime of Runtime.all()) {
     let entries: Map<string, RuntimeInspection>;
     try {
-      entries = ids ? await runtime.inspect(ids) : await runtime.list();
+      entries = await step(`${ids ? "inspect" : "list"}:${runtime.id}`, () =>
+        ids ? runtime.inspect(ids) : runtime.list(),
+      );
     } catch (err) {
       failedRuntimes.add(runtime.id);
       console.error(
@@ -420,32 +429,44 @@ async function apply(row: Conversation, plan: UpdatePlan): Promise<void> {
 async function reconcileRows(
   rows: Conversation[],
   live: LiveSnapshot,
+  step: BootStep,
 ): Promise<void> {
   // Held questions first retire the ones whose holder died (the agent process
   // can die mid-question), then are read once for the whole batch.
   // Independent reads, so they go together: one round trip, not four.
   const ids = rows.map((r) => r.id);
-  const [holds, submits, pending] = await Promise.all([
-    reapQuestionHolds(ids).then(() => readQuestionHolds(ids)),
-    latestSubmitAt(ids),
-    pendingTurnsSince(ids),
-  ]);
-  for (const row of rows) {
-    const { plan } = await planFor(row, live, holds, submits, pending);
-    await apply(row, plan);
-  }
+  const [holds, submits, pending] = await step("turn-state", () =>
+    Promise.all([
+      reapQuestionHolds(ids).then(() => readQuestionHolds(ids)),
+      latestSubmitAt(ids),
+      pendingTurnsSince(ids),
+    ]),
+  );
+  // One step for the loop, not one per row: a boot reconciles dozens of rows.
+  await step("plan-apply", async () => {
+    for (const row of rows) {
+      const { plan } = await planFor(row, live, holds, submits, pending);
+      await apply(row, plan);
+    }
+  });
 }
 
-/** Today's whole-world reconcile: every live session against every active row. */
-function reconcileAll(): Promise<void> {
+/**
+ * Today's whole-world reconcile: every live session against every active row.
+ * `step` times its parts when the boot hook runs it (`startStatusReconciler`).
+ */
+function reconcileAll(step: BootStep): Promise<void> {
   return reconcileGate.run(async () => {
     // Every signal so far is answered by the reads below (rows and runtimes
     // are both read after it), so a batch still pending would only repeat them.
     pendingAll = false;
     pendingIds.clear();
     const mark = inlineLaunchMark();
-    const rows = await listConversationsForInfra();
-    await reconcileRows(rows, await collectLive(rows, mark));
+    const rows = await step("rows", () => listConversationsForInfra());
+    const live = await step("collect-live", (inner) =>
+      collectLive(rows, mark, inner),
+    );
+    await reconcileRows(rows, live, step);
     // The gate runs one reconcile at a time, so no older mark is still read.
     pruneInlineLaunchStamps(mark);
   });
@@ -464,9 +485,10 @@ function reconcileIds(ids: readonly string[]): Promise<void> {
     const live = await collectLive(
       rows,
       mark,
+      untimedStep,
       rows.map((r) => r.id),
     );
-    await reconcileRows(rows, live);
+    await reconcileRows(rows, live, untimedStep);
   });
 }
 
@@ -522,7 +544,7 @@ async function drain(): Promise<void> {
       if (pendingAll) {
         pendingAll = false;
         pendingIds.clear();
-        await reconcileAll();
+        await reconcileAll(untimedStep);
         continue;
       }
       const ids = [...pendingIds];
@@ -540,10 +562,12 @@ async function drain(): Promise<void> {
  * transition missed while this backend was down lands here. Fails loudly: a
  * runtime whose signals cannot open would leave its conversations frozen.
  */
-export async function startStatusReconciler(): Promise<void> {
-  for (const runtime of Runtime.all()) {
-    await runtime.subscribe(onSignal);
-  }
+export async function startStatusReconciler(step: BootStep): Promise<void> {
+  await step("subscribe", async () => {
+    for (const runtime of Runtime.all()) {
+      await runtime.subscribe(onSignal);
+    }
+  });
   // The one state no runtime signal carries: a refused session id's transcript
   // appearing (see `awaitingTranscript`).
   onSessionTranscriptWritten((written) => {
@@ -557,7 +581,8 @@ export async function startStatusReconciler(): Promise<void> {
     onSignal({ conversationIds: [conversationId] });
   });
   try {
-    await reconcileAll();
+    // The gate's wait (a sweep or batch already reconciling) is inside it.
+    await step("reconcile", (inner) => reconcileAll(inner));
   } finally {
     // Even when it threw (the hook fails loudly): signals must not be held
     // for the process's lifetime. What arrived while it ran drains now.
@@ -578,5 +603,5 @@ export const conversationsStatusSweepJob = defineJob({
   dedup: "singleton",
   schedule: { cron: "* * * * *", perWorktree: true },
   maxAttempts: 1,
-  run: () => reconcileAll(),
+  run: () => reconcileAll(untimedStep),
 });

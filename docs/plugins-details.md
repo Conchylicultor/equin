@@ -31742,8 +31742,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/report-sink.defineReportSink`
           - `primitives/report-sink.defineRequestSink`
         - Exports (types):
+          - `BootHookContext`
           - `BootJournalEntry`
           - `BootMode`
+          - `BootStep`
           - `BrowserHost`
           - `BrowserHostBoot`
           - `BrowserHostOptions`
@@ -31893,6 +31895,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `unboundedWindowKeys`
           - `unfedResourceTables`
           - `unroutedResourceKeys`
+          - `untimedStep`
           - `validatePersistedValue`
           - `withNotifyBatch`
       - Cross-plugin:

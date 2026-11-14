@@ -28,6 +28,7 @@ import { serverErrorSink } from "./error-reporter";
 import type { ServerErrorReport } from "./error-reporter";
 import { isolateHostServices } from "./testing/host-services";
 import { clearCollectedContributions } from "./contributions";
+import { getProfilingData } from "./profiler";
 
 // The boot asserts every declared host service; the services the `bun test`
 // preload's desktop providers declared are not this suite's graph. They come
@@ -343,5 +344,35 @@ describe("sinkHandler — one handler per sink", () => {
     first.detach();
     second.attach();
     second.detach();
+  });
+});
+
+// A hook's named parts are spans under the hook's own, so a slow hook says
+// which part was slow (`debug/boot-budget` reports them).
+describe("boot hook steps", () => {
+  test("each step, nested ones included, is a `step` span naming its parent", async () => {
+    const ordered: LoadedServerPlugin[] = [
+      {
+        id: "test.stepped",
+        onReady: async ({ step }) => {
+          await step("outer", async (inner) => {
+            await inner("inner", async () => {});
+          });
+        },
+      },
+    ];
+    await asServingHost(() => runPostReadyPhases(ordered));
+    const spans = getProfilingData().spans;
+    const hook = spans.findLast((s) => s.label === "test.stepped");
+    expect(hook?.phase).toBe("onReady");
+    const outer = spans.findLast(
+      (s) => s.phase === "step" && s.parent === hook?.id,
+    );
+    expect(outer?.id).toStartWith(`${hook?.id}/outer`);
+    const inner = spans.findLast(
+      (s) => s.phase === "step" && s.parent === outer?.id,
+    );
+    expect(inner?.id).toStartWith(`${outer?.id}/inner`);
+    expect(inner?.plugin).toBe("test.stepped");
   });
 });

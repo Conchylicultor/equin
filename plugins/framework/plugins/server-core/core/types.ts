@@ -1,4 +1,5 @@
 import type { SinkHandler } from "./sink-handler";
+import type { BootHookContext } from "./profiler";
 import type { ServerWebSocket } from "bun";
 import type { EndpointAccess } from "@plugins/framework/plugins/principal/core";
 
@@ -175,7 +176,7 @@ export interface ServerPluginDefinition {
    * is a barrier, every `onReady` is guaranteed to observe a migrated DB and a
    * ready registry.
    */
-  onReadyBlocking?: () => void | Promise<void>;
+  onReadyBlocking?: (ctx: BootHookContext) => void | Promise<void>;
   /**
    * This plugin's handlers on one-handler sinks (`primitives/report-sink`),
    * each `sinkHandler(sink, () => handler)`. The framework attaches them in the
@@ -197,7 +198,7 @@ export interface ServerPluginDefinition {
    * filed as a report (one row per plugin and hook) and the backend goes on —
    * an exit would only respawn it into the same failure, a crash loop.
    */
-  onReady?: () => void | Promise<void>;
+  onReady?: (ctx: BootHookContext) => void | Promise<void>;
   /**
    * Called once after EVERY plugin's `onReady` has resolved (a full barrier,
    * not dependency-scoped). Use this for initialization that must observe
@@ -206,7 +207,7 @@ export interface ServerPluginDefinition {
    * read config the config plugin populates in its own `onReady`. Runs in
    * parallel across plugins; a rejection is reported, never fatal (as `onReady`).
    */
-  onAllReady?: () => void | Promise<void>;
+  onAllReady?: (ctx: BootHookContext) => void | Promise<void>;
   /**
    * Called once on a SERVING host (the desktop's `serve`, the browser host)
    * after `onAllReady` — and, in the browser, the seed — while the host is
@@ -217,7 +218,7 @@ export interface ServerPluginDefinition {
    * (infra/warmup), which drains here under a concurrency gate, a host slot
    * and per-host scope admission, and shows in Background activity.
    */
-  onSettled?: () => void | Promise<void>;
+  onSettled?: (ctx: BootHookContext) => void | Promise<void>;
   /**
    * Called once on SIGTERM/SIGINT before the process exits. Use this to drain
    * background workers, flush buffered state, and release DB connections.

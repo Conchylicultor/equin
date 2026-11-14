@@ -19,7 +19,10 @@ export type PhaseId =
   // drained warm-up (infra/warmup) a `warmup:<name>` span.
   | "settled"
   | "onSettled"
-  | "warmup";
+  | "warmup"
+  // A named part of a boot hook (`BootHookContext.step`): a span under the
+  // hook's own (`parent`), so a slow hook says which of its parts was slow.
+  | "step";
 
 export interface Span {
   id: string;
@@ -32,6 +35,8 @@ export interface Span {
   physFootprintStartMb?: number;
   /** phys_footprint (MB) at span end. */
   physFootprintEndMb?: number;
+  /** The span this one is a part of (a `step`'s hook or outer step), by id. */
+  parent?: string;
 }
 
 /**
@@ -149,20 +154,40 @@ export function profilerStart(
   phase: PhaseId,
   label: string,
   plugin?: string,
-  opts?: {
-    /** What the span holds: journaled as an `open` entry as it starts. */
-    members?: readonly string[];
-    /** Record the span only when it took at least this long. */
-    floorMs?: number;
-    /**
-     * `false`: keep the span in memory only — one of many concurrent siblings
-     * (a wave's barrel imports), summarised by the span around it instead.
-     */
-    journal?: false;
-  },
+  opts?: SpanOptions,
 ): (detail?: {
   slowest?: readonly { plugin: string; ms: number }[];
 }) => number {
+  return startSpan(id, phase, label, plugin, opts).end;
+}
+
+interface SpanOptions {
+  /** What the span holds: journaled as an `open` entry as it starts. */
+  members?: readonly string[];
+  /** Record the span only when it took at least this long. */
+  floorMs?: number;
+  /**
+   * `false`: keep the span in memory only — one of many concurrent siblings
+   * (a wave's barrel imports), summarised by the span around it instead.
+   */
+  journal?: false;
+  /** The span this one is a part of, by its (unique) id. */
+  parent?: string;
+}
+
+/** `profilerStart`, also answering the span's unique id — what a part names as its `parent`. */
+function startSpan(
+  id: string,
+  phase: PhaseId,
+  label: string,
+  plugin: string | undefined,
+  opts: SpanOptions | undefined,
+): {
+  uniqueId: string;
+  end: (detail?: {
+    slowest?: readonly { plugin: string; ms: number }[];
+  }) => number;
+} {
   const count = idCounts.get(id) ?? 0;
   idCounts.set(id, count + 1);
   const uniqueId = count === 0 ? id : `${id}:${count}`;
@@ -177,7 +202,9 @@ export function profilerStart(
       startMs: Math.round(t0 - bootStart),
       members: opts.members,
     });
-  return (detail) => {
+  const end = (detail?: {
+    slowest?: readonly { plugin: string; ms: number }[];
+  }): number => {
     const durationMs = Math.round(performance.now() - t0);
     if (opts?.floorMs !== undefined && durationMs < opts.floorMs)
       return durationMs;
@@ -190,6 +217,7 @@ export function profilerStart(
       durationMs,
       physFootprintStartMb,
       physFootprintEndMb: footprintMb(),
+      ...(opts?.parent !== undefined && { parent: opts.parent }),
     };
     spans.push(span);
     // A span that journaled its `open` journals its close whatever it took:
@@ -208,6 +236,65 @@ export function profilerStart(
       });
     return durationMs;
   };
+  return { uniqueId, end };
+}
+
+/**
+ * Time a named part of a boot hook: `step(name, work)` runs `work` as a `step`
+ * span `<parent>/<name>` under the span it is called in, and hands `work` a
+ * `step` of its own for the parts inside it. Every step is kept in the boot
+ * profile, and journaled past the journal floor like any span — so a hook
+ * over its budget says which part took the time (`debug/boot-budget` puts the
+ * hook's steps in its report). Steps may overlap (parts run under
+ * `Promise.all`); each is its own wall time.
+ *
+ * Code a boot hook shares with a later caller (a sweep job re-running the
+ * hook's reconcile) takes the `step` as a parameter and is handed
+ * `untimedStep` there.
+ */
+export type BootStep = <T>(
+  name: string,
+  work: (step: BootStep) => Promise<T>,
+) => Promise<T>;
+
+/** What the framework hands every boot hook (`onReadyBlocking` … `onSettled`). */
+export interface BootHookContext {
+  /** Time a named part of this hook (see `BootStep`). */
+  readonly step: BootStep;
+}
+
+/** `BootStep` timing nothing: the same code run outside a boot hook. */
+export const untimedStep: BootStep = (_name, work) => work(untimedStep);
+
+/** The `step` of the span `parentId` (a hook's, or an outer step's). */
+function stepUnder(parentId: string, plugin: string | undefined): BootStep {
+  return async (name, work) => {
+    // Labelled by its whole path (`onReady:conversations/reconcile/rows`):
+    // a boot Gantt lists every hook's steps in one lane.
+    const id = `${parentId}/${name}`;
+    const { uniqueId, end } = startSpan(id, "step", id, plugin, {
+      parent: parentId,
+    });
+    try {
+      return await work(stepUnder(uniqueId, plugin));
+    } finally {
+      end();
+    }
+  };
+}
+
+/**
+ * Open a boot hook's span and the context its hook is handed: the framework's
+ * one way to start a per-plugin hook span (`server-core`'s boot stages).
+ */
+export function profileBootHook(
+  id: string,
+  phase: PhaseId,
+  plugin: string,
+  opts?: { members?: readonly string[] },
+): { ctx: BootHookContext; end: () => number } {
+  const { uniqueId, end } = startSpan(id, phase, plugin, plugin, opts);
+  return { ctx: { step: stepUnder(uniqueId, plugin) }, end: () => end() };
 }
 
 /**

@@ -13,7 +13,11 @@ import { isMain } from "@plugins/infra/plugins/runtime-identity/core";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { createKeyedMutex } from "@plugins/packages/plugins/keyed-mutex/core";
 import { containsCommit } from "@plugins/primitives/plugins/commit-list/server";
-import { reportServerError } from "@plugins/framework/plugins/server-core/core";
+import {
+  reportServerError,
+  untimedStep,
+  type BootStep,
+} from "@plugins/framework/plugins/server-core/core";
 import {
   getServerCommit,
   serverPinCommit,
@@ -110,16 +114,20 @@ export async function deriveReportFixState(
  * backend already runs (a fix landing on a commit it adopted, or pushed before
  * the boot's ingest, is live already).
  */
-export async function ingestFixClaims(): Promise<void> {
+export async function ingestFixClaims(step: BootStep): Promise<void> {
   if (!isMain()) return;
-  const [{ newest } = { newest: null }] = await db
-    .select({ newest: max(_reportFixes.landedAt) })
-    .from(_reportFixes);
+  const [{ newest } = { newest: null }] = await step("newest-claim", async () =>
+    db.select({ newest: max(_reportFixes.landedAt) }).from(_reportFixes),
+  );
   const since =
     newest === null ? null : new Date(newest.getTime() - 24 * 3600 * 1000);
-  const claims = await readFixClaims(REPO_ROOT, since);
-  if ((await recordFixClaims(claims, REPO_ROOT)) > 0)
-    await stampDeployedFixes();
+  const claims = await step("read-claims", () =>
+    readFixClaims(REPO_ROOT, since),
+  );
+  const recorded = await step("record-claims", () =>
+    recordFixClaims(claims, REPO_ROOT),
+  );
+  if (recorded > 0) await step("stamp-new", () => stampDeployedFixes());
 }
 
 /**
@@ -296,5 +304,5 @@ export async function stampRegression(
 export const fixClaimsReaction = defineRefReaction({
   name: "reports.fix-claims",
   refName: "refs/heads/main",
-  run: ingestFixClaims,
+  run: () => ingestFixClaims(untimedStep),
 });

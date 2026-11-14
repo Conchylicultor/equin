@@ -74,6 +74,17 @@ function renderDescription(row: ReportRow, d: BootBudgetPayload): string {
   lines.push(
     `**Budget:** ${d.budgetMs}ms${d.budgetSource === "declared" ? " (declared)" : " (config default)"}`,
   );
+  if (d.steps && d.steps.length > 0) {
+    lines.push("");
+    lines.push(
+      `**Where the time went (its steps; offsets from the hook's start, overlapping where they ran concurrently):**`,
+    );
+    for (const s of d.steps) {
+      lines.push(
+        `${"  ".repeat(s.depth - 1)}- \`${s.name}\` — ${s.durationMs}ms (at +${s.atMs}ms)`,
+      );
+    }
+  }
   if (d.memoryCheckpoints && d.memoryCheckpoints.length > 0) {
     lines.push("");
     lines.push(`**Phase-boundary memory (phys_footprint / heapUsed):**`);

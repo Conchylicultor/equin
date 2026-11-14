@@ -52,6 +52,7 @@ import {
 import { resetRuntimeNamespaceForTest } from "@plugins/infra/plugins/runtime-identity/core/testing";
 import { spawnConversationJob } from "./spawn-job";
 import { startStatusReconciler } from "./status-reconciler";
+import { untimedStep } from "@plugins/framework/plugins/server-core/core";
 
 let t: TestDb;
 
@@ -66,7 +67,7 @@ async function reconcileAsMain(): Promise<void> {
   resetRuntimeNamespaceForTest();
   declareRuntimeNamespace(asNamespace(MAIN_WORKTREE_NAME));
   try {
-    await startStatusReconciler();
+    await startStatusReconciler(untimedStep);
   } finally {
     resetRuntimeNamespaceForTest();
     declareRuntimeNamespace(own);

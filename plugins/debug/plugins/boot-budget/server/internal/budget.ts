@@ -1,6 +1,6 @@
 import type { Span } from "@plugins/framework/plugins/server-core/core";
 import type { ConfigValues } from "@plugins/config_v2/core";
-import type { bootBudgetConfig } from "../../core";
+import type { BootBudgetPayload, bootBudgetConfig } from "../../core";
 
 type Budgets = ConfigValues<(typeof bootBudgetConfig)["fields"]>;
 
@@ -15,6 +15,40 @@ type Budgets = ConfigValues<(typeof bootBudgetConfig)["fields"]>;
 // warm-up default) — judging the same run here too filed it twice
 // (research/2026-10-30-global-slow-op-one-cause-one-report.md). Their boot
 // spans stay for the boot Gantt.
+/**
+ * The steps under `hook` (its `step` spans, nested), depth-first in start
+ * order: what a report says the hook's time went to.
+ */
+export function stepsUnder(
+  hook: Span,
+  spans: readonly Span[],
+): NonNullable<BootBudgetPayload["steps"]> {
+  const children = new Map<string, Span[]>();
+  for (const s of spans) {
+    if (s.phase !== "step" || s.parent === undefined) continue;
+    const list = children.get(s.parent) ?? [];
+    list.push(s);
+    children.set(s.parent, list);
+  }
+  const out: NonNullable<BootBudgetPayload["steps"]> = [];
+  const walk = (id: string, depth: number): void => {
+    const kids = [...(children.get(id) ?? [])].sort(
+      (a, b) => a.startMs - b.startMs,
+    );
+    for (const k of kids) {
+      out.push({
+        name: k.id.slice(id.length + 1),
+        depth,
+        atMs: k.startMs - hook.startMs,
+        durationMs: k.durationMs,
+      });
+      walk(k.id, depth + 1);
+    }
+  };
+  walk(hook.id, 1);
+  return out;
+}
+
 export function budgetForSpan(span: Span, cfg: Budgets): number | null {
   if (span.plugin == null) return null;
   // An if-chain, not a switch: PhaseId is a growing closed union and we budget

@@ -4,7 +4,7 @@ import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { getConfig } from "@plugins/config_v2/server";
 import { recordReport } from "@plugins/reports/plugins/engine/server";
 import { bootBudgetConfig } from "../../core";
-import { budgetForSpan } from "./budget";
+import { budgetForSpan, stepsUnder } from "./budget";
 
 // Per-process set of boot span names ALREADY reported this process. THE dedup
 // mechanism: boot happens once per process, so the profile is static after boot
@@ -59,6 +59,7 @@ export const bootBudgetMonitorJob = defineJob({
       if (span.durationMs <= budgetMs) continue; // within budget
       if (reported.has(span.id)) continue; // already filed this boot
       reported.add(span.id);
+      const steps = stepsUnder(span, spans);
       await recordReport({
         kind: "boot-budget",
         source: "server-boot-budget-monitor",
@@ -69,6 +70,7 @@ export const bootBudgetMonitorJob = defineJob({
           durationMs: span.durationMs,
           budgetMs,
           memoryCheckpoints: checkpoints,
+          ...(steps.length > 0 && { steps }),
         },
         message: `${span.id} — ${span.durationMs}ms boot (${span.phase}, budget ${budgetMs}ms)`,
       });

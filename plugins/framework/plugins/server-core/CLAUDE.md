@@ -523,8 +523,10 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `primitives/report-sink.defineReportSink`
     - `primitives/report-sink.defineRequestSink`
   - Exports (types):
+    - `BootHookContext`
     - `BootJournalEntry`
     - `BootMode`
+    - `BootStep`
     - `BrowserHost`
     - `BrowserHostBoot`
     - `BrowserHostOptions`
@@ -674,6 +676,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `unboundedWindowKeys`
     - `unfedResourceTables`
     - `unroutedResourceKeys`
+    - `untimedStep`
     - `validatePersistedValue`
     - `withNotifyBatch`
 - Cross-plugin:

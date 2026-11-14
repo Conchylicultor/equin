@@ -15,6 +15,7 @@ import { collectContributions } from "./contributions";
 import { reportServerError } from "./error-reporter";
 import {
   LOAD_SPAN_FLOOR_MS,
+  profileBootHook,
   profilerStart,
   recordMemoryCheckpoint,
 } from "./profiler";
@@ -431,16 +432,15 @@ async function runGraphPhase(
       // boot the gateway kills at its deadline usually is, and a span is
       // otherwise journaled only once it ends — which a SIGKILL never lets it.
       // The last `open` with no `span` is the hook it died in.
-      const end = profilerStart(
+      const { ctx, end } = profileBootHook(
         `${hook}:${p.id}`,
         hook,
-        p.id,
         p.id,
         hook === "onReadyBlocking" ? { members: [p.id] } : undefined,
       );
       try {
         for (const h of handlers) h.attach();
-        await fn?.call(p);
+        await fn?.call(p, ctx);
       } catch (err) {
         if (hook === "onReadyBlocking") {
           console.error(`[plugin.${p.id}] ${hook} failed`, err);
@@ -537,9 +537,13 @@ async function runAllReadyPhase(ordered: LoadedServerPlugin[]): Promise<void> {
   await Promise.all(
     ordered.map(async (p) => {
       if (!p.onAllReady) return;
-      const end = profilerStart(`onAllReady:${p.id}`, "onAllReady", p.id, p.id);
+      const { ctx, end } = profileBootHook(
+        `onAllReady:${p.id}`,
+        "onAllReady",
+        p.id,
+      );
       try {
-        await p.onAllReady();
+        await p.onAllReady(ctx);
       } catch (err) {
         reportPostReadyHookFailure(p, "onAllReady", err);
       } finally {
@@ -597,14 +601,13 @@ export async function runSettledPhase(
     await Promise.all(
       ordered.map(async (p) => {
         if (!p.onSettled) return;
-        const endHook = profilerStart(
+        const { ctx, end: endHook } = profileBootHook(
           `onSettled:${p.id}`,
           "onSettled",
           p.id,
-          p.id,
         );
         try {
-          await p.onSettled();
+          await p.onSettled(ctx);
         } catch (err) {
           reportPostReadyHookFailure(p, "onSettled", err);
         } finally {

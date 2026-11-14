@@ -52,9 +52,12 @@ export {
   installBootJournal,
   profilerStart,
   recordMemoryCheckpoint,
+  untimedStep,
 } from "./profiler";
 export type {
+  BootHookContext,
   BootJournalEntry,
+  BootStep,
   PhaseId,
   Span,
   MemoryCheckpoint,

@@ -33,6 +33,7 @@ const PHASE_ORDER = [
   "onReadyBlocking",
   "onReady",
   "onAllReady",
+  "step",
   "settled",
   "onSettled",
 ];
@@ -87,6 +88,12 @@ const PHASE_CONFIG: Record<string, PhaseConfig> = {
     label: "Settled",
     color: "bg-categorical-9",
     bg: "bg-categorical-9/10",
+  },
+  step: {
+    // The colour of onReady, whose hooks most steps are parts of.
+    label: "Hook steps (parts of a hook, by path)",
+    color: "bg-categorical-7",
+    bg: "bg-categorical-7/10",
   },
   onSettled: {
     label: "onSettled (parallel)",

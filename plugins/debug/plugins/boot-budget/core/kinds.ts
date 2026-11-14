@@ -27,5 +27,19 @@ export const BootBudgetPayloadSchema = z.object({
       }),
     )
     .optional(),
+  // The hook's named parts (`BootHookContext.step`), in tree order: where its
+  // time went. `atMs` is from the hook's start; `depth` 1 is a direct part.
+  // Absent on reports filed before hooks had steps, and for a hook that
+  // declares none.
+  steps: z
+    .array(
+      z.object({
+        name: z.string(),
+        depth: z.number(),
+        atMs: z.number(),
+        durationMs: z.number(),
+      }),
+    )
+    .optional(),
 });
 export type BootBudgetPayload = z.infer<typeof BootBudgetPayloadSchema>;
