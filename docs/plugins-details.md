@@ -56423,6 +56423,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `bundleRefusalMessage`
           - `DIRTY_WORKTREE_REASON`
           - `namespaceHint`
+          - `RELEASE_ACTIVATION_PROTOCOL`
           - `ReleaseManifestSchema`
           - `releaseRunIdKind`
       - Cross-plugin:

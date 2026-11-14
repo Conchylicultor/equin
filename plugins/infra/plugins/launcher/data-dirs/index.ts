@@ -44,7 +44,7 @@ export const gatewayLocks = defineDataDir({
   name: "gateway",
   owner: "infra/launcher",
   description:
-    "The gateway daemon's pid file — how a launcher discovers an already-running gateway",
+    "The gateway daemon's pid file — how a launcher discovers an already-running gateway — and its data-root lock, which keeps a second gateway off the same root",
   // A pid conveys nothing once its process is gone; reclaimable the moment
   // nothing on the box is running, never while the gateway is up.
   reclaim: { kind: "restart" },
@@ -81,6 +81,15 @@ export const CENTRAL_ROUTES_FILENAME = "central-routes.json";
 
 /** The pid file, inside {@link gatewayLocks}. */
 export const GATEWAY_PID_FILENAME = "gateway.pid";
+
+/**
+ * The data root's gateway lock, inside {@link gatewayLocks}: the gateway holds
+ * an exclusive flock on it for its life, so a second gateway on the same data
+ * root refuses at boot instead of half-starting beside the first
+ * (`gateway/datalock.go`). The pid file only says who claims the root; this is
+ * what enforces it.
+ */
+export const GATEWAY_LOCK_FILENAME = "gateway.lock";
 
 /**
  * Where the pid file sits *relative to a data root* — `"locks/gateway/gateway.pid"`.

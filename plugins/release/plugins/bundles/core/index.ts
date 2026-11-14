@@ -1,4 +1,7 @@
-export { ReleaseManifestSchema } from "./internal/manifest";
+export {
+  RELEASE_ACTIVATION_PROTOCOL,
+  ReleaseManifestSchema,
+} from "./internal/manifest";
 export type { ReleaseManifest } from "./internal/manifest";
 export { bundleRefusalMessage, namespaceHint } from "./internal/refusal";
 export type { BundleRefusal, BundleResolution } from "./internal/refusal";

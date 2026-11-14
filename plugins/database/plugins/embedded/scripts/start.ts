@@ -30,7 +30,7 @@ import {
   readFileSync,
   statSync,
 } from "@plugins/packages/plugins/timed-fs/core";
-import { join, dirname, basename } from "node:path";
+import { join, dirname, basename, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 import type { Client } from "pg";
 import { buildConnectionString } from "@plugins/database/core";
@@ -218,6 +218,37 @@ function readPidFile(): PidFileRead | null {
     if (err.code === "ENOENT") return null;
     throw err;
   }
+}
+
+/**
+ * The socket dir a live postmaster listens in, as its lock file records it: line
+ * 5 of `postmaster.pid` (Postgres's LOCK_FILE_LINE_SOCKET_DIR), written once the
+ * socket exists — empty before that, which is "not known yet", not a mismatch.
+ */
+function postmasterSocketDir(text: string): string | null {
+  const line = text.split("\n")[4]?.trim() ?? "";
+  return line === "" ? null : line;
+}
+
+/**
+ * Refuse to reattach to a postmaster that listens somewhere this start does not.
+ *
+ * Reattaching means "the cluster is up; everyone keeps reaching it at
+ * PG_SOCKET_DIR". A release launch mints that dir per boot (`/tmp/sgs-…`), so
+ * a postmaster another launch started listens in ITS dir, and every connect
+ * through ours is `ENOENT` — the website box's second gateway, 2026-11-14,
+ * failed exactly so, on a message naming a socket that never existed. Say what
+ * is actually true instead: the cluster belongs to another host generation.
+ */
+function assertReattachable(pid: number, judged: PidFileRead): void {
+  const listening = postmasterSocketDir(judged.text);
+  if (listening === null || resolve(listening) === resolve(PG_SOCKET_DIR)) {
+    return;
+  }
+  throw new Error(
+    `pg: embedded PG is already running (pid ${pid}) for ${PG_DATA_DIR}, but listening in ${listening}, not in this start's ${PG_SOCKET_DIR}: ` +
+      `another launch owns this cluster (a second host started on the same data root). Not reattaching — nothing here could reach it.`,
+  );
 }
 
 /**
@@ -472,6 +503,7 @@ async function main(): Promise<void> {
   const holder = postmasterHolder(judged);
   switch (holder.kind) {
     case "live":
+      assertReattachable(holder.pid, judged!);
       console.log(
         `pg: embedded PG already running (pid ${holder.pid}); reattaching`,
       );

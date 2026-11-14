@@ -204,6 +204,7 @@ Flat single-package layout:
 ```
 gateway/
 ├── main.go        # Flags, wiring, signal handling, sockets-dir setup, service bring-up
+├── datalock.go    # One gateway per data root: the -lock-file flock held for the process's life
 ├── env.go         # ChildEnv: the declared environment every child starts from; the only os.Environ()/exec.Command site
 ├── worktree.go    # Worktree lifecycle transitions (Ensure, Restart, Stop, exit), spawn, readiness
 ├── lifecycle.go   # The lifecycle as one value: the phase union and the spawnAttempt every waiter shares
@@ -395,6 +396,10 @@ convergence run calls `followMainGateway` (`plugins/infra/plugins/launcher/plugi
 
 `./equin start --force` remains the by-hand path (first install, a
 `gateway-restart-failed` fixed outside main, a host with main's deploy off).
+
+## One gateway per data root
+
+A gateway owns its data root's runtime — the supervised services, the registry, the pid file — so a second one on the same root can only break things: on 2026-11-14 a ship ran an old bundle whose extractor booted a whole host beside the website's serving one, and the second gateway truncated the shared stdio log, wrote over the pid file, "reattached" to the first one's Postgres over a socket dir it never had, and died. Now the first thing `main` does (after logging) is take an exclusive `flock` on `-lock-file` (`locks/gateway/gateway.lock`, passed by the launcher; defaults into the data root for a hand-run gateway) and hold it for its life (`datalock.go`). A second gateway exits at once, `gateway: fatal: another gateway (pid N) already serves this data root …`. The kernel drops the lock however the holder exits, so nothing goes stale; restarts never contend, since every restart path (systemd, `reloadService`) waits for the old process to be gone first. Log relays (`-log-relay`) return before the lock and never take it.
 
 ## Service supervision
 

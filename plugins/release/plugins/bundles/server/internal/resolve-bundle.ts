@@ -7,7 +7,7 @@ import {
 } from "@plugins/packages/plugins/timed-fs/core";
 import { basename, join } from "node:path";
 import type { Namespace } from "@plugins/infra/plugins/namespace/core";
-import { ReleaseManifestSchema } from "../../core";
+import { RELEASE_ACTIVATION_PROTOCOL, ReleaseManifestSchema } from "../../core";
 import type { BundleResolution } from "../../core";
 import {
   bundleRoot,
@@ -145,6 +145,21 @@ export async function resolveBundle(opts: {
         manifestPath,
         declared: manifest.runId,
         runId,
+      },
+    };
+  }
+
+  // Last of the manifest checks: what the bundle answers to. A bundle ship
+  // cannot speak to would not fail loudly — its extractor would boot a whole
+  // host beside the serving one (see RELEASE_ACTIVATION_PROTOCOL).
+  if (manifest.activationProtocol !== RELEASE_ACTIVATION_PROTOCOL) {
+    return {
+      ok: false,
+      refusal: {
+        kind: "activation-protocol",
+        manifestPath,
+        found: manifest.activationProtocol ?? null,
+        expected: RELEASE_ACTIVATION_PROTOCOL,
       },
     };
   }

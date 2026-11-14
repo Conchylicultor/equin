@@ -75,6 +75,12 @@ const BundleRefusalSchema = z.union([
     runId: z.string(),
   }),
   z.object({ kind: z.literal("not-packed"), localPath: z.string() }),
+  z.object({
+    kind: z.literal("activation-protocol"),
+    manifestPath: z.string(),
+    found: z.number().int().nullable(),
+    expected: z.number().int(),
+  }),
 ]) satisfies z.ZodType<BundleRefusal>;
 
 export const BundleResolutionSchema = z.union([

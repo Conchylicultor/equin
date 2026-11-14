@@ -10,6 +10,7 @@ import {
 import { join } from "node:path";
 import type { Namespace } from "@plugins/infra/plugins/namespace/core";
 import { releasesDir } from "../../data-dirs";
+import { RELEASE_ACTIVATION_PROTOCOL } from "../../core";
 import { bundleSignature, resolveBundle } from "./resolve-bundle";
 
 // A namespace no backend owns, removed after the suite.
@@ -39,6 +40,7 @@ function writeRun(runId: string): string {
       builtAt: new Date().toISOString(),
       port: 1,
       runId,
+      activationProtocol: RELEASE_ACTIVATION_PROTOCOL,
     }),
   );
   return runDir;
@@ -90,5 +92,64 @@ describe("bundleSignature — moves whenever resolveBundle's verdict can", () =>
 
     unlinkSync(join(next, "RELEASE.json"));
     await step("the manifest disappearing");
+  });
+});
+
+describe("resolveBundle — the activate protocol", () => {
+  // Its own composition dir, so the signature suite's runs are not in the way.
+  const comp = "comp-protocol";
+  const dir = releasesDir.file(NAMESPACE, `${comp}-web`);
+  const at = { namespace: NAMESPACE, composition: comp, platform: PLATFORM };
+
+  function packedRun(runId: string, protocol: number | undefined): void {
+    const runDir = join(dir, runId);
+    mkdirSync(join(runDir, "dist"), { recursive: true });
+    writeFileSync(
+      join(runDir, "RELEASE.json"),
+      JSON.stringify({
+        composition: comp,
+        target: "web",
+        platform: PLATFORM,
+        builtAt: new Date().toISOString(),
+        port: 1,
+        runId,
+        activationProtocol: protocol,
+      }),
+    );
+    writeFileSync(join(runDir, "dist", `${comp}-web-${PLATFORM}`), "");
+  }
+
+  test("a bundle built before the field is refused: it speaks none", async () => {
+    packedRun("release-old", undefined);
+    expect(
+      await resolveBundle({ ...at, release: "release-old" }),
+    ).toMatchObject({
+      ok: false,
+      refusal: {
+        kind: "activation-protocol",
+        found: null,
+        expected: RELEASE_ACTIVATION_PROTOCOL,
+      },
+    });
+  });
+
+  test("a bundle speaking another version is refused", async () => {
+    packedRun("release-other", RELEASE_ACTIVATION_PROTOCOL + 1);
+    expect(
+      await resolveBundle({ ...at, release: "release-other" }),
+    ).toMatchObject({
+      ok: false,
+      refusal: {
+        kind: "activation-protocol",
+        found: RELEASE_ACTIVATION_PROTOCOL + 1,
+      },
+    });
+  });
+
+  test("a bundle speaking the current version resolves", async () => {
+    packedRun("release-current", RELEASE_ACTIVATION_PROTOCOL);
+    expect(
+      await resolveBundle({ ...at, release: "release-current" }),
+    ).toMatchObject({ ok: true, runId: "release-current" });
   });
 });

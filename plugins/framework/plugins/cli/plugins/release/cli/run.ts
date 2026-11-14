@@ -94,6 +94,10 @@ import {
   type GitProvenance,
 } from "@plugins/release/plugins/bundles/server";
 import {
+  RELEASE_ACTIVATION_PROTOCOL,
+  type ReleaseManifest,
+} from "@plugins/release/plugins/bundles/core";
+import {
   acquireReleaseCheckout,
   isReleaseCheckout,
   releaseCargoTargetDir,
@@ -117,7 +121,7 @@ import {
 //     config/                      raw git-layer config tree (EQUIN_REPO_CONFIG_DIR)
 //     config-seed/config/<comp>/   resolved config defaults, seeded into <data>/config on first run
 //     web/                         filtered Vite dist (served statically)
-//     RELEASE.json                 { composition, target, platform, builtAt, port, runId, commitSha, commitDirty }
+//     RELEASE.json                 { composition, target, platform, builtAt, port, runId, commitSha, commitDirty, activationProtocol }
 //     dist/<comp>-<target>-<platform>   web target: self-extracting binary (the shippable)
 //     bundle/<Name>.app, <Name>.dmg     tauri target: desktop bundle (the shippable)
 //
@@ -1330,7 +1334,10 @@ const runRelease: CliAction<[], ReleaseOptions> = async (opts) => {
     port,
     runId,
     ...provenance,
-  };
+    // What this bundle's extractor and launcher answer to — the activate
+    // script's contract, checked by ship before it uploads.
+    activationProtocol: RELEASE_ACTIVATION_PROTOCOL,
+  } satisfies ReleaseManifest;
   writeFileSync(
     join(out, "RELEASE.json"),
     JSON.stringify(manifest, null, 2) + "\n",

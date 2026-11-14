@@ -58,7 +58,18 @@ export type BundleRefusal =
       runId: string;
     }
   /** Staged (`--dev`) but never packed into a shippable binary. */
-  | { kind: "not-packed"; localPath: string };
+  | { kind: "not-packed"; localPath: string }
+  /**
+   * The bundle speaks another activate protocol than this ship
+   * (`RELEASE_ACTIVATION_PROTOCOL`) — `found` null for one built before the
+   * field, which speaks none.
+   */
+  | {
+      kind: "activation-protocol";
+      manifestPath: string;
+      found: number | null;
+      expected: number;
+    };
 
 /**
  * The verdict of bundle discovery: the bundle to ship, or the named reason
@@ -138,5 +149,15 @@ export function bundleRefusalMessage(refusal: BundleRefusal): string {
       return `${refusal.manifestPath} declares runId "${refusal.declared}" but sits in "${refusal.runId}" — the release dir is inconsistent.`;
     case "not-packed":
       return `${refusal.localPath} is missing — that release was staged (\`--dev\`) but never packed into a shippable binary.`;
+    case "activation-protocol":
+      return (
+        `${refusal.manifestPath} ${
+          refusal.found === null
+            ? "predates the activate protocol"
+            : `speaks activate protocol ${refusal.found}`
+        }, and this ship speaks ${refusal.expected}: activating it would run ` +
+        `its whole host beside the serving one instead of extracting and swapping. ` +
+        `Cut a new release (\`./equin release\`) and ship that.`
+      );
   }
 }

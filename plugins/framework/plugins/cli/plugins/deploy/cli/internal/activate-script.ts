@@ -203,6 +203,10 @@ as_app() {
 }
 
 # ── 1. Extract while the previous release still serves. ──────────────────────
+# What this step and the swap below ask of the bundle is its activate protocol
+# (\`RELEASE_ACTIVATION_PROTOCOL\`, release/bundles): ship refuses a bundle that
+# does not declare the current one before uploading it, because an extractor
+# that predates RELEASE_EXTRACT_ONLY boots a whole host instead of extracting.
 # The extractor renames a complete extraction into place, so a dir that exists
 # is whole. It prints the dir as its last line.
 echo "[~] extracting the bundle"

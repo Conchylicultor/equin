@@ -53,6 +53,7 @@ import { dbConfigDir } from "@plugins/database/data-dirs";
 import { userConfigRelativeToRoot } from "@plugins/config_v2/data-dirs";
 import {
   CENTRAL_ROUTES_FILENAME,
+  GATEWAY_LOCK_FILENAME,
   GATEWAY_PID_FILENAME,
   gatewayLocks,
   gatewayPidFileRelativeToRoot,
@@ -610,6 +611,12 @@ export function gatewayLaunchFlags(
     // file naming a dead one.
     "-pid-file",
     pidFile(),
+    // One gateway per data root: held for the gateway's life, so a second one
+    // started on this root (a ship running an old bundle's full boot beside the
+    // serving host, 2026-11-14) refuses at once, naming the holder, instead of
+    // reattaching to the first one's Postgres over a socket dir it never had.
+    "-lock-file",
+    gatewayLocks.file(GATEWAY_LOCK_FILENAME),
     // The whole shutdown's budget, inside the stop timeout its service
     // manager (or `terminateProcess`) kills at — one number for both, so the
     // gateway exits on its own instead of being SIGKILLed mid-teardown.

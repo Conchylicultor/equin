@@ -38,6 +38,7 @@ type Config struct {
 	DefaultNamespace  string
 	PublicHosts       string
 	PidFile           string
+	LockFile          string
 	// MainCheckout is main's checkout, whose refs/heads/main the gateway
 	// watches to start main's convergence run (main_deploy.go). "" disables
 	// it: a release, serve-app or a hand-run gateway deploys nothing.
@@ -164,6 +165,11 @@ func parseFlags() (Config, string) {
 	// gateway launchd relaunches at login or after a crash would otherwise leave
 	// the file naming a dead generation. Empty ⇒ no pidfile (a hand-run gateway).
 	flag.StringVar(&cfg.PidFile, "pid-file", "", "file to write this process's pid to at boot")
+	// The data root's gateway lock (datalock.go): one gateway per data root.
+	// Defaults into the root like every path flag, so a hand-run gateway is held
+	// to it too; the launcher passes it from its `locks/gateway` declaration.
+	defaultLockFile := filepath.Join(dataDir, "locks", "gateway", "gateway.lock")
+	flag.StringVar(&cfg.LockFile, "lock-file", defaultLockFile, "the data root's gateway lock: held (flock) for this process's life; a second gateway on the same root refuses to start")
 	// Main's checkout: the gateway starts main's convergence run there on every
 	// advance of refs/heads/main (main_deploy.go). Only the machine's dev
 	// gateway (./equin start) passes it.
@@ -238,6 +244,14 @@ func main() {
 	}
 	cfg, childEnvFlag := parseFlags()
 	setupLogging(cfg)
+	// Before anything that touches the data root's runtime (pid file, sockets,
+	// registry, supervised services): a second gateway on a root that one
+	// already serves stops here, naming the holder.
+	lock, err := acquireDataRootLock(cfg.LockFile)
+	if err != nil {
+		fatal(fmt.Sprintf("gateway: fatal: %v", err), "data root lock not acquired", err)
+	}
+	dataRootLock = lock
 	if err := cfg.validatePublicServing(); err != nil {
 		fatal(fmt.Sprintf("gateway: fatal: %v", err), "invalid public serving flags", err)
 	}
