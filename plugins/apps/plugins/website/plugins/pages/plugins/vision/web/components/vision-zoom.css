@@ -58,6 +58,64 @@
   pointer-events: auto;
 }
 
+/* ---- the scroll cue: a V at the foot of the first screen, arriving once the heading is read, bobbing
+   gently, gone at the first scroll ([data-gone], set by the scroll skeleton) ---- */
+.vision-zoom-cue {
+  position: absolute;
+  left: 50%;
+  bottom: 20px;
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  margin-left: -28px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  cursor: pointer;
+  color: var(--muted-foreground);
+  animation: vz-cue-in 0.8s 1.2s cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
+  transition:
+    opacity 0.35s,
+    translate 0.35s,
+    color 0.2s;
+}
+.vision-zoom-cue svg {
+  overflow: visible;
+  filter: drop-shadow(0 0 8px color-mix(in srgb, var(--vz-azure), transparent 40%));
+  animation: vz-cue-bob 2.4s 2s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+.vision-zoom-cue:hover {
+  color: var(--foreground);
+}
+.vision-zoom-cue:focus-visible {
+  outline: 2px solid var(--vz-azure);
+  outline-offset: 2px;
+}
+.vision-zoom-cue[data-gone] {
+  opacity: 0;
+  translate: 0 8px;
+  pointer-events: none;
+}
+@keyframes vz-cue-in {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+}
+@keyframes vz-cue-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.55;
+  }
+  50% {
+    transform: translateY(7px);
+    opacity: 1;
+  }
+}
+
 /* ---- the ladder, pulled up under the hero so the zoom starts from it ---- */
 .vision-zoom .vs {
   position: relative;
@@ -651,6 +709,8 @@
   }
 }
 @media (prefers-reduced-motion: reduce) {
+  .vision-zoom-cue,
+  .vision-zoom-cue svg,
   .vision-zoom .zk,
   .vision-zoom .zb-breath,
   .vision-zoom .zb-fall,

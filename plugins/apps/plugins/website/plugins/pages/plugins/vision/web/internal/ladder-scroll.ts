@@ -46,6 +46,7 @@ export function mountLadderScroll(
   const segs = all<HTMLButtonElement>(strip, ".vs-strip-seg button");
   const num = one<HTMLElement>(strip, ".vs-strip-label b");
   const nm = one<HTMLElement>(strip, ".vs-strip-label span");
+  const cue = one<HTMLButtonElement>(root, ".vision-zoom-cue");
 
   const screen = () => scroller.clientHeight;
   const scrollerTop = () => scroller.getBoundingClientRect().top;
@@ -68,6 +69,10 @@ export function mountLadderScroll(
     revealElement(steps[i], { behavior: "smooth", block: "center" });
   };
   for (const b of segs) b.addEventListener("click", onSeg);
+  // the scroll cue reads the first chapter
+  const onCue = () =>
+    revealElement(cards[0], { behavior: "smooth", block: "center" });
+  cue.addEventListener("click", onCue);
 
   // the page's measures, as the stylesheet reads them
   function fit() {
@@ -114,6 +119,8 @@ export function mountLadderScroll(
     // the hero dissolves into the zoom over the first 60% of a screen
     const y = scroller.scrollTop;
     root.style.setProperty("--h", clamp01(y / (s * 0.6)).toFixed(3));
+    // the scroll cue leaves at the first scroll
+    cue.toggleAttribute("data-gone", y > 8);
     // the layer strip: one segment per chapter, filling as the zoom passes it
     segs.forEach((b, i) =>
       b.style.setProperty("--fill", clamp01(p - i + 1).toFixed(3)),
@@ -149,6 +156,7 @@ export function mountLadderScroll(
       cancelAnimationFrame(queued);
       scroller.removeEventListener("scroll", queue);
       for (const b of segs) b.removeEventListener("click", onSeg);
+      cue.removeEventListener("click", onCue);
       zoom.dispose();
     },
   };

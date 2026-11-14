@@ -16,7 +16,8 @@ import "./vision-zoom.css";
  * zoom-out on a dark starfield — a pinned stage behind six chapter cards,
  * each card one frame of the zoom, from an idea to every app — with a layer
  * strip pinned under the site header while it is read. The heading dissolves
- * into the zoom as the page moves.
+ * into the zoom as the page moves; a V at the foot of the first screen invites
+ * the first scroll and leaves as soon as it comes.
  *
  * React renders the ladder's markup once (memoised, no props) and never
  * re-renders it: the scroll skeleton (`internal/ladder-scroll.ts`) and the zoom
@@ -62,6 +63,28 @@ export function VisionZoom() {
     <div ref={rootRef} className="vision-zoom">
       <div className="vision-zoom-hero">
         <VisionOpening />
+        {/* the scroll cue: a V inviting the first scroll, gone once it comes (`ladder-scroll.ts` owns it) */}
+        <button
+          type="button"
+          className="vision-zoom-cue"
+          aria-label="Scroll to the first chapter"
+        >
+          <svg
+            width="28"
+            height="16"
+            viewBox="0 0 28 16"
+            fill="none"
+            aria-hidden="true"
+          >
+            <path
+              d="M3 3l11 10L25 3"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </button>
       </div>
       <LadderMarkup />
     </div>
