@@ -69,6 +69,8 @@ const SESSION_CARRIED = {
   host: textField(),
   exitAt: textField(),
   exitEngagedMs: intField(),
+  /** collect's active time (`Session.activeMs`): the lane's "N active". */
+  activeMs: intField(),
   engagedMs: intField(),
   referrerPath: nullable(textField()),
   hits: jsonField({

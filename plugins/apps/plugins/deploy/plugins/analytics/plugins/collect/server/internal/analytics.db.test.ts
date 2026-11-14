@@ -1089,9 +1089,9 @@ describe("visit duration: one definition, report and sessions alike", () => {
     });
   });
 
-  test("the report's total — raw and stored — is the sum of the sessions' durations", async () => {
+  test("the report's total — raw and stored — is the sum of the sessions' active times", async () => {
     const sum = (await sessionsOf(t.db, DAY)).reduce(
-      (a, s) => a + s.durationMs,
+      (a, s) => a + s.activeMs,
       0,
     );
     const raw = await rawDailyRows(t.db, {
@@ -1111,7 +1111,7 @@ describe("visit duration: one definition, report and sessions alike", () => {
     expect(totalDuration(stored)).toBe(sum);
   });
 
-  test("idle time is already visible time; earlier pages count wall-clock", async () => {
+  test("the report counts active time: every page's hidden and idle stretches out, each clipped to its page", async () => {
     // A visit of its own on a day nothing else touches, rolled back after.
     const day = "2026-09-20";
     const D = { ip: "203.0.113.4", ua: UA.chromeMac };
@@ -1133,7 +1133,13 @@ describe("visit duration: one definition, report and sessions alike", () => {
       );
     expect(
       t.db.transaction(async (tx) => {
-        await send(tx, { kind: "pageview", host, path: "/" }, at(day, "10:00"));
+        const first = pageviewId(
+          await send(
+            tx,
+            { kind: "pageview", host, path: "/" },
+            at(day, "10:00"),
+          ),
+        );
         const exit = pageviewId(
           await send(
             tx,
@@ -1154,11 +1160,26 @@ describe("visit duration: one definition, report and sessions alike", () => {
           },
           at(day, "10:04"),
         );
-        // 2 min on / (wall-clock) + 40 s visible on /b (its 20 s idle in)
-        // + its 30 s hidden.
-        const expected = 120_000 + 40_000 + 30_000;
+        // A late beacon of / : 20 s visible, then a background stretch that
+        // runs past its next pageview (at 120 s) — only its first 20 s count.
+        await send(
+          tx,
+          {
+            kind: "engagement",
+            pageviewId: first,
+            engagedMs: 20_000,
+            gaps: [{ kind: "hidden", startMs: 100_000, endMs: 200_000 }],
+          },
+          at(day, "10:04"),
+        );
+        // Wall-clock: 2 min on / + 40 s visible on /b (its 20 s idle in) +
+        // its 30 s hidden.
+        const wallClock = 120_000 + 40_000 + 30_000;
+        // Active: minus /'s clipped 20 s hidden, /b's 30 s hidden and 20 s idle.
+        const expected = wallClock - 20_000 - 30_000 - 20_000;
         const [session] = await sessionsOf(tx, day);
-        expect(session?.durationMs).toBe(expected);
+        expect(session?.durationMs).toBe(wallClock);
+        expect(session?.activeMs).toBe(expected);
         const raw = await rawDailyRows(tx, {
           from: day,
           to: day,
@@ -1175,11 +1196,11 @@ describe("visit duration: one definition, report and sessions alike", () => {
           dimensions: "total",
         });
         expect(totalDuration(stored)).toBe(expected);
-        // Time on page stays the page's visible time.
+        // Time on page: the page's visible time minus its idle stretches.
         expect(
           raw.find((r) => r.dimension === "page" && r.value === "/b")
             ?.durationMs,
-        ).toBe(40_000);
+        ).toBe(40_000 - 20_000);
         tx.rollback();
       }),
     ).rejects.toThrow(TransactionRollbackError);

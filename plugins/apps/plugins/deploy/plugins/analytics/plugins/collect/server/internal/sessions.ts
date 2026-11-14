@@ -25,7 +25,11 @@ import {
   type VisitCut,
   type VisitFilterColumn,
 } from "../../core";
-import { visitDurationMs, visitMembershipValues } from "./aggregate-sql";
+import {
+  visitActiveMs,
+  visitDurationMs,
+  visitMembershipValues,
+} from "./aggregate-sql";
 import { liveVisitCutoff } from "./visit-grouping";
 
 // Individual visits ("sessions") as a window of the filter language: the
@@ -248,6 +252,7 @@ const VisitRow = z.object({
   exitAt: instant,
   exitEngagedMs: z.coerce.number().int(),
   durationMs: z.coerce.number().int(),
+  activeMs: z.coerce.number().int(),
   engagedMs: z.coerce.number().int(),
   pageviews: z.coerce.number().int(),
   events: z.coerce.number().int(),
@@ -286,7 +291,7 @@ function visitRows(
         (v.last_at > ${liveVisitCutoff(now).toISOString()}::timestamptz) AS "live",
         v.host, v.entry_path AS "entryPath", v.exit_path AS "exitPath",
         ${iso("v.exit_at")} AS "exitAt", v.exit_engaged_ms AS "exitEngagedMs",
-        ${visitDurationMs} AS "durationMs", v.engaged_ms AS "engagedMs",
+        ${visitDurationMs} AS "durationMs", ${visitActiveMs} AS "activeMs", v.engaged_ms AS "engagedMs",
         v.pageviews, v.events, v.channel,
         v.referrer_host AS "referrerHost", v.referrer_path AS "referrerPath",
         v.utm_source AS "utmSource", v.utm_medium AS "utmMedium",

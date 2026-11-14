@@ -62,12 +62,12 @@ export function viewsPerVisit(m: Metrics): number | null {
   return ratio(m.pageviews, m.visits);
 }
 
-/** Average visit duration, in ms. */
+/** Average visit duration — active time, background and idle out — in ms. */
 export function averageVisitDurationMs(m: Metrics): number | null {
   return ratio(m.durationMs, m.visits);
 }
 
-/** On a `page` row: average time that page was visible per view, in ms. */
+/** On a `page` row: average time that page was visible and not idle per view, in ms. */
 export function averageTimeOnPageMs(pageRow: Metrics): number | null {
   return ratio(pageRow.durationMs, pageRow.pageviews);
 }

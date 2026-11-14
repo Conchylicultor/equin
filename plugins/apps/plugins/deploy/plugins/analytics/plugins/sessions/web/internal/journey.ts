@@ -62,7 +62,8 @@ export interface Journey {
   pages: JourneyPage[];
   durationS: number;
   /**
-   * Time on the pages minus every background and idle stretch; `null` when
+   * Time on the pages minus every background and idle stretch (collect's
+   * `activeMs`, the report's visit duration); `null` when
    * that is not known — a page without recorded stretches, or a truncated
    * visit (its unknown tail may hold some).
    */
@@ -94,9 +95,9 @@ function reachedSection(hit: SessionHit): string | null {
 
 /**
  * A visit's hits, as its pages. A page lasts until the next pageview's `ts`;
- * the exit page until the visit's end — the report's `durationMs`, collect's
- * one definition of a visit's duration (its background stretches already in),
- * so a visit lasts as long here as in the report. Events belong to the
+ * the exit page until the visit's end — `durationMs`, collect's wall-clock
+ * duration (its background stretches already in). Its active time is
+ * collect's `activeMs`, what the report's visit duration sums. Events belong to the
  * pageview before them (one before any pageview, to the first).
  */
 export function journeyOf(session: Session): Journey {
@@ -155,9 +156,8 @@ export function journeyOf(session: Session): Journey {
   return {
     pages,
     durationS: totalS,
-    activeS: known
-      ? Math.max(0, totalS - pages.reduce((a, p) => a + sumS(p.gaps!), 0))
-      : null,
+    // collect's one definition (the report's visit duration), never re-derived.
+    activeS: known ? session.activeMs / 1000 : null,
     actionCount,
     bounced: session.pageviews <= 1,
     truncated: session.hitsTruncated,

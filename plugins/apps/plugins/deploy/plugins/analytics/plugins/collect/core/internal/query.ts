@@ -108,14 +108,14 @@ export function reportSourceFor(
  *   was already known when the visit opened); `visits - returningVisits` are
  *   first visits. `null` when the site's release predates the count: the
  *   dashboard reads reports from deployed sites of any age.
- * - `durationMs` — summed visit duration (collect's one definition, its
- *   CLAUDE.md § Visit duration): wall-clock from the visit's first page to the
- *   end of its last — the last page's visible time plus its recorded
- *   background stretches.
+ * - `durationMs` — summed visit duration as ACTIVE time (collect's one
+ *   definition, its CLAUDE.md § Visit duration): wall-clock from the visit's
+ *   first page to the end of its last, minus every page's recorded background
+ *   and idle stretches.
  *
  * On a report row, counts are restricted to the row's value: for `page`,
  * `pageviews` counts views of that page, `durationMs` sums the time that page
- * was visible (time on page) and `events` counts events fired on it; for
+ * was visible and not idle (time on page) and `events` counts events fired on it; for
  * `event`, `events` counts that event; for `event_prop`, the events that
  * carried that prop. `visitors` / `visits` / `bounces` / `returningVisits`
  * always count the visits that have the value.

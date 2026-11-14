@@ -50,7 +50,11 @@ function ev(
 const reach = (s: number, path: string, section: string) =>
   ev(s, path, "section_reach", { section });
 
-function session(hits: SessionHit[], durationMs: number): Session {
+function session(
+  hits: SessionHit[],
+  durationMs: number,
+  activeMs = durationMs,
+): Session {
   const pageviews = hits.filter((h) => h.kind === "pageview").length;
   return {
     id: "00000000-0000-4000-8000-000000000001",
@@ -67,6 +71,7 @@ function session(hits: SessionHit[], durationMs: number): Session {
     exitAt: hits.filter((h) => h.kind === "pageview").at(-1)!.ts,
     exitEngagedMs: 0,
     durationMs,
+    activeMs,
     engagedMs: durationMs,
     pageviews,
     events: hits.length - pageviews,
@@ -256,7 +261,7 @@ describe("stretches away", () => {
     gaps,
   });
 
-  it("puts each page's stretches on it, and active = time on the pages minus every stretch", () => {
+  it("puts each page's stretches on it, and active is the box's (collect's one definition)", () => {
     // Exit page: 20 s visible, 30 s in the background between — the box's
     // duration (collect's one definition) already holds both: 100 + 20 + 30.
     const j = journeyOf(
@@ -266,6 +271,7 @@ describe("stretches away", () => {
           withGaps(pv(100, "/vision", 20_000), [gap(5, 35, "hidden")]),
         ],
         150_000,
+        90_000,
       ),
     );
     expect(j.pages[0]!.gaps).toEqual([{ kind: "idle", startS: 10, endS: 40 }]);
@@ -283,12 +289,13 @@ describe("stretches away", () => {
           withGaps(pv(100, "/vision", 10_000), []),
         ],
         110_000,
+        60_000,
       ),
     );
     expect(j.pages[0]!.gaps).toEqual([
       { kind: "hidden", startS: 50, endS: 100 },
     ]);
-    expect(j.activeS).toBe(110 - 50);
+    expect(j.activeS).toBe(60);
   });
 
   it("recorded with none: active is the whole time", () => {

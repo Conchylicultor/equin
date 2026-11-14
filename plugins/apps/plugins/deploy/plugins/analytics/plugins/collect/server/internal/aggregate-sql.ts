@@ -129,7 +129,7 @@ function memberships(scope: MembershipScope): SQL {
     UNION ALL
     SELECT ${row(literal("page"), sql`h.path`, {
       pageviews: sql`count(*) FILTER (WHERE h.kind = 'pageview')`,
-      durationMs: sql`COALESCE(sum(h.engaged_ms) FILTER (WHERE h.kind = 'pageview'), 0)::bigint`,
+      durationMs: sql`COALESCE(sum(${pageActiveMs}) FILTER (WHERE h.kind = 'pageview'), 0)::bigint`,
       events: sql`count(*) FILTER (WHERE h.kind = 'event')`,
     })}
     ${hits(sql`TRUE`)}
@@ -167,9 +167,10 @@ export function visitHasAll(
 }
 
 /**
- * The ONE definition of a visit's duration, over visit alias `v`: wall-clock
+ * The ONE definition of a visit's wall-clock duration, over visit alias `v`:
  * time from its start to the end of its exit page, every page on the same
- * scale — background time included.
+ * scale — background and idle time included. The Sessions tab draws a visit's
+ * pages on it; the report counts {@link visitActiveMs} instead.
  *
  * Every page before the exit lasts until the next pageview (`exit_at −
  * started_at`, wall-clock). The exit page has no next pageview, so its time is
@@ -178,9 +179,6 @@ export function visitHasAll(
  * pageview's recorded `gaps`. An exit pageview whose gaps were never recorded
  * (`NULL`: an older tracker, a visit from before `gaps` existed, no beacon
  * yet) adds no background time — its visible time is all that is known.
- *
- * The report (every aggregate below, through `base.duration_ms`) and the
- * sessions list (its page's `durationMs`) both read it, so a visit lasts as long in one as in the other.
  */
 export const visitDurationMs = sql`(
   (GREATEST(EXTRACT(EPOCH FROM (v.exit_at - v.started_at)) * 1000, 0))::bigint
@@ -194,14 +192,54 @@ export const visitDurationMs = sql`(
 )`;
 
 /**
- * `base` (the visits matching `where`, over alias `v`, with their duration —
- * {@link visitDurationMs}) and `m` (their memberships). Continue the WITH list
+ * The ONE definition of a visit's ACTIVE time, over visit alias `v` — what the
+ * report's `durationMs` (the Visit duration KPI, the stored totals) sums: its
+ * wall-clock duration ({@link visitDurationMs}) minus every away stretch
+ * (`hidden` and `idle`) of every pageview, each page's stretches clipped to
+ * that page's own length (until the next pageview; the exit page's are its
+ * own beacons', so already inside it). A tab left open in the background or
+ * with nobody at it adds nothing, so one forgotten tab cannot inflate the
+ * average.
+ *
+ * A pageview whose gaps were never recorded (`NULL`) subtracts nothing: its
+ * time is all counted, as it was before stretches existed.
+ */
+export const visitActiveMs = sql`GREATEST(${visitDurationMs} - COALESCE((
+  SELECT sum(GREATEST(
+    LEAST((g.value->>'endMs')::bigint, p.len) - LEAST((g.value->>'startMs')::bigint, p.len),
+    0))
+  FROM (
+    SELECT ph.gaps,
+      -- LEAST ignores a NULL: the exit page's stretches are never clipped.
+      CASE WHEN ph.id = v.exit_pageview_id THEN NULL
+        ELSE (EXTRACT(EPOCH FROM (lead(ph.ts) OVER (ORDER BY ph.ts, ph.id) - ph.ts)) * 1000)::bigint
+      END AS len
+    FROM analytics_hits ph
+    WHERE ph.visit_id = v.id AND ph.kind = 'pageview'
+  ) p
+    CROSS JOIN LATERAL jsonb_array_elements(p.gaps) AS g(value)
+), 0), 0)::bigint`;
+
+/**
+ * Over hit alias `h` (a pageview): the time it was visible with someone at it
+ * — its visible time minus its `idle` stretches (hidden ones are not visible
+ * time to begin with). A page row's `durationMs` (time on page) sums it.
+ */
+const pageActiveMs = sql`GREATEST(h.engaged_ms - COALESCE((
+  SELECT sum((g.value->>'endMs')::bigint - (g.value->>'startMs')::bigint)
+  FROM jsonb_array_elements(h.gaps) AS g(value)
+  WHERE g.value->>'kind' = 'idle'
+), 0), 0)`;
+
+/**
+ * `base` (the visits matching `where`, over alias `v`, with their active time —
+ * {@link visitActiveMs} — as `duration_ms`) and `m` (their memberships). Continue the WITH list
  * after it.
  */
 function visitsAndMemberships(where: SQL): SQL {
   return sql`
     base AS (
-      SELECT v.*, ${visitDurationMs} AS duration_ms
+      SELECT v.*, ${visitActiveMs} AS duration_ms
       FROM analytics_visits v
       WHERE ${where}
     ),

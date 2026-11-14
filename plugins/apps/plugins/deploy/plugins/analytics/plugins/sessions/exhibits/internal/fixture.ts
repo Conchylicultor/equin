@@ -323,7 +323,10 @@ export function fixtureSessions(now: number): Session[] {
     const iso = (s: number) => new Date(start + s * 1000).toISOString();
     const hits: SessionHit[] = [];
     let at = 0;
+    // Every stretch away, on every page: what the active time leaves out.
+    let awayMs = 0;
     v.pages.forEach(([path, seconds, reached, actions, gaps = []], i) => {
+      awayMs += gaps.reduce((a, [from, to]) => a + (to - from) * 1000, 0);
       const hiddenS = gaps
         .filter(([, , kind]) => kind === "hidden")
         .reduce((a, [from, to]) => a + to - from, 0);
@@ -406,6 +409,7 @@ export function fixtureSessions(now: number): Session[] {
       exitAt,
       exitEngagedMs,
       durationMs: at * 1000,
+      activeMs: Math.max(0, at * 1000 - awayMs),
       engagedMs: at * 1000,
       pageviews,
       events: hits.length - pageviews,

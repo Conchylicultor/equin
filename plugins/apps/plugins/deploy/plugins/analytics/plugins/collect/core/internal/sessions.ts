@@ -140,11 +140,17 @@ export const SessionSchema = z
     /** How long the exit page was visible; `durationMs` adds its background stretches. */
     exitEngagedMs: z.number().int().nonnegative(),
     /**
-     * The report's visit duration (collect's one definition): wall-clock from
-     * the start to the end of the exit page — exit − start + the exit page's
+     * The visit's wall-clock duration (collect's one definition): from the
+     * start to the end of the exit page — exit − start + the exit page's
      * visible time + its recorded background (`hidden`) stretches.
      */
     durationMs: z.number().int().nonnegative(),
+    /**
+     * The visit's active time — what the report's visit duration sums
+     * (collect's one definition): `durationMs` minus every page's recorded
+     * `hidden` and `idle` stretches.
+     */
+    activeMs: z.number().int().nonnegative(),
     engagedMs: z.number().int().nonnegative(),
     pageviews: z.number().int().nonnegative(),
     events: z.number().int().nonnegative(),
