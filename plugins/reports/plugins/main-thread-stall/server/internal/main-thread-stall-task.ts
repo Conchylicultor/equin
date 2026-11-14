@@ -119,6 +119,7 @@ function renderDescription(row: ReportRow, d: MainThreadStallPayload): string {
     `- **When:** ${new Date(d.startedAt).toISOString()} → ${new Date(d.endedAt).toISOString()}`,
   );
   lines.push(`- **Detector:** ${d.detector}`);
+  lines.push(`- **Browser:** ${d.client.family} on ${d.client.os}`);
   lines.push("");
   lines.push("**What ran**");
   if (d.stallFrame) {

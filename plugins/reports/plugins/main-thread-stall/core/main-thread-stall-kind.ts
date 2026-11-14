@@ -120,6 +120,37 @@ export const StallStacksSchema = z.discriminatedUnion("kind", [
 ]);
 export type StallStacks = z.infer<typeof StallStacksSchema>;
 
+// The browser a stall happened in, coarsely: family and OS only — never the
+// user agent, a version or anything else that narrows who it was (a website
+// visitor's stall is filed by a stranger's browser). Read by the filing tab,
+// which is always the same browser as the stalled one.
+export const CLIENT_FAMILIES = [
+  "chrome",
+  "edge",
+  "samsung",
+  "opera",
+  "firefox",
+  "safari",
+  "webview",
+  "other",
+  "unknown",
+] as const;
+export const CLIENT_OSES = [
+  "android",
+  "ios",
+  "macos",
+  "windows",
+  "chromeos",
+  "linux",
+  "other",
+  "unknown",
+] as const;
+export const StallClientSchema = z.object({
+  family: z.enum(CLIENT_FAMILIES),
+  os: z.enum(CLIENT_OSES),
+});
+export type StallClient = z.infer<typeof StallClientSchema>;
+
 export const MainThreadStallPayloadSchema = StallTabSchema.extend({
   // Epoch ms. `endedAt` is when the thread answered again (recovered), when
   // the tab went away (gone), or the last instant it was seen still frozen
@@ -173,6 +204,9 @@ export const MainThreadStallPayloadSchema = StallTabSchema.extend({
     kind: "unavailable",
     reason: "filed before stall reports carried sampled stacks",
   }),
+  // The browser it happened in (see StallClientSchema). Evidence only, like
+  // `stacks`: never part of the fingerprint or summary.
+  client: StallClientSchema.default({ family: "unknown", os: "unknown" }),
 });
 export type MainThreadStallPayload = z.infer<
   typeof MainThreadStallPayloadSchema
@@ -180,11 +214,15 @@ export type MainThreadStallPayload = z.infer<
 
 /**
  * A stall as the watchdog knows it: everything but `stacks`, which only the
- * stalled tab can add (its profiler ran on its own thread) when it files. It
- * is also all the fingerprint and summary may read — the same freeze stays
- * one row whatever its sampled stacks were.
+ * stalled tab can add (its profiler ran on its own thread) when it files, and
+ * `client`, which the filing tab reads. It is also all the fingerprint and
+ * summary may read — the same freeze stays one row whatever its sampled
+ * stacks or browser were.
  */
-export type MainThreadStallDraft = Omit<MainThreadStallPayload, "stacks">;
+export type MainThreadStallDraft = Omit<
+  MainThreadStallPayload,
+  "stacks" | "client"
+>;
 
 /**
  * A freeze a user interaction started: the interaction's target alone — the

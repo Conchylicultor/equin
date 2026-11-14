@@ -179,6 +179,186 @@ describe("reduceSiteReport", () => {
   });
 });
 
+// A stall payload as the site's stall kind validated it (the vision zoom's).
+function stallData(
+  over: Record<string, unknown> = {},
+): Record<string, unknown> {
+  return {
+    tabId: "tab-1",
+    app: "website",
+    routePattern: "(root)",
+    url: "https://equin.ai/about/vision?who=me",
+    visible: true,
+    focused: true,
+    startedAt: 1_794_000_000_000,
+    endedAt: 1_794_000_062_100,
+    durationMs: 62_100,
+    durationIsLowerBound: false,
+    ended: "recovered",
+    detector: "in-tab",
+    framesDuring: 0,
+    stallFrame: {
+      startedAt: 1_794_000_000_000,
+      durationMs: 62_100,
+      blockingDurationMs: 62_050,
+      renderStartMs: 62_090,
+      styleAndLayoutStartMs: null,
+      scripts: [
+        {
+          invokerType: "user-callback",
+          invoker: "FrameRequestCallback",
+          sourceURL: "https://equin.ai/assets/vision-1a2b.js",
+          sourceFunctionName: "play",
+          sourceCharPosition: 1234,
+          startMs: 1,
+          durationMs: 62_080,
+          forcedStyleAndLayoutDurationMs: 3,
+          pauseDurationMs: 0,
+        },
+        {
+          invokerType: "event-listener",
+          invoker: "https://evil.example/<img src=x>",
+          sourceURL: "https://evil.example/x.js",
+          sourceFunctionName: "`rm -rf`",
+          sourceCharPosition: 1,
+          startMs: 0,
+          durationMs: 5,
+          forcedStyleAndLayoutDurationMs: 0,
+          pauseDurationMs: 0,
+        },
+      ],
+    },
+    during: [],
+    frames: [],
+    marks: [],
+    frozenIn: null,
+    interaction: null,
+    cohort: [],
+    topFunction: "play (FrameRequestCallback)",
+    stacks: {
+      kind: "sampled",
+      sampleIntervalMs: 20,
+      sampledMs: 400,
+      noJsMs: 20,
+      truncated: false,
+      stacks: [],
+      topSelf: [
+        {
+          frame: "play (https://equin.ai/assets/vision-1a2b.js:1:1234)",
+          ms: 380,
+        },
+        { frame: "<script>alert(1)</script> (x.js:1:1)", ms: 20 },
+      ],
+    },
+    client: { family: "chrome", os: "android" },
+    ...over,
+  };
+}
+
+describe("reduceSiteReport: main-thread stalls", () => {
+  const stallRecord = (data: Record<string, unknown>) =>
+    record({
+      kind: "main-thread-stall",
+      source: "client-main-thread-stall",
+      message: "Main thread frozen 62.1s (recovered) — website (root) — play",
+      data,
+    });
+
+  test("keeps the stall's typed evidence: detector, ending, frame split, script and sampled function names, browser", () => {
+    const r = reduceSiteReport(stallRecord(stallData()), SITE);
+    expect(r.stall).toEqual({
+      kind: "stall",
+      detector: "in-tab",
+      ended: "recovered",
+      durationMs: 62_100,
+      durationIsLowerBound: false,
+      visible: true,
+      focused: true,
+      framesDuring: 0,
+      frame: {
+        durationMs: 62_100,
+        blockingDurationMs: 62_050,
+        renderStartMs: 62_090,
+        styleAndLayoutStartMs: null,
+        scriptMs: 62_085,
+        pauseMs: 0,
+        forcedStyleLayoutMs: 3,
+      },
+      scripts: [
+        {
+          fn: "play",
+          invoker: "FrameRequestCallback",
+          invokerType: "user-callback",
+          durationMs: 62_080,
+          pauseMs: 0,
+          forcedStyleLayoutMs: 3,
+        },
+        // A forged name or a URL invoker is not kept.
+        {
+          fn: null,
+          invoker: null,
+          invokerType: "event-listener",
+          durationMs: 5,
+          pauseMs: 0,
+          forcedStyleLayoutMs: 0,
+        },
+      ],
+      frozenInSource: null,
+      fromInteraction: false,
+      stacks: {
+        kind: "sampled",
+        sampleIntervalMs: 20,
+        sampledMs: 400,
+        noJsMs: 20,
+        truncated: false,
+        topSelf: [
+          { fn: "play", ms: 380 },
+          { fn: null, ms: 20 },
+        ],
+      },
+      client: { family: "chrome", os: "android" },
+    });
+    // No URL, page or source position survives anywhere in the evidence.
+    for (const s of strings(r.stall)) {
+      expect(s).not.toMatch(/https?:|equin\.ai|evil|vision-1a2b|who=me/);
+    }
+  });
+
+  test("a payload filed before the browser was kept reads as unknown", () => {
+    const data = stallData();
+    delete data.client;
+    const r = reduceSiteReport(stallRecord(data), SITE);
+    expect(r.stall?.kind === "stall" && r.stall.client).toEqual({
+      family: "unknown",
+      os: "unknown",
+    });
+  });
+
+  test("unavailable stacks keep their reason as one sanitised line", () => {
+    const r = reduceSiteReport(
+      stallRecord(
+        stallData({
+          stacks: { kind: "unavailable", reason: "no `Profiler` <b>here</b>" },
+        }),
+      ),
+      SITE,
+    );
+    expect(r.stall?.kind === "stall" && r.stall.stacks).toEqual({
+      kind: "unavailable",
+      reason: "no 'Profiler' 'b'here'/b'",
+    });
+  });
+
+  test("a payload that is not a stall is unreadable, not guessed at", () => {
+    const r = reduceSiteReport(stallRecord({ durationMs: "a lot" }), SITE);
+    expect(r.stall).toEqual({ kind: "unreadable" });
+  });
+
+  test("another kind keeps no stall evidence", () => {
+    expect(reduceSiteReport(record(), SITE).stall).toBeNull();
+  });
+});
+
 describe("reduceStack", () => {
   test("keeps only the site's own origin or relative frames, as file / line / column", () => {
     const stack = [

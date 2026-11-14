@@ -215,6 +215,23 @@ granted ⇒ it is gone ⇒ attach afresh, which starts and drains a new one).
 behind by a frozen-then-reloaded tab is filed by its next load (`unknown`,
 `detector: in-tab`).
 
+It has no sleep rule like the worker's, and needs none for a LoAF frame: a
+frame's duration is on the monotonic clock, which pauses while the machine
+sleeps (macOS, Android, Linux), so a sleep does not lengthen it. A process
+suspended mid-frame while the machine stays awake *would* lengthen it, but a
+page is hidden (rAF stops) before Android freezes a backgrounded renderer, so
+that is not expected. Not confirmed on a device (2026-11-14): a visitor's
+imported stall now keeps `detector` and the sampled coverage (`sampledMs` far
+under `durationMs` = the sampler thread stopped too = suspended, not busy), so
+a real occurrence says which it was.
+
+## Which browser
+
+`client` (`StallClientSchema`): the browser's family and OS only, read from
+the user agent by the filing tab (`web/internal/coarse-client.ts`, pure) —
+never the user agent, a version or a device. Evidence only, like `stacks`:
+not on `MainThreadStallDraft`, so never part of the fingerprint or summary.
+
 ## Verify
 
 `./equin run plugins/reports/plugins/main-thread-stall/e2e/freeze.ts --no-record`
@@ -258,6 +275,7 @@ renderer forever — so the script kills it with CDP `Page.crash`.
   - Uses tokens:
     - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/font-family --font-mono`
+  - Imported by: `apps/deploy/site-reports/import`
 - Core:
   - Exports (types):
     - `InteractionBreakdown`
@@ -265,6 +283,7 @@ renderer forever — so the script kills it with CDP `Page.crash`.
     - `MainThreadStallDraft`
     - `MainThreadStallPayload`
     - `SlowInteractionPayload`
+    - `StallClient`
     - `StallFrame`
     - `StallFrameScript`
     - `StallInteraction`
@@ -273,6 +292,8 @@ renderer forever — so the script kills it with CDP `Page.crash`.
     - `StallTab`
     - `TaskMark`
   - Exports (values):
+    - `CLIENT_FAMILIES`
+    - `CLIENT_OSES`
     - `dominantLayer`
     - `InteractionBreakdownSchema`
     - `interactionTargetKey`
@@ -284,6 +305,7 @@ renderer forever — so the script kills it with CDP `Page.crash`.
     - `slowInteractionFingerprint`
     - `SlowInteractionPayloadSchema`
     - `slowInteractionSummary`
+    - `StallClientSchema`
     - `StallFrameSchema`
     - `StallFrameScriptSchema`
     - `StallInteractionSchema`

@@ -57,7 +57,18 @@ kind payload is never copied. What is kept:
   origin (or relative), each file a safe pathname, at most 15;
 - the visitor page's source (`CLIENT_REPORT_SOURCES`, else `other`);
 - path, build and commit, each matched against a strict pattern (else null);
-- clamped counts and parsed timestamps.
+- clamped counts and parsed timestamps;
+- for a `main-thread-stall` report only, its evidence (`stall`,
+  `VisitorStallSchema`; `reduceStall`): the payload parsed with the stall
+  kind's own schema, then reduced to detector (`worker` / `in-tab`), how it
+  ended, duration, visibility and focus, long frames during it, the covering
+  LoAF frame's split (script, pause, forced style/layout, render start), its
+  longest scripts and sampled self-time functions **by identifier-shaped name
+  only** (no URL, source position, route or mark text), and the browser's
+  coarse family and OS (`StallClientSchema` — never the user agent). A
+  payload that no longer parses is `unreadable`, never guessed at. Without it
+  a visitor's stall could not be investigated: the message alone does not say
+  whether the page was busy or its process suspended.
 
 The result is parsed with the kind's strict schema (`WebsiteVisitorErrorSchema`)
 here and again in `recordReport`.
@@ -124,9 +135,13 @@ reconcile mechanics are `table-mirror/replica`'s suite.
     - `packages/list-bound.cappedList`
     - `packages/string-hash.hashHex`
     - `reports.CLIENT_REPORT_SOURCES`
+    - `reports/main-thread-stall.CLIENT_FAMILIES`
+    - `reports/main-thread-stall.CLIENT_OSES`
+    - `reports/main-thread-stall.MainThreadStallPayloadSchema`
   - Exports (types):
     - `SiteContext`
     - `VisitorStackFrame`
+    - `VisitorStall`
     - `WebsiteVisitorError`
   - Exports (values):
     - `reduceSiteReport`

@@ -3804,9 +3804,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `packages/list-bound.cappedList`
                   - `packages/string-hash.hashHex`
                   - `reports.CLIENT_REPORT_SOURCES`
+                  - `reports/main-thread-stall.CLIENT_FAMILIES`
+                  - `reports/main-thread-stall.CLIENT_OSES`
+                  - `reports/main-thread-stall.MainThreadStallPayloadSchema`
                 - Exports (types):
                   - `SiteContext`
                   - `VisitorStackFrame`
+                  - `VisitorStall`
                   - `WebsiteVisitorError`
                 - Exports (values):
                   - `reduceSiteReport`
@@ -57327,6 +57331,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/color-palette --muted-foreground`
           - `ui/tokens/font-family --font-mono`
+        - Imported by: `apps/deploy/site-reports/import`
       - Core:
         - Exports (types):
           - `InteractionBreakdown`
@@ -57334,6 +57339,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `MainThreadStallDraft`
           - `MainThreadStallPayload`
           - `SlowInteractionPayload`
+          - `StallClient`
           - `StallFrame`
           - `StallFrameScript`
           - `StallInteraction`
@@ -57342,6 +57348,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `StallTab`
           - `TaskMark`
         - Exports (values):
+          - `CLIENT_FAMILIES`
+          - `CLIENT_OSES`
           - `dominantLayer`
           - `InteractionBreakdownSchema`
           - `interactionTargetKey`
@@ -57353,6 +57361,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `slowInteractionFingerprint`
           - `SlowInteractionPayloadSchema`
           - `slowInteractionSummary`
+          - `StallClientSchema`
           - `StallFrameSchema`
           - `StallFrameScriptSchema`
           - `StallInteractionSchema`

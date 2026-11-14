@@ -2,6 +2,7 @@ import { ReportKind, type ReportRow } from "@plugins/reports/server";
 import {
   WEBSITE_VISITOR_ERROR_KIND,
   WebsiteVisitorErrorSchema,
+  type VisitorStall,
   type WebsiteVisitorError,
 } from "../../core";
 
@@ -9,6 +10,50 @@ import {
 // and a stranger's error that keeps recurring is one thing to look at, not
 // an hourly bell.
 const NOTIF_COOLDOWN_MS = 24 * 60 * 60 * 1000;
+
+const fnLabel = (fn: string | null): string =>
+  fn === null ? "(unnamed)" : `\`${fn}\``;
+
+/**
+ * A stall's evidence as task lines — every value typed (numbers, enums,
+ * identifier-shaped names in code spans).
+ */
+function stallLines(s: VisitorStall | null): string[] {
+  if (s === null) return [];
+  if (s.kind === "unreadable")
+    return [
+      "",
+      "**Stall evidence:** the site's stall payload no longer parses as a stall (an older build's) — none kept.",
+    ];
+  const lines = [
+    "",
+    "**Stall evidence:**",
+    `- **Seen by:** ${s.detector === "worker" ? "the SharedWorker watchdog (`worker`)" : "the in-tab fallback, no SharedWorker (`in-tab`)"}; ended \`${s.ended}\`; ${s.durationIsLowerBound ? "at least " : ""}${s.durationMs} ms`,
+    `- **Browser:** ${s.client.family} on ${s.client.os}`,
+    `- **Tab at its last word:** ${s.visible ? "visible" : "hidden"}, ${s.focused ? "focused" : "not focused"}; ${s.framesDuring} long frame(s) ran inside the stall${s.fromInteraction ? "; a click / key press started it" : ""}${s.frozenInSource ? `; froze inside a \`${s.frozenInSource}\` task` : ""}`,
+  ];
+  const f = s.frame;
+  lines.push(
+    f
+      ? `- **Covering frame (LoAF):** ${f.durationMs} ms, blocking ${f.blockingDurationMs} ms; scripts ${f.scriptMs} ms (paused ${f.pauseMs} ms, forced style/layout ${f.forcedStyleLayoutMs} ms); render started at ${f.renderStartMs ?? "-"} ms, style/layout at ${f.styleAndLayoutStartMs ?? "-"} ms`
+      : "- **Covering frame (LoAF):** none came back",
+  );
+  for (const sc of s.scripts)
+    lines.push(
+      `  - ${fnLabel(sc.fn)} — ${sc.invokerType ?? "?"} ${fnLabel(sc.invoker)}, ${sc.durationMs} ms (paused ${sc.pauseMs} ms, forced style/layout ${sc.forcedStyleLayoutMs} ms)`,
+    );
+  const st = s.stacks;
+  if (st.kind === "sampled") {
+    lines.push(
+      `- **Sampled stacks:** ${st.sampledMs} ms sampled of ${s.durationMs} ms (every ${st.sampleIntervalMs} ms; ${st.noJsMs} ms ran no JS)${st.truncated ? ", buffer filled before the end" : ""} — a sample far under the duration means the sampler thread stopped too (the process or machine was suspended, not the page busy)`,
+    );
+    for (const t of st.topSelf)
+      lines.push(`  - ${fnLabel(t.fn)} — ${t.ms} ms self`);
+  } else {
+    lines.push(`- **Sampled stacks:** unavailable — \`${st.reason}\``);
+  }
+  return lines;
+}
 
 /**
  * The task an Investigate files — built from typed fields only. The engine
@@ -44,6 +89,7 @@ export function renderWebsiteVisitorTask(
       "",
       `**Stack (the site's own bundle, ${e.framesOmitted} other frame(s) omitted):**`,
       frames,
+      ...stallLines(e.stall),
     ].join("\n"),
   };
 }

@@ -4,6 +4,10 @@ export {
   WebsiteVisitorErrorSchema,
   websiteVisitorErrorSummary,
 } from "./internal/kind";
-export type { VisitorStackFrame, WebsiteVisitorError } from "./internal/kind";
+export type {
+  VisitorStackFrame,
+  VisitorStall,
+  WebsiteVisitorError,
+} from "./internal/kind";
 export { reduceSiteReport } from "./internal/reduce";
 export type { SiteContext } from "./internal/reduce";

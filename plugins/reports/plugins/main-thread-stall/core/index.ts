@@ -1,5 +1,8 @@
 export {
+  CLIENT_FAMILIES,
+  CLIENT_OSES,
   MainThreadStallPayloadSchema,
+  StallClientSchema,
   StallFrameSchema,
   StallFrameScriptSchema,
   StallInteractionSchema,
@@ -10,6 +13,7 @@ export {
 } from "./main-thread-stall-kind";
 export type {
   MainThreadStallDraft,
+  StallClient,
   MainThreadStallPayload,
   StallFrame,
   StallFrameScript,

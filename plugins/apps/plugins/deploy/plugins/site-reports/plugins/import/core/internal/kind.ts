@@ -1,6 +1,10 @@
 import { z } from "zod";
 import { CLIENT_REPORT_SOURCES } from "@plugins/reports/core";
 import { cappedList } from "@plugins/packages/plugins/list-bound/core";
+import {
+  CLIENT_FAMILIES,
+  CLIENT_OSES,
+} from "@plugins/reports/plugins/main-thread-stall/core";
 
 /** The report kind a website visitor's error is recorded as on the computer. */
 export const WEBSITE_VISITOR_ERROR_KIND = "website-visitor-error";
@@ -23,6 +27,12 @@ export const VISITOR_ERROR_LIMITS = {
   maxFrames: 15,
   /** A frame's file or the page's path, as a pathname. */
   maxPath: 200,
+  /** A stall's frame scripts kept, longest first. */
+  maxStallScripts: 5,
+  /** A stall's sampled self-time functions kept, heaviest first. */
+  maxStallSelf: 5,
+  /** Why a stall's stacks are unavailable, one plain line. */
+  maxStallReason: 200,
 } as const;
 
 /**
@@ -44,6 +54,16 @@ export const SAFE_DEPLOYMENT_ID = /^[A-Za-z0-9_-]{1,128}$/;
  * unpaired surrogate; a pair is one code point.)
  */
 export const LONE_SURROGATE = /\p{Cs}/u;
+
+/**
+ * A JS function or invoker name of a safe alphabet (`play`, `Foo.bar`,
+ * `MessagePort.onmessage`, `(anonymous)`): a forged payload can name
+ * anything, so a name that is not identifier-shaped is not kept.
+ */
+export const SAFE_FUNCTION_NAME =
+  /^(?:[A-Za-z_$][A-Za-z0-9_$.#]{0,79}|\(anonymous\))$/;
+/** A LoAF invoker type (`user-callback`, `event-listener`, …). */
+export const SAFE_INVOKER_TYPE = /^[a-z][a-z-]{0,31}$/;
 
 /** A DNS hostname. */
 export const SAFE_HOSTNAME = /^(?=.{1,253}$)[a-z0-9-]+(\.[a-z0-9-]+)*$/;
@@ -78,6 +98,101 @@ const StackFrameSchema = z
   .strict();
 export type VisitorStackFrame = z.infer<typeof StackFrameSchema>;
 
+const Ms = z.number().int().min(0).max(1_000_000_000);
+const FunctionName = z.string().regex(SAFE_FUNCTION_NAME).nullable();
+
+/**
+ * A visitor's main-thread stall, reduced to what says what ran and how the
+ * freeze was seen — durations, booleans, enums and identifier-shaped function
+ * names only (no URL, no route, no message text, no user agent). `unreadable`:
+ * the site's payload did not parse as a stall (a payload from a build whose
+ * stall schema has since changed).
+ */
+export const VisitorStallSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("unreadable") }).strict(),
+  z
+    .object({
+      kind: z.literal("stall"),
+      /** worker: the SharedWorker watchdog saw it; in-tab: the fallback (no SharedWorker). */
+      detector: z.enum(["worker", "in-tab"]),
+      ended: z.enum(["recovered", "gone", "unknown"]),
+      durationMs: Ms,
+      durationIsLowerBound: z.boolean(),
+      /** The tab's last word before filing (in-tab: when the LoAF entry arrived). */
+      visible: z.boolean(),
+      focused: z.boolean(),
+      /** Long frames that ran inside the stall (0: one task never yielded). */
+      framesDuring: z.number().int().min(0).max(1_000_000),
+      /** The LoAF entry covering the stall: its time split, when one came back. */
+      frame: z
+        .object({
+          durationMs: Ms,
+          blockingDurationMs: Ms,
+          renderStartMs: Ms.nullable(),
+          styleAndLayoutStartMs: Ms.nullable(),
+          /** Summed over the frame's kept (longest) scripts. */
+          scriptMs: Ms,
+          pauseMs: Ms,
+          forcedStyleLayoutMs: Ms,
+        })
+        .strict()
+        .nullable(),
+      /** The frame's longest scripts, longest first. */
+      scripts: cappedList(
+        z
+          .object({
+            fn: FunctionName,
+            invoker: FunctionName,
+            invokerType: z.string().regex(SAFE_INVOKER_TYPE).nullable(),
+            durationMs: Ms,
+            pauseMs: Ms,
+            forcedStyleLayoutMs: Ms,
+          })
+          .strict(),
+        { max: VISITOR_ERROR_LIMITS.maxStallScripts },
+      ),
+      /** The open task mark's source (`port`, `live-state`), when it froze in one. */
+      frozenInSource: z.string().regex(SAFE_IDENTIFIER).nullable(),
+      /** A click / key press started it. */
+      fromInteraction: z.boolean(),
+      /**
+       * The JS Self-Profiling sample of the stall. `sampledMs` far under
+       * `durationMs` means the sampler thread was not running either: the
+       * whole process or machine was stopped, not the page busy.
+       */
+      stacks: z.discriminatedUnion("kind", [
+        z
+          .object({
+            kind: z.literal("sampled"),
+            sampleIntervalMs: z.number().min(0).max(1_000_000),
+            sampledMs: Ms,
+            noJsMs: Ms,
+            truncated: z.boolean(),
+            topSelf: cappedList(
+              z.object({ fn: FunctionName, ms: Ms }).strict(),
+              { max: VISITOR_ERROR_LIMITS.maxStallSelf },
+            ),
+          })
+          .strict(),
+        z
+          .object({
+            kind: z.literal("unavailable"),
+            reason: plainLine(
+              "stacks reason",
+              VISITOR_ERROR_LIMITS.maxStallReason,
+            ),
+          })
+          .strict(),
+      ]),
+      /** Browser family and OS (`unknown` on a payload filed before it was kept). */
+      client: z
+        .object({ family: z.enum(CLIENT_FAMILIES), os: z.enum(CLIENT_OSES) })
+        .strict(),
+    })
+    .strict(),
+]);
+export type VisitorStall = z.infer<typeof VisitorStallSchema>;
+
 /**
  * One website visitor's error as stored on the computer — typed, clamped
  * fields only. Nothing the site sent is copied as-is: the site's kind payload
@@ -111,6 +226,11 @@ export const WebsiteVisitorErrorSchema = z
     siteCount: z.number().int().min(1).max(1_000_000_000),
     firstSeenAt: z.string().datetime(),
     lastSeenAt: z.string().datetime(),
+    /**
+     * A `main-thread-stall` report's evidence (see VisitorStallSchema); null
+     * for every other kind, and on rows imported before it was kept.
+     */
+    stall: VisitorStallSchema.nullable().default(null),
   })
   .strict();
 export type WebsiteVisitorError = z.infer<typeof WebsiteVisitorErrorSchema>;

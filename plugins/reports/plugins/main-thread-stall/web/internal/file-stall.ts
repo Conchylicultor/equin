@@ -8,6 +8,7 @@ import {
   type StallTab,
 } from "../../core";
 import { STALL } from "./constants";
+import { coarseClient } from "./coarse-client";
 import { topFunction } from "./stall-machine";
 import type { StallProfiler } from "./stall-profiler";
 
@@ -40,7 +41,7 @@ function emitSlowOp(opts: {
  * File one finished stall: the report (the alert) and its slow-op (the
  * interval). Its stacks are this tab's sampled profile of the stall when the
  * tab is the one that stalled and survived it (`stacksFor` says why not
- * otherwise). Resolves whether the report landed — the caller acks the
+ * otherwise); its client is this browser's family and OS. Resolves whether the report landed — the caller acks the
  * watchdog with it, which keeps the stored record on a failure.
  */
 export async function fileStall(
@@ -51,6 +52,9 @@ export async function fileStall(
   const payload: MainThreadStallPayload = {
     ...draft,
     stacks: await profiler.stacksFor(draft, ownTabId),
+    // The filing tab is always of the stalled tab's browser (one origin's
+    // SharedWorker, or the tab itself).
+    client: coarseClient(navigator.userAgent),
   };
   emitSlowOp({
     tab: payload,

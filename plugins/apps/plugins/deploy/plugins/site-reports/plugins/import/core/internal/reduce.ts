@@ -1,17 +1,21 @@
 import { hashHex } from "@plugins/packages/plugins/string-hash/core";
 import type { SiteReportRecord } from "@plugins/apps/plugins/deploy/plugins/site-reports/plugins/intake/core";
+import { MainThreadStallPayloadSchema } from "@plugins/reports/plugins/main-thread-stall/core";
 import {
   LONE_SURROGATE,
   SAFE_BUILD_ID,
   SAFE_COMMIT,
   SAFE_DEPLOYMENT_ID,
+  SAFE_FUNCTION_NAME,
   SAFE_HOSTNAME,
   SAFE_IDENTIFIER,
+  SAFE_INVOKER_TYPE,
   SAFE_PATHNAME,
   VISITOR_ERROR_LIMITS as L,
   VISITOR_SOURCES,
   WebsiteVisitorErrorSchema,
   type VisitorStackFrame,
+  type VisitorStall,
   type WebsiteVisitorError,
 } from "./kind";
 
@@ -131,6 +135,100 @@ function clampCount(n: number): number {
   return Math.min(Math.floor(n), 1_000_000_000);
 }
 
+/** The site's kind name of a main-thread stall (reports/main-thread-stall). */
+const STALL_KIND = "main-thread-stall";
+
+/** A duration as stored: a whole, non-negative, bounded number of ms. */
+function ms(n: number): number {
+  if (!Number.isFinite(n) || n < 0) return 0;
+  return Math.min(Math.round(n), 1_000_000_000);
+}
+
+/** A function name from a sampled frame label (`name (url:line:col)`) or a LoAF field. */
+function functionName(raw: string): string | null {
+  const name = raw.split(" (")[0]!.trim();
+  return SAFE_FUNCTION_NAME.test(name) ? name : null;
+}
+
+/**
+ * A visitor's stall payload reduced to its evidence (VisitorStallSchema):
+ * how it was seen and ended, the covering frame's time split, its longest
+ * scripts and sampled self-time functions by name, the browser family and OS.
+ * The payload was validated by the site against the stall kind's schema; one
+ * that no longer parses (an older build's) is `unreadable`, never guessed at.
+ */
+export function reduceStall(data: unknown): VisitorStall {
+  const parsed = MainThreadStallPayloadSchema.safeParse(data);
+  if (!parsed.success) return { kind: "unreadable" };
+  const d = parsed.data;
+  const f = d.stallFrame;
+  const scripts = f?.scripts ?? [];
+  const sum = (pick: (s: (typeof scripts)[number]) => number): number =>
+    ms(scripts.reduce((total, s) => total + pick(s), 0));
+  return {
+    kind: "stall",
+    detector: d.detector,
+    ended: d.ended,
+    durationMs: ms(d.durationMs),
+    durationIsLowerBound: d.durationIsLowerBound,
+    visible: d.visible,
+    focused: d.focused,
+    framesDuring: Math.min(Math.max(0, Math.floor(d.framesDuring)), 1_000_000),
+    frame: f
+      ? {
+          durationMs: ms(f.durationMs),
+          blockingDurationMs: ms(f.blockingDurationMs),
+          renderStartMs: f.renderStartMs === null ? null : ms(f.renderStartMs),
+          styleAndLayoutStartMs:
+            f.styleAndLayoutStartMs === null
+              ? null
+              : ms(f.styleAndLayoutStartMs),
+          scriptMs: sum((s) => s.durationMs),
+          pauseMs: sum((s) => s.pauseDurationMs),
+          forcedStyleLayoutMs: sum((s) => s.forcedStyleAndLayoutDurationMs),
+        }
+      : null,
+    scripts: [...scripts]
+      .sort((a, b) => b.durationMs - a.durationMs)
+      .slice(0, L.maxStallScripts)
+      .map((s) => ({
+        fn: s.sourceFunctionName ? functionName(s.sourceFunctionName) : null,
+        invoker: functionName(s.invoker),
+        invokerType: SAFE_INVOKER_TYPE.test(s.invokerType)
+          ? s.invokerType
+          : null,
+        durationMs: ms(s.durationMs),
+        pauseMs: ms(s.pauseDurationMs),
+        forcedStyleLayoutMs: ms(s.forcedStyleAndLayoutDurationMs),
+      })),
+    frozenInSource: d.frozenIn
+      ? matchOrNull(d.frozenIn.source, SAFE_IDENTIFIER)
+      : null,
+    fromInteraction: d.interaction !== null,
+    stacks:
+      d.stacks.kind === "sampled"
+        ? {
+            kind: "sampled",
+            sampleIntervalMs: Math.min(
+              Math.max(0, d.stacks.sampleIntervalMs),
+              1_000_000,
+            ),
+            sampledMs: ms(d.stacks.sampledMs),
+            noJsMs: ms(d.stacks.noJsMs),
+            truncated: d.stacks.truncated,
+            topSelf: d.stacks.topSelf
+              .slice(0, L.maxStallSelf)
+              .map((t) => ({ fn: functionName(t.frame), ms: ms(t.ms) })),
+          }
+        : {
+            kind: "unavailable",
+            reason:
+              sanitizeLine(d.stacks.reason, L.maxStallReason) || "(none given)",
+          },
+    client: d.client,
+  };
+}
+
 /**
  * The structured-data gate between a site's stored report and this
  * computer: everything kept is typed and clamped, and the site's kind payload
@@ -183,5 +281,6 @@ export function reduceSiteReport(
     siteCount: clampCount(record.count),
     firstSeenAt: new Date(record.firstSeenAt).toISOString(),
     lastSeenAt: new Date(record.lastSeenAt).toISOString(),
+    stall: record.kind === STALL_KIND ? reduceStall(record.data) : null,
   });
 }
