@@ -303,6 +303,13 @@ Key invariants:
   which is exactly what made the old `build-id` nonce useless as
   an identity — and it also gave every compose-serve composition the SAME pin
   despite each composing a different closure.
+- **The global stylesheet never blocks the first paint.** Compose writes it
+  `media="print"` (fetched at t0, matching nothing) with an inline script that
+  applies it on `load`, and hides the body's children until then
+  (`stylesheetHead`): the first frame is the themed canvas, whose CSS is inline,
+  instead of a blank tab until the stylesheet wins its share of a connection
+  carrying the whole modulepreload closure. A failed load is web-core's
+  boot-failure screen. The markup is hashed into the graph identity.
 - **Every served file is compressed once, when it is published.** All three
   write-once caches (artifact store, vendor sets, global-CSS cache) publish
   through ONE `publishDir` (`core/internal/store.ts`): precompress the tmp dir

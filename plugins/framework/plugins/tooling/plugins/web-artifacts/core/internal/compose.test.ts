@@ -255,6 +255,26 @@ describe("composeDist with an address dir", () => {
     ).toBe(false);
   });
 
+  test("the global stylesheet never blocks render, and hides the body until it applies", () => {
+    const f = fixture();
+    const a = f.entry("a.web.1");
+    f.compose("web.staging.1", [{ linkName: "a.web.1", storePath: a }]);
+    const html = readFileSync(
+      joinAppPath(f.base, "web.staging.1", "index.html"),
+      "utf8",
+    );
+    const blocking = [
+      ...html.matchAll(/<link rel="stylesheet"(?![^>]*media="print")[^>]*>/g),
+    ].filter((m) => !html.slice(0, m.index).endsWith("<noscript>"));
+    expect(blocking).toEqual([]);
+    expect(html).toContain(
+      `<link rel="stylesheet" href="/artifacts/a.web.1/index.js" media="print"`,
+    );
+    expect(html).toContain(
+      "global-stylesheet-pending body>*{visibility:hidden}",
+    );
+  });
+
   test("an existing name linking another store path throws", () => {
     const f = fixture();
     const a = f.entry("a.web.1");

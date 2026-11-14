@@ -97,7 +97,10 @@
          `error` event on the module <script> (capture phase: it does not
          bubble), so that is what this listens to - no timers. Failed URLs come
          from Resource Timing (the event itself does not name the dependency).
-         Not for lazy plugin imports: App.tsx catches those (loadPlugins). -->
+         Not for lazy plugin imports: App.tsx catches those (loadPlugins).
+         The global stylesheet too: compose loads it without blocking render
+         and keeps the page hidden until it applies, so a stylesheet that
+         fails to load would otherwise leave the themed canvas up forever. -->
     <script id="boot-failure">
       (function () {
         var shown = false;
@@ -105,11 +108,12 @@
           var urls = [];
           performance.getEntriesByType("resource").forEach(function (r) {
             // responseStatus 0 with no body = network failure / blocked.
-            if (r.responseStatus >= 400 || (r.responseStatus === 0 && r.decodedBodySize === 0 && r.transferSize === 0 && /\.(js|mjs)(\?|$)/.test(r.name))) {
+            if (r.responseStatus >= 400 || (r.responseStatus === 0 && r.decodedBodySize === 0 && r.transferSize === 0 && /\.(js|mjs|css)(\?|$)/.test(r.name))) {
               if (urls.indexOf(r.name) < 0) urls.push(r.name);
             }
           });
-          if (urls.length === 0 && target.src) urls.push(target.src);
+          var own = target.src || target.href;
+          if (urls.length === 0 && own) urls.push(own);
           return urls;
         }
         function show(urls) {
@@ -118,7 +122,7 @@
           box.id = "boot-failure-screen";
           box.setAttribute("role", "alert");
           box.style.cssText =
-            "position:fixed;inset:0;overflow:auto;padding:32px;box-sizing:border-box;" +
+            "position:fixed;inset:0;overflow:auto;padding:32px;box-sizing:border-box;visibility:visible;" +
             "background:#1a0b0b;color:#f5e6e6;font:14px/1.5 system-ui,sans-serif;z-index:2147483647";
           var h = document.createElement("h1");
           h.style.cssText = "font-size:20px;margin:0 0 12px";
@@ -126,7 +130,7 @@
           var p = document.createElement("p");
           p.style.cssText = "margin:0 0 12px;max-width:60em";
           p.textContent =
-            urls.length + " module file" + (urls.length === 1 ? "" : "s") +
+            urls.length + " file" + (urls.length === 1 ? "" : "s") +
             " could not be loaded (the server answered 404 or the request failed), so the app cannot run. " +
             "The build's artifacts were most likely removed. Rebuild this worktree with ./equin build, then reload.";
           var ul = document.createElement("ul");
@@ -150,10 +154,13 @@
           "error",
           function (e) {
             var t = e.target;
-            if (shown || !t || t.tagName !== "SCRIPT" || t.type !== "module") return;
+            var bootFile =
+              t && ((t.tagName === "SCRIPT" && t.type === "module") ||
+                (t.tagName === "LINK" && t.rel === "stylesheet"));
+            if (shown || !bootFile) return;
             shown = true;
             var urls = failedUrls(t);
-            console.error("[boot] module graph failed to load:", urls);
+            console.error("[boot] boot files failed to load:", urls);
             show(urls);
             // Same alert funnel as plugin-load failures (reports/plugin-load-errors).
             fetch("/api/reports", {
@@ -163,7 +170,7 @@
               body: JSON.stringify({
                 kind: "crash",
                 source: "plugin-load",
-                message: "boot: " + urls.length + " module file(s) failed to load: " + urls.slice(0, 5).join(", "),
+                message: "boot: " + urls.length + " file(s) failed to load: " + urls.slice(0, 5).join(", "),
                 url: location.href,
                 userAgent: navigator.userAgent,
                 data: { errorType: "BootModuleLoadFailed", stack: null, urls: urls.slice(0, 50) },

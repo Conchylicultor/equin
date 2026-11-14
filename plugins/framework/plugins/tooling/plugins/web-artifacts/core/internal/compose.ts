@@ -169,6 +169,47 @@ export function computePreloadClosure(opts: {
   return order;
 }
 
+/** The global stylesheet `<link>`'s id, read by the reveal script beside it. */
+const STYLESHEET_ID = "global-stylesheet";
+/** On `<html>` while the global stylesheet is still downloading. */
+const STYLESHEET_PENDING_CLASS = "global-stylesheet-pending";
+
+/**
+ * The global stylesheet's head markup. It does NOT block render: the page's
+ * first paint is the themed canvas, whose CSS is inline in the head (the
+ * gateway splices theme-engine's `<style>`s), so nothing the first frame shows
+ * needs this file. Render-blocking, that frame waited for it, and it shares
+ * the connection with every modulepreload: bandwidth is split stream by
+ * stream (the server does not honour the browser's priorities), so a 36 KB
+ * stylesheet finished with the module graph, not before it (the website's
+ * canvas at 2.3 s on fast 4G, 12 s on slow 4G; alone on the wire, 0.35 s and
+ * 0.6 s).
+ *
+ * Instead, what the stylesheet DOES style waits for it: while it is pending,
+ * `<html>` carries a class that hides the body's children (not the body,
+ * whose background is the canvas), so nothing — the boot screen, the app, a
+ * portal — is ever drawn unstyled. `media="print"` keeps the preload
+ * scanner's early fetch while matching nothing; the reveal script flips it to
+ * `all` and drops the class in the same task, so the sheet applies and the
+ * content shows in one frame. A
+ * stylesheet that fails to load is web-core's boot-failure screen (its
+ * capture-phase `error` listener), never a canvas left up forever. Without
+ * JavaScript the `<noscript>` link loads it render-blocking as before.
+ *
+ * Part of the graph identity (`computeGraphHash` hashes this markup, not just
+ * the href): the reveal script runs in the tab like the shell's own inline
+ * scripts, so changing it is a new page.
+ */
+function stylesheetHead(cssHref: string): string[] {
+  const href = JSON.stringify(cssHref);
+  return [
+    `<style>html.${STYLESHEET_PENDING_CLASS} body>*{visibility:hidden}</style>`,
+    `<link rel="stylesheet" href=${href} media="print" id="${STYLESHEET_ID}" />`,
+    `<noscript><link rel="stylesheet" href=${href} /></noscript>`,
+    `<script>(function(){var d=document.documentElement,l=document.getElementById("${STYLESHEET_ID}");function show(){l.media="all";d.classList.remove("${STYLESHEET_PENDING_CLASS}")}if(l.sheet){show();return}d.classList.add("${STYLESHEET_PENDING_CLASS}");l.addEventListener("load",show)})()</script>`,
+  ];
+}
+
 /**
  * The CONTENT identity of everything a loaded tab is frozen on — a pure function
  * of the shell it booted from and the module graph that shell wires up:
@@ -221,7 +262,7 @@ export function computeGraphHash(graph: {
   const lines = [
     `shell\t${sha256Hex(graph.htmlSrc)}`,
     `entry\t${graph.entryUrl}`,
-    `css\t${graph.cssHref}`,
+    `css\t${sha256Hex(stylesheetHead(graph.cssHref).join("\n"))}`,
     ...Object.keys(graph.importMap.imports)
       .sort()
       .map((spec) => `map\t${spec}\t${graph.importMap.imports[spec]}`),
@@ -396,7 +437,7 @@ export function composeDist(opts: ComposeOptions): {
       )
       .join(" ")}</script>`,
     `<script type="importmap">${JSON.stringify(importMap)}</script>`,
-    `<link rel="stylesheet" href="${opts.cssHref}" />`,
+    ...stylesheetHead(opts.cssHref),
     ...preloads.map((p) => `<link rel="modulepreload" href="${p}" />`),
   ]
     .map((l) => `    ${l}`)

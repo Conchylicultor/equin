@@ -49,6 +49,19 @@ describe("boot-failure screen", () => {
     expect(body).toMatchObject({ kind: "crash", source: "plugin-load" });
   });
 
+  it("shows the screen when the global stylesheet fails", () => {
+    new Function(source!)();
+    const link = document.createElement("link");
+    link.rel = "stylesheet";
+    link.href = "/assets/style-abc.css";
+    document.head.appendChild(link);
+    link.dispatchEvent(new Event("error"));
+    const screen = document.getElementById("boot-failure-screen");
+    // Visible even while the page is hidden waiting for that stylesheet.
+    expect(screen?.style.visibility).toBe("visible");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
   it("ignores errors of non-module elements", () => {
     new Function(source!)();
     const img = document.createElement("img");
