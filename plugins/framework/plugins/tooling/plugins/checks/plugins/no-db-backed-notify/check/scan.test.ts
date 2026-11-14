@@ -185,6 +185,44 @@ describe("scanDbBackedNotify — serveValue / serveCollection options", () => {
     ).toEqual([]);
   });
 
+  test("a `reads` key declares reads only when its value is seen to be one (fail-closed)", async () => {
+    const LOADER = "async () => db.select().from(_things)";
+    for (const reads of [
+      "reads: undefined,",
+      "reads: null,",
+      "reads: void 0,",
+      'reads: flag ? { tables: [], reason: "r" } : undefined,',
+    ])
+      expect(
+        await at({
+          [SENTINEL]: `${LIVE}${DB}${external(LOADER, `  ${reads}`)}\n`,
+        }),
+      ).toEqual([`${SENTINEL}:3`]);
+    // A spread's reads is overridden by a later own `reads: undefined`.
+    expect(
+      await at({
+        [SENTINEL]: `${LIVE}${DB}const base = { reads: { tables: [], reason: "r" } };\n${external(LOADER, "  ...base,\n  reads: undefined,")}\n`,
+      }),
+    ).toEqual([`${SENTINEL}:4`]);
+    // Declared through a const.
+    expect(
+      await at({
+        [SENTINEL]: `${LIVE}${DB}const READS = { tables: [], reason: "r" };\n${external(LOADER, "  reads: READS,")}\n`,
+      }),
+    ).toEqual([]);
+    // A ternary whose arms both declare, and a const read for both `reads` and a spread.
+    expect(
+      await at({
+        [SENTINEL]: `${LIVE}${DB}const READS = { tables: [], reason: "r" };\nconst base = { reads: READS };\n${external(LOADER, "  ...base,\n  reads: flag ? READS : () => READS,")}\n`,
+      }),
+    ).toEqual([]);
+    // A `reads` that cannot be read is a violation, not a declaration.
+    const unreadable = await scan({
+      [SENTINEL]: `${LIVE}${DB}${external(LOADER, "  reads: someObject.reads,")}\n`,
+    });
+    expect(unreadable.unreadable.length).toBe(1);
+  });
+
   test("flags a db read in any external option, an external collection's answers included", async () => {
     expect(
       await at({

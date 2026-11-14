@@ -2443,8 +2443,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/tokens/shape` ×2
                   - `ui/tokens/font-family --font-mono`
                   - `ui/tokens/shadow --shadow-lg`
-              - Exemptions:
-                - Exempts itself from: `no-db-backed-notify` — `server/internal/served.ts` (sanctioned)
         - **`composition`** — Composition section of the site page's Settings tab: which composition this deployment builds and ships, the shape of it (category, entry points, what it extends, how many contributors are opted in), and a cross-app link into that composition's Studio detail pane where its membership is actually edited.
           - Web:
             - Contributes: `DeploymentDetail.Section` "Composition" → `CompositionSection`
@@ -3502,8 +3500,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `siteMessagesInbox`
               - Cross-plugin:
                 - Uses tokens: `ui/tokens/color-palette --border`
-              - Exemptions:
-                - Exempts itself from: `no-db-backed-notify` — `server/internal/served.ts` (sanctioned)
             - **`intake`** — useSendSiteMessage() — the contact form's send (sent or rate-limited); a site takes messages by importing this barrel, which pulls the intake's server half into its composition. Registers the site-message id kind (smsg) with the web id registry — the server barrel registers the same kind. Owns site_messages: the public POST /api/site-messages endpoint (body capped at 8 KB; honeypot, a send under three seconds or a bot user agent stored as spam and still answered sent; 3 per 10 minutes and 10 per day per salted IP hash, the IP never stored), the site-messages.notify job emailing each accepted message through Resend from the approved RESEND_API_KEY deploy secret (not-configured without one, at most 30 emails a day, the rest held and counted in the next), the site-messages.confirm job emailing the visitor a copy so they know it arrived (at most 30 a day and 3 a day per address), the 30-day spam sweep, and the site_messages mirror set the deploy app copies (ip_hash omitted, the salt never mirrored).
               - Web:
                 - Contributes: `IdKinds.Kind` "smsg"

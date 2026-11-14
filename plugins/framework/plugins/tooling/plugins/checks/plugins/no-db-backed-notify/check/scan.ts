@@ -345,8 +345,12 @@ async function declarationKeyOf(
 interface ServeOptions {
   /** The options' own `source`, when they spell one. */
   source: string | undefined;
-  /** Whether they declare `reads` (static or a thunk). */
-  reads: boolean;
+  /**
+   * Whether they declare `reads` (static or a thunk) — `undefined` when they
+   * spell no `reads` key, so a spread's key and a later own key override in
+   * source order, as at runtime.
+   */
+  reads: boolean | undefined;
 }
 
 /**
@@ -411,14 +415,14 @@ async function readOptions(
       expr,
       "serve options that are not an object literal (or a `const` or a helper returning one) cannot be read — pass them inline.",
     );
-  let out: ServeOptions = { source: undefined, reads: false };
+  let out: ServeOptions = { source: undefined, reads: undefined };
   for (const p of e.properties) {
     if (ts.isSpreadAssignment(p)) {
       const inner = await readOptions(ts, analysis, file, p.expression, seen);
       if (inner.kind === "unreadable") return inner;
       out = {
         source: inner.value.source ?? out.source,
-        reads: out.reads || inner.value.reads,
+        reads: inner.value.reads ?? out.reads,
       };
       continue;
     }
@@ -429,7 +433,27 @@ async function readOptions(
         p,
         "a computed key in serve options cannot be read — spell the key.",
       );
-    if (name === "reads") out = { ...out, reads: true };
+    if (name === "reads") {
+      const value = ts.isPropertyAssignment(p)
+        ? p.initializer
+        : ts.isShorthandPropertyAssignment(p)
+          ? p.name
+          : null;
+      if (value === null)
+        return cannot(file, p, "a `reads` that is not a value cannot be read.");
+      // Its own trail: a const the options also read elsewhere (`source`, a
+      // spread) is not a cycle.
+      const declared = await readsDeclared(
+        ts,
+        analysis,
+        file,
+        value,
+        new Set(seen),
+      );
+      if (declared.kind === "unreadable") return declared;
+      out = { ...out, reads: declared.value };
+      continue;
+    }
     if (name !== "source") continue;
     const value = ts.isPropertyAssignment(p)
       ? p.initializer
@@ -443,6 +467,66 @@ async function readOptions(
     out = { ...out, source: source.value };
   }
   return { kind: "read", value: out };
+}
+
+/**
+ * Does a `reads` value declare reads? Fail-closed: only a value seen to be
+ * one — an object or array literal, a thunk, or a `const` / one-return helper
+ * holding one — declares them; `undefined`, `null` and `void …` declare none
+ * (the runtime reads them as no `reads` at all), a ternary declares them only
+ * when both arms do, and anything else cannot be read.
+ */
+async function readsDeclared(
+  ts: typeof TS,
+  analysis: SourceAnalysis,
+  file: ParsedFile,
+  expr: TS.Expression,
+  seen: Set<string>,
+): Promise<Readout<boolean>> {
+  const e = unwrap(ts, expr);
+  if (
+    ts.isObjectLiteralExpression(e) ||
+    ts.isArrayLiteralExpression(e) ||
+    ts.isArrowFunction(e) ||
+    ts.isFunctionExpression(e)
+  )
+    return { kind: "read", value: true };
+  if (
+    e.kind === ts.SyntaxKind.NullKeyword ||
+    ts.isVoidExpression(e) ||
+    (ts.isIdentifier(e) && e.text === "undefined")
+  )
+    return { kind: "read", value: false };
+  if (ts.isConditionalExpression(e)) {
+    const whenTrue = await readsDeclared(ts, analysis, file, e.whenTrue, seen);
+    if (whenTrue.kind === "unreadable") return whenTrue;
+    const whenFalse = await readsDeclared(
+      ts,
+      analysis,
+      file,
+      e.whenFalse,
+      seen,
+    );
+    if (whenFalse.kind === "unreadable") return whenFalse;
+    return { kind: "read", value: whenTrue.value && whenFalse.value };
+  }
+  const resolved = ts.isIdentifier(e)
+    ? await constValue(ts, analysis, file, e, seen)
+    : ts.isCallExpression(e)
+      ? await returnedValue(ts, analysis, file, e)
+      : cannot<{ file: ParsedFile; expr: TS.Expression }>(
+          file,
+          expr,
+          "a `reads` that is not a literal, a thunk, a `const` or a helper's one return cannot be read — spell it inline.",
+        );
+  if (resolved.kind === "unreadable") return resolved;
+  return readsDeclared(
+    ts,
+    analysis,
+    resolved.value.file,
+    resolved.value.expr,
+    seen,
+  );
 }
 
 /** A string literal, directly or through `const`s. */
