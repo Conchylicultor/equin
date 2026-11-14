@@ -2,7 +2,8 @@
 // one continuous recorded session of the real app on the seeded promo-film
 // composition, ending on equin's desktop mode. Renders from what
 // e2e/record.ts recorded (never records itself); the music is
-// internal/music.ts's FILM_MUSIC (or, to audition, --music <slug>).
+// internal/music.ts's FILM_MUSIC (or, to audition, --music <slug>). The
+// recordings are read from --rec-dir <dir> (required: the dir record.ts wrote).
 //
 //   ./equin run plugins/apps/plugins/website/plugins/promo-film/e2e/film.ts --preview
 //   ./equin run plugins/apps/plugins/website/plugins/promo-film/e2e/film.ts --stills 5,12,30 [--captions]
@@ -30,7 +31,10 @@
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
 import { HOME_DIR } from "@plugins/infra/plugins/paths/plugins/data-root-layout/core";
-import { usage } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import {
+  arg,
+  usage,
+} from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { runFilm, type FilmContext } from "@plugins/media/plugins/film/e2e";
 import { buildFilm } from "./internal/film";
 import {
@@ -38,6 +42,12 @@ import {
   FILM_MUSIC_TRACKS,
   filmMusicBySlug,
 } from "./internal/music";
+
+// The recordings to render: never a fresh empty dir (recDir's default).
+if (arg("rec-dir") === undefined)
+  usage(
+    "promo-film: --rec-dir <dir> is required — the dir e2e/record.ts recorded into",
+  );
 
 /** Where the film's versions live. */
 const SHOWCASE = join(HOME_DIR, "Downloads/showcase");

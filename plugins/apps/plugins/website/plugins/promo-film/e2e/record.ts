@@ -1,12 +1,13 @@
 // Records the showcase film's session: the real app on this checkout's seeded
 // `promo-film` composition, segment by segment (internal/segments.ts). Frames,
 // input logs, the facts a segment reads off the page, and Sonata's sound go to
-// /tmp/equin-film/session/; film.ts renders from there without recording.
+// --rec-dir <dir> (a fresh mkdtemp dir when omitted — printed); film.ts
+// renders from there without recording.
 //
 //   ./equin build --composition promo-film      # once
 //   ./equin promo-film seed                     # first launch + the story
 //   ./equin run plugins/apps/plugins/website/plugins/promo-film/e2e/record.ts \
-//     --composition promo-film [--only pages,sonata,…]
+//     --composition promo-film [--only pages,sonata,…] --rec-dir "$EQUIN_SCRATCH/equin-film"
 //
 // Each segment is re-recordable alone (see this plugin's CLAUDE.md for which
 // need a fresh seed). A segment records ~0.5 s of real time per frame.
@@ -19,7 +20,7 @@ import {
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { SEGMENTS } from "./internal/segments";
-import { REC_DIR } from "./internal/session-kit";
+import { recDir } from "./internal/session-kit";
 
 const ALL = Object.keys(SEGMENTS);
 const only = arg("only")?.split(",") ?? ALL;
@@ -27,7 +28,7 @@ for (const k of only)
   if (!ALL.includes(k))
     usage(`unknown segment "${k}"; known: ${ALL.join(", ")}`);
 
-mkdirSync(REC_DIR, { recursive: true });
+mkdirSync(recDir(), { recursive: true });
 await withBrowser(
   async (h) => {
     for (const name of only) {
@@ -46,5 +47,5 @@ await withBrowser(
     steadyCaret: true,
   },
 );
-const have = ALL.filter((k) => existsSync(join(REC_DIR, `${k}.json`)));
+const have = ALL.filter((k) => existsSync(join(recDir(), `${k}.json`)));
 console.log(`recorded: ${only.join(", ")}; on disk: ${have.join(", ")}`);

@@ -132,14 +132,29 @@ So every session has a private directory (`infra/launcher/agent-scratch`):
 as `$EQUIN_SCRATCH`; a session no app launched gets
 `/tmp/equin-scratch/<Claude session id>`, named in the denial (`ctx.scratch`).
 Claude Code's own per-session dir (`/tmp/claude-<uid>/<slug>/<session id>/`,
-its task outputs and scratchpad) counts as the session's too. A `mktemp` name
-passes — it is held in a variable, and unique.
+its task outputs and scratchpad) counts as the session's too. A name unique by
+construction passes: a `mktemp` name held in a variable, a Bash path still
+carrying `$$` / `$RANDOM` (never a tool's literal `file_path`), or a segment
+ending in a `mktemp`-shaped random suffix (six mixed-case characters,
+`type-check-batches-045lhL`; or `tmp.` and ten — not capitalised words).
 
-A write is a redirection, a modelled writer's target (`writeTargets`), a
-`cd`/`pushd` into a shared temp dir, or an absolute temp path handed to a
-command the argv grammar does not model (`--out /tmp/shot`, `-o`, `git bundle
-create`). Reads stay free (`cat`, `tail`, `cp /tmp/a .`): a log a person put
-there, a task's output file. Not `allowOnRepeat` — the concern is correctness.
+A write is a redirection, a modelled writer's target (`writeTargets`), or an
+absolute temp path handed to a command the argv grammar does not model
+(`--out /tmp/shot`, `-o`, `git bundle create`) — minus the inputs a few
+measured commands name (`OPERAND_ROLES`: `sips` writes `--out` else in place,
+`ffmpeg -i` reads, `find` writes only with `-delete`/`-exec`/`-fprint`). A
+`cd` / `pushd` writes nothing (`cd /tmp
+&& ls`); what runs in a shared dir after it is judged there, fail-closed
+(`writesInCwd`): anything not known to only read counts (`cd /tmp && curl -O
+…`, `make`, `cp /a/b .`); code is never read for intent, so an interpreter run
+there counts (`python3 -c …`, `python3 - <<'EOF'`), as does an awk program that
+writes or a sed `w`. `xargs <writer>` fed by a pipeline naming `/tmp/x`, or run
+in a shared cwd, is a write there; `curl` / `sort` / `uniq` / `base64` read
+until a flag names an output (`READS_UNLESS`). Reads stay free (`cat`, `tail`, `cp /tmp/a .`, `lsof`, `otool`,
+`git apply /tmp/p.patch` from a repo): a log a person put there, a task's
+output file. Measured 2026-11-14 over 7 days of real refusals: 18 of 31 were
+reads or unique names and now pass; the 11 real fixed-name writes, and 2
+`cd /tmp && python3 -c <read>`, are still refused. Not `allowOnRepeat` — the concern is correctness.
 Subagents share the parent's directory (same session, the parent names their
 files). A path held in a variable the command assigned a literal
 (`D=/tmp/x; echo > "$D/msg.txt"`) is resolved — `parse-shell` tracks literal

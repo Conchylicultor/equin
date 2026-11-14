@@ -9,7 +9,7 @@ import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { Harness } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import type { AudioClip } from "@plugins/media/plugins/film/e2e";
-import { DPR, H, open, REC_DIR, visible, W } from "./session-kit";
+import { DPR, H, open, recDir, visible, W } from "./session-kit";
 
 /** How much of the passage the film may use (default). */
 const FILM_SECONDS = 9;
@@ -140,7 +140,7 @@ export async function recordSonataAudio(
   const len = Math.min(raw.n - start, Math.round(raw.sr * SECONDS));
   const file = opts.out ?? "sonata-piano.wav";
   writeFileSync(
-    opts.out ?? join(REC_DIR, file),
+    opts.out ?? join(recDir(), file),
     wav(
       left.slice(start, start + len),
       right.slice(start, start + len),
@@ -149,7 +149,7 @@ export async function recordSonataAudio(
   );
   const clip: AudioClip = { file, duration: len / raw.sr };
   if (opts.out === undefined)
-    writeFileSync(join(REC_DIR, "sonata-piano.json"), JSON.stringify(clip));
+    writeFileSync(join(recDir(), "sonata-piano.json"), JSON.stringify(clip));
   console.log(
     `sonata audio: ${clip.duration.toFixed(2)} s at ${raw.sr} Hz (first onset ${(onset / raw.sr).toFixed(2)} s after Play)`,
   );

@@ -2,10 +2,14 @@
 // the recordings live, opening a route in real time before a recording starts,
 // and reading a recording back.
 
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { Locator, Page } from "playwright";
-import { pathUrl } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import {
+  arg,
+  pathUrl,
+} from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import type { AssetManifest } from "@plugins/media/plugins/film/e2e";
 import {
   FILM_CLOCK_FILE,
@@ -18,8 +22,30 @@ export const H = 720;
 /** Recorded at 2x: a 2560×1440 frame stays sharp under the 1.45x push-ins of a 1080p film. */
 export const DPR = 2;
 
-/** Every recording (frames + input log) and the stills, one dir: the film's asset dir. */
-export const REC_DIR = "/tmp/equin-film/session";
+/**
+ * A new directory no other run or session can be handed: `mkdtemp`, unique by
+ * construction (a fixed `/tmp/<name>` is one dir for every agent that types
+ * it — the `shared-tmp` guard refuses them). Printed, so a later run can be
+ * pointed at it.
+ */
+export function freshDir(prefix: string): string {
+  const dir = mkdtempSync(join(tmpdir(), `${prefix}-`));
+  console.log(`${prefix}: writing to ${dir}`);
+  return dir;
+}
+
+let rec: string | undefined;
+
+/**
+ * Every recording (frames + input log) and the stills, one dir: the film's
+ * asset dir — `--rec-dir <dir>` (pass `"$EQUIN_SCRATCH/equin-film"` to keep
+ * one across runs: segments re-record into it, film.ts renders from it), else
+ * a fresh dir for this run.
+ */
+export function recDir(): string {
+  rec ??= arg("rec-dir") ?? freshDir("equin-film");
+  return rec;
+}
 
 export function newManifest(): AssetManifest {
   return {
@@ -85,7 +111,7 @@ export interface SegmentFacts {
 export function endHere(name: string, page: Page): void {
   const u = new URL(page.url());
   const facts: SegmentFacts = { endPath: `${u.pathname}${u.search}${u.hash}` };
-  writeFileSync(join(REC_DIR, `${name}.facts.json`), JSON.stringify(facts));
+  writeFileSync(join(recDir(), `${name}.facts.json`), JSON.stringify(facts));
 }
 
 /**
@@ -96,8 +122,8 @@ export function continueFrom(name: string): {
   path: string;
   cursor: { x: number; y: number };
 } {
-  const facts = join(REC_DIR, `${name}.facts.json`);
-  const log = join(REC_DIR, `${name}.json`);
+  const facts = join(recDir(), `${name}.facts.json`);
+  const log = join(recDir(), `${name}.json`);
   if (!existsSync(facts) || !existsSync(log))
     throw new Error(
       `promo-film: "${name}" is not recorded — record it first (it ends where this segment starts)`,

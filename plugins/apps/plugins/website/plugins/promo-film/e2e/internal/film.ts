@@ -48,7 +48,7 @@ import { filmMusicBeat, resolveFilmMusic, type FilmMusic } from "./music";
 import { outro, titleCard } from "./outro";
 import { place, recDuration, recMark, type Knot, type Placed } from "./place";
 import { SEGMENTS } from "./segments";
-import { REC_DIR } from "./session-kit";
+import { recDir } from "./session-kit";
 
 /** The montage's readable beats, before it accelerates. */
 const MONTAGE_READABLE = 3;
@@ -118,7 +118,7 @@ function loadAssets(): AssetManifest {
     audio: {},
   };
   for (const name of Object.keys(SEGMENTS)) {
-    const file = join(REC_DIR, `${name}.json`);
+    const file = join(recDir(), `${name}.json`);
     if (!existsSync(file))
       throw new Error(
         `promo-film: no recording "${name}" — run e2e/record.ts --only ${name}`,
@@ -765,7 +765,7 @@ export async function buildFilm(opts: {
     height: H,
     duration,
     background: "#000",
-    assets: { dir: REC_DIR, manifest: m },
+    assets: { dir: recDir(), manifest: m },
     // No motion blur (media/film's default): it snapped on and off mid-move
     // — v20/v21's Pick UI pull-back at 27.4 s / 27.8 s went crisp → smeared
     // → crisp in one frame each way, read as a shake.

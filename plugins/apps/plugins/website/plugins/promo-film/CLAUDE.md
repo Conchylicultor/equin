@@ -149,7 +149,11 @@ checkout, and needs the promo-film build.
   (its own input log). Browser-local state a fresh session lacks is set again
   in the pre-roll (`placesAsLeft`: the remembered map view, Gallery view).
 - **`record.ts`** drives the real app on media/film's virtual clock (with a
-  steady caret: the harness's `steadyCaret`) into `/tmp/equin-film/session/`:
+  steady caret: the harness's `steadyCaret`) into
+  `--rec-dir <dir>` (`recDir()`, `session-kit.ts`; pass
+  `"$EQUIN_SCRATCH/equin-film"` to keep one across runs — never a fixed `/tmp`
+  dir every session shares; omitted, a fresh `mkdtemp` dir; `film.ts` requires
+  it):
   each segment's frames and input log, the facts it read off the page
   (`<name>.facts.json`) and every frame's real ms per phase
   (`<name>.timing.json`: settle / step / screenshot — written even when the

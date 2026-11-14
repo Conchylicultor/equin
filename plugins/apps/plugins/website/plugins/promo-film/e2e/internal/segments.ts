@@ -79,7 +79,7 @@ import {
   continueFrom,
   endHere,
   filmDate,
-  REC_DIR,
+  recDir,
   visible,
   W,
 } from "./session-kit";
@@ -167,7 +167,7 @@ async function reportHealth(
   // Recording time (s): before 0 is the unrecorded pre-roll.
   const log = all.map((e) => ({ ...e, t: (e.t - start) / 1000 }));
   writeFileSync(
-    join(REC_DIR, `${name}.health.json`),
+    join(recDir(), `${name}.health.json`),
     JSON.stringify(log, null, 1),
   );
   const bad = log.filter((e) => e.t >= 0 && e.state !== "ok");
@@ -192,7 +192,7 @@ const rec = async (
   // may wait that long, the page's clock frozen meanwhile.
   const seq = await record(
     page,
-    { dir: REC_DIR, name, cursor, settle: { timeoutMs: 180_000 } },
+    { dir: recDir(), name, cursor, settle: { timeoutMs: 180_000 } },
     script,
   );
   await reportHealth(page, name, start);

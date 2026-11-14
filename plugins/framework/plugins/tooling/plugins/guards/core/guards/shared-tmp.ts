@@ -24,6 +24,34 @@ import { envName } from "@plugins/infra/plugins/launcher/plugins/env-names/core"
  * shipped: 1.7k calls would have been refused, ~60% of them by redirection —
  * the habit, not an edge case.
  */
+/**
+ * A name no other session can type by accident: a segment ending in a
+ * `mktemp` / `mkdtemp` random suffix — six characters after a `-` / `_` / `.`
+ * (`type-check-batches-045lhL`, `sgs-LuJq1H`), or `tmp.` and ten
+ * (`tmp.wAkVzaePNQ`) — mixed case, and not a run of capitalised words
+ * (`my_TestRun`, `-ReadMe`). A suffix with one case only (~8% of random ones)
+ * stays refused, the safe side.
+ */
+const WORDS = /^(?:[A-Z]?[a-z]+)+$/;
+
+function randomTail(tail: string): boolean {
+  return /[a-z]/.test(tail) && /[A-Z]/.test(tail) && !WORDS.test(tail);
+}
+
+function uniqueSegment(segment: string): boolean {
+  const tmp = /^tmp\.([A-Za-z0-9]{10})$/.exec(segment)?.[1];
+  if (tmp !== undefined) return randomTail(tmp);
+  const tail = /[-_.]([A-Za-z0-9]{6})$/.exec(segment)?.[1];
+  return tail !== undefined && randomTail(tail);
+}
+
+/**
+ * In a Bash command, the shell's own pid (`$$`, `$BASHPID`) or `$RANDOM` left
+ * in a path is unique too — the shell expands it. Not in a tool's literal
+ * `file_path`, where `$$` is two characters.
+ */
+const SHELL_UNIQUE = /\$(?:\$|\{?(?:BASHPID|RANDOM)\b)/;
+
 function denial(path: string, how: string, ctx: GuardContext): Denial {
   const dir = ctx.scratch.dir;
   const leaf = path.slice(path.lastIndexOf("/") + 1) || "file";
@@ -56,18 +84,23 @@ export const sharedTmpGuard = defineGuard<
       scratchDir: ctx.scratch.dir,
       claudeSessionId: ctx.sessionId,
     };
+    const classify = (path: string): string | null => {
+      // A write ON a root lands a name inside it (`cp a /tmp`, `cd /tmp &&
+      // mv /a/b .`): asked as `<root>/`.
+      const p = foreignTempPath(path, own) ?? foreignTempPath(`${path}/`, own);
+      return p !== null && !p.split("/").some(uniqueSegment) ? p : null;
+    };
     const file = input.file_path ?? input.notebook_path;
     if (file) {
-      const p = foreignTempPath(file, own);
+      const p = classify(file);
       return p ? denial(p, `the file path '${file}'`, ctx) : null;
     }
     if (!input.command) return null;
-    const hit = firstFlaggedWrite(
-      input.command,
-      ctx.cwd,
-      (p) => foreignTempPath(p, own),
-      { cdInto: true },
-    );
+    const shellClassify = (path: string): string | null =>
+      SHELL_UNIQUE.test(path) ? null : classify(path);
+    const hit = firstFlaggedWrite(input.command, ctx.cwd, shellClassify, {
+      cwdOperands: true,
+    });
     return hit ? denial(hit.path, hit.how, ctx) : null;
   },
 });

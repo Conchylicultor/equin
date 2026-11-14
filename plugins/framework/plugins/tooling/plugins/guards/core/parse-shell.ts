@@ -242,7 +242,7 @@ function collectSegment(
     // The call runs in the cwd in effect BEFORE its own `cd` takes hold; a
     // `cd` only moves the directory for the calls that follow it.
     out.push({ name, args, raw: seg, cwd: cur, redirections, pipedIn });
-    if (name === "cd") cur = applyCd(cur, args);
+    if (name === "cd" || name === "pushd") cur = applyCd(cur, args);
     if (!WRAPPERS.has(name)) break;
     const wrapped = dropWrapperOptions(args);
     if (wrapped.length === 0 || wrapped.length === toks.length) break;
@@ -615,7 +615,7 @@ const BLOCK_KEYWORDS = new Set([
  * Binaries whose job is to run another command. The wrapped command must surface
  * as its own call, or wrapping becomes a way past every Bash guard.
  */
-const WRAPPERS = new Set([
+export const WRAPPERS: ReadonlySet<string> = new Set([
   "nohup",
   "setsid",
   "env",

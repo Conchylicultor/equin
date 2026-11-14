@@ -23,7 +23,7 @@
  * covered by the unit tests instead.
  */
 import { readdirSync, readFileSync, statSync } from "node:fs";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { CLAUDE_PROJECTS_DIR } from "@plugins/infra/plugins/paths/core";
 import {
   classify,
@@ -109,6 +109,12 @@ interface ToolCall {
   /** The session's own cwd for this call — a sibling worktree is not main. */
   cwd: string;
   bg: boolean;
+  /**
+   * The Claude session id (the transcript's file name): what the guards own by
+   * it (`shared-tmp`: Claude's `/tmp/claude-<uid>/<slug>/<session id>/`) is
+   * the session's, not a foreign path.
+   */
+  sessionId: string;
 }
 
 interface SessionResult {
@@ -187,6 +193,7 @@ function parseArgs(argv: string[]): {
 
 function readToolCalls(file: string): ToolCall[] {
   const calls: ToolCall[] = [];
+  const sessionId = basename(file, ".jsonl");
   for (const line of readFileSync(file, "utf8").split("\n")) {
     if (!line || !line.includes('"tool_use"')) continue;
     let entry: {
@@ -215,6 +222,7 @@ function readToolCalls(file: string): ToolCall[] {
         cmd: block.input?.command ?? "",
         cwd: entry.cwd ?? "/tmp",
         bg: block.input?.run_in_background === true,
+        sessionId,
       });
     }
   }
@@ -356,7 +364,7 @@ function denialsFor(
 ): string[] {
   // The session's OWN cwd, not a synthetic root: to a sibling worktree, another
   // worktree's path looks like main, and `main-writes` would mis-report.
-  const ctx = createContext(call.cwd, "replay");
+  const ctx = createContext(call.cwd, call.sessionId);
   const denied: string[] = [];
   for (const guard of PURE_GUARDS) {
     const verdict = guard.check(
@@ -379,7 +387,7 @@ function denialLine(call: ToolCall, name: string): string {
   if (!guard) return "";
   const verdict = guard.check(
     { command: call.cmd, run_in_background: call.bg } as never,
-    createContext(call.cwd, "replay") as never,
+    createContext(call.cwd, call.sessionId) as never,
   );
   if (verdict instanceof Promise) return "";
   if (verdict.kind === "rewrite")
