@@ -4,10 +4,17 @@ import { resolveCredentials } from "./credentials";
 import { refreshAccessToken } from "./oauth-flow";
 import type { AuthIdentity, AuthProviderDescriptor } from "@plugins/auth/core";
 import { AuthNeedsConsentError } from "@plugins/auth/core";
+import { createInflight } from "@plugins/packages/plugins/inflight/core";
 import type { GetAccessTokenArgs, TokenResponse } from "@plugins/auth/core";
 
 const REFRESH_LEAD_MS = 60_000;
-const inFlightRefreshes = new Map<string, Promise<StoredAccount>>();
+// One refresh per account at a time: concurrent callers share it. The key is
+// released when the refresh settles, inside the shared promise itself, so a
+// failed refresh (Google unreachable) rejects only for the callers awaiting it.
+// A hand-rolled `void promise.finally(release)` here once re-rejected with the
+// refresh's error on a promise nobody owned, taking central down on every
+// network blip (report-1794655441-55bxvr).
+const inFlightRefreshes = createInflight();
 
 function refreshKey(providerId: string, accountId: string): string {
   return `${providerId}::${accountId}`;
@@ -23,73 +30,68 @@ async function refreshAccount(
   accountId: string,
   account: StoredAccount,
 ): Promise<StoredAccount> {
-  const key = refreshKey(descriptor.id, accountId);
-  const existing = inFlightRefreshes.get(key);
-  if (existing) return existing;
-
-  const promise = (async () => {
-    if (!descriptor.oauth || !account.refreshToken) {
-      throw new AuthNeedsConsentError({
-        providerId: descriptor.id,
-        reason: "needs-reconsent",
-      });
-    }
-    try {
-      const creds = await resolveCredentials(descriptor);
-      const refreshed = await refreshAccessToken({
-        oauth: descriptor.oauth,
-        clientId: creds.clientId,
-        clientSecret: creds.clientSecret,
-        refreshToken: account.refreshToken,
-      });
-      const updated = await patchAccount(descriptor.id, accountId, {
-        accessToken: refreshed.accessToken,
-        refreshToken: refreshed.refreshToken,
-        expiresAt: refreshed.expiresAt,
-        scopes: refreshed.scopes ?? account.scopes,
-        idToken: refreshed.idToken ?? account.idToken,
-        lastRefreshedAt: Date.now(),
-        needsReconsent: false,
-        lastRefreshError: undefined,
-      });
-      return updated ?? account;
-    } catch (err) {
-      const status = (err as { status?: number }).status;
-      if (status === 400 || status === 401) {
-        const at = Date.now();
-        const hint = descriptor.oauth.diagnoseRefreshFailure?.({
-          responseText: (err as { responseText?: string }).responseText ?? "",
-          grantAgeMs: at - account.connectedAt,
-        });
-        await patchAccount(descriptor.id, accountId, {
-          needsReconsent: true,
-          accessToken: undefined,
-          expiresAt: undefined,
-          lastRefreshError: {
-            message: err instanceof Error ? err.message : String(err),
-            at,
-            hint,
-          },
-        });
+  return inFlightRefreshes.run(
+    refreshKey(descriptor.id, accountId),
+    async () => {
+      if (!descriptor.oauth || !account.refreshToken) {
         throw new AuthNeedsConsentError({
           providerId: descriptor.id,
           reason: "needs-reconsent",
-          hint,
         });
       }
-      await patchAccount(descriptor.id, accountId, {
-        lastRefreshError: {
-          message: err instanceof Error ? err.message : String(err),
-          at: Date.now(),
-        },
-      });
-      throw err;
-    }
-  })();
-  inFlightRefreshes.set(key, promise);
-  // eslint-disable-next-line detached-work-safety/no-untracked-detached-work -- bookkeeping handler attached to an already-detached refresh promise; no new main-thread work to attribute
-  void promise.finally(() => inFlightRefreshes.delete(key));
-  return promise;
+      try {
+        const creds = await resolveCredentials(descriptor);
+        const refreshed = await refreshAccessToken({
+          oauth: descriptor.oauth,
+          clientId: creds.clientId,
+          clientSecret: creds.clientSecret,
+          refreshToken: account.refreshToken,
+        });
+        const updated = await patchAccount(descriptor.id, accountId, {
+          accessToken: refreshed.accessToken,
+          refreshToken: refreshed.refreshToken,
+          expiresAt: refreshed.expiresAt,
+          scopes: refreshed.scopes ?? account.scopes,
+          idToken: refreshed.idToken ?? account.idToken,
+          lastRefreshedAt: Date.now(),
+          needsReconsent: false,
+          lastRefreshError: undefined,
+        });
+        return updated ?? account;
+      } catch (err) {
+        const status = (err as { status?: number }).status;
+        if (status === 400 || status === 401) {
+          const at = Date.now();
+          const hint = descriptor.oauth.diagnoseRefreshFailure?.({
+            responseText: (err as { responseText?: string }).responseText ?? "",
+            grantAgeMs: at - account.connectedAt,
+          });
+          await patchAccount(descriptor.id, accountId, {
+            needsReconsent: true,
+            accessToken: undefined,
+            expiresAt: undefined,
+            lastRefreshError: {
+              message: err instanceof Error ? err.message : String(err),
+              at,
+              hint,
+            },
+          });
+          throw new AuthNeedsConsentError({
+            providerId: descriptor.id,
+            reason: "needs-reconsent",
+            hint,
+          });
+        }
+        await patchAccount(descriptor.id, accountId, {
+          lastRefreshError: {
+            message: err instanceof Error ? err.message : String(err),
+            at: Date.now(),
+          },
+        });
+        throw err;
+      }
+    },
+  );
 }
 
 export type {

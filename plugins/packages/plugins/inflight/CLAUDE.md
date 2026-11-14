@@ -85,6 +85,7 @@ context the joiner gets the very shared promise, as before.
     - `apps/places/place-details`
     - `apps/sonata/covers`
     - `apps/sonata/sources/midi/folders`
+    - `auth`
     - `conversations/conversation-view/commits-graph`
     - `conversations/runtime-sdk`
     - `infra/asset-mirror`

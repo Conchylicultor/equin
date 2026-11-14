@@ -41997,6 +41997,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/places/place-details`
           - `apps/sonata/covers`
           - `apps/sonata/sources/midi/folders`
+          - `auth`
           - `conversations/conversation-view/commits-graph`
           - `conversations/runtime-sdk`
           - `infra/asset-mirror`

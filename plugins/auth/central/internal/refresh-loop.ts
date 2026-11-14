@@ -33,13 +33,10 @@ async function tick(): Promise<void> {
     if (!account || account.needsReconsent || !account.refreshToken) continue;
     const expiresAt = account.expiresAt ?? 0;
     if (expiresAt > now + REFRESH_LEAD_MS) continue;
-    // getAccessTokenInternal owns the refresh path + per-account mutex; we
-    // await but swallow errors (logged inside on failure).
-    try {
-      await getAccessTokenInternal({ providerId: provider.id });
-      // eslint-disable-next-line promise-safety/no-bare-catch
-    } catch {
-      /* errors are persisted to the account.lastRefreshError field */
-    }
+    // getAccessTokenInternal owns the refresh path + per-account mutex and
+    // answers a failure as a result (persisted on the account as
+    // lastRefreshError), never a throw; anything it does throw is a bug, owned
+    // by the timer (recorded as a failed run).
+    await getAccessTokenInternal({ providerId: provider.id });
   }
 }
