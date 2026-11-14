@@ -447,6 +447,19 @@ export const worktreeArtifacts = {
   buildStatus: (name: Namespace): AppPath =>
     joinAppPath(worktreeDataDir(name), "build-status.json"),
   /**
+   * The deploy lock: `deploy.lock`, an flock (never read or written for its
+   * bytes). A convergence run (`./equin build --converge`, main's deploy) holds
+   * it EXCLUSIVELY for its whole run — its builds and, on main, the gateway
+   * follow after them, which can restart the gateway (and with it every
+   * backend) well after the build's exit marker has landed. Something that
+   * drives the deployed app on its own (main's `desktop.fullscreen-budget`
+   * job) takes it SHARED and drops it at once (e2e-harness's
+   * `awaitDeploySettled`), so it starts on a settled deploy instead of racing
+   * the restart. No `<id>` variant: one deploy at a time per namespace.
+   */
+  deployLock: (name: Namespace): AppPath =>
+    joinAppPath(worktreeDataDir(name), "deploy.lock"),
+  /**
    * One `./equin test` run's record: which runners ran and which test
    * cases failed. `test-status-<opId>.json`, written when the run STARTS
    * (`status: "running"`) and again with its verdict.

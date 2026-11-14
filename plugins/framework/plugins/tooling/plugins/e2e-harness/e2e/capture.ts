@@ -64,6 +64,18 @@ export function capture(page: Page, label?: string): Captured {
     console.log(`CONSOLE-ERROR${tag}:`, msg.text());
   });
 
+  // Chromium's console line for an error status names no URL ("Failed to load
+  // resource: the server responded with a status of 403"), so a transcript
+  // could not say WHAT was refused. Printed beside it, never counted: an error
+  // status may be what a script asserts on.
+  page.on("response", (res) => {
+    if (res.status() < 400) return;
+    const req = res.request();
+    console.log(
+      `HTTP-ERROR${tag}: ${res.status()} ${req.method()} ${res.url()}`,
+    );
+  });
+
   page.on("requestfailed", (req) => {
     const failure = requestFailure(req);
     if (failure === null) return;

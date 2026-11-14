@@ -5,8 +5,13 @@ import {
   actAsCheckoutNamespace,
   checkoutRef,
   WEB_CORE_RELATIVE,
+  worktreeArtifacts,
 } from "@plugins/infra/plugins/paths/server";
-import { MAIN_COMPOSITION_ID } from "@plugins/infra/plugins/namespace/core";
+import { waitForFlock } from "@plugins/packages/plugins/flock/core";
+import {
+  MAIN_COMPOSITION_ID,
+  type Namespace,
+} from "@plugins/infra/plugins/namespace/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import { runAttached } from "@plugins/infra/plugins/jobs/plugins/supervised-job/cli";
 import { createBuildRunRecorder } from "@plugins/build/plugins/run-ledger/cli";
@@ -88,6 +93,15 @@ export interface ConvergeOptions {
  * status reaches no one after a restart: a restart that fails files its own
  * report.
  *
+ * The whole run — builds and gateway follow — holds the namespace's deploy
+ * lock (`worktreeArtifacts.deployLock`) exclusively. A build's exit marker is
+ * not "the deploy is done": the follow that comes after it can restart the
+ * gateway and every backend seconds later (2026-11-14, `desktop.fullscreen-budget`
+ * was started by the marker and drove main through that restart: connection
+ * refused, its demo never rendered). What must start on a settled deploy waits
+ * for this lock instead of racing the run. A second run (the restarted
+ * gateway's own boot run) waits for the first to end.
+ *
  * D12 (main from a frozen per-commit copy) plugs in here: materialize the
  * commit, build there, and the gateway swap is unchanged.
  */
@@ -109,9 +123,36 @@ export async function runConvergence(opts: ConvergeOptions): Promise<number> {
   const checkout = await checkoutRef(root);
   const log = (line: string): void =>
     console.log(`[converge ${new Date().toISOString()}] ${line}`);
+  const namespace = await actAsCheckoutNamespace(root);
+  const lockStartedAt = Date.now();
+  const deployLock = await waitForFlock(
+    worktreeArtifacts.deployLock(namespace),
+  );
+  const lockWaitMs = Date.now() - lockStartedAt;
+  if (lockWaitMs >= 1000)
+    log(
+      `waited ${Math.round(lockWaitMs / 1000)} s for the deploy lock (another convergence run held it)`,
+    );
+  try {
+    return await convergeAndFollow(root, checkout, namespace, log);
+  } finally {
+    await deployLock.release();
+  }
+}
+
+/** One convergence run under the deploy lock: the builds, then the gateway follow. */
+async function convergeAndFollow(
+  root: AppPath,
+  checkout: Awaited<ReturnType<typeof checkoutRef>>,
+  namespace: Namespace,
+  log: (line: string) => void,
+): Promise<number> {
   let builds: { ok: true; code: number } | { ok: false; error: unknown };
   try {
-    builds = { ok: true, code: await convergeBuilds(root, checkout, log) };
+    builds = {
+      ok: true,
+      code: await convergeBuilds(root, checkout, namespace, log),
+    };
   } catch (error) {
     builds = { ok: false, error };
   }
@@ -169,9 +210,9 @@ function describeFollow(o: GatewayFollowOutcome): string {
 async function convergeBuilds(
   root: AppPath,
   checkout: Awaited<ReturnType<typeof checkoutRef>>,
+  namespace: Namespace,
   log: (line: string) => void,
 ): Promise<number> {
-  const namespace = await actAsCheckoutNamespace(root);
   const webDir = resolve(root, WEB_CORE_RELATIVE);
   const recorder = createBuildRunRecorder(namespace);
   try {

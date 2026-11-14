@@ -24,6 +24,7 @@ export type { PageFetchInit } from "./page-fetch";
 export { openDeployDb } from "./deploy-db";
 export type { DeployDb } from "./deploy-db";
 export { withBrowser, boot, DEFAULT_VIEWPORT } from "./browser";
+export { awaitDeploySettled } from "./deploy-settled";
 export { waitFor, ELEMENT_TIMEOUT_MS } from "./wait";
 // Playwright's own `networkidle` never fires on this app — see network-idle.ts.
 export { waitForNetworkIdle } from "./network-idle";

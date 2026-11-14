@@ -36,6 +36,7 @@
 import type { Locator, Page } from "playwright";
 import {
   arg,
+  awaitDeploySettled,
   flag,
   numArg,
   pathUrl,
@@ -145,6 +146,11 @@ async function roundTrips(
 }
 
 const cases: BudgetCase[] = [];
+
+// Started by main's job the moment a build's exit marker lands — while the
+// convergence run that ran the build may still restart the gateway (and every
+// backend) behind it. Measure the deploy once it has settled, not through it.
+await awaitDeploySettled();
 
 await withBrowser(async (h) => {
   const { page } = await h.session({ viewport: { width: 1400, height: 900 } });

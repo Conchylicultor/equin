@@ -41931,9 +41931,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `holdParentLifeline`
           - `waitForFlock`
       - Cross-plugin:
-        - Imported by: 24 plugins — full list in [`plugins/packages/plugins/flock/REFERENCE.md`](../plugins/packages/plugins/flock/REFERENCE.md)
+        - Imported by: 26 plugins — full list in [`plugins/packages/plugins/flock/REFERENCE.md`](../plugins/packages/plugins/flock/REFERENCE.md)
           - `infra` ×10
-          - `framework` ×5
+          - `framework` ×7
           - `packages` ×4
           - `apps/chord/song-index`
           - `debug/browser-recordings/writer`

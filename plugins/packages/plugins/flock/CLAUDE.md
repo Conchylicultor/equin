@@ -87,9 +87,9 @@ coalescing; `checkout-lock.ts` builds a size-1 mutex.
     - `holdParentLifeline`
     - `waitForFlock`
 - Cross-plugin:
-  - Imported by: 24 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 26 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra` ×10
-    - `framework` ×5
+    - `framework` ×7
     - `packages` ×4
     - `apps/chord/song-index`
     - `debug/browser-recordings/writer`

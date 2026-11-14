@@ -27,6 +27,14 @@ rendered — and none is slow enough for the stall report to see.
   and at boot for the latest deploy — once per commit (`lock` = commit,
   checked with `latestSupervisedRun`). Not on every push: it needs the deploy
   and a browser (~2 min).
+- **The script waits for the deploy to settle first** (`awaitDeploySettled`,
+  e2e-harness). The exit marker that enqueues it is not the end of main's
+  deploy: the convergence run then follows main's gateway, and when the commit
+  changed the gateway it restarts it — and every backend — seconds later. Every
+  failure 2026-11-11 … 11-14 was that race (connection refused on the page's
+  own modules, the demo's in-browser host failing to load its plugins, then
+  the 30 s wait for a window). The convergence run holds the namespace's
+  deploy lock for its whole run; the script takes it shared and drops it.
 - Reading a run on main: `job_runs` shows two rows per commit — a ~100 ms
   `suspended` one (claim + spawn) and, ~80 s later, a few-ms `succeeded` one
   (the wake that records the child's exit). The measurement is the child, in
