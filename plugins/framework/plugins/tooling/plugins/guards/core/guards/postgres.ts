@@ -24,7 +24,6 @@ const POSTGRES_COMMANDS = new Set([
 export const postgresGuard = defineGuard<BashInput>({
   name: "postgres",
   matcher: "Bash",
-  bypassToken: ".allow-postgres",
   check(input) {
     const cmd = input.command;
     if (!cmd) return null;

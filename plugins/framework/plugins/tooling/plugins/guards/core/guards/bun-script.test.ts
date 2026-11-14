@@ -12,7 +12,7 @@ import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 function verdict(command: string, cwd = REPO_ROOT): Verdict {
   // The guard's check is synchronous (hasBypass stats a path), so the result is
   // a Verdict. The default cwd is this checkout — the guard only judges a
-  // script inside a equin checkout — and holds no `.allow-bun-script`.
+  // script inside a equin checkout.
   return bunScriptGuard.check({ command }, createContext(cwd)) as Verdict;
 }
 
@@ -301,10 +301,6 @@ describe("bun-script guard", () => {
       expect(v.kind === "deny" && v.reason).toContain(
         "./equin run e2e/tabs-verify.ts",
       );
-    });
-
-    test("offers the bypass token", () => {
-      expect(v.kind === "deny" && v.reason).toContain(".allow-bun-script");
     });
   });
 });

@@ -7,7 +7,6 @@ import { worktreeContextOf } from "../worktree-root";
 export const mainEditsGuard = defineGuard<FileInput>({
   name: "main-edits",
   matcher: ["Write", "Edit", "NotebookEdit"],
-  bypassToken: ".allow-main",
   check(input, ctx) {
     let f = input.file_path;
     if (!f) return null;

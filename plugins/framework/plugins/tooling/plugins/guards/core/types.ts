@@ -1,5 +1,4 @@
 import type { DataRootView } from "@plugins/infra/plugins/paths/core";
-import type { BypassToken } from "@plugins/framework/plugins/tooling/plugins/guards/plugins/bypass-tokens/core";
 export type AllowVerdict = { kind: "allow" };
 /**
  * Refuse the call. `fatal` escalates to ending the turn; `allowOnRepeat` softens
@@ -166,12 +165,6 @@ export interface GuardContext {
    * the disk (and a split install throws only there).
    */
   readonly dataRoot: DataRootView;
-  /**
-   * Where a bypass file counts: absolute, at the checkout root (not the cwd).
-   * The denial names it, so the agent creates the file the guard will read.
-   */
-  bypassPath(token: string): string;
-  hasBypass(token: string): boolean;
   allow(): AllowVerdict;
   deny(reason: string): DenyVerdict;
   fatal(reason: string): DenyVerdict;
@@ -209,8 +202,6 @@ export interface AgentInput {
 export interface Guard<I = unknown> {
   name: string;
   matcher: ToolMatcher | ToolMatcher[];
-  /** File at the worktree root whose presence lets this guard's calls through. */
-  bypassToken?: BypassToken;
   /**
    * Tell each agent (the main conversation, every subagent) this guard's
    * `inform` at most once per session — for a long message, such as a whole

@@ -5,6 +5,7 @@ import {
 } from "@plugins/packages/plugins/timed-fs/core";
 import { tmpdir } from "node:os";
 import { hashHex } from "@plugins/packages/plugins/string-hash/core";
+import { bypassId } from "@plugins/framework/plugins/tooling/plugins/guards/plugins/bypass/core";
 import {
   joinAppPath,
   type AppPath,
@@ -43,7 +44,8 @@ function read(sessionId: string): string[] {
 }
 
 /**
- * The identity of a repeatable denial: which guard refused which call, where.
+ * The identity of a refused call: which guard refused which call, where. Keys a
+ * repeatable denial, and is the call's bypass id (`guards/bypass`).
  * The call is its whole input but `description` — the label the agent writes
  * for the user, which never changes what runs — and the cwd, which resolves
  * every relative path in it.
@@ -55,7 +57,7 @@ export function repeatKey(
   input: Readonly<Record<string, unknown>>,
 ): string {
   const { description: _label, ...call } = input;
-  return `${guard}#${hashHex(JSON.stringify([tool, cwd, call]))}`;
+  return bypassId(guard, hashHex(JSON.stringify([tool, cwd, call])));
 }
 
 const keyOf = (agent: string, what: string) => `${agent}\u0000${what}`;
@@ -69,6 +71,25 @@ export function wasInformed(
   return read(sessionId).includes(keyOf(agent, what));
 }
 
+/**
+ * Drop `what` for this agent, reporting whether it was there — a one-shot
+ * record (a guard bypass) is used up by the call it let through.
+ */
+export function consumeInformed(
+  sessionId: string,
+  agent: string,
+  what: string,
+): boolean {
+  const shown = read(sessionId);
+  const key = keyOf(agent, what);
+  if (!shown.includes(key)) return false;
+  write(
+    sessionId,
+    shown.filter((k) => k !== key),
+  );
+  return true;
+}
+
 export function recordInformed(
   sessionId: string,
   agent: string,
@@ -77,11 +98,15 @@ export function recordInformed(
   if (told.length === 0) return;
   const shown = new Set(read(sessionId));
   for (const w of told) shown.add(keyOf(agent, w));
+  write(sessionId, [...shown]);
+}
+
+function write(sessionId: string, keys: readonly string[]): void {
   // Write-then-rename: parallel tool calls run the hook as concurrent
   // processes, and a reader catching a half-written file would read it as
   // empty — and its own write would then drop every key recorded so far.
   const path = stateFile(sessionId);
   const tmp = `${path}.${process.pid}.tmp`;
-  writeFileSync(tmp, JSON.stringify([...shown]));
+  writeFileSync(tmp, JSON.stringify(keys));
   renameSync(tmp, path);
 }

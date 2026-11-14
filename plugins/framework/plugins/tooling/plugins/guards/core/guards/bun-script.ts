@@ -112,7 +112,6 @@ function rewritable(call: ShellCall): boolean {
 export const bunScriptGuard = defineGuard<BashInput>({
   name: "bun-script",
   matcher: "Bash",
-  bypassToken: ".allow-bun-script",
   check(input, ctx) {
     const cmd = input.command;
     if (!cmd) return null;

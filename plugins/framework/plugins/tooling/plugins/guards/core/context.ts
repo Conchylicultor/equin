@@ -1,13 +1,11 @@
 import { fstatSync, openSync, readSync } from "node:fs";
 import { adoptFd, type OwnedFd } from "@plugins/packages/plugins/owned-fd/core";
 import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
-import { join } from "node:path";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
 import { agentScratchDir } from "@plugins/infra/plugins/launcher/plugins/agent-scratch/core";
 import { machineDeclaredRootEntriesSync } from "@plugins/infra/plugins/paths/core";
 import { dataRootLayout } from "@plugins/infra/plugins/paths/plugins/data-root-layout/core";
 import type { DataRootView } from "@plugins/infra/plugins/paths/core";
-import { classifyRepo } from "./git-target";
 import { worktreeContextOf } from "./worktree-root";
 import type {
   AllowVerdict,
@@ -110,13 +108,6 @@ export function createContext(
   /** The launch-delivered `EQUIN_SCRATCH` — see `GuardContext.scratch`. */
   scratchDir: string | null = null,
 ): GuardContext {
-  // At the checkout root, not the raw cwd: the hook's cwd follows the session
-  // shell's persistent `cd`, so a file created at the root would stop counting
-  // the moment the agent cd'd into a subdirectory.
-  const bypassPath = (token: string): string => {
-    const repo = classifyRepo(cwd);
-    return join(repo.kind === "not-a-repo" ? cwd : repo.root, token);
-  };
   const workRoot = workspaceRoot ?? worktreeContextOf(cwd)?.worktreeRoot ?? cwd;
   return {
     cwd,
@@ -147,10 +138,6 @@ export function createContext(
           why: "no transcript path in the payload",
         };
       return readTail(transcriptPath);
-    },
-    bypassPath,
-    hasBypass(token: string): boolean {
-      return existsSync(bypassPath(token));
     },
     allow(): AllowVerdict {
       return { kind: "allow" };

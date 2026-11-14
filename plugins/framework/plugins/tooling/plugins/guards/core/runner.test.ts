@@ -91,3 +91,70 @@ describe("an allowOnRepeat denial (search-scope)", () => {
     expect(denial(await bash(newSession(), "rg foo ~"))).not.toBeNull();
   });
 });
+
+describe("a guard bypass (postgres, a hard denial)", () => {
+  const REASON = "--reason 'read-only listing of the throwaway test cluster'";
+  /** The bypass id the denial printed. */
+  function idOf(reason: string | null): string {
+    const m = /guard bypass (\S+#\S+) --reason/.exec(reason ?? "");
+    if (!m) throw new Error(`no bypass id in: ${reason}`);
+    return m[1]!;
+  }
+
+  test("every hard denial names the bypass command for that exact call", async () => {
+    const reason = denial(await bash(newSession(), "psql -l"));
+    expect(idOf(reason)).toStartWith("postgres#");
+    expect(reason).toContain("as its OWN tool call");
+  });
+
+  test("a warning (allowOnRepeat) offers the repeat, not a bypass", async () => {
+    const reason = denial(await bash(newSession(), "rg foo ~"));
+    expect(reason).not.toContain("guard bypass");
+  });
+
+  test("bypassed once: the retry passes, the next one is refused again", async () => {
+    const s = newSession();
+    const id = idOf(denial(await bash(s, "psql -l")));
+    expect(
+      denial(await bash(s, `./equin guard bypass ${id} ${REASON}`)),
+    ).toBeNull();
+    const retry = await bash(s, "psql -l");
+    expect(denial(retry)).toBeNull();
+    expect(JSON.stringify(retry)).toContain("was bypassed for this call");
+    expect(denial(await bash(s, "psql -l"))).not.toBeNull();
+  });
+
+  test("covers only the call it names", async () => {
+    const s = newSession();
+    const id = idOf(denial(await bash(s, "psql -l")));
+    await bash(s, `./equin guard bypass ${id} ${REASON}`);
+    expect(denial(await bash(s, "psql -c 'select 1'"))).not.toBeNull();
+  });
+
+  test("covers only the agent that asked", async () => {
+    const s = newSession();
+    const id = idOf(denial(await bash(s, "psql -l")));
+    await bash(s, `./equin guard bypass ${id} ${REASON}`);
+    expect(
+      denial(await bash(s, "psql -l", { agent_id: "sub-1" })),
+    ).not.toBeNull();
+  });
+
+  test("refuses a bypass without a real reason", async () => {
+    const s = newSession();
+    const id = idOf(denial(await bash(s, "psql -l")));
+    expect(
+      denial(await bash(s, `./equin guard bypass ${id} --reason ok`)),
+    ).toContain("--reason must say why");
+    expect(denial(await bash(s, "psql -l"))).not.toBeNull();
+  });
+
+  test("refuses a bypass chained with other commands", async () => {
+    const s = newSession();
+    const id = idOf(denial(await bash(s, "psql -l")));
+    expect(
+      denial(await bash(s, `./equin guard bypass ${id} ${REASON} && psql -l`)),
+    ).toContain("as its own tool call");
+    expect(denial(await bash(s, "psql -l"))).not.toBeNull();
+  });
+});

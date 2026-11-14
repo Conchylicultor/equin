@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-framework-tooling-guards-bypass",
+  "version": "0.0.1",
+  "private": true,
+  "description": "The guard bypass grammar: a denied call's bypass id (<guard>#<call hash>), the `./equin guard bypass <id> --reason \"…\"` command that lets that one call through, and its parser — shared by the hook that records it and the CLI that confirms it. A leaf, so both read one spelling."
+}

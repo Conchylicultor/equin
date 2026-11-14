@@ -442,7 +442,7 @@ export const attemptDeliveries = liveCollection("attempt-deliveries", {
 
 // Where a conversation runs — its attempt's checkout path and workspace —
 // lookup-only by the conversation's id, followed by `{ ids: [id] }` (the
-// worktree values: edited-files, allow-files, plugin-changes). Over the
+// worktree values: edited-files, plugin-changes). Over the
 // `conversations` table with its attempt joined (`conversationAttemptJoin`):
 // a conversation's move to another attempt refills it, an attempt's
 // `worktree_path` / `workspace` write reaches the conversations of that

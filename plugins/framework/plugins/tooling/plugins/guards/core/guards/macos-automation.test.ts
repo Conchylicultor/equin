@@ -1,14 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { createContext } from "../context";
 import type { Verdict } from "../types";
 import { macosAutomationGuard } from "./macos-automation";
 
 function verdict(command: string, cwd = "/tmp"): Verdict {
-  // Synchronous check (hasBypass stats a path); /tmp holds no
-  // `.allow-macos-automation`, so the bypass is off.
   return macosAutomationGuard.check({ command }, createContext(cwd)) as Verdict;
 }
 
@@ -73,16 +68,5 @@ describe("macos-automation guard", () => {
     ])("%s", (_label, command) => {
       expect(blocks(command)).toBe(false);
     });
-  });
-
-  test("the bypass file lets it through", () => {
-    const dir = mkdtempSync(join(tmpdir(), "macos-automation-"));
-    try {
-      expect(verdict("osascript -e 1", dir).kind).toBe("deny");
-      writeFileSync(join(dir, ".allow-macos-automation"), "");
-      expect(verdict("osascript -e 1", dir).kind).toBe("allow");
-    } finally {
-      rmSync(dir, { recursive: true });
-    }
   });
 });

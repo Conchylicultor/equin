@@ -321,6 +321,32 @@ judges it). The runner appends the "repeat it unchanged" line, and
 contradict it. Use it for a guard whose concern is cost, not correctness; it
 excludes `fatal`.
 
+## Every guard can be bypassed — one call at a time, with a reason
+
+There are no bypass files. Every hard denial (anything but an `allowOnRepeat`
+warning, which already passes on an identical repeat) ends with its call's
+**bypass id** — `<guard>#<hash>`, the `repeatKey` of the call as that guard
+judged it — and the command that uses it (`plugins/bypass`, appended by the
+runner so no guard can leave it out):
+
+```
+./equin guard bypass <guard>#<hash> --reason "<why this exact call is safe>"
+```
+
+Run as its OWN tool call (chained into anything, it is refused), it is recorded
+by the hook — only the hook knows the session and agent; the CLI verb
+(`cli/`) just re-checks the spelling — and the identical retry by the same
+agent goes through that one guard, once, with a note saying so. It is never a
+standing permission: nothing is bypassed by default, a changed call is judged
+afresh, another agent's bypass does not count, and the reason (≥ 20 chars)
+stays in the transcript for review. The denial asks the agent to use it only
+when it is SURE the call is safe, and to stop and ask the user otherwise.
+
+It replaced the `.allow-*` files (2026-11-14): a checkout-wide file that, once
+created, let every later call through until someone remembered to delete it —
+and needed the user to approve each one, though most denials audited were
+false positives (`research/2026-11-14-guards-false-positive-audit.md`).
+
 ## Measuring, not asserting
 
 `e2e/replay-transcripts.ts` runs the guards over recorded transcripts and reports
@@ -334,8 +360,9 @@ can blind or deafen all of them at once.
 
 - Description: Claude Code PreToolUse guards: safety checks that intercept tool calls before execution
 - Core:
-  - Uses: 35 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 39 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra/paths` ×5
+    - `framework/tooling/guards/bypass` ×4
     - `packages/timed-fs` ×4
     - `framework/cli/cli-name` ×3
     - `infra/host-fs/user-path` ×3
@@ -399,7 +426,7 @@ can blind or deafen all of them at once.
     - `blocking-fs/sync-named` — `core/agent-ops.ts`, `core/context.ts`, `core/git-target.ts`, `core/guards/data-root-writes.ts`, `core/guards/git-diff-main.ts`, `core/guards/poll-loop.ts`, `core/informed-once.ts`, `core/walk-scope.ts` (sanctioned)
 - Sub-plugins:
   - **`agent-policy`** — The protections every agent runs with — the guard and stop-guard hooks and the deny rules — declared once as data: `.claude/settings.json`'s protection keys are generated from it…
-  - **`bypass-tokens`** — BYPASS_TOKENS: every bypass file a guard may honour (.allow-main, …), declared as data, and the BypassToken type a guard's bypassToken must be — so a guard cannot name an undeclared file (tsc) and…
+  - **`bypass`** — The guard bypass grammar: a denied call's bypass id (<guard>#<call hash>), the `./equin guard bypass <id> --reason "…"` command that lets that one call through, and its parser — shared by the hook…
   - **`module-extension`** — MODULE_EXTENSION: the extensions bun loads as a module (.ts/.tsx/.js/.jsx and their m/c forms) — the one set the bun-script guard denies and `./equin run` accepts. A leaf with no imports, so the e2e…
   - **`refusal-format`** — The text format of a guard's denial — the did-not-run banner, then 'Why it was blocked:' and the guard's own reason — written (joinRefusal) and read back (refusalReason) in one place, so a…
   - **`tool-use-id`** — TOOL_USE_ID_RE and toolUseIdFrom(env): the tool-use id a PreToolUse guard stamps into a Bash command's environment (TOOL_USE_ID), so what the command leaves behind (an e2e recording) is filed under…

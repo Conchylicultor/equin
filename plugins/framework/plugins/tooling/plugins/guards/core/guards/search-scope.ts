@@ -24,13 +24,10 @@ function deny(walk: Walk, ctx: GuardContext): Denial | null {
   };
 }
 
-const BYPASS = ".allow-wide-search";
-
 /** Every recursive search / walk in a shell command (`rg`, `grep -r`, `fd`, `find`, `du`, …). */
 export const searchScopeGuard = defineGuard<BashInput>({
   name: "search-scope",
   matcher: "Bash",
-  bypassToken: BYPASS,
   check(input, ctx) {
     if (!input.command) return null;
     for (const call of parseShell(input.command, ctx.cwd).calls) {
@@ -47,13 +44,11 @@ export const searchScopeGuard = defineGuard<BashInput>({
 export const grepScopeGuard = defineGuard<SearchToolInput>({
   name: "search-scope-grep",
   matcher: "Grep",
-  bypassToken: BYPASS,
   check: (input, ctx) => deny(searchToolWalk("Grep", input, ctx.cwd), ctx),
 });
 
 export const globScopeGuard = defineGuard<SearchToolInput>({
   name: "search-scope-glob",
   matcher: "Glob",
-  bypassToken: BYPASS,
   check: (input, ctx) => deny(searchToolWalk("Glob", input, ctx.cwd), ctx),
 });

@@ -48,7 +48,6 @@ function findAutomation(cmd: string, depth = 0): string | undefined {
 export const macosAutomationGuard = defineGuard<BashInput>({
   name: "macos-automation",
   matcher: "Bash",
-  bypassToken: ".allow-macos-automation",
   check(input) {
     const cmd = input.command;
     if (!cmd) return null;

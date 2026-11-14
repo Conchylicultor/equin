@@ -113,7 +113,6 @@ export const backgroundOpsGuard = defineGuard<BashInput>({
   name: "background-ops",
   matcher: "Bash",
   // For the rare op that must be watched live (debugging the build itself).
-  bypassToken: ".allow-foreground-ops",
   check(input, ctx) {
     const cmd = input.command;
     if (!cmd) return null;

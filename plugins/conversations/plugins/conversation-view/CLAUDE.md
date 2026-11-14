@@ -23,7 +23,6 @@
     - `conversationPane.Actions` ← `conversations.agents`
     - `conversationPane.Actions` ← `conversations.conversation-preprompt`
     - `conversationPane.Actions` ← `conversations.conversation-progress`
-    - `conversationPane.Actions` ← `conversations.conversation-view.allow-monitor`
     - `conversationPane.Actions` ← `conversations.conversation-view.dependencies`
     - `conversationPane.Actions` ← `conversations.conversation-view.model`
     - `conversationPane.Actions` ← `conversations.conversation-view.pin`
@@ -71,8 +70,8 @@
     - `ui/tokens/density --space-xl`
     - `ui/tokens/density --space-xs`
     - `ui/tokens/type-scale --measure-reading`
-  - Imported by: 65 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `conversations` ×50
+  - Imported by: 64 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `conversations` ×49
     - `active-data` ×5
     - `tasks` ×4
     - `apps/home/tour`
@@ -83,7 +82,6 @@
     - `stats/cost`
 - Sub-plugins:
   - **`action-bar`** — Hosts the Conversation.ActionBar slot — action buttons rendered in the JSONL viewer header.
-  - **`allow-monitor`** — Flags when an agent has created a guard-bypass file (.allow-main, .allow-postgres, …) in its worktree.
   - **`artifacts`** — Conversation toolbar button listing everything the conversation made, changed or looked at. Owns the ConversationArtifacts.Kind registry each kind of artifact contributes to (its own section; its…
   - **`code`** — Meta plugin hosting code-related contributions for a conversation (edited files, viewer, etc.). Tracks edited files in the conversation's worktree via the live-state primitive: the git reads…
   - **`commits-graph`** — Toolbar chip showing commits ahead/behind main; opens a side pane with the chain of commits between merge-base and HEAD.

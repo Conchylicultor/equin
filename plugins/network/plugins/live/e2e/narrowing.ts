@@ -77,7 +77,6 @@ import { canonicalJson } from "@plugins/network/plugins/live/plugins/canonical-p
 import { pageBlocks } from "@plugins/page/plugins/editor/core";
 import { attemptWork } from "@plugins/tasks/plugins/attempt-work/core";
 import { editedFiles } from "@plugins/conversations/plugins/conversation-view/plugins/code/core";
-import { allowFiles } from "@plugins/conversations/plugins/conversation-view/plugins/allow-monitor/core";
 import {
   jsonlEvents,
   transcriptPrompts,
@@ -312,7 +311,6 @@ function convSubs(label: string, id: string, pluginChanges: boolean): Sub[] {
         { ...page0, limit: editedFiles.paged.limit },
       ),
     },
-    { label, key: allowFiles.key, params: { id } },
     ...(pluginChanges
       ? [{ label, key: PLUGIN_CHANGES_KEY, params: { conversationId: id } }]
       : []),

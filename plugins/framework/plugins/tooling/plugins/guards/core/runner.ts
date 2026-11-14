@@ -1,8 +1,20 @@
 import { loadGuards } from "./load-guards";
-import { recordInformed, repeatKey, wasInformed } from "./informed-once";
+import {
+  consumeInformed,
+  recordInformed,
+  repeatKey,
+  wasInformed,
+} from "./informed-once";
 import { createContext } from "./context";
 import { withRefusalBanner } from "./refusal";
+import { parseShell } from "./parse-shell";
 import { matchesTool, type Guard } from "./types";
+import { CLI_NAME } from "@plugins/framework/plugins/cli/plugins/cli-name/core";
+import {
+  bypassCommand,
+  isBypassCall,
+  parseBypassArgs,
+} from "@plugins/framework/plugins/tooling/plugins/guards/plugins/bypass/core";
 
 export interface HookInput {
   tool_name?: string;
@@ -78,6 +90,50 @@ export type HookOutput = Record<string, unknown>;
 export const REPEAT_TO_PROCEED =
   "This is a warning, not a hard block. If you have weighed the above and still need exactly this call, repeat it unchanged and it will run. A changed call is judged afresh.";
 
+/**
+ * Appended to every hard denial — here, so no guard can leave it out, and every
+ * guard can be bypassed the same way. Never by default: the agent asks for it
+ * per call, with a reason, after reading why it was refused.
+ */
+export function bypassToProceed(guard: string, id: string): string {
+  return `Bypass — only if you are SURE this is a false positive and this exact call is safe (never by default, never to save a step; when in doubt, stop and ask the user): run \`${bypassCommand(id)}\` as its OWN tool call, then retry this call unchanged. That lets this one call through \`${guard}\` once; your reason stays in the transcript for review. A changed call is judged afresh.`;
+}
+
+/** The informed-once record of a bypass the agent asked for. */
+const bypassRecord = (id: string): string => `bypass:${id}`;
+
+type BypassStep =
+  | { kind: "none" }
+  | { kind: "asked"; id: string }
+  | { kind: "refused"; why: string };
+
+/**
+ * A `./equin guard bypass <id> --reason …` call: recorded here, by the hook,
+ * because only the hook knows the session and agent it belongs to (the CLI
+ * verb just confirms). It must be the whole command — chained into the call it
+ * bypasses, it would be judged in the same hook run, too late.
+ */
+function bypassStep(
+  tool: string,
+  input: Readonly<Record<string, unknown>>,
+  cwd: string,
+): BypassStep {
+  if (tool !== "Bash" || typeof input.command !== "string")
+    return { kind: "none" };
+  const { calls } = parseShell(input.command, cwd);
+  const asks = calls.filter((c) => c.name === CLI_NAME && isBypassCall(c.args));
+  if (asks.length === 0) return { kind: "none" };
+  if (calls.length !== 1)
+    return {
+      kind: "refused",
+      why: `Run \`./${CLI_NAME} guard bypass …\` as its own tool call, with nothing chained before or after it, then retry the denied call unchanged in the next one.`,
+    };
+  const parsed = parseBypassArgs(asks[0]!.args);
+  if (!parsed.ok)
+    return { kind: "refused", why: `Bypass not recorded: ${parsed.why}.` };
+  return { kind: "asked", id: parsed.request.id };
+}
+
 export async function runHook(
   input: HookInput,
   options: HookOptions,
@@ -100,6 +156,24 @@ export async function runHook(
   const toolInput = (input.tool_input ?? {}) as Record<string, unknown>;
 
   const agent = ctx.agent?.id ?? "main";
+
+  const bypass = bypassStep(tool, toolInput, cwd);
+  if (bypass.kind === "refused") {
+    return {
+      hookSpecificOutput: {
+        hookEventName: "PreToolUse",
+        permissionDecision: "deny",
+        permissionDecisionReason: withRefusalBanner(
+          tool,
+          toolInput,
+          bypass.why,
+        ),
+      },
+    };
+  }
+  if (bypass.kind === "asked")
+    recordInformed(ctx.sessionId, agent, [bypassRecord(bypass.id)]);
+
   const guards = (await loadGuards()).filter(
     (g) =>
       matches(g.matcher, tool) &&
@@ -127,15 +201,24 @@ export async function runHook(
       continue;
     }
     if (verdict.kind === "deny") {
+      const key = repeatKey(guard.name, tool, cwd, current);
+      // The agent asked to bypass exactly this call: used up here, once.
+      if (consumeInformed(ctx.sessionId, agent, bypassRecord(key))) {
+        informs.push(
+          `\`${guard.name}\` was bypassed for this call, as you asked — it would otherwise have been refused.`,
+        );
+        continue;
+      }
       let message = verdict.reason;
       if (verdict.allowOnRepeat) {
         // A warning, not a wall: refused the first time so the agent reads the
         // cost, let through when it repeats the identical call deliberately.
         // Recorded on the denial itself — that IS the telling.
-        const key = repeatKey(guard.name, tool, cwd, current);
         if (wasInformed(ctx.sessionId, agent, key)) continue;
         recordInformed(ctx.sessionId, agent, [key]);
         message += `\n\n${REPEAT_TO_PROCEED}`;
+      } else {
+        message += `\n\n${bypassToProceed(guard.name, key)}`;
       }
       // Every denial leads with what did NOT happen — added here, at the one
       // exit every guard's refusal passes through, so no guard can forget it.

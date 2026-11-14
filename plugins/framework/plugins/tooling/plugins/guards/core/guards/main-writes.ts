@@ -97,7 +97,6 @@ export function writeTargets(call: ShellCall): string[] {
 export const mainWritesGuard = defineGuard<BashInput>({
   name: "main-writes",
   matcher: "Bash",
-  bypassToken: ".allow-main",
   check(input, ctx) {
     // Both boundaries come from the context, never from raw cwd — the hook
     // cwd tracks the shell's persistent `cd`, and a subdirectory cwd would both

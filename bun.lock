@@ -2025,10 +2025,6 @@
       "name": "@equin/plugin-conversations-conversation-view-action-bar",
       "version": "0.0.1",
     },
-    "plugins/conversations/plugins/conversation-view/plugins/allow-monitor": {
-      "name": "@equin/plugin-conversations-conversation-view-allow-monitor",
-      "version": "0.0.1",
-    },
     "plugins/conversations/plugins/conversation-view/plugins/artifacts": {
       "name": "@equin/plugin-conversations-conversation-view-artifacts",
       "version": "0.0.1",
@@ -4225,8 +4221,8 @@
       "name": "@equin/plugin-framework-tooling-guards-agent-policy",
       "version": "0.0.1",
     },
-    "plugins/framework/plugins/tooling/plugins/guards/plugins/bypass-tokens": {
-      "name": "@equin/plugin-framework-tooling-guards-bypass-tokens",
+    "plugins/framework/plugins/tooling/plugins/guards/plugins/bypass": {
+      "name": "@equin/plugin-framework-tooling-guards-bypass",
       "version": "0.0.1",
     },
     "plugins/framework/plugins/tooling/plugins/guards/plugins/module-extension": {
@@ -8941,8 +8937,6 @@
 
     "@equin/plugin-conversations-conversation-view-action-bar": ["@equin/plugin-conversations-conversation-view-action-bar@workspace:plugins/conversations/plugins/conversation-view/plugins/action-bar"],
 
-    "@equin/plugin-conversations-conversation-view-allow-monitor": ["@equin/plugin-conversations-conversation-view-allow-monitor@workspace:plugins/conversations/plugins/conversation-view/plugins/allow-monitor"],
-
     "@equin/plugin-conversations-conversation-view-artifacts": ["@equin/plugin-conversations-conversation-view-artifacts@workspace:plugins/conversations/plugins/conversation-view/plugins/artifacts"],
 
     "@equin/plugin-conversations-conversation-view-artifacts-page": ["@equin/plugin-conversations-conversation-view-artifacts-page@workspace:plugins/conversations/plugins/conversation-view/plugins/artifacts/plugins/page"],
@@ -10009,7 +10003,7 @@
 
     "@equin/plugin-framework-tooling-guards-agent-policy": ["@equin/plugin-framework-tooling-guards-agent-policy@workspace:plugins/framework/plugins/tooling/plugins/guards/plugins/agent-policy"],
 
-    "@equin/plugin-framework-tooling-guards-bypass-tokens": ["@equin/plugin-framework-tooling-guards-bypass-tokens@workspace:plugins/framework/plugins/tooling/plugins/guards/plugins/bypass-tokens"],
+    "@equin/plugin-framework-tooling-guards-bypass": ["@equin/plugin-framework-tooling-guards-bypass@workspace:plugins/framework/plugins/tooling/plugins/guards/plugins/bypass"],
 
     "@equin/plugin-framework-tooling-guards-module-extension": ["@equin/plugin-framework-tooling-guards-module-extension@workspace:plugins/framework/plugins/tooling/plugins/guards/plugins/module-extension"],
 
