@@ -103,8 +103,9 @@ const LITERAL_LIMIT = 256;
  * Bumped when a recorded answer may be wrong. 2: domains listed excluded files
  * (`listTreePathspec` let a leading-`**` exclude through), and a whole-tree
  * grep then recorded "no match" for a matching blob it was told to skip.
+ * 3: `gitGrepList` greps with `-I`, so a binary blob no longer matches.
  */
-const ANSWERS_VERSION = 2;
+const ANSWERS_VERSION = 3;
 
 /** Bumped when a directory or membership record's meaning changes. */
 const FOLD_VERSION = 1;

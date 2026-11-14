@@ -326,7 +326,10 @@ export async function gitGrepList(
   // `-z`: names NUL-terminated and never quoted. Without it git quotes a path
   // with a non-ASCII byte, `"` or `\` (core.quotePath), which then names no
   // file — and the grep index would record that file as not matching.
-  const args = ["git", "grep", "-l", "-z", fixed ? "-F" : "-E"];
+  // `-I`: binary files are never candidates. Every caller judges text a person
+  // or agent wrote; a binary built in the checkout (a Go binary embeds its
+  // build paths) only "matches" by accident, and its bytes are not source.
+  const args = ["git", "grep", "-l", "-z", "-I", fixed ? "-F" : "-E"];
   if (!tree) args.push("--untracked");
   args.push(grepArg);
   if (tree) args.push(tree);

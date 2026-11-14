@@ -157,3 +157,31 @@ test("gitGrepList throws on an unknown tree-ish", async () => {
     gitGrepList(root, "WebSocket", true, ["*.ts"], "0".repeat(40)),
   ).rejects.toBeInstanceOf(GitScanError);
 });
+
+// A binary that happens to contain the pattern (a Go binary embeds its build
+// paths) is never a candidate source — in the working tree or a scan tree —
+// while a text file spelling it still is, tracked or untracked.
+test("gitGrepList skips binary files and keeps text ones", async () => {
+  const bin = join(root, "built-binary");
+  const txt = join(root, "untracked_note.md");
+  writeFileSync(
+    bin,
+    Buffer.concat([
+      Buffer.from([0x7f, 0x45, 0x4c, 0x46, 0x00, 0x00]),
+      Buffer.from("/src/marker_in_binary/main.go\0"),
+    ]),
+  );
+  writeFileSync(txt, "see marker_in_binary here\n");
+  try {
+    expect(
+      await gitGrepList(root, "marker_in_binary", true, ["."], null),
+    ).toEqual(["untracked_note.md"]);
+    const tree = await computeTreeHash(root);
+    expect(
+      await gitGrepList(root, "marker_in_binary", true, ["."], tree),
+    ).toEqual(["untracked_note.md"]);
+  } finally {
+    rmSync(bin, { force: true });
+    rmSync(txt, { force: true });
+  }
+});
