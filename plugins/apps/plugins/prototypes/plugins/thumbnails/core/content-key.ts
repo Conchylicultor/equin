@@ -1,3 +1,7 @@
+// Not `fingerprint.ts`: a core file is served as its own module
+// (`…/core/fingerprint.js`), and EasyPrivacy — on by default in uBlock Origin
+// (Lite), AdGuard and Brave — blocks every URL ending `/fingerprint.js`, so the
+// demo's worker could not load this plugin's graph in those browsers.
 import { createSha256 } from "@plugins/packages/plugins/string-hash/core";
 
 /** One file of a prototype folder, as the fingerprint reads it. */
