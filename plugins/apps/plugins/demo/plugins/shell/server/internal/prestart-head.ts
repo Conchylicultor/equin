@@ -1,4 +1,5 @@
 import { DocumentHead } from "@plugins/shell/plugins/document-head/server";
+import { PAGE_SCRIPT_MODULES } from "@plugins/framework/plugins/import-map-names/core";
 import { demoApp, demoScenario } from "../../core";
 
 /**
@@ -11,7 +12,7 @@ import { demoApp, demoScenario } from "../../core";
  */
 const PRESTART_SCRIPT =
   `<script type="module" async>` +
-  `import { prestartDemoHost } from "@plugins/framework/plugins/browser-server/plugins/demo/plugins/prestart/web";` +
+  `import { prestartDemoHost } from ${JSON.stringify(PAGE_SCRIPT_MODULES.demoPrestart)};` +
   `import * as host from ${JSON.stringify(demoScenario.host.module)};` +
   `await prestartDemoHost(${JSON.stringify(demoScenario.id)}, ${JSON.stringify(demoScenario.storage)}, host);` +
   `</script>`;

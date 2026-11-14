@@ -44,3 +44,20 @@ export function isImportMapOnlySpecifier(id: string): boolean {
     id.startsWith(BROWSER_HOST_SNAPSHOT_SPECIFIER_PREFIX)
   );
 }
+
+/**
+ * Plugin barrels a page script OUTSIDE the app bundle imports by specifier — a
+ * head script the server splices before the app boots — sharing module state
+ * with the app. Every other plugin module reaches the page bundled into the
+ * build's route chunks and is named by URL, so the import map answers these
+ * specifiers only: the build makes each its own link entry, one instance with
+ * the app's (web-artifacts' `core/internal/link.ts`), and maps it.
+ *
+ * A closed list both halves read — the build, and the head script that spells
+ * its import from it (so the two cannot disagree).
+ */
+export const PAGE_SCRIPT_MODULES = {
+  /** The /demo page's head start of its browser host (`apps/demo/shell`'s prestart head). */
+  demoPrestart:
+    "@plugins/framework/plugins/browser-server/plugins/demo/plugins/prestart/web",
+} as const;

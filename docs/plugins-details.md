@@ -31559,9 +31559,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `framework/tooling/web-artifacts`
           - `plugin-meta/barrel-import`
-    - **`import-map-names`** — The bare-specifier namespaces only a page's import map answers — a browser host (`@browser-host/`), its worker entry (`@browser-host-worker/`) and its starting snapshot (`@browser-host-snapshot/`), served by web-artifacts: external to every artifact build, never an npm package, never resolved by Bun. A leaf with no imports directly under framework (not under web-artifacts, whose closure a child would carry into every composition), so source-digest's closure walk — which a server reaches a lazy `import("@browser-host/…")` through — knows them for free.
+    - **`import-map-names`** — The bare-specifier namespaces only a page's import map answers — a browser host (`@browser-host/`), its worker entry (`@browser-host-worker/`) and its starting snapshot (`@browser-host-snapshot/`), served by web-artifacts: external to every artifact build, never an npm package, never resolved by Bun. And PAGE_SCRIPT_MODULES: the plugin barrels a head script outside the app bundle imports by specifier (the demo prestart), each its own route-chunk entry mapped by the page — every other plugin module is bundled and named by URL. A leaf with no imports directly under framework (not under web-artifacts, whose closure a child would carry into every composition), so source-digest's closure walk — which a server reaches a lazy `import("@browser-host/…")` through — knows them for free.
       - Cross-plugin:
         - Imported by:
+          - `apps/demo/shell`
           - `framework/tooling/web-artifacts`
           - `packages/source-digest`
       - Core:
@@ -31572,6 +31573,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `isBrowserHostSnapshotSpecifier`
           - `isBrowserHostSpecifier`
           - `isImportMapOnlySpecifier`
+          - `PAGE_SCRIPT_MODULES`
     - **`plugin-id`** — Canonical plugin identity: the branded PluginId type and its derived path encodings.
       - Core:
         - Uses: `framework/product-name.PRODUCT_NAME`
@@ -32175,7 +32177,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/tooling/guards` (11 debt)
               - `framework/tooling/import-closure` (1 debt)
               - `framework/tooling/lint` (2 debt)
-              - `framework/tooling/web-artifacts` (21 debt)
+              - `framework/tooling/web-artifacts` (22 debt)
               - `framework/web-core` (1 debt)
               - `infra/asset-mirror/bundle` (1 debt)
               - `infra/corpus-index` (3 debt)
@@ -33436,9 +33438,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `source-read-safety/no-text-source-read` — `check/index.ts`, `check/runner-split.scan.ts` (debt)
         - **`web-artifacts`** — Per-plugin web build artifacts: content-addressed vite lib-mode builds composed via an import map
           - Core:
-            - Uses: 50 symbols — full list in [`plugins/framework/plugins/tooling/plugins/web-artifacts/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/web-artifacts/REFERENCE.md)
+            - Uses: 52 symbols — full list in [`plugins/framework/plugins/tooling/plugins/web-artifacts/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/web-artifacts/REFERENCE.md)
               - `packages/timed-fs` ×8
-              - `framework/import-map-names` ×5
+              - `framework/import-map-names` ×7
               - `framework/plugin-id` ×4
               - `framework/web-core` ×4
               - `infra/host-fs/user-path` ×4
@@ -33521,12 +33523,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/tooling/web-artifacts/prune`
           - Exemptions:
             - Exempts itself from:
-              - `boundaries/no-platform-api` — `core/hash.ts`, `core/internal/browser-hosts.ts`, `core/internal/compose.ts`, `core/internal/global-css.ts`, `core/internal/host-snapshots.ts`, `core/internal/crawl-snapshot.ts`, `core/internal/identity.ts`, `core/internal/lease.ts`, `core/internal/own-files.ts`, `core/internal/package-assets.ts`, `core/internal/pipeline.ts`, `core/internal/plan.ts`, `core/internal/precompress.ts`, `core/internal/served-dists.ts`, `core/internal/staged-verify.ts`, `core/internal/store.ts`, `core/internal/tailwind-candidates.ts`, `core/internal/vendor-cache.ts`, `core/internal/vendors.ts`, `core/internal/vite-builder.ts`, `core/internal/worker-link.ts` (debt)
+              - `boundaries/no-platform-api` — `core/hash.ts`, `core/internal/browser-hosts.ts`, `core/internal/compose.ts`, `core/internal/global-css.ts`, `core/internal/host-snapshots.ts`, `core/internal/crawl-snapshot.ts`, `core/internal/identity.ts`, `core/internal/lease.ts`, `core/internal/link.ts`, `core/internal/own-files.ts`, `core/internal/package-assets.ts`, `core/internal/pipeline.ts`, `core/internal/plan.ts`, `core/internal/precompress.ts`, `core/internal/served-dists.ts`, `core/internal/staged-verify.ts`, `core/internal/store.ts`, `core/internal/tailwind-candidates.ts`, `core/internal/vendor-cache.ts`, `core/internal/vendors.ts`, `core/internal/vite-builder.ts`, `core/internal/worker-link.ts` (debt)
               - `user-path/no-unproven-claim` — `core/internal/identity.ts`, `core/internal/plan.ts`, `core/internal/vendors.ts` (sanctioned)
               - `user-path/no-unproven-claim` — `core/internal/vendor-cache.ts` (sanctioned)
               - `user-path/no-unproven-claim` — `core/internal/global-css.ts`, `core/internal/package-assets.ts`, `core/internal/staged-verify.ts` (sanctioned)
+              - `user-path/no-unproven-claim` — `core/internal/link.ts` (sanctioned)
               - `repo-walk-safety/no-adhoc-repo-listing` — `core/internal/pipeline.ts` (sanctioned)
-              - `blocking-fs/sync-named` — `core/internal/browser-hosts.ts`, `core/internal/compose.ts`, `core/internal/global-css.ts`, `core/internal/host-snapshots.ts`, `core/internal/crawl-snapshot.ts`, `core/internal/identity.ts`, `core/internal/lease.ts`, `core/internal/package-assets.ts`, `core/internal/pipeline.ts`, `core/internal/plan.ts`, `core/internal/precompress.ts`, `core/internal/served-dists.ts`, `core/internal/staged-verify.ts`, `core/internal/store.ts`, `core/internal/vendor-cache.ts`, `core/internal/vendors.ts`, `core/internal/vite-builder.ts`, `core/internal/worker-link.ts` (sanctioned)
+              - `blocking-fs/sync-named` — `core/internal/browser-hosts.ts`, `core/internal/compose.ts`, `core/internal/global-css.ts`, `core/internal/host-snapshots.ts`, `core/internal/crawl-snapshot.ts`, `core/internal/identity.ts`, `core/internal/lease.ts`, `core/internal/link.ts`, `core/internal/package-assets.ts`, `core/internal/pipeline.ts`, `core/internal/plan.ts`, `core/internal/precompress.ts`, `core/internal/served-dists.ts`, `core/internal/staged-verify.ts`, `core/internal/store.ts`, `core/internal/vendor-cache.ts`, `core/internal/vendors.ts`, `core/internal/vite-builder.ts`, `core/internal/worker-link.ts` (sanctioned)
           - Plugins:
             - **`prune`** — The hourly web-artifacts.prune job: prunes the shared write-once web caches (artifact store, vendor sets, CSS cache, package assets) off every build's path — dist links read unlocked, only changed dists re-read under the store lock.
               - Server:

@@ -59,7 +59,8 @@ import {
   worktreeArtifacts,
 } from "@plugins/infra/plugins/paths/core";
 import { diffImportMaps } from "../core/import-map";
-import { DIST_EDGES_FILE } from "../core/internal/compose";
+import { DIST_EDGES_FILE, type DistLink } from "../core/internal/compose";
+import { DIST_LINK_FILE } from "../core/internal/link";
 import {
   computeExpectedComposition,
   deployedReads,
@@ -274,7 +275,15 @@ const mapInSync: Check = {
       };
     }
 
-    const diff = diffImportMaps(deployed, expected.imports);
+    const linkRaw = readIfExists(join(dist.dir, DIST_LINK_FILE));
+    const link = linkRaw === null ? null : (JSON.parse(linkRaw) as DistLink);
+    // The page-script entries are the link's own output: expected as the dist's
+    // link recorded them, once that link is the one the tree composes.
+    const expectedImports =
+      link !== null && link.key === expected.linkKey
+        ? { ...expected.imports, ...link.pageScripts }
+        : expected.imports;
+    const diff = diffImportMaps(deployed, expectedImports);
     const problems: string[] = [];
     if (diff.changed.length > 0) {
       problems.push(
@@ -298,11 +307,24 @@ const mapInSync: Check = {
           truncatedList(diff.extra),
       );
     }
-    const deployedEntry = extractEntryScriptSrc(html);
-    if (deployedEntry !== expected.entryUrl) {
+    // The page's modules are the link's route chunks: the dist must come from
+    // the link this tree composes, and load that link's entry chunk.
+    if (link === null) {
       problems.push(
-        `entry script: deployed ${deployedEntry ?? "<none>"}, expected ${expected.entryUrl}`,
+        `the dist carries no ${DIST_LINK_FILE}: it was composed before route chunks`,
       );
+    } else {
+      if (link.key !== expected.linkKey) {
+        problems.push(
+          `route chunks: the dist was linked from ${link.key.slice(0, 16)}, the current tree links ${expected.linkKey.slice(0, 16)}`,
+        );
+      }
+      const deployedEntry = extractEntryScriptSrc(html);
+      if (deployedEntry !== link.entryUrl) {
+        problems.push(
+          `entry script: deployed ${deployedEntry ?? "<none>"}, its link's entry is ${link.entryUrl}`,
+        );
+      }
     }
     if (problems.length > 0) {
       return {

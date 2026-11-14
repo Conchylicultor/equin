@@ -1301,3 +1301,15 @@ Not fixed here, on purpose:
   plugins by hand would remove the cluster today, and nothing would stop the next import from
   bringing it back.
 - The page-link edges (14.3 a) belong to xga2xc.
+
+## 15. R1 landed: module-granular imports served as route chunks (2026-11-14)
+
+Task `task-1794615000-vyqet0`; design, deviations and numbers in
+[R1](./2026-11-14-global-load-redesign-r1-module-imports-route-chunks.md). Page artifacts keep one
+file per module; a compose-time link resolves every named cross-plugin import to its defining
+module, loads only a web barrel's plugin definition from the registry, and bundles the page into
+route chunks (boot, per app-root set, lazy). `/about`: 611 → 104 preloaded files, 1.72 → 1.31 MB br
+(−24 %), HTML 319 → 81 KB (the import map is 7 KB). `/agents`: 1,679 → 199 files, 4.42 → 3.45 MB br.
+§12.5's precondition (route chunks before module granularity) holds: the link groups ~1,600–5,300
+boot modules into 27–88 files. §4.4's per-route sets remain R3's; the bytes left on `/about` are
+membership (R2/R3), no longer barrel grain.

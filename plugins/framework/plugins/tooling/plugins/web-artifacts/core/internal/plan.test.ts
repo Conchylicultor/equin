@@ -68,29 +68,30 @@ describe("composeMapEntries (the expected-map assembly shared with compose)", ()
     setHash: "f".repeat(64),
   };
 
-  test("targets + registry alias + vendor entries, entry artifact excluded", () => {
+  test("vendors, hosts and page scripts — no plugin artifact is mapped", () => {
     const entries = composeMapEntries({
-      targets: [
-        target({ dirName: "tasks.web.abc", specifier: "@plugins/tasks/web" }),
-        target({ dirName: "tasks.core.def", specifier: "@plugins/tasks/core" }),
-        target({ dirName: "web-core.entry.123", specifier: null }), // entry: no map entry
-      ],
-      registryDirName: "composition-web-registry.registry.999",
       vendorMeta,
-      hosts: [],
+      hosts: [
+        {
+          specifier: "@browser-host/demo",
+          dirName: "demo.browser-host.1",
+          workerSpecifier: "@browser-host-worker/demo",
+          workerUrl: "/artifacts/worker-tree.2/demo.bin/index.js",
+        },
+      ],
+      pageScripts: { "@plugins/p/web": "/artifacts/chunk.abc/index.js" },
     });
     const map = buildImportMap(entries).imports;
     expect(map).toEqual({
-      "@composition-web-registry":
-        "/artifacts/composition-web-registry.registry.999/index.js",
-      "@plugins/tasks/core": "/artifacts/tasks.core.def/index.js",
-      "@plugins/tasks/web": "/artifacts/tasks.web.abc/index.js",
+      "@browser-host/demo": "/artifacts/demo.browser-host.1/host.js",
+      "@browser-host-worker/demo": "/artifacts/worker-tree.2/demo.bin/index.js",
+      "@plugins/p/web": "/artifacts/chunk.abc/index.js",
       react: `/artifacts/set.${"f".repeat(16)}/react.js`,
       "react-dom/client": `/artifacts/set.${"f".repeat(16)}/react-dom__client.js`,
     });
   });
 
-  test("one artifact serves its co-entries from their own files", () => {
+  test("a co-entry is served under its own specifier", () => {
     const web = {
       ...target({ dirName: "tasks.web.abc", specifier: "@plugins/tasks/web" }),
       coEntries: [
@@ -101,34 +102,15 @@ describe("composeMapEntries (the expected-map assembly shared with compose)", ()
         },
       ],
     };
-    const map = buildImportMap(
-      composeMapEntries({
-        targets: [web],
-        registryDirName: "composition-web-registry.registry.999",
-        vendorMeta,
-        hosts: [],
-      }),
-    ).imports;
-    expect(map["@plugins/tasks/web"]).toBe("/artifacts/tasks.web.abc/index.js");
-    expect(map["@plugins/tasks/exhibits"]).toBe(
-      "/artifacts/tasks.web.abc/exhibits.js",
-    );
     expect(servedSpecsOf([web])).toEqual(
       new Set(["@plugins/tasks/web", "@plugins/tasks/exhibits"]),
     );
   });
 
-  test("map recompute is a pure function of targets — same input, same map", () => {
+  test("map recompute is a pure function of its inputs — same input, same map", () => {
     const make = () =>
       buildImportMap(
-        composeMapEntries({
-          targets: [
-            target({ dirName: "a.web.1", specifier: "@plugins/a/web" }),
-          ],
-          registryDirName: "composition-web-registry.registry.2",
-          vendorMeta,
-          hosts: [],
-        }),
+        composeMapEntries({ vendorMeta, hosts: [], pageScripts: {} }),
       ).imports;
     expect(make()).toEqual(make());
   });

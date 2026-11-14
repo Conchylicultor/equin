@@ -39,9 +39,15 @@ export function createInlineAudit(opts: {
   hashedRoots: string[];
   /** Absolute paths of every file the address hashed. */
   hashedFiles: readonly string[];
+  /**
+   * Module ids the build synthesizes from hashed files alone (a web barrel's
+   * plugin definition, `plugin-definition.ts`): no file of their own, so
+   * nothing outside the address can reach the bundle through them.
+   */
+  derivedIds?: readonly string[];
   kind: string;
 }): InlineAudit {
-  const hashed = new Set(opts.hashedFiles);
+  const hashed = new Set([...opts.hashedFiles, ...(opts.derivedIds ?? [])]);
   const emitted = new Set<string>();
   const plugin: VitePlugin = {
     name: "web-artifacts:inline-audit",

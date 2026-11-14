@@ -21,8 +21,8 @@ import {
 } from "./browser-hosts";
 import type { OwnSources } from "./own-files";
 import type { RepoSnapshot } from "@plugins/framework/plugins/tooling/core";
+import { linkInputsOf, linkKey } from "./link";
 import {
-  artifactUrl,
   collectVendorRequests,
   composeMapEntries,
   planFleet,
@@ -156,7 +156,12 @@ export function deployedReads(dist: {
 }
 
 export type ExpectedComposition =
-  | { kind: "computed"; imports: Record<string, string>; entryUrl: string }
+  | {
+      kind: "computed";
+      imports: Record<string, string>;
+      /** The key of the link the tree composes (`link.ts`): what the dist's chunks must come from. */
+      linkKey: string;
+    }
   | { kind: "missing-artifacts"; missing: string[] };
 
 /** The expected fleet's targets and metas, stopping at store misses. */
@@ -172,6 +177,9 @@ export async function planExpectedFleet(opts: {
   globs?: GlobPatternMemo;
 }): Promise<{
   targets: PlannedTarget[];
+  /** The page's targets (web artifacts + their barrel closure), the link's input. */
+  pageTargets: PlannedTarget[];
+  deferredPaths: ReadonlySet<string>;
   registryDirName: string;
   entryDirName: string;
   hosts: ExpectedHost[];
@@ -257,6 +265,8 @@ export async function planExpectedFleet(opts: {
 
   return {
     targets: [...pageTargets, ...hosts.flatMap((h) => [h.entry, ...h.added])],
+    pageTargets: [...plan.webTargets, ...barrelTargets.values()],
+    deferredPaths: plan.deferredPaths,
     registryDirName: plan.registryTarget.dirName,
     entryDirName: plan.entryTarget.dirName,
     hosts,
@@ -315,9 +325,10 @@ export async function computeExpectedComposition(opts: {
   if (missingSnapshots.length > 0) {
     return { kind: "missing-artifacts", missing: missingSnapshots };
   }
+  // The page-script entries name link chunks: what they are is the link's
+  // output, which the check reads off the dist once the keys agree.
   const mapEntries = composeMapEntries({
-    targets: fleet.targets,
-    registryDirName: fleet.registryDirName,
+    pageScripts: {},
     vendorMeta,
     hosts: composedHostsOf({
       hosts: fleet.hosts,
@@ -330,7 +341,17 @@ export async function computeExpectedComposition(opts: {
   return {
     kind: "computed",
     imports: buildImportMap(mapEntries).imports,
-    entryUrl: artifactUrl(fleet.entryDirName),
+    linkKey: linkKey(
+      linkInputsOf({
+        identityHash: fleet.identityHash,
+        minify: opts.minify,
+        pageTargets: fleet.pageTargets,
+        entryDirName: fleet.entryDirName,
+        registryDirName: fleet.registryDirName,
+        vendorSet: vendorMeta,
+        deferredPaths: fleet.deferredPaths,
+      }),
+    ),
   };
 }
 

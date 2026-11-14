@@ -113,8 +113,6 @@ export async function scanStagedModules(opts: {
   const linkFailures: StagedLinkFailure[] = [];
   const files = new Map<string, StagedFile>();
   const links: StagedLink[] = [];
-  /** The registry artifact's own module — the importer of every web barrel. */
-  let registryFile: string | null = null;
   const artifactsDir = joinAppPath(opts.stagingDir, "artifacts");
 
   // Real paths are resolved per DIRECTORY, never per file or per edge: a dist
@@ -204,8 +202,10 @@ export async function scanStagedModules(opts: {
       const distRel = `artifacts/${linkName}/${abs.slice(linkDir.length + 1)}`;
       const src = readFileSync(abs, "utf8");
       const [imports, exports] = esLexerParse(src, distRel);
-      if (isRegistry && dirent.name === "index.js") registryFile ??= distRel;
-      const self: StagedFile = { exports: new Set(exports.map((e) => e.n)), opaque: false };
+      const self: StagedFile = {
+        exports: new Set(exports.map((e) => e.n)),
+        opaque: false,
+      };
       const real = joinAppPath(realDirOf(appPathParent(abs))!, dirent.name);
       files.set(real, self);
       distRelOf.set(real, distRel);
@@ -280,16 +280,8 @@ export async function scanStagedModules(opts: {
     if (names.length > 0) checkNames(link.target, link.file, link.specifier, names);
   }
 
-  // The registry's web-barrel loaders are DYNAMIC (skipped above) and typed
-  // `Promise<{ default: unknown }>`, so a barrel that loses its default export
-  // is `undefined` at runtime with nothing to catch it. The map alone names
-  // every web barrel — assert the default from there.
-  for (const [spec, url] of Object.entries(opts.imports)) {
-    if (!spec.startsWith("@plugins/") || !spec.endsWith("/web")) continue;
-    const target = realOf(url);
-    if (target === null) continue; // an unresolvable URL is compose's failure
-    checkNames(target, registryFile ?? url, spec, ["default"]);
-  }
+  // The registry's web-barrel loaders are bundled into the route chunks: the
+  // link asserts each loader's module exports `default` (`link.ts`).
 
   return { failures, warnings, linkFailures, opaqueTargets: [...opaque].sort() };
 }

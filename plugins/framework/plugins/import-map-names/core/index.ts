@@ -5,4 +5,5 @@ export {
   isBrowserHostSnapshotSpecifier,
   isBrowserHostSpecifier,
   isImportMapOnlySpecifier,
+  PAGE_SCRIPT_MODULES,
 } from "./import-map-names";

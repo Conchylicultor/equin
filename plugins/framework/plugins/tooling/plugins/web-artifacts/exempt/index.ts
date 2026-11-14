@@ -12,6 +12,7 @@ export default [
       "core/internal/crawl-snapshot.ts",
       "core/internal/identity.ts",
       "core/internal/lease.ts",
+      "core/internal/link.ts",
       "core/internal/own-files.ts",
       "core/internal/package-assets.ts",
       "core/internal/pipeline.ts",
@@ -60,6 +61,13 @@ export default [
       "a relative import / url() specifier read from the checkout's own sources or its node_modules packages, resolved against the file that names it — or a path of the metafile esbuild wrote for the app's own vendor build, relative to its cwd",
   },
   {
+    rule: "user-path/no-unproven-claim",
+    paths: ["core/internal/link.ts"],
+    kind: "sanctioned",
+    reason:
+      "a module file of a page artifact or route chunk in the artifact store (`artifactStorePath`), named by the module ids the link derives from store paths and the relative imports the store's own files carry",
+  },
+  {
     rule: "repo-walk-safety/no-adhoc-repo-listing",
     paths: ["core/internal/pipeline.ts"],
     kind: "sanctioned",
@@ -76,6 +84,7 @@ export default [
       "core/internal/crawl-snapshot.ts",
       "core/internal/identity.ts",
       "core/internal/lease.ts",
+      "core/internal/link.ts",
       "core/internal/package-assets.ts",
       "core/internal/pipeline.ts",
       "core/internal/plan.ts",

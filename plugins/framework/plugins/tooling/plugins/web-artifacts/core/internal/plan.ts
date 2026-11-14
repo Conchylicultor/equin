@@ -25,10 +25,8 @@ import {
   FORCED_VENDOR_SPECS,
   isBareSpecifier,
   isBrowserUnreachableDynamic,
-  WORKER_ONLY_KINDS,
 } from "../constants";
 import { MAIN_COMPOSITION_ID } from "@plugins/infra/plugins/namespace/core";
-import { COMPOSITION_REGISTRY_SPECIFIER } from "../composition-modules";
 import { computeInputsHash, sha256Hex } from "../hash";
 import type { ImportMapEntry } from "../import-map";
 import {
@@ -40,11 +38,7 @@ import { computeBuilderIdentity, type BuilderIdentity } from "./identity";
 import { ownHashFor, type OwnSources } from "./own-files";
 import type { RepoFiles } from "@plugins/framework/plugins/tooling/core";
 import { allStaticImports, artifactDirName, type ArtifactEdges } from "./store";
-import {
-  coEntryFileName,
-  type ArtifactBuildTarget,
-  type CoEntry,
-} from "./vite-builder";
+import { type ArtifactBuildTarget, type CoEntry } from "./vite-builder";
 import {
   vendorSetDirName,
   type VendorSetMeta,
@@ -722,38 +716,27 @@ export function workerClosure(opts: {
 }
 
 /**
- * The import-map entry set of a composed fleet: one entry per target specifier
- * (the entry artifact has none), the registry alias, and one entry per vendor
- * specifier. Shared by the compose step and the map-in-sync check so the
- * expected and deployed maps cannot drift by construction.
+ * The import-map entry set of a composed fleet: what the page resolves by
+ * name rather than through the link's route chunks (`link.ts`) — each vendor
+ * specifier, and each browser host's module and worker entry. Every plugin
+ * module is bundled into a chunk that names its imports by URL, so no
+ * `@plugins/*` specifier reaches the page. Shared by the compose step and the
+ * map-in-sync check so the expected and deployed maps cannot drift by
+ * construction.
  */
 export function composeMapEntries(opts: {
-  /** web + core-closure + entry targets. */
-  targets: PlannedTarget[];
-  registryDirName: string;
   vendorMeta: VendorSetMeta;
   /** The fleet's browser hosts: the host module, and the worker entry's URL. */
   hosts: readonly ComposedHost[];
+  /**
+   * The page-script modules' entry chunks (`LinkRecord.pageScripts`): the
+   * plugin barrels a head script imports by specifier.
+   */
+  pageScripts: Readonly<Record<string, string>>;
 }): ImportMapEntry[] {
   const entries: ImportMapEntry[] = [];
-  for (const t of opts.targets) {
-    // The worker's own artifacts are reached through its link tree.
-    if (WORKER_ONLY_KINDS.has(t.kind)) continue;
-    if (t.specifier !== null)
-      entries.push({ specifier: t.specifier, url: artifactUrl(t.dirName) });
-    // One artifact, several specifiers: each co-entry is served from its own
-    // emitted file inside the host artifact (`exhibits.js` beside `index.js`).
-    for (const e of t.coEntries) {
-      entries.push({
-        specifier: e.specifier,
-        url: `/artifacts/${t.dirName}/${coEntryFileName(e)}`,
-      });
-    }
-  }
-  entries.push({
-    specifier: COMPOSITION_REGISTRY_SPECIFIER,
-    url: artifactUrl(opts.registryDirName),
-  });
+  for (const [specifier, url] of Object.entries(opts.pageScripts))
+    entries.push({ specifier, url });
   for (const host of opts.hosts) {
     entries.push({
       specifier: host.specifier,

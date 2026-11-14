@@ -1,7 +1,8 @@
 // Compose step: turn the artifact fleet into a servable dist — the inline
 // import map, index.html (preserving web-core's two inline pre-React scripts),
 // symlinks into the shared store (or real copies, under `materialize`), the
-// eager-tier modulepreload closure, and the hard-fail URL/coverage verification.
+// eager-tier modulepreload closure over the route chunks (`link.ts`), and the
+// hard-fail URL/coverage verification.
 
 import { cpSync, mkdirSync, symlinkSync, writeFileSync } from "node:fs";
 import {
@@ -31,6 +32,7 @@ import {
   GRAPH_GLOBAL,
 } from "./vite-builder";
 import type { ArtifactEdges } from "./store";
+import { DIST_LINK_FILE } from "./link";
 
 /**
  * The dist's record of the edges of every artifact it composed, by address
@@ -114,6 +116,22 @@ export interface ComposeOptions {
   appPreloadSeeds: Record<string, string[]>;
   /** Every planned artifact's edges, by address — written as {@link DIST_EDGES_FILE}. */
   edges: Record<string, ArtifactEdges>;
+  /**
+   * The link this dist's chunks came from (`link.ts`) — written as
+   * {@link DIST_LINK_FILE}, so `map-in-sync` can tell whether the tree still
+   * links to it without reading the store.
+   */
+  link: DistLink;
+}
+
+/** What {@link DIST_LINK_FILE} records. */
+export interface DistLink {
+  /** The link key (`linkKey`). */
+  key: string;
+  /** The entry chunk's URL. */
+  entryUrl: string;
+  /** The page-script specifiers' entry chunks, as the import map names them. */
+  pageScripts: Record<string, string>;
 }
 
 const MAIN_SCRIPT_TAG = '<script type="module" src="/main.tsx"></script>';
@@ -490,6 +508,10 @@ export function composeDist(opts: ComposeOptions): {
   writeFileSync(
     joinAppPath(stagingDir, DIST_EDGES_FILE),
     JSON.stringify(opts.edges),
+  );
+  writeFileSync(
+    joinAppPath(stagingDir, DIST_LINK_FILE),
+    JSON.stringify(opts.link),
   );
 
   // 7. Manifest — doubles as the marker the web-artifacts checks detect a

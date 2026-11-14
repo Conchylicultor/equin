@@ -209,32 +209,6 @@ describe("scanStagedModules (link verification: names the target must export)", 
     expect(opaqueTargets).toEqual(["artifacts/tasks.web.222/index.js"]);
   });
 
-  test("a web barrel with no `default` export fails, blamed on the registry", async () => {
-    staging = asAppPath(mkdtempSync(join(tmpdir(), "staged-verify-")));
-    artifact("composition-web-registry.registry.333", {
-      "index.js": `export const load = () => import("@plugins/tasks/web");\n`,
-    });
-    artifact("tasks.web.222", { "index.js": `export const TaskList = 1;\n` });
-    artifact("tasks.core.444", { "index.js": `export const Task = 1;\n` }); // non-web: not asserted
-
-    const { failures, linkFailures } = await scanStagedModules({
-      stagingDir: staging,
-      linkNames: staged(),
-      imports: {
-        "@plugins/tasks/web": "/artifacts/tasks.web.222/index.js",
-        "@plugins/tasks/core": "/artifacts/tasks.core.444/index.js",
-      },
-    });
-    expect(failures).toEqual([]);
-    expect(linkFailures).toEqual([
-      {
-        specifier: "@plugins/tasks/web",
-        name: "default",
-        file: "artifacts/composition-web-registry.registry.333/index.js",
-      },
-    ]);
-  });
-
   test("a fully-linked staged tree passes clean", async () => {
     staging = asAppPath(mkdtempSync(join(tmpdir(), "staged-verify-")));
     artifact("a.web.111", {

@@ -33,11 +33,12 @@ import {
 import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 import type { OrderedBabelContributions } from "@plugins/framework/plugins/web-core/core";
 import { COMPOSITION_REGISTRY_SPECIFIER } from "../composition-modules";
-import { WORKER_ASSETS_DIR } from "../constants";
+import { WORKER_ASSETS_DIR, WORKER_ONLY_KINDS } from "../constants";
 import { babelContributionsPlugin } from "./babel-transform";
 import { makeArtifactExternal } from "../externals";
 import { inlinedRootsFor } from "../own-roots";
 import { createInlineAudit } from "./inline-audit";
+import { PLUGIN_DEFINITION_ENTRY, splitWebBarrel } from "./plugin-definition";
 import { imageAssetsPlugin } from "./image-assets";
 import { hashedRootsFor } from "./own-files";
 import { artifactSourcemaps } from "./sourcemaps";
@@ -140,7 +141,9 @@ export function assertCoEntriesOffHostPath(opts: {
       );
     }
     for (const spec of opts.staticImportsByFile[file] ?? []) {
-      if (spec.startsWith("./")) queue.push(spec.slice(2));
+      // An emitted file's relative import, resolved as the browser does: by URL.
+      if (spec.startsWith("./") || spec.startsWith("../"))
+        queue.push(new URL(spec, `https://x/${file}`).pathname.slice(1));
     }
   }
 }
@@ -275,6 +278,55 @@ export function ownFolderBarrelPlugin(
 }
 
 /**
+ * A web barrel's plugin definition as its own module (`plugin-definition.ts`):
+ * the barrel is loaded with its default export replaced by a re-export of
+ * `<web>/__plugin.ts` — a module that exists only in this build, holding the
+ * barrel's imports and its default export. Its id is a path beside the barrel,
+ * so its relative imports resolve as the barrel's do and the TS transform and
+ * the Babel contributions treat it like any source module.
+ */
+export function pluginDefinitionModule(entryFile: AppPath): {
+  id: string;
+  plugin: VitePlugin;
+} {
+  const id = joinAppPath(
+    appPathParent(entryFile),
+    `${PLUGIN_DEFINITION_ENTRY}.ts`,
+  );
+  if (existsSync(id)) {
+    throw new Error(
+      `${id} exists: the name is reserved for the web barrel's plugin definition ` +
+        `the artifact builder synthesizes — rename the file.`,
+    );
+  }
+  let split: Promise<{ barrel: string; definition: string }> | null = null;
+  const splitOf = () =>
+    (split ??= splitWebBarrel({
+      source: readFileSync(entryFile, "utf8"),
+      filename: entryFile,
+      definitionSpecifier: `./${PLUGIN_DEFINITION_ENTRY}`,
+    }));
+  return {
+    id,
+    plugin: {
+      name: "web-artifacts:plugin-definition",
+      enforce: "pre",
+      resolveId(source, importer) {
+        if (source === id) return id;
+        if (importer === entryFile && source === `./${PLUGIN_DEFINITION_ENTRY}`)
+          return id;
+        return null;
+      },
+      async load(loaded) {
+        if (loaded === entryFile) return (await splitOf()).barrel;
+        if (loaded === id) return (await splitOf()).definition;
+        return null;
+      },
+    },
+  };
+}
+
+/**
  * Entry-artifact only: the global stylesheet import in `main.tsx`
  * (`…/ui-kit/web/theme/app.css`) is satisfied by the compose step's `<link>` to
  * the global Tailwind pass output — strip it to an empty module so it is
@@ -398,6 +450,27 @@ export async function assertWorkersSelfContained(opts: {
 }
 
 /**
+ * Every file an artifact build emitted, as artifact-relative POSIX paths,
+ * sorted — modules sit below the artifact root (a page artifact keeps one file
+ * per source module, `preserveModules`). The worker bundles
+ * (`WORKER_ASSETS_DIR`) are a separate realm and are not listed.
+ */
+export function listEmittedFiles(outDir: AppPath): string[] {
+  const out: string[] = [];
+  const walk = (rel: string) => {
+    const abs = rel === "" ? outDir : joinAppPath(outDir, rel);
+    for (const entry of readdirSync(abs, { withFileTypes: true })) {
+      const child = rel === "" ? entry.name : `${rel}/${entry.name}`;
+      if (entry.isDirectory()) {
+        if (child !== WORKER_ASSETS_DIR) walk(child);
+      } else out.push(child);
+    }
+  };
+  walk("");
+  return out.sort();
+}
+
+/**
  * Parse EVERY emitted module's external imports. An artifact with internal
  * dynamic imports (lazy-component) code-splits into `.mjs` chunks next to
  * `index.js` — the chunks' imports are as load-bearing as the entry's (a bare
@@ -412,7 +485,7 @@ export async function parseEmittedImports(outDir: AppPath): Promise<{
   await esLexerInit();
   const staticImportsByFile: Record<string, string[]> = {};
   const dynamicImports = new Set<string>();
-  for (const name of readdirSync(outDir).sort()) {
+  for (const name of listEmittedFiles(outDir)) {
     if (!name.endsWith(".js") && !name.endsWith(".mjs")) continue;
     const code = readFileSync(joinAppPath(outDir, name), "utf8");
     const [imports] = esLexerParse(code, name);
@@ -453,10 +526,17 @@ export async function buildArtifact(
     ...hashedRootsFor(pluginDir, target.kind),
     ...target.globRoots,
   ];
+  // A web barrel's plugin definition is its own entry (`plugin-definition.ts`),
+  // a module synthesized from the barrel beside it.
+  const definition =
+    target.kind === "web" && target.pluginPath !== null
+      ? pluginDefinitionModule(target.entryFile)
+      : null;
   const audit = createInlineAudit({
     dirName: target.dirName,
     hashedRoots,
     hashedFiles: [...target.ownFiles, ...target.globFiles],
+    derivedIds: definition === null ? [] : [definition.id],
     kind: target.kind,
   });
   // A worker (`new SharedWorker(new URL("./x.worker.ts", import.meta.url))`) is
@@ -485,29 +565,41 @@ export async function buildArtifact(
     imageAssetsPlugin(readImage),
   ];
   if (target.kind === "entry") plugins.push(stripGlobalCssPlugin());
+  if (definition !== null) plugins.push(definition.plugin);
   if (target.pluginPath) {
     plugins.push(
       ownFolderBarrelPlugin(target.pluginPath, pluginDir, target.kind),
     );
   }
 
-  const multiEntry = target.coEntries.length > 0;
-  const lib = multiEntry
-    ? {
-        entry: {
-          index: target.entryFile,
-          ...Object.fromEntries(
-            target.coEntries.map((e) => [e.folder, e.entryFile]),
-          ),
-        },
-        formats: ["es" as const],
-        fileName: (_format: string, entryName: string) => `${entryName}.js`,
-      }
-    : {
-        entry: target.entryFile,
-        formats: ["es" as const],
-        fileName: () => "index.js",
-      };
+  // A page artifact keeps one emitted file per source module
+  // (`preserveModules`): the compose-time link (`link.ts`) resolves a
+  // cross-plugin import to the module defining the name and regroups the
+  // page's modules into route chunks, so the artifact must keep the module
+  // boundaries. The barrel is `index.js` (co-entries `<folder>.js`, a web
+  // barrel's definition `__plugin.js`); every other module lands at its
+  // plugin-relative path (`web/components/x.js`). A worker-only artifact is
+  // never linked: it stays one bundle.
+  const preserveModules = !WORKER_ONLY_KINDS.has(target.kind);
+  const entries: Record<string, string> = {
+    index: target.entryFile,
+    ...Object.fromEntries(target.coEntries.map((e) => [e.folder, e.entryFile])),
+    ...(definition === null
+      ? {}
+      : { [PLUGIN_DEFINITION_ENTRY]: definition.id }),
+  };
+  const lib =
+    Object.keys(entries).length > 1 || preserveModules
+      ? {
+          entry: entries,
+          formats: ["es" as const],
+          fileName: (_format: string, entryName: string) => `${entryName}.js`,
+        }
+      : {
+          entry: target.entryFile,
+          formats: ["es" as const],
+          fileName: () => "index.js",
+        };
 
   const keepNamesOutput = ctx.minify ? { minify: KEEP_NAMES_MINIFY } : {};
   try {
@@ -538,7 +630,12 @@ export async function buildArtifact(
         reportCompressedSize: false,
         rolldownOptions: {
           external: makeArtifactExternal(target.pluginPath, target.kind),
-          output: keepNamesOutput,
+          output: {
+            ...keepNamesOutput,
+            ...(preserveModules
+              ? { preserveModules: true, preserveModulesRoot: pluginDir }
+              : {}),
+          },
         },
       },
     });
@@ -548,13 +645,17 @@ export async function buildArtifact(
     workerAudit.verify();
 
     // `chunkCssPlugin` folded every chunk's CSS into that chunk.
-    const strayCss = readdirSync(tmpDir).filter((f) => f.endsWith(".css"));
+    const strayCss = listEmittedFiles(tmpDir).filter((f) => f.endsWith(".css"));
     if (strayCss.length > 0)
       throw new Error(
         `vite build of ${target.dirName} left CSS outside its chunks: ${strayCss.join(", ")}`,
       );
 
-    for (const file of ["index.js", ...target.coEntries.map(coEntryFileName)]) {
+    for (const file of [
+      "index.js",
+      ...target.coEntries.map(coEntryFileName),
+      ...(definition === null ? [] : [`${PLUGIN_DEFINITION_ENTRY}.js`]),
+    ]) {
       if (!existsSync(joinAppPath(tmpDir, file))) {
         throw new Error(`vite build of ${target.dirName} emitted no ${file}`);
       }
@@ -575,7 +676,7 @@ export async function buildArtifact(
     // hide whatever it inlined, so fail on THIS artifact.
     const maps = await artifactSourcemaps({
       label: target.dirName,
-      files: readdirSync(tmpDir),
+      files: listEmittedFiles(tmpDir),
       read: (name) => readFileSync(joinAppPath(tmpDir, name), "utf8"),
     });
     await assertNoVendoredStateInlined({

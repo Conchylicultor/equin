@@ -102,6 +102,10 @@ export function computeBuilderIdentity(opts: {
     babelCore: packageVersion("@babel/core"),
     // Extracts every artifact's Tailwind candidates (`tailwind-candidates.ts`).
     tailwindOxide: packageVersion("@tailwindcss/oxide"),
+    // Bundle the route chunks and read every module's imports (`link.ts`);
+    // rolldown also splits a web barrel (`plugin-definition.ts`).
+    rolldown: packageVersion("rolldown"),
+    esModuleLexer: packageVersion("es-module-lexer"),
   };
   for (const pkg of INLINE_PACKAGES) {
     record[`inline:${pkg}`] = packageVersion(pkg, snapshot.root);

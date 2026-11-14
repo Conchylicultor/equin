@@ -14,16 +14,15 @@ import {
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import os from "node:os";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
-import { BUILDER_VERSION, WORKER_ONLY_KINDS } from "../constants";
 import {
-  findUnmappedDynamicWarnings,
-  type ImportMapEntry,
-} from "../import-map";
+  BUILDER_VERSION,
+  isBrowserUnreachableDynamic,
+  WORKER_ONLY_KINDS,
+} from "../constants";
+import type { ImportMapEntry } from "../import-map";
 import {
-  artifactUrl,
   collectVendorRequests,
   composeMapEntries,
-  eagerWebTargets,
   planFleet,
   planHostClosure,
   resolveBarrelClosure,
@@ -83,7 +82,7 @@ import {
   workerTreeOf,
 } from "./worker-link";
 import { composeDist } from "./compose";
-import { appRootOf } from "@plugins/apps-core/plugins/app-preload/core";
+import { ensureLink, linkInputsOf } from "./link";
 import {
   crawlSnapshotDirName,
   ensureCrawlSnapshot,
@@ -656,6 +655,34 @@ async function runPipeline(
     );
   }
 
+  // ── Stage 4c: link ──────────────────────────────────────────────────
+  // The page's modules, each cross-plugin import resolved to the module
+  // defining the name, regrouped into route chunks (`link.ts`).
+  const linked = await stage(
+    "artifacts:link",
+    "link route chunks",
+    async () => {
+      const out = await ensureLink({
+        ...linkInputsOf({
+          identityHash: plan.identity.identityHash,
+          minify: opts.minify,
+          pageTargets: [...plan.webTargets, ...buildOut.coreTargets],
+          entryDirName: plan.entryTarget.dirName,
+          registryDirName: plan.registryTarget.dirName,
+          vendorSet: vendors,
+          deferredPaths: plan.deferredPaths,
+        }),
+        pin: (paths) => lease.pin(paths),
+        log,
+      });
+      log(
+        `link: ${out.cached ? "reused" : "linked"} ${out.record.chunks.length} chunks ` +
+          `(${out.record.stats.bootChunks} boot, ${out.record.stats.modules} modules)`,
+      );
+      return out;
+    },
+  );
+
   // ── Stage 5: compose ────────────────────────────────────────────────
   const composed = await stage(
     "artifacts:compose",
@@ -665,59 +692,42 @@ async function runPipeline(
       const staticImportsByUrl: Record<string, string[]> = {};
       const emitted: Array<{ importer: string; specifiers: string[] }> = [];
 
-      // Coverage is STRICT for static imports (a miss breaks module evaluation)
-      // and for the registry's dynamic imports (its loaders are the app). Other
-      // artifacts' dynamic imports are mapped by construction too — the barrel
-      // closure follows them — EXCEPT the kinds declared browser-unreachable
-      // (BROWSER_UNREACHABLE_DYNAMIC_KINDS), which are silent by declaration.
-      // Anything else unmapped here is a pipeline bug and warns loudly.
-      const dynamicOnly: Array<{ importer: string; specifiers: string[] }> = [];
-      const registerArtifact = (
-        dirName: string,
-        strictDynamic: boolean,
-      ): void => {
+      // The page loads the route chunks (`link.ts`): every chunk's static and
+      // dynamic imports must resolve — its relative ones are chunk URLs, its
+      // bare ones vendors and hosts, through the map.
+      for (const [dirName, meta] of linked.chunkMetas) {
         links.push({
           linkName: dirName,
           storePath: artifactStorePath(dirName),
         });
-        const meta = buildOut.metas.get(dirName)!;
-        // Per emitted file (index.js + code-split .mjs chunks): the preload BFS
-        // must walk real static edges, so a lazy chunk's deps stay unpreloaded.
-        for (const [file, imports] of Object.entries(
-          meta.staticImportsByFile,
-        )) {
-          staticImportsByUrl[`/artifacts/${dirName}/${file}`] = imports;
-        }
-        const statics = allStaticImports(meta);
+        staticImportsByUrl[`/artifacts/${dirName}/index.js`] =
+          meta.staticImportsByFile["index.js"] ?? [];
         emitted.push({
           importer: dirName,
-          specifiers: strictDynamic
-            ? [...statics, ...meta.dynamicImports]
-            : statics,
+          specifiers: [
+            ...allStaticImports(meta),
+            // A leaf folder's loader is never invoked in the browser and
+            // never mapped (`BROWSER_UNREACHABLE_DYNAMIC_KINDS`).
+            ...meta.dynamicImports.filter(
+              (s) => !isBrowserUnreachableDynamic(s),
+            ),
+          ],
         });
-        if (!strictDynamic && meta.dynamicImports.length > 0) {
-          dynamicOnly.push({
-            importer: dirName,
-            specifiers: meta.dynamicImports,
-          });
-        }
-      };
-
-      // Every target the page's map names: the page fleet, and the `core`
-      // barrels only a browser host's worker reaches (mapped like any core).
-      for (const t of allTargets) {
-        if (!WORKER_ONLY_KINDS.has(t.kind)) registerArtifact(t.dirName, false);
       }
-      registerArtifact(plan.registryTarget.dirName, true);
+      // Artifacts whose files a chunk addresses by URL (images, workers).
+      for (const dirName of linked.record.assetDirs) {
+        links.push({
+          linkName: dirName,
+          storePath: artifactStorePath(dirName),
+        });
+      }
 
-      // Map entries: one per target specifier + the registry alias + one per
-      // vendor specifier — assembled by the same helper the map-in-sync check
-      // recomputes with, so the two cannot drift.
+      // Map entries: vendors and hosts — assembled by the same helper the
+      // map-in-sync check recomputes with, so the two cannot drift.
       const mapEntries: ImportMapEntry[] = composeMapEntries({
-        targets: allTargets,
-        registryDirName: plan.registryTarget.dirName,
         vendorMeta: vendors,
         hosts: composedHosts,
+        pageScripts: linked.record.pageScripts,
       });
       for (const host of hosts) {
         links.push({
@@ -732,10 +742,10 @@ async function runPipeline(
         });
         // Each linked copy at the top level too: the served-root form every
         // pruner reads (a tree's own links are not followed by older ones).
-        for (const linked of workerTree.linked) {
+        for (const l of workerTree.linked) {
           links.push({
-            linkName: linked,
-            storePath: artifactStorePath(linked),
+            linkName: l,
+            storePath: artifactStorePath(l),
           });
         }
       }
@@ -750,26 +760,11 @@ async function runPipeline(
         staticImportsByUrl[`/artifacts/${vendorLink}/${file}`] = imports;
       }
 
-      const entryUrl = artifactUrl(plan.entryTarget.dirName);
-      const eagerSeeds = eagerWebTargets(
-        plan.webTargets,
-        plan.deferredPaths,
-      ).map((t) => artifactUrl(t.dirName));
-      const preloadSeeds = [
-        entryUrl,
-        artifactUrl(plan.registryTarget.dirName),
-        ...eagerSeeds,
-      ];
-      // The boot's priority batch per app: every deferred plugin under the
-      // app's root (the same partition web-core's App.tsx loads by).
-      const appPreloadSeeds: Record<string, string[]> = {};
-      for (const t of plan.webTargets) {
-        if (t.pluginPath === null || !plan.deferredPaths.has(t.pluginPath))
-          continue;
-        const root = appRootOf(t.pluginPath);
-        if (root === null) continue;
-        (appPreloadSeeds[root] ??= []).push(artifactUrl(t.dirName));
-      }
+      const entryUrl = linked.record.entryUrl;
+      const preloadSeeds = linked.record.bootSeeds;
+      // The boot's priority batch per app: the chunks of every deferred plugin
+      // under the app's root (the same partition web-core's App.tsx loads by).
+      const appPreloadSeeds = linked.record.appSeeds;
 
       if (crawl !== null) {
         links.push({
@@ -797,6 +792,11 @@ async function runPipeline(
         entryUrl,
         preloadSeeds,
         appPreloadSeeds,
+        link: {
+          key: linked.record.key,
+          entryUrl,
+          pageScripts: linked.record.pageScripts,
+        },
         edges: Object.fromEntries(
           [...buildOut.metas].map(([dirName, meta]) => [
             dirName,
@@ -819,16 +819,6 @@ async function runPipeline(
           .filter((d) => d.isFile())
           .map((d) => joinAppPath(opts.stagingDir, d.name)),
       );
-      const unmappedDynamic = findUnmappedDynamicWarnings(
-        dynamicOnly,
-        importMap,
-      );
-      for (const u of unmappedDynamic) {
-        log(
-          `warning: dynamic import "${u.specifier}" (from ${u.importer}) has no import-map entry — ` +
-            `it will fail if ever invoked in the browser`,
-        );
-      }
 
       // Ground truth: re-scan the STAGED module files themselves (through the
       // store symlinks) — independent of the builders' meta.json, so a scanner
@@ -839,7 +829,11 @@ async function runPipeline(
       const groundTruth = await scanStagedModules({
         stagingDir: opts.stagingDir,
         imports: importMap.imports,
-        linkNames: links.map((l) => l.linkName),
+        // An asset dir is linked for its files, not its modules: those
+        // reach the page bundled into the chunks scanned here.
+        linkNames: links
+          .map((l) => l.linkName)
+          .filter((n) => !linked.record.assetDirs.includes(n)),
       });
       for (const w of groundTruth.warnings) {
         log(

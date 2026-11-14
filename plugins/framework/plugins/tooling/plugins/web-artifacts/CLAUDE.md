@@ -4,8 +4,9 @@ Per-plugin web build artifacts: each plugin's `web/` barrel (with its
 `exhibits/` as a second entry, when it has one) and every imported
 folder barrel — `core`, `prewarm`, … — builds into an independent,
 content-addressed vite lib-mode artifact under `~/.equin/cache/web-artifacts/`;
-the compose step assembles `dist/` (inline import map + entry + preloads +
-links into the store). This is the ONLY frontend build — the monolithic vite
+the link step (`core/internal/link.ts`) regroups the page's modules into a
+few route chunks, and the compose step assembles `dist/` (inline import map
+of vendors and hosts + the entry chunk + preloads + links into the store). This is the ONLY frontend build — the monolithic vite
 build it replaced is gone (`web-core/vite.config.ts`, `--monolith`,
 its environment switch), so every dist producer runs this pipeline:
 `./equin build` (once per target namespace) and `./equin build
@@ -34,6 +35,60 @@ Key invariants:
   the fleet plans and maps them like `webEntries`, and the plan's
   `deferredPaths` holds them, so they never join the boot's modulepreload
   closure — the scope loads them when the visitor asks.
+- **A page artifact keeps its module boundaries; the page loads route chunks.**
+  Every page-loaded kind (all but `WORKER_ONLY_KINDS`) builds with
+  `preserveModules` (one emitted file per source module, at its
+  plugin-relative path; the barrel stays `index.js`). A web barrel also emits
+  its **plugin definition**, `__plugin.js` (`plugin-definition.ts`): the barrel
+  minus its re-exports — every import, side-effect imports included, and the
+  `export default` — which the barrel re-exports `default` from (one object).
+  The **link** (`link.ts`, stage `artifacts:link`) then reads the composed
+  fleet together:
+  - **Elision.** A named import of a barrel is rewritten to import from the
+    module defining the name (re-export hops followed; the lexer resolves
+    import-then-export too), so `import { cn } from "…/ui-kit/web"` loads
+    `cn`'s module and what it needs, never the barrel's other re-exports. The
+    registry's `import("@plugins/<p>/web")` (it reads only `.default`) loads
+    `__plugin.js`. A namespace import, `export *` or any other dynamic import
+    keeps the whole barrel.
+  - **Evaluation semantics change with it, deliberately**: a module only
+    re-exported is evaluated once something imports a binding from it. A
+    barrel's side-effect imports stay in its definition. A module declaring a
+    boot-preloaded descriptor (`preload: "boot…"`) is a boot root of its own —
+    the boot snapshot hydrates by key before anything may have imported it.
+  - **Membership** over the elided graph: `boot` = the static closure of the
+    entry, the registry, the eager plugins' definitions and those descriptor
+    modules; each app root's set = its deferred plugins' definitions' closure
+    outside boot, grouped by the SET of app roots reaching it (a module two
+    apps share is in neither app's group). rolldown bundles them as
+    code-splitting groups split at ~400 KB raw (a few files a route on the
+    six-socket HTTP/1.1 gateway); lazy code keeps rolldown's own chunking.
+    Vendors and `@browser-host*` stay external. Two rolldown settings are
+    load-bearing: `strictExecutionOrder` (a size cut makes chunk cycles, and a
+    chunk would otherwise run before its dependencies' bodies) and
+    `includeDependenciesRecursively: false` (the groups are dependency-closed
+    by construction; capturing deps let one app's group take another's
+    helpers, and `/about` loaded the page editor). Each `link.<key>` record
+    carries `modules.json` (module → group, chunk): why a module is on a route.
+  - **Content-addressing holds at both levels**: an artifact's bytes still
+    name other plugins by barrel specifier (its address knows nothing of
+    theirs); each chunk is its own store entry `chunk.<hash>` (`index.js`, an
+    unchanged chunk keeps its URL across builds); the result is a `link.<key>`
+    record keyed by every input address, the vendor set, the tier split and
+    the builder identity — an unchanged fleet reuses it without bundling.
+  - **The import map holds only what stays external**: vendors, browser hosts,
+    and `PAGE_SCRIPT_MODULES` (`framework/import-map-names`: barrels a head
+    script imports by specifier, e.g. the demo prestart — each its own link
+    entry, one instance with the app's). No `@plugins/*` specifier is mapped
+    otherwise, so a head script importing any other barrel would 404: add it
+    to that list.
+  - `new URL("<rel>", import.meta.url)` (images, workers) is rewritten to the
+    file's absolute `/artifacts/<dir>/…` URL and the dir is linked for its
+    files (`LinkRecord.assetDirs`, never scanned as modules); any other
+    relative `import.meta` use fails the link.
+  - `map-in-sync` compares the dist's `.web-link.json` key with the key the
+    tree plans (`linkInputsOf`, shared with the pipeline) — never the store.
+  Plan and numbers: `research/2026-11-14-global-load-redesign-r1-module-imports-route-chunks.md`.
 - **Stale artifacts compile where the caller says, never all on one thread.**
   The pipeline builds through an `ArtifactBuilder`
   (`core/internal/artifact-builder.ts`). A request is plain data
@@ -158,8 +213,10 @@ Key invariants:
   bytes; an import the graph cannot resolve fails planning. `assertWorkersSelfContained`
   hard-fails on any import left in a worker chunk (no dynamic `import()` in a
   worker). Worker chunks never join the import map or the preload closure
-  (`parseEmittedImports` reads the top level only); `scanStagedModules` still
-  re-lexes them. Being inside the artifact's content-addressed dir, a worker's
+  (`parseEmittedImports` reads the top level only); `scanStagedModules` does
+  not re-lex them: a page worker's artifact is linked only for its files
+  (`LinkRecord.assetDirs`), so `assertWorkersSelfContained` at build is their
+  gate. Being inside the artifact's content-addressed dir, a worker's
   URL changes exactly when the code it bundles does — so a SharedWorker
   instance is per worker version by construction. What a page worker cannot do
   is load a module the page names at run time (another plugin's contribution):
@@ -507,9 +564,9 @@ Key invariants:
 
 - Description: Per-plugin web build artifacts: content-addressed vite lib-mode builds composed via an import map
 - Core:
-  - Uses: 50 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 52 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `packages/timed-fs` ×8
-    - `framework/import-map-names` ×5
+    - `framework/import-map-names` ×7
     - `framework/plugin-id` ×4
     - `framework/web-core` ×4
     - `infra/host-fs/user-path` ×4
@@ -592,12 +649,13 @@ Key invariants:
     - `framework/tooling/web-artifacts/prune`
 - Exemptions:
   - Exempts itself from:
-    - `boundaries/no-platform-api` — `core/hash.ts`, `core/internal/browser-hosts.ts`, `core/internal/compose.ts`, `core/internal/global-css.ts`, `core/internal/host-snapshots.ts`, `core/internal/crawl-snapshot.ts`, `core/internal/identity.ts`, `core/internal/lease.ts`, `core/internal/own-files.ts`, `core/internal/package-assets.ts`, `core/internal/pipeline.ts`, `core/internal/plan.ts`, `core/internal/precompress.ts`, `core/internal/served-dists.ts`, `core/internal/staged-verify.ts`, `core/internal/store.ts`, `core/internal/tailwind-candidates.ts`, `core/internal/vendor-cache.ts`, `core/internal/vendors.ts`, `core/internal/vite-builder.ts`, `core/internal/worker-link.ts` (debt)
+    - `boundaries/no-platform-api` — `core/hash.ts`, `core/internal/browser-hosts.ts`, `core/internal/compose.ts`, `core/internal/global-css.ts`, `core/internal/host-snapshots.ts`, `core/internal/crawl-snapshot.ts`, `core/internal/identity.ts`, `core/internal/lease.ts`, `core/internal/link.ts`, `core/internal/own-files.ts`, `core/internal/package-assets.ts`, `core/internal/pipeline.ts`, `core/internal/plan.ts`, `core/internal/precompress.ts`, `core/internal/served-dists.ts`, `core/internal/staged-verify.ts`, `core/internal/store.ts`, `core/internal/tailwind-candidates.ts`, `core/internal/vendor-cache.ts`, `core/internal/vendors.ts`, `core/internal/vite-builder.ts`, `core/internal/worker-link.ts` (debt)
     - `user-path/no-unproven-claim` — `core/internal/identity.ts`, `core/internal/plan.ts`, `core/internal/vendors.ts` (sanctioned)
     - `user-path/no-unproven-claim` — `core/internal/vendor-cache.ts` (sanctioned)
     - `user-path/no-unproven-claim` — `core/internal/global-css.ts`, `core/internal/package-assets.ts`, `core/internal/staged-verify.ts` (sanctioned)
+    - `user-path/no-unproven-claim` — `core/internal/link.ts` (sanctioned)
     - `repo-walk-safety/no-adhoc-repo-listing` — `core/internal/pipeline.ts` (sanctioned)
-    - `blocking-fs/sync-named` — `core/internal/browser-hosts.ts`, `core/internal/compose.ts`, `core/internal/global-css.ts`, `core/internal/host-snapshots.ts`, `core/internal/crawl-snapshot.ts`, `core/internal/identity.ts`, `core/internal/lease.ts`, `core/internal/package-assets.ts`, `core/internal/pipeline.ts`, `core/internal/plan.ts`, `core/internal/precompress.ts`, `core/internal/served-dists.ts`, `core/internal/staged-verify.ts`, `core/internal/store.ts`, `core/internal/vendor-cache.ts`, `core/internal/vendors.ts`, `core/internal/vite-builder.ts`, `core/internal/worker-link.ts` (sanctioned)
+    - `blocking-fs/sync-named` — `core/internal/browser-hosts.ts`, `core/internal/compose.ts`, `core/internal/global-css.ts`, `core/internal/host-snapshots.ts`, `core/internal/crawl-snapshot.ts`, `core/internal/identity.ts`, `core/internal/lease.ts`, `core/internal/link.ts`, `core/internal/package-assets.ts`, `core/internal/pipeline.ts`, `core/internal/plan.ts`, `core/internal/precompress.ts`, `core/internal/served-dists.ts`, `core/internal/staged-verify.ts`, `core/internal/store.ts`, `core/internal/vendor-cache.ts`, `core/internal/vendors.ts`, `core/internal/vite-builder.ts`, `core/internal/worker-link.ts` (sanctioned)
 - Sub-plugins:
   - **`prune`** — The hourly web-artifacts.prune job: prunes the shared write-once web caches (artifact store, vendor sets, CSS cache, package assets) off every build's path — dist links read unlocked, only changed…
 
