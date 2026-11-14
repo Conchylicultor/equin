@@ -2,7 +2,10 @@ import {
   ControlSizeProvider,
   cn,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { insetClass } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import {
+  Stack,
+  insetClass,
+} from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Rigid } from "@plugins/primitives/plugins/css/plugins/rigid/web";
@@ -65,9 +68,18 @@ export function ComposerField({
                 every glyph on it — a pill's, an icon button's — sits dimmed
                 beside the labels, so one control cannot read brighter than
                 its neighbours because it happens to be a different widget. */}
-            <Line
+          {/* A wrapping row: on a narrow screen (a phone's sheet) the
+                trailing group drops to its own line, still flush right,
+                rather than running off the edge with the submit button. Where
+                everything fits it is one line, as before. */}
+          <Stack
+            direction="row"
+            wrap
+            gap="xs"
+            align="center"
+            justify="end"
               className={cn(
-                "gap-xs [&_svg]:opacity-70",
+              "[&_svg]:opacity-70",
                 insetClass({ x: "xs", y: "xs" }),
               )}
             >
@@ -80,8 +92,8 @@ export function ComposerField({
                     right, in its own track rather than floating over the
                     leading half. */}
               <Fill />
-              {barEnd}
-          </Line>
+            <Line className="gap-xs">{barEnd}</Line>
+          </Stack>
         </ControlSizeProvider>
       }
     />

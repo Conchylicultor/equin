@@ -221,9 +221,9 @@ the code:
   - Uses tokens:
     - `ui/tokens/sidebar-palette --sidebar`
     - `ui/tokens/sidebar-palette --sidebar-accent`
-  - Imported by: 31 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 32 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×10
-    - `apps-core` ×7
+    - `apps-core` ×8
     - `primitives` ×3
     - `hints` ×2
     - `shell` ×2

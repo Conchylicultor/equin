@@ -53,29 +53,31 @@ never draw their own header (the shell places it; see
 
 ## Plugin reference
 
-- Description: The app brand every app shell draws (AppShell.Brand): the launcher — the current app's own mark — click for the composition's home app (the app gallery on main), hover or ArrowDown for a grid of every other installed app (switching exactly as the rail does) — plus, as the sidebar header, the current app's name linking to its own home. Where no app switcher frames the surface — solo (fullscreen), or an AppEmbed, which draws no rail or tab bar — a surface that draws no brand gets the launcher floating at the top-left of its box, revealed as the pointer nears that corner.
+- Description: The app brand every app shell draws (AppShell.Brand): the launcher — the current app's own mark — click for the composition's home app (the app gallery on main), hover or ArrowDown for a grid of every other installed app (switching exactly as the rail does) — plus, as the sidebar header, the current app's name linking to its own home. Where no app switcher frames the surface — solo (fullscreen), or an AppEmbed, which draws no rail or tab bar — a surface that draws no brand gets the launcher floating at the top-left of its box, revealed as the pointer nears that corner. On a phone neither the top-left launcher nor the floating one is drawn: the phone action button's Apps sheet (PhoneActions.Action 'apps') is the app grid there.
 - Web:
   - Slots: `AppLauncherSlots.ReturnTip`
   - Slot contributors: `AppLauncherSlots.ReturnTip` ← `apps.desktop.windows`
   - Contributes:
     - `AppShell.Brand` "Brand" → `AppBrand`
     - `Apps.Overlay` "Overlay" → `FloatingAppLauncher`
+    - `PhoneActions.Action` "Apps" → `AppsSheet`
     - `FieldPresentation.Register` "collection:apps.installed-app"
     - `Fields.Identity` "app-icon"
     - `Hints.Hint` "app-launcher.switch-apps"
-  - Uses: 46 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 48 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps-core/tabs` ×6
     - `apps-core` ×6
     - `hints` ×3
     - `network/live/live-state` ×3
+    - `primitives/css/ui-kit` ×3
     - `primitives/data-view` ×3
     - `apps-core/app-icon` ×2
     - `audience/developer-mark` ×2
     - `primitives/app-shell` ×2
     - `primitives/css/fill` ×2
     - `primitives/css/theme-boundary` ×2
-    - `primitives/css/ui-kit` ×2
     - `apps-core/chrome-theme.chromeThemeScope`
+    - `apps-core/phone-actions.PhoneActions`
     - `fields.Fields`
     - `network/live.FieldPresentation`
     - `primitives/avatar.useAvatarPresentation`

@@ -21,6 +21,7 @@ export interface ReorderableSlot {
 export const reorderableSlots: ReorderableSlot[] = [
   { slotId: "active-data.plugin-link.plugin-conv-side.actions", pluginId: "active-data.plugin-link", configName: "plugin-conv-side.actions" },
   { slotId: "apps-core.app", pluginId: "apps-core", configName: "app" },
+  { slotId: "apps-core.phone-actions.action", pluginId: "apps-core.phone-actions", configName: "action" },
   { slotId: "apps-core.surface.placement", pluginId: "apps-core.surface", configName: "placement" },
   { slotId: "apps-core.tab-bar-actions", pluginId: "apps-core", configName: "tab-bar-actions" },
   { slotId: "apps.agent-manager.welcome.welcome.actions", pluginId: "apps.agent-manager.welcome", configName: "welcome.actions" },

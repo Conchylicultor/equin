@@ -596,6 +596,7 @@ yes/no guard: `useConfirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `useControlSize`
     - `useHoldPopoverOpen`
     - `useInSidebarPanel`
+    - `useIsMobile`
     - `useMenuSurface`
     - `usePinOnClick`
     - `usePortalForward`
@@ -622,7 +623,7 @@ yes/no guard: `useConfirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `ui/tokens/chart` ×5
     - `ui/tokens/font-family` ×4
     - `ui/tokens/scrollbar --scrollbar-color`
-  - Imported by: 470 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 471 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives` ×112
     - `apps` ×110
     - `conversations` ×54
@@ -631,7 +632,7 @@ yes/no guard: `useConfirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `ui` ×23
     - `tasks` ×19
     - `fields` ×12
-    - `apps-core` ×10
+    - `apps-core` ×11
     - `plugin-meta` ×10
     - `infra` ×7
     - `build` ×5

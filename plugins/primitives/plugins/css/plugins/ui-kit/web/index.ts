@@ -170,6 +170,7 @@ export {
   type TooltipSide,
 } from "./components/ui/tooltip";
 export { usePinOnClick } from "./components/ui/use-pin-on-click";
+export { useIsMobile } from "./hooks/use-mobile";
 
 export default {
   description:

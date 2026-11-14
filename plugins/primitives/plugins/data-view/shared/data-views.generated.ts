@@ -20,6 +20,7 @@ export const dataViews: DataViewEntry[] = [
   { id: "agents-list", pluginId: "conversations.agents" },
   { id: "all-conversations", pluginId: "conversations.all-conversations" },
   { id: "apps-core.launcher", pluginId: "apps-core.app-launcher" },
+  { id: "apps-core.phone-apps", pluginId: "apps-core.app-launcher" },
   { id: "auth.accounts", pluginId: "auth" },
   { id: "build.run-log-steps", pluginId: "build.build-logs" },
   { id: "build.run-logs", pluginId: "build.build-logs" },

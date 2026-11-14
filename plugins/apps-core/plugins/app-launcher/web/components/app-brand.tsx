@@ -7,6 +7,7 @@ import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { fillClasses } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import type { AppShellBrandForm } from "@plugins/primitives/plugins/app-shell/web";
+import { useIsMobile } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { AppLauncher } from "./app-launcher";
 
 /**
@@ -21,6 +22,10 @@ export function AppBrand({ form }: { form: AppShellBrandForm }) {
   const active = useActiveApp();
   const store = usePaneStore();
   const go = useNavigate();
+  const isMobile = useIsMobile();
+  // On a phone the phone action button's Apps sheet switches apps, so a
+  // sidebar-less app's top chrome keeps its leading edge for its own title.
+  if (form === "icon" && isMobile) return null;
   if (form === "icon" || !active) return <AppLauncher form={form} tip />;
   const home = active.app.basePath;
   return (

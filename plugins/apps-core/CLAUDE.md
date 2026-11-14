@@ -123,9 +123,9 @@ so ⌘/middle-click opens a desktop in a new browser tab.
     - `Apps.TabBar`
     - `Apps.TabBarActions`
     - `Apps.Overlay`
-  - Slot contributors: 28 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+  - Slot contributors: 29 contributors — full list in [REFERENCE.md](./REFERENCE.md)
     - `Apps.App` ×23
-    - `Apps.Overlay` ← `apps-core.app-launcher`
+    - `Apps.Overlay` ×2
     - `Apps.RailFraming` ← `apps-core.app-rail-framing`
     - `Apps.Surface` ← `apps-core.surface`
     - `Apps.TabBarActions` ← `shell.global-action-bar`
@@ -182,9 +182,9 @@ so ⌘/middle-click opens a desktop in a new browser tab.
     - `APP_RAIL_WIDTH`
     - `documentTitle`
 - Cross-plugin:
-  - Imported by: 64 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 65 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×31
-    - `apps-core` ×15
+    - `apps-core` ×16
     - `ui` ×6
     - `companions` ×3
     - `config_v2` ×2
@@ -216,6 +216,7 @@ so ⌘/middle-click opens a desktop in a new browser tab.
   - **`chrome-theme`** — The app chrome's fixed theme (graphite): the rail, tab bar, action bar and toasts wear it whichever app is focused, so the frame stays the same while the app inside changes.
   - **`layout`** — Apps layout: the Core.Root composition wiring the tab bar, rail framing, and surface together, with the default-app redirect and document-title sync.
   - **`pane-morph`** — The pane → app morph: a pane's cross-app Expand ("Open in <App>") runs as a view transition in which the pane grows from its box into the leaf pane of the app that replaces this one — the old app…
+  - **`phone-actions`** — The phone action button: on a phone (below 768px), a floating button the thumb can reach — dragged anywhere, snapping to the nearer side edge, its place remembered and kept on screen as the window…
   - **`surface`** — Generic surface dispatcher: renders every open tab at once under the ONE surface mode (docked / windows / solo) selected from the Surface.Placement registry, so the modes are mutually exclusive.…
   - **`tab-bar`** — App tab bar: the top tab strip with per-tab titles, overflow collapse, drag reorder/tear-off, and the new-tab/new-window + button.
   - **`tab-origin`** — Which browser tab raised something, in words: useTabOrigin(stamp) reads a stamped tab id and page URL as this tab, or another one — the app its page belongs to (the menu-bar panel included) and…

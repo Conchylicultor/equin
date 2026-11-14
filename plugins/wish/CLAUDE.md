@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: The Wish toolbar button: the entry point for anything the user wants done — a fix, a change, a new app. Files a task under "Wishes" with the current URL. Companion actions join it as segments of one split pill via WishSlots.Segment; WishSlots.HeaderAction adds actions to its popover header (Ask equin). WishField is the same wish as a companion’s section — the task composer with its own ↑, filing one task under Wishes about the page the DraftPage around it names, confirming inline (“Filed — an agent is on …”). Task category of the Wish toolbar button. Files tasks stamped "Wishes" via the shared task-draft-form primitive.
+- Description: The Wish toolbar button: the entry point for anything the user wants done — a fix, a change, a new app. Files a task under "Wishes" with the current URL. Companion actions join it as segments of one split pill via WishSlots.Segment; WishSlots.HeaderAction adds actions to its popover header (Ask equin). WishField is the same wish as a companion’s section — the task composer with its own ↑, filing one task under Wishes about the page the DraftPage around it names, confirming inline (“Filed — an agent is on …”). On a phone the same field is the Wish sheet of the phone action button (PhoneActions.Action “wish”). Task category of the Wish toolbar button. Files tasks stamped "Wishes" via the shared task-draft-form primitive.
 - Web:
   - Slots:
     - `WishSlots.Segment`
@@ -12,14 +12,17 @@
   - Slot contributors:
     - `WishSlots.Segment` ← `wish.element-picker`
     - `WishSlots.HeaderAction` ← `hints.ask`
-  - Contributes: `ActionBar.Item` → `WishButton`
-  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Contributes:
+    - `ActionBar.Item` → `WishButton`
+    - `PhoneActions.Action` "Wish" → `WishSheet`
+  - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `tasks/task-draft-form` ×8
     - `primitives/css/ui-kit` ×3
     - `hints` ×2
     - `primitives/css/spacing` ×2
     - `primitives/persistent-draft` ×2
     - `tasks/launch-options` ×2
+    - `apps-core/phone-actions.PhoneActions`
     - `infra/endpoints.useFetchEndpoint`
     - `primitives/css/text.Text`
     - `primitives/dom/web-storage.defineStore`

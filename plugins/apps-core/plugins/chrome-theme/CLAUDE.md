@@ -103,6 +103,7 @@ layout, graphite tone, underline tabs).
   - Imported by:
     - `apps-core/app-launcher`
     - `apps-core/app-rail`
+    - `apps-core/phone-actions`
     - `apps-core/tab-bar`
     - `hints/ask`
     - `plugin-meta/exhibits`

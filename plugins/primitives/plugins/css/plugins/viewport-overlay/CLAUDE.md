@@ -192,6 +192,7 @@ looks equivalent and silently discards the caller's.
     - `ViewportOverlay`
 - Cross-plugin:
   - Imported by:
+    - `apps-core/phone-actions`
     - `apps-core/surface`
     - `apps/prototypes/present`
     - `apps/sonata/audio/metronome`

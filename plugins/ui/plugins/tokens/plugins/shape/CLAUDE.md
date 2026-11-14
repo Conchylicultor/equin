@@ -38,7 +38,7 @@
   - Uses tokens:
     - `ui/tokens/density --radius-chip-compact`
     - `ui/tokens/density --space-sm`
-  - Tokens used by: 413 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Tokens used by: 414 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations` ×96
     - `apps` ×82
     - `primitives` ×61
@@ -50,8 +50,8 @@
     - `fields` ×8
     - `infra` ×6
     - `reorder` ×6
+    - `apps-core` ×5
     - `companions` ×5
-    - `apps-core` ×4
     - `review` ×4
     - `shell` ×4
     - `build` ×3

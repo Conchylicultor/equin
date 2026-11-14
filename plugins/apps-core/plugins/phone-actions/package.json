@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-apps-core-phone-actions",
+  "description": "The phone action button: a draggable floating button, phone only, opening the PhoneActions.Action sub-actions (Apps, Wish) as labelled bubbles, each opening its sheet from the bottom.",
+  "private": true,
+  "version": "0.0.1"
+}

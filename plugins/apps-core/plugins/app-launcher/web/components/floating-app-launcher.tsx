@@ -8,7 +8,10 @@ import { chromeThemeScope } from "@plugins/apps-core/plugins/chrome-theme/web";
 import { useBrandDrawnOn } from "@plugins/primitives/plugins/app-shell/web";
 import { isChromelessDocument } from "@plugins/primitives/plugins/embed/web";
 import { Theme } from "@plugins/primitives/plugins/css/plugins/theme-boundary/web";
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  cn,
+  useIsMobile,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { AppLauncher } from "./app-launcher";
 
 /** How close to its box's top-left corner (px) the pointer must come for the
@@ -66,6 +69,10 @@ export function FloatingAppLauncher() {
   const { focusedTabId, mode, contained } = useTabs();
   const caps = usePlacementRegistry().useValue();
   const brandDrawn = useBrandDrawnOn(focusedTabId);
+  const isMobile = useIsMobile();
+  // On a phone the phone action button's Apps sheet switches apps: a corner
+  // launcher there would sit on the sidebar toggle.
+  if (isMobile) return null;
   // Until the surface body registers, what frames the surface is not known.
   if (caps === null || brandDrawn || isChromelessDocument()) return null;
   const noSwitcher =

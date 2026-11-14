@@ -50,6 +50,7 @@ should look different wears a sub-theme over them — see the
     - `primitives/css/line.Line`
     - `primitives/css/rigid.Rigid`
     - `primitives/css/spacing.insetClass`
+    - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.cn`

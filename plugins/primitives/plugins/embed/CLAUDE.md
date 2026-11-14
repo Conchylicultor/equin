@@ -107,6 +107,7 @@ flag that swallowed error surfaces would be worse than one that shows a toast.
   - Imported by:
     - `apps-core/app-launcher`
     - `apps-core/layout`
+    - `apps-core/phone-actions`
     - `apps-core/tabs`
     - `apps/prototypes/canvas`
     - `apps/prototypes/compare/route`

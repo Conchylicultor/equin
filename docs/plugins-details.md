@@ -13453,9 +13453,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `Apps.TabBar`
       - `Apps.TabBarActions`
       - `Apps.Overlay`
-    - Slot contributors: 28 contributors — full list in [`plugins/apps-core/REFERENCE.md`](../plugins/apps-core/REFERENCE.md)
+    - Slot contributors: 29 contributors — full list in [`plugins/apps-core/REFERENCE.md`](../plugins/apps-core/REFERENCE.md)
       - `Apps.App` ×23
-      - `Apps.Overlay` ← `apps-core.app-launcher`
+      - `Apps.Overlay` ×2
       - `Apps.RailFraming` ← `apps-core.app-rail-framing`
       - `Apps.Surface` ← `apps-core.surface`
       - `Apps.TabBarActions` ← `shell.global-action-bar`
@@ -13512,9 +13512,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `APP_RAIL_WIDTH`
       - `documentTitle`
   - Cross-plugin:
-    - Imported by: 64 plugins — full list in [`plugins/apps-core/REFERENCE.md`](../plugins/apps-core/REFERENCE.md)
+    - Imported by: 65 plugins — full list in [`plugins/apps-core/REFERENCE.md`](../plugins/apps-core/REFERENCE.md)
       - `apps` ×31
-      - `apps-core` ×15
+      - `apps-core` ×16
       - `ui` ×6
       - `companions` ×3
       - `config_v2` ×2
@@ -13604,29 +13604,31 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `companions/panel`
           - `config_v2/settings`
           - `framework/cli/release`
-    - **`app-launcher`** — The app brand every app shell draws (AppShell.Brand): the launcher — the current app's own mark — click for the composition's home app (the app gallery on main), hover or ArrowDown for a grid of every other installed app (switching exactly as the rail does) — plus, as the sidebar header, the current app's name linking to its own home. Where no app switcher frames the surface — solo (fullscreen), or an AppEmbed, which draws no rail or tab bar — a surface that draws no brand gets the launcher floating at the top-left of its box, revealed as the pointer nears that corner.
+    - **`app-launcher`** — The app brand every app shell draws (AppShell.Brand): the launcher — the current app's own mark — click for the composition's home app (the app gallery on main), hover or ArrowDown for a grid of every other installed app (switching exactly as the rail does) — plus, as the sidebar header, the current app's name linking to its own home. Where no app switcher frames the surface — solo (fullscreen), or an AppEmbed, which draws no rail or tab bar — a surface that draws no brand gets the launcher floating at the top-left of its box, revealed as the pointer nears that corner. On a phone neither the top-left launcher nor the floating one is drawn: the phone action button's Apps sheet (PhoneActions.Action 'apps') is the app grid there.
       - Web:
         - Slots: `AppLauncherSlots.ReturnTip`
         - Slot contributors: `AppLauncherSlots.ReturnTip` ← `apps.desktop.windows`
         - Contributes:
           - `AppShell.Brand` "Brand" → `AppBrand`
           - `Apps.Overlay` "Overlay" → `FloatingAppLauncher`
+          - `PhoneActions.Action` "Apps" → `AppsSheet`
           - `FieldPresentation.Register` "collection:apps.installed-app"
           - `Fields.Identity` "app-icon"
           - `Hints.Hint` "app-launcher.switch-apps"
-        - Uses: 46 symbols — full list in [`plugins/apps-core/plugins/app-launcher/REFERENCE.md`](../plugins/apps-core/plugins/app-launcher/REFERENCE.md)
+        - Uses: 48 symbols — full list in [`plugins/apps-core/plugins/app-launcher/REFERENCE.md`](../plugins/apps-core/plugins/app-launcher/REFERENCE.md)
           - `apps-core/tabs` ×6
           - `apps-core` ×6
           - `hints` ×3
           - `network/live/live-state` ×3
+          - `primitives/css/ui-kit` ×3
           - `primitives/data-view` ×3
           - `apps-core/app-icon` ×2
           - `audience/developer-mark` ×2
           - `primitives/app-shell` ×2
           - `primitives/css/fill` ×2
           - `primitives/css/theme-boundary` ×2
-          - `primitives/css/ui-kit` ×2
           - `apps-core/chrome-theme.chromeThemeScope`
+          - `apps-core/phone-actions.PhoneActions`
           - `fields.Fields`
           - `network/live.FieldPresentation`
           - `primitives/avatar.useAvatarPresentation`
@@ -13867,6 +13869,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `apps-core/app-launcher`
           - `apps-core/app-rail`
+          - `apps-core/phone-actions`
           - `apps-core/tab-bar`
           - `hints/ask`
           - `plugin-meta/exhibits`
@@ -13903,6 +13906,50 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens: `ui/tokens/color-palette --background`
       - Exemptions:
         - Exempts itself from: `page-hosts-on-demand` — `web/index.ts` (sanctioned)
+    - **`phone-actions`** — The phone action button: on a phone (below 768px), a floating button the thumb can reach — dragged anywhere, snapping to the nearer side edge, its place remembered and kept on screen as the window resizes. A tap fans its sub-actions (PhoneActions.Action: Apps, Wish) out as labelled bubbles toward the open side, its ⋯ turning into ×; each opens its sheet from the bottom, the button hidden while one is open. While the page scrolls it tucks into a thin edge tab, back about a second after scrolling stops (or on a tap). Desktop chrome is unchanged.
+      - Web:
+        - Slots: `PhoneActions.Action`
+        - Slot contributors:
+          - `PhoneActions.Action` ← `apps-core.app-launcher`
+          - `PhoneActions.Action` ← `wish`
+        - Contributes: `Apps.Overlay` "Overlay" → `PhoneActionButton`
+        - Uses: 26 symbols — full list in [`plugins/apps-core/plugins/phone-actions/REFERENCE.md`](../plugins/apps-core/plugins/phone-actions/REFERENCE.md)
+          - `primitives/css/ui-kit` ×5
+          - `primitives/slot-render` ×4
+          - `primitives/css/coords` ×2
+          - `primitives/css/spacing` ×2
+          - `apps-core/chrome-theme.chromeThemeScope`
+          - `apps-core/tabs.useTabs`
+          - `apps-core.Apps`
+          - `network/live/live-state.foldResource`
+          - `primitives/css/center.Center`
+          - `primitives/css/layer.layerClasses`
+          - `primitives/css/rigid.rigidClass`
+          - `primitives/css/text.Text`
+          - `primitives/css/theme-boundary.Theme`
+          - `primitives/css/viewport-overlay.ViewportOverlay`
+          - `primitives/dom/web-storage.defineStore`
+          - `primitives/embed.isChromelessDocument`
+          - `ui/icons.Icon`
+        - Exports (types):
+          - `PhoneActionContribution`
+          - `PhoneActionSheetProps`
+        - Exports (values): `PhoneActions`
+      - Cross-plugin:
+        - Uses tokens:
+          - `ui/tokens/color-palette --border`
+          - `ui/tokens/color-palette --popover`
+          - `ui/tokens/color-palette --popover-foreground`
+          - `ui/tokens/color-palette --primary`
+          - `ui/tokens/color-palette --primary-foreground`
+          - `ui/tokens/density --space-lg`
+          - `ui/tokens/density --space-sm`
+          - `ui/tokens/density --space-xl`
+          - `ui/tokens/shape --radius`
+          - `ui/tokens/shape --spacing`
+        - Imported by:
+          - `apps-core/app-launcher`
+          - `wish`
     - **`surface`** — Generic surface dispatcher: renders every open tab at once under the ONE surface mode (docked / windows / solo) selected from the Surface.Placement registry, so the modes are mutually exclusive. Owns the surface body and the mode control; each mode (docked / floating / solo) is a self-contained sub-plugin.
       - Web:
         - Slots: `Surface.Placement`
@@ -14083,9 +14130,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useSurfaceMode`
           - `useTabs`
       - Cross-plugin:
-        - Imported by: 43 plugins — full list in [`plugins/apps-core/plugins/tabs/REFERENCE.md`](../plugins/apps-core/plugins/tabs/REFERENCE.md)
+        - Imported by: 44 plugins — full list in [`plugins/apps-core/plugins/tabs/REFERENCE.md`](../plugins/apps-core/plugins/tabs/REFERENCE.md)
           - `apps` ×18
-          - `apps-core` ×8
+          - `apps-core` ×9
           - `debug` ×4
           - `hints` ×2
           - `primitives` ×2
@@ -41264,7 +41311,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `unresolved`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/color-palette --destructive`
-            - Imported by: 312 plugins — full list in [`plugins/network/plugins/live/plugins/live-state/REFERENCE.md`](../plugins/network/plugins/live/plugins/live-state/REFERENCE.md)
+            - Imported by: 313 plugins — full list in [`plugins/network/plugins/live/plugins/live-state/REFERENCE.md`](../plugins/network/plugins/live/plugins/live-state/REFERENCE.md)
               - `apps` ×85
               - `conversations` ×49
               - `debug` ×31
@@ -41276,8 +41323,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `build` ×9
               - `active-data` ×5
               - `plugin-meta` ×5
+              - `apps-core` ×4
               - `auth` ×4
-              - `apps-core` ×3
               - `companions` ×3
               - `integrations` ×3
               - `network` ×3
@@ -48217,14 +48264,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `CenterProps`
             - Exports (values): `Center`
           - Cross-plugin:
-            - Imported by: 143 plugins — full list in [`plugins/primitives/plugins/css/plugins/center/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/center/REFERENCE.md)
+            - Imported by: 144 plugins — full list in [`plugins/primitives/plugins/css/plugins/center/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/center/REFERENCE.md)
               - `apps` ×47
               - `primitives` ×28
               - `page` ×18
               - `conversations` ×11
               - `debug` ×6
+              - `apps-core` ×5
               - `ui` ×5
-              - `apps-core` ×4
               - `plugin-meta` ×3
               - `tasks` ×3
               - `fields` ×2
@@ -48480,7 +48527,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `placedClasses`
               - `placedStyle`
           - Cross-plugin:
-            - Imported by: 45 plugins — full list in [`plugins/primitives/plugins/css/plugins/coords/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/coords/REFERENCE.md)
+            - Imported by: 46 plugins — full list in [`plugins/primitives/plugins/css/plugins/coords/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/coords/REFERENCE.md)
               - `apps` ×21
               - `primitives` ×11
               - `debug` ×3
@@ -48488,6 +48535,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `hints` ×2
               - `screenshot` ×2
               - `active-data/go`
+              - `apps-core/phone-actions`
               - `map`
               - `shell/notifications`
         - **`fill`** — Flexible-cell layout primitive: <Fill axis> is the single grow+shrink cell of a Line/Row (min-w-0 flex-1). The one home for the slack-absorbing, truncation-enabling cell, so a stray flex-1 never strands the grow slot.
@@ -48620,10 +48668,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Layer`
               - `layerClasses`
           - Cross-plugin:
-            - Imported by: 28 plugins — full list in [`plugins/primitives/plugins/css/plugins/layer/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/layer/REFERENCE.md)
+            - Imported by: 29 plugins — full list in [`plugins/primitives/plugins/css/plugins/layer/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/layer/REFERENCE.md)
               - `apps` ×16
               - `primitives` ×7
               - `page` ×2
+              - `apps-core/phone-actions`
               - `integrations/youtube`
               - `map`
               - `shell/notifications`
@@ -48959,7 +49008,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Rigid`
               - `rigidClass`
           - Cross-plugin:
-            - Imported by: 145 plugins — full list in [`plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md)
+            - Imported by: 146 plugins — full list in [`plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md)
               - `apps` ×35
               - `conversations` ×28
               - `primitives` ×20
@@ -48976,6 +49025,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra` ×2
               - `shell` ×2
               - `active-data/show-me`
+              - `apps-core/phone-actions`
               - `auth`
               - `code-explorer/commit-detail`
               - `hints/ask`
@@ -49185,7 +49235,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Stack`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Imported by: 446 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
+            - Imported by: 447 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
               - `apps` ×109
               - `conversations` ×77
               - `primitives` ×54
@@ -49195,8 +49245,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `plugin-meta` ×16
               - `tasks` ×15
               - `fields` ×9
+              - `apps-core` ×7
               - `infra` ×7
-              - `apps-core` ×6
               - `stats` ×6
               - `build` ×5
               - `auth` ×4
@@ -49418,7 +49468,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×37
               - `ui/tokens/color-palette` ×6
               - `ui/tokens/font-family` ×2
-            - Imported by: 429 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+            - Imported by: 430 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
               - `apps` ×112
               - `conversations` ×83
               - `primitives` ×47
@@ -49434,11 +49484,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `auth` ×4
               - `integrations` ×4
               - `review` ×4
+              - `apps-core` ×3
               - `companions` ×3
               - `reorder` ×3
               - `shell` ×3
               - `active-data` ×2
-              - `apps-core` ×2
               - `backup` ×2
               - `code-explorer` ×2
               - `config_v2` ×2
@@ -49506,9 +49556,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/sidebar-palette --sidebar`
               - `ui/tokens/sidebar-palette --sidebar-accent`
-            - Imported by: 31 plugins — full list in [`plugins/primitives/plugins/css/plugins/theme-boundary/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/theme-boundary/REFERENCE.md)
+            - Imported by: 32 plugins — full list in [`plugins/primitives/plugins/css/plugins/theme-boundary/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/theme-boundary/REFERENCE.md)
               - `apps` ×10
-              - `apps-core` ×7
+              - `apps-core` ×8
               - `primitives` ×3
               - `hints` ×2
               - `shell` ×2
@@ -49712,6 +49762,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useControlSize`
               - `useHoldPopoverOpen`
               - `useInSidebarPanel`
+              - `useIsMobile`
               - `useMenuSurface`
               - `usePinOnClick`
               - `usePortalForward`
@@ -49738,7 +49789,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/chart` ×5
               - `ui/tokens/font-family` ×4
               - `ui/tokens/scrollbar --scrollbar-color`
-            - Imported by: 470 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Imported by: 471 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `primitives` ×112
               - `apps` ×110
               - `conversations` ×54
@@ -49747,7 +49798,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui` ×23
               - `tasks` ×19
               - `fields` ×12
-              - `apps-core` ×10
+              - `apps-core` ×11
               - `plugin-meta` ×10
               - `infra` ×7
               - `build` ×5
@@ -49827,6 +49878,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ViewportOverlay`
           - Cross-plugin:
             - Imported by:
+              - `apps-core/phone-actions`
               - `apps-core/surface`
               - `apps/prototypes/present`
               - `apps/sonata/audio/metronome`
@@ -50040,8 +50092,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DataViewSlots.Control` ← `primitives.data-view`
           - `DataViewSlots.FieldExtension` ← `primitives.data-view.custom-columns`
           - `DataViewSlots.RowOrder` ← `primitives.data-view.view-order`
-        - Contributes: 111 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
-          - `ConfigV2.WebRegister` ×101
+        - Contributes: 112 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+          - `ConfigV2.WebRegister` ×102
           - `DataViewSlots.Control` ×4
           - `DataViewSlots.Setting` ×4
           - `IdKinds.Kind` ×2
@@ -50321,8 +50373,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useViewRowCounts`
           - `wearsTimeInk`
       - Server:
-        - Contributes: 103 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
-          - `ConfigV2.Register` ×101
+        - Contributes: 104 contributions — full list in [`plugins/primitives/plugins/data-view/REFERENCE.md`](../plugins/primitives/plugins/data-view/REFERENCE.md)
+          - `ConfigV2.Register` ×102
           - `ids.kind` ×2
         - Uses:
           - `config_v2.getAllDescriptors`
@@ -51612,11 +51664,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useStore`
               - `WebStorageSlots`
           - Cross-plugin:
-            - Imported by: 52 plugins — full list in [`plugins/primitives/plugins/dom/plugins/web-storage/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/web-storage/REFERENCE.md)
+            - Imported by: 53 plugins — full list in [`plugins/primitives/plugins/dom/plugins/web-storage/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/web-storage/REFERENCE.md)
               - `primitives` ×15
               - `apps` ×13
               - `conversations` ×6
-              - `apps-core` ×2
+              - `apps-core` ×3
               - `framework` ×2
               - `reports` ×2
               - `ui` ×2
@@ -51702,6 +51754,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `apps-core/app-launcher`
           - `apps-core/layout`
+          - `apps-core/phone-actions`
           - `apps-core/tabs`
           - `apps/prototypes/canvas`
           - `apps/prototypes/compare/route`
@@ -55014,11 +55067,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useDispatchOutcome`
           - `useSlotOrder`
       - Cross-plugin:
-        - Imported by: 97 plugins — full list in [`plugins/primitives/plugins/slot-render/REFERENCE.md`](../plugins/primitives/plugins/slot-render/REFERENCE.md)
+        - Imported by: 98 plugins — full list in [`plugins/primitives/plugins/slot-render/REFERENCE.md`](../plugins/primitives/plugins/slot-render/REFERENCE.md)
           - `apps` ×31
           - `primitives` ×15
           - `conversations` ×13
-          - `apps-core` ×5
+          - `apps-core` ×6
           - `ui` ×5
           - `shell` ×4
           - `companions` ×3
@@ -55423,6 +55476,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/line.Line`
               - `primitives/css/rigid.Rigid`
               - `primitives/css/spacing.insetClass`
+              - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
               - `primitives/css/ui-kit.Button`
               - `primitives/css/ui-kit.cn`
@@ -56397,8 +56451,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 
 - **`reorder`** — Generic reorder primitive: every defineRenderSlot is unconditionally reorderable; use defineMountSlot for headless slots. Applies each slot's committed layout (order, hidden items, spacers, dividers, groups) everywhere slots render; a layout is edited in its config file or the Config pane's reorder-tree field. Generic reorder primitive: per-slot config_v2 directives for contribution order/visibility.
   - Web:
-    - Contributes: 296 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×296
+    - Contributes: 297 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×297
     - Uses:
       - `config_v2.ConfigV2`
       - `config_v2.useConfigResult`
@@ -56422,8 +56476,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `useLayoutOrder`
       - `useReorderedEntries`
   - Server:
-    - Contributes: 295 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
-      - `ConfigV2.Register` ×295
+    - Contributes: 296 contributions — full list in [`plugins/reorder/REFERENCE.md`](../plugins/reorder/REFERENCE.md)
+      - `ConfigV2.Register` ×296
     - Uses: `config_v2.ConfigV2`
     - Exports (values): `reorderDirectiveDescriptor`
   - Cross-plugin:
@@ -62630,7 +62684,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useWantedSprites`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
-        - Imported by: 596 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+        - Imported by: 597 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
           - `apps` ×157
           - `conversations` ×123
           - `primitives` ×53
@@ -62642,7 +62696,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `active-data` ×11
           - `ui` ×11
           - `infra` ×8
-          - `apps-core` ×6
+          - `apps-core` ×7
           - `auth` ×6
           - `companions` ×6
           - `config_v2` ×5
@@ -63954,7 +64008,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/density --space-sm`
               - `ui/tokens/shape --spacing`
-            - Tokens used by: 549 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
+            - Tokens used by: 550 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
               - `apps` ×123
               - `conversations` ×97
               - `primitives` ×75
@@ -63966,7 +64020,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `reports` ×16
               - `fields` ×12
               - `active-data` ×8
-              - `apps-core` ×6
+              - `apps-core` ×7
               - `build` ×6
               - `reorder` ×6
               - `stats` ×6
@@ -64101,7 +64155,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `densityGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --radius`
-            - Tokens used by: 350 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
+            - Tokens used by: 351 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
               - `apps` ×74
               - `primitives` ×72
               - `conversations` ×49
@@ -64113,9 +64167,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `fields` ×8
               - `reorder` ×5
               - `review` ×5
+              - `apps-core` ×4
               - `infra` ×4
               - `shell` ×4
-              - `apps-core` ×3
               - `build` ×3
               - `stats` ×3
               - `active-data` ×2
@@ -64530,7 +64584,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/density --radius-chip-compact`
               - `ui/tokens/density --space-sm`
-            - Tokens used by: 413 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
+            - Tokens used by: 414 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
               - `conversations` ×96
               - `apps` ×82
               - `primitives` ×61
@@ -64542,8 +64596,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `fields` ×8
               - `infra` ×6
               - `reorder` ×6
+              - `apps-core` ×5
               - `companions` ×5
-              - `apps-core` ×4
               - `review` ×4
               - `shell` ×4
               - `build` ×3
@@ -64970,7 +65024,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
   - Cross-plugin:
     - Imported by: `framework/cli/upstream`
 
-- **`wish`** — The Wish toolbar button: the entry point for anything the user wants done — a fix, a change, a new app. Files a task under "Wishes" with the current URL. Companion actions join it as segments of one split pill via WishSlots.Segment; WishSlots.HeaderAction adds actions to its popover header (Ask equin). WishField is the same wish as a companion’s section — the task composer with its own ↑, filing one task under Wishes about the page the DraftPage around it names, confirming inline (“Filed — an agent is on …”). Task category of the Wish toolbar button. Files tasks stamped "Wishes" via the shared task-draft-form primitive.
+- **`wish`** — The Wish toolbar button: the entry point for anything the user wants done — a fix, a change, a new app. Files a task under "Wishes" with the current URL. Companion actions join it as segments of one split pill via WishSlots.Segment; WishSlots.HeaderAction adds actions to its popover header (Ask equin). WishField is the same wish as a companion’s section — the task composer with its own ↑, filing one task under Wishes about the page the DraftPage around it names, confirming inline (“Filed — an agent is on …”). On a phone the same field is the Wish sheet of the phone action button (PhoneActions.Action “wish”). Task category of the Wish toolbar button. Files tasks stamped "Wishes" via the shared task-draft-form primitive.
   - Web:
     - Slots:
       - `WishSlots.Segment`
@@ -64978,14 +65032,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Slot contributors:
       - `WishSlots.Segment` ← `wish.element-picker`
       - `WishSlots.HeaderAction` ← `hints.ask`
-    - Contributes: `ActionBar.Item` → `WishButton`
-    - Uses: 25 symbols — full list in [`plugins/wish/REFERENCE.md`](../plugins/wish/REFERENCE.md)
+    - Contributes:
+      - `ActionBar.Item` → `WishButton`
+      - `PhoneActions.Action` "Wish" → `WishSheet`
+    - Uses: 26 symbols — full list in [`plugins/wish/REFERENCE.md`](../plugins/wish/REFERENCE.md)
       - `tasks/task-draft-form` ×8
       - `primitives/css/ui-kit` ×3
       - `hints` ×2
       - `primitives/css/spacing` ×2
       - `primitives/persistent-draft` ×2
       - `tasks/launch-options` ×2
+      - `apps-core/phone-actions.PhoneActions`
       - `infra/endpoints.useFetchEndpoint`
       - `primitives/css/text.Text`
       - `primitives/dom/web-storage.defineStore`
