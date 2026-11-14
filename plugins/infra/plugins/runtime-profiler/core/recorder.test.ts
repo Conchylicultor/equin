@@ -434,9 +434,30 @@ describe("gate meters — every queue wait metered once, against its gate", () =
     });
     chargeWait("db-acquire", 7, "queue"); // context-less: metered too
     expect(getRuntimeProfile().gates).toEqual([
-      { layer: "read-admit", kind: "queue", count: 1, totalMs: 30 },
-      { layer: "db-acquire", kind: "queue", count: 1, totalMs: 7 },
-      { layer: "fs-stat", kind: "io", count: 1, totalMs: 5 },
+      {
+        layer: "read-admit",
+        kind: "queue",
+        count: 1,
+        totalMs: 30,
+        maxWaitMs: 30,
+        longestBusyMs: 30,
+      },
+      {
+        layer: "db-acquire",
+        kind: "queue",
+        count: 1,
+        totalMs: 7,
+        maxWaitMs: 7,
+        longestBusyMs: 7,
+      },
+      {
+        layer: "fs-stat",
+        kind: "io",
+        count: 1,
+        totalMs: 5,
+        maxWaitMs: 5,
+        longestBusyMs: 5,
+      },
     ]);
   });
 
@@ -532,7 +553,7 @@ describe("queue residue — many small waits are reported against the gate", () 
       (w) => {
         if (w.ms < bar) return false;
         filed.push(
-          `${w.layer} ${w.ms} ${w.caller.kind}:${w.caller.label} ×${w.waits ?? 1}${w.windowMs === undefined ? "" : " window"}`,
+          `${w.layer} ${w.ms} ${w.caller.kind}:${w.caller.label} ×${w.waits ?? 1}${w.busy ? " busy" : ""}`,
         );
         return true;
       },
@@ -623,7 +644,7 @@ describe("queue residue — many small waits are reported against the gate", () 
     } finally {
       sub.dispose();
     }
-    // p's 200 ms is under the bar (and goes to the gate's window), the
+    // p's 200 ms is under the bar (and goes to the gate's busy timeline), the
     // child's 1200 ms is filed once, by the child.
     expect(filed).toEqual(["db-acquire 1200 loader:detached ×8"]);
   });
@@ -655,7 +676,7 @@ describe("queue residue — many small waits are reported against the gate", () 
     expect(filed).toEqual(["read-admit 1200 flush:flushNotifies ×8"]);
   });
 
-  test("independent ops each under the bar add up in the gate's window", async () => {
+  test("independent ops queued back to back are one busy stretch of the gate", async () => {
     const filed: string[] = [];
     const sub = fileWaitsOver(1000, filed);
     try {
@@ -666,22 +687,22 @@ describe("queue residue — many small waits are reported against the gate", () 
     } finally {
       sub.dispose();
     }
-    // Filed the moment the window reaches the bar; the 11th and 12th wait are
-    // the same (already filed) window's.
-    expect(filed).toEqual(["db-acquire 1000 http:GET /b ×10 window"]);
+    // The queue held without a break: filed the moment the stretch reaches
+    // the bar; the 11th and 12th wait grow the same (already filed) stretch.
+    expect(filed).toEqual(["db-acquire 1000 http:GET /b ×10 busy"]);
   });
 
-  test("a window is filed once, however far past the bar it grows; the next window files again", async () => {
+  test("a stretch is filed once, however far past the bar it grows; the next stretch files again", async () => {
     const filed: string[] = [];
     const sub = fileWaitsOver(1000, filed);
     try {
-      // A storm: 50 independent ops × 100 ms inside one window — 5× the bar,
-      // one incident.
+      // A storm: 50 independent ops × 100 ms back to back — the queue held
+      // 5× the bar, one incident.
       for (let i = 0; i < 50; i++)
         await recordEntrySpan("sub", `s${i}`, () => {
           waitsInARow("read-admit", 1, 100);
         });
-      fakeNow += 61_000; // the window expires
+      fakeNow += 61_000; // the queue drained; later waits start a new stretch
       for (let i = 0; i < 10; i++)
         await recordEntrySpan("sub", "again", () => {
           waitsInARow("read-admit", 1, 100);
@@ -690,12 +711,12 @@ describe("queue residue — many small waits are reported against the gate", () 
       sub.dispose();
     }
     expect(filed).toEqual([
-      "read-admit 1000 sub:s0 ×10 window",
-      "read-admit 1000 sub:again ×10 window",
+      "read-admit 1000 sub:s0 ×10 busy",
+      "read-admit 1000 sub:again ×10 busy",
     ]);
   });
 
-  test("one request's many small sequential waits are filed per request, not left to the window", async () => {
+  test("one request's many small sequential waits are filed per request, not left to the gate", async () => {
     const filed: string[] = [];
     const sub = fileWaitsOver(2000, filed);
     try {
@@ -709,7 +730,7 @@ describe("queue residue — many small waits are reported against the gate", () 
     expect(filed).toEqual(["read-admit 2100 http:GET /page ×300"]);
   });
 
-  test("a window's waits expire past GATE_WINDOW_MS", async () => {
+  test("waits with the queue drained between them are separate stretches", async () => {
     const filed: string[] = [];
     const sub = fileWaitsOver(1000, filed);
     try {
@@ -723,6 +744,60 @@ describe("queue residue — many small waits are reported against the gate", () 
       sub.dispose();
     }
     expect(filed).toEqual([]);
+  });
+
+  // A restart's replay: 250 reads queue at once and are admitted over 0.5 s.
+  // Summed they are 62 s of "wait" — what the old 60 s window judged — but the
+  // queue held 0.5 s and no reader waited longer: under a 2 s bar, nothing.
+  test("a burst of concurrent waiters is judged on how long the queue held, not on their sum", async () => {
+    const filed: string[] = [];
+    const sub = fileWaitsOver(2000, filed);
+    try {
+      for (let i = 1; i <= 250; i++) {
+        fakeNow = 10_000; // every read queues at 10 s
+        await recordEntrySpan("sub", `r${i % 7}`, () => {
+          fakeNow += 2 * i; // admitted one after another
+          chargeWait("read-admit", 2 * i, "queue");
+        });
+      }
+    } finally {
+      sub.dispose();
+    }
+    expect(filed).toEqual([]);
+    const gate = getRuntimeProfile().gates.find(
+      (g) => g.layer === "read-admit",
+    )!;
+    expect(gate.totalMs).toBe(62_750);
+    expect(gate.maxWaitMs).toBe(500);
+    expect(gate.longestBusyMs).toBe(500);
+  });
+
+  test("a queue that does not drain is filed once, naming its longest single wait", async () => {
+    const seen: SlowWait[] = [];
+    const sub = onSlowWait(
+      (w) => {
+        if (!w.busy || w.ms < 2000) return false;
+        seen.push(w);
+        return true;
+      },
+      { thresholdMs: 0 },
+    );
+    try {
+      // Waiters keep arriving faster than the gate admits them: each queues
+      // 300 ms, the next one already queued before the last is admitted.
+      for (let i = 0; i < 20; i++) {
+        fakeNow = 20_000 + 200 * i;
+        await recordEntrySpan("sub", "s", () => {
+          fakeNow += 300;
+          chargeWait("read-admit", 300, "queue");
+        });
+      }
+    } finally {
+      sub.dispose();
+    }
+    expect(seen.map((w) => [w.ms, w.waits, w.busy && w.longestWaitMs])).toEqual(
+      [[2100, 10, 300]],
+    );
   });
 
   // The own-time hole: a 0.6 s op that queued 1.5 s at a 2 s bar was judged
@@ -758,7 +833,7 @@ describe("queue residue — many small waits are reported against the gate", () 
           });
         });
         // The residue the loader's report took is not offered again: not by
-        // `s`, and not by the gate's window, however much more queues.
+        // `s`, and not by the gate's busy timeline, however much more queues.
         await recordEntrySpan("sub", "t", () => {
           waitsInARow("read-admit", 1, 1900);
         });

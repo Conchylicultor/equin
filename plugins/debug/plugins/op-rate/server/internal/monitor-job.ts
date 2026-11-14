@@ -77,8 +77,8 @@ const lastWallMs = new Map<string, number>();
 // happens) are diffed here by layer and judged against `waitMsPerWindow` — the
 // gate's congestion over the window, against the gate (with its holders),
 // instead of as N innocent waiters. (slow-ops' `wait <layer>` is the other
-// view: one op's wait past its bar, or a minute whose leftover waits kept the
-// gate's mean queue depth past `gateQueueDepth`.)
+// view: one op's wait past its bar, or a stretch where the leftover waits of
+// independent ops kept the gate's queue held past the same bar.)
 const lastGates: GateBaseline = new Map();
 
 // Drop-count log for over-cap ops (one line per tick when the cap trips).

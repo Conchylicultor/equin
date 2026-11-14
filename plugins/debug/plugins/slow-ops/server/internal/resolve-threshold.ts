@@ -135,13 +135,17 @@ export function resolveSlowThreshold(span: SlowSpan, t: Thresholds): number {
  *   delivery itself would have been judged on had the queue been counted
  *   against it. So a request that waits 2 s in total across many small waits
  *   is still filed, per request.
- * - A gate's WINDOW (independent ops' waits summed, `windowMs` set): not a
- *   latency anyone felt but the window's mean queue depth × its length, so
- *   its bar is `gateQueueDepth` × `windowMs` — how full the gate was, never
- *   how many reads there were.
+ * - A gate's BUSY STRETCH (`busy` set): how long its queue held without a
+ *   break, across independent ops — the time a burst took to drain, so the
+ *   longest a reader arriving at its start could have waited. A latency too,
+ *   held to the same loader bar as one op's wait: a burst that drains within
+ *   what one read may take cost no reader more than that. Never a sum across
+ *   waiters — the summed 60 s window it replaces (mean depth ≥ 0.25 waiters)
+ *   fired on every restart's 0.5 s replay burst, whose 250 waits summed to
+ *   15–20 s while no reader waited 1 s (main, 2026-11-13).
  */
 export function resolveWaitThreshold(wait: SlowWait, t: Thresholds): number {
-  if (wait.windowMs !== undefined) return t.gateQueueDepth * wait.windowMs;
+  if (wait.busy) return t.loaderMs;
   return wait.latency ? t.updateMs : t.loaderMs;
 }
 

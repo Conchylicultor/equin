@@ -18,7 +18,6 @@ const thresholds: Thresholds = {
   httpMs: 2000,
   dbMs: 500,
   jobMs: 3000,
-  gateQueueDepth: 0.25,
   browserHostBootMs: 5000,
 };
 
@@ -83,13 +82,16 @@ describe("resolveWaitThreshold", () => {
       ),
     ).toBe(2000);
   });
-  test("a gate's window is judged on mean queue depth, not on the count of waits", () => {
-    const window = { layer: "read-admit", caller, windowMs: 60_000 };
-    const bar = resolveWaitThreshold(
-      { ...window, ms: 0, waits: 0 },
-      thresholds,
-    );
-    // 0.25 waiters on average over the minute.
-    expect(bar).toBe(15_000);
+  test("a gate's busy stretch is a latency: the loader bar, whatever the waits", () => {
+    // 250 reads that queued together for 0.5 s are judged on the 0.5 s.
+    const stretch = {
+      layer: "read-admit",
+      caller,
+      busy: true as const,
+      longestWaitMs: 300,
+    };
+    expect(
+      resolveWaitThreshold({ ...stretch, ms: 500, waits: 250 }, thresholds),
+    ).toBe(2000);
   });
 });

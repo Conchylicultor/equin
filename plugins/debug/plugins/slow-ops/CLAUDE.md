@@ -89,7 +89,7 @@ all or it is charged to the op that owns it:
 
 | Excluded | Where it is measured | Who owns it |
 |---|---|---|
-| A server span's gate waits (`waitMs`) | `slowSpanMs` (resolve-threshold.ts), every kind | The gate. A `queue` wait at or past `loaderMs` files `wait <layer>` (`onSlowWait`): one row per gate, its waiters as callers. Waits each under the bar are summed: a wait not filed is residue, kept on the innermost open entry and offered as one wait (their sum capped at the entry's union on the gate — overlapping waiters cost it their union; the `waitCount` measure says how many) when it closes, the entry its caller, then handed unfiled to the nearest open ancestor — so 40 queries × 150 ms on `db-acquire` is one 6 s `wait db-acquire`, filed once. Residue leaving the top of its chain unfiled lands in the gate's 60 s window (runtime-profiler `addGateWindow`): summed across independent ops, which makes it the gate's mean queue depth × 60 s — so it is judged on depth, `gateQueueDepth` (0.25 waiters) × 60 s, never on the per-op `loaderMs` bar, and filed at most once per window (variant `across ops, 60 s window`, the longest waiter its caller). Before (2026-11-12, main, 24 h): 300 reads a minute queued ~7 ms each (depth ~0.035) reached the 2 s bar, and each boot storm re-filed every 2 s of it — 20–360 occurrences per boot, ~3,100 a day; every boot storm's busiest minute had a depth ≥ 0.57. A `join` wait (an identical run in flight) is that run's, which reports itself. |
+| A server span's gate waits (`waitMs`) | `slowSpanMs` (resolve-threshold.ts), every kind | The gate. A `queue` wait at or past `loaderMs` files `wait <layer>` (`onSlowWait`): one row per gate, its waiters as callers. Waits each under the bar are summed: a wait not filed is residue, kept on the innermost open entry and offered as one wait (their sum capped at the entry's union on the gate — overlapping waiters cost it their union; the `waitCount` measure says how many) when it closes, the entry its caller, then handed unfiled to the nearest open ancestor — so 40 queries × 150 ms on `db-acquire` is one 6 s `wait db-acquire`, filed once. Residue leaving the top of its chain unfiled is laid on the gate's timeline (runtime-profiler `addGateBusy`): the waits of independent ops join into busy stretches — time the gate's queue held without a break — and a stretch is judged on its length, the time a burst took to drain, against the same `loaderMs` bar as one op's wait; filed at most once per stretch (variant `queue held across ops`, the longest waiter its caller, `longestWaitMs` the longest any one op queued in it). Never a sum across waiters: the 60 s window it replaced (summed wait ÷ 60 s, mean depth ≥ 0.25) fired on nearly every restart of main — one ~0.5 s replay burst of ~250 reads sums to 15–20 s while no reader waited 1 s (replay of main, 2026-11-12 13:00 → 11-14: 108 of 108 window firings were one restart's burst, longest single wait 0.18–1.8 s, none a 2 s stretch; the 11-08 restart loop still files — 13 of its 45 trips show a ≥ 2 s stretch or wait). Before that (2026-11-12) the window was judged on the per-op bar and a boot storm re-filed every 2 s of it, 20–360 times per boot. A `join` wait (an identical run in flight) is that run's, which reports itself. |
 | A span's time inside an enclosed op already filed (`claims`) | `slowSpanMs` over the profiler's `excludedMs` | That op, filed once (see "One cause, one report"). |
 | A server leaf's time on a blocked event loop (`event-loop`) | runtime-profiler's `noteLoopTurn` (health-monitor's 100 ms probe) or `noteLoopObserved` (a database reply read while the probe is overdue), charged by `recordSpan` to a plain leaf (a query) | The stall: its answer sat unread. A stall ≥ 3 s is filed with its stacks (`event-loop-stall`); shorter ones are on Debug → Health. Entries are not charged. |
 | A delivery's wait on its flush's filed ops, and its `throttle-hold` | `deliver:<key>` is a latency leaf (`recordSpan(…, { latency: true })`) | The filed op; the hold is declared. |
@@ -416,7 +416,7 @@ bar).
     - `slow-ops.ops:rows` (keyed, point)
   - Routes: `POST /api/slow-ops/client`
 - Core:
-  - Uses: 24 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `fields` ×3
     - `infra/runtime-profiler` ×3
     - `packages/list-bound` ×3
@@ -425,7 +425,6 @@ bar).
     - `debug/trace/engine.traceListRoute`
     - `fields/date/config.dateField`
     - `fields/duration/config.durationField`
-    - `fields/float/config.floatField`
     - `fields/int/config.intField`
     - `fields/json/config.jsonField`
     - `fields/text/config.textField`

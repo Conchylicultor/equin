@@ -469,10 +469,12 @@ function printIteration(it: IterationResult): void {
       );
   }
   // Runtime profile: the gates and the loaders.
-  r.note("  gates (layer, kind, waits, total ms):");
+  r.note(
+    "  gates (layer, kind, waits, total ms, longest wait ms, longest queue held ms):",
+  );
   for (const g of [...it.runtime.gates].sort((a, b) => b.totalMs - a.totalMs))
     r.note(
-      `    ${g.layer.padEnd(28)} ${g.kind.padEnd(5)} ${String(g.count).padStart(6)} ${fmt(g.totalMs).padStart(8)}`,
+      `    ${g.layer.padEnd(28)} ${g.kind.padEnd(5)} ${String(g.count).padStart(6)} ${fmt(g.totalMs).padStart(8)} ${fmt(g.maxWaitMs).padStart(7)} ${fmt(g.longestBusyMs).padStart(7)}`,
     );
   const loaders = it.runtime.aggregates.loader;
   const show = (title: string, list: typeof loaders) => {
@@ -707,6 +709,20 @@ await withBrowser(async (h) => {
     "read-admit wait ms (sum)",
     (it) =>
       it.runtime.gates.find((g) => g.layer === "read-admit")?.totalMs ?? 0,
+  );
+  // What a reader felt (the exit criterion's measure): the longest single
+  // read-admit wait, and the longest the queue held without a break — the
+  // time the replay burst took to drain.
+  row(
+    "read-admit longest single wait ms",
+    (it) =>
+      it.runtime.gates.find((g) => g.layer === "read-admit")?.maxWaitMs ?? 0,
+  );
+  row(
+    "read-admit longest burst drain ms (queue held)",
+    (it) =>
+      it.runtime.gates.find((g) => g.layer === "read-admit")?.longestBusyMs ??
+      0,
   );
   row(
     "background-acquire wait ms (sum)",

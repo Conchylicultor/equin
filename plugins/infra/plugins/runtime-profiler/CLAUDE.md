@@ -192,7 +192,9 @@ handed to `onSlowWait` with that span as its caller: a wait is never booked as a
 An op is judged on its own time (`selfTotalMs`: wall minus waits, declared holds
 and child executions), so the time it waited must be judged somewhere else, once:
 a wait's charge meters every `queue` / `io` wait per layer (`GateMeter`: `count`,
-`totalMs`), ONCE per wait where it happens — never per ancestor and never per
+`totalMs`, and what a waiter felt: `maxWaitMs`, the longest single wait, and
+`longestBusyMs`, the longest the queue held without a break — every wait,
+filed or not), ONCE per wait where it happens — never per ancestor and never per
 label. A `join` is not metered (it is the joined run's time, which that run's
 own span counts). Cumulative like the aggregates, cleared by a reset.
 `debug/op-rate` diffs them per tick and files `op-time` against the gate
@@ -208,17 +210,21 @@ summed) to `onSlowWait` FIRST; what no subscriber filed comes off
 `excludedMs` (`SlowSpan.residueMs`), so the entry is judged on own +
 unreported waits against its own bar. Filed, it takes the residue (not handed
 on); unfiled, the residue climbs to the nearest open ancestor, then the
-gate's window. Without it, 0.6 s own + a 1.5 s wait at a 2 s bar filed
+gate's busy timeline. Without it, 0.6 s own + a 1.5 s wait at a 2 s bar filed
 nothing: each part was judged alone. Invariant: a wait taken off one op's
 report is reported for that op (or an enclosing one) at the same bar.
 
-The gate's window is a different measurement (`GateWindowWait`, `windowMs`
-set): independent ops' leftover waits summed over 60 s are the gate's mean
-queue depth × 60 s (Little's law), not a latency anyone felt. A subscriber
-judges it on depth (slow-ops: `gateQueueDepth`), and it is filed at most once
-per window — one storm, one occurrence. Judged on the per-op bar, 300 reads a
-minute queued 7 ms each "filed" the gate, and a boot storm re-filed every 2 s
-of it (20–360 times per boot on main, 2026-11-12). Every wait stays in the
+The gate's busy stretch is a different measurement (`GateBusyWait`, `busy`
+set): the positions of independent ops' leftover waits (`QueueTally.spans`,
+carried up with the residue) are laid on the gate's timeline
+(`addGateBusy`), and waits that touch join into one stretch — time the queue
+held without a break. Its length is the time a burst took to drain, so the
+longest a reader arriving at its start could have waited: a latency, judged on
+the per-op bar (slow-ops: `loaderMs`), filed at most once per stretch, its
+longest single waiter named (`longestWaitMs`). It replaced a 60 s window that
+SUMMED the waits (mean queue depth, Little's law): a restart's replay of ~250
+reads queued together for 0.5 s summed to 15–20 s and fired it on nearly every
+push, while no reader waited 1 s (main, 2026-11-13). Every wait stays in the
 gate's meter (`GateMeter`, below) either way.
 
 ### Claims — one slow op, filed once (`excludedMs` / `claims`)

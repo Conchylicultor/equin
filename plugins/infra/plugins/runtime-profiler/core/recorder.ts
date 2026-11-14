@@ -89,11 +89,12 @@ import { readEnv } from "@plugins/infra/plugins/launcher/plugins/env-names/core"
 // a wait taken off one report is always reported somewhere at the same bar.
 // Only when that files nothing too is it handed to the nearest open ancestor
 // (`handResidueOn`), which judges it the same way. Residue that leaves the top of its
-// chain unfiled (each request waited a little) lands in the gate's window
-// (`addGateWindow`): summed across independent ops for `GATE_WINDOW_MS` and
-// offered as the gate's own (`GateWindowWait`). That sum is the window's mean
-// queue depth × its length, so it is judged on how full the gate was — never
-// on one op's latency bar — and filed at most once per window.
+// chain unfiled (each request waited a little) is laid on the gate's timeline
+// (`addGateBusy`), where the leftover waits of independent ops join into busy
+// stretches — time the gate's queue held without a break — each offered as the
+// gate's own (`GateBusyWait`) and filed at most once. A stretch is how long a
+// burst took to drain: a latency a reader can feel, judged on the same bar as
+// one op's wait, never a sum across waiters.
 
 // `http` / `db` / `loader` are spans of real work. `sub` / `push` are *origin*
 // entries: the WS-subscription ack and the cascade/push flush that trigger a
@@ -170,6 +171,7 @@ export const SPAN_MEASURES = [
   "ids",
   "sinceChangeMs",
   "waitCount",
+  "longestWaitMs",
 ] as const;
 export type SpanMeasure = (typeof SPAN_MEASURES)[number];
 export type SpanMeasures = Partial<Record<SpanMeasure, number>>;
@@ -287,7 +289,7 @@ export interface SlowSpan {
    * Already taken OFF `excludedMs` — a wait no report holds stays this span's
    * to report, so time subtracted from it is always reported somewhere at the
    * same bar. Filed, the span takes it (the residue goes no further); unfiled,
-   * it moves on to the nearest open ancestor, then the gate's window. Absent
+   * it moves on to the nearest open ancestor, then the gate's busy timeline. Absent
    * when none.
    */
   residueMs?: number;
@@ -590,10 +592,59 @@ export { pushBand as __pushBand };
  * the summed waiter time of the waits it holds. Offered capped at the entry's
  * union on the layer (`offerQueueResidue`): concurrent waiters overlap, and the
  * entry was judged net of the union, never of more than its wall-clock.
+ *
+ * `spans` are WHEN those waits queued (merged where they touch, at most
+ * `QUEUE_SPAN_CAP`): a residue that leaves the top of its chain unfiled is
+ * laid on its gate's timeline (`addGateBusy`), which judges how long the
+ * gate's queue held, so it needs the positions, not only the sum.
  */
 interface QueueTally {
   ms: number;
   waits: number;
+  spans: QueueSpan[];
+}
+
+/** One stretch of time a waiter spent queued on a gate. */
+interface QueueSpan {
+  t0: number;
+  t1: number;
+}
+
+// Positions a residue keeps per layer. Past it the two closest spans are
+// joined across their gap: the gate's busy stretch can then read longer than
+// it was by that gap, so the gap closed is always the smallest. Only a single
+// entry with more than this many separate waits on one gate gets here (one
+// request's sequential reads), and its sum is judged on its own first.
+const QUEUE_SPAN_CAP = 32;
+
+/** Merge `add` into the sorted, disjoint `into` (in place), bounded. */
+function mergeQueueSpans(into: QueueSpan[], add: readonly QueueSpan[]): void {
+  for (const s of add) {
+    if (s.t1 <= s.t0) continue; // admitted with room: no time queued
+    let t0 = s.t0;
+    let t1 = s.t1;
+    // Remove every span `s` touches, widening it to cover them.
+    let i = 0;
+    while (i < into.length) {
+      const o = into[i]!;
+      if (o.t0 <= t1 && o.t1 >= t0) {
+        t0 = Math.min(t0, o.t0);
+        t1 = Math.max(t1, o.t1);
+        into.splice(i, 1);
+      } else i++;
+    }
+    let at = into.findIndex((o) => o.t0 > t0);
+    if (at < 0) at = into.length;
+    into.splice(at, 0, { t0, t1 });
+  }
+  while (into.length > QUEUE_SPAN_CAP) {
+    let best = 0;
+    for (let i = 1; i < into.length - 1; i++)
+      if (into[i + 1]!.t0 - into[i]!.t1 < into[best + 1]!.t0 - into[best]!.t1)
+        best = i;
+    into[best] = { t0: into[best]!.t0, t1: into[best + 1]!.t1 };
+    into.splice(best + 1, 1);
+  }
 }
 
 function addResidue(
@@ -601,13 +652,19 @@ function addResidue(
   layer: string,
   ms: number,
   waits: number,
+  spans: readonly QueueSpan[],
 ): void {
   const tallies = (ctx.queueTallies ??= new Map());
   const tally = tallies.get(layer);
   if (tally) {
     tally.ms += ms;
     tally.waits += waits;
-  } else tallies.set(layer, { ms, waits });
+    mergeQueueSpans(tally.spans, spans);
+  } else {
+    const own: QueueSpan[] = [];
+    mergeQueueSpans(own, spans);
+    tallies.set(layer, { ms, waits, spans: own });
+  }
 }
 
 /** `ctx` or its nearest ancestor still open (see `EntryContext.closed`). */
@@ -1002,19 +1059,21 @@ export type WaitKind = "queue" | "join" | "io";
 
 /**
  * What `onSlowWait` is handed — one of two different measurements, told apart
- * by `windowMs`:
+ * by `busy`:
  *
  * - `OpWait`: what ONE op waited — a single `queue` wait at or past a floor,
  *   or an entry's queue RESIDUE on one gate (its waits each under every bar,
  *   summed — see `offerQueueResidue`). A latency: how long that op lost.
- * - `GateWindowWait`: the waits of INDEPENDENT ops summed over the gate's
- *   window (`addGateWindow`). Not a latency anyone felt: by Little's law it is
- *   the window's mean queue depth × its length, so it must be judged on how
- *   full the gate was (`ms / windowMs`), never on one op's latency bar — 300
- *   reads a minute waiting 7 ms each add up to 2 s while the queue is all but
- *   empty.
+ * - `GateBusyWait`: how long the gate's queue HELD — a stretch of time during
+ *   which independent ops' leftover waits (no op's own report took them) kept
+ *   at least one waiter queued without a break (`addGateBusy`). The time to
+ *   drain a burst: the longest any reader arriving at its start could have
+ *   waited, so it is a latency too, judged on the same bar as one op's wait.
+ *   Never a sum across waiters: 250 reads queued at once for 0.5 s sum to
+ *   15–20 s of "wait" that no reader felt (the summed 60 s window this
+ *   replaces fired on every restart for exactly that, main, 2026-11-13).
  */
-export type SlowWait = OpWait | GateWindowWait;
+export type SlowWait = OpWait | GateBusyWait;
 
 interface SlowWaitBase {
   /** The gate's layer name (`read-admit`, `db-acquire`, …). */
@@ -1043,27 +1102,28 @@ export interface OpWait extends SlowWaitBase {
    * sees, so a monitor may hold it to a latency bar rather than a work bar.
    */
   latency?: true;
-  windowMs?: never;
+  busy?: never;
 }
 
-/** A gate's window: independent ops' leftover waits, summed. */
-export interface GateWindowWait extends SlowWaitBase {
-  /** The op that queued longest in the window. */
+/**
+ * A gate's busy stretch: `ms` is how long its queue held without a break —
+ * from the first leftover waiter queuing to the last one admitted.
+ */
+export interface GateBusyWait extends SlowWaitBase {
+  /** The op that queued longest in the stretch. */
   caller: SpanRef;
-  /** How many queue waits the window sums. */
+  /** How many queue waits the stretch holds. */
   waits: number;
-  /**
-   * The window's length (`GATE_WINDOW_MS`): `ms / windowMs` is its mean queue
-   * depth — the measure it is judged on.
-   */
-  windowMs: number;
+  busy: true;
+  /** The longest any one op queued in it without a break. */
+  longestWaitMs: number;
   latency?: never;
 }
 
 /**
  * A slow-wait subscriber: returns whether it FILED the wait. A filed wait is
  * done; one no subscriber filed is carried on as residue and offered again,
- * summed with others, by the entry around it (and at last the gate's window) —
+ * summed with others, by the entry around it (and at last the gate's busy timeline) —
  * so a subscriber that observes without filing sees the same time again.
  */
 export type SlowWaitHandler = (wait: SlowWait) => boolean;
@@ -1097,7 +1157,7 @@ function withHolders(wait: SlowWait): SlowWait {
  * op: a span is judged on its own time (its waits excluded), so the time it
  * queued is reported here, against the gate, instead. Called synchronously from
  * `chargeWait` (one wait), as an entry closes (its residue — see
- * `offerQueueResidue`) and from the gate's window (`addGateWindow`); the
+ * `offerQueueResidue`) and from the gate's busy stretch (`addGateBusy`); the
  * handler must only schedule. Returns a disposer.
  */
 export function onSlowWait(
@@ -1131,6 +1191,15 @@ export interface GateMeter {
   count: number;
   /** Σ their ms — a sum across concurrent waiters, so it can exceed wall. */
   totalMs: number;
+  /** The longest single wait — what one waiter felt at worst. */
+  maxWaitMs: number;
+  /**
+   * The longest the gate's queue held without a break (every wait, filed or
+   * not; waits arrive as they end, so a wait reaching back past a stretch
+   * that already closed starts a new one — a slight under-count): the time
+   * the worst burst took to drain.
+   */
+  longestBusyMs: number;
   /**
    * Who holds the gate as the profile is read, longest first — its gauge's
    * `holders` (`registerGateGauge`), absent when the gate names none. What
@@ -1141,12 +1210,41 @@ export interface GateMeter {
 
 const gateMeters = new Map<string, GateMeter>();
 
-function meterGateWait(layer: string, ms: number, kind: "queue" | "io"): void {
-  const m = gateMeters.get(layer);
+// Per layer: the meter's current busy stretch (every wait, filed or not).
+// Waits are charged as they end, so they arrive nearly in order; one that
+// started before the stretch's end joins it, any other starts the next.
+const gateMeterStretches = new Map<string, QueueSpan>();
+
+function meterGateWait(
+  layer: string,
+  wait: QueueSpan,
+  kind: "queue" | "io",
+): void {
+  const ms = wait.t1 - wait.t0;
+  let m = gateMeters.get(layer);
   if (m) {
     m.count += 1;
     m.totalMs += ms;
-  } else gateMeters.set(layer, { layer, kind, count: 1, totalMs: ms });
+    m.maxWaitMs = Math.max(m.maxWaitMs, ms);
+  } else {
+    m = {
+      layer,
+      kind,
+      count: 1,
+      totalMs: ms,
+      maxWaitMs: ms,
+      longestBusyMs: 0,
+    };
+    gateMeters.set(layer, m);
+  }
+  if (ms <= 0) return; // admitted with room: the queue did not hold
+  const cur = gateMeterStretches.get(layer);
+  if (cur && wait.t0 <= cur.t1) {
+    cur.t0 = Math.min(cur.t0, wait.t0);
+    cur.t1 = Math.max(cur.t1, wait.t1);
+  } else gateMeterStretches.set(layer, { t0: wait.t0, t1: wait.t1 });
+  const st = gateMeterStretches.get(layer)!;
+  m.longestBusyMs = Math.max(m.longestBusyMs, st.t1 - st.t0);
 }
 
 // --- Store ---
@@ -2294,7 +2392,8 @@ export function recordSpan(
  * the nearest open ancestor (nearest only, like a child's execution interval,
  * so no wait is ever held by two entries — a detached child closing after its
  * parent hands its own on, never the parent's), and from the top of the chain
- * to the gate's window. Filed by the innermost entry it is slow for, once.
+ * to the gate's busy timeline. Filed by the innermost entry it is slow for,
+ * once.
  */
 function offerQueueResidue(ctx: EntryContext): Map<string, QueueTally> {
   const tallies = ctx.queueTallies!;
@@ -2309,7 +2408,7 @@ function offerQueueResidue(ctx: EntryContext): Map<string, QueueTally> {
     const ms = Math.min(tally.ms, ctx.layerUnions.get(layer)?.unionMs ?? 0);
     if (ms <= 0) continue;
     if (notifySlowWait({ layer, ms, caller, waits })) continue;
-    unfiled.set(layer, { ms, waits });
+    unfiled.set(layer, { ms, waits, spans: tally.spans });
   }
   return unfiled;
 }
@@ -2323,7 +2422,7 @@ function sumResidue(residue: Map<string, QueueTally>): number {
 
 /**
  * Hand an entry's unfiled residue to the nearest open ancestor — or, from the
- * top of the chain, to each gate's window. Only when the entry did not file:
+ * top of the chain, to each gate's busy timeline. Only when the entry did not file:
  * a filed entry's report already holds it.
  */
 function handResidueOn(
@@ -2332,87 +2431,133 @@ function handResidueOn(
 ): void {
   const caller: SpanRef = { kind: ctx.kind, label: ctx.label };
   const outer = nearestOpen(ctx.parent);
-  for (const [layer, { ms, waits }] of residue) {
-    if (outer) addResidue(outer, layer, ms, waits);
-    else addGateWindow(layer, ms, waits, caller);
+  for (const [layer, { ms, waits, spans }] of residue) {
+    if (outer) addResidue(outer, layer, ms, waits, spans);
+    else addGateBusy(layer, spans, waits, caller);
   }
 }
 
 /**
- * How long a gate's window sums the residue of independent ops. The sum over
- * the window is its mean queue depth × its length (Little's law), so a
- * subscriber judges it on how full the gate was (`GateWindowWait`), never on
- * one op's latency bar. Fixed (tumbling), not sliding: a burst straddling two
- * windows under the bar in each is not filed.
+ * How far back a gate's busy timeline keeps its stretches. A residue reaches
+ * the top when its root entry closes, which can be long after its waits (a
+ * flush draining for seconds), so a stretch stays open to late joiners for
+ * this long after it last grew. Past it, a wait starts a new stretch.
  */
-const GATE_WINDOW_MS = 60_000;
+const GATE_BUSY_HORIZON_MS = 60_000;
 
-// Distinct callers a window keeps for naming its longest waiter; past it a
-// caller's waits still count, it just cannot be named.
-const GATE_WINDOW_CALLER_CAP = 64;
+// Stretches a gate keeps at once (oldest dropped first), and distinct callers
+// a stretch keeps for naming its longest waiter — past it a caller's waits
+// still count, it just cannot be named.
+const GATE_BUSY_STRETCH_CAP = 32;
+const GATE_BUSY_CALLER_CAP = 64;
 
-interface GateWindow {
-  startMs: number;
-  ms: number;
+interface BusyStretch {
+  t0: number;
+  t1: number;
   waits: number;
-  /** Per caller (`kind label`): ms it queued in the window. */
+  /** The longest one op queued without a break inside the stretch. */
+  longestMs: number;
+  /** Per caller (`kind label`): ms it queued in the stretch. */
   callers: Map<string, { ref: SpanRef; ms: number }>;
   /** The caller that queued longest so far (kept as each one grows). */
   top: { ref: SpanRef; ms: number } | undefined;
-  /** A subscriber filed this window: it is one incident, filed once. */
+  /** A subscriber filed this stretch: it is one incident, filed once. */
   filed: boolean;
 }
 
-/** Per queue layer: the residue of independent ops in its current window. */
-const gateWindows = new Map<string, GateWindow>();
+/** Per queue layer: its recent busy stretches, disjoint, oldest first. */
+const gateBusy = new Map<string, BusyStretch[]>();
 
 /**
- * Sum a root's unfiled residue into its gate's window, and offer the window to
- * `onSlowWait` as the gate's own wait — its caller the op that queued longest
- * in it — every time it grows, until a subscriber files it. A window is filed
- * at most ONCE: "this gate was full this minute" is one incident, and a boot
- * storm re-filed every time another 2 s accrued was 20–360 occurrences of one
- * storm (main, 2026-11-12). Its later waits still count in the gate's meter
- * (`GateMeter`, judged by op-rate's op-time). A window older than
- * `GATE_WINDOW_MS` is replaced as the next residue arrives.
+ * Lay a root's unfiled residue on its gate's timeline: each of its queued
+ * spans joins every stretch it touches into one (a burst of independent
+ * reads queued back to back is ONE stretch, however many waited), and each
+ * stretch it grew is offered to `onSlowWait` as the gate's own wait — `ms`
+ * its length, its caller the op that queued longest in it — until a
+ * subscriber files it. Filed at most ONCE (two filed stretches joined stay
+ * filed): "this gate's queue held 3 s" is one incident. Its waits still
+ * count in the gate's meter (`GateMeter`, judged by op-rate's op-time).
  */
-function addGateWindow(
+function addGateBusy(
   layer: string,
-  ms: number,
+  spans: readonly QueueSpan[],
   waits: number,
   caller: SpanRef,
 ): void {
   const t = now();
-  let w = gateWindows.get(layer);
-  if (!w || t - w.startMs > GATE_WINDOW_MS) {
-    w = {
-      startMs: t,
-      ms: 0,
+  const list = (gateBusy.get(layer) ?? []).filter(
+    (st) => t - st.t1 <= GATE_BUSY_HORIZON_MS,
+  );
+  gateBusy.set(layer, list);
+  const key = `${caller.kind} ${caller.label}`;
+  const grown = new Set<BusyStretch>();
+  let mostMs = 0;
+  let most: BusyStretch | undefined;
+  for (const span of spans) {
+    if (span.t1 <= span.t0) continue;
+    const merged: BusyStretch = {
+      t0: span.t0,
+      t1: span.t1,
       waits: 0,
+      longestMs: span.t1 - span.t0,
       callers: new Map(),
       top: undefined,
       filed: false,
     };
-    gateWindows.set(layer, w);
+    // Join every stretch this span touches (queued back to back counts).
+    for (let i = 0; i < list.length;) {
+      const st = list[i]!;
+      if (st.t0 <= merged.t1 && st.t1 >= merged.t0) {
+        merged.t0 = Math.min(merged.t0, st.t0);
+        merged.t1 = Math.max(merged.t1, st.t1);
+        merged.waits += st.waits;
+        merged.longestMs = Math.max(merged.longestMs, st.longestMs);
+        merged.filed ||= st.filed;
+        for (const [k, c] of st.callers) addBusyCaller(merged, k, c.ref, c.ms);
+        grown.delete(st);
+        if (most === st) most = merged;
+        list.splice(i, 1);
+      } else i++;
+    }
+    addBusyCaller(merged, key, caller, span.t1 - span.t0);
+    let at = list.findIndex((st) => st.t0 > merged.t0);
+    if (at < 0) at = list.length;
+    list.splice(at, 0, merged);
+    grown.add(merged);
+    if (span.t1 - span.t0 >= mostMs) {
+      mostMs = span.t1 - span.t0;
+      most = merged;
+    }
   }
-  w.ms += ms;
-  w.waits += waits;
-  const key = `${caller.kind} ${caller.label}`;
-  let entry = w.callers.get(key);
+  // The residue's waits are counted once, in the stretch most of it fell in.
+  if (most) most.waits += waits;
+  while (list.length > GATE_BUSY_STRETCH_CAP) list.shift();
+  for (const st of grown) {
+    if (st.filed || !list.includes(st)) continue;
+    st.filed = notifySlowWait({
+      layer,
+      ms: st.t1 - st.t0,
+      caller: st.top?.ref ?? caller,
+      waits: st.waits,
+      busy: true,
+      longestWaitMs: st.longestMs,
+    });
+  }
+}
+
+function addBusyCaller(
+  st: BusyStretch,
+  key: string,
+  ref: SpanRef,
+  ms: number,
+): void {
+  let entry = st.callers.get(key);
   if (entry) entry.ms += ms;
-  else if (w.callers.size < GATE_WINDOW_CALLER_CAP) {
-    entry = { ref: caller, ms };
-    w.callers.set(key, entry);
+  else if (st.callers.size < GATE_BUSY_CALLER_CAP) {
+    entry = { ref, ms };
+    st.callers.set(key, entry);
   }
-  if (entry && (!w.top || entry.ms > w.top.ms)) w.top = entry;
-  if (w.filed) return;
-  w.filed = notifySlowWait({
-    layer,
-    ms: w.ms,
-    caller: w.top?.ref ?? caller,
-    waits: w.waits,
-    windowMs: GATE_WINDOW_MS,
-  });
+  if (entry && (!st.top || entry.ms > st.top.ms)) st.top = entry;
 }
 
 // Cap the variant at MAX_VARIANT_LEN and drop empty parts, so an absent detail
@@ -2481,7 +2626,10 @@ function chargeWaitIn(
   ms: number,
   kind: WaitKind,
 ): void {
-  if (kind !== "join") meterGateWait(layer, ms, kind);
+  const waitEnd = now();
+  // The interval this wait queued: where it lies on its gate's busy timeline.
+  const queued: QueueSpan[] = [{ t0: waitEnd - ms, t1: waitEnd }];
+  if (kind !== "join") meterGateWait(layer, queued[0]!, kind);
   // A context-less join is nobody's wait: the time is the joined run's, which
   // its own span counts, and there is no waiter to take it off — a fallback
   // span would only inflate `db` call counts.
@@ -2506,7 +2654,7 @@ function chargeWaitIn(
       0,
     );
     if (!notifySlowWait({ layer, ms, caller }))
-      addGateWindow(layer, ms, 1, caller);
+      addGateBusy(layer, queued, 1, caller);
     return;
   }
   if (
@@ -2514,10 +2662,10 @@ function chargeWaitIn(
     !notifySlowWait({ layer, ms, caller: { kind: cur.kind, label: cur.label } })
   ) {
     const holder = nearestOpen(cur);
-    if (holder) addResidue(holder, layer, ms, 1);
-    else addGateWindow(layer, ms, 1, { kind: cur.kind, label: cur.label });
+    if (holder) addResidue(holder, layer, ms, 1, queued);
+    else addGateBusy(layer, queued, 1, { kind: cur.kind, label: cur.label });
   }
-  const end = now();
+  const end = waitEnd;
   const start = end - ms;
   for (let a: EntryContext | undefined = cur; a; a = a.parent) {
     if (a.closed) continue;
@@ -3129,7 +3277,8 @@ export function resetRuntimeProfile(): void {
   loopProbe = undefined;
   observedStall = null;
   laneClaims.clear();
-  gateWindows.clear();
+  gateBusy.clear();
+  gateMeterStretches.clear();
   gateMeters.clear();
   sinceMs = now();
 }

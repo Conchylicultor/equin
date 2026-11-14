@@ -16,7 +16,6 @@ const thresholds = {
   httpMs: 2000,
   dbMs: 500,
   jobMs: 3000,
-  gateQueueDepth: 0.25,
   browserHostBootMs: 5000,
 };
 

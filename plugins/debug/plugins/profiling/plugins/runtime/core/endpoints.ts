@@ -126,6 +126,10 @@ const gateMeterSchema = z.object({
   kind: z.enum(["queue", "io"]),
   count: z.number(),
   totalMs: z.number(),
+  // The longest single wait, and the longest the queue held without a break
+  // (the worst burst's drain time) — what a waiter felt, not a sum.
+  maxWaitMs: z.number(),
+  longestBusyMs: z.number(),
 });
 
 export const runtimeProfileSchema = z.object({

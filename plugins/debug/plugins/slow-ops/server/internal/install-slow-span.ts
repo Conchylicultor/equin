@@ -118,14 +118,13 @@ export function installSlowSpanHook(thresholds: Thresholds): void {
   // for the flush lane) arrives already net of what the lane filed inside it.
   // Waits each under the bar arrive summed: as an entry's residue (`waits`
   // set, the entry its caller — 40 queries × 150 ms on `db-acquire` is one 6 s
-  // wait), or, when every op waited a little, as the gate's window across
-  // independent ops (`windowMs` set, its longest waiter the caller). A wait
-  // returned unfiled comes back summed with others, so each is filed once. The
-  // bar is `resolveWaitThreshold`: one op's wait (single or summed) is a latency,
-  // held to the loader bar; a window is the gate's mean queue depth × its
-  // length, held to `gateQueueDepth` — how full the gate was, never how many
-  // reads went through it. The floor is the lowest per-op bar (a window's bar
-  // is far above it).
+  // wait), or, when every op waited a little, as the gate's busy stretch
+  // across independent ops (`busy` set: how long its queue held without a
+  // break, its longest waiter the caller). A wait returned unfiled comes back
+  // summed with others, so each is filed once. The bar is
+  // `resolveWaitThreshold`: one op's wait (single or summed) and a busy
+  // stretch (the time a burst took to drain) are both latencies a reader can
+  // feel, held to the loader bar — never a sum across waiters.
   waitDisposer = onSlowWait(
     (wait: SlowWait) => {
       const threshold = resolveWaitThreshold(wait, thresholds);
@@ -134,11 +133,13 @@ export function installSlowSpanHook(thresholds: Thresholds): void {
         wait.waits === undefined
           ? undefined
           : {
-              // A window's sample says it is a sum across ops, not one op's.
-              ...(wait.windowMs !== undefined && {
-                variant: `across ops, ${wait.windowMs / 1000} s window`,
-              }),
-              measures: { waitCount: wait.waits },
+              // A busy stretch's sample says it is the gate's queue holding
+              // across ops, not one op's wait.
+              ...(wait.busy && { variant: "queue held across ops" }),
+              measures: {
+                waitCount: wait.waits,
+                ...(wait.busy && { longestWaitMs: wait.longestWaitMs }),
+              },
             };
       const trace = captureTrace({
         kind: WAIT_KIND,

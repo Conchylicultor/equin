@@ -1,4 +1,4 @@
-// @hash d88a140f50c2
+// @hash 956206f5b2c3
 {
   // Report a slow-op when first content paint takes longer than this (measured client-side in a post-paint frame).
   "pageLoadMs": 2000,
@@ -17,7 +17,5 @@
   // Report a slow-op when a database query span exceeds this duration.
   "dbMs": 500,
   // Report a slow-op when a background job run exceeds this duration. A job can override this via defineJob({ slowThresholdMs }).
-  "jobMs": 3000,
-  // Report a congested gate when, over its one-minute window, the requests no single slow-op covered kept on average more than this many waiters queued on it (summed wait ÷ window). One wait, or one request's waits summed, is still judged on the loader threshold.
-  "gateQueueDepth": 0.25
+  "jobMs": 3000
 }

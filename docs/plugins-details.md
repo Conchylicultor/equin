@@ -26961,7 +26961,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `slow-ops.ops:rows` (keyed, point)
         - Routes: `POST /api/slow-ops/client`
       - Core:
-        - Uses: 24 symbols — full list in [`plugins/debug/plugins/slow-ops/REFERENCE.md`](../plugins/debug/plugins/slow-ops/REFERENCE.md)
+        - Uses: 23 symbols — full list in [`plugins/debug/plugins/slow-ops/REFERENCE.md`](../plugins/debug/plugins/slow-ops/REFERENCE.md)
           - `fields` ×3
           - `infra/runtime-profiler` ×3
           - `packages/list-bound` ×3
@@ -26970,7 +26970,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `debug/trace/engine.traceListRoute`
           - `fields/date/config.dateField`
           - `fields/duration/config.durationField`
-          - `fields/float/config.floatField`
           - `fields/int/config.intField`
           - `fields/json/config.jsonField`
           - `fields/text/config.textField`
@@ -28868,7 +28867,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `debug/profiling/op-log/op-store`
               - `debug/queue-health`
               - `debug/sentinel`
-              - `debug/slow-ops`
               - `infra/jobs`
               - `map/google`
               - `primitives/usage-rank`
