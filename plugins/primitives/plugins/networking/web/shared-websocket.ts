@@ -3,6 +3,10 @@ import { publishWsStatus, type WsStatus } from "./ws-status-bus";
 import { nativeWebSocket } from "@plugins/primitives/plugins/networking/plugins/request-guard/web";
 import { publishNetDiag } from "./net-diag-bus";
 import {
+  runMarked,
+  type TaskMarkText,
+} from "@plugins/primitives/plugins/perfs/plugins/task-marks/web";
+import {
   createInPageLocks,
   createInPageSharedWorkers,
 } from "./in-page-ws-host";
@@ -83,6 +87,33 @@ export interface SharedWebSocketOptions {
    */
   address?: string;
 }
+
+/**
+ * A worker message as a task mark (`primitives/perfs/task-marks`): its kind —
+ * and the status / diag event it carries, the grain a recurring freeze groups
+ * by — and its size for a frame. LoAF names only the port handler, the entry
+ * point of EVERY message, so the mark is what says which one froze the tab.
+ * Cheap by construction: no payload is read beyond a length.
+ */
+function portMark(url: string, msg: WorkerToTab): TaskMarkText {
+  switch (msg.kind) {
+    case "status":
+      return { what: `port status ${msg.status}`, detail: url };
+    case "rx":
+      return { what: "port rx", detail: `${url} ${msg.data.length} B` };
+    case "diag":
+      return { what: `port diag ${msg.event.type}`, detail: url };
+    case "ws-error":
+    case "released":
+    case "fatal":
+      return { what: `port ${msg.kind}`, detail: url };
+  }
+}
+
+/** A nested mark: the step of a port message's handling it names. */
+const step =
+  (what: string): (() => TaskMarkText) =>
+  () => ({ what, detail: "" });
 
 /** The OS seams a socket's tab client and its worker host run on. */
 interface WorkerSeams {
@@ -305,9 +336,21 @@ export class SharedWebSocket {
       lock: "held",
     };
     this.session = session;
-    worker.onerror = () => this.onWorkerError(session);
+    // Both are entry points the browser calls: marked tasks, so a freeze
+    // inside one names the message that started it (LoAF names only this
+    // handler — "(anonymous) (MessagePort.onmessage)").
+    worker.onerror = () =>
+      runMarked(
+        "networking",
+        () => ({ what: "port worker-error", detail: this.url }),
+        () => this.onWorkerError(session),
+      );
     session.port.onmessage = (ev: MessageEvent<WorkerToTab>) =>
-      this.onWorkerMessage(session, ev.data);
+      runMarked(
+        "networking",
+        () => portMark(this.url, ev.data),
+        () => this.onWorkerMessage(session, ev.data),
+      );
 
     // Hold the liveness lock for the port's whole life, and attach only once it
     // is held: the worker queues for the same lock, so a grant before ours
@@ -408,7 +451,9 @@ export class SharedWebSocket {
           // only a NEW connection (or a re-attach) may re-dispatch.
           if (msg.conn !== this.boundConn) {
             this.boundConn = msg.conn;
-            this.dispatch(() => this.onopen?.(new Event("open")));
+            runMarked("networking", step("onopen"), () =>
+              this.dispatch(() => this.onopen?.(new Event("open"))),
+            );
           }
         } else {
           this.boundConn = null;
@@ -423,7 +468,9 @@ export class SharedWebSocket {
         );
         return;
       case "ws-error":
-        this.dispatch(() => this.onerror?.(new Event("error")));
+        runMarked("networking", step("onerror"), () =>
+          this.dispatch(() => this.onerror?.(new Event("error"))),
+        );
         return;
       case "diag":
         publishNetDiag(msg.event);
@@ -440,7 +487,7 @@ export class SharedWebSocket {
           attachedMs: msg.attachedMs,
           tabLock: session.lock,
         });
-        this.detach();
+        runMarked("networking", step("detach"), () => this.detach());
         {
           const now = Date.now();
           this.evictions = this.evictions.filter(
@@ -458,7 +505,7 @@ export class SharedWebSocket {
         }
         this.boundConn = null;
         this.readyState = SharedWebSocket.CONNECTING;
-        this.attach();
+        runMarked("networking", step("attach"), () => this.attach());
         return;
       case "fatal":
         this.detach();

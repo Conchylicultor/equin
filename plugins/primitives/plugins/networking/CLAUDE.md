@@ -208,6 +208,8 @@ built on them — see
   - Uses:
     - `primitives/latest-ref.useLatestRef`
     - `primitives/networking/request-guard.nativeWebSocket`
+    - `primitives/perfs/task-marks.runMarked`
+    - `primitives/perfs/task-marks.TaskMarkText`
   - Exports (types):
     - `ContentServing`
     - `FetchWithRetryOptions`

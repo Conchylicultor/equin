@@ -10,7 +10,7 @@
 // bundle must be self-contained.
 
 import type {
-  MainThreadStallPayload,
+  MainThreadStallDraft,
   StallFrame,
   StallTab,
   TaskMark,
@@ -91,7 +91,7 @@ export interface StallRecord {
   id: string;
   /** The watchdog that owns it; its lock free ⇒ the record is an orphan to adopt. */
   owner: string;
-  payload: MainThreadStallPayload;
+  payload: MainThreadStallDraft;
 }
 
 export type StallEffect =
@@ -102,7 +102,7 @@ export type StallEffect =
       type: "deliver";
       portId: string;
       id: string;
-      payload: MainThreadStallPayload;
+      payload: MainThreadStallDraft;
     }
   /** `portId`: a live (answering) tab to carry the line, null when there is none. */
   | { type: "log"; line: Record<string, unknown>; portId?: string | null };
@@ -151,7 +151,7 @@ export interface StallMachine {
   /** Finished stalls waiting for a live tab to file them. */
   readonly outbox: Map<
     string,
-    { payload: MainThreadStallPayload; deliveredTo: string | null }
+    { payload: MainThreadStallDraft; deliveredTo: string | null }
   >;
   lastTick: number | null;
   readonly newId: () => string;
@@ -577,10 +577,10 @@ function drop(
 
 function payloadOf(
   inc: Incident,
-  ended: MainThreadStallPayload["ended"],
+  ended: MainThreadStallDraft["ended"],
   endedAt: number,
   lowerBound: boolean,
-): MainThreadStallPayload {
+): MainThreadStallDraft {
   const marks = inc.marks.filter(
     (k) => k.at < endedAt && k.at >= inc.startedAt - STALL.CRUMB_WINDOW_MS,
   );

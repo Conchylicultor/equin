@@ -3,15 +3,19 @@ export {
   StallFrameSchema,
   StallFrameScriptSchema,
   StallInteractionSchema,
+  StallStacksSchema,
   StallTabSchema,
   mainThreadStallFingerprint,
   mainThreadStallSummary,
 } from "./main-thread-stall-kind";
 export type {
+  MainThreadStallDraft,
   MainThreadStallPayload,
   StallFrame,
   StallFrameScript,
   StallInteraction,
+  StallStack,
+  StallStacks,
   StallTab,
   TaskMark,
 } from "./main-thread-stall-kind";

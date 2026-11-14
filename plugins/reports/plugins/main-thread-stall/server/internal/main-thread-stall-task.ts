@@ -51,6 +51,39 @@ function markLine(k: TaskMark, stallStartedAt: number): string {
   return `${at} — \`${k.source}\` \`${k.what}\` (${k.detail})`;
 }
 
+/** What the tab's sampling profiler caught underneath the entry point. */
+function stacksSection(d: MainThreadStallPayload): string[] {
+  const st = d.stacks;
+  const lines = ["**Sampled stacks (JS Self-Profiling, inside the stall)**"];
+  if (st.kind === "unavailable") {
+    lines.push(`Not available: ${st.reason}.`);
+    return lines;
+  }
+  const secs = (ms: number): string => (ms / 1000).toFixed(1);
+  lines.push(
+    `The stalled tab's own profiler sampled every ~${st.sampleIntervalMs} ms through the freeze: **${secs(st.sampledMs)} s** sampled of ${secs(d.durationMs)} s, ${secs(st.noJsMs)} s of it with no JS on the stack (style, layout, paint, GC — or the thread not scheduled).${st.truncated ? " **Truncated**: the profiler's buffer filled before the stall ended; the stacks cover its start only." : ""}`,
+  );
+  if (st.topSelf.length > 0) {
+    lines.push("");
+    lines.push("Heaviest functions (self time — the innermost frame):");
+    for (const f of st.topSelf) lines.push(`- ${f.ms} ms — \`${f.frame}\``);
+  }
+  st.stacks.forEach((s, i) => {
+    lines.push("");
+    lines.push(
+      `Stack ${i + 1} — ${s.ms} ms (${s.samples} samples), innermost first:`,
+    );
+    lines.push("```");
+    lines.push(...s.frames);
+    lines.push("```");
+  });
+  if (st.stacks.length === 0 && st.sampledMs > 0)
+    lines.push(
+      "No JS ran in any sample: the freeze was the browser's own work (style, layout, paint, GC) or the thread starved of CPU.",
+    );
+  return lines;
+}
+
 function renderDescription(row: ReportRow, d: MainThreadStallPayload): string {
   const lines: string[] = [];
   lines.push(
@@ -123,6 +156,8 @@ function renderDescription(row: ReportRow, d: MainThreadStallPayload): string {
     }
   }
   lines.push("");
+  lines.push(...stacksSection(d));
+  lines.push("");
   lines.push("**The task it froze in**");
   if (d.frozenIn) {
     lines.push(
@@ -174,7 +209,7 @@ function renderDescription(row: ReportRow, d: MainThreadStallPayload): string {
   lines.push("");
   lines.push("**How to investigate**");
   lines.push(
-    "Reproduce on the route above and record it (Debug → Render Profiler, or the Performance panel). An attributed function is where to start; an unattributed `gone` stall with 0 frames is a synchronous loop — look at what mounted or updated right before (breadcrumbs, `logs/live-state.jsonl` for this tab). The slow-op `main-thread` row for this route shows how often it happens below the 5 s report bar.",
+    "Start from the sampled stacks above when there are any: they are what ran underneath the entry point. Otherwise reproduce on the route above and record it (Debug → Render Profiler, or the Performance panel). An attributed function is where to start; an unattributed `gone` stall with 0 frames is a synchronous loop — look at what mounted or updated right before (breadcrumbs, `logs/live-state.jsonl` for this tab). The slow-op `main-thread` row for this route shows how often it happens below the 5 s report bar.",
   );
   return lines.join("\n");
 }

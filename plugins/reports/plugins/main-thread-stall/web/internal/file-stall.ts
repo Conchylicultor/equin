@@ -2,12 +2,14 @@ import { report } from "@plugins/reports/web";
 import { clientSlowOpSink } from "@plugins/debug/plugins/slow-ops/plugins/sink/core";
 import {
   mainThreadStallSummary,
+  type MainThreadStallDraft,
   type MainThreadStallPayload,
   type StallFrame,
   type StallTab,
 } from "../../core";
 import { STALL } from "./constants";
 import { topFunction } from "./stall-machine";
+import type { StallProfiler } from "./stall-profiler";
 
 // The slow-op every main-thread stall lands as: one row per (app, route
 // pattern), the attributed function as its variant, the interval at its true
@@ -36,12 +38,20 @@ function emitSlowOp(opts: {
 
 /**
  * File one finished stall: the report (the alert) and its slow-op (the
- * interval). Resolves whether the report landed — the caller acks the
+ * interval). Its stacks are this tab's sampled profile of the stall when the
+ * tab is the one that stalled and survived it (`stacksFor` says why not
+ * otherwise). Resolves whether the report landed — the caller acks the
  * watchdog with it, which keeps the stored record on a failure.
  */
 export async function fileStall(
-  payload: MainThreadStallPayload,
+  draft: MainThreadStallDraft,
+  profiler: StallProfiler,
+  ownTabId: string,
 ): Promise<boolean> {
+  const payload: MainThreadStallPayload = {
+    ...draft,
+    stacks: await profiler.stacksFor(draft, ownTabId),
+  };
   emitSlowOp({
     tab: payload,
     durationMs: payload.durationMs,

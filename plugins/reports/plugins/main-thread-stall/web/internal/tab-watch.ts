@@ -23,6 +23,7 @@ import {
   type LoafEntry,
 } from "./loaf";
 import { LOG_CHANNEL } from "./log-channel";
+import { installStallProfiler } from "./stall-profiler";
 
 // The prefix of every browser-visible name the watchdog takes; the worker reads
 // it back from the name it is started under (see constants.ts).
@@ -55,7 +56,10 @@ export function installStallWatch(readTab: () => StallTab): StallWatch {
   let session: Session | null = null;
   let disposed = false;
   const useWorker = typeof SharedWorker !== "undefined" && "locks" in navigator;
-  const fallback = useWorker ? null : installInTabFallback(readTab);
+  // Sampled while visible, rotated on each ping / heartbeat: the stacks a
+  // recovered stall's report carries.
+  const profiler = installStallProfiler();
+  const fallback = useWorker ? null : installInTabFallback(readTab, profiler);
   if (!useWorker) {
     clientLog(
       LOG_CHANNEL,
@@ -95,9 +99,10 @@ export function installStallWatch(readTab: () => StallTab): StallWatch {
         return;
       case "ping":
         post({ kind: "pong" });
+        profiler.pulse();
         return;
       case "file":
-        void fileStall(msg.payload).then((ok) => {
+        void fileStall(msg.payload, profiler, readTab().tabId).then((ok) => {
           if (s === session) post({ kind: "filed", id: msg.id, ok });
         });
         return;
@@ -314,6 +319,7 @@ export function installStallWatch(readTab: () => StallTab): StallWatch {
       observer?.disconnect();
       interactions.dispose();
       fallback?.dispose();
+      profiler.dispose();
       detach();
       document.removeEventListener("visibilitychange", postState);
       window.removeEventListener("focus", postState);

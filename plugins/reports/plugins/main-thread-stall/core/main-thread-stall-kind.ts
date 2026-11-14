@@ -85,6 +85,41 @@ export const StallInteractionSchema = z.object({
 });
 export type StallInteraction = z.infer<typeof StallInteractionSchema>;
 
+// One aggregated main-thread JS stack the sampling profiler caught inside the
+// stall: frames innermost first, each `name (url:line:col)`; `ms` is the
+// sampled time spent in exactly this stack.
+export const StallStackSchema = z.object({
+  ms: z.number(),
+  samples: z.number(),
+  frames: z.array(z.string()),
+});
+export type StallStack = z.infer<typeof StallStackSchema>;
+
+// What ran underneath the freeze's entry point, from the tab's rolling JS
+// Self-Profiling trace (web/internal/stall-profiler.ts). `sampled` only for a
+// stall the stalled tab itself survived and filed; otherwise `unavailable`
+// with the reason — never an empty `sampled`, which would read as "no JS ran".
+export const StallStacksSchema = z.discriminatedUnion("kind", [
+  z.object({
+    kind: z.literal("sampled"),
+    // The profiler's requested and the trace's actual mean sample interval.
+    sampleIntervalMs: z.number(),
+    // Sampled time inside the stall window, and how much of it ran no JS
+    // (no stack: style, layout, paint, GC — or the thread not scheduled).
+    sampledMs: z.number(),
+    noJsMs: z.number(),
+    // The profiler's buffer filled before the stall ended: the stacks cover
+    // its first `sampledMs` only.
+    truncated: z.boolean(),
+    // The heaviest exact stacks, heaviest first (capped).
+    stacks: z.array(StallStackSchema),
+    // The heaviest innermost frames (self time across every stack), capped.
+    topSelf: z.array(z.object({ frame: z.string(), ms: z.number() })),
+  }),
+  z.object({ kind: z.literal("unavailable"), reason: z.string() }),
+]);
+export type StallStacks = z.infer<typeof StallStacksSchema>;
+
 export const MainThreadStallPayloadSchema = StallTabSchema.extend({
   // Epoch ms. `endedAt` is when the thread answered again (recovered), when
   // the tab went away (gone), or the last instant it was seen still frozen
@@ -132,10 +167,24 @@ export const MainThreadStallPayloadSchema = StallTabSchema.extend({
   // `during` — as `function (invoker)`; null when unattributed. THE
   // attribution grain of the fingerprint.
   topFunction: z.string().nullable(),
+  // The main-thread JS stacks sampled during the stall (see StallStacksSchema).
+  // Evidence only: never part of the fingerprint or summary.
+  stacks: StallStacksSchema.default({
+    kind: "unavailable",
+    reason: "filed before stall reports carried sampled stacks",
+  }),
 });
 export type MainThreadStallPayload = z.infer<
   typeof MainThreadStallPayloadSchema
 >;
+
+/**
+ * A stall as the watchdog knows it: everything but `stacks`, which only the
+ * stalled tab can add (its profiler ran on its own thread) when it files. It
+ * is also all the fingerprint and summary may read — the same freeze stays
+ * one row whatever its sampled stacks were.
+ */
+export type MainThreadStallDraft = Omit<MainThreadStallPayload, "stacks">;
 
 /**
  * A freeze a user interaction started: the interaction's target alone — the
@@ -146,9 +195,7 @@ export type MainThreadStallPayload = z.infer<
  * handler runs together. No ids, durations or end kinds: the same freeze is
  * one row whose `count` grows, and its `data` is the newest sighting.
  */
-export function mainThreadStallFingerprint(
-  data: MainThreadStallPayload,
-): string {
+export function mainThreadStallFingerprint(data: MainThreadStallDraft): string {
   if (data.interaction)
     return `main-thread-stall:interaction:${interactionTargetKey(data.interaction.target)}`;
   const task = data.frozenIn
@@ -158,7 +205,7 @@ export function mainThreadStallFingerprint(
 }
 
 /** The one-line summary used as the report message and the task title stem. */
-export function mainThreadStallSummary(data: MainThreadStallPayload): string {
+export function mainThreadStallSummary(data: MainThreadStallDraft): string {
   const secs = (data.durationMs / 1000).toFixed(1);
   const at = `${data.app ?? "?"} ${data.routePattern}`;
   const who = data.topFunction ?? "unattributed";

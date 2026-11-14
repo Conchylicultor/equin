@@ -141,6 +141,21 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // cannot drift apart.
 const indexURL = "/index.html"
 
+// documentPolicy is the Document-Policy every app document is served with.
+//
+// js-profiling lets the page run Chrome's JS Self-Profiling API
+// (`new Profiler(…)`, which throws without it): the main-thread stall
+// detector (plugins/reports/plugins/main-thread-stall, web/internal/
+// stall-profiler.ts) keeps a rolling sampled trace so a recovered freeze's
+// report names the stacks that ran during it, not only the task's entry
+// point. The policy only permits profiling; nothing samples until the page
+// starts a Profiler. Set in serveShell, the one place the shell is served,
+// so every app document — direct hit, SPA fallback, spliced or plain — has it.
+const (
+	documentPolicyHeader = "Document-Policy"
+	documentPolicy       = "js-profiling"
+)
+
 // serveIndex serves the SPA shell, which must never be replayed from a browser
 // cache without asking us first.
 //
@@ -211,6 +226,7 @@ func serveShell(w http.ResponseWriter, r *http.Request, wt *Worktree, webDir str
 	indexPath := filepath.Join(webDir, indexURL)
 	prestartBackend(r, wt)
 	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set(documentPolicyHeader, documentPolicy)
 	// An explicit /index.html is redirected to the directory form by the plain
 	// serve (http.ServeFile); the document itself is only ever served at a path.
 	if strings.HasSuffix(r.URL.Path, indexURL) {

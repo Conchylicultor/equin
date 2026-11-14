@@ -1,3 +1,5 @@
+import { markedListeners } from "./marked-listeners";
+
 export type WsStatus = "connecting" | "open" | "reconnecting" | "closed";
 
 export interface WsStatusEvent {
@@ -5,15 +7,16 @@ export interface WsStatusEvent {
   status: WsStatus;
 }
 
-type Listener = (ev: WsStatusEvent) => void;
+const bus = markedListeners<WsStatusEvent>("ws-status", (ev) => ev.status);
 
-const listeners = new Set<Listener>();
-
+/** Every subscriber's reaction is a marked task naming it (`name`, else the function's name). */
 export function publishWsStatus(ev: WsStatusEvent): void {
-  for (const fn of listeners) fn(ev);
+  bus.publish(ev);
 }
 
-export function subscribeWsStatus(fn: Listener): () => void {
-  listeners.add(fn);
-  return () => listeners.delete(fn);
+export function subscribeWsStatus(
+  fn: (ev: WsStatusEvent) => void,
+  name?: string,
+): () => void {
+  return bus.subscribe(fn, name);
 }

@@ -6,7 +6,8 @@
  *     `ended: recovered`, attributed (LoAF) to the injected function.
  *  1b. An 8 s freeze INSIDE a live-state socket frame's handler (spun right
  *     after the frame's task mark was posted) ⇒ the report's `frozenIn`
- *     names that frame (`live-state`), and the fingerprint carries it.
+ *     names that frame — nested under the socket's port handler,
+ *     `port rx > live-state:<kind> <key>` — and the fingerprint carries it.
  *     The injected (unmarked) loops of 1, 2 and 3 name none: a live-state
  *     frame that finished just before them is never blamed.
  *  2. An endless loop in a second tab, then its renderer is killed (CDP
@@ -115,7 +116,8 @@ await withBrowser(async (h) => {
   );
 
   // ── 1b. A freeze inside a marked task ──────────────────────────────────
-  // The next live-state frame's mark is posted to the watchdog, then THAT
+  // The next live-state frame's mark (nested under the shared socket's
+  // `port rx`) is posted to the watchdog, then THAT
   // task spins for 8 s: the real path (a real server frame, the real mark,
   // the real watchdog), frozen exactly where the 2026-11-08 tab froze — inside
   // the shared socket's port handler, which LoAF alone cannot tell apart.
@@ -125,7 +127,7 @@ await withBrowser(async (h) => {
       const real = MessagePort.prototype.postMessage;
       MessagePort.prototype.postMessage = function (msg, ...rest) {
         const out = real.call(this, msg, ...rest);
-        if (msg && msg.kind === "mark" && msg.mark.source === "live-state") {
+        if (msg && msg.kind === "mark" && msg.mark.what.includes("live-state:")) {
           MessagePort.prototype.postMessage = real;
           const until = Date.now() + 8000;
           while (Date.now() < until) {}
@@ -150,12 +152,12 @@ await withBrowser(async (h) => {
   );
   r.ok(
     "its frozenIn names the live-state frame it froze in",
-    mk?.data.frozenIn?.source === "live-state",
+    mk?.data.frozenIn?.what.includes("> live-state:") ?? false,
     JSON.stringify(mk?.data.frozenIn),
   );
   r.ok(
     "the fingerprint carries the frozen task",
-    mk?.fingerprint.includes("|live-state:") ?? false,
+    mk?.fingerprint.includes("> live-state:") ?? false,
     String(mk?.fingerprint),
   );
 

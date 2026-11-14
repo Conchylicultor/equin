@@ -39,6 +39,11 @@ everything else  → static file from web/dist (SPA fallback for extensionless p
                    serving the shell to a document navigation also starts the backend in the background
 ```
 
+**The shell carries `Document-Policy: js-profiling`** (`documentPolicy`, set
+in `serveShell` beside its `no-cache`): every app document may run the JS
+Self-Profiling API, which the main-thread stall detector's rolling trace uses
+(`plugins/reports/plugins/main-thread-stall`). Assets carry no policy.
+
 **The shell carries a server-rendered head.** `serveShell` splices the entry of
 `<registry-dir>/<name>/document-head.json` (written by the backend —
 `shell/document-head`) whose key is the longest app path the request is in

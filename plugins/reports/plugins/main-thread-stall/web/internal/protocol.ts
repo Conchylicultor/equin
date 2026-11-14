@@ -4,7 +4,7 @@
 
 import type { InteractionBegin } from "./interaction-judge";
 import type {
-  MainThreadStallPayload,
+  MainThreadStallDraft,
   StallFrame,
   StallTab,
   TaskMark,
@@ -56,7 +56,7 @@ export type WorkerToTab =
   | { kind: "hello"; workerId: string }
   | { kind: "ping" }
   /** File this finished stall (the stalled tab may be gone, so a live one files it). */
-  | { kind: "file"; id: string; payload: MainThreadStallPayload }
+  | { kind: "file"; id: string; payload: MainThreadStallDraft }
   /** A line for the main-thread-stall log channel (a worker has no clientLog). */
   | { kind: "log"; line: Record<string, unknown> }
   /** The worker cannot do its job (protocol mismatch, storage failed). */

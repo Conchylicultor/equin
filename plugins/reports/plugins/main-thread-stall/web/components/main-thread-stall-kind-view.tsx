@@ -7,7 +7,8 @@ import {
 } from "../../core";
 
 // One-line Debug → Reports summary: how the stall ended, how long, where (app +
-// route pattern), the interaction it started from, what ran (or `unattributed`), and how many tabs froze with it.
+// route pattern), the interaction it started from, what ran (or `unattributed`),
+// the heaviest sampled function, and how many tabs froze with it.
 export function MainThreadStallKindView({ report }: { report: Report }) {
   const parsed = MainThreadStallPayloadSchema.safeParse(report.data);
   if (!parsed.success) return <>{report.message}</>;
@@ -34,6 +35,14 @@ export function MainThreadStallKindView({ report }: { report: Report }) {
       <span className="truncate text-muted-foreground font-mono">
         {d.topFunction ?? "unattributed"}
       </span>
+      {d.stacks.kind === "sampled" && d.stacks.topSelf[0] && (
+        <span
+          className="truncate font-mono"
+          title={`sampled: ${d.stacks.topSelf[0].ms} ms self`}
+        >
+          {d.stacks.topSelf[0].frame}
+        </span>
+      )}
       {d.frozenIn && (
         <span className="truncate font-mono" title={d.frozenIn.detail}>
           {d.frozenIn.source} {d.frozenIn.what}

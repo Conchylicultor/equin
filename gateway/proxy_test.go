@@ -210,6 +210,23 @@ func TestIndexIsRevalidated(t *testing.T) {
 	}
 }
 
+// Every app document may run the JS Self-Profiling API (the main-thread stall
+// detector's rolling trace): the direct hit and the SPA fallback alike.
+func TestShellCarriesDocumentPolicy(t *testing.T) {
+	p := newStaticProxy(t).proxy
+	for _, upath := range []string{"/", "/tasks/t/some-route"} {
+		rec := serve(p, "alpha.localhost:9000", upath)
+		if got := rec.Header().Get("Document-Policy"); got != "js-profiling" {
+			t.Fatalf("%s: Document-Policy = %q, want js-profiling", upath, got)
+		}
+	}
+	// A content-addressed asset is not a document: no policy.
+	rec := serve(p, "alpha.localhost:9000", "/artifacts/tasks.web.abc123/index.js")
+	if got := rec.Header().Get("Document-Policy"); got != "" {
+		t.Fatalf("artifact Document-Policy = %q, want none", got)
+	}
+}
+
 // An explicit /index.html never serves the document at all: http.ServeFile
 // redirects it to the directory form. That redirect is a 301, which a browser
 // caches FOREVER by default — so it has to carry the header too, or the one URL

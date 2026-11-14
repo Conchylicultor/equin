@@ -3,7 +3,7 @@ import { defineStore } from "@plugins/primitives/plugins/dom/plugins/web-storage
 import { clientLog } from "@plugins/primitives/plugins/log-channels/web";
 import {
   StallTabSchema,
-  type MainThreadStallPayload,
+  type MainThreadStallDraft,
   type StallFrame,
   type StallTab,
 } from "../../core";
@@ -12,6 +12,7 @@ import { stallInteraction, type InteractionBegin } from "./interaction-judge";
 import { fileStall } from "./file-stall";
 import { topFunction } from "./stall-machine";
 import { LOG_CHANNEL } from "./log-channel";
+import type { StallProfiler } from "./stall-profiler";
 
 // The detector for a browser without SharedWorker (Chrome for Android before
 // 148, some webviews): no other thread can watch this one, so it catches what
@@ -34,7 +35,10 @@ const markerStore = defineStore({
 });
 
 /** File what the previous page of this tab left open, then keep a heartbeat. Returns the disposer. */
-export function installInTabFallback(readTab: () => StallTab): {
+export function installInTabFallback(
+  readTab: () => StallTab,
+  profiler: StallProfiler,
+): {
   /** `beganIn`: the interaction dispatched while the frame ran, if any. */
   onFrame(
     frame: StallFrame,
@@ -51,6 +55,8 @@ export function installInTabFallback(readTab: () => StallTab): {
     if (gap >= STALL.REPORT_MIN_MS) {
       void fileStall(
         payload(left.value.tab, left.value.aliveAt, now, "unknown", null),
+        profiler,
+        readTab().tabId,
       );
     } else {
       clientLog(
@@ -67,6 +73,7 @@ export function installInTabFallback(readTab: () => StallTab): {
   let timer: ReturnType<typeof setInterval> | null = null;
   const beat = (): void => {
     markerStore.write("", { tab: readTab(), aliveAt: Date.now() });
+    profiler.pulse();
   };
   const sync = (): void => {
     const visible = document.visibilityState === "visible";
@@ -97,10 +104,14 @@ export function installInTabFallback(readTab: () => StallTab): {
       if (frame.durationMs < STALL.REPORT_MIN_MS || !tab.visible) return;
       const endedAt = frame.startedAt + frame.durationMs;
       const begin = beganIn();
-      void fileStall({
-        ...payload(tab, frame.startedAt, endedAt, "recovered", frame),
-        interaction: begin ? stallInteraction(begin, [frame], endedAt) : null,
-      });
+      void fileStall(
+        {
+          ...payload(tab, frame.startedAt, endedAt, "recovered", frame),
+          interaction: begin ? stallInteraction(begin, [frame], endedAt) : null,
+        },
+        profiler,
+        tab.tabId,
+      );
     },
     dispose() {
       onPageHide();
@@ -117,7 +128,7 @@ function payload(
   endedAt: number,
   ended: "recovered" | "unknown",
   frame: StallFrame | null,
-): MainThreadStallPayload {
+): MainThreadStallDraft {
   return {
     ...tab,
     startedAt,

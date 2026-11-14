@@ -455,6 +455,27 @@ function frameMark(msg: ServerMsg, bytes: number): TaskMarkText {
     detail: `${bytes} B${params}`,
   };
 }
+/**
+ * Call every listener of a set, each as a marked task naming the set and its
+ * place in it (`status listeners #1`): a subscriber's reaction runs inside a
+ * socket event, so a freeze in one names it rather than the event alone.
+ */
+function fanOutMarked<A>(
+  set: string,
+  listeners: ReadonlySet<(a: A) => void>,
+  arg: A,
+): void {
+  let i = 0;
+  for (const fn of listeners) {
+    const index = i++;
+    runMarked(
+      "live-state",
+      () => ({ what: `${set} #${index}`, detail: fn.name }),
+      () => fn(arg),
+    );
+  }
+}
+
 /** The co-produced push timing an update / delta frame may carry. */
 type FrameTiming = NonNullable<
   Extract<ServerMsg, { kind: "update" | "patch" | "delta" }>["timing"]
@@ -982,11 +1003,15 @@ export class NotificationsClient {
       if (next === "open" && this.firstReadyAt === null) {
         this.firstReadyAt = performance.now();
       }
-      for (const fn of this.statusListeners) fn(next);
+      fanOutMarked("status listeners", this.statusListeners, next);
       const channels = this.getChannelStatuses();
-      for (const fn of this.channelStatusListeners) fn(channels);
+      fanOutMarked(
+        "channel-status listeners",
+        this.channelStatusListeners,
+        channels,
+      );
       this.emitDebug();
-    });
+    }, "live-state");
     // Net-diag forwarder: the networking layer publishes socket/port
     // transitions to an event bus (it must not depend on log-channels — that
     // would form networking ↔ log-channels). Forward every event to the trace
@@ -996,7 +1021,7 @@ export class NotificationsClient {
     this.unsubscribeFromNetDiag = subscribeNetDiag((ev: NetDiagEvent) => {
       trace(`net-diag ${JSON.stringify(ev)}`);
       this.emitDebug();
-    });
+    }, "live-state");
     if (typeof window !== "undefined") {
       // Event-driven retry for failed reads — no timer, no polling: the two
       // moments a failure is likely to have healed are the network coming back
@@ -1179,7 +1204,11 @@ export class NotificationsClient {
     this.serverPushStallMs[kind] = ms;
     this.serverStalledResources[kind] = resources;
     const channels = this.getChannelStatuses();
-    for (const fn of this.channelStatusListeners) fn(channels);
+    fanOutMarked(
+      "channel-status listeners",
+      this.channelStatusListeners,
+      channels,
+    );
     this.emitDebug();
   }
 
@@ -1318,7 +1347,8 @@ export class NotificationsClient {
   }
 
   private emitDebug(): void {
-    for (const fn of this.debugListeners) fn();
+    if (this.debugListeners.size === 0) return;
+    fanOutMarked("debug listeners", this.debugListeners, undefined);
   }
 
   /**
@@ -2363,15 +2393,22 @@ export class NotificationsClient {
     // server to release every sub it holds, so a departed tab's subs stop
     // fanning out at once instead of leaking until the socket cycles.
     channel.ws.setLastWill(wire({ op: "unsub-tab", tabId: this.tabId }));
-    channel.ws.onopen = () => {
-      channel.opens++;
-      // Before the replay: its answers are addressed to the tabs holding each
-      // tuple, never fanned out to every tab on the socket. Every tab sends it
-      // (the frame is idempotent); a server that predates it ignores it and
-      // keeps sending bare frames, which still reach every tab.
-      channel.ws.send(wire({ op: "address-frames" }));
-      this.replaySubs(channel);
-    };
+    // A marked task like every frame (below): the open replays the tab's
+    // whole sub set, the heaviest thing a socket event runs.
+    channel.ws.onopen = () =>
+      runMarked(
+        "live-state",
+        () => ({ what: `open ${kind}`, detail: `${channel.subs.size} subs` }),
+        () => {
+          channel.opens++;
+          // Before the replay: its answers are addressed to the tabs holding each
+          // tuple, never fanned out to every tab on the socket. Every tab sends it
+          // (the frame is idempotent); a server that predates it ignores it and
+          // keeps sending bare frames, which still reach every tab.
+          channel.ws.send(wire({ op: "address-frames" }));
+          this.replaySubs(channel);
+        },
+      );
     channel.ws.onmessage = (ev) => {
       // Receipt stamp BEFORE the parse: decoding is client work, so it lands
       // in an update sample's `client-apply` phase. `arrivedAt` is the
@@ -2461,6 +2498,14 @@ export class NotificationsClient {
    * restate is released (the stale-sub reconciliation).
    */
   private replaySubs(channel: SocketChannel): void {
+    runMarked(
+      "live-state",
+      () => ({ what: "replay subs", detail: `${channel.subs.size} subs` }),
+      () => this.replaySubsNow(channel),
+    );
+  }
+
+  private replaySubsNow(channel: SocketChannel): void {
     const socket = channel === this.channels.central ? "central" : "worktree";
     trace(
       `replaySubs socket=${socket} subCount=${channel.subs.size} epoch=${channel.serverEpoch !== undefined ? 1 : 0}`,
@@ -2518,18 +2563,23 @@ export class NotificationsClient {
           : {}),
       });
     }
-    channel.ws.send(
-      wire({
-        op: "sub-batch",
-        tabId: this.tabId,
-        build: clientBuild(channel.kind),
-        protocol: PROTOCOL,
-        ...(channel.serverEpoch !== undefined
-          ? { epoch: channel.serverEpoch }
-          : {}),
-        complete: true,
-        entries,
-      }),
+    runMarked(
+      "live-state",
+      () => ({ what: "send sub-batch", detail: `${entries.length} entries` }),
+      () =>
+        channel.ws.send(
+          wire({
+            op: "sub-batch",
+            tabId: this.tabId,
+            build: clientBuild(channel.kind),
+            protocol: PROTOCOL,
+            ...(channel.serverEpoch !== undefined
+              ? { epoch: channel.serverEpoch }
+              : {}),
+            complete: true,
+            entries,
+          }),
+        ),
     );
     if (unbacked > 0)
       trace(

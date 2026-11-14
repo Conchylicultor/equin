@@ -53244,6 +53244,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `primitives/latest-ref.useLatestRef`
           - `primitives/networking/request-guard.nativeWebSocket`
+          - `primitives/perfs/task-marks.runMarked`
+          - `primitives/perfs/task-marks.TaskMarkText`
         - Exports (types):
           - `ContentServing`
           - `FetchWithRetryOptions`
@@ -54434,6 +54436,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Imported by:
               - `network/live/live-state`
+              - `primitives/networking`
               - `reports/main-thread-stall`
           - Web:
             - Exports (types):
@@ -57316,11 +57319,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (types):
           - `InteractionBreakdown`
           - `InteractionTarget`
+          - `MainThreadStallDraft`
           - `MainThreadStallPayload`
           - `SlowInteractionPayload`
           - `StallFrame`
           - `StallFrameScript`
           - `StallInteraction`
+          - `StallStack`
+          - `StallStacks`
           - `StallTab`
           - `TaskMark`
         - Exports (values):
@@ -57338,6 +57344,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `StallFrameSchema`
           - `StallFrameScriptSchema`
           - `StallInteractionSchema`
+          - `StallStacksSchema`
           - `StallTabSchema`
     - **`mutation-errors`** — Warning toast and persistent notification for unhandled TanStack Query mutation errors.
       - Web:

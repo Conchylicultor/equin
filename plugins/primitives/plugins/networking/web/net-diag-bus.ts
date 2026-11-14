@@ -1,3 +1,5 @@
+import { markedListeners } from "./marked-listeners";
+
 // Network-diagnostics event bus. Mirrors ws-status-bus.ts: a module-level
 // listener Set with publish/subscribe. The networking layer only *publishes*
 // transition events here (shared-websocket republishes the events its
@@ -50,15 +52,16 @@ export type NetDiagEvent =
       tabLock: "held" | "ended" | `aborted:${string}`;
     };
 
-type Listener = (ev: NetDiagEvent) => void;
+const bus = markedListeners<NetDiagEvent>("net-diag", (ev) => ev.type);
 
-const listeners = new Set<Listener>();
-
+/** Every subscriber's reaction is a marked task naming it (`name`, else the function's name). */
 export function publishNetDiag(ev: NetDiagEvent): void {
-  for (const fn of listeners) fn(ev);
+  bus.publish(ev);
 }
 
-export function subscribeNetDiag(fn: Listener): () => void {
-  listeners.add(fn);
-  return () => listeners.delete(fn);
+export function subscribeNetDiag(
+  fn: (ev: NetDiagEvent) => void,
+  name?: string,
+): () => void {
+  return bus.subscribe(fn, name);
 }

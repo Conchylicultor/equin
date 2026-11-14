@@ -1,7 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import {
   mainThreadStallFingerprint,
+  MainThreadStallPayloadSchema,
   mainThreadStallSummary,
+  type MainThreadStallDraft,
+  type MainThreadStallPayload,
   slowInteractionFingerprint,
   type InteractionTarget,
   type StallFrame,
@@ -859,5 +862,63 @@ describe("interactions", () => {
     const [rec] = of(run(m, T0 + 1000, T0 + 6000, []), "persist");
     expect(rec?.record.payload.ended).toBe("unknown");
     expect(rec?.record.payload.interaction?.target).toEqual(BUTTON);
+  });
+});
+
+describe("sampled stacks", () => {
+  // The watchdog's draft carries no stacks: only the stalled tab can add them.
+  function recovered(): MainThreadStallDraft {
+    const m = machine();
+    attach(m, "a", tab("A"));
+    attach(m, "b", tab("B"));
+    step(m, { type: "pong", portId: "a", now: T0 });
+    run(m, T0 + 1000, T0 + 9000, ["b"]);
+    step(m, { type: "pong", portId: "a", now: T0 + 9000 });
+    step(m, {
+      type: "frame",
+      portId: "a",
+      frame: frame(T0 + 300, 8700),
+      now: T0 + 9100,
+    });
+    const d = of(run(m, T0 + 10_000, T0 + 12_000, ["a", "b"]), "deliver")[0]
+      ?.payload;
+    if (!d) throw new Error("no stall delivered");
+    expect("stacks" in d).toBe(false);
+    return d;
+  }
+
+  test("never change the fingerprint or summary: the same freeze stays one row", () => {
+    const d = recovered();
+    const sampled: MainThreadStallPayload = {
+      ...d,
+      stacks: {
+        kind: "sampled",
+        sampleIntervalMs: 20,
+        sampledMs: 8700,
+        noJsMs: 0,
+        truncated: false,
+        stacks: [{ ms: 8700, samples: 435, frames: ["spin (app.js:1:1)"] }],
+        topSelf: [{ frame: "spin (app.js:1:1)", ms: 8700 }],
+      },
+    };
+    const unavailable: MainThreadStallPayload = {
+      ...d,
+      stacks: { kind: "unavailable", reason: "filed by another tab" },
+    };
+    expect(mainThreadStallFingerprint(sampled)).toBe(
+      mainThreadStallFingerprint(unavailable),
+    );
+    expect(mainThreadStallFingerprint(sampled)).toBe(
+      mainThreadStallFingerprint(d),
+    );
+    expect(mainThreadStallSummary(sampled)).toBe(mainThreadStallSummary(d));
+    expect(MainThreadStallPayloadSchema.parse(sampled).stacks).toEqual(
+      sampled.stacks,
+    );
+  });
+
+  test("a report filed before stacks existed parses as unavailable, with the reason", () => {
+    const old = MainThreadStallPayloadSchema.parse(recovered());
+    expect(old.stacks.kind).toBe("unavailable");
   });
 });
