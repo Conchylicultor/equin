@@ -46,6 +46,7 @@ import {
   joinAppPath,
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import type { OutputChunk } from "rolldown";
 import {
   init as lexerInit,
   parse as lexerParse,
@@ -324,7 +325,7 @@ interface ModuleSource {
   exports: ReadonlyArray<Export>;
 }
 
-interface LinkedModule {
+export interface LinkedModule {
   /** The rewritten code rolldown bundles. */
   code: string;
   map: string | null;
@@ -345,19 +346,56 @@ const BOOT_PRELOAD = /\bpreload:\s*["'`]boot/;
 
 const SOURCEMAP_COMMENT = /\n?\/\/# sourceMappingURL=[^\n]*\s*$/;
 
-async function runLink(
-  inputs: LinkInputs & {
-    key: string;
-    pin: (paths: AppPath[]) => Promise<void>;
-    log: (line: string) => void;
+/** Where the link reads the page artifacts' files: the store, or a test's. */
+export interface LinkIo {
+  /** The directory a store entry's files are in. */
+  storePath: (dirName: string) => string;
+  /** A file's text, or null when there is none. */
+  read: (file: string) => string | null;
+}
+
+/** The artifact store's own files (every module is a file of a store entry: app-owned). */
+const storeIo: LinkIo = {
+  storePath: artifactStorePath,
+  read: (file) => {
+    const path = asAppPath(file);
+    return existsSync(path) ? readFileSync(path, "utf8") : null;
   },
-): Promise<{
-  record: LinkRecord;
-  chunkMetas: Map<string, ArtifactMeta>;
-  modules: LinkModules;
-}> {
+};
+
+/** The elided module graph and where each module belongs (`runLink`'s first half). */
+export interface LinkGraph {
+  entryFile: string;
+  registryFile: string;
+  pageScriptFiles: string[];
+  /** Every module the page reaches, rewritten, by its id (its file). */
+  linked: Map<string, LinkedModule>;
+  /** The boot set: the static closure of {@link bootRoots}. */
+  boot: Set<string>;
+  bootRoots: string[];
+  /** Modules evaluated for the descriptors they register (imported by the registry). */
+  bootRegistering: string[];
+  /** The artifacts the boot evaluated under barrel semantics. */
+  barrelBoot: Set<string>;
+  /** App root → its deferred plugins' definition modules. */
+  appRoots: Map<string, string[]>;
+  /** Module outside boot → the `+`-joined app roots reaching it. */
+  appGroupOf: Map<string, string>;
+  appGroupKeys: string[];
+  assetDirs: Set<string>;
+  elided: number;
+}
+
+/**
+ * Elide, walk and assign: every module the page reaches, its imports
+ * rewritten to the modules defining what they name, and the boot / app-set
+ * membership the chunks are grouped by. Pure over `io`.
+ */
+export async function planLinkGraph(
+  inputs: LinkInputs,
+  io: LinkIo = storeIo,
+): Promise<LinkGraph> {
   await lexerInit();
-  const t0 = performance.now();
 
   // Specifier → the file it names, and every artifact's dir by its store path.
   const bySpecifier = new Map<string, string>();
@@ -365,7 +403,7 @@ async function runLink(
   const dirOfStorePath = new Map<string, string>(); // store path → dirName
   const pluginOfDefinition = new Map<string, string>(); // __plugin.js → pluginPath
   for (const a of inputs.artifacts) {
-    const dir = artifactStorePath(a.dirName);
+    const dir = io.storePath(a.dirName);
     dirOfStorePath.set(dir, a.dirName);
     if (a.specifier !== null) bySpecifier.set(a.specifier, `${dir}/index.js`);
     for (const e of a.coEntries)
@@ -376,14 +414,11 @@ async function runLink(
       pluginOfDefinition.set(def, a.pluginPath);
     }
   }
-  const entryFile = `${artifactStorePath(inputs.entryDirName)}/index.js`;
-  const registryFile = `${artifactStorePath(inputs.registryDirName)}/index.js`;
+  const entryFile = `${io.storePath(inputs.entryDirName)}/index.js`;
+  const registryFile = `${io.storePath(inputs.registryDirName)}/index.js`;
+  dirOfStorePath.set(io.storePath(inputs.entryDirName), inputs.entryDirName);
   dirOfStorePath.set(
-    artifactStorePath(inputs.entryDirName),
-    inputs.entryDirName,
-  );
-  dirOfStorePath.set(
-    artifactStorePath(inputs.registryDirName),
+    io.storePath(inputs.registryDirName),
     inputs.registryDirName,
   );
   bySpecifier.set(COMPOSITION_REGISTRY_SPECIFIER, registryFile);
@@ -405,10 +440,8 @@ async function runLink(
   const sourceOf = (file: string): ModuleSource => {
     let s = sources.get(file);
     if (s === undefined) {
-      // Every module is a file of a store entry: app-owned.
-      const path = asAppPath(file);
-      if (!existsSync(path)) throw new Error(`link: no module ${file}`);
-      const raw = readFileSync(path, "utf8");
+      const raw = io.read(file);
+      if (raw === null) throw new Error(`link: no module ${file}`);
       const code = raw.replace(SOURCEMAP_COMMENT, "\n");
       const [imports, exports] = lexerParse(code, file);
       s = { code, imports, exports };
@@ -604,8 +637,7 @@ async function runLink(
       }
     }
     // The module's own sourcemap: rolldown chains it into the chunk's.
-    const mapFile = asAppPath(`${file}.map`);
-    const map = existsSync(mapFile) ? readFileSync(mapFile, "utf8") : null;
+    const map = io.read(`${file}.map`);
     return { code, map, statics, dynamics };
   };
 
@@ -633,9 +665,7 @@ async function runLink(
   }
   const bootRegistering: string[] = [];
   const seenFiles = new Set<string>();
-  const fileQueue = [...barrelBoot].map(
-    (d) => `${artifactStorePath(d)}/index.js`,
-  );
+  const fileQueue = [...barrelBoot].map((d) => `${io.storePath(d)}/index.js`);
   // Each barrel's static closure, as evaluating it did: its own files over
   // relative imports, other barrels over their specifiers.
   while (fileQueue.length > 0) {
@@ -728,6 +758,37 @@ async function runLink(
   for (const [m, roots] of appsOf) appGroupOf.set(m, roots.join("+"));
   const appGroupKeys = [...new Set(appGroupOf.values())].sort();
 
+  return {
+    entryFile,
+    registryFile,
+    pageScriptFiles,
+    linked,
+    boot,
+    bootRoots,
+    bootRegistering,
+    barrelBoot,
+    appRoots,
+    appGroupOf,
+    appGroupKeys,
+    assetDirs,
+    elided,
+  };
+}
+
+/**
+ * Bundle a planned graph into route chunks: one rolldown build, `boot` and
+ * each app set a size-split group, lazy code in rolldown's own chunks.
+ */
+export async function bundleLinkGraph(
+  graph: LinkGraph,
+  opts: {
+    minify: boolean;
+    isExternal: (specifier: string) => boolean;
+    log: (line: string) => void;
+  },
+): Promise<OutputChunk[]> {
+  const { linked, boot, appGroupOf, appGroupKeys, entryFile, pageScriptFiles } =
+    graph;
   // Bundle.
   const { rolldown } = await import("rolldown");
   const bundle = await rolldown({
@@ -745,14 +806,14 @@ async function runLink(
       if (log.code === "CIRCULAR_DEPENDENCY") return;
       // "use client" in a library module: meaningless outside RSC.
       if (log.code === "MODULE_LEVEL_DIRECTIVE") return;
-      if (level === "warn") inputs.log(`link: warning: ${log.message}`);
+      if (level === "warn") opts.log(`link: warning: ${log.message}`);
     },
     plugins: [
       {
         name: "web-artifacts:link",
         resolveId(id) {
           if (linked.has(id)) return id;
-          if (inputs.isExternal(id) || isBrowserUnreachableDynamic(id))
+          if (opts.isExternal(id) || isBrowserUnreachableDynamic(id))
             return { id, external: true };
           throw new Error(`link: unresolved module ${id}`);
         },
@@ -782,7 +843,7 @@ async function runLink(
     // whatever chunk holds them.
     strictExecutionOrder: true,
     hashCharacters: "hex",
-    minify: inputs.minify
+    minify: opts.minify
       ? { compress: false, mangle: false, codegen: { removeWhitespace: true } }
       : false,
     codeSplitting: {
@@ -806,6 +867,37 @@ async function runLink(
   });
   await bundle.close();
 
+  return out.output.filter((o): o is OutputChunk => o.type === "chunk");
+}
+
+async function runLink(
+  inputs: LinkInputs & {
+    key: string;
+    pin: (paths: AppPath[]) => Promise<void>;
+    log: (line: string) => void;
+  },
+): Promise<{
+  record: LinkRecord;
+  chunkMetas: Map<string, ArtifactMeta>;
+  modules: LinkModules;
+}> {
+  const t0 = performance.now();
+  const graph = await planLinkGraph(inputs);
+  const {
+    linked,
+    boot,
+    bootRoots,
+    bootRegistering,
+    barrelBoot,
+    appRoots,
+    appGroupOf,
+    assetDirs,
+    elided,
+    entryFile,
+    pageScriptFiles,
+  } = graph;
+  const output = await bundleLinkGraph(graph, inputs);
+
   // Publish each chunk as its own store entry.
   const chunkMetas = new Map<string, ArtifactMeta>();
   const chunkOfModule = new Map<string, string>(); // module file → chunk URL
@@ -816,8 +908,7 @@ async function runLink(
     return r.startsWith(".") ? r : `./${r}`;
   };
   await Promise.all(
-    out.output.map(async (o) => {
-      if (o.type !== "chunk") return;
+    output.map(async (o) => {
       const [dirName, base] = o.fileName.split("/");
       if (
         dirName === undefined ||
