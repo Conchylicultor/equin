@@ -19,6 +19,7 @@
     - `primitives/css/text.Text`
     - `primitives/markdown.Markdown`
     - `primitives/pane.useOpenPane`
+    - `tasks/supervisor-roles/pane.SupervisorRoleBadge`
     - `tasks/task-detail.taskDetailPane`
     - `tasks/task-status.StatusIcon`
 - Cross-plugin:

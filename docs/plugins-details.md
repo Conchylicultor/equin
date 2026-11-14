@@ -20055,6 +20055,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `primitives/css/text.Text`
                       - `primitives/markdown.Markdown`
                       - `primitives/pane.useOpenPane`
+                      - `tasks/supervisor-roles/pane.SupervisorRoleBadge`
                       - `tasks/task-detail.taskDetailPane`
                       - `tasks/task-status.StatusIcon`
                   - Cross-plugin:
@@ -60913,7 +60914,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - Machine:
                 - Uses: `tasks/supervisor-roles/events.publishSupervisorEvent`
                 - Register: `defineJob('supervisor-events.report')`
-        - **`pane`** — The Supervisors pane, in the agent manager: one sidebar entry (live sessions and the tasks waiting in every backlog at its edge) opening the list — the pinned All supervisors entry (the shared prompt, edited inline), every role (session state, backlog and its oldest age, Launch / Open session) and the ad-hoc supervisors at work — and a role's page: its name and icon (picked automatically, overridable) and every setting edited in place (listed to agents, the description agents get, the supervisor prompt), the Launch / Open session band, the backlog (Adopt — into the live session, launching one when none is live — and Drop) and the session history. Also the task detail's Supervisor pill (TaskSupervisorControl: picking another role re-routes the task, None removes its role) and SupervisorPill.
+        - **`pane`** — The Supervisors pane, in the agent manager: one sidebar entry (live sessions and the tasks waiting in every backlog at its edge) opening the list — the pinned All supervisors entry (the shared prompt, edited inline), every role (session state, backlog and its oldest age, Launch / Open session) and the ad-hoc supervisors at work — and a role's page: its name and icon (picked automatically, overridable) and every setting edited in place (listed to agents, the description agents get, the supervisor prompt), the Launch / Open session band, the backlog (Adopt — into the live session, launching one when none is live — and Drop) and the session history. Also the task detail's Supervisor pill (TaskSupervisorControl: picking another role re-routes the task, None removes its role; InheritedTaskSupervisor: a nested task's role, read from its tree's root and naming it), SupervisorPill and SupervisorRoleBadge (a role by id, read live — the add_task card's backlog badge).
           - Web:
             - Slots:
               - `supervisors.actions`
@@ -60981,7 +60982,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tasks/tasks-core.useTaskConversations`
               - `ui/icons.Icon`
             - Exports (values):
+              - `InheritedTaskSupervisor`
               - `SupervisorPill`
+              - `SupervisorRoleBadge`
               - `TaskSupervisorControl`
           - Core:
             - Uses: `primitives/pane.defineRoute`
@@ -60996,7 +60999,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density` ×3
               - `ui/tokens/shape` ×2
               - `ui/tokens/font-family --font-mono`
-            - Imported by: `tasks/task-header`
+            - Imported by:
+              - `conversations/conversation-view/jsonl-viewer/tool-call/add-task`
+              - `tasks/task-header`
         - **`sessions`** — Supervisor role sessions: POST /api/supervisor-roles/:id/sessions opens the role's live session or launches one (one live session per role — a root task stating the supervisor-role mandate, owned by the role, its brief the role's prompt, armed at once), POST …/:id/backlog/:taskId/adopt (the Supervisors pane's Adopt: into the live session, launching one when none is live), and the role powers' MCP tools, gated on the role capability: backlog (list the role's backlog), adopt_task (move a backlog task under the live session's root and arm it) and route_task (hand a task the role owns to another role).
           - Server:
             - Uses: 26 symbols — full list in [`plugins/tasks/plugins/supervisor-roles/plugins/sessions/REFERENCE.md`](../plugins/tasks/plugins/supervisor-roles/plugins/sessions/REFERENCE.md)
@@ -61503,10 +61508,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`task-header`** — Top section of the task detail pane: editable title, status chip, hold/drop buttons, track (main | sidequest, click to switch), author, and timestamps. Launch configuration (auto-start, preprompt, thinking mode) lives in the Prompt card, not here.
       - Web:
         - Contributes: `TaskDetailSlots.Section` "Task" → `TaskHeader`
-        - Uses: 21 symbols — full list in [`plugins/tasks/plugins/task-header/REFERENCE.md`](../plugins/tasks/plugins/task-header/REFERENCE.md)
+        - Uses: 22 symbols — full list in [`plugins/tasks/plugins/task-header/REFERENCE.md`](../plugins/tasks/plugins/task-header/REFERENCE.md)
           - `tasks/task-detail` ×3
           - `network/live/live-state` ×2
           - `primitives/css/text` ×2
+          - `tasks/supervisor-roles/pane` ×2
           - `tasks` ×2
           - `conversations.useConversationById`
           - `network/live.rowOrStale`
@@ -61516,7 +61522,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/editable-field.useEditableField`
           - `primitives/pane.useOpenPane`
           - `primitives/relative-time.RelativeTime`
-          - `tasks/supervisor-roles/pane.TaskSupervisorControl`
           - `tasks/task-mandate.TaskMandateControl`
           - `tasks/task-status.StatusSignal`
           - `tasks/task-track.TaskTrackControl`

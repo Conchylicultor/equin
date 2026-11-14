@@ -21,6 +21,7 @@ import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web"
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
+import { SupervisorRoleBadge } from "@plugins/tasks/plugins/supervisor-roles/plugins/pane/web";
 
 /** `add_task`'s input, as its card draws it. */
 export const AddTaskInputSchema = z.looseObject({
@@ -30,6 +31,8 @@ export const AddTaskInputSchema = z.looseObject({
   track: TaskTrackSchema.optional(),
   start: z.enum(["now", "after", "manual"]).optional(),
   model: z.string().optional(),
+  /** The supervisor role whose backlog the task was filed into. */
+  supervisor: z.string().optional(),
   /** Calls made before start modes existed. */
   autostart: z.string().nullable().optional(),
 });
@@ -79,7 +82,14 @@ export function AddTaskToolView({ event, input }: ToolViewProps<AddTaskInput>) {
       <Badge variant="muted" className={rigidClass()} tooltip={track.hint}>
         {track.label}
       </Badge>
-      {autostart ? (
+      {input.supervisor ? (
+        // A backlog task is never armed: the role's session adopts it.
+        <SupervisorRoleBadge
+          roleId={input.supervisor}
+          tooltip="Filed into this supervisor's backlog"
+          className={rigidClass()}
+        />
+      ) : autostart ? (
         <Badge variant="success" className={rigidClass()}>
           auto-launch {modelDisplayLabel(autostart)}
         </Badge>
