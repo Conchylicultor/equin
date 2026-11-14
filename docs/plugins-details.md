@@ -35571,6 +35571,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `documentLink`
           - `EndpointAgentWriteRefusedError`
           - `EndpointError`
+          - `EndpointNetworkError`
           - `getRouteSlowThresholdMs`
           - `HttpError`
           - `implement`
@@ -36356,6 +36357,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live/live-state.UnansweredServer`
           - `network/live/live-state.unansweredSubReportSink`
           - `network/live/live-state.useNotificationsChannelStatuses`
+          - `primitives/networking.CONNECT_DEADLINE_MS`
           - `primitives/networking.NetDiagEvent`
           - `primitives/networking.subscribeNetDiag`
           - `primitives/networking.subscribeWsStatus`
@@ -53277,6 +53279,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `WsStatus`
           - `WsStatusEvent`
         - Exports (values):
+          - `CONNECT_DEADLINE_MS`
           - `fetchWithRetry`
           - `firedLate`
           - `probeUrlStatus`

@@ -23,3 +23,25 @@ export class EndpointError extends Error {
  * main cannot raise a report storm.
  */
 export class EndpointAgentWriteRefusedError extends EndpointError {}
+
+/**
+ * A request to an endpoint got no answer at all: the sender rejected with a
+ * `TypeError` (fetch's network failure — "Failed to fetch", Firefox's
+ * "NetworkError when attempting to fetch resource.", Safari's "Load failed").
+ * The browser's own error names neither the request nor a stack frame, so an
+ * unhandled one used to reach Reports as a bare `TypeError` nobody could place
+ * (report-1794609421-fk1a49). This one names the route it was for, and keeps
+ * the browser's error as `cause`.
+ *
+ * It IS a `TypeError`, so every caller that already tells "no answer" from a
+ * non-2xx with `err instanceof TypeError` keeps working unchanged.
+ */
+export class EndpointNetworkError extends TypeError {
+  override readonly name = "EndpointNetworkError";
+  constructor(
+    public readonly route: string,
+    cause: TypeError,
+  ) {
+    super(`${route}: ${cause.message}`, { cause });
+  }
+}

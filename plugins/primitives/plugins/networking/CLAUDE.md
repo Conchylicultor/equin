@@ -234,6 +234,7 @@ built on them — see
     - `WsStatus`
     - `WsStatusEvent`
   - Exports (values):
+    - `CONNECT_DEADLINE_MS`
     - `fetchWithRetry`
     - `firedLate`
     - `probeUrlStatus`

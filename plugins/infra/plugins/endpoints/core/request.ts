@@ -3,6 +3,7 @@ import type { AnyEndpointDef as AnyDef } from "./define-endpoint";
 import {
   EndpointAgentWriteRefusedError,
   EndpointError,
+  EndpointNetworkError,
 } from "./endpoint-error";
 import { isAgentWriteRefusal, SAFE_METHODS } from "./agent-write";
 import { extractPath, interpolatePath } from "./route-params";
@@ -143,7 +144,7 @@ export type RequestFetch = (
  * a health probe, a host process) never holds a route's string. Read the reply
  * with {@link readEndpointResponse}.
  */
-export function sendEndpointRequest<
+export async function sendEndpointRequest<
   Route extends string,
   TParams,
   TBody,
@@ -156,7 +157,16 @@ export function sendEndpointRequest<
   opts?: EndpointRequestOpts<TBody, TQuery>,
 ): Promise<Response> {
   const { path, init } = endpointRequest(endpoint, params, opts);
-  return send(path, init);
+  try {
+    return await send(path, init);
+  } catch (err) {
+    // No answer: name the request it was for (the browser's TypeError names
+    // nothing). An abort (a DOMException) and anything else pass through as is.
+    if (err instanceof TypeError && !(err instanceof EndpointNetworkError)) {
+      throw new EndpointNetworkError(endpoint.route, err);
+    }
+    throw err;
+  }
 }
 
 /**

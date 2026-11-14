@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import {
+  CONNECT_DEADLINE_MS,
   subscribeNetDiag,
   subscribeWsStatus,
   type NetDiagEvent,
@@ -215,11 +216,23 @@ export function WedgeWatchdog() {
         if (kind === null) return;
         const detail = `${ev.url} handshake unanswered for ${Math.round(ev.elapsedMs / 1000)}s (attempt ${ev.attempt})`;
         const stalledSince = Date.now() - ev.elapsedMs;
-        // A wait across a suspension never gets here: the socket owner's
-        // deadline restarts once its realm runs again (`firedLate`). A server
-        // (re)booting during the attempt held the handshake at the gateway for
-        // the whole deadline — a boot that slow is a fault of its own, split
-        // into its own task by that fact.
+        // The deadline runs in the SOCKET's realm — the SharedWorker, which
+        // keeps running while this page is hidden or frozen — so its
+        // `firedLate` sees the worker's suspension, never the page's. A phone
+        // that backgrounds the page holds the worker's handshake with it, and
+        // the stall reaches this page as it resumes (equin.ai, 2026-11-14
+        // 11:03: the page hidden for minutes, the stall processed 11 ms after
+        // it became visible, the backend up 27 min and answering in ~80 ms).
+        // So this page takes its own hidden time out of the window — the rule
+        // every elapsed-time signal here follows (`visible-deadline.ts`): a
+        // handshake that did not go unanswered for a full deadline of VISIBLE
+        // time is not established as a fault. A socket still not open once
+        // the page runs is reported as socket-down, on the same visible clock.
+        const visibleMs = deadlines.visibleMsSince(stalledSince);
+        if (visibleMs < CONNECT_DEADLINE_MS) return;
+        // A server (re)booting during the attempt held the handshake at the
+        // gateway for the whole deadline — a boot that slow is a fault of its
+        // own, split into its own task by that fact.
         void getHealth().then((health) => {
           if (health !== null && health.startedAt > stalledSince) {
             wedge(

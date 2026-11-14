@@ -31,6 +31,7 @@ export { documentLink } from "./document-link";
 export {
   EndpointError,
   EndpointAgentWriteRefusedError,
+  EndpointNetworkError,
 } from "./endpoint-error";
 export type { AgentWrite } from "./agent-write";
 export { agentWriteRefusedMessage, isAgentWriteRefusal } from "./agent-write";

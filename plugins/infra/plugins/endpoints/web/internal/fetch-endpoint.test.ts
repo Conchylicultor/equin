@@ -67,7 +67,10 @@ describe("fetchEndpoint retry", () => {
   test("a network error on every attempt throws after the last one", async () => {
     const fn = stubFetch([networkError(), networkError(), networkError()]);
     const call = fetchEndpoint(ping, {}, { body: { n: 1 }, retry: RETRY });
-    expect(call).rejects.toMatchObject({ message: "Failed to fetch" });
+    expect(call).rejects.toMatchObject({
+      name: "EndpointNetworkError",
+      message: "POST /api/ping: Failed to fetch",
+    });
     expect(fn).toHaveBeenCalledTimes(RETRY.retries + 1);
   });
 
@@ -253,7 +256,10 @@ describe("fetchEndpoint onTiming", () => {
     stubFetch([networkError()]);
     const onTiming = mock(() => {});
     const call = fetchEndpoint(ping, {}, { body: { n: 1 }, onTiming });
-    expect(call).rejects.toMatchObject({ message: "Failed to fetch" });
+    expect(call).rejects.toMatchObject({
+      name: "EndpointNetworkError",
+      message: "POST /api/ping: Failed to fetch",
+    });
     expect(onTiming).not.toHaveBeenCalled();
   });
 });
