@@ -1,5 +1,5 @@
+import { DEVICE_SIZES } from "@plugins/primitives/plugins/dom/plugins/device-sizes/core";
 import {
-  SIZE_PRESETS,
   presetSize,
   type PresetName,
 } from "@plugins/apps/plugins/prototypes/plugins/files/core";
@@ -206,7 +206,7 @@ export function snapWidth(
   const clamped = Math.round(Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, w)));
   // The nearest preset in reach, not the first: two presets can sit within
   // SNAP_PX of one width (Tablet 820, Phone landscape 844).
-  const snap = SIZE_PRESETS.filter(
+  const snap = DEVICE_SIZES.filter(
     (p) =>
       Math.abs(p.w - clamped) < SNAP_PX &&
       Math.abs(p.w - clamped) < Math.abs(p.w - from),

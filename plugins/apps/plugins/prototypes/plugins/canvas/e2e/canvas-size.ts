@@ -11,6 +11,7 @@
 //   ./equin run plugins/apps/plugins/prototypes/plugins/canvas/e2e/canvas-size.ts \
 //     [--name <prototype id>] [--out <prefix>] [--headed]
 
+import { DEVICE_SIZES } from "@plugins/primitives/plugins/dom/plugins/device-sizes/core";
 import type { Page } from "playwright";
 import {
   arg,
@@ -19,10 +20,7 @@ import {
   waitFor,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
-import {
-  SIZE_PRESETS,
-  type PrototypeMeta,
-} from "@plugins/apps/plugins/prototypes/plugins/files/core";
+import { type PrototypeMeta } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import {
   dismiss,
   frameDoc,
@@ -105,7 +103,7 @@ await withBrowser(async (h) => {
     `fit=${String(fitPressed)} device=${String(lit)}`,
   );
   if (declared.kind === "preset") {
-    const size = SIZE_PRESETS.find((p) => p.name === declared.preset)!;
+    const size = DEVICE_SIZES.find((p) => p.name === declared.preset)!;
     const at = await settle("A", (v) => v.w === size.w && v.h === size.h);
     r.ok(
       `…laying the page out at ${String(size.w)} × ${String(size.h)}`,

@@ -7687,6 +7687,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `packages/list-bound.wholeRecord`
               - `packages/list-bound.wholeTuple`
               - `primitives/css/color-picker.Color`
+              - `primitives/dom/device-sizes.DEVICE_SIZES`
+              - `primitives/dom/device-sizes.deviceSize`
+              - `primitives/dom/device-sizes.DeviceSizeName`
             - Exports (types):
               - `ChoiceOption`
               - `ColorOption`
@@ -7768,7 +7771,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `restorePrototypeVersion`
               - `scanPrototypeFolder`
               - `setPrototypePicks`
-              - `SIZE_PRESETS`
               - `stampPicks`
               - `StoredPicksSchema`
               - `UNTITLED_PROTOTYPE`
@@ -44971,6 +44973,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-xs`
           - `ui/tokens/shape --spacing`
 
+- **`phone-window`** — Open phone window: a row in the action bar's view-options popover that opens this page (the same URL, the same browser session) in a pop-up window sized like a phone (the Phone device size), with no address bar — a real narrow window, so the app takes its phone layout. Developer-only; never shown inside the phone window itself.
+  - Web:
+    - Contributes: `ActionBar.ViewOption` → `OpenPhoneWindowRow`
+    - Uses:
+      - `primitives/css/control-panel.ControlPanel`
+      - `primitives/dom/render-mode.useBrowserValue`
+      - `shell/action-bar.ActionBar`
+      - `ui/icons.Icon`
+
 - **`plugin-meta`** — Plugins about the plugin system itself — browsing, inspecting, and publishing.
   - Plugins:
     - **`barrel-import`** — Bun runtime stubs for importing web/server barrels outside the browser (docgen, introspection).
@@ -47780,7 +47791,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette` ×9
               - `ui/tokens/type-scale` ×7
               - `ui/tokens/shape` ×2
-            - Imported by: 49 plugins — full list in [`plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md)
+            - Imported by: 50 plugins — full list in [`plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/control-panel/REFERENCE.md)
               - `apps` ×15
               - `page` ×6
               - `primitives` ×4
@@ -47795,6 +47806,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `companions/menu-bar/open-in-window`
               - `framework/cli/build/experimental-marks`
               - `fullscreen`
+              - `phone-window`
               - `reports/panel-overflow`
               - `shell/global-action-bar`
               - `tag-tree/picker`
@@ -50666,6 +50678,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `active-data/go`
               - `primitives/css/badge`
               - `primitives/text-editor/inline-chip`
+        - **`device-sizes`** — The device screens equin is designed and checked at (DEVICE_SIZES: Phone 390×844, Phone landscape, Tablet, Laptop, Desktop, Wide — each a real device's screen in CSS pixels) and deviceSize(name). One list read by the prototype canvas, Compare and the action bar's phone window.
+          - Cross-plugin:
+            - Imported by:
+              - `apps/prototypes/canvas`
+              - `apps/prototypes/compare`
+              - `apps/prototypes/files`
+              - `phone-window`
+          - Core:
+            - Exports (types):
+              - `DeviceSize`
+              - `DeviceSizeName`
+            - Exports (values):
+              - `DEVICE_SIZES`
+              - `deviceSize`
         - **`dom-selection`** — The one sanctioned home for the guarded document-selection read: selectionRange() states the three-part guard (no selection → rangeCount 0 → getRangeAt(0) throwing IndexSizeError) that four hand-rolled copies each remembered a different subset of, selectionRect() is that range's bounding rect, hasBox(rect) is the one statement of 'a rect with no box is not an anchor', and selectionIsCollapsed() answers 'does the user have anything highlighted right now' — the question Lexical's model gets wrong for a whole task after a one-step selection gesture. Named for the DOM selection to keep it apart from Lexical's model $getSelection; owns the range read too, since a copy handler wants the range for its content, not its geometry.
           - Cross-plugin:
             - Imported by:
@@ -50809,7 +50835,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: `primitives/css/viewport-overlay.describeElement`
         - **`render-mode`** — Reading the browser while rendering, safely in both modes: useBrowserValue({ name, read, subscribe?, staticValue? }) (live: useSyncExternalStore, re-read on every change; static: staticValue, or a loud NoStaticValueError), useMediaQuery(query, staticValue), useViewportSize(staticValue), and useOwnedElement(name, create) — a DOM node a component mints once, which has no static form. The one place a render-time read of window / document / navigator / matchMedia happens (dom-access-safety/no-render-time-dom).
           - Cross-plugin:
-            - Imported by: 22 plugins — full list in [`plugins/primitives/plugins/dom/plugins/render-mode/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/render-mode/REFERENCE.md)
+            - Imported by: 23 plugins — full list in [`plugins/primitives/plugins/dom/plugins/render-mode/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/render-mode/REFERENCE.md)
               - `primitives` ×11
               - `apps` ×2
               - `companions/panel`
@@ -50818,6 +50844,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `fullscreen`
               - `map/google`
               - `media/player`
+              - `phone-window`
               - `screenshot/draw-on-app`
               - `tasks/worktree-identity`
               - `ui/theme-engine`
@@ -57622,6 +57649,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ActionBar.ViewOption` ← `config_v2.git-defaults-preview`
           - `ActionBar.ViewOption` ← `framework.cli.build.experimental-marks`
           - `ActionBar.ViewOption` ← `fullscreen`
+          - `ActionBar.ViewOption` ← `phone-window`
           - `ActionBar.Lead` ← `shell.health-report`
           - `ActionBar.Activity` ← `build`
           - `ActionBar.Glance` ← `build`
@@ -57640,6 +57668,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework/cli/build/experimental-marks`
           - `fullscreen`
           - `hints/help-menu`
+          - `phone-window`
           - `screenshot`
           - `screenshot/draw-on-app`
           - `shell/global-action-bar`
@@ -61953,7 +61982,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useWantedSprites`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
-        - Imported by: 593 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+        - Imported by: 594 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
           - `apps` ×155
           - `conversations` ×123
           - `primitives` ×53
@@ -61986,6 +62015,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `layouts/miller`
           - `media/player`
           - `network/live/live-state`
+          - `phone-window`
           - `runs/run-outcome`
           - `stats`
           - `tag-tree/picker`

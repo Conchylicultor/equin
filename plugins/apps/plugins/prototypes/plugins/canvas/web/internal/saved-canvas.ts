@@ -1,7 +1,7 @@
+import { DEVICE_SIZES } from "@plugins/primitives/plugins/dom/plugins/device-sizes/core";
 import { z } from "zod";
 import {
   PrototypeVersionSchema,
-  SIZE_PRESETS,
   StoredPicksSchema,
 } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import { settleLayout, type CanvasState } from "./canvas-model";
@@ -16,9 +16,9 @@ import { settleLayout, type CanvasState } from "./canvas-model";
  * them. Everything else is this browser's own view of the prototype.
  */
 
-const PRESET_NAMES = SIZE_PRESETS.map((p) => p.name) as [
-  (typeof SIZE_PRESETS)[number]["name"],
-  ...(typeof SIZE_PRESETS)[number]["name"][],
+const PRESET_NAMES = DEVICE_SIZES.map((p) => p.name) as [
+  (typeof DEVICE_SIZES)[number]["name"],
+  ...(typeof DEVICE_SIZES)[number]["name"][],
 ];
 
 const FrameIdSchema = z.number().int().positive();

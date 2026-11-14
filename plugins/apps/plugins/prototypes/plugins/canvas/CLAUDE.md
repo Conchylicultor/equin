@@ -256,8 +256,8 @@ whose fixed row grid has no two-leading-cell form:
   this browser) **opens at the size the prototype declares** (`<meta name="prototype-viewport" content="window">`
   — `window`, a preset's name or `responsive`; Responsive when absent), so a mock always
   opens at the screen it was drawn for rather than at whatever room the pane
-  happens to have. The presets and that tag's parser are one list, owned by
-  `files/core` (`SIZE_PRESETS`, `parseViewport`); the provider waits for the
+  happens to have. The presets are `primitives/dom/device-sizes`' `DEVICE_SIZES`,
+  that tag's parser `files/core`'s `parseViewport`; the provider waits for the
   prototype list before the canvas exists, so it never opens at a stand-in.
 - **The Width slider** in the same popover (its `838px` readout above it) resizes EVERY frame (the size is
   canvas-wide), in 360–2560 px, snapping onto the nearest preset it moves within 28 px

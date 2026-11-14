@@ -1,31 +1,16 @@
 import { z } from "zod";
+import {
+  DEVICE_SIZES,
+  deviceSize,
+  type DeviceSizeName,
+} from "@plugins/primitives/plugins/dom/plugins/device-sizes/core";
 
 /**
- * The size presets a prototype is designed at and viewed at: the device's
- * SCREEN, in CSS pixels at the device's default scaling. One list for the whole
- * Prototypes app — the tag an author writes, the canvas's size menu, the
- * gallery thumbnail and Compare all read it, so a size one of them knows is a
- * size all of them know.
- *
- * Each is a real, common device rather than a CSS breakpoint: a mock judged at
- * a width nobody's screen has is judged against a layout nobody sees.
- * Phone: iPhone 13–15, held upright; Phone landscape: the same phone on its
- * side. Tablet: iPad Air. Laptop: MacBook Air (and the most common laptop
- * width). Desktop: a 1080p monitor. Wide: a 27" 1440p monitor.
- *
- * `word` is how the `<meta name="prototype-viewport">` tag and a Present URL
- * spell the preset — one token, never a space.
+ * The size presets a prototype is designed at and viewed at: the device
+ * screens of `DEVICE_SIZES` — the tag an author writes, the canvas's size
+ * menu, the gallery thumbnail and Compare all read them.
  */
-export const SIZE_PRESETS = [
-  { name: "Phone", word: "phone", w: 390, h: 844 },
-  { name: "Phone landscape", word: "phone-landscape", w: 844, h: 390 },
-  { name: "Tablet", word: "tablet", w: 820, h: 1180 },
-  { name: "Laptop", word: "laptop", w: 1440, h: 900 },
-  { name: "Desktop", word: "desktop", w: 1920, h: 1080 },
-  { name: "Wide", word: "wide", w: 2560, h: 1440 },
-] as const;
-
-export type PresetName = (typeof SIZE_PRESETS)[number]["name"];
+export type PresetName = DeviceSizeName;
 
 /**
  * The size a prototype declares with `<meta name="prototype-viewport">`: a
@@ -61,7 +46,7 @@ export const DEFAULT_PROTOTYPE_VIEWPORT = {
 export const HEADLESS_PRESET: PresetName = "Laptop";
 
 const isPresetName = (v: unknown): v is PresetName =>
-  SIZE_PRESETS.some((p) => p.name === v);
+  DEVICE_SIZES.some((p) => p.name === v);
 
 /** The wire shape of a declared size. Mirrors `PrototypeViewport` exactly. */
 export const PrototypeViewportSchema = z.discriminatedUnion("kind", [
@@ -77,7 +62,7 @@ export const PrototypeViewportSchema = z.discriminatedUnion("kind", [
 export const PROTOTYPE_VIEWPORT_WORDS: readonly string[] = [
   "window",
   "responsive",
-  ...SIZE_PRESETS.map((p) => p.word),
+  ...DEVICE_SIZES.map((p) => p.word),
 ];
 
 /**
@@ -94,7 +79,7 @@ export function parseViewport(
   if (word === "responsive")
     return { ok: true, viewport: { kind: "responsive" } };
   if (word === "window") return { ok: true, viewport: { kind: "window" } };
-  const preset = SIZE_PRESETS.find((p) => p.word === word);
+  const preset = DEVICE_SIZES.find((p) => p.word === word);
   return preset
     ? { ok: true, viewport: { kind: "preset", preset: preset.name } }
     : { ok: false, raw: (raw ?? "").trim() };
@@ -103,7 +88,7 @@ export function parseViewport(
 /** The tag's word for a size — the inverse of {@link parseViewport}. */
 export function viewportWord(v: PrototypeViewport): string {
   if (v.kind !== "preset") return v.kind;
-  const preset = SIZE_PRESETS.find((p) => p.name === v.preset);
+  const preset = DEVICE_SIZES.find((p) => p.name === v.preset);
   if (!preset) throw new Error(`unknown size preset "${v.preset}"`);
   return preset.word;
 }
@@ -115,9 +100,7 @@ export function viewportProblemDetail(raw: string): string {
 
 /** A preset's logical size. */
 export function presetSize(name: PresetName): { w: number; h: number } {
-  const preset = SIZE_PRESETS.find((p) => p.name === name);
-  if (!preset) throw new Error(`unknown size preset "${name}"`);
-  return { w: preset.w, h: preset.h };
+  return deviceSize(name);
 }
 
 /**

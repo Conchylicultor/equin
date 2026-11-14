@@ -22,7 +22,7 @@ import {
   PopoverTrigger,
   WithTooltip,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { SIZE_PRESETS } from "@plugins/apps/plugins/prototypes/plugins/files/core";
+import { DEVICE_SIZES } from "@plugins/primitives/plugins/dom/plugins/device-sizes/core";
 import type { CanvasSize } from "../internal/canvas-model";
 import {
   MAX_WIDTH,
@@ -263,7 +263,7 @@ function SizePopoverBody({ layout, noWholePage }: SizeChipProps): ReactElement {
           >
             This window
           </SizeRow>
-          {SIZE_PRESETS.map((p) => (
+          {DEVICE_SIZES.map((p) => (
             <SizeRow
               key={p.name}
               checked={size.kind === "preset" && size.preset === p.name}
@@ -490,7 +490,7 @@ function BandLabel({
 }
 
 /** A preset's glyph in the size list. */
-function presetIcon(preset: (typeof SIZE_PRESETS)[number]["name"]): IconRef {
+function presetIcon(preset: (typeof DEVICE_SIZES)[number]["name"]): IconRef {
   switch (preset) {
     case "Phone":
       return phoneIphoneIcon;

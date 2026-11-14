@@ -1,8 +1,8 @@
+import { DEVICE_SIZES } from "@plugins/primitives/plugins/dom/plugins/device-sizes/core";
 import { describe, expect, test } from "bun:test";
 import {
   DEFAULT_PROTOTYPE_VIEWPORT,
   PROTOTYPE_VIEWPORT_WORDS,
-  SIZE_PRESETS,
   parseViewport,
   viewportRenderSize,
 } from "./viewport";
@@ -34,7 +34,7 @@ describe("parseViewport", () => {
   });
 
   test("every preset, by its word, case and spaces ignored", () => {
-    for (const p of SIZE_PRESETS) {
+    for (const p of DEVICE_SIZES) {
       expect(parseViewport(` ${p.word.toUpperCase()} `)).toEqual({
         ok: true,
         viewport: { kind: "preset", preset: p.name },

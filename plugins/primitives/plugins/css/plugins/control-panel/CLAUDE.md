@@ -506,7 +506,7 @@ surface isn't viewport-capped, it fails loudly.
     - `ui/tokens/color-palette` ×9
     - `ui/tokens/type-scale` ×7
     - `ui/tokens/shape` ×2
-  - Imported by: 49 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 50 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×15
     - `page` ×6
     - `primitives` ×4
@@ -521,6 +521,7 @@ surface isn't viewport-capped, it fails loudly.
     - `companions/menu-bar/open-in-window`
     - `framework/cli/build/experimental-marks`
     - `fullscreen`
+    - `phone-window`
     - `reports/panel-overflow`
     - `shell/global-action-bar`
     - `tag-tree/picker`

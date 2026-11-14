@@ -49,7 +49,7 @@ export type CanvasFrame = PrototypeFrame | SourceFrame;
 /**
  * The logical size every frame renders at: any size a prototype can declare —
  * the space the canvas has (`responsive` — the page's own responsive layout
- * shows), the viewer's own browser window (`window`), or a device preset (`SIZE_PRESETS`: the device's SCREEN; a page longer
+ * shows), the viewer's own browser window (`window`), or a device preset (`DEVICE_SIZES`: the device's SCREEN; a page longer
  * than it scrolls inside the frame unless Whole page is on) — or a width
  * dragged off the presets (`custom`).
  */

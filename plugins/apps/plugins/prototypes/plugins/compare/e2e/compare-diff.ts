@@ -70,6 +70,7 @@
 //   ./equin run plugins/apps/plugins/prototypes/plugins/compare/e2e/compare-diff.ts \
 //     --name proto-1786877040-3k6f --out /tmp/mist-panes
 
+import { DEVICE_SIZES } from "@plugins/primitives/plugins/dom/plugins/device-sizes/core";
 import { writeFileSync } from "node:fs";
 import type { Frame, Locator, Page } from "playwright";
 import {
@@ -95,7 +96,6 @@ import {
   protoIdKind,
   pickedColor,
   picksFromQuery,
-  SIZE_PRESETS,
   viewportRenderSize,
   HEADLESS_PRESET,
   type OptionPicks,
@@ -540,19 +540,19 @@ await withBrowser(async (h) => {
   // size the prototype declares — a preset (This window reads as one), or Responsive with the window sized
   // so the frames come out at the size a responsive page renders at.
   const declared = meta.viewport;
-  let preset: (typeof SIZE_PRESETS)[number] | undefined;
+  let preset: (typeof DEVICE_SIZES)[number] | undefined;
   // A width no preset has is Responsive, the window sized until the frames
   // come out that wide (at the declared size's height).
   let target = initial;
   if (width !== undefined) {
-    preset = SIZE_PRESETS.find((p) => p.w === width);
+    preset = DEVICE_SIZES.find((p) => p.w === width);
     if (!preset) target = { w: width, h: initial.h };
   } else if (declared.kind === "preset") {
-    preset = SIZE_PRESETS.find((p) => p.name === declared.preset);
+    preset = DEVICE_SIZES.find((p) => p.name === declared.preset);
   } else if (declared.kind === "window") {
     // The viewer's own window has no meaning in a headless run: take the
     // preset every headless render of `window` uses.
-    preset = SIZE_PRESETS.find((p) => p.name === HEADLESS_PRESET);
+    preset = DEVICE_SIZES.find((p) => p.name === HEADLESS_PRESET);
   }
   if (preset) {
     await pickSizeAtActual(page, preset.name);

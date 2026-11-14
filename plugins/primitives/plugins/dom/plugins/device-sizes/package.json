@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-primitives-dom-device-sizes",
+  "private": true,
+  "version": "0.0.1",
+  "description": "The device screens equin is designed and checked at (DEVICE_SIZES: Phone 390×844, Phone landscape, Tablet, Laptop, Desktop, Wide — each a real device's screen in CSS pixels) and deviceSize(name). One list read by the prototype canvas, Compare and the action bar's phone window."
+}

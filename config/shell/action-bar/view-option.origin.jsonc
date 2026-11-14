@@ -1,4 +1,4 @@
-// @hash a4409ea74341
+// @hash ecf157a76c1f
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -12,6 +12,7 @@
     "companions.menu-bar.open-in-window:open-in-window",
     "config_v2.git-defaults-preview:git-defaults-preview",
     "framework.cli.build.experimental-marks:experimental-marks",
-    "fullscreen:fullscreen-toggle"
+    "fullscreen:fullscreen-toggle",
+    "phone-window:open-phone-window"
   ]
 }

@@ -322,8 +322,9 @@ Metadata is therefore read out of the HTML, not a sidecar file:
   browser window) or a size preset's word (`phone`, `phone-landscape`,
   `tablet`, `laptop`, `desktop`, `wide`). Where
   there is no viewer's window (thumbnails, Compare), `window` and `responsive`
-  render at `HEADLESS_PRESET` (Laptop). `core/viewport.ts` owns the presets
-  (`SIZE_PRESETS`, which the canvas's size menu lists) and the parser
+  render at `HEADLESS_PRESET` (Laptop). The presets are the device screens of
+  `primitives/dom/device-sizes` (`DEVICE_SIZES`, which the canvas's size menu
+  lists); `core/viewport.ts` owns the parser
   (`parseViewport`); anything else — the retired `WxH` form included — is a
   `problems[]` entry and reads as the default. Named, not pixels, because the
   free `WxH` was an arbitrary number per prototype that matched no preset.
@@ -639,6 +640,9 @@ for the `checkpoints` plugin's end-of-turn job, and the history contract
     - `packages/list-bound.wholeRecord`
     - `packages/list-bound.wholeTuple`
     - `primitives/css/color-picker.Color`
+    - `primitives/dom/device-sizes.DEVICE_SIZES`
+    - `primitives/dom/device-sizes.deviceSize`
+    - `primitives/dom/device-sizes.DeviceSizeName`
   - Exports (types):
     - `ChoiceOption`
     - `ColorOption`
@@ -720,7 +724,6 @@ for the `checkpoints` plugin's end-of-turn job, and the history contract
     - `restorePrototypeVersion`
     - `scanPrototypeFolder`
     - `setPrototypePicks`
-    - `SIZE_PRESETS`
     - `stampPicks`
     - `StoredPicksSchema`
     - `UNTITLED_PROTOTYPE`

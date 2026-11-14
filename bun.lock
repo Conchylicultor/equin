@@ -5562,6 +5562,10 @@
       "name": "@equin/plugin-page-video",
       "version": "0.0.1",
     },
+    "plugins/phone-window": {
+      "name": "@equin/plugin-phone-window",
+      "version": "0.0.1",
+    },
     "plugins/plugin-meta": {
       "name": "@equin/plugin-plugin-meta",
       "version": "0.0.1",
@@ -6265,6 +6269,10 @@
     },
     "plugins/primitives/plugins/dom/plugins/copy-source-text": {
       "name": "@equin/plugin-primitives-dom-copy-source-text",
+      "version": "0.0.1",
+    },
+    "plugins/primitives/plugins/dom/plugins/device-sizes": {
+      "name": "@equin/plugin-primitives-dom-device-sizes",
       "version": "0.0.1",
     },
     "plugins/primitives/plugins/dom/plugins/dom-selection": {
@@ -10494,6 +10502,8 @@
 
     "@equin/plugin-page-video": ["@equin/plugin-page-video@workspace:plugins/page/plugins/video"],
 
+    "@equin/plugin-phone-window": ["@equin/plugin-phone-window@workspace:plugins/phone-window"],
+
     "@equin/plugin-plugin-meta": ["@equin/plugin-plugin-meta@workspace:plugins/plugin-meta"],
 
     "@equin/plugin-plugin-meta-barrel-import": ["@equin/plugin-plugin-meta-barrel-import@workspace:plugins/plugin-meta/plugins/barrel-import"],
@@ -10829,6 +10839,8 @@
     "@equin/plugin-primitives-dom-auto-scroll": ["@equin/plugin-primitives-dom-auto-scroll@workspace:plugins/primitives/plugins/dom/plugins/auto-scroll"],
 
     "@equin/plugin-primitives-dom-copy-source-text": ["@equin/plugin-primitives-dom-copy-source-text@workspace:plugins/primitives/plugins/dom/plugins/copy-source-text"],
+
+    "@equin/plugin-primitives-dom-device-sizes": ["@equin/plugin-primitives-dom-device-sizes@workspace:plugins/primitives/plugins/dom/plugins/device-sizes"],
 
     "@equin/plugin-primitives-dom-dom-selection": ["@equin/plugin-primitives-dom-dom-selection@workspace:plugins/primitives/plugins/dom/plugins/dom-selection"],
 
