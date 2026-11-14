@@ -983,7 +983,12 @@ export const pgDriver: DatabaseDriverImpl = {
           "stderr",
         ),
     }),
-  holdSchemaGeneration: (generation) => generationLocks.hold(generation),
+  // On the direct socket, not the pool: it needs the config loaded and
+  // nothing of `ready()`, so the boot barrier takes it while `ready()` runs.
+  holdSchemaGeneration: async (generation) => {
+    await loadDatabaseConfig();
+    return generationLocks.hold(generation);
+  },
   awaitGenerationsGone: (knowing) =>
     generationLocks.awaitGenerationsGone(knowing),
   awaitOlderProcessesGone: () => generationLocks.awaitOlderProcessesGone(),

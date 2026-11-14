@@ -9,7 +9,7 @@ import { compositionTickJob } from "./internal/composition-tick-job";
 import { requestConvergence } from "./internal/request-convergence";
 import {
   onAutoBuildTerminal,
-  recentClosedAutoBuilds,
+  unrungRecentAutoBuilds,
 } from "./internal/run-state";
 import {
   buildRunTerminalWatcher,
@@ -50,7 +50,7 @@ export default {
     await onRunTerminal((runId) => {
       void runTracked("build:auto-bell", () => onAutoBuildTerminal(runId));
     });
-    for (const runId of await recentClosedAutoBuilds())
+    for (const runId of await unrungRecentAutoBuilds())
       await onAutoBuildTerminal(runId);
 
     // The "what should be served changed" edge: switching a composition to

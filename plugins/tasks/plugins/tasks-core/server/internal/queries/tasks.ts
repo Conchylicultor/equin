@@ -137,20 +137,43 @@ export async function listBlockingDepIds(
   taskId: string,
   exec: DbExecutor,
 ): Promise<string[]> {
+  return (await listBlockingDepIdsOf([taskId], exec)).get(taskId) ?? [];
+}
+
+/**
+ * {@link listBlockingDepIds} for many tasks in one read: each task's direct
+ * blocking dependencies, keyed by task (a task with none is absent). For a
+ * caller judging a whole set — the queue's boot repair — which would otherwise
+ * pay one round trip per task.
+ */
+export async function listBlockingDepIdsOf(
+  taskIds: readonly string[],
+  exec: DbExecutor,
+): Promise<Map<string, string[]>> {
+  const byTask = new Map<string, string[]>();
+  if (taskIds.length === 0) return byTask;
   const rows = await exec
-    .select({ depTaskId: _taskDependencies.dependsOnTaskId })
+    .select({
+      taskId: _taskDependencies.taskId,
+      depTaskId: _taskDependencies.dependsOnTaskId,
+    })
     .from(_taskDependencies)
     .innerJoin(_tasks, eq(_tasks.id, _taskDependencies.dependsOnTaskId))
     .where(
       and(
-        eq(_taskDependencies.taskId, taskId),
+        inArray(_taskDependencies.taskId, [...taskIds]),
         // The SHARED rule (views.ts) — single-hop in shape, identical in
         // substance to the transitive task_blocking_v walk. Notably it treats a
         // held dependency as still blocking even once an attempt completed.
         directDepIsBlocking(sql`${_taskDependencies.dependsOnTaskId}`),
       ),
     );
-  return rows.map((r) => r.depTaskId);
+  for (const { taskId, depTaskId } of rows) {
+    const deps = byTask.get(taskId);
+    if (deps === undefined) byTask.set(taskId, [depTaskId]);
+    else deps.push(depTaskId);
+  }
+  return byTask;
 }
 
 // `exec` is REQUIRED for the same reason as `listBlockingDepIds` above: a

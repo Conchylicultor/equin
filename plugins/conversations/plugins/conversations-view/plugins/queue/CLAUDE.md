@@ -40,6 +40,7 @@
     - `tasks/tasks-core.conversationCreated`
     - `tasks/tasks-core.getConversation`
     - `tasks/tasks-core.listBlockingDepIds`
+    - `tasks/tasks-core.listBlockingDepIdsOf`
     - `tasks/tasks-core.listDependentIds`
     - `tasks/tasks-core.taskStatusChanged`
   - DB schema: `plugins/conversations/plugins/conversations-view/plugins/queue/server/internal/tables.ts`

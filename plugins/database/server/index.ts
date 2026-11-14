@@ -57,24 +57,33 @@ export default {
   // commits.
   async onReadyBlocking() {
     const driver = DatabaseDriver.get();
-    // Warm the pool only where something will be served from it: an `exec`
-    // child (a supervised job's body) runs one piece of work and exits, so a
-    // full pool per child only multiplies connections when many boot at once.
-    await driver.ready({ warm: getBootMode() === "serve" });
+    // Two independent preludes, run together: the pool made ready, and this
+    // process's schema generation held. Run one after the other they were a
+    // fifth of the barrier's steady-state time (~100 ms + ~60 ms on main).
+    const [, migrations] = await Promise.all([
+      // Warm the pool only where something will be served from it: an `exec`
+      // child (a supervised job's body) runs one piece of work and exits, so
+      // a full pool per child only multiplies connections when many boot at
+      // once.
+      driver.ready({ warm: getBootMode() === "serve" }),
+      // This process's code, visible to every later deploy's deferred
+      // contract for as long as it lives — taken before the schema layer, so
+      // no window exists in which it is migrating yet unseen. Its generation
+      // is its latest migration's.
+      (async () => {
+        const list = await MigrationSource.get().list();
+        const latest = list.at(-1);
+        if (latest !== undefined) {
+          await driver.holdSchemaGeneration(schemaGeneration(latest));
+        }
+        return list;
+      })(),
+    ]);
     // The resource runtime's commit watermark is this database's snapshot xmin:
     // installed on every host with a database, before anything is served, so
     // every frame that fully reconciles a client carries one — whether or not
     // the host boots L2 (which only consumes it, as its persist floor).
     setWatermarkSource(() => snapshotWatermark(db));
-    // This process's code, visible to every later deploy's deferred contract
-    // for as long as it lives — taken before the schema layer, so no window
-    // exists in which it is migrating yet unseen. Its generation is its latest
-    // migration's.
-    const migrations = await MigrationSource.get().list();
-    const latest = migrations.at(-1);
-    if (latest !== undefined) {
-      await driver.holdSchemaGeneration(schemaGeneration(latest));
-    }
     // The boot schema layer, in ONE transaction: views out (only when a
     // migration is pending) → pending migrations, each phased schema migration
     // as expand → claimed data → contract (the LAST group's contract deferred

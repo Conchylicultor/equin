@@ -1,5 +1,5 @@
 import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
-import { and, desc, eq, gt, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, gt, isNull, notExists, sql } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import type { UnfinishedRun } from "@plugins/infra/plugins/jobs/plugins/supervised-job/server";
 import type { RunTerminal } from "@plugins/infra/plugins/jobs/plugins/supervised-job/core";
@@ -287,13 +287,23 @@ export async function onAutoBuildTerminal(buildId: BuildRunId): Promise<void> {
  */
 const BOOT_BELL_LOOKBACK_MS = 24 * 60 * 60 * 1000;
 
+/** What a run's bell dedupe key starts with; the run id follows. */
+const FINISH_DEDUPE_PREFIX = "build-finish:";
+
 /**
- * The `auto` runs of this namespace that ended in the last day, newest first —
- * what a booting backend checks it has rung for (see
+ * The `auto` runs of this namespace that ended in the last day and have no
+ * bell yet, newest first — what a booting backend still has to ring for (see
  * {@link onAutoBuildTerminal}): every build that ended while main had no
  * backend, not only the last. Bounded by the lookback and a page.
+ *
+ * The "no bell yet" half is asked here, in the one read, rather than per run:
+ * every boot of main used to walk each of the day's runs through its read,
+ * its advisory lock and its bell probe — ~100 sequential round trips on a
+ * busy day, for bells that had all rung. A run this read finds still goes
+ * through `onAutoBuildTerminal`'s own locked check, so two backends booting
+ * together still ring once.
  */
-export async function recentClosedAutoBuilds(): Promise<BuildRunId[]> {
+export async function unrungRecentAutoBuilds(): Promise<BuildRunId[]> {
   const rows = await db
     .select({ id: _buildRuns.id })
     .from(_buildRuns)
@@ -302,6 +312,17 @@ export async function recentClosedAutoBuilds(): Promise<BuildRunId[]> {
         eq(_buildRuns.namespace, runtimeNamespace()),
         eq(_buildRuns.trigger, "auto"),
         gt(_buildRuns.finishedAt, new Date(Date.now() - BOOT_BELL_LOOKBACK_MS)),
+        notExists(
+          db
+            .select({ one: sql`1` })
+            .from(_notifications)
+            .where(
+              eq(
+                _notifications.dedupKey,
+                sql`${FINISH_DEDUPE_PREFIX} || ${_buildRuns.id}`,
+              ),
+            ),
+        ),
       ),
     )
     .orderBy(desc(_buildRuns.startedAt))
@@ -311,7 +332,7 @@ export async function recentClosedAutoBuilds(): Promise<BuildRunId[]> {
 
 /** The bell's dedupe key: one notification per run, whoever rings it. */
 function finishDedupeKey(buildId: string): string {
-  return `build-finish:${buildId}`;
+  return `${FINISH_DEDUPE_PREFIX}${buildId}`;
 }
 
 /**

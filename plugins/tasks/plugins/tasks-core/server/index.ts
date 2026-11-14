@@ -148,6 +148,7 @@ export {
   getTask,
   hasBlockingDep,
   listBlockingDepIds,
+  listBlockingDepIdsOf,
   listDependentIds,
   getTaskDependencyIds,
   findNextRankInFolder,

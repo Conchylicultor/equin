@@ -4,7 +4,7 @@ import { db } from "@plugins/database/server";
 import {
   _conversations,
   _attempts,
-  listBlockingDepIds,
+  listBlockingDepIdsOf,
 } from "@plugins/tasks/plugins/tasks-core/server";
 import type { ConversationStatus } from "@plugins/tasks/plugins/tasks-core/core";
 import { conversationsQueue } from "./tables";
@@ -46,18 +46,33 @@ export async function repairBlockedOrder(): Promise<void> {
         }
       }
 
+      // Which leads sit at or before a live conversation of a task blocking
+      // them, judged from the rows above and ONE read of every lead's
+      // blockers — never a read per task group: this runs at every boot
+      // under the deck lock, and on a steady deck it moves nothing.
+      const blockersByTask = await listBlockingDepIdsOf(
+        [...taskLeads.keys()],
+        tx,
+      );
+      const lastRankByTask = new Map<string, Rank>();
+      for (const row of rows)
+        lastRankByTask.set(row.taskId, Rank.from(row.rank));
+
       for (const [taskId, lead] of taskLeads) {
-        const blockingTaskIds = await listBlockingDepIds(taskId, tx);
-        if (blockingTaskIds.length === 0) continue;
+        const blockingTaskIds = blockersByTask.get(taskId);
+        if (blockingTaskIds === undefined) continue;
+        const currentRank = Rank.from(lead.rank);
+        const behindABlocker = blockingTaskIds.some((blocker) => {
+          const last = lastRankByTask.get(blocker);
+          return last !== undefined && Rank.compare(currentRank, last) <= 0;
+        });
+        if (!behindABlocker) continue;
 
         const requiredRank = await rankAfterBlockers(
           lead.convId,
           blockingTaskIds,
           tx,
         );
-        const currentRank = Rank.from(lead.rank as string);
-        if (Rank.compare(currentRank, requiredRank) >= 0) continue;
-
         await upsertRank(lead.convId, requiredRank, tx);
         await reseatGroupMembers(lead.convId, requiredRank, tx);
         madeChanges = true;

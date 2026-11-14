@@ -117,32 +117,41 @@ async function getAppliedLedger(
   db: NodePgDatabase | Tx,
   { inLayer }: { inLayer: boolean },
 ): Promise<AppliedLedger> {
-  await db.execute(drizzleSql`
-    CREATE TABLE IF NOT EXISTS ${drizzleSql.raw(MIGRATIONS_TABLE_NAME)} (
-      hash text PRIMARY KEY,
-      file text NOT NULL,
-      applied_at timestamptz NOT NULL DEFAULT now()
-    )
-  `);
-  if (inLayer) {
+  // What the ledger already is, in one catalog read: the DDL below runs only
+  // for what is missing. It used to run every boot — a CREATE and an ALTER
+  // that are no-ops on every ledger but the first, the ALTER still taking the
+  // table's ACCESS EXCLUSIVE lock — plus an information_schema probe.
+  const [shape] = await executeRows(db, {
+    query: drizzleSql`SELECT
+      to_regclass(${MIGRATIONS_TABLE_NAME}) IS NOT NULL AS present,
+      EXISTS (
+        SELECT 1 FROM pg_attribute
+         WHERE attrelid = to_regclass(${MIGRATIONS_TABLE_NAME})
+           AND attname = 'contract_pending'
+           AND NOT attisdropped
+      ) AS has`,
+    row: z.object({ present: z.boolean(), has: z.boolean() }),
+    label: "migrations: ledger shape",
+  });
+  if (shape?.present !== true) {
+    await db.execute(drizzleSql`
+      CREATE TABLE IF NOT EXISTS ${drizzleSql.raw(MIGRATIONS_TABLE_NAME)} (
+        hash text PRIMARY KEY,
+        file text NOT NULL,
+        applied_at timestamptz NOT NULL DEFAULT now()
+      )
+    `);
+  }
+  let hasContractPending = shape?.has === true;
+  if (inLayer && !hasContractPending) {
     await db.execute(drizzleSql`
       ALTER TABLE ${drizzleSql.raw(MIGRATIONS_TABLE_NAME)}
         ADD COLUMN IF NOT EXISTS contract_pending boolean NOT NULL DEFAULT false
     `);
+    hasContractPending = true;
   }
-  const column = await executeRows(db, {
-    query: drizzleSql`SELECT EXISTS (
-      SELECT 1 FROM information_schema.columns
-       WHERE table_schema = current_schema()
-         AND table_name = ${MIGRATIONS_TABLE_NAME}
-         AND column_name = 'contract_pending'
-    ) AS has`,
-    row: z.object({ has: z.boolean() }),
-    label: "migrations: ledger has contract_pending",
-  });
   const applied = await executeRows(db, {
-    query:
-      column[0]?.has === true
+    query: hasContractPending
         ? drizzleSql`SELECT hash, file, contract_pending FROM ${drizzleSql.raw(MIGRATIONS_TABLE_NAME)}`
         : drizzleSql`SELECT hash, file, false AS contract_pending FROM ${drizzleSql.raw(MIGRATIONS_TABLE_NAME)}`,
     row: z.object({

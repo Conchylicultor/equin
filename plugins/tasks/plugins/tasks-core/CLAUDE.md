@@ -552,6 +552,7 @@ serves them.
     - `listAttempts`
     - `listAttemptsForTask`
     - `listBlockingDepIds`
+    - `listBlockingDepIdsOf`
     - `listConversationIdsForAttempt`
     - `listConversationsForDisplay`
     - `listConversationsForInfra`
