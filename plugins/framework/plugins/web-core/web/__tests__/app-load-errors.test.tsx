@@ -37,17 +37,6 @@ vi.mock("@plugins/framework/plugins/web-sdk/core", async (importOriginal) => {
   };
 });
 
-// No live-state transport in jsdom: the provider is a pass-through and the
-// transport hoist a no-op. Neither is what this suite is about.
-vi.mock(
-  "@plugins/network/plugins/live/plugins/live-state/web",
-  async (importOriginal) => ({
-    ...(await importOriginal<object>()),
-    NotificationsProvider: ({ children }: { children: unknown }) => children,
-    ensureNotificationsClient: () => {},
-  }),
-);
-
 import { cleanup, render, waitFor } from "@testing-library/react";
 import {
   getDeferredLoadState,
@@ -55,6 +44,7 @@ import {
   type PluginLoadReport,
 } from "@plugins/framework/plugins/web-sdk/core";
 import { resetDeferredLoadStateForTests } from "@plugins/framework/plugins/web-sdk/core/testing";
+import { NotificationsClient } from "@plugins/network/plugins/live/plugins/live-state/web/testing";
 import App from "../App";
 
 /**
@@ -102,6 +92,9 @@ const reports: PluginLoadReport[] = [];
 beforeEach(() => {
   resetDeferredLoadStateForTests();
   reports.length = 0;
+  // App's boot runs the real live-state pipeline over the page transport; only
+  // the worktree socket it opens is stood in for (jsdom has no server).
+  vi.spyOn(NotificationsClient.prototype, "connect").mockImplementation(() => {});
   pluginLoadReportSink.register((r) => reports.push(r));
   // The loader logs each failure; that is the product's own loud path, and
   // noise here.

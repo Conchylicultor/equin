@@ -34,15 +34,6 @@ vi.mock("@plugins/framework/plugins/web-sdk/core", async (importOriginal) => {
   };
 });
 
-vi.mock(
-  "@plugins/network/plugins/live/plugins/live-state/web",
-  async (importOriginal) => ({
-    ...(await importOriginal<object>()),
-    NotificationsProvider: ({ children }: { children: unknown }) => children,
-    ensureNotificationsClient: () => {},
-  }),
-);
-
 const reported = vi.hoisted(() => [] as { message: string }[]);
 vi.mock("@plugins/reports/web", async (importOriginal) => ({
   ...(await importOriginal<object>()),
@@ -55,6 +46,7 @@ vi.mock("@plugins/reports/web", async (importOriginal) => ({
 import { cleanup, fireEvent, render, waitFor } from "@testing-library/react";
 import { Core } from "@plugins/framework/plugins/web-sdk/core";
 import { resetDeferredLoadStateForTests } from "@plugins/framework/plugins/web-sdk/core/testing";
+import { NotificationsClient } from "@plugins/network/plugins/live/plugins/live-state/web/testing";
 import App from "../App";
 
 /**
@@ -92,6 +84,9 @@ const bootState = (c: HTMLElement) =>
 beforeEach(() => {
   resetDeferredLoadStateForTests();
   reported.length = 0;
+  // App's boot runs the real live-state pipeline over the page transport; only
+  // the worktree socket it opens is stood in for (jsdom has no server).
+  vi.spyOn(NotificationsClient.prototype, "connect").mockImplementation(() => {});
   vi.spyOn(console, "error").mockImplementation(() => {});
 });
 
