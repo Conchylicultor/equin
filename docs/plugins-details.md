@@ -32993,11 +32993,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `blocking-fs/sync-named` — `core/internal/changed-files.ts` (sanctioned)
         - **`guards`** — Claude Code PreToolUse guards: safety checks that intercept tool calls before execution
           - Core:
-            - Uses: 39 symbols — full list in [`plugins/framework/plugins/tooling/plugins/guards/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/guards/REFERENCE.md)
+            - Uses: 40 symbols — full list in [`plugins/framework/plugins/tooling/plugins/guards/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/guards/REFERENCE.md)
               - `infra/paths` ×5
+              - `framework/cli/cli-name` ×4
               - `framework/tooling/guards/bypass` ×4
               - `packages/timed-fs` ×4
-              - `framework/cli/cli-name` ×3
               - `infra/host-fs/user-path` ×3
               - `framework/cli/foreground-handoff` ×2
               - `framework/tooling/collected-dir` ×2

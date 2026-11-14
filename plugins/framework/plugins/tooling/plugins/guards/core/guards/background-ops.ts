@@ -1,8 +1,15 @@
 import { recordAgentOpStart } from "../agent-ops";
 import { defineGuard } from "../define-guard";
-import { parseShell, type ShellParseResult } from "../parse-shell";
+import {
+  parseShell,
+  type ShellCall,
+  type ShellParseResult,
+} from "../parse-shell";
 import type { BashInput, GuardContext } from "../types";
-import { CLI_NAME } from "@plugins/framework/plugins/cli/plugins/cli-name/core";
+import {
+  CLI_NAME,
+  CLI_NAME_PATTERN,
+} from "@plugins/framework/plugins/cli/plugins/cli-name/core";
 import { isHandoffOp } from "@plugins/framework/plugins/cli/plugins/foreground-handoff/core";
 
 /**
@@ -31,6 +38,104 @@ export function longOpsIn(parsed: ShellParseResult): string[] {
   return ops;
 }
 
+/** The ops a foreground call is moved to the background for, rather than refused. */
+const REWRITTEN_OPS = new Set(["build", "push"]);
+
+/** The call's text starts with the CLI itself: no env prefix, no `time` wrapper. */
+const CLI_HEAD = new RegExp(`^(?:\\S*/)?${CLI_NAME_PATTERN}\\s`);
+
+const escapeRe = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/** `cd <one literal dir>`: it only sets the directory, which a background run keeps. */
+function isPlainCd(call: ShellCall): boolean {
+  return (
+    call.name === "cd" &&
+    call.args.length === 1 &&
+    !call.args[0]!.startsWith("-") &&
+    !/[$`]/.test(call.raw)
+  );
+}
+
+/** `tail -N` / `tail -n N`: the end of the op's output, read once it is over. */
+function isTailCount(call: ShellCall): boolean {
+  if (call.name !== "tail" || call.redirections.length > 0) return false;
+  const a = call.args;
+  return (
+    (a.length === 1 && /^-\d+$/.test(a[0]!)) ||
+    (a.length === 2 && a[0] === "-n" && /^\d+$/.test(a[1]!))
+  );
+}
+
+/**
+ * The one op the command consists of, when backgrounding it cannot change what
+ * the command means: a single `./equin build|push` call with its flags, and at
+ * most
+ *
+ * - a `2>&1`;
+ * - for a push, the `-m "$(cat <<'EOF' … EOF)"` message idiom (its `cat` reads
+ *   the heredoc, so it is the message, not a step);
+ * - a leading `cd <dir> &&` (or `;`) — the directory the op runs in either way;
+ * - a trailing `| tail -N` — the end of its output, which a background run
+ *   delivers when it is over, exactly when a foreground one would; `pipefail`
+ *   keeps the op's own exit status.
+ *
+ * Those are the shapes the refused calls actually had: replayed over 7 days
+ * (2026-11-14), 32 of background-ops' 78 denials are rewritten — and the bare
+ * form alone was none of them, so a rule without the `cd` and `tail` arms
+ * would have rewritten 0. Anything else stays refused, because
+ * a background run would read it differently: another command chained before
+ * or after (`git status &&`, `; git status` — its output would arrive at the
+ * end, out of order), a wrapper (`time` would time the hand-off), `head` (stops
+ * reading early), a file redirection, an env prefix.
+ */
+function soleRewritableOp(
+  cmd: string,
+  parsed: ShellParseResult,
+): string | null {
+  const op = parsed.calls.find((c) => c.name === CLI_NAME);
+  if (op === undefined) return null;
+  const sub = op.args.find((a) => !a.startsWith("-"));
+  if (sub === undefined || !REWRITTEN_OPS.has(sub)) return null;
+  if (!CLI_HEAD.test(op.raw.trim())) return null;
+  if (op.redirections.some((r) => r.kind !== "fd" || r.toFd !== "1"))
+    return null;
+
+  // A heredoc was stripped from the text (so the `cat` reads it, not stdin).
+  const heredocMessage = parsed.code !== cmd && /\$\(cat\s/.test(op.raw);
+  const steps = parsed.calls.filter(
+    (c) => !(heredocMessage && c.name === "cat" && c.args.length === 0),
+  );
+  const at = steps.indexOf(op);
+  const before = steps.slice(0, at);
+  const after = steps.slice(at + 1);
+  if (before.length > 1 || (before[0] && !isPlainCd(before[0]))) return null;
+  if (after.length > 1 || (after[0] && !isTailCount(after[0]))) return null;
+
+  // The calls alone do not say how they are joined: the text must be exactly
+  // `[cd … && | ;] <op> [| tail …]`, nothing around or between them.
+  const shape = new RegExp(
+    "^" +
+      (before[0] ? `${escapeRe(before[0].raw)}\\s*(?:&&|;)\\s*` : "") +
+      escapeRe(op.raw.trim()) +
+      (after[0] ? `\\s*\\|\\s*${escapeRe(after[0].raw)}` : "") +
+      "$",
+  );
+  return shape.test(parsed.code.trim()) ? sub : null;
+}
+
+/**
+ * What the agent is told when its foreground op was moved to the background:
+ * that it happened, and what to do next — which differs for a subagent.
+ */
+function rewriteNote(op: string, subagent: boolean): string {
+  const moved =
+    `\`./equin ${op}\` was typed in the foreground; it was started with \`run_in_background: true\` instead ` +
+    `(a ${op} regularly outlives the 600 s foreground limit). The command itself is unchanged.`;
+  return subagent
+    ? `${moved}\n${awaitInstead(op)}`
+    : `${moved}\nEND YOUR TURN now: you will be re-invoked with its output when it finishes. Do not watch it.`;
+}
+
 function shellDetachIn(parsed: ShellParseResult): boolean {
   if (parsed.calls.some((c) => SHELL_DETACH.has(c.name))) return true;
   // A trailing `&` survives tokenizing as its own empty segment, so look at the
@@ -54,6 +159,11 @@ function shellDetachIn(parsed: ShellParseResult): boolean {
  * completes" and lives up to its `timeout` — 30 min by default, 2 h at most,
  * which `background-timeout` sets on every backgrounded `./equin` call.
  * Forcing every long op through it deletes the handle-less state entirely.
+ *
+ * When the command is just the op ({@link soleRewritableOp}) the guard does
+ * that itself — rewrites the call to `run_in_background: true` with a note —
+ * instead of refusing it: the retry was the same command backgrounded every
+ * time, and each refusal cost a turn. Every other shape is still refused.
  *
  * ## Except the ones that hand themselves off
  *
@@ -153,6 +263,20 @@ export const backgroundOpsGuard = defineGuard<BashInput>({
       // must know whose it is, exactly as for a backgrounded one.
       for (const o of ops) recordOwnership(ctx, o);
       return null;
+    }
+
+    // The denial's fix is mechanical when the command IS the op: the retry was
+    // the same command backgrounded every time (research/
+    // 2026-11-14-guards-false-positive-audit.md). Do it for the agent — the
+    // timeout is raised by `background-timeout`, which judges the rewritten
+    // input — and record the op as a backgrounded one is.
+    const rewritable = soleRewritableOp(cmd, parsed);
+    if (rewritable !== null) {
+      recordOwnership(ctx, rewritable);
+      return {
+        rewrite: { run_in_background: true },
+        note: rewriteNote(rewritable, ctx.agent !== null),
+      };
     }
     return {
       blocked: `\`./equin ${pinned}\` must run with \`run_in_background: true\`.`,

@@ -158,3 +158,34 @@ describe("a guard bypass (postgres, a hard denial)", () => {
     expect(denial(await bash(s, "psql -l"))).not.toBeNull();
   });
 });
+
+describe("a foreground build backgrounded by background-ops", () => {
+  test("runs backgrounded, at the 2 h ceiling, the command unchanged", async () => {
+    const out = await bash(newSession(), "./equin build 2>&1");
+    const specific = out?.hookSpecificOutput as
+      | { updatedInput?: Record<string, unknown>; additionalContext?: string }
+      | undefined;
+    // background-timeout judges the rewritten input, so it raises the timeout.
+    expect(specific?.updatedInput).toEqual({
+      command: "./equin build 2>&1",
+      run_in_background: true,
+      timeout: 7_200_000,
+    });
+    expect(specific?.additionalContext).toContain("END YOUR TURN");
+  });
+
+  test("a tail of its output keeps the op's exit status (pipefail still applies)", async () => {
+    const out = await bash(newSession(), "./equin push -m x 2>&1 | tail -15");
+    const specific = out?.hookSpecificOutput as
+      { updatedInput?: Record<string, unknown> } | undefined;
+    expect(specific?.updatedInput?.run_in_background).toBe(true);
+    expect(specific?.updatedInput?.command).toBe(
+      "set -o pipefail; ./equin push -m x 2>&1 | tail -15",
+    );
+  });
+
+  test("a compound form is still refused", async () => {
+    const reason = denial(await bash(newSession(), "./equin build | head -15"));
+    expect(reason).toContain("run_in_background");
+  });
+});

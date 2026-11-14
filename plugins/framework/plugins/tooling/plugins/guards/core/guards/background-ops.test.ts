@@ -44,32 +44,113 @@ afterAll(() => {
 
 const blocks = (command: string, bg?: boolean) =>
   verdict(command, bg).kind === "deny";
+const rewrites = (command: string) => verdict(command).kind === "rewrite";
 const reason = (command: string, bg?: boolean) => {
   const v = verdict(command, bg);
   return v.kind === "deny" ? v.reason : "";
 };
 
 describe("background-ops guard", () => {
-  describe("long ops in the foreground are blocked", () => {
-    for (const op of ["build", "push", "release"]) {
+  describe("a foreground build/push that is the whole command is backgrounded", () => {
+    for (const op of ["build", "push"]) {
       for (const cli of CLI_NAMES.map((n) => `./${n}`)) {
         test(`${cli} ${op}`, () => {
-          expect(blocks(`${cli} ${op}`)).toBe(true);
+          const v = verdict(`${cli} ${op}`);
+          expect(v.kind).toBe("rewrite");
+          expect(v.kind === "rewrite" && v.patch).toEqual({
+            run_in_background: true,
+          });
         });
       }
     }
 
-    test("the exact shape from conv-1786116592-b70n", () => {
+    test("with its flags and a 2>&1", () => {
+      expect(rewrites(`./equin build --skip-checks 2>&1`)).toBe(true);
+      expect(rewrites(`./equin push -m "fix(x): y" --fixes-report r-1`)).toBe(
+        true,
+      );
+    });
+
+    test("behind a cd into the checkout, and/or into a tail of its output", () => {
+      // The 36 of 78 refused calls the audit found (2026-11-14): these shapes.
+      for (const cmd of [
+        "cd /r/repo/.claude/worktrees/att-1 && ./equin build",
+        "cd /r/repo/.claude/worktrees/att-1; ./equin build",
+        "./equin push -m x 2>&1 | tail -15",
+        "./equin build 2>&1 | tail -n 40",
+        "cd /r/wt && ./equin push -m x 2>&1 | tail -15",
+      ])
+        expect(rewrites(cmd)).toBe(true);
+    });
+
+    test("a push whose message is the heredoc idiom", () => {
+      const cmd = [
+        "./equin push -m \"$(cat <<'EOF'",
+        "fix(x): a thing",
+        "",
+        "Co-Authored-By: someone",
+        "EOF",
+        ')"',
+      ].join("\n");
+      expect(rewrites(cmd)).toBe(true);
+      expect(rewrites(`cd /r/wt; ${cmd} 2>&1 | tail -15`)).toBe(true);
+    });
+
+    test("the main conversation is told what happened and to end its turn", () => {
+      const v = verdict("./equin build");
+      expect(v.kind === "rewrite" && v.note).toContain(
+        "run_in_background: true",
+      );
+      expect(v.kind === "rewrite" && v.note).toContain("END YOUR TURN");
+    });
+
+    test("a subagent is told to await instead, and its op is recorded", () => {
+      const v = subagentVerdict("./equin push -m x");
+      expect(v.kind).toBe("rewrite");
+      expect(v.kind === "rewrite" && v.note).toContain("./equin await push");
+      expect(v.kind === "rewrite" && v.note).not.toContain("END YOUR TURN");
+    });
+  });
+
+  describe("forms a background run would read differently stay refused", () => {
+    for (const cmd of [
+      "time ./equin build 2>&1 | tail -15; git status",
+      "./equin build | head -30",
+      "./equin build | tail -f",
+      "./equin build | tail -15 | grep x",
+      "./equin build | tail -15; git status",
+      "git status --short && ./equin push -m x 2>&1 | tail -15",
+      "cd /r/wt && git status && ./equin push -m x",
+      'cd "$WT" && ./equin build',
+      "cd /r/wt && ./equin build && echo ok",
+      "./equin build; git status",
+      "./equin build && echo done",
+      "git fetch && ./equin push -m x",
+      "time ./equin build",
+      "FOO=1 ./equin build",
+      "./equin build > build.log",
+      "(./equin build)",
+      './equin push -m "$(git log -1 --format=%s)"',
+      "./equin release",
+    ]) {
+      test(cmd, () => {
+        expect(verdict(cmd).kind).toBe("deny");
+      });
+    }
+
+    test("the exact shape from conv-1786116592-b70n, with a time wrapper", () => {
       expect(
-        blocks(`./equin push -m "feat(data-view): properties" 2>&1 | tail -50`),
+        blocks(
+          `time ./equin push -m "feat(data-view): properties" 2>&1 | tail -50`,
+        ),
       ).toBe(true);
     });
 
-    test("behind a cd, as agents usually write it", () => {
+    test("behind a cd and another command, as agents often write it", () => {
       expect(
         blocks(
           // Fake root, deliberately not under /Users — see `paths:no-hardcoded-paths`.
-          `cd /r/repo/.claude/worktrees/att-1 && ./equin build`,
+          `cd /r/repo/.claude/worktrees/att-1 && git status --short; ./equin build`,
         ),
       ).toBe(true);
     });
@@ -79,7 +160,7 @@ describe("background-ops guard", () => {
     });
 
     test("the denial names run_in_background", () => {
-      expect(reason("./equin build")).toContain("run_in_background");
+      expect(reason("./equin build | head -5")).toContain("run_in_background");
     });
   });
 
@@ -129,14 +210,14 @@ describe("background-ops guard", () => {
     });
 
     test("a foreground op still denies, but the hint names both steps", () => {
-      const v = subagentVerdict("./equin build");
+      const v = subagentVerdict("./equin build | head -5");
       expect(v.kind).toBe("deny");
       expect(v.kind === "deny" && v.reason).toContain("run_in_background");
       expect(v.kind === "deny" && v.reason).toContain("./equin await build");
     });
 
     test("the main conversation's foreground hint still says to end its turn", () => {
-      const v = verdict("./equin build");
+      const v = verdict("./equin build | head -5");
       expect(v.kind === "deny" && v.reason).toContain("END YOUR TURN");
     });
 
@@ -193,7 +274,7 @@ describe("background-ops guard", () => {
         "EOF",
         ')"',
       ].join("\n");
-      expect(blocks(cmd)).toBe(true);
+      expect(rewrites(cmd)).toBe(true);
       expect(blocks(cmd, true)).toBe(false);
     });
 
@@ -204,7 +285,7 @@ describe("background-ops guard", () => {
         "EOF",
         ')"',
       ].join("\n");
-      expect(blocks(cmd)).toBe(true);
+      expect(rewrites(cmd)).toBe(true);
       expect(blocks(cmd, true)).toBe(false);
     });
 

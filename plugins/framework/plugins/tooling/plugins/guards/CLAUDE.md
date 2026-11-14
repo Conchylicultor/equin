@@ -274,6 +274,20 @@ they existed (denials → the agent's next call):
   failed would expand to nothing and diff against the index); `refs/heads/main`
   is the spelling that means the tip on purpose.
 
+`background-ops` is a judging guard that rewrites one case
+(2026-11-14 audit: 75 refusals in 7 days, each retried as the same command
+with `run_in_background: true`). A foreground `./equin build|push` is moved to
+the background, with a note — end your turn, or for a subagent
+`./equin await <op>` (its op is recorded for the stop guard exactly as a
+backgrounded one) — when the command is the op alone: its flags, `2>&1`, the
+`-m "$(cat <<'EOF' … EOF)"` message, a leading `cd <dir> &&`/`;`, a trailing
+`| tail -N`. Those last two are what the refused calls actually looked like
+(replay: 32 of 78 rewritten; the bare form alone, 0). Anything else chained
+(`git status &&`, `; git status`, `time`, `| head`, a file redirection) is
+still refused: backgrounded, its output would arrive out of order or mean
+something else. It sits among the judging guards, so `pipefail` and
+`background-timeout` (2 h) judge the rewritten call.
+
 `find` was audited too (20 Opus denials, 117 Sonnet; the retry was `rg --files`
 over the same dirs) and deliberately stays a denial. A pruned `find` is only
 bounded by the list of directories it prunes, and a hand-written list misses
@@ -360,11 +374,11 @@ can blind or deafen all of them at once.
 
 - Description: Claude Code PreToolUse guards: safety checks that intercept tool calls before execution
 - Core:
-  - Uses: 39 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 40 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra/paths` ×5
+    - `framework/cli/cli-name` ×4
     - `framework/tooling/guards/bypass` ×4
     - `packages/timed-fs` ×4
-    - `framework/cli/cli-name` ×3
     - `infra/host-fs/user-path` ×3
     - `framework/cli/foreground-handoff` ×2
     - `framework/tooling/collected-dir` ×2

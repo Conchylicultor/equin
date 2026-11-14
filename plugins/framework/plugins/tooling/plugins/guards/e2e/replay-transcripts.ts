@@ -349,7 +349,11 @@ console.log(
 );
 process.exit(regressed ? 1 : 0);
 
-function denialsFor(call: ToolCall, command: string): string[] {
+function denialsFor(
+  call: ToolCall,
+  command: string,
+  rewrites?: Set<string>,
+): string[] {
   // The session's OWN cwd, not a synthetic root: to a sibling worktree, another
   // worktree's path looks like main, and `main-writes` would mis-report.
   const ctx = createContext(call.cwd, "replay");
@@ -364,6 +368,7 @@ function denialsFor(call: ToolCall, command: string): string[] {
     // the parser seeing the command, which is what the floors below measure.
     if (verdict.kind === "deny" || verdict.kind === "rewrite")
       denied.push(guard.name);
+    if (verdict.kind === "rewrite") rewrites?.add(guard.name);
   }
   return denied;
 }
@@ -376,7 +381,10 @@ function denialLine(call: ToolCall, name: string): string {
     { command: call.cmd, run_in_background: call.bg } as never,
     createContext(call.cwd, "replay") as never,
   );
-  if (verdict instanceof Promise || verdict.kind !== "deny") return "";
+  if (verdict instanceof Promise) return "";
+  if (verdict.kind === "rewrite")
+    return `REWRITTEN ${JSON.stringify(verdict.patch)}`;
+  if (verdict.kind !== "deny") return "";
   return verdict.reason.split("\n")[0]!.slice(0, 240);
 }
 
@@ -396,6 +404,8 @@ function replayGuards(
   show: string | null,
 ): void {
   const perGuard = new Map<string, number>();
+  // Of each guard's interceptions, how many it now rewrites instead of denying.
+  const perGuardRewrites = new Map<string, number>();
   const shown: { session: string; cmd: string; why: string }[] = [];
   const bodySourced: { session: string; guard: string; cmd: string }[] = [];
   let bash = 0;
@@ -408,8 +418,11 @@ function replayGuards(
     for (const call of readToolCalls(path)) {
       if (call.name !== "Bash" || !call.cmd) continue;
       bash++;
-      const names = denialsFor(call, call.cmd);
+      const rewrote = new Set<string>();
+      const names = denialsFor(call, call.cmd, rewrote);
       for (const n of names) perGuard.set(n, (perGuard.get(n) ?? 0) + 1);
+      for (const n of rewrote)
+        perGuardRewrites.set(n, (perGuardRewrites.get(n) ?? 0) + 1);
       if (show !== null && names.includes(show))
         shown.push({ session, cmd: call.cmd, why: denialLine(call, show) });
       if (names.length > 0) denied++;
@@ -443,9 +456,13 @@ function replayGuards(
   console.log(`  … denied via an interpreter body : ${interpreterBodies}`);
   console.log(`  … denied via a DATA body         : ${bodySourced.length}\n`);
 
-  console.log("denials per guard:");
-  for (const [name, n] of [...perGuard].sort((a, b) => b[1] - a[1]))
-    console.log(`  ${String(n).padStart(5)}  ${name}`);
+  console.log("denials per guard (… of which rewritten, not refused):");
+  for (const [name, n] of [...perGuard].sort((a, b) => b[1] - a[1])) {
+    const r = perGuardRewrites.get(name);
+    console.log(
+      `  ${String(n).padStart(5)}  ${name}${r ? `  (${r} rewritten)` : ""}`,
+    );
+  }
 
   if (show !== null) {
     console.log(`\n${show} denials (${shown.length}):`);
