@@ -1,4 +1,5 @@
-import { fstatSync, mkdirSync, openSync, readSync, writeSync } from "node:fs";
+import { fstatSync, mkdirSync, openSync, readSync } from "node:fs";
+import { writeAllSync } from "@plugins/packages/plugins/blocking-write/machine";
 import { adoptFd } from "@plugins/packages/plugins/owned-fd/core";
 import { constants } from "node:os";
 import { existsSync } from "@plugins/packages/plugins/timed-fs/core";
@@ -120,7 +121,7 @@ function createEcho(path: string): { pump(): void; stop(): void } {
     while (offset < size) {
       const n = readSync(fd.fd, buf, 0, buf.length, offset);
       if (n === 0) break;
-      writeAll(buf.subarray(0, n));
+      writeAllSync(1, buf.subarray(0, n));
       offset += n;
     }
   };
@@ -132,11 +133,4 @@ function createEcho(path: string): { pump(): void; stop(): void } {
       fd.close();
     },
   };
-}
-
-function writeAll(bytes: Uint8Array): void {
-  let written = 0;
-  while (written < bytes.length) {
-    written += writeSync(1, bytes, written, bytes.length - written);
-  }
 }

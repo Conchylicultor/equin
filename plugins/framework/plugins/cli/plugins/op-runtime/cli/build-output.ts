@@ -1,4 +1,4 @@
-import { writeSync } from "node:fs";
+import { writeAllSync } from "@plugins/packages/plugins/blocking-write/machine";
 import {
   renderStepBlock,
   type BuildStepLog,
@@ -88,11 +88,12 @@ export function renderVerdict(v: Verdict): string {
 let emittedVerdict: { ok: boolean } | null = null;
 
 // Prints the build's own verdict to stdout for BOTH success and failure so it
-// can never be hidden by `2>/dev/null` and survives `| tail`. writeSync (not
-// console.log) because a following process.exit() can truncate buffered writes.
+// can never be hidden by `2>/dev/null` and survives `| tail`. writeAllSync (not
+// console.log) because a following process.exit() can truncate buffered writes,
+// and not a bare writeSync because a piped stdout may be non-blocking.
 export function emitVerdict(v: Verdict): void {
   emittedVerdict = { ok: v.ok };
-  writeSync(1, `\n${renderVerdict(v)}\n`);
+  writeAllSync(1, `\n${renderVerdict(v)}\n`);
 }
 
 /**
@@ -237,7 +238,7 @@ export function runVerdictGuard(
     ctx.crash?.() ?? null,
   );
   if (v === null) return null;
-  writeSync(1, `\n${renderVerdict(v)}\n`);
+  writeAllSync(1, `\n${renderVerdict(v)}\n`);
   return v;
 }
 

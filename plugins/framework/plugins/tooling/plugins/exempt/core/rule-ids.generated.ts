@@ -15,6 +15,7 @@ export type ExemptableRuleId =
   | "bar/no-adhoc-bar"
   | "blocking-fs/no-sync-fs"
   | "blocking-fs/sync-named"
+  | "blocking-write/no-bare-stdio-write-sync"
   | "boot:closure-digestable"
   | "boundaries/no-platform-api"
   | "boundaries:machine-portable-declaration"

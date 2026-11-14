@@ -36986,6 +36986,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/git/tree-lock` (0 debt)
               - `infra/launcher` (0 debt)
               - `infra/worktree` (0 debt)
+              - `packages/blocking-write` (0 debt)
               - `packages/signal-origin` (0 debt)
               - `packages/single-flight` (0 debt)
               - `plugin-meta/barrel-import` (0 debt)
@@ -41861,6 +41862,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 
 - **`packages`** — Umbrella for package management utilities.
   - Plugins:
+    - **`blocking-write`** — writeAllSync(fd, data): every byte written before it returns, on a blocking or a NON-blocking fd alike — a full non-blocking pipe (EAGAIN) is waited out with poll(2) until the reader drains it, never spun on, dropped or swallowed. Bun turns a piped stdout non-blocking the first time process.stdout is touched, so a synchronous writer to fd 1 or 2 (`./equin build | tail`) must use this, not a bare writeSync.
+      - Cross-plugin:
+        - Imported by:
+          - `framework/cli/foreground-handoff`
+          - `framework/cli/op-runtime`
+          - `infra/jobs/supervised-job`
+      - Exemptions:
+        - Exempts itself from: `blocking-fs/no-sync-fs` — `machine/internal/write-all.ts` (sanctioned)
+      - Machine:
+        - Exports (values): `writeAllSync`
     - **`coalesce`** — Trigger coalescer: createCoalescer / createKeyedCoalescer run a reaction at most once at a time per key and fold every trigger that lands mid-run into ONE trailing run (its items merged), so however many triggers arrive the work is bounded to one running plus one pending per key — and a trigger never joins a run that started before it.
       - Cross-plugin:
         - Imported by: 25 plugins — full list in [`plugins/packages/plugins/coalesce/REFERENCE.md`](../plugins/packages/plugins/coalesce/REFERENCE.md)

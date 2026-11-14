@@ -21,7 +21,6 @@
  * program — over-budget, and nothing recorded. A nonzero exit
  * means the worker itself crashed (the orchestrator records no PASSes for it).
  */
-import { writeSync } from "fs";
 import { realpathSync } from "@plugins/packages/plugins/timed-fs/core";
 import { join, relative } from "path";
 import ts from "typescript";
@@ -743,9 +742,10 @@ try {
   if (!(err instanceof OverBudget)) throw err;
   output = { kind: "over-budget", sources: err.sources, bound: err.bound };
 }
-// Synchronous, because the exit below follows at once: an async stream write
-// could still be buffered when the process ends.
-writeSync(1, JSON.stringify(output));
+// Awaited to the last byte, because the exit below follows at once — and not
+// a bare writeSync, which a non-blocking stdout pipe cuts short with EAGAIN
+// or a short write (packages/blocking-write).
+await Bun.write(Bun.stdout, JSON.stringify(output));
 // Explicit: `exitWithParent`'s lifeline thread parks in a blocking FFI flock,
 // which an emptied event loop must not wait on.
 process.exit(0);

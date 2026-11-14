@@ -9,7 +9,6 @@
  * Protocol: argv[2] is a JSON job file. stdout is one `BatchOutcome`. A nonzero
  * exit means the batch itself crashed.
  */
-import { writeSync } from "fs";
 import {
   existsSync,
   readFileSync,
@@ -123,8 +122,10 @@ const job = JSON.parse(
   readFileSync(asAppPath(jobArg), "utf8"),
 ) as BatchProcessJob;
 const outcome = await run(job);
-// Synchronous, because the exit below follows at once.
-writeSync(1, JSON.stringify(outcome));
+// Awaited to the last byte, because the exit below follows at once — and not
+// a bare writeSync, which a non-blocking stdout pipe cuts short with EAGAIN
+// or a short write (packages/blocking-write).
+await Bun.write(Bun.stdout, JSON.stringify(outcome));
 // Explicit: `exitWithParent`'s lifeline thread parks in a blocking FFI flock,
 // which an emptied event loop must not wait on.
 process.exit(0);

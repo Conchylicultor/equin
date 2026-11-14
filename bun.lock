@@ -5162,6 +5162,10 @@
       "name": "@equin/plugin-packages",
       "version": "0.0.1",
     },
+    "plugins/packages/plugins/blocking-write": {
+      "name": "@equin/plugin-packages-blocking-write",
+      "version": "0.0.1",
+    },
     "plugins/packages/plugins/coalesce": {
       "name": "@equin/plugin-packages-coalesce",
       "version": "0.0.1",
@@ -10432,6 +10436,8 @@
     "@equin/plugin-network-live-resource-vocabulary": ["@equin/plugin-network-live-resource-vocabulary@workspace:plugins/network/plugins/live/plugins/resource-vocabulary"],
 
     "@equin/plugin-packages": ["@equin/plugin-packages@workspace:plugins/packages"],
+
+    "@equin/plugin-packages-blocking-write": ["@equin/plugin-packages-blocking-write@workspace:plugins/packages/plugins/blocking-write"],
 
     "@equin/plugin-packages-coalesce": ["@equin/plugin-packages-coalesce@workspace:plugins/packages/plugins/coalesce"],
 

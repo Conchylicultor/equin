@@ -1,12 +1,6 @@
 import { spawn } from "node:child_process";
-import {
-  mkdtempSync,
-  openSync,
-  readSync,
-  rmSync,
-  watch,
-  writeSync,
-} from "node:fs";
+import { mkdtempSync, openSync, readSync, rmSync, watch } from "node:fs";
+import { writeAllSync } from "@plugins/packages/plugins/blocking-write/machine";
 import { adoptFd } from "@plugins/packages/plugins/owned-fd/core";
 import { constants, tmpdir } from "node:os";
 import { join } from "node:path";
@@ -92,7 +86,7 @@ export async function runHandedOff(
       const n = readSync(readFd.fd, chunk, 0, chunk.length, offset);
       if (n <= 0) return;
       offset += n;
-      writeSync(1, chunk.subarray(0, n));
+      writeAllSync(1, chunk.subarray(0, n));
     }
   };
   const watcher = watch(logPath, () => pump());
@@ -123,7 +117,7 @@ export async function runHandedOff(
 
   handedOff = true;
   child.unref();
-  writeSync(
+  writeAllSync(
     1,
     `\n⏸ ${op} is still running — handed off before this call's time limit; it keeps going on its own (pid ${child.pid}).\n` +
       `  Next: \`./equin await ${op}\` (foreground). It blocks until the ${op} writes its verdict and prints it; ` +
