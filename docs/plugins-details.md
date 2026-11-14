@@ -19687,12 +19687,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `ui/tokens/density --space-xs`
                       - `ui/tokens/shape --radius`
                       - `ui/tokens/shape --spacing`
-                - **`orchestration-tools`** — Renders the task-orchestration MCP tool calls an agent manages its task tree with: edit_task (the task's chip and the edit in words — renamed, prerequisites added or removed, armed or disarmed; the new title, description and dependency chips inside), drop_task (the dropped task's chip), task_tree (the tree as the agent read it — status icon, title, track and start words, indented, each row opening the task), list_agents (each agent's standing dot, task title and standing, each row opening its conversation) and message_agent (the recipient's chip, the message's first line, then the message and how it was delivered). A refusal turns the card to its error tone and shows the tool's reason.
+                - **`orchestration-tools`** — Renders the task-orchestration MCP tool calls an agent manages its task tree with: edit_task (the task's chip and the edit in words — renamed, prerequisites added or removed, armed or disarmed; the new title, description and dependency chips inside), drop_task (the dropped task's chip), task_tree (the tree as the agent read it — status icon, title, track and start words, indented, each row opening the task), list_agents (each agent's standing dot, task title and standing, each row opening its conversation), backlog (a supervisor role's waiting tasks as it read them — status icon, title, held or blocked and the track when not main, each row opening the task; the counts by standing in the row) and message_agent (the recipient's chip, the message's first line, then the message and how it was delivered). A refusal turns the card to its error tone and shows the tool's reason.
                   - Web:
                     - Contributes:
                       - `renderer` "edit_task$" → `ParsedToolView`
                       - `renderer` "drop_task$" → `ParsedToolView`
                       - `renderer` "task_tree$" → `ParsedToolView`
+                      - `renderer` "__backlog$" → `ParsedToolView`
                       - `renderer` "list_agents$" → `ParsedToolView`
                       - `renderer` "message_agent$" → `ParsedToolView`
                     - Uses:
@@ -60047,17 +60048,24 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types):
               - `AdoptBacklogTaskBody`
               - `AdoptBacklogTaskResponse`
+              - `BacklogLine`
               - `LaunchRoleSessionBody`
               - `LaunchRoleSessionResponse`
+              - `ReadBacklog`
+              - `ReadBacklogLine`
             - Exports (values):
               - `adoptBacklogTask`
               - `AdoptBacklogTaskBodySchema`
               - `AdoptBacklogTaskResponseSchema`
+              - `formatBacklog`
               - `launchRoleSession`
               - `LaunchRoleSessionBodySchema`
               - `LaunchRoleSessionResponseSchema`
+              - `readBacklog`
           - Cross-plugin:
-            - Imported by: `tasks/supervisor-roles/pane`
+            - Imported by:
+              - `conversations/conversation-view/jsonl-viewer/tool-call/orchestration-tools`
+              - `tasks/supervisor-roles/pane`
     - **`supervisor-run`** — The Supervisor launch option on every new-task composer (Home prompt, Make a wish, menu bar): Interactive (unset — the pill rests as its icon) or Supervisor. Draft-only — it decides how a task's tree runs when it is filed. The Supervisor launch option's server half: a task filed with it states the supervisor mandate (supervisorMandate) as its own — its conversation an ordinary one with more powers, the tasks it files workers that report. Not inherited: the tasks its agents file are covered by the mandate already (nearest wins).
       - Web:
         - Contributes: `TaskLaunch.Option` "Supervisor" → `SupervisorLaunchControl`

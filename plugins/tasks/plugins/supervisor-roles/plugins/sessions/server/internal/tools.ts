@@ -24,6 +24,7 @@ import {
   setTaskSupervisorRole,
   supervisorOfTask,
 } from "@plugins/tasks/plugins/supervisor-roles/server";
+import { formatBacklog, type BacklogLine } from "../../core";
 import { adoptIntoSession } from "./adopt";
 
 function text(t: string) {
@@ -47,22 +48,16 @@ export const backlogTool = Mcp.tool({
   async handler(_input, { conversationId }) {
     const { roleId } = await callerRole(conversationId);
     const rows = await roleBacklog(roleId);
-    if (rows.length === 0) return text("The backlog is empty.");
     const lines = await Promise.all(
-      rows.map(async (r) => {
-        const track = await getTaskTrack(r.id);
-        const from = r.filedFromTaskId
-          ? ` (filed from ${r.filedFromTaskId})`
-          : "";
-        const held = r.status === "new" ? "" : ` [${r.status}]`;
-        return `- ${r.id} [${track}]${held} ${r.title}${from}`;
-      }),
+      rows.map(async (r): Promise<BacklogLine> => ({
+        taskId: r.id,
+        track: await getTaskTrack(r.id),
+        status: r.status === "new" ? null : r.status,
+        title: r.title,
+        filedFrom: r.filedFromTaskId ?? null,
+      })),
     );
-    const more =
-      rows.length === BACKLOG_READ_LIMIT
-        ? ` — the oldest ${BACKLOG_READ_LIMIT}; adopt, route or drop some to see the rest`
-        : "";
-    return text(`Backlog (${rows.length}${more}):\n${lines.join("\n")}`);
+    return text(formatBacklog(lines, BACKLOG_READ_LIMIT));
   },
 });
 

@@ -12,3 +12,10 @@ export type {
   LaunchRoleSessionBody,
   LaunchRoleSessionResponse,
 } from "./internal/endpoints";
+export {
+  formatBacklog,
+  readBacklog,
+  type BacklogLine,
+  type ReadBacklog,
+  type ReadBacklogLine,
+} from "./internal/backlog-text";

@@ -4,12 +4,13 @@
 
 ## Plugin reference
 
-- Description: Renders the task-orchestration MCP tool calls an agent manages its task tree with: edit_task (the task's chip and the edit in words — renamed, prerequisites added or removed, armed or disarmed; the new title, description and dependency chips inside), drop_task (the dropped task's chip), task_tree (the tree as the agent read it — status icon, title, track and start words, indented, each row opening the task), list_agents (each agent's standing dot, task title and standing, each row opening its conversation) and message_agent (the recipient's chip, the message's first line, then the message and how it was delivered). A refusal turns the card to its error tone and shows the tool's reason.
+- Description: Renders the task-orchestration MCP tool calls an agent manages its task tree with: edit_task (the task's chip and the edit in words — renamed, prerequisites added or removed, armed or disarmed; the new title, description and dependency chips inside), drop_task (the dropped task's chip), task_tree (the tree as the agent read it — status icon, title, track and start words, indented, each row opening the task), list_agents (each agent's standing dot, task title and standing, each row opening its conversation), backlog (a supervisor role's waiting tasks as it read them — status icon, title, held or blocked and the track when not main, each row opening the task; the counts by standing in the row) and message_agent (the recipient's chip, the message's first line, then the message and how it was delivered). A refusal turns the card to its error tone and shows the tool's reason.
 - Web:
   - Contributes:
     - `renderer` "edit_task$" → `ParsedToolView`
     - `renderer` "drop_task$" → `ParsedToolView`
     - `renderer` "task_tree$" → `ParsedToolView`
+    - `renderer` "__backlog$" → `ParsedToolView`
     - `renderer` "list_agents$" → `ParsedToolView`
     - `renderer` "message_agent$" → `ParsedToolView`
   - Uses:
