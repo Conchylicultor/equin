@@ -27,8 +27,9 @@ export type DataViewId<Id extends string = string> = Id & {
  *
  * The grammar `^[a-zA-Z0-9._-]+$` bans `:` so the id is filename-safe as the
  * config descriptor name at `config/primitives/data-view/<id>.jsonc` (dots are
- * already used by existing config names; colon is the only novel char). Calls
- * must live under a plugin's `web/` (where codegen scans).
+ * already used by existing config names; colon is the only novel char). Codegen
+ * reads every call from its syntax tree, in any of a plugin's files, and fails
+ * the build on one whose id is not a literal at the call site.
  */
 export function defineDataView<const Id extends string>(
   id: Id,

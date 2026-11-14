@@ -1,11 +1,11 @@
-import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
 import {
   joinAppPath,
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { writeGenerated } from "./write-generated";
 import { buildBarrelFreeTree } from "./barrel-free-tree";
-import { maskSource } from "@plugins/plugin-meta/plugins/parse-utils/core";
+import { scanFiles } from "./file-scans";
+import { DEFAULT_EXPORT_SCAN } from "./plugin-registry.scan";
 import type { CodegenPass } from "./codegen-pass";
 
 /**
@@ -58,17 +58,6 @@ const MANIFEST_HEADER = [
 // `fields/plugins/<type>/plugins/storage`.
 const CAPABILITY_RE = /^fields\/plugins\/[^/]+\/plugins\/storage$/;
 
-function hasDefaultExport(file: AppPath): boolean {
-  // Mask comments/regex/strings so a commented-out or string-embedded `export
-  // default` can't make an entryless barrel look like an entry. This is a pure
-  // code-construct detector — the string interior is never read back.
-  const src = maskSource(readFileSync(file, "utf8"));
-  return (
-    /(^|\n)\s*export\s+default\b/.test(src) ||
-    /(^|\n)\s*export\s*\{[^}]*\bdefault\b[^}]*\}/.test(src)
-  );
-}
-
 /**
  * Walk the plugin tree (barrel-free static scan) and collect the `@plugins/…`
  * specifier of every fields storage `server` barrel with a default
@@ -79,15 +68,20 @@ export async function collectFieldEagerBarrels(
   pass: CodegenPass,
 ): Promise<string[]> {
   const tree = await buildBarrelFreeTree(pass);
-  const specifiers: string[] = [];
-  for (const node of tree.byDir.values()) {
-    if (!CAPABILITY_RE.test(node.path)) continue;
-    // A plugin dir of this checkout.
-    const barrel = joinAppPath(node.dir, "server", "index.ts");
-    if (!node.runtimes.server || !hasDefaultExport(barrel)) continue;
-    specifiers.push(`@plugins/${node.path}/server`);
-  }
-  return specifiers.sort();
+  const nodes = [...tree.byDir.values()].filter(
+    (node) => CAPABILITY_RE.test(node.path) && node.runtimes.server,
+  );
+  // The default export is read from each barrel's syntax tree — the registry
+  // generator's own scan, so "is this barrel an entry" has one answer.
+  const isEntry = await scanFiles(
+    tree.repo,
+    nodes.map((node) => `plugins/${node.path}/server/index.ts`),
+    DEFAULT_EXPORT_SCAN,
+  );
+  return nodes
+    .filter((_, i) => isEntry[i])
+    .map((node) => `@plugins/${node.path}/server`)
+    .sort();
 }
 
 function renderManifest(specifiers: string[]): string {

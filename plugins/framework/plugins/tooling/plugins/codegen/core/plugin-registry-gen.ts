@@ -368,10 +368,11 @@ const LEAF_FOLDER_SET: ReadonlySet<string> = new Set(LEAF_FOLDERS);
 // so every one is an entry, by construction, and its loader fails loudly if it
 // has no default export. Only a BARREL folder (`cli/`, `web/`, …) can hold an
 // `index.ts` that is not a contribution (shared machinery other plugins import),
-// so only there is the default export scanned for. A leaf entry used to be
-// scanned too, and a masker that lost sync on a nested template literal read
-// server-core's `export default` as string: its check vanished from the
-// registry and never ran.
+// so only there is the default export read — from the barrel's syntax tree
+// (`DEFAULT_EXPORT_SCAN`). A leaf entry used to be scanned too, by a text
+// masker that lost sync on a nested template literal and read server-core's
+// `export default` as string: its check vanished from the registry and never
+// ran.
 async function collectEntries(
   tree: PluginTree,
   repo: RepoFiles,
@@ -425,9 +426,10 @@ function tsFilesUnder(repo: RepoFiles, base: string): string[] {
 }
 
 // Every import specifier found in each plugin's `<dir>/` tree, by plugin path.
-// `findImports` masks comments/regex/strings and reads each specifier back by
-// offset, so an import written inside a string/comment can't register a
-// phantom dependency edge. Covers both `import … from` and `export … from`.
+// Read from each file's syntax tree (`IMPORT_SPECIFIER_SCAN`), so an import
+// inside a string/comment can't register a phantom edge and no spelling of a
+// real one is missed. Covers `import … from`, `export … from` and side-effect
+// imports.
 // One scan over every plugin's files: each file's answer is a file record, and
 // asking for all of them at once is one store read, not one per plugin.
 async function collectImportSpecifiers(

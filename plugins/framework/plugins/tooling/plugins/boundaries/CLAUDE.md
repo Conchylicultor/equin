@@ -311,7 +311,7 @@ takes a `debt` exemption on the check's id.
     - `framework/tooling/boundaries` (2 debt)
     - `framework/tooling/checks` (13 debt)
     - `framework/tooling/checks/type-check` (16 debt)
-    - `framework/tooling/codegen` (20 debt)
+    - `framework/tooling/codegen` (19 debt)
     - `framework/tooling/codegen/composition-registries` (1 debt)
     - `framework/tooling/collected-dir/discovery` (1 debt)
     - `framework/tooling/format` (5 debt)

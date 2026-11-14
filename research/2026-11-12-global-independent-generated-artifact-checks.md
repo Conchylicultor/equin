@@ -109,3 +109,44 @@ Deviation from §1: only `literal-icon-name` and the two `reserved-*` rules
 read through `iconUsesIn`, as planned. The check parses each file with
 `@typescript-eslint/parser` and sets parent pointers itself, because the parser
 leaves `parent` unset and ESLint only sets it while it traverses.
+
+## Triage of the eight self-verifying checks (2026-11-14)
+
+The question for each one: can its **generator** misread its input? A
+self-verifying check is only blind where the generator guesses. When it reads
+evaluated data, a directory listing, or a closed grammar it rejects on any
+deviation, the re-run oracle is as good as a second reader. The fix for a
+generator that guesses is to make it read the syntax tree and fail closed
+(`checks/plugins/source-analysis`), so it needs no cross-check. No generic
+cross-check framework was built: no two of the eight needed the same second
+reader.
+
+| Check | What the generator reads | Can it miss silently? | Runtime effect of a miss | Action |
+|---|---|---|---|---|
+| `app-declarations-in-sync` | evaluated `Apps.App` contributions (`collectWebSlotContributions`) | No: it is the runtime's own data | — | None |
+| `theme-declarations-in-sync` | evaluated theme-engine slot contributions | No | — | None |
+| `reorderable-slots-in-sync` | evaluated slot declarations (`meta.reorderable`, the same derivation the browser runs) | No | — | None |
+| `space-ramp-in-sync` | a declared grammar in app.css (`/* @ramp … */`) | No: an unknown keyword, a duplicate or a family missing a step throws. The output is a TS union, so a step it dropped could not be spelled (tsc) | — | None |
+| `app-css-utilities-in-sync` | every `@utility` in app.css (comment-masked) plus its co-located `/* twmerge: … */` marker | No: a `@utility` without a marker throws, and so does an unknown marker or group. The names are a closed `[\w-]+` grammar (app.css has no functional `x-*` utilities) | — | None |
+| `fields-eager-in-sync` | a directory listing (`fields/plugins/*/plugins/storage`) plus "the server barrel has a default export" | Barely (the default-export test was a masked regex). A miss is loud (`resolveFieldStorage` throws at boot) | Boot fails, far from the cause | Now uses the registry's syntax-tree default-export scan (below) |
+| `plugins-registry-in-sync` | a directory listing of `<dir>/index.ts`, "has a default export" (masked regex), and every import specifier (`findImports`, masked regex) for the dependency order and vendor set | **Yes.** The masker has already lost sync once on a nested template literal, and server-core's check vanished from the registry. A barrel read as having no default export is a plugin that silently never loads | Plugin never loads, silent | **Fixed:** both scans read the TS syntax tree (`plugin-registry.scan.ts`: `hasDefaultExport`, `importSpecifiers`) |
+| `data-views-in-sync` | `defineDataView("<id>")` marker text in `web/**` only | **Yes.** An aliased import (`defineDataView as dv`), a namespace call through an alias, a re-export, or a call outside `web/` (it is exported from data-view's `core`) is not seen | No config descriptor for that view, so `useConfig` throws on its first render, far from the cause | **Fixed:** the scan reads every non-generated file of the plugin through `fileTargetUses` (`data-views.scan.ts`). It follows aliases, namespaces and re-exports, and throws on any use it cannot read (a hoisted or interpolated id, the function passed as a value, a foreign re-export) |
+
+The sidequests filed by the audit (task-1794457917-1t5f3x … task-1794457933-45mjse)
+were dropped in favour of this triage.
+
+Verification: after the switch `./equin build` regenerates the same plugin
+registries and the same data-view ids. Only the header comment of
+`data-views.generated.ts` changed, to say "any plugin's source". So the old
+regex readers were right on today's tree, and the change only closes the
+spellings they could not read. A review compared the readers over all 16,928
+tracked files: `importSpecifiers` matches `findImports` exactly, and
+`hasDefaultExport` matches the masked regex on every `index.ts`. Generated
+files are left out of the data-views scan: the plugin registries load the
+data-view barrels through `import()` thunks, which the fail-closed reader
+rightly refuses, and no generated file authors a data view.
+Unit tests: `plugin-registry.scan.test.ts` (each default-export spelling, a
+nested template before it, every static import form, and strings/comments/dynamic
+imports ignored) and `data-views-gen.test.ts` (alias, namespace, foreign
+same-named function, hoisted/interpolated id, passed as a value, foreign
+re-export).
