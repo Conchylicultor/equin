@@ -11,7 +11,7 @@ import { NeedsExtension } from "./needs-extension";
  * (`/home/browser-extension?embed=1`), the WHOLE browser-extension app — the
  * companions' panel over `BrowserExtension.Section`, plus what only the
  * extension does: the popup following the content's height, the status line's
- * attention as the toolbar badge, recording each open, and reloading the
+ * attention as a dot on the toolbar icon, recording each open, and reloading the
  * extension onto a newer shell. Opened in a plain tab, it says it runs inside
  * the extension.
  */
@@ -28,20 +28,20 @@ function PresentPanel({
 }: {
   host: Extract<ExtensionHost, { kind: "present" }>;
 }) {
-  const { setHeight, setBadge, reload } = host;
+  const { setHeight, setAttention, reload } = host;
   const onContentHeight = useCallback(
     (px: number) => void setHeight(px),
     [setHeight],
   );
   const onAttention = useCallback(
-    (on: boolean) => void setBadge?.(on ? " " : null),
-    [setBadge],
+    (on: boolean) => void setAttention?.(on),
+    [setAttention],
   );
   return (
     <CompanionPanel
       sections={BrowserExtension.Section}
       onContentHeight={onContentHeight}
-      onAttention={setBadge === null ? null : onAttention}
+      onAttention={setAttention === null ? null : onAttention}
     >
       <ShellUpdate shellDigest={host.info.shellDigest} reload={reload} />
       <RecordOpen shellDigest={host.info.shellDigest} />

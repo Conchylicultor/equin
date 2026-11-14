@@ -9,7 +9,7 @@ tab — the OS menu-bar tray (`menu-bar`) and the Chrome extension
 A thin shell (a native helper, an extension popup) that loads an equin route
 (`/home/<companion>?embed=1`, chromeless) and adds a **bridge**: the few
 capabilities only the shell has (resize its window, open a URL in the default
-browser, set a badge, read the active browser tab). Everything else — the
+browser, mark its icon, read the active browser tab). Everything else — the
 sections, the theme, the data — is the page's, so it updates with main like any
 other page; the shell rarely changes.
 

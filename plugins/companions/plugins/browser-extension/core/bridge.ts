@@ -25,8 +25,9 @@ export const ExtensionCapabilitiesSchema = z.object({
   openTab: z.boolean(),
   /** Close the popup (`close`). */
   close: z.boolean(),
-  /** The toolbar icon's badge (`setBadge`). */
-  badge: z.boolean(),
+  /** The toolbar icon's attention dot (`setAttention`). Absent from a shell
+   *  older than it (which offered a `badge` instead), so it defaults off. */
+  attention: z.boolean().default(false),
 });
 export type ExtensionCapabilities = z.infer<typeof ExtensionCapabilitiesSchema>;
 
@@ -57,8 +58,8 @@ export const BridgeCallSchema = z.discriminatedUnion("method", [
   z.object({ method: z.literal("openTab"), params: UrlParams }),
   z.object({ method: z.literal("close"), params: NoParams }),
   z.object({
-    method: z.literal("setBadge"),
-    params: z.object({ text: z.string().max(4).nullable() }),
+    method: z.literal("setAttention"),
+    params: z.object({ on: z.boolean() }),
   }),
   z.object({
     method: z.literal("setHeight"),
@@ -76,7 +77,7 @@ export const BRIDGE_RESULTS = {
   navigate: z.null(),
   openTab: z.null(),
   close: z.null(),
-  setBadge: z.null(),
+  setAttention: z.null(),
   setHeight: z.null(),
   reload: z.null(),
 } as const satisfies Record<BridgeMethod, z.ZodType>;

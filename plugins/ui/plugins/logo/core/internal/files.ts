@@ -15,6 +15,14 @@ export type LogoFile =
 
 const WEB = "plugins/framework/plugins/web-core/web/public";
 const HELPER = "plugins/companions/plugins/menu-bar/rust/icons";
+const EXTENSION =
+  "plugins/companions/plugins/browser-extension/browser-extension/icons";
+
+/** The Chrome extension's attention dot: warm, so it reads on the blue-violet logo. */
+const EXTENSION_ATTENTION = {
+  dot: { cx: 18, cy: 18, r: 14 },
+  fill: "#e8643c",
+} as const;
 
 export const LOGO_FILES: readonly LogoFile[] = [
   {
@@ -75,6 +83,46 @@ export const LOGO_FILES: readonly LogoFile[] = [
         fill: LOGO.gradient.from,
       },
     },
+  },
+  // The Chrome extension's toolbar icon while its panel needs the user: the
+  // logo with a dot in its open quarter (a badge would cover half the icon).
+  {
+    path: `${EXTENSION}/attention-small.svg`,
+    kind: "svg",
+    svg: {
+      master: "small",
+      paint: "gradient",
+      size: 32,
+      attention: EXTENSION_ATTENTION,
+    },
+  },
+  {
+    path: `${EXTENSION}/attention.svg`,
+    kind: "svg",
+    svg: {
+      master: "full",
+      paint: "gradient",
+      size: 128,
+      attention: EXTENSION_ATTENTION,
+    },
+  },
+  {
+    path: `${EXTENSION}/attention_16x16.png`,
+    kind: "png",
+    from: `${EXTENSION}/attention-small.svg`,
+    px: 16,
+  },
+  {
+    path: `${EXTENSION}/attention_32x32.png`,
+    kind: "png",
+    from: `${EXTENSION}/attention-small.svg`,
+    px: 32,
+  },
+  {
+    path: `${EXTENSION}/attention_128x128.png`,
+    kind: "png",
+    from: `${EXTENSION}/attention.svg`,
+    px: 128,
   },
 ];
 

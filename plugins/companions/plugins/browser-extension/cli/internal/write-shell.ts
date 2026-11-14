@@ -19,11 +19,15 @@ import {
 const SHELL_SOURCES =
   "plugins/companions/plugins/browser-extension/browser-extension";
 
-/** The icon sizes the manifest names, each from the logo PNG of that size or larger. */
-const ICONS: readonly { name: string; px: number }[] = [
-  { name: "icon-16.png", px: 16 },
-  { name: "icon-32.png", px: 32 },
-  { name: "icon-128.png", px: 512 },
+/** The icons the shell ships, each from the generated logo PNG at that path's
+ *  end: the manifest's (at rest) and the attention ones the popup swaps in. */
+const ICONS: readonly { name: string; logo: string }[] = [
+  { name: "icon-16.png", logo: "/icon_16x16.png" },
+  { name: "icon-32.png", logo: "/icon_32x32.png" },
+  { name: "icon-128.png", logo: "/icon_512x512.png" },
+  { name: "icon-attention-16.png", logo: "/attention_16x16.png" },
+  { name: "icon-attention-32.png", logo: "/attention_32x32.png" },
+  { name: "icon-attention-128.png", logo: "/attention_128x128.png" },
 ];
 
 export type ShellWrite =
@@ -120,12 +124,14 @@ async function shellFiles(
   files.set("popup.html", Buffer.from(html.replace("{{ORIGIN}}", origin)));
 
   for (const icon of ICONS) {
-    const logo = LOGO_FILES.find(
-      (f) =>
-        f.kind === "png" && f.path.endsWith(`icon_${icon.px}x${icon.px}.png`),
+    const matches = LOGO_FILES.filter(
+      (f) => f.kind === "png" && f.path.endsWith(icon.logo),
     );
-    if (logo === undefined)
-      throw new Error(`the logo has no ${icon.px}px PNG for ${icon.name}`);
+    const [logo] = matches;
+    if (logo === undefined || matches.length !== 1)
+      throw new Error(
+        `the logo has ${matches.length} PNGs ending ${icon.logo} for ${icon.name}, not one`,
+      );
     files.set(icon.name, await readFile(join(repoRoot, logo.path)));
   }
   return files;
