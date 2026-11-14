@@ -417,6 +417,16 @@ export const worktreeArtifacts = {
    */
   processNames: (name: Namespace): AppPath =>
     joinAppPath(worktreeDataDir(name), "bin"),
+  /**
+   * The faceted plugin index's checkpoint (`faceted-index.json`): the
+   * checkout's file set as the last faceted-tree worker held it, and the
+   * file-system journal cursor taken before it — so the next backend's worker
+   * starts from it and asks git only about what changed since, instead of
+   * listing the whole checkout (`plugin-meta/plugin-tree`). One per
+   * namespace, rewritten by each worker's build; deleted with the worktree.
+   */
+  facetedIndexCheckpoint: (name: Namespace): AppPath =>
+    joinAppPath(worktreeDataDir(name), "faceted-index.json"),
   /** Build profiler spans. `build-profile.json` or `build-profile-<id>.json`. */
   buildProfile: (name: Namespace, buildId?: string): AppPath =>
     joinAppPath(

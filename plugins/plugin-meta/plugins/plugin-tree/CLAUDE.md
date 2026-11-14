@@ -64,7 +64,7 @@ added / an export added / the plugin removed seen in ~300 / ~280 / ~470 ms, an
 ordinary file or a body edit a 304, a worker module rewritten served again by
 a fresh worker in ~2.5 s.
 
-The session ends — and the next read opens a new one, cold — when the worker
+The session ends — and the next read opens a new one (from the last checkpoint, below) — when the worker
 dies, a refresh fails, the watcher loses events or reports a batch over 2,000
 paths, or a changed path is code the worker loaded (`require.cache`: the
 extractors, the index; its records were made by code no longer on disk). On
@@ -138,9 +138,60 @@ keying ~0.48 → ~0.33 s, since the worker's `StructureIndex` takes its fields
 through `fieldsOf` from the key-file fold records (`structure-records`'
 `recordedPluginFields`) instead of reading and parsing all ~3.8k key files;
 then node keys ~80 ms, record reads ~185 ms, parse ~50 ms and relate ~0.2 s.
-Snapshot and facet loading run together, then structure and keying. What is
-left is whole-tree on every boot because the index lives and dies with the
-backend process.
+Snapshot and facet loading run together, then structure and keying.
+
+## The index starts from the last one's checkpoint (`bin/faceted-tree-worker.ts`)
+
+The worker lives and dies with the backend, which restarts on every deploy,
+and its cold build asked git to list and hash the whole checkout (~24k files:
+0.2–0.45 s on a calm host, 0.6–4 s under load — the biggest step of the
+build) although almost nothing changed since the last one. So each build
+leaves a checkpoint, `~/.equin/worktrees/<ns>/faceted-index.json`
+(`worktreeArtifacts.facetedIndexCheckpoint`, temp + rename): the index's file
+set (`FacetedCheckpoint`: every member and its blob id) and a file-system
+journal cursor (`infra/file-watcher`'s `journalCursor`) taken BEFORE the build
+read anything. The next worker replays the journal since that cursor
+(`journalChangesSince`, O(changes)) and starts from the saved set, asking git
+only about the paths it names (`LiveRepoSnapshot.refresh`, the same code as a
+watcher batch). A path changed after the cursor is named again next time, so
+the set saved may be any state after its cursor: a re-check, never a miss.
+
+- **What is kept, and why only that.** The members are a fact about the
+  checkout; the rule that listed them is code, so they carry the code identity
+  of `REPO_MEMBERSHIP_URL` (tooling's `repo-files.ts`, through
+  `plugin-records`' `codeIdentity`), and a set listed by another rule starts
+  cold. Everything else is rebuilt from it with this process's code: the
+  structure (key-file fold records), the record keys and reads, relate. Those
+  are cheap once the code identities are computed, which every process does
+  once, and relate needs every plugin's data anyway.
+- **Cold, the answer that is always right**, whenever the journal cannot
+  vouch (not FSEvents, cursor over 7 days old, the root replaced, dropped
+  events — its own fail-closed rules), there is no checkpoint, it is not JSON
+  or in a format this code cannot read, it is another checkout's, git's
+  `.git/info/exclude` changed, the root itself is named, more than 2,000
+  paths changed (a checkout or rebase: one listing is cheaper), or the set was
+  last listed whole over a day ago (`listedAt`, carried from checkpoint to
+  checkpoint). That last bound is for what the journal cannot see and a
+  listing does: git's index alone (`git rm --cached`, `add -f`), a linked
+  worktree's exclude file (in the shared git dir, outside the checkout), a
+  binary file re-hashed as text by a refresh — at most a day wrong, one cold
+  listing among main's ~50 restarts. `.git` and `node_modules` paths are
+  skipped, and so is every path git ignores and does not track
+  (`dropIgnoredPaths`, `git check-ignore`): a build's output, and the agents'
+  checkouts under main's ignored `.claude/worktrees/`. A checkpoint that
+  cannot be written is reported (`reportServerError`); the session goes on. Each
+  build logs how it started to the `plugin-tree` log channel (`faceted index built in … ms,
+  resumed …` / `cold (…)`) and the `ready` frame carries it (`FacetedStart`).
+- **Measured** (`scripts/bench-faceted-index.ts`, 2026-11-14, this worktree,
+  host load 12–16; in-worker build): from the checkpoint with no change
+  0.83–0.98 s, against 1.38–1.77 s cold; the snapshot step 0.18–0.46 s
+  (cursor, read and replay 30–240 ms) against 1.0–4.1 s. After edits made
+  while no worker ran, the resumed tree equals a fresh build.
+
+What is still whole-tree per process: each record producer's code identity
+(the module graph over its closure, ~0.2 s, shared by the key-file fold and
+the facets), the record reads (~0.1–0.2 s) and relate (~0.15–0.3 s), and the
+whole tree handed to the backend (it holds nothing before).
 
 ## One structure tree per check pass (`structure-records`)
 
@@ -235,6 +286,7 @@ dynamic value.
     - `plugin-meta/parse-utils.parseStringField`
   - Exports (types):
     - `BuildPluginTreeOptions`
+    - `FacetedStart`
     - `KeyFileFacts`
     - `PluginFields`
     - `PluginNode`

@@ -83,6 +83,15 @@ export interface PluginTreeDelta {
 }
 
 /**
+ * How a faceted index (`plugin-tree/faceted`'s `openFacetedIndex`) started
+ * its file set: resumed from the checkpoint an earlier process left, with the
+ * number of paths the journal named as changed since, or cold — listed whole
+ * by git — and why.
+ */
+export type FacetedStart =
+  { kind: "resumed"; changed: number } | { kind: "cold"; reason: string };
+
+/**
  * The delta of `tree` against `sent` (each node's facets text as last sent,
  * by path — what {@link pluginTreeFromDelta}'s reader holds). Updates `sent`
  * to the tree's own texts, dropping nodes the tree no longer has. Returns the

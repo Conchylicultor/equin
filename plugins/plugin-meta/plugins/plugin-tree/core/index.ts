@@ -28,6 +28,7 @@ export type {
   StructureIndexIo,
 } from "./internal/structure-index";
 export type {
+  FacetedStart,
   PluginNodeDelta,
   PluginNodeJson,
   PluginTreeDelta,

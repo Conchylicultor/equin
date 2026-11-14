@@ -33,6 +33,8 @@ export interface LiveRepoSnapshot extends RepoSnapshot {
     paths: readonly string[],
     edited: readonly string[],
   ): Promise<SnapshotChange>;
+  /** Every member and its blob id, sorted by path — what `from` takes back. */
+  entries(): [string, string][];
 }
 
 /** What a refresh moved (repo-relative paths). */
@@ -66,15 +68,39 @@ function regionsOf(paths: readonly string[]): string[] {
   return out;
 }
 
+export interface OpenLiveSnapshotOptions {
+  /** How many file reads the snapshot holds open at once. */
+  readConcurrency: number;
+  /**
+   * Start from these members and blob ids (an earlier snapshot's
+   * {@link LiveRepoSnapshot.entries}) instead of asking git for the whole
+   * set. The caller then refreshes every path that may have changed since
+   * they were taken.
+   */
+  from?: readonly (readonly [string, string])[];
+}
+
 export async function openLiveSnapshot(
   root: AppPath,
-  opts: { readConcurrency: number },
+  opts: OpenLiveSnapshotOptions,
 ): Promise<LiveRepoSnapshot> {
-  const cold = await loadRepoSnapshot(root, opts);
-  const members = [...cold.all()];
-  const memberSet = new Set(members);
   const blobs = new Map<string, string>();
-  for (const p of members) blobs.set(p, cold.blobOf(p));
+  if (opts.from === undefined) {
+    const cold = await loadRepoSnapshot(root, opts);
+    for (const p of cold.all()) blobs.set(p, cold.blobOf(p));
+  } else {
+    let last: string | null = null;
+    for (const [p, blob] of opts.from) {
+      if (last !== null && p <= last)
+        throw new Error(
+          `openLiveSnapshot(${root}): the members it starts from are not sorted and unique (${JSON.stringify(last)} then ${JSON.stringify(p)}).`,
+        );
+      blobs.set(p, blob);
+      last = p;
+    }
+  }
+  const members = [...blobs.keys()];
+  const memberSet = new Set(members);
   const read = repoFileReader(root, opts);
 
   const assertMember = (op: string, path: string): void => {
@@ -101,6 +127,7 @@ export async function openLiveSnapshot(
       assertMember("blobOf", path);
       return blobs.get(path)!;
     },
+    entries: () => members.map((p) => [p, blobs.get(p)!]),
     async refresh(paths, edited) {
       const asked: string[] = [...paths];
       for (const p of [...paths, ...edited]) {

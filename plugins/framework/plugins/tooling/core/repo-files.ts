@@ -25,6 +25,14 @@ import { globPaths, pathsUnder } from "./pathspec";
 import type { RepoFiles, RepoSnapshot } from "./types";
 import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 
+/**
+ * This module's URL: the code that decides which paths are members of a set
+ * (`loadRepoSnapshot`, `listRepoMembers`). A holder that saves a snapshot's
+ * members for a later process keys them by its code identity, so a membership
+ * rule changed since is never answered from the old one's listing.
+ */
+export const REPO_MEMBERSHIP_URL = import.meta.url;
+
 // Wedge-breaker for a metadata-only git read, not a latency budget: what these
 // suffer under a saturated check run is starvation, not slowness. Same bound
 // and same reasoning as the check runner's read-set GIT_TIMEOUT_MS.
@@ -386,6 +394,37 @@ export async function listRepoMembers(
     lsFiles(root, ["--deleted", ...spec], true),
   ]);
   return membership(present, deleted);
+}
+
+/**
+ * `paths` (repo-relative) minus the ones git ignores and does not track —
+ * never members, whatever happens to them (`git check-ignore`, which also
+ * reports a path under an ignored folder). For a holder replaying a
+ * file-system journal: a build's output or a nested checkout under an
+ * ignored folder is no change to ask `listRepoMembers` about. A path kept may
+ * still be no member (gone, or a folder).
+ *
+ * Throws on any git failure — never the paths unfiltered as if none were
+ * ignored.
+ */
+export async function dropIgnoredPaths(
+  root: AppPath,
+  paths: readonly string[],
+): Promise<string[]> {
+  for (const p of paths) assertRepoPath("dropIgnoredPaths", p, false);
+  if (paths.length === 0) return [];
+  const result = await spawnCaptured(["git", "check-ignore", "-z", "--stdin"], {
+    cwd: root,
+    timeoutMs: GIT_TIMEOUT_MS,
+    stdin: `${paths.join("\0")}\0`,
+  });
+  // 0: some are ignored, 1: none is — anything else is a failure.
+  if (result.exitCode !== 0 && result.exitCode !== 1)
+    throw new Error(
+      `git check-ignore failed in ${root} (exit ${result.exitCode}): ${result.stderr.trim()}`,
+    );
+  const ignored = new Set(result.stdout.split("\0").filter((p) => p !== ""));
+  return paths.filter((p) => !ignored.has(p));
 }
 
 /**

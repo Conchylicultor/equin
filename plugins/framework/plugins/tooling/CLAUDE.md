@@ -26,6 +26,7 @@
     - `assertRepoPath`
     - `CHECK_SCOPES`
     - `CHECKOUT_SCOPES`
+    - `dropIgnoredPaths`
     - `globPaths`
     - `InconclusiveCheckError`
     - `installedRepoView`
@@ -38,6 +39,7 @@
     - `openRepoView`
     - `pathspecToRegex`
     - `pathsUnder`
+    - `REPO_MEMBERSHIP_URL`
     - `repoFileReader`
     - `repoFilesOver`
     - `repoSnapshotNow`

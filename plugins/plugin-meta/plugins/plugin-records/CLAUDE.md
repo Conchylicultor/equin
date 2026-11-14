@@ -440,6 +440,7 @@ its docblock records — and then lowered as readily as raised.
     - `buildModuleGraph`
     - `closureRecord`
     - `codeCheckoutOf`
+    - `codeIdentity`
     - `createMemoryRecordStore`
     - `currentRecordStore`
     - `defineRecordJob`

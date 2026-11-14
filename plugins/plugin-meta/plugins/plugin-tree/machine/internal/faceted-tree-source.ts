@@ -1,5 +1,11 @@
+import { reportServerError } from "@plugins/framework/plugins/server-core/core";
 import { appPathParent } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { PLUGINS_DIR } from "@plugins/infra/plugins/paths/server";
+import {
+  PLUGINS_DIR,
+  worktreeArtifacts,
+} from "@plugins/infra/plugins/paths/server";
+import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
+import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { defineDaemon } from "@plugins/infra/plugins/spawn/plugins/daemon/server";
 import {
@@ -28,6 +34,13 @@ export const facetedTreeDaemon = defineDaemon({
   where: "every-worktree",
   restart: { kind: "never" },
   onCodeAdopted: "stop",
+});
+
+/** One line per faceted-index build: how long, and whether it resumed. */
+const buildLog = defineLogSink({
+  id: "plugin-tree",
+  description:
+    "One line per faceted plugin index build (the faceted-tree worker): its time, and whether it resumed from its checkpoint (how many paths changed since) or started cold (why).",
 });
 
 // The checkout the backend serves — the root its watcher reports paths under.
@@ -76,6 +89,13 @@ export function openFacetedTreeSession(
   const applyFrame = (frame: FromWorkerFrame): void => {
     switch (frame.type) {
       case "ready":
+        buildLog.publish(
+          `faceted index built in ${Math.round(frame.ms)} ms, ${
+            frame.start.kind === "resumed"
+              ? `resumed from its checkpoint (${frame.start.changed} paths changed since)`
+              : `cold (${frame.start.reason})`
+          }`,
+        );
         tree = pluginTreeFromDelta(PLUGINS_DIR, frame.delta, null);
         for (const w of ready.splice(0)) w.resolve(tree);
         return;
@@ -93,6 +113,11 @@ export function openFacetedTreeSession(
         w?.resolve(result.kind === "changed");
         return;
       }
+      case "checkpoint-failed":
+        reportServerError({
+          message: `[plugin-tree] the faceted index could not leave its checkpoint; the next worker starts from an older one or cold: ${frame.message}`,
+        });
+        return;
       case "failed":
         end(frame.message, true);
         return;
@@ -118,6 +143,8 @@ export function openFacetedTreeSession(
       worker.postMessage({
         type: "init",
         root: REPO_ROOT,
+        checkpointFile:
+          worktreeArtifacts.facetedIndexCheckpoint(runtimeNamespace()),
       } satisfies ToWorkerFrame);
     },
     onMessage: (data) => onFrame(data as FromWorkerFrame),

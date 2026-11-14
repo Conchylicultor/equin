@@ -7,7 +7,9 @@ export type {
   TreeEnrichment,
 } from "./internal/faceted-tree";
 export type {
+  FacetedCheckpoint,
   FacetedIndex,
   FacetedRefresh,
+  FacetedResume,
   OpenFacetedIndexOptions,
 } from "./internal/faceted-index";

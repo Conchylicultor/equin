@@ -43,6 +43,7 @@ export type {
   ModuleNode,
 } from "./internal/module-graph";
 export { codeCheckoutOf } from "./internal/code-checkout";
+export { codeIdentity } from "./internal/code-identity";
 export { scanFilesCached, scanRepoFiles } from "./internal/file-scans";
 export type { FileScan } from "./internal/file-scans";
 export { foldFilesCached, foldRepoFiles } from "./internal/tree-fold";

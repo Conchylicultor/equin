@@ -5,8 +5,12 @@
 // "before" measures that in-process work (records warm), a floor of what the
 // child cost. After: the faceted-tree worker's cold build once, then its
 // refreshes — and its tree after every edit equals a fresh build.
+// Then across processes: a new worker started from the checkpoint the last
+// one left, after edits made while none ran (the journal names them), against
+// one started cold — and its tree too must equal a fresh build.
 // `./equin run plugins/plugin-meta/plugins/plugin-tree/scripts/bench-faceted-index.ts [--rounds N] [--skip-old]`
-import { rm, writeFile } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import { joinAppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
@@ -46,15 +50,12 @@ if (!SKIP_OLD) {
   console.log("before: per change, in-process ", fmt(old));
 }
 
-const worker = new Worker(
-  new URL("../bin/faceted-tree-worker.ts", import.meta.url),
-);
-const frames: FromWorkerFrame[] = [];
+const scratch = await mkdtemp(join(tmpdir(), "bench-faceted-index-"));
+const checkpointFile = join(scratch, "faceted-index.json");
+
+let worker!: Worker;
+let frames: FromWorkerFrame[] = [];
 let wake: (() => void) | null = null;
-worker.onmessage = (e: MessageEvent<FromWorkerFrame>) => {
-  frames.push(e.data);
-  wake?.();
-};
 async function next(): Promise<FromWorkerFrame> {
   while (frames.length === 0) await new Promise<void>((r) => (wake = r));
   const f = frames.shift()!;
@@ -63,14 +64,41 @@ async function next(): Promise<FromWorkerFrame> {
 }
 const send = (f: ToWorkerFrame) => worker.postMessage(f);
 
-let s = performance.now();
-send({ type: "init", root });
-const ready = await next();
-if (ready.type !== "ready") throw new Error("expected ready");
-let tree: PluginTreeData = pluginTreeFromDelta(pluginsRoot, ready.delta, null);
-console.log(
-  `after: cold build ${(performance.now() - s).toFixed(0)} ms (in worker ${ready.ms.toFixed(0)} ms), ${tree.byPath.size} nodes`,
-);
+/** A new worker, built (from the checkpoint when it can); its tree. */
+async function start(label: string): Promise<PluginTreeData> {
+  frames = [];
+  worker = new Worker(
+    new URL("../bin/faceted-tree-worker.ts", import.meta.url),
+  );
+  worker.onmessage = (e: MessageEvent<FromWorkerFrame>) => {
+    frames.push(e.data);
+    wake?.();
+  };
+  const s = performance.now();
+  send({ type: "init", root, checkpointFile });
+  const ready = await next();
+  if (ready.type !== "ready") throw new Error("expected ready");
+  const built = pluginTreeFromDelta(pluginsRoot, ready.delta, null);
+  console.log(
+    `after: ${label.padEnd(22)} ${(performance.now() - s).toFixed(0)} ms (in worker ${ready.ms.toFixed(0)} ms), ${
+      ready.start.kind === "resumed"
+        ? `resumed, ${ready.start.changed} paths changed`
+        : `cold: ${ready.start.reason}`
+    }`,
+  );
+  return built;
+}
+
+/** Stop the worker once its checkpoint is written (the frame after init). */
+async function stop(): Promise<void> {
+  send({ type: "refresh", id: -1, paths: [], edited: [] });
+  await next();
+  worker.terminate();
+}
+
+await rm(checkpointFile, { force: true });
+let tree: PluginTreeData = await start("cold build");
+console.log(`  ${tree.byPath.size} nodes`);
 
 const BARREL = "plugins/fullscreen/web/index.ts";
 const BODY = "plugins/fullscreen/web/components/fullscreen-toggle.tsx";
@@ -145,46 +173,77 @@ try {
   await writeFile(join(root, BARREL), barrelText);
   await writeFile(join(root, BODY), bodyText);
   await rm(join(root, NEW), { force: true });
-  worker.terminate();
+}
+await compare("the worker's after its edits", tree);
+
+// Across processes: edits while no worker runs, then one started from the
+// checkpoint, against one started cold.
+await stop();
+await writeFile(
+  join(root, BARREL),
+  `${barrelText}\nexport type BenchProbe = 1;\n`,
+);
+await writeFile(join(root, NEW), "export const benchProbe = 1;\n");
+try {
+  for (let i = 0; i < ROUNDS; i++) {
+    tree = await start("from the checkpoint");
+    await stop();
+  }
+  await compare("the resumed worker's", tree);
+  for (let i = 0; i < ROUNDS; i++) {
+    await rm(checkpointFile, { force: true });
+    tree = await start("cold");
+    await stop();
+  }
+} finally {
+  await writeFile(join(root, BARREL), barrelText);
+  await rm(join(root, NEW), { force: true });
+  await rm(scratch, { recursive: true, force: true });
 }
 
-// The worker's tree after every edit and revert must equal a fresh build.
-const fresh = await buildFacetedPluginTree(pluginsRoot, {
-  repo: await loadRepoSnapshot(root),
-});
-const a = JSON.stringify(pluginTreeToJson(fresh));
-const b = JSON.stringify(pluginTreeToJson(tree));
-console.log(
-  a === b ? "equivalent to a fresh build" : "DIFFERS from a fresh build",
-);
-if (a !== b) {
-  process.exitCode = 1;
-  for (const [path, n] of fresh.byPath) {
-    const m = tree.byPath.get(path);
-    const x = JSON.stringify({
-      ...n,
-      dir: 0,
-      children: n.children.map((c) => c.path),
-    });
-    const y =
-      m &&
-      JSON.stringify({ ...m, dir: 0, children: m.children.map((c) => c.path) });
-    if (x === y) continue;
-    console.log("node", path, m ? "" : "(missing)");
-    if (!m) continue;
-    for (const k of Object.keys(n.facets)) {
-      const fx = JSON.stringify(n.facets[k]);
-      const fy = JSON.stringify(m.facets[k]);
-      if (fx !== fy)
-        console.log(
-          "  facet",
-          k,
-          fx.slice(0, 300),
-          "\n   vs",
-          fy?.slice(0, 300),
-        );
+/** `tree` must equal a fresh build of the checkout as it is now. */
+async function compare(label: string, tree: PluginTreeData): Promise<void> {
+  const fresh = await buildFacetedPluginTree(pluginsRoot, {
+    repo: await loadRepoSnapshot(root),
+  });
+  const a = JSON.stringify(pluginTreeToJson(fresh));
+  const b = JSON.stringify(pluginTreeToJson(tree));
+  console.log(
+    `${label} tree: ${a === b ? "equivalent to a fresh build" : "DIFFERS from a fresh build"}`,
+  );
+  if (a !== b) {
+    process.exitCode = 1;
+    for (const [path, n] of fresh.byPath) {
+      const m = tree.byPath.get(path);
+      const x = JSON.stringify({
+        ...n,
+        dir: 0,
+        children: n.children.map((c) => c.path),
+      });
+      const y =
+        m &&
+        JSON.stringify({
+          ...m,
+          dir: 0,
+          children: m.children.map((c) => c.path),
+        });
+      if (x === y) continue;
+      console.log("node", path, m ? "" : "(missing)");
+      if (!m) continue;
+      for (const k of Object.keys(n.facets)) {
+        const fx = JSON.stringify(n.facets[k]);
+        const fy = JSON.stringify(m.facets[k]);
+        if (fx !== fy)
+          console.log(
+            "  facet",
+            k,
+            fx.slice(0, 300),
+            "\n   vs",
+            fy?.slice(0, 300),
+          );
+      }
     }
+    for (const path of tree.byPath.keys())
+      if (!fresh.byPath.has(path)) console.log("extra node", path);
   }
-  for (const path of tree.byPath.keys())
-    if (!fresh.byPath.has(path)) console.log("extra node", path);
 }
