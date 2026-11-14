@@ -9,7 +9,8 @@ import {
   type SkippedThemeValue,
   type ThemeId,
 } from "../core";
-import { ThemeEngine, useThemes } from "./slots";
+import { useThemes } from "./slots";
+import { usePaintedTokenGroups } from "./internal/use-painted-token-groups";
 
 export type ResolvedThemeState =
   | { pending: true }
@@ -30,7 +31,7 @@ export type ResolvedThemeState =
 
 /**
  * What scope `scopeId` paints (undefined = the desktop): its selected theme,
- * resolved over every registered token group.
+ * resolved over every token group it paints (`usePaintedTokenGroups`).
  *
  * A scope without its own theme document reads the desktop's selection — the
  * inheritance is config_v2's, so this and the painter's membership gate agree.
@@ -48,7 +49,7 @@ export function useResolvedTheme(
 ): ResolvedThemeState {
   const themes = useThemes();
   const selection = useConfigResult(themeSelectionConfig, { scopeId });
-  const groups = ThemeEngine.TokenGroup.useContributions();
+  const groups = usePaintedTokenGroups();
 
   return useMemo((): ResolvedThemeState => {
     const selected = foldResource(selection, {
@@ -60,11 +61,7 @@ export function useResolvedTheme(
     const { themesById } = themes;
     const exists = themesById.has(selected);
     const themeId = exists ? selected : DEFAULT_THEME_ID;
-    const { theme, skipped } = resolveTheme(
-      themeId,
-      themesById,
-      groups.map((g) => g.descriptor),
-    );
+    const { theme, skipped } = resolveTheme(themeId, themesById, groups);
     // A selection absent while a resident source FAILED may well be one of
     // that source's themes: whether it exists is unknown, so it paints Default
     // (never blank) without claiming it missing — the failure is the fault,

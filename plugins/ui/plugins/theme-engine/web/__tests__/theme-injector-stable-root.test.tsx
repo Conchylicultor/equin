@@ -57,6 +57,10 @@ vi.mock("../slots", () => ({
         { id: "palette", label: "Palette", descriptor: palette.group },
       ],
     },
+    // No code theme contributed: the painters paint the registered group only.
+    Theme: { useContributions: () => [] },
+    SubTheme: { useContributions: () => [] },
+    FixedTheme: { useContributions: () => [] },
   },
 }));
 

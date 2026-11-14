@@ -119,6 +119,19 @@ export type TokenVarOf<G extends { schema: TokenGroupSchema }> = TokenVarName<
   keyof G["schema"] & string
 >;
 
+// Every group `defineTokenGroup` has defined in this realm, by id — what a code
+// theme's fragment names. A fragment is built by its group's `fragment()`, so a
+// theme module that evaluated has evaluated its groups' definitions too: the
+// lookup cannot miss for a code theme, whether or not the group's registering
+// plugin (its `ThemeEngine.TokenGroup` contribution) loaded. Read only through
+// `paintedTokenGroups`.
+const definedGroups = new Map<string, TokenGroupSpec>();
+
+/** The group `defineTokenGroup` defined under `id` in this realm, if any. */
+export function definedTokenGroup(id: string): TokenGroupSpec | undefined {
+  return definedGroups.get(id);
+}
+
 export function defineTokenGroup<T extends TokenGroupSchema>(
   id: string,
   schema: T,
@@ -127,7 +140,7 @@ export function defineTokenGroup<T extends TokenGroupSchema>(
   for (const key of Object.keys(schema)) {
     vars[key] = tokenVarName(key);
   }
-  return {
+  const descriptor: TokenGroupDescriptor<T> = {
     id,
     schema,
     vars: vars as { [K in keyof T]: string },
@@ -136,6 +149,10 @@ export function defineTokenGroup<T extends TokenGroupSchema>(
         ? { groupId: id, light, dark }
         : { groupId: id, light, dark, meta },
   };
+  // Re-evaluating a module (HMR, a test re-importing) defines its group again:
+  // the latest definition is the live one.
+  definedGroups.set(id, descriptor);
+  return descriptor;
 }
 
 /** The same token values in both color modes — for a group that has no dark variant. */

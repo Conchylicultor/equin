@@ -18,7 +18,6 @@ import {
 import { usePluginScopeId } from "@plugins/framework/plugins/web-sdk/core";
 import { appIdOf, useColorModeSettingFor } from "../use-color-mode";
 import { ThemeEngine } from "../slots";
-import type { TokenGroupContribution } from "../slots";
 import {
   useResolvedTheme,
   type ResolvedThemeState,
@@ -45,6 +44,7 @@ import {
   themeResolutionReportSink,
   type ThemeResolutionFault,
 } from "../internal/resolution-report-sink";
+import { usePaintedTokenGroups } from "../internal/use-painted-token-groups";
 import {
   claimPaintedStyle,
   releasePaintedStyle,
@@ -148,7 +148,7 @@ function ScopeStyles({
   scopeId: string | undefined;
   scopeToken?: string;
 }) {
-  const groups = ThemeEngine.TokenGroup.useContributions();
+  const groups = usePaintedTokenGroups();
   const state = useResolvedTheme(scopeId);
   useReportResolutionFaults(scopeId, state);
 
@@ -157,7 +157,7 @@ function ScopeStyles({
       {groups.map((g) => (
         <GroupStyle
           key={g.id}
-          group={g.descriptor}
+          group={g}
           values={state.pending ? null : state.theme.groups[g.id]!}
           colorAdjust={state.pending ? null : state.theme.colorAdjust}
           scopeToken={scopeToken}
@@ -267,7 +267,7 @@ function PageThemeInjector() {
  * which app owns it, and while that app's theme is pending.
  */
 function DocumentCanvas({ root }: { root: RootThemeScopeState }) {
-  const groups = ThemeEngine.TokenGroup.useContributions();
+  const groups = usePaintedTokenGroups();
   const scopeId = root.known ? root.scopeId : undefined;
   const resolved = useResolvedTheme(scopeId);
   const colorMode = useColorModeSettingFor(appIdOf(scopeId)).effective;
@@ -275,11 +275,7 @@ function DocumentCanvas({ root }: { root: RootThemeScopeState }) {
     () =>
       !root.known || resolved.pending
         ? null
-        : renderCanvasBlock(
-            groups.map((g) => g.descriptor),
-            resolved.theme,
-            colorMode,
-          ),
+        : renderCanvasBlock(groups, resolved.theme, colorMode),
     [root.known, resolved, groups, colorMode],
   );
   usePaintedStyle(CANVAS_STYLE_ID, text);
@@ -390,11 +386,8 @@ export function SubThemeStyles() {
   // Inside a `<PluginScope>`, on the tokens its boundaries stamp (qualified).
   const pluginScope = usePluginScopeId();
   const subThemes = ThemeEngine.SubTheme.useContributions();
-  const groups = ThemeEngine.TokenGroup.useContributions();
-  const { blocks, skipped } = subThemeBlocks(
-    subThemes,
-    groups.map((g) => g.descriptor),
-  );
+  const groups = usePaintedTokenGroups();
+  const { blocks, skipped } = subThemeBlocks(subThemes, groups);
   useReportFaults(skippedFaults(skipped));
 
   return (
@@ -447,7 +440,7 @@ function SubThemeFragmentStyle({
  */
 export function FixedThemeStyles() {
   const fixedThemes = ThemeEngine.FixedTheme.useContributions();
-  const groups = ThemeEngine.TokenGroup.useContributions();
+  const groups = usePaintedTokenGroups();
   assertUniqueFixedThemes(fixedThemes);
 
   return (
@@ -464,14 +457,10 @@ function FixedThemeScopeStyles({
   groups,
 }: {
   fixed: FixedTheme;
-  groups: readonly TokenGroupContribution[];
+  groups: readonly TokenGroupSpec[];
 }) {
   const { values, colorAdjust, skipped } = useMemo(
-    () =>
-      fixedThemeGroupValues(
-        fixed,
-        groups.map((g) => g.descriptor),
-      ),
+    () => fixedThemeGroupValues(fixed, groups),
     [fixed, groups],
   );
   useReportFaults(skippedFaults(skipped));
@@ -486,7 +475,7 @@ function FixedThemeScopeStyles({
       {groups.map((g) => (
         <GroupStyle
           key={g.id}
-          group={g.descriptor}
+          group={g}
           values={values[g.id]!}
           colorAdjust={colorAdjust}
           scopeToken={scopeToken}

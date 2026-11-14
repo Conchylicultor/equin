@@ -100,6 +100,17 @@ mentions keeps its schema defaults — never another scope's choice — so a
 partial theme is safe. A cycle or a missing `extends` target throws; the write
 path refuses both, so a throw is a bug.
 
+**A code theme carries its groups.** The groups a scope paints and resolves
+over are its registered ones (`ThemeEngine.TokenGroup`) plus every group a
+contributed theme, sub-theme or fixed theme names (`paintedTokenGroups`, read
+by the painters through `usePaintedTokenGroups`): a code fragment is built by
+its group's `fragment()`, so the group's definition (`defineTokenGroup`, which
+records it) evaluated with the theme. A code theme naming an unregistered group
+therefore has no spelling — when the group's plugin failed to load, the page
+still paints it, and the load failure is reported on its own. Only a stored
+theme can name a group no code defines; that is what `unregistered-group`
+reports.
+
 ## Editing makes a copy
 
 Code themes and tweakcn imports are read-only. The first edit a scope makes on
@@ -453,6 +464,7 @@ the `""` entry.
     - `lightOnly`
     - `mergeGroupValues`
     - `NEUTRAL_COLOR_ADJUSTMENT`
+    - `paintedTokenGroups`
     - `paintThemeStyles`
     - `parseAppColorModeOverride`
     - `parseConfiguredColorMode`
