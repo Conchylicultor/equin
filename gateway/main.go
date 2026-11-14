@@ -56,6 +56,34 @@ type Config struct {
 	ChildEnv ChildEnv
 }
 
+// publicNamespace is the namespace this gateway serves to the public, or "" when
+// it serves none. Derived from how the gateway is launched, never named: a
+// request at one of the -public-hosts carries no `<name>.localhost` label, so it
+// can only reach the -default-namespace (Proxy.ServeHTTP's single-app
+// fallback) — that namespace IS the deployed site. A dev gateway, a desktop
+// app or a preview passes no public hosts and serves none.
+//
+// What it decides: the idle sweeper never stops it (Registry.Sweep). Idle
+// sweeping frees memory from backends nobody is using; a public site's only
+// backend is never "unused" in that sense — stopping it just moves its cold
+// start onto the next visitor (~5 a day on the website box, 2026-11-13).
+func (c *Config) publicNamespace() string {
+	if len(parsePublicHosts(c.PublicHosts)) == 0 {
+		return ""
+	}
+	return c.DefaultNamespace
+}
+
+// validatePublicServing refuses public hosts with no namespace to serve them:
+// every request at one would 404 ("Use <name>.localhost"), and the namespace
+// the sweeper must keep up would be unknowable.
+func (c *Config) validatePublicServing() error {
+	if len(parsePublicHosts(c.PublicHosts)) > 0 && c.DefaultNamespace == "" {
+		return fmt.Errorf("-public-hosts %q needs -default-namespace: a public host can only reach the default namespace", c.PublicHosts)
+	}
+	return nil
+}
+
 // dataRoot resolves the equin data root: the DIR override, else the home
 // root by the rule in homeDataRoot (dataroot.go).
 //
@@ -210,6 +238,12 @@ func main() {
 	}
 	cfg, childEnvFlag := parseFlags()
 	setupLogging(cfg)
+	if err := cfg.validatePublicServing(); err != nil {
+		fatal(fmt.Sprintf("gateway: fatal: %v", err), "invalid public serving flags", err)
+	}
+	if ns := cfg.publicNamespace(); ns != "" {
+		slog.Info("serving the public: never swept for idleness", "namespace", ns, "public_hosts", cfg.PublicHosts)
+	}
 
 	// Resolve the declared child environment before anything can spawn. The
 	// names the gateway itself carries but will not forward are logged at warn:

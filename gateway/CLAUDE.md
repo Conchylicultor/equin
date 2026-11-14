@@ -8,7 +8,8 @@ See the top-level [`CLAUDE.md`](../CLAUDE.md) for overall architecture and [`ser
 
 - Listens on loopback port 9000 (`-listen loopback:9000`: one listener on `127.0.0.1:9000`, one on `[::1]:9000`, one `http.Server`), routes `<name>.localhost:9000` → that worktree's backend
 - Serves each worktree's `web/dist` as static files directly (no backend spawn needed for page loads)
-- Lazy-spawns the backend on a page load (in the background, beside the SPA shell) or the first `/api/*` or `/ws/*` request; tears it down after 10 minutes idle
+- Lazy-spawns the backend on a page load (in the background, beside the SPA shell) or the first `/api/*` or `/ws/*` request; tears it down after 10 minutes idle — except the namespace it serves to the public (below)
+- **Never sweeps a deployed site's backend.** The namespace a gateway serves at its `-public-hosts` is derived, never named: a public host has no `<name>.localhost` label, so it can only reach `-default-namespace` (`Config.publicNamespace`; public hosts without a default namespace are fatal at boot). Idle sweeping frees memory from backends nobody uses; a public site's one backend being "idle" only moves its cold start (~0.8 s) onto the next visitor — about five times a day on the website box before this (2026-11-13). A dev gateway, desktop app or preview passes no public hosts and is swept as before. `/stop` and `?hold=1` still stop it (a data reset must be able to).
 - Hands each backend a Unix domain socket at `~/.equin/sockets/<name>.sock` as `--socket <path>` on its argv. Gateway dials the socket directly — no TCP between gateway and backend.
 - Starts every child (backends, supervised services) from a **declared** environment, never its own: see "Backend Contract", item 2.
 - Discovers worktrees from `~/.equin/worktrees/<name>/spec.json`

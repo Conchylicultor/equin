@@ -341,7 +341,8 @@ func serverPathMissing(server string) bool {
 	return errors.Is(err, os.ErrNotExist)
 }
 
-// Sweep blocks until ctx is done, periodically tearing down idle backends.
+// Sweep blocks until ctx is done, periodically tearing down idle backends —
+// except the namespace this gateway serves to the public (Config.publicNamespace).
 func (r *Registry) Sweep(ctx context.Context) {
 	t := time.NewTicker(r.cfg.SweepInterval)
 	defer t.Stop()
@@ -356,7 +357,7 @@ func (r *Registry) Sweep(ctx context.Context) {
 				if ctx.Err() != nil {
 					break
 				}
-				if wt.ShouldSweep(r.cfg.IdleTimeout) {
+				if r.sweepable(wt) {
 					slog.Info("sweeping idle worktree", "worktree", wt.Name)
 					// Not ctx itself: it ends on SIGTERM, and a stop already under
 					// way keeps its SIGTERM grace (terminateBackend SIGKILLs when its
@@ -368,6 +369,16 @@ func (r *Registry) Sweep(ctx context.Context) {
 			}
 		}
 	}
+}
+
+// sweepable reports whether the idle sweeper should stop wt now. The public
+// namespace never is: its idleness is a visitor's next cold start, not memory
+// nobody needs.
+func (r *Registry) sweepable(wt *Worktree) bool {
+	if wt.Name == r.cfg.publicNamespace() {
+		return false
+	}
+	return wt.ShouldSweep(r.cfg.IdleTimeout)
 }
 
 // StopAll stops every running worktree, called from main on shutdown.
