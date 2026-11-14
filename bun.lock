@@ -6069,6 +6069,13 @@
       "name": "@equin/plugin-primitives-css-rail",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/css/plugins/resizable": {
+      "name": "@equin/plugin-primitives-css-resizable",
+      "version": "0.0.1",
+      "dependencies": {
+        "react-resizable-panels": "^4.18.1",
+      },
+    },
     "plugins/primitives/plugins/css/plugins/rigid": {
       "name": "@equin/plugin-primitives-css-rigid",
       "version": "0.0.1",
@@ -6147,7 +6154,6 @@
         "class-variance-authority": "^0.7.1",
         "clsx": "^2.1.1",
         "radix-ui": "^1.8.1",
-        "react-resizable-panels": "^4.18.1",
         "shadcn": "^4.23.0",
         "tailwind-merge": "^3.7.0",
         "tailwindcss": "^4.3.4",
@@ -10719,6 +10725,8 @@
     "@equin/plugin-primitives-css-radius": ["@equin/plugin-primitives-css-radius@workspace:plugins/primitives/plugins/css/plugins/radius"],
 
     "@equin/plugin-primitives-css-rail": ["@equin/plugin-primitives-css-rail@workspace:plugins/primitives/plugins/css/plugins/rail"],
+
+    "@equin/plugin-primitives-css-resizable": ["@equin/plugin-primitives-css-resizable@workspace:plugins/primitives/plugins/css/plugins/resizable"],
 
     "@equin/plugin-primitives-css-rigid": ["@equin/plugin-primitives-css-rigid@workspace:plugins/primitives/plugins/css/plugins/rigid"],
 

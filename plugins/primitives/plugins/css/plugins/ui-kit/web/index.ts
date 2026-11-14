@@ -105,11 +105,6 @@ export {
 } from "./components/ui/popover";
 export { popoverAnchorLostSink } from "./components/steady-anchor";
 export type { PopoverAnchorLostFault } from "./components/steady-anchor";
-export {
-  ResizableHandle,
-  ResizablePanel,
-  ResizablePanelGroup,
-} from "./components/ui/resizable";
 export { ScrollArea, ScrollBar } from "./components/ui/scroll-area";
 export {
   Select,

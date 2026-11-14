@@ -1,0 +1,10 @@
+{
+  "name": "@equin/plugin-primitives-css-resizable",
+  "description": "Resizable panel groups (react-resizable-panels) in the ui-kit look: ResizablePanelGroup, ResizablePanel and ResizableHandle. Its own plugin, not a ui-kit export, so the package loads only on pages that split a surface into resizable panels — as a ui-kit export it was preloaded by every page that imports cn().",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "dependencies": {
+    "react-resizable-panels": "^4.18.1"
+  }
+}

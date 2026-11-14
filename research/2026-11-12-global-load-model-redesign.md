@@ -1113,3 +1113,191 @@ a 3 s (fast) to 13 s (slow) "looks ready, answers late" window, which is §6.2's
 
 Pre-render remains the only way to get content up in under 1 s on 4G. Revisit it once the hydration
 set is under ~1 MB, when the window it opens is short.
+
+## 14. Why a static page loads 606 files: the `/about` preload set, split by cause (2026-11-14)
+
+Task `task-1794614984-33dtev`. Question: `/about` is a static marketing page, yet a cold load
+preloads 606 files / 1.86 MB br (§13.4). Which rule puts each byte there, and which of those rules
+can be fixed now?
+
+**Method.** Ground truth from production (equin.ai, registry artifact
+`web-registry-website.registry.37da436e16870d84`): every `<link rel=modulepreload>` of the served
+HTML fetched with `Accept-Encoding: br` (606 files, **1,904,520 B br** on 2026-11-14), grouped by
+artifact (one artifact = one plugin folder barrel, or one vendor file). The website registry
+artifact itself lists each web plugin's `dependsOn` (328 web entries + 581 on-demand demo-scope
+entries), which gives the plugin import graph the browser walks; `explainInclusion`
+(`plugin-meta/closure`) over the website manifest names the composition edge that put a plugin in
+the bundle at all. Scratch scripts, not committed.
+
+### 14.1 How a byte gets into `/about`'s head
+
+Three facts compose:
+
+1. **Membership**: the website composition (`apps.website.**` + `served-baseline` + `reporters`)
+   is the hard closure of its entries over imports, tokens, companions and usage rules — 328 web
+   plugins.
+2. **Tier**: the website reuses **main's** `web-tiers.generated.ts` (`compositionFleetSource`
+   reads the main deferred set — "a superset is exact"). In it, every plugin that is not
+   `apps/<app>/plugins/<non-shell>` is eager by rule 1 (structural), whatever draws it. So in the
+   website, 309 of 328 plugins are eager and preloaded.
+3. **App batch**: the 19 deferred ones are all under `apps/website`, so `appPreloadSeeds` preloads
+   them — and their static closure — on every website path.
+
+So for `/about` the preload set is simply *the whole registry*. Eager vs deferred makes no
+difference to bytes on the website today; only membership and the per-artifact grain do.
+
+### 14.2 The split (br, production, 1.90 MB)
+
+| Part | Bytes | Files | Why it is there |
+|---|---|---|---|
+| Vendors | **516 KB** | 74 | see 14.4 |
+| `/about`'s own closure: website shell + `landing/*` and everything they import | **735 KB** | 176 plugins | the page imports it (14.3) |
+| …of which other pages, imported by the landing's links | 123 KB | 11 | `landing.layers` / `landing.story-link` import the page barrels (14.3 a) |
+| Other website pages not reachable from the landing | 124 KB | 17 | app batch = whole app root (the parallel task xga2xc) |
+| Everything else: in the composition, reached by no website page | **407 KB** | 135 | composition rows + rule 1 (14.5) |
+
+(First-party total 1.27 MB, plus 516 KB vendors; the registry artifact itself is 27 KB br of it.)
+
+### 14.3 `/about`'s own closure (735 KB): what the page imports
+
+The largest items and the first import chain that reaches each:
+
+| KB | Plugin | Chain |
+|---|---|---|
+| 49.0 | `apps.website.pages.foundations` | ← `landing.layers` |
+| 41.3 | `network.live` | ← `primitives.pane` ← `website.shell` |
+| 31.8 | `apps.website.pages.vision` | ← `landing.layers` |
+| 30.7 | `primitives.css.ui-kit` | ← `website.shell` |
+| 26.3 | `media.player` | ← `landing.hero` (drawn: the hero video) |
+| 22.4 | `network.live.live-state` | ← `apps-core` ← `website.shell` |
+| 21.9 | `ui.icons` | ← `website.shell` |
+| 21.2 | `primitives.pane` | ← `website.shell` |
+| 16.3 | `primitives.adaptive-bar` | ← `primitives.pane` |
+| 14.0 | `primitives.css.color-picker` | ← `ui.theme-engine.theme-customizer` ← `ui.tokens.chart` ← `website.shell` |
+| 13.5 | `primitives.css.control-panel` | ← `primitives.avatar` ← `pages.apps` ← `landing.layers` |
+| 9.4 | `layouts.miller` | ← `apps.settings.shell` ← `theme-customizer` ← `ui.tokens.chart` |
+| 8.6 | `primitives.dom.auto-scroll` | ← `primitives.pane` |
+
+Three causes, all **barrel grain** (a whole plugin barrel is one artifact, so importing one name
+loads every module and vendor that barrel reaches):
+
+- **a. Linking to a page loads the page.** `landing.layers` imports `appsPane` / `visionPane` /
+  `foundationsPane` from the pages' **web** barrels, `landing.story-link` imports `storyPane`. A
+  link needs a route, not the page: the cut is **123 KB** (foundations 49, vision 32, apps 9.4,
+  download 7.5, `reports.render-loop` 6.7 + `debug.render-profiler` 7.7 + `reports` 5.7, story,
+  guide, filter-chips). This also defeats "preload only the current page" (xga2xc): those pages are
+  static imports of `/about`. (The site nav avoids it: each page contributes its own nav link.)
+  **Being fixed by xga2xc** (in flight 2026-11-14), the other way round: each page barrel is made
+  light — the page body is a `websitePagePart(page, () => import(…))` lazy chunk, started at boot
+  only on its own URL — so `layers` → `visionPane` keeps only the route, title and nav link
+  (website app batch: 195 KB / 32 files → 50 KB / 38 files on its build).
+- **b. A token group's barrel carries its Settings section.** All 40 `ui/tokens/*` web barrels
+  import `ui.theme-engine.theme-customizer` for their customizer section. So any page that paints a
+  token loads the customizer and what it imports: `apps.settings.shell`, `layouts.miller`,
+  `color-picker`, `saved-themes`, `optimistic-mutation`, `section-card`, `detail-sections` (≈35 KB
+  on the website, and the same on every composition). The boot needs the token *group*; only the
+  Settings pane needs the *section*.
+- **c. The substrate**: `primitives.pane` → `network.live` (41), `live-state` (22),
+  `adaptive-bar` (16), `auto-scroll` (8.6), and `ui-kit` (31 + ~100 KB of vendors, 14.4). The
+  website needs a pane and live state for its data, but not the pane toolbar's adaptive bar, nor
+  every ui-kit component.
+
+### 14.4 Vendors (516 KB)
+
+| KB | Package | Imported by (in the website) |
+|---|---|---|
+| 188 | 38 shared chunks | the split vendor build's common code (react, base-ui internals, …) |
+| 89.3 | zod | ~60 `core` barrels (schemas: config, endpoints, live values) |
+| 66.7 | react-dom/client | the entry |
+| **37.8** | **react-resizable-panels** | **`primitives.css.ui-kit` — exported, used by ONE plugin (`file-explorer.browser`)** |
+| 20.9 / 11.5 / 5.4 / 5.3 / 5.0 / 4.7 / 4.0 | base-ui menu / select / popover / scroll-area / input / tooltip / dialog | `ui-kit` (one barrel; used by 35 / 17 / … / 4 / 59 / 32 / 8 plugins) |
+| 14.5 | @tanstack/react-query | config_v2, endpoints, live-state, optimistic-mutation, mutation-errors |
+| 11.1 | @tanstack/react-virtual | `virtual-rows` ← data-view (14.5) |
+| 9.7 / 9.3 / 7.0 | sonner / tailwind-merge / jsonc-parser | toast / ui-kit / config_v2 |
+| 3.9 + 1.6 | drizzle-orm/pg-core + fractional-indexing | `primitives.rank` **core** (a server column helper in a portable barrel), reached only through the data-view cluster |
+
+The ui-kit row is the barrel-grain cause at its starkest: every page that imports `cn()` preloads
+every vendor any ui-kit component uses — ~100 KB br. Every one but `react-resizable-panels` is
+used by many plugins, so for them only module-granular imports (M2) help; resizable was a
+misplaced export (fixed, 14.7).
+
+### 14.5 In the composition, drawn by no website page (407 KB)
+
+| KB | Cluster | Enters through | Kind of cause |
+|---|---|---|---|
+| **~320** | **`primitives.data-view` + list/table/gallery/view-core + ~45 `fields/*` companions + tree, data-table, rank-reorder, date-picker, multi-select, …** (94 plugins) | four edges, ALL needed for it to leave: `ui.theme-engine.theme-gallery` (seeded by served-baseline's `ui.theme-engine.**`), `shell.notifications` ← `reports.mutation-errors` (reporters row: imports `useToast`, and the bell's barrel holds the Debug → Notifications DataView), `primitives.dom.web-storage.health` (a **companion** of web-storage, reached from `reports.main-thread-stall`; its HealthReport.Row detail is a DataView), `infra.background.catalog` (via `integrations.google-maps.browser-config` →machine/→ `infra.file-watcher` →shared/→ catalog; per-plugin closure ships its web barrel, whose list is a DataView) | contribution + heavy UI in one plugin, for a surface the website never draws |
+| ~40 | the reporters (`reports.*` collectors, crash, main-thread-stall 10.6, …) | the `reporters` row | wanted (field error reports) |
+| ~20 | health-report, `infra.health`, connection-row | served-baseline `infra.health.**` | the website draws no health dot |
+| ~14 | theme-gallery, quick-theme, syntax-highlight | served-baseline `ui.theme-engine.**` | the website draws no theme picker |
+| ~24 | `fields.*` value types and `background.catalog` | reached only through `server/` / `machine/` / `shared/` imports; the closure is per plugin, so their web barrels ship (measured by re-resolving the website over web/core/shared edges only: 19 plugins) | per-plugin closure across runtimes |
+
+The website draws no bell, no health dot, no theme picker, no Debug/Settings pane (filmed:
+`/about` is a header, the hero and its sections). **Every one of those surfaces is still loaded,
+evaluated and kept, because a plugin is one unit**: whoever needs its light half (a toast API, a
+storage-failure toast, a theme painter, a catalog type) gets its heavy half, and rule 1 makes the
+heavy half eager.
+
+### 14.6 The root rules, ranked by bytes on `/about`
+
+1. **The plugin is the unit of loading (barrel grain)**: 14.3 a/b/c + 14.4 ui-kit + 14.5's
+   data-view entry edges. In total ≥ ~600 KB of the 1.9 MB is code `/about` reaches only because a
+   name it needs shares a barrel or a plugin with code it does not (123 page links + ~320
+   data-view cluster + ~100 ui-kit vendors + ~35 customizer + pane extras). Fix class: **module-
+   granular imports (M2)** for the barrel half, and **lazy contribution implementations** for the
+   plugin half (a HealthReport.Row's detail, a bell, a customizer section load when their host
+   draws them, not when the contributing plugin is registered).
+2. **Rule 1: a non-app plugin is eager whatever draws it, and the tier is main's**: on the website
+   it decides nothing today (14.1), but it is why per-page preloads cannot drop the 407 KB of 14.5
+   — they are eager. A derived tier (eager = what the composition's boot actually reads, per
+   composition) needs to know which slots each surface reads at boot; the five watched slots are a
+   subset (ActionBar.Item is "boot" on main and never drawn on the website). That is §12's per-route
+   set. Sizing the cheap version of the rule — "a non-app web barrel that contributes nothing and is
+   imported only by deferred code is deferred" — moves only 33 of main's 988 eager plugins and
+   ~58 KB on the website (most heavy plugins contribute *something*), so it is not worth a rule of
+   its own.
+3. **Composition rows broader than what every served composition draws**: served-baseline's
+   `ui.theme-engine.**` and `infra.health.**` ship theme and health UI to the website. Narrowing them
+   alone saves ~35 KB (theme-gallery, quick-theme) and drops nothing of the data-view cluster while
+   the other three edges stand — and the eight standalone apps extending the row do draw those
+   surfaces. Same answer as 1: the UI should load with the surface.
+4. **Per-plugin closure across runtimes**: ~24 KB (`background.catalog` via a `machine/` import).
+
+Where each lands in the redesign tasks: barrel grain (14.3 b/c, 14.4 ui-kit) → **R1**
+(`task-1794615000-vyqet0`); a contribution loading its heavy implementation (data-view cluster
+14.5, token sections 14.3 b; filed with numbers as `task-1794615994-kiz9x7`,
+`task-1794615997-p7rvgf`) → **R2** (`task-1794615006-urz7z5`); rule 1 and main's tier reused by
+every composition → **R3** (`task-1794615013-i57z5a`); nothing stopping the 320 KB cluster from
+coming back once removed → **R4** (`task-1794615017-nhahaf`).
+
+### 14.7 Fixed now: react-resizable-panels out of the ui-kit barrel
+
+`ResizablePanelGroup` / `ResizablePanel` / `ResizableHandle` were ui-kit exports used by exactly
+one plugin (`apps.file-explorer.browser`). The ui-kit barrel is one artifact that every page
+imports for `cn()`, so its static import of `react-resizable-panels` was preloaded by every page
+of every composition. They now live in their own plugin, `primitives/css/resizable`. A composition
+without the file explorer no longer holds the package (on the website it stays only in the import
+map, for the demo's on-demand scope). On main, the new plugin is still eager (rule 1), so main's
+`/agents` is unchanged.
+
+Measured on two website-composition builds of the same tree, with and without the change
+(`./equin build --composition website`, `/about`):
+
+| | Before | After |
+|---|---|---|
+| Modulepreloads | 606 | **605** |
+| Preloaded bytes (br, each file fetched with `Accept-Encoding: br`) | 1,904,498 B | **1,866,375 B (−38.1 KB, −2.0 %)** |
+| Bytes on the wire by ready (gzip: Chromium gets no br over `http://`) | 2.70 MB | 2.66 MB |
+| Ready, fast 4G + 4× CPU, 7 cold runs, median | 17.9 s | 18.1 s (noise) |
+
+The local "ready" is not comparable to production's 3.3 s. Over plain `http://` the page is
+gzip, the dev host's load average was 11–16, and the CPU-bound phases dominate. At the fast 4G
+profile's 9 Mbps, 38 KB is ~35 ms of the 2.3 s download phase, below this host's run-to-run
+spread. The bytes are the reliable measure.
+
+Not fixed here, on purpose:
+- the other ~60 KB of ui-kit's vendors: each is used by 4–59 plugins, so only R1 helps;
+- the data-view cluster, the token sections and the composition rows: each needs a contribution's
+  implementation to load with its surface (R2) or a per-composition tier (R3). Splitting the four
+  plugins by hand would remove the cluster today, and nothing would stop the next import from
+  bringing it back.
+- The page-link edges (14.3 a) belong to xga2xc.

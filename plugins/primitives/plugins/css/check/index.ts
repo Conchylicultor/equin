@@ -95,6 +95,8 @@ const NOT_A_LAYOUT_MECHANIC: Record<string, string> = {
   placeholder: "muted loading/empty text — a leaf",
   "radio-group": "a form control + its own lint rule",
   radius: "a token standard (corner radius) + its own lint rule",
+  resizable:
+    "a third-party control (react-resizable-panels: a user-draggable split) in the ui-kit look, used by one surface — its own plugin so the package loads only where it is drawn; the layout it holds is still composed with the advertised primitives",
   rail: "a dev-only guard on who owns a region's content edge — an inset audit, not a box to reach for",
   "selection-indicator": "checkbox/radio glyph boxes — leaves",
   slider:

@@ -5121,13 +5121,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `FileBrowserSlots.RowActions` "copy-path" → `CopyPathAction`
             - Uses: 83 symbols — full list in [`plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md`](../plugins/apps/plugins/file-explorer/plugins/browser/REFERENCE.md)
               - `primitives/data-view` ×10
-              - `primitives/css/ui-kit` ×8
               - `primitives/pane` ×8
               - `primitives/file-viewer` ×7
+              - `primitives/css/ui-kit` ×5
               - `network/live` ×4
               - `infra/endpoints` ×3
               - `infra/paths/file-systems` ×3
               - `network/live/live-state` ×3
+              - `primitives/css/resizable` ×3
               - `primitives/path-bar` ×3
               - `config_v2` ×2
               - `primitives/copy-to-clipboard` ×2
@@ -48258,6 +48259,21 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/detail-sections`
           - Web:
             - Exports (values): `useRailGuard`
+        - **`resizable`** — Resizable panel groups in the ui-kit look (react-resizable-panels): ResizablePanelGroup, ResizablePanel and ResizableHandle.
+          - Web:
+            - Uses: `primitives/css/ui-kit.cn`
+            - Exports (values):
+              - `ResizableHandle`
+              - `ResizablePanel`
+              - `ResizablePanelGroup`
+          - Cross-plugin:
+            - Uses tokens:
+              - `ui/tokens/color-palette --background`
+              - `ui/tokens/color-palette --border`
+              - `ui/tokens/color-palette --ring`
+              - `ui/tokens/shape --radius`
+              - `ui/tokens/shape --spacing`
+            - Imported by: `apps/file-explorer/browser`
         - **`rigid`** — Rigid-leaf layout primitive: <Rigid> / rigidClass() is the flex child that never shrinks (shrink-0). The missing half of <Fill>, kept a sibling the way <Clip> is to <Scroll>.
           - Web:
             - Uses: `primitives/css/ui-kit.cn`
@@ -48960,9 +48976,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PortalForwardProvider`
               - `PortalForwardScope`
               - `PortalThemeScopeProvider`
-              - `ResizableHandle`
-              - `ResizablePanel`
-              - `ResizablePanelGroup`
               - `ScrollArea`
               - `ScrollBar`
               - `Select`
@@ -49048,8 +49061,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/chart` ×5
               - `ui/tokens/font-family` ×4
               - `ui/tokens/scrollbar --scrollbar-color`
-            - Imported by: 469 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
-              - `primitives` ×111
+            - Imported by: 470 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+              - `primitives` ×112
               - `apps` ×110
               - `conversations` ×54
               - `page` ×27
@@ -63091,10 +63104,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/density --space-sm`
               - `ui/tokens/shape --spacing`
-            - Tokens used by: 548 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
+            - Tokens used by: 549 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
               - `apps` ×123
               - `conversations` ×97
-              - `primitives` ×74
+              - `primitives` ×75
               - `debug` ×42
               - `page` ×33
               - `plugin-meta` ×28
@@ -63665,10 +63678,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/density --radius-chip-compact`
               - `ui/tokens/density --space-sm`
-            - Tokens used by: 412 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
+            - Tokens used by: 413 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
               - `conversations` ×96
               - `apps` ×82
-              - `primitives` ×60
+              - `primitives` ×61
               - `page` ×36
               - `debug` ×28
               - `ui` ×26

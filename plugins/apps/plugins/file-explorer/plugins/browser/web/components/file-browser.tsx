@@ -23,10 +23,12 @@ import {
   Button,
   cn,
   ControlSizeProvider,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
   ResizableHandle,
   ResizablePanel,
   ResizablePanelGroup,
-} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+} from "@plugins/primitives/plugins/css/plugins/resizable/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { PaneMessage } from "@plugins/primitives/plugins/pane/web";
 import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";

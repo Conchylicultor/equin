@@ -600,6 +600,7 @@ export const browserHost = {
     "primitives.css.pin",
     "primitives.css.placeholder",
     "primitives.css.rail",
+    "primitives.css.resizable",
     "primitives.css.rigid",
     "primitives.css.row",
     "primitives.css.scroll",
