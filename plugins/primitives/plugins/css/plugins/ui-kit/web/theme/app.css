@@ -2809,8 +2809,21 @@
   label:has(input:is([type="checkbox"], [type="radio"]):not(:disabled)) {
     cursor: pointer;
     }
+  /* The app shell's roots never scroll: every scroller is a pane inside.
+     `clip`, not `hidden`: an `overflow: hidden` box is still a scroll
+     container a script or the browser can scroll (scrollIntoView, the
+     browser's own bring-into-view), and on Chrome for Android the content
+     under them can outgrow the visible height by the address bar's — so
+     `body` ended up scrolled by that much, the whole app drawn 72px too high
+     with the page background showing below it. A `clip` box has no scroll
+     position to move. `flow-root` keeps the block formatting context
+     `hidden` gave them. (On `html`, `clip` reaches the viewport as `hidden`.) */
   html, body, #root {
-    @apply h-full overflow-hidden;
+    height: 100%;
+    overflow: clip;
+    }
+  body, #root {
+    display: flow-root;
     }
   /* Inherited, themed typographic defaults (base font-family, font smoothing
      and text color) are consumed at EVERY theme-scope root — the desktop
