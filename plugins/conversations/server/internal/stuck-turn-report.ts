@@ -25,6 +25,7 @@ export const conversationStuckTurnKind = ReportKind({
     tag: "[stuck-turn]",
     notif: "An agent holds a turn it never started",
     variant: "warning",
+    category: "error",
   },
   renderTask: (row: ReportRow) => {
     const d = StuckTurnSchema.parse(row.data);

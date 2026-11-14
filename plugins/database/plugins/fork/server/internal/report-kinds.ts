@@ -35,6 +35,7 @@ export const dbForkFailedKind = ReportKind({
     tag: "[db]",
     notif: "DB fork failed",
     variant: "error",
+    category: "error",
   },
   renderTask: (row: ReportRow) => {
     const d = ForkFailedPayloadSchema.parse(row.data);
@@ -98,6 +99,7 @@ export const forkUndeclaredSchemaKind = ReportKind({
     tag: "[db]",
     notif: "Schema not covered by any fork exclusion",
     variant: "warning",
+    category: "error",
     // A standing declaration gap that re-trips on every fork: re-arm about
     // daily rather than every time a worktree is created.
     notifCooldownMs: 24 * 60 * 60 * 1000,

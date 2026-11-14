@@ -25,6 +25,7 @@ export const backendCrashKind = ReportKind({
     tag: "[backend-crash]",
     notif: "Backend crashed",
     variant: "error",
+    category: "error",
   },
   renderTask: (row: ReportRow) => {
     const d = BackendCrashPayloadSchema.parse(row.data);

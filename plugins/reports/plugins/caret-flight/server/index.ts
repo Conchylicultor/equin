@@ -18,6 +18,7 @@ export default {
         tag: "[caret-flight]",
         notif: "Typing was interrupted mid-split",
         variant: "warning",
+        category: "error",
         notifCooldownMs: CARET_FLIGHT_NOTIF_COOLDOWN_MS,
       },
       renderTask: renderCaretFlightTask,

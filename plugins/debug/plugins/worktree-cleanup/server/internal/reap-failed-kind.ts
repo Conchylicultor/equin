@@ -40,6 +40,7 @@ export const worktreeReapFailedKind = ReportKind({
     tag: "[reap]",
     notif: "Worktree reap failed",
     variant: "error",
+    category: "error",
     notifCooldownMs: REAP_FAILED_NOTIF_COOLDOWN_MS,
   },
   renderTask: (row: ReportRow) => {

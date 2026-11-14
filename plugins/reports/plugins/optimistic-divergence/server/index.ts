@@ -21,6 +21,7 @@ export default {
         tag: "[optimistic-divergence]",
         notif: "Optimistic op diverged from server truth",
         variant: "warning",
+        category: "error",
         notifCooldownMs: OPTIMISTIC_DIVERGENCE_NOTIF_COOLDOWN_MS,
       },
       renderTask: renderOptimisticDivergenceTask,

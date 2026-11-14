@@ -25,6 +25,7 @@ export const noopKind = ReportKind({
     tag: "[live-state]",
     notif: "Redundant live-state pushes",
     variant: "warning",
+    category: "error",
     notifCooldownMs: NOOP_NOTIF_COOLDOWN_MS,
   },
   renderTask: (row: ReportRow) => {

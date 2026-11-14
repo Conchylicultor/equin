@@ -20,6 +20,7 @@ export default {
         tag: "[page-doc-rank]",
         notif: "Page order needed repair at boot",
         variant: "warning",
+        category: "error",
       },
       renderTask: renderPageDocRankDriftTask,
     }),

@@ -18,6 +18,7 @@ export default {
         tag: "[collab-hydration]",
         notif: "A block's text stopped rendering",
         variant: "warning",
+        category: "error",
         notifCooldownMs: COLLAB_HYDRATION_NOTIF_COOLDOWN_MS,
       },
       renderTask: renderCollabHydrationTask,

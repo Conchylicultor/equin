@@ -61,6 +61,7 @@ export const spanStuckKind = ReportKind({
     tag: "[stuck]",
     notif: "An operation is stuck",
     variant: "error",
+    category: "slow-op",
     notifCooldownMs: NOTIF_COOLDOWN_MS,
   },
   renderTask: (row: ReportRow) => {

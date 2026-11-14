@@ -5,7 +5,7 @@ true`, so the demo's browser worker boots it): the `reports` table, its live
 read `reports.list`, the `ReportKind` / `ReportNoiseRule` slots every kind and
 rule contributes to, the fan-out ceiling config, and the two contracts the
 engine and the investigations automation meet on (`reportInvestigationSink`,
-`reportRecordedSignal`). Everything that WRITES reports — `recordReport`, the
+`ReportRecorded` (listeners)). Everything that WRITES reports — `recordReport`, the
 routes, the process-crash handler and buffer, the change producer, retention, the noise
 backfill, investigation — is the engine,
 [`plugins/engine`](plugins/engine/CLAUDE.md), a non-portable `server/` barrel.
@@ -121,6 +121,7 @@ before it) beside the total, worded by `formatReportActivity`
     - `ReportKindVariant`
     - `ReportNoiseInput`
     - `ReportNoiseRuleSpec`
+    - `ReportRecordedListener`
     - `ReportRow`
     - `StormRosterEntry`
     - `StormSummary`
@@ -132,7 +133,7 @@ before it) beside the total, worded by `formatReportActivity`
     - `reportInvestigationSink`
     - `ReportKind`
     - `ReportNoiseRule`
-    - `reportRecordedSignal`
+    - `ReportRecorded`
   - Resources:
     - `reports.list` (keyed, window)
     - `reports.list:groups` (push)
@@ -163,6 +164,7 @@ before it) beside the total, worded by `formatReportActivity`
     - `ReportActivity`
     - `ReportActivityInput`
     - `ReportBody`
+    - `ReportCategory`
     - `ReportFingerprintContext`
     - `ReportFixFacts`
     - `ReportFixStanding`
@@ -186,6 +188,7 @@ before it) beside the total, worded by `formatReportActivity`
     - `isUntrustedReportSource`
     - `normalizeMessage`
     - `regresses`
+    - `REPORT_CATEGORIES`
     - `REPORT_FIX_STATE_LABELS`
     - `REPORT_FIX_STATES`
     - `REPORT_FIXED_BY_TRAILER`
@@ -210,7 +213,7 @@ before it) beside the total, worded by `formatReportActivity`
     - `versionSkewCode`
     - `versionSkewExplains`
 - Cross-plugin:
-  - Imported by: 84 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 85 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `reports` ×33
     - `debug` ×20
     - `conversations` ×7
@@ -219,13 +222,13 @@ before it) beside the total, worded by `formatReportActivity`
     - `apps` ×3
     - `build` ×3
     - `framework` ×2
+    - `tasks` ×2
     - `active-data/report`
     - `backup`
     - `network/live/boot-snapshot`
     - `page/place/google`
     - `plugin-meta/plugin-records/write-lost`
     - `stats/cost`
-    - `tasks/reports-investigation`
     - `upstream`
 - Exemptions:
   - Exempts itself from:

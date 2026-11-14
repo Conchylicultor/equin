@@ -19,7 +19,8 @@ export default {
     TaskCategory({ id: REPORTS_CATEGORY_ID, label: "Reports", order: 4 }),
     automationConfigRegistration(reportInvestigationsConfig),
     ...reportInvestigationsScopeServed.declare,
+    reportRecordedWake,
   ],
   register: [reportInvestigationsAutomation],
-  sinkHandlers: [reportInvestigationHandler, reportRecordedWake],
+  sinkHandlers: [reportInvestigationHandler],
 } satisfies ServerPluginDefinition;

@@ -19,6 +19,7 @@ export const hostCheckKind = ReportKind({
     tag: "[host-check]",
     notif: "A host check failed",
     variant: "warning",
+    category: "error",
     notifCooldownMs: NOTIF_COOLDOWN_MS,
   },
   renderTask: (row: ReportRow) =>

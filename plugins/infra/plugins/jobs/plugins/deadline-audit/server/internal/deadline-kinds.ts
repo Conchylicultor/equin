@@ -40,6 +40,7 @@ export const deadlineExceededKind = ReportKind({
     tag: "[jobs]",
     notif: "Job exceeded its hold-class deadline",
     variant: "warning",
+    category: "slow-op",
     notifCooldownMs: NOTIF_COOLDOWN_MS,
   },
   renderTask: (row: ReportRow) => {
@@ -122,6 +123,7 @@ export const jobZombieKind = ReportKind({
     tag: "[jobs]",
     notif: "Job ignored its deadline and is still holding a slot",
     variant: "error",
+    category: "error",
     notifCooldownMs: NOTIF_COOLDOWN_MS,
   },
   renderTask: (row: ReportRow) => {

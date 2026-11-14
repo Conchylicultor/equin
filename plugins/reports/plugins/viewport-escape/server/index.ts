@@ -24,6 +24,7 @@ export default {
         // fullscreen is still a fullscreen. What is wrong is a CSS declaration
         // in another plugin, and that wants fixing rather than alarming.
         variant: "warning",
+        category: "error",
         notifCooldownMs: VIEWPORT_ESCAPE_NOTIF_COOLDOWN_MS,
       },
       renderTask: renderViewportEscapeTask,

@@ -24,6 +24,7 @@ export const unknownTypeKind = ReportKind({
     tag: "[place]",
     notif: "Unknown Google place type",
     variant: "warning",
+    category: "error",
   },
   renderTask: (row: ReportRow) => {
     const d = UnknownTypePayloadSchema.parse(row.data);

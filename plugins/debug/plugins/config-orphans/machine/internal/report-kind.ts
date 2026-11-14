@@ -40,6 +40,7 @@ export const strandedConfigKind = ReportKind({
     tag: "[config]",
     notif: "Some saved settings no longer apply",
     variant: "warning",
+    category: "error",
     notifCooldownMs: 24 * 60 * 60 * 1000,
   },
   renderTask: (row: ReportRow) => {

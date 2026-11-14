@@ -35,6 +35,7 @@ export const duressEpisodeKind = ReportKind({
     tag: "[duress-episode]",
     notif: "Cluster duress episode",
     variant: "warning",
+    category: "slow-op",
     notifCooldownMs: DURESS_EPISODE_NOTIF_COOLDOWN_MS,
   },
   renderTask: (row: ReportRow) => {

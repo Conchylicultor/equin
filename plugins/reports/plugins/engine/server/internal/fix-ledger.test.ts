@@ -73,7 +73,12 @@ describe("fix ledger (real DB)", () => {
             kind: "crash",
             schema: z.record(z.string(), z.unknown()),
             fingerprint: () => "fp-fix",
-            meta: { tag: "crash", notif: "Crash recorded", variant: "warning" },
+            meta: {
+              tag: "crash",
+              notif: "Crash recorded",
+              variant: "warning",
+              category: "error",
+            },
             renderTask: () => ({ title: "t", description: "d" }),
           }),
         ],

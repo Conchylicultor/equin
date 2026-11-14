@@ -21,6 +21,7 @@ export const opRateKind = ReportKind({
     tag: "[op-rate]",
     notif: "Endpoint call-rate spike",
     variant: "warning",
+    category: "slow-op",
     notifCooldownMs: OP_RATE_NOTIF_COOLDOWN_MS,
   },
   renderTask: (row: ReportRow) => {

@@ -59,6 +59,7 @@ export const slotFloorKind = ReportKind({
     tag: "[jobs]",
     notif: "Worker pool lost slots it cannot recover",
     variant: "error",
+    category: "error",
     notifCooldownMs: NOTIF_COOLDOWN_MS,
   },
   renderTask: (row: ReportRow) => {

@@ -32,6 +32,7 @@ export const bootWedgeKind = ReportKind({
     tag: "[boot-wedge]",
     notif: "Backend never became ready",
     variant: "error",
+    category: "error",
     notifCooldownMs: BOOT_WEDGE_NOTIF_COOLDOWN_MS,
   },
   renderTask: (row: ReportRow) => {

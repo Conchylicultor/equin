@@ -22,6 +22,7 @@ export default {
         notif: "A popover's anchor vanished while it was open",
         // `warning`: the popover stays usable (it keeps its last place).
         variant: "warning",
+        category: "error",
         notifCooldownMs: POPOVER_ANCHOR_LOST_NOTIF_COOLDOWN_MS,
       },
       renderTask: renderPopoverAnchorLostTask,

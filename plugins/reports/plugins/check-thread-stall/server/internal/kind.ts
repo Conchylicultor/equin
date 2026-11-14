@@ -19,6 +19,7 @@ export const checkThreadStallKind = ReportKind({
     tag: "[check-thread]",
     notif: "A check run stalled its thread",
     variant: "warning",
+    category: "slow-op",
     notifCooldownMs: NOTIF_COOLDOWN_MS,
   },
   renderTask: (row: ReportRow) =>

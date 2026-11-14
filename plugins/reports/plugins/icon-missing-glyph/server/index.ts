@@ -22,6 +22,7 @@ export default {
         notif: "An icon has no symbol in its sprite",
         // `error`: a shipped icon is broken — a build bug, not a design gap.
         variant: "error",
+        category: "error",
         notifCooldownMs: ICON_MISSING_GLYPH_NOTIF_COOLDOWN_MS,
       },
       renderTask: renderIconMissingGlyphTask,

@@ -19,6 +19,7 @@ export default {
         notif: "A strict icon family has no glyph for a symbol it draws",
         // `warning`: the app still works; one icon is a dashed placeholder.
         variant: "warning",
+        category: "error",
         notifCooldownMs: ICON_FAMILY_GAP_NOTIF_COOLDOWN_MS,
       },
       renderTask: renderIconFamilyGapTask,

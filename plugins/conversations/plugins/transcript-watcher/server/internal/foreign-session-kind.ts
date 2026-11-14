@@ -32,6 +32,7 @@ export const foreignSessionKind = ReportKind({
     tag: "[session]",
     notif: "Foreign session id in a conversation's chain",
     variant: "warning",
+    category: "error",
     notifCooldownMs: FOREIGN_SESSION_NOTIF_COOLDOWN_MS,
   },
   renderTask: (row: ReportRow) => {

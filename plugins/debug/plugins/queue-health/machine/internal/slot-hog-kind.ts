@@ -39,6 +39,7 @@ export const slotHogKind = ReportKind({
     tag: "[queue]",
     notif: "Job hogging a queue slot",
     variant: "warning",
+    category: "slow-op",
     notifCooldownMs: SLOT_HOG_NOTIF_COOLDOWN_MS,
   },
   renderTask: (row: ReportRow) => {

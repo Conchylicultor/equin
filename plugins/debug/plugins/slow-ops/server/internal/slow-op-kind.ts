@@ -25,6 +25,7 @@ export const slowOpKind = ReportKind({
     tag: "[slow-op]",
     notif: "Slow operation detected",
     variant: "warning",
+    category: "slow-op",
     // No notifCooldownMs, unlike most sibling kinds: a slow op is a recurring
     // metric, so it wants the SHORTEST re-alert the engine allows — which is
     // the engine's own floor. It used to name 60 s here; the floor is 10

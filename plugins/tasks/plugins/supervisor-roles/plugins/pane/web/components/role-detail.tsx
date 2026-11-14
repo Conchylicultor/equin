@@ -1,4 +1,4 @@
-import { useState, type ReactElement, type ReactNode } from "react";
+import { useState, type ReactElement } from "react";
 import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { useConfig } from "@plugins/config_v2/web";
 import { foldResource } from "@plugins/network/plugins/live/plugins/live-state/web";
@@ -7,7 +7,6 @@ import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Switch } from "@plugins/primitives/plugins/css/plugins/switch/web";
-import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import {
   Button,
   ControlSizeProvider,
@@ -45,6 +44,8 @@ import { RoleIcon } from "./role-icon";
 import { SessionBand } from "./session-band";
 import { BacklogSection } from "./backlog-section";
 import { SessionsSection } from "./sessions-section";
+import { SettingRow } from "./setting-row";
+import { EventsSection } from "./events-section";
 
 const autoIcon = symbol("auto-awesome");
 const NO_TASKS: readonly TaskTreeRow[] = [];
@@ -175,6 +176,8 @@ function RoleDetailBody({
         </SettingRow>
       </Card>
 
+      <EventsSection role={role} />
+
       <BacklogSection role={role} backlog={backlog} />
       <SessionsSection roleId={role.id} sessions={sessionRows} />
     </Stack>
@@ -182,33 +185,6 @@ function RoleDetailBody({
 }
 
 /** One inline setting: its label in a fixed column, the value beside it. */
-function SettingRow({
-  label,
-  children,
-  dim,
-  top,
-}: {
-  label: string;
-  children: ReactNode;
-  /** The setting does not apply right now (shown, faded). */
-  dim?: boolean;
-  /** Label aligned to the value's first line (a multi-line value). */
-  top?: boolean;
-}): ReactElement {
-  return (
-    <Stack
-      direction="row"
-      gap="lg"
-      align={top ? "start" : "center"}
-      className={cn("border-b p-md last:border-b-0", dim && "opacity-50")}
-    >
-      <Text variant="caption" tone="muted" className={`w-44 ${rigidClass()}`}>
-        {label}
-      </Text>
-      <Fill>{children}</Fill>
-    </Stack>
-  );
-}
 
 /**
  * The shared prompt, folded under the role's own: it is sent first to every

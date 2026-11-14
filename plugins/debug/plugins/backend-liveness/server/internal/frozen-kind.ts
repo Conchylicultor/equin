@@ -24,6 +24,7 @@ export const backendFrozenKind = ReportKind({
     tag: "[backend-frozen]",
     notif: "Backend stopped answering",
     variant: "error",
+    category: "error",
     notifCooldownMs: NOTIF_COOLDOWN_MS,
   },
   renderTask: (row: ReportRow) => {

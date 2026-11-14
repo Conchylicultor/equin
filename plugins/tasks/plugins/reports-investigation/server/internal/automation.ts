@@ -9,10 +9,9 @@ import { symbol } from "@plugins/ui/plugins/icons/core";
 import { defineAutomation } from "@plugins/tasks/plugins/automations/server";
 import {
   ReportKind,
-  reportRecordedSignal,
+  ReportRecorded,
   type ReportRow,
 } from "@plugins/reports/server";
-import { sinkHandler } from "@plugins/framework/plugins/server-core/core";
 import {
   linkReportsToTask,
   renderReportTask,
@@ -146,7 +145,7 @@ export const reportInvestigationsAutomation = defineAutomation({
 // decides for itself whether it is on and the report in scope. Only a serving
 // host records (a report from an exec child goes through the outbox and is
 // recorded — and signalled — by main), so in a child this never fires.
-export const reportRecordedWake = sinkHandler(
-  reportRecordedSignal,
-  () => () => reportInvestigationsAutomation.fire(),
-);
+export const reportRecordedWake = ReportRecorded({
+  id: "tasks.reports-investigation",
+  onRecorded: () => reportInvestigationsAutomation.fire(),
+});

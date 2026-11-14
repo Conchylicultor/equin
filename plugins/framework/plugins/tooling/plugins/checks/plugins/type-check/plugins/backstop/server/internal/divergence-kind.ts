@@ -36,6 +36,7 @@ export const typeCheckDivergenceKind = ReportKind({
     notif:
       "The two-program type check diverged, or nearly did, from a full check",
     variant: "error",
+    category: "error",
     notifCooldownMs: 24 * 60 * 60 * 1000,
   },
   renderTask: (row: ReportRow) => {

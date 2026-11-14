@@ -18,6 +18,7 @@ export default {
         tag: "[render-loop]",
         notif: "Render loop detected",
         variant: "warning",
+        category: "slow-op",
         notifCooldownMs: RENDER_LOOP_NOTIF_COOLDOWN_MS,
       },
       renderTask: renderRenderLoopTask,

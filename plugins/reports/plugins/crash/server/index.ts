@@ -11,7 +11,12 @@ export default {
       kind: "crash",
       schema: CrashPayloadSchema,
       fingerprint: crashFingerprint,
-      meta: { tag: "[crash]", notif: "Crash recorded", variant: "error" },
+      meta: {
+        tag: "[crash]",
+        notif: "Crash recorded",
+        variant: "error",
+        category: "error",
+      },
       renderTask: renderCrashTask,
     }),
   ],

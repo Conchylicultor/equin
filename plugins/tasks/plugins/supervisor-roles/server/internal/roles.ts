@@ -11,14 +11,20 @@ import {
 } from "drizzle-orm";
 import { db, type DbExecutor } from "@plugins/database/server";
 import type { EmitTx } from "@plugins/infra/plugins/events/server";
-import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
+import {
+  asPluginId,
+  type PluginId,
+} from "@plugins/framework/plugins/plugin-id/core";
 import {
   _tasks,
   createTask,
   setMandate,
   tasksView,
 } from "@plugins/tasks/plugins/tasks-core/server";
-import type { TaskStatus } from "@plugins/tasks/plugins/tasks-core/core";
+import type {
+  TaskAuthor,
+  TaskStatus,
+} from "@plugins/tasks/plugins/tasks-core/core";
 import { interactiveMandate } from "@plugins/tasks/plugins/mandate-presets/core";
 import type { TaskTrack } from "@plugins/tasks/plugins/task-track/core";
 import { setTaskTrack } from "@plugins/tasks/plugins/task-track/server";
@@ -281,31 +287,89 @@ export async function fileToBacklog(
   filing: BacklogFiling,
 ): Promise<{ taskId: string; role: SupervisorRole }> {
   const role = await resolveFilingRole(filing.supervisor);
-  const taskId = await db.transaction(async (tx) => {
-    const task = await createTask(
+  const taskId = await db.transaction((tx) =>
+    insertBacklogTask(
       {
-        mandate: interactiveMandate,
+        role,
         title: filing.title,
-        // The agent authored this title deliberately — keep it in the prompt.
-        titleAuto: false,
         description: filing.description,
-        filing: {
-          author: { kind: "agent", conversationId: filing.conversationId },
-          filedFrom: asPluginId("tasks.supervisor-roles"),
-        },
+        track: filing.track,
+        author: { kind: "agent", conversationId: filing.conversationId },
+        filedFrom: asPluginId("tasks.supervisor-roles"),
+        filedFromTaskId: filing.fromTaskId,
       },
       tx,
-    );
-    await tasksSupervisor.upsert(
-      task.id,
-      { supervisor: role.id, filedFromTaskId: filing.fromTaskId },
-      tx,
-    );
-    await setTaskTrack(task.id, filing.track, tx);
-    await emitBacklogArrived(task.id, role.id, filing.conversationId, tx);
-    return task.id;
-  });
+    ),
+  );
   return { taskId, role };
+}
+
+/**
+ * File a task into `roleId`'s backlog on the system's behalf (no agent filed
+ * it — e.g. a role's events, with no live session to tell): the same root
+ * task {@link fileToBacklog} files, any role (listed or not), on `exec`.
+ */
+export async function fileSystemBacklogTask(
+  filing: {
+    roleId: string;
+    title: string;
+    description: string | null;
+    filedFrom: PluginId;
+  },
+  exec: DbExecutor,
+): Promise<string> {
+  const role = await getSupervisorRole(filing.roleId, exec);
+  if (!role) throw new Error(`No supervisor role "${filing.roleId}".`);
+  return insertBacklogTask(
+    {
+      role,
+      title: filing.title,
+      description: filing.description,
+      track: "main",
+      author: { kind: "system" },
+      filedFrom: filing.filedFrom,
+      filedFromTaskId: null,
+    },
+    exec,
+  );
+}
+
+async function insertBacklogTask(
+  f: {
+    role: SupervisorRole;
+    title: string;
+    description: string | null;
+    track: TaskTrack;
+    author: TaskAuthor;
+    filedFrom: PluginId;
+    filedFromTaskId: string | null;
+  },
+  exec: DbExecutor,
+): Promise<string> {
+  const task = await createTask(
+    {
+      mandate: interactiveMandate,
+      title: f.title,
+      // The filer authored this title deliberately — keep it in the prompt.
+      titleAuto: false,
+      description: f.description,
+      filing: { author: f.author, filedFrom: f.filedFrom },
+    },
+    exec,
+  );
+  await tasksSupervisor.upsert(
+    task.id,
+    { supervisor: f.role.id, filedFromTaskId: f.filedFromTaskId },
+    exec,
+  );
+  await setTaskTrack(task.id, f.track, exec);
+  await emitBacklogArrived(
+    task.id,
+    f.role.id,
+    f.author.kind === "agent" ? f.author.conversationId : null,
+    exec,
+  );
+  return task.id;
 }
 
 /** Whether `taskId` waits in role `roleId`'s backlog now: a root it owns,

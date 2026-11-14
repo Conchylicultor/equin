@@ -157,6 +157,7 @@ tools — are `plugins/sessions`.
     - `_supervisorRoles`
     - `BACKLOG_READ_LIMIT`
     - `FALLBACK_ROLE_REF`
+    - `fileSystemBacklogTask`
     - `fileToBacklog`
     - `getSupervisorRole`
     - `isInRoleBacklog`
@@ -238,12 +239,16 @@ tools — are `plugins/sessions`.
 - Cross-plugin:
   - Imported by:
     - `tasks`
+    - `tasks/supervisor-roles/events`
     - `tasks/supervisor-roles/pane`
     - `tasks/supervisor-roles/sessions`
-  - Endpoint callers: `sessions`
+  - Endpoint callers:
+    - `events`
+    - `sessions`
 - Exemptions:
   - Exempts itself from: `ids:pk-declared` — `server/internal/tables-events.ts` (debt)
 - Sub-plugins:
+  - **`events`** — Supervisor event streams, web half: registers the supervisor event message and gathered event id kinds, so their ids are recognised in the browser as on the server. Supervisor event streams, data…
   - **`pane`** — The Supervisors pane, in the agent manager: one sidebar entry (live sessions and the tasks waiting in every backlog at its edge) opening the list — the pinned All supervisors entry (the shared…
   - **`sessions`** — Supervisor role sessions: POST /api/supervisor-roles/:id/sessions opens the role's live session or launches one (one live session per role — a root task stating the supervisor-role mandate, owned by…
 

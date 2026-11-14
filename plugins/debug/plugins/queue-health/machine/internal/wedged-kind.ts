@@ -49,6 +49,7 @@ export const wedgedKind = ReportKind({
     tag: "[queue]",
     notif: "Job queue wedged",
     variant: "error",
+    category: "error",
     notifCooldownMs: WEDGED_NOTIF_COOLDOWN_MS,
   },
   renderTask: (row: ReportRow) => {

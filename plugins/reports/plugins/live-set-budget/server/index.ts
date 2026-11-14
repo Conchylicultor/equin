@@ -23,6 +23,7 @@ export default {
         tag: "[live-set]",
         notif: "A live set outgrew its budget",
         variant: "warning",
+        category: "slow-op",
         notifCooldownMs: LIVE_SET_OVER_BUDGET_NOTIF_COOLDOWN_MS,
       },
       renderTask: renderOverBudgetTask,

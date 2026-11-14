@@ -21,6 +21,7 @@ export default {
         tag: "[live-state-stale-drop]",
         notif: "Live-state resource wedged on stale HTTP body",
         variant: "warning",
+        category: "error",
         notifCooldownMs: LIVE_STATE_STALE_DROP_NOTIF_COOLDOWN_MS,
       },
       renderTask: renderLiveStateStaleDropTask,

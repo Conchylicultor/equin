@@ -22,6 +22,7 @@ export default {
         notif: "A scoped page fell back for a renderer it left out",
         // `warning`: the fallback still renders.
         variant: "warning",
+        category: "error",
         notifCooldownMs: SCOPED_OUT_DISPATCH_NOTIF_COOLDOWN_MS,
       },
       renderTask: renderScopedOutDispatchTask,

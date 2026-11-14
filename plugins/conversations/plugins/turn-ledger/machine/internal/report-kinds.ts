@@ -29,6 +29,7 @@ export const turnUnverifiedKind = ReportKind({
     tag: "[turn-unverified]",
     notif: "A message could not be verified as submitted",
     variant: "warning",
+    category: "error",
   },
   renderTask: (row: ReportRow) => {
     const d = TurnUnverifiedSchema.parse(row.data);

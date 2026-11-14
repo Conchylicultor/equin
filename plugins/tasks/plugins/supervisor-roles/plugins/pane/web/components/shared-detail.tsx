@@ -11,6 +11,7 @@ import { Icon } from "@plugins/ui/plugins/icons/web";
 import { supervisorPromptConfig } from "@plugins/tasks/plugins/supervisor-roles/core";
 import { useAdhocSupervisors, useRoles } from "../internal/reads";
 import { InlineMarkdownField } from "./inline-fields";
+import { EventRoutingSection } from "./event-routing-section";
 
 const sharedIcon = symbol("stacks");
 
@@ -58,6 +59,7 @@ export function SharedDetail(): ReactElement {
           </Fill>
         </Stack>
       </Card>
+      <EventRoutingSection />
     </Stack>
   );
 }

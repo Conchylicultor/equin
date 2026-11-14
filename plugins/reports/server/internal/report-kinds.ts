@@ -1,7 +1,10 @@
 import type { z } from "zod";
 import { defineServerContribution } from "@plugins/framework/plugins/server-core/core";
 import type { RecordNotificationInput } from "@plugins/shell/plugins/notifications/server";
-import type { ReportFingerprintContext } from "@plugins/reports/core";
+import type {
+  ReportCategory,
+  ReportFingerprintContext,
+} from "@plugins/reports/core";
 import type { _reports } from "./tables";
 
 // The bell-notification variant a kind's report files. Single-sourced from the
@@ -52,6 +55,10 @@ export interface ReportKindSpec<TData = unknown> {
     tag: string;
     notif: string;
     variant: ReportKindVariant;
+    // What kind of problem this kind records: an error, or a slow op. Read by
+    // consumers that split reports without naming kinds (supervisor event
+    // streams). Required: a kind has to say which it is.
+    category: ReportCategory;
     // This kind's own fan-out ceiling: how many DISTINCT fingerprints of it may
     // raise their own alert per window. Only ever a RAISE — the engine takes
     // the max of this and the `reports.fanOutPerWindow` config, so there is no

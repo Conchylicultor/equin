@@ -381,6 +381,7 @@ export const LUCIDE_MAP = {
   tablet: "tablet",
   terminal: "terminal",
   "text-fields": "type",
+  thunderstorm: "cloud-lightning",
   timelapse: "timer",
   timeline: "chart-no-axes-gantt",
   timer: "timer",

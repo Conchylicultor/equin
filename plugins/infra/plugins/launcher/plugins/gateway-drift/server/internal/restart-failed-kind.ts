@@ -20,6 +20,7 @@ export const gatewayRestartFailedKind = ReportKind({
     tag: "[gateway-restart-failed]",
     notif: "Main's gateway could not be restarted",
     variant: "error",
+    category: "error",
   },
   renderTask: (row: ReportRow) => {
     const d = GatewayRestartFailedPayloadSchema.parse(row.data);

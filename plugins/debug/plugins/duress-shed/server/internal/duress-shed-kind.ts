@@ -34,6 +34,7 @@ export const duressShedKind = ReportKind({
     tag: "[duress-shed]",
     notif: "Observability writes shed under duress",
     variant: "warning",
+    category: "slow-op",
   },
   renderTask: (row: ReportRow) => {
     const d = DuressShedPayloadSchema.parse(row.data);

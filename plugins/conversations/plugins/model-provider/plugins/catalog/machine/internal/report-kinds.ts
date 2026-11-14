@@ -45,6 +45,7 @@ export const modelUnrecognizedKind = ReportKind({
     tag: "[models]",
     notif: "The Claude CLI's model menu names something unrecognized",
     variant: "warning",
+    category: "error",
     // Discovery runs daily and on every CLI update, so a standing rename would
     // re-ring daily; once a day is the cadence the fact can change at.
     notifCooldownMs: 24 * 60 * 60 * 1000,

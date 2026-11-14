@@ -51,6 +51,7 @@ export const slotBlockedKind = ReportKind({
     tag: "[queue]",
     notif: "Job blocking on a gate while holding a slot",
     variant: "warning",
+    category: "slow-op",
     notifCooldownMs: SLOT_BLOCKED_NOTIF_COOLDOWN_MS,
   },
   renderTask: (row: ReportRow) => {

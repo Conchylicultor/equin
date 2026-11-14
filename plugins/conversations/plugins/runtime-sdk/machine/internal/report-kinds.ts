@@ -46,6 +46,7 @@ export const sdkConsumerStalledKind = ReportKind({
     tag: "[sdk-consumer]",
     notif: "An agent's events are not being applied",
     variant: "error",
+    category: "slow-op",
   },
   renderTask: (row: ReportRow) => {
     const d = ConsumerStalledSchema.parse(row.data);
@@ -99,6 +100,7 @@ export const sdkCatchUpOverdueKind = ReportKind({
     tag: "[sdk-catch-up]",
     notif: "Applying an agent's events is stuck",
     variant: "error",
+    category: "slow-op",
   },
   renderTask: (row: ReportRow) => {
     const d = CatchUpOverdueSchema.parse(row.data);
@@ -151,6 +153,7 @@ export const sdkAgentUnresponsiveKind = ReportKind({
     tag: "[sdk-agent]",
     notif: "An agent stopped answering",
     variant: "error",
+    category: "error",
   },
   renderTask: (row: ReportRow) => {
     const d = AgentUnresponsiveSchema.parse(row.data);
@@ -201,6 +204,7 @@ export const turnWithoutIdKind = ReportKind({
     tag: "[turn-without-id]",
     notif: "An agent took a turn the app did not send",
     variant: "warning",
+    category: "error",
   },
   renderTask: (row: ReportRow) => {
     const d = TurnWithoutIdSchema.parse(row.data);
@@ -248,6 +252,7 @@ export const turnUnknownIdKind = ReportKind({
     tag: "[turn-unknown-id]",
     notif: "An agent confirmed a turn its conversation never sent",
     variant: "error",
+    category: "error",
   },
   renderTask: (row: ReportRow) => {
     const d = TurnUnknownIdSchema.parse(row.data);

@@ -24,6 +24,7 @@ export const backendExitKind = ReportKind({
     tag: "[backend-exit]",
     notif: "Backend exited",
     variant: "error",
+    category: "error",
   },
   renderTask: (row: ReportRow) => {
     const d = BackendExitPayloadSchema.parse(row.data);

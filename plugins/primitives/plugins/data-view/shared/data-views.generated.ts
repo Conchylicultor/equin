@@ -110,6 +110,8 @@ export const dataViews: DataViewEntry[] = [
   { id: "tasks.supervisor-roles", pluginId: "tasks.supervisor-roles.pane" },
   { id: "tasks.supervisor-roles.adhoc", pluginId: "tasks.supervisor-roles.pane" },
   { id: "tasks.supervisor-roles.backlog", pluginId: "tasks.supervisor-roles.pane" },
+  { id: "tasks.supervisor-roles.event-messages", pluginId: "tasks.supervisor-roles.pane" },
+  { id: "tasks.supervisor-roles.event-routing", pluginId: "tasks.supervisor-roles.pane" },
   { id: "tasks.supervisor-roles.sessions", pluginId: "tasks.supervisor-roles.pane" },
   { id: "theme-engine.themes", pluginId: "ui.theme-engine.theme-gallery" },
   { id: "theme-engine.themes.quick", pluginId: "ui.theme-engine.theme-gallery" },

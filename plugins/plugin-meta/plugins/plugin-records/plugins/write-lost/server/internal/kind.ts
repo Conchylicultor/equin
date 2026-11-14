@@ -18,6 +18,7 @@ export const recordsWriteLostKind = ReportKind({
     tag: "[plugin-records]",
     notif: "A process could not write its plugin records",
     variant: "warning",
+    category: "error",
     notifCooldownMs: NOTIF_COOLDOWN_MS,
   },
   renderTask: (row: ReportRow) => {

@@ -64,7 +64,7 @@ describe("untrusted report sources", () => {
             kind: "test-kind",
             schema: z.record(z.string(), z.unknown()),
             fingerprint: () => "fp",
-            meta: { tag: "t", notif: "n", variant: "error" },
+            meta: { tag: "t", notif: "n", variant: "error", category: "error" },
             renderTask: (row) => ({
               title: "A test report",
               description: `**Message:** ${row.message}`,

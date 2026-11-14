@@ -19,6 +19,7 @@ export default {
         notif: "A control panel's content is wider than the panel",
         // `warning`: the panel is still usable, just cut off at its edge.
         variant: "warning",
+        category: "error",
         notifCooldownMs: PANEL_OVERFLOW_NOTIF_COOLDOWN_MS,
       },
       renderTask: renderPanelOverflowTask,

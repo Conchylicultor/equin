@@ -68,6 +68,7 @@ export const heldTurnUndeliveredKind = ReportKind({
     tag: "[held-turn]",
     notif: "A message sent while the agent was starting is still waiting",
     variant: "warning",
+    category: "error",
   },
   renderTask: (row: ReportRow) => {
     const d = HeldTurnUndeliveredSchema.parse(row.data);

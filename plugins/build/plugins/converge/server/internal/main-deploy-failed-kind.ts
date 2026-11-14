@@ -19,6 +19,7 @@ export const mainDeployFailedKind = ReportKind({
     tag: "[main-deploy-failed]",
     notif: "Main's auto-deploy failed",
     variant: "error",
+    category: "error",
   },
   renderTask: (row: ReportRow) => {
     const d = MainDeployFailedPayloadSchema.parse(row.data);

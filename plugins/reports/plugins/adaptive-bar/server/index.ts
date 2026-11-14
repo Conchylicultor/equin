@@ -22,6 +22,7 @@ export default {
         // broken). What is wrong is the host's layout contract, and that wants
         // fixing rather than alarming.
         variant: "warning",
+        category: "error",
         notifCooldownMs: ADAPTIVE_BAR_NOTIF_COOLDOWN_MS,
       },
       renderTask: renderAdaptiveBarTask,

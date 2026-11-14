@@ -29,7 +29,7 @@ to the common fields: `severity` (error | warning | everything, matched against
 each kind's bell variant), `minCount` (occurrences, default 3) and
 `excludedKinds` (default `report-storm`).
 
-- **Woken** by reports' `reportRecordedSignal` (emitted for every recorded
+- **Woken** by its `ReportRecorded` listener (called for every recorded
   occurrence of an uninvestigated, non-noise report — after the duress and
   fan-out gates) calling the handle's `fire()`, so a burst settles into one run;
   or on a schedule, as the config picks.
@@ -69,12 +69,13 @@ each kind's bell variant), `minCount` (occurrences, default 3) and
     - `taskCategory` "reports"
     - `ConfigV2.Register` "report-investigations"
     - `resource.declare` "report-investigations.scope"
+    - `report-recorded` "tasks.reports-investigation"
   - Uses:
     - `network/live.serveValue`
     - `reports._reports`
     - `reports.reportInvestigationSink`
     - `reports.ReportKind`
-    - `reports.reportRecordedSignal`
+    - `reports.ReportRecorded`
     - `reports.ReportRow`
     - `reports/engine.linkReportsToTask`
     - `reports/engine.renderReportTask`

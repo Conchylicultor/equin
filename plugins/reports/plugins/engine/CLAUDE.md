@@ -9,7 +9,7 @@ and the fork exclusion.
 
 Its parent (`reports`) is the PORTABLE half — the table, `reports.list`, the
 `ReportKind` / `ReportNoiseRule` slots, the fan-out config and the contracts
-(`reportInvestigationSink`, `reportRecordedSignal`) — which every host boots,
+(`reportInvestigationSink`, `ReportRecorded` (listeners)) — which every host boots,
 the browser's worker included. This half needs the computer (a synchronous file
 append on a dying event loop, the desktop database's change producer and fork
 admin), so it is a non-portable `server/` barrel: other plugins' `server/` code

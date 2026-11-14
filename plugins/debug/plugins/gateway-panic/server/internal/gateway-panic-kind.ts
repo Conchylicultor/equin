@@ -20,6 +20,7 @@ export const gatewayPanicKind = ReportKind({
     tag: "[gateway-panic]",
     notif: "Gateway handler panicked",
     variant: "error",
+    category: "error",
   },
   renderTask: (row: ReportRow) => {
     const d = GatewayPanicPayloadSchema.parse(row.data);

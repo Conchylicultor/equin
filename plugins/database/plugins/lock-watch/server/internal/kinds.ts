@@ -28,6 +28,7 @@ export const lockHolderKind = ReportKind({
     tag: "[db]",
     notif: "A database session is holding others back",
     variant: "error",
+    category: "slow-op",
   },
   renderTask: (row: ReportRow) =>
     renderLockHolderTask(row, DbLockHolderPayloadSchema.parse(row.data)),
@@ -53,6 +54,7 @@ export const idleTransactionEndedKind = ReportKind({
     tag: "[db]",
     notif: "The database ended a transaction left idle too long",
     variant: "error",
+    category: "error",
   },
   renderTask: (row: ReportRow) =>
     renderIdleTransactionEndedTask(

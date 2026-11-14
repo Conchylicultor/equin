@@ -67,6 +67,7 @@ export const hostIoDegradedKind = ReportKind({
     tag: "[host-io]",
     notif: "This machine's file I/O is degraded",
     variant: "warning",
+    category: "slow-op",
     // A standing condition re-recorded hourly: re-ring at most every 6 h.
     notifCooldownMs: 6 * 60 * 60_000,
   },

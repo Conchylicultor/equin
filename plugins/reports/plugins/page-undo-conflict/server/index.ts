@@ -21,6 +21,7 @@ export default {
         tag: "[page-undo-conflict]",
         notif: "A text undo met a second writer",
         variant: "warning",
+        category: "error",
         notifCooldownMs: PAGE_UNDO_CONFLICT_NOTIF_COOLDOWN_MS,
       },
       renderTask: renderPageUndoConflictTask,

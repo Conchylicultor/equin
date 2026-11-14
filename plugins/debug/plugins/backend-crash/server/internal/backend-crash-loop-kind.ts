@@ -23,6 +23,7 @@ export const backendCrashLoopKind = ReportKind({
     tag: "[backend-crash-loop]",
     notif: "Backend is crash-looping",
     variant: "error",
+    category: "error",
   },
   renderTask: (row: ReportRow) => {
     const d = BackendCrashLoopPayloadSchema.parse(row.data);

@@ -27,6 +27,7 @@ export const backlogKind = ReportKind({
     tag: "[queue]",
     notif: "Job queue backing up",
     variant: "warning",
+    category: "slow-op",
     notifCooldownMs: BACKLOG_NOTIF_COOLDOWN_MS,
   },
   renderTask: (row: ReportRow) => {

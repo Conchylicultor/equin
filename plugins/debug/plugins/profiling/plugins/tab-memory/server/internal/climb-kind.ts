@@ -31,6 +31,7 @@ export const tabMemoryClimbKind = ReportKind({
     tag: "[tab-memory]",
     notif: "A browser tab's memory is climbing",
     variant: "error",
+    category: "slow-op",
     notifCooldownMs: NOTIF_COOLDOWN_MS,
   },
   renderTask: (row: ReportRow) => {

@@ -24,6 +24,7 @@ export const stallMonitorKind = ReportKind({
     tag: "[stall]",
     notif: "Event-loop stall",
     variant: "error",
+    category: "slow-op",
     notifCooldownMs: STALL_NOTIF_COOLDOWN_MS,
   },
   renderTask: (row: ReportRow) => {

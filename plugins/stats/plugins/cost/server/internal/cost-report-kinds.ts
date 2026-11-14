@@ -47,6 +47,7 @@ export const unpricedModelKind = ReportKind({
     tag: "[cost]",
     notif: "Model missing from the price table",
     variant: "warning",
+    category: "error",
     notifCooldownMs: COST_NOTIF_COOLDOWN_MS,
   },
   renderTask: (row: ReportRow) => {
@@ -116,6 +117,7 @@ export const archiveShrinkKind = ReportKind({
     tag: "[cost]",
     notif: "Transcript shrank against the archive",
     variant: "warning",
+    category: "error",
     notifCooldownMs: COST_NOTIF_COOLDOWN_MS,
   },
   renderTask: (row: ReportRow) => {

@@ -41,6 +41,7 @@ export const leakedTestDbKind = ReportKind({
     tag: "[db-test-fixture]",
     notif: "A killed test run left a database behind",
     variant: "warning",
+    category: "error",
     notifCooldownMs: NOTIF_COOLDOWN_MS,
   },
   renderTask: (row: ReportRow) => {

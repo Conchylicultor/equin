@@ -60,6 +60,7 @@ export const websiteVisitorErrorKind = ReportKind({
     tag: "[website-visitor]",
     notif: "A website visitor hit an error",
     variant: "error",
+    category: "error",
     notifCooldownMs: NOTIF_COOLDOWN_MS,
   },
   renderTask: (row: ReportRow) =>

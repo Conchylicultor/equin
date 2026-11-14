@@ -57,3 +57,5 @@ export type {
 } from "./fix-state";
 export { submitReport, investigateReport } from "./endpoints";
 export type { ReportResult } from "./endpoints";
+export { REPORT_CATEGORIES } from "./category";
+export type { ReportCategory } from "./category";

@@ -21,6 +21,7 @@ export default {
         tag: "[optimistic-rejection]",
         notif: "The server rejected an edit",
         variant: "error",
+        category: "error",
         notifCooldownMs: OPTIMISTIC_REJECTION_NOTIF_COOLDOWN_MS,
       },
       renderTask: renderOptimisticRejectionTask,

@@ -352,6 +352,7 @@ export const ICON_MANIFEST: {
     "tablet-mac",
     "terminal",
     "text-fields",
+    "thunderstorm",
     "timeline",
     "timer",
     "title",

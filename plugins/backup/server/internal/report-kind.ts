@@ -79,6 +79,7 @@ export const backupIncompleteKind = ReportKind({
     tag: "[backup]",
     notif: "Backup did not fully succeed",
     variant: "error",
+    category: "error",
     // Six hours. The schedule is nightly, so this re-arms the bell about once
     // per run rather than once per occurrence — enough that a standing gap
     // comes back, rare enough that it is never noise.

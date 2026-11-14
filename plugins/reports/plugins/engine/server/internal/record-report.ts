@@ -27,7 +27,7 @@ import {
   _reports,
   createFanOutGate,
   ReportKind,
-  reportRecordedSignal,
+  ReportRecorded,
   type StormSummary,
 } from "@plugins/reports/server";
 import { pickIncidentBell } from "./incident";
@@ -457,7 +457,7 @@ async function fileReport(input: ReportInput): Promise<FiledReport> {
   }
 
   if (row.taskId === null && !row.noise) {
-    reportRecordedSignal.emit({ reportId: row.id });
+    for (const l of ReportRecorded.getContributions()) l.onRecorded(row.id);
   }
   // A report with a live or pending fix: does this occurrence's code contain
   // it? Judged off the recording path (a git read), and only for these rows.

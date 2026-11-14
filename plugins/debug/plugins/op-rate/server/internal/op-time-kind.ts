@@ -26,6 +26,7 @@ export const opTimeKind = ReportKind({
     tag: "[op-time]",
     notif: "Endpoint aggregate-time budget breach",
     variant: "warning",
+    category: "slow-op",
     notifCooldownMs: OP_TIME_NOTIF_COOLDOWN_MS,
   },
   renderTask: (row: ReportRow) => {

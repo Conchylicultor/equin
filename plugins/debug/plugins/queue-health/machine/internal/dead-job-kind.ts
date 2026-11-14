@@ -35,6 +35,7 @@ export const deadJobKind = ReportKind({
     tag: "[queue]",
     notif: "Dead jobs in queue",
     variant: "error",
+    category: "error",
     notifCooldownMs: DEAD_JOB_NOTIF_COOLDOWN_MS,
   },
   renderTask: (row: ReportRow) => {

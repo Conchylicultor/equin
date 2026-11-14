@@ -36,6 +36,7 @@ export const runnerDiedKind = ReportKind({
     tag: "[jobs]",
     notif: "A job runner stopped on its own",
     variant: "error",
+    category: "error",
     notifCooldownMs: NOTIF_COOLDOWN_MS,
   },
   renderTask: (row: ReportRow) => {

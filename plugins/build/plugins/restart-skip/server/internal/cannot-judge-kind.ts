@@ -19,6 +19,7 @@ export const cannotJudgeKind = ReportKind({
     tag: "[restart-skip]",
     notif: "Restart-skip cannot judge a deploy",
     variant: "warning",
+    category: "error",
   },
   renderTask: (row: ReportRow) => {
     const d = CannotJudgePayloadSchema.parse(row.data);

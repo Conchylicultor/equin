@@ -31,11 +31,14 @@ async function roleOr404(id: string): Promise<SupervisorRole> {
 /**
  * Open `role`'s live session, launching one when none is live: a root task
  * stating the supervisor-role mandate, owned by the role, its brief the
- * role's prompt, armed with `model`.
+ * role's prompt (then `brief`, when given — what the launch is for, e.g. the
+ * events that woke it), armed with `model`. A live session found instead is
+ * left as it is: `brief` only briefs a session this call launches.
  */
-async function openRoleSession(
+export async function openRoleSession(
   role: SupervisorRole,
   model: ModelChoice,
+  brief?: string,
 ): Promise<{ taskId: string; started: boolean }> {
   assertChoiceLaunchable(model, getModelCatalog());
   const opened = await db.transaction(async (tx) => {
@@ -48,7 +51,9 @@ async function openRoleSession(
     // role's one session slot forever.
     if (live)
       return { taskId: live.id, started: false, arm: live.status === "new" };
-    const prompt = role.prompt.trim();
+    const prompt = [role.prompt.trim(), brief?.trim() ?? ""]
+      .filter((p) => p !== "")
+      .join("\n\n");
     const task = await createTask(
       {
         mandate: supervisorRoleMandate,

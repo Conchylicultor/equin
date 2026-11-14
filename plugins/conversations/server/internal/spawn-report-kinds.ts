@@ -42,6 +42,7 @@ export const conversationSpawnFailedKind = ReportKind({
     tag: "[spawn]",
     notif: "Conversation spawn failed",
     variant: "error",
+    category: "error",
   },
   renderTask: (row: ReportRow) => {
     const d = SpawnFailedPayloadSchema.parse(row.data);
@@ -117,6 +118,7 @@ export const claudeCodeUnavailableAtSpawnKind = ReportKind({
     tag: "[spawn]",
     notif: "Claude Code is not available",
     variant: "error",
+    category: "error",
   },
   renderTask: (row: ReportRow) => {
     const d = ClaudeCodeUnavailablePayloadSchema.parse(row.data);

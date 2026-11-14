@@ -15,6 +15,7 @@ export const fleetMemoryUnmeasuredKind = ReportKind({
     tag: "[host-admission]",
     notif: "Host admission is running without a memory reading",
     variant: "warning",
+    category: "error",
   },
   renderTask: (row: ReportRow) => {
     const d = FleetMemoryUnmeasuredPayloadSchema.parse(row.data);

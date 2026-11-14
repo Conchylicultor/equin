@@ -37,6 +37,7 @@ export const autoStartModelUnavailableKind = ReportKind({
     tag: "[auto-start]",
     notif: "A queued task's model is unavailable",
     variant: "warning",
+    category: "error",
   },
   renderTask: (row: ReportRow) => {
     const d = AutoStartModelUnavailablePayloadSchema.parse(row.data);

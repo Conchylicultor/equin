@@ -36,6 +36,7 @@ export const sentinelDownKind = ReportKind({
     notif:
       "The machine watcher stopped — builds are not held back when memory runs out",
     variant: "error",
+    category: "error",
   },
   renderTask: (row: ReportRow) => {
     const d = SentinelDownPayloadSchema.parse(row.data);

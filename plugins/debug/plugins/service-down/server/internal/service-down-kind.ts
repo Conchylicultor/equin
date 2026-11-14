@@ -26,6 +26,7 @@ export const serviceDownKind = ReportKind({
     tag: "[service-down]",
     notif: "Service went down",
     variant: "error",
+    category: "error",
   },
   renderTask: (row: ReportRow) => {
     const d = ServiceDownPayloadSchema.parse(row.data);

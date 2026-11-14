@@ -44,6 +44,7 @@ export const queryDeadlineKind = ReportKind({
     tag: "[db]",
     notif: "A database call got no answer and its connection was closed",
     variant: "error",
+    category: "slow-op",
     notifCooldownMs: NOTIF_COOLDOWN_MS,
   },
   renderTask: (row: ReportRow) =>
@@ -66,6 +67,7 @@ export const abandonCapKind = ReportKind({
     tag: "[db]",
     notif: "Too many abandoned database connections",
     variant: "error",
+    category: "error",
     notifCooldownMs: NOTIF_COOLDOWN_MS,
   },
   renderTask: (row: ReportRow) =>

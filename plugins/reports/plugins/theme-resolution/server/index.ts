@@ -23,6 +23,7 @@ export default {
         // `warning`, not `error`: the app still paints — Default for a missing
         // theme, the rest of the theme for skipped values.
         variant: "warning",
+        category: "error",
         notifCooldownMs: THEME_RESOLUTION_NOTIF_COOLDOWN_MS,
       },
       renderTask: renderThemeResolutionTask,

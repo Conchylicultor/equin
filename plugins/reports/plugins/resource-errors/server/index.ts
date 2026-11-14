@@ -22,6 +22,7 @@ export default {
         tag: "[resource-error]",
         notif: "A live read failed",
         variant: "warning",
+        category: "error",
         notifCooldownMs: RESOURCE_ERROR_NOTIF_COOLDOWN_MS,
       },
       renderTask: renderResourceErrorTask,

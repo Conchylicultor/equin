@@ -40,6 +40,7 @@ export const reportStormKind = ReportKind({
     tag: "[storm]",
     notif: "Alert storm collapsed",
     variant: "warning",
+    category: "error",
   },
   renderTask: (row: ReportRow) => {
     const d = ReportStormPayloadSchema.parse(row.data);

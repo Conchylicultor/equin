@@ -25,6 +25,7 @@ export const clientRateKind = ReportKind({
     tag: "[client-rate]",
     notif: "A browser tab is reloading in a loop",
     variant: "warning",
+    category: "slow-op",
     notifCooldownMs: NOTIF_COOLDOWN_MS,
   },
   renderTask: (row: ReportRow) => {

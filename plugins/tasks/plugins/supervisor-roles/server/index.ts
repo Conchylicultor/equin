@@ -38,6 +38,7 @@ import {
 
 export {
   FALLBACK_ROLE_REF,
+  fileSystemBacklogTask,
   fileToBacklog,
   getSupervisorRole,
   isInRoleBacklog,

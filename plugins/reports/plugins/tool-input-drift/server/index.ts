@@ -22,6 +22,7 @@ export default {
         notif: "A tool card's schema rejects an input its tool took",
         // `warning`: the generic card still draws the call.
         variant: "warning",
+        category: "error",
         notifCooldownMs: TOOL_INPUT_DRIFT_NOTIF_COOLDOWN_MS,
       },
       renderTask: renderToolInputDriftTask,

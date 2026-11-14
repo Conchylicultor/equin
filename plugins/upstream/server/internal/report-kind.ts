@@ -69,6 +69,7 @@ export const upstreamUpdatesKind = ReportKind({
     tag: "[upstream]",
     notif: "Updates available from upstream",
     variant: "info",
+    category: "error",
     // Seven days. The detection runs daily, so this re-arms the bell about once
     // a week: often enough that a growing gap comes back, rare enough that it
     // is never noise.

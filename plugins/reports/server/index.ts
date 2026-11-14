@@ -6,7 +6,8 @@ import { IdKinds } from "@plugins/ids/server";
 
 export { _reports } from "./internal/tables";
 export { reportInvestigationSink } from "./internal/investigation-sink";
-export { reportRecordedSignal } from "./internal/recorded-signal";
+export { ReportRecorded } from "./internal/recorded-signal";
+export type { ReportRecordedListener } from "./internal/recorded-signal";
 export type { InvestigationTaskRequest } from "./internal/investigation-sink";
 export { ReportNoiseRule } from "./internal/noise-rules";
 export type {

@@ -21,6 +21,7 @@ export default {
         tag: "[turn-unconfirmed]",
         notif: "Turn not confirmed in transcript",
         variant: "warning",
+        category: "error",
         notifCooldownMs: TURN_UNCONFIRMED_NOTIF_COOLDOWN_MS,
       },
       renderTask: renderTurnUnconfirmedTask,

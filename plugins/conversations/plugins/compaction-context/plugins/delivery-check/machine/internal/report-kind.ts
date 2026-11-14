@@ -36,6 +36,7 @@ export const compactionContextCutKind = ReportKind({
     tag: "[compaction]",
     notif: "An agent's compaction context was cut by the Claude CLI",
     variant: "warning",
+    category: "error",
   },
   renderTask: (row: ReportRow) => {
     const d = CompactionContextCutPayloadSchema.parse(row.data);

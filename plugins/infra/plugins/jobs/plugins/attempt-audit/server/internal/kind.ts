@@ -37,7 +37,12 @@ export const jobAttemptFailedKind = ReportKind({
       },
       { ...ctx, message: d.error },
     )}`,
-  meta: { tag: "[jobs]", notif: "Job attempt failed", variant: "error" },
+  meta: {
+    tag: "[jobs]",
+    notif: "Job attempt failed",
+    variant: "error",
+    category: "error",
+  },
   renderTask: (row: ReportRow) => {
     const d = JobAttemptFailedPayloadSchema.parse(row.data);
     return {

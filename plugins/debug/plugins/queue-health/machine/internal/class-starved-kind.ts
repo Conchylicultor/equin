@@ -51,6 +51,7 @@ export const classStarvedKind = ReportKind({
     tag: "[queue]",
     notif: "Job queue class starved",
     variant: "error",
+    category: "slow-op",
     notifCooldownMs: CLASS_STARVED_NOTIF_COOLDOWN_MS,
   },
   renderTask: (row: ReportRow) => {

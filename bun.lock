@@ -7294,6 +7294,14 @@
       "name": "@equin/plugin-tasks-supervisor-roles",
       "version": "0.0.1",
     },
+    "plugins/tasks/plugins/supervisor-roles/plugins/events": {
+      "name": "@equin/plugin-tasks-supervisor-roles-events",
+      "version": "0.0.1",
+    },
+    "plugins/tasks/plugins/supervisor-roles/plugins/events/plugins/report-streams": {
+      "name": "@equin/plugin-tasks-supervisor-roles-events-report-streams",
+      "version": "0.0.1",
+    },
     "plugins/tasks/plugins/supervisor-roles/plugins/pane": {
       "name": "@equin/plugin-tasks-supervisor-roles-pane",
       "version": "0.0.1",
@@ -11295,6 +11303,10 @@
     "@equin/plugin-tasks-sidequest-autopilot": ["@equin/plugin-tasks-sidequest-autopilot@workspace:plugins/tasks/plugins/sidequest-autopilot"],
 
     "@equin/plugin-tasks-supervisor-roles": ["@equin/plugin-tasks-supervisor-roles@workspace:plugins/tasks/plugins/supervisor-roles"],
+
+    "@equin/plugin-tasks-supervisor-roles-events": ["@equin/plugin-tasks-supervisor-roles-events@workspace:plugins/tasks/plugins/supervisor-roles/plugins/events"],
+
+    "@equin/plugin-tasks-supervisor-roles-events-report-streams": ["@equin/plugin-tasks-supervisor-roles-events-report-streams@workspace:plugins/tasks/plugins/supervisor-roles/plugins/events/plugins/report-streams"],
 
     "@equin/plugin-tasks-supervisor-roles-pane": ["@equin/plugin-tasks-supervisor-roles-pane@workspace:plugins/tasks/plugins/supervisor-roles/plugins/pane"],
 

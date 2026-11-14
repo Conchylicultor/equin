@@ -22,6 +22,7 @@ export const bootBudgetKind = ReportKind({
     tag: "[boot-budget]",
     notif: "Slow boot hook",
     variant: "warning",
+    category: "slow-op",
     notifCooldownMs: BOOT_BUDGET_NOTIF_COOLDOWN_MS,
   },
   renderTask: (row: ReportRow) => {

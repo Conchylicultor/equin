@@ -20,6 +20,7 @@ export const stepRegressionKind = ReportKind({
     tag: "[build-step]",
     notif: "A build step jumped against its own baseline",
     variant: "warning",
+    category: "slow-op",
     notifCooldownMs: NOTIF_COOLDOWN_MS,
   },
   renderTask: (row: ReportRow) =>

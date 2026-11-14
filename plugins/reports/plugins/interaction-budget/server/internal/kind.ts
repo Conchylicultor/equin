@@ -19,6 +19,7 @@ export const interactionBudgetKind = ReportKind({
     tag: "[interaction-budget]",
     notif: "An interaction went over its work budget",
     variant: "warning",
+    category: "slow-op",
     notifCooldownMs: NOTIF_COOLDOWN_MS,
   },
   renderTask: (row: ReportRow) =>
