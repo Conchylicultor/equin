@@ -23,9 +23,13 @@ export {
   blockLocations,
   BlockLocationSchema,
   blockContents,
+  trashedPages,
+  trashedPageBlocks,
 } from "./resources";
 export type {
   BlockContentsRow,
+  TrashedPageRow,
+  TrashedPageBlocksRow,
   BlockLocation,
   PagesTreeFields,
   PagesTreeRow,

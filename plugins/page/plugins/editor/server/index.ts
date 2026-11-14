@@ -20,6 +20,8 @@ import {
   blockLocationsServed,
   pagesTreeServed,
   pageBlocksServed,
+  trashedPageBlocksServed,
+  trashedPagesServed,
 } from "./internal/resources";
 import { PAGE_ROLLUPS } from "./internal/rollup-spec";
 import {
@@ -174,6 +176,8 @@ export default {
     ...blockLocationsServed.declare,
     ...blockContentsServed.declare,
     ...pageBlocksServed.declare,
+    ...trashedPagesServed.declare,
+    ...trashedPageBlocksServed.declare,
     // The page rows' materialized joins: the per-page content edit time
     // `pagesTree`'s `editedAt` reads, and the tree's `$childCount`.
     ...PAGE_ROLLUPS.map((rollup) => DerivedTable(rollup)),

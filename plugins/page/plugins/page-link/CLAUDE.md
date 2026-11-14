@@ -8,10 +8,7 @@
 - Web:
   - Contributes: `Editor.Block` "page-link" → `PageLinkBlock`
   - Uses:
-    - `network/live.LiveRowResult`
-    - `network/live.useLive`
     - `network/live/live-state.matchResource`
-    - `network/live/live-state.ResourceError`
     - `network/live/live-state.ResourceErrorInline`
     - `page/editor.BlockRendererProps`
     - `page/editor.Editor`
@@ -19,6 +16,8 @@
     - `page/editor.useBlockActivate`
     - `page/editor.usePageOptions`
     - `page/page-reference.PageReferenceRow`
+    - `page/page-reference.PageReferent`
+    - `page/page-reference.usePageReferent`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/row.Row`
     - `primitives/css/scroll.Scroll`

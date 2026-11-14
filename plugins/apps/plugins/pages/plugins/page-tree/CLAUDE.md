@@ -197,20 +197,22 @@ it, so an id means the same thing wherever it is clicked.
     - `PageDetail.UnderTitle` "backlinks" → `BacklinksUnderTitle`
     - `PageTree.RowActions` "delete" → `DeletePageAction`
     - `PageTree.RowActions` "add-below" → `AddPageBelowAction`
-  - Uses: 88 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/pane` ×10
+  - Uses: 101 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/pane` ×9
+    - `page/editor` ×8
+    - `primitives/css/ui-kit` ×8
     - `primitives/data-view` ×8
-    - `page/editor` ×7
     - `infra/endpoints` ×4
-    - `primitives/css/ui-kit` ×4
+    - `network/live/live-state` ×4
+    - `page/page-reference` ×4
     - `primitives/overlay/image-viewer` ×4
-    - `network/live/live-state` ×3
     - `network/live` ×3
-    - `page/page-reference` ×3
     - `apps/pages/shell` ×2
+    - `page/read-only-view` ×2
     - `primitives/breadcrumb` ×2
     - `primitives/collapsible` ×2
     - `primitives/css/control-panel` ×2
+    - `primitives/css/spacing` ×2
     - `primitives/hover-reveal` ×2
     - `primitives/usage-rank` ×2
     - `apps/pages/auto-icon.RegenerateIconAction`
@@ -220,14 +222,16 @@ it, so an id means the same thing wherever it is clicked.
     - `primitives/app-shell.SidebarItem`
     - `primitives/css/center.Center`
     - `primitives/css/clip.Clip`
+    - `primitives/css/cluster.Cluster`
+    - `primitives/css/column.Band`
     - `primitives/css/grid.Grid`
     - `primitives/css/grow.growClass`
     - `primitives/css/inline.Inline`
+    - `primitives/css/line.Line`
     - `primitives/css/pin.Pin`
     - `primitives/css/placeholder.Placeholder`
     - `primitives/css/rigid.rigidClass`
     - `primitives/css/scroll.Scroll`
-    - `primitives/css/spacing.Stack`
     - `primitives/css/spinner.Spinner`
     - `primitives/css/text.Text`
     - `primitives/css/yield.yieldClass`
@@ -236,6 +240,7 @@ it, so an id means the same thing wherever it is clicked.
     - `primitives/editable-field.useEditableField`
     - `primitives/icon-button.IconButton`
     - `primitives/loading.Loading`
+    - `primitives/relative-time.RelativeTime`
     - `primitives/slot-render.defineRenderSlot`
     - `primitives/text-editor/paste-images.attachmentUrl`
     - `primitives/tree.useOptionalRowControls`
@@ -265,10 +270,10 @@ it, so an id means the same thing wherever it is clicked.
     - `pageDetailRoute`
     - `pagesTreeRoute`
 - Cross-plugin:
-  - Uses tokens: 28 vars — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ui/tokens/density` ×9
+  - Uses tokens: 31 vars — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ui/tokens/density` ×10
+    - `ui/tokens/color-palette` ×9
     - `ui/tokens/type-scale` ×9
-    - `ui/tokens/color-palette` ×7
     - `ui/tokens/shape` ×3
   - Imported by:
     - `active-data/page-link`

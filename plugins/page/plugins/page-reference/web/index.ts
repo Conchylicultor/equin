@@ -19,6 +19,7 @@ export {
   PageReferenceRow,
   type PageReferenceRowProps,
 } from "./internal/reference-row";
+export { usePageReferent, type PageReferent } from "./internal/referent";
 export {
   usePageReferenceTint,
   type PageReferenceDecoration,

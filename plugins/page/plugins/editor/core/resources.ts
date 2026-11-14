@@ -237,3 +237,81 @@ export const blockContents = liveCollection("page.block-contents", {
   id: "id",
 });
 export type BlockContentsRow = z.infer<typeof blockContents.row>;
+
+// A TRASHED page row, by id — lookup-only (`:rows`), the twin of `pagesTree`'s
+// point read for the pages the tree no longer holds. A reference to a page
+// that is in the trash (a link block, an inline `[[page:…]]` chip, the page
+// pane itself) reads it once the live tree answers not found, so it can still
+// name the page — struck through — and open it read-only (Notion's "This page
+// is in Trash"), rather than calling it "not found" while it is restorable.
+//
+// Served over the `page_blocks` table with the TRASHED predicate as its base
+// membership (`type = 'page' AND deleted_at IS NOT NULL`): a trash is an
+// entrant, a restore a where-flip exit (the row reads not found again, and
+// the live tree answers instead), a purge an exit. `trashEntryId` is the
+// ledger entry the page's rows were flagged under — the handle a restore or a
+// purge names, and the scope `trashedPageBlocks` reads its content by.
+export const trashedPages = liveCollection("pages.trashed", {
+  from: pagesEntityRef,
+  baseExposures: false,
+  carry: {
+    pick: ["id", "pageId", "data"],
+    fields: {
+      deletedAt: dateField({ label: "Deleted" }),
+      trashEntryId: textField({ label: "Trash entry" }),
+    },
+  },
+  id: "id",
+});
+
+/** A row as `trashedPages` delivers it. */
+export type TrashedPageRow =
+  typeof trashedPages extends LiveRowsCollection<infer R> ? R : never;
+
+// A trashed page's content forest, as it was when it was trashed: every block
+// whose nearest page ancestor is `pageId` and that was flagged under the same
+// trash entry (`trashEntryId`) — so a block deleted on its own BEFORE the page
+// (its own, earlier entry) stays out, exactly as it was out of the page then.
+// One tuple per (page, entry), read `useLive(trashedPageBlocks, { where:
+// { pageId, trashEntryId } })` by the read-only view of a trashed page. The
+// rows are the `pageBlocks` shape (a reader builds the same forest), ordered
+// by `(rank, createdAt)` within siblings. Served over the `page_blocks` table
+// with `deleted_at IS NOT NULL` as its base membership: a restore or a purge
+// empties the tuple.
+export const trashedPageBlocks = liveCollection("page-blocks.trashed", {
+  from: pagesEntityRef,
+  baseExposures: false,
+  carry: {
+    pick: [
+      "id",
+      "pageId",
+      "parentId",
+      "type",
+      "expanded",
+      "createdAt",
+      "updatedAt",
+    ],
+    fields: {
+      rank: rankValueField(),
+      data: jsonField<unknown>({ schema: z.unknown(), default: {} }),
+      trashEntryId: textField({ label: "Trash entry" }),
+    },
+  },
+  id: "id",
+  all: {
+    by: ["pageId", "trashEntryId"],
+    orderBy: [
+      ["rank", "asc"],
+      ["createdAt", "asc"],
+    ],
+    unbounded: {
+      reason:
+        "one trashed page's content forest — the read-only view renders the whole document",
+      budget: 1200,
+    },
+  },
+});
+
+/** A row as `trashedPageBlocks` delivers it. */
+export type TrashedPageBlocksRow =
+  typeof trashedPageBlocks extends LiveRowsCollection<infer R> ? R : never;

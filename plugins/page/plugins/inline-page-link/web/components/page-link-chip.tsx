@@ -1,14 +1,9 @@
 import { ResourceErrorInline } from "@plugins/network/plugins/live/plugins/live-state/web";
-import { useLive } from "@plugins/network/plugins/live/web";
 import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
-import {
-  pagesTree,
-  pageData,
-  type PageRow,
-} from "@plugins/page/plugins/editor/core";
 import { PageIcon } from "@plugins/page/plugins/editor/web";
+import { usePageReferent } from "@plugins/page/plugins/page-reference/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { INERT_ACTIVATION } from "../internal/inert-activation";
 
@@ -29,62 +24,61 @@ const linkIcon = symbol("link");
  * one cannot be forgotten there.
  */
 export function PageLinkChip({ pageId }: { pageId: string }) {
-  const result = useLive(pagesTree, { id: pageId });
+  const referent = usePageReferent(pageId);
 
-  // A failed read that once had the page keeps resolving from it; without
-  // one, the chip is the failure (an icon, to keep the line intact).
-  let target: PageRow | undefined;
-  switch (result.status) {
-    case "loading":
-      // Show the raw token-free title placeholder rather than nothing, so the
-      // line height stays stable while the row loads.
+  switch (referent.state) {
+    case "pending":
       return (
         <LinkChip activation={INERT_ACTIVATION}>
           <Placeholder>…</Placeholder>
         </LinkChip>
       );
-    case "error":
-      if (result.stale === undefined) {
-        return (
-          <ResourceErrorInline
-            error={result.error}
-            refetch={result.refetch}
-            variant="icon"
-            icon={linkIcon}
-            subject="the linked page"
-          />
-        );
-      }
-      target = result.stale;
+    // Without a page ever seen, the chip is the failure (an icon, to keep
+    // the line intact).
+    case "failed":
+      return (
+        <ResourceErrorInline
+          error={referent.error}
+          refetch={referent.refetch}
+          variant="icon"
+          icon={linkIcon}
+          subject="the linked page"
+        />
+      );
+    case "missing":
+      return (
+        <LinkChip activation={INERT_ACTIVATION}>
+          <Placeholder>(page not found)</Placeholder>
+        </LinkChip>
+      );
+    case "live":
+    case "trashed":
       break;
-    case "ready":
-      target = result.found ? result.row : undefined;
   }
 
-  const data = target ? pageData(target) : undefined;
-
-  if (!target) {
-    return (
-      <LinkChip activation={INERT_ACTIVATION}>
-        <Placeholder>(page not found)</Placeholder>
-      </LinkChip>
-    );
-  }
+  const data = referent.data;
+  // A page in the trash keeps its name, struck through.
+  const trashed = referent.state === "trashed";
 
   return (
     <LinkChip
       leading={
         <Center as="span" className="size-3.5">
-          <PageIcon
-            icon={data?.icon}
-            fallback={linkIcon}
-            className="size-3.5"
-          />
+          <PageIcon icon={data.icon} fallback={linkIcon} className="size-3.5" />
         </Center>
       }
       activation={INERT_ACTIVATION}
     >
-      {data?.title || "Untitled"}
+      {trashed ? (
+        <span
+          className="text-muted-foreground line-through"
+          title="This page is in the trash"
+        >
+          {data.title || "Untitled"}
+        </span>
+      ) : (
+        data.title || "Untitled"
+      )}
     </LinkChip>
   );
 }

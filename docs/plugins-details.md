@@ -7045,20 +7045,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PageDetail.UnderTitle` "backlinks" → `BacklinksUnderTitle`
               - `PageTree.RowActions` "delete" → `DeletePageAction`
               - `PageTree.RowActions` "add-below" → `AddPageBelowAction`
-            - Uses: 88 symbols — full list in [`plugins/apps/plugins/pages/plugins/page-tree/REFERENCE.md`](../plugins/apps/plugins/pages/plugins/page-tree/REFERENCE.md)
-              - `primitives/pane` ×10
+            - Uses: 101 symbols — full list in [`plugins/apps/plugins/pages/plugins/page-tree/REFERENCE.md`](../plugins/apps/plugins/pages/plugins/page-tree/REFERENCE.md)
+              - `primitives/pane` ×9
+              - `page/editor` ×8
+              - `primitives/css/ui-kit` ×8
               - `primitives/data-view` ×8
-              - `page/editor` ×7
               - `infra/endpoints` ×4
-              - `primitives/css/ui-kit` ×4
+              - `network/live/live-state` ×4
+              - `page/page-reference` ×4
               - `primitives/overlay/image-viewer` ×4
-              - `network/live/live-state` ×3
               - `network/live` ×3
-              - `page/page-reference` ×3
               - `apps/pages/shell` ×2
+              - `page/read-only-view` ×2
               - `primitives/breadcrumb` ×2
               - `primitives/collapsible` ×2
               - `primitives/css/control-panel` ×2
+              - `primitives/css/spacing` ×2
               - `primitives/hover-reveal` ×2
               - `primitives/usage-rank` ×2
               - `apps/pages/auto-icon.RegenerateIconAction`
@@ -7068,14 +7070,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/app-shell.SidebarItem`
               - `primitives/css/center.Center`
               - `primitives/css/clip.Clip`
+              - `primitives/css/cluster.Cluster`
+              - `primitives/css/column.Band`
               - `primitives/css/grid.Grid`
               - `primitives/css/grow.growClass`
               - `primitives/css/inline.Inline`
+              - `primitives/css/line.Line`
               - `primitives/css/pin.Pin`
               - `primitives/css/placeholder.Placeholder`
               - `primitives/css/rigid.rigidClass`
               - `primitives/css/scroll.Scroll`
-              - `primitives/css/spacing.Stack`
               - `primitives/css/spinner.Spinner`
               - `primitives/css/text.Text`
               - `primitives/css/yield.yieldClass`
@@ -7084,6 +7088,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/editable-field.useEditableField`
               - `primitives/icon-button.IconButton`
               - `primitives/loading.Loading`
+              - `primitives/relative-time.RelativeTime`
               - `primitives/slot-render.defineRenderSlot`
               - `primitives/text-editor/paste-images.attachmentUrl`
               - `primitives/tree.useOptionalRowControls`
@@ -7113,10 +7118,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `pageDetailRoute`
               - `pagesTreeRoute`
           - Cross-plugin:
-            - Uses tokens: 28 vars — full list in [`plugins/apps/plugins/pages/plugins/page-tree/REFERENCE.md`](../plugins/apps/plugins/pages/plugins/page-tree/REFERENCE.md)
-              - `ui/tokens/density` ×9
+            - Uses tokens: 31 vars — full list in [`plugins/apps/plugins/pages/plugins/page-tree/REFERENCE.md`](../plugins/apps/plugins/pages/plugins/page-tree/REFERENCE.md)
+              - `ui/tokens/density` ×10
+              - `ui/tokens/color-palette` ×9
               - `ui/tokens/type-scale` ×9
-              - `ui/tokens/color-palette` ×7
               - `ui/tokens/shape` ×3
             - Imported by:
               - `active-data/page-link`
@@ -40918,13 +40923,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serveValueOn`
           - `sliceRange`
       - Cross-plugin:
-        - Imported by: 353 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
+        - Imported by: 352 plugins — full list in [`plugins/network/plugins/live/REFERENCE.md`](../plugins/network/plugins/live/REFERENCE.md)
           - `apps` ×89
           - `conversations` ×72
           - `debug` ×36
           - `tasks` ×31
           - `infra` ×24
-          - `page` ×16
+          - `page` ×15
           - `active-data` ×13
           - `build` ×10
           - `primitives` ×8
@@ -43759,10 +43764,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Server:
         - Contributes:
           - `ids.kind` "block"
+          - `resource.declare` "page-blocks.trashed"
+          - `resource.declare` "page-blocks.trashed:rows"
           - `resource.declare` "page-blocks.v2"
           - `resource.declare` "page-blocks.v2:rows"
           - `resource.declare` "page.block-contents:rows"
           - `resource.declare` "page.block-locations:rows"
+          - `resource.declare` "pages.trashed:rows"
           - `resource.declare` "pages.tree.v2"
           - `resource.declare` "pages.tree.v2:ancestors"
           - `resource.declare` "pages.tree.v2:groups"
@@ -43847,10 +43855,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defineTrashSource('pages')`
           - `defineTrashSource('page-blocks')`
         - Resources:
+          - `page-blocks.trashed` (keyed)
+          - `page-blocks.trashed:rows` (keyed, point)
           - `page-blocks.v2` (keyed)
           - `page-blocks.v2:rows` (keyed, point)
           - `page.block-contents:rows` (keyed, point)
           - `page.block-locations:rows` (keyed, point)
+          - `pages.trashed:rows` (keyed, point)
           - `pages.tree.v2` (keyed, window)
           - `pages.tree.v2:ancestors` (keyed, window)
           - `pages.tree.v2:groups` (push)
@@ -43945,6 +43956,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TextBearingSchema`
           - `TextData`
           - `TextRun`
+          - `TrashedPageBlocksRow`
+          - `TrashedPageRow`
           - `TurnIntoPageBody`
           - `UpdateBlockBody`
         - Exports (values):
@@ -44061,6 +44074,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TextRunSchema`
           - `tokenOf`
           - `toNodes`
+          - `trashedPageBlocks`
+          - `trashedPages`
           - `turnIntoPage`
           - `TurnIntoPageBodySchema`
           - `unwrapAgentCodeSpans`
@@ -44522,9 +44537,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `page/editor` ×9
           - `network/live/live-state` ×3
           - `primitives/text-editor/caret-trigger` ×3
+          - `page/page-reference` ×2
           - `infra/endpoints.useFetchEndpoint`
-          - `network/live.useLive`
-          - `page/page-reference.usePageNavigation`
           - `primitives/css/center.Center`
           - `primitives/css/link-chip.LinkChip`
           - `primitives/css/placeholder.Placeholder`
@@ -44539,7 +44553,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `pageLinkToken`
           - `scanPageLinkTokens`
       - Cross-plugin:
-        - Uses tokens: `ui/tokens/shape --spacing`
+        - Uses tokens:
+          - `ui/tokens/color-palette --muted-foreground`
+          - `ui/tokens/shape --spacing`
         - Imported by:
           - `apps/website/demos/workspace/story`
           - `page/editor`
@@ -44876,10 +44892,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Web:
         - Contributes: `Editor.Block` "page-link" → `PageLinkBlock`
         - Uses:
-          - `network/live.LiveRowResult`
-          - `network/live.useLive`
           - `network/live/live-state.matchResource`
-          - `network/live/live-state.ResourceError`
           - `network/live/live-state.ResourceErrorInline`
           - `page/editor.BlockRendererProps`
           - `page/editor.Editor`
@@ -44887,6 +44900,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `page/editor.useBlockActivate`
           - `page/editor.usePageOptions`
           - `page/page-reference.PageReferenceRow`
+          - `page/page-reference.PageReferent`
+          - `page/page-reference.usePageReferent`
           - `primitives/css/placeholder.Placeholder`
           - `primitives/css/row.Row`
           - `primitives/css/scroll.Scroll`
@@ -44937,6 +44952,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PageReference.Decoration` ← `page.annotations.instructions.instructions-page`
           - `PageReference.Trailing` ← `page.tags`
         - Uses:
+          - `network/live.useLive`
           - `page/editor.PageIcon`
           - `primitives/css/center.Center`
           - `primitives/css/inline.Inline`
@@ -44958,6 +44974,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PageReferenceDecoration`
           - `PageReferenceDecorationContribution`
           - `PageReferenceRowProps`
+          - `PageReferent`
         - Exports (values):
           - `PageNavigationProvider`
           - `PageReference`
@@ -44967,6 +44984,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `usePageNavigation`
           - `usePageReferenceActions`
           - `usePageReferenceTint`
+          - `usePageReferent`
       - Cross-plugin:
         - Uses tokens:
           - `ui/tokens/color-palette --muted-foreground`
@@ -45350,6 +45368,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-weight-medium`
         - Imported by:
           - `apps/pages/history`
+          - `apps/pages/page-tree`
           - `page/table`
     - **`sub-page`** — Sub-page block type: renders a child page inline in its parent's content flow as a clickable Notion-style page row. A void, text-less block — selectable and arrow-navigable, but Enter/Backspace can never originate in it. A page of a special kind (agent-authored, instructions) expanded inline is drawn as a card: its reference's tint washes the row and all of its content.
       - Web:
@@ -48355,8 +48374,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `ClusterProps`
             - Exports (values): `Cluster`
           - Cross-plugin:
-            - Imported by: 66 plugins — full list in [`plugins/primitives/plugins/css/plugins/cluster/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/cluster/REFERENCE.md)
-              - `apps` ×25
+            - Imported by: 67 plugins — full list in [`plugins/primitives/plugins/css/plugins/cluster/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/cluster/REFERENCE.md)
+              - `apps` ×26
               - `debug` ×12
               - `conversations` ×7
               - `plugin-meta` ×6
@@ -48449,8 +48468,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density --chrome-pad-x`
               - `ui/tokens/density --pad-row-x`
               - `ui/tokens/density --space-sm`
-            - Imported by: 24 plugins — full list in [`plugins/primitives/plugins/css/plugins/column/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/column/REFERENCE.md)
-              - `apps` ×9
+            - Imported by: 25 plugins — full list in [`plugins/primitives/plugins/css/plugins/column/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/column/REFERENCE.md)
+              - `apps` ×10
               - `primitives` ×5
               - `debug` ×4
               - `conversations` ×2
@@ -48765,8 +48784,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `LineProps`
             - Exports (values): `Line`
           - Cross-plugin:
-            - Imported by: 126 plugins — full list in [`plugins/primitives/plugins/css/plugins/line/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/line/REFERENCE.md)
-              - `apps` ×37
+            - Imported by: 127 plugins — full list in [`plugins/primitives/plugins/css/plugins/line/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/line/REFERENCE.md)
+              - `apps` ×38
               - `primitives` ×20
               - `conversations` ×18
               - `debug` ×8
@@ -54624,8 +54643,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from: `sortable-list/no-raw-dnd-kit` — `web` (sanctioned)
     - **`relative-time`** — Formats a Date as a human-readable relative string (just now, Nm ago, Nh ago, Nd ago — or the short now / Nm / Nh / Nd), and a running duration as a clock (m:ss). Exposes formatRelativeTime(), <RelativeTime date={…} />, formatElapsed(), useNow() and <ElapsedTime since={…} />.
       - Cross-plugin:
-        - Imported by: 71 plugins — full list in [`plugins/primitives/plugins/relative-time/REFERENCE.md`](../plugins/primitives/plugins/relative-time/REFERENCE.md)
-          - `apps` ×24
+        - Imported by: 72 plugins — full list in [`plugins/primitives/plugins/relative-time/REFERENCE.md`](../plugins/primitives/plugins/relative-time/REFERENCE.md)
+          - `apps` ×25
           - `debug` ×15
           - `conversations` ×10
           - `tasks` ×5
@@ -64082,12 +64101,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/density --space-sm`
               - `ui/tokens/shape --spacing`
-            - Tokens used by: 549 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
+            - Tokens used by: 550 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
               - `apps` ×123
               - `conversations` ×96
               - `primitives` ×75
               - `debug` ×42
-              - `page` ×33
+              - `page` ×34
               - `plugin-meta` ×28
               - `ui` ×26
               - `tasks` ×17

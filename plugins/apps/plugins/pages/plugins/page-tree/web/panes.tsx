@@ -15,18 +15,13 @@ import {
   Pane,
   PaneChrome,
   useOpenPane,
-  resolveRow,
   type ResolveResult,
   PaneMessage,
 } from "@plugins/primitives/plugins/pane/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { yieldClass } from "@plugins/primitives/plugins/css/plugins/yield/web";
-import {
-  pageBlocks,
-  pagesTree,
-  pageData,
-  textOf,
-} from "@plugins/page/plugins/editor/core";
+import { pageBlocks, textOf } from "@plugins/page/plugins/editor/core";
 import {
   blockDetailRoute,
   pageDetailRoute,
@@ -47,8 +42,10 @@ import {
 } from "@plugins/page/plugins/editor/web";
 import {
   PageNavigationProvider,
+  usePageReferent,
   type PageNavigation,
 } from "@plugins/page/plugins/page-reference/web";
+import { TrashedPageView } from "./components/trashed-page";
 import { PageHeader } from "./components/page-header";
 import { PageBreadcrumb } from "./components/page-breadcrumb";
 import { BackToTreeButton } from "./components/back-to-tree-button";
@@ -84,8 +81,21 @@ const RULE_STYLE = { paddingTop: "calc(var(--space-xl) + var(--space-xs))" };
 // bodies reference them. The component identifiers below are hoisted function
 // declarations, so the forward reference is safe at runtime.
 
+// A page in the trash resolves too: it opens read-only, saying so, with its
+// Restore (`TrashedPageView`) — "not found" only once it is purged.
 function useResolvePage({ pageId }: { pageId: string }): ResolveResult {
-  return resolveRow(useLive(pagesTree, { id: pageId }));
+  const referent = usePageReferent(pageId);
+  switch (referent.state) {
+    case "pending":
+      return { status: "pending" };
+    case "failed":
+      return { status: "error", error: referent.error };
+    case "missing":
+      return { status: "missing" };
+    case "live":
+    case "trashed":
+      return { status: "found" };
+  }
 }
 
 export const pageDetailPane = Pane.define({
@@ -172,11 +182,10 @@ function PagesTreeBody(): ReactElement {
  * or failed (the tab then shows the chrome's pageId fallback).
  */
 function usePageTitle({ pageId }: { pageId: string }): string | undefined {
-  const result = useLive(pagesTree, { id: pageId });
-  if (result.status === "loading" || result.status === "error") {
-    return undefined;
-  }
-  return result.found ? pageData(result.row).title : undefined;
+  const referent = usePageReferent(pageId);
+  return referent.state === "live" || referent.state === "trashed"
+    ? referent.data.title
+    : undefined;
 }
 
 /** The block pane's tab title: "<page> › <block>", as its Artifacts row reads. */
@@ -245,6 +254,24 @@ function PageSurface({
 /** The page pane's header title: the trail of the page its route names. */
 function PageDetailTitle(): ReactElement {
   const { pageId } = pageDetailPane.useParams();
+  const referent = usePageReferent(pageId);
+  // A trashed page is in no tree, so it has no trail: its own title, struck
+  // through as every reference to it is.
+  if (referent.state === "trashed") {
+    return (
+      <Stack
+        direction="row"
+        align="center"
+        gap="2xs"
+        className={yieldClass("x")}
+      >
+        <BackToTreeButton />
+        <Text className="text-muted-foreground truncate line-through">
+          {referent.data.title || "Untitled"}
+        </Text>
+      </Stack>
+    );
+  }
   return <PageTitleTrail pageId={pageId} />;
 }
 
@@ -320,7 +347,49 @@ function PageTitleTrail({
 
 function PageDetailBody(): ReactElement {
   const { pageId } = pageDetailPane.useParams();
-  return <PageBody pane={pageDetailPane} pageId={pageId} />;
+  const referent = usePageReferent(pageId);
+  switch (referent.state) {
+    case "trashed":
+      return (
+        <PageSurface pane={pageDetailPane}>
+          <TrashedPageView
+            pageId={pageId}
+            page={referent.data}
+            trashEntryId={referent.trashEntryId}
+            deletedAt={referent.deletedAt}
+            measureClassName={READING_MEASURE}
+          />
+        </PageSurface>
+      );
+    // The resolve guard keeps the body mounted through a transient re-lookup
+    // (a restore flips trashed → live through one), so these can arrive here.
+    case "pending":
+      return (
+        <PaneChrome pane={pageDetailPane}>
+          <PaneMessage>
+            <Loading variant="text" />
+          </PaneMessage>
+        </PaneChrome>
+      );
+    case "missing":
+      return (
+        <PaneChrome pane={pageDetailPane}>
+          <PaneMessage>
+            <Placeholder>This page no longer exists</Placeholder>
+          </PaneMessage>
+        </PaneChrome>
+      );
+    case "failed":
+      return (
+        <PaneChrome pane={pageDetailPane}>
+          <PaneMessage>
+            <Placeholder tone="error">{referent.error.message}</Placeholder>
+          </PaneMessage>
+        </PaneChrome>
+      );
+    case "live":
+      return <PageBody pane={pageDetailPane} pageId={pageId} />;
+  }
 }
 
 function PageBody({

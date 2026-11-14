@@ -1,4 +1,4 @@
-import { and, asc, eq, isNull } from "drizzle-orm";
+import { and, asc, eq, isNotNull, isNull } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { db, type DbExecutor } from "@plugins/database/server";
 import {
@@ -12,6 +12,8 @@ import {
   blockLocations,
   pagesTree,
   pageBlocks,
+  trashedPageBlocks,
+  trashedPages,
   type PageBlocksRow,
 } from "../../core";
 import type { PageRow } from "../../core";
@@ -162,4 +164,23 @@ export const blockLocationsServed = serveCollection(blockLocations, {
 export const blockContentsServed = serveCollection(blockContents, {
   from: _blocks,
   where: isNull(_blocks.deletedAt),
+});
+
+// A trashed page row by id (`trashedPages`, lookup-only `:rows`): the page
+// rows the live predicate leaves out — `type = 'page' AND deleted_at IS NOT
+// NULL` as the base membership, so a trash is an entrant and a restore or a
+// purge an exit. Every field binds to its column by name (`deleted_at` and
+// `trash_entry_id` are set together on every trashed row — CHECK
+// `page_blocks_trash_flags_agree` — so neither reads NULL here).
+export const trashedPagesServed = serveCollection(trashedPages, {
+  from: _blocks,
+  where: and(eq(_blocks.type, PAGE_BLOCK_TYPE), isNotNull(_blocks.deletedAt)),
+});
+
+// A trashed page's content forest (`trashedPageBlocks`, one tuple per
+// `(pageId, trashEntryId)`): the trashed rows of that page flagged under that
+// entry. Read only by the read-only view of a trashed page.
+export const trashedPageBlocksServed = serveCollection(trashedPageBlocks, {
+  from: _blocks,
+  where: isNotNull(_blocks.deletedAt),
 });

@@ -2388,10 +2388,13 @@ status, which live in another table) in both directions; the CALLER supplies val
 - Server:
   - Contributes:
     - `ids.kind` "block"
+    - `resource.declare` "page-blocks.trashed"
+    - `resource.declare` "page-blocks.trashed:rows"
     - `resource.declare` "page-blocks.v2"
     - `resource.declare` "page-blocks.v2:rows"
     - `resource.declare` "page.block-contents:rows"
     - `resource.declare` "page.block-locations:rows"
+    - `resource.declare` "pages.trashed:rows"
     - `resource.declare` "pages.tree.v2"
     - `resource.declare` "pages.tree.v2:ancestors"
     - `resource.declare` "pages.tree.v2:groups"
@@ -2476,10 +2479,13 @@ status, which live in another table) in both directions; the CALLER supplies val
     - `defineTrashSource('pages')`
     - `defineTrashSource('page-blocks')`
   - Resources:
+    - `page-blocks.trashed` (keyed)
+    - `page-blocks.trashed:rows` (keyed, point)
     - `page-blocks.v2` (keyed)
     - `page-blocks.v2:rows` (keyed, point)
     - `page.block-contents:rows` (keyed, point)
     - `page.block-locations:rows` (keyed, point)
+    - `pages.trashed:rows` (keyed, point)
     - `pages.tree.v2` (keyed, window)
     - `pages.tree.v2:ancestors` (keyed, window)
     - `pages.tree.v2:groups` (push)
@@ -2574,6 +2580,8 @@ status, which live in another table) in both directions; the CALLER supplies val
     - `TextBearingSchema`
     - `TextData`
     - `TextRun`
+    - `TrashedPageBlocksRow`
+    - `TrashedPageRow`
     - `TurnIntoPageBody`
     - `UpdateBlockBody`
   - Exports (values):
@@ -2690,6 +2698,8 @@ status, which live in another table) in both directions; the CALLER supplies val
     - `TextRunSchema`
     - `tokenOf`
     - `toNodes`
+    - `trashedPageBlocks`
+    - `trashedPages`
     - `turnIntoPage`
     - `TurnIntoPageBodySchema`
     - `unwrapAgentCodeSpans`

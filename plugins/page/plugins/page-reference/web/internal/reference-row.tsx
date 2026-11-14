@@ -41,6 +41,12 @@ export interface PageReferenceRowProps {
    * action cluster dissolves into is the same wash either way).
    */
   inCard?: boolean;
+  /**
+   * The page is in the trash: its title is struck through and muted, so the
+   * reference still names the page (and still opens it — read-only, with its
+   * restore) while saying it is deleted.
+   */
+  trashed?: boolean;
   focusRef?: RefObject<RowFocus | null>;
   onKeyDown?: KeyboardEventHandler;
   onFocus?: FocusEventHandler;
@@ -60,6 +66,7 @@ export function PageReferenceRow({
   fallbackIcon,
   selected,
   inCard,
+  trashed,
   focusRef,
   onKeyDown,
   onFocus,
@@ -129,7 +136,13 @@ export function PageReferenceRow({
         </Center>
       }
     >
-      <Text className="font-medium underline-offset-2 hover:underline">
+      <Text
+        className={cn(
+          "font-medium underline-offset-2",
+          trashed ? "text-muted-foreground line-through" : "hover:underline",
+        )}
+        title={trashed ? "This page is in the trash" : undefined}
+      >
         {page.title || "Untitled"}
       </Text>
       {/* What other plugins say ABOUT the page (its tags, …), right after

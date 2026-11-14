@@ -5,75 +5,28 @@ import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import {
   matchResource,
   ResourceErrorInline,
-  type ResourceError,
 } from "@plugins/network/plugins/live/plugins/live-state/web";
-import { type LiveRowResult, useLive } from "@plugins/network/plugins/live/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
 import { localUndoProps } from "@plugins/primitives/plugins/undo-redo/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import {
-  pagesTree,
-  pageData,
-  type PageRow,
-} from "@plugins/page/plugins/editor/core";
-import {
   usePageOptions,
   useBlockActivate,
   PageOptionsList,
   type BlockRendererProps,
 } from "@plugins/page/plugins/editor/web";
-import { PageReferenceRow } from "@plugins/page/plugins/page-reference/web";
+import {
+  PageReferenceRow,
+  usePageReferent,
+  type PageReferent,
+} from "@plugins/page/plugins/page-reference/web";
 import { pageLinkBlock } from "../../core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
 const linkIcon = symbol("link");
-
-/**
- * The five states a page-link row can be in.
- *
- * A union rather than "the page, or undefined", because two of the four —
- * *loading* and *no such page* — would otherwise both spell themselves
- * `undefined`, and they mean opposite things to the reader: one is a promise
- * that an answer is coming, the other is the answer. The resolved arm carries
- * the page it resolved to, so the render cannot look it up a second time (nor
- * assert it away with a `!`).
- */
-type PageLinkState =
-  | { state: "unset"; data?: undefined }
-  | { state: "pending"; data?: undefined }
-  | {
-      state: "failed";
-      data?: undefined;
-      error: ResourceError;
-      refetch: () => Promise<void>;
-    }
-  | { state: "missing"; data?: undefined }
-  | { state: "resolved"; data: ReturnType<typeof pageData> };
-
-function resolvedOrMissing(row: PageRow | undefined): PageLinkState {
-  return row === undefined
-    ? { state: "missing" }
-    : { state: "resolved", data: pageData(row) };
-}
-
-/** A linked page's row read, as the row's state. */
-function linkStateOf(result: LiveRowResult<PageRow>): PageLinkState {
-  switch (result.status) {
-    case "loading":
-      return { state: "pending" };
-    // A failed read that once had the page keeps resolving from it; without
-    // one, the row says the read failed.
-    case "error":
-      return result.stale === undefined
-        ? { state: "failed", error: result.error, refetch: result.refetch }
-        : resolvedOrMissing(result.stale);
-    case "ready":
-      return resolvedOrMissing(result.found ? result.row : undefined);
-  }
-}
 
 /**
  * A small page-picker popover: filterable list of pages fed by the live
@@ -149,16 +102,17 @@ function PagePicker({
 
 export function PageLinkBlock({ block, editor }: BlockRendererProps) {
   const { pageId } = pageLinkBlock.parse(block.data);
-  const result = useLive(pagesTree, { id: pageId === "" ? null : pageId });
+  const referent = usePageReferent(pageId === "" ? null : pageId);
   const [pickerOpen, setPickerOpen] = useState(false);
 
-  // Which of the five arms below will render, as a UNION that CARRIES the
-  // resolved page rather than a flag the resolved arm then has to re-derive. A
-  // hook must run before any early return, so the state has to be computed up
-  // here; making it a union is what keeps "not known yet" its own answer instead
-  // of collapsing into "no such page" on the way.
-  const link: PageLinkState =
-    pageId === "" ? { state: "unset" } : linkStateOf(result);
+  // Which arm below will render, as a UNION that CARRIES the resolved page
+  // rather than a flag the resolved arm then has to re-derive. A hook must run
+  // before any early return, so the state has to be computed up here; making
+  // it a union is what keeps "not known yet" its own answer instead of
+  // collapsing into "no such page" on the way — and "in the trash" its own
+  // answer instead of "not found".
+  const link: { state: "unset" } | PageReferent =
+    pageId === "" ? { state: "unset" } : referent;
 
   // Both arms that render a picker make "open it" the block's primary action, so
   // inserting a page-link and pressing Enter picks a page — the single step
@@ -219,7 +173,8 @@ export function PageLinkBlock({ block, editor }: BlockRendererProps) {
     );
   }
 
-  // Target page was deleted: offer a muted not-found row that re-opens the picker.
+  // Target page was purged (or never was one): offer a muted not-found row
+  // that re-opens the picker.
   if (link.state === "missing") {
     return (
       <div className="px-md py-xs">
@@ -234,6 +189,21 @@ export function PageLinkBlock({ block, editor }: BlockRendererProps) {
               <Placeholder>(page not found)</Placeholder>
             </Row>
           }
+        />
+      </div>
+    );
+  }
+
+  // Target page is in the trash: still THE page-reference row, its title
+  // struck through — it opens the page read-only, where it can be restored.
+  if (link.state === "trashed") {
+    return (
+      <div className="px-md py-xs">
+        <PageReferenceRow
+          pageId={pageId}
+          page={link.data}
+          fallbackIcon={linkIcon}
+          trashed
         />
       </div>
     );

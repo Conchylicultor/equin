@@ -110,8 +110,8 @@ is a region owner (slice 2's document panes).
     - `ui/tokens/density --chrome-pad-x`
     - `ui/tokens/density --pad-row-x`
     - `ui/tokens/density --space-sm`
-  - Imported by: 24 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×9
+  - Imported by: 25 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×10
     - `primitives` ×5
     - `debug` ×4
     - `conversations` ×2

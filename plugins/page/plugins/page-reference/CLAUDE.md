@@ -108,6 +108,7 @@ carrying the same actions — a separate feature.
     - `PageReference.Decoration` ← `page.annotations.instructions.instructions-page`
     - `PageReference.Trailing` ← `page.tags`
   - Uses:
+    - `network/live.useLive`
     - `page/editor.PageIcon`
     - `primitives/css/center.Center`
     - `primitives/css/inline.Inline`
@@ -129,6 +130,7 @@ carrying the same actions — a separate feature.
     - `PageReferenceDecoration`
     - `PageReferenceDecorationContribution`
     - `PageReferenceRowProps`
+    - `PageReferent`
   - Exports (values):
     - `PageNavigationProvider`
     - `PageReference`
@@ -138,6 +140,7 @@ carrying the same actions — a separate feature.
     - `usePageNavigation`
     - `usePageReferenceActions`
     - `usePageReferenceTint`
+    - `usePageReferent`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --muted-foreground`
