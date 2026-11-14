@@ -32,7 +32,7 @@ import { init as esInit, parse as esParse } from "es-module-lexer/minimal";
 import * as esbuild from "esbuild";
 import { sha256Hex } from "../hash";
 import { publishDir, WEB_ARTIFACTS_DIR, type CachePrunePolicy } from "./store";
-import { placePackageAssets } from "./package-assets";
+import { packageAssetPath, rewritePackageAssetUrls } from "./package-assets";
 import {
   computeVendorCacheGate,
   loadVendorResolutionCache,
@@ -56,6 +56,56 @@ export interface VendorSetMeta {
   /** file → its static import specifiers (relative chunks; used for preloads). */
   imports: Record<string, string[]>;
   setHash: string;
+  /**
+   * The package-asset store entries its chunks fetch by URL (`package-assets.ts`),
+   * sorted. Absent from a set built before they had their own URLs — its
+   * chunks carry hard-linked copies beside them instead.
+   */
+  packageAssets?: string[];
+}
+
+/** The dist links a vendor set's package assets need: `artifacts/<entry>`. */
+export function vendorAssetLinks(
+  meta: Pick<VendorSetMeta, "packageAssets">,
+  assetsRoot?: AppPath,
+): Array<{ linkName: string; storePath: AppPath }> {
+  return (meta.packageAssets ?? []).map((name) => ({
+    linkName: name,
+    storePath: packageAssetPath(name, assetsRoot),
+  }));
+}
+
+/**
+ * Every package-asset entry a cached vendor set names — prune roots, so a
+ * set reused by a later build never outlives the files it fetches. A set
+ * still being published has no meta yet; its builder's lease pins its assets.
+ */
+export function vendorSetPackageAssetPaths(
+  opts: { vendorsRoot?: AppPath; assetsRoot?: AppPath } = {},
+): Set<string> {
+  const vendorsRoot = opts.vendorsRoot ?? VENDORS_ROOT;
+  const out = new Set<string>();
+  let names: string[];
+  try {
+    names = readdirSync(vendorsRoot);
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+    return out;
+  }
+  for (const name of names) {
+    if (!name.startsWith("set.")) continue;
+    let text: string;
+    try {
+      text = readFileSync(joinAppPath(vendorsRoot, name, "meta.json"), "utf8");
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+      continue; // removed by a concurrent prune: names nothing any more
+    }
+    const meta = JSON.parse(text) as Pick<VendorSetMeta, "packageAssets">;
+    for (const l of vendorAssetLinks(meta, opts.assetsRoot))
+      out.add(l.storePath);
+  }
+  return out;
 }
 
 const IDENT_RE = /^[A-Za-z_$][A-Za-z0-9_$]*$/;
@@ -543,9 +593,9 @@ export async function ensureVendorSet(opts: {
       `vendor build failed: ${result.errors.map((e) => e.text).join("\n")}`,
     );
   }
-  // Files the bundled packages fetch by URL (PGlite's wasm and data), placed
-  // beside the outputs that fetch them, already compressed.
-  const precompressed = await placePackageAssets({
+  // Files the bundled packages fetch by URL (PGlite's wasm and data), each
+  // at its own content-addressed URL, already compressed in its store entry.
+  const packageAssets = await rewritePackageAssetUrls({
     metafile: result.metafile,
     cwd: asAppPath(process.cwd()), // the process dir esbuild resolves against
     pin: opts.pin,
@@ -581,13 +631,13 @@ export async function ensureVendorSet(opts: {
     ),
     imports,
     setHash,
+    packageAssets,
   };
   await publishDir({
     tmpDir,
     dest,
     meta,
     isComplete: () => existsSync(joinAppPath(dest, "meta.json")),
-    precompressed,
   });
   return { meta, stats };
 }

@@ -327,11 +327,16 @@ Key invariants:
   `framework/image-import`'s `ImportedImage` (`{ src, width, height }`, the
   size read at build time so the page reserves the box). An image it cannot
   size (`.svg`, `.avif`, `.ico`) fails the build.
-- **Vendor assets follow their module.** A bundled npm module fetching a file by
-  `new URL("./x.wasm", import.meta.url)` gets it beside every output holding it
-  (`internal/package-assets.ts`), hard-linked from a per-content store entry
-  published (precompressed) once — rebuilding the vendor set never recompresses
-  PGlite's 16 MB.
+- **A vendor asset has its own content-addressed URL.** A bundled npm module
+  fetching a file by `new URL("./x.wasm", import.meta.url)` has that literal
+  rewritten in its output (sourcemap shifted with it) to
+  `/artifacts/<sha16>.<name>/<name>` — its package-asset store entry, published
+  (precompressed) once (`internal/package-assets.ts`). The set's meta names its
+  entries (`packageAssets`); compose links each by name (`vendorAssetLinks`).
+  So the page and a browser host's worker fetch one URL that changes only with
+  the file's bytes: a new vendor set never recompresses PGlite's 16 MB, and a
+  returning visitor never downloads it again. A set built before this keeps its
+  hard-linked copies beside its chunks.
 - **An artifact's address covers exactly what its bytes inline.** The store
   reuses an artifact whenever its address matches, so any source file whose
   content reaches the bundle but not the hash fossilises the artifact: it is
@@ -410,8 +415,9 @@ Key invariants:
   prune runs while builds are between reusing/publishing entries and composing
   them — minutes in which no dist links them yet. So each pipeline run holds a **build lease**
   (`core/internal/lease.ts`): it PINS every entry (page and worker artifacts,
-  registry, browser host, worker links and worker tree, vendor set, package
-  assets, CSS cache dir) — a line of its own lease's pin file
+  registry, browser host, worker links and worker tree, vendor set, the
+  package assets the set names — a reused set's too, each asserted present —,
+  CSS cache dir) — a line of its own lease's pin file
   (`~/.equin/cache/web-artifacts/leases/<pid>-<rand>/pins`, one append per
   batch; a symlink per pin cost ~0.6 s of every build to make and remove, and
   a prune still reads a lease left in that form) — BEFORE it checks the
@@ -546,7 +552,11 @@ Key invariants:
   target of every dist under the worktrees dir (`web`, `web.live.*`,
   `web.staging.*`, release scratch dists — `core/internal/served-dists.ts`,
   read through each dist's `artifacts` link, so a namespace's address dir is
-  read once however many releases name it) as a root: never deleted by age or by the cap. Only unreferenced entries age out.
+  read once however many releases name it) as a root: never deleted by age or by the cap.
+  So is every package asset a cached vendor set's meta names
+  (`vendorSetPackageAssetPaths`, read in the unlocked phase: a set published
+  since has its assets pinned by its builder's lease): a set reused
+  later must not outlive the files its chunks fetch. Only unreferenced entries age out.
   A run removes at most `MAX_REMOVALS_PER_PRUNE` entries per cache (oldest
   first; the rest wait for the next run), because removal holds the exclusive
   store lock every build's pins wait on — a one-time un-rooting (main's first

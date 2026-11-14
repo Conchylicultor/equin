@@ -70,7 +70,7 @@ import {
   STORE_PRUNE_POLICY,
   type CachePrunePolicy,
 } from "./store";
-import { VENDOR_PRUNE_POLICY } from "./vendors";
+import { VENDOR_PRUNE_POLICY, vendorSetPackageAssetPaths } from "./vendors";
 import { CSS_PRUNE_POLICY } from "./global-css";
 import { PACKAGE_ASSETS_PRUNE_POLICY } from "./package-assets";
 import {
@@ -285,14 +285,16 @@ export interface PruneReport {
 
 /**
  * The ONE prune of every write-once cache. The roots are every entry a dist on
- * disk links (`servedDistTargets`) plus every entry a live build lease pins;
+ * disk links (`servedDistTargets`), every entry a live build lease pins and
+ * every package asset a cached vendor set names (`vendorSetPackageAssetPaths`);
  * each cache is then pruned by its own policy (`pruneCacheDir`).
  *
  * Two phases, so the exclusive store lock — which every build's pins wait on —
  * is held for O(dists + victims), never O(every link of every dist):
  *
- * 1. Unlocked: collect every dist's link targets (`scanServedDists`, each
- *    dist stamped before it is read; its memo when the stamp matches, so
+ * 1. Unlocked: read the package assets every cached vendor set names
+ *    (`vendorSetPackageAssetPaths`), collect every dist's link targets
+ *    (`scanServedDists`, each dist stamped before it is read; its memo when the stamp matches, so
  *    O(dists) plus the links of the dists new since the last prune) and survey
  *    every cache dir (`surveyCacheDir`).
  * 2. Locked: read the live leases, re-read only the dists that are new or
@@ -309,6 +311,8 @@ export async function pruneWebArtifactCaches(
     layout?: LeaseLayout;
     dists?: ServedDistLayout;
     policies?: readonly CachePrunePolicy[];
+    /** Where the vendor sets naming package assets live (the shared caches by default). */
+    vendorSets?: { vendorsRoot: AppPath; assetsRoot: AppPath };
   } = {},
 ): Promise<PruneReport> {
   const layout = opts.layout ?? DEFAULT_LAYOUT;
@@ -324,6 +328,10 @@ export async function pruneWebArtifactCaches(
     policy,
     survey: surveyCacheDir(policy.root, dists.targets),
   }));
+  // A package asset outlives no set naming it: a reused set's chunks fetch it.
+  // Read unlocked (the metas are MBs): a set published since has its assets
+  // pinned by its builder's lease; one removed since only leaves extra roots.
+  const vendorAssets = vendorSetPackageAssetPaths(opts.vendorSets);
   const t1 = performance.now();
   let t2 = t1;
   const locked = await withStoreLock(layout, "exclusive", () => {
@@ -332,6 +340,7 @@ export async function pruneWebArtifactCaches(
     for (const t of liveLeaseTargets(layout.leasesDir)) referenced.add(t);
     const { reread } = refreshServedDists(dists, opts.dists);
     for (const t of dists.targets) referenced.add(t);
+    for (const t of vendorAssets) referenced.add(t);
     let removed = 0;
     for (const { policy, survey } of surveys) {
       removed += pruneCacheDir({ ...policy, referenced, survey });

@@ -60,9 +60,14 @@ function fixture() {
     maxUnreferenced: 0,
     trimTo: 0,
   };
+  // Vendor sets naming package assets of `store` (none unless a test writes one).
+  const vendorSets = {
+    vendorsRoot: joinAppPath(base, "vendors"),
+    assetsRoot: store,
+  };
   const prune = () =>
-    pruneWebArtifactCaches({ layout, dists, policies: [policy] });
-  return { base, store, layout, entry, prune };
+    pruneWebArtifactCaches({ layout, dists, policies: [policy], vendorSets });
+  return { base, store, layout, dists, vendorSets, entry, prune };
 }
 
 describe("build lease", () => {
@@ -237,6 +242,40 @@ describe("build lease under a contended store lock", () => {
     await pinning;
     await releasing;
     expect(readdirSync(f.layout.leasesDir)).toHaveLength(0);
+  });
+});
+
+describe("package assets", () => {
+  test("one a vendor set names or a dist links survives its age; an unreferenced one goes", async () => {
+    const f = fixture();
+    const named = f.entry("1111111111111111.pglite.wasm", 30 * DAY);
+    const linked = f.entry("2222222222222222.pglite.data", 30 * DAY);
+    const orphan = f.entry("3333333333333333.initdb.wasm", 30 * DAY);
+    const set = joinAppPath(f.vendorSets.vendorsRoot, "set.abcdef0123456789");
+    mkdirSync(set, { recursive: true });
+    writeFileSync(
+      joinAppPath(set, "meta.json"),
+      JSON.stringify({
+        entries: {},
+        imports: {},
+        setHash: "abcdef0123456789",
+        packageAssets: ["1111111111111111.pglite.wasm"],
+      }),
+    );
+    // A set built before package assets had their own URL names none.
+    const old = joinAppPath(f.vendorSets.vendorsRoot, "set.0000000000000000");
+    mkdirSync(old);
+    writeFileSync(
+      joinAppPath(old, "meta.json"),
+      JSON.stringify({ entries: {}, imports: {}, setHash: "0" }),
+    );
+    const artifacts = joinAppPath(f.dists.worktrees, "ns", "web", "artifacts");
+    mkdirSync(artifacts, { recursive: true });
+    symlinkSync(linked, joinAppPath(artifacts, "2222222222222222.pglite.data"));
+    await f.prune();
+    expect(existsSync(named)).toBe(true);
+    expect(existsSync(linked)).toBe(true);
+    expect(existsSync(orphan)).toBe(false);
   });
 });
 

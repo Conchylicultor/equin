@@ -22,6 +22,7 @@ import {
   pagePins,
 } from "./compose";
 import { CENTRAL_BUILD_GLOBAL } from "./vite-builder";
+import { vendorAssetLinks } from "./vendors";
 
 const graph = {
   htmlSrc: "<!doctype html><head><script>var a = 1;</script></head>",
@@ -185,6 +186,7 @@ describe("composeDist with an address dir", () => {
       staging: string,
       links: Array<{ linkName: string; storePath: ReturnType<typeof entry> }>,
       centralBuild: string | null = null,
+      materialize = false,
     ) =>
       composeDist({
         stagingDir: joinAppPath(base, staging),
@@ -195,7 +197,9 @@ describe("composeDist with an address dir", () => {
         minify: true,
         cssHref: `/artifacts/${links[0]!.linkName}/index.js`,
         links,
-        addressDir: joinAppPath(base, "web-addresses"),
+        ...(materialize
+          ? { materialize: true }
+          : { addressDir: joinAppPath(base, "web-addresses") }),
         mapEntries: [],
         staticImportsByUrl: {},
         emitted: [],
@@ -209,7 +213,16 @@ describe("composeDist with an address dir", () => {
           pageScripts: {},
         },
       });
-    return { base, entry, compose };
+    // A package-asset entry: one file and its sidecars (`package-assets.ts`).
+    const asset = (name: string) => {
+      const p = joinAppPath(base, "package-assets", name);
+      mkdirSync(p, { recursive: true });
+      const file = name.slice(name.indexOf(".") + 1);
+      for (const f of [file, `${file}.br`, `${file}.gz`, "meta.json"])
+        writeFileSync(joinAppPath(p, f), f);
+      return p;
+    };
+    return { base, entry, asset, compose };
   }
 
   test("links only new names, and every release sees every name", () => {
@@ -289,5 +302,38 @@ describe("composeDist with an address dir", () => {
     expect(() =>
       f.compose("web.staging.1", [{ linkName: "a.web.1", storePath: a }]),
     ).toThrow(/write-once/);
+  });
+
+  test("a vendor set's package asset is linked once by name, and copied with its sidecars when materialized", () => {
+    const f = fixture();
+    const a = f.entry("a.web.1");
+    const name = "6b290789f89aabf0.pglite.wasm";
+    f.asset(name);
+    const links = [
+      { linkName: "a.web.1", storePath: a },
+      ...vendorAssetLinks(
+        { packageAssets: [name] },
+        joinAppPath(f.base, "package-assets"),
+      ),
+    ];
+    f.compose("web.staging.1", links);
+    // A re-compose of the same graph (the next build) finds the name in place.
+    f.compose("web.staging.2", links);
+    const addresses = joinAppPath(f.base, "web-addresses");
+    expect(readlinkSync(joinAppPath(addresses, name))).toBe(
+      joinAppPath(f.base, "package-assets", name),
+    );
+    expect(
+      readFileSync(
+        joinAppPath(f.base, "web.staging.2", "artifacts", name, "pglite.wasm"),
+        "utf8",
+      ),
+    ).toBe("pglite.wasm");
+
+    f.compose("release", links, null, true);
+    const copied = joinAppPath(f.base, "release", "artifacts", name);
+    expect(lstatSync(copied).isSymbolicLink()).toBe(false);
+    for (const file of ["pglite.wasm", "pglite.wasm.br", "pglite.wasm.gz"])
+      expect(lstatSync(joinAppPath(copied, file)).isFile()).toBe(true);
   });
 });

@@ -48,6 +48,7 @@ import {
 import { buildRegistryArtifact } from "./vite-builder";
 import {
   ensureVendorSet,
+  vendorAssetLinks,
   vendorSetDirName,
   vendorSetPath,
   type VendorSetMeta,
@@ -431,43 +432,63 @@ async function runPipeline(
     ...hosts.flatMap((h) => [h.entry, ...h.added]),
   ];
 
+  // The set this build composes: the given one, or this fleet's own.
+  async function resolveVendors(): Promise<VendorSetMeta> {
+    if (opts.vendors !== undefined) {
+      const dest = vendorSetPath(opts.vendors.setHash);
+      await lease.pin([dest]);
+      if (!existsSync(joinAppPath(dest, "meta.json"))) {
+        throw new Error(
+          `vendors: the given set ${opts.vendors.setHash.slice(0, 12)} is not in the store (${dest})`,
+        );
+      }
+      log(
+        `vendors: reusing set ${opts.vendors.setHash.slice(0, 12)} ` +
+          `(${Object.keys(opts.vendors.entries).length} specifiers)`,
+      );
+      return opts.vendors;
+    }
+    const requests = await collectVendorRequests({
+      root,
+      pluginsRoot,
+      targets: allTargets,
+      metaOf: (dirName) => buildOut.metas.get(dirName)!,
+    });
+    const { meta, stats } = await ensureVendorSet({
+      requests,
+      minify: opts.minify,
+      builderVersion: BUILDER_VERSION,
+      builderSource: plan.identity.sourceDigest,
+      root,
+      pin: (paths) => lease.pin(paths),
+    });
+    log(
+      `vendors: ${requests.length} specifiers, ${stats.cached} cached / ${stats.resolved} resolved ` +
+        `in ${stats.elapsedMs}ms (set ${meta.setHash.slice(0, 12)})`,
+    );
+    return meta;
+  }
+
   const vendors = await stage(
     "artifacts:vendors",
     "vendor pre-bundles",
     async () => {
-      if (opts.vendors !== undefined) {
-        const dest = vendorSetPath(opts.vendors.setHash);
-        await lease.pin([dest]);
-        if (!existsSync(joinAppPath(dest, "meta.json"))) {
-          throw new Error(
-            `vendors: the given set ${opts.vendors.setHash.slice(0, 12)} is not in the store (${dest})`,
-          );
-        }
-        log(
-          `vendors: reusing set ${opts.vendors.setHash.slice(0, 12)} ` +
-            `(${Object.keys(opts.vendors.entries).length} specifiers)`,
-        );
-        return opts.vendors;
-      }
-      const requests = await collectVendorRequests({
-        root,
-        pluginsRoot,
-        targets: allTargets,
-        metaOf: (dirName) => buildOut.metas.get(dirName)!,
-      });
-      const { meta, stats } = await ensureVendorSet({
-        requests,
-        minify: opts.minify,
-        builderVersion: BUILDER_VERSION,
-        builderSource: plan.identity.sourceDigest,
-        root,
-        pin: (paths) => lease.pin(paths),
-      });
-      log(
-        `vendors: ${requests.length} specifiers, ${stats.cached} cached / ${stats.resolved} resolved ` +
-          `in ${stats.elapsedMs}ms (set ${meta.setHash.slice(0, 12)})`,
+      const set = await resolveVendors();
+      // The files its chunks fetch by URL, each its own store entry: pinned
+      // like the set (a reused set's may be old), and present, or the page
+      // and the worker would 404 on them.
+      const assets = vendorAssetLinks(set);
+      await lease.pin(assets.map((a) => a.storePath));
+      const missing = assets.filter(
+        (a) => !existsSync(joinAppPath(a.storePath, "meta.json")),
       );
-      return meta;
+      if (missing.length > 0) {
+        throw new Error(
+          `vendors: set ${set.setHash.slice(0, 12)} fetches package asset(s) the store lacks: ` +
+            missing.map((a) => a.storePath).join(", "),
+        );
+      }
+      return set;
     },
   );
 
@@ -759,6 +780,9 @@ async function runPipeline(
       for (const [file, imports] of Object.entries(vendors.imports)) {
         staticImportsByUrl[`/artifacts/${vendorLink}/${file}`] = imports;
       }
+      // Its package assets, each at its own content-addressed URL.
+      const vendorAssets = vendorAssetLinks(vendors).map((l) => l.linkName);
+      links.push(...vendorAssetLinks(vendors));
 
       const entryUrl = linked.record.entryUrl;
       const preloadSeeds = linked.record.bootSeeds;
@@ -833,7 +857,10 @@ async function runPipeline(
         // reach the page bundled into the chunks scanned here.
         linkNames: links
           .map((l) => l.linkName)
-          .filter((n) => !linked.record.assetDirs.includes(n)),
+          .filter(
+            (n) =>
+              !linked.record.assetDirs.includes(n) && !vendorAssets.includes(n),
+          ),
       });
       for (const w of groundTruth.warnings) {
         log(
