@@ -34,6 +34,7 @@ import {
   type TimelineTakeover,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
+import { holdPlayback } from "@plugins/reports/plugins/render-loop/core";
 import { useCursorApi } from "./cursor-store";
 import { SonataSession } from "./slots";
 import { createTimelineStore, type TimelineStore } from "./timeline-store";
@@ -1308,6 +1309,12 @@ export function PlaybackSession({
     setIdle,
     setRunning,
   ]);
+
+  // While it plays, the session renders on its clock (the playhead, the keys
+  // lighting as notes sound) with nobody touching the page: the render-loop
+  // detector is told a playback timeline runs, so a listener at rest is not
+  // read as a page looping on its own.
+  useEffect(() => (isPlaying ? holdPlayback() : undefined), [isPlaying]);
 
   // --- The driver follows the transport. ------------------------------------
   // `isPlaying` stays the session's intent; the active driver is told. Before

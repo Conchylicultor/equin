@@ -1,4 +1,5 @@
 import { useLayoutEffect, useRef } from "react";
+import { ANIMATION_HOST } from "@plugins/reports/plugins/render-loop/core";
 import { WebsiteBand } from "@plugins/apps/plugins/website/plugins/shell/web";
 import { SkillsGraph } from "@plugins/apps/plugins/website/plugins/pages/plugins/story/plugins/skills-graph/web";
 import {
@@ -447,7 +448,7 @@ function NewFriction() {
     [],
   );
   return (
-    <div className="nest" ref={ref}>
+    <div className="nest" ref={ref} {...ANIMATION_HOST}>
       <div className="r">
         <span>Me</span>
         <div className="ln" />
@@ -464,7 +465,7 @@ function FrictionChain() {
     () => (ref.current ? mountFrictionChain(ref.current) : undefined),
     [],
   );
-  return <div className="nest chain" ref={ref} />;
+  return <div className="nest chain" ref={ref} {...ANIMATION_HOST} />;
 }
 
 /** The backlog: the same tasks pile up on the left, and are done and gone on the right. */
@@ -475,7 +476,7 @@ function Backlog() {
     [],
   );
   return (
-    <div className="sides" ref={ref}>
+    <div className="sides" ref={ref} {...ANIMATION_HOST}>
       <div className="side">
         <h4>
           Task list <span data-n="">0 open</span>

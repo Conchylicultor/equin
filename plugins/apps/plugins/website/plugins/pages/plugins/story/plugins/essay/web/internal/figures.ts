@@ -275,6 +275,8 @@ export function mountBacklog(fig: HTMLElement): () => void {
     enter(lList, t.el);
     if (open.length > SHOWN) exit(open[SHOWN]!.el);
     count(L, open.length);
+    // a new row's age moves first: the age clock wakes for it (only while the figure runs)
+    if (timer) tickAges();
     more.hidden = open.length <= SHOWN;
     more.textContent = `+ ${open.length - SHOWN} more`;
     // right: an agent takes it, deploys it, and it leaves
@@ -292,12 +294,31 @@ export function mountBacklog(fig: HTMLElement): () => void {
       1000 + Math.random() * 2000,
     );
   }
+  // the age a label shows next, in days: where `age(d)` next reads differently
+  function nextAge(d: number) {
+    if (d < 1) return 1;
+    if (d < 7) return Math.floor(d) + 1;
+    if (d < 30) return Math.min((Math.floor(d / 7) + 1) * 7, 30);
+    if (d < 365) return Math.min((Math.floor(d / 30) + 1) * 30, 365);
+    return (Math.floor(d / 365) + 1) * 365;
+  }
+  // Each shown row's age, written only when its label changes, then asleep until the soonest one
+  // changes next — a label rewritten with its own text is still a text node replaced every tick.
   function tickAges() {
+    clearTimeout(ageTimer);
     const t = now();
+    let soonest = Infinity;
     open.slice(0, SHOWN).forEach((x) => {
-      x.el.lastElementChild!.textContent = age((t - x.born) * DAYS_PER_SEC);
+      const d = (t - x.born) * DAYS_PER_SEC;
+      const label = age(d);
+      const meta = x.el.lastElementChild!;
+      if (meta.textContent !== label) meta.textContent = label;
+      soonest = Math.min(soonest, (nextAge(d) - d) / DAYS_PER_SEC);
     });
-    ageTimer = setTimeout(tickAges, 250);
+    ageTimer =
+      soonest === Infinity
+        ? undefined
+        : setTimeout(tickAges, Math.ceil(soonest * 1000) + 1);
   }
   function next() {
     const burst = Math.random() < 0.18 ? 2 + Math.floor(Math.random() * 2) : 1;

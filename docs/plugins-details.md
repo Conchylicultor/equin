@@ -57590,7 +57590,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/color-palette --muted-foreground`
           - `ui/tokens/font-family --font-mono`
         - Imported by:
+          - `apps/sonata/session`
           - `apps/website/pages/story/data-views`
+          - `apps/website/pages/story/essay`
           - `apps/website/pages/story/heads`
           - `apps/website/pages/story/skills-graph`
           - `apps/website/pages/vision`
@@ -57601,6 +57603,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `ANIMATION_HOST`
           - `ANIMATION_HOST_ATTR`
+          - `holdPlayback`
+          - `playbackHeld`
           - `RENDER_LOOP`
           - `renderLoopFingerprint`
           - `RenderLoopPayloadSchema`

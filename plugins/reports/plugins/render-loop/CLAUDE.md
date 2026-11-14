@@ -32,6 +32,17 @@ first record and cached in a WeakMap: the observer's per-record cost is O(1)
 for a node it has seen, which is what keeps an animation from making the
 detector itself a frame cost (it was 91 ms in one frame of the demo).
 
+## Playback
+
+A player that is playing renders on its clock — React-owned nodes too (a
+playhead, the keys lighting as notes sound) — while the person listens without
+touching anything, so the idle gate alone reads it as a loop (Sonata playing a
+dense piece on the website demo: 89/s across 17 keys). The session that owns a
+timeline's play state holds `holdPlayback()` (core) while it plays and releases
+it when it stops; the detector counts a held playback as activity, like input,
+and judges idleness from the last moment one was held. Hold it only around real
+playback: it silences nothing outside it.
+
 ## Attributing a loop to a culprit
 
 `web/internal/culprit-signature.ts` reads the composition lineage via
@@ -71,7 +82,9 @@ does not own.
     - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/font-family --font-mono`
   - Imported by:
+    - `apps/sonata/session`
     - `apps/website/pages/story/data-views`
+    - `apps/website/pages/story/essay`
     - `apps/website/pages/story/heads`
     - `apps/website/pages/story/skills-graph`
     - `apps/website/pages/vision`
@@ -82,6 +95,8 @@ does not own.
   - Exports (values):
     - `ANIMATION_HOST`
     - `ANIMATION_HOST_ATTR`
+    - `holdPlayback`
+    - `playbackHeld`
     - `RENDER_LOOP`
     - `renderLoopFingerprint`
     - `RenderLoopPayloadSchema`

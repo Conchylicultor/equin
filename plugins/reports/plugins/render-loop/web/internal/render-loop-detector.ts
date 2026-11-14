@@ -9,7 +9,8 @@
  * Catches a CONCENTRATED loop on one node. A deduped `render-loop` report is
  * filed when ALL gates hold:
  *   1. Sustained — one signature stays above its class threshold for SUSTAINED_MS.
- *   2. Idle — no pointer/keyboard/scroll input within IDLE_MS.
+ *   2. Idle — no pointer/keyboard/scroll input within IDLE_MS, and no playback
+ *      timeline held (core `holdPlayback`) within it.
  *   3. Visible — `document.visibilityState === "visible"`.
  *   4. Wasted-work — no-op/oscillating attribute writes (4a) or an identical
  *      childList rebuild whose tag+marker multisets match (4b).
@@ -68,6 +69,7 @@ import {
 } from "@plugins/debug/plugins/render-profiler/core";
 import {
   ANIMATION_HOST_ATTR,
+  playbackHeld,
   RENDER_LOOP,
   renderLoopFingerprint,
 } from "../../core";
@@ -198,6 +200,13 @@ export function installRenderLoopDetector(): () => void {
 
   function markInteraction(): void {
     lastInteractionAt = performance.now();
+  }
+
+  // A running playback timeline is activity like input (core `holdPlayback`):
+  // idleness is measured from the last moment one was held.
+  function msIdle(now: number): number {
+    if (playbackHeld()) lastInteractionAt = now;
+    return now - lastInteractionAt;
   }
 
   /**
@@ -428,7 +437,7 @@ export function installRenderLoopDetector(): () => void {
     if (sustainedMs < RENDER_LOOP.SUSTAINED_MS) return;
 
     // Gate 2: idle.
-    const msSinceInteraction = now - lastInteractionAt;
+    const msSinceInteraction = msIdle(now);
     if (msSinceInteraction < RENDER_LOOP.IDLE_MS) return;
 
     // Gate 3: visible.
@@ -555,7 +564,7 @@ export function installRenderLoopDetector(): () => void {
     if (sustainedMs < RENDER_LOOP.SUSTAINED_MS) return;
 
     // Gate 2: idle.
-    const msSinceInteraction = now - lastInteractionAt;
+    const msSinceInteraction = msIdle(now);
     if (msSinceInteraction < RENDER_LOOP.IDLE_MS) return;
 
     // Gate 3: visible.
