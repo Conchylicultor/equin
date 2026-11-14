@@ -47,3 +47,13 @@ export type {
   TokenNeedsConsent,
   TokenFailure,
 } from "./internal/token-types";
+export {
+  AuthRefreshFailedPayloadSchema,
+  RefreshFailureKindSchema,
+  TRANSIENT_REFRESH_REPORT_AFTER_MS,
+  humanDuration,
+} from "./internal/refresh-failure";
+export type {
+  AuthRefreshFailedPayload,
+  RefreshFailureKind,
+} from "./internal/refresh-failure";

@@ -5,6 +5,7 @@ import { refreshAccessToken } from "./oauth-flow";
 import type { AuthIdentity, AuthProviderDescriptor } from "@plugins/auth/core";
 import { AuthNeedsConsentError } from "@plugins/auth/core";
 import { createInflight } from "@plugins/packages/plugins/inflight/core";
+import { reportRefreshFailure, refreshSucceeded } from "./refresh-report";
 import type { GetAccessTokenArgs, TokenResponse } from "@plugins/auth/core";
 
 const REFRESH_LEAD_MS = 60_000;
@@ -57,6 +58,7 @@ async function refreshAccount(
           needsReconsent: false,
           lastRefreshError: undefined,
         });
+        refreshSucceeded(descriptor.id, accountId);
         return updated ?? account;
       } catch (err) {
         const status = (err as { status?: number }).status;
@@ -76,6 +78,14 @@ async function refreshAccount(
               hint,
             },
           });
+          await reportRefreshFailure({
+            providerId: descriptor.id,
+            providerName: descriptor.name,
+            accountId,
+            kind: "permanent",
+            error: err instanceof Error ? err.message : String(err),
+            hint,
+          });
           throw new AuthNeedsConsentError({
             providerId: descriptor.id,
             reason: "needs-reconsent",
@@ -87,6 +97,13 @@ async function refreshAccount(
             message: err instanceof Error ? err.message : String(err),
             at: Date.now(),
           },
+        });
+        await reportRefreshFailure({
+          providerId: descriptor.id,
+          providerName: descriptor.name,
+          accountId,
+          kind: "transient",
+          error: err instanceof Error ? err.message : String(err),
         });
         throw err;
       }

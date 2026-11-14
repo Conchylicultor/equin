@@ -1,4 +1,5 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
+import { authRefreshFailedKind } from "./internal/refresh-failed-kind";
 
 export {
   getTokenFromCentral,
@@ -14,5 +15,6 @@ export type {
 
 export default {
   description:
-    "Worktree-side auth helpers. Provides getTokenFromCentral() for worktree plugins that need OAuth tokens.",
+    "Worktree-side auth helpers. Provides getTokenFromCentral() for worktree plugins that need OAuth tokens. Registers the auth-refresh-failed report kind central's token refresh files through the report outbox: a refused grant at once, a transient failure once it has lasted 30 min of awake time.",
+  contributions: [authRefreshFailedKind],
 } satisfies ServerPluginDefinition;

@@ -217,7 +217,7 @@ before it) beside the total, worded by `formatReportActivity`
     - `versionSkewCode`
     - `versionSkewExplains`
 - Cross-plugin:
-  - Imported by: 85 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 86 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `reports` ×33
     - `debug` ×20
     - `conversations` ×7
@@ -228,6 +228,7 @@ before it) beside the total, worded by `formatReportActivity`
     - `framework` ×2
     - `tasks` ×2
     - `active-data/report`
+    - `auth`
     - `backup`
     - `network/live/boot-snapshot`
     - `page/place/google`

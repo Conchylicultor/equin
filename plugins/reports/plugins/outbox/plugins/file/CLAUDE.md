@@ -50,6 +50,7 @@ is documented in the parent's CLAUDE.md.
     - `repositoryOf`
 - Cross-plugin:
   - Imported by:
+    - `auth`
     - `backup`
     - `build/step-baseline`
     - `database/fork`

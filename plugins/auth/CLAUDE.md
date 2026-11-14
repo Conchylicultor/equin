@@ -105,7 +105,7 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
 
 ## Plugin reference
 
-- Description: Shared authentication infrastructure (OAuth 2.0, API keys, password sign-in). Exposes the Accounts pane — a DataView of every provider (Auth.Provider) and non-provider setup surface (Auth.Integration), grouped by service, each row opening one account pane to the right (header, account, and the row's setup inline — a provider's setup wizard, OAuth client steps or sign-in form; an integration's own setup) — and the Settings app surfaces the Account entry. Worktree-side auth helpers. Provides getTokenFromCentral() for worktree plugins that need OAuth tokens. Centralized OAuth/API-key/password-sign-in infrastructure for third-party services. Tokens persist via the central secrets store; auth runs on the central runtime so all worktrees share one connected state.
+- Description: Shared authentication infrastructure (OAuth 2.0, API keys, password sign-in). Exposes the Accounts pane — a DataView of every provider (Auth.Provider) and non-provider setup surface (Auth.Integration), grouped by service, each row opening one account pane to the right (header, account, and the row's setup inline — a provider's setup wizard, OAuth client steps or sign-in form; an integration's own setup) — and the Settings app surfaces the Account entry. Worktree-side auth helpers. Provides getTokenFromCentral() for worktree plugins that need OAuth tokens. Registers the auth-refresh-failed report kind central's token refresh files through the report outbox: a refused grant at once, a transient failure once it has lasted 30 min of awake time. Centralized OAuth/API-key/password-sign-in infrastructure for third-party services. Tokens persist via the central secrets store; auth runs on the central runtime so all worktrees share one connected state.
 - Load-bearing: yes
 - Web:
   - Slots:
@@ -169,7 +169,10 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
     - `useAccountStatus`
     - `useAuthState`
 - Server:
-  - Uses: `infra/endpoints.callEndpoint`
+  - Contributes: `report-kind` "auth-refresh-failed"
+  - Uses:
+    - `infra/endpoints.callEndpoint`
+    - `reports.ReportKind`
   - Exports (types):
     - `GetAccessTokenArgs`
     - `TokenFailure`
@@ -240,6 +243,7 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
     - `AuthIdentity`
     - `AuthProviderDescriptor`
     - `AuthProviderKind`
+    - `AuthRefreshFailedPayload`
     - `AuthStateValue`
     - `DisconnectBody`
     - `GetAccessTokenArgs`
@@ -248,6 +252,7 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
     - `ParsedTokenResponse`
     - `PasswordConfig`
     - `RefreshError`
+    - `RefreshFailureKind`
     - `ResolvedCredentials`
     - `SetApiKeyBody`
     - `SignInBody`
@@ -261,6 +266,7 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
     - `AuthKeychainLockedError`
     - `AuthNeedsConsentError`
     - `AuthProviderUnknownError`
+    - `AuthRefreshFailedPayloadSchema`
     - `authState`
     - `AuthStateValueSchema`
     - `defineAuthProvider`
@@ -269,12 +275,15 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
     - `getAuthState`
     - `getToken`
     - `GetTokenBodySchema`
+    - `humanDuration`
     - `oauthCallback`
     - `oauthStart`
+    - `RefreshFailureKindSchema`
     - `setApiKey`
     - `SetApiKeyBodySchema`
     - `signIn`
     - `SignInBodySchema`
+    - `TRANSIENT_REFRESH_REPORT_AFTER_MS`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --foreground`

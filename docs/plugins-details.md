@@ -14240,7 +14240,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `shell/action-bar.ActionBar`
           - `ui/icons.Icon`
 
-- **`auth`** — Shared authentication infrastructure (OAuth 2.0, API keys, password sign-in). Exposes the Accounts pane — a DataView of every provider (Auth.Provider) and non-provider setup surface (Auth.Integration), grouped by service, each row opening one account pane to the right (header, account, and the row's setup inline — a provider's setup wizard, OAuth client steps or sign-in form; an integration's own setup) — and the Settings app surfaces the Account entry. Worktree-side auth helpers. Provides getTokenFromCentral() for worktree plugins that need OAuth tokens. Centralized OAuth/API-key/password-sign-in infrastructure for third-party services. Tokens persist via the central secrets store; auth runs on the central runtime so all worktrees share one connected state.
+- **`auth`** — Shared authentication infrastructure (OAuth 2.0, API keys, password sign-in). Exposes the Accounts pane — a DataView of every provider (Auth.Provider) and non-provider setup surface (Auth.Integration), grouped by service, each row opening one account pane to the right (header, account, and the row's setup inline — a provider's setup wizard, OAuth client steps or sign-in form; an integration's own setup) — and the Settings app surfaces the Account entry. Worktree-side auth helpers. Provides getTokenFromCentral() for worktree plugins that need OAuth tokens. Registers the auth-refresh-failed report kind central's token refresh files through the report outbox: a refused grant at once, a transient failure once it has lasted 30 min of awake time. Centralized OAuth/API-key/password-sign-in infrastructure for third-party services. Tokens persist via the central secrets store; auth runs on the central runtime so all worktrees share one connected state.
   - Web:
     - Slots:
       - `Auth.Provider`
@@ -14303,7 +14303,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `useAccountStatus`
       - `useAuthState`
   - Server:
-    - Uses: `infra/endpoints.callEndpoint`
+    - Contributes: `report-kind` "auth-refresh-failed"
+    - Uses:
+      - `infra/endpoints.callEndpoint`
+      - `reports.ReportKind`
     - Exports (types):
       - `GetAccessTokenArgs`
       - `TokenFailure`
@@ -14374,6 +14377,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `AuthIdentity`
       - `AuthProviderDescriptor`
       - `AuthProviderKind`
+      - `AuthRefreshFailedPayload`
       - `AuthStateValue`
       - `DisconnectBody`
       - `GetAccessTokenArgs`
@@ -14382,6 +14386,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `ParsedTokenResponse`
       - `PasswordConfig`
       - `RefreshError`
+      - `RefreshFailureKind`
       - `ResolvedCredentials`
       - `SetApiKeyBody`
       - `SignInBody`
@@ -14395,6 +14400,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `AuthKeychainLockedError`
       - `AuthNeedsConsentError`
       - `AuthProviderUnknownError`
+      - `AuthRefreshFailedPayloadSchema`
       - `authState`
       - `AuthStateValueSchema`
       - `defineAuthProvider`
@@ -14403,12 +14409,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `getAuthState`
       - `getToken`
       - `GetTokenBodySchema`
+      - `humanDuration`
       - `oauthCallback`
       - `oauthStart`
+      - `RefreshFailureKindSchema`
       - `setApiKey`
       - `SetApiKeyBodySchema`
       - `signIn`
       - `SignInBodySchema`
+      - `TRANSIENT_REFRESH_REPORT_AFTER_MS`
   - Cross-plugin:
     - Uses tokens:
       - `ui/tokens/color-palette --foreground`
@@ -42361,6 +42370,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`sleep-clock`** — How long the machine slept between two reads: the difference between the OS clock that keeps running through sleep and the one that pauses. Exact, read through bun:ffi on macOS; says so where it cannot tell.
       - Cross-plugin:
         - Imported by:
+          - `auth`
           - `debug/health-monitor`
           - `debug/profiling/op-log`
           - `framework/cli/test`
@@ -56866,7 +56876,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `versionSkewCode`
       - `versionSkewExplains`
   - Cross-plugin:
-    - Imported by: 85 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
+    - Imported by: 86 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
       - `reports` ×33
       - `debug` ×20
       - `conversations` ×7
@@ -56877,6 +56887,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `framework` ×2
       - `tasks` ×2
       - `active-data/report`
+      - `auth`
       - `backup`
       - `network/live/boot-snapshot`
       - `page/place/google`
@@ -57484,6 +57495,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `repositoryOf`
           - Cross-plugin:
             - Imported by:
+              - `auth`
               - `backup`
               - `build/step-baseline`
               - `database/fork`
