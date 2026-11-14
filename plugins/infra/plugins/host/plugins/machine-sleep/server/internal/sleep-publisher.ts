@@ -69,6 +69,34 @@ export function overlapMs(
   return total;
 }
 
+/**
+ * The wall-clock instant from which the span up to `endMs` holds exactly
+ * `awakeMs` of time the machine was AWAKE, given the sleeps placed so far:
+ * walking back from `endMs`, every placed sleep is stepped over rather than
+ * counted. With no sleep in reach it is `endMs - awakeMs`.
+ *
+ * A sleep placed later than it really happened (several naps read as one
+ * stretch, see `sleepBetween`) only moves the answer earlier — it reads awake
+ * time as sleep, never sleep as awake time.
+ */
+export function awakeSpanStartMs(
+  sleeps: readonly SleepInterval[],
+  endMs: number,
+  awakeMs: number,
+): number {
+  let cursor = endMs;
+  let need = awakeMs;
+  // Latest-ending first; overlapping sleeps are stepped over together.
+  for (const s of [...sleeps].sort((a, b) => b.endMs - a.endMs)) {
+    if (s.startMs >= cursor) continue;
+    const gap = cursor - Math.min(s.endMs, cursor);
+    if (gap >= need) return cursor - need;
+    need -= gap;
+    cursor = s.startMs;
+  }
+  return cursor - need;
+}
+
 export interface SleepPublisher {
   /** The last published reading, reading the clock first if nothing was yet. */
   current(): SleepNow;
@@ -80,6 +108,12 @@ export interface SleepPublisher {
    * counts. `null` where the platform cannot tell (never "did not sleep").
    */
   sleptDuring(startMs: number, endMs: number): number | null;
+  /**
+   * The wall-clock instant (epoch ms) `awakeMs` of AWAKE time before `endMs`,
+   * stepping over the sleeps this process has seen — reading the clock first,
+   * so a wake moments ago counts. `null` where the platform cannot tell.
+   */
+  awakeSpanStart(endMs: number, awakeMs: number): number | null;
   /** Run `fn` on every changed reading `publish` finds. Returns the unsubscribe. */
   subscribe(fn: () => void): () => void;
 }
@@ -112,6 +146,11 @@ export function createSleepPublisher(
       publish();
       if (last?.value === null) return null;
       return overlapMs(sleeps, startMs, endMs);
+    },
+    awakeSpanStart(endMs, awakeMs) {
+      publish();
+      if (last?.value === null) return null;
+      return awakeSpanStartMs(sleeps, endMs, awakeMs);
     },
     subscribe(fn) {
       listeners.add(fn);

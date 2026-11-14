@@ -36774,10 +36774,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Exports (values):
                   - `FS_LATENCY_MONITOR_LABEL`
                   - `START_MONITOR_COMMAND`
-        - **`machine-sleep`** — useSleepNow(): the machine.sleep live value (and useSleepNowForFold: the reading as op-log's `sleepNow` fold parameter, unknown while loading or where the computer cannot be read) — the box's sleep clock, so a live surface can count a nap as asleep rather than as work. The machine's sleep clock, read and published: publishSleepReading() re-reads it and tells its listeners only when it changed — called by an existing periodic observer, so a wake reaches the browser without a poller of its own — with currentSleepReading() and onSleepReadingChanged() for the machine half that serves it as the machine.sleep live value, and sleptDuring(start, end) — the sleep this process saw inside a wall-clock span.
+        - **`machine-sleep`** — useSleepNow(): the machine.sleep live value (and useSleepNowForFold: the reading as op-log's `sleepNow` fold parameter, unknown while loading or where the computer cannot be read) — the box's sleep clock, so a live surface can count a nap as asleep rather than as work. The machine's sleep clock, read and published: publishSleepReading() re-reads it and tells its listeners only when it changed — called by an existing periodic observer, so a wake reaches the browser without a poller of its own — with currentSleepReading() and onSleepReadingChanged() for the machine half that serves it as the machine.sleep live value, sleptDuring(start, end) — the sleep this process saw inside a wall-clock span — and awakeSpanStart(end, awakeMs) — the wall-clock instant that much awake time before end, stepping over those sleeps.
           - Server:
             - Contributes: `resource.declare` "machine.sleep"
             - Exports (values):
+              - `awakeSpanStart`
               - `currentSleepReading`
               - `onSleepReadingChanged`
               - `publishSleepReading`
@@ -36804,6 +36805,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `debug/health-monitor`
               - `debug/profiling/ops`
               - `debug/slow-ops`
+              - `infra/jobs`
     - **`host-account`** — Host account, read: useHostAccount() — the account this instance runs as (login name and full name: the OS account on the desktop, a guest account on a host without the computer), loading until its value arrives; useProfileName() — the name to show for the user (the profile-name setting's name, else the account's), or anonymous when the user turned their name off. Registers that setting. Its home directory is the hostHome value (core, needsMachine), read with useLive. Host account: serves the host-account value — the account this instance runs as (login name and full name), read once through the HostAccountSource host service: the OS account on the desktop (machine/), a fixed guest account on a host without the computer. Its sibling host-account.home, the account's home directory, is the machine half's. Registers the profile-name setting (the name shown for the user, or none).
       - Web:
         - Contributes:

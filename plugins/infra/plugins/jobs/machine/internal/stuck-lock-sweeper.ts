@@ -1,9 +1,10 @@
-import { sql } from "drizzle-orm";
+import { type SQL, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@plugins/database/server";
 import { executeRows } from "@plugins/database/plugins/sql-rows/core";
 import { reportServerError } from "@plugins/framework/plugins/server-core/core";
 import { defineTimer } from "@plugins/infra/plugins/background/plugins/timer/server";
+import { awakeSpanStart } from "@plugins/infra/plugins/host/plugins/machine-sleep/server";
 import { jobLockHeldExpr, jobNameExpr, supersededExpr } from "./introspection";
 import { jobsLog } from "./jobs-log";
 import {
@@ -70,7 +71,16 @@ import { discardWorkflowLogs } from "../../server/internal/workflow-log";
 // handler is exactly as safe as a 200 ms one, because nothing here grows with
 // handler duration and nothing a job author writes can violate it. If a job
 // ever looks "stuck", the answer is never to raise this number.
-const LOCK_ACQUIRE_GRACE = "30 seconds";
+//
+// It is AWAKE time, not wall-clock time (`acquireGraceSql`). The acquisition
+// window is a few ms of work, but the machine can sleep inside it, and a sleep
+// stops the dispatcher while `now()` keeps advancing. On 2026-11-14 a laptop
+// on battery slept 4 s after graphile locked a `conversations.spawn` row,
+// before its advisory lock was taken (the lock session was still connecting),
+// and woke 262 s later: the overdue sweep ran in the same second, saw a row
+// "locked 266 s ago" with no lock, and reclaimed a LIVE job — which then ran
+// twice. Measured in awake time that row was 4 s into its grace.
+const LOCK_ACQUIRE_GRACE_MS = 30_000;
 const SWEEP_INTERVAL_MS = 60_000;
 
 export const stuckLockSweeperTimer = defineTimer({
@@ -149,6 +159,8 @@ const DroppedRowSchema = z.object({
 // `database` is the worktree database in production; a test hands it a
 // throwaway one.
 export async function sweepOnce(database: EnqueueTx = db): Promise<void> {
+  // One reading for the whole sweep: its three statements run milliseconds apart.
+  const acquireGrace = acquireGraceSql();
   // The superseded half, FIRST. A superseded row (`supersededExpr`) was retired
   // by graphile while it was running, because a newer copy of the same job was
   // queued — see jobs/CLAUDE.md, "Superseded rows". Its work is owned by that
@@ -179,7 +191,7 @@ export async function sweepOnce(database: EnqueueTx = db): Promise<void> {
      WHERE ${supersededExpr}
        AND (
              j.locked_at IS NULL
-          OR (j.locked_at < now() - ${LOCK_ACQUIRE_GRACE}::interval
+          OR (j.locked_at < now() - ${acquireGrace}
               AND NOT ${jobLockHeldExpr})
            )
     RETURNING j.id::text AS id,
@@ -235,7 +247,7 @@ export async function sweepOnce(database: EnqueueTx = db): Promise<void> {
            locked_by = NULL,
            run_at = greatest(j.run_at, now())
      WHERE j.locked_at IS NOT NULL
-       AND j.locked_at < now() - ${LOCK_ACQUIRE_GRACE}::interval
+       AND j.locked_at < now() - ${acquireGrace}
        AND NOT ${jobLockHeldExpr}
        AND NOT ${supersededExpr}
     RETURNING j.id::text AS id,
@@ -294,7 +306,7 @@ export async function sweepOnce(database: EnqueueTx = db): Promise<void> {
   // evidence is `jobLockHeldExpr` again — correlated over the queue's own jobs
   // via `j.job_queue_id = q.id` — never the age of `q.locked_at`.
   //
-  // `LOCK_ACQUIRE_GRACE` appears here for exactly the reason it appears above and
+  // The acquisition grace appears here for exactly the reason it appears above and
   // for no other: graphile stamps the queue's `locked_at` inside `get_job`, at
   // the same instant it stamps the job's, and `withJobLock` takes the advisory
   // lock a few milliseconds later in `dispatch()`. A queue observed inside that
@@ -317,7 +329,7 @@ export async function sweepOnce(database: EnqueueTx = db): Promise<void> {
        SET locked_at = NULL,
            locked_by = NULL
      WHERE q.locked_at IS NOT NULL
-       AND q.locked_at < now() - ${LOCK_ACQUIRE_GRACE}::interval
+       AND q.locked_at < now() - ${acquireGrace}
        AND NOT EXISTS (
              SELECT 1
                FROM graphile_worker._private_jobs j
@@ -348,6 +360,20 @@ export async function sweepOnce(database: EnqueueTx = db): Promise<void> {
     emitQueueActivity(ANY_QUEUE_CHANGE);
 
   await pruneDyingRuns(database);
+}
+
+/**
+ * The grace as a span ending at `now()`: `LOCK_ACQUIRE_GRACE_MS` of awake time,
+ * so a sleep inside it is stepped over rather than counted (see the constant).
+ * Where the platform cannot tell sleep from awake time, the wall-clock grace.
+ * Postgres's own `now()` stays the end of the span, as for `locked_at`, so the
+ * two are read on one clock; only the span's length comes from this process.
+ */
+function acquireGraceSql(): SQL {
+  const nowMs = Date.now();
+  const start = awakeSpanStart(nowMs, LOCK_ACQUIRE_GRACE_MS);
+  const spanMs = start === null ? LOCK_ACQUIRE_GRACE_MS : nowMs - start;
+  return sql`(${spanMs}::bigint * interval '1 millisecond')`;
 }
 
 /**

@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import type { SleepClockReading } from "@plugins/packages/plugins/sleep-clock/core";
 import {
+  awakeSpanStartMs,
   createSleepPublisher,
   overlapMs,
   sleepBetween,
@@ -135,5 +136,48 @@ describe("sleptDuring", () => {
         100,
       ),
     ).toBe(20);
+  });
+});
+
+describe("awakeSpanStart", () => {
+  test("no sleep in reach: the plain wall-clock span", () => {
+    expect(awakeSpanStartMs([], 100_000, 30_000)).toBe(70_000);
+    expect(
+      awakeSpanStartMs([{ startMs: 0, endMs: 10_000 }], 100_000, 30_000),
+    ).toBe(70_000);
+  });
+
+  test("steps over a sleep inside the span (the 2026-11-14 sweep)", () => {
+    // Locked at t=0, 4 s before a 262 s sleep, swept the moment it woke: 266 s
+    // of wall clock, only 4 s of awake time — the grace starts before the lock.
+    const sleeps = [{ startMs: 4_000, endMs: 266_000 }];
+    expect(awakeSpanStartMs(sleeps, 266_000, 30_000)).toBe(-26_000);
+  });
+
+  test("steps over several sleeps, overlapping ones together", () => {
+    const sleeps = [
+      { startMs: 50, endMs: 60 },
+      { startMs: 80, endMs: 95 },
+      { startMs: 85, endMs: 90 },
+    ];
+    // awake 95→100 (5), 60→80 (20), then 5 more before 50.
+    expect(awakeSpanStartMs(sleeps, 100, 30)).toBe(45);
+  });
+
+  test("ignores sleeps that start after the end", () => {
+    expect(awakeSpanStartMs([{ startMs: 200, endMs: 300 }], 100, 30)).toBe(70);
+  });
+
+  test("the publisher reads the clock first and says when it cannot tell", () => {
+    const h = harness({
+      supported: true,
+      boot: BOOT,
+      asleepMs: 0,
+      wakeAtMs: null,
+    });
+    h.p.publish();
+    h.set({ supported: true, boot: BOOT, asleepMs: 60_000, wakeAtMs: 100_000 });
+    expect(h.p.awakeSpanStart(110_000, 30_000)).toBe(20_000);
+    expect(harness({ supported: false }).p.awakeSpanStart(1, 1)).toBeNull();
   });
 });

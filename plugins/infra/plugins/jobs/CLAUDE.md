@@ -74,7 +74,9 @@ months. A 6-hour handler is exactly as alive as a 200 ms one. Details:
 row inside that gap would look abandoned. The grace bounds **acquisition latency**
 — a constant of the dispatch path — and never grows with handler duration. Wanting
 to raise it because a job is "slow" is reaching for a lease again; the answer is
-no. Every reclaim is loud (`console.warn` + report); silent reclaims are what hid
+no. It counts **awake** time (machine-sleep's `awakeSpanStart`): the machine can
+sleep inside that gap while `now()` runs on, and a wall-clock grace then
+reclaims a live job at the wake. Every reclaim is loud (`console.warn` + report); silent reclaims are what hid
 the original bug.
 
 Reading it:

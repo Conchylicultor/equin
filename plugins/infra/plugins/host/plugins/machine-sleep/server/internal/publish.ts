@@ -36,3 +36,14 @@ export function onSleepReadingChanged(fn: () => void): () => void {
 export function sleptDuring(startMs: number, endMs: number): number | null {
   return publisher.sleptDuring(startMs, endMs);
 }
+
+/**
+ * The wall-clock instant (epoch ms) `awakeMs` of AWAKE time before `endMs` —
+ * for a bound on work this machine does that a wall-clock age would let a nap
+ * spend (the job sweeper's lock-acquisition grace). Reads the clock first, so a
+ * wake moments ago counts. A process knows only the sleeps it lived through;
+ * `null` where the platform cannot tell.
+ */
+export function awakeSpanStart(endMs: number, awakeMs: number): number | null {
+  return publisher.awakeSpanStart(endMs, awakeMs);
+}
