@@ -20,6 +20,10 @@
 // `shared-host.ts` for the lock that keeps a connecting page off a worker that
 // is closing.
 
+import {
+  runMarked,
+  type TaskMarkText,
+} from "@plugins/primitives/plugins/perfs/plugins/task-marks/core";
 import { watchHostProgress, type HostProgress } from "./boot-progress";
 import {
   declarePageInputs,
@@ -589,6 +593,41 @@ export interface PortServerOptions {
   onProgress?: (progress: HostProgress) => void;
 }
 
+/** The task-mark source of the page-side port listeners (`primitives/perfs/task-marks`). */
+const MARK_SOURCE = "browser-server";
+
+/**
+ * A host message as a task mark: its kind (an ended host's reason too — a
+ * closed set) is what a freeze is grouped by; the rest tells one apart.
+ * `answers` names the request a `response` settles, when this listener holds it.
+ */
+function hostMessageMark(msg: FromHost, answers?: string): TaskMarkText {
+  switch (msg.t) {
+    case "ended":
+      return { what: `ended ${msg.why}`, detail: "" };
+    case "response":
+      return {
+        what: "response",
+        detail: `#${msg.id} ${msg.response.status} ${msg.response.body.byteLength} B${answers === undefined ? "" : ` · ${answers}`}`,
+      };
+    case "deliver":
+      return {
+        what: "deliver",
+        detail: `conn ${msg.conn} · ${msg.frame.length} chars`,
+      };
+    case "closed":
+      return { what: "closed", detail: `conn ${msg.conn} · ${msg.code}` };
+    case "ready":
+      return { what: "ready", detail: `${msg.keys.length} keys` };
+    case "refused":
+      return { what: `refused ${msg.refusal.kind}`, detail: "" };
+    case "failed":
+    case "progress":
+    case "accepted":
+      return { what: msg.t, detail: "" };
+  }
+}
+
 /**
  * Requests over `port` (an end a server answers on: a worker running
  * `serveHost`, or a port `attachPort` handed it): each one out as plain
@@ -604,10 +643,28 @@ export function portRequester(
   let ended: HostEndReason | null = null;
   const pending = new Map<
     number,
-    { resolve: (res: Response) => void; reject: (err: Error) => void }
+    {
+      resolve: (res: Response) => void;
+      reject: (err: Error) => void;
+      /** `METHOD url`, for the mark of the response that settles it. */
+      label: string;
+    }
   >();
   port.addEventListener("message", (event: MessageEvent) => {
     const msg = event.data as FromHost;
+    // Only what this listener acts on is its task (the rest is ignored here).
+    if (msg.t !== "ended" && msg.t !== "response") return;
+    runMarked(
+      MARK_SOURCE,
+      () =>
+        hostMessageMark(
+          msg,
+          msg.t === "response" ? pending.get(msg.id)?.label : undefined,
+        ),
+      () => onHostMessage(msg),
+    );
+  });
+  function onHostMessage(msg: FromHost): void {
     if (msg.t === "ended") {
       ended = msg.why;
       for (const { reject } of pending.values())
@@ -626,13 +683,13 @@ export function portRequester(
         headers,
       }),
     );
-  });
+  }
   return async (req) => {
     if (ended !== null) throw new HostEndedError(ended);
     const id = nextId++;
     const request = await toWireRequest(req);
     const answer = new Promise<Response>((resolve, reject) =>
-      pending.set(id, { resolve, reject }),
+      pending.set(id, { resolve, reject, label: `${req.method} ${req.url}` }),
     );
     port.postMessage(
       { t: "request", id, request } satisfies ToHost,
@@ -714,6 +771,13 @@ export function portBrowserServer(
   return new Promise<PortServer>((resolve, reject) => {
     port.addEventListener("message", (event: MessageEvent) => {
       const msg = event.data as FromHost;
+      runMarked(
+        MARK_SOURCE,
+        () => hostMessageMark(msg),
+        () => onHostMessage(msg),
+      );
+    });
+    function onHostMessage(msg: FromHost): void {
       switch (msg.t) {
         case "ready":
           resolve({
@@ -766,6 +830,6 @@ export function portBrowserServer(
           return;
         }
       }
-    });
+    }
   });
 }

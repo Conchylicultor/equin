@@ -1,4 +1,4 @@
-import { runMarked } from "@plugins/primitives/plugins/perfs/plugins/task-marks/web";
+import { runMarked } from "@plugins/primitives/plugins/perfs/plugins/task-marks/core";
 
 /**
  * A module-level listener set whose fan-out names each listener it runs: every

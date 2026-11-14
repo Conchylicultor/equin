@@ -259,7 +259,6 @@ export const staticHosts: Record<string, StaticHost> = {
       "primitives/plugins/pane",
       "primitives/plugins/pane/plugins/route-prefix",
       "primitives/plugins/perfs/plugins/boot-trace",
-      "primitives/plugins/perfs/plugins/task-marks",
       "primitives/plugins/persistent-draft",
       "primitives/plugins/rank",
       "primitives/plugins/rank-reorder",

@@ -20,7 +20,7 @@ import { clientLog } from "@plugins/primitives/plugins/log-channels/web";
 import {
   runMarked,
   type TaskMarkText,
-} from "@plugins/primitives/plugins/perfs/plugins/task-marks/web";
+} from "@plugins/primitives/plugins/perfs/plugins/task-marks/core";
 import { getTabId } from "@plugins/primitives/plugins/scope/plugins/tab-id/web";
 import type { ResourceDescriptor, ResourceOrigin } from "../core";
 import { mergeKeyedDelta } from "./keyed-delta-merge";

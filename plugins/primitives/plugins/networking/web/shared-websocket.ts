@@ -5,7 +5,7 @@ import { publishNetDiag } from "./net-diag-bus";
 import {
   runMarked,
   type TaskMarkText,
-} from "@plugins/primitives/plugins/perfs/plugins/task-marks/web";
+} from "@plugins/primitives/plugins/perfs/plugins/task-marks/core";
 import {
   createInPageLocks,
   createInPageSharedWorkers,

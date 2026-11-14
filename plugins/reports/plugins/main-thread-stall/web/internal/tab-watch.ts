@@ -3,7 +3,7 @@ import { clientLog } from "@plugins/primitives/plugins/log-channels/web";
 import {
   onTaskMark,
   runMarked,
-} from "@plugins/primitives/plugins/perfs/plugins/task-marks/web";
+} from "@plugins/primitives/plugins/perfs/plugins/task-marks/core";
 import type { StallFrame, StallTab } from "../../core";
 import {
   STALL,

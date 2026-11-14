@@ -102,6 +102,14 @@ version skew ("App updated — reload"). See `resource-runtime`'s `keySet`.
   its own (requests queue until the graph is up); **`portRequester(end)`** is
   the requesting half over any such end — what `portBrowserServer` and the
   frame-serving Service Worker both send requests through.
+- **Task marks.** The page side's two listeners (`portRequester`'s and
+  `portBrowserServer`'s) run each host message as a marked task
+  (`primitives/perfs/task-marks`, source `browser-server`, `what` the message
+  kind — `ready`, `deliver`, `response`, `ended <why>`, … — a response's
+  detail naming the request it answers), so a tab that freezes inside one,
+  or in the microtasks it queued (the demo's boot after `ready`, a fetch's
+  continuation), names it. A realm with no mark listener (the worker, the
+  frame-serving Service Worker) just runs the handler.
 
 ## core/: a SharedWorker host's end of life (`shared-host.ts`)
 
@@ -142,7 +150,8 @@ Where its state lives (memory, or IndexedDB across reloads, tabs and builds) is
 the `host-storage` sub-plugin's.
 
 Tests: `core/internal/port.test.ts` (a real `MessageChannel`: read, sub-ack, a
-boot failure on both ends, an attached port answering beside the page's).
+boot failure on both ends, an attached port answering beside the page's, the
+page side's task marks).
 
 ## core/testing: servers for tests
 
@@ -296,20 +305,10 @@ reaching the server, detach on unmount).
     - `ExternalHosts`
     - `hostBootReportSink`
     - `HostInputs`
-- Cross-plugin:
-  - Imported by:
-    - `apps/demo`
-    - `apps/prototypes/canvas`
-    - `apps/sonata/audio/piano`
-    - `apps/sonata/audio/soundfont`
-    - `debug/slow-ops`
-    - `framework/browser-server/demo/prestart`
-    - `framework/browser-server/demo/scope`
-    - `framework/browser-server/host-storage`
-    - `integrations/google-maps/browser-config`
-    - `integrations/google-maps/page-config`
-    - `map/google`
 - Core:
+  - Uses:
+    - `primitives/perfs/task-marks.runMarked`
+    - `primitives/perfs/task-marks.TaskMarkText`
   - Exports (types):
     - `BrowserServer`
     - `BrowserServerPeer`
@@ -344,6 +343,19 @@ reaching the server, detach on unmount).
     - `runtimeBrowserServer`
     - `serveHost`
     - `serveOverPort`
+- Cross-plugin:
+  - Imported by:
+    - `apps/demo`
+    - `apps/prototypes/canvas`
+    - `apps/sonata/audio/piano`
+    - `apps/sonata/audio/soundfont`
+    - `debug/slow-ops`
+    - `framework/browser-server/demo/prestart`
+    - `framework/browser-server/demo/scope`
+    - `framework/browser-server/host-storage`
+    - `integrations/google-maps/browser-config`
+    - `integrations/google-maps/page-config`
+    - `map/google`
 - Test helpers:
   - Core: `@plugins/framework/plugins/browser-server/core/testing`
     - `channelHost` — A host's `start`, as a scenario's `host.start` takes it, whose "worker" is one end of an in-realm `MessageChannel`: the other end runs `serveOverPort` over the server `boot` returns — or, when `boot` throws, reports the failure (`PortHostBootError` on the page side), as a real worker whose graph fails to boot does. `serviceWorkerUrl` is the host module's frame-serving script URL — only a test that stubs `navigator.serviceWorker` registers it.

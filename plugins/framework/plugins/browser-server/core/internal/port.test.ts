@@ -14,6 +14,7 @@ import {
   PROTOCOL,
   type ServerFrame,
 } from "@plugins/network/plugins/live/plugins/resource-protocol/core";
+import { onTaskMark } from "@plugins/primitives/plugins/perfs/plugins/task-marks/core";
 import { inRealmServer } from "../testing";
 import type { BrowserServer } from "./browser-server";
 import {
@@ -218,5 +219,36 @@ describe("boot progress", () => {
       onProgress: (progress) => seen.push(progress),
     });
     expect(seen.at(-1)?.plugins).toEqual({ loaded: 2, total: 2 });
+  });
+});
+
+describe("task marks", () => {
+  test("each host message the page handles is a marked task naming what it was", async () => {
+    const heard: string[] = [];
+    const uninstall = onTaskMark({
+      begin: (source, describe) => {
+        const { what, detail } = describe();
+        heard.push(`${source} ${what} [${detail}]`);
+        return null;
+      },
+      end: () => {},
+    });
+    try {
+      const { server } = await overChannel(greetingServer("hi"), [
+        greeting.key,
+      ]);
+      const url = `http://x/api/resources/${greeting.key}?who=ada`;
+      const res = await server.request(new Request(url));
+      expect(res.status).toBe(200);
+      expect(heard).toContain("browser-server ready [1 keys]");
+      const response = heard.find((h) =>
+        h.startsWith("browser-server response ["),
+      );
+      expect(response).toContain(` 200 `);
+      expect(response).toContain(`· GET ${url}`);
+      server.dispose();
+    } finally {
+      uninstall();
+    }
   });
 });

@@ -285,8 +285,6 @@ renderer forever — so the script kills it with CDP `Page.crash`.
     - `primitives/log-channels.clientLog`
     - `primitives/pane.peekRoute`
     - `primitives/pane.usePathname`
-    - `primitives/perfs/task-marks.onTaskMark`
-    - `primitives/perfs/task-marks.runMarked`
     - `primitives/scope/tab-id.getTabId`
     - `primitives/ui-context.collectLineage`
     - `primitives/ui-context.nearestOwner`

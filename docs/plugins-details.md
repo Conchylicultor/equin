@@ -30804,20 +30804,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ExternalHosts`
           - `hostBootReportSink`
           - `HostInputs`
-      - Cross-plugin:
-        - Imported by:
-          - `apps/demo`
-          - `apps/prototypes/canvas`
-          - `apps/sonata/audio/piano`
-          - `apps/sonata/audio/soundfont`
-          - `debug/slow-ops`
-          - `framework/browser-server/demo/prestart`
-          - `framework/browser-server/demo/scope`
-          - `framework/browser-server/host-storage`
-          - `integrations/google-maps/browser-config`
-          - `integrations/google-maps/page-config`
-          - `map/google`
       - Core:
+        - Uses:
+          - `primitives/perfs/task-marks.runMarked`
+          - `primitives/perfs/task-marks.TaskMarkText`
         - Exports (types):
           - `BrowserServer`
           - `BrowserServerPeer`
@@ -30852,6 +30842,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `runtimeBrowserServer`
           - `serveHost`
           - `serveOverPort`
+      - Cross-plugin:
+        - Imported by:
+          - `apps/demo`
+          - `apps/prototypes/canvas`
+          - `apps/sonata/audio/piano`
+          - `apps/sonata/audio/soundfont`
+          - `debug/slow-ops`
+          - `framework/browser-server/demo/prestart`
+          - `framework/browser-server/demo/scope`
+          - `framework/browser-server/host-storage`
+          - `integrations/google-maps/browser-config`
+          - `integrations/google-maps/page-config`
+          - `map/google`
       - Test helpers:
         - Core: `@plugins/framework/plugins/browser-server/core/testing`
           - `channelHost` — A host's `start`, as a scenario's `host.start` takes it, whose "worker" is one end of an in-realm `MessageChannel`: the other end runs `serveOverPort` over the server `boot` returns — or, when `boot` throws, reports the failure (`PortHostBootError` on the page side), as a real worker whose graph fails to boot does. `serviceWorkerUrl` is the host module's frame-serving script URL — only a test that stubs `navigator.serviceWorker` registers it.
@@ -41222,11 +41225,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `liveStringArray` — A jsonb string array (tags, label ids).
         - **`live-state`** — Server live-state primitive: useResource hook + NotificationsProvider + NotificationsClient. Thin TanStack Query wrapper over the app's tab-shared /ws/notifications channel. useQueryResource reads a local async load (not a server read — those are live) as a ResourceResult.
           - Web:
-            - Uses: 27 symbols — full list in [`plugins/network/plugins/live/plugins/live-state/REFERENCE.md`](../plugins/network/plugins/live/plugins/live-state/REFERENCE.md)
+            - Uses: 25 symbols — full list in [`plugins/network/plugins/live/plugins/live-state/REFERENCE.md`](../plugins/network/plugins/live/plugins/live-state/REFERENCE.md)
               - `primitives/networking` ×12
               - `primitives/css/spacing` ×2
               - `primitives/css/ui-kit` ×2
-              - `primitives/perfs/task-marks` ×2
               - `primitives/css/center.Center`
               - `primitives/css/inline.Inline`
               - `primitives/css/placeholder.Placeholder`
@@ -53275,8 +53277,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `primitives/latest-ref.useLatestRef`
           - `primitives/networking/request-guard.nativeWebSocket`
-          - `primitives/perfs/task-marks.runMarked`
-          - `primitives/perfs/task-marks.TaskMarkText`
         - Exports (types):
           - `ContentServing`
           - `FetchWithRetryOptions`
@@ -54464,13 +54464,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by: `framework/web-core`
           - Web:
             - Exports (values): `yieldToMain`
-        - **`task-marks`** — Say what the main thread is starting, for whoever watches it from another thread: runMarked(source, describe, fn) wraps a task's entry point — the listener hears it begin before fn runs and end one microtask after (describe runs only while a listener is installed); onTaskMark installs the one listener — main-thread-stall posts both to its out-of-thread watchdog, so a tab that freezes inside the task has already said which: the mark left open.
+        - **`task-marks`** — Say what the main thread is starting, for whoever watches it from another thread: runMarked(source, describe, fn) wraps a task's entry point (begin before, end one microtask after); onTaskMark installs the one listener (main-thread-stall posts both to its out-of-thread watchdog, so a tab that freezes inside the task has already said which: the mark left open).
           - Cross-plugin:
             - Imported by:
+              - `framework/browser-server`
               - `network/live/live-state`
               - `primitives/networking`
               - `reports/main-thread-stall`
-          - Web:
+          - Core:
             - Exports (types):
               - `TaskMarkListener`
               - `TaskMarkText`
@@ -57340,8 +57341,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/log-channels.clientLog`
           - `primitives/pane.peekRoute`
           - `primitives/pane.usePathname`
-          - `primitives/perfs/task-marks.onTaskMark`
-          - `primitives/perfs/task-marks.runMarked`
           - `primitives/scope/tab-id.getTabId`
           - `primitives/ui-context.collectLineage`
           - `primitives/ui-context.nearestOwner`

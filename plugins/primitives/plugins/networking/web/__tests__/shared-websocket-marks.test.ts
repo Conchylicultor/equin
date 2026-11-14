@@ -10,7 +10,7 @@ import { describe, test, expect, beforeEach, afterEach, vi } from "vitest";
 import {
   onTaskMark,
   runMarked,
-} from "@plugins/primitives/plugins/perfs/plugins/task-marks/web";
+} from "@plugins/primitives/plugins/perfs/plugins/task-marks/core";
 import { SharedWebSocket } from "../shared-websocket";
 import { subscribeNetDiag } from "../net-diag-bus";
 import { subscribeWsStatus } from "../ws-status-bus";

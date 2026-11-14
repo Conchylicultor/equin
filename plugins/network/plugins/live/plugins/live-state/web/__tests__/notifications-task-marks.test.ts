@@ -17,7 +17,7 @@ vi.mock(
 
 import { QueryClient } from "@tanstack/react-query";
 import { z } from "zod";
-import { onTaskMark } from "@plugins/primitives/plugins/perfs/plugins/task-marks/web";
+import { onTaskMark } from "@plugins/primitives/plugins/perfs/plugins/task-marks/core";
 import { createTransportHub } from "@plugins/primitives/plugins/networking/web/testing";
 import { NotificationsClient } from "../notifications-client";
 
