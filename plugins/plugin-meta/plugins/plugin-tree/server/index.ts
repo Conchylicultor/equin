@@ -13,14 +13,16 @@ export {
 export {
   FacetedSessionEnded,
   FacetedTreeSource,
+  FacetsUnavailable,
 } from "./internal/faceted-source";
 export type {
+  FacetedSessionHandlers,
   FacetedTreeSession,
   FacetedTreeSourceImpl,
 } from "./internal/faceted-source";
 
 export default {
   description:
-    "Watcher-kept plugin-tree accessors: the structure tree, kept up to date in-process by what changed (a plugin added or removed, a key file edited — O(changes), with its own change signal), and the faceted tree, kept up to date by what changed through the FacetedTreeSource host service (a worker holding the faceted index, never extracted in the backend), with its own change signal.",
+    "Watcher-kept plugin-tree accessors: the structure tree and the faceted tree, both held by the FacetedTreeSource host service (a worker holding the faceted index, which builds the structure first and hands it out ahead of the facets — neither is built in the backend), kept up to date by what changed (O(changes)), each with its own change signal.",
   register: [pluginTreeWarmup, pluginsDirWatcher],
 } satisfies ServerPluginDefinition;

@@ -86,6 +86,40 @@ index 328f469965d3bc248c99e8a50752c549c631e20a..d3d0eb17c52c07e8db400657153e49f9
  struct DirEntry {
    std::string path;
    uint64_t mtime;
+diff --git a/src/Event.hh b/src/Event.hh
+--- a/src/Event.hh
++++ b/src/Event.hh
+@@ -8,6 +8,7 @@
+ #include <mutex>
+ #include <map>
+ #include <optional>
++#include <sys/stat.h>
+ 
+ using namespace Napi;
+ 
+@@ -60,8 +61,21 @@ public:
+   std::vector<Event> getEvents() {
+     std::lock_guard<std::mutex> l(mMutex);
+     std::vector<Event> eventsCloneVector;
+     for(auto it = mEvents.begin(); it != mEvents.end(); ++it) {
+-      if (!(it->second.isCreated && it->second.isDeleted)) {
++      if (it->second.isCreated && it->second.isDeleted) {
++        // equin: created and deleted since the last batch nets to nothing
++        // only if the path is gone. One that is there now was replaced (git
++        // rewrites a file as unlink + create) and is reported as an update.
++        // Upstream dropped it whatever was on disk, so FSEvents' history
++        // replay (`getEventsSince`) never named about half the files a
++        // `git checkout` rewrote (83 of 161 in one probe): a reader catching
++        // up from a snapshot kept their old content.
++        struct stat file;
++        if (lstat(it->second.path.c_str(), &file) == 0) {
++          Event replaced(it->second.path);
++          eventsCloneVector.push_back(replaced);
++        }
++      } else {
+         eventsCloneVector.push_back(it->second);
+       }
+     }
 diff --git a/src/Watcher.cc b/src/Watcher.cc
 index a58ff3722d0d4a85dbef822f7cd4a078cb4278ff..f7e965de2964d094dbfc8f6e2099bc5047c5e223 100644
 --- a/src/Watcher.cc

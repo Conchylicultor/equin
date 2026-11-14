@@ -1,6 +1,6 @@
 # plugin-tree
 
-## The faceted tree is data in a backend (`server/internal/structure-tree-cache.ts`)
+## Both trees are data in a backend (`server/internal/structure-tree-cache.ts`)
 
 `core/` builds the STRUCTURE tree only (`buildPluginTree`: the walk, each
 barrel's description and flags, the hierarchy). Extracting facets is build
@@ -79,55 +79,68 @@ build only.
 A node is a function of two inputs only: whether its folder holds any file of
 the repo's set (the content gate, `pluginPositionsOf`), and the text of its own
 key files (`PLUGIN_KEY_FILES`: the four runtime barrels and `package.json`). So
-a backend does not rebuild the tree on a change — it holds a `StructureIndex`
-(those inputs: the member files under `plugins/`, sorted; a support count per
-plugin position; each plugin's read fields) and `getStructureTreeCached` hands
-out its current tree. The one `plugins/` watcher feeds it each batch:
+the tree is not rebuilt on a change — a `StructureIndex` holds those inputs
+(the member files under `plugins/`, sorted; a support count per plugin
+position; each plugin's read fields) and is handed each batch:
 
 - a watcher `update` of a file that is already a member: membership cannot have
   moved, so nothing is asked — a key file is re-read, any other file costs
   nothing at all;
-- a create / delete (a file or a folder): re-asked of git for those paths only
-  (`listRepoMembers` — `loadRepoFiles`' membership rule, scoped by literal
-  pathspecs), support counts moved, and the key files of the plugins touched
+- a create / delete (a file or a folder): re-asked of the file set for those
+  paths only, support counts moved, and the key files of the plugins touched
   re-read. A `.gitignore` edit re-asks its folder.
 
 The tree is re-linked (`assemblePluginTree`, in memory) only when a plugin
-actually changed, and only then does `onPluginStructureChanged` fire — the
+actually changed.
+
+**Held by the worker, not the backend.** The faceted index builds this index
+first, over its live snapshot, its fields from the key-file fold records
+(`fieldsOf`: no key file parsed that an earlier process folded). The worker
+posts it whole as soon as it is built — a `structure` frame
+(`pluginStructureDelta`), before any facet record is keyed or read — and again
+within each refresh that moved it, ahead of that refresh's facet work.
+`getStructureTreeCached` reads it from the session (`FacetedTreeSession.structure`),
+and `onPluginStructureChanged` fires on those frames only — the
 `plugin-view.tree` live value listens to that, not to every edit, and has no
-throttle. The faceted tree has its own signal (`onPluginFacetsChanged`, above).
+throttle. The faceted tree has its own signal (`onPluginFacetsChanged`).
 
-Cold builds happen once per process (the first read) and again only when the
-index was dropped: the watcher lost events (`onLost`), a batch named more than
-2,000 paths (a checkout or rebase — one listing is cheaper), a path came outside
-the root, or a refresh failed (a half-applied refresh is never kept). A cold
-build lists the whole repo's members (`listAllRepoMembers`: one `git status`
-over the untracked cache, then only the wholly-untracked folders walked) and
-keeps those under `plugins/` — a pathspec-scoped listing would bypass the cache
-and walk all of `plugins/`. It reads key files at width 8:
-the fs pool also serves the backend's requests — at 64 every other fs call of
-main queued behind the warm-up (fs-wait, 2026-11-04: ~100 ms per read, all
-queue time). The listing was its biggest cost while it was git's untracked walk
-of `plugins/` (`ls-files --others`: ~0.8 s median, seconds under load; now
-~0.13–0.17 s). `scripts/bench-structure-tree.ts` measures cold and
-per-edit costs (2026-11-06, medians: whole rebuild per change 1,073 ms → cold
-804 ms once, then 0 ms per save, ~48 ms per file created or deleted, ~46 ms
-per plugin folder); `e2e/structure-tree-live.ts` checks the deployed value
-(an ordinary file is a 304; a plugin added, edited, removed reaches the tab).
+The backend used to build the same index a second time, in process: the
+whole repo listed with git and ~3.8k key files read and parsed on its event
+loop (0.3–0.5 s alone on main's checkout; 0.65–2.5 s wall on main's boots,
+where it ran inside the restart's resubscribe burst and was, once the worker
+resumed from its checkpoint, the warm-up's tail — 2026-11-14). The two trees
+are equal (same nodes, same order).
 
-The repo-root `.gitignore` is outside the watch: an edit to it that moves
-membership under `plugins/` is seen at the next cold build, as before.
+**The structure never fails with the facets.** It is built as soon as the
+snapshot is there, not after the facet modules load; a facet module that does
+not load or an extraction that throws leaves the index holding the structure
+(kept up to date by every refresh) with its facets FAILED — a faceted read
+rejects with `FacetsUnavailable`, reported as a server error — and the next
+change ends the session by design (`facets-retry`): a fresh worker imports the
+facet modules anew (an import that threw throws again in the same process)
+and catches up from the checkpoint. Only the snapshot or the structure
+failing, or the worker dying, ends it on an error. A session that ends by
+design bumps the trees it had told a reader about (`onEnded`'s `held`); one
+that ends on an error is reported and bumps nothing, so `plugin-view.tree` —
+which re-reads on every structure bump — cannot loop re-opening a worker that
+keeps failing (the next read or change opens a new one).
+One cost: the structure shares the worker's one queue, so a key-file edit
+made during a slow facets refresh reaches the structure after that refresh
+(within its own refresh it is posted before the facet work).
+
+The `read` form of `StructureIndexIo` (each key file's text, parsed in place)
+remains for a reader without a record store (`scripts/bench-structure-tree.ts`).
+`e2e/structure-tree-live.ts` checks the deployed value (an ordinary file is a
+304; a plugin added, edited, removed reaches the tab).
 
 ## Boot warm-up (`server/internal/warmup.ts`)
 
-Both tree caches are in-memory and die with the process, so on main (which
-restarts on every deploy) the first Studio/plugin-view request of each process
-would wait for both. A `host`-scoped `defineWarmup` reads structure + facets in
-the throttled post-boot drain instead (the faceted one by starting its
-worker), side by side: neither reads the other, and starting the worker only
-after the backend's structure added that build to the warm-up's wall time.
-Worktree backends keep the lazy cold path on purpose: their Studio
-surfaces are rarely opened.
+Both trees die with the process, so on main (which restarts on every deploy)
+the first Studio/plugin-view request of each process would wait for them. A
+`host`-scoped `defineWarmup` reads both in the throttled post-boot drain
+instead, which opens the worker session (inside a heavy-read slot held until
+its first build is done, whichever tree was asked first). Worktree backends
+keep the lazy path on purpose: their Studio surfaces are rarely opened.
 
 What the worker's cold build costs, and why (2026-11-14, main's checkout,
 host load 10–20, steps timed one after another): git snapshot ~0.3 s; the
@@ -185,8 +198,21 @@ the set saved may be any state after its cursor: a re-check, never a miss.
 - **Measured** (`scripts/bench-faceted-index.ts`, 2026-11-14, this worktree,
   host load 12–16; in-worker build): from the checkpoint with no change
   0.83–0.98 s, against 1.38–1.77 s cold; the snapshot step 0.18–0.46 s
-  (cursor, read and replay 30–240 ms) against 1.0–4.1 s. After edits made
-  while no worker ran, the resumed tree equals a fresh build.
+  (cursor, read and replay 30–240 ms) against 1.0–4.1 s. The bench proves a
+  resumed tree equals a fresh build after edits made while no worker ran,
+  and — in a throwaway `git clone --shared` — after a branch switch (~490
+  paths) and a rebase; a cursor past the journal's age and a journal reset
+  start cold, saying why. The branch switch and the rebase first DIFFERED:
+  upstream parcel's history replay left out about half the files git
+  rewrote (unlink + create), fixed in the patched addon (file-watcher's
+  `parcel-addon`).
+- **What a resume costs on main** (2026-11-14, load ~1.6, main's checkout):
+  the replay is FSEvents scanning the machine's history since the cursor —
+  ~0.39 s for 276 paths 12 minutes later, almost all agents' checkouts and
+  `.git` — so on a calm host a resumed snapshot (0.76–0.9 s) is no faster
+  than main's cold listing (0.34–0.56 s); it pays off under load, where the
+  listing grows to seconds. Each build's steps are in its `plugin-tree` log
+  line (`steps`, ms from its start).
 
 What is still whole-tree per process: each record producer's code identity
 (the module graph over its closure, ~0.2 s, shared by the key-file fold and
@@ -247,7 +273,7 @@ dynamic value.
 
 ## Plugin reference
 
-- Description: Watcher-kept plugin-tree accessors: the structure tree, kept up to date in-process by what changed (a plugin added or removed, a key file edited — O(changes), with its own change signal), and the faceted tree, kept up to date by what changed through the FacetedTreeSource host service (a worker holding the faceted index, never extracted in the backend), with its own change signal.
+- Description: Watcher-kept plugin-tree accessors: the structure tree and the faceted tree, both held by the FacetedTreeSource host service (a worker holding the faceted index, which builds the structure first and hands it out ahead of the facets — neither is built in the backend), kept up to date by what changed (O(changes)), each with its own change signal.
 - Server:
   - Contributes: `host-service:plugin-tree.faceted-source` "plugin-tree.faceted-source"
   - Uses:
@@ -258,11 +284,13 @@ dynamic value.
     - `infra/paths.PLUGINS_DIR`
     - `infra/warmup.defineWarmup`
   - Exports (types):
+    - `FacetedSessionHandlers`
     - `FacetedTreeSession`
     - `FacetedTreeSourceImpl`
   - Exports (values):
     - `FacetedSessionEnded`
     - `FacetedTreeSource`
+    - `FacetsUnavailable`
     - `getFacetsTreeCached`
     - `getStructureTreeCached`
     - `onPluginFacetsChanged`
@@ -308,6 +336,7 @@ dynamic value.
     - `parseKeyFile`
     - `PLUGIN_KEY_FILES`
     - `pluginFieldsFrom`
+    - `pluginStructureDelta`
     - `pluginTreeDelta`
     - `pluginTreeFromDelta`
     - `pluginTreeToJson`

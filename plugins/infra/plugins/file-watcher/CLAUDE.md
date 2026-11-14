@@ -290,7 +290,10 @@ old (parcel cannot tell a purged history from a quiet one), the journal's ids
 went back, or the history reports
 dropped events — the caller then walks. parcel itself returns `[]` for a
 missing snapshot file; the cursor carries its snapshot, so that cannot happen
-here. `infra/corpus-index` uses it for its boot catch-up.
+here. A file git rewrote (unlink + create) is named too: upstream parcel's
+event list dropped any path whose replayed events netted to created and
+deleted, even one still there — about half of a checkout's rewrites
+(`parcel-addon`'s patch to `src/Event.hh`; tested in `shared/journal.test.ts`). `infra/corpus-index` uses it for its boot catch-up.
 
 ## `depth: "children"`: a folder's own entries, and the folder going
 

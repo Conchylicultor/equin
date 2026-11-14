@@ -8,6 +8,7 @@ export type {
 } from "./internal/faceted-tree";
 export type {
   FacetedCheckpoint,
+  FacetedFacets,
   FacetedIndex,
   FacetedRefresh,
   FacetedResume,

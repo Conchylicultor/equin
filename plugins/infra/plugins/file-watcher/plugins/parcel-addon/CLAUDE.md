@@ -142,6 +142,16 @@ plugin ships the fixed build.
   - `startStream` completes the state (tree, stream) before
     `FSEventStreamStart`: upstream set it after, so a first callback could
     read a null tree.
+- **`src/Event.hh`** (every backend's event list): a path whose events net
+  to created **and** deleted is dropped only if it is gone. One there now
+  was replaced — git rewrites a file as unlink + create — and is reported as
+  an `update`. Upstream dropped it whatever was on disk, and FSEvents'
+  history replay (`getEventsSince`, the file-watcher journal) coalesces a
+  rewrite that way: of 161 files a `git checkout` of this repo rewrote, 64–83
+  were never named, and a reader catching up from a snapshot (the faceted
+  index's checkpoint, the corpus index's boot catch-up) kept their old
+  content (2026-11-14). Tested by `shared/journal.test.ts` in file-watcher
+  (2,000 files, half rewritten by a checkout: upstream leaves 247 unnamed).
 - **On darwin `index.js` loads `build/Release/watcher.node` and nothing
   else** (same patch). A missing file throws, naming the fix: it used to fall
   back to the prebuilt `@parcel/watcher-darwin-<arch>` package — upstream's

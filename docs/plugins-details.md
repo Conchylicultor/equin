@@ -32046,7 +32046,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework/tooling/web-artifacts`
           - `infra/deps/npm`
           - `infra/worktree/reclaim`
-          - `plugin-meta/plugin-tree`
           - `plugin-meta/plugin-tree/faceted`
           - `plugin-meta/relocate`
           - `review/plugin-changes`
@@ -47150,7 +47149,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `scanCssRefs` — Relative paths in one CSS source: `@source "rel"` (and `@source not "rel"`) and `@import "rel"`.
           - `scanMarkdownRefs` — Relative targets in one markdown source: `[x](rel)` / `![x](rel)`, `[x]: rel` definitions, and `<img src>` / `<a href>` attributes.
           - `scanPathRefs` — `path` refs in one TS/TSX source: every string literal that is wholly a `plugins/…` path, and every `@plugins/…` module specifier (static, dynamic and mocked imports).
-    - **`plugin-tree`** — Watcher-kept plugin-tree accessors: the structure tree, kept up to date in-process by what changed (a plugin added or removed, a key file edited — O(changes), with its own change signal), and the faceted tree, kept up to date by what changed through the FacetedTreeSource host service (a worker holding the faceted index, never extracted in the backend), with its own change signal.
+    - **`plugin-tree`** — Watcher-kept plugin-tree accessors: the structure tree and the faceted tree, both held by the FacetedTreeSource host service (a worker holding the faceted index, which builds the structure first and hands it out ahead of the facets — neither is built in the backend), kept up to date by what changed (O(changes)), each with its own change signal.
       - Server:
         - Contributes: `host-service:plugin-tree.faceted-source` "plugin-tree.faceted-source"
         - Uses:
@@ -47161,11 +47160,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/paths.PLUGINS_DIR`
           - `infra/warmup.defineWarmup`
         - Exports (types):
+          - `FacetedSessionHandlers`
           - `FacetedTreeSession`
           - `FacetedTreeSourceImpl`
         - Exports (values):
           - `FacetedSessionEnded`
           - `FacetedTreeSource`
+          - `FacetsUnavailable`
           - `getFacetsTreeCached`
           - `getStructureTreeCached`
           - `onPluginFacetsChanged`
@@ -47211,6 +47212,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `parseKeyFile`
           - `PLUGIN_KEY_FILES`
           - `pluginFieldsFrom`
+          - `pluginStructureDelta`
           - `pluginTreeDelta`
           - `pluginTreeFromDelta`
           - `pluginTreeToJson`
@@ -47231,9 +47233,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Plugins:
         - **`faceted`** — The faceted plugin tree, build tooling: buildFacetedPluginTree (the structure tree plus every facet extracted — plugin records from a snapshot — enriched and related), and the faceted index a backend keeps in a worker thread (FacetedTreeSource's desktop provider): built once, then refreshed by the watcher's paths — only the plugins owning them re-keyed, only moved records extracted, relate only when a record text changed.
           - Core:
-            - Uses: 48 symbols — full list in [`plugins/plugin-meta/plugins/plugin-tree/plugins/faceted/REFERENCE.md`](../plugins/plugin-meta/plugins/plugin-tree/plugins/faceted/REFERENCE.md)
+            - Uses: 47 symbols — full list in [`plugins/plugin-meta/plugins/plugin-tree/plugins/faceted/REFERENCE.md`](../plugins/plugin-meta/plugins/plugin-tree/plugins/faceted/REFERENCE.md)
               - `plugin-meta/plugin-records` ×15
-              - `plugin-meta/plugin-tree` ×9
+              - `plugin-meta/plugin-tree` ×8
               - `framework/tooling` ×7
               - `plugin-meta/facets` ×4
               - `framework/plugin-id` ×3
@@ -47247,6 +47249,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `BuildFacetedTreeOptions`
               - `FacetCode`
               - `FacetedCheckpoint`
+              - `FacetedFacets`
               - `FacetedIndex`
               - `FacetedRefresh`
               - `FacetedResume`

@@ -83,6 +83,31 @@ export interface PluginTreeDelta {
 }
 
 /**
+ * The structure of `tree` alone, as a whole delta: every node with its
+ * structure fields and no facets — how the faceted index's holder hands its
+ * structure to the backend as soon as it is built, before any facet is read
+ * (read back by {@link pluginTreeFromDelta} with no previous tree).
+ */
+export function pluginStructureDelta(tree: PluginTreeData): PluginTreeDelta {
+  const toDelta = (node: PluginNode): PluginNodeDelta => ({
+    path: node.path,
+    name: node.name,
+    id: node.id,
+    ...(node.description === undefined
+      ? {}
+      : { description: node.description }),
+    descriptions: node.descriptions,
+    loadBearing: node.loadBearing,
+    collapsed: node.collapsed,
+    compositionRoot: node.compositionRoot,
+    runtimes: node.runtimes,
+    children: node.children.map(toDelta),
+    facets: "{}",
+  });
+  return { roots: tree.roots.map(toDelta) };
+}
+
+/**
  * How a faceted index (`plugin-tree/faceted`'s `openFacetedIndex`) started
  * its file set: resumed from the checkpoint an earlier process left, with the
  * number of paths the journal named as changed since, or cold — listed whole

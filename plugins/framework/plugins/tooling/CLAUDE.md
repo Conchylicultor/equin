@@ -63,7 +63,6 @@
     - `framework/tooling/web-artifacts`
     - `infra/deps/npm`
     - `infra/worktree/reclaim`
-    - `plugin-meta/plugin-tree`
     - `plugin-meta/plugin-tree/faceted`
     - `plugin-meta/relocate`
     - `review/plugin-changes`

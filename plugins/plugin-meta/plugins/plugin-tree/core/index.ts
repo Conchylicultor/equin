@@ -10,6 +10,7 @@ export {
 } from "./internal/plugin-tree";
 export { createStructureIndex } from "./internal/structure-index";
 export {
+  pluginStructureDelta,
   pluginTreeDelta,
   pluginTreeFromDelta,
   pluginTreeToJson,

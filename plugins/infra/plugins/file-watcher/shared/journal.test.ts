@@ -89,3 +89,47 @@ test.if(onFsEvents)(
     expect((await journalCursor(link)).kind).toBe("unsupported");
   },
 );
+
+/** Run git in `cwd`, failing the test on a non-zero exit. */
+async function git(cwd: string, args: string[]): Promise<void> {
+  const proc = Bun.spawn(
+    ["git", "-c", "user.name=test", "-c", "user.email=test@localhost", ...args],
+    { cwd, stdout: "ignore", stderr: "pipe" },
+  );
+  const [code, err] = await Promise.all([
+    proc.exited,
+    new Response(proc.stderr).text(),
+  ]);
+  if (code !== 0) throw new Error(`git ${args.join(" ")}: ${err}`);
+}
+
+// git rewrites a file as unlink + create, which FSEvents' history coalesces
+// so that parcel's event list saw it created and deleted — and dropped it,
+// although it is there with new content (upstream's addon: 247 of these 1,000
+// unnamed; the patched one reports it as an update — parcel-addon's
+// CLAUDE.md). A few hundred files did not reproduce it; this many do.
+test.if(onFsEvents)(
+  "a replay names every file a git checkout rewrote",
+  async () => {
+    const repo = join(dir, "repo");
+    await mkdir(repo);
+    await git(repo, ["init", "-q"]);
+    const files = Array.from({ length: 2000 }, (_, i) => `d${i % 50}/f${i}.ts`);
+    for (let d = 0; d < 50; d++) await mkdir(join(repo, `d${d}`));
+    for (const f of files) await writeFile(join(repo, f), `1 ${f}\n`);
+    await git(repo, ["add", "-A"]);
+    await git(repo, ["commit", "-q", "-m", "one"]);
+    const rewritten = files.filter((_, i) => i % 2 === 0);
+    for (const f of rewritten) await writeFile(join(repo, f), `2 ${f}\n`);
+    await git(repo, ["commit", "-q", "-am", "two"]);
+    const cursor = await cursorOf(repo);
+    await git(repo, ["checkout", "-q", "--detach", "HEAD~1"]);
+
+    const replay = await journalChangesSince(cursor);
+    expect(replay.kind).toBe("changes");
+    if (replay.kind !== "changes") return;
+    const named = new Set(replay.paths);
+    expect(rewritten.filter((f) => !named.has(join(repo, f)))).toEqual([]);
+  },
+  120_000,
+);

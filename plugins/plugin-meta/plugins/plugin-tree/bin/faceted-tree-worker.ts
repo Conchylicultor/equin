@@ -12,6 +12,7 @@ import {
   type JournalCursorResult,
 } from "@plugins/infra/plugins/file-watcher/server";
 import { wholeList } from "@plugins/packages/plugins/list-bound/core";
+import { pluginStructureDelta } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import {
   openFacetedIndex,
   type FacetedIndex,
@@ -19,9 +20,11 @@ import {
 } from "@plugins/plugin-meta/plugins/plugin-tree/plugins/faceted/core";
 import type { FromWorkerFrame, ToWorkerFrame } from "../shared/protocol";
 
-// The faceted-tree worker: one thread holding this checkout's faceted index
+// The plugin-tree worker: one thread holding this checkout's faceted index
 // (`faceted`'s `openFacetedIndex`), started by the backend (`machine/`) through the
-// daemon primitive. The facet extractors are build tooling, so they run here —
+// daemon primitive — and with it the structure tree, which the index builds
+// first and posts on its own (`structure` frames), so the backend builds
+// neither. The facet extractors are build tooling, so they run here —
 // on another thread, by path, never in the backend's own import closure
 // (`boot:closure-digestable`).
 //
@@ -188,13 +191,16 @@ async function handle(frame: ToWorkerFrame): Promise<void> {
         readConcurrency: 8,
         codeFiles,
         resume: cursor.then(() => resumeFrom(frame.root, frame.checkpointFile)),
+        onStructure: (tree) =>
+          post({ type: "structure", delta: pluginStructureDelta(tree) }),
       });
       index = built;
       post({
         type: "ready",
-        delta: built.full(),
+        facets: built.facets(),
         ms: performance.now() - t0,
         start: built.start,
+        steps: built.steps,
       });
     } catch (err) {
       post({ type: "failed", id: null, message: describe(err) });

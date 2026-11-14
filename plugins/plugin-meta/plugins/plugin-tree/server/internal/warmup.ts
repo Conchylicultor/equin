@@ -18,10 +18,8 @@ import {
 // and is mostly record reads at that. After this cold build it follows edits by
 // what changed.
 //
-// The two are built side by side: neither reads the other (the worker takes
-// its own snapshot and structure), so starting the worker only once the
-// backend's structure was built added that build's wall time (0.2–0.8 s on
-// main's boots) to the warm-up's for nothing.
+// Both come from one worker session, which builds the structure first and
+// hands it out ahead of the facets: the backend builds neither.
 export const pluginTreeWarmup = defineWarmup({
   name: "plugin-tree.trees",
   description:

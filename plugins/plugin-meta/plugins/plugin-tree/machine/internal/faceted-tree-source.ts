@@ -14,6 +14,8 @@ import {
 } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import {
   FacetedSessionEnded,
+  FacetsUnavailable,
+  type FacetedSessionHandlers,
   type FacetedTreeSession,
 } from "@plugins/plugin-meta/plugins/plugin-tree/server";
 import type { FromWorkerFrame, ToWorkerFrame } from "../../shared/protocol";
@@ -29,7 +31,7 @@ import type { FromWorkerFrame, ToWorkerFrame } from "../../shared/protocol";
 export const facetedTreeDaemon = defineDaemon({
   name: "plugin-tree.faceted-index",
   description:
-    "Holds this checkout's faceted plugin tree (every plugin's facets, related) and keeps it up to date by the files the watcher saw change, so Studio, the composition graph and the deploy-secrets gate read it without extracting facets in the backend.",
+    "Holds this checkout's plugin trees — the structure (every plugin, its key-file fields) and the faceted tree (every plugin's facets, related) — and keeps them up to date by the files the watcher saw change, so plugin views, Studio, the composition graph and the deploy-secrets gate read them without the backend building either.",
   startedBy: "on-demand",
   where: "every-worktree",
   restart: { kind: "never" },
@@ -60,14 +62,19 @@ interface Waiter<T> {
  * refresh posted before the cold build is done is applied after it, and the
  * replies come back in the order they were asked.
  */
-export function openFacetedTreeSession(
-  onEnded: (reason: string) => void,
-): FacetedTreeSession {
+export function openFacetedTreeSession({
+  onEnded,
+  onStructureChanged,
+}: FacetedSessionHandlers): FacetedTreeSession {
   let tree: PluginTreeData | null = null;
+  /** Why the facets are failed (the structure lives on), or null. */
+  let facetsFailed: FacetsUnavailable | null = null;
+  let structure: PluginTreeData | null = null;
   let ended: FacetedSessionEnded | null = null;
   let closing = false;
   let nextId = 0;
   const ready: Waiter<PluginTreeData>[] = [];
+  const structured: Waiter<PluginTreeData>[] = [];
   const pending = new Map<number, Waiter<boolean>>();
 
   /** End the session; `failed` when it ended on an error, not by design. */
@@ -75,12 +82,16 @@ export function openFacetedTreeSession(
     if (ended !== null) return;
     ended = new FacetedSessionEnded(reason, failed);
     for (const w of ready.splice(0)) w.reject(ended);
+    for (const w of structured.splice(0)) w.reject(ended);
     for (const w of pending.values()) w.reject(ended);
     pending.clear();
     if (!closing) {
       // The instance stays claimed until stopped (`restart: never`).
       void runTracked("plugin-tree:faceted-worker-stop", () => instance.stop());
-      onEnded(reason);
+      onEnded(ended, {
+        structure: structure !== null,
+        facets: tree !== null || facetsFailed !== null,
+      });
     }
   };
 
@@ -88,15 +99,30 @@ export function openFacetedTreeSession(
   // session — by a frame or by a throw while applying one — rejects it.
   const applyFrame = (frame: FromWorkerFrame): void => {
     switch (frame.type) {
+      case "structure": {
+        const first = structure === null;
+        structure = pluginTreeFromDelta(PLUGINS_DIR, frame.delta, null);
+        if (first) for (const w of structured.splice(0)) w.resolve(structure);
+        else onStructureChanged();
+        return;
+      }
       case "ready":
         buildLog.publish(
           `faceted index built in ${Math.round(frame.ms)} ms, ${
             frame.start.kind === "resumed"
               ? `resumed from its checkpoint (${frame.start.changed} paths changed since)`
               : `cold (${frame.start.reason})`
-          }`,
+          }; steps (ms from its start): ${Object.entries(frame.steps)
+            .map(([step, ms]) => `${step} ${ms}`)
+            .join(", ")}`,
         );
-        tree = pluginTreeFromDelta(PLUGINS_DIR, frame.delta, null);
+        if (frame.facets.kind === "failed") {
+          facetsFailed = new FacetsUnavailable(frame.facets.message);
+          reportServerError({ message: facetsFailed.message });
+          for (const w of ready.splice(0)) w.reject(facetsFailed);
+          return;
+        }
+        tree = pluginTreeFromDelta(PLUGINS_DIR, frame.facets.delta, null);
         for (const w of ready.splice(0)) w.resolve(tree);
         return;
       case "refreshed": {
@@ -106,11 +132,28 @@ export function openFacetedTreeSession(
           end(`its code changed (${result.path})`, false);
           return;
         }
-        if (result.kind === "changed")
+        if (result.kind === "facets-retry") {
+          // Its facets failed and something changed: a fresh worker
+          // imports the facet modules anew and builds them again.
+          end("its facets failed and the checkout changed since", false);
+          return;
+        }
+        let moved = false;
+        if (result.kind === "changed") {
+          // After a failure the delta holds every node's facets.
           tree = pluginTreeFromDelta(PLUGINS_DIR, result.delta, tree);
+          facetsFailed = null;
+          moved = true;
+        } else if (result.kind === "facets-failed") {
+          // Readers were handed a tree (or no failure yet): theirs moved.
+          moved = facetsFailed === null;
+          facetsFailed = new FacetsUnavailable(result.message);
+          if (moved) reportServerError({ message: facetsFailed.message });
+          tree = null;
+        }
         const w = pending.get(frame.id);
         pending.delete(frame.id);
-        w?.resolve(result.kind === "changed");
+        w?.resolve(moved);
         return;
       }
       case "checkpoint-failed":
@@ -158,8 +201,16 @@ export function openFacetedTreeSession(
   return {
     tree() {
       if (ended !== null) return Promise.reject(ended);
+      if (facetsFailed !== null) return Promise.reject(facetsFailed);
       if (tree !== null) return Promise.resolve(tree);
       return new Promise((resolve, reject) => ready.push({ resolve, reject }));
+    },
+    structure() {
+      if (ended !== null) return Promise.reject(ended);
+      if (structure !== null) return Promise.resolve(structure);
+      return new Promise((resolve, reject) =>
+        structured.push({ resolve, reject }),
+      );
     },
     refresh(paths, edited) {
       if (ended !== null) return Promise.reject(ended);

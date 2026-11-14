@@ -28,9 +28,9 @@ tree follows what changed") for the design and its measurements.
 
 - Description: The faceted plugin tree, build tooling: buildFacetedPluginTree (the structure tree plus every facet extracted — plugin records from a snapshot — enriched and related), and the faceted index a backend keeps in a worker thread (FacetedTreeSource's desktop provider): built once, then refreshed by the watcher's paths — only the plugins owning them re-keyed, only moved records extracted, relate only when a record text changed.
 - Core:
-  - Uses: 48 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 47 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `plugin-meta/plugin-records` ×15
-    - `plugin-meta/plugin-tree` ×9
+    - `plugin-meta/plugin-tree` ×8
     - `framework/tooling` ×7
     - `plugin-meta/facets` ×4
     - `framework/plugin-id` ×3
@@ -44,6 +44,7 @@ tree follows what changed") for the design and its measurements.
     - `BuildFacetedTreeOptions`
     - `FacetCode`
     - `FacetedCheckpoint`
+    - `FacetedFacets`
     - `FacetedIndex`
     - `FacetedRefresh`
     - `FacetedResume`
