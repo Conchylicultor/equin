@@ -2,6 +2,7 @@
 // check run's, or a writing pass's that re-takes it per evaluation phase).
 export {
   codegenPassOver,
+  openWritingCodegenPass,
   writingCodegenPass,
   type CodegenPass,
 } from "./codegen-pass";

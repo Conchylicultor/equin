@@ -3,7 +3,7 @@ import {
   regenerateRegistryCodegen,
   regenerateManifestCodegen,
   listReviewMarkedOverrides,
-  writingCodegenPass,
+  openWritingCodegenPass,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 import { loadRepoSnapshot } from "@plugins/framework/plugins/tooling/core";
@@ -19,11 +19,11 @@ const run: CliAction<[], object> = async () => {
   // evaluated barrels of the plugins this push did not touch are not computed
   // again.
   installRecordStore(openRecordStore());
-  // One pass for both pipelines: the trees read the first snapshot, and each
-  // barrel-evaluation phase re-takes it after the previous phase's writes.
-  const pass = writingCodegenPass(await loadRepoSnapshot(root), () =>
-    loadRepoSnapshot(root),
-  );
+  // One pass for both pipelines, over the checkout's view: the trees read
+  // the first snapshot, and every step reading generated files (each
+  // barrel-evaluation phase, each registry step) the set after the pass's
+  // writes so far — never the previous run's output.
+  const { pass, finish } = await openWritingCodegenPass(root);
   const { renamedPackages } = await regenerateRegistryCodegen({ pass });
   // The committed tree only: a composition's own manifests are gitignored, and
   // its next build writes them.
@@ -31,6 +31,8 @@ const run: CliAction<[], object> = async () => {
   // The records this pass made, written before it ends (a busy store is the
   // store's own outcome, said by it — never this command's failure).
   await currentRecordStore().flush();
+  // What every step was answered agrees with the tree as it is now.
+  await finish(await loadRepoSnapshot(root));
 
   // A created or corrected package.json leaves `bun.lock` without the new
   // member, or recording its old name. This

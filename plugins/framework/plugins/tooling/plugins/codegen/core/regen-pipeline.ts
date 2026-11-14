@@ -132,18 +132,25 @@ export async function regenerateRegistryCodegen({
   await onStep("barrelStubs", "barrel stubs", () =>
     generateBarrelStubs({ root }),
   );
-  const ctx = await buildRegistryGenContext(pass);
-  await onStep("pluginRegistry", "plugin registry", () =>
-    generatePluginRegistry({ ctx }),
+  // Each step reads a ctx over the set as of when it starts
+  // (`buildRegistryGenContext`'s default): a step after a write reads what
+  // was written, never the previous run's output — the browser hosts' scans
+  // read the registries the plugin registry step just rewrote. A step after
+  // a no-op write gets the same set, and with it the same memoized ctx.
+  await onStep("pluginRegistry", "plugin registry", async () =>
+    generatePluginRegistry({ ctx: await buildRegistryGenContext(pass) }),
   );
-  await onStep("eagerTier", "eager-tier manifest", () =>
-    generateEagerTier({ ctx }),
+  await onStep("eagerTier", "eager-tier manifest", async () =>
+    generateEagerTier({ ctx: await buildRegistryGenContext(pass) }),
   );
   // Not wrapped in one span: the generator opens its own per-phase spans
   // (inference, coverage guard, write), which a wrapping span would nest.
-  const browserHosts = await generateBrowserHosts(ctx, onStep);
+  const browserHosts = await generateBrowserHosts(
+    await buildRegistryGenContext(pass),
+    onStep,
+  );
   // The crawlable compositions' static-host graphs (`static-host-gen.ts`).
-  await generateStaticHosts(ctx, onStep);
+  await generateStaticHosts(await buildRegistryGenContext(pass), onStep);
   return { renamedPackages, browserHosts };
 }
 

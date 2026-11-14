@@ -21,7 +21,18 @@ none of it lists the working tree: the pass carries the caller's file set.
   phase wrote the pre-barrel or post-web manifests — so its records are keyed
   by the new content. The build takes it in stage 1
   (`prepareCompositionSources`) and hands the same pass to stage 2 and to
-  config propagation.
+  config propagation; `regen-generated` opens it with
+  `openWritingCodegenPass(root)` (the same repo view the build reads, so a
+  phase after a no-op write gets the same set, and the end of the pass
+  checks the view against the tree).
+- **Generated files are read as of now, never as first listed.** The
+  registry-gen context defaults to `pass.phaseRepo()`, and each step of
+  `regenerateRegistryCodegen` builds its ctx when it starts: the browser
+  hosts' scans read the registries the step before just rewrote (the coverage
+  guard reads every file of `server-core`). Reading the first listing there
+  read the previous run's registry by its stale blob, so a registry naming a
+  since-deleted plugin failed the very pass that rewrites it
+  (`core/regen-pipeline.test.ts`).
 - **Anything else** (a `cli/` command, a script, a test, a server action
   reading its own checkout) lists once and builds the pass itself; a listing
   outside `cli/`, `bin/` and scripts is a declared
@@ -223,7 +234,7 @@ wrapper fixpoint reads.
 
 - Description: Plugin doc generation and registry codegen
 - Core:
-  - Uses: 163 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 165 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `plugin-meta/parse-utils` ×17
     - `config_v2` ×16
     - `framework/plugin-id` ×13
@@ -234,6 +245,7 @@ wrapper fixpoint reads.
     - `plugin-meta/barrel-import` ×6
     - `plugin-meta/closure` ×6
     - `plugin-meta/composition` ×6
+    - `framework/tooling` ×5
     - `packages/timed-fs` ×5
     - `plugin-meta/facets` ×5
     - `plugin-meta/plugin-records/evaluate` ×5
@@ -241,7 +253,6 @@ wrapper fixpoint reads.
     - `infra/host-fs/user-path` ×4
     - `packages/shared-work` ×4
     - `framework/tooling/format` ×3
-    - `framework/tooling` ×3
     - `config_v2/ledger` ×2
     - `framework/tooling/boundaries` ×2
     - `framework/tooling/collected-dir/discovery` ×2
@@ -358,6 +369,7 @@ wrapper fixpoint reads.
     - `loadConfigDescriptorsByOriginPath`
     - `mainBundle`
     - `mainComposition`
+    - `openWritingCodegenPass`
     - `parseCustomUtilities`
     - `parseSpaceRamp`
     - `pluginClaudeMdPath`

@@ -32592,7 +32592,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                     - Uses: `framework/tooling/checks/type-check.readTypeCheckTree`
         - **`codegen`** — Plugin doc generation and registry codegen
           - Core:
-            - Uses: 163 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
+            - Uses: 165 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
               - `plugin-meta/parse-utils` ×17
               - `config_v2` ×16
               - `framework/plugin-id` ×13
@@ -32603,6 +32603,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `plugin-meta/barrel-import` ×6
               - `plugin-meta/closure` ×6
               - `plugin-meta/composition` ×6
+              - `framework/tooling` ×5
               - `packages/timed-fs` ×5
               - `plugin-meta/facets` ×5
               - `plugin-meta/plugin-records/evaluate` ×5
@@ -32610,7 +32611,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/host-fs/user-path` ×4
               - `packages/shared-work` ×4
               - `framework/tooling/format` ×3
-              - `framework/tooling` ×3
               - `config_v2/ledger` ×2
               - `framework/tooling/boundaries` ×2
               - `framework/tooling/collected-dir/discovery` ×2
@@ -32727,6 +32727,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `loadConfigDescriptorsByOriginPath`
               - `mainBundle`
               - `mainComposition`
+              - `openWritingCodegenPass`
               - `parseCustomUtilities`
               - `parseSpaceRamp`
               - `pluginClaudeMdPath`

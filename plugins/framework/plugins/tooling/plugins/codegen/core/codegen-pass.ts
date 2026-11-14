@@ -1,5 +1,9 @@
 import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import type { RepoSnapshot } from "@plugins/framework/plugins/tooling/core";
+import {
+  installRepoView,
+  openRepoView,
+  type RepoSnapshot,
+} from "@plugins/framework/plugins/tooling/core";
 import { sharedMemo } from "@plugins/packages/plugins/shared-work/core";
 
 /**
@@ -25,8 +29,10 @@ export interface CodegenPass {
   /** Absolute checkout root. */
   readonly root: AppPath;
   /**
-   * The pass's set: what the barrel-free tree (a pure function of committed
-   * plugin source, which no phase rewrites) and the registry scans read.
+   * The pass's set as first listed: what the barrel-free tree (a pure function
+   * of committed plugin source, which no phase rewrites) reads. Not what a
+   * reader of generated files reads — that is {@link phaseRepo}, the set after
+   * the pass's writes so far (the registry scans: `buildRegistryGenContext`).
    */
   readonly repo: RepoSnapshot;
   /** The set an evaluation phase reads, taken when the phase starts. */
@@ -57,4 +63,34 @@ export function writingCodegenPass(
   relist: () => Promise<RepoSnapshot>,
 ): CodegenPass {
   return { root: repo.root, repo, phaseRepo: relist };
+}
+
+/**
+ * A writing pass over the checkout at `root` for a process that has no repo
+ * view of its own (`regen-generated`; `build` opens its view itself, as it
+ * reads it outside codegen too): the view of the checkout (`openRepoView`),
+ * installed so every writer's `noteRepoWrites` reaches it, as the pass's
+ * phase set — each step reading generated files reads the set after the
+ * pass's own writes, and a step after a no-op write the same set (so it shares
+ * the earlier step's memos). `finish(fresh)` checks what every step was
+ * answered against `fresh`, a snapshot the pass root takes once the pass is
+ * done (a write that escaped the view fails by name, as in `build`), and
+ * uninstalls the view.
+ */
+export async function openWritingCodegenPass(root: AppPath): Promise<{
+  pass: CodegenPass;
+  finish: (fresh: RepoSnapshot) => Promise<void>;
+}> {
+  const view = await openRepoView(root);
+  installRepoView(view);
+  return {
+    pass: writingCodegenPass(await view.current(), () => view.current()),
+    finish: async (fresh) => {
+      try {
+        await view.assertAgrees(fresh);
+      } finally {
+        installRepoView(undefined);
+      }
+    },
+  };
 }

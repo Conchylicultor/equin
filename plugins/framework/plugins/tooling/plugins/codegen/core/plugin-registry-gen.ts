@@ -114,7 +114,8 @@ export interface RegistryGenContext {
   // every composition, host graph and check that takes this ctx shares it.
   declaredApps: ReadonlyMap<string, DeclaredApp>;
   // The repo's file set every scan below enumerates and reads — the check's
-  // own set when a check built this ctx, else the pass's.
+  // own set when a check built this ctx, else the pass's as of when the ctx
+  // was built (`buildRegistryGenContext`).
   repo(): Promise<RepoFiles>;
   // Per-`<dir>` scan (the collected entry list plus the raw import-derived
   // dependency graph), memoized for this context's lifetime.
@@ -178,8 +179,15 @@ interface DirEntryScan {
 /**
  * The shared registry-generation context of `pass`. A check passes its own
  * file set as `repo` (so the scans read through it — recorded, for an
- * input-keyed check); omitted, the scans read the pass's set, the one the
- * barrel-free tree was built from.
+ * input-keyed check); omitted, the scans read the pass's set AS OF NOW
+ * (`pass.phaseRepo()`): in a writing pass, the set after every write so far.
+ * Never the set the pass listed first — the scans read generated files (the
+ * coverage guard reads every file of `server-core`, its registries included;
+ * a host's closures reach other generators' outputs), and a step after a
+ * write reading that first set reads the PREVIOUS run's output by its stale
+ * blob: a registry naming a since-deleted plugin then fails the very pass
+ * that rewrites it. In a check pass the phase set is the run's one set, so
+ * this is the same ctx either way.
  *
  * Given a `repo`, the ctx is memoized on it: every check of one run asking
  * with the run's set gets the SAME ctx, so its memos (`dirScans`,
@@ -190,10 +198,11 @@ interface DirEntryScan {
  * own input, so it gets its own ctx, every read it makes is recorded, and the
  * work is counted as that check's — `sharedMemo`.)
  */
-export function buildRegistryGenContext(
+export async function buildRegistryGenContext(
   pass: CodegenPass,
-  repo: RepoFiles = pass.repo,
+  given?: RepoFiles,
 ): Promise<RegistryGenContext> {
+  const repo = given ?? (await pass.phaseRepo());
   if (repo.root !== pass.root) {
     throw new Error(
       `buildRegistryGenContext(${pass.root}) was handed the file set of ${repo.root}.`,
