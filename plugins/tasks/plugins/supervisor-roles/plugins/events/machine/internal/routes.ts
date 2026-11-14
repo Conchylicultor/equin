@@ -9,6 +9,6 @@ export const handleFlushRoleEvents = implementMachine(
   async ({ params }) => {
     if (!(await getSupervisorRole(params.id)))
       throw new HttpError(404, `No supervisor role "${params.id}".`);
-    await flushRoleEvents(params.id);
+    await flushRoleEvents(params.id, "now");
   },
 );

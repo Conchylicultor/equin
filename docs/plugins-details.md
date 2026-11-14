@@ -37913,9 +37913,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `McpHealthSchema`
           - `mcpRequest`
       - Cross-plugin:
-        - Imported by: 25 plugins — full list in [`plugins/infra/plugins/mcp/REFERENCE.md`](../plugins/infra/plugins/mcp/REFERENCE.md)
+        - Imported by: 26 plugins — full list in [`plugins/infra/plugins/mcp/REFERENCE.md`](../plugins/infra/plugins/mcp/REFERENCE.md)
+          - `tasks` ×7
           - `debug` ×6
-          - `tasks` ×6
           - `conversations` ×4
           - `apps` ×3
           - `infra` ×2
@@ -60141,6 +60141,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tasks/orchestration/watch`
               - `tasks/outcome-report`
               - `tasks/supervisor-roles`
+              - `tasks/supervisor-roles/events`
               - `tasks/supervisor-roles/sessions`
           - Plugins:
             - **`change-notice`** — A running agent follows a change of its task's mandate without a restart: on tasks.mandateChanged each live agent on those tasks reconnects the equin MCP server (its tools are the new mandate's at once), then is sent the new Mandate section as an event turn — its system prompt is fixed for the life of its process. The notice is typed now, the way a user message is (a working agent reads it at its next step), and says it is information only, not a request to act; an agent this backend does not run gets none.
@@ -60744,7 +60745,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Exemptions:
         - Exempts itself from: `ids:pk-declared` — `server/internal/tables-events.ts` (debt)
       - Plugins:
-        - **`events`** — Supervisor event streams, web half: registers the supervisor event message and gathered event id kinds, so their ids are recognised in the browser as on the server. Supervisor event streams, data half: a SupervisorEventStream contribution names a stream of events (error reports, slow ops…), fed by its plugin through the desktop's publishSupervisorEvent; each stream is routed to at most one role (PUT /api/supervisor-events/streams/:streamId, optionally narrowed to some kinds), and each role sets how its messages are spaced (gapMinutes, default 10) and what happens with no live session — drop (default), file in backlog, launch a session (PATCH /api/supervisor-roles/:id/events). Served live: the streams, the routes, each role's settings, what it is gathering and its last 50 messages.
+        - **`events`** — Supervisor event streams, web half: registers the supervisor event message and gathered event id kinds, so their ids are recognised in the browser as on the server. Supervisor event streams, data half: a SupervisorEventStream contribution names a stream of events (error reports, slow ops…), fed by its plugin through the desktop's publishSupervisorEvent; each stream is routed to at most one role (PUT /api/supervisor-events/streams/:streamId, optionally narrowed to some kinds), and each role sets how its messages are spaced (gapMinutes, default 10) and what happens with no live session — drop (default), file in backlog, launch a session (PATCH /api/supervisor-roles/:id/events). Served live: the streams, the routes, each role's settings, what it is gathering and its last 50 messages. The read_event_message MCP tool (gated on the role powers) reads every line of one of the caller's role's messages.
           - Web:
             - Contributes:
               - `IdKinds.Kind` "sevmsg"
@@ -60769,10 +60770,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/endpoints.implement`
               - `infra/entities.defaultNow`
               - `infra/entities.defineEntity`
+              - `infra/mcp.Mcp`
               - `network/live.serveCollection`
               - `network/live.serveValue`
+              - `tasks/orchestration/mandate.granted`
               - `tasks/supervisor-roles._supervisorRoles`
               - `tasks/supervisor-roles.getSupervisorRole`
+              - `tasks/supervisor-roles.roleOfConversation`
             - DB schema: `plugins/tasks/plugins/supervisor-roles/plugins/events/server/internal/tables.ts`
             - Exports (types): `SupervisorEventStreamSpec`
             - Exports (values):
@@ -60782,6 +60786,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `_supervisorEventSettings`
               - `streamLabel`
               - `SupervisorEventStream`
+            - Register: `mcpTool('read_event_message')`
             - Resources:
               - `supervisor-events.messages` (keyed)
               - `supervisor-events.messages:rows` (keyed, point)
@@ -60852,6 +60857,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `flushRoleEvents`
               - `GAP_MINUTES_MAX`
               - `IDLE_POLICIES`
+              - `MESSAGE_LINES_SHOWN`
               - `MESSAGE_OUTCOMES`
               - `MESSAGES_KEPT_PER_ROLE`
               - `nextMessageAt`

@@ -25,6 +25,7 @@ import {
   pendingEventIdKind,
   renderEventMessage,
   type EventLine,
+  type EventMessageId,
   type IdlePolicy,
   type MessageOutcome,
 } from "../../core";
@@ -105,9 +106,15 @@ async function dueAt(roleId: string, exec: DbExecutor): Promise<Date> {
 
 /**
  * Send `event` to the role its stream is routed to: gathered with the role's
- * other events of this quiet period, then sent — at once when the role's
- * last message is older than its gap, else when the gap ends. A stream routed
- * nowhere, or a kind its route filters out, is ignored.
+ * other events of this quiet period, then sent by the role's flush job — at
+ * once when the role's last message is older than its gap, else when the gap
+ * ends. A stream routed nowhere, or a kind its route filters out, is ignored.
+ *
+ * Only gathers: delivery (which can fail) is always the flush job's, one per
+ * role. So a failing delivery cannot feed itself — the report its failure
+ * files is gathered like any other event (a count bump) and waits for the
+ * same flush, and however many events land at once, one message goes per
+ * quiet period.
  */
 export async function publishSupervisorEvent(
   event: SupervisorEvent,
@@ -124,12 +131,10 @@ export async function publishSupervisorEvent(
     return { roleId: route.roleId, at: await dueAt(route.roleId, tx) };
   });
   if (due === null) return;
-  if (due.at.getTime() <= Date.now()) await flushRoleEvents(due.roleId);
-  else
-    await supervisorEventsFlushJob.enqueue(
-      { roleId: due.roleId },
-      { runAt: due.at },
-    );
+  await supervisorEventsFlushJob.enqueue(
+    { roleId: due.roleId },
+    { runAt: due.at },
+  );
 }
 
 async function gather(
@@ -195,35 +200,88 @@ async function sessionConversation(
 }
 
 /**
- * Send what `roleId` has gathered as ONE message, now: typed into its live
- * session as an event turn, or — with no live session — dropped, filed as one
- * backlog task, or briefed into a session it launches (the role's `idle`).
- * Nothing gathered: nothing to do. A session whose agent has not started yet
- * keeps the events gathered and looks again shortly.
+ * A message's lines, most frequent first, at most {@link PENDING_PER_ROLE_MAX}
+ * + 1: past the cap (events put back by a failed delivery, or one "other"
+ * line per stream) the tail folds into one "other" line.
  */
-export async function flushRoleEvents(roleId: string): Promise<void> {
-  const retry = await db.transaction(async (tx) => {
+function capLines(lines: EventLine[]): EventLine[] {
+  if (lines.length <= PENDING_PER_ROLE_MAX + 1) return lines;
+  const rest = lines.slice(PENDING_PER_ROLE_MAX);
+  return [
+    ...lines.slice(0, PENDING_PER_ROLE_MAX),
+    {
+      streamId: rest[0]!.streamId,
+      kind: "other",
+      title: "other events",
+      ref: null,
+      count: rest.reduce((n, l) => n + l.count, 0),
+    },
+  ];
+}
+
+/**
+ * When a flush may send: `due` (the flush job) only once the role's quiet
+ * period is over, `now` (a person's Send now) at once.
+ */
+type FlushWhen = "due" | "now";
+
+type PendingRow = typeof _supervisorEventPending.$inferSelect;
+
+/** A message claimed from the gathered events, its row written as `sending`. */
+interface Claimed {
+  messageId: EventMessageId;
+  text: string;
+  pending: PendingRow[];
+}
+
+/**
+ * Claim what `roleId` has gathered as one `sending` message, under the role's
+ * lock: the gathered rows deleted, the message row written (so its quiet
+ * period holds while it is delivered). Nothing gathered, or a live session
+ * whose agent has not started yet: nothing claimed.
+ */
+async function claimMessage(
+  roleId: string,
+  when: FlushWhen,
+): Promise<Claimed | "nothing" | "starting" | { notBefore: Date }> {
+  return db.transaction(async (tx) => {
     await lockRoleEvents(roleId, tx);
+    if (when === "due") {
+      // A run enqueued before the last claim committed may run inside the
+      // quiet period that claim started: it waits for its end instead.
+      const at = await dueAt(roleId, tx);
+      if (at.getTime() > Date.now()) return { notBefore: at };
+    }
     const pending = await tx
       .select()
       .from(_supervisorEventPending)
       .where(eq(_supervisorEventPending.roleId, roleId))
-      .orderBy(desc(_supervisorEventPending.count));
-    if (pending.length === 0) return false;
-    const lines: EventLine[] = pending.map((r) => ({
-      streamId: r.streamId,
-      kind: r.kind,
-      title: r.title,
-      ref: r.ref,
-      count: r.count,
-    }));
+      .orderBy(
+        desc(_supervisorEventPending.count),
+        desc(_supervisorEventPending.lastAt),
+      );
+    if (pending.length === 0) return "nothing";
+    const session = await liveSessionOf(roleId, tx);
+    if (
+      session !== null &&
+      (await sessionConversation(session.id, tx)) === null
+    )
+      return "starting";
+    const lines = capLines(
+      pending.map((r) => ({
+        streamId: r.streamId,
+        kind: r.kind,
+        title: r.title,
+        ref: r.ref,
+        count: r.count,
+      })),
+    );
     const since = pending.reduce<Date | null>(
       (a, r) => (a === null || r.firstAt < a ? r.firstAt : a),
       null,
     );
-    const text = renderEventMessage(lines, streamLabel, since);
-    const sent = await deliver(roleId, text, tx);
-    if (sent === "starting") return true;
+    const messageId = eventMessageIdKind.mint();
+    const text = renderEventMessage(lines, streamLabel, since, messageId);
     await tx.delete(_supervisorEventPending).where(
       inArray(
         _supervisorEventPending.id,
@@ -231,42 +289,110 @@ export async function flushRoleEvents(roleId: string): Promise<void> {
       ),
     );
     await tx.insert(_supervisorEventMessages).values({
-      id: eventMessageIdKind.mint(),
+      id: messageId,
       roleId,
       events: lines.reduce((n, l) => n + l.count, 0),
       lines,
-      outcome: sent.outcome,
-      taskId: sent.taskId,
+      outcome: "sending",
+      taskId: null,
     });
-    await pruneMessages(roleId, tx);
-    return false;
+    return { messageId, text, pending };
   });
-  if (retry)
+}
+
+/**
+ * A delivery threw: the message never happened. Its row goes, and its events
+ * go back to the gathered ones (folded into any that landed meanwhile), so
+ * the next flush sends them.
+ */
+async function unclaimMessage(roleId: string, claimed: Claimed): Promise<void> {
+  const p = _supervisorEventPending;
+  await db.transaction(async (tx) => {
+    await lockRoleEvents(roleId, tx);
+    await tx
+      .delete(_supervisorEventMessages)
+      .where(eq(_supervisorEventMessages.id, claimed.messageId));
+    await tx
+      .insert(p)
+      .values(claimed.pending)
+      .onConflictDoUpdate({
+        target: [p.roleId, p.streamId, p.key],
+        set: {
+          count: sql`${p.count} + excluded.count`,
+          firstAt: sql`least(${p.firstAt}, excluded.first_at)`,
+        },
+      });
+  });
+}
+
+/**
+ * Send what `roleId` has gathered as ONE message, now: typed into its live
+ * session as an event turn, or — with no live session — dropped, filed as one
+ * backlog task, or briefed into a session it launches (the role's `idle`).
+ * Nothing gathered: nothing to do. A session whose agent has not started yet
+ * keeps the events gathered and looks again shortly; with `when: "due"`, a
+ * quiet period not over yet waits for its end.
+ *
+ * Three steps, so delivery runs outside any transaction (typing a turn and
+ * launching a session open their own): claim the message under the role's
+ * lock, deliver it, then record its outcome — or, if delivery throws, put
+ * its events back and rethrow (the job retries).
+ */
+export async function flushRoleEvents(
+  roleId: string,
+  when: FlushWhen,
+): Promise<void> {
+  const claimed = await claimMessage(roleId, when);
+  if (claimed === "nothing") return;
+  if (typeof claimed === "object" && "notBefore" in claimed) {
+    await supervisorEventsFlushJob.enqueue(
+      { roleId },
+      { runAt: claimed.notBefore },
+    );
+    return;
+  }
+  if (claimed === "starting") {
     await supervisorEventsFlushJob.enqueue(
       { roleId },
       { runAt: new Date(Date.now() + SESSION_STARTING_RETRY_MS) },
     );
+    return;
+  }
+  let sent: { outcome: MessageOutcome; taskId: string | null };
+  try {
+    sent = await deliver(roleId, claimed.text);
+  } catch (err) {
+    await unclaimMessage(roleId, claimed);
+    throw err;
+  }
+  await db.transaction(async (tx) => {
+    await tx
+      .update(_supervisorEventMessages)
+      .set({ outcome: sent.outcome, taskId: sent.taskId })
+      .where(eq(_supervisorEventMessages.id, claimed.messageId));
+    await pruneMessages(roleId, tx);
+  });
 }
 
 async function deliver(
   roleId: string,
   text: string,
-  tx: DbExecutor,
-): Promise<"starting" | { outcome: MessageOutcome; taskId: string | null }> {
-  const session = await liveSessionOf(roleId, tx);
+): Promise<{ outcome: MessageOutcome; taskId: string | null }> {
+  const session = await liveSessionOf(roleId);
   if (session !== null) {
-    const conversationId = await sessionConversation(session.id, tx);
-    if (conversationId === null) return "starting";
-    const outcome = await submitTurn(conversationId, {
-      kind: "event",
-      text,
-      typedText: text,
-    });
-    if (outcome.kind === "submitted")
-      return { outcome: "sent", taskId: session.id };
+    const conversationId = await sessionConversation(session.id, db);
+    if (conversationId !== null) {
+      const outcome = await submitTurn(conversationId, {
+        kind: "event",
+        text,
+        typedText: text,
+      });
+      if (outcome.kind === "submitted")
+        return { outcome: "sent", taskId: session.id };
+    }
     // The session's agent is gone or done: as good as no live session.
   }
-  const { idle } = await settingsOf(roleId, tx);
+  const { idle } = await settingsOf(roleId, db);
   switch (idle) {
     case "drop":
       return { outcome: "dropped", taskId: null };
@@ -274,12 +400,12 @@ async function deliver(
       const head = text.split("\n", 1)[0] ?? "Events";
       const taskId = await fileSystemBacklogTask(
         { roleId, title: head, description: text, filedFrom: FILED_FROM },
-        tx,
+        db,
       );
       return { outcome: "filed", taskId };
     }
     case "launch": {
-      const role = await getSupervisorRole(roleId, tx);
+      const role = await getSupervisorRole(roleId, db);
       if (!role) throw new Error(`No supervisor role "${roleId}".`);
       const opened = await openRoleSession(
         role,
@@ -323,6 +449,6 @@ export const supervisorEventsFlushJob = defineJob({
   event: z.never(),
   dedup: { key: ({ roleId }) => roleId },
   run: async ({ input }) => {
-    await flushRoleEvents(input.roleId);
+    await flushRoleEvents(input.roleId, "due");
   },
 });

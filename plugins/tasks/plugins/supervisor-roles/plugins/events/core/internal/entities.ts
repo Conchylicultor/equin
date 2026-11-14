@@ -118,14 +118,27 @@ export const EventLineSchema = z.object({
 });
 export type EventLine = z.infer<typeof EventLineSchema>;
 
-/** What became of a message. */
+/**
+ * What became of a message. `sending` is a message claimed from the gathered
+ * events and being delivered (outside the claiming transaction): it holds the
+ * role's quiet period, and turns into its outcome — or, if delivery throws, is
+ * deleted and its events go back to the gathered ones.
+ */
 export const MESSAGE_OUTCOMES = [
+  "sending",
   "sent",
   "dropped",
   "filed",
   "launched",
 ] as const;
 export type MessageOutcome = (typeof MESSAGE_OUTCOMES)[number];
+
+/**
+ * The most event lines a message's text shows; the rest are summed in one
+ * `+N more` line (their events by kind), and read whole with the
+ * `read_event_message` tool (every line is kept on the message row).
+ */
+export const MESSAGE_LINES_SHOWN = 20;
 
 /** Messages kept per role (older ones are pruned as new ones land). */
 export const MESSAGES_KEPT_PER_ROLE = 50;
@@ -147,6 +160,7 @@ export const eventMessageFields = {
   outcome: enumTextField(MESSAGE_OUTCOMES, {
     label: "Outcome",
     options: {
+      sending: { label: "Sending" },
       sent: { label: "Sent" },
       dropped: { label: "Dropped" },
       filed: { label: "Filed in backlog" },

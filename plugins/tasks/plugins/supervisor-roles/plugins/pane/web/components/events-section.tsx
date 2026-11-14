@@ -95,6 +95,7 @@ const OUTCOME: Record<
   { label: string; variant: BadgeVariant }
 > = {
   gathering: { label: "Gathering", variant: "warning" },
+  sending: { label: "Sending", variant: "warning" },
   sent: { label: "Sent", variant: "success" },
   dropped: { label: "Dropped", variant: "muted" },
   filed: { label: "Filed in backlog", variant: "info" },
