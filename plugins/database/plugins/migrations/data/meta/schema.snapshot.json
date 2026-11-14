@@ -1,6 +1,6 @@
 {
-  "id": "edaf80ef-b766-419b-bfdc-a74ea71d0885",
-  "prevId": "1f7e2de8-b76b-43c5-b253-ea6d51c35845",
+  "id": "389fe9e6-5218-4950-b39e-267549d4167e",
+  "prevId": "edaf80ef-b766-419b-bfdc-a74ea71d0885",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -15405,6 +15405,12 @@
           "notNull": true,
           "default": "''"
         },
+        "section": {
+          "name": "section",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -15430,7 +15436,21 @@
           "with": {}
         }
       },
-      "foreignKeys": {},
+      "foreignKeys": {
+        "supervisor_roles_section_conversation_sections_id_fk": {
+          "name": "supervisor_roles_section_conversation_sections_id_fk",
+          "tableFrom": "supervisor_roles",
+          "tableTo": "conversation_sections",
+          "columnsFrom": [
+            "section"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},

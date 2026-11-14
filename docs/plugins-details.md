@@ -22093,12 +22093,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tasks/tasks-core.taskStatusChanged`
             - DB schema: `plugins/conversations/plugins/conversations-view/plugins/queue/server/internal/tables.ts`
             - Entity extension of: `tasks/tasks-core` (table `conversations_ext_queue`)
+            - Exports (types): `QueueLaunchSection`
             - Exports (values):
               - `_conversationSections`
               - `conversationsQueue`
               - `endRank`
               - `findTaskIdForConversation`
               - `lockDeck`
+              - `Queue`
               - `rankAdjacentTo`
               - `rankAfterBlockers`
               - `rankAfterN`
@@ -22173,6 +22175,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/website/promo-film/seed`
               - `conversations/conversation-view/pin`
               - `conversations/conversations-view/data-view/queue`
+              - `tasks/supervisor-roles`
+              - `tasks/supervisor-roles/pane`
     - **`effort-provider`** — Registry mapping thinking-mode (effort) levels to Claude CLI delivery (--effort flag / --settings ultracode) and display metadata. Reusable EffortSelect picker.
       - Web:
         - Uses:
@@ -31887,10 +31891,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `withNotifyBatch`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
-        - Imported by: 120 plugins — full list in [`plugins/framework/plugins/server-core/REFERENCE.md`](../plugins/framework/plugins/server-core/REFERENCE.md)
+        - Imported by: 121 plugins — full list in [`plugins/framework/plugins/server-core/REFERENCE.md`](../plugins/framework/plugins/server-core/REFERENCE.md)
           - `infra` ×29
+          - `conversations` ×14
           - `debug` ×14
-          - `conversations` ×13
           - `tasks` ×12
           - `database` ×10
           - `apps` ×8
@@ -60597,7 +60601,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defineJob('sidequest-autopilot.triage-on-task')`
           - `defineJob('sidequest-autopilot.triage-backfill')`
           - `defineWarmup('sidequest-autopilot.triage-backfill')`
-    - **`supervisor-roles`** — Supervisor roles, web half: registers the srole id kind, the shared supervisor prompt config (Settings → Config) and the exposed `supervisor` field of every task list, its options the live roles by name. Supervisor roles, data half: the supervisor_roles table (name, Haiku-picked icon with a person's override, listed, description, prompt) served whole as supervisor-roles.all with its create / edit / delete endpoints; the per-task owner (tasks_ext_supervisor, a role id, exposed as the `supervisor` field of every task list, routed by PUT /api/tasks/:taskId/supervisor); filing into a role's backlog (fileToBacklog — a root task owned by the role, never armed); the supervisor-role mandate (the supervisor preset plus the role powers on the root) and its reach (a role session manages every task its role owns); the system-prompt sections listing the listed roles to agents that may file into a backlog, and the shared supervisor prompt (a config) for every supervisor root.
+    - **`supervisor-roles`** — Supervisor roles, web half: registers the srole id kind, the shared supervisor prompt config (Settings → Config) and the exposed `supervisor` field of every task list, its options the live roles by name. Supervisor roles, data half: the supervisor_roles table (name, Haiku-picked icon with a person's override, listed, description, prompt, the queue section its sessions land in — contributed as Queue.LaunchSection) served whole as supervisor-roles.all with its create / edit / delete endpoints; the per-task owner (tasks_ext_supervisor, a role id, exposed as the `supervisor` field of every task list, routed by PUT /api/tasks/:taskId/supervisor); filing into a role's backlog (fileToBacklog — a root task owned by the role, never armed); the supervisor-role mandate (the supervisor preset plus the role powers on the root) and its reach (a role session manages every task its role owns); the system-prompt sections listing the listed roles to agents that may file into a backlog, and the shared supervisor prompt (a config) for every supervisor root.
       - Web:
         - Contributes:
           - `IdKinds.Kind` "srole"
@@ -60620,6 +60624,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `resource.declare` "task-supervisors.by-id:rows"
           - `live.columns.expose` "tasks ← tasks_ext_supervisor"
           - `mandateDefinition` "supervisor-role"
+          - `conversations.conversations-view.queue.launch-section` "supervisor-role-session"
           - `mandateCapability` "supervisor-roles.role"
           - `mandateReach` "supervisor-roles"
           - `conversations.system-prompt.section` "supervisor-prompt"
@@ -60627,10 +60632,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `watchSource` "supervisor-roles.backlog"
           - `trigger` "supervisor-roles.icon"
           - `trigger` "watch.ingest"
-        - Uses: 29 symbols — full list in [`plugins/tasks/plugins/supervisor-roles/REFERENCE.md`](../plugins/tasks/plugins/supervisor-roles/REFERENCE.md)
+        - Uses: 31 symbols — full list in [`plugins/tasks/plugins/supervisor-roles/REFERENCE.md`](../plugins/tasks/plugins/supervisor-roles/REFERENCE.md)
           - `tasks/tasks-core` ×6
           - `tasks/orchestration/mandate` ×4
           - `config_v2` ×2
+          - `conversations/conversations-view/queue` ×2
           - `database` ×2
           - `infra/endpoints` ×2
           - `infra/entities` ×2
@@ -60685,7 +60691,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses: `tasks/orchestration/watch.watchSource`
         - Register: `defineJob('supervisor-roles.icon')`
       - Core:
-        - Uses: 27 symbols — full list in [`plugins/tasks/plugins/supervisor-roles/REFERENCE.md`](../plugins/tasks/plugins/supervisor-roles/REFERENCE.md)
+        - Uses: 28 symbols — full list in [`plugins/tasks/plugins/supervisor-roles/REFERENCE.md`](../plugins/tasks/plugins/supervisor-roles/REFERENCE.md)
           - `tasks/tasks-core` ×4
           - `fields` ×3
           - `ids` ×3
@@ -60694,6 +60700,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/orchestration/mandate/policy` ×2
           - `ui/icons/saved-names` ×2
           - `config_v2.defineConfig`
+          - `conversations/conversations-view/queue.conversationSectionIdKind`
           - `fields/bool/config.boolField`
           - `fields/date/config.dateField`
           - `fields/multiline-text/config.multilineTextField`
@@ -60909,13 +60916,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `adhoc-actions` "open" → `OpenAdhocAction`
               - `backlog-actions` "adopt" → `AdoptAction`
               - `backlog-actions` "drop" → `DropAction`
-            - Uses: 65 symbols — full list in [`plugins/tasks/plugins/supervisor-roles/plugins/pane/REFERENCE.md`](../plugins/tasks/plugins/supervisor-roles/plugins/pane/REFERENCE.md)
+            - Uses: 70 symbols — full list in [`plugins/tasks/plugins/supervisor-roles/plugins/pane/REFERENCE.md`](../plugins/tasks/plugins/supervisor-roles/plugins/pane/REFERENCE.md)
+              - `primitives/css/ui-kit` ×8
               - `network/live/live-state` ×5
               - `primitives/data-view` ×5
               - `primitives/pane` ×5
               - `network/live` ×3
               - `primitives/collapsible` ×3
-              - `primitives/css/ui-kit` ×3
               - `config_v2` ×2
               - `infra/endpoints` ×2
               - `primitives/css/badge` ×2

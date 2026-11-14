@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 import { SavedSymbolNameSchema } from "@plugins/ui/plugins/icons/plugins/saved-names/core";
+import { conversationSectionIdKind } from "@plugins/conversations/plugins/conversations-view/plugins/queue/core";
 
 // The writes of the roles set. Rows reach clients only through the
 // `supervisor-roles.all` collection, which every write reaches through the
@@ -40,6 +41,11 @@ export const UpdateSupervisorRoleBodySchema = z.object({
    * which picks one again.
    */
   icon: SavedSymbolNameSchema.nullable().optional(),
+  /**
+   * The queue section new sessions land in (a user section's id); `null`:
+   * the Queue. An unknown section is a 400.
+   */
+  section: conversationSectionIdKind.schema.nullable().optional(),
 });
 export type UpdateSupervisorRoleBody = z.infer<
   typeof UpdateSupervisorRoleBodySchema

@@ -45,6 +45,7 @@ import { SessionBand } from "./session-band";
 import { BacklogSection } from "./backlog-section";
 import { SessionsSection } from "./sessions-section";
 import { SettingRow } from "./setting-row";
+import { SectionSelect } from "./section-select";
 import { EventsSection } from "./events-section";
 
 const autoIcon = symbol("auto-awesome");
@@ -159,6 +160,12 @@ function RoleDetailBody({
             value={role.description}
             disabled={!role.listed}
             onSave={(description) => save({ description })}
+          />
+        </SettingRow>
+        <SettingRow label="Sessions land in">
+          <SectionSelect
+            value={role.section}
+            onChange={(section) => void save({ section })}
           />
         </SettingRow>
         <SettingRow label="Supervisor prompt" top>

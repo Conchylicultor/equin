@@ -38,6 +38,8 @@ import {
 
 export { conversationsQueue, _conversationSections } from "./internal/tables";
 export { seedRankJob } from "./internal/seed-rank-job";
+export { Queue } from "./internal/launch-section";
+export type { QueueLaunchSection } from "./internal/launch-section";
 export {
   lockDeck,
   rankForTop,

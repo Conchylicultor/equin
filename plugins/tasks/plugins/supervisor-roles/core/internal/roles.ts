@@ -17,6 +17,7 @@ import {
   parseSavedSymbolName,
   SavedSymbolNameSchema,
 } from "@plugins/ui/plugins/icons/plugins/saved-names/core";
+import { conversationSectionIdKind } from "@plugins/conversations/plugins/conversations-view/plugins/queue/core";
 import { supervisorRoleIdKind } from "./id-kinds";
 
 /**
@@ -39,6 +40,8 @@ export const SUPERVISOR_ROLES_MAX = 50;
  *   whether `add_task` may name it).
  * - `description` — what agents read in that list to decide where to file.
  * - `prompt` — the brief each of the role's sessions is launched with.
+ * - `section` — the sidebar queue section each new session lands in (a user
+ *   section, `csec-…`); `null` is the Queue. Deleting the section clears it.
  */
 export const supervisorRoleFields = {
   id: idKindField(supervisorRoleIdKind),
@@ -53,6 +56,7 @@ export const supervisorRoleFields = {
   listed: boolField({ label: "Listed to agents", default: true }),
   description: textField({ label: "Description" }),
   prompt: textField({ label: "Prompt" }),
+  section: nullable(idKindField(conversationSectionIdKind)),
   createdAt: dateField({ label: "Created" }),
 } satisfies FieldsRecord;
 
@@ -73,7 +77,7 @@ export type SupervisorRole = z.infer<typeof SupervisorRoleSchema>;
 export const supervisorRoles = liveCollection("supervisor-roles.all", {
   from: supervisorRolesEntityRef,
   pick: ["name", "listed", "description", "createdAt"],
-  carry: { pick: ["id", "icon", "iconByUser", "prompt"] },
+  carry: { pick: ["id", "icon", "iconByUser", "prompt", "section"] },
   id: "id",
   all: {
     orderBy: [["name", "asc"]],

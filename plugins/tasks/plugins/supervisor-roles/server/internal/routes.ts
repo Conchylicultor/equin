@@ -2,6 +2,8 @@ import { count, eq, sql } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { HttpError, implement } from "@plugins/infra/plugins/endpoints/server";
 import { getTask } from "@plugins/tasks/plugins/tasks-core/server";
+import { _conversationSections } from "@plugins/conversations/plugins/conversations-view/plugins/queue/server";
+import type { ConversationSectionId } from "@plugins/conversations/plugins/conversations-view/plugins/queue/core";
 import {
   createSupervisorRole,
   deleteSupervisorRole,
@@ -27,6 +29,15 @@ async function assertNameFree(name: string, exceptId?: string): Promise<void> {
     .limit(1);
   if (row && row.id !== exceptId)
     throw new HttpError(400, `A supervisor role is already named "${name}".`);
+}
+
+async function assertSectionExists(id: ConversationSectionId): Promise<void> {
+  const [row] = await db
+    .select({ id: _conversationSections.id })
+    .from(_conversationSections)
+    .where(eq(_conversationSections.id, id))
+    .limit(1);
+  if (!row) throw new HttpError(400, `No queue section "${id}".`);
 }
 
 export const handleCreateSupervisorRole = implement(
@@ -69,6 +80,7 @@ export const handleUpdateSupervisorRole = implement(
     const role = await getSupervisorRole(params.id);
     if (!role) throw new HttpError(404, `No supervisor role "${params.id}".`);
     if (body.name !== undefined) await assertNameFree(body.name, role.id);
+    if (body.section != null) await assertSectionExists(body.section);
     const iconByUser =
       body.icon === undefined ? role.iconByUser : body.icon !== null;
     const textChanged =
@@ -88,6 +100,7 @@ export const handleUpdateSupervisorRole = implement(
           ...(body.prompt !== undefined ? { prompt: body.prompt } : {}),
           ...(body.listed !== undefined ? { listed: body.listed } : {}),
           ...(body.icon !== undefined ? { icon: body.icon, iconByUser } : {}),
+          ...(body.section !== undefined ? { section: body.section } : {}),
         })
         .where(eq(_supervisorRoles.id, role.id));
       if (repick)

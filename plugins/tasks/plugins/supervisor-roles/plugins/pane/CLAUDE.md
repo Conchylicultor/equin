@@ -56,13 +56,13 @@ the task patch; re-route `PUT /api/tasks/:taskId/supervisor`.
     - `adhoc-actions` "open" → `OpenAdhocAction`
     - `backlog-actions` "adopt" → `AdoptAction`
     - `backlog-actions` "drop" → `DropAction`
-  - Uses: 65 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 70 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/css/ui-kit` ×8
     - `network/live/live-state` ×5
     - `primitives/data-view` ×5
     - `primitives/pane` ×5
     - `network/live` ×3
     - `primitives/collapsible` ×3
-    - `primitives/css/ui-kit` ×3
     - `config_v2` ×2
     - `infra/endpoints` ×2
     - `primitives/css/badge` ×2

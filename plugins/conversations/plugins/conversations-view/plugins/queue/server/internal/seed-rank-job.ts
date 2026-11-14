@@ -10,6 +10,7 @@ import {
 } from "./queue-ranks";
 import { db } from "@plugins/database/server";
 import { conversationsQueue } from "./tables";
+import { launchSectionFor } from "./launch-section";
 
 export const seedRankJob = defineJob({
   name: "queue.seed-rank",
@@ -40,8 +41,19 @@ export const seedRankJob = defineJob({
       const seat = taskId
         ? await seatJoiningGroup(taskId, conversationId, tx)
         : null;
-      const rank = seat?.rank ?? (await rankForTop(conversationId, tx));
-      await upsertRank(conversationId, rank, tx, seat?.section ?? null);
+      if (seat) {
+        await upsertRank(conversationId, seat.rank, tx, seat.section);
+        return;
+      }
+      // A fresh group: at the top, in the section a contributor files the
+      // task's group into (a supervisor role's session), else the Queue.
+      const section = taskId ? await launchSectionFor(taskId, tx) : null;
+      await upsertRank(
+        conversationId,
+        await rankForTop(conversationId, tx),
+        tx,
+        section,
+      );
     });
   },
 });

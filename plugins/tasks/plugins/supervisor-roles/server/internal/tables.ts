@@ -6,6 +6,7 @@ import {
 } from "@plugins/infra/plugins/entities/server";
 import { defineExtension } from "@plugins/infra/plugins/entity-extensions/server";
 import { _tasks } from "@plugins/tasks/plugins/tasks-core/server";
+import { _conversationSections } from "@plugins/conversations/plugins/conversations-view/plugins/queue/server";
 import { supervisorRolesEntityRef, taskSupervisorShape } from "../../core";
 
 // Physical tables, derived from the field records in `core/`. A load-order
@@ -19,6 +20,13 @@ export const supervisorRolesEntity = defineEntity(supervisorRolesEntityRef, {
     listed: { default: true },
     description: { default: "" },
     prompt: { default: "" },
+    // A deleted section sends the role's next sessions back to the Queue.
+    section: {
+      references: {
+        column: () => _conversationSections.id,
+        onDelete: "set null",
+      },
+    },
     createdAt: { default: defaultNow() },
   },
   indexes: (t) => [
