@@ -236,6 +236,7 @@ pane declares `chrome.keepMountedWhenCollapsed` (kept mounted, hidden).
   - Imported by:
     - `apps/agent-manager/shell`
     - `apps/debug/shell`
+    - `apps/deploy/shell`
     - `apps/events/shell`
     - `apps/file-explorer/shell`
     - `apps/isle/shell`

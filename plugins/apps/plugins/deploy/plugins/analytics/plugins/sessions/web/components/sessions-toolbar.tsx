@@ -14,7 +14,8 @@ import type {
   ToolbarParts,
 } from "@plugins/primitives/plugins/data-view/core";
 import { PillsToolbar } from "@plugins/primitives/plugins/data-view/web";
-import { axisFrac, axisTicks } from "../internal/axis";
+import { axisFrac, labelledTicks } from "../internal/axis";
+import { useElementSize } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
 import { LANE_TRACKS, LaneWindowContext } from "../internal/lane-context";
 import { GAP_KINDS } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/core";
 import { GAP_LABEL, GapSwatch } from "./gap-look";
@@ -81,8 +82,11 @@ function Strong({ children }: { children: ReactNode }): ReactNode {
  */
 function AxisRow(): ReactNode {
   const lane = useContext(LaneWindowContext);
+  // The bar track narrows with its column: only the labels that fit are drawn.
+  const [trackRef, track] = useElementSize<HTMLDivElement>();
   if (lane === null) return null;
-  const ticks = axisTicks(lane.axisMaxS);
+  const ticks =
+    track.width > 0 ? labelledTicks(lane.axisMaxS, track.width) : [];
   // The rows' own nesting, mirrored: the card's hairline (a transparent
   // border), the row's padding, the lane's inset — so the tracks line up.
   return (
@@ -106,7 +110,7 @@ function AxisRow(): ReactNode {
             </Line>
           ))}
         </Line>
-        <div className="relative h-4">
+        <div ref={trackRef} className="relative h-4">
           {ticks.map((t, i) => (
             <Placed
               key={t.s}

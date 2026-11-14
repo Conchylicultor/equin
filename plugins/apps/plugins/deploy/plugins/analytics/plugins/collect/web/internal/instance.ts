@@ -160,7 +160,7 @@ export function getTracker(): Tracker {
     if (document.visibilityState === "visible") tracker.visible();
   });
   instance = tracker;
-  // A local serve framed by the Sessions tab's replay follows its commands;
+  // A local page framed by the Sessions tab's replay follows its commands;
   // anywhere else this installs nothing.
   followReplay({
     host: window.location.host,

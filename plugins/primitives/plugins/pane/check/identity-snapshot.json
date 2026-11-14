@@ -380,9 +380,9 @@
     },
     {
       "paneId": "deploy-session-replay",
-      "segment": "replay/:deploymentId/:visitId/:page?",
+      "segment": "replay/:visitId/:page?",
       "appIndex": false,
-      "parent": "deploy-index"
+      "parent": "deploy-site"
     },
     {
       "paneId": "deploy-site",

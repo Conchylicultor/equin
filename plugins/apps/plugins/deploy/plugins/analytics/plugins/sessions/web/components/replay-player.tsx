@@ -14,8 +14,9 @@ import {
   type ReplayCommand,
   type Session,
 } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/core";
-import type { Namespace } from "@plugins/infra/plugins/namespace/core";
 import { AppFrame } from "@plugins/primitives/plugins/embed/plugins/frame/web";
+import { embedUrl } from "@plugins/primitives/plugins/embed/web";
+import { useBrowserValue } from "@plugins/primitives/plugins/dom/plugins/render-mode/web";
 import { useElementSize } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
@@ -60,17 +61,6 @@ import {
 } from "../internal/replay";
 import { GAP_FILL, GAP_LABEL, GapSwatch } from "./gap-look";
 
-/** Where the site is served on this computer: what the replay frames. */
-export interface ReplayTarget {
-  namespace: Namespace;
-  /** `website.localhost:9000` — shown in the frame's address bar. */
-  host: string;
-  /** The namespace's origin. */
-  url: string;
-  /** Rebuild the local serve (one predating the replay channel never says it is ready). */
-  rebuild: () => void;
-}
-
 const SPEEDS = ["1", "2", "4", "8"] as const;
 type Speed = (typeof SPEEDS)[number];
 const SPEED_OPTIONS = SPEEDS.map((id) => ({ id, label: `${id}×` }));
@@ -82,27 +72,31 @@ const STAGE_PAD_PX = 24;
 /** After an in-app navigation, how long the new page gets to mount its sections before a scroll aims at one. */
 const SETTLE_MS = 600;
 
+const readHost = () => window.location.host;
+
 const playIcon = symbol("play-arrow");
 const pauseIcon = symbol("pause");
 const restartIcon = symbol("replay");
 const skipIcon = symbol("skip-next");
 
 /**
- * One visit played on the site's local serve, at the visitor's viewport: the
+ * One visit played on this instance's own app (framed chromeless, `?embed=1`),
+ * at the visitor's viewport: the
  * page load as long as it took them (a veil over the frame, its phases
  * filling in), each page opened as they opened it (in-app, no reload), each
  * section they reached scrolled into view when they reached it, their actions
  * as toasts, and the stretches they were away dimmed — or skipped. Not a
- * pixel replay: the feel of the visit, on today's build of the site.
+ * pixel replay: the feel of the visit, on this instance's build of the site.
  */
 export function ReplayPlayer({
   session,
   startPage,
-  target,
+  localPath,
 }: {
   session: Session;
   startPage: number;
-  target: ReplayTarget;
+  /** Where a recorded page lives on this instance (`/website/x` → `/about/x`). */
+  localPath: (path: string) => string;
 }): ReactNode {
   const script = useMemo(
     () => replayScriptOf(journeyOf(session), visitLoad(session)),
@@ -190,7 +184,7 @@ export function ReplayPlayer({
 
   const state = frameStateAt(script, t);
   const page = script.pages[state.page]!;
-  const pagePath = page.path;
+  const pagePath = localPath(page.path);
 
   // Keep the frame on the page and section the visitor was at.
   const shownPage = useRef(run.page);
@@ -201,8 +195,8 @@ export function ReplayPlayer({
     if (!ready || state.loading) return;
     const win = frameRef.current?.contentWindow;
     if (!win) return;
-    const origin = new URL(target.url).origin;
-    const send = (command: ReplayCommand) => win.postMessage(command, origin);
+    const send = (command: ReplayCommand) =>
+      win.postMessage(command, window.location.origin);
     const scroll: ReplayCommand =
       state.section === null
         ? { protocol: REPLAY_PROTOCOL, kind: "scroll-top" }
@@ -221,8 +215,10 @@ export function ReplayPlayer({
     // A new page mounts its sections after the navigation: aim once it has.
     const timer = setTimeout(() => send(scroll), SETTLE_MS);
     return () => clearTimeout(timer);
-  }, [ready, state.loading, state.page, state.section, pagePath, target.url]);
+  }, [ready, state.loading, state.page, state.section, pagePath]);
 
+  // The frame is this page's own origin: its address bar names this host.
+  const host = useBrowserValue({ name: "location.host", read: readHost });
   const viewport = viewportAt(script, state.page, session.device);
   const away = state.away;
 
@@ -257,25 +253,28 @@ export function ReplayPlayer({
             onClick={restart}
           />
           <NewTabButton
-            href={`${target.url}${pagePath}`}
-            label="Open the local serve"
-            tooltip={`Open ${target.host}${pagePath}`}
+            href={pagePath}
+            label="Open the page"
+            tooltip={`Open ${host}${pagePath}`}
           />
         </Line>
       </Inset>
       <Fill axis="y">
-        <Stack direction="row" gap="none" className="h-full">
-          <Fill>
+        {/* The frame on top, as wide as the pane; the steps under it. */}
+        <Stack gap="none" className="h-full">
+          <Fill axis="y">
             <Stage
               viewport={viewport}
-              host={target.host}
+              host={host}
               path={pagePath}
               frame={
                 <AppFrame
                   key={run.id}
                   ref={frameRef}
-                  namespace={target.namespace}
-                  path={script.pages[run.page]!.path}
+                  path={embedUrl(
+                    localPath(script.pages[run.page]!.path),
+                    "chromeless",
+                  )}
                   title="Session replay"
                   className="h-full w-full border-0 bg-background"
                 />
@@ -293,13 +292,14 @@ export function ReplayPlayer({
                   t={t}
                   loadS={script.loadS}
                   waiting={!ready && t >= gateS}
-                  host={target.host}
-                  onRebuild={target.rebuild}
                 />
               )}
             </Stage>
           </Fill>
-          <Scroll axis="y" className="w-[280px] border-l border-border">
+          <Scroll
+            axis="y"
+            className="h-[30%] min-h-[120px] border-t border-border"
+          >
             <Steps script={script} t={t} onSeek={seek} />
           </Scroll>
         </Stack>
@@ -449,15 +449,11 @@ function LoadVeil({
   t,
   loadS,
   waiting,
-  host,
-  onRebuild,
 }: {
   load: LoadTiming | null;
   t: number;
   loadS: number;
   waiting: boolean;
-  host: string;
-  onRebuild: () => void;
 }): ReactNode {
   const phases = load ? loadPhases(load) : [];
   const ms = t * 1000;
@@ -476,11 +472,12 @@ function LoadVeil({
           {waiting ? (
             <>
               <Text variant="body" tone="muted">
-                Waiting for {host}…
+                Waiting for the page to start…
               </Text>
-              <Button variant="ghost" onClick={onRebuild}>
-                Rebuild the local serve
-              </Button>
+              <Text variant="caption" tone="faint">
+                The replay plays once the page&apos;s analytics tracker says it
+                is up.
+              </Text>
             </>
           ) : load ? (
             <>

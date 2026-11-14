@@ -59,10 +59,13 @@ function useOpenReplay(visitId: string): ((page: number) => void) | null {
       replayPane,
       {
         deploymentId,
+        // The timeline lives in the site's Sessions tab: the replay opens
+        // beside it, the site staying on that tab.
+        tab: "sessions",
         visitId,
         ...(page > 0 ? { page: String(page) } : {}),
       },
-      { mode: "root" },
+      { mode: "push" },
     );
 }
 

@@ -182,8 +182,8 @@ so ⌘/middle-click opens a desktop in a new browser tab.
     - `APP_RAIL_WIDTH`
     - `documentTitle`
 - Cross-plugin:
-  - Imported by: 65 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×31
+  - Imported by: 66 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×32
     - `apps-core` ×16
     - `ui` ×6
     - `companions` ×3

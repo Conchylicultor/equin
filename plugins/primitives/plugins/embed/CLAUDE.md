@@ -109,6 +109,7 @@ flag that swallowed error surfaces would be worse than one that shows a toast.
     - `apps-core/layout`
     - `apps-core/phone-actions`
     - `apps-core/tabs`
+    - `apps/deploy/analytics/sessions`
     - `apps/prototypes/canvas`
     - `apps/prototypes/compare/route`
     - `apps/prototypes/present`

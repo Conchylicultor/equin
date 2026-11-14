@@ -41,6 +41,36 @@ export function axisTicks(maxS: number): readonly AxisTick[] {
   return TICKS.filter((t) => t.s <= maxS);
 }
 
+/** Room a tick's label takes on the axis, in px (its caption, plus a gap). */
+export const TICK_LABEL_PX = 32;
+
+/**
+ * The ticks whose labels fit an axis `widthPx` wide: walking from 0, a tick
+ * is kept only when it stands at least {@link TICK_LABEL_PX} past the last
+ * kept one — and the last tick (the axis' end) wins over the one before it,
+ * so a narrow axis still says how far it reaches.
+ */
+export function labelledTicks(
+  maxS: number,
+  widthPx: number,
+): readonly AxisTick[] {
+  const ticks = axisTicks(maxS);
+  const x = (t: AxisTick) => axisFrac(t.s, maxS) * widthPx;
+  const kept: AxisTick[] = [];
+  for (const t of ticks) {
+    const last = kept.at(-1);
+    if (last === undefined || x(t) - x(last) >= TICK_LABEL_PX) kept.push(t);
+  }
+  const end = ticks.at(-1);
+  if (end !== undefined && kept.at(-1) !== end) {
+    while (kept.length > 1 && x(end) - x(kept.at(-1)!) < TICK_LABEL_PX)
+      kept.pop();
+    if (kept.length === 0 || x(end) - x(kept.at(-1)!) >= TICK_LABEL_PX)
+      kept.push(end);
+  }
+  return kept;
+}
+
 /**
  * How a journey's pages share its bar: the bar's whole length is the visit's
  * total time ON THE AXIS (log), and inside it each page takes its share of the

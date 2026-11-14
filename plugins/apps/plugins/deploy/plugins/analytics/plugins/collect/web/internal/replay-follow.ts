@@ -45,7 +45,7 @@ function originIsLocal(origin: string): boolean {
 }
 
 /**
- * Starts following replay commands, when this page is a local serve in a
+ * Starts following replay commands, when this page is served locally in a
  * frame; returns whether it did. Tells the parent it is ready (no data but
  * the protocol: the target origin is unknown until a command arrives).
  */

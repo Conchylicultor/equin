@@ -5,7 +5,7 @@ row per anonymous visit of the deployed site — who (country, time, device,
 software, source, first visit or returning, channel), its **journey** on a
 shared log time axis, how long it lasted and how many actions it held — and,
 opened, the visit's timeline — and from it, the visit **replayed** on the
-site's local serve (see *Replay* below). Design:
+site's own app on this instance (see *Replay* below). Design:
 `research/2026-11-10-deploy-sessions-tab.md` (phase 1); pixel reference
 `proto-1794248902-aof7vs`.
 
@@ -119,12 +119,15 @@ Background / idle stretches and load time are recorded but not drawn yet
 ## Replay
 
 Clicking a page card in the timeline (or its **Replay** button) opens the
-replay pane, `replay/:deploymentId/:visitId/:page?` (`web/components/replay-pane.tsx`,
-a full screen of the Deploy app; `page` = the 0-based page to start on). It
-plays the visit — not a pixel recording, the *feel* of it — on this
-computer's **local serve** of the site's composition (`build/serve-composition`:
-the site page's Test locally; not served → the pane offers the same serve),
-framed by `AppFrame` on that namespace:
+replay as a side pane of the site page, `site/:deploymentId/:tab?/replay/:visitId/:page?`
+(`web/components/replay-pane.tsx`, child of `siteRoute`; `page` = the 0-based
+page to start on). It plays the visit — not a pixel recording, the *feel* of
+it — on **this instance's own app**: the deployed site renders the same apps
+under the same base paths, so each recorded path is an in-app path here,
+framed chromeless (`AppFrame` on this origin, `?embed=1` — no rail, no tab
+bar, no persisted tabs touched). A path under an app's former base path is
+moved to its current one (`/website/x` → `/about/x`, `web/internal/local-path.ts`);
+a visit with a page no app here owns says so instead of playing.
 
 - **At the visitor's size**: the frame is laid out at the page's recorded
   viewport (collect's pageview `viewport`) and scaled down to fit, never up.
@@ -134,8 +137,7 @@ framed by `AppFrame` on that namespace:
   veil covers the frame for the recorded load (ready, else first paint, else
   server), its phases filling in. The clock holds at its end until the
   framed page says it is up (a slower dev build is waited for, not shown);
-  "Rebuild the local serve" if it never does (a build from before the
-  channel). Starting on a later page loads it directly, with no recorded
+  the veil says it is waiting if it never does (a page with no tracker). Starting on a later page loads it directly, with no recorded
   load.
 - **Pages, sections, actions, away**: later pageviews are in-app navigations
   (no reload, as for the visitor); each `section_reach` scrolls that section
@@ -145,7 +147,7 @@ framed by `AppFrame` on that namespace:
 - **Transport**: play / pause, 1× 2× 4× 8×, a linear scrubber (load, pages,
   stretches hatched, section ticks, action dots — press or drag to seek; a
   seek before the run's first frame restarts the load) and the step list
-  beside the frame (click a step to play from it).
+  under the frame, so the frame takes the pane's width (click a step to play from it).
 
 The pure model is `web/internal/replay.ts` (`replayScriptOf` → the steps on
 one clock, `frameStateAt`, `viewportAt`, `skipAway`); the frame is driven
@@ -155,7 +157,7 @@ Mockup: `proto-1794566734-a58es0`.
 ## Tests
 
 `web/internal/axis.test.ts`, `web/internal/journey.test.ts`,
-`web/internal/replay.test.ts`,
+`web/internal/replay.test.ts`, `web/internal/local-path.test.ts`,
 `server/internal/served.test.ts` (the scope split); collect's
 `analytics.db.test.ts` covers the SQL. Run with
 `./equin test plugins/apps/plugins/deploy/plugins/analytics/plugins/sessions`.
@@ -164,7 +166,7 @@ Mockup: `proto-1794566734-a58es0`.
 
 ## Plugin reference
 
-- Description: Sessions tab of a site's page, shown only when the deployment's composition ships the collect plugin: one row per anonymous visit (country, time, device and software, source, first visit or returning, channel), its journey on a shared log time axis (pages split by their share of the visit, the read line and section ticks, action icons, each named on hover) with its duration and actions; opening a row shows its timeline (each page, the sections reached and when, the actions in order, the exit), and clicking a page — or Replay — opens the visit replayed on the site's local serve (replay/:deploymentId/:visitId/:page?): at the visitor's viewport, its recorded load as a veil, pages opened in-app, sections scrolled to when reached, actions as toasts, stretches away dimmed or skipped, with a scrubber, speeds and a step list. Read from this computer's copy of the site's analytics (site-mirror, its freshness line above the list; loading until a first whole copy is in place) as live key-range pages: the views (All / With actions / 2+ pages / Bounced) are saved filters, and every filter — whose visits, the device, any field — runs on the copy, a narrowed view carried in the URL. Serves a deployment's visits (deploy-analytics.sessions) from this computer's copy of the site's analytics tables (site-mirror's replica): collect's own visit-list SQL — the window, the rows by key, the groupings and the count, each filter compiled by collect — run on the copy, re-read whenever a pull applies a page to it.
+- Description: Sessions tab of a site's page, shown only when the deployment's composition ships the collect plugin: one row per anonymous visit (country, time, device and software, source, first visit or returning, channel), its journey on a shared log time axis (pages split by their share of the visit, the read line and section ticks, action icons, each named on hover) with its duration and actions; opening a row shows its timeline (each page, the sections reached and when, the actions in order, the exit), and clicking a page — or Replay — opens the visit replayed in a side pane of the site, on this instance's own app framed chromeless (site/:deploymentId/:tab?/replay/:visitId/:page?; a former base path moved to the app's current one): at the visitor's viewport, its recorded load as a veil, pages opened in-app, sections scrolled to when reached, actions as toasts, stretches away dimmed or skipped, with a scrubber, speeds and a step list. Read from this computer's copy of the site's analytics (site-mirror, its freshness line above the list; loading until a first whole copy is in place) as live key-range pages: the views (All / With actions / 2+ pages / Bounced) are saved filters, and every filter — whose visits, the device, any field — runs on the copy, a narrowed view carried in the URL. Serves a deployment's visits (deploy-analytics.sessions) from this computer's copy of the site's analytics tables (site-mirror's replica): collect's own visit-list SQL — the window, the rows by key, the groupings and the count, each filter compiled by collect — run on the copy, re-read whenever a pull applies a page to it.
 - Web:
   - Slots:
     - `sources`
@@ -176,21 +178,20 @@ Mockup: `proto-1794566734-a58es0`.
     - `Pane.Register` "deploy-session-replay"
     - `SiteTabs.View` "Sessions" → `SessionsSection`
     - `sources` "Visits" → `VisitsSource`
-  - Uses: 60 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 61 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/data-view` ×8
     - `primitives/css/ui-kit` ×6
     - `primitives/pane` ×6
     - `primitives/css/coords` ×4
     - `apps/deploy/host-query` ×3
-    - `build/serve-composition` ×2
+    - `apps/deploy/deployments` ×2
     - `network/live/live-state` ×2
     - `network/live` ×2
     - `primitives/css/clip` ×2
     - `primitives/css/spacing` ×2
     - `primitives/css/toggle-chip` ×2
-    - `apps/deploy/deployments.SiteTabs`
+    - `apps-core.Apps`
     - `apps/deploy/site-mirror/pull.MirrorFreshness`
-    - `plugin-meta/composition.useManifestItemByName`
     - `primitives/css/badge.Badge`
     - `primitives/css/center.Center`
     - `primitives/css/cluster.Cluster`
@@ -204,7 +205,9 @@ Mockup: `proto-1794566734-a58es0`.
     - `primitives/css/text.Text`
     - `primitives/css/yield.yieldClass`
     - `primitives/dom/element-size.useElementSize`
+    - `primitives/dom/render-mode.useBrowserValue`
     - `primitives/embed/frame.AppFrame`
+    - `primitives/embed.embedUrl`
     - `primitives/icon-button.IconButton`
     - `primitives/link-gesture/new-tab.NewTabButton`
     - `primitives/loading.Loading`

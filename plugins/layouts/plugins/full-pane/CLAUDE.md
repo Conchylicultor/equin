@@ -54,7 +54,6 @@ declared on the pane.**
   - Imported by:
     - `apps/chord/shell`
     - `apps/demo/shell`
-    - `apps/deploy/shell`
     - `apps/home/shell`
     - `apps/isle/shell`
     - `apps/places/shell`

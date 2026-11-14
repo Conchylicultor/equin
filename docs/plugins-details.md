@@ -2017,7 +2017,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Plugins:
         - **`analytics`** — Umbrella for cookieless site analytics on deployed compositions: the host-only route guard, the collect half that ships inside the deployed site (ingest, tables, nightly rollup, retention, the report and its mirror set), and the dashboard half in the local deploy app, which runs that report on its copy of the site's tables.
           - Plugins:
-            - **`collect`** — The visit tracker a deployed site mounts, cookieless unless the visitor consents: <AnalyticsTracker app={…} /> records one pageview per path change under that app (landing referrer and utm tags on the first only, the viewport on each) and the visible time on each; on a local serve framed by the Sessions tab's replay, follows its commands (navigate in-app, scroll a section into view); track(name, props?) records a custom event on the current page; useSectionReach(section) / observeSectionReach(el, section) record section_reach once when a section reaches the upper half of the screen, its section prop (<page>/<key>) giving a per-section reach funnel; useAnalyticsConsent() / setAnalyticsConsent(accepted) read and answer the site's consent prompt — accepting keeps a random key in the browser for 13 months, sent with every pageview and event so a return is recognised on any network. Owns the analytics tables (daily salts kept 30 days with the hash → visitor links that let a returning visitor keep one id, 90-day visits and hits, forever daily totals at every single-filter level and forever per-visit memberships for exact unique visitors over any range), the public collect endpoint, the analytics mirror set, the report (runAnalyticsQuery) and the visit-list reads (a window of individual visits with their hits, filtered in the filter language) — both run by the deploy app on its local copy of the tables — the nightly analytics.rollup job and the visits retention sweep that refuses to delete a day not yet rolled up.
+            - **`collect`** — The visit tracker a deployed site mounts, cookieless unless the visitor consents: <AnalyticsTracker app={…} /> records one pageview per path change under that app (landing referrer and utm tags on the first only, the viewport on each) and the visible time on each; on a local page framed by the Sessions tab's replay, follows its commands (navigate in-app, scroll a section into view); track(name, props?) records a custom event on the current page; useSectionReach(section) / observeSectionReach(el, section) record section_reach once when a section reaches the upper half of the screen, its section prop (<page>/<key>) giving a per-section reach funnel; useAnalyticsConsent() / setAnalyticsConsent(accepted) read and answer the site's consent prompt — accepting keeps a random key in the browser for 13 months, sent with every pageview and event so a return is recognised on any network. Owns the analytics tables (daily salts kept 30 days with the hash → visitor links that let a returning visitor keep one id, 90-day visits and hits, forever daily totals at every single-filter level and forever per-visit memberships for exact unique visitors over any range), the public collect endpoint, the analytics mirror set, the report (runAnalyticsQuery) and the visit-list reads (a window of individual visits with their hits, filtered in the filter language) — both run by the deploy app on its local copy of the tables — the nightly analytics.rollup job and the visits retention sweep that refuses to delete a day not yet rolled up.
               - Server:
                 - Contributes:
                   - `table-mirror-set` "analytics"
@@ -2409,7 +2409,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `buildSnapshot` — Parse a DB-IP `start,end,CC` CSV (no header row) into snapshot bytes.
                   - `createIpCountryLookup` — A lookup over the snapshot file at `snapshotPath()`, read lazily on the first lookup (one ~16 MB read, shared by lookups that arrive while it runs) and then held in memory.
                   - Types: `IpCountryLookup`
-            - **`sessions`** — Sessions tab of a site's page, shown only when the deployment's composition ships the collect plugin: one row per anonymous visit (country, time, device and software, source, first visit or returning, channel), its journey on a shared log time axis (pages split by their share of the visit, the read line and section ticks, action icons, each named on hover) with its duration and actions; opening a row shows its timeline (each page, the sections reached and when, the actions in order, the exit), and clicking a page — or Replay — opens the visit replayed on the site's local serve (replay/:deploymentId/:visitId/:page?): at the visitor's viewport, its recorded load as a veil, pages opened in-app, sections scrolled to when reached, actions as toasts, stretches away dimmed or skipped, with a scrubber, speeds and a step list. Read from this computer's copy of the site's analytics (site-mirror, its freshness line above the list; loading until a first whole copy is in place) as live key-range pages: the views (All / With actions / 2+ pages / Bounced) are saved filters, and every filter — whose visits, the device, any field — runs on the copy, a narrowed view carried in the URL. Serves a deployment's visits (deploy-analytics.sessions) from this computer's copy of the site's analytics tables (site-mirror's replica): collect's own visit-list SQL — the window, the rows by key, the groupings and the count, each filter compiled by collect — run on the copy, re-read whenever a pull applies a page to it.
+            - **`sessions`** — Sessions tab of a site's page, shown only when the deployment's composition ships the collect plugin: one row per anonymous visit (country, time, device and software, source, first visit or returning, channel), its journey on a shared log time axis (pages split by their share of the visit, the read line and section ticks, action icons, each named on hover) with its duration and actions; opening a row shows its timeline (each page, the sections reached and when, the actions in order, the exit), and clicking a page — or Replay — opens the visit replayed in a side pane of the site, on this instance's own app framed chromeless (site/:deploymentId/:tab?/replay/:visitId/:page?; a former base path moved to the app's current one): at the visitor's viewport, its recorded load as a veil, pages opened in-app, sections scrolled to when reached, actions as toasts, stretches away dimmed or skipped, with a scrubber, speeds and a step list. Read from this computer's copy of the site's analytics (site-mirror, its freshness line above the list; loading until a first whole copy is in place) as live key-range pages: the views (All / With actions / 2+ pages / Bounced) are saved filters, and every filter — whose visits, the device, any field — runs on the copy, a narrowed view carried in the URL. Serves a deployment's visits (deploy-analytics.sessions) from this computer's copy of the site's analytics tables (site-mirror's replica): collect's own visit-list SQL — the window, the rows by key, the groupings and the count, each filter compiled by collect — run on the copy, re-read whenever a pull applies a page to it.
               - Web:
                 - Slots:
                   - `sources`
@@ -2421,21 +2421,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `Pane.Register` "deploy-session-replay"
                   - `SiteTabs.View` "Sessions" → `SessionsSection`
                   - `sources` "Visits" → `VisitsSource`
-                - Uses: 60 symbols — full list in [`plugins/apps/plugins/deploy/plugins/analytics/plugins/sessions/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/analytics/plugins/sessions/REFERENCE.md)
+                - Uses: 61 symbols — full list in [`plugins/apps/plugins/deploy/plugins/analytics/plugins/sessions/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/analytics/plugins/sessions/REFERENCE.md)
                   - `primitives/data-view` ×8
                   - `primitives/css/ui-kit` ×6
                   - `primitives/pane` ×6
                   - `primitives/css/coords` ×4
                   - `apps/deploy/host-query` ×3
-                  - `build/serve-composition` ×2
+                  - `apps/deploy/deployments` ×2
                   - `network/live/live-state` ×2
                   - `network/live` ×2
                   - `primitives/css/clip` ×2
                   - `primitives/css/spacing` ×2
                   - `primitives/css/toggle-chip` ×2
-                  - `apps/deploy/deployments.SiteTabs`
+                  - `apps-core.Apps`
                   - `apps/deploy/site-mirror/pull.MirrorFreshness`
-                  - `plugin-meta/composition.useManifestItemByName`
                   - `primitives/css/badge.Badge`
                   - `primitives/css/center.Center`
                   - `primitives/css/cluster.Cluster`
@@ -2449,7 +2448,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/css/text.Text`
                   - `primitives/css/yield.yieldClass`
                   - `primitives/dom/element-size.useElementSize`
+                  - `primitives/dom/render-mode.useBrowserValue`
                   - `primitives/embed/frame.AppFrame`
+                  - `primitives/embed.embedUrl`
                   - `primitives/icon-button.IconButton`
                   - `primitives/link-gesture/new-tab.NewTabButton`
                   - `primitives/loading.Loading`
@@ -3482,7 +3483,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Apps.App` "Deploy" → `DeployLayout`
             - Uses:
               - `apps-core.Apps`
-              - `layouts/full-pane.FullPane`
+              - `layouts/miller.MillerColumns`
               - `primitives/app-shell.AppShellLayout`
               - `primitives/slot-render.defineRenderSlot`
               - `ui/theme-engine.ThemeEngine`
@@ -13517,8 +13518,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `APP_RAIL_WIDTH`
       - `documentTitle`
   - Cross-plugin:
-    - Imported by: 65 plugins — full list in [`plugins/apps-core/REFERENCE.md`](../plugins/apps-core/REFERENCE.md)
-      - `apps` ×31
+    - Imported by: 66 plugins — full list in [`plugins/apps-core/REFERENCE.md`](../plugins/apps-core/REFERENCE.md)
+      - `apps` ×32
       - `apps-core` ×16
       - `ui` ×6
       - `companions` ×3
@@ -15649,7 +15650,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live.serveValue`
       - Cross-plugin:
         - Imported by:
-          - `apps/deploy/analytics/sessions`
           - `apps/deploy/local-serve`
           - `apps/studio/compositions`
           - `apps/studio/compositions/draft-actions`
@@ -38064,9 +38064,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `namespaceUrl`
           - `resolveNamespaceAlias`
       - Cross-plugin:
-        - Imported by: 80 plugins — full list in [`plugins/infra/plugins/namespace/REFERENCE.md`](../plugins/infra/plugins/namespace/REFERENCE.md)
-          - `apps` ×13
+        - Imported by: 79 plugins — full list in [`plugins/infra/plugins/namespace/REFERENCE.md`](../plugins/infra/plugins/namespace/REFERENCE.md)
           - `framework` ×13
+          - `apps` ×12
           - `debug` ×12
           - `infra` ×10
           - `conversations` ×7
@@ -40065,7 +40065,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `apps/chord/shell`
           - `apps/demo/shell`
-          - `apps/deploy/shell`
           - `apps/home/shell`
           - `apps/isle/shell`
           - `apps/places/shell`
@@ -40123,6 +40122,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `apps/agent-manager/shell`
           - `apps/debug/shell`
+          - `apps/deploy/shell`
           - `apps/events/shell`
           - `apps/file-explorer/shell`
           - `apps/isle/shell`
@@ -45910,8 +45910,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SERVE_MODES`
           - `serveModeLabel`
       - Cross-plugin:
-        - Imported by: 29 plugins — full list in [`plugins/plugin-meta/plugins/composition/REFERENCE.md`](../plugins/plugin-meta/plugins/composition/REFERENCE.md)
-          - `apps` ×17
+        - Imported by: 28 plugins — full list in [`plugins/plugin-meta/plugins/composition/REFERENCE.md`](../plugins/plugin-meta/plugins/composition/REFERENCE.md)
+          - `apps` ×16
           - `framework` ×5
           - `build` ×3
           - `plugin-meta` ×2
@@ -51551,9 +51551,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: `primitives/css/viewport-overlay.describeElement`
         - **`render-mode`** — Reading the browser while rendering, safely in both modes: useBrowserValue({ name, read, subscribe?, staticValue? }) (live: useSyncExternalStore, re-read on every change; static: staticValue, or a loud NoStaticValueError), useMediaQuery(query, staticValue), useViewportSize(staticValue), and useOwnedElement(name, create) — a DOM node a component mints once, which has no static form. The one place a render-time read of window / document / navigator / matchMedia happens (dom-access-safety/no-render-time-dom).
           - Cross-plugin:
-            - Imported by: 23 plugins — full list in [`plugins/primitives/plugins/dom/plugins/render-mode/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/render-mode/REFERENCE.md)
+            - Imported by: 24 plugins — full list in [`plugins/primitives/plugins/dom/plugins/render-mode/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/render-mode/REFERENCE.md)
               - `primitives` ×11
-              - `apps` ×2
+              - `apps` ×3
               - `companions/panel`
               - `conversations/conversation-view/jsonl-viewer/steady-reveal`
               - `debug/timeline`
@@ -51773,6 +51773,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps-core/layout`
           - `apps-core/phone-actions`
           - `apps-core/tabs`
+          - `apps/deploy/analytics/sessions`
           - `apps/prototypes/canvas`
           - `apps/prototypes/compare/route`
           - `apps/prototypes/present`
