@@ -31,6 +31,27 @@ export const REPORT_SINK_HOLD_CAP = 100;
 // REPORT_SINK_HOLD_CAP reports (the first failures are usually the cause, the
 // rest their cascade) and drops later ones, warning once per overflow.
 export function defineReportSink<TBody>(): ReportSink<TBody> {
+  const sink = createReportSink<TBody>();
+  holdingSinks.add(sink);
+  return sink;
+}
+
+// Every report sink defined in this process, so a test runner can empty their
+// holds between tests (`discardHeldReports`): the hold is process-global, and a
+// test process runs many suites one after another — a report one suite's
+// background work emitted with no handler would otherwise be replayed into the
+// first handler a LATER suite registers (its collector), failing it with
+// reports that are not its own.
+const holdingSinks = new Set<{ discardHeld(): void }>();
+
+/** Drop every report held by every report sink, with no handler told. */
+export function discardHeldReports(): void {
+  for (const sink of holdingSinks) sink.discardHeld();
+}
+
+function createReportSink<TBody>(): ReportSink<TBody> & {
+  discardHeld(): void;
+} {
   let handler: ((body: TBody) => void) | null = null;
   let held: TBody[] = [];
   let overflowWarned = false;
@@ -45,6 +66,10 @@ export function defineReportSink<TBody>(): ReportSink<TBody> {
   }
 
   return {
+    discardHeld() {
+      held = [];
+      overflowWarned = false;
+    },
     register(fn) {
       handler = fn;
       const pending = held;

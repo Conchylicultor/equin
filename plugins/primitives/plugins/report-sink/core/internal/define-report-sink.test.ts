@@ -1,6 +1,7 @@
 import { afterAll, afterEach, describe, expect, spyOn, test } from "bun:test";
 import {
   defineReportSink,
+  discardHeldReports,
   defineRequestSink,
   REPORT_SINK_HOLD_CAP,
 } from "./define-report-sink";
@@ -119,4 +120,19 @@ describe("defineRequestSink", () => {
     });
     expect(sink.emit(1)).toBeUndefined();
   });
+});
+
+test("discardHeldReports empties every sink's hold, so a later handler hears only what follows", () => {
+  const a = defineReportSink<string>();
+  const b = defineReportSink<string>();
+  a.emit("stale-a");
+  b.emit("stale-b");
+  discardHeldReports();
+  const got: string[] = [];
+  a.register((s) => got.push(s));
+  b.register((s) => got.push(s));
+  a.emit("fresh");
+  expect(got).toEqual(["fresh"]);
+  a.register(null);
+  b.register(null);
 });

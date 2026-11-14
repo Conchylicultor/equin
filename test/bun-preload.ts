@@ -1,3 +1,5 @@
+import { beforeEach } from "bun:test";
+import { discardHeldReports } from "@plugins/primitives/plugins/report-sink/core/testing";
 import { declareRuntimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 import { readFileSync, renameSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -111,3 +113,13 @@ if (process.env.BOOTS_OWN_PLUGIN_GRAPH !== "1") {
   const { loadDatabaseConfig } = await import("@plugins/database/core");
   await loadDatabaseConfig();
 }
+
+// Report sinks hold what is emitted while no handler is registered, and the
+// hold is process-global: one `bun test` process runs many suites, so a report
+// one suite's background work filed with no handler (a job's failed attempts)
+// would be replayed into the first handler a LATER test registers — its
+// collector failing on reports that are not its own. Every test starts with
+// empty holds; a report emitted and then collected inside one test still is.
+beforeEach(() => {
+  discardHeldReports();
+});
