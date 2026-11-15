@@ -14,7 +14,7 @@ import {
   type Resident,
 } from "./placement";
 import { ROAD_R, trunkOf } from "./roads";
-import { plotBox, sitesOf } from "./sites";
+import { plotBox, plotsClash, sitesOf } from "./sites";
 import type { Island, Slot, WorldModel } from "./world-model";
 
 export type RoadKind = "trunk" | "street" | "lane" | "spur" | "link";
@@ -378,7 +378,9 @@ export function layoutWorld(
     roads: built,
     squares: finalSquares,
     buildings,
-    lots,
+    // a lot a standing building was set down over (a move that made its new
+    // plot on the one it left) is under that building: neither drawn nor a lot
+    lots: lots.filter((p) => !buildings.some((b) => plotsClash(p, b.plot))),
     ferries,
     piers,
     dock: islands[0]?.home ? M.homeDock() : null,

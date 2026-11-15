@@ -3,6 +3,7 @@
 // squares (flagstones), empty lots (a fenced patch with a blank stake), and the
 // signposts drawn over everything.
 
+import type { Box } from "@plugins/apps/plugins/isle/plugins/buildings/core";
 import {
   hash,
   roadHash,
@@ -198,14 +199,20 @@ export function paintSquare(g: Ctx, q: Square): void {
   }
 }
 
+/**
+ * An empty lot's fenced patch, world px: what is painted, and what the hero
+ * stands on or a click lands on to give it back to nature.
+ */
+export function lotPatch(p: Plot): Box {
+  const w = (p.g[2] - p.g[0]) * 0.72;
+  return [p.x - w / 2, p.y - 70, p.x + w / 2, p.y + 4];
+}
+
 /** An empty lot: a fenced patch of turned earth with weeds and a bare stake — room for the next app. */
 export function paintLot(g: Ctx, p: Plot): void {
   const rnd = seeded(strHash(`lot:${p.id}`));
-  const w = (p.g[2] - p.g[0]) * 0.72;
-  const x0 = p.x - w / 2;
-  const x1 = p.x + w / 2;
-  const y0 = p.y - 70;
-  const y1 = p.y + 4;
+  const [x0, y0, x1, y1] = lotPatch(p);
+  const w = x1 - x0;
   g.fillStyle = "rgba(120,100,64,.32)";
   blob(g, p.x, (y0 + y1) / 2, w * 0.52, rnd, 12, 0.18);
   g.fill();

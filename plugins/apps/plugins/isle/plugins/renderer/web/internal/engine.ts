@@ -71,6 +71,7 @@ import {
 import {
   drawSign,
   paintBridges,
+  lotPatch,
   paintLot,
   paintRoads,
   paintSquare,
@@ -115,6 +116,8 @@ export interface EngineHooks {
   onNear(appId: string | null): void;
   /** The hero is (no longer) standing on an empty lot (its plot id): it may be given back to nature. */
   onNearLot(plotId: string | null): void;
+  /** An empty lot was clicked and the hero has walked onto it: give it back to nature. */
+  onRestoreLot(plotId: string): void;
   /**
    * Open an app (a click on its building): `at` is the screen point it opens
    * from; the click's modifiers: `elsewhere` (⌘/Ctrl — a new browser tab),
@@ -384,6 +387,8 @@ export class IsleEngine {
   private dust: { x: number; y: number; t0: number } | null = null;
   private nearDoor: SceneBuilding | null = null;
   private nearLot: string | null = null;
+  /** The lot a click sent the hero to restore, once there (any other walk drops it). */
+  private restoreOnArrival: string | null = null;
   private where = "";
 
   // input
@@ -1737,12 +1742,36 @@ export class IsleEngine {
       );
       return;
     }
+    const lot = this.lotAt(p.x, p.y);
+    if (lot) {
+      // the lazy way: one click walks there and gives it back to nature
+      if (this.nearLot === lot) {
+        this.restoreOnArrival = null;
+        this.hooks.onRestoreLot(lot);
+        return;
+      }
+      this.walkTo(p.x, p.y);
+      this.restoreOnArrival = this.hero.path ? lot : null;
+      return;
+    }
     this.walkTo(p.x, p.y);
+  }
+
+  /** The empty lot covering world point (x, y), if any. */
+  private lotAt(x: number, y: number): string | null {
+    const lots = this.layout?.lots ?? [];
+    return (
+      lots.find((p) => {
+        const B = lotPatch(p);
+        return x > B[0] && x < B[2] && y > B[1] && y < B[3];
+      })?.id ?? null
+    );
   }
 
   private walkTo(x: number, y: number): void {
     if (!this.grid) return;
     const path = findPath(this.grid, this.hero.x, this.hero.y, x, y);
+    this.restoreOnArrival = null;
     if (!path) return;
     this.hero.path = path.slice(1);
     const end = path[path.length - 1]!;
@@ -1797,6 +1826,7 @@ export class IsleEngine {
     }
     hero.path = null;
     this.marker = null;
+    this.restoreOnArrival = null;
     hero.walking = true;
     hero.speed = sp;
     const turn = (to: number) => {
@@ -1949,8 +1979,12 @@ export class IsleEngine {
           t,
         );
         if (!this.drag) {
-          const cur = this.hovered ? "pointer" : "grab";
+          const w = this.toWorld(this.ptr.x, this.ptr.y);
+          const onLot = !this.hovered && this.lotAt(w.x, w.y) !== null;
+          const cur = this.hovered || onLot ? "pointer" : "grab";
           if (this.canvas.style.cursor !== cur) this.canvas.style.cursor = cur;
+          const tip = onLot ? "Empty lot — click to restore nature" : "";
+          if (this.canvas.title !== tip) this.canvas.title = tip;
         }
       } else if (!this.ptr || this.moving || (this.drag && this.drag.moved))
         this.hovered = null;
@@ -2663,17 +2697,15 @@ export class IsleEngine {
       if ((nb?.appId ?? null) !== was) this.hooks.onNear(nb?.appId ?? null);
     }
     // standing on an empty lot (a door takes precedence)
-    const lot = nb
-      ? null
-      : (this.layout!.lots.find((p) => {
-          const B = plotBox(p);
-          return (
-            hero.x > B[0] && hero.x < B[2] && hero.y > B[1] && hero.y < B[3]
-          );
-        })?.id ?? null);
+    const lot = nb ? null : this.lotAt(hero.x, hero.y);
     if (lot !== this.nearLot) {
       this.nearLot = lot;
       this.hooks.onNearLot(lot);
+    }
+    const want = this.restoreOnArrival;
+    if (want && !hero.path?.length) {
+      this.restoreOnArrival = null;
+      if (lot === want) this.hooks.onRestoreLot(want);
     }
     this.reportWhere();
   }

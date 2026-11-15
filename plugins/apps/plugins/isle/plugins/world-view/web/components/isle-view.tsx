@@ -211,6 +211,7 @@ export function IsleView() {
         onReady: () => setDrawn(true),
         onNear: (id) => near_(id),
         onNearLot: (id) => setNearLot(id),
+        onRestoreLot: (id) => onRestore(id),
         onStep: () => sfx.step(),
         onHover: (id) => {
           if (id) sfx.blip(false);
@@ -231,7 +232,7 @@ export function IsleView() {
       engineRef.current = null;
       engine.dispose();
     };
-  }, [enter, onMove, near_, sfx]);
+  }, [enter, onMove, onRestore, near_, sfx]);
 
   useEffect(() => {
     if (world.kind !== "ready") return;
