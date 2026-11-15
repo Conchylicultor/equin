@@ -124,13 +124,10 @@ export function SplitThumb({ pair }: { pair: BeforeAfterPair }): ReactNode {
   );
 }
 
-/** `route · W × H · before → after` — what the pair compares, on one line. */
+/** `route · W × H` — what the pair shows, on one line (which side is which is
+ *  on the comparison's own Before / After tags). */
 export function pairCaption(pair: BeforeAfterPair): string {
-  return [
-    pair.route,
-    `${String(pair.width)} × ${String(pair.height)}`,
-    `${pair.beforeLabel} → ${pair.afterLabel}`,
-  ]
+  return [pair.route, `${String(pair.width)} × ${String(pair.height)}`]
     .filter((part): part is string => part !== null)
     .join(" · ");
 }

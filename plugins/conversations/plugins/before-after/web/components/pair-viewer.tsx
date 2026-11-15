@@ -21,15 +21,16 @@ import { AfterImage, BeforeImage, pairCaption } from "./pair-image";
 import { CopyButton } from "@plugins/primitives/plugins/copy-to-clipboard/web";
 
 /**
- * One pair, large: its caption (`route · W × H · before → after`, under its
- * title when `titled` — in a pane the header carries the title), then a
- * toolbar row — the mode switch (Swipe / Side by side / Flip) on the left, the
- * zoom controls (− % + · Fit width · Fit height · 1:1 — scroll to zoom, drag
- * to pan) on the right — and the comparison filling the rest of the box,
- * fitted to its width at first (a full-page capture reads from its top). The
- * mode and the divider are the pane's ({@link useCompareState}), so the
- * pane's viewer and the full-screen one show the same comparison. `trailing`
- * ends the caption row (the full-screen view's close).
+ * One pair, large: a toolbar row — the mode switch (Swipe / Side by side /
+ * Flip) on the left, the zoom controls (− % + · Fit width · Fit height · 1:1 —
+ * scroll to zoom, drag to pan) on the right — the comparison filling the rest
+ * of the box, fitted to its width at first (a full-page capture reads from its
+ * top), and its caption under it (`route · W × H`). Above them, the title row
+ * when `titled` or `trailing` is given (full screen: the pane header carries
+ * the title otherwise). The mode and the divider are the pane's
+ * ({@link useCompareState}), so the pane's viewer and the full-screen one show
+ * the same comparison. `trailing` ends the title row (the full-screen view's
+ * close).
  */
 export function PairViewer(props: PairViewerProps): ReactNode {
   // A new pair starts its own zoom (and flip shows its after side).
@@ -38,7 +39,7 @@ export function PairViewer(props: PairViewerProps): ReactNode {
 
 interface PairViewerProps {
   pair: BeforeAfterPair;
-  /** Show the pair's title (and its copy-id button) above the caption — where
+  /** Show the pair's title (and its copy-id button) above the toolbar — where
    *  no pane header carries it (full screen). */
   titled?: boolean;
   trailing?: ReactNode;
@@ -58,19 +59,12 @@ function PairViewerBody({
   const zoom = useCompareZoom({ width: pair.width, height: pair.height });
   return (
     <Stack gap="smd" className={cn("min-h-0", className)}>
-      <Stack direction="row" align="center" gap="smd">
-        <Fill>
-          <Stack gap="2xs">
-            {titled ? <PairTitle pair={pair} /> : null}
-            <Line>
-              <Text variant="caption" tone="muted">
-                {pairCaption(pair)}
-              </Text>
-            </Line>
-          </Stack>
-        </Fill>
-        {trailing}
-      </Stack>
+      {titled || trailing !== undefined ? (
+        <Stack direction="row" align="center" gap="smd">
+          <Fill>{titled ? <PairTitle pair={pair} /> : null}</Fill>
+          {trailing}
+        </Stack>
+      ) : null}
       <Stack direction="row" align="center" justify="between" gap="smd" wrap>
         {/* The modes on a track, so the three read as one switch. */}
         <Inset
@@ -100,6 +94,11 @@ function PairViewerBody({
           zoom={zoom}
         />
       </Fill>
+      <Line>
+        <Text variant="caption" tone="muted">
+          {pairCaption(pair)}
+        </Text>
+      </Line>
     </Stack>
   );
 }
