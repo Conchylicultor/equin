@@ -442,7 +442,9 @@ describe("classifyFinishedDatabase — the fork DB goes ahead of its checkout", 
   });
 
   test("no database, or no checkout (the orphan branch's), is not this branch's", () => {
-    expect(classifyFinishedDatabase(attempt(), ctx({ hasDB: false }))).toBeNull();
+    expect(
+      classifyFinishedDatabase(attempt(), ctx({ hasDB: false })),
+    ).toBeNull();
     expect(
       classifyFinishedDatabase(attempt(), ctx({ hasDir: false })),
     ).toBeNull();
