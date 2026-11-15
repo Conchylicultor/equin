@@ -1197,7 +1197,7 @@ function spareCreatedAt(path: string): number {
 
 /**
  * Put a just-moved spare on the attempt's branch: `git switch -c
- * claude-web/<id> main`, or `git switch claude-web/<id>` when the branch already
+ * claude-web/<id> <main's commit>`, or `git switch claude-web/<id>` when the branch already
  * exists (the same convergence the cold add has). A two-tree checkout, so it
  * writes only the diff between the spare's commit and current `main`.
  *
@@ -1234,7 +1234,15 @@ async function switchToAttemptBranch(
     }
     argv = [...sw, "--ignore-other-worktrees", branch];
   } else {
-    argv = [...sw, "-c", branch, "main"];
+    // At the commit `main` names NOW, never `main` itself: `switch -c <b>
+    // <name>` resolves the name twice — once to pick the tree it checks out
+    // (a spare already at that commit skips the checkout entirely) and again
+    // when it creates the branch. A push landing between the two creates the
+    // branch at the newer commit over the older tree and index, so the
+    // attempt starts with staged changes reverting main's newest commit
+    // (2026-11-15, task-1794735587-5hho86). One commit, both reads.
+    const commit = await resolveCommit(repoRoot, "main", signal);
+    argv = [...sw, "-c", branch, commit];
   }
   const r = await spawnCaptured(argv, {
     tier: "background",

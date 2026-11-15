@@ -118,6 +118,45 @@ describe("spare claim", () => {
     expect(await listReadySpares(repo)).toEqual([]);
   });
 
+  test("a push landing mid-claim never leaves the branch ahead of the tree", async () => {
+    // `git switch -c <branch> main` resolves `main` twice: once to pick the
+    // tree (the spare is already at that commit, so the checkout is skipped)
+    // and again to create the branch. A push in between created the branch at
+    // main's newer commit over the spare's older tree and index — the attempt
+    // started with staged changes reverting main's newest commit
+    // (task-1794735587-5hho86). The fsmonitor hook runs inside the switch,
+    // between the two reads, and lands that push.
+    const older = await git(repo, "rev-parse", "main");
+    const newer = await commit("b.txt", "two");
+    await git(repo, "update-ref", "refs/heads/main", older);
+    await createSpareIn(repo, noInstall);
+
+    const fired = join(base, "push-landed");
+    const hook = join(base, "fsmonitor-push.sh");
+    writeFileSync(
+      hook,
+      `#!/bin/sh\n[ -e '${fired}' ] || { : > '${fired}'; '${GIT}' -C '${repo}' update-ref refs/heads/main ${newer}; }\nexit 1\n`,
+      { mode: 0o755 },
+    );
+    await git(repo, "config", "core.fsmonitor", hook);
+    const wt = wtFor("att-raced");
+    try {
+      expect((await checkoutAttempt(repo, "att-raced", wt)).source).toBe(
+        "spare",
+      );
+    } finally {
+      await git(repo, "config", "--unset", "core.fsmonitor");
+    }
+
+    expect(existsSync(fired)).toBe(true);
+    expect(await git(repo, "rev-parse", "main")).toBe(newer);
+    expect(await git(wt, "rev-parse", "HEAD")).toBe(older);
+    expect(await git(wt, "write-tree")).toBe(
+      await git(wt, "rev-parse", "HEAD^{tree}"),
+    );
+    expect(await git(wt, "status", "--porcelain")).toBe("");
+  });
+
   test("a spare is installed before it is locked: ready means installed", async () => {
     const seen: { path: string; lock: string | null | undefined }[] = [];
     const { path: spare } = await createSpareIn(repo, async (path) => {
