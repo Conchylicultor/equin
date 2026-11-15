@@ -1958,6 +1958,23 @@ interface SocketState {
    * them. Absent: every frame goes out bare and reaches every tab.
    */
   addressed?: true;
+  /**
+   * Subs waiting on an asynchronous access decision (a visitor's per-tuple
+   * rule, `authorize`) before they register, per `key\0pk`. Every release
+   * path runs synchronously while one waits — `unsub`, `unsub-tab`, a
+   * `sub-batch complete: true` reconciliation, the socket's `close` — so each
+   * cancels the pending subs it covers here, and a sub whose decision lands
+   * after its cancellation never registers (`beginPendingSub` /
+   * `endPendingSub`). Without it, `sub(A)` then `unsub(A)` registered A after
+   * its own unsub and held it until the socket closed.
+   */
+  pendingSubs: Map<string, Set<PendingSub>>;
+}
+
+/** One sub of a socket waiting on its access decision (`SocketState.pendingSubs`). */
+interface PendingSub {
+  tabId: string;
+  cancelled: boolean;
 }
 
 /**
@@ -8973,6 +8990,7 @@ export function createResourceRuntime(
         caller: ws.data?.principal ?? "owner",
         subs: new Map(),
         framesSent: 0,
+        pendingSubs: new Map(),
       });
       // How long owed changes have gone undelivered — every push stopped
       // (`pushStallMs`, 0 when nothing is owed) and one resource's drain
@@ -9059,6 +9077,7 @@ export function createResourceRuntime(
           const m = msg as ReceivedFrame<"unsub-tab">;
           const tabId = typeof m.tabId === "string" ? m.tabId : "";
           releaseTabSubs(state, tabId);
+          cancelPendingSubs(state, { tabId });
           releaseDetachedTab(tabId, "unsub-tab", state.caller);
           return;
         }
@@ -9074,6 +9093,10 @@ export function createResourceRuntime(
       heartbeats.delete(ws);
       const state = sockets.get(ws);
       sockets.delete(ws);
+      // A sub still waiting on its access decision never registers on a closed
+      // socket: nothing would release it (its linger is armed only for what is
+      // held now), and its tab replays it on its next socket.
+      if (state) cancelPendingSubs(state, {});
       if (state) releaseReattachedTabs(state);
       // Its subs linger until their tabs replay them elsewhere (`detached`).
       if (state && state.subs.size > 0) {
@@ -9745,6 +9768,84 @@ export function createResourceRuntime(
     }
   }
 
+  // Whether a sub's asynchronous access gates refuse it: the per-tuple visitor
+  // rule, then the subscription-authorization seam (deferred;
+  // single-instance-per-user — see
+  // research/2026-07-02-global-adr-single-instance-per-user.md). No resource
+  // declares `authorize` today — the sole trusted caller of the
+  // one-instance-per-user model is always allowed. A throwing authorize fails
+  // CLOSED (report + refuse) rather than leaking the value.
+  async function refuseAsyncGates(
+    caller: LiveCaller,
+    entry: RegistryEntry,
+    params: ResourceParams,
+  ): Promise<boolean> {
+    if (
+      needsTupleCheck(caller, entry) &&
+      (await refuseTupleForCaller(caller, entry, params))
+    ) {
+      return true;
+    }
+    if (!entry.authorize) return false;
+    try {
+      return !(await entry.authorize(params));
+    } catch (err) {
+      reportLoaderError(`authorize failed for ${entry.key}`, err);
+      return true;
+    }
+  }
+
+  // A sub starts waiting on its access decision (`SocketState.pendingSubs`).
+  function beginPendingSub(
+    state: SocketState,
+    key: string,
+    pk: string,
+    tabId: string,
+  ): PendingSub {
+    const tupleKey = `${key}\0${pk}`;
+    let set = state.pendingSubs.get(tupleKey);
+    if (!set) {
+      set = new Set();
+      state.pendingSubs.set(tupleKey, set);
+    }
+    const pending: PendingSub = { tabId, cancelled: false };
+    set.add(pending);
+    return pending;
+  }
+
+  // Its decision landed (cancelled or not): it no longer waits.
+  function endPendingSub(
+    state: SocketState,
+    key: string,
+    pk: string,
+    pending: PendingSub,
+  ): void {
+    const tupleKey = `${key}\0${pk}`;
+    const set = state.pendingSubs.get(tupleKey);
+    if (!set) return;
+    set.delete(pending);
+    if (set.size === 0) state.pendingSubs.delete(tupleKey);
+  }
+
+  // Cancel the socket's pending subs a release covers: `tabId`'s (every tab's
+  // when absent), on `tupleKey` only when given, except the `retain`ed tuples.
+  // Cancelled subs leave the map now; their own await finds them cancelled.
+  function cancelPendingSubs(
+    state: SocketState,
+    by: { tabId?: string; tupleKey?: string; retain?: ReadonlySet<string> },
+  ): void {
+    for (const [tupleKey, set] of state.pendingSubs) {
+      if (by.tupleKey !== undefined && tupleKey !== by.tupleKey) continue;
+      if (by.retain?.has(tupleKey)) continue;
+      for (const pending of set) {
+        if (by.tabId !== undefined && pending.tabId !== by.tabId) continue;
+        pending.cancelled = true;
+        set.delete(pending);
+      }
+      if (set.size === 0) state.pendingSubs.delete(tupleKey);
+    }
+  }
+
   // `m.derive` is a seeded derivation (see `deriveSub`), on a fresh `sub`
   // only, read only under this server's `PROTOCOL` (`m.protocol`).
   async function handleSub(
@@ -9782,39 +9883,26 @@ export function createResourceRuntime(
       return;
     }
     if (refuseSubParams(state.ws, entry, req, params, build)) return;
-    // The per-tuple visitor rule — on canonical, gated params, still before
-    // any side effect. Awaited only where it applies: every other sub keeps
-    // its synchronous step from frame to registration (a derived sub's
-    // answer, the frame-position bookkeeping, depend on it).
-    if (
-      needsTupleCheck(state.caller, entry) &&
-      (await refuseTupleForCaller(state.caller, entry, params))
-    ) {
-      sendJson(state.ws, {
-        kind: "sub-error",
-        ...req,
-        key,
-        params,
-        reason: "unauthorized",
-      });
-      return;
-    }
-    // Subscription-authorization seam (deferred; single-instance-per-user — see
-    // research/2026-07-02-global-adr-single-instance-per-user.md). Runs before
-    // any side effect (refcount bump, onFirstSubscribe, loader read) so a refused
-    // sub leaves no trace. No resource declares `authorize` today — the sole
-    // trusted caller of the one-instance-per-user model is always allowed — so
-    // for every shipped resource this branch is skipped entirely. A throwing
-    // authorize fails CLOSED (report + reject) rather than leaking the value.
-    if (entry.authorize) {
-      let allowed: boolean;
+    const pk = paramsKey(params);
+    const tabId = req.tabId ?? "";
+    // The asynchronous access gates — the per-tuple visitor rule, then the
+    // `authorize` seam — on canonical, gated params, still before any side
+    // effect. Awaited only where one applies: every other sub keeps its
+    // synchronous step from frame to registration (a derived sub's answer,
+    // the frame-position bookkeeping, depend on it). While they are awaited
+    // the sub is PENDING on the socket, so a release arriving meanwhile
+    // cancels it rather than running before it registers.
+    if (needsTupleCheck(state.caller, entry) || entry.authorize) {
+      const pending = beginPendingSub(state, key, pk, tabId);
+      let refused: boolean;
       try {
-        allowed = await entry.authorize(params);
-      } catch (err) {
-        reportLoaderError(`authorize failed for ${key}`, err);
-        allowed = false;
+        refused = await refuseAsyncGates(state.caller, entry, params);
+      } finally {
+        endPendingSub(state, key, pk, pending);
       }
-      if (!allowed) {
+      // Released while it waited: nobody is owed an answer, nothing registers.
+      if (pending.cancelled) return;
+      if (refused) {
         sendJson(state.ws, {
           kind: "sub-error",
           ...req,
@@ -9825,18 +9913,17 @@ export function createResourceRuntime(
         return;
       }
     }
-    const pk = paramsKey(params);
     const { firstGlobal } = registerSubOnSocket(
       state,
       entry,
       pk,
       params,
-      req.tabId ?? "",
+      tabId,
       m.acks === true,
     );
     // Where in this socket's frame stream the sub registered (`alreadyShipped`):
     // from here on every frame of the tuple is addressed to this tab too — a
-    // frame sent while `authorize` was awaited before it was not.
+    // frame sent while its access gates were awaited was not.
     const arrivedAt = state.framesSent;
     // Seeded derivation: answered (or refused) right here, synchronously after
     // the registration — so every change routed from now on reaches this tuple,
@@ -10372,6 +10459,9 @@ export function createResourceRuntime(
     // not restate. Runs strictly AFTER registration (see the function comment).
     if (m.complete === true) {
       releaseTabSubs(state, tabId, retained);
+      // …its subs still waiting on an access decision that it did not restate
+      // too (the ones this batch routed through `handleSub` are retained).
+      cancelPendingSubs(state, { tabId, retain: retained });
       // …and everything it still held on a closed socket: what it restated is
       // held here now (registered above, so it never went through 0 — the
       // short-circuit below can answer it), the rest it no longer wants.
@@ -10493,14 +10583,17 @@ export function createResourceRuntime(
   function handleUnsub(state: SocketState, m: ReceivedFrame<"unsub">): void {
     const { key, params = {} } = m;
     if (!key) return;
-    const inner = state.subs.get(key);
-    if (!inner) return;
     const pk = paramsKey(params);
-    const rec = inner.get(pk);
-    if (!rec) return;
     // Remove only the FRAME's tab (legacy untagged → the `""` bucket); the
     // socket-level refcount releases only when the last holding tab is gone.
     const tabId = typeof m.tabId === "string" ? m.tabId : "";
+    // A sub of this tab still waiting on its access decision is released too:
+    // it must not register after the unsub that followed it.
+    cancelPendingSubs(state, { tabId, tupleKey: `${key}\0${pk}` });
+    const inner = state.subs.get(key);
+    if (!inner) return;
+    const rec = inner.get(pk);
+    if (!rec) return;
     if (!rec.tabs.delete(tabId)) return;
     rec.ackTabs.delete(tabId);
     rec.awaiting.delete(tabId);
@@ -10545,8 +10638,9 @@ export function createResourceRuntime(
   // its last one leaves while the sub stays; every later `sub` / `sub-batch`
   // entry restates the flag anyway. A frame for a sub this tab does not hold is
   // dropped: the client only sends it after the tuple's `sub`, and frames on a
-  // socket are handled in order — only an `authorize`-deferred registration
-  // (no shipped resource declares one) could still be pending.
+  // socket are handled in order — only a sub still waiting on its access
+  // decision (`SocketState.pendingSubs`: a visitor's per-tuple rule, whose
+  // reader writes nothing and so asks no acks) could still be pending.
   function handleSubAcks(
     state: SocketState,
     m: ReceivedFrame<"sub-acks">,

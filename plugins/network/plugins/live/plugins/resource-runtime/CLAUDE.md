@@ -860,7 +860,12 @@ through `handleSub`, like `authorize`) and HTTP read are refused
 `unauthorized` unless it resolves true — after the params gate, before any
 registration or load, awaited only for a visitor on such an entry so every
 other sub keeps its synchronous step — and `visitorReadsTuple(key, params)`
-is the boot snapshot's form. A throwing rule refuses and is reported. A
+is the boot snapshot's form. A throwing rule refuses and is reported.
+**A sub awaiting an access decision is pending on its socket**
+(`SocketState.pendingSubs`, the tuple rule and `authorize` alike): `unsub`,
+`unsub-tab`, a `complete` reconciliation not restating it and the socket's
+close cancel it, so a decision landing after its release registers nothing
+and answers nothing (`runtime-pending-sub.test.ts`). A
 visitor's heartbeat carries `pushStallMs` only (never the stalled
 owner resources' names), and a tab id is vouched for only by a socket of the
 same caller (`unsub-tab`, a `complete` replay and a close release lingering
