@@ -66,6 +66,7 @@ import {
   demoPath,
   onDemoPage,
   bootDemo,
+  MARKER,
 } from "./internal/demo-pages";
 
 const OUT = arg("out") ?? "/tmp/demo-prototypes";
@@ -176,7 +177,7 @@ await withBrowser(async (h) => {
   });
 
   await bootDemo(page, pathUrl(demoPath(AGENT_MANAGER_LOCATION)), {
-    marker: 'button:has-text("Conversations")',
+    marker: MARKER,
   });
   await page
     .getByRole("button", { name: "Tasks", exact: true })

@@ -70,6 +70,7 @@ import {
   websiteDemoPath,
   onDemoPage,
   bootDemo,
+  MARKER,
 } from "./internal/demo-pages";
 
 const OUT = arg("out") ?? "/tmp/demo-places";
@@ -160,7 +161,7 @@ await withBrowser(async (h) => {
   });
 
   await bootDemo(page, demoUrl(AGENT_MANAGER_LOCATION), {
-    marker: 'button:has-text("Conversations")',
+    marker: MARKER,
   });
   await waitForNetworkIdle(page);
   const origin = new URL(page.url()).origin;

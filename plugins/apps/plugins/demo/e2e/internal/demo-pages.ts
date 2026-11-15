@@ -7,6 +7,7 @@ import {
   demoApp,
   demoScenario,
 } from "@plugins/apps/plugins/demo/plugins/shell/core";
+import { AGENT_MANAGER_READY } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 import { embedTailPath } from "@plugins/primitives/plugins/pane/core";
 import {
   appThemeScope,
@@ -29,8 +30,8 @@ export function demoAppThemeScope(appId: string): string {
 
 /** How long an app swap, a worker read or a host boot gets to render. */
 export const RENDER_TIMEOUT_MS = 30_000;
-/** A control the Agent Manager shows once the demo has booted. */
-export const MARKER = 'button:has-text("Conversations")';
+/** What the Agent Manager shows once the demo has booted: its own ready marker. */
+export const MARKER = AGENT_MANAGER_READY;
 
 /** The seeded root pages (`website/demos/workspace`'s `core/internal/pages.ts`). */
 export const ROOT_PAGES = [

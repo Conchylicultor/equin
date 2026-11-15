@@ -67,6 +67,7 @@ import {
   demoPath,
   onDemoPage,
   bootDemo,
+  MARKER,
 } from "./internal/demo-pages";
 
 const OUT = arg("out") ?? "/tmp/demo-sonata";
@@ -245,7 +246,7 @@ await withBrowser(async (h) => {
     { spaceFirst }: { spaceFirst: boolean },
   ): Promise<void> => {
     await bootDemo(page, pathUrl(demoPath(AGENT_MANAGER_LOCATION)), {
-      marker: 'button:has-text("Conversations")',
+      marker: MARKER,
     });
     await waitForNetworkIdle(page);
     demoUp = pass;

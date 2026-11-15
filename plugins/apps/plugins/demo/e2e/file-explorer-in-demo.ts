@@ -47,6 +47,7 @@ import {
   demoPath,
   onDemoPage,
   bootDemo,
+  MARKER,
 } from "./internal/demo-pages";
 
 const OUT = arg("out") ?? "/tmp/demo-files";
@@ -160,7 +161,7 @@ await withBrowser(async (h) => {
 
   // ── 1. launcher → Files, opening on Home ────────────────────────────────
   await bootDemo(page, pathUrl(demoPath(AGENT_MANAGER_LOCATION)), {
-    marker: 'button:has-text("Conversations")',
+    marker: MARKER,
   });
   demoUp = true;
   r.ok(

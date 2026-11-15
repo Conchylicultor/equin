@@ -654,12 +654,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses:
               - `primitives/pane.defineApp`
               - `ui/icons.symbol`
-            - Exports (values): `agentManagerApp`
+            - Exports (values):
+              - `AGENT_MANAGER_READY`
+              - `AGENT_MANAGER_READY_ATTR`
+              - `agentManagerApp`
           - Cross-plugin:
-            - Imported by: 35 plugins — full list in [`plugins/apps/plugins/agent-manager/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/agent-manager/plugins/shell/REFERENCE.md)
+            - Imported by: 36 plugins — full list in [`plugins/apps/plugins/agent-manager/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/agent-manager/plugins/shell/REFERENCE.md)
               - `conversations` ×17
               - `tasks` ×7
-              - `apps` ×4
+              - `apps` ×5
               - `active-data/plugin-link`
               - `build`
               - `code-explorer/commit-detail`

@@ -109,6 +109,7 @@ import {
   AGENT_MANAGER_LOCATION,
   demoPath,
   bootDemo,
+  MARKER,
 } from "./internal/demo-pages";
 
 const OUT = arg("out") ?? "/tmp/demo-no-leak";
@@ -400,7 +401,7 @@ await withBrowser(async (h) => {
   const socketTap = await tapSharedSocket(page);
 
   await bootDemo(page, pathUrl(demoPath(AGENT_MANAGER_LOCATION)), {
-    marker: 'button:has-text("Conversations")',
+    marker: MARKER,
   });
   // The scope renders its sidebar once the worker answered the first reads.
   await page
@@ -691,7 +692,7 @@ await withBrowser(async (h) => {
   await snap(page, OUT, "task-detail-reopened");
 
   // ── 2. a conversation: the composer says sending is not available ──────
-  await clickButton(page, "Conversations");
+  // The sidebar's Queue lists the conversations: open the first one.
   await page.locator('[data-ui-owner^="ConvTitle"]').first().click();
   // The composer is the prompt editor, disabled, its placeholder saying why.
   // (Lexical drops `aria-placeholder` from an editor that is not editable:

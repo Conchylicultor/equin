@@ -37,6 +37,7 @@ import {
   AGENT_MANAGER_LOCATION,
   demoPath,
   bootDemo,
+  MARKER,
 } from "./internal/demo-pages";
 
 const OUT = arg("out") ?? "/tmp/demo-transcript";
@@ -93,7 +94,7 @@ await withBrowser(async (h) => {
   const { page, captured } = await h.session();
 
   await bootDemo(page, pathUrl(demoPath(AGENT_MANAGER_LOCATION)), {
-    marker: 'button:has-text("Conversations")',
+    marker: MARKER,
   });
 
   // 1. Every path-drawing card carries its path.

@@ -49,6 +49,7 @@ import {
   demoPath,
   onDemoPage,
   bootDemo,
+  MARKER,
 } from "./internal/demo-pages";
 
 const OUT = arg("out") ?? "/tmp/demo-app-switch";
@@ -104,7 +105,7 @@ await withBrowser(async (h) => {
   const socketTap = await tapSharedSocket(page);
 
   await bootDemo(page, pathUrl(demoPath(AGENT_MANAGER_LOCATION)), {
-    marker: 'button:has-text("Conversations")',
+    marker: MARKER,
   });
   await page
     .getByRole("button", { name: "Tasks", exact: true })

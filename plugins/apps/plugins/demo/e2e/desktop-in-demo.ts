@@ -49,6 +49,7 @@ import {
   demoPath,
   onDemoPage,
   bootDemo,
+  MARKER,
 } from "./internal/demo-pages";
 
 const OUT = arg("out") ?? "/tmp/demo-desktop";
@@ -172,7 +173,7 @@ await withBrowser(async (h) => {
   const { page, captured } = await h.session();
 
   await bootDemo(page, pathUrl(demoPath(AGENT_MANAGER_LOCATION)), {
-    marker: 'button:has-text("Conversations")',
+    marker: MARKER,
   });
 
   const leaked: string[] = [];

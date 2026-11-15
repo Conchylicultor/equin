@@ -47,6 +47,7 @@ import {
   demoPath,
   onDemoPage,
   bootDemo,
+  MARKER,
 } from "./internal/demo-pages";
 
 const OUT = arg("out") ?? "/tmp/demo-keyboard-party";
@@ -178,7 +179,7 @@ await withBrowser(async (h) => {
   /** /demo → launcher → Tap Tap Party; `pass` names the run. */
   const openParty = async (pass: string): Promise<void> => {
     await bootDemo(page, pathUrl(demoPath(AGENT_MANAGER_LOCATION)), {
-      marker: 'button:has-text("Conversations")',
+      marker: MARKER,
     });
     // Counted from once the page's OWN chrome has booted (its deferred tier
     // mounted, its requests answered), as no-leak takes its baseline: the
