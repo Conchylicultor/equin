@@ -1,4 +1,4 @@
-// @hash 4f69ac892a4b
+// @hash b597602b7fa4
 {
   "manifests": [
     {
@@ -240,6 +240,8 @@
         "apps.desktop.**",
         "!apps.desktop.wallpaper.openverse.**",
         "apps.keyboard-party.**",
+        "apps.isle.**",
+        "!apps.isle.dev.**",
         "apps.settings.shell",
         "apps.settings.config",
         "apps.places.**",

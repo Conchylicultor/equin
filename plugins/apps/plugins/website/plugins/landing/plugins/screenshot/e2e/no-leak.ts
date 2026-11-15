@@ -772,12 +772,19 @@ await withBrowser(async (h) => {
   // ── 4. every app the launcher lists: what it draws stays in the scope ───
   const embed = page.locator("[data-app-embed]").first();
   const firstGrid = await openLauncherGrid(embed);
-  const tiles = await launcherTiles(firstGrid).evaluateAll((els) =>
+  const launcherOrder = await launcherTiles(firstGrid).evaluateAll((els) =>
     els.map((el) => ({
       key: el.getAttribute("data-row-key") ?? "",
       name: (el.textContent ?? "").replace(/\s+/g, " ").trim(),
     })),
   );
+  // The Desktop is visited last: it opens the app shown before it as a
+  // window, and there the launcher is the shelf's — a window whose app draws
+  // no brand of its own (Isle) has no launcher mark for the next visit.
+  const tiles = [
+    ...launcherOrder.filter((t) => t.key !== "desktop"),
+    ...launcherOrder.filter((t) => t.key === "desktop"),
+  ];
   await closeLauncherGrid(firstGrid);
   r.ok(
     "the launcher lists apps to visit",

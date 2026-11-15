@@ -1,7 +1,7 @@
 # workspace
 
 The workspace demo — the website's live demo: the Agent Manager, Pages,
-Prototypes, Sonata, Keyboard Party, Places and Files on Demo's own equin, the story being what equin is for:
+Prototypes, Sonata, Keyboard Party, Isle, Places and Files on Demo's own equin, the story being what equin is for:
 a person shaping their apps with agents. Its
 scenario is `workspaceDemo` (`core`) — the app, the
 route it opens at (`/c/conv-demo-practice-timer`) and its browser host

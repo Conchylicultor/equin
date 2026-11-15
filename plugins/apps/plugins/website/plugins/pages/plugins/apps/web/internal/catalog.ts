@@ -14,7 +14,7 @@ import pagesShot from "../shots/app-pages.jpg";
 import prototypesShot from "../shots/app-prototypes.jpg";
 import sonataShot from "../shots/app-sonata.jpg";
 
-export type AppCategoryId = "harness" | "daily" | "tools" | "next";
+export type AppCategoryId = "harness" | "daily" | "tools" | "surfaces" | "next";
 
 export interface AppCategory {
   id: AppCategoryId;
@@ -47,6 +47,12 @@ export const CATEGORIES: readonly AppCategory[] = [
   },
   { id: "daily", name: "Daily life", body: "The apps used every day" },
   { id: "tools", name: "Tools", body: "Small utilities the others lean on" },
+  // Not apps of their own kind: two ways to hold every other app at once.
+  {
+    id: "surfaces",
+    name: "Ways to use equin",
+    body: "Every app in one place, arranged your way",
+  },
   { id: "next", name: "Coming next", body: "Being built now" },
 ];
 
@@ -151,6 +157,24 @@ export const APPS: readonly CatalogApp[] = [
     color: "amber",
     description:
       "Browse and preview files on your machine and in every agent's workspace.",
+  },
+  {
+    id: "desktop",
+    name: "Desktop",
+    category: "surfaces",
+    icon: symbol("desktop-windows"),
+    color: "indigo",
+    description:
+      "Every app as a window over a wallpaper, with a shelf, virtual desktops and a window switcher. A computer's desktop, in equin.",
+  },
+  {
+    id: "isle",
+    name: "Isle",
+    category: "surfaces",
+    icon: symbol("sailing"),
+    color: "sky",
+    description:
+      "Every app is a building on an illustrated archipelago. Walk around the island and step through a door to open one.",
   },
   {
     id: "mail",

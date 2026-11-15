@@ -14,6 +14,15 @@ the foundations).
 Installing happens in equin itself, never on the site, so every Install and the
 "Build it" form go to the download page.
 
+**Ways to use equin.** After Tools, one group presents the two ways of using
+equin as a whole surface rather than one app at a time: **Desktop** (every app
+as a floating window over a wallpaper, `/desktop`) and **Isle** (every app a
+building on an archipelago you walk around, `/isle`). It is an ordinary
+category (`surfaces`) of the same catalog — same card, chip, count and search —
+and both carry `APP_DEMO_PLACES` entries, so each card opens the live demo at
+`/about/at/desktop;full=1` / `/about/at/isle;full=1`. Their icons are their app
+definitions' (`desktop-windows`, `sailing`).
+
 The list is plain data (`web/internal/catalog.ts`): the site is a written page,
 so adding an app to equin does not add it here — edit the catalog. The homepage's
 layers band keeps its own shorter teaser of the same apps.
@@ -46,7 +55,7 @@ shell never names this page. The homepage's applications layer opens it.
 
 ## Plugin reference
 
-- Description: The apps gallery of the equin website: the /about/apps pane listing every app equin ships, searchable and grouped by category (harness, daily life, tools, coming next), each card's Install and the 'Missing an app?' band going to the download page, the vision and foundations pages offered at its end, and its Apps nav link. The apps gallery of the equin website on the server: its sitemap entry (WebsitePages.Page).
+- Description: The apps gallery of the equin website: the /about/apps pane listing every app equin ships, searchable and grouped by category (harness, daily life, tools, the ways to use equin as a whole surface — Desktop and Isle —, coming next), each card's Install and the 'Missing an app?' band going to the download page, the vision and foundations pages offered at its end, and its Apps nav link. The apps gallery of the equin website on the server: its sitemap entry (WebsitePages.Page).
 - Web:
   - Contributes:
     - `Pane.Register` "website-apps"

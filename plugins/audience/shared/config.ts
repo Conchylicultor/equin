@@ -10,7 +10,7 @@ export const audienceConfig = defineConfig({
       default: false,
       label: "Developer mode",
       description:
-        "Use equin as a developer: the developer apps (Studio, Debug, Deploy, …) appear in the app gallery and launchers. Off, they stay out of the way — still reachable at their URL.",
+        "Use equin as a developer: the developer apps (Studio, Debug, Mail, …) appear in the app gallery and launchers. Off, they stay out of the way — still reachable at their URL.",
     }),
   },
 });

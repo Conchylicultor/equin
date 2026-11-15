@@ -42,4 +42,8 @@ export const APP_DEMO_PLACES: Readonly<Record<string, AppDemoPlace>> = {
     shot: "/files/browse/~;fs=browser/preview/This%20week.md",
   },
   maps: { home: "/places", shot: "/places" },
+  // The two ways to use equin as a whole surface, each opened at its own home:
+  // the desktop's windows over its wallpaper, the island with every app a building.
+  desktop: { home: "/desktop", shot: "/desktop" },
+  isle: { home: "/isle", shot: "/isle" },
 };

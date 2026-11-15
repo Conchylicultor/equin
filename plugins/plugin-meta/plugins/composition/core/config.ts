@@ -649,6 +649,12 @@ export const compositionsConfig = defineConfig({
               // loads nothing — emoji pictures, WebAudio-synthesized sounds,
               // the browser's own speechSynthesis.
               "apps.keyboard-party.**",
+              // Isle, the island launcher, whole but for its dev tools (the
+              // growth exhibit): its server half is the plots table and the
+              // Isle config, both portable, so the worker serves them; its
+              // bakes run in the page's own module workers.
+              "apps.isle.**",
+              "!apps.isle.dev.**",
               // Settings, with its Config pane only (its index: Settings opens
               // on it): the demo's configs, grouped from their registrations
               // and written to the worker's config, kept in the demo's own
