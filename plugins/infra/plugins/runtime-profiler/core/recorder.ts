@@ -1508,7 +1508,9 @@ function pushCompleted(
 // query genuinely busy in Postgres during a stall is under-charged by at most
 // the stall's length — the under-reporting direction. Entries are not charged: an entry
 // may itself be the synchronous work that blocked the loop, and nothing here
-// can tell that apart. Whether the stall itself is worth an alert is the
+// can tell that apart. The runtime offers no per-context turn signal (Bun 1.4.4:
+// async_hooks' `before` never fires), so a victim ancestor cannot be proven one
+// (see CLAUDE.md § Event-loop stalls). Whether the stall itself is worth an alert is the
 // stall monitor's call (debug/stall-monitor), with the stacks to name it.
 
 /** The wait layer a leaf's time on a blocked event loop is charged to. */

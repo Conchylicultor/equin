@@ -147,7 +147,19 @@ same 600 ms and finished within a few ms of each other.
   direction.
 - **Entries are not charged**: an entry may be the synchronous work that
   blocked the loop, and nothing here tells it apart. Whether a stall deserves
-  an alert is debug/stall-monitor's call, with the stacks to name it.
+  an alert is debug/stall-monitor's call, with the stacks to name it. So a
+  leaf's `event-loop` overlap stays on the leaf and its enclosing entries
+  book it as their own time (main, 2026-11-15: ~29 s of 179 s of `db` wall,
+  all of it in loaders' and pushes' own time). Charging a victim ancestor
+  would need proof that it ran no synchronous turn inside the stall, and the
+  runtime gives no per-context turn signal: on Bun 1.4.4
+  `async_hooks.createHook`'s `before` never fires and `executionAsyncId()` is
+  0. An in-flight leaf proves nothing either (`const p = query(); block();
+  await p` is the culprit with a leaf in flight), and the recorder's own call
+  sites see only some turns. Without that signal, charging the ancestors
+  would let a culprit hide its own block, which is worse than the
+  over-count. Thread CPU time does not help: it is per thread, not per
+  context.
 
 ### Positioned wait bands (`WaitBand`)
 
