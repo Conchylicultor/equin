@@ -164,6 +164,11 @@ export type SpanKind = (typeof SPAN_KINDS)[number];
  *   (includes how long the writing transaction stayed open).
  * - `waitCount` — how many queue waits a `wait <layer>` op filed by an entry's
  *   residue is the sum of (see `SlowWait.waits`).
+ * - `replyReads` / `replyBytes` — on a `db` statement: the socket reads its
+ *   reply took and their bytes. Each read is one event-loop turn, and over a
+ *   Unix socket a read carries at most the sender's SO_SNDBUF (8 KB on macOS),
+ *   so a reply of many reads on a busy loop is slow by the loop's turns, not
+ *   by Postgres (database/connection).
  */
 export const SPAN_MEASURES = [
   "subscribers",
@@ -172,6 +177,8 @@ export const SPAN_MEASURES = [
   "sinceChangeMs",
   "waitCount",
   "longestWaitMs",
+  "replyReads",
+  "replyBytes",
 ] as const;
 export type SpanMeasure = (typeof SPAN_MEASURES)[number];
 export type SpanMeasures = Partial<Record<SpanMeasure, number>>;

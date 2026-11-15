@@ -7,6 +7,7 @@ export {
   createDbClient,
   onClientLost,
   queryText,
+  receivedSoFar,
   type CreateDbPoolOptions,
   type CreateDbClientOptions,
 } from "./internal/client";

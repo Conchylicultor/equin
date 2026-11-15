@@ -363,6 +363,9 @@ const MEASURE_LABEL: Record<SpanMeasure, (v: number) => string> = {
   sinceChangeMs: (v) => `${Math.round(v)} ms since change`,
   waitCount: (v) => `${v} waits`,
   longestWaitMs: (v) => `${Math.round(v)} ms longest single wait`,
+  replyReads: (v) => `${v} socket reads`,
+  replyBytes: (v) =>
+    v >= 1024 ? `${(v / 1024).toFixed(1)} KB reply` : `${v} B reply`,
 };
 
 // The numbers the slow spans carried: # max 42 subscribers · last 40.

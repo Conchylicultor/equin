@@ -30,6 +30,7 @@ import {
   onClientLost,
   openListenSession,
   queryText,
+  receivedSoFar,
   sqlLabel,
   withQueryDeadline,
 } from "@plugins/database/plugins/connection/server";
@@ -401,10 +402,23 @@ export function installQueryWrapper(pool: Pool, background: Pool): void {
       });
       try {
         const exec0 = performance.now();
+        // What reading the reply took: socket reads (one event-loop turn
+        // each) and bytes, as the span's measures. Over a Unix socket a reply
+        // arrives in reads of at most the sender's SO_SNDBUF (8 KB on macOS),
+        // so a statement with `replyReads` in the tens took as many loop
+        // turns to read, whatever Postgres spent on it — a slow-op report
+        // shows which one it is.
+        const before = receivedSoFar(client);
         // The statement's deadline is the client's own (armed at this call).
         // biome-ignore lint/suspicious/noExplicitAny: proxy pg's overloaded query.
         const res = await (client.query as any)(...a);
-        recordSpan("db", label, performance.now() - exec0);
+        const after = receivedSoFar(client);
+        recordSpan("db", label, performance.now() - exec0, {
+          measures: {
+            replyReads: after.reads - before.reads,
+            replyBytes: after.bytes - before.bytes,
+          },
+        });
         return res;
       } finally {
         // Success or error, the connection goes back — unless the deadline lost

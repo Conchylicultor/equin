@@ -263,6 +263,29 @@ a value spelled INTO the text (`sql.raw` with an interpolated literal): that
 makes one statement per value at its call site — bind it as a parameter
 (change-feed's catalog reads did: 200 per-table `pg_trigger` labels, Nov 12).
 
+## A reply is read one socket buffer per event-loop turn
+
+Every connection here is a Unix socket (PgBouncer has `listen_addr =` empty,
+Postgres listens on no TCP port). On a macOS Unix stream socket only the
+**sender's** `SO_SNDBUF` bounds what is in flight (`net.local.stream.sendspace`,
+8 KB by default; the receiver's `SO_RCVBUF` changes nothing), and Bun reads a
+socket once per loop turn — so a reply of N KB takes ~N/8 turns to read, and
+the sender blocks between them. On an idle loop that is nothing (768 KB in
+~6 ms); on a loop whose turns take 150 ms it is 14 s, all of it charged to the
+statement, since turns under the probe's 100 ms + 100 ms tolerance register no
+`event-loop` wait. Writes are the same in the other direction (Bun is the
+sender).
+
+`DbClient` counts every read (`receivedSoFar(client)`: reads and bytes, for
+the connection's life), and the app pool's `<sql>` span carries the statement's
+difference as the `replyReads` / `replyBytes` measures — so a slow-op report
+on a statement says whether it was a big reply read on a busy loop (tens of
+reads) or Postgres being slow (one read). It reclassifies nothing: the time
+stays the statement's.
+
+PgBouncer's `tcp_socket_buffer` does not apply to Unix sockets (its
+`tune_socket` returns early for them), and Postgres sets no `SO_SNDBUF` on one.
+
 ## Pool names
 
 A closed list in `core` (`DB_POOL_NAMES`, `DbPoolName`) — plain data both
@@ -407,6 +430,7 @@ deadline sees it go silent. That needs a heartbeat.
     - `QUERY_DEADLINE_MS`
     - `queryDeadlineSink`
     - `queryText`
+    - `receivedSoFar`
     - `sqlLabel`
     - `withQueryDeadline`
 - Exemptions:

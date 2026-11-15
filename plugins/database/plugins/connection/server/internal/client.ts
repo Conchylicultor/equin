@@ -212,6 +212,8 @@ export class DbClient extends Client {
   #poolAssigning = false;
   #tx: OpenTransaction | null = null;
   #endedIdle: IdleTransactionEndedError | null = null;
+  #receivedReads = 0;
+  #receivedBytes = 0;
 
   constructor(
     config: string | ClientConfig | undefined,
@@ -227,7 +229,26 @@ export class DbClient extends Client {
     // span is recorded: the statement is charged it as an `event-loop` wait,
     // whichever phase of the loop the block ran in (runtime-profiler, "Event-
     // loop stalls"). One clock read and a compare per chunk.
-    this.connection.stream.on("data", noteLoopObserved);
+    //
+    // It also counts the chunks (`receivedSoFar`): each socket read is one
+    // turn of the event loop, and over a Unix socket a reply arrives in reads
+    // of at most the sender's SO_SNDBUF (8 KB on macOS by default), so a large
+    // reply costs one turn per 8 KB — on a busy loop, one busy turn each.
+    this.connection.stream.on("data", (chunk: Buffer) => {
+      noteLoopObserved();
+      this.#receivedReads++;
+      this.#receivedBytes += chunk.length;
+    });
+  }
+
+  /** @internal — use `receivedSoFar`. */
+  get receivedReads(): number {
+    return this.#receivedReads;
+  }
+
+  /** @internal — use `receivedSoFar`. */
+  get receivedBytes(): number {
+    return this.#receivedBytes;
   }
 
   /** Set once the server ended this session for idling inside its transaction. */
@@ -663,6 +684,25 @@ export function onClientLost(
     );
   }
   return client.subscribeLost(listener);
+}
+
+/**
+ * What this connection has read from its socket so far: how many reads (each
+ * one event-loop turn) and how many bytes. Monotonic for the connection's
+ * life; a caller takes the difference around one statement to learn what its
+ * reply cost to read. Throws for a client this plugin did not build.
+ */
+export function receivedSoFar(client: ClientBase): {
+  reads: number;
+  bytes: number;
+} {
+  if (!(client instanceof DbClient)) {
+    throw new TypeError(
+      "receivedSoFar: this client was not built by createDbPool / createDbClient " +
+        "(@plugins/database/plugins/connection/server), so it counts no reads.",
+    );
+  }
+  return { reads: client.receivedReads, bytes: client.receivedBytes };
 }
 
 export interface CreateDbPoolOptions {

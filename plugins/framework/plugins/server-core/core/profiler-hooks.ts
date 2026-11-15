@@ -32,7 +32,9 @@ export type ProfilerMeasureName =
   | "ids"
   | "sinceChangeMs"
   | "waitCount"
-  | "longestWaitMs";
+  | "longestWaitMs"
+  | "replyReads"
+  | "replyBytes";
 
 /**
  * One loader entry's own table read-set as its span closes (`[]` included),
