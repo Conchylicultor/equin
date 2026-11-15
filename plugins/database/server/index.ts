@@ -42,6 +42,7 @@ export {
   type Db,
   type ListenHandlers,
   type ListenSession,
+  type ListenSessionName,
 } from "./internal/driver";
 export { dbLog } from "./internal/db-log";
 export {
@@ -100,12 +101,18 @@ export default {
     // push advancing the checkout and the new backend booting applied the
     // push's migration itself, under the old backend, waiting up to 15 min on
     // its locks (task-1794734803-m7admg). A database not set up for this code
-    // yet holds the child until its owner's layer commits (a NOTIFY, no
-    // polling) — the deploy window — and refuses it with
-    // `SchemaNotReadyError` past `SCHEMA_WAIT_MS`.
+    // yet holds the child — its host admission given back — until its owner's
+    // layer commits (a NOTIFY, no polling), for as long as a build or deploy
+    // that can boot that owner is in flight (the deploy window); with none,
+    // it is refused at once (`SchemaNotReadyError`).
     if (schema.kind === "verifier") {
       await step("schema-verify", (inner) =>
-        awaitSchemaLayer(migrations, derivedInputs(), inner),
+        awaitSchemaLayer(
+          migrations,
+          derivedInputs(),
+          inner,
+          schema.yieldAdmission,
+        ),
       );
       // This process reconciled, applied and deferred nothing.
       publishReconciledRollups([]);

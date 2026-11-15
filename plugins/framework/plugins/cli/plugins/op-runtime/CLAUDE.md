@@ -168,6 +168,7 @@ the shared Playwright harness.
   - Uses:
     - `infra/paths.worktreeArtifacts`
     - `infra/paths.worktreeDataDir`
+    - `packages/timed-fs.readFile`
     - `packages/timed-fs.readFileSync`
   - Exports (types):
     - `BuildReceipt`
@@ -177,6 +178,7 @@ the shared Playwright harness.
   - Exports (values):
     - `interruptedPredecessorWarning`
     - `parseStepBlocks`
+    - `readBuildReceipt`
     - `readBuildReceiptSync`
     - `reportInterruptedPredecessorSync`
     - `resolveBuildReceiptSync`
@@ -251,6 +253,7 @@ the shared Playwright harness.
 - Cross-plugin:
   - Imported by:
     - `build/build-logs`
+    - `database`
     - `framework/cli/await`
     - `framework/cli/build`
     - `framework/cli/build/build-steps`

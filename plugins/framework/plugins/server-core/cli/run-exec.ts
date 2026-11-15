@@ -7,6 +7,7 @@ import { recordMemoryCheckpoint } from "../core/profiler";
 import { bootPluginGraph, runShutdownHooks } from "../core/boot-stages";
 import { installProcessCrashListeners } from "../core/process-crash-listeners";
 import { declareComposedWebPlugins } from "../core/composed-web-plugins";
+import { declareExecAdmission, type ExecAdmission } from "../core/schema-role";
 
 // ── `exec` — the short-lived boot mode ───────────────────────────────────────
 //
@@ -124,9 +125,17 @@ export async function runExec(
      * does not claim exits 1.
      */
     readonly exitCodeFor?: (err: unknown) => number;
+    /**
+     * The host admission this process was booted under, when one bounds it
+     * (a supervised child's `--admit` slot): given back while the boot only
+     * waits — its database's owner setting the schema up for this code
+     * (`SchemaRole`'s `yieldAdmission`) — so a waiter holds no slot.
+     */
+    readonly admission?: ExecAdmission;
   } = {},
 ): Promise<never> {
   declareRuntimeNamespace(namespace);
+  if (opts.admission !== undefined) declareExecAdmission(opts.admission);
   // The same crash listeners `serve` installs (`../core/process-crash-listeners.ts`): a
   // throw or rejection that escapes `body`'s await chain (a detached promise, a
   // timer) is filed through `processCrashSink` like the serving backend's.

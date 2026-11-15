@@ -36,7 +36,54 @@ export type SchemaRole =
   /** The serving host: sets the schema up (migrations, derived layer, triggers). */
   | { readonly kind: "owner"; readonly owner: SchemaOwner }
   /** An `exec` child: verifies the owner set it up for this code, never changes it. */
-  | { readonly kind: "verifier" };
+  | {
+      readonly kind: "verifier";
+      /**
+       * Run `wait` — the verifier waiting for its owner — with this process's
+       * host admission given back (`declareExecAdmission`), taken again before
+       * it returns (not when it throws: the boot fails, the process exits): a waiter holds no slot, so a deploy's waiting children do
+       * not starve the pool every other namespace's children share. A process
+       * admitted by nothing just runs `wait`.
+       */
+      readonly yieldAdmission: <T>(wait: () => Promise<T>) => Promise<T>;
+    };
+
+/**
+ * The host admission an `exec` child was booted under (a supervised child's
+ * `--admit` pool slot): given back while the child only waits, and taken again
+ * after. `reacquire` resolves once the slot is held again.
+ */
+export interface ExecAdmission {
+  release(): Promise<void>;
+  reacquire(): Promise<void>;
+}
+
+let execAdmission: ExecAdmission | null = null;
+
+/**
+ * Declare the admission this `exec` process holds — once, by its entry point
+ * (`runExec`), before it boots. Boot sequence only.
+ */
+export function declareExecAdmission(admission: ExecAdmission): void {
+  if (execAdmission !== null) {
+    throw new Error(
+      "[schema] this process's exec admission was declared twice",
+    );
+  }
+  execAdmission = admission;
+}
+
+async function yieldAdmission<T>(wait: () => Promise<T>): Promise<T> {
+  const admission = execAdmission;
+  if (admission === null) return wait();
+  await admission.release();
+  const result = await wait();
+  // Only once the wait succeeded: a wait that throws fails the boot, and the
+  // process exits — queueing for a slot first would only hold its exit back
+  // behind every admitted child.
+  await admission.reacquire();
+  return result;
+}
 
 const OWNER = Object.freeze({}) as unknown as SchemaOwner;
 
@@ -47,7 +94,7 @@ export function schemaRoleFor(mode: BootMode): SchemaRole {
     case "browser":
       return { kind: "owner", owner: OWNER };
     case "exec":
-      return { kind: "verifier" };
+      return { kind: "verifier", yieldAdmission };
   }
 }
 

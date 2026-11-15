@@ -8,6 +8,7 @@ export {
   worktreesDir,
   worktreeDataDir,
   worktreeArtifacts,
+  checkoutBuildLock,
   RUN_TERMINAL_SUFFIX,
   WORKTREE_SPEC_FILE,
   CLAUDE_DIR,

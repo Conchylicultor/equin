@@ -984,7 +984,7 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
     { wait: true },
   );
   const webDir = resolve(root, WEB_CORE_RELATIVE);
-  await profiler.wait("build-lock", () => acquireArtifactLock(webDir));
+  await profiler.wait("build-lock", () => acquireArtifactLock(root));
   // The build lock is this build's ENTRY ticket, so this is where it stops
   // queuing and starts its own work. It is NOT done waiting: the duress
   // valve and the host grant below are both post-`granted`, and are where a

@@ -3,7 +3,10 @@ import {
   defineHostService,
   type SchemaOwner,
 } from "@plugins/framework/plugins/server-core/core";
-import { isConnectionCapacityRefusal } from "@plugins/database/plugins/connection/core";
+import {
+  isConnectionCapacityRefusal,
+  type DbPoolName,
+} from "@plugins/database/plugins/connection/core";
 
 /**
  * The drizzle database every query in the app is written against.
@@ -82,10 +85,12 @@ export interface DatabaseDriverImpl {
    * reaches either handler after it.
    *
    * The desktop opens a dedicated connection on the direct socket
-   * (`database/connection`'s `openListenSession`); PGlite listens on its one
-   * in-process connection.
+   * (`database/connection`'s `openListenSession`), named `name` — what a
+   * connection count or a deadline report attributes it to; PGlite listens on
+   * its one in-process connection.
    */
   listen(
+    name: ListenSessionName,
     channels: readonly string[],
     handlers: ListenHandlers,
   ): Promise<ListenSession>;
@@ -121,7 +126,32 @@ export interface DatabaseDriverImpl {
    * generation); PGlite, one process, resolves at once.
    */
   awaitOlderProcessesGone(): Promise<void>;
+  /**
+   * Resolves once nothing that could boot a new owner of this database is in
+   * flight — at once when nothing is — with what it waited on, in words (empty
+   * when it did not wait). A wait, never a poll. What an `exec` child whose
+   * database is not set up for its code waits out (`awaitSchemaLayer`): once it
+   * resolves, no owner is on its way, so a schema still not set up for the
+   * child's code never will be.
+   *
+   * The desktop waits on the checkout's build lock (every `./equin build`
+   * holds it until its backend's boot settled, its stamp recorded) and its
+   * deploy lock (main's convergence run, from before it decides until after
+   * its last build) — and, on main's checkout, does not settle while its HEAD
+   * is one main's build has not attempted yet (a push landed, its deploy not
+   * started). PGlite's process is its own owner: nothing to wait for.
+   */
+  awaitDeploysSettled(signal: AbortSignal): Promise<readonly string[]>;
 }
+
+/**
+ * What a LISTEN session's connection is named (`DatabaseDriverImpl.listen`):
+ * one name per kind of session, from the closed pool-name set.
+ */
+export type ListenSessionName = Extract<
+  DbPoolName,
+  "change-feed" | "schema-wait" | "replica-notify"
+>;
 
 /** What a LISTEN session (`DatabaseDriverImpl.listen`) reports to its opener. */
 export interface ListenHandlers {

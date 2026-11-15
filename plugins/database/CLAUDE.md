@@ -458,9 +458,16 @@ barrier's hook reads `BootHookContext.schema` (server-core's
 an `exec` child (`verifier`) runs no DDL at all and instead awaits
 `awaitSchemaLayer` (`server/internal/await-schema-layer.ts`) — one read of the
 stamp the owner's layer commits (`migrations`' `verifySchemaLayer`, "The schema
-layer's stamp" in its CLAUDE.md), and when it does not match this code (a push
-is mid-deploy), a LISTEN for the owner's NOTIFY, bounded at 10 min, then
-`SchemaNotReadyError`. It publishes an empty reconcile, defers no contract and
+layer's stamp" in its CLAUDE.md), and when it does not match this code, a
+LISTEN for the owner's NOTIFY (a `schema-wait` session) for as long as a build
+or deploy that can boot that owner is in flight — `DatabaseDriver.awaitDeploysSettled`:
+on the desktop the checkout's build lock and the namespace's deploy lock, both
+kernel flocks a build holds until its backend's boot settled — bounded at
+10 min. With none in flight it throws `SchemaNotReadyError` at once: a
+worktree whose checkout is ahead of its backend (edits not built) fails its
+children in a second, not ten minutes each, and main's deploy window still
+waits and succeeds. The wait runs with the child's host admission given back
+(`SchemaRole.yieldAdmission`). It publishes an empty reconcile, defers no contract and
 reports the schema unchanged — it did nothing to it.
 
 Before the schema layer, the barrier takes this process's schema-generation lock
@@ -524,6 +531,7 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./equin build`. The bui
     - `DbExecutor`
     - `ListenHandlers`
     - `ListenSession`
+    - `ListenSessionName`
   - Exports (values):
     - `afterCommit`
     - `currentTxId`

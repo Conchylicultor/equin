@@ -440,6 +440,7 @@ reaped namespaces' gateway logs were each found by accident, months in.
     - `backupsDir`
     - `backupsDirs`
     - `CHECK_ARTIFACTS_RETENTION`
+    - `checkoutBuildLock`
     - `checkoutNamespace`
     - `checkoutRef`
     - `checkoutWorktreeName`

@@ -87,11 +87,12 @@ coalescing; `checkout-lock.ts` builds a size-1 mutex.
     - `holdParentLifeline`
     - `waitForFlock`
 - Cross-plugin:
-  - Imported by: 26 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 27 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra` ×10
     - `framework` ×7
     - `packages` ×4
     - `apps/chord/song-index`
+    - `database`
     - `debug/browser-recordings/writer`
     - `integrations/youtube/audio-fetch`
     - `release/source-checkout`

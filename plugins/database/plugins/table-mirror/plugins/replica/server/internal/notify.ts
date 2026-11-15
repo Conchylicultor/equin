@@ -29,25 +29,29 @@ function dispatch(payload: string): void {
 }
 
 function open(): Promise<ListenSession> {
-  const opened = DatabaseDriver.get().listen([REPLICA_CHANNEL], {
-    notification: (_channel, payload) => dispatch(payload),
-    lost: () => {
-      session = null;
-      if (handlers.size === 0) return;
-      // Re-read only once the new LISTEN is up: a page committed between the
-      // loss and the re-LISTEN is then in what the re-read sees, never in
-      // neither. A failed reopen is loud through `open` itself.
-      const reopened = open();
-      session = reopened;
-      void runTracked(
-        "table-mirror: re-read after replica LISTEN reopened",
-        async () => {
-          await reopened;
-          for (const fn of handlers.keys()) fn(null);
-        },
-      );
+  const opened = DatabaseDriver.get().listen(
+    "replica-notify",
+    [REPLICA_CHANNEL],
+    {
+      notification: (_channel, payload) => dispatch(payload),
+      lost: () => {
+        session = null;
+        if (handlers.size === 0) return;
+        // Re-read only once the new LISTEN is up: a page committed between the
+        // loss and the re-LISTEN is then in what the re-read sees, never in
+        // neither. A failed reopen is loud through `open` itself.
+        const reopened = open();
+        session = reopened;
+        void runTracked(
+          "table-mirror: re-read after replica LISTEN reopened",
+          async () => {
+            await reopened;
+            for (const fn of handlers.keys()) fn(null);
+          },
+        );
+      },
     },
-  });
+  );
   // A failed open is loud (an unhandled rejection) and leaves no session, so
   // the next subscription opens again.
   opened.catch((err: unknown) => {

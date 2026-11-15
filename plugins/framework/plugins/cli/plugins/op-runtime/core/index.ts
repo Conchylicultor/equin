@@ -19,6 +19,7 @@
 
 export {
   writeBuildReceiptSync,
+  readBuildReceipt,
   readBuildReceiptSync,
   resolveBuildReceiptSync,
   interruptedPredecessorWarning,

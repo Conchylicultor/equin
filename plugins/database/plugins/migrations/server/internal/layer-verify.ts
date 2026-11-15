@@ -40,7 +40,7 @@ export async function verifySchemaLayer(
   if (pending.length > 0) {
     return {
       kind: "not-ready",
-      detail: `${String(pending.length)} of this code's migrations are not applied (${pending.slice(0, 3).join(", ")}${pending.length > 3 ? ", …" : ""}) — a push is usually mid-deploy, and its backend applies them when it boots`,
+      detail: `${String(pending.length)} of this code's migrations are not applied (${pending.slice(0, 3).join(", ")}${pending.length > 3 ? ", …" : ""})`,
     };
   }
   const stored = await storedStamp(db);
@@ -54,7 +54,7 @@ export async function verifySchemaLayer(
   if (stored.stamp === expected) return { kind: "ready" };
   return {
     kind: "not-ready",
-    detail: `the serving backend last set it up (at ${stored.written_at}) for code whose ${differingParts(stored.stamp, expected).join(", ")} differ from this code's — a push is usually mid-deploy, and its backend sets the schema up when it boots`,
+    detail: `the serving backend last set it up (at ${stored.written_at}) for code whose ${differingParts(stored.stamp, expected).join(", ")} differ from this code's`,
   };
 }
 

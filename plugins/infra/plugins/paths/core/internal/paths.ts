@@ -59,6 +59,18 @@ export function repoConfigDir(): AppPath {
 export const WEB_CORE_RELATIVE = "plugins/framework/plugins/web-core";
 
 /**
+ * A checkout's build lock: `.build.lock` beside its web-core dir, an exclusive
+ * flock every `./equin build` holds for its whole process (the CLI's
+ * `acquireArtifactLock`) — so until its restarted backend's boot settled. What
+ * an `exec` child whose database is not set up for its code waits out
+ * (`database#machine`'s `awaitDeploysSettled`): a build in flight is how a
+ * backend running its code gets there.
+ */
+export function checkoutBuildLock(root: string): AppPath {
+  return joinAppPath(asAppPath(root), WEB_CORE_RELATIVE, ".build.lock");
+}
+
+/**
  * The server-core plugin dir, relative to a checkout root — the `server` field
  * of every `spec.json` a checkout publishes, and therefore the on-disk
  * back-pointer from a live namespace to the checkout that deployed it.

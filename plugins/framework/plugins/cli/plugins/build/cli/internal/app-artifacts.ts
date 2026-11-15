@@ -71,7 +71,10 @@ import {
   type CompositionManifestItem,
 } from "@plugins/plugin-meta/plugins/composition/core";
 import { worktreeArtifacts } from "@plugins/infra/plugins/paths/server";
-import { webGraphRecordsDir } from "@plugins/infra/plugins/paths/core";
+import {
+  checkoutBuildLock,
+  webGraphRecordsDir,
+} from "@plugins/infra/plugins/paths/core";
 import { withHostGrant } from "@plugins/infra/plugins/host/plugins/host-admission/server";
 import {
   cpuBudget,
@@ -312,11 +315,15 @@ function codegenStepFor(hooks: ArtifactHooks): CodegenStep {
  * filesystem symlink, so it works on a bare host. Callers sweep their own dist
  * leftovers immediately after this returns.
  */
-export async function acquireArtifactLock(webDir: string): Promise<void> {
+export async function acquireArtifactLock(root: string): Promise<void> {
   // `acquireCheckoutLock` resolves to a release closure; the lock is deliberately
   // held for the whole process lifetime (its own exit hook releases it), which
   // is exactly what build does today — so the closure is dropped here too.
-  await acquireCheckoutLock(resolve(webDir, ".build.lock"), {
+  // An `exec` child whose database is not set up for its code reads that hold
+  // as "a backend running this checkout's code is on its way"
+  // (`database#machine`'s `awaitDeploysSettled`): never release it before the
+  // restarted backend's boot settled.
+  await acquireCheckoutLock(checkoutBuildLock(root), {
     what: "build",
     observeHolder: observeBuildHolder,
   });
@@ -330,8 +337,8 @@ export async function acquireArtifactLock(webDir: string): Promise<void> {
  * build's ledger row and the dist it published — but must not hold the lock
  * across the build it then starts, which takes it itself.
  */
-export async function waitForArtifactLock(webDir: string): Promise<void> {
-  const release = await acquireCheckoutLock(resolve(webDir, ".build.lock"), {
+export async function waitForArtifactLock(root: string): Promise<void> {
+  const release = await acquireCheckoutLock(checkoutBuildLock(root), {
     what: "build",
     observeHolder: observeBuildHolder,
   });

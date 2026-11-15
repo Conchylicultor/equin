@@ -199,9 +199,13 @@ queue schema and live-state-snapshot's L2 init and sweep. Instead `database`'s
 `onReadyBlocking` checks that the owner committed the layer for exactly this
 code — one read of the stamp the layer commits (`migrations`'
 `verifySchemaLayer`) — and, when it did not yet (a push advanced the checkout,
-the new backend has not booted), waits for the owner's NOTIFY up to 10 min,
-then fails with `SchemaNotReadyError` (a supervised child exits
-`SUPERVISED_EXIT_SCHEMA_NOT_READY`). Why: until 2026-11-15 every child (~800 a
+the new backend has not booted), waits for the owner's NOTIFY for as long as
+a build or deploy that can boot that owner is in flight (bounded at 10 min),
+and fails at once with `SchemaNotReadyError` when none is (a supervised child
+exits `SUPERVISED_EXIT_SCHEMA_NOT_READY`). While it waits it gives its host
+admission back: the verifier role carries `yieldAdmission`, over the
+`ExecAdmission` its entry declared (`runExec`'s `admission`, a supervised
+child's `--admit` slot). Why: until 2026-11-15 every child (~800 a
 day on main) ran the whole layer under the schema-layer advisory lock — main's
 own boot waited 0.2–0.6 s behind any child mid-boot, and a child booted in a
 deploy window applied the push's migration itself under the old backend
@@ -559,6 +563,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `DependsOnEntry`
     - `EndpointHttpHandler`
     - `EpochHandoffHooks`
+    - `ExecAdmission`
     - `ExternalResource`
     - `HandoffState`
     - `HeapMemory`

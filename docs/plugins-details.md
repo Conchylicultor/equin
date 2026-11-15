@@ -23715,6 +23715,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `DbExecutor`
       - `ListenHandlers`
       - `ListenSession`
+      - `ListenSessionName`
     - Exports (values):
       - `afterCommit`
       - `currentTxId`
@@ -31344,6 +31345,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses:
               - `infra/paths.worktreeArtifacts`
               - `infra/paths.worktreeDataDir`
+              - `packages/timed-fs.readFile`
               - `packages/timed-fs.readFileSync`
             - Exports (types):
               - `BuildReceipt`
@@ -31353,6 +31355,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values):
               - `interruptedPredecessorWarning`
               - `parseStepBlocks`
+              - `readBuildReceipt`
               - `readBuildReceiptSync`
               - `reportInterruptedPredecessorSync`
               - `resolveBuildReceiptSync`
@@ -31427,6 +31430,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Imported by:
               - `build/build-logs`
+              - `database`
               - `framework/cli/await`
               - `framework/cli/build`
               - `framework/cli/build/build-steps`
@@ -31817,6 +31821,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DependsOnEntry`
           - `EndpointHttpHandler`
           - `EpochHandoffHooks`
+          - `ExecAdmission`
           - `ExternalResource`
           - `HandoffState`
           - `HeapMemory`
@@ -38303,18 +38308,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `namespaceUrl`
           - `resolveNamespaceAlias`
       - Cross-plugin:
-        - Imported by: 80 plugins — full list in [`plugins/infra/plugins/namespace/REFERENCE.md`](../plugins/infra/plugins/namespace/REFERENCE.md)
+        - Imported by: 81 plugins — full list in [`plugins/infra/plugins/namespace/REFERENCE.md`](../plugins/infra/plugins/namespace/REFERENCE.md)
           - `framework` ×14
           - `apps` ×12
           - `debug` ×12
           - `infra` ×10
           - `conversations` ×7
           - `build` ×6
+          - `database` ×3
           - `plugin-meta` ×3
           - `primitives` ×3
           - `tasks` ×3
           - `companions` ×2
-          - `database` ×2
           - `release` ×2
           - `reports` ×2
           - `auth`
@@ -38377,6 +38382,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `backupsDir`
           - `backupsDirs`
           - `CHECK_ARTIFACTS_RETENTION`
+          - `checkoutBuildLock`
           - `checkoutNamespace`
           - `checkoutRef`
           - `checkoutWorktreeName`
@@ -38856,7 +38862,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/host-fs/user-path.asAppPath`
             - Exports (values): `REPO_ROOT`
           - Cross-plugin:
-            - Imported by: 51 plugins — full list in [`plugins/infra/plugins/paths/plugins/repo-root/REFERENCE.md`](../plugins/infra/plugins/paths/plugins/repo-root/REFERENCE.md)
+            - Imported by: 52 plugins — full list in [`plugins/infra/plugins/paths/plugins/repo-root/REFERENCE.md`](../plugins/infra/plugins/paths/plugins/repo-root/REFERENCE.md)
               - `framework` ×15
               - `infra` ×8
               - `apps` ×7
@@ -38867,6 +38873,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `code-explorer`
               - `config_v2`
               - `conversations/workspace/scratch`
+              - `database`
               - `primitives/css/layout-harness`
               - `release`
           - Exemptions:
@@ -39307,12 +39314,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `spawnPassthrough`
           - `spawnToFile`
       - Cross-plugin:
-        - Imported by: 97 plugins — full list in [`plugins/infra/plugins/spawn/REFERENCE.md`](../plugins/infra/plugins/spawn/REFERENCE.md)
+        - Imported by: 98 plugins — full list in [`plugins/infra/plugins/spawn/REFERENCE.md`](../plugins/infra/plugins/spawn/REFERENCE.md)
           - `framework` ×31
           - `infra` ×26
           - `apps` ×9
+          - `database` ×5
           - `debug` ×5
-          - `database` ×4
           - `build` ×3
           - `code-explorer` ×2
           - `conversations` ×2
@@ -41291,8 +41298,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `fork-data-exclusion` "live_state_changelog"
             - Uses:
               - `database.DatabaseDriver`
-              - `database.DatabaseDriverImpl`
               - `database.db`
+              - `database.ListenHandlers`
               - `database.ListenSession`
               - `database.loadKnownRelations`
               - `database.snapshotWatermark`
@@ -42172,11 +42179,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `holdParentLifeline`
           - `waitForFlock`
       - Cross-plugin:
-        - Imported by: 26 plugins — full list in [`plugins/packages/plugins/flock/REFERENCE.md`](../plugins/packages/plugins/flock/REFERENCE.md)
+        - Imported by: 27 plugins — full list in [`plugins/packages/plugins/flock/REFERENCE.md`](../plugins/packages/plugins/flock/REFERENCE.md)
           - `infra` ×10
           - `framework` ×7
           - `packages` ×4
           - `apps/chord/song-index`
+          - `database`
           - `debug/browser-recordings/writer`
           - `integrations/youtube/audio-fetch`
           - `release/source-checkout`
@@ -42360,13 +42368,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `yieldMacrotask`
     - **`owned-fd`** — Owned file descriptors: openOwnedFd / adoptFd return an OwnedFd whose close() closes its descriptor exactly once — a second close throws FdAlreadyClosedError naming where the first happened, instead of closing whatever reused the number. Imports node:fs and the AppPath type only; enforced by the owned-fd/no-raw-fd-close lint (no fs.closeSync / fs.close outside it) and owned-fd/no-raw-spawn-stdio-fd (a spawn's stdio descriptor is an OwnedFd's .fd).
       - Cross-plugin:
-        - Imported by: 29 plugins — full list in [`plugins/packages/plugins/owned-fd/REFERENCE.md`](../plugins/packages/plugins/owned-fd/REFERENCE.md)
+        - Imported by: 30 plugins — full list in [`plugins/packages/plugins/owned-fd/REFERENCE.md`](../plugins/packages/plugins/owned-fd/REFERENCE.md)
           - `infra` ×12
           - `framework` ×7
           - `packages` ×4
+          - `database` ×2
           - `apps/chord/song-index`
           - `conversations/runtime-sdk`
-          - `database/migrations`
           - `debug/browser-recordings/writer`
           - `integrations/youtube/audio-fetch`
           - `reports/outbox`

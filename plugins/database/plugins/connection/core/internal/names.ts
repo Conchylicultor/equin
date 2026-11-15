@@ -42,6 +42,14 @@ export const DB_POOL_NAMES = [
   /** The change-feed LISTEN client. */
   "change-feed",
   /**
+   * An `exec` child's LISTEN for its database's owner to record the schema
+   * stamp of its code (`database`'s `awaitSchemaLayer`), held only while it
+   * waits out a deploy.
+   */
+  "schema-wait",
+  /** The table mirror's LISTEN for a replica's applied pages (`database/table-mirror/replica`). */
+  "replica-notify",
+  /**
    * The session holding this process's schema-generation lock, on which a
    * deferred contract waits out older code (`database#machine`).
    */

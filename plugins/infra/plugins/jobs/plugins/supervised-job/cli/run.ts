@@ -1,6 +1,7 @@
 import type { CliAction } from "@plugins/framework/plugins/cli/core";
 import { asNamespace } from "@plugins/infra/plugins/namespace/core";
 import { runExec } from "@plugins/framework/plugins/server-core/cli";
+import type { ExecAdmission } from "@plugins/framework/plugins/server-core/core";
 import {
   getSupervisedTask,
   getSupervisedTaskIds,
@@ -33,20 +34,22 @@ const run: CliAction<
   // becomes an identity: the namespace goes on to name a database and a
   // directory, so a malformed one must be loud rather than become a path.
   const namespace = asNamespace(opts.namespace);
-  const admission =
+  const pool =
     opts.admit === undefined ? undefined : parseAdmissionPool(opts.admit);
-  const boot = () =>
+  const boot = (admission?: ExecAdmission) =>
     runExec(namespace, body, {
       // A database that refused the connection because it was full exits
       // EX_TEMPFAIL: the one failure this child cannot write on its row (that
       // row is in the database that refused it), so the status carries it.
       exitCodeFor: supervisedChildExitCode,
+      // Given back while the boot only waits for its schema (`runExec`).
+      ...(admission === undefined ? {} : { admission }),
     });
   // The job's admission pool, taken before anything boots (`--admit`). Its
   // lines go to stdout, which IS the run's transcript.
-  await (admission === undefined
+  await (pool === undefined
     ? boot()
-    : admitThenBoot(admission, boot, (line) => {
+    : admitThenBoot(pool, boot, (line) => {
         process.stdout.write(`${line}\n`);
       }));
 

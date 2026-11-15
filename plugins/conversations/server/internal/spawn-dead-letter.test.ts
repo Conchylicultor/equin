@@ -92,6 +92,7 @@ function throwawayDriver(database: Db): DatabaseDriverImpl {
     holdSchemaGeneration: unused("holdSchemaGeneration"),
     awaitGenerationsGone: unused("awaitGenerationsGone"),
     awaitOlderProcessesGone: unused("awaitOlderProcessesGone"),
+    awaitDeploysSettled: unused("awaitDeploysSettled"),
   };
 }
 

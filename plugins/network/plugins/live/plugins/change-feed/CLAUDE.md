@@ -448,8 +448,8 @@ See `research/2026-09-29-global-scoped-change-routing.md`.
     - `fork-data-exclusion` "live_state_changelog"
   - Uses:
     - `database.DatabaseDriver`
-    - `database.DatabaseDriverImpl`
     - `database.db`
+    - `database.ListenHandlers`
     - `database.ListenSession`
     - `database.loadKnownRelations`
     - `database.snapshotWatermark`

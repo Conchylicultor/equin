@@ -1,7 +1,10 @@
 import { describe, test, expect, beforeAll, afterAll } from "bun:test";
 import { sql } from "drizzle-orm";
 import { Client } from "pg";
-import { createChangeFeedListener } from "./listener";
+import {
+  createChangeFeedListener,
+  type ChangeFeedListenerOptions,
+} from "./listener";
 import type { FeedChange } from "./route-change";
 import type { TxnEndProblem } from "./burst";
 import { rebuildTriggers } from "./triggers";
@@ -10,7 +13,6 @@ import {
   type TestDb,
 } from "@plugins/database/plugins/db-test-fixture/server/testing";
 import { openListenSession } from "@plugins/database/plugins/connection/server";
-import type { DatabaseDriverImpl } from "@plugins/database/server";
 
 // Real-DB listener suite: a throwaway database on the running cluster, a real raw
 // LISTEN client, and real `pg_notify` delivery over that socket. The listener's
@@ -30,7 +32,10 @@ let testDb: TestDb;
 
 // The desktop driver's LISTEN session (`DatabaseDriver.listen`), on the
 // throwaway database's direct connection.
-const listenOnTestDb: DatabaseDriverImpl["listen"] = (channels, handlers) =>
+const listenOnTestDb: ChangeFeedListenerOptions["listen"] = (
+  channels,
+  handlers,
+) =>
   openListenSession({
     name: "change-feed",
     connectionString: testDb.connectionString,

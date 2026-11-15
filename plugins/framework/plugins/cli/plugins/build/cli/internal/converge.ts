@@ -4,7 +4,6 @@ import { envEntries } from "@plugins/infra/plugins/launcher/plugins/env-names/co
 import {
   actAsCheckoutNamespace,
   checkoutRef,
-  WEB_CORE_RELATIVE,
   worktreeArtifacts,
 } from "@plugins/infra/plugins/paths/server";
 import { waitForFlock } from "@plugins/packages/plugins/flock/core";
@@ -215,12 +214,11 @@ async function convergeBuilds(
   namespace: Namespace,
   log: (line: string) => void,
 ): Promise<number> {
-  const webDir = resolve(root, WEB_CORE_RELATIVE);
   const recorder = createBuildRunRecorder(namespace);
   try {
     let previous: string | null = null;
     for (;;) {
-      await waitForArtifactLock(webDir);
+      await waitForArtifactLock(root);
       const decision = await decideConvergence({
         root,
         checkout,

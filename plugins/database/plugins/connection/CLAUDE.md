@@ -281,6 +281,8 @@ runtimes read, not a slot:
 | `lock-watch` | the lock watch's held session on its worktree's database, kept open between looks so a look still runs while new connections stall | `database/admin` `pool.ts` `openHeldClient`, held by `database/lock-watch` |
 | `fork-lease` | the session holding a DB fork's temp lease (an advisory lock), from before its temp exists to after the rename; the temp sweep tries it before a drop | `database/admin` `fork-lease.ts` |
 | `change-feed` | the change-feed LISTEN client | this plugin's `listen-session.ts` (`openListenSession`), opened by `database#machine`'s `DatabaseDriver.listen` for `network/live/change-feed`'s `listener.ts` |
+| `schema-wait` | an `exec` child's LISTEN for its owner's schema stamp, while it waits out a deploy | `DatabaseDriver.listen("schema-wait", …)`, from `database`'s `await-schema-layer.ts` |
+| `replica-notify` | the table mirror's LISTEN for a replica's applied pages | `DatabaseDriver.listen("replica-notify", …)`, from `database/table-mirror/replica`'s `notify.ts` |
 | `events-test` | the events-test harness's stand-in worker sessions | `infra/events-test` `crash-recovery.ts`, `superseded.ts`, `queue-lock-no-steal.ts` |
 | `cluster-start` | the embedded cluster's start script's one session (base database, cluster settings), on every start the gateway's supervisor runs — the bound is what lets a wedged-but-bound postmaster fail the start instead of hanging it | `database/embedded` `scripts/start.ts` `ensureClusterState` |
 

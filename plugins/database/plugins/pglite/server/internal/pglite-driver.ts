@@ -210,6 +210,9 @@ export function createPgliteDriver(
     holdSchemaGeneration: () => Promise.resolve(),
     awaitGenerationsGone: () => Promise.resolve(() => Promise.resolve()),
     awaitOlderProcessesGone: () => Promise.resolve(),
+    // This process is its database's owner (a browser host boots as one), so
+    // no other process can be on its way to set the schema up.
+    awaitDeploysSettled: () => Promise.resolve([]),
     // LISTEN on the one in-process connection: every NOTIFY a commit sends
     // reaches the root client's `onNotification` (channel and payload, one
     // queue, so the order holds across channels), filtered to this session's
@@ -217,7 +220,7 @@ export function createPgliteDriver(
     // transaction has no listen. The session is never lost (there is no
     // socket); `close` stops delivery and issues no UNLISTEN, which would
     // silence another session sharing the connection's channels.
-    async listen(channels, handlers) {
+    async listen(_name, channels, handlers) {
       const bad = channels.filter((c) => !CHANNEL_RE.test(c));
       if (channels.length === 0 || bad.length > 0) {
         throw new Error(

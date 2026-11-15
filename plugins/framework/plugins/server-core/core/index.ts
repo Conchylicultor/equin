@@ -87,7 +87,7 @@ export type { ProcessCrash, ProcessCrashEvent } from "./process-crash";
 export type { SinkHandler } from "./sink-handler";
 export type { BootMode } from "./boot-mode";
 export { SchemaNotReadyError } from "./schema-role";
-export type { SchemaOwner, SchemaRole } from "./schema-role";
+export type { ExecAdmission, SchemaOwner, SchemaRole } from "./schema-role";
 export {
   Resource,
   assertPreloadedResourcesDeclared,

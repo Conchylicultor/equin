@@ -48,6 +48,7 @@ import {
   type Db,
 } from "../../server/internal/driver";
 import { dbLog } from "../../server/internal/db-log";
+import { awaitDeploysSettled } from "./deploys-settled";
 import {
   extractReadTablesFromSql,
   readTagOf,
@@ -975,11 +976,10 @@ export const pgDriver: DatabaseDriverImpl = {
   bootDdl: (_owner, fn, reason = "boot DDL") =>
     withQueryDeadline({ ms: BOOT_DDL_QUERY_DEADLINE_MS, reason }, fn),
   // A dedicated connection on the direct socket (the pool's connections are
-  // pgbouncer's, and shared). Named `change-feed`: the change feed's listener
-  // is the one session this driver opens.
-  listen: (channels, handlers) =>
+  // pgbouncer's, and shared), named for the session it is.
+  listen: (name, channels, handlers) =>
     openListenSession({
-      name: "change-feed",
+      name,
       connectionString: buildConnectionString(direct(), runtimeNamespace()),
       channels,
       handlers,
@@ -998,4 +998,5 @@ export const pgDriver: DatabaseDriverImpl = {
   awaitGenerationsGone: (knowing) =>
     generationLocks.awaitGenerationsGone(knowing),
   awaitOlderProcessesGone: () => generationLocks.awaitOlderProcessesGone(),
+  awaitDeploysSettled,
 };

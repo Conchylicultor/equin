@@ -1,5 +1,8 @@
 import { mkdirSync, renameSync, writeFileSync } from "node:fs";
-import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
+import {
+  readFile,
+  readFileSync,
+} from "@plugins/packages/plugins/timed-fs/core";
 import {
   worktreeArtifacts,
   worktreeDataDir,
@@ -88,6 +91,29 @@ export function readBuildReceiptSync(name: Namespace): BuildReceipt | null {
     if ((err as NodeJS.ErrnoException).code === "ENOENT") return null;
     throw err;
   }
+  return parseReceipt(path, raw);
+}
+
+/**
+ * {@link readBuildReceiptSync} off the thread — for a backend process (an
+ * `exec` child asking whether main's deploy has attempted its checkout's HEAD
+ * yet, `database#machine`).
+ */
+export async function readBuildReceipt(
+  name: Namespace,
+): Promise<BuildReceipt | null> {
+  const path = worktreeArtifacts.buildStatus(name);
+  let raw: string;
+  try {
+    raw = await readFile(path, "utf8");
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return null;
+    throw err;
+  }
+  return parseReceipt(path, raw);
+}
+
+function parseReceipt(path: string, raw: string): BuildReceipt {
   // An unreadable receipt is NOT a legitimate "no build here" answer — absence
   // means something specific in this file's grammar, so degrading to null would
   // report "never built" for a worktree that has. Throw, naming the fix.

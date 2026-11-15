@@ -1,9 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import type {
-  DatabaseDriverImpl,
-  ListenSession,
-} from "@plugins/database/server";
-import { createChangeFeedListener } from "./listener";
+import type { ListenSession } from "@plugins/database/server";
+import {
+  createChangeFeedListener,
+  type ChangeFeedListenerOptions,
+} from "./listener";
 import type { FeedChange } from "./route-change";
 
 // `stop()` while the session's open is still in flight (a boot shut down during
@@ -18,7 +18,7 @@ describe("stop() during an in-flight open", () => {
       throw new Error("listen was never called");
     };
     let closed = 0;
-    const listen: DatabaseDriverImpl["listen"] = () => {
+    const listen: ChangeFeedListenerOptions["listen"] = () => {
       return new Promise((resolve) => {
         resolveOpen = resolve;
       });

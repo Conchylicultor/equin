@@ -5,8 +5,10 @@ import {
   type TestDb,
 } from "@plugins/database/plugins/db-test-fixture/server/testing";
 import { openListenSession } from "@plugins/database/plugins/connection/server";
-import type { DatabaseDriverImpl } from "@plugins/database/server";
-import { createChangeFeedListener } from "./listener";
+import {
+  createChangeFeedListener,
+  type ChangeFeedListenerOptions,
+} from "./listener";
 import type { FeedChange } from "./route-change";
 import { BARRIER_CHANNEL } from "./txn-end";
 
@@ -17,7 +19,10 @@ import { BARRIER_CHANNEL } from "./txn-end";
 
 let testDb: TestDb;
 
-const listenOnTestDb: DatabaseDriverImpl["listen"] = (channels, handlers) =>
+const listenOnTestDb: ChangeFeedListenerOptions["listen"] = (
+  channels,
+  handlers,
+) =>
   openListenSession({
     name: "change-feed",
     connectionString: testDb.connectionString,

@@ -201,12 +201,11 @@ export async function runHermeticBuild(opts: {
   // The per-checkout artifact lock. REQUIRED, and the one non-obvious
   // hermetic step: it is the only thing serializing this run against a
   // concurrent `./equin build` in the same checkout — both rewrite
-  // the committed registries in it. `webDir` is used for the lock and for
-  // NOTHING else: the lock is per-checkout because it guards codegen
+  // the committed registries in it (`checkoutBuildLock`). The lock is per-checkout because it guards codegen
   // written INTO the checkout, which is a separate question from where the
   // dist lands. A plain filesystem symlink, so it works on a bare host.
   const webDir = resolve(root, WEB_CORE_RELATIVE);
-  await acquireArtifactLock(webDir);
+  await acquireArtifactLock(root);
 
   // Light observability seam: console only. No build profile, no
   // build-progress log, no footprint step — see the module docblock.

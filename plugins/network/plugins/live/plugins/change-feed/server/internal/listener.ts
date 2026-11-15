@@ -1,7 +1,7 @@
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import {
   DatabaseDriver,
-  type DatabaseDriverImpl,
+  type ListenHandlers,
   type ListenSession,
 } from "@plugins/database/server";
 import { reportServerError } from "@plugins/framework/plugins/server-core/core";
@@ -29,7 +29,10 @@ export interface ChangeFeedListenerOptions {
    * a dedicated connection on the direct socket; PGlite: its one in-process
    * connection). The reconnect policy around it is this listener's.
    */
-  listen: DatabaseDriverImpl["listen"];
+  listen: (
+    channels: readonly string[],
+    handlers: ListenHandlers,
+  ) => Promise<ListenSession>;
   route: (change: FeedChange) => void;
   coveredTables: () => readonly string[];
   /** Told of a broken end-of-transaction assumption (default: logged and filed as a report). */
@@ -415,7 +418,7 @@ function reportTxnEndProblem(problem: TxnEndProblem): void {
 // in the plugin's public barrel, so the factory refactor is fully contained.
 const defaultListener = createChangeFeedListener({
   listen: (channels, handlers) =>
-    DatabaseDriver.get().listen(channels, handlers),
+    DatabaseDriver.get().listen("change-feed", channels, handlers),
   route: routeChange,
   coveredTables: getCoveredTables,
 });

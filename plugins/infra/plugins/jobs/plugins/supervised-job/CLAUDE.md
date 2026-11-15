@@ -731,6 +731,14 @@ and logs the wait and its admission to the transcript. Give the job a pool of it
 own: a body that also took a slot of its admission pool would hold one and wait
 for another. `worktree.prepare` is the one user (`worktree-prepare`, 4).
 
+A waiter holds no slot. A booted child whose database is not set up for its
+code yet waits for the build or deploy in flight to set it up (database's
+`awaitSchemaLayer`), and gives the slot back for that wait: `admitThenBoot`
+hands `runExec` the slot as an `ExecAdmission` (released, then queued for
+again once the wait succeeds; a wait that fails exits without it). Before
+2026-11-15 a child held its slot through the whole wait, and one namespace's
+deploy starved every namespace's children.
+
 ### Why the task is registered by the job, not declared beside it
 
 The child's argv is minted only by the registered task's `invoke`, and the task
