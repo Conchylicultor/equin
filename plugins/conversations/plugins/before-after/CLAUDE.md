@@ -38,10 +38,13 @@ images.
 - **Tool call** — `JsonlViewerTool.Renderer` for `register_before_after`: the
   tool row, its footer the pair read back by tool-use id (`{ where:
   { toolUseId }, limit: 1 }`) as a swipe preview (title, route, id chip, Open
-  in pane). Loading while the row is not there; a failed call has no footer,
+  in pane) — the whole capture, shrunk into a landscape box (never cropped).
+  Loading while the row is not there; a failed call has no footer,
   its error in the body (`ToolOutput`).
 - **Pane** — `beforeAfterPane` (`before-after/:pair`, agent manager), exported
   for the chip. The pair large (`PairViewer`: Swipe / Side by side / Flip)
+  — zoomable: `useCompareZoom` + `CompareZoomControls` (fit width at first,
+  fit height, 1:1, − / +, scroll to zoom, drag to pan; a new pair starts fresh)
   over the conversation's pairs as a gallery DataView in its `strip` layout
   (config `conversations.before-after.gallery`, oldest first, no band).
   Selecting rewrites `pair` in place (`useSetParams`). Full screen (header
@@ -69,10 +72,11 @@ images.
     - `beforeAfterPane.Actions` "full-screen" → `FullScreenAction`
     - `renderer` "register_before_after$" → `ParsedToolView`
     - `ConversationArtifacts.Kind` "Before / after"
-  - Uses: 48 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 50 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/pane` ×7
     - `conversations/conversation-view/jsonl-viewer/tool-call` ×3
     - `primitives/data-view` ×3
+    - `primitives/diff-view/swipe-compare` ×3
     - `conversations/conversation-view/artifacts` ×2
     - `network/live` ×2
     - `primitives/css/coords` ×2
@@ -97,7 +101,6 @@ images.
     - `primitives/css/toggle-chip.SegmentedControl`
     - `primitives/css/viewport-overlay.ViewportOverlay`
     - `primitives/css/yield.yieldClass`
-    - `primitives/diff-view/swipe-compare.SwipeCompare`
     - `primitives/dom/scroll-reveal.focusElement`
     - `primitives/icon-button.IconButton`
     - `primitives/link-gesture.activationProps`

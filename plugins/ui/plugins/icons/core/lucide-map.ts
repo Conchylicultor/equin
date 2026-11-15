@@ -162,6 +162,8 @@ export const LUCIDE_MAP = {
   "filter-list": "list-filter",
   "filter-none": "copy",
   fingerprint: "fingerprint",
+  "fit-page-height": "unfold-vertical",
+  "fit-page-width": "unfold-horizontal",
   "fit-screen": "scan",
   "fit-width": "move-horizontal",
   "fitness-center": "dumbbell",

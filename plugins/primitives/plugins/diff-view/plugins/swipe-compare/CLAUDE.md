@@ -38,6 +38,28 @@ of that ratio (each side's, side by side) centred in a size container
 Without it the primitive fills its parent (`size-full`) — a host that already
 sized the box (the canvas's `placeFrames`) passes none.
 
+## Zoom
+
+`zoom` (instead of `aspect`) makes the comparison zoomable in its parent:
+`const zoom = useCompareZoom({ width, height })` (the sides' pixel size; key the
+holder by the pair so a new one starts fresh), `<SwipeCompare zoom={zoom}>`, and
+`<CompareZoomControls zoom={zoom} />` wherever the host draws its toolbar
+(`− 62% + | Fit width · Fit height · 1:1`). The geometry is the image viewer's
+(`image-viewer/core`: fit floor, zoom ladder, pan clamp, wheel curve), in
+`web/internal/zoom-model.ts`; both sides share one view (side by side: each
+half is a viewport at the same view).
+
+- Starts at **fit width**, top first (a full-page capture reads from its top);
+  a resize re-applies the current fit, keeping the reader's place.
+- The **wheel** zooms around the pointer (a trackpad pinch faster); **drag**
+  pans when the picture overflows. In swipe a press within 14px of the divider
+  (or anywhere, when there is nothing to pan) moves the divider; a click off it
+  still jumps it there. In flip a click (no drag) flips.
+- The frame is the part of the box the picture covers — the picture's own box
+  when it fits, the whole box when it overflows; the divider and tags sit in it.
+- Keys on the focused surface: `+` / `−`, `W` fit width, `H` fit height, `0`
+  whole picture, `1` actual size (⌘ / Ctrl / Alt left to the browser).
+
 ## Chrome
 
 - **`full`** (default) — a framed surface (rounded, ringed, shadowed,
@@ -57,25 +79,38 @@ Exhibits: `swipe-compare/images` (swipe), `swipe-compare/side`,
 
 ## Plugin reference
 
-- Description: <SwipeCompare before after mode at? onAtChange?/>: two renderings of one thing compared — swiped one over the other (a pointer-captured divider: drag or click the track, ←/→ with Shift ×5, Home/End, double-click to recentre; role=separator), side by side, or flipped between (click or Space). Controlled or uncontrolled; fits its box at an optional aspect; chrome full (frame, knob, Before/After tags) or minimal (a hairline, for a host that frames and names its sides itself).
+- Description: <SwipeCompare before after mode at? onAtChange?/>: two renderings of one thing compared — swiped one over the other (a pointer-captured divider: drag or click the track, ←/→ with Shift ×5, Home/End, double-click to recentre; role=separator), side by side, or flipped between (click or Space). Controlled or uncontrolled; fits its box at an optional aspect, or zooms in it (useCompareZoom + CompareZoomControls: fit width / fit height / 1:1 / − + / wheel or pinch around the pointer, drag to pan — the image viewer's geometry, both sides at one view); chrome full (frame, knob, Before/After tags) or minimal (a hairline, for a host that frames and names its sides itself).
 - Web:
   - Uses:
     - `primitives/css/center.Center`
     - `primitives/css/clip.clipClasses`
     - `primitives/css/coords.pct`
     - `primitives/css/coords.Placed`
+    - `primitives/css/coords.placedClasses`
+    - `primitives/css/coords.placedStyle`
     - `primitives/css/fill.Fill`
+    - `primitives/css/inline.Inline`
     - `primitives/css/layer.Layer`
     - `primitives/css/pin.Pin`
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
+    - `primitives/css/ui-kit.Button`
     - `primitives/css/ui-kit.cn`
+    - `primitives/css/ui-kit.Separator`
+    - `primitives/dom/element-size.useElementSize`
+    - `primitives/icon-button.IconButton`
+    - `primitives/overlay/tooltip.Kbd`
     - `ui/icons.Icon`
   - Exports (types):
+    - `CompareZoom`
     - `SwipeCompareChrome`
     - `SwipeCompareMode`
     - `SwipeCompareProps`
-  - Exports (values): `SwipeCompare`
+    - `ZoomFit`
+  - Exports (values):
+    - `CompareZoomControls`
+    - `SwipeCompare`
+    - `useCompareZoom`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --background`

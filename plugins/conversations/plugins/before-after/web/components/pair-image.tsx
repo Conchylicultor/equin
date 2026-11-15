@@ -10,24 +10,32 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/coords/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Icon } from "@plugins/ui/plugins/icons/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import type { BeforeAfterPair } from "../../core";
 
 const brokenImageIcon = symbol("broken-image");
 
 /**
+ * How a side fills its box: `contain` — whole, never cropped (a comparison,
+ * whose box is the pair's own aspect anyway); `cover` — filling it from the
+ * top-left (a thumbnail tile, which crops a tall capture to its top).
+ */
+export type PairImageFit = "contain" | "cover";
+
+/**
  * One side of a pair: its PNG attachment (`GET /api/attachments/:id`, loaded
- * over the subtree's transport) covering its box from the top-left — a box of
- * the pair's own aspect shows it whole; a wider one (the tool-call preview of
- * a tall capture) shows its top. While it
- * loads the box's own tint shows; a failure says so, with the reason on hover.
+ * over the subtree's transport) filling its box as `fit` says. While it loads
+ * the box's own tint shows; a failure says so, with the reason on hover.
  */
 export function PairImage({
   attachmentId,
   alt,
+  fit = "contain",
 }: {
   attachmentId: string;
   alt: string;
+  fit?: PairImageFit;
 }): ReactNode {
   const src = useAssetSrc(assetPath(getAttachmentFile, { id: attachmentId }));
   if (src.kind === "loading") return null;
@@ -38,7 +46,10 @@ export function PairImage({
         alt={alt}
         decoding="async"
         draggable={false}
-        className="block size-full object-cover object-left-top"
+        className={cn(
+          "block size-full",
+          fit === "cover" ? "object-cover object-left-top" : "object-contain",
+        )}
       />
     );
   return (
@@ -53,9 +64,16 @@ export function PairImage({
 }
 
 /** The pair's before side, named for a screen reader. */
-export function BeforeImage({ pair }: { pair: BeforeAfterPair }): ReactNode {
+export function BeforeImage({
+  pair,
+  fit,
+}: {
+  pair: BeforeAfterPair;
+  fit?: PairImageFit;
+}): ReactNode {
   return (
     <PairImage
+      fit={fit}
       attachmentId={pair.beforeAttachmentId}
       alt={`${pair.title} — ${pair.beforeLabel}`}
     />
@@ -63,9 +81,16 @@ export function BeforeImage({ pair }: { pair: BeforeAfterPair }): ReactNode {
 }
 
 /** The pair's after side, named for a screen reader. */
-export function AfterImage({ pair }: { pair: BeforeAfterPair }): ReactNode {
+export function AfterImage({
+  pair,
+  fit,
+}: {
+  pair: BeforeAfterPair;
+  fit?: PairImageFit;
+}): ReactNode {
   return (
     <PairImage
+      fit={fit}
       attachmentId={pair.afterAttachmentId}
       alt={`${pair.title} — ${pair.afterLabel}`}
     />
@@ -83,10 +108,10 @@ export function SplitThumb({ pair }: { pair: BeforeAfterPair }): ReactNode {
   return (
     <>
       <Layer>
-        <BeforeImage pair={pair} />
+        <BeforeImage pair={pair} fit="cover" />
       </Layer>
       <Layer style={{ clipPath: "inset(0 0 0 50%)" }}>
-        <AfterImage pair={pair} />
+        <AfterImage pair={pair} fit="cover" />
       </Layer>
       <Placed
         x={{ start: pct(0.5), size: 1 }}

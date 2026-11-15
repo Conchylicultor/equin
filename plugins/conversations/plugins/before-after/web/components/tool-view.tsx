@@ -109,9 +109,9 @@ function PairPreviewOf({ toolUseId }: { toolUseId: string }): ReactNode {
 }
 
 /**
- * The tallest the preview's picture gets, as width / height: a landscape box.
- * A taller pair (a full-page capture) shows its top, cropped there — the pane
- * shows it whole.
+ * The tallest the preview's box gets, as width / height: a landscape box. A
+ * taller pair (a full-page capture) is shown whole inside it, shrunk to its
+ * height — the pane zooms into it.
  */
 const PREVIEW_MIN_ASPECT = 16 / 10;
 
@@ -133,7 +133,7 @@ function PairPreview({ pair }: { pair: BeforeAfterPair }): ReactNode {
     { pair: pair.id },
     { mode: "push" },
   );
-  const aspect = Math.max(pair.width / pair.height, PREVIEW_MIN_ASPECT);
+  const boxAspect = Math.max(pair.width / pair.height, PREVIEW_MIN_ASPECT);
   return (
     <PreviewFrame>
       <ControlSizeProvider size="xs">
@@ -156,12 +156,12 @@ function PairPreview({ pair }: { pair: BeforeAfterPair }): ReactNode {
           />
         </Line>
       </ControlSizeProvider>
-      <div className="w-full" style={{ aspectRatio: String(aspect) }}>
+      <div className="w-full" style={{ aspectRatio: String(boxAspect) }}>
         <SwipeCompare
           before={<BeforeImage pair={pair} />}
           after={<AfterImage pair={pair} />}
           mode="swipe"
-          aspect={aspect}
+          aspect={pair.width / pair.height}
         />
       </div>
     </PreviewFrame>

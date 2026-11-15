@@ -140,6 +140,8 @@ export const ICON_MANIFEST: {
     "filter-list",
     "filter-none",
     "fingerprint",
+    "fit-page-height",
+    "fit-page-width",
     "fit-screen",
     "fit-width",
     "fitness-center",

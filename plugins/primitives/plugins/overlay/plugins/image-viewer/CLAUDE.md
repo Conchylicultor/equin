@@ -214,6 +214,7 @@ handler, the `?` sheet and the button tooltips all read.
     - `page/image`
     - `page/read-only-view`
     - `primitives/diff-view`
+    - `primitives/diff-view/swipe-compare`
     - `primitives/file-viewer/image`
     - `primitives/text-editor/paste-images`
     - `tasks/task-attachments`

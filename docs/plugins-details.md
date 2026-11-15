@@ -17558,10 +17558,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `beforeAfterPane.Actions` "full-screen" → `FullScreenAction`
           - `renderer` "register_before_after$" → `ParsedToolView`
           - `ConversationArtifacts.Kind` "Before / after"
-        - Uses: 48 symbols — full list in [`plugins/conversations/plugins/before-after/REFERENCE.md`](../plugins/conversations/plugins/before-after/REFERENCE.md)
+        - Uses: 50 symbols — full list in [`plugins/conversations/plugins/before-after/REFERENCE.md`](../plugins/conversations/plugins/before-after/REFERENCE.md)
           - `primitives/pane` ×7
           - `conversations/conversation-view/jsonl-viewer/tool-call` ×3
           - `primitives/data-view` ×3
+          - `primitives/diff-view/swipe-compare` ×3
           - `conversations/conversation-view/artifacts` ×2
           - `network/live` ×2
           - `primitives/css/coords` ×2
@@ -17586,7 +17587,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/toggle-chip.SegmentedControl`
           - `primitives/css/viewport-overlay.ViewportOverlay`
           - `primitives/css/yield.yieldClass`
-          - `primitives/diff-view/swipe-compare.SwipeCompare`
           - `primitives/dom/scroll-reveal.focusElement`
           - `primitives/icon-button.IconButton`
           - `primitives/link-gesture.activationProps`
@@ -49173,11 +49173,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `InlineProps`
             - Exports (values): `Inline`
           - Cross-plugin:
-            - Imported by: 119 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
+            - Imported by: 120 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
               - `apps` ×23
               - `debug` ×20
               - `reports` ×20
-              - `primitives` ×13
+              - `primitives` ×14
               - `conversations` ×10
               - `page` ×6
               - `tasks` ×5
@@ -51811,25 +51811,38 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `review/code-review`
           - `review/plugin-changes/file-changes`
       - Plugins:
-        - **`swipe-compare`** — <SwipeCompare before after mode at? onAtChange?/>: two renderings of one thing compared — swiped one over the other (a pointer-captured divider: drag or click the track, ←/→ with Shift ×5, Home/End, double-click to recentre; role=separator), side by side, or flipped between (click or Space). Controlled or uncontrolled; fits its box at an optional aspect; chrome full (frame, knob, Before/After tags) or minimal (a hairline, for a host that frames and names its sides itself).
+        - **`swipe-compare`** — <SwipeCompare before after mode at? onAtChange?/>: two renderings of one thing compared — swiped one over the other (a pointer-captured divider: drag or click the track, ←/→ with Shift ×5, Home/End, double-click to recentre; role=separator), side by side, or flipped between (click or Space). Controlled or uncontrolled; fits its box at an optional aspect, or zooms in it (useCompareZoom + CompareZoomControls: fit width / fit height / 1:1 / − + / wheel or pinch around the pointer, drag to pan — the image viewer's geometry, both sides at one view); chrome full (frame, knob, Before/After tags) or minimal (a hairline, for a host that frames and names its sides itself).
           - Web:
             - Uses:
               - `primitives/css/center.Center`
               - `primitives/css/clip.clipClasses`
               - `primitives/css/coords.pct`
               - `primitives/css/coords.Placed`
+              - `primitives/css/coords.placedClasses`
+              - `primitives/css/coords.placedStyle`
               - `primitives/css/fill.Fill`
+              - `primitives/css/inline.Inline`
               - `primitives/css/layer.Layer`
               - `primitives/css/pin.Pin`
               - `primitives/css/spacing.Stack`
               - `primitives/css/text.Text`
+              - `primitives/css/ui-kit.Button`
               - `primitives/css/ui-kit.cn`
+              - `primitives/css/ui-kit.Separator`
+              - `primitives/dom/element-size.useElementSize`
+              - `primitives/icon-button.IconButton`
+              - `primitives/overlay/tooltip.Kbd`
               - `ui/icons.Icon`
             - Exports (types):
+              - `CompareZoom`
               - `SwipeCompareChrome`
               - `SwipeCompareMode`
               - `SwipeCompareProps`
-            - Exports (values): `SwipeCompare`
+              - `ZoomFit`
+            - Exports (values):
+              - `CompareZoomControls`
+              - `SwipeCompare`
+              - `useCompareZoom`
           - Cross-plugin:
             - Uses tokens:
               - `ui/tokens/color-palette --background`
@@ -51993,8 +52006,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useResizeObserver`
               - `useResizeObserverSet`
           - Cross-plugin:
-            - Imported by: 51 plugins — full list in [`plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md)
-              - `primitives` ×25
+            - Imported by: 52 plugins — full list in [`plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/element-size/REFERENCE.md)
+              - `primitives` ×26
               - `apps` ×16
               - `shell` ×2
               - `active-data/go`
@@ -52907,10 +52920,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `IconButton`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
-        - Imported by: 137 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
+        - Imported by: 138 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
           - `apps` ×46
           - `conversations` ×23
-          - `primitives` ×22
+          - `primitives` ×23
           - `tasks` ×8
           - `page` ×7
           - `debug` ×5
@@ -54234,6 +54247,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `page/image`
               - `page/read-only-view`
               - `primitives/diff-view`
+              - `primitives/diff-view/swipe-compare`
               - `primitives/file-viewer/image`
               - `primitives/text-editor/paste-images`
               - `tasks/task-attachments`
@@ -54458,8 +54472,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-size-2xs`
               - `ui/tokens/type-scale --font-weight-medium`
               - `ui/tokens/type-scale --line-height-2xs`
-            - Imported by: 25 plugins — full list in [`plugins/primitives/plugins/overlay/plugins/tooltip/REFERENCE.md`](../plugins/primitives/plugins/overlay/plugins/tooltip/REFERENCE.md)
-              - `primitives` ×10
+            - Imported by: 26 plugins — full list in [`plugins/primitives/plugins/overlay/plugins/tooltip/REFERENCE.md`](../plugins/primitives/plugins/overlay/plugins/tooltip/REFERENCE.md)
+              - `primitives` ×11
               - `page` ×6
               - `apps` ×5
               - `tasks` ×3

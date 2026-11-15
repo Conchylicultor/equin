@@ -8,35 +8,32 @@ import {
 } from "react";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
-import { clipClasses } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import {
   Placed,
   pct,
 } from "@plugins/primitives/plugins/css/plugins/coords/web";
 import { Layer } from "@plugins/primitives/plugins/css/plugins/layer/web";
-import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Icon } from "@plugins/ui/plugins/icons/web";
-import { symbol } from "@plugins/ui/plugins/icons/core";
+import {
+  FOCUS_CLASS,
+  SIDE_GAP_PX,
+  TAG_EDGE,
+  Tag,
+  clampAt,
+  frameClass,
+  keyedAt,
+  knobIcon,
+  type SwipeCompareChrome,
+  type SwipeCompareMode,
+} from "./chrome";
+import { ZoomedCompare, type CompareZoom } from "./zoomed-compare";
 
-/** How the two sides are compared. */
-export type SwipeCompareMode = "swipe" | "side" | "flip";
+export type { SwipeCompareChrome, SwipeCompareMode } from "./chrome";
 
-/**
- * What the primitive draws around the two sides.
- *
- * - `full` — a standalone comparison: a framed surface (rounded, ringed,
- *   clipped), a white divider with a round ‹› knob, and Before / After corner
- *   tags. What a pair of screenshots wants.
- * - `minimal` — for a host that draws its own frames and names (the prototype
- *   canvas): no frame, no knob, no tags, and a hairline divider in the
- *   foreground colour (the primary while dragged).
- */
-export type SwipeCompareChrome = "full" | "minimal";
-
-export interface SwipeCompareProps {
+interface SwipeCompareBaseProps {
   /** The "before" side: on top in swipe (clipped at the divider), left side by side. */
   before: ReactNode;
   /** The "after" side: underneath in swipe, right side by side. */
@@ -54,63 +51,23 @@ export interface SwipeCompareProps {
   beforeLabel?: string;
   /** Defaults to "After". */
   afterLabel?: string;
-  /**
-   * The sides' width / height. Given, the comparison is the largest box of
-   * that ratio that fits its parent (each side's, side by side), centred;
-   * omitted, it fills its parent.
-   */
-  aspect?: number;
   /** Defaults to `full`. */
   chrome?: SwipeCompareChrome;
   className?: string;
 }
 
-const knobIcon = symbol("code");
-
-/** One arrow key's step, and Shift's. */
-const STEP = 0.02;
-const BIG_STEP = 0.1;
-/** Below / above this position the tag it would cover fades out. */
-const TAG_EDGE = 0.14;
-/** The gap between the two sides side by side, in px (the `smd` step). */
-const SIDE_GAP_PX = 10;
-
-/** A position clamped to the track. */
-export function clampAt(at: number): number {
-  return Math.min(1, Math.max(0, at));
-}
-
 /**
- * Where a key moves the divider from `at`, or null when the key is not one
- * the divider answers.
+ * How the comparison is sized — one of:
+ *
+ * - `aspect` (the sides' width / height): the largest box of that ratio that
+ *   fits its parent (each side's, side by side), centred; omitted, it fills
+ *   its parent;
+ * - `zoom` (from {@link useCompareZoom}): zoomable and pannable in its parent
+ *   — fit width / fit height / 1:1 / steps / wheel, the controls
+ *   ({@link CompareZoomControls}) wherever the host puts them.
  */
-export function keyedAt(
-  key: string,
-  shift: boolean,
-  at: number,
-): number | null {
-  const step = shift ? BIG_STEP : STEP;
-  switch (key) {
-    case "ArrowLeft":
-      return clampAt(at - step);
-    case "ArrowRight":
-      return clampAt(at + step);
-    case "Home":
-      return 0;
-    case "End":
-      return 1;
-    default:
-      return null;
-  }
-}
-
-/** A dark scrim for a tag laid over an image. Deliberately not a theme token:
- *  it must read against the picture under it, which no palette knows. */
-const TAG_CLASS =
-  "pointer-events-none rounded-sm bg-black/60 px-xsm py-2xs text-white backdrop-blur-sm transition-opacity";
-
-const FOCUS_CLASS =
-  "outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background";
+export type SwipeCompareProps = SwipeCompareBaseProps &
+  ({ aspect?: number; zoom?: never } | { zoom: CompareZoom; aspect?: never });
 
 /**
  * Two renderings of one thing compared: swiped one over the other (drag, click
@@ -127,6 +84,7 @@ export function SwipeCompare({
   beforeLabel = "Before",
   afterLabel = "After",
   aspect,
+  zoom,
   chrome = "full",
   className,
 }: SwipeCompareProps): ReactElement {
@@ -137,6 +95,22 @@ export function SwipeCompare({
     if (atProp === undefined) setOwnAt(clamped);
     onAtChange?.(clamped);
   };
+
+  if (zoom !== undefined)
+    return (
+      <ZoomedCompare
+        before={before}
+        after={after}
+        beforeLabel={beforeLabel}
+        afterLabel={afterLabel}
+        mode={mode}
+        chrome={chrome}
+        at={at}
+        setAt={setAt}
+        zoom={zoom}
+        className={className}
+      />
+    );
 
   const body =
     mode === "side" ? (
@@ -200,42 +174,6 @@ function fitStyle(aspect: number | undefined): CSSProperties | undefined {
         width: `min(100cqw, calc(100cqh * ${String(aspect)}))`,
         aspectRatio: String(aspect),
       };
-}
-
-/**
- * A side's frame. `full` draws and clips one; `minimal` draws nothing and
- * clips nothing, so the host's own frames (their rounding, ring and shadow)
- * show whole.
- */
-function frameClass(chrome: SwipeCompareChrome): string | null {
-  return chrome === "full"
-    ? cn(
-        clipClasses({ axis: "both", fill: false }),
-        "rounded-lg bg-muted shadow-lg ring-1 ring-border",
-      )
-    : null;
-}
-
-function Tag({
-  children,
-  to,
-  hidden = false,
-}: {
-  children: string;
-  to: "bottom-left" | "bottom-right";
-  hidden?: boolean;
-}): ReactElement {
-  return (
-    <Pin
-      to={to}
-      offset="sm"
-      layer="raised"
-      decorative
-      className={cn(TAG_CLASS, hidden && "opacity-0")}
-    >
-      <Text variant="tag">{children}</Text>
-    </Pin>
-  );
 }
 
 function Swipe({
