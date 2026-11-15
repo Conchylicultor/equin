@@ -178,6 +178,11 @@ export function createPgliteDriver(
       },
       async dump() {
         await pglite.waitReady;
+        // A checkpoint first: the dump is then a clean data directory — its
+        // opener replays no WAL, and the WAL before the checkpoint is
+        // removed rather than shipped (a cluster that keeps few segments,
+        // web-artifacts' pglite-cluster).
+        await pglite.exec("CHECKPOINT");
         return pglite.dumpDataDir("gzip");
       },
     });
