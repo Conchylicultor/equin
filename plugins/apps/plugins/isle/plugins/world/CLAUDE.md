@@ -11,10 +11,13 @@ No DOM, no canvas. A port of the prototype `proto-1794374690-9xmb84`'s `islands.
   plot; a plot outlives its app as a lot a later app may take. A `Resident` is an app's id, category and
   its building's DECLARED footprint (`buildings/core`) — placement never paints or measures. Build one with
   `residentOf(app, spec)`.
-- `moveTargets` / `applyMove` — moving a building by hand. The first target is always `stay` (its own
-  plot: a drop over its old spot reuses it, nothing written); the plot it leaves is an empty lot in the
-  way of every other target but a swap, so no new plot or refit is ever made over it. `restoreLot`
-  gives an empty lot back to nature (`wild`).
+- `moveTargets` / `newPlotAt` / `applyMove` — moving a building by hand. `moveTargets` lists the
+  existing plots it may go to; the first is always `stay` (its own plot: a drop over its old spot reuses
+  it, nothing written), then lots it fits and swaps. `newPlotAt(x, y)` is a drop anywhere else: the
+  nearest spot to the point, on any revealed island's land, where it stands clear and its door's lane
+  reaches a road (null on water or where nothing fits) — the renderer asks it live under the cursor.
+  The plot it leaves is an empty lot in the way of every other target but a swap, so no new plot or
+  refit is ever made over it. `restoreLot` gives an empty lot back to nature (`wild`).
 - A plot is never deleted (ids are positional, `<district>:<n>`). One made over another plot — before
   2026-11-15 a move could set a building's new plot down on the lot it left — is `retired`: kept for
   its place, but no land at all (never drawn, never taken, in no one's way).
@@ -97,6 +100,7 @@ never moves a plot (40 → 41, 14 → 142 one by one); no plot clashes at 14 / 4
     - `LAKE`
     - `layoutWorld`
     - `moveTargets`
+    - `newPlotAt`
     - `pickLabelSpot`
     - `placeResidents`
     - `planIsland`

@@ -22,6 +22,7 @@ import {
   islandLabels,
   layoutWorld,
   moveTargets,
+  newPlotAt,
   pickLabelSpot,
   plotBox,
   residentOf,
@@ -200,9 +201,18 @@ interface Moving {
   sx: number;
   sy: number;
   readonly off: { x: number; y: number };
+  /** Its own plot, the lots it fits and the plots it can swap with. */
   readonly targets: readonly MoveTarget[];
+  /** Where a drop now lands: one of `targets`, a new plot under the cursor, or nowhere. */
   target: MoveTarget | null;
+  /** The new plot last looked for, by drop cell (the pointer moves far more often than it changes cell). */
+  fresh: { readonly key: string; readonly t: MoveTarget | null } | null;
 }
+
+/** A drop this close (world px) to an existing plot lands on it rather than on a new plot. */
+const MOVE_SNAP = 90;
+/** The cell (world px) a drop point is rounded to before a new plot is looked for. */
+const MOVE_CELL = 12;
 
 interface Settling {
   readonly b: SceneBuilding;
@@ -1846,6 +1856,7 @@ export class IsleEngine {
       off: { x: b.x - w.x, y: b.y - w.y },
       targets,
       target: null,
+      fresh: null,
     };
     this.hovered = null;
     this.hidden = new Set([b.appId]);
@@ -1860,17 +1871,34 @@ export class IsleEngine {
     return { x: w.x + m.off.x, y: w.y + m.off.y };
   }
 
+  /**
+   * Where a drop at the ghost lands: an existing plot right under it (its own,
+   * a lot, a swap), else a new plot wherever the land under it takes one.
+   */
   private pickTarget(): void {
     const m = this.moving!;
+    const M = this.M;
+    const placement = this.placement;
     const gp = this.ghostAt();
     let best: MoveTarget | null = null;
-    let bd = 180;
+    let bd = MOVE_SNAP;
     for (const c of m.targets) {
       const d = Math.hypot(c.plot.x - gp.x, (c.plot.y - gp.y) * 1.2);
       if (d < bd) {
         bd = d;
         best = c;
       }
+    }
+    if (!best && M && placement) {
+      const cx = Math.round(gp.x / MOVE_CELL) * MOVE_CELL;
+      const cy = Math.round(gp.y / MOVE_CELL) * MOVE_CELL;
+      const key = `${cx},${cy}`;
+      if (m.fresh?.key !== key)
+        m.fresh = {
+          key,
+          t: newPlotAt(M, placement, this.residents, m.b.appId, cx, cy),
+        };
+      best = m.fresh.t;
     }
     m.target = best;
   }
@@ -2170,9 +2198,14 @@ export class IsleEngine {
     // where a lifted building may go
     if (this.moving) {
       const pulse = 0.5 + 0.5 * Math.sin(t * 5);
-      for (const c of this.moving.targets) {
+      const mt = this.moving.target;
+      const shown =
+        mt && mt.kind === "new"
+          ? [...this.moving.targets, mt]
+          : this.moving.targets;
+      for (const c of shown) {
         const p = c.plot;
-        const on = c === this.moving.target;
+        const on = c === mt;
         const B = plotBox(p);
         const swap = c.kind === "plot" && c.other !== null;
         g.save();
@@ -2406,10 +2439,12 @@ export class IsleEngine {
         }
       }
     }
-    // the lifted building, under the cursor
+    // the lifted building, under the cursor (its shadow red where it cannot stand)
     if (this.moving) {
       const gp = this.ghostAt();
-      g.fillStyle = "rgba(20,24,16,.25)";
+      g.fillStyle = this.moving.target
+        ? "rgba(20,24,16,.25)"
+        : "rgba(170,40,30,.35)";
       g.beginPath();
       g.ellipse(gp.x + 10, gp.y + 6, this.moving.b.w * 0.55, 16, 0, 0, 7);
       g.fill();

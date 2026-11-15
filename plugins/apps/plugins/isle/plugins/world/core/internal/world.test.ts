@@ -6,7 +6,7 @@ import {
 import type { Setting } from "@plugins/apps/plugins/isle/plugins/buildings/core";
 import { fnv1a32 } from "@plugins/packages/plugins/string-hash/core";
 import { layoutWorld } from "./layout";
-import { applyMove, moveTargets, restoreLot } from "./move";
+import { applyMove, moveTargets, newPlotAt, restoreLot } from "./move";
 import {
   EMPTY_PLACEMENT,
   islandsInPlay,
@@ -251,6 +251,18 @@ describe("moving a building", () => {
   const rs = residents(24);
   const P = placeResidents(M, EMPTY_PLACEMENT, rs);
   const fromOf = (id: string) => plotById(P, P.occupant[id])!;
+  const home = M.islands[0]!;
+  /** Dry points of the home island, on a coarse grid. */
+  const homeGrid = (): [number, number][] => {
+    const out: [number, number][] = [];
+    for (let y = home.cy - 1600; y <= home.cy + 1600; y += 100)
+      for (let x = home.cx - 2000; x <= home.cx + 2000; x += 100)
+        if (M.height(home, x, y) > 0.25) out.push([x, y]);
+    return out;
+  };
+  /** New plots for app `id` dropped over the home island's grid. */
+  const drops = (id: string) =>
+    homeGrid().flatMap((p) => newPlotAt(M, P, rs, id, p[0], p[1]) ?? []);
 
   test("a drop over its own spot reuses its plot: no new plot, no write", () => {
     for (const r of rs) {
@@ -271,9 +283,12 @@ describe("moving a building", () => {
 
   test("no target it takes alone overlaps the plot it leaves", () => {
     let nextDoor = 0;
-    for (const r of rs) {
+    for (const [i, r] of rs.entries()) {
       const from = fromOf(r.id);
-      for (const t of moveTargets(M, P, rs, r.id)) {
+      for (const t of [
+        ...moveTargets(M, P, rs, r.id),
+        ...(i < 3 ? drops(r.id) : []),
+      ]) {
         if (t.kind === "stay" || (t.kind === "plot" && t.other)) continue;
         if (t.plot.slot === from.slot) nextDoor++;
         const N = applyMove(M, P, rs, r.id, t);
@@ -289,18 +304,51 @@ describe("moving a building", () => {
   test("a drop far away makes a new plot there, and leaves its own as a lot", () => {
     const r = rs[0]!;
     const from = fromOf(r.id);
-    const far = moveTargets(M, P, rs, r.id)
-      .filter((t) => t.kind === "new")
-      .sort(
-        (a, b) =>
-          Math.hypot(b.plot.x - from.x, b.plot.y - from.y) -
-          Math.hypot(a.plot.x - from.x, a.plot.y - from.y),
-      )[0]!;
+    const far = drops(r.id).sort(
+      (a, b) =>
+        Math.hypot(b.plot.x - from.x, b.plot.y - from.y) -
+        Math.hypot(a.plot.x - from.x, a.plot.y - from.y),
+    )[0]!;
     expect(far).toBeDefined();
     const N = applyMove(M, P, rs, r.id, far);
     expect(N.occupant[r.id]).toBe(far.plot.id);
     expect(far.plot.n).toBe(P.plots[far.plot.slot]?.length ?? 0);
     expect(layoutWorld(M, N, rs).lots.map((p) => p.id)).toContain(from.id);
+  });
+
+  test("a building can be dropped anywhere the land is free", () => {
+    // every dry point of the home island well clear of the plots: most take a
+    // new plot right there, and the spots are as many as the free land
+    const r = rs[3]!;
+    const plots = Object.values(P.plots).flat();
+    let free = 0;
+    let fits = 0;
+    const spots = new Set<string>();
+    for (const [x, y] of homeGrid()) {
+      const t = newPlotAt(M, P, rs, r.id, x, y);
+      if (t) {
+        spots.add(`${t.plot.x},${t.plot.y}`);
+        // a road-side spot stands back from its road: near, not on, the point
+        expect(Math.hypot(t.plot.x - x, (t.plot.y - y) * 1.2)).toBeLessThan(
+          260,
+        );
+        const N = applyMove(M, P, rs, r.id, t);
+        const landed = plotById(N, N.occupant[r.id])!;
+        for (const q of Object.values(N.plots).flat())
+          if (q.id !== landed.id && !q.retired)
+            expect(plotsClash(landed, q)).toBe(false);
+      }
+      if (plots.some((q) => Math.hypot(q.x - x, q.y - y) < 300)) continue;
+      free++;
+      if (t) fits++;
+    }
+    expect(fits / free).toBeGreaterThan(0.3);
+    expect(spots.size).toBeGreaterThan(20);
+  });
+
+  test("no new plot on the water", () => {
+    expect(newPlotAt(M, P, rs, rs[0]!.id, -50000, -50000)).toBeNull();
+    expect(newPlotAt(M, P, rs, rs[0]!.id, home.cx, home.cy - 4000)).toBeNull();
   });
 
   test("a retired plot is no land: not drawn, not a target, never taken", () => {

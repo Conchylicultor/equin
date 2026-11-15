@@ -5976,6 +5976,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `LAKE`
               - `layoutWorld`
               - `moveTargets`
+              - `newPlotAt`
               - `pickLabelSpot`
               - `placeResidents`
               - `planIsland`

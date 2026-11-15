@@ -45,7 +45,7 @@ export const claimPlots = defineEndpoint({
 /**
  * A building moved by hand (drag and drop): the plot it lands on, the plot it
  * left (empty, or the swapped building's), each marked `movedByUser`. The
- * target was validated by the pure world (`moveTargets`) on the placement the
+ * target was validated by the pure world (`moveTargets` / `newPlotAt`) on the placement the
  * writer read; the compare-and-set makes sure it is still that placement.
  */
 /**

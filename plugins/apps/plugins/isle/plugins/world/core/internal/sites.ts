@@ -437,6 +437,9 @@ export function plotCtx<
   return { plots, laneIdx };
 }
 
+/** How far a door's path keeps from any building's ground band (its own but at the door), px. */
+const PATH_CLEAR = 16;
+
 /** A door's path: down out of its ground band, then on to the target (round the band first when it is behind). */
 function spurTo(
   p: PlacedPlot & { slot: string },
@@ -460,9 +463,24 @@ function spurTo(
           ).slice(1),
         ];
   }
+  // round the band: along its front and up its side, both clear of the band
+  // by more than a path keeps from any ground (standAt's PATH_CLEAR), then —
+  // a target behind it — up past its back, so the way on never cuts back
+  // across the ground
   const G = placed(p, p.g);
-  const cx = tx > p.x ? G[2] + 22 : G[0] - 22;
-  return [door, [p.x, yb], [cx, yb], ...curve(cx, yb, tx, ty, 0.05).slice(1)];
+  const away = PATH_CLEAR + 6;
+  const yf = G[3] + away;
+  const cx = tx > p.x ? G[2] + away : G[0] - away;
+  const yt = G[1] - away;
+  const behind = ty < yt && (tx - cx) * (tx > p.x ? 1 : -1) < 0;
+  return [
+    door,
+    [p.x, yf],
+    [cx, yf],
+    ...(behind
+      ? [[cx, yt] as Pt, ...curve(cx, yt, tx, ty, 0.05).slice(1)]
+      : curve(cx, yf, tx, ty, 0.05).slice(1)),
+  ];
 }
 
 export function laneHits(lane: readonly Pt[], G: Box, m: number): boolean {
@@ -654,10 +672,10 @@ export function standAt(
       const [ax, ay] = path[i - 1]!;
       const [bx, by] = path[i]!;
       const L = Math.max(1e-6, Math.hypot(bx - ax, by - ay));
-      const sx0 = Math.min(ax, bx) - 17;
-      const sx1 = Math.max(ax, bx) + 17;
-      const sy0 = Math.min(ay, by) - 17;
-      const sy1 = Math.max(ay, by) + 17;
+      const sx0 = Math.min(ax, bx) - (PATH_CLEAR + 1);
+      const sx1 = Math.max(ax, bx) + (PATH_CLEAR + 1);
+      const sy0 = Math.min(ay, by) - (PATH_CLEAR + 1);
+      const sy1 = Math.max(ay, by) + (PATH_CLEAR + 1);
       const seg: Box[] = [];
       for (const Q of near)
         if (Q[0] < sx1 && Q[2] > sx0 && Q[1] < sy1 && Q[3] > sy0) seg.push(Q);
@@ -665,19 +683,19 @@ export function standAt(
         const px = ax + ((bx - ax) * t) / L;
         const py = ay + ((by - ay) * t) / L;
         if (
-          px > G[0] - 16 &&
-          px < G[2] + 16 &&
-          py > G[1] - 16 &&
-          py < G[3] + 16 &&
+          px > G[0] - PATH_CLEAR &&
+          px < G[2] + PATH_CLEAR &&
+          py > G[1] - PATH_CLEAR &&
+          py < G[3] + PATH_CLEAR &&
           !(Math.abs(px - x) < 18 && py >= y)
         )
           return false;
         for (const Q of seg)
           if (
-            px > Q[0] - 16 &&
-            px < Q[2] + 16 &&
-            py > Q[1] - 16 &&
-            py < Q[3] + 16
+            px > Q[0] - PATH_CLEAR &&
+            px < Q[2] + PATH_CLEAR &&
+            py > Q[1] - PATH_CLEAR &&
+            py < Q[3] + PATH_CLEAR
           )
             return false;
         if (k % 2 === 0 && !Sx.land(px, py, 0.08)) return false;

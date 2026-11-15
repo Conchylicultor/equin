@@ -4,6 +4,7 @@ import {
   WorldModel,
   applyMove,
   moveTargets,
+  newPlotAt,
   placeResidents,
   residentOf,
   type Resident,
@@ -116,15 +117,20 @@ describe("isle plots codec", () => {
     const before = placementOfRows(db.rows());
     const targets = moveTargets(M, before, apps, "app-0");
     expect(targets.length).toBeGreaterThan(0);
-    for (const t of [
-      targets.find((x) => x.kind === "new"),
-      targets.find((x) => x.kind === "plot"),
-    ]) {
+    const at = Object.values(before.plots)
+      .flat()
+      .find((p) => p.id === before.occupant["app-1"])!;
+    // a drop beside another building: a new plot near it
+    const dropped = newPlotAt(M, before, apps, "app-0", at.x + 300, at.y + 200);
+    for (const t of [dropped, targets.find((x) => x.kind === "plot")]) {
       if (!t) continue;
       const cur = placementOfRows(db.rows());
-      const fresh = moveTargets(M, cur, apps, "app-0").find(
-        (x) => x.kind === t.kind && x.plot.id === t.plot.id,
-      );
+      const fresh =
+        t.kind === "new"
+          ? newPlotAt(M, cur, apps, "app-0", t.plot.x, t.plot.y)
+          : moveTargets(M, cur, apps, "app-0").find(
+              (x) => x.kind === t.kind && x.plot.id === t.plot.id,
+            );
       if (!fresh) continue;
       const next = applyMove(M, cur, apps, "app-0", fresh);
       expect(db.apply(placementWrites(cur, next), true)).toBe("applied");
