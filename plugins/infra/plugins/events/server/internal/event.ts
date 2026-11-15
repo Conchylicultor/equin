@@ -17,7 +17,7 @@ import {
   type TriggerDelivery,
 } from "./deliver";
 import { eventsDispatchJob } from "./dispatch-job";
-import { triggerTableRegistry } from "./registry";
+import { definedTriggerTables, triggerTableRegistry } from "./registry";
 import { EMISSIONS_CAP } from "../../core";
 import { _event_emissions } from "./tables";
 
@@ -141,6 +141,8 @@ export function defineTriggerEvent<
           .where(sql`enabled`),
       ),
   );
+
+  definedTriggerTables.add(table);
 
   // Resolve column references on the built table.
   const resolvedCols: Record<string, AnyPgColumn> = {};

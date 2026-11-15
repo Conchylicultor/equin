@@ -1,6 +1,7 @@
 import { db } from "@plugins/database/server";
 import { connectionString } from "@plugins/database/plugins/admin/server";
 import { installQueueSchema } from "@plugins/infra/plugins/jobs/server/testing";
+import { detachStoredTriggers } from "@plugins/infra/plugins/events/server/testing";
 
 /**
  * db-or-tx executor — the SAME union every mutation in this repo takes (see
@@ -67,7 +68,10 @@ function ensureQueueSchema(): Promise<void> {
  * Run one scenario against the REAL worktree database inside a transaction that
  * is always rolled back, returning whatever the body read just before the
  * rollback. Nothing is ever committed: no seeded rows, no emissions, no
- * enqueued jobs survive.
+ * enqueued jobs survive. The database's stored event subscriptions are
+ * detached inside the transaction first (`detachStoredTriggers`): they bind
+ * jobs this process never registers, and which exist depends on how the
+ * database was last booted, not on the suite.
  *
  * This is the sanctioned harness for the suites that genuinely cannot use a
  * `createTestDb` throwaway — the ones reading the derived VIEW layer
@@ -91,6 +95,11 @@ export async function worktreeDbScenario<T>(
   let result: T | undefined;
   try {
     await db.transaction(async (tx) => {
+      // The database's stored subscriptions bind jobs of a booted backend, which
+      // this process never registers: a write that emits would throw delivering
+      // to one. Which exist depends on how the database was last booted, never
+      // on the suite — so a scenario starts with none (rolled back with the rest).
+      await detachStoredTriggers(tx);
       result = await body(tx);
       throw new Rollback();
     });

@@ -5,7 +5,12 @@ runs `body(tx)`, and always rolls it back — nothing is ever committed, so a
 suite leaves behind no rows, no emissions, no enqueued jobs. It also installs
 the `graphile_worker` schema once per process first (excluded from the worktree
 DB fork by design, so a never-booted worktree has none, and any mutation that
-emits a status change enqueues on the caller's transaction).
+emits a status change enqueues on the caller's transaction). And it deletes the
+database's stored event subscriptions inside that transaction before the body
+runs (`detachStoredTriggers` from `infra/events`' testing barrel): each binds a
+job of a booted backend that the test process never registers, so an emit would
+throw delivering to one — and which rows exist depends on how the database was
+last booted, not on the suite.
 
 Use it ONLY when a `createTestDb` throwaway genuinely cannot reproduce what is
 under test — today that means reading the derived VIEW layer (`tasks_v` /

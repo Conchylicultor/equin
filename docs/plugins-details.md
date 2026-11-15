@@ -36007,6 +36007,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from:
           - `ids:pk-declared` — `server/internal/tables.ts` (debt)
           - `investigate:failures-registered` — `core/resources.ts` (sanctioned)
+      - Test helpers:
+        - Server: `@plugins/infra/plugins/events/server/testing`
+          - `detachStoredTriggers` — Delete, on `tx`, every stored trigger row of every event this process has defined — so an emit on `tx` matches no subscriber.
     - **`events-test`** — Dummy UI for exercising the events plugin end-to-end. Dummy plugin exercising the events and jobs APIs end-to-end.
       - Web:
         - Slots: `eventsTestPane.Actions`
