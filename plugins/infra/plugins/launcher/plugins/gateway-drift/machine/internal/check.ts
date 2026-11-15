@@ -15,9 +15,11 @@ import {
 } from "@plugins/infra/plugins/launcher/deps";
 import {
   DEV_GATEWAY_LOG_LEVEL,
+  DEV_GATEWAY_PORT,
   devGatewayLaunchOptions,
   gatewayLaunchFlags,
   isRunning,
+  readGatewayGeneration,
   readPid,
 } from "@plugins/infra/plugins/launcher/server";
 import { GATEWAY_SERVICE } from "@plugins/infra/plugins/launcher/core";
@@ -249,9 +251,18 @@ function short(identity: string): string {
 
 /**
  * The running gateway's command line, space-joined (how `ps` prints it), or
- * null when no gateway is running under the pidfile.
+ * null when no gateway is running. Under a keeper that is the serving
+ * generation's launch (the last handover's), not the keeper's own command
+ * line — the keeper keeps the one its service manager started it with.
  */
 async function runningCommand(): Promise<string | null> {
+  const gen = await readGatewayGeneration(`127.0.0.1:${DEV_GATEWAY_PORT}`);
+  if (gen.kind === "generation") {
+    return [gen.generation.binary, ...gen.generation.args].join(" ");
+  }
+  // Unreachable: not known — the pidfile may name a keeper, whose command
+  // line is not the serving one's, so it is no answer either.
+  if (gen.kind === "unreachable") return null;
   const pid = await readPid();
   if (pid === null || !isRunning(pid)) return null;
   const proc = `/proc/${pid}/cmdline`;

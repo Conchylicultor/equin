@@ -37,6 +37,9 @@ type Proxy struct {
 	// deployer runs main's convergence (main_deploy.go); nil when this gateway
 	// was started without -main-checkout.
 	deployer *mainDeployer
+	// handover replaces this generation by a successor (handover.go); nil
+	// when this gateway runs with no keeper.
+	handover *handover
 }
 
 func NewProxy(reg *Registry, routes *CentralRoutesStore, sup *Supervisor, defaultNamespace string, panics *panicReporter) *Proxy {
@@ -49,6 +52,13 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	sw := &startedWriter{ResponseWriter: w}
 	w = sw
 	defer p.panics.recoverHandlerPanic(sw, r)
+
+	// Handed over: everything that still reaches this generation (a request
+	// on a connection accepted before its listeners closed) is the
+	// successor's. Forwarded untouched — the successor stamps it itself.
+	if p.handover.forwardIfHandedOver(w, r, nil) {
+		return
+	}
 
 	// A content host is a world of its own (content.go): stamped `content`,
 	// routed by path, nothing but declared content routes. Ahead of everything
@@ -385,6 +395,9 @@ func (p *Proxy) handleStatic(w http.ResponseWriter, r *http.Request, wt *Worktre
 // restart drains it before terminating the process (avoids mid-request 502s).
 func (p *Proxy) handleHTTP(w http.ResponseWriter, r *http.Request, wt *Worktree) {
 	bk, err := wt.Ensure(r.Context(), startReasonOf(r), startCause(r, "http"))
+	if p.handover.forwardIfHandedOver(w, r, err) {
+		return
+	}
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadGateway)
 		return
@@ -401,6 +414,9 @@ func (p *Proxy) handleHTTP(w http.ResponseWriter, r *http.Request, wt *Worktree)
 // new requests to the new backend without disturbing open connections.
 func (p *Proxy) handleWebSocket(w http.ResponseWriter, r *http.Request, wt *Worktree) {
 	bk, err := wt.Ensure(r.Context(), startReasonOf(r), startCause(r, "websocket"))
+	if p.handover.forwardIfHandedOver(w, r, err) {
+		return
+	}
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadGateway)
 		return
@@ -430,6 +446,12 @@ func (p *Proxy) handleWebSocket(w http.ResponseWriter, r *http.Request, wt *Work
 		return
 	}
 	defer clientConn.Close()
+	// Closed if this generation is handed over: the client reconnects to the
+	// successor, onto the same running backend.
+	if !p.handover.trackWS(clientConn) {
+		return
+	}
+	defer p.handover.untrackWS(clientConn)
 
 	// Forward the original request line + headers to the backend over UDS.
 	// Bun doesn't validate Host against the listener type; leaving the
@@ -456,6 +478,10 @@ func (p *Proxy) handleWebSocket(w http.ResponseWriter, r *http.Request, wt *Work
 
 // handleGatewayAPI serves /gateway/* endpoints.
 func (p *Proxy) handleGatewayAPI(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path == "/gateway/handover" {
+		p.handover.serve(w, r)
+		return
+	}
 	if r.URL.Path == "/gateway/services" && r.Method == http.MethodGet {
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(p.sup.List())
@@ -532,6 +558,9 @@ func (p *Proxy) handleGatewayAPI(w http.ResponseWriter, r *http.Request) {
 				p.reg.RefreshSpec(name)
 			}
 			if status, err := deployRestart(ctx, wt, cand, startCause(r, "restart route")); err != nil {
+				if p.handover.forwardIfHandedOver(w, r, err) {
+					return
+				}
 				http.Error(w, err.Error(), status)
 				return
 			}
@@ -561,6 +590,9 @@ func (p *Proxy) handleGatewayAPI(w http.ResponseWriter, r *http.Request) {
 				stop = wt.StopHeld
 			}
 			if err := stop(context.WithoutCancel(r.Context())); err != nil {
+				if p.handover.forwardIfHandedOver(w, r, err) {
+					return
+				}
 				if errors.Is(err, ErrStopping) {
 					http.Error(w, "backend is stopping; retry shortly", http.StatusServiceUnavailable)
 					return
@@ -580,7 +612,7 @@ func (p *Proxy) handleGatewayAPI(w http.ResponseWriter, r *http.Request) {
 			return
 
 		case action == "logs" && r.Method == http.MethodGet:
-			streamBackendLogs(w, r, wt)
+			streamBackendLogs(w, r, wt, p.handover.replaced())
 			return
 		}
 	}
@@ -636,7 +668,10 @@ func deployRestart(ctx context.Context, wt *Worktree, cand *DeploySpec, cause st
 // backend stdout/stderr. On connect, one `event: history` message delivers
 // the current ring buffer contents; each subsequent log line is sent as
 // `event: entry`. The stream ends when the client disconnects.
-func streamBackendLogs(w http.ResponseWriter, r *http.Request, wt *Worktree) {
+//
+// handedOver ends the stream when this generation is replaced (its state is
+// this generation's ring): EventSource reconnects to the successor.
+func streamBackendLogs(w http.ResponseWriter, r *http.Request, wt *Worktree, handedOver <-chan struct{}) {
 	flusher, ok := w.(http.Flusher)
 	if !ok {
 		http.Error(w, "streaming unsupported", http.StatusInternalServerError)
@@ -666,6 +701,8 @@ func streamBackendLogs(w http.ResponseWriter, r *http.Request, wt *Worktree) {
 	for {
 		select {
 		case <-r.Context().Done():
+			return
+		case <-handedOver:
 			return
 		case e, ok := <-ch:
 			if !ok {

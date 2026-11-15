@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -44,6 +45,11 @@ type Config struct {
 	// it: a release, serve-app or a hand-run gateway deploys nothing.
 	MainCheckout string
 
+	// KeeperFd: the -keeper-fd value ("" in the keeper itself). NoKeeper: run
+	// without one.
+	KeeperFd string
+	NoKeeper bool
+
 	// Taskpolicy is the macOS priority tool background boots are demoted and
 	// promoted with (detectTaskpolicy), "" where there is none. Not a flag:
 	// main detects it; tests point it at a fake.
@@ -55,6 +61,36 @@ type Config struct {
 	// after logging is up, so a bad declaration is reported like any other
 	// fatal startup error.
 	ChildEnv ChildEnv
+
+	// Spawner starts the long-lived children (backends, deploy runs): the
+	// keeper under one (generation.go), else this process (spawn.go). nil:
+	// this process.
+	Spawner spawner
+	// Gate admits lifecycle transitions; a handover freezes it (handover.go).
+	// nil admits everything.
+	Gate *lifecycleGate
+	// PredecessorGone closes once the generation this one replaced has
+	// exited; nil when there is none. Until then no backend is stopped.
+	PredecessorGone <-chan struct{}
+}
+
+func (c *Config) spawner() spawner {
+	if c.Spawner == nil {
+		return localSpawner{}
+	}
+	return c.Spawner
+}
+
+func (c *Config) predecessorGone() bool {
+	if c.PredecessorGone == nil {
+		return true
+	}
+	select {
+	case <-c.PredecessorGone:
+		return true
+	default:
+		return false
+	}
 }
 
 // publicNamespace is the namespace this gateway serves to the public, or "" when
@@ -178,6 +214,11 @@ func parseFlags() (Config, string) {
 	// Required and deliberately default-less: the declaration lives in
 	// plugins/infra/plugins/launcher/core (runtimeEnvNames), and a default here
 	// would be a second copy of it.
+	// Set by the keeper on the generations it starts (keeper.go); absent, this
+	// process IS the keeper — unless -no-keeper (a gateway that hands nothing
+	// over: tests, a debugger).
+	flag.StringVar(&cfg.KeeperFd, keeperFdFlag[1:], "", "set by the keeper: the inherited control socket of this gateway generation")
+	flag.BoolVar(&cfg.NoKeeper, "no-keeper", false, "run the gateway in this process, with no keeper: nothing outlives it, and it cannot hand over")
 	var childEnv string
 	flag.StringVar(&childEnv, "child-env", "", "REQUIRED: comma-separated environment variable names children receive (NAME_* matches a prefix); ./equin start passes launcher/core runtimeEnvNames()")
 
@@ -243,15 +284,28 @@ func main() {
 		os.Exit(logRelayMain(os.Args[2:]))
 	}
 	cfg, childEnvFlag := parseFlags()
+	keeperFd, err := parseKeeperFd(cfg.KeeperFd)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "gateway: fatal: %v\n", err)
+		os.Exit(2)
+	}
+	if keeperFd == 0 && !cfg.NoKeeper {
+		// Started by a service manager or a launcher: be the keeper, and run
+		// the gateway itself as its first generation (keeper.go).
+		os.Exit(keeperMain(cfg))
+	}
 	setupLogging(cfg)
 	// Before anything that touches the data root's runtime (pid file, sockets,
 	// registry, supervised services): a second gateway on a root that one
-	// already serves stops here, naming the holder.
-	lock, err := acquireDataRootLock(cfg.LockFile)
-	if err != nil {
-		fatal(fmt.Sprintf("gateway: fatal: %v", err), "data root lock not acquired", err)
+	// already serves stops here, naming the holder. Under a keeper the keeper
+	// holds it — two generations of ONE gateway overlap during a handover.
+	if keeperFd == 0 {
+		lock, err := acquireDataRootLock(cfg.LockFile)
+		if err != nil {
+			fatal(fmt.Sprintf("gateway: fatal: %v", err), "data root lock not acquired", err)
+		}
+		dataRootLock = lock
 	}
-	dataRootLock = lock
 	if err := cfg.validatePublicServing(); err != nil {
 		fatal(fmt.Sprintf("gateway: fatal: %v", err), "invalid public serving flags", err)
 	}
@@ -279,12 +333,42 @@ func main() {
 		slog.Warn("child environment: not forwarding undeclared variables from the gateway's own environment", "dropped", dropped)
 	}
 
-	if cfg.PidFile != "" {
+	// Under a keeper: its init says how this generation came to be, and the
+	// keeper — not this process — is the parent of every long-lived child.
+	var kc *keeperClient
+	mode := modeFresh
+	var inherited *generationState
+	if keeperFd > 0 {
+		kc, err = connectKeeper(keeperFd)
+		if err != nil {
+			fatal(fmt.Sprintf("gateway: fatal: keeper: %v", err), "keeper connect failed", err)
+		}
+		mode = kc.init.Mode
+		if len(kc.init.State) > 0 {
+			inherited = &generationState{}
+			if err := json.Unmarshal(kc.init.State, inherited); err != nil {
+				fatal(fmt.Sprintf("gateway: fatal: the predecessor's state: %v", err), "handover state unreadable", err)
+			}
+		}
+		cfg.Spawner = kc
+		cfg.Gate = newLifecycleGate()
+		cfg.PredecessorGone = kc.predecessorGone
+		// The process start (exec, the OS's checks of a new binary, Go's
+		// init): a handover's successor pays it while its predecessor serves.
+		var started time.Duration
+		if kc.init.SpawnedAt > 0 {
+			started = time.Since(time.UnixMilli(kc.init.SpawnedAt))
+		}
+		slog.Info("gateway generation", "mode", mode, "keeper_pid", kc.init.KeeperPid, "adopting", len(kc.init.Children), "process_start", started)
+	} else if cfg.PidFile != "" {
+		// Under a keeper the pidfile is the keeper's: it is what a service
+		// manager or the launcher stops.
 		if err := writePidFile(cfg.PidFile); err != nil {
 			fatal(fmt.Sprintf("gateway: fatal: write pid file %s: %v", cfg.PidFile, err),
 				"write pid file failed", err)
 		}
 	}
+	adopting := mode != modeFresh
 
 	if err := os.MkdirAll(cfg.SocketsDir, 0o755); err != nil {
 		slog.Error("create sockets dir failed", "err", err, "dir", cfg.SocketsDir)
@@ -295,12 +379,6 @@ func main() {
 		slog.Error("registry load failed", "err", err)
 		os.Exit(1)
 	}
-	// Reap orphan backends left by a prior gateway generation. MUST run here —
-	// after the registry is loaded but BEFORE the watcher/sweep goroutines and
-	// the eager-central spawn below — because it relies on the gateway having
-	// spawned zero backends yet (so any live socket is a prior-generation
-	// orphan). Do not move it after anything that can start a backend.
-	reconcileOrphanBackends(cfg.SocketsDir, reg)
 
 	routes := NewCentralRoutesStore(cfg.CentralRoutesFile)
 	sup, err := NewSupervisor(cfg.DbConfigFile, cfg.ChildEnv, cfg.LogDir, cfg.ReportOutboxDir)
@@ -312,6 +390,39 @@ func main() {
 		// silently managing nothing would hide that behind a later timeout.
 		fatal(fmt.Sprintf("gateway: fatal: bad managed-service config %s: %v", cfg.DbConfigFile, err),
 			"supervisor: failed to load config", err)
+	}
+
+	// Main's deploy trigger, configured now (a misconfigured checkout is
+	// fatal here rather than silent at the first push) so an adopted run has
+	// a deployer to report to; started after the services (its run needs
+	// Postgres).
+	var deployer *mainDeployer
+	if cfg.MainCheckout != "" {
+		deployer, err = newMainDeployer(cfg.MainCheckout, cfg.ChildEnv, cfg.LogDir, cfg.ReportOutboxDir)
+		if err != nil {
+			fatal(fmt.Sprintf("gateway: fatal: main deploy: %v", err), "main deploy: start failed", err)
+		}
+		deployer.spawner = cfg.spawner()
+		deployer.gate = cfg.Gate
+	}
+
+	if adopting {
+		// The predecessor's children are this generation's now: its backends
+		// keep serving (no cold start), its deploy run is watched to its end.
+		// Then the orphan reconcile, which must leave their sockets alone.
+		adopted := adoptChildren(kc, reg, deployer, inherited)
+		kc.adoptionDone()
+		reconcileOrphanBackendsKeeping(cfg.SocketsDir, reg, adopted)
+	} else {
+		if kc != nil {
+			kc.adoptionDone()
+		}
+		// Reap orphan backends left by a prior gateway generation. MUST run here —
+		// after the registry is loaded but BEFORE the watcher/sweep goroutines and
+		// the eager-central spawn below — because it relies on the gateway having
+		// spawned zero backends yet (so any live socket is a prior-generation
+		// orphan). Do not move it after anything that can start a backend.
+		reconcileOrphanBackends(cfg.SocketsDir, reg)
 	}
 
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
@@ -346,27 +457,32 @@ func main() {
 	// The watchdog deliberately does NOT share this policy: a service dying
 	// mid-session records its reason and the gateway stays up, since killing it
 	// would tear down every live backend over a transient blip.
-	if err := sup.StartAll(ctx); err != nil {
+	//
+	// A generation adopting from a predecessor finds them running: it probes
+	// and watches them, and starts only one that does not answer.
+	startServices := sup.StartAll
+	if adopting {
+		startServices = sup.AdoptAll
+	}
+	if err := startServices(ctx); err != nil {
 		fatal(fmt.Sprintf("gateway: fatal: managed service failed to start: %v", err),
 			"supervisor: start failed", err)
 	}
 
-	// Main's deploy trigger. After the services (its run needs Postgres), and a
-	// misconfigured checkout is fatal here rather than silent at the first push.
-	var deployer *mainDeployer
-	if cfg.MainCheckout != "" {
-		deployer, err = newMainDeployer(cfg.MainCheckout, cfg.ChildEnv, cfg.LogDir, cfg.ReportOutboxDir)
-		if err == nil {
-			err = deployer.Start(ctx)
+	if deployer != nil {
+		var inheritedDeploy *deployState
+		if inherited != nil {
+			inheritedDeploy = inherited.Deploy
 		}
-		if err != nil {
+		if err := deployer.Start(ctx, inheritedDeploy); err != nil {
 			fatal(fmt.Sprintf("gateway: fatal: main deploy: %v", err), "main deploy: start failed", err)
 		}
 	}
 
 	// Eagerly spawn `central` so plugins that load on boot (auth, secrets) are
 	// ready before the first request lands. PG is up by this point, so
-	// central's plugins can connect immediately.
+	// central's plugins can connect immediately. (Adopted: already running —
+	// Ensure returns it.)
 	if wt := reg.Get("central"); wt != nil {
 		go func() {
 			if _, err := wt.Ensure(ctx, StartDeploy, "eager central start"); err != nil {
@@ -375,7 +491,18 @@ func main() {
 		}()
 	}
 
-	listeners, err := listenAll(listenAddrs(cfg.Listen))
+	// The listening sockets: an adopting generation serves on the keeper's
+	// (the same sockets, never closed between generations); a fresh one binds
+	// them and hands them to its keeper.
+	var listeners []net.Listener
+	if adopting {
+		listeners, err = kc.inheritedListeners(listenAddrs(cfg.Listen))
+	} else {
+		listeners, err = listenAll(listenAddrs(cfg.Listen))
+		if err == nil && kc != nil {
+			err = kc.sendListeners(listeners)
+		}
+	}
 	if err != nil {
 		fatal(fmt.Sprintf("gateway: fatal: %v", err), "listen failed", err)
 	}
@@ -387,12 +514,32 @@ func main() {
 		Handler:           proxy,
 		ReadHeaderTimeout: 10 * time.Second,
 	}
+	if kc != nil {
+		proxy.handover = newHandover(kc, cfg.Gate, reg, sup, cfg.Listen)
+		proxy.handover.deploy = deployer
+		proxy.handover.listeners = listeners
+		srv.ConnState = proxy.handover.trackConn
+	}
 
 	shutdownDone := make(chan struct{})
 	go func() {
 		defer close(shutdownDone)
-		<-ctx.Done()
+		select {
+		case <-ctx.Done():
+		case <-proxy.handover.replaced():
+			// Handed over: stop accepting (the successor accepts on the same
+			// sockets), let every request in flight here finish — their
+			// backends are the successor's now and keep running — and exit
+			// WITHOUT stopping a backend.
+			slog.Info("handover: draining this generation", "budget", handoverDrainBudget)
+			proxy.handover.drain(ctx, srv, handoverDrainBudget)
+			return
+		}
 		slog.Info("shutdown signal received", "budget", cfg.ShutdownTimeout)
+		if cfg.Gate != nil && !cfg.Gate.isReplaced() {
+			// A handover frozen mid-way gives up: the keeper is stopping.
+			cfg.Gate.unfreeze()
+		}
 		shutdownWithin(cfg.ShutdownTimeout, cfg.ShutdownGrace, srv.Shutdown, reg.StopAll)
 		// Clears watchdog goroutines; services keep running as daemons.
 		sup.StopAll()
@@ -402,15 +549,33 @@ func main() {
 	for i, l := range listeners {
 		addrs[i] = l.Addr().String()
 	}
-	slog.Info("gateway listening", "addr", cfg.Listen, "listeners", addrs, "registry-dir", cfg.RegistryDir, "sockets-dir", cfg.SocketsDir)
+	slog.Info("gateway listening", "addr", cfg.Listen, "listeners", addrs, "registry-dir", cfg.RegistryDir, "sockets-dir", cfg.SocketsDir, "mode", mode)
 	// One http.Server over every listener, so srv.Shutdown closes them all and
 	// each Serve returns ErrServerClosed. Any other Serve error is fatal.
 	serveErrs := make(chan error, len(listeners))
 	for _, l := range listeners {
 		go func(l net.Listener) { serveErrs <- srv.Serve(l) }(l)
 	}
+	if kc != nil {
+		// Serving: from here the keeper may close a predecessor's listeners.
+		if err := kc.sendReady(); err != nil {
+			fatal(fmt.Sprintf("gateway: fatal: tell the keeper this gateway serves: %v", err), "keeper ready failed", err)
+		}
+		go func() {
+			// The keeper gone means nothing can spawn and every child is
+			// orphaned: shut down (its service manager restarts the stack).
+			<-kc.closed
+			if !proxy.handover.gate.isReplaced() {
+				// The services first: their watchdog must not restart a
+				// Postgres the launcher is stopping.
+				slog.Error("the keeper is gone; shutting down")
+				sup.StopAll()
+				cancel()
+			}
+		}()
+	}
 	for range listeners {
-		if err := <-serveErrs; err != nil && err != http.ErrServerClosed {
+		if err := <-serveErrs; err != nil && err != http.ErrServerClosed && !proxy.handover.handedOver() {
 			slog.Error("server error", "err", err)
 			os.Exit(1)
 		}
@@ -422,6 +587,12 @@ func main() {
 	<-shutdownDone
 	slog.Info("gateway stopped")
 }
+
+// handoverDrainBudget bounds how long a replaced generation waits for the
+// client connections it holds: past every client's keep-alive idle timeout
+// (Go 90 s, Caddy 2 min, Chrome 5 min), and an agent's MCP call can
+// legitimately run for minutes.
+const handoverDrainBudget = 6 * time.Minute
 
 // loopbackHost is the -listen host keyword for "loopback only, both
 // families": loopback:<port> binds 127.0.0.1:<port> AND [::1]:<port>. It is

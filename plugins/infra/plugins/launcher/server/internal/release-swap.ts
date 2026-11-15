@@ -44,6 +44,7 @@ import {
   selfContainedGatewayOptions,
 } from "./boot";
 import { LOOPBACK_BIND, type ListenAddress } from "./listen";
+import { handOverGateway } from "./gateway-handover";
 
 /** Which release a bundle is, from its `RELEASE.json`. */
 export interface ReleaseManifest {
@@ -267,6 +268,11 @@ export async function swapReleaseBackend(opts: {
   next: HostGeneration;
   spec: WorktreeSpec;
   listen: ListenAddress;
+  /** This bundle's sealed gateway (`bundledGateway`), for a gateway-only difference. */
+  gateway: Ready<BuildSource>;
+  /** This bundle's root, the handed-over gateway's cwd. */
+  bundleRoot: string;
+  log: (line: string) => void;
 }): Promise<SwapOutcome> {
   const running = await readHostGeneration();
   if (running === undefined) {
@@ -279,7 +285,43 @@ export async function swapReleaseBackend(opts: {
   const changed = (Object.keys(opts.next.parts) as (keyof HostParts)[]).filter(
     (k) => running.parts[k] !== opts.next.parts[k],
   );
-  if (changed.length > 0) {
+  if (changed.length === 1 && changed[0] === "gateway") {
+    // Only the gateway binary differs: its keeper hands the running gateway
+    // over to this bundle's — same sockets, same flags and environment, same
+    // backend, Postgres untouched — and the backend swap below runs through
+    // the new one. A flag, Postgres or PgBouncer change still restarts the
+    // host.
+    const binary = unbundledExecutable(gatewayBuild(opts.gateway)).path;
+    const handed = await handOverGateway({
+      dialAddress: gatewayDialAddress(opts.listen),
+      // Its cwd too: the first launch's bundle may be pruned later, and a
+      // generation (re)started there could not chdir.
+      launch: { binary, dir: opts.bundleRoot },
+    });
+    switch (handed.kind) {
+      case "no-keeper":
+        return {
+          kind: "host-differs",
+          reason:
+            "this release changes the host's gateway, and the running one predates handovers",
+        };
+      case "failed":
+        return {
+          kind: "failed",
+          reason: `the gateway handover failed (the running gateway keeps serving): ${handed.reason}`,
+        };
+      case "handed-over":
+        opts.log(
+          `[gateway handover] the gateway is now ${binary} (PID ${handed.pid}, ${handed.tookMs} ms); no request waited`,
+        );
+        // The host now runs this gateway: the next ship compares against it.
+        await writeHostGeneration({
+          ...running,
+          parts: { ...running.parts, gateway: opts.next.parts.gateway },
+        });
+        break;
+    }
+  } else if (changed.length > 0) {
     return {
       kind: "host-differs",
       reason: `this release changes the host's ${changed.join(", ")}`,

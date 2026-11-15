@@ -378,6 +378,12 @@ func (r *Registry) sweepable(wt *Worktree) bool {
 	if wt.Name == r.cfg.publicNamespace() {
 		return false
 	}
+	// No sweep while a handover freezes this generation, nor while the one
+	// it replaced still drains (its requests to a backend are not counted
+	// here — handover.go).
+	if !r.cfg.Gate.open() || !r.cfg.predecessorGone() {
+		return false
+	}
 	return wt.ShouldSweep(r.cfg.IdleTimeout)
 }
 
@@ -563,6 +569,13 @@ func socketStem(name string) string {
 // loudly and leave it; the per-spawn unlink and the backend's own ppid-poll
 // escape hatch clean it up.
 func reconcileOrphanBackends(dir string, reg *Registry) {
+	reconcileOrphanBackendsKeeping(dir, reg, nil)
+}
+
+// reconcileOrphanBackendsKeeping is the reconcile for a generation that
+// adopted backends from its predecessor (adopt.go): a socket whose sidecar
+// names an adopted pid is this generation's own, never an orphan.
+func reconcileOrphanBackendsKeeping(dir string, reg *Registry, keep map[int]bool) {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		slog.Warn("sockets dir scan failed", "dir", dir, "err", err)
@@ -579,6 +592,11 @@ func reconcileOrphanBackends(dir string, reg *Registry) {
 		}
 		sockets[name] = true
 		path := filepath.Join(dir, name)
+		if len(keep) > 0 {
+			if sc, err := readBackendSidecar(path); err == nil && keep[sc.PID] {
+				continue
+			}
+		}
 		stem := socketStem(name)
 		wg.Add(1)
 		sem <- struct{}{}

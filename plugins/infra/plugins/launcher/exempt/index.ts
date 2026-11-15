@@ -2,6 +2,13 @@ import type { Exemptions } from "@plugins/framework/plugins/tooling/plugins/exem
 
 export default [
   {
+    rule: "no-raw-websocket",
+    paths: ["scripts/gateway-load-probe.ts"],
+    kind: "sanctioned",
+    reason:
+      "The gateway load probe is a measuring client outside the app: it holds raw sockets to a site's /ws/notifications to count how often a gateway update closes one and how long a reconnect takes — the app's transports would hide exactly that behind their own reconnects.",
+  },
+  {
     rule: "paths:data-root-not-joined",
     paths: ["bin/launch.ts"],
     kind: "sanctioned",

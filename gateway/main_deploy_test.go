@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"reflect"
 	"strings"
@@ -88,12 +87,9 @@ func testDeployer(t *testing.T, script string) (*mainDeployer, string, string, *
 	}
 	d.debounce = 50 * time.Millisecond
 	runs := &atomic.Int32{}
-	d.spawn = func(logFile *os.File) (*exec.Cmd, error) {
+	d.spawn = func(logPath string, _ json.RawMessage) (*child, error) {
 		runs.Add(1)
-		cmd := exec.Command("sh", "-c", script)
-		cmd.Stdout = logFile
-		cmd.Stderr = logFile
-		return cmd, cmd.Start()
+		return shRun(script, logPath)
 	}
 	return d, logDir, outbox, runs
 }
@@ -158,11 +154,8 @@ func TestMainDeployFailureIsReportedWithItsOwnTail(t *testing.T) {
 	d, _, outbox, _ := testDeployer(t, "echo first-run; exit 0")
 	d.Trigger("gateway boot")
 	waitRunEnded(t, d)
-	d.spawn = func(logFile *os.File) (*exec.Cmd, error) {
-		cmd := exec.Command("sh", "-c", "echo deciding; echo boom >&2; exit 3")
-		cmd.Stdout = logFile
-		cmd.Stderr = logFile
-		return cmd, cmd.Start()
+	d.spawn = func(logPath string, _ json.RawMessage) (*child, error) {
+		return shRun("echo deciding; echo boom >&2; exit 3", logPath)
 	}
 	d.Trigger("ref advanced")
 	waitRunEnded(t, d)
@@ -186,9 +179,8 @@ func TestMainDeployFailureIsReportedWithItsOwnTail(t *testing.T) {
 // A run that cannot start is a report too, and leaves no run going.
 func TestMainDeploySpawnFailureIsReported(t *testing.T) {
 	d, _, outbox, _ := testDeployer(t, "")
-	d.spawn = func(logFile *os.File) (*exec.Cmd, error) {
-		cmd := exec.Command(filepath.Join(t.TempDir(), "missing"))
-		return cmd, cmd.Start()
+	d.spawn = func(logPath string, _ json.RawMessage) (*child, error) {
+		return startChild(spawnSpec{Argv: []string{filepath.Join(t.TempDir(), "missing")}})
 	}
 	d.Trigger("gateway boot")
 	waitRunEnded(t, d)
@@ -207,7 +199,7 @@ func TestMainDeployWatchesRefsHeadsMain(t *testing.T) {
 	d, _, _, runs := testDeployer(t, "exit 0")
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	if err := d.Start(ctx); err != nil {
+	if err := d.Start(ctx, nil); err != nil {
 		t.Fatal(err)
 	}
 	waitRunEnded(t, d)
@@ -247,4 +239,14 @@ func TestNewMainDeployerRefusesALinkedWorktree(t *testing.T) {
 	if _, err := newMainDeployer(dir, ChildEnv{}, t.TempDir(), t.TempDir()); err == nil || !strings.Contains(err.Error(), "linked worktree") {
 		t.Fatalf("err: %v", err)
 	}
+}
+
+// shRun runs `sh -c script` as a deploy run, its output appended to logPath.
+func shRun(script, logPath string) (*child, error) {
+	return startChild(spawnSpec{
+		Argv:   []string{"/bin/sh", "-c", script},
+		Env:    []string{"PATH=/usr/bin:/bin"},
+		Stdout: outputTo{Path: logPath},
+		Stderr: outputTo{Path: logPath},
+	})
 }

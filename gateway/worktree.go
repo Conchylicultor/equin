@@ -14,7 +14,6 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -211,8 +210,8 @@ var ErrBootFailed = errors.New("the backend's last boot failed, and background r
 // A Worktree holds at most one active *backend; a second may exist briefly
 // as the "draining" old backend during a hot restart.
 type backend struct {
-	cmd        *exec.Cmd
-	exitCh     chan struct{} // closed when cmd.Wait returns
+	proc       *child        // the process; its parent is the keeper, or this gateway (spawn.go)
+	exitCh     chan struct{} // closed once its exit has been handled (onBackendExit)
 	startedAt  int64         // epoch ms of spawn; bounds the stderr tail an early exit reports
 	socketPath string
 	proxy      *httputil.ReverseProxy // nil until waitReady succeeds
@@ -414,6 +413,15 @@ func (w *Worktree) restartTargetPath(serving *backend) string {
 // the priority of a spawn this call begins; a StartBrowser caller joining a
 // background spawn promotes it at once.
 func (w *Worktree) Ensure(ctx context.Context, reason StartReason, cause string) (*backend, error) {
+	// A cold start is a lifecycle transition: admitted by the gate (handover.go),
+	// which a handover freezes. Taken only on the slow path, never under mu.
+	var release func()
+	defer func() {
+		if release != nil {
+			release()
+		}
+	}()
+again:
 	w.mu.Lock()
 
 	switch p := w.phase.(type) {
@@ -480,6 +488,15 @@ func (w *Worktree) Ensure(ctx context.Context, reason StartReason, cause string)
 	}
 
 	// Idle or cooled-down Broken: begin a cold start.
+	if release == nil {
+		w.mu.Unlock()
+		rel, err := w.cfg.Gate.enter(ctx)
+		if err != nil {
+			return nil, err
+		}
+		release = rel
+		goto again
+	}
 	att := newSpawnAttempt()
 	w.phase = phaseStarting{spawn: att}
 	spec := w.Spec()
@@ -516,6 +533,11 @@ var errDeployRaced = errors.New("the backend's state changed before the deploy c
 // w.Spec(). Unlike Ensure it never joins or returns a backend it did not boot
 // from the candidate: in any other state it returns errDeployRaced.
 func (w *Worktree) DeployStart(ctx context.Context, cand *DeploySpec, cause string) error {
+	release, err := w.cfg.Gate.enter(ctx)
+	if err != nil {
+		return err
+	}
+	defer release()
 	w.mu.Lock()
 	switch w.phase.(type) {
 	case phaseIdle, phaseBroken:
@@ -527,7 +549,7 @@ func (w *Worktree) DeployStart(ctx context.Context, cand *DeploySpec, cause stri
 	att := newSpawnAttempt()
 	w.phase = phaseStarting{spawn: att}
 	w.mu.Unlock()
-	_, err := w.coldStart(att, cand.spec, cand, StartDeploy, cause)
+	_, err = w.coldStart(att, cand.spec, cand, StartDeploy, cause)
 	return err
 }
 
@@ -671,6 +693,11 @@ const postKillTimeout = 3 * time.Second
 // never earlier, so neither static serving nor a respawn sees it before its
 // backend is ready, and a failed restart leaves the spec as it was.
 func (w *Worktree) Restart(ctx context.Context, cand *DeploySpec) error {
+	release, err := w.cfg.Gate.enter(ctx)
+	if err != nil {
+		return err
+	}
+	defer release()
 	w.restartMu.Lock()
 	defer w.restartMu.Unlock()
 
@@ -784,7 +811,7 @@ func (w *Worktree) Restart(ctx context.Context, cand *DeploySpec) error {
 		"old_socket", oldBk.socketPath, "new_socket", newSocketPath)
 
 	// --- Step 4: Drain old backend in background ---
-	go w.drainAndStop(oldBk)
+	go w.drainAfterPredecessor(oldBk)
 	return nil
 }
 
@@ -799,6 +826,25 @@ func (w *Worktree) restartLost(att *spawnAttempt, newBk *backend, found phase) e
 	}
 	att.settle(nil, err)
 	return err
+}
+
+// drainAfterPredecessor drains and stops bk once no older generation can be
+// proxying to it (handover.go) — the wait outside the lifecycle gate, so a
+// long predecessor drain never holds up a handover — then as a lifecycle
+// transition of its own: a handover waits for the drain itself, and a
+// generation replaced meanwhile leaves bk to its successor (which adopts it
+// and drains it the same way, adopt.go).
+func (w *Worktree) drainAfterPredecessor(bk *backend) {
+	if pg := w.cfg.PredecessorGone; pg != nil {
+		<-pg
+	}
+	release, err := w.cfg.Gate.enter(context.Background())
+	if err != nil {
+		slog.Info("hot restart: the draining backend is the successor's to stop", "worktree", w.Name, "pid", backendPID(bk), "err", err)
+		return
+	}
+	defer release()
+	w.drainAndStop(bk)
 }
 
 // drainAndStop lets in-flight HTTP requests on bk finish (up to drainTimeout)
@@ -847,6 +893,11 @@ func (w *Worktree) Stop(ctx context.Context) error { return w.stop(ctx, false) }
 func (w *Worktree) StopHeld(ctx context.Context) error { return w.stop(ctx, true) }
 
 func (w *Worktree) stop(ctx context.Context, held bool) error {
+	release, err := w.cfg.Gate.enter(ctx)
+	if err != nil {
+		return err
+	}
+	defer release()
 	for {
 		w.mu.Lock()
 		var wait <-chan struct{}
@@ -1084,76 +1135,82 @@ func (w *Worktree) startBackend(spec *Spec, socketPath string, reason StartReaso
 	// The backend's namespace and socket travel on argv (backendLaunch),
 	// appended last so they are arguments of the backend, not of the wrapper.
 	argv = append(append([]string{}, argv...), backendLaunch(w.Name, socketPath)...)
-	cmd := w.cfg.ChildEnv.Command(argv[0], argv[1:]...)
-	cmd.Dir = spec.Server
-	// The backend's environment is exactly the declared runtime environment
-	// (-child-env, captured once at boot — see env.go) plus the spec's own
-	// entries (Spec.Env, which win). Nothing the gateway's starter carried
-	// reaches a backend unless it was declared.
-	cmd.Env = w.cfg.ChildEnv.With(spec.envEntries()...)
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		return nil, err
-	}
-	// stderr is a pipe the gateway owns, not cmd.StderrPipe: cmd.Wait closes
-	// that one's read end as soon as the process exits, dropping whatever is
-	// still buffered in it — and a crashing Bun writes its panic block last.
-	// This read end stays open until the pump reads EOF.
-	stderr, stderrW, err := os.Pipe()
-	if err != nil {
-		return nil, err
-	}
-	cmd.Stderr = stderrW
 	now := time.Now()
 	marker := fmt.Sprintf("--- starting %s ---", w.Name)
 	fmt.Fprintf(w.logFile, "%s [gateway] %s\n", now.Format(time.RFC3339), marker)
 	w.logBuf.Append("gateway", marker, now.UnixMilli())
-	err = cmd.Start()
-	// The child holds its own copy of the write end; the gateway's would keep
-	// the pipe from ever reaching EOF.
-	_ = stderrW.Close()
+	executable := filepath.Base(argv[0])
+	if len(spec.Command) > 0 {
+		// The binary the backend runs, not the taskpolicy wrapper in front of it.
+		executable = filepath.Base(spec.Command[0])
+	}
+	tag, _ := json.Marshal(childTag{Kind: childBackend, Worktree: w.Name, Socket: socketPath,
+		StartedAt: now.UnixMilli(), Executable: executable, Checkout: spec.Server})
+	// The backend's environment is exactly the declared runtime environment
+	// (-child-env, captured once at boot — see env.go) plus the spec's own
+	// entries (Spec.Env, which win). Nothing the gateway's starter carried
+	// reaches a backend unless it was declared.
+	//
+	// stderr is a pipe the gateway owns (not cmd.StderrPipe, whose read end
+	// cmd.Wait closes as soon as the process exits, dropping whatever is still
+	// buffered in it — and a crashing Bun writes its panic block last). Its
+	// read end stays open until the pump reads EOF.
+	proc, err := w.cfg.spawner().spawn(spawnSpec{
+		Argv:   argv,
+		Env:    w.cfg.ChildEnv.With(spec.envEntries()...),
+		Dir:    spec.Server,
+		Stdout: outputTo{Pipe: true},
+		Stderr: outputTo{Pipe: true},
+		Tag:    tag,
+	})
 	if err != nil {
-		_ = stderr.Close()
 		return nil, err
 	}
 
 	// Record a durable pid sidecar next to the socket so a future gateway
 	// generation can reap this backend if we die before stopping it. Best-effort:
 	// a missing sidecar degrades to the reconcile's "live, no record" branch.
-	if err := writeBackendSidecar(socketPath, w.Name, cmd); err != nil {
+	if err := writeBackendSidecar(socketPath, w.Name, proc.Pid); err != nil {
 		slog.Warn("write pid sidecar failed", "worktree", w.Name, "socket", socketPath, "err", err)
 	}
 
 	bk := &backend{
-		cmd:        cmd,
+		proc:       proc,
 		exitCh:     make(chan struct{}),
 		startedAt:  now.UnixMilli(),
 		socketPath: socketPath,
 		demoted:    demoted,
 		stderrTail: newLineTail(crashTailLines),
 		stderrDone: make(chan struct{}),
-		executable: filepath.Base(argv[0]),
+		executable: executable,
 		checkout:   spec.Server,
 	}
-	if len(spec.Command) > 0 {
-		// The binary the backend runs, not the taskpolicy wrapper in front of it.
-		bk.executable = filepath.Base(spec.Command[0])
-	}
-	log := slog.With("worktree", w.Name, "pid", cmd.Process.Pid, "socket", socketPath)
-	go pumpLog(stdout, "stdout", w.logBuf, w.logFile, nil)
-	go func() {
-		pumpLog(stderr, "stderr", w.logBuf, w.logFile, bk.stderrTail)
-		close(bk.stderrDone)
-	}()
-	go func() {
-		err := cmd.Wait()
-		w.onBackendExit(bk, err, time.Now())
-		close(bk.exitCh)
-	}()
+	log := slog.With("worktree", w.Name, "pid", proc.Pid, "socket", socketPath)
+	w.superviseBackend(bk)
 	log.Info("backend spawned")
 	return bk, nil
+}
+
+// superviseBackend pumps bk's output into the worktree's log channels and
+// handles its exit — for a backend this generation spawned, and for one it
+// adopted from its predecessor (adopt.go).
+func (w *Worktree) superviseBackend(bk *backend) {
+	if bk.proc.Stdout != nil {
+		go pumpLog(bk.proc.Stdout, "stdout", w.logBuf, w.logFile, nil)
+	}
+	if bk.proc.Stderr != nil {
+		go func() {
+			pumpLog(bk.proc.Stderr, "stderr", w.logBuf, w.logFile, bk.stderrTail)
+			close(bk.stderrDone)
+		}()
+	} else {
+		close(bk.stderrDone)
+	}
+	go func() {
+		<-bk.proc.done
+		w.onBackendExit(bk, bk.proc.status, time.Now())
+		close(bk.exitCh)
+	}()
 }
 
 // onBackendExit is invoked from the cmd.Wait goroutine. It ends a phase only
@@ -1167,17 +1224,13 @@ func (w *Worktree) startBackend(spec *Spec, socketPath string, reason StartReaso
 // segfault, a kill from outside) or by an exit code nobody asked for — is
 // filed as a report and counted toward a crash loop (reportBackendDeath,
 // exit_report.go), whichever backend it was: a draining one too.
-func (w *Worktree) onBackendExit(bk *backend, err error, exitedAt time.Time) {
+func (w *Worktree) onBackendExit(bk *backend, st childStatus, exitedAt time.Time) {
 	if !bk.signalled.Load() {
-		var ps *os.ProcessState
-		if bk.cmd != nil {
-			ps = bk.cmd.ProcessState
-		}
-		if d, ok := deathOf(ps); ok {
+		if d, ok := deathOf(st); ok {
 			go w.reportBackendDeath(bk, d, exitedAt)
 		} else {
 			slog.Error("backend died and its wait status is unreadable; not reported",
-				"worktree", w.Name, "pid", backendPID(bk), "err", err)
+				"worktree", w.Name, "pid", backendPID(bk), "err", st.Err)
 		}
 	}
 
@@ -1200,7 +1253,8 @@ func (w *Worktree) onBackendExit(bk *backend, err error, exitedAt time.Time) {
 	if ended == "" {
 		return
 	}
-	slog.Warn("backend exited unexpectedly", "worktree", w.Name, "pid", backendPID(bk), "now", ended, "err", err)
+	slog.Warn("backend exited unexpectedly", "worktree", w.Name, "pid", backendPID(bk), "now", ended,
+		"code", st.Code, "signaled", st.Signaled, "err", st.Err)
 	w.releaseBackendArtifacts(bk)
 }
 
@@ -1306,7 +1360,7 @@ func (w *Worktree) abandonUnreadyBackend(bk *backend, phase string, wait readyWa
 // how long it waited, since the stop's own log line cannot tell a clean exit
 // from a kill. why names the caller.
 func (w *Worktree) terminateBackend(ctx context.Context, bk *backend, why string) {
-	if bk.cmd == nil || bk.cmd.Process == nil {
+	if bk.proc == nil {
 		return
 	}
 	signalBackend(bk, syscall.SIGTERM, w.Name)
@@ -1521,12 +1575,12 @@ func killPgid(pgid int, sig syscall.Signal) error {
 	return syscall.Kill(-pgid, sig)
 }
 
-// killGroup signals the process group of cmd.
-func killGroup(cmd *exec.Cmd, sig syscall.Signal) error {
-	if cmd == nil || cmd.Process == nil {
+// killGroup signals the process group of p (its own group leader: Setpgid).
+func killGroup(p *child, sig syscall.Signal) error {
+	if p == nil {
 		return nil
 	}
-	return killPgid(cmd.Process.Pid, sig)
+	return killPgid(p.Pid, sig)
 }
 
 // signalBackend sends sig to the backend's process group and logs any error
@@ -1535,7 +1589,7 @@ func killGroup(cmd *exec.Cmd, sig syscall.Signal) error {
 func signalBackend(bk *backend, sig syscall.Signal, worktree string) {
 	// Before the kill: the exit it causes must find the mark.
 	bk.signalled.Store(true)
-	if err := killGroup(bk.cmd, sig); err != nil && !errors.Is(err, syscall.ESRCH) {
+	if err := killGroup(bk.proc, sig); err != nil && !errors.Is(err, syscall.ESRCH) {
 		slog.Warn("signal backend failed",
 			"worktree", worktree, "signal", sig.String(), "pid", backendPID(bk), "err", err)
 	}
@@ -1558,10 +1612,10 @@ func waitBackendExit(bk *backend, worktree string, timeout time.Duration) bool {
 
 // backendPID returns the backend's pid for logging, or -1 if unknown.
 func backendPID(bk *backend) int {
-	if bk == nil || bk.cmd == nil || bk.cmd.Process == nil {
+	if bk == nil || bk.proc == nil {
 		return -1
 	}
-	return bk.cmd.Process.Pid
+	return bk.proc.Pid
 }
 
 // processAlive reports whether pid names a live process (signal-0 probe).
@@ -1613,11 +1667,10 @@ func sidecarPath(socketPath string) string { return socketPath + ".pid" }
 
 // writeBackendSidecar atomically writes the pid record for a freshly-spawned
 // backend. pgid == pid because the backend is its own group leader (Setpgid).
-func writeBackendSidecar(socketPath, worktree string, cmd *exec.Cmd) error {
-	if cmd == nil || cmd.Process == nil {
+func writeBackendSidecar(socketPath, worktree string, pid int) error {
+	if pid <= 0 {
 		return errors.New("no process to record")
 	}
-	pid := cmd.Process.Pid
 	data, err := json.Marshal(backendSidecar{
 		PID:       pid,
 		PGID:      pid,

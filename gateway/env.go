@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"syscall"
 )
 
 // ─── the environment every child process starts from ─────────
@@ -198,4 +199,79 @@ const envPrefix = "EQUIN_"
 // readEnv returns the value of the app variable `key`, or "" when it is unset.
 func readEnv(key string) string {
 	return os.Getenv(envPrefix + key)
+}
+
+// ─── the exec sites of long-lived children (spawn.go, keeper.go) ─────────
+
+// startChild starts a long-lived child from its spec — the environment is the
+// spec's own, always explicit (a nil Env would inherit this process's). The
+// write ends of its output pipes are closed here once it holds them, so the
+// read ends reach EOF when it (and whatever it started) exits. A goroutine
+// waits for it and closes done with its status.
+func startChild(s spawnSpec) (*child, error) {
+	if len(s.Argv) == 0 {
+		return nil, errors.New("spawn: empty argv")
+	}
+	cmd := exec.Command(s.Argv[0], s.Argv[1:]...)
+	cmd.Env = append([]string{}, s.Env...)
+	cmd.Dir = s.Dir
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	outW, outR, err := openOutput(s.Stdout)
+	if err != nil {
+		return nil, fmt.Errorf("stdout: %w", err)
+	}
+	errW, errR, err := openOutput(s.Stderr)
+	if err != nil {
+		closeFiles(outW, outR)
+		return nil, fmt.Errorf("stderr: %w", err)
+	}
+	if outW != nil {
+		cmd.Stdout = outW
+	}
+	if errW != nil {
+		cmd.Stderr = errW
+	}
+	err = cmd.Start()
+	// The child holds its own copies of the write ends.
+	closeFiles(outW, errW)
+	if err != nil {
+		closeFiles(outR, errR)
+		return nil, err
+	}
+	c := &child{Pid: cmd.Process.Pid, Stdout: outR, Stderr: errR, done: make(chan struct{})}
+	go func() {
+		werr := cmd.Wait()
+		c.exited(statusOf(cmd.ProcessState, werr))
+	}()
+	return c, nil
+}
+
+func closeFiles(fs ...*os.File) {
+	for _, f := range fs {
+		if f != nil {
+			_ = f.Close()
+		}
+	}
+}
+
+// startGeneration starts one gateway generation for the keeper: binary and
+// args from its launch, the launch's own environment (explicit), the keeper's
+// stdout/stderr (the service's stdio log), and extra as fd 3, 4, …. Not its
+// own process group: a service manager stopping the keeper's group stops it
+// with the keeper.
+func startGeneration(binary string, args, env []string, dir string, extra []*os.File) (*exec.Cmd, error) {
+	cmd := exec.Command(binary, args...)
+	cmd.Env = append([]string{}, env...)
+	cmd.Dir = dir
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.ExtraFiles = extra
+	return cmd, cmd.Start()
+}
+
+// keeperOwnEnvironment is the keeper's whole environment: what its first
+// generation starts with, exactly as a gateway with no keeper ran with it. A
+// later generation runs with the environment its handover named.
+func keeperOwnEnvironment() []string {
+	return os.Environ()
 }

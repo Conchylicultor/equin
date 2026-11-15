@@ -31,7 +31,7 @@ func runFakeBackend(t *testing.T, wt *Worktree) (*backend, int) {
 		t.Fatalf("start sleep: %v", err)
 	}
 	t.Cleanup(func() { _ = cmd.Process.Kill() })
-	bk := &backend{cmd: cmd, exitCh: make(chan struct{}), socketPath: wt.primarySocketPath(), proxy: newReverseProxy(wt.primarySocketPath())}
+	bk := &backend{proc: procOf(cmd), exitCh: make(chan struct{}), socketPath: wt.primarySocketPath(), proxy: newReverseProxy(wt.primarySocketPath())}
 	go func() {
 		_ = cmd.Wait()
 		close(bk.exitCh)
@@ -201,4 +201,10 @@ func TestStopRouteHoldOnIdle(t *testing.T) {
 	if st := decodeStatus(t, postStop(fx2.proxy, "alpha")); st.Held {
 		t.Fatalf("plain stop: %+v, want not held", st)
 	}
+}
+
+// procOf is a started command as a backend's process (its exit is the test's
+// to handle).
+func procOf(cmd *exec.Cmd) *child {
+	return &child{Pid: cmd.Process.Pid, done: make(chan struct{})}
 }

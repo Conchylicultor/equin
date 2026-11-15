@@ -283,7 +283,7 @@ func TestReconcileReapsLiveOrphan(t *testing.T) {
 	go func() { _ = cmd.Wait() }()
 	t.Cleanup(func() { _ = cmd.Process.Kill() })
 
-	if err := writeBackendSidecar(sockPath, "wt", cmd); err != nil {
+	if err := writeBackendSidecar(sockPath, "wt", cmd.Process.Pid); err != nil {
 		t.Fatalf("writeBackendSidecar: %v", err)
 	}
 
@@ -460,7 +460,7 @@ func TestOnBackendExitIgnoresDraining(t *testing.T) {
 	wt.mu.Unlock()
 
 	// Simulate the draining backend exiting — should NOT change state.
-	wt.onBackendExit(drainingBk, nil, time.Now())
+	wt.onBackendExit(drainingBk, childStatus{}, time.Now())
 
 	wt.mu.Lock()
 	p, running := wt.phase.(phaseRunning)

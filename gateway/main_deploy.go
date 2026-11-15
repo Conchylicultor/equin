@@ -3,12 +3,12 @@ package main
 import (
 	"bufio"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"log/slog"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -118,13 +118,19 @@ type mainDeployer struct {
 	logPath   string
 	outboxDir string
 	debounce  time.Duration
+	// spawner starts the run as a long-lived child (spawn.go): under the
+	// keeper, a generation that replaces this one adopts it.
+	spawner spawner
 
-	// spawn starts the run; a field so tests can stand in a fake command.
-	spawn func(logFile *os.File) (*exec.Cmd, error)
+	// spawn starts the run, its output appended to logPath; a field so tests
+	// can stand in a fake command.
+	spawn func(logPath string, tag json.RawMessage) (*child, error)
+	// gate: a handover freezes the start of a run (handover.go); nil admits.
+	gate *lifecycleGate
 
 	mu      sync.Mutex
 	ref     string
-	running *exec.Cmd
+	running *child
 	// pending holds the causes of edges not yet given to a run: waiting out
 	// the debounce, or arrived while a run was going.
 	pending []string
@@ -156,6 +162,7 @@ func newMainDeployer(checkout string, env ChildEnv, logDir, outboxDir string) (*
 		return nil, fmt.Errorf("-main-checkout %s: no CLI at %s: %w", checkout, cli, err)
 	}
 	d := &mainDeployer{
+		spawner:   localSpawner{},
 		checkout:  checkout,
 		gitDir:    gitDir,
 		env:       env,
@@ -164,24 +171,28 @@ func newMainDeployer(checkout string, env ChildEnv, logDir, outboxDir string) (*
 		debounce:  mainDeployDebounce,
 		runEnded:  make(chan struct{}, 1),
 	}
-	d.spawn = func(logFile *os.File) (*exec.Cmd, error) {
-		cmd := env.Command(cli, "build", "--allow-main", "--converge")
-		cmd.Dir = checkout
-		// The CLI's orphan guard exits a command whose parent dies; this run
-		// must outlive a gateway restart (see the header).
-		cmd.Env = env.With(envPrefix + "BUILD_DETACHED=1")
-		cmd.Stdin = nil
-		cmd.Stdout = logFile
-		cmd.Stderr = logFile
-		cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-		return cmd, cmd.Start()
+	d.spawn = func(logPath string, tag json.RawMessage) (*child, error) {
+		return d.spawner.spawn(spawnSpec{
+			Argv: []string{cli, "build", "--allow-main", "--converge"},
+			Dir:  checkout,
+			// The CLI's orphan guard exits a command whose parent dies; this run
+			// must outlive a gateway restart (see the header).
+			Env:    env.With(envPrefix + "BUILD_DETACHED=1"),
+			Stdout: outputTo{Path: logPath},
+			Stderr: outputTo{Path: logPath},
+			Tag:    tag,
+		})
 	}
 	return d, nil
 }
 
 // Start sets up the refs/heads/main watch — an error here fails the boot — then
 // fires the boot edge and keeps watching until ctx ends.
-func (d *mainDeployer) Start(ctx context.Context) error {
+//
+// inherited is a predecessor's state (a handover): its pending edges carry
+// over and there is no boot edge — this is not a boot, and the run the
+// predecessor may have going was adopted (adoptRun).
+func (d *mainDeployer) Start(ctx context.Context, inherited *deployState) error {
 	w, err := fsnotify.NewWatcher()
 	if err != nil {
 		return err
@@ -194,8 +205,18 @@ func (d *mainDeployer) Start(ctx context.Context) error {
 			return fmt.Errorf("watch %s: %w", dir, err)
 		}
 	}
-	d.recheckRef("") // record the starting value; the boot edge covers it
-	d.Trigger("gateway boot")
+	if inherited != nil {
+		d.mu.Lock()
+		d.ref = inherited.Ref
+		d.mu.Unlock()
+		for _, c := range inherited.Pending {
+			d.Trigger(c)
+		}
+		d.recheckRef("ref advanced during a gateway handover")
+	} else {
+		d.recheckRef("") // record the starting value; the boot edge covers it
+		d.Trigger("gateway boot")
+	}
 	go d.watch(ctx, w)
 	return nil
 }
@@ -303,8 +324,19 @@ func (d *mainDeployer) armLocked() {
 	d.timer = time.AfterFunc(d.debounce, d.start)
 }
 
-// start runs the pending edges' convergence, unless a run already goes.
+// start runs the pending edges' convergence, unless a run already goes. A
+// handover in progress defers it (the edges travel to the successor, or run
+// here once the handover is abandoned).
 func (d *mainDeployer) start() {
+	if !d.gate.open() {
+		if d.gate.isReplaced() {
+			return
+		}
+		d.mu.Lock()
+		d.armLocked()
+		d.mu.Unlock()
+		return
+	}
 	d.mu.Lock()
 	if d.running != nil || len(d.pending) == 0 {
 		d.mu.Unlock()
@@ -314,12 +346,11 @@ func (d *mainDeployer) start() {
 	d.pending = nil
 	startedAt := time.Now()
 
-	logFile, offset, err := d.openLog()
-	var cmd *exec.Cmd
+	offset, err := d.openLog()
+	var c *child
 	if err == nil {
-		cmd, err = d.spawn(logFile)
-		// The child holds its own copy of the descriptor.
-		_ = logFile.Close()
+		tag, _ := json.Marshal(childTag{Kind: childDeployRun, Causes: causes, StartedAt: startedAt.UnixMilli(), LogOffset: offset})
+		c, err = d.spawn(d.logPath, tag)
 	}
 	if err != nil {
 		d.mu.Unlock()
@@ -328,37 +359,59 @@ func (d *mainDeployer) start() {
 		d.finish(causes, startedAt, mainDeployFailed{SpawnError: &msg}, offset)
 		return
 	}
-	d.running = cmd
+	d.running = c
 	d.mu.Unlock()
-	slog.Info("main deploy: convergence run started", "pid", cmd.Process.Pid, "causes", causes, "log", d.logPath)
-	go func() {
-		werr := cmd.Wait()
-		var f mainDeployFailed
-		ok := werr == nil
-		if !ok {
-			var exit *exec.ExitError
-			if !errors.As(werr, &exit) {
-				msg := werr.Error()
-				f.SpawnError = &msg
-			} else if ws, isWs := exit.Sys().(syscall.WaitStatus); isWs && ws.Signaled() {
-				sig := signalName(ws.Signal())
-				f.Signal = &sig
-			} else {
-				code := exit.ExitCode()
-				f.ExitCode = &code
-			}
-		}
-		d.mu.Lock()
-		d.running = nil
-		d.mu.Unlock()
-		if ok {
-			slog.Info("main deploy: convergence run finished", "causes", causes)
-			d.finish(causes, startedAt, mainDeployFailed{}, -1)
-		} else {
-			slog.Error("main deploy: convergence run failed", "causes", causes, "err", werr, "log", d.logPath)
-			d.finish(causes, startedAt, f, offset)
-		}
-	}()
+	slog.Info("main deploy: convergence run started", "pid", c.Pid, "causes", causes, "log", d.logPath)
+	go d.await(c, causes, startedAt, offset)
+}
+
+// await waits for a run to end and records how it did.
+func (d *mainDeployer) await(c *child, causes []string, startedAt time.Time, offset int64) {
+	<-c.done
+	st := c.status
+	var f mainDeployFailed
+	switch {
+	case st.success():
+	case st.Err != "":
+		msg := st.Err
+		f.SpawnError = &msg
+	case st.Signaled:
+		sig := signalName(syscall.Signal(st.Signal))
+		f.Signal = &sig
+	default:
+		code := st.Code
+		f.ExitCode = &code
+	}
+	d.mu.Lock()
+	d.running = nil
+	d.mu.Unlock()
+	if d.gate.isReplaced() {
+		return // the successor adopted this run and records it
+	}
+	if st.success() {
+		slog.Info("main deploy: convergence run finished", "causes", causes)
+		d.finish(causes, startedAt, mainDeployFailed{}, -1)
+	} else {
+		slog.Error("main deploy: convergence run failed", "causes", causes, "status", st, "log", d.logPath)
+		d.finish(causes, startedAt, f, offset)
+	}
+}
+
+// adoptRun takes over a run the predecessor started (adopt.go).
+func (d *mainDeployer) adoptRun(c *child, tag childTag) {
+	d.mu.Lock()
+	d.running = c
+	d.mu.Unlock()
+	slog.Info("main deploy: adopted the convergence run in progress", "pid", c.Pid, "causes", tag.Causes)
+	go d.await(c, tag.Causes, time.UnixMilli(tag.StartedAt), tag.LogOffset)
+}
+
+// exportState is what a successor needs to carry on: the ref seen and the
+// edges not yet given to a run.
+func (d *mainDeployer) exportState() *deployState {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	return &deployState{Ref: d.ref, Pending: append([]string{}, d.pending...)}
 }
 
 // finish records a run's end, files a failure, and starts the run edges that
@@ -395,7 +448,15 @@ func (d *mainDeployer) finish(causes []string, startedAt time.Time, f mainDeploy
 
 // openLog opens the run log for appending, rotating it first when it is past
 // its bound, and returns where this run's output starts.
-func (d *mainDeployer) openLog() (*os.File, int64, error) {
+func (d *mainDeployer) openLog() (int64, error) {
+	f, offset, err := d.openLogFile()
+	if err != nil {
+		return 0, err
+	}
+	return offset, f.Close()
+}
+
+func (d *mainDeployer) openLogFile() (*os.File, int64, error) {
 	if info, err := os.Stat(d.logPath); err == nil && info.Size() > mainDeployLogMax {
 		if err := os.Rename(d.logPath, d.logPath+".1"); err != nil {
 			return nil, 0, err
@@ -489,8 +550,8 @@ func (d *mainDeployer) Status() mainDeployStatus {
 		Pending:  append([]string{}, d.pending...),
 		Last:     d.last,
 	}
-	if d.running != nil && d.running.Process != nil {
-		s.Pid = d.running.Process.Pid
+	if d.running != nil {
+		s.Pid = d.running.Pid
 	}
 	return s
 }

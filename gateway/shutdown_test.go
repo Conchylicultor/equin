@@ -20,7 +20,7 @@ func startTermIgnoringBackend(t *testing.T, wt *Worktree) *backend {
 		t.Fatalf("start: %v", err)
 	}
 	t.Cleanup(func() { _ = syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL) })
-	bk := &backend{cmd: cmd, exitCh: make(chan struct{}), socketPath: wt.primarySocketPath(), proxy: newReverseProxy(wt.primarySocketPath())}
+	bk := &backend{proc: procOf(cmd), exitCh: make(chan struct{}), socketPath: wt.primarySocketPath(), proxy: newReverseProxy(wt.primarySocketPath())}
 	go func() {
 		_ = cmd.Wait()
 		close(bk.exitCh)

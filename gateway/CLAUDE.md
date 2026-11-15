@@ -16,7 +16,8 @@ See the top-level [`CLAUDE.md`](../CLAUDE.md) for overall architecture and [`ser
 - Exposes `/gateway/*` on every host as an API for apps to query gateway state
 - **Supervises configured services** (e.g. embedded Postgres) via a generic process supervisor. See "Service supervision" below.
 - **Triggers main's deploy** (`-main-checkout`): on every advance of `refs/heads/main` it runs `./equin build --allow-main --converge` in main's checkout, one run at a time. See "Main's deploy" below.
-- **Is replaced by main's deploy when main changes it**: that same run rebuilds this binary and restarts it — no one runs `./equin start --force` for a pushed gateway change. See "The gateway follows main" below.
+- **Is replaced by main's deploy when main changes it**: that same run rebuilds this binary and hands the running gateway over to it — no one runs `./equin start --force` for a pushed gateway change, and no backend restarts. See "The gateway follows main" below.
+- **Runs as a keeper and its generations** (`keeper.go`): the process a service manager or launcher starts holds the listening sockets and is the parent of every backend; the gateway proper is its child, replaced by `POST /gateway/handover` with no request refused and no backend stopped. See "The keeper: a gateway update is a handover" below.
 
 ## Key Design Decisions
 
@@ -203,8 +204,14 @@ Flat single-package layout:
 
 ```
 gateway/
-├── main.go        # Flags, wiring, signal handling, sockets-dir setup, service bring-up
-├── datalock.go    # One gateway per data root: the -lock-file flock held for the process's life
+├── main.go        # Flags, wiring, signal handling, sockets-dir setup, service bring-up; keeper vs generation dispatch
+├── datalock.go    # One gateway per data root: the -lock-file flock held for the process's life (the keeper's, under one)
+├── keeper.go      # The keeper: holds the listening sockets, starts the gateway generations and their long-lived children, runs a handover
+├── keeper_proto.go # The keeper ⇄ generation control socket: framed JSON + SCM_RIGHTS descriptors
+├── generation.go  # A generation's half: spawning through the keeper, the init it was handed, the listeners it inherits
+├── handover.go    # POST/GET /gateway/handover: the lifecycle gate a handover freezes, the state it hands on, the drain
+├── adopt.go       # Adopting a predecessor's backends and deploy run (tags, readiness for an un-vouched one)
+├── spawn.go       # Long-lived children as data (spawnSpec, child, childStatus); the local spawner
 ├── env.go         # ChildEnv: the declared environment every child starts from; the only os.Environ()/exec.Command site
 ├── worktree.go    # Worktree lifecycle transitions (Ensure, Restart, Stop, exit), spawn, readiness
 ├── lifecycle.go   # The lifecycle as one value: the phase union and the spawnAttempt every waiter shares
@@ -295,6 +302,102 @@ drain took its full 15 s whenever one proxied stream was open (a stream never
 ends on its own), then a backend's 5 s grace started — 15 + 5 = launchd's
 `ExitTimeOut`, so launchd killed the gateway mid-teardown (2026-11-08 18:05).
 
+## The keeper: a gateway update is a handover
+
+`keeper.go`, design `research/2026-11-14-gateway-handover.md`. A gateway
+process used to hold five things that died with it: the pid its service
+manager watches, the listening sockets, the parenthood of every backend (exit
+status for crash reports; a backend's own escape hatch exits it once reparented
+to pid 1 — macOS has no subreaper), the live connections and its in-memory
+state. So every gateway update — a main follow on the Mac, a gateway-changing
+ship on the website box — restarted the whole service: the port closed (~2 s on
+the box, Caddy holding visitors), and every backend stopped and cold-started.
+
+Now the binary a service manager (launchd's program, the release launcher's
+child) starts with no `-keeper-fd` is the **keeper**, and runs the gateway as
+its child, a **generation**, appending `-keeper-fd 3` (its control socket) to
+the same argv. The keeper is small and runs the code of the binary it was
+started from for its whole life — a handover changes the generation's binary,
+never the keeper's. It holds:
+
+- **the pid** the service manager supervises, and the `-pid-file` (a generation
+  under a keeper does not write it: stopping the service is stopping the
+  keeper, which forwards SIGTERM to every generation, waits within
+  `-shutdown-timeout` + 2 s, then stops any child left);
+- **the listening sockets**: the first generation binds them (after
+  `StartAll`, so "listening implies every service came up" still holds) and
+  hands copies to the keeper; every later generation receives them over the
+  control socket. They are never closed between generations, so a connection
+  arriving at any moment is queued, never refused;
+- **the parenthood of every long-lived child**: backends and main-deploy runs
+  are spawned BY the keeper on the generation's behalf (`spawnSpec` over the
+  control socket; the keeper `wait`s, and sends the exit status to every
+  generation). Their output pipes' read ends come back to the generation, and
+  the keeper keeps a copy for the next one.
+
+**A handover** (`POST /gateway/handover {"binary"?, "args"?, "env"?, "dir"?}`,
+an omitted field keeps the running launch's; answered only to a local caller
+dialling directly — loopback peer, loopback Host, no `X-Forwarded-*` / `Via`;
+`404` on a gateway with no keeper, which a caller answers by restarting the
+service as before):
+
+1. The serving generation **freezes** its lifecycle gate (`lifecycleGate`):
+   no spawn, restart, stop or deploy run starts, and those in flight are waited
+   out (≤ 3 min). It keeps serving the whole time; only a request that needs a
+   cold start waits, and only for the handover.
+2. It sends the keeper its **state** (`generationState`: each running backend's
+   pid and ready time, holds, broken boots, idle clocks, main deploy's ref and
+   pending edges).
+3. The keeper starts the successor (mode `handover`) with the listeners, every
+   live child and that state. The successor adopts each child by its tag
+   (`adopt.go`: the backend becomes its worktree's running backend — same
+   process, no probe when vouched for), adopts the services (`AdoptAll`: probe,
+   watch, start only one that does not answer), serves, and says `ready`. Not
+   ready within 60 s, or exited: the keeper kills it (and whatever it started)
+   and the old generation unfreezes — nothing changed.
+4. The old generation **drains**: it closes its copies of the listeners (the
+   kernel hands every new connection to the successor), closes its WebSockets
+   (their clients reconnect to the successor, onto the same backend) and stops
+   reading backend output. It never closes an idle keep-alive connection
+   itself — a client may be writing a request on it at that very instant (a
+   POST is not retried after an EOF; measured: the plain `Shutdown` failed 1–3
+   of ~60 requests per handover). Each later request on one is forwarded to the
+   successor with `Connection: close`; one that stays idle is closed by its
+   client (Go 90 s, Caddy 2 min). Then it exits — `handoverDrainBudget` (6 min)
+   bounds the wait — without stopping a backend. Until every older generation
+   has exited (`predecessor-gone`), the successor neither sweeps nor drains a
+   backend: one may still proxy to it.
+
+**A generation that dies** (a panic, a kill) is restarted by the keeper over
+its live children (mode `recover`: no state, so each backend is re-probed and a
+non-ready one stopped) — a gateway crash no longer kills a backend, and
+requests queue on the keeper's sockets meanwhile. The keeper exits non-zero
+(its service manager restarts everything, loudly) when the FIRST generation
+fails its boot (that generation's exit code — a service that would not start
+still fails `./equin start` fast), or three generations in a row die before
+ready.
+
+**What still restarts the service:** a change to the keeper itself (its code
+reaches a machine only when its service restarts — a reboot, `start --force`), a
+`-listen` change (a generation refuses sockets that are not the ones `-listen`
+names), and on the box anything but the gateway binary (Postgres, PgBouncer, the
+gateway's flags — `release-swap.ts`). The protocol is versioned
+(`keeperProtocol`): a generation refuses a keeper speaking another one, which
+fails its handover and leaves the old one serving.
+
+`-no-keeper` runs a gateway with no keeper (a debugger): it cannot hand over.
+
+`GET /gateway/handover`: the serving generation — its pid, mode, binary and
+args (never its environment) and the keeper's pid; `404` with no keeper.
+
+**Never `os.File.Fd()` on a shared descriptor.** It puts the descriptor in
+blocking mode, a flag of the open file every copy shares: done on a listening
+socket in the keeper (exec's `ExtraFiles` calls it), the serving generation's
+accept blocked a thread and its listener `Close` hung until the next
+connection. Descriptors cross the control socket as SCM_RIGHTS, read with
+`rawFd` (`SyscallConn().Control`); only the control socket itself is
+inherited.
+
 ## Main's deploy
 
 `main_deploy.go`. The gateway is the one process up whenever anything is, so
@@ -343,7 +446,8 @@ minutes until a person reloaded this gateway).
 
 ## The gateway follows main
 
-Main's deploy also replaces the gateway itself — no person, no approval
+Main's deploy also replaces the gateway itself — by a handover (see "The
+keeper"), so no backend stops — no person, no approval
 (decided 2026-11-11: fixes in `gateway/` sat inert for days until someone ran
 `./equin start --force`). After its builds, whatever their verdict, the
 convergence run calls `followMainGateway` (`plugins/infra/plugins/launcher/plugins/gateway-drift`,
@@ -360,12 +464,14 @@ convergence run calls `followMainGateway` (`plugins/infra/plugins/launcher/plugi
   or its launch spec is built from: `gateway/**/*.go`, `go.mod`/`go.sum`, Go
   itself, and any flag derivation (`gatewayLaunchFlags` — a new `-child-env`
   name, a new data dir flag, the PATH rule).
-- **How.** `start --force`'s path: install main's build into the equin app,
-  write the job, `reloadService` (unload, wait out the old process, load),
-  then `awaitGatewayReady` (alive and listening — and listening implies every
-  supervised service came up). Every backend stops with the old gateway (the
-  "Shutdown fits one budget" teardown) and cold-starts on its next request,
-  central eagerly. What outlives it: agents (detached), Postgres / PgBouncer and
+- **How.** Install main's build into the equin app, write the job (what the
+  NEXT start of the service runs), then `POST /gateway/handover` with the job's
+  binary, argv, environment and cwd: the keeper replaces the gateway process,
+  every backend keeps running. A gateway from before the keeper answers `404`;
+  only then is it `start --force`'s path — `reloadService` (unload, wait out
+  the old process, load) and `awaitGatewayReady` — once, after which it runs
+  under a keeper. A failed handover leaves the old gateway serving; the follow
+  restores the files (the bundle's binary, the job) and files the failure. What outlives it: agents (detached), Postgres / PgBouncer and
   their log relays (reattached), and this run (its own process group —
   measured 2026-11-11 on macOS 26: `launchctl bootout` kills the job's process
   group and leaves a child that `setpgid`'d alone, reparented to pid 1; systemd
@@ -399,7 +505,7 @@ convergence run calls `followMainGateway` (`plugins/infra/plugins/launcher/plugi
 
 ## One gateway per data root
 
-A gateway owns its data root's runtime — the supervised services, the registry, the pid file — so a second one on the same root can only break things: on 2026-11-14 a ship ran an old bundle whose extractor booted a whole host beside the website's serving one, and the second gateway truncated the shared stdio log, wrote over the pid file, "reattached" to the first one's Postgres over a socket dir it never had, and died. Now the first thing `main` does (after logging) is take an exclusive `flock` on `-lock-file` (`locks/gateway/gateway.lock`, passed by the launcher; defaults into the data root for a hand-run gateway) and hold it for its life (`datalock.go`). A second gateway exits at once, `gateway: fatal: another gateway (pid N) already serves this data root …`. The kernel drops the lock however the holder exits, so nothing goes stale; restarts never contend, since every restart path (systemd, `reloadService`) waits for the old process to be gone first. Log relays (`-log-relay`) return before the lock and never take it.
+A gateway owns its data root's runtime — the supervised services, the registry, the pid file — so a second one on the same root can only break things: on 2026-11-14 a ship ran an old bundle whose extractor booted a whole host beside the website's serving one, and the second gateway truncated the shared stdio log, wrote over the pid file, "reattached" to the first one's Postgres over a socket dir it never had, and died. Now the first thing `main` does (after logging) is take an exclusive `flock` on `-lock-file` (`locks/gateway/gateway.lock`, passed by the launcher; defaults into the data root for a hand-run gateway) and hold it for its life (`datalock.go`). A second gateway exits at once, `gateway: fatal: another gateway (pid N) already serves this data root …`. The kernel drops the lock however the holder exits, so nothing goes stale; restarts never contend, since every restart path (systemd, `reloadService`) waits for the old process to be gone first. Log relays (`-log-relay`) return before the lock and never take it. Under a keeper the KEEPER takes it (the process a launcher or service manager starts), never a generation: two generations of one gateway overlap during a handover, and the lock is what keeps a second keeper — a second host — out.
 
 ## Service supervision
 
@@ -477,7 +583,8 @@ platform). By hand, for a debugger:
 
 ```sh
 go build -o /tmp/gateway .
-/tmp/gateway -child-env HOME,USER,PATH                   # minimal hand-run; defaults: loopback:9000, ~/.equin/worktrees/
+/tmp/gateway -child-env HOME,USER,PATH                   # minimal hand-run (a keeper + its generation); defaults: loopback:9000, ~/.equin/worktrees/
+/tmp/gateway -no-keeper -child-env HOME,USER,PATH        # one process, for a debugger (cannot hand over)
 /tmp/gateway -child-env HOME,USER,PATH -listen loopback:8080 -idle-timeout 5m -log-level debug
 ```
 
@@ -542,6 +649,8 @@ writer's test and by `plugins/debug/plugins/backend-crash`'s schema test.
 `Proxy.ServeHTTP` defers `recoverHandlerPanic` (`handler_panic.go`) first thing: a panic in any handler answers `500` with the panic's text, is logged at error with its stack (`gateway handler panicked`), and is filed as a `gateway-panic` entry in the report outbox, coalesced per panic site (the function it was raised in): the first at once, the rest within a minute as one counted entry. `http.ErrAbortHandler` passes through unreported. Before, net/http's own recover wrote one `http: panic serving` line and dropped the connection — 240+ of them on 2026-11-08, and no report. Kind and schema: `plugins/debug/plugins/gateway-panic` (contract pinned by `testdata/gateway-panic-entry.json`).
 
 ## Orphan-backend reaping & stale-socket cleanup
+
+Under a keeper a generation that replaces another ADOPTS its backends (see "The keeper"): its boot reconcile (`reconcileOrphanBackendsKeeping`) leaves alone every socket whose sidecar names an adopted pid, and reaps the rest as below. The rest of this section is a keeper's first generation, and a gateway run with `-no-keeper`.
 
 The gateway owns backend lifecycles, but tracks live backends only in memory — so a gateway crash/restart (or `./equin start` re-launch) could leave the previous generation's backends orphaned. Cleanup has three layers:
 

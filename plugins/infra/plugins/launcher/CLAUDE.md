@@ -184,6 +184,16 @@ design `research/2026-11-14-global-zero-wait-site-deploys.md`):
   backend boots beside the serving one, and the gateway commits the spec only
   once it is ready. Exit 0 swapped, 3 the release changes the host (a host
   restart instead), 1 failed with nothing changed.
+- **A gateway-only difference is a handover, not a host restart.** When the
+  gateway binary is the ONE part that differs, `launch swap` first asks the
+  running gateway's keeper to hand over to this bundle's binary
+  (`handOverGateway`, `server/internal/gateway-handover.ts`; same sockets, the
+  same flags and environment, the same backend and Postgres — `gateway/CLAUDE.md`
+  § The keeper), records the new gateway digest in `host-generation.json`, and
+  then swaps the backend through the new gateway. A running gateway from
+  before the keeper answers `404` → exit 3 (the one host restart that installs
+  a keeper). The gateway's flags, Postgres or PgBouncer differing is still a
+  host restart.
 
 So **what one backend reads of its own bundle never travels through the
 gateway's environment**: the vendored migrations, web tree, workers, pg client
@@ -351,6 +361,10 @@ Design: [`research/2026-09-15-global-declared-runtime-environment.md`](../../../
     - `infra/worktree.WorktreeSpec`
     - `infra/worktree.writeWorktreeSpec`
   - Exports (types):
+    - `GatewayGeneration`
+    - `GatewayGenerationRead`
+    - `GatewayHandoverLaunch`
+    - `GatewayHandoverOutcome`
     - `GatewayLaunchOptions`
     - `HostGeneration`
     - `ListenAddress`
@@ -370,6 +384,7 @@ Design: [`research/2026-09-15-global-declared-runtime-environment.md`](../../../
     - `gatewayLaunchSpec`
     - `gatewayPidFile`
     - `gatewayServiceJob`
+    - `handOverGateway`
     - `hasPgBouncerPackage`
     - `isGatewayListening`
     - `isRunning`
@@ -378,6 +393,7 @@ Design: [`research/2026-09-15-global-declared-runtime-environment.md`](../../../
     - `pgbouncerConnection`
     - `pgbouncerService`
     - `propagateReleaseConfig`
+    - `readGatewayGeneration`
     - `readPid`
     - `releaseBackendSpec`
     - `releaseHostGeneration`
@@ -422,6 +438,7 @@ Design: [`research/2026-09-15-global-declared-runtime-environment.md`](../../../
     - `release`
 - Exemptions:
   - Exempts itself from:
+    - `no-raw-websocket` — `scripts/gateway-load-probe.ts` (sanctioned)
     - `paths:data-root-not-joined` — `bin/launch.ts` (sanctioned)
     - `marker-scan-safety/no-adhoc-marker-scan` — `check/internal/strip-comments.ts` (sanctioned)
     - `spawn-safety/no-raw-bun-spawn` — `server/internal/boot.ts` (sanctioned)

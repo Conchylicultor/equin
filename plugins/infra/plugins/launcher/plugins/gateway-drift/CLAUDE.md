@@ -36,12 +36,16 @@ main — and when it is not, make it so. Two halves over one comparison
    (`LoginService.readDefinition`) and the build held as `machine-gateway`
    (`heldDep`, `infra/deps`). No held build → refuse (report).
 6. `adoptGatewayLaunch` (install into the equin app, `database.json`), write
-   the job, `reloadService`, `awaitGatewayReady`; then, outside the rollback's
-   reach, the attempt is recorded and `holdGatewayBuild` moves the hold to the
-   new build.
+   the job, then **hand over** (`handOverGateway`, `launcher/server`): the
+   gateway's keeper replaces the gateway process with the job's binary, argv,
+   environment and cwd over the same sockets and backends — no backend stops
+   (`gateway/CLAUDE.md` § The keeper). Only a gateway from before the keeper
+   (`404`) is restarted instead: `reloadService`, `awaitGatewayReady`. Then,
+   outside the rollback's reach, the attempt is recorded and
+   `holdGatewayBuild` moves the hold to the new build.
 7. Any failure → `restorePrevious`: reinstall the held build, restore the
    definition, and (once the swap had unloaded the old one) reload and await
-   it. A refusal or a failure files a `gateway-restart-failed` report through
+   it. A failed handover unloaded nothing: the old gateway kept serving. A refusal or a failure files a `gateway-restart-failed` report through
    the outbox (`core/internal/restart-failed.ts`, kind in `server/`, summary in
    `web/`) — the converge run's exit status reaches no one once the gateway
    that started it is gone.
@@ -64,7 +68,7 @@ whichever checkout runs it — derived exactly as `start` derives it
 | flags | the definition's argv[1..] | `gatewayLaunchFlags(...)`, `-log-level` taken from the installed argv (a `start` flag) |
 | cwd | the definition's `WorkingDirectory` | main's checkout |
 | signature | `gatewaySignature(argv[0])` (`launcher/deps`; reads the identity, never mints one) | signed as `GATEWAY_CODESIGN_IDENTIFIER` by this machine's identity |
-| running | the pidfile's process command line (`/proc/<pid>/cmdline`, else `ps -ww -o args=`) | the installed argv, space-joined |
+| running | the serving generation's launch (`GET /gateway/handover`: under a keeper the pidfile names the keeper, whose argv is the one launchd started it with, not the last handover's); with no keeper the pidfile's process command line (`/proc/<pid>/cmdline`, else `ps -ww -o args=`) | the installed argv, space-joined |
 | principal stamp | whether this backend was launched with `--principal-stamped` (`principalStamp()`, `framework/principal`) | stamped — a gateway older than the principal stamp leaves every route ungated |
 
 The installed definition is read back through `LoginService.installedJob()`

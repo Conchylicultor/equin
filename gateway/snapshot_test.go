@@ -375,7 +375,7 @@ func recordingBackend(t *testing.T, wt *Worktree) <-chan *http.Request {
 		t.Fatalf("start sleep: %v", err)
 	}
 	t.Cleanup(func() { _ = cmd.Process.Kill() })
-	bk := &backend{cmd: cmd, exitCh: make(chan struct{}), socketPath: wt.primarySocketPath(), proxy: newReverseProxy(wt.primarySocketPath())}
+	bk := &backend{proc: procOf(cmd), exitCh: make(chan struct{}), socketPath: wt.primarySocketPath(), proxy: newReverseProxy(wt.primarySocketPath())}
 	go func() {
 		_ = cmd.Wait()
 		close(bk.exitCh)

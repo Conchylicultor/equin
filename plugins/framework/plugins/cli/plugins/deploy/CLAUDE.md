@@ -53,9 +53,12 @@ The activate script extracts the bundle while the previous release serves, then
 runs the new release's `launch swap` (`infra/launcher` § A release host): the
 gateway boots the new backend beside the serving one and switches once it is
 ready, so no visitor waits and the old backend drains its in-flight requests.
-`current` flips after the gate passes. A release that changes the host
-(gateway, Postgres, PgBouncer, how they start) exits 3 and gets the old path,
-announced as `[host restart]`: flip, `systemctl restart`, gate — already
+`current` flips after the gate passes. A release whose only host difference is
+the gateway binary hands the running gateway over to its own first (`[gateway
+handover]`: the gateway's keeper keeps the sockets and the backend — no request
+waits), then swaps the backend. A release that changes the rest of the host
+(Postgres, PgBouncer, the gateway's flags, how they start) exits 3 and gets
+the old path, announced as `[host restart]`: flip, `systemctl restart`, gate — already
 extracted, so the gap is ~2 s rather than the ~6 s an extract-after-stop cost.
 A failed swap changes nothing; a swapped release failing the gate is swapped
 back to the previous release's extraction (`<release>/extract-dir`), falling

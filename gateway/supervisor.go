@@ -265,6 +265,24 @@ func (sup *Supervisor) StartAll(ctx context.Context) error {
 	return nil
 }
 
+// AdoptAll takes over services a predecessor generation supervised: one that
+// answers its probe is running (its watchdog armed, no start command run);
+// one that does not is started as at boot.
+func (sup *Supervisor) AdoptAll(ctx context.Context) error {
+	for _, svc := range sup.services {
+		if err := svc.probe.Check(probeTimeout); err == nil {
+			svc.setState(ServiceRunning)
+			slog.Info("supervisor: service adopted", "name", svc.config.Name)
+			sup.startWatchdog(ctx, svc)
+			continue
+		}
+		if err := sup.startService(ctx, svc); err != nil {
+			return fmt.Errorf("service %q: %w", svc.config.Name, err)
+		}
+	}
+	return nil
+}
+
 func (sup *Supervisor) startService(ctx context.Context, svc *Service) error {
 	svc.setState(ServiceStarting)
 	slog.Info("supervisor: starting service", "name", svc.config.Name)

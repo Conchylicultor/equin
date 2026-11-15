@@ -32474,6 +32474,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `conversations/conversation-view/code` (0 debt)
                   - `conversations/conversation-view/jsonl-viewer` (0 debt)
                   - `debug/profiling/tab-memory` (0 debt)
+                  - `infra/launcher` (0 debt)
                   - `network/live` (0 debt)
                   - `primitives/networking` (0 debt)
                   - `primitives/networking/request-guard` (0 debt)
@@ -37664,6 +37665,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/worktree.WorktreeSpec`
           - `infra/worktree.writeWorktreeSpec`
         - Exports (types):
+          - `GatewayGeneration`
+          - `GatewayGenerationRead`
+          - `GatewayHandoverLaunch`
+          - `GatewayHandoverOutcome`
           - `GatewayLaunchOptions`
           - `HostGeneration`
           - `ListenAddress`
@@ -37683,6 +37688,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `gatewayLaunchSpec`
           - `gatewayPidFile`
           - `gatewayServiceJob`
+          - `handOverGateway`
           - `hasPgBouncerPackage`
           - `isGatewayListening`
           - `isRunning`
@@ -37691,6 +37697,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `pgbouncerConnection`
           - `pgbouncerService`
           - `propagateReleaseConfig`
+          - `readGatewayGeneration`
           - `readPid`
           - `releaseBackendSpec`
           - `releaseHostGeneration`
@@ -37735,6 +37742,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `release`
       - Exemptions:
         - Exempts itself from:
+          - `no-raw-websocket` — `scripts/gateway-load-probe.ts` (sanctioned)
           - `paths:data-root-not-joined` — `bin/launch.ts` (sanctioned)
           - `marker-scan-safety/no-adhoc-marker-scan` — `check/internal/strip-comments.ts` (sanctioned)
           - `spawn-safety/no-raw-bun-spawn` — `server/internal/boot.ts` (sanctioned)

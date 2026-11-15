@@ -42,6 +42,16 @@ export {
 } from "./internal/dev-launch";
 export { gatewayServiceJob } from "./internal/gateway-service";
 export {
+  handOverGateway,
+  readGatewayGeneration,
+} from "./internal/gateway-handover";
+export type {
+  GatewayGeneration,
+  GatewayGenerationRead,
+  GatewayHandoverLaunch,
+  GatewayHandoverOutcome,
+} from "./internal/gateway-handover";
+export {
   LOOPBACK_BIND,
   resolveListenAddress,
   listenFlag,

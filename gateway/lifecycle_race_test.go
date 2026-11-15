@@ -22,7 +22,7 @@ func (pf priorityFixture) setGate(t *testing.T, gate string) {
 
 func killBackend(t *testing.T, bk *backend) {
 	t.Helper()
-	if err := syscall.Kill(-bk.cmd.Process.Pid, syscall.SIGKILL); err != nil {
+	if err := syscall.Kill(-bk.proc.Pid, syscall.SIGKILL); err != nil {
 		t.Fatalf("kill backend: %v", err)
 	}
 	select {

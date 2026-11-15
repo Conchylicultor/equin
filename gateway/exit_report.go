@@ -119,20 +119,16 @@ func (d backendDeath) cause() string {
 	return fmt.Sprintf("exit %d", d.code)
 }
 
-// deathOf reads cmd.Wait's outcome. ok=false when the wait status cannot be
-// read (no ProcessState) — the death is then logged, not filed.
-func deathOf(ps *os.ProcessState) (backendDeath, bool) {
-	if ps == nil {
+// deathOf reads a child's exit. ok=false when its wait status is unknown —
+// the death is then logged, not filed.
+func deathOf(st childStatus) (backendDeath, bool) {
+	if st.Err != "" {
 		return backendDeath{}, false
 	}
-	ws, isWS := ps.Sys().(syscall.WaitStatus)
-	if !isWS {
-		return backendDeath{}, false
+	if st.Signaled {
+		return backendDeath{signaled: true, sig: syscall.Signal(st.Signal), coreDumped: st.CoreDump}, true
 	}
-	if ws.Signaled() {
-		return backendDeath{signaled: true, sig: ws.Signal(), coreDumped: ws.CoreDump()}, true
-	}
-	return backendDeath{code: ws.ExitStatus()}, true
+	return backendDeath{code: st.Code}, true
 }
 
 func newBackendExit(worktree string, pid, code int, startedAt, exitedAt int64, readyAt *int64, executable string, tail []string, complete bool) backendExit {

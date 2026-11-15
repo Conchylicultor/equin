@@ -191,6 +191,9 @@ async function main(): Promise<void> {
       next: await hostGeneration(),
       spec: backendSpec,
       listen,
+      gateway: gatewayReady,
+      bundleRoot,
+      log: console.log,
     });
     switch (outcome.kind) {
       case "swapped":

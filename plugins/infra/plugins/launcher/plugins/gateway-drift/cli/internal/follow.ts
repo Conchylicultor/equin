@@ -19,6 +19,7 @@ import {
   DEV_GATEWAY_PORT,
   gatewayLaunchSpec,
   gatewayServiceJob,
+  handOverGateway,
 } from "@plugins/infra/plugins/launcher/server";
 import {
   installServiceExecutable,
@@ -50,7 +51,13 @@ export type GatewayFollowOutcome =
   | { kind: "not-applicable"; reason: string }
   | { kind: "current" }
   | { kind: "already-attempted"; at: string; outcome: AttemptOutcome }
-  | { kind: "restarted"; pid: number; remaining: string[] }
+  | {
+      kind: "restarted";
+      pid: number;
+      remaining: string[];
+      /** handover: no backend stopped; reload: the service was restarted. */
+      via: "handover" | "reload";
+    }
   | { kind: "refused"; reason: string }
   | { kind: "failed"; rolledBack: boolean };
 
@@ -215,20 +222,54 @@ async function followLocked(
   const runningPid = state.kind === "loaded" ? state.pid : null;
   let unloaded = false;
   let newPid: number;
+  let via: "handover" | "reload";
   try {
     const launch = await adoptGatewayLaunch(prepared, app, log);
     const spec = gatewayLaunchSpec(launch);
     await service.write(gatewayServiceJob(spec));
-    log(`gateway: restarting (PID ${runningPid ?? "none"}) onto ${to}`);
-    unloaded = true;
-    const pid = await reloadService(service, runningPid, () =>
-      writeFile(spec.stdioLog, ""),
-    );
-    if (pid === null) {
-      throw new Error(`${service.id.label} loaded with no running process`);
+    // A handover first: the keeper replaces the gateway process over the
+    // same listening sockets and the same backends — no request refused, no
+    // backend stopped (gateway/CLAUDE.md, "The gateway follows main"). The
+    // written job is what the NEXT start of the service (a login, a
+    // keeper restart) runs.
+    const [binary = "", ...args] = spec.argv;
+    log(`gateway: handing over onto ${to}`);
+    const handed = await handOverGateway({
+      dialAddress: `127.0.0.1:${DEV_GATEWAY_PORT}`,
+      launch: { binary, args, env: spec.env, dir: spec.cwd },
+    });
+    switch (handed.kind) {
+      case "handed-over":
+        log(
+          `gateway: handed over in ${handed.tookMs} ms (gateway PID ${handed.pid}); no backend restarted`,
+        );
+        newPid = handed.pid;
+        via = "handover";
+        break;
+      case "failed":
+        // The running gateway keeps serving: only the files are put back.
+        throw new Error(
+          `the handover failed; the running gateway keeps serving: ${handed.reason}`,
+        );
+      case "no-keeper": {
+        // A gateway from before the keeper: restart its service (every
+        // backend stops with it), once — the new one runs under a keeper.
+        log(
+          `gateway: the running gateway predates handovers; restarting (PID ${runningPid ?? "none"}) onto ${to}`,
+        );
+        unloaded = true;
+        const pid = await reloadService(service, runningPid, () =>
+          writeFile(spec.stdioLog, ""),
+        );
+        if (pid === null) {
+          throw new Error(`${service.id.label} loaded with no running process`);
+        }
+        await awaitGatewayReady({ pid, port: DEV_GATEWAY_PORT });
+        newPid = pid;
+        via = "reload";
+        break;
+      }
     }
-    await awaitGatewayReady({ pid, port: DEV_GATEWAY_PORT });
-    newPid = pid;
   } catch (err) {
     log(`gateway: main's gateway did not come up: ${String(err)}`);
     const error = errorLines(err);
@@ -251,9 +292,9 @@ async function followLocked(
   const after = await compareGatewayLaunch();
   const remaining = after.kind === "compared" ? after.differences : [];
   log(
-    `gateway: restarted onto ${to} (PID ${newPid})${remaining.length > 0 ? ` — a restart does not fix: ${remaining.join("; ")}` : ""}`,
+    `gateway: ${via === "handover" ? "handed over" : "restarted"} onto ${to} (PID ${newPid})${remaining.length > 0 ? ` — a restart does not fix: ${remaining.join("; ")}` : ""}`,
   );
-  return { kind: "restarted", pid: newPid, remaining };
+  return { kind: "restarted", pid: newPid, remaining, via };
 }
 
 /**
