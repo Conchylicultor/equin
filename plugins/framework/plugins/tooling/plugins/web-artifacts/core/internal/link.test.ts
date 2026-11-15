@@ -84,7 +84,6 @@ function inputs(over: Partial<LinkInputs> = {}): LinkInputs {
       "apps/plugins/x/": ["apps/plugins/x/plugins/page"],
       "apps/plugins/y/": ["apps/plugins/y/plugins/page"],
     },
-    pageScripts: [],
     ...over,
   };
 }
@@ -252,6 +251,5 @@ describe("linkKey", () => {
       ),
     ).not.toBe(base);
     expect(linkKey(inputs({ eager: new Set(["kit"]) }))).not.toBe(base);
-    expect(linkKey(inputs({ pageScripts: ["@plugins/a/web"] }))).not.toBe(base);
   });
 });

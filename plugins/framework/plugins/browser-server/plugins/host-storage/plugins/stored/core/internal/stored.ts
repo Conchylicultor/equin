@@ -10,7 +10,7 @@ import {
  * (its lifecycle record says `ready`) — so starting its host downloads no
  * starting data. Read without booting anything and without creating the
  * database when it is absent (`indexedDB.databases()` first), so a page can
- * ask before it decides to start the host: a demo's gate, its head script.
+ * ask before it decides to start the host: a demo's gate.
  *
  * `false` where the page has no IndexedDB at all: nothing can be stored
  * there. Whether that stored data is still current (a newer build's snapshot

@@ -57,7 +57,6 @@ import {
   BROWSER_HOST_SPECIFIER_PREFIX,
   BROWSER_HOST_WORKER_SPECIFIER_PREFIX,
   isImportMapOnlySpecifier,
-  PAGE_SCRIPT_MODULES,
 } from "@plugins/framework/plugins/import-map-names/core";
 import { appRootOf } from "@plugins/apps-core/plugins/app-preload/core";
 import { sha256Hex } from "../hash";
@@ -128,11 +127,6 @@ export interface LinkInputs {
   eager: ReadonlySet<string>;
   /** Deferred web plugins under an app root, by root (`appRootOf`). */
   appPlugins: Readonly<Record<string, readonly string[]>>;
-  /**
-   * Barrels a page script outside the bundle imports by specifier
-   * (`PAGE_SCRIPT_MODULES`): each its own entry chunk, mapped by the page.
-   */
-  pageScripts: readonly string[];
 }
 
 /** What a link produced — published as the `link.<key>` record's meta. */
@@ -147,8 +141,6 @@ export interface LinkRecord {
   bootSeeds: string[];
   /** Per app root: the chunk URLs of its deferred plugins' definitions. */
   appSeeds: Record<string, string[]>;
-  /** Each page-script specifier's entry chunk URL (an import-map entry). */
-  pageScripts: Record<string, string>;
   /**
    * Artifact dirs a chunk addresses files of (images, worker bundles, by
    * `new URL("/artifacts/<dir>/…", import.meta.url)`): linked into the dist
@@ -198,7 +190,6 @@ export function linkKey(inputs: LinkInputs): string {
     ...Object.entries(inputs.appPlugins)
       .flatMap(([root, paths]) => paths.map((p) => `app\t${root}\t${p}`))
       .sort(),
-    ...[...inputs.pageScripts].map((s) => `page-script\t${s}`).sort(),
     // What stays external besides the vendor set (`framework/import-map-names`).
     ...[
       BROWSER_HOST_SPECIFIER_PREFIX,
@@ -237,7 +228,6 @@ export function linkInputsOf(opts: {
     if (root !== null) (appPlugins[root] ??= []).push(t.pluginPath);
   }
   for (const paths of Object.values(appPlugins)) paths.sort();
-  const served = new Set(opts.pageTargets.map((t) => t.specifier));
   return {
     identityHash: opts.identityHash,
     minify: opts.minify,
@@ -251,9 +241,6 @@ export function linkInputsOf(opts: {
     vendorSetHash: opts.vendorSet.setHash,
     eager,
     appPlugins,
-    pageScripts: Object.values(PAGE_SCRIPT_MODULES).filter((spec) =>
-      served.has(spec),
-    ),
   };
 }
 
@@ -380,7 +367,6 @@ const storeIo: LinkIo = {
 export interface LinkGraph {
   entryFile: string;
   registryFile: string;
-  pageScriptFiles: string[];
   /** Every module the page reaches, rewritten, by its id (its file). */
   linked: Map<string, LinkedModule>;
   /** The boot set: the static closure of {@link bootRoots}. */
@@ -697,16 +683,9 @@ export async function planLinkGraph(
       fileQueue.push(target);
     }
   }
-  const pageScriptFiles = inputs.pageScripts.map((spec) => {
-    const file = bySpecifier.get(spec);
-    if (file === undefined)
-      throw new Error(`link: page script ${spec} is no page artifact`);
-    return file;
-  });
-
   // Walk everything the page reaches, statically or not.
   const linked = new Map<string, LinkedModule>();
-  const queue = [entryFile, registryFile, ...pageScriptFiles];
+  const queue = [entryFile, registryFile];
   while (queue.length > 0) {
     const file = queue.pop()!;
     if (linked.has(file)) continue;
@@ -774,7 +753,6 @@ export async function planLinkGraph(
   return {
     entryFile,
     registryFile,
-    pageScriptFiles,
     linked,
     boot,
     bootRoots,
@@ -800,19 +778,13 @@ export async function bundleLinkGraph(
     log: (line: string) => void;
   },
 ): Promise<OutputChunk[]> {
-  const { linked, boot, appGroupOf, appGroupKeys, entryFile, pageScriptFiles } =
-    graph;
+  const { linked, boot, appGroupOf, appGroupKeys, entryFile } = graph;
   // Bundle.
   const { rolldown, RolldownMagicString } = await import("rolldown");
   const bundle = await rolldown({
-    input: {
-      entry: entryFile,
-      ...Object.fromEntries(
-        pageScriptFiles.map((f, i) => [`page-script-${i}`, f]),
-      ),
-    },
+    input: { entry: entryFile },
     treeshake: true,
-    // The entry and page scripts keep their exports; a chunk may export more.
+    // The entry keeps its exports; a chunk may export more.
     preserveEntrySignatures: "allow-extension",
     logLevel: "warn",
     onLog(level, log) {
@@ -918,7 +890,6 @@ async function runLink(
     assetDirs,
     elided,
     entryFile,
-    pageScriptFiles,
   } = graph;
   const output = await bundleLinkGraph(graph, inputs);
 
@@ -926,7 +897,6 @@ async function runLink(
   const chunkMetas = new Map<string, ArtifactMeta>();
   const chunkOfModule = new Map<string, string>(); // module file → chunk URL
   let entryUrl: string | null = null;
-  const pageScripts: Record<string, string> = {};
   const relSpec = (fromFile: string, toFile: string) => {
     const r = posix.relative(posix.dirname(fromFile), toFile);
     return r.startsWith(".") ? r : `./${r}`;
@@ -942,9 +912,6 @@ async function runLink(
         throw new Error(`link: unexpected chunk file ${o.fileName}`);
       const url = urlOf(dirName, "index.js");
       if (o.isEntry && o.facadeModuleId === entryFile) entryUrl = url;
-      const script = pageScriptFiles.indexOf(o.facadeModuleId ?? "");
-      if (o.isEntry && script >= 0)
-        pageScripts[inputs.pageScripts[script]!] = url;
       for (const id of o.moduleIds) chunkOfModule.set(id, url);
       const meta: ArtifactMeta = {
         specifier: null,
@@ -1011,7 +978,6 @@ async function runLink(
     chunks: [...chunkMetas.keys()].sort(),
     bootSeeds,
     appSeeds,
-    pageScripts,
     assetDirs: [...assetDirs].sort(),
     stats: {
       modules: linked.size,

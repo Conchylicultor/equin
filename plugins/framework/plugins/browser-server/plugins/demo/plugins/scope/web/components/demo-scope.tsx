@@ -63,11 +63,11 @@ import {
 } from "@plugins/framework/plugins/web-sdk/core";
 import { RenderOrigin } from "@plugins/primitives/plugins/scope/plugins/render-origin/web";
 import { ScopeIconSymbols } from "@plugins/ui/plugins/icons/plugins/sprites/web";
+import { connectDemoHost } from "../internal/connect";
 import {
-  connectDemoHost,
   trackHostGenerations,
   type HostGenerations,
-} from "@plugins/framework/plugins/browser-server/plugins/demo/plugins/prestart/web";
+} from "../internal/host-generation";
 import { holdVisitorIn, visitorInElsewhere } from "../internal/presence";
 
 // ── The host ───────────────────────────────────────────────────────────
@@ -149,10 +149,10 @@ interface ScopeStart {
 /**
  * The page's end of the scenario's host: ONE SharedWorker per build and host
  * generation for every tab of the demo (one server, one database — what keeps
- * a persistent host's data whole across tabs; `demo/prestart`'s
- * `connectDemoHost` for why a Reset, or a worker retiring once its last tab
- * went, moves to the next name), or, where the browser has none, a dedicated
- * worker of this page's own (the host's storage lock keeps a single owner).
+ * a persistent host's data whole across tabs; `connectDemoHost` for why a
+ * Reset, or a worker retiring once its last tab went, moves to the next name),
+ * or, where the browser has none, a dedicated worker of this page's own (the
+ * host's storage lock keeps a single owner).
  * The end is not started: the caller starts it once it listens.
  */
 async function connectHost(

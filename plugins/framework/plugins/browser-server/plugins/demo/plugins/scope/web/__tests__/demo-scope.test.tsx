@@ -55,7 +55,7 @@ import {
   type InRealmServerOptions,
 } from "@plugins/framework/plugins/browser-server/core/testing";
 import type { DemoScenario } from "@plugins/framework/plugins/browser-server/plugins/demo/core";
-import { trackHostGenerations } from "@plugins/framework/plugins/browser-server/plugins/demo/plugins/prestart/web";
+import { trackHostGenerations } from "../internal/host-generation";
 import {
   defineEndpoint,
   implement,
@@ -177,7 +177,6 @@ const scenarioOf = (
     id,
     home: null,
     plugins: SCOPE_PLUGINS,
-    module: "@browser-host/test-host",
     start: channelHost(boot),
   },
   storage: null,

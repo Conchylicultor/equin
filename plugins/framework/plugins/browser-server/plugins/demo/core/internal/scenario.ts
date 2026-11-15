@@ -10,12 +10,6 @@ import type { ScopedComposition } from "@plugins/framework/plugins/web-sdk/core"
  * shows exactly the plugins the worker serves.
  */
 export type DemoHost = ScopedComposition & {
-  /**
-   * The host module's import-map specifier (`@browser-host/<plugin path>`),
-   * what `start` imports: for a page script that imports it itself (the demo
-   * page's head script, `demo/prestart`).
-   */
-  module: string;
   start(): Promise<{
     /** The host in a dedicated worker: this page's alone. */
     start(): Worker;

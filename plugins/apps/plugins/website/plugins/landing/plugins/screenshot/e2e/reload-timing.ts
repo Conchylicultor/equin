@@ -100,14 +100,11 @@ async function timeLoad(
       )
       .join(", "),
   );
-  // When a head start's own modules arrived (`browser-server/demo/prestart`), on
-  // a page whose head script runs one; else the host module alone.
-  const prestartModules = await page.evaluate(() =>
+  // When the host module arrived.
+  const hostModule = await page.evaluate(() =>
     performance
       .getEntriesByType("resource")
-      .filter((e) =>
-        /demo\.prestart\.web|\.browser-host\.[0-9a-f]+\/host\.js/.test(e.name),
-      )
+      .filter((e) => /\.browser-host\.[0-9a-f]+\/host\.js/.test(e.name))
       .map(
         (e) =>
           `${e.name.replace(/^.*\/artifacts\//, "")} ${Math.round(e.startTime)}→${Math.round((e as PerformanceResourceTiming).responseEnd)}`,
@@ -118,7 +115,7 @@ async function timeLoad(
     dclMs,
     paintMs,
     bootLine: settled.value,
-    bootTrace: `${bootTrace}\n  head-script modules: ${prestartModules}`,
+    bootTrace: `${bootTrace}\n  host module: ${hostModule}`,
   };
 }
 

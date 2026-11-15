@@ -131,8 +131,8 @@ export function hostWorkerSpecifier(pluginPath: string): string {
  * `extendedLifetime`: the worker outlives its last tab, so what that tab asked
  * for is finished and flushed before the host retires itself
  * (`framework/browser-server`'s `serveHost` `retire`). Connecting to it — never
- * to a worker that is retiring — and starting it ahead of the page are the
- * caller's (`connectSharedHost`, `demo/prestart`).
+ * to a worker that is retiring — is the caller's (`connectSharedHost`,
+ * `demo/scope`).
  */
 export function hostModuleSource(pluginPath: string): string {
   const url = `import.meta.resolve(${JSON.stringify(hostWorkerSpecifier(pluginPath))})`;

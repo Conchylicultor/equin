@@ -2,7 +2,7 @@
 //
 // PGlite allows one connection per database, so exactly one worker may hold a
 // persistent storage. Tabs of one build share it through one SharedWorker —
-// but a worker's NAME can differ between tabs (`demo/prestart`'s generations:
+// but a worker's NAME can differ between tabs (`demo/scope`'s generations:
 // a retiring worker's name is skipped), a NEW build has a new worker URL — a
 // different SharedWorker — and a browser without SharedWorker falls back to a
 // worker per tab. So the storage is held under an exclusive Web Lock,

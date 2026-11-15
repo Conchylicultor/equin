@@ -277,13 +277,7 @@ const mapInSync: Check = {
 
     const linkRaw = readIfExists(join(dist.dir, DIST_LINK_FILE));
     const link = linkRaw === null ? null : (JSON.parse(linkRaw) as DistLink);
-    // The page-script entries are the link's own output: expected as the dist's
-    // link recorded them, once that link is the one the tree composes.
-    const expectedImports =
-      link !== null && link.key === expected.linkKey
-        ? { ...expected.imports, ...link.pageScripts }
-        : expected.imports;
-    const diff = diffImportMaps(deployed, expectedImports);
+    const diff = diffImportMaps(deployed, expected.imports);
     const problems: string[] = [];
     if (diff.changed.length > 0) {
       problems.push(

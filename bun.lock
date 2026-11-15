@@ -3719,10 +3719,6 @@
       "name": "@equin/plugin-framework-browser-server-demo",
       "version": "0.0.1",
     },
-    "plugins/framework/plugins/browser-server/plugins/demo/plugins/prestart": {
-      "name": "@equin/plugin-framework-browser-server-demo-prestart",
-      "version": "0.0.1",
-    },
     "plugins/framework/plugins/browser-server/plugins/demo/plugins/scope": {
       "name": "@equin/plugin-framework-browser-server-demo-scope",
       "version": "0.0.1",
@@ -9884,8 +9880,6 @@
     "@equin/plugin-framework-browser-server-bun-host": ["@equin/plugin-framework-browser-server-bun-host@workspace:plugins/framework/plugins/browser-server/plugins/bun-host"],
 
     "@equin/plugin-framework-browser-server-demo": ["@equin/plugin-framework-browser-server-demo@workspace:plugins/framework/plugins/browser-server/plugins/demo"],
-
-    "@equin/plugin-framework-browser-server-demo-prestart": ["@equin/plugin-framework-browser-server-demo-prestart@workspace:plugins/framework/plugins/browser-server/plugins/demo/plugins/prestart"],
 
     "@equin/plugin-framework-browser-server-demo-scope": ["@equin/plugin-framework-browser-server-demo-scope@workspace:plugins/framework/plugins/browser-server/plugins/demo/plugins/scope"],
 

@@ -31027,7 +31027,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/sonata/audio/soundfont`
           - `apps/website/landing/screenshot`
           - `debug/slow-ops`
-          - `framework/browser-server/demo/prestart`
           - `framework/browser-server/demo/scope`
           - `framework/browser-server/host-storage`
           - `integrations/google-maps/browser-config`
@@ -31050,25 +31049,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `DemoHost`
               - `DemoScenario`
           - Plugins:
-            - **`prestart`** — Which SharedWorker a demo's tabs share — its name, the scenario and its Reset generation (kept page-wide, so a Reset moves every tab past the closing worker) — and connecting a tab to it (connectDemoHost: never to a worker that is retiring — its generation is skipped — and the head start's connection when there is one), started before the page boots where the page says so (prestartDemoHost, run by the demo page's head script), so the host boots alongside the page's own bundle. Kept apart from demo/scope so that head script loads only this, not the scope's UI.
-              - Web:
-                - Uses: `primitives/dom/web-storage.defineStore`
-                - Exports (types):
-                  - `DemoHostConnection`
-                  - `HostGenerations`
-                - Exports (values):
-                  - `connectDemoHost`
-                  - `hostWorkerName`
-                  - `prestartDemoHost`
-                  - `trackHostGenerations`
-              - Cross-plugin:
-                - Imported by: `framework/browser-server/demo/scope`
             - **`scope`** — <DemoScope scenario>: renders its subtree against the scenario's browser host — real server code in a worker, on the scenario's seed — and scoped to the host's composition (<PluginScope>), so the page shows exactly the plugins the worker serves. Everything inside reaches the host only (the scope's transport): the build's coverage guard holds the host to serving every read, endpoint and config the scope uses, or declaring it needsMachine (answered unavailable); a key or endpoint it still does not serve fails loudly. A host that fails to boot throws to the error boundary. An optional boot render gates the demo on every visit (DemoBoot: checking, the gate, then starting with the worker's progress): the visitor enters it (enter), or — while they are in the demo in another tab of this browser (a shared Web Lock each such tab holds) — the tab joins it with no gate (onEnter hears both, and which: the gate's click, or a join no one acted on); a page whose own URL says whether the visitor is in decides alone (resume: true — no gate, only the loading; false — the gate, no join); behind the gate, a browser already holding the demo's data starts the host at once, a first visit only on enter, since it downloads the whole server and its data. Connects to one SharedWorker per build (every tab of the demo shares its server and data: a worker that finds the same host serving under another name sends the tab there — it joins, never takes it), shows the true cause when the host will not serve the page (equin updated in another tab; a browser without SharedWorker that opened it in another tab), and exposes Reset (useDemoHostControl) — the host wipes its data and every tab reconnects to a fresh one.
               - Web:
-                - Uses: 25 symbols — full list in [`plugins/framework/plugins/browser-server/plugins/demo/plugins/scope/REFERENCE.md`](../plugins/framework/plugins/browser-server/plugins/demo/plugins/scope/REFERENCE.md)
+                - Uses: 23 symbols — full list in [`plugins/framework/plugins/browser-server/plugins/demo/plugins/scope/REFERENCE.md`](../plugins/framework/plugins/browser-server/plugins/demo/plugins/scope/REFERENCE.md)
                   - `framework/browser-server` ×6
-                  - `framework/browser-server/demo/prestart` ×3
                   - `network/live/live-state` ×2
+                  - `primitives/dom/web-storage` ×2
                   - `primitives/networking` ×2
                   - `network/live.useLive`
                   - `primitives/css/center.Center`
@@ -31076,7 +31062,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/css/text.Text`
                   - `primitives/css/theme-boundary.Theme`
                   - `primitives/css/ui-kit.Button`
-                  - `primitives/dom/web-storage.clearStorageScope`
                   - `primitives/latest-ref.useEventCallback`
                   - `primitives/loading.Loading`
                   - `primitives/log-channels.clientLog`
@@ -31145,10 +31130,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Core: `@plugins/framework/plugins/browser-server/plugins/host-storage/core/testing`
               - `declareMemoryHostStorage` — Declare that this process's browser host keeps its state in memory — what a test that boots a browser graph (PGlite and the in-memory host stores) declares before `bootBrowserHost`, as a host's entry point declares its storage.
           - Plugins:
-            - **`stored`** — Whether this browser already holds a persistent browser host's data (hostDataStored(name)), read without booting anything — and the IndexedDB layout it reads, shared with host-storage's open (the storage's database names, the lifecycle record). A leaf, so a page can ask before it starts the host: a demo's gate, its head script.
+            - **`stored`** — Whether this browser already holds a persistent browser host's data (hostDataStored(name)), read without booting anything — and the IndexedDB layout it reads, shared with host-storage's open (the storage's database names, the lifecycle record). A leaf, so a page can ask before it starts the host: a demo's gate.
               - Cross-plugin:
                 - Imported by:
-                  - `framework/browser-server/demo/prestart`
                   - `framework/browser-server/demo/scope`
                   - `framework/browser-server/host-storage`
               - Core:
@@ -31755,7 +31739,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `framework/tooling/web-artifacts`
           - `plugin-meta/barrel-import`
-    - **`import-map-names`** — The bare-specifier namespaces only a page's import map answers — a browser host (`@browser-host/`), its worker entry (`@browser-host-worker/`) and its starting snapshot (`@browser-host-snapshot/`), served by web-artifacts: external to every artifact build, never an npm package, never resolved by Bun. And PAGE_SCRIPT_MODULES: the plugin barrels a head script outside the app bundle imports by specifier (the demo prestart), each its own route-chunk entry mapped by the page — every other plugin module is bundled and named by URL. A leaf with no imports directly under framework (not under web-artifacts, whose closure a child would carry into every composition), so source-digest's closure walk — which a server reaches a lazy `import("@browser-host/…")` through — knows them for free.
+    - **`import-map-names`** — The bare-specifier namespaces only a page's import map answers — a browser host (`@browser-host/`), its worker entry (`@browser-host-worker/`) and its starting snapshot (`@browser-host-snapshot/`), served by web-artifacts: external to every artifact build, never an npm package, never resolved by Bun. Every plugin module is bundled and named by URL, never mapped. A leaf with no imports directly under framework (not under web-artifacts, whose closure a child would carry into every composition), so source-digest's closure walk — which a server reaches a lazy `import("@browser-host/…")` through — knows them for free.
       - Cross-plugin:
         - Imported by:
           - `framework/tooling/web-artifacts`
@@ -31768,7 +31752,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `isBrowserHostSnapshotSpecifier`
           - `isBrowserHostSpecifier`
           - `isImportMapOnlySpecifier`
-          - `PAGE_SCRIPT_MODULES`
     - **`plugin-id`** — Canonical plugin identity: the branded PluginId type and its derived path encodings.
       - Core:
         - Uses: `framework/product-name.PRODUCT_NAME`
@@ -33713,9 +33696,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `source-read-safety/no-text-source-read` — `check/index.ts`, `check/runner-split.scan.ts` (debt)
         - **`web-artifacts`** — Per-plugin web build artifacts: content-addressed vite lib-mode builds composed via an import map
           - Core:
-            - Uses: 52 symbols — full list in [`plugins/framework/plugins/tooling/plugins/web-artifacts/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/web-artifacts/REFERENCE.md)
+            - Uses: 51 symbols — full list in [`plugins/framework/plugins/tooling/plugins/web-artifacts/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/web-artifacts/REFERENCE.md)
               - `packages/timed-fs` ×8
-              - `framework/import-map-names` ×7
+              - `framework/import-map-names` ×6
               - `framework/plugin-id` ×4
               - `framework/web-core` ×4
               - `infra/host-fs/user-path` ×4
@@ -52190,16 +52173,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `useStore`
               - `WebStorageSlots`
           - Cross-plugin:
-            - Imported by: 53 plugins — full list in [`plugins/primitives/plugins/dom/plugins/web-storage/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/web-storage/REFERENCE.md)
+            - Imported by: 52 plugins — full list in [`plugins/primitives/plugins/dom/plugins/web-storage/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/web-storage/REFERENCE.md)
               - `primitives` ×15
               - `apps` ×13
               - `conversations` ×6
               - `apps-core` ×3
-              - `framework` ×2
               - `reports` ×2
               - `ui` ×2
               - `companions/browser-extension`
               - `config_v2`
+              - `framework/browser-server/demo/scope`
               - `hints/ask`
               - `layouts/miller`
               - `map`

@@ -130,8 +130,6 @@ export interface DistLink {
   key: string;
   /** The entry chunk's URL. */
   entryUrl: string;
-  /** The page-script specifiers' entry chunks, as the import map names them. */
-  pageScripts: Record<string, string>;
 }
 
 const MAIN_SCRIPT_TAG = '<script type="module" src="/main.tsx"></script>';

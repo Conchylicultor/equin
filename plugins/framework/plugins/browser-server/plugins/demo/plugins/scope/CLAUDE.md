@@ -19,9 +19,10 @@ seed — so the unchanged app reads demo data through `useLive` /
   `<TransportProvider>` + `<NotificationsProvider>` around the children. The
   end is the host's SharedWorker (`startShared(scenario.id)`: every tab of
   the demo on one server and one database) — connected through
-  `demo/prestart`'s `connectDemoHost`, never to a worker that is retiring (its
-  last tab went: it flushes and closes; the tab moves to the next host
-  generation) — or a dedicated worker where the browser has no SharedWorker.
+  `connectDemoHost` (`web/internal/connect.ts`), never to a worker that is
+  retiring (its last tab went: it flushes and closes; the tab moves to the
+  next host generation) — or a dedicated worker where the browser has no
+  SharedWorker.
   Unmount disposes the server and leaves the connection. A host that fails to boot throws to the error boundary.
 - **A gate, where the page draws the boot** (`boot={(state) => …}`,
   `DemoBoot`: `gate` → `starting` with the worker's `HostProgress`). The
@@ -34,11 +35,18 @@ seed — so the unchanged app reads demo data through `useLive` /
 - **Progress while it boots**: `portBrowserServer`'s `onProgress` hands the
   worker's reports (downloaded bytes, the starting data's bytes, plugins
   loaded) to the boot render.
-- **Started before the page boots, where the page says so**: a page that
-  always opens a demo runs `demo/prestart`'s `prestartDemoHost` from
-  its `<head>` (the /demo page: `apps/demo/shell`'s head fragment) — on a
-  return visit only, where the data is stored — so the worker boots alongside the page's own bundle; the scope's `connectDemoHost` is
-  then handed that connection.
+- **No head start.** Starting the host from the page's `<head>` (a module
+  script connecting before the app boots) was built for /demo and measured
+  again on /about's website composition (2026-11-15, return visits, n=9
+  each): host.js arrived at ~26 ms instead of ~500 ms, yet the worker was
+  still created at ~1.2 s and ready no sooner (median 5.2 s with, 5.1 s
+  without), while FCP/LCP rose ~160 ms (1.23 s vs 1.07 s; a first visit's
+  plain page 0.82 vs 0.77 s). Chrome fetches a shared worker's script in the
+  browser process behind the page's requests already in flight and hands the
+  worker over through a task on the page's busy main thread, so the worker
+  starts once the page's own load lets it, wherever the script sits. What
+  moves it is a smaller page load or a shorter worker boot (graph ~3.5 s),
+  not an earlier script.
 - **Every tab shares the running host — it joins, never takes it.** A
   worker that finds the same host already serving the storage under another
   generation's name (two tabs connecting within ms of the last one leaving, a
@@ -50,17 +58,21 @@ seed — so the unchanged app reads demo data through `useLive` /
   tab (another build took the data, or the data is from newer code) — or
   `unshared` — a browser without SharedWorker opened the demo in another tab.
   Each with Reload; it never renders an app that cannot reach its server.
-- **Reset** (`useDemoHostControl().reset()`, inside the scope — the /demo
-  caption bar's "Reset demo"): the host wipes its storage and ends with
+- **Reset** (`useDemoHostControl().reset()`, inside the scope — the /about
+  demo band's "Reset demo"): the host wipes its storage and ends with
   `reset`; every tab's scope reconnects to a fresh host, which seeds again.
   The fresh host is the NEXT host generation's SharedWorker (`startShared` is
   named `<scenario>@<generation>`, the generation kept page-wide in
-  localStorage, `demo/prestart`'s `host-generation.ts`): the old worker closes
+  localStorage, `web/internal/host-generation.ts`): the old worker closes
   itself, but Chromium hands a `new SharedWorker` of the same name to a dying
   worker until the browser process hears of its close — a tab reconnecting at
   once would wait on a worker that never answers. The resetting tab advances
   the generation before it sends Reset (a tab opened mid-wipe already asks for
   the next one), and every tab told `ended: "reset"` advances past its own.
+  The generation is `{ current, highest }`: moving on reaches the generation
+  the other tabs already moved to, else a name no tab used (`highest` + 1) —
+  never one that is closing or that told a tab to join another; joining moves
+  `current` back to the generation the host serves at.
 - **Scoped to the host's composition**: the children render inside
   `<PluginScope composition={scenario.host}>` (`web-sdk`), so only the plugins
   the worker's composition ships contribute to any slot read inside the demo
@@ -113,10 +125,10 @@ in-realm `MessageChannel` standing in for the worker).
 
 - Description: <DemoScope scenario>: renders its subtree against the scenario's browser host — real server code in a worker, on the scenario's seed — and scoped to the host's composition (<PluginScope>), so the page shows exactly the plugins the worker serves. Everything inside reaches the host only (the scope's transport): the build's coverage guard holds the host to serving every read, endpoint and config the scope uses, or declaring it needsMachine (answered unavailable); a key or endpoint it still does not serve fails loudly. A host that fails to boot throws to the error boundary. An optional boot render gates the demo on every visit (DemoBoot: checking, the gate, then starting with the worker's progress): the visitor enters it (enter), or — while they are in the demo in another tab of this browser (a shared Web Lock each such tab holds) — the tab joins it with no gate (onEnter hears both, and which: the gate's click, or a join no one acted on); a page whose own URL says whether the visitor is in decides alone (resume: true — no gate, only the loading; false — the gate, no join); behind the gate, a browser already holding the demo's data starts the host at once, a first visit only on enter, since it downloads the whole server and its data. Connects to one SharedWorker per build (every tab of the demo shares its server and data: a worker that finds the same host serving under another name sends the tab there — it joins, never takes it), shows the true cause when the host will not serve the page (equin updated in another tab; a browser without SharedWorker that opened it in another tab), and exposes Reset (useDemoHostControl) — the host wipes its data and every tab reconnects to a fresh one.
 - Web:
-  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `framework/browser-server` ×6
-    - `framework/browser-server/demo/prestart` ×3
     - `network/live/live-state` ×2
+    - `primitives/dom/web-storage` ×2
     - `primitives/networking` ×2
     - `network/live.useLive`
     - `primitives/css/center.Center`
@@ -124,7 +136,6 @@ in-realm `MessageChannel` standing in for the worker).
     - `primitives/css/text.Text`
     - `primitives/css/theme-boundary.Theme`
     - `primitives/css/ui-kit.Button`
-    - `primitives/dom/web-storage.clearStorageScope`
     - `primitives/latest-ref.useEventCallback`
     - `primitives/loading.Loading`
     - `primitives/log-channels.clientLog`

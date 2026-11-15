@@ -84,12 +84,9 @@ Key invariants:
     unchanged chunk keeps its URL across builds); the result is a `link.<key>`
     record keyed by every input address, the vendor set, the tier split and
     the builder identity — an unchanged fleet reuses it without bundling.
-  - **The import map holds only what stays external**: vendors, browser hosts,
-    and `PAGE_SCRIPT_MODULES` (`framework/import-map-names`: barrels a head
-    script imports by specifier, e.g. the demo prestart — each its own link
-    entry, one instance with the app's). No `@plugins/*` specifier is mapped
-    otherwise, so a head script importing any other barrel would 404: add it
-    to that list.
+  - **The import map holds only what stays external**: vendors and browser
+    hosts. No `@plugins/*` specifier is mapped, so a head script outside the
+    bundle cannot import a plugin barrel by specifier (it would 404).
   - `new URL("<rel>", import.meta.url)` (images, workers) is rewritten to the
     file's absolute `/artifacts/<dir>/…` URL and the dir is linked for its
     files (`LinkRecord.assetDirs`, never scanned as modules); any other
@@ -582,9 +579,9 @@ Key invariants:
 
 - Description: Per-plugin web build artifacts: content-addressed vite lib-mode builds composed via an import map
 - Core:
-  - Uses: 52 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 51 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `packages/timed-fs` ×8
-    - `framework/import-map-names` ×7
+    - `framework/import-map-names` ×6
     - `framework/plugin-id` ×4
     - `framework/web-core` ×4
     - `infra/host-fs/user-path` ×4

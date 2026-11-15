@@ -137,8 +137,7 @@ presence lock and sends `hello`. Without Web Locks (a test realm) it just
 connects. Limits: a browser without `extendedLifetime` (Firefox, Safari) still
 ends the worker with its last tab; a tab killed between `new SharedWorker` and
 its `hello` reaching the worker leaves an end that never leaves (the worker
-then lives until the browser ends it); a head start no scope ever takes holds
-the retire lock shared until its tab goes.
+then lives until the browser ends it).
 
 The worker itself is a plugin's `bin/browser-host.ts`, built by web-artifacts
 (`browser-hosts.ts`) and imported by the page as `@browser-host/<pluginPath>`
@@ -350,7 +349,6 @@ reaching the server, detach on unmount).
     - `apps/sonata/audio/soundfont`
     - `apps/website/landing/screenshot`
     - `debug/slow-ops`
-    - `framework/browser-server/demo/prestart`
     - `framework/browser-server/demo/scope`
     - `framework/browser-server/host-storage`
     - `integrations/google-maps/browser-config`

@@ -68,7 +68,7 @@ describe("composeMapEntries (the expected-map assembly shared with compose)", ()
     setHash: "f".repeat(64),
   };
 
-  test("vendors, hosts and page scripts — no plugin artifact is mapped", () => {
+  test("vendors and hosts — no plugin artifact is mapped", () => {
     const entries = composeMapEntries({
       vendorMeta,
       hosts: [
@@ -79,13 +79,11 @@ describe("composeMapEntries (the expected-map assembly shared with compose)", ()
           workerUrl: "/artifacts/worker-tree.2/demo.bin/index.js",
         },
       ],
-      pageScripts: { "@plugins/p/web": "/artifacts/chunk.abc/index.js" },
     });
     const map = buildImportMap(entries).imports;
     expect(map).toEqual({
       "@browser-host/demo": "/artifacts/demo.browser-host.1/host.js",
       "@browser-host-worker/demo": "/artifacts/worker-tree.2/demo.bin/index.js",
-      "@plugins/p/web": "/artifacts/chunk.abc/index.js",
       react: `/artifacts/set.${"f".repeat(16)}/react.js`,
       "react-dom/client": `/artifacts/set.${"f".repeat(16)}/react-dom__client.js`,
     });
@@ -109,9 +107,7 @@ describe("composeMapEntries (the expected-map assembly shared with compose)", ()
 
   test("map recompute is a pure function of its inputs — same input, same map", () => {
     const make = () =>
-      buildImportMap(
-        composeMapEntries({ vendorMeta, hosts: [], pageScripts: {} }),
-      ).imports;
+      buildImportMap(composeMapEntries({ vendorMeta, hosts: [] })).imports;
     expect(make()).toEqual(make());
   });
 });

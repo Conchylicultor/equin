@@ -210,7 +210,6 @@ describe("composeDist with an address dir", () => {
         link: {
           key: "k",
           entryUrl: `/artifacts/${links[0]!.linkName}/index.js`,
-          pageScripts: {},
         },
       });
     // A package-asset entry: one file and its sidecars (`package-assets.ts`).

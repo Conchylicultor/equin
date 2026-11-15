@@ -770,7 +770,6 @@ async function runPipeline(
       const mapEntries: ImportMapEntry[] = composeMapEntries({
         vendorMeta: vendors,
         hosts: composedHosts,
-        pageScripts: linked.record.pageScripts,
       });
       for (const host of hosts) {
         links.push({
@@ -841,7 +840,6 @@ async function runPipeline(
         link: {
           key: linked.record.key,
           entryUrl,
-          pageScripts: linked.record.pageScripts,
         },
         edges: Object.fromEntries(
           [...buildOut.metas].map(([dirName, meta]) => [

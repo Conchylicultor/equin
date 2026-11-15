@@ -325,10 +325,7 @@ export async function computeExpectedComposition(opts: {
   if (missingSnapshots.length > 0) {
     return { kind: "missing-artifacts", missing: missingSnapshots };
   }
-  // The page-script entries name link chunks: what they are is the link's
-  // output, which the check reads off the dist once the keys agree.
   const mapEntries = composeMapEntries({
-    pageScripts: {},
     vendorMeta,
     hosts: composedHostsOf({
       hosts: fleet.hosts,

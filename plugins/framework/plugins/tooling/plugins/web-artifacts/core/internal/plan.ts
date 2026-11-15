@@ -728,15 +728,8 @@ export function composeMapEntries(opts: {
   vendorMeta: VendorSetMeta;
   /** The fleet's browser hosts: the host module, and the worker entry's URL. */
   hosts: readonly ComposedHost[];
-  /**
-   * The page-script modules' entry chunks (`LinkRecord.pageScripts`): the
-   * plugin barrels a head script imports by specifier.
-   */
-  pageScripts: Readonly<Record<string, string>>;
 }): ImportMapEntry[] {
   const entries: ImportMapEntry[] = [];
-  for (const [specifier, url] of Object.entries(opts.pageScripts))
-    entries.push({ specifier, url });
   for (const host of opts.hosts) {
     entries.push({
       specifier: host.specifier,
