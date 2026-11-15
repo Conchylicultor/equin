@@ -40,7 +40,11 @@ server was stopped (idle sweep), split into where the time goes. Plan:
   self time by function, time under the deepest plugin frame on the stack
   (vendor and React work charged to the plugin code that called into it), and
   inclusive time per plugin on the stack. The profiler slows the page: read
-  proportions, not headline times. With `--out`, each trace is written beside
+  proportions, not headline times. Only the sampler's periodic ticks count
+  as time: while tracing, Chromium also samples at every User Timing call
+  (its trace event's `callTime`); charged the time until the next tick, such
+  a sample would bill the timing call for work it did not do. They are
+  dropped before attribution (`User Timing call samples dropped` per window). With `--out`, each trace is written beside
   it (`<out>.trace-<n>.json`, opens in DevTools' Performance panel).
 - `--react-profile` runs `debug/render-profiler` from the moment its Core.Root
   installer publishes `window.__reactRenderProfiler` until the route-content

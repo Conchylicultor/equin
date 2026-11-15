@@ -7,6 +7,16 @@
 //
 // The trace clock and the page clock differ; one boot User Timing mark, present
 // in both, aligns them.
+//
+// Only the sampler's periodic ticks are time. While tracing, Chromium also
+// takes one sample at every User Timing call (`performance.mark` /
+// `measure`, its trace event's `callTime`), to give the entry a stack. Such a
+// sample is a point observation: charged "the time until the next sample",
+// it would claim the rest of the tick for the timing call — a boot that
+// measures ~1,000 plugin loads back to back put ~36 ms on
+// boot-trace's traceBootPluginLoad that way, while the ~1,200 calls took
+// ~5 ms by their own clock. So those samples are dropped before attribution:
+// each tick's interval stays with the tick, as with no timing calls at all.
 
 /** A window on the page clock (ms after navigation start). */
 export interface CpuWindow {
@@ -29,7 +39,7 @@ interface TraceEvent {
   tid: number;
   ts: number;
   id?: string;
-  args?: { data?: Record<string, unknown> };
+  args?: { data?: Record<string, unknown>; callTime?: unknown };
 }
 
 interface CallFrame {
@@ -134,6 +144,71 @@ function collectProfiles(events: TraceEvent[]): Samples[] {
   return [...byId.values()];
 }
 
+// How far a User Timing call's own sample lands from its `callTime`: 1–3 µs
+// in practice (measured on a cold /agents trace), a periodic tick ~1 ms apart.
+const CALL_SAMPLE_TOLERANCE_US = 10;
+
+/** Sorted `callTime`s (trace µs) of every User Timing call on one thread. */
+function userTimingCallTimes(
+  events: TraceEvent[],
+  pid: number,
+  tid: number,
+): number[] {
+  const out = new Set<number>();
+  for (const e of events) {
+    if (e.pid !== pid || e.tid !== tid) continue;
+    if (!(e.cat ?? "").includes("user_timing")) continue;
+    const at = e.args?.callTime;
+    if (typeof at === "number") out.add(at);
+  }
+  return [...out].sort((a, b) => a - b);
+}
+
+/**
+ * A profile with each User Timing call's own sample removed: for every call,
+ * the nearest not-yet-taken sample within the tolerance (one per call, so a
+ * periodic tick that happens to fall near a call keeps its place when the
+ * call's own sample is closer). `dropped` keeps their times, for the count.
+ */
+function withoutCallSamples(
+  p: Samples,
+  calls: number[],
+): Samples & { dropped: number[] } {
+  const drop = new Set<number>();
+  let j = 0;
+  for (const c of calls) {
+    while (j < p.times.length && (p.times[j] ?? 0) < c - CALL_SAMPLE_TOLERANCE_US)
+      j++;
+    let best = -1;
+    for (
+      let k = j;
+      k < p.times.length && (p.times[k] ?? 0) <= c + CALL_SAMPLE_TOLERANCE_US;
+      k++
+    ) {
+      if (drop.has(k)) continue;
+      if (
+        best === -1 ||
+        Math.abs((p.times[k] ?? 0) - c) < Math.abs((p.times[best] ?? 0) - c)
+      )
+        best = k;
+    }
+    if (best !== -1) drop.add(best);
+  }
+  const times: number[] = [];
+  const nodeIds: number[] = [];
+  const dropped: number[] = [];
+  for (let i = 0; i < p.times.length; i++) {
+    const t = p.times[i] ?? 0;
+    if (drop.has(i)) {
+      dropped.push(t);
+      continue;
+    }
+    times.push(t);
+    nodeIds.push(p.nodeIds[i] ?? 0);
+  }
+  return { ...p, times, nodeIds, dropped };
+}
+
 /**
  * Summarise a trace over `windows`. `anchor` is a User Timing mark name and
  * its startTime on the page clock: it finds the page's main thread (the thread
@@ -157,11 +232,15 @@ export function summariseCpuTrace(
   // µs on the trace clock ↔ ms on the page clock.
   const offsetUs = mark.ts - anchor.pageMs * 1000;
   const profiles = collectProfiles(events);
-  const main = profiles.filter((p) => p.pid === mark.pid && p.tid === mark.tid);
-  if (main.length === 0)
+  const mainProfiles = profiles.filter(
+    (p) => p.pid === mark.pid && p.tid === mark.tid,
+  );
+  if (mainProfiles.length === 0)
     throw new Error(
       `no V8 profile on the page's main thread (pid ${mark.pid} tid ${mark.tid}); profiles: ${profiles.map((p) => `${p.pid}/${p.tid}`).join(", ") || "none"}`,
     );
+  const calls = userTimingCallTimes(events, mark.pid, mark.tid);
+  const main = mainProfiles.map((p) => withoutCallSamples(p, calls));
 
   // Per node, once: the deepest plugin frame on its stack (vendor code —
   // React's work loop, a query library — charged to the plugin code that
@@ -242,6 +321,10 @@ export function summariseCpuTrace(
     const gc = byBucket.get("(garbage collector)") ?? 0;
     const program = byBucket.get("(program)") ?? 0;
     metrics[`P ${w.name}: window ms`] = w.endMs - w.startMs;
+    metrics[`P ${w.name}: User Timing call samples dropped`] = main.reduce(
+      (n, p) => n + p.dropped.filter((t) => t >= lo && t < hi).length,
+      0,
+    );
     metrics[`P ${w.name}: busy ms (sampled − idle)`] = sampled - idle;
     metrics[`P ${w.name}: script ms (busy − GC − program)`] =
       sampled - idle - gc - program;
