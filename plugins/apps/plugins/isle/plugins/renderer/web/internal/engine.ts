@@ -231,6 +231,9 @@ const LODS = [0.25, 0.5, 1, 2] as const;
 const TILE_BUDGET = 64e6;
 const GROUND_MAX = 120;
 const Z_MAX = 2.6;
+/** Signs fade in from SIGN_FADE_Z0 and are fully shown from SIGN_FULL_Z; below it a focused building's sign is drawn at this zoom's size. */
+const SIGN_FADE_Z0 = 0.36;
+const SIGN_FULL_Z = 0.6;
 /** World px the hero walks between two footsteps. */
 const STEP_PX = 30;
 /** Seconds a building's life takes to fade in. */
@@ -2541,29 +2544,48 @@ export class IsleEngine {
       }
       g.globalCompositeOperation = "source-over";
     }
-    // signs stay readable over everything, as on a map — and give way to district names when zoomed out
-    const signA = ss(0.36, 0.6, z);
-    if (signA > 0.01) {
-      world2screen();
-      g.globalAlpha = signA * (night ? 0.9 : 1);
-      for (const b of this.buildings) {
-        if (!vis(b.x + b.signX, b.y, 120)) continue;
-        const app = this.apps.get(b.appId)!;
-        drawSign(
-          g,
-          {
-            x: b.x + b.signX,
-            y: b.y + 12,
-            name: b.name,
-            signHalf: b.signHalf,
-            tile: shade(app.hue, -0.12),
-            glyph: this.tintedGlyph(app, "#ffffff"),
-          },
-          Math.max(hoverA(b), this.nearDoor === b ? 1 : 0),
-        );
+    // signs stay readable over everything, as on a map — and give way to district names when zoomed out;
+    // the hovered building (or the one at the hero's door) keeps its sign at any zoom, drawn last and
+    // scaled up to the size it has where every sign shows, so its name still reads from afar
+    const signA = ss(SIGN_FADE_Z0, SIGN_FULL_Z, z);
+    const focusA = (b: SceneBuilding) =>
+      Math.max(hoverA(b), this.nearDoor === b ? 1 : 0);
+    const signFor = (b: SceneBuilding) => {
+      const app = this.apps.get(b.appId)!;
+      return {
+        x: b.x + b.signX,
+        y: b.y + 12,
+        name: b.name,
+        signHalf: b.signHalf,
+        tile: shade(app.hue, -0.12),
+        glyph: this.tintedGlyph(app, "#ffffff"),
+      };
+    };
+    const nightA = night ? 0.9 : 1;
+    world2screen();
+    const focused: SceneBuilding[] = [];
+    for (const b of this.buildings) {
+      if (!vis(b.x + b.signX, b.y, 120)) continue;
+      if (focusA(b) > 0 && signA < 1) {
+        focused.push(b);
+        continue;
       }
-      g.globalAlpha = 1;
+      if (signA <= 0.01) continue;
+      g.globalAlpha = signA * nightA;
+      drawSign(g, signFor(b), focusA(b));
     }
+    const grow = SIGN_FULL_Z / z;
+    for (const b of focused) {
+      const a = focusA(b);
+      const s = signFor(b);
+      g.globalAlpha = Math.max(signA, a) * nightA;
+      g.save();
+      g.translate(s.x, s.y);
+      g.scale(grow, grow);
+      drawSign(g, { ...s, x: 0, y: 0 }, a);
+      g.restore();
+    }
+    g.globalAlpha = 1;
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
     this.drawChatter(t, z);
     this.drawLabels(dt, z, night);
