@@ -34,6 +34,8 @@ import {
 import { withActiveRoutePrefix } from "@plugins/primitives/plugins/pane/plugins/route-prefix/web";
 import { REVEAL_BOUNDARY_ATTR } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
+import { useRecordBrandDrawn } from "@plugins/primitives/plugins/app-shell/web";
+import { useSurfaceTabId } from "@plugins/primitives/plugins/scope/plugins/surface-id/web";
 
 /** An app-rooted URL the embed was asked to open but cannot hold (no app in scope owns it). */
 export type AppEmbedLeave = (url: string) => void;
@@ -142,6 +144,10 @@ export function AppEmbed({
   className?: string;
 }): ReactNode {
   const fillsPage = fills !== undefined;
+  // Filling the viewport, the embed's own brand (its floating launcher) holds
+  // the page's top-left corner: the page draws no launcher of its own there.
+  const pageSurface = useSurfaceTabId();
+  useRecordBrandDrawn(fills === "viewport" ? pageSurface : undefined);
   const paneBinding = usePaneTailBinding();
   const binding = place ?? paneBinding;
   const location = binding?.location;

@@ -52,7 +52,10 @@ around nothing the real instance. Designs:
   surface does at boot, so Space reaches Sonata with no click first. A
   `viewport` one is no `floating-bar-boundary`: it is the viewport's
   top-right corner, so its headers make room for and anchor the page's
-  floating action bar, as the app's own surface does.
+  floating action bar, as the app's own surface does. It is the top-left
+  corner too: it records its page's surface as drawing the brand
+  (`app-shell`'s `useRecordBrandDrawn`), so the page's floating launcher
+  steps aside for the embed's own.
 - **Its place, in the page's URL — kept by the embed itself.** Where it is
   (the focused tab's app-rooted URL under the mode's prefix: `/agents/c/x`,
   `/desktop/sonata`) and whether its host maximized it are two reserved
@@ -118,6 +121,7 @@ Tests: `web/__tests__/app-embed.test.tsx`.
     - `apps-core/tabs.EmbeddedTabSet`
     - `apps-core/tabs.TabsProvider`
     - `apps-core/tabs.useTabs`
+    - `primitives/app-shell.useRecordBrandDrawn`
     - `primitives/css/theme-boundary.Theme`
     - `primitives/css/ui-kit.cn`
     - `primitives/dom/scroll-reveal.REVEAL_BOUNDARY_ATTR`
@@ -127,6 +131,7 @@ Tests: `web/__tests__/app-embed.test.tsx`.
     - `primitives/pane.usePaneViews`
     - `primitives/pane/route-prefix.withActiveRoutePrefix`
     - `primitives/scope/render-origin.RenderOrigin`
+    - `primitives/scope/surface-id.useSurfaceTabId`
     - `primitives/slot-render.renderIsolated`
     - `shell/toast.showToast`
   - Exports (types):

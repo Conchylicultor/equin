@@ -41,11 +41,14 @@ export async function openLauncherGrid(
 }
 
 /**
- * Close a grid `openLauncherGrid` opened (Escape, pointer away) and wait until
- * it is gone, so the next hover never finds the closing one.
+ * Close a grid `openLauncherGrid` opened (Escape while it is still open,
+ * pointer away) and wait until it is gone, so the next hover never finds the
+ * closing one. A grid a pick already closed gets no Escape: nothing would
+ * take it, and a page's lowest-precedence Esc (a maximized demo's Restore)
+ * would.
  */
 export async function closeLauncherGrid(grid: Locator): Promise<void> {
-  await grid.page().keyboard.press("Escape");
+  if (await grid.isVisible()) await grid.page().keyboard.press("Escape");
   await grid.page().mouse.move(0, 0);
   await grid.waitFor({ state: "hidden", timeout: ELEMENT_TIMEOUT_MS });
 }

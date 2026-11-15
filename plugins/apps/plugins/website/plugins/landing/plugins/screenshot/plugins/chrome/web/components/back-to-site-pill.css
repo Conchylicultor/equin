@@ -1,0 +1,25 @@
+/* The demo page's way back (back-to-site-pill.tsx): a quiet pill hanging
+   from the top edge, over the demo — the site's tokens, a hairline and a
+   soft shadow so it reads above any app it covers. */
+.demo-back-pill {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: 2px 2px 2px var(--space-md);
+  border-radius: 9999px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--background) 92%, transparent);
+  box-shadow: var(--shadow-sm);
+  backdrop-filter: blur(8px);
+  cursor: grab;
+  white-space: nowrap;
+}
+/* A narrow screen keeps only the button. */
+@media (max-width: 640px) {
+  .demo-back-pill {
+    padding-left: 2px;
+  }
+  .demo-back-pill-what {
+    display: none;
+  }
+}

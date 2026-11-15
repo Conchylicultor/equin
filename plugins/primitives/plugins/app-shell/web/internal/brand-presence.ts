@@ -6,7 +6,12 @@ import { defineSurfacePresence } from "./surface-presence";
 // way out.
 const brandPresence = defineSurfacePresence();
 
-/** Record that a brand is drawn on `surfaceId` while the caller is mounted. */
+/**
+ * Record that a brand is drawn on `surfaceId` while the caller is mounted —
+ * by `AppShellBrand`, or by whatever else holds the surface's top-left corner
+ * with an app brand of its own (an `AppEmbed` filling the viewport: its
+ * floating launcher is there). `undefined` records nothing.
+ */
 export function useRecordBrandDrawn(surfaceId: string | undefined): void {
   brandPresence.useRecord(surfaceId);
 }

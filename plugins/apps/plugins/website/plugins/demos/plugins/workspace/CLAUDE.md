@@ -268,7 +268,9 @@ data and seed; no app folder changes:
 - Description: The workspace demo — the website's live demo of the Agent Manager, Pages, Prototypes, Sonata and Keyboard Party on Demo's own equin (core: workspaceDemo — the app, the route /c/conv-demo-practice-timer and its browser host: real server code in a Web Worker on PGlite, starting from a build-time snapshot of the demo's own data written through each app's fixture writer — agents at work on Demo's wishes, one waiting for review after adding a practice timer to Sonata, pages showing every block type, prototypes and songs, every id carrying `demo`) and its exhibit, the app rendered in-process on that host.
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shadow --shadow`
-  - Imported by: `apps/website/landing/screenshot`
+  - Imported by:
+    - `apps/website/landing/screenshot`
+    - `apps/website/live-demo`
 - Core:
   - Exports (values):
     - `externalHosts`

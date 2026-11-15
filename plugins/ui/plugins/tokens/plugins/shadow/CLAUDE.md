@@ -33,8 +33,8 @@ and a record's cover at rest / under the pointer, `shadow-cover` (`sm`) and
     - `ShadowParamsSchema`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/color-palette --popover`
-  - Tokens used by: 58 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×21
+  - Tokens used by: 59 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×22
     - `primitives` ×12
     - `ui` ×6
     - `framework` ×4

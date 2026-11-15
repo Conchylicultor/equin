@@ -6,7 +6,10 @@ import { pickFromLauncher } from "@plugins/apps-core/plugins/app-launcher/e2e";
 import { answerTipsAsTheyShow } from "@plugins/hints/e2e";
 import { workspaceDemo } from "@plugins/apps/plugins/website/plugins/demos/plugins/workspace/core";
 import { AGENT_MANAGER_READY } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
-import { embedTailPath } from "@plugins/primitives/plugins/pane/core";
+import {
+  demoPage,
+  demoPagePath,
+} from "@plugins/apps/plugins/website/plugins/live-demo/core";
 import {
   appThemeScope,
   qualifyThemeScope,
@@ -17,8 +20,8 @@ import {
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { waitFor } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/core";
 
-/** The page the live demo is on: the website's homepage. */
-const DEMO_PAGE = "/about";
+/** The page the live demo is alone on: the website's demo page (`/about/demo`). */
+const DEMO_PAGE = demoPage.path;
 
 /**
  * The `data-theme-scope` an app's boundary stamps inside the demo: its app
@@ -134,16 +137,16 @@ export async function joinDemo(
 }
 
 /**
- * The homepage with its live demo at `location` inside the demo (an
- * app-rooted URL, `/agents/c/x`), framed — or `full` screen — as the embed
- * writes its own place into the page's URL (`/about/at/agents/c/x;full=1`).
+ * The demo page with the live demo at `location` inside it (an app-rooted
+ * URL, `/agents/c/x`), as the embed writes its own place into the page's URL
+ * (`/about/demo/at/agents/c/x`).
  */
-export function demoPath(location: string, opts?: { full?: boolean }): string {
-  return DEMO_PAGE + embedTailPath(location, { maximized: opts?.full });
+export function demoPath(location: string): string {
+  return demoPagePath(location);
 }
 
 /**
- * Whether `url` is still the homepage (`/about`, `/about/at/…`): a move
+ * Whether `url` is still the demo page (`/about/demo`, `/about/demo/at/…`): a move
  * inside the demo rewrites the page's URL, but never leaves it for the app it
  * shows.
  */

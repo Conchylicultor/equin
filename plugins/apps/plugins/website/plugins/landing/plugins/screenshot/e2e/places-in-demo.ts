@@ -33,7 +33,9 @@
  *
  * And asserts, throughout, that nothing left the scope — the list `no-leak.ts`
  * checks against (D3): no `/api/…` request for the page's origin but the
- * sanctioned telemetry routes (the icons included — no exception), no page socket, no page or console error — and
+ * sanctioned telemetry routes (the icons included — no exception, but the
+ * glyphs of the page's own View options popover while step 5 drives it: the
+ * page's chrome, not the demo), no page socket, no page or console error — and
  * that every request to another origin, the page's or the worker's, goes to a
  * host a scoped plugin declares (`externalHosts`, `ExternalHosts.Declare`),
  * and that no request reaches the Places API (the page's key draws the map
@@ -52,6 +54,7 @@ import { shownWindowIds } from "@plugins/apps/plugins/desktop/plugins/windows/e2
 import { pickSurfaceMode } from "@plugins/apps-core/plugins/surface/e2e";
 import { externalHosts } from "@plugins/apps/plugins/website/plugins/demos/plugins/workspace/core";
 import { DEMO_PLACES } from "@plugins/apps/plugins/website/plugins/demos/plugins/workspace/plugins/story/core";
+import { densestPinIds } from "@plugins/map/core";
 import {
   arg,
   flag,
@@ -99,6 +102,10 @@ const SANCTIONED: readonly RegExp[] = [
   /^\/api\/health(\/ready)?$/,
 ];
 
+/** A glyph read: what the page's own chrome may ask its server for (`desktop-in-demo.ts`'s). */
+const PAGE_GLYPH_READ =
+  /^\/api\/(resources\/icons\.runtime-symbols|icons\/glyph-assets\/)/;
+
 /** The demo's places (`core/internal/places.ts`). */
 const PLACE_COUNT = DEMO_PLACES.places.length;
 /** Whether `p` carries `path` or a tag nested under it (the sidebar's `has-nested`). */
@@ -106,12 +113,37 @@ const taggedUnder = (
   p: (typeof DEMO_PLACES.places)[number],
   path: readonly string[],
 ) => p.tags.some((t) => path.every((segment, k) => t[k] === segment));
-/** The trips' places, which a map opened on Paris leaves off screen. */
-const TRIP_NAMES = new Set(
-  DEMO_PLACES.places
-    .filter((p) => p.tags.some((t) => t[0] === "Trips"))
-    .map((p) => p.place.name),
-);
+/** Whether `p` is one of the trips' places, which a map opened on Paris leaves off screen. */
+const onTrip = (p: (typeof DEMO_PLACES.places)[number]) =>
+  p.tags.some((t) => t[0] === "Trips");
+/** Every place but the trips': the most a map opened on Paris can show. */
+const PARIS_COUNT = DEMO_PLACES.places.filter((p) => !onTrip(p)).length;
+/**
+ * The places the opening frames (`opening: "densest"`, through the map's own
+ * `densestPinIds`): Paris without its day trips (Versailles, Saint-Denis, …),
+ * which the camera then shows or not by the map's size and aspect alone — so
+ * "in view" is at least this many and at most `PARIS_COUNT`, never an exact
+ * count.
+ */
+const FRAMED = (() => {
+  const ids = densestPinIds(
+    DEMO_PLACES.places.map((p, i) => ({
+      kind: "pin" as const,
+      id: String(i),
+      pinType: "place",
+      position: { lat: p.place.lat, lng: p.place.lng },
+    })),
+  );
+  if (ids === null) throw new Error("Demo's places have no densest area");
+  const framed = ids.map((id) => DEMO_PLACES.places[Number(id)]!);
+  // The opening must be Paris itself: no trip's place is framed.
+  const trips = framed.filter(onTrip).map((p) => p.place.name);
+  if (trips.length > 0)
+    throw new Error(
+      `the densest area frames trips' places: ${trips.join(", ")}`,
+    );
+  return framed.length;
+})();
 /** Demo's saved presets, with how many places each shows (its tag filter: has-nested rows, lacks-nested). */
 const PRESETS = (DEMO_PLACES.presets ?? []).map((preset) => ({
   name: preset.name,
@@ -167,6 +199,12 @@ await withBrowser(async (h) => {
   const declared = new Set(externalHosts.map((h) => h.host));
 
   const leaked: string[] = [];
+  // While the test drives the PAGE's own chrome (its View options popover,
+  // whose Layout control acts on the embed), that chrome's glyphs are the
+  // page's and come from the page's server — not a read escaping the scope.
+  // That the scope's own icons never draw from the page is checked on the DOM
+  // (no saved icon in the embed draws from the page's sheet, step 1b).
+  let inPageChrome = false;
   const offOrigin: string[] = [];
   /** Every off-origin request as `host/path`. */
   const offOriginUrls: string[] = [];
@@ -179,8 +217,15 @@ await withBrowser(async (h) => {
       return;
     }
     if (!url.pathname.startsWith("/api/")) return;
+    if (SANCTIONED.some((re) => re.test(url.pathname))) return;
     const line = `${req.method()} ${url.pathname}`;
-    if (!SANCTIONED.some((re) => re.test(url.pathname))) leaked.push(line);
+    if (inPageChrome && PAGE_GLYPH_READ.test(url.pathname)) {
+      r.note(`the page's own chrome: ${line}${url.search}`);
+      return;
+    }
+    leaked.push(line);
+    // What it asked for, so a leak names its reader (e.g. the glyphs).
+    r.note(`leaked: ${line}${url.search}`);
   };
   page.on("request", onRequest);
   const openedSockets: string[] = [];
@@ -288,16 +333,16 @@ await withBrowser(async (h) => {
   // not every place: Demo's trips span the world, Paris is where they live.
   if (map.value === "google") {
     // The side panel's "In view" counts the places the camera shows: every
-    // place but the trips'.
+    // place it frames (Paris), at most every place but the trips'.
     await renders(
-      `the map opens on Paris: ${PLACE_COUNT - TRIP_NAMES.size} places in view, no trip's`,
-      () =>
-        embedRoot(page)
-          .getByText(`In view ${PLACE_COUNT - TRIP_NAMES.size}`, {
-            exact: true,
-          })
-          .count(),
-      (n) => n > 0,
+      `the map opens on Paris: ${FRAMED}–${PARIS_COUNT} places in view, no trip's`,
+      async () => {
+        const inView = embedRoot(page).getByText(/^In view \d+$/);
+        if ((await inView.count()) === 0) return null;
+        const text = await inView.first().textContent();
+        return text === null ? null : Number(text.replace("In view ", ""));
+      },
+      (n) => n !== null && n >= FRAMED && n <= PARIS_COUNT,
     );
   }
 
@@ -457,7 +502,14 @@ await withBrowser(async (h) => {
   // The Layout control is the page's action bar: main's, never the
   // website's (its page has none).
   if (!SITE) {
-    await pickSurfaceMode(page, "Desktop");
+    inPageChrome = true;
+    try {
+      // The popover's glyphs are asked once it renders, before its radio is
+      // clicked: inside this window.
+      await pickSurfaceMode(page, "Desktop");
+    } finally {
+      inPageChrome = false;
+    }
     await renders(
       "the Layout control returns to the desktop",
       () => shownWindowIds(embedRoot(page)),

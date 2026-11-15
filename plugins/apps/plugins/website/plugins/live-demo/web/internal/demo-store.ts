@@ -42,6 +42,12 @@ export interface DemoState {
   place: string | undefined;
   /** The demo page was left for the frame: the homepage reveals it. */
   returning: boolean;
+  /**
+   * The demo page shows because the visitor maximized the homepage's frame
+   * (not a link, not the apps gallery): it offers the way back. Cleared when
+   * the page is left.
+   */
+  viaMaximize: boolean;
 }
 
 const DemoStore = defineScopedStore<DemoState>({
@@ -53,6 +59,7 @@ const DemoStore = defineScopedStore<DemoState>({
   gateEntries: 0,
   place: undefined,
   returning: false,
+  viaMaximize: false,
 });
 
 /** The store's scope: one per site surface, around its pages and the resident. */
@@ -82,6 +89,8 @@ export interface DemoActions {
   setPlace(place: string | undefined): void;
   /** The visitor came in through the scope's gate or a join. */
   entered(how: DemoEntry): void;
+  /** The visitor maximized the frame: the demo page about to show offers the way back. */
+  maximizing(): void;
 }
 
 /** {@link DemoActions} over the enclosing scope's store. */
@@ -105,8 +114,12 @@ function demoActions(store: ScopedStore<DemoState>): DemoActions {
         returning: kind === "framed" && s.lastKind === "page",
       });
       return () => {
-        if (store.getState().target?.element === element)
-          update({ target: null });
+        if (store.getState().target?.element !== element) return;
+        update(
+          kind === "page"
+            ? { target: null, viaMaximize: false }
+            : { target: null },
+        );
       };
     },
     bindTargetPlace(element, place) {
@@ -129,6 +142,9 @@ function demoActions(store: ScopedStore<DemoState>): DemoActions {
     },
     setPlace(place) {
       if (store.getState().place !== place) update({ place });
+    },
+    maximizing() {
+      update({ viaMaximize: true });
     },
     entered(how) {
       const s = store.getState();

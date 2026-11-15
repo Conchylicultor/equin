@@ -224,10 +224,13 @@ await withBrowser(async (h) => {
   // ── 2. launcher → back to the Agent Manager ─────────────────────────────
   // The composition's home app is the launcher mark itself (not a tile).
   const picked = await pickFromLauncher(embedRoot(page), /Agent manager/i);
-  if (!picked) await launcherMark(page).click();
-  // The pointer still rests on the mark, so its hover grid stays open over the
-  // sidebar: dismiss it and move off, as a user would.
-  await page.keyboard.press("Escape");
+  if (!picked) {
+    await launcherMark(page).click();
+    // The pointer still rests on the mark, so its hover grid stays open over
+    // the sidebar: dismiss it, as a user would. (After a pick the grid is
+    // closed already, and a stray Esc would restore the maximized demo.)
+    await page.keyboard.press("Escape");
+  }
   await page.mouse.move(0, 0);
   r.note(
     `back via ${picked ? "the Agent Manager tile" : "the launcher mark (home)"}`,
@@ -286,8 +289,11 @@ await withBrowser(async (h) => {
   } else {
     // The header is an overflow bar that re-lays out as the pointer moves over
     // it, so a locator click can land on whatever slid under its aim (the ⋯).
-    // Aim at where the button settled, as a user's eye does.
-    await page.keyboard.press("Escape");
+    // Aim at where the button settled, as a user's eye does. The pointer
+    // leaves the Origin chip first, so no tooltip of it covers the header
+    // (never an Esc: with nothing open it would restore the demo).
+    const view = page.viewportSize();
+    await page.mouse.move((view?.width ?? 1200) / 2, (view?.height ?? 800) - 8);
     await openInPages.hover();
     await page.waitForTimeout(500);
     const box = await openInPages.boundingBox();

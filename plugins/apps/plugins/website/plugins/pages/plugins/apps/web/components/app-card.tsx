@@ -12,13 +12,12 @@ import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { embedTailPath } from "@plugins/primitives/plugins/pane/core";
 import { useAppLinkProps } from "@plugins/apps-core/plugins/tabs/web";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { track } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/web";
 import { downloadPane } from "@plugins/apps/plugins/website/plugins/pages/plugins/download/web";
-import { websiteApp } from "@plugins/apps/plugins/website/plugins/shell/core";
+import { demoPagePath } from "@plugins/apps/plugins/website/plugins/live-demo/core";
 import { APP_DEMO_PLACES } from "../../core";
 import type { AppCategory, CatalogApp } from "../internal/catalog";
 
@@ -30,8 +29,8 @@ import type { AppCategory, CatalogApp } from "../internal/catalog";
  * (`equinGalleryTheme`, worn by the gallery around it).
  *
  * An app the homepage's live demo carries (`APP_DEMO_PLACES`) is a link as a
- * whole: the card opens the demo maximized on the app's home
- * (`/about/at/<home>;full=1` — the embed's own place in the homepage's
+ * whole: the card opens the demo page on the app's home
+ * (`/about/demo/at/<home>` — the embed's own place in the demo page's
  * URL), so the reader tries the app instead of reading about it — never on
  * the staged frame its picture shows. The link is
  * a full-bleed button BEHIND the card's content, so Install stays a control
@@ -66,10 +65,7 @@ export function AppCard({
           type="button"
           className="website-app-open"
           aria-label={`Try ${app.name} live`}
-          {...appLinkProps(
-            websiteApp.basePath +
-              embedTailPath(demoPlace.home, { maximized: true }),
-          )}
+          {...appLinkProps(demoPagePath(demoPlace.home))}
           onClickCapture={() => track("apps_try_live", { app: app.id })}
         />
       )}

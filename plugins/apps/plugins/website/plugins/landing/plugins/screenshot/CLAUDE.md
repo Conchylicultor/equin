@@ -16,8 +16,8 @@ demo's server is the site's resident, so it outlives the page.
 - **Once it runs**, the row under it offers Maximize (the demo page,
   `/about/demo` — see `live-demo`) and Reset demo.
 - **The homepage's URL never names the demo.** Where the visitor is inside
-  the framed demo is kept in memory; coming back from the demo page (Restore,
-  Esc, Back) shows the frame grown, at that place, scrolled to it.
+  the framed demo is kept in memory; coming back from the demo page (Back to
+  equin, the browser's Back) shows the frame grown, at that place, scrolled to it.
 - The frame's paint follows the site's theme tokens, as every website
   component does; the boot screen's colours are the logo's (`ui/logo`).
 
@@ -29,8 +29,9 @@ demo's server is the site's resident, so it outlives the page.
 
 `e2e/live-demo.ts` drives a first visit: the gate (nothing of the host
 requested before it), the growth, the running demo, the URL staying `/about`,
-Maximize onto the demo page (view transition, notice, nothing of the
-homepage mounted, the same server) / Esc / Back / Restore, a reload (the gate
+Maximize onto the demo page (view transition, nothing of the homepage
+mounted, the same server, the draggable Back to equin pill; Esc stays) /
+Back to equin / the browser's Back, a reload (the gate
 again), the demo page loaded fresh (no gate, no hero film) and a second tab
 joining it, with screenshots.
 

@@ -90,6 +90,7 @@ reads what is on screen rather than a per-app flag.
     - `SidebarItem`
     - `SidebarPaneSection`
     - `useBrandDrawnOn`
+    - `useRecordBrandDrawn`
     - `useSidebarDrawnOn`
 - Cross-plugin:
   - Uses tokens:
@@ -104,11 +105,11 @@ reads what is on screen rather than a per-app flag.
     - `ui/tokens/sidebar-palette --sidebar-accent`
     - `ui/tokens/sidebar-palette --sidebar-foreground`
     - `ui/tokens/sidebar-palette --sidebar-icon`
-  - Imported by: 31 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 32 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×23
     - `tasks` ×3
+    - `apps-core` ×2
     - `conversations` ×2
-    - `apps-core/app-launcher`
     - `stats`
     - `ui/sidebar-framing`
 - Core:

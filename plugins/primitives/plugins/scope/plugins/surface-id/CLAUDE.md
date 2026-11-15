@@ -22,6 +22,7 @@ once per surface by `TabSurface`.
 - Description: Stable per-surface-instance id context (the tab's tabId): SurfaceIdContext + useSurfaceTabId. A leaf so low-level primitives (shortcuts, scoped-store) can read which surface they're rendered in without importing pane.
 - Cross-plugin:
   - Imported by:
+    - `apps-core/app-embed`
     - `apps-core/tabs`
     - `apps/file-explorer/browser`
     - `apps/sonata/controls`

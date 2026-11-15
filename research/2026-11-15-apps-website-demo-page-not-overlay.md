@@ -124,3 +124,21 @@ Reused: `DemoScope` / `DemoEntry` (`browser-server/demo/scope`),
   the same place, scrolled to it) → reload `/about/demo/at/<place>` (no gate,
   no landing section, no hero video request).
 - `register_before_after` on `/about/demo/at/agents`.
+
+## Revisions after review
+
+- **No Esc on the demo page.** It is a page of its own (a shared link lands
+  on it), so an Esc nothing inside the demo takes must not navigate off it —
+  the demo's e2e suites showed apps (Keyboard Party, Places, the desktop)
+  letting Esc through. The hover-revealed Restore strip and the "Press Esc to
+  restore" notice go too.
+- **Back to equin pill** (`landing/screenshot/chrome`'s `BackToSitePill`):
+  always shown at the top edge, centred, draggable (`dom/movable`), "Demo ·
+  made-up data" + Back to equin (only the button on a narrow screen). Drawn
+  only when the visitor reached the demo page by Maximize (`viaMaximize` in
+  the demo store) — never on a page opened directly, from a link or from the
+  apps gallery's Try it live.
+- **The page's floating launcher steps aside**: an `AppEmbed` filling the
+  viewport records its page's surface as drawing the brand
+  (`app-shell`'s `useRecordBrandDrawn`), so the website's own corner launcher
+  no longer covers the demo's.

@@ -87,12 +87,12 @@ if (unknown.length) {
 }
 
 /**
- * The demo's own chrome over a maximized demo — its "Press Esc to restore"
- * notice (`apps/demo/chrome`) — is not the app: left out of the picture,
- * whenever its fade happens to be.
+ * The demo page's own chrome — its "Back to equin" pill
+ * (`landing/screenshot/chrome`, shown only after a Maximize, never on a
+ * page opened directly as here) — is not the app: left out of the picture
+ * should it ever show.
  */
-const DEMO_CHROME_STYLE =
-  "[data-demo-esc-notice] { display: none !important; }";
+const DEMO_CHROME_STYLE = "[data-demo-back] { display: none !important; }";
 /** How many times, and how far apart, a frame is checked for a tip. */
 const TIP_ROUNDS = 4;
 const TIP_ROUND_MS = 1500;

@@ -16,7 +16,7 @@ import { withActiveRoutePrefix } from "@plugins/primitives/plugins/pane/plugins/
 import { DemoScope } from "@plugins/framework/plugins/browser-server/plugins/demo/plugins/scope/web";
 import {
   DemoBootScreen,
-  MaximizedChrome,
+  BackToSitePill,
   morphDemoFrame,
   ResetDemoButton,
 } from "@plugins/apps/plugins/website/plugins/landing/plugins/screenshot/plugins/chrome/web";
@@ -61,6 +61,7 @@ function DemoServer(): ReactNode {
   const navigate = useNavigate();
   const maximize = useCallback(() => {
     track("demo_maximize");
+    demo.maximizing();
     morphDemoFrame(() => navigate(demoPagePath(demo.peek().place)));
   }, [demo, navigate]);
   const restore = useCallback(
@@ -104,7 +105,7 @@ function ResidentDemo({
   onMaximize: () => void;
   onRestore: () => void;
 }): ReactNode {
-  const { place, controls } = useDemoState();
+  const { place, controls, viaMaximize } = useDemoState();
   const { setPlace } = useDemoActions();
   const claimTitle = useClaimTabTitle();
   // The framed demo's place: memory, never the homepage's URL.
@@ -128,7 +129,11 @@ function ResidentDemo({
             fills={page ? "viewport" : undefined}
             onTitleChange={claimTitle}
           />
-          {page && <MaximizedChrome onRestore={onRestore} />}
+          {/* The way back, only for a visitor who maximized the homepage's
+              frame — a link or the apps gallery opens the demo page alone. */}
+          {page && viaMaximize && (
+            <BackToSitePill onBack={onRestore} bounds={target.element} />
+          )}
         </>,
         target.element,
         target.kind,

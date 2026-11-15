@@ -10,7 +10,7 @@ is typed in; nothing runs until the reader presses Enter). Then the caveats as b
 the first install builds every app (~15 minutes), and the apps were tuned
 for one person — and "Once it is running": open it, read the guide, press
 Improve. Last, for a reader not ready to install, one card opens the
-homepage's live demo full screen (`/about;full=1`, the demo at its own start —
+demo page (`/about/demo`, the demo at its own start —
 this page names no place inside it), saying its agents are off: they need equin
 on the reader's machine.
 

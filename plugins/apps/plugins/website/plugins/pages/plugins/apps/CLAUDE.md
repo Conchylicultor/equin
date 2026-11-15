@@ -30,8 +30,8 @@ layers band keeps its own shorter teaser of the same apps.
 **A card opens the app live.** An app the homepage's live demo carries has an
 entry in `core/demo-places.ts` (`APP_DEMO_PLACES`, keyed by the catalog's id:
 the app's `home`, and the staged `shot` place its screenshot is taken at): the whole
-card is a link to the homepage with the demo maximized on the app's home
-(`/about/at/<home>;full=1`) — never the staged screenshot frame — a
+card is a link to the demo page on the app's home
+(`/about/demo/at/<home>`) — never the staged screenshot frame — a
 full-bleed button behind the card's content, so Install stays its own control,
 and an always-drawn "Try it live" chip on the picture says so before any hover.
 

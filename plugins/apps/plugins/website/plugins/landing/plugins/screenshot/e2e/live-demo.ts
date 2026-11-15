@@ -11,13 +11,14 @@
  *     homepage's URL alone (`/about`) and adds no history entry;
  *  5. Maximize runs as a view transition onto the demo page
  *     (`/about/demo/at/pages`): the demo alone fills the tab, nothing of the
- *     homepage mounted, on the same server (no host restart), with a "Press
- *     Esc to restore" notice; Esc goes back to the homepage's frame, also as
- *     a view transition, on Pages; Maximize again, then Back returns to the
- *     frame; Restore (revealed at the top edge) also returns;
+ *     homepage mounted, on the same server (no host restart), with the "Back
+ *     to equin" pill at its top (draggable); Esc leaves the page alone; the
+ *     pill goes back to the homepage's frame, also as a view transition, on
+ *     Pages; Maximize again, then the browser's Back also returns;
  *  6. the homepage reloaded shows the gate again (its URL names no place);
- *  7. the demo page loaded fresh resumes with no gate, on Pages, and loads
- *     nothing of the homepage (no hero film);
+ *  7. the demo page loaded fresh resumes with no gate, on Pages, loads
+ *     nothing of the homepage (no hero film) and offers no "Back to equin"
+ *     pill (the visitor did not come from the homepage);
  *  8. a second tab opened at that URL joins the demo — no gate.
  * Screenshots of each step go to `--out`.
  *
@@ -211,18 +212,43 @@ await withBrowser(async (h) => {
     hostRequests.length,
     hostsBefore,
   );
-  const notice = page.locator("[data-demo-esc-notice]");
+  const pill = page.locator("[data-demo-back]");
   r.ok(
-    "Maximize: a notice says Esc restores",
-    /Press\s*Esc\s*to restore/.test((await notice.textContent()) ?? ""),
+    "Maximize: the demo page offers Back to equin",
+    (await pill.count()) === 1 && (await pill.isVisible()),
   );
   await snap(page, OUT, "4-maximized");
-  const hidden = await waitFor(
-    () => notice.isVisible(),
-    (v) => !v,
-    { timeoutMs: 8_000 },
+
+  // The pill moves out of the way, and stays clickable. Once the Maximize
+  // morph has ended: during a view transition nothing on the page is hit.
+  await page.waitForFunction(
+    () => !document.documentElement.hasAttribute("data-demo-morph"),
   );
-  r.ok("the notice hides on its own", hidden.ok);
+  await page.waitForTimeout(300);
+  const home = await pill.boundingBox();
+  if (home !== null) {
+    await page.mouse.move(home.x + 12, home.y + home.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(home.x + 12 - 200, home.y + home.height / 2 + 300, {
+      steps: 8,
+    });
+    await page.mouse.up();
+  }
+  const moved = await pill.boundingBox();
+  r.ok(
+    "the pill can be dragged off what it covers",
+    home !== null &&
+      moved !== null &&
+      Math.abs(moved.y - home.y) > 100 &&
+      Math.abs(moved.x - home.x) > 100,
+    JSON.stringify({ home, moved }),
+  );
+
+  // Esc is the demo's, never a way off its page.
+  await page.mouse.click((viewport?.width ?? 1200) / 2, 300);
+  await page.keyboard.press("Escape");
+  await page.waitForTimeout(500);
+  r.eq("Esc leaves the demo page alone", pathOf(page), DEMO_PAGES);
 
   const restoredInFrame = async (name: string) => {
     const restored = await waitFor(
@@ -236,21 +262,22 @@ await withBrowser(async (h) => {
     );
     r.ok(name, restored.ok, JSON.stringify(restored.value));
   };
-  await page.mouse.click((viewport?.width ?? 1200) / 2, 300);
-  await page.keyboard.press("Escape");
-  await restoredInFrame("Esc returns to the homepage's frame, on Pages");
-  r.eq("Esc: run as a view transition", await viewTransitions(page), 2);
+  await page.getByRole("button", { name: "Back to equin" }).click();
+  await restoredInFrame(
+    "Back to equin returns to the homepage's frame, on Pages",
+  );
+  r.eq(
+    "Back to equin: run as a view transition",
+    await viewTransitions(page),
+    2,
+  );
 
   await page.getByRole("button", { name: "Maximize" }).click();
   await demoPage.waitFor({ timeout: 3_000 });
   await page.goBack();
-  await restoredInFrame("Back from the demo page returns to the frame");
-
-  await page.getByRole("button", { name: "Maximize" }).click();
-  await demoPage.waitFor({ timeout: 3_000 });
-  await page.mouse.move((viewport?.width ?? 1200) / 2, 2);
-  await page.getByRole("button", { name: "Restore" }).click();
-  await restoredInFrame("Restore returns to the frame");
+  await restoredInFrame(
+    "the browser's Back from the demo page returns to the frame",
+  );
   r.eq(
     "the server ran through every switch (no host request)",
     hostRequests.length,
@@ -299,6 +326,11 @@ await withBrowser(async (h) => {
       films: films.length,
     },
     { bands: 0, films: 0 },
+  );
+  r.eq(
+    "opened directly, the demo page offers no Back to equin",
+    await fresh.locator("[data-demo-back]").count(),
+    0,
   );
   await snap(fresh, OUT, "6-demo-page");
 

@@ -154,7 +154,7 @@ await awaitDeploySettled();
 
 await withBrowser(async (h) => {
   const { page } = await h.session({ viewport: { width: 1400, height: 900 } });
-  await bootDemo(page, pathUrl(demoPath(`/desktop/${APP}`, { full: true })), {
+  await bootDemo(page, pathUrl(demoPath(`/desktop/${APP}`)), {
     marker: "[data-floating-window-id]",
   });
   const root = embedRoot(page);

@@ -4,19 +4,17 @@ import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { withEmbedMaximized } from "@plugins/primitives/plugins/pane/core";
 import { useAppLinkProps } from "@plugins/apps-core/plugins/tabs/web";
-import { websiteApp } from "@plugins/apps/plugins/website/plugins/shell/core";
+import { demoPagePath } from "@plugins/apps/plugins/website/plugins/live-demo/core";
 import { WebsiteArrow } from "@plugins/apps/plugins/website/plugins/shell/web";
 import { track } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/web";
 import "./download-try-demo.css";
 
 /**
- * The homepage with its live demo maximized at no place of its own
- * (`/about;full=1`): the demo opens full screen where it starts by itself, so
- * this page names no place inside it.
+ * The demo page at no place of its own (`/about/demo`): the demo opens full
+ * screen where it starts by itself, so this page names no place inside it.
  */
-const DEMO_URL = websiteApp.basePath + withEmbedMaximized("");
+const DEMO_URL = demoPagePath(undefined);
 
 /**
  * The page's last word, for a reader not ready to install: the homepage's live
