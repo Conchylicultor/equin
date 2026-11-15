@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "answers": [
+    {
+      "key": "table:op_rate_day_buckets",
+      "entityType": "table",
+      "entityName": "op_rate_day_buckets",
+      "action": "create"
+    },
+    {
+      "key": "table:op_rate_day_hours",
+      "entityType": "table",
+      "entityName": "op_rate_day_hours",
+      "action": "create"
+    }
+  ]
+}

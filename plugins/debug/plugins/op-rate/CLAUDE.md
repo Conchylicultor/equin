@@ -76,12 +76,21 @@ unit-tested):
   replays its subscriptions, catch-up runs. `steady` — every later window. Main restarts dozens of times a day, so one history mixing them
   would make every boot burst the bar steady windows are judged against.
 - **History** — per op, regime and UTC day, how many windows landed in each
-  call-count bucket (`op_rate_window_counts`; buckets exact to 16, then a
+  call-count bucket (`op_rate_day_buckets`; buckets exact to 16, then a
   quarter-octave apart); per regime and UTC hour, how many windows were judged
   (`op_rate_windows`): a window an op was not called in is the difference; per
-  op and UTC hour, its calls (`op_rate_hour_calls`). Each backend writes its own
-  (per-worktree DB; excluded from fork, backup and the change feed; swept after
-  9 days).
+  op and UTC day, its calls in each hour (`op_rate_day_hours`). Each backend
+  writes its own (per-worktree DB; excluded from fork, backup and the change
+  feed; swept after 9 days).
+- **One row per op and day, its counters an array** (`windows[bucket]`,
+  `calls[hourOfDay]`, each upsert adding element by element). A baseline read
+  touches at most ops × days rows. The first layout — a row per (op, day,
+  bucket) and per (op, hour) — spread one op's week over ~75–170 rows, each
+  inserted at its own moment and so on its own heap page: reading 59 ops visited
+  4,270 pages for 4,350 rows (twice the table), ~5 ms cached and 0.7–1.8 s of
+  random reads when the host was under memory pressure (slow-op reports of
+  2026-11-15). The ops are matched as one `= ANY($1::text[])` parameter, so each
+  read is one `db` label whatever the number of ops.
 - **Usual** = a high quantile of the op's windows over the **7 days before
   today** (today excluded: a loop that started today is never its own baseline):
   the 99th percentile of steady windows (an op is at most this busy in all but
@@ -207,19 +216,20 @@ live-state-churn's accumulator + scheduled job.)
     - `ConfigV2.Register` "op-rate"
     - `report-kind` "op-rate"
     - `report-kind` "op-time"
-    - `change-feed-exclusion` "op_rate_hour_calls"
-    - `change-feed-exclusion` "op_rate_window_counts"
+    - `change-feed-exclusion` "op_rate_day_buckets"
+    - `change-feed-exclusion` "op_rate_day_hours"
     - `change-feed-exclusion` "op_rate_windows"
-    - `fork-data-exclusion` "op_rate_hour_calls"
-    - `fork-data-exclusion` "op_rate_window_counts"
+    - `fork-data-exclusion` "op_rate_day_buckets"
+    - `fork-data-exclusion` "op_rate_day_hours"
     - `fork-data-exclusion` "op_rate_windows"
-    - `backup-data-exclusion` "op_rate_hour_calls"
-    - `backup-data-exclusion` "op_rate_window_counts"
+    - `backup-data-exclusion` "op_rate_day_buckets"
+    - `backup-data-exclusion` "op_rate_day_hours"
     - `backup-data-exclusion` "op_rate_windows"
   - Uses:
     - `config_v2.ConfigV2`
     - `config_v2.getConfig`
     - `database.db`
+    - `database.DbExecutor`
     - `database.writeAtomically`
     - `database/admin.ExcludeFromBackup`
     - `database/admin.ExcludeFromFork`
@@ -234,9 +244,9 @@ live-state-churn's accumulator + scheduled job.)
   - DB schema: `plugins/debug/plugins/op-rate/server/internal/tables.ts`
   - Register:
     - `defineJob('debug.op-rate-monitor')`
-    - `defineJob('retention.op_rate_window_counts')`
+    - `defineJob('retention.op_rate_day_buckets')`
     - `defineJob('retention.op_rate_windows')`
-    - `defineJob('retention.op_rate_hour_calls')`
+    - `defineJob('retention.op_rate_day_hours')`
 - Core:
   - Uses:
     - `config_v2.defineConfig`

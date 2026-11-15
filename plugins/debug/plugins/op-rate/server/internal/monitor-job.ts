@@ -7,6 +7,7 @@ import {
   type SpanKind,
 } from "@plugins/infra/plugins/runtime-profiler/core";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
+import { db } from "@plugins/database/server";
 import { getConfig } from "@plugins/config_v2/server";
 import type { ConfigValues } from "@plugins/config_v2/core";
 import { recordReport } from "@plugins/reports/plugins/engine/server";
@@ -380,6 +381,7 @@ export const opRateMonitorJob = defineJob({
     // state the next tick diffs against.
     if (plan.kind === "window")
       await recordWindow(
+        db,
         plan.regime,
         atMs,
         new Map([...windowCalls].map(([key, w]) => [key, w.calls])),
@@ -419,6 +421,7 @@ async function judgeCallRates(
   );
   if (candidates.length === 0) return [];
   const history = await readHistory(
+    db,
     regime,
     atMs,
     candidates.map(([key]) => key),
@@ -479,6 +482,7 @@ async function judgeHourRates(
   if (windowCalls.size === 0) return [];
   const rule = { minCalls: cfg.minCallsPerWindow, factor: cfg.baselineFactor };
   const history = await readHourHistory(
+    db,
     atMs,
     new Map([...windowCalls].map(([key, w]) => [key, w.calls])),
     hourThresholdOf(0, rule),

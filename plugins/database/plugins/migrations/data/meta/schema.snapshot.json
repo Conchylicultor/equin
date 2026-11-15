@@ -1,6 +1,6 @@
 {
-  "id": "389fe9e6-5218-4950-b39e-267549d4167e",
-  "prevId": "edaf80ef-b766-419b-bfdc-a74ea71d0885",
+  "id": "a640b086-08b4-4257-846a-b8e127006e39",
+  "prevId": "389fe9e6-5218-4950-b39e-267549d4167e",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -9213,63 +9213,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.op_rate_hour_calls": {
-      "name": "op_rate_hour_calls",
-      "schema": "",
-      "columns": {
-        "op": {
-          "name": "op",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "hour_start": {
-          "name": "hour_start",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "calls": {
-          "name": "calls",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {
-        "op_rate_hour_calls_hour_idx": {
-          "name": "op_rate_hour_calls_hour_idx",
-          "columns": [
-            {
-              "expression": "hour_start",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {},
-      "compositePrimaryKeys": {
-        "op_rate_hour_calls_op_hour_start_pk": {
-          "name": "op_rate_hour_calls_op_hour_start_pk",
-          "columns": [
-            "op",
-            "hour_start"
-          ]
-        }
-      },
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.op_rate_window_counts": {
-      "name": "op_rate_window_counts",
+    "public.op_rate_day_buckets": {
+      "name": "op_rate_day_buckets",
       "schema": "",
       "columns": {
         "op": {
@@ -9290,22 +9235,16 @@
           "primaryKey": false,
           "notNull": true
         },
-        "bucket": {
-          "name": "bucket",
-          "type": "smallint",
-          "primaryKey": false,
-          "notNull": true
-        },
         "windows": {
           "name": "windows",
-          "type": "integer",
+          "type": "integer[]",
           "primaryKey": false,
           "notNull": true
         }
       },
       "indexes": {
-        "op_rate_window_counts_day_idx": {
-          "name": "op_rate_window_counts_day_idx",
+        "op_rate_day_buckets_day_idx": {
+          "name": "op_rate_day_buckets_day_idx",
           "columns": [
             {
               "expression": "day_start",
@@ -9322,13 +9261,67 @@
       },
       "foreignKeys": {},
       "compositePrimaryKeys": {
-        "op_rate_window_counts_op_regime_day_start_bucket_pk": {
-          "name": "op_rate_window_counts_op_regime_day_start_bucket_pk",
+        "op_rate_day_buckets_op_regime_day_start_pk": {
+          "name": "op_rate_day_buckets_op_regime_day_start_pk",
           "columns": [
             "op",
             "regime",
-            "day_start",
-            "bucket"
+            "day_start"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.op_rate_day_hours": {
+      "name": "op_rate_day_hours",
+      "schema": "",
+      "columns": {
+        "op": {
+          "name": "op",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "day_start": {
+          "name": "day_start",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "calls": {
+          "name": "calls",
+          "type": "integer[]",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "op_rate_day_hours_day_idx": {
+          "name": "op_rate_day_hours_day_idx",
+          "columns": [
+            {
+              "expression": "day_start",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "op_rate_day_hours_op_day_start_pk": {
+          "name": "op_rate_day_hours_op_day_start_pk",
+          "columns": [
+            "op",
+            "day_start"
           ]
         }
       },

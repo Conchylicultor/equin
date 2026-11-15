@@ -26102,19 +26102,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ConfigV2.Register` "op-rate"
           - `report-kind` "op-rate"
           - `report-kind` "op-time"
-          - `change-feed-exclusion` "op_rate_hour_calls"
-          - `change-feed-exclusion` "op_rate_window_counts"
+          - `change-feed-exclusion` "op_rate_day_buckets"
+          - `change-feed-exclusion` "op_rate_day_hours"
           - `change-feed-exclusion` "op_rate_windows"
-          - `fork-data-exclusion` "op_rate_hour_calls"
-          - `fork-data-exclusion` "op_rate_window_counts"
+          - `fork-data-exclusion` "op_rate_day_buckets"
+          - `fork-data-exclusion` "op_rate_day_hours"
           - `fork-data-exclusion` "op_rate_windows"
-          - `backup-data-exclusion` "op_rate_hour_calls"
-          - `backup-data-exclusion` "op_rate_window_counts"
+          - `backup-data-exclusion` "op_rate_day_buckets"
+          - `backup-data-exclusion` "op_rate_day_hours"
           - `backup-data-exclusion` "op_rate_windows"
         - Uses:
           - `config_v2.ConfigV2`
           - `config_v2.getConfig`
           - `database.db`
+          - `database.DbExecutor`
           - `database.writeAtomically`
           - `database/admin.ExcludeFromBackup`
           - `database/admin.ExcludeFromFork`
@@ -26129,9 +26130,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - DB schema: `plugins/debug/plugins/op-rate/server/internal/tables.ts`
         - Register:
           - `defineJob('debug.op-rate-monitor')`
-          - `defineJob('retention.op_rate_window_counts')`
+          - `defineJob('retention.op_rate_day_buckets')`
           - `defineJob('retention.op_rate_windows')`
-          - `defineJob('retention.op_rate_hour_calls')`
+          - `defineJob('retention.op_rate_day_hours')`
       - Core:
         - Uses:
           - `config_v2.defineConfig`

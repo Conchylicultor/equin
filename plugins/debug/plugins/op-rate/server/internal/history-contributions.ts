@@ -5,11 +5,7 @@ import {
 } from "@plugins/database/plugins/admin/server";
 import { defineRetention } from "@plugins/infra/plugins/retention/server";
 import { BASELINE_DAYS } from "./op-rate-baseline";
-import {
-  _opRateHourCalls,
-  _opRateWindowCounts,
-  _opRateWindows,
-} from "./tables";
+import { _opRateDayBuckets, _opRateDayHours, _opRateWindows } from "./tables";
 
 // The call history op-rate judges against is a measurement of THIS backend's
 // traffic in THIS database:
@@ -28,19 +24,19 @@ const backupReason =
   "A week of call-rate observability, swept daily; not user data.";
 
 export const historyContributions = [
-  ExcludeFromChangeFeed({ table: _opRateWindowCounts, reason: feedReason }),
+  ExcludeFromChangeFeed({ table: _opRateDayBuckets, reason: feedReason }),
   ExcludeFromChangeFeed({ table: _opRateWindows, reason: feedReason }),
-  ExcludeFromChangeFeed({ table: _opRateHourCalls, reason: feedReason }),
-  ExcludeFromFork({ table: _opRateWindowCounts, reason: forkReason }),
+  ExcludeFromChangeFeed({ table: _opRateDayHours, reason: feedReason }),
+  ExcludeFromFork({ table: _opRateDayBuckets, reason: forkReason }),
   ExcludeFromFork({ table: _opRateWindows, reason: forkReason }),
-  ExcludeFromFork({ table: _opRateHourCalls, reason: forkReason }),
-  ExcludeFromBackup({ table: _opRateWindowCounts, reason: backupReason }),
+  ExcludeFromFork({ table: _opRateDayHours, reason: forkReason }),
+  ExcludeFromBackup({ table: _opRateDayBuckets, reason: backupReason }),
   ExcludeFromBackup({ table: _opRateWindows, reason: backupReason }),
-  ExcludeFromBackup({ table: _opRateHourCalls, reason: backupReason }),
+  ExcludeFromBackup({ table: _opRateDayHours, reason: backupReason }),
 ];
 
-export const windowCountsRetention = defineRetention({
-  table: _opRateWindowCounts,
+export const dayBucketsRetention = defineRetention({
+  table: _opRateDayBuckets,
   column: "dayStart",
   ttlDays: BASELINE_DAYS + 2,
   perWorktree: true,
@@ -51,9 +47,9 @@ export const windowsRetention = defineRetention({
   ttlDays: BASELINE_DAYS + 2,
   perWorktree: true,
 });
-export const hourCallsRetention = defineRetention({
-  table: _opRateHourCalls,
-  column: "hourStart",
+export const dayHoursRetention = defineRetention({
+  table: _opRateDayHours,
+  column: "dayStart",
   ttlDays: BASELINE_DAYS + 2,
   perWorktree: true,
 });
