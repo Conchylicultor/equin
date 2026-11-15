@@ -57,7 +57,7 @@ interface ColumnMotionProps {
  *   render while it slides (a loading block giving way) joins the entrance
  *   where it stands (`playEntrance`).
  * - **leave** — the entrance in reverse: a closed column is lifted out of flow
- *   at its last rect (a copy of its DOM, on top) and its content slides 36px
+ *   at its last rect (a copy of the DOM it showed, on top) and its content slides 36px
  *   right while fading out, over the same duration and curve as an entrance;
  *   the remaining columns transition to their new widths underneath (re-balancing
  *   over the row), and the row's scroll glides back with them —
@@ -101,7 +101,13 @@ export class ColumnMotion extends Component<
       );
       if (!column) continue;
       const rect = column.getBoundingClientRect();
-      const { clone, carryScroll } = cloneWithScroll(column);
+      // Only what shows: the ghost is drawn through the column's own clip
+      // and moves inside it, so content scrolled out of view never appears —
+      // and copying it whole costs style and layout of every element when
+      // `carryScroll` writes the offsets (a 300-block page column: ~100 ms).
+      const { clone, carryScroll } = cloneWithScroll(column, {
+        visibleOnly: true,
+      });
       const successor = next[i];
       const swap =
         successor !== undefined &&
