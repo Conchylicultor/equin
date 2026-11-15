@@ -86,7 +86,7 @@ export interface GitStateMemo<T> {
  */
 export function createGitStateMemo<T>(opts: { name: string }): GitStateMemo<T> {
   const cache = new Map<string, { signature: string; value: T }>();
-  const inflight = createInflight();
+  const inflight = createInflight(`git-state-memo:${opts.name}`);
   return {
     async get(worktreePath, signatureFn, computeFn, getOpts) {
       const sig = await signatureFn(); // cheap, ungated, no slot

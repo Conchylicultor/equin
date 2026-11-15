@@ -90,7 +90,7 @@ export function endpointHandler<
   const gate = _endpoint.concurrency
     ? createSemaphore(_endpoint.concurrency)
     : null;
-  const dedupe = _endpoint.dedupe ? createInflight() : null;
+  const dedupe = _endpoint.dedupe ? createInflight("endpoint-dedupe") : null;
   if (dedupe && _endpoint.method !== "GET") {
     // Fail loudly at boot: deduping a mutation would silently drop a caller's
     // distinct side effect.

@@ -65,6 +65,7 @@ async function productionDeps(): Promise<DrainDeps> {
 // escaping is unexpected and surfaces as an unhandled rejection — without
 // disarming later passes.
 const drains = createCoalescer({
+  name: "report-outbox.drains",
   run: () =>
     runTracked("report-outbox:drain", async () =>
       drainOutbox(await productionDeps()),

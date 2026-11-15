@@ -247,6 +247,7 @@ let latestSample: ClusterSample | null = null;
  * sample is newest when it starts (the detector skips the ones in between).
  */
 const latchStep = createCoalescer({
+  name: "sentinel.latch-step",
   run: async () => {
     const sample = latestSample;
     latestSample = null;

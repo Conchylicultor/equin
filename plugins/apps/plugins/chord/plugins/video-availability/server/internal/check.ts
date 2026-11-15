@@ -23,7 +23,7 @@ const VIDEO_CHECK_CONCURRENCY = 8;
 
 const gate = createSemaphore(VIDEO_CHECK_CONCURRENCY);
 // Two loop queries offering the same video at once share one request.
-const inflight = createInflight();
+const inflight = createInflight("chord-video-availability");
 
 const videoCheckLog = defineLogSink({
   id: "chord-video-check",

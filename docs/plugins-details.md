@@ -38951,15 +38951,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SPAN_MEASURES`
           - `waitSplit`
       - Cross-plugin:
-        - Imported by: 77 plugins — full list in [`plugins/infra/plugins/runtime-profiler/REFERENCE.md`](../plugins/infra/plugins/runtime-profiler/REFERENCE.md)
-          - `infra` ×22
+        - Imported by: 79 plugins — full list in [`plugins/infra/plugins/runtime-profiler/REFERENCE.md`](../plugins/infra/plugins/runtime-profiler/REFERENCE.md)
+          - `infra` ×23
           - `debug` ×21
           - `apps` ×7
           - `conversations` ×6
           - `build` ×3
           - `database` ×3
+          - `packages` ×3
           - `tasks` ×3
-          - `packages` ×2
           - `primitives` ×2
           - `reports` ×2
           - `auth`
@@ -41956,6 +41956,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Machine:
         - Exports (values): `writeAllSync`
     - **`coalesce`** — Trigger coalescer: createCoalescer / createKeyedCoalescer run a reaction at most once at a time per key and fold every trigger that lands mid-run into ONE trailing run (its items merged), so however many triggers arrive the work is bounded to one running plus one pending per key — and a trigger never joins a run that started before it.
+      - Core:
+        - Uses: `infra/runtime-profiler.beginWait`
+        - Exports (types):
+          - `Coalescer`
+          - `CoalescerStats`
+          - `KeyedCoalescer`
+        - Exports (values):
+          - `createCoalescer`
+          - `createKeyedCoalescer`
       - Cross-plugin:
         - Imported by: 25 plugins — full list in [`plugins/packages/plugins/coalesce/REFERENCE.md`](../plugins/packages/plugins/coalesce/REFERENCE.md)
           - `infra` ×11
@@ -41968,14 +41977,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `plugin-meta/plugin-tree`
           - `reports/outbox`
           - `shell/document-head`
-      - Core:
-        - Exports (types):
-          - `Coalescer`
-          - `CoalescerStats`
-          - `KeyedCoalescer`
-        - Exports (values):
-          - `createCoalescer`
-          - `createKeyedCoalescer`
     - **`deadline`** — Bound an await: withDeadline(work, budgetMs, onTimeout) races a promise against a one-shot timer, rejecting with the caller's own error on expiry (the work's own rejection wins when it comes first) and always clearing the timer. It never cancels the work — the caller keeps its handle and decides what a still-running promise means.
       - Cross-plugin:
         - Imported by:
@@ -42096,8 +42097,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`inflight`** — In-flight request deduplicator: createInflight() collapses concurrent callers sharing a key onto one execution, plus a caller-supplied freshness floor (notBefore) that supersedes rather than joins a flight older than a change the caller already knows about.
       - Core:
         - Uses: `packages/semaphore.whileWaiting`
-        - Exports (types): `Inflight`
-        - Exports (values): `createInflight`
+        - Exports (types):
+          - `Inflight`
+          - `InflightJoinMeter`
+        - Exports (values):
+          - `createInflight`
+          - `installInflightJoinMeter`
       - Cross-plugin:
         - Imported by:
           - `apps/chord/video-availability`
@@ -42112,6 +42117,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/git/git-read-cache`
           - `infra/host-fs`
           - `infra/host-fs/image`
+          - `infra/runtime-profiler`
           - `network/live/live-state`
           - `network/live/resource-runtime`
           - `packages/watched-memo`

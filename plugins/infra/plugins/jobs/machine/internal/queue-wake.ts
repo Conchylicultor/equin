@@ -112,6 +112,7 @@ export function createQueueWake(opts: {
   // One wake at a time; every trigger landing mid-wake folds into one trailing
   // wake, nudging if any folded trigger asked to.
   const wakes = createCoalescer<boolean>({
+    name: "jobs.queue-wakes",
     run: (nudges) => wakeOnce(nudges.includes(true)),
   });
 

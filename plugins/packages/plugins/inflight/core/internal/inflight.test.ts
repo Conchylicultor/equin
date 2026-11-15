@@ -1,11 +1,11 @@
 import { describe, expect, test } from "bun:test";
-import { createInflight } from "./inflight";
+import { createInflight, installInflightJoinMeter } from "./inflight";
 
 const tick = () => new Promise<void>((r) => setTimeout(r, 0));
 
 describe("createInflight", () => {
   test("shares one execution across concurrent callers with the same key", async () => {
-    const inflight = createInflight();
+    const inflight = createInflight("test");
     let calls = 0;
     let open!: () => void;
     const gate = new Promise<void>((r) => {
@@ -27,7 +27,7 @@ describe("createInflight", () => {
   });
 
   test("distinct keys run independently", async () => {
-    const inflight = createInflight();
+    const inflight = createInflight("test");
     let calls = 0;
     const fn = async () => {
       calls++;
@@ -42,7 +42,7 @@ describe("createInflight", () => {
   });
 
   test("clears the key after settlement — a later call runs fresh", async () => {
-    const inflight = createInflight();
+    const inflight = createInflight("test");
     let calls = 0;
     const fn = async () => ++calls;
 
@@ -52,7 +52,7 @@ describe("createInflight", () => {
   });
 
   test("shares a rejection then clears the key", async () => {
-    const inflight = createInflight();
+    const inflight = createInflight("test");
     let calls = 0;
     const fn = async () => {
       calls++;
@@ -105,7 +105,7 @@ describe("createInflight — freshness floor (notBefore)", () => {
   }
 
   test("a floor OLDER than the live flight joins it: the body runs once", async () => {
-    const inflight = createInflight();
+    const inflight = createInflight("test");
     const p = parked();
     const before = performance.now(); // earlier than the flight's startedAt
     const a = inflight.run("k", p.fn);
@@ -117,7 +117,7 @@ describe("createInflight — freshness floor (notBefore)", () => {
   });
 
   test("a floor NEWER than the live flight supersedes it: two bodies, onSupersede once, and the superseder never joins", async () => {
-    const inflight = createInflight();
+    const inflight = createInflight("test");
     const p = parked();
     const joins: number[] = [];
     const supersedes: number[] = [];
@@ -144,7 +144,7 @@ describe("createInflight — freshness floor (notBefore)", () => {
   });
 
   test("a caller arriving after a supersession joins the FRESH flight, not the superseded one", async () => {
-    const inflight = createInflight();
+    const inflight = createInflight("test");
     const p = parked();
     const a = inflight.run("k", p.fn);
     await tick();
@@ -163,7 +163,7 @@ describe("createInflight — freshness floor (notBefore)", () => {
     // `pending.delete(key)` in the old one's `finally` would drop the NEW entry:
     // the next arrival would start a third redundant body — and, worse, could
     // then join a flight that had already been refused as too old.
-    const inflight = createInflight();
+    const inflight = createInflight("test");
     let calls = 0;
     let openOld!: () => void;
     let openNew!: () => void;
@@ -202,7 +202,7 @@ describe("createInflight — freshness floor (notBefore)", () => {
   });
 
   test("a REJECTED superseded flight clears cleanly: it neither evicts the fresh entry nor leaves a poisoned key", async () => {
-    const inflight = createInflight();
+    const inflight = createInflight("test");
     let openOld!: () => void;
     const oldGate = new Promise<void>((r) => (openOld = r));
     const first = inflight.run("k", async () => {
@@ -226,7 +226,7 @@ describe("createInflight — freshness floor (notBefore)", () => {
     // Termination. A floor read after the superseding flight began is satisfied by
     // it, so a burst of floored callers costs one extra body in total — never one
     // per caller, and never a flight that keeps being replaced before it settles.
-    const inflight = createInflight();
+    const inflight = createInflight("test");
     const p = parked();
     const a = inflight.run("k", p.fn);
     await tick();
@@ -242,7 +242,7 @@ describe("createInflight — freshness floor (notBefore)", () => {
   });
 
   test("`size` counts keys, not flights: a superseded flight still running is not counted", async () => {
-    const inflight = createInflight();
+    const inflight = createInflight("test");
     const p = parked();
     const a = inflight.run("k", p.fn);
     await tick();
@@ -256,7 +256,7 @@ describe("createInflight — freshness floor (notBefore)", () => {
   test("onJoin still fires for an ordinary joiner that passes a satisfied floor", async () => {
     // The floor and the wait metric are orthogonal: refusing changes who reports,
     // not whether joiners report at all.
-    const inflight = createInflight();
+    const inflight = createInflight("test");
     const p = parked();
     const events: string[] = [];
     const before = performance.now();
@@ -277,7 +277,7 @@ describe("createInflight — freshness floor (notBefore)", () => {
   });
 
   test("a joiner's wait ends when the shared flight rejects", async () => {
-    const inflight = createInflight();
+    const inflight = createInflight("test");
     let open!: () => void;
     const gate = new Promise<void>((r) => (open = r));
     const fn = async () => {
@@ -299,7 +299,7 @@ describe("createInflight — freshness floor (notBefore)", () => {
   });
 
   test("a detached flight takes no new joiner; its own joiners still share it", async () => {
-    const inflight = createInflight();
+    const inflight = createInflight("test");
     let detach!: () => void;
     let calls = 0;
     let release!: () => void;
@@ -325,7 +325,7 @@ describe("createInflight — freshness floor (notBefore)", () => {
   });
 
   test("a detach before the body's first await still keeps the flight out of the key", async () => {
-    const inflight = createInflight();
+    const inflight = createInflight("test");
     let calls = 0;
     const a = inflight.run("k", async (flight) => {
       calls++;
@@ -337,5 +337,29 @@ describe("createInflight — freshness floor (notBefore)", () => {
     });
     expect(calls).toBe(2);
     await Promise.all([a, b]);
+  });
+});
+
+describe("a join is a wait", () => {
+  test("a joiner naming no layer reports to the installed meter, under the deduplicator's name; the starter does not", async () => {
+    const events: string[] = [];
+    installInflightJoinMeter((layer) => {
+      events.push(`begin ${layer}`);
+      return () => events.push(`end ${layer}`);
+    });
+    try {
+      const inflight = createInflight("probe");
+      let release!: () => void;
+      const gate = new Promise<void>((r) => (release = r));
+      const starter = inflight.run("k", () => gate.then(() => 1));
+      const joiner = inflight.run("k", () => Promise.resolve(2));
+      expect(events).toEqual(["begin inflight:probe"]);
+      release();
+      expect(await starter).toBe(1);
+      expect(await joiner).toBe(1);
+      expect(events).toEqual(["begin inflight:probe", "end inflight:probe"]);
+    } finally {
+      installInflightJoinMeter(null);
+    }
   });
 });

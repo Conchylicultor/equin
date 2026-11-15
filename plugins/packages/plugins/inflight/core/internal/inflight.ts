@@ -1,5 +1,25 @@
 import { whileWaiting } from "@plugins/packages/plugins/semaphore/core";
 
+/**
+ * How a join is metered when its caller names no layer of its own: shown from
+ * the moment a caller joins, charged when the flight settles. Installed by
+ * the process's profiler at boot (`runtime-profiler/server` installs
+ * `beginWait(layer, "join")`) — this primitive cannot import the profiler
+ * (the resource runtime builds on it, and the profiler's server half on the
+ * runtime's). With none installed (a browser, a CLI, a test), nothing.
+ */
+export type InflightJoinMeter = (layer: string) => () => void;
+
+const NO_JOIN_END = (): void => {};
+let joinMeter: InflightJoinMeter = () => NO_JOIN_END;
+
+/** Install the meter every unnamed join reports to (see {@link InflightJoinMeter}). */
+export function installInflightJoinMeter(
+  meter: InflightJoinMeter | null,
+): void {
+  joinMeter = meter ?? (() => NO_JOIN_END);
+}
+
 /** Per-call options for `Inflight.run`. */
 export interface InflightOptions {
   /**
@@ -13,8 +33,14 @@ export interface InflightOptions {
    * One callback for both moments, so a caller cannot report a join's wait
    * without having shown it while it lasted — runtime-profiler's
    * `beginWait(layer, "join")` is exactly this shape (it shows the wait on the
-   * joiner's open spans, and its end charges the time). This primitive stays
-   * profiler-free.
+   * joiner's open spans, and its end charges the time).
+   *
+   * Omitted, a join is still a wait: the installed meter's
+   * (`installInflightJoinMeter`) `inflight:<name>` join, the name the
+   * deduplicator was created with — so no joiner's wait on the starter's
+   * work is ever booked as its own time. Pass it only to name the
+   * join under a layer of the caller's own vocabulary (`read-coalesce`), or
+   * through a host seam that owns the profiler (the resource runtime's).
    */
   onJoin?: () => () => void;
   /**
@@ -103,7 +129,15 @@ export interface Inflight {
  * letting a caller that needs post-change freshness refuse a flight older than
  * what it already knows (`notBefore`).
  */
-export function createInflight(): Inflight {
+export function createInflight(
+  /**
+   * What the deduplicated work is: a joiner's wait on it is shown and charged
+   * as the `inflight:<name>` join (see {@link InflightOptions.onJoin}).
+   */
+  name: string,
+): Inflight {
+  const joinLayer = `inflight:${name}`;
+  const defaultJoin = (): (() => void) => joinMeter(joinLayer);
   // `token` is the flight's identity, minted before its promise exists so the
   // settle handler has something total to compare against (see the release
   // below); `startedAt` is when its body was invoked.
@@ -126,8 +160,7 @@ export function createInflight(): Inflight {
         // joiners would otherwise stall every caller that depends on nothing
         // here. Without such a slot in its context it is the shared promise.
         const shared = whileWaiting(existing.promise as Promise<T>);
-        const onJoin = opts?.onJoin;
-        if (!onJoin) return shared;
+        const onJoin = opts?.onJoin ?? defaultJoin;
         // Joiner path: announced here, synchronously, in the JOINER's own
         // async context (ambient AsyncLocalStorage attribution lands on the
         // joiner, not the starter), and ended as the shared flight settles —

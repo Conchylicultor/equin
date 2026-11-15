@@ -1,3 +1,5 @@
+import { beginWait } from "@plugins/infra/plugins/runtime-profiler/core";
+
 /** Totals since the coalescer was created, across every key. */
 export interface CoalescerStats {
   /** `trigger` / `run` calls. */
@@ -83,9 +85,26 @@ interface Slot<E> {
  * ```
  */
 export function createKeyedCoalescer<K, E = never>(opts: {
+  /**
+   * What the reaction is, as the profiler names a wait on it: a caller
+   * awaiting a run it did not start (`run` served by a run another caller's
+   * settle starts, `idle`, `settled`) waits on another party's work, shown and
+   * charged as the `coalesce:<name>` join — never as its own time.
+   */
+  name: string;
   run: (key: K, items: E[]) => Promise<unknown> | void;
 }): KeyedCoalescer<K, E> {
   const slots = new Map<K, Slot<E>>();
+  const joinLayer = `coalesce:${opts.name}`;
+
+  /**
+   * `done`, awaited as a join on another party's run: announced now, in the
+   * waiter's own context, and charged as it settles.
+   */
+  function joined<T>(done: Promise<T>): Promise<T> {
+    const end = beginWait(joinLayer, "join");
+    return done.finally(end);
+  }
   const stats: CoalescerStats = { triggers: 0, runs: 0, folded: 0 };
 
   function enqueue(key: K, items: readonly E[] | undefined): Generation<E> {
@@ -170,13 +189,20 @@ export function createKeyedCoalescer<K, E = never>(opts: {
       const done = new Promise<void>((resolve, reject) => {
         gen.waiters.push({ resolve, reject });
       });
+      // Idle, this very call starts the run: it is this caller's work (it
+      // runs in this context, its spans nest here) — a starter waits for
+      // nothing, as `inflight`'s. Otherwise it is folded behind a run already
+      // in flight, and runs when THAT settles, in its context: a join.
+      const startsHere = slots.get(key)?.running === false;
       start(key);
-      return done;
+      return startsHere ? done : joined(done);
     },
     idle(key) {
       const slot = slots.get(key);
       if (slot === undefined) return Promise.resolve();
-      return new Promise<void>((resolve) => slot.idleWaiters.push(resolve));
+      return joined(
+        new Promise<void>((resolve) => slot.idleWaiters.push(resolve)),
+      );
     },
     settled(key) {
       // The pending run starts after the running one settles, so it is the
@@ -184,7 +210,9 @@ export function createKeyedCoalescer<K, E = never>(opts: {
       const slot = slots.get(key);
       const last = slot?.pending ?? slot?.current ?? null;
       if (last === null) return Promise.resolve();
-      return new Promise<void>((resolve) => last.settledWaiters.push(resolve));
+      return joined(
+        new Promise<void>((resolve) => last.settledWaiters.push(resolve)),
+      );
     },
     stats: () => ({ ...stats }),
   };
@@ -200,9 +228,12 @@ function isThenable(v: unknown): v is PromiseLike<unknown> {
 
 /** {@link createKeyedCoalescer} with a single key. */
 export function createCoalescer<E = never>(opts: {
+  /** See {@link createKeyedCoalescer}'s `name`. */
+  name: string;
   run: (items: E[]) => Promise<unknown> | void;
 }): Coalescer<E> {
   const keyed = createKeyedCoalescer<null, E>({
+    name: opts.name,
     run: (_key, items) => opts.run(items),
   });
   return {

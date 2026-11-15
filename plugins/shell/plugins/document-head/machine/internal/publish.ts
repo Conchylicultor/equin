@@ -31,6 +31,7 @@ export async function publishDocumentHead(): Promise<void> {
   );
   const file = worktreeArtifacts.documentHead(runtimeNamespace());
   const publish = createCoalescer({
+    name: "document-head.publish",
     run: async () => {
       const rendered = await Promise.all(sources.map((s) => s.render()));
       await writeAtomic(

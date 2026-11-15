@@ -177,6 +177,7 @@ export function openBuildLease(
   // One store-lock acquisition at a time for the whole lease: every pin that
   // lands while one is in flight folds into the ONE pending batch.
   const pinner = createCoalescer<AppPath>({
+    name: "web-artifacts.pinner",
     run: (paths) =>
       withStoreLock(layout, "shared", () => {
         if (ownerFd === null) create();

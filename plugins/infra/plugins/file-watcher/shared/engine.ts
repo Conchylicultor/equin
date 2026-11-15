@@ -283,12 +283,14 @@ export async function createFileWatcher(
   // call. The `bg` span covers the reaction's awaited work, not only its
   // synchronous body.
   const changes = createCoalescer<parcel.Event>({
+    name: `watch:${name}`,
     run: (events) => runTracked(`watch:${name}`, () => onChange(events)),
   });
   const losses =
     onLost === undefined
       ? null
       : createKeyedCoalescer<string, unknown>({
+          name: `watch:${name}:lost`,
           run: (dir, errors) =>
             runTracked(`watch:${name}:lost`, () => onLost(dir, errors.at(-1))),
         });

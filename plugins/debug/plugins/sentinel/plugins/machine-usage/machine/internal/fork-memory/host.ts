@@ -88,11 +88,13 @@ export function measureForkTrees(
     );
   }
   const id = nextId++;
-  return new Promise((resolve, reject) => {
-    pending.set(id, { resolve, reject });
-    const frame: MainToWorkerFrame = { type: "measure", id, trees };
-    worker.postMessage(frame);
-  });
+  return worker.awaitReply(
+    new Promise<Map<number, number>>((resolve, reject) => {
+      pending.set(id, { resolve, reject });
+      const frame: MainToWorkerFrame = { type: "measure", id, trees };
+      worker.postMessage(frame);
+    }),
+  );
 }
 
 export async function stopForkMemoryWorker(): Promise<void> {

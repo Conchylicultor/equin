@@ -181,6 +181,7 @@ function heardAtOf(work: readonly RoomWork[]): number | undefined {
 // line at a time (debounceMs: 0) costs at most one running plus one pending
 // run however fast the lines come — and a slow room holds only itself.
 const roomRuns = createKeyedCoalescer<Room, RoomWork>({
+  name: "transcript-watcher.room-runs",
   run: (room, work) =>
     work.some((w) => w.kind === "resolve")
       ? runTracked("transcript-watcher:reconcile", () =>

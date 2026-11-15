@@ -60,6 +60,7 @@ let started = false;
 // interleave on `lastKnownSha` (and double-announce an advance). A "replan"
 // item first brings the follow in line with the refs dirs as they are now.
 const recomputes = createCoalescer<"replan">({
+  name: "git-watcher.recomputes",
   run: (items) =>
     runTracked("git-watcher:recompute", async () => {
       if (items.length > 0) await follow();

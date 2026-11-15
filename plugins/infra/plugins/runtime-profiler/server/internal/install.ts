@@ -42,6 +42,7 @@ import {
   type GateReading,
   type LeafSpanOptions,
 } from "../../core";
+import { installInflightJoinMeter } from "@plugins/packages/plugins/inflight/core";
 import {
   installLeaseContextRuntime,
   whileWaiting,
@@ -63,6 +64,13 @@ const als = new AsyncLocalStorage<EntryContext>();
 // filesystem), and its end charges it. Measured overhead per call
 // (scripts/fs-meter-bench.ts): see the plugin's CLAUDE.md.
 installFsWaitMeter((layer) => beginDeferredWait(layer, "io", FS_WAIT_FLOOR_MS));
+
+// A joiner of a deduplicated flight waits on the starter's work: every
+// `createInflight(name)` join its caller names no layer for is the
+// `inflight:<name>` join wait, so the joiner's span never books the starter's
+// time as its own. Installed, not imported: the resource runtime builds on
+// inflight, and this plugin's server half on the runtime.
+installInflightJoinMeter((layer) => beginWait(layer, "join"));
 
 installSpanContextRuntime({
   run: (ctx, fn) => als.run(ctx, fn),

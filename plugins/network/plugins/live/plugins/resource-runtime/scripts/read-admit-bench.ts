@@ -27,7 +27,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 async function run(label: string): Promise<void> {
   const h = createHarness();
-  const memo = createInflight();
+  const memo = createInflight("bench-memo");
   const transcript = () => memo.run("t", () => sleep(SLOW_MS).then(() => "e"));
   for (let i = 0; i < DERIVED; i++) {
     h.runtime.defineExternalResource({

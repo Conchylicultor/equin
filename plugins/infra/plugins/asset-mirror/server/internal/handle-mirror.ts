@@ -37,7 +37,7 @@ function contentType(name: string): string {
 }
 
 /** A miss being fetched, joined by every request for the same file meanwhile. */
-const downloads = createInflight();
+const downloads = createInflight("asset-mirror-download");
 
 /**
  * Fetch one pinned file into the cache, under its digest. Throws on any

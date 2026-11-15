@@ -15,7 +15,7 @@ const REFRESH_LEAD_MS = 60_000;
 // A hand-rolled `void promise.finally(release)` here once re-rejected with the
 // refresh's error on a promise nobody owned, taking central down on every
 // network blip (report-1794655441-55bxvr).
-const inFlightRefreshes = createInflight();
+const inFlightRefreshes = createInflight("auth-token-refresh");
 
 function refreshKey(providerId: string, accountId: string): string {
   return `${providerId}::${accountId}`;

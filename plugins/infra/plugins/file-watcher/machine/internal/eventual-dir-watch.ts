@@ -80,10 +80,12 @@ async function followDir(
   let synced = false;
 
   const reaction = createCoalescer<FileChangeEvent>({
+    name: "eventual-dir-watch.reaction",
     run: (events) => (stopped ? undefined : onChange(events)),
   });
   // Losses, from either watch, folded like changes (they come in bursts).
   const lost = createCoalescer<unknown>({
+    name: "eventual-dir-watch.lost",
     run: (errors) =>
       stopped || opts.onLost === undefined
         ? undefined
@@ -93,6 +95,7 @@ async function followDir(
   // Bring the held watch in line with what is at `dir` now. One run at a
   // time (a coalescer), so two parent batches never race two opens.
   const sync = createCoalescer({
+    name: "eventual-dir-watch.sync",
     run: async () => {
       const first = !synced;
       synced = true;

@@ -384,6 +384,7 @@ function syncWatcher(): Promise<void> {
 }
 
 const watcherSync = createCoalescer({
+  name: "supervised-job.watcher-sync",
   run: () => runsDirExclusion.run(RUNS_DIR_KEY, applyWatcher),
 });
 

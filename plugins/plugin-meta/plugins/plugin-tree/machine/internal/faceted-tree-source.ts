@@ -186,31 +186,42 @@ export function openFacetedTreeSession({
   });
 
   return {
+    // Every answer still to come is the worker's (its build, its refresh):
+    // awaited through `awaitReply`, so the reader's span shows it as a
+    // `worker:plugin-tree.faceted-index` wait, not as its own time.
     tree() {
       if (ended !== null) return Promise.reject(ended);
       if (facetsFailed !== null) return Promise.reject(facetsFailed);
       if (tree !== null) return Promise.resolve(tree);
-      return new Promise((resolve, reject) => ready.push({ resolve, reject }));
+      return instance.awaitReply(
+        new Promise<PluginTreeData>((resolve, reject) =>
+          ready.push({ resolve, reject }),
+        ),
+      );
     },
     structure() {
       if (ended !== null) return Promise.reject(ended);
       if (structure !== null) return Promise.resolve(structure);
-      return new Promise((resolve, reject) =>
-        structured.push({ resolve, reject }),
+      return instance.awaitReply(
+        new Promise<PluginTreeData>((resolve, reject) =>
+          structured.push({ resolve, reject }),
+        ),
       );
     },
     refresh(paths, edited) {
       if (ended !== null) return Promise.reject(ended);
       const id = ++nextId;
-      return new Promise<boolean>((resolve, reject) => {
-        pending.set(id, { resolve, reject });
-        instance.postMessage({
-          type: "refresh",
-          id,
-          paths: [...paths],
-          edited: [...edited],
-        } satisfies ToWorkerFrame);
-      });
+      return instance.awaitReply(
+        new Promise<boolean>((resolve, reject) => {
+          pending.set(id, { resolve, reject });
+          instance.postMessage({
+            type: "refresh",
+            id,
+            paths: [...paths],
+            edited: [...edited],
+          } satisfies ToWorkerFrame);
+        }),
+      );
     },
     async close() {
       closing = true;

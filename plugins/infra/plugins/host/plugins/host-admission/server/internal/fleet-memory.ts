@@ -139,6 +139,7 @@ export function fleetCapacity(
       // one at a time, so an older read can never land after a newer one and
       // put back a window that has since moved.
       const reread = createCoalescer({
+        name: "fleet-memory.reread",
         run: () =>
           evaluate().catch((err: unknown) => {
             if (starting) throw err;

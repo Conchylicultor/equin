@@ -65,7 +65,7 @@ async function readUsageReply(accountId: string): Promise<unknown> {
   }
 }
 
-const inflight = createInflight();
+const inflight = createInflight("usage-probe");
 
 /**
  * Read `accountId`'s limits now and, when there are some, overwrite its usage

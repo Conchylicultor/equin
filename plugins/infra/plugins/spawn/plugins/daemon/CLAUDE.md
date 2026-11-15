@@ -41,7 +41,11 @@ Four ways to start an instance — the arm decides how liveness is known:
   a Bun Worker. `onMessage(data, ctx)` gets `ctx.ready()` for a
   `healthy: "ready"` daemon; `stop(worker)` is the graceful half of a stop
   (the primitive terminates afterwards); the instance's `postMessage` reaches
-  the current incarnation. Liveness: the `close` event.
+  the current incarnation. Liveness: the `close` event. A caller awaiting
+  the worker's answer awaits it through `instance.awaitReply(promise)`: the
+  `worker:<name>` `io` wait (shown while pending, charged as it settles,
+  filed by slow-ops as `wait worker:<name>`), so the worker's time is never
+  the caller's own (plugin-tree's session, machine-usage's fork-memory).
 - **`launchDetached({ argv, env?, onOutputLine?, pidFile })`** — a bootstrap
   that starts something detached and exits (a release preview), or the
   long-lived process itself (an sdk agent). Liveness: the pid file, watched

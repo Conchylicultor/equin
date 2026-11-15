@@ -46,7 +46,7 @@ export function coverCacheKey(contentHash: string): string {
 export function createCoverServer(
   store: CoverStore,
 ): (req: ScoreCoverRequest) => Promise<Response> {
-  const renders = createInflight();
+  const renders = createInflight("sonata-cover-render");
   return async (req) => {
     const key = coverCacheKey(req.contentHash);
     const cached = await store.read(key);

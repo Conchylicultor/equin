@@ -1,6 +1,6 @@
 # inflight
 
-In-flight request deduplicator: `createInflight()` returns
+In-flight request deduplicator: `createInflight(name)` returns
 `{ run(key, fn, opts?), size }`. Concurrent callers sharing a `key` share one
 execution of `fn` and one result; the key clears the instant the promise settles,
 so it collapses *overlapping* work without caching a settled value. A
@@ -11,6 +11,21 @@ next call retries fresh).
 This is a *concurrency* deduplicator, not a cache — pair it with a TTL cache if
 you also want to reuse a settled result. Never use it where each caller needs a
 distinct side effect (mutations): the shared body runs once.
+
+## A join is a wait (`name`, `opts.onJoin`)
+
+A joiner only waits on the starter's work, so its time there is never its own:
+every join is shown on the joiner's open spans and charged when the flight
+settles as a runtime-profiler `join` wait — `inflight:<name>` by default (the
+name is required, so no deduplicator can leave its joiners' waits booked as
+their own time). The default goes through an installed meter
+(`installInflightJoinMeter`, installed by `runtime-profiler/server` beside
+timed-fs's fs meter), not an import: the resource runtime builds on this
+primitive and the profiler's server half on the runtime, so an import would
+close a plugin cycle. With none installed (a browser, the CLI) a join is
+metered nowhere. `opts.onJoin` names it under the caller's own layer instead
+(`read-coalesce`, `endpoint-dedupe`, `git-coalesce:<name>`). The starter
+waits for nothing: its time is `fn`'s.
 
 ## Detaching a flight (`fn`'s `flight.detach()`)
 
@@ -77,8 +92,12 @@ context the joiner gets the very shared promise, as before.
 - Description: In-flight request deduplicator: createInflight() collapses concurrent callers sharing a key onto one execution, plus a caller-supplied freshness floor (notBefore) that supersedes rather than joins a flight older than a change the caller already knows about.
 - Core:
   - Uses: `packages/semaphore.whileWaiting`
-  - Exports (types): `Inflight`
-  - Exports (values): `createInflight`
+  - Exports (types):
+    - `Inflight`
+    - `InflightJoinMeter`
+  - Exports (values):
+    - `createInflight`
+    - `installInflightJoinMeter`
 - Cross-plugin:
   - Imported by:
     - `apps/chord/video-availability`
@@ -93,6 +112,7 @@ context the joiner gets the very shared promise, as before.
     - `infra/git/git-read-cache`
     - `infra/host-fs`
     - `infra/host-fs/image`
+    - `infra/runtime-profiler`
     - `network/live/live-state`
     - `network/live/resource-runtime`
     - `packages/watched-memo`

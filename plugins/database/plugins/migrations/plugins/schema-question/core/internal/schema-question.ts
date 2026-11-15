@@ -100,6 +100,7 @@ interface Batch {
  */
 const batches = new Map<string, Batch>();
 const probes = createKeyedCoalescer<string, Ask>({
+  name: "schema-question.probes",
   run: async (batchKey, asks) => {
     const { root, files } = batches.get(batchKey)!;
     const request: HostRequest = {

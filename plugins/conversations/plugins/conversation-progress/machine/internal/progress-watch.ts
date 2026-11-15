@@ -41,7 +41,10 @@ const followed = new Map<string, Followed>();
 // One pass at a time per conversation, the passes landing meanwhile folded
 // into one: the watch's batches and the baseline never race each other's
 // read-then-write of the phase.
-const passes = createKeyedCoalescer<string, Pass>({ run: runPass });
+const passes = createKeyedCoalescer<string, Pass>({
+  name: "conversation-progress.passes",
+  run: runPass,
+});
 
 /** The stored phase's index in PHASE_ORDER; -1 when none is stored yet. */
 async function storedPhaseIndex(conversationId: string): Promise<number> {

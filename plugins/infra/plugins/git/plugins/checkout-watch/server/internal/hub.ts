@@ -245,6 +245,7 @@ export function createCheckoutWatchHub(deps: CheckoutWatchDeps) {
     // it) is filtered, so `git checkout b` plus the write to `refs/heads/b` is
     // judged against the new branch.
     const deliver = createCoalescer<CheckoutChange>({
+      name: "checkout-watch.deliver",
       run: (changes) => {
         const treePaths = new Set<string>();
         for (const c of changes) {
@@ -362,6 +363,7 @@ export function createCheckoutWatchHub(deps: CheckoutWatchDeps) {
       // This reader's own reaction queue: a slow reader holds only its own
       // later batches, never the hub or another reader.
       const reaction = createCoalescer<CheckoutChange>({
+        name: "checkout-watch.reaction",
         run: (changes) => (released ? undefined : request.onChange(changes)),
       });
       const hold = hub.acquire(root, (delivery) => {

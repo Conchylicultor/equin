@@ -111,6 +111,7 @@ function malformed(path: string, why: string): void {
 
 let watcher: FileWatcher | null = null;
 const passes = createCoalescer({
+  name: "tests.ingest-passes",
   run: () =>
     runTracked("tests:ingest-pass", async () => {
       await ingestPass(testRunRecordsDir.path);

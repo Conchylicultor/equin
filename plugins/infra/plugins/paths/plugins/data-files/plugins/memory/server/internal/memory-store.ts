@@ -263,6 +263,7 @@ export function createMemoryDataFiles(opts?: {
       async watch(onChange: DataChangeHandler) {
         requireWatchSpec(spec);
         const reactions = createCoalescer<RelPath>({
+          name: "data-files-memory.reactions",
           run: async (items) => {
             await onChange({ kind: "changed", paths: [...new Set(items)] });
           },

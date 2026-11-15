@@ -33,7 +33,7 @@ beforeAll(() => {
 /** One slow shared read (the transcript) and `n` values derived from it. */
 function setup(n: number) {
   const h = createHarness();
-  const memo = createInflight();
+  const memo = createInflight("test");
   const transcript = controllable("events");
   const readTranscript = () => memo.run("transcript", transcript.loader);
   for (let i = 0; i < n; i++) {

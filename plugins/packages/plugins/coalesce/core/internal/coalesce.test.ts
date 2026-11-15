@@ -1,4 +1,11 @@
 import { describe, expect, test } from "bun:test";
+import { AsyncLocalStorage } from "node:async_hooks";
+import {
+  installSpanContextRuntime,
+  onSlowSpan,
+  recordEntrySpan,
+  type EntryContext,
+} from "@plugins/infra/plugins/runtime-profiler/core";
 import { createCoalescer, createKeyedCoalescer } from "./coalesce";
 
 function deferred(): { promise: Promise<void>; resolve: () => void } {
@@ -18,6 +25,7 @@ describe("createCoalescer", () => {
     let concurrent = 0;
     let maxConcurrent = 0;
     const c = createCoalescer<number>({
+      name: "test",
       run: async (items) => {
         concurrent += 1;
         maxConcurrent = Math.max(maxConcurrent, concurrent);
@@ -51,6 +59,7 @@ describe("createCoalescer", () => {
     let state = "old";
     const gate = deferred();
     const c = createCoalescer({
+      name: "test",
       run: async () => {
         const read = state;
         if (seen.length === 0) await gate.promise;
@@ -69,6 +78,7 @@ describe("createCoalescer", () => {
     const gate = deferred();
     let finished = 0;
     const c = createCoalescer({
+      name: "test",
       run: async () => {
         await gate.promise;
         finished += 1;
@@ -90,6 +100,7 @@ describe("createCoalescer", () => {
     const gate = deferred();
     let calls = 0;
     const c = createCoalescer({
+      name: "test",
       run: async () => {
         calls += 1;
         if (calls === 1) {
@@ -116,6 +127,7 @@ describe("createCoalescer", () => {
     const gates: (() => void)[] = [];
     const batches: number[][] = [];
     const c = createCoalescer<number>({
+      name: "test",
       run: async (items) => {
         batches.push(items);
         const gate = deferred();
@@ -146,6 +158,7 @@ describe("createCoalescer", () => {
   test("settled() resolves after a failed run too", async () => {
     const gate = deferred();
     const c = createCoalescer({
+      name: "test",
       run: async () => {
         await gate.promise;
         throw new Error("boom");
@@ -160,7 +173,7 @@ describe("createCoalescer", () => {
 
   test("a sync reaction runs inline", () => {
     let calls = 0;
-    const c = createCoalescer({ run: () => void (calls += 1) });
+    const c = createCoalescer({ name: "test", run: () => void (calls += 1) });
     c.trigger();
     expect(calls).toBe(1);
   });
@@ -171,6 +184,7 @@ describe("createKeyedCoalescer", () => {
     const gates = new Map<string, () => void>();
     const runs: string[] = [];
     const c = createKeyedCoalescer<string>({
+      name: "test",
       run: async (key) => {
         runs.push(key);
         const gate = deferred();
@@ -191,5 +205,62 @@ describe("createKeyedCoalescer", () => {
     gates.get("b")!();
     await Promise.all([c.idle("a"), c.idle("b")]);
     expect(c.stats().runs).toBe(4);
+  });
+});
+
+describe("waits on another caller's run", () => {
+  // What runtime-profiler/server installs at boot.
+  const als = new AsyncLocalStorage<EntryContext>();
+  installSpanContextRuntime({
+    run: (ctx, fn) => als.run(ctx, fn),
+    current: () => als.getStore(),
+  });
+
+  /** The waits a `run` caller's span recorded, by layer. */
+  async function waitsOfCaller(
+    c: { run(): Promise<void> },
+    label: string,
+  ): Promise<Record<string, number>> {
+    let waits: Record<string, number> | undefined;
+    const sub = onSlowSpan(
+      (span) => {
+        if (span.label === label) waits = { ...span.waits };
+      },
+      { thresholdMs: 0 },
+    );
+    try {
+      await recordEntrySpan("http", label, () => c.run());
+    } finally {
+      sub.dispose();
+    }
+    return waits ?? {};
+  }
+
+  test("a run folded behind one in flight is a named join, not own time", async () => {
+    const gate = deferred();
+    let first = true;
+    const c = createCoalescer({
+      name: "probe",
+      run: async () => {
+        if (!first) return;
+        first = false;
+        await gate.promise;
+      },
+    });
+    c.trigger(); // another party's run, in flight
+    const waiting = waitsOfCaller(c, "folded-reader");
+    await new Promise((r) => setTimeout(r, 20));
+    gate.resolve();
+    const waits = await waiting;
+    expect(waits["coalesce:probe"]).toBeGreaterThanOrEqual(15);
+  });
+
+  test("a run this caller starts is its own work: no join", async () => {
+    const c = createCoalescer({
+      name: "probe-own",
+      run: () => new Promise<void>((r) => setTimeout(r, 10)),
+    });
+    const waits = await waitsOfCaller(c, "starting-reader");
+    expect(waits["coalesce:probe-own"]).toBeUndefined();
   });
 });

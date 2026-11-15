@@ -1,4 +1,5 @@
 import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import { beginWait } from "@plugins/infra/plugins/runtime-profiler/core";
 import {
   backoffPolicy,
   claimInstance,
@@ -356,6 +357,13 @@ export function spawnWorkerIn(
     stop: handle.stop,
     postMessage(message: unknown) {
       worker?.postMessage(message);
+    },
+    awaitReply<T>(reply: Promise<T>): Promise<T> {
+      // The worker's time, not the caller's: an `io` wait like a git child's
+      // (`git:<subcommand>`) — shown while pending, charged as it settles,
+      // and filed against the worker (`wait worker:<name>`) when slow.
+      const end = beginWait(`worker:${handle.name}`, "io");
+      return reply.finally(end);
     },
   };
 }

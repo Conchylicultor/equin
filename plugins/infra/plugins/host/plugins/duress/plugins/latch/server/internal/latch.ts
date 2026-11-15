@@ -171,6 +171,7 @@ function reportLatchFailure(what: string, err: unknown): void {
 }
 
 const reread = createCoalescer({
+  name: "duress-latch.reread",
   run: async () => {
     const gen = writeGen;
     try {

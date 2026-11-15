@@ -132,6 +132,7 @@ export function holdPidFile(
   };
 
   const reads = createCoalescer({
+    name: "daemon.pid-file-reads",
     run: async () => {
       if (released) return;
       if (watch === null) {

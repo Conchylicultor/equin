@@ -46,6 +46,7 @@ export const midiFoldersWatcher = defineFileWatcher({
 // A lost-events reconcile, coalesced: an error burst on several dirs costs at
 // most one running plus one pending walk.
 const lostReconciles = createCoalescer({
+  name: "midi-folders.lost-reconciles",
   run: () =>
     runTracked("midi-folders:reconcile", () => reconcileAfterLostEvents()),
 });

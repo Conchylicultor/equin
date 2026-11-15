@@ -1,2 +1,2 @@
-export { createInflight } from "./internal/inflight";
-export type { Inflight } from "./internal/inflight";
+export { createInflight, installInflightJoinMeter } from "./internal/inflight";
+export type { Inflight, InflightJoinMeter } from "./internal/inflight";

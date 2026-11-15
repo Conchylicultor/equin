@@ -823,7 +823,7 @@ export class NotificationsClient {
    * same tuple share one request and its answer (a concurrency deduplicator,
    * never a cache — the next ask after it settles reads again).
    */
-  private readFlights = createInflight();
+  private readFlights = createInflight("live-state-read");
   /**
    * The client-wide apply sequence: bumped on every value written to a sub's
    * cache (`markApplied`), so each sub's `appliedSeq` orders its value against

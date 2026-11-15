@@ -165,9 +165,10 @@ export function createWatchedMemo<T, F, N = never>(
   const passLabel = opts.passLabel ?? `watched-memo:${name}:pass`;
   const entries = new Map<string, Entry<T, F>>();
   const cache = new Map<string, { signature: string; value: T }>();
-  const inflight = createInflight();
+  const inflight = createInflight(`watched-memo:${name}`);
 
   const passes = createKeyedCoalescer<Entry<T, F>, PassCause<N>>({
+    name: `memo-pass:${name}`,
     run: (entry, causes) => runTracked(passLabel, () => pass(entry, causes)),
   });
 

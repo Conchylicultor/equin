@@ -31,7 +31,7 @@ type Thumbnail =
   | { kind: "maps-not-configured" };
 
 // Concurrent asks for one place (a gallery opened in two tabs) share one fetch.
-const inflight = createInflight();
+const inflight = createInflight("place-thumbnail");
 
 /**
  * Serve one Google place's gallery thumbnail from the disk cache, fetching it

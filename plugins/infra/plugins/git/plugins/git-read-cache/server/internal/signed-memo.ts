@@ -195,7 +195,7 @@ function signatureProbe<I>(opts: {
       changed: () => {},
     };
   }
-  const flights = createInflight();
+  const flights = createInflight(`signed-memo:${opts.name}`);
   // Per key: how many of its probes are running, and the instant of its last
   // prime while any was. Only a running probe can be joined, so a prime with
   // none running needs no floor (every later probe starts after it), and the

@@ -3097,7 +3097,7 @@ export function createResourceRuntime(
   opts: ResourceRuntimeOptions = {},
 ): ResourceRuntime {
   const registry = new Map<string, RegistryEntry>();
-  const inflight = createInflight();
+  const inflight = createInflight("resource-read");
   // The runtime-wide version clock: the last version handed out, for any
   // tuple of any entry. Every version is minted from it (`mintVersion`, the
   // span opener in `registerSubOnSocket`), so a version is never reused —
@@ -4015,7 +4015,7 @@ export function createResourceRuntime(
   // within `WATERMARK_SHARE_MS` (a hung one is superseded, never waited on by
   // every later read), and a joiner whose shared capture failed captures its
   // own — the starter's error is the starter's.
-  const watermarkFlight = createInflight();
+  const watermarkFlight = createInflight("resource-watermark");
   async function captureSharedWatermark(
     capture: () => Promise<string>,
   ): Promise<string> {

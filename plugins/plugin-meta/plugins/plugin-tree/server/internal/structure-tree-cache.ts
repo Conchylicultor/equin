@@ -276,6 +276,7 @@ function dropFacets(): void {
 }
 
 const facetsRefresh = createCoalescer<FileChangeEvent>({
+  name: "plugin-tree.facets-refresh",
   run: (events) => refreshFacets(events),
 });
 

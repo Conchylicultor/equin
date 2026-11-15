@@ -64,7 +64,7 @@ export type ConversationMandate =
 
 /** One resolution per conversation at a time: every gated tool's `when` asks
  * on every MCP request, all in parallel. */
-const conversationMandates = createInflight();
+const conversationMandates = createInflight("conversation-mandate");
 
 /** The effective mandate of the task a conversation works on; `none` for a
  * conversation without a task (or that does not exist) — nothing granted. */

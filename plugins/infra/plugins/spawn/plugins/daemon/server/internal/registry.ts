@@ -200,6 +200,14 @@ export interface DaemonInstance {
 export interface WorkerDaemonInstance extends DaemonInstance {
   /** Post to the current worker; a no-op between incarnations. */
   postMessage(message: unknown): void;
+  /**
+   * Await `reply` — a promise the worker's answer settles (a request's
+   * response, a build it reports) — as a wait on the worker: shown on the
+   * caller's open spans while pending and charged as the `worker:<daemon>`
+   * `io` wait when it settles, so the worker's time is never booked as the
+   * caller's own. Every await of a worker's answer goes through it.
+   */
+  awaitReply<T>(reply: Promise<T>): Promise<T>;
 }
 
 export interface DaemonDeclBase {

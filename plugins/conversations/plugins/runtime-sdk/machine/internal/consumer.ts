@@ -197,6 +197,7 @@ export async function waitForProjection(
 }
 
 const catchUps = createKeyedCoalescer<string>({
+  name: "runtime-sdk.catch-ups",
   run: (id) => watchedCatchUp(id),
 });
 
@@ -702,7 +703,10 @@ async function reportFollowFailure(
   });
 }
 
-const followScan = createCoalescer({ run: () => syncFollowed() });
+const followScan = createCoalescer({
+  name: "runtime-sdk.follow-scan",
+  run: () => syncFollowed(),
+});
 
 /** How many agents the boot catch-up brings up at once. */
 const BOOT_CATCH_UP_CONCURRENCY = 8;

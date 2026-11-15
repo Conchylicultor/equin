@@ -10,7 +10,7 @@ export const DETAILS_TTL_MS = 24 * 60 * 60 * 1000;
  */
 export function createTtlMemo<V>(ttlMs: number, now: () => number = Date.now) {
   const kept = new Map<string, { at: number; value: V }>();
-  const inflight = createInflight();
+  const inflight = createInflight("place-details");
   return {
     async get(key: string, fetch: () => Promise<V>): Promise<V> {
       const hit = kept.get(key);

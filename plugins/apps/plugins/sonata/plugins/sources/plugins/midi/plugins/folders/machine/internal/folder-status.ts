@@ -99,7 +99,7 @@ export function createFolderStatusStore(deps: {
 }): FolderStatusStore {
   // One probe per path at a time: a pending prompt holds one probe, however
   // many re-checks ask meanwhile.
-  const probes = createInflight();
+  const probes = createInflight("midi-folder-status");
   // Each configured path's last answer.
   const answers = new Map<UserPath, FolderStatus>();
   // The last published statuses, in config order — `null` until the first

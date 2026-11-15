@@ -50,6 +50,7 @@ let watcher: FileWatcher | null = null;
 // unexpected and surfaces as an unhandled rejection, without disarming later
 // passes.
 const passes = createCoalescer({
+  name: "op-store.passes",
   run: () => runTracked("op-store:pass", pass),
 });
 

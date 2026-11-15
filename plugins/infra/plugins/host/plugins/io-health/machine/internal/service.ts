@@ -41,6 +41,7 @@ export const ioHealthState = createIoHealthState({
 // Refreshes are serialized (the state holds one cursor); a tick landing
 // mid-refresh is owed one more.
 const refreshes = createCoalescer({
+  name: "io-health.refreshes",
   run: () => runTracked("io-health:refresh", () => ioHealthState.refresh()),
 });
 

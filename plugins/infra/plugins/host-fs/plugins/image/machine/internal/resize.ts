@@ -35,7 +35,7 @@ const TOUCH_EVERY_MS = 24 * 60 * 60 * 1000;
  * fill a grid quickly, not the whole box.
  */
 const builds = createSemaphore(Math.max(2, Math.floor(cpus().length / 2)));
-const inflight = createInflight();
+const inflight = createInflight("image-resize");
 
 type Opened = Extract<HostFileOpen, { kind: "ok" }>;
 

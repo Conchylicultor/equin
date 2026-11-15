@@ -170,6 +170,7 @@ type RefreshItem = { kind: "folder"; name: string } | { kind: "all" };
 // arriving together must not each apply a listing over the other's and notify
 // twice for one edit.
 const refreshes = createCoalescer<RefreshItem>({
+  name: "prototypes-files.refreshes",
   run: (items) =>
     runTracked("prototypes:refresh", () => refreshOnce(scopeOf(items))),
 });

@@ -284,6 +284,7 @@ async function appendLines(
 const rotation = new Map<AppPath, { maxBytes: number; keep: number }>();
 const waiting = new Map<AppPath, string[]>();
 const drains = createKeyedCoalescer<AppPath>({
+  name: "file-sink.drains",
   run: (path) => {
     const queued = waiting.get(path) ?? [];
     // This drain writes the lines queued now; later ones wait for the next.

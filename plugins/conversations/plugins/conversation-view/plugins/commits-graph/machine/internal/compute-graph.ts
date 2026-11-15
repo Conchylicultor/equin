@@ -85,7 +85,7 @@ const graphCache = new Map<
   string,
   { pending?: PendingHalf; behind?: BehindHalf; landed?: LandedPiece }
 >();
-const graphInflight = createInflight();
+const graphInflight = createInflight("commits-graph");
 
 async function probeGraphState(
   worktreePath: string,

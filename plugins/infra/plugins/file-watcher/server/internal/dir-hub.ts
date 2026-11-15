@@ -287,6 +287,7 @@ export function createDirWatchHub(starts: DirWatchStarts): DirWatchHub {
       // This watcher's own reaction queue: the native fan-out stays
       // synchronous, while a slow reaction holds only its own later batches.
       const reaction = createCoalescer<FileChangeEvent>({
+        name: "dir-hub.reaction",
         run: (events) => (released ? undefined : onChange(events)),
       });
       const listener = (signal: RootSignal) => {

@@ -134,7 +134,7 @@ interface Cached {
 
 /** Most recently used last. */
 const cache = new Map<string, Cached>();
-const flights = createInflight();
+const flights = createInflight("archive-tree");
 
 function remember(file: UserPath, cached: Cached): void {
   cache.delete(file);

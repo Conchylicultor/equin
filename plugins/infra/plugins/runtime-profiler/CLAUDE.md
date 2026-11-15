@@ -88,6 +88,18 @@ was not:
   for `beginWait` under three entries (`scripts/fs-meter-bench.ts`).
 - **The bare charge (`chargeWait`) is module-internal.** No caller outside
   the module.
+- **Waits on other in-process work are the primitives' to announce, never a
+  call site's.** A span awaiting work another party runs — a deduplicated
+  flight (`packages/inflight`: `inflight:<name>` unless the caller names it,
+  through the join meter `server/internal/install.ts` installs),
+  a coalescer run it did not start (`packages/coalesce`: `coalesce:<name>`),
+  a watched memo's first pass, a worker thread's answer
+  (`WorkerDaemonInstance.awaitReply`: `worker:<daemon>`, kind `io`) — gets the
+  wait from the primitive it awaits through, whose name is required. Before
+  this (2026-11-14 23:17, main), the `deploy-secrets.status` /
+  `composition.data` read that STARTED the plugin-tree memo's compute (its
+  joiners already showed `git-coalesce:plugin-tree.facets`) counted the
+  worker's ~2.2 s rebuild as its own time.
 
 `captureFlightWindow` gives each open span `pendingWaitMs` (what its
 subtree's in-progress waits add to its wait union, through a copy of the
@@ -174,7 +186,12 @@ span encloses them, so deduped GETs record one span per request with joiners sho
 `endpoint-dedupe ≈ wall`, `selfMs ≈ 0`); `git-coalesce:<name>` (joined an in-flight git
 recompute) and the 0 ms markers `git-memo-hit:<name>` / `git-memo-miss:<name>`
 (`infra/git/git-read-cache`); `memo-opening:<name>` (joined a watched memo's
-in-flight first pass, `packages/watched-memo`); `fs-stat` / `fs-readdir` / `fs-read` / `fs-glob`
+in-flight first pass, `packages/watched-memo`); `inflight:<name>` (a joiner of
+any `createInflight(name)` that names no layer of its own, `packages/inflight`);
+`coalesce:<name>` (awaited a coalescer run another caller's settle starts, or
+`idle` / `settled`, `packages/coalesce`); `worker:<daemon>` (kind `io`: awaited
+a worker thread's answer through `WorkerDaemonInstance.awaitReply`,
+`infra/spawn/daemon` — the worker's time, filed as `wait worker:<daemon>`); `fs-stat` / `fs-readdir` / `fs-read` / `fs-glob`
 (kind `io`: a file call past `packages/timed-fs`'s floor, a `beginDeferredWait`
 from `server/internal/install.ts`'s fs wait meter — a disk stall is the
 disk's time, filed like a `queue` wait as `wait fs-<op>`); `git:<subcommand>`
@@ -616,15 +633,15 @@ remaining allocations are one flat band array per completed entry span, and what
     - `SPAN_MEASURES`
     - `waitSplit`
 - Cross-plugin:
-  - Imported by: 77 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `infra` ×22
+  - Imported by: 79 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `infra` ×23
     - `debug` ×21
     - `apps` ×7
     - `conversations` ×6
     - `build` ×3
     - `database` ×3
+    - `packages` ×3
     - `tasks` ×3
-    - `packages` ×2
     - `primitives` ×2
     - `reports` ×2
     - `auth`
