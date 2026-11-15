@@ -4,7 +4,6 @@ import {
   $isRangeSelection,
   $isTextNode,
 } from "lexical";
-import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { useFetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
   foldResource,
@@ -15,6 +14,7 @@ import {
   CaretTriggerMenu,
   useCaretMenu,
   useCaretQuery,
+  type CaretQuery,
 } from "@plugins/primitives/plugins/text-editor/plugins/caret-trigger/web";
 import {
   usePageOptions,
@@ -41,7 +41,22 @@ const NO_OPTIONS: readonly PageOption[] = [];
  * closes by derivation — no explicit close.
  */
 export function InlinePageLinkPlugin(_: BlockTextPluginProps) {
-  const [lexicalEditor] = useLexicalComposerContext();
+  const caret = useCaretQuery({
+    id: "page-link",
+    trigger: "[[",
+    isQueryValid: (q) => !/[[\]\n]/.test(q),
+  });
+  // The menu — its pages read, keyboard commands and surface — exists only
+  // while the trigger is open. This plugin is mounted on every text block of
+  // a page, so a menu mounted closed subscribed every block to the
+  // recent-pages window on open (~15–20 ms of a 300-block page's first
+  // commit) for menus nobody opened. Closed, the menu had nothing to do: its
+  // commands gate on `open`, and the surface is hidden.
+  return caret.open ? <InlinePageLinkMenu caret={caret} /> : null;
+}
+
+function InlinePageLinkMenu({ caret }: { caret: CaretQuery }) {
+  const lexicalEditor = caret.editor;
   const fetchEndpoint = useFetchEndpoint();
 
   function insertLink(pageId: string) {
@@ -76,12 +91,6 @@ export function InlinePageLinkPlugin(_: BlockTextPluginProps) {
       );
     }
   }
-
-  const caret = useCaretQuery({
-    id: "page-link",
-    trigger: "[[",
-    isQueryValid: (q) => !/[[\]\n]/.test(q),
-  });
 
   const pageOptionsResult = usePageOptions(caret.query, { allowCreate: true });
   // Settled options drive keyboard nav; [] while loading or failed is safe —
