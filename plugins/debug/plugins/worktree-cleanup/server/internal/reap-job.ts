@@ -198,10 +198,10 @@ export const worktreeReapJob = defineSupervisedJob({
       }),
     );
 
-    // Finished attempts' fork DBs, their checkouts left in place. After the
-    // checkout pass, which the scan already keeps these apart from; serial-ish
-    // at the same width, each a `DROP DATABASE` on the cluster every
-    // worktree shares.
+    // Finished attempts' and idle stamped namespaces' fork DBs, their checkouts
+    // left in place. After the checkout pass, which the scan already keeps
+    // these apart from; serial-ish at the same width, each a `DROP DATABASE` on
+    // the cluster every worktree shares.
     await pMap(databaseTargets, 3, (id: string) =>
       contain(id, async () => {
         await reclaimFinishedDatabase(id);
@@ -212,7 +212,7 @@ export const worktreeReapJob = defineSupervisedJob({
     log(
       `auto-reap: ${reaped}/${targets.length} reaped, ` +
         `${reclaimed}/${namespaceTargets.length} orphaned namespaces reclaimed, ` +
-        `${dropped}/${databaseTargets.length} finished attempts' databases dropped`,
+        `${dropped}/${databaseTargets.length} idle databases dropped (finished attempts, idle stamped namespaces)`,
     );
 
     // After the checkout pass, so the branches it just retired go this sweep.

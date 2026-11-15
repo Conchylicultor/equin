@@ -28538,11 +28538,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `report-kind` "worktree-reap-failed"
           - `resource.declare` "debug.worktree-cleanup.worktrees"
           - `resource.declare` "debug.worktree-cleanup.worktrees:meta"
-        - Uses: 42 symbols — full list in [`plugins/debug/plugins/worktree-cleanup/REFERENCE.md`](../plugins/debug/plugins/worktree-cleanup/REFERENCE.md)
+        - Uses: 43 symbols — full list in [`plugins/debug/plugins/worktree-cleanup/REFERENCE.md`](../plugins/debug/plugins/worktree-cleanup/REFERENCE.md)
           - `infra/worktree` ×15
+          - `database/admin` ×4
           - `infra/worktree/reclaim` ×4
           - `tasks/tasks-core` ×4
-          - `database/admin` ×3
           - `infra/endpoints` ×3
           - `infra/host/host-read-pool` ×2
           - `infra/jobs/supervised-job` ×2

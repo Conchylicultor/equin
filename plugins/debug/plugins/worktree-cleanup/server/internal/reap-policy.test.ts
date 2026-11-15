@@ -8,9 +8,11 @@ import {
   AUTO_REAP_AGE_MS,
   classifyAttempt,
   classifyFinishedDatabase,
+  classifyIdleStampedDatabase,
   classifyMintedCheckout,
   classifyOwnedNamespace,
   classifyStampedNamespace,
+  IDLE_STAMPED_DATABASE_MS,
   NEEDS_HYGIENE,
   STAMPED_NAMESPACE_GRACE_MS,
   type AttemptFacts,
@@ -447,6 +449,54 @@ describe("classifyFinishedDatabase — the fork DB goes ahead of its checkout", 
     ).toBeNull();
     expect(
       classifyFinishedDatabase(attempt(), ctx({ hasDir: false })),
+    ).toBeNull();
+  });
+});
+
+describe("classifyIdleStampedDatabase", () => {
+  const NOW = 10 * IDLE_STAMPED_DATABASE_MS;
+  const idle = {
+    kind: "stamped" as const,
+    root: "/repo/.claude/worktrees/agent-a1",
+    lastUsedMs: NOW - IDLE_STAMPED_DATABASE_MS,
+  };
+  const ns = asNamespace("agent-a1");
+
+  test("idle past the window with a database → its database goes", () => {
+    expect(
+      classifyIdleStampedDatabase(ns, idle, { hasDB: true, now: NOW }),
+    ).toBe("agent-a1");
+  });
+
+  test("an op within the window → kept", () => {
+    const recent = { ...idle, lastUsedMs: NOW - IDLE_STAMPED_DATABASE_MS + 1 };
+    expect(
+      classifyIdleStampedDatabase(ns, recent, { hasDB: true, now: NOW }),
+    ).toBeNull();
+  });
+
+  test("no database → nothing to drop", () => {
+    expect(
+      classifyIdleStampedDatabase(ns, idle, { hasDB: false, now: NOW }),
+    ).toBeNull();
+  });
+
+  test("unstamped or unreadable owner → unknown is not idle", () => {
+    for (const owner of [
+      { kind: "absent" as const },
+      { kind: "malformed" as const, reason: "x" },
+    ])
+      expect(
+        classifyIdleStampedDatabase(ns, owner, { hasDB: true, now: NOW }),
+      ).toBeNull();
+  });
+
+  test("main → never, however idle", () => {
+    expect(
+      classifyIdleStampedDatabase(asNamespace(MAIN_WORKTREE_NAME), idle, {
+        hasDB: true,
+        now: NOW,
+      }),
     ).toBeNull();
   });
 });

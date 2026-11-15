@@ -84,6 +84,23 @@ reaper's: `WorkspaceImpl.onResume` (a resume, or a new conversation on the
 attempt) re-enqueues the worktree's `database.fork` when the database is gone,
 and the next build publishes the spec again.
 
+## An idle stamped namespace's database goes, its checkout stays
+
+A checkout equin did not launch — a Claude Code subagent's `isolation:
+"worktree"` checkout (`agent-…`), a desktop-app worktree, a hand-made `git
+worktree add` — gets a database only by `./equin db fork`, and no attempt row
+will ever finish it. Its namespace is stamped (`checkout.json`), so once the
+checkout is gone the stamped branch reclaims the whole namespace; but while the
+checkout stays — and nothing of ours removes a checkout that is not ours — its
+fork DB stayed too (2026-11-15: seven, ~1 GB, three idle since October).
+
+`classifyIdleStampedDatabase`: when such a namespace has a database, no op has
+rewritten its stamp for 7 days (`IDLE_STAMPED_DATABASE_MS`; every op acting as
+it rewrites it), and nothing is connected to it, the database joins
+`databaseTargets` and goes the finished-attempt way (`reclaimFinishedDatabase`:
+backend held down, drop, spec withdrawn). The checkout is untouched; its next
+`./equin build` names `./equin db fork` to get a fresh fork.
+
 ## What "clean" means: nothing only the checkout holds
 
 The clean path (72 h) and the minted-checkout rule reap only a checkout whose
@@ -204,11 +221,11 @@ the panel until it is given something to say.
     - `report-kind` "worktree-reap-failed"
     - `resource.declare` "debug.worktree-cleanup.worktrees"
     - `resource.declare` "debug.worktree-cleanup.worktrees:meta"
-  - Uses: 42 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 43 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra/worktree` ×15
+    - `database/admin` ×4
     - `infra/worktree/reclaim` ×4
     - `tasks/tasks-core` ×4
-    - `database/admin` ×3
     - `infra/endpoints` ×3
     - `infra/host/host-read-pool` ×2
     - `infra/jobs/supervised-job` ×2

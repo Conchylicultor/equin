@@ -4,7 +4,10 @@ import {
   listAttempts,
   listTasks,
 } from "@plugins/tasks/plugins/tasks-core/server";
-import { listDatabases } from "@plugins/database/plugins/admin/server";
+import {
+  countActiveConnections,
+  listDatabases,
+} from "@plugins/database/plugins/admin/server";
 import { heavyReadSlotCount } from "@plugins/infra/plugins/host/plugins/host-read-pool/server";
 import {
   MAIN_WORKTREE_NAME,
@@ -82,10 +85,11 @@ export interface ReapScan {
   // and keeping them in one list would let a caller hand either to either. See
   // the branch that fills this at the foot of collectReapable.
   namespaceTargets: NamespaceReapTarget[];
-  // Finished attempts whose fork DB goes now while their checkout stays
-  // (classifyFinishedDatabase) — a third list, reclaimed by
-  // `reclaimFinishedDatabase`, which touches no checkout. Never an id that is
-  // also in `targets`: a full reap drops the database itself.
+  // Databases that go now while their checkout stays — a third list, reclaimed
+  // by `reclaimFinishedDatabase`, which touches no checkout: finished attempts'
+  // fork DBs (classifyFinishedDatabase) and idle stamped namespaces' fork DBs
+  // (classifyIdleStampedDatabase). Never an id that is also in `targets`: a
+  // full reap drops the database itself.
   databaseTargets: string[];
   // Attempt rows examined (the whole `attempts` table).
   scanned: number;
@@ -303,6 +307,43 @@ export function classifyStampedNamespace(
   return { id: ns };
 }
 
+// How long a stamped namespace whose checkout is STILL on disk must go without
+// an op before its database is dropped (the checkout itself is never touched).
+export const IDLE_STAMPED_DATABASE_MS = 7 * 24 * 60 * 60 * 1000;
+
+// The database half of a stamped namespace whose checkout is still here — a
+// checkout equin did not launch (a Claude Code subagent's `isolation:
+// "worktree"` checkout, a desktop-app worktree, a hand-made `git worktree add`)
+// that once ran `./equin db fork` + `./equin build`. No attempt row will ever
+// finish it, and its checkout is the user's, not ours to remove; so before this
+// rule its fork DB lived exactly as long as the checkout — which nothing
+// removes. On 2026-11-15 seven such databases (~1 GB) sat on the shared cluster,
+// three of them Claude Code subagent checkouts idle since 2026-10-21, each
+// costing an autovacuum visit per naptime.
+//
+// The stamp's mtime is the namespace's last op (every op acting as it rewrites
+// it — `actAsCheckoutNamespace`), so idle past IDLE_STAMPED_DATABASE_MS is the
+// same "nothing reads it" evidence a finished task gives an attempt's fork DB.
+// The caller additionally requires no active connection (a backend serving it
+// right now is a use the stamp cannot see). Every non-main namespace's database
+// is a fork of main (`./equin build` only ever waits for one — `db fork`
+// mints it), so the loss is a fork: the next build says to run `./equin db
+// fork`. PURE: the caller supplies whether the database exists.
+//
+// Never a target: MAIN; an unstamped or unreadable owner (unknown is not idle);
+// no database; an op within the idle window.
+export function classifyIdleStampedDatabase(
+  ns: Namespace,
+  owner: CheckoutOwnerRead,
+  ctx: { hasDB: boolean; now: number },
+): string | null {
+  if (ns === MAIN_WORKTREE_NAME) return null;
+  if (owner.kind !== "stamped") return null;
+  if (!ctx.hasDB) return null;
+  if (ctx.now - owner.lastUsedMs < IDLE_STAMPED_DATABASE_MS) return null;
+  return ns;
+}
+
 export interface ClassifyMintedContext {
   // Whether the minting checkout's dir is still on disk — a CONFIRMED absence,
   // per the readdir invariant in collectReapable.
@@ -402,6 +443,9 @@ export async function collectReapable(now: number): Promise<ReapScan> {
   const dbSet = new Set(
     databases.filter((name) => isCanonicalWorktreeName(name)),
   );
+  // Every database, for the stamped-namespace branch: those names are, by
+  // definition, not canonical.
+  const allDatabases = new Set(databases);
   // A worktree's gateway spec file is an artifact to reclaim just like its fork
   // DB, so the on-disk registry set joins dbSet as a signal that an inactive
   // attempt whose dir is gone still has something to clean (its registry entry
@@ -431,7 +475,8 @@ export async function collectReapable(now: number): Promise<ReapScan> {
   const { allNames } = dirIndex;
 
   let candidates = 0;
-  // Finished attempts whose database may go ahead of their checkout; filtered
+  // Databases that may go ahead of their checkout — finished attempts', and
+  // (pushed by the stamped branch below) idle stamped namespaces'; filtered
   // against `targets` once every branch has run (a full reap drops it anyway).
   const finishedDatabases: string[] = [];
   const needProbe: AttemptFacts[] = [];
@@ -668,7 +713,18 @@ export async function collectReapable(now: number): Promise<ReapScan> {
           (await dirExists(owner.root)),
         now,
       });
-      if (decision !== null) targets.set(decision.id, decision);
+      if (decision !== null) {
+        targets.set(decision.id, decision);
+        continue;
+      }
+      // The checkout is still here (or was just used): its database may still
+      // go once the namespace has been idle long enough.
+      const idle = classifyIdleStampedDatabase(ns, owner, {
+        hasDB: allDatabases.has(name),
+        now,
+      });
+      if (idle !== null && (await countActiveConnections(idle)) === 0)
+        finishedDatabases.push(idle);
     }
   }
 
