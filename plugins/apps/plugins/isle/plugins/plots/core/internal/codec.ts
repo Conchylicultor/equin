@@ -32,6 +32,7 @@ export function plotOfRow(row: IslePlotRow): Plot {
     slot: row.slot,
     category: categoryOf(row),
     wild: row.wild,
+    retired: row.retired,
   };
 }
 
@@ -130,7 +131,12 @@ export function placementWrites(
         continue;
       }
       const was = occ.before.get(p.id) ?? null;
-      if (was !== occupant || old.wild !== p.wild || !sameGeometry(old, p))
+      if (
+        was !== occupant ||
+        old.wild !== p.wild ||
+        old.retired !== p.retired ||
+        !sameGeometry(old, p)
+      )
         out.push({
           plot: p,
           occupant,

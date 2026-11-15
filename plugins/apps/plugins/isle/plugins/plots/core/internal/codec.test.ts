@@ -56,6 +56,7 @@ function store() {
           occupant: w.occupant,
           movedByUser: moved || (rows.get(w.plot.id)?.movedByUser ?? false),
           wild: w.plot.wild,
+          retired: w.plot.retired,
         });
       }
       return "applied";

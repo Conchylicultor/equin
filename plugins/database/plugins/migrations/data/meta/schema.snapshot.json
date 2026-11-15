@@ -1,6 +1,6 @@
 {
-  "id": "cc983620-e245-458c-81c5-32c8e5a1d15c",
-  "prevId": "3519ddf0-f7c2-430e-867d-d9cb27d45082",
+  "id": "16dd63e5-05bc-47b9-b1c8-7de6ed74f439",
+  "prevId": "cc983620-e245-458c-81c5-32c8e5a1d15c",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -3320,6 +3320,13 @@
         },
         "wild": {
           "name": "wild",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "retired": {
+          "name": "retired",
           "type": "boolean",
           "primaryKey": false,
           "notNull": true,

@@ -84,6 +84,13 @@ export interface Plot extends PlotBoxes {
    * built on: a building landing on it clears this.
    */
   readonly wild: boolean;
+  /**
+   * Made over another plot — a move once set a building's new plot down on
+   * the lot it left — and so struck out: it keeps its place among its
+   * district's plots (ids are positional, plots never deleted) but is no land
+   * at all: never drawn, never built on, never in anyone's way.
+   */
+  readonly retired: boolean;
 }
 
 /** The persisted state: every plot ever made, and who stands on which. */
@@ -198,7 +205,9 @@ export function placeResidents(
   const occupant: Record<string, string> = { ...placement.occupant };
   const state = (): Placement => ({ plots, occupant });
   const byId = new Map(residents.map((a) => [a.id, a]));
-  const plotsOf = (s: Slot): MutPlot[] => plots[s.id] ?? [];
+  // a retired plot is no land: neither a lot to take nor in anyone's way
+  const plotsOf = (s: Slot): MutPlot[] =>
+    (plots[s.id] ?? []).filter((p) => !p.retired);
   const islandPlots = (I: Island) => I.slots.flatMap(plotsOf);
   const opened = (s: Slot) => (plots[s.id]?.length ?? 0) > 0;
 
@@ -238,7 +247,7 @@ export function placeResidents(
   const taken = new Map<string, string>();
   for (const a of residents) {
     const p = plotById(state(), occupant[a.id]);
-    if (p && !taken.has(p.id)) taken.set(p.id, a.id);
+    if (p && !p.retired && !taken.has(p.id)) taken.set(p.id, a.id);
     else delete occupant[a.id];
   }
   // in one batch, the landmarks that want a particular spot (the coast, a
@@ -421,6 +430,7 @@ export function placeResidents(
         feat: sp.c.feat,
         category: a.category,
         wild: false,
+        retired: false,
       };
       L.push(p);
       const ctx = ctxOf(s.island);

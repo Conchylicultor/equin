@@ -11,6 +11,13 @@ No DOM, no canvas. A port of the prototype `proto-1794374690-9xmb84`'s `islands.
   plot; a plot outlives its app as a lot a later app may take. A `Resident` is an app's id, category and
   its building's DECLARED footprint (`buildings/core`) — placement never paints or measures. Build one with
   `residentOf(app, spec)`.
+- `moveTargets` / `applyMove` — moving a building by hand. The first target is always `stay` (its own
+  plot: a drop over its old spot reuses it, nothing written); the plot it leaves is an empty lot in the
+  way of every other target but a swap, so no new plot or refit is ever made over it. `restoreLot`
+  gives an empty lot back to nature (`wild`).
+- A plot is never deleted (ids are positional, `<district>:<n>`). One made over another plot — before
+  2026-11-15 a move could set a building's new plot down on the lot it left — is `retired`: kept for
+  its place, but no land at all (never drawn, never taken, in no one's way).
 - `layoutWorld(world, placement, residents)` — what is revealed: islands, roads (with samples and
   bridge flags), squares, buildings, empty lots, ferries, piers, the world rect.
 - `walkGrid(world, layout, solids?)` + `findPath` — the 16 px walk grid and A*.

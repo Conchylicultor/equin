@@ -88,6 +88,7 @@ async function applyWrites(
           geometry: geometryOf(w.plot),
           occupant: w.occupant,
           wild: w.plot.wild,
+          retired: w.plot.retired,
         };
         if (w.expect.kind === "absent") {
           // another writer may have made it since the check (no row to lock):
@@ -107,6 +108,7 @@ async function applyWrites(
               geometry: row.geometry,
               occupant: row.occupant,
               wild: row.wild,
+              retired: row.retired,
               ...(movedByUser && { movedByUser: true }),
             })
             .where(

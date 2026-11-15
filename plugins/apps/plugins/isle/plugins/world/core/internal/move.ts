@@ -1,7 +1,9 @@
-// Moving a building by hand: where an app's building may go (a lot it fits, a
-// plot it swaps with a building that fits its own, or a new plot made for it
-// in any open district), and the placement once it went there. Pure, like
-// placement: a move is validated by the same rules a new app is placed by.
+// Moving a building by hand: where an app's building may go (back on its own
+// plot, a lot it fits, a plot it swaps with a building that fits its own, or a
+// new plot made for it in any open district), and the placement once it went
+// there. Pure, like placement: a move is validated by the same rules a new app
+// is placed by — the plot it leaves is an empty lot like any other, so nothing
+// it lands on alone may clash with it.
 
 import { pointIndex } from "./geometry";
 import {
@@ -20,10 +22,12 @@ import {
   sitesOf,
   type PlotBoxes,
 } from "./sites";
-import type { WorldModel } from "./world-model";
+import type { Slot, WorldModel } from "./world-model";
 
 /** Where a lifted building may be dropped. */
 export type MoveTarget =
+  /** Back on the plot it stands on: a drop over its own spot reuses it (no move). */
+  | { readonly kind: "stay"; readonly plot: Plot }
   /** An existing plot: an empty lot (`other` null), or a swap with the app standing there. */
   | {
       readonly kind: "plot";
@@ -46,9 +50,16 @@ function allPlots(placement: Placement): Plot[] {
     .sort((a, b) => a.seq - b.seq);
 }
 
+/** The plots of `s`'s island that are land (a retired plot is in no one's way). */
+const islandPlots = (placement: Placement, s: Slot): Plot[] =>
+  s.island.slots
+    .flatMap((t) => placement.plots[t.id] ?? [])
+    .filter((q) => !q.retired);
+
 /**
- * Can `a` stand on plot `p` (leaving `skip`, the plot it moves from)? → its
- * boxes there (sign on either side), or null.
+ * Can `a` stand on plot `p` (with `skip` refitted for someone else — a swap's
+ * other plot — so out of its way)? → its boxes there (sign on either side), or
+ * null.
  */
 function canTake(
   M: WorldModel,
@@ -61,9 +72,9 @@ function canTake(
   if (!s)
     throw new Error(`isle move: plot ${p.id} names unknown slot ${p.slot}`);
   const Sx = sitesOf(M, s.island);
-  const others = s.island.slots
-    .flatMap((t) => placement.plots[t.id] ?? [])
-    .filter((q) => q.id !== p.id && q.id !== skip?.id);
+  const others = islandPlots(placement, s).filter(
+    (q) => q.id !== p.id && q.id !== skip?.id,
+  );
   const ctx = { plots: others, laneIdx: pointIndex() };
   for (const side of [p.side, -p.side as 1 | -1]) {
     const B = plotBoxes(a, side);
@@ -91,7 +102,12 @@ function standing(
   return out;
 }
 
-/** Where app `appId`'s building may go. Empty when it has no plot. */
+/**
+ * Where app `appId`'s building may go. Empty when it has no plot. Its own plot
+ * comes first (`stay`); the plot it leaves counts as a lot in the way of every
+ * other target but a swap (where the swapped building is refitted onto it), so
+ * no new plot or refit is ever made over it.
+ */
 export function moveTargets(
   M: WorldModel,
   placement: Placement,
@@ -103,28 +119,25 @@ export function moveTargets(
   const from = plotById(placement, placement.occupant[appId]);
   if (!app || !from) return [];
   const taken = standing(placement, residents);
-  const out: MoveTarget[] = [];
+  const out: MoveTarget[] = [{ kind: "stay", plot: from }];
   const total = allPlots(placement).length;
   for (const s of M.slots) {
     const list = placement.plots[s.id];
     if (!list?.length) continue;
     for (const p of list) {
-      if (p.id === from.id) continue;
+      if (p.id === from.id || p.retired) continue;
       const occ = taken.get(p.id) ?? null;
       const other = occ ? byId.get(occ) : undefined;
-      if (!canTake(M, placement, p, app, from)) continue;
+      if (!canTake(M, placement, p, app, other ? from : null)) continue;
       if (other && !canTake(M, placement, from, other, p)) continue;
       out.push({ kind: "plot", plot: p, other: occ });
     }
     const Sx = sitesOf(M, s.island);
-    const others = s.island.slots
-      .flatMap((t) => placement.plots[t.id] ?? [])
-      .filter((q) => q.id !== from.id);
     const sp = bestSpot(
       M,
       Sx,
       Sx.sites.get(s.id)!,
-      plotCtx(others.map((q) => ({ ...q }))),
+      plotCtx(islandPlots(placement, s).map((q) => ({ ...q }))),
       (side) => plotBoxes(app, side),
       app.setting,
     );
@@ -155,6 +168,7 @@ export function moveTargets(
         feat: sp.c.feat,
         category: app.category,
         wild: false,
+        retired: false,
       },
     });
   }
@@ -188,6 +202,13 @@ export function applyMove(
   const from = plotById(placement, placement.occupant[appId]);
   if (!app || !from)
     throw new Error(`isle move: ${appId} has no plot to move from`);
+  if (target.kind === "stay") {
+    if (target.plot.id !== from.id)
+      throw new Error(
+        `isle move: ${appId} no longer stands on ${target.plot.id}`,
+      );
+    return placement;
+  }
   const plots: Record<string, Plot[]> = {};
   for (const [k, l] of Object.entries(placement.plots)) plots[k] = [...l];
   const occupant: Record<string, string> = { ...placement.occupant };
@@ -203,7 +224,7 @@ export function applyMove(
     occupant[appId] = target.plot.id;
     return { plots, occupant };
   }
-  const B = canTake(M, placement, target.plot, app, from);
+  const B = canTake(M, placement, target.plot, app, target.other ? from : null);
   if (!B)
     throw new Error(`isle move: ${appId} no longer fits ${target.plot.id}`);
   put(withBoxes(target.plot, B));

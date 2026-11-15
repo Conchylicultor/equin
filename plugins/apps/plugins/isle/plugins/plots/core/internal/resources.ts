@@ -25,6 +25,7 @@ export const islePlots = liveCollection("isle.plots", {
       "occupant",
       "movedByUser",
       "wild",
+      "retired",
     ],
   },
   id: compositeKey(["world", "plotId"]),

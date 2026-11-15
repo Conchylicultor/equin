@@ -1902,7 +1902,8 @@ export class IsleEngine {
     this.moving = null;
     this.canvas.style.cursor = "grab";
     const t = performance.now() / 1000;
-    if (commit && m.target) {
+    // dropped back over its own plot: it settles home, nothing is written
+    if (commit && m.target && m.target.kind !== "stay") {
       this.settling = {
         b: m.b,
         from: gp,

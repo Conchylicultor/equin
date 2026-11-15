@@ -14,7 +14,7 @@ import {
   type Resident,
 } from "./placement";
 import { ROAD_R, trunkOf } from "./roads";
-import { plotBox, plotsClash, sitesOf } from "./sites";
+import { plotBox, sitesOf } from "./sites";
 import type { Island, Slot, WorldModel } from "./world-model";
 
 export type RoadKind = "trunk" | "street" | "lane" | "spur" | "link";
@@ -177,10 +177,11 @@ export function layoutWorld(
     const pid = placement.occupant[r.id];
     if (pid && !occupantOf.has(pid)) occupantOf.set(pid, r.id);
   }
-  // a lot given back to nature is not drawn (nor its lane): only its land shows
+  // a lot given back to nature is not drawn (nor its lane): only its land
+  // shows; a retired plot is no land at all
   const shownOf = (s: Slot): readonly Plot[] =>
     (placement.plots[s.id] ?? []).filter(
-      (p) => !p.wild || occupantOf.has(p.id),
+      (p) => !p.retired && (!p.wild || occupantOf.has(p.id)),
     );
   const active = M.slots.filter(
     (s) => districtCategory(placement, s.id) !== null && shownOf(s).length,
@@ -378,9 +379,7 @@ export function layoutWorld(
     roads: built,
     squares: finalSquares,
     buildings,
-    // a lot a standing building was set down over (a move that made its new
-    // plot on the one it left) is under that building: neither drawn nor a lot
-    lots: lots.filter((p) => !buildings.some((b) => plotsClash(p, b.plot))),
+    lots,
     ferries,
     piers,
     dock: islands[0]?.home ? M.homeDock() : null,

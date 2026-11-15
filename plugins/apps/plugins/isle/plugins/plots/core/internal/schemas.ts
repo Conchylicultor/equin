@@ -66,6 +66,8 @@ export const islePlotFields = {
   movedByUser: boolField(),
   /** Given back to nature (world/core's `Plot.wild`). */
   wild: boolField(),
+  /** Made over another plot, struck out (world/core's `Plot.retired`). */
+  retired: boolField(),
 };
 
 export const islePlotEntityRef = entityRef("isle_plots", islePlotFields);
@@ -81,4 +83,5 @@ export const PlotSchema = PlotGeometrySchema.extend({
   slot: z.string(),
   category: z.enum(APP_CATEGORIES),
   wild: z.boolean(),
+  retired: z.boolean(),
 }) satisfies z.ZodType<Plot>;

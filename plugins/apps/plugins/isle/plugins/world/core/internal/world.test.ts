@@ -245,3 +245,83 @@ describe("restoring a lot", () => {
     ).toBe(true);
   });
 });
+
+describe("moving a building", () => {
+  const M = new WorldModel(7);
+  const rs = residents(24);
+  const P = placeResidents(M, EMPTY_PLACEMENT, rs);
+  const fromOf = (id: string) => plotById(P, P.occupant[id])!;
+
+  test("a drop over its own spot reuses its plot: no new plot, no write", () => {
+    for (const r of rs) {
+      const from = fromOf(r.id);
+      const T = moveTargets(M, P, rs, r.id);
+      // the target a drop right where it stood picks (the nearest one)
+      const near = T.reduce((a, b) =>
+        Math.hypot(b.plot.x - from.x, b.plot.y - from.y) <
+        Math.hypot(a.plot.x - from.x, a.plot.y - from.y)
+          ? b
+          : a,
+      );
+      expect(near.kind).toBe("stay");
+      expect(near.plot.id).toBe(from.id);
+      expect(applyMove(M, P, rs, r.id, near)).toBe(P);
+    }
+  });
+
+  test("no target it takes alone overlaps the plot it leaves", () => {
+    let nextDoor = 0;
+    for (const r of rs) {
+      const from = fromOf(r.id);
+      for (const t of moveTargets(M, P, rs, r.id)) {
+        if (t.kind === "stay" || (t.kind === "plot" && t.other)) continue;
+        if (t.plot.slot === from.slot) nextDoor++;
+        const N = applyMove(M, P, rs, r.id, t);
+        const landed = plotById(N, N.occupant[r.id])!;
+        expect(landed.id).not.toBe(from.id);
+        expect(plotsClash(landed, from)).toBe(false);
+      }
+    }
+    // the case that made duplicates: a new plot in the district it leaves
+    expect(nextDoor).toBeGreaterThan(0);
+  });
+
+  test("a drop far away makes a new plot there, and leaves its own as a lot", () => {
+    const r = rs[0]!;
+    const from = fromOf(r.id);
+    const far = moveTargets(M, P, rs, r.id)
+      .filter((t) => t.kind === "new")
+      .sort(
+        (a, b) =>
+          Math.hypot(b.plot.x - from.x, b.plot.y - from.y) -
+          Math.hypot(a.plot.x - from.x, a.plot.y - from.y),
+      )[0]!;
+    expect(far).toBeDefined();
+    const N = applyMove(M, P, rs, r.id, far);
+    expect(N.occupant[r.id]).toBe(far.plot.id);
+    expect(far.plot.n).toBe(P.plots[far.plot.slot]?.length ?? 0);
+    expect(layoutWorld(M, N, rs).lots.map((p) => p.id)).toContain(from.id);
+  });
+
+  test("a retired plot is no land: not drawn, not a target, never taken", () => {
+    const gone = rs[5]!;
+    const lot = fromOf(gone.id);
+    const plots = { ...P.plots };
+    plots[lot.slot] = plots[lot.slot]!.map((p) =>
+      p.id === lot.id ? { ...p, retired: true } : p,
+    );
+    const R: Placement = { plots, occupant: P.occupant };
+    const present = rs.filter((r) => r !== gone);
+    expect(layoutWorld(M, R, present).lots.map((p) => p.id)).not.toContain(
+      lot.id,
+    );
+    for (const r of present)
+      expect(
+        moveTargets(M, R, present, r.id).some((t) => t.plot.id === lot.id),
+      ).toBe(false);
+    // back, its app is placed anew rather than on the struck-out plot
+    const back = placeResidents(M, R, rs);
+    expect(back.occupant[gone.id]).toBeDefined();
+    expect(back.occupant[gone.id]).not.toBe(lot.id);
+  });
+});
