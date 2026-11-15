@@ -68,6 +68,7 @@ import {
   logEnvelope,
 } from "@plugins/primitives/plugins/log-channels/plugins/log-files/server";
 import {
+  admittedAs,
   HOST_ROUTES_ROUTE,
   hostGateFromArgv,
   type HostGate,
@@ -332,7 +333,9 @@ export async function serve({
           // that admits one.
           const refused = gate.refuseUpgrade(req, url.pathname, handler.access);
           if (refused) return refused;
-          server.upgrade(req, { data: { path: url.pathname } });
+          server.upgrade(req, {
+            data: { path: url.pathname, principal: admittedAs(req) },
+          });
           return;
         }
       }

@@ -212,9 +212,13 @@ export interface Harness {
  * plus the harness-only `sockets` count.
  */
 export function createHarness(
-  opts: ResourceRuntimeOptions & { sockets?: number } = {},
+  opts: ResourceRuntimeOptions & {
+    sockets?: number;
+    /** Who opened each socket (`RuntimeSocket.data`), by index; absent ⇒ no `data` (the owner). */
+    principals?: readonly ("owner" | "visitor")[];
+  } = {},
 ): Harness {
-  const { sockets: socketCount = 1, ...runtimeOpts } = opts;
+  const { sockets: socketCount = 1, principals = [], ...runtimeOpts } = opts;
   const runtime = createResourceRuntime(runtimeOpts);
   const frames: RecordedFrame[] = [];
   let seq = 0;
@@ -241,6 +245,9 @@ export function createHarness(
         return raw.length;
       },
       close() {},
+      ...(principals[i] !== undefined
+        ? { data: { principal: principals[i] } }
+        : {}),
     };
     handler.open(ws);
     wsList.push(ws);

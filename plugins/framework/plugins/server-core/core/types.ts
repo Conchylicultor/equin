@@ -8,6 +8,12 @@ import type {
 
 export interface WsData {
   path: string;
+  /**
+   * Who opened it, as the upgrade was admitted (principal's `admittedAs`) —
+   * the live-state socket serves a visitor only the resources declaring
+   * `access: { visitor }` (resource-runtime's `RuntimeSocket.data`).
+   */
+  principal: "owner" | "visitor";
 }
 
 export interface WsHandler {

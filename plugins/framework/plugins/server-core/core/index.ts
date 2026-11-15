@@ -95,6 +95,7 @@ export {
   defineExternalResource,
   onDeferredResourcesBound,
   handleResourceHttp,
+  visitorReadable,
   installAsleepClock,
   installSnapHash,
   loadResourceByKey,

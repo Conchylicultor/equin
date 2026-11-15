@@ -514,6 +514,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `framework/plugin-id.pluginOfNode`
     - `framework/plugin-loader.computeLoadWaves`
     - `framework/plugin-loader.topoSortPlugins`
+    - `framework/principal.admittedAs`
     - `framework/tooling/collected-dir.defineCollectedDir`
     - `network/live/resource-protocol.RESOURCE_HTTP_ROUTE`
     - `network/live/resource-runtime.createResourceRuntime`
@@ -680,6 +681,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `unroutedResourceKeys`
     - `untimedStep`
     - `validatePersistedValue`
+    - `visitorReadable`
     - `withNotifyBatch`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shadow --shadow`

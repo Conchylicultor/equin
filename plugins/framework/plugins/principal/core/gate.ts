@@ -10,6 +10,7 @@ import {
   crossSiteRefusedResponse,
   principalOf,
   type EndpointAccess,
+  type VisitorAccess,
 } from "./principal";
 import { readPrincipalStamp, UNSTAMPED_GATEWAY_WARNING } from "./stamp";
 
@@ -100,7 +101,7 @@ export function gateByPrincipal(
  * is public or content: WebSockets are not bound by the same-origin policy,
  * so a foreign page could otherwise read all live state.
  */
-export type SocketAccess = "owner" | { visitor: string };
+export type SocketAccess = "owner" | VisitorAccess;
 
 /**
  * A WebSocket upgrade's answer before `server.upgrade`: the refusal for a

@@ -89,8 +89,11 @@ const booted = await bootBrowserHost({
 await booted.settled;
 // The composition's own page boots from this snapshot: its tuples are those
 // the composition's web plugins read.
+// What a visitor's page boots from: the snapshot is served to robots, so it
+// holds only what a deployed site's visitor may read.
 const bootSnapshot = await assembleBootSnapshot({
   webPlugins: new Set(host.webPlugins.map(webPluginId)),
+  caller: "visitor",
 });
 const pages = [...WebsitePages.Page.getContributions()].sort((a, b) =>
   a.path.localeCompare(b.path),

@@ -134,6 +134,7 @@ export const handleBootBenchRun = implement(bootBenchRun, async ({ body }) => {
         // loaders, not a persisted alias's kept in-memory snapshot.
         const r = await assembleBootSnapshot({
           webPlugins: composedWebPlugins(),
+          caller: "owner",
           memory: !cold,
         });
         return {
@@ -204,6 +205,7 @@ export const handleBootBenchRun = implement(bootBenchRun, async ({ body }) => {
     measureSnapshotBytes(
       await assembleBootSnapshot({
         webPlugins: composedWebPlugins(),
+        caller: "owner",
         memory: !cold,
       }),
     );

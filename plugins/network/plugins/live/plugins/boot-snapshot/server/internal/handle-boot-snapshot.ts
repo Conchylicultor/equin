@@ -6,7 +6,9 @@ import {
   loadResourceByKey,
   reportServerError,
   unboundedWindowKeys,
+  visitorReadable,
 } from "@plugins/framework/plugins/server-core/core";
+import { admittedAs } from "@plugins/framework/plugins/principal/core";
 import { readPersistedSnapshots } from "@plugins/network/plugins/live/plugins/live-state-snapshot/server";
 import { resourceDescriptorByKey } from "@plugins/network/plugins/live/plugins/live-state/core";
 import { bootSnapshot } from "../../core";
@@ -64,6 +66,13 @@ export async function assembleBootSnapshot(opts: {
    */
   webPlugins: ReadonlySet<string>;
   /**
+   * Who the page boots for. A deployed site's `visitor` gets only the
+   * resources declaring `access: { visitor }` (network/live) — the same rule
+   * the HTTP read and the socket apply, so the snapshot is never a way round
+   * them. The crawlable take renders what a visitor sees.
+   */
+  caller: "owner" | "visitor";
+  /**
    * Serve persisted aliases from memory (default true). Boot-bench's cold
    * mode turns it off, so a cleared L2 really measures the loaders.
    */
@@ -75,9 +84,14 @@ export async function assembleBootSnapshot(opts: {
   /** Wall time of the single batched persisted-snapshot read (the L2 fast path). */
   persistedReadMs: number;
 }> {
-  const enumerated = enumeratedPreloads();
-  const enumeratedKeys = new Set(enumerated.map((e) => e.key));
-  const preloaded = preloadedKeys().filter((k) => !enumeratedKeys.has(k));
+  const readable = (key: string) =>
+    opts.caller === "owner" || visitorReadable(key);
+  const allEnumerated = enumeratedPreloads();
+  const enumeratedKeys = new Set(allEnumerated.map((e) => e.key));
+  const enumerated = allEnumerated.filter((e) => readable(e.key));
+  const preloaded = preloadedKeys().filter(
+    (k) => !enumeratedKeys.has(k) && readable(k),
+  );
   // The memory path: each persisted alias that holds a kept snapshot.
   const fromMemory = new Map<string, { value: unknown; workMs: number }>();
   if (opts.memory ?? true) {
@@ -190,6 +204,9 @@ export async function assembleBootSnapshot(opts: {
   return { resources, tuples, timings, persistedReadMs };
 }
 
-export const handleBootSnapshot = implement(bootSnapshot, () =>
-  assembleBootSnapshot({ webPlugins: composedWebPlugins() }),
+export const handleBootSnapshot = implement(bootSnapshot, ({ req }) =>
+  assembleBootSnapshot({
+    webPlugins: composedWebPlugins(),
+    caller: admittedAs(req),
+  }),
 );

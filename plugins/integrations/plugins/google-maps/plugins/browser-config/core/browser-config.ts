@@ -71,6 +71,12 @@ export type MapsBrowserConfigValue = z.infer<
  */
 export const mapsBrowserConfig = liveValue("google-maps.browser-config", {
   schema: MapsBrowserConfigValueSchema,
+  // Public by design (a referrer-restricted key every page drawing a map
+  // carries): the website's page hands it to its demo's browser host.
+  access: {
+    visitor:
+      "the public website's page hands it to its live demo (HostInputs.Supply) so the demo's maps draw",
+  },
 });
 
 /**

@@ -5,6 +5,15 @@ import {
   wholeRecord,
 } from "@plugins/packages/plugins/list-bound/core";
 
+/**
+ * Why a deployed site's visitors read config: every page of it renders from
+ * its composition's config (its theme selection, its sections' order, its
+ * copy), read through `useConfig` — the documents, which scopes have their own,
+ * and whether one is in conflict.
+ */
+const CONFIG_VISITOR_REASON =
+  "every page of a deployed site renders from its composition's config (useConfig: the document, its scope membership, its conflict)";
+
 export const configV2ValuesSchema = wholeRecord(z.unknown(), {
   reason: "one config document's fields — its descriptor's declared schema",
 });
@@ -26,6 +35,7 @@ export const configValues = liveValue("config-v2.values", {
   schema: configV2ValuesSchema,
   params: ["path", "scopeId?"],
   preload: "boot-and-keep",
+  access: { visitor: CONFIG_VISITOR_REASON },
 });
 
 // One descriptor's COMMITTED document — what a brand-new user resolves it to:
@@ -106,6 +116,9 @@ export type ConfigV2Conflicts = z.infer<typeof configV2ConflictsSchema>;
 export const configConflict = liveValue("config-v2.conflicts", {
   schema: configV2ConflictEntrySchema.nullable(),
   params: ["path", "scopeId?"],
+  // `useSetConfig` reads it beside every document it writes (a conflicted
+  // document refuses the write), so a deployed site's page reads it too.
+  access: { visitor: CONFIG_VISITOR_REASON },
 });
 
 export const configV2TiersSchema = wholeRecord(
@@ -150,6 +163,7 @@ export type ConfigV2ScopesMap = z.infer<typeof configV2ScopesMapSchema>;
 export const configScopes = liveValue("config-v2.scopes", {
   schema: configV2ScopesMapSchema,
   preload: "boot-and-keep",
+  access: { visitor: CONFIG_VISITOR_REASON },
 });
 
 // WHERE one descriptor conflicts: its base document, and/or the named app scopes

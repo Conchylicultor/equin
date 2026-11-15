@@ -16,6 +16,7 @@ import {
 import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { createRequestHandler } from "@plugins/framework/plugins/http-router/core";
 import {
+  admittedAs,
   CENTRAL_HOST_ROUTES_ROUTE,
   hostGateFromArgv,
 } from "@plugins/framework/plugins/principal/core";
@@ -258,7 +259,9 @@ const server = Bun.serve<WsData>({
         // No socket is public (behind the gateway's own refusal).
         const refused = gate.refuseUpgrade(req, url.pathname, handler.access);
         if (refused) return refused;
-        server.upgrade(req, { data: { path: url.pathname } });
+        server.upgrade(req, {
+          data: { path: url.pathname, principal: admittedAs(req) },
+        });
         return;
       }
     }

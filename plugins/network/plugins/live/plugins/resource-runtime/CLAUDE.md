@@ -841,6 +841,24 @@ mismatched tuple — typically a tab on the previous bundle.
   it everywhere (`evictOnContractError`) and always reports.
 - Declaration-time and encode failures stay plain `Error`s (programmer errors).
 
+## Who reads — `access`
+
+A definition's `access: { visitor }` (from the shared descriptor, two-arg form
+only) opens it to a deployed site's visitor; absent is the owner only. The
+caller is the host's: `callerOf(req)` for an HTTP read (server-core passes
+principal's `admittedAs`), `RuntimeSocket.data.principal` for a socket (read
+once at `open`; absent ⇒ owner — a browser host, central). A visitor is
+refused an undeclared key on the HTTP read (403 `unauthorized`, `_debug` and
+the answer trail too) and in `handleSub` / each `sub-batch` entry
+(`sub-error unauthorized`, BEFORE the params gate — a visitor learns nothing
+of an owner-only key's contract and files no report — and before any
+registration or load); `visitorReadable(key)` is the same rule for the boot
+snapshot. A visitor's heartbeat carries `pushStallMs` only (never the stalled
+owner resources' names), and a tab id is vouched for only by a socket of the
+same caller (`unsub-tab`, a `complete` replay and a close release lingering
+records of that caller's sockets alone). Pinned by
+`runtime-visitor-access.test.ts`.
+
 ## A closed key set — `unserved`
 
 `keySet: () => "closed"` declares a host shipped with its only client (a browser

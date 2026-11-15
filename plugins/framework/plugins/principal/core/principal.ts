@@ -73,8 +73,15 @@ export function principalOf(req: Request): Principal {
 export type EndpointAccess =
   | "owner"
   | { public: string }
-  | { visitor: string }
+  | VisitorAccess
   | { content: string; item: string };
+
+/**
+ * The one opt-in that serves a deployed site's visitors as well as the owner,
+ * with why: an endpoint's, a socket's (`SocketAccess`) and a live resource's
+ * (`liveValue` / `liveCollection`'s `access`) — each owner-only without it.
+ */
+export type VisitorAccess = { visitor: string };
 
 /**
  * Whether a caller may reach a route of this access — the one rule every

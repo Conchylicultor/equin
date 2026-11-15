@@ -1375,6 +1375,36 @@ useLive(metricQuery, query); // schema INPUT; null reads nothing
 - Excludes `params` and `preload`; central allowed. A changed question is a new
   tuple (reads loading); the query schema may not itself be a list.
 
+## Who may read — `access`
+
+Every live resource is **owner-only** unless its declaration opens it to a
+deployed site's visitors (principal `visitor`, anyone through the site's
+public edge) — the vocabulary of an endpoint's `access`
+(`framework/principal`):
+
+```ts
+export const savedThemesList = liveValue("saved-themes.list", {
+  schema, preload: "boot-and-keep",
+  access: { visitor: "the theme painter resolves every page's selected theme against it" },
+});
+liveCollection("x.items", { …, access: { visitor: "<which site page reads it>" } });
+```
+
+- Absent is the owner: a forgotten field is the safe answer. Anything but
+  `{ visitor: "<non-empty reason>" }` throws at declaration (`core/internal/access.ts`).
+- On every descriptor the declaration mints (a collection's window, `:rows`,
+  `:groups`, `:count`, `:ancestors`; a paged value's pages and meta), so the
+  runtime decides per registered key (resource-runtime's
+  `ResourceDefinition.access`).
+- Enforced on every read path a visitor reaches: the HTTP read (403
+  `unauthorized`, `_debug` and the answer trail too), each socket `sub` /
+  `sub-batch` entry (`sub-error unauthorized`, before any side effect) and the
+  boot snapshot (only visitor-readable keys; the crawlable take assembles a
+  visitor's). The owner, a browser host and central read everything.
+- Declare it only for what a deployed site's pages read (the website: config,
+  saved themes, icons, the Maps browser config). Design:
+  `research/2026-11-15-network-live-resource-visitor-access.md`.
+
 ## Desktop-only reads — `needsMachine`
 
 A read only the desktop app's server can answer (a checkout, a process):

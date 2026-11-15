@@ -22,4 +22,8 @@ export const savedThemesList = liveValue("saved-themes.list", {
       "every saved theme: the painter needs all of them resident to paint any selection, and the list grows only by a hand-made save or a tweakcn import — single digits in practice",
   }),
   preload: "boot-and-keep",
+  access: {
+    visitor:
+      "the theme painter resolves every page's selected theme against it — a deployed site's pages included",
+  },
 });

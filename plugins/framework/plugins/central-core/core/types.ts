@@ -3,6 +3,13 @@ import type { SocketAccess } from "@plugins/framework/plugins/principal/core";
 
 export interface WsData {
   path: string;
+  /**
+   * Who opened it, as the upgrade was admitted (principal's `admittedAs`).
+   * Central's sockets are owner-only, so a stamped host only ever records
+   * `owner`; the live-state runtime reads it as every host's
+   * (`RuntimeSocket.data`).
+   */
+  principal: "owner" | "visitor";
 }
 
 export interface WsHandler {

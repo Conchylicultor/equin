@@ -111,7 +111,21 @@ import {
 export interface RuntimeSocket {
   send(data: string): number;
   close(code?: number, reason?: string): void;
+  /**
+   * Who opened it, as its host admitted the upgrade (Bun's `ws.data`, which
+   * server-core's upgrade stamps). Absent ⇒ the owner: a host without
+   * visitors (the in-realm browser host, whose only caller is the page;
+   * central, whose socket is owner-only).
+   */
+  readonly data?: { readonly principal?: LiveCaller };
 }
+
+/**
+ * Who reads a live resource, as the host admitted the request or socket: the
+ * owner, or a deployed site's visitor — who reads only a resource declaring
+ * `access: { visitor }` (`ResourceDefinition.access`).
+ */
+export type LiveCaller = "owner" | "visitor";
 
 // Local, cycle-free copy of the WS types (see server-core/central-core types.ts).
 export interface WsData {
@@ -649,6 +663,16 @@ export interface ResourceDefinition<
    */
   optionalParams?: readonly string[];
   /**
+   * Who may read it besides the owner — `{ visitor: "<reason>" }` (principal's
+   * `VisitorAccess`, read structurally so this module stays a leaf), declared
+   * once on the shared client descriptor (a `liveValue` / `liveCollection`'s
+   * `access`). Absent ⇒ owner-only: a deployed site's visitor (a socket or
+   * request the host marks `visitor`) is refused it on every read path — the
+   * HTTP read (403 `unauthorized`), every socket sub (`sub-error`
+   * `unauthorized`) and the boot snapshot (`visitorReadable`).
+   */
+  access?: { readonly visitor: string };
+  /**
    * The refusal codes the loader may throw (`ResourceRefusal.code`), declared
    * once on the shared client descriptor (a `liveValue`'s `refusals`) so the
    * client can type and check them too. A refusal with any other code is a
@@ -841,6 +865,7 @@ export type DefineResourceInput<
   | "reach"
   | "preload"
   | "optionalParams"
+  | "access"
 > & {
   mode: "push" | "invalidate";
 };
@@ -862,6 +887,8 @@ type ExternalDefinition<T, P extends ResourceParams> = ResourceDefinition<
   routes?: never;
   reach?: never;
   recomputeOn?: never;
+  // Declared on the shared descriptor only (the two-arg form).
+  access?: never;
 };
 
 /**
@@ -898,6 +925,8 @@ export interface ResourceContract<
   optionalParams?: readonly string[];
   /** Declared refusal codes — see `ResourceDefinition.refusals`. */
   refusals?: readonly string[];
+  /** Who besides the owner may read it — see `ResourceDefinition.access`. */
+  access?: { readonly visitor: string };
   /** A bytes value — see `ResourceDefinition.bytes`. */
   bytes?: true;
   /** A patched value — see `ResourceDefinition.patches`. */
@@ -1062,6 +1091,7 @@ function contractToDefinition<T, P extends ResourceParams>(
       ? { optionalParams: contract.optionalParams }
       : {}),
     ...(contract.refusals !== undefined ? { refusals: contract.refusals } : {}),
+    ...(contract.access !== undefined ? { access: contract.access } : {}),
     ...(contract.bytes === true ? { bytes: true as const } : {}),
     ...(contract.patches === true ? { patches: true as const } : {}),
     ...(contract.shape !== undefined ? { shape: contract.shape } : {}),
@@ -1522,6 +1552,8 @@ interface RegistryEntry {
   optionalParams?: readonly string[];
   /** Declared refusal codes — see `ResourceDefinition.refusals`. */
   refusals?: readonly string[];
+  /** Who besides the owner may read it — see `ResourceDefinition.access`. */
+  access?: { readonly visitor: string };
   /** A bytes value — see `ResourceDefinition.bytes`. */
   bytes?: true;
   /**
@@ -1847,6 +1879,8 @@ interface SocketSubRecord {
 
 interface SocketState {
   ws: RuntimeSocket;
+  /** Who opened it (`RuntimeSocket.data`), read once at `open`. */
+  caller: LiveCaller;
   /** key -> paramsKey -> record (subscriptions this socket holds, tagged by tab). */
   subs: Map<string, Map<string, SocketSubRecord>>;
   /**
@@ -2055,6 +2089,12 @@ export interface ResourceRuntimeOptions {
    * recordEntrySpan("http", `GET /api/resources/${key}`, fn); central: omit.
    */
   wrapHttp?: (key: string, fn: () => Promise<Response>) => Promise<Response>;
+  /**
+   * Who an HTTP read (`GET /api/resources/:key`) is, as the host admitted it —
+   * a visitor reads only a resource declaring `access: { visitor }`.
+   * server: principal's `admittedAs`; central / a browser host: omit (owner).
+   */
+  callerOf?: (req: Request) => LiveCaller;
   /**
    * Wrap a window resource's ids-only membership query (`windowIdsOf`), so it
    * is told apart from the value query. Runs inside the drain's `push` origin.
@@ -2837,6 +2877,13 @@ export interface ResourceRuntime {
    * hydration and persistence.
    */
   preloadedKeys: () => string[];
+  /**
+   * Whether a deployed site's visitor may read `key`: a registered resource
+   * declaring `access: { visitor }` (`ResourceDefinition.access`). For a read
+   * path outside this runtime's own (the boot snapshot), so it applies the
+   * same rule; false for an unknown key.
+   */
+  visitorReadable: (key: string) => boolean;
   /**
    * Seed the in-memory diff base (`entry.snapshots` + order sigs) of a persisted
    * unbounded-window alias from its durable L2 value at boot, BEFORE catch-up, so
@@ -6061,6 +6108,7 @@ export function createResourceRuntime(
         ? { optionalParams: def.optionalParams }
         : {}),
       ...(def.refusals !== undefined ? { refusals: def.refusals } : {}),
+      ...(def.access !== undefined ? { access: def.access } : {}),
       ...(def.bytes === true ? { bytes: true as const } : {}),
       ...(def.patches === true ? { patches: true as const } : {}),
       externalSource,
@@ -6172,6 +6220,7 @@ export function createResourceRuntime(
         ...(contract.refusals !== undefined
           ? { refusals: contract.refusals }
           : {}),
+        ...(contract.access !== undefined ? { access: contract.access } : {}),
         ...(contract.bytes === true ? { bytes: true as const } : {}),
         ...(contract.patches === true ? { patches: true as const } : {}),
         ...(contract.shape !== undefined ? { shape: contract.shape } : {}),
@@ -8838,15 +8887,28 @@ export function createResourceRuntime(
 
   const notificationsWsHandler: WsHandler = {
     open(ws) {
-      sockets.set(ws, { ws, subs: new Map(), framesSent: 0 });
+      sockets.set(ws, {
+        ws,
+        caller: ws.data?.principal ?? "owner",
+        subs: new Map(),
+        framesSent: 0,
+      });
       // How long owed changes have gone undelivered — every push stopped
       // (`pushStallMs`, 0 when nothing is owed) and one resource's drain
       // stopped (`stalledResources`) — see `pushStall()`. The client reads a
       // ping without them as 0 / none.
-      const timer = setInterval(
-        () => sendJson(ws, { kind: "ping", ...pushStall() }),
-        HEARTBEAT_MS,
-      );
+      // A visitor's socket gets the stall's age only: which owner resources
+      // are stalled is the owner's to know.
+      const visitor = ws.data?.principal === "visitor";
+      const timer = setInterval(() => {
+        const stall = pushStall();
+        sendJson(
+          ws,
+          visitor
+            ? { kind: "ping", pushStallMs: stall.pushStallMs }
+            : { kind: "ping", ...stall },
+        );
+      }, HEARTBEAT_MS);
       heartbeats.set(ws, timer);
     },
     message(ws, raw) {
@@ -8916,7 +8978,7 @@ export function createResourceRuntime(
           const m = msg as ReceivedFrame<"unsub-tab">;
           const tabId = typeof m.tabId === "string" ? m.tabId : "";
           releaseTabSubs(state, tabId);
-          releaseDetachedTab(tabId, "unsub-tab");
+          releaseDetachedTab(tabId, "unsub-tab", state.caller);
           return;
         }
       }
@@ -9626,6 +9688,18 @@ export function createResourceRuntime(
     }
     // The params gate — before authorize and before the sub registers, so a
     // refused sub leaves no trace a push could rerun.
+    // Access first: a visitor learns nothing of an owner-only key's contract
+    // (and files no contract report) — the HTTP read checks it first too.
+    if (refuseForCaller(state, entry)) {
+      sendJson(state.ws, {
+        kind: "sub-error",
+        ...req,
+        key,
+        params,
+        reason: "unauthorized",
+      });
+      return;
+    }
     if (refuseSubParams(state.ws, entry, req, params, build)) return;
     // Subscription-authorization seam (deferred; single-instance-per-user — see
     // research/2026-07-02-global-adr-single-instance-per-user.md). Runs before
@@ -10143,6 +10217,17 @@ export function createResourceRuntime(
         });
         continue;
       }
+      if (refuseForCaller(state, entry)) {
+        sendJson(state.ws, {
+          kind: "sub-error",
+          id: e.id,
+          tabId,
+          key: e.key,
+          params,
+          reason: "unauthorized",
+        });
+        continue;
+      }
       if (refuseSubParams(state.ws, entry, { id: e.id, tabId }, params, build))
         continue;
       retained.add(`${e.key}\0${pk}`);
@@ -10192,7 +10277,7 @@ export function createResourceRuntime(
       // …and everything it still held on a closed socket: what it restated is
       // held here now (registered above, so it never went through 0 — the
       // short-circuit below can answer it), the rest it no longer wants.
-      releaseDetachedTab(tabId, "replayed");
+      releaseDetachedTab(tabId, "replayed", state.caller);
       lingerLedger.returned(tabId);
     }
 
@@ -10423,9 +10508,12 @@ export function createResourceRuntime(
   // replay landed before this close (a reconnect raced it), so what they want
   // is held there — release their records here at once rather than at the
   // linger's end. Releasing early can only cost a reload, never a stale answer.
+  // Only a socket of the same caller vouches for a tab id: a visitor naming
+  // the owner's tab id must not release the owner's records (nor the reverse).
   function releaseReattachedTabs(closing: SocketState): void {
     const live = new Set<string>();
     for (const st of sockets.values()) {
+      if (st.caller !== closing.caller) continue;
       for (const tab of tabsOf(st)) live.add(tab);
     }
     for (const tab of tabsOf(closing)) {
@@ -10456,8 +10544,11 @@ export function createResourceRuntime(
   function releaseDetachedTab(
     tabId: string,
     by: Exclude<LingerEnd, "expired">,
+    caller: LiveCaller,
   ): void {
     for (const [state, timer] of detached) {
+      // A tab id is vouched for only by a socket of the same caller.
+      if (state.caller !== caller) continue;
       releaseTabSubs(state, tabId);
       if (state.subs.size === 0) {
         clearTimeout(timer);
@@ -10535,16 +10626,41 @@ export function createResourceRuntime(
     const build = req.headers.get(BUILD_GRAPH_HEADER) ?? undefined;
     noteClientBuild(build);
     if (!key) return httpError(404, { reason: "unknown-key" });
+    const caller = opts.callerOf?.(req) ?? "owner";
+    // The runtime's own diagnostics are the owner's.
+    if (
+      caller === "visitor" &&
+      (key === "_debug" || key === ANSWER_TRAIL_KEY)
+    ) {
+      return httpError(403, { reason: "unauthorized" });
+    }
     if (key === "_debug") return handleResourcesDebug();
     if (key === ANSWER_TRAIL_KEY) return handleAnswerTrail(req);
     const entry = registry.get(key);
     if (!entry) return httpError(404, refuseUnknownKey(key, build));
+    if (refuseForCaller(caller, entry)) {
+      return httpError(403, { reason: "unauthorized" });
+    }
     // Everything past the registry lookup — the revalidate signature and its 304
     // included — runs inside `wrapHttp` (server: an `http` entry span), so a
     // conditional GET is measured even when it never reaches a loader. Wrapped
     // only after the lookup, so the span label only ever names a registered key.
     const serve = () => serveResourceHttp(req, entry, build);
     return opts.wrapHttp ? opts.wrapHttp(key, serve) : serve();
+  }
+
+  /**
+   * Whether `entry` is closed to this caller: a visitor reads only a resource
+   * declaring `access: { visitor }` (`ResourceDefinition.access`). Checked on
+   * every read path before any side effect — the HTTP read, each sub and each
+   * sub-batch entry — so a refused read registers, loads and counts nothing.
+   */
+  function refuseForCaller(
+    who: LiveCaller | { caller: LiveCaller },
+    entry: RegistryEntry,
+  ): boolean {
+    const caller = typeof who === "string" ? who : who.caller;
+    return caller === "visitor" && entry.access === undefined;
   }
 
   // A failed read's JSON body (see `ResourceHttpErrorBody`): the client reads
@@ -11816,6 +11932,7 @@ export function createResourceRuntime(
     persistedKeys,
     unboundedWindowKeys,
     preloadedKeys,
+    visitorReadable: (key: string) => registry.get(key)?.access !== undefined,
     seedPersistedSnapshot,
     validatePersistedValue,
     persistedDefinitions,

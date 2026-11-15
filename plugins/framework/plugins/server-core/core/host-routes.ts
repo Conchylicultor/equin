@@ -6,12 +6,14 @@ import type { HttpHandler, LoadedServerPlugin } from "./types";
 /**
  * Why a deployed site's visitors (principal `visitor`) reach the live-state
  * read and socket: every page boots and stays live through them, and on a
- * deployed site those pages are the visitors'. They serve the resources of
- * the composition the site runs — what its pages read — and stay closed to a
- * foreign page (anonymous) on any host.
+ * deployed site those pages are the visitors'. The route admits the visitor;
+ * each RESOURCE then decides — a visitor reads only one declaring
+ * `access: { visitor }` (network/live), refused every other on the HTTP read,
+ * each socket sub and the boot snapshot. Closed to a foreign page (anonymous)
+ * on any host.
  */
 export const LIVE_STATE_VISITOR_REASON =
-  "every page of a deployed site boots and stays live through it; it serves the resources of the composition the site runs";
+  "every page of a deployed site boots and stays live through it; a visitor reads only the resources declaring access: { visitor }";
 
 /** The core-owned live-state socket's access (`/ws/notifications`). */
 export const LIVE_STATE_SOCKET_ACCESS: SocketAccess = {

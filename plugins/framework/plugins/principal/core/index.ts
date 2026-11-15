@@ -8,7 +8,8 @@ export {
   isCrossSiteRefusal,
   isBrowserRequest,
 } from "./principal";
-export type { Principal, EndpointAccess } from "./principal";
+export type { Principal, EndpointAccess, VisitorAccess } from "./principal";
+export { admittedAs } from "./admitted";
 export {
   gateByPrincipal,
   hostGateFromArgv,

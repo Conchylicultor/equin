@@ -1,4 +1,5 @@
 import type { z } from "zod";
+import type { VisitorAccess } from "@plugins/framework/plugins/principal/core";
 
 // `origin` tells the browser-side NotificationsClient which WS endpoint owns
 // this resource: per-worktree backends serve the default origin, central
@@ -105,6 +106,14 @@ export interface ResourceDescriptor<
    * declared code. Absent ⇒ none: the read is never refused.
    */
   refusals?: readonly string[];
+  /**
+   * Who may read it besides the owner — `{ visitor: "<reason>" }`, a
+   * `liveValue` / `liveCollection`'s `access` (every descriptor a collection
+   * mints carries its collection's). The server refuses a deployed site's
+   * visitor every resource without it, on every read path (resource-runtime's
+   * `ResourceDefinition.access`). Absent ⇒ the owner only.
+   */
+  access?: VisitorAccess;
   /**
    * Default params tuple boot paths use when a caller names none — e.g. a
    * `liveCollection`'s window (its window descriptor sets it to the encoded

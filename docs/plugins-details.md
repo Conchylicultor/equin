@@ -31681,8 +31681,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Principal`
           - `PrincipalStamp`
           - `SocketAccess`
+          - `VisitorAccess`
         - Exports (values):
           - `admits`
+          - `admittedAs`
           - `CENTRAL_HOST_ROUTES_ROUTE`
           - `CROSS_SITE_REFUSED_MESSAGE`
           - `crossSiteRefusedResponse`
@@ -31702,8 +31704,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `apps/deploy/deploy-secrets/approvals`
           - `debug/backend-liveness`
+          - `framework/server-core`
           - `infra/launcher`
           - `infra/launcher/gateway-drift`
+          - `network/live/boot-snapshot`
     - **`product-name`** — The product's own name, as data: PRODUCT_NAME (`equin`, always lowercase — what every person and agent reads) and LEGACY_PRODUCT_NAMES (the names it went by before, never written again), enforced by the product-name:legacy check over every tracked file; and LEGACY_IDS, the identifiers built from the old name that are kept for good (stored state, cross-version contracts), the one place they are spelled — enforced by product-name:legacy-id (and its mirrors by product-name:legacy-ids-in-sync). A dependency-free leaf, so a browser bundle, a server or a script can import it.
       - Cross-plugin:
         - Imported by: 66 plugins — full list in [`plugins/framework/plugins/product-name/REFERENCE.md`](../plugins/framework/plugins/product-name/REFERENCE.md)
@@ -31748,6 +31752,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework/plugin-id.pluginOfNode`
           - `framework/plugin-loader.computeLoadWaves`
           - `framework/plugin-loader.topoSortPlugins`
+          - `framework/principal.admittedAs`
           - `framework/tooling/collected-dir.defineCollectedDir`
           - `network/live/resource-protocol.RESOURCE_HTTP_ROUTE`
           - `network/live/resource-runtime.createResourceRuntime`
@@ -31914,6 +31919,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `unroutedResourceKeys`
           - `untimedStep`
           - `validatePersistedValue`
+          - `visitorReadable`
           - `withNotifyBatch`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`

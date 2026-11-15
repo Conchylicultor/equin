@@ -31,6 +31,7 @@ import {
 } from "./query-value";
 import { LIVE_ROW_KEY, type LiveCutKey } from "./row-key";
 import type { MachineFeature } from "@plugins/infra/plugins/endpoints/core";
+import { accessFields, type LiveAccessSpec } from "./access";
 import {
   machineFields,
   type LiveMachineBrand,
@@ -904,7 +905,8 @@ export function liveValue<
   key: string,
   spec: LiveBytesParamValueSpec<N, M> &
     LiveRefusalsSpec<C> &
-    LiveMachineSpec<NM>,
+    LiveMachineSpec<NM> &
+    LiveAccessSpec,
 ): LiveValue<ArrayBuffer, LiveValueParams<N>> &
   LiveBytesBrand &
   LiveSnapshotBrand<"push"> &
@@ -920,7 +922,8 @@ export function liveValue<
   spec: LiveBytesTypedParamValueSpec<R, M> &
     LiteralParamNames<R> &
     LiveRefusalsSpec<C> &
-    LiveMachineSpec<NM>,
+    LiveMachineSpec<NM> &
+    LiveAccessSpec,
 ): LiveValue<ArrayBuffer, LiveTypedValueParams<R>> &
   LiveBytesBrand &
   LiveSnapshotBrand<"push"> &
@@ -936,7 +939,8 @@ export function liveValue<
   key: string,
   spec: LiveBytesQueryValueSpec<Q, QIn, M> &
     LiveRefusalsSpec<C> &
-    LiveMachineSpec<NM>,
+    LiveMachineSpec<NM> &
+    LiveAccessSpec,
 ): LiveQueryValue<ArrayBuffer, Q, QIn> &
   LiveBytesBrand &
   LiveSnapshotBrand<"push"> &
@@ -956,7 +960,8 @@ export function liveValue<
   spec: LivePagedValueSpec<Item, Meta, Q, QIn, O, L> & {
     paged: { meta: z.ZodType<Meta> };
   } & LiveRefusalsSpec<C> &
-    LiveMachineSpec<NM>,
+    LiveMachineSpec<NM> &
+    LiveAccessSpec,
 ): LivePagedValue<Item, Meta, Q, QIn, O, C, NM, LivePagedSnapshot<L>>;
 export function liveValue<
   Item,
@@ -971,7 +976,8 @@ export function liveValue<
   spec: LivePagedValueSpec<Item, undefined, Q, QIn, O, L> & {
     paged: { meta?: undefined };
   } & LiveRefusalsSpec<C> &
-    LiveMachineSpec<NM>,
+    LiveMachineSpec<NM> &
+    LiveAccessSpec,
 ): LivePagedValue<Item, undefined, Q, QIn, O, C, NM, LivePagedSnapshot<L>>;
 export function liveValue<
   T,
@@ -985,7 +991,8 @@ export function liveValue<
   key: string,
   spec: LiveQueryValueSpec<T, Q, QIn, O, L> &
     LiveRefusalsSpec<C> &
-    LiveMachineSpec<NM>,
+    LiveMachineSpec<NM> &
+    LiveAccessSpec,
 ): LiveQueryValue<T, Q, QIn, O> &
   LiveSnapshotBrand<L> &
   LiveRefusalsBrand<C> &
@@ -1011,7 +1018,8 @@ export function liveValue<
 >(
   key: string,
   spec: LiveValueSpec<T, L> & { preload?: PL } & LiveRefusalsSpec<C> &
-    LiveMachineSpec<NM>,
+    LiveMachineSpec<NM> &
+    LiveAccessSpec,
 ): LiveValue<T, Record<string, never>> &
   LivePersistableBrand<PL> &
   LiveSnapshotBrand<L> &
@@ -1026,7 +1034,8 @@ export function liveValue<
   key: string,
   spec: LivePreloadedParamValueSpec<T, N> &
     LiveRefusalsSpec<C> &
-    LiveMachineSpec<NM>,
+    LiveMachineSpec<NM> &
+    LiveAccessSpec,
 ): LivePreloadedParamValue<T, LiveValueParams<N>> &
   LiveSnapshotBrand<"push"> &
   LiveRefusalsBrand<C> &
@@ -1042,7 +1051,8 @@ export function liveValue<
   spec: LiveParamValueSpec<T, N, L> & {
     origin: "central";
   } & LiveRefusalsSpec<C> &
-    LiveMachineSpec<NM>,
+    LiveMachineSpec<NM> &
+    LiveAccessSpec,
 ): LiveValue<T, LiveValueParams<N>, "central"> &
   LiveSnapshotBrand<L> &
   LiveRefusalsBrand<C> &
@@ -1058,7 +1068,8 @@ export function liveValue<
   spec: LiveParamValueSpec<T, N, L> & {
     origin?: undefined;
   } & LiveRefusalsSpec<C> &
-    LiveMachineSpec<NM>,
+    LiveMachineSpec<NM> &
+    LiveAccessSpec,
 ): LiveValue<T, LiveValueParams<N>> &
   LiveSnapshotBrand<L> &
   LiveRefusalsBrand<C> &
@@ -1075,7 +1086,8 @@ export function liveValue<
     origin: "central";
   } & LiteralParamNames<R> &
     LiveRefusalsSpec<C> &
-    LiveMachineSpec<NM>,
+    LiveMachineSpec<NM> &
+    LiveAccessSpec,
 ): LiveValue<T, LiveTypedValueParams<R>, "central"> &
   LiveSnapshotBrand<L> &
   LiveRefusalsBrand<C> &
@@ -1092,7 +1104,8 @@ export function liveValue<
     origin?: undefined;
   } & LiteralParamNames<R> &
     LiveRefusalsSpec<C> &
-    LiveMachineSpec<NM>,
+    LiveMachineSpec<NM> &
+    LiveAccessSpec,
 ): LiveValue<T, LiveTypedValueParams<R>> &
   LiveSnapshotBrand<L> &
   LiveRefusalsBrand<C> &
@@ -1112,7 +1125,8 @@ export function liveValue<T>(
     | LiveBytesQueryValueSpec<unknown, unknown, number | undefined>
   ) &
     LiveRefusalsSpec<string> &
-    LiveMachineSpec<MachineFeature | undefined>,
+    LiveMachineSpec<MachineFeature | undefined> &
+    LiveAccessSpec,
 ): DeclaredValue<T> {
   const { spec: s, fields: bytes } = bytesSpec<T>(key, spec);
   return plainOrQueryValue(key, s, bytes);
@@ -1129,7 +1143,8 @@ type JsonValueSpec<T> = (
   | AnyPagedValueSpec
 ) &
   LiveRefusalsSpec<string> &
-  LiveMachineSpec<MachineFeature | undefined>;
+  LiveMachineSpec<MachineFeature | undefined> &
+  LiveAccessSpec;
 
 /** {@link liveValue}'s body, over a spec whose bytes form is normalized (see {@link bytesSpec}). */
 function plainOrQueryValue<T>(
@@ -1181,6 +1196,7 @@ function plainOrQueryValue<T>(
     ...loadFields(spec.load),
     ...refusalFields(key, spec.refusals),
     ...machineFields(spec),
+    ...accessFields(`liveValue("${key}")`, spec.access),
     ...patchesFields(key, spec),
     ...bytes,
   };
@@ -1402,7 +1418,8 @@ function queryValue<T>(
     LiveQueryValueSpec<T, unknown, unknown, LiveValueOrigin> | AnyPagedValueSpec
   ) &
     LiveRefusalsSpec<string> &
-    LiveMachineSpec<MachineFeature | undefined>,
+    LiveMachineSpec<MachineFeature | undefined> &
+    LiveAccessSpec,
   bytes: BytesFields,
 ): DeclaredValue<T> {
   // Unreachable from typed code (each is `never` beside `query`).
@@ -1423,6 +1440,7 @@ function queryValue<T>(
     ...loadFields(spec.load),
     ...refusalFields(key, spec.refusals),
     ...machineFields(spec),
+    ...accessFields(`liveValue("${key}")`, spec.access),
     ...patchesFields(key, spec),
     ...bytes,
   };
@@ -1472,6 +1490,7 @@ function pagedValue(
     refusals?: readonly string[];
     refuse?: (code: string, message: string) => ResourceRefusal;
     needsMachine?: MachineFeature;
+    access?: { visitor: string };
   },
 ): LivePagedValue<unknown, unknown, unknown, unknown, LiveValueOrigin> {
   if ((s as { schema?: unknown }).schema !== undefined) {
@@ -1571,6 +1590,8 @@ function pagedValue(
               ...(common.needsMachine !== undefined
                 ? { needsMachine: common.needsMachine }
                 : {}),
+              // …and is read by whoever reads the pages.
+              ...(common.access !== undefined ? { access: common.access } : {}),
             },
             {},
           ),

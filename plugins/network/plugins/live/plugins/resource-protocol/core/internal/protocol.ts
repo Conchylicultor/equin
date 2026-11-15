@@ -12,7 +12,9 @@ import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
  * Why a subscription (or its HTTP read) was refused.
  *
  * - `unknown-key` — no resource is registered under the key.
- * - `unauthorized` — the resource's `authorize` seam refused it.
+ * - `unauthorized` — the caller may not read it: a deployed site's visitor
+ *   asked for a resource that does not declare `access: { visitor }` (HTTP
+ *   403), or the resource's `authorize` seam refused it.
  * - `loader-failed` — the loader threw: a server-side failure.
  * - `contract-mismatch` — the params do not match the resource's declaration
  *   (a required param missing, an unknown one, a non-canonical encoding). The

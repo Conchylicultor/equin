@@ -25,6 +25,12 @@ const SPRITES = { feature: "Icon sprites" } as const;
  */
 export const RESIDENT_SPRITE_KEYS: readonly SpriteKey[] = [BRANDS_SPRITE];
 
+/** Every page reads its icons through these, a deployed site's visitors' included. */
+const ICON_VISITOR_ACCESS = {
+  visitor:
+    "the icons every page of a deployed site draws (`<Icon>`'s glyph loader and sprite host)",
+} as const;
+
 /**
  * One whole sprite, by key: a whole `<svg>…</svg>` of `<symbol>`s. The page
  * reads `brands` (when the head did not provide it) and `seti` (the file-type
@@ -53,6 +59,7 @@ export const iconSprite = liveValue("icons.sprite", {
   params: ["hash", "key"],
   load: "on-demand",
   refusals: ["unknown-key", "stale-manifest", "not-drawn-here"],
+  access: ICON_VISITOR_ACCESS,
 });
 
 /**
@@ -67,6 +74,7 @@ export const spriteHash = liveValue("icons.sprite-hash", {
   // The page's first-frame glyphs are addressed by it: known at the first
   // render, so the first frame's batch is asked for at once.
   preload: "boot-and-keep",
+  access: ICON_VISITOR_ACCESS,
 });
 
 /**
@@ -80,6 +88,7 @@ export const spriteHash = liveValue("icons.sprite-hash", {
 export const savedSymbolsHash = liveValue("icons.symbols-hash", {
   schema: z.string(),
   preload: "boot-and-keep",
+  access: ICON_VISITOR_ACCESS,
 });
 
 /** Every page draws its icons from these, a deployed site's visitors' included. */
@@ -153,6 +162,7 @@ export const runtimeSymbolsValue = liveValue("icons.runtime-symbols", {
   params: ["hash", "key", "names"],
   load: "on-demand",
   refusals: ["unknown-key", "stale-symbols", "invalid-names"],
+  access: ICON_VISITOR_ACCESS,
 });
 
 const IconManifestSchema = z.object({
