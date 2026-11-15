@@ -98,6 +98,7 @@ import {
   DEMO_AGENTS,
   DEMO_PAGE_IDS,
   DEMO_PLACES,
+  DEMO_RECIPES_BEFORE_AFTER,
   DEMO_STORIES,
   demoAgentId,
   demoConversationId,
@@ -113,6 +114,7 @@ import { loadPageTags } from "@plugins/page/plugins/tags/server";
 import { promptBlock } from "@plugins/page/plugins/prompt/plugins/link/server";
 import { PAGES_CATEGORY_ID } from "@plugins/page/plugins/prompt/plugins/link/core";
 import { searchResults } from "@plugins/search/plugins/engine/core";
+import { _beforeAfterPairs } from "@plugins/conversations/plugins/before-after/server";
 import { warmupRunOf } from "@plugins/infra/plugins/warmup/server";
 import { listRegisteredJobs } from "@plugins/infra/plugins/jobs/server";
 import { settleJobQueue } from "@plugins/infra/plugins/jobs/plugins/in-process/server";
@@ -325,6 +327,46 @@ describe.if(IN_CHILD)("the demo's browser host", () => {
         story.status === "working" ? "tool-call" : "assistant-text",
       );
     }
+  });
+
+  test("the recipes session ends showing its card layouts as a before / after pair the host serves", async () => {
+    const pair = DEMO_RECIPES_BEFORE_AFTER;
+    const events = await openConversationEvents("conv-demo-recipes");
+    const calls = events.filter(
+      (e): e is ToolCallEvent => e.kind === "tool-call",
+    );
+    // The last call of the session: its register_before_after, keyed by the
+    // tool-use id the seed stored the pair under.
+    const last = calls.at(-1)!;
+    expect(last.name).toBe("mcp__equin__register_before_after");
+    expect(last.toolUseId).toBe(pair.toolUseId);
+    expect(last.result?.content).toContain(pair.id);
+    const [row] = await db
+      .select()
+      .from(_beforeAfterPairs)
+      .where(sql`${_beforeAfterPairs.toolUseId} = ${pair.toolUseId}`);
+    expect(row).toMatchObject({
+      id: pair.id,
+      conversationId: "conv-demo-recipes",
+      title: pair.title,
+      beforeLabel: pair.before.label,
+      afterLabel: pair.after.label,
+    });
+    // Both images answer, as the pane loads them.
+    for (const attachment of [
+      row!.beforeAttachmentId,
+      row!.afterAttachmentId,
+    ]) {
+      const res = await host.request(
+        new Request(`http://demo.invalid/api/attachments/${attachment}`),
+      );
+      expect(res.status).toBe(200);
+      expect(res.headers.get("content-type")).toBe("image/png");
+    }
+    // The final answer cites the pair.
+    const answer = events.at(-1) as { kind: string; text?: string };
+    expect(answer.kind).toBe("assistant-text");
+    expect(answer.text).toContain(pair.id);
   });
 
   test("the weekly-review agent's Journal read is the real tool's", async () => {

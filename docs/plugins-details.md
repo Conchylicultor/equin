@@ -8290,6 +8290,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/prototypes/present`
               - `apps/prototypes/state`
               - `apps/prototypes/thumbnails`
+              - `apps/website/demos/workspace/story`
               - `apps/website/promo-film/circle`
               - `conversations/conversation-view/artifacts/prototype`
               - `page/prototype`
@@ -12614,13 +12615,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - Plugins:
                 - **`story`** — The workspace demo's story, as data: the agents' stories and transcripts, Demo's pages, prototypes' tags, songs and places — what the demo's build-time seed writes through each app's fixture writer, kept apart from the demo's scenario so the page that embeds the demo never bundles the apps this data names.
                   - Core:
-                    - Uses:
-                      - `conversations.CONVERSATIONS_CATEGORY_ID`
-                      - `conversations/agents.agentIdKind`
-                      - `conversations/agents.agentLaunchIdKind`
+                    - Uses: 21 symbols — full list in [`plugins/apps/plugins/website/plugins/demos/plugins/workspace/plugins/story/REFERENCE.md`](../plugins/apps/plugins/website/plugins/demos/plugins/workspace/plugins/story/REFERENCE.md)
+                      - `apps/prototypes/files` ×4
+                      - `infra/namespace` ×3
+                      - `conversations/agents` ×2
+                      - `conversations/before-after` ×2
                       - `conversations/model-provider.ConversationModelSchema`
-                      - `infra/namespace.asNamespace`
-                      - `infra/namespace.namespaceUrl`
+                      - `conversations.CONVERSATIONS_CATEGORY_ID`
+                      - `infra/mcp.agentToolName`
                       - `packages/string-hash.hashHex`
                       - `page/editor.blockIdKind`
                       - `page/inline-date.dateToken`
@@ -12630,6 +12632,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `wish.WISHES_CATEGORY_ID`
                     - Exports (types):
                       - `DemoAgent`
+                      - `DemoBeforeAfterRegistration`
                       - `DemoPageSession`
                       - `DemoPageToolCall`
                       - `DemoStory`
@@ -12638,6 +12641,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `DEMO_PAGE_IDS`
                       - `DEMO_PAGES`
                       - `DEMO_PLACES`
+                      - `DEMO_RECIPES_BEFORE_AFTER`
                       - `DEMO_SONG_ID`
                       - `DEMO_STORIES`
                       - `demoAgentId`
@@ -17652,6 +17656,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `BeforeAfterColorScheme`
           - `BeforeAfterPair`
           - `RegisterBeforeAfterInput`
+          - `RegisteredPairSummary`
         - Exports (values):
           - `baIdKind`
           - `BEFORE_AFTER_ARTIFACT_KIND`
@@ -17667,6 +17672,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `parseRegisterInput`
           - `REGISTER_BEFORE_AFTER_TOOL`
           - `registerBeforeAfterInputShape`
+          - `registeredPairText`
           - `RegisterInputError`
       - Cross-plugin:
         - Uses tokens:
@@ -17684,7 +17690,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-sm`
           - `ui/tokens/shape --radius`
           - `ui/tokens/shape --spacing`
-        - Imported by: `active-data/before-after`
+        - Imported by:
+          - `active-data/before-after`
+          - `apps/website/demos/workspace/story`
       - Machine:
         - Register: `mcpTool('register_before_after')`
     - **`close`** — Closing a conversation, portable half: POST /api/conversations/:id/close marks it done on every host (markConversationClosed) — the demo's in-browser server included — then runs every CloseTeardown contribution before it returns (the desktop's stops the agent).
@@ -38359,11 +38367,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `McpHealthSchema`
           - `mcpRequest`
       - Cross-plugin:
-        - Imported by: 27 plugins — full list in [`plugins/infra/plugins/mcp/REFERENCE.md`](../plugins/infra/plugins/mcp/REFERENCE.md)
+        - Imported by: 28 plugins — full list in [`plugins/infra/plugins/mcp/REFERENCE.md`](../plugins/infra/plugins/mcp/REFERENCE.md)
           - `tasks` ×7
           - `debug` ×6
           - `conversations` ×5
-          - `apps` ×3
+          - `apps` ×4
           - `infra` ×2
           - `database/query`
           - `hints/ask`

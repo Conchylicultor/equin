@@ -8,6 +8,7 @@ import {
   parseRegisterInput,
   REGISTER_BEFORE_AFTER_TOOL,
   registerBeforeAfterInputShape,
+  registeredPairText,
   type RegisterBeforeAfterInput,
 } from "../../core";
 import {
@@ -45,20 +46,21 @@ export const registerBeforeAfterTool = Mcp.tool({
       conversationId: ctx.conversationId,
       toolUseId: ctx.toolUseId,
     });
-    const what =
-      pair.route === null
-        ? `${pair.before.label} vs ${pair.after.label}`
-        : `${pair.route} — ${pair.before.label} vs ${pair.after.label}, ${pair.width}×${pair.height} ${pair.colorScheme ?? ""}`.trim();
     return {
       content: [
         {
           type: "text",
-          text: [
-            `Registered before / after ${id}: "${pair.title}" (${what}).`,
-            `Cite ${id} in your final message, next to what it shows — it renders as a chip that opens the comparison.`,
-            ...notes,
-            `Before (${pair.before.label}), then after (${pair.after.label}):`,
-          ].join("\n"),
+          text: registeredPairText({
+            id,
+            title: pair.title,
+            route: pair.route,
+            width: pair.width,
+            height: pair.height,
+            colorScheme: pair.colorScheme,
+            beforeLabel: pair.before.label,
+            afterLabel: pair.after.label,
+            notes,
+          }),
         },
         { type: "image", data: base64(pair.before.png), mimeType: "image/png" },
         { type: "image", data: base64(pair.after.png), mimeType: "image/png" },

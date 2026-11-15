@@ -37,6 +37,9 @@ import { writePlacesFixture } from "@plugins/apps/plugins/places/plugins/fixture
 import { writeBrowserHomeFiles } from "@plugins/infra/plugins/paths/plugins/data-files/plugins/memory/server";
 import { systemOrigin } from "@plugins/infra/plugins/request-origin/core";
 import { settleJobQueue } from "@plugins/infra/plugins/jobs/plugins/in-process/server";
+import { registerBeforeAfterPair } from "@plugins/conversations/plugins/before-after/server";
+import { registeredPairText } from "@plugins/conversations/plugins/before-after/core";
+import { readImageSize } from "@plugins/packages/plugins/image-size/core";
 import { eq } from "drizzle-orm";
 import {
   readEndpointResponse,
@@ -63,6 +66,8 @@ import {
   demoPrototypeFixture,
   demoWorktreePath,
   demoPushSha,
+  DEMO_RECIPES_BEFORE_AFTER,
+  type DemoBeforeAfterRegistration,
   type DemoPageSession,
   type DemoPageToolCall,
 } from "@plugins/apps/plugins/website/plugins/demos/plugins/workspace/plugins/story/core";
@@ -88,18 +93,21 @@ import {
  *    ({@link runPageWork}), then settled; then the user
  *    decorating the page it minted with an icon, through the page header's own
  *    write ({@link decoratePlanPage}) — an agent's tools cannot set one;
- * 4. each conversation's transcript, recording those runs;
- * 5. the Prototypes gallery, through Prototypes' fixture writer
+ * 4. the recipes agent's before / after pair — its card layouts, photo vs
+ *    overlay — through before-after's own write, its PNGs the committed
+ *    `../data/before-after/` ({@link registerRecipesBeforeAfter});
+ * 5. each conversation's transcript, recording those runs;
+ * 6. the Prototypes gallery, through Prototypes' fixture writer
  *    (`writePrototypeFixture`) from `prototypes` — the committed `../data/`,
  *    inlined into the worker's bundle or read off disk by the boot test — then
  *    settled;
- * 6. the Sonata library's songs (`../core`'s, the real pieces' files from
+ * 7. the Sonata library's songs (`../core`'s, the real pieces' files from
  *    `songs` — the committed `../data/songs/`), through Sonata's fixture writer
  *    (`writeSongFixtures`), beside the MIDI starters the MIDI source seeds;
- * 7. Demo's Places map (`../core`'s), through Places' fixture writer
+ * 8. Demo's Places map (`../core`'s), through Places' fixture writer
  *    (`writePlacesFixture`): its tags through the tag tree's endpoints on the
  *    host, its places through the app's one insert, icons given;
- * 8. Demo's home folder (`../data/home/`), at `~` of the browser's own file
+ * 9. Demo's home folder (`../data/home/`), at `~` of the browser's own file
  *    system — what Files opens on — through its own writes
  *    (`writeBrowserHomeFiles`): Documents (notes, code, a recipe page, the
  *    Lisbon trip's papers), Music (a recording, a MIDI piece, the practice
@@ -114,6 +122,8 @@ export interface DemoSeedData {
   home: Readonly<Record<string, Uint8Array>>;
   /** `data/songs/`: the files of Demo's file-backed Sonata songs, name → bytes. */
   songs: Readonly<Record<string, Uint8Array>>;
+  /** `data/before-after/`: the PNGs of the agents' before / after pairs, name → bytes. */
+  beforeAfter: Readonly<Record<string, Uint8Array>>;
 }
 
 const PRACTICE_TIMER = demoStoryByKey("practice-timer");
@@ -229,12 +239,14 @@ export async function seed(
 
   const session = await runPageWork();
   await decoratePlanPage(host, session.planId);
+  const recipesBeforeAfter = await registerRecipesBeforeAfter(data.beforeAfter);
   await settleJobQueue();
   for (const story of DEMO_STORIES)
     await writeTranscript(
       demoConversationId(story),
       demoTranscriptJsonl(story, now, session, {
         prototypes: parsePrototypeTree(prototypes.tree),
+        recipesBeforeAfter,
       }),
     );
 
@@ -323,6 +335,66 @@ async function runPageWork(): Promise<DemoPageSession> {
   });
 
   return { readOrigin, readSpec, edit, note, cardId, planId, readJournal };
+}
+
+/**
+ * The recipes agent's before / after pair (`DEMO_RECIPES_BEFORE_AFTER`),
+ * stored through before-after's own write (`registerBeforeAfterPair`, what
+ * the `register_before_after` tool calls) under the tool-use id its
+ * transcript gives the call — the PNGs the committed `data/before-after/`,
+ * their size read from the files — and the tool's text result for it
+ * (`registeredPairText`, the tool's own), for the transcript.
+ */
+async function registerRecipesBeforeAfter(
+  files: DemoSeedData["beforeAfter"],
+): Promise<DemoBeforeAfterRegistration> {
+  const pair = DEMO_RECIPES_BEFORE_AFTER;
+  const png = (file: string) => {
+    const bytes = files[file];
+    if (bytes === undefined)
+      throw new Error(`[demo seed] data/before-after/ has no ${file}`);
+    const read = readImageSize(bytes);
+    if (read.kind !== "size")
+      throw new Error(
+        `[demo seed] cannot read the size of ${file} (${read.kind})`,
+      );
+    return { bytes, ...read.size };
+  };
+  const before = png(pair.before.file);
+  const after = png(pair.after.file);
+  for (const side of [before, after])
+    if (
+      side.width !== pair.viewport.width ||
+      side.height !== pair.viewport.height
+    )
+      throw new Error(
+        `[demo seed] the recipes before / after PNGs must be ${pair.viewport.width}×${pair.viewport.height} (the viewport the transcript screenshots at), got ${side.width}×${side.height}`,
+      );
+  const id = await registerBeforeAfterPair({
+    id: pair.id,
+    conversationId: demoConversationId(demoStoryByKey("recipes")),
+    toolUseId: pair.toolUseId,
+    title: pair.title,
+    route: null,
+    width: before.width,
+    height: before.height,
+    colorScheme: null,
+    before: { png: before.bytes, label: pair.before.label },
+    after: { png: after.bytes, label: pair.after.label },
+  });
+  return {
+    result: registeredPairText({
+      id,
+      title: pair.title,
+      route: null,
+      width: before.width,
+      height: before.height,
+      colorScheme: null,
+      beforeLabel: pair.before.label,
+      afterLabel: pair.after.label,
+      notes: [],
+    }),
+  };
 }
 
 /**

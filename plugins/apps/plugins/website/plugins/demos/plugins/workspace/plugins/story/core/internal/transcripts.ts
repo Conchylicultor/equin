@@ -1,13 +1,27 @@
 import type { ParsedPrototypeTree } from "@plugins/apps/plugins/prototypes/plugins/fixtures/core";
 import {
   asNamespace,
+  contentUrl,
   namespaceUrl,
 } from "@plugins/infra/plugins/namespace/core";
+import {
+  getPrototypeFile,
+  PROTOTYPE_ENTRY_FILE,
+  prototypeDocumentQuery,
+  type OptionPicks,
+} from "@plugins/apps/plugins/prototypes/plugins/files/core";
+import { REGISTER_BEFORE_AFTER_TOOL } from "@plugins/conversations/plugins/before-after/core";
+import { agentToolName } from "@plugins/infra/plugins/mcp/core";
+import {
+  RECIPES_BEFORE_AFTER,
+  type BeforeAfterRegistration,
+} from "./before-after";
 import { DEMO_PAGE_IDS } from "./pages";
 import { DEMO_FEATURED_PROTOTYPE } from "./prototypes";
 import { DEMO_SONG_ID } from "./songs";
 import {
   attemptId,
+  conversationId,
   promptOf,
   pushSha,
   storyByKey,
@@ -42,6 +56,8 @@ type Turn =
       result: string;
       /** The tool failed (a non-zero exit): the result is flagged `is_error`. */
       error?: boolean;
+      /** Its tool-use id, when a record the seed wrote is keyed by it (else derived from its place). */
+      id?: string;
     }
   /** A tool call still running: its use is written, its result not yet. */
   | { kind: "running"; name: string; input: unknown };
@@ -80,11 +96,31 @@ export interface PageSession {
 /** What else a session is written from: the demo's prototypes, as the fixture parser reads them. */
 export interface SessionContext {
   prototypes: ParsedPrototypeTree;
+  /** The recipes agent's before / after pair, as the seed registered it. */
+  recipesBeforeAfter: BeforeAfterRegistration;
 }
 
 /** The preview a story's agent built, at its worktree's namespace (its attempt id). */
 const previewUrl = (story: Story, path = "") =>
   namespaceUrl(asNamespace(attemptId(story)), path);
+
+/**
+ * One variant of a prototype as a document on the story's preview — what
+ * `./equin prototype options` prints and `screenshot.ts --url` takes.
+ */
+function prototypeVariantUrl(
+  story: Story,
+  id: string,
+  picks: OptionPicks,
+): string {
+  // Text in a transcript, never loaded: the route spelled as the CLI prints it.
+  const path = getPrototypeFile.route
+    .replace(/^GET /, "")
+    .replace(":name", id)
+    .replace(":file", PROTOTYPE_ENTRY_FILE);
+  const query = new URLSearchParams(prototypeDocumentQuery({ picks }));
+  return `${contentUrl(id, asNamespace(attemptId(story)), path)}?${query.toString()}`;
+}
 
 /** The page tools as Claude Code names an MCP tool: `mcp__<server>__<tool>`. */
 const PAGE_TOOL_PREFIX = "mcp__equin__";
@@ -131,7 +167,9 @@ export function transcriptJsonl(
   turns.forEach((turn, i) => {
     const at = times[i]!;
     const msgId = `msg_demo_${story.key}_${i + 1}`;
-    const toolUseId = `toolu_demo_${story.key}_${i + 1}`;
+    const toolUseId =
+      (turn.kind === "tool" ? turn.id : undefined) ??
+      `toolu_demo_${story.key}_${i + 1}`;
     switch (turn.kind) {
       case "user":
         record(at, "user", { role: "user", content: turn.text });
@@ -606,6 +644,8 @@ function recipes(story: Story, _s: PageSession, ctx: SessionContext): Turn[] {
       "- **Headings**: serif or sans.",
       "- **Paper**: the background colour, beside the accent.",
       "",
+      `The photo cards you had, next to the new overlay ones: ${RECIPES_BEFORE_AFTER.id}`,
+      "",
       "Tell me what to change, or say *build it* and I'll turn it into a real app in your equin.",
     ].join("\n"),
   ];
@@ -672,9 +712,79 @@ function recipes(story: Story, _s: PageSession, ctx: SessionContext): Turn[] {
               : editsOf(`${dir}/${file}`, was, text);
           })
           .flat(),
+        ...(i === steps.length - 1
+          ? cardsBeforeAfter(story, version.files, ctx.recipesBeforeAfter)
+          : []),
         { kind: "assistant", text: answers[i]!, final: true } satisfies Turn,
       ];
     }),
+  ];
+}
+
+/** The script an agent screenshots a page with. */
+const SCREENSHOT_SCRIPT =
+  "plugins/framework/plugins/tooling/plugins/e2e-harness/e2e/screenshot.ts";
+
+/**
+ * The recipes agent showing what the card layouts changed: it screenshots the
+ * recipes page with the photo cards and with the overlay cards (two values of
+ * the `cards` option the last version declares), then registers the two as a
+ * before / after pair — the call the seed ran ({@link RECIPES_BEFORE_AFTER}),
+ * under the tool-use id its pair is stored by.
+ */
+function cardsBeforeAfter(
+  story: Story,
+  files: Readonly<Record<string, string>>,
+  registration: BeforeAfterRegistration,
+): Turn[] {
+  const pair = RECIPES_BEFORE_AFTER;
+  const declared =
+    /<meta name="prototype-option" content="cards: ([^"]*)"/.exec(
+      files["index.html"] ?? "",
+    );
+  const values = declared?.[1]?.split("|").map((v) => v.trim()) ?? [];
+  for (const side of [pair.before, pair.after])
+    if (!values.includes(side.picks.cards))
+      throw new Error(
+        `[demo] the recipes prototype's last version declares no cards=${side.picks.cards} (cards: ${values.join(" | ") || "none"})`,
+      );
+  const scratch = `/tmp/equin-scratch/${conversationId(story)}`;
+  const { width, height } = pair.viewport;
+  const shots = [pair.before, pair.after].map((side) => ({
+    url: prototypeVariantUrl(story, pair.prototype, side.picks),
+    out: `${scratch}/cards-${side.picks.cards}`,
+  }));
+  return [
+    bash(
+      shots
+        .map(
+          (s) =>
+            `./equin run ${SCREENSHOT_SCRIPT} --url "${s.url}" --viewport ${width}x${height} --color-scheme light --out ${s.out}`,
+        )
+        .join(" && \\\n"),
+      "Screenshot the photo and overlay cards",
+      shots
+        .flatMap((s, i) => [
+          `url:          ${s.url}`,
+          "color-scheme: light",
+          `painted after ${[412, 268][i]}ms`,
+          `wrote ${s.out}-before.png`,
+        ])
+        .join("\n"),
+    ),
+    {
+      kind: "tool",
+      id: pair.toolUseId,
+      name: agentToolName(REGISTER_BEFORE_AFTER_TOOL),
+      input: {
+        title: pair.title,
+        beforePath: `${shots[0]!.out}-before.png`,
+        afterPath: `${shots[1]!.out}-before.png`,
+        beforeLabel: pair.before.label,
+        afterLabel: pair.after.label,
+      },
+      result: registration.result,
+    },
   ];
 }
 

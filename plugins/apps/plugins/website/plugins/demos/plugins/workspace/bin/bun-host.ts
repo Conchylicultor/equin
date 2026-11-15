@@ -24,6 +24,7 @@ import { hostEntries, hostProviders } from "./browser-host.generated";
 
 const HOME = "home/";
 const SONGS = "songs/";
+const BEFORE_AFTER = "before-after/";
 
 /** The demo's `data/` folder off disk, as the seed reads it. */
 export function diskDemoData(): DemoSeedData {
@@ -31,15 +32,23 @@ export function diskDemoData(): DemoSeedData {
   const prototypes: Record<string, Uint8Array> = {};
   const home: Record<string, Uint8Array> = {};
   const songs: Record<string, Uint8Array> = {};
+  const beforeAfter: Record<string, Uint8Array> = {};
   for (const rel of readdirSync(dir, { recursive: true }) as string[]) {
     if (!statSync(join(dir, rel)).isFile()) continue;
     const path = rel.split(sep).join("/");
     const bytes = new Uint8Array(readFileSync(join(dir, rel)));
     if (path.startsWith(HOME)) home[path.slice(HOME.length)] = bytes;
     else if (path.startsWith(SONGS)) songs[path.slice(SONGS.length)] = bytes;
+    else if (path.startsWith(BEFORE_AFTER))
+      beforeAfter[path.slice(BEFORE_AFTER.length)] = bytes;
     else prototypes[path] = bytes;
   }
-  return { prototypes: prototypeFixtureDataOf(prototypes), home, songs };
+  return {
+    prototypes: prototypeFixtureDataOf(prototypes),
+    home,
+    songs,
+    beforeAfter,
+  };
 }
 
 /** Every migration hash the bundle carries (`bundledMigrations()`), read off disk. */

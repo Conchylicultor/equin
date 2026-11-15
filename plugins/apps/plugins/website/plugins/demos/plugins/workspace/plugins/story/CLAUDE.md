@@ -6,13 +6,14 @@
 
 - Description: The workspace demo's story, as data: the agents' stories and transcripts, Demo's pages, prototypes' tags, songs and places — what the demo's build-time seed writes through each app's fixture writer, kept apart from the demo's scenario so the page that embeds the demo never bundles the apps this data names.
 - Core:
-  - Uses:
-    - `conversations.CONVERSATIONS_CATEGORY_ID`
-    - `conversations/agents.agentIdKind`
-    - `conversations/agents.agentLaunchIdKind`
+  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps/prototypes/files` ×4
+    - `infra/namespace` ×3
+    - `conversations/agents` ×2
+    - `conversations/before-after` ×2
     - `conversations/model-provider.ConversationModelSchema`
-    - `infra/namespace.asNamespace`
-    - `infra/namespace.namespaceUrl`
+    - `conversations.CONVERSATIONS_CATEGORY_ID`
+    - `infra/mcp.agentToolName`
     - `packages/string-hash.hashHex`
     - `page/editor.blockIdKind`
     - `page/inline-date.dateToken`
@@ -22,6 +23,7 @@
     - `wish.WISHES_CATEGORY_ID`
   - Exports (types):
     - `DemoAgent`
+    - `DemoBeforeAfterRegistration`
     - `DemoPageSession`
     - `DemoPageToolCall`
     - `DemoStory`
@@ -30,6 +32,7 @@
     - `DEMO_PAGE_IDS`
     - `DEMO_PAGES`
     - `DEMO_PLACES`
+    - `DEMO_RECIPES_BEFORE_AFTER`
     - `DEMO_SONG_ID`
     - `DEMO_STORIES`
     - `demoAgentId`

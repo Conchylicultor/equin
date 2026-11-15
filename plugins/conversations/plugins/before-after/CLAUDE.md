@@ -18,10 +18,12 @@ neither / both / a field of the other):
 - **files** — `{ title, beforePath, afterPath, beforeLabel?, afterLabel? }`: two
   PNGs the agent made (a state that needs clicks; another comparison).
 
-It mints a `ba-…` id (`baIdKind`), stores both PNGs as attachments linked to
+It mints a `ba-…` id (`baIdKind`; a fixture passes its own — the website
+demo's carries `demo`), stores both PNGs as attachments linked to
 the row (`before_after_pairs_attachments`, so the orphan sweep keeps them),
 inserts the row under `ctx.toolUseId`, and answers the id (to cite) plus both
-images.
+images. The answer's text is `registeredPairText` (`core/`), so a transcript
+recording a registration (the website demo's seed) reads as the tool's.
 
 ## Data (`core/`, `server/`)
 
@@ -165,6 +167,7 @@ images.
     - `BeforeAfterColorScheme`
     - `BeforeAfterPair`
     - `RegisterBeforeAfterInput`
+    - `RegisteredPairSummary`
   - Exports (values):
     - `baIdKind`
     - `BEFORE_AFTER_ARTIFACT_KIND`
@@ -180,6 +183,7 @@ images.
     - `parseRegisterInput`
     - `REGISTER_BEFORE_AFTER_TOOL`
     - `registerBeforeAfterInputShape`
+    - `registeredPairText`
     - `RegisterInputError`
 - Cross-plugin:
   - Uses tokens:
@@ -197,7 +201,9 @@ images.
     - `ui/tokens/density --space-sm`
     - `ui/tokens/shape --radius`
     - `ui/tokens/shape --spacing`
-  - Imported by: `active-data/before-after`
+  - Imported by:
+    - `active-data/before-after`
+    - `apps/website/demos/workspace/story`
 - Machine:
   - Register: `mcpTool('register_before_after')`
 

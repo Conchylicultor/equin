@@ -25,3 +25,5 @@ export {
   BEFORE_AFTER_ARTIFACT_KIND,
   extractBeforeAfterHits,
 } from "./internal/extract";
+export { registeredPairText } from "./internal/result-text";
+export type { RegisteredPairSummary } from "./internal/result-text";

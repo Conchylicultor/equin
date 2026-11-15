@@ -8,6 +8,8 @@ import { beforeAfterPairAttachments } from "./schema-attachments";
 
 /** What a registered pair records — its images as PNG bytes. */
 export interface NewBeforeAfterPair {
+  /** The pair's id — minted when absent; a fixture names its own (the website demo's carry `demo`). */
+  id?: BaId;
   conversationId: string;
   toolUseId: string | null;
   title: string;
@@ -20,13 +22,13 @@ export interface NewBeforeAfterPair {
 }
 
 /**
- * Store a pair: mint its id, store both PNGs as attachments, insert the row
+ * Store a pair: mint its id (unless it names one), store both PNGs as attachments, insert the row
  * and link the images to it (so the orphan sweep keeps them). Returns the id.
  */
 export async function registerBeforeAfterPair(
   pair: NewBeforeAfterPair,
 ): Promise<BaId> {
-  const id = baIdKind.mint();
+  const id = pair.id ?? baIdKind.mint();
   const [before, after] = await Promise.all([
     createAttachment(pair.before.png, `${id}-before.png`, "image/png"),
     createAttachment(pair.after.png, `${id}-after.png`, "image/png"),

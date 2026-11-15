@@ -78,6 +78,19 @@ never name it. Rendered by `<DemoScope scenario><AppEmbed app route/></DemoScope
   (`infra/paths/data-files/memory`).
   Design:
   `research/2026-10-28-global-per-app-demo-seeds-v2.md`.
+- **The recipes session ends on a before / after pair.** After the card
+  layouts (the prototype's last version), the agent screenshots the recipes
+  page with the photo cards and the overlay cards and calls
+  `register_before_after` — so the demo shows the swipe comparison under the
+  call, in the Artifacts and as the `ba-…` chip its last answer cites. The
+  pair is `story`'s `RECIPES_BEFORE_AFTER` (`ba-1792900000-demo01`, its
+  tool-use id, labels); the seed stores it through before-after's own
+  `registerBeforeAfterPair` under that tool-use id, and the transcript's
+  result is the tool's own text (`registeredPairText`). The PNGs are
+  committed in `data/before-after/` at the pair's viewport (the seed refuses
+  another size): after editing the prototype's last version, re-render both
+  — its `index.html` (with the prototype's `photos.js`) at 1120×720, light,
+  `document.documentElement.dataset.cards` set to `photo` / `overlay`.
 - **The prototypes, the home folder and the boot test read `data/` off disk**
   (`bin/bun-host.ts`'s `diskDemoData`: `data/home/` is Demo's home, the rest
   Prototypes'): the seed runs in Bun only, so nothing
@@ -99,8 +112,8 @@ never name it. Rendered by `<DemoScope scenario><AppEmbed app route/></DemoScope
   the weekly-review agent's read of the Journal, likewise)
   → the user decorating the page the agent minted with an icon (⏳), through
   the page header's own `PATCH` sent to the host's router (`seed`'s `host`
-  argument) — an agent's tools cannot set an icon, a person can — → settle →
-  the transcripts → the prototypes fixture → settle → the songs → settle →
+  argument) — an agent's tools cannot set an icon, a person can — → the
+  recipes agent's before / after pair → settle → the transcripts → the prototypes fixture → settle → the songs → settle →
   Places → settle → the home folder → settle. (Sonata's MIDI starters are not the demo's: the MIDI source seeds
   them itself, as on a fresh install.)
 - **Every id carries `demo`** (`conv-demo-…`, `task-demo-…`, `att-demo-…`, the
