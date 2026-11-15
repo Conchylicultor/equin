@@ -4429,6 +4429,10 @@
         "@types/babel__core": "^7.20.5",
       },
     },
+    "plugins/framework/plugins/tooling/plugins/web-artifacts/plugins/blocker-scan": {
+      "name": "@equin/plugin-framework-tooling-web-artifacts-blocker-scan",
+      "version": "0.0.1",
+    },
     "plugins/framework/plugins/tooling/plugins/web-artifacts/plugins/prune": {
       "name": "@equin/plugin-framework-tooling-web-artifacts-prune",
       "version": "0.0.1",
@@ -4570,6 +4574,10 @@
     },
     "plugins/infra/plugins/deps/plugins/download": {
       "name": "@equin/plugin-infra-deps-download",
+      "version": "0.0.1",
+    },
+    "plugins/infra/plugins/deps/plugins/download/plugins/github-release-updater": {
+      "name": "@equin/plugin-infra-deps-download-github-release-updater",
       "version": "0.0.1",
     },
     "plugins/infra/plugins/deps/plugins/mise": {
@@ -10185,6 +10193,8 @@
 
     "@equin/plugin-framework-tooling-web-artifacts": ["@equin/plugin-framework-tooling-web-artifacts@workspace:plugins/framework/plugins/tooling/plugins/web-artifacts"],
 
+    "@equin/plugin-framework-tooling-web-artifacts-blocker-scan": ["@equin/plugin-framework-tooling-web-artifacts-blocker-scan@workspace:plugins/framework/plugins/tooling/plugins/web-artifacts/plugins/blocker-scan"],
+
     "@equin/plugin-framework-tooling-web-artifacts-prune": ["@equin/plugin-framework-tooling-web-artifacts-prune@workspace:plugins/framework/plugins/tooling/plugins/web-artifacts/plugins/prune"],
 
     "@equin/plugin-framework-web-sdk": ["@equin/plugin-framework-web-sdk@workspace:plugins/framework/plugins/web-sdk"],
@@ -10242,6 +10252,8 @@
     "@equin/plugin-infra-deps-build": ["@equin/plugin-infra-deps-build@workspace:plugins/infra/plugins/deps/plugins/build"],
 
     "@equin/plugin-infra-deps-download": ["@equin/plugin-infra-deps-download@workspace:plugins/infra/plugins/deps/plugins/download"],
+
+    "@equin/plugin-infra-deps-download-github-release-updater": ["@equin/plugin-infra-deps-download-github-release-updater@workspace:plugins/infra/plugins/deps/plugins/download/plugins/github-release-updater"],
 
     "@equin/plugin-infra-deps-mise": ["@equin/plugin-infra-deps-mise@workspace:plugins/infra/plugins/deps/plugins/mise"],
 

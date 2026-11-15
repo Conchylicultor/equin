@@ -40,6 +40,7 @@ export const cliEntries: CollectedEntry[] = [
   { pluginPath: "framework/plugins/tooling/plugins/codegen", id: "framework.tooling.codegen", loader: () => import("@plugins/framework/plugins/tooling/plugins/codegen/cli"), dependsOn: [] },
   { pluginPath: "framework/plugins/tooling/plugins/exempt", id: "framework.tooling.exempt", loader: () => import("@plugins/framework/plugins/tooling/plugins/exempt/cli"), dependsOn: [] },
   { pluginPath: "framework/plugins/tooling/plugins/guards", id: "framework.tooling.guards", loader: () => import("@plugins/framework/plugins/tooling/plugins/guards/cli"), dependsOn: [] },
+  { pluginPath: "framework/plugins/tooling/plugins/web-artifacts/plugins/blocker-scan", id: "framework.tooling.web-artifacts.blocker-scan", loader: () => import("@plugins/framework/plugins/tooling/plugins/web-artifacts/plugins/blocker-scan/cli"), dependsOn: ["infra/plugins/deps", "infra/plugins/jobs/plugins/supervised-job"] },
   { pluginPath: "framework/plugins/tooling/plugins/web-artifacts/plugins/prune", id: "framework.tooling.web-artifacts.prune", loader: () => import("@plugins/framework/plugins/tooling/plugins/web-artifacts/plugins/prune/cli"), dependsOn: [] },
   { pluginPath: "infra/plugins/audio-analysis", id: "infra.audio-analysis", loader: () => import("@plugins/infra/plugins/audio-analysis/cli"), dependsOn: ["infra/plugins/jobs/plugins/supervised-job"] },
   { pluginPath: "infra/plugins/codesign", id: "infra.codesign", loader: () => import("@plugins/infra/plugins/codesign/cli"), dependsOn: [] },

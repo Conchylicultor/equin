@@ -52,6 +52,7 @@ delete it once none can be open.
 - Cross-plugin:
   - Imported by:
     - `infra/deps`
+    - `infra/deps/download/github-release-updater`
     - `infra/deps/mise`
     - `infra/deps/npm`
     - `infra/deps/python/uv-updater`

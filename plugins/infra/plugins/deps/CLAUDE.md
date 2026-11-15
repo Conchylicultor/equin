@@ -245,8 +245,12 @@ module eval).
   `env/<name>.part` through `ctx.run` (the progress meter lands in the install
   log), sha256 check (a mismatch throws, nothing is left under the name), rename;
   then `derive.run(ctx)` post-processes inside `env/` and must leave its declared
-  `outputs`, which are what `isIntact` checks. No updater: a frozen dataset says
-  `updates: { none }` (first user: `apps/chord/song-index`'s `sheetsage-dumps`).
+  `outputs`, which are what `isIntact` checks. A plain download has no updater:
+  a frozen dataset says `updates: { none }` (first user: `apps/chord/song-index`'s
+  `sheetsage-dumps`). `githubReleaseDownload` pins one GitHub release asset in a
+  JSON file its `github-release-updater` sub-plugin rewrites to each new
+  release past a 3-day cooldown (first user: `web-artifacts/blocker-scan`'s
+  `blocker-rulesets`).
 - `build` — the `build` kind (`build`, `builtFile`, its `deps/` barrel):
   `build({ inputs: [globs], tool: { versionArgv }, output, run, then?, targets?, admission? })`.
   Identity = sha256 of every file the `git ls-files` globs match at the root
@@ -290,10 +294,11 @@ torch.
 
 ## Not done yet (by design, follow-ups)
 
-- A way for a `download` declaration to name an updater (IP-country is
-  blocked: db-ip serves only the current and previous month, so a pinned month
-  would 404 within ~2 months) — see
-  `research/2026-09-30-infra-deps-migrate-adhoc-deps.md`. Every dependency is
+- An updater for a `download` pinned to anything but a GitHub release
+  (IP-country is blocked: db-ip serves only the current and previous month, so
+  a pinned month would 404 within ~2 months) — see
+  `research/2026-09-30-infra-deps-migrate-adhoc-deps.md`. GitHub releases have
+  one (`githubReleaseDownload`). Every dependency is
   on demand; no at-install policy is planned (Chromium is on demand too).
 
 ## Traps
@@ -384,10 +389,10 @@ torch.
   - Uses tokens:
     - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/font-family --font-mono`
-  - Imported by: 31 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `infra` ×11
+  - Imported by: 33 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `infra` ×12
+    - `framework` ×6
     - `apps` ×5
-    - `framework` ×5
     - `companions` ×2
     - `integrations` ×2
     - `media` ×2

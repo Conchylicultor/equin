@@ -62,6 +62,7 @@ is documented in the parent's CLAUDE.md.
     - `framework/tooling/checks`
     - `framework/tooling/checks/type-check`
     - `framework/tooling/checks/type-check/backstop`
+    - `framework/tooling/web-artifacts/blocker-scan`
     - `infra/host/host-admission`
     - `infra/launcher`
     - `infra/launcher/gateway-drift`

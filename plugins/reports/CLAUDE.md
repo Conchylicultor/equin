@@ -217,7 +217,7 @@ before it) beside the total, worded by `formatReportActivity`
     - `versionSkewCode`
     - `versionSkewExplains`
 - Cross-plugin:
-  - Imported by: 86 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 87 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `reports` ×33
     - `debug` ×20
     - `conversations` ×7
@@ -225,7 +225,7 @@ before it) beside the total, worded by `formatReportActivity`
     - `infra` ×4
     - `apps` ×3
     - `build` ×3
-    - `framework` ×2
+    - `framework` ×3
     - `tasks` ×2
     - `active-data/report`
     - `auth`

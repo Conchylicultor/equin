@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-framework-tooling-web-artifacts-blocker-scan",
+  "description": "The daily web-artifacts.blocker-scan job: matches every URL main serves (its served graph's artifacts and dist files, and each release dist) against the generic block rules of uBlock Origin Lite's default-on rulesets (EasyList, EasyPrivacy, uBlock filters — the blocker-rulesets dependency, a pinned GitHub release asset kept current by the github-release updater), and files a blocked-artifact-url report per (source file, rule) hit.",
+  "version": "0.0.1",
+  "private": true
+}

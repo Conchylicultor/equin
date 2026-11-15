@@ -31053,8 +31053,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `readMergeMarkers`
           - `resolveGitDir`
       - Cross-plugin:
-        - Imported by: 38 plugins — full list in [`plugins/framework/plugins/cli/REFERENCE.md`](../plugins/framework/plugins/cli/REFERENCE.md)
-          - `framework` ×27
+        - Imported by: 39 plugins — full list in [`plugins/framework/plugins/cli/REFERENCE.md`](../plugins/framework/plugins/cli/REFERENCE.md)
+          - `framework` ×28
           - `infra` ×5
           - `apps` ×3
           - `plugin-meta` ×2
@@ -31207,9 +31207,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `CLI_NAMES`
               - `isCliName`
           - Cross-plugin:
-            - Imported by: 27 plugins — full list in [`plugins/framework/plugins/cli/plugins/cli-name/REFERENCE.md`](../plugins/framework/plugins/cli/plugins/cli-name/REFERENCE.md)
-              - `framework` ×7
-              - `infra` ×6
+            - Imported by: 29 plugins — full list in [`plugins/framework/plugins/cli/plugins/cli-name/REFERENCE.md`](../plugins/framework/plugins/cli/plugins/cli-name/REFERENCE.md)
+              - `framework` ×8
+              - `infra` ×7
               - `debug` ×4
               - `apps` ×2
               - `build` ×2
@@ -32197,6 +32197,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/web-core` (1 debt)
               - `infra/asset-mirror/bundle` (1 debt)
               - `infra/corpus-index` (3 debt)
+              - `infra/deps/download/github-release-updater` (1 debt)
               - `infra/deps/mise` (2 debt)
               - `infra/deps/npm` (1 debt)
               - `infra/deps/playwright-browser` (1 debt)
@@ -33544,6 +33545,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/cli/build`
               - `framework/tooling/codegen`
               - `framework/tooling/e2e-harness`
+              - `framework/tooling/web-artifacts/blocker-scan`
               - `framework/tooling/web-artifacts/prune`
           - Exemptions:
             - Exempts itself from:
@@ -33555,6 +33557,50 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `repo-walk-safety/no-adhoc-repo-listing` — `core/internal/pipeline.ts` (sanctioned)
               - `blocking-fs/sync-named` — `core/internal/browser-hosts.ts`, `core/internal/compose.ts`, `core/internal/global-css.ts`, `core/internal/host-snapshots.ts`, `core/internal/crawl-snapshot.ts`, `core/internal/identity.ts`, `core/internal/lease.ts`, `core/internal/link.ts`, `core/internal/package-assets.ts`, `core/internal/pipeline.ts`, `core/internal/plan.ts`, `core/internal/precompress.ts`, `core/internal/served-dists.ts`, `core/internal/staged-verify.ts`, `core/internal/store.ts`, `core/internal/vendor-cache.ts`, `core/internal/vendors.ts`, `core/internal/vite-builder.ts`, `core/internal/worker-link.ts` (sanctioned)
           - Plugins:
+            - **`blocker-scan`** — The daily web-artifacts.blocker-scan job (main only, in a supervised child running `./equin web-artifacts-blocker-scan`) and the blocked-artifact-url report kind it files through the outbox: one row per (source file, rule) whose served URL a default content-blocker rule cancels.
+              - Server:
+                - Contributes: `report-kind` "blocked-artifact-url"
+                - Uses:
+                  - `infra/jobs/supervised-job.defineSupervisedJob`
+                  - `primitives/log-channels.defineLogSink`
+                  - `reports.ReportKind`
+                  - `reports.ReportRow`
+                - Register: `defineSupervisedJob('web-artifacts.blocker-scan')`
+              - Cli:
+                - Uses:
+                  - `framework/tooling/web-artifacts.servedGraphOf`
+                  - `infra/jobs/supervised-job.cliExecContext`
+              - Deps:
+                - Uses:
+                  - `infra/deps.defineDep`
+                  - `infra/deps/download.githubReleaseDownload`
+                - Exports (values):
+                  - `blockerRulesets`
+                  - `DEFAULT_RULESETS_FILE`
+              - Core:
+                - Exports (types):
+                  - `BlockedArtifactUrlPayload`
+                  - `CompiledRule`
+                  - `DefaultRulesets`
+                  - `DnrRule`
+                  - `Ruleset`
+                  - `UncompiledRule`
+                - Exports (values):
+                  - `BLOCKED_ARTIFACT_URL_KIND`
+                  - `blockedArtifactUrlFingerprint`
+                  - `blockedArtifactUrlMessage`
+                  - `BlockedArtifactUrlPayloadSchema`
+                  - `compileGenericRules`
+                  - `DefaultRulesetsSchema`
+                  - `DnrRuleSchema`
+                  - `isGenericCancellingRule`
+                  - `matchingRules`
+                  - `resourceTypesOf`
+                  - `RulesetSchema`
+                  - `SERVED_HOSTS`
+                  - `stableServedPath`
+                  - `urlFilterNeedle`
+                  - `urlFilterSource`
             - **`prune`** — The hourly web-artifacts.prune job: prunes the shared write-once web caches (artifact store, vendor sets, CSS cache, package assets) off every build's path — dist links read unlocked, only changed dists re-read under the store lock.
               - Server:
                 - Uses:
@@ -35156,10 +35202,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens:
           - `ui/tokens/color-palette --muted-foreground`
           - `ui/tokens/font-family --font-mono`
-        - Imported by: 31 plugins — full list in [`plugins/infra/plugins/deps/REFERENCE.md`](../plugins/infra/plugins/deps/REFERENCE.md)
-          - `infra` ×11
+        - Imported by: 33 plugins — full list in [`plugins/infra/plugins/deps/REFERENCE.md`](../plugins/infra/plugins/deps/REFERENCE.md)
+          - `infra` ×12
+          - `framework` ×6
           - `apps` ×5
-          - `framework` ×5
           - `companions` ×2
           - `integrations` ×2
           - `media` ×2
@@ -35235,7 +35281,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `apps/chord/song-index`
               - `apps/website/promo-film`
+              - `framework/tooling/web-artifacts/blocker-scan`
               - `infra/codesign`
+              - `infra/deps/download/github-release-updater`
               - `media/ffmpeg`
               - `media/film`
           - Deps:
@@ -35243,9 +35291,28 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `DownloadDerive`
               - `DownloadFile`
               - `DownloadSource`
+              - `GithubReleaseDownloadSource`
+              - `GithubReleasePin`
             - Exports (values):
               - `download`
               - `downloadedFile`
+              - `GITHUB_RELEASE_UPDATER_ID`
+              - `githubReleaseAssetName`
+              - `githubReleaseAssetUrl`
+              - `githubReleaseDownload`
+              - `GithubReleasePinSchema`
+              - `isGithubReleaseDownload`
+          - Plugins:
+            - **`github-release-updater`** — The github-release updater: moves every githubReleaseDownload's pin (a JSON file beside its declaration: tag, publish instant, asset sha256) to the repository's newest release past a 3-day cooldown, honouring reviewed holds, contributed to the infra/deps updater registry.
+              - Server:
+                - Contributes: `updater` "github-release"
+                - Uses: `infra/deps/updates.UpdaterDeclare`
+              - Exemptions:
+                - Exempts itself from: `boundaries/no-platform-api` — `server/internal/github-release-updater.ts` (debt)
+              - Core:
+                - Exports (values):
+                  - `GITHUB_RELEASE_HOLDS`
+                  - `GITHUB_RELEASE_HOLDS_FILE`
         - **`mise`** — The mise toolchain as an updater: contributes `mise` to the updater registry, so the Dependency upgrades automation includes it in the batched upgrade task and `./equin deps upgrade mise` (alias: `toolchain upgrade`) moves mise.lock through the gated runner.
           - Server:
             - Contributes: `updater` "mise"
@@ -35470,6 +35537,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Imported by:
               - `infra/deps`
+              - `infra/deps/download/github-release-updater`
               - `infra/deps/mise`
               - `infra/deps/npm`
               - `infra/deps/python/uv-updater`
@@ -37031,8 +37099,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exempts itself from: `boundaries/no-platform-api` — `server/internal/sweep.ts` (debt)
         - **`user-path`** — Which host paths a synchronous fs call may touch: AppPath (a path the app owns — its data dirs, its checkout; the only kind a sync fs call in runtime code may take) and UserPath (one the user or their config chose), with the type-aware lint that refuses a sync fs call on any path not proven app-owned — so a macOS Files & Folders prompt can never freeze a backend's JS thread, whether or not anyone marked the user's path.
           - Cross-plugin:
-            - Imported by: 110 plugins — full list in [`plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md`](../plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md)
-              - `infra` ×38
+            - Imported by: 111 plugins — full list in [`plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md`](../plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md)
+              - `infra` ×39
               - `framework` ×20
               - `apps` ×8
               - `debug` ×7
@@ -37552,8 +37620,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `takeRunErrorPath`
               - `writeRunErrorSync`
           - Cross-plugin:
-            - Imported by: 32 plugins — full list in [`plugins/infra/plugins/jobs/plugins/supervised-job/REFERENCE.md`](../plugins/infra/plugins/jobs/plugins/supervised-job/REFERENCE.md)
-              - `framework` ×9
+            - Imported by: 33 plugins — full list in [`plugins/infra/plugins/jobs/plugins/supervised-job/REFERENCE.md`](../plugins/infra/plugins/jobs/plugins/supervised-job/REFERENCE.md)
+              - `framework` ×10
               - `infra` ×6
               - `apps` ×5
               - `build` ×3
@@ -38097,8 +38165,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `namespaceUrl`
           - `resolveNamespaceAlias`
       - Cross-plugin:
-        - Imported by: 79 plugins — full list in [`plugins/infra/plugins/namespace/REFERENCE.md`](../plugins/infra/plugins/namespace/REFERENCE.md)
-          - `framework` ×13
+        - Imported by: 80 plugins — full list in [`plugins/infra/plugins/namespace/REFERENCE.md`](../plugins/infra/plugins/namespace/REFERENCE.md)
+          - `framework` ×14
           - `apps` ×12
           - `debug` ×12
           - `infra` ×10
@@ -38225,9 +38293,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `worktreeDataDir`
           - `worktreesDir`
       - Cross-plugin:
-        - Imported by: 131 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
+        - Imported by: 132 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
           - `infra` ×31
-          - `framework` ×20
+          - `framework` ×21
           - `apps` ×18
           - `debug` ×15
           - `conversations` ×7
@@ -38650,8 +38718,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/host-fs/user-path.asAppPath`
             - Exports (values): `REPO_ROOT`
           - Cross-plugin:
-            - Imported by: 50 plugins — full list in [`plugins/infra/plugins/paths/plugins/repo-root/REFERENCE.md`](../plugins/infra/plugins/paths/plugins/repo-root/REFERENCE.md)
-              - `framework` ×14
+            - Imported by: 51 plugins — full list in [`plugins/infra/plugins/paths/plugins/repo-root/REFERENCE.md`](../plugins/infra/plugins/paths/plugins/repo-root/REFERENCE.md)
+              - `framework` ×15
               - `infra` ×8
               - `apps` ×7
               - `build` ×6
@@ -42645,9 +42713,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TIMED_FS_CALLS`
           - `withFsCallTally`
       - Cross-plugin:
-        - Imported by: 172 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
-          - `infra` ×49
-          - `framework` ×25
+        - Imported by: 174 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
+          - `infra` ×50
+          - `framework` ×26
           - `apps` ×15
           - `debug` ×15
           - `backup` ×12
@@ -52867,13 +52935,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/density --space-xs`
           - `ui/tokens/shape --radius`
           - `ui/tokens/shape --spacing`
-        - Imported by: 78 plugins — full list in [`plugins/primitives/plugins/log-channels/REFERENCE.md`](../plugins/primitives/plugins/log-channels/REFERENCE.md)
+        - Imported by: 79 plugins — full list in [`plugins/primitives/plugins/log-channels/REFERENCE.md`](../plugins/primitives/plugins/log-channels/REFERENCE.md)
           - `apps` ×14
           - `debug` ×14
           - `infra` ×10
           - `conversations` ×6
           - `database` ×6
-          - `framework` ×5
+          - `framework` ×6
           - `network` ×4
           - `plugin-meta` ×3
           - `build` ×2
@@ -56921,7 +56989,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `versionSkewCode`
       - `versionSkewExplains`
   - Cross-plugin:
-    - Imported by: 86 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
+    - Imported by: 87 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
       - `reports` ×33
       - `debug` ×20
       - `conversations` ×7
@@ -56929,7 +56997,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `infra` ×4
       - `apps` ×3
       - `build` ×3
-      - `framework` ×2
+      - `framework` ×3
       - `tasks` ×2
       - `active-data/report`
       - `auth`
@@ -57552,6 +57620,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/tooling/checks`
               - `framework/tooling/checks/type-check`
               - `framework/tooling/checks/type-check/backstop`
+              - `framework/tooling/web-artifacts/blocker-scan`
               - `infra/host/host-admission`
               - `infra/launcher`
               - `infra/launcher/gateway-drift`

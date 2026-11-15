@@ -322,6 +322,7 @@ takes a `debt` exemption on the check's id.
     - `framework/web-core` (1 debt)
     - `infra/asset-mirror/bundle` (1 debt)
     - `infra/corpus-index` (3 debt)
+    - `infra/deps/download/github-release-updater` (1 debt)
     - `infra/deps/mise` (2 debt)
     - `infra/deps/npm` (1 debt)
     - `infra/deps/playwright-browser` (1 debt)

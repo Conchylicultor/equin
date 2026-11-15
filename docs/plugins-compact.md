@@ -202,6 +202,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
         - **`test-layout`** [exempt] — The canonical bun:test ⇄ vitest split as data (core), enforced as the test-layout:runner-split check.
         - **`web-artifacts`** [exempt] — Per-plugin web build artifacts: content-addressed vite lib-mode builds composed via an import map
           - Plugins:
+            - **`blocker-scan`** — The daily web-artifacts.blocker-scan job (main only, in a supervised child running `./equin web-artifacts-blocker-scan`) and the blocked-artifact-url report kind it files through the outbox: one row…
             - **`prune`** — The hourly web-artifacts.prune job: prunes the shared write-once web caches (artifact store, vendor sets, CSS cache, package assets) off every build's path — dist links read unlocked, only changed…
     - **`web-core`** [exempt]
     - **`web-sdk`** [test helpers] — Web plugin runtime: slots, contributions, loader
@@ -220,7 +221,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 
 - **`ids`** — The id-kind registry, web half: IdKinds.Kind registers a declared kind and IdKinds.Presenter how its ids render and open (icon, useReferent, usePane); useIdKinds() / useIdPresenters() read them at…
 
-- **`infra`** [test helpers] [exempt] [114 sub-plugins] — Umbrella for cross-cutting server-side primitives used by feature plugins: jobs, events, secrets, mcp, attachments.
+- **`infra`** [test helpers] [exempt] [115 sub-plugins] — Umbrella for cross-cutting server-side primitives used by feature plugins: jobs, events, secrets, mcp, attachments.
 
 - **`integrations`** — Umbrella for third-party service integrations that consume an auth connection (Gmail, …).
   - Plugins:

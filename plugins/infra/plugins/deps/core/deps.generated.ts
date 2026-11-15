@@ -17,6 +17,7 @@ export const depsEntries: CollectedEntry[] = [
   { pluginPath: "apps/plugins/sonata/plugins/transcription", id: "apps.sonata.transcription", loader: () => import("@plugins/apps/plugins/sonata/plugins/transcription/deps"), dependsOn: [] },
   { pluginPath: "apps/plugins/website/plugins/promo-film", id: "apps.website.promo-film", loader: () => import("@plugins/apps/plugins/website/plugins/promo-film/deps"), dependsOn: [] },
   { pluginPath: "companions/plugins/menu-bar", id: "companions.menu-bar", loader: () => import("@plugins/companions/plugins/menu-bar/deps"), dependsOn: [] },
+  { pluginPath: "framework/plugins/tooling/plugins/web-artifacts/plugins/blocker-scan", id: "framework.tooling.web-artifacts.blocker-scan", loader: () => import("@plugins/framework/plugins/tooling/plugins/web-artifacts/plugins/blocker-scan/deps"), dependsOn: [] },
   { pluginPath: "infra/plugins/audio-analysis", id: "infra.audio-analysis", loader: () => import("@plugins/infra/plugins/audio-analysis/deps"), dependsOn: [] },
   { pluginPath: "infra/plugins/codesign", id: "infra.codesign", loader: () => import("@plugins/infra/plugins/codesign/deps"), dependsOn: [] },
   { pluginPath: "infra/plugins/file-watcher/plugins/parcel-addon", id: "infra.file-watcher.parcel-addon", loader: () => import("@plugins/infra/plugins/file-watcher/plugins/parcel-addon/deps"), dependsOn: [] },
