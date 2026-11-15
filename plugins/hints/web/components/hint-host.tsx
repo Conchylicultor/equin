@@ -5,6 +5,11 @@ import { useEventCallback } from "@plugins/primitives/plugins/latest-ref/web";
 import { foldResource } from "@plugins/network/plugins/live/plugins/live-state/web";
 import { Theme } from "@plugins/primitives/plugins/css/plugins/theme-boundary/web";
 import { ViewportOverlay } from "@plugins/primitives/plugins/css/plugins/viewport-overlay/web";
+import { closestOverlayPanel } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  anyPopupOpen,
+  subscribeOpenPopups,
+} from "@plugins/primitives/plugins/overlay/plugins/popup-open/web";
 import { HintsLayer } from "../internal/layer";
 import { revealElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 import {
@@ -199,16 +204,22 @@ function ElectedHintHost() {
         if (isSuperseded(engine.tips, request, declaredHints, shown))
           return false;
         // On screen: a tip on a scrolled-away anchor would point at nothing.
-        return (
-          resolveAnchorElement(tipAnchorKey(request), { onScreen: true }) !==
-          null
-        );
+        const anchor = resolveAnchorElement(tipAnchorKey(request), {
+          onScreen: true,
+        });
+        if (anchor === null) return false;
+        // Never while the user is in a popup (a menu, a popover) about
+        // something else: the tip would compete with it, and pressing Got it
+        // is a press outside the popup, which closes it. A tip on something
+        // inside a floating panel (the popup itself) still shows.
+        return !anyPopupOpen() || closestOverlayPanel(anchor) !== null;
       },
       lastInputAt.current,
     );
   });
   useEffect(() => subscribeAnchors(stepTips), [stepTips]);
   useEffect(() => subscribeLedgers(stepTips), [stepTips]);
+  useEffect(() => subscribeOpenPopups(stepTips), [stepTips]);
   useEffect(() => stepTips(), [stepTips, engine.tips, tourRunning, pointing]);
   useEffect(() => {
     const tips = engine.tips;

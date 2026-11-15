@@ -457,6 +457,7 @@ yes/no guard: `useConfirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `primitives/link-gesture.activationProps`
     - `primitives/overlay/overlay-boundary.OverlayBoundary`
     - `primitives/overlay/popup-open.usePopupAnchorAtRest`
+    - `primitives/overlay/popup-open.usePublishOpenPopup`
     - `primitives/overlay/popup-open.useReportPopupOpen`
     - `primitives/overlay/portal-host.usePortalContainer`
     - `primitives/select-scope.ContentScope`

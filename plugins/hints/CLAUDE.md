@@ -55,7 +55,11 @@ function OpenAppButton({ conv }) {
 host shows it when the seen state is **known** and has no row for it, it was
 not answered this session, its anchor is on the page **and on screen** (one
 page-wide in-view watcher; scrolled away, the tip hides and comes back when the
-anchor does) and no tour runs. A tip **never lands with the screen it is
+anchor does), no tour runs and **no popup is open** — a menu, popover or
+select anywhere on the page (`popup-open`'s page-wide `anyPopupOpen`), unless
+the tip's anchor is itself inside a floating panel: the user is busy in it, and
+pressing Got it would be a press outside it, which closes it. A tip showing
+when a popup opens hides and comes back once it closes. A tip **never lands with the screen it is
 about**: the first request on a quiet queue waits a **1.2 s orientation
 window** (`ORIENT_MS` — the moment is usually a screen that just appeared, a
 window opened or an app launched, and the user first needs to see where they
@@ -337,10 +341,11 @@ Exhibits: `hints/card`, `hints/caption`, `hints/spotlight`, `hints/welcome`.
     - `Shortcuts.Shortcut` "hints.tour-back (ArrowLeft)"
     - `Shortcuts.Shortcut` "hints.tour-end (Escape)"
     - `Shortcuts.Shortcut` "hints.tour-next (ArrowRight)"
-  - Uses: 25 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 28 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `network/live/live-state` ×3
+    - `primitives/css/ui-kit` ×3
+    - `primitives/overlay/popup-open` ×3
     - `apps-core/tabs` ×2
-    - `primitives/css/ui-kit` ×2
     - `primitives/dom/in-view` ×2
     - `apps-core.useFocusedAppId`
     - `infra/endpoints.useFetchEndpoint`
@@ -354,7 +359,6 @@ Exhibits: `hints/card`, `hints/caption`, `hints/spotlight`, `hints/welcome`.
     - `primitives/dom/element-size.useResizeObserver`
     - `primitives/dom/scroll-reveal.revealElement`
     - `primitives/latest-ref.useEventCallback`
-    - `primitives/overlay/popup-open.useReportPopupOpen`
     - `primitives/shortcuts.defineShortcut`
     - `ui/icons.Icon`
     - `ui/theme-engine.ThemeEngine`

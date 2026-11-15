@@ -1,7 +1,13 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { act, cleanup, render } from "@testing-library/react";
 import { useState, type ReactNode } from "react";
-import { PopupOpenScope, useReportPopupOpen } from "../index";
+import {
+  anyPopupOpen,
+  PopupOpenScope,
+  subscribeOpenPopups,
+  usePublishOpenPopup,
+  useReportPopupOpen,
+} from "../index";
 
 /**
  * The invariant under test: a scope reads `true` exactly while at least one
@@ -139,5 +145,58 @@ describe("PopupOpenScope", () => {
 
     const { getByRole } = render(<Standalone />);
     expect(() => act(() => getByRole("button").click())).not.toThrow();
+  });
+});
+
+/** A real popup stand-in: publishes page-wide whatever its `open` prop says. */
+function PagePopup({ open }: { open: boolean }) {
+  usePublishOpenPopup(open);
+  return null;
+}
+
+describe("anyPopupOpen", () => {
+  it("counts every popup on the page, scope or not, and releases on unmount", () => {
+    let changes = 0;
+    const unsubscribe = subscribeOpenPopups(() => (changes += 1));
+    const { rerender, unmount } = render(
+      <>
+        <PagePopup open={false} />
+        <Probe>
+          <PagePopup open={false} />
+        </Probe>
+      </>,
+    );
+    expect(anyPopupOpen()).toBe(false);
+    rerender(
+      <>
+        <PagePopup open />
+        <Probe>
+          <PagePopup open />
+        </Probe>
+      </>,
+    );
+    expect(anyPopupOpen()).toBe(true);
+    rerender(
+      <>
+        <PagePopup open={false} />
+        <Probe>
+          <PagePopup open />
+        </Probe>
+      </>,
+    );
+    expect(anyPopupOpen()).toBe(true);
+    unmount();
+    expect(anyPopupOpen()).toBe(false);
+    expect(changes).toBe(4);
+    unsubscribe();
+  });
+
+  it("is not held by a region reporting to its scope only", () => {
+    render(
+      <Probe>
+        <Popup open />
+      </Probe>,
+    );
+    expect(anyPopupOpen()).toBe(false);
   });
 });

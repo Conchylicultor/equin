@@ -1,9 +1,13 @@
 import * as React from "react";
 
-import { useReportPopupOpen } from "@plugins/primitives/plugins/overlay/plugins/popup-open/web";
+import {
+  usePublishOpenPopup,
+  useReportPopupOpen,
+} from "@plugins/primitives/plugins/overlay/plugins/popup-open/web";
 
 /**
- * Publishes a base-ui `Root`'s open state to the enclosing `PopupOpenScope`.
+ * Publishes a base-ui `Root`'s open state to the enclosing `PopupOpenScope`,
+ * and page-wide (`usePublishOpenPopup`).
  *
  * This is the ONLY place in the repo that reads a popup library's open state on
  * behalf of surrounding chrome — consumers get the typed boolean out of
@@ -33,6 +37,7 @@ export function usePopupOpenMirror<Args extends unknown[]>({
   // stands in for the uncontrolled case, where base-ui keeps the state itself.
   const isOpen = open ?? mirrored;
   useReportPopupOpen(isOpen);
+  usePublishOpenPopup(isOpen);
 
   return {
     onOpenChange: (nextOpen, ...rest) => {
