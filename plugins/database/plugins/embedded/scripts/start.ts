@@ -52,9 +52,14 @@ import {
   PG_LOG_FILE,
   PG_LEGACY_LOG_FILE,
   PG_PID_FILE,
-  MAX_CONNECTIONS,
   applyClusterSettings,
+  clusterServerSettings,
+  pendingServerSettings,
 } from "../shared";
+import { totalmem } from "node:os";
+
+/** This machine's postmaster-start settings (`max_connections`, `shared_buffers`). */
+const SERVER_SETTINGS = clusterServerSettings(totalmem());
 
 const READY_TIMEOUT_SEC = 30;
 
@@ -385,7 +390,11 @@ function startPostmaster(binDir: string, target: ServiceLogTarget): void {
       "-l",
       log.path,
       "-o",
-      `-k ${PG_SOCKET_DIR} -p ${PG_PORT} -c max_connections=${MAX_CONNECTIONS} -c listen_addresses=''`,
+      [
+        `-k ${PG_SOCKET_DIR} -p ${PG_PORT}`,
+        ...Object.entries(SERVER_SETTINGS).map(([k, v]) => `-c ${k}=${v}`),
+        `-c listen_addresses=''`,
+      ].join(" "),
       "-w",
       "-t",
       String(READY_TIMEOUT_SEC),
@@ -474,6 +483,13 @@ async function ensureClusterState(): Promise<void> {
   try {
     await ensureBaseDatabase(client);
     await applyClusterSettings(client);
+    // A reattached cluster keeps the server settings it started with: say
+    // which differ, so a changed value is not mistaken for an applied one.
+    for (const p of await pendingServerSettings(client, SERVER_SETTINGS)) {
+      console.log(
+        `pg: ${p.name} is ${p.running}, wanted ${p.wanted} — takes effect on the cluster's next restart`,
+      );
+    }
   } finally {
     // Block form, not `eslint-disable-next-line`: a disable/enable PAIR is a
     // line RANGE and survives the format pass reflowing the line under it.

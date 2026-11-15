@@ -24148,13 +24148,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PG_USER`
           - `pgPostmasterPidFile`
       - Shared:
-        - Exports (types): `ClusterSettingsClient`
+        - Exports (types):
+          - `ClusterSettingsClient`
+          - `PendingServerSetting`
         - Exports (values):
           - `applyClusterSettings`
           - `CLIENT_CONNECTION_CHECK_INTERVAL_MS`
           - `CLUSTER_SESSION_SETTINGS`
+          - `clusterServerSettings`
           - `IDLE_IN_TRANSACTION_TIMEOUT_MS`
           - `MAX_CONNECTIONS`
+          - `pendingServerSettings`
           - `PG_BASE_DATABASE`
           - `PG_DATA_DIR`
           - `PG_DIR`
@@ -24168,6 +24172,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PG_USER`
           - `pgPostmasterPidFile`
           - `RETIRED_CLUSTER_SETTINGS`
+          - `sharedBuffersBytes`
     - **`fork`** — Durable, self-healing worktree DB fork: a graphile job that forks the base DB per worktree (idempotent, atomic), plus a scheduled sweep of orphaned temp forks.
       - Server:
         - Contributes:

@@ -14,6 +14,7 @@ This plugin ships:
 - **Single embedded cluster, supervised by the gateway.** The gateway's generic service supervisor invokes `scripts/start.ts`, which runs `initdb` on first start (writing to `~/.equin/postgres/data-pg18/`), `pg_ctl start -w` to launch PG, and then `CREATE DATABASE` for the base database if the cluster does not have it. `pg_ctl` daemonizes PG (forks + setsid), so the spawned process exits as soon as PG is ready, leaving PG running with no parent. PG listens on a Unix socket at `~/.equin/postgres/socket/.s.PGSQL.5433`.
 - **The base database is born with the cluster.** The base database is the one that is nobody's copy — every other database in the app is minted from it — so the script that brings the cluster up creates it, empty, on every start (reattach included, so a dropped one comes back). Its schema is not this plugin's business: the first backend to boot against it runs the migrations. Before this, nothing anywhere created it, and a fresh clone's first build waited 60s for a fork of a database that did not exist.
 - **Session settings are the cluster's.** A setting every session on every database must start with (`CLUSTER_SESSION_SETTINGS` in `shared/` — today `idle_in_transaction_session_timeout` (5 min, `IDLE_IN_TRANSACTION_TIMEOUT_MS`: the bound around app code that stalls between two statements of a transaction — it holds row locks, a lane slot, and if it wrote the live-update watermark of every database; every session it ends is reported, see `database/lock-watch`), `client_connection_check_interval`, so a statement whose client closed its connection — a call lost to its deadline, which `database/connection` closes — is cancelled within 10 s instead of running or waiting on a lock to completion, and `log_connections` — `receipt,setup_durations`, so a connection stall shows in Postgres's log whether the postmaster accepted the socket and how long the backend took to be ready) is written by the start script with `ALTER SYSTEM` + `pg_reload_conf()` on every start, reattach included — one writer per cluster start. The same start `ALTER DATABASE … RESET`s a cluster setting on every database still carrying its own copy, which would override the cluster's value there (the first, per-database version of the idle-in-transaction timeout left one on every database that booted it). A setting the cluster must no longer carry goes in `RETIRED_CLUSTER_SETTINGS`: the start `ALTER SYSTEM RESET`s it and resets its per-database copies the same way (none today). A changed setting reaches a running cluster on the next gateway start (or `cluster-settings.test.ts`, which applies the same values). Never `ALTER DATABASE … SET` it from a backend's boot: every process booting the DB layer (the server and each supervised exec child) would write the same `pg_db_role_setting` row, and concurrent boots fail with `tuple concurrently updated`; a fork would not carry it either.
+- **Server settings are passed at postmaster start.** What Postgres reads only when the postmaster starts (`clusterServerSettings(ram)` in `shared/` — `max_connections` and `shared_buffers`) is passed on `pg_ctl`'s command line (`-c`, which wins over `postgresql.conf`). `shared_buffers` is 1/16 of RAM, clamped to 128 MB…1 GB: 1 GB holds main's non-archive tables (~770 MB, ~300 MB hot) plus the running worktrees' hot copies, where initdb's 128 MB turned over every ~20 s under ~490 databases' autovacuum visits (measurements in `server-settings.ts`). A reattach cannot apply a changed value: the start script logs each one that differs (`pendingServerSettings`) — it lands on the cluster's next full restart.
 - **Cluster shared by every worktree backend.** Isolation comes from per-worktree databases inside the cluster, not separate clusters. Worktree backends connect via `~/.equin/postgres/socket` on port 5433 (see `server/src/db/client.ts`).
 - **PG outlives gateway and central restarts.** Because PG is detached, both `./equin build` (which restarts central) and `./equin start` (which rebuilds + relaunches the gateway) leave PG untouched. Worktree backends keep their pools alive across both blips. A reattach check lets a freshly-started gateway pick up an already-running PG instead of trying to spawn a duplicate. It judges `postmaster.pid` by the pid it names (`packages/pid-file-holder`: a process of this user whose command line carries `-D <data dir>` is the cluster), never by a socket dial — a dial fails for a postmaster that is only slow, and reading that as "crashed" deleted the live postmaster's lock file, which Postgres re-checks about once a minute and answers with an immediate shutdown. The file is removed only when provably stale (no such process, or another user's) and still unchanged; a process of ours that is not the postmaster, or a file naming no pid, fails the start loudly instead. Being alive is not answering, so the session the script then opens (base database, cluster settings) is a deadline-bearing `createDbClient` (`cluster-start`, 60 s per connect and per query): a wedged cluster fails the start, naming the call, instead of hanging it and with it the gateway's watchdog (2026-11-08: reproduced with a SIGSTOPped postmaster — the bare `pg.Client` waited forever).
 - **Binaries from `embedded-postgres` npm.** The package vendors PG 18 binaries per platform via `@embedded-postgres/<platform>` optionalDependencies. The package only ships `postgres`, `initdb`, and `pg_ctl`. Client tools (`pg_isready`, `psql`) are replaced with `pg.Client` calls / `net.Dial` socket pings; `pg_dump`/`pg_restore` are vendored by the sibling [`client-tools`](../client-tools/CLAUDE.md) plugin, built from the same Postgres release — the `postgres-release` lockstep group (in client-tools' `package.json`) makes the npm updater move both together, and `deps-npm:groups-coherent` fails when the lock disagrees.
@@ -75,13 +76,17 @@ Worktree backends read connection params from `~/.equin/state/db-config/database
     - `PG_USER`
     - `pgPostmasterPidFile`
 - Shared:
-  - Exports (types): `ClusterSettingsClient`
+  - Exports (types):
+    - `ClusterSettingsClient`
+    - `PendingServerSetting`
   - Exports (values):
     - `applyClusterSettings`
     - `CLIENT_CONNECTION_CHECK_INTERVAL_MS`
     - `CLUSTER_SESSION_SETTINGS`
+    - `clusterServerSettings`
     - `IDLE_IN_TRANSACTION_TIMEOUT_MS`
     - `MAX_CONNECTIONS`
+    - `pendingServerSettings`
     - `PG_BASE_DATABASE`
     - `PG_DATA_DIR`
     - `PG_DIR`
@@ -95,5 +100,6 @@ Worktree backends read connection params from `~/.equin/state/db-config/database
     - `PG_USER`
     - `pgPostmasterPidFile`
     - `RETIRED_CLUSTER_SETTINGS`
+    - `sharedBuffersBytes`
 
 <!-- AUTOGENERATED:END -->
