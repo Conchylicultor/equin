@@ -321,6 +321,7 @@ function contracts(
   bound: { max: number } | { unbounded: { reason: string; budget: number } } = {
     unbounded: { reason: "a test set", budget: 1000 },
   },
+  rowsSchema: z.ZodType = z.array(z.object({ id: z.string() }).passthrough()),
 ) {
   const all = {
     key,
@@ -331,6 +332,7 @@ function contracts(
   } as unknown as AllQueryResourceContract<Row>;
   const rows = {
     key: `${key}:rows`,
+    schema: rowsSchema,
     queryPk: "id",
     point: {
       decode: (p: Record<string, string>) =>
@@ -880,7 +882,9 @@ describe("the definition (A18 / A40)", () => {
       }).definition,
     ).not.toBe(base);
     const wire = (id: string) =>
-      spec({ wire: { encodeRow: (row) => row, ids: { title: id } } });
+      spec({
+        wire: { encodeRow: (row) => row, ids: { title: id }, pinned: true },
+      });
     const withWireA = compile("a-def-2", wire("codec:a")).definition;
     expect(withWireA).not.toBe(base);
     expect(compile("a-def-2", wire("codec:b")).definition).not.toBe(withWireA);
@@ -1234,7 +1238,9 @@ describe("bind-time refusals", () => {
 
   test("A18: wire codecs with no id", () => {
     refuses(
-      spec({ wire: { encodeRow: (row) => row, ids: {} } }) as never,
+      spec({
+        wire: { encodeRow: (row) => row, ids: {}, pinned: true },
+      }) as never,
       /`wire\.ids` is empty/,
     );
   });
@@ -1393,5 +1399,60 @@ describe("bind-time refusals", () => {
       { from: tasks, joins: [bad], select: () => ({}) },
       /aggregate "n" reads "base"\."id", outside the join/,
     );
+  });
+});
+
+describe("the `:rows` handoff definition (the epoch handoff)", () => {
+  const answer = (c: ReturnType<typeof compile>) =>
+    c.rows.routes!.handoffDefinition!();
+
+  test("is defined, equal for two compiles of one declaration, and never the L2 definition", () => {
+    const a = answer(compile("a-hd-1"));
+    expect(a.kind).toBe("defined");
+    expect(answer(compile("a-hd-1"))).toEqual(a);
+    expect(a.kind === "defined" && a.definition).not.toBe(
+      compile("a-hd-1").definition,
+    );
+    // The whole set itself is never inherited (not a point read).
+    expect(compile("a-hd-1").all.routes!.handoffDefinition).toBeUndefined();
+  });
+
+  test("moves with the `all` definition (the SQL, the wire ids)", () => {
+    const base = answer(compile("a-hd-2"));
+    expect(
+      answer(compile("a-hd-2", spec({ where: sql`${tasks.heldAt} IS NULL` }))),
+    ).not.toEqual(base);
+    expect(
+      answer(
+        compile(
+          "a-hd-2",
+          spec({
+            wire: {
+              encodeRow: (row) => row,
+              ids: { title: "codec:a" },
+              pinned: true,
+            },
+          }),
+        ),
+      ),
+    ).not.toEqual(base);
+  });
+
+  test("moves with the `:rows` row schema, and is none over an opaque part", () => {
+    const of = (schema: z.ZodType) =>
+      compileAllCollection(contracts("a-hd-3", undefined, undefined, schema), {
+        ...spec(),
+        db: recordingQueryDb(script).db,
+      }).rows.routes!.handoffDefinition!();
+    const base = of(z.array(z.object({ id: z.string() })));
+    expect(base.kind).toBe("defined");
+    expect(of(z.array(z.object({ id: z.string().min(1) })))).not.toEqual(base);
+    const opaque = of(
+      z.array(z.object({ id: z.string().transform((s) => s.trim()) })),
+    );
+    expect(opaque).toEqual({
+      kind: "none",
+      reason: expect.stringContaining("an opaque row-schema part"),
+    });
   });
 });

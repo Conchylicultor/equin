@@ -6,6 +6,8 @@ export {
 export {
   fallbackTo,
   retype,
+  wireTransparent,
+  WireTransparencyError,
   type FallbackValue,
 } from "./internal/described-fn";
 export {

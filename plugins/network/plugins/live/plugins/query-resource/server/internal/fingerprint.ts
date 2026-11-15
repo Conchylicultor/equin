@@ -81,6 +81,13 @@ export function decoderId(
   decoder: SqlDecoderLike,
   where: string,
   fail: (message: string) => never,
+  /**
+   * A `parsedText` / `parsedJson` column's schema with an opaque part:
+   * folded in (`fold`, the L2 definition's rule — refusing would fail the
+   * compile) or refused (`refuse`, the epoch handoff's: a read with no
+   * definition is only reloaded).
+   */
+  opts: { opaqueColumn: "fold" | "refuse" } = { opaqueColumn: "fold" },
 ): string {
   // `.mapWith(fn)` stores `{ mapFromDriverValue: fn }`.
   const held = is(decoder, Column)
@@ -96,8 +103,17 @@ export function decoderId(
       // A `parsedText` / `parsedJson` column decodes through its schema: a
       // change to it moves what a read produces, its name and type unmoved.
       const schema = columnSchema(col);
+      const described =
+        schema === undefined ? undefined : describeSchema(schema);
+      if (opts.opaqueColumn === "refuse" && described?.opaque.length) {
+        return fail(
+          `${where} reads column "${col.name}", decoded through a schema whose output depends on a function body (${described.opaque.join("; ")})`,
+        );
+      }
       return `column:${getTableName(col.table)}.${col.name}:${col.columnType}:${col.getSQLType()}${
-        schema === undefined ? "" : `:${JSON.stringify(describeZod(schema))}`
+        described === undefined
+          ? ""
+          : `:${JSON.stringify(described.description)}`
       }`;
     }
     case "builtin":
@@ -112,7 +128,7 @@ export function decoderId(
       return `parsed:${JSON.stringify([origin.label, description])}`;
     }
     case "nullable":
-      return `nullable:${decoderId(origin.inner, where, fail)}`;
+      return `nullable:${decoderId(origin.inner, where, fail, opts)}`;
     case "opaque":
       return fail(
         `${where}'s decoder is a function with no readable identity — the definition of a persisted compile could not move when its body does, so a value the old decoder produced would be served after a deploy (A18). Decode with a column, \`Number\` / \`String\` / \`Boolean\` / \`BigInt\`, \`parsed(schema, label)\`, or \`nullable(…)\` of one.`,

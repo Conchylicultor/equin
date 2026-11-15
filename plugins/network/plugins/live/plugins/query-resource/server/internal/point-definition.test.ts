@@ -24,6 +24,7 @@ import {
   fallbackTo,
   retype,
 } from "@plugins/packages/plugins/zod-introspect/core";
+import { parsedText } from "@plugins/database/plugins/sql-column/server";
 import { recordingQueryDb } from "../testing/recording-db";
 import { compileWindowQuery } from "./register";
 import type { PointQueryResourceSpec } from "./spec";
@@ -158,6 +159,27 @@ describe("a point read's handoff definition", () => {
         },
       ),
     ).toBeNull();
+  });
+
+  test("is none for a column decoded through a schema with an opaque part (the L2 definition only folds it)", () => {
+    const trimmed = pgTable("pd_trimmed", {
+      id: text("id").primaryKey(),
+      title: parsedText(
+        "title",
+        z.string().transform((v) => v.trim()),
+      ),
+    });
+    const { db } = recordingQueryDb();
+    const compiled = compileWindowQuery(contract(), {
+      from: trimmed,
+      select: { id: trimmed.id, title: trimmed.title },
+      point: { by: trimmed.id },
+      db,
+    } as unknown as Spec);
+    expect(compiled.serverOpts.routes.handoffDefinition!()).toEqual({
+      kind: "none",
+      reason: expect.stringContaining("a function body"),
+    });
   });
 
   test("is defined over a literal Date default, a retype cast and a fallbackTo catch — each of which moves it", () => {

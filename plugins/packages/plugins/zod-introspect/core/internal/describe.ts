@@ -18,7 +18,7 @@ export interface SchemaDescription {
  * layout, so the description survives a zod upgrade, and moves only when what the schema accepts or produces does.
  *
  * FAIL-CLOSED: a part whose OUTPUT depends on a function body — a transform
- * (and so a preprocess) other than `retype`, a codec (`z.codec`, `z.stringbool()`), a rewrite check (`.trim()` — zod 4 cannot say which
+ * (and so a preprocess) other than `retype` / `wireTransparent`, a codec (`z.codec`, `z.stringbool()`), a rewrite check (`.trim()` — zod 4 cannot say which
  * rewrite it is), a catch value not minted by `fallbackTo`, a default that is
  * neither one stable JSON value nor a literal `Date`, a literal that is not a
  * JSON value — is described as `{ $opaque: <what> }` and listed in `opaque`,
@@ -95,15 +95,21 @@ export function describeSchema(schema: unknown): SchemaDescription {
       case "array":
       case "set":
         return { kind: node.kind, element: kid({ kind: "element" }), checks };
-      case "record":
+      case "record": {
+        // A key is read as text (`toString`, never `toJSON`): a
+        // wire-transparent step there vouches for nothing.
+        const keyD = kid({ kind: "keyType" });
         return {
           kind: "record",
-          key: kid({ kind: "keyType" }),
+          key: holdsWireTransparent(keyD)
+            ? blind(path, "a wire-transparent step under a record key")
+            : keyD,
           value: kid({ kind: "valueType" }),
           mode: node.mode,
           partial: node.partial,
           checks,
         };
+      }
       case "map":
         return {
           kind: "map",
@@ -143,22 +149,47 @@ export function describeSchema(schema: unknown): SchemaDescription {
           checks,
         };
       }
-      case "intersection":
+      case "intersection": {
+        // The merge reads each side's output's own properties, not its JSON.
+        const side = (edge: "left" | "right"): unknown => {
+          const d = kid({ kind: edge });
+          return holdsWireTransparent(d)
+            ? blind(path, "a wire-transparent step under an intersection")
+            : d;
+        };
         return {
           kind: "intersection",
-          left: kid({ kind: "left" }),
-          right: kid({ kind: "right" }),
+          left: side("left"),
+          right: side("right"),
           checks,
         };
-      case "pipe":
+      }
+      case "pipe": {
+        // A `wireTransparent` step vouches for its OWN output's JSON. A pipe
+        // whose `out` reads its `in`'s output structurally (an object's
+        // properties, a string's type…) may produce other JSON from it, so a
+        // wire-transparent step inside `in` is data only when `out` reads
+        // nothing of it: `any` / `unknown` (a `z.custom` is `any` + a
+        // refine, which only accepts or refuses).
+        const outNode = inspect(childOf(node, "out"));
+        const inD = kid({ kind: "in" });
+        const readsStructurally =
+          outNode.kind !== "any" && outNode.kind !== "unknown";
         return {
           kind: "pipe",
-          in: kid({ kind: "in" }),
+          in:
+            readsStructurally && holdsWireTransparent(inD)
+              ? blind(
+                  path,
+                  "a wire-transparent step whose output the pipe reads structurally",
+                )
+              : inD,
           out: kid({ kind: "out" }),
           // A codec's decode is a function body between `in` and `out`.
           ...(node.codec ? { codec: blind(path, "a codec transform") } : {}),
           checks,
         };
+      }
       case "template_literal":
         // Its parts are no children (pieces of one string), described here.
         return {
@@ -183,13 +214,11 @@ export function describeSchema(schema: unknown): SchemaDescription {
           checks,
         };
       case "transform":
-        // A function this plugin minted (`retype`) is data; any other is a body.
+        // A function this plugin minted (`retype`, `wireTransparent`) is
+        // data; any other is a body.
         return {
           kind: "transform",
-          fn:
-            describedFn(node.fn)?.fn === "retype"
-              ? "retype"
-              : blind(path, "a transform"),
+          fn: describeTransformFn(node.fn, () => blind(path, "a transform")),
           checks,
         };
       case "default":
@@ -282,6 +311,13 @@ export function describeSchema(schema: unknown): SchemaDescription {
   return { description: describe(schema, ""), opaque };
 }
 
+function describeTransformFn(fn: unknown, blinded: () => unknown): unknown {
+  const minted = describedFn(fn);
+  if (minted?.fn === "retype") return "retype";
+  if (minted?.fn === "wire-transparent") return "wire-transparent";
+  return blinded();
+}
+
 function describeCheck(
   c: SchemaCheck,
   path: string,
@@ -307,6 +343,26 @@ function describeCheck(
       );
     }
   }
+}
+
+/** Whether a description holds a `wireTransparent` step anywhere. */
+function holdsWireTransparent(description: unknown): boolean {
+  if (Array.isArray(description)) return description.some(holdsWireTransparent);
+  if (typeof description !== "object" || description === null) return false;
+  const record = description as Record<string, unknown>;
+  if (record.kind === "transform" && record.fn === "wire-transparent") {
+    return true;
+  }
+  return Object.values(record).some(holdsWireTransparent);
+}
+
+/** A pipe node's `in` / `out` child schema. */
+function childOf(node: SchemaNode, edge: "in" | "out"): unknown {
+  const child = childrenOf(node).find((c) => c.edge.kind === edge);
+  if (child === undefined) {
+    throw new Error(`describeSchema: a pipe without its ${edge} child.`);
+  }
+  return child.schema;
 }
 
 /** Whether a description holds a `refine` check anywhere (a function body deciding acceptance). */

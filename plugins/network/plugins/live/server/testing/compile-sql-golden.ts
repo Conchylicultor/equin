@@ -1492,6 +1492,7 @@ async function allCases(): Promise<Record<string, Json>> {
             wire: {
               encodeRow: (row) => row,
               ids: { title: "golden:identity" },
+              pinned: true,
             },
             db,
           },

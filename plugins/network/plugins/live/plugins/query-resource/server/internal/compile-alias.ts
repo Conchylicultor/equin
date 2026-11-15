@@ -15,7 +15,10 @@ import {
 } from "@plugins/database/plugins/sql-projection/server";
 import { executeRows } from "@plugins/database/plugins/sql-rows/core";
 import { columnSchema } from "@plugins/database/plugins/sql-column/server";
-import { isTextPassthrough } from "@plugins/packages/plugins/zod-introspect/core";
+import {
+  describeSchema,
+  isTextPassthrough,
+} from "@plugins/packages/plugins/zod-introspect/core";
 import type {
   KeyedServerResourceOptions,
   ResourceParams,
@@ -23,6 +26,7 @@ import type {
 } from "@plugins/network/plugins/live/plugins/resource-runtime/core";
 import type {
   DerivedRead,
+  HandoffDefinitionAnswer,
   RoutePlan,
   TupleUse,
 } from "@plugins/network/plugins/live/plugins/resource-runtime/plugins/routing/core";
@@ -222,6 +226,14 @@ export interface AllCollectionSpec<
   wire?: {
     encodeRow: (row: Record<string, unknown>) => Record<string, unknown>;
     ids: Readonly<Record<string, string>>;
+    /**
+     * Whether `ids` pin ALL of `encodeRow`'s code — false when a codec is
+     * named by its field alone (a scoped set's: enough for the L2
+     * definition, which guards no persisted row of a scoped set). Then
+     * `:rows` has no handoff definition: a codec's body could change with
+     * no id moving, and an inherited tuple would hold the old encoding.
+     */
+    pinned: boolean;
   };
   /** How an order field is read off an encoded row (the order signature). Default `row[field]`. */
   readField?: (row: Record<string, unknown>, field: string) => unknown;
@@ -843,8 +855,78 @@ export function compileAllCollectionWith<
   } as KeyedServerResourceOptions<Row[], AllParams> & ScopePolicy<AllParams>;
 
   const point = contracts.rows.point;
+  // The epoch handoff's definition of `:rows` (resource-runtime's
+  // `handoffDefinition`; the point compile's twin is `./point-definition`):
+  // everything that decides what a `:rows` load produces — the `all`
+  // definition above (every shape's SQL, decoder ids, SQL types and
+  // nullability, rollup DDL, wire ids, key field), the `:rows` shape itself
+  // (over the placeholder ids, as a client's ids are read: `"absent"`), the
+  // `:rows` row schema and its id bound. Fail-closed like the point compile:
+  // a row schema with an opaque part (which the `all` definition folds in
+  // rather than refuses) yields none, and a non-literal param too. Rendered
+  // lazily, once the runtime first asks.
+  const refuse = (message: string): never => {
+    throw new RowsHandoffRefused(message);
+  };
+  const rowsHandoffDefinition = (): HandoffDefinitionAnswer => {
+    if (spec.wire !== undefined && !spec.wire.pinned) {
+      return {
+        kind: "none",
+        reason: "a wire codec its ids do not pin (named by field only)",
+      };
+    }
+    // A column decoder's schema with an opaque part is folded into the
+    // `all` definition; here it is refused, as the point compile does.
+    for (const f of fields) {
+      decoderId(decoderOfRead(f.read), `field "${f.name}"`, refuse, {
+        opaqueColumn: "refuse",
+      });
+    }
+    const { description, opaque } = describeSchema(contracts.rows.schema);
+    if (opaque.length > 0) {
+      return {
+        kind: "none",
+        reason: `an opaque row-schema part (${opaque.join("; ")})`,
+      };
+    }
+    const rowsShape = renderQuery(
+      composite === null
+        ? scopedSql(["$ids"], "absent", null)!
+        : scopedTupleSql([pkColumns.map((_, i) => `$ids${i}`)], null),
+      "the :rows shape",
+      refuse,
+    );
+    return {
+      kind: "defined",
+      definition: sha256(
+        JSON.stringify({
+          all: definition,
+          rows: rowsShape,
+          row: description,
+          maxIds: point.maxIds,
+          // The params a client's id set rides as (the point codec).
+          params: point.encode(["$ids"]),
+        }),
+      ),
+    };
+  };
   const rowsPolicy: ScopePolicy<PointParams> = {
-    routes: compiledRoutePlan<PointParams>(routes, usesOf, derivedReads),
+    routes: compiledRoutePlan<PointParams>(
+      routes,
+      usesOf,
+      derivedReads,
+      undefined,
+      () => {
+        try {
+          return rowsHandoffDefinition();
+        } catch (err) {
+          if (err instanceof RowsHandoffRefused) {
+            return { kind: "none", reason: err.message };
+          }
+          throw err;
+        }
+      },
+    ),
     membership: {
       kind: "point",
       idsOf: (params) => point.decode(params),
@@ -1021,3 +1103,6 @@ function sortedEntries(
     a < b ? -1 : a > b ? 1 : 0,
   );
 }
+
+/** A `:rows` handoff definition gave up (a non-literal param) — turned into `none`. */
+class RowsHandoffRefused extends Error {}

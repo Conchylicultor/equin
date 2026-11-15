@@ -740,7 +740,11 @@ windowQueryResource(c.rows, {
   inherited) for a function `where`, an `encodeRow` with no `encodeRowId`, an
   opaque decoder or schema part, a non-literal param. `serveCollection` names
   its `$columns` fold as an `encodeRowId`; a wire codec has none. Pinned by
-  `point-definition.test.ts`.
+  `point-definition.test.ts`. An `all` set's `:rows` carries one too
+  (`compile-alias.ts`): the `all` definition, the `:rows` shape (`"absent"`
+  ids), its row schema and `maxIds` — none over an opaque row-schema part,
+  which the `all` definition itself only folds in. Pinned by
+  `compile-alias.test.ts` (*the `:rows` handoff definition*).
   - **The code is versioned by its digest, not by hand.** What turns those
     inputs into rows — the point compile and loader (`compile-window.ts` and
     everything it loads: arm-plan, raw-sql, the sql-projection / sql-column

@@ -82,6 +82,7 @@ export function pointDefinition<P extends ResourceParams>(
             decoderOfRead(is(f.read, SQL.Aliased) ? f.read.sql : f.read),
             `field "${f.outer}"`,
             giveUp,
+            { opaqueColumn: "refuse" },
           ),
         ]),
         row: description,

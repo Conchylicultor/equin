@@ -1,6 +1,8 @@
 import { z } from "zod";
 import {
   declaredDefault,
+  defineDefaultlessField,
+  type DefaultlessFieldDef,
   type FieldDef,
   type ExactOptions,
   type FieldMarks,
@@ -9,7 +11,7 @@ import {
   pickMeta,
 } from "@plugins/fields/core";
 import { rankFieldType } from "@plugins/fields/plugins/rank/core";
-import { Rank, RankSchema } from "@plugins/primitives/plugins/rank/core";
+import { type Rank, RankSchema } from "@plugins/primitives/plugins/rank/core";
 
 export interface RankFieldDef extends FieldDef<string> {
   readonly type: typeof rankFieldType;
@@ -36,7 +38,7 @@ export function rankField<
   }) as RankFieldDef & FieldMarks<O>;
 }
 
-export interface RankValueFieldDef extends FieldDef<Rank> {
+export interface RankValueFieldDef extends DefaultlessFieldDef<Rank> {
   readonly type: FieldType<Rank>;
 }
 
@@ -47,11 +49,16 @@ export interface RankValueFieldDef extends FieldDef<Rank> {
 // its rows sort and move by `Rank` as the hand wire schemas did. Never a
 // column of an entity record: the column's value stays the raw `string`
 // (`rankField`), the transform a wire concern.
+//
+// DEFAULTLESS: a row's rank is always on the wire (the column is NOT NULL),
+// so a missing one is a loud parse failure, never a backfilled empty rank —
+// and the row schema holds no default that is not one JSON value (a `Rank`
+// object), which would leave every collection carrying a rank with no
+// point definition (the epoch handoff never inherits its `:rows`).
 export function rankValueField(): RankValueFieldDef {
-  return Object.freeze({
+  return defineDefaultlessField({
     type: rankFieldType as unknown as FieldType<Rank>,
     schema: RankSchema,
-    defaultValue: Rank.from(""),
     meta: pickMeta(undefined),
-  });
+  }) as RankValueFieldDef;
 }

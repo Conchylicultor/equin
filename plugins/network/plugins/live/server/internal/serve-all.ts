@@ -454,11 +454,18 @@ export function compileAllSpecs<Row, B extends string = never>(
   // the fold's id, and a scoped set's codecs — named by field only, which is
   // enough for a definition that guards no persisted row (see `scoped`).
   const wireOf = ():
-    | { encodeRow: typeof encodeRow; ids: Record<string, string> }
+    | {
+        encodeRow: typeof encodeRow;
+        ids: Record<string, string>;
+        pinned: boolean;
+      }
     | undefined => {
     if (exposes === null && wired.size === 0) return undefined;
     return {
       encodeRow,
+      // The fold is pinned by its id (and its code is `liveReadCode`'s); a
+      // codec named by field only is not.
+      pinned: wired.size === 0,
       ids: {
         ...(exposes === null ? {} : { [LIVE_COLUMNS_KEY]: foldId }),
         ...Object.fromEntries(

@@ -30428,6 +30428,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Core:
             - Uses:
               - `fields.declaredDefault`
+              - `fields.DefaultlessFieldDef`
+              - `fields.defineDefaultlessField`
               - `fields.ExactOptions`
               - `fields.FieldDef`
               - `fields.FieldMarks`
@@ -43224,6 +43226,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live/query-resource`
           - `packages/list-bound`
           - `primitives/dom/web-storage`
+          - `primitives/rank`
           - `ui/icons/saved-names`
       - Exemptions:
         - Exempts itself from: `zod-introspect/no-zod-internals` — `core/internal`, `lint` (sanctioned)
@@ -43259,6 +43262,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `peel`
           - `retype`
           - `valueSide`
+          - `WireTransparencyError`
+          - `wireTransparent`
 
 - **`page`** — Block-based page editor.
   - Plugins:
@@ -55106,6 +55111,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `rankAfterSibling`
           - `rankText`
           - `withRank`
+      - Core:
+        - Uses: `packages/zod-introspect.wireTransparent`
+        - Exports (types):
+          - `Ranked`
+          - `RankedItem`
+        - Exports (values):
+          - `computeFlatReorder`
+          - `Rank`
+          - `RankSchema`
+          - `rankText`
+          - `withRank`
       - Cross-plugin:
         - Imported by: 27 plugins — full list in [`plugins/primitives/plugins/rank/REFERENCE.md`](../plugins/primitives/plugins/rank/REFERENCE.md)
           - `apps` ×7
@@ -55121,16 +55137,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `Rank`
           - `RankSchema`
-      - Core:
-        - Exports (types):
-          - `Ranked`
-          - `RankedItem`
-        - Exports (values):
-          - `computeFlatReorder`
-          - `Rank`
-          - `RankSchema`
-          - `rankText`
-          - `withRank`
     - **`rank-reorder`** — Rank-based drag-reorder primitive. Flat lists and grids: a sortable RankReorderProvider (one SortableContext, the dragged row follows the pointer and its group's rows slide, drops resolved to a Rank via computeFlatReorder, group-by aware; with onReseat + slideAcrossGroups a row dragged into another group is previewed there so its rows slide, group headers / empty bands take anchorless drops, an optional new-group target, and sortable whole-group blocks) and useRankSortableItem per row. The tree: RankReorderDndContext + useRankReorderItem (indicator-line before/after droppables and a drag chip). Depends only on rank + dnd-kit.
       - Web:
         - Uses:

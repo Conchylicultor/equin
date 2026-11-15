@@ -1,5 +1,6 @@
 import { generateKeyBetween, generateNKeysBetween } from "fractional-indexing";
 import { z } from "zod";
+import { wireTransparent } from "@plugins/packages/plugins/zod-introspect/core";
 
 export class Rank {
   private constructor(private readonly _v: string) {}
@@ -46,8 +47,11 @@ export class Rank {
 }
 
 // Accepts the wire form (a raw string) or an already-wrapped `Rank`, and always
-// outputs a `Rank`.
+// outputs a `Rank`. The preprocess is `wireTransparent` (a `Rank` serializes
+// to its key, checked on every parse), so a row schema holding a rank stays
+// describable as data — the epoch handoff's point definition, an L2
+// definition — instead of blinded.
 export const RankSchema: z.ZodType<Rank> = z.preprocess(
-  (v) => (typeof v === "string" ? Rank.from(v) : v),
+  wireTransparent((v: unknown) => (typeof v === "string" ? Rank.from(v) : v)),
   z.custom<Rank>((v) => v instanceof Rank),
 );

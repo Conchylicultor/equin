@@ -1,7 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import { z } from "zod";
 import { describeSchema } from "./describe";
-import { fallbackTo, retype } from "./described-fn";
+import {
+  fallbackTo,
+  retype,
+  wireTransparent,
+  WireTransparencyError,
+} from "./described-fn";
 import {
   childrenOf,
   inspect,
@@ -681,6 +686,62 @@ describe("describeSchema — what moves the description", () => {
     ).toBe(false);
     expect(describeSchema(z.string().transform((v) => v)).opaque).toEqual([
       "/out: a transform",
+    ]);
+  });
+
+  test("a `wireTransparent` step is data, and refuses an output that serializes to other JSON", () => {
+    class Box {
+      constructor(private readonly v: string) {}
+      toJSON(): string {
+        return this.v;
+      }
+    }
+    const wrap = wireTransparent((v: unknown) =>
+      typeof v === "string" ? new Box(v) : v,
+    );
+    const boxed = z.preprocess(
+      wrap,
+      z.custom<Box>((v) => v instanceof Box),
+    );
+    const { description, opaque } = describeSchema(boxed);
+    expect(opaque).toEqual([]);
+    expect(JSON.stringify(description)).toContain(
+      '{"kind":"transform","fn":"wire-transparent","checks":[]}',
+    );
+    expect(boxed.parse("k")).toBeInstanceOf(Box);
+    const lying = z.preprocess(
+      wireTransparent((v: unknown) => (typeof v === "string" ? v + "!" : v)),
+      z.string(),
+    );
+    expect(() => lying.parse("k")).toThrow(WireTransparencyError);
+    // Read structurally by its pipe, the step vouches for nothing.
+    class Shaped {
+      b = "x";
+      constructor(private readonly v: string) {}
+      toJSON(): string {
+        return this.v;
+      }
+    }
+    const structural = z.preprocess(
+      wireTransparent((v: unknown) =>
+        typeof v === "string" ? new Shaped(v) : v,
+      ),
+      z.object({ b: z.string() }),
+    );
+    expect(describeSchema(structural).opaque).toEqual([
+      "(root): a wire-transparent step whose output the pipe reads structurally",
+    ]);
+    // Under a record key (read as text) or an intersection (read by its
+    // own properties), it vouches for nothing either.
+    expect(describeSchema(z.record(boxed as never, z.number())).opaque).toEqual(
+      ["(root): a wire-transparent step under a record key"],
+    );
+    expect(describeSchema(z.intersection(boxed, z.object({}))).opaque).toEqual([
+      "(root): a wire-transparent step under an intersection",
+    ]);
+    // An unminted preprocess stays blind.
+    expect(describeSchema(z.preprocess((v) => v, z.string())).opaque).toEqual([
+      "/in: a transform",
     ]);
   });
 

@@ -12,6 +12,8 @@ sortable fractional-indexing column.
 - Core:
   - Uses:
     - `fields.declaredDefault`
+    - `fields.DefaultlessFieldDef`
+    - `fields.defineDefaultlessField`
     - `fields.ExactOptions`
     - `fields.FieldDef`
     - `fields.FieldMarks`
