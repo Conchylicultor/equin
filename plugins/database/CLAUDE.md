@@ -460,15 +460,27 @@ an `exec` child (`verifier`) runs no DDL at all and instead awaits
 stamp the owner's layer commits (`migrations`' `verifySchemaLayer`, "The schema
 layer's stamp" in its CLAUDE.md), and when it does not match this code, a
 LISTEN for the owner's NOTIFY (a `schema-wait` session) for as long as a build
-or deploy that can boot that owner is in flight — `DatabaseDriver.awaitDeploysSettled`:
-on the desktop the checkout's build lock and the namespace's deploy lock, both
-kernel flocks a build holds until its backend's boot settled — bounded at
+or deploy that can boot that owner is in flight — `DatabaseDriverImpl.awaitDeploysSettled`:
+on the desktop the namespace's deploy lock, the checkout's build lock and —
+the direct signal — the namespace's **schema-owner boot marker**
+(`machine/internal/owner-boot.ts`), a flock every serving backend holds shared
+from the top of its entry point (`serve`) until its `onReady` recorded the stamp,
+so the wait holds however the build that restarted it exited (a build's
+deadline arm reports ok while its backend still boots) — bounded at
 10 min. With none in flight it throws `SchemaNotReadyError` at once: a
 worktree whose checkout is ahead of its backend (edits not built) fails its
 children in a second, not ten minutes each, and main's deploy window still
 waits and succeeds. The wait runs with the child's host admission given back
 (`SchemaRole.yieldAdmission`). It publishes an empty reconcile, defers no contract and
 reports the schema unchanged — it did nothing to it.
+
+The refusal says why from the last serving backend's boot record
+(`DatabaseDriverImpl.lastOwnerBoot`, written beside the marker before it is let go):
+a stamp write that failed in `onReady` is named with its error (the hook's
+failure is filed as a server error; it stays non-fatal, like every post-ready
+hook, but no child is told to run a build that would not help), and so is a
+backend that exited before its stamp; only otherwise does it suggest
+`./equin build`.
 
 Before the schema layer, the barrier takes this process's schema-generation lock
 (`DatabaseDriver.holdSchemaGeneration`), and the schema layer defers the last
@@ -548,6 +560,7 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./equin build`. The bui
     - `writeAtomically`
 - Machine:
   - Uses: `database/pgbouncer.convergePgbouncerConfig`
+  - Exports (values): `claimSchemaOwnerBoot`
 - Core:
   - Uses:
     - `packages/timed-fs.readFile`

@@ -61,10 +61,11 @@ export const WEB_CORE_RELATIVE = "plugins/framework/plugins/web-core";
 /**
  * A checkout's build lock: `.build.lock` beside its web-core dir, an exclusive
  * flock every `./equin build` holds for its whole process (the CLI's
- * `acquireArtifactLock`) — so until its restarted backend's boot settled. What
- * an `exec` child whose database is not set up for its code waits out
- * (`database#machine`'s `awaitDeploysSettled`): a build in flight is how a
- * backend running its code gets there.
+ * `acquireArtifactLock`) — across its backend's restart, until that backend's
+ * boot settled or a deadline arm gave up on it. One of what an `exec` child
+ * whose database is not set up for its code waits out (`database#machine`'s
+ * `awaitDeploysSettled`), beside the backend's own boot marker
+ * (`worktreeArtifacts.schemaOwnerBoot`), which holds past a deadline arm.
  */
 export function checkoutBuildLock(root: string): AppPath {
   return joinAppPath(asAppPath(root), WEB_CORE_RELATIVE, ".build.lock");
@@ -461,6 +462,30 @@ export const worktreeArtifacts = {
    */
   deployLock: (name: Namespace): AppPath =>
     joinAppPath(worktreeDataDir(name), "deploy.lock"),
+  /**
+   * The schema-owner boot marker: `schema-owner-boot.lock`, an flock (never
+   * read or written for its bytes). The namespace's serving backend holds it
+   * SHARED from the top of its entry point (`serve`) until its `onReady`
+   * recorded the schema stamp (or failed to) — and the kernel drops it when
+   * that process dies. An `exec` child whose database is not set up for its
+   * code waits for it to be free (`database#machine`'s `awaitDeploysSettled`):
+   * a backend booting toward the stamp is the one fact that says the stamp is
+   * still coming, however the build that restarted it exited. Shared, so two
+   * incarnations booting at once never wait on each other.
+   */
+  schemaOwnerBoot: (name: Namespace): AppPath =>
+    joinAppPath(worktreeDataDir(name), "schema-owner-boot.lock"),
+  /**
+   * What the last serving backend to claim the schema-owner boot marker said
+   * of its schema stamp: `schema-owner-boot.json` — `booting` once it holds
+   * the marker, then `recorded` or `stamp-failed` (with the error) when its
+   * `onReady` settles it. Written atomically (a rename), so never read torn;
+   * a separate file, since renaming over the lock file would swap the inode
+   * its holders and waiters lock. Read by a refused `exec` child, to say WHY
+   * the stamp never came.
+   */
+  schemaOwnerBootRecord: (name: Namespace): AppPath =>
+    joinAppPath(worktreeDataDir(name), "schema-owner-boot.json"),
   /**
    * One `./equin test` run's record: which runners ran and which test
    * cases failed. `test-status-<opId>.json`, written when the run STARTS

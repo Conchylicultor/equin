@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { SchemaNotReadyError } from "@plugins/framework/plugins/server-core/core";
 import type { SchemaLayerCheck } from "@plugins/database/plugins/migrations/server";
 import { waitForOwner, type OwnerWaitDeps } from "./await-schema-layer";
-import type { ListenHandlers } from "./driver";
+import type { ListenHandlers, OwnerBootRecord } from "./driver";
 
 const NOT_READY = {
   kind: "not-ready",
@@ -14,7 +14,10 @@ const NOT_READY = {
  * this code's stamp and NOTIFYs; `settle()` ends the builds and deploys in
  * flight (as many as `waitedOn` names).
  */
-function fakeHost(opts: { inFlight: boolean }) {
+function fakeHost(opts: {
+  inFlight: boolean;
+  lastOwnerBoot?: OwnerBootRecord | null;
+}) {
   let ready = false;
   let handlers: ListenHandlers | null = null;
   let settle: (() => void) | null = null;
@@ -50,6 +53,7 @@ function fakeHost(opts: { inFlight: boolean }) {
         });
         return ["a deploy of this namespace"];
       },
+      lastOwnerBoot: () => Promise.resolve(opts.lastOwnerBoot ?? null),
     },
   };
   return {
@@ -79,7 +83,9 @@ describe("waitForOwner", () => {
       caught = err;
     }
     expect(caught).toBeInstanceOf(SchemaNotReadyError);
-    expect(String(caught)).toContain("no build or deploy");
+    expect(String(caught)).toContain(
+      "no build, deploy or backend boot of this checkout is in flight",
+    );
     expect(String(caught)).toContain("./equin build");
     expect(Date.now() - started).toBeLessThan(1000);
     expect(host.closed()).toBe(true);
@@ -135,5 +141,66 @@ describe("waitForOwner", () => {
     }
     expect(caught).toBeInstanceOf(SchemaNotReadyError);
     expect(host.closed()).toBe(true);
+  });
+
+  test("the last backend failed to record its stamp: refused naming that failure, not a build", async () => {
+    // database's onReady: the stamp write threw; the backend serves on.
+    const host = fakeHost({
+      inFlight: true,
+      lastOwnerBoot: {
+        kind: "stamp-failed",
+        pid: 4242,
+        startedAt: Date.UTC(2026, 10, 15, 10, 0, 0),
+        error: 'relation "schema_layer_stamps" does not exist',
+      },
+    });
+    const waiting = waitForOwner(NOT_READY, host.deps);
+    await tick();
+    host.settle();
+    let caught: unknown;
+    try {
+      await waiting;
+    } catch (err) {
+      caught = err;
+    }
+    expect(caught).toBeInstanceOf(SchemaNotReadyError);
+    const message = String(caught);
+    expect(message).toContain(
+      "the serving backend that booted at 2026-11-15T10:00:00.000Z (pid 4242) failed to record its schema stamp",
+    );
+    expect(message).toContain('relation "schema_layer_stamps" does not exist');
+    expect(message).toContain("server error of database's onReady");
+    expect(message).not.toContain("./equin build");
+  });
+
+  test("the last backend exited before its stamp: refused naming the exit", async () => {
+    const host = fakeHost({
+      inFlight: false,
+      lastOwnerBoot: { kind: "booting", pid: 7, startedAt: 0 },
+    });
+    let caught: unknown;
+    try {
+      await waitForOwner(NOT_READY, host.deps);
+    } catch (err) {
+      caught = err;
+    }
+    expect(caught).toBeInstanceOf(SchemaNotReadyError);
+    expect(String(caught)).toContain(
+      "exited before it recorded its schema stamp",
+    );
+  });
+
+  test("the last backend recorded its stamp (for other code): refused naming the build", async () => {
+    const host = fakeHost({
+      inFlight: false,
+      lastOwnerBoot: { kind: "recorded", pid: 7, startedAt: 0 },
+    });
+    let caught: unknown;
+    try {
+      await waitForOwner(NOT_READY, host.deps);
+    } catch (err) {
+      caught = err;
+    }
+    expect(String(caught)).toContain("./equin build");
   });
 });

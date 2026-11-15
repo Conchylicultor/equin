@@ -213,6 +213,8 @@ export function createPgliteDriver(
     // This process is its database's owner (a browser host boots as one), so
     // no other process can be on its way to set the schema up.
     awaitDeploysSettled: () => Promise.resolve([]),
+    settleOwnerBoot: () => Promise.resolve(),
+    lastOwnerBoot: () => Promise.resolve(null),
     // LISTEN on the one in-process connection: every NOTIFY a commit sends
     // reaches the root client's `onNotification` (channel and payload, one
     // queue, so the order holds across channels), filtered to this session's

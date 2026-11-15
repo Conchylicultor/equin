@@ -62,6 +62,7 @@ import {
 import { recordFsWaits } from "@plugins/debug/plugins/profiling/plugins/fs-wait/server";
 import { writeBootStartEvent } from "@plugins/debug/plugins/boot-events/server";
 import { markOwnBootUnsettled } from "@plugins/debug/plugins/boot-events/machine";
+import { claimSchemaOwnerBoot } from "@plugins/database/machine";
 import { createRequestHandler } from "@plugins/framework/plugins/http-router/core";
 import {
   channelFileSink,
@@ -150,6 +151,12 @@ export async function serve({
   // and the boot watchdog still reads its worktree (see writeBootStartEvent).
   writeBootStartEvent();
   markOwnBootUnsettled(runtimeNamespace());
+  // This backend is on its way to its database's schema stamp: the marker an
+  // `exec` child whose database is not set up for its code waits out, held
+  // until database's `onReady` recorded the stamp (or failed to) — so the
+  // wait holds however the build that restarted us exits
+  // (database#machine's `owner-boot.ts`).
+  await claimSchemaOwnerBoot(runtimeNamespace(), processStartedAt);
 
   // ── Which app (before the socket binds) ─────────────────────────
   // The entry that imported these registries names one composition; the

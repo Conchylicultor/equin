@@ -134,15 +134,50 @@ export interface DatabaseDriverImpl {
    * resolves, no owner is on its way, so a schema still not set up for the
    * child's code never will be.
    *
-   * The desktop waits on the checkout's build lock (every `./equin build`
-   * holds it until its backend's boot settled, its stamp recorded) and its
-   * deploy lock (main's convergence run, from before it decides until after
-   * its last build) — and, on main's checkout, does not settle while its HEAD
-   * is one main's build has not attempted yet (a push landed, its deploy not
+   * The desktop waits on its deploy lock (main's convergence run, from
+   * before it decides until after its last build), the checkout's build lock
+   * (every `./equin build`) and — the direct signal — the namespace's
+   * schema-owner boot marker, held by a serving backend from its entry point
+   * until its `onReady` recorded the stamp, however the build that restarted
+   * it exited. On main's checkout it also does not settle while its HEAD is
+   * one main's build has not attempted yet (a push landed, its deploy not
    * started). PGlite's process is its own owner: nothing to wait for.
    */
   awaitDeploysSettled(signal: AbortSignal): Promise<readonly string[]>;
+  /**
+   * This serving process's boot toward its schema stamp is over — `onReady`
+   * recorded it, or the write failed: says so where a refused `exec` child
+   * reads it (`lastOwnerBoot`), then lets go of what told children the stamp
+   * was still coming. Called once, by database's `onReady`. The desktop
+   * writes the namespace's boot record and releases the boot marker the
+   * serving entry point claimed (a process that claimed none — a test's host
+   * — does nothing); PGlite has no other process to tell.
+   */
+  settleOwnerBoot(outcome: OwnerBootOutcome): Promise<void>;
+  /**
+   * What the last serving backend to boot on this database said of its
+   * schema stamp, or null when none ever said anything — what a refused
+   * `exec` child names as the reason. Read only once `awaitDeploysSettled`
+   * resolved. PGlite: always null (it is its own owner).
+   */
+  lastOwnerBoot(): Promise<OwnerBootRecord | null>;
 }
+
+/** How a serving backend's boot toward its schema stamp ended (`settleOwnerBoot`). */
+export type OwnerBootOutcome =
+  | { kind: "recorded" }
+  /** The stamp write failed (`error`); the failure is filed as database's `onReady` server error. */
+  | { kind: "stamp-failed"; error: string };
+
+/**
+ * The last serving backend's word on its stamp (`lastOwnerBoot`): `booting`
+ * from the moment it claimed the boot marker until `onReady` settled it — so
+ * `booting` read with the marker free is a backend that exited before it got
+ * there.
+ */
+export type OwnerBootRecord = { pid: number; startedAt: number } & (
+  { kind: "booting" } | OwnerBootOutcome
+);
 
 /**
  * What a LISTEN session's connection is named (`DatabaseDriverImpl.listen`):

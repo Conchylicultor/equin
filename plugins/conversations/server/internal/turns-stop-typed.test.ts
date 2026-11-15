@@ -55,6 +55,8 @@ function throwawayDriver(database: Db): DatabaseDriverImpl {
     awaitGenerationsGone: unused("awaitGenerationsGone"),
     awaitOlderProcessesGone: unused("awaitOlderProcessesGone"),
     awaitDeploysSettled: unused("awaitDeploysSettled"),
+    settleOwnerBoot: unused("settleOwnerBoot"),
+    lastOwnerBoot: unused("lastOwnerBoot"),
   };
 }
 

@@ -102,9 +102,9 @@ export default {
     // push's migration itself, under the old backend, waiting up to 15 min on
     // its locks (task-1794734803-m7admg). A database not set up for this code
     // yet holds the child — its host admission given back — until its owner's
-    // layer commits (a NOTIFY, no polling), for as long as a build or deploy
-    // that can boot that owner is in flight (the deploy window); with none,
-    // it is refused at once (`SchemaNotReadyError`).
+    // layer commits (a NOTIFY, no polling), for as long as a build, deploy or
+    // serving backend's boot that can bring it is in flight (the deploy
+    // window); with none, it is refused at once (`SchemaNotReadyError`).
     if (schema.kind === "verifier") {
       await step("schema-verify", (inner) =>
         awaitSchemaLayer(
@@ -198,10 +198,29 @@ export default {
     // plugin's blocking hook has committed its boot DDL (the change feed's
     // triggers, the mirror's, the queue schema), so a child woken by its NOTIFY
     // finds the database whole — not only the layer.
+    //
+    // Either way, the boot is then settled for the children waiting on it
+    // (`DatabaseDriver.settleOwnerBoot`). A failed write is not fatal — a
+    // post-ready hook never is (server-core's boot-stages: on 2026-11-08 a
+    // fatal one crash-looped main on a deterministic DB error), and this
+    // backend serves fine without it — but it is loud twice over: the throw is
+    // filed as this hook's server error, and every child refused for want of
+    // the stamp says that THIS is why, with the error, rather than suggesting
+    // a build that would not help (`awaitSchemaLayer`'s refusal).
+    const driver = DatabaseDriver.get();
     const stamped = takeBootStamp();
-    if (stamped !== null) {
-      await recordSchemaLayerStamp(db, stamped.owner, stamped.stamp);
+    try {
+      if (stamped !== null) {
+        await recordSchemaLayerStamp(db, stamped.owner, stamped.stamp);
+      }
+    } catch (err) {
+      await driver.settleOwnerBoot({
+        kind: "stamp-failed",
+        error: err instanceof Error ? err.message : String(err),
+      });
+      throw err;
     }
+    await driver.settleOwnerBoot({ kind: "recorded" });
     const deferred = takeDeferredContract();
     if (deferred === null) return;
     void runTracked("database:deferred-contract", () =>

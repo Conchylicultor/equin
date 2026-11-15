@@ -320,9 +320,10 @@ export async function acquireArtifactLock(root: string): Promise<void> {
   // held for the whole process lifetime (its own exit hook releases it), which
   // is exactly what build does today — so the closure is dropped here too.
   // An `exec` child whose database is not set up for its code reads that hold
-  // as "a backend running this checkout's code is on its way"
-  // (`database#machine`'s `awaitDeploysSettled`): never release it before the
-  // restarted backend's boot settled.
+  // as "a backend running this checkout's code may be on its way"
+  // (`database#machine`'s `awaitDeploysSettled`) — it covers the restarted
+  // backend's spawn, after which the backend's own boot marker holds until
+  // its stamp is recorded, however this build exits.
   await acquireCheckoutLock(checkoutBuildLock(root), {
     what: "build",
     observeHolder: observeBuildHolder,

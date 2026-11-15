@@ -1,5 +1,7 @@
 import type { AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import {
+  flockRelease,
+  flockTry,
   flockTryShared,
   waitForFlock,
 } from "@plugins/packages/plugins/flock/core";
@@ -18,11 +20,13 @@ import {
 import { spawnExpectOk } from "@plugins/infra/plugins/spawn/core";
 import { readBuildReceipt } from "@plugins/framework/plugins/cli/plugins/op-runtime/core";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
+import { runtimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
 
 /**
- * The desktop's `DatabaseDriverImpl.awaitDeploysSettled`: what can boot a new
- * owner of this process's database, on this machine, is a build of this
- * checkout or main's deploy. Three facts, read in this order:
+ * The desktop's `DatabaseDriverImpl.awaitDeploysSettled`: what can bring this
+ * process's database a stamp for new code, on this machine, is a serving
+ * backend booting toward it — started by a build of this checkout, by main's
+ * deploy, or by the gateway's respawn. Four facts, read in this order:
  *
  * - **main's deploy is due** — on main's checkout only: its HEAD is not the
  *   commit main's last build took its lock for (the deploy receipt's
@@ -39,14 +43,21 @@ import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
  *   main's convergence run holds it exclusively from before it decides to its
  *   end, its compositions' builds and a second push's build included.
  * - **the checkout's build lock** (`checkoutBuildLock`): every `./equin
- *   build` holds it exclusively for its whole process, and does not exit
- *   before the backend it restarted reported its boot settled — after that
- *   backend's `onReady` recorded its schema stamp.
+ *   build` holds it exclusively for its whole process — across its backend's
+ *   spawn, until that backend's boot settled or a deadline arm gave up on it.
+ * - **the namespace's schema-owner boot marker**
+ *   (`worktreeArtifacts.schemaOwnerBoot`, `./owner-boot.ts`): the direct
+ *   signal. Every serving backend holds it shared from its entry point until
+ *   its `onReady` recorded the stamp (or failed to), so it holds however the
+ *   build exited — a deadline arm returns `ok` while the backend is still
+ *   booting (task-1794739540-eqmg40). Read LAST: a build or deploy holds its
+ *   lock across the spawn of the backend that takes it.
  *
- * Each lock is first tried shared without blocking (free: nothing to wait for,
- * no child spawned); held, it is waited for shared (`waitForFlock`: granted by
- * the kernel the moment its exclusive holder lets go — no polling) and dropped
- * at once. A lock file that does not exist was never held by anything, and is
+ * Each exclusive lock is first tried shared without blocking (free: nothing to
+ * wait for, no child spawned); held, it is waited for shared (`waitForFlock`:
+ * granted by the kernel the moment its exclusive holder lets go — no polling)
+ * and dropped at once. The boot marker, held shared, is tried and waited for
+ * exclusively instead: granted once no booting backend holds it. A lock file that does not exist was never held by anything, and is
  * not created: a checkout no build ran in (a release bundle's) has nothing to
  * wait for. A worktree's checkout has no deploy but its own builds: nothing
  * builds it on its own.
@@ -66,6 +77,11 @@ export async function awaitDeploysSettled(
         what: "main's deploy",
       },
       { path: checkoutBuildLock(REPO_ROOT), what: "a build of this checkout" },
+      {
+        path: worktreeArtifacts.schemaOwnerBoot(runtimeNamespace()),
+        what: "the serving backend's boot",
+        heldBy: "shared",
+      },
     ],
     signal,
   );
@@ -107,6 +123,11 @@ function untilAborted(signal: AbortSignal): Promise<never> {
 export interface DeployLock {
   path: AppPath;
   what: string;
+  /**
+   * How its holders take it: `exclusive` (the default — one build, one
+   * deploy) or `shared` (the boot marker: any number of booting backends).
+   */
+  heldBy?: "exclusive" | "shared";
 }
 
 /**
@@ -118,17 +139,28 @@ export async function awaitLocksReleased(
   signal: AbortSignal,
 ): Promise<readonly string[]> {
   const waited: string[] = [];
-  for (const { path, what } of locks) {
-    if (!(await heldExclusively(path))) continue;
+  for (const { path, what, heldBy = "exclusive" } of locks) {
+    if (!(await held(path, heldBy))) continue;
     waited.push(what);
-    const held = await waitForFlock(path, { shared: true, signal });
-    await held.release();
+    // Wait in the mode that conflicts with the holders': shared behind an
+    // exclusive holder, exclusive behind shared ones.
+    const granted = await waitForFlock(path, {
+      shared: heldBy === "exclusive",
+      signal,
+    });
+    await granted.release();
   }
   return waited;
 }
 
-/** Whether a process holds `path`'s flock exclusively now (no such file: never). */
-async function heldExclusively(path: AppPath): Promise<boolean> {
+/**
+ * Whether a process holds `path`'s flock in `mode` now (no such file: never):
+ * an exclusive holder refuses a shared try, a shared one an exclusive try.
+ */
+async function held(
+  path: AppPath,
+  mode: "exclusive" | "shared",
+): Promise<boolean> {
   let fd;
   try {
     fd = await openOwnedFd(path, "r");
@@ -137,9 +169,13 @@ async function heldExclusively(path: AppPath): Promise<boolean> {
     throw err;
   }
   try {
-    // Shared and non-blocking: refused only while someone holds it
-    // exclusively. Granted, it is dropped with the fd just below.
-    return !flockTryShared(fd.fd);
+    // Non-blocking, in the mode the holders' conflicts with. Granted, it is
+    // dropped at once (the exclusive grant explicitly, so a booting backend's
+    // shared try right after never sees it).
+    if (mode === "exclusive") return !flockTryShared(fd.fd);
+    if (!flockTry(fd.fd)) return true;
+    flockRelease(fd.fd);
+    return false;
   } finally {
     fd.close();
   }

@@ -49,6 +49,7 @@ import {
 } from "../../server/internal/driver";
 import { dbLog } from "../../server/internal/db-log";
 import { awaitDeploysSettled } from "./deploys-settled";
+import { readOwnerBootRecord, settleSchemaOwnerBoot } from "./owner-boot";
 import {
   extractReadTablesFromSql,
   readTagOf,
@@ -999,4 +1000,6 @@ export const pgDriver: DatabaseDriverImpl = {
     generationLocks.awaitGenerationsGone(knowing),
   awaitOlderProcessesGone: () => generationLocks.awaitOlderProcessesGone(),
   awaitDeploysSettled,
+  settleOwnerBoot: settleSchemaOwnerBoot,
+  lastOwnerBoot: () => readOwnerBootRecord(runtimeNamespace()),
 };

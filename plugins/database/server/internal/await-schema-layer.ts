@@ -11,7 +11,12 @@ import {
 } from "@plugins/database/plugins/migrations/server";
 import { withDeadline } from "@plugins/packages/plugins/deadline/core";
 import { dbLog } from "./db-log";
-import { db, DatabaseDriver, type DatabaseDriverImpl } from "./driver";
+import {
+  db,
+  DatabaseDriver,
+  type DatabaseDriverImpl,
+  type OwnerBootRecord,
+} from "./driver";
 
 /**
  * How long a verifier waits at most for a build or deploy in flight to set the
@@ -30,7 +35,9 @@ export const SCHEMA_WAIT_MS = 10 * 60 * 1000;
  * push: nothing polls).
  *
  * It waits only while an owner can still be on its way: a build or deploy in
- * flight (`DatabaseDriver.awaitDeploysSettled`) — main's ~26 s deploy window.
+ * flight, or a serving backend booting toward its stamp — however the build
+ * that restarted it exited, a deadline arm included (task-1794739540-eqmg40)
+ * (`DatabaseDriver.awaitDeploysSettled`) — main's ~26 s deploy window.
  * Once none is and the schema is still not set up for this code, nothing will
  * set it up (a worktree's edits not built, a deploy that failed or built
  * other code), and it throws `SchemaNotReadyError` at once — so a checkout
@@ -71,7 +78,10 @@ export async function awaitSchemaLayer(
 export interface OwnerWaitDeps {
   /** One read of whether the schema is set up for this code (`verifySchemaLayer`). */
   verify(): Promise<SchemaLayerCheck>;
-  driver: Pick<DatabaseDriverImpl, "listen" | "awaitDeploysSettled">;
+  driver: Pick<
+    DatabaseDriverImpl,
+    "listen" | "awaitDeploysSettled" | "lastOwnerBoot"
+  >;
   /** The bound on the whole wait (`SCHEMA_WAIT_MS`). */
   waitMs: number;
 }
@@ -128,7 +138,7 @@ export async function waitForOwner(
     },
   );
   dbLog.publish(
-    `[database] waiting for the build or deploy in flight to set the schema up for this code (up to ${String(Math.round(waitMs / 60_000))} min): ${first.detail}`,
+    `[database] waiting for the build, deploy or backend boot in flight to set the schema up for this code (up to ${String(Math.round(waitMs / 60_000))} min): ${first.detail}`,
   );
   try {
     for (;;) {
@@ -153,10 +163,13 @@ export async function waitForOwner(
           { cause: watchFailed.err },
         );
       }
-      // Read after every build and deploy in flight ended (each records its
-      // owner's stamp before it lets go): no owner is on its way.
+      // Read after every build, deploy and serving backend's boot in flight
+      // ended (a booting backend lets go only once its `onReady` settled the
+      // stamp): no owner is on its way. Why, from what the last one said.
       if (wasSettled)
-        throw new SchemaNotReadyError(nothingComing(check, waitedOn));
+        throw new SchemaNotReadyError(
+          nothingComing(check, waitedOn, await driver.lastOwnerBoot()),
+        );
       const remaining = waitMs - (Date.now() - started);
       if (remaining <= 0) throw new SchemaNotReadyError(check.detail);
       if (notified || settled || watchFailed !== null) continue;
@@ -167,7 +180,7 @@ export async function waitForOwner(
         remaining,
         () =>
           new SchemaNotReadyError(
-            `${check.detail} — waited ${String(Math.round(waitMs / 60_000))} min and the build or deploy in flight did not set it up`,
+            `${check.detail} — waited ${String(Math.round(waitMs / 60_000))} min and the build, deploy or backend boot in flight did not set it up`,
           ),
       );
       wake = null;
@@ -179,14 +192,32 @@ export async function waitForOwner(
   }
 }
 
-/** Why no owner will set this database up for this code, for the refusal. */
+/**
+ * Why no owner will set this database up for this code, for the refusal. A
+ * last serving backend that failed to record its stamp, or exited before it
+ * did, is named as the reason: a build is the remedy only when the backend
+ * runs other code than this checkout's.
+ */
 function nothingComing(
   check: Extract<SchemaLayerCheck, { kind: "not-ready" }>,
   waitedOn: readonly string[],
+  last: OwnerBootRecord | null,
 ): string {
   const after =
     waitedOn.length === 0
-      ? "no build or deploy of this checkout is in flight"
+      ? "no build, deploy or backend boot of this checkout is in flight"
       : `${waitedOn.join(" and ")} ended without setting it up for this code`;
-  return `${check.detail}; ${after}, so nothing will — if this checkout has changes its backend was not built from, run \`./equin build\``;
+  const backend =
+    last === null
+      ? null
+      : `the serving backend that booted at ${new Date(last.startedAt).toISOString()} (pid ${String(last.pid)})`;
+  switch (last?.kind) {
+    case "stamp-failed":
+      return `${check.detail}; ${after}: ${backend} failed to record its schema stamp (${last.error}) — filed as a server error of database's onReady. The stamp is recorded only at a backend's boot: fix that error, then restart the backend`;
+    case "booting":
+      return `${check.detail}; ${after}: ${backend} exited before it recorded its schema stamp — see its backend-exit report and its log`;
+    case "recorded":
+    case undefined:
+      return `${check.detail}; ${after}, so nothing will — if this checkout has changes its backend was not built from, run \`./equin build\``;
+  }
 }
