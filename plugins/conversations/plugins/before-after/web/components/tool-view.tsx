@@ -108,10 +108,17 @@ function PairPreviewOf({ toolUseId }: { toolUseId: string }): ReactNode {
   return <PairPreview pair={pair} />;
 }
 
-/** The preview card's box: a raised card under the tool row, at most ~460px wide. */
+/**
+ * The tallest the preview's picture gets, as width / height: a landscape box.
+ * A taller pair (a full-page capture) shows its top, cropped there — the pane
+ * shows it whole.
+ */
+const PREVIEW_MIN_ASPECT = 16 / 10;
+
+/** The preview card's box: a raised card under the tool row, as wide as the transcript. */
 function PreviewFrame({ children }: { children: ReactNode }): ReactNode {
   return (
-    <Surface level="raised" className="w-full max-w-115 p-sm">
+    <Surface level="raised" className="w-full p-sm">
       <Stack gap="sm">{children}</Stack>
     </Surface>
   );
@@ -126,6 +133,7 @@ function PairPreview({ pair }: { pair: BeforeAfterPair }): ReactNode {
     { pair: pair.id },
     { mode: "push" },
   );
+  const aspect = Math.max(pair.width / pair.height, PREVIEW_MIN_ASPECT);
   return (
     <PreviewFrame>
       <ControlSizeProvider size="xs">
@@ -148,15 +156,12 @@ function PairPreview({ pair }: { pair: BeforeAfterPair }): ReactNode {
           />
         </Line>
       </ControlSizeProvider>
-      <div
-        className="w-full"
-        style={{ aspectRatio: String(pair.width / pair.height) }}
-      >
+      <div className="w-full" style={{ aspectRatio: String(aspect) }}>
         <SwipeCompare
           before={<BeforeImage pair={pair} />}
           after={<AfterImage pair={pair} />}
           mode="swipe"
-          aspect={pair.width / pair.height}
+          aspect={aspect}
         />
       </div>
     </PreviewFrame>

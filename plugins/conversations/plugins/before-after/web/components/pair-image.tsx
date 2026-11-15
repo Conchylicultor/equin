@@ -17,8 +17,9 @@ const brokenImageIcon = symbol("broken-image");
 
 /**
  * One side of a pair: its PNG attachment (`GET /api/attachments/:id`, loaded
- * over the subtree's transport) filling its box from the top-left — every box
- * it is drawn in has the pair's own aspect, so nothing is cropped. While it
+ * over the subtree's transport) covering its box from the top-left — a box of
+ * the pair's own aspect shows it whole; a wider one (the tool-call preview of
+ * a tall capture) shows its top. While it
  * loads the box's own tint shows; a failure says so, with the reason on hover.
  */
 export function PairImage({
