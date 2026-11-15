@@ -1,4 +1,4 @@
-// @hash aa9c71549c33
+// @hash 01cd1f7a4c2a
 // @legend — how to write this file (rewritten by ./equin build; edits inside this block are lost):
 //   Item: "<key>" (terse; <key> is "<pluginId>:<id>")
 //   Hide: { "item": "<key>", "hidden": true }
@@ -30,6 +30,7 @@
     "ui.tokens.file-type-palette.customizer:file-type-palette",
     "ui.tokens.chord-palette.customizer:chord-palette",
     "ui.tokens.place-palette.customizer:place",
+    "ui.tokens.spend-palette.customizer:spend-palette",
     "ui.tweakcn.community-browser.customizer:import-by-url"
   ]
 }

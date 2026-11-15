@@ -102,12 +102,17 @@ export async function invokeClaude<T>({
 }): Promise<T> {
   const startedAt = performance.now();
   let output: string | undefined;
+  let costUsd: number | null = null;
   let caughtError: Error | undefined;
+  // Resolved once: the account the turn runs on is the one its cost is filed
+  // under, even if the active account switches mid-call.
+  let accountId: string | null = null;
   try {
+    accountId = await activeClaudeAccountId();
     let result: ClaudeTurnResult;
     try {
       result = await runClaudeTurn({
-        env: await claudeSessionEnv(await activeClaudeAccountId()),
+        env: await claudeSessionEnv(accountId),
         prompt: input.prompt,
         options: {
           // What `claude --print` loaded: the user's own settings and env
@@ -136,6 +141,9 @@ export async function invokeClaude<T>({
         err instanceof Error ? err.message : String(err),
       );
     }
+    // What the turn cost, at API prices — an error result's too: the tokens
+    // it spent were drawn from the account all the same.
+    costUsd = result.total_cost_usd;
     if (result.subtype !== "success" || result.is_error) {
       const detail =
         result.subtype === "success"
@@ -169,6 +177,9 @@ export async function invokeClaude<T>({
       error: caughtError ? caughtError.message : null,
       durationMs,
       correlationId: input.source.correlationId ?? null,
+      accountId,
+      costUsd,
+      at: new Date(),
     });
   }
 }

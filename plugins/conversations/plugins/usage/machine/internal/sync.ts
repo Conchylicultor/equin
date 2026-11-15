@@ -45,8 +45,9 @@ import {
 //      once the table knows it;
 //   4. sum every file row (vanished files included — the totals never shrink
 //      when Claude Code sweeps a transcript) and write only what changed;
-//   5. file the cost this pass priced under the Claude account that spent it
-//      (`conversation_usage_account_days`): a live pass runs right after the
+//   5. file the cost this pass priced, per UTC hour, under the Claude account
+//      that spent it and the conversation's `conv:` source (the spend ledger,
+//      infra/claude-cli/spend-ledger's `claude_spend_hours`): a live pass runs right after the
 //      agent's own append, so the account its runtime runs it on NOW is the
 //      one the tokens were drawn from. A job pass (backfill, reprice) files
 //      nothing — it cannot know which account spent what it counts.
@@ -206,16 +207,16 @@ async function syncConversationUsage(
   const rows: (FileScan & FilePricing)[] = [];
   const toWrite: (FileScan & FilePricing)[] = [];
   const changedPaths = new Set(changed.map((scan) => scan.path));
-  const addedByDate = new Map<string, number>();
+  const addedByHour = new Map<string, number>();
   for (const scan of byPath.values()) {
     const prev = storedByPath.get(scan.path);
-    const { addedByDate: added, ...pricing } = priceFile(
+    const { addedByHour: added, ...pricing } = priceFile(
       prev,
       scan.buckets,
       table,
     );
-    for (const [date, cost] of added)
-      addedByDate.set(date, (addedByDate.get(date) ?? 0) + cost);
+    for (const [hour, cost] of added)
+      addedByHour.set(hour, (addedByHour.get(hour) ?? 0) + cost);
     const row = { ...scan, ...pricing };
     rows.push(row);
     const repriced =
@@ -232,7 +233,7 @@ async function syncConversationUsage(
     current.tokens === totals.tokens &&
     current.cacheReadTokens === totals.cacheReadTokens &&
     current.agentCount === totals.agentCount;
-  const spend = await spendOf(conversationId, state, cause, addedByDate);
+  const spend = await spendOf(conversationId, state, cause, addedByHour);
   if (toWrite.length > 0 || !same) {
     try {
       await writeUsage(
@@ -269,16 +270,16 @@ async function spendOf(
   conversationId: string,
   state: UsageState,
   cause: SyncCause,
-  addedByDate: ReadonlyMap<string, number>,
+  addedByHour: ReadonlyMap<string, number>,
 ): Promise<AccountSpend[]> {
-  if (cause === "reload" || addedByDate.size === 0) return [];
+  if (cause === "reload" || addedByHour.size === 0) return [];
   const running = await conversationRunningAccount(conversationId);
   if (running !== null) state.account = running;
   const accountId = state.account;
   if (accountId === null) return [];
-  return [...addedByDate].map(([date, costUsd]) => ({
+  return [...addedByHour].map(([hour, costUsd]) => ({
     accountId,
-    date,
+    hour: new Date(hour),
     costUsd,
   }));
 }

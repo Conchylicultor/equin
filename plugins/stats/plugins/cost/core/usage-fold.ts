@@ -77,20 +77,47 @@ export interface SeenEntry {
 }
 
 /**
- * A fold's running state: the `(date, model, speed)` buckets (keyed
- * `${date} ${model} ${speed}`) and the entries already counted, by hash.
+ * How finely a fold buckets time: per UTC day (`DayBucket.date` only — the
+ * corpus index and the archive), or per UTC hour of that day (`hour` set too —
+ * conversations/usage, whose spend is filed per hour). Tiering is per entry
+ * either way, so an hour-keyed fold's buckets sum to the day-keyed ones.
+ */
+export type UsageGranularity = "day" | "hour";
+
+/**
+ * A fold's running state: the `(date[, hour], model, speed)` buckets (keyed
+ * `${date} ${model} ${speed}`, or `${date}T${hh} …` when hour-keyed) and the
+ * entries already counted, by hash.
  */
 export interface UsageBuckets {
+  granularity: UsageGranularity;
   buckets: Map<string, DayBucket>;
   seen: Map<string, SeenEntry>;
 }
 
-export function emptyUsageBuckets(): UsageBuckets {
-  return { buckets: new Map(), seen: new Map() };
+export function emptyUsageBuckets(
+  granularity: UsageGranularity = "day",
+): UsageBuckets {
+  return { granularity, buckets: new Map(), seen: new Map() };
 }
 
-function bucketKey(b: Pick<DayBucket, "date" | "model" | "speed">): string {
-  return `${b.date} ${b.model} ${b.speed}`;
+// An hourless bucket keeps the day key it always had, so the stored tail of a
+// row counted before hours (its `bucket` strings) still names its bucket.
+function bucketKey(
+  b: Pick<DayBucket, "date" | "hour" | "model" | "speed">,
+): string {
+  const time =
+    b.hour === undefined
+      ? b.date
+      : `${b.date}T${String(b.hour).padStart(2, "0")}`;
+  return `${time} ${b.model} ${b.speed}`;
+}
+
+/** The UTC hour of an ISO timestamp (`…THH:…Z`), or undefined when it has none. */
+function hourOf(timestamp: string): number | undefined {
+  if (timestamp[10] !== "T") return undefined;
+  const hour = Number(timestamp.slice(11, 13));
+  return Number.isInteger(hour) && hour >= 0 && hour < 24 ? hour : undefined;
 }
 
 /**
@@ -101,8 +128,10 @@ function bucketKey(b: Pick<DayBucket, "date" | "model" | "speed">): string {
 export function resumeUsageBuckets(
   buckets: readonly DayBucket[],
   seen: Iterable<readonly [string, SeenEntry]>,
+  granularity: UsageGranularity = "day",
 ): UsageBuckets {
   return {
+    granularity,
     buckets: new Map(buckets.map((b) => [bucketKey(b), structuredClone(b)])),
     seen: new Map([...seen].map(([hash, e]) => [hash, { ...e }])),
   };
@@ -199,12 +228,18 @@ export function foldUsageEntry(
     typeof obj.timestamp === "string" ? obj.timestamp.slice(0, 10) : "";
   const model = obj.message?.model;
   const speed = normalizeSpeed(usage.speed);
-  const key = day && model ? bucketKey({ date: day, model, speed }) : null;
+  const hour =
+    fold.granularity === "hour" && typeof obj.timestamp === "string"
+      ? hourOf(obj.timestamp)
+      : undefined;
+  const key =
+    day && model ? bucketKey({ date: day, hour, model, speed }) : null;
   if (hash != null) fold.seen.set(hash, { bucket: key, output });
 
   if (key !== null && day && model) {
     const b = fold.buckets.get(key) ?? {
       date: day,
+      ...(hour === undefined ? {} : { hour }),
       model,
       speed,
       input: emptyTiered(),

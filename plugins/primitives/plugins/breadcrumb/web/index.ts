@@ -8,6 +8,9 @@ export {
 } from "./internal/breadcrumb";
 
 export { BreadcrumbSlots } from "./slots";
+// The themed mark between two crumbs, for a trail drawn by hand (one whose
+// crumbs animate in and out — the spend breakdown's title).
+export { TrailSeparator } from "./internal/trail-separator";
 export type { BreadcrumbSeparatorContribution } from "./slots";
 
 export default {

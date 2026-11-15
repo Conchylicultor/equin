@@ -3070,6 +3070,13 @@
     },
     {
       "version": "7",
+      "when": 1794742390000,
+      "tag": "20261115_113310_4bcebaad__claude_spend_hours_backfill",
+      "hash": "4bcebaad",
+      "breakpoints": true
+    },
+    {
+      "version": "7",
       "when": 1794742792000,
       "tag": "20261115_113952_4773fe8d__merged_20261115_1139",
       "hash": "4773fe8d",
@@ -3094,6 +3101,13 @@
       "when": 1794751072000,
       "tag": "20261115_135752_949545fa__merged_20261115_1357",
       "hash": "949545fa",
+      "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1794785051000,
+      "tag": "20261115_232411_a52fb6b4__merged_20261115_2324",
+      "hash": "a52fb6b4",
       "breakpoints": true
     }
   ]

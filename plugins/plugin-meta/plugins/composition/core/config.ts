@@ -600,6 +600,11 @@ export const compositionsConfig = defineConfig({
               // leaves with them. Written here because the cascade took it out
               // of `tasks.**` without a word until `cascadeLosses` said so.
               "!tasks.task-triage",
+              // The supervisors spend breakdown: what the user's own Claude
+              // accounts spent this week — a demo has no account and no
+              // spend (and its Background category names automations, which
+              // leave above).
+              "!tasks.supervisor-roles.spend",
               // The task_submit_triage tool call's renderer draws its verdict
               // with the Triage card's labels (task-triage/core), so it leaves
               // with it.

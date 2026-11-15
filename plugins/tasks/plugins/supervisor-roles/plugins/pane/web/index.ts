@@ -15,7 +15,9 @@ import {
   supervisorsListActions,
 } from "./components/supervisors-list";
 import { BacklogActions, backlogActions } from "./components/backlog-section";
+import { SupervisorsList } from "./slots";
 
+export { SupervisorsList } from "./slots";
 export {
   SupervisorPill,
   TaskSupervisorControl,
@@ -49,5 +51,6 @@ export default {
     "role-actions": RoleActions,
     "adhoc-actions": AdhocActions,
     "backlog-actions": BacklogActions,
+    "list-head": SupervisorsList.Head,
   },
 } satisfies PluginDefinition;

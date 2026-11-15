@@ -27,10 +27,11 @@ const line = (
   id: string,
   usage: { input?: number; output?: number; cacheRead?: number },
   requestId = `req-${id}`,
+  timestamp = "2026-10-08T12:00:00.000Z",
 ) =>
   JSON.stringify({
     type: "assistant",
-    timestamp: "2026-10-08T12:00:00.000Z",
+    timestamp,
     requestId,
     message: {
       role: "assistant",
@@ -60,6 +61,9 @@ const TABLE: PriceTable = {
 };
 
 const NO_PRICES: PriceTable = { fetchedAt: 0, models: {} };
+
+/** The ledger hour of `line`'s default timestamp. */
+const NOON = "2026-10-08T12:00:00.000Z";
 
 /** Each scan priced whole with TABLE, then summed. */
 const totals = (...scans: (FileScan | null)[]) =>
@@ -245,7 +249,7 @@ describe("totalsOf", () => {
     expect(pricing).toEqual({
       costUsd: 0,
       unpricedModels: ["claude-test"],
-      addedByDate: new Map(),
+      addedByHour: new Map(),
     });
     const result = totalsOf([{ ...scan!, ...pricing }]);
     expect(result.tokens).toBe(5);
@@ -260,7 +264,7 @@ describe("priceFile", () => {
     const first = await advanceFile(path, "session", undefined);
     const firstPricing = priceFile(undefined, first!.buckets, TABLE);
     expect(firstPricing.costUsd).toBe(21);
-    expect(firstPricing.addedByDate).toEqual(new Map([["2026-10-08", 21]]));
+    expect(firstPricing.addedByHour).toEqual(new Map([[NOON, 21]]));
 
     // The price doubles; the tokens already counted keep their cost.
     const doubled: PriceTable = {
@@ -273,7 +277,7 @@ describe("priceFile", () => {
     // Nothing new counted: nothing added, whatever the table says now.
     expect(priceFile(stored, first!.buckets, doubled)).toEqual({
       ...firstPricing,
-      addedByDate: new Map(),
+      addedByHour: new Map(),
     });
 
     await appendFile(path, line("m2", { input: 2, output: 5 }));
@@ -281,8 +285,8 @@ describe("priceFile", () => {
     expect(priceFile(stored, second!.buckets, doubled)).toEqual({
       costUsd: 21 + 2 * 2 + 5 * 4,
       unpricedModels: [],
-      // Only the appended message, dated by its own bucket.
-      addedByDate: new Map([["2026-10-08", 2 * 2 + 5 * 4]]),
+      // Only the appended message, filed under its own bucket's hour.
+      addedByHour: new Map([[NOON, 2 * 2 + 5 * 4]]),
     });
   });
 
@@ -297,13 +301,13 @@ describe("priceFile", () => {
     expect(priceFile(unpriced, scan!.buckets, NO_PRICES)).toEqual({
       costUsd: 0,
       unpricedModels: ["claude-test"],
-      addedByDate: new Map(),
+      addedByHour: new Map(),
     });
-    // Priced now: added on this pass, dated by the bucket it was spent on.
+    // Priced now: added on this pass, filed under the hour it was spent in.
     expect(priceFile(unpriced, scan!.buckets, TABLE)).toEqual({
       costUsd: 10,
       unpricedModels: [],
-      addedByDate: new Map([["2026-10-08", 10]]),
+      addedByHour: new Map([[NOON, 10]]),
     });
   });
 
@@ -322,7 +326,7 @@ describe("priceFile", () => {
     expect(priceFile(undefined, [synthetic], TABLE)).toEqual({
       costUsd: 0,
       unpricedModels: [],
-      addedByDate: new Map(),
+      addedByHour: new Map(),
     });
   });
 
@@ -332,5 +336,79 @@ describe("priceFile", () => {
     const scan = await advanceFile(path, "session", undefined);
     const legacy = { ...scan!, costUsd: null, unpricedModels: [] };
     expect(priceFile(legacy, scan!.buckets, TABLE).costUsd).toBe(3);
+  });
+
+  test("files each hour's cost under its own hour, across an hour boundary", async () => {
+    const path = join(await newDir(), "s.jsonl");
+    await writeFile(
+      path,
+      line("m1", { input: 1 }, "r1", "2026-10-08T12:59:59.000Z") +
+        line("m2", { input: 2 }, "r2", "2026-10-08T13:00:00.000Z"),
+    );
+    const first = await advanceFile(path, "session", undefined);
+    expect(first!.buckets.map((b) => b.hour).sort()).toEqual([12, 13]);
+    const firstPricing = priceFile(undefined, first!.buckets, TABLE);
+    expect(firstPricing.addedByHour).toEqual(
+      new Map([
+        ["2026-10-08T12:00:00.000Z", 1],
+        ["2026-10-08T13:00:00.000Z", 2],
+      ]),
+    );
+
+    // An append in the next day's first hour adds there alone.
+    await appendFile(
+      path,
+      line("m3", { output: 1 }, "r3", "2026-10-09T00:10:00.000Z"),
+    );
+    const second = await advanceFile(path, "session", first!);
+    const pass = priceFile(
+      { ...first!, ...firstPricing },
+      second!.buckets,
+      TABLE,
+    );
+    expect(pass.addedByHour).toEqual(
+      new Map([["2026-10-09T00:00:00.000Z", 2]]),
+    );
+    expect(pass.costUsd).toBe(5);
+  });
+
+  test("a day bucket counted before hours is re-bucketed, not re-filed", async () => {
+    const path = join(await newDir(), "s.jsonl");
+    await writeFile(
+      path,
+      line("m1", { input: 1 }, "r1", "2026-10-08T09:00:00.000Z") +
+        line("m2", { input: 2 }, "r2", "2026-10-08T10:30:00.000Z"),
+    );
+    const hourly = await advanceFile(path, "session", undefined);
+    // What a row counted before hours held: one day bucket, both messages.
+    const legacy = {
+      ...hourly!,
+      buckets: [
+        {
+          ...hourly!.buckets[0]!,
+          hour: undefined,
+          input: { below: 3, above: 0 },
+        },
+      ],
+      costUsd: 3,
+      unpricedModels: [],
+    };
+    // A re-read from the start re-buckets the same tokens by hour: nothing
+    // was spent on this pass.
+    const reread = priceFile(legacy, hourly!.buckets, TABLE);
+    expect(reread.costUsd).toBe(3);
+    expect(reread.addedByHour).toEqual(new Map());
+
+    // A message appended before the re-read is the only cost, at its hour.
+    await appendFile(
+      path,
+      line("m3", { input: 4 }, "r3", "2026-10-08T11:00:00.000Z"),
+    );
+    const grown = await advanceFile(path, "session", undefined);
+    const pass = priceFile(legacy, grown!.buckets, TABLE);
+    expect(pass.costUsd).toBe(7);
+    expect(pass.addedByHour).toEqual(
+      new Map([["2026-10-08T11:00:00.000Z", 4]]),
+    );
   });
 });

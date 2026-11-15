@@ -625,14 +625,14 @@ yes/no guard: `useConfirmDialog` (`imperative-dialog/plugins/confirm`); native
     - `ui/tokens/chart` ×5
     - `ui/tokens/font-family` ×4
     - `ui/tokens/scrollbar --scrollbar-color`
-  - Imported by: 472 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 473 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives` ×113
     - `apps` ×109
     - `conversations` ×55
     - `page` ×27
     - `debug` ×25
     - `ui` ×23
-    - `tasks` ×19
+    - `tasks` ×20
     - `fields` ×12
     - `apps-core` ×11
     - `plugin-meta` ×10

@@ -783,9 +783,9 @@ serves them.
     - `TRAILER_LOG_FORMAT`
     - `UNATTRIBUTED_TRAILER_KEY`
 - Cross-plugin:
-  - Imported by: 124 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 125 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `conversations` ×50
-    - `tasks` ×40
+    - `tasks` ×41
     - `debug` ×6
     - `active-data` ×5
     - `apps` ×3

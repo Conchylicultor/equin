@@ -20,6 +20,7 @@ describe("claude-cli-calls fields", () => {
       "prompt",
       "output",
       "error",
+      "costUsd",
       "status",
     ]);
   });
@@ -35,6 +36,7 @@ describe("claude-cli-calls fields", () => {
         "prompt",
         "output",
         "error",
+        "costUsd",
       ].sort(),
     );
   });

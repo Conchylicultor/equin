@@ -404,6 +404,7 @@ A trigger on `tasks.statusChanged` (`automations.task-status`):
   - Exports (values):
     - `automationConfigRegistration`
     - `defineAutomation`
+    - `tasksOrigin`
   - Register: `defineJob('automations.task-status')`
   - Resources:
     - `automations.catalog` (push, notified, whole: every registered automation — declared in code, bounded by the composition, whole: the tasks one launch-kind automation holds a slot for — at most its concurrency, whole: what one automation watches — e.g. one per dependency updater, declared in code, whole: one automation's prompt variables — a handful, declared in code, capped: TRIGGER_KINDS.length)
@@ -527,6 +528,7 @@ A trigger on `tasks.statusChanged` (`automations.task-status`):
     - `tasks/outcome-report`
     - `tasks/reports-investigation`
     - `tasks/sidequest-autopilot`
+    - `tasks/supervisor-roles/spend`
     - `tasks/task-triage`
     - `upstream`
 

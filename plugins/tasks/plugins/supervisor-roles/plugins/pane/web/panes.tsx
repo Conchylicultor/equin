@@ -66,7 +66,7 @@ export const supervisorsSharedPane = Pane.define({
 function SupervisorsBody(): ReactElement {
   const openPane = useOpenPane();
   const roleId = supervisorRolePane.useRouteEntry()?.params.roleId;
-  const shared = supervisorsSharedPane.useRouteEntry() !== undefined;
+  const shared = supervisorsSharedPane.useRouteEntry() !== null;
   return (
     <PaneChrome pane={supervisorsPane}>
       <div className="rail-lg">

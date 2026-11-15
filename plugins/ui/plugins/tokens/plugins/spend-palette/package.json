@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-ui-tokens-spend-palette",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Spend colour token group: --spend-1…5, the five categorical colours a spend breakdown's parts are painted with in order, and --spend-rest for the folded remainder."
+}

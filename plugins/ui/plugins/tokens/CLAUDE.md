@@ -111,6 +111,9 @@ exactly this (`plugins/apps/plugins/website/plugins/shell/web/internal/theme.ts`
   - **`sidebar-palette`** — Sidebar palette token group. Its customizer section is the `customizer` child.
     - Plugins:
       - **`customizer`** — Customizer section for the sidebar palette token group, with the palette dots in its header.
+  - **`spend-palette`** — Spend colour token group: --spend-1…5 (a spend breakdown's parts, in order) and --spend-rest (the folded remainder). Its customizer section is the `customizer` child.
+    - Plugins:
+      - **`customizer`** — Customizer section for the spend colour token group (--spend-1…5, --spend-rest).
   - **`type-scale`** [exempt] — Type-scale token group (font sizes, line heights, weights). Its customizer section is the `customizer` child.
     - Plugins:
       - **`customizer`** — Customizer section for the type-scale token group.

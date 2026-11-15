@@ -4564,6 +4564,10 @@
         "@xterm/headless": "^6.0.0",
       },
     },
+    "plugins/infra/plugins/claude-cli/plugins/spend-ledger": {
+      "name": "@equin/plugin-infra-claude-cli-spend-ledger",
+      "version": "0.0.1",
+    },
     "plugins/infra/plugins/codesign": {
       "name": "@equin/plugin-infra-codesign",
       "version": "0.0.1",
@@ -7463,6 +7467,10 @@
       "name": "@equin/plugin-tasks-supervisor-roles-sessions",
       "version": "0.0.1",
     },
+    "plugins/tasks/plugins/supervisor-roles/plugins/spend": {
+      "name": "@equin/plugin-tasks-supervisor-roles-spend",
+      "version": "0.0.1",
+    },
     "plugins/tasks/plugins/supervisor-run": {
       "name": "@equin/plugin-tasks-supervisor-run",
       "version": "0.0.1",
@@ -7886,6 +7894,14 @@
     },
     "plugins/ui/plugins/tokens/plugins/sidebar-palette/plugins/customizer": {
       "name": "@equin/plugin-ui-tokens-sidebar-palette-customizer",
+      "version": "0.0.1",
+    },
+    "plugins/ui/plugins/tokens/plugins/spend-palette": {
+      "name": "@equin/plugin-ui-tokens-spend-palette",
+      "version": "0.0.1",
+    },
+    "plugins/ui/plugins/tokens/plugins/spend-palette/plugins/customizer": {
+      "name": "@equin/plugin-ui-tokens-spend-palette-customizer",
       "version": "0.0.1",
     },
     "plugins/ui/plugins/tokens/plugins/type-scale": {
@@ -10271,6 +10287,8 @@
 
     "@equin/plugin-infra-claude-cli-sign-in": ["@equin/plugin-infra-claude-cli-sign-in@workspace:plugins/infra/plugins/claude-cli/plugins/sign-in"],
 
+    "@equin/plugin-infra-claude-cli-spend-ledger": ["@equin/plugin-infra-claude-cli-spend-ledger@workspace:plugins/infra/plugins/claude-cli/plugins/spend-ledger"],
+
     "@equin/plugin-infra-codesign": ["@equin/plugin-infra-codesign@workspace:plugins/infra/plugins/codesign"],
 
     "@equin/plugin-infra-corpus-index": ["@equin/plugin-infra-corpus-index@workspace:plugins/infra/plugins/corpus-index"],
@@ -11625,6 +11643,8 @@
 
     "@equin/plugin-tasks-supervisor-roles-sessions": ["@equin/plugin-tasks-supervisor-roles-sessions@workspace:plugins/tasks/plugins/supervisor-roles/plugins/sessions"],
 
+    "@equin/plugin-tasks-supervisor-roles-spend": ["@equin/plugin-tasks-supervisor-roles-spend@workspace:plugins/tasks/plugins/supervisor-roles/plugins/spend"],
+
     "@equin/plugin-tasks-supervisor-run": ["@equin/plugin-tasks-supervisor-run@workspace:plugins/tasks/plugins/supervisor-run"],
 
     "@equin/plugin-tasks-task-attachments": ["@equin/plugin-tasks-task-attachments@workspace:plugins/tasks/plugins/task-attachments"],
@@ -11832,6 +11852,10 @@
     "@equin/plugin-ui-tokens-sidebar-palette": ["@equin/plugin-ui-tokens-sidebar-palette@workspace:plugins/ui/plugins/tokens/plugins/sidebar-palette"],
 
     "@equin/plugin-ui-tokens-sidebar-palette-customizer": ["@equin/plugin-ui-tokens-sidebar-palette-customizer@workspace:plugins/ui/plugins/tokens/plugins/sidebar-palette/plugins/customizer"],
+
+    "@equin/plugin-ui-tokens-spend-palette": ["@equin/plugin-ui-tokens-spend-palette@workspace:plugins/ui/plugins/tokens/plugins/spend-palette"],
+
+    "@equin/plugin-ui-tokens-spend-palette-customizer": ["@equin/plugin-ui-tokens-spend-palette-customizer@workspace:plugins/ui/plugins/tokens/plugins/spend-palette/plugins/customizer"],
 
     "@equin/plugin-ui-tokens-type-scale": ["@equin/plugin-ui-tokens-type-scale@workspace:plugins/ui/plugins/tokens/plugins/type-scale"],
 

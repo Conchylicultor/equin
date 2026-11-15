@@ -745,6 +745,12 @@
       "parent": "supervisors"
     },
     {
+      "paneId": "supervisors-spend",
+      "segment": "spend/:path*",
+      "appIndex": false,
+      "parent": "supervisors"
+    },
+    {
       "paneId": "table-detail",
       "segment": "t/:pluginId/:tableName",
       "appIndex": false,

@@ -885,12 +885,12 @@ Details:
     - `unresolved`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/color-palette --destructive`
-  - Imported by: 313 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 315 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×85
     - `conversations` ×49
     - `debug` ×31
-    - `ui` ×25
-    - `tasks` ×24
+    - `ui` ×26
+    - `tasks` ×25
     - `page` ×16
     - `primitives` ×15
     - `infra` ×10

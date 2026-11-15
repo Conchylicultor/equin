@@ -1,25 +1,27 @@
 import { sql } from "drizzle-orm";
 import { writeAtomically, type DbExecutor } from "@plugins/database/server";
+import {
+  spendLedgerUpsert,
+  type SpendLedgerRow,
+} from "@plugins/infra/plugins/claude-cli/plugins/spend-ledger/server";
+import { conversationSpendSource } from "@plugins/infra/plugins/claude-cli/plugins/spend-ledger/core";
 import type { FilePricing, FileScan, UsageTotals } from "./scan";
 import {
-  _conversationUsageAccountDays,
   _conversationUsageFiles,
   conversationUsage,
 } from "../../server/internal/tables";
 
-/** Cost a sync priced on one UTC day, to add to the account that spent it. */
-export interface AccountSpend {
-  accountId: string;
-  /** `YYYY-MM-DD`, UTC. */
-  date: string;
-  costUsd: number;
-}
+/**
+ * Cost a sync priced in one UTC hour, to add to the account that spent it —
+ * filed under the conversation's own source, which `writeUsage` stamps.
+ */
+export type AccountSpend = Omit<SpendLedgerRow, "source">;
 
 /**
  * Write what one sync changed: the file rows it advanced or re-priced, the
  * conversation's totals (`null` when they did not move), and the cost it priced
- * per account and day (added to what each day already holds) — in ONE
- * statement.
+ * per account and hour, under the conversation's `conv:` source (added to what
+ * the spend ledger already holds, `spendLedgerUpsert`) — in ONE statement.
  *
  * Never a transaction of round trips: between two statements the server sits
  * idle in transaction, holding the file rows' locks while the app thinks — the
@@ -58,20 +60,13 @@ export async function writeUsage(
             },
           })
       : null,
-    spend.length > 0
-      ? exec
-          .insert(_conversationUsageAccountDays)
-          .values([...spend])
-          .onConflictDoUpdate({
-            target: [
-              _conversationUsageAccountDays.accountId,
-              _conversationUsageAccountDays.date,
-            ],
-            set: {
-              costUsd: sql`"conversation_usage_account_days"."cost_usd" + excluded.cost_usd`,
-            },
-          })
-      : null,
+    spendLedgerUpsert(
+      exec,
+      spend.map((row) => ({
+        ...row,
+        source: conversationSpendSource(conversationId),
+      })),
+    ),
     totals !== null
       ? conversationUsage.upsertQuery(conversationId, totals)
       : null,

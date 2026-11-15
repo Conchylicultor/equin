@@ -34,6 +34,7 @@ import {
   useRoles,
 } from "../internal/reads";
 import { isStale, sessionLabel, useSessionNumbers } from "../internal/format";
+import { SupervisorsList as SupervisorsListSlots } from "../slots";
 import { RoleIcon } from "./role-icon";
 import {
   LaunchSessionIconButton,
@@ -118,6 +119,7 @@ export function SupervisorsList({
 }): ReactElement {
   return (
     <Stack gap="lg">
+      <SupervisorsListSlots.Head.Render />
       <SharedEntry selected={selected === "all"} linkToShared={linkToShared} />
       <RolesView
         selected={selected}

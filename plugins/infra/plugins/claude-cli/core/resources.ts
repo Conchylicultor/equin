@@ -23,6 +23,7 @@ import { durationField } from "@plugins/fields/plugins/duration/plugins/config/c
 import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
 import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
 import { jsonField } from "@plugins/fields/plugins/json/plugins/config/core";
+import { moneyField } from "@plugins/fields/plugins/money/plugins/config/core";
 import { entityRef } from "@plugins/infra/plugins/entities/core";
 import {
   cappedList,
@@ -75,6 +76,13 @@ export const claudeCliCallFields = {
   // across callers and hand one plugin another's calls. Appended last so the
   // record still reads in physical column order.
   correlationId: nullable(textField()),
+  // What the call cost at API prices — the SDK result's `total_cost_usd`, an
+  // error result's included; `null` when the call never got a result (a CLI
+  // that died, a timeout) or was recorded before costs were kept. The same
+  // amount is added to the spend ledger under `cli:<sourceName>`
+  // (`plugins/spend-ledger`) — the ledger, not this trimmed log, is what spend
+  // is read from.
+  costUsd: nullable(moneyField({ label: "Cost" })),
 } satisfies FieldsRecord;
 
 /** The `claude_cli_calls` entity: the table is built from these fields (`server/internal/tables.ts`). */
@@ -138,6 +146,7 @@ export const claudeCliCalls = liveCollection("claude-cli-calls", {
     "prompt",
     "output",
     "error",
+    "costUsd",
   ],
   fields: {
     status: enumTextField(CLAUDE_CLI_CALL_STATUSES, {
@@ -182,6 +191,7 @@ export const claudeCliCallsByRecord = liveCollection(
         "error",
         "durationMs",
         "correlationId",
+        "costUsd",
       ],
     },
     baseExposures: false,

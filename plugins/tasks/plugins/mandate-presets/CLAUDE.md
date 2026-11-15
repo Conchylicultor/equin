@@ -61,6 +61,7 @@ the orchestration umbrella never does.
     - `tasks/reports-investigation`
     - `tasks/supervisor-roles`
     - `tasks/supervisor-roles/pane`
+    - `tasks/supervisor-roles/spend`
     - `tasks/supervisor-run`
     - `tasks/task-triage`
 

@@ -372,6 +372,8 @@ export const staticHosts: Record<string, StaticHost> = {
       "ui/plugins/tokens/plugins/sidebar-metrics/plugins/customizer",
       "ui/plugins/tokens/plugins/sidebar-palette",
       "ui/plugins/tokens/plugins/sidebar-palette/plugins/customizer",
+      "ui/plugins/tokens/plugins/spend-palette",
+      "ui/plugins/tokens/plugins/spend-palette/plugins/customizer",
       "ui/plugins/tokens/plugins/type-scale",
       "ui/plugins/tokens/plugins/type-scale/plugins/customizer",
       "ui/plugins/tweakcn/plugins/community-browser/plugins/customizer",

@@ -218,6 +218,10 @@ async function writeFixtureRow(
         error: null,
         durationMs: 0,
         correlationId: id,
+        // No result, so no cost: a fixture call files nothing in the ledger.
+        accountId: null,
+        costUsd: null,
+        at: new Date(),
       });
       return;
     case "task-subject":

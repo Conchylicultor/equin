@@ -1,4 +1,4 @@
-// @hash aa9c71549c33
+// @hash 01cd1f7a4c2a
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -27,6 +27,7 @@
     "ui.tokens.shape.customizer:shape",
     "ui.tokens.sidebar-metrics.customizer:sidebar-metrics",
     "ui.tokens.sidebar-palette.customizer:sidebar-palette",
+    "ui.tokens.spend-palette.customizer:spend-palette",
     "ui.tokens.type-scale.customizer:type-scale",
     "ui.tweakcn.community-browser.customizer:import-by-url"
   ]

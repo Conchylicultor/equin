@@ -758,9 +758,9 @@ with an empty route.
 - Load-bearing: yes
 - Web:
   - Slots: `Pane.Register`
-  - Slot contributors: 101 contributors — full list in [REFERENCE.md](./REFERENCE.md)
-    - `Pane.Register` ×101
-  - Contributes: 133 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+  - Slot contributors: 102 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `Pane.Register` ×102
+  - Contributes: 134 contributions — full list in [REFERENCE.md](./REFERENCE.md)
     - `FileBrowserHeader` "title" → `PaneTitleItem`
     - `FilePreviewHeader` "title" → `PaneTitleItem`
     - `SlotRender.ListMiddleware`
@@ -880,6 +880,7 @@ with an empty route.
     - `statsPane.Actions` "title" → `PaneTitleItem`
     - `supervisor-role.actions` "title" → `PaneTitleItem`
     - `supervisors-shared.actions` "title" → `PaneTitleItem`
+    - `supervisors-spend.actions` "title" → `PaneTitleItem`
     - `supervisors.actions` "title" → `PaneTitleItem`
     - `systemAgentDetailPane.Actions` "title" → `PaneTitleItem`
     - `tabMemoryPane.Actions` "title" → `PaneTitleItem`
@@ -1050,12 +1051,12 @@ with an empty route.
     - `ui/tokens/density --space-md`
     - `ui/tokens/density --space-sm`
     - `ui/tokens/shape --spacing`
-  - Imported by: 217 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 218 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×79
     - `conversations` ×33
     - `debug` ×29
     - `active-data` ×14
-    - `tasks` ×11
+    - `tasks` ×12
     - `primitives` ×9
     - `apps-core` ×7
     - `plugin-meta` ×6

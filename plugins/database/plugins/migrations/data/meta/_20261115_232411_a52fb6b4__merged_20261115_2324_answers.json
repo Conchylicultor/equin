@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "answers": [
+    {
+      "key": "table:claude_spend_hours",
+      "entityType": "table",
+      "entityName": "claude_spend_hours",
+      "action": "create"
+    }
+  ]
+}

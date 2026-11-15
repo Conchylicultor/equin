@@ -91,10 +91,14 @@ export async function advanceFile(
   const resumed = restart ? [] : prev.tailHashes.filter(isTailEntry);
   const start = restart ? 0 : prev.offset;
   const fold = restart
-    ? { ...emptyUsageBuckets(), ...(chainSeen ? { seen: chainSeen } : {}) }
+    ? {
+        ...emptyUsageBuckets("hour"),
+        ...(chainSeen ? { seen: chainSeen } : {}),
+      }
     : resumeUsageBuckets(
         prev.buckets,
         resumed.map(({ hash, ...entry }) => [hash, entry] as const),
+        "hour",
       );
   // This file's counted hashes, oldest first; the fold's `seen` holds each
   // one's current output (a top-up updates it in place).
@@ -144,13 +148,14 @@ export interface FilePricing {
 
 /**
  * A pricing pass's result: the row's frozen pricing, and what this pass ADDED
- * to its cost, per UTC day of the priced bucket (negative for tokens a chain
- * re-read took back). Not stored on the row: the sync files it under the
- * account that spent it (`conversation_usage_account_days`). Its values sum to
- * the move of `costUsd`.
+ * to its cost, per UTC hour of the priced bucket (`spendHourKey`, an ISO
+ * instant; negative for tokens a chain re-read took back). Not stored on the
+ * row: the sync files it under the account that spent it
+ * (infra/claude-cli/spend-ledger's `claude_spend_hours`). Its values sum to the
+ * move of `costUsd`.
  */
 export interface PricingPass extends FilePricing {
-  addedByDate: Map<string, number>;
+  addedByHour: Map<string, number>;
 }
 
 /** A file row as stored: its scan state and its pricing (`null`: never priced). */
@@ -159,50 +164,104 @@ export interface PricedFile extends FileScan {
   unpricedModels: string[];
 }
 
-const bucketKey = (b: DayBucket): string => `${b.date}\0${b.model}\0${b.speed}`;
+/** A bucket's `(date, model, speed)` — the day it counts toward. */
+const dayKey = (b: DayBucket): string => `${b.date}\0${b.model}\0${b.speed}`;
+/** A bucket's full key: its day, and its hour (none on a legacy bucket). */
+const bucketKey = (b: DayBucket): string => `${dayKey(b)}\0${b.hour ?? ""}`;
 
-const minus = (
-  a: { below: number; above: number },
-  b: { below: number; above: number } | undefined,
-): { below: number; above: number } => ({
-  below: a.below - (b?.below ?? 0),
-  above: a.above - (b?.above ?? 0),
-});
+/** The ten token counts of a bucket, by kind and tier. */
+const TOKEN_KINDS = [
+  "input",
+  "output",
+  "cacheRead",
+  "cacheCreate5m",
+  "cacheCreate1h",
+] as const;
+const TIERS = ["below", "above"] as const;
 
-const ZERO = { below: 0, above: 0 };
+type Tokens = Pick<DayBucket, (typeof TOKEN_KINDS)[number]>;
+
+function mapTokens(
+  f: (
+    kind: (typeof TOKEN_KINDS)[number],
+    tier: (typeof TIERS)[number],
+  ) => number,
+): Tokens {
+  const tiered = (kind: (typeof TOKEN_KINDS)[number]) => ({
+    below: f(kind, "below"),
+    above: f(kind, "above"),
+  });
+  return {
+    input: tiered("input"),
+    output: tiered("output"),
+    cacheRead: tiered("cacheRead"),
+    cacheCreate5m: tiered("cacheCreate5m"),
+    cacheCreate1h: tiered("cacheCreate1h"),
+  };
+}
 
 /**
- * `next`'s buckets minus `prev`'s, per `(date, model, speed)`: the tokens
+ * `next`'s buckets minus `prev`'s, per `(date, hour, model, speed)`: the tokens
  * counted since `prev`. Usually only additions; a chain re-read can also take
  * tokens back (a bucket shrinks or goes), and pricing is linear, so the
  * negative delta un-prices them at the rate they are taken back at.
+ *
+ * A row counted before the fold kept hours holds hourless (day) buckets. An
+ * append leaves them as they are (new tokens go to hour buckets beside them);
+ * a re-read from the start re-buckets their tokens by hour. Such a day bucket,
+ * gone from `next`, is taken out of `next`'s hours of the same day, earliest
+ * first — a transcript is append-only, so what was counted before is what came
+ * first — and only what is left over (tokens really taken back) stays a
+ * negative delta, on the day bucket itself.
  */
 function bucketDelta(prev: DayBucket[], next: DayBucket[]): DayBucket[] {
   const before = new Map(prev.map((b) => [bucketKey(b), b]));
-  const delta: DayBucket[] = [];
-  for (const b of next) {
+  const nextKeys = new Set(next.map(bucketKey));
+  const delta: DayBucket[] = next.map((b) => {
     const p = before.get(bucketKey(b));
-    before.delete(bucketKey(b));
-    delta.push({
+    return {
       ...b,
-      input: minus(b.input, p?.input),
-      output: minus(b.output, p?.output),
-      cacheRead: minus(b.cacheRead, p?.cacheRead),
-      cacheCreate5m: minus(b.cacheCreate5m, p?.cacheCreate5m),
-      cacheCreate1h: minus(b.cacheCreate1h, p?.cacheCreate1h),
-    });
+      ...mapTokens((kind, tier) => b[kind][tier] - (p?.[kind][tier] ?? 0)),
+    };
+  });
+  const hoursOfDay = new Map<string, DayBucket[]>();
+  for (const d of delta) {
+    if (d.hour === undefined) continue;
+    const day = hoursOfDay.get(dayKey(d)) ?? [];
+    day.push(d);
+    hoursOfDay.set(dayKey(d), day);
   }
-  for (const p of before.values()) {
+  for (const hours of hoursOfDay.values())
+    hours.sort((a, b) => (a.hour ?? 0) - (b.hour ?? 0));
+  for (const p of prev) {
+    if (nextKeys.has(bucketKey(p))) continue;
+    const left: Tokens = mapTokens((kind, tier) => p[kind][tier]);
+    if (p.hour === undefined) {
+      for (const d of hoursOfDay.get(dayKey(p)) ?? []) {
+        for (const kind of TOKEN_KINDS) {
+          for (const tier of TIERS) {
+            const take = Math.min(left[kind][tier], Math.max(0, d[kind][tier]));
+            d[kind][tier] -= take;
+            left[kind][tier] -= take;
+          }
+        }
+      }
+    }
     delta.push({
       ...p,
-      input: minus(ZERO, p.input),
-      output: minus(ZERO, p.output),
-      cacheRead: minus(ZERO, p.cacheRead),
-      cacheCreate5m: minus(ZERO, p.cacheCreate5m),
-      cacheCreate1h: minus(ZERO, p.cacheCreate1h),
+      // `0 -`, not `-`: a fully taken-out count stays 0, never -0.
+      ...mapTokens((kind, tier) => 0 - left[kind][tier]),
     });
   }
   return delta;
+}
+
+/**
+ * The ledger hour a priced bucket's cost is filed under, as an ISO instant: its
+ * UTC hour, or 00:00 of its day for a legacy (hourless) bucket.
+ */
+export function spendHourKey(b: Pick<DayBucket, "date" | "hour">): string {
+  return `${b.date}T${String(b.hour ?? 0).padStart(2, "0")}:00:00.000Z`;
 }
 
 /**
@@ -226,29 +285,30 @@ export function priceFile(
       ? { buckets: [], costUsd: 0, unpricedModels: [] }
       : { ...prev, costUsd: prev.costUsd };
   let costUsd = base.costUsd;
-  const addedByDate = new Map<string, number>();
-  const add = (date: string, cost: number): void => {
+  const addedByHour = new Map<string, number>();
+  const add = (b: DayBucket, cost: number): void => {
     if (cost === 0) return;
     costUsd += cost;
-    addedByDate.set(date, (addedByDate.get(date) ?? 0) + cost);
+    const hour = spendHourKey(b);
+    addedByHour.set(hour, (addedByHour.get(hour) ?? 0) + cost);
   };
   const unpriced = new Set<string>();
   const wasUnpriced = new Set(base.unpricedModels);
   for (const b of base.buckets) {
     if (!wasUnpriced.has(b.model)) continue;
     const priced = priceBucket(b, table);
-    if (priced.ok) add(b.date, priced.cost);
+    if (priced.ok) add(b, priced.cost);
     else if (priced.tokens !== 0) unpriced.add(b.model);
   }
   for (const b of bucketDelta(base.buckets, nextBuckets)) {
     const priced = priceBucket(b, table);
-    if (priced.ok) add(b.date, priced.cost);
+    if (priced.ok) add(b, priced.cost);
     // No tokens cost nothing, priced or not (here and above): Claude Code's
     // `<synthetic>` pseudo-model only ever carries zeros, and no table will
     // ever price it.
     else if (priced.tokens !== 0) unpriced.add(b.model);
   }
-  return { costUsd, unpricedModels: [...unpriced].sort(), addedByDate };
+  return { costUsd, unpricedModels: [...unpriced].sort(), addedByHour };
 }
 
 /** The totals a conversation's file rows add up to. */

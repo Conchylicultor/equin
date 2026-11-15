@@ -64,6 +64,7 @@ path showed `… › leaf` with hundreds of pixels standing empty.)
   - Exports (values):
     - `Breadcrumb`
     - `BreadcrumbSlots`
+    - `TrailSeparator`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --muted-foreground`
@@ -80,6 +81,7 @@ path showed `… › leaf` with hundreds of pixels standing empty.)
     - `plugin-meta/plugin-view`
     - `primitives/filepath-breadcrumb`
     - `primitives/path-bar`
+    - `tasks/supervisor-roles/spend`
     - `ui/breadcrumb-separator`
 - Core:
   - Exports (types): `BreadcrumbSeparatorProps`

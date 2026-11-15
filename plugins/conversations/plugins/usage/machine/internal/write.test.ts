@@ -29,8 +29,8 @@ import {
 import { FALLBACK_MODEL } from "@plugins/conversations/plugins/model-provider/core";
 import type { FilePricing, FileScan, UsageTotals } from "./scan";
 import { writeUsage } from "./write";
+import { _claudeSpendHours } from "@plugins/infra/plugins/claude-cli/plugins/spend-ledger/server";
 import {
-  _conversationUsageAccountDays,
   _conversationUsageExt,
   _conversationUsageFiles,
 } from "../../server/internal/tables";
@@ -73,6 +73,7 @@ beforeAll(async () => {
     runtime: "sdk",
     model: FALLBACK_MODEL,
     kind: "user",
+    launchCause: "direct",
   } as typeof _conversations.$inferInsert);
 });
 
@@ -177,35 +178,63 @@ describe("writeUsage", () => {
     expect(await filesOf()).toHaveLength(2);
   });
 
-  test("spend adds to each account's day, in the same statement as the files", async () => {
+  test("spend adds to each account's hour under the conversation's source, in the same statement as the files", async () => {
     const spendOf = () =>
       t.db
         .select()
-        .from(_conversationUsageAccountDays)
-        .orderBy(
-          asc(_conversationUsageAccountDays.accountId),
-          asc(_conversationUsageAccountDays.date),
-        );
+        .from(_claudeSpendHours)
+        .orderBy(asc(_claudeSpendHours.accountId), asc(_claudeSpendHours.hour));
+    const h = (iso: string) => new Date(iso);
     await writeUsage(
       t.db,
       "conv-w",
       [fileRow("/c.jsonl", 7, 0.25)],
       totals(1.25, 38),
       [
-        { accountId: "api", date: "2026-11-04", costUsd: 0.25 },
-        { accountId: "max", date: "2026-11-04", costUsd: 1 },
+        { accountId: "api", hour: h("2026-11-04T10:00:00Z"), costUsd: 0.25 },
+        { accountId: "max", hour: h("2026-11-04T10:00:00Z"), costUsd: 1 },
       ],
     );
-    // A later pass adds to the day it already holds, and starts the next.
+    // A later pass adds to the hour it already holds, and starts the next.
     await writeUsage(t.db, "conv-w", [fileRow("/c.jsonl", 9, 0.75)], null, [
-      { accountId: "api", date: "2026-11-04", costUsd: 0.5 },
-      { accountId: "api", date: "2026-11-05", costUsd: 2 },
+      { accountId: "api", hour: h("2026-11-04T10:00:00Z"), costUsd: 0.5 },
+      { accountId: "api", hour: h("2026-11-04T11:00:00Z"), costUsd: 2 },
     ]);
     expect(await spendOf()).toEqual([
-      { accountId: "api", date: "2026-11-04", costUsd: 0.75 },
-      { accountId: "api", date: "2026-11-05", costUsd: 2 },
-      { accountId: "max", date: "2026-11-04", costUsd: 1 },
+      {
+        accountId: "api",
+        hour: h("2026-11-04T10:00:00Z"),
+        source: "conv:conv-w",
+        costUsd: 0.75,
+      },
+      {
+        accountId: "api",
+        hour: h("2026-11-04T11:00:00Z"),
+        source: "conv:conv-w",
+        costUsd: 2,
+      },
+      {
+        accountId: "max",
+        hour: h("2026-11-04T10:00:00Z"),
+        source: "conv:conv-w",
+        costUsd: 1,
+      },
     ]);
     expect(await usageOf()).toMatchObject({ costUsd: 1.25, tokens: 38 });
+  });
+
+  test("a failed write files no spend", async () => {
+    const before = await t.db.select().from(_claudeSpendHours);
+    // The conversation does not exist: the file rows' FK fails the statement.
+    expect(
+      writeUsage(t.db, "conv-missing", [fileRow("/x.jsonl", 1, 1)], null, [
+        {
+          accountId: "api",
+          hour: new Date("2026-11-04T12:00:00Z"),
+          costUsd: 1,
+        },
+      ]),
+    ).rejects.toThrow();
+    expect(await t.db.select().from(_claudeSpendHours)).toEqual(before);
   });
 });

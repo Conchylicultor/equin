@@ -42,6 +42,12 @@ export interface TieredTokens {
  */
 export interface DayBucket {
   date: string; // YYYY-MM-DD
+  /**
+   * The UTC hour of `date` (0–23) — set only by a fold keyed by the hour
+   * (`emptyUsageBuckets("hour")`: conversations/usage, whose spend is filed per
+   * hour); absent on a day-keyed bucket (the corpus index, the archive).
+   */
+  hour?: number;
   model: string;
   speed: "standard" | "fast";
   input: TieredTokens;

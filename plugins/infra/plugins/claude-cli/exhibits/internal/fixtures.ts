@@ -29,6 +29,7 @@ export const SUCCEEDED_CALL: ClaudeCliCall = {
   error: null,
   durationMs: 3116,
   correlationId: "5d2e8a41-7c09-4f3b-a6d1-e94b0c7f2a58",
+  costUsd: 0.0031,
 };
 
 export const FAILED_CALL: ClaudeCliCall = {
@@ -50,4 +51,5 @@ The backup run detail pane shows a stale target list after Grant access — the 
   error: "Claude Code process exited with code 143",
   durationMs: 11400,
   correlationId: null,
+  costUsd: null,
 };

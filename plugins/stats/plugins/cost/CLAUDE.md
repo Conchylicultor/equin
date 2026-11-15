@@ -325,6 +325,7 @@ it survives, the snapshot fills in where it does not.
     - `SeenEntry`
     - `TieredTokens`
     - `UsageBuckets`
+    - `UsageGranularity`
   - Exports (values):
     - `emptyUsageBuckets`
     - `foldUsageEntry`

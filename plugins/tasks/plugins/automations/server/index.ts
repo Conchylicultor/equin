@@ -27,6 +27,9 @@ export type {
   LaunchCandidate,
 } from "./internal/registry";
 export type { AutomationFiling } from "./internal/origin";
+// The origin side-table, for a read that joins it (the supervisors spend
+// breakdown classifies an automation's tasks by it).
+export { tasksOrigin } from "./internal/tables";
 
 export default {
   description:

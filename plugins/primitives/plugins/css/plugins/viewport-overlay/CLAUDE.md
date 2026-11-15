@@ -208,6 +208,7 @@ looks equivalent and silently discards the caller's.
     - `reports/viewport-escape`
     - `screenshot/draw-on-app`
     - `shell/toast`
+    - `tasks/supervisor-roles/spend`
 - Exemptions:
   - Exempted by: `primitives/css/ui-kit` (0 debt)
 

@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-ui-tokens-spend-palette-customizer",
+  "description": "Customizer section for the spend colour token group (--spend-1…5, --spend-rest).",
+  "private": true,
+  "version": "0.0.1"
+}

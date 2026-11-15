@@ -1,0 +1,293 @@
+/*
+ * The spend breakdown's own drawing: the stacked bar, the glance card, the
+ * drill title (the path), its zoom stage and the rows' grid. Plugin-local
+ * because each is a bespoke piece of motion or geometry no primitive owns —
+ * a bar of runtime-weighted segments, a clip-path wipe, a WAAPI zoom whose
+ * transform origin is the bar's start — and the keyframes belong beside
+ * them. Colours are tokens (the spend palette, the text tiers, the surface
+ * fills); type is the role utilities on the elements.
+ */
+
+/* ---- the bar ---- */
+.sp-bar {
+  display: flex;
+  gap: 2px;
+  height: 12px;
+}
+.sp-bar.thin {
+  height: 6px;
+}
+.sp-bar.enter {
+  animation: sp-bar-in 0.45s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.sp-bar > i {
+  display: block;
+  min-width: 3px;
+  border-radius: 2px;
+  transition:
+    opacity 0.15s,
+    transform 0.15s;
+}
+.sp-bar > i:first-child {
+  border-top-left-radius: 4px;
+  border-bottom-left-radius: 4px;
+}
+.sp-bar > i:last-child {
+  border-top-right-radius: 4px;
+  border-bottom-right-radius: 4px;
+}
+.sp-bar.has-hot > i:not(.hot) {
+  opacity: 0.3;
+}
+.sp-bar:not(.thin) > i.hot {
+  transform: scaleY(1.35);
+}
+.sp-bar > i.pick {
+  cursor: pointer;
+}
+@keyframes sp-bar-in {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+/* ---- the tooltip ---- */
+.sp-tip {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 7px 10px 8px;
+  white-space: nowrap;
+}
+.sp-tip .st-h {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.sp-tip .st-h > i,
+.sp-sw {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  flex: none;
+}
+.sp-tip .st-v,
+.sp-tip .st-s {
+  padding-left: 14px;
+}
+
+/* ---- the glance ---- */
+.sp-glance {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 2px 2px 0;
+  padding: 10px 12px 11px;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.sp-glance:hover {
+  background: var(--hover-fill);
+}
+.sp-glance.on {
+  background: var(--selected-fill);
+}
+.sp-glance .sg-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.sp-glance .sg-legend {
+  display: grid;
+  /* Two columns in the narrow list column; in a wide one the entries stay
+     their own width (the share next to its name) and line up in one row. */
+  grid-template-columns: repeat(auto-fill, minmax(128px, 176px));
+  gap: 3px 12px;
+}
+.sp-glance .sg-legend > span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  white-space: nowrap;
+  transition:
+    opacity 0.12s,
+    color 0.12s;
+}
+.sp-glance .sg-legend > span.dim {
+  opacity: 0.45;
+}
+.sp-glance .sg-legend > span > i {
+  width: 7px;
+  height: 7px;
+  border-radius: 2px;
+  flex: none;
+}
+.sp-glance .sg-legend > span > b {
+  margin-left: auto;
+  font-weight: inherit;
+}
+.sp-skel {
+  height: 6px;
+  border-radius: 4px;
+}
+
+/* ---- the drill page ---- */
+.sp-page {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.sp-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 32px;
+}
+.sp-title .grow {
+  flex: 1;
+}
+.sp-total {
+  flex: none;
+}
+.sp-path {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.sp-path .pseg {
+  flex: 0 1 auto;
+  min-width: 2.5em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color 0.16s ease-out;
+}
+.sp-path .pseg.cur {
+  flex-shrink: 0.2;
+  cursor: default;
+}
+.sp-path .sep {
+  display: inline-flex;
+  flex: none;
+}
+/* The new name is wiped in at full colour — never half-transparent, so the
+   current level is always the one bright name. */
+.sp-path .pseg.enter {
+  animation: sp-seg-wipe-in 0.3s cubic-bezier(0.22, 0.8, 0.24, 1) both;
+}
+.sp-path .sep.enter {
+  animation: sp-sep-in 0.18s ease-out both;
+}
+.sp-path .pseg.leaving {
+  animation: sp-seg-wipe-out 0.2s ease-in forwards;
+  pointer-events: none;
+}
+.sp-path .sep.leaving {
+  animation: sp-sep-out 0.2s ease-in forwards;
+  pointer-events: none;
+}
+@keyframes sp-seg-wipe-in {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+@keyframes sp-seg-wipe-out {
+  from {
+    clip-path: inset(0 0 0 0);
+  }
+  to {
+    clip-path: inset(0 100% 0 0);
+  }
+}
+@keyframes sp-sep-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes sp-sep-out {
+  to {
+    opacity: 0;
+  }
+}
+
+/* The zoom between levels: the bar grows from (or back into) the picked
+   segment; the old bar fades out on top as a ghost. */
+.sp-stage {
+  position: relative;
+  overflow: hidden;
+  padding: 3px 0;
+  margin: -3px 0;
+}
+.sp-zoom {
+  transform-origin: 0 50%;
+  will-change: transform;
+}
+.sp-zoom.ghost {
+  position: absolute;
+  inset: 3px 0;
+  pointer-events: none;
+}
+
+/* ---- the rows ---- */
+.sp-rows {
+  position: relative;
+}
+.sp-row {
+  display: grid;
+  grid-template-columns: 8px minmax(0, 1fr) minmax(40px, 96px) 40px 52px 16px;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+.sp-row .sp-nm {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.sp-row .sp-nm .t {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.sp-row .sp-nm .t > span,
+.sp-row .sp-nm .sp-sub {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sp-row .ldot {
+  width: 6px;
+  height: 6px;
+  border-radius: 99px;
+  flex: none;
+}
+.sp-row .sp-share {
+  height: 3px;
+  border-radius: 99px;
+  overflow: hidden;
+}
+.sp-row .sp-share > i {
+  display: block;
+  height: 100%;
+  border-radius: 99px;
+}
+.sp-row .sp-pct,
+.sp-row .sp-v {
+  text-align: right;
+}
+.sp-row .sp-go {
+  display: inline-flex;
+}
