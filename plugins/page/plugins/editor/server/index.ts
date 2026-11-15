@@ -1,4 +1,7 @@
-import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
+import {
+  getBootMode,
+  type ServerPluginDefinition,
+} from "@plugins/framework/plugins/server-core/core";
 import { defineTrashSource } from "@plugins/infra/plugins/trash/server";
 import { IdKinds } from "@plugins/ids/server";
 import { DerivedTable } from "@plugins/database/plugins/derived-tables/server";
@@ -133,7 +136,13 @@ export default {
   // doc-order marks — repaired here, and announced on `docRankDriftSink`.
   // After `database`'s barrier (a `dependsOn` edge), so the column exists;
   // idempotent.
+  //
+  // A serving host's work only: an `exec` child (a supervised job's body, ~400
+  // a day on main) serves nobody and reads no sidebar order, so it would only
+  // re-scan page_blocks against its spawner's live database — four full scans
+  // per child — and race the serving backend as a second repairer.
   async onReadyBlocking() {
+    if (getBootMode() === "exec") return;
     await reconcileDocRanksAndAnnounceDrift();
   },
   httpRoutes: {
