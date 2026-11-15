@@ -4,8 +4,19 @@
  * says what a visitor saw.
  *
  *   ./equin run plugins/infra/plugins/launcher/scripts/gateway-load-probe.ts \
- *     --url https://equin.ai [--seconds 90] [--workers 6] [--websockets 2] \
- *     [--out "$EQUIN_SCRATCH/probe.json"]
+ *     --url https://equin.ai [--seconds 90] [--workers 6] [--rate 60] \
+ *     [--websockets 2] [--out "$EQUIN_SCRATCH/probe.json"]
+ *
+ * The load is DECLARED, not discovered: `--rate` requests per second in total,
+ * spread evenly over the workers, each worker starting its next request on its
+ * own schedule (or as soon as the previous one ends, when it answers slower
+ * than that). A closed loop — the next request the instant the previous answers
+ * — sends `workers / latency` requests a second: ~60/s to equin.ai over the
+ * internet, but ~3,500/s to the local gateway at ~1 ms, which is what a
+ * 25-minute run against main did on 2026-11-15 (3.3M `GET /api/health` in an
+ * hour, report-1794537600-wwhsz4). The default matches what the equin.ai runs
+ * measured; a handover window of milliseconds is still seen at 60/s by the
+ * WebSockets and by any request that spans it.
  *
  * Each worker cycles a page GET, `GET /api/health` (whose `startedAt` names
  * the backend PROCESS — a change is a backend cold start or swap) and an
@@ -26,6 +37,8 @@ interface Opts {
   url: string;
   seconds: number;
   workers: number;
+  /** Requests per second across every worker. */
+  rate: number;
   websockets: number;
   out: string | null;
 }
@@ -35,6 +48,7 @@ function parseArgs(argv: string[]): Opts {
     url: "",
     seconds: 90,
     workers: 6,
+    rate: 60,
     websockets: 2,
     out: null,
   };
@@ -54,6 +68,10 @@ function parseArgs(argv: string[]): Opts {
         opts.workers = Number(v);
         i++;
         break;
+      case "--rate":
+        opts.rate = Number(v);
+        i++;
+        break;
       case "--websockets":
         opts.websockets = Number(v);
         i++;
@@ -67,6 +85,7 @@ function parseArgs(argv: string[]): Opts {
     }
   }
   if (opts.url === "") throw new Error("--url <origin> is required");
+  if (!(opts.rate > 0)) throw new Error("--rate must be a positive number");
   opts.url = opts.url.replace(/\/$/, "");
   return opts;
 }
@@ -134,9 +153,18 @@ async function main(): Promise<void> {
     }
   };
 
+  // Each worker's share of --rate; workers start staggered across one interval.
+  const intervalMs = (opts.workers * 1000) / opts.rate;
   const worker = async (i: number) => {
     let n = i;
+    let next = Date.now() + (i * intervalMs) / opts.workers;
     while (Date.now() < until) {
+      const wait = next - Date.now();
+      if (wait > 0) await Bun.sleep(wait);
+      if (Date.now() >= until) return;
+      // A request that ran past its slot is followed at once, never by a burst
+      // catching up on the slots it covered.
+      next = Math.max(next + intervalMs, Date.now());
       switch (n % 3) {
         case 0:
           await timed("page", () => fetch(`${opts.url}/`), samples);
@@ -162,10 +190,6 @@ async function main(): Promise<void> {
           );
       }
       n++;
-      // A failed request backs off like a client would, instead of spinning:
-      // the failure count then reads as requests a visitor made, not as how
-      // fast a refused connect returns.
-      if (samples.at(-1)?.error != null) await Bun.sleep(100);
     }
   };
 
@@ -221,6 +245,7 @@ async function main(): Promise<void> {
   const summary = {
     url: opts.url,
     seconds: opts.seconds,
+    rate: opts.rate,
     requests: samples.length,
     failed: failed.length,
     firstErrors: failed.slice(0, 10).map((s) => ({
