@@ -31572,10 +31572,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`hook-value`** — A React hook carried as a value: the Hook<F> brand, and the two lint rules that keep every binding holding one named use* (the React Compiler recognises hooks by name only and memoizes any other call).
       - Core:
         - Exports (types): `Hook`
-    - **`http-router`** — The one HTTP request router every host mounts: createRequestHandler turns "METHOD /path/:param" route pairs into a (req) => Promise<Response> — literal fast path, then :param matching in registration order, a default cache-control: no-store, a Server-Timing stamp of the handler's own time with a per-response id on every response (readServerTiming parses it back), and a logged generic 500 on a throw. A duplicate route key throws at construction.
+    - **`http-router`** — The one HTTP request router every host mounts: createRequestHandler turns "METHOD /path/:param" route pairs into a (req) => Promise<Response> — literal fast path, then :param matching in registration order, a default cache-control: no-store, a Server-Timing stamp of the handler's own time with a per-response id on every response (readServerTiming parses it back), and a logged, reported 500 on a throw — generic, or the response the error carries (answerThrowWith, for a protocol with its own error shape such as MCP's JSON-RPC). A duplicate route key throws at construction.
       - Cross-plugin:
         - Imported by:
           - `framework/server-core`
+          - `infra/mcp`
           - `primitives/networking`
       - Core:
         - Exports (types):
@@ -31583,6 +31584,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `RouteHandler`
           - `ServerTimingStamp`
         - Exports (values):
+          - `answerThrowWith`
           - `createRequestHandler`
           - `readServerTiming`
           - `SERVER_TIMING_METRIC`
@@ -38137,6 +38139,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `page/annotations/agent-access`
           - `plugin-meta/plugin-health`
         - Endpoint callers: `health`
+      - Exemptions:
+        - Exempts itself from: `endpoints:no-raw-json-handlers` — `machine/internal/handle-mcp.ts` (sanctioned)
       - Plugins:
         - **`browser`** — The health report's Agent browser row: whether the machine's agent-browser host runs, its sessions (what each is for — its task's title — its tab count, and how long until it closes if left idle), a recent failure the host hit on its own, and a host that died without closing them — read from the agent-browser.status push value. Agent browser: MCP tools (browser_navigate, browser_read_page, browser_act, browser_batch, browser_screenshot, browser_console, …) forwarded to one detached host process per machine that owns the shared headless Chromium — an isolated session per conversation targeted at that conversation's own worktree build, tabs that stay open across calls and across backend restarts, frozen between calls — plus the agent-browser.status value (host, sessions, tabs, deadlines) pushed from the host's status file.
           - Web:

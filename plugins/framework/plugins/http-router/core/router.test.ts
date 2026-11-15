@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { createRequestHandler, type RouteHandler } from "./router";
 import { readServerTiming } from "./server-timing";
+import { answerThrowWith } from "./thrown-response";
 
 const ok =
   (body: string): RouteHandler =>
@@ -126,6 +127,29 @@ describe("createRequestHandler", () => {
       { message: "kaboom", method: "GET", pathname: "/api/boom/1" },
       { message: "async kaboom", method: "POST", pathname: "/api/reject" },
     ]);
+  });
+
+  test("a throw carrying its own answer is still reported, then answered with it", async () => {
+    const errors: string[] = [];
+    const handle = createRequestHandler({
+      routes: [
+        [
+          "POST /api/rpc",
+          () => {
+            throw answerThrowWith(
+              new Error("db down"),
+              Response.json({ error: { message: "db down" } }, { status: 500 }),
+            );
+          },
+        ],
+      ],
+      onError: (err) => errors.push(err.message),
+    });
+    const res = await handle(req("POST", "/api/rpc"));
+    expect(res.status).toBe(500);
+    expect(res.headers.get("cache-control")).toBe("no-store");
+    expect(await res.json()).toEqual({ error: { message: "db down" } });
+    expect(errors).toEqual(["db down"]);
   });
 
   test("a duplicate route key throws at construction", () => {

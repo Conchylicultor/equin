@@ -18,10 +18,11 @@ requests are timed (`Transport.requestTiming`).
 
 ## Plugin reference
 
-- Description: The one HTTP request router every host mounts: createRequestHandler turns "METHOD /path/:param" route pairs into a (req) => Promise<Response> — literal fast path, then :param matching in registration order, a default cache-control: no-store, a Server-Timing stamp of the handler's own time with a per-response id on every response (readServerTiming parses it back), and a logged generic 500 on a throw. A duplicate route key throws at construction.
+- Description: The one HTTP request router every host mounts: createRequestHandler turns "METHOD /path/:param" route pairs into a (req) => Promise<Response> — literal fast path, then :param matching in registration order, a default cache-control: no-store, a Server-Timing stamp of the handler's own time with a per-response id on every response (readServerTiming parses it back), and a logged, reported 500 on a throw — generic, or the response the error carries (answerThrowWith, for a protocol with its own error shape such as MCP's JSON-RPC). A duplicate route key throws at construction.
 - Cross-plugin:
   - Imported by:
     - `framework/server-core`
+    - `infra/mcp`
     - `primitives/networking`
 - Core:
   - Exports (types):
@@ -29,6 +30,7 @@ requests are timed (`Transport.requestTiming`).
     - `RouteHandler`
     - `ServerTimingStamp`
   - Exports (values):
+    - `answerThrowWith`
     - `createRequestHandler`
     - `readServerTiming`
     - `SERVER_TIMING_METRIC`

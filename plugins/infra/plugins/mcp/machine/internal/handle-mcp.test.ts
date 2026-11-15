@@ -8,6 +8,7 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { z } from "zod";
 import { setServerErrorHandler } from "@plugins/framework/plugins/server-core/core/testing";
+import { createRequestHandler } from "@plugins/framework/plugins/http-router/core";
 import { handleMcpRequest } from "./handle-mcp";
 import { Mcp, type McpToolContext } from "../../server";
 import { MCP_UNATTACHED_ID } from "../../core";
@@ -345,5 +346,50 @@ describe("unattached sessions", () => {
         json.result.content[0]?.text !== "gated");
     expect(refused).toBe(true);
     expect(gateRuns).toBe(0);
+  });
+});
+
+describe("a request the server fails to serve", () => {
+  afterEach(() => {
+    scopeRegistry.resolver = null;
+  });
+
+  // 2026-11-15: Postgres restarted for 9 s; the scope read threw before the
+  // SDK ran, and every browser_act call answered the router's bare
+  // "Internal server error" — the agent could not tell what failed.
+  test("a tools/call answers a JSON-RPC error naming the tool and the cause, still logged", async () => {
+    scopeRegistry.resolver = () =>
+      Promise.reject(new Error("the database system is shutting down"));
+    const logged: string[] = [];
+    const handle = createRequestHandler({
+      routes: [["POST /api/mcp/:conversationId", handleMcpRequest]],
+      onError: (err) => logged.push(err.message),
+    });
+    const res = await handle(
+      new Request(`http://localhost/api/mcp/${CONVERSATION}`, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          accept: "application/json, text/event-stream",
+        },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: 7,
+          method: "tools/call",
+          params: { name: "echo", arguments: { text: "hi" } },
+        }),
+      }),
+    );
+    expect(res.status).toBe(500);
+    expect(await res.json()).toEqual({
+      jsonrpc: "2.0",
+      id: 7,
+      error: {
+        code: -32603,
+        message:
+          'MCP tool "echo" failed: the equin server could not serve it: the database system is shutting down',
+      },
+    });
+    expect(logged).toEqual(["the database system is shutting down"]);
   });
 });

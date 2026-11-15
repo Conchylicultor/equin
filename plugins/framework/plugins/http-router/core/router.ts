@@ -1,4 +1,5 @@
 import { serverTimingValue } from "./server-timing";
+import { thrownResponse } from "./thrown-response";
 
 /** A route's handler: the request and the values of its `:param` segments. */
 export type RouteHandler = (
@@ -9,7 +10,7 @@ export type RouteHandler = (
 export interface RequestHandlerOptions {
   /** `["METHOD /path/:param", handler]` pairs. A duplicate key throws. */
   routes: Iterable<[key: string, handler: RouteHandler]>;
-  /** Called with a handler's throw, before the generic 500 is returned. */
+  /** Called with a handler's throw, before the 500 is returned. */
   onError: (err: Error, req: Request, pathname: string) => void;
   /** The response when no route matches. Default: 404 "Not found". */
   onUnmatched?: (req: Request, pathname: string) => Response;
@@ -102,7 +103,8 @@ function notFound(): Response {
  * `:param` matcher (filtered by method, in registration order). Every handled
  * response (the 500 included) defaults to `cache-control: no-store` and carries
  * the handler's time as `Server-Timing` (`server-timing.ts`); a throw goes to
- * `onError` and answers a generic JSON 500.
+ * `onError` and answers a generic JSON 500 — or the response the error carries
+ * (`answerThrowWith`).
  */
 export function createRequestHandler(
   opts: RequestHandlerOptions,
@@ -145,7 +147,8 @@ export function createRequestHandler(
       opts.onError(errObj, req, pathname);
       return withServerTiming(
         withDefaultCacheControl(
-          Response.json({ error: "Internal server error" }, { status: 500 }),
+          thrownResponse(errObj) ??
+            Response.json({ error: "Internal server error" }, { status: 500 }),
         ),
         performance.now() - startedAt,
       );

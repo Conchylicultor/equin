@@ -1,4 +1,5 @@
 export { createRequestHandler } from "./router";
+export { answerThrowWith } from "./thrown-response";
 export type { RouteHandler, RequestHandlerOptions } from "./router";
 export {
   readServerTiming,

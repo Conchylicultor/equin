@@ -1,4 +1,5 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { answerThrowWith } from "@plugins/framework/plugins/http-router/core";
 import { bodyMessages, hasToolsList } from "./messages";
 import { MCP_SERVER_NAME, MCP_UNATTACHED_ID } from "../../core";
 import { runContribution } from "./isolate";
@@ -16,21 +17,24 @@ import { mcpSdk, type McpSdk } from "./sdk";
 /**
  * The MCP route: answers one request, and records its outcome for the health
  * value (`mcp.health`) — a throw or a 5xx is the server failing its agents.
- * The throw is rethrown: recording it never absorbs it.
+ * The throw is rethrown: recording it never absorbs it, and the router logs
+ * and reports it. It is answered as a JSON-RPC error naming the call and its
+ * cause (`mcpFailureResponse`) rather than the router's bare 500: the agent
+ * reads the body, and "Internal server error" told it nothing (a 9 s Postgres
+ * restart once failed every `browser_act` call that way, 2026-11-15).
  */
 export async function handleMcpRequest(
   req: Request,
   params: Record<string, string>,
 ): Promise<Response> {
+  const messages = await bodyMessages(req);
   let res: Response;
   try {
-    res = await answerMcpRequest(req, params);
+    res = await answerMcpRequest(req, params, messages);
   } catch (err) {
-    recordMcpRequest({
-      ok: false,
-      message: err instanceof Error ? err.message : String(err),
-    });
-    throw err;
+    const error = err instanceof Error ? err : new Error(String(err));
+    recordMcpRequest({ ok: false, message: error.message });
+    throw answerThrowWith(error, mcpFailureResponse(messages, error));
   }
   recordMcpRequest(
     res.status >= 500
@@ -40,9 +44,52 @@ export async function handleMcpRequest(
   return res;
 }
 
+/** JSON-RPC's code for an error inside the server. */
+const INTERNAL_ERROR = -32603;
+
+/**
+ * A failed request's answer: one JSON-RPC error per request it held (a batch
+ * gets one each, a lone notification one with a null id), each naming what
+ * was asked — the tool, for a `tools/call` — and the real cause.
+ */
+function mcpFailureResponse(
+  messages: readonly unknown[],
+  err: Error,
+): Response {
+  const requests = messages.flatMap((m) => {
+    if (typeof m !== "object" || m === null) return [];
+    const { id, method, params } = m as {
+      id?: unknown;
+      method?: unknown;
+      params?: unknown;
+    };
+    if (id === undefined) return [];
+    const tool = (params as { name?: unknown } | null | undefined)?.name;
+    const what =
+      method === "tools/call" && typeof tool === "string"
+        ? `MCP tool "${tool}"`
+        : `MCP request "${typeof method === "string" ? method : "?"}"`;
+    return [{ id, what }];
+  });
+  const errors = (
+    requests.length > 0 ? requests : [{ id: null, what: "MCP request" }]
+  ).map(({ id, what }) => ({
+    jsonrpc: "2.0",
+    id,
+    error: {
+      code: INTERNAL_ERROR,
+      message: `${what} failed: the equin server could not serve it: ${err.message}`,
+    },
+  }));
+  return Response.json(errors.length === 1 ? errors[0] : errors, {
+    status: 500,
+  });
+}
+
 async function answerMcpRequest(
   req: Request,
   params: Record<string, string>,
+  messages: readonly unknown[],
 ): Promise<Response> {
   const conversationId = params.conversationId;
   if (!conversationId) {
@@ -53,7 +100,6 @@ async function answerMcpRequest(
       ? { kind: "unattached" }
       : { kind: "conversation", conversationId };
 
-  const messages = await bodyMessages(req);
   const sdk = await mcpSdk();
   const server = newMcpServer(sdk);
 
