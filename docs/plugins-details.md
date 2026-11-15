@@ -42176,6 +42176,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live/live-state`
           - `network/live/resource-runtime`
           - `packages/watched-memo`
+          - `plugin-meta/plugin-tree`
           - `tasks/orchestration/mandate`
     - **`keyed-mutex`** — Keyed FIFO mutex: createKeyedMutex().run(key, fn) runs fn once every earlier run for the same key has settled, in arrival order, while different keys run concurrently; a key's entry is dropped the moment its queue drains.
       - Cross-plugin:

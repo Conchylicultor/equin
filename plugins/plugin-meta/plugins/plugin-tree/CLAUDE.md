@@ -141,6 +141,19 @@ instead, which opens the worker session (inside a heavy-read slot held until
 its first build is done, whichever tree was asked first). Worktree backends
 keep the lazy path on purpose: their Studio surfaces are rarely opened.
 
+**One cold build, one wait** (`machine/internal/faceted-tree-source.ts`): the
+first read of each tree awaits the worker (`awaitReply`, the
+`worker:plugin-tree.faceted-index` io wait slow-ops files past 2 s); a read
+arriving while that build is in flight joins it
+(`inflight:plugin-tree.cold-build`, a `join` — the build's time, filed once by
+its first waiter). Otherwise every waiter files the same build again (on main:
+the `plugin-tree:first-build` slot holder and the warm-up, on every restart).
+
+The cold build costs ~1.1 s on a calm host (worker CPU ~0.6 s: git listing
+~0.3 s, structure + keying ~0.3 s, records ~0.15 s, relate ~0.2 s), 1.8–2.3 s
+on main at load 10–20. No step dominates; each is whole-tree once per process
+(below).
+
 What the worker's cold build costs, and why (2026-11-14, main's checkout,
 host load 10–20, steps timed one after another): git snapshot ~0.3 s; the
 facet modules ~0.37 s → ~15 ms, since `token-usage` loads TypeScript and

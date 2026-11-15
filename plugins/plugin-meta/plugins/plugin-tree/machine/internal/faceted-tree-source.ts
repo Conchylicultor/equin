@@ -3,6 +3,7 @@ import { appPathParent } from "@plugins/infra/plugins/host-fs/plugins/user-path/
 import { PLUGINS_DIR } from "@plugins/infra/plugins/paths/server";
 import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
+import { createInflight } from "@plugins/packages/plugins/inflight/core";
 import { defineDaemon } from "@plugins/infra/plugins/spawn/plugins/daemon/server";
 import {
   pluginTreeFromDelta,
@@ -87,6 +88,15 @@ export function openFacetedTreeSession({
   const ready: Waiter<PluginTreeData>[] = [];
   const structured: Waiter<PluginTreeData>[] = [];
   const pending = new Map<number, Waiter<boolean>>();
+  // The cold build is ONE run of the worker, however many reads wait for it.
+  // The first read of each tree awaits the worker (`awaitReply`: the
+  // `worker:<daemon>` io wait, filed as `wait worker:plugin-tree.faceted-index`
+  // when slow); every read arriving while it is in flight joins that read
+  // (`inflight:plugin-tree.cold-build`, a join: the build's time, reported by
+  // its first waiter). Before, each waiter filed the same build again — on
+  // main the warm-up and the session's own first-build span both waited on
+  // every restart's build, so one 2.3 s build was two reports' occurrences.
+  const coldBuild = createInflight("plugin-tree.cold-build");
 
   /** End the session; `failed` when it ended on an error, not by design. */
   const end = (reason: string, failed: boolean): void => {
@@ -211,23 +221,28 @@ export function openFacetedTreeSession({
   return {
     // Every answer still to come is the worker's (its build, its refresh):
     // awaited through `awaitReply`, so the reader's span shows it as a
-    // `worker:plugin-tree.faceted-index` wait, not as its own time.
+    // `worker:plugin-tree.faceted-index` wait, not as its own time — the
+    // cold build's by its first reader only, the rest joining it (above).
     tree() {
       if (ended !== null) return Promise.reject(ended);
       if (facetsFailed !== null) return Promise.reject(facetsFailed);
       if (tree !== null) return Promise.resolve(tree);
-      return instance.awaitReply(
-        new Promise<PluginTreeData>((resolve, reject) =>
-          ready.push({ resolve, reject }),
+      return coldBuild.run("facets", () =>
+        instance.awaitReply(
+          new Promise<PluginTreeData>((resolve, reject) =>
+            ready.push({ resolve, reject }),
+          ),
         ),
       );
     },
     structure() {
       if (ended !== null) return Promise.reject(ended);
       if (structure !== null) return Promise.resolve(structure);
-      return instance.awaitReply(
-        new Promise<PluginTreeData>((resolve, reject) =>
-          structured.push({ resolve, reject }),
+      return coldBuild.run("structure", () =>
+        instance.awaitReply(
+          new Promise<PluginTreeData>((resolve, reject) =>
+            structured.push({ resolve, reject }),
+          ),
         ),
       );
     },
