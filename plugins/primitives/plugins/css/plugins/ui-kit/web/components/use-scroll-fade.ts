@@ -1,5 +1,6 @@
 import { useLayoutEffect, useState } from "react";
 
+import { afterLayout } from "@plugins/primitives/plugins/dom/plugins/after-layout/web";
 import { useResizeObserver } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
 import { useEventCallback } from "@plugins/primitives/plugins/latest-ref/web";
 
@@ -40,7 +41,12 @@ export interface ScrollFade<T extends HTMLElement> {
  *     gap the other two leave: content appended while the box is ALREADY at its
  *     height cap changes `scrollHeight` without resizing the box or moving the
  *     scroll position. Commit-driven, not a poll, and the setter bails out on an
- *     unchanged pair so it can never loop.
+ *     unchanged pair so it can never loop. The effect only QUEUES the read
+ *     (`afterLayout`): read on the commit path, `scrollHeight` forces a
+ *     synchronous style + layout of the whole dirty document there (on a pane
+ *     scroller, a long page opening beside a conversation measured ~110 ms of
+ *     it). Queued, it runs with the frame's other layout reads, still before
+ *     paint.
  *
  * The node is held in state rather than a ref (the `useElementSize` precedent):
  * the measurement is render-visible, so it must re-subscribe the observer when
@@ -67,7 +73,7 @@ export function useScrollFade<T extends HTMLElement>(): ScrollFade<T> {
 
   useResizeObserver(() => node, measure, { deps: [node] });
   // Intentionally no dependency list — see signal 3 above.
-  useLayoutEffect(measure);
+  useLayoutEffect(() => afterLayout(measure));
 
   return {
     measureRef: setNode,

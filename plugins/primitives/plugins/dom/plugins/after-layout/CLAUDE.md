@@ -118,6 +118,7 @@ and `dom/layout-host` (`useHostFlowAxis`).
 - Cross-plugin:
   - Imported by:
     - `primitives/css/layout-harness`
+    - `primitives/css/ui-kit`
     - `primitives/dom/element-size`
     - `primitives/dom/layout-host`
 - Exemptions:

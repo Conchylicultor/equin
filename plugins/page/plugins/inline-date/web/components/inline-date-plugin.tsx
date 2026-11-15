@@ -22,12 +22,19 @@ import {
 } from "@plugins/primitives/plugins/text-editor/plugins/caret-trigger/web";
 import { type BlockTextPluginProps } from "@plugins/page/plugins/editor/web";
 import { $createDateMentionNode } from "./date-mention-node";
-import { buildMenu, type DateOption } from "../internal/date-options";
+import {
+  buildMenu,
+  type DateOption,
+  type MenuModel,
+} from "../internal/date-options";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
 const calendarTodayIcon = symbol("calendar-today");
 const notificationsActiveIcon = symbol("notifications-active");
+
+/** The menu while its trigger is closed: nothing to offer, nothing computed. */
+const CLOSED_MENU: MenuModel = { open: false, hint: false, options: [] };
 
 /**
  * Inline, Notion-style `@` date/reminder typeahead, built on the shared
@@ -83,7 +90,13 @@ export function InlineDatePlugin(_: BlockTextPluginProps) {
   // `buildMenu` runs here for RENDER (the option rows) and again inside
   // `isQueryValid` for the OPEN gate — the same double evaluation the old
   // sync()+render performed; the model is deliberately not threaded through the hook.
-  const menu = useMemo(() => buildMenu(caret.query, new Date()), [caret.query]);
+  // Only while the trigger is open: this plugin is mounted on every line of a
+  // page, and a closed menu's presets (each formatted through Intl) cost a long
+  // page's opening commit ~25 ms for rows nobody sees.
+  const menu = useMemo(
+    () => (caret.open ? buildMenu(caret.query, new Date()) : CLOSED_MENU),
+    [caret.open, caret.query],
+  );
   const options = menu.options;
 
   const { surfaceOpen, activeIndex, setActiveIndex, commit } = useCaretMenu(

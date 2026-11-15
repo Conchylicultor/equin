@@ -1,5 +1,5 @@
 import { useHomeDisplay } from "@plugins/infra/plugins/host-account/web";
-import { useRef, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { ActiveDataMarkdown } from "@plugins/active-data/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { useSteadyReveal } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/steady-reveal/web";
@@ -46,10 +46,9 @@ function Prose({ text, conversationId, messageId, leading }: AgentProseProps) {
 }
 
 function StreamingProse(props: AgentProseProps) {
-  const body = useRef<HTMLDivElement>(null);
-  const shown = useSteadyReveal(props.text, body);
+  const { shown, host } = useSteadyReveal(props.text);
   return (
-    <div ref={body}>
+    <div {...host}>
       <Prose {...props} text={props.text.slice(0, shown)} />
     </div>
   );

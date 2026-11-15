@@ -451,6 +451,7 @@ yes/no guard: `useConfirmDialog` (`imperative-dialog/plugins/confirm`); native
   - Contributes: `Core.Root` → `InputModalityTracker`
   - Uses:
     - `primitives/css/rail.useRailGuard`
+    - `primitives/dom/after-layout.afterLayout`
     - `primitives/dom/element-size.useResizeObserver`
     - `primitives/latest-ref.useEventCallback`
     - `primitives/latest-ref.useLatestRef`

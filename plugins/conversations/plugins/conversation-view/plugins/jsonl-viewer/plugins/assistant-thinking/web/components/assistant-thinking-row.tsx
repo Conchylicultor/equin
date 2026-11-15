@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-source/core";
 import { useBlockWriting } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import { CollapsibleCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/collapsible-card/web";
@@ -65,8 +65,7 @@ export function AssistantThinkingRow({ event }: { event: JsonlEvent }) {
 
 /** The thought being written: placeholder lines until its first words, then a steady reveal. */
 function StreamingThought({ text }: { text: string }) {
-  const body = useRef<HTMLDivElement>(null);
-  const shown = useSteadyReveal(text, body, "muted");
+  const { shown, host } = useSteadyReveal(text, "muted");
   if (text === "")
     return (
       <Stack gap="sm">
@@ -75,7 +74,7 @@ function StreamingThought({ text }: { text: string }) {
       </Stack>
     );
   return (
-    <div ref={body}>
+    <div {...host}>
       <Text as="div" variant="caption" className={THOUGHT_CLASS}>
         {text.slice(0, shown)}
       </Text>

@@ -53,11 +53,18 @@
  * same fill, so a user cannot see where the native selection inside the origin
  * block stops and the painted span begins. Never a local tint: a selection
  * colour belongs to the theme, and two spellings of it would drift.
+ *
+ * The span's ranges always lie in a block's Lexical root (`domRangeOf` builds
+ * them from its editor), so the highlight rule is scoped to that root and its
+ * text inherits it through highlight inheritance. Unscoped, `::highlight()`
+ * matches every element of the document, each of which then computes the
+ * highlight style on every style recalc (~40 ms per full recalc of a
+ * 17k-element agent-manager page, for this one rule).
  */
 .block-list-editing-selectable ::selection {
   background-color: var(--text-selection);
 }
 
-::highlight(page-text-span) {
+[data-lexical-editor]::highlight(page-text-span) {
   background-color: var(--text-selection);
 }

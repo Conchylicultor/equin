@@ -11,6 +11,7 @@ import {
   clearTail,
   FADE_MS,
   paintTail,
+  STREAM_TAIL_ATTR,
   TIER_COUNT,
   type RevealTone,
 } from "./reveal-tail";
@@ -23,18 +24,31 @@ interface Mark {
 }
 
 /**
+ * What the element holding the revealed text spreads: the ref the tail is
+ * painted through, and the mark the `::highlight(stream-tail-…)` rules are
+ * scoped to (stream-tail.css). One value, so a painted tail always sits under
+ * its rules — an unscoped `::highlight()` rule would make every element of the
+ * document compute its highlight style on every style recalc.
+ */
+export interface StreamTailHost {
+  ref: RefObject<HTMLDivElement | null>;
+  [STREAM_TAIL_ATTR]: "";
+}
+
+/**
  * How much of `text` — the message being written, still growing — to show
- * now: a steady flow over the bursts it arrives in (`stepReveal`), with its
- * newest words fading in on `container` (`paintTail`). Driven by animation
- * frames only while there is text left to reveal or a fade still running.
- * Reduced motion shows the text as it arrives. `tone` is the colour the
- * container's text settles on, which the newest words fade up to.
+ * now (`shown`): a steady flow over the bursts it arrives in (`stepReveal`),
+ * with its newest words fading in on the element `host` is spread onto
+ * (`paintTail`). Driven by animation frames only while there is text left to
+ * reveal or a fade still running. Reduced motion shows the text as it
+ * arrives. `tone` is the colour the host's text settles on, which the newest
+ * words fade up to.
  */
 export function useSteadyReveal(
   text: string,
-  container: RefObject<HTMLElement | null>,
   tone: RevealTone = "foreground",
-): number {
+): { shown: number; host: StreamTailHost } {
+  const container = useRef<HTMLDivElement>(null);
   const reduced = useMediaQuery("(prefers-reduced-motion: reduce)", false);
   const [shown, setShown] = useState(0);
   const textRef = useRef(text);
@@ -127,5 +141,8 @@ export function useSteadyReveal(
     paintRef.current?.(performance.now(), Math.min(shown, text.length));
   }, [shown, text.length]);
 
-  return reduced ? text.length : Math.min(shown, text.length);
+  return {
+    shown: reduced ? text.length : Math.min(shown, text.length),
+    host: { ref: container, [STREAM_TAIL_ATTR]: "" },
+  };
 }

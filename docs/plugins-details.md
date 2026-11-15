@@ -32666,6 +32666,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                     - Register: `defineSupervisedJob('type-check.backstop')`
                   - Cli:
                     - Uses: `framework/tooling/checks/type-check.readTypeCheckTree`
+            - **`unscoped-highlight-pseudo`**
         - **`codegen`** — Plugin doc generation and registry codegen
           - Core:
             - Uses: 163 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
@@ -49884,6 +49885,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes: `Core.Root` → `InputModalityTracker`
             - Uses:
               - `primitives/css/rail.useRailGuard`
+              - `primitives/dom/after-layout.afterLayout`
               - `primitives/dom/element-size.useResizeObserver`
               - `primitives/latest-ref.useEventCallback`
               - `primitives/latest-ref.useLatestRef`
@@ -51554,6 +51556,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Imported by:
               - `primitives/css/layout-harness`
+              - `primitives/css/ui-kit`
               - `primitives/dom/element-size`
               - `primitives/dom/layout-host`
           - Exemptions:

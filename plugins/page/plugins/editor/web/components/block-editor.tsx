@@ -87,6 +87,7 @@ import { useBlockDocs } from "../internal/use-block-docs";
 import type { BlockDocs } from "../internal/collab-session";
 import type { CaretSurface, CaretSurfaceRef } from "../caret-surface";
 import { BlockEditorProvider, useBlockEditor } from "../block-editor-context";
+import { InsertableBlocksProvider } from "../internal/insertable-blocks";
 import {
   Editor,
   useBlockFeet,
@@ -550,6 +551,7 @@ function BlockEditorInner({
     focusBlock,
     focusBlockBoundary,
     scope,
+    enabledBlockTypes,
   } = useBlockEditor();
 
   // The Cmd+Z / Cmd+Shift+Z / Cmd+Y bindings are NOT registered here — they are
@@ -660,13 +662,17 @@ function BlockEditorInner({
   }
 
   return (
-    <MultiSelectProvider orderedIds={orderedIds}>
-      <SelectionLayer
-        rows={rows}
-        flat={flat}
-        contentClassName={contentClassName}
-      />
-    </MultiSelectProvider>
+    // The rows' menus (`/`, gutter `+`, the rail's Turn into) all offer the
+    // same insertable types: derived here once for the surface, not per row.
+    <InsertableBlocksProvider enabledBlockTypes={enabledBlockTypes}>
+      <MultiSelectProvider orderedIds={orderedIds}>
+        <SelectionLayer
+          rows={rows}
+          flat={flat}
+          contentClassName={contentClassName}
+        />
+      </MultiSelectProvider>
+    </InsertableBlocksProvider>
   );
 }
 

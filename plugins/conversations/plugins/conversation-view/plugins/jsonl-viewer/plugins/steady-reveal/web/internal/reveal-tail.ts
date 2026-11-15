@@ -15,6 +15,12 @@ export const FADE_MS = 360;
  */
 export type RevealTone = "foreground" | "muted";
 
+/**
+ * The attribute on the element a tail is painted in: the `::highlight()` rules
+ * of stream-tail.css apply under it only (see `StreamTailHost`).
+ */
+export const STREAM_TAIL_ATTR = "data-stream-tail";
+
 /** Faintest first — the `::highlight(stream-tail-…)` rules in stream-tail.css. */
 const TIER_NAMES: Record<RevealTone, readonly string[]> = {
   foreground: ["stream-tail-1", "stream-tail-2", "stream-tail-3"],

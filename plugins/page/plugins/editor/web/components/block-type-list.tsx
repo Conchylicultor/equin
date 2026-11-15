@@ -1,7 +1,5 @@
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import { useMemo } from "react";
-import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
-import { useReorderedEntries } from "@plugins/reorder/web";
 import {
   mapResource,
   type ResourceResult,
@@ -12,9 +10,9 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import type { BlockHandle } from "../../core";
 import { Editor } from "../slots";
-import { useBlockEditor, useEnabledBlockTypes } from "../block-editor-context";
+import { useBlockEditor } from "../block-editor-context";
+import { useEditorInsertableBlocks } from "../internal/insertable-blocks";
 import {
-  entriesToSections,
   flattenSections,
   withInsertActions,
   type BlockSection,
@@ -39,23 +37,12 @@ export type {
  * `BlockEditorProvider` sets an `enabledBlockTypes` allowlist (the in-memory
  * demo's curated text palette), non-listed types drop out — so every picker
  * respects both with no per-menu wiring. Emptied sections are dropped.
+ *
+ * Derived once per editor surface (`internal/insertable-blocks.tsx`):
+ * every line's menus read the same answer.
  */
 export function useGroupedInsertableBlocks(): ResourceResult<BlockSection[]> {
-  const contributions = Editor.Block.useContributions();
-  const enabled = useEnabledBlockTypes();
-  // The clean contributions carry `_pluginId` + `id`, which is all the reorder
-  // entryKey needs; they lack `_slot`, so widen through `unknown`. A read: the
-  // grouping is not known until the layout loads, and the raw registration
-  // order never stands in for it (it would list hidden types, ungrouped).
-  const order = useReorderedEntries(
-    "page.editor.block",
-    contributions as unknown as Contribution[],
-  );
-  return useMemo(
-    () =>
-      mapResource(order, ({ entries }) => entriesToSections(entries, enabled)),
-    [order, enabled],
-  );
+  return useEditorInsertableBlocks();
 }
 
 /**

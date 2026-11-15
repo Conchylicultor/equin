@@ -1,26 +1,32 @@
 /* The text being written: its newest words fade in through three highlight
-   tiers painted by internal/reveal-tail.ts. Plugin-local per the theme rule. */
-::highlight(stream-tail-1) {
+   tiers painted by internal/reveal-tail.ts. Plugin-local per the theme rule.
+
+   Scoped to the element the tail is painted in (`data-stream-tail`, spread by
+   useSteadyReveal's `host`): the text below it inherits these styles through
+   highlight inheritance. An unscoped `::highlight()` rule matches every
+   element, so each one computes the highlight style on every style recalc —
+   these six cost ~230 ms per full recalc of a 17k-element agent-manager page. */
+[data-stream-tail]::highlight(stream-tail-1) {
   color: color-mix(in oklch, var(--foreground) 20%, transparent);
 }
 
-::highlight(stream-tail-2) {
+[data-stream-tail]::highlight(stream-tail-2) {
   color: color-mix(in oklch, var(--foreground) 50%, transparent);
 }
 
-::highlight(stream-tail-3) {
+[data-stream-tail]::highlight(stream-tail-3) {
   color: color-mix(in oklch, var(--foreground) 80%, transparent);
 }
 
 /* The same tiers for secondary text (a thought), fading up to its muted colour. */
-::highlight(stream-tail-muted-1) {
+[data-stream-tail]::highlight(stream-tail-muted-1) {
   color: color-mix(in oklch, var(--muted-foreground) 20%, transparent);
 }
 
-::highlight(stream-tail-muted-2) {
+[data-stream-tail]::highlight(stream-tail-muted-2) {
   color: color-mix(in oklch, var(--muted-foreground) 50%, transparent);
 }
 
-::highlight(stream-tail-muted-3) {
+[data-stream-tail]::highlight(stream-tail-muted-3) {
   color: color-mix(in oklch, var(--muted-foreground) 80%, transparent);
 }
