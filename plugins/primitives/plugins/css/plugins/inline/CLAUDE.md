@@ -55,8 +55,8 @@ line, it's also the fix for a multi-contribution chip slot (`<Inline><Slot.Rende
   - Exports (types): `InlineProps`
   - Exports (values): `Inline`
 - Cross-plugin:
-  - Imported by: 120 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×24
+  - Imported by: 119 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps` ×23
     - `debug` ×20
     - `reports` ×20
     - `primitives` ×13

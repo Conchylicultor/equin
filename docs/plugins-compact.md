@@ -12,10 +12,6 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`browser`** [exempt] [10 sub-plugins] — Web browser app: each tab is a page in a real Chromium on the machine (persistent profile, so logins stick), streamed to a canvas with input sent back.
     - **`chord`** [test helpers] [exempt] [9 sub-plugins] — Chord — a chord ear trainer that plays loops of real songs whose chords you have turned on, asks you to name each chord, and keeps track of how well you know each one.
     - **`debug`** [1 sub-plugin] — Debug app.
-    - **`demo`** — Demo — a temporary sandbox app hosting the in-app demo (the Agent Manager on made-up data) while it is prototyped, before it ships on the website.
-      - Plugins:
-        - **`chrome`** — The demo before it runs, drawn for <DemoScope boot>: the equin logo over the logo's own colours, then the Enter equin button on every visit (a first visit downloads nothing before it; a return…
-        - **`shell`** — App shell for the Demo sandbox: registers the /demo app entry — equin rendered in-process on made-up data (DemoScope + AppEmbed over the workspace demo's browser host), starting on its home app (the…
     - **`deploy`** [test helpers] [exempt] [34 sub-plugins] — The Deploy task category: the category tasks filed from the Deploy app, such as a failed deploy's investigation, are grouped under.
     - **`desktop`** [11 sub-plugins] — Desktop — the floating-window desktop mode as an app: windows over a wallpaper, one bottom shelf (launcher, pinned apps, running windows, tray), virtual desktops, overview and a window switcher.
     - **`events`** [exempt] [23 sub-plugins] — Events — track events from pluggable sources in one database.
@@ -43,7 +39,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`settings`** [5 sub-plugins] — Settings app.
     - **`sonata`** [test helpers] [exempt] [84 sub-plugins] — Sonata — extensible piano and music app.
     - **`studio`** [exempt] [28 sub-plugins] — Plugin inspection and visualization; home for the plugin graph and contribution tables.
-    - **`website`** [test helpers] [29 sub-plugins] — Website — the public-facing site of equin: the homepage's claim, a picture of it and the three layers of the project, a gallery of its apps, placeholder pages for the vision, the foundations and the…
+    - **`website`** [test helpers] [30 sub-plugins] — Website — the public-facing site of equin: the homepage's claim, a picture of it and the three layers of the project, a gallery of its apps, placeholder pages for the vision, the foundations and the…
 
 - **`apps-core`** [load-bearing] [test helpers] — App switcher rail. Wraps per-app shells; plugins contribute via Apps.App. Every app the browser registers, readable on the server: declaredApps() — each Apps.App contribution of the plugins the…
   - Plugins:

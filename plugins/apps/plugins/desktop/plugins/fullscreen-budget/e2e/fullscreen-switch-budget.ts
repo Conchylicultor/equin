@@ -11,7 +11,7 @@
 // `display: none`, icon sprites rendered — so the budgets sit at ~2× today's
 // numbers and far under one whole-document restyle.
 //
-// Deterministic content: the `/demo` page, entered maximized at the desktop
+// Deterministic content: the homepage's live demo (`/about`), entered maximized at the desktop
 // with Sonata — the real app's code on the demo's seeded data (in a worker, no
 // writes to the host), never the user's live library — so every run measures
 // the same document.
@@ -50,7 +50,7 @@ import {
   demoPath,
   embedRoot,
   RENDER_TIMEOUT_MS,
-} from "@plugins/apps/plugins/demo/e2e";
+} from "@plugins/apps/plugins/website/plugins/landing/plugins/screenshot/e2e";
 import {
   shownWindowIds,
   traceSwitch,

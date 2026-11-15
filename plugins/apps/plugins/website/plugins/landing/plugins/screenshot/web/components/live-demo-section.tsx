@@ -32,7 +32,7 @@ import {
   MaximizedChrome,
   morphDemoFrame,
   ResetDemoButton,
-} from "@plugins/apps/plugins/demo/plugins/chrome/web";
+} from "@plugins/apps/plugins/website/plugins/landing/plugins/screenshot/plugins/chrome/web";
 import { track } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/web";
 import { workspaceDemo } from "@plugins/apps/plugins/website/plugins/demos/plugins/workspace/core";
 import { WebsiteBand } from "@plugins/apps/plugins/website/plugins/shell/web";

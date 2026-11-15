@@ -46,7 +46,7 @@
     - `demoWorktreePath`
     - `PRACTICE_TIMER_PAGE_WORK`
 - Cross-plugin:
-  - Imported by: `apps/demo`
+  - Imported by: `apps/website/landing/screenshot`
 - Test helpers:
   - Core: `@plugins/apps/plugins/website/plugins/demos/plugins/workspace/plugins/story/core/testing`
     - `DEMO_FEATURED_PROTOTYPE` — The prototype the demo's pages and transcripts point at (the photo grid).

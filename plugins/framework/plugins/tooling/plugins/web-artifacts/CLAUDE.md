@@ -660,7 +660,7 @@ Key invariants:
     - `servedGraphOf`
 - Cross-plugin:
   - Imported by:
-    - `apps/demo`
+    - `apps/website/landing/screenshot`
     - `framework/cli/build`
     - `framework/tooling/codegen`
     - `framework/tooling/e2e-harness/page-ready`

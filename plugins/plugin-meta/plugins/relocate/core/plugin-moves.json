@@ -108,5 +108,10 @@
     "at": "2026-11-13T05:34:44.579Z",
     "from": "conversations.menu-bar-status",
     "to": "conversations.companion-status"
+  },
+  {
+    "at": "2026-11-15T13:34:07.000Z",
+    "from": "apps.demo.chrome",
+    "to": "apps.website.landing.screenshot.chrome"
   }
 ]

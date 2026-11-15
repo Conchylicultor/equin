@@ -30,9 +30,9 @@
     - `readHomeDataRootLayoutSync`
 - Cross-plugin:
   - Imported by:
-    - `apps/demo`
     - `apps/file-explorer/browser`
     - `apps/prototypes/files`
+    - `apps/website/landing/screenshot`
     - `apps/website/promo-film`
     - `code-explorer/file-resolve`
     - `debug/sentinel`

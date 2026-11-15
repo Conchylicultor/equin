@@ -345,10 +345,10 @@ reaching the server, detach on unmount).
     - `serveOverPort`
 - Cross-plugin:
   - Imported by:
-    - `apps/demo`
     - `apps/prototypes/canvas`
     - `apps/sonata/audio/piano`
     - `apps/sonata/audio/soundfont`
+    - `apps/website/landing/screenshot`
     - `debug/slow-ops`
     - `framework/browser-server/demo/prestart`
     - `framework/browser-server/demo/scope`

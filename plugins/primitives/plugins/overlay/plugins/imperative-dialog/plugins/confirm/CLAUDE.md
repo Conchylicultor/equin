@@ -76,10 +76,10 @@ appears (YAGNI).
   - Exports (values): `useConfirmDialog`
 - Cross-plugin:
   - Imported by:
-    - `apps/demo/chrome`
     - `apps/deploy/deploy-history/rollback`
     - `apps/places/places-map`
     - `apps/prototypes/canvas`
+    - `apps/website/landing/screenshot/chrome`
     - `build/serve-composition`
     - `conversations/conversation-view/rewind`
     - `debug/worktree-cleanup`

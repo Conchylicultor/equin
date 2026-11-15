@@ -57,7 +57,7 @@ export function isImportMapOnlySpecifier(id: string): boolean {
  * its import from it (so the two cannot disagree).
  */
 export const PAGE_SCRIPT_MODULES = {
-  /** The /demo page's head start of its browser host (`apps/demo/shell`'s prestart head). */
+  /** A demo's head start of its browser host (`browser-server/demo/prestart`'s `prestartDemoHost`), for a page whose head script runs it. */
   demoPrestart:
     "@plugins/framework/plugins/browser-server/plugins/demo/plugins/prestart/web",
 } as const;

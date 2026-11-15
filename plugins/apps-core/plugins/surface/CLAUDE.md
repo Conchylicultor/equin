@@ -46,8 +46,8 @@
   - Imported by:
     - `apps-core/surface/docked`
     - `apps-core/surface/solo`
-    - `apps/demo`
     - `apps/desktop/windows`
+    - `apps/website/landing/screenshot`
 - Sub-plugins:
   - **`docked`** — Docked surface placement — the full-area tab that fills the surface below the tab strip.
   - **`solo`** — Solo (fullscreen) surface mode — the default boot mode: only the focused tab, full-viewport (the tab bar and app rail hidden, the global action bar floating). Left only through the surface-mode…

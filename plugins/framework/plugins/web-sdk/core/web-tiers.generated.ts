@@ -15,7 +15,6 @@
 
 // App-content plugins pinned EAGER (would otherwise defer), and why:
 //   - apps/plugins/agent-manager/plugins/welcome: watched boot slot Shell.Sidebar
-//   - apps/plugins/demo/plugins/chrome: dependency closure (imported by an eager plugin)
 //   - apps/plugins/deploy/plugins/analytics/plugins/collect: dependency closure (imported by an eager plugin)
 //   - apps/plugins/events/plugins/events-core: dependency closure (imported by an eager plugin)
 //   - apps/plugins/events/plugins/sources: dependency closure (imported by an eager plugin)
@@ -250,6 +249,7 @@ export const DEFERRED_PLUGIN_PATHS: ReadonlySet<string> = new Set([
   "apps/plugins/website/plugins/landing/plugins/hero",
   "apps/plugins/website/plugins/landing/plugins/layers",
   "apps/plugins/website/plugins/landing/plugins/screenshot",
+  "apps/plugins/website/plugins/landing/plugins/screenshot/plugins/chrome",
   "apps/plugins/website/plugins/landing/plugins/story-link",
   "apps/plugins/website/plugins/pages/plugins/apps",
   "apps/plugins/website/plugins/pages/plugins/download",

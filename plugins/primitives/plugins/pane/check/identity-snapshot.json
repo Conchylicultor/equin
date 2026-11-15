@@ -343,12 +343,6 @@
       "parent": null
     },
     {
-      "paneId": "demo-start",
-      "segment": "",
-      "appIndex": true,
-      "parent": null
-    },
-    {
       "paneId": "dependencies",
       "segment": "dependencies",
       "appIndex": false,

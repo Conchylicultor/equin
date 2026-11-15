@@ -53,7 +53,6 @@ declared on the pane.**
 - Cross-plugin:
   - Imported by:
     - `apps/chord/shell`
-    - `apps/demo/shell`
     - `apps/home/shell`
     - `apps/isle/shell`
     - `apps/places/shell`

@@ -16,7 +16,8 @@ rendered — and none is slow enough for the stall report to see.
 
 ## How it runs
 
-- `e2e/fullscreen-switch-budget.ts` opens `/demo` maximized at the desktop
+- `e2e/fullscreen-switch-budget.ts` opens the homepage's live demo
+  (`/about`) maximized at the desktop
   with Sonata (the real app's code on the demo's seeded data, in a worker),
   traces `--rounds` round trips per window count, and judges the warm median
   (round 1 is cold) against `BUDGETS` — ~2× today's numbers, far under one
@@ -40,7 +41,7 @@ rendered — and none is slow enough for the stall report to see.
   (the wake that records the child's exit). The measurement is the child, in
   `supervised_job_runs` (`exit_code`) and its transcript in main's
   `logs/desktop-fullscreen-budget.jsonl`. A child that cannot measure (no
-  browser, `/demo` broken, a trace with no style recalc — `traceSwitch`
+  browser, the demo broken, a trace with no style recalc — `traceSwitch`
   throws) exits 1: the built-in ledger dead-letters it and files a
   `job-attempt-failed` report, never "succeeded".
 - On demand from any worktree: `./equin run <the script>` against your own

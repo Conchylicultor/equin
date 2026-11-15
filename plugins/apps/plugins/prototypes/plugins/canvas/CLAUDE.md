@@ -626,11 +626,11 @@ navigation, so it starts from nothing remembered.
     - `ui/tokens/font-family --font-mono`
   - Imported by:
     - `active-data/prototype`
-    - `apps/demo`
     - `apps/prototypes/compare`
     - `apps/prototypes/copy-id`
     - `apps/prototypes/gallery`
     - `apps/prototypes/present`
+    - `apps/website/landing/screenshot`
     - `conversations/conversation-view/artifacts/prototype`
     - `page/prototype`
 
