@@ -70,6 +70,7 @@ import {
 } from "./kit";
 import {
   drawSign,
+  SIGN_LIGHT,
   paintBridges,
   lotPatch,
   paintLot,
@@ -2683,9 +2684,9 @@ export class IsleEngine {
         signHalf: b.signHalf,
         tile: shade(app.hue, -0.12),
         glyph: this.tintedGlyph(app, "#ffffff"),
+        light: SIGN_LIGHT[this.time],
       };
     };
-    const nightA = night ? 0.9 : 1;
     world2screen();
     const focused: SceneBuilding[] = [];
     for (const b of this.buildings) {
@@ -2695,14 +2696,14 @@ export class IsleEngine {
         continue;
       }
       if (signA <= 0.01) continue;
-      g.globalAlpha = signA * nightA;
+      g.globalAlpha = signA;
       drawSign(g, signFor(b), focusA(b));
     }
     const grow = SIGN_FULL_Z / z;
     for (const b of focused) {
       const a = focusA(b);
       const s = signFor(b);
-      g.globalAlpha = Math.max(signA, a) * nightA;
+      g.globalAlpha = Math.max(signA, a);
       g.save();
       g.translate(s.x, s.y);
       g.scale(grow, grow);

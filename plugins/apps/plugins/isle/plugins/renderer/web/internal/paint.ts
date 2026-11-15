@@ -278,7 +278,19 @@ export interface SignInfo {
   readonly tile: string;
   /** The app's glyph, white, square. */
   readonly glyph: CanvasImageSource;
+  /**
+   * The time of day's light on the sign, multiplied over post and board (null by day): signs are drawn
+   * above the scene's own tint so they stay readable, so they take a softer one of their own.
+   */
+  readonly light: string | null;
 }
+
+/** The sign's light per time of day: softer than the scene's tint, so the name still reads. */
+export const SIGN_LIGHT = {
+  day: null,
+  dusk: "#f4d6bc",
+  night: "#8794bd",
+} as const;
 
 /** The signpost; hover 0..1 lifts and brightens the board. The name is fitted to the board placement reserved. */
 export function drawSign(g: Ctx, s: SignInfo, hover: number): void {
@@ -333,6 +345,24 @@ export function drawSign(g: Ctx, s: SignInfo, hover: number): void {
     g.fillText(s.name, 0, 0);
   } else g.fillText(s.name, bx + 33, by + 16);
   g.restore();
+  if (s.light) {
+    // the light falls on post and board alone; a hovered sign is lit a little, as by a lantern
+    g.save();
+    g.translate(s.x, s.y);
+    g.globalCompositeOperation = "multiply";
+    g.fillStyle = s.light;
+    g.fillRect(-3, -38, 6, 39);
+    g.beginPath();
+    g.roundRect(bx - 2.5, by - 2.5, bw + 5, 35, 5);
+    g.fill();
+    if (hover > 0) {
+      g.globalCompositeOperation = "lighter";
+      g.globalAlpha *= 0.18 * hover;
+      g.fillStyle = "#ffd9a0";
+      g.fill();
+    }
+    g.restore();
+  }
 }
 
 /**
