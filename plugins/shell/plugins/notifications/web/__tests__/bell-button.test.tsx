@@ -104,7 +104,13 @@ import {
   raisedByTab,
   recurrenceLabel,
 } from "../components/notification-view";
-import { symbol } from "@plugins/ui/plugins/icons/core";
+import {
+  DEFAULT_ICON_STYLE,
+  glyphId,
+  styleKeyOf,
+  symbol,
+} from "@plugins/ui/plugins/icons/core";
+import { pageRuntimeSymbols } from "@plugins/ui/plugins/icons/web";
 import type { TabOrigin } from "@plugins/apps-core/plugins/tab-origin/web";
 import { audienceScope } from "../../shared/audience-scope";
 import { BellButton } from "../components/bell-button";
@@ -539,6 +545,16 @@ describe("NotificationView — what a notification says", () => {
     const { container } = render(
       withActions(
         <NotificationView surface="bell" n={note({ icon: symbol("forum") })} />,
+      ),
+    );
+    // A glyph is a loading state until its batch lands (the sprites plugin
+    // fetches it in the app); land it as that batch would.
+    const key = styleKeyOf(DEFAULT_ICON_STYLE, false);
+    act(() =>
+      pageRuntimeSymbols.provide(
+        "bell-button-test-forum",
+        `<svg><symbol id="${glyphId(key, "forum")}" viewBox="0 0 24 24"></symbol></svg>`,
+        [{ key, name: "forum" }],
       ),
     );
     expect(container.querySelector("use")?.getAttribute("href")).toMatch(
