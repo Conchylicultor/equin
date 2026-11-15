@@ -109,7 +109,6 @@ if (
 // hook and stdio MCP server — still runs darwinbg, through its shell prefix
 // (`spawnClaudeCodeProcess` below).
 const tier = leaveDarwinBackground();
-const shellPrefix = backgroundShellPrefix();
 
 const dir = asAppPath(args.dir);
 mkdirSync(dir, { recursive: true });
@@ -121,6 +120,15 @@ const usagePath = args["usage-file"];
 const options = AgentLaunchOptionsSchema.parse(
   JSON.parse(readFileSync(join(dir, AGENT_OPTIONS_FILE), "utf8")),
 );
+// A sandboxed session (a scratch profile's `sandbox: true`) gets no shell
+// prefix: its commands run inside Claude Code's sandbox, which forbids the
+// setpriority call `taskpolicy -b` makes, so every command would fail with
+// "setpriority(): Operation not permitted". The sandbox already confines them;
+// the darwinbg demotion is only a scheduling courtesy.
+const sandboxed =
+  (options.settings.sandbox as { enabled?: boolean } | undefined)?.enabled ===
+  true;
+const shellPrefix = sandboxed ? null : backgroundShellPrefix();
 // The account's environment: this process's own (the agent session's closed
 // list) plus the account's token, fetched by the agent itself from the secrets
 // store, so it never sits in an argv, the options file or the login shell's

@@ -21,7 +21,8 @@ import { copyRepoContext } from "./repo-context";
  * bypass mode, so `deny` is what removes a tool). Its MCP tools are the task
  * filing tool, the page tools (`read_page` / `edit_page` /
  * `write_agent_note`: it annotates the user's pages inside agent-authored
- * blocks, the page tools' own rule) and `flag_raise` — no `add_task` (whose dependency wiring and
+ * blocks, the page tools' own rule), `flag_raise`, the read-only lookups
+ * (`query_db`, `get_timeline`, `get_queue_health`) and `message_agent` — no `add_task` (whose dependency wiring and
  * auto-start rules are for working agents), no `exit_clean`: it ends its turn
  * instead, so the user can reply in the thread.
  */
@@ -43,6 +44,28 @@ export const helpAskProfile = defineScratchProfile({
     "edit_page",
     "write_agent_note",
     "flag_raise",
+    // Read-only lookups a working agent has: the databases (tasks, attempts,
+    // conversations — equin's own history, which git does not hold), the
+    // incident timeline and queue health. `task_tree` is not here (its
+    // mandate gate needs a task of its own).
+    "query_db",
+    "get_timeline",
+    "get_queue_health",
+    "get_runtime_profile",
+    // Look at a page (any URL, or main) without acting on it: no
+    // `browser_act` / `browser_batch` / `browser_javascript`.
+    "browser_tabs",
+    "browser_navigate",
+    "browser_read_page",
+    "browser_find",
+    "browser_get_page_text",
+    "browser_screenshot",
+    "browser_console",
+    "browser_network",
+    "browser_viewport",
+    "browser_close",
+    // Ask the agent that did the work (any task, not only a tree's).
+    "message_agent",
   ],
   permissions: {
     allow: ["Read", "Grep", "Glob", "Bash"],

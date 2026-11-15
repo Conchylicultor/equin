@@ -40,9 +40,14 @@ portable `server/` half.
   removes a tool). Bash is safe to give because the profile is `sandbox:
   true`: Claude Code's sandbox lets its commands read anywhere (the checkout
   and its git history) and write only inside the scratch dir, with no
-  network and no unsandboxed escape. MCP tools: `ask_file_task`, the page
-  tools (`read_page` / `edit_page` / `write_agent_note`) and `flag_raise` —
-  no `add_task`.
+  network and no unsandboxed escape. A sandboxed session gets no
+  `CLAUDE_CODE_SHELL_PREFIX` (`runtime-sdk/bin/agent.ts`): the prefix runs every
+  command under `taskpolicy -b`, whose `setpriority` the sandbox forbids, so
+  with it Bash failed on every command. MCP tools: `ask_file_task`, the page
+  tools (`read_page` / `edit_page` / `write_agent_note`), `flag_raise`, the
+  read-only lookups `query_db` / `get_timeline` / `get_queue_health` / `get_runtime_profile`, the look-only `browser_*` tools (navigate, read page, find, text, screenshot, console, network; never act / batch / javascript) (equin's
+  task and conversation history lives in the DB, not git) and `message_agent`
+  — no `add_task`, no `task_tree` (its mandate gate needs a task).
 - **It edits the user's pages, nothing else**: asked to write on a page, it
   does so itself with the page tools (the page's id is the route's
   `/pages/page/<id>` segment), under their own rule — only inside an
