@@ -334,3 +334,88 @@ export function drawSign(g: Ctx, s: SignInfo, hover: number): void {
   } else g.fillText(s.name, bx + 33, by + 16);
   g.restore();
 }
+
+/**
+ * An empty lot coming back to life — drawn over it while the mouse rests on
+ * it (or the hero stands on it), saying a click (or E) gives it back to
+ * nature: a green wash over the turned earth and shoots pushing up through
+ * it, each in its own turn, swaying; the tallest open a flower. `grow` 0..1
+ * (eased by the caller), `t` seconds (0: still).
+ */
+export function paintLotSprouts(
+  g: Ctx,
+  p: Plot,
+  grow: number,
+  t: number,
+): void {
+  const rnd = seeded(strHash(`sprouts:${p.id}`));
+  const [x0, y0, x1, y1] = lotPatch(p);
+  const w = x1 - x0;
+  g.save();
+  g.fillStyle = `rgba(118,170,72,${0.3 * grow})`;
+  blob(g, p.x, (y0 + y1) / 2, w * 0.5 * (0.7 + 0.3 * grow), rnd, 12, 0.2);
+  g.fill();
+  const shoots = Array.from({ length: Math.max(9, Math.round(w / 9)) }, () => ({
+    x: x0 + 6 + rnd() * (w - 12),
+    y: y0 + 8 + rnd() * (y1 - y0 - 10),
+    h: 9 + rnd() * 15,
+    d: rnd(),
+    ph: rnd() * 6.28,
+    lean: (rnd() - 0.5) * 0.35,
+    bloom: rnd() < 0.35 ? (rnd() < 0.5 ? "#f2d35b" : "#f4a3b4") : null,
+  })).sort((a, b) => a.y - b.y);
+  g.lineCap = "round";
+  for (const s of shoots) {
+    const k = Math.max(0, Math.min(1, (grow - 0.45 * s.d) / 0.55));
+    if (k <= 0) continue;
+    const h = s.h * k;
+    const a = s.lean + Math.sin(t * 1.8 + s.ph) * 0.07 * k;
+    const tx = s.x + Math.sin(a) * h;
+    const ty = s.y - Math.cos(a) * h;
+    g.strokeStyle = "#4f7a2c";
+    g.lineWidth = 1.6;
+    g.beginPath();
+    g.moveTo(s.x, s.y);
+    g.quadraticCurveTo(s.x + Math.sin(a) * h * 0.3, s.y - h * 0.6, tx, ty);
+    g.stroke();
+    const leaf = Math.max(0, (k - 0.3) / 0.7) * 5;
+    if (leaf > 0.3) {
+      const ly = s.y - h * 0.55;
+      const lx = s.x + Math.sin(a) * h * 0.5;
+      g.fillStyle = "#7cb342";
+      g.strokeStyle = "rgba(40,60,25,.6)";
+      g.lineWidth = 0.6;
+      for (const dir of [-1, 1]) {
+        g.beginPath();
+        g.ellipse(
+          lx + dir * leaf * 0.8,
+          ly - leaf * 0.2,
+          leaf,
+          leaf * 0.45,
+          dir * -0.5 + a,
+          0,
+          7,
+        );
+        g.fill();
+        g.stroke();
+      }
+    }
+    if (s.bloom && k > 0.85) {
+      const r = ((k - 0.85) / 0.15) * 2.6;
+      g.fillStyle = s.bloom;
+      g.beginPath();
+      g.arc(tx, ty, r, 0, 7);
+      g.fill();
+      g.fillStyle = "rgba(255,250,235,.9)";
+      g.beginPath();
+      g.arc(tx, ty, r * 0.35, 0, 7);
+      g.fill();
+    } else {
+      g.fillStyle = "#8fc456";
+      g.beginPath();
+      g.arc(tx, ty, 1.4 * k, 0, 7);
+      g.fill();
+    }
+  }
+  g.restore();
+}

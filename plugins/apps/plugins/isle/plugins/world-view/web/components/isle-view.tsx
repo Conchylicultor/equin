@@ -220,7 +220,7 @@ export function IsleView() {
     );
   });
 
-  // the empty lot the hero stands on, given back to nature: its fence, stake
+  // an empty lot (clicked, or the one the hero stands on) given back to nature: its fence, stake
   // and lane go, and the trees grow back over it
   const onRestore = useEventCallback((plotId: string) => {
     if (world.kind !== "ready" || restore.isPending) return;

@@ -73,6 +73,7 @@ import {
   paintBridges,
   lotPatch,
   paintLot,
+  paintLotSprouts,
   paintRoads,
   paintSquare,
   SIGN_FONT,
@@ -116,7 +117,7 @@ export interface EngineHooks {
   onNear(appId: string | null): void;
   /** The hero is (no longer) standing on an empty lot (its plot id): it may be given back to nature. */
   onNearLot(plotId: string | null): void;
-  /** An empty lot was clicked and the hero has walked onto it: give it back to nature. */
+  /** Give an empty lot back to nature: it was clicked (wherever the hero is), or acted on where the hero stands. */
   onRestoreLot(plotId: string): void;
   /**
    * Open an app (a click on its building): `at` is the screen point it opens
@@ -405,8 +406,10 @@ export class IsleEngine {
   private dust: { x: number; y: number; t0: number } | null = null;
   private nearDoor: SceneBuilding | null = null;
   private nearLot: string | null = null;
-  /** The lot a click sent the hero to restore, once there (any other walk drops it). */
-  private restoreOnArrival: string | null = null;
+  /** The empty lot under the resting mouse (null over a building or anywhere else). */
+  private hoveredLot: string | null = null;
+  /** Each lot's sprouting 0..1, eased in and out (the hovered one grows fully, the one the hero stands on half). */
+  private readonly lotFx = new Map<string, number>();
   private where = "";
 
   // input
@@ -1783,16 +1786,10 @@ export class IsleEngine {
       );
       return;
     }
+    // the desktop way: a click on an empty lot gives it back to nature right there, no walk
     const lot = this.lotAt(p.x, p.y);
     if (lot) {
-      // the lazy way: one click walks there and gives it back to nature
-      if (this.nearLot === lot) {
-        this.restoreOnArrival = null;
-        this.hooks.onRestoreLot(lot);
-        return;
-      }
-      this.walkTo(p.x, p.y);
-      this.restoreOnArrival = this.hero.path ? lot : null;
+      this.hooks.onRestoreLot(lot);
       return;
     }
     this.walkTo(p.x, p.y);
@@ -1812,7 +1809,6 @@ export class IsleEngine {
   private walkTo(x: number, y: number): void {
     if (!this.grid) return;
     const path = findPath(this.grid, this.hero.x, this.hero.y, x, y);
-    this.restoreOnArrival = null;
     if (!path) return;
     this.hero.path = path.slice(1);
     const end = path[path.length - 1]!;
@@ -1867,7 +1863,6 @@ export class IsleEngine {
     }
     hero.path = null;
     this.marker = null;
-    this.restoreOnArrival = null;
     hero.walking = true;
     hero.speed = sp;
     const turn = (to: number) => {
@@ -2040,14 +2035,31 @@ export class IsleEngine {
         );
         if (!this.drag) {
           const w = this.toWorld(this.ptr.x, this.ptr.y);
-          const onLot = !this.hovered && this.lotAt(w.x, w.y) !== null;
+          this.hoveredLot = this.hovered ? null : this.lotAt(w.x, w.y);
+          const onLot = this.hoveredLot !== null;
           const cur = this.hovered || onLot ? "pointer" : "grab";
           if (this.canvas.style.cursor !== cur) this.canvas.style.cursor = cur;
           const tip = onLot ? "Empty lot — click to restore nature" : "";
           if (this.canvas.title !== tip) this.canvas.title = tip;
         }
-      } else if (!this.ptr || this.moving || (this.drag && this.drag.moved))
+      } else if (!this.ptr || this.moving || (this.drag && this.drag.moved)) {
         this.hovered = null;
+        this.hoveredLot = null;
+      }
+      // lots sprouting under the mouse (~0.6 s to full) or under the hero's feet (half: E restores it)
+      for (const id of [this.hoveredLot, this.nearLot])
+        if (id && !this.lotFx.has(id)) this.lotFx.set(id, 0);
+      for (const [id, a] of this.lotFx) {
+        const goal =
+          id === this.hoveredLot ? 1 : id === this.nearLot ? 0.55 : 0;
+        const na = this.opts.reducedMotion
+          ? goal
+          : a < goal
+            ? Math.min(goal, a + dt / 0.6)
+            : Math.max(goal, a - dt / 0.35);
+        if (na <= 0) this.lotFx.delete(id);
+        else this.lotFx.set(id, na);
+      }
       const hov = this.hovered;
       const hoverId = hov?.appId ?? null;
       if (hoverId !== this.hoverId) {
@@ -2244,6 +2256,13 @@ export class IsleEngine {
         g.stroke();
       }
     }
+    // empty lots coming back to life under the mouse: shoots push up through the turned earth
+    if (this.lotFx.size)
+      for (const p of layout.lots) {
+        const a = this.lotFx.get(p.id);
+        if (a && vis(p.x, p.y, 120))
+          paintLotSprouts(g, p, easeIO(a), this.opts.reducedMotion ? 0 : t);
+      }
 
     // --- the object layer, from tiles
     g.setTransform(1, 0, 0, 1, 0, 0);
@@ -2764,11 +2783,6 @@ export class IsleEngine {
     if (lot !== this.nearLot) {
       this.nearLot = lot;
       this.hooks.onNearLot(lot);
-    }
-    const want = this.restoreOnArrival;
-    if (want && !hero.path?.length) {
-      this.restoreOnArrival = null;
-      if (lot === want) this.hooks.onRestoreLot(want);
     }
     this.reportWhere();
   }
