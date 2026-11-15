@@ -14,7 +14,11 @@ import {
   type FacetedSessionHandlers,
   type FacetedTreeSession,
 } from "@plugins/plugin-meta/plugins/plugin-tree/server";
-import type { FromWorkerFrame, ToWorkerFrame } from "../../shared/protocol";
+import {
+  readFromWorkerFrame,
+  type FromWorkerFrame,
+  type ToWorkerFrame,
+} from "../../shared/protocol";
 
 /**
  * The faceted-tree worker, declared once. On demand (the first faceted read
@@ -48,6 +52,16 @@ const WORKER_URL = new URL("../../bin/faceted-tree-worker.ts", import.meta.url);
 
 let sessions = 0;
 
+/**
+ * Set once a worker's frame did not match this backend's protocol: the
+ * worker runs the checkout's code, which moved since this backend started
+ * (`shared/protocol.ts`). Another worker would load the same code, so none is
+ * spawned again: every session opened after it is refused with this reason,
+ * until the backend restarts on the checkout's code (main's deploy, a
+ * worktree's build).
+ */
+let protocolSkew: FacetedSessionEnded | null = null;
+
 interface Waiter<T> {
   resolve(value: T): void;
   reject(err: Error): void;
@@ -62,6 +76,7 @@ export function openFacetedTreeSession({
   onEnded,
   onStructureChanged,
 }: FacetedSessionHandlers): FacetedTreeSession {
+  if (protocolSkew !== null) return refusedSession(protocolSkew);
   let tree: PluginTreeData | null = null;
   /** Why the facets are failed (the structure lives on), or null. */
   let facetsFailed: FacetsUnavailable | null = null;
@@ -177,7 +192,15 @@ export function openFacetedTreeSession({
         root: REPO_ROOT,
       } satisfies ToWorkerFrame);
     },
-    onMessage: (data) => onFrame(data as FromWorkerFrame),
+    onMessage: (data) => {
+      const read = readFromWorkerFrame(data);
+      if (read.ok) return onFrame(read.frame);
+      protocolSkew = new FacetedSessionEnded(
+        `the faceted-tree worker runs other code than this backend — the checkout moved since the backend started; reads are refused until it restarts on the checkout's code: ${read.issue}`,
+        true,
+      );
+      end(protocolSkew.message, true);
+    },
     onState: (t) => {
       if (t.state === "exited")
         end(`its worker exited (${t.lastError ?? "no error"})`, true);
@@ -228,5 +251,20 @@ export function openFacetedTreeSession({
       end("closed", false);
       await instance.stop();
     },
+  };
+}
+
+/**
+ * A session that never started: every read rejects with `reason`, and a
+ * watcher batch moves nothing (there is no tree to bring up to date — a
+ * rejecting refresh would drop it and bump every reader into the same
+ * refusal on each batch).
+ */
+function refusedSession(reason: FacetedSessionEnded): FacetedTreeSession {
+  return {
+    tree: () => Promise.reject(reason),
+    structure: () => Promise.reject(reason),
+    refresh: () => Promise.resolve(false),
+    close: async () => {},
   };
 }

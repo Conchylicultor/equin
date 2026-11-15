@@ -12,6 +12,7 @@ export { createStructureIndex } from "./internal/structure-index";
 export {
   pluginStructureDelta,
   pluginTreeDelta,
+  pluginTreeDeltaSchema,
   pluginTreeFromDelta,
   pluginTreeToJson,
 } from "./internal/tree-data";

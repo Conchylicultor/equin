@@ -7,7 +7,11 @@ import {
   openFacetedIndex,
   type FacetedIndex,
 } from "@plugins/plugin-meta/plugins/plugin-tree/plugins/faceted/core";
-import type { FromWorkerFrame, ToWorkerFrame } from "../shared/protocol";
+import {
+  readToWorkerFrame,
+  type FromWorkerFrame,
+  type ToWorkerFrame,
+} from "../shared/protocol";
 
 // The plugin-tree worker: one thread holding this checkout's faceted index
 // (`faceted`'s `openFacetedIndex`), started by the backend (`machine/`) through the
@@ -103,7 +107,15 @@ function describe(err: unknown): string {
   return err instanceof Error ? (err.stack ?? err.message) : String(err);
 }
 
-self.onmessage = (event: MessageEvent<ToWorkerFrame>) => {
-  const frame = event.data;
+self.onmessage = (event: MessageEvent<unknown>) => {
+  const read = readToWorkerFrame(event.data);
+  // A backend of other code (see `shared/protocol.ts`): it is told, and ends
+  // the session; this thread serves nothing it cannot read.
+  if (!read.ok) {
+    index = null;
+    post({ type: "failed", id: null, message: read.issue });
+    return;
+  }
+  const frame = read.frame;
   queue = queue.then(() => handle(frame));
 };

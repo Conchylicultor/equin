@@ -3,8 +3,14 @@ import {
   joinAppPath,
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
-import { wholeRecord } from "@plugins/packages/plugins/list-bound/core";
+import {
+  asPluginId,
+  type PluginId,
+} from "@plugins/framework/plugins/plugin-id/core";
+import {
+  wholeList,
+  wholeRecord,
+} from "@plugins/packages/plugins/list-bound/core";
 import type { PluginNode, PluginTreeData } from "./plugin-tree";
 
 /**
@@ -81,6 +87,38 @@ export interface PluginNodeDelta extends Omit<
 export interface PluginTreeDelta {
   roots: PluginNodeDelta[];
 }
+
+const runtimeSchema = z.enum(["web", "server", "machine", "central"]);
+
+/**
+ * A {@link PluginNodeDelta} as it arrives from another thread: parsed, not
+ * cast. Typed against the interface (`z.ZodType<PluginNodeDelta>`), so the
+ * two cannot drift — a field added to one and not the other is a tsc error.
+ */
+const pluginNodeDeltaSchema: z.ZodType<PluginNodeDelta> = z.lazy(() =>
+  z.object({
+    path: z.string(),
+    name: z.string(),
+    id: z.string().transform(asPluginId),
+    description: z.string().optional(),
+    descriptions: z.partialRecord(runtimeSchema, z.string()),
+    loadBearing: z.boolean(),
+    collapsed: z.boolean(),
+    compositionRoot: z.boolean(),
+    runtimes: z.record(runtimeSchema, z.boolean()),
+    children: wholeList(pluginNodeDeltaSchema, {
+      reason: "a plugin's child plugins — the plugin tree, held whole",
+    }),
+    facets: z.string().nullable(),
+  }),
+);
+
+/** A {@link PluginTreeDelta} as it arrives from another thread (see above). */
+export const pluginTreeDeltaSchema: z.ZodType<PluginTreeDelta> = z.object({
+  roots: wholeList(pluginNodeDeltaSchema, {
+    reason: "the top-level plugins — the plugin tree, held whole",
+  }),
+});
 
 /**
  * The structure of `tree` alone, as a whole delta: every node with its

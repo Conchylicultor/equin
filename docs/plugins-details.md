@@ -47332,6 +47332,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/host-fs/user-path.AppPath`
           - `infra/host-fs/user-path.appPathParent`
           - `infra/host-fs/user-path.joinAppPath`
+          - `packages/list-bound.wholeList`
           - `packages/list-bound.wholeRecord`
           - `plugin-meta/parse-utils.defaultExportObjectBody`
           - `plugin-meta/parse-utils.parseBoolField`
@@ -47361,6 +47362,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `pluginFieldsFrom`
           - `pluginStructureDelta`
           - `pluginTreeDelta`
+          - `pluginTreeDeltaSchema`
           - `pluginTreeFromDelta`
           - `pluginTreeToJson`
           - `resolvePluginSpecifier`
