@@ -100,7 +100,7 @@ all or it is charged to the op that owns it:
 | An update's `watch-delivery` (a file's write → the host's watch heard it; the frame's `timing.heardAt`) | `EXCLUDED_PHASES` / `ownMsOf` | The server: its `bg watch-delivery:<backend>` span (infra/file-watcher, "Delivery lag"). Before, it sat inside `server-notice` and a transcript update re-filed the watch's lag as the tab's own (~1.5 s, 2026-11-12). |
 | A `watch-delivery` span's time before the watch was armed | the span's leading `watch-before-start` wait and its `watch-arm` queue (infra/file-watcher, "Delivery lag") | Arming: `wait watch-arm` (backend start → the watch armed, the boot's share) is filed on its own; the time before the process started is shown only. |
 | An element's transport bring-up (`notifications-transport`) | `elementSlowOp` | The transport. It is filed once per transport — the page's own and each scoped pipeline's (`transportId`) — as `wait notifications-transport` (`transportSlowOp`), measured from that pipeline's first socket (`transportStartedAtMs`), never from the page's start. |
-| Main-thread stalls ≥ 1 s (`main-thread-stall`) | `judgePagePauses` at the queue's flush, via perfs/page-pauses | main-thread-stall, which files the frozen page as its own `main-thread` op. |
+| Main-thread stalls ≥ 1 s (`main-thread-stall`) | `judgePagePauses` at the queue's flush, once page-pauses' `stallsKnownThrough(window end)` resolved — the stall's entry reaches the page late, after the frame; judged before it, one 1.1 s stall was filed again as four updates' and two settles' own time (main, 2026-11-15) | main-thread-stall, which files the frozen page as its own `main-thread` op. |
 | A hidden or frozen tab (`page-hidden`) | The same | Nobody. Only the hidden part is taken off — a throttled tab measures the browser — and the visible rest is still judged, so a slow op spanning a brief tab switch is still reported. |
 | Machine sleep (`sleep`) | `withoutSleep` in the client handler, over the item's `endedAt` window (machine-sleep's `sleptDuring`) | Nobody. Only the sleep beyond the item's `page-hidden` time comes off (a nap usually hides the tab, and the two cannot be placed against each other server-side), so one nap is never taken off twice. A server span needs none: Bun's `performance.now()` stops while the machine sleeps (measured 2026-10-30). |
 
@@ -231,9 +231,11 @@ against the backend that was already failing. See
 
 **Batching is a transport change, plus one judgement.** An item queued with
 its wall-clock window (every element and latency sample) is judged against the
-page's pauses inside it at the flush (`judgePagePauses`, see "Own time"). That
-is the only place late enough to ask, because a long frame's entry arrives
-after the frame. Nothing else is filtered, thresholded, deduped or delayed out
+page's pauses inside it at the flush (`judgePagePauses`, see "Own time"), and
+only once page-pauses' stall record holds every long frame that ended inside
+it (`stallsKnownThrough`): a long frame's entry arrives after the frame, late
+on a busy page, so a flush can wait up to 2 s on a calm one (a departing page
+judges with what it knows). Nothing else is filtered, thresholded, deduped or delayed out
 of existence on the way. The only other loss the queue can cause is its
 1000-item cap, and that loss is counted and sent as the batch's `dropped`
 field, which the handler writes to the `slow-ops` log channel — never silently
@@ -368,6 +370,7 @@ bar).
     - `primitives/pane.currentRoutePath`
     - `primitives/perfs/boot-trace.getBootTrace`
     - `primitives/perfs/page-pauses.pausesDuring`
+    - `primitives/perfs/page-pauses.stallsKnownThrough`
     - `primitives/scope/automation.AUTOMATED_BROWSER`
     - `reports.Reports`
 - Server:

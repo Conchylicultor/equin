@@ -27562,6 +27562,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/pane.currentRoutePath`
           - `primitives/perfs/boot-trace.getBootTrace`
           - `primitives/perfs/page-pauses.pausesDuring`
+          - `primitives/perfs/page-pauses.stallsKnownThrough`
           - `primitives/scope/automation.AUTOMATED_BROWSER`
           - `reports.Reports`
       - Server:
@@ -54686,7 +54687,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `network/live`
               - `network/live/live-state`
               - `network/live/optimistic-mutation`
-        - **`page-pauses`** — Was this page paused during a span of wall-clock time? pausesDuring(start, end): how long it was hidden or frozen inside it (visibilitychange, Page Lifecycle freeze), and how long its main thread was stalled outside that (long animation frames ≥ 1 s, the bar main-thread-stall files its own slow-op at) — the one record every client latency consumer reads instead of tracking visibility itself.
+        - **`page-pauses`** — Was this page paused during a span of wall-clock time? pausesDuring(start, end): how long it was hidden or frozen inside it (visibilitychange, Page Lifecycle freeze), and how long its main thread was stalled outside that (long animation frames ≥ 1 s, the bar main-thread-stall files its own slow-op at) — the one record every client latency consumer reads instead of tracking visibility itself; stallsKnownThrough(end) resolves once that record holds every long frame that ended by `end` (an entry reaches the page late, after its frame), which is when a span ending there may be judged.
           - Cross-plugin:
             - Imported by:
               - `debug/latency-ledger`
@@ -54696,6 +54697,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values):
               - `pausesDuring`
               - `STALL_MIN_MS`
+              - `stallsKnownThrough`
         - **`scheduler`** — Main-thread scheduling primitives (yieldToMain: scheduler.yield → postTask → setTimeout(0)) for cooperative boot/work batching.
           - Cross-plugin:
             - Imported by: `framework/web-core`

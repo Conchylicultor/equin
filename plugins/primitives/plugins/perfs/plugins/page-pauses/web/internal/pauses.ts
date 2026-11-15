@@ -1,4 +1,5 @@
 import { coveredMs, pushBounded, type Interval } from "./intervals";
+import { createStallRecord } from "./stall-record";
 
 // The page's pauses on the wall clock (epoch ms), recorded from module load:
 //
@@ -23,7 +24,9 @@ const LOAF = "long-animation-frame";
 const LONGTASK = "longtask";
 
 const hidden: Interval[] = [];
-const stalls: Interval[] = [];
+const stallRecord = createStallRecord({ minMs: STALL_MIN_MS, cap: RING_CAP });
+/** Whether this page can observe long frames at all (else stalls are 0, known). */
+let stallsObservable = false;
 /** Start of the hidden stretch in progress, or null while visible. */
 let hiddenSince: number | null = null;
 
@@ -46,16 +49,16 @@ function observeStalls(): void {
       ? LONGTASK
       : null;
   if (type === null) return;
+  stallsObservable = true;
   new PerformanceObserver((list) => {
     // Entry times are on the performance clock: place them on the wall clock
     // from the same instant read on both clocks, now — the entry is delivered
     // just after its frame, so no sleep can sit between the two.
     const wallMinusPerf = Date.now() - performance.now();
-    for (const e of list.getEntries()) {
-      if (e.duration < STALL_MIN_MS) continue;
-      const startMs = wallMinusPerf + e.startTime;
-      pushBounded(stalls, { startMs, endMs: startMs + e.duration }, RING_CAP);
-    }
+    // Every entry, short ones included: a later frame's arrival is what
+    // proves the record complete up to it (`stallsKnownThrough`).
+    for (const e of list.getEntries())
+      stallRecord.noteFrame(wallMinusPerf + e.startTime, e.duration);
   }).observe({ type, buffered: true });
 }
 
@@ -91,9 +94,20 @@ export interface PagePauses {
 }
 
 /**
- * The page's pauses inside `[startMs, endMs]` (epoch ms). Ask right after the
- * span ends — ideally a beat later, since a long frame's entry is delivered
- * after the frame (the slow-op queue asks at its flush, ~250 ms on).
+ * Resolves once the stall record holds every long frame that ended by `endMs`
+ * (epoch ms): ask `pausesDuring` about a span ending there only after it. A
+ * long frame's entry reaches the page in a task of its own, after the frame,
+ * and late on a page still busy from it — asked before, a stall the span sat
+ * behind reads as 0 and is charged to the span (stall-record.ts says what that
+ * cost). Immediate where long frames cannot be observed (stalls are 0 there).
+ */
+export function stallsKnownThrough(endMs: number): Promise<void> {
+  return stallsObservable ? stallRecord.knownThrough(endMs) : Promise.resolve();
+}
+
+/**
+ * The page's pauses inside `[startMs, endMs]` (epoch ms). `hiddenMs` is known
+ * at once; `stalledMs` is complete once `stallsKnownThrough(endMs)` resolved.
  */
 export function pausesDuring(startMs: number, endMs: number): PagePauses {
   const hiddenNow: Interval[] =
@@ -103,6 +117,8 @@ export function pausesDuring(startMs: number, endMs: number): PagePauses {
   const hiddenMs = coveredMs(hiddenNow, startMs, endMs);
   return {
     hiddenMs,
-    stalledMs: coveredMs([...hiddenNow, ...stalls], startMs, endMs) - hiddenMs,
+    stalledMs:
+      coveredMs([...hiddenNow, ...stallRecord.stalls], startMs, endMs) -
+      hiddenMs,
   };
 }

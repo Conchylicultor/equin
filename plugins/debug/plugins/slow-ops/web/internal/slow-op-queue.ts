@@ -1,6 +1,9 @@
 import { fetchEndpointOver } from "@plugins/infra/plugins/endpoints/web";
 import { pageTransport } from "@plugins/primitives/plugins/networking/plugins/page-transport/web";
-import { pausesDuring } from "@plugins/primitives/plugins/perfs/plugins/page-pauses/web";
+import {
+  pausesDuring,
+  stallsKnownThrough,
+} from "@plugins/primitives/plugins/perfs/plugins/page-pauses/web";
 import { AUTOMATED_BROWSER } from "@plugins/primitives/plugins/scope/plugins/automation/web";
 import { MAX_CLIENT_SLOW_OP_ITEMS } from "../../core";
 import {
@@ -27,9 +30,10 @@ const fetchEndpoint = fetchEndpointOver(pageTransport);
 //
 // One rule rides the flush: an item queued with its wall-clock window is
 // judged against the page's pauses inside it (`judgePagePauses`) — the time the
-// tab was hidden and its main-thread stalls taken off its own time. That is
-// the only place late enough to ask: a long frame's entry is delivered after
-// the frame. Nothing else is filtered here. See "Own time" in ../../CLAUDE.md.
+// tab was hidden and its main-thread stalls taken off its own time — once the
+// page's stall record is known to hold every long frame inside it
+// (`stallsKnownThrough`: a long frame's entry is delivered after the frame,
+// late on a busy page). Nothing else is filtered here. See "Own time" in ../../CLAUDE.md.
 
 interface Queued {
   item: SlowOpClientItem;
@@ -98,21 +102,60 @@ function scheduleFlush(): void {
   }, FLUSH_DELAY_MS);
 }
 
-async function flush(): Promise<void> {
+/**
+ * The next chunk to send: items with no window, and windowed items ending by
+ * `knownThrough` (the page's stall record is complete for them), oldest first.
+ * `null`: no wait was made — no windowed item was queued, or the page is
+ * departing and judges with what it knows — so every item is taken.
+ */
+function takeReady(knownThrough: number | null): Queued[] {
+  const ready: Queued[] = [];
+  for (
+    let i = 0;
+    i < queue.length && ready.length < MAX_CLIENT_SLOW_OP_ITEMS;
+  ) {
+    const q = queue[i]!;
+    if (
+      knownThrough === null ||
+      q.window === undefined ||
+      q.window.endMs <= knownThrough
+    ) {
+      ready.push(q);
+      queue.splice(i, 1);
+    } else i++;
+  }
+  return ready;
+}
+
+function latestWindowEnd(): number | null {
+  let latest: number | null = null;
+  for (const { window } of queue)
+    if (window !== undefined && (latest === null || window.endMs > latest))
+      latest = window.endMs;
+  return latest;
+}
+
+async function flush(departing = false): Promise<void> {
   while (queue.length > 0) {
+    // A windowed item is judged only once the page's stall record holds every
+    // long frame that ended inside it (`stallsKnownThrough`): the entry of the
+    // stall an update or settle sat behind reaches the page after the frame,
+    // late on a page still busy from it, and judged before it the stall was
+    // filed again as each item's own time. Items queued meanwhile, ending
+    // later, wait for the next pass of this loop.
+    const knownThrough = departing ? null : latestWindowEnd();
+    if (knownThrough !== null) await stallsKnownThrough(knownThrough);
     // Drain in chunks the server will accept (≤ MAX_CLIENT_SLOW_OP_ITEMS). An
     // over-cap POST would be rejected with 400, so the chunk size — not the
     // accumulated queue length — bounds each request.
-    const items = queue
-      .splice(0, MAX_CLIENT_SLOW_OP_ITEMS)
-      .flatMap(({ item, window }) => {
-        if (window === undefined) return [item];
-        const judged = judgePagePauses(
-          item,
-          pausesDuring(window.startMs, window.endMs),
-        );
-        return judged === null ? [] : [{ ...judged, endedAt: window.endMs }];
-      });
+    const items = takeReady(knownThrough).flatMap(({ item, window }) => {
+      if (window === undefined) return [item];
+      const judged = judgePagePauses(
+        item,
+        pausesDuring(window.startMs, window.endMs),
+      );
+      return judged === null ? [] : [{ ...judged, endedAt: window.endMs }];
+    });
     if (items.length === 0) continue;
     const carried = dropped;
     await fetchEndpoint(
@@ -150,6 +193,8 @@ if (typeof window !== "undefined") {
       clearTimeout(flushTimer);
       flushTimer = null;
     }
-    void flush();
+    // No wait for the stall record: the page is going, and `keepalive` only
+    // carries a request started in this handler.
+    void flush(true);
   });
 }
