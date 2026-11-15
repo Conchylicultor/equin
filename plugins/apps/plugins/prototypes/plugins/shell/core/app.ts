@@ -6,5 +6,6 @@ export const prototypesApp = defineApp({
   name: "Prototypes",
   basePath: "/prototypes",
   icon: symbol("dashboard-customize"),
+  iconColor: "violet",
   category: "create",
 });

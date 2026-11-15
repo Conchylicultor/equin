@@ -329,8 +329,8 @@ the `""` entry.
     - `ThemeEngine.SubTheme`
     - `ThemeEngine.FixedTheme`
     - `ThemeEngine.ThemeSource`
-  - Slot contributors: 55 contributors — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ThemeEngine.TokenGroup` ×20
+  - Slot contributors: 56 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ThemeEngine.TokenGroup` ×21
     - `ThemeEngine.Theme` ×15
     - `ThemeEngine.SubTheme` ×8
     - `ThemeEngine.VariantGroup` ×6
@@ -491,8 +491,8 @@ the `""` entry.
     - `ui/tokens/shape` ×4
     - `ui/tokens/type-scale` ×4
     - `ui/tokens/data-view` ×2
-  - Imported by: 76 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ui` ×51
+  - Imported by: 77 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ui` ×52
     - `apps` ×19
     - `apps-core/chrome-theme`
     - `companions/panel`

@@ -1,10 +1,7 @@
 import type { CSSProperties } from "react";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
-import { AVATAR_COLOR_NAMES } from "@plugins/primitives/plugins/avatar/core";
-import {
-  Avatar,
-  AvatarPresentationProvider,
-} from "@plugins/primitives/plugins/avatar/web";
+import { appTileFill } from "@plugins/apps-core/plugins/app-icon/core";
+import { AppIconTile } from "@plugins/apps-core/plugins/app-icon/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
@@ -14,12 +11,16 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useAppLinkProps } from "@plugins/apps-core/plugins/tabs/web";
 import { Icon } from "@plugins/ui/plugins/icons/web";
+import { useRevealOnActive } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { track } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/web";
 import { downloadPane } from "@plugins/apps/plugins/website/plugins/pages/plugins/download/web";
-import { demoPagePath } from "@plugins/apps/plugins/website/plugins/live-demo/core";
-import { APP_DEMO_PLACES } from "../../core";
-import type { AppCategory, CatalogApp } from "../internal/catalog";
+import { tryLivePath } from "../internal/try-live";
+import {
+  catalogAppIcon,
+  type AppCategory,
+  type CatalogApp,
+} from "../internal/catalog";
 
 /**
  * One app of the gallery: its picture, its tile and name, what it does, and
@@ -29,8 +30,8 @@ import type { AppCategory, CatalogApp } from "../internal/catalog";
  * (`equinGalleryTheme`, worn by the gallery around it).
  *
  * An app the homepage's live demo carries (`APP_DEMO_PLACES`) is a link as a
- * whole: the card opens the demo page on the app's home
- * (`/about/demo/at/<home>` — the embed's own place in the demo page's
+ * whole: the card opens the demo maximized on the app's home
+ * (`/about/at/<home>;full=1` — the embed's own place in the homepage's
  * URL), so the reader tries the app instead of reading about it — never on
  * the staged frame its picture shows. The link is
  * a full-bleed button BEHIND the card's content, so Install stays a control
@@ -40,49 +41,55 @@ import type { AppCategory, CatalogApp } from "../internal/catalog";
 export function AppCard({
   app,
   category,
+  focused,
 }: {
   app: CatalogApp;
   category: AppCategory;
+  /** The app the page was opened on: scrolled to (centred) and briefly ringed. */
+  focused: boolean;
 }) {
+  const revealRef = useRevealOnActive(focused, {
+    revealOnMount: true,
+    block: "center",
+  });
   const openPane = useOpenPane();
   const appLinkProps = useAppLinkProps();
-  const demoPlace = APP_DEMO_PLACES[app.id];
-  // The app's categorical slot, read by the drawn picture's accent (see the CSS).
+  const livePath = tryLivePath(app);
+  const icon = catalogAppIcon(app);
+  // The app's tile colour, read by the drawn picture's accent (see the CSS).
   const tint = {
-    "--app-tint": `var(--categorical-${AVATAR_COLOR_NAMES.indexOf(app.color) + 1})`,
+    "--app-tint": appTileFill(icon, app.id),
   } as CSSProperties;
   return (
     <Card
+      ref={revealRef}
       className={cn(
         "website-app-card rounded-2xl shadow-none",
+        focused && "is-focused",
         app.soon && "is-soon",
-        demoPlace !== undefined && "is-live",
+        livePath !== undefined && "is-live",
       )}
       style={tint}
     >
-      {demoPlace !== undefined && (
+      {livePath !== undefined && (
         <button
           type="button"
           className="website-app-open"
           aria-label={`Try ${app.name} live`}
-          {...appLinkProps(demoPagePath(demoPlace.home))}
+          {...appLinkProps(livePath)}
           onClickCapture={() => track("apps_try_live", { app: app.id })}
         />
       )}
       <Stack gap="lg" className="website-app-body h-full">
-        <AppThumb app={app} live={demoPlace !== undefined} />
+        <AppThumb app={app} live={livePath !== undefined} />
         <Fill>
           <Stack gap="md">
             <Stack direction="row" gap="md" align="start">
-              <div className={cn("website-app-tile size-13", rigidClass())}>
-                <AvatarPresentationProvider value="gradient-tile">
-                  <Avatar
-                    symbol={app.icon}
-                    color={app.color}
-                    shape="squircle"
-                  />
-                </AvatarPresentationProvider>
-              </div>
+              <AppIconTile
+                icon={icon}
+                appId={app.id}
+                className={cn("website-app-tile size-13", rigidClass())}
+              />
               <Stack gap="none">
                 <Text
                   as="h4"

@@ -7,5 +7,5 @@ export const keyboardPartyApp = defineApp({
   basePath: "/keyboard-party",
   icon: symbol("celebration"),
   category: "play",
-  iconColor: "pink",
+  iconColor: "fuchsia",
 });

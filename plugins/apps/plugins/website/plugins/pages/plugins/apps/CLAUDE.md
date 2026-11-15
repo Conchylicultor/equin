@@ -5,7 +5,7 @@ being built.
 
 The heading (the shell's `WebsiteHero`) carries the search; under it, a row of
 category chips and one group per category, each a grid of app cards: the
-app's screenshot (or a drawn stand-in), its tile (the glyph its own app definition declares), what
+app's screenshot (or a drawn stand-in), its tile (its glyph on its colour), what
 it does, and Install. Apps not built yet are dashed and faded, with Soon in
 place of Install. Then "Missing an app?" and, at the end, the two questions a
 reader is likely to have — each opening the page that answers it (the vision,
@@ -25,7 +25,17 @@ definitions' (`desktop-windows`, `sailing`).
 
 The list is plain data (`web/internal/catalog.ts`): the site is a written page,
 so adding an app to equin does not add it here — edit the catalog. The homepage's
-layers band keeps its own shorter teaser of the same apps.
+layers band reads the same catalog (exported: `APPS`, `catalogAppIcon`,
+`tryLivePath`), so the two cannot disagree.
+
+**An app's tile is the app's own.** Both pages draw `AppIconTile`
+(`apps-core/app-icon`) — the tile every launcher in equin draws — from the
+entry's `color`, a copy of the app definition's `iconColor` (`appId` names the
+definition; `null` for an app not built yet). The copy is text because
+importing an app's shell would pull it into the website's composition;
+`web/internal/catalog.test.ts` imports the definitions and holds the copies
+equal, and every colour distinct. The card's drawn-picture accent (`--app-tint`)
+is the same colour (`appTileFill`).
 
 **A card opens the app live.** An app the homepage's live demo carries has an
 entry in `core/demo-places.ts` (`APP_DEMO_PLACES`, keyed by the catalog's id:
@@ -50,6 +60,10 @@ whatever data it has — look at every image before adding it, and an app whose
 screenshot is not fit to publish (real data, an error) keeps the drawn
 stand-in.
 
+**Opened on one app.** The pane takes `;app=<catalog id>`
+(`/about/apps;app=sonata`): that app's card is scrolled to the centre on
+arrival and ringed for a moment. The homepage's app tiles link there.
+
 The nav link is contributed into the shell's shared `WebsiteHeader`, so the
 shell never names this page. The homepage's applications layer opens it.
 
@@ -68,7 +82,8 @@ shell never names this page. The homepage's applications layer opens it.
     - `apps/website/shell` ×6
     - `primitives/css/ui-kit` ×4
     - `primitives/pane` ×4
-    - `primitives/avatar` ×2
+    - `primitives/dom/scroll-reveal` ×2
+    - `apps-core/app-icon.AppIconTile`
     - `apps-core/tabs.useAppLinkProps`
     - `apps/deploy/analytics/collect.track`
     - `apps/website/pages/download.downloadPane`
@@ -83,13 +98,21 @@ shell never names this page. The homepage's applications layer opens it.
     - `primitives/css/surface.Surface`
     - `primitives/css/text.Text`
     - `primitives/css/theme-boundary.Theme`
-    - `primitives/dom/scroll-reveal.focusElement`
     - `primitives/filter-chips.FilterChip`
     - `primitives/search.SearchInput`
     - `primitives/shortcuts.useSurfaceShortcuts`
     - `ui/icons.Icon`
     - `ui/theme-engine.ThemeEngine`
-  - Exports (values): `appsPane`
+  - Exports (types):
+    - `AppCategory`
+    - `AppCategoryId`
+    - `CatalogApp`
+  - Exports (values):
+    - `APPS`
+    - `appsPane`
+    - `catalogAppIcon`
+    - `CATEGORIES`
+    - `tryLivePath`
 - Server:
   - Contributes: `apps.website.crawlable.page` "/about/apps"
   - Uses: `apps/website/crawlable.WebsitePages`

@@ -8,13 +8,13 @@ import { visionPane } from "@plugins/apps/plugins/website/plugins/pages/plugins/
 import { foundationsPane } from "@plugins/apps/plugins/website/plugins/pages/plugins/foundations/web";
 import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
-import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { WebsiteBand } from "@plugins/apps/plugins/website/plugins/shell/web";
+import { AppsShelf } from "./apps-shelf";
 import "./layers-section.css";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
@@ -24,57 +24,6 @@ const arrowForwardIcon = symbol("arrow-forward");
 
 const HEADING = "What is equin?";
 const SUBHEADING = "Three layers, each built on the one before it.";
-
-interface App {
-  name: string;
-  body: string;
-}
-
-interface Category {
-  name: string;
-  body: string;
-  /** Apps not built yet: drawn dimmed. */
-  future?: boolean;
-  apps: App[];
-}
-
-/** The apps built so far, and the ones next in line — a closed list, plain data. */
-const CATEGORIES: Category[] = [
-  {
-    name: "The harness",
-    body: "The apps used to build the system",
-    apps: [
-      { name: "Agent manager", body: "equin's version of Cursor" },
-      { name: "Prototypes", body: "equin's version of Claude Design" },
-      {
-        name: "Deploy",
-        body: "A self-hosted PaaS, used to deploy the site you are reading",
-      },
-    ],
-  },
-  {
-    name: "Daily life",
-    body: "The apps used every day",
-    apps: [
-      { name: "Pages", body: "Notion-like editor and agentic wiki" },
-      { name: "Sonata", body: "Piano learning app" },
-      { name: "Events", body: "Social events from many sources, in one place" },
-      { name: "Maps", body: "Places to go and places been, on one map" },
-    ],
-  },
-  {
-    name: "Future",
-    body: "Next in line",
-    future: true,
-    apps: [
-      { name: "Mail", body: "An Inbox-like email client, recreated" },
-      {
-        name: "Finance",
-        body: "Every account in one place: a personal finance aggregator",
-      },
-    ],
-  },
-];
 
 /**
  * "What is equin?" — the homepage's map of the project, as three stacked layers
@@ -115,11 +64,7 @@ export function LayersSection() {
             body="Every app is a composition of plugins, so it can be reshaped by the person using it."
             pane={appsPane}
           >
-            <Grid minCellWidth="13rem" mode="fit" gap="md">
-              {CATEGORIES.map((category) => (
-                <CategoryColumn key={category.name} category={category} />
-              ))}
-            </Grid>
+            <AppsShelf />
           </Layer>
           <LayerArrow />
           <Layer
@@ -146,16 +91,20 @@ function Layer({
 }) {
   const openPane = useOpenPane();
   return (
-    <Card
-      as="button"
-      interactive
-      // A flat panel at rest; under the pointer it lifts and its border
-      // brightens toward the foreground (`website-layer`, see the CSS), in place
-      // of the interactive card's accent border and tinted fill.
-      className="website-layer hover:border-foreground/22 hover:bg-card rounded-2xl text-left shadow-none"
-      {...openPane.link(pane, {}, { mode: "root" })}
-    >
-      <Stack gap="lg">
+    // A flat panel at rest; under the pointer it lifts and its border
+    // brightens toward the foreground (`website-layer`, see the CSS), in place
+    // of the interactive card's accent border and tinted fill.
+    <Card className="website-layer hover:border-foreground/22 hover:bg-card rounded-2xl text-left shadow-none">
+      {/* The layer's link is a full-bleed button BEHIND its content, so the
+          links inside a layer (the applications layer's apps) stay links of
+          their own above it, and every other press lands on the layer. */}
+      <button
+        type="button"
+        className="website-layer-hit"
+        aria-label={title}
+        {...openPane.link(pane, {}, { mode: "root" })}
+      />
+      <Stack gap="lg" className="website-layer-content">
         {/* The arrow is a real track beside the text, not a corner overlay, so
             a long title wraps before it rather than running under it. */}
         <Stack direction="row" gap="lg" align="start">
@@ -190,44 +139,5 @@ function LayerArrow() {
     <Center className="text-muted-foreground/60 h-11">
       <Icon icon={arrowDownwardIcon} aria-hidden />
     </Center>
-  );
-}
-
-function CategoryColumn({ category }: { category: Category }) {
-  return (
-    <Stack
-      gap="xs"
-      className="border-foreground/18 p-md rounded-xl border border-dashed"
-    >
-      <Stack gap="none">
-        <Text
-          as="h4"
-          variant="eyebrow"
-          className="text-muted-foreground/60 font-semibold tracking-widest"
-        >
-          {category.name}
-        </Text>
-        <Text variant="caption" className="text-muted-foreground/60">
-          {category.body}
-        </Text>
-      </Stack>
-      {category.apps.map((app) => (
-        <Stack
-          key={app.name}
-          gap="none"
-          className={cn(
-            "bg-muted/60 border-border px-sm py-xs rounded-lg border",
-            category.future && "opacity-55",
-          )}
-        >
-          <Text variant="label" className="font-semibold">
-            {app.name}
-          </Text>
-          <Text variant="caption" tone="muted">
-            {app.body}
-          </Text>
-        </Stack>
-      ))}
-    </Stack>
   );
 }

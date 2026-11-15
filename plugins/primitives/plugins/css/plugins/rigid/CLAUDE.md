@@ -65,7 +65,7 @@ slots-as-props, which is what `<Frame>` did before it was deleted.
     - `Rigid`
     - `rigidClass`
 - Cross-plugin:
-  - Imported by: 147 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 148 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×35
     - `conversations` ×29
     - `primitives` ×20
@@ -76,13 +76,13 @@ slots-as-props, which is what `<Frame>` did before it was deleted.
     - `plugin-meta` ×4
     - `review` ×4
     - `build` ×3
+    - `apps-core` ×2
     - `backup` ×2
     - `companions` ×2
     - `config_v2` ×2
     - `infra` ×2
     - `shell` ×2
     - `active-data/show-me`
-    - `apps-core/phone-actions`
     - `auth`
     - `code-explorer/commit-detail`
     - `hints/ask`

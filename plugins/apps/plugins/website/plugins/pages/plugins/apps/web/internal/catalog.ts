@@ -1,4 +1,8 @@
-import type { AvatarColor } from "@plugins/primitives/plugins/avatar/core";
+import type { AppTileColor } from "@plugins/apps-core/plugins/app-icon/plugins/tile-colors/core";
+import {
+  appIcon,
+  type AppIcon,
+} from "@plugins/apps-core/plugins/app-icon/core";
 import { symbol, type SymbolRef } from "@plugins/ui/plugins/icons/core";
 // The apps' screenshots, taken by `plugins/apps/plugins/website/e2e/app-screenshots.ts`
 // and cut down to card size (640px JPEG): a web artifact inlines every image it
@@ -31,9 +35,21 @@ export interface CatalogApp {
   category: AppCategoryId;
   /** The glyph the app's own definition declares (`defineApp({ icon: symbol(…) })`), so the card wears the icon the rail draws. */
   icon: SymbolRef;
-  /** The tile's colour, one categorical palette slot. */
-  color: AvatarColor;
+  /**
+   * The id of the app's own definition (`defineApp({ id })`), `null` for an
+   * app not built yet. Text, not the descriptor: importing an app's shell
+   * would pull it into the website's composition.
+   */
+  appId: string | null;
+  /**
+   * The app's tile colour — a copy of its definition's `iconColor`, so the
+   * site draws the tile the app draws (`AppIconTile`); `catalog.test.ts`
+   * holds the two equal.
+   */
+  color: AppTileColor;
   description: string;
+  /** One short line, for where the description does not fit (the homepage's app shelf). */
+  summary?: string;
   /** The app's screenshot (its URL and size); the card draws a stand-in without one. */
   shot?: ImportedImage;
   /** Not built yet: drawn dimmed, with no Install. */
@@ -66,136 +82,182 @@ export const CATEGORIES: readonly AppCategory[] = [
 export const APPS: readonly CatalogApp[] = [
   {
     id: "agents",
+    appId: "agent-manager",
+    color: "sky",
     shot: agentsShot,
     name: "Agent manager",
     category: "harness",
     icon: symbol("chat-bubble"),
-    color: "sky",
+    summary: "Agents working through a task tree",
     description:
       "Nested tasks, each worked on by an agent in its own copy of the code. equin's version of Cursor.",
   },
   {
     id: "prototypes",
+    appId: "prototypes",
+    color: "violet",
     shot: prototypesShot,
     name: "Prototypes",
     category: "harness",
     icon: symbol("dashboard-customize"),
-    color: "violet",
+    summary: "Mockups beside the real app",
     description:
       "Mockups beside the real app they mock, with versions and variants. equin's version of Claude Design.",
   },
   {
     id: "deploy",
+    appId: "deploy",
+    color: "teal",
     name: "Deploy",
     category: "harness",
     icon: symbol("cloud"),
-    color: "teal",
     description: "A self-hosted PaaS. It deploys the site you are reading.",
   },
   {
     id: "pages",
+    appId: "pages",
+    color: "blue",
     shot: pagesShot,
     name: "Pages",
     category: "daily",
     icon: symbol("description"),
-    color: "slate",
+    summary: "Notion-like editor and agentic wiki",
     description:
       "A Notion-like editor and agentic wiki: blocks, databases, backlinks, and agents writing beside you.",
   },
   {
     id: "sonata",
+    appId: "sonata",
+    color: "emerald",
     shot: sonataShot,
     name: "Sonata",
     category: "daily",
     icon: symbol("piano"),
-    color: "emerald",
+    summary: "Learn piano from any song",
     description:
       "Learn piano from any song: a piano roll, chords broken down, and practice that adapts to you.",
   },
   {
     id: "events",
+    appId: "events",
+    color: "orange",
     name: "Events",
     category: "daily",
     icon: symbol("event"),
-    color: "orange",
     description:
       "Social events from many sources, in one place, on a map and a calendar.",
   },
   {
     id: "maps",
+    appId: "places",
+    color: "green",
     shot: mapsShot,
     name: "Maps",
     category: "daily",
     icon: symbol("location-on"),
-    color: "teal",
+    summary: "Every place you love, on one map",
     description:
       "The places you want to go and have been, on one map, sorted by a tree of tags.",
   },
   {
     id: "chord",
+    appId: "chord",
+    color: "pink",
     shot: chordShot,
     name: "Chord",
     category: "daily",
     icon: symbol("queue-music"),
-    color: "pink",
+    summary: "Name the chords of real songs",
     description:
       "An ear trainer that plays loops of real songs and asks you to name each chord.",
   },
   {
     id: "browser",
+    appId: "browser",
+    color: "indigo",
     name: "Browser",
     category: "tools",
     icon: symbol("public"),
-    color: "indigo",
     description:
       "A minimal web browser, so a page can sit next to the app that uses it.",
   },
   {
     id: "files",
+    appId: "file-explorer",
+    color: "amber",
     shot: filesShot,
     name: "Files",
     category: "tools",
     icon: symbol("folder"),
-    color: "amber",
+    summary: "Your files and every agent's",
     description:
       "Browse and preview files on your machine and in every agent's workspace.",
   },
   {
     id: "desktop",
+    appId: "desktop",
+    color: "cyan",
     name: "Desktop",
     category: "surfaces",
     icon: symbol("desktop-windows"),
-    color: "indigo",
     shot: desktopShot,
     description: "Use equin as a desktop, with every app in its own window.",
   },
   {
     id: "isle",
+    appId: "isle",
+    color: "mint",
     name: "Isle",
     category: "surfaces",
     icon: symbol("sailing"),
-    color: "sky",
     shot: isleShot,
     description:
       "An RPG-style workspace where you walk around to open your apps.",
   },
   {
+    id: "studio",
+    appId: "studio",
+    color: "purple",
+    name: "Studio",
+    category: "harness",
+    icon: symbol("extension"),
+    description:
+      "Every plugin of equin, its graph and what it contributes, open to inspect.",
+  },
+  {
+    id: "party",
+    appId: "keyboard-party",
+    color: "fuchsia",
+    name: "Tap Tap Party",
+    category: "daily",
+    icon: symbol("celebration"),
+    description:
+      "A keyboard toy for a small child: every key answers with its own animation and sound.",
+  },
+  {
     id: "mail",
+    appId: "mail",
+    color: "rose",
     name: "Mail",
     category: "next",
     icon: symbol("mail"),
-    color: "rose",
     soon: true,
     description:
       "An Inbox-like email client, recreated: bundles, snoozes, and an agent that drafts replies.",
   },
   {
     id: "finance",
+    appId: null,
+    color: "gold",
     name: "Finance",
     category: "next",
     icon: symbol("account-balance"),
-    color: "emerald",
     soon: true,
     description: "Every account in one place: a personal finance aggregator.",
   },
 ];
+
+/** The app's icon as its tile draws it: its glyph on its colour (`AppIconTile`). */
+export function catalogAppIcon(app: CatalogApp): AppIcon {
+  return appIcon(app.icon, { color: app.color });
+}

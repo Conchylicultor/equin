@@ -1,4 +1,4 @@
-import type { AvatarColor } from "@plugins/primitives/plugins/avatar/core";
+import type { AppTileColor } from "@plugins/apps-core/plugins/app-icon/plugins/tile-colors/core";
 import type { SymbolRef } from "@plugins/ui/plugins/icons/core";
 import type { AppIcon } from "../index";
 
@@ -9,7 +9,7 @@ import type { AppIcon } from "../index";
  */
 export function appIcon(
   symbol: SymbolRef,
-  opts: { color?: AvatarColor } = {},
+  opts: { color?: AppTileColor } = {},
 ): AppIcon {
   return {
     kind: "symbol",

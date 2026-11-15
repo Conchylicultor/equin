@@ -166,7 +166,6 @@ color palette.
     - `apps-core/app-icon`
     - `apps-core/app-launcher`
     - `apps/mail/reading-pane`
-    - `apps/website/pages/apps`
     - `companions/browser-extension`
     - `conversations/agents`
     - `conversations/conversation-category`

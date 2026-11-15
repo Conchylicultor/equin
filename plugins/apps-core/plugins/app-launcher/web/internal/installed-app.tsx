@@ -55,7 +55,7 @@ export function AppIconCell({
 
 /**
  * The icon (an `app-icon` field, a visual) is the row's lead: drawn through `AppIconCell` (the
- * app's colour in `APP_TILE_PALETTE`; a tile filling the box in a tile view, a
+ * app's own tile colour; a tile filling the box in a tile view, a
  * badge in rows and table cells). Every list of apps passes these overrides, so
  * an app looks the same wherever it is launched from.
  */

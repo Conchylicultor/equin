@@ -1,4 +1,4 @@
-import type { AvatarColor } from "@plugins/primitives/plugins/avatar/core";
+import type { AppTileColor } from "@plugins/apps-core/plugins/app-icon/plugins/tile-colors/core";
 import type { SymbolRef } from "@plugins/ui/plugins/icons/core";
 
 /**
@@ -6,21 +6,19 @@ import type { SymbolRef } from "@plugins/ui/plugins/icons/core";
  * custom-image variant (`{ kind: "image"; src }`) drops in later with one render
  * branch and zero changes to existing `kind: "symbol"` authors.
  *
- * `color` is the app's declared tile colour (a launcher paints the icon on it).
- * Omitted, a surface derives one from the app id, so only an app whose colour is
- * part of its identity declares it.
+ * `color` is the app's declared tile colour (`AppTileColor`: a launcher paints
+ * the icon on its gradient). Omitted, a surface picks one from the app id.
  */
 export type AppIcon = {
   kind: "symbol";
   symbol: SymbolRef;
-  color?: AvatarColor;
+  color?: AppTileColor;
 };
 
 export { appIcon } from "./internal/app-icon";
-export { APP_TILE_PALETTE } from "./internal/tile-palette";
 export { appIconToSvg } from "./internal/app-icon-to-svg";
 export type {
   AppIconGlyph,
   AppIconSvgOptions,
 } from "./internal/app-icon-to-svg";
-export { appTileFill } from "./internal/tile-fill";
+export { appTileFill, appTileGradient } from "./internal/tile-fill";

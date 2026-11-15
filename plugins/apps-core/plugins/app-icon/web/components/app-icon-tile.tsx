@@ -1,25 +1,82 @@
+import type { CSSProperties } from "react";
 import {
-  Avatar,
-  AvatarPresentationProvider,
-} from "@plugins/primitives/plugins/avatar/web";
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { APP_TILE_PALETTE, type AppIcon } from "../../core";
+  appTileColor,
+  appTileStops,
+  TILE_GRADIENT_ANGLE,
+  type OklchColor,
+} from "@plugins/apps-core/plugins/app-icon/plugins/tile-colors/core";
+import { useAvatarPresentation } from "@plugins/primitives/plugins/avatar/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
+import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
+import {
+  cn,
+  useControlSize,
+  type ControlSize,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Icon } from "@plugins/ui/plugins/icons/web";
+import type { AppIcon } from "../../core";
 
-/** The app-tile palette as the `--categorical-*` vars the avatar's tile
- *  fill reads, set on the tile itself — so the tile is the colour the Home
- *  gallery paints it, whatever theme scope the launcher sits in. */
-const TILE_PALETTE_VARS = Object.fromEntries(
-  Object.entries(APP_TILE_PALETTE).map(([k, v]) => [`--${k}`, v]),
-) as React.CSSProperties;
+/** The badge box per control size — the avatar's own (`size-avatar-*`), so an app's icon in a row is the size every avatar there is. */
+const BADGE_BOX: Record<ControlSize, string> = {
+  xs: "size-avatar-xs",
+  sm: "size-avatar-sm",
+  md: "size-avatar-md",
+  lg: "size-avatar-lg",
+};
 
 /**
- * An app's icon as its launcher TILE: the glyph on a squircle in the app's
- * declared colour (`icon.color`), or one derived from `appId` when it declares
- * none — the same tile the Home gallery draws, so an app looks the same in
- * every launcher. `className` sizes the tile (e.g. `size-9`); the glyph is a
- * fixed share of it. `appId` undefined (an app that cannot be resolved) and no
- * declared colour draws the neutral box. It paints in `APP_TILE_PALETTE`, not the enclosing
- * theme's categorical slots.
+ * A tile colour at the theme's intensity: its chroma scaled by
+ * `--app-tile-intensity` (the `app-tile` token group — calm on equin's
+ * launchers, vivid on the website), so where a tile is drawn decides how loud
+ * it is, never which colour it is.
+ */
+function themedCss({ l, c, h }: OklchColor): string {
+  return `oklch(${l.toFixed(3)} calc(${c} * var(--app-tile-intensity)) ${h})`;
+}
+
+/**
+ * The tile itself: the app's glyph (46% of the box), white, on a squircle
+ * painted with the app's colour as a diagonal gradient — the deep end
+ * top-left, the base bottom-right (`tile-colors`) — inside a hairline
+ * inner edge. Bounded and flat, like an app icon on a phone: no gloss, no drop
+ * shadow, nothing that makes it read as a curved button. Fills its box.
+ */
+function TileBox({
+  icon,
+  appId,
+  className,
+}: {
+  icon: AppIcon;
+  appId: string | undefined;
+  className?: string;
+}) {
+  // An app that cannot be resolved still gets a colour, from its glyph's name.
+  const { deep, base } = appTileStops(
+    appTileColor(icon.color, appId ?? icon.symbol.name),
+    1,
+  );
+  const paint = {
+    backgroundImage: `linear-gradient(${TILE_GRADIENT_ANGLE}deg, ${themedCss(deep)}, ${themedCss(base)})`,
+  } satisfies CSSProperties;
+  return (
+    <Center
+      aria-hidden
+      style={paint}
+      className={cn(
+        "rounded-squircle text-categorical-foreground shadow-[inset_0_0_0_1px_oklch(1_0_0/12%)]",
+        className,
+      )}
+    >
+      <Icon icon={icon.symbol} className="size-[46%]" />
+    </Center>
+  );
+}
+
+/**
+ * An app's icon as its launcher TILE — the same tile wherever an app is drawn
+ * (the Home gallery, the launcher grid, the desktop, the website), in the
+ * colour the app declares (`defineApp({ iconColor })`), else one picked from
+ * `appId`. `className` sizes the tile (e.g. `size-9`).
  */
 export function AppIconTile({
   icon,
@@ -27,37 +84,22 @@ export function AppIconTile({
   className,
 }: {
   icon: AppIcon;
-  /** Seeds the derived colour when the icon declares none. */
+  /** Seeds the picked colour when the icon declares none. */
   appId: string | undefined;
   className?: string;
 }) {
   switch (icon.kind) {
     case "symbol":
-      return (
-        <span
-          aria-hidden
-          className={cn("block", className)}
-          style={TILE_PALETTE_VARS}
-        >
-          <AvatarPresentationProvider value="tile">
-            <Avatar
-              symbol={icon.symbol}
-              color={icon.color ?? null}
-              shape="squircle"
-              fallbackKey={appId}
-            />
-          </AvatarPresentationProvider>
-        </span>
-      );
+      return <TileBox icon={icon} appId={appId} className={className} />;
   }
 }
 
 /**
- * An app's icon as a field cell: drawn in the AMBIENT avatar presentation, so
- * the same field is a launcher tile where the view declares tiles (the icons
- * view's `AvatarPresentationProvider value="tile"`, filling the box it gives)
- * and a badge-sized avatar in rows and table cells — where a forced tile would
- * fill a content-sized box, i.e. collapse to nothing. Same colour either way.
+ * An app's icon as a field cell: the same tile, sized by the AMBIENT avatar
+ * presentation — filling the box where the view declares tiles (the icons
+ * view's `AvatarPresentationProvider value="tile"`), and avatar-sized in rows
+ * and table cells, where a box-filling tile would fill a content-sized box,
+ * i.e. collapse to nothing.
  */
 export function AppIconAvatar({
   icon,
@@ -66,17 +108,16 @@ export function AppIconAvatar({
   icon: AppIcon;
   appId: string;
 }) {
+  const tile = useAvatarPresentation() !== "badge";
+  const size = useControlSize();
   switch (icon.kind) {
     case "symbol":
       return (
-        <span aria-hidden className="block size-full" style={TILE_PALETTE_VARS}>
-          <Avatar
-            symbol={icon.symbol}
-            color={icon.color ?? null}
-            shape="squircle"
-            fallbackKey={appId}
-          />
-        </span>
+        <TileBox
+          icon={icon}
+          appId={appId}
+          className={tile ? "size-full" : cn(rigidClass(), BADGE_BOX[size])}
+        />
       );
   }
 }

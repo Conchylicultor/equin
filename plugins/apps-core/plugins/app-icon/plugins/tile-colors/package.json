@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-apps-core-app-icon-tile-colors",
+  "private": true,
+  "version": "0.0.1",
+  "description": "The app-tile colours as data: the closed set of colours an app's tile can wear (AppTileColor), each a bright base and the deep end of its gradient, the pick for an app that declares none, and the gradient's stops. A leaf, so defineApp (primitives/pane) can type an app's iconColor without a cycle through apps-core."
+}

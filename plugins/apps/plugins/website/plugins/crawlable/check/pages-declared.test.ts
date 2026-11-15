@@ -139,6 +139,31 @@ export const computedPage = defineWebsitePage({ path: base + "/x", title: "Y", d
     ]);
   });
 
+  test("keyed params after the segment are a view of the page, not its path", () => {
+    const ok = pageProblems(
+      sites({
+        "a/core/page.ts": core,
+        "a/web/panes.tsx": `export const downloadPane = ${pane(
+          "downloadPage",
+          `defineRoute({ id: "website-download", segment: "download;app" })`,
+        )}`,
+        "a/server/index.ts": server,
+      }),
+    );
+    expect(ok).toEqual([]);
+    const wrong = pageProblems(
+      sites({
+        "a/core/page.ts": core,
+        "a/web/panes.tsx": `export const downloadPane = ${pane(
+          "downloadPage",
+          `defineRoute({ id: "website-download", segment: "get;app" })`,
+        )}`,
+        "a/server/index.ts": server,
+      }),
+    );
+    expect(wrong).toHaveLength(1);
+  });
+
   test("a hoisted or computed route is refused, not followed", () => {
     const problems = pageProblems(
       sites({

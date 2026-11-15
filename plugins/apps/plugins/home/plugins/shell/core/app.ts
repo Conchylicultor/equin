@@ -6,4 +6,5 @@ export const homeApp = defineApp({
   name: "Home",
   basePath: "/home",
   icon: symbol("home"),
+  iconColor: "yellow",
 });

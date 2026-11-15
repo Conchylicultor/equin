@@ -56,6 +56,7 @@ exactly this (`plugins/apps/plugins/website/plugins/shell/web/internal/theme.ts`
 
 - Description: Umbrella for CSS token group plugins: each declares its variables and schema defaults and registers them, its customizer section a `customizer` child of its own so painting never depends on the editor loading.
 - Sub-plugins:
+  - **`app-tile`** — App-tile token group: how intense the app tiles' colours are (app-tile-intensity) — calm on equin's launchers by default, vivid where a theme turns it up (the website).
   - **`categorical`** — Categorical color palette token group: the categorical-1…10 series colors. Its customizer section is the `customizer` child.
     - Plugins:
       - **`customizer`** — Customizer section for the categorical palette token group (categorical-1…10).

@@ -273,10 +273,12 @@ export function pageProblems(sites: readonly PageSites[]): string[] {
     if (page === undefined || page.path === null) continue;
     const want = websitePaneIdentity(page.path);
     const route = `defineRoute({ id: "${want.id}", segment: "${want.segment}" })`;
+    // Keyed params (`apps;app`) are a view of the page, not part of its path:
+    // the segment's positional part is what the path gives.
     if (
       p.route === null ||
       p.route.id !== want.id ||
-      p.route.segment !== want.segment
+      p.route.segment.split(";")[0] !== want.segment
     ) {
       problems.push(
         `${where(p)}: the pane of \`${p.name}\` (${page.path}) must declare \`route: ${route}\` inline, as literals`,

@@ -2,7 +2,7 @@ import { Resvg } from "@resvg/resvg-js";
 import {
   appIcon,
   appIconToSvg,
-  appTileFill,
+  appTileGradient,
 } from "@plugins/apps-core/plugins/app-icon/core";
 import type { AppRef } from "@plugins/primitives/plugins/pane/core";
 import { manifestSymbolBody } from "@plugins/ui/plugins/icons/plugins/sprites/machine";
@@ -67,7 +67,7 @@ export function appIconPng(
 export async function appIconSvg(app: AppRef, size = 1024): Promise<string> {
   return appIconToSvg(await manifestSymbolBody(app.icon.name), {
     size,
-    background: appTileFill(
+    background: appTileGradient(
       appIcon(app.icon, { color: app.iconColor }),
       app.id,
     ),

@@ -310,3 +310,28 @@
     transform: none;
   }
 }
+
+/* The card the page was opened on (`;app=`, from a homepage tile): ringed in
+ * the brand colour for a moment after it is scrolled to, so the eye lands on
+ * it, then back to rest. */
+.website-app-card.is-focused {
+  animation: website-app-focused 2.4s ease-out 0.3s both;
+}
+
+@keyframes website-app-focused {
+  0%,
+  45% {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 35%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 0%, transparent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .website-app-card.is-focused {
+    animation: none;
+    border-color: var(--primary);
+  }
+}

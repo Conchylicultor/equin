@@ -33,10 +33,13 @@ export function AppsGallery({
   query,
   category,
   onCategoryChange,
+  focusedApp,
 }: {
   query: string;
   category: CategoryFilter;
   onCategoryChange: (category: CategoryFilter) => void;
+  /** The catalog id of the app the page was opened on (`;app=`): its card is scrolled to and marked. */
+  focusedApp: string | undefined;
 }) {
   const hits = APPS.filter(
     (app) =>
@@ -111,7 +114,12 @@ export function AppsGallery({
               {/* Four to a row on the 1040px measure: 4 × 248px + 3 × 16px. */}
               <Grid minCellWidth="15rem" mode="fill" gap="lg">
                 {apps.map((app) => (
-                  <AppCard key={app.id} app={app} category={c} />
+                  <AppCard
+                    key={app.id}
+                    app={app}
+                    category={c}
+                    focused={app.id === focusedApp}
+                  />
                 ))}
               </Grid>
             </Stack>

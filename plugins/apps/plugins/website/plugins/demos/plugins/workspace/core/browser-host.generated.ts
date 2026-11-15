@@ -884,6 +884,7 @@ export const browserHost = {
     "ui.theme-engine.theme-gallery.customizer",
     "ui.theme-toggle",
     "ui.theme-toggle.customizer",
+    "ui.tokens.app-tile",
     "ui.tokens.categorical",
     "ui.tokens.categorical.customizer",
     "ui.tokens.chart",

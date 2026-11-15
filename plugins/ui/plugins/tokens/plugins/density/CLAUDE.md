@@ -50,8 +50,8 @@
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shape --radius`
   - Tokens used by: 359 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps` ×73
     - `primitives` ×73
+    - `apps` ×72
     - `conversations` ×51
     - `debug` ×29
     - `ui` ×29
@@ -59,9 +59,9 @@
     - `plugin-meta` ×13
     - `tasks` ×10
     - `fields` ×8
+    - `apps-core` ×5
     - `reorder` ×5
     - `review` ×5
-    - `apps-core` ×4
     - `infra` ×4
     - `shell` ×4
     - `build` ×3

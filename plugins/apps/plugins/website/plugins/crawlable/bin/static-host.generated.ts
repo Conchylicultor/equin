@@ -336,6 +336,7 @@ export const staticHosts: Record<string, StaticHost> = {
       "ui/plugins/theme-engine/plugins/theme-gallery",
       "ui/plugins/theme-engine/plugins/theme-gallery/plugins/customizer",
       "ui/plugins/theme-toggle/plugins/customizer",
+      "ui/plugins/tokens/plugins/app-tile",
       "ui/plugins/tokens/plugins/categorical",
       "ui/plugins/tokens/plugins/categorical/plugins/customizer",
       "ui/plugins/tokens/plugins/chart",

@@ -154,6 +154,10 @@
       "name": "@equin/plugin-apps-core-app-icon",
       "version": "0.0.1",
     },
+    "plugins/apps-core/plugins/app-icon/plugins/tile-colors": {
+      "name": "@equin/plugin-apps-core-app-icon-tile-colors",
+      "version": "0.0.1",
+    },
     "plugins/apps-core/plugins/app-launcher": {
       "name": "@equin/plugin-apps-core-app-launcher",
       "version": "0.0.1",
@@ -7744,6 +7748,10 @@
       "name": "@equin/plugin-ui-tokens",
       "version": "0.0.1",
     },
+    "plugins/ui/plugins/tokens/plugins/app-tile": {
+      "name": "@equin/plugin-ui-tokens-app-tile",
+      "version": "0.0.1",
+    },
     "plugins/ui/plugins/tokens/plugins/categorical": {
       "name": "@equin/plugin-ui-tokens-categorical",
       "version": "0.0.1",
@@ -8218,6 +8226,8 @@
     "@equin/plugin-apps-core-app-embed": ["@equin/plugin-apps-core-app-embed@workspace:plugins/apps-core/plugins/app-embed"],
 
     "@equin/plugin-apps-core-app-icon": ["@equin/plugin-apps-core-app-icon@workspace:plugins/apps-core/plugins/app-icon"],
+
+    "@equin/plugin-apps-core-app-icon-tile-colors": ["@equin/plugin-apps-core-app-icon-tile-colors@workspace:plugins/apps-core/plugins/app-icon/plugins/tile-colors"],
 
     "@equin/plugin-apps-core-app-launcher": ["@equin/plugin-apps-core-app-launcher@workspace:plugins/apps-core/plugins/app-launcher"],
 
@@ -11776,6 +11786,8 @@
     "@equin/plugin-ui-theme-toggle-customizer": ["@equin/plugin-ui-theme-toggle-customizer@workspace:plugins/ui/plugins/theme-toggle/plugins/customizer"],
 
     "@equin/plugin-ui-tokens": ["@equin/plugin-ui-tokens@workspace:plugins/ui/plugins/tokens"],
+
+    "@equin/plugin-ui-tokens-app-tile": ["@equin/plugin-ui-tokens-app-tile@workspace:plugins/ui/plugins/tokens/plugins/app-tile"],
 
     "@equin/plugin-ui-tokens-categorical": ["@equin/plugin-ui-tokens-categorical@workspace:plugins/ui/plugins/tokens/plugins/categorical"],
 

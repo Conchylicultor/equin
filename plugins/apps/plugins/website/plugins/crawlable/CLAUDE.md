@@ -40,7 +40,8 @@ contributions: [WebsitePages.Page(downloadPage)],
   page by `title: <page>.title`) and one `WebsitePages.Page(…)`; every website
   pane and server entry names a declared page (by binding name, held unique);
   each pane's inline route literals and `appIndex` are the ones its page's path
-  gives; paths are string literals and unique.
+  gives (its segment's positional part: keyed params such as `apps;app` are a
+  view of the page, not its path); paths are string literals and unique.
 
 ## `/robots.txt` and `/sitemap.xml`
 

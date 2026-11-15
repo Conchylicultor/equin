@@ -15,7 +15,9 @@ import {
  * shown.
  */
 export const appsPane = Pane.define({
-  route: defineRoute({ id: "website-apps", segment: "apps" }),
+  // `;app=<catalog id>`: the app to scroll to — the homepage's app tiles
+  // open the gallery on their own card (`/about/apps;app=sonata`).
+  route: defineRoute({ id: "website-apps", segment: "apps;app" }),
   app: websiteApp,
   actions: WebsiteHeader,
   title: appsPage.title,

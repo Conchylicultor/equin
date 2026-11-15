@@ -18,6 +18,7 @@ import { AppsClosing } from "./apps-closing";
 export function AppsBody() {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<CategoryFilter>("all");
+  const { app } = appsPane.useParams();
   return (
     <WebsiteChrome pane={appsPane}>
       <WebsiteHero
@@ -33,6 +34,7 @@ export function AppsBody() {
           query={query}
           category={category}
           onCategoryChange={setCategory}
+          focusedApp={app}
         />
         <AppsClosing />
       </WebsiteBand>

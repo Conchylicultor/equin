@@ -1,8 +1,12 @@
 export interface AppIconSvgOptions {
   /** Canvas size in px (square). Default 512. */
   size?: number;
-  /** CSS color for the rounded-rect background, or null for transparent. Default "#18181b". */
-  background?: string | null;
+  /**
+   * The rounded-rect background: a CSS colour, a gradient (`from` top-left to
+   * `to` bottom-right — the app tile's, `appTileGradient`), or null for
+   * transparent. Default "#18181b".
+   */
+  background?: string | { from: string; to: string } | null;
   /** Rounded-rect corner radius in px. Default Math.round(size * 0.22). */
   cornerRadius?: number;
   /** Glyph fill color (resvg has no currentColor). Default "#ffffff". */
@@ -40,12 +44,18 @@ export function appIconToSvg(
   const inner = size * (1 - 2 * padding);
   const scale = inner / Math.max(glyph.width, glyph.height);
   const translate = size * padding;
+  const gradient = background !== null && typeof background === "object";
+  // The tile's diagonal: the deep end top-left, the base bottom-right.
+  const defs = gradient
+    ? `<defs><linearGradient id="tile" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${background.from}"/><stop offset="1" stop-color="${background.to}"/></linearGradient></defs>`
+    : "";
   const bg =
     background != null
-      ? `<rect width="${size}" height="${size}" rx="${cornerRadius}" fill="${background}"/>`
+      ? `<rect width="${size}" height="${size}" rx="${cornerRadius}" fill="${gradient ? "url(#tile)" : background}"/>`
       : "";
   return (
     `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">` +
+    defs +
     bg +
     `<g transform="translate(${translate},${translate}) scale(${scale})" fill="${foreground}" color="${foreground}">` +
     glyph.body +
