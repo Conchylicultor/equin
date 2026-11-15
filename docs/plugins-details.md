@@ -25068,6 +25068,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `config_v2.ConfigV2`
           - `config_v2.getConfig`
           - `debug/slow-ops.recordSlowOp`
+          - `debug/trace/boot.bootClass`
           - `debug/trace/engine.captureTrace`
           - `infra/endpoints.implement`
           - `infra/jobs.defineJob`
@@ -27554,7 +27555,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `change-producer` "slow_ops"
           - `fork-data-exclusion` "slow_op_callers"
           - `fork-data-exclusion` "slow_ops"
-        - Uses: 26 symbols — full list in [`plugins/debug/plugins/slow-ops/REFERENCE.md`](../plugins/debug/plugins/slow-ops/REFERENCE.md)
+        - Uses: 27 symbols — full list in [`plugins/debug/plugins/slow-ops/REFERENCE.md`](../plugins/debug/plugins/slow-ops/REFERENCE.md)
           - `infra/jobs` ×4
           - `infra/entities` ×3
           - `config_v2` ×2
@@ -27563,6 +27564,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `reports/engine` ×2
           - `database/admin.ExcludeFromFork`
           - `database.db`
+          - `debug/trace/client-boot.clientBootClass`
           - `debug/trace/engine.captureTrace`
           - `infra/endpoints.implement`
           - `infra/host/machine-sleep.sleptDuring`
@@ -27765,6 +27767,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses:
           - `config_v2.ConfigV2`
           - `debug/trace/engine.captureTrace`
+          - `debug/trace/stall.stallClass`
           - `reports.ReportKind`
           - `reports/engine.recordReport`
         - Exports (values):
@@ -28094,7 +28097,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `boundaries/no-platform-api` — `server/internal/mcp-tool.ts`, `server/internal/sources/health.ts` (debt)
     - **`trace`** — Umbrella for the durable slow-event trace engine: the generic perf-event trace registry + storage (engine) and the built-in event classes (spans, gates, contention).
       - Plugins:
-        - **`boot`** — Boot trace lane: a self-contained phase-grouped Gantt card of the server-boot profile (gateway readiness wait, per-phase spans, memory checkpoints) on the boot section's own clock axis. Built-in trace event class 'boot': the server-boot profile (phase spans + memory checkpoints + optional gateway readiness wait) pre-aggregated by debug/boot-monitor and passed in via the boot trigger's detail.
+        - **`boot`** — Boot trace lane: a self-contained phase-grouped Gantt card of the server-boot profile (gateway readiness wait, per-phase spans, memory checkpoints) on the boot section's own clock axis. Built-in trace event class 'boot': the server-boot profile (phase spans + memory checkpoints + optional gateway readiness wait) pre-aggregated by debug/boot-monitor and supplied by the producer through bootClass.supply.
           - Web:
             - Contributes: `Trace.Lane` → `BootLane`
             - Uses:
@@ -28112,6 +28115,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Server:
             - Contributes: `trace-event-class` "boot"
             - Uses: `debug/trace/engine.defineTraceEventClass`
+            - Exports (values): `bootClass`
           - Cross-plugin:
             - Uses tokens:
               - `ui/tokens/categorical --categorical-1`
@@ -28141,7 +28145,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `BootMemoryCheckpointSchema`
               - `BootSectionSchema`
               - `BootSpanSchema`
-        - **`client-boot`** — Client-boot trace lane: the browser's own boot decomposition rendered as the embedded Boot Profile Gantt on a slow page-load trace, with the trimmed-asset rollup caption. Built-in trace event class 'client-boot': the browser's own boot decomposition (spans, navigation/paint timing, long tasks, trimmed assets + rollup), built client-side and carried in the page-load slow-op beacon via the trigger's detail.
+        - **`client-boot`** — Client-boot trace lane: the browser's own boot decomposition rendered as the embedded Boot Profile Gantt on a slow page-load trace, with the trimmed-asset rollup caption. Built-in trace event class 'client-boot': the browser's own boot decomposition (spans, navigation/paint timing, long tasks, trimmed assets + rollup), built client-side and carried in the page-load slow-op beacon supplied through clientBootClass.supply.
           - Web:
             - Contributes: `Trace.Lane` → `ClientBootLane`
             - Uses:
@@ -28155,15 +28159,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Server:
             - Contributes: `trace-event-class` "client-boot"
             - Uses: `debug/trace/engine.defineTraceEventClass`
+            - Exports (values): `clientBootClass`
           - Cross-plugin:
             - Uses tokens:
               - `ui/tokens/density --space-lg`
               - `ui/tokens/density --space-sm`
             - Imported by: `debug/slow-ops`
           - Core:
-            - Exports (types):
-              - `AssetRollup`
-              - `ClientBootSection`
+            - Exports (types): `AssetRollup`
             - Exports (values):
               - `AssetRollupSchema`
               - `ClientBootSectionSchema`
@@ -28248,6 +28251,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `reports/engine.recordReport`
             - DB schema: `plugins/debug/plugins/trace/plugins/engine/server/internal/tables.ts`
             - Exports (types):
+              - `SuppliedTraceSection`
               - `TraceEventClassHandle`
               - `TraceEventClassSpec`
             - Exports (values):
@@ -28454,7 +28458,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-weight-semibold`
           - Exemptions:
             - Exempts itself from: `sink-safety/no-adhoc-profiler-seam` — `.` (sanctioned)
-        - **`stall`** — Stall trace lane: a histogram card of the sampled JS call stacks (top frames + collapsed stack signatures) captured during an event-loop freeze. Built-in trace event class 'stall': the sampled JS call-stack histogram (top leaves + collapsed stack signatures) captured during an event-loop freeze, passed in by the health-monitor sampler via the stall trigger's detail.
+        - **`stall`** — Stall trace lane: a histogram card of the sampled JS call stacks (top frames + collapsed stack signatures) captured during an event-loop freeze. Built-in trace event class 'stall': the sampled JS call-stack histogram (top leaves + collapsed stack signatures) captured during an event-loop freeze, passed in by the health-monitor sampler through stallClass.supply.
           - Web:
             - Contributes: `Trace.Lane` → `StallLane`
             - Uses:
@@ -28469,6 +28473,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Server:
             - Contributes: `trace-event-class` "stall"
             - Uses: `debug/trace/engine.defineTraceEventClass`
+            - Exports (values): `stallClass`
           - Cross-plugin:
             - Uses tokens:
               - `ui/tokens/density --space-lg`

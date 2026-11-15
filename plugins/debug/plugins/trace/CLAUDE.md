@@ -39,8 +39,11 @@ engine+kind split:
   `Trace.Lane` that paints its section. `spans`/`gates`/`contention` read
   ambient in-memory state at the trip instant; `stall`, `boot`, and
   `client-boot` are **trigger-owned** — the producer pre-aggregates the evidence
-  and hands it in via `trigger.detail`, the class is a schema-validating
-  passthrough. `stall`: the health-monitor sampler's JSC stack histogram on a
+  and supplies it through the class's own handle
+  (`captureTrace(trigger, [bootClass.supply(section)])`); the class has no
+  capture hook and never reads the trigger kind (an open vocabulary another
+  producer can reuse — the client's `boot browser-host:*` slow-op did), and the
+  supplied value is schema-validated like any section. `stall`: the health-monitor sampler's JSC stack histogram on a
   `critical` `stall` trigger. `boot`: the server's boot-phase spans (+ the
   gateway's spawn/readiness stats when reported), minted by `debug/boot-monitor`
   on an over-budget boot — necessarily *after* the fact, so the section carries

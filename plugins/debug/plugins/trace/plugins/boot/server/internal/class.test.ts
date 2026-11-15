@@ -1,7 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import type { TripContext, TraceTrigger } from "@plugins/debug/plugins/trace/plugins/engine/core";
 import { BootSectionSchema, type BootSection } from "../../core";
-import { captureBootSection } from "./class";
+import { bootClass } from "./class";
 
 const section: BootSection = {
   wallStartMs: 1_752_700_000_000,
@@ -39,25 +38,13 @@ const section: BootSection = {
   },
 };
 
-function ctxFor(trigger: TraceTrigger): TripContext {
-  return { id: "t", atMs: 1_000, wallTime: "2026-07-17T00:00:00.000Z", windowStartMs: 0, trigger };
-}
-
-describe("captureBootSection", () => {
-  test("passes a boot trigger's detail through, and it is BootSection-valid", () => {
-    const out = captureBootSection(
-      ctxFor({
-        kind: "boot",
-        label: "server-ready",
-        durationMs: 10_400,
-        thresholdMs: 10_000,
-        detail: section,
-      }),
-    );
-    expect(out).toEqual(section);
-    // The engine validates each section against the class schema before persist —
-    // assert the passthrough output actually satisfies it (no empty/faked section).
-    expect(BootSectionSchema.safeParse(out).success).toBe(true);
+describe("bootClass", () => {
+  test("supply names the boot class and carries a BootSection-valid value", () => {
+    const supplied = bootClass.supply(section);
+    expect(supplied.classId).toBe("boot");
+    expect(supplied.value).toEqual(section);
+    // The engine validates each section against the class schema before persist.
+    expect(BootSectionSchema.safeParse(supplied.value).success).toBe(true);
   });
 
   test("a gateway-less section (older gateway never POSTed) is still schema-valid", () => {
@@ -67,14 +54,5 @@ describe("captureBootSection", () => {
     expect(
       BootSectionSchema.safeParse({ ...withoutGateway, gateway: { escalated: true } }).success,
     ).toBe(true);
-  });
-
-  test("returns undefined for a non-boot trip (no empty boot section on a slow span)", () => {
-    expect(
-      captureBootSection(ctxFor({ kind: "loader", label: "x", durationMs: 500, thresholdMs: 100 })),
-    ).toBeUndefined();
-    expect(
-      captureBootSection(ctxFor({ kind: "stall", label: "y", durationMs: 9_000, thresholdMs: 3_000, critical: true })),
-    ).toBeUndefined();
   });
 });

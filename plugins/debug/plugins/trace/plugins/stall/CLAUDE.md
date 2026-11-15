@@ -14,8 +14,8 @@ resulting trace.
 in-memory state at the trip instant; the stall stacks are instead *pre-aggregated
 by the sampler* (raw JSC traces — thousands per freeze — are far too large to
 carry, and the drain must run on the sampler's own tick to bound memory). So the
-section arrives via `trigger.detail` and `captureAtTrip` is a cheap passthrough
-gated on the `"stall"` kind; every other trip returns `undefined`.
+sampler hands it in as `captureTrace(trigger, [stallClass.supply(section)])`;
+the class has no `captureAtTrip` and reads no trigger kind.
 
 **`critical: true`** makes the trigger bypass the engine's per-minute cap (a
 post-freeze burst of slow spans must never starve the frozen-backend trace) while
@@ -31,7 +31,7 @@ lane that parses it.
 
 ## Plugin reference
 
-- Description: Stall trace lane: a histogram card of the sampled JS call stacks (top frames + collapsed stack signatures) captured during an event-loop freeze. Built-in trace event class 'stall': the sampled JS call-stack histogram (top leaves + collapsed stack signatures) captured during an event-loop freeze, passed in by the health-monitor sampler via the stall trigger's detail.
+- Description: Stall trace lane: a histogram card of the sampled JS call stacks (top frames + collapsed stack signatures) captured during an event-loop freeze. Built-in trace event class 'stall': the sampled JS call-stack histogram (top leaves + collapsed stack signatures) captured during an event-loop freeze, passed in by the health-monitor sampler through stallClass.supply.
 - Web:
   - Contributes: `Trace.Lane` → `StallLane`
   - Uses:
@@ -46,6 +46,7 @@ lane that parses it.
 - Server:
   - Contributes: `trace-event-class` "stall"
   - Uses: `debug/trace/engine.defineTraceEventClass`
+  - Exports (values): `stallClass`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/density --space-lg`

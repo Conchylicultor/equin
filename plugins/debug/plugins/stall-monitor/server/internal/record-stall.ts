@@ -5,6 +5,7 @@ import {
   profilerNowMs,
 } from "@plugins/infra/plugins/runtime-profiler/core";
 import type { StallSection } from "@plugins/debug/plugins/trace/plugins/stall/core";
+import { stallClass } from "@plugins/debug/plugins/trace/plugins/stall/server";
 import { deriveCulprit } from "./culprit";
 import { classifyCoverage } from "./coverage";
 
@@ -41,14 +42,16 @@ export function recordEventLoopStall(
   // never throws. Pass the STABLE `culpritStack` as the label: `label` is part of
   // the engine's kind:label admission/cooldown key, so a varying per-tick label
   // would defeat trace-side dedup across the ticks of one sustained freeze.
-  const trace = captureTrace({
-    kind: "stall",
-    label: culpritStack,
-    durationMs,
-    thresholdMs,
-    critical: true,
-    detail: section,
-  });
+  const trace = captureTrace(
+    {
+      kind: "stall",
+      label: culpritStack,
+      durationMs,
+      thresholdMs,
+      critical: true,
+    },
+    [stallClass.supply(section)],
+  );
 
   // Plain `void` — recordReport already wraps its own DB/bell writes in
   // runInBackgroundLane(runWithoutProfiling(…)) internally, so the caller must NOT
@@ -97,11 +100,13 @@ export function recordLoopStallEvidence(
   thresholdMs: number,
 ): void {
   const { culpritStack } = deriveCulprit(section);
-  captureTrace({
-    kind: "stall",
-    label: `short stall: ${culpritStack}`,
-    durationMs,
-    thresholdMs,
-    detail: section,
-  });
+  captureTrace(
+    {
+      kind: "stall",
+      label: `short stall: ${culpritStack}`,
+      durationMs,
+      thresholdMs,
+    },
+    [stallClass.supply(section)],
+  );
 }

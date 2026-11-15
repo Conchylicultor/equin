@@ -10,6 +10,7 @@ import { traceConfig, type TraceTrigger, type TripContext } from "../../core";
 import {
   TraceEventClass,
   getRing,
+  type SuppliedTraceSection,
   type TraceEventClassSpec,
 } from "./registry";
 import { admitTrace } from "./rate-limit";
@@ -42,8 +43,16 @@ export function _setTraceConfigForTests(values: TraceConfigValues | null): void 
 // + persist detach under runWithoutProfiling. Returns the minted id (for
 // report/row linkage) or null when disabled / rate-limited. NEVER throws into
 // the caller's hot path.
+//
+// `sections` carries evidence the producer pre-aggregated for a trigger-owned
+// class (stall, boot, client-boot), each minted by that class's handle
+// (`bootClass.supply(section)`). It stays out of the persisted trigger: the
+// section lands once, under events[classId], validated like any other.
 // ---------------------------------------------------------------------------
-export function captureTrace(trigger: TraceTrigger): { id: string } | null {
+export function captureTrace(
+  trigger: TraceTrigger,
+  sections: readonly SuppliedTraceSection[] = [],
+): { id: string } | null {
   const cfg: TraceConfigValues = configOverride ?? getConfig(traceConfig);
   if (!cfg.enabled) return null;
 
@@ -83,7 +92,7 @@ export function captureTrace(trigger: TraceTrigger): { id: string } | null {
 
   // Phase 1 — SYNCHRONOUS coherent-instant capture. No IO, no await between
   // admission and the last captureAtTrip, so every class reads the same instant.
-  const atTripByClass = captureAtTripPhase(specs, ctx);
+  const atTripByClass = captureAtTripPhase(specs, ctx, sections);
 
   // Phase 2 — detached async enrich + validate + persist, under
   // runWithoutProfiling so the engine's own IO (a class's async enrich query,
@@ -110,13 +119,38 @@ export function captureTrace(trigger: TraceTrigger): { id: string } | null {
 // SYNCHRONOUS phase: run every class's captureAtTrip, each guarded so one
 // throwing class never aborts the instant (or the others) — the noise-rules
 // per-rule try/catch discipline. A class that returns undefined is skipped.
+// A section the producer supplied for a class IS that class's phase-1 output
+// (its captureAtTrip, if any, does not run). A supplied section no registered
+// class owns (its plugin is not in this composition) or supplied twice is
+// reported, never silently dropped.
 export function captureAtTripPhase(
   specs: TraceEventClassSpec[],
   ctx: TripContext,
+  supplied: readonly SuppliedTraceSection[] = [],
 ): Map<string, unknown> {
   const out = new Map<string, unknown>();
+  const known = new Set(specs.map((s) => s.id));
+  for (const section of supplied) {
+    if (!known.has(section.classId)) {
+      reportSectionError(
+        section.classId,
+        "supplied but no such class is registered",
+        undefined,
+      );
+      continue;
+    }
+    if (out.has(section.classId)) {
+      reportSectionError(
+        section.classId,
+        "supplied twice for one trip",
+        undefined,
+      );
+      continue;
+    }
+    out.set(section.classId, section.value);
+  }
   for (const spec of specs) {
-    if (!spec.captureAtTrip) continue;
+    if (!spec.captureAtTrip || out.has(spec.id)) continue;
     try {
       const value = spec.captureAtTrip(ctx);
       if (value !== undefined) out.set(spec.id, value);
@@ -173,8 +207,12 @@ export async function assembleEvents(
 }
 
 function reportSectionError(id: string, what: string, err: unknown): void {
+  const cause =
+    err === undefined
+      ? ""
+      : `: ${err instanceof Error ? err.message : String(err)}`;
   reportServerError({
-    message: `trace class "${id}" ${what}: ${err instanceof Error ? err.message : String(err)}`,
+    message: `trace class "${id}" ${what}${cause}`,
     ...crashFieldsOf(err),
     errorType: "TraceClassError",
   });

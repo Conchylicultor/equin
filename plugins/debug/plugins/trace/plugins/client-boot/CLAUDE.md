@@ -11,10 +11,10 @@ beacon's trace held only server lanes and the client decomposition was ephemeral
 unless a human clicked "Copy permalink" in Debug → Boot Profile.
 
 **Trigger-owned, like `stall`.** The server has no ambient client state to read
-at the trip instant — the browser pre-builds the section and hands it in via
-`trigger.detail`. `captureAtTrip` is a cheap passthrough gated on the
-`"page-load"` kind AND payload presence: an older client (or any non-page-load
-trip) yields `undefined`, so the section is omitted — never faked.
+at the trip instant — the browser pre-builds the section, and the slow-op
+handler supplies it as `clientBootClass.supply(item.clientBoot)` when the item
+carries one. An older client (or any non-page-load item) supplies nothing, so
+the section is omitted — never faked.
 
 **The trim.** `assets` (Resource Timing rows) is the one unbounded part of a
 `BootTrace`; `toClientBootSection(trace, maxAssets = 20)` keeps the top-N by
@@ -38,7 +38,7 @@ never the trace window's (engine clock-domain rule).
 
 ## Plugin reference
 
-- Description: Client-boot trace lane: the browser's own boot decomposition rendered as the embedded Boot Profile Gantt on a slow page-load trace, with the trimmed-asset rollup caption. Built-in trace event class 'client-boot': the browser's own boot decomposition (spans, navigation/paint timing, long tasks, trimmed assets + rollup), built client-side and carried in the page-load slow-op beacon via the trigger's detail.
+- Description: Client-boot trace lane: the browser's own boot decomposition rendered as the embedded Boot Profile Gantt on a slow page-load trace, with the trimmed-asset rollup caption. Built-in trace event class 'client-boot': the browser's own boot decomposition (spans, navigation/paint timing, long tasks, trimmed assets + rollup), built client-side and carried in the page-load slow-op beacon supplied through clientBootClass.supply.
 - Web:
   - Contributes: `Trace.Lane` → `ClientBootLane`
   - Uses:
@@ -52,15 +52,14 @@ never the trace window's (engine clock-domain rule).
 - Server:
   - Contributes: `trace-event-class` "client-boot"
   - Uses: `debug/trace/engine.defineTraceEventClass`
+  - Exports (values): `clientBootClass`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/density --space-lg`
     - `ui/tokens/density --space-sm`
   - Imported by: `debug/slow-ops`
 - Core:
-  - Exports (types):
-    - `AssetRollup`
-    - `ClientBootSection`
+  - Exports (types): `AssetRollup`
   - Exports (values):
     - `AssetRollupSchema`
     - `ClientBootSectionSchema`

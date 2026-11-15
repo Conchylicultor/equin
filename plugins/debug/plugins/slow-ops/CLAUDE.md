@@ -378,7 +378,7 @@ bar).
     - `change-producer` "slow_ops"
     - `fork-data-exclusion` "slow_op_callers"
     - `fork-data-exclusion` "slow_ops"
-  - Uses: 26 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 27 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra/jobs` ×4
     - `infra/entities` ×3
     - `config_v2` ×2
@@ -387,6 +387,7 @@ bar).
     - `reports/engine` ×2
     - `database/admin.ExcludeFromFork`
     - `database.db`
+    - `debug/trace/client-boot.clientBootClass`
     - `debug/trace/engine.captureTrace`
     - `infra/endpoints.implement`
     - `infra/host/machine-sleep.sleptDuring`

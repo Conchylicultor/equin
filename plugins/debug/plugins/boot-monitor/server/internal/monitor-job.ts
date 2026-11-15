@@ -5,6 +5,7 @@ import { getConfig } from "@plugins/config_v2/server";
 import { captureTrace } from "@plugins/debug/plugins/trace/plugins/engine/server";
 import { recordSlowOp } from "@plugins/debug/plugins/slow-ops/server";
 import type { BootSection } from "@plugins/debug/plugins/trace/plugins/boot/core";
+import { bootClass } from "@plugins/debug/plugins/trace/plugins/boot/server";
 import { bootMonitorConfig } from "../../core";
 import { getGatewayBootReport } from "./gateway-report";
 
@@ -90,13 +91,15 @@ export const bootMonitorJob = defineJob({
       ...(gateway !== null ? { gateway } : {}),
     };
 
-    const trace = captureTrace({
-      kind: "boot",
-      label: "server-ready",
-      durationMs: timeToReadyMs,
-      thresholdMs: cfg.readyBudgetMs,
-      detail: section,
-    });
+    const trace = captureTrace(
+      {
+        kind: "boot",
+        label: "server-ready",
+        durationMs: timeToReadyMs,
+        thresholdMs: cfg.readyBudgetMs,
+      },
+      [bootClass.supply(section)],
+    );
     await recordSlowOp({
       operationKind: "boot",
       operation: "server-ready",

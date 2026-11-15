@@ -123,6 +123,7 @@ rename.
   - Uses:
     - `config_v2.ConfigV2`
     - `debug/trace/engine.captureTrace`
+    - `debug/trace/stall.stallClass`
     - `reports.ReportKind`
     - `reports/engine.recordReport`
   - Exports (values):

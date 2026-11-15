@@ -55,6 +55,7 @@ Key mechanics:
     - `config_v2.ConfigV2`
     - `config_v2.getConfig`
     - `debug/slow-ops.recordSlowOp`
+    - `debug/trace/boot.bootClass`
     - `debug/trace/engine.captureTrace`
     - `infra/endpoints.implement`
     - `infra/jobs.defineJob`

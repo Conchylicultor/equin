@@ -4,7 +4,7 @@ import { z } from "zod";
 // snapshot.events.boot). It is the whole-boot server profile — phase spans +
 // memory checkpoints from getProfilingData(), plus the gateway-observed
 // readiness wait when the gateway reported one — pre-aggregated by
-// debug/boot-monitor and handed in via `trigger.detail`.
+// debug/boot-monitor and supplied to captureTrace as `bootClass.supply(section)`.
 //
 // CLOCK AXES — the engine clock-domain rule applies twice here:
 //   - `wallStartMs` is the ONE wall-clock anchor: epoch ms of process start

@@ -1,4 +1,5 @@
 import { implement } from "@plugins/infra/plugins/endpoints/server";
+import { clientBootClass } from "@plugins/debug/plugins/trace/plugins/client-boot/server";
 import { captureTrace } from "@plugins/debug/plugins/trace/plugins/engine/server";
 import { defineLogSink } from "@plugins/primitives/plugins/log-channels/server";
 import { submitClientSlowOp } from "../../shared/endpoints";
@@ -53,28 +54,31 @@ export const handleClientSlowOp = implement(
       // trigger kind is the client operationKind ("page-load", "element",
       // "update", …) so it slots into the same open trigger vocabulary as server
       // spans.
-      const trace = captureTrace({
-        kind: item.operationKind,
-        label: item.operation,
-        durationMs: item.durationMs,
-        thresholdMs: item.thresholdMs,
-        detail: {
-          caller: item.caller ?? null,
-          // How many items of this kind the batch carried — this trace is the
-          // slowest one's, and every one of them links to it.
-          batchCount,
-          waits: item.waits,
-          variant: item.detail?.variant,
-          censored: item.detail?.censored,
-          evidence: item.detail?.evidence,
-          transportColdStart: item.transportColdStart,
-          // The browser's own boot decomposition (page-load only): the
-          // client-boot trace class reads it off the trigger detail and
-          // persists it as its section. recordSlowOpBatch below never receives
-          // it — the aggregate row stays lean.
-          clientBoot: item.clientBoot,
+      const trace = captureTrace(
+        {
+          kind: item.operationKind,
+          label: item.operation,
+          durationMs: item.durationMs,
+          thresholdMs: item.thresholdMs,
+          detail: {
+            caller: item.caller ?? null,
+            // How many items of this kind the batch carried — this trace is the
+            // slowest one's, and every one of them links to it.
+            batchCount,
+            waits: item.waits,
+            variant: item.detail?.variant,
+            censored: item.detail?.censored,
+            evidence: item.detail?.evidence,
+            transportColdStart: item.transportColdStart,
+          },
         },
-      });
+        // The browser's own boot decomposition (page-load only), supplied as
+        // the client-boot class's section. recordSlowOpBatch below never
+        // receives it — the aggregate row stays lean.
+        item.clientBoot === undefined
+          ? []
+          : [clientBootClass.supply(item.clientBoot)],
+      );
       return trace?.id;
     });
     // Who saw it: marked on every report the batch files, never filtered.

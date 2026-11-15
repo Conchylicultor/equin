@@ -68,6 +68,92 @@ describe("captureAtTripPhase", () => {
   });
 });
 
+describe("supplied sections", () => {
+  // A trigger-owned class: no captureAtTrip, its section only ever supplied.
+  const owned = defineTraceEventClass({
+    id: "owned",
+    schema: z.object({ spans: z.array(z.number()) }),
+  });
+  const ownedSpec: TraceEventClassSpec = {
+    id: "owned",
+    schema: z.object({ spans: z.array(z.number()) }),
+  };
+
+  test("a supplied section is the class's phase-1 output and is persisted", async () => {
+    const atTrip = captureAtTripPhase([ownedSpec], ctx, [
+      owned.supply({ spans: [1] }),
+    ]);
+    const events = await assembleEvents([ownedSpec], ctx, atTrip);
+    expect(events).toEqual({ owned: { spans: [1] } });
+    expect(reports).toHaveLength(0);
+  });
+
+  test("a trip that supplies nothing gets no section, whatever its kind and detail", async () => {
+    // The 2026-11-12 regression: the client's in-browser host boot slow-op
+    // trips with kind "boot" and a slow-op detail. A class keyed on the kind
+    // took that detail for its section and failed validation on every trip.
+    const foreign: TripContext = {
+      ...ctx,
+      trigger: {
+        kind: "owned",
+        label: "browser-host:agent-manager",
+        durationMs: 9_000,
+        thresholdMs: 5_000,
+        detail: { caller: null, batchCount: 1, waits: { "host-graph": 4_000 } },
+      },
+    };
+    const atTrip = captureAtTripPhase([ownedSpec], foreign);
+    const events = await assembleEvents([ownedSpec], foreign, atTrip);
+    expect(events).toEqual({});
+    expect(reports).toHaveLength(0);
+  });
+
+  test("a malformed supplied section is still refused and reported", async () => {
+    const bad = { classId: "owned", value: {} } as unknown as ReturnType<
+      typeof owned.supply
+    >;
+    const atTrip = captureAtTripPhase([ownedSpec], ctx, [bad]);
+    const events = await assembleEvents([ownedSpec], ctx, atTrip);
+    expect(events).toEqual({});
+    expect(reports).toHaveLength(1);
+    expect(reports[0]?.message).toContain(
+      'trace class "owned" section failed validation',
+    );
+  });
+
+  test("a supplied section wins over the class's own captureAtTrip", () => {
+    let ran = false;
+    const spec: TraceEventClassSpec = {
+      id: "owned",
+      schema: z.unknown(),
+      captureAtTrip: () => {
+        ran = true;
+        return { spans: [9] };
+      },
+    };
+    const atTrip = captureAtTripPhase([spec], ctx, [
+      owned.supply({ spans: [1] }),
+    ]);
+    expect(atTrip.get("owned")).toEqual({ spans: [1] });
+    expect(ran).toBe(false);
+  });
+
+  test("a section for an unregistered class, or supplied twice, is reported", () => {
+    const stray = defineTraceEventClass({ id: "stray", schema: z.number() });
+    const atTrip = captureAtTripPhase([ownedSpec], ctx, [
+      stray.supply(1),
+      owned.supply({ spans: [1] }),
+      owned.supply({ spans: [2] }),
+    ]);
+    expect(atTrip.get("owned")).toEqual({ spans: [1] });
+    expect(atTrip.has("stray")).toBe(false);
+    expect(reports.map((r) => r.message)).toEqual([
+      'trace class "stray" supplied but no such class is registered',
+      'trace class "owned" supplied twice for one trip',
+    ]);
+  });
+});
+
 describe("assembleEvents", () => {
   test("persists a captureAtTrip section that passes its schema", async () => {
     const specs: TraceEventClassSpec[] = [

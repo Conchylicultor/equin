@@ -17,6 +17,7 @@ export { defineTraceEventClass, TraceEventClass } from "./internal/registry";
 export type {
   TraceEventClassSpec,
   TraceEventClassHandle,
+  SuppliedTraceSection,
 } from "./internal/registry";
 export { captureTrace } from "./internal/capture";
 export { _traces } from "./internal/tables";

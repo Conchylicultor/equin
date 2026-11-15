@@ -3,4 +3,4 @@ export {
   ClientBootSectionSchema,
   toClientBootSection,
 } from "./section";
-export type { AssetRollup, ClientBootSection } from "./section";
+export type { AssetRollup } from "./section";

@@ -12,9 +12,13 @@ the resulting trace.
 **Trigger-owned, like `stall`.** The other built-in classes read ambient
 in-memory state at the trip instant; the boot profile is instead *pre-aggregated
 by the producer* — the mint happens on a minute tick long after boot completed,
-so there is no live instant to capture. The section arrives via `trigger.detail`
-and `captureAtTrip` is a cheap passthrough gated on the `"boot"` kind; every
-other trip returns `undefined`.
+so there is no live instant to capture. The producer hands the section in as
+`captureTrace(trigger, [bootClass.supply(section)])`; the class has no
+`captureAtTrip` and reads no trigger kind. It once took any `"boot"`-kind
+trigger's `detail` for its section — and the client's in-browser host boot
+slow-op (`boot browser-host:<scenario>`) trips with that kind, so every such
+trace failed validation (13× on main, 2026-11-12 → 11-15). Now a trace carries
+a boot section exactly when its producer supplied one.
 
 **Own clock axis.** All section offsets are relative to `wallStartMs` (epoch ms
 of process start = `Math.round(performance.timeOrigin)`, the boot-events pairing
@@ -35,7 +39,7 @@ recompile), so partial reports from either side of the skew must stay valid.
 
 ## Plugin reference
 
-- Description: Boot trace lane: a self-contained phase-grouped Gantt card of the server-boot profile (gateway readiness wait, per-phase spans, memory checkpoints) on the boot section's own clock axis. Built-in trace event class 'boot': the server-boot profile (phase spans + memory checkpoints + optional gateway readiness wait) pre-aggregated by debug/boot-monitor and passed in via the boot trigger's detail.
+- Description: Boot trace lane: a self-contained phase-grouped Gantt card of the server-boot profile (gateway readiness wait, per-phase spans, memory checkpoints) on the boot section's own clock axis. Built-in trace event class 'boot': the server-boot profile (phase spans + memory checkpoints + optional gateway readiness wait) pre-aggregated by debug/boot-monitor and supplied by the producer through bootClass.supply.
 - Web:
   - Contributes: `Trace.Lane` → `BootLane`
   - Uses:
@@ -53,6 +57,7 @@ recompile), so partial reports from either side of the skew must stay valid.
 - Server:
   - Contributes: `trace-event-class` "boot"
   - Uses: `debug/trace/engine.defineTraceEventClass`
+  - Exports (values): `bootClass`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/categorical --categorical-1`

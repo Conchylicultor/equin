@@ -80,18 +80,38 @@ export function getRing(id: string): { slice: EventRing["slice"] } | undefined {
   return ringsById.get(id);
 }
 
+// A section a producer hands in for one class, minted only by that class's
+// handle (`supply`), so it names its class by construction and its value is
+// typed by the class's own section type. The engine takes it as the class's
+// phase-1 output — still validated against the class schema, so a malformed
+// one is reported and omitted like any other bad section.
+declare const suppliedBrand: unique symbol;
+export interface SuppliedTraceSection {
+  readonly classId: string;
+  readonly value: unknown;
+  readonly [suppliedBrand]: true;
+}
+
 // The handle a class plugin lists: `contribution` goes into its `contributions`
 // array; `emit` appends to this class's ring (functional only when `ring` is
 // declared — otherwise a no-op, so a class that forgets `ring` fails loudly by
-// its events simply never appearing rather than throwing).
-export interface TraceEventClassHandle {
+// its events simply never appearing rather than throwing); `supply` is how a
+// producer that pre-aggregated this class's evidence hands it to captureTrace.
+//
+// A TRIGGER-OWNED class (stall, boot, client-boot) is one that only ever gets
+// its section this way: it has no captureAtTrip, so it reads no trigger kind
+// and no `detail`. Keying such a class on `trigger.kind` let any producer
+// reusing the kind (the client's in-browser host boot, kind "boot") feed it a
+// foreign detail, failing validation on every trip (2026-11-12 → 11-15, 13×).
+export interface TraceEventClassHandle<T = unknown> {
   contribution: ServerContribution;
   emit(event: RingEvent): void;
+  supply(value: T): SuppliedTraceSection;
 }
 
 export function defineTraceEventClass<T>(
   spec: TraceEventClassSpec<T>,
-): TraceEventClassHandle {
+): TraceEventClassHandle<T> {
   if (spec.ring) {
     if (ringsById.has(spec.id)) {
       throw new Error(`defineTraceEventClass: duplicate class id "${spec.id}"`);
@@ -103,6 +123,7 @@ export function defineTraceEventClass<T>(
     emit: (event) => {
       ringsById.get(spec.id)?.push(event);
     },
+    supply: (value) => ({ classId: spec.id, value }) as SuppliedTraceSection,
   };
 }
 

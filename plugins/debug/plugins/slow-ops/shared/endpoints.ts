@@ -91,9 +91,9 @@ export const SlowOpClientItemSchema = z.object({
   // Additive, backward-compatible client evidence for the `page-load` signal
   // (absent for the others and older clients): the browser's own boot
   // decomposition (perfs/boot-trace), trimmed by toClientBootSection so the
-  // keepalive beacon stays small. The handler threads it into the page-load
-  // trigger's detail, where the client-boot trace class validates and persists
-  // it; recordSlowOp never sees it.
+  // keepalive beacon stays small. The handler supplies it to the trace as
+  // the client-boot class's section (clientBootClass.supply), which validates
+  // and persists it; recordSlowOp never sees it.
   clientBoot: ClientBootSectionSchema.optional(),
 });
 export type SlowOpClientItem = z.infer<typeof SlowOpClientItemSchema>;

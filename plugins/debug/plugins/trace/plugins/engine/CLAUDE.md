@@ -52,6 +52,17 @@ A class contributes one snapshot section under `snapshot.events[id]`:
   class with no `ring` gets a no-op `emit` (forgetting `ring` shows up as its
   events never appearing, never a throw).
 
+**Supplied sections (trigger-owned classes).** A producer that pre-aggregated
+a class's evidence (the stall sampler, boot-monitor, the client boot beacon)
+passes it as `captureTrace(trigger, [cls.supply(value)])` — the handle mints it,
+so it names its class and is typed by the class's section. It becomes that
+class's phase-1 output (its `captureAtTrip`, if any, does not run), is validated
+like any section, and stays out of the persisted `trigger`. A section for a
+class not registered in this composition, or supplied twice, is reported. A
+class must never infer its section from `trigger.kind` + `detail`: the kind is
+an open vocabulary, and a reused kind feeds the class a foreign detail (the
+client's `boot browser-host:*` slow-op did that to `boot`, 2026-11-12).
+
 **Schema-validation isolation** (covered by `server/internal/capture.test.ts`).
 Each section is validated independently in the async phase; a class whose
 `captureAtTrip`/`enrich` throws, or whose output fails its `schema`, is **omitted**
@@ -256,6 +267,7 @@ expandable JSON.
     - `reports/engine.recordReport`
   - DB schema: `plugins/debug/plugins/trace/plugins/engine/server/internal/tables.ts`
   - Exports (types):
+    - `SuppliedTraceSection`
     - `TraceEventClassHandle`
     - `TraceEventClassSpec`
   - Exports (values):
