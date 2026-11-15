@@ -106,6 +106,8 @@ export const CUSTOM_UTILITY_REGISTRY = [
   { classes: ["gap-x-gallery"], extend: "gap-x" },
   { classes: ["gap-y-gallery"], extend: "gap-y" },
   { classes: ["pb-gallery"], extend: "pb" },
+  { classes: ["w-gallery-strip-card"], extend: "w" },
+  { classes: ["gap-x-gallery-strip"], extend: "gap-x" },
   { classes: ["clip-fade-end"], standalone: true, reason: "A mask-image on the box itself; no built-in group sets mask-image, so nothing to replace." },
   { classes: ["sticky-fade"], standalone: true, reason: "An additive ::after gradient tail; pseudo-element paint has no single-value built-in group to conflict with." },
   { classes: ["h-sidebar-row"], extend: "h" },

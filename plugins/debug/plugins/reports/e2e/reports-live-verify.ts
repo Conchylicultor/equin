@@ -36,9 +36,9 @@ import {
   report,
   snap,
   targetNamespace,
-  waitFor,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import { waitFor } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/core";
 import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
 import { MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/namespace/core";
 import {

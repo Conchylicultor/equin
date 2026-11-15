@@ -33,7 +33,10 @@
  */
 import type { Page } from "playwright";
 import { pushDiagnostic } from "./diagnostics";
-import { waitFor, type Settled } from "./wait";
+import {
+  waitFor,
+  type Settled,
+} from "@plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/core";
 
 /**
  * Every toast on screen. The attribute is sonner's own, which is what the app's

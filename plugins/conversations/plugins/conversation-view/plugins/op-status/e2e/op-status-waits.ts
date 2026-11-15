@@ -37,9 +37,9 @@ import {
   requireArg,
   snap,
   targetNamespace,
-  waitFor,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import { waitFor } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/core";
 import {
   LIVE_TIMEOUT_MS,
   closeSynthetic,

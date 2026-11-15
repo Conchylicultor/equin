@@ -483,7 +483,7 @@ navigation, so it starts from nothing remembered.
     - `PrototypeFrameActions` "close" → `CloseFrameAction`
     - `PrototypeVersionActions` "compare" → `CompareVersionAction`
     - `PrototypeVersionActions` "open-conversation" → `OpenVersionConversation`
-  - Uses: 95 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 96 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×9
     - `primitives/data-view` ×6
     - `infra/endpoints` ×5
@@ -525,6 +525,7 @@ navigation, so it starts from nothing remembered.
     - `primitives/css/text.Text`
     - `primitives/css/theme-boundary.Theme`
     - `primitives/css/yield.yieldClass`
+    - `primitives/diff-view/swipe-compare.SwipeCompare`
     - `primitives/dom/element-size.useElementSize`
     - `primitives/dom/scroll-reveal.useRevealOnActive`
     - `primitives/embed.isEmbeddedDocument`

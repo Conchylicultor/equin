@@ -46,11 +46,13 @@ import {
   pathUrl,
   report,
   snap,
-  waitFor,
-  waitForNetworkIdle,
   withBrowser,
   type Report,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import {
+  waitFor,
+  waitForNetworkIdle,
+} from "@plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/core";
 import {
   createPage,
   embedRoot,

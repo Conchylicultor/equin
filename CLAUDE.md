@@ -172,6 +172,8 @@ For a checkout cloned from someone else's repo, that repo is **upstream** (read-
 
 **Main is read-only for agent sessions**: on main, a write from the agent browser or an e2e run is refused with a 403 (telemetry excepted) — to exercise a write, drive your own build.
 
+**Show the user a visible UI change with `register_before_after`** (MCP, [`conversations/before-after`](plugins/conversations/plugins/before-after/CLAUDE.md)) — after `./equin build`, one call per changed screen or state: `{ route, title }` captures the route on main and on your build, or pass `{ beforePath, afterPath, title }` for two PNGs you made (`screenshot.ts --click …`). Cite the returned `ba-…` id in your final message.
+
 **Explore interactively with the `browser_*` MCP tools** ([`infra/mcp/browser`](plugins/infra/plugins/mcp/plugins/browser/CLAUDE.md)) — a headless tab that stays open across calls: routes (`/agents/…`) open your own build (so they need one), an absolute URL (any website, or main) works before you have built; script what must be repeatable with the headless scripts below. Not Claude-in-Chrome: that is one shared Chrome on the user's screen with their real accounts — only for what needs it (their sign-ins, a state they have open, a demo they watch).
 
 **A script failed mid-flow? Continue from where it stopped**: call `browser_attach`, rerun the script with the `--attach <ticket>` it returns — it drives a tab of your `browser_*` session instead of its own browser and leaves it there, pass or fail — then inspect that tab with `browser_*`.

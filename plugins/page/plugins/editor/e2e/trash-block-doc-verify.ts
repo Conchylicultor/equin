@@ -31,12 +31,14 @@
 import {
   agentFetch,
   arg,
-  ELEMENT_TIMEOUT_MS,
   report,
   snap,
-  waitFor,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import {
+  ELEMENT_TIMEOUT_MS,
+  waitFor,
+} from "@plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/core";
 import type { Locator } from "playwright";
 import * as Y from "yjs";
 import {

@@ -30,6 +30,7 @@ import {
   HOST_FILES,
   HOST_PROTOCOL,
   HostCallBodySchema,
+  HostCapturePairBodySchema,
   HostCloseBodySchema,
   HostShutdownBodySchema,
 } from "../shared/protocol";
@@ -43,6 +44,7 @@ import {
 } from "./host-session";
 import { drivesSnapshot, wireDrives } from "./host-drives";
 import { runTool } from "./host-tools";
+import { capturePair } from "./host-capture";
 
 const dir = agentBrowserDir.ensureSync();
 const file = (name: string) => agentBrowserDir.file(name);
@@ -130,6 +132,17 @@ async function route(req: Request): Promise<Response> {
         );
       } catch (err) {
         // The tool's own failure: the agent's to read, not the host's.
+        if (!(err instanceof Error)) throw err;
+        return json({ error: err.message }, 422);
+      }
+    }
+    case "/capture-pair": {
+      const capture = HostCapturePairBodySchema.parse(body);
+      try {
+        return json(await capturePair(capture));
+      } catch (err) {
+        // The capture's own failure (a page that never painted, a navigation
+        // that timed out): the caller's to read, as for a tool.
         if (!(err instanceof Error)) throw err;
         return json({ error: err.message }, 422);
       }

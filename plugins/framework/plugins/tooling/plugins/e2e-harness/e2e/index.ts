@@ -25,12 +25,10 @@ export { openDeployDb } from "./deploy-db";
 export type { DeployDb } from "./deploy-db";
 export { withBrowser, boot, DEFAULT_VIEWPORT } from "./browser";
 export { awaitDeploySettled } from "./deploy-settled";
-export { waitFor, ELEMENT_TIMEOUT_MS } from "./wait";
-// Playwright's own `networkidle` never fires on this app — see network-idle.ts.
-export { waitForNetworkIdle } from "./network-idle";
-export { busyRegions, waitForNotBusy } from "./busy";
-export type { NetworkIdleOptions } from "./network-idle";
-export type { Settled } from "./wait";
+// The readiness waits (`waitFor`, `ELEMENT_TIMEOUT_MS`, `waitForNetworkIdle`,
+// `waitForNotBusy`, `busyRegions`, `Settled`, `Rgba`) are their own plugin's,
+// shared with the agent browser's host: import them from
+// `@plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/core`.
 export type {
   BrowserOptions,
   Harness,
@@ -48,7 +46,7 @@ export type { StalledRoute, StallRouteOptions } from "./stall";
 export { snap, DEFAULT_SNAP_TIMEOUT_MS } from "./shots";
 export type { SnapResult } from "./shots";
 export { samplePixels, colorDistance, deltaE } from "./pixels";
-export type { PixelGrid, Rgba, Rect } from "./pixels";
+export type { PixelGrid, Rect } from "./pixels";
 export { diffImages, heatmapText } from "./image-diff";
 export type { ImageDiff, ImageDiffOptions, ImageSize } from "./image-diff";
 export { colorReport, colorReportText } from "./color-report";

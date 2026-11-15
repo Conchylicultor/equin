@@ -44,9 +44,9 @@ import {
   pathUrl,
   report,
   snap,
-  waitFor,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import { waitFor } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/core";
 
 const OUT = arg("out", "/tmp/url-paste-link-verify");
 

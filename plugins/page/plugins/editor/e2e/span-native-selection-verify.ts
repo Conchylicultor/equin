@@ -21,8 +21,8 @@ import {
   report,
   samplePixels,
   withBrowser,
-  type Rgba,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import { type Rgba } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/core";
 import type { Page } from "playwright";
 import {
   blockTexts,

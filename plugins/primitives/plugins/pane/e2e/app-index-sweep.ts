@@ -25,13 +25,15 @@
 //
 // Exit 0 = all pass; exit 1 = a failing assertion (with a printed reason).
 import {
-  ELEMENT_TIMEOUT_MS,
   numArg,
   pathUrl,
   report,
-  waitFor,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import {
+  ELEMENT_TIMEOUT_MS,
+  waitFor,
+} from "@plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/core";
 
 const waitMs = numArg("wait", ELEMENT_TIMEOUT_MS);
 

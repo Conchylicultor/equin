@@ -33,9 +33,9 @@ import {
   openDeployDb,
   pathUrl,
   report,
-  waitFor,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import { waitFor } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/core";
 import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 import type { Page } from "playwright";
 

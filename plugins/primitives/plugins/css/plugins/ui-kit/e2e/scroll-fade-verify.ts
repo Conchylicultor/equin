@@ -36,8 +36,8 @@ import {
   samplePixels,
   snap,
   withBrowser,
-  type Rgba,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import { type Rgba } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/core";
 import { openBlankPage } from "@plugins/page/plugins/editor/e2e";
 
 const out = arg("out", "/tmp/scroll-fade");

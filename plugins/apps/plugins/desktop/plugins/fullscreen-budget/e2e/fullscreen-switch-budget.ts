@@ -41,9 +41,9 @@ import {
   numArg,
   pathUrl,
   usage,
-  waitFor,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import { waitFor } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/core";
 import { openFloatingActionBar } from "@plugins/shell/plugins/global-action-bar/e2e";
 import {
   bootDemo,

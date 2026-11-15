@@ -1,5 +1,5 @@
 import type { Locator, Page } from "playwright";
-import { ELEMENT_TIMEOUT_MS } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import { ELEMENT_TIMEOUT_MS } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/core";
 
 /**
  * Open the launcher drawn inside `scope` (a page, or an in-process app embed's

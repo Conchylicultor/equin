@@ -35,9 +35,12 @@ import { createRecorder } from "./recorder";
 import { repairAgentWrites, settleAgentWrites } from "./agent-writes";
 import { assertDeployIdentity } from "./deploy-identity";
 import { isTargetOrigin, targetNamespace, unconsumedPage } from "./target";
-import { trackContextNetwork, waitForNetworkIdle } from "./network-idle";
+import {
+  trackContextNetwork,
+  waitForNetworkIdle,
+  ELEMENT_TIMEOUT_MS,
+} from "@plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/core";
 import { describeBootStall } from "./boot-diagnosis";
-import { ELEMENT_TIMEOUT_MS } from "./wait";
 import { withSteadyCaret } from "./steady-caret";
 
 export const DEFAULT_VIEWPORT = { width: 1400, height: 900 } as const;

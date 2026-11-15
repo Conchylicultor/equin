@@ -144,8 +144,8 @@ resolver returning one. Fix: spread `openPane.link(…)`, or pass `openPane.to(�
     - `linkProps`
     - `openInBrowserTab`
 - Cross-plugin:
-  - Imported by: 80 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `conversations` ×21
+  - Imported by: 81 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `conversations` ×22
     - `primitives` ×19
     - `apps` ×13
     - `tasks` ×5

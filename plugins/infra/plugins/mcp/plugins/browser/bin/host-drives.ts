@@ -29,9 +29,14 @@ export function drivesSnapshot(): AgentBrowserHostStatus["drives"] {
   return { ...drives };
 }
 
-export async function withDriveSlot(
-  call: () => Promise<HostToolResult>,
-): Promise<HostToolResult> {
+/**
+ * Run `call` under one drive slot, answering what it returned and how long it
+ * queued for the slot — for a host operation whose answer is not a tool result
+ * (`capturePair`).
+ */
+export async function inDriveSlot<T>(
+  call: () => Promise<T>,
+): Promise<{ result: T; waitedMs: number }> {
   let waitedMs = 0;
   let queued = false;
   const result = await withE2eGrant(
@@ -70,6 +75,14 @@ export async function withDriveSlot(
       onChange();
     }
   });
+  return { result, waitedMs };
+}
+
+/** A tool call under a drive slot; a wait worth noticing is said in its result. */
+export async function withDriveSlot(
+  call: () => Promise<HostToolResult>,
+): Promise<HostToolResult> {
+  const { result, waitedMs } = await inDriveSlot(call);
   if (waitedMs < SAY_WAIT_MS) return result;
   return {
     ...result,

@@ -21,9 +21,9 @@ import {
   pathUrl,
   report,
   requireArg,
-  waitFor,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import { waitFor } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/core";
 
 interface Probe {
   chips: number;

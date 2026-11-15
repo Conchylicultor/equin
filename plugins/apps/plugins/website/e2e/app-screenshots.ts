@@ -34,10 +34,10 @@ import {
   pathUrl,
   requireArg,
   snap,
-  waitForNotBusy,
   withBrowser,
   type ColorScheme,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import { waitForNotBusy } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/core";
 import {
   embedTailPath,
   type AppRef,

@@ -1171,14 +1171,23 @@ const prototype: SegmentFn = async ({ h }) => {
     );
     await r.mark("swipe");
     await r.hold(0.4);
-    // The real slider: its divider dragged across the two variants.
-    const handle = page.locator(
-      '[role="separator"][aria-label^="Drag to swipe"]',
-    );
-    const box = await handle.first().boundingBox();
+    // The real slider: its divider dragged across the two variants. The
+    // separator is the whole swipe surface (a press anywhere jumps the
+    // divider there), so the hand grabs the divider where it IS — the
+    // surface's `aria-valuenow` (0–100) along its width — not the surface's
+    // centre, which would jump it first.
+    const handle = page
+      .locator('[role="separator"][aria-label^="Drag to swipe"]')
+      .first();
+    const box = await handle.boundingBox();
     if (!box)
       throw new Error("promo-film prototype: the swipe handle has no box");
-    const hx = box.x + box.width / 2;
+    const valueNow = Number(await handle.getAttribute("aria-valuenow"));
+    if (!Number.isFinite(valueNow))
+      throw new Error(
+        "promo-film prototype: the swipe surface has no aria-valuenow",
+      );
+    const hx = box.x + (box.width * valueNow) / 100;
     const hy = box.y + box.height / 2;
     const frame = await page.locator("iframe").first().boundingBox();
     if (!frame) throw new Error("promo-film prototype: no frame");

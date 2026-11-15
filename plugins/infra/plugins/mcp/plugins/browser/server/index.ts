@@ -11,7 +11,16 @@ import {
   stopStatusWatcher,
 } from "./internal/host-client";
 
-export { readAgentBrowserStatus } from "./internal/host-client";
+export {
+  HostCannotCaptureError,
+  readAgentBrowserStatus,
+} from "./internal/host-client";
+export { capturePair, UnbuiltCheckoutError } from "./internal/capture-pair";
+export type {
+  CapturedPage,
+  CapturedPair,
+  CapturePairRequest,
+} from "./internal/capture-pair";
 
 export default {
   description:

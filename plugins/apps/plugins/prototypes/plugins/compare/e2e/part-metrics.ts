@@ -22,9 +22,11 @@ import { z } from "zod";
 import {
   deltaE,
   usage,
+} from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import {
   waitForNetworkIdle,
   type Rgba,
-} from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+} from "@plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/core";
 import { DATA_VIEW_PARTS } from "@plugins/primitives/plugins/data-view/core";
 import type {
   OptionPicks,

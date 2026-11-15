@@ -37,7 +37,8 @@ interface Tracker {
 
 const trackers = new WeakMap<Page, Tracker>();
 
-function track(page: Page): void {
+/** Track one page's requests from now on (call before its first navigation). */
+export function trackPageNetwork(page: Page): void {
   if (trackers.has(page)) return;
   const tracker: Tracker = { inflight: new Set(), changed: new Set() };
   trackers.set(page, tracker);
@@ -90,8 +91,8 @@ function withoutHash(url: string): string {
 
 /** Track every page of a harness session's context, from its first request. */
 export function trackContextNetwork(context: BrowserContext): void {
-  context.on("page", track);
-  for (const page of context.pages()) track(page);
+  context.on("page", trackPageNetwork);
+  for (const page of context.pages()) trackPageNetwork(page);
 }
 
 /**

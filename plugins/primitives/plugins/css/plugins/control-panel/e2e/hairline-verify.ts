@@ -25,8 +25,8 @@ import {
   report,
   samplePixels,
   colorDistance,
-  type Rgba,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import { type Rgba } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/core";
 
 const out = arg("out", "/tmp/cp-hairline");
 const url = pathUrl("/agents");

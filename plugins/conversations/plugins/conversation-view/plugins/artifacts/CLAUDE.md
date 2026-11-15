@@ -158,6 +158,7 @@ here.
 - Web:
   - Slots: `ConversationArtifacts.Kind`
   - Slot contributors:
+    - `ConversationArtifacts.Kind` ← `conversations.before-after`
     - `ConversationArtifacts.Kind` ← `conversations.conversation-view.artifacts.page`
     - `ConversationArtifacts.Kind` ← `conversations.conversation-view.artifacts.prototype`
     - `ConversationArtifacts.Kind` ← `conversations.conversation-view.artifacts.research`
@@ -224,6 +225,7 @@ here.
     - `ui/tokens/shape --spacing`
     - `ui/tokens/type-scale --font-weight-semibold`
   - Imported by:
+    - `conversations/before-after`
     - `conversations/conversation-view/artifacts/page`
     - `conversations/conversation-view/artifacts/prototype`
     - `conversations/conversation-view/artifacts/research`

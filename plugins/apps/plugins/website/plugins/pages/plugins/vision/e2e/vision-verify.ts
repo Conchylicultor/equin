@@ -26,9 +26,9 @@ import {
   pathUrl,
   report,
   snap,
-  waitFor,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import { waitFor } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/core";
 
 const out = arg("out", "/tmp/vision");
 const width = numArg("width", 1400);

@@ -50,9 +50,9 @@ import {
   arg,
   report,
   snap,
-  waitFor,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import { waitFor } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/core";
 import { openBlankPage, typeLines } from "@plugins/page/plugins/editor/e2e";
 import { fetchBlockDoc } from "./support/ydoc";
 

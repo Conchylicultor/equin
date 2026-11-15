@@ -329,6 +329,11 @@ export const densityGroup = defineTokenGroup("density", {
   },
   galleryGapX: { default: "var(--space-lg)", label: "Gallery column gap" },
   galleryGapY: { default: "var(--space-xl)", label: "Gallery row gap" },
+  // The gallery's strip layout (`viewOptions.gallery.layout: "strip"`): one
+  // scrolling row of small fixed-width cards — a filmstrip under a viewer.
+  // Defaults = 112px (a 70px-tall 16/10 cover) and the `smd` step.
+  galleryStripCard: { default: "7rem", label: "Gallery strip card width" },
+  galleryStripGap: { default: "var(--space-smd)", label: "Gallery strip gap" },
   // A record's cover as a list row's leading thumbnail (`size-cover-thumb`).
   // Defaults = 52 × 34px, the gallery cover's 16/10 shape at row height.
   coverThumbW: { default: "3.25rem", label: "Cover thumbnail width" },

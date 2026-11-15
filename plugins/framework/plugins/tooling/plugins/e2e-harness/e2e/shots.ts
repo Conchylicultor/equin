@@ -4,7 +4,10 @@
  */
 import type { Page } from "playwright";
 import { pushDiagnostic } from "./diagnostics";
-import { flatness, hexColor } from "./pixels";
+import {
+  flatness,
+  hexColor,
+} from "@plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/core";
 import { TOAST, TOAST_STRIP } from "./toasts";
 
 /**

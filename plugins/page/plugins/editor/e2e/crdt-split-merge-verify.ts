@@ -15,12 +15,14 @@
 // Usage: bun plugins/page/plugins/editor/e2e/crdt-split-merge-verify.ts [--url <deploy>] [--out /tmp/sm]
 import {
   arg,
-  ELEMENT_TIMEOUT_MS,
   report,
   snap,
-  waitFor,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import {
+  ELEMENT_TIMEOUT_MS,
+  waitFor,
+} from "@plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/core";
 import { blockText, openBlankPage } from "./support/blank-page";
 import { caretLinear, pressUntilOffset } from "./support/caret";
 

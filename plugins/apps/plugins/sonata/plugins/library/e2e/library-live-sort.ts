@@ -37,9 +37,9 @@ import {
   report,
   snap,
   targetNamespace,
-  waitFor,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import { waitFor } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/core";
 
 if (String(targetNamespace()) === MAIN_WORKTREE_NAME) {
   throw new Error(

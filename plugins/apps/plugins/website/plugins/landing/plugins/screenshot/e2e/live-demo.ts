@@ -34,10 +34,10 @@ import {
   pathUrl,
   report,
   snap,
-  waitFor,
   withBrowser,
   type Report,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import { waitFor } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/core";
 import { answerTipsAsTheyShow } from "@plugins/hints/e2e";
 
 const OUT = arg("out") ?? "/tmp/website-live-demo";

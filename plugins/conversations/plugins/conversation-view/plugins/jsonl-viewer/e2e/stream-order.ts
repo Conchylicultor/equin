@@ -26,9 +26,9 @@ import {
   pathUrl,
   report,
   requireArg,
-  waitFor,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import { waitFor } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/core";
 
 const MODEL = "sonnet-5-5";
 const TURN_BUDGET_MS = 240_000;

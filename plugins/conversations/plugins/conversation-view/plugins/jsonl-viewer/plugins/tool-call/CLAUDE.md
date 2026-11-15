@@ -30,8 +30,8 @@ JsonlViewerTool.Renderer({ match, icon?, input: Schema, partialInput?: PartialSc
   - Slots:
     - `renderer`
     - `JsonlViewerTool.Footer`
-  - Slot contributors: 30 contributors — full list in [REFERENCE.md](./REFERENCE.md)
-    - `renderer` ×29
+  - Slot contributors: 31 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `renderer` ×30
     - `JsonlViewerTool.Footer` ← `debug.browser-recordings`
   - Contributes:
     - `JsonlViewer.EventRenderer` "tool-call" → `ToolCallRow`
@@ -109,8 +109,8 @@ JsonlViewerTool.Renderer({ match, icon?, input: Schema, partialInput?: PartialSc
     - `ui/tokens/type-scale --font-weight-medium`
     - `ui/tokens/type-scale --font-weight-normal`
     - `ui/tokens/type-scale --line-height-caption`
-  - Imported by: 34 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `conversations` ×31
+  - Imported by: 35 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `conversations` ×32
     - `apps/places/places-map`
     - `debug/browser-recordings`
     - `reports/tool-input-drift`

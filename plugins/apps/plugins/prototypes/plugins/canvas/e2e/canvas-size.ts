@@ -17,9 +17,9 @@ import {
   arg,
   report,
   snap,
-  waitFor,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import { waitFor } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/core";
 import { type PrototypeMeta } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import {
   dismiss,

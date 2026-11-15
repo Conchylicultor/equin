@@ -37,15 +37,17 @@ import {
   agentFetch,
   arg,
   boot,
-  ELEMENT_TIMEOUT_MS,
   onBeforeFinish,
   openDeployDb,
   pathUrl,
   report,
   snap,
-  waitFor,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import {
+  ELEMENT_TIMEOUT_MS,
+  waitFor,
+} from "@plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/core";
 import { tapSharedSocket } from "@plugins/primitives/plugins/networking/e2e";
 
 const OUT = arg("out") ?? "/tmp/page-tree-live";

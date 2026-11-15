@@ -36,15 +36,17 @@ import {
   arg,
   boot,
   detectOsColorScheme,
-  ELEMENT_TIMEOUT_MS,
   pathUrl,
   report,
   snap,
   usage,
-  waitFor,
   withBrowser,
   type ColorScheme,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import {
+  ELEMENT_TIMEOUT_MS,
+  waitFor,
+} from "@plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/core";
 
 const USAGE =
   "usage: ./equin run plugins/build/e2e/stale-tab-reload.ts [--color-scheme dark|light] [--out <prefix>] [--deferred <plugin path>] [--eager <plugin path>] [--headed]";

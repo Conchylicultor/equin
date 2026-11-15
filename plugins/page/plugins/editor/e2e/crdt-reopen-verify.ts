@@ -34,12 +34,14 @@
 import {
   agentFetch,
   arg,
-  ELEMENT_TIMEOUT_MS,
   report,
   snap,
-  waitFor,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import {
+  ELEMENT_TIMEOUT_MS,
+  waitFor,
+} from "@plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/core";
 // This script lives inside the editor plugin, which declares `yjs` as a
 // dependency — so the bare specifier resolves by ordinary walk-up. (Before the
 // per-plugin move this was a `createRequire` against a hardcoded

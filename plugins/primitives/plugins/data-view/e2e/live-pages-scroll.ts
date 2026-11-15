@@ -58,9 +58,9 @@ import {
   report,
   requirePage,
   snap,
-  waitFor,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import { waitFor } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/core";
 
 const PAGE = requirePage(
   "live-pages-scroll.ts --path <route> [--click <text>] [--view <type>] [--scroller <css>] [--width <px>] [--expect-placeholders] [--rows N] [--expect N] [--out <prefix>]",

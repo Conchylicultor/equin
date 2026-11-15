@@ -663,7 +663,7 @@ Key invariants:
     - `apps/demo`
     - `framework/cli/build`
     - `framework/tooling/codegen`
-    - `framework/tooling/e2e-harness`
+    - `framework/tooling/e2e-harness/page-ready`
     - `framework/tooling/web-artifacts/blocker-scan`
     - `framework/tooling/web-artifacts/prune`
 - Exemptions:

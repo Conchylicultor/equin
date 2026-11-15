@@ -35,7 +35,7 @@ import { agentFetch } from "./app-fetch";
  * (`mcp-browser:<conversationId>`) reverts its own when it closes.
  */
 const E2E_WRITES: AgentWritesScope = { scope: "prefix", prefix: "e2e" };
-import { waitFor } from "./wait";
+import { waitFor } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/core";
 import { pushDiagnostic } from "./diagnostics";
 
 /**

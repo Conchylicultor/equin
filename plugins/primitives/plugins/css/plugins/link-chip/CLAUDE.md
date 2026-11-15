@@ -29,9 +29,9 @@
     - `ui/tokens/type-scale --font-weight-medium`
     - `ui/tokens/type-scale --line-height-caption`
     - `ui/tokens/type-scale --line-height-label`
-  - Imported by: 28 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 29 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `active-data` ×10
-    - `conversations` ×5
+    - `conversations` ×6
     - `apps` ×4
     - `primitives` ×3
     - `page` ×2

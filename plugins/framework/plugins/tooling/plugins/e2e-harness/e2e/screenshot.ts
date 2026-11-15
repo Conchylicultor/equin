@@ -49,10 +49,10 @@ import { pageUrl } from "./target";
 import { withBrowser } from "./browser";
 import { detectOsColorScheme, type ColorScheme } from "./color-scheme";
 import { snap } from "./shots";
-import { flatness, hexColor } from "./pixels";
-import { waitFor, ELEMENT_TIMEOUT_MS } from "./wait";
-import { waitForNetworkIdle } from "./network-idle";
-import { waitForNotBusy } from "./busy";
+import {
+  hexColor,
+  waitForScreenReady,
+} from "@plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/core";
 
 const url = pageUrl();
 const click = arg("click");
@@ -77,34 +77,23 @@ await withBrowser(async (h) => {
   });
 
   await page.goto(url, { waitUntil: "domcontentloaded" });
-  // On a loaded machine (builds holding the CPU) the app can take well over
-  // any fixed sleep to first paint — 4 s and 8 s both captured a black frame.
-  const painted = await waitFor(
-    async () => flatness(page, await page.screenshot()),
-    (v) => !v.flat,
-    { timeoutMs: ELEMENT_TIMEOUT_MS, intervalMs: 500 },
-  );
-  if (painted.value.flat) {
+  // Painted (not one flat colour), network idle, no `aria-busy` loader — the
+  // one readiness rule, shared with the agent browser's capturePair.
+  const ready = await waitForScreenReady(page);
+  if (ready.kind === "blank") {
     console.error(
-      `page never painted: still one flat colour (${hexColor(painted.value.color)}) ` +
-        `after ${painted.waitedMs}ms — the app did not render`,
+      `page never painted: still one flat colour (${hexColor(ready.color)}) ` +
+        `after ${ready.waitedMs}ms — the app did not render`,
     );
     await snap(page, out, "before", { allowBlank: true });
     process.exitCode = 1;
     return;
   }
-  console.log(`painted after ${painted.waitedMs}ms`);
-  await waitForNetworkIdle(page);
-  // Network idle is the page's own requests: work it waits on can run where
-  // they do not show (the demo's host boots in a SharedWorker), so also wait
-  // for the app to stop showing a loader.
-  const settled = await waitForNotBusy(page, { timeoutMs: ELEMENT_TIMEOUT_MS });
-  if (!settled.ok) {
+  console.log(`painted after ${ready.paintedAfterMs}ms`);
+  if (ready.stillBusy.length > 0) {
     console.error(
-      `STILL-LOADING after ${settled.waitedMs}ms — capturing anyway: ${settled.value.join(" | ")}`,
+      `STILL-LOADING after ${ready.busyWaitedMs}ms — capturing anyway: ${ready.stillBusy.join(" | ")}`,
     );
-  } else if (settled.attempts > 1) {
-    console.log(`loaders cleared after ${settled.waitedMs}ms`);
   }
   await page.waitForTimeout(waitMs);
   if (!(await snap(page, out, "before")).ok) process.exitCode = 1;

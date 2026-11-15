@@ -186,6 +186,7 @@ might show one.
   - Slots: `InlineChip.Tag`
   - Slot contributors:
     - `InlineChip.Tag` ← `active-data.attempt`
+    - `InlineChip.Tag` ← `active-data.before-after`
     - `InlineChip.Tag` ← `active-data.build-run`
     - `InlineChip.Tag` ← `active-data.conv`
     - `InlineChip.Tag` ← `active-data.event-source`
@@ -221,6 +222,7 @@ might show one.
   - Imported by:
     - `active-data`
     - `active-data/attempt`
+    - `active-data/before-after`
     - `active-data/conv`
     - `active-data/id-chip`
     - `active-data/song`

@@ -22,12 +22,14 @@ import {
   arg,
   pathUrl,
   withBrowser,
-  waitForNetworkIdle,
-  waitForNotBusy,
-  ELEMENT_TIMEOUT_MS,
   snap,
   clearToasts,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import {
+  waitForNetworkIdle,
+  waitForNotBusy,
+  ELEMENT_TIMEOUT_MS,
+} from "@plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/core";
 import { answerTipsAsTheyShow } from "@plugins/hints/e2e";
 import {
   openThreadFixture,

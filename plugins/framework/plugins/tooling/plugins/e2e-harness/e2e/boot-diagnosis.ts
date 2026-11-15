@@ -10,8 +10,10 @@
  * whatever the caller knows how to read about its own app (`describe`).
  */
 import type { Page } from "playwright";
-import { busyRegions } from "./busy";
-import { inflightUrls } from "./network-idle";
+import {
+  busyRegions,
+  inflightUrls,
+} from "@plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/core";
 
 /** How the page looked: one line per signal, ready to print. */
 export async function describeBootStall(

@@ -40,10 +40,12 @@ import {
   pathUrl,
   report,
   snap,
-  waitFor,
   withBrowser,
-  type Settled,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import {
+  waitFor,
+  type Settled,
+} from "@plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/core";
 import {
   addSource,
   card,

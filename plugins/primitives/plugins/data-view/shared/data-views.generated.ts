@@ -26,6 +26,7 @@ export const dataViews: DataViewEntry[] = [
   { id: "build.run-logs", pluginId: "build.build-logs" },
   { id: "config_v2.settings.nav", pluginId: "config_v2.settings" },
   { id: "conversations-sidebar", pluginId: "conversations.conversations-view.data-view" },
+  { id: "conversations.before-after.gallery", pluginId: "conversations.before-after" },
   { id: "conversations.op-status.queue", pluginId: "conversations.conversation-view.op-status" },
   { id: "debug.boot-profiles", pluginId: "debug.boot-profile" },
   { id: "debug.broadcasts", pluginId: "debug.broadcasts" },

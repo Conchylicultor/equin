@@ -9,6 +9,7 @@ import { useElementSize } from "@plugins/primitives/plugins/dom/plugins/element-
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Placed } from "@plugins/primitives/plugins/css/plugins/coords/web";
+import { SwipeCompare } from "@plugins/primitives/plugins/diff-view/plugins/swipe-compare/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
@@ -378,7 +379,9 @@ const SWIPE_PILL_INSET = 12;
 
 /**
  * Swipe: the two frames in ONE box, B under A, A clipped at the divider — drag
- * the divider to wipe one design over the other. The divider carries the way
+ * the divider (or, focused, ←/→ / Home / End) to wipe one design over the
+ * other. The wipe is the `SwipeCompare` primitive in its minimal chrome: the
+ * frames draw their own screens and the header band names them. The divider carries the way
  * back to side by side at its top.
  */
 function SwipeFrames({
@@ -394,15 +397,9 @@ function SwipeFrames({
   box: FrameBox;
 }): ReactElement | null {
   const { canvas, dispatch } = usePrototypeDetail();
-  const [dragging, setDragging] = useState(false);
   const [a, b] = canvas.frames;
   if (a === undefined || b === undefined) return null;
   const at = canvas.swipeAt;
-
-  const moveTo = (clientX: number, el: HTMLElement) => {
-    const rect = el.getBoundingClientRect();
-    dispatch({ type: "setSwipeAt", at: (clientX - rect.left) / rect.width });
-  };
 
   // Each frame renders ONCE: B's view wraps A's, so both screens and both
   // resolutions (a source frame's tag) are in hand for the one composition.
@@ -448,38 +445,17 @@ function SwipeFrames({
                   </Fill>
                 </Stack>
               </HeaderBand>
-              {screenB}
-              <Placed
-                x="fill"
-                y="fill"
-                style={{
-                  clipPath: `inset(0 ${String((1 - at) * 100)}% 0 0)`,
-                }}
-              >
-                {screenA}
-              </Placed>
-              <Placed
-                x={{ start: `${String(at * 100)}%`, size: 2, shift: "-50%" }}
-                y="fill"
-                role="separator"
-                aria-orientation="vertical"
-                aria-label="Drag to swipe between the two frames"
-                className={cn(
-                  "cursor-ew-resize touch-none",
-                  dragging ? "bg-primary" : "bg-foreground",
-                )}
-                onPointerDown={(e) => {
-                  e.preventDefault();
-                  e.currentTarget.setPointerCapture(e.pointerId);
-                  setDragging(true);
-                }}
-                onPointerMove={(e) => {
-                  if (!dragging) return;
-                  const el = e.currentTarget.parentElement;
-                  if (el) moveTo(e.clientX, el);
-                }}
-                onPointerUp={() => setDragging(false)}
-                onPointerCancel={() => setDragging(false)}
+              <SwipeCompare
+                mode="swipe"
+                chrome="minimal"
+                before={screenA}
+                after={screenB}
+                beforeLabel={names(a)}
+                afterLabel={names(b)}
+                at={at}
+                onAtChange={(next) =>
+                  dispatch({ type: "setSwipeAt", at: next })
+                }
               />
               <Placed
                 x={{ start: `${String(at * 100)}%`, shift: "-50%" }}

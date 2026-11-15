@@ -1,6 +1,6 @@
 {
-  "id": "a640b086-08b4-4257-846a-b8e127006e39",
-  "prevId": "389fe9e6-5218-4950-b39e-267549d4167e",
+  "id": "2685cc3e-e919-4df6-a544-a74713bff43b",
+  "prevId": "a640b086-08b4-4257-846a-b8e127006e39",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -6563,6 +6563,135 @@
           "onUpdate": "no action"
         }
       },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.before_after_pairs": {
+      "name": "before_after_pairs",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "conversation_id": {
+          "name": "conversation_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tool_use_id": {
+          "name": "tool_use_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "route": {
+          "name": "route",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "width": {
+          "name": "width",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "height": {
+          "name": "height",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "color_scheme": {
+          "name": "color_scheme",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "before_attachment_id": {
+          "name": "before_attachment_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "after_attachment_id": {
+          "name": "after_attachment_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "before_label": {
+          "name": "before_label",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "after_label": {
+          "name": "after_label",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "before_after_pairs_by_conv_idx": {
+          "name": "before_after_pairs_by_conv_idx",
+          "columns": [
+            {
+              "expression": "conversation_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "before_after_pairs_tool_use_idx": {
+          "name": "before_after_pairs_tool_use_idx",
+          "columns": [
+            {
+              "expression": "tool_use_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
@@ -19131,6 +19260,73 @@
       "compositePrimaryKeys": {
         "sonata_songs_attachments_owner_id_attachment_id_pk": {
           "name": "sonata_songs_attachments_owner_id_attachment_id_pk",
+          "columns": [
+            "owner_id",
+            "attachment_id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.before_after_pairs_attachments": {
+      "name": "before_after_pairs_attachments",
+      "schema": "",
+      "columns": {
+        "owner_id": {
+          "name": "owner_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "attachment_id": {
+          "name": "attachment_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "before_after_pairs_attachments_owner_id_before_after_pairs_id_fk": {
+          "name": "before_after_pairs_attachments_owner_id_before_after_pairs_id_fk",
+          "tableFrom": "before_after_pairs_attachments",
+          "tableTo": "before_after_pairs",
+          "columnsFrom": [
+            "owner_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        },
+        "before_after_pairs_attachments_attachment_id_attachments_id_fk": {
+          "name": "before_after_pairs_attachments_attachment_id_attachments_id_fk",
+          "tableFrom": "before_after_pairs_attachments",
+          "tableTo": "attachments",
+          "columnsFrom": [
+            "attachment_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {
+        "before_after_pairs_attachments_owner_id_attachment_id_pk": {
+          "name": "before_after_pairs_attachments_owner_id_attachment_id_pk",
           "columns": [
             "owner_id",
             "attachment_id"

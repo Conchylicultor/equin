@@ -70,6 +70,10 @@
       "name": "@equin/plugin-active-data-attempt",
       "version": "0.0.1",
     },
+    "plugins/active-data/plugins/before-after": {
+      "name": "@equin/plugin-active-data-before-after",
+      "version": "0.0.1",
+    },
     "plugins/active-data/plugins/build-run": {
       "name": "@equin/plugin-active-data-build-run",
       "version": "0.0.1",
@@ -1963,6 +1967,10 @@
     },
     "plugins/conversations/plugins/automatic-turn": {
       "name": "@equin/plugin-conversations-automatic-turn",
+      "version": "0.0.1",
+    },
+    "plugins/conversations/plugins/before-after": {
+      "name": "@equin/plugin-conversations-before-after",
       "version": "0.0.1",
     },
     "plugins/conversations/plugins/close": {
@@ -4209,6 +4217,10 @@
       "name": "@equin/plugin-framework-tooling-e2e-harness",
       "version": "0.0.1",
     },
+    "plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready": {
+      "name": "@equin/plugin-framework-tooling-e2e-harness-page-ready",
+      "version": "0.0.1",
+    },
     "plugins/framework/plugins/tooling/plugins/exempt": {
       "name": "@equin/plugin-framework-tooling-exempt",
       "version": "0.0.1",
@@ -6388,6 +6400,10 @@
       "name": "@equin/plugin-primitives-diff-view",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/diff-view/plugins/swipe-compare": {
+      "name": "@equin/plugin-primitives-diff-view-swipe-compare",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/dom": {
       "name": "@equin/plugin-primitives-dom",
       "version": "0.0.1",
@@ -8101,6 +8117,8 @@
 
     "@equin/plugin-active-data-attempt": ["@equin/plugin-active-data-attempt@workspace:plugins/active-data/plugins/attempt"],
 
+    "@equin/plugin-active-data-before-after": ["@equin/plugin-active-data-before-after@workspace:plugins/active-data/plugins/before-after"],
+
     "@equin/plugin-active-data-build-run": ["@equin/plugin-active-data-build-run@workspace:plugins/active-data/plugins/build-run"],
 
     "@equin/plugin-active-data-commit-link": ["@equin/plugin-active-data-commit-link@workspace:plugins/active-data/plugins/commit-link"],
@@ -9018,6 +9036,8 @@
     "@equin/plugin-conversations-all-conversations": ["@equin/plugin-conversations-all-conversations@workspace:plugins/conversations/plugins/all-conversations"],
 
     "@equin/plugin-conversations-automatic-turn": ["@equin/plugin-conversations-automatic-turn@workspace:plugins/conversations/plugins/automatic-turn"],
+
+    "@equin/plugin-conversations-before-after": ["@equin/plugin-conversations-before-after@workspace:plugins/conversations/plugins/before-after"],
 
     "@equin/plugin-conversations-close": ["@equin/plugin-conversations-close@workspace:plugins/conversations/plugins/close"],
 
@@ -10109,6 +10129,8 @@
 
     "@equin/plugin-framework-tooling-e2e-harness": ["@equin/plugin-framework-tooling-e2e-harness@workspace:plugins/framework/plugins/tooling/plugins/e2e-harness"],
 
+    "@equin/plugin-framework-tooling-e2e-harness-page-ready": ["@equin/plugin-framework-tooling-e2e-harness-page-ready@workspace:plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready"],
+
     "@equin/plugin-framework-tooling-exempt": ["@equin/plugin-framework-tooling-exempt@workspace:plugins/framework/plugins/tooling/plugins/exempt"],
 
     "@equin/plugin-framework-tooling-format": ["@equin/plugin-framework-tooling-format@workspace:plugins/framework/plugins/tooling/plugins/format"],
@@ -11114,6 +11136,8 @@
     "@equin/plugin-primitives-detail-sections": ["@equin/plugin-primitives-detail-sections@workspace:plugins/primitives/plugins/detail-sections"],
 
     "@equin/plugin-primitives-diff-view": ["@equin/plugin-primitives-diff-view@workspace:plugins/primitives/plugins/diff-view"],
+
+    "@equin/plugin-primitives-diff-view-swipe-compare": ["@equin/plugin-primitives-diff-view-swipe-compare@workspace:plugins/primitives/plugins/diff-view/plugins/swipe-compare"],
 
     "@equin/plugin-primitives-dom": ["@equin/plugin-primitives-dom@workspace:plugins/primitives/plugins/dom"],
 

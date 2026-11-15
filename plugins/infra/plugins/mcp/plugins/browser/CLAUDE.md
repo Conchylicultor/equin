@@ -27,7 +27,7 @@ every agent's tabs. The host outlives any backend.
   main. So a push that does not touch this plugin keeps every session.
 - **Wire** (`shared/protocol.ts`): HTTP on `host.sock` — `POST /call`
   (`{conversationId, target, tool, args}` → the MCP result; 422 = the tool's
-  own failure), `/close`, `/shutdown`. Bump `HOST_PROTOCOL` on any
+  own failure), `/capture-pair` (below), `/close`, `/shutdown`. Bump `HOST_PROTOCOL` on any
   change — except an added read route whose 404 the backend reads as an
   answer, which must not lock other checkouts out (and a removed route no
   backend calls any more).
@@ -156,6 +156,26 @@ the `aria-ref=` selector), `browser_find`, `browser_get_page_text`,
 (an MCP image block), `browser_console`, `browser_network`, `browser_viewport`,
 `browser_attach` (below), `browser_close`.
 
+## Before / after captures (`capturePair`)
+
+`capturePair(conversationId, { route, width, height, colorScheme })` (server
+barrel; `conversations/before-after`'s `register_before_after` calls it)
+captures one route on MAIN and on the conversation's own build — refused
+(`UnbuiltCheckoutError`) while it has none. The backend resolves both URLs and
+`POST`s `/capture-pair`; the host (`bin/host-capture.ts`) opens each in a
+THROWAWAY page of the conversation's session (`withThrowawayPage`: adopted as
+a tab while it lives, like every page of the context, closed after, the
+current tab restored; never counted against the tab cap), one after the other
+under one drive slot, waits until it is ready by the e2e harness's rule
+(`waitForScreenReady` from `e2e-harness/page-ready`: painted, network idle, no
+`aria-busy` loader — a page that never painted fails the capture) and returns
+both PNGs. Each captured page drops the agent-worktree build's `experimental`
+class as the build's head stamp adds it (an init script, `stripExperimentalMark`),
+so the build's shot has no red frame or Wish banner that main's lacks — the
+pair compares the app, not the deploy kind. No setting is written. An ADDED route, so no protocol bump: a host that predates it answers
+404, read as `HostCannotCaptureError` (captures work once main runs the host
+code).
+
 ## Script attach (`browser_attach` → `--attach`)
 
 An e2e script can run INSIDE a session and leave its tab there, so an agent
@@ -217,7 +237,15 @@ nor closed under it. Bounded, because the host cannot see the script end.
     - `network/live.serveValue`
     - `tasks/tasks-core.conversationStatusChanged`
     - `tasks/tasks-core.getConversation`
-  - Exports (values): `readAgentBrowserStatus`
+  - Exports (types):
+    - `CapturedPage`
+    - `CapturedPair`
+    - `CapturePairRequest`
+  - Exports (values):
+    - `capturePair`
+    - `HostCannotCaptureError`
+    - `readAgentBrowserStatus`
+    - `UnbuiltCheckoutError`
   - Register:
     - `mcpTool('browser_tabs')`
     - `mcpTool('browser_navigate')`
@@ -263,6 +291,7 @@ nor closed under it. Bounded, because the host cannot see the script end.
     - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/color-palette --warning`
   - Imported by:
+    - `conversations/before-after`
     - `debug/sentinel/machine-usage`
     - `framework/tooling/e2e-harness`
 - Exemptions:

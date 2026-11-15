@@ -20,9 +20,11 @@ import {
   requirePage,
   withBrowser,
   report,
+} from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import {
   waitFor,
   ELEMENT_TIMEOUT_MS,
-} from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+} from "@plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/core";
 
 const USAGE = "--path /agents --header Queue";
 const url = requirePage(USAGE);

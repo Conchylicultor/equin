@@ -484,9 +484,9 @@ the `""` entry.
     - `tokenGroupMatchesSearch`
     - `transformValues`
 - Cross-plugin:
-  - Uses tokens: 66 vars — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses tokens: 67 vars — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ui/tokens/density` ×27
     - `ui/tokens/color-palette` ×26
-    - `ui/tokens/density` ×26
     - `ui/tokens/shadow` ×4
     - `ui/tokens/shape` ×4
     - `ui/tokens/type-scale` ×4

@@ -33,9 +33,9 @@ import {
   pathUrl,
   report,
   snap,
-  waitFor,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import { waitFor } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/core";
 
 /**
  * A conversation with a rich artifact set — three prototypes, a research doc,

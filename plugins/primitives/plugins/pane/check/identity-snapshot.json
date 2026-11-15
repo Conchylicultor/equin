@@ -91,6 +91,12 @@
       "parent": "backup"
     },
     {
+      "paneId": "before-after",
+      "segment": "before-after/:pair",
+      "appIndex": false,
+      "parent": null
+    },
+    {
       "paneId": "block-detail",
       "segment": "block/:blockId",
       "appIndex": false,

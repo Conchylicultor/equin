@@ -46,13 +46,13 @@ import {
   arg,
   boot,
   clearToasts,
-  ELEMENT_TIMEOUT_MS,
   pathUrl,
   report,
   requireArg,
   snap,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import { ELEMENT_TIMEOUT_MS } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/core";
 import {
   DEFAULT_MODEL_CHOICE,
   choiceLabel,

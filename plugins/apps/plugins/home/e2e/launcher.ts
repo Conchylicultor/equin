@@ -10,12 +10,14 @@
 
 import type { Page } from "playwright";
 import {
-  ELEMENT_TIMEOUT_MS,
   pathUrl,
   report,
-  waitFor,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import {
+  ELEMENT_TIMEOUT_MS,
+  waitFor,
+} from "@plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/core";
 
 const TILE = "[data-row-key]";
 const SEARCH = "input[placeholder='Search apps']";

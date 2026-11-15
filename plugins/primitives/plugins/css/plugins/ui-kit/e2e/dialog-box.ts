@@ -30,14 +30,16 @@
 
 import {
   DEFAULT_VIEWPORT,
-  ELEMENT_TIMEOUT_MS,
   pathUrl,
   report,
   snap,
-  waitFor,
   withBrowser,
-  waitForNetworkIdle,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import {
+  ELEMENT_TIMEOUT_MS,
+  waitFor,
+  waitForNetworkIdle,
+} from "@plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/core";
 
 const OUT = "/tmp/dialog-box";
 const PANEL = '[data-slot="dialog-panel"]';

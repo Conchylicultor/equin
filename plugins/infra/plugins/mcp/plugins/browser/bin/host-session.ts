@@ -543,6 +543,32 @@ export async function closeTab(session: Session, id: string): Promise<void> {
 }
 
 /**
+ * Run `work` on a THROWAWAY page of the session's context, closed after it —
+ * a capture the agent did not ask to see as a tab (`capturePair`). Every page
+ * of the context is adopted as a tab ({@link adoptPage}), so it is listed
+ * while it lives and takes a tab id; what this keeps is the agent's view:
+ * the page is closed whatever `work` did, and the tab that was current is
+ * current again. It is not counted against {@link MAX_TABS}: it never
+ * displaces one of the agent's tabs.
+ */
+export async function withThrowawayPage<T>(
+  session: Session,
+  work: (page: Page) => Promise<T>,
+): Promise<T> {
+  const current = session.current;
+  const page = await session.context.newPage();
+  try {
+    return await work(page);
+  } finally {
+    await closeBounded(page.close(), "throwaway page");
+    if (current !== null && session.tabs.has(current)) {
+      session.current = current;
+      onChange();
+    }
+  }
+}
+
+/**
  * Close a conversation's session: stop it sending anything new, wait for the
  * writes it already sent to land, drop its context, then revert the durable
  * writes IT made on every deploy it reached — its own request-origin source only, so

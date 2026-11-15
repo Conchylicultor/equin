@@ -99,12 +99,14 @@ import {
   report,
   snap,
   tapSharedWorkerRequests,
+  withBrowser,
+} from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import {
   waitFor,
   waitForNetworkIdle,
   waitForNotBusy,
-  withBrowser,
   type Settled,
-} from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+} from "@plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/core";
 import {
   AGENT_MANAGER_LOCATION,
   demoPath,

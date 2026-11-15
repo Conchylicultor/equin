@@ -16,12 +16,12 @@
 //   ./equin run plugins/apps-core/plugins/app-launcher/e2e/launcher.ts [--headed]
 
 import {
-  ELEMENT_TIMEOUT_MS,
   pathUrl,
   report,
   snap,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import { ELEMENT_TIMEOUT_MS } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/core";
 
 const OUT = "/tmp/app-launcher";
 

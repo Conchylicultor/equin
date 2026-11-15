@@ -23,12 +23,12 @@
 //
 // Usage: ./equin run plugins/page/plugins/code-block/e2e/undo-verify.ts [--url <deploy>]
 import {
-  ELEMENT_TIMEOUT_MS,
   arg,
   report,
   snap,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import { ELEMENT_TIMEOUT_MS } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/core";
 import { openBlankPage } from "@plugins/page/plugins/editor/e2e";
 
 const out = arg("out", "/tmp/code-undo");

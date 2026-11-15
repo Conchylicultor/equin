@@ -8,7 +8,7 @@ import {
 import { join } from "node:path";
 import type { Page } from "playwright";
 import { spawnPassthrough } from "@plugins/infra/plugins/spawn/core";
-import { waitFor } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import { waitFor } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/core";
 
 // The op-status e2es' shared half: driving `../scripts/synthetic-op.ts` (a real
 // process writing the real op log) and reading the banner it shows up in.

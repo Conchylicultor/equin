@@ -180,6 +180,7 @@ export const reorderableSlots: ReorderableSlot[] = [
   { slotId: "conversations.agents.system-agent", pluginId: "conversations.agents", configName: "system-agent" },
   { slotId: "conversations.agents.view", pluginId: "conversations.agents", configName: "view" },
   { slotId: "conversations.all-conversations.all-conversations.actions", pluginId: "conversations.all-conversations", configName: "all-conversations.actions" },
+  { slotId: "conversations.before-after.pane.actions", pluginId: "conversations.before-after", configName: "pane.actions" },
   { slotId: "conversations.conversation-ui.item.chips", pluginId: "conversations.conversation-ui.item", configName: "chips" },
   { slotId: "conversations.conversation-view.above-prompt-input", pluginId: "conversations.conversation-view", configName: "above-prompt-input" },
   { slotId: "conversations.conversation-view.action-bar.action-bar", pluginId: "conversations.conversation-view.action-bar", configName: "action-bar" },

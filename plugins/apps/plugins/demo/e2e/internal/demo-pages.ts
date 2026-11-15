@@ -15,9 +15,9 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
 import {
   boot,
-  waitFor,
   type Report,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import { waitFor } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/core";
 
 /**
  * The `data-theme-scope` an app's boundary stamps inside the demo: its app

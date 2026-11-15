@@ -39,9 +39,12 @@ import { arg, numArg, usage } from "./args";
 import { pageUrl } from "./target";
 import { withBrowser } from "./browser";
 import { report } from "./report";
-import { waitFor, ELEMENT_TIMEOUT_MS } from "./wait";
-import { waitForNetworkIdle } from "./network-idle";
-import { waitForNotBusy } from "./busy";
+import {
+  waitFor,
+  ELEMENT_TIMEOUT_MS,
+  waitForNetworkIdle,
+  waitForNotBusy,
+} from "@plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/core";
 import {
   analyzeLeakRun,
   leakReportText,

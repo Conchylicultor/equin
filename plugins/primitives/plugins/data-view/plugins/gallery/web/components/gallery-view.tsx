@@ -13,6 +13,8 @@ import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { VirtualRows } from "@plugins/primitives/plugins/virtual-rows/web";
+import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
+import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { useIsHovered } from "@plugins/primitives/plugins/data-view/web";
 import type { LinkedHover } from "@plugins/primitives/plugins/data-view/core";
 import {
@@ -199,6 +201,7 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
   const options = props.options as GalleryViewOptions | undefined;
   const panel = options?.card === "panel";
   const poster = options?.card === "poster";
+  const strip = options?.layout === "strip";
   const gridMin = panel ? PANEL_MIN : cardMin;
 
   // Single source of cell markup — shared by the plain and windowed branches.
@@ -353,7 +356,9 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
     >
       {/* A section whose cards are all folded draws no grid — its header and
           fold line say everything. */}
-      {cells.length === 0 ? null : (
+      {cells.length === 0 ? null : strip ? (
+        <GalleryStrip cells={cells} renderCell={renderCell} />
+      ) : (
         <GalleryGrid
           section={section}
           placeholders={props.placeholders}
@@ -555,6 +560,41 @@ function GalleryGrid({
         </VirtualRows>
       ) : null}
     </>
+  );
+}
+
+/**
+ * One section's cards as a single row scrolling sideways (`layout: "strip"`):
+ * each card at the strip's fixed width (`w-gallery-strip-card`), the strip's
+ * own gap between them. Never windowed — a strip is a short set's filmstrip.
+ * The vertical pad gives a selected card's ring room inside the scroller,
+ * which clips both axes once it scrolls one.
+ */
+function GalleryStrip({
+  cells,
+  renderCell,
+}: {
+  cells: GalleryCell[];
+  renderCell: (cell: GalleryCell) => ReactNode;
+}): ReactNode {
+  return (
+    <Scroll axis="x" className="py-2xs">
+      <Stack
+        direction="row"
+        gap="none"
+        align="start"
+        className="w-max gap-x-gallery-strip px-2xs"
+      >
+        {cells.map((cell) => (
+          <div
+            key={cell.key}
+            className={cn("w-gallery-strip-card", rigidClass())}
+          >
+            {renderCell(cell)}
+          </div>
+        ))}
+      </Stack>
+    </Scroll>
   );
 }
 

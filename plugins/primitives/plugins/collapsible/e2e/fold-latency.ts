@@ -26,8 +26,8 @@ import {
   requirePage,
   withBrowser,
   report,
-  ELEMENT_TIMEOUT_MS,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import { ELEMENT_TIMEOUT_MS } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/core";
 
 const USAGE = "--path /agents/c/<conv> --trigger Expand";
 const url = requirePage(USAGE);

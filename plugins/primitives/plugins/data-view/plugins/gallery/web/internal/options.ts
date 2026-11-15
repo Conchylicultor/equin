@@ -23,4 +23,15 @@ export interface GalleryViewOptions {
    *   by their picture and annotates (places, trips).
    */
   card?: "cover" | "panel" | "poster";
+  /**
+   * How the cards are laid out — a closed set, like `card`:
+   *
+   * - `"grid"` (default) — the responsive grid: as many columns as the
+   *   theme's card minimum fits, windowed above 60 cards.
+   * - `"strip"` — ONE row of small fixed-width cards (density
+   *   `galleryStripCard`, `galleryStripGap`) scrolling sideways: a filmstrip
+   *   under a viewer, picking which record it shows (the selected card
+   *   ringed). Meant for a short set: it is never windowed.
+   */
+  layout?: "grid" | "strip";
 }

@@ -14,12 +14,14 @@
 // Usage: bun plugins/page/plugins/editor/e2e/crdt-typing-verify.ts [--url <deploy>] [--out /tmp/crdt]
 import {
   arg,
-  ELEMENT_TIMEOUT_MS,
   report,
   snap,
-  waitFor,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import {
+  ELEMENT_TIMEOUT_MS,
+  waitFor,
+} from "@plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/core";
 import { blockText, caretState, openBlankPage } from "./support/blank-page";
 
 const out = arg("out", "/tmp/crdt");

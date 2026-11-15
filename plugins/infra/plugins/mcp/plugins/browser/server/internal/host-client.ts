@@ -28,10 +28,13 @@ import {
   HOST_FILES,
   HOST_ORIGIN,
   HOST_PROTOCOL,
+  HostCapturePairResultSchema,
   HostCloseResultSchema,
   HostErrorBodySchema,
   HostToolResultSchema,
   type HostCallBody,
+  type HostCapturePairBody,
+  type HostCapturePairResult,
   type HostToolResult,
 } from "../../shared/protocol";
 import { revertSessionWritesOn } from "../../shared/revert";
@@ -398,6 +401,45 @@ export async function callHostTool(
     error.success
       ? error.data.error
       : `[agent-browser] host answered HTTP ${res.status}: ${JSON.stringify(body)}`,
+  );
+}
+
+/**
+ * A running host that predates `POST /capture-pair` (an added route: no
+ * protocol bump). Only main replaces the host, so a checkout whose host code
+ * is newer than main's cannot capture until main runs it.
+ */
+export class HostCannotCaptureError extends Error {}
+
+/** Capture a before / after pair on the host. Its own failure throws its message. */
+export async function callHostCapturePair(
+  body: HostCapturePairBody,
+): Promise<HostCapturePairResult> {
+  await ensureHost();
+  let res: Response;
+  try {
+    res = await post("/capture-pair", body, CALL_MS);
+  } catch (err) {
+    // The host left between the status read and the call: find or launch the
+    // next one, once (as for a tool call).
+    if (!isUnreachable(err)) throw err;
+    await ensureHost();
+    res = await post("/capture-pair", body, CALL_MS);
+  }
+  if (res.status === 404) {
+    throw new HostCannotCaptureError(
+      "The agent browser host running on this machine predates before / after captures (it has no /capture-pair route). " +
+        "Only main replaces the host, so captures work once main runs this code — until then, capture the two PNGs yourself " +
+        "(screenshot.ts against main and against this build) and pass them as beforePath / afterPath.",
+    );
+  }
+  const json: unknown = await res.json();
+  if (res.ok) return HostCapturePairResultSchema.parse(json);
+  const error = HostErrorBodySchema.safeParse(json);
+  throw new Error(
+    error.success
+      ? error.data.error
+      : `[agent-browser] host answered HTTP ${res.status}: ${JSON.stringify(json)}`,
   );
 }
 

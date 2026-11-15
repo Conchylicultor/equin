@@ -71,6 +71,54 @@ export const HostToolResultSchema = z.object({
 });
 export type HostToolResult = z.infer<typeof HostToolResultSchema>;
 
+/**
+ * `POST /capture-pair` — two pages captured in the conversation's session at
+ * one viewport and colour scheme, for a before / after pair
+ * (`conversations/before-after`). Not an MCP tool of its own (it is not in
+ * `shared/tools.ts`): the backend resolves both URLs (main and this
+ * conversation's build) and the host opens each in a THROWAWAY page of the
+ * session's context — the agent's tabs, and which one is current, untouched —
+ * waits until it is ready (`waitForScreenReady`), captures it and closes it.
+ *
+ * An ADDED route, so no `HOST_PROTOCOL` bump: a host that predates it answers
+ * 404, which the backend reads as "this host cannot capture yet" — bumping
+ * would instead lock every checkout on the old protocol out of every browser
+ * tool until main replaced the host.
+ */
+export const HostCapturePairBodySchema = z.object({
+  conversationId: z.string().min(1),
+  target: HostTargetSchema,
+  /** Absolute http(s) URLs: the backend resolved both. */
+  urls: z.tuple([z.string().url(), z.string().url()]),
+  viewport: z.object({
+    width: z.number().int().min(200).max(4000),
+    height: z.number().int().min(200).max(4000),
+  }),
+  colorScheme: z.enum(["light", "dark"]),
+});
+export type HostCapturePairBody = z.infer<typeof HostCapturePairBodySchema>;
+
+/** One captured page: its PNG and what its readiness wait saw. */
+export const HostCaptureShotSchema = z.object({
+  /** Base64 PNG of the viewport. */
+  png: z.string(),
+  /** Where the page ended (after redirects). */
+  url: z.string(),
+  /** The document's HTTP status (`null`: none reported). */
+  httpStatus: z.number().int().nullable(),
+  paintedAfterMs: z.number(),
+  /** Loaders still visible at the readiness deadline (captured anyway). */
+  stillBusy: z.array(z.string()),
+});
+export type HostCaptureShot = z.infer<typeof HostCaptureShotSchema>;
+
+export const HostCapturePairResultSchema = z.object({
+  shots: z.tuple([HostCaptureShotSchema, HostCaptureShotSchema]),
+  /** How long the capture queued for a browser slot (the host-wide e2e pool). */
+  slotWaitedMs: z.number(),
+});
+export type HostCapturePairResult = z.infer<typeof HostCapturePairResultSchema>;
+
 /** A tool that threw: its message is the agent's to read. */
 export const HostErrorBodySchema = z.object({ error: z.string() });
 

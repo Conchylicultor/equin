@@ -28,12 +28,12 @@
 // Usage: ./equin run plugins/page/plugins/table/e2e/table-verify.ts [--url <deploy>]
 import type { Page } from "playwright";
 import {
-  ELEMENT_TIMEOUT_MS,
   arg,
   report,
   snap,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import { ELEMENT_TIMEOUT_MS } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/core";
 import { openBlankPage } from "@plugins/page/plugins/editor/e2e";
 
 const out = arg("out", "/tmp/table-verify");

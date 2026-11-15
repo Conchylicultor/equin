@@ -988,6 +988,10 @@
 /* The same row gap as a line's own bottom padding, for a WINDOWED gallery whose
  * lines are separate grids (each one measured row of cards). */
 @utility pb-gallery { padding-bottom: var(--gallery-gap-y); } /* twmerge: extend pb */
+/* The gallery's strip layout: a card's fixed width and the gap between cards
+ * (density `galleryStripCard` / `galleryStripGap`, defaults 112px and `smd`). */
+@utility w-gallery-strip-card { width: var(--gallery-strip-card); } /* twmerge: extend w */
+@utility gap-x-gallery-strip { column-gap: var(--gallery-strip-gap); } /* twmerge: extend gap-x */
 
 /* A one-line row that clips at its inline end with a fade instead of a hard
  * edge (a card's icon+value token line): the content dissolves over the last
