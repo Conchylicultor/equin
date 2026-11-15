@@ -42,9 +42,21 @@ the blocking reasons joined; a waived block is an `allow` carrying the waivers'
 reasons (for the log). A contribution that throws fails the request, loudly —
 and the hook then fails open, saying so on stderr.
 
+**A block names how to wait.** Every waiver declares `when` (required): the
+condition it waives for, said to the agent. A blocked stop's reason is the
+gates' reasons, then "You may end your turn anyway while:" and each waiver's
+`when` — so a gate can never leave an agent with no legal way to wait. The
+case that made it so (2026-11-15): an agent owing an outcome report could not
+end its turn on a background e2e soak (the report gate refused), nor watch it
+in the foreground (the `poll-loop` guard refused). The sdk runtime's
+`background-work` waiver (runtime-sdk `machine/internal/stop-waiver.ts`) waives
+while the CLI reports background tasks in flight — backgrounded commands,
+Monitors, background subagents, workflows — each of which re-invokes the agent.
+Fixed once here, for every gate.
+
 ```ts
 StopGate({ id: "outcome-report", check: async (conversationId) => … })
-StopWaiver({ id: "watch", waives: async (conversationId) => … })
+StopWaiver({ id: "watch", when: "a task subtree you watch still has work running…", waives: async (conversationId) => … })
 ```
 
 This plugin names no contributor.

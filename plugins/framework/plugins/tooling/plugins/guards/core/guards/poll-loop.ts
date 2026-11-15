@@ -353,6 +353,19 @@ function livenessOf(
 /* -------------------------------------------------------------------- message */
 
 /**
+ * The legal ways to wait, said in every denial that is not about a harness
+ * task: the refusal is the moment the agent needs them. A main-conversation
+ * agent waits by ending its turn on a background task (the stop gate lets that
+ * turn end even while it owes a report — conversations/stop-gate's
+ * background-work waiver); a subagent is never woken, so it awaits.
+ */
+function howToWait(subagent: boolean): string {
+  return subagent
+    ? "You are a subagent: no background-task notification reaches you. For an `./equin` op (build, push, check, test, run), `./equin await <op>` in the foreground blocks until its verdict and prints it (exit 70: still going, call it again)."
+    : "To wait for work you started: run it with `run_in_background: true` (or as a Monitor) and END YOUR TURN — you are re-invoked when it finishes, and a stop gate (an outcome report owed) lets that turn end while it runs. For an `./equin` op already running in this checkout, `./equin await <op>` blocks in the foreground until its verdict.";
+}
+
+/**
  * `finished` is excluded rather than handled: a thing that has stopped changing
  * is never a reason to block, and `check` turns it into an `inform` before it
  * gets here. This used to be a fourth arm that nothing could reach — dead
@@ -363,6 +376,7 @@ function denialFor(
   liveness: Exclude<Liveness, { kind: "finished" }>,
   subjects: WatchSubject[],
   fatal: boolean,
+  subagent: boolean,
 ): Denial {
   const watching = subjects.join(", ");
   const base = {
@@ -381,7 +395,7 @@ function denialFor(
         : {
             ...base,
             why: `${liveness.what} is still running. Watching it costs a turn per look and changes nothing.`,
-            hint: "END YOUR TURN. If this op is one of your own background tasks you will be re-invoked when it finishes. If it is not, say so to the user rather than waiting on it.",
+            hint: `${howToWait(subagent)} If it is not yours, say what you are waiting for rather than watching it.`,
           };
     case "nothing-watched":
       return {
@@ -394,8 +408,8 @@ function denialFor(
     case "unknown":
       return {
         ...base,
-        why: "Nothing here is going to wake you: this is not one of your background tasks, so no notification is coming no matter how long you watch.",
-        hint: "STOP and tell the user what you are waiting for and why. If you started this op yourself, re-run it with `run_in_background: true` so its completion notifies you.",
+        why: "Nothing here is going to wake you: this is not one of your background tasks, so watching it in the foreground costs a turn per look and no notification is coming from it.",
+        hint: `${howToWait(subagent)} If nothing you started is going to wake you, stop watching and say what you are waiting for and why.`,
       };
   }
 }
@@ -477,6 +491,6 @@ export const pollLoopGuard = defineGuard<BashInput>({
     state.tripped = [...new Set([...state.tripped, ...repeated])];
     writeFileSync(path, JSON.stringify(state));
 
-    return denialFor(liveness, repeated, seenBefore);
+    return denialFor(liveness, repeated, seenBefore, ctx.agent !== null);
   },
 });

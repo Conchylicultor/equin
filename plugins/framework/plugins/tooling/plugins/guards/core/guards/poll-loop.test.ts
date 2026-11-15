@@ -278,6 +278,36 @@ describe("poll-loop guard", () => {
       expect(v.kind).toBe("deny");
     });
 
+    test("the denial names the legal ways to wait, not a dead end", () => {
+      const missing = join(newDir(), "logs", "build.jsonl");
+      const v = runAll(Array.from({ length: 4 }, () => `cat ${missing}`));
+      expect(v.kind).toBe("deny");
+      const reason = v.kind === "deny" ? v.reason : "";
+      expect(reason).toContain("run_in_background: true");
+      expect(reason).toContain("END YOUR TURN");
+      expect(reason).toContain("./equin await <op>");
+    });
+
+    test("a subagent is pointed at ./equin await, never told to end its turn", () => {
+      const missing = join(newDir(), "logs", "build.jsonl");
+      const session = newSession();
+      let last: Verdict = { kind: "allow" };
+      for (let i = 0; i < 4; i++) {
+        last = pollLoopGuard.check(
+          { command: `cat ${missing}` },
+          createContext("/tmp", session, [], undefined, {
+            id: "a1b2c3d4e5f6",
+            type: "general-purpose",
+          }),
+        ) as Verdict;
+      }
+      expect(last.kind).toBe("deny");
+      const reason = last.kind === "deny" ? last.reason : "";
+      expect(reason).toContain("You are a subagent");
+      expect(reason).toContain("./equin await <op>");
+      expect(reason).not.toContain("END YOUR TURN");
+    });
+
     test("an empty log is a file waited FOR, not a result being read", () => {
       const dir = join(newDir(), "logs");
       mkdirSync(dir, { recursive: true });

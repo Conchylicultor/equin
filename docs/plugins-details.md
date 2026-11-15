@@ -22666,6 +22666,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ConfigV2.Register` "runtime-sdk-auto-resume"
           - `trigger` "runtime-sdk.attempt-ended"
           - `Workspace.Reclaimed` "runtime-sdk.agent-dirs"
+          - `conversations.stop-waiver` "background-work"
           - `report-kind` "sdk-agent-unresponsive"
           - `report-kind` "sdk-catch-up-overdue"
           - `report-kind` "sdk-consumer-stalled"

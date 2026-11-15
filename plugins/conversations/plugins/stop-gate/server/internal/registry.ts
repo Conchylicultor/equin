@@ -22,6 +22,14 @@ export interface StopGateEntry {
 export interface StopWaiverEntry {
   /** Stable id, for logs and the docs. */
   id: string;
+  /**
+   * When this waiver lets an agent stop, said to the agent: a blocked stop
+   * lists every waiver's `when`, so the refusal always names the legal way to
+   * wait instead of leaving the agent to find one (2026-11-15: an agent owing a
+   * report could neither end its turn on a background run nor watch it in the
+   * foreground). A clause completing "You may end your turn anyway while …".
+   */
+  when: string;
   waives(conversationId: string): Promise<string | null>;
 }
 

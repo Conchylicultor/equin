@@ -7,6 +7,7 @@ import { watchesOf } from "./queries";
  */
 export const watchStopWaiver = StopWaiver({
   id: "watch",
+  when: "a task subtree you watch still has work running — its next event wakes you with a turn",
   async waives(conversationId) {
     const busy = (await watchesOf(conversationId)).filter((w) => !w.quiet);
     if (busy.length === 0) return null;

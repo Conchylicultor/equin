@@ -18,7 +18,7 @@ export const reportStopGate = StopGate({
     if (report?.conversationId === conversationId) return { kind: "allow" };
     return {
       kind: "block",
-      reason: `Your mandate requires an outcome report and you have not submitted one: call \`${OUTCOME_REPORT_TOOL}\` before you stop.`,
+      reason: `Your mandate requires an outcome report and you have not submitted one: call \`${OUTCOME_REPORT_TOOL}\` once your work is done, before you stop.`,
     };
   },
 });

@@ -17,6 +17,7 @@ export const contextCompactCapability = Mandate.Capability({
  */
 export const compactionStopWaiver = StopWaiver({
   id: "self-compact",
+  when: "you have asked to compact your context (`compact_context`) — the compaction runs as your turn ends, and you continue from what you said next",
   async waives(conversationId) {
     return (await hasPendingCompaction(conversationId))
       ? "You asked to compact your context: it runs now, and you continue with what you said next."
