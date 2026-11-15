@@ -76,6 +76,7 @@ export function FullScreenCompare({
         <Inset x="lg" t="md" b="lg" className="size-full">
           <PairViewer
             pair={pair}
+            titled
             className="size-full"
             stageClassName={several ? cn("px-2xl") : undefined}
             trailing={

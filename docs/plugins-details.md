@@ -17571,16 +17571,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ids.IdKinds`
           - `infra/endpoints.useAssetSrc`
           - `network/live/live-state.ResourceErrorInline`
-          - `primitives/copy-to-clipboard.useCopyToClipboard`
+          - `primitives/copy-to-clipboard.CopyButton`
           - `primitives/css/center.Center`
           - `primitives/css/clip.Clip`
           - `primitives/css/fill.Fill`
           - `primitives/css/grid.Grid`
-          - `primitives/css/inline.Inline`
           - `primitives/css/layer.Layer`
           - `primitives/css/line.Line`
           - `primitives/css/link-chip.LinkChip`
           - `primitives/css/pin.Pin`
+          - `primitives/css/rigid.Rigid`
           - `primitives/css/surface.Surface`
           - `primitives/css/text.Text`
           - `primitives/css/theme-boundary.ColorSchemeRegion`
@@ -17673,11 +17673,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/color-palette --border`
           - `ui/tokens/color-palette --destructive`
           - `ui/tokens/color-palette --foreground`
+          - `ui/tokens/color-palette --muted`
           - `ui/tokens/color-palette --primary`
           - `ui/tokens/color-palette --ring`
           - `ui/tokens/data-view --cover-fill`
           - `ui/tokens/density --pad-row-x`
           - `ui/tokens/density --space-2xl`
+          - `ui/tokens/density --space-2xs`
           - `ui/tokens/density --space-sm`
           - `ui/tokens/shape --radius`
           - `ui/tokens/shape --spacing`
@@ -49173,12 +49175,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `InlineProps`
             - Exports (values): `Inline`
           - Cross-plugin:
-            - Imported by: 120 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
+            - Imported by: 119 plugins — full list in [`plugins/primitives/plugins/css/plugins/inline/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/inline/REFERENCE.md)
               - `apps` ×23
               - `debug` ×20
               - `reports` ×20
               - `primitives` ×14
-              - `conversations` ×10
+              - `conversations` ×9
               - `page` ×6
               - `tasks` ×5
               - `build` ×4
@@ -49549,9 +49551,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Rigid`
               - `rigidClass`
           - Cross-plugin:
-            - Imported by: 146 plugins — full list in [`plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md)
+            - Imported by: 147 plugins — full list in [`plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md)
               - `apps` ×35
-              - `conversations` ×28
+              - `conversations` ×29
               - `primitives` ×20
               - `debug` ×13
               - `page` ×8

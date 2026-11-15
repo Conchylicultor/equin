@@ -85,16 +85,16 @@ images.
     - `ids.IdKinds`
     - `infra/endpoints.useAssetSrc`
     - `network/live/live-state.ResourceErrorInline`
-    - `primitives/copy-to-clipboard.useCopyToClipboard`
+    - `primitives/copy-to-clipboard.CopyButton`
     - `primitives/css/center.Center`
     - `primitives/css/clip.Clip`
     - `primitives/css/fill.Fill`
     - `primitives/css/grid.Grid`
-    - `primitives/css/inline.Inline`
     - `primitives/css/layer.Layer`
     - `primitives/css/line.Line`
     - `primitives/css/link-chip.LinkChip`
     - `primitives/css/pin.Pin`
+    - `primitives/css/rigid.Rigid`
     - `primitives/css/surface.Surface`
     - `primitives/css/text.Text`
     - `primitives/css/theme-boundary.ColorSchemeRegion`
@@ -187,11 +187,13 @@ images.
     - `ui/tokens/color-palette --border`
     - `ui/tokens/color-palette --destructive`
     - `ui/tokens/color-palette --foreground`
+    - `ui/tokens/color-palette --muted`
     - `ui/tokens/color-palette --primary`
     - `ui/tokens/color-palette --ring`
     - `ui/tokens/data-view --cover-fill`
     - `ui/tokens/density --pad-row-x`
     - `ui/tokens/density --space-2xl`
+    - `ui/tokens/density --space-2xs`
     - `ui/tokens/density --space-sm`
     - `ui/tokens/shape --radius`
     - `ui/tokens/shape --spacing`

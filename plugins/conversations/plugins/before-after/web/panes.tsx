@@ -9,13 +9,11 @@ import {
 } from "@plugins/primitives/plugins/pane/web";
 import { rowOrStale, useLive } from "@plugins/network/plugins/live/web";
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
-import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import {
   Inset,
   Stack,
 } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
-import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { beforeAfterPairs, type BeforeAfterPair } from "../core";
@@ -23,7 +21,7 @@ import {
   CompareStateProvider,
   useCompareState,
 } from "./internal/compare-state";
-import { PairViewer } from "./components/pair-viewer";
+import { PairTitle, PairViewer } from "./components/pair-viewer";
 import { PairGallery } from "./components/pair-gallery";
 import { FullScreenCompare } from "./components/full-screen";
 
@@ -56,7 +54,11 @@ function useResolvePair({ pair }: { pair: string }): ResolveResult {
 export const beforeAfterPane = Pane.define({
   route: beforeAfterRoute,
   app: agentManagerApp,
-  title: { useText: "Before / after", component: BeforeAfterTitle },
+  title: {
+    useText: usePairTitleText,
+    fallback: "Before / after",
+    component: BeforeAfterTitle,
+  },
   useResolve: useResolvePair,
   component: BeforeAfterBody,
 });
@@ -69,28 +71,18 @@ function useConversationPairs(conversationId: string) {
   });
 }
 
-/** "Before / after" and how many pairs the pair's conversation has. */
+/** The pair's title — the tab's and the document's (a global live read, so
+ *  it runs outside the app's providers too). */
+function usePairTitleText({ pair }: { pair: string }): string | undefined {
+  return rowOrStale(usePairRow(pair))?.title;
+}
+
+/** The header title: the pair's title with its copy-id button, "Before /
+ *  after" until the row is read. */
 function BeforeAfterTitle(): ReactNode {
   const { pair } = beforeAfterPane.useParams();
   const row = rowOrStale(usePairRow(pair));
-  return (
-    <Inline gap="sm" align="baseline">
-      Before / after
-      {row === undefined ? null : (
-        <PairCount conversationId={row.conversationId} />
-      )}
-    </Inline>
-  );
-}
-
-function PairCount({ conversationId }: { conversationId: string }): ReactNode {
-  const pairs = useConversationPairs(conversationId);
-  if (pairs.status !== "ready") return null;
-  return (
-    <Text tone="faint">
-      {`${String(pairs.data.length)}${pairs.canGrow ? "+" : ""}`}
-    </Text>
-  );
+  return row === undefined ? "Before / after" : <PairTitle pair={row} />;
 }
 
 /** The header's full-screen action: the pane's viewer over the whole window. */
