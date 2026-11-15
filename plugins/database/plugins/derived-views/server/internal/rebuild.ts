@@ -191,14 +191,17 @@ export async function rebuildDerivedViews(
   });
 }
 
-// Drops every plain view that is LIVE in the `public` schema, ahead of pending
-// migrations. Views are derived code rebuilt from source right after migrations
-// (`rebuildDerivedViews`), so nothing is lost — but while they exist, a migration
-// that drops or retypes a column a live view reads fails ("cannot drop column …
+// Drops every plain view that is LIVE in the `public` schema, when a pending
+// migration statement is refused because a view is in its way (the runner's
+// `runSteps` calls it then, never up front — an up-front drop held every view
+// locked for the whole schema layer). Views are derived code rebuilt from
+// source right after migrations (`rebuildDerivedViews`), so nothing is lost —
+// but while they exist, a migration that drops or retypes a column a live view
+// reads fails ("cannot drop column …
 // because other objects depend on it"). drizzle-kit never sees the views, so it
 // cannot order a DROP VIEW itself, and push regenerates schema migrations, so a
-// hand-added DROP VIEW never survives. Dropping the whole layer first makes that
-// class of failure impossible.
+// hand-added DROP VIEW never survives. Dropping the whole layer on the first
+// conflict makes that class of failure impossible.
 //
 // The LIVE set, not the declared one: the view in the way is the one the
 // previous code created, which the current declarations may no longer name.

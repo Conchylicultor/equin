@@ -420,10 +420,13 @@ restart error `./equin build` prints.
 ## Views never block a migration
 
 Plain views are derived code (`database/derived-views`), rebuilt from source at
-the end of the one boot schema-layer transaction. When any migration is pending,
-that transaction first drops every live `public` view (`dropDerivedViews`), so a
-migration that drops or retypes a column a view reads just works, and the
-previous backend never reads a missing view during a hot-swap. Never hand-add
+the end of the one boot schema-layer transaction. When a migration statement
+conflicts with a live view (Postgres refuses it: a DROP / retype of a column a
+view reads), the runner rolls that step back to its savepoint, drops every live
+`public` view (`dropDerivedViews`) and applies the step again — so such a
+migration just works, and the previous backend never reads a missing view
+during a hot-swap. A migration that conflicts with no view drops none, so the
+views stay readable for the whole layer (`derived-views/CLAUDE.md`). Never hand-add
 a `DROP VIEW` to a schema migration: push regenerates schema migrations and
 refuses hand-edited ones.
 
@@ -439,10 +442,10 @@ before push:
   connection** (the ~99% case).
 - **Slow path** — otherwise it opens a direct connection to the live **main** DB
   and calls `dryRunPendingMigrations` (`server/internal/runner.ts`), which is
-  `applySchemaLayer(…, { commit: false })`: the very function boot runs (drop the
-  live views, the phased steps, derived updatedAt, derived tables, rebuild the
-  views, all in one transaction) ending in a sentinel throw that **always rolls
-  back**. The check process never boots, so it hands the layer its inputs itself
+  `applySchemaLayer(…, { commit: false })`: the very function boot runs (the
+  phased steps — dropping the live views only when one is in a step's way —
+  derived updatedAt, derived tables, rebuild the views, all in one
+  transaction) ending in a sentinel throw that **always rolls back**. The check process never boots, so it hands the layer its inputs itself
   — views, derived tables and updatedAt specs read from main's server barrels
   (`check/internal/declared-schema-inputs.ts`); registry reads would come back
   empty there. Applying against main's real schema + data reproduces the boot

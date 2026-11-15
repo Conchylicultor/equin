@@ -40,20 +40,29 @@ generates **no migration at all**.
 ### Views never block a migration
 
 - `dropDerivedViews(db)` (server) drops every view **live** in `public`, in one
-  statement, at the start of that same transaction — **only when a migration is
-  pending**. A live view would otherwise block any migration that drops or
-  retypes a column it reads ("other objects depend on it"), and neither
-  drizzle-kit (which never sees views) nor a hand edit (push regenerates schema
-  migrations; the phaser rejects `CREATE/DROP VIEW`) can put a `DROP VIEW` in
-  front of it. The rebuild then finds views missing and recreates them.
+  statement, inside that same transaction — **only when a migration statement
+  conflicts with a live view**. The runner (`migrations` `runSteps`) applies
+  each step under a savepoint; when Postgres refuses it because a view is in
+  the way (2BP01 "other objects depend on it" on a DROP COLUMN / TABLE, 0A000
+  on an ALTER COLUMN TYPE), it rolls the step back, drops the layer and applies
+  the step again. Neither drizzle-kit (which never sees views) nor a hand edit
+  (push regenerates schema migrations; the phaser rejects `CREATE/DROP VIEW`)
+  can put a `DROP VIEW` in front of it. The rebuild then finds views missing
+  and recreates them.
+- **Never up front.** A `DROP VIEW` locks the view (AccessExclusive) until
+  commit, so every view reader on live main — the boot layer and every
+  `migration-applies-clean` dry run — would wait out the whole layer, backfills
+  included. A migration that conflicts with no view takes no lock on the views.
 - It drops the live set, not the declared one, because the view in the way is
   the one the previous code created, which current declarations may not name.
 - Because drop, migrations and rebuild commit together, the previous backend
   never reads a missing view during a hot-swap: it waits on the transaction's
   locks, then sees the new layer. A failure anywhere leaves the old views, the
   old columns and the ledger untouched.
-- With nothing pending no view is dropped, and the rebuild takes its
-  skip-when-unchanged path — the steady-state restart opens no lock window.
+- With no conflict no view is dropped, and the rebuild takes its
+  skip-when-unchanged path unless a view's own source changed — so neither the
+  steady-state restart nor a migration that leaves the views alone opens a lock
+  window on them.
 - The view set is an argument, not read inside the rebuild, because the
   `migration-applies-clean` check also rebuilds the views (in its rolled-back
   dry-run on main's DB) from a process that never boots. It gathers the same set

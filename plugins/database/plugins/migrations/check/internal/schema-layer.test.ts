@@ -16,6 +16,7 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { sql } from "drizzle-orm";
 import { integer, pgView, text } from "drizzle-orm/pg-core";
+import { Client } from "pg";
 import { z } from "zod";
 import {
   createTestDb,
@@ -172,6 +173,51 @@ describe("applySchemaLayer", () => {
       ),
     ).toEqual({ pending: 0, rollups: [], deferredContract: null });
     expect(await viewRows(t)).toHaveLength(2);
+  });
+
+  test("a migration no view is in the way of leaves the views readable while the layer runs", async () => {
+    // A slow step on a table no view reads — a backfill's shape. Before, the
+    // layer dropped every live view up front, so a view reader waited out the
+    // whole layer (report-1794568287-y1ejjk: conversations_v reads of 1–13 s).
+    const slow = mig(
+      "20260102_000000",
+      "eeeeeeee",
+      "sl_unrelated",
+      `CREATE TABLE "sl_unrelated" ("id" integer);
+       SELECT pg_sleep(1.5);`,
+    );
+    const viewOid = async (): Promise<string> =>
+      (
+        await executeRows(t.db, {
+          query: sql`SELECT 'sl_widgets_v'::regclass::oid::text AS oid`,
+          row: z.object({ oid: z.string() }),
+          label: "test: view oid",
+        })
+      )[0]!.oid;
+    const before = await viewOid();
+
+    const reader = new Client({ connectionString: t.connectionString });
+    await reader.connect();
+    try {
+      const layer = applySchemaLayerFrom(
+        t.db,
+        [base, slow],
+        withViews(oldView),
+        { commit: true, deferContract: false },
+      );
+      await Bun.sleep(500);
+      // Mid-layer: a read of the view must not wait on any lock.
+      await reader.query("SET lock_timeout = '200ms'");
+      const read = await reader.query(
+        "SELECT count(*)::int AS n FROM sl_widgets_v",
+      );
+      expect(read.rows).toEqual([{ n: 2 }]);
+      expect((await layer).pending).toBe(1);
+    } finally {
+      await reader.end();
+    }
+    // The view was never dropped (nor rebuilt: its source did not change).
+    expect(await viewOid()).toBe(before);
   });
 
   test("a failure in the view rebuild leaves the ledger, the columns and the old views intact", async () => {

@@ -688,12 +688,16 @@ function reportPlan(
 // the migrations log before it propagates: the process is about to die, and
 // its stderr is not where anyone reading this worktree's logs looks.
 //
-// `dropViews` is the boot layer's: the caller rebuilds the views after.
+// `dropViewsOnConflict` is the boot layer's (see `runSteps`): the caller rebuilds
+// the views after.
 // `deferContract`: see `SchemaPlanOptions`.
 async function planAndRun(
   tx: Tx,
   migrations: Migration[],
-  { dropViews, deferContract }: { dropViews: boolean; deferContract: boolean },
+  {
+    dropViewsOnConflict,
+    deferContract,
+  }: { dropViewsOnConflict: boolean; deferContract: boolean },
 ): Promise<{ pending: number; deferredContract: string | null }> {
   try {
     const ledger = await getAppliedLedger(tx, { inLayer: true });
@@ -702,12 +706,7 @@ async function planAndRun(
       deferContract,
     });
     reportPlan(migrations, ledger, plan);
-    // Views never block a migration: a live view reading a column a pending
-    // migration drops or retypes would fail it. Drop the whole live layer
-    // first — only when something is pending, so a steady-state boot opens
-    // no lock window — and the caller rebuilds it, in this same transaction.
-    if (dropViews && plan.pendingFiles.length > 0) await dropDerivedViews(tx);
-    await runSteps(tx, plan.steps);
+    await runSteps(tx, plan.steps, { dropViewsOnConflict });
     return {
       pending: plan.pendingFiles.length,
       deferredContract: plan.deferredContract,
@@ -718,7 +717,64 @@ async function planAndRun(
   }
 }
 
-async function runSteps(tx: Tx, steps: readonly SchemaStep[]): Promise<void> {
+// What Postgres answers a statement that a live view is in the way of: a DROP
+// COLUMN / DROP TABLE under a view (2BP01 dependent_objects_still_exist), an
+// ALTER COLUMN TYPE of a column a view reads (0A000 feature_not_supported,
+// "cannot alter type of a column used by a view or rule"). 0A000 is wider than
+// that; any other cause fails again on the second run, below, and propagates.
+const VIEW_IN_THE_WAY_CODES: ReadonlySet<string> = new Set(["2BP01", "0A000"]);
+
+function isViewInTheWay(e: unknown): boolean {
+  return (
+    e instanceof Error &&
+    "code" in e &&
+    typeof e.code === "string" &&
+    VIEW_IN_THE_WAY_CODES.has(e.code)
+  );
+}
+
+// Views never block a migration: a live view reading a column a pending
+// migration drops or retypes would fail it. The live view layer is dropped
+// (and the caller rebuilds it, in this same transaction) only when a step
+// actually conflicts with it — Postgres says so — never up front.
+//
+// Why not up front: a DROP VIEW holds an AccessExclusive lock on every view
+// until the layer commits, so every reader of every view (conversations_v,
+// tasks_v — the agent manager's hot path) waited out the WHOLE layer, data
+// backfills included, even when no migration touched a table a view reads:
+// 4–13 s stalls on every deploy with a migration and on every
+// `migration-applies-clean` dry run against live main (2026-11-13 → 11-15,
+// report-1794568287-y1ejjk). A step that conflicts already takes an
+// AccessExclusive lock on the table it alters, so dropping the views at that
+// point adds little: the window starts where the migration's own does.
+//
+// Each step runs under a savepoint until the views are dropped, so a conflict
+// rolls back just that step, which then runs again with the views gone.
+async function runSteps(
+  tx: Tx,
+  steps: readonly SchemaStep[],
+  { dropViewsOnConflict }: { dropViewsOnConflict: boolean },
+): Promise<void> {
+  let viewsDropped = false;
+  const execute = async (label: string, sqlText: string): Promise<void> => {
+    if (!dropViewsOnConflict || viewsDropped) {
+      await tx.execute(drizzleSql.raw(sqlText));
+      return;
+    }
+    try {
+      await tx.transaction(async (sp) => {
+        await sp.execute(drizzleSql.raw(sqlText));
+      });
+    } catch (e) {
+      if (!isViewInTheWay(e)) throw e;
+      log.publish(
+        `[migrate] ${label} conflicts with a live view (${(e as Error).message}): dropping the view layer and applying it again`,
+      );
+      await dropDerivedViews(tx);
+      viewsDropped = true;
+      await tx.execute(drizzleSql.raw(sqlText));
+    }
+  };
   for (const step of steps) {
     if (step.kind === "record") {
       await tx.execute(
@@ -742,7 +798,7 @@ async function runSteps(tx: Tx, steps: readonly SchemaStep[]): Promise<void> {
       step.phase === "whole" ? step.file : `${step.file} (${step.phase})`;
     log.publish(`[migrate] applying ${label}`);
     try {
-      await tx.execute(drizzleSql.raw(step.sql));
+      await execute(label, step.sql);
     } catch (e) {
       // This one throw site applies every migration, so its frames are the
       // same for all of them: the subject (the migration, by its stable slug)
@@ -814,14 +870,17 @@ export async function applySchemaLayerFrom(
         );
       }
       ({ pending, deferredContract } = await step("migrations", () =>
-        planAndRun(tx, migrations, { dropViews: true, deferContract }),
+        planAndRun(tx, migrations, {
+          dropViewsOnConflict: true,
+          deferContract,
+        }),
       ));
       if (!commit && deferredContract !== null) {
         // The dry run plays the deferred run too, on the ledger the boot plan
         // just wrote: the claimed data again, then the contract — what the
         // serving backend does once the old code is gone.
         await planAndRun(tx, migrations, {
-          dropViews: true,
+          dropViewsOnConflict: true,
           deferContract: false,
         });
       }
@@ -872,7 +931,9 @@ export async function applySchemaLayerFrom(
 }
 
 // The boot schema layer, in ONE transaction:
-//   1. if any migration is pending, drop every live public view;
+//   1. (no step) the live views are left alone unless a migration statement
+//      conflicts with one — then every live public view is dropped right
+//      there (`runSteps`) and the statement applied again;
 //   2. the pending migrations (`planSchemaSteps`: legacy files whole, each
 //      phased schema migration as expand → claimed data → contract), each
 //      file's ledger row right after its last step — except the LAST group's
@@ -886,8 +947,10 @@ export async function applySchemaLayerFrom(
 // One transaction because the previous backend keeps serving during a hot-swap:
 // it waits on this transaction's locks instead of reading missing views, and a
 // failure at any step leaves the whole layer — ledger, columns, old views —
-// untouched. On a boot with nothing pending, no view is dropped and each derived
-// step takes its skip-when-unchanged path, so no new lock window opens.
+// untouched. A migration that conflicts with no view (most do: new tables, new
+// columns, backfills) drops none, and on a boot with nothing pending each
+// derived step takes its skip-when-unchanged path, so neither opens a lock
+// window on the views beyond the rebuild of a view whose source changed.
 //
 // `commit: false` is the dry run (`dryRunPendingMigrations`): the same code
 // under the live-DB timeouts, always rolled back, contract included. Only a
@@ -921,7 +984,7 @@ export async function runMigrations(
 ): Promise<void> {
   await db.transaction(async (tx) => {
     await planAndRun(tx, migrations, {
-      dropViews: false,
+      dropViewsOnConflict: false,
       deferContract: false,
     });
   });
