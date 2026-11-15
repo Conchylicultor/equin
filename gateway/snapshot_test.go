@@ -406,12 +406,13 @@ func TestRobotsAndSitemapForwardedToBackend(t *testing.T) {
 		if h := r.Header.Get("X-Forwarded-Proto"); h != "http" {
 			t.Errorf("%s: X-Forwarded-Proto = %q", p, h)
 		}
-		if h := r.Header.Get(principalHeader); h != principalOwner {
+		// A forwarding header means a proxy stood in front: never the owner.
+		if h := r.Header.Get(principalHeader); h != principalVisitor {
 			t.Errorf("%s: principal = %q", p, h)
 		}
 	}
 
-	// A TLS proxy's scheme and an anonymous (public) visitor reach it as such.
+	// A TLS proxy's scheme reaches it, and its visitor as a visitor.
 	req := httptest.NewRequest(http.MethodGet, "http://alpha.localhost:9000/robots.txt", nil)
 	req.Host = "alpha.localhost:9000"
 	req.Header.Set("X-Forwarded-Proto", "https")
@@ -421,8 +422,8 @@ func TestRobotsAndSitemapForwardedToBackend(t *testing.T) {
 	if h := r.Header.Get("X-Forwarded-Proto"); h != "https" {
 		t.Errorf("X-Forwarded-Proto = %q, want the front proxy's https", h)
 	}
-	if h := r.Header.Get(principalHeader); h != principalAnonymous {
-		t.Errorf("cross-site principal = %q, want anonymous", h)
+	if h := r.Header.Get(principalHeader); h != principalVisitor {
+		t.Errorf("proxied principal = %q, want visitor", h)
 	}
 }
 

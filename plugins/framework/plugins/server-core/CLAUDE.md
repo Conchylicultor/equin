@@ -626,6 +626,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `isProcessCrashHandled`
     - `isServerReady`
     - `keptSnapshotValue`
+    - `LIVE_STATE_SOCKET_ACCESS`
     - `loadResourceByKey`
     - `loadResourceFresh`
     - `machineCollectedDir`

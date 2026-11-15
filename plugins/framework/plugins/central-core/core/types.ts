@@ -1,4 +1,5 @@
 import type { ServerWebSocket } from "bun";
+import type { SocketAccess } from "@plugins/framework/plugins/principal/core";
 
 export interface WsData {
   path: string;
@@ -10,6 +11,11 @@ export interface WsHandler {
   close(ws: ServerWebSocket<WsData>, code: number, reason: string): void;
   /** The socket's send queue drained after a `send` hit backpressure. */
   drain?(ws: ServerWebSocket<WsData>): void;
+  /**
+   * Who may open it: absent is the owner only; `{ visitor: "<reason>" }` adds
+   * a deployed site's visitors. No socket is public (`framework/principal`).
+   */
+  readonly access?: SocketAccess;
 }
 
 export type HttpHandler = (

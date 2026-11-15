@@ -232,7 +232,9 @@ const gate = hostGateFromArgv(process.argv);
 const gatedRoutes = gate.routes({
   tableRoute: CENTRAL_HOST_ROUTES_ROUTE,
   http: httpRoutes,
-  wsPaths: Object.keys(wsRoutes),
+  ws: Object.entries(wsRoutes).map(
+    ([path, handler]) => [path, handler.access ?? "owner"] as const,
+  ),
 });
 
 const handleHttp = createRequestHandler({
@@ -254,7 +256,7 @@ const server = Bun.serve<WsData>({
       const handler = wsRoutes[url.pathname];
       if (handler) {
         // No socket is public (behind the gateway's own refusal).
-        const refused = gate.refuseUpgrade(req, url.pathname);
+        const refused = gate.refuseUpgrade(req, url.pathname, handler.access);
         if (refused) return refused;
         server.upgrade(req, { data: { path: url.pathname } });
         return;

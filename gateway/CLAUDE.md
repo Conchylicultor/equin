@@ -27,7 +27,7 @@ See the top-level [`CLAUDE.md`](../CLAUDE.md) for overall architecture and [`ser
 - **Children get a declared environment, not an inherited one** — the gateway used to hand every child its own environment, i.e. whatever its starter carried. Started from an agent shell, that put the shell's `EQUIN_CONVERSATION_ID`, `TMUX` and `CLAUDE_*` into every backend on the host. Now the launcher declares the names (`-child-env`), `env.go` captures that subset once at boot, and `env.go` is the only file allowed to call `os.Environ()` or `exec.Command` (the `launcher:gateway-env-explicit` check) — so no exec site can fall back to Go's nil-`Env` "inherit everything"
 - **Unix domain sockets, not TCP loopback** — eliminates the IPv4/IPv6 bind-shape asymmetry that allowed unrelated processes to silently steal traffic on macOS (an IPv4-loopback squatter could coexist with a dual-stack listener on the same port). UDS scopes the gateway↔backend channel by filesystem path, removes the port allocator entirely, and removes any LAN-exposure surface.
 - **Loopback front door, both families** — the gateway's own port binds `127.0.0.1` and `[::1]` as two listeners (`listenAddrs` in `main.go`), never one dual-stack wildcard, so it is unreachable off-box (and trips no macOS incoming-connections prompt) and no IPv4- or IPv6-loopback squatter can coexist with it on the port: `[::1]` in use is fatal, like `127.0.0.1`; only `[::1]` *unavailable* (no IPv6) degrades to IPv4 with a warning. Every interface is the explicit `-listen :<port>` (`EQUIN_LISTEN=:<port>`).
-- **`/gateway/*` is a reserved path** on every host — the gateway intercepts it before proxying. Apps call `GET /gateway/worktrees` to list instances. This is an official API, not internal plumbing
+- **`/gateway/*` is a reserved path** on every host — the gateway intercepts it before proxying, and answers the owner only (see "Principal"). Local tools call `GET /gateway/worktrees` to list instances. This is an official API, not internal plumbing
 
 ## Routing Rules
 
@@ -117,13 +117,18 @@ the shell is `no-cache`.
 
 ## Principal (who a request is)
 
-`principal.go` turns every request into `owner` or `anonymous` (`principalOf`) and `Proxy.ServeHTTP` stamps it as `X-Equin-Principal` first thing, deleting any client-sent value (the HTTP reverse proxy and the WebSocket `r.Write` replay both carry it). The gateway's own direct-socket calls (`/api/health/ready`, `/api/boot/gateway-report`) stamp `owner`. The backends enforce per-route access from the header; the gateway itself refuses two things, `403 {"reason":"cross-site-refused",...}`: an anonymous non-GET/HEAD `/gateway/*` call, and any anonymous WebSocket upgrade. Same-origin, not same-site:
+`principal.go` turns every request into `owner`, `visitor` or `anonymous` (`principalOf`) and `Proxy.ServeHTTP` stamps it as `X-Equin-Principal` first thing, deleting any client-sent value (the HTTP reverse proxy and the WebSocket `r.Write` replay both carry it). The gateway's own direct-socket calls (`/api/health/ready`, `/api/boot/gateway-report`) stamp `owner`. The backends enforce per-route access from the header; the gateway itself refuses two things, `403 {"reason":"cross-site-refused",...}`: **every `/gateway/*` request from anyone but the owner** (any method — `gatewayAPIRefused`, checked in the one branch that dispatches to `handleGatewayAPI`), and any anonymous WebSocket upgrade. Same-origin, not same-site:
 
 1. Host not an equin host (no namespace, not `localhost`/`127.0.0.1`/`::1`, not in `-public-hosts`) -> anonymous (DNS rebinding). `-public-hosts` (comma-separated) is how a deployed site, whose Caddy forwards the public Host unchanged, names its own hostnames; the launcher passes it from `EQUIN_PUBLIC_HOSTS`.
-2. `Sec-Fetch-Site` `same-origin` or `none` -> owner.
-3. No `Sec-Fetch-Site` and no `Origin` -> owner (local tools).
-4. No `Sec-Fetch-Site`, `Origin` == `http://<Host>` or `https://<Host>` -> owner (old browsers).
-5. Otherwise anonymous (cross-site, sibling namespace, `Origin: null`).
+2. Came through an edge -> **visitor**: the Host is one of `-public-hosts`, or the request carries a forwarding header (`X-Forwarded-For`, `X-Forwarded-Host`, `X-Forwarded-Proto`, `Forwarded` — Caddy sets them; a local tool dialling the gateway sends none, nor does a handover's hop). The rules below read headers a browser cannot forge — but a stranger's `curl` can send any of them, or none ("a local tool"), so on the internet they prove nothing. A deployed site's owner reaches it on the box (SSH → loopback), never through Caddy. Before 2026-11-15 a public host fell through to rule 3, so `curl -X POST https://equin.ai/gateway/worktrees/<site>/stop?hold=1` was the owner.
+3. `Sec-Fetch-Site` `same-origin` or `none` -> owner.
+4. No `Sec-Fetch-Site` and no `Origin` -> owner (local tools).
+5. No `Sec-Fetch-Site`, `Origin` == `http://<Host>` or `https://<Host>` -> owner (old browsers).
+6. Otherwise anonymous (cross-site, sibling namespace, `Origin: null`).
+
+Any proxy in front of a gateway makes its callers visitors — a tunnel (Tailscale serve, cloudflared, ngrok) to a dev gateway included: the owner reaches the gateway directly, never through a proxy. The stamp vocabulary is a release host part (`principalStamps`, `release-swap.ts`): a release that changes it restarts the host rather than handing the gateway over beside a backend that cannot read the new stamp.
+
+The deployed site's Caddy also refuses `/gateway/*` (`caddySite`, a second layer). `TestGatewayAPIRefusesEveryoneButTheOwner` reads every `/gateway/…` literal out of the gateway's sources and asserts each, under every method, is refused to a public curl, a forged same-origin visitor, a proxied loopback request and a cross-site page — a route added later is covered the day it is written.
 
 **The handshake.** Every backend (central included) gets the bare `--principal-stamped` at the end of its argv (`principalStampedFlag`, `backendLaunch`): "this gateway stamps the header". A backend enforces fail-closed — a missing header is anonymous — only when it sees the flag (`readPrincipalStamp`, `plugins/framework/plugins/principal`). The gateway binary is a shared dependency a worktree's `./equin build` neither rebuilds nor restarts (main's deploy restarts it once a change lands — "The gateway follows main"), so a backend can boot behind a gateway older than the stamp; without the handshake it would refuse everything, this gateway's own readiness probe included, and every namespace would stay down. Behind such a gateway the backend serves ungated (the pre-principal status quo), logs `[principal] this gateway predates the principal stamp …` at boot, and the health report's Gateway row turns stale. **The protection takes effect once the gateway is restarted — which main's deploy does by itself after the push that changes it (by hand: `./equin start --force`).** The flag and the Go constant are pinned to the TS one by `principal:header-in-sync`.
 
@@ -224,7 +229,7 @@ gateway/
 ├── document_head.go # The backend-rendered <head> fragment spliced into the SPA shell
 ├── snapshot.go    # A crawlable dist's static page snapshot (manifest + fragments) spliced into the shell
 ├── encoding.go    # Content-encoding of statics: precompressed-sidecar negotiation, on-the-fly gzip of the spliced shell
-├── principal.go   # principalOf: owner/anonymous verdict, X-Equin-Principal stamp, cross-site refusal
+├── principal.go   # principalOf: owner/visitor/anonymous verdict, X-Equin-Principal stamp, cross-site refusal
 ├── content.go     # the content host: <item>.content.localhost/<ns>/api/… stamped `content`, nothing else served
 ├── crash_report.go # The report outbox writer; a backend's signal death as a backend-crash entry
 ├── exit_report.go # Every unrequested backend death filed (backend-exit for an exit code) and counted into crash loops (backend-crash-loop)

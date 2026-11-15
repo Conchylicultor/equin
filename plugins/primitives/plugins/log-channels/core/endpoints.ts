@@ -37,6 +37,11 @@ export const emitLogs = defineEndpoint({
   // Log lines only: an agent session's browser logs like a user's (main is
   // read-only for agents otherwise).
   agentWrite: "telemetry",
+  // A deployed site's pages log like the owner's (its site-reports read them
+  // back over SSH); never a foreign page, which could fill the disk.
+  access: {
+    visitor: "a deployed site's pages emit their browser log lines here",
+  },
   body: EmitLogsBodySchema,
   response: EmitLogsResultSchema,
   // One batch is one ring trim plus one file write, so this route has no honest

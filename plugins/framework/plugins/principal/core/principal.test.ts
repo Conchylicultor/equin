@@ -17,6 +17,15 @@ describe("principalOf", () => {
     });
   });
 
+  test("visitor exactly is a visitor, never the owner", () => {
+    expect(principalOf(req({ [PRINCIPAL_HEADER]: "visitor" })).kind).toBe(
+      "visitor",
+    );
+    expect(principalOf(req({ [PRINCIPAL_HEADER]: "Visitor" })).kind).toBe(
+      "anonymous",
+    );
+  });
+
   test("the header name is case-insensitive", () => {
     expect(principalOf(req({ "X-Equin-Principal": "owner" })).kind).toBe(
       "owner",

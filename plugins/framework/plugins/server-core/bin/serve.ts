@@ -12,6 +12,7 @@ import {
   recordMemoryCheckpoint,
   notificationsWsHandler,
   hostHttpRoutes,
+  LIVE_STATE_SOCKET_ACCESS,
   reportServerError,
   markServerReady,
   markServerSettled,
@@ -203,7 +204,11 @@ export async function serve({
     }
 
     // Core-owned socket for the live-state primitive.
-    wsRoutes["/ws/notifications"] = notificationsWsHandler;
+    // A deployed site's pages are its visitors', so they may open it too.
+    wsRoutes["/ws/notifications"] = {
+      ...notificationsWsHandler,
+      access: LIVE_STATE_SOCKET_ACCESS,
+    };
 
     const handle = createRequestHandler({
       // Plugin routes + the live-state read (the table the browser host mounts
@@ -216,7 +221,9 @@ export async function serve({
       routes: gate.routes({
         tableRoute: HOST_ROUTES_ROUTE,
         http: hostHttpRoutes(ordered),
-        wsPaths: Object.keys(wsRoutes),
+        ws: Object.entries(wsRoutes).map(
+          ([path, handler]) => [path, handler.access ?? "owner"] as const,
+        ),
       }),
       onError: (errObj, req, pathname) => {
         // Fail loudly: always emit a durable log line (captured by the gateway into
@@ -321,8 +328,9 @@ export async function serve({
         const handler = wsRoutes[url.pathname];
         if (handler) {
           // No socket is public: an anonymous upgrade is refused here too,
-          // behind the gateway's own refusal.
-          const refused = gate.refuseUpgrade(req, url.pathname);
+          // behind the gateway's own refusal; a visitor only on a socket
+          // that admits one.
+          const refused = gate.refuseUpgrade(req, url.pathname, handler.access);
           if (refused) return refused;
           server.upgrade(req, { data: { path: url.pathname } });
           return;

@@ -1,7 +1,10 @@
 import type { SinkHandler } from "./sink-handler";
 import type { BootHookContext } from "./profiler";
 import type { ServerWebSocket } from "bun";
-import type { EndpointAccess } from "@plugins/framework/plugins/principal/core";
+import type {
+  EndpointAccess,
+  SocketAccess,
+} from "@plugins/framework/plugins/principal/core";
 
 export interface WsData {
   path: string;
@@ -17,6 +20,11 @@ export interface WsHandler {
    * rather than queue it).
    */
   drain?(ws: ServerWebSocket<WsData>): void;
+  /**
+   * Who may open it: absent is the owner only; `{ visitor: "<reason>" }` adds
+   * a deployed site's visitors. No socket is public (`framework/principal`).
+   */
+  readonly access?: SocketAccess;
 }
 
 export type HttpHandler = (

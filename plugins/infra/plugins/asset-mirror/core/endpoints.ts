@@ -16,16 +16,25 @@ import {
  * out that way — the router has no splat, so each depth is its own route onto
  * the same handler.
  */
+/**
+ * A mirrored file is a public asset (a font, a poster, an emoji set) a
+ * deployed site's pages load like any other file.
+ */
+const MIRRORED_FILE_VISITOR_REASON =
+  "a deployed site's pages load their mirrored public assets (media, fonts, data files)";
+
 /** One mirrored file: `/api/asset-mirror/<id>/<file>`. */
 export const getMirroredFile = defineEndpoint({
   route: "GET /api/asset-mirror/:id/:file",
   response: blob(),
+  access: { visitor: MIRRORED_FILE_VISITOR_REASON },
 });
 
 /** One mirrored file one directory deep: `/api/asset-mirror/<id>/<dir>/<file>`. */
 export const getMirroredNestedFile = defineEndpoint({
   route: "GET /api/asset-mirror/:id/:dir/:file",
   response: blob(),
+  access: { visitor: MIRRORED_FILE_VISITOR_REASON },
 });
 
 /**

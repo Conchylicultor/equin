@@ -11,30 +11,49 @@ import { z } from "zod";
 export const PRINCIPAL_HEADER = "x-equin-principal";
 
 /**
+ * The values the gateway stamps under {@link PRINCIPAL_HEADER}, one per
+ * principal kind. Pinned to the gateway's Go constants (`principalOwner`, …
+ * in `gateway/principal.go`) by the `principal:header-in-sync` check: a stamp
+ * the hosts do not know reads as anonymous (fail closed).
+ */
+export const PRINCIPAL_STAMPS = {
+  owner: "owner",
+  anonymous: "anonymous",
+  visitor: "visitor",
+  content: "content",
+} as const;
+
+/**
  * Who a request is, as the edge decided it. `owner`: the person this instance
  * belongs to — their own pages (same-origin), a typed URL, or a local tool
- * (the CLI, MCP, a script: no browser headers at all). `anonymous`: anyone
- * else — another site, a sibling namespace, an opaque origin, a DNS-rebound
- * host. Hosted widens it (a device, an agent, a share link).
+ * (the CLI, MCP, a script: no browser headers at all) on this machine.
+ * `visitor`: anyone who came through a deployed site's public edge (Caddy) —
+ * a stranger on the internet, on the site's own origin; never the owner,
+ * whatever headers they send. `anonymous`: anyone else — another site, a
+ * sibling namespace, an opaque origin, a DNS-rebound host. `content`: a
+ * request on the content host. Hosted widens it (a device, an agent, a share
+ * link).
  */
-export type Principal =
-  { kind: "owner" } | { kind: "anonymous" } | { kind: "content" };
+export type Principal = { kind: keyof typeof PRINCIPAL_STAMPS };
 
 const OWNER: Principal = { kind: "owner" };
 const ANONYMOUS: Principal = { kind: "anonymous" };
+const VISITOR: Principal = { kind: "visitor" };
 const CONTENT: Principal = { kind: "content" };
 
 /**
- * The principal a request carries. Exactly `owner` → owner; exactly `content`
- * → content (a request on the content host, `<item>.content.localhost` — never
- * the owner); anything else — a missing header included — is anonymous. Fail
- * closed: a request that did not come through the gateway was not vouched for
- * by it.
+ * The principal a request carries. Exactly `owner` → owner; exactly `visitor`
+ * → visitor (through a deployed site's public edge — never the owner);
+ * exactly `content` → content (a request on the content host,
+ * `<item>.content.localhost` — never the owner); anything else — a missing
+ * header included — is anonymous. Fail closed: a request that did not come
+ * through the gateway was not vouched for by it.
  */
 export function principalOf(req: Request): Principal {
   const stamp = req.headers.get(PRINCIPAL_HEADER);
-  if (stamp === "owner") return OWNER;
-  if (stamp === "content") return CONTENT;
+  if (stamp === PRINCIPAL_STAMPS.owner) return OWNER;
+  if (stamp === PRINCIPAL_STAMPS.visitor) return VISITOR;
+  if (stamp === PRINCIPAL_STAMPS.content) return CONTENT;
   return ANONYMOUS;
 }
 
@@ -42,13 +61,34 @@ export function principalOf(req: Request): Principal {
  * Who may call a route. `"owner"` is the default — never written in a
  * declaration, it is what an endpoint without `access` is. `{ public }` lets
  * an anonymous caller in, and says why (the reason is what a reviewer reads):
- * `defineEndpoint({ …, access: { public: "<reason>" } })`. `{ content }`
+ * `defineEndpoint({ …, access: { public: "<reason>" } })`. `{ visitor }`
+ * serves the owner and a deployed site's visitors (anyone through its public
+ * edge), never a foreign page: what every page of a deployed site boots and
+ * reports through (the live-state read and socket, the log sink, served
+ * assets) — not a cross-site reader of the owner's own machine. `{ content }`
  * serves the route ONLY on the content host (`<item>.content.localhost`), to
  * untrusted content framed off the app origin — `item` names the route param
  * whose value is the content's origin key (one origin per piece of content).
  */
 export type EndpointAccess =
-  "owner" | { public: string } | { content: string; item: string };
+  | "owner"
+  | { public: string }
+  | { visitor: string }
+  | { content: string; item: string };
+
+/**
+ * Whether a caller may reach a route of this access — the one rule every
+ * host's gate (HTTP routes and WebSocket upgrades alike) applies. A content
+ * route's refusal of the owner is a distinct answer, left to the gate.
+ */
+export function admits(access: EndpointAccess, caller: Principal): boolean {
+  if (access === "owner") return caller.kind === "owner";
+  if ("public" in access) return true;
+  if ("visitor" in access) {
+    return caller.kind === "owner" || caller.kind === "visitor";
+  }
+  return caller.kind === "content";
+}
 
 const REFUSED_STATUS = 403;
 

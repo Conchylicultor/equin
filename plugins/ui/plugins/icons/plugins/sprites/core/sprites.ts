@@ -82,6 +82,10 @@ export const savedSymbolsHash = liveValue("icons.symbols-hash", {
   preload: "boot-and-keep",
 });
 
+/** Every page draws its icons from these, a deployed site's visitors' included. */
+const ICON_ASSET_VISITOR_REASON =
+  "the icons every page of a deployed site draws (the shell's head script loads them)";
+
 /**
  * `GET /api/icons/sprite-assets/:hash/:key` — one sprite (`image/svg+xml`),
  * content-addressed by the host's {@link spriteHash}: served
@@ -95,6 +99,7 @@ export const savedSymbolsHash = liveValue("icons.symbols-hash", {
 export const getSpriteAsset = defineEndpoint({
   route: "GET /api/icons/sprite-assets/:hash/:key",
   response: blob("image/svg+xml"),
+  access: { visitor: ICON_ASSET_VISITOR_REASON },
 });
 
 /**
@@ -110,6 +115,7 @@ export const getSpriteAsset = defineEndpoint({
 export const getGlyphAsset = defineEndpoint({
   route: "GET /api/icons/glyph-assets/:hash/:key/:names",
   response: blob("image/svg+xml"),
+  access: { visitor: ICON_ASSET_VISITOR_REASON },
 });
 
 /**

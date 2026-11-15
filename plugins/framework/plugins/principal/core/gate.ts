@@ -5,6 +5,7 @@ import {
   namespaceFromHost,
 } from "@plugins/infra/plugins/namespace/core";
 import {
+  admits,
   contentOnlyResponse,
   crossSiteRefusedResponse,
   principalOf,
@@ -71,7 +72,7 @@ export function gateByPrincipal(
       continue;
     }
     const gated: GatedRouteHandler =
-      typeof access === "object"
+      typeof access === "object" && "content" in access
         ? // Content: served only on the content host. On an app origin its
           // document would run as the owner; anonymous is anyone else.
           (req, params) => {
@@ -85,7 +86,7 @@ export function gateByPrincipal(
               : crossSiteRefusedResponse(route);
           }
         : (req, params) =>
-            principalOf(req).kind === "owner"
+            admits(access, principalOf(req))
               ? handler(req, params)
               : crossSiteRefusedResponse(route);
     out.push([route, gated]);
@@ -94,17 +95,25 @@ export function gateByPrincipal(
 }
 
 /**
- * A WebSocket upgrade's answer before `server.upgrade`: the refusal for a
- * non-owner request — anonymous, or content (no socket is public — WebSockets are not bound by the
- * same-origin policy, so a foreign page could otherwise read all live state),
- * `null` to proceed. The gateway refuses these first; this is the host's own
- * floor.
+ * Who may open a socket: the owner (the default, absent on a handler), or the
+ * owner and a deployed site's visitors (`{ visitor: "<reason>" }`). No socket
+ * is public or content: WebSockets are not bound by the same-origin policy,
+ * so a foreign page could otherwise read all live state.
  */
-export function refuseAnonymousUpgrade(
+export type SocketAccess = "owner" | { visitor: string };
+
+/**
+ * A WebSocket upgrade's answer before `server.upgrade`: the refusal for a
+ * caller the socket's access does not admit — anonymous and content always, a
+ * visitor unless the socket says why it serves one — `null` to proceed. The
+ * gateway refuses an anonymous upgrade first; this is the host's own floor.
+ */
+export function refuseUnadmittedUpgrade(
   req: Request,
   path: string,
+  access: SocketAccess = "owner",
 ): Response | null {
-  return principalOf(req).kind === "owner"
+  return admits(access, principalOf(req))
     ? null
     : crossSiteRefusedResponse(`WS ${path}`);
 }
@@ -113,8 +122,8 @@ export function refuseAnonymousUpgrade(
 export const HostRouteSchema = z.object({
   route: z.string(),
   kind: z.enum(["http", "ws"]),
-  access: z.enum(["owner", "public", "content"]),
-  /** Why the route is public / content; absent on an owner route. */
+  access: z.enum(["owner", "public", "visitor", "content"]),
+  /** Why the route is public / visitor / content; absent on an owner route. */
   reason: z.string().optional(),
 });
 export type HostRoute = z.infer<typeof HostRouteSchema>;
@@ -139,26 +148,32 @@ export const HOST_ROUTES_ROUTE = "GET /api/host/routes";
  */
 export const CENTRAL_HOST_ROUTES_ROUTE = "GET /api/central/host/routes";
 
+function routeRow(
+  route: string,
+  kind: HostRoute["kind"],
+  access: EndpointAccess,
+): HostRoute {
+  if (access === "owner") return { route, kind, access: "owner" };
+  if ("public" in access) {
+    return { route, kind, access: "public", reason: access.public };
+  }
+  if ("visitor" in access) {
+    return { route, kind, access: "visitor", reason: access.visitor };
+  }
+  return { route, kind, access: "content", reason: access.content };
+}
+
 /** The table of a host's HTTP and WebSocket routes, with each one's access. */
 export function hostRouteTable(
   http: Iterable<readonly [string, GatedRouteHandler]>,
-  wsPaths: Iterable<string>,
+  ws: Iterable<readonly [string, SocketAccess]>,
 ): HostRoute[] {
   const rows: HostRoute[] = [];
   for (const [route, handler] of http) {
-    const access = accessOf(handler);
-    rows.push(
-      typeof access !== "object"
-        ? { route, kind: "http", access: "owner" }
-        : "public" in access
-          ? { route, kind: "http", access: "public", reason: access.public }
-          : { route, kind: "http", access: "content", reason: access.content },
-    );
+    rows.push(routeRow(route, "http", accessOf(handler)));
   }
   // No socket is public: every upgrade is refused to an anonymous caller.
-  for (const path of wsPaths) {
-    rows.push({ route: path, kind: "ws", access: "owner" });
-  }
+  for (const [path, access] of ws) rows.push(routeRow(path, "ws", access));
   return rows;
 }
 
@@ -167,7 +182,7 @@ export function hostRouteTable(
  * from whether their gateway stamps the principal.
  *
  * - `stamped`: every HTTP route behind `gateByPrincipal`, every WebSocket
- *   upgrade behind `refuseAnonymousUpgrade`.
+ *   upgrade behind `refuseUnadmittedUpgrade`.
  * - not stamped (a gateway older than the stamp): every route served ungated —
  *   a fail-closed gate would refuse every request, the gateway's own readiness
  *   probe included. The route table says so (`stamped: false`).
@@ -181,10 +196,14 @@ export interface HostGate {
   routes(opts: {
     tableRoute: string;
     http: Iterable<readonly [string, GatedRouteHandler]>;
-    wsPaths: Iterable<string>;
+    ws: Iterable<readonly [string, SocketAccess]>;
   }): Array<[string, GatedRouteHandler]>;
   /** The refusal for a WebSocket upgrade, `null` to proceed. */
-  refuseUpgrade(req: Request, path: string): Response | null;
+  refuseUpgrade(
+    req: Request,
+    path: string,
+    access: SocketAccess | undefined,
+  ): Response | null;
 }
 
 export function hostGate(stamped: boolean): HostGate {
@@ -192,10 +211,10 @@ export function hostGate(stamped: boolean): HostGate {
     stamped,
     routes(opts) {
       const http: Array<readonly [string, GatedRouteHandler]> = [...opts.http];
-      const wsPaths = [...opts.wsPaths];
+      const ws = [...opts.ws];
       let table: HostRouteTable | null = null;
       const tableHandler: GatedRouteHandler = () => {
-        table ??= { stamped, routes: hostRouteTable(all, wsPaths) };
+        table ??= { stamped, routes: hostRouteTable(all, ws) };
         return Response.json(table);
       };
       const all = [...http, [opts.tableRoute, tableHandler] as const];
@@ -203,8 +222,8 @@ export function hostGate(stamped: boolean): HostGate {
         ? gateByPrincipal(all)
         : all.map(([route, handler]) => [route, handler]);
     },
-    refuseUpgrade: (req, path) =>
-      stamped ? refuseAnonymousUpgrade(req, path) : null,
+    refuseUpgrade: (req, path, access) =>
+      stamped ? refuseUnadmittedUpgrade(req, path, access) : null,
   };
 }
 

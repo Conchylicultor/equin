@@ -243,6 +243,12 @@ interface EndpointOptions<Route extends string, B, R, TQuery> {
    * the default; `"owner"` has no spelling here, so the safe answer is the one
    * a forgotten field gives.
    *
+   * `{ visitor: "<reason>" }` serves the owner and a deployed site's visitors
+   * (anyone through its public edge — Caddy), never a foreign page: a route
+   * the site's own pages need (a log sink, a served asset). Without it a
+   * visitor is refused like a foreign page — the owner of a deployed site is
+   * only ever on the box.
+   *
    * `{ content: "<reason>", item: "<param>" }` (a GET only) serves untrusted
    * content — a page that runs script but is not reviewed app code — and ONLY
    * on the content host (`<item>.content.localhost`), never on an app origin.
@@ -251,8 +257,8 @@ interface EndpointOptions<Route extends string, B, R, TQuery> {
    * (`primitives/embed/frame`) through `contentPath`.
    */
   access?: Route extends `GET ${string}`
-    ? { public: string } | ContentAccess<Route>
-    : { public: string };
+    ? { public: string } | { visitor: string } | ContentAccess<Route>
+    : { public: string } | { visitor: string };
 }
 
 /** `access: { content }` — see {@link EndpointOptions.access}. */
@@ -424,9 +430,21 @@ function resolveInternal(opts: {
 /** A declaration's `access`, resolved: absent → `"owner"`. */
 function resolveAccess(
   route: string,
-  access: { public: string } | { content: string; item: string } | undefined,
+  access:
+    | { public: string }
+    | { visitor: string }
+    | { content: string; item: string }
+    | undefined,
 ): EndpointAccess {
   if (access === undefined) return "owner";
+  if (typeof access === "object" && "visitor" in access) {
+    if (typeof access.visitor !== "string" || access.visitor.trim() === "") {
+      throw new Error(
+        `defineEndpoint(${route}): access.visitor needs a reason — why does a deployed site's visitor need it?`,
+      );
+    }
+    return { visitor: access.visitor };
+  }
   if (typeof access === "object" && "content" in access) {
     if (typeof access.content !== "string" || access.content.trim() === "") {
       throw new Error(
@@ -443,7 +461,7 @@ function resolveAccess(
   // A cast past tsc (`access: "owner"`) is refused by name, not by a TypeError.
   if (typeof access !== "object" || typeof access.public !== "string") {
     throw new Error(
-      `defineEndpoint(${route}): access is { public: "<reason>" }, { content, item } or absent (owner) — got ${JSON.stringify(access)}`,
+      `defineEndpoint(${route}): access is { public: "<reason>" }, { visitor: "<reason>" }, { content, item } or absent (owner) — got ${JSON.stringify(access)}`,
     );
   }
   if (access.public.trim() === "") {

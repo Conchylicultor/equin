@@ -31,8 +31,6 @@ import (
 // `namespace:grammar-in-sync` check, which reads this literal.
 const contentHostLabel = "content"
 
-const principalContent = "content"
-
 // contentItemRe is one DNS label: what an item key may be.
 var contentItemRe = regexp.MustCompile(`^[a-z0-9][a-z0-9-]{0,62}$`)
 

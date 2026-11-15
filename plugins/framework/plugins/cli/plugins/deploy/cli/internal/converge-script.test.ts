@@ -31,6 +31,7 @@ import {
   RESTART_GATE_SH,
   SECRET_CREDENTIALS_SH,
   caddySite,
+  GATEWAY_API_PREFIX,
   EDGE_RESTART_HOLD_SEC,
   convergeScript,
 } from "./converge-script";
@@ -72,6 +73,7 @@ describe("caddySite", () => {
       `equin.dev, www.equin.dev {
 \tencode zstd gzip
 \trespond /api/host-only/* 404
+\trespond /gateway/* 404
 \theader /assets/* Cache-Control "public, max-age=31536000, immutable"
 \treverse_proxy 127.0.0.1:9100 {
 \t\tlb_try_duration ${EDGE_RESTART_HOLD_SEC}s
@@ -79,6 +81,12 @@ describe("caddySite", () => {
 \t}
 }
 `,
+    );
+  });
+
+  test("refuses the gateway's control API publicly", () => {
+    expect(caddySite(["a.example"], 9100)).toContain(
+      `respond ${GATEWAY_API_PREFIX}* 404`,
     );
   });
 

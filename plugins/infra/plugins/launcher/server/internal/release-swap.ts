@@ -38,6 +38,7 @@ import type { Ready } from "@plugins/infra/plugins/deps/deps";
 import type { BuildSource } from "@plugins/infra/plugins/deps/plugins/build/deps";
 import { unbundledExecutable } from "@plugins/infra/plugins/launcher/plugins/login-services/core";
 import { runtimeEnvNames } from "@plugins/infra/plugins/launcher/plugins/runtime-env/core";
+import { PRINCIPAL_STAMPS } from "@plugins/framework/plugins/principal/core";
 import {
   gatewayLaunchFlags,
   releaseDatabaseConfig,
@@ -136,6 +137,17 @@ const HostPartsSchema = z.object({
   pgbouncerStart: z.string(),
   gatewayFlags: z.string(),
   databaseConfig: z.string(),
+  /**
+   * The principal stamps the gateway writes and the backend reads
+   * (`framework/principal`'s `PRINCIPAL_STAMPS`, pinned to the gateway's Go
+   * constants). A gateway-only handover keeps the running backend serving
+   * behind the new gateway until its own swap is ready, and a backend that does
+   * not know a stamp reads it as anonymous (fail closed) — so a release that
+   * changes the vocabulary restarts the host instead, booting the two
+   * together. Absent in a generation recorded before this part existed: read
+   * as differing.
+   */
+  principalStamps: z.string().optional(),
 });
 export type HostParts = z.infer<typeof HostPartsSchema>;
 
@@ -216,6 +228,7 @@ export async function releaseHostGeneration(opts: {
       databaseConfig: sha256OfText(
         relative(JSON.stringify(releaseDatabaseConfigFor(bundleRoot))),
       ),
+      principalStamps: sha256OfText(JSON.stringify(PRINCIPAL_STAMPS)),
     },
   };
 }

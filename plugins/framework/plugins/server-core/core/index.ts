@@ -69,7 +69,7 @@ export {
   markServerSettled,
   serverBootState,
 } from "./readiness";
-export { hostHttpRoutes } from "./host-routes";
+export { hostHttpRoutes, LIVE_STATE_SOCKET_ACCESS } from "./host-routes";
 export { bootBrowserHost } from "./browser-host";
 export type {
   BrowserHost,

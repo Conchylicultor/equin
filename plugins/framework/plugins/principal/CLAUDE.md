@@ -1,9 +1,10 @@
 # principal
 
 Who a request is. A **principal** is the edge's verdict on the caller:
-`owner` (the person this instance belongs to), `anonymous` (anyone else), or
-`content` (a request on the content host, `<item>.content.localhost` —
-untrusted content served off every app origin; never the owner).
+`owner` (the person this instance belongs to), `visitor` (anyone who came
+through a deployed site's public edge — never the owner), `anonymous` (anyone
+else), or `content` (a request on the content host, `<item>.content.localhost`
+— untrusted content served off every app origin; never the owner).
 Hosted widens it later (a device, an agent, a share link). Design:
 [`research/2026-10-28-global-http-edge-principal.md`](../../../../research/2026-10-28-global-http-edge-principal.md);
 the Trust boundaries track (Phase 1) and the single-instance ADR
@@ -13,18 +14,38 @@ the Trust boundaries track (Phase 1) and the single-instance ADR
 
 The gateway (`gateway/principal.go`, see [`gateway/CLAUDE.md`](../../../../gateway/CLAUDE.md)
 → Principal) decides it once per request — same-origin, not same-site: a
-non-equin Host (DNS rebinding) is anonymous; `Sec-Fetch-Site: same-origin` /
+non-equin Host (DNS rebinding) is anonymous; a request that came through an
+edge (a `-public-hosts` Host, or any `X-Forwarded-*` / `Forwarded` header) is a
+**visitor**, whatever else it sends; `Sec-Fetch-Site: same-origin` /
 `none` is the owner; no `Sec-Fetch-Site` and no `Origin` is a local tool (the
 CLI, MCP, a script), the owner; everything else (another site, a sibling
 namespace, `Origin: null`) is anonymous. It deletes any client-sent
 `X-Equin-Principal` and stamps its own on every proxied request, HTTP and
-WebSocket. It refuses two things itself: an anonymous non-GET `/gateway/*` call
-and every anonymous WebSocket upgrade.
+WebSocket. It refuses two things itself: every non-owner `/gateway/*` call (any
+method) and every anonymous WebSocket upgrade.
 
 The backends never re-derive it. `principalOf(req)` (core) reads the stamp,
-**fail closed**: exactly `owner` is the owner, anything else — a missing header
-included — is anonymous. `PRINCIPAL_HEADER` is pinned to the Go constant by the
+**fail closed**: exactly `owner` / `visitor` / `content` are those, anything
+else — a missing header included — is anonymous. `PRINCIPAL_HEADER` and the
+stamp values (`PRINCIPAL_STAMPS`) are pinned to the Go constants by the
 `principal:header-in-sync` check.
+
+### The visitor
+
+Header rules (`Sec-Fetch-Site`, "no Origin = a local tool") tell the owner's
+browser from a foreign page's; they say nothing about a stranger's `curl`,
+which sends whatever headers it likes. So nothing that came through a public
+edge is the owner: a deployed site's owner works on the box (SSH → the
+gateway's loopback port, no forwarding headers), never through Caddy. Until
+2026-11-15 a public host was judged by the header rules, and
+`curl -X POST https://equin.ai/gateway/worktrees/<site>/stop?hold=1` was the
+owner.
+
+A visitor reaches what a route declares it may: `{ public }` routes, and
+`{ visitor: "<reason>" }` routes — what every page of a deployed site boots
+and reports through, refused to a foreign page on any host (the live-state
+read `GET /api/resources/:key` and socket `/ws/notifications`, the log sink,
+icon and mirrored assets). Every other route — owner by default — refuses it.
 
 ## Every route is owner-only unless it says why not
 
@@ -35,8 +56,9 @@ export const oauthCallback = defineEndpoint({
 });
 ```
 
-- `EndpointAccess = "owner" | { public: string } | { content: string; item: string }`.
-  A declaration spells `access: { public: "<reason>" }` or (a GET only)
+- `EndpointAccess = "owner" | { public: string } | { visitor: string } | { content: string; item: string }`.
+  A declaration spells `access: { public: "<reason>" }`,
+  `access: { visitor: "<reason>" }` or (a GET only)
   `access: { content: "<reason>", item: "<param>" }` (`infra/endpoints`); its
   absence is `"owner"`, which has no spelling — so a forgotten field is the
   safe answer, and an empty reason throws at declaration.
@@ -45,9 +67,10 @@ export const oauthCallback = defineEndpoint({
   run as the owner there), anyone else `403 cross-site-refused`. Every other
   route refuses `content` like `anonymous`. See `primitives/embed/frame`
   (Trust boundaries, Phase 3).
-- The rule is the same for every method: an anonymous caller reaches public
-  routes only — GETs, writes and WebSocket upgrades alike (no socket is
-  public). SPA pages are static (served by the gateway), so a pasted app link
+- The rule is the same for every method (`admits(access, principal)`): an
+  anonymous caller reaches public routes only — GETs, writes and WebSocket
+  upgrades alike (no socket is public; a socket's `WsHandler.access` may be
+  `{ visitor }`). SPA pages are static (served by the gateway), so a pasted app link
   still loads.
 - `implement` / `implementMachine` / `rawEndpointHandler` / `machineHandler`
   attach the resolved `access` to the handler they build
@@ -134,7 +157,9 @@ deploy does that by itself after the push that changes it
     - `HostRouteTable`
     - `Principal`
     - `PrincipalStamp`
+    - `SocketAccess`
   - Exports (values):
+    - `admits`
     - `CENTRAL_HOST_ROUTES_ROUTE`
     - `CROSS_SITE_REFUSED_MESSAGE`
     - `crossSiteRefusedResponse`
@@ -146,6 +171,7 @@ deploy does that by itself after the push that changes it
     - `isBrowserRequest`
     - `isCrossSiteRefusal`
     - `PRINCIPAL_HEADER`
+    - `PRINCIPAL_STAMPS`
     - `principalOf`
     - `principalStamp`
     - `UNSTAMPED_GATEWAY_WARNING`
@@ -153,6 +179,7 @@ deploy does that by itself after the push that changes it
   - Imported by:
     - `apps/deploy/deploy-secrets/approvals`
     - `debug/backend-liveness`
+    - `infra/launcher`
     - `infra/launcher/gateway-drift`
 
 <!-- AUTOGENERATED:END -->

@@ -3,7 +3,7 @@ import { join } from "node:path";
 import type { Check } from "@plugins/framework/plugins/tooling/core";
 import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 // Own plugin, so relative.
-import { PRINCIPAL_HEADER } from "../core/principal";
+import { PRINCIPAL_HEADER, PRINCIPAL_STAMPS } from "../core/principal";
 import { PRINCIPAL_STAMPED_FLAG } from "../core/stamp";
 
 const GATEWAY_FILE = "gateway/principal.go";
@@ -12,6 +12,12 @@ const GATEWAY_FILE = "gateway/principal.go";
 const GO_CONSTANT = /\bprincipalHeader\s*=\s*"([^"]+)"/;
 /** `const principalStampedFlag = "<flag>"` — the handshake flag's declaration. */
 const GO_FLAG_CONSTANT = /\bprincipalStampedFlag\s*=\s*"([^"]+)"/;
+
+/** Each stamp's Go constant: `principalOwner = "owner"`, … */
+function goStampConstant(kind: string): RegExp {
+  const name = `principal${kind[0]!.toUpperCase()}${kind.slice(1)}`;
+  return new RegExp(`\\b${name}\\s*=\\s*"([^"]+)"`);
+}
 
 /**
  * The principal header is written by the gateway (Go) and read by the socket
@@ -24,7 +30,7 @@ const GO_FLAG_CONSTANT = /\bprincipalStampedFlag\s*=\s*"([^"]+)"/;
 const headerInSyncCheck: Check = {
   id: "principal:header-in-sync",
   description:
-    "The gateway's principal header (principalHeader in gateway/principal.go) must name the header the socket hosts read (PRINCIPAL_HEADER), and its stamp-handshake argv flag (principalStampedFlag) the flag they look for (PRINCIPAL_STAMPED_FLAG)",
+    "The gateway's principal header (principalHeader in gateway/principal.go) must name the header the socket hosts read (PRINCIPAL_HEADER), its stamp-handshake argv flag (principalStampedFlag) the flag they look for (PRINCIPAL_STAMPED_FLAG), and its stamp values (principalOwner, …) PRINCIPAL_STAMPS",
   async run() {
     const root = await getWorktreeRoot();
     const text = await readFile(join(root, GATEWAY_FILE), "utf8");
@@ -56,6 +62,21 @@ const headerInSyncCheck: Check = {
             : `the gateway declares the stamp with "${flag}" but the socket hosts look for "${PRINCIPAL_STAMPED_FLAG}"`,
         hint: "Make gateway/principal.go's principalStampedFlag and PRINCIPAL_STAMPED_FLAG (plugins/framework/plugins/principal/core/stamp.ts) the same flag — otherwise every host serves ungated, as if behind a gateway older than the stamp.",
       };
+    }
+    // The stamp values: one the hosts do not know reads as anonymous, so a
+    // drift refuses that principal everything (the owner's included).
+    for (const [kind, value] of Object.entries(PRINCIPAL_STAMPS)) {
+      const go = goStampConstant(kind).exec(text)?.[1];
+      if (go !== value) {
+        return {
+          ok: false,
+          message:
+            go === undefined
+              ? `${GATEWAY_FILE} declares no constant for the "${kind}" principal`
+              : `the gateway stamps the ${kind} principal "${go}" but the socket hosts read "${value}"`,
+          hint: "Make gateway/principal.go's principal constants and PRINCIPAL_STAMPS (plugins/framework/plugins/principal/core/principal.ts) agree.",
+        };
+      }
     }
     return { ok: true };
   },

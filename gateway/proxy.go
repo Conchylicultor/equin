@@ -78,21 +78,26 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// The boot tier is the gateway's word to a booting backend, on its own
 	// readiness probe only (waitReady) — never a client's to send.
 	r.Header.Del(bootTierHeader)
-	if principal == principalAnonymous {
-		if strings.HasPrefix(r.URL.Path, "/gateway/") && r.Method != http.MethodGet && r.Method != http.MethodHead {
-			writeCrossSiteRefusal(w, r)
-			return
-		}
-		if isWebSocketUpgrade(r) {
-			writeCrossSiteRefusal(w, r)
-			return
-		}
+	// No socket is open to a foreign page (WebSockets ignore the same-origin
+	// policy). A visitor's upgrade goes on: the backend admits it only on a
+	// socket a deployed site serves its visitors.
+	if principal == principalAnonymous && isWebSocketUpgrade(r) {
+		writeCrossSiteRefusal(w, r)
+		return
 	}
 
 	worktreeName := parseWorktree(r.Host)
 
 	// /gateway/* is reserved on every host, including the no-subdomain root.
+	// The gateway's own control API answers the owner only — every method,
+	// every host (a visitor through a deployed site's edge included). Refused
+	// in the one branch that dispatches to it, so no path reaches the API
+	// without passing the gate.
 	if strings.HasPrefix(r.URL.Path, "/gateway/") {
+		if gatewayAPIRefused(principal) {
+			writeCrossSiteRefusal(w, r)
+			return
+		}
 		p.handleGatewayAPI(w, r)
 		return
 	}

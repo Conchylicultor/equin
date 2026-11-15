@@ -28,6 +28,12 @@ export type BootSnapshotSource = z.infer<typeof bootSnapshotSource>;
 
 export const bootSnapshot = defineEndpoint({
   route: "GET /api/resources/boot-snapshot",
+  // Like the live-state read it front-loads (`GET /api/resources/:key`): every
+  // page of a deployed site boots from it.
+  access: {
+    visitor:
+      "every page of a deployed site boots from it; it carries the boot resources of the composition the site runs",
+  },
   response: z.object({
     resources: z.record(z.string(), z.unknown()),
     tuples: z.record(

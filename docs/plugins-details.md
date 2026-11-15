@@ -31679,7 +31679,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `HostRouteTable`
           - `Principal`
           - `PrincipalStamp`
+          - `SocketAccess`
         - Exports (values):
+          - `admits`
           - `CENTRAL_HOST_ROUTES_ROUTE`
           - `CROSS_SITE_REFUSED_MESSAGE`
           - `crossSiteRefusedResponse`
@@ -31691,6 +31693,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `isBrowserRequest`
           - `isCrossSiteRefusal`
           - `PRINCIPAL_HEADER`
+          - `PRINCIPAL_STAMPS`
           - `principalOf`
           - `principalStamp`
           - `UNSTAMPED_GATEWAY_WARNING`
@@ -31698,6 +31701,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `apps/deploy/deploy-secrets/approvals`
           - `debug/backend-liveness`
+          - `infra/launcher`
           - `infra/launcher/gateway-drift`
     - **`product-name`** — The product's own name, as data: PRODUCT_NAME (`equin`, always lowercase — what every person and agent reads) and LEGACY_PRODUCT_NAMES (the names it went by before, never written again), enforced by the product-name:legacy check over every tracked file; and LEGACY_IDS, the identifiers built from the old name that are kept for good (stored state, cross-version contracts), the one place they are spelled — enforced by product-name:legacy-id (and its mirrors by product-name:legacy-ids-in-sync). A dependency-free leaf, so a browser bundle, a server or a script can import it.
       - Cross-plugin:
@@ -31855,6 +31859,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `isProcessCrashHandled`
           - `isServerReady`
           - `keptSnapshotValue`
+          - `LIVE_STATE_SOCKET_ACCESS`
           - `loadResourceByKey`
           - `loadResourceFresh`
           - `machineCollectedDir`

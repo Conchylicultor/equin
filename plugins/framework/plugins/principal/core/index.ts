@@ -1,5 +1,7 @@
 export {
   PRINCIPAL_HEADER,
+  PRINCIPAL_STAMPS,
+  admits,
   CROSS_SITE_REFUSED_MESSAGE,
   principalOf,
   crossSiteRefusedResponse,
@@ -20,6 +22,7 @@ export type {
   HostGate,
   HostRoute,
   HostRouteTable,
+  SocketAccess,
 } from "./gate";
 export { UNSTAMPED_GATEWAY_WARNING, principalStamp } from "./stamp";
 export type { PrincipalStamp } from "./stamp";

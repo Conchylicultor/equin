@@ -382,6 +382,13 @@ WantedBy=multi-user.target
  */
 export const EDGE_RESTART_HOLD_SEC = 60;
 
+/**
+ * The gateway's reserved control-API prefix (`gateway/proxy.go`: every
+ * `/gateway/…` path is the gateway's own, on every host). Never served
+ * publicly — see {@link caddySite}.
+ */
+export const GATEWAY_API_PREFIX = "/gateway/";
+
 /** This deployment's Caddy site block: TLS in front, plain HTTP on loopback. */
 export function caddySite(hostnames: string[], loopbackPort: number): string {
   // No `header_up Host`: each install runs its OWN gateway with
@@ -406,9 +413,17 @@ export function caddySite(hostnames: string[], loopbackPort: number): string {
   // gateway. Caddy's fixed directive order runs `respond` ahead of
   // `reverse_proxy`, so its position in the block is not what makes it win.
   // `hostOnly()` on the backend is the second, independent guard.
+  //
+  // `respond <GATEWAY_API_PREFIX>* 404` refuses the gateway's own control
+  // API (stop / restart / hold a backend, deploy, list the box's services and
+  // paths) the same way. The gateway is the first guard: a request that came
+  // through this edge is a visitor, never the owner, and `/gateway/*` answers
+  // the owner only (`gateway/principal.go`). This is the second, so neither
+  // alone stands between the internet and the box's controls.
   return `${hostnames.join(", ")} {
 \tencode zstd gzip
 \trespond ${HOST_ONLY_PREFIX}* 404
+\trespond ${GATEWAY_API_PREFIX}* 404
 \theader /assets/* Cache-Control "public, max-age=31536000, immutable"
 \treverse_proxy ${listenAddress(loopbackPort)} {
 \t\tlb_try_duration ${EDGE_RESTART_HOLD_SEC}s

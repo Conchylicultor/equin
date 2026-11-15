@@ -3,6 +3,9 @@ package main
 import (
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -36,10 +39,19 @@ func TestPrincipalOf(t *testing.T) {
 		h    map[string]string
 		want string
 	}{
-		{"public host same-origin", "equin.ai", map[string]string{"Origin": "https://equin.ai", "Sec-Fetch-Site": "same-origin"}, "owner"},
-		{"public host old browser https", "equin.ai", map[string]string{"Origin": "https://equin.ai"}, "owner"},
-		{"public host cross-site", "equin.ai", map[string]string{"Origin": "https://evil.example", "Sec-Fetch-Site": "cross-site"}, "anonymous"},
-		{"public host old browser foreign origin", "equin.ai", map[string]string{"Origin": "https://evil.example"}, "anonymous"},
+		// Through the public edge: never the owner, whatever the headers say.
+		{"public host same-origin", "equin.ai", map[string]string{"Origin": "https://equin.ai", "Sec-Fetch-Site": "same-origin"}, "visitor"},
+		{"public host old browser https", "equin.ai", map[string]string{"Origin": "https://equin.ai"}, "visitor"},
+		{"public host no headers (curl)", "equin.ai", nil, "visitor"},
+		{"public host typed url", "equin.ai", map[string]string{"Sec-Fetch-Site": "none"}, "visitor"},
+		{"public host port and case", "EQUIN.AI.:443", nil, "visitor"},
+		{"public host via caddy", "equin.ai", map[string]string{"X-Forwarded-For": "203.0.113.9", "X-Forwarded-Proto": "https", "X-Forwarded-Host": "equin.ai"}, "visitor"},
+		{"public host cross-site", "equin.ai", map[string]string{"Origin": "https://evil.example", "Sec-Fetch-Site": "cross-site"}, "visitor"},
+		{"loopback via a proxy", "127.0.0.1:9100", map[string]string{"X-Forwarded-For": "203.0.113.9"}, "visitor"},
+		{"namespace via a proxy", "equin.localhost:9000", map[string]string{"X-Forwarded-Proto": "https"}, "visitor"},
+		{"loopback Forwarded", "localhost:9000", map[string]string{"Forwarded": "for=203.0.113.9"}, "visitor"},
+		{"loopback forwarded host only", "localhost:9000", map[string]string{"X-Forwarded-Host": "equin.ai"}, "visitor"},
+		{"box-local tool on loopback", "127.0.0.1:9100", nil, "owner"},
 		{"unlisted host", "evil.com", map[string]string{"Origin": "https://evil.com", "Sec-Fetch-Site": "same-origin"}, "anonymous"},
 	}...)
 	for _, c := range cases {
@@ -84,11 +96,107 @@ func TestProxyGateRefusesAnonymousWebSocket(t *testing.T) {
 	}
 }
 
-func TestProxyGateLeavesAnonymousGatewayReadOpen(t *testing.T) {
+// gatewayAPIPaths reads every "/gateway/…" string literal out of the
+// gateway's own (non-test) sources: the routes handleGatewayAPI dispatches,
+// spelled where they are matched. A route added later is in this list the day
+// it is written, so the test below covers it without being edited.
+func gatewayAPIPaths(t *testing.T) []string {
+	t.Helper()
+	files, err := filepath.Glob("*.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	lit := regexp.MustCompile(`"(/gateway/[^"]*)"`)
+	seen := map[string]bool{}
+	var paths []string
+	for _, f := range files {
+		if strings.HasSuffix(f, "_test.go") {
+			continue
+		}
+		src, err := os.ReadFile(f)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, m := range lit.FindAllStringSubmatch(string(src), -1) {
+			p := m[1]
+			// A prefix ("/gateway/worktrees/") is matched with a name after it.
+			if strings.HasSuffix(p, "/") {
+				p += "x/stop"
+			}
+			if !seen[p] {
+				seen[p] = true
+				paths = append(paths, p)
+			}
+		}
+	}
+	if len(paths) < 5 {
+		t.Fatalf("found only %d /gateway/ routes in the sources: %v", len(paths), paths)
+	}
+	return paths
+}
+
+// Nothing under /gateway/ answers anyone but the owner: not a visitor through
+// a deployed site's edge (a stranger's curl to equin.ai with no browser
+// headers, or forging same-origin ones), not a foreign page — any method.
+func TestGatewayAPIRefusesEveryoneButTheOwner(t *testing.T) {
+	publicHosts := parsePublicHosts("equin.ai")
+	callers := map[string]func(method, path string) *http.Request{
+		"public curl": func(method, path string) *http.Request {
+			req := httptest.NewRequest(method, "http://equin.ai"+path, nil)
+			req.Host = "equin.ai"
+			return req
+		},
+		"public forged same-origin": func(method, path string) *http.Request {
+			req := httptest.NewRequest(method, "http://equin.ai"+path, nil)
+			req.Host = "equin.ai"
+			req.Header.Set("Sec-Fetch-Site", "same-origin")
+			req.Header.Set("Origin", "https://equin.ai")
+			return req
+		},
+		"through caddy on loopback": func(method, path string) *http.Request {
+			req := httptest.NewRequest(method, "http://127.0.0.1:9100"+path, nil)
+			req.Host = "127.0.0.1:9100"
+			req.Header.Set("X-Forwarded-For", "203.0.113.9")
+			return req
+		},
+		"cross-site page": crossSiteReq,
+	}
+	for _, path := range gatewayAPIPaths(t) {
+		for _, method := range []string{http.MethodGet, http.MethodHead, http.MethodPost, http.MethodPut, http.MethodDelete, http.MethodOptions} {
+			for name, mk := range callers {
+				p := newTestProxy(t, "")
+				p.publicHosts = publicHosts
+				rec := httptest.NewRecorder()
+				p.ServeHTTP(rec, mk(method, path))
+				if rec.Code != http.StatusForbidden || (method != http.MethodHead && !strings.Contains(rec.Body.String(), `"reason":"cross-site-refused"`)) {
+					t.Errorf("%s %s %s: got %d %q, want 403 cross-site-refused", name, method, path, rec.Code, rec.Body.String())
+				}
+			}
+		}
+	}
+}
+
+func TestProxyGateAllowsOwnerGatewayRead(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "http://localhost:9000/gateway/worktrees", nil)
+	req.Host = "localhost:9000"
 	rec := httptest.NewRecorder()
-	newTestProxy(t, "").ServeHTTP(rec, crossSiteReq(http.MethodGet, "/gateway/worktrees"))
+	newTestProxy(t, "").ServeHTTP(rec, req)
 	if rec.Code == http.StatusForbidden {
-		t.Fatalf("GET must pass the principal gate, got 403")
+		t.Fatalf("a local tool's GET must pass the principal gate, got 403")
+	}
+}
+
+// A visitor's request reaches its backend stamped visitor — never owner, and
+// never what the visitor sent.
+func TestProxyStampsVisitor(t *testing.T) {
+	p := newTestProxy(t, "")
+	p.publicHosts = parsePublicHosts("equin.ai")
+	req := httptest.NewRequest(http.MethodGet, "http://equin.ai/api/x", nil)
+	req.Host = "equin.ai"
+	req.Header.Set(principalHeader, "owner")
+	p.ServeHTTP(httptest.NewRecorder(), req)
+	if got := req.Header.Get(principalHeader); got != "visitor" {
+		t.Fatalf("principal header = %q, want visitor", got)
 	}
 }
 
