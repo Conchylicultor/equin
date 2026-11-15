@@ -31,6 +31,12 @@ is what keeps every such control agreeing on what a ⌘-click means.
   `data-link` and `href()` still runs only on click. A component that forwards
   link props by picking handlers one by one drops it — spread the whole bag
   (`LinkChip` spreads it, then chains the handlers).
+- **On a real `<a href>`** (a link screen readers and keyboards follow — Isle's
+  hidden building list) the same props read it off the event's `currentTarget`:
+  a plain click / Enter runs the in-app open and `preventDefault`s the document
+  navigation; ⌘/Ctrl-, Shift- and middle-click are left to the browser (new tab
+  or window at the anchor's own href), never doubled by a `window.open`.
+  Pinned by `web/__tests__/link-props-anchor.test.tsx`.
 - `linkGestureProps(open)` is the low-level form — `open({ elsewhere })` decides
   what "elsewhere" means. Only for a control whose elsewhere is not a browser tab
   at an app path (open-app's button, whose default flips between a browser tab

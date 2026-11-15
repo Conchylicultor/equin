@@ -31,6 +31,11 @@ import type { Activation, Gesture, LinkTarget } from "../../core";
  * Shift is deliberately untouched. In a browser it means "new window", and
  * whether this app draws windows at all is the surface mode — a per-surface
  * user setting that a single link has no business overriding.
+ *
+ * **Spread onto a real `<a href>`** (a link screen readers and keyboards can
+ * follow), the props read that from the event: a plain click or Enter runs the
+ * in-app open and cancels the document navigation, while ⌘/Ctrl-, Shift- and
+ * middle-click are left to the browser, which opens the anchor's own href.
  */
 export interface LinkGestureProps {
   onClick(e: MouseEvent): void;
@@ -179,10 +184,24 @@ export function linkGestureProps(
 ): LinkGestureProps {
   return {
     onClick(e) {
+      if (isRealLink(e)) {
+        // The browser already gives an `<a href>` its "elsewhere" gestures
+        // (⌘/Ctrl → new tab, Shift → new window) at the anchor's own href:
+        // leave them to it rather than opening a second tab ourselves.
+        if (e.metaKey || e.ctrlKey || e.shiftKey) return;
+        // A plain click (or Enter, which the browser delivers as one) opens
+        // here, in place — never the document navigation the anchor would
+        // otherwise run, which reloads the app and loses its tab state.
+        e.preventDefault();
+        open({ elsewhere: false, gesture: gestureOf(e) });
+        return;
+      }
       open({ elsewhere: e.metaKey || e.ctrlKey, gesture: gestureOf(e) });
     },
     onAuxClick(e) {
       if (e.button !== 1) return;
+      // A real link's middle click is the browser's own new tab.
+      if (isRealLink(e)) return;
       // The default middle-button action (autoscroll on Windows, paste on
       // X11) has nothing to do with navigating, so it never reaches the page.
       e.preventDefault();
@@ -191,7 +210,22 @@ export function linkGestureProps(
     onMouseDown(e) {
       // Autoscroll arms on mousedown, not on the aux click — cancelling it
       // there is too late to stop the scroll cursor appearing.
-      if (e.button === 1) e.preventDefault();
+      if (e.button === 1 && !isRealLink(e)) e.preventDefault();
     },
   };
+}
+
+/**
+ * Whether the handlers sit on a real `<a href>` — a control the browser
+ * already navigates on click. Read off the event (the element the handler is
+ * attached to), so the same props are right on a `<button>`, a `<div>` and an
+ * anchor alike, with nothing for the call site to declare.
+ */
+function isRealLink(e: MouseEvent): boolean {
+  const el = e.currentTarget;
+  return (
+    // `localName`, so an SVG `<a>` (whose `href` is not an HTMLAnchorElement's)
+    // counts too.
+    el instanceof Element && el.localName === "a" && el.hasAttribute("href")
+  );
 }
