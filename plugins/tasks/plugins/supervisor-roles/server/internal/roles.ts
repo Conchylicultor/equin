@@ -5,10 +5,11 @@ import {
   eq,
   inArray,
   isNull,
-  ne,
   notInArray,
   sql,
+  type SQL,
 } from "drizzle-orm";
+import { renderOpSql } from "@plugins/network/plugins/live/plugins/filter/server";
 import { db, type DbExecutor } from "@plugins/database/server";
 import type { EmitTx } from "@plugins/infra/plugins/events/server";
 import {
@@ -176,6 +177,39 @@ export interface RoleTaskRow {
 /** The most backlog rows one read returns (the oldest first). */
 export const BACKLOG_READ_LIMIT = 200;
 
+/**
+ * Every task role `roleId` owns that is not one of its session roots (its
+ * backlog candidates, at any depth) — `roleBacklogWhere`'s owner and mandate
+ * clauses, over `tasksView` joined to `_tasks` and the owner table. The
+ * mandate clause is the filter language's own `ne` (a complement: NULL
+ * kept), the pane's semantics — a task a person routed stays nested in its
+ * tree and states no mandate, and a plain SQL `<>` would drop it.
+ */
+function roleNonSessionTasks(roleId: string): SQL | undefined {
+  return and(
+    eq(tasksSupervisor.table.supervisor, roleId),
+    renderOpSql(
+      "ne",
+      "text",
+      sql`${_tasks.mandateRef}`,
+      supervisorRoleMandate.id,
+    ),
+  );
+}
+
+/**
+ * Role `roleId`'s backlog as a SQL condition (`roleBacklogWhere`, server
+ * side): the ONE predicate every server read of it uses — the backlog read,
+ * the arrival notice's check, adopt. Over `tasksView` joined to `_tasks`
+ * and `tasksSupervisor.table` on the task id.
+ */
+export function roleBacklogSql(roleId: string): SQL | undefined {
+  return and(
+    roleNonSessionTasks(roleId),
+    inArray(tasksView.status, [...BACKLOG_STATUSES]),
+  );
+}
+
 /** The role's session roots, or every other task it owns (its backlog
  * candidates, at any depth) — `roleSessionsWhere` / `roleBacklogWhere`. */
 function roleTasks(roleId: string, sessions: boolean) {
@@ -185,10 +219,7 @@ function roleTasks(roleId: string, sessions: boolean) {
         isNull(tasksView.folderId),
         eq(_tasks.mandateRef, supervisorRoleMandate.id),
       )
-    : and(
-        eq(tasksSupervisor.table.supervisor, roleId),
-        ne(_tasks.mandateRef, supervisorRoleMandate.id),
-      );
+    : roleNonSessionTasks(roleId);
 }
 
 async function roleRootRows(
@@ -383,13 +414,7 @@ export async function isInRoleBacklog(
       tasksSupervisor.table,
       eq(tasksSupervisor.table.taskId, tasksView.id),
     )
-    .where(
-      and(
-        eq(tasksView.id, taskId),
-        roleTasks(roleId, false),
-        inArray(tasksView.status, [...BACKLOG_STATUSES]),
-      ),
-    )
+    .where(and(eq(tasksView.id, taskId), roleBacklogSql(roleId)))
     .limit(1);
   return row !== undefined;
 }

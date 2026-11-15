@@ -1,4 +1,4 @@
-import { and, eq, inArray, ne, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { withNotifyBatch } from "@plugins/framework/plugins/server-core/core";
 import {
@@ -15,10 +15,9 @@ import {
 } from "@plugins/tasks/plugins/tasks-core/server";
 import { armTaskAutoStart } from "@plugins/tasks/server";
 import {
-  BACKLOG_STATUSES,
-  supervisorRoleMandate,
-} from "@plugins/tasks/plugins/supervisor-roles/core";
-import { tasksSupervisor } from "@plugins/tasks/plugins/supervisor-roles/server";
+  roleBacklogSql,
+  tasksSupervisor,
+} from "@plugins/tasks/plugins/supervisor-roles/server";
 
 /** Why a backlog task could not be adopted. */
 export type AdoptRefusal = "not-in-backlog" | "held";
@@ -57,14 +56,7 @@ export async function adoptIntoSession(args: {
           tasksSupervisor.table,
           eq(tasksSupervisor.table.taskId, tasksView.id),
         )
-        .where(
-          and(
-            eq(tasksView.id, taskId),
-            eq(tasksSupervisor.table.supervisor, roleId),
-            ne(_tasks.mandateRef, supervisorRoleMandate.id),
-            inArray(tasksView.status, [...BACKLOG_STATUSES]),
-          ),
-        )
+        .where(and(eq(tasksView.id, taskId), roleBacklogSql(roleId)))
         .limit(1);
       if (!row) return "not-in-backlog";
       if (row.status === "held") return "held";

@@ -46,6 +46,7 @@ export {
   liveSessionOf,
   lockRoleSessions,
   roleBacklog,
+  roleBacklogSql,
   roleOfConversation,
   routeRefusal,
   setTaskSupervisorRole,

@@ -98,6 +98,7 @@ renderOpSql("contains", "text", sql`${t.title}`, "abc");    // one op
     - `network/live`
     - `primitives/data-view`
     - `shell/notifications`
+    - `tasks/supervisor-roles`
 - Server:
   - Exports (values):
     - `filterSql`

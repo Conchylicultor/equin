@@ -44,6 +44,10 @@ tools — are `plugins/sessions`.
   launching it by hand gets an ordinary agent); a task a person ROUTED there
   stays where it sits in its tree until adopted. A backlog task is never
   armed. Adopt moves it under the session's root (from wherever it sits).
+  Server side every read of it (the backlog read, the arrival notice's
+  check, adopt) uses ONE predicate, `roleBacklogSql(R)`, whose "not a
+  session root" clause is the filter language's `ne` (NULL kept) — a routed
+  nested task states no mandate, and a plain SQL `<>` dropped it.
 - **Sessions** of role R (`roleSessionsWhere(R)`): root tasks owned by R that
   state the `supervisor-role` mandate. Live until `attempted` / `done` /
   `dropped` (`isLiveSessionStatus`); one live session per role (the launch
@@ -135,7 +139,7 @@ tools — are `plugins/sessions`.
     - `watchSource` "supervisor-roles.backlog"
     - `trigger` "supervisor-roles.icon"
     - `trigger` "watch.ingest"
-  - Uses: 30 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 31 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `tasks/tasks-core` ×5
     - `tasks/orchestration/mandate` ×4
     - `config_v2` ×2
@@ -149,6 +153,7 @@ tools — are `plugins/sessions`.
     - `ids.IdKinds`
     - `infra/entity-extensions.defineExtension`
     - `infra/events.defineTriggerEvent`
+    - `network/live/filter.renderOpSql`
     - `tasks/mandate-presets.supervisorPolicy`
     - `tasks/task-track.setTaskTrack`
     - `ui/icons/saved-sources.defineSavedIconSource`
@@ -173,6 +178,7 @@ tools — are `plugins/sessions`.
     - `liveSessionOf`
     - `lockRoleSessions`
     - `roleBacklog`
+    - `roleBacklogSql`
     - `roleOfConversation`
     - `routeRefusal`
     - `setTaskSupervisorRole`

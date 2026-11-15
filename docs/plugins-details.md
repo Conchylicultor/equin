@@ -41699,6 +41699,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `network/live`
               - `primitives/data-view`
               - `shell/notifications`
+              - `tasks/supervisor-roles`
           - Server:
             - Exports (values):
               - `filterSql`
@@ -61342,7 +61343,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `watchSource` "supervisor-roles.backlog"
           - `trigger` "supervisor-roles.icon"
           - `trigger` "watch.ingest"
-        - Uses: 30 symbols — full list in [`plugins/tasks/plugins/supervisor-roles/REFERENCE.md`](../plugins/tasks/plugins/supervisor-roles/REFERENCE.md)
+        - Uses: 31 symbols — full list in [`plugins/tasks/plugins/supervisor-roles/REFERENCE.md`](../plugins/tasks/plugins/supervisor-roles/REFERENCE.md)
           - `tasks/tasks-core` ×5
           - `tasks/orchestration/mandate` ×4
           - `config_v2` ×2
@@ -61356,6 +61357,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ids.IdKinds`
           - `infra/entity-extensions.defineExtension`
           - `infra/events.defineTriggerEvent`
+          - `network/live/filter.renderOpSql`
           - `tasks/mandate-presets.supervisorPolicy`
           - `tasks/task-track.setTaskTrack`
           - `ui/icons/saved-sources.defineSavedIconSource`
@@ -61380,6 +61382,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `liveSessionOf`
           - `lockRoleSessions`
           - `roleBacklog`
+          - `roleBacklogSql`
           - `roleOfConversation`
           - `routeRefusal`
           - `setTaskSupervisorRole`
@@ -61699,8 +61702,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tasks/task-header`
         - **`sessions`** — Supervisor role sessions: POST /api/supervisor-roles/:id/sessions opens the role's live session or launches one (one live session per role — a root task stating the supervisor-role mandate, owned by the role, its brief the role's prompt, armed at once), POST …/:id/backlog/:taskId/adopt (the Supervisors pane's Adopt: into the live session, launching one when none is live), and the role powers' MCP tools, gated on the role capability: backlog (list the role's backlog), adopt_task (move a backlog task under the live session's root and arm it) and route_task (hand a task the role owns to another role).
           - Server:
-            - Uses: 26 symbols — full list in [`plugins/tasks/plugins/supervisor-roles/plugins/sessions/REFERENCE.md`](../plugins/tasks/plugins/supervisor-roles/plugins/sessions/REFERENCE.md)
-              - `tasks/supervisor-roles` ×10
+            - Uses: 27 symbols — full list in [`plugins/tasks/plugins/supervisor-roles/plugins/sessions/REFERENCE.md`](../plugins/tasks/plugins/supervisor-roles/plugins/sessions/REFERENCE.md)
+              - `tasks/supervisor-roles` ×11
               - `tasks/tasks-core` ×6
               - `infra/endpoints` ×2
               - `tasks/orchestration/mandate` ×2
