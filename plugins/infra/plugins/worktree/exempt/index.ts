@@ -19,6 +19,7 @@ export default [
       "server/internal/spare.ts",
       "server/internal/spec.ts",
       "server/internal/tree-pool.ts",
+      "server/internal/untracked-cache.ts",
       "server/internal/worktree-op.ts",
       "server/internal/worktree-op-marker.ts",
       "server/internal/worktree.ts",

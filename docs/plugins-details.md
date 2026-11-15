@@ -32238,7 +32238,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/spawn/daemon` (1 debt)
               - `infra/ssh` (2 debt)
               - `infra/stack-sampler` (1 debt)
-              - `infra/worktree` (11 debt)
+              - `infra/worktree` (12 debt)
               - `infra/worktree/reclaim` (2 debt)
               - `integrations/youtube/audio-fetch` (3 debt)
               - `packages/flock` (3 debt)
@@ -39549,7 +39549,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Exemptions:
         - Exempts itself from:
           - `worktree/no-raw-worktree-git` — `.` (sanctioned)
-          - `boundaries/no-platform-api` — `server/internal/composition-namespace.ts`, `server/internal/dep-store-pool.ts`, `server/internal/install-checkout.ts`, `server/internal/rename-pool.ts`, `server/internal/spare-name.ts`, `server/internal/spare.ts`, `server/internal/spec.ts`, `server/internal/tree-pool.ts`, `server/internal/worktree-op.ts`, `server/internal/worktree-op-marker.ts`, `server/internal/worktree.ts` (debt)
+          - `boundaries/no-platform-api` — `server/internal/composition-namespace.ts`, `server/internal/dep-store-pool.ts`, `server/internal/install-checkout.ts`, `server/internal/rename-pool.ts`, `server/internal/spare-name.ts`, `server/internal/spare.ts`, `server/internal/spec.ts`, `server/internal/tree-pool.ts`, `server/internal/untracked-cache.ts`, `server/internal/worktree-op.ts`, `server/internal/worktree-op-marker.ts`, `server/internal/worktree.ts` (debt)
           - `user-path/no-unproven-claim` — `server/internal/worktree.ts` (sanctioned)
           - `blocking-fs/no-sync-fs` — `server/internal/worktree-op-marker.ts` (sanctioned)
           - `repo-walk-safety/no-adhoc-repo-listing` — `server/internal/worktree.ts` (sanctioned)

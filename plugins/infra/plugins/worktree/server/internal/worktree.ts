@@ -39,6 +39,10 @@ import {
 } from "./dep-store-pool";
 import { installCheckout } from "./install-checkout";
 import {
+  primeUntrackedCache,
+  type UntrackedCachePrime,
+} from "./untracked-cache";
+import {
   emptyTreePool,
   harvestTree,
   takeTree,
@@ -1454,6 +1458,12 @@ export interface WorktreeSetup {
   /** Null when no checkout was written here: a claimed spare (its refill wrote it), or one already in place. */
   tree: TreeStart | null;
   depStore: AdoptResult;
+  /**
+   * Whether this setup filled the checkout's untracked cache
+   * (`primeUntrackedCache`): only one it wrote is primed — an `existing` one
+   * may have an agent working in it, and its first check run publishes one.
+   */
+  untrackedCache: UntrackedCachePrime | "not-primed";
 }
 
 /**
@@ -1551,8 +1561,14 @@ export async function setupWorktree(
       { frozen: false },
       signal,
     );
+    // A checkout discarded and written again here is a new one: fill its
+    // untracked cache. An `existing` one is left to its next check run.
+    const untrackedCache =
+      source === "existing"
+        ? "not-primed"
+        : await primeUntrackedCache(wtPath, signal);
     await stampMinter(id, minter);
-    return { source, tree, depStore };
+    return { source, tree, depStore, untrackedCache };
   }
 
   // A checkout's namespace is its own name (the main composition's prefix
@@ -1592,8 +1608,11 @@ export async function setupWorktree(
     { frozen: true },
     signal,
   );
+  // Installed, at its final path, and nobody works in it yet — the one moment
+  // its untracked cache can be filled (see primeUntrackedCache).
+  const untrackedCache = await primeUntrackedCache(wtPath, signal);
   await stampMinter(id, minter);
-  return { source, tree, depStore };
+  return { source, tree, depStore, untrackedCache };
 }
 
 // Once the checkout exists, never before: a stamp-only `<ns>/` dir with no

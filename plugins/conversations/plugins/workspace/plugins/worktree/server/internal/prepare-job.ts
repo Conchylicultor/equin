@@ -54,7 +54,7 @@ export const worktreePrepareJob = defineSupervisedJob({
     // included) rather than inside `infra/worktree`, which must stay importable
     // from the CLI.
     log(`checkout ${attemptId} at ${path}: starting`);
-    const { source, tree, depStore } = await setupWorktree(
+    const { source, tree, depStore, untrackedCache } = await setupWorktree(
       attemptId,
       path,
       new Set(getConfig(compositionsConfig).manifests.map((m) => m.id)),
@@ -62,7 +62,7 @@ export const worktreePrepareJob = defineSupervisedJob({
       runtimeNamespace(),
     );
     log(
-      `checkout ${attemptId}: ${source}; ${tree === null ? "" : `${describeTreeStart(tree)}; `}${describeAdoption(depStore)}`,
+      `checkout ${attemptId}: ${source}; ${tree === null ? "" : `${describeTreeStart(tree)}; `}${describeAdoption(depStore)}; untracked cache: ${untrackedCache}`,
     );
   },
   // A checkout was made — from a spare (the pool is now one short) or cold
