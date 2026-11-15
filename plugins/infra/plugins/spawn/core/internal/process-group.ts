@@ -1,4 +1,4 @@
-import { killProcessGroup } from "./group-signal";
+import { signalProcessGroup } from "./group-signal";
 import { spawnCaptured } from "./spawn-captured";
 import type { LeftBehindProcess } from "./types";
 
@@ -11,6 +11,14 @@ import type { LeftBehindProcess } from "./types";
  * group's id), so `-pgid` reaches exactly what the child left behind; once the
  * group is empty the kill meets ESRCH and nothing is signalled.
  *
+ * Zombies are members too (macOS): a descendant that exited while its parent
+ * — one that left the group with `setsid`, or one that just died, leaving it to
+ * launchd — has not reaped it yet. They are already dead, so they are neither
+ * killed nor returned; a group of ONLY zombies answers the probe with EPERM
+ * (`none-signallable`), which is how `./equin test` once exited 1 after every
+ * test passed. A member that is alive yet cannot be signalled is a leak this
+ * call cannot end, and it throws naming it.
+ *
  * The listing is `ps` (no change signal exists for "a group emptied"; this runs
  * once, after the leader's exit, never in a loop). The kill comes after it and
  * runs whatever the listing did — a `ps` that failed is thrown only once the
@@ -19,32 +27,41 @@ import type { LeftBehindProcess } from "./types";
 export async function endProcessGroup(
   pgid: number,
 ): Promise<LeftBehindProcess[]> {
-  if (!groupHasMembers(pgid)) return [];
-  let listed: LeftBehindProcess[] | Error;
+  if (signalProcessGroup(pgid, 0) === "empty") return [];
+  let listed: GroupMember[] | Error;
   try {
     listed = await listGroup(pgid);
   } catch (err) {
     if (!(err instanceof Error)) throw err;
     listed = err;
   }
-  killProcessGroup(pgid, "SIGKILL");
+  const killed = signalProcessGroup(pgid, "SIGKILL");
   if (listed instanceof Error) throw listed;
-  return listed;
-}
-
-function groupHasMembers(pgid: number): boolean {
-  try {
-    process.kill(-pgid, 0);
-    return true;
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === "ESRCH") return false;
-    throw err;
+  const alive = listed.filter((p) => !p.zombie);
+  // Nothing received the kill although `ps` saw a live member: either it died
+  // between the listing and the kill (a zombie now), or it really cannot be
+  // signalled. Look again to tell which.
+  if (killed === "none-signallable" && alive.length > 0) {
+    const unkillable = (await listGroup(pgid)).filter((p) => !p.zombie);
+    if (unkillable.length > 0) {
+      throw new Error(
+        `process group ${pgid} still holds processes that cannot be signalled (EPERM), so they outlive their spawner: ${unkillable
+          .map((p) => `${p.pid} ${p.command}`)
+          .join("; ")}`,
+      );
+    }
   }
+  return alive.map(({ pid, command }) => ({ pid, command }));
 }
 
-async function listGroup(pgid: number): Promise<LeftBehindProcess[]> {
+interface GroupMember extends LeftBehindProcess {
+  /** `ps` state `Z`: exited, not yet reaped by its parent. */
+  zombie: boolean;
+}
+
+async function listGroup(pgid: number): Promise<GroupMember[]> {
   const ps = await spawnCaptured(
-    ["ps", "-o", "pid=,command=", "-g", String(pgid)],
+    ["ps", "-o", "pid=,stat=,command=", "-g", String(pgid)],
     // A wedge-breaker for one `ps`, far above its milliseconds.
     { timeoutMs: 30_000 },
   );
@@ -60,12 +77,16 @@ async function listGroup(pgid: number): Promise<LeftBehindProcess[]> {
     .map((line) => line.trim())
     .filter((line) => line !== "")
     .map((line) => {
-      const space = line.indexOf(" ");
-      return space === -1
-        ? { pid: Number(line), command: "" }
-        : {
-            pid: Number(line.slice(0, space)),
-            command: line.slice(space + 1).trim(),
-          };
+      const m = /^(\d+)\s+(\S+)\s*(.*)$/.exec(line);
+      if (m === null) {
+        throw new Error(
+          `ps -g ${pgid}: unparseable line ${JSON.stringify(line)}`,
+        );
+      }
+      return {
+        pid: Number(m[1]),
+        zombie: m[2]!.startsWith("Z"),
+        command: m[3]!,
+      };
     });
 }

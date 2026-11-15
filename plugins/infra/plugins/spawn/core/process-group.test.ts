@@ -62,3 +62,30 @@ test("a child that leaves nothing behind reports nothing", async () => {
   expect(result.exitCode).toBe(0);
   expect(result.leftBehind).toEqual([]);
 });
+
+test("a group left holding only zombies ends cleanly and reports nothing", async () => {
+  // macOS counts an exited-but-unreaped process as a group member yet refuses
+  // to signal it: `kill(-pgid, 0)` on a group of zombies is EPERM, not ESRCH.
+  // A descendant forks a child that exits at once, then leaves the group with
+  // setsid and never reaps it: once the leader exits, the group's one member
+  // is that zombie (2026-11-15: `./equin test` exited 1 after 318 passes).
+  const dir = mkdtempSync(join(tmpdir(), "process-group-"));
+  const pidFile = join(dir, "escaper.pid");
+  try {
+    const result = await spawnPassthrough(
+      [
+        "/bin/sh",
+        "-c",
+        `perl -MPOSIX -e 'my $c = fork(); exit 0 if $c == 0; POSIX::setsid() or die; until (\`ps -o stat= -p $c\` =~ /Z/) { select(undef, undef, undef, 0.02) } open(my $f, ">", "${pidFile}") or die; print $f "$$\\n"; close $f; sleep 600' &
+         until [ -s ${pidFile} ]; do sleep 0.02; done; exit 0`,
+      ],
+      { processGroup: "own" },
+    );
+    expect(result.exitCode).toBe(0);
+    expect(result.leftBehind).toEqual([]);
+    // The escaper left the group on purpose; it is this test's to end.
+    process.kill(Number(readFileSync(pidFile, "utf8").trim()), "SIGKILL");
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});

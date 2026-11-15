@@ -78,6 +78,11 @@ descendant stays in that group unless it starts a session of its own, so:
 - **The child exits:** whatever is still in its group is listed (`ps -g`),
   SIGKILLed, and returned as `leftBehind: { pid, command }[]` — the result
   type (`SpawnGroupResult`) has the field only in this mode (an overload).
+  Zombies (exited, parent not yet reaping) are members on macOS but cannot
+  be signalled, so a group of only zombies answers `kill(-pgid)` with EPERM:
+  `signalProcessGroup` reports that as `none-signallable`, zombies are
+  neither killed nor listed, and a live member that still cannot be
+  signalled throws naming it.
 - **The parent exits first:** the exit reaper SIGKILLs the whole group rather
   than SIGTERMing the child alone. SIGKILL, so don't use this mode for a child
   that is itself an op CLI with exit hooks of its own.
