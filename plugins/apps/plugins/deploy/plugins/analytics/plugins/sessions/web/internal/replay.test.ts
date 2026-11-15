@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import type { Journey, JourneyPage } from "./journey";
+import { activeAt, type Journey, type JourneyPage } from "./journey";
 import {
   currentStep,
   frameStateAt,
@@ -19,6 +19,7 @@ const page = (
   sections: null,
   viewport: null,
   ...over,
+  activeDurationS: activeAt({ gaps: over.gaps ?? [] }, over.durationS),
 });
 
 const journey: Journey = {
@@ -39,6 +40,7 @@ const journey: Journey = {
   ],
   durationS: 100,
   activeS: 80,
+  barS: 80,
   actionCount: 1,
   bounced: false,
   truncated: false,

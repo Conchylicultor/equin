@@ -21,6 +21,7 @@ import { axisFrac, axisTicks, pageShares } from "../internal/axis";
 import { presentEvent, propsText } from "../internal/events";
 import { clock, span } from "../internal/format";
 import {
+  activeAt,
   pageRead,
   readLabel,
   sumS,
@@ -34,21 +35,26 @@ import { GAP_FILL, GAP_LABEL } from "./gap-look";
 
 /** The space between two pages of a bar, in px. */
 const PAGE_GAP = 2;
+/** How wide a stretch away is drawn once collapsed (its break mark), in px. */
+const BREAK_PX = 7;
 
 /**
- * A visit's journey on the window's shared log axis: one segment per page,
- * split by its share of the visit; under each, the read line (how much of the
- * page's known sections were reached) and a tick per section reached; over
- * it, one icon per action. Every piece names itself on hover.
+ * A visit's journey on the window's shared log axis, on its ACTIVE clock
+ * (`Journey.barS`): one segment per page, split by its share of the active
+ * time; each stretch away (tab in the background, idle) collapsed to a break
+ * mark at the moment it began, so a visit mostly left open is as long as the
+ * time it was used; under each page, the read line (how much of its known
+ * sections were reached) and a tick per section reached; over it, one icon
+ * per action. Every piece names itself on hover.
  */
 export function JourneyBar({ journey }: { journey: Journey }): ReactNode {
   const { axisMaxS, sections } = useLaneWindow();
   // A truncated visit's unknown tail takes its share of the bar, undrawn.
-  const durations = journey.pages.map((p) => p.durationS);
+  const durations = journey.pages.map((p) => p.activeDurationS);
   const shown = durations.reduce((a, d) => a + d, 0);
   const shares = pageShares(
     journey.truncated
-      ? [...durations, Math.max(0, journey.durationS - shown)]
+      ? [...durations, Math.max(0, journey.barS - shown)]
       : durations,
   ).slice(0, journey.pages.length);
   const starts = shares.map((_, i) =>
@@ -69,7 +75,7 @@ export function JourneyBar({ journey }: { journey: Journey }): ReactNode {
           />
         ))}
       <Placed
-        x={{ start: 0, size: pct(axisFrac(journey.durationS, axisMaxS)) }}
+        x={{ start: 0, size: pct(axisFrac(journey.barS, axisMaxS)) }}
         y="fill"
       >
         {journey.pages.map((page, i) => {
@@ -85,17 +91,14 @@ export function JourneyBar({ journey }: { journey: Journey }): ReactNode {
           );
         })}
         {/* Each stretch away names itself on hover: a hit area over its
-            shading (drawn inside the segment, under the page's label). */}
+            break mark (drawn inside the segment, under the page's label). */}
         {journey.pages.flatMap((page, i) =>
           (page.gaps ?? []).map((g, j) => (
             <GapMark
               key={`${i}:${j}`}
               gap={g}
               path={page.path}
-              left={starts[i]! + shares[i]! * pageFrac(page, g.startS)}
-              width={
-                shares[i]! * (pageFrac(page, g.endS) - pageFrac(page, g.startS))
-              }
+              at={starts[i]! + shares[i]! * pageFrac(page, g.startS)}
             />
           )),
         )}
@@ -116,9 +119,11 @@ export function JourneyBar({ journey }: { journey: Journey }): ReactNode {
   );
 }
 
-/** Where `s` seconds into `page` fall along it, 0..1. */
+/** Where `s` seconds into `page` (wall clock) fall along its segment — on its active clock, 0..1. */
 function pageFrac(page: JourneyPage, s: number): number {
-  return page.durationS > 0 ? Math.min(1, s / page.durationS) : 0;
+  return page.activeDurationS > 0
+    ? Math.min(1, activeAt(page, s) / page.activeDurationS)
+    : 0;
 }
 
 export function pageTitle(path: string): string {
@@ -171,12 +176,12 @@ function PageSegment({
           <Placed
             key={j}
             decorative
-            x={{
-              start: pct(pageFrac(page, g.startS)),
-              size: pct(pageFrac(page, g.endS) - pageFrac(page, g.startS)),
-            }}
+            x={{ center: pct(pageFrac(page, g.startS)), size: BREAK_PX }}
             y="fill"
-            className={GAP_FILL[g.kind]}
+            className={cn(
+              GAP_FILL[g.kind],
+              "shadow-[inset_1px_0_0_var(--border),inset_-1px_0_0_var(--border)]",
+            )}
           />
         ))}
         <Placed
@@ -212,11 +217,12 @@ function PageSegment({
       <TooltipCardContent side="top" align="start">
         <Stack gap="2xs">
           <Text variant="label" tone="strong">
-            {page.path} · {span(page.durationS)}
+            {page.path} ·{" "}
+            {span(away > 0 ? page.activeDurationS : page.durationS)}
             {away > 0 && (
               <span className="font-normal text-muted-foreground">
                 {" "}
-                · {span(page.durationS - away)} active
+                active · {span(page.durationS)} total
               </span>
             )}
           </Text>
@@ -255,13 +261,12 @@ export function actionsLabel(n: number): string {
 function GapMark({
   gap,
   path,
-  left,
-  width,
+  at,
 }: {
   gap: PageGap;
   path: string;
-  left: number;
-  width: number;
+  /** Where its break mark stands along the bar, 0..1. */
+  at: number;
 }): ReactNode {
   return (
     <Tooltip>
@@ -269,7 +274,7 @@ function GapMark({
         render={
           <span
             className={placedClasses()}
-            style={placedStyle({ start: pct(left), size: pct(width) }, "fill")}
+            style={placedStyle({ center: pct(at), size: BREAK_PX + 4 }, "fill")}
           />
         }
       />

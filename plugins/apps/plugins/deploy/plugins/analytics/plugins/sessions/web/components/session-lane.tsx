@@ -29,8 +29,9 @@ const DEVICE_ICON = {
 /**
  * One visit's row: who (flag, country, time; device, software, source;
  * first visit or returning, channel, load time) · its journey on the shared
- * axis · how long it lasted (and how much of it was active, when the stretches
- * away are recorded and there were some) and how many actions it held.
+ * axis · how long it was active (the time minus its stretches away, when they
+ * are recorded — its wall-clock total under it when there were some) and how
+ * many actions it held.
  */
 export function SessionLane({ session }: { session: Session }): ReactNode {
   const journey = useLaneWindow().journeys.get(session.id);
@@ -89,15 +90,14 @@ export function SessionLane({ session }: { session: Session }): ReactNode {
       </Stack>
       <JourneyBar journey={journey} />
       <Stack gap="none" align="end">
+        {/* The headline is the time the visit was USED; the wall-clock total
+            (a tab left open) is the line under it, only when they differ. */}
         <Text variant="subheading" className="tabular-nums">
-          {span(journey.durationS)}
+          {span(journey.activeS ?? journey.durationS)}
         </Text>
         {journey.activeS !== null && journey.activeS < journey.durationS && (
           <Text variant="caption" tone="faint" className="tabular-nums">
-            <span className="font-medium text-muted-foreground">
-              {span(journey.activeS)}
-            </span>{" "}
-            active
+            {span(journey.durationS)} total
           </Text>
         )}
         <Text variant="caption" tone={journey.actionCount ? "muted" : "faint"}>

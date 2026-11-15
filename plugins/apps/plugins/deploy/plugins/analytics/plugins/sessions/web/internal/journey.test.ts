@@ -4,7 +4,13 @@ import type {
   SessionHit,
 } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/core";
 import { sourceOf } from "./facts";
-import { journeyOf, pageRead, readLabel, sectionsByPath } from "./journey";
+import {
+  activeAt,
+  journeyOf,
+  pageRead,
+  readLabel,
+  sectionsByPath,
+} from "./journey";
 
 const T0 = Date.parse("2026-11-10T14:32:00.000Z");
 const at = (s: number) => new Date(T0 + s * 1000).toISOString();
@@ -279,6 +285,23 @@ describe("stretches away", () => {
     expect(j.pages[1]!.durationS).toBe(50);
     expect(j.durationS).toBe(150);
     expect(j.activeS).toBe(150 - 30 - 30);
+    // The bar runs on the active clock: each page's stretches collapsed.
+    expect(j.pages.map((p) => p.activeDurationS)).toEqual([70, 20]);
+    expect(j.barS).toBe(90);
+  });
+
+  it("activeAt: a moment on the page's active clock, a stretch's inside at its start", () => {
+    const page = {
+      gaps: [
+        { kind: "idle" as const, startS: 10, endS: 40 },
+        { kind: "hidden" as const, startS: 50, endS: 60 },
+      ],
+    };
+    expect(activeAt(page, 5)).toBe(5);
+    expect(activeAt(page, 25)).toBe(10);
+    expect(activeAt(page, 45)).toBe(15);
+    expect(activeAt(page, 80)).toBe(40);
+    expect(activeAt({ gaps: null }, 80)).toBe(80);
   });
 
   it("clips a stretch to its page, and drops one wholly past it", () => {

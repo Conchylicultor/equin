@@ -2502,11 +2502,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `sessionRowOf`
                   - `startedAtKeyText`
               - Cross-plugin:
-                - Uses tokens: 30 vars — full list in [`plugins/apps/plugins/deploy/plugins/analytics/plugins/sessions/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/analytics/plugins/sessions/REFERENCE.md)
+                - Uses tokens: 29 vars — full list in [`plugins/apps/plugins/deploy/plugins/analytics/plugins/sessions/REFERENCE.md`](../plugins/apps/plugins/deploy/plugins/analytics/plugins/sessions/REFERENCE.md)
                   - `ui/tokens/color-palette` ×14
                   - `ui/tokens/density` ×9
-                  - `ui/tokens/type-scale` ×3
                   - `ui/tokens/shape` ×2
+                  - `ui/tokens/type-scale` ×2
                   - `ui/tokens/font-family --font-mono`
                   - `ui/tokens/shadow --shadow-lg`
         - **`composition`** — Composition section of the site page's Settings tab: which composition this deployment builds and ships, the shape of it (category, entry points, what it extends, how many contributors are opted in), and a cross-app link into that composition's Studio detail pane where its membership is actually edited.

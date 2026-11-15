@@ -38,6 +38,11 @@ export interface JourneyPage {
   startS: number;
   /** How long the visit stayed on it: until the next pageview, the exit page until the visit's end. */
   durationS: number;
+  /**
+   * How long the visit was AT it: `durationS` minus its stretches away (the
+   * page's active clock, `activeAt`); `durationS` when they are not recorded.
+   */
+  activeDurationS: number;
   /** In reach order; the first reach of each section only. */
   reached: SectionReach[];
   /** In order; section reaches excluded. */
@@ -68,6 +73,12 @@ export interface Journey {
    * visit (its unknown tail may hold some).
    */
   activeS: number | null;
+  /**
+   * The bar's length: the visit on its ACTIVE clock — each page's
+   * `activeDurationS`, plus a truncated visit's unknown tail — so a visit
+   * mostly spent away is drawn as short as the time it was used.
+   */
+  barS: number;
   actionCount: number;
   /** One pageview — collect's bounce (the Bounced shape). */
   bounced: boolean;
@@ -111,6 +122,7 @@ export function journeyOf(session: Session): Journey {
         path: hit.path,
         startS: Math.max(0, (ms(hit.ts) - start) / 1000),
         durationS: 0,
+        activeDurationS: 0,
         reached: [],
         actions: [],
         gaps: hit.gaps === null ? null : hit.gaps.map(gapOf),
@@ -127,6 +139,7 @@ export function journeyOf(session: Session): Journey {
       path: session.entryPath,
       startS: 0,
       durationS: 0,
+      activeDurationS: 0,
       reached: [],
       actions: [],
       gaps: null,
@@ -149,15 +162,19 @@ export function journeyOf(session: Session): Journey {
         : durationS;
     page.durationS = Math.max(0, end - page.startS);
     if (page.gaps !== null) page.gaps = clipGaps(page.gaps, page.durationS);
+    page.activeDurationS = activeAt(page, page.durationS);
   });
   const actionCount = pages.reduce((n, p) => n + p.actions.length, 0);
   const totalS = Math.max(durationS, pages.at(-1)!.startS);
+  const shownEnd = pages.at(-1)!.startS + pages.at(-1)!.durationS;
+  const tailS = session.hitsTruncated ? Math.max(0, totalS - shownEnd) : 0;
   const known = !session.hitsTruncated && pages.every((p) => p.gaps !== null);
   return {
     pages,
     durationS: totalS,
     // collect's one definition (the report's visit duration), never re-derived.
     activeS: known ? session.activeMs / 1000 : null,
+    barS: pages.reduce((a, p) => a + p.activeDurationS, 0) + tailS,
     actionCount,
     bounced: session.pageviews <= 1,
     truncated: session.hitsTruncated,
@@ -194,6 +211,20 @@ function clipGaps(gaps: readonly PageGap[], durationS: number): PageGap[] {
       endS: Math.min(g.endS, durationS),
     }))
     .filter((g) => g.endS > g.startS);
+}
+
+/**
+ * `s` seconds into `page` on its ACTIVE clock: `s` minus every stretch away
+ * before it — where the bar draws what happened at `s`, the stretches
+ * collapsed. A moment inside a stretch lands at the stretch's start.
+ */
+export function activeAt(page: Pick<JourneyPage, "gaps">, s: number): number {
+  let away = 0;
+  for (const g of page.gaps ?? []) {
+    if (g.startS >= s) break;
+    away += Math.min(g.endS, s) - g.startS;
+  }
+  return s - away;
 }
 
 /** How long `gaps` last in all, in seconds. */

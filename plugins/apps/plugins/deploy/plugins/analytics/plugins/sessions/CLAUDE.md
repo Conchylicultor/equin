@@ -113,8 +113,16 @@ Served `source: "external"` (`server/internal/served.ts`) on this computer's
 - `events.ts` — the website's event names in words, with an icon; an unknown
   event still renders, by its name.
 
-Background / idle stretches and load time are recorded but not drawn yet
-(task-1794273264-vx579h).
+**Active time first.** A row's headline duration is the visit's active time
+(`activeS`, collect's `activeMs`), its wall-clock total (`durationS`, a tab
+left open included) the line under it when they differ; the toolbar's median
+is over the same figure. The bar runs on the same ACTIVE clock
+(`Journey.barS`, each page's `activeDurationS`, `activeAt` mapping a page
+moment onto it): every stretch away (background, idle) is collapsed to a
+narrow break mark where it began, named with its length on hover — so a
+visit mostly left open is drawn as short as the time it was used, and the
+axis (whose end is the longest bar) measures active time. The expanded
+timeline stays on the wall clock: it says when things happened.
 
 ## Replay
 
@@ -256,11 +264,11 @@ Mockup: `proto-1794566734-a58es0`.
     - `sessionRowOf`
     - `startedAtKeyText`
 - Cross-plugin:
-  - Uses tokens: 30 vars — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses tokens: 29 vars — full list in [REFERENCE.md](./REFERENCE.md)
     - `ui/tokens/color-palette` ×14
     - `ui/tokens/density` ×9
-    - `ui/tokens/type-scale` ×3
     - `ui/tokens/shape` ×2
+    - `ui/tokens/type-scale` ×2
     - `ui/tokens/font-family --font-mono`
     - `ui/tokens/shadow --shadow-lg`
 

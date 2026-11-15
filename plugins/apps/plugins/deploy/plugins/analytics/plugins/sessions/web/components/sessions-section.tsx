@@ -352,14 +352,15 @@ function useLaneWindow(
       deploymentId,
       journeys,
       sections: sectionsByPath(all),
-      axisMaxS: axisMaxS(Math.max(0, ...all.map((j) => j.durationS))),
+      axisMaxS: axisMaxS(Math.max(0, ...all.map((j) => j.barS))),
       // Not known yet is no figure at all, never "0 sessions".
       summary: !known
         ? null
         : {
             total,
             loaded: sessions.length,
-            medianS: median(all.map((j) => j.durationS)),
+            // The time a visit was used, as its row's headline says.
+            medianS: median(all.map((j) => j.activeS ?? j.durationS)),
             // Over the visits whose load got ready on screen; none such → no figure.
             medianLoadMs: median(
               sessions.flatMap((s) => {
