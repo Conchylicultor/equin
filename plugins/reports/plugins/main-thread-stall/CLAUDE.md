@@ -37,6 +37,11 @@ All rules live (and are tested) there:
 - **Ended**: `recovered`, `gone` (lock granted: reload, close, kill),
   `unknown` (the worker died with it open — see storage).
 - **Suppressed**: a tab hidden or Page-Lifecycle-frozen at onset (logged once).
+  A harness that pauses a page from outside owes it the `freeze` / `resume`
+  events: the agent-browser host's idle freeze (`Debugger.pause`, which
+  Chromium never announces) does (`infra/mcp/browser` core `freezeTab`), so
+  its idle tabs are not filed (the 35.8 s and 254.9 s "stalls" of 2026-11-15;
+  `e2e/freeze.ts` case 1c).
 - **Sleep**: a worker tick > 3 s late resets every tab and drops open stalls.
 - **Cohort**: tabs silent within 1.5 s of each other froze together (one
   renderer): one incident, the focused visible tab primary, the others

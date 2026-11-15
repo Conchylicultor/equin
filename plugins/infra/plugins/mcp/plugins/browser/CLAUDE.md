@@ -107,7 +107,12 @@ Files: `services/agent-browser/` (`data-dirs`) — `host.sock`, `host.pid`,
   rasterized on the CPU (SwiftShader) in the one GPU process, so a page that
   redraws forever costs whole cores with nobody looking (four idle Sonata
   piano rolls once held ~4.5 cores for a day). The status marks each tab
-  `frozen`.
+  `frozen`. The host keeps the Page Lifecycle contract a real freeze has: the
+  page's document gets `freeze` just before the pause and `resume` just after
+  the thaw, so the page's own observers (`reports/main-thread-stall`'s
+  watchdog, `primitives/perfs/page-pauses`) take the silence as the browser's
+  doing — without them every idle tab was filed as a frozen main thread (35.8
+  s and 254.9 s stalls on 2026-11-15) and the live updates it held as slow-ops.
 - **Tab** — `t1`, `t2`, …; a call naming none acts on the last one used. Each
   records its console (incl. page errors and auto-dismissed dialogs) and network
   from the moment it opens, capped at 500 entries. At most 5 per session, 32
@@ -276,6 +281,7 @@ nor closed under it. Bounded, because the host cannot see the script end.
     - `AgentBrowserStatus`
     - `AgentBrowserTab`
     - `AttachTicket`
+    - `TabFreezeCdp`
   - Exports (values):
     - `AgentBrowserHostStatusSchema`
     - `agentBrowserStatus`
@@ -283,9 +289,11 @@ nor closed under it. Bounded, because the host cannot see the script end.
     - `attachMarker`
     - `decodeAttachTicket`
     - `encodeAttachTicket`
+    - `freezeTab`
     - `MAX_HOST_ERRORS`
     - `MAX_SESSIONS`
     - `MAX_TABS`
+    - `thawTab`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --muted-foreground`
@@ -294,6 +302,7 @@ nor closed under it. Bounded, because the host cannot see the script end.
     - `conversations/before-after`
     - `debug/sentinel/machine-usage`
     - `framework/tooling/e2e-harness`
+    - `reports/main-thread-stall`
 - Exemptions:
   - Exempts itself from:
     - `boundaries/no-platform-api` — `server/internal/host-client.ts`, `shared/code-id.ts` (debt)

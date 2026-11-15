@@ -10,6 +10,11 @@
  *     `port rx > live-state:<kind> <key>` — and the fingerprint carries it.
  *     The injected (unmarked) loops of 1, 2 and 3 name none: a live-state
  *     frame that finished just before them is never blamed.
+ *  1c. The agent-browser host's idle freeze (`freezeTab`: Page Lifecycle
+ *     `freeze`, then `Debugger.pause`), held 12 s, then `thawTab` ⇒ NO
+ *     report: a tab paused from outside is the browser's doing. Its control —
+ *     the same pause without the lifecycle event — still files one, so the
+ *     silence is the event's doing, not a detector that went blind.
  *  2. An endless loop in a second tab, then its renderer is killed (CDP
  *     Page.crash — headless Chromium cannot reload or close a hung tab) ⇒
  *     `ended: gone`, `framesDuring: 0`, naming that tab, filed through the
@@ -37,6 +42,10 @@ import {
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { waitFor } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/core";
 import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
+import {
+  freezeTab,
+  thawTab,
+} from "@plugins/infra/plugins/mcp/plugins/browser/core";
 import type { Page } from "playwright";
 
 interface StallRow extends Record<string, unknown> {
@@ -174,6 +183,40 @@ await withBrowser(async (h) => {
     mk?.fingerprint.includes("> live-state:") ?? false,
     String(mk?.fingerprint),
   );
+
+  // ── 1c. Paused from outside: the agent-browser host's idle freeze ───────
+  // The 2026-11-15 reports (35.8 s, 254.9 s) were idle `browser_*` tabs the
+  // host paused in the debugger. Held well past the report bar, then thawed.
+  const cdp = await context.newCDPSession(page);
+  const t1c = Date.now() - 1000;
+  await freezeTab(cdp);
+  await new Promise((resolve) => setTimeout(resolve, 12_000));
+  await thawTab(cdp);
+  // Past the settle grace and a filing round trip: a report would be in.
+  await new Promise((resolve) => setTimeout(resolve, 8000));
+  const paused = await stallsSince(t1c);
+  r.ok(
+    "a tab the agent-browser host froze for 12 s files no main-thread-stall report",
+    paused.length === 0,
+    JSON.stringify(paused.map((x) => x.data)),
+  );
+  // Control: the same pause without the lifecycle event is a stall.
+  const t1d = Date.now() - 1000;
+  await cdp.send("Debugger.enable");
+  await cdp.send("Debugger.pause");
+  await new Promise((resolve) => setTimeout(resolve, 8000));
+  await cdp.send("Debugger.disable");
+  const bare = await waitFor(
+    () => stallsSince(t1d),
+    (rows) => rows.some((x) => x.data.ended === "recovered"),
+    { timeoutMs: 40_000, intervalMs: 1000 },
+  );
+  r.ok(
+    "control: the same 8 s pause without the freeze event files a recovered report",
+    bare.ok,
+    JSON.stringify(bare.value.map((x) => x.data)),
+  );
+  await cdp.detach();
 
   // ── 2. A stall that never ends: the frozen tab is killed ────────────────
   // Headless Chromium has no "page unresponsive" path: a reload or close of a

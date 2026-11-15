@@ -38433,6 +38433,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `AgentBrowserStatus`
               - `AgentBrowserTab`
               - `AttachTicket`
+              - `TabFreezeCdp`
             - Exports (values):
               - `AgentBrowserHostStatusSchema`
               - `agentBrowserStatus`
@@ -38440,9 +38441,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `attachMarker`
               - `decodeAttachTicket`
               - `encodeAttachTicket`
+              - `freezeTab`
               - `MAX_HOST_ERRORS`
               - `MAX_SESSIONS`
               - `MAX_TABS`
+              - `thawTab`
           - Cross-plugin:
             - Uses tokens:
               - `ui/tokens/color-palette --muted-foreground`
@@ -38451,6 +38454,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/before-after`
               - `debug/sentinel/machine-usage`
               - `framework/tooling/e2e-harness`
+              - `reports/main-thread-stall`
           - Exemptions:
             - Exempts itself from:
               - `boundaries/no-platform-api` — `server/internal/host-client.ts`, `shared/code-id.ts` (debt)

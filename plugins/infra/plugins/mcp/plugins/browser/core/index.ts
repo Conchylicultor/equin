@@ -6,6 +6,8 @@ export {
   decodeAttachTicket,
 } from "./internal/attach-ticket";
 export type { AttachTicket } from "./internal/attach-ticket";
+export { freezeTab, thawTab } from "./internal/tab-freeze";
+export type { TabFreezeCdp } from "./internal/tab-freeze";
 export {
   agentBrowserStatus,
   AgentBrowserHostStatusSchema,

@@ -13,9 +13,11 @@ import {
   namespaceFromHost,
 } from "@plugins/infra/plugins/namespace/core";
 import {
+  freezeTab,
   MAX_HOST_ERRORS,
   MAX_SESSIONS,
   MAX_TABS,
+  thawTab,
   type AgentBrowserHostError,
   type AgentBrowserSession,
 } from "../core";
@@ -70,6 +72,8 @@ export const HOST_IDLE_MS = 5 * 60_000;
  * `Page.setWebLifecycleState: frozen` is NOT it — headless pages are always
  * visible, and Chromium ignores a freeze of a visible page (scripts kept
  * running, the GPU cost was unchanged); a minimized window is ignored too.
+ * The freeze and thaw themselves (and the Page Lifecycle events they keep)
+ * are `freezeTab` / `thawTab` in `core`.
  */
 export const FREEZE_AFTER_MS = 60_000;
 /**
@@ -713,12 +717,7 @@ async function applyFrozen(session: Session, frozen: boolean): Promise<void> {
     if (tab.frozen === frozen || tab.page.isClosed()) continue;
     tab.cdp ??= session.context.newCDPSession(tab.page);
     const cdp = await tab.cdp;
-    if (frozen) {
-      await cdp.send("Debugger.enable");
-      await cdp.send("Debugger.pause");
-    } else {
-      await cdp.send("Debugger.disable");
-    }
+    await (frozen ? freezeTab(cdp) : thawTab(cdp));
     tab.frozen = frozen;
     changed = true;
   }
