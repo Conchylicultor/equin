@@ -186,7 +186,11 @@ the tab was never frozen long enough to need one):
   long frames inside them are in (an id already judged is ignored: a key held
   past the grace). Judged on its **own time** — processing + presentation,
   not input delay: a click that waited on an unrelated long task is that
-  frame's slowness, never the clicked control's.
+  frame's slowness, never the clicked control's. Nor a LATER input's work:
+  inputs dispatched inside one frame share its paint (`Alt+N`: keydown Alt,
+  keydown N), so an entry's own time ends where the next interaction's
+  handlers began (`ownEnd`) — the bare Alt is not blamed for the window N
+  opened.
 - **Identify at dispatch**: a capture listener on pointerdown / click /
   keydown resolves the target — and reads where the tab is (a click that
   navigates is filed under the screen it was made on) — while it is still in

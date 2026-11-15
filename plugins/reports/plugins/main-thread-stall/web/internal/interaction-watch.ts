@@ -13,6 +13,7 @@ import {
   frameClaimed,
   judgeInteraction,
   longestEntry,
+  ownEnd,
   type InteractionBegin,
   phasesOf,
   type EventTimingLike,
@@ -27,6 +28,18 @@ import { LOG_CHANNEL } from "./log-channel";
 interface EventTimingEntry extends PerformanceEntry, EventTimingLike {
   readonly target: Node | null;
 }
+
+/**
+ * An Event Timing entry cut to its own time (`ownEnd`): its `duration` ends
+ * where a later interaction's handlers began inside its frame, if one did.
+ */
+interface OwnEntry extends EventTimingLike {
+  readonly target: Node | null;
+}
+
+// The dispatches that START an interaction: their handlers' time is never an
+// earlier interaction's (a click follows its own pointerdown).
+const STARTS_INTERACTION = new Set(["keydown", "pointerdown"]);
 
 const EVENT_ENTRY_TYPE = "event";
 
@@ -69,10 +82,12 @@ interface Dispatched extends Origin {
    * frame by the input delay.
    */
   ranAt: number;
+  /** The same instant on the performance clock (Event Timing's). */
+  ranAtPerf: number;
 }
 
 interface Pending {
-  entries: EventTimingEntry[];
+  entries: OwnEntry[];
   origin: Origin | null;
 }
 
@@ -147,6 +162,7 @@ export function installInteractionWatch(
     if (!kind) return;
     const key = ev instanceof KeyboardEvent ? keyClass(ev) : null;
     const target = interactionTarget(ev.target, kind, key);
+    const ranAtPerf = performance.now();
     const begin: InteractionBegin = {
       target,
       eventType: ev.type,
@@ -159,7 +175,8 @@ export function installInteractionWatch(
       tab: readTab(),
       begin,
       trusted: ev.isTrusted,
-      ranAt: performance.timeOrigin + performance.now(),
+      ranAt: performance.timeOrigin + ranAtPerf,
+      ranAtPerf,
     });
     if (dispatched.length > INTERACTION.DISPATCH_RING) dispatched.shift();
     // A script's synthetic event is not something a person did.
@@ -168,7 +185,7 @@ export function installInteractionWatch(
 
   // Matched as the entry arrives (right after its paint), while its dispatch is
   // still in the ring. An entry's startTime is its event's timeStamp.
-  const originOf = (e: EventTimingEntry): Origin | null => {
+  const originOf = (e: OwnEntry): Origin | null => {
     const kind = e.name.startsWith("key") ? "key" : "click";
     const hit = dispatched.find(
       (d) =>
@@ -252,10 +269,33 @@ export function installInteractionWatch(
   let eventObserver: PerformanceObserver | null = null;
   if (eventTimingSupported()) {
     eventObserver = new PerformanceObserver((list) => {
-      for (const e of list.getEntries() as EventTimingEntry[]) {
-        if (e.interactionId === 0 || judged.includes(e.interactionId)) continue;
-        // Its own time: an input delay alone is the long task it waited on.
-        const end = e.startTime + e.duration;
+      for (const raw of list.getEntries() as EventTimingEntry[]) {
+        if (raw.interactionId === 0 || judged.includes(raw.interactionId))
+          continue;
+        // Its own time: an input delay alone is the long task it waited on,
+        // and a later input's handlers sharing its frame are that input's.
+        // Entries arrive after their paint, so every dispatch inside the
+        // frame is already in the ring — never the entry's own event (its
+        // timeStamp is the entry's startTime), whose handlers ran inside its
+        // processing.
+        const later = dispatched
+          .filter(
+            (d) =>
+              d.trusted &&
+              STARTS_INTERACTION.has(d.begin.eventType) &&
+              d.timeStamp !== raw.startTime,
+          )
+          .map((d) => d.ranAtPerf);
+        const end = ownEnd(raw, later);
+        const e: OwnEntry = {
+          name: raw.name,
+          startTime: raw.startTime,
+          duration: end - raw.startTime,
+          processingStart: raw.processingStart,
+          processingEnd: raw.processingEnd,
+          interactionId: raw.interactionId,
+          target: raw.target,
+        };
         if (end - e.processingStart < INTERACTION.RECORD_MIN_MS) continue;
         slow.push({ start: e.processingStart, end });
         const group = pending.get(e.interactionId);

@@ -6,6 +6,7 @@ import {
   frameClaimed,
   judgeInteraction,
   longestEntry,
+  ownEnd,
   phasesOf,
   type RawFrame,
   type RawScript,
@@ -159,5 +160,28 @@ describe("Event Timing entries", () => {
       processingMs: 50,
       presentationDelayMs: 424,
     });
+  });
+});
+
+describe("ownEnd", () => {
+  // Alt+N as Playwright sends it: keydown Alt (no work), then keydown N (opens
+  // a window) 0.2 ms later, both presented by one 88 ms frame.
+  const alt = {
+    name: "keydown",
+    startTime: 868.9,
+    duration: 88,
+    processingStart: 869.1,
+    processingEnd: 869.4,
+    interactionId: 2500,
+  };
+  const nHandlers = 869.6;
+  test("a later input's handlers in the same frame end this entry's own time", () => {
+    expect(ownEnd(alt, [869.3, nHandlers])).toBe(nHandlers);
+  });
+  test("with no later input, its own time runs to its paint", () => {
+    expect(ownEnd(alt, [869.3])).toBe(868.9 + 88);
+  });
+  test("an input after the paint, or before its handlers ended, is not inside it", () => {
+    expect(ownEnd(alt, [700, 869.2, 2000])).toBe(868.9 + 88);
   });
 });

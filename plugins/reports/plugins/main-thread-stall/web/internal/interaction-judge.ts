@@ -273,3 +273,25 @@ export function phasesOf(e: EventTimingLike): {
     presentationDelayMs: Math.round(Math.max(0, end - e.processingEnd)),
   };
 }
+
+/**
+ * Where an entry's OWN time ends (performance clock): at its paint, unless a
+ * later interaction's handlers began after this entry's handlers ended and
+ * before that paint — then at the first of them. Several inputs dispatched
+ * inside one frame (`Alt+N`: keydown Alt, keydown N) all share its paint, so
+ * each entry's presentation delay would include every later one's work: the
+ * Alt keydown, whose handlers do nothing, would carry what N's new-window
+ * handler did. From where the later handlers begin, the time is theirs.
+ *
+ * `laterHandlers`: when each other interaction's handlers began (a trusted
+ * keydown / pointerdown, read at dispatch) — the starts of NEW interactions
+ * only, never a later event of this same one (its click after a pointerdown).
+ */
+export function ownEnd(
+  e: EventTimingLike,
+  laterHandlers: readonly number[],
+): number {
+  let end = e.startTime + e.duration;
+  for (const t of laterHandlers) if (t > e.processingEnd && t < end) end = t;
+  return end;
+}
