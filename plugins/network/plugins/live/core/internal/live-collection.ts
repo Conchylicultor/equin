@@ -39,7 +39,10 @@ import {
 } from "./query";
 import { LIVE_ROW_KEY } from "./row-key";
 import type { MachineFeature } from "@plugins/infra/plugins/endpoints/core";
-import { accessFields, type LiveAccessSpec } from "./access";
+import {
+  type LiveCollectionAccessSpec,
+  refuseCollectionAccess,
+} from "./access";
 import {
   machineFields,
   type LiveMachineBrand,
@@ -916,7 +919,7 @@ export function liveCollection<
     tree?: never;
   } & LiveFieldsForm<undefined, Al, never, undefined, R> &
     LiveMachineSpec<NM> &
-    LiveAccessSpec,
+    LiveCollectionAccessSpec,
 ): LiveNoWindowCollection<
   [Al] extends [undefined]
     ? FieldsRow<E, P, CP, OF, CF>
@@ -968,7 +971,7 @@ export function liveCollection<
     baseExposures?: never;
     /** A union is no tree: its rows are several tables'. */
     tree?: never;
-  } & LiveAccessSpec,
+  } & LiveCollectionAccessSpec,
 ): LiveArmsCollection<
   FieldsRow<undefined, never, never, OF, CF>,
   FieldsSpecFilterable<undefined, never, OF>,
@@ -1029,7 +1032,7 @@ export function liveCollection<
       >;
   } & LiveFieldsForm<LiveFieldsDefault<S>, undefined, S, Cn, R> &
     LiveMachineSpec<NM> &
-    LiveAccessSpec,
+    LiveCollectionAccessSpec,
 ): LiveCollectionOf<
   FieldsRow<E, P, CP, OF, CF>,
   FieldsSpecFilterable<E, P, OF>,
@@ -1039,9 +1042,9 @@ export function liveCollection<
   Tr
 > &
   LiveScopedColumnsOf<Sc> & {
-  fields: LiveFields<P | (keyof OF & string)>;
-  from: FromEntity<E>;
-} & LiveMachineBrand<NM>;
+    fields: LiveFields<P | (keyof OF & string)>;
+    from: FromEntity<E>;
+  } & LiveMachineBrand<NM>;
 export function liveCollection<Row, F, S extends string>(
   key: string,
   declared: LiveFieldsSpec<
@@ -1073,6 +1076,7 @@ export function liveCollection<Row, F, S extends string>(
       needsMachine?: MachineFeature;
       access?: unknown;
     };
+    refuseCollectionAccess(key, fieldsSpec.access);
     // A union's rows are no entity's: its base fields are its own, and each
     // arm's are the arm's (`liveArm`).
     if (fieldsSpec.arms !== undefined) {
@@ -1113,7 +1117,6 @@ export function liveCollection<Row, F, S extends string>(
       carry: _carry,
       baseExposures: _baseExposures,
       needsMachine: _needsMachine,
-      access: _access,
       ...rest
     } = fieldsSpec;
     if (fieldsSpec.arms !== undefined && _needsMachine !== undefined) {
@@ -1151,7 +1154,6 @@ export function liveCollection<Row, F, S extends string>(
       ).map(([f]) => f),
     ];
     const from = fieldsSpec.from;
-    stampAccess(key, minted, _access);
     return {
       ...minted,
       fields: resolved.fields(sortable),
@@ -1163,37 +1165,6 @@ export function liveCollection<Row, F, S extends string>(
       shape: declaredShape(`liveCollection("${key}")`, resolved.row, ""),
       ...machineFields(fieldsSpec),
     };
-  }
-}
-
-/**
- * Carry a collection's `access` onto every descriptor it minted — itself (an
- * `all` set is its own) and each sibling it holds (`window`, `rows`, `groups`,
- * `count`, `ancestors`, …): each is a resource the runtime registers apart, so
- * each must say who reads it. The descriptors are the registered objects
- * (`registerResourceDescriptor` keeps them by reference), stamped before any
- * serve call reads them.
- */
-function stampAccess(key: string, minted: object, access: unknown): void {
-  const fields = accessFields(`liveCollection("${key}")`, access);
-  if (fields.access === undefined) return;
-  const isDescriptor = (v: unknown): v is { key: string; access?: unknown } =>
-    v !== null &&
-    typeof v === "object" &&
-    typeof (v as { key?: unknown }).key === "string" &&
-    ((v as { key: string }).key === key ||
-      (v as { key: string }).key.startsWith(`${key}:`)) &&
-    typeof (v as { validateParams?: unknown }).validateParams === "function";
-  let stamped = 0;
-  for (const v of [minted, ...Object.values(minted)]) {
-    if (!isDescriptor(v)) continue;
-    v.access = fields.access;
-    stamped++;
-  }
-  if (stamped === 0) {
-    throw new Error(
-      `liveCollection("${key}"): \`access\` declared, but the collection minted no descriptor to carry it`,
-    );
   }
 }
 

@@ -79,7 +79,7 @@ export type EndpointAccess =
 /**
  * The one opt-in that serves a deployed site's visitors as well as the owner,
  * with why: an endpoint's, a socket's (`SocketAccess`) and a live resource's
- * (`liveValue` / `liveCollection`'s `access`) — each owner-only without it.
+ * (`liveValue`'s `access`; a `liveCollection` takes none) — each owner-only without it.
  */
 export type VisitorAccess = { visitor: string };
 

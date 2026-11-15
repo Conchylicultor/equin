@@ -1387,13 +1387,12 @@ export const savedThemesList = liveValue("saved-themes.list", {
   schema, preload: "boot-and-keep",
   access: { visitor: "the theme painter resolves every page's selected theme against it" },
 });
-liveCollection("x.items", { …, access: { visitor: "<which site page reads it>" } });
 ```
 
 - Absent is the owner: a forgotten field is the safe answer. Anything but
   `{ visitor: "<non-empty reason>" }` throws at declaration (`core/internal/access.ts`).
-- On every descriptor the declaration mints (a collection's window, `:rows`,
-  `:groups`, `:count`, `:ancestors`; a paged value's pages and meta), so the
+- On every descriptor the declaration mints (a paged value's pages and
+  meta), so the
   runtime decides per registered key (resource-runtime's
   `ResourceDefinition.access`).
 - Enforced on every read path a visitor reaches: the HTTP read (403
@@ -1412,8 +1411,16 @@ liveCollection("x.items", { …, access: { visitor: "<which site page reads it>"
   asks the rule on the same three paths, after the params gate and before any
   side effect (`ResourceDefinition.access.tuple`; the boot snapshot through
   `visitorReadsTuple`); a throwing rule refuses. Never for the owner. A paged
-  value is not visitor-readable (throws); a collection's access stays whole
-  (its tuples are queries over one row set).
+  value is not visitor-readable (throws).
+- **A collection takes no `access`.** Its tuples are queries (a window's
+  `where` / `orderBy` / `limit`, an id set) over one row set, so a whole
+  `{ visitor }` would open every query and id lookup to a site's visitors.
+  `access` on any `liveCollection` form is a type error (`access?: never`)
+  and throws at declaration for an untyped caller
+  (`access.ts`'s `refuseCollectionAccess`). Visitor-readable collections need
+  a per-tuple design first — a rule over decoded queries and id sets in every
+  collection compiler (window, `all`, lookup, union, external, off-feed);
+  until a site page needs one, read what it shows through a `liveValue`.
 - Declare it only for what a deployed site's pages read (the website: config,
   saved themes, icons, the Maps browser config). Design:
   `research/2026-11-15-network-live-resource-visitor-access.md`.

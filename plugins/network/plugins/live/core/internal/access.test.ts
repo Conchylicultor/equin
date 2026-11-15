@@ -25,37 +25,44 @@ describe("access — on the descriptor the runtime registers", () => {
     ).toBeUndefined();
   });
 
-  test("a window collection stamps every descriptor it mints", () => {
-    liveCollection("test.access.window", {
-      fields: F,
-      id: "id",
-      sortable: ["n"],
-      default: { orderBy: [["n", "asc"]], limit: 10 },
-      maxLimit: 50,
-      count: true,
-      access,
-    });
-    for (const k of ["", ":rows", ":groups", ":count"]) {
-      expect(resourceDescriptorByKey(`test.access.window${k}`)?.access).toEqual(
+  test("a collection refuses it — a type error, and a throw at declaration", () => {
+    const refused =
+      /`access` is not available on a collection.*per-tuple design first/;
+    expect(() =>
+      liveCollection("test.access.window", {
+        fields: F,
+        id: "id",
+        sortable: ["n"],
+        default: { orderBy: [["n", "asc"]], limit: 10 },
+        maxLimit: 50,
+        count: true,
+        // @ts-expect-error -- a collection declares no visitor access
         access,
-      );
-    }
-  });
-
-  test("an `all` set and a lookup-only collection stamp theirs", () => {
-    liveCollection("test.access.all", {
-      fields: F,
-      id: "id",
-      all: { orderBy: [["n", "asc"]], max: 10 },
-      access,
-    });
-    liveCollection("test.access.lookup", { fields: F, id: "id", access });
+      }),
+    ).toThrow(refused);
+    expect(() =>
+      liveCollection("test.access.all", {
+        fields: F,
+        id: "id",
+        all: { orderBy: [["n", "asc"]], max: 10 },
+        // @ts-expect-error -- a collection declares no visitor access
+        access,
+      }),
+    ).toThrow(refused);
+    expect(() =>
+      liveCollection("test.access.lookup", {
+        fields: F,
+        id: "id",
+        // @ts-expect-error -- a collection declares no visitor access
+        access,
+      }),
+    ).toThrow(refused);
     for (const k of [
+      "test.access.window",
       "test.access.all",
-      "test.access.all:rows",
-      "test.access.lookup:rows",
+      "test.access.lookup",
     ]) {
-      expect(resourceDescriptorByKey(k)?.access).toEqual(access);
+      expect(resourceDescriptorByKey(k)).toBeUndefined();
     }
   });
 
