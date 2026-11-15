@@ -3,15 +3,19 @@ import { codegenPassOver } from "@plugins/framework/plugins/tooling/plugins/code
 import { drizzle } from "drizzle-orm/node-postgres";
 import type { Pool } from "pg";
 import {
+  dryRunTarget,
+  migrationShadowName,
   MIGRATIONS_DATA_DIR,
   publishedMigrationRefs,
+  type DryRunTarget,
 } from "@plugins/database/plugins/migrations/core";
+import { queryOne } from "@plugins/database/plugins/sql-rows/core";
+import { z } from "zod";
 import { dryRunPendingMigrations } from "@plugins/database/plugins/migrations/server";
 import {
   listMigrationFiles,
   MIGRATIONS_DIR,
 } from "@plugins/database/plugins/migrations/machine";
-import { mintTestDbName } from "@plugins/database/plugins/db-test-fixture/core/testing";
 import { MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/namespace/core";
 import { checkoutNamespace } from "@plugins/infra/plugins/paths/core";
 import {
@@ -33,6 +37,10 @@ import {
 } from "@plugins/primitives/plugins/log-channels/server";
 import { withDirectDb } from "./internal/direct-db";
 import { declaredSchemaInputs } from "./internal/declared-schema-inputs";
+import {
+  ensureMigrationShadow,
+  reapOtherShadows,
+} from "./internal/migration-shadow";
 
 // Wedge-breaker for a metadata-only git read: far above any real duration,
 // because starvation under a saturated check run is what these suffer, not
@@ -92,7 +100,7 @@ function cannotVerify(database: string, cause: string): CheckResult {
 const check: Check = {
   id: "migration-applies-clean",
   description:
-    "pending migrations apply cleanly on top of main (transactional dry-run, rolled back)",
+    "pending migrations apply cleanly on top of main (transactional dry-run in a fork of main, rolled back)",
   // Impure: reads local `main` via git. The data/ dir CONTENT is already
   // covered by the runner's own tree hash (this check is scope "tree", the
   // default) — only local main's sha needs folding in, since the ref can move
@@ -128,12 +136,16 @@ const check: Check = {
     );
     if (!declared.ok) return { ok: false, message: declared.message };
 
-    // Then a migration differs from main → replay the pending delta against
-    // main's live DB inside a transaction that always rolls back, over a direct
-    // (non-pgbouncer) connection so the multi-statement dry-run transaction
-    // stays on one backend. withDirectDb separates a connectivity failure
-    // (cannot verify → fail loudly) from a real apply failure (the migration is
-    // broken), which is reported from inside the callback.
+    // Then a migration differs from main → replay the pending delta inside a
+    // transaction that always rolls back — in a MIGRATION SHADOW (a fork of
+    // main's database: its real schema and rows), never in main itself. A
+    // rolled-back dry run still holds every lock its migrations take until it
+    // ends, and in main that queued main's own readers behind every branch's
+    // check pass (./internal/migration-shadow.ts). Over a direct
+    // (non-pgbouncer) connection so the multi-statement transaction stays on
+    // one backend. withDirectDb separates a connectivity failure (cannot verify
+    // → fail loudly) from a real apply failure (the migration is broken),
+    // which is reported from inside the callback.
     const database = await mainDatabaseOf(root);
     // The dry-run replays the derived layer, whose rebuilds log to durable
     // channels — and a durable channel's store is a host service, which this
@@ -141,60 +153,114 @@ const check: Check = {
     // first log line throws and reads as a broken migration. Its lines stay in
     // the channel's ring: a dry-run's log is not worth keeping.
     provideHostServicesUnbooted([LogPersistence.provide(RING_ONLY_LOGS)]);
-    const dryRun = async (pool: Pool): Promise<CheckResult> => {
-      try {
-        await dryRunPendingMigrations(
-          drizzle(pool),
-          await listMigrationFiles(MIGRATIONS_DIR),
-          declared.inputs,
-        );
-        return { ok: true };
-      } catch (e) {
-        return {
-          ok: false,
-          message: (e as Error).message,
-          hint: "This migration (or the derived layer after it: updatedAt triggers, rollup tables, views) would fail and crash main's boot. Fix the SQL in plugins/database/plugins/migrations/data/, or the derived object in its owning plugin.",
-        };
-      }
-    };
-    const result = await withDirectDb(database, dryRun);
+    const dryRun =
+      (target: DryRunTarget) =>
+      async (pool: Pool): Promise<CheckResult> => {
+        try {
+          await dryRunPendingMigrations(
+            drizzle(pool),
+            target,
+            await listMigrationFiles(MIGRATIONS_DIR),
+            declared.inputs,
+          );
+          return { ok: true };
+        } catch (e) {
+          return {
+            ok: false,
+            message: (e as Error).message,
+            hint: "This migration (or the derived layer after it: updatedAt triggers, rollup tables, views) would fail and crash main's boot. Fix the SQL in plugins/database/plugins/migrations/data/, or the derived object in its owning plugin.",
+          };
+        }
+      };
+
+    // Does main's database exist? Asked of the maintenance database, so the
+    // check opens no session on main at all.
+    const probe = await withDirectDb("postgres", (pool) =>
+      queryOne(pool, {
+        sql: "SELECT EXISTS (SELECT 1 FROM pg_database WHERE datname = $1) AS present",
+        params: [database],
+        row: z.object({ present: z.boolean() }),
+      }),
+    );
+    if (probe.kind !== "ok")
+      return cannotVerify(
+        database,
+        probe.kind === "unreachable"
+          ? probe.cause
+          : "maintenance database missing",
+      );
+    if (!probe.value.present) {
+      // This machine's main app always has its database: a missing one is
+      // no more verifiable than an unreachable cluster.
+      if (database === MAIN_WORKTREE_NAME)
+        return cannotVerify(database, `database "${database}" does not exist`);
+      // Another repository whose main was never deployed here: there is no
+      // live data for a migration to trip on, so the whole truth is the
+      // schema — every migration, main's and this branch's, applied in order
+      // to an empty database.
+      return schemaOnlyDryRun(database, dryRun);
+    }
+
+    const tree = await git(root, [
+      "rev-parse",
+      `${main.sha}:${MIGRATIONS_DATA_DIR}`,
+    ]);
+    if (tree.code !== 0)
+      return {
+        ok: false,
+        message: `cannot read the migration tree of local main (${main.sha}:${MIGRATIONS_DATA_DIR})`,
+      };
+    let shadow: DryRunTarget;
+    try {
+      shadow = await ensureMigrationShadow({
+        mainDatabase: database,
+        migrationsTree: tree.out.trim(),
+        exclusions: declared.forkExclusions,
+      });
+    } catch (e) {
+      return {
+        ok: false,
+        message: `cannot verify migration: forking main ("${database}") into a migration shadow failed: ${(e as Error).message}`,
+        hint: "The dry run runs in a fork of main, never in main itself. Fix what the fork reports (the same pg_dump | pg_restore every worktree fork runs) and re-run the check.",
+      };
+    }
+    const result = await withDirectDb(shadow.database, dryRun(shadow));
     switch (result.kind) {
       case "ok":
         return result.value;
       case "unreachable":
-        return cannotVerify(database, result.cause);
+        return cannotVerify(shadow.database, result.cause);
       case "no-database":
-        // This machine's main app always has its database: a missing one is
-        // no more verifiable than an unreachable cluster.
-        if (database === MAIN_WORKTREE_NAME)
-          return cannotVerify(
-            database,
-            `database "${database}" does not exist`,
-          );
-        // Another repository whose main was never deployed here: there is no
-        // live data for a migration to trip on, so the whole truth is the
-        // schema — every migration, main's and this branch's, applied in order
-        // to an empty database.
-        return schemaOnlyDryRun(database, dryRun);
+        throw new Error(
+          `migration-applies-clean: migration shadow "${shadow.database}" vanished right after it was ensured`,
+        );
     }
   },
 };
 
 /**
  * The dry-run on a throwaway empty database, for a repository with no deployed
- * main on this machine. The name is minted in the disposable test-database
- * grammar, so the test-db sweep reclaims it if this process dies before the
- * `finally`. A failure says which mode ran, so a pass is never mistaken for a
- * check against live data.
+ * main on this machine. It is a migration shadow keyed by this run (the only
+ * kind of database a dry run may target), so if this process dies before the
+ * `finally`, the next check's reap drops it — its main does not exist. A
+ * failure says which mode ran, so a pass is never mistaken for a check against
+ * live data.
  */
 async function schemaOnlyDryRun(
   mainDatabase: string,
-  dryRun: (pool: Pool) => Promise<CheckResult>,
+  dryRun: (target: DryRunTarget) => (pool: Pool) => Promise<CheckResult>,
 ): Promise<CheckResult> {
-  const scratch = mintTestDbName("mig_check", process.pid, Date.now());
-  // Over the maintenance database, directly: `database/admin`'s pool throws at
-  // import in a check subprocess (see ./internal/direct-db.ts). The name comes
-  // from `mintTestDbName`'s own grammar, so it is safe to quote as an identifier.
+  const target = dryRunTarget(
+    migrationShadowName(
+      mainDatabase,
+      `scratch:${process.pid}:${Date.now()}:${Math.random()}`,
+    ),
+  );
+  const scratch = target.database;
+  await reapOtherShadows(mainDatabase, scratch);
+  // Over the maintenance database, directly, like every other connection this
+  // check opens itself (./internal/direct-db.ts). The name comes from the
+  // shadow grammar (hex and underscores), so it is safe to quote.
   const created = await withDirectDb("postgres", (pool) =>
     pool.query(`CREATE DATABASE "${scratch}"`),
   );
@@ -206,15 +272,15 @@ async function schemaOnlyDryRun(
         : "maintenance database missing",
     );
   try {
-    return await verdictOnScratch(scratch, mainDatabase, dryRun);
+    return await verdictOnScratch(scratch, mainDatabase, dryRun(target));
   } finally {
     const dropped = await withDirectDb("postgres", (pool) =>
       pool.query(`DROP DATABASE IF EXISTS "${scratch}" WITH (FORCE)`),
     );
-    // Loud: a scratch database left behind is the sweep's backstop, not silence.
+    // Loud: a scratch shadow left behind is the next reap's, not silence.
     if (dropped.kind !== "ok")
       console.warn(
-        `migration-applies-clean: could not drop scratch database "${scratch}" (${dropped.kind}); the test-db sweep reclaims it.`,
+        `migration-applies-clean: could not drop scratch shadow "${scratch}" (${dropped.kind}); the next check's reap drops it.`,
       );
   }
 }

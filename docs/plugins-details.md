@@ -23812,6 +23812,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `databaseSizeBytes`
           - `describeUndeclaredSchema`
           - `dropDatabase`
+          - `dropDatabaseIfIdle`
           - `ensureDatabase`
           - `ExcludeFromBackup`
           - `ExcludeFromFork`
@@ -24314,6 +24315,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `packages/owned-fd.openOwnedFdSync`
           - `packages/owned-fd.OwnedFd`
           - `packages/semaphore.createSemaphore`
+          - `packages/string-hash.hashHex`
           - `packages/timed-fs.existsSync`
           - `packages/timed-fs.readdir`
           - `packages/timed-fs.readdirSync`
@@ -24324,6 +24326,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ContractOp`
           - `DrizzleGenerateOptions`
           - `DrizzleStage`
+          - `DryRunTarget`
           - `EmittedSnapshot`
           - `ExpandOp`
           - `MigrationData`
@@ -24350,11 +24353,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `declaredParents`
           - `DRIZZLE_CONFIG_PATH`
           - `drizzleGenerateArgv`
+          - `dryRunTarget`
           - `equivalentSnapshots`
           - `findPublishedMigrationViolations`
           - `foldMergeParents`
           - `formatPublishedMigrationViolations`
           - `formatSnapshotConflict`
+          - `isMigrationShadowOf`
           - `isSchemaMigration`
           - `legacySnapshotFiles`
           - `legacySnapshotFilesIn`
@@ -24362,12 +24367,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LOCAL_MAIN_REF`
           - `mergeNodeSnapshotText`
           - `mergeSnapshots`
+          - `MIGRATION_SHADOW_SUFFIX`
           - `migrationContentHash`
           - `migrationDataIn`
           - `MIGRATIONS_DATA_DIR`
           - `MIGRATIONS_PLUGIN_DIR`
+          - `migrationShadowName`
+          - `migrationShadowOwnerHash`
           - `MissingSnapshotBodyError`
           - `NULL_SNAPSHOT_ID`
+          - `parseMigrationShadowName`
           - `phaseStatements`
           - `probeSchema`
           - `PUBLISHED_MIGRATION_HINT`
@@ -24396,6 +24405,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `stageDrizzleOut`
           - `UnjoinedSnapshotTipsError`
       - Cross-plugin:
+        - Uses tokens: `ui/tokens/shadow --shadow`
         - Imported by:
           - `database`
           - `database/migrations/bundled-source`
@@ -42690,9 +42700,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `withForegroundPriority`
     - **`string-hash`** — Portable string hashes in plain JS (no node:crypto, no Bun.hash), so every host — the Bun server, central and a browser page — computes the same value: hash53 (cyrb53, a 53-bit number, optionally seeded), hashHex (two seeded cyrb53s, ~106 bits as hex), hash64 (a 64-bit bigint), fnv1a32 (32-bit FNV-1a, for seeding), sha256Hex (a synchronous SHA-256, identical to node:crypto's hex digest), createSha256 (the same SHA-256, incremental over strings and bytes) and sha1Hex (SHA-1 for values already stored as one).
       - Cross-plugin:
-        - Imported by: 50 plugins — full list in [`plugins/packages/plugins/string-hash/REFERENCE.md`](../plugins/packages/plugins/string-hash/REFERENCE.md)
+        - Imported by: 51 plugins — full list in [`plugins/packages/plugins/string-hash/REFERENCE.md`](../plugins/packages/plugins/string-hash/REFERENCE.md)
           - `apps` ×17
-          - `database` ×5
+          - `database` ×6
           - `network` ×5
           - `framework` ×4
           - `reports` ×3
@@ -64849,7 +64859,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ShadowParamsSchema`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/color-palette --popover`
-            - Tokens used by: 56 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md)
+            - Tokens used by: 57 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md)
               - `apps` ×21
               - `primitives` ×11
               - `ui` ×6
@@ -64859,6 +64869,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `screenshot` ×2
               - `tasks` ×2
               - `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`
+              - `database/migrations`
               - `hints`
               - `map`
               - `media/player`

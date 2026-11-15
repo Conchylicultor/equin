@@ -232,6 +232,7 @@ database in `backup-plan.test.ts`. The real dump → restore round trip is in
     - `databaseSizeBytes`
     - `describeUndeclaredSchema`
     - `dropDatabase`
+    - `dropDatabaseIfIdle`
     - `ensureDatabase`
     - `ExcludeFromBackup`
     - `ExcludeFromFork`

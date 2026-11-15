@@ -138,3 +138,16 @@ export {
   PUBLISHED_MIGRATION_HINT,
 } from "./internal/published-immutable";
 export type { PublishedMigrationViolation } from "./internal/published-immutable";
+// Where a migration dry run may happen: a migration shadow (a disposable fork
+// of main, shared per published migration set and day) or a throwaway test
+// database — never a database something serves. `dryRunPendingMigrations`
+// takes the branded target. See ./internal/dry-run-target.ts.
+export {
+  dryRunTarget,
+  isMigrationShadowOf,
+  MIGRATION_SHADOW_SUFFIX,
+  migrationShadowName,
+  migrationShadowOwnerHash,
+  parseMigrationShadowName,
+} from "./internal/dry-run-target";
+export type { DryRunTarget } from "./internal/dry-run-target";

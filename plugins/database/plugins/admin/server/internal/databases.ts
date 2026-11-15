@@ -98,6 +98,30 @@ export async function dropDatabase(target: DatabaseToDrop): Promise<void> {
   );
 }
 
+/**
+ * Drop an unserved database only if no session is connected to it — `DROP
+ * DATABASE` without `FORCE`, so it never cuts a session that is using it.
+ * `"in-use"` (Postgres's 55006, object_in_use) is an answer, not a failure:
+ * the caller leaves the database for a later drop. Any other error throws.
+ */
+export async function dropDatabaseIfIdle(target: {
+  readonly unserved: string;
+  readonly reason: string;
+}): Promise<"dropped" | "in-use"> {
+  const name = target.unserved;
+  assertSafeName(name);
+  try {
+    await runDatabaseDdl(
+      `DROP DATABASE ${name} (only if idle): removes its files`,
+      `DROP DATABASE IF EXISTS "${name}"`,
+    );
+    return "dropped";
+  } catch (err) {
+    if ((err as { code?: unknown }).code === "55006") return "in-use";
+    throw err;
+  }
+}
+
 // Create `name` if it does not already exist. `CREATE DATABASE` cannot run in a
 // transaction and Postgres has no `IF NOT EXISTS` for databases, so the
 // `databaseExists` guard is the idempotency mechanism; the `42P04`

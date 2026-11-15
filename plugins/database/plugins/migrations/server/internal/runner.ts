@@ -29,10 +29,14 @@ import {
   type Supersession,
 } from "@plugins/database/plugins/migrations/plugins/phases/core";
 import { MIGRATIONS_TABLE_NAME } from "@plugins/database/plugins/derived-views/core";
-import { executeRows } from "@plugins/database/plugins/sql-rows/core";
+import {
+  executeOne,
+  executeRows,
+} from "@plugins/database/plugins/sql-rows/core";
 import { z } from "zod";
 import { SubjectError } from "@plugins/packages/plugins/error-subject/core";
 import { migrationSubject } from "./migration-subject";
+import type { DryRunTarget } from "../../core";
 import {
   untimedStep,
   type BootStep,
@@ -858,17 +862,17 @@ export async function applySchemaLayerFrom(
   try {
     await db.transaction(async (tx) => {
       if (!commit) {
-        // The dry run replays against the LIVE main DB. statement_timeout is
-        // the load-bearing bound on how long it can hold locks there;
-        // lock_timeout bounds the wait to ACQUIRE one, so it never queues
-        // behind live traffic.
-        await tx.execute(drizzleSql`SET LOCAL lock_timeout = '1s'`);
+        // The dry run replays in a database nothing serves (a migration
+        // shadow: `DryRunTarget`), so its locks block no reader.
+        // statement_timeout bounds a hung statement — the check that runs it
+        // has no other deadline — and also the wait for the schema-layer lock
+        // below, which serializes the dry runs that share one shadow (two
+        // branches altering the same table would otherwise fail each other).
         await tx.execute(drizzleSql`SET LOCAL statement_timeout = '60s'`);
-      } else {
-        await step("lock", () =>
-          tx.execute(drizzleSql`SELECT ${SCHEMA_LAYER_LOCK}`),
-        );
       }
+      await step("lock", () =>
+        tx.execute(drizzleSql`SELECT ${SCHEMA_LAYER_LOCK}`),
+      );
       ({ pending, deferredContract } = await step("migrations", () =>
         planAndRun(tx, migrations, {
           dropViewsOnConflict: true,
@@ -952,8 +956,8 @@ export async function applySchemaLayerFrom(
 // derived step takes its skip-when-unchanged path, so neither opens a lock
 // window on the views beyond the rebuild of a view whose source changed.
 //
-// `commit: false` is the dry run (`dryRunPendingMigrations`): the same code
-// under the live-DB timeouts, always rolled back, contract included. Only a
+// `commit: false` is the dry run (`dryRunPendingMigrations`): the same code,
+// serialized by the same lock, always rolled back, contract included. Only a
 // committing call settles `migrationsReady`.
 export async function applySchemaLayer(
   db: NodePgDatabase,
@@ -1011,27 +1015,42 @@ export async function completeDeferredContract(
 
 // Prove that the pending migrations — and the derived layer main's next boot
 // rebuilds after them — apply cleanly on top of the connected DB's current
-// state, then ROLL BACK, leaving the DB byte-identical. Used by the
-// `migration-applies-clean` check against the live main DB: the only way a
-// migration "breaks main" is by erroring during boot's schema layer, and this
-// IS that layer (`applySchemaLayer` with `commit: false`), so it cannot drift
-// from boot.
+// state, then ROLL BACK. Used by the `migration-applies-clean` check, in a
+// MIGRATION SHADOW: a disposable fork of main (main's real schema and data),
+// never main itself — rolled back is not lock-free, and a dry run holds every
+// lock its migrations take until it ends, which main's readers queued behind
+// (2026-11-15). `target` is the branded database it may run in
+// (`dryRunTarget`, core), re-checked against the connection below. The only
+// way a migration "breaks main" is by erroring during boot's schema layer, and
+// this IS that layer (`applySchemaLayer` with `commit: false`), so it cannot
+// drift from boot.
 //
-// Nothing pending ⇒ nothing to verify: returns without opening a transaction,
-// so a branch whose migrations main already has never locks main's views.
+// Nothing pending ⇒ nothing to verify: returns without opening a transaction.
 //
 // Note: a rolled-back INSERT still advances any serial/identity sequence
-// (nextval is non-transactional), so a dry-run can leave harmless ID gaps. No
-// data is changed; this is expected and ignorable.
+// (nextval is non-transactional) — in the shadow, which nothing reads.
 //
 // `inputs` is the derived set main's next boot would install. The caller
 // supplies it because this runs in a process that never booted, where no
 // contribution was collected and no schema file was loaded.
 export async function dryRunPendingMigrations(
   db: NodePgDatabase,
+  target: DryRunTarget,
   migrations: Migration[],
   inputs: SchemaLayerInputs,
 ): Promise<{ pending: number }> {
+  // The target names the database; the connection is what runs the SQL. A
+  // pool pointed anywhere else (main's live database) fails here, before the
+  // first lock is taken.
+  const here = await executeOne(db, {
+    query: drizzleSql`SELECT current_database()::text AS name`,
+    row: z.object({ name: z.string() }),
+  });
+  if (here.name !== target.database) {
+    throw new Error(
+      `dryRunPendingMigrations: connected to "${here.name}", not the dry-run target "${target.database}" — a dry run never runs in a database something serves.`,
+    );
+  }
   const ledger = await getAppliedLedger(db, { inLayer: false });
   const { pendingFiles } = planSchemaSteps(
     migrations,

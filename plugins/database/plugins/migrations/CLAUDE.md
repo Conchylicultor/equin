@@ -29,7 +29,7 @@ touching it.
   with `./equin build --custom-migration --migration-name <slug>`. No human
   approval gate: two automated checks back it up instead —
   `data-migration-dml-only` (proves it contains no schema changes) and
-  `migration-applies-clean` (a transactional dry-run against main, rolled back,
+  `migration-applies-clean` (a transactional dry-run in a fork of main, rolled back,
   that proves it applies before push — see **Pre-push verification** below). It has
   **no snapshot header**: a backfill changes no schema, so it is deliberately kept
   out of the snapshot chain. Why this matters:
@@ -440,25 +440,47 @@ before push:
 - **Fast path** — if this branch changes no file under `data/` vs local `main`
   (the ref the main DB runs) there are no pending migrations, so it passes instantly with **no DB
   connection** (the ~99% case).
-- **Slow path** — otherwise it opens a direct connection to the live **main** DB
-  and calls `dryRunPendingMigrations` (`server/internal/runner.ts`), which is
-  `applySchemaLayer(…, { commit: false })`: the very function boot runs (the
+- **Slow path** — otherwise it dry-runs in a **migration shadow**, a fork of
+  main's database (`check/internal/migration-shadow.ts`), over a direct
+  connection, calling `dryRunPendingMigrations` (`server/internal/runner.ts`),
+  which is `applySchemaLayer(…, { commit: false })`: the very function boot runs (the
   phased steps — dropping the live views only when one is in a step's way —
   derived updatedAt, derived tables, rebuild the views, all in one
   transaction) ending in a sentinel throw that **always rolls back**. The check process never boots, so it hands the layer its inputs itself
-  — views, derived tables and updatedAt specs read from main's server barrels
+  — views, derived tables and updatedAt specs read from main's server barrels,
+  and the fork exclusions from its server and machine barrels
   (`check/internal/declared-schema-inputs.ts`); registry reads would come back
-  empty there. Applying against main's real schema + data reproduces the boot
-  failure exactly, while the rollback leaves main untouched. A real apply error
-  is surfaced with the offending filename + the pg error.
-- `SET LOCAL statement_timeout = '60s'` is the load-bearing bound on how long the
-  dry-run can hold locks on live main; `lock_timeout = '1s'` bounds lock
-  acquisition so it can never queue behind live traffic. Postgres DDL+DML are both
-  transactional and `LISTEN/NOTIFY` only fires on commit, so a rolled-back apply
-  is side-effect-free.
+  empty there. The shadow holds main's real schema and rows, so it reproduces
+  the boot failure exactly (a backfill tripping on main's data included). A
+  real apply error is surfaced with the offending filename + the pg error.
+- **Never in main itself.** Rolled back is not lock-free: a dry run holds every
+  lock its migrations take (an ALTER's ACCESS EXCLUSIVE, a backfill's row
+  locks, a view or trigger rebuild) until it ends, and main's readers queued
+  behind it — on 2026-11-15 03:17 UTC three `conversations_v` reads on main
+  stalled 11 s behind a branch's dry run. So `dryRunPendingMigrations` takes a
+  `DryRunTarget` (core, `core/internal/dry-run-target.ts`), which only a
+  migration shadow name (`ms_<sha8(main)>_<sha8(key)>__migshadow`) yields —
+  `dryRunTarget("<main>")` throws — and it re-checks `current_database()`
+  against it before its first statement.
+- **The shadow is shared and minted rarely.** Its name is a function of main's
+  database, the git tree id of `data/` at local `main` and the UTC day, so every
+  check asking the same question that day finds the one already there; the
+  check that finds none forks it (`forkDatabase`, the same pg_dump | pg_restore
+  and declared exclusions as a worktree fork: ~16 s p50 / 33 s p90 measured,
+  ~230 MB), then drops every other shadow of that main nobody is connected to
+  (`dropDatabaseIfIdle`), and every idle shadow whose main no longer exists. Main pays what any fork costs it: ACCESS SHARE on its
+  tables for the length of the dump — no reader waits on it, only DDL (main's
+  own boot layer, if it deploys mid-dump), as with the ~107 worktree forks a
+  day. A warm slow-path
+  pass measured 4.5 s. Concurrent dry runs in one shadow are serialized by the
+  schema-layer advisory lock (the dry run takes it too, under a 60 s
+  `statement_timeout`); concurrent mints by `forkDatabase`'s atomic publish.
+- A repository with no deployed main on this machine has nothing to fork: the
+  dry run replays every migration into an empty scratch shadow keyed by the run
+  (schema only, and the failure says so), dropped after it — or by the next
+  reap, its main not existing, if the check dies first.
 - Caveat: a rolled-back `INSERT` still advances serial/identity **sequences**
-  (`nextval` is non-transactional), so a dry-run can leave harmless ID gaps. No
-  data changes; nothing to fix.
+  (`nextval` is non-transactional) — in the shadow, which nothing reads.
 
 The check runs uniformly in `./equin build`, `./equin check`, and the
 push checks step — which runs after rebase + migration normalization, i.e. when
@@ -670,6 +692,7 @@ only agreement that matters.
     - `packages/owned-fd.openOwnedFdSync`
     - `packages/owned-fd.OwnedFd`
     - `packages/semaphore.createSemaphore`
+    - `packages/string-hash.hashHex`
     - `packages/timed-fs.existsSync`
     - `packages/timed-fs.readdir`
     - `packages/timed-fs.readdirSync`
@@ -680,6 +703,7 @@ only agreement that matters.
     - `ContractOp`
     - `DrizzleGenerateOptions`
     - `DrizzleStage`
+    - `DryRunTarget`
     - `EmittedSnapshot`
     - `ExpandOp`
     - `MigrationData`
@@ -706,11 +730,13 @@ only agreement that matters.
     - `declaredParents`
     - `DRIZZLE_CONFIG_PATH`
     - `drizzleGenerateArgv`
+    - `dryRunTarget`
     - `equivalentSnapshots`
     - `findPublishedMigrationViolations`
     - `foldMergeParents`
     - `formatPublishedMigrationViolations`
     - `formatSnapshotConflict`
+    - `isMigrationShadowOf`
     - `isSchemaMigration`
     - `legacySnapshotFiles`
     - `legacySnapshotFilesIn`
@@ -718,12 +744,16 @@ only agreement that matters.
     - `LOCAL_MAIN_REF`
     - `mergeNodeSnapshotText`
     - `mergeSnapshots`
+    - `MIGRATION_SHADOW_SUFFIX`
     - `migrationContentHash`
     - `migrationDataIn`
     - `MIGRATIONS_DATA_DIR`
     - `MIGRATIONS_PLUGIN_DIR`
+    - `migrationShadowName`
+    - `migrationShadowOwnerHash`
     - `MissingSnapshotBodyError`
     - `NULL_SNAPSHOT_ID`
+    - `parseMigrationShadowName`
     - `phaseStatements`
     - `probeSchema`
     - `PUBLISHED_MIGRATION_HINT`
@@ -752,6 +782,7 @@ only agreement that matters.
     - `stageDrizzleOut`
     - `UnjoinedSnapshotTipsError`
 - Cross-plugin:
+  - Uses tokens: `ui/tokens/shadow --shadow`
   - Imported by:
     - `database`
     - `database/migrations/bundled-source`

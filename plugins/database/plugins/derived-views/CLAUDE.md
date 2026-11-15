@@ -50,9 +50,8 @@ generates **no migration at all**.
   can put a `DROP VIEW` in front of it. The rebuild then finds views missing
   and recreates them.
 - **Never up front.** A `DROP VIEW` locks the view (AccessExclusive) until
-  commit, so every view reader on live main — the boot layer and every
-  `migration-applies-clean` dry run — would wait out the whole layer, backfills
-  included. A migration that conflicts with no view takes no lock on the views.
+  commit, so every view reader on live main would wait out the whole boot
+  layer, backfills included. A migration that conflicts with no view takes no lock on the views.
 - It drops the live set, not the declared one, because the view in the way is
   the one the previous code created, which current declarations may not name.
 - Because drop, migrations and rebuild commit together, the previous backend
@@ -65,7 +64,8 @@ generates **no migration at all**.
   window on them.
 - The view set is an argument, not read inside the rebuild, because the
   `migration-applies-clean` check also rebuilds the views (in its rolled-back
-  dry-run on main's DB) from a process that never boots. It gathers the same set
+  dry-run in a migration shadow, a fork of main) from a process that never
+  boots. It gathers the same set
   with `View.from(definitions)` over main's server barrels.
 - The view body is compiled from the drizzle `pgView` object via
   `compileCreateView` (core), which inlines all params into standalone DDL.

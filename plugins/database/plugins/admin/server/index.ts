@@ -11,6 +11,7 @@ export {
   listDatabases,
   databaseExists,
   dropDatabase,
+  dropDatabaseIfIdle,
   ensureDatabase,
   recreateDatabase,
   countActiveConnections,
