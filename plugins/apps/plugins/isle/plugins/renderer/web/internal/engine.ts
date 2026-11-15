@@ -1155,30 +1155,44 @@ export class IsleEngine {
     this.readyCheck();
   }
 
-  /** The title card waits for the home island's ground and the view the game opens on. */
+  /**
+   * The title card waits for the home island's ground and the view the game
+   * opens on — the first time. Coming back, the island opens as play draws
+   * it, the islands' previews standing in for ground still baking: the
+   * player has seen it drawn before, and a view left far out (the whole
+   * island's ground, more than the engine keeps) would hold the card for
+   * half a minute or more.
+   */
   private readyCheck(): void {
     if (this.readySent || this.previewJobs.length || !this.layout) return;
     const home = this.layout.islands.find((I) => I.home);
     if (!home) return;
-    const homeDone = this.groundKeys.every((k) => {
-      if (this.ground.has(k)) return true;
-      const [tx, ty] = k.split(":").map(Number) as [number, number];
-      return !this.islandAt(tx, ty, true);
-    });
-    if (
-      !homeDone ||
-      !this.heroTiles().every(([tx, ty]) => this.tileFinal(tx, ty))
-    )
-      return;
+    if (!this.resume) {
+      const homeDone = this.groundKeys.every((k) => {
+        if (this.ground.has(k)) return true;
+        const [tx, ty] = k.split(":").map(Number) as [number, number];
+        return !this.islandAt(tx, ty, true);
+      });
+      if (
+        !homeDone ||
+        !this.openingTiles().every(([tx, ty]) => this.tileFinal(tx, ty))
+      )
+        return;
+    }
     this.readySent = true;
     this.hooks.onReady();
   }
 
-  private heroTiles(): [number, number][] {
+  /**
+   * The tiles of the view the game opens on: coming back, the camera where it
+   * was left (it stays there on Start, wherever the hero is); else the hero,
+   * whom the camera follows on Start.
+   */
+  private openingTiles(): [number, number][] {
     const hw = this.vw / 2 / this.cam.z + 80;
     const hh = this.vh / 2 / this.cam.z + 80;
-    const cx = this.hero.x;
-    const cy = this.hero.y - 40;
+    const cx = this.resume ? this.cam.x : this.hero.x;
+    const cy = this.resume ? this.cam.y : this.hero.y - 40;
     const out: [number, number][] = [];
     for (
       let ty = Math.floor((cy - hh) / TILE);
@@ -2089,7 +2103,7 @@ export class IsleEngine {
     }
     // on the title card, also build the tiles of the view the game opens on, so Start shows a finished map
     if (!this.started)
-      for (const [tx, ty] of this.heroTiles()) {
+      for (const [tx, ty] of this.openingTiles()) {
         const e = this.tileCache.get(`${lod}:${tx}:${ty}`);
         if ((!e || e.stale) && performance.now() < budget + 30)
           this.buildTile(lod, tx, ty);
