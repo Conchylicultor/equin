@@ -8,4 +8,5 @@ export const isleApp = defineApp({
   icon: symbol("sailing"),
   category: "play",
   colorMode: "light",
+  launcher: true,
 });

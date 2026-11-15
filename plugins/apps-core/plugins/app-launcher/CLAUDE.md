@@ -29,6 +29,16 @@ never draw their own header (the shell places it; see
   "All apps" (= the icon's click) and the hover-revealed options trigger
   (search). Its own view config, `apps-core.launcher`. A pick goes through
   `useActivateApp` (tabs), the one activation the rail and Home share.
+- **Back to where you came from** — when the user came from an app made for
+  opening others, the popover's first line is "Back to <app>"
+  (`internal/return-target.ts`): the surface-mode app the surface just left
+  (`previousMode` — the Desktop, after a window went full screen; its windows
+  are still there), else the launcher app the focused tab was opened from
+  (`Tab.openedFrom` in `apps-core/tabs`, set when a tab leaves an app declared
+  `defineApp({ launcher: true })` — Isle — kept across later app swaps, cleared
+  when it lands back on one). Picking it is that app's `useActivateApp`, as
+  its tile would be. Nothing is named here: a new surface-mode app or launcher
+  app gets the line for free.
 - **`form="header"`** (sidebar header) — launcher + the current app's name, a
   link to that app's own `basePath` (not the gallery). The name is the row's
   flexible, truncating cell; the launcher is rigid.
@@ -64,7 +74,7 @@ never draw their own header (the shell places it; see
     - `FieldPresentation.Register` "collection:apps.installed-app"
     - `Fields.Identity` "app-icon"
     - `Hints.Hint` "app-launcher.switch-apps"
-  - Uses: 48 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 49 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps-core/tabs` ×6
     - `apps-core` ×6
     - `hints` ×3
@@ -76,6 +86,7 @@ never draw their own header (the shell places it; see
     - `primitives/app-shell` ×2
     - `primitives/css/fill` ×2
     - `primitives/css/theme-boundary` ×2
+    - `primitives/link-gesture` ×2
     - `apps-core/chrome-theme.chromeThemeScope`
     - `apps-core/phone-actions.PhoneActions`
     - `fields.Fields`
@@ -85,7 +96,6 @@ never draw their own header (the shell places it; see
     - `primitives/css/spacing.Stack`
     - `primitives/css/text.Text`
     - `primitives/embed.isChromelessDocument`
-    - `primitives/link-gesture.linkProps`
     - `primitives/overlay/hover-popover.HoverPopover`
     - `primitives/pane.usePaneStore`
     - `ui/icons.Icon`

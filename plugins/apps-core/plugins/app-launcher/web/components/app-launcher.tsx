@@ -1,5 +1,6 @@
 import { createContext, useContext, useMemo, type ReactNode } from "react";
 import { afterOpen } from "@plugins/primitives/plugins/link-gesture/core";
+import { activationProps } from "@plugins/primitives/plugins/link-gesture/web";
 import {
   Apps,
   routePrefixForMode,
@@ -46,25 +47,32 @@ import { PopupTheme } from "@plugins/primitives/plugins/css/plugins/theme-bounda
 import { chromeThemeScope } from "@plugins/apps-core/plugins/chrome-theme/web";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import type { AppShellBrandForm } from "@plugins/primitives/plugins/app-shell/web";
+import { useReturnTarget } from "../internal/return-target";
 
 const allAppsIcon = symbol("apps");
+const backIcon = symbol("arrow-back");
 
 const LAUNCHER_VIEW = defineDataView("apps-core.launcher");
 
-/** The popover's footer link ("All apps"), handed to the hosted frame — a
- *  frame is a module-level component, so what it needs from this render
- *  arrives by context. */
+/** The popover's footer link ("All apps") and its header ("Back to …", when
+ *  there is somewhere to go back to), handed to the hosted frame — a frame is
+ *  a module-level component, so what it needs from this render arrives by
+ *  context. */
+const HeaderContext = createContext<ReactNode>(null);
 const FooterContext = createContext<ReactNode>(null);
 
 /**
- * The popover is the DataView's frame: no toolbar band, just the grid, then a
- * footer line with "All apps" and — revealed on hover — the options trigger
- * (search: type to narrow the grid).
+ * The popover is the DataView's frame: no toolbar band — the way back to where
+ * the user came from first, when there is one ("Back to Desktop"), then the
+ * grid, then a footer line with "All apps" and — revealed on hover — the
+ * options trigger (search: type to narrow the grid).
  */
 function LauncherFrame({ body, options }: HostedToolbarParts) {
+  const header = useContext(HeaderContext);
   const footer = useContext(FooterContext);
   return (
     <Stack gap="xs">
+      {header && <Line className="border-b pb-xs">{header}</Line>}
       {body}
       <Line className="border-t pt-xs">
         {footer}
@@ -190,6 +198,7 @@ export function AppLauncher({
   const activeId = active?.id;
   const activate = useActivateApp();
   const appLinkProps = useAppLinkProps();
+  const returnTo = useReturnTarget();
   // No home app registered: nothing to launch, and nowhere to go.
   if (!gallery) return null;
   const galleryLink = appLinkProps(gallery.app.basePath);
@@ -222,38 +231,52 @@ export function AppLauncher({
           </Button>
         }
         content={({ close }) => (
-          <FooterContext.Provider
+          <HeaderContext.Provider
             value={
-              <Button
-                variant="ghost"
-                {...galleryLink}
-                onClick={(e) => {
-                  close();
-                  galleryLink.onClick(e);
-                }}
-              >
-                <Icon icon={allAppsIcon} />
-                All apps
-              </Button>
+              returnTo && (
+                <Button
+                  variant="ghost"
+                  {...activationProps(afterOpen(activate(returnTo), close))}
+                >
+                  <Icon icon={backIcon} />
+                  Back to {returnTo.app.name}
+                </Button>
+              )
             }
           >
-            <DataView<AppRow>
-              rows={rows}
-              readiness={launchable}
-              rowKey={(a) => a.id}
-              collection={installedApp}
-              overrides={appRowOverrides}
-              views={["icons"]}
-              defaultView="icons"
-              density="compact"
-              toolbar={LAUNCHER_TOOLBAR}
-              searchPlaceholder="Search apps"
-              storageKey={LAUNCHER_VIEW}
-              selectedRowId={activeId}
-              rowActivation={(row) => afterOpen(activate(row.entry), close)}
-              emptyState="No app matches."
-            />
-          </FooterContext.Provider>
+            <FooterContext.Provider
+              value={
+                <Button
+                  variant="ghost"
+                  {...galleryLink}
+                  onClick={(e) => {
+                    close();
+                    galleryLink.onClick(e);
+                  }}
+                >
+                  <Icon icon={allAppsIcon} />
+                  All apps
+                </Button>
+              }
+            >
+              <DataView<AppRow>
+                rows={rows}
+                readiness={launchable}
+                rowKey={(a) => a.id}
+                collection={installedApp}
+                overrides={appRowOverrides}
+                views={["icons"]}
+                defaultView="icons"
+                density="compact"
+                toolbar={LAUNCHER_TOOLBAR}
+                searchPlaceholder="Search apps"
+                storageKey={LAUNCHER_VIEW}
+                selectedRowId={activeId}
+                rowActivation={(row) => afterOpen(activate(row.entry), close)}
+                emptyState="No app matches."
+              />
+            </FooterContext.Provider>
+          </HeaderContext.Provider>
         )}
       />
     </PopupTheme>

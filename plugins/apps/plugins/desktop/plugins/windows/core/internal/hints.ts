@@ -36,7 +36,7 @@ export const backToDesktopHint = defineHint({
   id: "desktop.back-to-desktop",
   anchor: appLauncherAnchor,
   title: "Go back to the desktop",
-  body: "Hover here, then pick Desktop to bring your windows back.",
+  body: "Hover here, then pick Back to Desktop to bring your windows back.",
   placement: "bottom",
   order: 0,
   supersedes: [appLauncherHint],

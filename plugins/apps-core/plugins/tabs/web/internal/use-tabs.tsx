@@ -352,7 +352,28 @@ function rebuildBackgroundTab(persisted: PersistedTab, apps: AppList): Tab {
     tabId: persisted.tabId,
     appId: persisted.appId,
     store,
+    ...(persisted.openedFrom !== undefined && {
+      openedFrom: persisted.openedFrom,
+    }),
   };
+}
+
+/**
+ * Where a tab swapped from `prev` to `appId` was opened from: the app it
+ * leaves when that is a launcher app (Isle), else what `prev` was opened from
+ * — cleared once the tab lands on a launcher app (back where it came from, or
+ * on another one).
+ */
+function openedFromAfterSwap(
+  prev: Tab,
+  appId: string,
+  apps: AppList,
+): string | undefined {
+  const isLauncher = (id: string) =>
+    apps.find((a) => a.id === id)?.app.launcher === true;
+  if (isLauncher(appId)) return undefined;
+  if (isLauncher(prev.appId)) return prev.appId;
+  return prev.openedFrom;
 }
 
 interface BootState {
@@ -1076,9 +1097,16 @@ export function TabsProvider({
     ) => {
       const idx = tabsRef.current.findIndex((t) => t.tabId === tabId);
       if (idx < 0) return;
-      tabsRef.current[idx]!.store.live = false;
+      const prev = tabsRef.current[idx]!;
+      prev.store.live = false;
       const store = makeBackgroundStore(appId, appsRef.current);
-      const tab: Tab = { tabId, appId, store };
+      const openedFrom = openedFromAfterSwap(prev, appId, appsRef.current);
+      const tab: Tab = {
+        tabId,
+        appId,
+        store,
+        ...(openedFrom !== undefined && { openedFrom }),
+      };
       const nextTabs = [...tabsRef.current];
       nextTabs[idx] = tab;
       tabsRef.current = nextTabs;

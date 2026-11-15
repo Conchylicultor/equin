@@ -13663,7 +13663,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `FieldPresentation.Register` "collection:apps.installed-app"
           - `Fields.Identity` "app-icon"
           - `Hints.Hint` "app-launcher.switch-apps"
-        - Uses: 48 symbols — full list in [`plugins/apps-core/plugins/app-launcher/REFERENCE.md`](../plugins/apps-core/plugins/app-launcher/REFERENCE.md)
+        - Uses: 49 symbols — full list in [`plugins/apps-core/plugins/app-launcher/REFERENCE.md`](../plugins/apps-core/plugins/app-launcher/REFERENCE.md)
           - `apps-core/tabs` ×6
           - `apps-core` ×6
           - `hints` ×3
@@ -13675,6 +13675,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/app-shell` ×2
           - `primitives/css/fill` ×2
           - `primitives/css/theme-boundary` ×2
+          - `primitives/link-gesture` ×2
           - `apps-core/chrome-theme.chromeThemeScope`
           - `apps-core/phone-actions.PhoneActions`
           - `fields.Fields`
@@ -13684,7 +13685,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/spacing.Stack`
           - `primitives/css/text.Text`
           - `primitives/embed.isChromelessDocument`
-          - `primitives/link-gesture.linkProps`
           - `primitives/overlay/hover-popover.HoverPopover`
           - `primitives/pane.usePaneStore`
           - `ui/icons.Icon`

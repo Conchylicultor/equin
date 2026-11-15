@@ -146,6 +146,13 @@ export interface AppRef {
    * Omitted, the app declares no kind and each surface picks its own default.
    */
   readonly category?: AppCategory;
+  /**
+   * `true` for an app whose purpose is opening other apps in its place (Isle:
+   * walk to a building, enter it). A tab swapped from it to another app
+   * remembers it (`Tab.openedFrom`), so the app launcher offers the way back
+   * ("Back to Isle"). Omitted, the app is an ordinary app.
+   */
+  readonly launcher?: true;
 }
 
 /**
@@ -190,6 +197,7 @@ export function defineApp(def: {
   listed?: false;
   audience?: "developer";
   category?: AppCategory;
+  launcher?: true;
 }): AppRef {
   for (const former of def.formerBasePaths ?? []) {
     if (!/^\/[^/?#;]+(\/[^/?#;]+)*$/.test(former) || former === def.basePath) {
@@ -214,6 +222,7 @@ export function defineApp(def: {
     ...(def.listed === false && { listed: false as const }),
     ...(def.audience !== undefined && { audience: def.audience }),
     ...(def.category !== undefined && { category: def.category }),
+    ...(def.launcher === true && { launcher: true as const }),
   });
 }
 

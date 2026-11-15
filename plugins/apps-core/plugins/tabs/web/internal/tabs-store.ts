@@ -30,6 +30,13 @@ export interface Tab {
   tabId: string;
   appId: string;
   store: PaneStore;
+  /**
+   * The launcher app (`defineApp({ launcher: true })` — Isle) this tab was
+   * opened from: set when the tab is swapped from it to another app, kept
+   * across later app swaps, cleared once the tab is back on it. The app
+   * launcher reads it to offer "Back to <app>".
+   */
+  openedFrom?: string;
 }
 
 /**
@@ -74,6 +81,8 @@ export interface PersistedTab {
    * them; a reload restores them from here. Absent when there are none.
    */
   index?: Record<string, string>;
+  /** {@link Tab.openedFrom}, so the way back survives a reload. */
+  openedFrom?: string;
 }
 
 export interface PersistedTabs {
@@ -104,6 +113,7 @@ const persistedTabsSchema = z
         route: z.array(persistedSlotSchema),
         rawPath: z.string().optional(),
         index: z.record(z.string(), z.string()).optional(),
+        openedFrom: z.string().optional(),
       }),
     ),
     focusedTabId: z.string().optional(),
@@ -260,6 +270,7 @@ export function savePersistedTabs(
       route: serializeRoute(t.store),
       rawPath: rawPathForTab(t, prevRawByTab),
       ...indexOf(t.store),
+      ...(t.openedFrom !== undefined && { openedFrom: t.openedFrom }),
     })),
     focusedTabId,
     mode,
