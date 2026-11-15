@@ -10,6 +10,7 @@ import {
   exists,
   readdir,
   stat,
+  lstat,
 } from "@plugins/packages/plugins/timed-fs/core";
 import {
   classifyScopes,
@@ -58,14 +59,26 @@ export async function assembleConfig(dir: string): Promise<BackupSourceReport> {
   // One subtree per namespace; every one but a worktree's is copied (see
   // `select-scopes`). A worktree's subtree is never touched, so the reaper
   // removing one mid-run cannot fail the copy.
+  const entries = await readdir(configDir, { withFileTypes: true });
   const classified = await classifyScopes(
-    await readdir(configDir),
+    entries.map((e) => ({ name: e.name, isDirectory: e.isDirectory() })),
     hasCompositionMarker,
   );
   const items = [];
   let sizeBytes = 0;
   for (const { name, kind } of backedUpScopes(classified)) {
     const out = join(dir, name);
+    if (kind === "loose-file") {
+      // A file outside any namespace subtree: copied as itself, never walked.
+      await cp(join(configDir, name), out);
+      items.push({
+        label: name,
+        detail: "a file outside any namespace subtree",
+        count: 1,
+      });
+      sizeBytes += (await lstat(out)).size;
+      continue;
+    }
     await cp(join(configDir, name), out, { recursive: true });
     const counted = await countFilesAndSize(out);
     items.push({
