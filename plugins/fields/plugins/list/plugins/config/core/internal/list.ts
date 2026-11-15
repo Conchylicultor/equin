@@ -50,33 +50,39 @@ export function listField<const F extends FieldsRecord>(
     stableIdentity?: boolean;
   },
 ): ListFieldDef<F> {
-  const subShape: Record<string, z.ZodType> = {};
-  for (const [key, field] of Object.entries(opts.itemFields)) {
-    // A missing item key (e.g. a field added after items were stored) heals to
-    // the field's default instead of failing the whole list's validation.
-    subShape[key] = fieldSchemaWithDefault(field);
-  }
-
-  const itemSchema = z
-    .object({
-      id: z.string().optional(),
-      // Legacy-read tolerance only: array position is the canonical order now, so
-      // no `rank` is ever written, but a document stored before that change may
-      // still carry one on disk. Keep it optional so it parses cleanly (the
-      // registry's normalizeCollectionItems migrates then drops it).
-      rank: z.string().optional(),
-      ...subShape,
-    })
-    .passthrough();
-
-  const schema = z.array(itemSchema);
-
-  return Object.freeze({
-    type: listFieldType as FieldType<ListItem<F>[]>,
+  // Composed on first read, memoized: a list field is declared at module
+  // evaluation (every DataView's views config holds two), and composing its
+  // item schema checks each item field's default (`fieldSchemaWithDefault`).
+  let schema: z.ZodType<ListItem<F>[]> | undefined;
+  const composeSchema = (): z.ZodType<ListItem<F>[]> => {
+    const subShape: Record<string, z.ZodType> = {};
+    for (const [key, field] of Object.entries(opts.itemFields)) {
+      // A missing item key (e.g. a field added after items were stored) heals to
+      // the field's default instead of failing the whole list's validation.
+      subShape[key] = fieldSchemaWithDefault(field);
+    }
+    const itemSchema = z
+      .object({
+        id: z.string().optional(),
+        // Legacy-read tolerance only: array position is the canonical order now, so
+        // no `rank` is ever written, but a document stored before that change may
+        // still carry one on disk. Keep it optional so it parses cleanly (the
+        // registry's normalizeCollectionItems migrates then drops it).
+        rank: z.string().optional(),
+        ...subShape,
+      })
+      .passthrough();
     // `id` is `.optional()` on the wire (legacy documents predate it) but
     // required on `ListItem`, so the output types genuinely differ — a cast the
     // input widening does not remove.
-    schema: schema as unknown as z.ZodType<ListItem<F>[]>,
+    return z.array(itemSchema) as unknown as z.ZodType<ListItem<F>[]>;
+  };
+
+  return Object.freeze({
+    type: listFieldType as FieldType<ListItem<F>[]>,
+    get schema() {
+      return (schema ??= composeSchema());
+    },
     defaultValue: (opts.default ?? []) as ListItem<F>[],
     meta: pickMeta(opts),
     itemFields: opts.itemFields,

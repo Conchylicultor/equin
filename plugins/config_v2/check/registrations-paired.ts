@@ -13,11 +13,12 @@ import {
   loadConfigRegistrations,
   type ConfigRegistration,
 } from "./config-registrations";
+import { configDefaultFailures } from "./config-defaults";
 
 const check: Check = {
   id: "config-v2:registrations-paired",
   description:
-    "Every ConfigV2.Register (server/ or machine/) must have a matching ConfigV2.WebRegister (web) at the same storePath, and vice versa — and every one a browser host's scoped page registers is served by a `server/` barrel of the host's worker graph",
+    "Every ConfigV2.Register (server/ or machine/) must have a matching ConfigV2.WebRegister (web) at the same storePath, and vice versa — every one a browser host's scoped page registers is served by a `server/` barrel of the host's worker graph — and every registered descriptor's defaults parse against its own schema",
   async run(checkCtx) {
     // The run's registry-gen context — the one every check passing the run's
     // file set shares: its barrel-free tree is the same node set this check
@@ -53,15 +54,25 @@ const check: Check = {
     const webOnly = [...webPaths].filter((p) => !serverPaths.has(p)).sort();
     const serverOnly = [...serverPaths].filter((p) => !webPaths.has(p)).sort();
     const hostGaps = await hostConfigGaps(ctx, loaded.registrations);
+    // The defaults arm: a page load composes no config schema (defineConfig
+    // composes on first read), so this is where a bad default fails.
+    const badDefaults = configDefaultFailures(loaded.registrations);
 
     if (
       webOnly.length === 0 &&
       serverOnly.length === 0 &&
-      hostGaps.length === 0
+      hostGaps.length === 0 &&
+      badDefaults.length === 0
     )
       return { ok: true };
 
     const parts: string[] = [];
+    if (badDefaults.length > 0) {
+      parts.push(
+        `${badDefaults.length} config descriptor(s) whose defaults their own schema rejects:\n` +
+          badDefaults.map((f) => `    ${f}`).join("\n"),
+      );
+    }
     if (hostGaps.length > 0) {
       parts.push(
         `${hostGaps.length} config storePath(s) a browser host's scoped page registers are not served by its worker (the host coverage guard's config arm — nothing exempts it):\n` +
@@ -89,6 +100,8 @@ const check: Check = {
           "For each web-only storePath, add ConfigV2.Register({ descriptor }) (with the same pluginId override if used) to the defining plugin's server/index.ts or machine/index.ts contributions[].",
         serverOnly.length > 0 &&
           "For each server-only storePath, add ConfigV2.WebRegister({ descriptor }) (with the same pluginId override if used) to the defining plugin's web/index.ts contributions[].",
+        badDefaults.length > 0 &&
+          "For each descriptor with bad defaults, fix the field's `default` (or the factory's implicit one) so its own schema accepts it.",
         hostGaps.length > 0 &&
           "For each storePath a browser host does not serve, make the registering `server/` barrel portable (move what needs the computer — each blocker above, with its chain — out of its closure into `machine/`), or move its `ConfigV2.Register` from `machine/` into the plugin's portable `server/` barrel.",
       ]

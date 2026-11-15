@@ -29,6 +29,12 @@ export interface ConfigRegistration {
   storePath: string;
   /** Repo-relative barrel the contribution was found in. */
   barrel: string;
+  /**
+   * The registered descriptor itself, as the barrel produced it — read by
+   * `config-v2:registrations-paired`'s defaults arm (`configDefaultFailures`),
+   * which composes its schema and parses its defaults.
+   */
+  descriptor: unknown;
 }
 
 /** A barrel's default export, as read by {@link collectConfigRegistrations}. */
@@ -91,6 +97,7 @@ export function collectConfigRegistrations(
         owner,
         storePath: storePathFor(owner, name),
         barrel: b.barrel,
+        descriptor: c.descriptor,
       });
     }
   }

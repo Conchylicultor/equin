@@ -10,8 +10,10 @@ import type { FieldDef, FieldsRecord } from "./field-spec";
 // every FieldsRecord→z.object composition site shares.
 //
 // Every default composed here is asserted to parse (`assertFieldDefault`, once
-// per def), so a factory that skipped `defineField` cannot slip an invalid
-// default past this choke point either.
+// per def): this is THE check of a field's default — `defineField` only
+// freezes — so no schema ever backfills a value its field rejects. Composition
+// is where the cost lands, so a composer declared at module evaluation (a
+// config, a list or object field) composes on its schema's first read.
 export function fieldSchemaWithDefault(field: FieldDef): z.ZodType {
   assertFieldDefault(field);
   if (field.defaultless === true) return field.schema;

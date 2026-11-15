@@ -18,9 +18,10 @@ export interface FieldDef<T = unknown> {
   /**
    * Output-typed on purpose: `defaultValue` is read as a live `T` throughout
    * the repo (it seeds form values, and in config_v2 it *is* the config value).
-   * Always a value the schema accepts: `defineField` and
-   * `fieldSchemaWithDefault` assert `schema.safeParse(defaultValue)`, so an
-   * invalid default fails loudly at definition time, never at a read. A field
+   * Always a value the schema accepts: `fieldSchemaWithDefault` asserts
+   * `schema.safeParse(defaultValue)` where the field is composed into a schema,
+   * so an invalid default fails loudly before any schema backfills it, and a
+   * config's at build (`config-v2:registrations-paired`). A field
    * with no meaningful default has none ({@link DefaultlessFieldDef}).
    */
   readonly defaultValue: T;

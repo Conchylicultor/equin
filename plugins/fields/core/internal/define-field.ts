@@ -6,8 +6,8 @@ export class FieldDefaultError extends Error {
 }
 
 // Every def whose default has been checked (or that has none). A def is frozen,
-// so one check holds for its lifetime; `fieldSchemaWithDefault` re-asserts
-// through this set without re-parsing on every composition.
+// so one check holds for its lifetime: `fieldSchemaWithDefault` asserts
+// through this set, so a def composed into many schemas is parsed once.
 const checked = new WeakSet<FieldDef>();
 
 /**
@@ -36,14 +36,16 @@ export function assertFieldDefault(field: FieldDef): void {
 }
 
 /**
- * The one way a field def is built: freezes it after asserting its default
- * parses ({@link assertFieldDefault}), so an invalid default fails where the
- * field is declared — at boot — not at the first read that backfills it.
+ * The one way a field def is built: freezes it. Its default is checked where
+ * the field is COMPOSED into a schema (`fieldSchemaWithDefault`, the one
+ * place a default becomes a backfill), not here: fields are declared at module
+ * evaluation, hundreds per page load, and parsing each default there cost the
+ * browser's plugin load more than everything else zod did. A bad default still
+ * throws a {@link FieldDefaultError} before a schema can hand it out; every
+ * config's are checked at build (`config-v2:registrations-paired`).
  */
 export function defineField<D extends FieldDef>(def: D): D {
-  const frozen = Object.freeze(def);
-  assertFieldDefault(frozen);
-  return frozen;
+  return Object.freeze(def);
 }
 
 /**

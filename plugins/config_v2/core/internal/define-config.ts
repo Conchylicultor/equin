@@ -73,20 +73,34 @@ export function defineConfig<const F extends FieldsRecord>(
     );
   }
 
-  // .passthrough() for parity with object/list: unknown keys are preserved, not
-  // stripped (redaction/tiers iterate descriptor.fields explicitly anyway).
-  // `fieldsToZodObject` returns a STRICT object — config applies passthrough
-  // here, where the old `buildFieldsSchema` used to bake it in.
-  const schema = fieldsToZodObject(opts.fields).passthrough();
-
   const defaults = fieldDefaults(
     opts.fields,
     `defineConfig("${opts.name ?? "config"}")`,
   ) as ConfigValues<F>;
 
+  // The schema is composed on first read, not here. A descriptor is declared
+  // at module evaluation — ~100 of them on every page load, most never parsed
+  // in the browser (the server resolves documents) — and composing one builds
+  // a zod object over every field and checks each field's default against its
+  // own schema (`fieldsToZodObject` → `assertFieldDefault`). Composed once,
+  // memoized: every reader sees the same schema. A bad default still fails
+  // loudly: `config-v2:registrations-paired` composes every registered
+  // descriptor's schema and parses its defaults at build, and the server
+  // composes it resolving the config's document (a FieldDefaultError naming
+  // the field type).
+  //
+  // .passthrough() for parity with object/list: unknown keys are preserved, not
+  // stripped (redaction/tiers iterate descriptor.fields explicitly anyway).
+  // `fieldsToZodObject` returns a STRICT object — config applies passthrough
+  // here, where the old `buildFieldsSchema` used to bake it in.
+  let schema: ConfigDescriptor<F>["schema"] | undefined;
+  const fields = opts.fields;
+
   return Object.freeze({
     name: opts.name ?? "config",
-    schema,
+    get schema() {
+      return (schema ??= fieldsToZodObject(fields).passthrough());
+    },
     fields: opts.fields,
     defaults,
     originDefaultsFrom: opts.originDefaultsFrom ?? "descriptor",

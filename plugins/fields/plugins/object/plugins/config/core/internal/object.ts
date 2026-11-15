@@ -38,12 +38,21 @@ export function objectField<const F extends FieldsRecord>(
       | { subFields: F & DefaultedFields<F>; default?: undefined }
     ),
 ): ObjectFieldDef<F> {
-  const subShape: Record<string, z.ZodType> = {};
-  for (const [key, field] of Object.entries(opts.subFields)) {
-    subShape[key] = fieldSchemaWithDefault(field);
-  }
-
-  const schema = z.object(subShape).passthrough();
+  // Composed on first read, memoized: an object field is declared at module
+  // evaluation, and composing its schema checks each sub-field's default
+  // (`fieldSchemaWithDefault`). The sub-shape is built as an untyped record of
+  // schemas, so zod cannot prove the object's output equals
+  // `InferFieldsObject<F>` — a cast the input widening does not remove.
+  let schema: z.ZodType<InferFieldsObject<F>> | undefined;
+  const composeSchema = (): z.ZodType<InferFieldsObject<F>> => {
+    const subShape: Record<string, z.ZodType> = {};
+    for (const [key, field] of Object.entries(opts.subFields)) {
+      subShape[key] = fieldSchemaWithDefault(field);
+    }
+    return z.object(subShape).passthrough() as unknown as z.ZodType<
+      InferFieldsObject<F>
+    >;
+  };
 
   const defaultValue =
     opts.default != null
@@ -52,10 +61,9 @@ export function objectField<const F extends FieldsRecord>(
 
   return Object.freeze({
     type: objectFieldType as FieldType<InferFieldsObject<F>>,
-    // The sub-shape is built as an untyped record of schemas, so zod cannot
-    // prove the object's output equals `InferFieldsObject<F>` — a cast the
-    // input widening does not remove.
-    schema: schema as unknown as z.ZodType<InferFieldsObject<F>>,
+    get schema() {
+      return (schema ??= composeSchema());
+    },
     defaultValue: defaultValue as InferFieldsObject<F>,
     meta: pickMeta(opts),
     subFields: opts.subFields,

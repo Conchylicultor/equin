@@ -38,6 +38,7 @@ describe("collectConfigRegistrations", () => {
         owner: "ui.tab-bar",
         storePath: "ui/tab-bar/config.jsonc",
         barrel: "plugins/ui/plugins/tab-bar/web/index.ts",
+        descriptor: { name: "config" },
       },
       {
         runtime: "server",
@@ -45,6 +46,7 @@ describe("collectConfigRegistrations", () => {
         owner: "ui.tab-bar",
         storePath: "ui/tab-bar/config.jsonc",
         barrel: "plugins/ui/plugins/tab-bar/server/index.ts",
+        descriptor: { name: "config" },
       },
     ]);
   });

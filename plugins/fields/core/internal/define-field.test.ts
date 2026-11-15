@@ -13,23 +13,17 @@ import { fieldSchemaWithDefault, fieldsToZodObject } from "./schema-builder";
 const intType = defineFieldType<number>("__df_int__");
 const idType = defineFieldType<string>("__df_id__");
 
-test("defineField refuses a default its own schema rejects, naming the type and the issue", () => {
-  expect(() =>
-    defineField({
-      type: intType,
-      schema: z.number().int().min(1),
-      defaultValue: 0,
-      meta: {},
-    }),
-  ).toThrow(FieldDefaultError);
-  expect(() =>
-    defineField({
-      type: intType,
-      schema: z.number().int().min(1),
-      defaultValue: 0,
-      meta: {},
-    }),
-  ).toThrow(/"__df_int__".*\(root\)/);
+test("a default its own schema rejects fails where the field is composed, naming the type and the issue", () => {
+  // Declaring it checks nothing (no parse at module evaluation)…
+  const bad = defineField({
+    type: intType,
+    schema: z.number().int().min(1),
+    defaultValue: 0,
+    meta: {},
+  });
+  // …composing it into a schema does, before any backfill can hand it out.
+  expect(() => fieldsToZodObject({ n: bad })).toThrow(FieldDefaultError);
+  expect(() => fieldSchemaWithDefault(bad)).toThrow(/"__df_int__".*\(root\)/);
 });
 
 test("defineField freezes and returns a field whose default parses", () => {

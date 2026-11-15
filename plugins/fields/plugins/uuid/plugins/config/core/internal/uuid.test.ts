@@ -19,6 +19,7 @@ test("a declared uuid default backfills and is marked declared", () => {
   expect(fieldsToZodObject({ id }).parse({})).toEqual({ id: UUID });
 });
 
-test("a declared default that is not a uuid fails at definition", () => {
-  expect(() => uuidField({ default: "" })).toThrow(/"uuid"/);
+test("a declared default that is not a uuid fails where the field is composed", () => {
+  const bad = uuidField({ default: "" });
+  expect(() => fieldsToZodObject({ id: bad })).toThrow(/"uuid"/);
 });

@@ -30,20 +30,23 @@ export interface VariantFieldDef extends FieldDef<VariantValue> {
   readonly useVariants?: Hook<() => Map<string, VariantEntry>>;
 }
 
+// Opaque/passthrough at the config boundary: only the `type` discriminant is
+// validated; per-type payload survives passthrough, validated downstream by
+// the chosen variant's own fields (see validateVariant), not here. One schema
+// for every variant field — it depends on no option, and a zod schema is
+// immutable — so declaring one (every DataView's views config does, at module
+// evaluation) builds no zod.
+const VARIANT_SCHEMA = z.object({ type: z.string() }).passthrough();
+
 export function variantField(
   opts?: FieldMeta & {
     default?: VariantValue;
     useVariants?: VariantFieldDef["useVariants"];
   },
 ): VariantFieldDef {
-  // Opaque/passthrough at the config boundary: only the `type` discriminant is
-  // validated; per-type payload survives passthrough, validated downstream by
-  // the chosen variant's own fields (see validateVariant), not here.
-  const schema = z.object({ type: z.string() }).passthrough();
-
   return Object.freeze({
     type: variantFieldType,
-    schema: schema,
+    schema: VARIANT_SCHEMA,
     defaultValue: opts?.default ?? { type: "" },
     meta: pickMeta(opts),
     useVariants: opts?.useVariants,
