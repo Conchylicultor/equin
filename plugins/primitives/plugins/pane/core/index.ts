@@ -3,9 +3,6 @@ export {
   APP_COLOR_MODES,
   defineApp,
   defineRoute,
-  EMBED_MAXIMIZED,
-  EMBED_MAXIMIZED_PARAMS,
-  EMBED_MAXIMIZED_SURFACE,
   EMBED_PLACE_SURFACE,
   embedTailPath,
   embedTailStarts,
@@ -25,13 +22,11 @@ export {
   segmentCollision,
   segmentParamNames,
   segmentRequiredParamNames,
-  splitEmbedMaximized,
   splitEmbedTail,
   splitKeyedPart,
   splitSurfaceViewPart,
   surfaceViewKey,
   surfaceViewsOf,
-  withEmbedMaximized,
   withoutSurfaceViews,
 } from "./route";
 export type {

@@ -20,7 +20,7 @@ as a floating window over a wallpaper, `/desktop`) and **Isle** (every app a
 building on an archipelago you walk around, `/isle`). It is an ordinary
 category (`surfaces`) of the same catalog — same card, chip, count and search —
 and both carry `APP_DEMO_PLACES` entries, so each card opens the live demo at
-`/about/at/desktop;full=1` / `/about/at/isle;full=1`. Their icons are their app
+`/about/demo/at/desktop` / `/about/demo/at/isle`. Their icons are their app
 definitions' (`desktop-windows`, `sailing`).
 
 The list is plain data (`web/internal/catalog.ts`): the site is a written page,

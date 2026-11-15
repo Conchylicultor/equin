@@ -32,11 +32,7 @@ import {
   getFocusedSurfaceId,
   setFocusedSurfaceId,
 } from "@plugins/primitives/plugins/shortcuts/web";
-import {
-  AppEmbed,
-  useEmbedPlace,
-  type EmbedPlace,
-} from "../components/app-embed";
+import { AppEmbed } from "../components/app-embed";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { appThemeScope } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
 
@@ -284,15 +280,13 @@ describe("<AppEmbed>", () => {
       icon: symbol("home"),
     });
     type PaneViews = NonNullable<ReturnType<typeof usePaneViews>>;
-    let place: EmbedPlace | null = null;
     let views: PaneViews | null = null;
-    /** Hands the host's handles to the test (the view-param suite's pattern). */
-    function capture(p: EmbedPlace, v: PaneViews | null) {
-      place = p;
+    /** Hands the host pane's views to the test (the view-param suite's pattern). */
+    function capture(v: PaneViews | null) {
       views = v;
     }
     function PlaceProbe() {
-      capture(useEmbedPlace(), usePaneViews());
+      capture(usePaneViews());
       return null;
     }
     const hostPane = Pane.define({
@@ -342,7 +336,6 @@ describe("<AppEmbed>", () => {
     }
 
     afterEach(() => {
-      place = null;
       views = null;
       setLiveStore(defaultStore);
     });
@@ -354,14 +347,6 @@ describe("<AppEmbed>", () => {
       // The user's first move is the first place written.
       goTo("/other/c/x");
       expect(window.location.pathname).toBe("/host/at/other/c/x");
-    });
-
-    it("a maximize before any move is the flag alone", () => {
-      mountHost("/host");
-      act(() => place!.setMaximized(true));
-      expect(window.location.pathname).toBe("/host;full=1");
-      goTo("/other/c/x");
-      expect(window.location.pathname).toBe("/host/at/other/c/x;full=1");
     });
 
     it("hands its title to the host as it moves, and takes it back when it unmounts", () => {
@@ -395,25 +380,6 @@ describe("<AppEmbed>", () => {
       expect(window.history.length).toBe(length);
     });
 
-    it("maximized, a move is the entry the app's own tab would write", () => {
-      mountHost("/host/at/emb/c/one;full=1");
-      expect(place!.maximized).toBe(true);
-      const length = window.history.length;
-      goTo("/other/c/x");
-      expect(window.location.pathname).toBe("/host/at/other/c/x;full=1");
-      expect(window.history.length).toBe(length + 1);
-    });
-
-    it("Maximize and Restore are the page's own steps (pushed)", () => {
-      mountHost("/host/at/emb/c/one");
-      const length = window.history.length;
-      act(() => place!.setMaximized(true));
-      expect(window.location.pathname).toBe("/host/at/emb/c/one;full=1");
-      expect(window.history.length).toBe(length + 1);
-      act(() => place!.setMaximized(false));
-      expect(window.location.pathname).toBe("/host/at/emb/c/one");
-    });
-
     it("is a reveal boundary: a reveal inside never scrolls its host page", () => {
       mountHost("/host");
       expect(
@@ -430,10 +396,10 @@ describe("<AppEmbed>", () => {
       expect(screen.getByTestId("route").textContent).toBe("pending:c/one");
     });
 
-    it("addresses a new browser tab as this page there, maximized", () => {
+    it("addresses a new browser tab as this page there", () => {
       mountHost("/host/at/emb/c/one");
       expect(peekFocusedTabSet()?.browserTabUrl("/other/c/x")).toBe(
-        "/host/at/other/c/x;full=1",
+        "/host/at/other/c/x",
       );
     });
 

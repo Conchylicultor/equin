@@ -16,8 +16,8 @@ rendered — and none is slow enough for the stall report to see.
 
 ## How it runs
 
-- `e2e/fullscreen-switch-budget.ts` opens the homepage's live demo
-  (`/about`) maximized at the desktop
+- `e2e/fullscreen-switch-budget.ts` opens the live demo's own page
+  (`/about/demo`) at the desktop
   with Sonata (the real app's code on the demo's seeded data, in a worker),
   traces `--rounds` round trips per window count, and judges the warm median
   (round 1 is cold) against `BUDGETS` — ~2× today's numbers, far under one

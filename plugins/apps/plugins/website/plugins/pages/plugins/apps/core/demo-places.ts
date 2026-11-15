@@ -2,7 +2,7 @@
 export interface AppDemoPlace {
   /**
    * The app's home — its base path (`/sonata`): the card's "Try it live"
-   * opens the demo maximized there (`/about/at/<home>;full=1`), where a
+   * opens the demo page there (`/about/demo/at/<home>`), where a
    * visitor starts using it. Text, not the app's descriptor: importing an
    * app's shell would pull it into the website composition's bundle.
    */

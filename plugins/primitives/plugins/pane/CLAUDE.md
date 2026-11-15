@@ -142,14 +142,14 @@ address can hold it.
 - `usePaneViews()` → `{ values, set(views, history?), href(views) }` is the
   several-surfaces form: one history write for several keys, and the URL
   such a write would produce (a link, a new tab).
-- **The embed tail.** Two surfaces are reserved for an embedded app's place
-  (`EMBED_PLACE_SURFACE` `embed`, `EMBED_MAXIMIZED_SURFACE` `embed.full`,
-  bound by `apps-core/app-embed`). On the route's last instance (its last
-  slot, or the landing pane with none) they are spelled as the URL's tail —
-  `<the page's URL>/at/<location parts>`, and `;full=1` on the URL's last
-  part with or without a location (`splitEmbedTail`) — instead of `;view.…`
-  pairs; anywhere else (or on a last segment ending open), plainly. No route
-  may declare `full`. `parseUrl` tries the
+- **The embed tail.** One surface is reserved for an embedded app's place
+  (`EMBED_PLACE_SURFACE` `embed`, bound by `apps-core/app-embed`). On the
+  route's last instance (its last slot, or the landing pane with none) it is
+  spelled as the URL's tail — `<the page's URL>/at/<location parts>`
+  (`splitEmbedTail`), each part encoded — instead of a `;view.…` pair;
+  anywhere else (or on a last segment ending open), plainly. A tail part
+  holding a raw `;` is no tail (a stale `;full=1` link of the retired
+  maximized flag reads as no route: not found). `parseUrl` tries the
   plain chain first and reads a tail only when that fails, so a route with a
   real `at` segment keeps matching. `embedTailPath(location)` spells one for
   a script addressing an embed from outside.
@@ -1101,9 +1101,6 @@ with an empty route.
     - `APP_COLOR_MODES`
     - `defineApp`
     - `defineRoute`
-    - `EMBED_MAXIMIZED`
-    - `EMBED_MAXIMIZED_PARAMS`
-    - `EMBED_MAXIMIZED_SURFACE`
     - `EMBED_PLACE_SURFACE`
     - `embedTailPath`
     - `embedTailStarts`
@@ -1123,13 +1120,11 @@ with an empty route.
     - `segmentKeyedParamNames`
     - `segmentParamNames`
     - `segmentRequiredParamNames`
-    - `splitEmbedMaximized`
     - `splitEmbedTail`
     - `splitKeyedPart`
     - `splitSurfaceViewPart`
     - `surfaceViewKey`
     - `surfaceViewsOf`
-    - `withEmbedMaximized`
     - `withoutSurfaceViews`
 - Test helpers:
   - Web: `@plugins/primitives/plugins/pane/web/testing`

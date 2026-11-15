@@ -133,7 +133,7 @@ describe("judgeClientHours", () => {
 
 describe("appOfRoute", () => {
   test("first path segment", () => {
-    expect(appOfRoute("/demo/at/desktop/sonata;full=1")).toBe("/demo");
+    expect(appOfRoute("/demo/at/desktop/sonata")).toBe("/demo");
     expect(appOfRoute("/agents?x=1")).toBe("/agents");
     expect(appOfRoute("/")).toBe("/");
   });

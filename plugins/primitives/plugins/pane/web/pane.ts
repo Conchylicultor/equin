@@ -15,7 +15,6 @@ import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { defineInstallSink } from "@plugins/primitives/plugins/scope/plugins/install-sink/web";
 import { splitRoutePrefix } from "@plugins/primitives/plugins/pane/plugins/route-prefix/web";
 import {
-  EMBED_MAXIMIZED_PARAMS,
   embedTailStarts,
   fillSegment,
   indexKeyedSuffix,
@@ -33,13 +32,11 @@ import {
   segmentCollision,
   segmentParamNames,
   segmentRequiredParamNames,
-  splitEmbedMaximized,
   splitEmbedTail,
   splitKeyedPart,
   splitSurfaceViewPart,
   surfaceViewKey,
   surfaceViewsOf,
-  withEmbedMaximized,
   withoutSurfaceViews,
   type AppRef,
   type PositionalRouteParams,
@@ -648,12 +645,7 @@ export type ParsedRoute =
 export function parseUrl(pathname: string, basePath: string): ParsedRoute {
   const home = normalizeAppPath(basePath);
   const normalized = pathname === "/" ? "" : pathname.replace(/^\/+|\/+$/g, "");
-  // The URL's last part may end in an embed's maximized flag (`;full=1`,
-  // `splitEmbedTail`): read it off first, for the route's last instance.
-  const { parts: urlSegments, maximized } = splitEmbedMaximized(
-    normalized ? normalized.split("/") : [],
-  );
-  const flag = maximized ? EMBED_MAXIMIZED_PARAMS : NO_PARAMS;
+  const urlSegments = normalized ? normalized.split("/") : [];
   // A first part with nothing before its `;` is the app's LANDING pane's keyed
   // suffix, written on the base path (`/sonata;view.sonata.library=all` → `;view.sonata.library=all`): the
   // index pane has no URL part of its own to carry it.
@@ -677,10 +669,10 @@ export function parseUrl(pathname: string, basePath: string): ParsedRoute {
   };
 
   const parsed = parseChain(urlSegments, home);
-  if (parsed) return matched(parsed, flag);
+  if (parsed) return matched(parsed, NO_PARAMS);
 
   // No chain matches the whole URL: it may end in an embed tail
-  // (`…/at/agents/c/x;full=1` — `splitEmbedTail`), owned by the instance
+  // (`…/at/agents/c/x` — `splitEmbedTail`), owned by the instance
   // before it: the last pane of the chain that matches the parts before the
   // first `at` that leaves one, or the landing pane when that chain is empty.
   // Tried only after the plain parse, so a route with a real `at` segment
@@ -690,7 +682,7 @@ export function parseUrl(pathname: string, basePath: string): ParsedRoute {
     if (tail === null) continue;
     const head = parseChain(urlSegments.slice(0, at), home);
     if (!head) continue;
-    return matched(head, { ...tail, ...flag });
+    return matched(head, tail);
   }
 
   // No chain of registered panes matches the whole URL: it is not resolvable at
@@ -796,7 +788,6 @@ export function buildRouteUrl(
   // has none — spells an embed's place as the URL's tail (`/at/…`).
   const lastIdx = route.length - 1;
   const indexTail = lastIdx < 0 ? splitEmbedTail(index) : undefined;
-  let maximized = indexTail?.maximized ?? false;
   const suffix = indexKeyedSuffix(
     indexTail?.params ?? index,
     indexPane ? segmentKeyedParamNames(indexPane.segment) : [],
@@ -811,13 +802,12 @@ export function buildRouteUrl(
     // after it as its own value: the place keeps the plain `;view.…` spelling.
     const open = parseSegmentParts(pane.segment).at(-1)?.kind;
     if (i === lastIdx && open !== "wildcard" && open !== "optional")
-      ({ params, tail, maximized } = splitEmbedTail(params));
+      ({ params, tail } = splitEmbedTail(params));
     // `fillSegment` owns the `:name`/`:name*`/encode/missing-param logic — the
     // single source of truth shared with `RouteDef.path`.
     parts.push(...fillSegment(pane.segment, params, { ownSlot: true }));
   });
-  const url = joinUrlParts([...parts, ...tail]);
-  return maximized ? withEmbedMaximized(url) : url;
+  return joinUrlParts([...parts, ...tail]);
 }
 
 /**
@@ -2656,7 +2646,7 @@ export interface PaneViewParam {
    * Write it (or clear it with `undefined`) in place, REPLACING the history
    * entry by default: which view is on screen is not a navigation Back should
    * step through. `"push"` adds an entry, for a surface whose moves ARE the
-   * page's history (a maximized embed's navigation, its Maximize itself).
+   * page's history (an embed that is the whole page, its every move).
    */
   set: (value: string | undefined, history?: HistoryMode) => void;
 }

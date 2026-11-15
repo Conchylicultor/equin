@@ -27,9 +27,9 @@ import { symbol } from "@plugins/ui/plugins/icons/core";
 
 // AN EMBED'S PLACE IS THE TAIL OF ITS PAGE'S URL.
 //
-// The two reserved surface views of the pane instance hosting an embed
-// (`view.embed`: its location; `view.embed.full`: maximized) are spelled, on
-// the route's LAST instance, as `<the page's URL>/at/<location>[;full=1]`.
+// The reserved surface view of the pane instance hosting an embed
+// (`view.embed`: its location) is spelled, on the route's LAST instance, as
+// `<the page's URL>/at/<location>`.
 // This suite pins the build and the parse on both owners (the landing pane, a
 // slot), the plain spelling elsewhere, and that a route with a real `at`
 // segment keeps meaning itself.
@@ -118,7 +118,6 @@ function parsed(path: string) {
 }
 
 const PLACE = "view.embed";
-const FULL = "view.embed.full";
 
 describe("parsing an embed tail", () => {
   it("puts it on the landing pane when the route has no slot", () => {
@@ -126,13 +125,9 @@ describe("parsing an embed tail", () => {
       slots: [],
       index: { [PLACE]: "/agents/c/x" },
     });
-    expect(parsed("/;view.lib=all/at/desktop/sonata;full=1")).toEqual({
+    expect(parsed("/;view.lib=all/at/desktop/sonata")).toEqual({
       slots: [],
-      index: {
-        "view.lib": "all",
-        [PLACE]: "/desktop/sonata",
-        [FULL]: "1",
-      },
+      index: { "view.lib": "all", [PLACE]: "/desktop/sonata" },
     });
   });
 
@@ -160,14 +155,10 @@ describe("parsing an embed tail", () => {
     });
   });
 
-  it("reads the flag off a route with no location, on its last slot", () => {
-    expect(parsed("/et-host/et-child;full=1")).toEqual({
-      slots: [
-        ["et-host", {}],
-        ["et-child", { [FULL]: "1" }],
-      ],
-      index: {},
-    });
+  it("is no tail when a part holds a raw `;` (a retired `;full=1` link)", () => {
+    expect(parsed("/at/desktop/sonata;full=1")).toBe("unresolved");
+    expect(parsed("/et-host/et-child/at/agents;full=1")).toBe("unresolved");
+    expect(parsed("/et-host/et-child;full=1")).toBe("unresolved");
   });
 
   it("is no tail with nothing after `at`", () => {
@@ -178,9 +169,6 @@ describe("parsing an embed tail", () => {
 describe("embedTailPath", () => {
   it("spells the tail a script appends to its page", () => {
     expect(embedTailPath("/agents/c/x")).toBe("/at/agents/c/x");
-    expect(embedTailPath("/desktop/sonata", { maximized: true })).toBe(
-      "/at/desktop/sonata;full=1",
-    );
     expect(embedTailPath("/sonata;view.lib=all")).toBe(
       "/at/sonata%3Bview.lib%3Dall",
     );
@@ -231,31 +219,14 @@ describe("writing an embed's place", () => {
     expect(window.location.pathname).toBe("/site/at/agents/c/x");
     expect(window.history.length).toBe(historyLength);
 
-    act(() => views!.set({ "embed.full": "1" }, "push"));
-    expect(window.location.pathname).toBe("/site/at/agents/c/x;full=1");
+    act(() => views!.set({ embed: "/pages" }, "push"));
+    expect(window.location.pathname).toBe("/site/at/pages");
     expect(window.history.length).toBe(historyLength + 1);
-    expect(views!.values).toEqual({ embed: "/agents/c/x", "embed.full": "1" });
+    expect(views!.values).toEqual({ embed: "/pages" });
 
-    expect(views!.href({ embed: "/pages", "embed.full": undefined })).toBe(
-      "/site/at/pages",
-    );
+    expect(views!.href({ embed: "/agents" })).toBe("/site/at/agents");
     // Nothing written by asking.
-    expect(window.location.pathname).toBe("/site/at/agents/c/x;full=1");
-  });
-
-  it("spells a maximize with no location as the flag alone", () => {
-    store.clearRoute();
-    let views: PaneViews | null = null;
-    render(
-      <TestSurface store={store} plugins={plugins} basePath="/site">
-        <InInstance>
-          <Bind onBind={(v) => (views = v)} />
-        </InInstance>
-      </TestSurface>,
-    );
-    act(() => views!.set({ "embed.full": "1" }));
-    expect(window.location.pathname).toBe("/site;full=1");
-    expect(parsed("/;full=1")).toEqual({ slots: [], index: { [FULL]: "1" } });
+    expect(window.location.pathname).toBe("/site/at/pages");
   });
 
   it("is a tail on the last slot, plain keys on any other", () => {

@@ -58,35 +58,31 @@ around nothing the real instance. Designs:
   steps aside for the embed's own.
 - **Its place, in the page's URL — kept by the embed itself.** Where it is
   (the focused tab's app-rooted URL under the mode's prefix: `/agents/c/x`,
-  `/desktop/sonata`) and whether its host maximized it are two reserved
-  surface views of the enclosing pane instance (`pane/core`'s
-  `EMBED_PLACE_SURFACE` / `EMBED_MAXIMIZED_SURFACE`), which the router
-  spells as the URL's **embed tail**: `<the page's URL>/at/<location>[;full=1]`
-  (`/demo/at/agents/c/x`, `/about/at/desktop/sonata;full=1`). So a host
-  writes no URL code, every host spells it the same, and the tail rides every
-  path a pane's URL rides (history snapshots, persisted tabs, restores).
+  `/desktop/sonata`) is a reserved surface view of the enclosing pane instance
+  (`pane/core`'s `EMBED_PLACE_SURFACE`), which the router spells as the URL's
+  **embed tail**: `<the page's URL>/at/<location>` (`/about/demo/at/agents/c/x`).
+  So a host writes no URL code, every host spells it the same, and the tail
+  rides every path a pane's URL rides (history snapshots, persisted tabs,
+  restores).
   - Never a place no one chose: the place it opened at by itself (its seed,
     a redirect) is not written — the URL names a place once the user moves
-    the embed (or maximizes it: `/demo;full=1`), so mounting an embed never
-    rewrites its host page's address.
-  - Framed, a move rewrites the current history entry (a box on a page: Back
-    leaves the page); maximized, the embed is the tab, so each move is the
-    entry the app's own tab would write (a link pushes, a redirect or a mode
-    switch replaces), and Back / Forward move the embed back there (the
-    embed follows its place when the URL changes under it).
-  - `useEmbedPlace()` is the host's handle for its chrome: `maximized`,
-    `setMaximized(on)` (the page's own step: a pushed entry, so Back from
-    maximized returns to the frame) and `reset()` (forget the place — a
-    demo's Reset, which may erase it).
+    the embed, so mounting an embed never rewrites its host page's address.
+  - A move rewrites the current history entry (a box on a page: Back leaves
+    the page); when the URL changes under it (Back / Forward), the embed
+    follows its place.
   - One embed per pane instance (two would share the tail). Outside any pane
     (a test, an exhibit with no address) the place is kept in memory only.
   - **A host can keep it elsewhere**: `place={{ location, onLocationChange,
     browserTabUrl }}` (`EmbedPlaceBinding`, the embedded tab set's own
-    fields) replaces the pane's tail — an embed portaled from a layout, or
-    one whose place must stay out of its page's URL (the website's live demo:
-    memory in the homepage's frame, the demo page's own tail maximized).
+    fields) replaces the pane's tail — an embed portaled from a layout, one
+    whose place must stay out of its page's URL, or one that is the whole
+    page, whose every move is the page's history: `onLocationChange` is told
+    each move's `history` mode (the entry the app's own tab would write — a
+    link pushes, a redirect or a mode switch replaces). The website's live
+    demo binds both ways: memory in the homepage's frame, the demo page's own
+    tail (pushed) on `/about/demo`.
   - The tail is written only on the route's last instance (its last slot, or
-    the landing pane with no slot); elsewhere the two keys keep the plain
+    the landing pane with no slot); elsewhere the key keeps the plain
     `;view.embed=…` spelling. The parse tries the plain chain first, so a
     route with a real `at` segment (`/files/<fs>/at/…`) keeps meaning itself.
     Design: `research/2026-11-11-global-embed-place-in-page-url.md`.
@@ -94,8 +90,8 @@ around nothing the real instance. Designs:
   goes through `link-gesture`'s `openInBrowserTab`, whose address is the tab
   set the user is in's (`browserTabAddressSink`, installed by the page's tab
   set; an embed claims the set on pointer-down): this page with the embed at
-  that place, maximized — the same embed (on a demo, the same data), never
-  the real app at that path.
+  that place (the binding's `browserTabUrl`) — the same embed (on a demo, the
+  same data), never the real app at that path.
 - **Its title, for the host to take.** `onTitleChange` is told the focused
   tab's title as the app's own tab is titled (`<Entity> — <App>`), and
   `undefined` when it unmounts; a host that is the embed while it shows
@@ -112,7 +108,7 @@ Tests: `web/__tests__/app-embed.test.tsx`.
 
 ## Plugin reference
 
-- Description: <AppEmbed app? route? onLeave? fills? onTitleChange? place? />: the app rendered in-process inside its own box — an embedded tab set (TabsProvider embedded: seeded from the page URL's place, else app + route, else the composition's home app — non-live stores never touching the page URL, history or storage, none of the page's signals) and the same surface body the app's layout renders, so pane opens, app switches and the Desktop (its windows the embed's own tabs) work as in the app. Its navigation boundary resolves URLs against the apps in scope: an app's URL moves the embed, a surface-mode app's base path switches its mode, anything else is onLeave (default: a toast). Its theme scope is the focused tab's app's (transform-gpu, so fixed chrome stays in the embed); solo fills the embed box, and it opens docked. It keeps its own place in the page URL — the enclosing pane's embed tail, <the page URL>/at/<location>[;full=1] — so a host writes no URL code (or, given a place binding, wherever the host keeps it: memory, its own route) — never a place no one chose (nothing is written until the user moves it); framed, a move rewrites the current history entry; maximized, each move is the entry the app's own tab would write; Back / Forward move it back; a new browser tab opened inside opens this page there, maximized. useEmbedPlace() gives the host's chrome maximized / setMaximized (a pushed entry) / reset. fills: page | viewport: it is all the page shows (takes the keyboard at mount); a viewport-filling one hosts the page's floating action bar. Its box is a reveal boundary (a reveal inside never scrolls the host page), and onTitleChange hands the host its focused tab's title (<Entity> — <App>). Knows nothing about demos or where data comes from.
+- Description: <AppEmbed app? route? onLeave? fills? onTitleChange? place? />: the app rendered in-process inside its own box — an embedded tab set (TabsProvider embedded: seeded from the page URL's place, else app + route, else the composition's home app — non-live stores never touching the page URL, history or storage, none of the page's signals) and the same surface body the app's layout renders, so pane opens, app switches and the Desktop (its windows the embed's own tabs) work as in the app. Its navigation boundary resolves URLs against the apps in scope: an app's URL moves the embed, a surface-mode app's base path switches its mode, anything else is onLeave (default: a toast). Its theme scope is the focused tab's app's (transform-gpu, so fixed chrome stays in the embed); solo fills the embed box, and it opens docked. It keeps its own place in the page URL — the enclosing pane's embed tail, <the page URL>/at/<location> — so a host writes no URL code (or, given a place binding, wherever the host keeps it: memory, its own route) — never a place no one chose (nothing is written until the user moves it); a move rewrites the current history entry (a host binding is told each move's history mode, for an embed that is the whole page); Back / Forward move it with the URL; a new browser tab opened inside opens this page there. fills: page | viewport: it is all the page shows (takes the keyboard at mount); a viewport-filling one hosts the page's floating action bar. Its box is a reveal boundary (a reveal inside never scrolls the host page), and onTitleChange hands the host its focused tab's title (<Entity> — <App>). Knows nothing about demos or where data comes from.
 - Web:
   - Uses:
     - `apps-core.Apps`
@@ -137,11 +133,8 @@ Tests: `web/__tests__/app-embed.test.tsx`.
   - Exports (types):
     - `AppEmbedAt`
     - `AppEmbedLeave`
-    - `EmbedPlace`
     - `EmbedPlaceBinding`
-  - Exports (values):
-    - `AppEmbed`
-    - `useEmbedPlace`
+  - Exports (values): `AppEmbed`
 - Cross-plugin:
   - Imported by: `apps/website/live-demo`
 
