@@ -6,11 +6,11 @@ import {
   type ComposedEntry,
 } from "@plugins/framework/plugins/server-core/core";
 import type {
-  ReachPlan,
   ResourceParams,
   ResourceRuntime,
   ServerResourceOptions,
 } from "@plugins/network/plugins/live/plugins/resource-runtime/core";
+import type { ReachPlan } from "@plugins/network/plugins/live/plugins/resource-runtime/plugins/routing/core";
 import {
   compiledValueReach,
   type FollowRead,

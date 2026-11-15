@@ -30,7 +30,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { z } from "zod";
-import type { RoutePlan } from "@plugins/network/plugins/live/plugins/resource-runtime/core";
+import type { RoutePlan } from "@plugins/network/plugins/live/plugins/resource-runtime/plugins/routing/core";
 import { ResourceContractError } from "@plugins/network/plugins/live/plugins/resource-protocol/core";
 import { parsedText } from "@plugins/database/plugins/sql-column/server";
 import { retype } from "@plugins/packages/plugins/zod-introspect/core";

@@ -1,10 +1,10 @@
 import { count, sql, type SQL } from "drizzle-orm";
 import { db as realDb } from "@plugins/database/server";
 import type {
-  ReachPlan,
   ResourceParams,
   ServerResourceOptions,
 } from "@plugins/network/plugins/live/plugins/resource-runtime/core";
+import type { ReachPlan } from "@plugins/network/plugins/live/plugins/resource-runtime/plugins/routing/core";
 import { planGroupArm, type GroupsQuerySpec } from "./compile-groups";
 import { compiledReachPlan } from "./routes";
 import type { QueryDb } from "./spec";

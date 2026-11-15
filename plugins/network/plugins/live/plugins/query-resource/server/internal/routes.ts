@@ -6,6 +6,7 @@ import {
   getViewConfig,
   type PgColumn,
 } from "drizzle-orm/pg-core";
+import { type ResourceParams } from "@plugins/network/plugins/live/plugins/resource-runtime/core";
 import {
   type HandoffDefinitionAnswer,
   mintReachPlan,
@@ -15,12 +16,11 @@ import {
   type HostMap,
   type ReachPlan,
   type RelationRead,
-  type ResourceParams,
   type Route,
   type RoutePlan,
   type TaggedRead,
   type TupleUse,
-} from "@plugins/network/plugins/live/plugins/resource-runtime/core";
+} from "@plugins/network/plugins/live/plugins/resource-runtime/plugins/routing/core";
 import {
   armKeyCodec,
   BASE_RELATION,

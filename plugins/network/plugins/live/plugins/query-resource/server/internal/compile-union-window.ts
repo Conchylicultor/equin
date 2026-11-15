@@ -10,14 +10,16 @@ import {
   type SqlDecoderLike,
 } from "@plugins/database/plugins/sql-projection/server";
 import type {
-  FullRoute,
   KeyedMembership,
   KeyedServerResourceOptions,
   ResourceParams,
   RoutedRecomputeOn,
   ScopePolicy,
-  TupleUse,
 } from "@plugins/network/plugins/live/plugins/resource-runtime/core";
+import type {
+  FullRoute,
+  TupleUse,
+} from "@plugins/network/plugins/live/plugins/resource-runtime/plugins/routing/core";
 import {
   atOrBeforePredicate,
   orderByClauses,

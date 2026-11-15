@@ -26,7 +26,7 @@ import {
   mintRoutePlan,
   type Route,
   type TupleUse,
-} from "./routing";
+} from "@plugins/network/plugins/live/plugins/resource-runtime/plugins/routing/core";
 import {
   createHarness,
   makeClientView,

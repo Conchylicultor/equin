@@ -18,7 +18,11 @@
 
 import { describe, expect, test } from "bun:test";
 import { z } from "zod";
-import { mintReachPlan, type TableChange, type TupleUse } from "./routing";
+import {
+  mintReachPlan,
+  type TableChange,
+  type TupleUse,
+} from "@plugins/network/plugins/live/plugins/resource-runtime/plugins/routing/core";
 import { createHarness, tick, type Harness } from "./test-support";
 import type { LoadRun, ResourceParams } from "./runtime";
 

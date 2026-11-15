@@ -35,11 +35,11 @@ import {
   createRelationBases,
   rebuildTriggers,
 } from "@plugins/network/plugins/live/plugins/change-feed/server/testing";
+import { createResourceRuntime } from "@plugins/network/plugins/live/plugins/resource-runtime/core";
 import {
-  createResourceRuntime,
   mintReachPlan,
   type ReachPlan,
-} from "@plugins/network/plugins/live/plugins/resource-runtime/core";
+} from "@plugins/network/plugins/live/plugins/resource-runtime/plugins/routing/core";
 import { installTaskDerivedSchema, TREE_IDS, treeSeed } from "../testing";
 import { rollupSourcesOf } from "@plugins/database/plugins/derived-tables/server/testing";
 import { TASK_ROLLUPS } from "./task-rollups";

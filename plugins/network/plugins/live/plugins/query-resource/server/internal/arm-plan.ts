@@ -2,11 +2,13 @@ import { utf8ByteLength } from "./utf8";
 import { and, inArray, is, sql, SQL } from "drizzle-orm";
 import type { PgColumn } from "drizzle-orm/pg-core";
 import type {
-  DerivedRead,
   ResourceParams,
   RoutedRecomputeOn,
-  TupleUse,
 } from "@plugins/network/plugins/live/plugins/resource-runtime/core";
+import type {
+  DerivedRead,
+  TupleUse,
+} from "@plugins/network/plugins/live/plugins/resource-runtime/plugins/routing/core";
 import {
   atOrBeforePredicate,
   orderByClauses,

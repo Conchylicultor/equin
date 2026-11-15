@@ -30,7 +30,7 @@ import {
   type ChangeSource,
   type ReachPlan,
   type RoutePlan,
-} from "../routing";
+} from "@plugins/network/plugins/live/plugins/resource-runtime/plugins/routing/core";
 import type { PointBatch, Resource, ResourceParams } from "../runtime";
 import type { Harness } from "../test-support";
 

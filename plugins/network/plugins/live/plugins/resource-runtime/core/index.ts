@@ -46,30 +46,6 @@ export type {
   HeldFollows,
   LoadRun,
 } from "./runtime";
-export {
-  mintReachPlan,
-  mintRoutePlan,
-  tableLayoutRequirements,
-} from "./routing";
-export type {
-  ChangeSource,
-  DerivedRead,
-  HandoffDefinitionAnswer,
-  FullRoute,
-  HostMap,
-  NotifiedRead,
-  ReachPlan,
-  RelationRead,
-  ReplayScope,
-  Route,
-  RoutePlan,
-  RouteVia,
-  TableChange,
-  TableLayoutRequirement,
-  TaggedRead,
-  TupleUse,
-  UnfedRead,
-} from "./routing";
 export { diffKeyedScopedMembership, retainSnapEncoder } from "./keyed-diff";
 export { ResourceGuardError } from "./guard-error";
 export type {

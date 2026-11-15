@@ -13,7 +13,10 @@ import { test, expect, describe } from "bun:test";
 import { z } from "zod";
 import { createHarness, tick } from "./test-support";
 import { wholeReach } from "./testing/routed-fixture";
-import type { ReplayScope, TableChange } from "./routing";
+import type {
+  ReplayScope,
+  TableChange,
+} from "@plugins/network/plugins/live/plugins/resource-runtime/plugins/routing/core";
 
 const schema = z.array(z.object({ id: z.string() }));
 

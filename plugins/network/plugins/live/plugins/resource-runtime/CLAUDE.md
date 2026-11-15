@@ -300,8 +300,11 @@ per (key, pk) (`persistChains`).
 ## Scoped change routing (`routes` + `routeTableChange`)
 
 Every DB-backed resource declares, as data, which tables reach it — routing never
-uses the captured loader read-set. Plans live in `core/routing.ts` (SQL-free, names
-no contributor).
+uses the captured loader read-set. Plans live in the `routing` child plugin
+(`plugins/routing/core/routing.ts`: SQL-free, names no contributor, imports
+nothing), which the runtime and every compiler import from its own barrel — so
+a query compiler's `routes.ts` loads no runtime code, and query-resource's
+`liveReadCode` digest does not move with the runtime.
 
 **The two plans**
 
@@ -311,7 +314,7 @@ no contributor).
     with no `column` read the table's single-column PK; a composite
     `identity` lists its pk `columns` and a `compose`, and each changed row's
     host id is composed from those carried keys — a missing column, a NULL
-    part or keys over the NOTIFY cap go FULL, `core/routing-composite.test.ts`);
+    part or keys over the NOTIFY cap go FULL, `routing/core/routing-composite.test.ts`);
   - the referenced `columns`;
   - an optional key filter.
 
@@ -406,7 +409,7 @@ no contributor).
   `routeDrifted`, `readSetBases`, `tuples`, `persisted`, `positionAgeMs`,
   `freshness` and `shape`. Central degrades to empty / false / null.
 
-Pinned by `runtime-table-routing.test.ts`, `routing-layout.test.ts`,
+Pinned by `runtime-table-routing.test.ts`, `routing/core/routing-layout.test.ts`,
 `runtime-declared-reads.test.ts`, `runtime-debug-policy.test.ts`.
 
 ## Follows — `Route.via`, `onFollowReached`, `loadResourceFresh`
@@ -994,8 +997,9 @@ Out of reach at this seam (DB-backed harness instead):
 ## Plugin reference
 
 - Core:
-  - Uses: 29 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 48 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `network/live/resource-protocol` ×19
+    - `network/live/resource-runtime/routing` ×19
     - `packages/semaphore` ×2
     - `packages/string-hash` ×2
     - `packages/value-patch` ×2
@@ -1004,10 +1008,8 @@ Out of reach at this seam (DB-backed harness instead):
     - `packages/inflight.createInflight`
   - Exports (types):
     - `AliasMembership`
-    - `ChangeSource`
     - `DefineResourceInput`
     - `DependsOnEntry`
-    - `DerivedRead`
     - `ExternalKeyedPolicy`
     - `ExternalPointMembership`
     - `ExternalPointPolicy`
@@ -1015,29 +1017,22 @@ Out of reach at this seam (DB-backed harness instead):
     - `ExternalWindowMembership`
     - `ExternalWindowPolicy`
     - `FollowReached`
-    - `FullRoute`
-    - `HandoffDefinitionAnswer`
     - `HandoffState`
     - `HandoffTuple`
     - `HeldFollows`
-    - `HostMap`
     - `KeyedDiff`
     - `KeyedMembership`
     - `KeyedMembershipInput`
     - `KeyedResourceContract`
     - `KeyedServerResourceOptions`
     - `LoadRun`
-    - `NotifiedRead`
     - `NotifyCounts`
     - `PersistedBase`
     - `PersistedValueCheck`
     - `PersistMeta`
     - `PointBatch`
-    - `ReachPlan`
     - `ReadTags`
     - `RecomputeCost`
-    - `RelationRead`
-    - `ReplayScope`
     - `Resource`
     - `ResourceContract`
     - `ResourceDefinition`
@@ -1048,11 +1043,8 @@ Out of reach at this seam (DB-backed harness instead):
     - `ResourceRuntimeOptions`
     - `ResumeRecord`
     - `ResumeReplayOutcome`
-    - `Route`
     - `RoutedCut`
     - `RoutedRecomputeOn`
-    - `RoutePlan`
-    - `RouteVia`
     - `RunCapture`
     - `RuntimeSocket`
     - `ScopedResourceTable`
@@ -1061,22 +1053,14 @@ Out of reach at this seam (DB-backed harness instead):
     - `ServerResourceOptions`
     - `SnapEncoder`
     - `SnapEntry`
-    - `TableChange`
-    - `TableLayoutRequirement`
-    - `TaggedRead`
-    - `TupleUse`
-    - `UnfedRead`
     - `UnfedResourceTable`
     - `WsData`
     - `WsHandler`
   - Exports (values):
     - `createResourceRuntime`
     - `diffKeyedScopedMembership`
-    - `mintReachPlan`
-    - `mintRoutePlan`
     - `ResourceGuardError`
     - `retainSnapEncoder`
-    - `tableLayoutRequirements`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shadow --shadow`
   - Imported by:
@@ -1084,9 +1068,7 @@ Out of reach at this seam (DB-backed harness instead):
     - `framework/server-core`
     - `network/live/query-resource`
 - Exemptions:
-  - Exempts itself from:
-    - `resource-runtime:compiled-routes` — `core/routing.ts`, `core/index.ts` (sanctioned)
-    - `live/no-legacy-resource-spelling` — `.` (sanctioned)
+  - Exempts itself from: `live/no-legacy-resource-spelling` — `.` (sanctioned)
 - Test helpers:
   - Core: `@plugins/network/plugins/live/plugins/resource-runtime/core/testing`
     - `buildSnapshot` — Build the id→entry map for a keyed resource's array `value`, in array order.
@@ -1100,5 +1082,7 @@ Out of reach at this seam (DB-backed harness instead):
     - `makeClientView`
     - `wholeReach` — The reach plan of a non-keyed value reading each of `tables` whole: one `full` route per table, read by every tuple — so a change to any of them recomputes each tracked tuple (and a param-less persisted / cascading entry's `{}`) FULL.
     - Types: `ClientView`, `DeriveFrame`, `DeriveSourceFrame`, `FedChange`, `Harness`, `KeyedSnapshot`, `RecordedFrame`, `RoutedTable`, `RoutedTableSpec`
+- Sub-plugins:
+  - **`routing`** — Scoped change routing, as a leaf with no imports: the TableChange every producer hands the router, the route / reach plans a query compiler mints (mintRoutePlan / mintReachPlan, branded so only they…
 
 <!-- AUTOGENERATED:END -->

@@ -1,8 +1,8 @@
+import type { ResourceParams } from "@plugins/network/plugins/live/plugins/resource-runtime/core";
 import type {
   FullRoute,
-  ResourceParams,
   TupleUse,
-} from "@plugins/network/plugins/live/plugins/resource-runtime/core";
+} from "@plugins/network/plugins/live/plugins/resource-runtime/plugins/routing/core";
 
 // A compiled lookup's read, on its own: `routes.ts` folds lookups into a
 // value's reach and checks their brand, and it is in the closure the

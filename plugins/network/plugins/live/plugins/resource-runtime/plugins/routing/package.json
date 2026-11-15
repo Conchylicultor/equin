@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-network-live-resource-runtime-routing",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Scoped change routing, as a leaf with no imports: the TableChange every producer hands the router, the route / reach plans a query compiler mints (mintRoutePlan / mintReachPlan, branded so only they make one), the table key layouts they require, and routeTuple — the one pure per-tuple decision the resource runtime routes a change by. Apart from the runtime so a compiler's routes.ts loads no runtime code: query-resource's liveReadCode digest covers what its compilers load."
+}

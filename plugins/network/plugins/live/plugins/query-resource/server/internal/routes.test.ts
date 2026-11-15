@@ -3,7 +3,7 @@ import { pgTable, pgView, text } from "drizzle-orm/pg-core";
 import type {
   HostMap,
   TupleUse,
-} from "@plugins/network/plugins/live/plugins/resource-runtime/core";
+} from "@plugins/network/plugins/live/plugins/resource-runtime/plugins/routing/core";
 import {
   compiledRoutePlan,
   compiledUnionRoutePlan,

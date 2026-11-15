@@ -12,7 +12,7 @@ import { clearRelationBases } from "@plugins/framework/plugins/server-core/core/
 import {
   mintReachPlan,
   mintRoutePlan,
-} from "@plugins/network/plugins/live/plugins/resource-runtime/core";
+} from "@plugins/network/plugins/live/plugins/resource-runtime/plugins/routing/core";
 import {
   createTestDb,
   type TestDb,

@@ -29,8 +29,8 @@ import { ATTEMPT_CONV_AGG_TABLE } from "@plugins/database/plugins/derived-views/
 import {
   createResourceRuntime,
   type ResourceParams,
-  type TableLayoutRequirement,
 } from "@plugins/network/plugins/live/plugins/resource-runtime/core";
+import { type TableLayoutRequirement } from "@plugins/network/plugins/live/plugins/resource-runtime/plugins/routing/core";
 import { BASE_RELATION } from "@plugins/network/plugins/live/plugins/query-resource/core";
 import { recordingQueryDb } from "../testing/recording-db";
 import { routedReads } from "./arm-plan";

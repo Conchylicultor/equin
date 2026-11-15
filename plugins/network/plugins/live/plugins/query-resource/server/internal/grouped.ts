@@ -22,7 +22,7 @@ import { executeRows } from "@plugins/database/plugins/sql-rows/core";
 import type {
   DerivedRead,
   TupleUse,
-} from "@plugins/network/plugins/live/plugins/resource-runtime/core";
+} from "@plugins/network/plugins/live/plugins/resource-runtime/plugins/routing/core";
 import {
   isAggregate,
   type Aggregate,

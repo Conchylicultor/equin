@@ -2,11 +2,11 @@ import type { z } from "zod";
 import { sql } from "drizzle-orm";
 import type { PgColumn } from "drizzle-orm/pg-core";
 import { db as realDb, readTag } from "@plugins/database/server";
+import type { ResourceParams } from "@plugins/network/plugins/live/plugins/resource-runtime/core";
 import type {
   FullRoute,
-  ResourceParams,
   TupleUse,
-} from "@plugins/network/plugins/live/plugins/resource-runtime/core";
+} from "@plugins/network/plugins/live/plugins/resource-runtime/plugins/routing/core";
 import type {
   ColumnRef,
   JoinSpec,

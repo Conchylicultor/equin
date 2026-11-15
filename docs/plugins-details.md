@@ -41933,8 +41933,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/metrics`
         - **`resource-runtime`**
           - Core:
-            - Uses: 29 symbols — full list in [`plugins/network/plugins/live/plugins/resource-runtime/REFERENCE.md`](../plugins/network/plugins/live/plugins/resource-runtime/REFERENCE.md)
+            - Uses: 48 symbols — full list in [`plugins/network/plugins/live/plugins/resource-runtime/REFERENCE.md`](../plugins/network/plugins/live/plugins/resource-runtime/REFERENCE.md)
               - `network/live/resource-protocol` ×19
+              - `network/live/resource-runtime/routing` ×19
               - `packages/semaphore` ×2
               - `packages/string-hash` ×2
               - `packages/value-patch` ×2
@@ -41943,10 +41944,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `packages/inflight.createInflight`
             - Exports (types):
               - `AliasMembership`
-              - `ChangeSource`
               - `DefineResourceInput`
               - `DependsOnEntry`
-              - `DerivedRead`
               - `ExternalKeyedPolicy`
               - `ExternalPointMembership`
               - `ExternalPointPolicy`
@@ -41954,29 +41953,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ExternalWindowMembership`
               - `ExternalWindowPolicy`
               - `FollowReached`
-              - `FullRoute`
-              - `HandoffDefinitionAnswer`
               - `HandoffState`
               - `HandoffTuple`
               - `HeldFollows`
-              - `HostMap`
               - `KeyedDiff`
               - `KeyedMembership`
               - `KeyedMembershipInput`
               - `KeyedResourceContract`
               - `KeyedServerResourceOptions`
               - `LoadRun`
-              - `NotifiedRead`
               - `NotifyCounts`
               - `PersistedBase`
               - `PersistedValueCheck`
               - `PersistMeta`
               - `PointBatch`
-              - `ReachPlan`
               - `ReadTags`
               - `RecomputeCost`
-              - `RelationRead`
-              - `ReplayScope`
               - `Resource`
               - `ResourceContract`
               - `ResourceDefinition`
@@ -41987,11 +41979,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ResourceRuntimeOptions`
               - `ResumeRecord`
               - `ResumeReplayOutcome`
-              - `Route`
               - `RoutedCut`
               - `RoutedRecomputeOn`
-              - `RoutePlan`
-              - `RouteVia`
               - `RunCapture`
               - `RuntimeSocket`
               - `ScopedResourceTable`
@@ -42000,22 +41989,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ServerResourceOptions`
               - `SnapEncoder`
               - `SnapEntry`
-              - `TableChange`
-              - `TableLayoutRequirement`
-              - `TaggedRead`
-              - `TupleUse`
-              - `UnfedRead`
               - `UnfedResourceTable`
               - `WsData`
               - `WsHandler`
             - Exports (values):
               - `createResourceRuntime`
               - `diffKeyedScopedMembership`
-              - `mintReachPlan`
-              - `mintRoutePlan`
               - `ResourceGuardError`
               - `retainSnapEncoder`
-              - `tableLayoutRequirements`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shadow --shadow`
             - Imported by:
@@ -42023,9 +42004,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/server-core`
               - `network/live/query-resource`
           - Exemptions:
-            - Exempts itself from:
-              - `resource-runtime:compiled-routes` — `core/routing.ts`, `core/index.ts` (sanctioned)
-              - `live/no-legacy-resource-spelling` — `.` (sanctioned)
+            - Exempts itself from: `live/no-legacy-resource-spelling` — `.` (sanctioned)
           - Test helpers:
             - Core: `@plugins/network/plugins/live/plugins/resource-runtime/core/testing`
               - `buildSnapshot` — Build the id→entry map for a keyed resource's array `value`, in array order.
@@ -42039,6 +42018,44 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `makeClientView`
               - `wholeReach` — The reach plan of a non-keyed value reading each of `tables` whole: one `full` route per table, read by every tuple — so a change to any of them recomputes each tracked tuple (and a param-less persisted / cascading entry's `{}`) FULL.
               - Types: `ClientView`, `DeriveFrame`, `DeriveSourceFrame`, `FedChange`, `Harness`, `KeyedSnapshot`, `RecordedFrame`, `RoutedTable`, `RoutedTableSpec`
+          - Plugins:
+            - **`routing`** — Scoped change routing, as a leaf with no imports: the TableChange every producer hands the router, the route / reach plans a query compiler mints (mintRoutePlan / mintReachPlan, branded so only they make one), the table key layouts they require, and routeTuple — the one pure per-tuple decision the resource runtime routes a change by. Apart from the runtime so a compiler's routes.ts loads no runtime code: query-resource's liveReadCode digest covers what its compilers load.
+              - Cross-plugin:
+                - Imported by:
+                  - `network/live/query-resource`
+                  - `network/live/resource-runtime`
+              - Exemptions:
+                - Exempts itself from: `resource-runtime:compiled-routes` — `core/routing.ts`, `core/index.ts` (sanctioned)
+              - Core:
+                - Exports (types):
+                  - `ChangeSource`
+                  - `DerivedRead`
+                  - `FullRoute`
+                  - `HandoffDefinitionAnswer`
+                  - `HostMap`
+                  - `NotifiedRead`
+                  - `ReachPlan`
+                  - `ReachPlanInput`
+                  - `RelationRead`
+                  - `ReplayScope`
+                  - `ReverseRoute`
+                  - `Route`
+                  - `RoutePlan`
+                  - `RoutePlanInput`
+                  - `RouteVia`
+                  - `TableChange`
+                  - `TableLayoutRequirement`
+                  - `TaggedRead`
+                  - `TupleRouting`
+                  - `TupleUse`
+                  - `UnfedRead`
+                  - `UnresolvedReverse`
+                - Exports (values):
+                  - `isMintedPlan`
+                  - `mintReachPlan`
+                  - `mintRoutePlan`
+                  - `routeTuple`
+                  - `tableLayoutRequirements`
         - **`resource-vocabulary`** — The closed set of ways a plugin declares a live-state resource, as data every build-time resource scanner reads. Its key set is DERIVED from the barrels' own module types, so a factory that exists but is unlisted is a type error.
           - Core:
             - Uses:

@@ -18,7 +18,11 @@
 import { describe, expect, spyOn, test } from "bun:test";
 import { z } from "zod";
 import { ResourceContractError } from "@plugins/network/plugins/live/plugins/resource-protocol/core";
-import { mintReachPlan, mintRoutePlan, type RelationRead } from "./routing";
+import {
+  mintReachPlan,
+  mintRoutePlan,
+  type RelationRead,
+} from "@plugins/network/plugins/live/plugins/resource-runtime/plugins/routing/core";
 import { createHarness, tick, type Harness } from "./test-support";
 import { ResourceGuardError } from "./guard-error";
 import type {

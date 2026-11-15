@@ -65,7 +65,7 @@ import {
   type TupleUse,
   type TaggedRead,
   type UnresolvedReverse,
-} from "./routing";
+} from "@plugins/network/plugins/live/plugins/resource-runtime/plugins/routing/core";
 
 // Shared live-state resource runtime. See
 // research/2026-04-15-global-sse-lifecycle-mental-model-v3.md and

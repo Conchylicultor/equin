@@ -18,7 +18,7 @@
 
 import { expect, test } from "bun:test";
 import { z } from "zod";
-import { mintRoutePlan } from "./routing";
+import { mintRoutePlan } from "@plugins/network/plugins/live/plugins/resource-runtime/plugins/routing/core";
 import { createHarness, makeClientView, tick } from "./test-support";
 import type { ResourceParams } from "./runtime";
 

@@ -23,7 +23,7 @@ import { test, expect, describe, mock } from "bun:test";
 import { hashHex } from "@plugins/packages/plugins/string-hash/core";
 import { ResourceRefusal } from "@plugins/network/plugins/live/plugins/resource-protocol/core";
 import { z } from "zod";
-import { mintReachPlan } from "./routing";
+import { mintReachPlan } from "@plugins/network/plugins/live/plugins/resource-runtime/plugins/routing/core";
 import {
   createHarness,
   controllable,

@@ -25,7 +25,7 @@ import { type ExternalResource, type ResourceParams } from "./runtime";
 // fakes). `createHarness()` subsumes the old bespoke `harness()` (default 1
 // socket), `feedHarness()` (a `readSet` option), and `revalHarness()` (subscribe
 // takes an `etag`) with byte-identical behavior.
-import { mintReachPlan } from "./routing";
+import { mintReachPlan } from "@plugins/network/plugins/live/plugins/resource-runtime/plugins/routing/core";
 import {
   createHarness,
   controllable,

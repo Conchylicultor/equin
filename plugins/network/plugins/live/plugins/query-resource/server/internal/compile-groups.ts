@@ -2,12 +2,14 @@ import { count, getTableName, sql, type SQL } from "drizzle-orm";
 import type { PgColumn } from "drizzle-orm/pg-core";
 import { db as realDb } from "@plugins/database/server";
 import type {
-  FullRoute,
-  ReachPlan,
   ResourceParams,
   ServerResourceOptions,
-  TupleUse,
 } from "@plugins/network/plugins/live/plugins/resource-runtime/core";
+import type {
+  FullRoute,
+  ReachPlan,
+  TupleUse,
+} from "@plugins/network/plugins/live/plugins/resource-runtime/plugins/routing/core";
 import {
   BASE_RELATION,
   type JoinSpec,

@@ -1,8 +1,6 @@
 import { is, SQL } from "drizzle-orm";
-import type {
-  HandoffDefinitionAnswer,
-  ResourceParams,
-} from "@plugins/network/plugins/live/plugins/resource-runtime/core";
+import type { ResourceParams } from "@plugins/network/plugins/live/plugins/resource-runtime/core";
+import type { HandoffDefinitionAnswer } from "@plugins/network/plugins/live/plugins/resource-runtime/plugins/routing/core";
 import { describeSchema } from "@plugins/packages/plugins/zod-introspect/core";
 import type { PointArmPlan } from "./arm-plan";
 import { decoderId, renderQuery, sha256 } from "./fingerprint";

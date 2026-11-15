@@ -30,7 +30,7 @@ import {
   type FullRoute,
   type TableChange,
   type TupleUse,
-} from "./routing";
+} from "@plugins/network/plugins/live/plugins/resource-runtime/plugins/routing/core";
 import {
   controllable,
   createHarness,

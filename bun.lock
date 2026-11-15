@@ -5174,6 +5174,10 @@
       "name": "@equin/plugin-network-live-resource-runtime",
       "version": "0.0.1",
     },
+    "plugins/network/plugins/live/plugins/resource-runtime/plugins/routing": {
+      "name": "@equin/plugin-network-live-resource-runtime-routing",
+      "version": "0.0.1",
+    },
     "plugins/network/plugins/live/plugins/resource-vocabulary": {
       "name": "@equin/plugin-network-live-resource-vocabulary",
       "version": "0.0.1",
@@ -10546,6 +10550,8 @@
     "@equin/plugin-network-live-resource-protocol": ["@equin/plugin-network-live-resource-protocol@workspace:plugins/network/plugins/live/plugins/resource-protocol"],
 
     "@equin/plugin-network-live-resource-runtime": ["@equin/plugin-network-live-resource-runtime@workspace:plugins/network/plugins/live/plugins/resource-runtime"],
+
+    "@equin/plugin-network-live-resource-runtime-routing": ["@equin/plugin-network-live-resource-runtime-routing@workspace:plugins/network/plugins/live/plugins/resource-runtime/plugins/routing"],
 
     "@equin/plugin-network-live-resource-vocabulary": ["@equin/plugin-network-live-resource-vocabulary@workspace:plugins/network/plugins/live/plugins/resource-vocabulary"],
 

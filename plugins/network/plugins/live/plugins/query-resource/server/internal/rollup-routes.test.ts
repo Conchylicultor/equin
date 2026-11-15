@@ -28,10 +28,8 @@ import {
   ATTEMPT_PUSH_AGG_TABLE,
   TASK_LATEST_CONVERSATION_TABLE,
 } from "@plugins/database/plugins/derived-views/core";
-import type {
-  HostMap,
-  ResourceParams,
-} from "@plugins/network/plugins/live/plugins/resource-runtime/core";
+import type { ResourceParams } from "@plugins/network/plugins/live/plugins/resource-runtime/core";
+import type { HostMap } from "@plugins/network/plugins/live/plugins/resource-runtime/plugins/routing/core";
 import {
   aggregate,
   BASE_RELATION,

@@ -1,14 +1,16 @@
 import type {
-  HandoffDefinitionAnswer,
   ExternalPointMembership,
   ExternalWindowMembership,
   KeyedMembership,
   KeyedServerResourceOptions,
   PointBatch,
   ResourceParams,
-  RoutePlan,
   ScopePolicy,
 } from "@plugins/network/plugins/live/plugins/resource-runtime/core";
+import type {
+  HandoffDefinitionAnswer,
+  RoutePlan,
+} from "@plugins/network/plugins/live/plugins/resource-runtime/plugins/routing/core";
 import type {
   PointParams,
   WindowParams,

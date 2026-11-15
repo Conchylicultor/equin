@@ -26,7 +26,7 @@ import {
   type PgTable,
 } from "drizzle-orm/pg-core";
 import type { CompiledRollupSource } from "@plugins/database/plugins/derived-tables/core";
-import type { DerivedRead } from "@plugins/network/plugins/live/plugins/resource-runtime/core";
+import type { DerivedRead } from "@plugins/network/plugins/live/plugins/resource-runtime/plugins/routing/core";
 import {
   BASE_RELATION,
   expr as exprField,

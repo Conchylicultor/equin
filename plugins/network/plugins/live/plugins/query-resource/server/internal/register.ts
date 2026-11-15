@@ -1,4 +1,5 @@
 import { db, quotedRelationsIn } from "@plugins/database/server";
+import { ResourceContractError } from "@plugins/network/plugins/live/plugins/resource-protocol/core";
 import {
   defineDeferredResource,
   defineResource,
@@ -56,6 +57,7 @@ import type {
 const realHost: CompileHost = {
   db: db as unknown as QueryDb,
   quotedRelationsIn,
+  contractError: (key, detail) => new ResourceContractError(key, detail),
 };
 
 /**

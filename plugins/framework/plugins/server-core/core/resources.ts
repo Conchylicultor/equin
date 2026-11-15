@@ -14,10 +14,6 @@ import type {
   ResourceMode as RtMode,
   ResourceParams as RtParams,
   DependsOnEntry as RtDep,
-  TableChange as RtTableChange,
-  ReplayScope as RtReplayScope,
-  ChangeSource as RtChangeSource,
-  TableLayoutRequirement as RtTableLayoutRequirement,
   PersistMeta as RtPersistMeta,
   RoutedCut as RtRoutedCut,
   PersistedBase as RtPersistedBase,
@@ -28,6 +24,12 @@ import type {
   HandoffState as RtHandoffState,
   ResumeRecord as RtResumeRecord,
 } from "@plugins/network/plugins/live/plugins/resource-runtime/core";
+import type {
+  TableChange as RtTableChange,
+  ReplayScope as RtReplayScope,
+  ChangeSource as RtChangeSource,
+  TableLayoutRequirement as RtTableLayoutRequirement,
+} from "@plugins/network/plugins/live/plugins/resource-runtime/plugins/routing/core";
 import {
   recordEntrySpan,
   recordSpan,

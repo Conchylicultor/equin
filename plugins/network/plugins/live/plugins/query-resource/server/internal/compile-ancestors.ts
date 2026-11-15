@@ -7,8 +7,8 @@ import type {
   KeyedMembership,
   KeyedServerResourceOptions,
   ScopePolicy,
-  TupleUse,
 } from "@plugins/network/plugins/live/plugins/resource-runtime/core";
+import type { TupleUse } from "@plugins/network/plugins/live/plugins/resource-runtime/plugins/routing/core";
 import type { PointParams } from "@plugins/network/plugins/live/plugins/live-state/core";
 import {
   BASE_RELATION,

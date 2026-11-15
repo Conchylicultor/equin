@@ -10,7 +10,7 @@
 
 import { describe, expect, test } from "bun:test";
 import { z } from "zod";
-import { mintRoutePlan } from "./routing";
+import { mintRoutePlan } from "@plugins/network/plugins/live/plugins/resource-runtime/plugins/routing/core";
 import { createHarness, tick, type Harness } from "./test-support";
 import { defineRoutedTable } from "./testing/routed-fixture";
 

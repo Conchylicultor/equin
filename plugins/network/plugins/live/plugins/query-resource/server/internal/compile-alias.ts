@@ -17,15 +17,16 @@ import { executeRows } from "@plugins/database/plugins/sql-rows/core";
 import { columnSchema } from "@plugins/database/plugins/sql-column/server";
 import { isTextPassthrough } from "@plugins/packages/plugins/zod-introspect/core";
 import type {
-  DerivedRead,
   KeyedServerResourceOptions,
   ResourceParams,
-  RoutePlan,
   ScopePolicy,
-  TupleUse,
 } from "@plugins/network/plugins/live/plugins/resource-runtime/core";
+import type {
+  DerivedRead,
+  RoutePlan,
+  TupleUse,
+} from "@plugins/network/plugins/live/plugins/resource-runtime/plugins/routing/core";
 import type { PointParams } from "@plugins/network/plugins/live/plugins/live-state/core";
-import { ResourceContractError } from "@plugins/network/plugins/live/plugins/resource-protocol/core";
 import {
   orderByClauses,
   type SortKey,
@@ -513,7 +514,7 @@ export function compileAllCollectionWith<
   };
 
   // ── The scope (`all.by`): base columns the feed carries as text ──────────
-  const scope = scopeOf(contract.all.by ?? [], select, plan, fail);
+  const scope = scopeOf(contract.all.by ?? [], select, plan, host, fail);
   // A tuple's membership predicate: the static `where`, ANDed with its scope
   // (`params` null: none — `:rows` is global, by id).
   const whereOf = (params: AllParams | null): SQL | undefined =>
@@ -909,7 +910,7 @@ export function compileAllCollectionWith<
 interface ScopeField {
   field: string;
   col: PgColumn;
-  /** Throws `ResourceContractError` unless `value` is the canonical text of the column's type. */
+  /** Throws the host's `contractError` unless `value` is the canonical text of the column's type. */
   check(key: string, value: string): void;
 }
 
@@ -922,6 +923,7 @@ function scopeOf(
   by: readonly string[],
   select: SelectMap,
   plan: JoinPlan,
+  host: CompileHost,
   fail: (message: string) => never,
 ): ScopeField[] {
   return by.map((field) => {
@@ -954,7 +956,7 @@ function scopeOf(
       check: (key, value) => {
         const expected = canonical(value);
         if (expected !== null) {
-          throw new ResourceContractError(
+          throw host.contractError(
             key,
             `allCollection("${key}"): param "${field}" must be ${expected}, got ${JSON.stringify(value)} — the scope matches the column's own text.`,
           );

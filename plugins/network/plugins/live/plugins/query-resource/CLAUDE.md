@@ -809,7 +809,13 @@ the database as a `CompileHost` (`spec.ts`: the real `db` and database's
 `compile-lookup.ts` for the same reason: `routes.ts` reads it. When both were
 imported, the digest spanned the database and server-core barrels (216
 files), and 25 of 115 commits on main moved it — each such restart's
-successor inherited no handed-over tuple. `query-resource:live-read-closure`
+successor inherited no handed-over tuple. Likewise `routes.ts` imports the
+route minters from resource-runtime's `routing` leaf, never the runtime barrel,
+and `compile-alias.ts` throws its params-gate refusal through
+`CompileHost.contractError`, never importing resource-protocol: with them the
+digest spanned the runtime and the wire protocol (85 files) and moved with 21
+of 576 commits; now 58 files and 5 (`core/internal/live-read-code.ts` says why
+the runtime shapes no inherited row). `query-resource:live-read-closure`
 (`check/`) holds the closure to a file budget with source-digest's own walk.
 
 ## Boundaries

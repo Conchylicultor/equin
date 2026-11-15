@@ -9,7 +9,7 @@ import { getWorktreeRoot } from "@plugins/infra/plugins/spawn/core";
 // resource, so only the compiler that renders the SQL may state them.
 //
 // The minters' own module and the barrel that re-exports them are exempt (in
-// resource-runtime's own manifest), as is test code (a harness injects routes
+// the routing leaf's own manifest), as is test code (a harness injects routes
 // directly). Every other production caller is a compiler that does not exist
 // yet: its plugin declares the exemption with the reason.
 const PATTERN = "mint(Route|Reach)Plan";

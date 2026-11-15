@@ -14,7 +14,7 @@ import {
   routeTableChange,
   type TableChange,
 } from "@plugins/framework/plugins/server-core/core";
-import { mintReachPlan } from "@plugins/network/plugins/live/plugins/resource-runtime/core";
+import { mintReachPlan } from "@plugins/network/plugins/live/plugins/resource-runtime/plugins/routing/core";
 import { clearRelationBases } from "@plugins/framework/plugins/server-core/core/testing";
 import {
   assertRelationBasesSourced,

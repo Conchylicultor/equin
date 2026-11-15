@@ -24,7 +24,10 @@
 
 import { describe, expect, test } from "bun:test";
 import { z } from "zod";
-import { mintRoutePlan, type TableChange } from "./routing";
+import {
+  mintRoutePlan,
+  type TableChange,
+} from "@plugins/network/plugins/live/plugins/resource-runtime/plugins/routing/core";
 import type {
   HandoffState,
   ResourceParams,

@@ -13,18 +13,29 @@ const ID = "query-resource:live-read-closure";
 const INCLUDE = "liveReadCode.include(import.meta)";
 
 /**
- * How many repo files the `liveReadCode` digest may cover. Measured
- * 2026-11-15: 85 (query-resource's compilers, the sql-projection / sql-column
- * decoders, zod-introspect, keyset, and resource-runtime's barrel through the
- * route minters). Before the registration moved out of the digested
- * compilers (`server/internal/register.ts`) it was 216 — the database and
- * server-core barrels — and 25 of 115 commits on main moved it, each of them
- * a restart whose successor inherited no handed-over tuple (~1,150 point
- * reads re-run instead of ~450). A rise past it names a new edge: cut it
- * (hand the dependency in, as `CompileHost` does), or re-measure and raise
- * the budget saying why the code shapes a compiled read's rows.
+ * How many repo files the `liveReadCode` digest may cover — exactly what was
+ * measured, so any new edge fails here and is decided on purpose.
+ * Measured 2026-11-15: 58 (query-resource's compilers, the sql-projection /
+ * sql-column / sql-rows decoders, zod-introspect, keyset, string-hash,
+ * report-sink, and resource-runtime's `routing` leaf).
+ * - Before the registration moved out of the digested compilers
+ *   (`server/internal/register.ts`): 216 — the database and server-core
+ *   barrels — and 25 of 115 commits on main moved it.
+ * - Before `routes.ts` imported the `routing` leaf instead of
+ *   resource-runtime's barrel, and `compile-alias.ts` took its params-gate
+ *   error from its `CompileHost` instead of importing resource-protocol: 85
+ *   — the whole runtime (`runtime.ts`, its ledgers, networking) and the wire
+ *   protocol (with product-name) — and 21 of the 576 commits on main since
+ *   2026-11-10 moved it, 16 of them touching only those files. Under this
+ *   closure, 5 of the 576 do.
+ * Each such commit is a restart whose successor inherits no handed-over tuple
+ * (~1,150 point reads re-run instead of ~450). A rise past it names a new
+ * edge: cut it (hand the dependency in, as `CompileHost` does; import a leaf,
+ * not a barrel), or re-measure and raise the budget saying why the code
+ * shapes a compiled read's rows (`core/internal/live-read-code.ts` says why
+ * the runtime does not).
  */
-const BUDGET = 100;
+const BUDGET = 58;
 
 /**
  * The `liveReadCode` digest stamps the epoch handoff record and every L2

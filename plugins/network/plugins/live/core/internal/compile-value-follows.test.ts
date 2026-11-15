@@ -34,10 +34,12 @@ import { describe, expect, test } from "bun:test";
 import { z } from "zod";
 import {
   createResourceRuntime,
-  mintReachPlan,
   type ResourceParams,
-  type TupleUse,
 } from "@plugins/network/plugins/live/plugins/resource-runtime/core";
+import {
+  mintReachPlan,
+  type TupleUse,
+} from "@plugins/network/plugins/live/plugins/resource-runtime/plugins/routing/core";
 import { liveValue } from "@plugins/network/plugins/live/core";
 import {
   bothLifecycles,

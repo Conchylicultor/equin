@@ -1,9 +1,9 @@
+import type { ResourceParams } from "@plugins/network/plugins/live/plugins/resource-runtime/core";
 import type {
   FullRoute,
-  ResourceParams,
   RoutePlan,
   TupleUse,
-} from "@plugins/network/plugins/live/plugins/resource-runtime/core";
+} from "@plugins/network/plugins/live/plugins/resource-runtime/plugins/routing/core";
 import type { PgColumn } from "drizzle-orm/pg-core";
 import { canonicalTextOf } from "./canonical-text";
 import { canonicalSqlType } from "./raw-sql";

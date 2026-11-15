@@ -9,10 +9,10 @@ import {
 } from "@plugins/network/plugins/live/plugins/filter/core";
 import { filterSql } from "@plugins/network/plugins/live/plugins/filter/server";
 import type {
-  ReachPlan,
   ResourceParams,
   ServerResourceOptions,
 } from "@plugins/network/plugins/live/plugins/resource-runtime/core";
+import type { ReachPlan } from "@plugins/network/plugins/live/plugins/resource-runtime/plugins/routing/core";
 import {
   defineDeferredResource,
   defineExternalResource,

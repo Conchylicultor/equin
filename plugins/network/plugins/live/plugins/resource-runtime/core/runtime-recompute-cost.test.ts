@@ -8,7 +8,7 @@
 
 import { describe, expect, test } from "bun:test";
 import { z } from "zod";
-import { mintReachPlan } from "./routing";
+import { mintReachPlan } from "@plugins/network/plugins/live/plugins/resource-runtime/plugins/routing/core";
 import type { OriginCost, RecomputeCost } from "./runtime";
 import { createHarness, tick } from "./test-support";
 import { defineRoutedTable } from "./testing/routed-fixture";

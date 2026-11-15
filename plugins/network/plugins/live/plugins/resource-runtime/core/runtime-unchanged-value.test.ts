@@ -12,7 +12,7 @@
 
 import { describe, expect, test } from "bun:test";
 import { z } from "zod";
-import { mintReachPlan } from "./routing";
+import { mintReachPlan } from "@plugins/network/plugins/live/plugins/resource-runtime/plugins/routing/core";
 import { createHarness, tick } from "./test-support";
 
 const Schema = z.object({ s: z.string(), n: z.array(z.number()) });

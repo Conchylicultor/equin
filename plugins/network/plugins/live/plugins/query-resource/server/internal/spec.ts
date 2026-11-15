@@ -103,6 +103,13 @@ export interface CompileHost {
   readonly db: QueryDb;
   /** database's `quotedRelationsIn`: the relations a statement's text is captured under. */
   readonly quotedRelationsIn: (text: string) => string[];
+  /**
+   * The params gate's refusal: resource-protocol's `ResourceContractError`,
+   * which the runtime answers as `contract-mismatch`. Handed in, not imported —
+   * the wire protocol shapes no compiled row, and its every edit would move
+   * the `liveReadCode` digest.
+   */
+  readonly contractError: (key: string, detail: string) => Error;
 }
 
 /**
