@@ -86,6 +86,21 @@ L2 does not own the commit watermark: the runtime's capture is the database's
 a persisted value's floor. So a degraded init (`setLiveStateSnapshotHooks(null)`)
 turns persistence off and leaves frames' watermarks on.
 
+## Boot DDL takes no lock when nothing changed (`internal/tables-ddl.ts`)
+
+`ensureSnapshotTable` runs in every boot's `onReadyBlocking` — `exec` children
+too, against main's database while main serves (~700 a day). It reads the
+catalog once and runs a `CREATE` / `ALTER` only for a table or column that is
+missing: `ALTER TABLE … ADD COLUMN IF NOT EXISTS` takes ACCESS EXCLUSIVE even
+with nothing to do, and queued behind any reader (a DB fork's `pg_dump` holds
+ACCESS SHARE for its whole dump), it made every persist upsert and boot-snapshot
+read wait behind it — the 1–13 s `live_state_snapshot` upserts of
+report-1794459123-665p68 / report-1794590277-46uqo4. A new later column goes
+in `SNAPSHOT_LATER_COLUMNS` / `HANDOFF_LATER_COLUMNS`, never as an
+unconditional statement; `ensure-snapshot-table.test.ts` fails on any non-ACCESS-SHARE
+lock a steady-state call takes. Same rule as change-feed's
+`ensureChangelogTable` and the migration ledger.
+
 ## The code stamp (`internal/code-stamp.ts`)
 
 A definition (when a key has one) pins the compiled SQL, decoders and row
