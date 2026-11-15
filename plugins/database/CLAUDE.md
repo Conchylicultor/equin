@@ -72,7 +72,8 @@ timing into the runtime-profiler recorder (`db` spans). The promise form is
 reimplemented to split the two phases node-postgres collapses into one — it
 emits a separate **`[acquire]`** span for connection checkout (pool queue-wait +
 pgbouncer backend establishment) and a **`<sql text>`** span for pure execution
-on an already-acquired client. This keeps a trivial query from reading as
+on an already-acquired client, labelled by the statement's shape
+(`database/connection`'s `sqlLabel`: a list's length is not part of it). This keeps a trivial query from reading as
 multi-second right after a restart when the cost is really cold-connection
 acquisition; a spiking `[acquire]` aggregate is the signal for that. Each `db`
 span is attributed to the innermost enclosing request/loader (its `parent`) via

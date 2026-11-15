@@ -23914,6 +23914,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `QUERY_DEADLINE_MS`
           - `queryDeadlineSink`
           - `queryText`
+          - `sqlLabel`
           - `withQueryDeadline`
       - Exemptions:
         - Exempts itself from:

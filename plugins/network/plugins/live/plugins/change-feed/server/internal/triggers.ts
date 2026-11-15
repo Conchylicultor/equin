@@ -129,10 +129,8 @@ async function relationExists(
   name: string,
 ): Promise<boolean> {
   const rows = await executeRows(db, {
-    query: drizzleSql.raw(
-      `SELECT relname AS name FROM pg_class
-       WHERE oid = to_regclass(${quoteLiteral(`public.${name}`)})`,
-    ),
+    query: drizzleSql`SELECT relname AS name FROM pg_class
+       WHERE oid = to_regclass(${`public.${name}`}::text)`,
     row: CatalogNameRowSchema,
     label: "relationExists",
   });
@@ -584,12 +582,12 @@ async function tableColumns(
   table: string,
 ): Promise<string[]> {
   const rows = await executeRows(db, {
-    query: drizzleSql.raw(
-      `SELECT attname FROM pg_attribute
-       WHERE attrelid = format('public.%I', ${quoteLiteral(table)})::regclass
+    // The table is a parameter, never spelled into the text: one statement
+    // (one `db` label) for every table it is asked about.
+    query: drizzleSql`SELECT attname FROM pg_attribute
+       WHERE attrelid = format('public.%I', ${table}::text)::regclass
          AND attnum > 0 AND NOT attisdropped
        ORDER BY attnum`,
-    ),
     row: ColumnNameRowSchema,
     label: "tableColumns",
   });

@@ -30,6 +30,7 @@ import {
   onClientLost,
   openListenSession,
   queryText,
+  sqlLabel,
   withQueryDeadline,
 } from "@plugins/database/plugins/connection/server";
 import { tagSqlWithOrigin } from "@plugins/database/plugins/connection/core";
@@ -360,6 +361,9 @@ export function installQueryWrapper(pool: Pool, background: Pool): void {
     if (typeof last === "function") return origQuery(...a); // callback form, untimed + ungated
 
     const text = queryText(a[0]);
+    // The span's label: the statement's shape, the same name its deadline
+    // reports (`sqlLabel` takes every list's arity out of it).
+    const label = sqlLabel(text);
     // The lane, read synchronously while the caller's ambient context is
     // current: it picks both the gate (below) and the pool the statement runs on.
     const inBackground = currentOriginClass() === "background";
@@ -398,7 +402,7 @@ export function installQueryWrapper(pool: Pool, background: Pool): void {
         // The statement's deadline is the client's own (armed at this call).
         // biome-ignore lint/suspicious/noExplicitAny: proxy pg's overloaded query.
         const res = await (client.query as any)(...a);
-        recordSpan("db", text, performance.now() - exec0);
+        recordSpan("db", label, performance.now() - exec0);
         return res;
       } finally {
         // Success or error, the connection goes back — unless the deadline lost

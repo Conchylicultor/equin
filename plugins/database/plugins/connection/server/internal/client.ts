@@ -28,6 +28,7 @@ import {
   type QueryDeadlineEvent,
 } from "./deadline";
 import { armAwakeDeadline } from "./awake-timer";
+import { SQL_LABEL_MAX, sqlLabel } from "./sql-label";
 import {
   IDLE_IN_TRANSACTION_TIMEOUT_SQLSTATE,
   IdleTransactionEndedError,
@@ -49,17 +50,7 @@ import {
 // in awake time, names its caller, and closes the lost connection itself.
 // ---------------------------------------------------------------------------
 
-// The runtime-profiler caps span labels at 500 chars (recorder MAX_LABEL_LEN):
-// `sql` is cut to the same length, so it equals the label the `<sql>` span
-// records, and the `[deadline]` span keeps its suffix instead of losing it to
-// the recorder's cut.
-const SQL_LABEL_MAX = 500;
 const DEADLINE_SPAN_SUFFIX = "[deadline]";
-
-/** A query's text, cut to the label its `<sql>` profiler span records. */
-export function sqlLabel(text: string): string {
-  return text.length > SQL_LABEL_MAX ? text.slice(0, SQL_LABEL_MAX) : text;
-}
 
 /**
  * The SQL text of `client.query`'s first argument (a string or a config

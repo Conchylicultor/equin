@@ -242,6 +242,27 @@ spelling of the origin comment the app pool puts in front of every statement
 span label and a `QueryDeadlineExceededError.sql` are the statement alone —
 the caller already has its own field, `origin`.
 
+## A statement's label is its shape (`sqlLabel`)
+
+`sqlLabel(text)` (server barrel, `server/internal/sql-label.ts`) is the one
+name a statement goes by: its `db` profiler span (the app pool's `<sql>` leaf,
+`database#machine`), its deadline (`QueryDeadlineExceededError.sql`, the
+`[deadline]` span), and so every slow-op row and op-rate op downstream. It
+takes every list's arity out of the text, for every call site at once: a
+placeholder list in `(…)` / `[…]` (two or more, or one after `IN` / `ARRAY` /
+`VALUES`) becomes `$…`, a run of `($…)` tuples one tuple, and the remaining
+placeholders are renumbered by first appearance — so `in ($1…$22) and regime =
+$23` and `in ($1…$59) and regime = $60` are one op. Cut to the profiler's
+500-char label length after that.
+
+Why: keyed by raw text, main held 1,662 distinct `db` ops (op-rate history,
+2026-11-12 → 15), 448 of them the same statements at another list length — one
+slow statement filed as several slow-op reports, each under its threshold.
+With the label: 1,214, the rest genuinely distinct statements. It cannot reach
+a value spelled INTO the text (`sql.raw` with an interpolated literal): that
+makes one statement per value at its call site — bind it as a parameter
+(change-feed's catalog reads did: 200 per-table `pg_trigger` labels, Nov 12).
+
 ## Pool names
 
 A closed list in `core` (`DB_POOL_NAMES`, `DbPoolName`) — plain data both
@@ -384,6 +405,7 @@ deadline sees it go silent. That needs a heartbeat.
     - `QUERY_DEADLINE_MS`
     - `queryDeadlineSink`
     - `queryText`
+    - `sqlLabel`
     - `withQueryDeadline`
 - Exemptions:
   - Exempts itself from:

@@ -10,6 +10,9 @@ export {
   type CreateDbPoolOptions,
   type CreateDbClientOptions,
 } from "./internal/client";
+// A statement's label — its shape, with every list's arity taken out — the
+// name its `db` profiler span and everything downstream know it by.
+export { sqlLabel } from "./internal/sql-label";
 // A LISTEN session on its own connection (the desktop's `DatabaseDriver.listen`).
 export {
   openListenSession,
