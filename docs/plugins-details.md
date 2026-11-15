@@ -5972,6 +5972,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `IslandShapes`
               - `IsleApp`
               - `IsleLife`
+              - `IsleViewState`
               - `TimeOfDay`
             - Exports (values):
               - `ISLE_FONTS`
@@ -6094,8 +6095,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes:
               - `Pane.Register` "isle"
               - `ConfigV2.WebRegister` "isle"
-            - Uses: 30 symbols — full list in [`plugins/apps/plugins/isle/plugins/world-view/REFERENCE.md`](../plugins/apps/plugins/isle/plugins/world-view/REFERENCE.md)
-              - `apps/isle/renderer` ×6
+            - Uses: 31 symbols — full list in [`plugins/apps/plugins/isle/plugins/world-view/REFERENCE.md`](../plugins/apps/plugins/isle/plugins/world-view/REFERENCE.md)
+              - `apps/isle/renderer` ×7
               - `config_v2` ×3
               - `apps-core/tabs` ×2
               - `apps-core` ×2

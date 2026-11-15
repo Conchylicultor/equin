@@ -34,8 +34,8 @@ channels — nothing here files one itself:
   - Contributes:
     - `Pane.Register` "isle"
     - `ConfigV2.WebRegister` "isle"
-  - Uses: 30 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `apps/isle/renderer` ×6
+  - Uses: 31 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `apps/isle/renderer` ×7
     - `config_v2` ×3
     - `apps-core/tabs` ×2
     - `apps-core` ×2

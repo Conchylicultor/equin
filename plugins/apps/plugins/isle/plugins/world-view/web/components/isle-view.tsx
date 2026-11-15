@@ -41,6 +41,7 @@ import {
 import {
   IsleEngine,
   type ClickModifiers,
+  type IsleViewState,
 } from "@plugins/apps/plugins/isle/plugins/renderer/web";
 import { useElementSize } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
 import { focusElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
@@ -56,8 +57,14 @@ const playIcon = symbol("play-arrow");
 const placeIcon = symbol("landscape");
 const natureIcon = symbol("park");
 
-/** Once Start was pressed in this page, coming back to the island skips the title card. */
+/**
+ * Once Start was pressed in this page, coming back to the island skips the
+ * title card, and picks up where it was left: the hero, the camera (the last
+ * engine's view, kept when it is unmounted) and the music (unlocked again
+ * without a gesture — the page already had one).
+ */
 let startedThisPage = false;
+let lastView: IsleViewState | null = null;
 
 interface Entering {
   readonly r: Resident;
@@ -116,7 +123,7 @@ export function IsleView() {
     mood: ready ? world.mood : "lofi",
     on: playing && focused && ready && world.music,
   });
-  const unlockSound = () => ambient.unlock();
+  const unlockSound = ambient.unlock;
   const toggleMusic = () => {
     if (world.kind !== "ready") return;
     ambient.unlock();
@@ -212,10 +219,15 @@ export function IsleView() {
         onMove: (id, target) => onMove(id, target),
         onWhere: (island, district) => setWhere({ island, district }),
       },
-      { reducedMotion: prefersReducedMotion(), workers: true },
+      {
+        reducedMotion: prefersReducedMotion(),
+        workers: true,
+        resume: startedThisPage ? lastView : null,
+      },
     );
     engineRef.current = engine;
     return () => {
+      lastView = engine.viewState() ?? lastView;
       engineRef.current = null;
       engine.dispose();
     };
@@ -246,10 +258,13 @@ export function IsleView() {
 
   useEffect(() => {
     if (!started || !canStart) return;
+    // back on the island: the music resumes as it was (the page's earlier
+    // gesture still allows it)
+    if (startedThisPage) unlockSound();
     startedThisPage = true;
     engineRef.current?.start();
     focusElement(stageRef.current, { reveal: false });
-  }, [started, canStart]);
+  }, [started, canStart, unlockSound]);
 
   // the iris opens on the next frame, so its transition runs
   useEffect(() => {

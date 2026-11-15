@@ -9,6 +9,7 @@ export type {
   EngineOptions,
   IsleApp,
   IsleLife,
+  IsleViewState,
   TimeOfDay,
 } from "./internal/engine";
 

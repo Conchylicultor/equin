@@ -149,6 +149,23 @@ export interface EngineOptions {
    * page's frames paying for them.
    */
   readonly workers: boolean;
+  /**
+   * Where a previous engine on this page left off (its `viewState()`): the
+   * hero and the camera come back there, and the title card's drift is
+   * skipped. A hero spot no longer walkable (the world changed) falls back to
+   * the home square.
+   */
+  readonly resume?: IsleViewState | null;
+}
+
+/** Where the hero stands and what the camera shows — handed from one engine to the next. */
+export interface IsleViewState {
+  readonly hero: {
+    readonly x: number;
+    readonly y: number;
+    readonly facing: number;
+  };
+  readonly cam: { readonly x: number; readonly y: number; readonly z: number };
 }
 
 interface Tile {
@@ -265,6 +282,8 @@ export class IsleEngine {
   private readonly cam = { x: 0, y: 0, z: 1 };
   private zMin = 0.3;
   private camSet = false;
+  /** The view to come back to, until the hero has been placed there. */
+  private resume: IsleViewState | null;
 
   // the world
   private M: WorldModel | null = null;
@@ -467,8 +486,16 @@ export class IsleEngine {
       chat: null,
       lastLine: null,
     }));
-    this.cam.x = CX;
-    this.cam.y = CY;
+    this.resume = opts.resume ?? null;
+    if (this.resume) {
+      this.cam.x = this.resume.cam.x;
+      this.cam.y = this.resume.cam.y;
+      this.cam.z = this.resume.cam.z;
+      this.camSet = true;
+    } else {
+      this.cam.x = CX;
+      this.cam.y = CY;
+    }
     this.bindInput();
     this.raf = requestAnimationFrame((t) => this.frame(t));
   }
@@ -490,6 +517,13 @@ export class IsleEngine {
   /** The title card is gone: input and the walking camera begin. */
   start(): void {
     this.started = true;
+  }
+
+  /** Where the hero stands and what the camera shows — `null` before the hero is placed. */
+  viewState(): IsleViewState | null {
+    if (!this.hero.placed) return null;
+    const { x, y, facing } = this.hero;
+    return { hero: { x, y, facing }, cam: { ...this.cam } };
   }
 
   /**
@@ -913,6 +947,20 @@ export class IsleEngine {
       v.x = r.pts[v.k]![0];
       v.y = r.pts[v.k]![1];
     });
+    const back = this.resume;
+    if (
+      !this.hero.placed &&
+      back &&
+      this.walkableAt(back.hero.x, back.hero.y)
+    ) {
+      this.hero.x = back.hero.x;
+      this.hero.y = back.hero.y;
+      this.hero.facing = back.hero.facing;
+      this.hero.placed = true;
+    } else if (!this.hero.placed && back) {
+      // the world changed under the spot: start over at home
+      this.resume = null;
+    }
     if (!this.hero.placed) {
       const q = layout.squares[0];
       const b = this.buildings[0];
@@ -2723,6 +2771,7 @@ export class IsleEngine {
     const cam = this.cam;
     const { vw, vh } = this;
     const layout = this.layout!;
+    if (!this.started && this.resume) return;
     if (!this.started) {
       // the title card's slow drift over the home square
       const home = layout.squares[0] ?? { x: this.hero.x, y: this.hero.y };
@@ -2737,7 +2786,8 @@ export class IsleEngine {
     }
     if (!this.cameraStarted) {
       this.cameraStarted = true;
-      this.follow = { x: this.hero.x, y: this.hero.y - 40 };
+      // coming back, the camera stays where it was left
+      if (!this.resume) this.follow = { x: this.hero.x, y: this.hero.y - 40 };
     }
     const za = this.zoomAnim;
     if (za && za.k) {
