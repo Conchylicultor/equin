@@ -23283,6 +23283,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks`
           - `tasks/orchestration/mandate`
           - `tasks/supervisor-roles`
+          - `tasks/task-source-url`
       - Server:
         - Exports (types): `SystemPromptSection`
         - Exports (values): `SystemPrompt`
@@ -62284,17 +62285,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `deleteTaskPreprompt`
           - `putTaskPreprompt`
           - `TaskPrepromptSchema`
-    - **`task-source-url`** — Reads back the page a task was filed from, by attempt (useAttemptSourceUrl). Owns the tasks_ext_source_url side-table: the page a task was filed from (the draft form's Page URL toggle), stored as data rather than only as prompt text, and read back by attempt (falling back to the url of the first <ui-context> in the task's prompt).
+    - **`task-source-url`** — Reads back the page a task was filed from, by attempt (useAttemptSourceUrl). Owns the tasks_ext_source_url side-table: the page a task was filed from (the draft form's Page URL toggle), stored as data rather than as prompt text: handed to the task's agents as the `source-page` system-prompt section at every spawn, and read back by attempt (falling back to the url of the first <ui-context> in the task's prompt).
       - Server:
         - Contributes:
           - `resource.declare` "task-source-url.by-attempt"
           - `resource.declare` "task-source-urls:rows"
+          - `conversations.system-prompt.section` "source-page"
         - Uses:
+          - `conversations/system-prompt.SystemPrompt`
           - `infra/entity-extensions.defineExtension`
           - `network/live.serveCollection`
           - `network/live.serveValue`
           - `tasks/tasks-core._tasks`
           - `tasks/tasks-core.attemptTasksServed`
+          - `tasks/tasks-core.getConversation`
           - `tasks/tasks-core.taskDescriptionsServed`
         - DB schema: `plugins/tasks/plugins/task-source-url/server/internal/tables.ts`
         - Entity extension of: `tasks/tasks-core` (table `tasks_ext_source_url`)

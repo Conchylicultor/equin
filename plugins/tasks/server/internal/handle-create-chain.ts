@@ -100,7 +100,6 @@ export const handleCreateChain = implement(
 
         const description = renderTaskDescription({
           text: card.text,
-          url: card.url ?? "",
           attachments,
         });
 
@@ -124,8 +123,9 @@ export const handleCreateChain = implement(
           await setTaskCategory(newTask.id, categoryId);
         }
 
-        // Stored as data too, not only as the prompt's `**URL:**` line, so
-        // "Open app" can land on the page without parsing the description.
+        // Stored as data, never written into the description: the agent gets it
+        // as task-source-url's `source-page` system-prompt section, and "Open
+        // app" lands on the page from the same row.
         if (card.url) {
           await setTaskSourceUrl(newTask.id, card.url);
         }
@@ -177,7 +177,6 @@ export const handleCreateChain = implement(
 
 function renderTaskDescription(opts: {
   text: string;
-  url: string;
   attachments: { id: string; filename: string }[];
 }): string {
   // Attachments already referenced inline in the text are intentionally omitted
@@ -186,16 +185,11 @@ function renderTaskDescription(opts: {
   const inlineIds = new Set(extractAttachmentIds(opts.text));
   const extraAttachments = opts.attachments.filter((a) => !inlineIds.has(a.id));
 
-  const hasContext = opts.url || extraAttachments.length > 0;
-  if (!hasContext) return opts.text;
+  if (extraAttachments.length === 0) return opts.text;
 
-  const lines: string[] = [opts.text, "", "---"];
-  if (opts.url) lines.push(`**URL:** ${opts.url}`);
-  if (extraAttachments.length > 0) {
-    lines.push("**Attachments:**");
-    for (const att of extraAttachments) {
-      lines.push(`- ${attachmentMarkdown(att.id, att.filename)}`);
-    }
+  const lines: string[] = [opts.text, "", "---", "**Attachments:**"];
+  for (const att of extraAttachments) {
+    lines.push(`- ${attachmentMarkdown(att.id, att.filename)}`);
   }
   return lines.join("\n");
 }

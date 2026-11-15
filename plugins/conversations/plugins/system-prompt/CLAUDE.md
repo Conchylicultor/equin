@@ -83,6 +83,7 @@ Design: `research/2026-11-12-conversations-system-prompt-sections.md`.
     - `tasks`
     - `tasks/orchestration/mandate`
     - `tasks/supervisor-roles`
+    - `tasks/task-source-url`
 - Server:
   - Exports (types): `SystemPromptSection`
   - Exports (values): `SystemPrompt`
