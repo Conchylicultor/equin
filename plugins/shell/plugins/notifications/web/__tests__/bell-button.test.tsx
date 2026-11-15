@@ -70,6 +70,7 @@ vi.mock("@plugins/apps-core/plugins/tabs/web", async (importOriginal) => ({
 }));
 
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -371,6 +372,36 @@ describe("BellButton — toasts mirror the bell", () => {
       }),
     );
     expect(toast.duration).toBe(Infinity);
+  });
+
+  it("an arrival on a hidden page is the bell's alone — no toast", async () => {
+    // sonner pauses a hidden page's dismiss timers, so a toast raised there
+    // would stay mounted until the page is shown (one per arrival, for hours).
+    const visibility = vi
+      .spyOn(document, "visibilityState", "get")
+      .mockReturnValue("hidden");
+    try {
+      const live = settled({ errors: 0, warnings: 0 });
+      mount(live);
+      await waitFor(() =>
+        screen.getByRole("button", { name: "Notifications" }),
+      );
+      live.queryClient.setQueryData(windowKey(), [note({ variant: "error" })]);
+      // Let the hidden arrival reach the bell before the page is shown again.
+      await act(() => new Promise((resolve) => setTimeout(resolve, 200)));
+      expect(spy.toasts).toHaveLength(0);
+      // The arrival was read (the next visible one is toasted, it alone).
+      visibility.mockReturnValue("visible");
+      live.queryClient.setQueryData(windowKey(), [
+        note({ id: notificationIdKind.key("notif-next") }),
+        note({ variant: "error" }),
+      ]);
+      await waitFor(() => {
+        expect(spy.toasts).toHaveLength(1);
+      });
+    } finally {
+      visibility.mockRestore();
+    }
   });
 
   it("a row from before actions opens its linkTo", () => {

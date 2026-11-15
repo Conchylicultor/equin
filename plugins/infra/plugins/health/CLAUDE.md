@@ -49,6 +49,7 @@ Watches this page's connection to its backends and says so.
     - `primitives/networking.subscribeNetDiag`
     - `primitives/networking.subscribeWsStatus`
     - `primitives/networking/page-transport.pageTransport`
+    - `shell/toast.isPageOnScreen`
     - `shell/toast.showToast`
   - Exports (types): `WedgeReport`
   - Exports (values):

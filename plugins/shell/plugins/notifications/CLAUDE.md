@@ -68,7 +68,10 @@ the line box.
 (`useToast`, which requires a `category`) are shown through
 `useToastNotification()` — the toast plugin's custom-content path
 (`useShowCustomToast`): the view on the overlay surface, 4s, `Infinity` for an
-error. It renders in the CALLER's render origin (`scope/render-origin`), so a
+error. An arrival is toasted only while the page is on screen (`isPageOnScreen`,
+`shell/toast` § Announcements): on a hidden page the bell's row and badge are
+its only announcement, since sonner would keep the toast mounted until the
+page is shown. It renders in the CALLER's render origin (`scope/render-origin`), so a
 toast `useToast` raises inside the demo resolves its action kind, runs its
 `useRun` / `useLink` and reads its subject against the demo — never the page
 chrome's registry, server or tabs. The popover's row is the same view with its time and an unread dot.
@@ -233,7 +236,7 @@ DataView (`web/components/notifications-view.tsx`):
     - `notification-actions` "dismiss" → `DismissNotificationAction`
     - `Notifications.Action` "open"
     - `Notifications.Action` "reload"
-  - Uses: 56 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 57 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/data-view` ×5
     - `apps-core/tab-origin` ×4
     - `infra/endpoints` ×3
@@ -244,6 +247,7 @@ DataView (`web/components/notifications-view.tsx`):
     - `primitives/css/fill` ×2
     - `primitives/cursor-pagination` ×2
     - `primitives/pane` ×2
+    - `shell/toast` ×2
     - `apps-core/tabs.useAppLink`
     - `apps/debug/shell.DebugApp`
     - `audience/developer-mark.DeveloperMark`
@@ -271,7 +275,6 @@ DataView (`web/components/notifications-view.tsx`):
     - `primitives/relative-time.RelativeTime`
     - `primitives/scope/tab-id.getTabId`
     - `shell/action-bar.ActionBar`
-    - `shell/toast.useShowCustomToast`
     - `ui/icons.Icon`
   - Exports (types):
     - `Notification`
