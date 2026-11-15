@@ -1,5 +1,6 @@
--- singularity:snapshot id=2685cc3e-e919-4df6-a544-a74713bff43b parents=a640b086-08b4-4257-846a-b8e127006e39
--- singularity:supersedes 8bf92d6f
+-- singularity:snapshot id=3519ddf0-f7c2-430e-867d-d9cb27d45082 parents=a640b086-08b4-4257-846a-b8e127006e39
+-- singularity:supersedes 1dbfe6f2
+-- singularity:supersedes 1dbfe6f2 <- 8bf92d6f
 -- singularity:phase expand
 CREATE TABLE "before_after_pairs" (
 	"id" text PRIMARY KEY NOT NULL,

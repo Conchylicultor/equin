@@ -33237,7 +33237,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `waitForNotBusy`
                   - `waitForScreenReady`
               - Cross-plugin:
-                - Imported by: 67 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/REFERENCE.md)
+                - Imported by: 68 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/REFERENCE.md)
                   - `apps` ×25
                   - `conversations` ×11
                   - `primitives` ×11
@@ -33251,6 +33251,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `network/live`
                   - `reports/main-thread-stall`
                   - `runs`
+                  - `shell/notifications`
         - **`exempt`** — Inverted exemptions: a plugin declares, in its own exempt/index.ts, which of its files may violate which lint rule or check — with a reason, and a task when it is debt. The manifest types, the generated rule-id union, the file-category vocabulary rule owners scope by, and the one loader + hit-recording matcher the ESLint config, the type-check worker and the check runner all read.
           - Cross-plugin:
             - Imported by:

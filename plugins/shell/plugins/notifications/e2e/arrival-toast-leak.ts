@@ -33,10 +33,12 @@ import {
   pathUrl,
   report,
   runLeakTest,
-  waitFor,
-  waitForNetworkIdle,
   withBrowser,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
+import {
+  waitFor,
+  waitForNetworkIdle,
+} from "@plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/core";
 import { notificationIdKind } from "@plugins/shell/plugins/notifications/core";
 import type { Page } from "playwright";
 
