@@ -82,7 +82,8 @@ import {
   pickLine,
   type ChatterPlace,
 } from "./chatter";
-import { PBOX, People, type Hero, type Villager } from "./people";
+import { PBOX, People, type Hero, type Villager, type Walker } from "./people";
+import { drawBats, NightSky, Werewolf, WOLF_BOX } from "./easter-eggs";
 import { realizeScene, TILE, type Scene, type Static } from "./scene";
 import { DOCK_LEN, makeSprites, type SpriteSet } from "./sprites";
 
@@ -272,6 +273,8 @@ export class IsleEngine {
   private readonly rnd = this.sprites.rnd;
   private readonly oceanPat: CanvasPattern;
   private readonly people = new People();
+  private readonly wolf = new Werewolf(this.rnd);
+  private readonly nightSky = new NightSky(this.rnd);
   private raf = 0;
   private disposed = false;
 
@@ -611,6 +614,7 @@ export class IsleEngine {
   setTime(time: TimeOfDay): void {
     if (time === this.time) return;
     this.time = time;
+    if (time === "night") this.wolf.nightfall();
     // every painted building and every tile's object layer (lamps, buildings) is per time of day
     this.art.stop();
     this.art = this.newArt();
@@ -977,6 +981,7 @@ export class IsleEngine {
         this.cam.y = at.y;
       }
     }
+    this.wolf.follow(layout);
     const trees = this.scene!.statics.filter((o) => o.tree);
     const rnd = this.rnd;
     this.flies = trees.length
@@ -2254,18 +2259,23 @@ export class IsleEngine {
         },
       });
     }
-    const person = (p: Hero | Villager) => ({
+    // someone standing at (p.x, p.y) in a box round its feet, drawn by `paint`
+    const figure = (
+      p: { readonly x: number; readonly y: number },
+      box: readonly [number, number, number, number],
+      paint: (c: Ctx) => void,
+    ) => ({
       y: p.y,
       d: () => {
         const front = tileObjsIn(
-          p.x + PBOX[0],
-          p.y + PBOX[1],
-          p.x + PBOX[2],
-          p.y + PBOX[3],
+          p.x + box[0],
+          p.y + box[1],
+          p.x + box[2],
+          p.y + box[3],
           (o) => o.y > p.y,
         );
         if (!front.length) {
-          this.people.draw(g, p, t);
+          paint(g);
           return;
         }
         // drawn into its own layer, cut out there by the solid part of whatever stands in front, then laid on the
@@ -2273,10 +2283,10 @@ export class IsleEngine {
         const k = z * dpr;
         const ox = dpr * (vw / 2 - cam.x * z);
         const oy = dpr * (vh / 2 - cam.y * z);
-        const sx = Math.floor((p.x + PBOX[0]) * k + ox);
-        const sy = Math.floor((p.y + PBOX[1]) * k + oy);
-        const W = Math.ceil((PBOX[2] - PBOX[0]) * k) + 2;
-        const H = Math.ceil((PBOX[3] - PBOX[1]) * k) + 2;
+        const sx = Math.floor((p.x + box[0]) * k + ox);
+        const sy = Math.floor((p.y + box[1]) * k + oy);
+        const W = Math.ceil((box[2] - box[0]) * k) + 2;
+        const H = Math.ceil((box[3] - box[1]) * k) + 2;
         const pc = this.personC;
         if (pc.width < W || pc.height < H) {
           pc.width = Math.max(pc.width, W);
@@ -2287,7 +2297,7 @@ export class IsleEngine {
         lg.globalCompositeOperation = "source-over";
         lg.clearRect(0, 0, W, H);
         lg.setTransform(k, 0, 0, k, ox - sx, oy - sy);
-        this.people.draw(lg, p, t);
+        paint(lg);
         lg.globalCompositeOperation = "destination-out";
         for (const o of front) o.draw(lg, true);
         lg.globalCompositeOperation = "source-over";
@@ -2296,10 +2306,17 @@ export class IsleEngine {
         world2screen();
       },
     });
+    const person = (p: Walker) =>
+      figure(p, PBOX, (c) => this.people.draw(c, p, t));
     this.walkVillagers(dt, t, night);
     for (const v of this.villagers)
       if ((v.route || v.linger) && vis(v.x, v.y)) dyn.push(person(v));
     dyn.push(person(this.hero));
+    // the werewolf, out only at night
+    const wolf = this.wolf;
+    if (night && this.hero.placed) wolf.step(dt, t, this.hero);
+    if (night && wolf.present && vis(wolf.x, wolf.y))
+      dyn.push(figure(wolf, WOLF_BOX, (c) => wolf.draw(c, t)));
     // a building landing on its new plot (and waiting there for the write to come back)
     const st = this.settling;
     if (st) {
@@ -2371,6 +2388,8 @@ export class IsleEngine {
       g.lineWidth = 0.8;
       g.stroke();
     }
+    if (dusk && village && vis(village.x, village.y, 300))
+      drawBats(g, village.x, village.y, t);
     for (const c of this.clouds) {
       c.x += c.v * dt;
       if (c.x > rect[2] + 400) c.x = rect[0] - 400;
@@ -2477,8 +2496,17 @@ export class IsleEngine {
           }
           g.globalAlpha = 1;
         }
+        // two yellow eyes in the dark
+        if (wolf.present) {
+          const [ex, ey] = wolf.eye();
+          g.globalAlpha = wolf.alpha;
+          glow(ex, ey, 4, "rgba(255,220,90,.95)");
+          glow(ex, ey, 14, "rgba(255,200,60,.22)");
+          g.globalAlpha = 1;
+        }
       }
       g.globalCompositeOperation = "source-over";
+      if (night) this.nightSky.draw(g, vw, vh, dt, t);
     }
     // signs stay readable over everything, as on a map — and give way to district names when zoomed out
     const signA = ss(0.36, 0.6, z);
@@ -2755,6 +2783,16 @@ export class IsleEngine {
       if (s.x < -200 || s.x > this.vw + 200 || s.y < -40 || s.y > this.vh + 200)
         continue;
       drawBubble(g, s.x, s.y, c.line, a * zoomA);
+    }
+    const cry = this.wolf.cry;
+    if (cry && this.time === "night" && this.wolf.present) {
+      const a =
+        Math.min(1, (t - cry.t0) / 0.2) *
+        Math.max(0, Math.min(1, 1 - (t - cry.until) / 0.35));
+      if (a > 0) {
+        const s = this.toScreen(this.wolf.x, this.wolf.y + WOLF_BOX[1] + 4);
+        drawBubble(g, s.x, s.y, cry.line, a * zoomA * this.wolf.alpha);
+      }
     }
   }
 

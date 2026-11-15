@@ -38,6 +38,11 @@ const NIGHT: readonly string[] = [
   "Can't sleep either?",
   "The fireflies are out. Pretty, aren't they?",
   "The windows stay lit while someone's working.",
+  "Did you hear that howl? Just the wind. Probably.",
+  "Don't wander the outskirts after dark. Trust me.",
+  "My neighbour gets awfully hairy around the full moon.",
+  "If you see yellow eyes by the far road, walk the other way.",
+  "Make a wish if you spot a shooting star!",
 ];
 
 const AT_APP: readonly ((app: string) => string)[] = [
