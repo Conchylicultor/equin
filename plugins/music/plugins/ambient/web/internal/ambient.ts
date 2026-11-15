@@ -4,7 +4,7 @@ import {
   barsDue,
   type AmbientMood,
 } from "../../core";
-import { SONGS } from "./songs";
+import { SONGS, type BarWriter } from "./songs";
 import {
   bell,
   crackle,
@@ -81,6 +81,10 @@ export function createAmbient(
   let next = 0;
   let bar = 0;
   let waker: ConstantSourceNode | null = null;
+  // a fresh form of the song each time it starts, so no two plays are the same
+  const compose = () =>
+    SONGS[mood].compose(Math.floor(Math.random() * 2 ** 32));
+  let writer: BarWriter = compose();
   let hiss: AudioBufferSourceNode | null = null;
 
   const syncCrackle = () => {
@@ -103,7 +107,7 @@ export function createAmbient(
       LOOK_AHEAD_SEC,
       () => song.barSec,
     );
-    for (const d of r.due) song.bar(rig, d.at, d.bar);
+    for (const d of r.due) writer(rig, d.at, d.bar);
     next = r.next;
     bar = r.bar;
     // the audio clock wakes the next refill: a silent source ending PUMP_SEC from now
@@ -132,6 +136,7 @@ export function createAmbient(
       playing = true;
       next = ctx.currentTime + 0.1;
       bar = 0;
+      writer = compose();
       fade(MASTER, 3);
       syncCrackle();
       pump();
@@ -148,6 +153,7 @@ export function createAmbient(
       mood = m;
       // the new song starts from its first bar, at the next bar line already written
       bar = 0;
+      writer = compose();
       syncCrackle();
     },
     duck(on) {

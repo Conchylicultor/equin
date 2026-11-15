@@ -40907,7 +40907,27 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 
 - **`music`** — Umbrella for music building blocks shared across apps, knowing pitch classes, strings and sound only: the chord box (a chord's degree colour, numeral and tile) and the ambient engine (generative WebAudio music and sound effects).
   - Plugins:
-    - **`ambient`** — Generative ambient music in WebAudio, no samples: createAmbient(ctx, { mood }) plays a mood (lofi — a swung 72 bpm Rhodes loop with drums and vinyl crackle; bossa — an 84 bpm nylon guitar over shaker and rim clave; nocturne — a rolled piano in 3/4 with crickets and music-box fireflies; ambient — slow pads, bells, surf and birds) written bar by bar a little ahead of the audio clock, its look-ahead pump woken by the audio clock itself (a silent source's onended, never an interval), with start / stop / setMood / duck and sound effects (step, blip, enter, whoosh); useAmbient({ mood, on }) owns its own AudioContext, built suspended when it mounts (constructing one blocks the main thread while the browser opens the audio output, so never inside a gesture), resumed by unlock() from a user gesture and closed on unmount.
+    - **`ambient`** — Generative ambient music in WebAudio, no samples: createAmbient(ctx, { mood }) plays a mood (lofi — a swung 72 bpm Rhodes loop with drums and vinyl crackle; bossa — an 84 bpm nylon guitar over shaker and rim clave; nocturne — a rolled piano in 3/4 with crickets and music-box fireflies; ambient — slow pads, bells, surf and birds), each an endless procedural form rather than a loop — core's createComposer walks sections (intro, verse, chorus, bridge, break) over the mood's progressions, moves key now and then, and gives each section a melodic motif stated, answered and varied, fresh from a new seed every start — written bar by bar a little ahead of the audio clock, its look-ahead pump woken by the audio clock itself (a silent source's onended, never an interval), with start / stop / setMood / duck and sound effects (step, blip, enter, whoosh); useAmbient({ mood, on }) owns its own AudioContext, built suspended when it mounts (constructing one blocks the main thread while the browser opens the audio output, so never inside a gesture), resumed by unlock() from a user gesture and closed on unmount.
+      - Core:
+        - Uses: `packages/seeded-random.mulberry32`
+        - Exports (types):
+          - `AmbientMood`
+          - `Arrangement`
+          - `BarPlan`
+          - `Composer`
+          - `FormSpec`
+          - `Motif`
+          - `SectionKind`
+        - Exports (values):
+          - `AMBIENT_MOOD_LABELS`
+          - `AMBIENT_MOODS`
+          - `AMBIENT_TRACKS`
+          - `ambientMoodOf`
+          - `barsDue`
+          - `createComposer`
+          - `LOOK_AHEAD_SEC`
+          - `PUMP_SEC`
+          - `SECTION_KINDS`
       - Cross-plugin:
         - Imported by: `apps/isle/world-view`
       - Web:
@@ -40919,16 +40939,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `createAmbient`
           - `useAmbient`
-      - Core:
-        - Exports (types): `AmbientMood`
-        - Exports (values):
-          - `AMBIENT_MOOD_LABELS`
-          - `AMBIENT_MOODS`
-          - `AMBIENT_TRACKS`
-          - `ambientMoodOf`
-          - `barsDue`
-          - `LOOK_AHEAD_SEC`
-          - `PUMP_SEC`
     - **`chord-box`** — The chord box: <ChordBox> (a frame painted in the colour of its numeral's number — filled tile, given or empty — holding its numeral and name, with a full-bleed hit button behind the content and now / selected states), <ChordNumeral> (the Roman numeral in the display serif, its mark raised in the sans), chordToneStyle / chordColour (the degree's --chord-N colour and tile depth as the --fn custom properties the .chord-tone paint reads), and chordPaint — the four named paints (tile, tint, tint-quiet, ghost) every chord surface applies by name instead of re-stating a chord colour, with .chord-caption for a reading under a numeral (V/V, I/3) in the paint's own ink. Knows degrees and strings only, so any app can draw a chord the same way.
       - Web:
         - Uses:
@@ -42737,6 +42747,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/isle/buildings`
           - `apps/isle/renderer`
           - `apps/isle/world`
+          - `music/ambient`
       - Core:
         - Exports (values): `mulberry32`
     - **`semaphore`**
