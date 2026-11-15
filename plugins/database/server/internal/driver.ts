@@ -1,5 +1,8 @@
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
-import { defineHostService } from "@plugins/framework/plugins/server-core/core";
+import {
+  defineHostService,
+  type SchemaOwner,
+} from "@plugins/framework/plugins/server-core/core";
 import { isConnectionCapacityRefusal } from "@plugins/database/plugins/connection/core";
 
 /**
@@ -54,8 +57,16 @@ export interface DatabaseDriverImpl {
    * desktop under the widened boot query deadline, since it can wait minutes on
    * the previous backend's locks during a hot-swap. `reason` names the scope on
    * a deadline report (default "boot DDL").
+   *
+   * `owner`: only the schema's owner runs boot DDL — the token a serving
+   * host's boot hooks are handed (`BootHookContext.schema`). An `exec` child
+   * has none to pass (server-core's `core/schema-role.ts`).
    */
-  bootDdl<T>(fn: () => Promise<T>, reason?: string): Promise<T>;
+  bootDdl<T>(
+    owner: SchemaOwner,
+    fn: () => Promise<T>,
+    reason?: string,
+  ): Promise<T>;
   /**
    * Open a LISTEN session on `channels` — the one part of the change feed
    * (`network/live/change-feed`) that differs per host. Resolves once LISTEN on

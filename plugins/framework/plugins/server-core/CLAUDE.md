@@ -62,6 +62,7 @@ there, not in a composition root, unless it is genuinely serve-only.
 | socket bind (first, 503 until routes) + route install | yes | no | no |
 | `sinkHandlers` attached (in the `onReadyBlocking` graph) | yes | yes | yes      |
 | `onReadyBlocking`                              | yes     | yes    | yes       |
+| `BootHookContext.schema` (who owns the schema) | owner   | verifier | owner   |
 | `markServerReady()`                            | yes     | no     | no        |
 | change-feed assertion (D3), `onReady` / `onAllReady` | yes | no   | yes       |
 | seed (after the post-ready phases, before serving) | no  | no     | yes       |
@@ -82,7 +83,7 @@ The **preload-declare assert** (`assertPreloadedResourcesDeclared`,
 `Resource.Declare` contribution carrying it, naming every such key. The boot
 snapshot and the L2 persist set read `preload` off the Declare set only, so a
 forgotten `...served.declare` would otherwise serve but silently lose boot
-hydration and persistence — and the barrier's L2 sweep, which `exec` runs too,
+hydration and persistence — and the barrier's L2 sweep (the schema owner's),
 would delete the key's persisted row. That is why it runs in both modes and
 before the barrier.
 
@@ -179,6 +180,34 @@ owns it (the serving backend's boot-crash filer, which stands down once
 was not filed. `server-core/no-process-crash-listener` rejects any other
 `process.on("uncaughtException" | "unhandledRejection", …)`.
 
+### Only the serving host sets the schema up: `BootHookContext.schema`
+
+Every boot hook is handed `schema: SchemaRole` (`core/schema-role.ts`), decided
+by the boot mode: `{ kind: "owner", owner }` in `serve` and `browser`,
+`{ kind: "verifier" }` in `exec`. The boot-DDL chokepoints take the owner
+token as a REQUIRED argument — `DatabaseDriver.bootDdl(owner, fn)`, a
+committing `applySchemaLayer({ commit: true, owner })`, the job queue's
+`install(owner)` — so a hook running in an `exec` child has nothing to pass
+them: "an exec child runs boot DDL" does not type-check. Only the boot sequence
+mints the token (`schemaRoleFor`, off the barrel; tests take
+`testSchemaOwner()` from `core/testing`).
+
+In `exec` the owner-only work is skipped, not re-run: the schema layer
+(migrations, derived `updatedAt` triggers, rollup tables and their drift
+reconcile, views), change-feed's trigger install, table-mirror's install, the
+queue schema and live-state-snapshot's L2 init and sweep. Instead `database`'s
+`onReadyBlocking` checks that the owner committed the layer for exactly this
+code — one read of the stamp the layer commits (`migrations`'
+`verifySchemaLayer`) — and, when it did not yet (a push advanced the checkout,
+the new backend has not booted), waits for the owner's NOTIFY up to 10 min,
+then fails with `SchemaNotReadyError` (a supervised child exits
+`SUPERVISED_EXIT_SCHEMA_NOT_READY`). Why: until 2026-11-15 every child (~800 a
+day on main) ran the whole layer under the schema-layer advisory lock — main's
+own boot waited 0.2–0.6 s behind any child mid-boot, and a child booted in a
+deploy window applied the push's migration itself under the old backend
+(task-1794734803-m7admg). A new boot hook that writes schema takes the owner
+token from its context, and does nothing in a verifier.
+
 ### Two standing constraints — read before adding a boot hook
 
 **1. `isMain()` does NOT mean "the serving backend", and an `exec` child satisfies
@@ -217,24 +246,18 @@ for a silently stale rollup. Split the two halves before reaching for a signatur
 definition DDL can be signature-skipped, a rebuild-from-source cannot. That split
 is now implemented — see `plugins/database/plugins/derived-tables/CLAUDE.md`.
 
-**The accepted residual: every `exec` child still runs a full rollup reconcile
-before it can start its work.** That is a deliberate trade, not an oversight. The
-definition half — including the trigger DDL that locks `conversations` /
-`pushes` — is skipped when unchanged, per source table, so an exec child no
-longer contends with the live backend for a hot source table. What remains is a
-diff-first scan against the rollup that writes nothing when nothing drifted: it
-costs boot latency and blocks nothing. If an exec child ever proves too slow to boot because of it, that is a
-measured problem wanting a measured fix — a bounded or incremental reconcile, or
-moving repair off the boot path with an explicit invalidation. **The fix is NOT to
-put the reconcile behind the definition signature**: rollups are feed-exempt, so a
-silently stale rollup has nothing to invalidate it and no reader would ever learn
-it was wrong.
+**The rollup reconcile runs in the schema's owner only** (see "Only the serving
+host sets the schema up" above): an `exec` child no longer scans every rollup
+before its work. **Never put the reconcile behind the definition signature**:
+rollups are feed-exempt, so a silently stale rollup has nothing to invalidate it
+and no reader would ever learn it was wrong.
 
 **3. A blocking hook that scopes a write by the DECLARED resource/plugin set is
 safe only while registry selection and DB selection agree.**
 `live-state-snapshot`'s `sweepUnusableSnapshots` DELETEs persisted snapshot rows
 that are not usable — keys the runtime no longer persists, another definition, an
-older writer. That is a no-op in an `exec` child today
+older writer. An `exec` child no longer runs it (the L2 init is the
+schema owner's), and it was a no-op there before only
 because `bin/active-runtime.ts` selects the registry from the namespace's own
 `spec.json` (and a serving backend refuses an entry whose registries are not the
 composition that spec declares) and the database is derived from that same
@@ -581,6 +604,8 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `ResumeRecord`
     - `RoutedCut`
     - `RuntimeProfileView`
+    - `SchemaOwner`
+    - `SchemaRole`
     - `SeedOutcome`
     - `ServerContribution`
     - `ServerContributionToken`
@@ -658,6 +683,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `Resource`
     - `routedTableRequirements`
     - `routeTableChange`
+    - `SchemaNotReadyError`
     - `scopedResourceTables`
     - `seedPersistedSnapshot`
     - `seedRouteDrift`
@@ -740,6 +766,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `serverEntries`
     - `serverEntryFor` — The registry entry of `pluginPath`'s server barrel, as codegen writes one (`<id>` the dotted path, loaded by its `@plugins/<path>/server` specifier), with the `dependsOn` the caller states and no core barrel to warm.
     - `setServerErrorHandler` — Route every `reportServerError` to `fn` — or to nobody (`null`) — discarding whatever was held before, so a suite never receives another suite's reports.
+    - `testSchemaOwner` — The token a serving host's boot hooks are handed (`BootHookContext.schema`).
     - `withHostServices` — Run `fn` with `providers` (each a `Svc.provide(impl)`) answering their services — over the unbooted host's providers and over a collected graph's — and put the previous answers back once it settles, so a suite swapping a service cannot leak it into the suites after it in the same bun process.
 
 <!-- AUTOGENERATED:END -->

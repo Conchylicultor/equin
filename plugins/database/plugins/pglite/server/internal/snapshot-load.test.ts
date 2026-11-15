@@ -1,3 +1,4 @@
+import { testSchemaOwner } from "@plugins/framework/plugins/server-core/core/testing";
 import { describe, expect, setDefaultTimeout, test } from "bun:test";
 import { sql } from "drizzle-orm";
 import { z } from "zod";
@@ -109,6 +110,7 @@ describe.if(IN_CHILD)("a snapshot's database", () => {
     const db = await openOn(source);
     await applySchemaLayer(db, committedMigrations(), NO_DERIVED, {
       commit: true,
+      owner: testSchemaOwner(),
       deferContract: false,
     });
     // Any trigger firing on the ledger fails the load.

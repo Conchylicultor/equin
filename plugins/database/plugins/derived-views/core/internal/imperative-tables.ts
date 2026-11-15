@@ -50,6 +50,16 @@ export const MIGRATIONS_TABLE_NAME = `__${LEGACY_IDS.dbObjectPrefix}_migrations`
 export const DERIVED_VIEW_STATE_TABLE_NAME = "derived_view_state";
 
 /**
+ * Public table created imperatively by the migration runner's boot schema
+ * layer (`plugins/database/plugins/migrations/server/internal/layer-stamp.ts`)
+ * — one row: the stamp of the code whose schema layer the database's owner
+ * (its serving backend) last committed. What an `exec` child compares its own
+ * code's stamp against instead of running the layer itself. Not present in the
+ * drizzle snapshot; the orphaned-db-tables check treats it as declared.
+ */
+export const SCHEMA_LAYER_STATE_TABLE = "schema_layer_state";
+
+/**
  * The L2 durable change outbox, created imperatively by change-feed inside its
  * trigger-rebuild transaction
  * (`plugins/network/plugins/live/plugins/change-feed/server/internal/triggers.ts`) — the
@@ -282,6 +292,7 @@ export const PAGE_TREE_RANK_TABLE = "page_tree_rank";
 export const IMPERATIVE_PUBLIC_TABLES = {
   MIGRATIONS_TABLE_NAME,
   DERIVED_VIEW_STATE_TABLE_NAME,
+  SCHEMA_LAYER_STATE_TABLE,
   LIVE_STATE_TRIGGER_STATE_TABLE,
   LIVE_STATE_CHANGELOG_TABLE,
   LIVE_STATE_SNAPSHOT_TABLE,

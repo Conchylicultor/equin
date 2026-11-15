@@ -32,7 +32,7 @@ Nothing in the SQL shows which.
 ## `db` over the host's driver: `DatabaseDriver`
 
 `db` (`server/internal/driver.ts`) is a forwarding Proxy over the booted host's
-**`DatabaseDriver`** host service (`{ db(), ready(), bootDdl(fn, reason?),
+**`DatabaseDriver`** host service (`{ db(), ready(), bootDdl(owner, fn, reason?),
 listen(channels, handlers) }` — `listen` opens the change feed's LISTEN
 session, the one part of it that differs per host): the boot
 barrier calls `ready()` then runs the schema layer under `bootDdl`, over the
@@ -452,6 +452,17 @@ environment. The throws stay loud in production; only test runs get the default.
 
 ## Bootstrap
 
+**Only the schema's owner — the serving host — runs the boot schema layer.** The
+barrier's hook reads `BootHookContext.schema` (server-core's
+`core/schema-role.ts`): an owner runs the layer below under `bootDdl(owner, …)`;
+an `exec` child (`verifier`) runs no DDL at all and instead awaits
+`awaitSchemaLayer` (`server/internal/await-schema-layer.ts`) — one read of the
+stamp the owner's layer commits (`migrations`' `verifySchemaLayer`, "The schema
+layer's stamp" in its CLAUDE.md), and when it does not match this code (a push
+is mid-deploy), a LISTEN for the owner's NOTIFY, bounded at 10 min, then
+`SchemaNotReadyError`. It publishes an empty reconcile, defers no contract and
+reports the schema unchanged — it did nothing to it.
+
 Before the schema layer, the barrier takes this process's schema-generation lock
 (`DatabaseDriver.holdSchemaGeneration`), and the schema layer defers the last
 phased group's contract; `onReady` runs it once no older code is connected
@@ -493,11 +504,18 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./equin build`. The bui
     - `database/migrations.applySchemaLayer`
     - `database/migrations.completeDeferredContract`
     - `database/migrations.generationsKnowing`
+    - `database/migrations.Migration`
     - `database/migrations.MigrationSource`
+    - `database/migrations.recordSchemaLayerStamp`
+    - `database/migrations.SCHEMA_STAMPED_CHANNEL`
     - `database/migrations.schemaGeneration`
+    - `database/migrations.SchemaLayerCheck`
     - `database/migrations.SchemaLayerInputs`
+    - `database/migrations.verifySchemaLayer`
     - `primitives/log-channels.defineLogSink`
-  - DB schema: `plugins/database/server/internal/boot-schema.ts`
+  - DB schema:
+    - `plugins/database/server/internal/await-schema-layer.ts`
+    - `plugins/database/server/internal/boot-schema.ts`
   - Exports (types):
     - `AtomicWrite`
     - `DatabaseDriverImpl`

@@ -12,3 +12,14 @@
  * other failure still exits 1.
  */
 export const SUPERVISED_EXIT_TEMPFAIL = 75;
+
+/**
+ * The exit status of a `run`-body child whose database was not set up for its
+ * code (server-core's `SchemaNotReadyError`): only the serving backend sets the
+ * schema up, the child waited for it (`SCHEMA_WAIT_MS`, database's
+ * `awaitSchemaLayer`) and nothing did — an abandoned deploy, or a worktree whose
+ * edits were not built. Not a fault of the work: the same input runs once the
+ * backend serving that code has booted. Outside sysexits' 64–78, so it is never
+ * read as one of theirs.
+ */
+export const SUPERVISED_EXIT_SCHEMA_NOT_READY = 79;

@@ -68,3 +68,7 @@ export { serverEntryFor } from "./server-entry";
 // suite capturing `reportServerError` routes it to its own handler, discarding
 // what earlier suites left held (`null`: none — later reports are held again).
 export { setServerErrorHandler } from "./server-errors";
+
+// The schema owner's token, for a suite that drives a boot-DDL chokepoint
+// (a committing schema layer, `bootDdl`) the way a serving host's boot does.
+export { testSchemaOwner } from "./schema-owner";

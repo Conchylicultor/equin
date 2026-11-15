@@ -4,7 +4,11 @@ import {
   type HostPoolId,
 } from "@plugins/infra/plugins/host/plugins/host-admission/core";
 import { isConnectionCapacityRefusal } from "@plugins/database/plugins/connection/core";
-import { SUPERVISED_EXIT_TEMPFAIL } from "../../core";
+import { SchemaNotReadyError } from "@plugins/framework/plugins/server-core/core";
+import {
+  SUPERVISED_EXIT_SCHEMA_NOT_READY,
+  SUPERVISED_EXIT_TEMPFAIL,
+} from "../../core";
 
 /**
  * The `--admit <pool>` value, checked: it travels on a command line, so it is
@@ -57,8 +61,12 @@ export async function admitThenBoot(
  * The exit status of a failed child: EX_TEMPFAIL when the database refused a
  * connection because it was full — the one failure a child cannot record on
  * its row, and the one its waiter should retry later rather than count — and
- * 1 for everything else.
+ * `SUPERVISED_EXIT_SCHEMA_NOT_READY` when its database was never set up for its
+ * code (the boot's `SchemaNotReadyError`), and 1 for everything else.
  */
 export function supervisedChildExitCode(err: unknown): number {
-  return isConnectionCapacityRefusal(err) ? SUPERVISED_EXIT_TEMPFAIL : 1;
+  if (isConnectionCapacityRefusal(err)) return SUPERVISED_EXIT_TEMPFAIL;
+  if (err instanceof SchemaNotReadyError)
+    return SUPERVISED_EXIT_SCHEMA_NOT_READY;
+  return 1;
 }

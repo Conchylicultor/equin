@@ -12,6 +12,7 @@ import {
   type SchemaLayerInputs,
 } from "@plugins/database/plugins/migrations/server";
 import { db, DatabaseDriver } from "./driver";
+import type { SchemaOwner } from "@plugins/framework/plugins/server-core/core";
 
 // The derived set the schema layer installs, read at the call site (see the
 // boot comment in `../index.ts`) — by the boot layer and by the deferred
@@ -27,15 +28,21 @@ export function derivedInputs(): SchemaLayerInputs {
 }
 
 // The phased file whose contract this boot's schema layer deferred, for
-// `onReady` to run once older code is gone. Null when nothing was deferred.
-let deferredContract: string | null = null;
+// `onReady` to run once older code is gone — with the owner token the layer
+// ran under. Null when nothing was deferred.
+let deferredContract: DeferredContract | null = null;
 
-export function setDeferredContract(file: string | null): void {
+interface DeferredContract {
+  readonly owner: SchemaOwner;
+  readonly file: string;
+}
+
+export function setDeferredContract(file: DeferredContract | null): void {
   deferredContract = file;
 }
 
 /** The deferred file, handed over once. */
-export function takeDeferredContract(): string | null {
+export function takeDeferredContract(): DeferredContract | null {
   const file = deferredContract;
   deferredContract = null;
   return file;
@@ -48,7 +55,10 @@ export function takeDeferredContract(): string | null {
 // `contract_pending`: the code serving now runs on the expanded schema, and the
 // next boot tries again. See
 // research/2026-10-28-database-deferred-contract-phase.md.
-export async function runDeferredContract(file: string): Promise<void> {
+export async function runDeferredContract(
+  owner: SchemaOwner,
+  file: string,
+): Promise<void> {
   const driver = DatabaseDriver.get();
   const migrations = await MigrationSource.get().list();
   const release = await driver.awaitGenerationsGone(
@@ -56,7 +66,8 @@ export async function runDeferredContract(file: string): Promise<void> {
   );
   try {
     await driver.bootDdl(
-      () => completeDeferredContract(db, migrations, derivedInputs()),
+      owner,
+      () => completeDeferredContract(db, owner, migrations, derivedInputs()),
       "deferred contract",
     );
   } finally {

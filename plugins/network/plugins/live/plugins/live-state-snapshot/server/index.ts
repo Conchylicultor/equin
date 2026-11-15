@@ -83,7 +83,7 @@ export default {
   // Because `onReadyBlocking` throws are fatal by contract, that degradation is
   // handled EXPLICITLY inside `initSnapshotSubsystem` (catch + log + continue) — it
   // never throws, so a snapshot-table failure can't abort boot. See boot-init.ts.
-  async onReadyBlocking() {
+  async onReadyBlocking({ schema }) {
     // A20: the boot schema layer — and with it every rollup's reconcile — has
     // committed before L2 reads anything (`database` is a dependsOn edge, so
     // its onReadyBlocking ran first); `healedRollups()` throws otherwise, a
@@ -99,13 +99,22 @@ export default {
     // degradation below (whose catch would turn the throw into a disabled L2),
     // so a boot-order bug blocks boot, like A20 above.
     relationBases(LIVE_STATE_SNAPSHOT_TABLE);
-    await initSnapshotSubsystem(
-      db,
-      produced,
-      relationBases,
-      healed,
-      bootRoutedCut.cut,
-    );
+    // The schema's owner only (`BootHookContext.schema`). An `exec` child
+    // serves no client, so it has nothing to persist — and the init is owner
+    // work through and through: it creates and alters L2's tables, and sweeps
+    // every row another definition wrote, which in a child booted from a
+    // checkout a push just advanced deletes the rows the serving backend's
+    // code wrote. Without the init no hook is installed, so the child
+    // persists nothing (the degraded init's state).
+    if (schema.kind === "owner") {
+      await initSnapshotSubsystem(
+        db,
+        produced,
+        relationBases,
+        healed,
+        bootRoutedCut.cut,
+      );
+    }
     // A6 (boot, static evidence): a key the runtime persists whose routes or
     // identity table name a produced table blocks boot. Outside the graceful
     // degradation above on purpose — it is a declaration bug, not a snapshot

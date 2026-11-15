@@ -115,8 +115,11 @@ export default {
   // completes across ALL plugins before any plugin's `onReady` runs, so a
   // plugin that tx-enqueues from its own `onReady` can never observe a
   // half-installed queue.
-  onReadyBlocking: async () => {
-    await JobQueue.get().install();
+  //
+  // The schema's owner only (`BootHookContext.schema`): an `exec` child
+  // enqueues into the queue schema its serving backend installed.
+  onReadyBlocking: async ({ schema }) => {
+    if (schema.kind === "owner") await JobQueue.get().install(schema.owner);
   },
   onReady: async () => {
     await JobQueue.get().start();

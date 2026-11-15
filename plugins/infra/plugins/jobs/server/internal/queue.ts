@@ -1,4 +1,7 @@
-import { defineHostService } from "@plugins/framework/plugins/server-core/core";
+import {
+  defineHostService,
+  type SchemaOwner,
+} from "@plugins/framework/plugins/server-core/core";
 import type { LiveGroup } from "@plugins/network/plugins/live/core";
 import type { FilterScalar } from "@plugins/network/plugins/live/plugins/filter/core";
 import type { HoldClass, SettleSpec } from "../../core";
@@ -109,8 +112,10 @@ export interface JobQueueImpl {
    */
   onActivity(listener: () => void): () => void;
   /** `onReadyBlocking`: make the queue usable (the desktop installs its schema
-   *  in this backend's database), before any plugin's `onReady` enqueues. */
-  install(): Promise<void>;
+   *  in this backend's database), before any plugin's `onReady` enqueues.
+   *  The schema's owner only (`BootHookContext.schema`): an `exec` child
+   *  enqueues into the schema its serving backend installed. */
+  install(owner: SchemaOwner): Promise<void>;
   /** `onReady`: start dispatching. */
   start(): Promise<void>;
   /** `onAllReady`: install the scheduled jobs' schedules — after every plugin

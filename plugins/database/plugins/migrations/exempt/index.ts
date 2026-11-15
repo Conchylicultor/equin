@@ -50,9 +50,9 @@ export default [
   },
   {
     rule: "sql-writes:fit:hand-written",
-    paths: ["server/internal/runner.ts"],
+    paths: ["server/internal/runner.ts", "server/internal/layer-stamp.ts"],
     kind: "sanctioned",
     reason:
-      "The migration runner's own ledger table is written while the schema it records is being applied — before any table definition is known to hold — by the runner that owns that table.",
+      "The migration runner's own bookkeeping tables (the ledger, the schema-layer stamp) are written while the schema they record is being applied — before any table definition is known to hold — by the runner that owns them.",
   },
 ] satisfies Exemptions;

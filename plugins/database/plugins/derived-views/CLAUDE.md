@@ -152,6 +152,7 @@ and re-export it from `core/index.ts`. See
   - Uses: `primitives/log-channels.defineLogSink`
   - Exports (types): `DeclaredView`
   - Exports (values):
+    - `compiledDerivedViews`
     - `dropDerivedViews`
     - `rebuildDerivedViews`
     - `View`
@@ -182,6 +183,7 @@ and re-export it from `core/index.ts`. See
     - `PAGE_TREE_RANK_TABLE`
     - `READ_ALIAS_SCHEMA`
     - `readAliasStem`
+    - `SCHEMA_LAYER_STATE_TABLE`
     - `TASK_ACTIVE_DEPENDENTS_TABLE`
     - `TASK_ATTEMPT_FACTS_TABLE`
     - `TASK_BLOCKING_TABLE`

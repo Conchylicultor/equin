@@ -1,4 +1,6 @@
 import { heapMemory, ownCpuMs, physFootprintBytes } from "./memory-probe";
+import { getBootMode } from "./boot-mode";
+import { schemaRoleFor, type SchemaRole } from "./schema-role";
 
 export type PhaseId =
   // Importing the plugin graph (`loadServerPlugins`): one `load:wave-<n>` span
@@ -261,6 +263,12 @@ export type BootStep = <T>(
 export interface BootHookContext {
   /** Time a named part of this hook (see `BootStep`). */
   readonly step: BootStep;
+  /**
+   * Whether this process owns its database's schema (`./schema-role.ts`): the
+   * owner token every boot-DDL chokepoint requires, or `verifier` in an `exec`
+   * child, which must not change the schema.
+   */
+  readonly schema: SchemaRole;
 }
 
 /** `BootStep` timing nothing: the same code run outside a boot hook. */
@@ -294,7 +302,13 @@ export function profileBootHook(
   opts?: { members?: readonly string[] },
 ): { ctx: BootHookContext; end: () => number } {
   const { uniqueId, end } = startSpan(id, phase, plugin, plugin, opts);
-  return { ctx: { step: stepUnder(uniqueId, plugin) }, end: () => end() };
+  return {
+    ctx: {
+      step: stepUnder(uniqueId, plugin),
+      schema: schemaRoleFor(getBootMode()),
+    },
+    end: () => end(),
+  };
 }
 
 /**

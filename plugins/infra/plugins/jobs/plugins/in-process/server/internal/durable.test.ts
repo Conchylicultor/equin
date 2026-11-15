@@ -1,3 +1,4 @@
+import { testSchemaOwner } from "@plugins/framework/plugins/server-core/core/testing";
 import { afterAll, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -122,7 +123,7 @@ describe.if(IN_CHILD)("the in-process queue on a stored database", () => {
           triggers: [],
           claimedTriggerSets: [],
         },
-        { commit: true, deferContract: false },
+        { commit: true, owner: testSchemaOwner(), deferContract: false },
       );
       // Never started: a tab closed before its debounce ran.
       const queue = createInProcessQueue({

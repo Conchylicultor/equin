@@ -1,3 +1,4 @@
+import { testSchemaOwner } from "@plugins/framework/plugins/server-core/core/testing";
 import { afterAll, describe, expect, setDefaultTimeout, test } from "bun:test";
 import { mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -205,6 +206,7 @@ describe.if(IN_CHILD)("a stored PGlite database across a new version", () => {
     const before = await openOn(first);
     const r1 = await applySchemaLayer(before, earlier, NO_DERIVED, {
       commit: true,
+      owner: testSchemaOwner(),
       deferContract: false,
     });
     expect(r1.pending).toBe(earlier.length);
@@ -216,6 +218,7 @@ describe.if(IN_CHILD)("a stored PGlite database across a new version", () => {
     const after = await openOn(second);
     const r2 = await applySchemaLayer(after, all, NO_DERIVED, {
       commit: true,
+      owner: testSchemaOwner(),
       deferContract: false,
     });
     expect(r2.pending).toBe(all.length - earlier.length);

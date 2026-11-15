@@ -204,7 +204,7 @@ export function createPgliteDriver(
     warmPool: async () => {},
     // One connection, nothing else holding locks: boot DDL needs no wider
     // bound than any other query.
-    bootDdl: (fn) => fn(),
+    bootDdl: (_owner, fn) => fn(),
     // One process, nothing else connected: no older code can be holding a
     // session, so there is nothing to hold and nothing to wait for.
     holdSchemaGeneration: () => Promise.resolve(),

@@ -5,13 +5,19 @@ import {
 } from "@plugins/framework/plugins/server-core/core";
 import { db, DatabaseDriver } from "./internal/driver";
 import { snapshotWatermark } from "./internal/snapshot-watermark";
-import { setSchemaChangedAtBoot } from "./internal/boot-schema";
+import {
+  setBootStamp,
+  setSchemaChangedAtBoot,
+  takeBootStamp,
+} from "./internal/boot-schema";
 import { loadKnownRelations } from "./internal/read-set-capture";
 import {
   applySchemaLayer,
   MigrationSource,
+  recordSchemaLayerStamp,
   schemaGeneration,
 } from "@plugins/database/plugins/migrations/server";
+import { awaitSchemaLayer } from "./internal/await-schema-layer";
 import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import {
   derivedInputs,
@@ -55,7 +61,7 @@ export default {
   // migrated, warm DB. Running this in the `onReadyBlocking` barrier makes that
   // guarantee real and lets the gateway hold the hot-swap until the schema layer
   // commits.
-  async onReadyBlocking({ step }) {
+  async onReadyBlocking({ step, schema }) {
     const driver = DatabaseDriver.get();
     // An `exec` child (a supervised job's body) runs one piece of work and
     // exits: it serves nobody, so it neither checks the background lane nor
@@ -85,6 +91,30 @@ export default {
     // every frame that fully reconciles a client carries one — whether or not
     // the host boots L2 (which only consumes it, as its persist floor).
     setWatermarkSource(() => snapshotWatermark(db));
+    // An `exec` child does not own the schema (`BootHookContext.schema`): the
+    // serving backend set it up, and the child only checks that it did so for
+    // THIS code — one read of the stamp the owner's layer commits, no lock
+    // and no DDL. Until 2026-11-15 every child (~800 a day on main) ran the
+    // whole layer itself: main's own boot waited 0.2–0.6 s behind any child
+    // holding the schema-layer lock, and a child booted in the ~26 s between a
+    // push advancing the checkout and the new backend booting applied the
+    // push's migration itself, under the old backend, waiting up to 15 min on
+    // its locks (task-1794734803-m7admg). A database not set up for this code
+    // yet holds the child until its owner's layer commits (a NOTIFY, no
+    // polling) — the deploy window — and refuses it with
+    // `SchemaNotReadyError` past `SCHEMA_WAIT_MS`.
+    if (schema.kind === "verifier") {
+      await step("schema-verify", (inner) =>
+        awaitSchemaLayer(migrations, derivedInputs(), inner),
+      );
+      // This process reconciled, applied and deferred nothing.
+      publishReconciledRollups([]);
+      setDeferredContract(null);
+      setSchemaChangedAtBoot(false);
+      await step("known-relations", () => loadKnownRelations(db));
+      return;
+    }
+    const { owner } = schema;
     // The pool filled to its size while the schema layer runs: the layer holds
     // one connection, and the warm opens only the rest (`warmPool`), so the
     // two overlap instead of the layer waiting ~17 PgBouncer logins out. Both
@@ -118,9 +148,11 @@ export default {
         // cycle).
         const layer = await step("schema-layer", (inner) =>
           driver.bootDdl(
+            owner,
             () =>
               applySchemaLayer(db, migrations, derivedInputs(), {
                 commit: true,
+                owner,
                 deferContract: true,
                 step: inner,
               }),
@@ -131,7 +163,12 @@ export default {
         // has COMMITTED (C13) — `reconciledRollups()` readers (live-state-snapshot's
         // A20 boot check) run after this barrier, so they see this boot's answer.
         publishReconciledRollups(layer.rollups);
-        setDeferredContract(layer.deferredContract);
+        setDeferredContract(
+          layer.deferredContract === null
+            ? null
+            : { owner, file: layer.deferredContract },
+        );
+        setBootStamp(owner, layer.stamp);
         setSchemaChangedAtBoot(
           layer.pending > 0 || layer.deferredContract !== null,
         );
@@ -149,11 +186,19 @@ export default {
   // `onReady`): after the barrier, so it never holds back readiness — the
   // gateway swaps to this backend, the previous one drains and exits, and
   // that exit is what the wait is for.
-  onReady() {
-    const file = takeDeferredContract();
-    if (file === null) return;
+  async onReady() {
+    // The stamp an `exec` child is admitted by, recorded only now: every
+    // plugin's blocking hook has committed its boot DDL (the change feed's
+    // triggers, the mirror's, the queue schema), so a child woken by its NOTIFY
+    // finds the database whole — not only the layer.
+    const stamped = takeBootStamp();
+    if (stamped !== null) {
+      await recordSchemaLayerStamp(db, stamped.owner, stamped.stamp);
+    }
+    const deferred = takeDeferredContract();
+    if (deferred === null) return;
     void runTracked("database:deferred-contract", () =>
-      runDeferredContract(file),
+      runDeferredContract(deferred.owner, deferred.file),
     );
   },
 } satisfies ServerPluginDefinition;

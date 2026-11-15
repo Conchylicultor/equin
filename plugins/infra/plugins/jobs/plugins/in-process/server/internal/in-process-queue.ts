@@ -624,7 +624,7 @@ export function createInProcessQueue(
         listeners.delete(listener);
       };
     },
-    async install() {},
+    async install(_owner) {},
     async start() {
       started = true;
       await (loading ??= load());

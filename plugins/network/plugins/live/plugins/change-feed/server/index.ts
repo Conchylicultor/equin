@@ -109,7 +109,7 @@ export default {
   // every boot (like derived-views), NOT a migration. This runs in the blocking
   // barrier so the feed's triggers exist before any traffic — and the listener
   // (started in onReady, after the barrier) is guaranteed to find them.
-  async onReadyBlocking() {
+  async onReadyBlocking({ schema }) {
     // The contributed exclusions and producers, read once here: contributions
     // were collected before this barrier. The routed tables' trigger layouts
     // and the resource tables are derived from every registered route —
@@ -144,15 +144,24 @@ export default {
     // A trigger on a table this code no longer feeds is KEPT here — the
     // previous backend may still route it — and dropped in `onReady` once
     // every older process is gone (./internal/unfed-removal).
-    const { kept } = await DatabaseDriver.get().bootDdl(
-      () => installFeed(db, inputs),
-      "boot: change-feed trigger rebuild",
-    );
-    setPendingUnfedRemoval(
-      kept > 0
-        ? { exclusions: inputs.exclusions, layouts: inputs.layouts }
-        : null,
-    );
+    //
+    // Only the schema's owner installs them (`BootHookContext.schema`): an
+    // `exec` child writes through the triggers the serving backend installed,
+    // and opens no LISTEN of its own — so it neither needs this code's
+    // triggers nor may rebuild them under the backend that serves.
+    if (schema.kind === "owner") {
+      const { owner } = schema;
+      const { kept } = await DatabaseDriver.get().bootDdl(
+        owner,
+        () => installFeed(db, inputs),
+        "boot: change-feed trigger rebuild",
+      );
+      setPendingUnfedRemoval(
+        kept > 0
+          ? { owner, exclusions: inputs.exclusions, layouts: inputs.layouts }
+          : null,
+      );
+    }
     // `installFeed` above creates `live_state_changelog`, which did not exist
     // yet when the database plugin took its own snapshot of the public relations.
     // Take it again so a loader naming the changelog unquoted is recognised too.

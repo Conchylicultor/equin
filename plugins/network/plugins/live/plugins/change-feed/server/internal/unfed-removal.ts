@@ -1,4 +1,7 @@
-import type { TableLayoutRequirement } from "@plugins/framework/plugins/server-core/core";
+import type {
+  SchemaOwner,
+  TableLayoutRequirement,
+} from "@plugins/framework/plugins/server-core/core";
 import { DatabaseDriver, db } from "@plugins/database/server";
 import { changeFeedLog as log } from "./log-sink";
 import { rebuildTriggers, type TriggerExclusions } from "./triggers";
@@ -12,6 +15,8 @@ import { rebuildTriggers, type TriggerExclusions } from "./triggers";
 // serving, this process exits, and the triggers it would have dropped stay.
 
 interface PendingRemoval {
+  /** The boot install's owner token: only the schema's owner keeps (and so removes) a trigger. */
+  owner: SchemaOwner;
   exclusions: TriggerExclusions;
   layouts: readonly TableLayoutRequirement[];
 }
@@ -35,6 +40,7 @@ export async function removeUnfedTriggers(): Promise<void> {
   const driver = DatabaseDriver.get();
   await driver.awaitOlderProcessesGone();
   const { kept } = await driver.bootDdl(
+    removal.owner,
     () => rebuildTriggers(db, removal.exclusions, removal.layouts),
     "change-feed: removal of unfed triggers",
   );

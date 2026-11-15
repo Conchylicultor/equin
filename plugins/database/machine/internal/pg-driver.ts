@@ -972,7 +972,7 @@ export const pgDriver: DatabaseDriverImpl = {
   // Boot DDL can wait minutes on the previous backend's locks during a
   // hot-swap, so the schema layer widens the query deadline for its own
   // queries.
-  bootDdl: (fn, reason = "boot DDL") =>
+  bootDdl: (_owner, fn, reason = "boot DDL") =>
     withQueryDeadline({ ms: BOOT_DDL_QUERY_DEADLINE_MS, reason }, fn),
   // A dedicated connection on the direct socket (the pool's connections are
   // pgbouncer's, and shared). Named `change-feed`: the change feed's listener

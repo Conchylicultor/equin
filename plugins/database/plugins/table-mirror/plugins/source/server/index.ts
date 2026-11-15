@@ -56,10 +56,14 @@ export default {
     }),
   ],
   register: [tableMirrorPruneJob],
-  async onReadyBlocking() {
+  async onReadyBlocking({ schema }) {
+    // Boot DDL: the schema's owner only (`BootHookContext.schema`) — an `exec`
+    // child writes through the triggers the serving backend installed.
+    if (schema.kind !== "owner") return;
     const sets = MirrorSet.getContributions();
     const never = NeverMirrored.getContributions();
     await DatabaseDriver.get().bootDdl(
+      schema.owner,
       () => installMirrorSource(db, sets, never),
       "boot: table-mirror triggers",
     );

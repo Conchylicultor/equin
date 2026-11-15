@@ -51,18 +51,9 @@ export async function rebuildDerivedViews(
   db: NodePgDatabase,
   views: readonly DeclaredView[],
 ): Promise<void> {
-  const declared: RegisteredView[] = views.map(({ view, dependsOn }) => ({
-    name: getViewConfig(view).name,
-    view,
-    dependsOn: dependsOn ?? [],
-  }));
-  const ordered = topoSortViews(declared);
+  const compiled = compiledDerivedViews(views);
+  const ordered = compiled;
   if (ordered.length === 0) return;
-
-  const compiled = ordered.map((v) => ({
-    name: v.name,
-    ddl: compileCreateView(v),
-  }));
 
   await db.transaction(async (tx) => {
     // Bookkeeping for the derived-view layer's content signature. Created
@@ -189,6 +180,25 @@ export async function rebuildDerivedViews(
       `,
     );
   });
+}
+
+/**
+ * The declared views in dependency order, each with the `CREATE VIEW` it
+ * compiles to — what `rebuildDerivedViews` installs, and a pure function of
+ * source (the schema layer's stamp digests it).
+ */
+export function compiledDerivedViews(
+  views: readonly DeclaredView[],
+): { readonly name: string; readonly ddl: string }[] {
+  const declared: RegisteredView[] = views.map(({ view, dependsOn }) => ({
+    name: getViewConfig(view).name,
+    view,
+    dependsOn: dependsOn ?? [],
+  }));
+  return topoSortViews(declared).map((v) => ({
+    name: v.name,
+    ddl: compileCreateView(v),
+  }));
 }
 
 // Drops every plain view that is LIVE in the `public` schema, when a pending

@@ -1,6 +1,10 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 
-export { dropDerivedViews, rebuildDerivedViews } from "./internal/rebuild";
+export {
+  compiledDerivedViews,
+  dropDerivedViews,
+  rebuildDerivedViews,
+} from "./internal/rebuild";
 export type { DeclaredView } from "./internal/rebuild";
 export { View } from "./internal/contribution";
 

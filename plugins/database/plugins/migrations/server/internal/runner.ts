@@ -40,7 +40,9 @@ import type { DryRunTarget } from "../../core";
 import {
   untimedStep,
   type BootStep,
+  type SchemaOwner,
 } from "@plugins/framework/plugins/server-core/core";
+import { schemaLayerStamp } from "./layer-stamp";
 
 const log = defineLogSink({
   id: "migrations",
@@ -829,11 +831,27 @@ export interface SchemaLayerResult {
   pending: number;
   rollups: RollupReconcile[];
   deferredContract: string | null;
+  /**
+   * The stamp of the code this layer set the schema up for
+   * (`schemaLayerStamp`). Not written here: the owner records it
+   * (`recordSchemaLayerStamp`) once its WHOLE boot DDL committed — the
+   * change feed's, the mirror's and the queue's run in later hooks.
+   */
+  stamp: string;
 }
 
-/** How a schema layer runs: committed or rolled back, deferring the contract or not. */
-export interface SchemaLayerOptions {
-  commit: boolean;
+/**
+ * How a schema layer runs: committed — by the database's schema owner only, the
+ * token a serving host's boot hooks are handed (`BootHookContext.schema`) — or
+ * rolled back (the dry run, in a database nothing serves); deferring the
+ * contract or not.
+ */
+export type SchemaLayerOptions = (
+  { commit: true; owner: SchemaOwner } | { commit: false; owner?: never }
+) &
+  SchemaLayerRunOptions;
+
+interface SchemaLayerRunOptions {
   deferContract: boolean;
   /**
    * Times the layer's parts (lock, migrations, rollup tables, triggers, each
@@ -856,6 +874,10 @@ export async function applySchemaLayerFrom(
   inputs: SchemaLayerInputs,
   { commit, deferContract, step = untimedStep }: SchemaLayerOptions,
 ): Promise<SchemaLayerResult> {
+  // Computed before the transaction opens: pure, and a declaration it cannot
+  // digest fails before any lock is taken — in the dry run too, so the
+  // `migration-applies-clean` check catches one before it reaches a boot.
+  const stamp = schemaLayerStamp(migrations, inputs);
   let pending = 0;
   let deferredContract: string | null = null;
   let rollups: RollupReconcile[] = [];
@@ -931,7 +953,7 @@ export async function applySchemaLayerFrom(
   } catch (e) {
     if (e !== ROLLBACK) throw e;
   }
-  return { pending, rollups, deferredContract };
+  return { pending, rollups, deferredContract, stamp };
 }
 
 // The boot schema layer, in ONE transaction:
@@ -1004,11 +1026,13 @@ export async function runMigrations(
 // it leaves nothing to do here.
 export async function completeDeferredContract(
   db: NodePgDatabase,
+  owner: SchemaOwner,
   migrations: Migration[],
   inputs: SchemaLayerInputs,
 ): Promise<SchemaLayerResult> {
   return applySchemaLayerFrom(db, migrations, inputs, {
     commit: true,
+    owner,
     deferContract: false,
   });
 }

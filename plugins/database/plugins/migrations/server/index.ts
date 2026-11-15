@@ -20,6 +20,12 @@ export type {
   SchemaPlanOptions,
   SchemaStep,
 } from "./internal/runner";
+export {
+  recordSchemaLayerStamp,
+  SCHEMA_STAMPED_CHANNEL,
+} from "./internal/layer-stamp";
+export { verifySchemaLayer } from "./internal/layer-verify";
+export type { SchemaLayerCheck } from "./internal/layer-verify";
 export { MigrationSource } from "./internal/source";
 export type { MigrationSourceImpl } from "./internal/source";
 

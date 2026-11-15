@@ -7,6 +7,7 @@ import {
 } from "@plugins/infra/plugins/jobs/server";
 import {
   assertRunKindId,
+  SUPERVISED_EXIT_SCHEMA_NOT_READY,
   SUPERVISED_EXIT_TEMPFAIL,
   type RunTerminal,
 } from "../../core";
@@ -389,8 +390,10 @@ export function applyFailurePolicy(args: {
   const why =
     terminal.exitCode === SUPERVISED_EXIT_TEMPFAIL
       ? "the database refused its connection because it was full (EX_TEMPFAIL) — a temporary failure, see the transcript"
-      : (args.failure.errorMessage ??
-        "killed or crashed before recording an error — see the transcript");
+      : terminal.exitCode === SUPERVISED_EXIT_SCHEMA_NOT_READY
+        ? "its database was not set up for its code, and no serving backend set it up while it waited (schema not ready) — see the transcript"
+        : (args.failure.errorMessage ??
+          "killed or crashed before recording an error — see the transcript");
   throw new NonRetryableError(
     `[supervised-job] ${args.jobName}: run ${args.runId} ${ended} on attempt ` +
       `${args.attempt}/${args.runAttempts}` +

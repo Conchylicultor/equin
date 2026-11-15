@@ -417,6 +417,28 @@ the `migrations` log (`logs/migrations.jsonl`) before it propagates; the
 gateway additionally returns the dead backend's last stderr lines in the
 restart error `./equin build` prints.
 
+## The schema layer's stamp (what an `exec` child checks instead)
+
+Only a database's serving backend runs the boot schema layer (server-core's
+`core/schema-role.ts`: a committing `applySchemaLayer` takes the owner token).
+Inside the layer's transaction, last, it writes `schema_layer_state`'s one row
+(`server/internal/layer-stamp.ts`): the stamp of the code it just set the schema
+up for — one hash per part (`migrations`, and each key of `SchemaLayerInputs`;
+`inputDigests` must answer every key, a tsc error otherwise), every list put in
+a canonical order first (contributions arrive in load-wave order) — and
+NOTIFYs `schema_layer_stamped`. A `exec` child computes its own code's stamp and
+compares (`verifySchemaLayer`, one read): equal means the database holds the
+schema this code was written for; otherwise the detail names the differing
+parts (`migrations` during a deploy). The digest refuses anything that is not
+plain data (a class instance) rather than guessing what it means; functions
+(asserts, the reconcile's SQL builders) are not part of it, nor is the rollup
+reconcile (data, not definition). The dry run writes it too, rolled back, so a
+declaration the digest cannot read fails `migration-applies-clean`.
+
+A boot on a partial graph (a job booted on its plugin closure) would compute a
+partial stamp and always be refused: it must take the derived inputs' digest
+from a whole-graph artifact instead.
+
 ## Views never block a migration
 
 Plain views are derived code (`database/derived-views`), rebuilt from source at
@@ -656,6 +678,7 @@ only agreement that matters.
     - `database/db-triggers.installDbTriggers`
     - `database/derived-tables.prepareRollupTables`
     - `database/derived-tables.reconcileRollups`
+    - `database/derived-views.compiledDerivedViews`
     - `database/derived-views.DeclaredView`
     - `database/derived-views.dropDerivedViews`
     - `database/derived-views.rebuildDerivedViews`
@@ -663,6 +686,7 @@ only agreement that matters.
   - Exports (types):
     - `Migration`
     - `MigrationSourceImpl`
+    - `SchemaLayerCheck`
     - `SchemaLayerInputs`
     - `SchemaLayerOptions`
     - `SchemaLayerResult`
@@ -679,7 +703,10 @@ only agreement that matters.
     - `MigrationSource`
     - `migrationsReady`
     - `planSchemaSteps`
+    - `recordSchemaLayerStamp`
+    - `SCHEMA_STAMPED_CHANNEL`
     - `schemaGeneration`
+    - `verifySchemaLayer`
 - Core:
   - Uses:
     - `database/migrations/phases.snapshotLineage`
@@ -797,7 +824,7 @@ only agreement that matters.
     - `boundaries/no-platform-api` — `core/internal/schema-glob.ts`, `core/internal/drizzle-stage.ts`, `core/internal/published-immutable.ts`, `core/internal/schema-load-probe.ts`, `core/internal/schema-snapshot.ts`, `core/internal/snapshot-bodies.ts`, `core/internal/migration-data.ts` (debt)
     - `check-thread-safety/no-blocking-check-work` — `check/fork-schema-drift.ts`, `check/orphaned-tables.ts` (debt)
     - `blocking-fs/sync-named` — `core/internal/drizzle-stage.ts`, `core/internal/schema-snapshot.ts` (sanctioned)
-    - `sql-writes:fit:hand-written` — `server/internal/runner.ts` (sanctioned)
+    - `sql-writes:fit:hand-written` — `server/internal/runner.ts`, `server/internal/layer-stamp.ts` (sanctioned)
   - Exempted by:
     - `database/migrations` (0 debt)
     - `database/table-mirror/replica` (0 debt)

@@ -23695,11 +23695,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `database/migrations.applySchemaLayer`
       - `database/migrations.completeDeferredContract`
       - `database/migrations.generationsKnowing`
+      - `database/migrations.Migration`
       - `database/migrations.MigrationSource`
+      - `database/migrations.recordSchemaLayerStamp`
+      - `database/migrations.SCHEMA_STAMPED_CHANNEL`
       - `database/migrations.schemaGeneration`
+      - `database/migrations.SchemaLayerCheck`
       - `database/migrations.SchemaLayerInputs`
+      - `database/migrations.verifySchemaLayer`
       - `primitives/log-channels.defineLogSink`
-    - DB schema: `plugins/database/server/internal/boot-schema.ts`
+    - DB schema:
+      - `plugins/database/server/internal/await-schema-layer.ts`
+      - `plugins/database/server/internal/boot-schema.ts`
     - Exports (types):
       - `AtomicWrite`
       - `DatabaseDriverImpl`
@@ -24076,6 +24083,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses: `primitives/log-channels.defineLogSink`
         - Exports (types): `DeclaredView`
         - Exports (values):
+          - `compiledDerivedViews`
           - `dropDerivedViews`
           - `rebuildDerivedViews`
           - `View`
@@ -24106,6 +24114,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `PAGE_TREE_RANK_TABLE`
           - `READ_ALIAS_SCHEMA`
           - `readAliasStem`
+          - `SCHEMA_LAYER_STATE_TABLE`
           - `TASK_ACTIVE_DEPENDENTS_TABLE`
           - `TASK_ATTEMPT_FACTS_TABLE`
           - `TASK_BLOCKING_TABLE`
@@ -24279,6 +24288,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `database/db-triggers.installDbTriggers`
           - `database/derived-tables.prepareRollupTables`
           - `database/derived-tables.reconcileRollups`
+          - `database/derived-views.compiledDerivedViews`
           - `database/derived-views.DeclaredView`
           - `database/derived-views.dropDerivedViews`
           - `database/derived-views.rebuildDerivedViews`
@@ -24286,6 +24296,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (types):
           - `Migration`
           - `MigrationSourceImpl`
+          - `SchemaLayerCheck`
           - `SchemaLayerInputs`
           - `SchemaLayerOptions`
           - `SchemaLayerResult`
@@ -24302,7 +24313,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `MigrationSource`
           - `migrationsReady`
           - `planSchemaSteps`
+          - `recordSchemaLayerStamp`
+          - `SCHEMA_STAMPED_CHANNEL`
           - `schemaGeneration`
+          - `verifySchemaLayer`
       - Core:
         - Uses:
           - `database/migrations/phases.snapshotLineage`
@@ -24420,7 +24434,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `boundaries/no-platform-api` — `core/internal/schema-glob.ts`, `core/internal/drizzle-stage.ts`, `core/internal/published-immutable.ts`, `core/internal/schema-load-probe.ts`, `core/internal/schema-snapshot.ts`, `core/internal/snapshot-bodies.ts`, `core/internal/migration-data.ts` (debt)
           - `check-thread-safety/no-blocking-check-work` — `check/fork-schema-drift.ts`, `check/orphaned-tables.ts` (debt)
           - `blocking-fs/sync-named` — `core/internal/drizzle-stage.ts`, `core/internal/schema-snapshot.ts` (sanctioned)
-          - `sql-writes:fit:hand-written` — `server/internal/runner.ts` (sanctioned)
+          - `sql-writes:fit:hand-written` — `server/internal/runner.ts`, `server/internal/layer-stamp.ts` (sanctioned)
         - Exempted by:
           - `database/migrations` (0 debt)
           - `database/table-mirror/replica` (0 debt)
@@ -31844,6 +31858,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ResumeRecord`
           - `RoutedCut`
           - `RuntimeProfileView`
+          - `SchemaOwner`
+          - `SchemaRole`
           - `SeedOutcome`
           - `ServerContribution`
           - `ServerContributionToken`
@@ -31921,6 +31937,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `Resource`
           - `routedTableRequirements`
           - `routeTableChange`
+          - `SchemaNotReadyError`
           - `scopedResourceTables`
           - `seedPersistedSnapshot`
           - `seedRouteDrift`
@@ -32003,6 +32020,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `serverEntries`
           - `serverEntryFor` — The registry entry of `pluginPath`'s server barrel, as codegen writes one (`<id>` the dotted path, loaded by its `@plugins/<path>/server` specifier), with the `dependsOn` the caller states and no core barrel to warm.
           - `setServerErrorHandler` — Route every `reportServerError` to `fn` — or to nobody (`null`) — discarding whatever was held before, so a suite never receives another suite's reports.
+          - `testSchemaOwner` — The token a serving host's boot hooks are handed (`BootHookContext.schema`).
           - `withHostServices` — Run `fn` with `providers` (each a `Svc.provide(impl)`) answering their services — over the unbooted host's providers and over a collected graph's — and put the previous answers back once it settles, so a suite swapping a service cannot leak it into the suites after it in the same bun process.
     - **`slot-declaration`** — The slot self-description + declaration contract: SlotMeta (what kind of slot, and whether it is reorderable), the created-at-construction slot set, and the one normalisation of a plugin's `slots` record declaration. A leaf — it imports no React — so the build-time collectors can read the contract without pulling the web runtime.
       - Cross-plugin:
@@ -37711,6 +37729,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `RUN_TERMINAL_ENV`
               - `RunMarkerError`
               - `SUPERVISED_EXEC_COMMAND`
+              - `SUPERVISED_EXIT_SCHEMA_NOT_READY`
               - `SUPERVISED_EXIT_TEMPFAIL`
               - `supervisedArgv`
               - `writeRunTerminalSync`
@@ -42100,6 +42119,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by:
           - `conversations`
           - `conversations/runtime-sdk`
+          - `database`
           - `infra/claude-cli/sdk`
           - `infra/safe-fetch/browser-fetch`
           - `network/live/live-state-snapshot`

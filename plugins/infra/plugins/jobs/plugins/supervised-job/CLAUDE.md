@@ -813,6 +813,7 @@ construction, and the job and the body it spawns cannot drift apart.
     - `RUN_TERMINAL_ENV`
     - `RunMarkerError`
     - `SUPERVISED_EXEC_COMMAND`
+    - `SUPERVISED_EXIT_SCHEMA_NOT_READY`
     - `SUPERVISED_EXIT_TEMPFAIL`
     - `supervisedArgv`
     - `writeRunTerminalSync`

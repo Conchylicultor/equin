@@ -1,3 +1,4 @@
+import { testSchemaOwner } from "@plugins/framework/plugins/server-core/core/testing";
 import { codegenPassOver } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { loadRepoSnapshot } from "@plugins/framework/plugins/tooling/core";
 /**
@@ -53,6 +54,7 @@ test("the whole data/ directory plus the real derived layer applies from scratch
     inputs,
     {
       commit: true,
+      owner: testSchemaOwner(),
       deferContract: false,
     },
   );
@@ -96,10 +98,11 @@ test("the whole data/ directory plus the real derived layer applies from scratch
       inputs,
       {
         commit: true,
+        owner: testSchemaOwner(),
         deferContract: false,
       },
     ),
-  ).toEqual({
+  ).toMatchObject({
     pending: 0,
     rollups: order.map((table) => ({
       table,

@@ -13,6 +13,7 @@
  * Requires the running embedded cluster (`./equin build` first).
  */
 
+import { testSchemaOwner } from "@plugins/framework/plugins/server-core/core/testing";
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { sql } from "drizzle-orm";
 import { integer, pgView, text } from "drizzle-orm/pg-core";
@@ -130,6 +131,7 @@ beforeEach(async () => {
   t = await createTestDb({ prefix: "schema_layer_test" });
   await applySchemaLayerFrom(t.db, [base], withViews(oldView), {
     commit: true,
+    owner: testSchemaOwner(),
     deferContract: false,
   });
 });
@@ -149,7 +151,7 @@ describe("applySchemaLayer", () => {
       t.db,
       [base, backfill, push],
       withViews(newView),
-      { commit: true, deferContract: false },
+      { commit: true, owner: testSchemaOwner(), deferContract: false },
     );
 
     expect(result.pending).toBe(2);
@@ -168,10 +170,11 @@ describe("applySchemaLayer", () => {
         withViews(newView),
         {
           commit: true,
+          owner: testSchemaOwner(),
           deferContract: false,
         },
       ),
-    ).toEqual({ pending: 0, rollups: [], deferredContract: null });
+    ).toMatchObject({ pending: 0, rollups: [], deferredContract: null });
     expect(await viewRows(t)).toHaveLength(2);
   });
 
@@ -203,7 +206,7 @@ describe("applySchemaLayer", () => {
         t.db,
         [base, slow],
         withViews(oldView),
-        { commit: true, deferContract: false },
+        { commit: true, owner: testSchemaOwner(), deferContract: false },
       );
       await Bun.sleep(500);
       // Mid-layer: a read of the view must not wait on any lock.
@@ -234,7 +237,7 @@ describe("applySchemaLayer", () => {
         t.db,
         [base, backfill, push],
         withViews(brokenView),
-        { commit: true, deferContract: false },
+        { commit: true, owner: testSchemaOwner(), deferContract: false },
       );
     } catch (e) {
       error = e;
@@ -300,7 +303,7 @@ describe("the deferred contract", () => {
       t.db,
       [base, backfill, push],
       withViews(newView),
-      { commit: true, deferContract: true },
+      { commit: true, owner: testSchemaOwner(), deferContract: true },
     );
     expect(boot.deferredContract).toBe(push.file);
     // Expanded and backfilled; nothing tightened or dropped.
@@ -320,7 +323,7 @@ describe("the deferred contract", () => {
           t.db,
           [base, backfill, push],
           withViews(newView),
-          { commit: true, deferContract: true },
+          { commit: true, owner: testSchemaOwner(), deferContract: true },
         )
       ).deferredContract,
     ).toBe(push.file);
@@ -329,9 +332,13 @@ describe("the deferred contract", () => {
       t.db,
       [base, backfill, push],
       withViews(newView),
-      { commit: true, deferContract: false },
+      { commit: true, owner: testSchemaOwner(), deferContract: false },
     );
-    expect(done).toEqual({ pending: 1, rollups: [], deferredContract: null });
+    expect(done).toMatchObject({
+      pending: 1,
+      rollups: [],
+      deferredContract: null,
+    });
     expect(await columns(t)).toEqual(["id", "name"]);
     expect(await pendingContracts(t)).toEqual([]);
     expect(await viewRows(t)).toEqual([
@@ -348,6 +355,7 @@ describe("the deferred contract", () => {
       withViews(newView),
       {
         commit: true,
+        owner: testSchemaOwner(),
         deferContract: true,
       },
     );
@@ -366,7 +374,7 @@ describe("the deferred contract", () => {
       t.db,
       [base, backfill, push, next],
       withViews(newView),
-      { commit: true, deferContract: true },
+      { commit: true, owner: testSchemaOwner(), deferContract: true },
     );
     // `push`'s contract dropped the text old_name, so `next` re-adds it.
     expect(result.deferredContract).toBe(next.file);

@@ -8,7 +8,10 @@ import {
   type SupervisedRunRow,
 } from "@plugins/infra/plugins/jobs/plugins/supervised-job/server";
 import type { CheckoutState } from "@plugins/infra/plugins/worktree/server";
-import { SUPERVISED_EXIT_TEMPFAIL } from "@plugins/infra/plugins/jobs/plugins/supervised-job/core";
+import {
+  SUPERVISED_EXIT_SCHEMA_NOT_READY,
+  SUPERVISED_EXIT_TEMPFAIL,
+} from "@plugins/infra/plugins/jobs/plugins/supervised-job/core";
 
 /**
  * How long one suspension waits for a prepare run's `supervisedRun.ended`
@@ -133,16 +136,27 @@ export async function prepareWorktree(
       await wait(ctx, deps.kindId, null, i);
       continue;
     }
-    if (ours && run.exitCode === SUPERVISED_EXIT_TEMPFAIL) {
+    if (
+      ours &&
+      (run.exitCode === SUPERVISED_EXIT_TEMPFAIL ||
+        run.exitCode === SUPERVISED_EXIT_SCHEMA_NOT_READY)
+    ) {
       // Back-pressure, not a failed checkout: the child could not get a
-      // database connection. Wait it out and ask again, without spending a
-      // request — losing the launch to a full pooler is what this exists for.
+      // database connection, or its database was not set up for its code yet
+      // (a deploy that outlasted the child's own wait). Wait it out and ask
+      // again, without spending a request — losing the launch to a full
+      // pooler or a slow deploy is what this exists for.
       if (tempfails >= MAX_TEMPFAIL_REQUESTS) {
         throw new NonRetryableError(
-          `The checkout of ${attemptId} could not start: its last ${String(tempfails + 1)} runs ` +
-            `(last ${run.id}) were refused a database connection because the database was full ` +
-            `(EX_TEMPFAIL), over ~${String(Math.round(totalTempfailBackoffMs() / 60_000))} min. ` +
-            "Something is holding the pooler's connections — see pgbouncer's log.",
+          run.exitCode === SUPERVISED_EXIT_SCHEMA_NOT_READY
+            ? `The checkout of ${attemptId} could not start: its last ${String(tempfails + 1)} runs ` +
+                `(last ${run.id}) found the database not set up for their code, over ` +
+                `~${String(Math.round(totalTempfailBackoffMs() / 60_000))} min of waits beyond each run's own. ` +
+                "The serving backend has not booted the checkout's code — see the deploy."
+            : `The checkout of ${attemptId} could not start: its last ${String(tempfails + 1)} runs ` +
+                `(last ${run.id}) were refused a database connection because the database was full ` +
+                `(EX_TEMPFAIL), over ~${String(Math.round(totalTempfailBackoffMs() / 60_000))} min. ` +
+                "Something is holding the pooler's connections — see pgbouncer's log.",
         );
       }
       await ctx.sleep(tempfailBackoffMs(tempfails));
