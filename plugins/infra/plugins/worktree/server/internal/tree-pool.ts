@@ -72,6 +72,7 @@ function treePool(repoRoot: AppPath): RenamePool {
     what: "tree",
     dir: treePoolDir(repoRoot),
     maxAgeMs: TREE_POOL_MAX_AGE_MS,
+    seeded: false,
   };
 }
 
@@ -130,11 +131,15 @@ export async function harvestTree(
     if (await exists(join(nodeModules, ".bun"))) {
       await deletePath(pool, nodeModules);
     }
-    const entry = `${now}-${basename(trashPath).replace(/^\d+-/, "")}`;
-    await publishEntry(pool, entry, async (staging) => {
-      await rename(index, join(staging, INDEX_FILE));
-      await rename(trashPath, join(staging, TREE_DIR));
-    });
+    const { entry } = await publishEntry(
+      pool,
+      basename(trashPath).replace(/^\d+-/, ""),
+      () => now,
+      async (staging) => {
+        await rename(index, join(staging, INDEX_FILE));
+        await rename(trashPath, join(staging, TREE_DIR));
+      },
+    );
     return { kind: "harvested", entry };
   } catch (err) {
     if (!(err instanceof Error)) throw err;

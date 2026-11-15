@@ -149,21 +149,29 @@ install, at any tier. It ran per launch, and the reap then deleted the same
   `node_modules` takes the newest entry under 7 days old as its
   `node_modules/.bun`; the install (no stamp came with it) re-links it, cloning
   only what the lock changed.
-- **The oldest store stays, as the seed** — when the only store waiting is
-  the oldest (adopters take newest first, so the last one left is), the
-  checkout gets a copy (`cloneSeed`: `cp -cR` — per-file APFS clones, which
-  hold no rename lock — staged under a transient pool name, moved in by one
-  rename). Without it the pool ran dry most days, and the cold installs held
-  renames for seconds. macOS only.
-- **No adopter ever renames the seed, not even to look**
-  (`takeNewestSparingOldest`): a copy of it may be in flight in another
-  process at any moment, and a rename moves its source from under that `cp`.
-  The first version claimed the newest entry, saw it was the last, and put it
-  back — 29 of 154 seed copies failed on ENOENT (11-11..11-15). Otherwise
-  only the sweep's expiry claims a seed (and, at the 7-day boundary, an
-  adopter whose clock already counts the old seed expired may take the next
-  one); a copy that ends with the seed gone is discarded (a cold install),
-  while one that failed with the seed in place throws.
+- **The seed: one store is never handed away, only copied** — `.claude/worktree-dep-stores/seed/`
+  (its `entry` file names the entry it was). A harvest publishes its store as
+  the seed when there is none (a rename onto `seed`, which fails while one
+  exists), and the sweep promotes the newest entry when it retired one. A
+  checkout that finds no entry gets a copy (`cloneSeed`: `cp -cR` — per-file
+  APFS clones, which hold no rename lock). Without it the pool ran dry most
+  days, and the cold installs held renames for seconds. macOS only.
+- **The seed is a name, never worked out from a clock**: no adopter takes it
+  (it is not a published entry), and only the sweep retires it — past 7 days,
+  and only once it takes `seed.lock` exclusive, which every copy holds shared
+  from before it reads the seed until its `cp` exits. Earlier versions derived
+  it ("the oldest entry within 7 days", per adopter): a claim-and-put-back to
+  learn "it was the last" moved it from under copies in flight (29 of 154
+  failed on ENOENT, 11-11..11-15), adopters whose clocks disagreed at the
+  7-day boundary disagreed on which entry it was, and a harvest stamped
+  before its walk could publish an entry older than it. Entry names are
+  stamped at the publishing rename (`publishEntry`'s clock).
+- **A copy is moved in only whole**: it is written under an owned transient
+  dir (`holdTransient`: its writer holds a flock on `.owner`, which the sweep
+  must take before it deletes the dir — the 1 h grace is wall time, the copy's
+  timeout awake time, so across a sleep the sweep used to `rm -rf` a copy `cp`
+  was still writing). With both ends held, a `cp` that exits 0 is a complete
+  store; only then is it renamed into the checkout. Any other end throws.
 - **No count bound — supply is demand, 72 h late.** A store is made when its
   checkout is reaped, and the reaper takes a finished checkout only at 72 h
   old (all 260 harvests of 11-05..08 came from checkouts made 72–80 h before);
@@ -189,8 +197,9 @@ install, at any tier. It ran per launch, and the reap then deleted the same
   `node_modules` are links bun recreates, and bun never prunes a top-level
   entry the lock dropped — carrying them could keep a removed dependency
   resolvable.
-- **Sweep** — `emptyWorktreeTrash` (the reaper's tick) deletes expired entries
-  and transient names (`.staging-…`, `.claimed-…`) older than an hour — a
+- **Sweep** — `emptyWorktreeTrash` (the reaper's tick) deletes expired entries,
+  the expired seed once no copy holds it, and transient names (`.staging-…`,
+  `.claimed-…`) older than an hour whose owner lock (if any) is free — a
   process that died holding them.
 - **Not caught**: a store file edited in place AND then a later successful
   install in the same checkout (the stamp is rewritten after the edit). Only

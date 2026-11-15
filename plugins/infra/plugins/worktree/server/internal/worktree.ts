@@ -1690,7 +1690,7 @@ export async function removeWorktree(
   // Its dependency store goes to the next checkout instead of being deleted
   // while that one clones it again (dep-store-pool.ts). Outside the gate, like
   // the delete: a read-only walk of the store and a rename of it. Never throws.
-  const depStore = await harvestDepStore(repoRoot, trashPath, Date.now());
+  const depStore = await harvestDepStore(repoRoot, trashPath, Date.now);
   // Its tree (with the index kept above) goes to the next checkout too, which
   // then writes only the files `main` changed since (tree-pool.ts). After the
   // store's harvest: what is left of `node_modules` is `git clean`'s.

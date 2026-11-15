@@ -7,16 +7,15 @@ import { lstat, readdir, stat } from "@plugins/packages/plugins/timed-fs/core";
 import { basename, join } from "node:path";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 import {
-  deletePath,
-  isStillPublished,
+  holdSeed,
+  type HeldTransient,
+  holdTransient,
   publishEntry,
   putBack,
   type RenamePool,
   sweep,
   type TakenEntry,
   takeNewest,
-  takeNewestSparingOldest,
-  transientPath,
 } from "./rename-pool";
 
 // A removed checkout's installed dependency store, handed to the next checkout
@@ -45,11 +44,12 @@ import {
 // entry's own dependency links on every install (measured: a planted stale
 // link was repaired).
 //
-// THE OLDEST STORE STAYS, AS THE SEED. Supply is demand three days late, and the
+// ONE STORE STAYS, AS THE SEED. Supply is demand three days late, and the
 // fleet grows, so the pool ran dry most days: 11-05..11-10 still had 40–80 cold
 // installs a day (the job logs), and every rename stall the fs-latency monitor
-// caught in that time was a cold install's directory clones. So the last store
-// waiting is never handed away: the adopter gets a copy of it, made by
+// caught in that time was a cold install's directory clones. So one store
+// waiting is never handed away: an adopter that finds nothing else gets a
+// copy of it, made by
 // `cp -cR` — APFS clones of each FILE, plus mkdir and symlink. A file clone
 // holds no rename lock (measured 2026-11-11 with a 10 Hz probe renaming in a
 // disjoint dir: 7 copies of a 66k-entry store, 28–59 s each, probe max 6–173 ms
@@ -57,16 +57,29 @@ import {
 // ~150 MB of metadata, no data blocks. The install then re-links the copy like
 // any adopted store. task-1794358998-iwey1b.
 //
-// THE SEED IS NEVER RENAMED BY AN ADOPTER. It is the oldest store waiting
-// (adopters take newest first, so the last one left is the oldest), and a copy
-// of it may be running in another process at any moment — so no adopter
-// claims it, not even to find out it is the last (`takeNewestSparingOldest`).
-// The first version did: take the newest, see nothing else waited, put it
-// back. Each such claim moved the seed from under every copy in flight, whose
-// `cp` then failed on ENOENT for the files it had not reached yet: 29 of 154
-// seed copies on main, 11-11..11-15 (9 failed spare refills, 20 failed
-// launch checkouts, each then taking a median 272 s against 102 s).
-// task-1794700081-cr2q5z.
+// THE SEED IS A NAME, NOT A COMPUTATION. It is the pool's `seed` entry
+// (`rename-pool.ts`): made by a publish when there is none (or by the sweep,
+// promoting the newest entry, once it retired one), never taken by an adopter,
+// and retired only by the sweep — past the age bound, and only once no copy
+// holds its readers' lock. A copy holds that lock (shared) from before it
+// reads the seed until its `cp` exits, so the seed cannot move from under it.
+//
+// The versions before derived it: "the oldest entry within 7 days", each
+// adopter from its own clock. A claim-and-put-back to learn "it was the last"
+// moved the seed from under every copy in flight (29 of 154 seed copies on
+// main failed on ENOENT, 11-11..11-15; task-1794700081-cr2q5z); and with that
+// fixed, two adopters whose clocks disagreed at the 7-day boundary still
+// disagreed on which entry the seed was — one copying what the other took —
+// and a harvest stamped before its long walk could publish an entry older
+// than the seed, making the seed claimable (task-1794700748-n65pps).
+//
+// A COPY IS MOVED IN ONLY WHOLE. It is written under an owned transient name
+// (`holdTransient`: its writer holds a flock the sweep must take before it
+// deletes the dir), so a machine asleep mid-`cp` — past the sweep's 1 h
+// wall-clock grace, while the copy's timeout counts awake time — no longer
+// lets the sweep `rm -rf` the copy as `cp` writes it. With the source and the
+// destination both held, `cp` exiting 0 is a complete store; only then is it
+// renamed into the checkout (bun trusts an existing package dir).
 //
 // THE POOL'S NAMES and how an entry is taken: `rename-pool.ts`, shared with
 // the tree pool (`tree-pool.ts`).
@@ -112,16 +125,31 @@ export function depStorePoolDir(repoRoot: AppPath): AppPath {
   return joinAppPath(repoRoot, ".claude", "worktree-dep-stores");
 }
 
+/**
+ * A copy of a store that holds no rename lock: `cp -cR` clones each file
+ * (APFS) and makes each dir and symlink — never a directory `clonefile`. Null
+ * where there is no such copy (off macOS): the last store is then handed away
+ * like any other.
+ */
+const FILE_CLONE_ARGV: readonly string[] | null =
+  process.platform === "darwin" ? ["cp", "-cR"] : null;
+
+// ~30–60 s measured under load; counted in awake time, like the pool's deletes.
+const CLONE_TIMEOUT_MS = 30 * 60_000;
+
 function depStorePool(repoRoot: AppPath): RenamePool {
   return {
     what: "dependency store",
     dir: depStorePoolDir(repoRoot),
     maxAgeMs: POOL_MAX_AGE_MS,
+    // A seed only where it can be copied without a rename lock.
+    seeded: FILE_CLONE_ARGV !== null,
   };
 }
 
 export type HarvestResult =
-  | { kind: "harvested"; entry: string }
+  /** `seed`: it became the pool's seed (there was none). */
+  | { kind: "harvested"; entry: string; seed: boolean }
   | { kind: "skipped"; why: string }
   /** The harvest itself threw; the store is deleted with the checkout. */
   | { kind: "failed"; error: string };
@@ -177,10 +205,10 @@ async function exists(path: string): Promise<boolean> {
 export async function harvestDepStore(
   repoRoot: AppPath,
   checkout: string,
-  now: number,
+  clock: () => number,
 ): Promise<HarvestResult> {
   try {
-    return await harvest(repoRoot, checkout, now);
+    return await harvest(repoRoot, checkout, clock);
   } catch (err) {
     if (!(err instanceof Error)) throw err;
     return { kind: "failed", error: err.message };
@@ -190,7 +218,7 @@ export async function harvestDepStore(
 async function harvest(
   repoRoot: AppPath,
   checkout: string,
-  now: number,
+  clock: () => number,
 ): Promise<HarvestResult> {
   const store = join(checkout, STORE_REL);
   if (!(await exists(store))) {
@@ -209,18 +237,20 @@ async function harvest(
     return { kind: "skipped", why: `changed after its install: ${changed}` };
   }
 
-  const entry = `${now}-${basename(checkout)}`;
   // Staged then published by one rename, so an adopter never sees an entry
-  // without its store.
-  await publishEntry(depStorePool(repoRoot), entry, (staging) =>
-    rename(store, join(staging, STORE_DIR)),
+  // without its store; named by the clock at that rename, after the walk.
+  const { entry, seed } = await publishEntry(
+    depStorePool(repoRoot),
+    basename(checkout),
+    clock,
+    (staging) => rename(store, join(staging, STORE_DIR)),
   );
-  return { kind: "harvested", entry };
+  return { kind: "harvested", entry, seed };
 }
 
 export type AdoptResult =
   | { kind: "adopted"; entry: string; ageMs: number }
-  /** The oldest waiting store (the seed), copied file by file; it stays in the pool. */
+  /** The pool's seed, copied file by file; it stays in the pool. */
   | { kind: "cloned"; entry: string; ageMs: number }
   /** The checkout already has a `node_modules`: its own tree is newer than anything waiting. */
   | { kind: "present" }
@@ -228,31 +258,17 @@ export type AdoptResult =
   | { kind: "none" };
 
 /**
- * A copy of a store that holds no rename lock: `cp -cR` clones each file
- * (APFS) and makes each dir and symlink — never a directory `clonefile`. Null
- * where there is no such copy (off macOS): the last store is then handed away
- * like any other.
- */
-const FILE_CLONE_ARGV: readonly string[] | null =
-  process.platform === "darwin" ? ["cp", "-cR"] : null;
-
-// ~30–60 s measured under load; counted in awake time, like the pool's deletes.
-const CLONE_TIMEOUT_MS = 30 * 60_000;
-
-/**
  * Give `checkout` the newest waiting store as its `node_modules/.bun`, before
  * its install runs: the install then re-links it and clones only what the lock
  * changed. A no-op for a checkout that already has a `node_modules` (a claimed
- * spare, a resumed checkout). The oldest store waiting is the pool's SEED: it
- * is never moved, only copied (`cloneSeed`), so the pool never runs dry between
- * reaps — the checkout gets it when it is the only one waiting, or when every
- * newer one was taken first.
+ * spare, a resumed checkout). With no published entry left, the checkout gets
+ * a copy of the pool's seed (`cloneSeed`), which is never moved — so the pool
+ * never runs dry between reaps.
  *
  * An entry is taken by renaming it to a claimed name first: two adopters, or
  * an adopter and a delete, are told apart by that rename — the loser's source
- * is gone (ENOENT) and it tries the next entry. The seed is never claimed by
- * an adopter, not even to look (`takeNewestSparingOldest`): a copy of it can
- * be in flight in another process at any moment.
+ * is gone (ENOENT) and it tries the next entry. The seed is not a published
+ * entry, so no take can reach it.
  */
 export async function adoptDepStore(
   repoRoot: AppPath,
@@ -261,27 +277,12 @@ export async function adoptDepStore(
 ): Promise<AdoptResult> {
   if (await exists(join(checkout, NODE_MODULES))) return { kind: "present" };
   const pool = depStorePool(repoRoot);
-  if (FILE_CLONE_ARGV === null) {
-    // No lock-free copy: every store, the last included, is handed away.
-    const taken = await takeNewest(pool, now);
-    return taken === null ? { kind: "none" } : moveIn(pool, taken, checkout);
-  }
-  const take = await takeNewestSparingOldest(pool, now);
-  switch (take.kind) {
-    case "none":
-      return { kind: "none" };
-    case "taken":
-      return moveIn(pool, take.taken, checkout);
-    case "oldest":
-      return cloneSeed(
-        pool,
-        FILE_CLONE_ARGV,
-        take.entry,
-        take.ageMs,
-        checkout,
-        now,
-      );
-  }
+  const taken = await takeNewest(pool, now);
+  if (taken !== null) return moveIn(pool, taken, checkout);
+  // No lock-free copy (off macOS): the pool keeps no seed, and the last
+  // store is handed away like any other.
+  if (FILE_CLONE_ARGV === null) return { kind: "none" };
+  return cloneSeed(pool, FILE_CLONE_ARGV, checkout, now);
 }
 
 async function moveIn(
@@ -303,59 +304,60 @@ async function moveIn(
 }
 
 /**
- * Copy the published seed `entry`'s store into `checkout` without taking it.
- * The copy is made under a transient pool name and moved in by one rename, so
+ * Copy the pool's seed into `checkout` without taking it; `none` when there is
+ * no seed. Both ends are held for the whole copy: the seed by its readers'
+ * lock (the sweep cannot retire it), the copy by its owner lock (the sweep
+ * cannot delete it). So a `cp` that exits 0 made a whole store, and any other
+ * end is a real failure, which throws. The copy is moved in by one rename, so
  * a checkout never holds a partial store (bun trusts an existing package dir).
- *
- * The seed is read unclaimed. No adopter claims it, so the rename that can
- * move it is an expiry: the sweep's claim, or — at the 7-day boundary — an
- * adopter whose clock already counts an older entry expired and so sees this
- * one as claimable. A claim of a seed is never put back unless that adopter's
- * move then fails (rare; the copy then throws). So a
- * seed still published under its own name after the copy was untouched
- * throughout, and a copy that failed or finished while it is gone is discarded
- * (the install is then cold): a vanished seed is that expiry, not a broken
- * copy. A copy that failed with the seed still in place is a real failure and
- * throws.
  */
 async function cloneSeed(
   pool: RenamePool,
   argv: readonly string[],
-  entry: string,
-  ageMs: number,
   checkout: string,
   now: number,
 ): Promise<AdoptResult> {
-  const copy = transientPath(pool, `clone-${basename(checkout)}`, now);
-  const r = await spawnCaptured(
-    [...argv, join(pool.dir, entry, STORE_DIR), copy],
-    {
-      tier: "background",
-      timeoutMs: CLONE_TIMEOUT_MS,
-    },
-  );
-  if (!(await isStillPublished(pool, entry))) {
-    await deletePath(pool, copy);
-    return { kind: "none" };
-  }
-  if (r.timedOut || r.exitCode !== 0) {
-    await deletePath(pool, copy);
-    throw new Error(
-      `copying the pooled dependency store ${entry} ${
-        r.timedOut
-          ? `timed out after ${CLONE_TIMEOUT_MS} ms`
-          : `exited ${r.exitCode}`
-      }: ${r.stderr.trim() || "<no stderr>"}`,
-    );
-  }
+  const seed = await holdSeed(pool);
+  if (seed === null) return { kind: "none" };
+  let copy: HeldTransient;
   try {
-    await mkdir(join(checkout, NODE_MODULES));
-    await rename(copy, join(checkout, STORE_REL));
+    copy = await holdTransient(pool, `clone-${basename(checkout)}`, now);
   } catch (err) {
-    await deletePath(pool, copy);
+    seed.release();
     throw err;
   }
-  return { kind: "cloned", entry, ageMs };
+  const copied = join(copy.path, STORE_DIR);
+  try {
+    let r;
+    try {
+      r = await spawnCaptured([...argv, join(seed.path, STORE_DIR), copied], {
+        tier: "background",
+        timeoutMs: CLONE_TIMEOUT_MS,
+      });
+    } finally {
+      // Read: the sweep may retire it from here on.
+      seed.release();
+    }
+    if (r.timedOut || r.exitCode !== 0) {
+      throw new Error(
+        `copying the pool's seed dependency store ${seed.entry} ${
+          r.timedOut
+            ? `timed out after ${CLONE_TIMEOUT_MS} ms`
+            : `exited ${r.exitCode}`
+        }: ${r.stderr.trim() || "<no stderr>"}`,
+      );
+    }
+    await mkdir(join(checkout, NODE_MODULES));
+    await rename(copied, join(checkout, STORE_REL));
+  } finally {
+    // What is left: the owner file, or a partial copy after a failure.
+    await copy.discard();
+  }
+  return {
+    kind: "cloned",
+    entry: seed.entry,
+    ageMs: now - seed.madeAt,
+  };
 }
 
 /**
@@ -388,7 +390,7 @@ export function describeAdoption(r: AdoptResult): string {
 export function describeHarvest(r: HarvestResult): string {
   switch (r.kind) {
     case "harvested":
-      return `dependency store kept for the next checkout (${r.entry})`;
+      return `dependency store kept for the next checkout (${r.entry}${r.seed ? "; it is the pool's seed" : ""})`;
     case "skipped":
       return `dependency store deleted with the checkout — ${r.why}`;
     case "failed":
