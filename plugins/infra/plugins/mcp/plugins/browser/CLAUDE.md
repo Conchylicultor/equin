@@ -174,10 +174,9 @@ current tab restored; never counted against the tab cap), one after the other
 under one drive slot, waits until it is ready by the e2e harness's rule
 (`waitForScreenReady` from `e2e-harness/page-ready`: painted, network idle, no
 `aria-busy` loader — a page that never painted fails the capture) and returns
-both PNGs. Each captured page drops the agent-worktree build's `experimental`
-class as the build's head stamp adds it (an init script, `stripExperimentalMark`),
-so the build's shot has no red frame or Wish banner that main's lacks — the
-pair compares the app, not the deploy kind. No setting is written. An ADDED route, so no protocol bump: a host that predates it answers
+both PNGs. Neither shot wears the red experimental frame or Wish banner: a
+build's stamp skips any page under automation (`cli/build`'s
+`experimental-marker.ts`), so the pair compares the app, not the deploy kind. An ADDED route, so no protocol bump: a host that predates it answers
 404, read as `HostCannotCaptureError` (captures work once main runs the host
 code).
 

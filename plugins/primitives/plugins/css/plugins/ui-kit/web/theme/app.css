@@ -311,7 +311,8 @@
 /* Agent-worktree deploy frame. The class is stamped into the served index.html
    by `./equin build` (CLI: experimental-marker.ts) — the same JS-sets /
    CSS-styles split as `data-color-scheme`. Compositions and releases never carry it, and
-   neither does a chromeless `?embed=1` document (its host already does).
+   neither does a chromeless `?embed=1` document (its host already does) nor a
+   page under automation (`navigator.webdriver`: the agent browser, e2e runs).
    `experimental-marks-off` is the user's Show experimental marks setting
    (cli/build/experimental-marks). */
 .experimental:not(.experimental-marks-off)::after {

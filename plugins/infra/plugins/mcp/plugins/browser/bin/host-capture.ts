@@ -4,7 +4,6 @@ import {
   trackPageNetwork,
   waitForScreenReady,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/core";
-import { EXPERIMENTAL_CLASS } from "@plugins/framework/plugins/cli/plugins/build/plugins/experimental-marks/core";
 import type {
   HostCapturePairBody,
   HostCapturePairResult,
@@ -55,7 +54,6 @@ async function captureOne(
   trackPageNetwork(page);
   await page.setViewportSize(body.viewport);
   await page.emulateMedia({ colorScheme: body.colorScheme });
-  await page.addInitScript(stripExperimentalMark, EXPERIMENTAL_CLASS);
   const res = await page.goto(url, { waitUntil: "domcontentloaded" });
   const ready = await waitForScreenReady(page);
   if (ready.kind === "blank") {
@@ -71,24 +69,4 @@ async function captureOne(
     paintedAfterMs: ready.paintedAfterMs,
     stillBusy: ready.stillBusy,
   };
-}
-
-/**
- * Runs in the captured page before any of its scripts: takes the agent-worktree
- * build's `experimental` class off <html> as soon as the build's head stamp
- * adds it, so the shot of a worktree build carries neither the red frame nor
- * the other experimental marks (the Wish banner) — a before / after pair
- * compares the app, and main's shot never has them. The capture's own page
- * only: no setting is written, the user's own tabs keep their marks.
- */
-function stripExperimentalMark(className: string): void {
-  const root = document.documentElement;
-  const strip = (): void => {
-    if (root.classList.contains(className)) root.classList.remove(className);
-  };
-  strip();
-  new MutationObserver(strip).observe(root, {
-    attributes: true,
-    attributeFilter: ["class"],
-  });
 }

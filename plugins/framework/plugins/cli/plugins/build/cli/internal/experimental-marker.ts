@@ -23,6 +23,16 @@
 // into every picture of the embedded app (the prototype Compare stage's diff
 // of a mock against the real screen). The stamp reads the same flag values the
 // app does, spelled once in embed's core.
+//
+// And except in a page driven by automation (`navigator.webdriver` — the
+// signal `primitives/scope/automation` names AUTOMATED_BROWSER): the agent
+// browser, an e2e or screenshot script, a before / after capture. The frame is
+// for a PERSON, so they never mistake a worktree's deploy for main's; an agent
+// already knows which deploy it drives, and the frame would only put a red band
+// into every picture it takes and reports (main's shot never has one). The
+// Wish banner follows, as both marks read the one class. A person's own
+// browser — and the Browser app, which turns `navigator.webdriver` off so
+// sites see a person — keeps both marks.
 
 import { writeFileSync } from "node:fs";
 import { readFileSync } from "@plugins/packages/plugins/timed-fs/core";
@@ -33,7 +43,7 @@ import {
 } from "@plugins/primitives/plugins/embed/core";
 
 const STAMP =
-  `<script>if(!${JSON.stringify(Object.values(EMBED_VALUES))}.includes(new URLSearchParams(location.search).get(${JSON.stringify(EMBED_PARAM)})))` +
+  `<script>if(!navigator.webdriver&&!${JSON.stringify(Object.values(EMBED_VALUES))}.includes(new URLSearchParams(location.search).get(${JSON.stringify(EMBED_PARAM)})))` +
   'document.documentElement.classList.add("experimental");</script>';
 
 /**

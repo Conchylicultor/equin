@@ -136,14 +136,10 @@ await withBrowser(async (h) => {
     settleMs: 2500,
   });
   await page.clock.pauseAt(Date.now() + 60_000);
-  // not the drawing: the app's toasts (a slow-op report), and the agent-worktree deploy frame (main
-  // has none, so a worktree's shots would differ from main's by it)
+  // not the drawing: the app's toasts (a slow-op report)
   await page.addStyleTag({
     content: `${TOAST}, [data-sonner-toaster] { display: none !important; }`,
   });
-  await page.evaluate(() =>
-    document.documentElement.classList.add("experimental-marks-off"),
-  );
   if (hide)
     await page.addStyleTag({ content: `${hide} { opacity: 0 !important; }` });
   mkdirSync(out, { recursive: true });
