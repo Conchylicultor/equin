@@ -8,7 +8,6 @@ import {
   type SQLWrapper,
 } from "drizzle-orm";
 import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
-import { db as realDb, quotedRelationsIn } from "@plugins/database/server";
 import {
   decodedRow,
   nullable,
@@ -96,6 +95,7 @@ import {
   type RawRoute,
 } from "./routes";
 import type {
+  CompileHost,
   EntitySource,
   QueryDb,
   RoutedSource,
@@ -261,18 +261,21 @@ export interface CompiledAllCollection<
 }
 
 /**
- * Compile a collection declared `all` (see the header). Every misuse throws
+ * Compile a collection declared `all` (see the header), reading the database
+ * through `host` (`./register`'s `compileAllCollection` hands the real one).
+ * Every misuse throws
  * here, at module eval — the joins' (A4, A35, A37, A38, A39), the projection's
  * (a read of no relation column, C7; an unrendered SQL; an unread grouped
  * join), the order's (a non-base column, A29), the `where`'s (an aggregate),
  * and the SQL's (a quoted relation no route covers; a non-literal param, A40).
  */
-export function compileAllCollection<
+export function compileAllCollectionWith<
   Row,
   T extends RoutedSource,
   const J extends readonly AllJoinSpec[] = readonly [],
   B extends string = never,
 >(
+  host: CompileHost,
   contracts: AllCollectionContracts<Row, B>,
   spec: AllCollectionSpec<T, J>,
 ): CompiledAllCollection<Row, AllQueryParams<B>> {
@@ -294,7 +297,7 @@ export function compileAllCollection<
       `the point contract keys on ${describeKey(contracts.rows.queryPk)}, the whole set on ${describeKey(contract.queryPk)} — one row, one key.`,
     );
   }
-  const db: QueryDb = spec.db ?? (realDb as unknown as QueryDb);
+  const db: QueryDb = spec.db ?? host.db;
   const base = routedBase(spec.from, label);
   const queryKey: QueryKey = contract.queryPk;
   const composite: CompositeKey | null = isCompositeKey(queryKey)
@@ -677,7 +680,7 @@ export function compileAllCollection<
     orderIds: renderQuery(orderIdsSql(placeholder), "the orderIds shape", fail),
   };
   for (const [shape, q] of Object.entries(rendered)) {
-    for (const relation of quotedRelationsIn(q.sql)) {
+    for (const relation of host.quotedRelationsIn(q.sql)) {
       if (!covered.has(relation)) {
         fail(
           `the ${shape} shape reads "${relation}", which no route names and no rollup declares — a change to it would reach no reader (A1 / A8).`,

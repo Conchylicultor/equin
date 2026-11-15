@@ -44,10 +44,8 @@ import {
   type AllQueryResourceContract,
   type PointQueryResourceContract,
 } from "@plugins/network/plugins/live/plugins/query-resource/core";
-import {
-  compileAllCollection,
-  type CompiledAllCollection,
-} from "./compile-alias";
+import type { CompiledAllCollection } from "./compile-alias";
+import { compileAllCollection } from "./register";
 import type { QueryDb } from "./spec";
 
 const nodes = pgTable("c_nodes", {

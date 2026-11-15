@@ -28,7 +28,7 @@ import {
   type CompositeKey,
 } from "@plugins/network/plugins/live/plugins/query-resource/core";
 import type { EntitySource, RoutedSource } from "./spec";
-import { isLookupRead, type LookupRead } from "./compile-lookup";
+import { isLookupRead, type LookupRead } from "./lookup-read";
 import { isFollowRead, type FollowRead } from "./follow";
 
 // The routed half of a compiled read: the `RoutePlan` (or, for a non-keyed

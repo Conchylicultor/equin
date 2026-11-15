@@ -90,6 +90,22 @@ export interface QueryDb extends SqlExecutable<SQL> {
 }
 
 /**
+ * What a digested compile (`compile-window.ts`, `compile-alias.ts` — the
+ * `liveReadCode` source set) reads of the database plugin, handed in by the
+ * registration (`./register`) instead of imported: the database server
+ * barrel shapes no row, and every module it loads would otherwise be in the
+ * digest — one edit to a boot hook or a migration moved it, and the next
+ * restart's successor inherited nothing (main, 2026-11-15: 25 of 115
+ * commits). A spec's own `db` (a test's fake) wins over `db`.
+ */
+export interface CompileHost {
+  /** The per-worktree drizzle `db` — a spec's `db` unless it has one. */
+  readonly db: QueryDb;
+  /** database's `quotedRelationsIn`: the relations a statement's text is captured under. */
+  readonly quotedRelationsIn: (text: string) => string[];
+}
+
+/**
  * One key of a bounded window's total order.
  *
  * RULE: the column MUST be UPDATE-STABLE (immutable post-insert — `createdAt`,

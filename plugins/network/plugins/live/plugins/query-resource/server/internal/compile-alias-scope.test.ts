@@ -42,7 +42,8 @@ import {
   type PointQueryResourceContract,
 } from "@plugins/network/plugins/live/plugins/query-resource/core";
 import { recordingQueryDb, type RecordedQuery } from "../testing/recording-db";
-import { compileAllCollection, type AllCollectionSpec } from "./compile-alias";
+import type { AllCollectionSpec } from "./compile-alias";
+import { compileAllCollection } from "./register";
 
 // ── The schema ───────────────────────────────────────────────────────────────
 

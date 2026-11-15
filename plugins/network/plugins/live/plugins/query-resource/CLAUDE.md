@@ -795,6 +795,23 @@ is forbidden), coerced to a minimal `QueryDb`; tests inject a fake.
 Safe because `@plugins/database/server` builds its pool lazily on the first
 query.
 
+**The digested compilers never import it.** `compile-window.ts` and
+`compile-alias.ts` are in the `liveReadCode` source set (below, *Handoff
+definition*), so everything they statically load moves the digest. They take
+the database as a `CompileHost` (`spec.ts`: the real `db` and database's
+`quotedRelationsIn`) through `compileWindowQueryWith` /
+`compileOffFeedQueryWith` / `compileAllCollectionWith`; the registration half
+— `server/internal/register.ts`: the real host, `defineResource` /
+`defineDeferredResource`, and every entry point the barrels export
+(`windowQueryResource`, `pointQueryResource`, the deferred forms,
+`compileOffFeedQuery`, `compileAllCollection`, testing's `compileWindowQuery`)
+— is outside it. A compiled lookup's brand (`lookup-read.ts`) is apart from
+`compile-lookup.ts` for the same reason: `routes.ts` reads it. When both were
+imported, the digest spanned the database and server-core barrels (216
+files), and 25 of 115 commits on main moved it — each such restart's
+successor inherited no handed-over tuple. `query-resource:live-read-closure`
+(`check/`) holds the closure to a file budget with source-digest's own walk.
+
 ## Boundaries
 
 - `core/` — web-safe, **no runtime drizzle** (type-only imports):
@@ -982,8 +999,8 @@ query.
     - `live/no-legacy-resource-spelling` — `.` (sanctioned)
 - Test helpers:
   - Server: `@plugins/network/plugins/live/plugins/query-resource/server/testing`
-    - `compileAllCollection` — Compile a collection declared `all` (see the header).
-    - `compileWindowQuery` — Turn a bounded spec + its shared contract into the two-arg `defineResource` server half.
+    - `compileAllCollection` — Compile a collection declared `all` (`./compile-alias`) over the real database.
+    - `compileWindowQuery` — Turn a bounded spec + its shared contract into the two-arg `defineResource` server half, without registering — the real database unless the spec carries its own `db` (a test's fake).
     - `recordingQueryDb` — A `QueryDb` that renders every query through drizzle's real `PgDialect` — the SQL a compiler would send — records it, and answers with `script`'s rows instead of running it.
     - Types: `RecordedQuery`
   - Core: `@plugins/network/plugins/live/plugins/query-resource/core/testing`

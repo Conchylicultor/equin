@@ -3,7 +3,8 @@ import { pgTable, pgView, text } from "drizzle-orm/pg-core";
 import { z } from "zod";
 import type { LookupJoin } from "@plugins/network/plugins/live/plugins/query-resource/core";
 import { recordingQueryDb } from "../testing/recording-db";
-import { compileLookup, type LookupRead } from "./compile-lookup";
+import { compileLookup } from "./compile-lookup";
+import type { LookupRead } from "./lookup-read";
 import { compiledValueReach } from "./routes";
 
 // `compileLookup`: one declaration → the tagged by-key statement (`run`) and

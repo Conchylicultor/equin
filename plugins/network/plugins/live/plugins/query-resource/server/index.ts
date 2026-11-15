@@ -1,16 +1,15 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 
 export {
+  compileAllCollection,
   compileOffFeedQuery,
   deferredPointQueryResource,
   deferredWindowQueryResource,
   pointQueryResource,
   windowQueryResource,
-} from "./internal/compile-window";
-export type {
-  CompiledOffFeedQuery,
-  FollowablePoint,
-} from "./internal/compile-window";
+} from "./internal/register";
+export type { FollowablePoint } from "./internal/register";
+export type { CompiledOffFeedQuery } from "./internal/compile-window";
 export { compileAncestorsQuery } from "./internal/compile-ancestors";
 export type {
   AncestorsClosure,
@@ -26,7 +25,6 @@ export type {
 export { compileGroupsQuery } from "./internal/compile-groups";
 export { compileCountQuery } from "./internal/compile-count";
 export type { CompiledCount } from "./internal/compile-count";
-export { compileAllCollection } from "./internal/compile-alias";
 export type {
   AllBind,
   AllCollectionContracts,
@@ -61,10 +59,10 @@ export type { ValueReads } from "./internal/routes";
 export { compileLookup } from "./internal/compile-lookup";
 export type {
   CompiledLookup,
-  LookupRead,
   LookupResult,
   LookupSpec,
 } from "./internal/compile-lookup";
+export type { LookupRead } from "./internal/lookup-read";
 export type { ReadColumn } from "./internal/joins";
 export type { CompiledGroups } from "./internal/compile-groups";
 export type {

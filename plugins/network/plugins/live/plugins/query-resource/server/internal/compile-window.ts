@@ -1,8 +1,3 @@
-import { db as realDb } from "@plugins/database/server";
-import {
-  defineDeferredResource,
-  defineResource,
-} from "@plugins/framework/plugins/server-core/core";
 import type {
   HandoffDefinitionAnswer,
   ExternalPointMembership,
@@ -10,7 +5,6 @@ import type {
   KeyedMembership,
   KeyedServerResourceOptions,
   PointBatch,
-  Resource,
   ResourceParams,
   RoutePlan,
   ScopePolicy,
@@ -18,7 +12,6 @@ import type {
 import type {
   PointParams,
   WindowParams,
-  WindowSelector,
 } from "@plugins/network/plugins/live/plugins/live-state/core";
 import {
   liveReadCode,
@@ -39,7 +32,7 @@ import { exactIdOf } from "./canonical-text";
 import { canonicalSqlType } from "./raw-sql";
 import type {
   BoundedQueryResourceSpec,
-  PointQueryResourceSpec,
+  CompileHost,
   QueryDb,
   WindowOrderKey,
   WindowQueryResourceSpec,
@@ -128,7 +121,7 @@ export interface CompiledOffFeedQuery<Row, P extends ResourceParams> {
   validateParams?: (params: ResourceParams) => void;
 }
 
-type AnyWindowContract<Row, P extends WindowParams = WindowParams> =
+export type AnyWindowContract<Row, P extends WindowParams = WindowParams> =
   WindowQueryResourceContract<Row, P, never> | PointQueryResourceContract<Row>;
 
 function guard(
@@ -415,11 +408,15 @@ type PlannedBounded<Row, P extends ResourceParams> =
  * never a silent misbehavior: the spec's own guards first (kind, codec, order,
  * limits), then the arm's (`planArm`).
  */
-export function compileWindowQuery<Row, P extends WindowParams | PointParams>(
+export function compileWindowQueryWith<
+  Row,
+  P extends WindowParams | PointParams,
+>(
+  host: CompileHost,
   contract: AnyWindowContract<Row, P & WindowParams>,
   spec: BoundedQueryResourceSpec<P>,
 ): CompiledWindowQuery<Row, P> {
-  const planned = planBounded<Row, P>(contract, spec);
+  const planned = planBounded<Row, P>(host, contract, spec);
   return planned.kind === "point"
     ? assemblePoint<Row, P>([planned.arm], planned.outer)
     : assembleWindow<Row, P>([planned.arm], planned.outer);
@@ -432,11 +429,15 @@ export function compileWindowQuery<Row, P extends WindowParams | PointParams>(
  * loader is the routed one, run by the external arm with no `ctx`: a window's
  * windowed FULL read, a point set's read of its ids.
  */
-export function compileOffFeedQuery<Row, P extends WindowParams | PointParams>(
+export function compileOffFeedQueryWith<
+  Row,
+  P extends WindowParams | PointParams,
+>(
+  host: CompileHost,
   contract: AnyWindowContract<Row, P & WindowParams>,
   spec: BoundedQueryResourceSpec<P>,
 ): CompiledOffFeedQuery<Row, P> {
-  const planned = planBounded<Row, P>(contract, spec);
+  const planned = planBounded<Row, P>(host, contract, spec);
   assertKeyField(contract as AnyWindowContract<unknown>, planned.arm.keyField);
   // Every table the SQL may read: the route tables of the routed compile
   // (the base's identity route, one per join and per family), each once.
@@ -468,6 +469,7 @@ export function compileOffFeedQuery<Row, P extends WindowParams | PointParams>(
 
 /** The spec's own guards, then its one arm's plan (`planArm`). */
 function planBounded<Row, P extends WindowParams | PointParams>(
+  host: CompileHost,
   contract: AnyWindowContract<Row, P & WindowParams>,
   spec: BoundedQueryResourceSpec<P>,
 ): PlannedBounded<Row, P> {
@@ -484,7 +486,7 @@ function planBounded<Row, P extends WindowParams | PointParams>(
   );
 
   // One boundary cast (the entities plugin precedent).
-  const db: QueryDb = spec.db ?? (realDb as unknown as QueryDb);
+  const db: QueryDb = spec.db ?? host.db;
   const label = `windowQueryResource("${key}")`;
   const base = routedBase(spec.from, label);
   const relationSet = {
@@ -675,7 +677,7 @@ function planBounded<Row, P extends WindowParams | PointParams>(
 }
 
 /** The descriptor/keyField drift assertion every registration makes. */
-function assertKeyField(
+export function assertKeyField(
   descriptor: AnyWindowContract<unknown>,
   keyField: string,
 ): void {
@@ -688,134 +690,4 @@ function assertKeyField(
         `to the descriptor factory, or the identity/select in the spec.`,
     );
   }
-}
-
-/**
- * `windowQueryResource` whose spec is only known at boot, once contributions
- * are collected (a collection whose columns other plugins contribute): the
- * resource registers now under its descriptor, and `specOf` compiles at
- * `bindDeferredResources` — through the same compiler and the same checks.
- */
-export function deferredWindowQueryResource<
-  Row,
-  P extends WindowParams = WindowParams,
-  S extends WindowSelector = WindowSelector,
->(
-  descriptor: WindowQueryResourceContract<Row, P, S>,
-  specOf: () => WindowQueryResourceSpec<P>,
-): Resource<Row[], P>;
-export function deferredWindowQueryResource<Row>(
-  descriptor: PointQueryResourceContract<Row>,
-  specOf: () => PointQueryResourceSpec<PointParams>,
-): Resource<Row[], PointParams>;
-export function deferredWindowQueryResource<Row>(
-  descriptor: AnyWindowContract<Row>,
-  specOf: () =>
-    WindowQueryResourceSpec<WindowParams> | PointQueryResourceSpec<PointParams>,
-): Resource<Row[], WindowParams> | Resource<Row[], PointParams> {
-  return defineDeferredResource(descriptor, () => {
-    const { serverOpts, keyField } = compileWindowQuery(
-      descriptor,
-      specOf() as BoundedQueryResourceSpec<WindowParams | PointParams>,
-    );
-    assertKeyField(descriptor as AnyWindowContract<unknown>, keyField);
-    return serverOpts;
-  });
-}
-
-/**
- * A `:rows` point set registered with what a follow copies of it (`./follow`):
- * the resource, and its followable — at once for an eager compile, or a
- * getter that throws until `bindDeferredResources` compiled a deferred one.
- */
-export interface FollowablePoint<Row> {
-  resource: Resource<Row[], PointParams>;
-  followable: () => FollowablePlan;
-}
-
-/** `windowQueryResource` for a point set, with its followable (see `FollowablePoint`). */
-export function pointQueryResource<Row>(
-  descriptor: PointQueryResourceContract<Row>,
-  spec: PointQueryResourceSpec<PointParams>,
-): FollowablePoint<Row> {
-  const compiled = compileWindowQuery(
-    descriptor as AnyWindowContract<Row, PointParams & WindowParams>,
-    spec as BoundedQueryResourceSpec<PointParams>,
-  );
-  assertKeyField(descriptor as AnyWindowContract<unknown>, compiled.keyField);
-  const followable = pointFollowable(descriptor.key, compiled);
-  return {
-    resource: defineResource(descriptor, compiled.serverOpts),
-    followable: () => followable,
-  };
-}
-
-/** `deferredWindowQueryResource` for a point set, with its followable (see `FollowablePoint`). */
-export function deferredPointQueryResource<Row>(
-  descriptor: PointQueryResourceContract<Row>,
-  specOf: () => PointQueryResourceSpec<PointParams>,
-): FollowablePoint<Row> {
-  let followable: FollowablePlan | undefined;
-  const resource = defineDeferredResource(descriptor, () => {
-    const compiled = compileWindowQuery(
-      descriptor as AnyWindowContract<Row, PointParams & WindowParams>,
-      specOf() as BoundedQueryResourceSpec<PointParams>,
-    );
-    assertKeyField(descriptor as AnyWindowContract<unknown>, compiled.keyField);
-    followable = pointFollowable(descriptor.key, compiled);
-    return compiled.serverOpts;
-  });
-  return {
-    resource,
-    followable: () => {
-      if (followable === undefined) {
-        throw new Error(
-          `pointQueryResource("${descriptor.key}"): followed before bindDeferredResources compiled it — a follower of a deferred collection binds after it.`,
-        );
-      }
-      return followable;
-    },
-  };
-}
-
-function pointFollowable(
-  key: string,
-  compiled: CompiledWindowQuery<unknown, PointParams>,
-): FollowablePlan {
-  if (compiled.followable === null) {
-    // Unreachable: a point descriptor compiles to the point arm.
-    throw new Error(`pointQueryResource("${key}"): compiled no point set.`);
-  }
-  return compiled.followable;
-}
-
-/**
- * Compile a bounded spec and register the keyed resource against the shared
- * contract. Asserts the contract's `queryPk` equals the derived keyField — a
- * LOUD throw at module evaluation (boot crash) on drift. (A whole ordered set
- * is not a bounded spec: declare it `liveCollection(key, { all })`.)
- */
-export function windowQueryResource<
-  Row,
-  P extends WindowParams = WindowParams,
-  S extends WindowSelector = WindowSelector,
->(
-  descriptor: WindowQueryResourceContract<Row, P, S>,
-  spec: WindowQueryResourceSpec<P>,
-): Resource<Row[], P>;
-export function windowQueryResource<Row>(
-  descriptor: PointQueryResourceContract<Row>,
-  spec: PointQueryResourceSpec<PointParams>,
-): Resource<Row[], PointParams>;
-export function windowQueryResource<Row>(
-  descriptor: AnyWindowContract<Row>,
-  spec:
-    WindowQueryResourceSpec<WindowParams> | PointQueryResourceSpec<PointParams>,
-): Resource<Row[], WindowParams> | Resource<Row[], PointParams> {
-  const { serverOpts, keyField } = compileWindowQuery(
-    descriptor,
-    spec as BoundedQueryResourceSpec<WindowParams | PointParams>,
-  );
-  assertKeyField(descriptor as AnyWindowContract<unknown>, keyField);
-  return defineResource(descriptor, serverOpts);
 }

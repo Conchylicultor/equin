@@ -55,7 +55,8 @@ import {
   type PointQueryResourceContract,
 } from "@plugins/network/plugins/live/plugins/query-resource/core";
 import { recordingQueryDb, type RecordedQuery } from "../testing/recording-db";
-import { compileAllCollection, type AllCollectionSpec } from "./compile-alias";
+import type { AllCollectionSpec } from "./compile-alias";
+import { compileAllCollection } from "./register";
 import { CTE_NAME_RE, WITHIN_IN_SQL_MAX } from "./grouped";
 
 // ── The schema ───────────────────────────────────────────────────────────────

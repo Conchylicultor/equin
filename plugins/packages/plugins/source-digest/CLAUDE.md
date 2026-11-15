@@ -85,7 +85,11 @@ const digest = await sourceDigest([myCode]);
   asks. Rows unread for 14 days are dropped.
 - **Keep the included module small.** The digest moves with everything the
   module loads: include the module holding the parse or the compiler, not the
-  plugin's server entry, or every unrelated change rebuilds the state.
+  plugin's server entry, or every unrelated change rebuilds the state — and
+  hand a server barrel in rather than import it (query-resource's
+  `CompileHost`). `closureFiles(entries)` lists the repo files such a digest
+  covers, by the same walk, for a check holding a set to a budget
+  (`query-resource:live-read-closure`).
 
 Users: `infra/corpus-index` (`corpusFormat`), `network/live/query-resource`'s
 `liveReadCode` (the epoch handoff and every persisted `all` set), and every
@@ -123,6 +127,7 @@ backfill runs once per change of its derivation code: `page/links`,
 - Server:
   - Exports (values):
     - `closureChangedSince`
+    - `closureFiles`
     - `closureRefusal`
     - `sourceDigest`
 - Central:

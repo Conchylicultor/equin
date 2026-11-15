@@ -25,7 +25,7 @@ import {
   retype,
 } from "@plugins/packages/plugins/zod-introspect/core";
 import { recordingQueryDb } from "../testing/recording-db";
-import { compileWindowQuery } from "./compile-window";
+import { compileWindowQuery } from "./register";
 import type { PointQueryResourceSpec } from "./spec";
 
 const items = pgTable("pd_items", {

@@ -34,9 +34,8 @@ import {
   type PointQueryResourceContract,
 } from "@plugins/network/plugins/live/plugins/query-resource/core";
 import { recordingQueryDb } from "../testing/recording-db";
-import { compileAllCollection } from "./compile-alias";
 import { compileLookup } from "./compile-lookup";
-import { compileWindowQuery } from "./compile-window";
+import { compileAllCollection, compileWindowQuery } from "./register";
 import { followRead, type FollowablePlan, type FollowRead } from "./follow";
 import { compileJoins } from "./joins";
 import { compiledValueReach, routedBase } from "./routes";

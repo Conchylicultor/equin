@@ -41869,8 +41869,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `live/no-legacy-resource-spelling` — `.` (sanctioned)
           - Test helpers:
             - Server: `@plugins/network/plugins/live/plugins/query-resource/server/testing`
-              - `compileAllCollection` — Compile a collection declared `all` (see the header).
-              - `compileWindowQuery` — Turn a bounded spec + its shared contract into the two-arg `defineResource` server half.
+              - `compileAllCollection` — Compile a collection declared `all` (`./compile-alias`) over the real database.
+              - `compileWindowQuery` — Turn a bounded spec + its shared contract into the two-arg `defineResource` server half, without registering — the real database unless the spec carries its own `db` (a test's fake).
               - `recordingQueryDb` — A `QueryDb` that renders every query through drizzle's real `PgDialect` — the SQL a compiler would send — records it, and answers with `script`'s rows instead of running it.
               - Types: `RecordedQuery`
             - Core: `@plugins/network/plugins/live/plugins/query-resource/core/testing`
@@ -42682,6 +42682,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Server:
         - Exports (values):
           - `closureChangedSince`
+          - `closureFiles`
           - `closureRefusal`
           - `sourceDigest`
       - Central:

@@ -6,6 +6,7 @@ import { prewarmSourceDigests } from "../shared/digest";
 
 export {
   closureChangedSince,
+  closureFiles,
   closureRefusal,
   sourceDigest,
 } from "../shared/digest";

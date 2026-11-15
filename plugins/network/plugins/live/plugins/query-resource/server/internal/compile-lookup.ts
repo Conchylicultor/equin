@@ -13,6 +13,7 @@ import type {
 } from "@plugins/network/plugins/live/plugins/query-resource/core";
 import { planArm } from "./arm-plan";
 import { compileJoins } from "./joins";
+import { LOOKUP_READ, type LookupRead } from "./lookup-read";
 import { BASE_ROUTE_ID, routedBase, tablePrimary } from "./routes";
 import type { QueryDb, RoutedSource, SelectMap } from "./spec";
 
@@ -47,33 +48,6 @@ export type LookupResult<Row> = { found: true; row: Row } | { found: false };
 
 // The projection field the key rides under (dropped before `row` parses).
 const KEY_FIELD = "__lookup_key";
-
-// The mark a compiled lookup puts on a read. Module-private, so a
-// `LookupRead` cannot be spelled as a literal: its routes' columns gate
-// updates, so only the code that renders the SQL may state them.
-const COMPILED: unique symbol = Symbol("query-resource.lookup-read");
-
-/**
- * What a compiled lookup reads for a reader keyed by `P`, for a served value's
- * `reads.lookups` (`compiledValueReach`): its routes — one `full` route per
- * relation, gated by the columns its SQL reads, the key table's matched per
- * tuple — and which of them each tuple reads. Minted by
- * `CompiledLookup.read` only.
- */
-export interface LookupRead<P extends ResourceParams = ResourceParams> {
-  /** The lookup's label — its read tag, and the prefix of its route ids. */
-  readonly label: string;
-  /** Every relation its SQL reads, as a `full` route (ids `<label>:<relation>`). */
-  readonly routes: readonly FullRoute[];
-  /** The routes `params` reads: none when the tuple names no key. */
-  readonly usesOf: (params: P) => ReadonlyMap<string, TupleUse>;
-  readonly [COMPILED]: true;
-}
-
-/** Whether `read` came from a compiled lookup (not a cast literal). */
-export function isLookupRead(read: object): read is LookupRead<never> {
-  return (read as Partial<LookupRead>)[COMPILED] === true;
-}
 
 export interface CompiledLookup<Row> {
   /**
@@ -209,7 +183,7 @@ export function compileLookup<Row>(spec: LookupSpec<Row>): CompiledLookup<Row> {
           ]),
         );
       },
-      [COMPILED]: true,
+      [LOOKUP_READ]: true,
     }),
   };
 }

@@ -584,6 +584,21 @@ export async function sourceDigest(
 }
 
 /**
+ * The repo files a digest whose set includes `entries` (absolute module
+ * paths) covers, sorted — the same walk {@link sourceDigest} reads, so what
+ * moves such a digest is exactly an edit to one of these (or a package
+ * version). For a guard that keeps a set's closure to the code its state
+ * depends on (`network/live/query-resource`'s `live-read-closure` check: a
+ * set reaching a server barrel moves with every unrelated edit).
+ */
+export async function closureFiles(
+  entries: readonly string[],
+): Promise<string[]> {
+  const closure = await closureOf([...entries].sort());
+  return [...closure.files.keys()].sort();
+}
+
+/**
  * Start digesting every set defined so far, without waiting (boot): each is
  * then read as close as possible to when its modules were imported.
  */
