@@ -22,16 +22,17 @@
  * And asserts, throughout, that the page itself never moved:
  *
  *  - the page stays on the demo (its URL follows the embed, never the app);
- *  - no request for `/api/…` left for the page's origin during the steps,
- *    except the sanctioned telemetry routes — the list `no-leak.ts` checks
- *    against (D3) — and no page socket was opened, and the page's own
- *    live-state socket subscribed to nothing naming the demo's data;
+ *  - the demo's rule (`internal/page-origin.ts`, this plugin's CLAUDE.md): no
+ *    page-origin `/api/…` request issued from inside the demo, every one
+ *    attributed, no page glyph inside the embed;
+ *    no page socket was opened, and the page's own live-state socket
+ *    subscribed to nothing naming the demo's data;
  *  - no "Opens outside this embed" toast, no page error, no console error.
  *
  * Manual only — nothing runs this automatically.
  *   ./equin run plugins/apps/plugins/website/plugins/landing/plugins/screenshot/e2e/app-switch.ts [--out /tmp/demo-app-switch] [--headed]
  */
-import type { Locator, Page, Request, WebSocket } from "playwright";
+import type { Locator, Page, WebSocket } from "playwright";
 import { tapSharedSocket } from "@plugins/primitives/plugins/networking/e2e";
 import { pickFromLauncher } from "@plugins/apps-core/plugins/app-launcher/e2e";
 import {
@@ -53,20 +54,9 @@ import {
   bootDemo,
   MARKER,
 } from "./internal/demo-pages";
+import { watchPageOrigin } from "./internal/page-origin";
 
 const OUT = arg("out") ?? "/tmp/demo-app-switch";
-
-/** The page-origin `/api` routes a demo may still call — `no-leak.ts`'s list (D3). */
-const SANCTIONED: readonly RegExp[] = [
-  /^\/api\/logs\/emit$/,
-  /^\/api\/latency-ledger\/client$/,
-  /^\/api\/slow-ops\/client$/,
-  /^\/api\/app-usage\/flush$/,
-  /^\/api\/analytics\/collect$/,
-  /^\/api\/reports$/,
-  /^\/api\/icons\/(sprite|symbols)\//,
-  /^\/api\/health(\/ready)?$/,
-];
 
 /** The seeded pages (`website/demos/workspace`'s `core/internal/pages.ts`). */
 const ROOT_PAGES = ["Welcome to equin", "Piano practice", "Ideas"] as const;
@@ -115,14 +105,7 @@ await withBrowser(async (h) => {
     .waitFor();
 
   // From here on, every /api request the page itself sends is recorded.
-  const leaked: string[] = [];
-  const onRequest = (req: Request): void => {
-    const url = new URL(req.url());
-    if (!url.pathname.startsWith("/api/")) return;
-    if (!SANCTIONED.some((re) => re.test(url.pathname)))
-      leaked.push(`${req.method()} ${url.pathname}`);
-  };
-  page.on("request", onRequest);
+  const pageRequests = watchPageOrigin(page, r);
   const openedSockets: string[] = [];
   const onSocket = (ws: WebSocket): void => {
     openedSockets.push(new URL(ws.url()).pathname);
@@ -314,15 +297,10 @@ await withBrowser(async (h) => {
     await snap(page, OUT, "4-open-in-pages");
   }
 
-  page.off("request", onRequest);
   page.off("websocket", onSocket);
 
   // ── assertions ──────────────────────────────────────────────────────────
-  r.eq(
-    "no /api request left for the page's origin (sanctioned telemetry aside)",
-    leaked,
-    [],
-  );
+  await pageRequests.finish();
   r.eq("the page opened no socket of its own", openedSockets, []);
   const pageSubs = socketTap
     .sent(NOTIFICATIONS)

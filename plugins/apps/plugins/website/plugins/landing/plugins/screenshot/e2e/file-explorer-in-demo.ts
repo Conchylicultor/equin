@@ -23,14 +23,15 @@
  * Every file-type and Lucide icon is drawn from the demo's own server
  * (`ScopeIconSymbols` reads `icons.sprite` through the scope).
  *
- * And asserts, throughout, that nothing left the scope — the list `no-leak.ts`
- * checks against (D3): no `/api/…` request for the page's origin but the
- * sanctioned telemetry routes, no page socket, no page or console error.
+ * And asserts, throughout, that nothing left the scope — the demo's rule (`internal/page-origin.ts`, this plugin's CLAUDE.md): no
+ * page-origin `/api/…` request issued from inside the demo, every one
+ * attributed, no page glyph inside the embed;
+ * no page socket, no page or console error.
  *
  * Manual only — nothing runs this automatically.
  *   ./equin run plugins/apps/plugins/website/plugins/landing/plugins/screenshot/e2e/file-explorer-in-demo.ts [--out /tmp/demo-files] [--headed]
  */
-import type { Locator, Page, Request, WebSocket } from "playwright";
+import type { Locator, Page, WebSocket } from "playwright";
 import { pickFromLauncher } from "@plugins/apps-core/plugins/app-launcher/e2e";
 import { DATA_DIR_NAME } from "@plugins/infra/plugins/paths/plugins/data-root-layout/core";
 import {
@@ -51,20 +52,9 @@ import {
   bootDemo,
   MARKER,
 } from "./internal/demo-pages";
+import { watchPageOrigin } from "./internal/page-origin";
 
 const OUT = arg("out") ?? "/tmp/demo-files";
-
-/** The page-origin `/api` routes a demo may still call — `no-leak.ts`'s list (D3). */
-const SANCTIONED: readonly RegExp[] = [
-  /^\/api\/logs\/emit$/,
-  /^\/api\/latency-ledger\/client$/,
-  /^\/api\/slow-ops\/client$/,
-  /^\/api\/app-usage\/flush$/,
-  /^\/api\/analytics\/collect$/,
-  /^\/api\/reports$/,
-  /^\/api\/icons\/(sprite|symbols)\//,
-  /^\/api\/health(\/ready)?$/,
-];
 
 /** The app's launcher name and id (`apps/file-explorer/shell`'s `fileExplorerApp`). */
 const APP_NAME = /^\s*Files\s*$/;
@@ -128,16 +118,7 @@ await withBrowser(async (h) => {
   const r = report("demo: Files on the browser worker");
   const { page, captured } = await h.session();
 
-  let demoUp = false;
-  const leaked: string[] = [];
-  const onRequest = (req: Request): void => {
-    const url = new URL(req.url());
-    if (!demoUp || url.origin !== new URL(page.url()).origin) return;
-    if (!url.pathname.startsWith("/api/")) return;
-    if (!SANCTIONED.some((re) => re.test(url.pathname)))
-      leaked.push(`${req.method()} ${url.pathname}`);
-  };
-  page.on("request", onRequest);
+  const pageRequests = watchPageOrigin(page, r);
   const openedSockets: string[] = [];
   const onSocket = (ws: WebSocket): void => {
     openedSockets.push(new URL(ws.url()).pathname);
@@ -165,7 +146,6 @@ await withBrowser(async (h) => {
   await bootDemo(page, pathUrl(demoPath(AGENT_MANAGER_LOCATION)), {
     marker: MARKER,
   });
-  demoUp = true;
   r.ok(
     "the launcher offers Files",
     await pickFromLauncher(embedRoot(page), APP_NAME),
@@ -413,13 +393,8 @@ await withBrowser(async (h) => {
 
   r.ok("the page stays on the demo", onDemoPage(page.url()), page.url());
 
-  page.off("request", onRequest);
   page.off("websocket", onSocket);
-  r.eq(
-    "no /api request left for the page's origin (sanctioned telemetry aside)",
-    leaked,
-    [],
-  );
+  await pageRequests.finish();
   r.eq("the page opened no socket of its own", openedSockets, []);
   r.eq("no page errors", captured.pageErrors, []);
   r.eq("no console errors", captured.consoleErrors, []);

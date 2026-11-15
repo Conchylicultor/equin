@@ -20,6 +20,7 @@ export type {
   SharedWorkerLike,
 } from "./transport-types";
 export { TransportProvider, useTransport } from "./transport";
+export { RequestIssuerScope, stampIssuer } from "./request-issuer";
 export type {
   ContentServing,
   Transport,

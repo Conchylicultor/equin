@@ -37,9 +37,10 @@
  * (`tapSharedWorkerRequests`).
  *
  * And asserts, throughout, that the page itself never moved and nothing left
- * the scope — the list `no-leak.ts` checks against (D3): no `/api/…` request
- * for the page's origin but the sanctioned telemetry routes, no page socket,
- * no page or console error.
+ * the scope — the demo's rule (`internal/page-origin.ts`, this plugin's CLAUDE.md): no
+ * page-origin `/api/…` request issued from inside the demo, every one
+ * attributed, no page glyph inside the embed; no page socket, no page or
+ * console error.
  *
  * Manual only — nothing runs this automatically.
  *   ./equin run plugins/apps/plugins/website/plugins/landing/plugins/screenshot/e2e/sonata-in-demo.ts [--out /tmp/demo-sonata] [--headed]
@@ -71,20 +72,9 @@ import {
   bootDemo,
   MARKER,
 } from "./internal/demo-pages";
+import { watchPageOrigin } from "./internal/page-origin";
 
 const OUT = arg("out") ?? "/tmp/demo-sonata";
-
-/** The page-origin `/api` routes a demo may still call — `no-leak.ts`'s list (D3). */
-const SANCTIONED: readonly RegExp[] = [
-  /^\/api\/logs\/emit$/,
-  /^\/api\/latency-ledger\/client$/,
-  /^\/api\/slow-ops\/client$/,
-  /^\/api\/app-usage\/flush$/,
-  /^\/api\/analytics\/collect$/,
-  /^\/api\/reports$/,
-  /^\/api\/icons\/(sprite|symbols)\//,
-  /^\/api\/health(\/ready)?$/,
-];
 
 /** The demo's songs (`website/demos/workspace`'s `core/internal/songs.ts`) and a MIDI starter. */
 const DEMO_SONGS = [
@@ -174,21 +164,12 @@ await withBrowser(async (h) => {
   await tapVoices(page);
   await tapDecodes(page);
 
-  // The page's own boot reads its shell's resources — some (Mail's sync
-  // state, the Settings conflict dot) after the demo shows when the demo
-  // boots fast, as it does warm. Once the demo is up and the page has gone
-  // quiet, every /api request the page itself sends is recorded.
-  let demoUp: string | null = null;
-  const leaked: string[] = [];
+  const pageRequests = watchPageOrigin(page, r);
   /** Sample requests the page itself made — the mirror's job, never the page's. */
   const pageSamples: string[] = [];
   const onRequest = (req: Request): void => {
-    const url = new URL(req.url());
-    if (url.host === SAMPLE_CDN) pageSamples.push(url.pathname);
-    if (demoUp === null || url.origin !== new URL(page.url()).origin) return;
-    if (!url.pathname.startsWith("/api/")) return;
-    if (!SANCTIONED.some((re) => re.test(url.pathname)))
-      leaked.push(`${demoUp}: ${req.method()} ${url.pathname}`);
+    if (new URL(req.url()).host === SAMPLE_CDN)
+      pageSamples.push(new URL(req.url()).pathname);
   };
   page.on("request", onRequest);
   const openedSockets: string[] = [];
@@ -251,7 +232,6 @@ await withBrowser(async (h) => {
       marker: MARKER,
     });
     await waitForNetworkIdle(page);
-    demoUp = pass;
     await renders(
       `${pass}: the demo's worker is recorded`,
       async () => worker.workers().filter((w) => isHost(w.url) && w.recording),
@@ -363,7 +343,6 @@ await withBrowser(async (h) => {
     ),
     [],
   );
-  demoUp = null;
   await page.goto("about:blank");
   await renders(
     "the demo's workers end once no page holds them",
@@ -384,11 +363,7 @@ await withBrowser(async (h) => {
   await worker.stop();
 
   r.eq("the page itself requested no sample", pageSamples, []);
-  r.eq(
-    "no /api request left for the page's origin (sanctioned telemetry aside)",
-    leaked,
-    [],
-  );
+  await pageRequests.finish();
   r.eq("the page opened no socket of its own", openedSockets, []);
   r.eq("no page errors", captured.pageErrors, []);
   r.eq("no console errors", captured.consoleErrors, []);

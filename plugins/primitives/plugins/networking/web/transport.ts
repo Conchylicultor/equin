@@ -8,6 +8,7 @@ import type {
   SharedWebSocket,
   SharedWebSocketOptions,
 } from "./shared-websocket";
+import { issuedBy, useRequestIssuer } from "./request-issuer";
 
 /**
  * The part of a socket a transport client relies on — what `SharedWebSocket`
@@ -137,7 +138,12 @@ export interface Transport {
 
 const TransportContext = createContext<Transport | null>(null);
 
-/** Points every transport client in `children` at `transport`. */
+/**
+ * Points every transport client in `children` at `transport`. The PAGE's
+ * transport handed out inside a scope that names its issuer
+ * (`RequestIssuerScope`) stamps that scope on its requests, so a scope
+ * reaching the page's server is told apart from the page's own chrome.
+ */
 export function TransportProvider({
   transport,
   children,
@@ -145,11 +151,12 @@ export function TransportProvider({
   transport: Transport;
   children: ReactNode;
 }) {
-  return createElement(
-    TransportContext.Provider,
-    { value: transport },
-    children,
-  );
+  const issuer = useRequestIssuer();
+  const value =
+    issuer !== null && transport.server === "page"
+      ? issuedBy(transport, issuer)
+      : transport;
+  return createElement(TransportContext.Provider, { value }, children);
 }
 
 /**

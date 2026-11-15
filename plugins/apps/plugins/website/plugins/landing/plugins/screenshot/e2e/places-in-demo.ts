@@ -31,11 +31,10 @@
  *     shelf's launcher, takes it full screen, and comes back through the
  *     Layout control.
  *
- * And asserts, throughout, that nothing left the scope — the list `no-leak.ts`
- * checks against (D3): no `/api/…` request for the page's origin but the
- * sanctioned telemetry routes (the icons included — no exception, but the
- * glyphs of the page's own View options popover while step 5 drives it: the
- * page's chrome, not the demo), no page socket, no page or console error — and
+ * And asserts, throughout, that nothing left the scope — the demo's rule (`internal/page-origin.ts`, this plugin's CLAUDE.md): no
+ * page-origin `/api/…` request issued from inside the demo, every one
+ * attributed, no page glyph inside the embed;
+ * no page socket, no page or console error — and
  * that every request to another origin, the page's or the worker's, goes to a
  * host a scoped plugin declares (`externalHosts`, `ExternalHosts.Declare`),
  * and that no request reaches the Places API (the page's key draws the map
@@ -48,7 +47,7 @@
  * Manual only — nothing runs this automatically.
  *   ./equin run plugins/apps/plugins/website/plugins/landing/plugins/screenshot/e2e/places-in-demo.ts [--out /tmp/demo-places] [--site --composition website] [--headed]
  */
-import type { Locator, Page, Request, WebSocket } from "playwright";
+import type { Locator, Page, WebSocket } from "playwright";
 import { pickFromLauncher } from "@plugins/apps-core/plugins/app-launcher/e2e";
 import { shownWindowIds } from "@plugins/apps/plugins/desktop/plugins/windows/e2e";
 import { pickSurfaceMode } from "@plugins/apps-core/plugins/surface/e2e";
@@ -76,6 +75,7 @@ import {
   bootDemo,
   MARKER,
 } from "./internal/demo-pages";
+import { watchPageOrigin } from "./internal/page-origin";
 
 const OUT = arg("out") ?? "/tmp/demo-places";
 /** Drive the standalone website's live demo (the `website` composition) instead of main's `/about`. */
@@ -90,21 +90,6 @@ function demoUrl(location: string): string {
 function onPage(url: string): boolean {
   return onDemoPage(url);
 }
-
-/** The page-origin `/api` routes a demo may still call — `no-leak.ts`'s list (D3). */
-const SANCTIONED: readonly RegExp[] = [
-  /^\/api\/logs\/emit$/,
-  /^\/api\/latency-ledger\/client$/,
-  /^\/api\/slow-ops\/client$/,
-  /^\/api\/app-usage\/flush$/,
-  /^\/api\/analytics\/collect$/,
-  /^\/api\/reports$/,
-  /^\/api\/health(\/ready)?$/,
-];
-
-/** A glyph read: what the page's own chrome may ask its server for (`desktop-in-demo.ts`'s). */
-const PAGE_GLYPH_READ =
-  /^\/api\/(resources\/icons\.runtime-symbols|icons\/glyph-assets\/)/;
 
 /** The demo's places (`core/internal/places.ts`). */
 const PLACE_COUNT = DEMO_PLACES.places.length;
@@ -198,36 +183,12 @@ await withBrowser(async (h) => {
   const origin = new URL(page.url()).origin;
   const declared = new Set(externalHosts.map((h) => h.host));
 
-  const leaked: string[] = [];
-  // While the test drives the PAGE's own chrome (its View options popover,
-  // whose Layout control acts on the embed), that chrome's glyphs are the
-  // page's and come from the page's server — not a read escaping the scope.
-  // That the scope's own icons never draw from the page is checked on the DOM
-  // (no saved icon in the embed draws from the page's sheet, step 1b).
-  let inPageChrome = false;
-  const offOrigin: string[] = [];
+  const pageRequests = watchPageOrigin(page, r);
+  /** Every host the page sent a request to off its origin. */
+  const offOrigin = (): string[] => pageRequests.offOrigin.map((o) => o.host);
   /** Every off-origin request as `host/path`. */
-  const offOriginUrls: string[] = [];
-  const onRequest = (req: Request): void => {
-    const url = new URL(req.url());
-    if (url.protocol !== "http:" && url.protocol !== "https:") return;
-    if (url.origin !== origin) {
-      offOrigin.push(url.host);
-      offOriginUrls.push(`${url.host}${url.pathname}`);
-      return;
-    }
-    if (!url.pathname.startsWith("/api/")) return;
-    if (SANCTIONED.some((re) => re.test(url.pathname))) return;
-    const line = `${req.method()} ${url.pathname}`;
-    if (inPageChrome && PAGE_GLYPH_READ.test(url.pathname)) {
-      r.note(`the page's own chrome: ${line}${url.search}`);
-      return;
-    }
-    leaked.push(line);
-    // What it asked for, so a leak names its reader (e.g. the glyphs).
-    r.note(`leaked: ${line}${url.search}`);
-  };
-  page.on("request", onRequest);
+  const offOriginUrls = (): string[] =>
+    pageRequests.offOrigin.map((o) => `${o.host}${o.path}`);
   const openedSockets: string[] = [];
   const onSocket = (ws: WebSocket): void => {
     openedSockets.push(new URL(ws.url()).pathname);
@@ -304,7 +265,7 @@ await withBrowser(async (h) => {
   if (map.value === "google") {
     await renders(
       "Google's tiles loaded from Google",
-      async () => offOrigin.filter((host) => host.endsWith("googleapis.com")),
+      async () => offOrigin().filter((host) => host.endsWith("googleapis.com")),
       (hosts) => hosts.length > 0,
     );
   }
@@ -502,14 +463,8 @@ await withBrowser(async (h) => {
   // The Layout control is the page's action bar: main's, never the
   // website's (its page has none).
   if (!SITE) {
-    inPageChrome = true;
-    try {
-      // The popover's glyphs are asked once it renders, before its radio is
-      // clicked: inside this window.
-      await pickSurfaceMode(page, "Desktop");
-    } finally {
-      inPageChrome = false;
-    }
+    // The popover's glyphs are the page's own chrome (attributed `page`).
+    await pickSurfaceMode(page, "Desktop");
     await renders(
       "the Layout control returns to the desktop",
       () => shownWindowIds(embedRoot(page)),
@@ -518,21 +473,16 @@ await withBrowser(async (h) => {
   }
   r.ok("the page stays on the demo", onPage(page.url()), page.url());
 
-  page.off("request", onRequest);
   page.off("websocket", onSocket);
 
   // ── assertions ──────────────────────────────────────────────────────────
-  r.eq(
-    "no /api request left for the page's origin (sanctioned telemetry aside)",
-    leaked,
-    [],
-  );
+  await pageRequests.finish();
   r.eq("the page opened no socket of its own", openedSockets, []);
   const workerHosts = worker.requests
     .map((req) => new URL(req.url))
     .filter((url) => url.origin !== origin && url.protocol.startsWith("http"))
     .map((url) => url.host);
-  const reached = [...new Set([...offOrigin, ...workerHosts])].sort();
+  const reached = [...new Set([...offOrigin(), ...workerHosts])].sort();
   r.note(`third-party hosts reached: ${reached.join(", ") || "none"}`);
   r.eq(
     "every third-party host reached is declared (ExternalHosts.Declare)",
@@ -545,7 +495,7 @@ await withBrowser(async (h) => {
     .map((url) => `${url.host}${url.pathname}`);
   r.eq(
     "no Places API request (the demo's key draws the map only)",
-    [...offOriginUrls, ...workerUrls].filter((u) => PLACES_API.test(u)),
+    [...offOriginUrls(), ...workerUrls].filter((u) => PLACES_API.test(u)),
     [],
   );
   r.eq("no page errors", captured.pageErrors, []);
@@ -559,7 +509,7 @@ await withBrowser(async (h) => {
   // Which basemap the page's config asked for: with a Map ID, Google fetches
   // the Map ID's configuration (its cloud style) before drawing the vector map.
   if (map.value === "google") {
-    const askedVector = offOriginUrls.some((u) => MAP_ID_CONFIG.test(u));
+    const askedVector = offOriginUrls().some((u) => MAP_ID_CONFIG.test(u));
     r.note(
       `basemap: ${
         askedVector

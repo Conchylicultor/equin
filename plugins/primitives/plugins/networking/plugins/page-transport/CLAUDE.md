@@ -27,7 +27,9 @@ to itself).
 - Description: pageTransport: the page's own server as a Transport (same-origin SharedWebSocket, the native fetch past the page request guard, plain asset paths, machine, its telemetry reported). The app root mounts it; every other importer is a sanctioned exemption of networking/no-page-transport (page-wide telemetry, boot).
 - Web:
   - Uses:
+    - `primitives/networking.ContentServing`
     - `primitives/networking.SharedWebSocket`
+    - `primitives/networking.stampIssuer`
     - `primitives/networking.Transport`
     - `primitives/networking/request-guard.nativeFetch`
   - Exports (values): `pageTransport`

@@ -31094,11 +31094,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Plugins:
             - **`scope`** — <DemoScope scenario>: renders its subtree against the scenario's browser host — real server code in a worker, on the scenario's seed — and scoped to the host's composition (<PluginScope>), so the page shows exactly the plugins the worker serves. Everything inside reaches the host only (the scope's transport): the build's coverage guard holds the host to serving every read, endpoint and config the scope uses, or declaring it needsMachine (answered unavailable); a key or endpoint it still does not serve fails loudly. A host that fails to boot throws to the error boundary. An optional boot render gates the demo on every visit (DemoBoot: checking, the gate, then starting with the worker's progress): the visitor enters it (enter), or — while they are in the demo in another tab of this browser (a shared Web Lock each such tab holds) — the tab joins it with no gate (onEnter hears both, and which: the gate's click, or a join no one acted on); a page whose own URL says whether the visitor is in decides alone (resume: true — no gate, only the loading; false — the gate, no join); behind the gate, a browser already holding the demo's data starts the host at once, a first visit only on enter, since it downloads the whole server and its data. Connects to one SharedWorker per build (every tab of the demo shares its server and data: a worker that finds the same host serving under another name sends the tab there — it joins, never takes it), shows the true cause when the host will not serve the page (equin updated in another tab; a browser without SharedWorker that opened it in another tab), and exposes Reset (useDemoHostControl) — the host wipes its data and every tab reconnects to a fresh one.
               - Web:
-                - Uses: 23 symbols — full list in [`plugins/framework/plugins/browser-server/plugins/demo/plugins/scope/REFERENCE.md`](../plugins/framework/plugins/browser-server/plugins/demo/plugins/scope/REFERENCE.md)
+                - Uses: 24 symbols — full list in [`plugins/framework/plugins/browser-server/plugins/demo/plugins/scope/REFERENCE.md`](../plugins/framework/plugins/browser-server/plugins/demo/plugins/scope/REFERENCE.md)
                   - `framework/browser-server` ×6
+                  - `primitives/networking` ×3
                   - `network/live/live-state` ×2
                   - `primitives/dom/web-storage` ×2
-                  - `primitives/networking` ×2
                   - `network/live.useLive`
                   - `primitives/css/center.Center`
                   - `primitives/css/spacing.Stack`
@@ -53827,9 +53827,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `probeUrlStatus`
           - `publishNetDiag`
           - `publishWsStatus`
+          - `RequestIssuerScope`
           - `requestTimingOf`
           - `RESOURCE_TIMING_WAIT_MS`
           - `SharedWebSocket`
+          - `stampIssuer`
           - `subscribeNetDiag`
           - `subscribeWsStatus`
           - `TransportProvider`
@@ -53838,19 +53840,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useTransport`
           - `useTransportScoped`
       - Cross-plugin:
-        - Imported by: 41 plugins — full list in [`plugins/primitives/plugins/networking/REFERENCE.md`](../plugins/primitives/plugins/networking/REFERENCE.md)
+        - Imported by: 43 plugins — full list in [`plugins/primitives/plugins/networking/REFERENCE.md`](../plugins/primitives/plugins/networking/REFERENCE.md)
           - `apps` ×11
           - `primitives` ×7
           - `conversations` ×5
-          - `network` ×4
+          - `network` ×5
           - `framework` ×3
           - `auth` ×2
           - `debug` ×2
           - `infra` ×2
           - `page` ×2
+          - `ui` ×2
           - `shell/notifications`
           - `tasks/tasks-core`
-          - `ui/icons/emoji`
       - Exemptions:
         - Exempts itself from:
           - `no-raw-websocket` — `web/shared-ws.worker.ts` (sanctioned)
@@ -53876,12 +53878,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Core:
         - Exports (types):
           - `ReadFrame`
+          - `RequestIssuer`
           - `WsTestControls`
           - `WsTestEvent`
           - `WsTestHook`
         - Exports (values):
           - `addressFrame`
+          - `PAGE_ISSUER`
+          - `pageIssuerHeaders`
+          - `parseRequestIssuer`
           - `readAddressedFrame`
+          - `REQUEST_ISSUER_HEADER`
+          - `scopeIssuer`
           - `WS_TEST_HOOK_GLOBAL`
           - `wsTestHook`
       - Test helpers:
@@ -53901,7 +53909,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`page-transport`** — pageTransport: the page's own server as a Transport (same-origin SharedWebSocket, the native fetch past the page request guard, plain asset paths, machine, its telemetry reported). The app root mounts it; every other importer is a sanctioned exemption of networking/no-page-transport (page-wide telemetry, boot).
           - Web:
             - Uses:
+              - `primitives/networking.ContentServing`
               - `primitives/networking.SharedWebSocket`
+              - `primitives/networking.stampIssuer`
               - `primitives/networking.Transport`
               - `primitives/networking/request-guard.nativeFetch`
             - Exports (values): `pageTransport`

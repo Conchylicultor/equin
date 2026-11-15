@@ -8,7 +8,11 @@ import {
   GATEWAY_PORT,
   namespaceFromHost,
 } from "@plugins/infra/plugins/namespace/core";
-import type { ContentServing } from "@plugins/primitives/plugins/networking/web";
+import {
+  stampIssuer,
+  type ContentServing,
+} from "@plugins/primitives/plugins/networking/web";
+import { PAGE_ISSUER } from "@plugins/primitives/plugins/networking/core";
 
 /**
  * The page's content host: `<item>.content.localhost:<port>/<ns>/…` for the
@@ -28,7 +32,7 @@ function pageContentServing(): ContentServing | null {
 
 /**
  * The page's own server: same-origin sockets (one `SharedWebSocket` per URL),
- * the native `fetch` (past the page request guard — the one raw `fetch` the
+ * the native `fetch` (each request stamped with its issuer; past the page request guard — the one raw `fetch` the
  * page's own traffic goes through), assets loaded by their own path, content
  * documents on the content host, the computer behind it, and its
  * telemetry reported (to itself). Mounted once at the app root; anything else reaching
@@ -39,7 +43,11 @@ export const pageTransport: Transport = {
   socketUrl: (path) => path,
   server: "page",
   openSocket: (url, options) => new SharedWebSocket(url, undefined, options),
-  fetch: (input, init) => nativeFetch(input, init),
+  // Every request names its issuer (`page`, unless a scope's wrapper named
+  // itself first — `RequestIssuerScope`), so e2e tells the page's own
+  // requests from a scope's leak.
+  fetch: (input, init) =>
+    nativeFetch(input, stampIssuer(input, init, PAGE_ISSUER, false)),
   servesUrls: true,
   requestTiming: true,
   content: pageContentServing(),

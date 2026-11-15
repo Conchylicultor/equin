@@ -26,14 +26,15 @@
  *  7. a frame URL the Service Worker does not answer is a 404 at the gateway,
  *     never the app's shell.
  *
- * And throughout: the page stays on the demo, no `/api/…` request left for the
- * page's origin (sanctioned telemetry aside — `no-leak.ts`'s list), every
- * frame `src` is under `/artifacts/*\/frames/`, no page or console error.
+ * And throughout: the page stays on the demo, the demo's rule (`internal/page-origin.ts`, this plugin's CLAUDE.md): no
+ * page-origin `/api/…` request issued from inside the demo, every one
+ * attributed, no page glyph inside the embed;
+ * every frame `src` is under `/artifacts/*\/frames/`, no page or console error.
  *
  * Manual only — nothing runs this automatically.
  *   ./equin run plugins/apps/plugins/website/plugins/landing/plugins/screenshot/e2e/prototypes-in-demo.ts [--out /tmp/demo-prototypes] [--headed]
  */
-import type { Frame, Locator, Page, Request } from "playwright";
+import type { Frame, Locator, Page } from "playwright";
 import {
   agentFetch,
   arg,
@@ -70,20 +71,9 @@ import {
   bootDemo,
   MARKER,
 } from "./internal/demo-pages";
+import { watchPageOrigin } from "./internal/page-origin";
 
 const OUT = arg("out") ?? "/tmp/demo-prototypes";
-
-/** The page-origin `/api` routes a demo may still call — `no-leak.ts`'s list (D3). */
-const SANCTIONED: readonly RegExp[] = [
-  /^\/api\/logs\/emit$/,
-  /^\/api\/latency-ledger\/client$/,
-  /^\/api\/slow-ops\/client$/,
-  /^\/api\/app-usage\/flush$/,
-  /^\/api\/analytics\/collect$/,
-  /^\/api\/reports$/,
-  /^\/api\/icons\/(sprite|symbols)\//,
-  /^\/api\/health(\/ready)?$/,
-];
 
 /** The seeded prototypes (`website/demos/workspace`'s `data/prototypes/`). */
 const RECIPES = { id: "proto-1792900000-demo01", title: "Family Recipes" };
@@ -186,14 +176,7 @@ await withBrowser(async (h) => {
     .first()
     .waitFor();
 
-  const leaked: string[] = [];
-  const onRequest = (req: Request): void => {
-    const url = new URL(req.url());
-    if (!url.pathname.startsWith("/api/")) return;
-    if (!SANCTIONED.some((re) => re.test(url.pathname)))
-      leaked.push(`${req.method()} ${url.pathname}`);
-  };
-  page.on("request", onRequest);
+  const pageRequests = watchPageOrigin(page, r);
   const frameSrcs = new Set<string>();
   const noteFrames = async (): Promise<void> => {
     for (const src of await page
@@ -413,15 +396,9 @@ await withBrowser(async (h) => {
     );
   }
 
-  page.off("request", onRequest);
-
   // ── assertions ──────────────────────────────────────────────────────────
   r.ok("the page stays on the demo", onDemoPage(page.url()), page.url());
-  r.eq(
-    "no /api request left for the page's origin (sanctioned telemetry aside)",
-    leaked,
-    [],
-  );
+  await pageRequests.finish();
   r.ok(
     "every frame src is under /artifacts/*/frames/",
     frameSrcs.size > 0 && [...frameSrcs].every((s) => FRAME_SRC_RE.test(s)),

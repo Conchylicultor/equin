@@ -22,14 +22,15 @@
  *     pressed in it still play; its titlebar's Full screen fills the embed with
  *     the stage, and keys pressed there play too.
  *
- * And asserts, throughout, that nothing left the scope — the list `no-leak.ts`
- * checks against (D3): no `/api/…` request for the page's origin but the
- * sanctioned telemetry routes, no page socket, no page or console error.
+ * And asserts, throughout, that nothing left the scope — the demo's rule (`internal/page-origin.ts`, this plugin's CLAUDE.md): no
+ * page-origin `/api/…` request issued from inside the demo, every one
+ * attributed, no page glyph inside the embed;
+ * no page socket, no page or console error.
  *
  * Manual only — nothing runs this automatically.
  *   ./equin run plugins/apps/plugins/website/plugins/landing/plugins/screenshot/e2e/keyboard-party-in-demo.ts [--out /tmp/demo-keyboard-party] [--headed]
  */
-import type { Locator, Page, Request, WebSocket } from "playwright";
+import type { Locator, Page, WebSocket } from "playwright";
 import { pickFromLauncher } from "@plugins/apps-core/plugins/app-launcher/e2e";
 import { shownWindowIds } from "@plugins/apps/plugins/desktop/plugins/windows/e2e";
 import {
@@ -41,7 +42,6 @@ import {
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import {
   waitFor,
-  waitForNetworkIdle,
   type Settled,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/core";
 import {
@@ -51,20 +51,9 @@ import {
   bootDemo,
   MARKER,
 } from "./internal/demo-pages";
+import { watchPageOrigin } from "./internal/page-origin";
 
 const OUT = arg("out") ?? "/tmp/demo-keyboard-party";
-
-/** The page-origin `/api` routes a demo may still call — `no-leak.ts`'s list (D3). */
-const SANCTIONED: readonly RegExp[] = [
-  /^\/api\/logs\/emit$/,
-  /^\/api\/latency-ledger\/client$/,
-  /^\/api\/slow-ops\/client$/,
-  /^\/api\/app-usage\/flush$/,
-  /^\/api\/analytics\/collect$/,
-  /^\/api\/reports$/,
-  /^\/api\/icons\/(sprite|symbols)\//,
-  /^\/api\/health(\/ready)?$/,
-];
 
 /** The app's launcher name and id (`apps/keyboard-party/shell`'s `keyboardPartyApp`). */
 const APP_NAME = /^\s*Tap Tap Party\s*$/;
@@ -148,16 +137,7 @@ await withBrowser(async (h) => {
   const { page, captured } = await h.session();
   await tapSound(page);
 
-  let demoUp = false;
-  const leaked: string[] = [];
-  const onRequest = (req: Request): void => {
-    const url = new URL(req.url());
-    if (!demoUp || url.origin !== new URL(page.url()).origin) return;
-    if (!url.pathname.startsWith("/api/")) return;
-    if (!SANCTIONED.some((re) => re.test(url.pathname)))
-      leaked.push(`${req.method()} ${url.pathname}`);
-  };
-  page.on("request", onRequest);
+  const pageRequests = watchPageOrigin(page, r);
   const openedSockets: string[] = [];
   const onSocket = (ws: WebSocket): void => {
     openedSockets.push(new URL(ws.url()).pathname);
@@ -183,18 +163,6 @@ await withBrowser(async (h) => {
     await bootDemo(page, pathUrl(demoPath(AGENT_MANAGER_LOCATION)), {
       marker: MARKER,
     });
-    // Counted from once the page's OWN chrome has booted (its deferred tier
-    // mounted, its requests answered), as no-leak takes its baseline: the
-    // demo can be up before the page around it is, and the page's chrome
-    // reading its own server is not the demo's traffic.
-    await page.waitForFunction(
-      () =>
-        performance.getEntriesByName("boot:deferred-load-complete").length > 0,
-      undefined,
-      { timeout: RENDER_TIMEOUT_MS },
-    );
-    await waitForNetworkIdle(page);
-    demoUp = true;
     r.ok(
       `${pass}: the launcher offers Tap Tap Party`,
       await pickFromLauncher(embedRoot(page), APP_NAME),
@@ -272,7 +240,6 @@ await withBrowser(async (h) => {
   );
   await page.keyboard.press("Escape");
   await snap(page, OUT, "3-sunny");
-  demoUp = false;
   await openParty("reload");
   await renders(
     "reload: the scene picked is still the stage's (the worker's config is kept)",
@@ -309,13 +276,8 @@ await withBrowser(async (h) => {
   r.ok("the page stays on the demo", onDemoPage(page.url()), page.url());
   await snap(page, OUT, "4-full-screen");
 
-  page.off("request", onRequest);
   page.off("websocket", onSocket);
-  r.eq(
-    "no /api request left for the page's origin (sanctioned telemetry aside)",
-    leaked,
-    [],
-  );
+  await pageRequests.finish();
   r.eq("the page opened no socket of its own", openedSockets, []);
   r.eq("no page errors", captured.pageErrors, []);
   r.eq("no console errors", captured.consoleErrors, []);

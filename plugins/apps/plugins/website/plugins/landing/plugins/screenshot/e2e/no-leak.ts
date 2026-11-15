@@ -64,11 +64,12 @@
  *    to a host a scoped plugin declares (`externalHosts`, each plugin's
  *    `ExternalHosts.Declare`: Google's map, the instruments' sample CDNs),
  *    and none to an undeclared one;
- *  - no request for `/api/…` left for the page's origin during those steps,
- *    except the sanctioned telemetry routes (D3: logs, latency samples, slow
- *    ops, app usage, analytics, crash reports) — every other call, the
- *    demo's saved icons included, went to the worker, which the page sees as a
- *    `postMessage`, not as a request;
+ *  - the demo's rule (`internal/page-origin.ts`, this plugin's CLAUDE.md): no
+ *    page-origin `/api/…` request issued from inside the demo, every one
+ *    attributed, no page glyph inside the embed —
+ *    every request of the demo, its icons included, went to the worker,
+ *    which the page sees as a `postMessage`, not as a request; the page's
+ *    own chrome and telemetry (D3) are logged, never failed;
  *  - the composer shows "not available" and the send did nothing;
  *  - this deploy's database gained no row in tasks, task_dependencies,
  *    notifications, attachments or tasks_attachments;
@@ -81,7 +82,7 @@
  * reads this deploy's database).
  *   ./equin run plugins/apps/plugins/website/plugins/landing/plugins/screenshot/e2e/no-leak.ts [--out /tmp/demo-no-leak] [--headed]
  */
-import type { Locator, Page, Request, WebSocket } from "playwright";
+import type { Locator, Page, WebSocket } from "playwright";
 import { tapSharedSocket } from "@plugins/primitives/plugins/networking/e2e";
 import { externalHosts } from "@plugins/apps/plugins/website/plugins/demos/plugins/workspace/core";
 import { CANVAS_FRAME_ATTR } from "@plugins/apps/plugins/prototypes/plugins/canvas/core";
@@ -113,28 +114,9 @@ import {
   bootDemo,
   MARKER,
 } from "./internal/demo-pages";
+import { watchPageOrigin } from "./internal/page-origin";
 
 const OUT = arg("out") ?? "/tmp/demo-no-leak";
-
-/**
- * The page-origin `/api` routes a demo may still call (D3, the
- * `networking/no-page-transport` sanctioned importers): telemetry belongs to
- * the page. Nothing else — a scope's icons included: its saved icons come
- * from its own server (`ScopeIconSymbols`).
- */
-const SANCTIONED: readonly RegExp[] = [
-  /^\/api\/logs\/emit$/,
-  /^\/api\/latency-ledger\/client$/,
-  /^\/api\/slow-ops\/client$/,
-  /^\/api\/app-usage\/flush$/,
-  /^\/api\/analytics\/collect$/,
-  /^\/api\/reports$/,
-  // A site page's error reports (its report channel, the standalone website):
-  // the page's collectors catch the demo's errors and send them to the site's
-  // own public intake — reports/web's `reportChannel`.
-  /^\/api\/site-reports$/,
-  /^\/api\/health(\/ready)?$/,
-];
 
 /** The tables a leaked write would land in. */
 const TABLES = [
@@ -415,24 +397,8 @@ await withBrowser(async (h) => {
   r.note(`db before: ${JSON.stringify(before)}`);
 
   // From here on, every /api request the page itself sends is recorded.
-  const leaked: string[] = [];
-  const sanctioned: string[] = [];
-  /** Hosts of every request the page sent to another origin. */
-  const offOrigin: string[] = [];
+  const pageRequests = watchPageOrigin(page, r);
   const pageOrigin = new URL(page.url()).origin;
-  const onRequest = (req: Request): void => {
-    const url = new URL(req.url());
-    if (url.protocol !== "http:" && url.protocol !== "https:") return;
-    if (url.origin !== pageOrigin) {
-      offOrigin.push(url.host);
-      return;
-    }
-    if (!url.pathname.startsWith("/api/")) return;
-    const line = `${req.method()} ${url.pathname}`;
-    if (SANCTIONED.some((re) => re.test(url.pathname))) sanctioned.push(line);
-    else leaked.push(line);
-  };
-  page.on("request", onRequest);
   // A socket the page opens itself (a per-tab feed such as `/ws/logs`).
   const openedSockets: string[] = [];
   const onSocket = (ws: WebSocket): void => {
@@ -792,7 +758,7 @@ await withBrowser(async (h) => {
     JSON.stringify(tiles),
   );
   for (const tile of tiles) {
-    const leakedBefore = leaked.length;
+    const leakedBefore = (await pageRequests.leaks()).length;
     const grid = await openLauncherGrid(embed);
     await launcherTiles(grid)
       .and(page.locator(`[data-row-key="${tile.key}"]`))
@@ -817,10 +783,11 @@ await withBrowser(async (h) => {
         throw err;
       r.note(`${tile.name}: the page never went quiet — ${err.message}`);
     });
+    const leakedHere = (await pageRequests.leaks()).slice(leakedBefore);
     r.ok(
-      `${tile.name}: its landing (${(await embed.getAttribute("data-app-embed")) ?? "?"}) loads nothing from the page's origin`,
-      leaked.length === leakedBefore,
-      leaked.slice(leakedBefore).join(", "),
+      `${tile.name}: its landing (${(await embed.getAttribute("data-app-embed")) ?? "?"}) sent nothing to the page's server`,
+      leakedHere.length === 0,
+      leakedHere.length === 0 ? "none" : `REAL LEAK — ${leakedHere.join(", ")}`,
     );
     await snap(page, OUT, `app-${tile.key.replace(/[^\w-]/g, "_")}`);
   }
@@ -877,17 +844,10 @@ await withBrowser(async (h) => {
   r.note(`after Undo: ${(await workerLog(page)).slice(-3).join(" · ")}`);
   noteSubs("toast");
 
-  page.off("request", onRequest);
   page.off("websocket", onSocket);
 
   // ── assertions ──────────────────────────────────────────────────────────
-  r.ok(
-    "no /api request left for the page's origin (sanctioned telemetry aside)",
-    leaked.length === 0,
-    leaked.length === 0
-      ? `${sanctioned.length} sanctioned (${[...new Set(sanctioned)].join(", ")})`
-      : leaked.join("\n  "),
-  );
+  await pageRequests.finish();
   const worker = await workerLog(page);
   r.ok(
     "the demo's writes went to the worker",
@@ -925,7 +885,9 @@ await withBrowser(async (h) => {
       (url) => url.origin !== pageOrigin && url.protocol.startsWith("http"),
     )
     .map((url) => url.host);
-  const reached = [...new Set([...offOrigin, ...workerHosts])].sort();
+  const reached = [
+    ...new Set([...pageRequests.offOrigin.map((o) => o.host), ...workerHosts]),
+  ].sort();
   r.note(`third-party hosts reached: ${reached.join(", ") || "none"}`);
   r.eq(
     "every third-party host reached is declared (ExternalHosts.Declare)",

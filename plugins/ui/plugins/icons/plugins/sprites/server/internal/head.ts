@@ -12,6 +12,7 @@ import {
   HEAD_REQUEST_GLOBAL,
 } from "../../shared/head-request";
 import { SpriteDrawer } from "./sprite-drawer";
+import { pageIssuerHeaders } from "@plugins/primitives/plugins/networking/core";
 
 /** Placeholders the head script swaps for a remembered batch's address. */
 const HASH = "__hash__";
@@ -51,7 +52,9 @@ export function spritesHeadScript(): string {
   });
   return (
     `<script type="module" async>` +
-    `const get = (p) => { const r = fetch(p); r.catch(() => undefined); return r; };` +
+    // Stamped as the page's own requests, as the page transport stamps its
+    // (`networking`'s request issuer).
+    `const get = (p) => { const r = fetch(p, { headers: ${JSON.stringify(pageIssuerHeaders())} }); r.catch(() => undefined); return r; };` +
     `const startMs = performance.now();` +
     `const sprites = {};` +
     `for (const [k, p] of Object.entries(${JSON.stringify(resident)})) sprites[k] = get(p);` +

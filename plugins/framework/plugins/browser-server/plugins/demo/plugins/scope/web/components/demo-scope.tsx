@@ -54,9 +54,11 @@ import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { PLUGIN_SCOPE_ROOT_THEME } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
 import { Theme } from "@plugins/primitives/plugins/css/plugins/theme-boundary/web";
 import {
+  RequestIssuerScope,
   TransportProvider,
   useTransport,
 } from "@plugins/primitives/plugins/networking/web";
+import { scopeIssuer } from "@plugins/primitives/plugins/networking/core";
 import {
   PluginScope,
   useScopePlugins,
@@ -639,25 +641,29 @@ export function DemoScope({
       <TransportProvider transport={transport}>
         <NotificationsProvider>
           <PluginScope composition={scenario.host}>
-            {/* The scope's saved icons are drawn from the host — never
-                asked of the page's sprite host, which reads the page's
-                server. */}
-            <ScopeIconSymbols>
-              {/* The scope's own `:root`: its base theme, painted by the
-                  scope's theme hosts (`PLUGIN_SCOPE_ROOT_THEME`, qualified by
-                  the scope) — so nothing the page's `:root` declares reaches
-                  the demo's glue. `contents`: a theme region, not a box. */}
-              <Theme
-                name={PLUGIN_SCOPE_ROOT_THEME}
-                surface="none"
-                className="contents"
-              >
-                {/* What the scope's code hands to page chrome (a toast's body,
-                    an imperative dialog) renders here, against the host —
-                    never in the page's tree, against the page's server. */}
-                <RenderOrigin>{children}</RenderOrigin>
-              </Theme>
-            </ScopeIconSymbols>
+            {/* Every page-origin request issued in here names the scope
+                (it must issue none — e2e fails on one as a leak). */}
+            <RequestIssuerScope issuer={scopeIssuer(scenario.host.id)}>
+              {/* The scope's saved icons are drawn from the host — never
+                  asked of the page's sprite host, which reads the page's
+                  server. */}
+              <ScopeIconSymbols>
+                {/* The scope's own `:root`: its base theme, painted by the
+                    scope's theme hosts (`PLUGIN_SCOPE_ROOT_THEME`, qualified by
+                    the scope) — so nothing the page's `:root` declares reaches
+                    the demo's glue. `contents`: a theme region, not a box. */}
+                <Theme
+                  name={PLUGIN_SCOPE_ROOT_THEME}
+                  surface="none"
+                  className="contents"
+                >
+                  {/* What the scope's code hands to page chrome (a toast's body,
+                      an imperative dialog) renders here, against the host —
+                      never in the page's tree, against the page's server. */}
+                  <RenderOrigin>{children}</RenderOrigin>
+                </Theme>
+              </ScopeIconSymbols>
+            </RequestIssuerScope>
           </PluginScope>
         </NotificationsProvider>
       </TransportProvider>

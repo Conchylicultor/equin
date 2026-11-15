@@ -166,6 +166,21 @@ the same URL. `fetchWithRetry` takes the transport's `fetch` as an option.
   per server it talks to: the endpoints fetcher, live-state's pipeline, the
   pending-turn store, the page editor's content-doc registry, the asset blob
   store.
+- **Request issuer — who sent a page-origin request** (`core`'s
+  `REQUEST_ISSUER_HEADER`, `X-Equin-Issuer`; the server ignores it). A scope
+  rendering in the page's document (a demo) shares its origin, so a request's
+  URL cannot say whether the page's chrome or the scope sent it. The page
+  transport stamps `page` on every fetch that names no issuer
+  (`stampIssuer`), and the shell's head scripts stamp their t0 fetches with
+  `pageIssuerHeaders()`. `<RequestIssuerScope issuer={scopeIssuer(id)}>`
+  (mounted by `DemoScope`) names a subtree: a `<TransportProvider>` below it
+  handing out a transport whose `server` is `"page"` hands out one stamping
+  the scope instead (`issuedBy`, one object per (transport, issuer)) — so a
+  scope that reaches the page's server says so on the request. Read by the
+  demo e2e's one leak rule (`apps/website/landing/screenshot`'s CLAUDE.md,
+  *Did the demo leak?*). A page-side store that does the scope's work for it
+  (an icon want landing in the page's glyph store) issues as `page`: that
+  class is caught structurally, on the DOM, not by this mark.
 - **Tests.** `web/testing`: `testTransport(overrides?)` (page-shaped, the
   global `fetch` read at call time, so a stubbed fetch answers),
   `transportWrapper(t)` (a `render` / `renderHook` wrapper) and
@@ -238,9 +253,11 @@ built on them — see
     - `probeUrlStatus`
     - `publishNetDiag`
     - `publishWsStatus`
+    - `RequestIssuerScope`
     - `requestTimingOf`
     - `RESOURCE_TIMING_WAIT_MS`
     - `SharedWebSocket`
+    - `stampIssuer`
     - `subscribeNetDiag`
     - `subscribeWsStatus`
     - `TransportProvider`
@@ -249,19 +266,19 @@ built on them — see
     - `useTransport`
     - `useTransportScoped`
 - Cross-plugin:
-  - Imported by: 41 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 43 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×11
     - `primitives` ×7
     - `conversations` ×5
-    - `network` ×4
+    - `network` ×5
     - `framework` ×3
     - `auth` ×2
     - `debug` ×2
     - `infra` ×2
     - `page` ×2
+    - `ui` ×2
     - `shell/notifications`
     - `tasks/tasks-core`
-    - `ui/icons/emoji`
 - Exemptions:
   - Exempts itself from:
     - `no-raw-websocket` — `web/shared-ws.worker.ts` (sanctioned)
@@ -287,12 +304,18 @@ built on them — see
 - Core:
   - Exports (types):
     - `ReadFrame`
+    - `RequestIssuer`
     - `WsTestControls`
     - `WsTestEvent`
     - `WsTestHook`
   - Exports (values):
     - `addressFrame`
+    - `PAGE_ISSUER`
+    - `pageIssuerHeaders`
+    - `parseRequestIssuer`
     - `readAddressedFrame`
+    - `REQUEST_ISSUER_HEADER`
+    - `scopeIssuer`
     - `WS_TEST_HOOK_GLOBAL`
     - `wsTestHook`
 - Test helpers:
