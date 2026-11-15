@@ -89,6 +89,7 @@ describe("resolveWaitThreshold", () => {
       caller,
       busy: true as const,
       longestWaitMs: 300,
+      waiterKinds: ["sub" as const],
     };
     expect(
       resolveWaitThreshold({ ...stretch, ms: 500, waits: 250 }, thresholds),

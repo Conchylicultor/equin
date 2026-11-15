@@ -125,6 +125,31 @@ export function resolveSlowThreshold(span: SlowSpan, t: Thresholds): number {
 }
 
 /**
+ * Whether a wait is filed as the gate's (`wait <layer>`) at all: not when the
+ * one op that waited is a `bg` span — detached background work (a warm-up, a
+ * watcher pass, a build's slot holder) that no reader is behind. Declined, the
+ * recorder hands the wait back to that op as residue: its own time again,
+ * judged against its own bar (a warm-up's budget, else `loaderMs`), so it is
+ * filed as the slow background op it is (`bg <label>`), never as a reader's
+ * wait. Every other waiter — a loader, a `sub`, an `http` request, a flush or
+ * job — is a reader of the gate, and its wait is judged by
+ * `resolveWaitThreshold`. A gate's busy stretch (`busy`) is the gate's queue
+ * across independent ops: a reader's when any op of another kind queued in
+ * it (`waiterKinds`) — else it is only that background work's waits, handed
+ * back (each op already judged them as its own time).
+ *
+ * Before (main, 2026-11-15): a restart's 2.3 s faceted-index build, awaited by
+ * the boot warm-up and the session's `plugin-tree:first-build` slot holder,
+ * filed `wait worker:plugin-tree.faceted-index` on every restart while no
+ * page waited on it.
+ */
+export function isReaderWait(wait: SlowWait): boolean {
+  return wait.busy
+    ? wait.waiterKinds.some((kind) => kind !== "bg")
+    : wait.caller.kind !== "bg";
+}
+
+/**
  * The bar a gate's `queue` wait is judged against, by what it measures:
  *
  * - What ONE op waited (a single wait, or one entry's waits summed): a

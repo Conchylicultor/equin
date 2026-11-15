@@ -38978,7 +38978,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `getRuntimeProfile`
           - `getSelfMeter`
           - `installBackgroundLaneRuntime`
-          - `installClock`
           - `installLoaderReadSetSink`
           - `installProfilingSuppressionRuntime`
           - `installRootContextRuntime`
@@ -39027,6 +39026,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from:
           - `boundaries/no-platform-api` — `server/internal/install.ts` (debt)
           - `timed-fs/no-untimed-fs-read` — `scripts/fs-meter-bench.ts` (sanctioned)
+      - Test helpers:
+        - Core: `@plugins/infra/plugins/runtime-profiler/core/testing`
+          - `installClock`
     - **`safe-fetch`** — SSRF-guarded fetch primitive: parsePublicUrl + DNS-resolution checks (isPrivateIp/assertResolvesPublic) and safeFetch, which dials the validated IP directly (closing the DNS-rebinding TOCTOU) while preserving Host/SNI/cert via Bun fetch tls.serverName, following redirects with per-hop revalidation so a target can never reach loopback/private/link-local/metadata addresses.
       - Cross-plugin:
         - Imported by:

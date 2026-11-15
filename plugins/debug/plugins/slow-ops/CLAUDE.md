@@ -197,6 +197,13 @@ only waited in the same cycle) and four client `update`s. Now:
   the item is recorded, aggregated and drawn on the Timeline like any other,
   but `incidentsFor` files no `slow-op` report for it — its kind
   (`slow-interaction`, `main-thread-stall`) already did, with a richer payload.
+- **Only a reader's wait is the gate's** (`isReaderWait`,
+  resolve-threshold.ts). A wait whose one waiter is a `bg` span (a warm-up, a
+  watcher pass, a build's slot holder) is declined, so the recorder hands it
+  back as that op's residue: judged with its own time on its own bar, filed as
+  `bg <label>` if slow. A busy stretch is filed only when some non-`bg` op
+  queued in it (`GateBusyWait.waiterKinds`). A loader, `sub`, `http`, flush or
+  job waiting is still `wait <layer>` (`reader-wait.test.ts`).
 - **A warm-up is judged once**, here, on its `bg` span (against its declared
   `budgetMs` or `DEFAULT_WARMUP_BUDGET_MS`); boot-budget no longer judges its
   boot span.

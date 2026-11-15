@@ -10,6 +10,7 @@ import { recordSlowOp } from "./record-slow-op";
 import {
   perfFloorMs,
   resolveSlowThreshold,
+  isReaderWait,
   resolveWaitThreshold,
   slowSpanMs,
   type Thresholds,
@@ -127,6 +128,9 @@ export function installSlowSpanHook(thresholds: Thresholds): void {
   // feel, held to the loader bar — never a sum across waiters.
   waitDisposer = onSlowWait(
     (wait: SlowWait) => {
+      // A background op's own wait: not filed here, so it comes back to that
+      // op as residue and is judged with its own time (`isReaderWait`).
+      if (!isReaderWait(wait)) return false;
       const threshold = resolveWaitThreshold(wait, thresholds);
       if (wait.ms < threshold) return false;
       const detail =

@@ -17,7 +17,6 @@ export {
   installProfilingSuppressionRuntime,
   installBackgroundLaneRuntime,
   installRootContextRuntime,
-  installClock,
   runWithoutProfiling,
   runInBackgroundLane,
   runInRootContext,

@@ -1145,6 +1145,12 @@ export interface GateBusyWait extends SlowWaitBase {
   busy: true;
   /** The longest any one op queued in it without a break. */
   longestWaitMs: number;
+  /**
+   * Every kind of op that queued in it (a closed set, never capped): who the
+   * stretch held back — a monitor can tell a stretch only background work
+   * (`bg`) waited in from one a reader did.
+   */
+  waiterKinds: readonly SpanKind[];
   latency?: never;
 }
 
@@ -2491,6 +2497,8 @@ interface BusyStretch {
   callers: Map<string, { ref: SpanRef; ms: number }>;
   /** The caller that queued longest so far (kept as each one grows). */
   top: { ref: SpanRef; ms: number } | undefined;
+  /** Every kind of op that queued in it (`GateBusyWait.waiterKinds`). */
+  kinds: Set<SpanKind>;
   /** A subscriber filed this stretch: it is one incident, filed once. */
   filed: boolean;
 }
@@ -2532,6 +2540,7 @@ function addGateBusy(
       longestMs: span.t1 - span.t0,
       callers: new Map(),
       top: undefined,
+      kinds: new Set([caller.kind]),
       filed: false,
     };
     // Join every stretch this span touches (queued back to back counts).
@@ -2544,6 +2553,7 @@ function addGateBusy(
         merged.longestMs = Math.max(merged.longestMs, st.longestMs);
         merged.filed ||= st.filed;
         for (const [k, c] of st.callers) addBusyCaller(merged, k, c.ref, c.ms);
+        for (const kind of st.kinds) merged.kinds.add(kind);
         grown.delete(st);
         if (most === st) most = merged;
         list.splice(i, 1);
@@ -2571,6 +2581,7 @@ function addGateBusy(
       waits: st.waits,
       busy: true,
       longestWaitMs: st.longestMs,
+      waiterKinds: [...st.kinds],
     });
   }
 }
