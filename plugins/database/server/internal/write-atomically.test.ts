@@ -18,7 +18,7 @@ import {
 // current-tx-id.test.ts (the db-test-fixture is a child plugin: a cycle).
 
 beforeAll(async () => {
-  await DatabaseDriver.get().ready({ warm: false });
+  await DatabaseDriver.get().ready({ serving: false });
 });
 
 /** Run `fn` on a transaction holding fresh parent/child TEMP tables. */

@@ -61,7 +61,7 @@ export default {
     // release_runs_inflight_uniq lock for the next release.
     //
     // Drop any preview whose gateway died across the restart, and reap orphan
-    // /tmp/sgp-* stacks left running by a prior backend lifetime.
+    // /tmp/sgp/* stacks left running by a prior backend lifetime.
     await reconcileOrphanPreviews();
   },
 } satisfies ServerPluginDefinition;

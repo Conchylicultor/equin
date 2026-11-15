@@ -62,7 +62,7 @@ preloaded, so neither needs eager registration.)
   `/tmp` dirs — the PG/PgBouncer sockets to a `/tmp/sgs-XXXXXX` dir via
   `EQUIN_PG_SOCKET_DIR`, the backend worktree sockets to a `/tmp/sgw-XXXXXX`
   dir via `EQUIN_SOCKETS_DIR` — so a long `<run-id>` is safe even for a
-  direct `<out>/launch`. For **preview**, the data root is a `/tmp/sgp-XXXXXX`
+  direct `<out>/launch`. For **preview**, the data root is a `/tmp/sgp/XXXXXX`
   mkdtemp — short by construction.
 - **Preview** (`server/internal/preview-manager.ts`) spawns the staged `launch`
   binary with `EQUIN_DIR=<tmp>` + `EQUIN_LISTEN=loopback:<free>`, tracked in an in-memory

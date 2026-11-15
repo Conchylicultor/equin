@@ -794,12 +794,14 @@ async function awaitDbReady(): Promise<void> {
 // a backend now, not on the first user query. node-postgres `min` does NOT
 // pre-connect — it only avoids destroying idle connections — so this explicit
 // warm step is required. Called from the database plugin's onReadyBlocking
-// (`ready({ warm: true })`), after awaitDbReady() and before migrations — in a
-// SERVING backend only: an `exec` child passes `warm: false`, since a full pool
+// (`warmPool()`), after `ready()` and alongside the schema layer — in a
+// SERVING backend only: an `exec` child never calls it, since a full pool
 // per short-lived child is what ran pgbouncer out of client connections when
-// many launched at once. awaitDbReady() leaves 1 connection idle in each pool,
-// so we only open the remainder; self-healing if `max` is small (e.g. 1 in
-// tests). Each pool's raw connect: warming is context-less and takes no gate.
+// many launched at once. Only the connections a pool does not hold yet are
+// opened (`totalCount`: idle AND checked out, so the schema layer's own
+// connection, taken concurrently, is counted rather than waited for);
+// self-healing if `max` is small (e.g. 1 in tests). Each pool's raw connect:
+// warming is context-less and takes no gate.
 async function warmPool(): Promise<void> {
   const { front, background } = lanePools();
   await Promise.all([warmOne(front), warmOne(background)]);
@@ -807,7 +809,7 @@ async function warmPool(): Promise<void> {
 
 async function warmOne(p: Pool): Promise<void> {
   const target = p.options.max ?? 5;
-  const need = target - p.idleCount;
+  const need = target - p.totalCount;
   if (need <= 0) return;
   const clients = await Promise.all(
     Array.from({ length: need }, () => p.connect()),
@@ -943,26 +945,26 @@ const generationLocks = createSchemaGenerationLocks({
 
 export const pgDriver: DatabaseDriverImpl = {
   db: realDb,
-  async ready({ warm }) {
+  async ready({ serving }) {
     await loadDatabaseConfig();
     await awaitDbReady();
-    // `warm` is true exactly in a serving backend (an exec child passes false).
+    // `serving` is true exactly in a serving backend (an exec child passes false).
     // The background lane's own PgBouncer pool needs its role in Postgres and
     // its user in PgBouncer's config. Both are machine-wide, so only the host
     // singleton (main in dev, the one backend of a release) makes them so — a
     // no-op once they are; it has to happen at a backend boot because the
     // gateway re-runs PgBouncer's start script only when the gateway itself
     // starts. A worktree's code never rewrites the machine's PgBouncer config.
-    const ownsLaneSetup = viaPgbouncer() && warm && isHostSingleton();
+    const ownsLaneSetup = viaPgbouncer() && serving && isHostSingleton();
     if (ownsLaneSetup) {
       await ensureBackgroundRole();
       await convergePgbouncerConfig({ reload: "if-changed" });
     }
     // Every serving backend checks its background lane logs in; an exec child
     // meets a broken lane at its first background statement, just as loudly.
-    if (warm) await awaitBackgroundLane(ownsLaneSetup);
-    if (warm) await warmPool();
+    if (serving) await awaitBackgroundLane(ownsLaneSetup);
   },
+  warmPool,
   // Boot DDL can wait minutes on the previous backend's locks during a
   // hot-swap, so the schema layer widens the query deadline for its own
   // queries.

@@ -313,7 +313,7 @@ export function dataRoot(): AppPath {
  *
  * For the callers that must name a declared location under a root that is NOT
  * this process's own: teardown killing a release preview's gateway under its
- * `/tmp/sgp-XXXXXX` data dir, a release bundle seeding config into a freshly
+ * `/tmp/sgp/XXXXXX` data dir, a release bundle seeding config into a freshly
  * installed app's data dir, the asset-mirror seed. They cannot read `.path`,
  * which resolves against THIS process's root — but they must not spell the
  * location a second time either, because a hand-written copy goes on naming the

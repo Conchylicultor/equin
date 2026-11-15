@@ -108,6 +108,7 @@ interface Shape {
   columns: readonly RollupColumn[];
   values: readonly string[];
   select: RollupSpec["select"];
+  selectAll: string | undefined;
   closure: { table: string; child: string; parent: string } | undefined;
 }
 
@@ -135,9 +136,12 @@ function renderSelect(s: Shape, scope: (keyExpr: string) => string): string {
 // columns by name. That the select returns exactly those columns is asserted
 // at install (`selectCheckSql`).
 function aggregateCte(s: Shape, keysSql: string | null): string {
-  const rendered = renderSelect(s, (keyExpr) =>
-    keysSql === null ? "true" : `(${keyExpr}) = ANY(${keysSql})`,
-  );
+  const rendered =
+    keysSql === null && s.selectAll !== undefined
+      ? s.selectAll
+      : renderSelect(s, (keyExpr) =>
+          keysSql === null ? "true" : `(${keyExpr}) = ANY(${keysSql})`,
+        );
   const cols = s.columns.map((c) => `r.${quoteIdent(c.name)}`).join(", ");
   return `SELECT ${cols} FROM (${rendered}) AS r`;
 }
@@ -541,6 +545,7 @@ export function defineRollup<T extends PgTable>(
     columns,
     values: columns.filter((c) => c.name !== key).map((c) => c.name),
     select: spec.select,
+    selectAll: spec.selectAll,
     closure:
       spec.closure === undefined
         ? undefined

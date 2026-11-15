@@ -173,38 +173,50 @@ export function materializeJoin<J extends GroupedJoin, T extends PgTable>(
     }
   }
 
-  // ── The select: the scoped CTEs, one row per host with a group ───────────
+  // ── The select: one row per host with a group ────────────────────────────
+  // Two renderings of the same CTEs: the SCOPED shape (the A32 planner
+  // fences, a lateral probe per reached node) for a maintain function's few
+  // keys, and the set-based FULL shape for the reconcile's drift scan over
+  // every key — the scoped one, scoped to `true`, probes row by row through
+  // all of them (task_active_dependents: 17.7k pair probes, ~45 ms a boot).
   const cte = sql.raw(compiled.cte);
-  const query = sql`WITH RECURSIVE ${sql.join(
-    grouped.ctes({
+  const selectOf = (scope: Parameters<typeof grouped.ctes>[0]): SQL =>
+    sql`WITH RECURSIVE ${sql.join(
+      grouped.ctes(scope),
+      sql`, `,
+    )} SELECT ${sql.join(
+      [
+        sql`${cte}.__k AS ${sql.identifier(keyCol.name)}`,
+        ...stored.map((s) => {
+          const out = sql`${cte}.${sql.identifier(s.name)}`;
+          return sql`${s.ifNone === null ? out : sql`COALESCE(${out}, ${s.ifNone})`} AS ${sql.identifier(s.column)}`;
+        }),
+      ],
+      sql`, `,
+      // A group whose key is NULL — the children with no host, e.g. a
+      // self-referencing tree's ROOTS (`parent IS NULL`) — is no host's: the
+      // `all` compiler's LEFT JOIN on `__k` never matches it, so the rollup
+      // stores none (a NULL key could only read as drift on every reconcile).
+    )} FROM ${cte} WHERE ${cte}.__k IS NOT NULL`;
+  // Plain SQL text (a maintain function's body, a temp view), never a
+  // prepared statement: every parameter inlined by drizzle's own escaping.
+  const inlined = (query: SQL): string => {
+    const rendered = new PgDialect().sqlToQuery(query.inlineParams());
+    if (rendered.params.length > 0) {
+      fail(
+        `its SQL kept ${rendered.params.length} parameter(s) drizzle could not inline.`,
+      );
+    }
+    return rendered.sql;
+  };
+  const text = inlined(
+    selectOf({
       kind: "scoped",
       hostIn: (col) => sql`${sql.raw(SCOPE_OPEN)}${col}${sql.raw(SCOPE_CLOSE)}`,
     }),
-    sql`, `,
-  )} SELECT ${sql.join(
-    [
-      sql`${cte}.__k AS ${sql.identifier(keyCol.name)}`,
-      ...stored.map((s) => {
-        const out = sql`${cte}.${sql.identifier(s.name)}`;
-        return sql`${s.ifNone === null ? out : sql`COALESCE(${out}, ${s.ifNone})`} AS ${sql.identifier(s.column)}`;
-      }),
-    ],
-    sql`, `,
-    // A group whose key is NULL — the children with no host, e.g. a
-    // self-referencing tree's ROOTS (`parent IS NULL`) — is no host's: the
-    // `all` compiler's LEFT JOIN on `__k` never matches it, so the rollup
-    // stores none (a NULL key could only read as drift on every reconcile).
-  )} FROM ${cte} WHERE ${cte}.__k IS NOT NULL`;
-  // Plain SQL text (a maintain function's body, a temp view), never a
-  // prepared statement: every parameter inlined by drizzle's own escaping.
-  const rendered = new PgDialect().sqlToQuery(query.inlineParams());
-  if (rendered.params.length > 0) {
-    fail(
-      `its SQL kept ${rendered.params.length} parameter(s) drizzle could not inline.`,
-    );
-  }
-  const text = rendered.sql;
+  );
   if (!text.includes(SCOPE_OPEN)) fail("the CTEs never scoped the hosts.");
+  const textAll = inlined(selectOf({ kind: "full" }));
 
   // ── The sources ──────────────────────────────────────────────────────────
   // The columns each table's route reads (the compile's gates): what an
@@ -275,6 +287,7 @@ export function materializeJoin<J extends GroupedJoin, T extends PgTable>(
     key: keyCol,
     select: (scope) =>
       text.replace(SCOPE_RE, (_, keyExpr: string) => scope(keyExpr)),
+    selectAll: textAll,
     sources,
     ...(join.kind === "closure"
       ? {

@@ -44,7 +44,7 @@ export const PGBOUNCER_LEGACY_LOG_FILE = joinAppPath(PG_DIR, "pgbouncer.log");
 
 /**
  * The PgBouncer pidfile under an arbitrary install root. Used by teardown to find
- * a preview's PgBouncer (rooted at its `/tmp/sgp-XXXXXX` data dir, not this
+ * a preview's PgBouncer (rooted at its `/tmp/sgp/XXXXXX` data dir, not this
  * process's own data root). `PGBOUNCER_PID_FILE` is the same path under the dev
  * root.
  */

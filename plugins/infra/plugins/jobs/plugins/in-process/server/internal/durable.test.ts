@@ -80,7 +80,7 @@ function diskStorage(dir: string): HostStorage & { close(): Promise<void> } {
 async function asHost<T>(dir: string, fn: () => Promise<T>): Promise<T> {
   const storage = diskStorage(dir);
   const driver = createPgliteDriver({ storage: () => storage });
-  await driver.ready({ warm: false });
+  await driver.ready({ serving: false });
   try {
     return await withHostServices([DatabaseDriver.provide(driver)], fn);
   } finally {

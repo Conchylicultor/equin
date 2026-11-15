@@ -96,7 +96,7 @@ export const GATEWAY_LOCK_FILENAME = "gateway.lock";
  *
  * For the one caller that must name this file under a root that is NOT this
  * process's own: teardown finds a release preview's gateway under its
- * `/tmp/sgp-XXXXXX` data dir, not under `EQUIN_DIR`. It cannot use
+ * `/tmp/sgp/XXXXXX` data dir, not under `EQUIN_DIR`. It cannot use
  * `gatewayLocks.file(...)`, but it also must not spell the location a second
  * time — a hand-written copy would go on naming the old spot after the layout
  * migration moved the real one, leaving every preview's gateway un-killable.

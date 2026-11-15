@@ -175,7 +175,7 @@ async function gatewayLogTail(): Promise<string> {
 
 /**
  * The gateway pidfile under an arbitrary install root. Used by teardown to find a
- * preview's gateway (rooted at its `/tmp/sgp-XXXXXX` data dir, not the dev
+ * preview's gateway (rooted at its `/tmp/sgp/XXXXXX` data dir, not the dev
  * data root). {@link pidFile} is the same path under this process's own root.
  *
  * The subpath comes from the `locks/gateway` declaration rather than being
@@ -1024,7 +1024,7 @@ const GATEWAY_STOP_TIMEOUT_MS = 10_000;
 const PG_FAST_STOP_TIMEOUT_MS = 15_000;
 
 /**
- * Tear down a self-contained app stack rooted at `root` (a preview's `/tmp/sgp-*`
+ * Tear down a self-contained app stack rooted at `root` (a preview's `/tmp/sgp/*`
  * data dir). The whole stack is detached after boot — the gateway is `unref()`'d
  * into its own session, `pg_ctl` fork+setsids PG, and `pgbouncer -d` daemonizes —
  * so none sit in a killable process group. We kill each via its pidfile under

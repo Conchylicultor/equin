@@ -77,7 +77,7 @@ export const PG_LEGACY_LOG_FILE = joinAppPath(PG_DIR, "postgres.log");
 
 /**
  * The PG postmaster pidfile under an arbitrary install root. Used by teardown to
- * find a preview's PG (rooted at its `/tmp/sgp-XXXXXX` data dir, not this
+ * find a preview's PG (rooted at its `/tmp/sgp/XXXXXX` data dir, not this
  * process's own data root). `PG_PID_FILE` is the same path under the dev root.
  */
 export function pgPostmasterPidFile(root: AppPath): AppPath {

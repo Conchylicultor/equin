@@ -69,6 +69,9 @@ import {
 } from "./task-rows";
 import { _conversations } from "./tables";
 import { attempts, conversations, tasks } from "./views";
+import { TASK_ROLLUPS } from "./task-rollups";
+import { reconcileRollups } from "@plugins/database/plugins/derived-tables/server";
+import type { Rollup } from "@plugins/database/plugins/derived-tables/core";
 
 setDefaultTimeout(180_000);
 
@@ -506,5 +509,73 @@ describe("the compiled collections ≡ the derived views (Europe/Paris)", () => 
     expect(await checkTasks()).toBe(taskIds.length);
     expect(await checkAttempts()).toBe(attemptIds.length);
     expect(await checkActiveConversations()).toBeGreaterThan(5);
+  });
+});
+
+// ── The boot drift scan ──────────────────────────────────────────────────────
+//
+// A materialized join's drift scan reads every key through the join's
+// set-based (`full`) shape (`selectAll`), while its maintain functions and the
+// reconcile's write go through the per-key (`scoped`) shape. A row the
+// triggers or the heal wrote is the scoped shape's answer, so "the scan finds
+// no drift" on it is "the two shapes agree, key for key".
+
+async function driftKeys(r: Rollup): Promise<string[]> {
+  const [row] = await executeRows(t.db, {
+    query: sql.raw(r.driftSql),
+    row: z.object({ keys: z.array(z.string()) }),
+    label: `drift ${r.table}`,
+  });
+  return row!.keys;
+}
+
+async function keysOf(r: Rollup): Promise<string[]> {
+  const rows = await executeRows(t.db, {
+    query: sql.raw(
+      `SELECT "${r.key}"::text AS k FROM "public"."${r.table}" ORDER BY 1`,
+    ),
+    row: z.object({ k: z.string() }),
+    label: `keys ${r.table}`,
+  });
+  return rows.map((x) => x.k);
+}
+
+describe("the drift scan's whole-set read agrees with the per-key rows", () => {
+  test("no drift on trigger-maintained rows; a deleted row and a truncated table are found and healed", async () => {
+    for (const r of TASK_ROLLUPS) expect(await driftKeys(r)).toEqual([]);
+
+    // Every task closure and children join: one row deleted out of band.
+    const touched = TASK_ROLLUPS.filter((r) => r.closure !== undefined);
+    expect(touched.length).toBeGreaterThan(0);
+    const deleted = new Map<string, string>();
+    for (const r of touched) {
+      const [first] = await keysOf(r);
+      expect(first).toBeDefined();
+      await t.db.execute(
+        sql.raw(
+          `DELETE FROM "public"."${r.table}" WHERE "${r.key}"::text = '${first!}'`,
+        ),
+      );
+      expect(await driftKeys(r)).toEqual([first!]);
+      deleted.set(r.table, first!);
+    }
+    // And one whole table emptied (a TRUNCATE fires no trigger).
+    const emptied = touched[0]!;
+    const before = [
+      ...(await keysOf(emptied)),
+      deleted.get(emptied.table)!,
+    ].sort();
+    await t.db.execute(sql.raw(`TRUNCATE "public"."${emptied.table}"`));
+    expect(await driftKeys(emptied)).toEqual(before);
+
+    // The heal re-aggregates through the per-key shape; the scan then agrees.
+    await t.db.transaction((tx) =>
+      reconcileRollups(tx, TASK_ROLLUPS, {
+        recreated: new Set(),
+        installs: [],
+      }),
+    );
+    for (const r of TASK_ROLLUPS) expect(await driftKeys(r)).toEqual([]);
+    expect(await keysOf(emptied)).toEqual(before);
   });
 });

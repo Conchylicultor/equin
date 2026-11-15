@@ -35,6 +35,17 @@ export const attemptConvAgg = defineRollup({
   reconcile's drift scan, `keyExpr = ANY(<keys>)` in a maintain function and
   the reconcile's write). Call it at least once (a recursive select scopes
   each place it seeds from).
+- **`selectAll`** (optional) — the same rows for every key, written as a
+  whole-set read; the drift scan runs it instead of `select` scoped to `true`.
+  For a select shaped for a few keys (planner fences that keep a maintain
+  function to its keys), which scoped to `true` still probes key by key:
+  query-resource's `materializeJoin` renders both from one compiled join
+  (its `full` and `scoped` shapes) — task_active_dependents' scan went from
+  17.7k lateral probes to one hash-joined pass. It must read nothing `select`
+  does not (the install assert checks `select`). Pinned by tasks-core's
+  `all-parity.test.ts` (*the drift scan's whole-set read*): rows the per-key
+  shape wrote show no drift, and out-of-band deletes and a TRUNCATE are found
+  and healed.
 - **A source** is a table whose writes move the rollup. `carry` is the source
   column naming the rollup row (the key, or — with `via: { table, match, key }`
   — a value one hop maps to it); `reads` are the other source columns the

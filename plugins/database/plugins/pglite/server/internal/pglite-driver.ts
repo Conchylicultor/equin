@@ -195,6 +195,8 @@ export function createPgliteDriver(
       if (owedShiftMs !== 0) shifting ??= shiftClock(pg(), owedShiftMs);
       await shifting;
     },
+    // One in-process connection: nothing to pre-open.
+    warmPool: async () => {},
     // One connection, nothing else holding locks: boot DDL needs no wider
     // bound than any other query.
     bootDdl: (fn) => fn(),

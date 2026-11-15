@@ -101,6 +101,18 @@ export interface RollupSpec<T extends PgTable = PgTable> {
    * A read no declaration names would be a write no trigger re-aggregates.
    */
   select: (scope: (keyExpr: string) => string) => string;
+  /**
+   * The same rows as `select`, for EVERY key at once, written as a whole-set
+   * read: what the reconcile's drift scan runs (every boot, over every key).
+   * For a select whose text is shaped for a few keys — planner fences that
+   * keep a maintain function's walk to the keys it maintains (query-resource's
+   * A32 laterals) — which, scoped to `true`, still probe row by row through
+   * every key. Absent: the drift scan renders `select` with its scope `true`.
+   * It must read nothing `select` does not (the install assert checks
+   * `select`): query-resource's `materializeJoin` renders both from one
+   * compiled join, its set-based (`full`) and scoped shapes.
+   */
+  selectAll?: string;
   sources: readonly RollupSourceSpec[];
   /** Expand every maintained key to its transitive dependents (see `RollupClosure`). */
   closure?: RollupClosure;

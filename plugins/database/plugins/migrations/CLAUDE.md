@@ -639,6 +639,7 @@ only agreement that matters.
     - `Migration`
     - `MigrationSourceImpl`
     - `SchemaLayerInputs`
+    - `SchemaLayerOptions`
     - `SchemaLayerResult`
     - `SchemaPlan`
     - `SchemaPlanOptions`

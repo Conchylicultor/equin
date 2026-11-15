@@ -1,5 +1,5 @@
 import { envEntries } from "@plugins/infra/plugins/launcher/plugins/env-names/core";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { readdir } from "@plugins/packages/plugins/timed-fs/core";
 import { join } from "node:path";
 import { connect } from "node:net";
@@ -44,11 +44,14 @@ const PREVIEW_PORT_FLOOR = 9101;
 // still names its Unix socket file and defaults to the dev cluster's 5433, so
 // each preview gets a free port from here up.
 const PREVIEW_PG_PORT_FLOOR = 5500;
-// Where preview data roots live. Literal `/tmp` (NOT os.tmpdir(), the long
-// /var/folders/... path on macOS): the embedded PG/gateway open Unix sockets under
-// this root, capped at 104 bytes, so the prefix must be short.
-const PREVIEW_TMP_DIR = asAppPath("/tmp");
-const PREVIEW_DIR_PREFIX = "sgp-";
+// Where preview data roots live: one `/tmp/sgp/XXXXXX` mkdtemp each. Under
+// literal `/tmp` (NOT os.tmpdir(), the long /var/folders/... path on macOS): the
+// embedded PG/gateway open Unix sockets under this root, capped at 104 bytes, so
+// the path must be short. In a parent of their own, not loose in `/tmp`: the
+// boot reap lists this directory, and `/tmp` is shared with every process on
+// the machine — a listing of it cost every boot ~0.4–0.7 s once it held 121k
+// entries (2026-11-15), for a reap that looks at a handful.
+const PREVIEW_PARENT_DIR = asAppPath("/tmp/sgp");
 
 /**
  * Probe upward from `from` for a free TCP port. Uses a connect attempt: a refused
@@ -79,7 +82,7 @@ async function pickFreePort(from: number): Promise<number> {
  * and binds its embedded PG to the free `EQUIN_PG_PORT` we pick — so the
  * whole stack runs isolated alongside the dev environment. The data root MUST be
  * short because the embedded PG/gateway open Unix sockets under it (104-byte path
- * limit) — `/tmp/sgp-XXXXXX` is short by construction, the canonical mitigation.
+ * limit) — `/tmp/sgp/XXXXXX` is short by construction, the canonical mitigation.
  */
 export async function startPreview(runId: string): Promise<void> {
   if (previews.get(runId)?.status === "running") return;
@@ -101,9 +104,8 @@ export async function startPreview(runId: string): Promise<void> {
 
   const port = await pickFreePort(PREVIEW_PORT_FLOOR);
   const pgPort = await pickFreePort(PREVIEW_PG_PORT_FLOOR);
-  const dataRoot = asAppPath(
-    await mkdtemp(join(PREVIEW_TMP_DIR, PREVIEW_DIR_PREFIX)),
-  );
+  await mkdir(PREVIEW_PARENT_DIR, { recursive: true });
+  const dataRoot = asAppPath(await mkdtemp(join(PREVIEW_PARENT_DIR, "/")));
 
   // The composition comes off a DB row, and a preview listens on its own port.
   const url = namespaceUrl(asNamespace(run.composition), "", port);
@@ -168,7 +170,7 @@ export async function stopPreview(runId: string): Promise<void> {
 /**
  * Reap orphan previews on boot. Two passes:
  *   1. In-memory entries whose gateway died → drop and remove their data dir.
- *   2. Filesystem sweep: any leftover `/tmp/sgp-*` data root NOT backing an active
+ *   2. Filesystem sweep: any leftover `/tmp/sgp/*` data root NOT backing an active
  *      entry is an orphan stack from a prior backend lifetime (the previews map is
  *      in-memory, so a dev restart leaves running gateways/PG holding ports with no
  *      record). Tear each down via the launcher and remove the dir.
@@ -191,15 +193,13 @@ export async function reconcileOrphanPreviews(): Promise<void> {
 
   let dirs: string[];
   try {
-    dirs = (await readdir(PREVIEW_TMP_DIR)).filter((n) =>
-      n.startsWith(PREVIEW_DIR_PREFIX),
-    );
+    dirs = await readdir(PREVIEW_PARENT_DIR);
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === "ENOENT") dirs = [];
     else throw err;
   }
   for (const name of dirs) {
-    const root = joinAppPath(PREVIEW_TMP_DIR, name);
+    const root = joinAppPath(PREVIEW_PARENT_DIR, name);
     if (activeRoots.has(root)) continue;
     // Ports unknown for an orphan dir — pidfile-based teardown suffices.
     await teardownSelfContainedApp({ root, postgres: "immediate" });

@@ -179,16 +179,28 @@ What the app pool (`machine/internal/pg-driver.ts`) adds on top:
   those call sites, not in the runners, which take `db` as a parameter precisely
   so they never import this barrel.
 
-`warmPool()` (called in `onReadyBlocking`, after `awaitDbReady` and before migrations)
+`DatabaseDriver.warmPool()` (called in `onReadyBlocking`, after `ready()` and
+ALONGSIDE the schema layer, awaited before the barrier ends)
 eagerly opens + validates connections up to the pool's `max` so the boot
 thundering herd hits warm connections instead of paying establishment cost.
 node-postgres `min` does **not** pre-connect, so this explicit step is required.
-**Serving backends only**: `DatabaseDriver.ready({ warm })` takes the decision
-as a required option, and the barrier passes `getBootMode() === "serve"`. An
+It opens only what each pool does not hold yet (`max - totalCount`, the schema
+layer's checked-out connection counted), so running it beside the layer —
+which needs one connection — takes ~50 ms off the barrier instead of making
+the layer wait out ~17 PgBouncer logins.
+**Serving backends only**: `DatabaseDriver.ready({ serving })` takes the
+decision as a required option (it gates the background lane's login check too),
+and the barrier passes `getBootMode() === "serve"` and calls `warmPool()` only
+then. An
 `exec` child (a supervised job's body) serves nobody, and warming a full pool
 per child (then 16 connections) is what ran pgbouncer out of `max_client_conn`
 when a launch storm booted twenty children at once (2026-10-28). A serving
 backend warms both lane pools (8 + 10).
+
+The barrier times its parts as boot steps (`driver-ready`, `schema-generation`,
+`warm-pool`, `schema-layer` with the layer's own `lock` / `migrations` /
+`rollup-tables` / `triggers` / `rollup-reconcile/<table>` / `views`,
+`known-relations`), so a boot-budget report on it says which part took the time.
 
 `isTransientDbError` — what `awaitDbReady` waits out — includes a connect
 refused because the database is full (`database/connection`'s

@@ -27,7 +27,11 @@ import { _reports } from "@plugins/reports/server";
 import { fixStandingOf, type ReportId } from "@plugins/reports/core";
 import { reportsProducer } from "./producer";
 import { _reportFixes } from "./tables";
-import { readFixClaims, type FixClaim } from "./fix-trailers";
+import {
+  placeableFixClaims,
+  readFixClaims,
+  type FixClaim,
+} from "./fix-trailers";
 import { fixNoticeOf } from "./fix-notice";
 import { ringRowBell } from "./bell";
 import { announceRecorded } from "./recorded";
@@ -124,10 +128,35 @@ export async function ingestFixClaims(step: BootStep): Promise<void> {
   const claims = await step("read-claims", () =>
     readFixClaims(REPO_ROOT, since),
   );
+  // The window overlaps a day of claims already recorded (every boot and
+  // every advance of main re-reads it): only the new ones are placed and
+  // recorded, so a steady-state ingest costs the log and one read.
+  const fresh = await step("unrecorded", () => unrecordedClaims(claims));
+  const placed = await step("place-claims", () =>
+    placeableFixClaims(fresh, REPO_ROOT),
+  );
   const recorded = await step("record-claims", () =>
-    recordFixClaims(claims, REPO_ROOT),
+    recordFixClaims(placed, REPO_ROOT),
   );
   if (recorded > 0) await step("stamp-new", () => stampDeployedFixes());
+}
+
+/** `claims` without those `report_fixes` already holds (by report and commit). */
+async function unrecordedClaims(
+  claims: readonly FixClaim[],
+): Promise<FixClaim[]> {
+  if (claims.length === 0) return [];
+  const rows = await db
+    .select({ reportId: _reportFixes.reportId, commit: _reportFixes.commit })
+    .from(_reportFixes)
+    .where(
+      inArray(
+        _reportFixes.reportId,
+        claims.map((c) => c.reportId),
+      ),
+    );
+  const have = new Set(rows.map((r) => `${r.reportId}\0${r.commit}`));
+  return claims.filter((c) => !have.has(`${c.reportId}\0${c.commit}`));
 }
 
 /**

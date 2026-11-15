@@ -106,12 +106,10 @@ export function parseFixLog(raw: string): FixClaim[] {
 
 /**
  * Main's fix claims since `since` (null: its whole history — only right for
- * an empty ledger). Only commits whose message carries a trailer are read
- * (`--grep`, either key), so the walk is cheap whatever its window. Throws on
- * any git failure: "no claims" must never stand in for "could not read". A
- * `Report-fixed-by` claim whose fix is not an ancestor of the commit claiming
- * it (push refuses one: the claim names a commit already on main) is filed as
- * a server error and skipped.
+ * an empty ledger), as its log states them. Only commits whose message carries
+ * a trailer are read (`--grep`, either key), so the walk is cheap whatever its
+ * window. Throws on any git failure: "no claims" must never stand in for
+ * "could not read". Not yet checked for placement: see `placeableFixClaims`.
  */
 export async function readFixClaims(
   repoRoot: string,
@@ -129,8 +127,23 @@ export async function readFixClaims(
     ],
     repoRoot,
   );
-  const claims: FixClaim[] = [];
-  for (const c of parseFixLog(raw)) {
+  return parseFixLog(raw);
+}
+
+/**
+ * `claims` without the `Report-fixed-by` ones whose fix is not an ancestor of
+ * the commit claiming them (push refuses one: the claim names a commit
+ * already on main) — each such claim filed as a server error and skipped. One
+ * `merge-base --is-ancestor` per `Report-fixed-by` claim, so hand it only the
+ * claims not recorded yet: a recorded claim was placed when it was recorded,
+ * and main's history does not change under it.
+ */
+export async function placeableFixClaims(
+  claims: readonly FixClaim[],
+  repoRoot: string,
+): Promise<FixClaim[]> {
+  const out: FixClaim[] = [];
+  for (const c of claims) {
     if (
       c.claimedBy !== undefined &&
       (await containsCommit(c.claimedBy, c.commit, repoRoot)) !== true
@@ -143,7 +156,7 @@ export async function readFixClaims(
       });
       continue;
     }
-    claims.push(c);
+    out.push(c);
   }
-  return claims;
+  return out;
 }

@@ -33,14 +33,22 @@ export interface DatabaseDriverImpl {
    * step, before the schema layer runs. The desktop waits out a starting
    * cluster here.
    *
-   * `warm`: also pre-open the pool to its full size, so a SERVING host's first
-   * wave of requests and loaders finds live connections. Required, so every
-   * caller decides: a short-lived `exec` child must not — it serves nobody, and
-   * a pool warmed per child is what exhausted pgbouncer's `max_client_conn`
-   * when ten launches booted twenty children at once (2026-10-28: 16
-   * connections each, 318 refusals, three tasks' launches lost).
+   * `serving`: this host will serve (not a short-lived `exec` child), so
+   * the desktop also checks its background lane logs in (and, in the host
+   * singleton, converges the lane's role and PgBouncer config). Required, so
+   * every caller decides.
    */
-  ready(opts: { readonly warm: boolean }): Promise<void>;
+  ready(opts: { readonly serving: boolean }): Promise<void>;
+  /**
+   * Pre-open the pool to its full size, so a SERVING host's first wave of
+   * requests and loaders finds live connections. Called by the boot barrier
+   * after `ready`, alongside the schema layer (which needs one connection,
+   * not a full pool) — never by an `exec` child: it serves nobody, and a pool
+   * warmed per child is what exhausted pgbouncer's `max_client_conn` when ten
+   * launches booted twenty children at once (2026-10-28: 16 connections each,
+   * 318 refusals, three tasks' launches lost).
+   */
+  warmPool(): Promise<void>;
   /**
    * Run boot DDL (the schema layer, the change feed's trigger rebuild): on the
    * desktop under the widened boot query deadline, since it can wait minutes on

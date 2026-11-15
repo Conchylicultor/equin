@@ -23,6 +23,10 @@ import type {
   RollupReconcile,
 } from "@plugins/database/plugins/derived-tables/core";
 import { DerivedTable } from "./contribution";
+import {
+  untimedStep,
+  type BootStep,
+} from "@plugins/framework/plugins/server-core/core";
 
 type Tx = Parameters<Parameters<NodePgDatabase["transaction"]>[0]>[0];
 type Exec = NodePgDatabase | Tx;
@@ -156,8 +160,11 @@ export async function reconcileRollups(
   definition: {
     readonly recreated: ReadonlySet<string>;
     readonly installs: readonly DbTriggerInstall[];
+    /** Times each rollup's reconcile as a boot step (`untimedStep` outside boot). */
+    readonly step?: BootStep;
   },
 ): Promise<RollupReconcile[]> {
+  const step = definition.step ?? untimedStep;
   if (rollups.length === 0) return [];
   const installed = new Set(
     definition.installs
@@ -168,7 +175,9 @@ export async function reconcileRollups(
   for (const r of readersLast(byTable(rollups))) {
     // A transaction of its own (a savepoint inside the schema layer), so the
     // advisory locks are held until the heal commits whoever the caller is.
-    const counts = await db.transaction((tx) => reconcile(tx, r));
+    const counts = await step(r.table, () =>
+      db.transaction((tx) => reconcile(tx, r)),
+    );
     results.push({
       table: r.table,
       ...counts,

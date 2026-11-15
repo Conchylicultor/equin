@@ -35,7 +35,7 @@ setDefaultTimeout(240_000);
 
 if (IN_CHILD) {
   test("boot the desktop driver (child)", async () => {
-    await pgDriver.ready({ warm: false });
+    await pgDriver.ready({ serving: false });
   });
 } else {
   describe("concurrent DB-layer boots", () => {

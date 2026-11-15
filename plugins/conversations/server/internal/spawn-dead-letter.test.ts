@@ -86,6 +86,7 @@ function throwawayDriver(database: Db): DatabaseDriverImpl {
   return {
     db: () => database,
     ready: async () => {},
+    warmPool: async () => {},
     bootDdl: unused("bootDdl"),
     listen: unused("listen"),
     holdSchemaGeneration: unused("holdSchemaGeneration"),

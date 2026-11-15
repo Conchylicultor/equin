@@ -73,7 +73,7 @@ function memoryStorage(start: HostStorage["databaseStart"]): HostStorage & {
 
 async function openOn(storage: HostStorage): Promise<NodePgDatabase> {
   const driver = createPgliteDriver({ storage: () => storage });
-  await driver.ready({ warm: false });
+  await driver.ready({ serving: false });
   return driver.db() as unknown as NodePgDatabase;
 }
 

@@ -14,6 +14,7 @@ export {
 export type {
   Migration,
   SchemaLayerInputs,
+  SchemaLayerOptions,
   SchemaLayerResult,
   SchemaPlan,
   SchemaPlanOptions,

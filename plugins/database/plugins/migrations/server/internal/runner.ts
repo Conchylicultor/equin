@@ -33,6 +33,10 @@ import { executeRows } from "@plugins/database/plugins/sql-rows/core";
 import { z } from "zod";
 import { SubjectError } from "@plugins/packages/plugins/error-subject/core";
 import { migrationSubject } from "./migration-subject";
+import {
+  untimedStep,
+  type BootStep,
+} from "@plugins/framework/plugins/server-core/core";
 
 const log = defineLogSink({
   id: "migrations",
@@ -767,6 +771,18 @@ export interface SchemaLayerResult {
   deferredContract: string | null;
 }
 
+/** How a schema layer runs: committed or rolled back, deferring the contract or not. */
+export interface SchemaLayerOptions {
+  commit: boolean;
+  deferContract: boolean;
+  /**
+   * Times the layer's parts (lock, migrations, rollup tables, triggers, each
+   * rollup's reconcile, views) as boot steps, when the caller is a boot hook;
+   * `untimedStep` otherwise.
+   */
+  step?: BootStep;
+}
+
 // Serializes committing schema layers on one database: a backend's deferred
 // contract and the next deploy's boot layer may overlap, and each plans from
 // the ledger it reads — two plans over one ledger would both run a contract.
@@ -778,7 +794,7 @@ export async function applySchemaLayerFrom(
   db: NodePgDatabase,
   migrations: Migration[],
   inputs: SchemaLayerInputs,
-  { commit, deferContract }: { commit: boolean; deferContract: boolean },
+  { commit, deferContract, step = untimedStep }: SchemaLayerOptions,
 ): Promise<SchemaLayerResult> {
   let pending = 0;
   let deferredContract: string | null = null;
@@ -793,12 +809,13 @@ export async function applySchemaLayerFrom(
         await tx.execute(drizzleSql`SET LOCAL lock_timeout = '1s'`);
         await tx.execute(drizzleSql`SET LOCAL statement_timeout = '60s'`);
       } else {
-        await tx.execute(drizzleSql`SELECT ${SCHEMA_LAYER_LOCK}`);
+        await step("lock", () =>
+          tx.execute(drizzleSql`SELECT ${SCHEMA_LAYER_LOCK}`),
+        );
       }
-      ({ pending, deferredContract } = await planAndRun(tx, migrations, {
-        dropViews: true,
-        deferContract,
-      }));
+      ({ pending, deferredContract } = await step("migrations", () =>
+        planAndRun(tx, migrations, { dropViews: true, deferContract }),
+      ));
       if (!commit && deferredContract !== null) {
         // The dry run plays the deferred run too, on the ledger the boot plan
         // just wrote: the claimed data again, then the contract — what the
@@ -818,8 +835,11 @@ export async function applySchemaLayerFrom(
       // a set nobody declares any more is swept from `public`. The rollup
       // tables come first (a maintain function writes one), the reconcile
       // after (it needs the triggers in place).
-      const prepared = await prepareRollupTables(tx, inputs.derivedTables);
-      const installs = await installDbTriggers(
+      const prepared = await step("rollup-tables", () =>
+        prepareRollupTables(tx, inputs.derivedTables),
+      );
+      const installs = await step("triggers", () =>
+        installDbTriggers(
         tx,
         [
           ...inputs.updatedAtSpecs.map((spec) => spec.triggerSet),
@@ -832,12 +852,16 @@ export async function applySchemaLayerFrom(
             installedElsewhere: inputs.claimedTriggerSets,
           },
         },
+        ),
       );
-      rollups = await reconcileRollups(tx, inputs.derivedTables, {
-        recreated: prepared.recreated,
-        installs,
-      });
-      await rebuildDerivedViews(tx, inputs.views);
+      rollups = await step("rollup-reconcile", (inner) =>
+        reconcileRollups(tx, inputs.derivedTables, {
+          recreated: prepared.recreated,
+          installs,
+          step: inner,
+        }),
+      );
+      await step("views", () => rebuildDerivedViews(tx, inputs.views));
 
       if (!commit) throw ROLLBACK;
     });
@@ -872,10 +896,10 @@ export async function applySchemaLayer(
   db: NodePgDatabase,
   migrations: Migration[],
   inputs: SchemaLayerInputs,
-  { commit, deferContract }: { commit: boolean; deferContract: boolean },
+  options: SchemaLayerOptions,
 ): Promise<SchemaLayerResult> {
-  const run = () =>
-    applySchemaLayerFrom(db, migrations, inputs, { commit, deferContract });
+  const run = () => applySchemaLayerFrom(db, migrations, inputs, options);
+  const { commit } = options;
   if (!commit) return run();
   try {
     const result = await run();
