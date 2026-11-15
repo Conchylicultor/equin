@@ -177,7 +177,10 @@ function withoutCallSamples(
   const drop = new Set<number>();
   let j = 0;
   for (const c of calls) {
-    while (j < p.times.length && (p.times[j] ?? 0) < c - CALL_SAMPLE_TOLERANCE_US)
+    while (
+      j < p.times.length &&
+      (p.times[j] ?? 0) < c - CALL_SAMPLE_TOLERANCE_US
+    )
       j++;
     let best = -1;
     for (
