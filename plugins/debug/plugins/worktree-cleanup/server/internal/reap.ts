@@ -10,6 +10,7 @@ import {
   isCanonicalWorktreePath,
   removeWorktree,
   removeWorktreeSpec,
+  unpublishWorktreeSpec,
   type WorktreeRemoval,
 } from "@plugins/infra/plugins/worktree/server";
 import { asNamespace } from "@plugins/infra/plugins/namespace/core";
@@ -145,6 +146,24 @@ export async function reapAttempt(
     );
   }
   return removal;
+}
+
+// A FINISHED attempt's fork DB, reclaimed ahead of its checkout
+// (`classifyFinishedDatabase`): the checkout stays for the 72 h clean path, but
+// nothing reads the database of an attempt the user has closed — while every
+// idle one costs the shared cluster an autovacuum visit a minute.
+//
+// Backend down before its data, as in `reapAttempt`; then the spec is withdrawn
+// (the registry dir, with its logs and build records, stays for the checkout's
+// own reap), so a gateway that restarts does not route traffic to a backend
+// that would boot onto no database. A resume forks a fresh one and the next
+// build publishes the spec again (`WorkspaceImpl.onResume`, worktree kind).
+export async function reclaimFinishedDatabase(id: string): Promise<void> {
+  const held = await holdBackendDown(asNamespace(id));
+  if (await databaseExists(id)) {
+    await dropDatabase(held);
+  }
+  await unpublishWorktreeSpec(id);
 }
 
 // Reclaim every namespace owned by this checkout, returning one message per

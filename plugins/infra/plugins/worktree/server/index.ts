@@ -67,6 +67,7 @@ export {
   type WorktreeSpec,
   writeWorktreeSpec,
   removeWorktreeSpec,
+  unpublishWorktreeSpec,
 } from "./internal/spec";
 export {
   type CompositionMarker,

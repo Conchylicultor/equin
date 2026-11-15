@@ -2,6 +2,7 @@ import { cp } from "node:fs/promises";
 import { access, stat } from "@plugins/packages/plugins/timed-fs/core";
 import type { WorkspaceImpl } from "@plugins/conversations/plugins/workspace/server";
 import { databaseForkJob } from "@plugins/database/plugins/fork/server";
+import { databaseExists } from "@plugins/database/plugins/admin/server";
 import { configDir } from "@plugins/config_v2/data-dirs";
 import { MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/namespace/core";
 import { attemptBranchName } from "@plugins/infra/plugins/worktree/core";
@@ -65,6 +66,20 @@ export const worktreeWorkspace: WorkspaceImpl<"worktree"> = {
   // rolled-back launch leaves no config dir behind.
   async onFinish({ attemptId }) {
     await forkConfigDir(attemptId);
+  },
+
+  // The fork DB lives while the attempt is retained, not as long as its
+  // checkout: the hourly worktree sweep drops a finished attempt's database
+  // (`debug/worktree-cleanup`, `classifyFinishedDatabase`) and leaves the
+  // checkout to the 72 h clean path. Resuming such an attempt forks a fresh one
+  // from main, the same durable job a launch enqueues — not awaited, as at
+  // launch: the agent's first worktree-DB op comes later (MCP / build).
+  async onResume({ attemptId }) {
+    if (await databaseExists(attemptId)) return;
+    await databaseForkJob.enqueue({
+      source: MAIN_WORKTREE_NAME,
+      target: attemptId,
+    });
   },
 
   // The checkout carries the repo's own `.claude/settings.json` and

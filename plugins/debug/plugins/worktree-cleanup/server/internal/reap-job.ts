@@ -18,7 +18,7 @@ import {
   type NamespaceReapTarget,
   type ReapTarget,
 } from "./reap-policy";
-import { reapAttempt } from "./reap";
+import { reapAttempt, reclaimFinishedDatabase } from "./reap";
 import { refreshSweptRows } from "./scan-served";
 
 // The reaper's ops log, at `logs/worktree-cleanup.jsonl`. Its only WRITER is the
@@ -92,8 +92,10 @@ export const worktreeReapJob = defineSupervisedJob({
     const scan = await collectReapable(Date.now());
     const targets = scan.targets;
     const namespaceTargets = scan.namespaceTargets;
+    const databaseTargets = scan.databaseTargets;
     let reaped = 0;
     let reclaimed = 0;
+    let dropped = 0;
 
     // The scan's own shape, logged every tick. `scanned` vs `candidates` shows
     // how much of the attempt table has nothing left to reclaim, and
@@ -101,7 +103,7 @@ export const worktreeReapJob = defineSupervisedJob({
     // verdict hangs on git were really walked — the rest still witnessed dirty
     // (hygiene-witness.ts).
     log(
-      `auto-reap scan: scanned=${scan.scanned} candidates=${scan.candidates} hygieneCandidates=${scan.hygieneCandidates} hygieneProbes=${scan.hygieneProbes} targets=${targets.length} namespaceTargets=${namespaceTargets.length}`,
+      `auto-reap scan: scanned=${scan.scanned} candidates=${scan.candidates} hygieneCandidates=${scan.hygieneCandidates} hygieneProbes=${scan.hygieneProbes} targets=${targets.length} namespaceTargets=${namespaceTargets.length} databaseTargets=${databaseTargets.length}`,
     );
 
     // Failures of the REPORTING path, not of a reap. Collected rather than
@@ -196,9 +198,21 @@ export const worktreeReapJob = defineSupervisedJob({
       }),
     );
 
+    // Finished attempts' fork DBs, their checkouts left in place. After the
+    // checkout pass, which the scan already keeps these apart from; serial-ish
+    // at the same width, each a `DROP DATABASE` on the cluster every
+    // worktree shares.
+    await pMap(databaseTargets, 3, (id: string) =>
+      contain(id, async () => {
+        await reclaimFinishedDatabase(id);
+        dropped++;
+      }),
+    );
+
     log(
       `auto-reap: ${reaped}/${targets.length} reaped, ` +
-        `${reclaimed}/${namespaceTargets.length} orphaned namespaces reclaimed`,
+        `${reclaimed}/${namespaceTargets.length} orphaned namespaces reclaimed, ` +
+        `${dropped}/${databaseTargets.length} finished attempts' databases dropped`,
     );
 
     // After the checkout pass, so the branches it just retired go this sweep.

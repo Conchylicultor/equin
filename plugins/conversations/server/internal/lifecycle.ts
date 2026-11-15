@@ -620,6 +620,9 @@ export async function finishConversation(
   // exists and the only spawn step (`runtime.create`) is sub-second, so keep it
   // synchronous — no job-pickup latency for the interactive fork buttons.
   try {
+    // The attempt may be finished, its fork DB reclaimed while its checkout
+    // stayed: bring it back before the agent starts, as a resume does.
+    await workspace.onResume(p.workspace);
     if (p.target.transcriptCopy) {
       await Bun.write(
         p.target.transcriptCopy.destPath,
@@ -781,6 +784,10 @@ async function respawnResume(
     if (row.closeRequested) {
       await updateConversation(row.id, { closeRequested: false });
     }
+
+    // What a reaper reclaimed while the workspace stayed (a finished
+    // worktree's fork DB) comes back before the session starts.
+    await Workspace.get(workspace.spec.kind).onResume(workspace);
 
     const runtime = Runtime.get(row.runtime);
     // Clear any stale agent for this conversation before re-spawning.

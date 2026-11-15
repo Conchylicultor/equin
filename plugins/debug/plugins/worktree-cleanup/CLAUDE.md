@@ -63,6 +63,27 @@ it contains any per-target failure (log + a deduped `worktree-reap-failed`
 report) and the retry is structural — the checkout is gone, so its stranded
 namespaces are precisely what the marker-owned branch enumerates next tick.
 
+## A finished attempt's database goes before its checkout
+
+The checkout and its fork DB are kept for different reasons, so they are
+reclaimed on different terms (`classifyFinishedDatabase`, `ReapScan.databaseTargets`,
+`reclaimFinishedDatabase`). The checkout may hold work nothing else does, so it
+waits for the clean path (72 h + hygiene) or the floor. The database is a fork
+of main nothing reads once the attempt is not retained and its task is done or
+dropped — and every idle database costs the shared cluster an autovacuum visit
+per naptime, pulling its catalog into shared buffers. Bundled with the
+checkout, ~360 finished forks sat out the 72 h at any time (2026-11-15: 490
+databases on the cluster, ~50 of them retained work), and autovacuum evicted
+more cache than every client query combined.
+
+So the hourly sweep drops it at once: backend held down, `DROP DATABASE`, then
+`spec.json` withdrawn (`unpublishWorktreeSpec` — the registry dir and its logs
+stay for the checkout's reap) so a restarted gateway never cold-starts a
+backend onto no database. Coming back is the workspace's job, not the
+reaper's: `WorkspaceImpl.onResume` (a resume, or a new conversation on the
+attempt) re-enqueues the worktree's `database.fork` when the database is gone,
+and the next build publishes the spec again.
+
 ## What "clean" means: nothing only the checkout holds
 
 The clean path (72 h) and the minted-checkout rule reap only a checkout whose
@@ -183,8 +204,8 @@ the panel until it is given something to say.
     - `report-kind` "worktree-reap-failed"
     - `resource.declare` "debug.worktree-cleanup.worktrees"
     - `resource.declare` "debug.worktree-cleanup.worktrees:meta"
-  - Uses: 41 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `infra/worktree` ×14
+  - Uses: 42 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `infra/worktree` ×15
     - `infra/worktree/reclaim` ×4
     - `tasks/tasks-core` ×4
     - `database/admin` ×3

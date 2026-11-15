@@ -128,3 +128,15 @@ export async function removeWorktreeSpec(name: string): Promise<void> {
   // Legacy layout: flat <worktreesDir>/<name>.json written by old CLI versions.
   await rm(join(dir, `${name}.json`), { force: true });
 }
+
+/**
+ * Withdraw a namespace's spec while keeping its registry dir (logs, build
+ * records, ops) — for a namespace whose data is gone but whose checkout stays.
+ * The gateway keys registration on the dir, so a running gateway keeps the
+ * entry (a caller holds its backend down first, `backend-hold`); a gateway that
+ * starts without the spec never loads it, and a build writes it again.
+ * `removeWorktreeSpec` is the full deregistration.
+ */
+export async function unpublishWorktreeSpec(name: string): Promise<void> {
+  await rm(worktreeArtifacts.spec(asNamespace(name)), { force: true });
+}

@@ -23658,6 +23658,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses:
               - `config_v2.getConfig`
               - `conversations/workspace.Workspace`
+              - `database/admin.databaseExists`
               - `database/fork.databaseForkJob`
               - `infra/jobs.JobCtx`
               - `infra/jobs.NonRetryableError`
@@ -23829,7 +23830,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `reclaimForkTemp`
           - `recreateDatabase`
       - Cross-plugin:
-        - Imported by: 34 plugins — full list in [`plugins/database/plugins/admin/REFERENCE.md`](../plugins/database/plugins/admin/REFERENCE.md)
+        - Imported by: 35 plugins — full list in [`plugins/database/plugins/admin/REFERENCE.md`](../plugins/database/plugins/admin/REFERENCE.md)
           - `debug` ×8
           - `infra` ×7
           - `database` ×5
@@ -23838,6 +23839,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `build` ×2
           - `network` ×2
           - `backup/sources/databases`
+          - `conversations/workspace/worktree`
           - `reports/engine`
           - `shell/notifications`
       - Exemptions:
@@ -28535,8 +28537,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `report-kind` "worktree-reap-failed"
           - `resource.declare` "debug.worktree-cleanup.worktrees"
           - `resource.declare` "debug.worktree-cleanup.worktrees:meta"
-        - Uses: 41 symbols — full list in [`plugins/debug/plugins/worktree-cleanup/REFERENCE.md`](../plugins/debug/plugins/worktree-cleanup/REFERENCE.md)
-          - `infra/worktree` ×14
+        - Uses: 42 symbols — full list in [`plugins/debug/plugins/worktree-cleanup/REFERENCE.md`](../plugins/debug/plugins/worktree-cleanup/REFERENCE.md)
+          - `infra/worktree` ×15
           - `infra/worktree/reclaim` ×4
           - `tasks/tasks-core` ×4
           - `database/admin` ×3
@@ -39580,6 +39582,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `removeWorktreeSpec`
           - `setupWorktree`
           - `stampCompositionMarker`
+          - `unpublishWorktreeSpec`
           - `withWorktreeMutateSlot`
           - `WorktreeGitTimeoutError`
           - `worktreePathFor`

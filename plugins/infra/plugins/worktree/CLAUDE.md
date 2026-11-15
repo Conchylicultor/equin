@@ -413,6 +413,7 @@ pid liveness.
     - `removeWorktreeSpec`
     - `setupWorktree`
     - `stampCompositionMarker`
+    - `unpublishWorktreeSpec`
     - `withWorktreeMutateSlot`
     - `WorktreeGitTimeoutError`
     - `worktreePathFor`

@@ -96,6 +96,14 @@ export interface WorkspaceImpl<K extends WorkspaceKind = WorkspaceKind> {
   prepare(at: WorkspaceAt<SpecOf<K>>, ctx: WorkspacePrepareCtx): Promise<void>;
   /** What runs once the launch has committed (fire-and-forget by the caller). */
   onFinish(at: WorkspaceAt<SpecOf<K>>): Promise<void>;
+  /**
+   * Brings back what a resumed session — or a new conversation on an existing
+   * attempt — needs that a reaper may have reclaimed while the workspace stayed (a worktree's fork DB is dropped once its
+   * attempt is finished; its checkout outlives it). Runs after
+   * `checkResumable` said ok, before the session starts. Idempotent; it may
+   * start the work rather than wait for it, as a launch's `onCommit` does.
+   */
+  onResume(at: WorkspaceAt<SpecOf<K>>): Promise<void>;
   /** What every session started in this workspace adds to its launch. */
   launch(at: WorkspaceAt<SpecOf<K>>, ctx: LaunchContext): LaunchFragment;
   /**

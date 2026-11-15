@@ -63,6 +63,10 @@ export function createScratchWorkspace(deps: {
 
     async onFinish() {},
 
+    // The dir is the whole workspace, and `checkResumable` refuses once it is
+    // gone: nothing is reclaimed apart from it.
+    async onResume() {},
+
     launch({ spec }, { conversationId }) {
       const profile = ScratchProfile.get(spec.profile);
       return scratchLaunchFragment({

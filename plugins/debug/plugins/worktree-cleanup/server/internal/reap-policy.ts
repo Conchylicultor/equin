@@ -82,6 +82,11 @@ export interface ReapScan {
   // and keeping them in one list would let a caller hand either to either. See
   // the branch that fills this at the foot of collectReapable.
   namespaceTargets: NamespaceReapTarget[];
+  // Finished attempts whose fork DB goes now while their checkout stays
+  // (classifyFinishedDatabase) — a third list, reclaimed by
+  // `reclaimFinishedDatabase`, which touches no checkout. Never an id that is
+  // also in `targets`: a full reap drops the database itself.
+  databaseTargets: string[];
   // Attempt rows examined (the whole `attempts` table).
   scanned: number;
   // Rows with anything left to reclaim — a dir, a fork DB, or a registry entry.
@@ -183,6 +188,34 @@ export function classifyAttempt(
     retained: false, // proven above — a retained attempt already returned null
   });
   return safe ? { id: attempt.id, worktreePath: attempt.worktreePath } : null;
+}
+
+// Whether a finished attempt's fork DB goes NOW, ahead of its checkout — as a
+// PURE function. The database and the checkout are kept for different reasons,
+// so they are reclaimed on different terms:
+//   - the CHECKOUT may hold work nothing else does (uncommitted files, a commit
+//     on a detached HEAD), so it waits for the clean path's hygiene proof and
+//     72 h, or the 90-day floor;
+//   - the DATABASE is a fork of main the attempt's agent tested against. Once
+//     the user has closed every conversation (not retained) and the task is
+//     done or dropped, nothing reads it — and each idle one costs the shared
+//     cluster an autovacuum visit every naptime (60 s), pulling its catalog
+//     into shared buffers: ~360 such forks were waiting out the 72 h on
+//     2026-11-15, evicting more cache than every app query combined.
+//     A resume or a new conversation on the attempt forks a fresh one
+//     (WorkspaceImpl.onResume).
+//
+// Only for a checkout still on disk: with the dir gone, the orphan branch of
+// classifyAttempt reaps the whole namespace. RETAINED outranks everything, as
+// in every branch of this file.
+export function classifyFinishedDatabase(
+  attempt: AttemptFacts,
+  ctx: Pick<ClassifyContext, "hasDir" | "hasDB" | "taskStatus">,
+): string | null {
+  if (attempt.retained) return null;
+  if (!ctx.hasDB || !ctx.hasDir) return null;
+  if (!isTaskDeletable(ctx.taskStatus)) return null;
+  return attempt.id;
 }
 
 // A namespace the sweep may reclaim, paired with the checkout whose
@@ -398,6 +431,9 @@ export async function collectReapable(now: number): Promise<ReapScan> {
   const { allNames } = dirIndex;
 
   let candidates = 0;
+  // Finished attempts whose database may go ahead of their checkout; filtered
+  // against `targets` once every branch has run (a full reap drops it anyway).
+  const finishedDatabases: string[] = [];
   const needProbe: AttemptFacts[] = [];
   const probeCtx = new Map<string, ClassifyContext>();
 
@@ -420,6 +456,8 @@ export async function collectReapable(now: number): Promise<ReapScan> {
       taskStatus: taskMap.get(attempt.taskId)?.status,
       now,
     };
+    const finished = classifyFinishedDatabase(attempt, ctx);
+    if (finished !== null) finishedDatabases.push(finished);
     const decision = classifyAttempt(attempt, ctx);
     if (decision === null) continue;
     if (decision === NEEDS_HYGIENE) {
@@ -637,6 +675,7 @@ export async function collectReapable(now: number): Promise<ReapScan> {
   return {
     targets: [...targets.values()],
     namespaceTargets,
+    databaseTargets: finishedDatabases.filter((id) => !targets.has(id)),
     scanned: attempts.length,
     candidates,
     hygieneCandidates: needProbe.length,

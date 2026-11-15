@@ -7,6 +7,7 @@ import type { OwnedNamespace } from "@plugins/infra/plugins/worktree/plugins/rec
 import {
   AUTO_REAP_AGE_MS,
   classifyAttempt,
+  classifyFinishedDatabase,
   classifyMintedCheckout,
   classifyOwnedNamespace,
   classifyStampedNamespace,
@@ -412,6 +413,38 @@ describe("classifyMintedCheckout — a checkout another backend minted", () => {
         { kind: "stamped", minter: asNamespace("sonata") },
         withClean,
       ),
+    ).toBeNull();
+  });
+});
+
+describe("classifyFinishedDatabase — the fork DB goes ahead of its checkout", () => {
+  test("a finished attempt's database goes at once, whatever its age", () => {
+    const young = attempt({ createdAt: new Date(NOW - 60_000) });
+    expect(classifyFinishedDatabase(young, ctx())).toBe(young.id);
+    expect(
+      classifyFinishedDatabase(young, ctx({ taskStatus: "dropped" })),
+    ).toBe(young.id);
+  });
+
+  test("a retained attempt keeps its database, even at the hard floor", () => {
+    const old = attempt({
+      retained: true,
+      createdAt: new Date(NOW - AUTO_REAP_AGE_MS * 2),
+    });
+    expect(classifyFinishedDatabase(old, ctx())).toBeNull();
+  });
+
+  test("an unfinished task keeps its database", () => {
+    for (const taskStatus of ["in_progress", "need_action", "blocked"])
+      expect(
+        classifyFinishedDatabase(attempt(), ctx({ taskStatus })),
+      ).toBeNull();
+  });
+
+  test("no database, or no checkout (the orphan branch's), is not this branch's", () => {
+    expect(classifyFinishedDatabase(attempt(), ctx({ hasDB: false }))).toBeNull();
+    expect(
+      classifyFinishedDatabase(attempt(), ctx({ hasDir: false })),
     ).toBeNull();
   });
 });

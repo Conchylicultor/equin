@@ -60,6 +60,7 @@ Design: [`research/2026-10-28-global-supervised-worktree-checkout.md`](../../../
   - Uses:
     - `config_v2.getConfig`
     - `conversations/workspace.Workspace`
+    - `database/admin.databaseExists`
     - `database/fork.databaseForkJob`
     - `infra/jobs.JobCtx`
     - `infra/jobs.NonRetryableError`
