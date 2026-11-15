@@ -27,7 +27,7 @@ import {
   LUCIDE_TUNING_VERSION,
   type SpriteDrawerImpl,
 } from "../../server";
-import { ICON_MANIFEST } from "./icon-manifest.generated";
+import { ICON_MANIFEST } from "../../server/internal/icon-manifest.generated";
 import { PACKAGE, setIdentity, readSet, withSymbolSets } from "./symbol-sets";
 
 /**

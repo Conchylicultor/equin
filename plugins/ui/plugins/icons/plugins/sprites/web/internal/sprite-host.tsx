@@ -221,14 +221,14 @@ function SpriteReads({
 /**
  * Gives a plugin scope icons of its own: a glyph store bound to the scope
  * (`RuntimeSymbolScope`), filled from the server the scope reads — its hashes
- * and every `icons.runtime-symbols` batch its saved icons and Lucide glyphs
- * want — and drawn in a sheet of its own inside the scope; and every whole
- * sprite its icons want (the Seti file-type glyphs) read as `icons.sprite`
- * from that server too ({@link ScopeSprites}). Mount it INSIDE the scope's
- * `<PluginScope>` and transport (`DemoScope` does): a saved icon in a scope
- * with no store of its own throws, it never reaches the page's store and so
- * the page's server. (Its code Material symbols are the page's: the same
- * drawing, and a browser host's drawer would load its whole bundled set.)
+ * and every `icons.runtime-symbols` batch its icons want (saved icons, code
+ * Material symbols, Lucide glyphs) — and drawn in a sheet of its own inside
+ * the scope; and every whole sprite its icons want (the Seti file-type
+ * glyphs) read as `icons.sprite` from that server too ({@link ScopeSprites}).
+ * Mount it INSIDE the scope's `<PluginScope>` and transport (`DemoScope`
+ * does): nothing drawn in the scope then reads the page's server. (A browser
+ * host draws the code symbols' default style from its storage — pre-drawn by
+ * `bundled-symbols`' warm-up.)
  */
 export function ScopeIconSymbols({
   children,

@@ -20,8 +20,7 @@ import { useIconFamilyPreview, useIconScope } from "./icon-scope";
 import { useScopeIconStyle } from "./style-store";
 import { subscribeSprites } from "./sprite-store";
 import {
-  pageRuntimeSymbols,
-  useFamilyGlyphStore,
+  useScopeGlyphStore,
   useRuntimeSymbolStore,
 } from "./runtime-symbol-store";
 import {
@@ -68,8 +67,7 @@ export function useIconStyle(): IconStyle {
 
 /**
  * Subscribe to every icon store an icon drawing from `stores` reads: a
- * sprite, a glyph chunk of any of its stores (the page's included — code
- * Material symbols draw from it) or the families landing.
+ * sprite, a glyph chunk of either of its glyph stores or the families landing.
  */
 function subscribeIconStores(
   stores: IconStores,
@@ -78,8 +76,8 @@ function subscribeIconStores(
   const offs = [
     subscribeSprites(listener),
     subscribeFamilies(listener),
-    ...[...new Set([pageRuntimeSymbols, stores.saved, stores.family])].map(
-      (store) => store.subscribe(listener),
+    ...[...new Set([stores.saved, stores.glyphs])].map((store) =>
+      store.subscribe(listener),
     ),
   ];
   return () => {
@@ -90,8 +88,8 @@ function subscribeIconStores(
 /** The glyph stores an icon rendered here draws from (`IconStores`), stable while they are. */
 export function useIconStores(): IconStores {
   const saved = useRuntimeSymbolStore();
-  const family = useFamilyGlyphStore();
-  return useMemo(() => ({ saved, family }), [saved, family]);
+  const glyphs = useScopeGlyphStore();
+  return useMemo(() => ({ saved, glyphs }), [saved, glyphs]);
 }
 
 /** `subscribeIconStores` over the caller's stores, stable while they are. */

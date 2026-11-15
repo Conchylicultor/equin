@@ -18,7 +18,7 @@ export function renderIconMissingGlyphTask(row: ReportRow): {
   const title =
     rawTitle.length > 120 ? `${rawTitle.slice(0, 117)}...` : rawTitle;
   const lines = [
-    `**The \`${data.sprite}\` sprite has no \`<symbol id="${data.id}">\`, but an \`<Icon>\` drew it.** The icon shows the missing-glyph marker (a crossed-out dashed square). The sprites ship exactly the build's icon manifest (\`plugins/ui/plugins/icons/plugins/sprites/machine/internal/icon-manifest.generated.ts\`), so the manifest did not list a name the code draws.`,
+    `**The \`${data.sprite}\` sprite has no \`<symbol id="${data.id}">\`, but an \`<Icon>\` drew it.** The icon shows the missing-glyph marker (a crossed-out dashed square). The sprites ship exactly the build's icon manifest (\`plugins/ui/plugins/icons/plugins/sprites/server/internal/icon-manifest.generated.ts\`), so the manifest did not list a name the code draws.`,
     "",
     `**How to fix**`,
     `Run \`./equin check icons:manifest-covers-uses\` on the deployed commit: it reads every icon use through ESLint's scope analysis, independently of the manifest generator, and names the call the manifest missed. If it passes, the deploy ran an older manifest than its code (a stale build); if it fails after \`./equin build\`, the manifest scan (\`codegen/core/icon-manifest.scan.ts\`) misreads that call — fix the scan.`,

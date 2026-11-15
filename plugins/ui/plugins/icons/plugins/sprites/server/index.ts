@@ -17,6 +17,7 @@ export {
 } from "./internal/drawer";
 export type { RuntimeSymbolDrawerImpl } from "./internal/drawer";
 export { savedIconNames } from "./internal/saved";
+export { codeSymbolNames } from "./internal/code-symbols";
 export { SpriteDrawer } from "./internal/sprite-drawer";
 export type { DrawnSprite, SpriteDrawerImpl } from "./internal/sprite-drawer";
 export { buildSprite } from "./internal/build-sprite";

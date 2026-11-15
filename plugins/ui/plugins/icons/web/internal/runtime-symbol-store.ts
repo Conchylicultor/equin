@@ -324,12 +324,13 @@ export function useRuntimeSymbolStore(): RuntimeSymbolStore {
 }
 
 /**
- * Where a sprite family's glyphs (Lucide) drawn here come from: the store
- * mounted in this plugin scope when it mounted one (its server draws them),
- * else the page's — never the refusing store of a scope that mounted none,
- * since a family glyph is no saved data of the scope's.
+ * Where the code glyphs drawn here come from (a code Material symbol, a
+ * sprite family's — Lucide): the store mounted in this plugin scope when it
+ * mounted one (its server draws them, so a sealed scope reads no glyph from
+ * the page's server), else the page's — never the refusing store of a scope
+ * that mounted none, since a code glyph is no saved data of the scope's.
  */
-export function useFamilyGlyphStore(): RuntimeSymbolStore {
+export function useScopeGlyphStore(): RuntimeSymbolStore {
   const scope = usePluginScopeId();
   const mounted = useContext(RuntimeSymbolContext);
   if (mounted !== null && mounted.scope === scope) return mounted.store;

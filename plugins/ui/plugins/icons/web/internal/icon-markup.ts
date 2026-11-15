@@ -9,7 +9,6 @@ import {
 import { useMemo } from "react";
 import { heldSprites, useSprites } from "./sprite-store";
 import {
-  pageRuntimeSymbols,
   useRuntimeSymbolChunks,
   type RuntimeSymbolStore,
 } from "./runtime-symbol-store";
@@ -97,7 +96,7 @@ interface HeldIcons {
 
 /** What the stores hold right now — to tell a stale reader from a resolver bug. */
 function heldNow(stores: IconStores): HeldIcons {
-  const all = new Set([pageRuntimeSymbols, stores.saved, stores.family]);
+  const all = new Set([stores.saved, stores.glyphs]);
   return {
     sprites: heldSprites(),
     chunks: new Map([...all].map((s) => [s, s.chunks()])),
@@ -182,30 +181,19 @@ export function useIconMarkup(): IconMarkupReader {
   const previewing = useIconFamilyPreview() !== undefined;
   const stores = useIconStores();
   const sprites = useSprites();
-  const pageChunks = useRuntimeSymbolChunks(pageRuntimeSymbols);
   const savedChunks = useRuntimeSymbolChunks(stores.saved);
-  const familyChunks = useRuntimeSymbolChunks(stores.family);
+  const glyphChunks = useRuntimeSymbolChunks(stores.glyphs);
   const families = useIconFamilies();
   return useMemo(
     () =>
       markupReader(style, previewing, stores, {
         sprites,
         chunks: new Map([
-          [pageRuntimeSymbols, pageChunks],
           [stores.saved, savedChunks],
-          [stores.family, familyChunks],
+          [stores.glyphs, glyphChunks],
         ]),
         families,
       }),
-    [
-      style,
-      previewing,
-      stores,
-      sprites,
-      pageChunks,
-      savedChunks,
-      familyChunks,
-      families,
-    ],
+    [style, previewing, stores, sprites, savedChunks, glyphChunks, families],
   );
 }

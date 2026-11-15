@@ -63284,6 +63284,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `buildLucideSprites`
               - `buildSetiSprite`
               - `buildSprite`
+              - `codeSymbolNames`
               - `drawRuntimeSymbol`
               - `LUCIDE_TUNING_VERSION`
               - `RUNTIME_SYMBOL_BUILD_VERSION`
@@ -63340,16 +63341,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/icons/sprites.LUCIDE_TUNING_VERSION`
                   - `ui/icons/sprites.SpriteDrawer`
                   - `ui/icons/sprites.SpriteDrawerImpl`
-            - **`bundled-symbols`** (excluded) — The saved-icon drawings of a host without the computer's icon sets (the browser composition): provides the RuntimeSymbolDrawer from the Material Symbols set bundled with the worker (weight 400, every shape and fill; a light style draws its 400 drawing), loaded lazily and only on a miss. Its warm-up draws every saved name in every style and keeps those drawings in the host's storage (a picker's are held in memory only), so a build-time snapshot ships the demo's icons drawn and a visitor never loads the set for them. Never booted by the desktop.
+            - **`bundled-symbols`** (excluded) — The saved-icon drawings of a host without the computer's icon sets (the browser composition): provides the RuntimeSymbolDrawer from the Material Symbols set bundled with the worker (weight 400, every shape and fill; a light style draws its 400 drawing), loaded lazily and only on a miss. Its warm-ups draw every saved name in every style, and every code symbol (the build's icon manifest) in the default style, and keep those drawings in the host's storage (a picker's are held in memory only), so a build-time snapshot ships the demo's icons and chrome drawn and a visitor never loads the set for them. Never booted by the desktop.
               - Server:
                 - Contributes: `host-service:icons.runtime-symbol-drawer` "icons.runtime-symbol-drawer"
                 - Uses:
                   - `infra/warmup.defineWarmup`
+                  - `ui/icons/sprites.codeSymbolNames`
                   - `ui/icons/sprites.drawRuntimeSymbol`
                   - `ui/icons/sprites.RuntimeSymbolDrawer`
                   - `ui/icons/sprites.RuntimeSymbolDrawerImpl`
                   - `ui/icons/sprites.savedIconNames`
-                - Register: `defineWarmup('icons.bundled-symbols.draw-saved')`
+                - Register:
+                  - `defineWarmup('icons.bundled-symbols.draw-saved')`
+                  - `defineWarmup('icons.bundled-symbols.draw-code')`
     - **`logo`** — <Logo className tone>: the equin logo, drawn from ui/logo's geometry — its small master below 28 px (a container query on its own box), in the brand gradient or the text colour.
       - Web:
         - Uses: `primitives/css/ui-kit.cn`

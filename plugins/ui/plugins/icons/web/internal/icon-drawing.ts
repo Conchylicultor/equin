@@ -19,10 +19,7 @@ import {
   type SymbolName,
 } from "../../core";
 import { hasSprite, spriteHolds } from "./sprite-store";
-import {
-  pageRuntimeSymbols,
-  type RuntimeSymbolStore,
-} from "./runtime-symbol-store";
+import type { RuntimeSymbolStore } from "./runtime-symbol-store";
 import { iconFamily } from "./family-store";
 
 /** Where a drawn symbol's markup lives. */
@@ -49,17 +46,17 @@ export type DrawingWant =
   | { kind: "glyph"; key: GlyphKey; name: string; store: RuntimeSymbolStore };
 
 /**
- * The stores an icon's glyphs come from. `saved` — the store a saved icon of
- * this part of the page draws from (a plugin scope's own, or one that refuses
- * when the scope mounted none). `family` — where a sprite family's glyphs
- * (Lucide) come from: the scope's own store when it mounted one, else the
- * page's. Code Material symbols always come from the PAGE's store: the same
- * drawing whichever server draws it, and a scope's server (a browser host)
- * would load its whole bundled set for a name it has not cached.
+ * The stores an icon's glyphs come from — both resolved from where the icon
+ * renders, never named here, so no glyph drawn inside a plugin scope can reach
+ * a server other than the scope's. `saved` — the store a saved icon of this
+ * part of the page draws from (a plugin scope's own, or one that refuses when
+ * the scope mounted none). `glyphs` — where every code glyph comes from (a
+ * code Material symbol, a sprite family's — Lucide): the scope's own store
+ * when it mounted one, else the page's.
  */
 export interface IconStores {
   readonly saved: RuntimeSymbolStore;
-  readonly family: RuntimeSymbolStore;
+  readonly glyphs: RuntimeSymbolStore;
 }
 
 /**
@@ -300,7 +297,7 @@ export function resolveIconDrawing(
         style.family,
         icon.name,
         active && style.activeFill === "filled",
-        stores.family,
+        stores.glyphs,
       );
       if (family.drawing !== null || family.wants.length > 0) {
         return { drawing: family.drawing, wants: family.wants };
@@ -317,7 +314,7 @@ export function resolveIconDrawing(
           wants: [],
         };
       }
-      return materialDrawing(pageRuntimeSymbols, key, defaultKey, icon.name);
+      return materialDrawing(stores.glyphs, key, defaultKey, icon.name);
     }
   }
 }

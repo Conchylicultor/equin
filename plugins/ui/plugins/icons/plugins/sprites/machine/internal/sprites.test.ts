@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import { symbolBody } from "@plugins/ui/plugins/icons/machine";
 import type { SymbolName } from "@plugins/ui/plugins/icons/core";
-import { ICON_MANIFEST } from "./icon-manifest.generated";
+import { ICON_MANIFEST } from "../../server/internal/icon-manifest.generated";
 import { manifestSymbolBody } from "./sprites";
 
 describe("manifestSymbolBody", () => {

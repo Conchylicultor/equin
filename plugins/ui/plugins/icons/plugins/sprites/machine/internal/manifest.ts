@@ -1,6 +1,6 @@
 import { serveValue } from "@plugins/network/plugins/live/machine";
 import { iconManifest } from "../../core";
-import { ICON_MANIFEST } from "./icon-manifest.generated";
+import { ICON_MANIFEST } from "../../server/internal/icon-manifest.generated";
 
 /**
  * The manifest's symbol names. External and `fixed`: the manifest is compiled

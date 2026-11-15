@@ -24,11 +24,11 @@ const NO_LIGHT_SET: IconifyJSON = {
   icons: {},
 };
 
-// What this host drew, in memory; and what its warm-up drew — the saved
-// icons — written through to its storage too: it outlives a reload, and a
+// What this host drew, in memory; and what its warm-ups drew — the saved
+// icons, the code symbols' default style — written through to its storage too: it outlives a reload, and a
 // build-time snapshot carries it, so a visitor's first visit draws the demo's
 // icons without loading the set. A picker's grid is drawn in memory only, so
-// the storage holds the saved names' drawings (and a stale set's are dropped
+// the storage holds the warm-ups' drawings (and a stale set's are dropped
 // when it opens), never the whole set.
 interface Drawn {
   readonly store: HostStore<string>;

@@ -47,9 +47,11 @@ const tsIcon = seti("typescript");         // { kind: "seti",   name: "typescrip
   icon manifest (`codegen/core/icon-manifest-gen.ts`, a pre-barrel manifest;
   `icons:manifest-in-sync`); the machine drawer's whole sprites and the
   Lucide map ship exactly the manifest (Material glyphs are drawn from the
-  installed sets by name and need no manifest). The manifest sits beside
-  its one reader, `plugins/sprites/machine/internal/icon-manifest.generated.ts`,
-  not in `core/`: the CLI loads the core barrel (through this plugin's checks)
+  installed sets by name and need no manifest); a browser host's warm-up
+  pre-draws its symbols (`plugins/sprites/plugins/bundled-symbols`). The
+  manifest sits in the sprites' portable `server/`
+  (`plugins/sprites/server/internal/icon-manifest.generated.ts`, exported as
+  `codeSymbolNames`), not in `core/`: the CLI loads the core barrel (through this plugin's checks)
   in the process that regenerates the manifest, which would freeze it.
 - **The manifest has an independent oracle.** `icons:manifest-in-sync` compares
   the manifest to a re-run of its own generator, so it catches drift but never
@@ -176,12 +178,16 @@ Design and measurements: `research/2026-11-14-ui-per-glyph-icon-loading.md`.
   `icons.runtime-symbols` tuple `{ hash, key, names }` per key per commit).
   A glyph a batch was asked for and does not carry is **missing** (the
   marker, reported).
-- **Which store**: code Material symbols always draw from the PAGE's store
-  (`pageRuntimeSymbols`) — the same drawing whichever server draws it, and a
-  plugin scope's server (a browser host) would load its whole bundled set for
-  a name it has not cached. Saved icons draw from their scope's store
-  (`useRuntimeSymbolStore`), sprite-family glyphs from the scope's own store
-  when it mounted one, else the page's (`useFamilyGlyphStore`).
+- **Which store** — resolved from where the icon renders, never named by the
+  drawing code (`IconStores`), so nothing drawn inside a sealed plugin scope
+  (a demo) reads a glyph from the page's server: saved icons draw from their
+  scope's store (`useRuntimeSymbolStore`; a scope that mounted none throws),
+  code glyphs — code Material symbols and sprite-family glyphs — from the
+  scope's own store when it mounted one, else the page's
+  (`useScopeGlyphStore`). A browser host draws code symbols in the default
+  style from its storage (its warm-up pre-drew them into the snapshot,
+  `plugins/sprites/plugins/bundled-symbols`); another style loads its bundled
+  set once.
 - **Asked in a layout effect**, so every want of a commit is recorded before
   it paints: the sprites plugin holds the page's FIRST paint until the first
   frame's glyphs are in (`plugins/sprites/web/internal/first-frame.ts`) — no

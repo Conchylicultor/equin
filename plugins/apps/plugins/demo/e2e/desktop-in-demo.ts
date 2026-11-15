@@ -66,6 +66,16 @@ const SANCTIONED: readonly RegExp[] = [
   /^\/api\/health(\/ready)?$/,
 ];
 
+/** A glyph read: what the page's own chrome may ask its server for. */
+const PAGE_GLYPH_READ =
+  /^\/api\/(resources\/icons\.runtime-symbols|icons\/glyph-assets\/)/;
+
+/**
+ * A `<use href>` drawing from the PAGE's glyph sheet (a Material or Lucide
+ * glyph without a scope store's `rs<n>-` prefix): never inside the embed.
+ */
+const PAGE_GLYPH_ID = /^#(msr-|lucide-)/;
+
 /** How long an app swap, a mode switch or a worker read gets. */
 const RENDER_TIMEOUT_MS = 30_000;
 
@@ -177,12 +187,36 @@ await withBrowser(async (h) => {
   });
 
   const leaked: string[] = [];
+  // While the test drives the PAGE's own chrome (its View options popover,
+  // whose Layout control acts on the embed), that chrome's glyphs are the
+  // page's and come from the page's server — not a read escaping the scope.
+  // That the scope's own icons never draw from the page is checked on the DOM
+  // instead (no page glyph id inside the embed, below).
+  let inPageChrome = false;
   const onRequest = (req: Request): void => {
     const url = new URL(req.url());
     if (url.origin !== new URL(page.url()).origin) return;
     if (!url.pathname.startsWith("/api/")) return;
-    if (!SANCTIONED.some((re) => re.test(url.pathname)))
-      leaked.push(`${req.method()} ${url.pathname}`);
+    if (SANCTIONED.some((re) => re.test(url.pathname))) return;
+    const line = `${req.method()} ${url.pathname}${url.search}`;
+    if (inPageChrome && PAGE_GLYPH_READ.test(url.pathname)) {
+      r.note(`the page's own chrome: ${line}`);
+      return;
+    }
+    leaked.push(`${req.method()} ${url.pathname}`);
+    // What it asked for, so a leak names its reader (e.g. the glyphs).
+    r.note(`leaked: ${line}`);
+  };
+  /** Pick a surface mode through the page's own View options popover. */
+  const pickThroughPageChrome = async (label: string): Promise<void> => {
+    inPageChrome = true;
+    try {
+      // The popover's glyphs are asked once it renders, before its radio is
+      // clicked: inside this window.
+      await pickSurfaceMode(page, label);
+    } finally {
+      inPageChrome = false;
+    }
   };
   page.on("request", onRequest);
   const openedSockets: string[] = [];
@@ -310,7 +344,7 @@ await withBrowser(async (h) => {
   );
   r.ok("the page stays on the demo", onDemoPage(page.url()), page.url());
   await snap(page, OUT, "3-full-screen");
-  await pickSurfaceMode(page, "Desktop");
+  await pickThroughPageChrome("Desktop");
   await renders(
     "the Layout control returns to the desktop with both windows",
     () => shownWindowIds(embedRoot(page)),
@@ -356,6 +390,17 @@ await withBrowser(async (h) => {
   r.eq(
     "no /api request left for the page's origin (sanctioned telemetry aside)",
     leaked,
+    [],
+  );
+  r.eq(
+    "no icon inside the embed draws a glyph from the page's sheet",
+    await embedRoot(page).evaluate(
+      (root, pageGlyph) =>
+        [...root.querySelectorAll("use")]
+          .map((u) => u.getAttribute("href") ?? "")
+          .filter((href) => new RegExp(pageGlyph).test(href)),
+      PAGE_GLYPH_ID.source,
+    ),
     [],
   );
   r.eq("the page opened no socket of its own", openedSockets, []);

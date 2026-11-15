@@ -67,9 +67,11 @@ is now the glyph (`GlyphKey`, name — the parent's "Glyphs and sprites").
   per-style symbol map — a name is drawn the first time it is asked for, then
   kept; the ~19 MB sets parsed under one shared lease and dropped after), the
   bundled set on a browser host (`plugins/bundled-symbols`, weight 400 only,
-  imported lazily when a drawing is missing; its warm-up draws every saved
-  name — `savedIconNames()`, the saved-icon sources — and keeps them in the
-  host's storage). `drawRuntimeSymbol(sets, key, name)` is the one build every
+  imported lazily when a drawing is missing; its warm-ups draw every saved
+  name — `savedIconNames()`, the saved-icon sources — in every style, and
+  every code symbol — `codeSymbolNames()`, the icon manifest — in the
+  default style, and keep them in the host's storage: a scope's code icons
+  draw from its own host, and a snapshot carries them). `drawRuntimeSymbol(sets, key, name)` is the one build every
   drawer runs; `symbolsHash()` (the drawer's identity, the drawable-name list,
   `RUNTIME_SYMBOL_BUILD_VERSION`) is served as `icons.symbols-hash`.
 - **Desktop-only** (`machine/`): `icons.manifest` (`needsMachine`, Debug →
@@ -125,6 +127,7 @@ is now the glyph (`GlyphKey`, name — the parent's "Glyphs and sprites").
     - `buildLucideSprites`
     - `buildSetiSprite`
     - `buildSprite`
+    - `codeSymbolNames`
     - `drawRuntimeSymbol`
     - `LUCIDE_TUNING_VERSION`
     - `RUNTIME_SYMBOL_BUILD_VERSION`

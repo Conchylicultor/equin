@@ -5,7 +5,11 @@ import {
   PluginProvider,
   PluginScope,
 } from "@plugins/framework/plugins/web-sdk/core";
-import { runtimeSymbol, type SavedSymbolName } from "../../core/icon-ref";
+import {
+  runtimeSymbol,
+  symbol,
+  type SavedSymbolName,
+} from "../../core/icon-ref";
 import { Icon } from "../internal/icon";
 import {
   RuntimeSymbolScope,
@@ -65,6 +69,27 @@ describe("runtime symbols in a plugin scope", () => {
     expect(href).not.toBe("#msr-default-outline-400-star");
     // The scope's sheet holds the symbol under the same, prefixed id.
     expect(container.querySelector(href!)).not.toBeNull();
+    offScope();
+    offPage();
+  });
+
+  it("draws a code symbol from the scope's own store too, never the page's", () => {
+    const store = createScopedRuntimeSymbols();
+    const scopeWants: GlyphEntry[] = [];
+    const pageWants: GlyphEntry[] = [];
+    const offScope = store.installLoader((e) => scopeWants.push(e));
+    const offPage = pageRuntimeSymbols.installLoader((e) => pageWants.push(e));
+    render(
+      inPlugins(
+        <PluginScope composition={demo}>
+          <RuntimeSymbolScope store={store}>
+            <Icon icon={symbol("add")} />
+          </RuntimeSymbolScope>
+        </PluginScope>,
+      ),
+    );
+    expect(scopeWants).toEqual([{ key: "default-outline-400", name: "add" }]);
+    expect(pageWants).toEqual([]);
     offScope();
     offPage();
   });
