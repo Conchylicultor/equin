@@ -68,6 +68,10 @@ import {
   renderStatement,
   type Binding,
 } from "./bindings";
+import {
+  dedupeDynamicImportEdits,
+  IMPORT_ONCE_HELPER,
+} from "./dedupe-dynamic-imports";
 import { PLUGIN_DEFINITION_ENTRY } from "./plugin-definition";
 import { coEntryFileName, type CoEntry } from "./vite-builder";
 import {
@@ -790,7 +794,7 @@ export async function bundleLinkGraph(
   const { linked, boot, appGroupOf, appGroupKeys, entryFile, pageScriptFiles } =
     graph;
   // Bundle.
-  const { rolldown } = await import("rolldown");
+  const { rolldown, RolldownMagicString } = await import("rolldown");
   const bundle = await rolldown({
     input: {
       entry: entryFile,
@@ -821,6 +825,17 @@ export async function bundleLinkGraph(
           const m = linked.get(id);
           if (m === undefined) throw new Error(`link: unlinked module ${id}`);
           return { code: m.code, map: m.map ?? undefined };
+        },
+        // One import() per target per chunk: the registry's ~1,200 loaders
+        // name ~100 chunks, and a browser re-walks a module's whole graph
+        // on every import() of it (dedupe-dynamic-imports.ts).
+        async renderChunk(code) {
+          const edits = await dedupeDynamicImportEdits(code);
+          if (edits.length === 0) return null;
+          const s = new RolldownMagicString(code);
+          for (const e of edits) s.overwrite(e.start, e.end, e.text);
+          s.prepend(IMPORT_ONCE_HELPER);
+          return s;
         },
       },
     ],

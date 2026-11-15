@@ -70,6 +70,14 @@ Key invariants:
     by construction; capturing deps let one app's group take another's
     helpers, and `/about` loaded the page editor). Each `link.<key>` record
     carries `modules.json` (module → group, chunk): why a module is on a route.
+  - **One `import()` per target per chunk** (`dedupe-dynamic-imports.ts`, the
+    link plugin's `renderChunk`): a target a chunk imports from more than one
+    place goes through one per-chunk memo, `__equinImportOnce(X, () =>
+    import(X))` — the literal import stays written out, so every lexer reader
+    still sees the edge; a rejection is forgotten, so a retry imports again.
+    Why: the registry's loaders name far fewer chunks than plugins, and a
+    browser re-walks a module's whole static graph (a task per module) on
+    every `import()` of it, even one already loaded.
   - **Content-addressing holds at both levels**: an artifact's bytes still
     name other plugins by barrel specifier (its address knows nothing of
     theirs); each chunk is its own store entry `chunk.<hash>` (`index.js`, an
