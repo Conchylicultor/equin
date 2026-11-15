@@ -2,7 +2,7 @@
 
 import type { Ctx2D } from "@plugins/apps/plugins/isle/plugins/buildings/core";
 import { mix } from "./colour";
-import { ell, part, smooth, TAU, type Point } from "./draw-parts";
+import { ell, part, smooth, TAU, type Path, type Point } from "./draw-parts";
 import type { FigurePose, Gait } from "./gait";
 import type { Look } from "./looks";
 
@@ -59,8 +59,6 @@ export function frontHead(
   const [x, y] = c;
   const lagY = G.hairLag * 0.3;
   // hair behind the head
-  if (L.hairStyle === "bun" && back)
-    part(g, ell(x, y - 2.2, 2.2, 1.9), L.hair, { off: 0.6 });
   if (L.hairStyle === "curly")
     part(
       g,
@@ -75,9 +73,8 @@ export function frontHead(
       L.hair,
       { off: 0.9 },
     );
-  // ears + face
-  if (!back)
-    for (const s of [-1, 1])
+  // ears + face (from behind, the ears peek out either side of the hair)
+  for (const s of [-1, 1])
       part(g, ell(x + s * (hr - 0.1), y + 0.6, 0.8, 1.15), mix(L.skin, -0.06), {
         off: 0.3,
         lw: 0.5,
@@ -139,6 +136,10 @@ export function frontHead(
   }
   // hair on top
   const H = L.hair;
+  if (back) {
+    backOfHead(g, L, c, hr, hy, lagY);
+    if (L.hairStyle !== "curly") return;
+  }
   if (L.hairStyle === "curly") {
     const pts: readonly Point[] = back
       ? [
@@ -190,24 +191,22 @@ export function frontHead(
       L.cap,
       { off: 0.8 },
     );
-    if (!back)
-      part(
-        g,
-        smooth([
-          [x - hr - 0.2, y - 0.9],
-          [x + hr + 0.2, y - 0.9],
-          [x + hr * 0.7, y + 0.3],
-          [x - hr * 0.7, y + 0.3],
-        ]),
-        mix(L.cap, -0.25),
-        { off: 0.4 },
-      );
-    if (!back)
-      for (const s of [-1, 1])
-        part(g, ell(x + s * (hr - 0.4), y + 0.8, 0.9, 1.2), H, {
-          off: 0.3,
-          lw: 0.4,
-        });
+    part(
+      g,
+      smooth([
+        [x - hr - 0.2, y - 0.9],
+        [x + hr + 0.2, y - 0.9],
+        [x + hr * 0.7, y + 0.3],
+        [x - hr * 0.7, y + 0.3],
+      ]),
+      mix(L.cap, -0.25),
+      { off: 0.4 },
+    );
+    for (const s of [-1, 1])
+      part(g, ell(x + s * (hr - 0.4), y + 0.8, 0.9, 1.2), H, {
+        off: 0.3,
+        lw: 0.4,
+      });
   } else if (L.hairStyle === "bun") {
     part(
       g,
@@ -224,8 +223,7 @@ export function frontHead(
       H,
       { off: 0.8 },
     );
-    if (!back)
-      part(g, ell(x + 0.4, y - hy - 1 + lagY, 2, 1.6), mix(H, -0.05), {
+    part(g, ell(x + 0.4, y - hy - 1 + lagY, 2, 1.6), mix(H, -0.05), {
         off: 0.6,
       });
     g.strokeStyle = "rgba(40,20,10,.35)";
@@ -249,38 +247,23 @@ export function frontHead(
         H,
         { off: 0.4, lw: 0.5 },
       );
-    if (back)
-      part(
-        g,
-        smooth([
-          [x - hr - 0.2, y + 1.2],
-          [x - hr, y - 1.8],
-          [x + hr, y - 1.8],
-          [x + hr + 0.2, y + 1.2],
-          [x, y + 2.6],
-        ]),
-        H,
-        { off: 0.5 },
-      );
-    if (!back) {
-      g.strokeStyle = "rgba(255,255,255,.55)";
-      g.lineWidth = 0.55;
-      g.beginPath();
-      g.moveTo(x - 1.6, y - hy * 0.85);
-      g.quadraticCurveTo(x - 0.4, y - hy - 0.1, x + 0.8, y - hy * 0.92);
-      g.stroke();
-    }
+    g.strokeStyle = "rgba(255,255,255,.55)";
+    g.lineWidth = 0.55;
+    g.beginPath();
+    g.moveTo(x - 1.6, y - hy * 0.85);
+    g.quadraticCurveTo(x - 0.4, y - hy - 0.1, x + 0.8, y - hy * 0.92);
+    g.stroke();
   } else {
     // short / swept
     const sweep = L.hairStyle === "swept" ? 1 : 0;
     part(
       g,
       smooth([
-        [x - hr - 0.3, y + (back ? 2 : -0.2)],
+        [x - hr - 0.3, y - 0.2],
         [x - hr * 0.95, y - hy * 0.95],
         [x - 0.5, y - hy - 1.2 + lagY * sweep],
         [x + hr * 0.9 + sweep, y - hy * 0.9 + lagY * sweep],
-        [x + hr + 0.3, y + (back ? 2 : -0.2)],
+        [x + hr + 0.3, y - 0.2],
         [x + hr * 0.6, y - 1.8 - sweep],
         [x - 0.6 * sweep, y - 2.4],
         [x - hr * 0.6, y - 1.6],
@@ -304,6 +287,115 @@ export function frontHead(
       }
     }
   }
+}
+
+/**
+ * The hair over the back of the skull, down to the nape: from the crown (`crown`
+ * true) for the styles whose hair covers the whole head, or from the ears for a
+ * bald head's fringe.
+ */
+function backHairMass(
+  x: number,
+  y: number,
+  hr: number,
+  hy: number,
+  nape: number,
+  crown: boolean,
+  lift: number,
+): Path {
+  const top: readonly Point[] = crown
+    ? [
+        [x - hr - 0.35, y - 0.6],
+        [x - hr * 0.98 - 0.3, y - hy * 0.88 - 0.2],
+        [x, y - hy - 1 + lift],
+        [x + hr * 0.98 + 0.3, y - hy * 0.88 - 0.2],
+        [x + hr + 0.35, y - 0.6],
+      ]
+    : [
+        [x - hr - 0.3, y + 0.3],
+        [x - hr * 0.9, y - 1.4],
+        [x, y - 0.3],
+        [x + hr * 0.9, y - 1.4],
+        [x + hr + 0.3, y + 0.3],
+      ];
+  return smooth([
+    ...top,
+    [x + hr * 0.92, y + hy * 0.5],
+    [x + hr * 0.4, nape + 0.5],
+    [x, nape - 0.2],
+    [x - hr * 0.4, nape + 0.5],
+    [x - hr * 0.92, y + hy * 0.5],
+  ]);
+}
+
+/**
+ * The back of the head: hair over the skull down to the nape (the face drawn
+ * under it never shows), combed strands, then what sits on it — the bun, the
+ * cap's crown. Curly hair only gets the mass; its curls are drawn on top.
+ */
+function backOfHead(
+  g: Ctx2D,
+  L: Look,
+  c: Point,
+  hr: number,
+  hy: number,
+  lagY: number,
+): void {
+  const [x, y] = c;
+  const H = L.hair;
+  const style = L.hairStyle;
+  const sweep = style === "swept" ? 1 : 0;
+  const nape = y + hy * (style === "bun" ? 0.62 : 0.72);
+  part(
+    g,
+    backHairMass(x, y, hr, hy, nape, style !== "bald", lagY * sweep),
+    style === "curly" ? mix(H, -0.08) : H,
+    { off: 0.8, shade: 0.24 },
+  );
+  if (style === "curly") return;
+  if (style === "bald") {
+    // the bare crown's shine
+    g.strokeStyle = "rgba(255,255,255,.45)";
+    g.lineWidth = 0.5;
+    g.beginPath();
+    g.moveTo(x - 1.4, y - hy * 0.8);
+    g.quadraticCurveTo(x, y - hy - 0.1, x + 1.2, y - hy * 0.85);
+    g.stroke();
+    return;
+  }
+  // combed strands, from the crown (or the bun) down to the nape
+  g.strokeStyle = "rgba(40,20,10,.32)";
+  g.lineWidth = 0.35;
+  for (let i = -2; i <= 2; i++) {
+    if (i === 0 && style !== "bun") continue;
+    g.beginPath();
+    g.moveTo(x + i * 0.5 + sweep * 0.6, y - hy + 0.8);
+    g.quadraticCurveTo(
+      x + i * 1.5 + sweep * 0.8,
+      y - 0.5,
+      x + i * 1.1,
+      nape - 0.4 + Math.abs(i) * 0.2,
+    );
+    g.stroke();
+  }
+  if (style === "bun")
+    part(g, ell(x, y - hy * 0.45 + lagY, 2.2, 1.9), mix(H, -0.05), {
+      off: 0.6,
+    });
+  else if (L.hairStyle === "cap")
+    part(
+      g,
+      smooth([
+        [x - hr - 0.45, y - 0.3],
+        [x - hr * 0.95, y - hy * 0.9],
+        [x, y - hy - 1.1],
+        [x + hr * 0.95, y - hy * 0.9],
+        [x + hr + 0.45, y - 0.3],
+        [x, y + 0.3],
+      ]),
+      L.cap,
+      { off: 0.8 },
+    );
 }
 
 export function sideHead(
