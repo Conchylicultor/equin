@@ -106,7 +106,9 @@ const refuseLeave: AppEmbedLeave = () => {
  *   this page with the embed at that place, maximized — the same embed, never
  *   the real app at that path.
  *
- * The host's chrome reads and toggles maximized, and resets the place, with
+ * A host that keeps the place elsewhere (in memory, in its own route) hands
+ * a `place` binding instead ({@link EmbedPlaceBinding}). The host's chrome
+ * reads and toggles maximized, and resets the place, with
  * {@link useEmbedPlace}. Size it with `className` (it fills its box). `app` /
  * `route` seed the first tab when the URL names no place yet; with neither,
  * it opens on the composition's home app.
@@ -116,6 +118,7 @@ export function AppEmbed({
   fills,
   onTitleChange,
   className,
+  place,
   ...at
 }: AppEmbedAt & {
   onLeave?: AppEmbedLeave;
@@ -130,13 +133,19 @@ export function AppEmbed({
   fills?: "page" | "viewport";
   /** Told the embed's title as it changes, `undefined` once it unmounts (see above). */
   onTitleChange?: (title: string | undefined) => void;
+  /**
+   * Where the host keeps the embed's place, when not in the enclosing pane's
+   * embed tail (see {@link EmbedPlaceBinding}). Omitted: the pane's tail,
+   * else (no pane) memory only.
+   */
+  place?: EmbedPlaceBinding;
   className?: string;
 }): ReactNode {
   const fillsPage = fills !== undefined;
-  const views = usePaneViews();
-  const location = views?.values[EMBED_PLACE_SURFACE];
-  const maximized = views?.values[EMBED_MAXIMIZED_SURFACE] === EMBED_MAXIMIZED;
-  // The seed is read once, at the tab set's first render: the URL's place
+  const paneBinding = usePaneTailBinding();
+  const binding = place ?? paneBinding;
+  const location = binding?.location;
+  // The seed is read once, at the tab set's first render: the host's place
   // first, else the host's app / route, else the composition's home app.
   const seed: EmbeddedAt =
     location !== undefined
@@ -145,8 +154,57 @@ export function AppEmbed({
         ? { app: at.app, route: at.route }
         : { url: undefined };
   const [embeddedAt] = useState(seed);
+  const onLocationChange = binding?.onLocationChange;
+  const browserTabUrl = binding?.browserTabUrl;
+  const embedded = useMemo<EmbeddedTabSet>(
+    () => ({
+      at: embeddedAt,
+      location,
+      onLeave,
+      fillsPage,
+      ...(onLocationChange !== undefined && browserTabUrl !== undefined
+        ? { onLocationChange, browserTabUrl }
+        : {}),
+    }),
+    [embeddedAt, location, onLeave, fillsPage, onLocationChange, browserTabUrl],
+  );
+  return (
+    <TabsProvider embedded={embedded}>
+      <EmbedFrame
+        className={className}
+        viewport={fills === "viewport"}
+        onTitleChange={onTitleChange}
+      />
+    </TabsProvider>
+  );
+}
+
+/**
+ * Where a host keeps its embed's place — the embed reads it and reports every
+ * move to it, and addresses a new browser tab opened from inside through it.
+ * The default binding is the enclosing pane's embed tail; a host whose embed
+ * lives outside a pane (portaled from a layout), or whose place must not be
+ * in the URL, hands its own.
+ */
+export interface EmbedPlaceBinding {
+  /** Where the embed is, as the host keeps it (`undefined`: nowhere chosen yet). */
+  location: string | undefined;
+  /** Told each move (`history`: how the app's own tab would write it). */
+  onLocationChange: (url: string, history: HistoryMode) => void;
+  /** The URL of this origin a new browser tab opened at `place` from inside opens. */
+  browserTabUrl: (place: string) => string;
+}
+
+/**
+ * The enclosing pane's embed tail as a binding: framed, a move rewrites the
+ * current entry; maximized, each move is the app's own entry. `null` outside
+ * a pane (the place is then kept in memory only).
+ */
+function usePaneTailBinding(): EmbedPlaceBinding | null {
+  const views = usePaneViews();
+  const location = views?.values[EMBED_PLACE_SURFACE];
+  const maximized = views?.values[EMBED_MAXIMIZED_SURFACE] === EMBED_MAXIMIZED;
   const latest = useLatestRef({ views, location, maximized });
-  const bound = views !== null;
   const onLocationChange = useCallback(
     (next: string, history: HistoryMode) => {
       const now = latest.current;
@@ -172,32 +230,10 @@ export function AppEmbed({
     },
     [latest],
   );
-  const embedded = useMemo<EmbeddedTabSet>(
-    () => ({
-      at: embeddedAt,
-      location,
-      onLeave,
-      fillsPage,
-      ...(bound ? { onLocationChange, browserTabUrl } : {}),
-    }),
-    [
-      embeddedAt,
-      location,
-      onLeave,
-      fillsPage,
-      bound,
-      onLocationChange,
-      browserTabUrl,
-    ],
-  );
-  return (
-    <TabsProvider embedded={embedded}>
-      <EmbedFrame
-        className={className}
-        viewport={fills === "viewport"}
-        onTitleChange={onTitleChange}
-      />
-    </TabsProvider>
+  const bound = views !== null;
+  return useMemo(
+    () => (bound ? { location, onLocationChange, browserTabUrl } : null),
+    [bound, location, onLocationChange, browserTabUrl],
   );
 }
 

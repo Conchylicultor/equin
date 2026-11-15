@@ -1,5 +1,8 @@
 import type { ComponentType } from "react";
-import { defineRenderSlot } from "@plugins/primitives/plugins/slot-render/web";
+import {
+  defineRenderSlot,
+  defineWrapperSlot,
+} from "@plugins/primitives/plugins/slot-render/web";
 import { definePaneHeaderSlot } from "@plugins/primitives/plugins/pane/web";
 
 /**
@@ -42,6 +45,17 @@ export const Website = {
    * each contribution places itself (a `Pin` in the surface's corner).
    */
   Layer: defineRenderSlot<{ label: string; component: ComponentType }>({
+    docLabel: (p) => p.label,
+  }),
+  /**
+   * What lives across every page of the site: wrappers folded around the
+   * pages by the app's surface (`WebsiteLayout`), kept while the visitor
+   * moves between them — state a page switch must not end (the live demo's
+   * store and server). A resident renders `children` (the pages) and may
+   * mount beside them what it keeps; it shows itself, where it does, through
+   * a portal into the page that asks for it.
+   */
+  Resident: defineWrapperSlot<{ label: string }>({
     docLabel: (p) => p.label,
   }),
   /**

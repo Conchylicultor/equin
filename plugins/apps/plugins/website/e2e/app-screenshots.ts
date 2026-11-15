@@ -2,8 +2,8 @@
 // gallery's screenshots can be refreshed whenever an app's design moves.
 //
 // An app the homepage's live demo carries is photographed IN the demo, at its
-// staged `shot` place (`APP_DEMO_PLACES`, the apps page's core): the homepage at
-// `/about/at/<place>;full=1`, the demo maximized over the page — the demo's
+// staged `shot` place (`APP_DEMO_PLACES`, the apps page's core): the demo page
+// at `/about/demo/at/<place>`, the demo alone filling the page — the demo's
 // own made-up data, never anyone's real one. Every tip the demo raises is answered before
 // the shot, so none covers the app.
 //
@@ -38,12 +38,9 @@ import {
   type ColorScheme,
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { waitForNotBusy } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/core";
-import {
-  embedTailPath,
-  type AppRef,
-} from "@plugins/primitives/plugins/pane/core";
+import type { AppRef } from "@plugins/primitives/plugins/pane/core";
+import { demoPagePath } from "@plugins/apps/plugins/website/plugins/live-demo/core";
 import { APP_DEMO_PLACES } from "@plugins/apps/plugins/website/plugins/pages/plugins/apps/core";
-import { websiteApp } from "@plugins/apps/plugins/website/plugins/shell/core";
 import { browserApp } from "@plugins/apps/plugins/browser/plugins/shell/core";
 import { chordApp } from "@plugins/apps/plugins/chord/plugins/shell/core";
 import { deployApp } from "@plugins/apps/plugins/deploy/plugins/shell/core";
@@ -64,7 +61,7 @@ const INSTANCE_APPS: Readonly<Record<string, AppRef>> = {
 const GALLERY: { id: string; path: string }[] = [
   ...Object.entries(APP_DEMO_PLACES).map(([id, { shot }]) => ({
     id,
-    path: websiteApp.basePath + embedTailPath(shot, { maximized: true }),
+    path: demoPagePath(shot),
   })),
   ...Object.entries(INSTANCE_APPS).map(([id, app]) => ({
     id,

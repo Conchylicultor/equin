@@ -565,6 +565,7 @@ after new visits, a rollup and a retention sweep arrive as deltas.
     - `apps/website/improve`
     - `apps/website/landing/hero`
     - `apps/website/landing/screenshot`
+    - `apps/website/live-demo`
     - `apps/website/pages/apps`
     - `apps/website/pages/download`
     - `apps/website/pages/foundations`

@@ -787,6 +787,12 @@
       "parent": null
     },
     {
+      "paneId": "website-demo",
+      "segment": "demo",
+      "appIndex": false,
+      "parent": null
+    },
+    {
       "paneId": "website-download",
       "segment": "download",
       "appIndex": false,

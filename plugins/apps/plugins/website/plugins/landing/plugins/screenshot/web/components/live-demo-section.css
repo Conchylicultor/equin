@@ -1,8 +1,8 @@
 /* The homepage's live demo: equin itself, in a frame where the desktop
    picture was. Its frame grows in place when the visitor enters the demo —
    out of the reading measure, nearly as wide and as tall as the window, the
-   page below moving down. Maximized, the component draws it through a
-   SurfaceOverlay instead (the tab's surface, above the site's header). */
+   page below moving down. Maximized, the demo is its own page
+   (`live-demo`'s `/about/demo`). */
 .website-demo {
   margin: 0;
   /* Where a reveal stops when the frame grows: GROWN_GAP below the page's

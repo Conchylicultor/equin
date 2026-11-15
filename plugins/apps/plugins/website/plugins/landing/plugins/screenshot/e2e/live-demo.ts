@@ -1,28 +1,24 @@
 /**
- * The homepage's live demo band, from a first visit (a fresh browser holds no
- * demo data):
+ * The homepage's live demo band and the demo page, from a first visit (a
+ * fresh browser holds no demo data):
  *  1. it opens on the gate (Enter equin), and nothing of the demo's host —
  *     its host module, its worker — is requested before the click;
  *  2. Enter grows the frame in place, out of the reading measure, and the
  *     boot screen's bar shows while the host starts;
  *  3. the demo runs (the embed renders) with Maximize and Reset demo under
  *     it — no Collapse / Expand: once entered, the frame stays grown;
- *  4. a move inside the demo (Home's Pages tile) is written into the
- *     homepage's URL, rewriting the current entry (framed);
- *  5. Maximize runs as a view transition and draws the demo over the tab's
- *     surface (above the site's header), with a "Press Esc to restore"
- *     notice; Esc brings it back into its frame, also as a view transition;
- *     Maximize again, then Back returns to the frame (Maximize is the page's
- *     own step); Restore (revealed at the top edge) also restores;
- *  6. a reload: the URL names the demo, so it resumes grown, on Pages, where
- *     the visitor was, with no gate;
- *  7. maximized, a reload resumes it maximized over the tab, on Pages;
- *  8. a second tab opened at that URL while the visitor is in the demo joins
- *     it — maximized, no gate;
- *  9. an old link's keys (`;view.website.demo=…;view.website.demo.full=1`,
- *     from before the embed kept its own place; an older `/website…` one
- *     reaches `/about` through the gateway's 301 first)
- *     is rewritten onto the embed's own tail, and opens there.
+ *  4. a move inside the framed demo (Home's Pages tile) leaves the
+ *     homepage's URL alone (`/about`) and adds no history entry;
+ *  5. Maximize runs as a view transition onto the demo page
+ *     (`/about/demo/at/pages`): the demo alone fills the tab, nothing of the
+ *     homepage mounted, on the same server (no host restart), with a "Press
+ *     Esc to restore" notice; Esc goes back to the homepage's frame, also as
+ *     a view transition, on Pages; Maximize again, then Back returns to the
+ *     frame; Restore (revealed at the top edge) also returns;
+ *  6. the homepage reloaded shows the gate again (its URL names no place);
+ *  7. the demo page loaded fresh resumes with no gate, on Pages, and loads
+ *     nothing of the homepage (no hero film);
+ *  8. a second tab opened at that URL joins the demo — no gate.
  * Screenshots of each step go to `--out`.
  *
  * Manual only — nothing runs this automatically.
@@ -39,14 +35,16 @@ import {
 } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/e2e";
 import { waitFor } from "@plugins/framework/plugins/tooling/plugins/e2e-harness/plugins/page-ready/core";
 import { answerTipsAsTheyShow } from "@plugins/hints/e2e";
+import { demoPagePath } from "@plugins/apps/plugins/website/plugins/live-demo/core";
 
 const OUT = arg("out") ?? "/tmp/website-live-demo";
 /** The demo's host: its module (`@browser-host/…`) and its worker tree. */
 const HOST_REQUEST = /\/(artifacts\/[^/]*browser-host|artifacts\/worker-tree)/;
 const BOOT_TIMEOUT_MS = 60_000;
-/** Where the homepage's URL holds the demo's place: the embed's own tail (`app-embed`). */
-const LOCATION_KEY = "/about/at";
-const FULL_KEY = ";full=1";
+/** The demo page at Pages. */
+const DEMO_PAGES = demoPagePath("/pages");
+/** The hero film, which only the homepage loads. */
+const HERO_FILM = /website-media\/.*\.mp4/;
 
 /** The page's URL path, decoded. */
 function pathOf(page: Page): string {
@@ -153,7 +151,7 @@ await withBrowser(async (h) => {
   await page.waitForTimeout(700);
   await snap(page, OUT, "3-running");
 
-  // ── 4. a move inside is the homepage's URL ─────────────────────────
+  // ── 4. a move inside the frame leaves the homepage's URL alone ─────
   const entries = await page.evaluate(() => history.length);
   await page
     .locator("[data-app-embed]")
@@ -165,24 +163,21 @@ await withBrowser(async (h) => {
     .locator('[data-app-embed="pages"]')
     .first()
     .waitFor({ timeout: BOOT_TIMEOUT_MS });
-  await urlSettles(r, page, "the URL names the demo's place (Pages)", (p) =>
-    p.includes(`${LOCATION_KEY}/pages`),
-  );
+  r.eq("framed, the URL stays the homepage's", pathOf(page), "/about");
   r.eq(
     "framed, the demo's moves add no history entry",
     await page.evaluate(() => history.length),
     entries,
   );
 
-  // ── 5. Maximize, Esc, Back, Restore ────────────────────────────────
+  // ── 5. Maximize (the demo page), Esc, Back, Restore ────────────────
+  const hostsBefore = hostRequests.length;
   await countViewTransitions(page);
   await page.getByRole("button", { name: "Maximize" }).click();
   const viewport = page.viewportSize();
-  // Maximized, the demo is drawn over the tab's surface (above the site's
-  // header), the frame keeping its place in the page.
-  const overlay = page.locator("[data-website-demo-maximized]").first();
+  const demoPage = page.locator('[data-demo-target="page"]').first();
   const maximized = await waitFor(
-    async () => (await overlay.boundingBox()) ?? null,
+    async () => (await demoPage.boundingBox()) ?? null,
     (box) =>
       box !== null &&
       viewport !== null &&
@@ -191,17 +186,30 @@ await withBrowser(async (h) => {
     { timeoutMs: 3_000 },
   );
   r.ok(
-    "Maximize fills the tab, the site's header included",
+    "Maximize opens the demo page, the demo filling the tab",
     maximized.ok,
     JSON.stringify(maximized.value),
   );
   r.eq("Maximize: run as a view transition", await viewTransitions(page), 1);
-  await urlSettles(r, page, "Maximize: the URL says so", (p) =>
-    p.includes(FULL_KEY),
+  await urlSettles(
+    r,
+    page,
+    "Maximize: the URL is the demo page, at Pages",
+    (p) => p === DEMO_PAGES,
+  );
+  r.eq(
+    "the demo page mounts nothing of the homepage",
+    await page.locator("figure.website-demo, video").count(),
+    0,
   );
   r.ok(
     "the maximized demo runs on Pages (the embed reopened where it was)",
-    (await overlay.locator('[data-app-embed="pages"]').count()) > 0,
+    (await demoPage.locator('[data-app-embed="pages"]').count()) > 0,
+  );
+  r.eq(
+    "the demo's server kept running (no host request on Maximize)",
+    hostRequests.length,
+    hostsBefore,
   );
   const notice = page.locator("[data-demo-esc-notice]");
   r.ok(
@@ -219,129 +227,101 @@ await withBrowser(async (h) => {
   const restoredInFrame = async (name: string) => {
     const restored = await waitFor(
       async () => ({
-        overlays: await overlay.count(),
-        embeds: await frame.locator("[data-app-embed]").count(),
+        path: pathOf(page),
+        pages: await demoPage.count(),
+        embeds: await frame.locator('[data-app-embed="pages"]').count(),
       }),
-      (v) => v.overlays === 0 && v.embeds > 0,
+      (v) => v.path === "/about" && v.pages === 0 && v.embeds > 0,
       { timeoutMs: 3_000 },
     );
     r.ok(name, restored.ok, JSON.stringify(restored.value));
   };
   await page.mouse.click((viewport?.width ?? 1200) / 2, 300);
   await page.keyboard.press("Escape");
-  await restoredInFrame("Esc puts the demo back in its frame");
+  await restoredInFrame("Esc returns to the homepage's frame, on Pages");
   r.eq("Esc: run as a view transition", await viewTransitions(page), 2);
-  await urlSettles(
-    r,
-    page,
-    "Esc: the URL is framed again, on Pages",
-    (p) => !p.includes(FULL_KEY) && p.includes(`${LOCATION_KEY}/pages`),
-  );
 
   await page.getByRole("button", { name: "Maximize" }).click();
-  await overlay.waitFor({ timeout: 3_000 });
+  await demoPage.waitFor({ timeout: 3_000 });
   await page.goBack();
-  await restoredInFrame("Back from maximized returns to the frame");
+  await restoredInFrame("Back from the demo page returns to the frame");
 
   await page.getByRole("button", { name: "Maximize" }).click();
-  await overlay.waitFor({ timeout: 3_000 });
+  await demoPage.waitFor({ timeout: 3_000 });
   await page.mouse.move((viewport?.width ?? 1200) / 2, 2);
   await page.getByRole("button", { name: "Restore" }).click();
-  await restoredInFrame("Restore puts the demo back in its frame");
+  await restoredInFrame("Restore returns to the frame");
+  r.eq(
+    "the server ran through every switch (no host request)",
+    hostRequests.length,
+    hostsBefore,
+  );
 
-  // ── 6. a reload: the URL names the demo, so it resumes — no gate ────
+  // ── 6. the homepage reloaded: the gate again ────────────────────────
   await page.reload({ waitUntil: "domcontentloaded" });
-  const reopened = await waitFor(
-    async () => ({
-      gates: await gate.count(),
-      embeds: await frame.locator('[data-app-embed="pages"]').count(),
-    }),
-    (v) => v.embeds > 0,
-    { timeoutMs: BOOT_TIMEOUT_MS, intervalMs: 50 },
+  const gated = await waitFor(
+    async () => gate.count(),
+    (n) => n > 0,
+    { timeoutMs: BOOT_TIMEOUT_MS },
   );
   r.ok(
-    "after a reload, the demo resumes on Pages with no gate (the URL names it)",
-    reopened.ok && reopened.value.gates === 0,
-    JSON.stringify(reopened.value),
+    "after a reload, the homepage shows the gate (its URL names no place)",
+    gated.ok,
   );
-  r.ok(
-    "after a reload, the resumed frame is grown",
-    ((await frame.boundingBox())?.width ?? 0) > before + 100,
-  );
-  await page.waitForTimeout(700);
   await snap(page, OUT, "5-reloaded");
 
-  // ── 7. a maximized URL reloaded: it resumes maximized, no gate ──────
-  await page.getByRole("button", { name: "Maximize" }).click();
-  await overlay.waitFor({ timeout: 3_000 });
-  await urlSettles(r, page, "Maximize before the reload", (p) =>
-    p.includes(FULL_KEY),
-  );
-  await page.reload({ waitUntil: "domcontentloaded" });
+  // ── 7. the demo page loaded fresh: no gate, nothing of the homepage ──
+  const fresh = await page.context().newPage();
+  const films: string[] = [];
+  fresh.on("request", (req: Request) => {
+    if (HERO_FILM.test(req.url())) films.push(req.url());
+  });
+  await fresh.goto(pathUrl(DEMO_PAGES), { waitUntil: "domcontentloaded" });
   const inPlace = await waitFor(
     async () => ({
-      gates: await gate.count(),
-      embeds: await overlay.locator('[data-app-embed="pages"]').count(),
-      box: await overlay.boundingBox(),
-    }),
-    (v) => v.embeds > 0,
-    { timeoutMs: BOOT_TIMEOUT_MS, intervalMs: 50 },
-  );
-  r.ok(
-    "after a maximized reload, the demo resumes maximized over the tab, on Pages, with no gate",
-    inPlace.ok &&
-      inPlace.value.gates === 0 &&
-      viewport !== null &&
-      inPlace.value.box !== null &&
-      Math.abs(inPlace.value.box.width - viewport.width) < 2,
-    JSON.stringify(inPlace.value),
-  );
-  await snap(page, OUT, "6-maximized-reload");
-
-  // ── 8. a second tab while the visitor is in: no second Enter ────────
-  const second = await page.context().newPage();
-  await second.goto(page.url(), { waitUntil: "domcontentloaded" });
-  const secondOverlay = second.locator("[data-website-demo-maximized]").first();
-  const joined = await waitFor(
-    async () => ({
-      gates: await second.locator('[data-demo-boot="gate"]').count(),
-      embeds: await secondOverlay.locator('[data-app-embed="pages"]').count(),
+      gates: await fresh.locator('[data-demo-boot="gate"]').count(),
+      embeds: await fresh
+        .locator('[data-demo-target="page"] [data-app-embed="pages"]')
+        .count(),
     }),
     (v) => v.gates > 0 || v.embeds > 0,
     { timeoutMs: BOOT_TIMEOUT_MS, intervalMs: 20 },
   );
   r.ok(
-    "a second tab joins the demo the first is in, maximized, with no gate",
+    "the demo page resumes on Pages with no gate",
+    inPlace.ok && inPlace.value.gates === 0 && inPlace.value.embeds > 0,
+    JSON.stringify(inPlace.value),
+  );
+  r.eq(
+    "the demo page loads nothing of the homepage",
+    {
+      bands: await fresh.locator("figure.website-demo, video").count(),
+      films: films.length,
+    },
+    { bands: 0, films: 0 },
+  );
+  await snap(fresh, OUT, "6-demo-page");
+
+  // ── 8. a second tab at the demo page: it joins, no gate ─────────────
+  const second = await page.context().newPage();
+  await second.goto(pathUrl(DEMO_PAGES), { waitUntil: "domcontentloaded" });
+  const joined = await waitFor(
+    async () => ({
+      gates: await second.locator('[data-demo-boot="gate"]').count(),
+      embeds: await second
+        .locator('[data-demo-target="page"] [data-app-embed="pages"]')
+        .count(),
+    }),
+    (v) => v.gates > 0 || v.embeds > 0,
+    { timeoutMs: BOOT_TIMEOUT_MS, intervalMs: 20 },
+  );
+  r.ok(
+    "a second tab joins the demo, with no gate",
     joined.ok && joined.value.gates === 0 && joined.value.embeds > 0,
     JSON.stringify(joined.value),
   );
   await snap(second, OUT, "7-joined");
   await second.close();
-
-  // ── 9. an old link: rewritten onto the embed's tail ─────────────────
-  const old = await page.context().newPage();
-  await old.goto(
-    pathUrl(
-      `/about;view.website.demo=${encodeURIComponent("/pages")};view.website.demo.full=1`,
-    ),
-    { waitUntil: "domcontentloaded" },
-  );
-  await urlSettles(
-    r,
-    old,
-    "an old link is rewritten onto /about/at/pages;full=1",
-    (p) => p === `${LOCATION_KEY}/pages${FULL_KEY}`,
-  );
-  const oldOpened = await waitFor(
-    async () =>
-      old
-        .locator("[data-website-demo-maximized]")
-        .locator('[data-app-embed="pages"]')
-        .count(),
-    (n) => n > 0,
-    { timeoutMs: BOOT_TIMEOUT_MS },
-  );
-  r.ok("an old link opens the demo there, maximized", oldOpened.ok);
-  await old.close();
+  await fresh.close();
   await r.finish();
 });

@@ -13,6 +13,9 @@ the claim, show what it looks like, and then get out of the way:
 - [`demos`](plugins/demos/CLAUDE.md) — the live demos, one plugin each, each owning
   its data and writing it into its own browser host through the apps' fixture
   writers (`demos/workspace`: the Agent Manager, Pages, Prototypes, Sonata and Keyboard Party on Demo's own equin).
+- [`live-demo`](plugins/live-demo/CLAUDE.md) — the live demo's runtime: its
+  server kept for the visit by a `Website.Resident`, drawn in the homepage's
+  frame or alone on the demo page (`/about/demo`).
 - [`pages`](plugins/pages/CLAUDE.md) — the inner pages: the apps gallery
   (`/about/apps`), the download page, the foundations iceberg
   (`/about/foundations`), and the vision, story and guide pages

@@ -75,11 +75,12 @@ hover.
 
 ## Plugin reference
 
-- Description: App shell for the Website (equin public site). Registers the /about app entry, owns the shared site header (wordmark + nav) and the band/page/footer chrome every page wears, defines the Website.Section landing slot, the Website.Layer slot for what floats over every page (rendered by the app's surface) and the Website.FooterLink slot for the footer's small print, and contributes the site's own theme (equin: palette, chart ramp, font), which the website app selects, plus the equin-document sub-theme (type scale, density, shape) every page wears and the equin-page-hero sub-theme an inner page's heading wears. The website's landing page on the server: its sitemap entry (WebsitePages.Page).
+- Description: App shell for the Website (equin public site). Registers the /about app entry, owns the shared site header (wordmark + nav) and the band/page/footer chrome every page wears, defines the Website.Section landing slot, the Website.Layer slot for what floats over every page and the Website.Resident slot for what must outlive a page switch (both rendered by the app's surface) and the Website.FooterLink slot for the footer's small print, and contributes the site's own theme (equin: palette, chart ramp, font), which the website app selects, plus the equin-document sub-theme (type scale, density, shape) every page wears and the equin-page-hero sub-theme an inner page's heading wears. The website's landing page on the server: its sitemap entry (WebsitePages.Page).
 - Web:
   - Slots:
     - `Website.Section`
     - `Website.Layer`
+    - `Website.Resident`
     - `Website.FooterLink`
     - `WebsiteHeader`
   - Slot contributors:
@@ -89,6 +90,7 @@ hover.
     - `Website.Section` ← `apps.website.landing.screenshot`
     - `Website.Section` ← `apps.website.landing.story-link`
     - `Website.Layer` ← `apps.website.pages.privacy`
+    - `Website.Resident` ← `apps.website.live-demo`
     - `Website.FooterLink` ← `apps.website.pages.privacy`
     - `WebsiteHeader` ← `apps.website.improve`
     - `WebsiteHeader` ← `apps.website.pages.apps`
@@ -107,12 +109,13 @@ hover.
     - `ThemeEngine.Theme` "equin"
     - `ThemeEngine.SubTheme` "equin document"
     - `ThemeEngine.SubTheme` "equin page heading"
-  - Uses: 28 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 29 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/pane` ×7
     - `primitives/css/spacing` ×3
     - `apps/deploy/analytics/collect` ×2
     - `primitives/css/text` ×2
     - `primitives/css/ui-kit` ×2
+    - `primitives/slot-render` ×2
     - `apps-core.Apps`
     - `layouts/full-pane.FullPane`
     - `primitives/css/cluster.Cluster`
@@ -122,7 +125,6 @@ hover.
     - `primitives/css/theme-boundary.Theme`
     - `primitives/icon-button.IconButton`
     - `primitives/lazy-component.lazyComponent`
-    - `primitives/slot-render.defineRenderSlot`
     - `ui/icons.Icon`
     - `ui/theme-engine.ThemeEngine`
   - Exports (types): `WebsiteBandRhythm`

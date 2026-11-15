@@ -1,42 +1,27 @@
 import {
-  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
   useState,
   type CSSProperties,
   type ReactNode,
 } from "react";
-import { createPortal } from "react-dom";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
-import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useElementSize } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
 import {
   useViewportSize,
   type ViewportSize,
 } from "@plugins/primitives/plugins/dom/plugins/render-mode/web";
 import { revealElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
-import { Icon } from "@plugins/ui/plugins/icons/web";
-import { symbol } from "@plugins/ui/plugins/icons/core";
-import {
-  AppEmbed,
-  useEmbedPlace,
-} from "@plugins/apps-core/plugins/app-embed/web";
-import { useClaimTabTitle } from "@plugins/apps-core/plugins/tabs/web";
-import { SurfaceOverlay } from "@plugins/primitives/plugins/overlay/plugins/surface-overlay/web";
-import {
-  DemoScope,
-  type DemoEntry,
-} from "@plugins/framework/plugins/browser-server/plugins/demo/plugins/scope/web";
-import {
-  DEMO_FRAME_ATTR,
-  DemoBootScreen,
-  MaximizedChrome,
-  morphDemoFrame,
-  ResetDemoButton,
-} from "@plugins/apps/plugins/website/plugins/landing/plugins/screenshot/plugins/chrome/web";
 import { track } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/web";
-import { workspaceDemo } from "@plugins/apps/plugins/website/plugins/demos/plugins/workspace/core";
 import { WebsiteBand } from "@plugins/apps/plugins/website/plugins/shell/web";
-import { useLegacyDemoPlace } from "../internal/legacy-demo-place";
+import {
+  DemoControls,
+  DemoTarget,
+  useDemoActions,
+  useDemoState,
+} from "@plugins/apps/plugins/website/plugins/live-demo/web";
 import "./live-demo-section.css";
 
 const NO_WINDOW: ViewportSize = { width: 0, height: 0 };
@@ -53,147 +38,62 @@ const GROWN_MAX_WIDTH = 1400;
 const FOOT_ROOM = 56;
 
 /**
- * The homepage's live demo, where the desktop picture was: equin itself — its
- * real server code in a worker, on the workspace demo's data
- * (`<DemoScope>` around `<AppEmbed>`), opening on its home app. Nothing
- * downloads until the visitor clicks Enter equin (`DemoScope`'s gate, shown
- * on every visit; a browser that already holds the demo's data starts it
- * behind the gate, so entering is instant).
+ * The homepage's live demo, where the desktop picture was: equin itself —
+ * its real server code in a worker, on the workspace demo's data — drawn in
+ * a frame this band claims (`live-demo`'s `DemoTarget`; the demo's server is
+ * the site's resident, so it outlives the page). Nothing downloads until the
+ * visitor clicks Enter equin (the gate, shown on every visit; a browser that
+ * already holds the demo's data starts it behind the gate, so entering is
+ * instant).
  *
  * Entering grows the frame in place, for good: out of the reading measure,
  * nearly as wide and tall as the window, the page below moving down and
- * scrolling to it. The frame is one element from the gate to the running demo
- * (the scope lives inside it), so its growth is never cut by the demo
- * arriving. Once it runs, the row under it offers Maximize (the demo grows
- * over the tab's surface, above the site — `morphDemoFrame`; Restore at its
- * top edge, or Esc when nothing inside wants it — `MaximizedChrome`) and
- * Reset demo, drawn from inside the scope, into the row, through a portal.
+ * scrolling to it. Once it runs, the row under it offers Maximize — the demo
+ * page, `/about/demo`, where the demo is alone — and Reset demo.
  *
- * Where the visitor is inside the demo, and whether it is maximized, is the
- * homepage's URL (`/about/at/agents/c/x;full=1`) — kept by the embed itself
- * (`AppEmbed`, `useEmbedPlace`), so a reload comes back there: a URL that
- * names the demo opens it with no gate (`DemoScope`'s `resume`), its frame
- * grown — or maximized — showing only its loading until it runs. The plain
- * page names nothing and stays so: the embed writes no place it opened at by
- * itself, and the gate shows even while the visitor is in the demo in
- * another tab — the URL alone decides; a tab opened from inside the demo
- * carries its place, so it resumes.
- *
- * Nothing moves the page but the visitor: only Enter at the gate scrolls to
- * the grown frame — a resumed demo is grown from the start, and the embed
- * never scrolls the page around it. While the demo runs, the browser tab is
- * titled by the app inside it (the embed's title, claimed for this tab).
+ * The homepage's URL never names the demo: where the visitor is inside the
+ * framed demo is kept in memory, and the demo page is the address of a place
+ * in it. Coming back from the demo page (Restore, Esc, Back) shows the frame
+ * grown, at the place the visitor was, scrolled to.
  */
 export function LiveDemoSection(): ReactNode {
-  // An old link's place is moved onto the embed's before the band renders.
-  return useLegacyDemoPlace() ? null : <LiveDemoBand />;
-}
-
-function LiveDemoBand(): ReactNode {
-  const { named, maximized, setMaximized, reset } = useEmbedPlace();
-  // The URL names the demo (a reload, a shared link): the visitor is in it.
-  const [resume] = useState(named);
-  // Entered: the frame grows, and stays grown.
-  const [grown, setGrown] = useState(resume);
+  const { entered, gateEntries } = useDemoState();
+  const { consumeReturn } = useDemoActions();
   const [columnRef, column] = useElementSize<HTMLDivElement>();
   // A static render has no window; its frame is never grown (no click runs),
   // and only the grown frame reads the window's size.
   const viewport = useViewportSize(NO_WINDOW);
   const [figure, setFigure] = useState<HTMLElement | null>(null);
-  const [controls, setControls] = useState<HTMLElement | null>(null);
 
-  // The visitor came in (the gate's Enter; a join, were the URL silent).
-  const grow = (how: DemoEntry) => {
-    setGrown(true);
-    // Only the visitor's own click moves the page: the grown frame's top
-    // comes to the window's (its scroll margin: the gap). A tab that joined
-    // opens where its page starts.
-    if (how !== "gate") return;
+  // Only the visitor's own click moves the page: the grown frame's top comes
+  // to the window's (its scroll margin: the gap). A tab that joined opens
+  // where its page starts.
+  const seenEntries = useRef(gateEntries);
+  useEffect(() => {
+    if (gateEntries === seenEntries.current) return;
+    seenEntries.current = gateEntries;
     track("demo_enter");
     revealElement(figure, { behavior: "smooth", block: "start" });
-  };
-  const frameStyle = frameSize(column.width, viewport, grown);
-  const restore = useCallback(
-    () => morphDemoFrame(() => setMaximized(false)),
-    [setMaximized],
-  );
-  const embed = <TitledEmbed fills={maximized ? "viewport" : undefined} />;
-  // The demo's box (what a Maximize grows): the frame, or maximized the
-  // overlay — one of the two at a time.
-  const frameMark = { [DEMO_FRAME_ATTR]: "" };
+  }, [gateEntries, figure]);
+  // Back from the demo page: the frame, at once (the morph is the motion).
+  useLayoutEffect(() => {
+    if (figure !== null && consumeReturn())
+      revealElement(figure, { behavior: "instant", block: "start" });
+  }, [figure, consumeReturn]);
 
+  const frameStyle = frameSize(column.width, viewport, entered);
   return (
     <WebsiteBand section="screenshot" divider rhythm="section">
       <div ref={columnRef}>
         <figure ref={setFigure} className="website-demo">
-          <div
-            {...(maximized ? {} : frameMark)}
+          <DemoTarget
+            kind="framed"
             className={cn(
               "website-demo-frame",
               frameStyle !== null && "is-sized",
             )}
             style={frameStyle ?? undefined}
-          >
-            <DemoScope
-              scenario={workspaceDemo}
-              onEnter={grow}
-              resume={resume}
-              // Until the demo runs: its boot screen where the demo will
-              // show — in the frame, or maximized over the tab's surface.
-              boot={(state) =>
-                maximized ? (
-                  <SurfaceOverlay
-                    {...frameMark}
-                    className="bg-background"
-                    data-website-demo-maximized=""
-                  >
-                    <DemoBootScreen state={state} />
-                  </SurfaceOverlay>
-                ) : (
-                  <DemoBootScreen state={state} />
-                )
-              }
-            >
-              {/* Maximized, the demo leaves the frame for the tab's whole
-                  surface (above the site's sticky header); moving between
-                  the two remounts the embed, which reopens where the visitor
-                  was. */}
-              {maximized ? (
-                <SurfaceOverlay
-                  {...frameMark}
-                  className="bg-background"
-                  data-website-demo-maximized=""
-                >
-                  {embed}
-                  <MaximizedChrome onRestore={restore} />
-                </SurfaceOverlay>
-              ) : (
-                embed
-              )}
-              {controls !== null &&
-                createPortal(
-                  <Inline gap="sm">
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        track("demo_maximize");
-                        morphDemoFrame(() => setMaximized(true));
-                      }}
-                    >
-                      <Icon icon={symbol("fullscreen")} />
-                      Maximize
-                    </Button>
-                    <ResetDemoButton
-                      onReset={() => {
-                        track("demo_reset");
-                        reset();
-                      }}
-                    />
-                  </Inline>,
-                  controls,
-                )}
-            </DemoScope>
-          </div>
+          />
           <figcaption
             className="website-demo-foot"
             style={
@@ -209,23 +109,12 @@ function LiveDemoBand(): ReactNode {
               {CAPTION}
             </Text>
             {/* The running demo's controls land here (empty until it runs). */}
-            <span ref={setControls} className="website-demo-controls" />
+            <DemoControls className="website-demo-controls" />
           </figcaption>
         </figure>
       </div>
     </WebsiteBand>
   );
-}
-
-/**
- * The demo's embed, titling this browser tab with the app inside it while it
- * runs. Its own component, so the title is claimed only where the embed
- * mounts — inside a tab, in a live page; a static render (the crawlable
- * snapshot) shows the gate and has no tab to title.
- */
-function TitledEmbed({ fills }: { fills: "viewport" | undefined }): ReactNode {
-  const claimTitle = useClaimTabTitle();
-  return <AppEmbed fills={fills} onTitleChange={claimTitle} />;
 }
 
 /**

@@ -30,6 +30,7 @@ read it.
     - `apps-core/app-embed`
     - `apps-core/tab-origin`
     - `apps-core/tabs`
+    - `apps/website/live-demo`
     - `primitives/link-gesture`
     - `primitives/pane`
 - Web:

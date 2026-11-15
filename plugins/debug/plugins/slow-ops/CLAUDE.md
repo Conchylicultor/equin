@@ -126,7 +126,7 @@ still carries `transportColdStart` and its wait, so its report says what was
 taken off.
 
 **An in-browser server's boot is its own op** (`hostBootSlowOp`). A demo's
-reads (`/demo/at/…`, `/about/at/…`) are served by a worker booting the real
+reads (`/demo/at/…`, `/about/demo/at/…`) are served by a worker booting the real
 server graph (`framework/browser-server`): 2–19 s, median 3 s on main
 (2026-11-12). Nothing reads that host before it is ready (`DemoScope` mounts
 its subtree on `ready`), so the boot is in no element's settle; it is filed

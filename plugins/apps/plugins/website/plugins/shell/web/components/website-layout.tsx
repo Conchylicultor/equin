@@ -15,7 +15,8 @@ import { Website } from "../slots";
  * any pane's chrome: this component is the app's surface, which stays mounted
  * while the visitor moves between pages, whereas each page's `WebsiteChrome`
  * is replaced with the pane it wraps. The same holds for what floats over the
- * pages (`Website.Layer`: the consent prompt).
+ * pages (`Website.Layer`: the consent prompt) and for what must outlive a
+ * page switch (`Website.Resident`: the live demo's server).
  */
 export function WebsiteLayout() {
   return (
@@ -23,7 +24,9 @@ export function WebsiteLayout() {
     // app's surface, so it floats over whichever page scrolls under it.
     <div className="relative h-full min-h-0">
       <AnalyticsTracker app={websiteApp} />
-      <FullPane />
+      <Website.Resident.Wrap>
+        <FullPane />
+      </Website.Resident.Wrap>
       <Website.Layer.Render />
     </div>
   );

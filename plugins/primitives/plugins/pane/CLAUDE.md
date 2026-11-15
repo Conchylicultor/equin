@@ -758,9 +758,9 @@ with an empty route.
 - Load-bearing: yes
 - Web:
   - Slots: `Pane.Register`
-  - Slot contributors: 100 contributors — full list in [REFERENCE.md](./REFERENCE.md)
-    - `Pane.Register` ×100
-  - Contributes: 132 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+  - Slot contributors: 101 contributors — full list in [REFERENCE.md](./REFERENCE.md)
+    - `Pane.Register` ×101
+  - Contributes: 133 contributions — full list in [REFERENCE.md](./REFERENCE.md)
     - `FileBrowserHeader` "title" → `PaneTitleItem`
     - `FilePreviewHeader` "title" → `PaneTitleItem`
     - `SlotRender.ListMiddleware`
@@ -805,6 +805,7 @@ with an empty route.
     - `debug-boot-profile-detail.actions` "title" → `PaneTitleItem`
     - `debug-boot-profile.actions` "title" → `PaneTitleItem`
     - `debug-boot-profiles-list.actions` "title" → `PaneTitleItem`
+    - `demoPane.Actions` "title" → `PaneTitleItem`
     - `dependencies.actions` "title" → `PaneTitleItem`
     - `deploy-activity.actions` "title" → `PaneTitleItem`
     - `deploy-deployment-detail.actions` "title" → `PaneTitleItem`
