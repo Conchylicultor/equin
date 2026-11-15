@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: Generative ambient music in WebAudio, no samples: createAmbient(ctx, { mood }) plays a mood (lofi — a swung 72 bpm Rhodes loop with drums and vinyl crackle; bossa — an 84 bpm nylon guitar over shaker and rim clave; nocturne — a rolled piano in 3/4 with crickets and music-box fireflies; ambient — slow pads, bells, surf and birds) written bar by bar a little ahead of the audio clock, its look-ahead pump woken by the audio clock itself (a silent source's onended, never an interval), with start / stop / setMood / duck and sound effects (step, blip, enter, whoosh); useAmbient({ mood, on }) owns its own AudioContext, created or resumed by unlock() from a user gesture and closed on unmount.
+- Description: Generative ambient music in WebAudio, no samples: createAmbient(ctx, { mood }) plays a mood (lofi — a swung 72 bpm Rhodes loop with drums and vinyl crackle; bossa — an 84 bpm nylon guitar over shaker and rim clave; nocturne — a rolled piano in 3/4 with crickets and music-box fireflies; ambient — slow pads, bells, surf and birds) written bar by bar a little ahead of the audio clock, its look-ahead pump woken by the audio clock itself (a silent source's onended, never an interval), with start / stop / setMood / duck and sound effects (step, blip, enter, whoosh); useAmbient({ mood, on }) owns its own AudioContext, built suspended when it mounts (constructing one blocks the main thread while the browser opens the audio output, so never inside a gesture), resumed by unlock() from a user gesture and closed on unmount.
 - Cross-plugin:
   - Imported by: `apps/isle/world-view`
 - Web:

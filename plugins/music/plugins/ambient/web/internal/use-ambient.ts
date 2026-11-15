@@ -12,8 +12,8 @@ export type AmbientStatus = "locked" | "playing" | "off";
 export interface AmbientHandle {
   readonly status: AmbientStatus;
   /**
-   * Creates (or resumes) the AudioContext — call it from a user gesture's
-   * handler (a click, a key press). Nothing sounds before.
+   * Resumes the AudioContext (built at mount, suspended) — call it from a
+   * user gesture's handler (a click, a key press). Nothing sounds before.
    */
   unlock(): void;
   /** Lowers the music under something else. */
@@ -26,8 +26,18 @@ export interface AmbientHandle {
 
 /**
  * Generative ambient music owned by the calling component: its own
- * AudioContext, created on `unlock()` (a user gesture), playing `mood` while
- * `on`, closed on unmount.
+ * AudioContext and engine, built when the component mounts (suspended — no
+ * sound before a gesture), resumed by `unlock()` (a user gesture), playing
+ * `mood` while `on`, closed on unmount.
+ *
+ * Why the context is built at mount, not in `unlock()`: constructing a page's
+ * first AudioContext blocks the main thread while the browser sets up the
+ * audio output (a synchronous round trip to its audio service — ~130 ms
+ * headless, seconds on a real Mac's output device), and the engine's reverb
+ * impulse is a few hundred thousand samples to fill and transform. Built in
+ * the gesture, all of it froze the click that asked for sound (the Isle's
+ * Start, 2.2 s); built at mount it runs while the caller is still loading,
+ * and the gesture only resumes — microseconds.
  */
 export function useAmbient(opts: {
   readonly mood: AmbientMood;
@@ -36,24 +46,27 @@ export function useAmbient(opts: {
   const { mood, on } = opts;
   const ref = useRef<{ ctx: AudioContext; ambient: Ambient } | null>(null);
   const [ctxState, setCtxState] = useState<AudioContextState | null>(null);
+  const [unlocked, setUnlocked] = useState(false);
   const moodRef = useRef(mood);
   useEffect(() => {
     moodRef.current = mood;
   }, [mood]);
 
-  // closed with the component
-  useEffect(
-    () => () => {
-      const cur = ref.current;
+  // built with the component (suspended until a gesture), closed with it
+  useEffect(() => {
+    const ctx = new AudioContext();
+    const cur = { ctx, ambient: createAmbient(ctx, { mood: moodRef.current }) };
+    ref.current = cur;
+    ctx.onstatechange = () => setCtxState(ctx.state);
+    return () => {
       ref.current = null;
-      if (!cur) return;
+      ctx.onstatechange = null;
       cur.ambient.dispose();
-      void cur.ctx.close();
-    },
-    [],
-  );
+      void ctx.close();
+    };
+  }, []);
 
-  const running = ctxState === "running";
+  const running = unlocked && ctxState === "running";
   useEffect(() => {
     const cur = ref.current;
     if (!cur || !running) return;
@@ -71,14 +84,13 @@ export function useAmbient(opts: {
     };
     return {
       unlock() {
-        let cur = ref.current;
-        if (!cur) {
-          const ctx = new AudioContext();
-          cur = { ctx, ambient: createAmbient(ctx, { mood: moodRef.current }) };
-          ref.current = cur;
-          ctx.onstatechange = () => setCtxState(ctx.state);
-          setCtxState(ctx.state);
-        }
+        const cur = ref.current;
+        if (!cur)
+          throw new Error("useAmbient: unlock() before the context was built");
+        setUnlocked(true);
+        // its state so far (a browser that lets it run without a gesture
+        // never reports a change); later changes arrive by onstatechange
+        setCtxState(cur.ctx.state);
         void cur.ctx.resume();
       },
       duck: (d: boolean) => ref.current?.ambient.duck(d),
@@ -86,7 +98,10 @@ export function useAmbient(opts: {
     };
   }, []);
 
-  const status: AmbientStatus =
-    ctxState === null ? "locked" : running && on ? "playing" : "off";
-  return { ...handle, status, contextState: ctxState };
+  const status: AmbientStatus = !unlocked
+    ? "locked"
+    : running && on
+      ? "playing"
+      : "off";
+  return { ...handle, status, contextState: unlocked ? ctxState : null };
 }
