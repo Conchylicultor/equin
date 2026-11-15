@@ -9,7 +9,11 @@ import { openFloatingActionBar } from "@plugins/shell/plugins/global-action-bar/
  * acts on the tab set the user is in, so inside an embed it switches the embed.
  *
  * Docked, the gear sits in the tab bar; where the bar floats collapsed, its
- * row is `inert` until revealed, so open it first. Esc then closes the popover.
+ * row is `inert` until revealed, so open it first. Esc then closes the popover,
+ * and this returns once it is gone: the popover closes with an exit
+ * transition, and input sent meanwhile is the popover's to dismiss — the
+ * desktop-in-demo script's right-click right after the Layout step opened no
+ * context menu 3 runs in 8 while the popover was still fading out.
  */
 export async function pickSurfaceMode(
   page: Page,
@@ -20,6 +24,8 @@ export async function pickSurfaceMode(
   const collapsed = await gear.evaluate((el) => el.closest("[inert]") !== null);
   if (collapsed) await openFloatingActionBar(page);
   await gear.click();
-  await page.getByRole("radio", { name: label, exact: true }).click();
+  const radio = page.getByRole("radio", { name: label, exact: true });
+  await radio.click();
   await page.keyboard.press("Escape");
+  await radio.waitFor({ state: "detached" });
 }

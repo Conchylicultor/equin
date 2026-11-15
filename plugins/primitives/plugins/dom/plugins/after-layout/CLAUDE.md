@@ -94,8 +94,17 @@ resize-loop tracer (`element-size/resize-loop-trace`) names it.
   task, or the next frame's first animation callback). Inside one, the root
   trigger is never armed (queued reads run as a phase of that delivery, in a
   microtask) and `observeInPhase` starts a target the delivery can no longer
-  reach at the next frame. What a library's own commit RESIZES above its
-  delivery is still the browser's to report (it never goes through
+  reach at the next frame. The watch also overrides `observe` / `unobserve` /
+  `disconnect`, so a library's observations join the set the phase keeps:
+  started inside a delivery (a popup mounted by a phase's commit), a shallow
+  one starts at the next frame; resized by a `commitInPhase` above the
+  delivery, it is stopped and restarted at the next frame,
+  whose first notification brings the library its new size (it has no
+  `onHeldBack` to answer in the phase). (2026-11-15: the demo's desktop e2e
+  saw a loop error 1 run in 5 whose step delivered only the Pages sidebar's
+  first measures, with a popup's `autoUpdate` observer on a desktop shelf
+  entry among the next frame's notifications.) What a library's own commit RESIZES
+  above its delivery is still the browser's to report (it never goes through
   `commitInPhase`); the resize-loop tracer names the observer and the element.
 
 Who reads through it: `dom/element-size` (initial measure, target resolution)
@@ -105,7 +114,7 @@ and `dom/layout-host` (`useHostFlowAxis`).
 
 ## Plugin reference
 
-- Description: Read layout where the browser already computed it: afterLayout(read) runs `read` once the current frame is styled and laid out, before it paints (a ResizeObserver delivery), batched with every other read of that frame — reads first, then the writes they return, then one React commit (flushSync) — so a layout or style read never forces a synchronous recalc on React's commit path, and a write never sits between two reads. runAsAfterLayout(fn, delivered) lets a ResizeObserver callback join the phase; commitInPhase(update) is its one way to commit before paint — whatever that commit resizes at or above the delivery (which the browser could only deliver a frame late, with a 'ResizeObserver loop' error) is answered in the same phase through the observer's onHeldBack, and its observation restarted at the next frame; observeInPhase(observer, el, onHeldBack?) starts and keeps an observation where the browser can deliver it — at once, or (a target the running delivery can no longer reach) at the next frame — and arms the root trigger with one started outside a phase, so its first callback shares the root's broadcast. element-size and layout-host read through it.
+- Description: Read layout where the browser already computed it: afterLayout(read) runs `read` once the current frame is styled and laid out, before it paints (a ResizeObserver delivery), batched with every other read of that frame — reads first, then the writes they return, then one React commit (flushSync) — so a layout or style read never forces a synchronous recalc on React's commit path, and a write never sits between two reads. runAsAfterLayout(fn, delivered) lets a ResizeObserver callback join the phase; commitInPhase(update) is its one way to commit before paint — whatever that commit resizes at or above the delivery (which the browser could only deliver a frame late, with a 'ResizeObserver loop' error) is answered in the same phase through the observer's onHeldBack, and its observation restarted at the next frame; observeInPhase(observer, el, onHeldBack?) starts and keeps an observation where the browser can deliver it — at once, or (a target the running delivery can no longer reach) at the next frame — and arms the root trigger with one started outside a phase, so its first callback shares the root's broadcast. A library's own observer (floating-ui's autoUpdate) is kept the same way: the page's ResizeObserver is replaced so its observe() joins the set. element-size and layout-host read through it.
 - Cross-plugin:
   - Imported by:
     - `primitives/css/layout-harness`

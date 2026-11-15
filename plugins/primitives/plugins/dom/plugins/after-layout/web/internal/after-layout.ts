@@ -52,10 +52,16 @@ let delivery: readonly Element[] | null = null;
 let deliveryEndScheduled = false;
 let trigger: ResizeObserver | null = null;
 
-/** One observation started through {@link observeInPhase}. */
+/**
+ * One observation on the page: started through {@link observeInPhase}, or a
+ * library observer's own `observe()` (floating-ui's `autoUpdate`, inside every
+ * popup), which the delivery watch routes here (see
+ * {@link installDeliveryWatch}).
+ */
 interface Observation {
   observer: ResizeObserver;
   el: Element;
+  options: ResizeObserverOptions | undefined;
   /** The observer's response to a resize, run in the phase that caused it when
    * the browser could no longer deliver it there (see {@link settle}). */
   onHeldBack: (() => void) | undefined;
@@ -64,10 +70,47 @@ interface Observation {
   released: boolean;
 }
 
-/** Every live observation of the app's observers — all of them start here
- * (`no-raw-resize-observer`), so this is the whole set the browser's
- * depth rule can hold back. */
+/** Every live observation on the page — the app's observers start here
+ * (`no-raw-resize-observer`), a library's are routed here by the delivery
+ * watch — so this is the whole set the browser's depth rule can hold back. */
 const observations = new Set<Observation>();
+
+/** A library observer's observations, by target: what its `unobserve` and
+ * `disconnect` release. */
+const libraryObservations = new WeakMap<
+  ResizeObserver,
+  Map<Element, Observation>
+>();
+
+/** The browser's own `observe` / `unobserve` on a delivery-watched observer,
+ * past its overrides (which route a library's calls through {@link start}). */
+const NATIVE = Symbol("after-layout.native");
+
+interface NativeCalls {
+  observe(el: Element, options?: ResizeObserverOptions): void;
+  unobserve(el: Element): void;
+}
+
+function nativeCalls(observer: ResizeObserver): NativeCalls {
+  const own = (observer as { [NATIVE]?: NativeCalls })[NATIVE];
+  // An observer without the overrides (created before the watch, a test's
+  // stand-in) is asked directly.
+  return own ?? observer;
+}
+
+/** What this module starts an observation with. */
+function observeNative(
+  observer: ResizeObserver,
+  el: Element,
+  options?: ResizeObserverOptions,
+): void {
+  nativeCalls(observer).observe(el, options);
+}
+
+/** What this module stops an observation with. */
+function unobserveNative(observer: ResizeObserver, el: Element): void {
+  nativeCalls(observer).unobserve(el);
+}
 
 /**
  * The box of every observation at or above the running phase's delivery, as it
@@ -198,6 +241,7 @@ export function observeInPhase(
   const obs: Observation = {
     observer,
     el,
+    options: undefined,
     onHeldBack,
     frame: null,
     released: false,
@@ -205,12 +249,72 @@ export function observeInPhase(
   observations.add(obs);
   start(obs);
   return () => {
-    obs.released = true;
-    observations.delete(obs);
-    if (obs.frame !== null) cancelAnimationFrame(obs.frame);
-    obs.frame = null;
-    observer.unobserve(el);
+    stop(obs);
+    unobserveNative(observer, el);
   };
+}
+
+/** Leave the set and cancel a pending start; the caller unobserves. */
+function stop(obs: Observation): void {
+  obs.released = true;
+  observations.delete(obs);
+  if (obs.frame !== null) cancelAnimationFrame(obs.frame);
+  obs.frame = null;
+}
+
+/**
+ * A library observer's `observe(el)`, kept as {@link observeInPhase} keeps the
+ * app's: started where the browser can deliver it, and — resized by a commit
+ * inside a phase where the browser no longer can — stopped and restarted at
+ * the next frame, whose first notification brings the library its new size
+ * (it has no answer to run in the phase). Observing an observed target again
+ * replaces its options, as the browser does.
+ */
+function observeLibrary(
+  observer: ResizeObserver,
+  el: Element,
+  options: ResizeObserverOptions | undefined,
+): void {
+  let byTarget = libraryObservations.get(observer);
+  if (byTarget === undefined) {
+    byTarget = new Map();
+    libraryObservations.set(observer, byTarget);
+  }
+  const previous = byTarget.get(el);
+  if (previous !== undefined) stop(previous);
+  const obs: Observation = {
+    observer,
+    el,
+    options,
+    onHeldBack: undefined,
+    frame: null,
+    released: false,
+  };
+  byTarget.set(el, obs);
+  observations.add(obs);
+  start(obs);
+}
+
+function unobserveLibrary(observer: ResizeObserver, el: Element): void {
+  const byTarget = libraryObservations.get(observer);
+  const obs = byTarget?.get(el);
+  if (obs === undefined) return;
+  byTarget!.delete(el);
+  stop(obs);
+}
+
+function forgetLibrary(obs: Observation): void {
+  const byTarget = libraryObservations.get(obs.observer);
+  if (byTarget?.get(obs.el) !== obs) return;
+  byTarget.delete(obs.el);
+  observations.delete(obs);
+}
+
+function disconnectLibrary(observer: ResizeObserver): void {
+  const byTarget = libraryObservations.get(observer);
+  if (byTarget === undefined) return;
+  for (const obs of byTarget.values()) stop(obs);
+  libraryObservations.delete(observer);
 }
 
 function start(obs: Observation): void {
@@ -218,7 +322,7 @@ function start(obs: Observation): void {
   // callback's microtasks) bounds what this step can deliver just the same.
   const delivered = phaseDelivered ?? delivery;
   if (delivered === null) {
-    obs.observer.observe(obs.el);
+    observeNative(obs.observer, obs.el, obs.options);
     // Delivered in the next step's FIRST broadcast: armed with it, the root
     // trigger shares that broadcast, so its shallowest depth is the root's and
     // a callback committing there may change layout at any depth.
@@ -226,7 +330,7 @@ function start(obs: Observation): void {
     return;
   }
   if (depthOf(obs.el) > shallowestDepth(delivered)) {
-    obs.observer.observe(obs.el);
+    observeNative(obs.observer, obs.el, obs.options);
     return;
   }
   startNextFrame(obs);
@@ -278,7 +382,16 @@ function shallowBoxes(): Map<Observation, Box> {
   // The root's broadcast reaches every depth below it.
   if (depth === 0) return boxes;
   for (const obs of observations) {
-    if (!obs.el.isConnected || depthOf(obs.el) > depth) continue;
+    if (!obs.el.isConnected) {
+      // A library observer that drops a detached target without unobserving
+      // it must not have it kept alive here: the browser still observes it,
+      // only the bookkeeping lets go (a reattached target is observed as
+      // before, just no longer settled).
+      if (obs.onHeldBack === undefined && obs.frame === null)
+        forgetLibrary(obs);
+      continue;
+    }
+    if (depthOf(obs.el) > depth) continue;
     boxes.set(obs, boxOf(obs.el));
   }
   return boxes;
@@ -309,7 +422,7 @@ function settle(): void {
     }
     if (resized.length === 0) return;
     for (const obs of resized) {
-      obs.observer.unobserve(obs.el);
+      unobserveNative(obs.observer, obs.el);
       startNextFrame(obs);
     }
     for (const obs of resized) obs.onHeldBack?.();
@@ -350,7 +463,7 @@ function depthOf(el: Element): number {
 
 function drain(): void {
   if (armed && trigger) {
-    trigger.unobserve(document.documentElement);
+    unobserveNative(trigger, document.documentElement);
     armed = false;
   }
   for (let pass = 0; pending.length > 0; pass++) {
@@ -424,30 +537,53 @@ function arm(): void {
   );
   // A new observation of a box with a size is delivered at the next rendering
   // step, after its layout: the root always has one.
-  trigger.observe(document.documentElement);
+  observeNative(trigger, document.documentElement);
 }
 
 function noop(): void {}
 
 /**
- * Make the page's `ResizeObserver` report every delivery to the phase: each
- * callback, whoever created the observer, opens {@link delivery} with its
- * targets before it runs, and the step's end (the first task after it) closes
- * it. The app's observers all start through {@link observeInPhase}, but a
- * library creates its own — floating-ui's `autoUpdate` in every popup — and a
- * delivery the phase cannot see is one whose commits arm the root trigger and
- * start shallow observations where the browser holds them back. Installed once
- * when this module evaluates, so whatever uses after-layout has it — there is
- * no install step to forget. Returns the uninstall (tests).
+ * Make the page's `ResizeObserver` part of the phase, whoever creates it. The
+ * app's observers all start through {@link observeInPhase}, but a library
+ * creates its own — floating-ui's `autoUpdate` in every popup — and the browser
+ * holds back its notifications just the same:
+ *
+ * - each callback opens {@link delivery} with its targets before it runs, and
+ *   the step's end (the first task after it) closes it — a delivery the phase
+ *   cannot see is one whose commits arm the root trigger and start shallow
+ *   observations where the browser holds them back;
+ * - each `observe()` is kept as the app's are ({@link observeLibrary}): a
+ *   popup mounted by a commit inside a deep delivery starts its shallow
+ *   observations at the next frame, and a popup a phase's commit resizes (its
+ *   content changed with the commit) is restarted there instead of held back
+ *   into "ResizeObserver loop completed with undelivered notifications".
+ *
+ * Installed once when this module evaluates, so whatever uses after-layout has
+ * it — there is no install step to forget. Returns the uninstall (tests).
  */
 export function installDeliveryWatch(): () => void {
   const Native = globalThis.ResizeObserver;
   class DeliveryWatchedResizeObserver extends Native {
+    readonly [NATIVE]: NativeCalls = {
+      observe: (el, options) => super.observe(el, options),
+      unobserve: (el) => super.unobserve(el),
+    };
     constructor(callback: ResizeObserverCallback) {
       super((entries, observer) => {
         openDelivery(entries);
         callback.call(observer, entries, observer);
       });
+    }
+    override observe(el: Element, options?: ResizeObserverOptions): void {
+      observeLibrary(this, el, options);
+    }
+    override unobserve(el: Element): void {
+      unobserveLibrary(this, el);
+      super.unobserve(el);
+    }
+    override disconnect(): void {
+      disconnectLibrary(this);
+      super.disconnect();
     }
   }
   globalThis.ResizeObserver = DeliveryWatchedResizeObserver;
