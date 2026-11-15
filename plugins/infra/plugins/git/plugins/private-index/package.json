@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-infra-git-private-index",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Refresh a checkout's index on a private copy, then publish it back: copy the index WITH its mtime (racy git), let git write the copy (privateIndexWrites), and swap it into place by compare-and-swap under git's own index.lock taken wx — skipped while a git writer holds the lock or once the real index was written since the copy. One protocol, in a sync form (the tree hash, on the CLI's thread) and an async one (a backend's checkout primer)."
+}

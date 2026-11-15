@@ -32221,6 +32221,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/file-watcher/background-arm` (1 debt)
               - `infra/git/checkout-watch` (1 debt)
               - `infra/git/git-watcher` (1 debt)
+              - `infra/git/private-index` (1 debt)
               - `infra/git/remotes` (2 debt)
               - `infra/git/tree-lock` (1 debt)
               - `infra/host-fs` (16 debt)
@@ -32290,7 +32291,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Exports (values): `parseRuntimeException`
         - **`checks`** — Check runner and built-in checks for ./equin check
           - Core:
-            - Uses: 88 symbols — full list in [`plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md)
+            - Uses: 89 symbols — full list in [`plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/checks/REFERENCE.md)
               - `framework/tooling` ×12
               - `packages/timed-fs` ×11
               - `plugin-meta/plugin-records` ×9
@@ -32303,14 +32304,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/launcher/env-names` ×3
               - `infra/spawn` ×3
               - `plugin-meta/parse-utils` ×3
+              - `infra/git/private-index` ×2
               - `infra/paths` ×2
               - `packages/macrotask-yield` ×2
-              - `packages/owned-fd` ×2
               - `packages/thread-cpu-clock` ×2
               - `reports/outbox/file` ×2
               - `infra/file-sink.defineFileSink`
               - `infra/paths/repo-root.REPO_ROOT`
               - `packages/flock.flockTry`
+              - `packages/owned-fd.openOwnedFdSync`
               - `packages/semaphore.createSemaphore`
               - `packages/single-flight.singleFlight`
               - `packages/string-hash.sha256Hex`
@@ -36391,6 +36393,29 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exempts itself from:
               - `ids:pk-declared` — `server/internal/tables-ref-advanced.ts` (debt)
               - `boundaries/no-platform-api` — `server/internal/is-dir.ts` (debt)
+        - **`private-index`** — Refresh a checkout's index on a private copy, then publish it back: copy the index WITH its mtime (racy git), let git write the copy (privateIndexWrites), and swap it into place by compare-and-swap under git's own index.lock taken wx — skipped while a git writer holds the lock or once the real index was written since the copy. One protocol, in a sync form (the tree hash, on the CLI's thread) and an async one (a backend's checkout primer).
+          - Core:
+            - Uses:
+              - `infra/host-fs/user-path.AppPath`
+              - `infra/host-fs/user-path.appPathParent`
+              - `infra/host-fs/user-path.joinAppPath`
+              - `packages/owned-fd.openOwnedFdSync`
+              - `packages/timed-fs.stat`
+              - `packages/timed-fs.statSync`
+            - Exports (types):
+              - `IndexPublish`
+              - `SeenIndex`
+            - Exports (values):
+              - `copyIndex`
+              - `publishRefreshedIndex`
+              - `publishRefreshedIndexSync`
+              - `writeIndexCopySync`
+          - Cross-plugin:
+            - Imported by:
+              - `framework/tooling/checks`
+              - `infra/worktree`
+          - Exemptions:
+            - Exempts itself from: `boundaries/no-platform-api` — `core/internal/private-index.ts` (debt)
         - **`remotes`** — May this checkout publish, and where does it receive from? — the write-access probe (`git push --dry-run`, classified into denied / no-credentials / unreachable rather than one 'no'), its `.git/config` cache of that measurement, the upstream resolution built from the same facts, and who signs the commits push makes (a local placeholder where they cannot leave the machine, a real identity required where they will be public).
           - Core:
             - Uses:
@@ -37121,8 +37146,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exempts itself from: `boundaries/no-platform-api` — `server/internal/sweep.ts` (debt)
         - **`user-path`** — Which host paths a synchronous fs call may touch: AppPath (a path the app owns — its data dirs, its checkout; the only kind a sync fs call in runtime code may take) and UserPath (one the user or their config chose), with the type-aware lint that refuses a sync fs call on any path not proven app-owned — so a macOS Files & Folders prompt can never freeze a backend's JS thread, whether or not anyone marked the user's path.
           - Cross-plugin:
-            - Imported by: 111 plugins — full list in [`plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md`](../plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md)
-              - `infra` ×39
+            - Imported by: 112 plugins — full list in [`plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md`](../plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md)
+              - `infra` ×40
               - `framework` ×20
               - `apps` ×8
               - `debug` ×7
@@ -39555,6 +39580,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempts itself from:
           - `worktree/no-raw-worktree-git` — `.` (sanctioned)
           - `boundaries/no-platform-api` — `server/internal/composition-namespace.ts`, `server/internal/dep-store-pool.ts`, `server/internal/install-checkout.ts`, `server/internal/rename-pool.ts`, `server/internal/spare-name.ts`, `server/internal/spare.ts`, `server/internal/spec.ts`, `server/internal/tree-pool.ts`, `server/internal/untracked-cache.ts`, `server/internal/worktree-op.ts`, `server/internal/worktree-op-marker.ts`, `server/internal/worktree.ts` (debt)
+          - `user-path/no-unproven-claim` — `server/internal/untracked-cache.ts` (sanctioned)
           - `user-path/no-unproven-claim` — `server/internal/worktree.ts` (sanctioned)
           - `blocking-fs/no-sync-fs` — `server/internal/worktree-op-marker.ts` (sanctioned)
           - `repo-walk-safety/no-adhoc-repo-listing` — `server/internal/worktree.ts` (sanctioned)
@@ -42245,8 +42271,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `yieldMacrotask`
     - **`owned-fd`** — Owned file descriptors: openOwnedFd / adoptFd return an OwnedFd whose close() closes its descriptor exactly once — a second close throws FdAlreadyClosedError naming where the first happened, instead of closing whatever reused the number. Imports node:fs and the AppPath type only; enforced by the owned-fd/no-raw-fd-close lint (no fs.closeSync / fs.close outside it) and owned-fd/no-raw-spawn-stdio-fd (a spawn's stdio descriptor is an OwnedFd's .fd).
       - Cross-plugin:
-        - Imported by: 28 plugins — full list in [`plugins/packages/plugins/owned-fd/REFERENCE.md`](../plugins/packages/plugins/owned-fd/REFERENCE.md)
-          - `infra` ×11
+        - Imported by: 29 plugins — full list in [`plugins/packages/plugins/owned-fd/REFERENCE.md`](../plugins/packages/plugins/owned-fd/REFERENCE.md)
+          - `infra` ×12
           - `framework` ×7
           - `packages` ×4
           - `apps/chord/song-index`
@@ -42748,8 +42774,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TIMED_FS_CALLS`
           - `withFsCallTally`
       - Cross-plugin:
-        - Imported by: 174 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
-          - `infra` ×50
+        - Imported by: 175 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
+          - `infra` ×51
           - `framework` ×26
           - `apps` ×15
           - `debug` ×15

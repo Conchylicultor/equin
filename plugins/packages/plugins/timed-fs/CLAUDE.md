@@ -162,8 +162,8 @@ its boot journal attribute that.
     - `TIMED_FS_CALLS`
     - `withFsCallTally`
 - Cross-plugin:
-  - Imported by: 174 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `infra` ×50
+  - Imported by: 175 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `infra` ×51
     - `framework` ×26
     - `apps` ×15
     - `debug` ×15

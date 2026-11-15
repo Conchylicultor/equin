@@ -1,5 +1,16 @@
-import { copyFile, open, rename, rm, unlink, utimes } from "node:fs/promises";
+import { randomBytes } from "node:crypto";
+import { rm } from "node:fs/promises";
+import {
+  copyIndex,
+  publishRefreshedIndex,
+  type IndexPublish,
+} from "@plugins/infra/plugins/git/plugins/private-index/core";
 import { stat } from "@plugins/packages/plugins/timed-fs/core";
+import {
+  asAppPath,
+  joinAppPath,
+  appPathParent,
+} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { GIT } from "@plugins/infra/plugins/paths/server";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
 
@@ -11,7 +22,7 @@ const PRIME_TIMEOUT_MS = 120_000;
 const WITH_UNTRACKED_CACHE = ["-c", "core.untrackedCache=true"];
 
 /** What this primer publishes, or why it did not. */
-export type UntrackedCachePrime = "published" | "index-busy" | "index-changed";
+export type UntrackedCachePrime = IndexPublish;
 
 async function git(
   wtPath: string,
@@ -57,8 +68,8 @@ async function git(
  * re-reads only those whose mtime moved; a later commit, switch or rebase keeps
  * the cache and invalidates only the directories it wrote.
  *
- * How — the same protocol as `computeTreeHash`'s publish (checks/core
- * tree-hash.ts): `git status` on a PRIVATE copy of the index (allowed to write
+ * How — `infra/git/private-index`, the protocol `computeTreeHash`'s publish
+ * uses too: `git status` on a PRIVATE copy of the index (allowed to write
  * it: `privateIndexWrites`), then that copy replaces the real index by
  * compare-and-swap under git's own `index.lock`, taken `wx`, held for one stat
  * and one rename — only while nobody wrote the real index since it was copied,
@@ -72,23 +83,22 @@ export async function primeUntrackedCache(
   wtPath: string,
   signal?: AbortSignal,
 ): Promise<UntrackedCachePrime> {
-  const realIndex = await git(
-    wtPath,
-    ["rev-parse", "--path-format=absolute", "--git-path", "index"],
-    { signal },
+  // This checkout's own index: the one path this primer claims.
+  const realIndex = asAppPath(
+    await git(
+      wtPath,
+      ["rev-parse", "--path-format=absolute", "--git-path", "index"],
+      { signal },
+    ),
   );
   const seen = await stat(realIndex, { bigint: true });
-  const scratch = `${realIndex}.untracked-prime-${process.pid}`;
+  const scratch = joinAppPath(
+    appPathParent(realIndex),
+    `${realIndex.slice(realIndex.lastIndexOf("/") + 1)}.untracked-prime-${process.pid}-${randomBytes(4).toString("hex")}`,
+  );
   try {
-    // WITH the real index's mtime: git re-checks by content every entry whose
-    // file is not strictly older than the index (racy git), which a fresh
-    // mtime would make it trust by stat.
-    await copyFile(realIndex, scratch);
-    await utimes(
-      scratch,
-      Number(seen.atimeMs) / 1000,
-      Number(seen.mtimeMs) / 1000,
-    );
+    // WITH the real index's mtime (racy git — see `copyIndex`).
+    await copyIndex(realIndex, seen, scratch);
     await git(
       wtPath,
       [
@@ -102,37 +112,8 @@ export async function primeUntrackedCache(
       ],
       { indexFile: scratch, signal },
     );
-    return await publish(realIndex, scratch, seen);
+    return await publishRefreshedIndex(realIndex, scratch, seen);
   } finally {
     await rm(scratch, { force: true });
-  }
-}
-
-async function publish(
-  realIndex: string,
-  primed: string,
-  seen: { ino: bigint; size: bigint; mtimeNs: bigint; ctimeNs: bigint },
-): Promise<UntrackedCachePrime> {
-  const lock = `${realIndex}.lock`;
-  let held;
-  try {
-    held = await open(lock, "wx");
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === "EEXIST") return "index-busy";
-    throw err;
-  }
-  try {
-    const now = await stat(realIndex, { bigint: true });
-    const unchanged =
-      now.ino === seen.ino &&
-      now.size === seen.size &&
-      now.mtimeNs === seen.mtimeNs &&
-      now.ctimeNs === seen.ctimeNs;
-    if (!unchanged) return "index-changed";
-    await rename(primed, realIndex);
-    return "published";
-  } finally {
-    await held.close();
-    await unlink(lock);
   }
 }

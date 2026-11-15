@@ -1,8 +1,8 @@
-import { renameSync, rmSync, unlinkSync, utimesSync, writeFileSync } from "fs";
+import { rmSync } from "fs";
 import {
-  openOwnedFdSync,
-  type OwnedFd,
-} from "@plugins/packages/plugins/owned-fd/core";
+  publishRefreshedIndexSync,
+  writeIndexCopySync,
+} from "@plugins/infra/plugins/git/plugins/private-index/core";
 import {
   existsSync,
   readFileSync,
@@ -119,7 +119,7 @@ function fieldsTail(record: string, n: number): string {
  *   untracked listing reads only the directories git's untracked cache cannot
  *   (every other one is a stat).
  * - What status learns (refreshed stats, the untracked cache) is published to
- *   the real index (`publishRefreshedIndex`), so neither this walk nor any
+ *   the real index (`publishRefreshedIndexSync`, infra/git/private-index), so neither this walk nor any
  *   later git read in the checkout pays for it again: the build's own
  *   `git status` (`loadRepoSnapshot`) is the main beneficiary.
  * - `add -A` is limited to the paths status named (none: no add at all), so
@@ -165,7 +165,7 @@ export async function computeTreeHash(root: AppPath): Promise<string | null> {
     if (existsSync(realIndex)) {
       const seen = statSync(realIndex, { bigint: true });
       const seed = readFileSync(realIndex);
-      copyIndex(seed, seen, tmpIndex);
+      writeIndexCopySync(seed, seen, tmpIndex);
       pending = await pendingPaths(root, env);
       const learnedSomething =
         !readFileSync(tmpIndex).equals(seed) ||
@@ -180,12 +180,14 @@ export async function computeTreeHash(root: AppPath): Promise<string | null> {
         // differs from the real one in caches only.
         const learned = besideIndex(realIndex, `equin-refreshed-${nonce}`);
         scratch.push(learned);
-        copyIndex(
+        writeIndexCopySync(
           readFileSync(tmpIndex),
           statSync(tmpIndex, { bigint: true }),
           learned,
         );
-        publishRefreshedIndex(realIndex, learned, seen);
+        // Not published (a git writer holds the lock, or wrote the index
+        // since): the next run learns it again. The hash is unaffected.
+        publishRefreshedIndexSync(realIndex, learned, seen);
       }
     }
 
@@ -536,69 +538,4 @@ function hasRacyEntry(
     at += (fixed + extended + (nul - nameStart) + 8) & ~7;
   }
   return false;
-}
-
-/**
- * Write an index's bytes to `dst` WITH the source's mtime. Load-bearing for
- * correctness, not tidiness: git re-checks by content every entry whose file
- * is not strictly older (in whole seconds — Apple git has no USE_NSEC) than
- * the index file, which is how a file edited in the same second as the index
- * was written is still caught. A fresh mtime would make those entries trusted
- * by stat and hash a stale tree — a false check-cache hit.
- */
-function copyIndex(
-  bytes: Buffer,
-  st: { atimeMs: bigint; mtimeMs: bigint },
-  dst: AppPath,
-): void {
-  writeFileSync(dst, bytes, { flag: "wx" });
-  utimesSync(dst, Number(st.atimeMs) / 1000, Number(st.mtimeMs) / 1000);
-}
-
-/**
- * Replace the real index with the refreshed one, compare-and-swap: only while
- * nobody has written it since it was read (`seen`), and only under git's own
- * `index.lock`, taken `wx` the way every git writer takes it — if one holds
- * it, this run just does not publish.
- *
- * Why publish at all: every child we spawn runs with `GIT_OPTIONAL_LOCKS=0`
- * (spawn's child-env), so no git READ ever saves the stat cache it refreshes.
- * Whatever left the real index unable to vouch for its files — a whole-tree
- * checkout (11,200 of 20,664 entries racily clean after a 2 s `worktree add`),
- * a spare claim's `switch`, a rebase, a codegen rewrite — stayed that way
- * until the next commit, and every tree hash re-read those files' content.
- *
- * Why this cannot reintroduce the collision child-env exists for (a push's
- * `merge` in main failing on "index.lock: File exists" beside `git status`):
- * the lock is held for one stat + one rename, synchronously — no await, no
- * child — not for the seconds a refresh takes, and only on runs that learned
- * something. The refreshed index differs from the real one in stat data only
- * (`update-index --refresh` never stages), and it carries the mtime git wrote
- * it with, so racy-git protection holds for it as for any index git writes.
- */
-function publishRefreshedIndex(
-  realIndex: AppPath,
-  refreshed: AppPath,
-  seen: { ino: bigint; size: bigint; mtimeNs: bigint; ctimeNs: bigint },
-): void {
-  const lock = besideIndex(realIndex, "lock");
-  let fd: OwnedFd;
-  try {
-    fd = openOwnedFdSync(lock, "wx");
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === "EEXIST") return; // a writer has it
-    throw err;
-  }
-  try {
-    const now = statSync(realIndex, { bigint: true });
-    const unchanged =
-      now.ino === seen.ino &&
-      now.size === seen.size &&
-      now.mtimeNs === seen.mtimeNs &&
-      now.ctimeNs === seen.ctimeNs;
-    if (unchanged) renameSync(refreshed, realIndex);
-  } finally {
-    fd.close();
-    unlinkSync(lock);
-  }
 }

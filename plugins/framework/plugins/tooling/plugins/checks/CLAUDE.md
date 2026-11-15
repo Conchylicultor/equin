@@ -214,7 +214,7 @@ load-bearing:
   (2026-06-07) to 2026-11-04 every agent worktree hashed from an EMPTY index — the whole tree's content on every
   check run (180 s timeouts under load, so `null` and an uncached run).
 - **What status learns is published back** to the real index
-  (`publishRefreshedIndex`): its refreshed stats AND git's untracked cache.
+  (`publishRefreshedIndexSync`, `infra/git/private-index`): its refreshed stats AND git's untracked cache.
   No git read of ours ever saves either (`GIT_OPTIONAL_LOCKS=0`, spawn's
   child-env), so racily clean entries left by a checkout, a spare claim's
   switch or a rebase (up to 11,200 of 20,664 measured) were otherwise re-read
@@ -223,7 +223,7 @@ load-bearing:
   scratch `status` is the one git read allowed to write (`privateIndexWrites`
   — its index is this process's own file). Only when it learned something,
   compare-and-swap under git's own `index.lock`, held for one stat + one
-  rename. Scratch indexes keep the source index's mtime (`copyIndex`) — a
+  rename. Scratch indexes keep the source index's mtime (`writeIndexCopySync`) — a
   fresh one would trust racily clean stats and hash a stale tree.
 - **`add -A` never walks the whole tree.** Its own walk ignores the untracked
   cache, so a plain `add -A` read every directory on every run; scoped to the
@@ -645,7 +645,7 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
 
 - Description: Check runner and built-in checks for ./equin check
 - Core:
-  - Uses: 88 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 89 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `framework/tooling` ×12
     - `packages/timed-fs` ×11
     - `plugin-meta/plugin-records` ×9
@@ -658,14 +658,15 @@ entries it was raised to abandon. To undo `v2`, go to `v3`.
     - `infra/launcher/env-names` ×3
     - `infra/spawn` ×3
     - `plugin-meta/parse-utils` ×3
+    - `infra/git/private-index` ×2
     - `infra/paths` ×2
     - `packages/macrotask-yield` ×2
-    - `packages/owned-fd` ×2
     - `packages/thread-cpu-clock` ×2
     - `reports/outbox/file` ×2
     - `infra/file-sink.defineFileSink`
     - `infra/paths/repo-root.REPO_ROOT`
     - `packages/flock.flockTry`
+    - `packages/owned-fd.openOwnedFdSync`
     - `packages/semaphore.createSemaphore`
     - `packages/single-flight.singleFlight`
     - `packages/string-hash.sha256Hex`

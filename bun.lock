@@ -4682,6 +4682,10 @@
       "name": "@equin/plugin-infra-git-git-watcher",
       "version": "0.0.1",
     },
+    "plugins/infra/plugins/git/plugins/private-index": {
+      "name": "@equin/plugin-infra-git-private-index",
+      "version": "0.0.1",
+    },
     "plugins/infra/plugins/git/plugins/remotes": {
       "name": "@equin/plugin-infra-git-remotes",
       "version": "0.0.1",
@@ -10302,6 +10306,8 @@
     "@equin/plugin-infra-git-git-read-cache": ["@equin/plugin-infra-git-git-read-cache@workspace:plugins/infra/plugins/git/plugins/git-read-cache"],
 
     "@equin/plugin-infra-git-git-watcher": ["@equin/plugin-infra-git-git-watcher@workspace:plugins/infra/plugins/git/plugins/git-watcher"],
+
+    "@equin/plugin-infra-git-private-index": ["@equin/plugin-infra-git-private-index@workspace:plugins/infra/plugins/git/plugins/private-index"],
 
     "@equin/plugin-infra-git-remotes": ["@equin/plugin-infra-git-remotes@workspace:plugins/infra/plugins/git/plugins/remotes"],
 
