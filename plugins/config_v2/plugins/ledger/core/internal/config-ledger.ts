@@ -68,6 +68,16 @@ function writeApplied(file: AppPath, applied: Set<string>): void {
   );
 }
 
+/** The keys of `keys` that `userConfigDir` has not applied yet, in order. */
+export function unappliedLedgerKeys(opts: {
+  userConfigDir: AppPath;
+  markerFile: string;
+  keys: readonly string[];
+}): string[] {
+  const applied = readApplied(joinAppPath(opts.userConfigDir, opts.markerFile));
+  return opts.keys.filter((k) => !applied.has(k));
+}
+
 export interface ConfigLedgerEntry<R> {
   /** Stable, unique within the ledger — what the marker records. */
   readonly key: string;

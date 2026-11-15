@@ -5,6 +5,7 @@ import {
   parseConfigText,
   rewriteConfigFiles,
   runConfigLedger,
+  unappliedLedgerKeys,
   walkConfigFiles,
 } from "./config-ledger";
 
@@ -22,6 +23,40 @@ function escapeRe(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+const migrationKey = (
+  hierarchyPath: string,
+  descriptor: ConfigDescriptor,
+  id: string,
+) => `${hierarchyPath}/${descriptor.name}:${id}`;
+
+/** Whether the namespace has saved config at all (a fresh one records migrations without running them). */
+const isFresh = (userConfigDir: AppPath) =>
+  !walkConfigFiles(userConfigDir).some((f) => f.endsWith(".jsonc"));
+
+/**
+ * Whether `applyConfigMigrations` would RUN a migration's `apply` on this
+ * namespace — an unapplied migration and saved config to rewrite. A caller
+ * holding descriptors read from plugin records (whose functions are stubs)
+ * must hand `applyConfigMigrations` live descriptors when this is true.
+ */
+export function configMigrationsPending(opts: {
+  userConfigDir: AppPath;
+  configs: readonly { hierarchyPath: string; descriptor: ConfigDescriptor }[];
+}): boolean {
+  const keys = opts.configs.flatMap(({ hierarchyPath, descriptor }) =>
+    (descriptor.migrations ?? []).map((m) =>
+      migrationKey(hierarchyPath, descriptor, m.id),
+    ),
+  );
+  return (
+    unappliedLedgerKeys({
+      userConfigDir: opts.userConfigDir,
+      markerFile: APPLIED_CONFIG_MIGRATIONS_FILE,
+      keys,
+    }).length > 0 && !isFresh(opts.userConfigDir)
+  );
+}
+
 /**
  * Apply every config migration (`defineConfigMigration`, declared on a
  * descriptor's `migrations`) that the namespace dir `userConfigDir` has not
@@ -35,15 +70,13 @@ export function applyConfigMigrations(opts: {
   configs: readonly { hierarchyPath: string; descriptor: ConfigDescriptor }[];
 }): AppliedConfigMigration[] {
   const { userConfigDir, configs } = opts;
-  const fresh = !walkConfigFiles(userConfigDir).some((f) =>
-    f.endsWith(".jsonc"),
-  );
+  const fresh = isFresh(userConfigDir);
   const entries = configs.flatMap(({ hierarchyPath, descriptor }) => {
     const files = new RegExp(
       `^${escapeRe(hierarchyPath)}/(${escapeRe(APP_SCOPE_DIR)}/[^/]+/)?${escapeRe(descriptor.name)}(\\.origin|\\.ancestor)?\\.jsonc$`,
     );
     return (descriptor.migrations ?? []).map((migration) => ({
-      key: `${hierarchyPath}/${descriptor.name}:${migration.id}`,
+      key: migrationKey(hierarchyPath, descriptor, migration.id),
       apply: (dir: AppPath): string[] =>
         rewriteConfigFiles(dir, {
           select: (rel) => files.test(rel),

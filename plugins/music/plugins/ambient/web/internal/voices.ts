@@ -297,3 +297,99 @@ export function whoosh(r: Rig, t: number): void {
   n.start(t);
   n.stop(t + 0.7);
 }
+
+/** A nylon-string pluck: a bright triangle that darkens and dies quickly. */
+export function pluck(
+  r: Rig,
+  freq: number,
+  t: number,
+  vel = 0.06,
+  dur = 1.6,
+): void {
+  const { ctx } = r;
+  const o = ctx.createOscillator();
+  const o2 = ctx.createOscillator();
+  const g2 = ctx.createGain();
+  const f = ctx.createBiquadFilter();
+  const g = ctx.createGain();
+  o.type = "triangle";
+  o.frequency.value = freq;
+  o2.type = "sine";
+  o2.frequency.value = freq * 2;
+  g2.gain.value = 0.25;
+  f.type = "lowpass";
+  f.frequency.setValueAtTime(3200, t);
+  f.frequency.exponentialRampToValueAtTime(500, t + 0.4);
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(vel, t + 0.004);
+  g.gain.exponentialRampToValueAtTime(vel * 0.3, t + 0.25);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(f);
+  o2.connect(g2).connect(f);
+  f.connect(g);
+  g.connect(r.music);
+  g.connect(r.reverb);
+  for (const x of [o, o2]) {
+    x.start(t);
+    x.stop(t + dur + 0.05);
+  }
+}
+
+/** A soft shaker: a breath of high noise. */
+export function shaker(r: Rig, t: number, v = 0.012): void {
+  const { ctx } = r;
+  const n = noiseSource(r);
+  const f = ctx.createBiquadFilter();
+  const g = ctx.createGain();
+  f.type = "bandpass";
+  f.frequency.value = 6000;
+  f.Q.value = 0.9;
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(v, t + 0.02);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.09);
+  n.connect(f).connect(g).connect(r.music);
+  n.start(t, Math.random() * 0.8);
+  n.stop(t + 0.1);
+}
+
+/** A rim click: a short woody tick. */
+export function rim(r: Rig, t: number, v = 0.05): void {
+  const { ctx } = r;
+  const o = ctx.createOscillator();
+  const f = ctx.createBiquadFilter();
+  const g = ctx.createGain();
+  o.type = "square";
+  o.frequency.value = 820;
+  f.type = "bandpass";
+  f.frequency.value = 1700;
+  f.Q.value = 2;
+  g.gain.setValueAtTime(v, t);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.04);
+  o.connect(f).connect(g);
+  g.connect(r.music);
+  g.connect(r.reverb);
+  o.start(t);
+  o.stop(t + 0.05);
+}
+
+/** A cricket: a few fast trills of a high sine. */
+export function cricket(r: Rig, t: number, v = 0.006): void {
+  const { ctx } = r;
+  const o = ctx.createOscillator();
+  const g = ctx.createGain();
+  o.type = "sine";
+  o.frequency.value = 4200 + Math.random() * 600;
+  g.gain.setValueAtTime(0, t);
+  const pulses = 3 + Math.floor(Math.random() * 3);
+  for (let k = 0; k < pulses; k++) {
+    const p = t + k * 0.055;
+    g.gain.setValueAtTime(0, p);
+    g.gain.linearRampToValueAtTime(v, p + 0.008);
+    g.gain.linearRampToValueAtTime(0, p + 0.035);
+  }
+  o.connect(g);
+  g.connect(r.music);
+  g.connect(r.reverb);
+  o.start(t);
+  o.stop(t + pulses * 0.055 + 0.05);
+}

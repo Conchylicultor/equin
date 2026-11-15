@@ -38,6 +38,7 @@ import { evaluateAllBarrels } from "./evaluated-barrels";
 import { writeGenerated } from "./write-generated";
 import {
   applyConfigMigrations,
+  configMigrationsPending,
   type AppliedConfigMigration,
 } from "@plugins/config_v2/plugins/ledger/core";
 import type { CodegenPass } from "./codegen-pass";
@@ -655,7 +656,15 @@ export async function propagateConfigToUser(opts: {
   // Saved values follow a config's shape change BEFORE propagation compares
   // them: replay every config migration this namespace has not applied yet.
   // Returned, so the build can say what it rewrote.
-  const migrations = applyConfigMigrations({ userConfigDir, configs });
+  // A migration's `apply` is code, and descriptors read from plugin records
+  // carry functions as stubs: when one is about to run, the barrels are
+  // imported live (only on the build that first meets a new migration).
+  const migrations = applyConfigMigrations({
+    userConfigDir,
+    configs: configMigrationsPending({ userConfigDir, configs })
+      ? await discoverConfigs(opts.pass, { live: true })
+      : configs,
+  });
 
   // The checkout's committed layer, resolved by the same `committedDocument` a
   // host's ConfigGitLayer answers with, so the desktop's propagated origins and

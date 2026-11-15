@@ -23,6 +23,7 @@
   - Exports (values):
     - `APPLIED_CONFIG_MIGRATIONS_FILE`
     - `applyConfigMigrations`
+    - `configMigrationsPending`
     - `configTextHash`
     - `parseConfigText`
     - `rewriteConfigFiles`

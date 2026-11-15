@@ -48,8 +48,8 @@ const MUSIC = 0.55;
 const DUCKED = 0.15;
 
 /**
- * The generative ambient engine on a caller's AudioContext: two songs (`lofi`,
- * `ambient`) written bar by bar a little ahead of the audio clock, and sound
+ * The generative ambient engine on a caller's AudioContext: the songs of
+ * `AMBIENT_MOODS`, written bar by bar a little ahead of the audio clock, and sound
  * effects. The look-ahead pump is woken by the audio clock itself — a silent
  * source's `onended` — never by an interval: it follows the context (a
  * suspended context writes nothing; a slept tab skips the missed bars).

@@ -22,6 +22,7 @@ import {
 import {
   APPLIED_CONFIG_MIGRATIONS_FILE,
   applyConfigMigrations,
+  configMigrationsPending,
 } from "./config-migrations";
 
 let ns: AppPath;
@@ -138,5 +139,22 @@ describe("applyConfigMigrations", () => {
     });
     expect(applied?.rewritten).toEqual([]);
     expect(readFileSync(join(ns, "a/b/config.jsonc"), "utf8")).toBe(text);
+  });
+});
+
+describe("configMigrationsPending", () => {
+  test("only while an unapplied migration would run on saved config", () => {
+    // fresh: recorded without running, so record-read stubs are fine
+    expect(
+      configMigrationsPending({ userConfigDir: ns, configs: configs() }),
+    ).toBe(false);
+    put("a/b/config.jsonc", { icon: "old" }, "abcdef012345");
+    expect(
+      configMigrationsPending({ userConfigDir: ns, configs: configs() }),
+    ).toBe(true);
+    applyConfigMigrations({ userConfigDir: ns, configs: configs() });
+    expect(
+      configMigrationsPending({ userConfigDir: ns, configs: configs() }),
+    ).toBe(false);
   });
 });

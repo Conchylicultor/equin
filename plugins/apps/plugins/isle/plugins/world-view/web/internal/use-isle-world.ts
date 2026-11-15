@@ -33,13 +33,9 @@ import {
   type IsleApp,
   type TimeOfDay,
 } from "@plugins/apps/plugins/isle/plugins/renderer/web";
-import {
-  ambientMoodOf,
-  type AmbientMood,
-} from "@plugins/music/plugins/ambient/core";
 import { fnv1a32 } from "@plugins/packages/plugins/string-hash/core";
 import type { AppCategory } from "@plugins/primitives/plugins/pane/core";
-import { isleConfig } from "../../core";
+import { isleConfig, isleStationOf, type IsleStation } from "../../core";
 import { useIsleFonts } from "./fonts";
 import { useGlyphImages } from "./glyphs";
 
@@ -60,7 +56,7 @@ export type IsleWorld =
       readonly residents: readonly Resident[];
       readonly time: TimeOfDay | "auto";
       readonly music: boolean;
-      readonly mood: AmbientMood;
+      readonly station: IsleStation;
     };
 
 const kits = new Map<string, BuildingSpec>();
@@ -200,7 +196,7 @@ export function useIsleWorld(): IsleWorld {
         residents,
         time: timeOf(d.config.time),
         music: d.config.music,
-        mood: ambientMoodOf(d.config.mood),
+        station: isleStationOf(d.config.mood),
       };
     },
   });

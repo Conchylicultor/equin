@@ -65,22 +65,123 @@
   margin-top: 1px;
 }
 
-.isle-radio {
+.isle-radio-dock {
   bottom: 16px;
   left: 16px;
+}
+.isle-radio {
   display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 14px 8px 8px;
+  align-items: stretch;
   border-radius: 999px;
   background: rgb(20 22 30 / 0.55);
   backdrop-filter: blur(10px) saturate(1.3);
   border: 1px solid rgb(255 255 255 / 0.12);
   box-shadow: 0 8px 30px rgb(0 0 0 / 0.25);
+  transition: opacity 0.3s;
+}
+.isle-radio-main,
+.isle-radio-more {
+  display: flex;
+  align-items: center;
+  background: none;
+  border: 0;
   color: inherit;
   font: inherit;
   cursor: pointer;
-  transition: opacity 0.3s;
+}
+.isle-radio-main {
+  gap: 10px;
+  padding: 8px 12px 8px 8px;
+  border-radius: 999px 0 0 999px;
+}
+.isle-radio-more {
+  padding: 0 12px 0 10px;
+  border-left: 1px solid rgb(255 255 255 / 0.14);
+  border-radius: 0 999px 999px 0;
+  font-size: 16px;
+  opacity: 0.75;
+  transition: opacity 0.2s, background 0.2s;
+}
+.isle-radio-more:hover,
+.isle-radio-more[aria-expanded="true"] {
+  opacity: 1;
+  background: rgb(255 255 255 / 0.08);
+}
+.isle-stations {
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 8px);
+  min-width: 250px;
+  display: flex;
+  flex-direction: column;
+  padding: 6px;
+  border-radius: 16px;
+  background: rgb(20 22 30 / 0.7);
+  backdrop-filter: blur(12px) saturate(1.3);
+  border: 1px solid rgb(255 255 255 / 0.12);
+  box-shadow: 0 12px 36px rgb(0 0 0 / 0.3);
+  animation: isle-stations-in 0.16s ease-out;
+}
+.isle-station {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+.isle-station:hover {
+  background: rgb(255 255 255 / 0.08);
+}
+.isle-station.isle-on {
+  background: rgb(255 215 154 / 0.16);
+}
+.isle-station:first-child {
+  margin-bottom: 5px;
+  position: relative;
+}
+.isle-station:first-child::after {
+  content: "";
+  position: absolute;
+  left: 6px;
+  right: 6px;
+  bottom: -3px;
+  height: 1px;
+  background: rgb(255 255 255 / 0.1);
+}
+.isle-station-dot {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.3);
+}
+.isle-station.isle-on .isle-station-dot {
+  background: #ffd79a;
+  box-shadow: none;
+}
+.isle-station-name {
+  flex: 1;
+  white-space: nowrap;
+}
+.isle-station small {
+  margin-left: 12px;
+  font-weight: 600;
+  opacity: 0.55;
+  white-space: nowrap;
+}
+@keyframes isle-stations-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
 }
 .isle-radio-disc {
   width: 30px;
@@ -331,7 +432,8 @@
   .isle-title button,
   .isle-title button svg,
   .isle-radio-disc,
-  .isle-radio-eq i {
+  .isle-radio-eq i,
+  .isle-stations {
     animation: none;
   }
   .isle-prompt,

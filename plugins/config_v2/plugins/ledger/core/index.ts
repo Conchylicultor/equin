@@ -10,5 +10,6 @@ export type { ConfigLedgerEntry } from "./internal/config-ledger";
 export {
   APPLIED_CONFIG_MIGRATIONS_FILE,
   applyConfigMigrations,
+  configMigrationsPending,
 } from "./internal/config-migrations";
 export type { AppliedConfigMigration } from "./internal/config-migrations";

@@ -11,7 +11,10 @@ import {
 } from "@plugins/apps-core/plugins/tabs/web";
 import { useAppUsageSummary } from "@plugins/apps-core/plugins/app-usage/web";
 import { useSetConfig } from "@plugins/config_v2/web";
-import { AMBIENT_TRACKS } from "@plugins/music/plugins/ambient/core";
+import {
+  AMBIENT_MOODS,
+  AMBIENT_TRACKS,
+} from "@plugins/music/plugins/ambient/core";
 import { useAmbient } from "@plugins/music/plugins/ambient/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import {
@@ -47,7 +50,14 @@ import { useElementSize } from "@plugins/primitives/plugins/dom/plugins/element-
 import { focusElement } from "@plugins/primitives/plugins/dom/plugins/scroll-reveal/web";
 import { isleApp } from "@plugins/apps/plugins/isle/plugins/shell/core";
 import { PRODUCT_NAME } from "@plugins/framework/plugins/product-name/core";
-import { DAY_PHASE_PHRASE, isleConfig, lifeOfSummary } from "../../core";
+import {
+  DAY_PHASE_PHRASE,
+  PHASE_MOOD,
+  isleConfig,
+  lifeOfSummary,
+  moodOf,
+  type IsleStation,
+} from "../../core";
 import { useTimeOfDay } from "../internal/time";
 import { useIsleWorld, type Resident } from "../internal/use-isle-world";
 import { useStageDeadline } from "../internal/stage-deadline";
@@ -56,6 +66,14 @@ import "./isle.css";
 const playIcon = symbol("play-arrow");
 const placeIcon = symbol("landscape");
 const natureIcon = symbol("park");
+const stationsIcon = symbol("queue-music");
+
+/** The radio's stations, in the order N steps through them. */
+const STATIONS: readonly IsleStation[] = ["auto", ...AMBIENT_MOODS];
+/** Which phase of the day plays each mood while the station is `auto`. */
+const PHASE_OF_MOOD = new Map(
+  Object.entries(PHASE_MOOD).map(([phase, mood]) => [mood, phase]),
+);
 
 /**
  * Once Start was pressed in this page, coming back to the island skips the
@@ -97,6 +115,8 @@ export function IsleView() {
     district: string | null;
   } | null>(null);
   const [entering, setEntering] = useState<Entering | null>(null);
+  const [stationsOpen, setStationsOpen] = useState(false);
+  const radioRef = useRef<HTMLDivElement | null>(null);
   const activate = useActivateApp();
   const setConfig = useSetConfig(isleConfig);
   const focused = useSurfaceFocused();
@@ -119,8 +139,9 @@ export function IsleView() {
   const stuck = useStageDeadline(waitingOn, focused);
   // the island's music: unlocked by Start (a user gesture), playing while the
   // config says so and this tab is the one on screen
+  const mood = moodOf(ready ? world.station : "auto", time);
   const ambient = useAmbient({
-    mood: ready ? world.mood : "lofi",
+    mood,
     on: playing && focused && ready && world.music,
   });
   const unlockSound = ambient.unlock;
@@ -129,6 +150,18 @@ export function IsleView() {
     ambient.unlock();
     if (ambient.status === "locked" && world.music) return;
     setConfig("music", !world.music);
+  };
+  // picking a station is asking to hear it: the music comes on with it
+  const tune = (station: IsleStation) => {
+    if (world.kind !== "ready") return;
+    ambient.unlock();
+    if (station !== world.station) setConfig("mood", station);
+    if (!world.music) setConfig("music", true);
+  };
+  const nextStation = () => {
+    if (world.kind !== "ready") return;
+    const at = STATIONS.indexOf(world.station);
+    tune(STATIONS[(at + 1) % STATIONS.length]!);
   };
   const sfx = ambient.sfx;
 
@@ -276,6 +309,16 @@ export function IsleView() {
     return () => cancelAnimationFrame(id);
   }, [entering]);
 
+  // the station list closes on a press outside it (Escape: the dock's onKeyDown)
+  useEffect(() => {
+    if (!stationsOpen) return;
+    const onDown = (e: PointerEvent) => {
+      if (!radioRef.current?.contains(e.target as Node)) setStationsOpen(false);
+    };
+    document.addEventListener("pointerdown", onDown, true);
+    return () => document.removeEventListener("pointerdown", onDown, true);
+  }, [stationsOpen]);
+
   function onKeyDown(e: KeyboardEvent<HTMLDivElement>) {
     if (!started) {
       if (e.key === "Enter" || e.key === " ") {
@@ -293,6 +336,16 @@ export function IsleView() {
     ) {
       e.preventDefault();
       toggleMusic();
+      return;
+    }
+    if (
+      (e.key === "n" || e.key === "N") &&
+      !e.repeat &&
+      !e.metaKey &&
+      !e.ctrlKey
+    ) {
+      e.preventDefault();
+      nextStation();
       return;
     }
     if (
@@ -347,32 +400,90 @@ export function IsleView() {
         </div>
       ) : null}
       {started && ready ? (
-        <button
-          type="button"
-          className={
-            ambient.status === "playing"
-              ? "isle-hud isle-radio"
-              : "isle-hud isle-radio isle-off"
-          }
-          title="Music (M)"
-          aria-pressed={ambient.status === "playing"}
-          onClick={toggleMusic}
+        <div
+          ref={radioRef}
+          className="isle-hud isle-radio-dock"
+          onKeyDown={(e) => {
+            if (e.key !== "Escape" || !stationsOpen) return;
+            e.preventDefault();
+            setStationsOpen(false);
+            focusElement(stageRef.current, { reveal: false });
+          }}
         >
-          <span className="isle-radio-disc" />
-          <span className="isle-radio-eq" aria-hidden>
-            <i />
-            <i />
-            <i />
-            <i />
-          </span>
-          <span className="isle-radio-track">
-            {ambient.status === "playing"
-              ? AMBIENT_TRACKS[world.mood]
-              : world.music && ambient.status === "locked"
-                ? "music"
-                : "muted"}
-          </span>
-        </button>
+          {stationsOpen ? (
+            <div className="isle-stations" role="menu" aria-label="Stations">
+              {STATIONS.map((st) => {
+                const on = st === world.station;
+                const hint =
+                  st === "auto"
+                    ? AMBIENT_TRACKS[PHASE_MOOD[time]]
+                    : PHASE_OF_MOOD.get(st);
+                return (
+                  <button
+                    key={st}
+                    type="button"
+                    role="menuitemradio"
+                    aria-checked={on}
+                    className={on ? "isle-station isle-on" : "isle-station"}
+                    onClick={() => {
+                      tune(st);
+                      setStationsOpen(false);
+                      focusElement(stageRef.current, { reveal: false });
+                    }}
+                  >
+                    <span className="isle-station-dot" />
+                    <span className="isle-station-name">
+                      {st === "auto"
+                        ? "Match the time of day"
+                        : AMBIENT_TRACKS[st]}
+                    </span>
+                    {hint ? <small>{hint}</small> : null}
+                  </button>
+                );
+              })}
+            </div>
+          ) : null}
+          <div
+            className={
+              ambient.status === "playing"
+                ? "isle-radio"
+                : "isle-radio isle-off"
+            }
+          >
+            <button
+              type="button"
+              className="isle-radio-main"
+              title="Music (M)"
+              aria-pressed={ambient.status === "playing"}
+              onClick={toggleMusic}
+            >
+              <span className="isle-radio-disc" />
+              <span className="isle-radio-eq" aria-hidden>
+                <i />
+                <i />
+                <i />
+                <i />
+              </span>
+              <span className="isle-radio-track">
+                {ambient.status === "playing"
+                  ? AMBIENT_TRACKS[mood]
+                  : world.music && ambient.status === "locked"
+                    ? "music"
+                    : "muted"}
+              </span>
+            </button>
+            <button
+              type="button"
+              className="isle-radio-more"
+              title="Stations (N for the next one)"
+              aria-haspopup="menu"
+              aria-expanded={stationsOpen}
+              onClick={() => setStationsOpen((o) => !o)}
+            >
+              <Icon icon={stationsIcon} />
+            </button>
+          </div>
+        </div>
       ) : null}
       <div
         className={
