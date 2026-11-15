@@ -13,10 +13,10 @@
     - `ThemeCustomizer.Section` ×22
     - `themeCustomizerPane.Actions` ← `primitives.pane`
   - Contributes: `Pane.Register` "theme-customizer"
-  - Uses: 41 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 40 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/css/ui-kit` ×10
     - `ui/theme-engine` ×6
-    - `primitives/pane` ×4
+    - `primitives/pane` ×3
     - `config_v2` ×2
     - `infra/endpoints` ×2
     - `network/live/live-state` ×2
@@ -42,10 +42,12 @@
     - `FillFromMenu`
     - `ThemeCustomizer`
     - `themeCustomizerPane`
-    - `themeCustomizerRoute`
     - `TokenRows`
     - `useColorAdjustEditor`
     - `useTokenGroupEditor`
+- Core:
+  - Uses: `primitives/pane.defineRoute`
+  - Exports (values): `themeCustomizerRoute`
 - Cross-plugin:
   - Uses tokens: 24 vars — full list in [REFERENCE.md](./REFERENCE.md)
     - `ui/tokens/type-scale` ×9

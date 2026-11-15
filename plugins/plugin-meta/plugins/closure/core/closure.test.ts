@@ -1301,6 +1301,15 @@ test("a companion contribution is a hard edge from the slot's owner", () => {
     ["primitives.slot-render", "reorder.slot-middleware"],
     ["primitives.slot-render", "primitives.error-boundary"],
     ["reorder.node-types", "reorder.node-types.spacer"],
+    // A detail pane opened to companions (`defineDetailSections({ companions:
+    // true })`): the customizer's sections live in `customizer` children that
+    // nothing imports, so painting never loads the editor.
+    ["ui.theme-engine.theme-customizer", "ui.tokens.shadow.customizer"],
+    ["ui.theme-engine.theme-customizer", "ui.theme-toggle.customizer"],
+    [
+      "ui.theme-engine.theme-customizer",
+      "ui.theme-engine.theme-gallery.customizer",
+    ],
   ];
   for (const [owner, companion] of pairs) {
     const from = asPluginId(owner);

@@ -138,5 +138,6 @@ export const checkEntries: CollectedEntry[] = [
   { pluginPath: "ui/plugins/icons", id: "ui.icons", loader: () => import("@plugins/ui/plugins/icons/check"), dependsOn: ["framework/plugins/tooling/plugins/codegen", "plugin-meta/plugins/plugin-records"] },
   { pluginPath: "ui/plugins/logo", id: "ui.logo", loader: () => import("@plugins/ui/plugins/logo/check"), dependsOn: [] },
   { pluginPath: "ui/plugins/theme-engine", id: "ui.theme-engine", loader: () => import("@plugins/ui/plugins/theme-engine/check"), dependsOn: ["framework/plugins/tooling/plugins/codegen"] },
+  { pluginPath: "ui/plugins/theme-engine/plugins/theme-customizer", id: "ui.theme-engine.theme-customizer", loader: () => import("@plugins/ui/plugins/theme-engine/plugins/theme-customizer/check"), dependsOn: ["framework/plugins/tooling/plugins/codegen"] },
   { pluginPath: "ui/plugins/tokens/plugins/type-scale", id: "ui.tokens.type-scale", loader: () => import("@plugins/ui/plugins/tokens/plugins/type-scale/check"), dependsOn: ["framework/plugins/tooling/plugins/codegen"] },
 ];

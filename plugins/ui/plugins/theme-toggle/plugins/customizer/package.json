@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-ui-theme-toggle-customizer",
+  "description": "The Color mode customizer section: the current app's color mode (its declared default or an override) and the global setting.",
+  "private": true,
+  "version": "0.0.1"
+}

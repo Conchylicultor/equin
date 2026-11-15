@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-ui-tokens-chord-palette-customizer",
+  "description": "Customizer section for the chord colour token group (--chord-1…7, --chord-outside).",
+  "private": true,
+  "version": "0.0.1"
+}

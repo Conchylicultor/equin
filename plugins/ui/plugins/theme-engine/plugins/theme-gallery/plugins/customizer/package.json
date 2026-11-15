@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-ui-theme-engine-theme-gallery-customizer",
+  "description": "The Theme customizer section: the theme gallery as cards, with rename and delete on saved themes.",
+  "private": true,
+  "version": "0.0.1"
+}

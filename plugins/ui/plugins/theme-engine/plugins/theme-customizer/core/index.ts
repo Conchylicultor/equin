@@ -1,0 +1,1 @@
+export { themeCustomizerRoute } from "./route";

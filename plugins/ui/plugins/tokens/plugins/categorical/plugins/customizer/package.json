@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-ui-tokens-categorical-customizer",
+  "description": "Customizer section for the categorical palette token group (categorical-1…10).",
+  "private": true,
+  "version": "0.0.1"
+}

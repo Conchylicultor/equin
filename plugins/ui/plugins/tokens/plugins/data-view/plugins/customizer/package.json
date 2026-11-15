@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-ui-tokens-data-view-customizer",
+  "description": "Customizer section for the DataView token group.",
+  "private": true,
+  "version": "0.0.1"
+}

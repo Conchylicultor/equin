@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-ui-tokens-chart-customizer",
+  "description": "Customizer section for the chart color token group (chart-1…5).",
+  "private": true,
+  "version": "0.0.1"
+}

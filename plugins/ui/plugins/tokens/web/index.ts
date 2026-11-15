@@ -3,6 +3,6 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 export default {
   collapsed: true,
   description:
-    "Umbrella for CSS token group plugins: each declares its variables and schema defaults, and a customizer section that edits the scope's theme.",
+    "Umbrella for CSS token group plugins: each declares its variables and schema defaults and registers them, its customizer section a `customizer` child of its own so painting never depends on the editor loading.",
   contributions: [],
 } satisfies PluginDefinition;

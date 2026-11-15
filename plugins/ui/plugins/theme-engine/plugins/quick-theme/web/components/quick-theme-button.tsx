@@ -4,7 +4,7 @@ import { ControlPanelPopover } from "@plugins/primitives/plugins/css/plugins/con
 import { useActiveApp } from "@plugins/apps-core/web";
 import { useAppLink } from "@plugins/apps-core/plugins/tabs/web";
 import { afterOpen } from "@plugins/primitives/plugins/link-gesture/core";
-import { themeCustomizerRoute } from "@plugins/ui/plugins/theme-engine/plugins/theme-customizer/web";
+import { themeCustomizerRoute } from "@plugins/ui/plugins/theme-engine/plugins/theme-customizer/core";
 import { QuickThemePanel } from "./quick-theme-panel";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 

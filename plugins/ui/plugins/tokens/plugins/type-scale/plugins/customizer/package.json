@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-ui-tokens-type-scale-customizer",
+  "description": "Customizer section for the type-scale token group.",
+  "private": true,
+  "version": "0.0.1"
+}

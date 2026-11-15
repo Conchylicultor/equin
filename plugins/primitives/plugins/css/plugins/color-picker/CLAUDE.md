@@ -61,7 +61,7 @@
     - `apps/sonata/track-mixer`
     - `fields/color/config`
     - `ui/theme-engine/theme-customizer`
-    - `ui/tokens/shadow`
+    - `ui/tokens/shadow/customizer`
 - Core:
   - Exports (values):
     - `Color`

@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-ui-tokens-icons-customizer",
+  "description": "Customizer section for the icons token group.",
+  "private": true,
+  "version": "0.0.1"
+}

@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-ui-tokens-color-palette-customizer",
+  "description": "Customizer section for the color palette token group, with the palette dots in its header.",
+  "private": true,
+  "version": "0.0.1"
+}

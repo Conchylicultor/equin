@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-ui-tokens-density-customizer",
+  "description": "Customizer section for the density token group, with \"Fill from…\" shortcuts.",
+  "private": true,
+  "version": "0.0.1"
+}

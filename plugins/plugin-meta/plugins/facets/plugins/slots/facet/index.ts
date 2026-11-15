@@ -268,6 +268,54 @@ function applyCompanions(
 }
 
 /**
+ * A detail pane's section slot opened to companions:
+ * `export const Group = defineDetailSections<…>({ companions: true, … })` mints
+ * ONE render slot, `Group.Section`, whose id is `<plugin>.section`
+ * (detail-sections' own derivation). The closure engine reads companion slots
+ * from this parse alone, so without it a `Group.Section({ companion: true })`
+ * would ship nowhere (the theme customizer's per-plugin `customizer` children).
+ *
+ * Only calls opened to companions are read: the parse has never named a detail
+ * pane's slot otherwise, and naming them all would add soft edges (classify-edges
+ * matches a contribution's `Group` head) to every composition with a detail pane.
+ */
+function parseCompanionDetailSections(
+  masked: string,
+  original: string,
+  file: string,
+  pluginId: string,
+): SlotDef[] {
+  const out: SlotDef[] = [];
+  for (const span of markerCallSpans(masked, "defineDetailSections")) {
+    const companions = readCompanionsOption(
+      masked,
+      original,
+      span.open,
+      span.close,
+      file,
+    );
+    if (!companions) continue;
+    const prefix = masked.slice(0, span.identifier);
+    const groupName = /(?:export\s+)?const\s+(\w+)\s*=\s*$/.exec(prefix)?.[1];
+    if (!groupName)
+      throw new Error(
+        `${file}: a \`defineDetailSections({ companions })\` call must be bound ` +
+          "to a const (`export const Group = defineDetailSections(…)`) so the " +
+          "closure engine can match `Group.Section` contributions to it.",
+      );
+    out.push({
+      memberName: "Section",
+      groupName,
+      slotId: slotIdFor(pluginId, seg("Section")),
+      kind: "render",
+      contributors: [],
+      companions,
+    });
+  }
+  return out;
+}
+
+/**
  * Static parse of every source file under the plugin's OWN `web/` (walkFiles
  * skips sub-plugin `plugins/` trees, `node_modules` and tests), deduped by slot
  * id, first writer wins.
@@ -315,6 +363,7 @@ function parseSlotsFromSource(dir: AppPath, pluginId: string): SlotDef[] {
       ),
       // Same reason: an ordered (data) slot is usually a standalone `const`.
       ...parseSlotCalls(masked, "defineOrderedSlot", "ordered", pluginId),
+      ...parseCompanionDetailSections(masked, original, file, pluginId),
       ...parseDefineGroup(
         original,
         "defineSlot",

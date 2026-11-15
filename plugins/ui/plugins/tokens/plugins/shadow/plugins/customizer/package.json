@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-ui-tokens-shadow-customizer",
+  "description": "Param-driven customizer section for the shadow token group, with \"Fill from…\" shortcuts.",
+  "private": true,
+  "version": "0.0.1"
+}

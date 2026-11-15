@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-ui-tokens-file-type-palette-customizer",
+  "description": "Customizer section for the file-type colour token group (--file-<tone>, --folder).",
+  "private": true,
+  "version": "0.0.1"
+}

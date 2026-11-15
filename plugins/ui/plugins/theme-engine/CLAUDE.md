@@ -491,8 +491,8 @@ the `""` entry.
     - `ui/tokens/shape` ×4
     - `ui/tokens/type-scale` ×4
     - `ui/tokens/data-view` ×2
-  - Imported by: 54 plugins — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ui` ×29
+  - Imported by: 74 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ui` ×49
     - `apps` ×19
     - `apps-core/chrome-theme`
     - `companions/panel`

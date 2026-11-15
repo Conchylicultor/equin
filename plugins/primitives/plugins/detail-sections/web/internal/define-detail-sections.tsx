@@ -31,6 +31,7 @@ import {
   type RenderSlot,
 } from "@plugins/primitives/plugins/slot-render/web";
 import type { Hook } from "@plugins/framework/plugins/hook-value/core";
+import type { CompanionFlag } from "@plugins/framework/plugins/web-sdk/core";
 
 /** Every pane's section open/closed flags, one entry per `<slot id>.<section id>.open`. */
 const sectionOpenStore = defineStore({
@@ -63,7 +64,7 @@ const sectionOpenStore = defineStore({
  *   An inspector stack has no inset by construction (its rules and hover fills
  *   run edge to edge), so the field does not exist on that arm.
  */
-export type DetailSectionsOptions =
+export type DetailSectionsOptions = (
   | {
       chrome?: "card";
       /**
@@ -78,7 +79,18 @@ export type DetailSectionsOptions =
        */
       inset?: SpaceStep;
     }
-  | { chrome: "inspector"; inset?: never };
+  | { chrome: "inspector"; inset?: never }
+) & {
+  /**
+   * Open the section slot to companions: a section contributed with
+   * `companion: true` ships wherever the pane's owner does, with no
+   * composition naming it. For a pane whose sections live in small child
+   * plugins nothing imports (the theme customizer's per-token-group editors,
+   * split off so painting never depends on the editor) — without it a
+   * composition that is not the whole repo ships the pane without them.
+   */
+  companions?: true;
+};
 
 /** The fields every section carries, whatever its shape. */
 interface DetailSectionCommon<EntityProps> {
@@ -274,12 +286,23 @@ const REVEAL_TTL_MS = 30_000;
 export function defineDetailSections<
   EntityProps extends Record<string, unknown>,
   Extra extends object = {},
+>(
+  options: DetailSectionsOptions & { companions: true },
+): DetailSections<EntityProps, Extra & CompanionFlag>;
+export function defineDetailSections<
+  EntityProps extends Record<string, unknown>,
+  Extra extends object = {},
+>(options?: DetailSectionsOptions): DetailSections<EntityProps, Extra>;
+export function defineDetailSections<
+  EntityProps extends Record<string, unknown>,
+  Extra extends object = {},
 >(options?: DetailSectionsOptions): DetailSections<EntityProps, Extra> {
   const Section = defineRenderSlot<DetailSection<EntityProps> & Extra>({
     // The human-readable title, not the id — this is what reorder's drag overlay
     // shows ("Tracks", not "track-mixer"). `label` is required on every section,
     // so it is always present.
     docLabel: (p) => p.label,
+    ...(options?.companions ? { companions: true } : {}),
   });
   const chrome = options?.chrome ?? "card";
   const inset =

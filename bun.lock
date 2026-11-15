@@ -7684,12 +7684,20 @@
       "name": "@equin/plugin-ui-theme-engine-theme-gallery",
       "version": "0.0.1",
     },
+    "plugins/ui/plugins/theme-engine/plugins/theme-gallery/plugins/customizer": {
+      "name": "@equin/plugin-ui-theme-engine-theme-gallery-customizer",
+      "version": "0.0.1",
+    },
     "plugins/ui/plugins/theme-engine/plugins/token-var-name": {
       "name": "@equin/plugin-ui-theme-engine-token-var-name",
       "version": "0.0.1",
     },
     "plugins/ui/plugins/theme-toggle": {
       "name": "@equin/plugin-ui-theme-toggle",
+      "version": "0.0.1",
+    },
+    "plugins/ui/plugins/theme-toggle/plugins/customizer": {
+      "name": "@equin/plugin-ui-theme-toggle-customizer",
       "version": "0.0.1",
     },
     "plugins/ui/plugins/tokens": {
@@ -7700,12 +7708,24 @@
       "name": "@equin/plugin-ui-tokens-categorical",
       "version": "0.0.1",
     },
+    "plugins/ui/plugins/tokens/plugins/categorical/plugins/customizer": {
+      "name": "@equin/plugin-ui-tokens-categorical-customizer",
+      "version": "0.0.1",
+    },
     "plugins/ui/plugins/tokens/plugins/chart": {
       "name": "@equin/plugin-ui-tokens-chart",
       "version": "0.0.1",
     },
+    "plugins/ui/plugins/tokens/plugins/chart/plugins/customizer": {
+      "name": "@equin/plugin-ui-tokens-chart-customizer",
+      "version": "0.0.1",
+    },
     "plugins/ui/plugins/tokens/plugins/chord-palette": {
       "name": "@equin/plugin-ui-tokens-chord-palette",
+      "version": "0.0.1",
+    },
+    "plugins/ui/plugins/tokens/plugins/chord-palette/plugins/customizer": {
+      "name": "@equin/plugin-ui-tokens-chord-palette-customizer",
       "version": "0.0.1",
     },
     "plugins/ui/plugins/tokens/plugins/color-adjust": {
@@ -7716,6 +7736,10 @@
       "name": "@equin/plugin-ui-tokens-color-palette",
       "version": "0.0.1",
     },
+    "plugins/ui/plugins/tokens/plugins/color-palette/plugins/customizer": {
+      "name": "@equin/plugin-ui-tokens-color-palette-customizer",
+      "version": "0.0.1",
+    },
     "plugins/ui/plugins/tokens/plugins/color-ref": {
       "name": "@equin/plugin-ui-tokens-color-ref",
       "version": "0.0.1",
@@ -7724,16 +7748,32 @@
       "name": "@equin/plugin-ui-tokens-data-view",
       "version": "0.0.1",
     },
+    "plugins/ui/plugins/tokens/plugins/data-view/plugins/customizer": {
+      "name": "@equin/plugin-ui-tokens-data-view-customizer",
+      "version": "0.0.1",
+    },
     "plugins/ui/plugins/tokens/plugins/density": {
       "name": "@equin/plugin-ui-tokens-density",
+      "version": "0.0.1",
+    },
+    "plugins/ui/plugins/tokens/plugins/density/plugins/customizer": {
+      "name": "@equin/plugin-ui-tokens-density-customizer",
       "version": "0.0.1",
     },
     "plugins/ui/plugins/tokens/plugins/file-type-palette": {
       "name": "@equin/plugin-ui-tokens-file-type-palette",
       "version": "0.0.1",
     },
+    "plugins/ui/plugins/tokens/plugins/file-type-palette/plugins/customizer": {
+      "name": "@equin/plugin-ui-tokens-file-type-palette-customizer",
+      "version": "0.0.1",
+    },
     "plugins/ui/plugins/tokens/plugins/font-family": {
       "name": "@equin/plugin-ui-tokens-font-family",
+      "version": "0.0.1",
+    },
+    "plugins/ui/plugins/tokens/plugins/font-family/plugins/customizer": {
+      "name": "@equin/plugin-ui-tokens-font-family-customizer",
       "version": "0.0.1",
     },
     "plugins/ui/plugins/tokens/plugins/font-family/plugins/google-fonts": {
@@ -7744,16 +7784,32 @@
       "name": "@equin/plugin-ui-tokens-icons",
       "version": "0.0.1",
     },
+    "plugins/ui/plugins/tokens/plugins/icons/plugins/customizer": {
+      "name": "@equin/plugin-ui-tokens-icons-customizer",
+      "version": "0.0.1",
+    },
     "plugins/ui/plugins/tokens/plugins/material": {
       "name": "@equin/plugin-ui-tokens-material",
+      "version": "0.0.1",
+    },
+    "plugins/ui/plugins/tokens/plugins/material/plugins/customizer": {
+      "name": "@equin/plugin-ui-tokens-material-customizer",
       "version": "0.0.1",
     },
     "plugins/ui/plugins/tokens/plugins/overlay": {
       "name": "@equin/plugin-ui-tokens-overlay",
       "version": "0.0.1",
     },
+    "plugins/ui/plugins/tokens/plugins/overlay/plugins/customizer": {
+      "name": "@equin/plugin-ui-tokens-overlay-customizer",
+      "version": "0.0.1",
+    },
     "plugins/ui/plugins/tokens/plugins/place-palette": {
       "name": "@equin/plugin-ui-tokens-place-palette",
+      "version": "0.0.1",
+    },
+    "plugins/ui/plugins/tokens/plugins/place-palette/plugins/customizer": {
+      "name": "@equin/plugin-ui-tokens-place-palette-customizer",
       "version": "0.0.1",
     },
     "plugins/ui/plugins/tokens/plugins/rich-text-palette": {
@@ -7764,24 +7820,48 @@
       "name": "@equin/plugin-ui-tokens-scrollbar",
       "version": "0.0.1",
     },
+    "plugins/ui/plugins/tokens/plugins/scrollbar/plugins/customizer": {
+      "name": "@equin/plugin-ui-tokens-scrollbar-customizer",
+      "version": "0.0.1",
+    },
     "plugins/ui/plugins/tokens/plugins/shadow": {
       "name": "@equin/plugin-ui-tokens-shadow",
+      "version": "0.0.1",
+    },
+    "plugins/ui/plugins/tokens/plugins/shadow/plugins/customizer": {
+      "name": "@equin/plugin-ui-tokens-shadow-customizer",
       "version": "0.0.1",
     },
     "plugins/ui/plugins/tokens/plugins/shape": {
       "name": "@equin/plugin-ui-tokens-shape",
       "version": "0.0.1",
     },
+    "plugins/ui/plugins/tokens/plugins/shape/plugins/customizer": {
+      "name": "@equin/plugin-ui-tokens-shape-customizer",
+      "version": "0.0.1",
+    },
     "plugins/ui/plugins/tokens/plugins/sidebar-metrics": {
       "name": "@equin/plugin-ui-tokens-sidebar-metrics",
+      "version": "0.0.1",
+    },
+    "plugins/ui/plugins/tokens/plugins/sidebar-metrics/plugins/customizer": {
+      "name": "@equin/plugin-ui-tokens-sidebar-metrics-customizer",
       "version": "0.0.1",
     },
     "plugins/ui/plugins/tokens/plugins/sidebar-palette": {
       "name": "@equin/plugin-ui-tokens-sidebar-palette",
       "version": "0.0.1",
     },
+    "plugins/ui/plugins/tokens/plugins/sidebar-palette/plugins/customizer": {
+      "name": "@equin/plugin-ui-tokens-sidebar-palette-customizer",
+      "version": "0.0.1",
+    },
     "plugins/ui/plugins/tokens/plugins/type-scale": {
       "name": "@equin/plugin-ui-tokens-type-scale",
+      "version": "0.0.1",
+    },
+    "plugins/ui/plugins/tokens/plugins/type-scale/plugins/customizer": {
+      "name": "@equin/plugin-ui-tokens-type-scale-customizer",
       "version": "0.0.1",
     },
     "plugins/ui/plugins/tree-disclosure": {
@@ -7806,6 +7886,10 @@
     },
     "plugins/ui/plugins/tweakcn/plugins/community-browser": {
       "name": "@equin/plugin-ui-tweakcn-community-browser",
+      "version": "0.0.1",
+    },
+    "plugins/ui/plugins/tweakcn/plugins/community-browser/plugins/customizer": {
+      "name": "@equin/plugin-ui-tweakcn-community-browser-customizer",
       "version": "0.0.1",
     },
     "plugins/ui/plugins/variant-region": {
@@ -11615,55 +11699,95 @@
 
     "@equin/plugin-ui-theme-engine-theme-gallery": ["@equin/plugin-ui-theme-engine-theme-gallery@workspace:plugins/ui/plugins/theme-engine/plugins/theme-gallery"],
 
+    "@equin/plugin-ui-theme-engine-theme-gallery-customizer": ["@equin/plugin-ui-theme-engine-theme-gallery-customizer@workspace:plugins/ui/plugins/theme-engine/plugins/theme-gallery/plugins/customizer"],
+
     "@equin/plugin-ui-theme-engine-token-var-name": ["@equin/plugin-ui-theme-engine-token-var-name@workspace:plugins/ui/plugins/theme-engine/plugins/token-var-name"],
 
     "@equin/plugin-ui-theme-toggle": ["@equin/plugin-ui-theme-toggle@workspace:plugins/ui/plugins/theme-toggle"],
+
+    "@equin/plugin-ui-theme-toggle-customizer": ["@equin/plugin-ui-theme-toggle-customizer@workspace:plugins/ui/plugins/theme-toggle/plugins/customizer"],
 
     "@equin/plugin-ui-tokens": ["@equin/plugin-ui-tokens@workspace:plugins/ui/plugins/tokens"],
 
     "@equin/plugin-ui-tokens-categorical": ["@equin/plugin-ui-tokens-categorical@workspace:plugins/ui/plugins/tokens/plugins/categorical"],
 
+    "@equin/plugin-ui-tokens-categorical-customizer": ["@equin/plugin-ui-tokens-categorical-customizer@workspace:plugins/ui/plugins/tokens/plugins/categorical/plugins/customizer"],
+
     "@equin/plugin-ui-tokens-chart": ["@equin/plugin-ui-tokens-chart@workspace:plugins/ui/plugins/tokens/plugins/chart"],
 
+    "@equin/plugin-ui-tokens-chart-customizer": ["@equin/plugin-ui-tokens-chart-customizer@workspace:plugins/ui/plugins/tokens/plugins/chart/plugins/customizer"],
+
     "@equin/plugin-ui-tokens-chord-palette": ["@equin/plugin-ui-tokens-chord-palette@workspace:plugins/ui/plugins/tokens/plugins/chord-palette"],
+
+    "@equin/plugin-ui-tokens-chord-palette-customizer": ["@equin/plugin-ui-tokens-chord-palette-customizer@workspace:plugins/ui/plugins/tokens/plugins/chord-palette/plugins/customizer"],
 
     "@equin/plugin-ui-tokens-color-adjust": ["@equin/plugin-ui-tokens-color-adjust@workspace:plugins/ui/plugins/tokens/plugins/color-adjust"],
 
     "@equin/plugin-ui-tokens-color-palette": ["@equin/plugin-ui-tokens-color-palette@workspace:plugins/ui/plugins/tokens/plugins/color-palette"],
 
+    "@equin/plugin-ui-tokens-color-palette-customizer": ["@equin/plugin-ui-tokens-color-palette-customizer@workspace:plugins/ui/plugins/tokens/plugins/color-palette/plugins/customizer"],
+
     "@equin/plugin-ui-tokens-color-ref": ["@equin/plugin-ui-tokens-color-ref@workspace:plugins/ui/plugins/tokens/plugins/color-ref"],
 
     "@equin/plugin-ui-tokens-data-view": ["@equin/plugin-ui-tokens-data-view@workspace:plugins/ui/plugins/tokens/plugins/data-view"],
 
+    "@equin/plugin-ui-tokens-data-view-customizer": ["@equin/plugin-ui-tokens-data-view-customizer@workspace:plugins/ui/plugins/tokens/plugins/data-view/plugins/customizer"],
+
     "@equin/plugin-ui-tokens-density": ["@equin/plugin-ui-tokens-density@workspace:plugins/ui/plugins/tokens/plugins/density"],
+
+    "@equin/plugin-ui-tokens-density-customizer": ["@equin/plugin-ui-tokens-density-customizer@workspace:plugins/ui/plugins/tokens/plugins/density/plugins/customizer"],
 
     "@equin/plugin-ui-tokens-file-type-palette": ["@equin/plugin-ui-tokens-file-type-palette@workspace:plugins/ui/plugins/tokens/plugins/file-type-palette"],
 
+    "@equin/plugin-ui-tokens-file-type-palette-customizer": ["@equin/plugin-ui-tokens-file-type-palette-customizer@workspace:plugins/ui/plugins/tokens/plugins/file-type-palette/plugins/customizer"],
+
     "@equin/plugin-ui-tokens-font-family": ["@equin/plugin-ui-tokens-font-family@workspace:plugins/ui/plugins/tokens/plugins/font-family"],
+
+    "@equin/plugin-ui-tokens-font-family-customizer": ["@equin/plugin-ui-tokens-font-family-customizer@workspace:plugins/ui/plugins/tokens/plugins/font-family/plugins/customizer"],
 
     "@equin/plugin-ui-tokens-font-family-google-fonts": ["@equin/plugin-ui-tokens-font-family-google-fonts@workspace:plugins/ui/plugins/tokens/plugins/font-family/plugins/google-fonts"],
 
     "@equin/plugin-ui-tokens-icons": ["@equin/plugin-ui-tokens-icons@workspace:plugins/ui/plugins/tokens/plugins/icons"],
 
+    "@equin/plugin-ui-tokens-icons-customizer": ["@equin/plugin-ui-tokens-icons-customizer@workspace:plugins/ui/plugins/tokens/plugins/icons/plugins/customizer"],
+
     "@equin/plugin-ui-tokens-material": ["@equin/plugin-ui-tokens-material@workspace:plugins/ui/plugins/tokens/plugins/material"],
+
+    "@equin/plugin-ui-tokens-material-customizer": ["@equin/plugin-ui-tokens-material-customizer@workspace:plugins/ui/plugins/tokens/plugins/material/plugins/customizer"],
 
     "@equin/plugin-ui-tokens-overlay": ["@equin/plugin-ui-tokens-overlay@workspace:plugins/ui/plugins/tokens/plugins/overlay"],
 
+    "@equin/plugin-ui-tokens-overlay-customizer": ["@equin/plugin-ui-tokens-overlay-customizer@workspace:plugins/ui/plugins/tokens/plugins/overlay/plugins/customizer"],
+
     "@equin/plugin-ui-tokens-place-palette": ["@equin/plugin-ui-tokens-place-palette@workspace:plugins/ui/plugins/tokens/plugins/place-palette"],
+
+    "@equin/plugin-ui-tokens-place-palette-customizer": ["@equin/plugin-ui-tokens-place-palette-customizer@workspace:plugins/ui/plugins/tokens/plugins/place-palette/plugins/customizer"],
 
     "@equin/plugin-ui-tokens-rich-text-palette": ["@equin/plugin-ui-tokens-rich-text-palette@workspace:plugins/ui/plugins/tokens/plugins/rich-text-palette"],
 
     "@equin/plugin-ui-tokens-scrollbar": ["@equin/plugin-ui-tokens-scrollbar@workspace:plugins/ui/plugins/tokens/plugins/scrollbar"],
 
+    "@equin/plugin-ui-tokens-scrollbar-customizer": ["@equin/plugin-ui-tokens-scrollbar-customizer@workspace:plugins/ui/plugins/tokens/plugins/scrollbar/plugins/customizer"],
+
     "@equin/plugin-ui-tokens-shadow": ["@equin/plugin-ui-tokens-shadow@workspace:plugins/ui/plugins/tokens/plugins/shadow"],
+
+    "@equin/plugin-ui-tokens-shadow-customizer": ["@equin/plugin-ui-tokens-shadow-customizer@workspace:plugins/ui/plugins/tokens/plugins/shadow/plugins/customizer"],
 
     "@equin/plugin-ui-tokens-shape": ["@equin/plugin-ui-tokens-shape@workspace:plugins/ui/plugins/tokens/plugins/shape"],
 
+    "@equin/plugin-ui-tokens-shape-customizer": ["@equin/plugin-ui-tokens-shape-customizer@workspace:plugins/ui/plugins/tokens/plugins/shape/plugins/customizer"],
+
     "@equin/plugin-ui-tokens-sidebar-metrics": ["@equin/plugin-ui-tokens-sidebar-metrics@workspace:plugins/ui/plugins/tokens/plugins/sidebar-metrics"],
+
+    "@equin/plugin-ui-tokens-sidebar-metrics-customizer": ["@equin/plugin-ui-tokens-sidebar-metrics-customizer@workspace:plugins/ui/plugins/tokens/plugins/sidebar-metrics/plugins/customizer"],
 
     "@equin/plugin-ui-tokens-sidebar-palette": ["@equin/plugin-ui-tokens-sidebar-palette@workspace:plugins/ui/plugins/tokens/plugins/sidebar-palette"],
 
+    "@equin/plugin-ui-tokens-sidebar-palette-customizer": ["@equin/plugin-ui-tokens-sidebar-palette-customizer@workspace:plugins/ui/plugins/tokens/plugins/sidebar-palette/plugins/customizer"],
+
     "@equin/plugin-ui-tokens-type-scale": ["@equin/plugin-ui-tokens-type-scale@workspace:plugins/ui/plugins/tokens/plugins/type-scale"],
+
+    "@equin/plugin-ui-tokens-type-scale-customizer": ["@equin/plugin-ui-tokens-type-scale-customizer@workspace:plugins/ui/plugins/tokens/plugins/type-scale/plugins/customizer"],
 
     "@equin/plugin-ui-tree-disclosure": ["@equin/plugin-ui-tree-disclosure@workspace:plugins/ui/plugins/tree-disclosure"],
 
@@ -11676,6 +11800,8 @@
     "@equin/plugin-ui-tweakcn": ["@equin/plugin-ui-tweakcn@workspace:plugins/ui/plugins/tweakcn"],
 
     "@equin/plugin-ui-tweakcn-community-browser": ["@equin/plugin-ui-tweakcn-community-browser@workspace:plugins/ui/plugins/tweakcn/plugins/community-browser"],
+
+    "@equin/plugin-ui-tweakcn-community-browser-customizer": ["@equin/plugin-ui-tweakcn-community-browser-customizer@workspace:plugins/ui/plugins/tweakcn/plugins/community-browser/plugins/customizer"],
 
     "@equin/plugin-ui-variant-region": ["@equin/plugin-ui-variant-region@workspace:plugins/ui/plugins/variant-region"],
 

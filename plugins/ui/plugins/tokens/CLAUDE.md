@@ -1,22 +1,39 @@
 # tokens
 
 A token group is one family of CSS variables: the color palette, the type
-scale, density, shape, shadows, fonts, and so on. Each group plugin here does
-three things:
+scale, density, shape, shadows, fonts, and so on. Each group is two plugins:
 
-- **Declares its variables and their defaults.** `defineTokenGroup(id, schema)`
-  in the group's `core/` lists every token with its `default`, plus a
-  `darkDefault` wherever the dark look differs. These defaults ARE the Default
-  theme: a theme that says nothing about a group paints exactly these values.
-  The same descriptor's typed `.fragment({ light, dark })` is how a code theme
-  writes values for the group — a misspelled token does not compile.
-- **Registers the group** with `ThemeEngine.TokenGroup({ id, label, descriptor })`,
-  so the painter emits it.
-- **Contributes an editor section** to the customizer (`ThemeCustomizer.Section`).
-  It shows the values the scope's theme resolves to and edits through the
-  customizer's `useTokenGroupEditor`, which lands every change in saved-themes'
-  `useEditTheme` (editing a read-only theme makes a custom copy first). Shape, shadow, density and the color adjustment also offer a "Fill
-  from…" menu of named shortcuts — values copied into the theme, not settings.
+- **The group itself** (`<group>/`) declares its variables and registers them.
+  `defineTokenGroup(id, schema)` in the group's `core/` lists every token with
+  its `default`, plus a `darkDefault` wherever the dark look differs. These
+  defaults ARE the Default theme: a theme that says nothing about a group
+  paints exactly these values. The same descriptor's typed
+  `.fragment({ light, dark })` is how a code theme writes values for the group
+  — a misspelled token does not compile. Its `web/` registers the group with
+  `ThemeEngine.TokenGroup({ id, label, descriptor })`, so the painter emits it,
+  and imports nothing else of the theme UI.
+- **Its editor** (`<group>/plugins/customizer/`) contributes the customizer
+  section (`ThemeCustomizer.Section`). It shows the values the scope's theme
+  resolves to and edits through the customizer's `useTokenGroupEditor`, which
+  lands every change in saved-themes' `useEditTheme` (editing a read-only
+  theme makes a custom copy first). Shape, shadow, density and the color
+  adjustment also offer a "Fill from…" menu of named shortcuts — values
+  copied into the theme, not settings. Nothing imports the child: its section
+  is contributed with `companion: true` (the customizer opens its slot to
+  companions), so it ships in every composition the customizer ships in.
+
+**Why two plugins: painting must not depend on the editor.** The web loader
+isolates plugins one by one, but a static import ties a plugin to what it
+imports. When the group's registration lived in the same barrel as its
+section, a customizer artifact that failed to load (or anything only the
+editor reaches: the color picker, collapsibles…) unregistered every group on
+the page. The check `theme-customizer:painting-off-the-editor` fails when the
+web barrel of anything that paints (a `ThemeEngine.*` contribution) or draws
+the quick-theme popover (`QuickTheme.Section`) statically reaches the
+customizer's `web/`. The same split applies outside this umbrella
+(`theme-gallery`, `theme-toggle` and `tweakcn/community-browser` each have a
+`customizer` child), and a link to the customizer uses `themeCustomizerRoute`
+from `theme-customizer/core`.
 
 `color-adjust` is the one member that is not a group: it is the editor for a
 theme's hue / saturation / lightness shift (`Theme.colorAdjust`).
@@ -37,30 +54,65 @@ exactly this (`plugins/apps/plugins/website/plugins/shell/web/internal/theme.ts`
 
 ## Plugin reference
 
-- Description: Umbrella for CSS token group plugins: each declares its variables and schema defaults, and a customizer section that edits the scope's theme.
+- Description: Umbrella for CSS token group plugins: each declares its variables and schema defaults and registers them, its customizer section a `customizer` child of its own so painting never depends on the editor loading.
 - Sub-plugins:
-  - **`categorical`** — Categorical color palette token group: the categorical-1…10 series colors and their customizer section.
-  - **`chart`** — Chart color token group: the chart-1…5 ramp and its customizer section.
-  - **`chord-palette`** — Chord colour token group: --chord-1…7 (one colour per Roman numeral's number, I … VII, ♭VII sharing VII's) and --chord-outside (a chord with no key), with their customizer section.
+  - **`categorical`** — Categorical color palette token group: the categorical-1…10 series colors. Its customizer section is the `customizer` child.
+    - Plugins:
+      - **`customizer`** — Customizer section for the categorical palette token group (categorical-1…10).
+  - **`chart`** — Chart color token group: the chart-1…5 ramp. Its customizer section is the `customizer` child.
+    - Plugins:
+      - **`customizer`** — Customizer section for the chart color token group (chart-1…5).
+  - **`chord-palette`** — Chord colour token group: --chord-1…7 (one colour per Roman numeral's number, I … VII, ♭VII sharing VII's) and --chord-outside (a chord with no key). Its customizer section is the `customizer` child.
+    - Plugins:
+      - **`customizer`** — Customizer section for the chord colour token group (--chord-1…7, --chord-outside).
   - **`color-adjust`** — Customizer section for a theme's color adjustment — the hue / saturation / lightness shift applied to every color it paints — with "Fill from…" shortcuts.
-  - **`color-palette`** — Color palette token group (surfaces, text, accents, status colors) with its customizer section.
+  - **`color-palette`** — Color palette token group (surfaces, text, accents, status colors). Its customizer section is the `customizer` child.
+    - Plugins:
+      - **`customizer`** — Customizer section for the color palette token group, with the palette dots in its header.
   - **`color-ref`** — ColorTokenRef: a typed reference to a declared palette colour token (its CSS var, drawn as var(<ref>)) — a GENERATED string-literal union of every var the palette token groups declare, in a…
   - **`data-view`** — DataView token group (each part's type pick — rung, emphasis, family — plus the inks and metrics of the toolbar pills, view chips, gallery card and cover, group headers and the soft table; every…
-  - **`density`** — Density token group (padding intents, control heights, the spacing ramp) with its customizer section and "Fill from…" shortcuts.
-  - **`file-type-palette`** — File-type colour token group: the closed --file-<tone> tints file-type glyphs are drawn in (Seti's palette on dark, darkened on light) and the --folder tint, with their customizer section.
-  - **`font-family`** — Font-family token group (sans/serif/mono families, letter-spacing) with its customizer section.
     - Plugins:
+      - **`customizer`** — Customizer section for the DataView token group.
+  - **`density`** — Density token group (padding intents, control heights, the spacing ramp). Its customizer section is the `customizer` child.
+    - Plugins:
+      - **`customizer`** — Customizer section for the density token group, with "Fill from…" shortcuts.
+  - **`file-type-palette`** — File-type colour token group: the closed --file-<tone> tints file-type glyphs are drawn in (Seti's palette on dark, darkened on light) and the --folder tint. Its customizer section is the…
+    - Plugins:
+      - **`customizer`** — Customizer section for the file-type colour token group (--file-<tone>, --folder).
+  - **`font-family`** — Font-family token group (sans/serif/mono families, letter-spacing). Its customizer section is the `customizer` child.
+    - Plugins:
+      - **`customizer`** — Customizer section for the font-family token group.
       - **`google-fonts`** — Loads the Google Fonts that the theme each scope selects asks for (the desktop's and every app's own), so a per-app font loads whether or not that app is focused.
   - **`icons`** — Icons token group (family — Material Symbols or their Lucide counterparts — and the shape, fill, active fill and stroke of the Material Symbols a scope draws; Material, outline, filled when active…
-  - **`material`** — Material token group (a floating panel's fill and backdrop filter — opaque, unfiltered by default; frosted glass when a theme sets them) with its customizer section.
-  - **`overlay`** — Overlay token group (how a floating panel enters — instant by default — and the tooltip's fill, ink, ring, corners, padding, shadow, distance and arrow) with its customizer section.
+    - Plugins:
+      - **`customizer`** — Customizer section for the icons token group.
+  - **`material`** — Material token group (a floating panel's fill and backdrop filter — opaque, unfiltered by default; frosted glass when a theme sets them). Its customizer section is the `customizer` child.
+    - Plugins:
+      - **`customizer`** — Customizer section for the material token group.
+  - **`overlay`** — Overlay token group (how a floating panel enters — instant by default — and the tooltip's fill, ink, ring, corners, padding, shadow, distance and arrow). Its customizer section is the `customizer`…
+    - Plugins:
+      - **`customizer`** — Customizer section for the overlay token group.
   - **`place-palette`** — Place colour token group: the --place-<family> colours place cards are painted with (Google Maps' own pin colours by default), plus --place-overlay — the accent of a page's places laid over the…
+    - Plugins:
+      - **`customizer`** — Customizer section for the place colour token group.
   - **`rich-text-palette`** — Rich-text color palette token group: the closed --rt-color-<token> vars backing inline text color in the page block editor.
-  - **`scrollbar`** — Scrollbar token group (the thumb and track colours of the native scrollbar, `auto` by default) with its customizer section.
-  - **`shadow`** — Shadow token group (the shadow-2xs…2xl tiers) with its param-driven customizer section and "Fill from…" shortcuts.
-  - **`shape`** — Shape token group (border radius, base spacing) with its customizer section and "Fill from…" shortcuts.
-  - **`sidebar-metrics`** — Sidebar metrics token group (panel width, nav row height, padding, icon size, icon gap — no type: the nav label is the `label` role) with its customizer section.
-  - **`sidebar-palette`** — Sidebar palette token group with its customizer section.
-  - **`type-scale`** [exempt] — Type-scale token group (font sizes, line heights, weights) with its customizer section.
+  - **`scrollbar`** — Scrollbar token group (the thumb and track colours of the native scrollbar, `auto` by default). Its customizer section is the `customizer` child.
+    - Plugins:
+      - **`customizer`** — Customizer section for the scrollbar token group.
+  - **`shadow`** — Shadow token group (the shadow-2xs…2xl tiers). Its param-driven customizer section is the `customizer` child.
+    - Plugins:
+      - **`customizer`** — Param-driven customizer section for the shadow token group, with "Fill from…" shortcuts.
+  - **`shape`** — Shape token group (border radius, base spacing). Its customizer section is the `customizer` child.
+    - Plugins:
+      - **`customizer`** — Customizer section for the shape token group, with "Fill from…" shortcuts.
+  - **`sidebar-metrics`** — Sidebar metrics token group (panel width, nav row height, padding, icon size, icon gap — no type: the nav label is the `label` role). Its customizer section is the `customizer` child.
+    - Plugins:
+      - **`customizer`** — Customizer section for the sidebar metrics token group.
+  - **`sidebar-palette`** — Sidebar palette token group. Its customizer section is the `customizer` child.
+    - Plugins:
+      - **`customizer`** — Customizer section for the sidebar palette token group, with the palette dots in its header.
+  - **`type-scale`** [exempt] — Type-scale token group (font sizes, line heights, weights). Its customizer section is the `customizer` child.
+    - Plugins:
+      - **`customizer`** — Customizer section for the type-scale token group.
 
 <!-- AUTOGENERATED:END -->

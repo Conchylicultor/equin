@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-ui-tokens-overlay-customizer",
+  "description": "Customizer section for the overlay token group.",
+  "private": true,
+  "version": "0.0.1"
+}

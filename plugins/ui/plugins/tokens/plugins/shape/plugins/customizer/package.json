@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-ui-tokens-shape-customizer",
+  "description": "Customizer section for the shape token group, with \"Fill from…\" shortcuts.",
+  "private": true,
+  "version": "0.0.1"
+}

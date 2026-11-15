@@ -10,6 +10,7 @@ export default {
     'Customizer section for a theme\'s color adjustment — the hue / saturation / lightness shift applied to every color it paints — with "Fill from…" shortcuts.',
   contributions: [
     ThemeCustomizer.Section({
+      companion: true,
       id: "color-adjust",
       label: "Color Adjust",
       component: ColorAdjustSection,

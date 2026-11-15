@@ -1,4 +1,4 @@
-// @hash 9872c3776a30
+// @hash aa9c71549c33
 {
   // Item: "<key>" (terse; <key> is "<pluginId>:<id>")
   // Hide: { "item": "<key>", "hidden": true }
@@ -7,27 +7,27 @@
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   // Overflow (⋯ menu): { "type": "overflow", "id": "<unique-id>", "items": [ "<key>", … ] }
   "items": [
-    "ui.theme-engine.theme-gallery:themes",
-    "ui.theme-toggle:color-mode",
-    "ui.tokens.categorical:categorical",
-    "ui.tokens.chart:chart",
-    "ui.tokens.chord-palette:chord-palette",
+    "ui.theme-engine.theme-gallery.customizer:themes",
+    "ui.theme-toggle.customizer:color-mode",
+    "ui.tokens.categorical.customizer:categorical",
+    "ui.tokens.chart.customizer:chart",
+    "ui.tokens.chord-palette.customizer:chord-palette",
     "ui.tokens.color-adjust:color-adjust",
-    "ui.tokens.color-palette:color-palette",
-    "ui.tokens.data-view:data-view",
-    "ui.tokens.density:density",
-    "ui.tokens.file-type-palette:file-type-palette",
-    "ui.tokens.font-family:font-family",
-    "ui.tokens.icons:icons",
-    "ui.tokens.material:material",
-    "ui.tokens.overlay:overlay",
-    "ui.tokens.place-palette:place",
-    "ui.tokens.scrollbar:scrollbar",
-    "ui.tokens.shadow:shadow",
-    "ui.tokens.shape:shape",
-    "ui.tokens.sidebar-metrics:sidebar-metrics",
-    "ui.tokens.sidebar-palette:sidebar-palette",
-    "ui.tokens.type-scale:type-scale",
-    "ui.tweakcn.community-browser:import-by-url"
+    "ui.tokens.color-palette.customizer:color-palette",
+    "ui.tokens.data-view.customizer:data-view",
+    "ui.tokens.density.customizer:density",
+    "ui.tokens.file-type-palette.customizer:file-type-palette",
+    "ui.tokens.font-family.customizer:font-family",
+    "ui.tokens.icons.customizer:icons",
+    "ui.tokens.material.customizer:material",
+    "ui.tokens.overlay.customizer:overlay",
+    "ui.tokens.place-palette.customizer:place",
+    "ui.tokens.scrollbar.customizer:scrollbar",
+    "ui.tokens.shadow.customizer:shadow",
+    "ui.tokens.shape.customizer:shape",
+    "ui.tokens.sidebar-metrics.customizer:sidebar-metrics",
+    "ui.tokens.sidebar-palette.customizer:sidebar-palette",
+    "ui.tokens.type-scale.customizer:type-scale",
+    "ui.tweakcn.community-browser.customizer:import-by-url"
   ]
 }

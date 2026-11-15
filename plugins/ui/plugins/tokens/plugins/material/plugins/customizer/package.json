@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-ui-tokens-material-customizer",
+  "description": "Customizer section for the material token group.",
+  "private": true,
+  "version": "0.0.1"
+}

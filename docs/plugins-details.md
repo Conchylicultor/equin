@@ -35605,7 +35605,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `unmatchedApiResponse`
           - `unsupportedEndpointResponse`
       - Cross-plugin:
-        - Imported by: 264 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
+        - Imported by: 265 plugins — full list in [`plugins/infra/plugins/endpoints/REFERENCE.md`](../plugins/infra/plugins/endpoints/REFERENCE.md)
           - `apps` ×79
           - `conversations` ×35
           - `infra` ×23
@@ -35613,7 +35613,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `debug` ×20
           - `page` ×19
           - `primitives` ×15
-          - `ui` ×7
+          - `ui` ×8
           - `reports` ×6
           - `auth` ×5
           - `framework` ×4
@@ -48412,7 +48412,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `config_v2/fields`
               - `infra/claude-cli`
               - `stats/commits`
-              - `ui/tokens/shadow`
+              - `ui/tokens/shadow/customizer`
         - **`color-picker`** — Composable color picker primitive: a fitted (always-in-gamut) OKLCH ColorArea, HueSlider, AlphaSlider, per-channel ColorValueFields (HEX / OKLCH / HSL), SwatchGrid with named suggestions, and ColorPicker / ColorPickerPopover with before/after, Reset, eyedropper and a shared Recent row. The Color math (parse, convert, gamut) is in core.
           - Web:
             - Uses: 32 symbols — full list in [`plugins/primitives/plugins/css/plugins/color-picker/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/color-picker/REFERENCE.md)
@@ -48470,7 +48470,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/sonata/track-mixer`
               - `fields/color/config`
               - `ui/theme-engine/theme-customizer`
-              - `ui/tokens/shadow`
+              - `ui/tokens/shadow/customizer`
           - Core:
             - Exports (values):
               - `Color`
@@ -62804,7 +62804,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useWantedSprites`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
-        - Imported by: 596 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+        - Imported by: 598 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
           - `apps` ×157
           - `conversations` ×122
           - `primitives` ×53
@@ -62813,8 +62813,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `debug` ×30
           - `tasks` ×24
           - `plugin-meta` ×16
+          - `ui` ×13
           - `active-data` ×11
-          - `ui` ×11
           - `infra` ×8
           - `apps-core` ×7
           - `auth` ×6
@@ -63743,8 +63743,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/shape` ×4
           - `ui/tokens/type-scale` ×4
           - `ui/tokens/data-view` ×2
-        - Imported by: 54 plugins — full list in [`plugins/ui/plugins/theme-engine/REFERENCE.md`](../plugins/ui/plugins/theme-engine/REFERENCE.md)
-          - `ui` ×29
+        - Imported by: 74 plugins — full list in [`plugins/ui/plugins/theme-engine/REFERENCE.md`](../plugins/ui/plugins/theme-engine/REFERENCE.md)
+          - `ui` ×49
           - `apps` ×19
           - `apps-core/chrome-theme`
           - `companions/panel`
@@ -63779,7 +63779,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/icons.Icon`
               - `ui/theme-engine.ThemeEngine`
               - `ui/theme-engine.ThemeScopeProvider`
-              - `ui/theme-engine/theme-customizer.themeCustomizerRoute`
             - Exports (types): `QuickThemeSectionContribution`
             - Exports (values): `QuickTheme`
           - Cross-plugin:
@@ -63877,6 +63876,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/theme-engine/theme-gallery`
               - `ui/tweakcn`
               - `ui/tweakcn/community-browser`
+              - `ui/tweakcn/community-browser/customizer`
           - Exemptions:
             - Exempts itself from: `ids:pk-declared` — `server/internal/tables.ts` (debt)
         - **`theme-customizer`** — Extensible theme customization pane: per-app theme toggle, component variant pickers, search, and contributed sections, plus the token-group editor kit (useTokenGroupEditor, TokenRows, FillFromMenu) every section edits the scope's theme through.
@@ -63888,10 +63888,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ThemeCustomizer.Section` ×22
               - `themeCustomizerPane.Actions` ← `primitives.pane`
             - Contributes: `Pane.Register` "theme-customizer"
-            - Uses: 41 symbols — full list in [`plugins/ui/plugins/theme-engine/plugins/theme-customizer/REFERENCE.md`](../plugins/ui/plugins/theme-engine/plugins/theme-customizer/REFERENCE.md)
+            - Uses: 40 symbols — full list in [`plugins/ui/plugins/theme-engine/plugins/theme-customizer/REFERENCE.md`](../plugins/ui/plugins/theme-engine/plugins/theme-customizer/REFERENCE.md)
               - `primitives/css/ui-kit` ×10
               - `ui/theme-engine` ×6
-              - `primitives/pane` ×4
+              - `primitives/pane` ×3
               - `config_v2` ×2
               - `infra/endpoints` ×2
               - `network/live/live-state` ×2
@@ -63917,10 +63917,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `FillFromMenu`
               - `ThemeCustomizer`
               - `themeCustomizerPane`
-              - `themeCustomizerRoute`
               - `TokenRows`
               - `useColorAdjustEditor`
               - `useTokenGroupEditor`
+          - Core:
+            - Uses: `primitives/pane.defineRoute`
+            - Exports (values): `themeCustomizerRoute`
           - Cross-plugin:
             - Uses tokens: 24 vars — full list in [`plugins/ui/plugins/theme-engine/plugins/theme-customizer/REFERENCE.md`](../plugins/ui/plugins/theme-engine/plugins/theme-customizer/REFERENCE.md)
               - `ui/tokens/type-scale` ×9
@@ -63931,16 +63933,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by: 24 plugins — full list in [`plugins/ui/plugins/theme-engine/plugins/theme-customizer/REFERENCE.md`](../plugins/ui/plugins/theme-engine/plugins/theme-customizer/REFERENCE.md)
               - `ui` ×23
               - `apps/settings/appearance`
-        - **`theme-gallery`** — The Theme DataView: every selectable theme plus every catalog's unsaved entries, with My themes / Community / Curated views. Picking one selects it for the current scope (saving a catalog entry first). Shown as the customizer's first section (cards, with rename and delete on saved themes) and in the quick-theme popover (compact rows).
+        - **`theme-gallery`** — The Theme DataView: every selectable theme plus every catalog's unsaved entries, with My themes / Community / Curated views. Picking one selects it for the current scope (saving a catalog entry first). Shown in the quick-theme popover (compact rows) and, through the `customizer` child, as the customizer's first section (cards, with rename and delete on saved themes).
           - Web:
             - Slots: `item-actions`
             - Slot contributors: `item-actions` ← `ui.theme-engine.theme-gallery`
             - Contributes:
-              - `ThemeCustomizer.Section` "Theme" → `ThemeGalleryPicker`
               - `QuickTheme.Section` "Theme" → `QuickThemePicker`
               - `item-actions` "rename" → `RenameThemeAction`
               - `item-actions` "delete" → `DeleteThemeAction`
-            - Uses: 43 symbols — full list in [`plugins/ui/plugins/theme-engine/plugins/theme-gallery/REFERENCE.md`](../plugins/ui/plugins/theme-engine/plugins/theme-gallery/REFERENCE.md)
+            - Uses: 42 symbols — full list in [`plugins/ui/plugins/theme-engine/plugins/theme-gallery/REFERENCE.md`](../plugins/ui/plugins/theme-engine/plugins/theme-gallery/REFERENCE.md)
               - `primitives/data-view` ×7
               - `ui/theme-engine` ×7
               - `primitives/css/ui-kit` ×4
@@ -63960,7 +63961,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/overlay/imperative-dialog.useOpenDialog`
               - `primitives/syntax-highlight.useDarkMode`
               - `ui/theme-engine/quick-theme.QuickTheme`
-              - `ui/theme-engine/theme-customizer.ThemeCustomizer`
+            - Exports (values):
+              - `SelectedThemeSummary`
+              - `ThemeGalleryPicker`
+              - `useThemeSectionMatchesSearch`
           - Cross-plugin:
             - Uses tokens:
               - `ui/tokens/color-palette --border`
@@ -63968,6 +63972,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/density --space-sm`
               - `ui/tokens/shape --radius`
               - `ui/tokens/shape --spacing`
+            - Imported by: `ui/theme-engine/theme-gallery/customizer`
+          - Plugins:
+            - **`customizer`** — The Theme customizer section: the theme gallery as cards, with rename and delete on saved themes.
+              - Web:
+                - Contributes: `ThemeCustomizer.Section` "Theme" → `ThemeGalleryPicker`
+                - Uses:
+                  - `ui/theme-engine/theme-customizer.ThemeCustomizer`
+                  - `ui/theme-engine/theme-gallery.SelectedThemeSummary`
+                  - `ui/theme-engine/theme-gallery.ThemeGalleryPicker`
+                  - `ui/theme-engine/theme-gallery.useThemeSectionMatchesSearch`
         - **`token-var-name`** — The CSS custom property a token-group schema key paints (tokenVarName: `--` + its kebab case). A leaf with no imports, so the static token-group reader (token-usage, run by the cross-refs facet) spells vars exactly as defineTokenGroup does without loading the theme engine — that facet's record key follows this module, not the theme-engine barrel.
           - Cross-plugin:
             - Imported by:
@@ -63976,41 +63990,35 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/data-view`
           - Core:
             - Exports (values): `tokenVarName`
-    - **`theme-toggle`** — Light/dark controls: the Dark mode and Match system switches inside the quick-theme popover (editing the scheme of the focused app's scope, or the global setting when no app fills the surface), and a Color mode customizer section — the current app's choice (its declared default or an override) and the global setting.
+    - **`theme-toggle`** — Light/dark controls: the Dark mode and Match system switches inside the quick-theme popover (editing the scheme of the focused app's scope, or the global setting when no app fills the surface). Its Color mode customizer section is the `customizer` child.
       - Web:
-        - Contributes:
-          - `QuickTheme.Section` "Appearance" → `ThemeToggle`
-          - `ThemeCustomizer.Section` "Color mode" → `ColorModeSection`
+        - Contributes: `QuickTheme.Section` "Appearance" → `ThemeToggle`
         - Uses:
-          - `apps-core.useCurrentAppId`
           - `primitives/css/control-panel.ControlPanel`
-          - `primitives/css/spacing.Stack`
-          - `primitives/css/text.Text`
-          - `primitives/css/toggle-chip.SegmentedControl`
           - `primitives/loading.Loading`
           - `ui/icons.Icon`
-          - `ui/theme-engine.ColorModeSetting`
           - `ui/theme-engine.useColorModeSetting`
-          - `ui/theme-engine.useColorModeSettingFor`
-          - `ui/theme-engine.useSetAppColorMode`
-          - `ui/theme-engine.useSetGlobalColorMode`
           - `ui/theme-engine/quick-theme.QuickTheme`
-          - `ui/theme-engine/theme-customizer.ThemeCustomizer`
-    - **`tokens`** — Umbrella for CSS token group plugins: each declares its variables and schema defaults, and a customizer section that edits the scope's theme.
       - Plugins:
-        - **`categorical`** — Categorical color palette token group: the categorical-1…10 series colors and their customizer section.
+        - **`customizer`** — The Color mode customizer section: the current app's color mode (its declared default or an override) and the global setting.
           - Web:
-            - Contributes:
-              - `ThemeEngine.TokenGroup` "Categorical"
-              - `ThemeCustomizer.Section` "Categorical" → `CategoricalSection`
+            - Contributes: `ThemeCustomizer.Section` "Color mode" → `ColorModeSection`
             - Uses:
-              - `network/live/live-state.ResourceErrorInline`
+              - `apps-core.useCurrentAppId`
               - `primitives/css/spacing.Stack`
-              - `primitives/loading.Loading`
-              - `ui/theme-engine.ThemeEngine`
+              - `primitives/css/text.Text`
+              - `primitives/css/toggle-chip.SegmentedControl`
+              - `ui/theme-engine.ColorModeSetting`
+              - `ui/theme-engine.useColorModeSettingFor`
+              - `ui/theme-engine.useSetAppColorMode`
+              - `ui/theme-engine.useSetGlobalColorMode`
               - `ui/theme-engine/theme-customizer.ThemeCustomizer`
-              - `ui/theme-engine/theme-customizer.TokenRows`
-              - `ui/theme-engine/theme-customizer.useTokenGroupEditor`
+    - **`tokens`** — Umbrella for CSS token group plugins: each declares its variables and schema defaults and registers them, its customizer section a `customizer` child of its own so painting never depends on the editor loading.
+      - Plugins:
+        - **`categorical`** — Categorical color palette token group: the categorical-1…10 series colors. Its customizer section is the `customizer` child.
+          - Web:
+            - Contributes: `ThemeEngine.TokenGroup` "Categorical"
+            - Uses: `ui/theme-engine.ThemeEngine`
           - Core:
             - Uses: `ui/theme-engine.defineTokenGroup`
             - Exports (types): `CategoricalTokenValues`
@@ -64030,19 +64038,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/home/shell`
               - `apps/places/shell`
               - `companions/panel`
-        - **`chart`** — Chart color token group: the chart-1…5 ramp and its customizer section.
+              - `ui/tokens/categorical/customizer`
+          - Plugins:
+            - **`customizer`** — Customizer section for the categorical palette token group (categorical-1…10).
+              - Web:
+                - Contributes: `ThemeCustomizer.Section` "Categorical" → `CategoricalSection`
+                - Uses:
+                  - `network/live/live-state.ResourceErrorInline`
+                  - `primitives/css/spacing.Stack`
+                  - `primitives/loading.Loading`
+                  - `ui/theme-engine/theme-customizer.ThemeCustomizer`
+                  - `ui/theme-engine/theme-customizer.TokenRows`
+                  - `ui/theme-engine/theme-customizer.useTokenGroupEditor`
+        - **`chart`** — Chart color token group: the chart-1…5 ramp. Its customizer section is the `customizer` child.
           - Web:
-            - Contributes:
-              - `ThemeEngine.TokenGroup` "Chart"
-              - `ThemeCustomizer.Section` "Chart" → `ChartSection`
-            - Uses:
-              - `network/live/live-state.ResourceErrorInline`
-              - `primitives/css/spacing.Stack`
-              - `primitives/loading.Loading`
-              - `ui/theme-engine.ThemeEngine`
-              - `ui/theme-engine/theme-customizer.ThemeCustomizer`
-              - `ui/theme-engine/theme-customizer.TokenRows`
-              - `ui/theme-engine/theme-customizer.useTokenGroupEditor`
+            - Contributes: `ThemeEngine.TokenGroup` "Chart"
+            - Uses: `ui/theme-engine.ThemeEngine`
           - Core:
             - Uses: `ui/theme-engine.defineTokenGroup`
             - Exports (types): `ChartTokenValues`
@@ -64056,19 +64067,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `apps/deploy/shell`
               - `apps/website/shell`
-        - **`chord-palette`** — Chord colour token group: --chord-1…7 (one colour per Roman numeral's number, I … VII, ♭VII sharing VII's) and --chord-outside (a chord with no key), with their customizer section.
+              - `ui/tokens/chart/customizer`
+          - Plugins:
+            - **`customizer`** — Customizer section for the chart color token group (chart-1…5).
+              - Web:
+                - Contributes: `ThemeCustomizer.Section` "Chart" → `ChartSection`
+                - Uses:
+                  - `network/live/live-state.ResourceErrorInline`
+                  - `primitives/css/spacing.Stack`
+                  - `primitives/loading.Loading`
+                  - `ui/theme-engine/theme-customizer.ThemeCustomizer`
+                  - `ui/theme-engine/theme-customizer.TokenRows`
+                  - `ui/theme-engine/theme-customizer.useTokenGroupEditor`
+        - **`chord-palette`** — Chord colour token group: --chord-1…7 (one colour per Roman numeral's number, I … VII, ♭VII sharing VII's) and --chord-outside (a chord with no key). Its customizer section is the `customizer` child.
           - Web:
-            - Contributes:
-              - `ThemeEngine.TokenGroup` "Chord colours"
-              - `ThemeCustomizer.Section` "Chord colours" → `ChordPaletteSection`
-            - Uses:
-              - `network/live/live-state.ResourceErrorInline`
-              - `primitives/css/spacing.Stack`
-              - `primitives/loading.Loading`
-              - `ui/theme-engine.ThemeEngine`
-              - `ui/theme-engine/theme-customizer.ThemeCustomizer`
-              - `ui/theme-engine/theme-customizer.TokenRows`
-              - `ui/theme-engine/theme-customizer.useTokenGroupEditor`
+            - Contributes: `ThemeEngine.TokenGroup` "Chord colours"
+            - Uses: `ui/theme-engine.ThemeEngine`
           - Core:
             - Uses: `ui/theme-engine.defineTokenGroup`
             - Exports (types): `ChordPaletteValues`
@@ -64086,6 +64100,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `apps/chord/shell`
               - `apps/sonata/shell`
+              - `ui/tokens/chord-palette/customizer`
+          - Plugins:
+            - **`customizer`** — Customizer section for the chord colour token group (--chord-1…7, --chord-outside).
+              - Web:
+                - Contributes: `ThemeCustomizer.Section` "Chord colours" → `ChordPaletteSection`
+                - Uses:
+                  - `network/live/live-state.ResourceErrorInline`
+                  - `primitives/css/spacing.Stack`
+                  - `primitives/loading.Loading`
+                  - `ui/theme-engine/theme-customizer.ThemeCustomizer`
+                  - `ui/theme-engine/theme-customizer.TokenRows`
+                  - `ui/theme-engine/theme-customizer.useTokenGroupEditor`
         - **`color-adjust`** — Customizer section for a theme's color adjustment — the hue / saturation / lightness shift applied to every color it paints — with "Fill from…" shortcuts.
           - Web:
             - Contributes: `ThemeCustomizer.Section` "Color Adjust" → `ColorAdjustSection`
@@ -64105,38 +64131,23 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-size-body`
               - `ui/tokens/type-scale --font-weight-normal`
               - `ui/tokens/type-scale --line-height-body`
-        - **`color-palette`** — Color palette token group (surfaces, text, accents, status colors) with its customizer section.
+        - **`color-palette`** — Color palette token group (surfaces, text, accents, status colors). Its customizer section is the `customizer` child.
           - Web:
-            - Contributes:
-              - `ThemeEngine.TokenGroup` "Color Palette"
-              - `ThemeCustomizer.Section` "Color Palette" → `ColorPaletteSection`
-            - Uses:
-              - `network/live/live-state.ResourceErrorInline`
-              - `primitives/collapsible.Collapsible`
-              - `primitives/collapsible.CollapsibleContent`
-              - `primitives/css/row.SectionHeaderRow`
-              - `primitives/css/spacing.Stack`
-              - `primitives/loading.Loading`
-              - `ui/theme-engine.ThemeEngine`
-              - `ui/theme-engine/theme-customizer.ThemeCustomizer`
-              - `ui/theme-engine/theme-customizer.TokenRows`
-              - `ui/theme-engine/theme-customizer.useTokenGroupEditor`
+            - Contributes: `ThemeEngine.TokenGroup` "Color Palette"
+            - Uses: `ui/theme-engine.ThemeEngine`
           - Core:
             - Uses: `ui/theme-engine.defineTokenGroup`
             - Exports (types): `ColorPaletteTokenValues`
             - Exports (values): `colorPaletteGroup`
           - Cross-plugin:
-            - Uses tokens:
-              - `ui/tokens/density --space-sm`
-              - `ui/tokens/shape --spacing`
-            - Tokens used by: 550 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
+            - Tokens used by: 552 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
               - `apps` ×123
               - `conversations` ×96
               - `primitives` ×75
               - `debug` ×42
               - `page` ×34
               - `plugin-meta` ×28
-              - `ui` ×26
+              - `ui` ×28
               - `tasks` ×17
               - `reports` ×16
               - `fields` ×12
@@ -64169,46 +64180,39 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `search/quick-find`
               - `tag-tree/picker`
               - `wish`
-            - Imported by:
+            - Imported by: 21 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
+              - `apps` ×15
+              - `ui` ×2
               - `apps-core/chrome-theme`
-              - `apps/agent-manager/shell`
-              - `apps/browser/shell`
-              - `apps/chord/shell`
-              - `apps/deploy/shell`
-              - `apps/desktop/shell`
-              - `apps/file-explorer/shell`
-              - `apps/home/new-app`
-              - `apps/home/shell`
-              - `apps/isle/shell`
-              - `apps/pages/shell`
-              - `apps/places/shell`
-              - `apps/prototypes/shell`
-              - `apps/sonata/shell`
-              - `apps/website/pages/foundations`
-              - `apps/website/shell`
               - `companions/panel`
               - `hints`
               - `media/player`
-              - `ui/theme-engine/theme-gallery`
+          - Plugins:
+            - **`customizer`** — Customizer section for the color palette token group, with the palette dots in its header.
+              - Web:
+                - Contributes: `ThemeCustomizer.Section` "Color Palette" → `ColorPaletteSection`
+                - Uses:
+                  - `network/live/live-state.ResourceErrorInline`
+                  - `primitives/collapsible.Collapsible`
+                  - `primitives/collapsible.CollapsibleContent`
+                  - `primitives/css/row.SectionHeaderRow`
+                  - `primitives/css/spacing.Stack`
+                  - `primitives/loading.Loading`
+                  - `ui/theme-engine/theme-customizer.ThemeCustomizer`
+                  - `ui/theme-engine/theme-customizer.TokenRows`
+                  - `ui/theme-engine/theme-customizer.useTokenGroupEditor`
+              - Cross-plugin:
+                - Uses tokens:
+                  - `ui/tokens/color-palette --border`
+                  - `ui/tokens/density --space-sm`
+                  - `ui/tokens/shape --spacing`
         - **`color-ref`** — ColorTokenRef: a typed reference to a declared palette colour token (its CSS var, drawn as var(<ref>)) — a GENERATED string-literal union of every var the palette token groups declare, in a zero-import leaf so data-view, network/live and apps can carry a tint without importing theme-engine.
           - Core:
             - Exports (types): `ColorTokenRef`
-        - **`data-view`** — DataView token group (each part's type pick — rung, emphasis, family — plus the inks and metrics of the toolbar pills, view chips, gallery card and cover, group headers and the soft table; every default reproduces today's look) with its customizer section.
+        - **`data-view`** — DataView token group (each part's type pick — rung, emphasis, family — plus the inks and metrics of the toolbar pills, view chips, gallery card and cover, group headers and the soft table; every default reproduces today's look). Its customizer section is the `customizer` child.
           - Web:
-            - Contributes:
-              - `ThemeEngine.TokenGroup` "DataView"
-              - `ThemeCustomizer.Section` "DataView" → `DataViewTokensSection`
-            - Uses:
-              - `network/live/live-state.ResourceErrorInline`
-              - `primitives/collapsible.Collapsible`
-              - `primitives/collapsible.CollapsibleContent`
-              - `primitives/css/row.SectionHeaderRow`
-              - `primitives/css/spacing.Stack`
-              - `primitives/loading.Loading`
-              - `ui/theme-engine.ThemeEngine`
-              - `ui/theme-engine/theme-customizer.ThemeCustomizer`
-              - `ui/theme-engine/theme-customizer.TokenRows`
-              - `ui/theme-engine/theme-customizer.useTokenGroupEditor`
+            - Contributes: `ThemeEngine.TokenGroup` "DataView"
+            - Uses: `ui/theme-engine.ThemeEngine`
           - Core:
             - Uses:
               - `primitives/css/text.PICK_EMPHASES`
@@ -64249,23 +64253,27 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/data-view/gallery`
               - `primitives/data-view/table`
               - `primitives/data-view/view-core`
-        - **`density`** — Density token group (padding intents, control heights, the spacing ramp) with its customizer section and "Fill from…" shortcuts.
+              - `ui/tokens/data-view/customizer`
+          - Plugins:
+            - **`customizer`** — Customizer section for the DataView token group.
+              - Web:
+                - Contributes: `ThemeCustomizer.Section` "DataView" → `DataViewTokensSection`
+                - Uses:
+                  - `network/live/live-state.ResourceErrorInline`
+                  - `primitives/collapsible.Collapsible`
+                  - `primitives/collapsible.CollapsibleContent`
+                  - `primitives/css/row.SectionHeaderRow`
+                  - `primitives/css/spacing.Stack`
+                  - `primitives/loading.Loading`
+                  - `ui/theme-engine/theme-customizer.ThemeCustomizer`
+                  - `ui/theme-engine/theme-customizer.TokenRows`
+                  - `ui/theme-engine/theme-customizer.useTokenGroupEditor`
+              - Cross-plugin:
+                - Uses tokens: `ui/tokens/density --space-sm`
+        - **`density`** — Density token group (padding intents, control heights, the spacing ramp). Its customizer section is the `customizer` child.
           - Web:
-            - Contributes:
-              - `ThemeEngine.TokenGroup` "Density"
-              - `ThemeCustomizer.Section` "Density" → `DensitySection`
-            - Uses:
-              - `network/live/live-state.ResourceErrorInline`
-              - `primitives/collapsible.Collapsible`
-              - `primitives/collapsible.CollapsibleContent`
-              - `primitives/css/row.SectionHeaderRow`
-              - `primitives/css/spacing.Stack`
-              - `primitives/loading.Loading`
-              - `ui/theme-engine.ThemeEngine`
-              - `ui/theme-engine/theme-customizer.FillFromMenu`
-              - `ui/theme-engine/theme-customizer.ThemeCustomizer`
-              - `ui/theme-engine/theme-customizer.TokenRows`
-              - `ui/theme-engine/theme-customizer.useTokenGroupEditor`
+            - Contributes: `ThemeEngine.TokenGroup` "Density"
+            - Uses: `ui/theme-engine.ThemeEngine`
           - Core:
             - Uses:
               - `primitives/css/text.PICK_EMPHASES`
@@ -64276,12 +64284,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `densityGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --radius`
-            - Tokens used by: 352 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
+            - Tokens used by: 357 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
               - `apps` ×74
               - `primitives` ×72
               - `conversations` ×50
               - `debug` ×29
-              - `ui` ×24
+              - `ui` ×29
               - `page` ×21
               - `plugin-meta` ×13
               - `tasks` ×9
@@ -64326,19 +64334,28 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `companions/panel`
               - `hints`
               - `media/player`
-        - **`file-type-palette`** — File-type colour token group: the closed --file-<tone> tints file-type glyphs are drawn in (Seti's palette on dark, darkened on light) and the --folder tint, with their customizer section.
+              - `ui/tokens/density/customizer`
+          - Plugins:
+            - **`customizer`** — Customizer section for the density token group, with "Fill from…" shortcuts.
+              - Web:
+                - Contributes: `ThemeCustomizer.Section` "Density" → `DensitySection`
+                - Uses:
+                  - `network/live/live-state.ResourceErrorInline`
+                  - `primitives/collapsible.Collapsible`
+                  - `primitives/collapsible.CollapsibleContent`
+                  - `primitives/css/row.SectionHeaderRow`
+                  - `primitives/css/spacing.Stack`
+                  - `primitives/loading.Loading`
+                  - `ui/theme-engine/theme-customizer.FillFromMenu`
+                  - `ui/theme-engine/theme-customizer.ThemeCustomizer`
+                  - `ui/theme-engine/theme-customizer.TokenRows`
+                  - `ui/theme-engine/theme-customizer.useTokenGroupEditor`
+              - Cross-plugin:
+                - Uses tokens: `ui/tokens/density --space-sm`
+        - **`file-type-palette`** — File-type colour token group: the closed --file-<tone> tints file-type glyphs are drawn in (Seti's palette on dark, darkened on light) and the --folder tint. Its customizer section is the `customizer` child.
           - Web:
-            - Contributes:
-              - `ThemeEngine.TokenGroup` "File types"
-              - `ThemeCustomizer.Section` "File types" → `FileTypePaletteSection`
-            - Uses:
-              - `network/live/live-state.ResourceErrorInline`
-              - `primitives/css/spacing.Stack`
-              - `primitives/loading.Loading`
-              - `ui/theme-engine.ThemeEngine`
-              - `ui/theme-engine/theme-customizer.ThemeCustomizer`
-              - `ui/theme-engine/theme-customizer.TokenRows`
-              - `ui/theme-engine/theme-customizer.useTokenGroupEditor`
+            - Contributes: `ThemeEngine.TokenGroup` "File types"
+            - Uses: `ui/theme-engine.ThemeEngine`
           - Core:
             - Uses:
               - `ui/theme-engine.defineTokenGroup`
@@ -64347,33 +64364,34 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `fileTypePaletteGroup`
           - Cross-plugin:
             - Tokens used by: `primitives/file-type`
-            - Imported by: `apps/file-explorer/shell`
-        - **`font-family`** — Font-family token group (sans/serif/mono families, letter-spacing) with its customizer section.
+            - Imported by:
+              - `apps/file-explorer/shell`
+              - `ui/tokens/file-type-palette/customizer`
+          - Plugins:
+            - **`customizer`** — Customizer section for the file-type colour token group (--file-<tone>, --folder).
+              - Web:
+                - Contributes: `ThemeCustomizer.Section` "File types" → `FileTypePaletteSection`
+                - Uses:
+                  - `network/live/live-state.ResourceErrorInline`
+                  - `primitives/css/spacing.Stack`
+                  - `primitives/loading.Loading`
+                  - `ui/theme-engine/theme-customizer.ThemeCustomizer`
+                  - `ui/theme-engine/theme-customizer.TokenRows`
+                  - `ui/theme-engine/theme-customizer.useTokenGroupEditor`
+        - **`font-family`** — Font-family token group (sans/serif/mono families, letter-spacing). Its customizer section is the `customizer` child.
           - Web:
             - Slots: `FontFamily.Root`
             - Slot contributors: `FontFamily.Root` ← `ui.tokens.font-family.google-fonts`
             - Contributes:
               - `ThemeEngine.TokenGroup` "Fonts"
-              - `ThemeCustomizer.Section` "Fonts" → `FontFamilySection`
               - `Core.Root`
-            - Uses:
-              - `network/live/live-state.ResourceErrorInline`
-              - `primitives/collapsible.Collapsible`
-              - `primitives/collapsible.CollapsibleContent`
-              - `primitives/css/row.SectionHeaderRow`
-              - `primitives/css/spacing.Stack`
-              - `primitives/loading.Loading`
-              - `ui/theme-engine.ThemeEngine`
-              - `ui/theme-engine/theme-customizer.ThemeCustomizer`
-              - `ui/theme-engine/theme-customizer.TokenRows`
-              - `ui/theme-engine/theme-customizer.useTokenGroupEditor`
+            - Uses: `ui/theme-engine.ThemeEngine`
             - Exports (values): `FontFamily`
           - Core:
             - Uses: `ui/theme-engine.defineTokenGroup`
             - Exports (types): `FontFamilyTokenValues`
             - Exports (values): `fontFamilyGroup`
           - Cross-plugin:
-            - Uses tokens: `ui/tokens/density --space-sm`
             - Tokens used by: 157 plugins — full list in [`plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/font-family/REFERENCE.md)
               - `conversations` ×39
               - `apps` ×25
@@ -64409,8 +64427,24 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/website/shell`
               - `companions/panel`
               - `hints`
+              - `ui/tokens/font-family/customizer`
               - `ui/tokens/font-family/google-fonts`
           - Plugins:
+            - **`customizer`** — Customizer section for the font-family token group.
+              - Web:
+                - Contributes: `ThemeCustomizer.Section` "Fonts" → `FontFamilySection`
+                - Uses:
+                  - `network/live/live-state.ResourceErrorInline`
+                  - `primitives/collapsible.Collapsible`
+                  - `primitives/collapsible.CollapsibleContent`
+                  - `primitives/css/row.SectionHeaderRow`
+                  - `primitives/css/spacing.Stack`
+                  - `primitives/loading.Loading`
+                  - `ui/theme-engine/theme-customizer.ThemeCustomizer`
+                  - `ui/theme-engine/theme-customizer.TokenRows`
+                  - `ui/theme-engine/theme-customizer.useTokenGroupEditor`
+              - Cross-plugin:
+                - Uses tokens: `ui/tokens/density --space-sm`
             - **`google-fonts`** — Loads the Google Fonts that the theme each scope selects asks for (the desktop's and every app's own), so a per-app font loads whether or not that app is focused.
               - Web:
                 - Contributes: `FontFamily.Root` → `GoogleFontsLoader`
@@ -64419,32 +64453,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ui/theme-engine.useThemes`
                   - `ui/theme-engine.useThemeSelections`
                   - `ui/tokens/font-family.FontFamily`
-        - **`icons`** — Icons token group (family — Material Symbols or their Lucide counterparts — and the shape, fill, active fill and stroke of the Material Symbols a scope draws; Material, outline, filled when active, by default) with its customizer section, and the bridge that publishes each painted theme scope's icon style to the icons primitive.
+        - **`icons`** — Icons token group (family — Material Symbols or their Lucide counterparts — and the shape, fill, active fill and stroke of the Material Symbols a scope draws; Material, outline, filled when active, by default), and the bridge that publishes each painted theme scope's icon style to the icons primitive. Its customizer section is the `customizer` child.
           - Web:
             - Contributes:
               - `ThemeEngine.TokenGroup` "Icons"
-              - `ThemeCustomizer.Section` "Icons" → `IconsSection`
               - `Icons.Root` → `IconThemeBridge`
             - Uses:
               - `apps-core.Apps`
               - `config_v2.useScopeMembership`
               - `network/live/live-state.foldResource`
-              - `primitives/css/row.Row`
-              - `primitives/css/spacing.Stack`
-              - `primitives/css/text.Text`
               - `primitives/css/theme-boundary.usePublishedColorScheme`
-              - `primitives/css/toggle-chip.SegmentedControl`
-              - `primitives/loading.Loading`
-              - `ui/icons.Icon`
               - `ui/icons.Icons`
-              - `ui/icons.useIconFamilies`
               - `ui/icons.usePublishIconStyle`
               - `ui/icons.usePublishIconStyleLayer`
               - `ui/theme-engine.ThemeEngine`
               - `ui/theme-engine.useColorMode`
               - `ui/theme-engine.useResolvedTheme`
-              - `ui/theme-engine/theme-customizer.ThemeCustomizer`
-              - `ui/theme-engine/theme-customizer.useTokenGroupEditor`
           - Core:
             - Uses:
               - `ui/icons.DEFAULT_ICON_STYLE`
@@ -64460,7 +64484,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `readIconTokenLayer`
               - `readIconTokens`
           - Cross-plugin:
-            - Uses tokens: `ui/tokens/shape --spacing`
             - Imported by:
               - `apps-core/chrome-theme`
               - `apps/agent-manager/shell`
@@ -64471,22 +64494,27 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/sonata/shell`
               - `hints`
               - `media/player`
-        - **`material`** — Material token group (a floating panel's fill and backdrop filter — opaque, unfiltered by default; frosted glass when a theme sets them) with its customizer section.
+              - `ui/tokens/icons/customizer`
+          - Plugins:
+            - **`customizer`** — Customizer section for the icons token group.
+              - Web:
+                - Contributes: `ThemeCustomizer.Section` "Icons" → `IconsSection`
+                - Uses:
+                  - `primitives/css/row.Row`
+                  - `primitives/css/spacing.Stack`
+                  - `primitives/css/text.Text`
+                  - `primitives/css/toggle-chip.SegmentedControl`
+                  - `primitives/loading.Loading`
+                  - `ui/icons.Icon`
+                  - `ui/icons.useIconFamilies`
+                  - `ui/theme-engine/theme-customizer.ThemeCustomizer`
+                  - `ui/theme-engine/theme-customizer.useTokenGroupEditor`
+              - Cross-plugin:
+                - Uses tokens: `ui/tokens/shape --spacing`
+        - **`material`** — Material token group (a floating panel's fill and backdrop filter — opaque, unfiltered by default; frosted glass when a theme sets them). Its customizer section is the `customizer` child.
           - Web:
-            - Contributes:
-              - `ThemeEngine.TokenGroup` "Material"
-              - `ThemeCustomizer.Section` "Material" → `MaterialSection`
-            - Uses:
-              - `network/live/live-state.ResourceErrorInline`
-              - `primitives/collapsible.Collapsible`
-              - `primitives/collapsible.CollapsibleContent`
-              - `primitives/css/row.SectionHeaderRow`
-              - `primitives/css/spacing.Stack`
-              - `primitives/loading.Loading`
-              - `ui/theme-engine.ThemeEngine`
-              - `ui/theme-engine/theme-customizer.ThemeCustomizer`
-              - `ui/theme-engine/theme-customizer.TokenRows`
-              - `ui/theme-engine/theme-customizer.useTokenGroupEditor`
+            - Contributes: `ThemeEngine.TokenGroup` "Material"
+            - Uses: `ui/theme-engine.ThemeEngine`
           - Core:
             - Uses: `ui/theme-engine.defineTokenGroup`
             - Exports (types): `MaterialTokenValues`
@@ -64496,7 +64524,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette --card`
               - `ui/tokens/color-palette --popover`
               - `ui/tokens/color-palette --popover-border`
-              - `ui/tokens/density --space-sm`
             - Tokens used by: `primitives/css/ui-kit`
             - Imported by:
               - `apps/desktop/shell`
@@ -64504,22 +64531,27 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/sonata/shell`
               - `companions/panel`
               - `media/player`
-        - **`overlay`** — Overlay token group (how a floating panel enters — instant by default — and the tooltip's fill, ink, ring, corners, padding, shadow, distance and arrow) with its customizer section.
+              - `ui/tokens/material/customizer`
+          - Plugins:
+            - **`customizer`** — Customizer section for the material token group.
+              - Web:
+                - Contributes: `ThemeCustomizer.Section` "Material" → `MaterialSection`
+                - Uses:
+                  - `network/live/live-state.ResourceErrorInline`
+                  - `primitives/collapsible.Collapsible`
+                  - `primitives/collapsible.CollapsibleContent`
+                  - `primitives/css/row.SectionHeaderRow`
+                  - `primitives/css/spacing.Stack`
+                  - `primitives/loading.Loading`
+                  - `ui/theme-engine/theme-customizer.ThemeCustomizer`
+                  - `ui/theme-engine/theme-customizer.TokenRows`
+                  - `ui/theme-engine/theme-customizer.useTokenGroupEditor`
+              - Cross-plugin:
+                - Uses tokens: `ui/tokens/density --space-sm`
+        - **`overlay`** — Overlay token group (how a floating panel enters — instant by default — and the tooltip's fill, ink, ring, corners, padding, shadow, distance and arrow). Its customizer section is the `customizer` child.
           - Web:
-            - Contributes:
-              - `ThemeEngine.TokenGroup` "Overlay"
-              - `ThemeCustomizer.Section` "Overlay" → `OverlaySection`
-            - Uses:
-              - `network/live/live-state.ResourceErrorInline`
-              - `primitives/collapsible.Collapsible`
-              - `primitives/collapsible.CollapsibleContent`
-              - `primitives/css/row.SectionHeaderRow`
-              - `primitives/css/spacing.Stack`
-              - `primitives/loading.Loading`
-              - `ui/theme-engine.ThemeEngine`
-              - `ui/theme-engine/theme-customizer.ThemeCustomizer`
-              - `ui/theme-engine/theme-customizer.TokenRows`
-              - `ui/theme-engine/theme-customizer.useTokenGroupEditor`
+            - Contributes: `ThemeEngine.TokenGroup` "Overlay"
+            - Uses: `ui/theme-engine.ThemeEngine`
           - Core:
             - Uses:
               - `primitives/css/text.PICK_EMPHASES`
@@ -64534,7 +64566,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/color-palette --popover`
               - `ui/tokens/color-palette --popover-foreground`
               - `ui/tokens/density --space-md`
-              - `ui/tokens/density --space-sm`
               - `ui/tokens/density --space-xs`
               - `ui/tokens/shadow --shadow`
               - `ui/tokens/shadow --shadow-md`
@@ -64546,19 +64577,27 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/prototypes/shell`
               - `apps/sonata/shell`
               - `media/player`
-        - **`place-palette`** — Place colour token group: the --place-<family> colours place cards are painted with (Google Maps' own pin colours by default), plus --place-overlay — the accent of a page's places laid over the Places map — and their customizer section.
+              - `ui/tokens/overlay/customizer`
+          - Plugins:
+            - **`customizer`** — Customizer section for the overlay token group.
+              - Web:
+                - Contributes: `ThemeCustomizer.Section` "Overlay" → `OverlaySection`
+                - Uses:
+                  - `network/live/live-state.ResourceErrorInline`
+                  - `primitives/collapsible.Collapsible`
+                  - `primitives/collapsible.CollapsibleContent`
+                  - `primitives/css/row.SectionHeaderRow`
+                  - `primitives/css/spacing.Stack`
+                  - `primitives/loading.Loading`
+                  - `ui/theme-engine/theme-customizer.ThemeCustomizer`
+                  - `ui/theme-engine/theme-customizer.TokenRows`
+                  - `ui/theme-engine/theme-customizer.useTokenGroupEditor`
+              - Cross-plugin:
+                - Uses tokens: `ui/tokens/density --space-sm`
+        - **`place-palette`** — Place colour token group: the --place-<family> colours place cards are painted with (Google Maps' own pin colours by default), plus --place-overlay — the accent of a page's places laid over the Places map. Its customizer section is the `customizer` child.
           - Web:
-            - Contributes:
-              - `ThemeEngine.TokenGroup` "Places"
-              - `ThemeCustomizer.Section` "Places" → `PlacePaletteSection`
-            - Uses:
-              - `network/live/live-state.ResourceErrorInline`
-              - `primitives/css/spacing.Stack`
-              - `primitives/loading.Loading`
-              - `ui/theme-engine.ThemeEngine`
-              - `ui/theme-engine/theme-customizer.ThemeCustomizer`
-              - `ui/theme-engine/theme-customizer.TokenRows`
-              - `ui/theme-engine/theme-customizer.useTokenGroupEditor`
+            - Contributes: `ThemeEngine.TokenGroup` "Places"
+            - Uses: `ui/theme-engine.ThemeEngine`
           - Core:
             - Uses: `ui/theme-engine.defineTokenGroup`
             - Exports (types): `PlacePaletteToken`
@@ -64567,7 +64606,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `placeTokenFill`
           - Cross-plugin:
             - Tokens used by: `apps/places/places-map`
-            - Imported by: `page/place`
+            - Imported by:
+              - `page/place`
+              - `ui/tokens/place-palette/customizer`
+          - Plugins:
+            - **`customizer`** — Customizer section for the place colour token group.
+              - Web:
+                - Contributes: `ThemeCustomizer.Section` "Places" → `PlacePaletteSection`
+                - Uses:
+                  - `network/live/live-state.ResourceErrorInline`
+                  - `primitives/css/spacing.Stack`
+                  - `primitives/loading.Loading`
+                  - `ui/theme-engine/theme-customizer.ThemeCustomizer`
+                  - `ui/theme-engine/theme-customizer.TokenRows`
+                  - `ui/theme-engine/theme-customizer.useTokenGroupEditor`
         - **`rich-text-palette`** — Rich-text color palette token group: the closed --rt-color-<token> vars backing inline text color in the page block editor.
           - Web:
             - Contributes: `ThemeEngine.TokenGroup` "Rich-text palette"
@@ -64578,51 +64630,39 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `richTextPaletteGroup`
           - Cross-plugin:
             - Imported by: `apps/places/shell`
-        - **`scrollbar`** — Scrollbar token group (the thumb and track colours of the native scrollbar, `auto` by default) with its customizer section.
+        - **`scrollbar`** — Scrollbar token group (the thumb and track colours of the native scrollbar, `auto` by default). Its customizer section is the `customizer` child.
           - Web:
-            - Contributes:
-              - `ThemeEngine.TokenGroup` "Scrollbar"
-              - `ThemeCustomizer.Section` "Scrollbar" → `ScrollbarSection`
-            - Uses:
-              - `network/live/live-state.ResourceErrorInline`
-              - `primitives/collapsible.Collapsible`
-              - `primitives/collapsible.CollapsibleContent`
-              - `primitives/css/row.SectionHeaderRow`
-              - `primitives/css/spacing.Stack`
-              - `primitives/loading.Loading`
-              - `ui/theme-engine.ThemeEngine`
-              - `ui/theme-engine/theme-customizer.ThemeCustomizer`
-              - `ui/theme-engine/theme-customizer.TokenRows`
-              - `ui/theme-engine/theme-customizer.useTokenGroupEditor`
+            - Contributes: `ThemeEngine.TokenGroup` "Scrollbar"
+            - Uses: `ui/theme-engine.ThemeEngine`
           - Core:
             - Uses: `ui/theme-engine.defineTokenGroup`
             - Exports (types): `ScrollbarTokenValues`
             - Exports (values): `scrollbarGroup`
           - Cross-plugin:
-            - Uses tokens: `ui/tokens/density --space-sm`
             - Tokens used by: `primitives/css/ui-kit`
-            - Imported by: `apps/agent-manager/shell`
-        - **`shadow`** — Shadow token group (the shadow-2xs…2xl tiers) with its param-driven customizer section and "Fill from…" shortcuts.
+            - Imported by:
+              - `apps/agent-manager/shell`
+              - `ui/tokens/scrollbar/customizer`
+          - Plugins:
+            - **`customizer`** — Customizer section for the scrollbar token group.
+              - Web:
+                - Contributes: `ThemeCustomizer.Section` "Scrollbar" → `ScrollbarSection`
+                - Uses:
+                  - `network/live/live-state.ResourceErrorInline`
+                  - `primitives/collapsible.Collapsible`
+                  - `primitives/collapsible.CollapsibleContent`
+                  - `primitives/css/row.SectionHeaderRow`
+                  - `primitives/css/spacing.Stack`
+                  - `primitives/loading.Loading`
+                  - `ui/theme-engine/theme-customizer.ThemeCustomizer`
+                  - `ui/theme-engine/theme-customizer.TokenRows`
+                  - `ui/theme-engine/theme-customizer.useTokenGroupEditor`
+              - Cross-plugin:
+                - Uses tokens: `ui/tokens/density --space-sm`
+        - **`shadow`** — Shadow token group (the shadow-2xs…2xl tiers). Its param-driven customizer section is the `customizer` child.
           - Web:
-            - Contributes:
-              - `ThemeEngine.TokenGroup` "Shadow"
-              - `ThemeCustomizer.Section` "Shadow" → `ShadowSection`
-            - Uses: 21 symbols — full list in [`plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md)
-              - `ui/theme-engine/theme-customizer` ×3
-              - `primitives/collapsible` ×2
-              - `primitives/css/row` ×2
-              - `primitives/css/spacing` ×2
-              - `primitives/css/ui-kit` ×2
-              - `network/live/live-state.ResourceErrorInline`
-              - `primitives/css/cluster.Cluster`
-              - `primitives/css/color-picker.ColorPickerPopover`
-              - `primitives/css/fill.fillClasses`
-              - `primitives/css/line.Line`
-              - `primitives/css/rigid.rigidClass`
-              - `primitives/css/text.Text`
-              - `primitives/loading.Loading`
-              - `ui/icons.Icon`
-              - `ui/theme-engine.ThemeEngine`
+            - Contributes: `ThemeEngine.TokenGroup` "Shadow"
+            - Uses: `ui/theme-engine.ThemeEngine`
           - Core:
             - Uses:
               - `ui/theme-engine.both`
@@ -64639,28 +64679,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `shadowParamsOf`
               - `ShadowParamsSchema`
           - Cross-plugin:
-            - Uses tokens:
-              - `ui/tokens/color-palette --background`
-              - `ui/tokens/color-palette --border`
-              - `ui/tokens/color-palette --foreground`
-              - `ui/tokens/color-palette --muted-foreground`
-              - `ui/tokens/color-palette --popover`
-              - `ui/tokens/density --space-2xs`
-              - `ui/tokens/density --space-sm`
-              - `ui/tokens/density --space-xs`
-              - `ui/tokens/font-family --font-mono`
-              - `ui/tokens/shape --radius`
-              - `ui/tokens/shape --spacing`
-              - `ui/tokens/type-scale --font-scale`
-              - `ui/tokens/type-scale --font-size-3xs`
-              - `ui/tokens/type-scale --font-size-caption`
-              - `ui/tokens/type-scale --font-weight-normal`
-              - `ui/tokens/type-scale --line-height-3xs`
-              - `ui/tokens/type-scale --line-height-caption`
-            - Tokens used by: 55 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md)
+            - Uses tokens: `ui/tokens/color-palette --popover`
+            - Tokens used by: 56 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md)
               - `apps` ×21
               - `primitives` ×11
-              - `ui` ×5
+              - `ui` ×6
               - `framework` ×4
               - `page` ×3
               - `apps-core` ×2
@@ -64680,31 +64703,61 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/sonata/shell`
               - `hints`
               - `media/player`
-        - **`shape`** — Shape token group (border radius, base spacing) with its customizer section and "Fill from…" shortcuts.
+              - `ui/tokens/shadow/customizer`
+          - Plugins:
+            - **`customizer`** — Param-driven customizer section for the shadow token group, with "Fill from…" shortcuts.
+              - Web:
+                - Contributes: `ThemeCustomizer.Section` "Shadow" → `ShadowSection`
+                - Uses:
+                  - `network/live/live-state.ResourceErrorInline`
+                  - `primitives/collapsible.Collapsible`
+                  - `primitives/collapsible.CollapsibleContent`
+                  - `primitives/css/cluster.Cluster`
+                  - `primitives/css/color-picker.ColorPickerPopover`
+                  - `primitives/css/fill.fillClasses`
+                  - `primitives/css/line.Line`
+                  - `primitives/css/rigid.rigidClass`
+                  - `primitives/css/row.Row`
+                  - `primitives/css/row.SectionHeaderRow`
+                  - `primitives/css/spacing.selfClass`
+                  - `primitives/css/spacing.Stack`
+                  - `primitives/css/text.Text`
+                  - `primitives/css/ui-kit.Button`
+                  - `primitives/css/ui-kit.cn`
+                  - `primitives/loading.Loading`
+                  - `ui/icons.Icon`
+                  - `ui/theme-engine/theme-customizer.FillFromMenu`
+                  - `ui/theme-engine/theme-customizer.ThemeCustomizer`
+                  - `ui/theme-engine/theme-customizer.useTokenGroupEditor`
+              - Cross-plugin:
+                - Uses tokens:
+                  - `ui/tokens/color-palette --background`
+                  - `ui/tokens/color-palette --border`
+                  - `ui/tokens/color-palette --foreground`
+                  - `ui/tokens/color-palette --muted-foreground`
+                  - `ui/tokens/density --space-2xs`
+                  - `ui/tokens/density --space-sm`
+                  - `ui/tokens/density --space-xs`
+                  - `ui/tokens/font-family --font-mono`
+                  - `ui/tokens/shadow --shadow`
+                  - `ui/tokens/shape --radius`
+                  - `ui/tokens/shape --spacing`
+                  - `ui/tokens/type-scale --font-scale`
+                  - `ui/tokens/type-scale --font-size-3xs`
+                  - `ui/tokens/type-scale --font-size-caption`
+                  - `ui/tokens/type-scale --font-weight-normal`
+                  - `ui/tokens/type-scale --line-height-3xs`
+                  - `ui/tokens/type-scale --line-height-caption`
+        - **`shape`** — Shape token group (border radius, base spacing). Its customizer section is the `customizer` child.
           - Web:
-            - Contributes:
-              - `ThemeEngine.TokenGroup` "Shape"
-              - `ThemeCustomizer.Section` "Shape" → `ShapeSection`
-            - Uses:
-              - `network/live/live-state.ResourceErrorInline`
-              - `primitives/collapsible.Collapsible`
-              - `primitives/collapsible.CollapsibleContent`
-              - `primitives/css/row.SectionHeaderRow`
-              - `primitives/css/spacing.Stack`
-              - `primitives/loading.Loading`
-              - `ui/theme-engine.ThemeEngine`
-              - `ui/theme-engine/theme-customizer.FillFromMenu`
-              - `ui/theme-engine/theme-customizer.ThemeCustomizer`
-              - `ui/theme-engine/theme-customizer.TokenRows`
-              - `ui/theme-engine/theme-customizer.useTokenGroupEditor`
+            - Contributes: `ThemeEngine.TokenGroup` "Shape"
+            - Uses: `ui/theme-engine.ThemeEngine`
           - Core:
             - Uses: `ui/theme-engine.defineTokenGroup`
             - Exports (types): `ShapeTokenValues`
             - Exports (values): `shapeGroup`
           - Cross-plugin:
-            - Uses tokens:
-              - `ui/tokens/density --radius-chip-compact`
-              - `ui/tokens/density --space-sm`
+            - Uses tokens: `ui/tokens/density --radius-chip-compact`
             - Tokens used by: 414 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shape/REFERENCE.md)
               - `conversations` ×96
               - `apps` ×82
@@ -64757,22 +64810,28 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `companions/panel`
               - `hints`
               - `media/player`
-        - **`sidebar-metrics`** — Sidebar metrics token group (panel width, nav row height, padding, icon size, icon gap — no type: the nav label is the `label` role) with its customizer section.
+              - `ui/tokens/shape/customizer`
+          - Plugins:
+            - **`customizer`** — Customizer section for the shape token group, with "Fill from…" shortcuts.
+              - Web:
+                - Contributes: `ThemeCustomizer.Section` "Shape" → `ShapeSection`
+                - Uses:
+                  - `network/live/live-state.ResourceErrorInline`
+                  - `primitives/collapsible.Collapsible`
+                  - `primitives/collapsible.CollapsibleContent`
+                  - `primitives/css/row.SectionHeaderRow`
+                  - `primitives/css/spacing.Stack`
+                  - `primitives/loading.Loading`
+                  - `ui/theme-engine/theme-customizer.FillFromMenu`
+                  - `ui/theme-engine/theme-customizer.ThemeCustomizer`
+                  - `ui/theme-engine/theme-customizer.TokenRows`
+                  - `ui/theme-engine/theme-customizer.useTokenGroupEditor`
+              - Cross-plugin:
+                - Uses tokens: `ui/tokens/density --space-sm`
+        - **`sidebar-metrics`** — Sidebar metrics token group (panel width, nav row height, padding, icon size, icon gap — no type: the nav label is the `label` role). Its customizer section is the `customizer` child.
           - Web:
-            - Contributes:
-              - `ThemeEngine.TokenGroup` "Sidebar Metrics"
-              - `ThemeCustomizer.Section` "Sidebar Metrics" → `SidebarMetricsSection`
-            - Uses:
-              - `network/live/live-state.ResourceErrorInline`
-              - `primitives/collapsible.Collapsible`
-              - `primitives/collapsible.CollapsibleContent`
-              - `primitives/css/row.SectionHeaderRow`
-              - `primitives/css/spacing.Stack`
-              - `primitives/loading.Loading`
-              - `ui/theme-engine.ThemeEngine`
-              - `ui/theme-engine/theme-customizer.ThemeCustomizer`
-              - `ui/theme-engine/theme-customizer.TokenRows`
-              - `ui/theme-engine/theme-customizer.useTokenGroupEditor`
+            - Contributes: `ThemeEngine.TokenGroup` "Sidebar Metrics"
+            - Uses: `ui/theme-engine.ThemeEngine`
           - Core:
             - Uses: `ui/theme-engine.defineTokenGroup`
             - Exports (types): `SidebarMetricsTokenValues`
@@ -64799,31 +64858,32 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/agent-manager/shell`
               - `apps/file-explorer/shell`
               - `apps/pages/shell`
-        - **`sidebar-palette`** — Sidebar palette token group with its customizer section.
+              - `ui/tokens/sidebar-metrics/customizer`
+          - Plugins:
+            - **`customizer`** — Customizer section for the sidebar metrics token group.
+              - Web:
+                - Contributes: `ThemeCustomizer.Section` "Sidebar Metrics" → `SidebarMetricsSection`
+                - Uses:
+                  - `network/live/live-state.ResourceErrorInline`
+                  - `primitives/collapsible.Collapsible`
+                  - `primitives/collapsible.CollapsibleContent`
+                  - `primitives/css/row.SectionHeaderRow`
+                  - `primitives/css/spacing.Stack`
+                  - `primitives/loading.Loading`
+                  - `ui/theme-engine/theme-customizer.ThemeCustomizer`
+                  - `ui/theme-engine/theme-customizer.TokenRows`
+                  - `ui/theme-engine/theme-customizer.useTokenGroupEditor`
+              - Cross-plugin:
+                - Uses tokens: `ui/tokens/density --space-sm`
+        - **`sidebar-palette`** — Sidebar palette token group. Its customizer section is the `customizer` child.
           - Web:
-            - Contributes:
-              - `ThemeEngine.TokenGroup` "Sidebar Palette"
-              - `ThemeCustomizer.Section` "Sidebar Palette" → `SidebarPaletteSection`
-            - Uses:
-              - `network/live/live-state.ResourceErrorInline`
-              - `primitives/collapsible.Collapsible`
-              - `primitives/collapsible.CollapsibleContent`
-              - `primitives/css/row.SectionHeaderRow`
-              - `primitives/css/spacing.Stack`
-              - `primitives/loading.Loading`
-              - `ui/theme-engine.ThemeEngine`
-              - `ui/theme-engine/theme-customizer.ThemeCustomizer`
-              - `ui/theme-engine/theme-customizer.TokenRows`
-              - `ui/theme-engine/theme-customizer.useTokenGroupEditor`
+            - Contributes: `ThemeEngine.TokenGroup` "Sidebar Palette"
+            - Uses: `ui/theme-engine.ThemeEngine`
           - Core:
             - Uses: `ui/theme-engine.defineTokenGroup`
             - Exports (types): `SidebarPaletteTokenValues`
             - Exports (values): `sidebarPaletteGroup`
           - Cross-plugin:
-            - Uses tokens:
-              - `ui/tokens/color-palette --border`
-              - `ui/tokens/density --space-sm`
-              - `ui/tokens/shape --spacing`
             - Tokens used by:
               - `apps-core/app-launcher`
               - `apps/browser/shell`
@@ -64840,28 +64900,35 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `apps/file-explorer/shell`
               - `apps/pages/shell`
               - `apps/places/shell`
-        - **`type-scale`** — Type-scale token group (font sizes, line heights, weights) with its customizer section.
+              - `ui/tokens/sidebar-palette/customizer`
+          - Plugins:
+            - **`customizer`** — Customizer section for the sidebar palette token group, with the palette dots in its header.
+              - Web:
+                - Contributes: `ThemeCustomizer.Section` "Sidebar Palette" → `SidebarPaletteSection`
+                - Uses:
+                  - `network/live/live-state.ResourceErrorInline`
+                  - `primitives/collapsible.Collapsible`
+                  - `primitives/collapsible.CollapsibleContent`
+                  - `primitives/css/row.SectionHeaderRow`
+                  - `primitives/css/spacing.Stack`
+                  - `primitives/loading.Loading`
+                  - `ui/theme-engine/theme-customizer.ThemeCustomizer`
+                  - `ui/theme-engine/theme-customizer.TokenRows`
+                  - `ui/theme-engine/theme-customizer.useTokenGroupEditor`
+              - Cross-plugin:
+                - Uses tokens:
+                  - `ui/tokens/color-palette --border`
+                  - `ui/tokens/density --space-sm`
+                  - `ui/tokens/shape --spacing`
+        - **`type-scale`** — Type-scale token group (font sizes, line heights, weights). Its customizer section is the `customizer` child.
           - Web:
-            - Contributes:
-              - `ThemeEngine.TokenGroup` "Type Scale"
-              - `ThemeCustomizer.Section` "Type Scale" → `TypeScaleSection`
-            - Uses:
-              - `network/live/live-state.ResourceErrorInline`
-              - `primitives/collapsible.Collapsible`
-              - `primitives/collapsible.CollapsibleContent`
-              - `primitives/css/row.SectionHeaderRow`
-              - `primitives/css/spacing.Stack`
-              - `primitives/loading.Loading`
-              - `ui/theme-engine.ThemeEngine`
-              - `ui/theme-engine/theme-customizer.ThemeCustomizer`
-              - `ui/theme-engine/theme-customizer.TokenRows`
-              - `ui/theme-engine/theme-customizer.useTokenGroupEditor`
+            - Contributes: `ThemeEngine.TokenGroup` "Type Scale"
+            - Uses: `ui/theme-engine.ThemeEngine`
           - Core:
             - Uses: `ui/theme-engine.defineTokenGroup`
             - Exports (types): `TypeScaleTokenValues`
             - Exports (values): `typeScaleGroup`
           - Cross-plugin:
-            - Uses tokens: `ui/tokens/density --space-sm`
             - Tokens used by: 231 plugins — full list in [`plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/type-scale/REFERENCE.md)
               - `apps` ×59
               - `conversations` ×40
@@ -64908,10 +64975,27 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `companions/panel`
               - `hints`
               - `media/player`
+              - `ui/tokens/type-scale/customizer`
           - Exemptions:
             - Exempts itself from:
               - `type-scale:closed-role-ladder:raw-vars` — `.` (sanctioned)
               - `check-thread-safety/no-blocking-check-work` — `check/index.ts` (debt)
+          - Plugins:
+            - **`customizer`** — Customizer section for the type-scale token group.
+              - Web:
+                - Contributes: `ThemeCustomizer.Section` "Type Scale" → `TypeScaleSection`
+                - Uses:
+                  - `network/live/live-state.ResourceErrorInline`
+                  - `primitives/collapsible.Collapsible`
+                  - `primitives/collapsible.CollapsibleContent`
+                  - `primitives/css/row.SectionHeaderRow`
+                  - `primitives/css/spacing.Stack`
+                  - `primitives/loading.Loading`
+                  - `ui/theme-engine/theme-customizer.ThemeCustomizer`
+                  - `ui/theme-engine/theme-customizer.TokenRows`
+                  - `ui/theme-engine/theme-customizer.useTokenGroupEditor`
+              - Cross-plugin:
+                - Uses tokens: `ui/tokens/density --space-sm`
     - **`tree-disclosure`** — Tree-row disclosure region (merged / dimmed-leaf / column). Contributes its variant-region host into Tree.Disclosure.
       - Web:
         - Slots: `TreeDisclosure.Variant`
@@ -64999,34 +65083,24 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/shadow --shadow-sm`
           - `ui/tokens/shadow --shadow-xl`
           - `ui/tokens/shadow --shadow-xs`
-        - Imported by: `ui/tweakcn/community-browser`
+        - Imported by:
+          - `ui/tweakcn/community-browser`
+          - `ui/tweakcn/community-browser/customizer`
       - Plugins:
-        - **`community-browser`** — The tweakcn community catalog as a browsable theme source (picking a theme saves it as a saved theme), plus a customizer section that imports any tweakcn theme by URL. Serves the tweakcn community catalog (the live tweakcn.community-catalog value), and the endpoint that saves one of its themes as a saved theme.
+        - **`community-browser`** — The tweakcn community catalog as a browsable theme source (picking a theme saves it as a saved theme). Its import-by-URL customizer section is the `customizer` child. Serves the tweakcn community catalog (the live tweakcn.community-catalog value), and the endpoint that saves one of its themes as a saved theme.
           - Web:
-            - Contributes:
-              - `ThemeEngine.ThemeSource` "community"
-              - `ThemeCustomizer.Section` "Import from tweakcn" → `ImportByUrlSection`
+            - Contributes: `ThemeEngine.ThemeSource` "community"
             - Uses:
-              - `config_v2.useSetConfig`
-              - `infra/endpoints.EndpointError`
-              - `infra/endpoints.useEndpointMutation`
               - `infra/endpoints.useFetchEndpoint`
               - `network/live.useLive`
               - `network/live/live-state.combineResources`
               - `network/live/live-state.mapResource`
               - `network/live/live-state.PortableGateInput`
               - `network/live/live-state.ResourceResult`
-              - `primitives/css/fill.fillClasses`
-              - `primitives/css/spacing.Stack`
-              - `primitives/css/text.Text`
-              - `primitives/css/ui-kit.Button`
-              - `primitives/css/ui-kit.cn`
               - `ui/theme-engine.ThemeEngine`
               - `ui/theme-engine.ThemeSourceEntry`
               - `ui/theme-engine.useThemes`
-              - `ui/theme-engine.useThemeScopeId`
               - `ui/theme-engine/saved-themes.useAwaitSavedThemesWrite`
-              - `ui/theme-engine/theme-customizer.ThemeCustomizer`
           - Server:
             - Contributes: `resource.declare` "tweakcn.community-catalog"
             - Uses:
@@ -65041,22 +65115,38 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/endpoints.defineEndpoint`
               - `ui/theme-engine/saved-themes.SavedThemeWriteSchema`
             - Exports (values): `applyCatalogTheme`
-          - Cross-plugin:
-            - Uses tokens:
-              - `ui/tokens/color-palette --border`
-              - `ui/tokens/color-palette --foreground`
-              - `ui/tokens/color-palette --muted`
-              - `ui/tokens/color-palette --muted-foreground`
-              - `ui/tokens/color-palette --primary`
-              - `ui/tokens/density --space-md`
-              - `ui/tokens/density --space-xs`
-              - `ui/tokens/shape --radius`
-              - `ui/tokens/type-scale --font-scale`
-              - `ui/tokens/type-scale --font-size-body`
-              - `ui/tokens/type-scale --font-weight-normal`
-              - `ui/tokens/type-scale --line-height-body`
           - Shared:
             - Exports (types): `CatalogTheme`
+          - Plugins:
+            - **`customizer`** — The Import from tweakcn customizer section: imports any tweakcn theme by URL.
+              - Web:
+                - Contributes: `ThemeCustomizer.Section` "Import from tweakcn" → `ImportByUrlSection`
+                - Uses:
+                  - `config_v2.useSetConfig`
+                  - `infra/endpoints.EndpointError`
+                  - `infra/endpoints.useEndpointMutation`
+                  - `primitives/css/fill.fillClasses`
+                  - `primitives/css/spacing.Stack`
+                  - `primitives/css/text.Text`
+                  - `primitives/css/ui-kit.Button`
+                  - `primitives/css/ui-kit.cn`
+                  - `ui/theme-engine.useThemeScopeId`
+                  - `ui/theme-engine/saved-themes.useAwaitSavedThemesWrite`
+                  - `ui/theme-engine/theme-customizer.ThemeCustomizer`
+              - Cross-plugin:
+                - Uses tokens:
+                  - `ui/tokens/color-palette --border`
+                  - `ui/tokens/color-palette --foreground`
+                  - `ui/tokens/color-palette --muted`
+                  - `ui/tokens/color-palette --muted-foreground`
+                  - `ui/tokens/color-palette --primary`
+                  - `ui/tokens/density --space-md`
+                  - `ui/tokens/density --space-xs`
+                  - `ui/tokens/shape --radius`
+                  - `ui/tokens/type-scale --font-scale`
+                  - `ui/tokens/type-scale --font-size-body`
+                  - `ui/tokens/type-scale --font-weight-normal`
+                  - `ui/tokens/type-scale --line-height-body`
     - **`variant-region`** — Factory for pluggable chrome regions with per-app switchable variants. Collapses the config + slot + host + picker + registrations boilerplate into defineVariantRegion (core) and defineVariantRegionWeb (web).
       - Web:
         - Uses:

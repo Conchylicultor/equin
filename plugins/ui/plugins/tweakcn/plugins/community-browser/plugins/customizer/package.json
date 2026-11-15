@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-ui-tweakcn-community-browser-customizer",
+  "description": "The Import from tweakcn customizer section: imports any tweakcn theme by URL.",
+  "private": true,
+  "version": "0.0.1"
+}

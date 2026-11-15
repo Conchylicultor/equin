@@ -4,7 +4,7 @@ import { themeCustomizerPane } from "./panes";
 import { ThemeCustomizer } from "./slots";
 
 export { ThemeCustomizer } from "./slots";
-export { themeCustomizerPane, themeCustomizerRoute } from "./panes";
+export { themeCustomizerPane } from "./panes";
 export { TokenRows } from "./components/token-rows";
 export type { ReadyTokenGroupEditor } from "./components/token-rows";
 export { FillFromMenu } from "./components/fill-from-menu";

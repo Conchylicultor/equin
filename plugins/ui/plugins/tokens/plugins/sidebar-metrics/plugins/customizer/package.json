@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-ui-tokens-sidebar-metrics-customizer",
+  "description": "Customizer section for the sidebar metrics token group.",
+  "private": true,
+  "version": "0.0.1"
+}

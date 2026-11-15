@@ -6,10 +6,14 @@ the action bar's palette button, where switching a theme costs no context.
 
 Why a sibling plugin rather than a second component inside `theme-customizer`:
 the popover needs its own contribution surface (`QuickTheme.Section`), and one of
-its contributors — `theme-engine/theme-gallery` — also contributes to the
-pane's `ThemeCustomizer.Section`. Keeping the two slots in separate plugins lets
-a contributor pick either surface (or both, with a different component each) and
-keeps the popover importable without dragging in the pane.
+its contributors — `theme-engine/theme-gallery` — also has a section in the
+pane's `ThemeCustomizer.Section` (from its `customizer` child). Keeping the two
+slots in separate plugins lets a contributor pick either surface (or both, with
+a different component each) and keeps the popover importable without dragging
+in the pane: nothing contributing here may reach the customizer's web barrel
+(`theme-customizer:painting-off-the-editor`), so the popover works when the
+editor fails to load. The footer's link to the pane uses `themeCustomizerRoute`
+from `theme-customizer/core`.
 
 The panel body is assembled from three generic sources, naming no contributor:
 
@@ -70,7 +74,6 @@ itself stays a pane concern — this surface only follows the choice made there.
     - `ui/icons.Icon`
     - `ui/theme-engine.ThemeEngine`
     - `ui/theme-engine.ThemeScopeProvider`
-    - `ui/theme-engine/theme-customizer.themeCustomizerRoute`
   - Exports (types): `QuickThemeSectionContribution`
   - Exports (values): `QuickTheme`
 - Cross-plugin:

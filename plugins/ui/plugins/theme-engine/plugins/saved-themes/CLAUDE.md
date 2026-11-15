@@ -95,6 +95,7 @@
     - `ui/theme-engine/theme-gallery`
     - `ui/tweakcn`
     - `ui/tweakcn/community-browser`
+    - `ui/tweakcn/community-browser/customizer`
 - Exemptions:
   - Exempts itself from: `ids:pk-declared` — `server/internal/tables.ts` (debt)
 
