@@ -52,7 +52,6 @@ const DIRT_EDGE: Rgb = [92, 82, 54];
 const BANK: Rgb = [52, 50, 30];
 const HILL_LIT: Rgb = [214, 206, 150];
 const HILL_SHADE: Rgb = [58, 64, 34];
-const CONTOUR: Rgb = [70, 66, 40];
 
 export type HeightFn = (x: number, y: number) => number;
 type PixelFn = (
@@ -110,19 +109,13 @@ function groundPixel(H: HeightFn, E: HeightFn | null): PixelFn {
       if (E) {
         const e = E(X, Y);
         if (e > 0.04) {
-          // a hill: lit from the north-west, drier on top, ink contour lines round it
+          // a hill: lit from the north-west, drier on top
           const ex = (E(X + 6, Y) - E(X - 6, Y)) / 12;
           const ey = (E(X, Y + 6) - E(X, Y - 6)) / 12;
-          const gl = Math.hypot(ex, ey);
           const lit = (-ex - ey * 0.8) * 260;
           if (lit > 0) mixTo(col, col, HILL_LIT, Math.min(0.5, lit * 0.45));
           else mixTo(col, col, HILL_SHADE, Math.min(0.45, -lit * 0.5));
           mixTo(col, col, DRY, ss(0.5, 0.95, e) * 0.28);
-          const lv = e * 7;
-          const fr = lv - Math.floor(lv);
-          const dpx = Math.min(fr, 1 - fr) / Math.max(1e-5, 7 * gl);
-          if (Math.floor(lv) >= 1 && dpx < 1.3)
-            mixTo(col, col, CONTOUR, 0.42 * (1 - dpx / 1.3));
         }
       }
       for (let k = 0; k < 3; k++) col[k] = col[k]! + grain * 16;

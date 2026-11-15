@@ -1,12 +1,11 @@
 // The island's easter eggs — things nobody announces, found by being there at
 // the right time: the werewolf that prowls the outskirts at night (howling at
 // the moon, bolting when the hero comes near, gone into the dark and back
-// later), the moon on the water and the odd shooting star flashing across it,
-// and the bats that circle the campfire at dusk. Pure drawing and motion; the engine
+// later), and the bats that circle the campfire at dusk. Pure drawing and motion; the engine
 // says when (time of day), where (the layout) and puts them in its passes.
 
 import type { Layout, Pt } from "@plugins/apps/plugins/isle/plugins/world/core";
-import { glowSprite, type Ctx, type Rnd } from "./kit";
+import type { Ctx, Rnd } from "./kit";
 
 // ---------------------------------------------------------------- werewolf
 
@@ -461,118 +460,6 @@ function paintWerewolf(g: Ctx, p: WolfPose): void {
 
 /** Its box round its feet (local px), like a person's. */
 export const WOLF_BOX = [-32, -66, 32, 10] as const;
-
-// ---------------------------------------------------------------- the moon, on the water
-
-interface ShootingStar {
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
-  t0: number;
-}
-
-/**
- * The night's moon as the island can see it — the map shows ground and sea,
- * never the sky, so the moon is its reflection: a soft disc and a glitter
- * path on a patch of open sea off the home island, and now and then a
- * shooting star flashing across the water. The engine keeps both to the water
- * and adds them as light over the night.
- */
-export class MoonOnWater {
-  private star: ShootingStar | null = null;
-  private nextStar = 6;
-
-  constructor(private readonly rnd: Rnd) {}
-
-  /** The reflection at (x, y) on the sea, in world px. */
-  paintReflection(g: Ctx, x: number, y: number, t: number): void {
-    const R = 105;
-    g.save();
-    // the disc, squashed by the water and gently wobbling
-    const wob = Math.sin(t * 1.1) * 6;
-    g.drawImage(
-      glowSprite("rgba(205,220,255,.5)"),
-      x - R * 4,
-      y - R * 2.4,
-      R * 8,
-      R * 4.8,
-    );
-    // feathered: three nested passes, so its edge breaks up like light on water
-    g.fillStyle = "rgba(240,242,255,.22)";
-    for (const k of [1, 0.82, 0.62]) {
-      g.beginPath();
-      g.ellipse(x + wob * k, y, R * k, R * 0.6 * k, 0, 0, Math.PI * 2);
-      g.fill();
-    }
-    // the glitter path: broken strokes trailing down toward the viewer
-    g.lineCap = "round";
-    g.lineWidth = 8;
-    for (let i = 0; i < 26; i++) {
-      const dy = R * 0.5 + i * 26;
-      const fall = 1 - i / 26;
-      const flick = 0.5 + 0.5 * Math.sin(t * 2.3 + i * 1.7);
-      const w = R * (0.35 + 0.75 * fall) * (0.55 + 0.45 * flick);
-      const sx = x + Math.sin(t * 1.3 + i * 0.8) * 18 * (1 - fall * 0.5);
-      g.strokeStyle = `rgba(235,240,255,${(0.2 + 0.55 * flick) * fall})`;
-      g.beginPath();
-      g.moveTo(sx - w / 2, y + dy);
-      g.lineTo(sx + w / 2, y + dy);
-      // a shorter broken stroke above the disc too
-      if (i < 5) {
-        const uy = y - R * 0.5 - (i + 1) * 22;
-        const uw = w * 0.5 * (1 - i / 5);
-        g.moveTo(sx - uw / 2, uy);
-        g.lineTo(sx + uw / 2, uy);
-      }
-      g.stroke();
-    }
-    g.restore();
-  }
-
-  /** Now and then a shooting star flashing across the water, in screen px. */
-  paintStar(g: Ctx, vw: number, vh: number, dt: number, t: number): void {
-    g.save();
-    // the shooting star, seen in the water: a bright head and a fading trail
-    this.nextStar -= dt;
-    if (!this.star && this.nextStar <= 0) {
-      const rnd = this.rnd;
-      const leftward = rnd() < 0.5;
-      this.star = {
-        x: vw * (0.15 + rnd() * 0.7),
-        y: vh * (0.15 + rnd() * 0.6),
-        vx: (leftward ? -1 : 1) * (520 + rnd() * 260),
-        vy: 180 + rnd() * 120,
-        t0: t,
-      };
-      this.nextStar = 14 + rnd() * 26;
-    }
-    const st = this.star;
-    if (st) {
-      const k = (t - st.t0) / 0.9;
-      if (k > 1 || k < 0) this.star = null;
-      else {
-        const hx = st.x + st.vx * (t - st.t0);
-        const hy = st.y + st.vy * (t - st.t0);
-        const a = Math.sin(k * Math.PI);
-        const tx = hx - st.vx * 0.18;
-        const ty = hy - st.vy * 0.18;
-        const tr = g.createLinearGradient(hx, hy, tx, ty);
-        tr.addColorStop(0, `rgba(255,250,225,${0.95 * a})`);
-        tr.addColorStop(1, "rgba(255,250,225,0)");
-        g.strokeStyle = tr;
-        g.lineWidth = 2;
-        g.beginPath();
-        g.moveTo(hx, hy);
-        g.lineTo(tx, ty);
-        g.stroke();
-        g.globalAlpha = a;
-        g.drawImage(glowSprite("rgba(255,250,220,.8)"), hx - 8, hy - 8, 16, 16);
-      }
-    }
-    g.restore();
-  }
-}
 
 // ---------------------------------------------------------------- dusk bats
 

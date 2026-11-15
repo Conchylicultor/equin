@@ -34,7 +34,6 @@ import {
   type Layout,
   type MoveTarget,
   type Placement,
-  type Pt,
   type Resident,
   type WalkGrid,
   type WorldModel,
@@ -85,7 +84,7 @@ import {
   type ChatterPlace,
 } from "./chatter";
 import { PBOX, People, type Hero, type Villager, type Walker } from "./people";
-import { drawBats, MoonOnWater, Werewolf, WOLF_BOX } from "./easter-eggs";
+import { drawBats, Werewolf, WOLF_BOX } from "./easter-eggs";
 import { realizeScene, TILE, type Scene, type Static } from "./scene";
 import { DOCK_LEN, makeSprites, type SpriteSet } from "./sprites";
 
@@ -264,15 +263,6 @@ const VILLAGER_LOOKS: readonly LookName[] = [
   "villager4",
   "villager5",
 ];
-/** A ground tile in view, where it lands on screen (device px). */
-interface TileView {
-  readonly tx: number;
-  readonly ty: number;
-  readonly sx: number;
-  readonly sy: number;
-  readonly w: number;
-  readonly h: number;
-}
 const easeIO = (p: number) => p * p * (3 - 2 * p);
 const tileKey = (tx: number, ty: number) => `${tx}:${ty}`;
 
@@ -287,9 +277,6 @@ export class IsleEngine {
   private readonly oceanPat: CanvasPattern;
   private readonly people = new People();
   private readonly wolf = new Werewolf(this.rnd);
-  private readonly moon = new MoonOnWater(this.rnd);
-  /** Where the moon shows on the sea: a patch of open water off the home island (world px). */
-  private moonSpot: Pt | null = null;
   private raf = 0;
   private disposed = false;
 
@@ -999,7 +986,6 @@ export class IsleEngine {
       }
     }
     this.wolf.follow(layout);
-    this.moonSpot = this.findMoonSpot(layout);
     const trees = this.scene!.statics.filter((o) => o.tree);
     const rnd = this.rnd;
     this.flies = trees.length
@@ -1012,29 +998,6 @@ export class IsleEngine {
           };
         })
       : [];
-  }
-
-  /**
-   * A patch of open sea off the home island for the moon's reflection: out from its centre (east first), about
-   * 300 px past its coast, where open water runs on beyond it.
-   */
-  private findMoonSpot(layout: Layout): Pt | null {
-    const home = layout.islands.find((I) => I.home);
-    if (!home) return null;
-    const H = heightOver(this.M!, layout.islands);
-    for (const a of [-0.3, 0, -0.7, 0.4, -1.2, 0.9, 2.6, 3.1]) {
-      const ux = Math.cos(a);
-      const uy = Math.sin(a);
-      let run = 0;
-      for (let r = 200; r < 6000; r += 40) {
-        const x = home.cx + ux * r;
-        const y = home.cy + uy * r;
-        run = H(x, y) < -0.1 ? run + 40 : 0;
-        // well clear of the coast, with open water on past it
-        if (run >= 640) return [x - ux * 340, y - uy * 340];
-      }
-    }
-    return null;
   }
 
   // ---------------------------------------------------------------- tiles
@@ -2016,15 +1979,6 @@ export class IsleEngine {
     const y0 = cam.y - hh;
     const y1 = cam.y + hh;
     const g = this.g;
-    const world2screenOn = (c: Ctx) =>
-      c.setTransform(
-        dpr * z,
-        0,
-        0,
-        dpr * z,
-        dpr * (vw / 2 - cam.x * z),
-        dpr * (vh / 2 - cam.y * z),
-      );
     const world2screen = () =>
       g.setTransform(
         dpr * z,
@@ -2586,25 +2540,6 @@ export class IsleEngine {
         }
       }
       g.globalCompositeOperation = "source-over";
-      if (night) {
-        // the moon, as the map can see it: on the water, added as light over the night
-        const fg = this.fg;
-        fg.setTransform(1, 0, 0, 1, 0, 0);
-        fg.clearRect(0, 0, this.fxc.width, this.fxc.height);
-        const spot = this.moonSpot;
-        if (spot && vis(spot[0], spot[1], 900)) {
-          world2screenOn(fg);
-          this.moon.paintReflection(fg, spot[0], spot[1], t);
-        }
-        fg.setTransform(dpr, 0, 0, dpr, 0, 0);
-        this.moon.paintStar(fg, vw, vh, dt, t);
-        this.keepToWater(inView);
-        g.setTransform(1, 0, 0, 1, 0, 0);
-        g.globalCompositeOperation = "lighter";
-        g.drawImage(this.fxc, 0, 0);
-        g.globalCompositeOperation = "source-over";
-        g.setTransform(dpr, 0, 0, dpr, 0, 0);
-      }
     }
     // signs stay readable over everything, as on a map — and give way to district names when zoomed out
     const signA = ss(0.36, 0.6, z);
@@ -3010,7 +2945,14 @@ export class IsleEngine {
     y0: number,
     x1: number,
     y1: number,
-    inView: readonly TileView[],
+    inView: readonly {
+      tx: number;
+      ty: number;
+      sx: number;
+      sy: number;
+      w: number;
+      h: number;
+    }[],
   ): void {
     const fg = this.fg;
     const { vw, vh, dpr, cam } = this;
@@ -3108,12 +3050,6 @@ export class IsleEngine {
       fg.lineTo(s.x + 7, s.y);
     }
     fg.stroke();
-    this.keepToWater(inView);
-  }
-
-  /** Keeps what the effects layer holds to the water: cut by each baked ground tile's water mask. */
-  private keepToWater(inView: readonly TileView[]): void {
-    const fg = this.fg;
     fg.setTransform(1, 0, 0, 1, 0, 0);
     fg.globalCompositeOperation = "destination-in";
     for (const v of inView) {
