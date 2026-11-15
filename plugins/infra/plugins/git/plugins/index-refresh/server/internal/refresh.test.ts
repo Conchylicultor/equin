@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, expect, test } from "bun:test";
 import {
   mkdirSync,
+  readFileSync,
   mkdtempSync,
   realpathSync,
   rmSync,
@@ -10,7 +11,9 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { GIT } from "@plugins/infra/plugins/paths/server";
 import { spawnCaptured } from "@plugins/infra/plugins/spawn/core";
-import { primeUntrackedCache } from "./untracked-cache";
+import { stat } from "node:fs/promises";
+import { countRacyEntries } from "../../core";
+import { refreshCheckoutIndex, refreshIndexIfRacy } from "./refresh";
 
 // A throwaway repository — never the real checkout.
 let repo: string;
@@ -44,7 +47,7 @@ async function opendirsOfReadOnlyStatus(): Promise<number> {
 }
 
 beforeEach(async () => {
-  repo = realpathSync(mkdtempSync(join(tmpdir(), "untracked-cache-")));
+  repo = realpathSync(mkdtempSync(join(tmpdir(), "index-refresh-")));
   await git({}, "init", "-q", "-b", "main");
   await git({}, "config", "core.untrackedCache", "true");
   for (const d of ["a", "b", "c", "d", "e"]) {
@@ -81,7 +84,7 @@ test("primed, a read-only status opens only the directories that changed", async
   await Bun.sleep(1100);
   // Under GIT_OPTIONAL_LOCKS=0, as every child of ours runs: the primer's
   // status writes a private index, never the checkout's own.
-  expect(await primeUntrackedCache(repo)).toBe("published");
+  expect(await refreshCheckoutIndex(repo)).toBe("published");
   expect(await opendirsOfReadOnlyStatus()).toBe(0);
   writeFileSync(join(repo, "b", "x", "new"), "n\n");
   // The changed directory only (its new file is untracked).
@@ -91,7 +94,52 @@ test("primed, a read-only status opens only the directories that changed", async
 test("a git writer holding index.lock keeps the real index untouched", async () => {
   await Bun.sleep(1100);
   writeFileSync(join(repo, ".git", "index.lock"), "");
-  expect(await primeUntrackedCache(repo)).toBe("index-busy");
+  expect(await refreshCheckoutIndex(repo)).toBe("index-busy");
   rmSync(join(repo, ".git", "index.lock"));
   expect(await opendirsOfReadOnlyStatus()).toBeGreaterThanOrEqual(11);
+});
+
+/** The racy count of the repo's index as countRacyEntries reads it. */
+async function racyNow(): Promise<{ entries: number; racy: number }> {
+  const index = join(repo, ".git", "index");
+  const mtimeSec = Math.floor((await stat(index)).mtimeMs / 1000);
+  return countRacyEntries(new Uint8Array(readFileSync(index)), mtimeSec);
+}
+
+test("an index written in the same second as its files is racy; refreshIndexIfRacy makes it trusted, once", async () => {
+  // The commit above wrote the index in the files' own second.
+  expect(await racyNow()).toEqual({ entries: 5, racy: 5 });
+  const first = await refreshIndexIfRacy(repo);
+  expect(first).toEqual({
+    kind: "refreshed",
+    entries: 5,
+    racy: 5,
+    publish: "published",
+  });
+  expect(await racyNow()).toEqual({ entries: 5, racy: 0 });
+  // Trusted now: no refresh, no index write.
+  expect(await refreshIndexIfRacy(repo)).toEqual({
+    kind: "trusted",
+    entries: 5,
+  });
+});
+
+test("countRacyEntries reads index versions 3 and 4 the same as 2", async () => {
+  // Every entry older than the index: none racy, whatever the version.
+  await Bun.sleep(1100);
+  for (const version of ["2", "3", "4"]) {
+    await git({}, "update-index", "--index-version", version);
+    await git({}, "update-index", "--refresh", "-q");
+    // Pretend the index was written in the files' second: all racy.
+    const index = join(repo, ".git", "index");
+    const bytes = new Uint8Array(readFileSync(index));
+    expect(countRacyEntries(bytes, 0)).toEqual({ entries: 5, racy: 5 });
+    expect(await racyNow()).toEqual({ entries: 5, racy: 0 });
+  }
+});
+
+test("countRacyEntries refuses what is not an index", () => {
+  expect(() => countRacyEntries(new Uint8Array(16), 0)).toThrow(
+    "not a git index",
+  );
 });

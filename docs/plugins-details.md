@@ -32251,6 +32251,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/file-watcher/background-arm` (1 debt)
               - `infra/git/checkout-watch` (1 debt)
               - `infra/git/git-watcher` (1 debt)
+              - `infra/git/index-refresh` (1 debt)
               - `infra/git/private-index` (1 debt)
               - `infra/git/remotes` (2 debt)
               - `infra/git/tree-lock` (1 debt)
@@ -32274,7 +32275,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/spawn/daemon` (1 debt)
               - `infra/ssh` (2 debt)
               - `infra/stack-sampler` (1 debt)
-              - `infra/worktree` (12 debt)
+              - `infra/worktree` (11 debt)
               - `infra/worktree/reclaim` (2 debt)
               - `integrations/youtube/audio-fetch` (3 debt)
               - `packages/flock` (3 debt)
@@ -36337,6 +36338,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Server:
             - Uses:
               - `infra/file-watcher.acquireDirWatch`
+              - `infra/git/index-refresh.refreshIndexIfRacy`
               - `primitives/commit-list.GitError`
               - `primitives/commit-list.runGit`
               - `primitives/commit-list.tryRunGit`
@@ -36426,6 +36428,24 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exempts itself from:
               - `ids:pk-declared` — `server/internal/tables-ref-advanced.ts` (debt)
               - `boundaries/no-platform-api` — `server/internal/is-dir.ts` (debt)
+        - **`index-refresh`** — Keep a checkout's index able to vouch for its files: refreshCheckoutIndex (git status on a private copy of the index — stat data refreshed, untracked cache filled — published by private-index's compare-and-swap) and refreshIndexIfRacy (the same, only when the index holds racily-clean entries: countRacyEntries, core, reads the index file — entries whose mtime is not older in whole seconds than the index, which every git status / git diff <rev> otherwise re-hashes on every read, since no read of ours may write the index).
+          - Server:
+            - Uses: `infra/paths.GIT`
+            - Exports (types): `IndexTrust`
+            - Exports (values):
+              - `refreshCheckoutIndex`
+              - `refreshIndexIfRacy`
+          - Cross-plugin:
+            - Imported by:
+              - `infra/git/checkout-watch`
+              - `infra/worktree`
+          - Exemptions:
+            - Exempts itself from:
+              - `boundaries/no-platform-api` — `server/internal/refresh.ts` (debt)
+              - `user-path/no-unproven-claim` — `server/internal/refresh.ts` (sanctioned)
+          - Core:
+            - Exports (types): `IndexRacyCount`
+            - Exports (values): `countRacyEntries`
         - **`private-index`** — Refresh a checkout's index on a private copy, then publish it back: copy the index WITH its mtime (racy git), let git write the copy (privateIndexWrites), and swap it into place by compare-and-swap under git's own index.lock taken wx — skipped while a git writer holds the lock or once the real index was written since the copy. One protocol, in a sync form (the tree hash, on the CLI's thread) and an async one (a backend's checkout primer).
           - Core:
             - Uses:
@@ -36446,7 +36466,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Imported by:
               - `framework/tooling/checks`
-              - `infra/worktree`
+              - `infra/git/index-refresh`
           - Exemptions:
             - Exempts itself from: `boundaries/no-platform-api` — `core/internal/private-index.ts` (debt)
         - **`remotes`** — May this checkout publish, and where does it receive from? — the write-access probe (`git push --dry-run`, classified into denied / no-credentials / unreachable rather than one 'no'), its `.git/config` cache of that measurement, the upstream resolution built from the same facts, and who signs the commits push makes (a local placeholder where they cannot leave the machine, a real identity required where they will be public).
@@ -37180,8 +37200,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exempts itself from: `boundaries/no-platform-api` — `server/internal/sweep.ts` (debt)
         - **`user-path`** — Which host paths a synchronous fs call may touch: AppPath (a path the app owns — its data dirs, its checkout; the only kind a sync fs call in runtime code may take) and UserPath (one the user or their config chose), with the type-aware lint that refuses a sync fs call on any path not proven app-owned — so a macOS Files & Folders prompt can never freeze a backend's JS thread, whether or not anyone marked the user's path.
           - Cross-plugin:
-            - Imported by: 112 plugins — full list in [`plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md`](../plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md)
-              - `infra` ×40
+            - Imported by: 113 plugins — full list in [`plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md`](../plugins/infra/plugins/host-fs/plugins/user-path/REFERENCE.md)
+              - `infra` ×41
               - `framework` ×20
               - `apps` ×8
               - `debug` ×7
@@ -37215,6 +37235,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/tooling/web-artifacts` (0 debt)
               - `infra/claude-cli/sdk` (0 debt)
               - `infra/deps/playwright-browser` (0 debt)
+              - `infra/git/index-refresh` (0 debt)
               - `infra/git/tree-lock` (0 debt)
               - `infra/host-fs/user-path` (0 debt)
               - `infra/launcher/env-names` (0 debt)
@@ -38381,8 +38402,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `worktreeDataDir`
           - `worktreesDir`
       - Cross-plugin:
-        - Imported by: 132 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
-          - `infra` ×31
+        - Imported by: 133 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
+          - `infra` ×32
           - `framework` ×20
           - `apps` ×18
           - `debug` ×15
@@ -39257,9 +39278,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `spawnPassthrough`
           - `spawnToFile`
       - Cross-plugin:
-        - Imported by: 96 plugins — full list in [`plugins/infra/plugins/spawn/REFERENCE.md`](../plugins/infra/plugins/spawn/REFERENCE.md)
+        - Imported by: 97 plugins — full list in [`plugins/infra/plugins/spawn/REFERENCE.md`](../plugins/infra/plugins/spawn/REFERENCE.md)
           - `framework` ×31
-          - `infra` ×25
+          - `infra` ×26
           - `apps` ×9
           - `debug` ×5
           - `database` ×4
@@ -39530,6 +39551,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`worktree`**
       - Server:
         - Uses:
+          - `infra/git/index-refresh.refreshCheckoutIndex`
           - `infra/host/host-admission.defineHostPool`
           - `infra/paths.GIT`
           - `infra/paths.worktreeArtifacts`
@@ -39616,8 +39638,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Exemptions:
         - Exempts itself from:
           - `worktree/no-raw-worktree-git` — `.` (sanctioned)
-          - `boundaries/no-platform-api` — `server/internal/composition-namespace.ts`, `server/internal/dep-store-pool.ts`, `server/internal/install-checkout.ts`, `server/internal/rename-pool.ts`, `server/internal/spare-name.ts`, `server/internal/spare.ts`, `server/internal/spec.ts`, `server/internal/tree-pool.ts`, `server/internal/untracked-cache.ts`, `server/internal/worktree-op.ts`, `server/internal/worktree-op-marker.ts`, `server/internal/worktree.ts` (debt)
-          - `user-path/no-unproven-claim` — `server/internal/untracked-cache.ts` (sanctioned)
+          - `boundaries/no-platform-api` — `server/internal/composition-namespace.ts`, `server/internal/dep-store-pool.ts`, `server/internal/install-checkout.ts`, `server/internal/rename-pool.ts`, `server/internal/spare-name.ts`, `server/internal/spare.ts`, `server/internal/spec.ts`, `server/internal/tree-pool.ts`, `server/internal/worktree-op.ts`, `server/internal/worktree-op-marker.ts`, `server/internal/worktree.ts` (debt)
           - `user-path/no-unproven-claim` — `server/internal/worktree.ts` (sanctioned)
           - `blocking-fs/no-sync-fs` — `server/internal/worktree-op-marker.ts` (sanctioned)
           - `repo-walk-safety/no-adhoc-repo-listing` — `server/internal/worktree.ts` (sanctioned)
@@ -42812,8 +42833,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TIMED_FS_CALLS`
           - `withFsCallTally`
       - Cross-plugin:
-        - Imported by: 175 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
-          - `infra` ×51
+        - Imported by: 176 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
+          - `infra` ×52
           - `framework` ×26
           - `apps` ×15
           - `debug` ×15

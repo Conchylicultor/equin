@@ -91,6 +91,15 @@ export interface CheckoutWatchDeps {
     relPaths: readonly string[],
   ) => Promise<ReadonlySet<string>>;
   acquireDirWatch: (request: DirWatchRequest) => Promise<DirWatchRelease>;
+  /**
+   * Make the checkout's index vouch for its files again when it cannot
+   * (`infra/git/index-refresh`'s `refreshIndexIfRacy`): run once the watch is
+   * live and after every write of the checkout's index it hears, one at a time
+   * per checkout. Our own reads may never write the index, so a whole-tree
+   * write's racily-clean entries would otherwise be re-hashed by every read the
+   * readers make, for as long as the checkout is read.
+   */
+  refreshIndex: (root: string) => Promise<void>;
 }
 
 /** `abs` relative to `dir`, or null when it is not inside it. */
@@ -235,6 +244,16 @@ export function createCheckoutWatchHub(deps: CheckoutWatchDeps) {
     const outside = watches.filter((w) => !inside(w.dir));
     let branch = await deps.readBranch(root);
     const headFiles = new Set([`${gitDir}/HEAD`, `${gitDir}/HEAD.lock`]);
+    const indexFile = `${gitDir}/index`;
+
+    // The index's trust, kept: checked when the watch opens and after each
+    // index write heard, one check at a time (writes landing meanwhile fold
+    // into one more). Its own publish is an index write too: heard, checked,
+    // found trusted — one read of the index file, no refresh.
+    const refresh = createCoalescer<void>({
+      name: "checkout-watch.refresh-index",
+      run: () => deps.refreshIndex(root),
+    });
 
     // Batches in order, one delivery at a time. A batch touching the working
     // tree first drops the paths git ignores (one `check-ignore` per batch
@@ -313,6 +332,7 @@ export function createCheckoutWatchHub(deps: CheckoutWatchDeps) {
         kept.push(ref === undefined ? c : { ...c, ref });
       }
       if (kept.length > 0) deliver.trigger(kept);
+      if (kept.some((c) => c.path === indexFile)) refresh.trigger();
     };
     // A loss skips the batch queue: a resync re-reads everything, so it need
     // not wait behind (or be filtered with) the batches still being read.
@@ -347,6 +367,7 @@ export function createCheckoutWatchHub(deps: CheckoutWatchDeps) {
       releaseAll();
       throw err;
     }
+    refresh.trigger();
     return releaseAll;
   });
 

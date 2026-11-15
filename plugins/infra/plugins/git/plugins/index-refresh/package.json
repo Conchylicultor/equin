@@ -1,0 +1,5 @@
+{
+  "name": "@equin/plugin-infra-git-index-refresh",
+  "private": true,
+  "version": "0.0.1"
+}

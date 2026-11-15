@@ -14,6 +14,7 @@ import {
   type CheckoutWatchRequest,
 } from "./hub";
 import { ignoredPaths } from "./ignored-paths";
+import { refreshIndexIfRacy } from "@plugins/infra/plugins/git/plugins/index-refresh/server";
 
 export type {
   CheckoutChange,
@@ -75,11 +76,25 @@ async function readBranch(root: string): Promise<CheckoutBranch> {
   }
 }
 
+/**
+ * Refresh the checkout's index when it holds racily-clean entries. A checkout
+ * reaped while watched has no index to keep: its readers hear the removal.
+ */
+async function refreshIndex(root: string): Promise<void> {
+  try {
+    await refreshIndexIfRacy(root);
+  } catch (err) {
+    if ((await dirOrNull(root)) === null) return;
+    throw err;
+  }
+}
+
 const hub = createCheckoutWatchHub({
   locate,
   readBranch,
   ignored: ignoredPaths,
   acquireDirWatch,
+  refreshIndex,
 });
 
 /**

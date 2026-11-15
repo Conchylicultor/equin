@@ -130,17 +130,20 @@ every path settles (fresh add, claimed spare — whose switch may move `bun.lock
 gate. Without it, a checkout's first program (the guard hook, not `./equin`)
 resolved npm packages by walking up into main's `node_modules`.
 
-## Every new checkout starts with a filled untracked cache (`server/internal/untracked-cache.ts`)
+## Every new checkout starts with a refreshed index (`infra/git/index-refresh`)
 
 No git read of ours writes a checkout's index (spawn's `GIT_OPTIONAL_LOCKS=0`),
-so a new checkout's untracked cache (`UNTR`) is empty until its first
-`./equin check` publishes one — and every `git status` in it (the edited-files
-pass) re-reads all ~9.6k directories (0.6–2.5 s vs 0.13–0.37 s filled).
+so a new checkout's untracked cache (`UNTR`) is empty, and the thousands of
+entries its checkout wrote in the index's own second are racily clean, until
+something rewrites it — and every `git status` in it (the edited-files pass)
+re-reads all ~9.6k directories (0.6–2.5 s vs 0.13–0.37 s filled) and re-hashes
+every racy file.
 
-- `setupWorktree` primes every checkout it wrote, after the install: `git status`
-  on a private index copy, published by compare-and-swap under `index.lock`
-  (`infra/git/private-index`, the protocol `computeTreeHash` publishes by too).
-  ~1 s, once.
+- `setupWorktree` refreshes every checkout it wrote, after the install
+  (`refreshCheckoutIndex`): `git status` on a private index copy, published by
+  compare-and-swap under `index.lock` (`infra/git/private-index`, the protocol
+  `computeTreeHash` publishes by too). ~1 s, once. Later index writes (a rebase,
+  a commit) are refreshed by `checkout-watch` while the checkout is watched.
 - `WorktreeSetup.untrackedCache`: `published` | `index-busy` | `index-changed` |
   `not-primed` (an `existing` checkout — an agent may be in it).
 - Never on a spare: the cache names the checkout's path, so the claim's move drops it.
@@ -350,6 +353,7 @@ pid liveness.
 
 - Server:
   - Uses:
+    - `infra/git/index-refresh.refreshCheckoutIndex`
     - `infra/host/host-admission.defineHostPool`
     - `infra/paths.GIT`
     - `infra/paths.worktreeArtifacts`
@@ -436,8 +440,7 @@ pid liveness.
 - Exemptions:
   - Exempts itself from:
     - `worktree/no-raw-worktree-git` — `.` (sanctioned)
-    - `boundaries/no-platform-api` — `server/internal/composition-namespace.ts`, `server/internal/dep-store-pool.ts`, `server/internal/install-checkout.ts`, `server/internal/rename-pool.ts`, `server/internal/spare-name.ts`, `server/internal/spare.ts`, `server/internal/spec.ts`, `server/internal/tree-pool.ts`, `server/internal/untracked-cache.ts`, `server/internal/worktree-op.ts`, `server/internal/worktree-op-marker.ts`, `server/internal/worktree.ts` (debt)
-    - `user-path/no-unproven-claim` — `server/internal/untracked-cache.ts` (sanctioned)
+    - `boundaries/no-platform-api` — `server/internal/composition-namespace.ts`, `server/internal/dep-store-pool.ts`, `server/internal/install-checkout.ts`, `server/internal/rename-pool.ts`, `server/internal/spare-name.ts`, `server/internal/spare.ts`, `server/internal/spec.ts`, `server/internal/tree-pool.ts`, `server/internal/worktree-op.ts`, `server/internal/worktree-op-marker.ts`, `server/internal/worktree.ts` (debt)
     - `user-path/no-unproven-claim` — `server/internal/worktree.ts` (sanctioned)
     - `blocking-fs/no-sync-fs` — `server/internal/worktree-op-marker.ts` (sanctioned)
     - `repo-walk-safety/no-adhoc-repo-listing` — `server/internal/worktree.ts` (sanctioned)

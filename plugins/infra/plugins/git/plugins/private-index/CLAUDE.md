@@ -24,7 +24,7 @@
 - Cross-plugin:
   - Imported by:
     - `framework/tooling/checks`
-    - `infra/worktree`
+    - `infra/git/index-refresh`
 - Exemptions:
   - Exempts itself from: `boundaries/no-platform-api` — `core/internal/private-index.ts` (debt)
 

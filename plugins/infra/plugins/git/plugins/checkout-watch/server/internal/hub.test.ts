@@ -127,6 +127,7 @@ function linkedHub(
   const dirs = fakeDirs();
   let probes = 0;
   const ignoreCalls: string[][] = [];
+  const refreshes: string[] = [];
   const hub = createCheckoutWatchHub({
     acquireDirWatch: dirs.acquireDirWatch,
     locate: async () => {
@@ -138,8 +139,9 @@ function linkedHub(
       ignoreCalls.push([...relPaths]);
       return ignored(root, relPaths);
     },
+    refreshIndex: async (root) => void refreshes.push(root),
   });
-  return { dirs, hub, probes: () => probes, ignoreCalls };
+  return { dirs, hub, probes: () => probes, ignoreCalls, refreshes };
 }
 
 const OWN: CheckoutBranch = {
@@ -350,6 +352,7 @@ describe("createCheckoutWatchHub", () => {
       }),
       readBranch: async () => OWN,
       ignored: IGNORES_NONE,
+      refreshIndex: async () => {},
     });
     const rejected = hub.acquire("/wt", {
       refs: ALSO_NONE,
@@ -358,6 +361,30 @@ describe("createCheckoutWatchHub", () => {
     expect(rejected).rejects.toThrow("ENOENT");
     expect(dirs.released).toEqual(["/wt"]);
     expect(hub.roots()).toEqual([]);
+  });
+
+  test("the index's trust is checked when the watch opens and after each index write it hears", async () => {
+    const { dirs, hub, refreshes } = linkedHub();
+    const release = await hub.acquire("/wt", {
+      refs: ALSO_NONE,
+      onChange: () => {},
+    });
+    await tick();
+    expect(refreshes).toEqual(["/wt"]);
+    // A second reader shares the watch: no second check.
+    await hub.acquire("/wt", { refs: ALSO_NONE, onChange: () => {} });
+    await tick();
+    expect(refreshes).toEqual(["/wt"]);
+    dirs.emit("/main/.git/worktrees/wt", "/main/.git/worktrees/wt/index");
+    await tick();
+    expect(refreshes).toEqual(["/wt", "/wt"]);
+    // Not HEAD, not a working-tree file, not the main checkout's own index.
+    dirs.emit("/main/.git/worktrees/wt", "/main/.git/worktrees/wt/HEAD");
+    dirs.emit("/wt", "/wt/src/a.ts");
+    dirs.emit("/main/.git", "/main/.git/index");
+    await tick();
+    expect(refreshes).toEqual(["/wt", "/wt"]);
+    release();
   });
 
   test("working-tree paths git ignores reach nobody; a mixed batch keeps the rest", async () => {
@@ -407,6 +434,7 @@ describe("createCheckoutWatchHub", () => {
       locate: async () => ({ ...LINKED, infoDir: null }),
       readBranch: async () => OWN,
       ignored: IGNORES_NONE,
+      refreshIndex: async () => {},
     });
     await hub.acquire("/wt", { refs: ALSO_NONE, onChange: () => {} });
     expect(dirs.acquired).toEqual([

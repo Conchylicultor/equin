@@ -38,10 +38,8 @@ import {
   harvestDepStore,
 } from "./dep-store-pool";
 import { installCheckout } from "./install-checkout";
-import {
-  primeUntrackedCache,
-  type UntrackedCachePrime,
-} from "./untracked-cache";
+import type { IndexPublish } from "@plugins/infra/plugins/git/plugins/private-index/core";
+import { refreshCheckoutIndex } from "@plugins/infra/plugins/git/plugins/index-refresh/server";
 import {
   emptyTreePool,
   harvestTree,
@@ -1460,10 +1458,10 @@ export interface WorktreeSetup {
   depStore: AdoptResult;
   /**
    * Whether this setup filled the checkout's untracked cache
-   * (`primeUntrackedCache`): only one it wrote is primed — an `existing` one
+   * (`refreshCheckoutIndex`, infra/git/index-refresh): only one it wrote is primed — an `existing` one
    * may have an agent working in it, and its first check run publishes one.
    */
-  untrackedCache: UntrackedCachePrime | "not-primed";
+  untrackedCache: IndexPublish | "not-primed";
 }
 
 /**
@@ -1566,7 +1564,7 @@ export async function setupWorktree(
     const untrackedCache =
       source === "existing"
         ? "not-primed"
-        : await primeUntrackedCache(wtPath, signal);
+        : await refreshCheckoutIndex(wtPath, signal);
     await stampMinter(id, minter);
     return { source, tree, depStore, untrackedCache };
   }
@@ -1609,8 +1607,8 @@ export async function setupWorktree(
     signal,
   );
   // Installed, at its final path, and nobody works in it yet — the one moment
-  // its untracked cache can be filled (see primeUntrackedCache).
-  const untrackedCache = await primeUntrackedCache(wtPath, signal);
+  // its untracked cache can be filled (see refreshCheckoutIndex).
+  const untrackedCache = await refreshCheckoutIndex(wtPath, signal);
   await stampMinter(id, minter);
   return { source, tree, depStore, untrackedCache };
 }
