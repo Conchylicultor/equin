@@ -38,12 +38,19 @@ dist.stats.html
 /.generated/
 /plugins/config_v2/web/internal/git-layer.generated.ts
 
-# Composition build-gating: per-worktree filtered registries emitted only by
-# `./equin build --hermetic --composition <name…>` (never committed;
-# siblings of the committed `<dir>.generated.ts`). The second pattern covers the per-name
-# auto-serve registries (`<dir>.composition.<name>.generated.ts`).
-*.composition.generated.ts
-*.composition.*.generated.ts
+# A composition's build output: its filtered registries
+# (`<dir>.composition.<id>.generated.ts`, siblings of the committed
+# `<dir>.generated.ts`) and its backend entry. EXACTLY the locations a build
+# writes (`compositionOutputIgnorePatterns`, codegen/composition-registries),
+# held equal by its `composition-outputs-ignored` check — never a broader pattern: an output
+# no build writes any more must be visible to git, so `build` / `push` delete it
+# instead of it hiding in every checkout forever.
+/plugins/framework/plugins/server-core/bin/index.composition.*.generated.ts
+/plugins/framework/plugins/server-core/core/machine.composition.*.generated.ts
+/plugins/framework/plugins/server-core/core/server.composition.*.generated.ts
+/plugins/framework/plugins/web-sdk/core/web.composition.*.generated.ts
+/plugins/infra/plugins/asset-mirror/core/prewarm.composition.*.generated.ts
+/plugins/infra/plugins/deps/core/deps.composition.*.generated.ts
 
 # Tauri desktop shell — generated/staged artifacts (the Rust project itself is
 # committed; these are produced per-release or per-build).

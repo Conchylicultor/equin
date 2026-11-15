@@ -50,6 +50,7 @@
     - `framework/cli/deploy`
     - `framework/cli/git-artifacts`
     - `framework/cli/migrations`
+    - `framework/cli/push`
     - `framework/cli/regen-generated`
     - `framework/cli/release`
     - `framework/cli/test`

@@ -4,10 +4,7 @@ import {
   sharedMemo,
   sharedWorkOver,
 } from "@plugins/packages/plugins/shared-work/core";
-import {
-  joinAppPath,
-  type AppPath,
-} from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
+import { type AppPath } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
 import { COMPOSITION_SPECIFIERS } from "@plugins/framework/plugins/tooling/plugins/web-artifacts/core";
 import { type PluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import type { RepoFiles } from "@plugins/framework/plugins/tooling/core";
@@ -35,10 +32,6 @@ import {
 } from "@plugins/plugin-meta/plugins/composition/core";
 import { MAIN_COMPOSITION_ID } from "@plugins/infra/plugins/namespace/core";
 import {
-  backendEntryFor,
-  SERVER_CORE_RELATIVE,
-} from "@plugins/infra/plugins/paths/core";
-import {
   classifyEdges,
   type EdgeGraph,
 } from "@plugins/plugin-meta/plugins/closure/core";
@@ -47,9 +40,9 @@ import {
   type DiscoveredCollectedDir,
 } from "@plugins/framework/plugins/tooling/plugins/collected-dir/plugins/discovery/core";
 import {
-  collectedDirNamedCompositionRegistryPath,
   collectedDirRegistryPath,
-  COMPOSITION_RUNTIME_DIRS,
+  compositionOutputLocations,
+  compositionOutputPath,
   compositionRegistryFileName,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/plugins/composition-registries/core";
 import { resolveMainComposition } from "./main-bundle";
@@ -951,14 +944,17 @@ export async function generateCompositionRegistry(opts: {
       opts.home,
     ),
   };
-  const defs = await discoverCollectedDirsIn(await ctx.repo());
-  for (const def of defs) {
-    if (!COMPOSITION_RUNTIME_DIRS.has(def.dir)) continue;
+  // Every file is written at one of `compositionOutputLocations` — the list the
+  // reclaim listing and the `.gitignore` patterns read too, so nothing this
+  // writes can land where reclaim does not look or git does not ignore.
+  const locations = await compositionOutputLocations(await ctx.repo());
+  for (const loc of locations) {
+    if (loc.def === null) continue;
     await writeGenerated({
-      file: collectedDirNamedCompositionRegistryPath(def, opts.name),
+      file: compositionOutputPath(loc, opts.name),
       content: await renderCollectedDirRegistry({
         ctx,
-        def,
+        def: loc.def,
         bundle: opts.bundle,
         composition,
       }),
@@ -966,15 +962,13 @@ export async function generateCompositionRegistry(opts: {
   }
   // The backend that boots those registries: its serving entry, written last
   // so it never names a registry not yet on disk.
-  await writeGenerated({
-    file: backendEntryPath(ctx.root, opts.name),
-    content: renderBackendEntry(opts.name),
-  });
-}
-
-/** The serving entry of `composition`'s backend in the checkout at `root`. */
-function backendEntryPath(root: AppPath, composition: string): AppPath {
-  return joinAppPath(root, SERVER_CORE_RELATIVE, backendEntryFor(composition));
+  for (const loc of locations) {
+    if (loc.def !== null) continue;
+    await writeGenerated({
+      file: compositionOutputPath(loc, opts.name),
+      content: renderBackendEntry(opts.name),
+    });
+  }
 }
 
 /**

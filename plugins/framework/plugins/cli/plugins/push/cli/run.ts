@@ -62,6 +62,8 @@ import { fixClaimCarrier } from "./fix-claim";
 import { runLandPhase, takeLandPayload } from "./handoff";
 import { resolveFixedReports } from "@plugins/reports/plugins/engine/cli";
 import { landPush } from "./land";
+import { loadRepoFiles } from "@plugins/framework/plugins/tooling/core";
+import { removeDeadCompositionOutputs } from "@plugins/framework/plugins/tooling/plugins/codegen/plugins/composition-registries/core";
 
 // The three facts that decide HOW this branch is made to land on main.
 interface LandingShape {
@@ -549,6 +551,16 @@ const pushAction: CliAction<
     profiler.waitEnd();
     profiler.markGranted();
   };
+
+  // 1a. A per-composition output git sees is one no build writes any more —
+  //     an older build's leftover at a location `.gitignore` stopped hiding
+  //     (`deadCompositionOutputs`). Deleted before the commit below, which
+  //     would otherwise commit it.
+  for (const rel of await removeDeadCompositionOutputs(
+    await loadRepoFiles(root0),
+  )) {
+    console.log(`Removed a per-composition output no build writes: ${rel}`);
+  }
 
   // 1. Commit if -m provided, otherwise require clean tree
   const status = await run(["git", "status", "--porcelain"]);

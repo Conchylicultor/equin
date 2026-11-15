@@ -32052,6 +32052,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework/cli/deploy`
           - `framework/cli/git-artifacts`
           - `framework/cli/migrations`
+          - `framework/cli/push`
           - `framework/cli/regen-generated`
           - `framework/cli/release`
           - `framework/cli/test`
@@ -32623,7 +32624,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                     - Uses: `framework/tooling/checks/type-check.readTypeCheckTree`
         - **`codegen`** — Plugin doc generation and registry codegen
           - Core:
-            - Uses: 165 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
+            - Uses: 163 symbols — full list in [`plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/codegen/REFERENCE.md)
               - `plugin-meta/parse-utils` ×17
               - `config_v2` ×16
               - `framework/plugin-id` ×13
@@ -32647,7 +32648,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/tooling/collected-dir/discovery` ×2
               - `framework/tooling/lint` ×2
               - `framework/tooling/web-artifacts` ×2
-              - `infra/paths` ×2
               - `network/live/resource-protocol` ×2
               - `packages/macrotask-yield` ×2
               - `plugin-meta/parse-utils/source-files` ×2
@@ -32837,7 +32837,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `blocking-fs/sync-named` — `core/authored-override-seed.ts`, `core/barrel-stubs-gen.ts`, `core/claude-settings-gen.ts`, `core/config-origin-gen.ts`, `core/custom-utilities-gen.ts`, `core/declared-apps.ts`, `core/docgen.ts`, `core/evaluated-barrels.ts`, `core/file-config-proxy.ts`, `core/git-layer-config.ts`, `core/override-legend-stamp.ts`, `core/pre-barrel-guard.ts`, `core/slot-declaration-guard.ts`, `core/space-ramp-gen.ts`, `core/symbol-names-gen.ts`, `core/test-helpers-doc.ts`, `core/write-generated.ts` (sanctioned)
               - `source-read-safety/no-text-source-read` — `check/index.ts` (debt)
           - Plugins:
-            - **`composition-registries`** — The per-composition registry files' grammar and listing: where a composition's `<dir>` registry lives (main's is the committed `<dir>.generated.ts`, any other's the gitignored `<dir>.composition.<id>.generated.ts`), which collected dirs get one, and every per-name registry and backend entry on disk — without the build pipeline, so a serving backend (worktree reclaim) can list them.
+            - **`composition-registries`** — The per-composition registry files' grammar and listing: where a composition's `<dir>` registry lives (main's is the committed `<dir>.generated.ts`, any other's the gitignored `<dir>.composition.<id>.generated.ts`), which collected dirs get one, the one list of locations a composition's build writes (read by the writer, the on-disk listing worktree reclaim uses, and the `.gitignore` patterns its composition-outputs-ignored check holds equal), and the dead outputs — per-composition files git sees, left at a location no build writes any more — that build and push delete.
               - Core:
                 - Uses:
                   - `framework/tooling/collected-dir/discovery.discoverCollectedDirsIn`
@@ -32846,21 +32846,31 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `infra/host-fs/user-path.joinAppPath`
                   - `infra/namespace.MAIN_COMPOSITION_ID`
                   - `infra/paths.SERVER_CORE_RELATIVE`
+                  - `infra/spawn.spawnExpectOk`
                   - `packages/timed-fs.readdir`
                   - `plugin-meta/composition.assertCompositionName`
+                - Exports (types): `CompositionOutputLocation`
                 - Exports (values):
                   - `collectedDirNamedCompositionRegistryPath`
                   - `collectedDirRegistryPath`
                   - `COMPOSITION_RUNTIME_DIRS`
                   - `compositionFilteredRegistries`
+                  - `compositionOutputIgnorePatterns`
+                  - `compositionOutputLocations`
+                  - `compositionOutputPath`
                   - `compositionRegistryFileName`
                   - `compositionRegistryPath`
                   - `compositionRegistryRedirects`
+                  - `deadCompositionOutputs`
+                  - `isCompositionOutputName`
                   - `listNamedCompositionRegistries`
                   - `parseNamedCompositionRegistryFileName`
+                  - `removeDeadCompositionOutputs`
               - Cross-plugin:
                 - Imported by:
                   - `framework/cli/build`
+                  - `framework/cli/git-artifacts`
+                  - `framework/cli/push`
                   - `framework/cli/release`
                   - `framework/tooling/codegen`
                   - `infra/worktree/reclaim`
@@ -38301,9 +38311,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `worktreeDataDir`
           - `worktreesDir`
       - Cross-plugin:
-        - Imported by: 132 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
+        - Imported by: 131 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
           - `infra` ×31
-          - `framework` ×21
+          - `framework` ×20
           - `apps` ×18
           - `debug` ×15
           - `conversations` ×7
@@ -39175,8 +39185,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `spawnPassthrough`
           - `spawnToFile`
       - Cross-plugin:
-        - Imported by: 95 plugins — full list in [`plugins/infra/plugins/spawn/REFERENCE.md`](../plugins/infra/plugins/spawn/REFERENCE.md)
-          - `framework` ×30
+        - Imported by: 96 plugins — full list in [`plugins/infra/plugins/spawn/REFERENCE.md`](../plugins/infra/plugins/spawn/REFERENCE.md)
+          - `framework` ×31
           - `infra` ×25
           - `apps` ×9
           - `debug` ×5

@@ -10,6 +10,7 @@ import {
   readMergeMarkers,
 } from "@plugins/framework/plugins/cli/core";
 import { loadRepoFiles } from "@plugins/framework/plugins/tooling/core";
+import { removeDeadCompositionOutputs } from "@plugins/framework/plugins/tooling/plugins/codegen/plugins/composition-registries/core";
 import { LEGACY_IDS } from "@plugins/framework/plugins/product-name/core";
 
 // Wedge-breaker for the local `git` metadata reads in this file — orders of
@@ -107,6 +108,16 @@ export async function normalizeGeneratedArtifacts(
       ? `Normalizing artifacts auto-resolved during merge (${markers.join(", ")})...`
       : "Regenerating every artifact from the merged sources (no merge marker to go on)...",
   );
+
+  // A rebase can bring in a narrower `.gitignore` that un-hides an older
+  // build's per-composition output (one no build writes any more): delete it
+  // before the regen reads the tree and before the amend below, whose
+  // `git add -A` would commit it. See `deadCompositionOutputs`.
+  for (const rel of await removeDeadCompositionOutputs(
+    await loadRepoFiles(root),
+  )) {
+    console.log(`Removed a per-composition output no build writes: ${rel}`);
+  }
 
   if (regenMigrations) {
     await exec(

@@ -99,6 +99,8 @@ import { assertPrerequisites } from "@plugins/framework/plugins/cli/plugins/doct
 import { installLockedToolchain } from "@plugins/infra/plugins/deps/plugins/mise/core";
 import { clearMergeMarkers } from "@plugins/framework/plugins/cli/core";
 import { markBuildInProgress } from "@plugins/framework/plugins/tooling/plugins/checks/core";
+import { loadRepoFiles } from "@plugins/framework/plugins/tooling/core";
+import { removeDeadCompositionOutputs } from "@plugins/framework/plugins/tooling/plugins/codegen/plugins/composition-registries/core";
 import {
   closeAdminPool,
   listDatabases,
@@ -1244,6 +1246,17 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
       // reports only the docs that rewrote. See ./internal/moved-plugin-leftovers.ts.
       if (checkout.kind === "main") {
         await assertNoMoveLeftovers(root);
+      }
+
+      // A per-composition output git sees is one no build writes any more
+      // (`.gitignore` hides exactly the live locations), left by an older
+      // build: deleted before the snapshot below, so main's guard compares a
+      // tree without it and no step reads it as source. See
+      // `deadCompositionOutputs` (codegen/composition-registries).
+      for (const rel of await removeDeadCompositionOutputs(
+        await loadRepoFiles(root),
+      )) {
+        console.log(`Removed a per-composition output no build writes: ${rel}`);
       }
 
       // Main's tree as git sees it BEFORE the first writer below — compared after

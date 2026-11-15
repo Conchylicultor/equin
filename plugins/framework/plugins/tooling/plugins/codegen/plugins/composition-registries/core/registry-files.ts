@@ -1,9 +1,11 @@
 import { readdir } from "@plugins/packages/plugins/timed-fs/core";
+import { rm } from "node:fs/promises";
+import { spawnExpectOk } from "@plugins/infra/plugins/spawn/core";
 import {
   joinAppPath,
   type AppPath,
 } from "@plugins/infra/plugins/host-fs/plugins/user-path/core";
-import { join } from "path";
+import { basename, join, relative } from "path";
 import { assertCompositionName } from "@plugins/plugin-meta/plugins/composition/core";
 import { MAIN_COMPOSITION_ID } from "@plugins/infra/plugins/namespace/core";
 import { SERVER_CORE_RELATIVE } from "@plugins/infra/plugins/paths/core";
@@ -48,9 +50,7 @@ export function collectedDirRegistryPath(def: DiscoveredCollectedDir): AppPath {
 // `prewarm` is in this ONE set (rather than a released-only sibling set)
 // because release is its only consumer and release is now per-name too — which
 // also means `listNamedCompositionRegistries` lists prewarm files, so
-// a future reclaim sweep would list prewarm files like any other. (Nothing
-// sweeps today — the compose-serve deactivation stage that used to was deleted
-// with the serve fan-out; Phase 5 owns the replacement.)
+// worktree reclaim deletes them like any other.
 export const COMPOSITION_RUNTIME_DIRS: ReadonlySet<string> = new Set([
   "web",
   "server",
@@ -158,27 +158,182 @@ export function parseNamedCompositionRegistryFileName(
   return { dir: m[1]!, name: m[2]! };
 }
 
+// ── Where a composition's build writes ──────────────────────────────
+//
+// ONE list of locations, read by everything that touches these files: the
+// writer (`generateCompositionRegistry`), the listing (reclaim, the resident-
+// composition replan), and the `.gitignore` patterns that hide them
+// (`compositionOutputIgnorePatterns`, held equal to `.gitignore` by this
+// plugin's `composition-outputs-ignored` check).
+//
+// That last equality is what keeps a RETIRED output from lingering. `.gitignore`
+// hides exactly the locations a build writes today, nothing broader, so when a
+// writer stops writing somewhere its pattern leaves `.gitignore` with it and
+// whatever older builds left there becomes a file git SEES. A per-composition
+// output git sees is therefore dead by construction (`deadCompositionOutputs`),
+// and every pass root that would otherwise read or commit it — `build` before
+// its first writer, `push` before its commit — deletes it. A broad
+// `*.composition.*.generated.ts` pattern hid such files forever: the post-web
+// manifests' `apps.composition.<id>` / `theme-declarations.composition.<id>`
+// copies outlived their writer in every checkout that had built a composition.
+
+/** One place a composition's build writes a file, whatever the composition. */
+export interface CompositionOutputLocation {
+  /** The folder the file is written to. */
+  folder: AppPath;
+  /** The file name's stem: the collected dir's `dir`, `index` for the backend entry. */
+  stem: string;
+  /**
+   * What `listNamedCompositionRegistries` calls it: the collected dir, or
+   * `bin` (the folder it sits in) for the backend entry.
+   */
+  listedAs: string;
+  /** The collected dir whose filtered registry this is; null for the backend entry. */
+  def: DiscoveredCollectedDir | null;
+}
+
+/**
+ * Every location a non-main composition's build writes: each filtered
+ * registry (`COMPOSITION_RUNTIME_DIRS`, in its collected dir's `core/`) and
+ * the composition's backend entry (`bin/index.composition.<id>.generated.ts`,
+ * written last by the writer so it never names a registry not yet on disk).
+ */
+export async function compositionOutputLocations(
+  repo: RepoFiles,
+): Promise<CompositionOutputLocation[]> {
+  const registries = (await compositionFilteredRegistries(repo)).map(
+    ({ def }): CompositionOutputLocation => ({
+      folder: joinAppPath(def.ownerDir, "core"),
+      stem: def.dir,
+      listedAs: def.dir,
+      def,
+    }),
+  );
+  return [
+    ...registries,
+    {
+      folder: joinAppPath(repo.root, SERVER_CORE_RELATIVE, "bin"),
+      stem: "index",
+      listedAs: "bin",
+      def: null,
+    },
+  ];
+}
+
+/** The file `composition`'s build writes at `location`. */
+export function compositionOutputPath(
+  location: CompositionOutputLocation,
+  composition: string,
+): AppPath {
+  assertCompositionName(composition);
+  if (composition === MAIN_COMPOSITION_ID) {
+    // Main's registries and entry are the committed files, never a sibling.
+    throw new Error(
+      `compositionOutputPath: the main composition writes no per-composition file (${location.stem})`,
+    );
+  }
+  return joinAppPath(
+    location.folder,
+    compositionRegistryFileName(location.stem, composition),
+  );
+}
+
+/**
+ * The `.gitignore` lines that hide every composition's outputs and nothing
+ * else: one anchored pattern per location, `*` standing for the id (a `*`
+ * never crosses a `/`). `.gitignore` holds exactly these — the
+ * `composition-outputs-ignored` check — so a retired location is visible to git.
+ */
+export async function compositionOutputIgnorePatterns(
+  repo: RepoFiles,
+): Promise<string[]> {
+  return (await compositionOutputLocations(repo))
+    .map(
+      (loc) =>
+        `/${relative(repo.root, loc.folder)}/${loc.stem}.composition.*.generated.ts`,
+    )
+    .sort();
+}
+
+/**
+ * Whether a file name is spelled like a per-composition output — any stem,
+ * any composition id, or none (the retired singleton
+ * `<dir>.composition.generated.ts`).
+ */
+export function isCompositionOutputName(fileName: string): boolean {
+  return /^[^/]+\.composition\.(?:[^/]+\.)?generated\.ts$/.test(fileName);
+}
+
+/**
+ * The per-composition outputs in `repo`'s file set (tracked +
+ * untracked-not-ignored), repo-relative. Every live one is gitignored (the
+ * `composition-outputs-ignored` check), so each of these is one no build writes any more
+ * — left by an older build, at a location `.gitignore` stopped hiding — and
+ * nothing reads it. The pass roots delete them (`removeDeadCompositionOutputs`).
+ */
+export function deadCompositionOutputs(repo: RepoFiles): string[] {
+  return repo.all().filter((p) => isCompositionOutputName(basename(p)));
+}
+
+/**
+ * Delete every UNTRACKED dead per-composition output in `repo`'s file set
+ * (`deadCompositionOutputs`) and answer the repo-relative paths deleted, for
+ * the caller to log. A tracked one is left alone — it is someone's commit, and
+ * the `composition-outputs-ignored` check fails on it by name. Called by `build` before
+ * its first writer, by `push` before its commit and by the post-rebase
+ * normalize before its amend, so a dead copy is neither read as source nor
+ * committed.
+ */
+export async function removeDeadCompositionOutputs(
+  repo: RepoFiles,
+): Promise<string[]> {
+  const dead = deadCompositionOutputs(repo);
+  if (dead.length === 0) return [];
+  // `??` in `git status` is untracked-not-ignored: exactly the leftovers.
+  const status = await spawnExpectOk(
+    [
+      "git",
+      "--no-optional-locks",
+      "status",
+      "--porcelain=v1",
+      "-z",
+      "--untracked-files=all",
+      "--",
+      ...dead.map((p) => `:(literal)${p}`),
+    ],
+    { cwd: repo.root, timeoutMs: GIT_TIMEOUT_MS },
+  );
+  const untracked = status.stdout
+    .split("\0")
+    .filter((rec) => rec.startsWith("?? "))
+    .map((rec) => rec.slice(3));
+  for (const rel of untracked) {
+    await rm(join(repo.root, rel), { force: true });
+  }
+  return untracked;
+}
+
+// Wedge-breaker for one pathspec-scoped status: far above any real duration.
+const GIT_TIMEOUT_MS = 60_000;
+
 /**
  * Every per-name composition registry currently on disk, and every
- * composition's backend entry (`bin/index.composition.<name>.generated.ts`) — the auto-serve
- * stage's sweep input (delete the entries whose name is no longer activated).
+ * composition's backend entry (`bin/index.composition.<name>.generated.ts`) —
+ * read from the locations a build writes (`compositionOutputLocations`), so
+ * the listing and the writer cannot disagree on where to look. Reclaim's
+ * input (delete the files of a composition no longer served from here).
  *
- * The owning plugins are discovered from the caller's file set. The per-name
- * registries themselves are GITIGNORED, so no file set holds them: reading the
- * (at most five) owning `core/` directories is the only way to see them.
+ * The per-name files themselves are GITIGNORED, so no file set holds them:
+ * reading the (at most six) owning folders is the only way to see them.
  */
 export async function listNamedCompositionRegistries(
   repo: RepoFiles,
 ): Promise<Array<{ dir: string; name: string; file: string }>> {
-  const root = repo.root;
   const out: Array<{ dir: string; name: string; file: string }> = [];
-  for (const def of await discoverCollectedDirsIn(repo)) {
-    if (!COMPOSITION_RUNTIME_DIRS.has(def.dir)) continue;
-    // The plugin dir of a collected dir of this checkout.
-    const coreDir = joinAppPath(def.ownerDir, "core");
+  for (const loc of await compositionOutputLocations(repo)) {
     let entries;
     try {
-      entries = await readdir(coreDir, { withFileTypes: true });
+      entries = await readdir(loc.folder, { withFileTypes: true });
     } catch (err) {
       if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
       continue;
@@ -186,26 +341,13 @@ export async function listNamedCompositionRegistries(
     for (const entry of entries) {
       if (!entry.isFile()) continue;
       const parsed = parseNamedCompositionRegistryFileName(entry.name);
-      if (parsed === null || parsed.dir !== def.dir) continue;
-      out.push({ ...parsed, file: join(coreDir, entry.name) });
+      if (parsed === null || parsed.dir !== loc.stem) continue;
+      out.push({
+        dir: loc.listedAs,
+        name: parsed.name,
+        file: join(loc.folder, entry.name),
+      });
     }
-  }
-  // Each composition's backend entry, written with its registries
-  // (`generateCompositionRegistry`) and reclaimed with them. Listed as dir
-  // `bin`, the folder it sits in.
-  const binDir = joinAppPath(root, SERVER_CORE_RELATIVE, "bin");
-  let binEntries;
-  try {
-    binEntries = await readdir(binDir, { withFileTypes: true });
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
-    return out;
-  }
-  for (const entry of binEntries) {
-    if (!entry.isFile()) continue;
-    const parsed = parseNamedCompositionRegistryFileName(entry.name);
-    if (parsed === null || parsed.dir !== "index") continue;
-    out.push({ dir: "bin", name: parsed.name, file: join(binDir, entry.name) });
   }
   return out;
 }

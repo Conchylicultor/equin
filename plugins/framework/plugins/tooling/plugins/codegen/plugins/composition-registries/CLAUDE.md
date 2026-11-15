@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: The per-composition registry files' grammar and listing: where a composition's `<dir>` registry lives (main's is the committed `<dir>.generated.ts`, any other's the gitignored `<dir>.composition.<id>.generated.ts`), which collected dirs get one, and every per-name registry and backend entry on disk — without the build pipeline, so a serving backend (worktree reclaim) can list them.
+- Description: The per-composition registry files' grammar and listing: where a composition's `<dir>` registry lives (main's is the committed `<dir>.generated.ts`, any other's the gitignored `<dir>.composition.<id>.generated.ts`), which collected dirs get one, the one list of locations a composition's build writes (read by the writer, the on-disk listing worktree reclaim uses, and the `.gitignore` patterns its composition-outputs-ignored check holds equal), and the dead outputs — per-composition files git sees, left at a location no build writes any more — that build and push delete.
 - Core:
   - Uses:
     - `framework/tooling/collected-dir/discovery.discoverCollectedDirsIn`
@@ -13,21 +13,31 @@
     - `infra/host-fs/user-path.joinAppPath`
     - `infra/namespace.MAIN_COMPOSITION_ID`
     - `infra/paths.SERVER_CORE_RELATIVE`
+    - `infra/spawn.spawnExpectOk`
     - `packages/timed-fs.readdir`
     - `plugin-meta/composition.assertCompositionName`
+  - Exports (types): `CompositionOutputLocation`
   - Exports (values):
     - `collectedDirNamedCompositionRegistryPath`
     - `collectedDirRegistryPath`
     - `COMPOSITION_RUNTIME_DIRS`
     - `compositionFilteredRegistries`
+    - `compositionOutputIgnorePatterns`
+    - `compositionOutputLocations`
+    - `compositionOutputPath`
     - `compositionRegistryFileName`
     - `compositionRegistryPath`
     - `compositionRegistryRedirects`
+    - `deadCompositionOutputs`
+    - `isCompositionOutputName`
     - `listNamedCompositionRegistries`
     - `parseNamedCompositionRegistryFileName`
+    - `removeDeadCompositionOutputs`
 - Cross-plugin:
   - Imported by:
     - `framework/cli/build`
+    - `framework/cli/git-artifacts`
+    - `framework/cli/push`
     - `framework/cli/release`
     - `framework/tooling/codegen`
     - `infra/worktree/reclaim`
