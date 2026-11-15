@@ -206,19 +206,33 @@ export type TranscriptImageReader = (
 /**
  * A `queued_command` attachment carrying a human prompt (`commandMode`
  * "prompt", or none on older lines) — not a harness control message such as a
- * task notification — with the uuid it was sent under.
+ * task notification — with the uuid it was sent under. A prompt sent as
+ * content blocks (text, then the images its `@<path>` references name — see
+ * the sdk agent's `promptContent`) is its text blocks: the text draws those
+ * images itself.
  */
 function humanQueuedPrompt(
   att: Record<string, unknown>,
 ): { prompt: string; uuid: string | undefined } | null {
-  if (att.type !== "queued_command" || typeof att.prompt !== "string") {
-    return null;
-  }
+  if (att.type !== "queued_command") return null;
   if (att.commandMode !== undefined && att.commandMode !== "prompt") {
     return null;
   }
+  const prompt =
+    typeof att.prompt === "string"
+      ? att.prompt
+      : Array.isArray(att.prompt)
+        ? (att.prompt as (RawBlock | null)[])
+            .flatMap((block) =>
+              block?.type === "text" && typeof block.text === "string"
+                ? [block.text]
+                : [],
+            )
+            .join("\n")
+        : null;
+  if (prompt === null) return null;
   return {
-    prompt: att.prompt,
+    prompt,
     uuid: typeof att.source_uuid === "string" ? att.source_uuid : undefined,
   };
 }
@@ -241,7 +255,7 @@ async function pushTextWithImages(
   uuid: string | undefined,
   merged: string[],
   readImage: TranscriptImageReader,
-): Promise<void> {
+): Promise<number> {
   // Local regex instance — the g flag stores match state in lastIndex, so a
   // shared module-level regex gets corrupted when concurrent async calls
   // (from the file watcher) interleave at await points.
@@ -278,7 +292,7 @@ async function pushTextWithImages(
   const after = text.slice(last);
   if (after) segments.push({ kind: "text", value: after });
 
-  if (segments.length === 0) return;
+  if (segments.length === 0) return 0;
 
   if (!hasImages) {
     if (text.trim()) {
@@ -290,7 +304,7 @@ async function pushTextWithImages(
         ...mergedOf(uuid, merged),
       });
     }
-    return;
+    return 0;
   }
 
   const plainText = segments
@@ -306,6 +320,7 @@ async function pushTextWithImages(
     uuid,
     ...mergedOf(uuid, merged),
   });
+  return segments.filter((s) => s.kind === "image").length;
 }
 
 interface RawBlock {
@@ -647,7 +662,8 @@ export class JsonlEventBuilder {
   // and the array text-block branch. In order: lift the launch preprompt,
   // decode any harness relay envelopes, extract teammate-message blocks (each
   // emitted as its own event), strip the relay scaffolding, then route the rest
-  // through task-notification extraction + image-aware push.
+  // through task-notification extraction + image-aware push. Answers how many
+  // images the text drew from its `@<path>` references.
   private async processUserText(
     rawText: string,
     ts: string,
@@ -655,7 +671,7 @@ export class JsonlEventBuilder {
     lineUuid: string | undefined,
     // The other sends the CLI merged into this line (`mergedSendUuids`).
     merged: string[],
-  ): Promise<void> {
+  ): Promise<number> {
     // First, before anything looks for a tag: the CLI wraps whatever it took
     // as a paste, so a relay envelope or a task-notification pasted into the
     // prompt would otherwise stay hidden inside `<pasted_content>`.
@@ -672,7 +688,7 @@ export class JsonlEventBuilder {
         uuid: lineUuid,
         ...mergedOf(lineUuid, merged),
       });
-      return;
+      return 0;
     }
     if (!this.seenPreprompt) {
       const { preprompt, rest } = extractPreprompt(body);
@@ -703,16 +719,15 @@ export class JsonlEventBuilder {
         ? stripRelayBoilerplate(afterTeammates)
         : afterTeammates;
     const remaining = extractTaskNotifications(body, ts, this.sink);
-    if (remaining.length > 0) {
-      await pushTextWithImages(
-        remaining,
-        ts,
-        this.sink,
-        promptUuid,
-        merged,
-        this.readImage,
-      );
-    }
+    if (remaining.length === 0) return 0;
+    return pushTextWithImages(
+      remaining,
+      ts,
+      this.sink,
+      promptUuid,
+      merged,
+      this.readImage,
+    );
   }
 
   /** Fold the next lines of the live branch, in chain order. */
@@ -850,6 +865,12 @@ export class JsonlEventBuilder {
           // The same predicate a rewind applies to an answer it cuts at.
           const answerUuid =
             uuid && questionAnswerText(obj) !== null ? uuid : undefined;
+          // A prompt equin sent carries each attached image twice: its
+          // `@<path>` in the text (what the user wrote, and the path the
+          // agent can hand on) and the image itself after it (so the model
+          // sees it without a Read). The text already draws those, so as many
+          // image blocks as it drew are not drawn again.
+          let drawnByText = 0;
           for (const block of content as RawBlock[]) {
             // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard; JSON array may contain null/undefined elements
             if (block?.type === "tool_result") {
@@ -878,7 +899,7 @@ export class JsonlEventBuilder {
               block?.type === "text" &&
               typeof block.text === "string"
             ) {
-              await this.processUserText(
+              drawnByText += await this.processUserText(
                 block.text,
                 ts,
                 promptUuid,
@@ -891,6 +912,10 @@ export class JsonlEventBuilder {
               block.source?.type === "ref" &&
               typeof block.source.data === "string"
             ) {
+              if (drawnByText > 0) {
+                drawnByText -= 1;
+                continue;
+              }
               // `TranscriptLines` put the image's key where its bytes were.
               this.emit({
                 kind: "user-image",

@@ -9,6 +9,7 @@ export { type ConversationEntry } from "./resources";
 export { hibernationConfig } from "./hibernation-config";
 export {
   attachmentDiskRef,
+  attachmentImagePathsOf,
   attachmentRefsOf,
   isAttachmentDiskPath,
 } from "./attachment-refs";

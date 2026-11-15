@@ -44,6 +44,7 @@ import { provideHostServicesUnbooted } from "@plugins/framework/plugins/server-c
 import { SecretStore } from "@plugins/infra/plugins/secrets/server";
 import { centralSecretStore } from "@plugins/infra/plugins/secrets/cli";
 import { basename, dirname, join } from "node:path";
+import { promptContent } from "./prompt-content";
 import { parseArgs } from "node:util";
 import { ZodError, z } from "zod";
 import {
@@ -380,7 +381,7 @@ function pushInput(text: string, turnId: string | null): string {
     message: {
       type: "user",
       uuid,
-      message: { role: "user", content: text },
+      message: { role: "user", content: promptContent(text) },
       parent_tool_use_id: null,
     },
     turnId,

@@ -225,6 +225,7 @@ is the pure `planConversationUpdate` (`plan-update.ts`).
     - `RewindRefusal`
   - Exports (values):
     - `attachmentDiskRef`
+    - `attachmentImagePathsOf`
     - `attachmentRefsOf`
     - `BackgroundWorkSchema`
     - `canSendTurn`

@@ -63,3 +63,16 @@ export function attachmentRefsOf(text: string): string {
     },
   );
 }
+
+/**
+ * The stored files of the images a prompt hands the agent as
+ * `@<attachment disk path>`, in order, each once — what the sdk agent sends
+ * the model as image blocks beside the text, so it sees them without a Read.
+ */
+export function attachmentImagePathsOf(text: string): string[] {
+  const paths = new Set<string>();
+  for (const [, path, , ext] of text.matchAll(DISK_REF_RE)) {
+    if (IMAGE_EXTS.has(ext?.toLowerCase() ?? "")) paths.add(path!);
+  }
+  return [...paths];
+}

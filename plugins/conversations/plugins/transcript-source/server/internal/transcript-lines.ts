@@ -256,6 +256,18 @@ function dropUnreadPayloads(line: Record<string, unknown>): void {
       }
     }
   }
+  // A prompt queued while the agent worked keeps its images in the
+  // attachment; the event builder reads only its text (`humanQueuedPrompt`).
+  const attachment = line.attachment as
+    { type?: unknown; prompt?: unknown } | undefined;
+  if (
+    attachment?.type === "queued_command" &&
+    Array.isArray(attachment.prompt)
+  ) {
+    attachment.prompt = (
+      attachment.prompt as ({ type?: unknown } | null)[]
+    ).filter((block) => block?.type !== "image");
+  }
   const result = line.toolUseResult;
   if (result === undefined) return;
   if (

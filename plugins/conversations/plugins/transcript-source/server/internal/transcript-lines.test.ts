@@ -214,6 +214,80 @@ describe("TranscriptLines image sizes", () => {
   });
 });
 
+describe("a prompt carrying its attached images", () => {
+  // What the sdk agent sends: the text with each image's `@<path>`, then the
+  // image itself as a block.
+  const png = btoa(String.fromCharCode(0x89, 0x50, 0x4e, 0x47));
+  const image = { type: "base64", media_type: "image/png", data: png };
+  const text = "look @/data/attachments/shot.png here";
+  const reader = (path: string) =>
+    Promise.resolve(
+      path === "/data/attachments/shot.png" ? { key: "k1" } : null,
+    );
+
+  const eventsOf = async (
+    lines: Record<string, unknown>[],
+    readImage = reader,
+  ) => {
+    const held = new TranscriptLines(readImage);
+    const bytes = new TextEncoder().encode(
+      lines.map((l) => JSON.stringify(l)).join("\n") + "\n",
+    );
+    await held.catchUp("a.jsonl", bytes.length, wholeBytes(bytes));
+    return held.events();
+  };
+  const promptLine = {
+    type: "user",
+    uuid: "u1",
+    parentUuid: null,
+    timestamp: T1,
+    message: {
+      role: "user",
+      content: [
+        { type: "text", text },
+        { type: "image", source: image },
+      ],
+    },
+  };
+
+  test("draws each image once — in the text, where the user wrote it", async () => {
+    const events = await eventsOf([promptLine]);
+    expect(events.filter((e) => e.kind === "user-image")).toEqual([]);
+    const row = events.find((e) => e.kind === "user-text");
+    expect(
+      row?.kind === "user-text" && row.segments?.map((s) => s.kind),
+    ).toEqual(["text", "image", "text"]);
+  });
+
+  test("an image block the text could not draw is still drawn", async () => {
+    const events = await eventsOf([promptLine], () => Promise.resolve(null));
+    expect(events.filter((e) => e.kind === "user-image")).toHaveLength(1);
+  });
+
+  test("queued while the agent worked, it is the user's message", async () => {
+    const events = await eventsOf([
+      {
+        type: "attachment",
+        uuid: "q1",
+        parentUuid: null,
+        timestamp: T1,
+        attachment: {
+          type: "queued_command",
+          commandMode: "prompt",
+          source_uuid: "s1",
+          prompt: [
+            { type: "text", text },
+            { type: "image", source: image },
+          ],
+        },
+      },
+    ]);
+    const row = events.find((e) => e.kind === "user-text");
+    expect(row?.kind === "user-text" && row.uuid).toBe("s1");
+    expect(row?.kind === "user-text" && row.text).toBe("look  here");
+  });
+});
+
 describe("TranscriptLines catch-ups", () => {
   const encode = (lines: Record<string, unknown>[]) =>
     new TextEncoder().encode(

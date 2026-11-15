@@ -17006,6 +17006,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `RewindRefusal`
     - Exports (values):
       - `attachmentDiskRef`
+      - `attachmentImagePathsOf`
       - `attachmentRefsOf`
       - `BackgroundWorkSchema`
       - `canSendTurn`
