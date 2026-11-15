@@ -12,6 +12,10 @@
 // `?embed=1`: the app's own screen, without the rail, tab bar or action bar
 // around it — showing whatever data the instance has.
 //
+// A place a URL cannot stage has a SETUP step, run on the settled frame before
+// the shot: the desktop opens two more apps from its shelf and lays the
+// windows out; the island presses its title card's Start.
+//
 // Toasts never reach the image (snap's hideToasts); what each one said is
 // logged as TOAST-HIDDEN, since an error toast is still a bug worth reading.
 //
@@ -93,9 +97,84 @@ if (unknown.length) {
  * should it ever show.
  */
 const DEMO_CHROME_STYLE = "[data-demo-back] { display: none !important; }";
+/**
+ * The site's cookie consent prompt (`pages/privacy`) asks every fresh
+ * visitor, the screenshot's browser included: left out of the picture
+ * rather than answered, so the run records no consent.
+ */
+const CONSENT_STYLE =
+  '[aria-label="Cookie consent"] { display: none !important; }';
 /** How many times, and how far apart, a frame is checked for a tip. */
 const TIP_ROUNDS = 4;
 const TIP_ROUND_MS = 1500;
+
+/**
+ * A desktop window (`apps/desktop/windows`) — not the copy of one a shelf
+ * thumbnail draws (`WindowSnapshot`), which carries the same id.
+ */
+const WINDOW =
+  "[data-floating-window-id]:not([data-window-snapshot] [data-floating-window-id])";
+
+/**
+ * Open `app` from the desktop's shelf as a new window and drag it by its
+ * titlebar so its top-left corner lands at `to` — the window the click added,
+ * told apart from the ones already open by its id.
+ */
+async function openWindowAt(
+  page: Page,
+  app: string,
+  to: { x: number; y: number },
+): Promise<void> {
+  const ids = async () =>
+    page
+      .locator(WINDOW)
+      .evaluateAll((els) =>
+        els.map((el) => el.getAttribute("data-floating-window-id")),
+      );
+  const before = new Set(await ids());
+  await page.getByRole("button", { name: app, exact: true }).first().click();
+  await page.waitForFunction(
+    ([selector, open]) => document.querySelectorAll(selector).length > open,
+    [WINDOW, before.size] as const,
+  );
+  const added = (await ids()).find((id) => !before.has(id));
+  if (!added) throw new Error(`the shelf's ${app} opened no new window`);
+  const win = page
+    .locator(WINDOW)
+    .and(page.locator(`[data-floating-window-id="${added}"]`));
+  await page.waitForTimeout(1500);
+  const box = await win.boundingBox();
+  if (!box) throw new Error(`the ${app} window has no box`);
+  // An empty stretch of the titlebar, left of its window controls.
+  const grab = { x: box.x + box.width - 260, y: box.y + 20 };
+  await page.mouse.move(grab.x, grab.y);
+  await page.mouse.down();
+  const end = { x: to.x + box.width - 260, y: to.y + 20 };
+  await page.mouse.move(end.x, end.y, { steps: 20 });
+  await page.mouse.up();
+  await page.waitForTimeout(500);
+}
+
+/**
+ * The staging a place's URL cannot express, by gallery id: run on the
+ * settled frame, before its tips are answered and the shot taken.
+ */
+const SETUP: Readonly<Record<string, (page: Page) => Promise<void>>> = {
+  // The `shot` URL opens Sonata as the first window; two more apps join it,
+  // overlapping as windows do, the wallpaper and the shelf still showing.
+  desktop: async (page) => {
+    await openWindowAt(page, "Pages", { x: 560, y: 24 });
+    await openWindowAt(page, "Agent Manager", { x: 520, y: 226 });
+  },
+  // The island opens on its title card: Start walks into the world.
+  isle: async (page) => {
+    // Its Start breathes (an endless animation), so it is never "stable".
+    await page
+      .getByRole("button", { name: "Start", exact: true })
+      .click({ force: true });
+    await page.waitForTimeout(4000);
+  },
+};
 
 /** A contextual tip's Got it, while its card shows (the hints stage). */
 const SHOWN_TIP_BUTTON =
@@ -130,11 +209,13 @@ await withBrowser(async (h) => {
   for (const shot of shots) {
     console.log(`${shot.id}: ${shot.path}`);
     await page.goto(pathUrl(shot.path));
-    await page.addStyleTag({ content: DEMO_CHROME_STYLE });
+    await page.addStyleTag({ content: DEMO_CHROME_STYLE + CONSENT_STYLE });
     await page.waitForTimeout(waitMs);
     // Every loading region done (each `Loading` is aria-busy).
     const settled = await waitForNotBusy(page);
     if (!settled.ok) console.log(`  still busy: ${settled.value.join(", ")}`);
+    const setup = SETUP[shot.id];
+    if (setup) await setup(page);
     await dismissTips(page);
     const result = await snap(page, `${outDir}/app`, shot.id, {
       hideToasts: true,

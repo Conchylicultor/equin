@@ -42,7 +42,9 @@ jpeg`), because a web artifact inlines every image it imports as a data URI
 demo carries is shot IN the demo at its `APP_DEMO_PLACES` `shot` place — the demo's
 made-up data; pick a place that shows
 the app in use (a song in the piano roll, a page of blocks), not its empty
-landing. Shoot main (`--url http://equin.localhost:9000`): a worktree deploy
+landing. What a URL cannot stage (more windows on the desktop, the island
+past its title card) is the script's `SETUP` step for that app, run before the
+shot. Shoot main (`--url http://equin.localhost:9000`): a worktree deploy
 wears the red experimental frame. Any other app is shot on the instance, with
 whatever data it has — look at every image before adding it, and an app whose
 screenshot is not fit to publish (real data, an error) keeps the drawn

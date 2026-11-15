@@ -3,12 +3,14 @@ import { symbol, type SymbolRef } from "@plugins/ui/plugins/icons/core";
 // The apps' screenshots, taken by `plugins/apps/plugins/website/e2e/app-screenshots.ts`
 // and cut down to card size (640px JPEG): a web artifact inlines every image it
 // imports, so the files stay small. An app the live demo carries is shot in the
-// demo, at the place its card opens (`APP_DEMO_PLACES`); only apps whose
+// demo, at its staged `shot` place (`APP_DEMO_PLACES`); only apps whose
 // screenshot is fit to publish have one; the rest are drawn.
 import type { ImportedImage } from "@plugins/framework/plugins/image-import/core";
 import agentsShot from "../shots/app-agents.jpg";
 import chordShot from "../shots/app-chord.jpg";
+import desktopShot from "../shots/app-desktop.jpg";
 import filesShot from "../shots/app-files.jpg";
+import isleShot from "../shots/app-isle.jpg";
 import mapsShot from "../shots/app-maps.jpg";
 import pagesShot from "../shots/app-pages.jpg";
 import prototypesShot from "../shots/app-prototypes.jpg";
@@ -164,6 +166,7 @@ export const APPS: readonly CatalogApp[] = [
     category: "surfaces",
     icon: symbol("desktop-windows"),
     color: "indigo",
+    shot: desktopShot,
     description:
       "Every app as a window over a wallpaper, with a shelf, virtual desktops and a window switcher. A computer's desktop, in equin.",
   },
@@ -173,6 +176,7 @@ export const APPS: readonly CatalogApp[] = [
     category: "surfaces",
     icon: symbol("sailing"),
     color: "sky",
+    shot: isleShot,
     description:
       "Every app is a building on an illustrated archipelago. Walk around the island and step through a door to open one.",
   },
