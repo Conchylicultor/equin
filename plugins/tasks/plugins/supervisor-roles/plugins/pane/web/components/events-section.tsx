@@ -100,6 +100,7 @@ const OUTCOME: Record<
   dropped: { label: "Dropped", variant: "muted" },
   filed: { label: "Filed in backlog", variant: "info" },
   launched: { label: "Launched a session", variant: "info" },
+  failed: { label: "Failed", variant: "destructive" },
 };
 
 /** A row of the message log: a message sent, or the one being gathered. */

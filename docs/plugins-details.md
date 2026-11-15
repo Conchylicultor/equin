@@ -38368,7 +38368,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `worktreeDataDir`
           - `worktreesDir`
       - Cross-plugin:
-        - Imported by: 131 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
+        - Imported by: 132 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
           - `infra` ×31
           - `framework` ×20
           - `apps` ×18
@@ -38386,11 +38386,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `database` ×2
           - `integrations` ×2
           - `stats` ×2
+          - `tasks` ×2
           - `apps-core/app-preload`
           - `config_v2`
           - `review/plugin-changes`
           - `shell/document-head`
-          - `tasks`
       - Exemptions:
         - Exempts itself from:
           - `paths:no-hardcoded-paths` — `check/index.ts` (sanctioned)

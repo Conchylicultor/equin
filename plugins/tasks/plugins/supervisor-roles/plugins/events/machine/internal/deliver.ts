@@ -2,6 +2,7 @@ import { and, count, desc, eq, inArray, max, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db, type DbExecutor } from "@plugins/database/server";
 import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
+import { isHostSingleton } from "@plugins/infra/plugins/paths/core";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { submitTurn } from "@plugins/conversations/server";
 import { DEFAULT_MODEL_CHOICE } from "@plugins/conversations/plugins/model-provider/core";
@@ -111,14 +112,22 @@ async function dueAt(roleId: string, exec: DbExecutor): Promise<Date> {
  * ends. A stream routed nowhere, or a kind its route filters out, is ignored.
  *
  * Only gathers: delivery (which can fail) is always the flush job's, one per
- * role. So a failing delivery cannot feed itself — the report its failure
- * files is gathered like any other event (a count bump) and waits for the
- * same flush, and however many events land at once, one message goes per
+ * role. So a failing delivery cannot feed itself — its message is kept as
+ * `failed`, so the quiet period it started holds; the report its failure
+ * files is gathered like any other event (a count bump) and waits for that
+ * period's end, and however many events land at once, one message goes per
  * quiet period.
+ *
+ * Only the host's own backend (main, or a release's one backend) gathers and
+ * delivers: a worktree's database is a fork of main's, so the roles, routes and
+ * live sessions it holds are main's — their agents run under main, and a
+ * worktree typing into them would only fail (or, idle `launch`, start a second
+ * supervisor session).
  */
 export async function publishSupervisorEvent(
   event: SupervisorEvent,
 ): Promise<void> {
+  if (!isHostSingleton()) return;
   const due = await db.transaction(async (tx) => {
     const [route] = await tx
       .select()
@@ -301,16 +310,19 @@ async function claimMessage(
 }
 
 /**
- * A delivery threw: the message never happened. Its row goes, and its events
- * go back to the gathered ones (folded into any that landed meanwhile), so
- * the next flush sends them.
+ * A delivery threw: the message never reached anyone. Its row stays, as
+ * `failed` — it still holds the quiet period it started, so the retry (and the
+ * report the failure itself files) waits for that period's end rather than
+ * running at once — and its events go back to the gathered ones (folded into
+ * any that landed meanwhile), so the next flush sends them.
  */
 async function unclaimMessage(roleId: string, claimed: Claimed): Promise<void> {
   const p = _supervisorEventPending;
   await db.transaction(async (tx) => {
     await lockRoleEvents(roleId, tx);
     await tx
-      .delete(_supervisorEventMessages)
+      .update(_supervisorEventMessages)
+      .set({ outcome: "failed" })
       .where(eq(_supervisorEventMessages.id, claimed.messageId));
     await tx
       .insert(p)
@@ -335,8 +347,9 @@ async function unclaimMessage(roleId: string, claimed: Claimed): Promise<void> {
  *
  * Three steps, so delivery runs outside any transaction (typing a turn and
  * launching a session open their own): claim the message under the role's
- * lock, deliver it, then record its outcome — or, if delivery throws, put
- * its events back and rethrow (the job retries).
+ * lock, deliver it, then record its outcome — or, if delivery throws, mark
+ * it `failed`, put its events back and rethrow (the job retries, after the
+ * quiet period the failed message holds).
  */
 export async function flushRoleEvents(
   roleId: string,
@@ -449,6 +462,9 @@ export const supervisorEventsFlushJob = defineJob({
   event: z.never(),
   dedup: { key: ({ roleId }) => roleId },
   run: async ({ input }) => {
+    // A run enqueued before this backend knew (a worktree's fork of main's
+    // queue): see publishSupervisorEvent.
+    if (!isHostSingleton()) return;
     await flushRoleEvents(input.roleId, "due");
   },
 });

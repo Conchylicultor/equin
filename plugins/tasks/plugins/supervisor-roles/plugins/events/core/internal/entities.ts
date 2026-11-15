@@ -121,8 +121,10 @@ export type EventLine = z.infer<typeof EventLineSchema>;
 /**
  * What became of a message. `sending` is a message claimed from the gathered
  * events and being delivered (outside the claiming transaction): it holds the
- * role's quiet period, and turns into its outcome — or, if delivery throws, is
- * deleted and its events go back to the gathered ones.
+ * role's quiet period, and turns into its outcome. `failed` is a delivery that
+ * threw: its events went back to the gathered ones, and the row stays — so the
+ * quiet period it started still holds, and the next try (with whatever the
+ * failure itself reported) waits for its end instead of running at once.
  */
 export const MESSAGE_OUTCOMES = [
   "sending",
@@ -130,6 +132,7 @@ export const MESSAGE_OUTCOMES = [
   "dropped",
   "filed",
   "launched",
+  "failed",
 ] as const;
 export type MessageOutcome = (typeof MESSAGE_OUTCOMES)[number];
 
@@ -165,6 +168,7 @@ export const eventMessageFields = {
       dropped: { label: "Dropped" },
       filed: { label: "Filed in backlog" },
       launched: { label: "Launched a session" },
+      failed: { label: "Failed" },
     },
   }),
   taskId: nullable(textField()),
