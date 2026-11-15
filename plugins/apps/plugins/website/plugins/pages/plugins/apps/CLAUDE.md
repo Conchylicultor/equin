@@ -14,7 +14,7 @@ the foundations).
 Installing happens in equin itself, never on the site, so every Install and the
 "Build it" form go to the download page.
 
-**Ways to use equin.** After Tools, one group presents the two ways of using
+**Home screens.** After Tools, one group presents the two ways of using
 equin as a whole surface rather than one app at a time: **Desktop** (every app
 as a floating window over a wallpaper, `/desktop`) and **Isle** (every app a
 building on an archipelago you walk around, `/isle`). It is an ordinary

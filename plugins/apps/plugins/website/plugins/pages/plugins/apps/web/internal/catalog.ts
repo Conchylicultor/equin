@@ -50,7 +50,7 @@ export const CATEGORIES: readonly AppCategory[] = [
   // Not apps of their own kind: two ways to hold every other app at once.
   {
     id: "surfaces",
-    name: "Ways to use equin",
+    name: "Home screens",
     body: "Every app in one place, arranged your way",
   },
   { id: "next", name: "Coming next", body: "Being built now" },
