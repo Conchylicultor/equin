@@ -237,8 +237,15 @@ interface HoverFx {
   } | null;
 }
 
+/** A baked ground tile; `c` null once its colour was dropped (`trimGround`). */
+type GroundEntry = Omit<GroundTile, "c"> & {
+  c: HTMLCanvasElement | null;
+  used: number;
+};
+
 const LODS = [0.25, 0.5, 1, 2] as const;
 const TILE_BUDGET = 64e6;
+/** Ground tiles whose full-resolution colour is kept (`trimGround`). */
 const GROUND_MAX = 120;
 const Z_MAX = 2.6;
 /** Signs fade in from SIGN_FADE_Z0 and are fully shown from SIGN_FULL_Z; below it a focused building's sign is drawn at this zoom's size. */
@@ -278,6 +285,12 @@ const VILLAGER_LOOKS: readonly LookName[] = [
 ];
 const easeIO = (p: number) => p * p * (3 - 2 * p);
 const tileKey = (tx: number, ty: number) => `${tx}:${ty}`;
+/** Whether ground tile (tx, ty) meets `view` ([x0, y0, x1, y1, …] in world px). */
+const tileInView = (tx: number, ty: number, view: readonly number[]) =>
+  (tx + 1) * GT > view[0]! &&
+  tx * GT < view[2]! &&
+  (ty + 1) * GT > view[1]! &&
+  ty * GT < view[3]!;
 
 export class IsleEngine {
   private readonly canvas: HTMLCanvasElement;
@@ -329,7 +342,12 @@ export class IsleEngine {
   private readonly tileCache = new Map<string, Tile>();
   private tilePixels = 0;
   private frameNo = 0;
-  private readonly ground = new Map<string, GroundTile & { used: number }>();
+  /**
+   * Each baked ground tile. Its full-resolution colour (`c`, 1 MB) is kept for
+   * at most GROUND_MAX tiles (`trimGround`); past that it is dropped (`c:
+   * null`) while its water mask and reeds — read every frame — stay.
+   */
+  private readonly ground = new Map<string, GroundEntry>();
   private readonly gJobs = new Map<string, Job<GroundTile>>();
   private previewJobs: { I: Island; job: Job<Preview> }[] = [];
   private readonly previews = new Map<number, Preview>();
@@ -558,7 +576,7 @@ export class IsleEngine {
     const ofCanvas = (c: HTMLCanvasElement) =>
       bytesDigest(ctx2d(c).getImageData(0, 0, c.width, c.height).data);
     for (const [k, G] of this.ground) {
-      out[`ground:${k}`] = ofCanvas(G.c);
+      if (G.c) out[`ground:${k}`] = ofCanvas(G.c);
       out[`water:${k}`] = ofCanvas(G.mask);
     }
     for (const [id, P] of this.previews) out[`preview:${id}`] = ofCanvas(P.c);
@@ -1053,6 +1071,57 @@ export class IsleEngine {
     });
   }
 
+  /** How many ground tiles still hold their full-resolution colour. */
+  private groundFull(): number {
+    let n = 0;
+    for (const G of this.ground.values()) if (G.c) n++;
+    return n;
+  }
+
+  /** The zoom level of the tiles the view draws at the camera's zoom. */
+  private viewLod(): number {
+    const need = this.cam.z * this.dpr;
+    return LODS.find((l) => l >= need * 0.92) ?? LODS[LODS.length - 1]!;
+  }
+
+  /** Whether the view's tile `k` at the zoom it draws is built from its baked ground (so that ground's colour is no longer needed). */
+  private lodTileDone(k: string): boolean {
+    const e = this.tileCache.get(`${this.viewLod()}:${k}`);
+    return !!e && e.final && !e.stale;
+  }
+
+  /**
+   * Keeps at most GROUND_MAX ground tiles' full-resolution colour, dropping
+   * first the tiles out of view (least recently drawn first), then those in
+   * view whose tile at the drawn zoom is already built from it (farthest
+   * first) — never one the view still needs to build a tile from, so a tile
+   * in view is never dropped to make room for another and baked again. Zoomed
+   * far out, the view draws its small tiles and keeps only their water masks
+   * and reeds. Before the title card is done, the home island's are kept.
+   */
+  private trimGround(view: readonly number[]): void {
+    let over = this.groundFull() - GROUND_MAX;
+    if (over <= 0) return;
+    const drop: [number, number, GroundEntry][] = [];
+    for (const [k, G] of this.ground) {
+      if (!G.c) continue;
+      const [tx, ty] = k.split(":").map(Number) as [number, number];
+      if (!this.readySent && this.islandAt(tx, ty, true)) continue;
+      if (!tileInView(tx, ty, view)) drop.push([0, G.used, G]);
+      else if (this.lodTileDone(k))
+        drop.push([
+          1,
+          -Math.hypot((tx + 0.5) * GT - view[4]!, (ty + 0.5) * GT - view[5]!),
+          G,
+        ]);
+    }
+    drop.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+    for (const [, , G] of drop) {
+      if (over-- <= 0) break;
+      G.c = null;
+    }
+  }
+
   /** Previews first, then the ground tiles in view nearest the centre, then nearby, within the budget. */
   private stepBakes(budgetMs: number, view: readonly number[]): void {
     const M = this.M;
@@ -1061,6 +1130,7 @@ export class IsleEngine {
     if (!M || !furniture || !layout) return;
     const t0 = performance.now();
     const left = () => performance.now() - t0 < budgetMs;
+    this.trimGround(view);
     for (let i = 0; i < this.previewJobs.length && left();) {
       const j = this.previewJobs[i]!;
       let r = j.job.it.next();
@@ -1097,18 +1167,17 @@ export class IsleEngine {
       this.art.bake(b);
     }
     const cand: [number, string][] = [];
+    const full = this.groundFull();
     for (const k of this.groundKeys) {
-      if (this.ground.has(k)) continue;
       const [tx, ty] = k.split(":").map(Number) as [number, number];
+      const inView = tileInView(tx, ty, view);
+      const G = this.ground.get(k);
+      // a tile whose colour was dropped bakes again only when the view draws it and its tile at this zoom is not built from it yet
+      if (G && (G.c || !inView || this.lodTileDone(k))) continue;
       const cx = (tx + 0.5) * GT;
       const cy = (ty + 0.5) * GT;
-      const inView =
-        (tx + 1) * GT > view[0]! &&
-        tx * GT < view[2]! &&
-        (ty + 1) * GT > view[1]! &&
-        ty * GT < view[3]!;
       const homeT = !this.readySent && this.islandAt(tx, ty, true);
-      if (!inView && !homeT && this.ground.size >= GROUND_MAX) continue;
+      if (!inView && !homeT && full >= GROUND_MAX) continue;
       cand.push([
         Math.hypot(cx - view[4]!, cy - view[5]!) +
           (inView ? 0 : 1e6) -
@@ -1142,24 +1211,6 @@ export class IsleEngine {
         this.gJobs.delete(best);
         this.ground.set(best, { ...r.value, used: this.frameNo });
         this.dropLod(tx, ty);
-        if (this.ground.size > GROUND_MAX) {
-          // forget the ground farthest from view (it re-bakes if needed)
-          let far: string | null = null;
-          let fd = -1;
-          for (const [k] of this.ground) {
-            const [x2, y2] = k.split(":").map(Number) as [number, number];
-            const dd =
-              Math.hypot(
-                (x2 + 0.5) * GT - view[4]!,
-                (y2 + 0.5) * GT - view[5]!,
-              ) - (!this.readySent && this.islandAt(x2, y2, true) ? 1e7 : 0);
-            if (dd > fd) {
-              fd = dd;
-              far = k;
-            }
-          }
-          if (far && far !== best) this.ground.delete(far);
-        }
       }
     }
     this.readyCheck();
@@ -1238,7 +1289,7 @@ export class IsleEngine {
     tg.fillRect(X0, Y0, X1 - X0, Y1 - Y0);
     const k = tileKey(Math.floor(X0 / GT), Math.floor(Y0 / GT));
     const G = this.ground.get(k);
-    if (G) {
+    if (G?.c) {
       G.used = this.frameNo;
       tg.drawImage(G.c, X0, Y0, GT, GT);
       return true;
@@ -2040,8 +2091,7 @@ export class IsleEngine {
     g.globalCompositeOperation = "source-over";
     g.fillStyle = "#25608f";
     g.fillRect(0, 0, this.canvas.width, this.canvas.height);
-    const need = z * dpr;
-    const lod = LODS.find((l) => l >= need * 0.92) ?? LODS[LODS.length - 1]!;
+    const lod = this.viewLod();
     const tx0 = Math.floor(x0 / TILE);
     const tx1 = Math.floor(x1 / TILE);
     const ty0 = Math.floor(y0 / TILE);
@@ -2103,6 +2153,12 @@ export class IsleEngine {
     for (const v of todo) {
       if (performance.now() >= budget) break;
       if (this.started && built >= 3 && (v.e || v.fb)) continue;
+      // its ground's colour was dropped and bakes again: another zoom's tile stands in till then, not one from the coarse preview
+      if (
+        (v.e || v.fb?.final) &&
+        this.ground.get(tileKey(v.tx, v.ty))?.c === null
+      )
+        continue;
       v.e = this.buildTile(lod, v.tx, v.ty);
       built++;
     }
