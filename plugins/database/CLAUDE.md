@@ -511,6 +511,7 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./equin build`. The bui
     - `database/migrations.schemaGeneration`
     - `database/migrations.SchemaLayerCheck`
     - `database/migrations.SchemaLayerInputs`
+    - `database/migrations.SchemaStampPart`
     - `database/migrations.verifySchemaLayer`
     - `primitives/log-channels.defineLogSink`
   - DB schema:

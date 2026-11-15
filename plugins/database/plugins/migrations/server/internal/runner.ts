@@ -43,6 +43,7 @@ import {
   type SchemaOwner,
 } from "@plugins/framework/plugins/server-core/core";
 import { schemaLayerStamp } from "./layer-stamp";
+import type { SchemaStampPartSpec } from "./stamp-part";
 
 const log = defineLogSink({
   id: "migrations",
@@ -631,6 +632,12 @@ export interface SchemaLayerInputs {
    * layer's sweep of `public` leaves them alone.
    */
   claimedTriggerSets: readonly string[];
+  /**
+   * What boot DDL outside the layer requires of the database
+   * (`SchemaStampPart`). The layer installs none of it: it is only folded
+   * into the stamp, so a child of code needing another install waits for it.
+   */
+  stampParts: readonly SchemaStampPartSpec[];
 }
 
 // Force-rollback sentinel: thrown to abort a non-committing layer so it never

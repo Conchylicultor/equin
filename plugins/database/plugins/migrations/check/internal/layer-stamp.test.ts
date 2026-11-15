@@ -22,6 +22,7 @@ import {
   type SchemaLayerInputs,
 } from "../../server/internal/runner";
 import {
+  differingParts,
   recordSchemaLayerStamp,
   schemaLayerStamp,
 } from "../../server/internal/layer-stamp";
@@ -53,6 +54,7 @@ function inputs(...views: DeclaredView[]): SchemaLayerInputs {
     updatedAtSpecs: [],
     triggers: [],
     claimedTriggerSets: [],
+    stampParts: [],
   };
 }
 
@@ -82,6 +84,26 @@ describe("schemaLayerStamp", () => {
     expect(
       schemaLayerStamp([base], { ...inputs(v1), claimedTriggerSets: ["x"] }),
     ).not.toBe(a);
+  });
+
+  test("is a function of every stamp part, in any order, and names the parts that differ", () => {
+    const part = (id: string, digest: string) => ({ id, digest });
+    const a = schemaLayerStamp([base], {
+      ...inputs(v1),
+      stampParts: [part("q", "1.0.0"), part("r", "x")],
+    });
+    expect(
+      schemaLayerStamp([base], {
+        ...inputs(v1),
+        stampParts: [part("r", "x"), part("q", "1.0.0")],
+      }),
+    ).toBe(a);
+    const bumped = schemaLayerStamp([base], {
+      ...inputs(v1),
+      stampParts: [part("q", "1.1.0"), part("r", "x")],
+    });
+    expect(bumped).not.toBe(a);
+    expect(differingParts(a, bumped)).toEqual(["stampParts"]);
   });
 
   test("ignores the framework's own marks on a contribution, and declaration order", () => {

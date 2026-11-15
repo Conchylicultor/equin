@@ -21,7 +21,9 @@ type Tx = Parameters<Parameters<NodePgDatabase["transaction"]>[0]>[0];
 //
 // The stamp is a pure function of everything the layer installs from source:
 // the migration files (their names and content hashes) and every derived input
-// (`SchemaLayerInputs`). `inputDigests` below answers one digest per key of that type, so an
+// (`SchemaLayerInputs`), each `SchemaStampPart` included: what a plugin that
+// installs boot DDL of its own contributes (see "Boot DDL outside the layer"
+// below). `inputDigests` below answers one digest per key of that type, so an
 // input added to the layer without a digest here is a tsc error — the stamp
 // cannot silently miss what the layer installs. What the layer does from DATA
 // (each rollup's reconcile, which heals drift) is the owner's alone and is not
@@ -31,6 +33,43 @@ type Tx = Parameters<Parameters<NodePgDatabase["transaction"]>[0]>[0];
 // written against. A different stamp means it does not — usually the ~26 s
 // between a push advancing main's checkout and main's new backend booting —
 // and the child refuses to run rather than running DDL itself.
+
+// ── Boot DDL outside the layer ───────────────────────────────────────────────
+//
+// Four plugins install boot DDL in their own `onReadyBlocking`, after the
+// layer. The owner records the stamp at its `onReady`, once that DDL has
+// committed, but the stamp digests only what a part names. So the question for
+// each owner is this: when a deploy changes only its install, can an exec child
+// of the NEW code, admitted during the deploy window, break against the OLD
+// install? Its writes look like the old backend's: that backend keeps serving
+// and writing through the same install until the new one boots.
+//
+// - The job queue's schema (graphile-worker, `infra/jobs`): UNSAFE, so it is a
+//   part. A child runs no worker, but it enqueues. Through the library's own
+//   helpers (`addJob`, `completeJobs`, `rescheduleJobs`), that is SQL the NEW
+//   library writes against the OLD queue schema's functions and tables. A
+//   graphile bump that changes those functions makes the child's enqueue fail.
+//   Its digest is the library's version: a bump with no schema change costs
+//   children only the wait for the new backend.
+// - Change-feed's triggers (`network/live/change-feed`): safe. A child opens
+//   no LISTEN and only writes. Its writes fire the triggers the serving backend
+//   installed, which route the old layouts for the old backend, exactly like
+//   that backend's own writes. A table only the new code feeds gets no NOTIFY
+//   from a child's write in the window, but no backend serves it yet, and the
+//   new backend loads it fresh once its triggers exist.
+// - Table-mirror's sets (`database/table-mirror/source`): safe. A child's
+//   writes go to the change log through the installed triggers, as the old
+//   backend's do. A table added to a set has no log trigger yet, but the
+//   reader that serves the set is the old backend's and refuses that table
+//   (`unknown-table`). The table's first pull is the new backend's full copy,
+//   taken after its triggers exist, so it sees every row the child wrote.
+// - live-state-snapshot's L2 tables: safe. A child runs no L2 init, so no
+//   persist hook is installed: it neither reads nor writes those tables.
+//
+// The table-mirror and change-feed trigger SQL (and graphile's superseded-row
+// trigger) is also not in the stamp. When it changes, a child's write fires the
+// old version, as the old backend's writes do, and the new owner reinstalls it
+// at boot.
 
 /** Each input's digest: a pure function of the declarations, never of the database. */
 type InputDigests = {
@@ -43,6 +82,7 @@ const inputDigests = ({
   updatedAtSpecs,
   triggers,
   claimedTriggerSets,
+  stampParts,
 }: SchemaLayerInputs): InputDigests => ({
   // The compiled `CREATE VIEW`s in dependency order: what `rebuildDerivedViews`
   // installs. (Its read aliases follow from these and the migrated tables.)
@@ -73,6 +113,10 @@ const inputDigests = ({
     [...claimedTriggerSets].sort(),
     "claimedTriggerSets",
   ),
+  // What boot DDL OUTSIDE the layer requires (`SchemaStampPart`): the queue
+  // schema's library version, for one. The owner records the stamp only once
+  // that DDL has committed too, at its `onReady`.
+  stampParts: dataJson(byId(stampParts), "stampParts"),
 });
 
 function byId<T extends { readonly id: string }>(sets: readonly T[]): T[] {

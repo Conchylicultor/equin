@@ -54,6 +54,7 @@ function withViews(...views: DeclaredView[]): SchemaLayerInputs {
     updatedAtSpecs: [],
     triggers: [],
     claimedTriggerSets: [],
+    stampParts: [],
   };
 }
 

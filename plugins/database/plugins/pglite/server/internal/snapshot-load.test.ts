@@ -84,6 +84,7 @@ const NO_DERIVED = {
   updatedAtSpecs: [],
   triggers: [],
   claimedTriggerSets: [],
+  stampParts: [],
 };
 
 function committedMigrations() {

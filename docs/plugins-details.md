@@ -23702,6 +23702,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `database/migrations.schemaGeneration`
       - `database/migrations.SchemaLayerCheck`
       - `database/migrations.SchemaLayerInputs`
+      - `database/migrations.SchemaStampPart`
       - `database/migrations.verifySchemaLayer`
       - `primitives/log-channels.defineLogSink`
     - DB schema:
@@ -24302,6 +24303,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SchemaLayerResult`
           - `SchemaPlan`
           - `SchemaPlanOptions`
+          - `SchemaStampPartSpec`
           - `SchemaStep`
         - Exports (values):
           - `applySchemaLayer`
@@ -24316,6 +24318,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `recordSchemaLayerStamp`
           - `SCHEMA_STAMPED_CHANNEL`
           - `schemaGeneration`
+          - `SchemaStampPart`
           - `verifySchemaLayer`
       - Core:
         - Uses:
@@ -24427,6 +24430,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `framework/browser-server/bun-host`
           - `framework/cli/migrations`
           - `framework/cli/regen-migrations`
+          - `infra/jobs`
       - Exemptions:
         - Exempts itself from:
           - `product-name:legacy-id` — `data` (sanctioned)
@@ -37322,6 +37326,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `resource.declare` "jobs:groups"
           - `resource.declare` "jobs:rows"
           - `host-service:jobs.queue` "jobs.queue"
+          - `schema-stamp-part` "jobs.graphile-worker"
           - `fork-schema-data-exclusion` "graphile_worker"
           - `fork-data-exclusion` "job_steps"
           - `fork-data-exclusion` "job_waits"

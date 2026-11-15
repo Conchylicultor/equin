@@ -435,6 +435,19 @@ plain data (a class instance) rather than guessing what it means; functions
 reconcile (data, not definition). The dry run writes it too, rolled back, so a
 declaration the digest cannot read fails `migration-applies-clean`.
 
+**Boot DDL outside the layer** (the job queue's schema, change-feed's
+triggers, table-mirror's triggers, L2's tables) is installed by its own
+plugin's `onReadyBlocking`. The owner records the stamp only at its `onReady`,
+after all of that DDL has committed. The stamp covers such DDL only through a
+`SchemaStampPart({ id, digest })` contribution, which `derivedInputs` folds in
+as the `stampParts` input without naming the contributor. One owner
+contributes one: `infra/jobs#machine` digests graphile-worker's version,
+because a child of new code would run the new library's SQL against the old
+queue schema. The other three are safe as they are: a child writes through the
+old install exactly as the serving old backend does. `layer-stamp.ts`, "Boot
+DDL outside the layer", gives each verdict. Contribute a part only when a
+child of new code against the old install would break.
+
 A boot on a partial graph (a job booted on its plugin closure) would compute a
 partial stamp and always be refused: it must take the derived inputs' digest
 from a whole-graph artifact instead.
@@ -692,6 +705,7 @@ only agreement that matters.
     - `SchemaLayerResult`
     - `SchemaPlan`
     - `SchemaPlanOptions`
+    - `SchemaStampPartSpec`
     - `SchemaStep`
   - Exports (values):
     - `applySchemaLayer`
@@ -706,6 +720,7 @@ only agreement that matters.
     - `recordSchemaLayerStamp`
     - `SCHEMA_STAMPED_CHANNEL`
     - `schemaGeneration`
+    - `SchemaStampPart`
     - `verifySchemaLayer`
 - Core:
   - Uses:
@@ -817,6 +832,7 @@ only agreement that matters.
     - `framework/browser-server/bun-host`
     - `framework/cli/migrations`
     - `framework/cli/regen-migrations`
+    - `infra/jobs`
 - Exemptions:
   - Exempts itself from:
     - `product-name:legacy-id` — `data` (sanctioned)

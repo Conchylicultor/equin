@@ -787,6 +787,7 @@ connection and every statement on it gives up after 60 s with no reply, and the
     - `resource.declare` "jobs:groups"
     - `resource.declare` "jobs:rows"
     - `host-service:jobs.queue` "jobs.queue"
+    - `schema-stamp-part` "jobs.graphile-worker"
     - `fork-schema-data-exclusion` "graphile_worker"
     - `fork-data-exclusion` "job_steps"
     - `fork-data-exclusion` "job_waits"

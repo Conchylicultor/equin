@@ -16,7 +16,10 @@ import {
   DbTrigger,
   DbTriggerClaim,
 } from "@plugins/database/plugins/db-triggers/server";
-import type { SchemaLayerInputs } from "@plugins/database/plugins/migrations/server";
+import {
+  SchemaStampPart,
+  type SchemaLayerInputs,
+} from "@plugins/database/plugins/migrations/server";
 import {
   forkExclusionsFrom,
   type ForkExclusions,
@@ -55,7 +58,7 @@ export async function declaredSchemaInputs(
 
   type Definition = { contributions?: readonly ServerContribution[] };
   const definitions: Definition[] = [];
-  // The machine barrels count for the fork exclusions only: a backend on this
+  // The machine barrels count for the fork exclusions and the stamp parts: a backend on this
   // computer boots them too (`infra/jobs` declares graphile's queue there), so
   // a fork that skipped them would copy main's pending jobs.
   const machineDefinitions: Definition[] = [];
@@ -88,6 +91,8 @@ export async function declaredSchemaInputs(
     updatedAtSpecs: registeredDerivedUpdatedAt(),
     triggers: DbTrigger.from(definitions),
     claimedTriggerSets: DbTriggerClaim.from(definitions).map((c) => c.id),
+    // From the machine barrels too: the job queue's part is `infra/jobs#machine`'s.
+    stampParts: SchemaStampPart.from([...definitions, ...machineDefinitions]),
   };
   if (inputs.views.length === 0) {
     return {

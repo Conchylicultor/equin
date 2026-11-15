@@ -9,6 +9,7 @@ import {
   completeDeferredContract,
   generationsKnowing,
   MigrationSource,
+  SchemaStampPart,
   type SchemaLayerInputs,
 } from "@plugins/database/plugins/migrations/server";
 import { db, DatabaseDriver } from "./driver";
@@ -24,6 +25,7 @@ export function derivedInputs(): SchemaLayerInputs {
     updatedAtSpecs: registeredDerivedUpdatedAt(),
     triggers: DbTrigger.getContributions(),
     claimedTriggerSets: DbTriggerClaim.getContributions().map((c) => c.id),
+    stampParts: SchemaStampPart.getContributions(),
   };
 }
 

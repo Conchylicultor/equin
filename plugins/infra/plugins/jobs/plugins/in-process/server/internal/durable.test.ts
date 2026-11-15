@@ -122,6 +122,7 @@ describe.if(IN_CHILD)("the in-process queue on a stored database", () => {
           updatedAtSpecs: [],
           triggers: [],
           claimedTriggerSets: [],
+          stampParts: [],
         },
         { commit: true, owner: testSchemaOwner(), deferContract: false },
       );

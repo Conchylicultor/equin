@@ -25,6 +25,8 @@ export {
   SCHEMA_STAMPED_CHANNEL,
 } from "./internal/layer-stamp";
 export { verifySchemaLayer } from "./internal/layer-verify";
+export { SchemaStampPart } from "./internal/stamp-part";
+export type { SchemaStampPartSpec } from "./internal/stamp-part";
 export type { SchemaLayerCheck } from "./internal/layer-verify";
 export { MigrationSource } from "./internal/source";
 export type { MigrationSourceImpl } from "./internal/source";
