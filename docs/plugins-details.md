@@ -49110,14 +49110,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Fill`
               - `fillClasses`
           - Cross-plugin:
-            - Imported by: 182 plugins — full list in [`plugins/primitives/plugins/css/plugins/fill/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/fill/REFERENCE.md)
+            - Imported by: 183 plugins — full list in [`plugins/primitives/plugins/css/plugins/fill/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/fill/REFERENCE.md)
               - `apps` ×51
               - `primitives` ×33
               - `conversations` ×27
               - `debug` ×18
               - `page` ×11
+              - `tasks` ×9
               - `ui` ×9
-              - `tasks` ×8
               - `infra` ×4
               - `plugin-meta` ×3
               - `review` ×3
@@ -49293,14 +49293,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `LineProps`
             - Exports (values): `Line`
           - Cross-plugin:
-            - Imported by: 128 plugins — full list in [`plugins/primitives/plugins/css/plugins/line/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/line/REFERENCE.md)
+            - Imported by: 129 plugins — full list in [`plugins/primitives/plugins/css/plugins/line/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/line/REFERENCE.md)
               - `apps` ×38
               - `primitives` ×20
               - `conversations` ×19
               - `debug` ×8
               - `page` ×6
+              - `tasks` ×6
               - `ui` ×6
-              - `tasks` ×5
               - `plugin-meta` ×4
               - `review` ×4
               - `build` ×3
@@ -49795,7 +49795,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Stack`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --spacing`
-            - Imported by: 449 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
+            - Imported by: 450 plugins — full list in [`plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/spacing/REFERENCE.md)
               - `apps` ×109
               - `conversations` ×78
               - `primitives` ×55
@@ -49803,7 +49803,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui` ×31
               - `page` ×27
               - `plugin-meta` ×16
-              - `tasks` ×15
+              - `tasks` ×16
               - `fields` ×9
               - `apps-core` ×7
               - `infra` ×7
@@ -50028,15 +50028,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale` ×37
               - `ui/tokens/color-palette` ×6
               - `ui/tokens/font-family` ×2
-            - Imported by: 431 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
+            - Imported by: 432 plugins — full list in [`plugins/primitives/plugins/css/plugins/text/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/text/REFERENCE.md)
               - `apps` ×112
               - `conversations` ×83
               - `primitives` ×48
               - `debug` ×39
               - `page` ×25
               - `ui` ×18
+              - `tasks` ×16
               - `plugin-meta` ×15
-              - `tasks` ×15
               - `fields` ×11
               - `infra` ×8
               - `stats` ×6
@@ -52537,6 +52537,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/conversation-view/markdown-extensions`
           - `hints/ask`
           - `tasks/task-detail`
+          - `tasks/task-source-url`
     - **`file-type`** — <FileTypeIcon name isDir? open?/>: a directory as the Material folder in the --folder colour, a file as its Seti glyph tinted by its file-type tone.
       - Web:
         - Uses: `ui/icons.Icon`
@@ -62087,10 +62088,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --line-height-caption`
       - Exemptions:
         - Exempts itself from: `endpoints/no-void-fetch-endpoint` — `web/components/task-graph.tsx` (sanctioned)
-    - **`task-header`** — Top section of the task detail pane: editable title, status chip, hold/drop buttons, track (main | sidequest, click to switch), author, and timestamps. Launch configuration (auto-start, preprompt, thinking mode) lives in the Prompt card, not here.
+    - **`task-header`** — Top section of the task detail pane: editable title, status chip, hold/drop buttons, track (main | sidequest, click to switch), author, the page it was filed from, and timestamps. Launch configuration (auto-start, preprompt, thinking mode) lives in the Prompt card, not here.
       - Web:
         - Contributes: `TaskDetailSlots.Section` "Task" → `TaskHeader`
-        - Uses: 21 symbols — full list in [`plugins/tasks/plugins/task-header/REFERENCE.md`](../plugins/tasks/plugins/task-header/REFERENCE.md)
+        - Uses: 22 symbols — full list in [`plugins/tasks/plugins/task-header/REFERENCE.md`](../plugins/tasks/plugins/task-header/REFERENCE.md)
           - `tasks/task-detail` ×3
           - `network/live/live-state` ×2
           - `primitives/css/text` ×2
@@ -62105,6 +62106,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/relative-time.RelativeTime`
           - `tasks/supervisor-roles/pane.TaskSupervisorControl`
           - `tasks/task-mandate.TaskMandateControl`
+          - `tasks/task-source-url.TaskSourceUrlRow`
           - `tasks/task-status.StatusSignal`
           - `tasks/task-track.TaskTrackControl`
       - Cross-plugin:
@@ -62285,7 +62287,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `deleteTaskPreprompt`
           - `putTaskPreprompt`
           - `TaskPrepromptSchema`
-    - **`task-source-url`** — Reads back the page a task was filed from, by attempt (useAttemptSourceUrl). Owns the tasks_ext_source_url side-table: the page a task was filed from (the draft form's Page URL toggle), stored as data rather than as prompt text: handed to the task's agents as the `source-page` system-prompt section at every spawn, and read back by attempt (falling back to the url of the first <ui-context> in the task's prompt).
+    - **`task-source-url`** — Reads back the page a task was filed from: by attempt (useAttemptSourceUrl), and by task as the task header's read-only Filed from row (TaskSourceUrlRow). Owns the tasks_ext_source_url side-table: the page a task was filed from (the draft form's Page URL toggle), stored as data rather than as prompt text: handed to the task's agents as the `source-page` system-prompt section at every spawn, and read back by attempt (falling back to the url of the first <ui-context> in the task's prompt).
       - Server:
         - Contributes:
           - `resource.declare` "task-source-url.by-attempt"
@@ -62309,8 +62311,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `task-source-url.by-attempt` (push)
           - `task-source-urls:rows` (keyed, point)
       - Web:
-        - Uses: `network/live.useLive`
-        - Exports (values): `useAttemptSourceUrl`
+        - Uses:
+          - `network/live.useLive`
+          - `primitives/css/fill.Fill`
+          - `primitives/css/line.Line`
+          - `primitives/css/spacing.Stack`
+          - `primitives/css/text.SectionLabel`
+          - `primitives/css/text.Text`
+          - `primitives/file-links.FileLinkText`
+        - Exports (values):
+          - `TaskSourceUrlRow`
+          - `useAttemptSourceUrl`
       - Core:
         - Uses:
           - `fields/text/config.textField`
@@ -62327,6 +62338,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/conversation-view/open-app`
           - `debug/read-set`
           - `tasks`
+          - `tasks/task-header`
     - **`task-status`** — Single source of truth for TaskStatus display metadata — icon, label, icon color, and badge style.
       - Web:
         - Uses:

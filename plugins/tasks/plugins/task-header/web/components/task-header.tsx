@@ -17,6 +17,7 @@ import { TaskMandateControl } from "@plugins/tasks/plugins/task-mandate/web";
 import { TaskSupervisorControl } from "@plugins/tasks/plugins/supervisor-roles/plugins/pane/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
+import { TaskSourceUrlRow } from "@plugins/tasks/plugins/task-source-url/web";
 import { AuthorDisplay } from "./author-display";
 
 export function TaskHeader({ taskId }: { taskId: string }) {
@@ -102,6 +103,9 @@ export function TaskHeader({ taskId }: { taskId: string }) {
           filedFrom={task.filedFrom}
         />
       </Stack>
+      {/* The page the task was filed from — data, no longer a line of the
+          description (the agent gets it as a system-prompt section). */}
+      <TaskSourceUrlRow taskId={taskId} />
       <Stack direction="row" align="center" gap="md">
         <SectionLabel as="span">Created</SectionLabel>
         <Text as="span" variant="caption">

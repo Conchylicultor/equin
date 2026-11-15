@@ -1154,6 +1154,7 @@ export const hostReads: readonly {
   { key: "task-mandates", needsMachine: false },
   { key: "task-preprompts", needsMachine: false },
   { key: "task-source-url.by-attempt", needsMachine: false },
+  { key: "task-source-urls", needsMachine: false },
   { key: "task-subject.by-subject", needsMachine: false },
   { key: "task-supervisors.by-id", needsMachine: false },
   { key: "task-tracks.by-id", needsMachine: false },

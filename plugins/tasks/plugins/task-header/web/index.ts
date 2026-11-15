@@ -4,7 +4,7 @@ import { TaskHeader } from "./components/task-header";
 
 export default {
   description:
-    "Top section of the task detail pane: editable title, status chip, hold/drop buttons, track (main | sidequest, click to switch), author, and timestamps. Launch configuration (auto-start, preprompt, thinking mode) lives in the Prompt card, not here.",
+    "Top section of the task detail pane: editable title, status chip, hold/drop buttons, track (main | sidequest, click to switch), author, the page it was filed from, and timestamps. Launch configuration (auto-start, preprompt, thinking mode) lives in the Prompt card, not here.",
   contributions: [
     TaskDetailSlots.Section({
       // The id keys the persisted order and open state — never rename it.
