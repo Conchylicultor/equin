@@ -25,6 +25,8 @@ export function noopReportData(
     subscribers: s.subscribers,
     windowSeconds: cfg.windowSeconds,
     wastedMsPerMinute: s.wastedMsPerMinute,
+    measuredMsPerMinute: s.measuredMsPerMinute,
+    noopTuples: s.noopTuples,
     wastedOwnMs: s.noopOwnMs,
     wastedIoMs: s.noopIoMs,
     wastedWaitMs: s.noopWaitMs,
@@ -39,8 +41,9 @@ export function noopReportData(
 // storm of its own. It reads the in-memory accumulator only — no DB query.
 //
 // A resource files when its no-op recomputes WASTE material work — own work
-// plus io, per minute (see `liveStateChurnConfig`) — not when they are merely
-// frequent: a cheap recompute churning at 3/s costs a fraction of a percent of
+// plus io, per minute (see `liveStateChurnConfig`), each no-op charged at the
+// cheapest run of its tuple so a busy host's contention is not counted (see
+// the accumulator) — not when they are merely frequent: a cheap recompute churning at 3/s costs a fraction of a percent of
 // a core, while an expensive one is worth a report at one a minute. A no-op
 // whose cost the host did not measure (a host without the profiler) is never
 // judged — the report would have nothing to say about what it costs.

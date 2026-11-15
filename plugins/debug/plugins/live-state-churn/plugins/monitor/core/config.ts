@@ -18,7 +18,9 @@ import { floatField } from "@plugins/fields/plugins/float/plugins/config/core";
 // and `conversations-active` below that. A count threshold (1/s) filed all of
 // them and two investigations found nothing worth fixing. At 1000 ms/min a
 // 3 ms recompute must churn at ~5.5/s to file, and a 2 s one files at one no-op
-// a minute.
+// a minute. Each no-op is charged at the cheapest run of its tuple in the
+// window, not at what it measured, so a busy host (a push, a build: ~50 ms a
+// run for that 3 ms recompute) does not push cheap churn over the bar.
 export const liveStateChurnConfig = defineConfig({
   name: "live-state-churn",
   fields: {
@@ -33,7 +35,7 @@ export const liveStateChurnConfig = defineConfig({
       min: 0,
       label: "Wasted work threshold (ms per minute)",
       description:
-        "File a live-state-noop report when a resource's no-op (empty-diff) recomputes waste this much work per minute over the window — their own work (server thread + database) plus the git / file io they waited on. Time spent queued on a gate or joining another run is not counted.",
+        "File a live-state-noop report when a resource's no-op (empty-diff) recomputes waste this much work per minute over the window — their own work (server thread + database) plus the git / file io they waited on, each no-op charged at the cheapest run of its tuple in the window so a busy host's contention is not counted. Time spent queued on a gate or joining another run is not counted.",
     }),
     windowSeconds: intField({
       default: 60,

@@ -2224,7 +2224,13 @@ export interface ResourceRuntimeOptions {
    *  but the loader ran for nothing). */
   onPush?(
     key: string,
-    info: { subscribers: number; changed: boolean; cost: RecomputeCost | null },
+    info: {
+      /** The recomputed tuple (its canonical params key): no-ops of one tuple recompute the same value from the same rows. */
+      tuple: string;
+      subscribers: number;
+      changed: boolean;
+      cost: RecomputeCost | null;
+    },
   ): void;
   /**
    * Per-key automatic table read-set: the tables this resource's loader actually
@@ -7898,6 +7904,7 @@ export function createResourceRuntime(
           pendingEntry,
         );
         opts.onPush?.(entry.key, {
+          tuple: pk,
           subscribers: subs.length,
           changed: true,
           cost: recomputeCost(meter),
@@ -7924,6 +7931,7 @@ export function createResourceRuntime(
         };
         frameChars = broadcastJson(subs, msg);
         opts.onPush?.(entry.key, {
+          tuple: pk,
           subscribers: subs.length,
           changed:
             upserts.length > 0 || deletes.length > 0 || order !== undefined,
@@ -8297,6 +8305,7 @@ export function createResourceRuntime(
     // An empty diff is still a recorded no-op push (changed:false) to any subscriber.
     if (subs.length > 0) {
       opts.onPush?.(entry.key, {
+        tuple: pk,
         subscribers: subs.length,
         changed,
         cost: recomputeCost(meter),
@@ -8803,6 +8812,7 @@ export function createResourceRuntime(
           : subs.length;
         if (holders > 0)
           opts.onPush?.(entry.key, {
+            tuple: pk,
             subscribers: holders,
             changed: !unchanged,
             cost: recomputeCost(meter),

@@ -35,6 +35,7 @@ function setup(
 ) {
   const pushes: Array<{
     key: string;
+    tuple: string;
     changed: boolean;
     subscribers: number;
     cost: unknown;
@@ -191,8 +192,8 @@ describe("D8 — an equal recompute of any pushed value sends nothing", () => {
     await tick();
     expect(t.pushes).toEqual([
       // No `wrapOrigin` in the harness: nothing measured the cost.
-      { key: "r", changed: false, subscribers: 1, cost: null },
-      { key: "r", changed: true, subscribers: 1, cost: null },
+      { key: "r", tuple: "{}", changed: false, subscribers: 1, cost: null },
+      { key: "r", tuple: "{}", changed: true, subscribers: 1, cost: null },
     ]);
   });
 });

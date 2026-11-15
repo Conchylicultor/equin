@@ -2,7 +2,7 @@
 {
   // When off, the monitor job returns early and files no live-state churn reports.
   "enabled": true,
-  // File a live-state-noop report when a resource's no-op (empty-diff) recomputes waste this much work per minute over the window — their own work (server thread + database) plus the git / file io they waited on. Time spent queued on a gate or joining another run is not counted.
+  // File a live-state-noop report when a resource's no-op (empty-diff) recomputes waste this much work per minute over the window — their own work (server thread + database) plus the git / file io they waited on, each no-op charged at the cheapest run of its tuple in the window so a busy host's contention is not counted. Time spent queued on a gate or joining another run is not counted.
   "wastedMsPerMinuteThreshold": 1000,
   // Sliding window over which the wasted work is measured.
   "windowSeconds": 60

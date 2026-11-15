@@ -445,10 +445,14 @@ function errorReport(context: string, err: unknown): ServerErrorReport {
 // ships no frame, as a `changed: false` no-op); we fan it out to every registered observer. A
 // debug plugin registers at boot via `onResourcePush` from this barrel.
 // `info.cost` is what the recompute cost (`RecomputeCost`: own work, waits, the
-// io part of the waits), `null` when nothing measured it.
+// io part of the waits), `null` when nothing measured it. `info.tuple` names the
+// recomputed tuple: a no-op detector compares no-ops of one tuple, which recompute the
+// same value from the same rows.
 export type ResourcePushObserver = (
   key: string,
   info: {
+    /** The recomputed tuple (canonical params key). */
+    tuple: string;
     subscribers: number;
     changed: boolean;
     cost: RtRecomputeCost | null;
