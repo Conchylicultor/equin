@@ -853,7 +853,15 @@ the answer trail too) and in `handleSub` / each `sub-batch` entry
 (`sub-error unauthorized`, BEFORE the params gate — a visitor learns nothing
 of an owner-only key's contract and files no report — and before any
 registration or load); `visitorReadable(key)` is the same rule for the boot
-snapshot. A visitor's heartbeat carries `pushStallMs` only (never the stalled
+snapshot. `access.tuple` (the server half's `visitorTuple`, merged in by
+`contractToDefinition`; a `visitorTuple` without the contract's access
+throws) narrows it per tuple: a visitor's sub, sub-batch entry (routed
+through `handleSub`, like `authorize`) and HTTP read are refused
+`unauthorized` unless it resolves true — after the params gate, before any
+registration or load, awaited only for a visitor on such an entry so every
+other sub keeps its synchronous step — and `visitorReadsTuple(key, params)`
+is the boot snapshot's form. A throwing rule refuses and is reported. A
+visitor's heartbeat carries `pushStallMs` only (never the stalled
 owner resources' names), and a tab id is vouched for only by a socket of the
 same caller (`unsub-tab`, a `complete` replay and a close release lingering
 records of that caller's sockets alone). Pinned by

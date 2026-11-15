@@ -176,3 +176,187 @@ describe("visitor access — nothing of an owner-only key leaks", () => {
     expect(await linger()).toMatchObject({ sockets: 0, records: 0 });
   });
 });
+
+// The composition a visitor's page belongs to: the serving host's
+// (`visitorWebPlugins`) on the socket and HTTP, the snapshot's own for
+// `visitorReadsTuple`. Its one plugin reads the "public" document.
+const SITE: ReadonlySet<string> = new Set(["site.pages"]);
+
+// A parameterized resource narrowing its visitor access per tuple
+// (`access.tuple`, from the server half's `visitorTuple`): a visitor reads
+// `{ path: "public" }` only — on the socket, a sub-batch entry, HTTP and
+// `visitorReadsTuple` — and the owner every tuple, never asked the rule.
+function definePerTuple(
+  h: ReturnType<typeof createHarness>,
+  rule: (
+    p: { path?: string },
+    ctx: { readonly webPlugins: ReadonlySet<string> },
+  ) => boolean | Promise<boolean> = ({ path }, { webPlugins }) =>
+    path === "public" && webPlugins.has("site.pages"),
+) {
+  const loaded: string[] = [];
+  let asked = 0;
+  h.runtime.defineExternalResource(
+    {
+      key: "docs",
+      schema: z.string(),
+      validateParams: () => {},
+      access: VISITOR,
+    },
+    {
+      mode: "push",
+      loader: async (p: { path?: string }) => {
+        loaded.push(p.path ?? "");
+        return `doc:${p.path}`;
+      },
+      visitorTuple: async (
+        p: { path?: string },
+        ctx: { readonly webPlugins: ReadonlySet<string> },
+      ) => {
+        asked++;
+        return rule(p, ctx);
+      },
+    },
+  );
+  return { loaded, asked: () => asked };
+}
+
+const getDoc = (path: string) =>
+  new Request(`http://backend/api/resources/docs?path=${path}`);
+
+describe("visitor access per tuple", () => {
+  test("a visitor's sub of a closed tuple is refused unauthorized before any load; an open one is answered", async () => {
+    const h = createHarness({
+      principals: ["visitor"],
+      visitorWebPlugins: () => SITE,
+    });
+    const d = definePerTuple(h);
+    await h.subscribe("docs", { path: "secret" }, { id: 1, tabId: "t" });
+    await h.subscribe("docs", { path: "public" }, { id: 2, tabId: "t" });
+    const err = h.frames.find((f) => f.kind === "sub-error");
+    expect(err).toMatchObject({
+      key: "docs",
+      params: { path: "secret" },
+      reason: "unauthorized",
+      id: 1,
+    });
+    expect(h.frames.filter((f) => f.kind === "sub-ack")).toHaveLength(1);
+    expect(d.loaded).toEqual(["public"]);
+  });
+
+  test("a visitor's sub-batch refuses the closed tuple and answers the open one", async () => {
+    const h = createHarness({
+      principals: ["visitor"],
+      visitorWebPlugins: () => SITE,
+    });
+    const d = definePerTuple(h);
+    await h.subscribeBatch([
+      { key: "docs", params: { path: "public" } },
+      { key: "docs", params: { path: "secret" } },
+    ]);
+    await tick();
+    await tick();
+    const errs = h.frames.filter((f) => f.kind === "sub-error");
+    expect(errs).toHaveLength(1);
+    expect(errs[0]).toMatchObject({
+      params: { path: "secret" },
+      reason: "unauthorized",
+    });
+    expect(d.loaded).toEqual(["public"]);
+  });
+
+  test("a visitor's HTTP read of a closed tuple is 403, of an open one 200", async () => {
+    const h = createHarness({
+      callerOf: () => "visitor",
+      visitorWebPlugins: () => SITE,
+    });
+    const d = definePerTuple(h);
+    const refused = await h.runtime.handleResourceHttp(getDoc("secret"), {
+      key: "docs",
+    });
+    expect(refused.status).toBe(403);
+    expect(await refused.json()).toEqual({ reason: "unauthorized" });
+    const ok = await h.runtime.handleResourceHttp(getDoc("public"), {
+      key: "docs",
+    });
+    expect(ok.status).toBe(200);
+    expect((await ok.json()).value).toBe("doc:public");
+    expect(d.loaded).toEqual(["public"]);
+  });
+
+  test("a throwing rule refuses (fails closed)", async () => {
+    const h = createHarness({
+      callerOf: () => "visitor",
+      visitorWebPlugins: () => SITE,
+    });
+    definePerTuple(h, () => {
+      throw new Error("broken rule");
+    });
+    const r = await h.runtime.handleResourceHttp(getDoc("public"), {
+      key: "docs",
+    });
+    expect(r.status).toBe(403);
+  });
+
+  test("the owner reads every tuple and is never asked the rule", async () => {
+    const h = createHarness({
+      principals: ["owner"],
+      callerOf: () => "owner",
+    });
+    const d = definePerTuple(h);
+    await h.subscribe("docs", { path: "secret" });
+    const r = await h.runtime.handleResourceHttp(getDoc("secret"), {
+      key: "docs",
+    });
+    expect(r.status).toBe(200);
+    expect(h.frames.some((f) => f.kind === "sub-error")).toBe(false);
+    expect(d.asked()).toBe(0);
+  });
+
+  test("the rule is asked about the composition it is handed: another composition's page reads nothing", async () => {
+    const h = createHarness();
+    definePerTuple(h);
+    expect(
+      await h.runtime.visitorReadsTuple(
+        "docs",
+        { path: "public" },
+        new Set(["other.app"]),
+      ),
+    ).toBe(false);
+  });
+
+  test("a host naming no composition refuses a visitor read with a rule (fails closed)", async () => {
+    const h = createHarness({ callerOf: () => "visitor" });
+    const d = definePerTuple(h);
+    const r = await h.runtime.handleResourceHttp(getDoc("public"), {
+      key: "docs",
+    });
+    expect(r.status).toBe(403);
+    expect(d.loaded).toEqual([]);
+  });
+
+  test("visitorReadsTuple applies the rule, and the whole-resource rule first", async () => {
+    const h = createHarness();
+    definePerTuple(h);
+    define(h);
+    expect(
+      await h.runtime.visitorReadsTuple("docs", { path: "public" }, SITE),
+    ).toBe(true);
+    expect(
+      await h.runtime.visitorReadsTuple("docs", { path: "secret" }, SITE),
+    ).toBe(false);
+    expect(await h.runtime.visitorReadsTuple("open", {}, SITE)).toBe(true);
+    expect(await h.runtime.visitorReadsTuple("closed", {}, SITE)).toBe(false);
+    expect(await h.runtime.visitorReadsTuple("nope", {}, SITE)).toBe(false);
+  });
+
+  test("visitorTuple on a resource granting visitors nothing throws at declaration", () => {
+    const h = createHarness();
+    expect(() =>
+      h.runtime.defineExternalResource(
+        { key: "x", schema: z.number(), validateParams: () => {} },
+        { mode: "push", loader: async () => 1, visitorTuple: () => true },
+      ),
+    ).toThrow(/grants no visitor access/);
+  });
+});

@@ -7,6 +7,7 @@ import {
   reportServerError,
   unboundedWindowKeys,
   visitorReadable,
+  visitorReadsTuple,
 } from "@plugins/framework/plugins/server-core/core";
 import { admittedAs } from "@plugins/framework/plugins/principal/core";
 import { readPersistedSnapshots } from "@plugins/network/plugins/live/plugins/live-state-snapshot/server";
@@ -89,9 +90,20 @@ export async function assembleBootSnapshot(opts: {
   const allEnumerated = enumeratedPreloads();
   const enumeratedKeys = new Set(allEnumerated.map((e) => e.key));
   const enumerated = allEnumerated.filter((e) => readable(e.key));
-  const preloaded = preloadedKeys().filter(
-    (k) => !enumeratedKeys.has(k) && readable(k),
-  );
+  // A resource narrowing its visitor access per tuple (resource-runtime's
+  // `access.tuple`) is asked about each tuple a visitor's snapshot would
+  // carry: the default tuple of a plain preload here, each enumerated tuple
+  // once loaded (below) — the rule the HTTP read and the socket apply.
+  const visitorTuple = (key: string, params: Params) =>
+    opts.caller === "owner"
+      ? Promise.resolve(true)
+      : visitorReadsTuple(key, params, opts.webPlugins);
+  const preloaded: string[] = [];
+  for (const k of preloadedKeys()) {
+    if (enumeratedKeys.has(k) || !readable(k)) continue;
+    const params = (resourceDescriptorByKey(k)?.defaultParams ?? {}) as Params;
+    if (await visitorTuple(k, params)) preloaded.push(k);
+  }
   // The memory path: each persisted alias that holds a kept snapshot.
   const fromMemory = new Map<string, { value: unknown; workMs: number }>();
   if (opts.memory ?? true) {
@@ -114,6 +126,7 @@ export async function assembleBootSnapshot(opts: {
         const ok: { params: Params; value: unknown }[] = [];
         const failed: { params: Params; error: unknown }[] = [];
         for (const t of loaded) {
+          if (!(await visitorTuple(key, t.params))) continue;
           if (t.ok) ok.push({ params: t.params, value: t.value });
           else failed.push({ params: t.params, error: t.error });
         }

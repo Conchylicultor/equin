@@ -1401,6 +1401,19 @@ liveCollection("x.items", { …, access: { visitor: "<which site page reads it>"
   `sub-batch` entry (`sub-error unauthorized`, before any side effect) and the
   boot snapshot (only visitor-readable keys; the crawlable take assembles a
   visitor's). The owner, a browser host and central read everything.
+- **Per tuple — `visitorTuple`.** A PARAMETERIZED value granting visitor
+  access must say, on its serve call, which of its tuples a visitor reads:
+  `visitorTuple: (subject) => boolean | Promise<boolean>` (server state
+  decides — `config-v2.values`: a document only when a web plugin of the
+  composition reads it) or `visitorTuple: { every: "<reason>" }` (every tuple
+  is public — the icon glyph values). Missing on such a value, or given on any
+  other, throws at the serve call (`compile-value.ts`'s `visitorTupleOf`), so a
+  parameterized resource cannot open every tuple by omission. The runtime
+  asks the rule on the same three paths, after the params gate and before any
+  side effect (`ResourceDefinition.access.tuple`; the boot snapshot through
+  `visitorReadsTuple`); a throwing rule refuses. Never for the owner. A paged
+  value is not visitor-readable (throws); a collection's access stays whole
+  (its tuples are queries over one row set).
 - Declare it only for what a deployed site's pages read (the website: config,
   saved themes, icons, the Maps browser config). Design:
   `research/2026-11-15-network-live-resource-visitor-access.md`.

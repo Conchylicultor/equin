@@ -44,6 +44,7 @@ import {
 } from "./read-set";
 import { defineServerContribution } from "./contributions";
 import { admittedAs } from "@plugins/framework/plugins/principal/core";
+import { composedWebPlugins } from "./composed-web-plugins";
 import { reportServerError, type ServerErrorReport } from "./error-reporter";
 
 // Live-state primitive — per-worktree server side. The runtime itself lives in
@@ -548,6 +549,9 @@ const runtime = createResourceRuntime({
   // Who an HTTP read is, as the gate admitted it: a deployed site's visitor
   // reads only a resource declaring `access: { visitor }`.
   callerOf: admittedAs,
+  // The composition a per-tuple visitor rule is asked about (network/live's
+  // `visitorTuple`): the one this backend serves.
+  visitorWebPlugins: composedWebPlugins,
   // A window resource's ids-only membership query, as its own kind so it is told
   // apart from the value query and stays out of the loader read-set index.
   wrapMembership: (key, fn) => recordEntrySpan("membership", key, fn),
@@ -821,6 +825,8 @@ export const {
   // Whether a deployed site's visitor may read a key (its `access`) — the boot
   // snapshot's filter, the same rule the read paths apply.
   visitorReadable,
+  // …and a tuple of it, for a resource narrowing its access per tuple.
+  visitorReadsTuple,
 } = runtime;
 
 // ── Boot: bind the deferred resources ──────────────────────────────────────

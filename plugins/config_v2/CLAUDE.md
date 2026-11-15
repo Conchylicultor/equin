@@ -364,6 +364,18 @@ The memo key comes from **the filesystem, not an event** — deliberately. `refr
 
 **`config-v2.modified-counts` — derived from disk, through the same memo.** Its loader sweeps every registered descriptor and counts the BASE fields whose tier is `"user"` (below), so the nav badge and the detail pane can never disagree about what "modified" means. `refreshModifiedCount` survives only as the push path — it diffs a "last published" count and notifies on a flip — and is never the value the loader reads.
 
+**Who reads config from a deployed site.** A visitor (network/live, *Who may
+read*) reads `config-v2.values` and `config-v2.conflicts` of a document only
+when a web plugin of the serving composition reads it — the plugin the
+document is registered under is in `composedWebPlugins()`
+(`visitorReadsDocument`, both values' `visitorTuple`): exactly the documents
+the site's boot snapshot carries. Derived rather than declared per
+descriptor: a page reading a document ships it to that page's visitor
+anyway, and a hand-kept list would drift from what the pages read. Every
+other per-document value (tiers, git-values, raw-file, the aggregates) is
+owner-only; `config-v2.scopes` stays whole (every registered path and its app
+scopes, no values — what every `useConfig` read keys off).
+
 **`config-v2.scopes` (storePath→scopeIds) — still an event-fed in-memory map** in `resource.ts`, recomputed per changed descriptor by `refreshScopeMembers` (boot warm-up + `registry.ts`'s notify path). It reads nothing from disk per load — and so **does** go stale on a missed watcher event. Applying the fingerprint-memo treatment above is the intended fix; conflict-locations and modified-counts have had it, this one hasn't.
 
 `config-v2.conflicts` is keyed per-descriptor (`{ path, scopeId? }`) so opening one config page recomputes one descriptor, not the whole ~180-descriptor map. `config-v2.tiers` is keyed the same way and rides the same memo record — as a **lazily computed slot**, because the conflict-locations sweep reads every descriptor's conflict entry and must not start paying to normalize and diff two documents it never looks at.

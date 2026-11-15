@@ -682,6 +682,7 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `untimedStep`
     - `validatePersistedValue`
     - `visitorReadable`
+    - `visitorReadsTuple`
     - `withNotifyBatch`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shadow --shadow`

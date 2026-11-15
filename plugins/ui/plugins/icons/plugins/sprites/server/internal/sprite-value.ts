@@ -15,6 +15,12 @@ import { SpriteDrawer } from "./sprite-drawer";
  */
 export const iconSpriteServed = serveValue(iconSprite, {
   source: "external",
+  // Every tuple is the drawing of glyphs from the open icon sets the build
+  // ships — the same for every user, nothing of the owner's.
+  visitorTuple: {
+    every:
+      "a tuple is drawn from the shipped open icon sets, content-addressed — no owner data",
+  },
   // A slice of the drawer's per-host memo (one build per sprite group,
   // shared by every reader): no slot, never queued behind git reads.
   readCost: "memory",

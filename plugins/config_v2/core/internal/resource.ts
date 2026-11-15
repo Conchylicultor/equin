@@ -9,7 +9,12 @@ import {
  * Why a deployed site's visitors read config: every page of it renders from
  * its composition's config (its theme selection, its sections' order, its
  * copy), read through `useConfig` — the documents, which scopes have their own,
- * and whether one is in conflict.
+ * and whether one is in conflict. The per-document values (`config-v2.values`,
+ * `config-v2.conflicts`) are narrowed per tuple by their served half
+ * (`visitorTuple`): a visitor reads a document only when a web plugin of the
+ * site's composition reads it. `config-v2.scopes` is one param-less map —
+ * every registered path and the app scopes it is customized for, no values —
+ * which every `useConfig` read keys off, so it stays whole.
  */
 const CONFIG_VISITOR_REASON =
   "every page of a deployed site renders from its composition's config (useConfig: the document, its scope membership, its conflict)";

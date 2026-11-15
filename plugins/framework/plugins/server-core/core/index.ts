@@ -96,6 +96,7 @@ export {
   onDeferredResourcesBound,
   handleResourceHttp,
   visitorReadable,
+  visitorReadsTuple,
   installAsleepClock,
   installSnapHash,
   loadResourceByKey,

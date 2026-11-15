@@ -54,3 +54,42 @@ No change to the network/live API beyond the declared field.
 - principal: `admittedAs` matrix.
 - boot-snapshot: visitor assembly drops undeclared keys.
 - live core: access stamped on every minted descriptor; empty reason throws.
+
+## Follow-up: per tuple (config documents)
+
+Access per resource left `config-v2.values` / `.conflicts` open for EVERY
+`{ path }`: a visitor could read any registered config document (automation
+prompts, budgets), not only the site's. Fixed by a per-tuple rule:
+
+- **Where.** `serveValue(…, { visitorTuple })` — the serve half, because what
+  decides is server state (the config registry, the composition). It becomes
+  the runtime entry's `access.tuple`; the declaration's `access: { visitor }`
+  stays the resource-level opt-in. A parameterized visitor value must pass
+  one (a predicate, or `{ every: "<reason>" }`) — a throw at the serve call —
+  so the hole cannot reopen for the next parameterized resource.
+- **Enforced** on the HTTP read, each socket sub and sub-batch entry, and the
+  boot snapshot (`visitorReadsTuple`, applied to plain preloads' default tuple
+  and each enumerated tuple), after the params gate, failing closed.
+- **Config's rule — derived, not declared.** A visitor reads a document iff
+  the plugin it is registered under is a web plugin of the serving
+  composition (the same reader the boot snapshot's `preloadParams` name).
+  Considered: a per-descriptor `visitor` flag (the setting's owner decides).
+  Rejected: a document a site page reads is shipped to that page's visitor by
+  the boot snapshot regardless, so "read by the site but private" has no
+  consistent answer — the flag could only break the page — and ~45 documents
+  (most of them generated reorder / view descriptors) would need hand-kept
+  flags drifting from what the pages read. The residual: the rule is plugin
+  granular — a composed plugin's document no visitor page actually reads is
+  still readable. Acceptable: such plugins are the site's own UI.
+- `config-v2.conflicts` follows the same rule (`useSetConfig` reads it beside
+  every document; its origin/override are that document's values).
+  `config-v2.scopes` stays whole: one param-less map of paths and app scope
+  ids, no values, read by every `useConfig`.
+- Icons' `icons.sprite` / `icons.runtime-symbols`: `{ every }` (shipped open
+  icon sets, content-addressed).
+
+Verified on the website composition as a visitor (X-Forwarded-For): every
+`/about` page renders with no console error or 403; a non-site document
+(`tasks/sidequest-autopilot/…`) is 403 over HTTP and `sub-error unauthorized`
+on sub and sub-batch for values and conflicts; the visitor's boot snapshot
+carries the same 60 config tuples as the owner's.

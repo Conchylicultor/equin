@@ -127,6 +127,31 @@ export interface RuntimeSocket {
  */
 export type LiveCaller = "owner" | "visitor";
 
+/**
+ * A runtime entry's visitor access (`ResourceDefinition.access`): the
+ * declaration's `{ visitor: "<reason>" }`, plus the server half's per-tuple
+ * predicate when it narrows it (`tuple`).
+ */
+export interface VisitorTupleAccess<P = ResourceParams> {
+  readonly visitor: string;
+  readonly tuple?: (
+    params: P,
+    ctx: VisitorTupleContext,
+  ) => boolean | Promise<boolean>;
+}
+
+/**
+ * What a per-tuple visitor rule is told about the page asking: the web
+ * plugins (dot-form ids) of the composition it is a page of — the serving
+ * process's for the HTTP read and the socket
+ * (`ResourceRuntimeOptions.visitorWebPlugins`), the snapshot's own for a boot
+ * snapshot (`visitorReadsTuple`), which may render another composition's
+ * pages (the crawlable static host).
+ */
+export interface VisitorTupleContext {
+  readonly webPlugins: ReadonlySet<string>;
+}
+
 // Local, cycle-free copy of the WS types (see server-core/central-core types.ts).
 export interface WsData {
   path: string;
@@ -670,8 +695,17 @@ export interface ResourceDefinition<
    * request the host marks `visitor`) is refused it on every read path — the
    * HTTP read (403 `unauthorized`), every socket sub (`sub-error`
    * `unauthorized`) and the boot snapshot (`visitorReadable`).
+   *
+   * `tuple` narrows it per TUPLE, for a parameterized resource whose tuples
+   * are not all a deployed site's to read (config-v2.values: one document per
+   * `path`): a visitor reads `params` only when it resolves true — on the
+   * same three paths (`visitorReadsTuple` for the boot snapshot), after the
+   * params gate and before any side effect; a throwing predicate refuses
+   * (fails closed, reported). Supplied by the server half
+   * (`ServerResourceOptionsBase.visitorTuple`), since what decides it is
+   * server state; the owner is never asked it.
    */
-  access?: { readonly visitor: string };
+  access?: VisitorTupleAccess<P>;
   /**
    * The refusal codes the loader may throw (`ResourceRefusal.code`), declared
    * once on the shared client descriptor (a `liveValue`'s `refusals`) so the
@@ -984,6 +1018,15 @@ interface ServerResourceOptionsBase<
   readCost?: ReadCost;
   /** Deferred subscription-authorization seam — see `ResourceDefinition.authorize`. */
   authorize?: ResourceDefinition<T, P>["authorize"];
+  /**
+   * Which tuples of a visitor-readable resource a deployed site's visitor may
+   * read — `ResourceDefinition.access`'s `tuple`. Only beside a contract
+   * declaring `access: { visitor }` (throws otherwise).
+   */
+  visitorTuple?: (
+    params: P,
+    ctx: VisitorTupleContext,
+  ) => boolean | Promise<boolean>;
   /** Declared freshness, a `_debug` label — see `ResourceDefinition.freshness`. */
   freshness?: ResourceFreshness;
   /**
@@ -1065,6 +1108,17 @@ function contractToDefinition<T, P extends ResourceParams>(
   },
 ): ResourceDefinition<T, P> {
   refuseLegacyScopeKeys(form, contract.key, opts);
+  if (opts.visitorTuple !== undefined && contract.access === undefined) {
+    throw new Error(
+      `${form}: "visitorTuple" on key "${contract.key}", whose declaration grants no visitor access — declare \`access: { visitor: "<reason>" }\` on it first`,
+    );
+  }
+  const access: VisitorTupleAccess<P> | undefined =
+    contract.access === undefined
+      ? undefined
+      : opts.visitorTuple === undefined
+        ? contract.access
+        : { visitor: contract.access.visitor, tuple: opts.visitorTuple };
   let mode: ResourceMode;
   if (contract.keyed) {
     if (opts.mode !== undefined) {
@@ -1091,7 +1145,7 @@ function contractToDefinition<T, P extends ResourceParams>(
       ? { optionalParams: contract.optionalParams }
       : {}),
     ...(contract.refusals !== undefined ? { refusals: contract.refusals } : {}),
-    ...(contract.access !== undefined ? { access: contract.access } : {}),
+    ...(access !== undefined ? { access } : {}),
     ...(contract.bytes === true ? { bytes: true as const } : {}),
     ...(contract.patches === true ? { patches: true as const } : {}),
     ...(contract.shape !== undefined ? { shape: contract.shape } : {}),
@@ -1553,7 +1607,7 @@ interface RegistryEntry {
   /** Declared refusal codes — see `ResourceDefinition.refusals`. */
   refusals?: readonly string[];
   /** Who besides the owner may read it — see `ResourceDefinition.access`. */
-  access?: { readonly visitor: string };
+  access?: VisitorTupleAccess;
   /** A bytes value — see `ResourceDefinition.bytes`. */
   bytes?: true;
   /**
@@ -2095,6 +2149,14 @@ export interface ResourceRuntimeOptions {
    * server: principal's `admittedAs`; central / a browser host: omit (owner).
    */
   callerOf?: (req: Request) => LiveCaller;
+  /**
+   * The web plugins of the composition this host serves, handed to a
+   * per-tuple visitor rule (`VisitorTupleContext`) on the HTTP read and the
+   * socket. server: server-core's `composedWebPlugins`; central / a browser
+   * host: omit — they have no visitor, and a visitor read of a resource with
+   * a rule then refuses (fails closed).
+   */
+  visitorWebPlugins?: () => ReadonlySet<string>;
   /**
    * Wrap a window resource's ids-only membership query (`windowIdsOf`), so it
    * is told apart from the value query. Runs inside the drain's `push` origin.
@@ -2884,6 +2946,19 @@ export interface ResourceRuntime {
    * same rule; false for an unknown key.
    */
   visitorReadable: (key: string) => boolean;
+  /**
+   * Whether a deployed site's visitor may read this tuple of `key`:
+   * `visitorReadable(key)` and, for a resource with a per-tuple rule
+   * (`ResourceDefinition.access.tuple`), that rule — the boot snapshot's half
+   * of the check the HTTP read and the socket apply, asked for the
+   * composition whose page boots from it (`webPlugins`). `params` canonical.
+   * A throwing rule refuses (reported).
+   */
+  visitorReadsTuple: (
+    key: string,
+    params: ResourceParams,
+    webPlugins: ReadonlySet<string>,
+  ) => Promise<boolean>;
   /**
    * Seed the in-memory diff base (`entry.snapshots` + order sigs) of a persisted
    * unbounded-window alias from its durable L2 value at boot, BEFORE catch-up, so
@@ -6108,7 +6183,10 @@ export function createResourceRuntime(
         ? { optionalParams: def.optionalParams }
         : {}),
       ...(def.refusals !== undefined ? { refusals: def.refusals } : {}),
-      ...(def.access !== undefined ? { access: def.access } : {}),
+      // Erased like `authorize`: the entry is asked with the tuple it serves.
+      ...(def.access !== undefined
+        ? { access: def.access as VisitorTupleAccess }
+        : {}),
       ...(def.bytes === true ? { bytes: true as const } : {}),
       ...(def.patches === true ? { patches: true as const } : {}),
       externalSource,
@@ -6288,6 +6366,9 @@ export function createResourceRuntime(
         revalidate: built.entry.revalidate,
         readCost: built.entry.readCost,
         authorize: built.entry.authorize,
+        // The bind's per-tuple visitor rule (`visitorTuple`) narrows the
+        // contract's whole-resource access the placeholder was built with.
+        access: built.entry.access,
         validateParams: built.entry.validateParams,
       } satisfies Partial<RegistryEntry>);
       indexRouting(entry);
@@ -9701,6 +9782,23 @@ export function createResourceRuntime(
       return;
     }
     if (refuseSubParams(state.ws, entry, req, params, build)) return;
+    // The per-tuple visitor rule — on canonical, gated params, still before
+    // any side effect. Awaited only where it applies: every other sub keeps
+    // its synchronous step from frame to registration (a derived sub's
+    // answer, the frame-position bookkeeping, depend on it).
+    if (
+      needsTupleCheck(state.caller, entry) &&
+      (await refuseTupleForCaller(state.caller, entry, params))
+    ) {
+      sendJson(state.ws, {
+        kind: "sub-error",
+        ...req,
+        key,
+        params,
+        reason: "unauthorized",
+      });
+      return;
+    }
     // Subscription-authorization seam (deferred; single-instance-per-user — see
     // research/2026-07-02-global-adr-single-instance-per-user.md). Runs before
     // any side effect (refcount bump, onFirstSubscribe, loader read) so a refused
@@ -10231,7 +10329,7 @@ export function createResourceRuntime(
       if (refuseSubParams(state.ws, entry, { id: e.id, tabId }, params, build))
         continue;
       retained.add(`${e.key}\0${pk}`);
-      if (entry.authorize) {
+      if (entry.authorize || needsTupleCheck(state.caller, entry)) {
         // The authorization seam must run BEFORE any side effect (see
         // `handleSub`), so an authorized entry cannot be pre-registered here —
         // route it through the full per-sub path wholesale. (No shipped resource
@@ -10645,7 +10743,7 @@ export function createResourceRuntime(
     // included — runs inside `wrapHttp` (server: an `http` entry span), so a
     // conditional GET is measured even when it never reaches a loader. Wrapped
     // only after the lookup, so the span label only ever names a registered key.
-    const serve = () => serveResourceHttp(req, entry, build);
+    const serve = () => serveResourceHttp(req, entry, build, caller);
     return opts.wrapHttp ? opts.wrapHttp(key, serve) : serve();
   }
 
@@ -10661,6 +10759,39 @@ export function createResourceRuntime(
   ): boolean {
     const caller = typeof who === "string" ? who : who.caller;
     return caller === "visitor" && entry.access === undefined;
+  }
+
+  /** Whether this caller's read of `entry` waits on its per-tuple visitor rule. */
+  function needsTupleCheck(caller: LiveCaller, entry: RegistryEntry): boolean {
+    return caller === "visitor" && entry.access?.tuple !== undefined;
+  }
+
+  /**
+   * Whether this tuple of `entry` is closed to this caller: a visitor reads a
+   * resource with a per-tuple rule (`ResourceDefinition.access.tuple`) only
+   * where it says so. A throwing rule refuses — never a read let through by a
+   * broken predicate — and is reported. The owner is never asked.
+   */
+  async function refuseTupleForCaller(
+    caller: LiveCaller,
+    entry: RegistryEntry,
+    params: ResourceParams,
+    webPlugins?: ReadonlySet<string>,
+  ): Promise<boolean> {
+    const tuple = entry.access?.tuple;
+    if (caller !== "visitor" || tuple === undefined) return false;
+    try {
+      const composed = webPlugins ?? opts.visitorWebPlugins?.();
+      if (composed === undefined) {
+        throw new Error(
+          `a visitor read of "${entry.key}" asks its per-tuple rule, but this host names no composition (visitorWebPlugins)`,
+        );
+      }
+      return !(await tuple(params, { webPlugins: composed }));
+    } catch (err) {
+      reportLoaderError(`access.tuple failed for ${entry.key}`, err);
+      return true;
+    }
   }
 
   // A failed read's JSON body (see `ResourceHttpErrorBody`): the client reads
@@ -10679,6 +10810,7 @@ export function createResourceRuntime(
     req: Request,
     entry: RegistryEntry,
     build: string | undefined,
+    caller: LiveCaller,
   ): Promise<Response> {
     const key = entry.key;
     const url = new URL(req.url);
@@ -10702,6 +10834,14 @@ export function createResourceRuntime(
         verdict,
         detail: err.message,
       });
+    }
+    // The per-tuple visitor rule, as on the socket: after the params gate,
+    // before the revalidate signature and the loader.
+    if (
+      needsTupleCheck(caller, entry) &&
+      (await refuseTupleForCaller(caller, entry, resourceParams))
+    ) {
+      return httpError(403, { reason: "unauthorized" });
     }
 
     // Conditional revalidation: compute the signature ONCE, BEFORE the value, and
@@ -11933,6 +12073,22 @@ export function createResourceRuntime(
     unboundedWindowKeys,
     preloadedKeys,
     visitorReadable: (key: string) => registry.get(key)?.access !== undefined,
+    visitorReadsTuple: async (
+      key: string,
+      params: ResourceParams,
+      webPlugins: ReadonlySet<string>,
+    ) => {
+      const entry = registry.get(key);
+      if (entry === undefined || refuseForCaller("visitor", entry)) {
+        return false;
+      }
+      return !(await refuseTupleForCaller(
+        "visitor",
+        entry,
+        params,
+        webPlugins,
+      ));
+    },
     seedPersistedSnapshot,
     validatePersistedValue,
     persistedDefinitions,

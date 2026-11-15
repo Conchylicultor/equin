@@ -135,6 +135,12 @@ export async function loadRuntimeSymbols({
  */
 export const runtimeSymbolsServed = serveValue(runtimeSymbolsValue, {
   source: "external",
+  // Every tuple is the drawing of glyphs from the open icon sets the build
+  // ships — the same for every user, nothing of the owner's.
+  visitorTuple: {
+    every:
+      "a tuple is drawn from the shipped open icon sets, content-addressed — no owner data",
+  },
   // A pick from the drawers' memos (per style on the desktop; the host's
   // store, else the bundled set, on a browser host).
   readCost: "memory",

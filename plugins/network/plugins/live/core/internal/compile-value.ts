@@ -445,7 +445,36 @@ export type ServeValueOptions<
    * `ResourceDefinition.readCost`). A db value reads Postgres: never memory.
    */
   readCost?: Src extends "db" ? never : "memory";
+  /**
+   * Which tuples a deployed site's visitor may read, for a PARAMETERIZED
+   * value whose declaration grants `access: { visitor }` — required there
+   * (a throw at the serve call), refused anywhere else: a visitor's read is
+   * decided per tuple, never per resource, once the resource has more than
+   * one. A function of the subject (the params; a typed-query value's decoded
+   * question) answering whether this one is the site's to read — what decides
+   * it is server state the declaration cannot see (config-v2.values: whether
+   * a plugin of the composition's browser reads that document) — or
+   * `{ every: "<reason>" }` when every tuple is (content-addressed public
+   * assets). The owner is never asked. Enforced by the runtime on the HTTP
+   * read, each socket sub and the boot snapshot (resource-runtime's
+   * `ResourceDefinition.access.tuple`); a throwing rule refuses. Handed
+   * `{ webPlugins }`: the web plugins of the composition the asking page
+   * belongs to — the serving backend's, or the one a boot snapshot is
+   * assembled for (the crawlable host renders another composition's pages).
+   */
+  visitorTuple?: VisitorTupleRule<P>;
 };
+
+/**
+ * {@link ServeValueOptions.visitorTuple}: a per-subject predicate, or every
+ * tuple with a reason.
+ */
+export type VisitorTupleRule<S> =
+  | ((
+      subject: S,
+      ctx: { readonly webPlugins: ReadonlySet<string> },
+    ) => boolean | Promise<boolean>)
+  | { every: string };
 
 /**
  * A paged value's options: external only (a paged Postgres list is a
@@ -478,7 +507,11 @@ export type ServePagedValueOptions<
   C,
   F,
   W
-> & { revalidate?: never; readCost?: never } & MetaOption<Meta, Q, F>;
+> & {
+  revalidate?: never;
+  readCost?: never;
+  visitorTuple?: never;
+} & MetaOption<Meta, Q, F>;
 
 /** `meta` exactly when the declaration has `paged.meta`. */
 type MetaOption<Meta, Q, F> = [Meta] extends [undefined]
@@ -1246,9 +1279,16 @@ function compilePagedOf(
   const freshness =
     changes !== undefined ? { freshness: freshnessOf(changes) } : {};
   refuseServedBound(value.key, opts);
-  const stray = (["revalidate", "readCost"] as const).filter(
+  const stray = (["revalidate", "readCost", "visitorTuple"] as const).filter(
     (f) => opts[f] !== undefined,
   );
+  if ((value as { access?: unknown }).access !== undefined) {
+    // Its pages are one resource per question and range: a visitor's read of
+    // one would have to be decided per tuple, which nothing decides yet.
+    throw new Error(
+      `serveValue("${value.key}"): a paged value is not readable by a deployed site's visitor — drop its \`access\`.`,
+    );
+  }
   if (stray.length > 0) {
     throw new Error(
       `serveValue("${value.key}"): a paged value takes no \`${stray.join("`, `")}\`.`,
@@ -1594,6 +1634,7 @@ export function compileValueOf<T, P extends Record<string, string>, S>(
   );
   const revalidate = opts.revalidate as
     ((...args: unknown[]) => Promise<string>) | undefined;
+  const visitorTuple = visitorTupleOf<P, S>(value, opts.visitorTuple, subjects);
   const readCost = opts.readCost as "memory" | undefined;
   if (readCost !== undefined && !external) {
     // Unreachable from typed code (`readCost` is `never` on a db value).
@@ -1625,6 +1666,7 @@ export function compileValueOf<T, P extends Record<string, string>, S>(
             ) => Promise<string>,
           }),
       ...(readCost === undefined ? {} : { readCost }),
+      ...(visitorTuple === undefined ? {} : { visitorTuple }),
       ...lifecycle,
       // A label the runtime's `_debug` payload shows per key (read-set pane).
       ...(changes !== undefined ? { freshness: freshnessOf(changes) } : {}),
@@ -1636,6 +1678,56 @@ export function compileValueOf<T, P extends Record<string, string>, S>(
       notify = fn;
     },
   };
+}
+
+/**
+ * The runtime's per-tuple visitor rule (`visitorTuple`) for a value, checked
+ * against its declaration: required for a parameterized value granting
+ * visitor access, refused on any other. `{ every }` answers every tuple
+ * (absent from the runtime: its whole-resource access already does).
+ */
+function visitorTupleOf<P extends Record<string, string>, S>(
+  value: LiveValue<unknown, P, LiveValueOrigin>,
+  rule: unknown,
+  subjects: Subjects<P, S>,
+):
+  | ((
+      params: P,
+      ctx: { readonly webPlugins: ReadonlySet<string> },
+    ) => boolean | Promise<boolean>)
+  | undefined {
+  const decl = value as {
+    access?: unknown;
+    params?: readonly string[];
+    query?: unknown;
+  };
+  const parameterized =
+    (decl.params?.length ?? 0) > 0 || decl.query !== undefined;
+  if (decl.access === undefined || !parameterized) {
+    if (rule === undefined) return undefined;
+    throw new Error(
+      `serveValue("${value.key}"): \`visitorTuple\` is for a parameterized value declaring \`access: { visitor }\` — ${decl.access === undefined ? "this one grants visitors nothing" : "this one has one tuple, decided by its access"}.`,
+    );
+  }
+  if (typeof rule === "function") {
+    const fn = rule as (
+      subject: S,
+      ctx: { readonly webPlugins: ReadonlySet<string> },
+    ) => boolean | Promise<boolean>;
+    return (params, ctx) => fn(subjects.of(params), ctx);
+  }
+  if (
+    rule !== null &&
+    typeof rule === "object" &&
+    Object.keys(rule).length === 1 &&
+    typeof (rule as { every?: unknown }).every === "string" &&
+    (rule as { every: string }).every.trim() !== ""
+  ) {
+    return undefined;
+  }
+  throw new Error(
+    `serveValue("${value.key}"): a parameterized value declaring \`access: { visitor }\` names which of its tuples a visitor reads — \`visitorTuple: (subject) => boolean\`, or \`visitorTuple: { every: "<why every tuple is public>" }\` — got ${rule === undefined ? "none" : JSON.stringify(rule)}.`,
+  );
 }
 
 /** `changes` as the runtime's debug label: its arm and, off `"notified"`, its reason. */
@@ -1764,6 +1856,8 @@ export interface AnyServeOptions {
   recomputeOn?: readonly unknown[];
   revalidate?: unknown;
   readCost?: unknown;
+  /** Which tuples a visitor reads (see {@link ServeValueOptions.visitorTuple}). */
+  visitorTuple?: unknown;
   whileSubscribed?: unknown;
   /** A start over the followed rows — only beside `follows` (`followingHook`). */
   whileFollowing?: unknown;

@@ -31923,6 +31923,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `untimedStep`
           - `validatePersistedValue`
           - `visitorReadable`
+          - `visitorReadsTuple`
           - `withNotifyBatch`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`

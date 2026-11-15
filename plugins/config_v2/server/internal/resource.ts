@@ -142,6 +142,29 @@ function redactSecrets(
   return redacted;
 }
 
+/**
+ * Whether a deployed site's visitor may read the document at `path` (any of
+ * its scopes): only when a web plugin of the asking page's composition reads
+ * it — the plugin it is registered under (`pluginByPath`, the same reader each
+ * boot tuple names) is one that composition loads (`webPlugins`: the serving
+ * backend's, or the one a boot snapshot is assembled for). So a visitor reads
+ * exactly the documents its pages can read, and the site's boot snapshot
+ * already carries; a document of a plugin the site does not load (an
+ * automation's prompt, a budget) is refused on every read path. Derived, never
+ * declared per descriptor: a page reading a document is what ships it to that
+ * page's visitor, so "read by the site but private" has no consistent answer,
+ * and a list kept by hand would drift from what the pages read. An unknown
+ * path is refused.
+ */
+async function visitorReadsDocument(
+  { path }: { path: string; scopeId?: string },
+  { webPlugins }: { readonly webPlugins: ReadonlySet<string> },
+): Promise<boolean> {
+  await registryReady;
+  const plugin = pluginByPath.get(path);
+  return plugin !== undefined && webPlugins.has(plugin);
+}
+
 // One descriptor's document for one scope. Preloaded: the boot snapshot loads
 // every tuple a first paint can read — each registered `{ path }` plus each
 // `{ path, scopeId }` with its own config — named by `preloadParams` from the
@@ -162,6 +185,7 @@ export const configValuesServed = serveValue(configValues, {
   // first reads only wait for the registry): no read-admission slot, so a
   // tab's hundreds of config tuples never queue behind git reads.
   readCost: "memory",
+  visitorTuple: visitorReadsDocument,
   loader: whenRegistryReady(({ path, scopeId }) => {
     const descriptor = descriptorByPath.get(path);
     if (!descriptor || !configGetter) {
@@ -430,6 +454,10 @@ async function derivedDescriptorConflict(
 export const configConflictServed = serveValue(configConflict, {
   source: "external",
   changes: "notified",
+  // The documents a visitor reads (`useSetConfig` reads a document's conflict
+  // beside it) — its origin and override are that document's committed and
+  // stored values, no more than the document itself.
+  visitorTuple: visitorReadsDocument,
   loader: whenRegistryReady(({ path, scopeId }) =>
     derivedDescriptorConflict(path, scopeId),
   ),
