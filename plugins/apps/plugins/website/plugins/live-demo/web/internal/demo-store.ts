@@ -33,7 +33,7 @@ export interface DemoState {
    * then on, for the rest of the visit — never before (a site page without
    * the demo starts nothing), never again (a page switch keeps the server).
    */
-  started: { resume: true | undefined } | null;
+  started: boolean;
   /** The visitor came in (the gate, a join, or the demo page): the frame stays grown. */
   entered: boolean;
   /** How many times the visitor clicked Enter at the gate (the homepage scrolls to the frame). */
@@ -54,7 +54,7 @@ const DemoStore = defineScopedStore<DemoState>({
   target: null,
   lastKind: null,
   controls: null,
-  started: null,
+  started: false,
   entered: false,
   gateEntries: 0,
   place: undefined,
@@ -109,7 +109,7 @@ function demoActions(store: ScopedStore<DemoState>): DemoActions {
       update({
         target: { kind, element, place: null },
         lastKind: kind,
-        started: s.started ?? { resume: kind === "page" ? true : undefined },
+        started: true,
         entered: s.entered || kind === "page",
         returning: kind === "framed" && s.lastKind === "page",
       });

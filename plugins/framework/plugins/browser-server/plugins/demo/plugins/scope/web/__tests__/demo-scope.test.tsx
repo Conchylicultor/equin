@@ -37,7 +37,13 @@ vi.mock(
 );
 
 import { act, cleanup, render, waitFor } from "@testing-library/react";
-import { Component, useEffect, type ReactElement, type ReactNode } from "react";
+import {
+  Component,
+  useEffect,
+  useState,
+  type ReactElement,
+  type ReactNode,
+} from "react";
 import { z } from "zod";
 import {
   PluginProvider,
@@ -238,6 +244,19 @@ function Probe<T>({ read, onRead }: { read: () => T; onRead: (v: T) => void }) {
     onRead(value);
   });
   return null;
+}
+
+/** A page whose URL comes to name the demo later: `resume` is unset until `onReady`'s callback runs. */
+function ResumeLater({
+  onReady,
+  children,
+}: {
+  onReady: (resume: () => void) => void;
+  children: (resume: true | undefined) => ReactNode;
+}) {
+  const [resume, setResume] = useState<true | undefined>(undefined);
+  useEffect(() => onReady(() => setResume(true)), [onReady]);
+  return children(resume);
 }
 
 const textOf = (r: { status: string; data?: { text: string } }) =>
@@ -471,6 +490,46 @@ describe("<DemoScope>", () => {
     await waitFor(() => expect(seen.greeting).toBe("hello ada (demo)"));
     expect(new Set(seen.boots)).toEqual(new Set(["starting"]));
     // The page knew: no entry to hear.
+    expect(seen.entered).toEqual([]);
+  });
+
+  it("a scope at the gate lets the visitor in once its page's URL comes to name the demo (resume turns true)", async () => {
+    stubLocks([]);
+    const scenario = scenarioOf();
+    const seen: { boots: string[]; greeting?: string; entered: string[] } = {
+      boots: [],
+      entered: [],
+    };
+    let resumeNow: (() => void) | undefined;
+    await renderAsync(
+      <PluginProvider plugins={PLUGINS}>
+        <ResumeLater onReady={(r) => (resumeNow = r)}>
+          {(resume) => (
+            <DemoScope
+              scenario={scenario}
+              resume={resume}
+              onEnter={(how) => seen.entered.push(how)}
+              boot={(state) => {
+                seen.boots.push(state.kind);
+                return null;
+              }}
+            >
+              <Probe
+                read={() => useLive(greeting, { who: "ada" })}
+                onRead={(r) => (seen.greeting = textOf(r))}
+              />
+            </DemoScope>
+          )}
+        </ResumeLater>
+      </PluginProvider>,
+    );
+    await waitFor(() => expect(seen.boots.at(-1)).toBe("gate"));
+    expect(seen.greeting).toBeUndefined();
+    seen.boots = [];
+    act(() => resumeNow!());
+    await waitFor(() => expect(seen.greeting).toBe("hello ada (demo)"));
+    // Never the gate again; the page knew, so no entry to hear.
+    expect(seen.boots).not.toContain("gate");
     expect(seen.entered).toEqual([]);
   });
 

@@ -429,7 +429,9 @@ export function DemoScope({
    * no gate, the host starts at once and `boot` draws only its loading, and
    * `onEnter` is not called — the page knew. `false` (a plain page): the gate,
    * even while the visitor is in the demo in another tab. Omitted: a page
-   * whose URL cannot say — a tab joins the demo another tab is in.
+   * whose URL cannot say — a tab joins the demo another tab is in. Read live:
+   * turning `true` after mount (the page moved to a URL in the demo) lets the
+   * visitor in at once; leaving `true` never sends them back to the gate.
    */
   resume?: boolean;
   children: ReactNode;
@@ -470,6 +472,15 @@ export function DemoScope({
   // Whether the host may start: once the visitor entered, or behind the gate
   // once this browser is found to hold the data (nothing large to download).
   const [started, setStarted] = useState(!gated);
+  // The page's URL came to name the demo after mount (a scope mounted on a
+  // plain page, then the page switched to one whose URL is in the demo): the
+  // visitor is in from now on — adjusted during render, and the render below
+  // reads `resume` too, so the gate is never drawn once it is true.
+  // `onEnter` is not called: the page knew.
+  if (resume === true && (visitor !== "in" || !started)) {
+    setVisitor("in");
+    setStarted(true);
+  }
   const [state, setState] = useState<ScopeState>(
     gated ? { kind: "idle" } : { kind: "booting", progress: null },
   );
@@ -598,9 +609,11 @@ export function DemoScope({
   // host started behind it (stored data) that failed or was declined says so
   // once the visitor enters, never in place of the gate.
   if (checkFailed !== null) throw checkFailed.error;
-  if (visitor === "checking" && boot !== undefined)
+  // A resumed visit is in, even on the render pass that adjusts the state.
+  const outside = resume === true ? "in" : visitor;
+  if (outside === "checking" && boot !== undefined)
     return boot({ kind: "checking" });
-  if (visitor === "gate" && boot !== undefined) {
+  if (outside === "gate" && boot !== undefined) {
     return boot({
       kind: "gate",
       enter: () => {

@@ -15,7 +15,10 @@ whichever page asks for it. Design:
   is mounted (no hero film, no bands). Its place is the page's embed tail
   (`/about/demo/at/agents/c/x`, `demoPagePath`), each move a history entry,
   so Back walks the demo's moves, then leaves. Esc is the demo's alone:
-  nothing on this page navigates off it on a key.
+  nothing on this page navigates off it on a key. It never shows the Enter
+  equin gate: its URL says the visitor is in (`DemoScope`'s `resume`, passed
+  live — also when the homepage mounted the scope first, at its gate). The
+  gate is only ever the homepage frame's.
 - **Back to equin** (`landing/screenshot/chrome`'s `BackToSitePill`: an
   always-shown, draggable pill at the top edge) is drawn only when the
   visitor got to the demo page by Maximize (`viaMaximize`, set by Maximize

@@ -50,8 +50,8 @@ export function DemoResident({ children }: { children: ReactNode }): ReactNode {
  * (`Website.Resident`), so moving between the homepage's frame and the demo
  * page never ends it. Nothing mounts until a page first asks for the demo
  * (a `DemoTarget`) — another site page starts no worker — and from then on
- * one `<DemoScope>` stays (`resume` when the first page was the demo page,
- * whose URL says the visitor is in). Its boot screen and the running demo
+ * one `<DemoScope>` stays (`resume` while the demo page shows, whose URL
+ * says the visitor is in: the gate is only ever the homepage frame's). Its boot screen and the running demo
  * are drawn into whichever box the current page claimed, through a portal;
  * on a page without one, nothing is drawn and the server keeps running.
  */
@@ -68,12 +68,14 @@ function DemoServer(): ReactNode {
     () => morphDemoFrame(() => navigate(landingUrl())),
     [navigate],
   );
-  if (started === null) return null;
+  if (!started) return null;
   return (
     <DemoScope
       scenario={workspaceDemo}
       onEnter={demo.entered}
-      resume={started.resume}
+      // The demo page's URL names a place in the demo: the visitor is in,
+      // whichever page mounted the scope first — the gate is the frame's.
+      resume={target?.kind === "page" ? true : undefined}
       boot={(state) =>
         target === null
           ? null
