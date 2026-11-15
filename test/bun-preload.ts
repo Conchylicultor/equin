@@ -1,3 +1,5 @@
+// First, before any module that could make a slot: see track-slot-sites.ts.
+import "./track-slot-sites";
 import { beforeEach } from "bun:test";
 import { discardHeldReports } from "@plugins/primitives/plugins/report-sink/core/testing";
 import { declareRuntimeNamespace } from "@plugins/infra/plugins/runtime-identity/core";
