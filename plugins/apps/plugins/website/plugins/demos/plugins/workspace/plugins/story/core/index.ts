@@ -25,5 +25,13 @@ export type {
 export { demoPrototypeFixture } from "./internal/prototypes";
 export { DEMO_SONG_ID, demoSongs } from "./internal/songs";
 export { DEMO_PLACES } from "./internal/places";
-export { RECIPES_BEFORE_AFTER as DEMO_RECIPES_BEFORE_AFTER } from "./internal/before-after";
-export type { BeforeAfterRegistration as DemoBeforeAfterRegistration } from "./internal/before-after";
+export {
+  BEFORE_AFTERS as DEMO_BEFORE_AFTERS,
+  PRACTICE_TIMER_BEFORE_AFTER as DEMO_PRACTICE_TIMER_BEFORE_AFTER,
+  RECIPES_BEFORE_AFTER as DEMO_RECIPES_BEFORE_AFTER,
+} from "./internal/before-after";
+export type {
+  BeforeAfterRegistration as DemoBeforeAfterRegistration,
+  BeforeAfterRegistrations as DemoBeforeAfterRegistrations,
+  DemoBeforeAfter,
+} from "./internal/before-after";

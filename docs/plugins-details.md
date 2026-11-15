@@ -8366,7 +8366,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `prototypeFixtureStates`
               - `prototypeFixtureVersionFingerprint`
           - Cross-plugin:
-            - Imported by: `apps/website/promo-film/seed`
+            - Imported by:
+              - `apps/website/demos/workspace`
+              - `apps/website/promo-film/seed`
           - Machine:
             - Exports (values):
               - `prototypeFixtureThumbnailsCheck`
@@ -12615,11 +12617,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - Plugins:
                 - **`story`** — The workspace demo's story, as data: the agents' stories and transcripts, Demo's pages, prototypes' tags, songs and places — what the demo's build-time seed writes through each app's fixture writer, kept apart from the demo's scenario so the page that embeds the demo never bundles the apps this data names.
                   - Core:
-                    - Uses: 21 symbols — full list in [`plugins/apps/plugins/website/plugins/demos/plugins/workspace/plugins/story/REFERENCE.md`](../plugins/apps/plugins/website/plugins/demos/plugins/workspace/plugins/story/REFERENCE.md)
+                    - Uses: 23 symbols — full list in [`plugins/apps/plugins/website/plugins/demos/plugins/workspace/plugins/story/REFERENCE.md`](../plugins/apps/plugins/website/plugins/demos/plugins/workspace/plugins/story/REFERENCE.md)
                       - `apps/prototypes/files` ×4
-                      - `infra/namespace` ×3
+                      - `infra/namespace` ×4
+                      - `conversations/before-after` ×3
                       - `conversations/agents` ×2
-                      - `conversations/before-after` ×2
                       - `conversations/model-provider.ConversationModelSchema`
                       - `conversations.CONVERSATIONS_CATEGORY_ID`
                       - `infra/mcp.agentToolName`
@@ -12632,15 +12634,19 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `wish.WISHES_CATEGORY_ID`
                     - Exports (types):
                       - `DemoAgent`
+                      - `DemoBeforeAfter`
                       - `DemoBeforeAfterRegistration`
+                      - `DemoBeforeAfterRegistrations`
                       - `DemoPageSession`
                       - `DemoPageToolCall`
                       - `DemoStory`
                     - Exports (values):
                       - `DEMO_AGENTS`
+                      - `DEMO_BEFORE_AFTERS`
                       - `DEMO_PAGE_IDS`
                       - `DEMO_PAGES`
                       - `DEMO_PLACES`
+                      - `DEMO_PRACTICE_TIMER_BEFORE_AFTER`
                       - `DEMO_RECIPES_BEFORE_AFTER`
                       - `DEMO_SONG_ID`
                       - `DEMO_STORIES`
@@ -12658,7 +12664,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                       - `demoWorktreePath`
                       - `PRACTICE_TIMER_PAGE_WORK`
                   - Cross-plugin:
-                    - Imported by: `apps/website/landing/screenshot`
+                    - Imported by:
+                      - `apps/website/demos/workspace`
+                      - `apps/website/landing/screenshot`
                   - Test helpers:
                     - Core: `@plugins/apps/plugins/website/plugins/demos/plugins/workspace/plugins/story/core/testing`
                       - `DEMO_FEATURED_PROTOTYPE` — The prototype the demo's pages and transcripts point at (the photo grid).
@@ -33181,8 +33189,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses: `framework/tooling/guards/module-extension.MODULE_EXTENSION`
             - Exports (values): `isE2eScriptPath`
           - Cross-plugin:
-            - Imported by: 196 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
-              - `apps` ×59
+            - Imported by: 197 plugins — full list in [`plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md`](../plugins/framework/plugins/tooling/plugins/e2e-harness/REFERENCE.md)
+              - `apps` ×60
               - `primitives` ×29
               - `page` ×26
               - `conversations` ×25
@@ -43124,10 +43132,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TIMED_FS_CALLS`
           - `withFsCallTally`
       - Cross-plugin:
-        - Imported by: 177 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
+        - Imported by: 178 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
           - `infra` ×52
           - `framework` ×26
-          - `apps` ×15
+          - `apps` ×16
           - `debug` ×15
           - `conversations` ×13
           - `backup` ×12

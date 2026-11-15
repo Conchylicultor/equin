@@ -66,8 +66,9 @@ import {
   demoPrototypeFixture,
   demoWorktreePath,
   demoPushSha,
-  DEMO_RECIPES_BEFORE_AFTER,
+  DEMO_BEFORE_AFTERS,
   type DemoBeforeAfterRegistration,
+  type DemoBeforeAfterRegistrations,
   type DemoPageSession,
   type DemoPageToolCall,
 } from "@plugins/apps/plugins/website/plugins/demos/plugins/workspace/plugins/story/core";
@@ -93,9 +94,10 @@ import {
  *    ({@link runPageWork}), then settled; then the user
  *    decorating the page it minted with an icon, through the page header's own
  *    write ({@link decoratePlanPage}) — an agent's tools cannot set one;
- * 4. the recipes agent's before / after pair — its card layouts, photo vs
- *    overlay — through before-after's own write, its PNGs the committed
- *    `../data/before-after/` ({@link registerRecipesBeforeAfter});
+ * 4. the agents' before / after pairs — the recipes cards, photo vs
+ *    overlay; Sonata's library before and after the practice timer — through
+ *    before-after's own write, their PNGs the committed
+ *    `../data/before-after/` ({@link registerBeforeAfters});
  * 5. each conversation's transcript, recording those runs;
  * 6. the Prototypes gallery, through Prototypes' fixture writer
  *    (`writePrototypeFixture`) from `prototypes` — the committed `../data/`,
@@ -239,14 +241,14 @@ export async function seed(
 
   const session = await runPageWork();
   await decoratePlanPage(host, session.planId);
-  const recipesBeforeAfter = await registerRecipesBeforeAfter(data.beforeAfter);
+  const beforeAfters = await registerBeforeAfters(data.beforeAfter);
   await settleJobQueue();
   for (const story of DEMO_STORIES)
     await writeTranscript(
       demoConversationId(story),
       demoTranscriptJsonl(story, now, session, {
         prototypes: parsePrototypeTree(prototypes.tree),
-        recipesBeforeAfter,
+        beforeAfters,
       }),
     );
 
@@ -338,17 +340,17 @@ async function runPageWork(): Promise<DemoPageSession> {
 }
 
 /**
- * The recipes agent's before / after pair (`DEMO_RECIPES_BEFORE_AFTER`),
- * stored through before-after's own write (`registerBeforeAfterPair`, what
- * the `register_before_after` tool calls) under the tool-use id its
- * transcript gives the call — the PNGs the committed `data/before-after/`,
- * their size read from the files — and the tool's text result for it
- * (`registeredPairText`, the tool's own), for the transcript.
+ * The agents' before / after pairs (`DEMO_BEFORE_AFTERS`), each stored
+ * through before-after's own write (`registerBeforeAfterPair`, what the
+ * `register_before_after` tool calls) as its story's conversation, under the
+ * tool-use id its transcript gives the call — the PNGs the committed
+ * `../data/before-after/`, their size read from the files — and the tool's
+ * text result for each (`registeredPairText`, the tool's own), by pair id, for
+ * the transcripts.
  */
-async function registerRecipesBeforeAfter(
+async function registerBeforeAfters(
   files: DemoSeedData["beforeAfter"],
-): Promise<DemoBeforeAfterRegistration> {
-  const pair = DEMO_RECIPES_BEFORE_AFTER;
+): Promise<DemoBeforeAfterRegistrations> {
   const png = (file: string) => {
     const bytes = files[file];
     if (bytes === undefined)
@@ -360,41 +362,45 @@ async function registerRecipesBeforeAfter(
       );
     return { bytes, ...read.size };
   };
-  const before = png(pair.before.file);
-  const after = png(pair.after.file);
-  for (const side of [before, after])
-    if (
-      side.width !== pair.viewport.width ||
-      side.height !== pair.viewport.height
-    )
-      throw new Error(
-        `[demo seed] the recipes before / after PNGs must be ${pair.viewport.width}×${pair.viewport.height} (the viewport the transcript screenshots at), got ${side.width}×${side.height}`,
-      );
-  const id = await registerBeforeAfterPair({
-    id: pair.id,
-    conversationId: demoConversationId(demoStoryByKey("recipes")),
-    toolUseId: pair.toolUseId,
-    title: pair.title,
-    route: null,
-    width: before.width,
-    height: before.height,
-    colorScheme: null,
-    before: { png: before.bytes, label: pair.before.label },
-    after: { png: after.bytes, label: pair.after.label },
-  });
-  return {
-    result: registeredPairText({
-      id,
+  const registrations: Record<string, DemoBeforeAfterRegistration> = {};
+  for (const pair of DEMO_BEFORE_AFTERS) {
+    const before = png(pair.before.file);
+    const after = png(pair.after.file);
+    for (const side of [before, after])
+      if (
+        side.width !== pair.viewport.width ||
+        side.height !== pair.viewport.height
+      )
+        throw new Error(
+          `[demo seed] ${pair.id}'s PNGs must be ${pair.viewport.width}×${pair.viewport.height} (the viewport its transcript screenshots at), got ${side.width}×${side.height} — re-render with workspace/e2e/render-before-afters.ts`,
+        );
+    const id = await registerBeforeAfterPair({
+      id: pair.id,
+      conversationId: demoConversationId(demoStoryByKey(pair.story)),
+      toolUseId: pair.toolUseId,
       title: pair.title,
       route: null,
       width: before.width,
       height: before.height,
       colorScheme: null,
-      beforeLabel: pair.before.label,
-      afterLabel: pair.after.label,
-      notes: [],
-    }),
-  };
+      before: { png: before.bytes, label: pair.before.label },
+      after: { png: after.bytes, label: pair.after.label },
+    });
+    registrations[id] = {
+      result: registeredPairText({
+        id,
+        title: pair.title,
+        route: null,
+        width: before.width,
+        height: before.height,
+        colorScheme: null,
+        beforeLabel: pair.before.label,
+        afterLabel: pair.after.label,
+        notes: [],
+      }),
+    };
+  }
+  return registrations;
 }
 
 /**

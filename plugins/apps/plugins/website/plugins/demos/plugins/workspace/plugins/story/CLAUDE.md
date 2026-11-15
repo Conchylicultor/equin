@@ -6,11 +6,11 @@
 
 - Description: The workspace demo's story, as data: the agents' stories and transcripts, Demo's pages, prototypes' tags, songs and places — what the demo's build-time seed writes through each app's fixture writer, kept apart from the demo's scenario so the page that embeds the demo never bundles the apps this data names.
 - Core:
-  - Uses: 21 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 23 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps/prototypes/files` ×4
-    - `infra/namespace` ×3
+    - `infra/namespace` ×4
+    - `conversations/before-after` ×3
     - `conversations/agents` ×2
-    - `conversations/before-after` ×2
     - `conversations/model-provider.ConversationModelSchema`
     - `conversations.CONVERSATIONS_CATEGORY_ID`
     - `infra/mcp.agentToolName`
@@ -23,15 +23,19 @@
     - `wish.WISHES_CATEGORY_ID`
   - Exports (types):
     - `DemoAgent`
+    - `DemoBeforeAfter`
     - `DemoBeforeAfterRegistration`
+    - `DemoBeforeAfterRegistrations`
     - `DemoPageSession`
     - `DemoPageToolCall`
     - `DemoStory`
   - Exports (values):
     - `DEMO_AGENTS`
+    - `DEMO_BEFORE_AFTERS`
     - `DEMO_PAGE_IDS`
     - `DEMO_PAGES`
     - `DEMO_PLACES`
+    - `DEMO_PRACTICE_TIMER_BEFORE_AFTER`
     - `DEMO_RECIPES_BEFORE_AFTER`
     - `DEMO_SONG_ID`
     - `DEMO_STORIES`
@@ -49,7 +53,9 @@
     - `demoWorktreePath`
     - `PRACTICE_TIMER_PAGE_WORK`
 - Cross-plugin:
-  - Imported by: `apps/website/landing/screenshot`
+  - Imported by:
+    - `apps/website/demos/workspace`
+    - `apps/website/landing/screenshot`
 - Test helpers:
   - Core: `@plugins/apps/plugins/website/plugins/demos/plugins/workspace/plugins/story/core/testing`
     - `DEMO_FEATURED_PROTOTYPE` — The prototype the demo's pages and transcripts point at (the photo grid).

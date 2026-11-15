@@ -126,7 +126,9 @@ fire-and-forget from the watcher's listener: a caller that needs every card
     - `prototypeFixtureStates`
     - `prototypeFixtureVersionFingerprint`
 - Cross-plugin:
-  - Imported by: `apps/website/promo-film/seed`
+  - Imported by:
+    - `apps/website/demos/workspace`
+    - `apps/website/promo-film/seed`
 - Machine:
   - Exports (values):
     - `prototypeFixtureThumbnailsCheck`

@@ -2,6 +2,7 @@ import type { ParsedPrototypeTree } from "@plugins/apps/plugins/prototypes/plugi
 import {
   asNamespace,
   contentUrl,
+  MAIN_WORKTREE_NAME,
   namespaceUrl,
 } from "@plugins/infra/plugins/namespace/core";
 import {
@@ -13,8 +14,10 @@ import {
 import { REGISTER_BEFORE_AFTER_TOOL } from "@plugins/conversations/plugins/before-after/core";
 import { agentToolName } from "@plugins/infra/plugins/mcp/core";
 import {
+  PRACTICE_TIMER_BEFORE_AFTER,
   RECIPES_BEFORE_AFTER,
-  type BeforeAfterRegistration,
+  type BeforeAfterRegistrations,
+  type DemoBeforeAfter,
 } from "./before-after";
 import { DEMO_PAGE_IDS } from "./pages";
 import { DEMO_FEATURED_PROTOTYPE } from "./prototypes";
@@ -96,8 +99,8 @@ export interface PageSession {
 /** What else a session is written from: the demo's prototypes, as the fixture parser reads them. */
 export interface SessionContext {
   prototypes: ParsedPrototypeTree;
-  /** The recipes agent's before / after pair, as the seed registered it. */
-  recipesBeforeAfter: BeforeAfterRegistration;
+  /** The agents' before / after pairs, as the seed registered them (by pair id). */
+  beforeAfters: BeforeAfterRegistrations;
 }
 
 /** The preview a story's agent built, at its worktree's namespace (its attempt id). */
@@ -396,7 +399,11 @@ const SONATA = "plugins/apps/plugins/sonata/plugins";
  * the ii–V–I warm-up, report. Its prose names pages and the song by bare id,
  * which the transcript renders as chips.
  */
-function practiceTimer(story: Story, s: PageSession): Turn[] {
+function practiceTimer(
+  story: Story,
+  s: PageSession,
+  ctx: SessionContext,
+): Turn[] {
   const root = worktreePath(story);
   const history = `${root}/${SONATA}/playback-history`;
   const shape = `${history}/shared/shape.ts`;
@@ -588,6 +595,7 @@ function practiceTimer(story: Story, s: PageSession): Turn[] {
         "PASS  6/6",
       ].join("\n"),
     ),
+    ...libraryBeforeAfter(story, ctx),
     pageTool("write_agent_note", s.note),
     end(
       "Ready for review. Sonata's library now shows how long you practised each song this week.",
@@ -599,6 +607,7 @@ function practiceTimer(story: Story, s: PageSession): Turn[] {
       "**Checked**",
       "- The tests pass. One caught a real bug on the way: the week turned at midnight UTC, not at yours.",
       `- In the preview, on your ii–V–I warm-up (${DEMO_SONG_ID}): 40 s, a 30 s pause, 20 s more reads 1 min.`,
+      `- Your library on main and on the preview, the new column beside Last played: ${PRACTICE_TIMER_BEFORE_AFTER.id}`,
       "",
       `The plan is in the card next to your prompt (${s.cardId}) and on its own page (${s.planId}).`,
       "",
@@ -713,7 +722,7 @@ function recipes(story: Story, _s: PageSession, ctx: SessionContext): Turn[] {
           })
           .flat(),
         ...(i === steps.length - 1
-          ? cardsBeforeAfter(story, version.files, ctx.recipesBeforeAfter)
+          ? cardsBeforeAfter(story, version.files, ctx)
           : []),
         { kind: "assistant", text: answers[i]!, final: true } satisfies Turn,
       ];
@@ -735,7 +744,7 @@ const SCREENSHOT_SCRIPT =
 function cardsBeforeAfter(
   story: Story,
   files: Readonly<Record<string, string>>,
-  registration: BeforeAfterRegistration,
+  ctx: SessionContext,
 ): Turn[] {
   const pair = RECIPES_BEFORE_AFTER;
   const declared =
@@ -772,19 +781,92 @@ function cardsBeforeAfter(
         ])
         .join("\n"),
     ),
-    {
-      kind: "tool",
-      id: pair.toolUseId,
-      name: agentToolName(REGISTER_BEFORE_AFTER_TOOL),
-      input: {
-        title: pair.title,
-        beforePath: `${shots[0]!.out}-before.png`,
-        afterPath: `${shots[1]!.out}-before.png`,
-        beforeLabel: pair.before.label,
-        afterLabel: pair.after.label,
-      },
-      result: registration.result,
+    registerPair(
+      pair,
+      `${shots[0]!.out}-before.png`,
+      `${shots[1]!.out}-before.png`,
+      ctx,
+    ),
+  ];
+}
+
+/**
+ * The `register_before_after` call (files form) that registered `pair` — the
+ * call the seed ran, under the tool-use id its pair is stored by, answered
+ * with the tool's own text.
+ */
+function registerPair(
+  pair: DemoBeforeAfter,
+  beforePath: string,
+  afterPath: string,
+  ctx: SessionContext,
+): Turn {
+  const registration = ctx.beforeAfters[pair.id];
+  if (registration === undefined)
+    throw new Error(`[demo] the seed registered no before / after ${pair.id}`);
+  return {
+    kind: "tool",
+    id: pair.toolUseId,
+    name: agentToolName(REGISTER_BEFORE_AFTER_TOOL),
+    input: {
+      title: pair.title,
+      beforePath,
+      afterPath,
+      beforeLabel: pair.before.label,
+      afterLabel: pair.after.label,
     },
+    result: registration.result,
+  };
+}
+
+/**
+ * The practice-timer agent showing the library's new column: Sonata's library
+ * on main and on its preview, each switched to the Recent view (the one with
+ * the play stats — a click, so the files form), then registered as a pair.
+ */
+function libraryBeforeAfter(story: Story, ctx: SessionContext): Turn[] {
+  const pair = PRACTICE_TIMER_BEFORE_AFTER;
+  const scratch = `/tmp/equin-scratch/${conversationId(story)}`;
+  const { width, height } = pair.viewport;
+  const shots = [
+    {
+      url: namespaceUrl(MAIN_WORKTREE_NAME, "/sonata"),
+      out: `${scratch}/library-main`,
+    },
+    { url: previewUrl(story, "/sonata"), out: `${scratch}/library-preview` },
+  ];
+  return [
+    bash(
+      shots
+        .map(
+          (s) =>
+            `./equin run ${SCREENSHOT_SCRIPT} --url "${s.url}" --click "Recent" --viewport ${width}x${height} --color-scheme dark --out ${s.out}`,
+        )
+        .join(" && \\\n"),
+      "Screenshot the library's Recent view on main and on the preview",
+      shots
+        .flatMap((s, i) => [
+          `url:          ${s.url}`,
+          "color-scheme: dark",
+          `painted after ${[1184, 906][i]}ms`,
+          `wrote ${s.out}-before.png`,
+          "clickable: {",
+          '  role: "button",',
+          "  disabled: false,",
+          '  pressed: "false",',
+          "  checked: null,",
+          '  text: "",',
+          "}",
+          `wrote ${s.out}-after.png`,
+        ])
+        .join("\n"),
+    ),
+    registerPair(
+      pair,
+      `${shots[0]!.out}-after.png`,
+      `${shots[1]!.out}-after.png`,
+      ctx,
+    ),
   ];
 }
 

@@ -97,6 +97,7 @@ import {
   PRACTICE_TIMER_PAGE_WORK,
   DEMO_AGENTS,
   DEMO_PAGE_IDS,
+  DEMO_BEFORE_AFTERS,
   DEMO_PLACES,
   DEMO_RECIPES_BEFORE_AFTER,
   DEMO_STORIES,
@@ -329,44 +330,46 @@ describe.if(IN_CHILD)("the demo's browser host", () => {
     }
   });
 
-  test("the recipes session ends showing its card layouts as a before / after pair the host serves", async () => {
-    const pair = DEMO_RECIPES_BEFORE_AFTER;
-    const events = await openConversationEvents("conv-demo-recipes");
-    const calls = events.filter(
+  test("each before / after pair is registered by its session's call, served with both images, and cited in its last answer", async () => {
+    for (const pair of DEMO_BEFORE_AFTERS) {
+      const conversationId = demoConversationId(demoStoryByKey(pair.story));
+      const events = await openConversationEvents(conversationId);
+      const call = events
+        .filter((e): e is ToolCallEvent => e.kind === "tool-call")
+        .find((e) => e.toolUseId === pair.toolUseId);
+      expect(call?.name).toBe("mcp__equin__register_before_after");
+      expect(call?.result?.content).toContain(pair.id);
+      const [row] = await db
+        .select()
+        .from(_beforeAfterPairs)
+        .where(sql`${_beforeAfterPairs.toolUseId} = ${pair.toolUseId}`);
+      expect(row).toMatchObject({
+        id: pair.id,
+        conversationId,
+        title: pair.title,
+        beforeLabel: pair.before.label,
+        afterLabel: pair.after.label,
+      });
+      // Both images answer, as the pane loads them.
+      for (const attachment of [
+        row!.beforeAttachmentId,
+        row!.afterAttachmentId,
+      ]) {
+        const res = await host.request(
+          new Request(`http://demo.invalid/api/attachments/${attachment}`),
+        );
+        expect(res.status).toBe(200);
+        expect(res.headers.get("content-type")).toBe("image/png");
+      }
+      const answer = events.at(-1) as { kind: string; text?: string };
+      expect(answer.kind).toBe("assistant-text");
+      expect(answer.text).toContain(pair.id);
+    }
+    // The recipes session ENDS on its pair: the last call it makes.
+    const recipes = (await openConversationEvents("conv-demo-recipes")).filter(
       (e): e is ToolCallEvent => e.kind === "tool-call",
     );
-    // The last call of the session: its register_before_after, keyed by the
-    // tool-use id the seed stored the pair under.
-    const last = calls.at(-1)!;
-    expect(last.name).toBe("mcp__equin__register_before_after");
-    expect(last.toolUseId).toBe(pair.toolUseId);
-    expect(last.result?.content).toContain(pair.id);
-    const [row] = await db
-      .select()
-      .from(_beforeAfterPairs)
-      .where(sql`${_beforeAfterPairs.toolUseId} = ${pair.toolUseId}`);
-    expect(row).toMatchObject({
-      id: pair.id,
-      conversationId: "conv-demo-recipes",
-      title: pair.title,
-      beforeLabel: pair.before.label,
-      afterLabel: pair.after.label,
-    });
-    // Both images answer, as the pane loads them.
-    for (const attachment of [
-      row!.beforeAttachmentId,
-      row!.afterAttachmentId,
-    ]) {
-      const res = await host.request(
-        new Request(`http://demo.invalid/api/attachments/${attachment}`),
-      );
-      expect(res.status).toBe(200);
-      expect(res.headers.get("content-type")).toBe("image/png");
-    }
-    // The final answer cites the pair.
-    const answer = events.at(-1) as { kind: string; text?: string };
-    expect(answer.kind).toBe("assistant-text");
-    expect(answer.text).toContain(pair.id);
+    expect(recipes.at(-1)?.toolUseId).toBe(DEMO_RECIPES_BEFORE_AFTER.toolUseId);
   });
 
   test("the weekly-review agent's Journal read is the real tool's", async () => {

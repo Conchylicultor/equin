@@ -78,19 +78,23 @@ never name it. Rendered by `<DemoScope scenario><AppEmbed app route/></DemoScope
   (`infra/paths/data-files/memory`).
   Design:
   `research/2026-10-28-global-per-app-demo-seeds-v2.md`.
-- **The recipes session ends on a before / after pair.** After the card
-  layouts (the prototype's last version), the agent screenshots the recipes
-  page with the photo cards and the overlay cards and calls
-  `register_before_after` — so the demo shows the swipe comparison under the
-  call, in the Artifacts and as the `ba-…` chip its last answer cites. The
-  pair is `story`'s `RECIPES_BEFORE_AFTER` (`ba-1792900000-demo01`, its
-  tool-use id, labels); the seed stores it through before-after's own
+- **Two sessions show their change as a before / after pair.** The recipes
+  agent ends on one (photo cards vs the new overlay cards, after the
+  prototype's card layouts), the practice-timer agent registers one before
+  its last note (Sonata's library, Recent view, on main and on its preview
+  with the This week column) — so the demo shows the swipe comparison under
+  the call, in the Artifacts and as the `ba-…` chip each last answer cites.
+  The pairs are `story`'s `BEFORE_AFTERS` (id carrying `demo`, tool-use id,
+  labels, viewport); the seed stores each through before-after's own
   `registerBeforeAfterPair` under that tool-use id, and the transcript's
   result is the tool's own text (`registeredPairText`). The PNGs are
-  committed in `data/before-after/` at the pair's viewport (the seed refuses
-  another size): after editing the prototype's last version, re-render both
-  — its `index.html` (with the prototype's `photos.js`) at 1120×720, light,
-  `document.documentElement.dataset.cards` set to `photo` / `overlay`.
+  committed in `data/before-after/`, palette-quantized (~0.7 MB for all
+  four); the seed refuses a PNG not at its pair's viewport. Re-render them
+  with `./equin run
+  plugins/apps/plugins/website/plugins/demos/plugins/workspace/e2e/render-before-afters.ts`
+  (after `./equin build`; needs `pngquant`) once the recipes prototype's last
+  version or Sonata's library changes. The practice timer exists only in the
+  story, so that script STAGES its column into the real library table.
 - **The prototypes, the home folder and the boot test read `data/` off disk**
   (`bin/bun-host.ts`'s `diskDemoData`: `data/home/` is Demo's home, the rest
   Prototypes'): the seed runs in Bun only, so nothing
@@ -113,7 +117,7 @@ never name it. Rendered by `<DemoScope scenario><AppEmbed app route/></DemoScope
   → the user decorating the page the agent minted with an icon (⏳), through
   the page header's own `PATCH` sent to the host's router (`seed`'s `host`
   argument) — an agent's tools cannot set an icon, a person can — → the
-  recipes agent's before / after pair → settle → the transcripts → the prototypes fixture → settle → the songs → settle →
+  agents' before / after pairs → settle → the transcripts → the prototypes fixture → settle → the songs → settle →
   Places → settle → the home folder → settle. (Sonata's MIDI starters are not the demo's: the MIDI source seeds
   them itself, as on a fresh install.)
 - **Every id carries `demo`** (`conv-demo-…`, `task-demo-…`, `att-demo-…`, the
