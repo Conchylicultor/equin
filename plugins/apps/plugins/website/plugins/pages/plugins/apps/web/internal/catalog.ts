@@ -53,7 +53,7 @@ export const CATEGORIES: readonly AppCategory[] = [
   {
     id: "surfaces",
     name: "Home screens",
-    body: "Every app in one place, arranged your way",
+    body: "The workspace to organize your apps",
   },
   { id: "next", name: "Coming next", body: "Being built now" },
 ];
@@ -167,8 +167,7 @@ export const APPS: readonly CatalogApp[] = [
     icon: symbol("desktop-windows"),
     color: "indigo",
     shot: desktopShot,
-    description:
-      "Every app as a window over a wallpaper, with a shelf, virtual desktops and a window switcher. A computer's desktop, in equin.",
+    description: "Use equin as a desktop, with every app in its own window.",
   },
   {
     id: "isle",
@@ -178,7 +177,7 @@ export const APPS: readonly CatalogApp[] = [
     color: "sky",
     shot: isleShot,
     description:
-      "Every app is a building on an illustrated archipelago. Walk around the island and step through a door to open one.",
+      "An RPG-style workspace where you walk around to open your apps.",
   },
   {
     id: "mail",
