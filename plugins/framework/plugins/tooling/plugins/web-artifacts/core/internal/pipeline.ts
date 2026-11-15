@@ -160,8 +160,18 @@ export interface WebArtifactsPipelineOptions {
    * (`cli/`'s `createPooledArtifactBuilder`).
    */
   builder?: ArtifactBuilder;
-  /** Stage wrapper — the caller records profiler spans here. */
-  onStage: <T>(id: string, label: string, run: () => Promise<T>) => Promise<T>;
+  /**
+   * Stage wrapper — the caller records profiler spans here. A
+   * content-addressed stage passes `reusedOf`: whether its result was the
+   * stored one its inputs address (true) or computed (false) — the two are
+   * different work by design, so the caller records which (`BuildSpan.reused`).
+   */
+  onStage: <T>(
+    id: string,
+    label: string,
+    run: () => Promise<T>,
+    reusedOf?: (out: T) => boolean,
+  ) => Promise<T>;
 }
 
 export interface WebArtifactsPipelineResult {
@@ -171,6 +181,12 @@ export interface WebArtifactsPipelineResult {
   reusedArtifacts: number;
   vendorSpecs: number;
   preloads: number;
+  /**
+   * Every content-addressed stage (`reusedOf`) reused its stored result: the
+   * pipeline as a whole did reuse-only work. The caller records it on the
+   * enclosing span (`BuildSpan.reused`), whose file calls include theirs.
+   */
+  stagesReused: boolean;
   /**
    * Content identity of the composed graph. The caller writes it into the dist
    * (`.build-graph`) — it is what tells a tab whether the bundle it is running
@@ -237,15 +253,19 @@ async function runPipeline(
   const { root, log } = opts;
   const pluginsRoot = joinAppPath(root, "plugins");
   const webSrcDir = joinAppPath(root, WEB_CORE_REL, "web");
+  // Whether every content-addressed stage reused its stored result.
+  let stagesReused = true;
   // Every stage's wall time in the transcript too: a caller without profiler
   // spans (the hermetic build) still shows where a cold build spent it.
   const stage = async <T>(
     id: string,
     label: string,
     run: () => Promise<T>,
+    reusedOf?: (out: T) => boolean,
   ): Promise<T> => {
     const t0 = performance.now();
-    const out = await opts.onStage(id, label, run);
+    const out = await opts.onStage(id, label, run, reusedOf);
+    if (reusedOf !== undefined && !reusedOf(out)) stagesReused = false;
     log(`stage ${id}: ${((performance.now() - t0) / 1000).toFixed(2)}s`);
     return out;
   };
@@ -530,6 +550,7 @@ async function runPipeline(
         key: cssKey,
         candidates: cssInput.candidates,
       }),
+    (out) => out.cached,
   );
   log(
     `css: ${css.cached ? "cache hit" : "compiled"} from ${cssInput.candidates.length} candidates (key ${cssKey.slice(0, 12)})`,
@@ -702,6 +723,7 @@ async function runPipeline(
       );
       return out;
     },
+    (out) => out.cached,
   );
 
   // ── Stage 5: compose ────────────────────────────────────────────────
@@ -908,6 +930,7 @@ async function runPipeline(
     reusedArtifacts: counts.reused,
     vendorSpecs: Object.keys(vendors.entries).length,
     preloads: composed.preloads.length,
+    stagesReused,
     graphHash: composed.graphHash,
     linkNames: composed.linkNames,
   };

@@ -250,7 +250,7 @@ export interface ArtifactHooks {
     phase: string,
     label: string,
     options?: { wait?: boolean },
-  ) => (info?: { peak?: PeakFootprint }) => void;
+  ) => (info?: { peak?: PeakFootprint; reused?: boolean }) => void;
   /** `pushBuildSpan` — records an already-finished span retroactively. */
   pushSpan: (
     id: string,
@@ -1226,6 +1226,9 @@ export async function buildAndPublishWebDist(
     // budget rather than running on top of it.
     const end = hooks.span("viteBuild", "build:frontend", "web artifacts");
     const start = performance.now();
+    // Its file calls include its content-addressed stages': it reused only
+    // when every one of them did (`BuildSpan.reused`).
+    let stagesReused: boolean | undefined;
     const lines: StepResult["lines"] = [];
     let success = true;
     try {
@@ -1290,12 +1293,15 @@ export async function buildAndPublishWebDist(
               addressDir,
               log: (line) => lines.push({ text: line, stream: "stdout" }),
               isPlatformApi,
-              onStage: async (id, label, run) => {
+              onStage: async (id, label, run, reusedOf) => {
                 const endStage = hooks.span(id, "build:frontend", label);
+                let reused: boolean | undefined;
                 try {
-                  return await run();
+                  const out = await run();
+                  reused = reusedOf?.(out);
+                  return out;
                 } finally {
-                  endStage();
+                  endStage(reused === undefined ? undefined : { reused });
                 }
               },
             });
@@ -1307,6 +1313,7 @@ export async function buildAndPublishWebDist(
       );
       graphHash = result.graphHash;
       linkNames = result.linkNames;
+      stagesReused = result.stagesReused;
       lines.push({
         text:
           `web artifacts: ${result.builtArtifacts} built, ${result.reusedArtifacts} reused ` +
@@ -1322,7 +1329,7 @@ export async function buildAndPublishWebDist(
         lines.push({ text: line, stream: "stderr" });
       }
     }
-    end();
+    end(stagesReused === undefined ? undefined : { reused: stagesReused });
     return {
       id: "viteBuild",
       label: "web artifacts",

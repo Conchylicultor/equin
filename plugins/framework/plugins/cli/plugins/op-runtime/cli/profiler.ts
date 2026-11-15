@@ -39,6 +39,15 @@ export interface BuildSpan {
   /** A check span: the check answered from the cache, its body never ran. */
   cached?: boolean;
   /**
+   * A content-addressed stage (the link, the global CSS): true when it reused
+   * the stored result its inputs address, false when it computed it. Both did
+   * their work (unlike a cached check), but different work by design — a
+   * reuse reads one record, a computation reads every input — so a step
+   * baseline compares a span only with spans of the same outcome
+   * (`build/step-baseline`). Absent on a stage with no such fork.
+   */
+  reused?: boolean;
+  /**
    * The span is a WAIT, not the build's own work: its length is another
    * party's — a lock's queue, the host grant, Postgres, a backend or central
    * adopting the deploy or booting (judged by their own boot monitors) — so no
@@ -51,6 +60,13 @@ export interface BuildSpan {
 export interface SpanOptions {
   /** A wait, not work — see `BuildSpan.wait`. */
   wait?: boolean;
+}
+
+/** What closing a span may record beyond its timing. */
+export interface SpanEndExtra {
+  peak?: PeakFootprint;
+  /** See `BuildSpan.reused`. */
+  reused?: boolean;
 }
 
 /** What a retroactively recorded span may carry beyond its timing. */
@@ -76,7 +92,7 @@ interface SpanCollector {
     phase: string,
     label: string,
     options?: SpanOptions,
-  ): (extra?: { peak?: PeakFootprint }) => void;
+  ): (extra?: SpanEndExtra) => void;
   push(
     id: string,
     phase: string,
@@ -145,6 +161,7 @@ function makeSpanCollector(): SpanCollector {
             ? { peakFootprintBytes: extra.peak.bytes }
             : {}),
           fs,
+          ...(extra?.reused !== undefined ? { reused: extra.reused } : {}),
           ...(options?.wait === true ? { wait: true as const } : {}),
         });
         buildProgressSpanEnd(token, id, durationMs);
@@ -178,7 +195,7 @@ export function buildProfilerStart(
   phase: string,
   label: string,
   options?: SpanOptions,
-): (extra?: { peak?: PeakFootprint }) => void {
+): (extra?: SpanEndExtra) => void {
   return defaultCollector.start(id, phase, label, options);
 }
 

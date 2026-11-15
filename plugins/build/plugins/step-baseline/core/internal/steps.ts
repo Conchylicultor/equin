@@ -23,6 +23,7 @@ export interface ProfileSpanLike {
   durationMs: number;
   fs?: StepFsCalls;
   cached?: boolean;
+  reused?: boolean;
   wait?: true;
 }
 
@@ -35,6 +36,13 @@ export interface StepSample {
   durationMs: number;
   /** Null when the profile predates counting, or the step's record had none. */
   fs: StepFsCalls | null;
+  /**
+   * A content-addressed stage's outcome: reused its stored result (true) or
+   * computed it (false) — the same step doing different work by design, so a
+   * sample is judged only against samples of the same outcome. Null for a
+   * step with no such fork, or a profile written before spans said so.
+   */
+  reused: boolean | null;
 }
 
 /** One build: when it ran, whether it rebuilt anything, and its steps by id. */
@@ -110,7 +118,11 @@ export function readBuildSteps(
       continue;
     const prev = steps.get(span.id);
     if (prev !== undefined && prev.durationMs >= span.durationMs) continue;
-    steps.set(span.id, { durationMs: span.durationMs, fs: span.fs ?? null });
+    steps.set(span.id, {
+      durationMs: span.durationMs,
+      fs: span.fs ?? null,
+      reused: span.reused ?? null,
+    });
   }
   return { buildId, at, rebuiltNothing, steps };
 }

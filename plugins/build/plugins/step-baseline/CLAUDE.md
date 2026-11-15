@@ -51,6 +51,15 @@ same-work build, against its own baseline. One slow build is a cache miss or a
 busy minute (a host snapshot re-taken, the fleet at load 90); a slowdown that
 holds is the step's or the host's. It costs one build of delay.
 
+**`0 stale` means the store already held every artifact, not that the fleet
+is unchanged** — an agent's build publishes a branch's artifacts before it
+lands. A content-addressed stage then still sees new inputs: the link re-links
+the whole page (~16k reads, seconds) where an unchanged fleet reuses its record
+(~430 calls). So such a stage records its outcome (`BuildSpan.reused`: the
+link, the global CSS), and a sample is judged only against samples of the same
+outcome — a re-link against re-links, a reuse against reuses (absent matches
+absent). A reuse that starts walking the store still fires.
+
 A check answered from the cache is not a step (it did none of its work).
 Agent checkouts record but are not judged: a moving branch's few builds are no
 baseline. One report row per step and metric

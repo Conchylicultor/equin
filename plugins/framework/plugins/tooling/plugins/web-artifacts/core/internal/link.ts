@@ -358,12 +358,21 @@ export interface LinkIo {
   read: (file: string) => string | null;
 }
 
-/** The artifact store's own files (every module is a file of a store entry: app-owned). */
+/**
+ * The artifact store's own files (every module is a file of a store entry:
+ * app-owned). One read per file, absence its ENOENT: a re-link reads every
+ * module and its map (~16k files), so an existence check before each read
+ * doubled its file calls.
+ */
 const storeIo: LinkIo = {
   storePath: artifactStorePath,
   read: (file) => {
-    const path = asAppPath(file);
-    return existsSync(path) ? readFileSync(path, "utf8") : null;
+    try {
+      return readFileSync(asAppPath(file), "utf8");
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+      return null;
+    }
   },
 };
 

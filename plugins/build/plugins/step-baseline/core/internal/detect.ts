@@ -106,9 +106,16 @@ function jumps(
 ): StepRegression[] {
   const found: StepRegression[] = [];
   for (const [step, sample] of current.steps) {
+    // A content-addressed stage that reused its stored result and one that
+    // computed it did different work: each is judged against its own kind
+    // (a re-link reads every module, a reuse one record).
+    const sameWork = (b: BuildSteps, id: string) => {
+      const s = b.steps.get(id);
+      return s !== undefined && s.reused === sample.reused ? s : undefined;
+    };
     const timeBase = earlier
       .flatMap((b) => {
-        const s = b.steps.get(step);
+        const s = sameWork(b, step);
         return s === undefined ? [] : [s.durationMs];
       })
       .slice(0, t.window);
@@ -134,7 +141,7 @@ function jumps(
     if (sample.fs === null) continue;
     const fsBase = earlier
       .flatMap((b) => {
-        const s = b.steps.get(step);
+        const s = sameWork(b, step);
         return s?.fs != null ? [s.fs] : [];
       })
       .slice(0, t.window);

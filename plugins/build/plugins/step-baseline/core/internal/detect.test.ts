@@ -22,7 +22,10 @@ function fs(total: number, prefix = "~/cache/store"): StepFsCalls {
 
 function build(
   i: number,
-  steps: Record<string, { ms: number; calls?: number; prefix?: string }>,
+  steps: Record<
+    string,
+    { ms: number; calls?: number; prefix?: string; reused?: boolean }
+  >,
   stale = 0,
 ): BuildSteps {
   const spans: ProfileSpanLike[] = [
@@ -50,6 +53,7 @@ function build(
       startMs: 0,
       durationMs: s.ms,
       ...(s.calls !== undefined ? { fs: fs(s.calls, s.prefix) } : {}),
+      ...(s.reused !== undefined ? { reused: s.reused } : {}),
     });
   return readBuildSteps(`build-${1794000000 + i}-x`, i * HOUR, { spans });
 }
@@ -170,4 +174,31 @@ test("a profile written before spans marked their waits reads the known waits as
   });
   expect([...old.steps.keys()]).toEqual(["pluginDocs"]);
   expect(old.rebuiltNothing).toBeNull();
+});
+
+test("a content-addressed stage is judged only against samples of the same outcome", () => {
+  // The link reuses its record (~430 calls) unless the fleet changed, which
+  // the store can already hold every artifact of (0 stale): then it reads
+  // every module (~32k calls). Both are normal; neither is the other's baseline.
+  const link = (i: number, reused: boolean, calls = reused ? 430 : 32_500) =>
+    build(i, { "artifacts:link": { ms: 3_000, calls, reused } });
+  const mixed = Array.from({ length: 20 }, (_, i) => link(i, i % 3 !== 0));
+  expect(
+    detectStepRegressions(link(21, false), [...mixed, link(20, false)]),
+  ).toEqual([]);
+  // A reuse that starts reading the whole store still fires…
+  const leaky = (i: number) => link(i, true, 32_500);
+  const found = detectStepRegressions(leaky(21), [...mixed, leaky(20)]);
+  expect(found).toHaveLength(1);
+  expect(found[0]).toMatchObject({
+    step: "artifacts:link",
+    metric: "fs-calls",
+    baseline: 430,
+  });
+  // …and so does a re-link that grows against earlier re-links.
+  const relinks = Array.from({ length: 20 }, (_, i) => link(i, false));
+  const grown = (i: number) => link(i, false, 120_000);
+  expect(
+    detectStepRegressions(grown(21), [...relinks, grown(20)]),
+  ).toHaveLength(1);
 });
