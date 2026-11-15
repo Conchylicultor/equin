@@ -255,17 +255,22 @@ export const watchOnTaskFiledJob = defineJob({
 export const watchOnConversationCreatedJob = defineJob({
   name: "watch.on-conversation-created",
   description:
-    "When an agent starts on the root task of a mandate granting watch.tree, makes it the one watching the whole tree (taking the watch over from an earlier conversation there).",
+    "When an agent is launched, re-checks the watched subtrees above its task (a new conversation is busy from its first row); when it starts on the root task of a mandate granting watch.tree, makes it the one watching the whole tree (taking the watch over from an earlier conversation there).",
   hold: "instant",
   input: z.object({}),
   dedup: "none",
   event: z
     .object({ conversationId: z.string(), taskId: z.string() })
     .passthrough(),
-  // Not main-only: it writes the watch row and delivers nothing, and
-  // `takeOverTreeWatch` is idempotent, so a forked DB replaying it is harmless.
+  // The take-over is not main-only: it writes the watch row and delivers
+  // nothing, and `takeOverTreeWatch` is idempotent, so a forked DB replaying
+  // it is harmless.
   run: async ({ event }) => {
     if (!event) return;
+    // An insert reports previousStatus = status (`conversationStatusChange`),
+    // so the status job never sees a new `starting` row cross into busy: the
+    // launch is re-checked here. Main-only, like every quiet re-check.
+    if (isMain()) await enqueueQuietForChain(db, event.taskId);
     const mandate = await mandateOf(event.taskId);
     if (mandate.kind !== "found" || mandate.rootTaskId !== event.taskId) return;
     if ((await grantOf(watchTree, event.conversationId)) === null) return;

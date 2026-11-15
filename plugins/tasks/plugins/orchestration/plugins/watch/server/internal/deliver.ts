@@ -10,9 +10,10 @@ import type {
   HeldTurn,
   TurnReadiness,
 } from "@plugins/conversations/plugins/automatic-turn/server";
-import type { WatchEvent, WatchId } from "../../core";
+import { QUIET_EVENT_KIND, type WatchEvent, type WatchId } from "../../core";
 import type { WatchHandlerEntry } from "./contributions";
 import { getWatch, isWatchLive, nearestLiveWatch } from "./queries";
+import { evaluateQuiet } from "./quiet";
 import { _watchInbox } from "./tables";
 
 /** What delivery reads and does outside the inbox: ports, so a test drives the
@@ -159,6 +160,8 @@ async function reclaimUnsent(
  *   one), waiting on the user (it would answer their question), or another
  *   plugin's turn is pending for it (it goes first — typed after ours it
  *   would reach a busy CLI).
+ * - A `quiet` row is re-checked first: withdrawn when the subtree is no
+ *   longer quiet (an agent launched while the watcher was held).
  * - Otherwise every undelivered row is claimed into ONE turn (or ONE code
  *   batch), whose id is derived from the rows. A code batch is handled here,
  *   on the claim; a conversation turn is only claimed (`claimed`) — sending it
@@ -213,7 +216,14 @@ export async function claimDelivery(
     await reclaimUnsent(exec, watchId, ports);
   }
 
-  const rows = await undelivered(exec, watchId);
+  let rows = await undelivered(exec, watchId);
+  // A `quiet` row is a claim about the present, recorded maybe long before
+  // (the watcher was held): asked again now, a subtree that came back to life
+  // withdraws it (evaluateQuiet) rather than telling the watcher it is idle.
+  if (rows.some((r) => r.kind === QUIET_EVENT_KIND)) {
+    if ((await evaluateQuiet(exec, watchId)) === "became-busy")
+      rows = await undelivered(exec, watchId);
+  }
   if (rows.length === 0) return { kind: "empty" };
   const ids = rows.map((r) => r.id);
   const turnId = turnIdFor(ids);

@@ -25,11 +25,17 @@ an agent (one `event` turn per batch) or code (a `WatchHandler`). Plan:
   its own `taskId` — how a fact about a task in no tree (a root waiting in
   a queue no tree holds) reaches the tree that should hear it.
 - **Quiet** (`watch.quiet`) — re-evaluated for every live watch on the chain
-  on `tasks.statusChanged`, on a conversation entering or leaving a busy state,
-  and after routing. Active = an agent `starting`/`working` on a subtree task
-  other than the watcher's own, or an armed task that can launch
-  (`listLaunchableArmedIn`: not blocked, held or dropped). Only a false → true
-  flip of `task_watches.quiet` raises one `quiet` event.
+  on `tasks.statusChanged`, on a conversation being created or entering or
+  leaving a busy state, and after routing. Active = an agent busy
+  (`isAgentBusy`: `starting`/`working`) on a subtree task other than the
+  watcher's own, or an armed task that can launch (`listLaunchableArmedIn`:
+  not blocked, held or dropped). Only a false → true flip of
+  `task_watches.quiet` raises one `quiet` event. **A `quiet` event is a claim
+  about the present**: a true → false flip withdraws it while undelivered, and
+  delivery re-checks it before claiming — the watcher may be held long after
+  it was recorded, and an agent launched meanwhile (still `starting`) must not
+  be reported idle (2026-11-14: three supervisors told "quiet" while their
+  child was starting). The agent settling raises a fresh one.
 - **Delivery** (`watch.deliver`, keyed by watch) — a dead watch re-routes its
   rows to the next live watch above; a conversation watcher that cannot take
   an automatic turn (`conversations/automatic-turn`'s readiness: busy,

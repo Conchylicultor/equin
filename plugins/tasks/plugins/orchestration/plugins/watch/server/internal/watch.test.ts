@@ -293,7 +293,97 @@ describe("quiet", () => {
     expect(got.withBlocked).toBe("unchanged");
     expect(got.withArmed).toBe("became-busy");
     expect(got.quietAgain).toBe("became-quiet");
-    expect(got.quietEvents).toBe(2);
+    // The first quiet, never delivered, was withdrawn by the busy flip.
+    expect(got.quietEvents).toBe(1);
+  });
+});
+
+describe("quiet while an agent is starting", () => {
+  test("a quiet held for a busy watcher is withdrawn at delivery when an agent launched meanwhile; the agent settling raises a fresh one", async () => {
+    const fake = fakePorts();
+    const got = await worktreeDbScenario(async (tx) => {
+      const root = await task(tx, null);
+      const done = await task(tx, root);
+      const watcherConv = await conversation(tx, root, "working");
+      const last = await conversation(tx, done, "working");
+      const w = await watchTask(
+        root,
+        { kind: "conversation", conversationId: watcherConv },
+        tx,
+      );
+      const before = w.quiet;
+      // The last child settled while the watcher was in a turn: correct then.
+      await setStatus(tx, last, "done");
+      fake.state.set(watcherConv, { kind: "held", reason: "busy" });
+      const recorded = await evaluateQuiet(tx, w.id);
+      const held = await deliver(tx, w.id, fake.ports);
+      // Still in that turn, the watcher files a child that launches at once.
+      // No re-check runs (as when no trigger reached evaluateQuiet).
+      const next = await task(tx, root);
+      const starting = await conversation(tx, next, "starting");
+      fake.state.delete(watcherConv);
+      const atDelivery = await deliver(tx, w.id, fake.ports);
+      const quietRowsLeft = (await inbox(tx, w.id)).length;
+      const [row] = await tx
+        .select({ quiet: _taskWatches.quiet })
+        .from(_taskWatches)
+        .where(eq(_taskWatches.id, w.id));
+      // The new agent settles: quiet is true again, and said once.
+      await setStatus(tx, starting, "waiting");
+      const settled = await evaluateQuiet(tx, w.id);
+      const afterSettle = await deliver(tx, w.id, fake.ports);
+      return {
+        before,
+        recorded,
+        held: held.kind,
+        atDelivery,
+        quietRowsLeft,
+        quietColumn: row?.quiet,
+        settled,
+        afterSettle,
+      };
+    });
+    expect(got.before).toBe(false);
+    expect(got.recorded).toBe("became-quiet");
+    expect(got.held).toBe("held");
+    expect(got.atDelivery).toEqual({ kind: "empty" });
+    expect(got.quietRowsLeft).toBe(0);
+    expect(got.quietColumn).toBe(false);
+    expect(got.settled).toBe("became-quiet");
+    expect(got.afterSettle.kind).toBe("delivered");
+    expect(fake.turns).toHaveLength(1);
+    expect(fake.turns[0]?.text).toContain("- quiet · ");
+  });
+
+  test("a starting agent keeps the subtree busy, and the flip withdraws only the undelivered quiet — other events still go", async () => {
+    const fake = fakePorts();
+    const got = await worktreeDbScenario(async (tx) => {
+      const root = await task(tx, null);
+      const child = await task(tx, root);
+      const watcherConv = await conversation(tx, root, "working");
+      const worker = await conversation(tx, child, "working");
+      const w = await watchTask(
+        root,
+        { kind: "conversation", conversationId: watcherConv },
+        tx,
+      );
+      await setStatus(tx, worker, "waiting");
+      const quiet = await evaluateQuiet(tx, w.id);
+      await routeEvents(tx, [
+        { kind: "flagged", taskId: child, summary: "caveat" },
+      ]);
+      await conversation(tx, child, "starting");
+      const busy = await evaluateQuiet(tx, w.id);
+      const kinds = (await inbox(tx, w.id)).map((r) => r.kind);
+      const out = await deliver(tx, w.id, fake.ports);
+      return { quiet, busy, kinds, out: out.kind };
+    });
+    expect(got.quiet).toBe("became-quiet");
+    expect(got.busy).toBe("became-busy");
+    expect(got.kinds).toEqual(["flagged"]);
+    expect(got.out).toBe("delivered");
+    expect(fake.turns).toHaveLength(1);
+    expect(fake.turns[0]?.text).not.toContain("- quiet · ");
   });
 });
 
