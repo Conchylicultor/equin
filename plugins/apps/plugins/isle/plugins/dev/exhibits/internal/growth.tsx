@@ -300,6 +300,7 @@ function GrowthCanvas(props: {
       {
         onReady,
         onNear: () => {},
+        onNearLot: () => {},
         onEnter: () => {},
         onMove,
         onWhere: () => {},

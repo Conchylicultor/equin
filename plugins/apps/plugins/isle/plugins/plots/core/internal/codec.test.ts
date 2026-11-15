@@ -55,6 +55,7 @@ function store() {
           geometry: geometryOf(w.plot),
           occupant: w.occupant,
           movedByUser: moved || (rows.get(w.plot.id)?.movedByUser ?? false),
+          wild: w.plot.wild,
         });
       }
       return "applied";

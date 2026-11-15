@@ -154,6 +154,7 @@ export function moveTargets(
         tags: sp.tags,
         feat: sp.c.feat,
         category: app.category,
+        wild: false,
       },
     });
   }
@@ -167,6 +168,7 @@ const withBoxes = (p: Plot, B: PlotBoxes): Plot => ({
   k: B.k,
   sx: B.sx,
   side: B.side,
+  wild: false,
 });
 
 /**
@@ -215,5 +217,29 @@ export function applyMove(
     put(withBoxes(from, B2));
     occupant[target.other] = from.id;
   }
+  return { plots, occupant };
+}
+
+/**
+ * The placement once empty lot `plotId` was given back to nature: the plot
+ * kept (`wild`), and whoever absent still held it let go — on its return that
+ * app is placed anew, like any app without a plot. Pure. Throws when a present
+ * resident stands on it (only an empty lot may be restored) or it is unknown.
+ */
+export function restoreLot(
+  placement: Placement,
+  residents: readonly Resident[],
+  plotId: string,
+): Placement {
+  const p = plotById(placement, plotId);
+  if (!p) throw new Error(`isle restore: no plot ${plotId}`);
+  const on = standing(placement, residents).get(p.id);
+  if (on) throw new Error(`isle restore: ${on} stands on ${p.id}`);
+  const plots: Record<string, Plot[]> = {};
+  for (const [k, l] of Object.entries(placement.plots)) plots[k] = [...l];
+  plots[p.slot]![p.n] = { ...p, wild: true };
+  const occupant: Record<string, string> = {};
+  for (const [app, pid] of Object.entries(placement.occupant))
+    if (pid !== p.id) occupant[app] = pid;
   return { plots, occupant };
 }

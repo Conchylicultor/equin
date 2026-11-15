@@ -177,7 +177,11 @@ export function layoutWorld(
     const pid = placement.occupant[r.id];
     if (pid && !occupantOf.has(pid)) occupantOf.set(pid, r.id);
   }
-  const shownOf = (s: Slot): readonly Plot[] => placement.plots[s.id] ?? [];
+  // a lot given back to nature is not drawn (nor its lane): only its land shows
+  const shownOf = (s: Slot): readonly Plot[] =>
+    (placement.plots[s.id] ?? []).filter(
+      (p) => !p.wild || occupantOf.has(p.id),
+    );
   const active = M.slots.filter(
     (s) => districtCategory(placement, s.id) !== null && shownOf(s).length,
   );

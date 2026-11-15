@@ -49,7 +49,7 @@ export type {
   Square,
 } from "./internal/layout";
 export { fbm, hash, smoothstep, vnoise } from "./internal/noise";
-export { applyMove, moveTargets } from "./internal/move";
+export { applyMove, moveTargets, restoreLot } from "./internal/move";
 export type { MoveTarget } from "./internal/move";
 export {
   districtCategory,

@@ -77,6 +77,13 @@ export interface Plot extends PlotBoxes {
   readonly feat: Setting | null;
   /** The category of the app it was made for: a district takes the kind of its first plot. */
   readonly category: AppCategory;
+  /**
+   * Given back to nature (`restoreLot`): an empty lot drawn as the land it was
+   * made on — no fence, no stake, no lane — so the scenery grows back. It keeps
+   * its place among its district's plots (ids are positional) and may still be
+   * built on: a building landing on it clears this.
+   */
+  readonly wild: boolean;
 }
 
 /** The persisted state: every plot ever made, and who stands on which. */
@@ -349,7 +356,8 @@ export function placeResidents(
       if (best && base + 11 <= best.sc) break;
       for (const p of plotsOf(s)) {
         if (taken.has(p.id)) continue;
-        const sc = base + tagScore(pref, p.tags, spare) + 1;
+        // a lot is preferred to a new plot — but not one given back to nature
+        const sc = base + tagScore(pref, p.tags, spare) + (p.wild ? 0 : 1);
         if (best && sc <= best.sc) continue;
         const B = canTake(p, a);
         if (B) best = { sc, p, B };
@@ -384,6 +392,7 @@ export function placeResidents(
         k: best.B.k,
         sx: best.B.sx,
         side: best.B.side,
+        wild: false,
       });
     } else {
       const { s, sp } = best;
@@ -411,6 +420,7 @@ export function placeResidents(
         tags: sp.tags,
         feat: sp.c.feat,
         category: a.category,
+        wild: false,
       };
       L.push(p);
       const ctx = ctxOf(s.island);

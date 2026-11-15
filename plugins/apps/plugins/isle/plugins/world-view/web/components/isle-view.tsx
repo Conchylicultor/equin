@@ -30,11 +30,13 @@ import { symbol } from "@plugins/ui/plugins/icons/core";
 import {
   applyMove,
   residentOf,
+  restoreLot,
   type MoveTarget,
 } from "@plugins/apps/plugins/isle/plugins/world/core";
 import {
   movePlot,
   placementWrites,
+  restorePlot,
 } from "@plugins/apps/plugins/isle/plugins/plots/core";
 import {
   IsleEngine,
@@ -52,6 +54,7 @@ import "./isle.css";
 
 const playIcon = symbol("play-arrow");
 const placeIcon = symbol("landscape");
+const natureIcon = symbol("park");
 
 /** Once Start was pressed in this page, coming back to the island skips the title card. */
 let startedThisPage = false;
@@ -81,6 +84,7 @@ export function IsleView() {
   const [drawn, setDrawn] = useState(false);
   const [started, setStarted] = useState(startedThisPage);
   const [near, setNear] = useState<string | null>(null);
+  const [nearLot, setNearLot] = useState<string | null>(null);
   const [where, setWhere] = useState<{
     island: string;
     district: string | null;
@@ -91,6 +95,7 @@ export function IsleView() {
   const focused = useSurfaceFocused();
   const usage = useAppUsageSummary();
   const move = useEndpointMutation(movePlot);
+  const restore = useEndpointMutation(restorePlot);
   const ready = world.kind === "ready";
   const residents = ready ? world.residents : [];
   const residentOfId = (id: string) =>
@@ -175,6 +180,21 @@ export function IsleView() {
     );
   });
 
+  // the empty lot the hero stands on, given back to nature: its fence, stake
+  // and lane go, and the trees grow back over it
+  const onRestore = useEventCallback((plotId: string) => {
+    if (world.kind !== "ready" || restore.isPending) return;
+    const rs = world.residents.map((r) => residentOf(r.app, r.app.spec));
+    const next = restoreLot(world.placement, rs, plotId);
+    sfx.blip(true);
+    restore.mutate({
+      body: {
+        world: world.world,
+        writes: placementWrites(world.placement, next),
+      },
+    });
+  });
+
   useEffect(() => {
     const stage = stageRef.current;
     if (!stage) throw new Error("IsleView: stage not mounted");
@@ -183,6 +203,7 @@ export function IsleView() {
       {
         onReady: () => setDrawn(true),
         onNear: (id) => near_(id),
+        onNearLot: (id) => setNearLot(id),
         onStep: () => sfx.step(),
         onHover: (id) => {
           if (id) sfx.blip(false);
@@ -268,12 +289,18 @@ export function IsleView() {
         elsewhere: false,
         keepOthers: e.altKey,
       });
+      return;
+    }
+    if ((e.key === "e" || e.key === "E") && !near && nearLot && !e.repeat) {
+      e.preventDefault();
+      onRestore(nearLot);
     }
   }
 
   if (world.kind === "error") throw world.error;
   if (stuck) throw stuck;
   const nearR = near ? residentOfId(near) : null;
+  const lotPrompt = !nearR && nearLot !== null;
   const showTitle = !(started && canStart);
   return (
     <div className="isle-root" data-time={time}>
@@ -285,7 +312,7 @@ export function IsleView() {
         className="isle-stage"
         tabIndex={0}
         role="application"
-        aria-label={`${isleApp.name}: walk with the arrow keys, press E at a door to open its app`}
+        aria-label={`${isleApp.name}: walk with the arrow keys, press E at a door to open its app, or on an empty lot to give it back to nature`}
         onKeyDown={onKeyDown}
       />
       {started && where ? (
@@ -333,11 +360,11 @@ export function IsleView() {
       ) : null}
       <div
         className={
-          nearR && started
+          (nearR || lotPrompt) && started
             ? "isle-hud isle-prompt isle-on"
             : "isle-hud isle-prompt"
         }
-        aria-hidden={!nearR}
+        aria-hidden={!nearR && !lotPrompt}
       >
         {nearR ? (
           <button
@@ -363,6 +390,22 @@ export function IsleView() {
             <span className="isle-prompt-text">
               <b>{nearR.app.name}</b>
               <small>Open</small>
+            </span>
+            <kbd>E</kbd>
+          </button>
+        ) : lotPrompt ? (
+          <button
+            type="button"
+            className="isle-card"
+            disabled={restore.isPending}
+            onClick={() => onRestore(nearLot)}
+          >
+            <span className="isle-prompt-icon isle-prompt-nature">
+              <Icon icon={natureIcon} />
+            </span>
+            <span className="isle-prompt-text">
+              <b>Empty lot</b>
+              <small>Restore nature</small>
             </span>
             <kbd>E</kbd>
           </button>

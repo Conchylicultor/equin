@@ -64,6 +64,8 @@ export const islePlotFields = {
   geometry: jsonField({ schema: PlotGeometrySchema }),
   occupant: nullable(textField()),
   movedByUser: boolField(),
+  /** Given back to nature (world/core's `Plot.wild`). */
+  wild: boolField(),
 };
 
 export const islePlotEntityRef = entityRef("isle_plots", islePlotFields);
@@ -78,4 +80,5 @@ export const PlotSchema = PlotGeometrySchema.extend({
   seq: z.number().int(),
   slot: z.string(),
   category: z.enum(APP_CATEGORIES),
+  wild: z.boolean(),
 }) satisfies z.ZodType<Plot>;

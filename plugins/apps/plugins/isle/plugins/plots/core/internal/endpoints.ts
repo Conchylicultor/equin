@@ -48,6 +48,18 @@ export const claimPlots = defineEndpoint({
  * target was validated by the pure world (`moveTargets`) on the placement the
  * writer read; the compare-and-set makes sure it is still that placement.
  */
+/**
+ * An empty lot given back to nature by hand: the one plot, now `wild` and with
+ * no occupant (an absent app that held it lets go). The pure world's
+ * `restoreLot` made it from the placement the writer read; the compare-and-set
+ * refuses it when someone has landed there since.
+ */
+export const restorePlot = defineEndpoint({
+  route: "POST /api/isle/plots/restore",
+  body: WritesBodySchema,
+  response: PlotWritesResultSchema,
+});
+
 export const movePlot = defineEndpoint({
   route: "POST /api/isle/plots/move",
   body: WritesBodySchema,

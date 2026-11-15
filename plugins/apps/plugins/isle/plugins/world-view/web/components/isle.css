@@ -186,6 +186,10 @@
   background: var(--isle-hue, #8a7a5c);
   box-shadow: inset 0 -3px 0 rgb(0 0 0 / 0.2);
 }
+/* an empty lot's card: the green of the land it gives back */
+.isle-prompt-nature {
+  background: #5f8a4a;
+}
 .isle-prompt-text b {
   display: block;
   font-family: Fraunces, serif;

@@ -1,6 +1,6 @@
 {
-  "id": "3519ddf0-f7c2-430e-867d-d9cb27d45082",
-  "prevId": "a640b086-08b4-4257-846a-b8e127006e39",
+  "id": "cc983620-e245-458c-81c5-32c8e5a1d15c",
+  "prevId": "3519ddf0-f7c2-430e-867d-d9cb27d45082",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -3313,6 +3313,13 @@
         },
         "moved_by_user": {
           "name": "moved_by_user",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "wild": {
+          "name": "wild",
           "type": "boolean",
           "primaryKey": false,
           "notNull": true,

@@ -5,6 +5,7 @@ import {
   claimPlots,
   geometryOf,
   movePlot,
+  restorePlot,
   type PlotWrite,
   type PlotWritesResult,
 } from "../../core";
@@ -86,6 +87,7 @@ async function applyWrites(
           category: w.plot.category,
           geometry: geometryOf(w.plot),
           occupant: w.occupant,
+          wild: w.plot.wild,
         };
         if (w.expect.kind === "absent") {
           // another writer may have made it since the check (no row to lock):
@@ -104,6 +106,7 @@ async function applyWrites(
             .set({
               geometry: row.geometry,
               occupant: row.occupant,
+              wild: row.wild,
               ...(movedByUser && { movedByUser: true }),
             })
             .where(
@@ -123,6 +126,10 @@ async function applyWrites(
 }
 
 export const handleClaimPlots = implement(claimPlots, ({ body }) =>
+  applyWrites(body.world, body.writes, false),
+);
+
+export const handleRestorePlot = implement(restorePlot, ({ body }) =>
   applyWrites(body.world, body.writes, false),
 );
 

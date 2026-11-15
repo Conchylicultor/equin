@@ -6,6 +6,7 @@ import {
 import type { Setting } from "@plugins/apps/plugins/isle/plugins/buildings/core";
 import { fnv1a32 } from "@plugins/packages/plugins/string-hash/core";
 import { layoutWorld } from "./layout";
+import { applyMove, moveTargets, restoreLot } from "./move";
 import {
   EMPTY_PLACEMENT,
   islandsInPlay,
@@ -204,4 +205,43 @@ describe("islands in play", () => {
       for (const id of shown) expect(now.has(id)).toBe(true);
     }
   }, 120_000);
+});
+
+describe("restoring a lot", () => {
+  const M = new WorldModel(7);
+  const rs = residents(12);
+  const P = placeResidents(M, EMPTY_PLACEMENT, rs);
+  const gone = rs[3]!;
+  const present = rs.filter((r) => r !== gone);
+  const lotId = P.occupant[gone.id]!;
+
+  test("a restored lot is no longer drawn, nor its lane, and its absent app lets go", () => {
+    expect(layoutWorld(M, P, present).lots.map((p) => p.id)).toContain(lotId);
+    const R = restoreLot(P, present, lotId);
+    expect(plotById(R, lotId)!.wild).toBe(true);
+    expect(R.occupant[gone.id]).toBeUndefined();
+    const L = layoutWorld(M, R, present);
+    expect(L.lots.map((p) => p.id)).not.toContain(lotId);
+    expect(L.roads.some((r) => r.key.endsWith(`:${lotId}`))).toBe(false);
+    // every other plot keeps its place
+    for (const r of present) expect(R.occupant[r.id]).toBe(P.occupant[r.id]);
+  });
+
+  test("an occupied plot cannot be restored", () => {
+    expect(() => restoreLot(P, rs, lotId)).toThrow(/stands on/);
+  });
+
+  test("a building landing on a restored lot clears it", () => {
+    const R = restoreLot(P, present, lotId);
+    const mover = present[0]!;
+    const t = moveTargets(M, R, present, mover.id).find(
+      (x) => x.kind === "plot" && x.plot.id === lotId,
+    );
+    if (!t) return; // the mover does not fit there
+    const N = applyMove(M, R, present, mover.id, t);
+    expect(plotById(N, lotId)!.wild).toBe(false);
+    expect(
+      layoutWorld(M, N, present).buildings.some((b) => b.plot.id === lotId),
+    ).toBe(true);
+  });
 });

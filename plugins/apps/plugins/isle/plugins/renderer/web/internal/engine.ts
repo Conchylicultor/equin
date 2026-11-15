@@ -111,6 +111,8 @@ export interface EngineHooks {
   onReady(): void;
   /** The hero is (no longer) at a building's door. */
   onNear(appId: string | null): void;
+  /** The hero is (no longer) standing on an empty lot (its plot id): it may be given back to nature. */
+  onNearLot(plotId: string | null): void;
   /**
    * Open an app (a click on its building): `at` is the screen point it opens
    * from; the click's modifiers: `elsewhere` (⌘/Ctrl — a new browser tab),
@@ -347,6 +349,7 @@ export class IsleEngine {
   private marker: { x: number; y: number; t0: number } | null = null;
   private dust: { x: number; y: number; t0: number } | null = null;
   private nearDoor: SceneBuilding | null = null;
+  private nearLot: string | null = null;
   private where = "";
 
   // input
@@ -2519,6 +2522,19 @@ export class IsleEngine {
       const was = this.nearDoor?.appId ?? null;
       this.nearDoor = nb;
       if ((nb?.appId ?? null) !== was) this.hooks.onNear(nb?.appId ?? null);
+    }
+    // standing on an empty lot (a door takes precedence)
+    const lot = nb
+      ? null
+      : (this.layout!.lots.find((p) => {
+          const B = plotBox(p);
+          return (
+            hero.x > B[0] && hero.x < B[2] && hero.y > B[1] && hero.y < B[3]
+          );
+        })?.id ?? null);
+    if (lot !== this.nearLot) {
+      this.nearLot = lot;
+      this.hooks.onNearLot(lot);
     }
     this.reportWhere();
   }

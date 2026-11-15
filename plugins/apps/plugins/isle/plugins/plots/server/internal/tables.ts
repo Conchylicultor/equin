@@ -28,11 +28,13 @@ export const islePlots = defineEntity(
         geometry: true,
         occupant: true,
         movedByUser: true,
+        wild: true,
         createdAt: false,
       },
     },
     columns: {
       movedByUser: { default: false },
+      wild: { default: false },
       createdAt: { default: defaultNow() },
       updatedAt: { default: defaultNow() },
     },

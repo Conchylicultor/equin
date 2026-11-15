@@ -5900,7 +5900,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `viewOf`
               - `WALK_FRAMES`
         - **`dev`** — Isle's dev tools, never part of the app: the growth exhibit (isle/growth) — the world drawn with N made-up apps (14…142; ±1, add to a category, remove one at random, another seed), placed in memory, never the real plots, with its stats (islands, districts, buildings, empty lots, rebuild time), a switch between baking in workers and on the page, and a fingerprint of what was baked to compare the two.
-        - **`plots`** — Isle's plots table (isle_plots: one row per plot of a world, keyed (world, plotId), its occupant unique per world, the geometry as jsonb) served as the isle.plots live collection, and the claim / move endpoints: one compare-and-set transaction per batch, answered stale when what the writer read no longer holds.
+        - **`plots`** — Isle's plots table (isle_plots: one row per plot of a world, keyed (world, plotId), its occupant unique per world, the geometry as jsonb) served as the isle.plots live collection, and the claim / move / restore endpoints: one compare-and-set transaction per batch, answered stale when what the writer read no longer holds.
           - Server:
             - Contributes:
               - `resource.declare` "isle.plots"
@@ -5919,6 +5919,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Routes:
               - `POST /api/isle/plots/claim`
               - `POST /api/isle/plots/move`
+              - `POST /api/isle/plots/restore`
           - Core:
             - Uses:
               - `apps/isle/buildings.SETTINGS`
@@ -5956,6 +5957,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `PlotSchema`
               - `PlotWriteSchema`
               - `PlotWritesResultSchema`
+              - `restorePlot`
               - `worldOfSeed`
           - Cross-plugin:
             - Imported by: `apps/isle/world-view`
@@ -6067,6 +6069,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `plotsClash`
               - `pointIndex`
               - `residentOf`
+              - `restoreLot`
               - `RIVER`
               - `riverWidth`
               - `roadHash`

@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: Isle's plots table (isle_plots: one row per plot of a world, keyed (world, plotId), its occupant unique per world, the geometry as jsonb) served as the isle.plots live collection, and the claim / move endpoints: one compare-and-set transaction per batch, answered stale when what the writer read no longer holds.
+- Description: Isle's plots table (isle_plots: one row per plot of a world, keyed (world, plotId), its occupant unique per world, the geometry as jsonb) served as the isle.plots live collection, and the claim / move / restore endpoints: one compare-and-set transaction per batch, answered stale when what the writer read no longer holds.
 - Server:
   - Contributes:
     - `resource.declare` "isle.plots"
@@ -23,6 +23,7 @@
   - Routes:
     - `POST /api/isle/plots/claim`
     - `POST /api/isle/plots/move`
+    - `POST /api/isle/plots/restore`
 - Core:
   - Uses:
     - `apps/isle/buildings.SETTINGS`
@@ -60,6 +61,7 @@
     - `PlotSchema`
     - `PlotWriteSchema`
     - `PlotWritesResultSchema`
+    - `restorePlot`
     - `worldOfSeed`
 - Cross-plugin:
   - Imported by: `apps/isle/world-view`
