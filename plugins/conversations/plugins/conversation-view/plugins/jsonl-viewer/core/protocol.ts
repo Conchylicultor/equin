@@ -37,8 +37,17 @@ export function seqKey(seq: number): string {
   return String(seq).padStart(9, "0");
 }
 
-/** Events per page: what a conversation opens on, and the step scrolling up loads. */
-export const JSONL_EVENTS_PAGE = 200;
+/**
+ * Events per page: what a conversation opens on, and the step scrolling up loads.
+ *
+ * Every loaded event is a real mounted row (`TranscriptView` does not window),
+ * so this is what opening a conversation renders and lays out. Sized to fill
+ * the viewport plus the top sentinel's 1500px load margin, not more: rows
+ * average ~100px, so 50 events are ~5000px. At 200 a conversation opened on
+ * ~200 rows / ~6,400 elements to show 6 of them — 240–290 ms of main thread
+ * per open in a foreground headless Chrome, 0.7–2 s in the user's (2026-11-15).
+ */
+export const JSONL_EVENTS_PAGE = 50;
 
 /** The most events one read without a viewport holds. */
 export const JSONL_EVENTS_MAX = 5000;

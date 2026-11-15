@@ -3,7 +3,7 @@
 ## `jsonl-events`: paged, newest first — the page never holds the whole transcript
 
 `jsonlEvents` (`core/protocol.ts`) is a key-range-paged `liveValue` (query
-`{ id }`): rows `{ id, seq, event }`, newest first, 200 per page. A
+`{ id }`): rows `{ id, seq, event }`, newest first, 50 per page (sized to fill the viewport: every loaded event is a mounted row). A
 conversation opens on its latest events; `TranscriptView` loads older pages as
 the reader scrolls to the top (`older`, a top sentinel) and keeps the reader in
 place (`KeepAnchorAcross`). A change ships a keyed delta — an appended line is
