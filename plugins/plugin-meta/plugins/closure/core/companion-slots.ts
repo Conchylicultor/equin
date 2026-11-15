@@ -83,11 +83,26 @@ export function collectCompanionSlots(
       if (!contribution.companion) continue;
       const head = contribution.slot.split(".")[0];
       const owner = head ? groupOwner.get(head) : undefined;
-      if (!owner || owner === node.id) continue;
+      // An owner the static parse cannot name is NOT a skip: the flag would
+      // draw no edge, so the contribution would ship in no composition while
+      // every check passes (the 22 theme-customizer sections, whose
+      // `defineDetailSections` group the parse did not read). The runtime
+      // `companions-visible` check cannot catch it either — the manifest never
+      // lists the slot.
+      if (!owner)
+        throw new Error(
+          `plugins/${node.path}/web/index.ts: \`${contribution.slot}({ …, companion: true })\` (${node.id}) — ` +
+            `no plugin declares a slot group \`${head ?? contribution.slot}\` that the static slots parse can read, ` +
+            "so this companion would ship in no composition. Declare the group with a slot constructor the parse " +
+            "reads (`defineSlot` / `defineRenderSlot` / … or `defineDetailSections`), or teach the slots facet " +
+            "(plugin-meta/facets/slots) the factory that makes it.",
+        );
+      // A plugin is never its own companion: it ships with itself.
+      if (owner === node.id) continue;
       const slot = byRef.get(contribution.slot);
       if (!slot)
         throw new Error(
-          `${node.id}: \`${contribution.slot}({ …, companion: true })\` — no slot opened to companions ` +
+          `plugins/${node.path}/web/index.ts: \`${contribution.slot}({ …, companion: true })\` (${node.id}) — no slot opened to companions ` +
             `is spelled \`${contribution.slot}\`. The owner declares it with \`companions\` ` +
             "(or `defineRootSlot()`), and the static parse must be able to read that declaration.",
         );

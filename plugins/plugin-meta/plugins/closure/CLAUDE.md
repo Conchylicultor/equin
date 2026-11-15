@@ -179,7 +179,11 @@ Two edge kinds, both indexed forward + reverse:
   contribution, with the owner's consent (an unflagged slot rejects the field
   at the type level). `via` is `"companion"` (import > token > companion when
   several hold). The flag is read from the inline literal only; the
-  `companions-visible` check fails on one built elsewhere.
+  `companions-visible` check fails on one built elsewhere. A `companion: true`
+  contribution whose slot group no plugin declares in a form the static slots
+  parse reads THROWS (naming the file and the group), never a skip: it would
+  ship in no composition, and the runtime check cannot see a slot the manifest
+  never lists.
   **Server companions** work the same way for a server contribution kind: the
   owner opens it with `export const Kind = defineServerContribution("<kind>",
   { companions: true })` in its `server/`, a contributor's `server/index.ts`
