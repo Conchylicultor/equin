@@ -24,7 +24,6 @@ import {
   type NotificationsFilter,
 } from "./notifications-panel";
 import { useToastNotification } from "./notification-view";
-import { isPageOnScreen } from "@plugins/shell/plugins/toast/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
 const notificationsIcon = symbol("notifications");
@@ -48,17 +47,15 @@ export function BellButton() {
   const unreadResult = useLive(notificationsUnread);
   const audience = useAudience();
 
-  // A toast for each notification that arrives while the bell is mounted and
-  // the page is on screen — the same view its row in the popover draws (the
-  // bell mirrors the toasts). An arrival on a hidden page is announced by the
-  // bell alone (its row and the unread badge are there on return): an arrival
-  // is an announcement, and an announcement raised on a hidden page stays
-  // mounted until the page is shown (isPageOnScreen) — on 2026-11-14 a
-  // hidden tab gained ~12k DOM nodes in 2 h this way, one per arrival.
+  // A toast for each notification that arrives while the bell is mounted —
+  // the same view its row in the popover draws (the bell mirrors the toasts).
+  // An arrival is an announcement: the toast plugin raises it only on a page
+  // on screen and takes it down after its announcement duration whatever its
+  // variant, so the bell's row and unread badge are its lasting record — a
+  // hidden tab (2026-11-14: ~12k DOM nodes in 2 h) or a visible one left
+  // overnight (~2 MB per kept error toast) no longer piles them up.
   const toastNotification = useToastNotification();
-  useNotificationArrivals((n) => {
-    if (isPageOnScreen()) toastNotification(n);
-  });
+  useNotificationArrivals((n) => toastNotification(n, "announcement"));
 
   const hadUnreadRef = useRef(false);
 

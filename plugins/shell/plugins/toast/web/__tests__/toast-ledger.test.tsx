@@ -25,6 +25,7 @@ import type { ToastVariant } from "../../core";
 import { useLiveToastCount } from "../internal/live-toasts";
 import { RenderOrigin } from "@plugins/primitives/plugins/scope/plugins/render-origin/web";
 import {
+  ANNOUNCEMENT_DURATION_MS,
   showToast,
   useShowCustomToast,
   type CustomToastArgs,
@@ -405,6 +406,7 @@ describe("click-to-dismiss", () => {
     );
     await act(async () => {
       show!({
+        kind: "reply",
         duration: Infinity,
         render: () => (
           <div>
@@ -488,7 +490,7 @@ describe("a custom toast renders in its caller's origin", () => {
 
   async function raise(): Promise<void> {
     await act(async () => {
-      show!({ duration: Infinity, render: () => <WorldName /> });
+      show!({ kind: "reply", duration: Infinity, render: () => <WorldName /> });
       await Promise.resolve();
     });
     await flushToasts();
@@ -511,5 +513,78 @@ describe("a custom toast renders in its caller's origin", () => {
     await flushToasts(TIME_BEFORE_UNMOUNT + 50);
     expect(mountedToasts()).toHaveLength(0);
     expect(ledgerCount()).toBe(0);
+  });
+});
+
+describe("an announcement is never sticky", () => {
+  /**
+   * An announcement is something that happened on its own (a notification
+   * arriving): its record is its persistent surface (the bell), so the toast
+   * leaves after the announcement duration whatever it says, and a page off
+   * screen never raises one — sonner would keep it mounted until shown.
+   */
+  let show: ((args: CustomToastArgs) => void) | null = null;
+  function Raiser({
+    into,
+  }: {
+    into: (r: (args: CustomToastArgs) => void) => void;
+  }) {
+    into(useShowCustomToast());
+    return null;
+  }
+  function mountHost() {
+    render(
+      <RenderOrigin>
+        <LedgerProbe />
+        <Toaster />
+        <Raiser into={(r) => (show = r)} />
+      </RenderOrigin>,
+    );
+  }
+  async function raise(args: CustomToastArgs): Promise<void> {
+    await act(async () => {
+      show!(args);
+      await Promise.resolve();
+    });
+    await flushToasts();
+  }
+
+  it("a custom announcement leaves after the announcement duration", async () => {
+    mountHost();
+    await raise({ kind: "announcement", render: () => <p>arrived</p> });
+    expect(mountedToasts()).toHaveLength(1);
+    await flushToasts(ANNOUNCEMENT_DURATION_MS);
+    await flushToasts(TIME_BEFORE_UNMOUNT + 50);
+    expect(mountedToasts()).toHaveLength(0);
+    expect(ledgerCount()).toBe(0);
+  });
+
+  it("a reply may stay until handled", async () => {
+    mountHost();
+    await raise({
+      kind: "reply",
+      duration: Infinity,
+      render: () => <p>save failed</p>,
+    });
+    await flushToasts(ANNOUNCEMENT_DURATION_MS * 10);
+    expect(mountedToasts()).toHaveLength(1);
+  });
+
+  it("a page off screen raises no announcement, custom or text — a reply still shows", async () => {
+    const visibility = vi
+      .spyOn(document, "visibilityState", "get")
+      .mockReturnValue("hidden");
+    try {
+      mountHost();
+      await raise({ kind: "announcement", render: () => <p>arrived</p> });
+      showToast({ kind: "announcement", description: "reconnected" });
+      await flushToasts();
+      expect(mountedToasts()).toHaveLength(0);
+      showToast({ description: "copied" });
+      await flushToasts();
+      expect(mountedToasts()).toHaveLength(1);
+    } finally {
+      visibility.mockRestore();
+    }
   });
 });

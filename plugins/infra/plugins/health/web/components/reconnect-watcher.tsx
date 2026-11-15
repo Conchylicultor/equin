@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { subscribeWsStatus } from "@plugins/primitives/plugins/networking/web";
-import { isPageOnScreen, showToast } from "@plugins/shell/plugins/toast/web";
+import { showToast } from "@plugins/shell/plugins/toast/web";
 
 export function ReconnectWatcher() {
   useEffect(() => {
@@ -12,11 +12,10 @@ export function ReconnectWatcher() {
       toastTimer = setTimeout(() => {
         toastTimer = null;
         // An announcement: a reconnect the user did not watch is not news (the
-        // health report's Connection row has the state), and a toast raised on
-        // a hidden page stays mounted until it is shown — one per server
-        // restart, per background tab.
-        if (!isPageOnScreen()) return;
+        // health report's Connection row has the state), so the toast plugin
+        // raises it only on a page on screen.
         showToast({
+          kind: "announcement",
           description: "Reconnected to server",
           variant: "info",
           audience: "developer",

@@ -660,14 +660,15 @@ export function NotificationToastCard({
   );
 }
 
-/** How long a toast that does not stay until handled is shown. */
-export const TOAST_DURATION_MS = 4000;
+/** How long a reply that does not stay until handled is shown. */
+const REPLY_DURATION_MS = 4000;
 
 /**
- * Whether a toast stays until dismissed or acted on: an error, or a problem
+ * Whether a reply stays until dismissed or acted on: an error, or a problem
  * that came back after being resolved (whatever its severity — a fix that did
  * not hold is not something to miss). Everything else leaves after
- * `TOAST_DURATION_MS`.
+ * `REPLY_DURATION_MS`. Only a reply: an announcement (an arrival) always
+ * leaves after the toast plugin's announcement duration — the bell keeps it.
  */
 function staysUntilHandled(
   n: Pick<NotificationContent, "variant" | "state">,
@@ -676,23 +677,41 @@ function staysUntilHandled(
 }
 
 /**
+ * Why a notification is toasted: an `announcement` (it arrived on its own —
+ * shown only on a page on screen, and gone after the announcement duration
+ * whatever its variant) or a `reply` (this page raised it, answering what the
+ * user did — an error stays until handled).
+ */
+export type NotificationToastKind = "announcement" | "reply";
+
+/**
  * Shows a notification as a toast through the toast host's custom-content
  * path, rendered in the caller's render origin — so its action kind, its
  * `useLink` / `useRun` and its subject resolve where the caller is (inside the
  * demo: the demo's registry, server and embed), never in the page chrome
  * that shows the toast.
  */
-export function useToastNotification(): (n: NotificationContent) => void {
+export function useToastNotification(): (
+  n: NotificationContent,
+  kind: NotificationToastKind,
+) => void {
   const showCustomToast = useShowCustomToast();
   return useCallback(
-    (n: NotificationContent) =>
+    (n: NotificationContent, kind: NotificationToastKind) => {
+      const render = ({ dismiss }: { dismiss: () => void }) => (
+        <NotificationToastCard n={n} dismiss={dismiss} />
+      );
+      if (kind === "announcement") {
+        showCustomToast({ kind, render, audience: n.audience });
+        return;
+      }
       showCustomToast({
-        render: ({ dismiss }) => (
-          <NotificationToastCard n={n} dismiss={dismiss} />
-        ),
-        duration: staysUntilHandled(n) ? Infinity : TOAST_DURATION_MS,
+        kind,
+        render,
+        duration: staysUntilHandled(n) ? Infinity : REPLY_DURATION_MS,
         audience: n.audience,
-      }),
+      });
+    },
     [showCustomToast],
   );
 }

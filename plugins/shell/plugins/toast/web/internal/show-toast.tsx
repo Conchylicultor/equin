@@ -20,6 +20,7 @@ import type { Audience } from "@plugins/audience/core";
 import type { ToastArgs } from "../../core";
 import { trackToast, untrackToast } from "./live-toasts";
 import { toastReachesReader } from "./reader-audience";
+import { isPageOnScreen } from "./on-screen";
 
 /**
  * Page-unique toast ids we mint ourselves, rather than taking sonner's return
@@ -30,9 +31,9 @@ import { toastReachesReader } from "./reader-audience";
  * trimmed of dismissed toasts only once it passes 100 (2.0.8,
  * `MAX_HISTORY_SIZE` / `trimHistory`) — so a reused id republishes, and
  * thereby resurrects, a toast that died minutes ago. The same history keeps
- * each of those last ~100 toasts' bodies alive, a custom toast's portal
- * container (and React's ~140 root listeners on it) included: bounded, but
- * real (`research/2026-11-11-global-browser-tab-memory.md`). A string is disjoint from sonner's own numeric
+ * each of those last ~100 toasts' JSX alive — so a custom toast's JSX holds
+ * its content only through a reference released when it is gone
+ * (`showCustomToast`; `research/2026-11-11-global-browser-tab-memory.md`). A string is disjoint from sonner's own numeric
  * counter by construction, and the session prefix keeps an HMR reload (which
  * restarts `seq` under a still-live sonner module) from colliding with the
  * ids the previous module instance handed out.
@@ -137,18 +138,31 @@ function ToastBody({
   );
 }
 
+/** How long an announcement is shown — every announcement, whatever its variant. */
+export const ANNOUNCEMENT_DURATION_MS = 4000;
+
 /**
- * A toast whose whole content the caller draws (a notification's own view),
- * shown for `duration` ms — `Infinity` keeps it until dismissed or acted on.
+ * A toast whose whole content the caller draws (a notification's own view).
  * The host adds nothing around it: the content paints its own surface.
+ *
+ * Why it is shown decides how long it stays, so the caller states the why,
+ * never an announcement's duration:
+ *
+ * - `announcement` — something that happened on its own (a notification
+ *   arriving). Raised only on a page on screen, and gone after
+ *   `ANNOUNCEMENT_DURATION_MS` whatever it says: its record is its persistent
+ *   surface (the bell's row and unread badge), so a tab left on screen never
+ *   piles them up.
+ * - `reply` — the answer to something the user just did (a failed save). Shown
+ *   whatever the page's state, for `duration` ms; `Infinity` keeps it until
+ *   dismissed or acted on.
  */
-export interface CustomToastArgs {
+export type CustomToastArgs = {
   /** The toast's content, handed the toast's own `dismiss` (a × of its own). */
   render: (toast: { dismiss: () => void }) => ReactNode;
-  duration: number;
   /** Who it is for — a `developer` toast is shown only in Developer mode. */
   audience?: Audience;
-}
+} & ({ kind: "announcement" } | { kind: "reply"; duration: number });
 
 /**
  * Fire a text toast. Backed by sonner's global imperative API — callable from
@@ -164,6 +178,8 @@ export interface CustomToastArgs {
 export function showToast(args: ToastArgs): void {
   // A developer toast is shown only to a developer (Developer mode on).
   if (!toastReachesReader(args.audience)) return;
+  // An announcement is for a user looking at the page (`isPageOnScreen`).
+  if (args.kind === "announcement" && !isPageOnScreen()) return;
   showTextToast(nextToastId(), args);
 }
 
@@ -184,6 +200,8 @@ export function useShowCustomToast(): (args: CustomToastArgs) => void {
   return useCallback(
     (args: CustomToastArgs) => {
       if (!toastReachesReader(args.audience)) return;
+      // An announcement is for a user looking at the page (`isPageOnScreen`).
+      if (args.kind === "announcement" && !isPageOnScreen()) return;
       showCustomToast(origin, nextToastId(), args);
     },
     [origin],
@@ -193,18 +211,65 @@ export function useShowCustomToast(): (args: CustomToastArgs) => void {
 function showCustomToast(
   origin: RenderOriginHandle,
   id: string,
-  { render, duration }: CustomToastArgs,
+  args: CustomToastArgs,
 ) {
-  const dismiss = () => {
+  const duration =
+    args.kind === "announcement" ? ANNOUNCEMENT_DURATION_MS : args.duration;
+  let live: RaisedContent | null = raiseContent(origin, args.render, () => {
     sonnerToast.dismiss(id);
+  });
+  const { mounted } = live;
+  // sonner keeps a dismissed toast's JSX in its history (its last ~100
+  // toasts, `Observer.toasts`), so the JSX below reaches the heavy parts —
+  // the adopted element (and through it the toast's detached `<li>`, the
+  // content's DOM and listeners) — only through `live`, released once the
+  // body is gone for good. Built in `raiseContent`, never here: closures of
+  // one function share one scope, so a local here would be kept by every
+  // closure the JSX holds. Before, each dismissed custom toast kept ~58 KB,
+  // 7 DOM nodes and ~143 listeners alive until 100 later toasts pushed it out.
+  const gone = () => {
+    const held = live;
+    live = null;
+    held?.remove();
   };
-  // The content renders in the caller's origin, portalled into an element of
-  // its own; the toast's `<li>` adopts that element once the content has
-  // committed (`raised.mounted`). Adopting rather than portalling into the
-  // `<li>` from its own mount: sonner measures the toast's height in its
-  // first effect, so the content must already be there when sonner mounts it.
-  // React events still bubble through the origin's tree (a portal), and the
-  // CSS — the chrome's theme, sonner's styles — is the `<li>`'s, by the DOM.
+  const body = (
+    <ToastBody id={id} onGone={gone}>
+      <AdoptElement
+        adoptee={() => live?.element ?? null}
+        onPortalContainer={(portal) => live?.update(portal)}
+      />
+    </ToastBody>
+  );
+  // After the content committed, and through the same one-microtask
+  // deferral as the text toast — see `showTextToast`.
+  void mounted.then(() =>
+    queueMicrotask(() => sonnerToast.custom(() => body, { id, duration })),
+  );
+}
+
+interface RaisedContent {
+  /** The element the content portals into, for the toast's `<li>` to adopt. */
+  element: HTMLElement;
+  /** Re-render the content under the portal container the toast is drawn in. */
+  update: (portal: HTMLElement | null | undefined) => void;
+  remove: () => void;
+  mounted: Promise<void>;
+}
+
+/**
+ * The content renders in the caller's origin, portalled into an element of
+ * its own; the toast's `<li>` adopts that element once the content has
+ * committed (`mounted`). Adopting rather than portalling into the `<li>`
+ * from its own mount: sonner measures the toast's height in its first
+ * effect, so the content must already be there when sonner mounts it. React
+ * events still bubble through the origin's tree (a portal), and the CSS — the
+ * chrome's theme, sonner's styles — is the `<li>`'s, by the DOM.
+ */
+function raiseContent(
+  origin: RenderOriginHandle,
+  render: CustomToastArgs["render"],
+  dismiss: () => void,
+): RaisedContent {
   const element = document.createElement("div");
   element.style.display = "contents";
   const content = render({ dismiss });
@@ -221,19 +286,12 @@ function showCustomToast(
       element,
     );
   const raised = origin.raise(contentIn(undefined), { onGone: dismiss });
-  const body = (
-    <ToastBody id={id} onGone={raised.remove}>
-      <AdoptElement
-        element={element}
-        onPortalContainer={(portal) => raised.update(contentIn(portal))}
-      />
-    </ToastBody>
-  );
-  // After the content committed, and through the same one-microtask
-  // deferral as the text toast — see `showTextToast`.
-  void raised.mounted.then(() =>
-    queueMicrotask(() => sonnerToast.custom(() => body, { id, duration })),
-  );
+  return {
+    element,
+    update: (portal) => raised.update(contentIn(portal)),
+    remove: raised.remove,
+    mounted: raised.mounted,
+  };
 }
 
 /**
@@ -241,17 +299,20 @@ function showCustomToast(
  * hands back the portal container this spot is drawn under.
  */
 function AdoptElement({
-  element,
+  adoptee,
   onPortalContainer,
 }: {
-  element: HTMLElement;
+  /** The element to adopt — `null` once the toast is gone for good. */
+  adoptee: () => HTMLElement | null;
   onPortalContainer: (portal: HTMLElement | null | undefined) => void;
 }) {
   const adopt = useCallback(
     (span: HTMLSpanElement | null) => {
-      if (span !== null && element.parentNode !== span) span.append(element);
+      const element = adoptee();
+      if (span !== null && element !== null && element.parentNode !== span)
+        span.append(element);
     },
-    [element],
+    [adoptee],
   );
   const portal = usePortalContainer();
   const report = useEventCallback(onPortalContainer);

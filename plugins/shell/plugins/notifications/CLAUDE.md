@@ -18,8 +18,9 @@
   stands (`pending` / `resolved` / `recurred`, the producer's words), set on
   every row about one subject by `restateByMetadata(key, value, state)`. A
   resolved row settles (check glyph); one that recurred keeps its severity's
-  glyph, draws a red state line, and its toast stays until handled
-  (`staysUntilHandled`). A report's
+  glyph, draws a red state line, and a toast this page raises about it
+  (`useToast`, a reply) stays until handled (`staysUntilHandled`); an arrival
+  is an announcement and leaves on its own. A report's
   regression is a new row (the reports engine's own key), never the old one
   moved.
 
@@ -43,7 +44,8 @@ A notification is **icon · one-line headline · line 2 · at most one action**
 - `category` — `conversations | updates | automations | reports | other`
   (`NOTIFICATION_CATEGORIES`, a closed list in `core/`; default `other`). The
   bell's chips.
-- `variant` — `error` ⇒ the toast stays until dismissed or acted on.
+- `variant` — `error` ⇒ a reply toast (`useToast`) stays until dismissed or
+  acted on; an arrival (an announcement) leaves after 4 s whatever its variant.
 - `icon` — the event's own glyph, the `SymbolRef` its producer wrote with
   `symbol("…")` (so the icon manifest ships it); without one the view draws
   the variant's (error / warning) else the category's. An error / warning is
@@ -66,12 +68,13 @@ the line box.
 (`web/components/notification-view.tsx`). An arriving notification
 (`useNotificationArrivals`, in the bell) and a toast this page raises itself
 (`useToast`, which requires a `category`) are shown through
-`useToastNotification()` — the toast plugin's custom-content path
-(`useShowCustomToast`): the view on the overlay surface, 4s, `Infinity` for an
-error. An arrival is toasted only while the page is on screen (`isPageOnScreen`,
-`shell/toast` § Announcements): on a hidden page the bell's row and badge are
-its only announcement, since sonner would keep the toast mounted until the
-page is shown. It renders in the CALLER's render origin (`scope/render-origin`), so a
+`useToastNotification()(n, kind)` — the toast plugin's custom-content path
+(`useShowCustomToast`), the view on the overlay surface. An arrival is an
+`announcement` (`shell/toast` § Announcements vs replies): shown only while the
+page is on screen and gone after the toast plugin's 4 s whatever its variant —
+the bell's row and badge are its lasting record, so a tab left open (hidden or
+on screen) never piles them up. A toast `useToast` raises is a `reply`: 4 s,
+`Infinity` for an error or a problem that came back. It renders in the CALLER's render origin (`scope/render-origin`), so a
 toast `useToast` raises inside the demo resolves its action kind, runs its
 `useRun` / `useLink` and reads its subject against the demo — never the page
 chrome's registry, server or tabs. The popover's row is the same view with its time and an unread dot.
@@ -236,7 +239,7 @@ DataView (`web/components/notifications-view.tsx`):
     - `notification-actions` "dismiss" → `DismissNotificationAction`
     - `Notifications.Action` "open"
     - `Notifications.Action` "reload"
-  - Uses: 57 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 56 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/data-view` ×5
     - `apps-core/tab-origin` ×4
     - `infra/endpoints` ×3
@@ -247,7 +250,6 @@ DataView (`web/components/notifications-view.tsx`):
     - `primitives/css/fill` ×2
     - `primitives/cursor-pagination` ×2
     - `primitives/pane` ×2
-    - `shell/toast` ×2
     - `apps-core/tabs.useAppLink`
     - `apps/debug/shell.DebugApp`
     - `audience/developer-mark.DeveloperMark`
@@ -275,6 +277,7 @@ DataView (`web/components/notifications-view.tsx`):
     - `primitives/relative-time.RelativeTime`
     - `primitives/scope/tab-id.getTabId`
     - `shell/action-bar.ActionBar`
+    - `shell/toast.useShowCustomToast`
     - `ui/icons.Icon`
   - Exports (types):
     - `Notification`

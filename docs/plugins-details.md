@@ -36552,7 +36552,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/networking.subscribeNetDiag`
           - `primitives/networking.subscribeWsStatus`
           - `primitives/networking/page-transport.pageTransport`
-          - `shell/toast.isPageOnScreen`
           - `shell/toast.showToast`
         - Exports (types): `WedgeReport`
         - Exports (values):
@@ -58885,7 +58884,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `notification-actions` "dismiss" → `DismissNotificationAction`
           - `Notifications.Action` "open"
           - `Notifications.Action` "reload"
-        - Uses: 57 symbols — full list in [`plugins/shell/plugins/notifications/REFERENCE.md`](../plugins/shell/plugins/notifications/REFERENCE.md)
+        - Uses: 56 symbols — full list in [`plugins/shell/plugins/notifications/REFERENCE.md`](../plugins/shell/plugins/notifications/REFERENCE.md)
           - `primitives/data-view` ×5
           - `apps-core/tab-origin` ×4
           - `infra/endpoints` ×3
@@ -58896,7 +58895,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/css/fill` ×2
           - `primitives/cursor-pagination` ×2
           - `primitives/pane` ×2
-          - `shell/toast` ×2
           - `apps-core/tabs.useAppLink`
           - `apps/debug/shell.DebugApp`
           - `audience/developer-mark.DeveloperMark`
@@ -58924,6 +58922,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/relative-time.RelativeTime`
           - `primitives/scope/tab-id.getTabId`
           - `shell/action-bar.ActionBar`
+          - `shell/toast.useShowCustomToast`
           - `ui/icons.Icon`
         - Exports (types):
           - `Notification`
@@ -59077,7 +59076,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/color-palette --muted-foreground`
               - `ui/tokens/density --space-md`
-    - **`toast`** — Global toast notifications: a plain showToast() (text toasts: data only) backed by sonner's global API, and useShowCustomToast() — a toast whose content the caller draws, rendered in the caller's render origin (its transport, registry and navigator) while the stack only places it, plus the Core.Root-mounted sonner Toaster host. Degrades to a silent no-op when no host is mounted. A toast declaring audience developer is shown only in Developer mode. isPageOnScreen() gates a toast nobody asked for (an announcement: a notification arriving, a reconnect) — sonner keeps a hidden page's toasts mounted until it is shown. useSuppressToasts() lets a surface that is its whole document (the menu-bar panel) turn the host off while mounted.
+    - **`toast`** — Global toast notifications: a plain showToast() (text toasts: data only) backed by sonner's global API, and useShowCustomToast() — a toast whose content the caller draws, rendered in the caller's render origin (its transport, registry and navigator) while the stack only places it, plus the Core.Root-mounted sonner Toaster host. Degrades to a silent no-op when no host is mounted. A toast declaring audience developer is shown only in Developer mode. A custom toast states why it is shown: an announcement (something that happened on its own, e.g. a notification arriving) is raised only on a page on screen and always leaves after the announcement duration, whatever its variant; a reply (the answer to the user's own action) stays as long as its caller says, Infinity included. useSuppressToasts() lets a surface that is its whole document (the menu-bar panel) turn the host off while mounted.
       - Web:
         - Contributes:
           - `Core.Root` → `ToasterHost`
@@ -59107,7 +59106,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ToastVariant`
         - Exports (values):
           - `isInToast`
-          - `isPageOnScreen`
           - `showToast`
           - `useShowCustomToast`
           - `useSuppressToasts`

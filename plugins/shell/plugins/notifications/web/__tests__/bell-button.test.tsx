@@ -11,7 +11,8 @@
  * it closes through `onClose`, never the popover's own `onOpenChange`.
  *
  * The bell mirrors the toasts: an arriving notification is toasted as the
- * same `NotificationView` its popover row draws (4s, an error until handled),
+ * same `NotificationView` its popover row draws, as an announcement (the toast
+ * plugin's duration whatever its variant — the bell keeps it),
  * the chips are the user's categories, and an action kind no plugin
  * registered throws rather than drawing nothing.
  */
@@ -34,7 +35,8 @@ const spy = vi.hoisted(() => ({
   /** Every toast shown. */
   toasts: [] as {
     render: (toast: { dismiss: () => void }) => unknown;
-    duration: number;
+    kind: "announcement" | "reply";
+    duration?: number;
   }[],
 }));
 
@@ -44,7 +46,8 @@ vi.mock("@plugins/shell/plugins/toast/web", async (importOriginal) => ({
     () =>
     (args: {
       render: (toast: { dismiss: () => void }) => unknown;
-      duration: number;
+      kind: "announcement" | "reply";
+      duration?: number;
     }) => {
       spy.toasts.push(args);
     },
@@ -316,9 +319,10 @@ describe("BellButton — toasts mirror the bell", () => {
     return spy.toasts[0]!;
   }
 
-  it("an arrival is toasted as the NotificationView its row draws, for 4s", async () => {
+  it("an arrival is toasted as an announcement: the NotificationView its row draws", async () => {
     const toast = await arrive(note());
-    expect(toast.duration).toBe(4000);
+    expect(toast.kind).toBe("announcement");
+    expect(toast.duration).toBeUndefined();
     cleanup();
     let dismissed = 0;
     const { container } = render(
@@ -365,49 +369,23 @@ describe("BellButton — toasts mirror the bell", () => {
     expect(dismissed).toBe(1);
   });
 
-  it("an error stays until dismissed or acted on", async () => {
+  // An arrival is an announcement whatever it says: the toast plugin owns its
+  // duration and its on-screen gate (`shell/toast`'s tests), and the bell
+  // keeps the row and the unread badge.
+  it("an error arrival is an announcement too — never sticky", async () => {
     const toast = await arrive(note({ variant: "error" }));
-    expect(toast.duration).toBe(Infinity);
+    expect(toast.kind).toBe("announcement");
+    expect(toast.duration).toBeUndefined();
   });
 
-  it("a problem that came back stays too, whatever its severity", async () => {
+  it("so is a problem that came back", async () => {
     const toast = await arrive(
       note({
         variant: "warning",
         state: { tone: "recurred", text: "Came back after abc123" },
       }),
     );
-    expect(toast.duration).toBe(Infinity);
-  });
-
-  it("an arrival on a hidden page is the bell's alone — no toast", async () => {
-    // sonner pauses a hidden page's dismiss timers, so a toast raised there
-    // would stay mounted until the page is shown (one per arrival, for hours).
-    const visibility = vi
-      .spyOn(document, "visibilityState", "get")
-      .mockReturnValue("hidden");
-    try {
-      const live = settled({ errors: 0, warnings: 0 });
-      mount(live);
-      await waitFor(() =>
-        screen.getByRole("button", { name: "Notifications" }),
-      );
-      live.queryClient.setQueryData(windowKey(), [note({ variant: "error" })]);
-      // Let the hidden arrival reach the bell before the page is shown again.
-      await act(() => new Promise((resolve) => setTimeout(resolve, 200)));
-      expect(spy.toasts).toHaveLength(0);
-      // The arrival was read (the next visible one is toasted, it alone).
-      visibility.mockReturnValue("visible");
-      live.queryClient.setQueryData(windowKey(), [
-        note({ id: notificationIdKind.key("notif-next") }),
-        note({ variant: "error" }),
-      ]);
-      await waitFor(() => {
-        expect(spy.toasts).toHaveLength(1);
-      });
-    } finally {
-      visibility.mockRestore();
-    }
+    expect(toast.kind).toBe("announcement");
   });
 
   it("a row from before actions opens its linkTo", () => {

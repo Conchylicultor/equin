@@ -78,24 +78,27 @@ export function useToast(): Toast {
       };
 
       // The same view the bell's row draws, from the same fields.
-      toastNotification({
-        type: args.type,
-        title: args.title,
-        description: args.description,
-        variant,
-        category: args.category,
-        audience: args.audience ?? "user",
-        subjectId: args.subjectId ?? null,
-        subjectName: args.subjectName ?? null,
-        detail: args.detail ?? null,
-        action: args.action ?? null,
-        icon: args.icon ?? null,
-        // A toast raised in the page reports an event, not a standing problem.
-        state: null,
-        linkTo: args.linkTo ?? null,
-        metadata,
-        count: 1,
-      });
+      toastNotification(
+        {
+          type: args.type,
+          title: args.title,
+          description: args.description,
+          variant,
+          category: args.category,
+          audience: args.audience ?? "user",
+          subjectId: args.subjectId ?? null,
+          subjectName: args.subjectName ?? null,
+          detail: args.detail ?? null,
+          action: args.action ?? null,
+          icon: args.icon ?? null,
+          // A toast raised in the page reports an event, not a standing problem.
+          state: null,
+          linkTo: args.linkTo ?? null,
+          metadata,
+          count: 1,
+        },
+        "reply",
+      );
       if (!persist) return;
 
       const id = notificationIdKind.mint();
