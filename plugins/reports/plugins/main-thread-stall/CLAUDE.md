@@ -198,7 +198,9 @@ the tab was never frozen long enough to need one):
   opened.
 - **Identify at dispatch**: a capture listener on pointerdown / click /
   keydown resolves the target — and reads where the tab is (a click that
-  navigates is filed under the screen it was made on) — while it is still in
+  navigates is filed under the screen it was made on; `landed` is the route
+  it opened, read when judged — a click's cost is usually what it opened) —
+  while it is still in
   the document (a slow switch
   remounts the very button; Event Timing's `target` is then null) — the
   nearest control's ui-context element descriptor, its innermost contribution

@@ -111,6 +111,10 @@ function renderDescription(row: ReportRow, d: SlowInteractionPayload): string {
     `- **App:** \`${d.app ?? "?"}\` · **Route pattern:** \`${d.routePattern}\``,
   );
   lines.push(`- **URL:** ${d.url}`);
+  if (d.landed)
+    lines.push(
+      `- **Opened:** route pattern \`${d.landed.routePattern}\` · ${d.landed.url} — the interaction navigated here, so measure the open of THIS route (with what it restored), not the pane it started on`,
+    );
   lines.push(`- **When:** ${new Date(d.startedAt).toISOString()}`);
   lines.push("");
   lines.push("**Report**");

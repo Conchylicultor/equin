@@ -42,6 +42,16 @@ export const SlowInteractionPayloadSchema = z.object({
   app: z.string().nullable(),
   routePattern: z.string(),
   url: z.string(),
+  // Where the interaction TOOK the tab, read once its paint was judged: the
+  // route it landed on, or null when it stayed on the route above. A click
+  // that opens something is paid for by what it opened (a session row that
+  // restores a long page beside its conversation costs the page, not the
+  // row), which the starting route alone does not name. Context, never
+  // identity.
+  landed: z
+    .object({ routePattern: z.string(), url: z.string() })
+    .nullable()
+    .default(null),
   // The JS stacks the tab's sampling profiler caught inside the interaction's
   // own time (handlers → paint): what ran underneath the long frames' entry
   // points (a React root's `onclick` names nothing). Added by the tab when it

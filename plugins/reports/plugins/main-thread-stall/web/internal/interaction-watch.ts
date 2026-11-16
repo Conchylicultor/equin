@@ -238,6 +238,12 @@ export function installInteractionWatch(
     );
     const verdict = judgeInteraction(ownMs, count, frozen);
     const a = attribute(w, frames);
+    // Judged after the interaction's paint: the route it opened, if it moved.
+    const now = readTab();
+    const landed =
+      now.url === tab.url
+        ? null
+        : { routePattern: now.routePattern, url: now.url };
     const payload: SlowInteractionDraft = {
       target,
       eventType: e.name,
@@ -253,6 +259,7 @@ export function installInteractionWatch(
       app: tab.app,
       routePattern: tab.routePattern,
       url: tab.url,
+      landed,
     };
     clientLog(
       LOG_CHANNEL,
