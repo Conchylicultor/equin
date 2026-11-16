@@ -4,9 +4,10 @@ import {
   PaneChrome,
   defineRoute,
   PaneMessage,
-  useOpenPane,
 } from "@plugins/primitives/plugins/pane/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
+import { CopyButton } from "@plugins/primitives/plugins/copy-to-clipboard/web";
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { CommitDiffView } from "./components/commit-diff-view";
@@ -39,7 +40,6 @@ function CommitDetailBody() {
   // conversation lookup, which is what lets any surface push it.
   const { worktree, sha } = commitDetailPane.useParams();
   const info = useCommitInfo(worktree, sha);
-  const openPane = useOpenPane();
 
   if (info.kind === "not-found" || info.kind === "unavailable") {
     return (
@@ -58,18 +58,7 @@ function CommitDetailBody() {
           away, the file list's toolbar pins at the top, an open file's row
           pins under it while its diff scrolls. */}
       <Stack gap="none">
-        {info.kind === "found" && (
-          <CommitMessage
-            commit={info.commit}
-            parentActivation={(parent) =>
-              openPane.to(
-                commitDetailPane,
-                { worktree, sha: parent },
-                { mode: "swap" },
-              )
-            }
-          />
-        )}
+        {info.kind === "found" && <CommitMessage commit={info.commit} />}
         <CommitDiffView worktree={worktree} sha={sha} />
       </Stack>
     </PaneChrome>
@@ -91,17 +80,23 @@ function shortSha(sha: string): string {
   return sha.slice(0, 7);
 }
 
-// The header's title: "Commit" and the short sha set in mono — the same
-// cached commit read the tab title's `useCommitTitleText` makes.
+// The header's title: "Commit" and the short sha set in mono, then the
+// standard copy button for the full sha — the same cached commit read the tab
+// title's `useCommitTitleText` makes.
 function CommitTitle(): ReactNode {
   const { worktree, sha } = commitDetailPane.useParams();
   const info = useCommitInfo(worktree, sha);
-  const short = info.kind === "found" ? info.commit.shortSha : shortSha(sha);
+  const found = info.kind === "found";
+  const short = found ? info.commit.shortSha : shortSha(sha);
+  const full = found ? info.commit.sha : sha;
   return (
-    // One inline box: the pane header lays a title node out as a flex row,
-    // where the space between two sibling text items would collapse.
-    <span>
-      Commit <span className="font-mono">{short}</span>
-    </span>
+    <Inline gap="2xs">
+      {/* One inline box: the pane header lays a title node out as a flex
+          row, where the space between two sibling text items would collapse. */}
+      <span>
+        Commit <span className="font-mono">{short}</span>
+      </span>
+      <CopyButton text={full} tooltip={`Copy ${full}`} />
+    </Inline>
   );
 }

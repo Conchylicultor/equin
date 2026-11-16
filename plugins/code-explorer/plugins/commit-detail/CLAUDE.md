@@ -56,16 +56,16 @@ DataView owns no scroll, and a nested one would bound its sticky toolbar.
   - Slots: `commitDetailPane.Actions`
   - Slot contributors: `commitDetailPane.Actions` ← `primitives.pane`
   - Contributes: `Pane.Register` "commit-detail"
-  - Uses: 36 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 34 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/data-view` ×7
-    - `primitives/pane` ×6
+    - `primitives/pane` ×5
     - `primitives/css/ui-kit` ×3
     - `ids` ×2
     - `primitives/css/spacing` ×2
     - `network/live/live-state.foldResource`
     - `network/live.useLive`
     - `primitives/avatar.Avatar`
-    - `primitives/copy-to-clipboard.useCopyToClipboard`
+    - `primitives/copy-to-clipboard.CopyButton`
     - `primitives/css/badge.Badge`
     - `primitives/css/cluster.Cluster`
     - `primitives/css/inline.Inline`
@@ -74,7 +74,6 @@ DataView owns no scroll, and a nested one would bound its sticky toolbar.
     - `primitives/css/text.Text`
     - `primitives/diff-view.DiffOrImageView`
     - `primitives/expandable.Expandable`
-    - `primitives/link-gesture.activationProps`
     - `primitives/markdown.Markdown`
     - `primitives/relative-time.RelativeTime`
     - `ui/icons.Icon`
@@ -84,11 +83,8 @@ DataView owns no scroll, and a nested one would bound its sticky toolbar.
     - `useCommitInfo`
 - Cross-plugin:
   - Uses tokens:
-    - `ui/tokens/color-palette --accent`
     - `ui/tokens/color-palette --border`
     - `ui/tokens/color-palette --destructive`
-    - `ui/tokens/color-palette --foreground`
-    - `ui/tokens/color-palette --muted`
     - `ui/tokens/color-palette --muted-foreground`
     - `ui/tokens/color-palette --subtle-foreground`
     - `ui/tokens/color-palette --success`

@@ -36,7 +36,7 @@ const COMMIT: CommitDetail = {
   ].join("\n"),
 };
 
-/** The header over a fixed commit; the parent link is inert (an exhibit never navigates). */
+/** The header over a fixed commit. */
 export default function CommitMessageExhibit() {
   return <CommitMessage commit={COMMIT} />;
 }
