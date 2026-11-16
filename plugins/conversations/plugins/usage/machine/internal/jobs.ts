@@ -15,7 +15,13 @@ import { ensureMainWorktreeRoot } from "@plugins/infra/plugins/worktree/server";
 import { requestUsageSync } from "./sync";
 import { importUsageHistory, transcriptsOnDisk } from "./history-import";
 import { loadCostArchive } from "./archive";
-import { equinSessionIds, requestSessionSync } from "./session-sync";
+import {
+  equinSessionIds,
+  furthestByKey,
+  requestSessionSync,
+} from "./session-sync";
+import { keyTranscriptScans } from "./scan-keys";
+import { transcriptKey } from "./transcript-key";
 import {
   _claudeTranscriptScans,
   _conversationUsageExt,
@@ -147,20 +153,18 @@ export const usageSessionBackfillJob = defineJob({
       }
     }
     const owned = await equinSessionIds(db, [...files.keys()]);
-    const read = new Map(
-      (
-        await db
-          .select({
-            path: _claudeTranscriptScans.path,
-            offset: _claudeTranscriptScans.offset,
-          })
-          .from(_claudeTranscriptScans)
-          .where(eq(_claudeTranscriptScans.kind, "session"))
-      ).map((r) => [r.path, r.offset]),
+    const read = furthestByKey(
+      await db
+        .select({
+          path: _claudeTranscriptScans.path,
+          offset: _claudeTranscriptScans.offset,
+        })
+        .from(_claudeTranscriptScans)
+        .where(eq(_claudeTranscriptScans.kind, "session")),
     );
     for (const [sessionId, path] of files) {
       if (owned.has(sessionId)) continue;
-      const offset = read.get(path);
+      const offset = read.get(transcriptKey(path))?.offset;
       if (offset !== undefined && (await stat(path)).size <= offset) continue;
       await usageSessionSyncJob.enqueue({ sessionId, path });
     }
@@ -215,6 +219,43 @@ export const usageHistoryImportJob = defineJob({
   },
 });
 
+/**
+ * Rewrites the `claude_transcript_scans` rows still stored under an absolute
+ * path to their transcript key (`scan-keys.ts`) — once no backend older than
+ * keys is connected. Not a data migration: one runs at boot while the previous
+ * backend still serves, and that backend matches scan rows by absolute path —
+ * a row keyed under it would be counted again from zero. Until then the
+ * scanners read both spellings (`furthestByKey`) and write the key. Host
+ * singleton only, like the scanners; a no-op once every row is keyed.
+ */
+export const usageScanKeysJob = defineJob({
+  name: "conversations.usage.scan-keys",
+  description:
+    "Rewrites the usage scan rows of Claude Code sessions still stored under an absolute transcript path to the session-relative key, once the previous backend is gone.",
+  // minutes: it waits out the schema's deferred contract (the previous backend
+  // draining), then two statements over a few hundred rows.
+  hold: "minutes",
+  inProcess:
+    "Restartable from scratch: one idempotent transaction; local DB only.",
+  input: z.object({}).default({}),
+  event: z.never(),
+  dedup: "singleton",
+  slowThresholdMs: 600_000,
+  run: async () => {
+    if (!isHostSingleton()) return;
+    // Awaited, not polled: the database boot settles it once.
+    const contract = await deferredContractSettled();
+    if (contract.kind !== "settled")
+      throw new Error(
+        contract.kind === "failed"
+          ? "keying the usage scan rows waits on the schema's deferred contract, which failed this boot (the next boot retries it)"
+          : "keying the usage scan rows runs in the serving backend, which owns the schema's deferred contract",
+        contract.kind === "failed" ? { cause: contract.error } : undefined,
+      );
+    await keyTranscriptScans(db);
+  },
+});
+
 // A declared warm-up rather than an `onReady` enqueue: deferred past
 // serving-ready and throttled. `worktree` scope — usage lives in each backend's
 // own DB; a fork inherits its source's rows, so it seeds only what was missing.
@@ -232,6 +273,8 @@ export const usageBackfillWarmup = defineWarmup({
       await usageSessionBackfillJob.enqueue({});
       // The history before the ledger, imported once (a no-op once recorded).
       await usageHistoryImportJob.enqueue({});
+      // Scan rows still stored under absolute paths, keyed (a no-op after).
+      await usageScanKeysJob.enqueue({});
     }
   },
 });

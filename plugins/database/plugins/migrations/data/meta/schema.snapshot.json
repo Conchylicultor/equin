@@ -1,6 +1,6 @@
 {
-  "id": "4e353d1f-5e60-4c93-8add-3036440d6357",
-  "prevId": "51609897-0580-4619-b10f-7352f385f768",
+  "id": "e0b7471b-de9a-4dcf-952e-90664c4cffea",
+  "prevId": "4e353d1f-5e60-4c93-8add-3036440d6357",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -8504,45 +8504,6 @@
       "indexes": {},
       "foreignKeys": {},
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.claude_usage_import_accounts": {
-      "name": "claude_usage_import_accounts",
-      "schema": "",
-      "columns": {
-        "source": {
-          "name": "source",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "hour": {
-          "name": "hour",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "account_id": {
-          "name": "account_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {
-        "claude_usage_import_accounts_source_hour_pk": {
-          "name": "claude_usage_import_accounts_source_hour_pk",
-          "columns": [
-            "source",
-            "hour"
-          ]
-        }
-      },
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},

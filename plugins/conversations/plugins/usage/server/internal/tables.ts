@@ -165,10 +165,11 @@ export const UsageHistoryImportSummarySchema = z.object({
   rows: z.number(),
   /**
    * Of those, the rows filed under a real account: a conversation's hour the
-   * legacy dollar ledger named exactly one account for
-   * (`claude_usage_import_accounts`). The rest are `UNKNOWN_ACCOUNT`.
+   * legacy dollar ledger named exactly one account for (main's import only,
+   * from a copy of that ledger since dropped). Absent: every row is
+   * `UNKNOWN_ACCOUNT`.
    */
-  attributedRows: z.number(),
+  attributedRows: z.number().optional(),
 });
 export type UsageHistoryImportSummary = z.infer<
   typeof UsageHistoryImportSummarySchema
@@ -208,26 +209,4 @@ export const _claudeAccountSpendCarryover = pgTable(
     costUsd: doublePrecision("cost_usd").notNull(),
   },
   (t) => [primaryKey({ columns: [t.accountId, t.day] })],
-);
-
-// ─── The legacy dollar ledger's accounts, for the history import ──────────────
-//
-// Which Claude account each conversation hour was spent on, as the legacy
-// dollar ledger (`claude_spend_hours`, 2026-11-15 23:00 → its drop) recorded
-// it: one row per (`conv:` source, UTC hour) it filed under exactly ONE
-// account. Copied by the data migration that dropped that ledger
-// (`…__usage_ledger_legacy_carryover.sql`, before the drop, in the same
-// migration group) so the one-shot history import — which runs after the
-// boot that applied it — still attributes each imported remainder hour to its
-// account (machine/internal/history-import.ts). Read by nothing else; drop it
-// once main has recorded the import.
-export const _claudeUsageImportAccounts = pgTable(
-  "claude_usage_import_accounts",
-  {
-    /** A `conv:<conversationId>` source. */
-    source: text("source").notNull(),
-    hour: timestamp("hour", { withTimezone: true }).notNull(),
-    accountId: text("account_id").notNull(),
-  },
-  (t) => [primaryKey({ columns: [t.source, t.hour] })],
 );

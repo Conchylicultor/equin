@@ -30,7 +30,7 @@ import {
   type ConversationSourceFacts,
 } from "./write";
 import { releaseSessions } from "./session-sync";
-import { rekeyStoredRows } from "./transcript-key";
+import { rekeyStoredRows, transcriptKey } from "./transcript-key";
 import {
   _conversationUsageFiles,
   conversationUsage,
@@ -44,9 +44,9 @@ import {
 //
 //   1. resolve its files — the ANCHORED session chain (never raw session ids:
 //      that derivation is the ownership guard) and every sub-agent below it;
-//      Stored rows are matched to those files by transcript, not by path
-//      (`transcript-key.ts`): a row under an old spelling of the file's
-//      project dir is taken over, never counted again from zero;
+//      Stored rows are keyed by transcript, not by path
+//      (`transcript-key.ts`: the session-relative path is what the table
+//      stores), so a renamed project dir never counts a file again from zero;
 //   2. fold each file's NEW bytes into its stored scan state (an append read),
 //      or — when a session file joins the chain, or was counted before a
 //      message counted at its largest output (`isLegacyScan`) — re-read every
@@ -86,6 +86,7 @@ import {
  */
 interface UsageState {
   sessionPaths: string[];
+  /** Every file row as the DB holds it, by its stored `path` (a `transcriptKey`). */
   files: Map<string, FileScan>;
   /** The agent count the DB holds (`undefined`: no row yet). */
   agentCount: number | undefined;
@@ -183,20 +184,23 @@ async function syncConversationUsage(
     ...sessionPaths,
     ...agents.map((a) => a.transcriptPath),
   ];
-  const storedByPath = state.files;
-  // The stored rows matched to what this pass reads by transcript, not by
-  // path (`rekeyStoredRows`): a project dir renamed under its rows (the
-  // data-root move) continues from the row's offset instead of counting the
-  // file again from zero, and a transcript already counted under both
-  // spellings gives the second count back.
+  // The stored rows matched to what this pass reads by transcript
+  // (`rekeyStoredRows`): each row continues from its offset whichever project
+  // dir holds its file now; a row still stored under an absolute path is
+  // rewritten under its key, and a second row of one transcript is deleted.
+  // Nothing is given back for it: such a pair is one count continued under
+  // two spellings (an older backend, mid hot-restart, advancing the absolute
+  // row it held after the migration keyed it), never two counts from zero —
+  // the ledger already holds the furthest row's tokens exactly once.
   const { byPath, moved, dropped } = rekeyStoredRows(
-    storedByPath,
+    state.files.values(),
     reachedPaths,
   );
-  /** The row a path's delta is taken from: its own, or the one it took over. */
-  const priorOf = (path: string): FileScan | undefined =>
-    storedByPath.get(path) ?? moved.get(path);
-  const removed = [
+  /** The row a path's delta is taken from, as it stood before this pass. */
+  const prior = new Map(byPath);
+  const priorOf = (path: string): FileScan | undefined => prior.get(path);
+  /** Stored spellings this pass deletes (never a key it writes again). */
+  const removedRows = [
     ...[...moved.values()].map((r) => r.path),
     ...dropped.map((r) => r.path),
   ];
@@ -255,17 +259,20 @@ async function syncConversationUsage(
       sessionPaths.some((p) => sessionIdOf(p) === id && byPath.has(p)),
     )
     .map(sessionSpendSource);
-  const toWrite = changed;
+  // Stored under its key, never its absolute path (`transcript-key.ts`).
+  const toWrite = changed.map((scan) => ({
+    ...scan,
+    path: transcriptKey(scan.path),
+  }));
+  const written = new Set(toWrite.map((scan) => scan.path));
+  const removed = removedRows.filter((path) => !written.has(path));
   const agentCount = agentCountOf(byPath.values());
   // Only the agent count is the sync's to write: cost and tokens are derived
   // from the token ledger by the database (server/internal/cost-triggers.ts).
   const same = state.agentCount === agentCount;
-  const counted = [
-    ...changed.flatMap((scan) =>
-      tokenDelta(priorOf(scan.path)?.buckets, scan.buckets),
-    ),
-    ...dropped.flatMap((scan) => tokenDelta(scan.buckets, [])),
-  ];
+  const counted = changed.flatMap((scan) =>
+    tokenDelta(priorOf(scan.path)?.buckets, scan.buckets),
+  );
   const accountId = await accountOf(
     conversationId,
     state,

@@ -28,7 +28,6 @@ import { spendHourKey, tokenDelta } from "./scan";
 import {
   _claudeTranscriptScans,
   _claudeUsageHistoryImports,
-  _claudeUsageImportAccounts,
   _conversationUsageFiles,
   type UsageHistoryImportSummary,
 } from "../../server/internal/tables";
@@ -75,10 +74,12 @@ import {
 //    (project dir, repo flag, the archived title).
 //
 // The legacy dollar ledger (`claude_spend_hours`) is gone by the time this
-// runs: the migration that dropped it copied, in the same group, what the
-// import needs of it — each conversation hour's one account
-// (`claude_usage_import_accounts`, read for (1)) — and carried its
-// `unattributed` dollars into `claude_account_spend_carryover` itself.
+// runs: the migration that dropped it carried its `unattributed` dollars into
+// `claude_account_spend_carryover`. The import main ran (2026-11-16) also
+// attributed each remainder hour the ledger named one account for, from a
+// copy of it (`claude_usage_import_accounts`) dropped once main had recorded
+// the import; a database importing since (a fresh install) has no legacy
+// ledger, so every remainder is `UNKNOWN_ACCOUNT`.
 //
 // A conversation's file rows hold each transcript once (`rekeyStoredRows`
 // keeps them so; the drop-dollars group's claimed data migration collapsed
@@ -263,8 +264,6 @@ export async function importUsageHistory(
       })
       .from(_conversationUsageFiles);
     const target = new Map<string, UsageLedgerRow>();
-    /** Target rows holding a legacy day bucket's tokens (its hour: 00:00). */
-    const dayRows = new Set<string>();
     const firstSessionFile = new Map<string, string>();
     const seen = new Map<string, string>();
     for (const file of files) {
@@ -283,7 +282,6 @@ export async function importUsageHistory(
       }
       for (const b of tokenDelta(undefined, file.buckets)) {
         const row = rowOf(source, b);
-        if (b.hour === undefined) dayRows.add(keyOf(row));
         const prev = target.get(keyOf(row));
         if (prev === undefined) {
           target.set(keyOf(row), row);
@@ -295,8 +293,7 @@ export async function importUsageHistory(
       }
     }
     const conversationIds = new Set(files.map((f) => f.conversationId));
-    // What the sync filed since the ledger began, taken out of the target —
-    // per account, so the attributed rows stay as they are.
+    // What the sync filed since the ledger began, taken out of the target.
     const filed = await usageLedgerRowsOf(
       tx,
       [...conversationIds].map(conversationSpendSource),
@@ -315,44 +312,12 @@ export async function importUsageHistory(
         for (const tier of TOKEN_TIERS)
           remainder.tokens[kind][tier] -= row.tokens[kind][tier];
     }
-    // The account each remainder was spent on, where a record says: the
-    // legacy dollar ledger filed each live pass's cost under its account and
-    // `conv:` source per hour (2026-11-15 23:00 → its drop) — an hour of a
-    // conversation it named exactly one account for is that account's
-    // (`claude_usage_import_accounts`, copied before the drop). Every other
-    // hour (older history, a job pass, an account switch inside the hour)
-    // stays `UNKNOWN_ACCOUNT`. A legacy day bucket (filed at 00:00 of its
-    // day) is that account's when every hour of the day the record names for
-    // the conversation names the same one.
-    const recorded = await tx.select().from(_claudeUsageImportAccounts);
-    const accountOf = new Map(
-      recorded.map((r) => [
-        `${r.source}\0${r.hour.toISOString()}`,
-        r.accountId,
-      ]),
-    );
-    /** Per conversation and UTC day: its hours' one account, or null when they differ. */
-    const dayAccountOf = new Map<string, string | null>();
-    for (const r of recorded) {
-      const day = `${r.source}\0${r.hour.toISOString().slice(0, 10)}`;
-      const prev = dayAccountOf.get(day);
-      dayAccountOf.set(
-        day,
-        prev === undefined || prev === r.accountId ? r.accountId : null,
-      );
-    }
-    let attributedRows = 0;
-    for (const [key, row] of target) {
-      const iso = row.hour.toISOString();
-      const account = dayRows.has(key)
-        ? dayAccountOf.get(`${row.source}\0${iso.slice(0, 10)}`)
-        : accountOf.get(`${row.source}\0${iso}`);
-      if (account === undefined || account === null) continue;
-      row.accountId = account;
-      attributedRows += 1;
-    }
     rows.push(...target.values());
     for (const [conversationId, path] of firstSessionFile) {
+      // A row stored under its key (`transcript-key.ts`) names no project
+      // dir: the sync that wrote it counted its tokens, and wrote the source
+      // row with them.
+      if (transcriptKey(path) === path) continue;
       const { projectDir } = locate(inputs.projectsDir, path);
       sources.push({
         source: conversationSpendSource(conversationId),
@@ -462,7 +427,6 @@ export async function importUsageHistory(
       archiveEntries,
       archiveSkipped,
       rows: rows.length,
-      attributedRows,
     };
     await tx
       .insert(_claudeUsageHistoryImports)

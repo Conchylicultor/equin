@@ -39,8 +39,8 @@ export type ConversationSourceFacts = Omit<UsageSourceRow, "source">;
  * owned them — their ledger rows, source rows and scan rows go in the same
  * statement, so each transcript's tokens are in the ledger once. `removed`:
  * file rows of this conversation the pass no longer keeps — a transcript's row
- * under its old spelling, taken over under its new path or dropped as a second
- * count (`rekeyStoredRows`); the tokens a drop gives back are in `usage`.
+ * under an absolute path, rewritten under its key, or a second row of it
+ * (`rekeyStoredRows`).
  *
  * Never a transaction of round trips: between two statements the server sits
  * idle in transaction, holding the file rows' locks while the app thinks — the

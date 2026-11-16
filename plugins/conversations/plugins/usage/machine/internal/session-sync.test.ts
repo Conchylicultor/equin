@@ -16,7 +16,14 @@ import {
   test,
 } from "bun:test";
 import { randomUUID } from "node:crypto";
-import { appendFile, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import {
+  appendFile,
+  mkdir,
+  mkdtemp,
+  rename,
+  rm,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { eq, sql } from "drizzle-orm";
@@ -37,6 +44,7 @@ import { _claudeUsageHours } from "@plugins/infra/plugins/claude-cli/plugins/usa
 import { sessionSpendSource } from "@plugins/infra/plugins/claude-cli/plugins/usage-ledger/core";
 import { syncSessionUsage } from "./session-sync";
 import { writeUsage } from "./write";
+import { keyTranscriptScans } from "./scan-keys";
 import { _claudeTranscriptScans } from "../../server/internal/tables";
 
 setDefaultTimeout(120_000);
@@ -150,6 +158,11 @@ describe("syncSessionUsage", () => {
       "session",
       "subagent",
     ]);
+    // Stored by transcript key, never by the absolute path.
+    expect((await scansOf(source)).map((r) => r.path).sort()).toEqual([
+      `${s.id}.jsonl`,
+      `${s.id}/subagents/agent-a1.jsonl`,
+    ]);
     expect(await sourceRowsOf(source)).toEqual([
       { project_dir: "-Users-me-elsewhere", is_repo: false, title: null },
     ]);
@@ -161,6 +174,46 @@ describe("syncSessionUsage", () => {
     // Nothing new, nothing filed.
     await syncSessionUsage(t.db, s.id, s.path, "job");
     expect(await ledgerOf(source)).toMatchObject({ input: 111, output: 60 });
+  });
+
+  test("a renamed project dir, or a row stored under its absolute path, continues from its offset", async () => {
+    const s = await newSession(line("m1", 10, 5));
+    const source = sessionSpendSource(s.id);
+    await syncSessionUsage(t.db, s.id, s.path, "job");
+    expect(await ledgerOf(source)).toMatchObject({ input: 10, output: 5 });
+
+    // The project dir is renamed under the row: nothing is counted again.
+    const movedDir = join(projects, "-Users-me-renamed");
+    await mkdir(movedDir, { recursive: true });
+    const moved = join(movedDir, `${s.id}.jsonl`);
+    await rename(s.path, moved);
+    await syncSessionUsage(t.db, s.id, moved, "job");
+    expect(await ledgerOf(source)).toMatchObject({ input: 10, output: 5 });
+
+    // A row an older backend stored under the absolute path: the next read
+    // continues from its offset and writes the keyed row beside it (the
+    // absolute one stays while that backend may still read it)…
+    await t.db
+      .update(_claudeTranscriptScans)
+      .set({ path: s.path })
+      .where(eq(_claudeTranscriptScans.source, source));
+    await appendFile(moved, line("m2", 1, 1));
+    await syncSessionUsage(t.db, s.id, moved, "job");
+    expect(await ledgerOf(source)).toMatchObject({ input: 11, output: 6 });
+    // …the next read takes the furthest of the two…
+    await appendFile(moved, line("m3", 1, 1));
+    await syncSessionUsage(t.db, s.id, moved, "job");
+    expect(await ledgerOf(source)).toMatchObject({ input: 12, output: 7 });
+    expect((await scansOf(source)).map((r) => r.path).sort()).toEqual(
+      [s.path, `${s.id}.jsonl`].sort(),
+    );
+    // …and keying the table keeps that one, under its key.
+    const furthest = (await scansOf(source)).find(
+      (r) => r.path === `${s.id}.jsonl`,
+    )!;
+    await keyTranscriptScans(t.db);
+    await keyTranscriptScans(t.db);
+    expect(await scansOf(source)).toEqual([furthest]);
   });
 
   test("leaves a session equin ever ran to the conversation path — a deleted conversation's included", async () => {

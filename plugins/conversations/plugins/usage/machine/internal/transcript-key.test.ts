@@ -36,13 +36,33 @@ describe("transcriptKey", () => {
   test("a path with no session segment is its own key", () => {
     expect(transcriptKey("/p/s.jsonl")).toBe("/p/s.jsonl");
   });
+
+  test("a key is its own key (what the scan tables store)", () => {
+    expect(transcriptKey(`${S}.jsonl`)).toBe(`${S}.jsonl`);
+    expect(transcriptKey(`${S}/subagents/agent-x.jsonl`)).toBe(
+      `${S}/subagents/agent-x.jsonl`,
+    );
+  });
 });
 
 describe("rekeyStoredRows", () => {
-  test("a reached path takes over the row stored under its old spelling", () => {
+  test("a row stored under its key is found under the path the pass reads", () => {
+    const keyed = row(`${S}.jsonl`, 120);
+    const { byPath, moved, dropped } = rekeyStoredRows(
+      [keyed],
+      [`${NEW}/${S}.jsonl`],
+    );
+    expect([...byPath.entries()]).toEqual([
+      [`${NEW}/${S}.jsonl`, { ...keyed, path: `${NEW}/${S}.jsonl` }],
+    ]);
+    expect(moved.size).toBe(0);
+    expect(dropped).toEqual([]);
+  });
+
+  test("a row stored under an absolute path is taken over, to be rewritten under its key", () => {
     const old = row(`${OLD}/${S}.jsonl`, 120);
     const { byPath, moved, dropped } = rekeyStoredRows(
-      new Map([[old.path, old]]),
+      [old],
       [`${NEW}/${S}.jsonl`],
     );
     expect([...byPath.keys()]).toEqual([`${NEW}/${S}.jsonl`]);
@@ -54,43 +74,52 @@ describe("rekeyStoredRows", () => {
     expect(dropped).toEqual([]);
   });
 
-  test("a transcript counted under both spellings drops the old row", () => {
+  test("a transcript counted under two spellings drops the one read less far", () => {
     const old = row(`${OLD}/${S}.jsonl`, 120);
-    const fresh = row(`${NEW}/${S}.jsonl`, 130);
+    const keyed = row(`${S}.jsonl`, 130);
     const { byPath, moved, dropped } = rekeyStoredRows(
-      new Map([
-        [old.path, old],
-        [fresh.path, fresh],
-      ]),
-      [fresh.path],
+      [old, keyed],
+      [`${NEW}/${S}.jsonl`],
     );
-    expect([...byPath.values()]).toEqual([fresh]);
+    expect([...byPath.values()]).toEqual([
+      { ...keyed, path: `${NEW}/${S}.jsonl` },
+    ]);
     expect(moved.size).toBe(0);
     expect(dropped).toEqual([old]);
   });
 
-  test("of two old spellings, the one read furthest moves", () => {
-    const a = row(`${OLD}/${S}.jsonl`, 10);
-    const b = row(`/u/.claude/projects/-other/${S}.jsonl`, 50);
+  test("on a tie, the row already stored under its key stays", () => {
+    const old = row(`${OLD}/${S}.jsonl`, 120);
+    const keyed = row(`${S}.jsonl`, 120);
     const { moved, dropped } = rekeyStoredRows(
-      new Map([
-        [a.path, a],
-        [b.path, b],
-      ]),
+      [old, keyed],
       [`${NEW}/${S}.jsonl`],
     );
+    expect(moved.size).toBe(0);
+    expect(dropped).toEqual([old]);
+  });
+
+  test("of two absolute spellings, the one read furthest moves", () => {
+    const a = row(`${OLD}/${S}.jsonl`, 10);
+    const b = row(`/u/.claude/projects/-other/${S}.jsonl`, 50);
+    const { moved, dropped } = rekeyStoredRows([a, b], [`${NEW}/${S}.jsonl`]);
     expect(moved.get(`${NEW}/${S}.jsonl`)).toBe(b);
     expect(dropped).toEqual([a]);
   });
 
-  test("an unreached transcript keeps its row", () => {
-    const gone = row(`${OLD}/${S}/subagents/agent-x.jsonl`, 5);
-    const { byPath, moved, dropped } = rekeyStoredRows(
-      new Map([[gone.path, gone]]),
-      [`${NEW}/${S}.jsonl`],
-    );
-    expect([...byPath.values()]).toEqual([gone]);
-    expect(moved.size).toBe(0);
-    expect(dropped).toEqual([]);
+  test("an unreached transcript keeps its row, under its key", () => {
+    const key = `${S}/subagents/agent-x.jsonl`;
+    const keyed = row(key, 5);
+    const kept = rekeyStoredRows([keyed], [`${NEW}/${S}.jsonl`]);
+    expect([...kept.byPath.entries()]).toEqual([[key, keyed]]);
+    expect(kept.moved.size).toBe(0);
+
+    const gone = row(`${OLD}/${key}`, 5);
+    const moved = rekeyStoredRows([gone], [`${NEW}/${S}.jsonl`]);
+    expect([...moved.byPath.entries()]).toEqual([
+      [key, { ...gone, path: key }],
+    ]);
+    expect(moved.moved.get(key)).toBe(gone);
+    expect(moved.dropped).toEqual([]);
   });
 });

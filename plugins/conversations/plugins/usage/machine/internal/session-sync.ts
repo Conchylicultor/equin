@@ -28,6 +28,7 @@ import {
   type TranscriptRead,
   type TranscriptScan,
 } from "./scan";
+import { transcriptKey } from "./transcript-key";
 import {
   writeSessionUsage,
   type AccountUsage,
@@ -83,6 +84,7 @@ export type SessionSyncCause = "live" | "job";
  * path adopts is dropped (`releaseSessions`) and re-checked on its next pass.
  */
 interface SessionState {
+  /** The session's scan rows by transcript (`transcriptKey`), as stored. */
   files: Map<string, TranscriptScan>;
 }
 
@@ -144,7 +146,31 @@ async function loadState(
     })
     .from(_claudeTranscriptScans)
     .where(eq(_claudeTranscriptScans.source, source));
-  return { files: new Map(rows.map((r) => [r.path, r])) };
+  return { files: furthestByKey(rows) };
+}
+
+/**
+ * A session's scan rows by transcript (`transcriptKey`): a row written before
+ * the table stored keys (an absolute path) continues from its offset, and of
+ * two rows of one transcript — its absolute row, kept until the previous
+ * backend is gone (`keyTranscriptScans`), beside the keyed row this code
+ * writes — the one read furthest (a tie: the keyed one).
+ */
+export function furthestByKey<R extends { path: string; offset: number }>(
+  rows: readonly R[],
+): Map<string, R> {
+  const out = new Map<string, R>();
+  for (const row of rows) {
+    const key = transcriptKey(row.path);
+    const prev = out.get(key);
+    if (
+      prev === undefined ||
+      row.offset > prev.offset ||
+      (row.offset === prev.offset && row.path === key)
+    )
+      out.set(key, row);
+  }
+  return out;
 }
 
 /** The session's source row: its encoded project dir, and whether that is one of this repo's checkouts. */
@@ -195,7 +221,10 @@ export async function syncSessionUsage(
 
   const reads = new Map<string, TranscriptRead>();
   for (const [path, kind] of paths)
-    reads.set(path, await scanTranscript(path, kind, state.files.get(path)));
+    reads.set(
+      path,
+      await scanTranscript(path, kind, state.files.get(transcriptKey(path))),
+    );
   const recount = [...reads.values()].some((r) => r.status === "shrunk");
   let takeBack: AccountUsage[] = [];
   if (recount) {
@@ -208,7 +237,8 @@ export async function syncSessionUsage(
   const counted: AccountUsage[] = [];
   for (const read of reads.values()) {
     if (read.status !== "read") continue;
-    scans.push(read.scan);
+    // Stored under its key, never its absolute path (`transcript-key.ts`).
+    scans.push({ ...read.scan, path: transcriptKey(read.scan.path) });
     for (const b of read.counted)
       counted.push({
         accountId: UNKNOWN_ACCOUNT,

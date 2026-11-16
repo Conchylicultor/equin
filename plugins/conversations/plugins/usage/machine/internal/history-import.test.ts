@@ -56,7 +56,6 @@ import { writeUsage } from "./write";
 import {
   _claudeTranscriptScans,
   _claudeUsageHistoryImports,
-  _claudeUsageImportAccounts,
   _conversationUsageFiles,
 } from "../../server/internal/tables";
 
@@ -224,14 +223,6 @@ describe("importUsageHistory", () => {
         },
       ]),
     ]);
-    // The legacy dollar ledger's accounts (copied by the migration that
-    // dropped it): conv-h's 09:00 hour was spent on `max`, so its imported
-    // remainder is filed there.
-    await t.db.insert(_claudeUsageImportAccounts).values({
-      source: "conv:conv-h",
-      hour: new Date("2026-11-16T09:00:00Z"),
-      accountId: "max",
-    });
     await t.db.insert(_claudeTranscriptScans).values({
       path: sessionPath(E),
       source: sessionSpendSource(E),
@@ -260,11 +251,10 @@ describe("importUsageHistory", () => {
         conversations: 1,
         archiveEntries: 3,
         archiveSkipped: 3,
-        attributedRows: 1,
       },
     });
-    // The 09:00 remainder under the account the legacy ledger names; the
-    // archived day (no record of its account) under UNKNOWN_ACCOUNT.
+    // The remainder beside what the sync filed, and the archived day: no
+    // record of their account, so UNKNOWN_ACCOUNT.
     const convRows = await t.db
       .select({
         accountId: _claudeUsageHours.accountId,
@@ -289,7 +279,7 @@ describe("importUsageHistory", () => {
         input: 30,
       },
       {
-        accountId: "max",
+        accountId: UNKNOWN_ACCOUNT,
         hour: new Date("2026-11-16T09:00:00Z"),
         origin: "imported",
         input: 70,
@@ -361,16 +351,15 @@ describe("importUsageHistory", () => {
     await t.db.delete(_claudeUsageHours);
     await t.db.delete(_conversationUsageFiles);
     await t.db.delete(_claudeTranscriptScans);
-    await t.db.delete(_claudeUsageImportAccounts);
   }
 
-  test("matches transcripts across a renamed project dir; a day goes to its hours' one account", async () => {
+  test("matches transcripts across a renamed project dir", async () => {
     await freshImport();
     await mkdir(join(projects, NEW_DIR), { recursive: true });
     // R1 is on disk under the new name only: the session scanner's.
     await writeFile(at(NEW_DIR, R1), line("r1", 1));
     // R2 was counted by conv-h under the new name (its file since gone),
-    // day buckets: 11-15 (every recorded hour on `max`) and 11-14 (on two).
+    // day buckets: 11-15 and 11-14.
     await t.db.insert(_conversationUsageFiles).values({
       conversationId: "conv-h",
       path: at(NEW_DIR, R2),
@@ -379,28 +368,6 @@ describe("importUsageHistory", () => {
       buckets: [bucket("2026-11-15", 50), bucket("2026-11-14", 20)],
       tailHashes: [],
     });
-    await t.db.insert(_claudeUsageImportAccounts).values([
-      {
-        source: "conv:conv-h",
-        hour: new Date("2026-11-15T22:00:00Z"),
-        accountId: "max",
-      },
-      {
-        source: "conv:conv-h",
-        hour: new Date("2026-11-15T23:00:00Z"),
-        accountId: "max",
-      },
-      {
-        source: "conv:conv-h",
-        hour: new Date("2026-11-14T10:00:00Z"),
-        accountId: "max",
-      },
-      {
-        source: "conv:conv-h",
-        hour: new Date("2026-11-14T11:00:00Z"),
-        accountId: "pro",
-      },
-    ]);
     // R3 was scanned under the new name.
     await t.db.insert(_claudeTranscriptScans).values({
       path: at(NEW_DIR, R3),
@@ -418,7 +385,7 @@ describe("importUsageHistory", () => {
     ]);
     expect(await importUsageHistory(t.db, inputs(archive))).toMatchObject({
       kind: "imported",
-      summary: { archiveEntries: 1, archiveSkipped: 3, attributedRows: 1 },
+      summary: { archiveEntries: 1, archiveSkipped: 3 },
     });
     for (const id of [R1, R3])
       expect(await ledgerOf(sessionSpendSource(id))).toEqual({
@@ -445,7 +412,7 @@ describe("importUsageHistory", () => {
         input: 20,
       },
       {
-        accountId: "max",
+        accountId: UNKNOWN_ACCOUNT,
         hour: new Date("2026-11-15T00:00:00Z"),
         input: 50,
       },
