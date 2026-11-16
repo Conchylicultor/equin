@@ -81,6 +81,7 @@ import {
   type ResetPrior,
 } from "./reset-lineage";
 import { dropLegacyEntries, settleSnapshotFiles } from "./snapshot-files";
+import { branchAnswers, createdEntityKeys } from "./branch-answers";
 import { drizzleVerdict } from "./drizzle-verdict";
 import {
   ANSWERS_PREFIX,
@@ -381,15 +382,24 @@ export async function generateMigration(opts: {
         "(committed at HEAD, gone from the tree, superseded by no file) — generating as --reset-migration",
     );
 
-  // Regen mode (a reset with no positional answers) replays the persisted
-  // create-vs-rename decisions. Read the branch-local sidecars NOW — before the
-  // reset below deletes them — so a re-emitted prompt resolves by entity identity.
+  // Regen mode (a reset with no positional answers) replays the create-vs-rename
+  // decisions the branch already made: its sidecars, composed with what its own
+  // migrations create (./branch-answers.ts). Read NOW — before the reset below
+  // deletes them — so a re-emitted prompt resolves by entity identity.
   const keyedAnswers =
     reset && !migrationAnswers
-      ? readBranchLocalAnswers(
-          migrationsDir,
-          published,
-          stranded.flatMap((s) => (s.answers === null ? [] : [s.answers])),
+      ? branchAnswers(
+          readBranchLocalAnswers(
+            migrationsDir,
+            published,
+            stranded.flatMap((s) => (s.answers === null ? [] : [s.answers])),
+          ),
+          createdEntityKeys([
+            ...[...schemaMigrationFiles(migrationsDir)]
+              .filter((f) => NEW_FORMAT.test(f) && !published.has(f))
+              .map((f) => readFileSync(join(migrationsDir, f), "utf8")),
+            ...stranded.map((s) => s.sql),
+          ]),
         )
       : undefined;
 
@@ -630,50 +640,27 @@ export async function generateMigration(opts: {
     process.exit(1);
   }
 
-  // INVARIANT: never keep a migration generated with prompts unless answers were
-  // provided. In keyed (regen) mode `migrationAnswers` is undefined but answers
-  // come from the sidecar map — so exclude keyed mode here; its own unanswered
-  // check below handles the abort.
-  if (result.detectedPrompts.length > 0 && !migrationAnswers && !keyedAnswers) {
-    const added = readdirSync(migrationsDir).filter(
-      (f: string) => f.endsWith(".sql") && !before.has(f),
+  // INVARIANT: never keep a migration generated with prompts left unanswered —
+  // authoring with no answers given, or a regen whose branch history implies
+  // no answer for a prompt (`unanswered`). One exit, one instruction.
+  const unanswered = keyedAnswers
+    ? result.unanswered
+    : migrationAnswers
+      ? []
+      : result.detectedPrompts.map(promptKey);
+  if (unanswered.length > 0) {
+    discardGenerated(
+      migrationsDir,
+      readdirSync(migrationsDir).filter(
+        (f: string) => f.endsWith(".sql") && !before.has(f),
+      ),
     );
-    discardGenerated(migrationsDir, added);
-    console.log("\nMIGRATION_PROMPTS_DETECTED");
-    console.log(JSON.stringify(result.detectedPrompts, null, 2));
-    console.error(
-      "\ndrizzle-kit encountered ambiguous schema changes that require explicit answers.\n" +
-        "Re-run with --migration-answers to provide choices. Example:\n" +
-        `  ./equin build --migration-name <slug> --migration-answers '${JSON.stringify(result.detectedPrompts.map(() => ({ action: "create" })))}'\n\n` +
-        'AGENT: Decide each answer yourself from the schema change you made: "rename"\n' +
-        "(with its `from`) only when you renamed that column/table and its data must\n" +
-        'carry over, "create" when it is genuinely new. Re-run with one answer per\n' +
-        "prompt, in the order listed above, and name your choices in your summary. If\n" +
-        "this feature does not work as expected or has limitations, report that\n" +
-        "clearly rather than working around it.\n",
-    );
-    process.exit(2);
-  }
-
-  // Keyed (regen) mode: a re-emitted prompt had no persisted answer (or its
-  // rename source was missing). Discard the generated files and stop loudly —
-  // the sidecar must be (re-)authored before push can normalize this branch.
-  if (keyedAnswers && result.unanswered.length > 0) {
-    const added = readdirSync(migrationsDir).filter(
-      (f: string) => f.endsWith(".sql") && !before.has(f),
-    );
-    discardGenerated(migrationsDir, added);
-    console.error(
-      "\ndrizzle-kit showed an ambiguous create-vs-rename prompt with no persisted answer:\n" +
-        result.unanswered.map((k) => `  ${k}`).join("\n") +
-        "\n\nThe regen replays answers from meta/<tag>_answers.json, but these keys are\n" +
-        "absent (a new ambiguity introduced after the original authoring). Author the\n" +
-        "decision first on the original migration via:\n" +
-        "  ./equin build --migration-name <slug> --migration-answers '[...]'\n\n" +
-        "AGENT: Stop here and report this to the user. Do not retry or hand-edit the\n" +
-        "generated SQL — the create-vs-rename choice must be made explicitly.\n",
-    );
-    process.exit(2);
+    exitOnUnansweredPrompts({
+      prompts: result.detectedPrompts,
+      unanswered: new Set(unanswered),
+      known: keyedAnswers,
+      reset,
+    });
   }
 
   const added = readdirSync(migrationsDir).filter(
@@ -818,6 +805,52 @@ export async function generateMigration(opts: {
     verdict: verdict === null ? "bypassed" : "miss",
     phases,
   };
+}
+
+/**
+ * The one exit for create-vs-rename prompts nothing answered — the same
+ * situation whether a build authored the change or a regen (push's normalize)
+ * merged the branch's migrations — so the same instruction: the agent made the
+ * schema change, so it decides. The re-run answers EVERY prompt positionally,
+ * pre-filled with what the branch already implies (`known`); on a regen it is
+ * a reset, so it regenerates the merged migration the prompts came from and
+ * records all answers in its sidecar (a plain build would diff against the
+ * branch's own tip, find nothing, and record nothing).
+ */
+function exitOnUnansweredPrompts(opts: {
+  prompts: readonly DetectedPrompt[];
+  unanswered: ReadonlySet<string>;
+  known: ReadonlyMap<string, MigrationAnswer> | undefined;
+  reset: boolean;
+}): never {
+  const { prompts, unanswered, known, reset } = opts;
+  const answers: MigrationAnswer[] = prompts.map((p) =>
+    unanswered.has(promptKey(p))
+      ? { action: "create" }
+      : known!.get(promptKey(p))!,
+  );
+  console.log("\nMIGRATION_PROMPTS_DETECTED");
+  console.log(
+    JSON.stringify(
+      prompts.map((p) => ({ ...p, answered: !unanswered.has(promptKey(p)) })),
+      null,
+      2,
+    ),
+  );
+  console.error(
+    `\ndrizzle-kit asked ${prompts.length} create-vs-rename question(s); ` +
+      `${unanswered.size} ha${unanswered.size === 1 ? "s" : "ve"} no answer:\n` +
+      [...unanswered].map((k) => `  ${k}`).join("\n") +
+      "\n\nRe-run with one answer per question, in the order listed above " +
+      "(the answered ones pre-filled):\n" +
+      `  ./equin build${reset ? " --reset-migration" : ""} --migration-name <slug> --migration-answers '${JSON.stringify(answers)}'\n\n` +
+      'AGENT: Decide each unanswered one yourself from the schema change you made: "rename"\n' +
+      "(with its `from`) only when you renamed that entity and its data must carry over,\n" +
+      '"create" when it is genuinely new. Never hand-edit an answers sidecar or the\n' +
+      "generated SQL. Name your choices in your summary. If this does not work as\n" +
+      "expected, report that clearly rather than working around it.\n",
+  );
+  process.exit(2);
 }
 
 /**

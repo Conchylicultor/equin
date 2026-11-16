@@ -36,6 +36,16 @@ migrations that an earlier, interrupted reset already removed from the tree
 so a failed normalize can no longer strand a database. See
 `database/migrations/CLAUDE.md` → **Supersession**.
 
+A regen merges the branch's migrations into one diff, which can ask
+create-vs-rename questions no authored migration asked (a table one created
+meets a table another dropped). It answers them from the branch's own history
+(`branch-answers.ts`): the sidecars' recorded answers, renames composed through
+what the branch created or renamed, and `create` for every entity a branch
+migration CREATEs. A prompt still unanswered — authoring with no answers, or a
+regen the history does not cover — takes the one exit
+(`exitOnUnansweredPrompts`): the agent decides, and re-runs with every answer
+positionally (`--reset-migration` on a regen, so the answers are recorded).
+
 Before drizzle-kit runs, `joinSnapshotTips` (`snapshot-join.ts`, merging with
 the pure 3-way merge and `foldMergeParents` of the migrations core) joins a snapshot DAG with several published tips —
 an upstream update's fork — with a no-op **merge node**, or fails naming the
