@@ -22,6 +22,8 @@ export interface IcebergPiece {
 }
 
 export interface IcebergLayer {
+  /** The layer's `section_reach` key (`foundations/<key>`): stable, so renaming the layer keeps its reach history. */
+  key: string;
   name: string;
   tag: string;
   loc: number;
@@ -30,6 +32,7 @@ export interface IcebergLayer {
 
 export const LAYERS: readonly IcebergLayer[] = [
   {
+    key: "apps",
     name: "The apps",
     loc: 140365,
     tag: "What you see. Every one is just plugins put together.",
@@ -79,6 +82,7 @@ export const LAYERS: readonly IcebergLayer[] = [
     ],
   },
   {
+    key: "shell",
     name: "Shell & chrome",
     loc: 34571,
     tag: "The frame around every app.",
@@ -134,6 +138,7 @@ export const LAYERS: readonly IcebergLayer[] = [
     ],
   },
   {
+    key: "primitives",
     name: "UI primitives",
     loc: 286996,
     tag: "Building blocks every app reuses.",
@@ -174,6 +179,7 @@ export const LAYERS: readonly IcebergLayer[] = [
     ],
   },
   {
+    key: "plugins",
     name: "The plugin system",
     loc: 88701,
     tag: "An abstraction above the code: a thousand small, self-contained pieces that combine together into one app.",
@@ -227,6 +233,7 @@ export const LAYERS: readonly IcebergLayer[] = [
     ],
   },
   {
+    key: "data",
     name: "Data in motion",
     loc: 24067,
     tag: "How data on screen stays in sync with the server.",
@@ -274,6 +281,7 @@ export const LAYERS: readonly IcebergLayer[] = [
     ],
   },
   {
+    key: "state",
     name: "Where state lives",
     loc: 49175,
     tag: "Your data, kept safe and current while agents change the app around it.",
@@ -327,6 +335,7 @@ export const LAYERS: readonly IcebergLayer[] = [
     ],
   },
   {
+    key: "background",
     name: "Background & reactions",
     loc: 20962,
     tag: "Work the app does on its own, without a user action.",
@@ -354,6 +363,7 @@ export const LAYERS: readonly IcebergLayer[] = [
     ],
   },
   {
+    key: "watching",
     name: "Watching itself",
     loc: 77444,
     tag: "Each part of the app reports what it does, so you can see what is happening without reading the code.",
@@ -401,6 +411,7 @@ export const LAYERS: readonly IcebergLayer[] = [
     ],
   },
   {
+    key: "machine",
     name: "The machine",
     loc: 31788,
     tag: "Processes, addresses and the operating system.",
@@ -447,6 +458,7 @@ export const LAYERS: readonly IcebergLayer[] = [
     ],
   },
   {
+    key: "loop",
     name: "The loop",
     loc: 119650,
     tag: "Agents use the app to change and deploy the app itself.",

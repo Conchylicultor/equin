@@ -10,7 +10,10 @@ import {
 import { findScrollParent } from "@plugins/primitives/plugins/dom/plugins/auto-scroll/web";
 import { useResizeObserver } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
 import { useSurfaceShortcuts } from "@plugins/primitives/plugins/shortcuts/web";
-import { track } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/web";
+import {
+  observeSectionReach,
+  track,
+} from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/web";
 import { WebsiteScrollCue } from "@plugins/apps/plugins/website/plugins/shell/web";
 import { CARDS } from "../internal/cards";
 import { LAYERS, type IcebergPiece } from "../internal/iceberg/data";
@@ -45,7 +48,9 @@ import "./iceberg.css";
  * whose `card` / `layer` props say which — the dashboard counts it once and
  * breaks it down on demand, instead of listing one event per card. Expand all
  * is `foundations_expand_all` (`via`: button | shortcut), and the pieces it
- * opens are not counted as card opens.
+ * opens are not counted as card opens. How far down the visitor scrolled is
+ * `section_reach`: the hero as `foundations/hero`, then each layer as
+ * `foundations/<layer key>` once it reaches the upper half of the screen.
  */
 export function IcebergSection({
   onHeaderOver,
@@ -72,7 +77,11 @@ export function IcebergSection({
       onExpandAll,
     });
     sceneRef.current = scene;
+    const reach = sectionsOf(root).map(({ el, key }) =>
+      observeSectionReach(el, `foundations/${key}`),
+    );
     return () => {
+      for (const stop of reach) stop();
       sceneRef.current = null;
       scene.dispose();
       runtime.dispose();
@@ -100,6 +109,21 @@ export function IcebergSection({
   useSurfaceShortcuts(shortcuts);
 
   return <IcebergMarkup ref={rootRef} />;
+}
+
+/** The page's reach sections, in page order: the hero, then every layer. */
+function sectionsOf(root: HTMLElement): { el: Element; key: string }[] {
+  const hero = root.querySelector(".iceberg-hero");
+  if (!hero) throw new Error("foundations: the hero is not mounted");
+  const layers = root.querySelectorAll(".iceberg-layer");
+  if (layers.length !== LAYERS.length)
+    throw new Error(
+      `foundations: ${layers.length} layers mounted, ${LAYERS.length} declared`,
+    );
+  return [
+    { el: hero, key: "hero" },
+    ...[...layers].map((el, i) => ({ el, key: LAYERS[i]!.key })),
+  ];
 }
 
 function onPieceOpen({ name, layer }: OpenedPiece) {

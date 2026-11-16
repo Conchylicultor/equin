@@ -13100,6 +13100,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `ThemeEngine.SubTheme` "iceberg sea header"
                   - `ThemeEngine.SubTheme` "iceberg sky header"
                 - Uses:
+                  - `apps/deploy/analytics/collect.observeSectionReach`
                   - `apps/deploy/analytics/collect.track`
                   - `apps/website/shell.WebsiteChrome`
                   - `apps/website/shell.WebsiteHeader`
