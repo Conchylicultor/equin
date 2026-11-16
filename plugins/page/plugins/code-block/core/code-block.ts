@@ -17,8 +17,11 @@ export const codeBlock = defineBlock({
     // its preview, or both. Display state only — not part of the markdown fence.
     // undefined ⇒ split. Ignored for a language with no preview.
     view: z.enum(CODE_BLOCK_VIEWS).optional(),
+    // Folded to its one-line summary (language, line count, first line).
+    // Display state only — not part of the markdown fence. undefined ⇒ shown.
+    collapsed: z.boolean().optional(),
   }),
-  displayOnly: ["view"],
+  displayOnly: ["view", "collapsed"],
   label: "Code",
   icon: codeIcon,
   aliases: ["snippet", "syntax", "monospace", "pre"],

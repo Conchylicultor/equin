@@ -48,8 +48,14 @@ import {
   useCodePreviewRenderer,
 } from "@plugins/primitives/plugins/syntax-highlight/plugins/code-preview/web";
 import { ViewSwitcher } from "@plugins/primitives/plugins/view-switcher/web";
+import {
+  CollapsibleChevron,
+  FoldMotion,
+} from "@plugins/primitives/plugins/collapsible/web";
+import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 
 const autoAwesomeIcon = symbol("auto-awesome");
+const collapseIcon = symbol("unfold-less");
 
 const VIEW_OPTIONS: ReadonlyArray<{
   id: CodeBlockView;
@@ -109,6 +115,15 @@ function underlayText(code: string): string {
   return code === "" || code.endsWith("\n") ? `${code} ` : code;
 }
 
+/** What a folded block says of itself: its line count and first non-blank line. */
+function foldSummary(code: string): { lines: number; first: string } {
+  const all = code.replace(/\n$/, "").split("\n");
+  return {
+    lines: code === "" ? 0 : all.length,
+    first: all.find((l) => l.trim() !== "")?.trim() ?? "",
+  };
+}
+
 export function CodeBlock({ block, isFocused, editor }: BlockRendererProps) {
   const parsed = codeBlock.parse(block.data);
   const dark = useDarkMode();
@@ -121,6 +136,9 @@ export function CodeBlock({ block, isFocused, editor }: BlockRendererProps) {
   // diagram). Persisted alongside the language, the same way.
   const [view, setView] = useState<CodeBlockView | undefined>(parsed.view);
   const viewRef = useLatestRef(view);
+  // Folded to its one-line summary. Persisted the same way as the view.
+  const [collapsed, setCollapsed] = useState(parsed.collapsed === true);
+  const collapsedRef = useLatestRef(collapsed);
 
   // The block's own plain-text surface. `useBlockPlainText` owns the draft, the
   // SYNCHRONOUS undo entry per keystroke, the debounced row write, the void-caret
@@ -135,6 +153,7 @@ export function CodeBlock({ block, isFocused, editor }: BlockRendererProps) {
       code,
       language: languageRef.current,
       view: viewRef.current,
+      collapsed: collapsedRef.current || undefined,
     }),
     label: "code",
     onKeyDown: (e, ctl) => {
@@ -168,12 +187,19 @@ export function CodeBlock({ block, isFocused, editor }: BlockRendererProps) {
     // AUTO maps back to undefined; "text" (PLAIN) and concrete langs persist as-is.
     const lang = !value || value === AUTO ? undefined : value;
     setLanguage(lang);
-    editor.update({ code, language: lang, view });
+    editor.update({ code, language: lang, view, collapsed: stored });
   }
 
   function onViewChange(next: CodeBlockView) {
     setView(next);
-    editor.update({ code, language, view: next });
+    editor.update({ code, language, view: next, collapsed: stored });
+  }
+
+  // `collapsed: false` is never written: a shown block carries no key.
+  const stored = collapsed || undefined;
+  function onCollapsedChange(next: boolean) {
+    setCollapsed(next);
+    editor.update({ code, language, view, collapsed: next || undefined });
   }
 
   // Only an explicitly chosen language previews — never an auto-detected guess.
@@ -199,145 +225,196 @@ export function CodeBlock({ block, isFocused, editor }: BlockRendererProps) {
     [pickerLangs],
   );
 
+  const summary = foldSummary(code);
+  const summaryLabel =
+    language === PLAIN ? "Plain text" : (language ?? detected ?? "Code");
+
   return (
     <Inset x={BLOCK_INSET} y="xs">
       <Clip
         className={cn(hoverRevealGroup, "group relative rounded-md bg-muted")}
       >
-        {/* Hover/focus toolbar: language picker + copy. */}
-        <Pin to="top-right" offset="xs" layer="raised">
-          <Stack
-            direction="row"
-            gap="xs"
-            align="center"
-            className={hoverRevealTarget}
-          >
-            <ControlSizeProvider size="xs">
-              {preview ? (
-                <ViewSwitcher
-                  options={VIEW_OPTIONS}
-                  activeId={shown}
-                  onSelect={(id) => onViewChange(viewOf(id))}
-                  className="bg-background/80 backdrop-blur"
-                />
-              ) : null}
-              <Select
-                items={langItems}
-                value={language ?? AUTO}
-                onValueChange={onLanguageChange}
-              >
-                <SelectTrigger
-                  aria-label="Code language"
-                  className="w-36 bg-background/80 px-sm text-caption backdrop-blur"
-                >
-                  {language === undefined ? (
-                    <Stack
-                      as="span"
-                      direction="row"
-                      align="center"
-                      gap="xs"
-                      className={fillClasses("x")}
-                    >
-                      <Icon
-                        icon={autoAwesomeIcon}
-                        className={cn(rigidClass(), "text-muted-foreground")}
-                      />
-                      <span className="truncate">
-                        Auto
-                        {detected ? (
-                          <span className="text-muted-foreground">
-                            {" "}
-                            · {detected}
-                          </span>
-                        ) : null}
-                      </span>
-                    </Stack>
-                  ) : (
-                    <span className="truncate">
-                      {language === PLAIN ? "Plain text" : language}
-                    </span>
-                  )}
-                </SelectTrigger>
-                <SelectContent align="end">
-                  <SelectItem value={AUTO}>
-                    <Icon icon={autoAwesomeIcon} />
-                    Auto
-                  </SelectItem>
-                  <SelectItem value={PLAIN}>Plain text</SelectItem>
-                  <SelectSeparator />
-                  {pickerLangs.map((lang) => (
-                    <SelectItem key={lang} value={lang}>
-                      {lang}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </ControlSizeProvider>
+        {/* Folded: one summary row — click it to unfold. */}
+        <FoldMotion open={collapsed} kind="state">
+          <Stack direction="row" align="center" gap="xs" className="pr-xs">
+            <button
+              type="button"
+              aria-expanded={false}
+              aria-label={`Expand ${summaryLabel} code`}
+              onClick={() => onCollapsedChange(false)}
+              className={cn(
+                fillClasses("x"),
+                "py-xs pl-md text-left text-caption text-muted-foreground outline-none hover:text-foreground focus-visible:text-foreground",
+              )}
+            >
+              <Stack as="span" direction="row" align="center" gap="sm">
+                <CollapsibleChevron open={false} />
+                <span className={cn(rigidClass(), "text-foreground")}>
+                  {summaryLabel}
+                </span>
+                <span className={rigidClass()}>
+                  · {summary.lines} {summary.lines === 1 ? "line" : "lines"}
+                </span>
+                {summary.first ? (
+                  <span className={cn(fillClasses("x"), "truncate font-mono")}>
+                    {summary.first}
+                  </span>
+                ) : null}
+              </Stack>
+            </button>
             <CopyButton
               text={code}
               tooltip="Copy code"
-              className="bg-background/80 backdrop-blur"
+              className={cn(rigidClass(), hoverRevealTarget)}
             />
           </Stack>
-        </Pin>
+        </FoldMotion>
 
-        {shown !== "preview" ? (
-          // The editor's own box: the textarea layer is laid over the underlay
-          // only, never over the preview below it.
-          <Clip>
-            {/* Underlay: highlighted (or plain) text, decorative — sizes the box. */}
-            {html ? (
-              <div
-                aria-hidden
-                className={SHIKI_PRE}
-                dangerouslySetInnerHTML={{ __html: html }}
-              />
-            ) : (
-              <pre aria-hidden className={METRICS}>
-                {underlay}
-              </pre>
-            )}
-
-            {/* Editor: transparent text + visible caret, laid exactly over the underlay. */}
-            <BlockTextArea
-              text={text}
-              placeholder="Code…"
-              // The interactive full-bleed editor layer laid exactly over the sizing
-              // underlay. `layerClasses()` (not `<Overlay above>`, which is
-              // pointer-events-none) because the layer IS this element. METRICS is
-              // the caret-alignment contract: drop a token and the invisible caret
-              // drifts off the coloured glyphs underneath.
-              className={cn(
-                layerClasses(),
-                clipClasses({ axis: "both", fill: false }),
-                "h-full w-full resize-none border-0 bg-transparent",
-                "text-transparent",
-                METRICS,
-              )}
-            />
-          </Clip>
-        ) : null}
-
-        {preview && shown !== "code" ? (
-          shown === "preview" ? (
-            // Preview only: click the diagram to edit its source beside it.
-            <button
-              type="button"
-              onClick={() => {
-                onViewChange("split");
-                editor.onFocus();
-              }}
-              aria-label={`Edit ${preview.label} source`}
-              className="block w-full cursor-text text-left outline-none"
+        <FoldMotion open={!collapsed}>
+          {/* Hover/focus toolbar: language picker + copy + collapse. */}
+          <Pin to="top-right" offset="xs" layer="raised">
+            <Stack
+              direction="row"
+              gap="xs"
+              align="center"
+              className={hoverRevealTarget}
             >
-              <preview.Component source={code} />
-            </button>
-          ) : (
-            <div className="border-t border-border">
-              <preview.Component source={code} />
-            </div>
-          )
-        ) : null}
+              <ControlSizeProvider size="xs">
+                {preview ? (
+                  <ViewSwitcher
+                    options={VIEW_OPTIONS}
+                    activeId={shown}
+                    onSelect={(id) => onViewChange(viewOf(id))}
+                    className="bg-background/80 backdrop-blur"
+                  />
+                ) : null}
+                <Select
+                  items={langItems}
+                  value={language ?? AUTO}
+                  onValueChange={onLanguageChange}
+                >
+                  <SelectTrigger
+                    aria-label="Code language"
+                    className="w-36 bg-background/80 px-sm text-caption backdrop-blur"
+                  >
+                    {language === undefined ? (
+                      <Stack
+                        as="span"
+                        direction="row"
+                        align="center"
+                        gap="xs"
+                        className={fillClasses("x")}
+                      >
+                        <Icon
+                          icon={autoAwesomeIcon}
+                          className={cn(rigidClass(), "text-muted-foreground")}
+                        />
+                        <span className="truncate">
+                          Auto
+                          {detected ? (
+                            <span className="text-muted-foreground">
+                              {" "}
+                              · {detected}
+                            </span>
+                          ) : null}
+                        </span>
+                      </Stack>
+                    ) : (
+                      <span className="truncate">
+                        {language === PLAIN ? "Plain text" : language}
+                      </span>
+                    )}
+                  </SelectTrigger>
+                  <SelectContent align="end">
+                    <SelectItem value={AUTO}>
+                      <Icon icon={autoAwesomeIcon} />
+                      Auto
+                    </SelectItem>
+                    <SelectItem value={PLAIN}>Plain text</SelectItem>
+                    <SelectSeparator />
+                    {pickerLangs.map((lang) => (
+                      <SelectItem key={lang} value={lang}>
+                        {lang}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </ControlSizeProvider>
+              <CopyButton
+                text={code}
+                tooltip="Copy code"
+                className="bg-background/80 backdrop-blur"
+              />
+              <ControlSizeProvider size="xs">
+                <IconButton
+                  icon={collapseIcon}
+                  label="Collapse code"
+                  aria-expanded
+                  onClick={() => onCollapsedChange(true)}
+                  className="bg-background/80 backdrop-blur"
+                />
+              </ControlSizeProvider>
+            </Stack>
+          </Pin>
+
+          {shown !== "preview" ? (
+            // The editor's own box: the textarea layer is laid over the underlay
+            // only, never over the preview below it.
+            <Clip>
+              {/* Underlay: highlighted (or plain) text, decorative — sizes the box. */}
+              {html ? (
+                <div
+                  aria-hidden
+                  className={SHIKI_PRE}
+                  dangerouslySetInnerHTML={{ __html: html }}
+                />
+              ) : (
+                <pre aria-hidden className={METRICS}>
+                  {underlay}
+                </pre>
+              )}
+
+              {/* Editor: transparent text + visible caret, laid exactly over the underlay. */}
+              <BlockTextArea
+                text={text}
+                placeholder="Code…"
+                // The interactive full-bleed editor layer laid exactly over the sizing
+                // underlay. `layerClasses()` (not `<Overlay above>`, which is
+                // pointer-events-none) because the layer IS this element. METRICS is
+                // the caret-alignment contract: drop a token and the invisible caret
+                // drifts off the coloured glyphs underneath.
+                className={cn(
+                  layerClasses(),
+                  clipClasses({ axis: "both", fill: false }),
+                  "h-full w-full resize-none border-0 bg-transparent",
+                  "text-transparent",
+                  METRICS,
+                )}
+              />
+            </Clip>
+          ) : null}
+
+          {preview && shown !== "code" ? (
+            shown === "preview" ? (
+              // Preview only: click the diagram to edit its source beside it.
+              <button
+                type="button"
+                onClick={() => {
+                  onViewChange("split");
+                  editor.onFocus();
+                }}
+                aria-label={`Edit ${preview.label} source`}
+                className="block w-full cursor-text text-left outline-none"
+              >
+                <preview.Component source={code} />
+              </button>
+            ) : (
+              <div className="border-t border-border">
+                <preview.Component source={code} />
+              </div>
+            )
+          ) : null}
+        </FoldMotion>
       </Clip>
     </Inset>
   );
