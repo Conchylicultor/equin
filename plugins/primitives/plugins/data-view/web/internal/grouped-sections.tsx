@@ -11,6 +11,7 @@ import {
   StickyStack,
   StickyStackBranch,
   StickyStackItem,
+  useStickyStackBelow,
 } from "@plugins/primitives/plugins/css/plugins/sticky/plugins/stack/web";
 import {
   CollapsibleProvider,
@@ -18,6 +19,7 @@ import {
 } from "@plugins/primitives/plugins/collapsible/web";
 import {
   DATA_VIEW_HEADER_OFFSET_VAR,
+  DATA_VIEW_SECTION_OFFSET_VAR,
   visibleSections,
   dataPart,
   type DataViewSection,
@@ -60,6 +62,13 @@ export interface GroupedSectionsProps {
    * group, one JS state — on a single row.
    */
   headerActions?: (section: DataViewSection<unknown>) => ReactNode;
+  /**
+   * What a section's header says about it AT REST (`DataViewProps.
+   * sectionSummary`) — information, so never hover-revealed, unlike
+   * `headerActions`; trails the label run, before the action cluster.
+   * `null` for a section with nothing to say.
+   */
+  sectionSummary?: (section: DataViewSection<unknown>) => ReactNode;
   /**
    * Editable section headers (`DataViewProps.groupEdit`): an editable
    * section's header renames inline and, under a `RankReorderProvider` given
@@ -140,6 +149,7 @@ export function GroupedSections({
   collapsedSections,
   setSectionCollapsed,
   headerActions,
+  sectionSummary,
   groupEdit,
   draggedSection = null,
   children,
@@ -172,6 +182,7 @@ export function GroupedSections({
       collapsed: collapsedSections?.has(key) ?? false,
       setSectionCollapsed,
       action: headerActions?.(section),
+      summary: sectionSummary?.(section),
       groupEdit,
       drop: canReseat,
       holdsDrag: key === draggedSection,
@@ -218,6 +229,7 @@ interface SectionFrameProps {
   collapsed: boolean;
   setSectionCollapsed: GroupedSectionsProps["setSectionCollapsed"];
   action: ReactNode;
+  summary: ReactNode;
   groupEdit: GroupEditConfig | undefined;
   /** The header takes a row dropped "into this section" (`onReseat`). */
   drop: boolean;
@@ -244,6 +256,7 @@ function SectionFrame({
   collapsed,
   setSectionCollapsed,
   action,
+  summary,
   groupEdit,
   drop,
   holdsDrag,
@@ -252,6 +265,9 @@ function SectionFrame({
 }: SectionFrameProps & { sort: RankSortableGroupControls | null }): ReactNode {
   const key = section.key!;
   const depth = section.nesting?.depth ?? 0;
+  // Where a row pinned under this section's header pins (an open row's
+  // detail scrolling under it): published to the body as a CSS var.
+  const below = useStickyStackBelow(key);
   const editable = groupEdit?.editable(key) === true;
   // Destructured so render never reads a member off the hook output
   // (react-hooks/refs flags member access on it, not destructuring).
@@ -266,6 +282,7 @@ function SectionFrame({
     <DataViewGroupHeader
       section={section}
       action={action}
+      summary={summary}
       rename={
         editable && groupEdit
           ? {
@@ -317,6 +334,7 @@ function SectionFrame({
     <CollapsibleContent
       className={holdsDrag ? DRAG_UNSEAL : "isolate"}
       data-holds-drag={holdsDrag && !sort ? "" : undefined}
+      style={{ [DATA_VIEW_SECTION_OFFSET_VAR]: below } as CSSProperties}
       {...dataPart("dv.group")}
     >
       {ownBody && (

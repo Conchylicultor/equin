@@ -1,6 +1,8 @@
-import type { CommitRow } from "@plugins/primitives/plugins/commit-list/core";
 import { useLive } from "@plugins/network/plugins/live/web";
-import { commitInfo } from "@plugins/code-explorer/plugins/code-api/core";
+import {
+  commitInfo,
+  type CommitDetail,
+} from "@plugins/code-explorer/plugins/code-api/core";
 
 /**
  * `not-found` and `error` are separate arms on purpose: the server refusing
@@ -12,13 +14,13 @@ import { commitInfo } from "@plugins/code-explorer/plugins/code-api/core";
  */
 export type CommitInfoState =
   | { kind: "loading" }
-  | { kind: "found"; commit: CommitRow }
+  | { kind: "found"; commit: CommitDetail }
   | { kind: "not-found"; reason: string }
   | { kind: "error"; message: string }
   | { kind: "unavailable"; message: string };
 
 /**
- * One commit's metadata, read live from `code.commit-info` — immutable per
+ * One commit's metadata and message body, read live from `code.commit-info` — immutable per
  * `(worktree, sha)`, so every consumer of a tuple shares one read.
  */
 export function useCommitInfo(worktree: string, sha: string): CommitInfoState {

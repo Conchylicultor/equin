@@ -1,14 +1,18 @@
 import { Icon } from "@plugins/ui/plugins/icons/web";
 import { type CSSProperties, type ReactNode, useState } from "react";
 import {
+  Button,
+  ButtonGroup,
   cn,
   DropdownMenu,
+  DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuContent,
   ControlSizeProvider,
   Separator,
   useControlSize,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import {
   rolePickClass,
   rolePickScope,
@@ -26,7 +30,7 @@ import {
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import type { ViewTypeMeta } from "../../core";
 import type { ResolvedViewInstance } from "../internal/resolve-instances";
-import type { ViewActionsCore } from "../internal/use-view-model";
+import type { ViewActionsCore, ViewDrafts } from "../internal/use-view-model";
 import {
   type HostViewSettings,
   ViewSettingsPopover,
@@ -35,6 +39,7 @@ import { AddViewMenuItems } from "./add-view-menu-items";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 
 const addIcon = symbol("add");
+const saveMenuIcon = symbol("keyboard-arrow-down");
 
 // ── The view chip's look, from the data-view token group ──────────────────
 // The defaults draw the ghost chip with its icon and name, the active one on a
@@ -128,6 +133,98 @@ function ChipLabel(props: {
 }
 
 /**
+ * A chip's row count and dirty dot, after its name. The count is the caption's
+ * faint tally; it goes with the name when the theme draws inactive chips
+ * icon-only (`hideClass`). The dot (unsaved edits) always shows.
+ */
+function ChipMarks(props: {
+  count: number | undefined;
+  dirty: boolean;
+  hideClass: string | undefined;
+}): ReactNode {
+  const { count, dirty, hideClass } = props;
+  return (
+    <>
+      {count !== undefined ? (
+        <span
+          className={cn(
+            "text-faint-foreground font-normal tabular-nums",
+            hideClass,
+          )}
+          data-part="dv.view-chip-count"
+        >
+          {count}
+        </span>
+      ) : null}
+      {dirty ? (
+        <span
+          title="Unsaved changes"
+          aria-label="Unsaved changes"
+          data-part="dv.view-chip-dirty"
+        >
+          <StatusDot colorClass="bg-primary" />
+        </span>
+      ) : null}
+    </>
+  );
+}
+
+/**
+ * The active view's unsaved edits, kept or dropped (`ViewDrafts`): a
+ * **Save view** split button whose menu offers **Save as new view** and
+ * **Discard changes**. On the home view (`homeId`, an "All" that is never
+ * redefined) the primary action is Save as new view — saving onto the home
+ * view would change what "All" means.
+ */
+function SaveViewAction(props: {
+  activeId: string;
+  activeName: string;
+  homeId: string | null;
+  drafts: ViewDrafts;
+  /** A view made by Save as new: its settings open, to rename it. */
+  onCreated: (id: string) => void;
+}): ReactNode {
+  const { activeId, activeName, homeId, drafts, onCreated } = props;
+  const saveAsNew = () =>
+    onCreated(drafts.saveAsNew(activeId, { name: `${activeName} copy` }));
+  const isHome = activeId === homeId;
+  return (
+    <ControlSizeProvider size="sm">
+      <ButtonGroup data-part="dv.view-save">
+        <Button
+          variant="ghost"
+          className="text-primary-text"
+          onClick={isHome ? saveAsNew : () => drafts.save(activeId)}
+        >
+          {isHome ? "Save as new view" : "Save view"}
+        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={
+              <IconButton
+                icon={saveMenuIcon}
+                label="More save options"
+                className="text-primary-text"
+              />
+            }
+          />
+          <DropdownMenuContent align="start">
+            {isHome ? null : (
+              <DropdownMenuItem onClick={saveAsNew}>
+                Save as new view
+              </DropdownMenuItem>
+            )}
+            <DropdownMenuItem onClick={() => drafts.discard(activeId)}>
+              Discard changes
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </ButtonGroup>
+    </ControlSizeProvider>
+  );
+}
+
+/**
  * Config-mode switcher: drag-reorderable ghost chips (matching the read-only
  * `SegmentedControl variant="ghost"` look so chrome stays identical) + a trailing
  * `+` add menu, revealed with the strip (`viewAddReveal`). Click an inactive chip → select; click the **active** chip → open
@@ -139,6 +236,10 @@ export function EditableViewSwitcher<T extends ViewTypeMeta>({
   onSelect,
   actions,
   hostSettings,
+  countFor,
+  dirtyFor,
+  drafts = null,
+  homeId = null,
 }: {
   instances: ResolvedViewInstance<T>[];
   activeId: string;
@@ -146,12 +247,28 @@ export function EditableViewSwitcher<T extends ViewTypeMeta>({
   actions: ViewActionsCore;
   /** The consumer's own per-instance settings (see `ViewSettingsPopover`). */
   hostSettings?: HostViewSettings<T>;
+  /** A view's row count, drawn after its name (`undefined` = not known: no
+   *  number rather than a wrong one) — `ViewList`'s contract. */
+  countFor?: (id: string) => number | undefined;
+  /** Whether a view has unsaved edits — a dot after its name. */
+  dirtyFor?: (id: string) => boolean;
+  /**
+   * The surface's working copies (`useViewModel(…, { drafts: true })`):
+   * while the active view is dirty (`dirtyFor`), a Save view action follows
+   * the chips (Save as new view / Discard changes in its menu). `null` /
+   * absent: every edit is saved as made, nothing to keep.
+   */
+  drafts?: ViewDrafts | null;
+  /** The surface's home view (`ViewList.homeId`): its edits are saved as a
+   *  new view, never onto it. */
+  homeId?: string | null;
 }): ReactNode {
   // WHICH view's settings are open, not merely whether some are: a bare boolean
   // stayed true when the active instance changed under it, so the panel silently
   // re-aimed at a different view and the next click in it edited that one.
   const [settingsForId, setSettingsForId] = useState<string | null>(null);
   const ids = instances.map((r) => r.instance.id);
+  const activeInstance = instances.find((r) => r.instance.id === activeId);
   // The chip is `md` (the small control's height, padding and caption type)
   // at every density but `xs` — see `ToggleChip`'s `chipSizeForDensity`.
   const mdChip = useControlSize() !== "xs";
@@ -230,6 +347,11 @@ export function EditableViewSwitcher<T extends ViewTypeMeta>({
                 >
                   {r.instance.name}
                 </ChipLabel>
+                <ChipMarks
+                  count={countFor?.(id)}
+                  dirty={dirtyFor?.(id) ?? false}
+                  hideClass={isActive ? undefined : INACTIVE_LABEL_HIDE_CLASS}
+                />
               </ToggleChip>
             );
             return (
@@ -262,6 +384,15 @@ export function EditableViewSwitcher<T extends ViewTypeMeta>({
         </Stack>
       </SortableList>
 
+      {drafts !== null && activeInstance && dirtyFor?.(activeId) ? (
+        <SaveViewAction
+          activeId={activeId}
+          activeName={activeInstance.instance.name}
+          homeId={homeId}
+          drafts={drafts}
+          onCreated={setSettingsForId}
+        />
+      ) : null}
       {/* The `+` add-view button — revealed with the strip by default
           (`ADD_REVEAL_CLASS`), always tabbable. Ambient size comes from
           the surrounding `ControlSizeProvider`, with `IconButton` itself as the

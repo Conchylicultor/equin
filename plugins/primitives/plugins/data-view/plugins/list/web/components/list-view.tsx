@@ -1,4 +1,4 @@
-import { memo, useMemo, type ReactNode } from "react";
+import { memo, useMemo, type CSSProperties, type ReactNode } from "react";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
@@ -93,6 +93,8 @@ import { useIsHovered } from "@plugins/primitives/plugins/data-view/web";
 import {
   applySectionMove,
   applySectionMoves,
+  DATA_VIEW_HEADER_OFFSET_VAR,
+  DATA_VIEW_SECTION_OFFSET_VAR,
   dataPart,
   type LinkedHover,
 } from "@plugins/primitives/plugins/data-view/core";
@@ -886,6 +888,7 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
         collapsedSections={props.collapsedSections}
         setSectionCollapsed={props.setSectionCollapsed}
         headerActions={props.headerActions}
+        sectionSummary={props.sectionSummary}
         groupEdit={groupEdit}
         // The section the dragged row is laid out in (after the preview):
         // its body is lifted over the pinned headers for the drag.
@@ -1748,9 +1751,15 @@ function listRowNode(
   if (!detail) return withPrimary;
   // The detail is the row's SIBLING, so it may hold controls of its own
   // whatever the row's activation is. It folds in and out under the row.
+  // While open the row stays pinned — under its section's header (the
+  // section body's `--dv-section-offset`), else under the toolbar — until its
+  // detail scrolls past: the entry's own box is the row's containing block.
+  // `active` keeps the element (and the row under it) across open / close.
   return (
     <Stack gap="none">
-      {withPrimary}
+      <Sticky active={open} mask layer="raised" style={OPEN_ROW_TOP}>
+        {withPrimary}
+      </Sticky>
       <FoldMotion open={open}>
         <Inset x="sm" b="sm">
           {detail(row)}
@@ -1759,6 +1768,11 @@ function listRowNode(
     </Stack>
   );
 }
+
+/** Where an open row pins: under its section's header, else the toolbar. */
+const OPEN_ROW_TOP: CSSProperties = {
+  top: `var(${DATA_VIEW_SECTION_OFFSET_VAR}, var(${DATA_VIEW_HEADER_OFFSET_VAR}, 0px))`,
+};
 
 /**
  * One entry as a card (`ListViewOptions.frame: "card"`): the row and its open

@@ -791,6 +791,7 @@ export function NestedTableView(
                 section={section}
                 open={!collapsed}
                 onClick={() => props.setSectionCollapsed?.(key, !collapsed)}
+                summary={props.sectionSummary?.(section)}
                 // Fold / unfold this group's subtrees (a group holds whole
                 // subtrees: every descendant follows its root).
                 action={groupFoldAction(

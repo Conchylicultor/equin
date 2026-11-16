@@ -4,7 +4,9 @@ export {
   commitInfo,
   commitFiles,
   pushFiles,
+  CommitDetailSchema,
   CommitFilesSchema,
+  type CommitDetail,
   type CommitFiles,
 } from "./commit-values";
 export {

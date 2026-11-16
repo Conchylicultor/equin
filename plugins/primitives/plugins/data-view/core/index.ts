@@ -1,7 +1,10 @@
 export { defineDataView } from "./internal/define-data-view";
 export type { DataViewId } from "./internal/define-data-view";
 
-export { DATA_VIEW_HEADER_OFFSET_VAR } from "./internal/header-offset";
+export {
+  DATA_VIEW_HEADER_OFFSET_VAR,
+  DATA_VIEW_SECTION_OFFSET_VAR,
+} from "./internal/header-offset";
 
 export { DATA_VIEW_PARTS, dataPart } from "./internal/parts";
 export type { DataViewPart } from "./internal/parts";

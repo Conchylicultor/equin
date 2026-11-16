@@ -446,6 +446,7 @@ function FlatTableView(props: DataViewRenderProps<unknown>): ReactNode {
                     section={section}
                     open={!collapsed}
                     onClick={() => props.setSectionCollapsed?.(key, !collapsed)}
+                    summary={props.sectionSummary?.(section)}
                   />
                 </NestedSectionIndent>
               ),

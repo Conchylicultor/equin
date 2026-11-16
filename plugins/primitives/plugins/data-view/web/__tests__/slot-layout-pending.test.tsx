@@ -120,7 +120,11 @@ describe("DataView while its view types' layout is not known", () => {
 });
 
 function ctx(extra: Partial<DataViewControlsContextValue> = {}) {
-  return { expandAll: null, ...extra } as DataViewControlsContextValue;
+  return {
+    expandAll: null,
+    promotedSettings: [],
+    ...extra,
+  } as DataViewControlsContextValue;
 }
 
 describe("settings panel while the settings' layout is not known", () => {

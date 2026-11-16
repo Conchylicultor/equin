@@ -89,7 +89,7 @@ naming the pane, the path and the component path.
     - `ui/tokens/type-scale --font-size-body`
     - `ui/tokens/type-scale --font-weight-normal`
     - `ui/tokens/type-scale --line-height-body`
-  - Imported by: 238 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 237 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×71
     - `conversations` ×25
     - `ui` ×24
@@ -111,7 +111,6 @@ naming the pane, the path and the component path.
     - `network` ×2
     - `audience/view-option`
     - `backup`
-    - `code-explorer/commit-detail`
     - `config_v2/settings`
     - `fields/secret/config`
     - `framework/browser-server/demo/scope`

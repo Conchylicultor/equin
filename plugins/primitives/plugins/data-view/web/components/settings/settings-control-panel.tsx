@@ -60,8 +60,11 @@ export function SettingsControlPanel(): ReactNode {
   // Each contribution declares its own applicability (`isApplicable`); the panel
   // stays generic — it never names group-by / properties. A setting filtered out
   // here is the one that would self-hide, so no section ever renders empty.
+  // A setting the surface promoted to a toolbar control of its own
+  // (`promotedSettings`) is reached there, never twice.
   const applicable = (s: (typeof settings)[number]) =>
-    s.isApplicable?.(context) ?? true;
+    !context.promotedSettings.includes(s.id) &&
+    (s.isApplicable?.(context) ?? true);
   const ordered = [
     ...settings.filter((s) => s.scope === "view" && applicable(s)),
     ...settings.filter((s) => s.scope === "global" && applicable(s)),

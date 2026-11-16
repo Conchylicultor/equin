@@ -1,0 +1,129 @@
+// @hash 6ec84829688d
+{
+  // The commit pane's changed files (commit-detail's CommitDiffView), in
+  // draft mode: a narrowed view is a per-tab working copy until saved. "All
+  // files" is the home view (always first, never renamed or deleted); the
+  // others are nothing but a filter on `kind` (fileKindOf: code | test | doc |
+  // generated) — the enum's registered `is` operator. Every view groups by
+  // plugin (a path outside plugins/ by its top-level directory) and sorts the
+  // most changed files first.
+  "views": [
+    {
+      "id": "all",
+      "name": "All files",
+      "icon": "list",
+      "view": {
+        "type": "list",
+        "sort": [
+          {
+            "fieldId": "churn",
+            "direction": "desc"
+          }
+        ],
+        "groupBy": {
+          "fieldId": "plugin",
+          "groupingId": "value"
+        }
+      }
+    },
+    {
+      "id": "code",
+      "name": "Code",
+      "icon": "code",
+      "view": {
+        "type": "list",
+        "sort": [
+          {
+            "fieldId": "churn",
+            "direction": "desc"
+          }
+        ],
+        "groupBy": {
+          "fieldId": "plugin",
+          "groupingId": "value"
+        },
+        "filter": {
+          "kind": "group",
+          "id": "code",
+          "conjunction": "and",
+          "children": [
+            {
+              "kind": "rule",
+              "id": "code-kind",
+              "fieldId": "kind",
+              "operatorId": "is",
+              "value": "code"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "tests",
+      "name": "Tests",
+      "icon": "experiment",
+      "view": {
+        "type": "list",
+        "sort": [
+          {
+            "fieldId": "churn",
+            "direction": "desc"
+          }
+        ],
+        "groupBy": {
+          "fieldId": "plugin",
+          "groupingId": "value"
+        },
+        "filter": {
+          "kind": "group",
+          "id": "tests",
+          "conjunction": "and",
+          "children": [
+            {
+              "kind": "rule",
+              "id": "tests-kind",
+              "fieldId": "kind",
+              "operatorId": "is",
+              "value": "test"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "docs",
+      "name": "Docs",
+      "icon": "description",
+      "view": {
+        "type": "list",
+        "sort": [
+          {
+            "fieldId": "churn",
+            "direction": "desc"
+          }
+        ],
+        "groupBy": {
+          "fieldId": "plugin",
+          "groupingId": "value"
+        },
+        "filter": {
+          "kind": "group",
+          "id": "docs",
+          "conjunction": "and",
+          "children": [
+            {
+              "kind": "rule",
+              "id": "docs-kind",
+              "fieldId": "kind",
+              "operatorId": "is",
+              "value": "doc"
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "sortPresets": [],
+  "filterPresets": [],
+  "customColumns": []
+}

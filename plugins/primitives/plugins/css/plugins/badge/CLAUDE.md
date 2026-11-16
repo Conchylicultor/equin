@@ -78,7 +78,7 @@ index signature), and `web/__tests__/badge-ref.test.tsx` pins where it lands. Se
     - `ui/tokens/type-scale` ×6
     - `ui/tokens/shape` ×3
     - `ui/tokens/font-family --font-mono`
-  - Imported by: 188 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 189 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×39
     - `debug` ×39
     - `conversations` ×28
@@ -95,6 +95,7 @@ index signature), and `web/__tests__/badge-ref.test.tsx` pins where it lands. Se
     - `runs` ×2
     - `auth`
     - `backup/runs-arm`
+    - `code-explorer/commit-detail`
     - `config_v2/settings`
     - `database/query-deadline`
     - `hints/ask`

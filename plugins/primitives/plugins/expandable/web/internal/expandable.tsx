@@ -26,8 +26,15 @@ export interface ExpandableProps {
   expanded?: boolean;
   /** Notified with the next expanded state whenever the user toggles. */
   onToggle?: (expanded: boolean) => void;
+  /**
+   * The toggle's two labels, for a host that names what is hidden ("Full
+   * message"). Default "Show more" / "Show less".
+   */
+  labels?: { more: string; less: string };
   className?: string;
 }
+
+const DEFAULT_LABELS = { more: "Show more", less: "Show less" };
 
 const FADE_MASK = "linear-gradient(to bottom, black 65%, transparent 100%)";
 
@@ -52,6 +59,7 @@ export function Expandable({
   collapsedHeight = 192,
   expanded: expandedProp,
   onToggle,
+  labels = DEFAULT_LABELS,
   className,
 }: ExpandableProps) {
   const contentRef = useRef<HTMLDivElement>(null);
@@ -105,12 +113,12 @@ export function Expandable({
               {expanded ? (
                 <>
                   <Icon icon={keyboardArrowUpIcon} className="size-3.5" />
-                  Show less
+                  {labels.less}
                 </>
               ) : (
                 <>
                   <Icon icon={keyboardArrowDownIcon} className="size-3.5" />
-                  Show more
+                  {labels.more}
                 </>
               )}
             </Stack>

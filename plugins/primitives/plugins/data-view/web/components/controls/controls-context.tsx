@@ -116,6 +116,13 @@ export interface DataViewControlsContextValue {
    * settings' Expand all / Collapse all rows — neither names a view type.
    */
   expandAll: DataViewExpandAll | null;
+  /**
+   * The `DataViewSlots.Setting` ids the surface promotes out of View settings
+   * to toolbar controls of their own (`DataViewProps.promotedSettings`), in
+   * the surface's order. Read by the toolbar's control list (one trigger
+   * each) and by the settings panel (which then leaves them out).
+   */
+  promotedSettings: readonly string[];
 }
 
 const DataViewControlsContext =
@@ -149,6 +156,7 @@ export function DataViewControlsProvider({
   sort,
   rows,
   expandAll,
+  promotedSettings,
 }: DataViewControlsContextValue & { children: ReactNode }): ReactNode {
   const value = useMemo<DataViewControlsContextValue>(
     () => ({
@@ -171,6 +179,7 @@ export function DataViewControlsProvider({
       sort,
       rows,
       expandAll,
+      promotedSettings,
     }),
     [
       storageKey,
@@ -192,6 +201,7 @@ export function DataViewControlsProvider({
       sort,
       rows,
       expandAll,
+      promotedSettings,
     ],
   );
   return (

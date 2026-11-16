@@ -6,6 +6,7 @@
 // readers cannot produce different bytes.
 
 import { extname } from "path";
+import { GENERATED_TS_SUFFIX } from "@plugins/framework/plugins/tooling/plugins/generated-artifacts/core";
 import { FormatSyntaxError } from "./format-error";
 
 /**
@@ -42,9 +43,6 @@ export const FORMATTABLE_EXTENSIONS = [".ts", ".tsx", ".mts", ".cts"] as const;
  */
 const FORMAT_GENERATED_ARTIFACTS: boolean = false;
 
-/** Every generated `.ts` artifact in the repo is named this way (18 today). */
-const GENERATED_SUFFIX = ".generated.ts";
-
 /**
  * Whether `file`'s bytes may be formatted at all: its extension is in
  * {@link FORMATTABLE_EXTENSIONS}, and it is not a generated artifact being held
@@ -63,7 +61,7 @@ export function isFormattable(file: string): boolean {
   const ext = extname(file).toLowerCase();
   if (!(FORMATTABLE_EXTENSIONS as readonly string[]).includes(ext))
     return false;
-  if (!FORMAT_GENERATED_ARTIFACTS && file.endsWith(GENERATED_SUFFIX)) {
+  if (!FORMAT_GENERATED_ARTIFACTS && file.endsWith(GENERATED_TS_SUFFIX)) {
     return false;
   }
   return true;
@@ -206,7 +204,7 @@ export async function formatSource({
     throw new Error(
       `formatSource: "${file}" is not a formattable path ` +
         `(allowlist: ${FORMATTABLE_EXTENSIONS.join(", ")}` +
-        `${FORMAT_GENERATED_ARTIFACTS ? "" : `; ${GENERATED_SUFFIX} held out`}). ` +
+        `${FORMAT_GENERATED_ARTIFACTS ? "" : `; ${GENERATED_TS_SUFFIX} held out`}). ` +
         `Use formatIfFormattable if a non-formattable file in your set is expected.`,
     );
   }

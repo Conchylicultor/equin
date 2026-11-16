@@ -84,7 +84,10 @@ function renderToolbar(opts: {
   return render(
     <PluginProvider plugins={[plugin]}>
       <DataViewControlsProvider
-        {...({ ...opts.controls } as DataViewControlsContextValue)}
+        {...({
+          promotedSettings: [],
+          ...opts.controls,
+        } as DataViewControlsContextValue)}
       >
         <DataViewToolbar
           query=""

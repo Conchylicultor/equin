@@ -18,7 +18,22 @@ import { CODE_MACHINE } from "./endpoints";
 const COMMIT_REFUSALS = ["missing", "no-checkout"] as const;
 
 /**
- * One commit's metadata (subject, author, dates), by `(worktree, sha)`.
+ * One commit as its own pane shows it: the row every `git log` list reads
+ * ({@link CommitRowSchema}), plus the message body — read here only, so the
+ * shared log format stays lean.
+ */
+export const CommitDetailSchema = CommitRowSchema.extend({
+  /**
+   * The message without its subject line and without its trailer block
+   * (already parsed into `trailers`), trimmed; empty when the message is a
+   * subject alone.
+   */
+  body: z.string(),
+});
+export type CommitDetail = z.infer<typeof CommitDetailSchema>;
+
+/**
+ * One commit's metadata (subject, body, author, dates, trailers), by `(worktree, sha)`.
  *
  * `worktree` names the REPOSITORY whose object store holds the sha: `main`,
  * `self` or an attempt id all name this repository — every `git worktree add`
@@ -32,7 +47,7 @@ const COMMIT_REFUSALS = ["missing", "no-checkout"] as const;
  * store's contents. `commitFiles` answers with the full sha it resolved.
  */
 export const commitInfo = liveValue("code.commit-info", {
-  schema: CommitRowSchema,
+  schema: CommitDetailSchema,
   params: ["worktree", "sha"],
   refusals: COMMIT_REFUSALS,
   // Read with git from the repository's object store.

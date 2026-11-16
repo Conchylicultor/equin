@@ -87,6 +87,9 @@ so its branch boxes keep the column tracks; the row fold finds rows inside them.
 - **`StickyStack`** — `keys` (ordered, top→bottom in DOM order; its **length**
   decides whether the stack stacks), `base` (CSS length the *first* item pins at —
   any expression, incl. `var()`/`calc()`; default `"0px"`), `maxStacked`.
+- **`useStickyStackBelow(itemKey)`** — the CSS length just below an item
+  (its `top` + its measured height), for what must pin under it (a DataView
+  section publishes it as `--dv-section-offset`, where an open list row pins).
 - **`StickyStackItem`** — `itemKey` (must be in `keys`; absent ⇒ throws, it is a
   wiring bug, not a transient state), plus every `<Sticky>` prop except `edge` /
   `offset`. `top` is stack-owned and wins over a caller `style.top` (a caller
@@ -114,6 +117,7 @@ so its branch boxes keep the column tracks; the row fold finds rows inside them.
     - `StickyStackBranch`
     - `StickyStackItem`
     - `stickyStackTop`
+    - `useStickyStackBelow`
 - Cross-plugin:
   - Imported by:
     - `primitives/data-table`

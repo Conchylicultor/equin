@@ -122,6 +122,25 @@ export interface DataViewSettingContribution {
    */
   isApplicable?: (ctx: DataViewControlsContextValue) => boolean;
   component: ComponentType;
+  /**
+   * How this setting reads as a toolbar control of its own, when a surface
+   * promotes it out of View settings (`DataViewProps.promotedSettings`): its
+   * trigger's glyph and name, and what it is set to in words (the trigger's
+   * tooltip and accessible name, the compact fold's row text — `null` while
+   * it is at its default). Absent: the setting cannot be promoted (a surface
+   * naming it throws). A promoted setting is configuration, not narrowing:
+   * its trigger stays ghost and never counts into the fold's badge.
+   */
+  promote?: DataViewSettingPromotion;
+}
+
+/** {@link DataViewSettingContribution.promote}. */
+export interface DataViewSettingPromotion {
+  label: string;
+  icon: IconRef;
+  /** What the setting is set to, in words ("Plugin"); `null` at its default.
+   *  Pure, like a control's `summary` — no panel is mounted to compute it. */
+  describe?: (ctx: DataViewControlsContextValue) => string | null;
 }
 
 /**

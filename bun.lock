@@ -1863,6 +1863,10 @@
       "name": "@equin/plugin-code-explorer-commit-detail",
       "version": "0.0.1",
     },
+    "plugins/code-explorer/plugins/file-kind": {
+      "name": "@equin/plugin-code-explorer-file-kind",
+      "version": "0.0.1",
+    },
     "plugins/code-explorer/plugins/file-resolve": {
       "name": "@equin/plugin-code-explorer-file-resolve",
       "version": "0.0.1",
@@ -4203,6 +4207,10 @@
     },
     "plugins/framework/plugins/tooling/plugins/codegen/plugins/composition-registries": {
       "name": "@equin/plugin-framework-tooling-codegen-composition-registries",
+      "version": "0.0.1",
+    },
+    "plugins/framework/plugins/tooling/plugins/generated-artifacts": {
+      "name": "@equin/plugin-framework-tooling-generated-artifacts",
       "version": "0.0.1",
     },
     "plugins/framework/plugins/tooling/plugins/collected-dir": {
@@ -9009,6 +9017,8 @@
 
     "@equin/plugin-code-explorer-commit-detail": ["@equin/plugin-code-explorer-commit-detail@workspace:plugins/code-explorer/plugins/commit-detail"],
 
+    "@equin/plugin-code-explorer-file-kind": ["@equin/plugin-code-explorer-file-kind@workspace:plugins/code-explorer/plugins/file-kind"],
+
     "@equin/plugin-code-explorer-file-resolve": ["@equin/plugin-code-explorer-file-resolve@workspace:plugins/code-explorer/plugins/file-resolve"],
 
     "@equin/plugin-companions": ["@equin/plugin-companions@workspace:plugins/companions"],
@@ -10150,6 +10160,8 @@
     "@equin/plugin-framework-tooling-codegen": ["@equin/plugin-framework-tooling-codegen@workspace:plugins/framework/plugins/tooling/plugins/codegen"],
 
     "@equin/plugin-framework-tooling-codegen-composition-registries": ["@equin/plugin-framework-tooling-codegen-composition-registries@workspace:plugins/framework/plugins/tooling/plugins/codegen/plugins/composition-registries"],
+
+    "@equin/plugin-framework-tooling-generated-artifacts": ["@equin/plugin-framework-tooling-generated-artifacts@workspace:plugins/framework/plugins/tooling/plugins/generated-artifacts"],
 
     "@equin/plugin-framework-tooling-collected-dir": ["@equin/plugin-framework-tooling-collected-dir@workspace:plugins/framework/plugins/tooling/plugins/collected-dir"],
 

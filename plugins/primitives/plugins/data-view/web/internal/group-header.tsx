@@ -164,6 +164,13 @@ export interface DataViewGroupHeaderProps {
    * revealed in the trailing cluster. `null`/absent ⇒ no cluster at all.
    */
   action?: ReactNode;
+  /**
+   * What the header says about its section at rest
+   * (`GroupedSectionsProps.sectionSummary`) — always visible, trailing the
+   * label run (past the rule under `rule`), before the hover cluster.
+   * `null`/absent ⇒ nothing.
+   */
+  summary?: ReactNode;
   /** Forwarded to the header row (the band's inline-inset choice is the caller's). */
   className?: string;
   /**
@@ -206,6 +213,7 @@ export function DataViewGroupHeader({
   open,
   onClick,
   action,
+  summary,
   className,
   rename,
 }: DataViewGroupHeaderProps): ReactNode {
@@ -238,8 +246,21 @@ export function DataViewGroupHeader({
       // `headerActions` returns `null`, not a component that renders nothing:
       // a component is an element, and an element is never `null`.
       actions={
-        action == null ? undefined : (
-          <RowActions pin={null}>{action}</RowActions>
+        action == null && summary == null ? undefined : (
+          <>
+            {summary == null ? null : (
+              <Text
+                pick={DATA_VIEW_PICKS.groupCount}
+                className="text-group-count-ink tabular-nums"
+                {...dataPart("dv.group-summary")}
+              >
+                {summary}
+              </Text>
+            )}
+            {action == null ? null : (
+              <RowActions pin={null}>{action}</RowActions>
+            )}
+          </>
         )
       }
     >

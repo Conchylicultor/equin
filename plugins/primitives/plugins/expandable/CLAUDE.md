@@ -63,6 +63,7 @@ therefore never depends on the current expand state — no flapping at the bound
     - `ui/tokens/type-scale --font-weight-normal`
     - `ui/tokens/type-scale --line-height-caption`
   - Imported by:
+    - `code-explorer/commit-detail`
     - `conversations/conversation-view/jsonl-viewer/user-text`
     - `tasks/outcome-report`
 

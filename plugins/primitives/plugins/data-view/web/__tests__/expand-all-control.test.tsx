@@ -39,7 +39,10 @@ const plugin = {
 } as unknown as LoadedPlugin;
 
 function ctx(expandAll: DataViewExpandAll | null) {
-  return { expandAll } as DataViewControlsContextValue;
+  return {
+    expandAll,
+    promotedSettings: [],
+  } as unknown as DataViewControlsContextValue;
 }
 
 function renderToolbar(expandAll: DataViewExpandAll | null) {

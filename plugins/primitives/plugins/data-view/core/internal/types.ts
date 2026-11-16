@@ -1611,6 +1611,9 @@ export interface DataViewRenderProps<TRow> {
   /** `DataViewProps.headerActions`: a section-scoped affordance in each group
    *  header's hover cluster (`GroupedSectionsProps.headerActions`). */
   headerActions?: (section: DataViewSection<unknown>) => ReactNode;
+  /** `DataViewProps.sectionSummary`: each group header's trailing cluster at
+   *  rest (`GroupedSectionsProps.sectionSummary`). */
+  sectionSummary?: (section: DataViewSection<unknown>) => ReactNode;
   /**
    * Cross-section drops whose `onReseat` write is still in flight: the view
    * draws each row in its destination section (`applySectionMove`) until the
@@ -1976,6 +1979,14 @@ interface DataViewHierarchyRows<TRow> {
   /** Hierarchy accessors + mutations. Present → hierarchical views (tree) appear. */
   hierarchy?: HierarchyConfig<TRow>;
   paging?: never;
+  /**
+   * A footer under the rows saying what the active view's FILTER hides of
+   * what the search shows — "N hidden · <values of the filtered fields> ·
+   * Show" — whose Show clears the view's filter (a draft under
+   * `viewEdits: "draft"`). Only for rows held whole in memory: a paged or
+   * live read cannot count what it has not read (a type error there).
+   */
+  revealHidden?: true;
   /** A tree draws its own structure; a second relation beside it has no row. */
   attach?: never;
 }
@@ -1983,6 +1994,8 @@ interface DataViewHierarchyRows<TRow> {
 /** An in-memory origin whose rows are a loaded prefix of a paged read. */
 interface DataViewPagedRows<TRow> {
   hierarchy?: never;
+  /** A paged read cannot count what it has not read. */
+  revealHidden?: never;
   /**
    * `rows` hold a loaded prefix of a longer read that pages as the user
    * scrolls: the body renders the same infinite-scroll footer a live `source`
@@ -2268,6 +2281,8 @@ interface DataViewLiveRows<TRow> {
   manualOrder?: never;
   /** Sections and order are the server's; attaching is in-memory only. */
   attach?: never;
+  /** Its hidden count is unknown: the server filtered. */
+  revealHidden?: never;
 }
 
 /** Where a DataView's rows come from — exactly one, so a stand-in (`rows={[]}` beside a server source) cannot be spelled. */
@@ -2392,6 +2407,25 @@ export interface DataViewBaseProps<TRow> extends PlacementSpec {
    * views rendering through `GroupedSections`.
    */
   headerActions?: (section: DataViewSection<unknown>) => ReactNode;
+  /**
+   * What each group header says about its section AT REST, trailing its
+   * label run (the `+a −d` sums of a section of changed files); `null` for a
+   * section with nothing to say. Unlike `headerActions` (an affordance,
+   * hover-revealed) it is information, so it always shows. Drawn by every
+   * view rendering through `GroupedSections` (list, gallery, icons, tree) and
+   * the table's group headers.
+   */
+  sectionSummary?: (section: DataViewSection<unknown>) => ReactNode;
+  /**
+   * `DataViewSlots.Setting` ids (`"data-view.group-by"`) promoted out of View
+   * settings to toolbar controls of their own — one icon trigger each,
+   * opening that setting alone, ahead of the other controls, in this order.
+   * The settings panel then leaves them out. A setting must declare
+   * `promote` (its trigger's glyph, name and what it is set to); an id naming
+   * no setting, or one without `promote`, throws. Group-by stays in View
+   * settings unless promoted.
+   */
+  promotedSettings?: readonly string[];
   /**
    * Every row activates, this way. The simple case, and what most surfaces want.
    *

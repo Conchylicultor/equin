@@ -223,6 +223,28 @@ export function StickyStackItem({
   );
 }
 
+/**
+ * Where something pinned just BELOW one item of the stack pins — the item's
+ * own `top` plus its measured height, as a CSS length. For content an item
+ * heads that must stay visible under it while it scrolls (an open row under
+ * its section header). Called inside the stack, at the item's place in the
+ * branch tree (the same ancestor chain the item reads).
+ */
+export function useStickyStackBelow(itemKey: string): string {
+  const { keys, base, stacked, heights } = useCtx();
+  const chain = useContext(BranchChainContext);
+  const ancestors = chain.at(-1) === itemKey ? chain.slice(0, -1) : chain;
+  const top = stickyStackTop({
+    keys,
+    heights,
+    itemKey,
+    base,
+    stacked,
+    ancestors,
+  });
+  return `calc(${top} + ${heights.get(itemKey) ?? 0}px)`;
+}
+
 export interface StickyStackBranchProps extends Omit<
   ComponentProps<"div">,
   "children"

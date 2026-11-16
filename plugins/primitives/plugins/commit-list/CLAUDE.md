@@ -49,10 +49,17 @@
   - Exports (types):
     - `CommitRow`
     - `CommitTrailer`
+    - `ConventionalSubject`
+    - `GitIdent`
   - Exports (values):
+    - `CO_AUTHORED_BY_TRAILER_KEY`
+    - `commitCoAuthors`
     - `CommitRowSchema`
     - `commitTrailer`
     - `CommitTrailerSchema`
+    - `commitTrailerValues`
+    - `parseConventionalSubject`
+    - `parseGitIdent`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --border`
@@ -66,6 +73,7 @@
     - `build/deployment`
     - `code-explorer`
     - `code-explorer/code-api`
+    - `code-explorer/commit-detail`
     - `conversations/commit-conversation`
     - `conversations/conversation-progress`
     - `conversations/conversation-view/code`

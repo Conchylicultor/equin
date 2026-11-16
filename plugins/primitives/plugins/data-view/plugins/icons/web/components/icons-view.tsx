@@ -562,6 +562,7 @@ export function IconsView(props: DataViewRenderProps<unknown>): ReactNode {
         sections={sections}
         collapsedSections={props.collapsedSections}
         setSectionCollapsed={props.setSectionCollapsed}
+        sectionSummary={props.sectionSummary}
       >
         {(section) => renderSection(section, activeId)}
       </GroupedSections>

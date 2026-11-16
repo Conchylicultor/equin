@@ -14,7 +14,7 @@
     - `CopyButton`
     - `useCopyToClipboard`
 - Cross-plugin:
-  - Imported by: 36 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 37 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×10
     - `conversations` ×5
     - `primitives` ×5
@@ -23,6 +23,7 @@
     - `infra` ×2
     - `review` ×2
     - `build/build-logs`
+    - `code-explorer/commit-detail`
     - `companions/browser-extension/accounts-row`
     - `fields/identifier/table`
     - `plugin-meta/exhibits`

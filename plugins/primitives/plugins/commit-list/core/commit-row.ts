@@ -39,3 +39,39 @@ export function commitTrailer(commit: CommitRow, key: string): string | null {
   const hit = commit.trailers.find((t) => t.key.toLowerCase() === wanted);
   return hit === undefined ? null : hit.value;
 }
+
+/**
+ * Every value of a commit's `key` trailer, in message order (a key may repeat:
+ * one `Co-Authored-By` per co-author). Case-insensitive, like
+ * {@link commitTrailer}.
+ */
+export function commitTrailerValues(commit: CommitRow, key: string): string[] {
+  const wanted = key.toLowerCase();
+  return commit.trailers
+    .filter((t) => t.key.toLowerCase() === wanted)
+    .map((t) => t.value);
+}
+
+/** Git's own co-author trailer (GitHub's spelling; matched case-insensitively). */
+export const CO_AUTHORED_BY_TRAILER_KEY = "Co-Authored-By";
+
+/** A person as git spells one: `Name <email>`. */
+export interface GitIdent {
+  name: string;
+  /** Empty when the value carried no `<email>`. */
+  email: string;
+}
+
+/** `Name <email>` → its parts; a value with no `<…>` is all name. */
+export function parseGitIdent(value: string): GitIdent {
+  const m = /^(.*?)\s*<([^<>]*)>\s*$/.exec(value.trim());
+  if (!m) return { name: value.trim(), email: "" };
+  return { name: m[1]!.trim() || m[2]!.trim(), email: m[2]!.trim() };
+}
+
+/** The commit's co-authors, from its {@link CO_AUTHORED_BY_TRAILER_KEY} trailers. */
+export function commitCoAuthors(commit: CommitRow): GitIdent[] {
+  return commitTrailerValues(commit, CO_AUTHORED_BY_TRAILER_KEY).map(
+    parseGitIdent,
+  );
+}

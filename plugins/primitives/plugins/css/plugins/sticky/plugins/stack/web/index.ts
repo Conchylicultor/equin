@@ -5,6 +5,7 @@ export {
   StickyStackItem,
   StickyStackBranch,
   stickyStackTop,
+  useStickyStackBelow,
   DEFAULT_MAX_STACKED,
   type StickyStackProps,
   type StickyStackItemProps,

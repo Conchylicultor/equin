@@ -801,6 +801,16 @@ per-section affordance (a `+`, a `⋯` menu) to `GroupedSections` (list).
 - Not `hover-reveal` (that primitive defers to `row-actions` for row-action
   clusters).
 
+### `sectionSummary` — what a header says at rest
+
+`sectionSummary?: (section) => ReactNode` (`DataViewBaseProps`, threaded as
+`DataViewRenderProps.sectionSummary`) draws a trailing cluster in every group
+header that is **always visible** — information, unlike `headerActions` (an
+affordance, hover-revealed). The commit pane's `+a −d` per section. `null` for
+a section with nothing to say. Drawn by `DataViewGroupHeader` (`summary` prop,
+part `dv.group-summary`, the `groupCount` pick and ink, before the action
+cluster), so list, gallery, icons, the flat and the nested table all show it.
+
 **`table` is the documented exception**: its group headers are `col-span-full`
 subgrid rows, so it composes `StickyStack` directly inside `data-table` (offset by
 its own column header, or none under `columnHeader: "first-group"`). The nested
@@ -973,6 +983,22 @@ Keep row (the filter builder over `fold.keep`) and a "Show first" number field
   `DataViewControlsProvider` overriding `filter`).
 - Sub-pages must go through `useFilterPanelStack()` (`filter-scope.tsx`) or a
   nested group would edit the view's filter instead.
+
+## Hidden by the view (`revealHidden`)
+
+`revealHidden` (in-memory rows held whole — a tsc error beside `paging` or a
+live `source`, whose hidden count is unknown) draws a footer under the rows:
+**"N hidden · <values> · Show"** (`web/components/hidden-rows-footer.tsx`,
+part `dv.hidden-rows`).
+
+- **N** = rows passing the search but failing the active view's filter — the
+  two `useRowMatcher`s the body uses, so it agrees with what is drawn.
+- **values** = the distinct values those rows hold in the fields the filter's
+  rules name (option labels where declared), lower-cased, the first four then
+  `+N`.
+- **Show** clears the view's filter (`viewModel.setFilter(id, null)`) — a draft
+  under `viewEdits: "draft"` (dirty dot, Save view).
+- Nothing when the filter hides nothing; only once the view itself is drawn.
 
 ## Paging (`paging`)
 
@@ -1237,6 +1263,15 @@ Hosted / sections toolbars throw on `aside`.
 `switcherForm`: `"strip"` (default), `"chip"` (`strip` is `null`), `"none"` (the
 surface lists views itself).
 
+- Under drafts the strip is **`DataViewViewStrip`** (exported): each chip
+  carries its view's row count (`useViewRowCounts`; none where the rows are
+  not in memory) and dirty dot, and a dirty active view is followed by
+  **Save view** (`drafts.save`) whose menu offers **Save as new view**
+  (`drafts.saveAsNew`, named "<name> copy", its settings opened to rename it)
+  and **Discard changes** (`drafts.discard`); on the home view the primary is
+  Save as new view (saving onto "All" would redefine it). Counts are drawn
+  under drafts only — a surface whose views are saved filters; views that are
+  different layouts of the same rows would all read the same number.
 - Under drafts the chip is `DataViewViewChip` (exported; `appearance="title"`).
 - Self-listing: **`DataViewViewList({ newLabel, onNew? })`**
   (`web/components/view-list.tsx`), counts from **`useViewRowCounts()`** (each
@@ -1385,6 +1420,26 @@ until it lands.
 `DataViewSlots.Setting` is one level down: a section inside a control's panel (the
 settings control). Don't flatten settings into controls.
 
+### Promoting a setting: `promotedSettings`
+
+A surface may lift a `Setting` out of View settings into a toolbar control of its
+own — `promotedSettings={["data-view.group-by"]}` (Setting ids, in the surface's
+order). The commit pane's Group by, beside Filter and Sort.
+
+- The setting declares how it reads as a control:
+  `promote: { label, icon, describe?(ctx) }` (`DataViewSettingPromotion`;
+  `describe` is pure, the trigger's words — "Group by: Plugin" — `null` at its
+  default). Group-by declares one; a promoted id naming no setting, or a setting
+  without `promote`, throws in `useToolbarControls`.
+- `useToolbarControls` resolves it into the same `ToolbarControl` panel arm
+  (`ToolbarPanel`: `label`, `icon`, precomputed `summary`, `narrows`,
+  `render()` — `renderIsolated` through the setting's own slot), ahead of the
+  slot's controls. `narrows: false`: the trigger stays ghost and never counts
+  into the fold's badge (configuration, not narrowing).
+- The settings panel leaves a promoted setting out
+  (`DataViewControlsContextValue.promotedSettings`), so it is reached once.
+- Inapplicable (`isApplicable`) → no trigger, like any control.
+
 ### One merged context
 
 `useDataViewControls()` (`web/components/controls/controls-context.tsx`) is read by
@@ -1417,7 +1472,8 @@ ate the narrowest toolbars).
 ### Panel bodies
 
 - A control's `component` is **prop-less** and reads the context, mounted by
-  `DataViewControlPanel({ control })` in both the bar and the compact fold. Draw with
+  the resolved panel's `render()` (`ToolbarPanel`) in both the bar and the
+  compact fold. Draw with
   `control-panel` (`@plugins/primitives/plugins/css/plugins/control-panel/web`); never
   paint a surface, never declare a width.
 - The settings control is always applicable (pure `isApplicable` can't read the
@@ -2339,20 +2395,20 @@ restyled 20.6k elements before, 10.4k after (`fullscreen-budget` cases unchanged
     - `DataViewSlots.Control` ← `primitives.data-view`
     - `DataViewSlots.FieldExtension` ← `primitives.data-view.custom-columns`
     - `DataViewSlots.RowOrder` ← `primitives.data-view.view-order`
-  - Contributes: 114 contributions — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ConfigV2.WebRegister` ×104
+  - Contributes: 115 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ConfigV2.WebRegister` ×105
     - `DataViewSlots.Control` ×4
     - `DataViewSlots.Setting` ×4
     - `IdKinds.Kind` ×2
-  - Uses: 147 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 148 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `network/live` ×24
     - `primitives/css/ui-kit` ×17
     - `primitives/data-view/view-core` ×11
     - `network/live/live-state` ×7
     - `primitives/slot-render` ×5
     - `primitives/css/control-panel` ×4
+    - `primitives/css/sticky/stack` ×4
     - `primitives/rank-reorder` ×4
-    - `primitives/css/sticky/stack` ×3
     - `primitives/css/text` ×3
     - `primitives/css/toggle-chip` ×3
     - `primitives/dom/web-storage` ×3
@@ -2430,6 +2486,7 @@ restyled 20.6k elements before, 10.4k after (`fullscreen-budget` cases unchanged
     - `DataViewRowEntry`
     - `DataViewSection`
     - `DataViewSettingContribution`
+    - `DataViewSettingPromotion`
     - `DataViewSourceBundle`
     - `DataViewSourceContribution`
     - `DataViewSourceProps`
@@ -2538,6 +2595,7 @@ restyled 20.6k elements before, 10.4k after (`fullscreen-budget` cases unchanged
     - `DataViewSwitcher`
     - `DataViewViewChip`
     - `DataViewViewList`
+    - `DataViewViewStrip`
     - `defineDataView`
     - `defineDataViewSources`
     - `defineItemActions`
@@ -2620,8 +2678,8 @@ restyled 20.6k elements before, 10.4k after (`fullscreen-budget` cases unchanged
     - `useViewRowCounts`
     - `wearsTimeInk`
 - Server:
-  - Contributes: 106 contributions — full list in [REFERENCE.md](./REFERENCE.md)
-    - `ConfigV2.Register` ×104
+  - Contributes: 107 contributions — full list in [REFERENCE.md](./REFERENCE.md)
+    - `ConfigV2.Register` ×105
     - `ids.kind` ×2
   - Uses:
     - `config_v2.getAllDescriptors`
@@ -2784,6 +2842,7 @@ restyled 20.6k elements before, 10.4k after (`fullscreen-budget` cases unchanged
     - `createLinkedHover`
     - `DATA_VIEW_HEADER_OFFSET_VAR`
     - `DATA_VIEW_PARTS`
+    - `DATA_VIEW_SECTION_OFFSET_VAR`
     - `dataPart`
     - `defineDataView`
     - `deriveLinkedHover`
@@ -2821,7 +2880,7 @@ restyled 20.6k elements before, 10.4k after (`fullscreen-budget` cases unchanged
     - `ui/tokens/type-scale` ×6
     - `ui/tokens/shadow` ×4
     - `ui/tokens/shape` ×3
-  - Imported by: 128 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 129 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `fields` ×39
     - `apps` ×29
     - `debug` ×17
@@ -2833,6 +2892,7 @@ restyled 20.6k elements before, 10.4k after (`fullscreen-budget` cases unchanged
     - `apps-core/app-launcher`
     - `auth`
     - `build/build-logs`
+    - `code-explorer/commit-detail`
     - `companions/menu-bar/app-grid`
     - `config_v2/settings`
     - `history/dialog`

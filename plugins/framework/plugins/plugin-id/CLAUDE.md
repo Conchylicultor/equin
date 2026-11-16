@@ -44,7 +44,7 @@
     - `UNDOCUMENTED_RUNTIME_FOLDERS`
     - `VERIFYING_FOLDERS`
 - Cross-plugin:
-  - Imported by: 96 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 97 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `plugin-meta` ×21
     - `apps` ×15
     - `tasks` ×12
@@ -58,6 +58,7 @@
     - `active-data` ×2
     - `apps-core` ×2
     - `companions` ×2
+    - `code-explorer/commit-detail`
     - `hints/ask`
     - `primitives/data-view`
     - `reorder`

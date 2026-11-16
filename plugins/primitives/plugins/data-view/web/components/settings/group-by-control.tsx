@@ -2,7 +2,23 @@ import { Fragment, type ReactNode } from "react";
 import { ControlPanel } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import { useGroupByController } from "../../internal/use-group-by-controller";
 import { FieldSections } from "../../internal/field-sections";
-import { useDataViewControls } from "../controls/controls-context";
+import {
+  useDataViewControls,
+  type DataViewControlsContextValue,
+} from "../controls/controls-context";
+
+/**
+ * What the active view is grouped by, in words — the promoted Group by
+ * trigger's tooltip ("Group by: Plugin"); `null` while ungrouped. Pure: a
+ * closed trigger mounts no panel.
+ */
+export function describeGroupBy(
+  ctx: DataViewControlsContextValue,
+): string | null {
+  const rule = ctx.activeState.groupBy;
+  if (rule == null) return null;
+  return ctx.fields.find((f) => f.id === rule.fieldId)?.label ?? rule.fieldId;
+}
 
 /**
  * Group-by setting (the first `view`-scope settings contribution): a field

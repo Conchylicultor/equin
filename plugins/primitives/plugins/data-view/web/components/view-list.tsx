@@ -1,8 +1,11 @@
 import type { ReactNode } from "react";
 import {
   CollapsedViewSwitcher,
+  EditableViewSwitcher,
+  type HostViewSettings,
   ViewList,
 } from "@plugins/primitives/plugins/data-view/plugins/view-core/web";
+import type { DataViewContribution } from "../slots";
 import { useDataViewControls } from "./controls/controls-context";
 import { useViewRowCounts } from "../internal/use-view-row-counts";
 
@@ -79,6 +82,34 @@ export function DataViewViewChip(props: {
       appearance={appearance}
       countFor={countFor}
       dirtyFor={viewModel.dirtyFor}
+      homeId={viewModel.homeViewId}
+    />
+  );
+}
+
+/**
+ * The views as the band's strip (`EditableViewSwitcher`) on a drafted surface
+ * (`viewEdits`), reading counts, dirty dots and the working copies from the
+ * controls context — so it renders inside the band: each chip carries its
+ * view's row count (`useViewRowCounts`; none when the rows are not in memory)
+ * and dirty dot, and a dirty active view is followed by Save view (Save as
+ * new view / Discard changes in its menu; on the home view, Save as new view).
+ */
+export function DataViewViewStrip(props: {
+  hostSettings?: HostViewSettings<DataViewContribution>;
+}): ReactNode {
+  const { viewModel, activeViewId } = useDataViewControls();
+  const countFor = useViewRowCounts();
+  return (
+    <EditableViewSwitcher
+      instances={viewModel.instances}
+      activeId={activeViewId}
+      onSelect={viewModel.setActiveView}
+      actions={viewModel.actions}
+      hostSettings={props.hostSettings}
+      countFor={countFor}
+      dirtyFor={viewModel.dirtyFor}
+      drafts={viewModel.drafts}
       homeId={viewModel.homeViewId}
     />
   );

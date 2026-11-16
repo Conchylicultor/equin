@@ -4,10 +4,13 @@ import {
   PaneChrome,
   defineRoute,
   PaneMessage,
+  useOpenPane,
 } from "@plugins/primitives/plugins/pane/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { CommitDiffView } from "./components/commit-diff-view";
+import { CommitMessage } from "./components/commit-message";
 import { useCommitInfo } from "./use-commit-info";
 
 export const commitDetailPane = Pane.define({
@@ -16,11 +19,13 @@ export const commitDetailPane = Pane.define({
     segment: "commit/:worktree/:sha",
   }),
   app: agentManagerApp,
-  // The subject once resolved; the short sha while loading, unknown, or
-  // unreachable — a metadata failure must not cost the pane its identity.
+  // `Commit <shortSha>`: the subject now heads the body (CommitMessage), so
+  // the title names the object. The resolved short sha (git's abbreviation)
+  // once known; the param's first seven while loading, unknown or unreachable
+  // — a metadata failure must not cost the pane its identity.
   title: {
-    useText: useCommitSubject,
-    fallback: ({ sha }) => shortSha(sha),
+    useText: useCommitTitleText,
+    fallback: ({ sha }) => `Commit ${shortSha(sha)}`,
     component: CommitTitle,
   },
   component: CommitDetailBody,
@@ -34,6 +39,7 @@ function CommitDetailBody() {
   // conversation lookup, which is what lets any surface push it.
   const { worktree, sha } = commitDetailPane.useParams();
   const info = useCommitInfo(worktree, sha);
+  const openPane = useOpenPane();
 
   if (info.kind === "not-found" || info.kind === "unavailable") {
     return (
@@ -48,12 +54,29 @@ function CommitDetailBody() {
   }
   return (
     <PaneChrome pane={commitDetailPane}>
-      <CommitDiffView worktree={worktree} sha={sha} />
+      {/* One scroll for the whole pane (PaneChrome's): the message scrolls
+          away, the file list's toolbar pins at the top, an open file's row
+          pins under it while its diff scrolls. */}
+      <Stack gap="none">
+        {info.kind === "found" && (
+          <CommitMessage
+            commit={info.commit}
+            parentActivation={(parent) =>
+              openPane.to(
+                commitDetailPane,
+                { worktree, sha: parent },
+                { mode: "swap" },
+              )
+            }
+          />
+        )}
+        <CommitDiffView worktree={worktree} sha={sha} />
+      </Stack>
     </PaneChrome>
   );
 }
 
-function useCommitSubject({
+function useCommitTitleText({
   worktree,
   sha,
 }: {
@@ -61,18 +84,24 @@ function useCommitSubject({
   sha: string;
 }): string | undefined {
   const info = useCommitInfo(worktree, sha);
-  return info.kind === "found" ? info.commit.subject : undefined;
+  return info.kind === "found" ? `Commit ${info.commit.shortSha}` : undefined;
 }
 
 function shortSha(sha: string): string {
   return sha.slice(0, 7);
 }
 
-// The header's title: the subject, or the short sha set in mono — the same
-// cached commit read the tab title's `useCommitSubject` makes.
+// The header's title: "Commit" and the short sha set in mono — the same
+// cached commit read the tab title's `useCommitTitleText` makes.
 function CommitTitle(): ReactNode {
   const { worktree, sha } = commitDetailPane.useParams();
   const info = useCommitInfo(worktree, sha);
-  if (info.kind === "found") return info.commit.subject;
-  return <span className="font-mono">{shortSha(sha)}</span>;
+  const short = info.kind === "found" ? info.commit.shortSha : shortSha(sha);
+  return (
+    // One inline box: the pane header lays a title node out as a flex row,
+    // where the space between two sibling text items would collapse.
+    <span>
+      Commit <span className="font-mono">{short}</span>
+    </span>
+  );
 }

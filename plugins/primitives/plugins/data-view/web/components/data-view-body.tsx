@@ -157,6 +157,7 @@ import {
   withRootsScope,
 } from "../internal/live-tree/use-live-tree";
 import { attachRoots } from "../internal/attach";
+import { HiddenRowsFooter } from "./hidden-rows-footer";
 import type { CollectionActivation } from "../internal/fold-activations";
 import {
   DataViewControlsProvider,
@@ -451,6 +452,9 @@ function DataViewBodyInner<TRow>(
     rowHover,
     groupEdit,
     headerActions,
+    sectionSummary,
+    promotedSettings: promotedSettingsProp,
+    revealHidden,
     storageKey,
     viewModel,
     activeInstance,
@@ -469,6 +473,14 @@ function DataViewBodyInner<TRow>(
       emphasis: JSON.parse(emphasisKey) as typeof emphasis,
     }),
     [recipe, placeKey, emphasisKey],
+  );
+
+  // The promoted settings, one stable list per change of its CONTENT (a
+  // surface spells it inline; a fresh literal must not rebuild the context).
+  const promotedKey = (promotedSettingsProp ?? NO_PROMOTED).join("\n");
+  const promotedSettings = useMemo(
+    () => (promotedKey === "" ? NO_PROMOTED : promotedKey.split("\n")),
+    [promotedKey],
   );
 
   // The backdrop's view type (`DataViewProps.backdrop`): resolved from the
@@ -1633,6 +1645,7 @@ function DataViewBodyInner<TRow>(
           rowHover,
           groupEdit,
           headerActions,
+          sectionSummary,
         };
         // The grouped field's value of a row: what a held cross-section drop
         // waits on to change (`usePendingMoveOverlay`).
@@ -1677,6 +1690,7 @@ function DataViewBodyInner<TRow>(
               ? effectiveRows
               : null,
           expandAll,
+          promotedSettings,
         };
 
         const onQueryChange =
@@ -1792,6 +1806,21 @@ function DataViewBodyInner<TRow>(
                           />
                         ) : null}
                         <NotKnownRowsTail rows={notKnown} />
+                        {revealHidden === true && origin == null ? (
+                          <HiddenRowsFooter
+                            rows={effectiveRows}
+                            fields={fields as FieldDef<unknown>[]}
+                            state={activeState}
+                            resolveOperatorSet={resolveOperatorSet}
+                            searchAccessor={
+                              searchAccessor as
+                                ((row: unknown) => string) | undefined
+                            }
+                            onShow={() =>
+                              viewModel.setFilter(activeViewId, null)
+                            }
+                          />
+                        ) : null}
                       </RowReadsHost>
                     </>
                   )}
@@ -2043,6 +2072,7 @@ function isSectionCollapsed(
   );
 }
 const NO_QUERY = { query: "", filter: null };
+const NO_PROMOTED: readonly string[] = [];
 const NO_UNAVAILABLE: readonly UnavailableRule[] = [];
 const NO_UNSORTABLE: readonly string[] = [];
 // Every row of a read with no `isPaged` is the read's.

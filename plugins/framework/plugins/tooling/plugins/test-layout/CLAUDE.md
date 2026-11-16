@@ -158,6 +158,7 @@ The rule only fires in files importing `bun:test`.
     - `TEST_FILE_GLOB`
 - Cross-plugin:
   - Imported by:
+    - `code-explorer/file-kind`
     - `framework/cli/test`
     - `framework/cli/test/digest`
 - Exemptions:

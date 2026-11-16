@@ -239,7 +239,17 @@ conditional hook.
 - `disclosureVariant?` — the disclosure look this list pins (see "Attached
   rows").
 - `detail?(row)` — the row's detail, drawn under it while open (the view's
-  expand map); every row then leads with the tree's disclosure.
+  expand map); every row then leads with the tree's disclosure. **An open
+  row stays pinned** while its detail scrolls under it — below its section's
+  sticky header (the section body's `--dv-section-offset`,
+  `DATA_VIEW_SECTION_OFFSET_VAR`, published by `GroupedSections`), else below
+  the toolbar (`--dv-header-offset`) — until the detail scrolls past: the
+  entry's own box (row + detail) is the row's containing block, so a closed
+  row pins nothing and a windowed (`VirtualRows`) entry pins within its own
+  placed box. `Sticky active={open}`, so opening never remounts the row.
+  Default-on (the consumers in 2026-11 — automations' History, the sidequest
+  launch list — have short details, where it is invisible). Not under
+  `frame: "card"`: the card clips its content, which bounds a sticky row.
 - `detailOnActivate?` — the whole row is its detail's disclosure: a click
   toggles it, the row carries `aria-expanded`, no disclosure glyph is drawn.
   Needs `detail`; beside a surface's own row activation it throws (one click,

@@ -207,7 +207,11 @@ contributions each surface passes in, and per-entry plugin id
   `buildViewDescriptors`,
   `buildViewConfigContributions(entries: { id, descriptor, pluginId }[])`,
   `ViewDrafts` / `ViewModelOptions` (see "Drafts"),
-  `EditableViewSwitcher` (the chips, drag-reorderable, then an
+  `EditableViewSwitcher` (the chips, drag-reorderable — each with
+  `countFor` (a count after the name, `undefined` = none) and `dirtyFor` (a
+  dot), `ViewList`'s contract; given `drafts` (`ViewDrafts`) a dirty active
+  view is followed by a Save view split button — Save as new view / Discard
+  changes in its menu, Save as new view as the primary on `homeId` — then an
   ALWAYS-visible `+` add-view button — adding a view is a first-class gesture,
   never hover-revealed chrome; the strip hugs its chips and never grows, so its
   host decides the slack: the DataView toolbar's views pill scrolls it
@@ -242,8 +246,8 @@ contributions each surface passes in, and per-entry plugin id
 - Description: Type-agnostic named-view-instance engine: instance model + resolver, config-descriptor machinery, debounced write-back, and the editable view-switcher chrome. Type-agnostic named-view-instance engine (server): the per-id `views` config descriptor + a generic registration helper. Consumers register their own ids under their own plugin.
 - Web:
   - Contributes: `IdKinds.Kind` "view"
-  - Uses: 49 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `primitives/css/ui-kit` ×15
+  - Uses: 50 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `primitives/css/ui-kit` ×16
     - `primitives/dom/web-storage` ×5
     - `config_v2` ×3
     - `primitives/css/text` ×3
@@ -310,10 +314,10 @@ contributions each surface passes in, and per-entry plugin id
     - `ViewTypeMeta`
   - Exports (values): `viewIdKind`
 - Cross-plugin:
-  - Uses tokens: 27 vars — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses tokens: 29 vars — full list in [REFERENCE.md](./REFERENCE.md)
     - `ui/tokens/data-view` ×14
-    - `ui/tokens/color-palette` ×4
-    - `ui/tokens/type-scale` ×4
+    - `ui/tokens/color-palette` ×5
+    - `ui/tokens/type-scale` ×5
     - `ui/tokens/density` ×2
     - `ui/tokens/sidebar-metrics` ×2
     - `ui/tokens/shape --spacing`

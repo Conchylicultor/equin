@@ -35,6 +35,7 @@ on the live primitive and `EditedFileSchema` (a pure schema sink in the
     - `CodeDirEntry`
     - `CodeFile`
     - `CodeFileDiff`
+    - `CommitDetail`
     - `CommitFiles`
     - `WorkspaceRootInfo`
   - Exports (values):
@@ -43,6 +44,7 @@ on the live primitive and `EditedFileSchema` (a pure schema sink in the
     - `codeFile`
     - `codeFileDiff`
     - `COMMIT_FILES_MAX`
+    - `CommitDetailSchema`
     - `commitFiles`
     - `CommitFilesSchema`
     - `commitInfo`

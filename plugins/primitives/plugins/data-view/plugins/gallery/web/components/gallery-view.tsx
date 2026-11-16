@@ -391,6 +391,7 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
       sections={sections}
       collapsedSections={props.collapsedSections}
       setSectionCollapsed={props.setSectionCollapsed}
+      sectionSummary={props.sectionSummary}
     >
       {(section) => renderSection(section, cellsOf(section))}
     </GroupedSections>

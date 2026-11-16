@@ -1,7 +1,10 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { dataViewConfigContributions } from "./internal/config-registrations";
 import { DataViewSlots } from "./slots";
-import { GroupByControl } from "./components/settings/group-by-control";
+import {
+  describeGroupBy,
+  GroupByControl,
+} from "./components/settings/group-by-control";
 import { PropertiesControl } from "./components/settings/properties-control";
 import { FoldControl } from "./components/settings/fold-control";
 import {
@@ -64,6 +67,7 @@ export { DataViewSlots } from "./slots";
 export type {
   DataViewContribution,
   DataViewSettingContribution,
+  DataViewSettingPromotion,
   DataViewControlContribution,
   DataViewControlSummary,
   GlobalRowOrderProps,
@@ -74,7 +78,11 @@ export type {
 } from "./slots";
 export { getDataViewDescriptor } from "./internal/descriptors";
 export { useDataViewControls } from "./components/controls/controls-context";
-export { DataViewViewChip, DataViewViewList } from "./components/view-list";
+export {
+  DataViewViewChip,
+  DataViewViewList,
+  DataViewViewStrip,
+} from "./components/view-list";
 export { useViewRowCounts } from "./internal/use-view-row-counts";
 export type { DataViewControlsContextValue } from "./components/controls/controls-context";
 export { useResolveCell, useIsChipField } from "./cell-slot";
@@ -285,6 +293,8 @@ export default {
       component: PropertiesControl,
     }),
     // Group-by: sections the rows by a groupable field.
+    // Promotable: `promotedSettings={["data-view.group-by"]}` draws it as a
+    // toolbar control of its own, saying the grouped field in its tooltip.
     DataViewSlots.Setting({
       id: "data-view.group-by",
       scope: "view",
@@ -292,6 +302,11 @@ export default {
         ctx.activeSupportsGroupBy &&
         ctx.fields.some((f) => ctx.groupableField(f)),
       component: GroupByControl,
+      promote: {
+        label: "Group by",
+        icon: symbol("stacks"),
+        describe: describeGroupBy,
+      },
     }),
     // Fold rows: rows not matching a filter rule fold behind "… N more" at the
     // end of their section. Needs a filterable field to write a rule over, and a

@@ -129,7 +129,11 @@ describe("hosted toolbar — shell", () => {
 function renderOptions(query: string) {
   return render(
     <PluginProvider plugins={[plugin]}>
-      <DataViewControlsProvider {...({} as DataViewControlsContextValue)}>
+      <DataViewControlsProvider
+        {...({
+          promotedSettings: [],
+        } as unknown as DataViewControlsContextValue)}
+      >
         <HostedOptions
           query={query}
           onQueryChange={() => {}}

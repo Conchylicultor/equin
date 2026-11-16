@@ -199,6 +199,7 @@ idempotent and per-file.
 - Core:
   - Uses:
     - `framework/tooling.noteRepoWrites`
+    - `framework/tooling/generated-artifacts.GENERATED_TS_SUFFIX`
     - `infra/host-fs/user-path.AppPath`
     - `infra/host-fs/user-path.joinAppPath`
     - `infra/spawn.spawnCaptured`

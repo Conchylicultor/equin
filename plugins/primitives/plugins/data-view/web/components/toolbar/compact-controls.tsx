@@ -7,8 +7,6 @@ import {
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { hoverRevealTarget } from "@plugins/primitives/plugins/hover-reveal/web";
 import { dataPart, type ToolbarPartForms } from "../../../core";
-import { useDataViewControls } from "../controls/controls-context";
-import { DataViewControlPanel } from "./control-panel-host";
 import type { ToolbarControls } from "./use-toolbar-controls";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -32,7 +30,7 @@ const tuneIcon = symbol("tune");
  * layer, its own width, its own clamp, its own dismissal — over a surface that
  * was narrow to begin with. A push is the same box at every depth.
  *
- * Wide and compact share one code path: both mount `DataViewControlPanel`, which
+ * Wide and compact share one code path: both mount the panel's `render()` (`ToolbarPanel`), which
  * is prop-less and reads `useDataViewControls()`. The wide layout puts it in a
  * popover, this one puts it in a stack entry, and there is nothing left for them
  * to diverge on.
@@ -203,8 +201,6 @@ export function CompactRootPanel({
   /** The surface's quick filters, under the search. */
   quickFilters?: ReactNode;
 }): ReactNode {
-  const ctx = useDataViewControls();
-
   return (
     <>
       {search ? <ControlPanel.Section>{search}</ControlPanel.Section> : null}
@@ -239,14 +235,14 @@ export function CompactRootPanel({
                 </ControlPanel.Row>
               );
             }
-            const { control } = item;
+            const { panel } = item;
             // The same pure `summary` the wide bar's trigger reads — so a folded
             // control says exactly what its unfolded twin would say.
-            const summary = control.summary?.(ctx) ?? null;
+            const { summary } = panel;
             return (
               <ControlPanel.Row
-                key={control.id}
-                icon={<Icon icon={control.icon} />}
+                key={panel.id}
+                icon={<Icon icon={panel.icon} />}
                 trailing={
                   summary
                     ? summary.more
@@ -255,12 +251,12 @@ export function CompactRootPanel({
                     : undefined
                 }
                 push={{
-                  key: control.id,
-                  title: control.label,
-                  render: () => <DataViewControlPanel control={control} />,
+                  key: panel.id,
+                  title: panel.label,
+                  render: panel.render,
                 }}
               >
-                {control.label}
+                {panel.label}
               </ControlPanel.Row>
             );
           })

@@ -13,6 +13,9 @@ export const DATA_VIEW_PARTS = [
   "dv.view-chip",
   "dv.view-chip-active",
   "dv.view-add",
+  "dv.view-chip-count",
+  "dv.view-chip-dirty",
+  "dv.view-save",
   "dv.quick-filters",
   "dv.tools-pill",
   "dv.search",
@@ -40,6 +43,7 @@ export const DATA_VIEW_PARTS = [
   "dv.group-chip",
   "dv.group-label",
   "dv.group-count",
+  "dv.group-summary",
   "dv.group-rule",
   "dv.group-chevron",
   "dv.group-rename",
@@ -55,6 +59,8 @@ export const DATA_VIEW_PARTS = [
   "dv.title-cell",
   "dv.title-cell-title",
   "dv.title-cell-subtitle",
+  // Body
+  "dv.hidden-rows",
 ] as const;
 
 export type DataViewPart = (typeof DATA_VIEW_PARTS)[number];

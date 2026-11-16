@@ -47,7 +47,7 @@ import type {
 import { useDataViewDevGuards } from "../internal/use-dev-guards";
 import { assertSurfaceChrome } from "../internal/surface-chrome-rules";
 import { useViewShortcuts } from "../internal/use-view-shortcuts";
-import { DataViewViewChip } from "./view-list";
+import { DataViewViewChip, DataViewViewStrip } from "./view-list";
 import { useOrphanViewTypeGuard } from "../internal/use-orphan-view-type-guard";
 import { pendingLayoutModel, slotLayout } from "../internal/slot-layout";
 import { hoverRevealGroup } from "@plugins/primitives/plugins/hover-reveal/web";
@@ -522,7 +522,17 @@ export function DataViewShellFrame(props: {
         : switcherForm === "chip"
           ? { strip: null, chip }
           : {
-              strip: <EditableViewSwitcher {...switcherInputs} />,
+              // Under drafts the strip carries each view's count and dirty
+              // dot and the active view's Save view — read from the controls
+              // context, which wraps the band (as the drafted chip does).
+              strip:
+                viewModel.drafts !== null ? (
+                  <DataViewViewStrip
+                    hostSettings={switcherInputs.hostSettings}
+                  />
+                ) : (
+                  <EditableViewSwitcher {...switcherInputs} />
+                ),
               chip,
             },
     switcherCount: pinned ? 1 : instances.length,

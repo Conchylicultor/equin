@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-framework-tooling-generated-artifacts",
+  "version": "0.0.1",
+  "private": true,
+  "description": "The repo's generated artifacts as data: GENERATED_ARTIFACTS (each committed path pattern a build or migration generate writes, with the .gitattributes merge driver that resolves it), GENERATED_TS_SUFFIX, and isGeneratedArtifactPath. A zero-import leaf, so web code (a commit's file-kind classifier) reads the same list as build tooling; its generated-artifacts-attributed check holds the .gitattributes regen lines equal to it."
+}

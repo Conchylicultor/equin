@@ -4,10 +4,8 @@ import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { dataPart, type ToolbarPartForms } from "../../../core";
 import { ROUND_AT_REST } from "./round-form";
-import type { DataViewControlAction, DataViewPanelControl } from "../../slots";
-import type { ToolbarControl } from "./use-toolbar-controls";
-import { useDataViewControls } from "../controls/controls-context";
-import { DataViewControlPanel } from "./control-panel-host";
+import type { DataViewControlAction } from "../../slots";
+import type { ToolbarControl, ToolbarPanel } from "./use-toolbar-controls";
 
 /**
  * ONE trigger for every toolbar control — there is no branch on which control it
@@ -41,7 +39,7 @@ export function ControlTrigger({
   form?: ToolbarPartForms["controls"];
 }): ReactNode {
   return control.kind === "panel" ? (
-    <PanelTrigger control={control.control} form={form} />
+    <PanelTrigger panel={control.panel} form={form} />
   ) : (
     <ActionTrigger action={control.action} form={form} />
   );
@@ -75,10 +73,10 @@ function ActionTrigger({
 }
 
 function PanelTrigger({
-  control,
+  panel,
   form,
 }: {
-  control: DataViewPanelControl;
+  panel: ToolbarPanel;
   /**
    * The trigger's shape — the arrangement's `forms.controls`. `round` is the
    * same icon button drawn as a circle (a pill with no label), whose glyph
@@ -86,39 +84,41 @@ function PanelTrigger({
    */
   form: ToolbarPartForms["controls"];
 }): ReactNode {
-  const ctx = useDataViewControls();
   const [open, setOpen] = useState(false);
-  // Pure — no panel is mounted to compute it. See `DataViewControlContribution`.
-  const summary = control.summary?.(ctx) ?? null;
+  // Pure — no panel is mounted to compute it (`useToolbarControls`).
+  const { summary } = panel;
+  // `secondary` only while it narrows what you see — a promoted setting
+  // (configuration) says what it is set to in words only.
+  const active = summary !== null && panel.narrows;
 
   const suffix = summary?.more ?? 0;
   const label = summary
-    ? `${control.label}: ${summary.spoken ?? summary.label}` +
+    ? `${panel.label}: ${summary.spoken ?? summary.label}` +
       (suffix ? `, +${suffix} more` : "")
-    : control.label;
+    : panel.label;
   const tooltip = summary
-    ? `${control.label}: ${summary.label}` + (suffix ? ` +${suffix}` : "")
-    : control.label;
+    ? `${panel.label}: ${summary.label}` + (suffix ? ` +${suffix}` : "")
+    : panel.label;
 
   return (
     <ControlPanelPopover
       open={open}
       onOpenChange={setOpen}
       align="end"
-      label={control.label}
+      label={panel.label}
       trigger={
         <IconButton
-          icon={control.icon}
+          icon={panel.icon}
           label={label}
           tooltip={tooltip}
-          variant={summary ? "secondary" : "ghost"}
+          variant={active ? "secondary" : "ghost"}
           shape={form === "round" ? "pill" : "default"}
-          className={cn(form === "round" && !summary && ROUND_AT_REST)}
+          className={cn(form === "round" && !active && ROUND_AT_REST)}
           {...dataPart("dv.control")}
         />
       }
     >
-      <DataViewControlPanel control={control} />
+      {panel.render()}
     </ControlPanelPopover>
   );
 }

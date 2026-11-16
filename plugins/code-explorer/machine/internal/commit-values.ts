@@ -2,9 +2,9 @@ import { serveValue } from "@plugins/network/plugins/live/machine";
 import {
   commitFiles,
   commitInfo,
+  type CommitDetail,
   type CommitFiles,
 } from "@plugins/code-explorer/plugins/code-api/core";
-import type { CommitRow } from "@plugins/primitives/plugins/commit-list/core";
 import {
   LOG_FORMAT,
   parseGitLog,
@@ -16,9 +16,16 @@ import {
   SHA_RE,
 } from "../../server/internal/commit-values";
 import { resolveParentSha } from "../../server/internal/get-push-files";
+import { bodyWithoutTrailers } from "./commit-body";
 
 // One commit's metadata and files, read with git from the repository's object
 // store — desktop-only (`needsMachine` on both declarations).
+
+/**
+ * The shared row format, then the raw body (`%b`) as one more NUL-terminated
+ * field: commit messages cannot hold a NUL, so the first one ends the row.
+ */
+const DETAIL_FORMAT = `${LOG_FORMAT}%b%x00`;
 
 /**
  * A sha naming no commit is a determinate answer (`missing`), not a failure.
@@ -28,20 +35,23 @@ import { resolveParentSha } from "../../server/internal/get-push-files";
 async function loadCommitInfo(
   worktree: string,
   sha: string,
-): Promise<CommitRow> {
+): Promise<CommitDetail> {
   const missing = () => commitInfo.refuse("missing", `no commit ${sha}`);
   if (!SHA_RE.test(sha)) throw missing();
   const root = await objectStoreRoot(worktree, commitInfo.refuse);
   const result = await tryRunGit(
-    ["log", "-1", `--format=${LOG_FORMAT}`, `${sha}^{commit}`, "--"],
+    ["log", "-1", `--format=${DETAIL_FORMAT}`, `${sha}^{commit}`, "--"],
     root,
   );
   if (!result.ok) throw missing();
-  const row = parseGitLog(result.stdout)[0];
+  const end = result.stdout.indexOf("\0");
+  const row =
+    end < 0 ? undefined : parseGitLog(result.stdout.slice(0, end + 1))[0];
   // `git log -1` either fails or emits exactly one record: an ok exit that
   // parses to nothing is a broken premise, not an answer to vouch for.
   if (!row) throw new Error(`git log -1 ${sha} produced no parseable commit`);
-  return row;
+  const rawBody = result.stdout.slice(end + 1).replace(/\0\s*$/, "");
+  return { ...row, body: bodyWithoutTrailers(rawBody, row.trailers.length) };
 }
 
 async function loadCommitFiles(
