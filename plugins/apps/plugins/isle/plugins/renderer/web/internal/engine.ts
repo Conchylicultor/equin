@@ -5,7 +5,8 @@
 // what stands in front of it), the hovered building's glow, the sky, the time
 // of day's tint and lights, the signposts and the map labels. Input: drag with
 // inertia, wheel and pinch zoom at the cursor, double-click zoom, click to
-// open or walk (A*), arrows / WASD to walk, hold a building to move it.
+// open or walk (A*), arrows / WASD to walk, drag a building to move it (a
+// finger holds on it first).
 // React only mounts it (`IsleCanvas`); everything here is imperative.
 
 import {
@@ -1699,8 +1700,20 @@ export class IsleEngine {
       Math.hypot(e.offsetX - drag.sx, e.offsetY - drag.sy) >
         (drag.touch ? 10 : 5)
     ) {
-      drag.moved = true;
+      // a mouse / pen dragging a building moves it (a click opens it; the ground pans);
+      // a finger still holds first, since buildings cover too much of a phone to pan past
+      const held = this.hold?.b;
       this.cancelHold();
+      if (held && !drag.touch) {
+        const m = this.startMove(held, drag.sx, drag.sy);
+        if (m) {
+          m.sx = e.offsetX;
+          m.sy = e.offsetY;
+          this.pickTarget();
+          return;
+        }
+      }
+      drag.moved = true;
       this.canvas.style.cursor = "grabbing";
     }
     if (drag.moved) {
@@ -1888,10 +1901,10 @@ export class IsleEngine {
 
   // ---- moving a building: lift it, show where it can go, drop it on a plot (swapping with whoever is there)
 
-  private startMove(b: SceneBuilding, sx: number, sy: number): void {
+  private startMove(b: SceneBuilding, sx: number, sy: number): Moving | null {
     const M = this.M;
     const placement = this.placement;
-    if (!M || !placement) return;
+    if (!M || !placement) return null;
     this.drag = null;
     const w = this.toWorld(sx, sy);
     const targets = moveTargets(M, placement, this.residents, b.appId);
@@ -1910,6 +1923,7 @@ export class IsleEngine {
     this.realize();
     this.canvas.style.cursor = "grabbing";
     this.pickTarget();
+    return this.moving;
   }
 
   private ghostAt() {
