@@ -66,13 +66,18 @@ function PullRefreshDisc({ ref }: { ref: React.Ref<HTMLElement> }) {
           cy="12"
           r="7"
           strokeDasharray={ARC_LENGTH}
-          transform="rotate(-90 12 12)"
+          // The arc runs clockwise and ENDS at 12 o'clock (its 15% gap just
+          // past it), so the arrowhead there leads the arc, never trails it.
+          transform="rotate(-36 12 12)"
           style={{
             strokeDashoffset: `var(--pull-arc-offset, ${ARC_LENGTH})`,
           }}
         />
         <path
-          d="M12 2.6 L15 5 L12 7.4"
+          d="M11.2 2.2 L14.6 5 L11.2 7.8 Z"
+          fill="currentColor"
+          strokeWidth="1.2"
+          strokeLinejoin="round"
           className="opacity-0 group-data-[armed]:opacity-100"
         />
       </svg>
