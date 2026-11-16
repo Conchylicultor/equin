@@ -114,7 +114,7 @@ export function mountIcebergScene({
     });
   }
 
-  // The tip rises to the top of the apps layer, just above "The apps", but never into "Descend ↓" above it:
+  // The tip rises to the top of the apps layer, just above "The apps", but never into the scroll cue above it:
   // on a short screen it stops 24px under that line.
   function tipOffset() {
     const dive = q<HTMLElement>(hero, ".iceberg-dive").getBoundingClientRect();

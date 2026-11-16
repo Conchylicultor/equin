@@ -117,7 +117,7 @@ await withBrowser(async (h) => {
     colorScheme,
   });
   await boot(page, pathUrl("/about/foundations"), {
-    marker: "text=Descend ↓",
+    marker: "button.iceberg-dive",
     settleMs: 1200,
   });
 

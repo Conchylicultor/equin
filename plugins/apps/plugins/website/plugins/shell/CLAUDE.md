@@ -109,7 +109,7 @@ hover.
     - `ThemeEngine.Theme` "equin"
     - `ThemeEngine.SubTheme` "equin document"
     - `ThemeEngine.SubTheme` "equin page heading"
-  - Uses: 30 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 32 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `primitives/pane` ×7
     - `primitives/css/spacing` ×3
     - `apps/deploy/analytics/collect` ×2
@@ -123,6 +123,8 @@ hover.
     - `primitives/css/fill.Fill`
     - `primitives/css/inline.Inline`
     - `primitives/css/theme-boundary.Theme`
+    - `primitives/dom/auto-scroll.findScrollParent`
+    - `primitives/dom/scroll-reveal.revealElement`
     - `primitives/icon-button.IconButton`
     - `primitives/lazy-component.lazyComponent`
     - `primitives/overlay/surface-overlay.SurfaceOverlay`
@@ -141,6 +143,7 @@ hover.
     - `WebsiteHero`
     - `WebsiteNavLink`
     - `websitePagePart`
+    - `WebsiteScrollCue`
     - `WebsiteSoon`
 - Server:
   - Contributes: `apps.website.crawlable.page` "/about"

@@ -13096,6 +13096,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `apps/website/shell.WebsiteHeader`
                   - `apps/website/shell.WebsiteNavLink`
                   - `apps/website/shell.websitePagePart`
+                  - `apps/website/shell.WebsiteScrollCue`
                   - `primitives/dom/auto-scroll.findScrollParent`
                   - `primitives/dom/auto-scroll.keepInPlace`
                   - `primitives/dom/auto-scroll.scrollChildIntoView`
@@ -13314,6 +13315,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `apps/website/shell.WebsiteHero`
                   - `apps/website/shell.WebsiteNavLink`
                   - `apps/website/shell.websitePagePart`
+                  - `apps/website/shell.WebsiteScrollCue`
                   - `primitives/dom/auto-scroll.findScrollParent`
                   - `primitives/dom/element-size.useResizeObserver`
                   - `primitives/dom/in-view.createInViewWatcher`
@@ -13464,7 +13466,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ThemeEngine.Theme` "equin"
               - `ThemeEngine.SubTheme` "equin document"
               - `ThemeEngine.SubTheme` "equin page heading"
-            - Uses: 30 symbols — full list in [`plugins/apps/plugins/website/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/website/plugins/shell/REFERENCE.md)
+            - Uses: 32 symbols — full list in [`plugins/apps/plugins/website/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/website/plugins/shell/REFERENCE.md)
               - `primitives/pane` ×7
               - `primitives/css/spacing` ×3
               - `apps/deploy/analytics/collect` ×2
@@ -13478,6 +13480,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/fill.Fill`
               - `primitives/css/inline.Inline`
               - `primitives/css/theme-boundary.Theme`
+              - `primitives/dom/auto-scroll.findScrollParent`
+              - `primitives/dom/scroll-reveal.revealElement`
               - `primitives/icon-button.IconButton`
               - `primitives/lazy-component.lazyComponent`
               - `primitives/overlay/surface-overlay.SurfaceOverlay`
@@ -13496,6 +13500,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `WebsiteHero`
               - `WebsiteNavLink`
               - `websitePagePart`
+              - `WebsiteScrollCue`
               - `WebsiteSoon`
           - Server:
             - Contributes: `apps.website.crawlable.page` "/about"
@@ -52257,9 +52262,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Uses tokens:
               - `ui/tokens/density --space-xs`
               - `ui/tokens/shape --spacing`
-            - Imported by: 22 plugins — full list in [`plugins/primitives/plugins/dom/plugins/auto-scroll/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/auto-scroll/REFERENCE.md)
+            - Imported by: 23 plugins — full list in [`plugins/primitives/plugins/dom/plugins/auto-scroll/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/auto-scroll/REFERENCE.md)
+              - `apps` ×8
               - `primitives` ×8
-              - `apps` ×7
               - `conversations` ×4
               - `apps-core/tab-surface`
               - `layouts/miller`
@@ -52498,8 +52503,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `revealElement`
               - `useRevealOnActive`
           - Cross-plugin:
-            - Imported by: 53 plugins — full list in [`plugins/primitives/plugins/dom/plugins/scroll-reveal/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/scroll-reveal/REFERENCE.md)
-              - `apps` ×20
+            - Imported by: 54 plugins — full list in [`plugins/primitives/plugins/dom/plugins/scroll-reveal/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/scroll-reveal/REFERENCE.md)
+              - `apps` ×21
               - `primitives` ×16
               - `page` ×6
               - `conversations` ×4

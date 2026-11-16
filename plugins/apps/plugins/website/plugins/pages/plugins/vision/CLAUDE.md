@@ -12,9 +12,9 @@ options <id>`) before porting a change; only those picks are implemented.
 - The heading (`WebsiteHero`, "A vision for applications") fills the first
   screen of the pane and fades / lifts away over the first 60% of a scroll
   (`--h`); the ladder is pulled up under it, so the zoom starts from it. A V
-  at the foot of that screen (`.vision-zoom-cue`) arrives once the heading is
-  read, bobs, reads the first chapter when clicked, and leaves at the first
-  scroll (`data-gone`, set by the scroll skeleton).
+  at the foot of that screen (the site's `WebsiteScrollCue`, placed by
+  `.vision-zoom-cue`) arrives just after first paint, bobs, reads the first
+  chapter when clicked, and leaves at the first scroll.
 - A pinned stage (one screen of the pane's viewport) draws the zoom; six
   chapter cards scroll over it (`internal/ladder.ts`, the prototype's copy
   verbatim — a chapter with no `before` shows only its present). Scroll
@@ -126,6 +126,7 @@ renders below the zoom.
     - `apps/website/shell.WebsiteHero`
     - `apps/website/shell.WebsiteNavLink`
     - `apps/website/shell.websitePagePart`
+    - `apps/website/shell.WebsiteScrollCue`
     - `primitives/dom/auto-scroll.findScrollParent`
     - `primitives/dom/element-size.useResizeObserver`
     - `primitives/dom/in-view.createInViewWatcher`

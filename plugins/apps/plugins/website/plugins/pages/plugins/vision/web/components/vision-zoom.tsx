@@ -2,6 +2,7 @@ import { memo, useId, useLayoutEffect, useRef } from "react";
 import { observeSectionReach } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/web";
 import { findScrollParent } from "@plugins/primitives/plugins/dom/plugins/auto-scroll/web";
 import { useResizeObserver } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
+import { WebsiteScrollCue } from "@plugins/apps/plugins/website/plugins/shell/web";
 import { ANIMATION_HOST } from "@plugins/reports/plugins/render-loop/core";
 import { LADDER } from "../internal/ladder";
 import {
@@ -63,28 +64,14 @@ export function VisionZoom() {
     <div ref={rootRef} className="vision-zoom">
       <div className="vision-zoom-hero">
         <VisionOpening />
-        {/* the scroll cue: a V inviting the first scroll, gone once it comes (`ladder-scroll.ts` owns it) */}
-        <button
-          type="button"
+        {/* the scroll cue: a V inviting the first scroll, gone once it comes */}
+        <WebsiteScrollCue
           className="vision-zoom-cue"
-          aria-label="Scroll to the first chapter"
-        >
-          <svg
-            width="28"
-            height="16"
-            viewBox="0 0 28 16"
-            fill="none"
-            aria-hidden="true"
-          >
-            <path
-              d="M3 3l11 10L25 3"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </button>
+          label="Scroll to the first chapter"
+          target={(cue) =>
+            cue.closest(".vision-zoom")?.querySelector(".vs-card") ?? null
+          }
+        />
       </div>
       <LadderMarkup />
     </div>

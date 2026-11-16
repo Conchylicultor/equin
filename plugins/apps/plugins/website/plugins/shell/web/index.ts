@@ -21,6 +21,7 @@ export { WebsiteArrow } from "./components/website-arrow";
 export { WebsiteBand } from "./components/website-band";
 export { WebsiteHero } from "./components/website-hero";
 export { WebsiteSoon } from "./components/website-soon";
+export { WebsiteScrollCue } from "./components/website-scroll-cue";
 export { WebsiteFooterLink } from "./components/website-footer-link";
 export type { WebsiteBandRhythm } from "./components/website-band";
 export { WebsiteChrome } from "./components/website-chrome";

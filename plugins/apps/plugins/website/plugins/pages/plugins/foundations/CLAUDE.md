@@ -12,6 +12,8 @@ Re-check the picks (the prototype's options pill) before porting a change.
   while its neighbours and the berg glide to where they land (FLIP). The apps
   (sea level) start as pills — the sky is sized for them — and every piece
   below the waterline starts open, its drawing mounted on boot.
+- Under the title, the site's scroll cue (`WebsiteScrollCue`, a V placed by
+  `.iceberg-dive`): a click descends to the first layer under the surface.
 - A depth gauge (lines of code passed below the surface), a Components /
   Harness filter under the title, and Expand all (the pill, or `E`).
 - Harness pieces are plain chips like the rest, told apart by the wrench in
@@ -95,6 +97,7 @@ variables.
     - `apps/website/shell.WebsiteHeader`
     - `apps/website/shell.WebsiteNavLink`
     - `apps/website/shell.websitePagePart`
+    - `apps/website/shell.WebsiteScrollCue`
     - `primitives/dom/auto-scroll.findScrollParent`
     - `primitives/dom/auto-scroll.keepInPlace`
     - `primitives/dom/auto-scroll.scrollChildIntoView`

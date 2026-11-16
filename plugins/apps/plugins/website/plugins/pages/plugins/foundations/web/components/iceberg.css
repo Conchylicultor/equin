@@ -125,13 +125,12 @@
   font-size: 17px;
   color: var(--berg-ink-2);
 }
+/* the scroll cue (the site's `WebsiteScrollCue`) under the title, in the sky's ink: the berg's tip rises to just under it */
 .iceberg-dive {
-  margin-top: calc(clamp(10px, calc(3 * var(--svh)), 36px) * var(--fit));
-  font: 500 11px var(--font-mono), monospace;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: var(--berg-ink-2);
-  opacity: 0.8;
+  --website-scroll-cue-ink: var(--berg-ink-2);
+  --website-scroll-cue-hover: var(--berg-ink);
+  --website-scroll-cue-glow: var(--berg-blue-2);
+  margin: calc(clamp(2px, calc(1 * var(--svh)), 16px) * var(--fit)) auto 0;
 }
 
 /* ---------- the Components / Harness key under the title: each filters to its half ---------- */

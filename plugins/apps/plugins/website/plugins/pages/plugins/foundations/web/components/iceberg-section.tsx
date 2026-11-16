@@ -11,6 +11,7 @@ import { findScrollParent } from "@plugins/primitives/plugins/dom/plugins/auto-s
 import { useResizeObserver } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
 import { useSurfaceShortcuts } from "@plugins/primitives/plugins/shortcuts/web";
 import { track } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/web";
+import { WebsiteScrollCue } from "@plugins/apps/plugins/website/plugins/shell/web";
 import { CARDS } from "../internal/cards";
 import { LAYERS, type IcebergPiece } from "../internal/iceberg/data";
 import { openWidth, PIECE_FONT } from "../internal/iceberg/geometry";
@@ -141,7 +142,16 @@ const IcebergMarkup = memo(function IcebergMarkup({
               Harness
             </button>
           </div>
-          <div className="iceberg-dive">Descend ↓</div>
+          <WebsiteScrollCue
+            className="iceberg-dive"
+            label="Descend to the first layer under the surface"
+            align="start"
+            target={(cue) =>
+              cue
+                .closest(".iceberg-scene")
+                ?.querySelector('.iceberg-layer[data-i="1"]') ?? null
+            }
+          />
         </header>
         {LAYERS.map((L, i) => (
           <section
