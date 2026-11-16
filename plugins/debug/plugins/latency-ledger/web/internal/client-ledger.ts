@@ -1,4 +1,5 @@
 import {
+  EndpointAgentWriteRefusedError,
   EndpointError,
   fetchEndpointOver,
 } from "@plugins/infra/plugins/endpoints/web";
@@ -129,7 +130,7 @@ function clientField(): { client?: LedgerClient } {
     : { client: { tabId, automated: AUTOMATED_BROWSER } };
 }
 
-async function flush(): Promise<void> {
+export async function flush(): Promise<void> {
   if (minutes.size === 0 && interactions.length === 0) return;
   const batchMinutes: ClientMinute[] = [...minutes.values()].map((e) => ({
     metric: e.metric,
@@ -156,6 +157,18 @@ async function flush(): Promise<void> {
       },
     );
   } catch (err) {
+    // The server refused the batch itself (a 4xx: a field it will not accept):
+    // re-sending it would be refused forever, taking every later sample of
+    // this tab down with it. Drop it and fail loudly — the rejection reaches
+    // Reports as a crash, never only a 400 in the network log. (An agent
+    // session's refusal on main is not a bug: kept, like a server down.)
+    if (
+      err instanceof EndpointError &&
+      !(err instanceof EndpointAgentWriteRefusedError) &&
+      err.status >= 400 &&
+      err.status < 500
+    )
+      throw err;
     // The server is down or restarting — the expected failure, and exactly when
     // these samples matter. Keep them for the next flush. Anything else is a bug.
     if (!(err instanceof EndpointError) && !(err instanceof TypeError))

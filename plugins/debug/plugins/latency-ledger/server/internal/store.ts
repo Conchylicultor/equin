@@ -125,6 +125,7 @@ export async function insertInteractions(
       occurredAt: new Date(r.occurredAt),
       kind: r.kind,
       route: r.route,
+      placeKey: r.placeKey ?? null,
       durationMs: r.durationMs,
       hidden: r.hidden,
       censored: r.censored,

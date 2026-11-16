@@ -1006,6 +1006,7 @@ with an empty route.
     - `parseUrl`
     - `peekBasePath`
     - `peekRoute`
+    - `peekRoutePattern`
     - `reorderRoute`
     - `resolveFrom`
     - `resolveRow`
@@ -1114,6 +1115,7 @@ with an empty route.
     - `normalizeRoutePath`
     - `onlySurfaceViews`
     - `parseSegmentParts`
+    - `positionalOf`
     - `readEmbedTail`
     - `readIndexKeyedParams`
     - `readKeyedParams`

@@ -305,8 +305,11 @@ export function parseSegmentParts(segment: string): SegmentPart[] {
 // a written value: a raw `;` in a part is always the keyed suffix.
 // ---------------------------------------------------------------------------
 
-/** The segment without its `;name` keyed suffix. */
-function positionalOf(segment: string): string {
+/**
+ * The segment without its `;name` keyed suffix — its positional pattern
+ * (`site/:deploymentId/:tab?`), what a route pattern is spelled from.
+ */
+export function positionalOf(segment: string): string {
   const i = segment.indexOf(";");
   return i < 0 ? segment : segment.slice(0, i);
 }

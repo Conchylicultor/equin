@@ -86,7 +86,10 @@ export const _latencyLedgerInteraction = pgTable(
     id: uuid("id").primaryKey().defaultRandom(),
     occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull(),
     kind: parsedText("kind", z.enum(["page-load", "navigate"])).notNull(),
+    /** The route pattern (older rows: the raw path, which was its own place). */
     route: text("route").notNull(),
+    /** Hash of the exact path within the pattern; null on a row that predates it. */
+    placeKey: text("place_key"),
     durationMs: doublePrecision("duration_ms").notNull(),
     hidden: boolean("hidden").notNull(),
     censored: boolean("censored").notNull(),

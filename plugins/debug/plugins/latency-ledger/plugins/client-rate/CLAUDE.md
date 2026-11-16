@@ -15,9 +15,12 @@ every op's usual range. Counted per tab, it stands out.
   storage cannot hold an id (`NO_TAB_ID`, shared by every such tab) is sent as
   no client — unknown, never pooled.
 - **The unit is a client-route-hour**: one tab's loads (or navigations) of ONE
-  route in one UTC clock hour. A loop repeats where it goes (a reload, a
-  redirect ping-pong); browsing goes somewhere new — an agent exploring 30
-  different routes in an hour is not a loop.
+  place in one UTC clock hour — an exact page (`place_key`, a hash of its
+  path), named by its route pattern (`route`; an older row's raw path there
+  is its own place). A loop repeats where
+  it goes (a reload, a redirect ping-pong); browsing goes somewhere new — an
+  agent opening 30 different tasks in an hour (one pattern, 30 places) is not
+  a loop.
 - **Usual** = the 99th percentile of every client-route-hour over the 7 UTC
   days before today (today excluded: a loop that started today is never its
   own baseline). Page loads and navigations each have their own. Read once per

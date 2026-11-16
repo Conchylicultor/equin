@@ -24,6 +24,7 @@ import {
   MissingRouteParamError,
   normalizeRoutePath,
   parseSegmentParts,
+  positionalOf,
   readEmbedTail,
   readIndexKeyedParams,
   readKeyedParams,
@@ -2794,6 +2795,35 @@ function normalizeAppPath(path: string): string {
  */
 export function currentRoutePath(): string {
   return splitRoutePrefix(readLocationPath()).path;
+}
+
+/**
+ * The focused tab's route as a PATTERN: its app's base path, then each open
+ * pane's declared positional segment — `/deploy/site/:deploymentId/:tab?`,
+ * never the ids, keyed `;` params or view filters the address bar carries
+ * (a DataView filter rides the URL as a base64 blob of any length). What
+ * per-screen telemetry groups by: the same screen is the same pattern
+ * whatever record it shows, and a pattern is as short as the code that
+ * declares it. Sampled now, like {@link peekRoute}.
+ */
+export function peekRoutePattern(): string {
+  return routePatternOf(peekBasePath(), peekRoute());
+}
+
+/** {@link peekRoutePattern} of a given base path and route. */
+export function routePatternOf(
+  basePath: string,
+  route: readonly Pick<PaneSlot, "paneId">[],
+): string {
+  const parts = route.flatMap((slot) => {
+    const pane = registry.get(slot.paneId);
+    if (!pane) throw new Error(`Unknown pane: ${slot.paneId}`);
+    return positionalOf(pane.segment).split("/").filter(Boolean);
+  });
+  const base = normalizeAppPath(basePath);
+  // The landing pane (an empty route) is the app's root: `/deploy`, not `/deploy/`.
+  if (parts.length === 0) return base || "/";
+  return joinBasePath(base, joinUrlParts(parts));
 }
 
 /**

@@ -28,7 +28,9 @@ const ClientHourRowSchema = z.object({
 });
 
 /**
- * Every (client, kind, route, UTC clock hour) with at least one interaction in
+ * Every (client, kind, place, UTC clock hour) — a place being one exact page
+ * (`place_key`; a row that predates it stored the raw path as its route, its
+ * own place), named by its route pattern — with at least one interaction in
  * `[from, to)`, with its count. A row with no client (from a bundle that
  * predates the field) belongs to no client and is not counted.
  */
@@ -40,7 +42,9 @@ export async function readClientHours(
     label: "latency-ledger:client-hours",
     row: ClientHourRowSchema,
     query: sql`
-      SELECT client_id, kind, route,
+      SELECT client_id, kind,
+             -- One place has one pattern (the path determines it).
+             min(route) AS route,
              -- UTC, not the session's zone: the caller's hours are UTC.
              date_trunc('hour', occurred_at, 'UTC') AS hour_start,
              count(*)::int8 AS n,
@@ -48,7 +52,7 @@ export async function readClientHours(
       FROM latency_ledger_interaction
       WHERE occurred_at >= ${from} AND occurred_at < ${to}
         AND client_id IS NOT NULL
-      GROUP BY 1, 2, 3, 4`,
+      GROUP BY client_id, kind, coalesce(place_key, route), hour_start`,
   });
   return rows.map((r) => ({
     clientId: r.client_id,

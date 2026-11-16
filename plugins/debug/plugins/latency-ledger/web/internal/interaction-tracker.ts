@@ -2,7 +2,11 @@ import {
   pendingMountSnapshot,
   subscribePendingMounts,
 } from "@plugins/network/plugins/live/plugins/live-state/web";
-import { currentRoutePath } from "@plugins/primitives/plugins/pane/web";
+import {
+  currentRoutePath,
+  peekRoutePattern,
+} from "@plugins/primitives/plugins/pane/web";
+import { hashHex } from "@plugins/packages/plugins/string-hash/core";
 import { clientLog } from "@plugins/primitives/plugins/log-channels/web";
 import type { Interaction } from "../../core";
 
@@ -54,7 +58,11 @@ function finish(a: Active, endMs: number, censored: boolean): void {
   report?.({
     kind: a.kind,
     occurredAt: Date.now(),
-    route: currentRoutePath(),
+    // The pattern, never the address bar: latency aggregates per screen, and
+    // a URL carrying a DataView filter can be any length (the log line above
+    // keeps the full path for whoever reads this tab's log).
+    route: peekRoutePattern(),
+    placeKey: hashHex(currentRoutePath()),
     durationMs: Math.max(0, endMs - a.startMs),
     hidden: a.hidden,
     censored,

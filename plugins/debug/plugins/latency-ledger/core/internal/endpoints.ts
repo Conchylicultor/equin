@@ -28,7 +28,19 @@ export const InteractionSchema = z.object({
   kind: z.enum(["page-load", "navigate"]),
   /** Epoch ms at which it ended. */
   occurredAt: z.number().int().nonnegative(),
+  /**
+   * The route PATTERN (`/deploy/site/:deploymentId/:tab?`, pane `peekRoutePattern`):
+   * what latency aggregates by, and short by construction — never the address
+   * bar, which a DataView filter can make any length. The bound stays as a guard.
+   */
   route: z.string().max(500),
+  /**
+   * The exact place within that pattern (which record, which view), as a hash
+   * of the address bar's path: tells "the same page again" from "another
+   * record of the same screen" (client-rate's loop judge) without carrying
+   * the path. Absent from a bundle that predates it.
+   */
+  placeKey: z.string().max(32).optional(),
   durationMs: z.number().nonnegative(),
   /** The tab was hidden at some point: timers were throttled, the number means little. */
   hidden: z.boolean(),

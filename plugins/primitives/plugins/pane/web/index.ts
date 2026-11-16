@@ -26,6 +26,7 @@ export {
   routeHomeApp,
   stripBasePath,
   currentRoutePath,
+  peekRoutePattern,
   currentRoutePrefix,
   useRoute,
   useRouteState,

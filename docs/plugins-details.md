@@ -26039,6 +26039,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Web:
         - Contributes: `Core.Root` → `LatencyCollector`
         - Uses:
+          - `infra/endpoints.EndpointAgentWriteRefusedError`
           - `infra/endpoints.EndpointError`
           - `infra/endpoints.fetchEndpointOver`
           - `network/live/live-state.pendingMountSnapshot`
@@ -26046,6 +26047,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `primitives/log-channels.clientLog`
           - `primitives/networking/page-transport.pageTransport`
           - `primitives/pane.currentRoutePath`
+          - `primitives/pane.peekRoutePattern`
           - `primitives/perfs/page-pauses.pausesDuring`
           - `primitives/scope/automation.AUTOMATED_BROWSER`
           - `primitives/scope/tab-id.getTabId`
@@ -43309,15 +43311,15 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `withForegroundPriority`
     - **`string-hash`** — Portable string hashes in plain JS (no node:crypto, no Bun.hash), so every host — the Bun server, central and a browser page — computes the same value: hash53 (cyrb53, a 53-bit number, optionally seeded), hashHex (two seeded cyrb53s, ~106 bits as hex), hash64 (a 64-bit bigint), fnv1a32 (32-bit FNV-1a, for seeding), sha256Hex (a synchronous SHA-256, identical to node:crypto's hex digest), createSha256 (the same SHA-256, incremental over strings and bytes) and sha1Hex (SHA-1 for values already stored as one).
       - Cross-plugin:
-        - Imported by: 51 plugins — full list in [`plugins/packages/plugins/string-hash/REFERENCE.md`](../plugins/packages/plugins/string-hash/REFERENCE.md)
+        - Imported by: 52 plugins — full list in [`plugins/packages/plugins/string-hash/REFERENCE.md`](../plugins/packages/plugins/string-hash/REFERENCE.md)
           - `apps` ×17
           - `database` ×6
           - `network` ×5
           - `framework` ×4
+          - `debug` ×3
           - `reports` ×3
           - `ui` ×3
           - `companions` ×2
-          - `debug` ×2
           - `infra` ×2
           - `page` ×2
           - `plugin-meta` ×2
@@ -55088,6 +55090,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `parseUrl`
           - `peekBasePath`
           - `peekRoute`
+          - `peekRoutePattern`
           - `reorderRoute`
           - `resolveFrom`
           - `resolveRow`
@@ -55196,6 +55199,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `normalizeRoutePath`
           - `onlySurfaceViews`
           - `parseSegmentParts`
+          - `positionalOf`
           - `readEmbedTail`
           - `readIndexKeyedParams`
           - `readKeyedParams`

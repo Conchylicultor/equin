@@ -41,6 +41,13 @@ first value. An interaction ends when the count is zero and stays zero for a sho
 quiet window (the next screen's components mount a little after the click). The
 duration recorded is up to the last list's data, not to the end of the quiet window.
 
+An interaction is filed under its **route pattern** (pane `peekRoutePattern`:
+`/deploy/site/:deploymentId/:tab?`), never the address bar — whose ids, keyed
+params and DataView filters can be any length. The exact page rides beside it
+as `placeKey` (a hash of the path) for the loop judge (`plugins/client-rate`);
+older rows hold the raw path in `route`. A batch the server refuses (4xx) is
+dropped and thrown (a crash report), never re-queued: it would be refused forever.
+
 ## Honesty rules
 
 - **A hidden tab's sample is kept out of the distribution** (counted as
@@ -125,6 +132,7 @@ state rather than the previous window's numbers.
 - Web:
   - Contributes: `Core.Root` → `LatencyCollector`
   - Uses:
+    - `infra/endpoints.EndpointAgentWriteRefusedError`
     - `infra/endpoints.EndpointError`
     - `infra/endpoints.fetchEndpointOver`
     - `network/live/live-state.pendingMountSnapshot`
@@ -132,6 +140,7 @@ state rather than the previous window's numbers.
     - `primitives/log-channels.clientLog`
     - `primitives/networking/page-transport.pageTransport`
     - `primitives/pane.currentRoutePath`
+    - `primitives/pane.peekRoutePattern`
     - `primitives/perfs/page-pauses.pausesDuring`
     - `primitives/scope/automation.AUTOMATED_BROWSER`
     - `primitives/scope/tab-id.getTabId`

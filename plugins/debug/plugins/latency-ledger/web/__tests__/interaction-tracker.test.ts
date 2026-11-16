@@ -24,7 +24,8 @@ vi.mock(
 );
 vi.mock("@plugins/primitives/plugins/pane/web", async (importOriginal) => ({
   ...(await importOriginal<object>()),
-  currentRoutePath: () => "/demo",
+  currentRoutePath: () => "/demo/site/x;view.list=all~AAAA",
+  peekRoutePattern: () => "/demo/site/:id",
 }));
 vi.mock(
   "@plugins/primitives/plugins/log-channels/web",
@@ -50,7 +51,8 @@ describe("cutActiveInteraction", () => {
     expect(seen).toHaveLength(1);
     expect(seen[0]).toMatchObject({
       kind: "page-load",
-      route: "/demo",
+      route: "/demo/site/:id",
+      placeKey: expect.stringMatching(/^[0-9a-f]{28}$/),
       censored: true,
     });
     // Once recorded, a second cut records nothing more.
