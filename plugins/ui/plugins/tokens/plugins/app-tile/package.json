@@ -1,6 +1,0 @@
-{
-  "name": "@equin/plugin-ui-tokens-app-tile",
-  "private": true,
-  "version": "0.0.1",
-  "description": "App-tile token group: how intense the app tiles' colours are (app-tile-intensity, a share of each tile colour's chroma) — calm on equin's own launchers by default, turned up by a theme that wants them vivid (the website)."
-}

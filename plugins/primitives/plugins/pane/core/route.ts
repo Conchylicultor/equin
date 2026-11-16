@@ -5,7 +5,7 @@
 // segment param substitution and `:param` name inference.
 // ---------------------------------------------------------------------------
 
-import type { AppTileColor } from "@plugins/apps-core/plugins/app-icon/plugins/tile-colors/core";
+import type { AvatarColor } from "@plugins/primitives/plugins/avatar/core";
 import type { SymbolRef } from "@plugins/ui/plugins/icons/core";
 
 // ---------------------------------------------------------------------------
@@ -116,11 +116,10 @@ export interface AppRef {
    */
   readonly icon: SymbolRef;
   /**
-   * The app's tile colour — what every surface paints its icon on (the
-   * launchers, the desktop, the website, the icon PNGs). Declare one, distinct
-   * from every other app's; omitted, a surface picks one from the app id.
+   * The app's declared tile colour. Omitted, every surface derives one from the
+   * app id, so only an app whose colour is part of its identity declares it.
    */
-  readonly iconColor?: AppTileColor;
+  readonly iconColor?: AvatarColor;
   /**
    * How the app picks light or dark by default (see {@link AppColorMode}).
    * Omitted, it follows the global setting — so only an app whose scheme is
@@ -193,7 +192,7 @@ export function defineApp(def: {
   basePath: string;
   formerBasePaths?: readonly string[];
   icon: SymbolRef;
-  iconColor?: AppTileColor;
+  iconColor?: AvatarColor;
   colorMode?: AppColorMode;
   listed?: false;
   audience?: "developer";

@@ -12553,6 +12553,28 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `plugin-meta/plugin-view`
     - **`website`** — Website — the public-facing site of equin: the homepage's claim, a picture of it and the three layers of the project, a gallery of its apps, placeholder pages for the vision, the foundations and the story, and how to get in touch.
       - Plugins:
+        - **`app-tiles`** — The website's app tile: <WebsiteAppTile symbol color />, an app's glyph on its vivid website colour as a diagonal gradient on a bounded squircle.
+          - Web:
+            - Uses:
+              - `primitives/css/center.Center`
+              - `primitives/css/ui-kit.cn`
+              - `ui/icons.Icon`
+            - Exports (values): `WebsiteAppTile`
+          - Cross-plugin:
+            - Uses tokens: `ui/tokens/categorical --categorical-foreground`
+            - Imported by:
+              - `apps/website/landing/layers`
+              - `apps/website/pages/apps`
+          - Core:
+            - Exports (types):
+              - `OklchColor`
+              - `WebsiteTileColor`
+            - Exports (values):
+              - `oklchCss`
+              - `TILE_DEEP_DROP`
+              - `TILE_GRADIENT_ANGLE`
+              - `WEBSITE_TILE_COLORS`
+              - `websiteTileStops`
         - **`crawlable`** — The website's pages on the server: the WebsitePages.Page collection every page plugin contributes its defineWebsitePage declaration to, and the public /robots.txt (allow all, pointing at the sitemap) and /sitemap.xml (one URL per page) built from it per request, origin from the request's X-Forwarded-Host (else Host) and X-Forwarded-Proto; both 404 in a composition with no pages.
           - Server:
             - Uses: `infra/endpoints.rawEndpointHandler`
@@ -12786,13 +12808,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - **`layers`** — Landing layers band: 'What is equin?' as three stacked, clickable layers — the technical foundations, the applications built on them (a shelf of apps to try live and every other app's tile), and the vision of one OS-like surface — each opening its own page.
               - Web:
                 - Contributes: `Website.Section` "Layers" → `LayersSection`
-                - Uses: 23 symbols — full list in [`plugins/apps/plugins/website/plugins/landing/plugins/layers/REFERENCE.md`](../plugins/apps/plugins/website/plugins/landing/plugins/layers/REFERENCE.md)
-                  - `apps/website/pages/apps` ×5
+                - Uses: 22 symbols — full list in [`plugins/apps/plugins/website/plugins/landing/plugins/layers/REFERENCE.md`](../plugins/apps/plugins/website/plugins/landing/plugins/layers/REFERENCE.md)
+                  - `apps/website/pages/apps` ×4
                   - `apps/website/shell` ×2
                   - `primitives/pane` ×2
-                  - `apps-core/app-icon.AppIconTile`
                   - `apps-core/tabs.useAppLinkProps`
                   - `apps/deploy/analytics/collect.track`
+                  - `apps/website/app-tiles.WebsiteAppTile`
                   - `apps/website/pages/foundations.foundationsPane`
                   - `apps/website/pages/vision.visionPane`
                   - `primitives/css/card.Card`
@@ -12959,9 +12981,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/css/ui-kit` ×4
                   - `primitives/pane` ×4
                   - `primitives/dom/scroll-reveal` ×2
-                  - `apps-core/app-icon.AppIconTile`
                   - `apps-core/tabs.useAppLinkProps`
                   - `apps/deploy/analytics/collect.track`
+                  - `apps/website/app-tiles.WebsiteAppTile`
                   - `apps/website/pages/download.downloadPane`
                   - `apps/website/pages/foundations.foundationsPane`
                   - `apps/website/pages/vision.visionPane`
@@ -12986,7 +13008,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Exports (values):
                   - `APPS`
                   - `appsPane`
-                  - `catalogAppIcon`
                   - `CATEGORIES`
                   - `tryLivePath`
               - Server:
@@ -13640,12 +13661,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`app-icon`** — Canonical, serializable app-icon descriptor (a Material Symbols glyph now, image variant later), drawn by the icons primitive.
       - Web:
         - Uses:
-          - `primitives/avatar.useAvatarPresentation`
-          - `primitives/css/center.Center`
-          - `primitives/css/rigid.rigidClass`
+          - `primitives/avatar.Avatar`
+          - `primitives/avatar.AvatarPresentationProvider`
           - `primitives/css/ui-kit.cn`
-          - `primitives/css/ui-kit.ControlSize`
-          - `primitives/css/ui-kit.useControlSize`
           - `ui/icons.Icon`
         - Exports (values):
           - `AppIconAvatar`
@@ -13654,59 +13672,30 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `DEFAULT_APP_ICON`
       - Core:
         - Uses:
-          - `apps-core/app-icon/tile-colors.appTileColor`
-          - `apps-core/app-icon/tile-colors.appTileStops`
-          - `apps-core/app-icon/tile-colors.OklchColor`
+          - `primitives/avatar.AVATAR_COLOR_NAMES`
+          - `primitives/avatar.avatarColorPick`
           - `primitives/css/color-picker.Color`
         - Exports (types):
           - `AppIcon`
           - `AppIconGlyph`
           - `AppIconSvgOptions`
         - Exports (values):
+          - `APP_TILE_PALETTE`
           - `appIcon`
           - `appIconToSvg`
           - `appTileFill`
-          - `appTileGradient`
       - Cross-plugin:
-        - Uses tokens:
-          - `ui/tokens/app-tile --app-tile-intensity`
-          - `ui/tokens/categorical --categorical-foreground`
-          - `ui/tokens/density --avatar-lg`
-          - `ui/tokens/density --avatar-md`
-          - `ui/tokens/density --avatar-sm`
-          - `ui/tokens/density --avatar-xs`
         - Imported by:
           - `apps-core`
           - `apps-core/app-launcher`
           - `apps-core/app-manifest`
           - `apps-core/app-rail`
           - `apps/desktop/shell`
+          - `apps/home/shell`
           - `apps/isle/world-view`
-          - `apps/website/landing/layers`
-          - `apps/website/pages/apps`
+          - `companions/panel`
           - `config_v2/settings`
           - `framework/cli/release`
-      - Plugins:
-        - **`tile-colors`** — The app-tile colours as data: the closed set of colours an app's tile can wear (AppTileColor), each a bright base and the deep end of its gradient, the pick for an app that declares none, and the gradient's stops. A leaf, so defineApp (primitives/pane) can type an app's iconColor without a cycle through apps-core.
-          - Cross-plugin:
-            - Imported by:
-              - `apps-core/app-icon`
-              - `ui/tokens/app-tile`
-          - Core:
-            - Exports (types):
-              - `AppTileColor`
-              - `AppTileIntensity`
-              - `OklchColor`
-            - Exports (values):
-              - `APP_TILE_COLOR_NAMES`
-              - `APP_TILE_COLORS`
-              - `APP_TILE_INTENSITIES`
-              - `appTileColor`
-              - `appTileStops`
-              - `DEFAULT_APP_TILE_INTENSITY`
-              - `oklchCss`
-              - `TILE_DEEP_DROP`
-              - `TILE_GRADIENT_ANGLE`
     - **`app-launcher`** — The app brand every app shell draws (AppShell.Brand): the launcher — the current app's own mark — click for the composition's home app (the app gallery on main), hover or ArrowDown for a grid of every other installed app (switching exactly as the rail does) — plus, as the sidebar header, the current app's name linking to its own home. Where no app switcher frames the surface — solo (fullscreen), or an AppEmbed, which draws no rail or tab bar — a surface that draws no brand gets the launcher floating at the top-left of its box, revealed as the pointer nears that corner. On a phone neither the top-left launcher nor the floating one is drawn: the phone action button's Apps sheet (PhoneActions.Action 'apps') is the app grid there.
       - Web:
         - Slots: `AppLauncherSlots.ReturnTip`
@@ -48900,12 +48889,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `Center`
           - Cross-plugin:
             - Imported by: 146 plugins — full list in [`plugins/primitives/plugins/css/plugins/center/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/center/REFERENCE.md)
-              - `apps` ×46
+              - `apps` ×47
               - `primitives` ×29
               - `page` ×18
               - `conversations` ×12
-              - `apps-core` ×6
               - `debug` ×6
+              - `apps-core` ×5
               - `ui` ×5
               - `plugin-meta` ×3
               - `tasks` ×3
@@ -49646,7 +49635,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Rigid`
               - `rigidClass`
           - Cross-plugin:
-            - Imported by: 148 plugins — full list in [`plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md)
+            - Imported by: 147 plugins — full list in [`plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/rigid/REFERENCE.md)
               - `apps` ×35
               - `conversations` ×29
               - `primitives` ×20
@@ -49657,13 +49646,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `plugin-meta` ×4
               - `review` ×4
               - `build` ×3
-              - `apps-core` ×2
               - `backup` ×2
               - `companions` ×2
               - `config_v2` ×2
               - `infra` ×2
               - `shell` ×2
               - `active-data/show-me`
+              - `apps-core/phone-actions`
               - `auth`
               - `code-explorer/commit-detail`
               - `hints/ask`
@@ -50431,9 +50420,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/chart` ×5
               - `ui/tokens/font-family` ×4
               - `ui/tokens/scrollbar --scrollbar-color`
-            - Imported by: 473 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Imported by: 474 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `primitives` ×113
-              - `apps` ×109
+              - `apps` ×110
               - `conversations` ×55
               - `page` ×27
               - `debug` ×25
@@ -63544,8 +63533,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useWantedSprites`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
-        - Imported by: 600 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
-          - `apps` ×156
+        - Imported by: 601 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+          - `apps` ×157
           - `conversations` ×123
           - `primitives` ×54
           - `page` ×52
@@ -64325,8 +64314,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ThemeEngine.SubTheme`
           - `ThemeEngine.FixedTheme`
           - `ThemeEngine.ThemeSource`
-        - Slot contributors: 56 contributors — full list in [`plugins/ui/plugins/theme-engine/REFERENCE.md`](../plugins/ui/plugins/theme-engine/REFERENCE.md)
-          - `ThemeEngine.TokenGroup` ×21
+        - Slot contributors: 55 contributors — full list in [`plugins/ui/plugins/theme-engine/REFERENCE.md`](../plugins/ui/plugins/theme-engine/REFERENCE.md)
+          - `ThemeEngine.TokenGroup` ×20
           - `ThemeEngine.Theme` ×15
           - `ThemeEngine.SubTheme` ×8
           - `ThemeEngine.VariantGroup` ×6
@@ -64487,8 +64476,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/shape` ×4
           - `ui/tokens/type-scale` ×4
           - `ui/tokens/data-view` ×2
-        - Imported by: 77 plugins — full list in [`plugins/ui/plugins/theme-engine/REFERENCE.md`](../plugins/ui/plugins/theme-engine/REFERENCE.md)
-          - `ui` ×52
+        - Imported by: 76 plugins — full list in [`plugins/ui/plugins/theme-engine/REFERENCE.md`](../plugins/ui/plugins/theme-engine/REFERENCE.md)
+          - `ui` ×51
           - `apps` ×19
           - `apps-core/chrome-theme`
           - `companions/panel`
@@ -64759,19 +64748,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/theme-engine/theme-customizer.ThemeCustomizer`
     - **`tokens`** — Umbrella for CSS token group plugins: each declares its variables and schema defaults and registers them, its customizer section a `customizer` child of its own so painting never depends on the editor loading.
       - Plugins:
-        - **`app-tile`** — App-tile token group: how intense the app tiles' colours are (app-tile-intensity) — calm on equin's launchers by default, vivid where a theme turns it up (the website).
-          - Web:
-            - Contributes: `ThemeEngine.TokenGroup` "App tiles"
-            - Uses: `ui/theme-engine.ThemeEngine`
-          - Core:
-            - Uses:
-              - `apps-core/app-icon/tile-colors.APP_TILE_INTENSITIES`
-              - `apps-core/app-icon/tile-colors.DEFAULT_APP_TILE_INTENSITY`
-              - `ui/theme-engine.defineTokenGroup`
-            - Exports (values): `appTileGroup`
-          - Cross-plugin:
-            - Tokens used by: `apps-core/app-icon`
-            - Imported by: `apps/website/shell`
         - **`categorical`** — Categorical color palette token group: the categorical-1…10 series colors. Its customizer section is the `customizer` child.
           - Web:
             - Contributes: `ThemeEngine.TokenGroup` "Categorical"
@@ -64784,16 +64760,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Tokens used by: 33 plugins — full list in [`plugins/ui/plugins/tokens/plugins/categorical/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/categorical/REFERENCE.md)
               - `debug` ×10
               - `conversations` ×7
-              - `apps` ×5
+              - `apps` ×6
               - `plugin-meta` ×4
               - `primitives` ×2
-              - `apps-core/app-icon`
               - `build/build-profiling`
               - `page/place/map-layer`
               - `review/plugin-changes/api-changes`
               - `tasks/task-graph`
             - Imported by:
+              - `apps/home/shell`
               - `apps/places/shell`
+              - `companions/panel`
               - `ui/tokens/categorical/customizer`
           - Plugins:
             - **`customizer`** — Customizer section for the categorical palette token group (categorical-1…10).
@@ -65041,7 +65018,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `densityGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --radius`
-            - Tokens used by: 359 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
+            - Tokens used by: 358 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
               - `primitives` ×73
               - `apps` ×72
               - `conversations` ×51
@@ -65051,9 +65028,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `plugin-meta` ×13
               - `tasks` ×10
               - `fields` ×8
-              - `apps-core` ×5
               - `reorder` ×5
               - `review` ×5
+              - `apps-core` ×4
               - `infra` ×4
               - `shell` ×4
               - `build` ×3

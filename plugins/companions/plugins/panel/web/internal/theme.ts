@@ -1,5 +1,7 @@
+import { APP_TILE_PALETTE } from "@plugins/apps-core/plugins/app-icon/core";
 import { both, defineTheme } from "@plugins/ui/plugins/theme-engine/core";
 import { colorPaletteGroup } from "@plugins/ui/plugins/tokens/plugins/color-palette/core";
+import { categoricalGroup } from "@plugins/ui/plugins/tokens/plugins/categorical/core";
 import { typeScaleGroup } from "@plugins/ui/plugins/tokens/plugins/type-scale/core";
 import { densityGroup } from "@plugins/ui/plugins/tokens/plugins/density/core";
 import { fontFamilyGroup } from "@plugins/ui/plugins/tokens/plugins/font-family/core";
@@ -167,6 +169,8 @@ const shape = shapeGroup.fragment(
   both({ radius: "8px", radiusPanelRow: "7px" }),
 );
 
+const categorical = categoricalGroup.fragment(both(APP_TILE_PALETTE));
+
 /**
  * What a companion's window is made of, which decides how its panel paints:
  *
@@ -210,6 +214,7 @@ function companionThemeFor(
         },
         dark: { popoverFill: "var(--popover)", popoverBackdrop: "none" },
       }),
+      categorical,
     ],
   });
 }

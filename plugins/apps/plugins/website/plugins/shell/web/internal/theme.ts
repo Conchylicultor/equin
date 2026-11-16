@@ -9,7 +9,6 @@ import { typeScaleGroup } from "@plugins/ui/plugins/tokens/plugins/type-scale/co
 import { densityGroup } from "@plugins/ui/plugins/tokens/plugins/density/core";
 import { shapeGroup } from "@plugins/ui/plugins/tokens/plugins/shape/core";
 import { fontFamilyGroup } from "@plugins/ui/plugins/tokens/plugins/font-family/core";
-import { appTileGroup } from "@plugins/ui/plugins/tokens/plugins/app-tile/core";
 
 /** Azure accent and cyan counter-accent, shared by both modes. */
 const AZURE = "oklch(0.5461 0.2152 262.88)";
@@ -107,13 +106,6 @@ const chart = chartGroup.fragment({
     "chart-5": "oklch(0.42 0.16 268)",
   },
 });
-
-/**
- * The app tiles at full colour: the site shows the apps off, so their tiles
- * (the gallery, the homepage's shelf) wear their colours vivid, where equin's
- * own launchers keep them calm (the `app-tile` group's default).
- */
-const appTile = appTileGroup.fragment(both({ appTileIntensity: "1" }));
 
 /**
  * The site's typeface: Inter, the bundled variable face, with the default serif
@@ -263,7 +255,7 @@ const shape = shapeGroup.fragment(
 export const equinTheme = defineTheme({
   id: "equin",
   label: "equin",
-  fragments: [colorPalette, chart, fontFamily, appTile],
+  fragments: [colorPalette, chart, fontFamily],
 });
 
 /**

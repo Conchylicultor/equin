@@ -1,7 +1,10 @@
 import type { CSSProperties } from "react";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
-import { appTileFill } from "@plugins/apps-core/plugins/app-icon/core";
-import { AppIconTile } from "@plugins/apps-core/plugins/app-icon/web";
+import {
+  oklchCss,
+  WEBSITE_TILE_COLORS,
+} from "@plugins/apps/plugins/website/plugins/app-tiles/core";
+import { WebsiteAppTile } from "@plugins/apps/plugins/website/plugins/app-tiles/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
@@ -16,11 +19,7 @@ import { symbol } from "@plugins/ui/plugins/icons/core";
 import { track } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/web";
 import { downloadPane } from "@plugins/apps/plugins/website/plugins/pages/plugins/download/web";
 import { tryLivePath } from "../internal/try-live";
-import {
-  catalogAppIcon,
-  type AppCategory,
-  type CatalogApp,
-} from "../internal/catalog";
+import type { AppCategory, CatalogApp } from "../internal/catalog";
 
 /**
  * One app of the gallery: its picture, its tile and name, what it does, and
@@ -55,10 +54,9 @@ export function AppCard({
   const openPane = useOpenPane();
   const appLinkProps = useAppLinkProps();
   const livePath = tryLivePath(app);
-  const icon = catalogAppIcon(app);
   // The app's tile colour, read by the drawn picture's accent (see the CSS).
   const tint = {
-    "--app-tint": appTileFill(icon, app.id),
+    "--app-tint": oklchCss(WEBSITE_TILE_COLORS[app.color]),
   } as CSSProperties;
   return (
     <Card
@@ -85,9 +83,9 @@ export function AppCard({
         <Fill>
           <Stack gap="md">
             <Stack direction="row" gap="md" align="start">
-              <AppIconTile
-                icon={icon}
-                appId={app.id}
+              <WebsiteAppTile
+                symbol={app.icon}
+                color={app.color}
                 className={cn("website-app-tile size-13", rigidClass())}
               />
               <Stack gap="none">

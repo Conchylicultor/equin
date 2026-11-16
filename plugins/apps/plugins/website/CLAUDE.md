@@ -88,6 +88,7 @@ everywhere a reader can see it; the old name survives only as an internal identi
 
 - Description: Website — the public-facing site of equin: the homepage's claim, a picture of it and the three layers of the project, a gallery of its apps, placeholder pages for the vision, the foundations and the story, and how to get in touch.
 - Sub-plugins:
+  - **`app-tiles`** — The website's app tile: <WebsiteAppTile symbol color />, an app's glyph on its vivid website colour as a diagonal gradient on a bounded squircle.
   - **`crawlable`** — The website's pages on the server: the WebsitePages.Page collection every page plugin contributes its defineWebsitePage declaration to, and the public /robots.txt (allow all, pointing at the…
     - Plugins:
       - **`snapshot-render`** (excluded) — The crawlable snapshot's render half, build-only: renderSiteSnapshot renders each declared website page once by its path through the real app (static-render over the composition's plugins and a boot…

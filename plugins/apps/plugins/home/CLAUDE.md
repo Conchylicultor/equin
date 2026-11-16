@@ -32,8 +32,8 @@ Entry-point app: a phone-home-screen launcher of every installed app, shown at
   `prototypes/CLAUDE.md`, the `create-app` skill — tell the agent how, so the
   prompt does not restate them. Design: proto-1792811301-yksedx.
 - **Theme** (`shell/web/internal/theme.ts`) — Home contributes its own theme via
-  `ThemeEngine.Theme`: a black page whose only colour is the app tiles (each
-  app's own, `AppIconTile`). `config/ui/theme-engine/@app/home/theme.jsonc` selects it for the
+  `ThemeEngine.Theme`: a black page and an ocean categorical palette for the
+  tiles. `config/ui/theme-engine/@app/home/theme.jsonc` selects it for the
   `app:home` scope only, so avatars and chart colours in other apps are
   unchanged.
 - **Layout** (`shell`) — a centred "Apps" title and subtitle above the grid

@@ -8,7 +8,6 @@
 // The `token-group-vars-in-sync` check fails on drift.
 
 export const TOKEN_GROUP_VARS: Record<string, readonly string[]> = {
-  "app-tile": ["--app-tile-intensity"],
   "categorical": ["--categorical-1", "--categorical-10", "--categorical-2", "--categorical-3", "--categorical-4", "--categorical-5", "--categorical-6", "--categorical-7", "--categorical-8", "--categorical-9", "--categorical-foreground"],
   "chart": ["--chart-1", "--chart-2", "--chart-3", "--chart-4", "--chart-5"],
   "chord-palette": ["--chord-1", "--chord-2", "--chord-3", "--chord-4", "--chord-5", "--chord-6", "--chord-7", "--chord-outside"],

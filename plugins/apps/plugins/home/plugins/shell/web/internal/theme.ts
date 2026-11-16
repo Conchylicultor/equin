@@ -1,5 +1,7 @@
+import { APP_TILE_PALETTE } from "@plugins/apps-core/plugins/app-icon/core";
 import { defineTheme } from "@plugins/ui/plugins/theme-engine/core";
 import { colorPaletteGroup } from "@plugins/ui/plugins/tokens/plugins/color-palette/core";
+import { categoricalGroup } from "@plugins/ui/plugins/tokens/plugins/categorical/core";
 import { typeScaleGroup } from "@plugins/ui/plugins/tokens/plugins/type-scale/core";
 
 const WHITE = "oklch(1 0 0)";
@@ -15,7 +17,7 @@ const LIGHT_TEXT = "oklch(0.16 0 0)";
  * `primary` is the TEXT colour, not an accent: the launcher's one filled
  * control — the capsule's round New app button — reads as a text-coloured
  * circle with a page-coloured glyph, and the app tiles carry all the colour on
- * the page, each in its own app's colour (`AppIconTile`).
+ * the page, in the shared app-tile palette (`APP_TILE_PALETTE`).
  */
 const colorPalette = colorPaletteGroup.fragment({
   dark: {
@@ -78,6 +80,11 @@ const colorPalette = colorPaletteGroup.fragment({
   },
 });
 
+const categorical = categoricalGroup.fragment({
+  light: APP_TILE_PALETTE,
+  dark: APP_TILE_PALETTE,
+});
+
 /**
  * Home's headlines ("Apps", "New app") are the display role at the mock's
  * 34px semibold — a launcher's title, not a marketing hero's 48px bold.
@@ -105,5 +112,5 @@ const typeScale = typeScaleGroup.fragment({
 export const homeTheme = defineTheme({
   id: "home",
   label: "Home",
-  fragments: [colorPalette, typeScale],
+  fragments: [colorPalette, categorical, typeScale],
 });

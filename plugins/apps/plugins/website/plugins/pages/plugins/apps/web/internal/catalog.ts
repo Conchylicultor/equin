@@ -1,8 +1,4 @@
-import type { AppTileColor } from "@plugins/apps-core/plugins/app-icon/plugins/tile-colors/core";
-import {
-  appIcon,
-  type AppIcon,
-} from "@plugins/apps-core/plugins/app-icon/core";
+import type { WebsiteTileColor } from "@plugins/apps/plugins/website/plugins/app-tiles/core";
 import { symbol, type SymbolRef } from "@plugins/ui/plugins/icons/core";
 // The apps' screenshots, taken by `plugins/apps/plugins/website/e2e/app-screenshots.ts`
 // and cut down to card size (640px JPEG): a web artifact inlines every image it
@@ -42,11 +38,10 @@ export interface CatalogApp {
    */
   appId: string | null;
   /**
-   * The app's tile colour — a copy of its definition's `iconColor`, so the
-   * site draws the tile the app draws (`AppIconTile`); `catalog.test.ts`
-   * holds the two equal.
+   * The app's tile colour on the site (`WebsiteAppTile`) — the site's own,
+   * vivid palette, one per app (`catalog.test.ts`).
    */
-  color: AppTileColor;
+  color: WebsiteTileColor;
   description: string;
   /** One short line, for where the description does not fit (the homepage's app shelf). */
   summary?: string;
@@ -256,8 +251,3 @@ export const APPS: readonly CatalogApp[] = [
     description: "Every account in one place: a personal finance aggregator.",
   },
 ];
-
-/** The app's icon as its tile draws it: its glyph on its colour (`AppIconTile`). */
-export function catalogAppIcon(app: CatalogApp): AppIcon {
-  return appIcon(app.icon, { color: app.color });
-}

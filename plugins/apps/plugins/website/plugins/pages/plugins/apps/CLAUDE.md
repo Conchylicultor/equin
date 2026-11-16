@@ -25,17 +25,18 @@ definitions' (`desktop-windows`, `sailing`).
 
 The list is plain data (`web/internal/catalog.ts`): the site is a written page,
 so adding an app to equin does not add it here — edit the catalog. The homepage's
-layers band reads the same catalog (exported: `APPS`, `catalogAppIcon`,
-`tryLivePath`), so the two cannot disagree.
+layers band reads the same catalog (exported: `APPS`, `tryLivePath`), so the
+two cannot disagree.
 
-**An app's tile is the app's own.** Both pages draw `AppIconTile`
-(`apps-core/app-icon`) — the tile every launcher in equin draws — from the
-entry's `color`, a copy of the app definition's `iconColor` (`appId` names the
-definition; `null` for an app not built yet). The copy is text because
+**An app's tile is the site's.** Both pages draw `WebsiteAppTile`
+(`website/app-tiles`) from the entry's `color` — the site's own vivid palette,
+deliberately louder than the calm tiles equin's launchers draw
+(`apps-core/app-icon`). The glyph is a copy of the app definition's (`appId`
+names the definition; `null` for an app not built yet), as text because
 importing an app's shell would pull it into the website's composition;
-`web/internal/catalog.test.ts` imports the definitions and holds the copies
+`web/internal/catalog.test.ts` imports the definitions and holds the glyphs
 equal, and every colour distinct. The card's drawn-picture accent (`--app-tint`)
-is the same colour (`appTileFill`).
+is the tile's base colour.
 
 **A card opens the app live.** An app the homepage's live demo carries has an
 entry in `core/demo-places.ts` (`APP_DEMO_PLACES`, keyed by the catalog's id:
@@ -83,9 +84,9 @@ shell never names this page. The homepage's applications layer opens it.
     - `primitives/css/ui-kit` ×4
     - `primitives/pane` ×4
     - `primitives/dom/scroll-reveal` ×2
-    - `apps-core/app-icon.AppIconTile`
     - `apps-core/tabs.useAppLinkProps`
     - `apps/deploy/analytics/collect.track`
+    - `apps/website/app-tiles.WebsiteAppTile`
     - `apps/website/pages/download.downloadPane`
     - `apps/website/pages/foundations.foundationsPane`
     - `apps/website/pages/vision.visionPane`
@@ -110,7 +111,6 @@ shell never names this page. The homepage's applications layer opens it.
   - Exports (values):
     - `APPS`
     - `appsPane`
-    - `catalogAppIcon`
     - `CATEGORIES`
     - `tryLivePath`
 - Server:

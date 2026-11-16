@@ -154,10 +154,6 @@
       "name": "@equin/plugin-apps-core-app-icon",
       "version": "0.0.1",
     },
-    "plugins/apps-core/plugins/app-icon/plugins/tile-colors": {
-      "name": "@equin/plugin-apps-core-app-icon-tile-colors",
-      "version": "0.0.1",
-    },
     "plugins/apps-core/plugins/app-launcher": {
       "name": "@equin/plugin-apps-core-app-launcher",
       "version": "0.0.1",
@@ -1538,6 +1534,10 @@
     },
     "plugins/apps/plugins/website": {
       "name": "@equin/plugin-apps-website",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/website/plugins/app-tiles": {
+      "name": "@equin/plugin-apps-website-app-tiles",
       "version": "0.0.1",
     },
     "plugins/apps/plugins/website/plugins/crawlable": {
@@ -7748,10 +7748,6 @@
       "name": "@equin/plugin-ui-tokens",
       "version": "0.0.1",
     },
-    "plugins/ui/plugins/tokens/plugins/app-tile": {
-      "name": "@equin/plugin-ui-tokens-app-tile",
-      "version": "0.0.1",
-    },
     "plugins/ui/plugins/tokens/plugins/categorical": {
       "name": "@equin/plugin-ui-tokens-categorical",
       "version": "0.0.1",
@@ -8226,8 +8222,6 @@
     "@equin/plugin-apps-core-app-embed": ["@equin/plugin-apps-core-app-embed@workspace:plugins/apps-core/plugins/app-embed"],
 
     "@equin/plugin-apps-core-app-icon": ["@equin/plugin-apps-core-app-icon@workspace:plugins/apps-core/plugins/app-icon"],
-
-    "@equin/plugin-apps-core-app-icon-tile-colors": ["@equin/plugin-apps-core-app-icon-tile-colors@workspace:plugins/apps-core/plugins/app-icon/plugins/tile-colors"],
 
     "@equin/plugin-apps-core-app-launcher": ["@equin/plugin-apps-core-app-launcher@workspace:plugins/apps-core/plugins/app-launcher"],
 
@@ -8836,6 +8830,8 @@
     "@equin/plugin-apps-studio-shell": ["@equin/plugin-apps-studio-shell@workspace:plugins/apps/plugins/studio/plugins/shell"],
 
     "@equin/plugin-apps-website": ["@equin/plugin-apps-website@workspace:plugins/apps/plugins/website"],
+
+    "@equin/plugin-apps-website-app-tiles": ["@equin/plugin-apps-website-app-tiles@workspace:plugins/apps/plugins/website/plugins/app-tiles"],
 
     "@equin/plugin-apps-website-crawlable": ["@equin/plugin-apps-website-crawlable@workspace:plugins/apps/plugins/website/plugins/crawlable"],
 
@@ -11786,8 +11782,6 @@
     "@equin/plugin-ui-theme-toggle-customizer": ["@equin/plugin-ui-theme-toggle-customizer@workspace:plugins/ui/plugins/theme-toggle/plugins/customizer"],
 
     "@equin/plugin-ui-tokens": ["@equin/plugin-ui-tokens@workspace:plugins/ui/plugins/tokens"],
-
-    "@equin/plugin-ui-tokens-app-tile": ["@equin/plugin-ui-tokens-app-tile@workspace:plugins/ui/plugins/tokens/plugins/app-tile"],
 
     "@equin/plugin-ui-tokens-categorical": ["@equin/plugin-ui-tokens-categorical@workspace:plugins/ui/plugins/tokens/plugins/categorical"],
 

@@ -6,6 +6,5 @@ export const fileExplorerApp = defineApp({
   name: "Files",
   basePath: "/files",
   icon: symbol("folder"),
-  iconColor: "amber",
   category: "work",
 });

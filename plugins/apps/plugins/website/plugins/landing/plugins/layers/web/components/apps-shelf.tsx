@@ -1,6 +1,6 @@
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { useAppLinkProps } from "@plugins/apps-core/plugins/tabs/web";
-import { AppIconTile } from "@plugins/apps-core/plugins/app-icon/web";
+import { WebsiteAppTile } from "@plugins/apps/plugins/website/plugins/app-tiles/web";
 import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
 import { rigidClass } from "@plugins/primitives/plugins/css/plugins/rigid/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -10,7 +10,6 @@ import { track } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/co
 import {
   APPS,
   appsPane,
-  catalogAppIcon,
   tryLivePath,
   type CatalogApp,
 } from "@plugins/apps/plugins/website/plugins/pages/plugins/apps/web";
@@ -35,7 +34,7 @@ function catalogApp(id: string): CatalogApp {
  *
  * The apps are the gallery's catalog (`pages/apps`), so the homepage and the
  * gallery cannot list different apps; each tile is the gallery's own
- * (`AppIconTile`: its glyph on its colour, the tile the app itself draws).
+ * (`WebsiteAppTile`: its glyph on its colour).
  *
  * Every entry is a link of its own, above the layer's full-bleed link: a
  * picture and a tile open the app's card in the gallery (the picture's "Try
@@ -115,9 +114,9 @@ function FeaturedApp({ app }: { app: CatalogApp }) {
         </span>
         <span className="website-shelf-cap">
           <span className="website-shelf-head">
-            <AppIconTile
-              icon={catalogAppIcon(app)}
-              appId={app.id}
+            <WebsiteAppTile
+              symbol={app.icon}
+              color={app.color}
               className={cn("size-6", rigidClass())}
             />
             <Text as="span" variant="label" className="font-semibold">
@@ -146,9 +145,9 @@ function AppChip({ app }: { app: CatalogApp }) {
       title={app.description}
       {...openPane.link(appsPane, { app: app.id }, { mode: "root" })}
     >
-      <AppIconTile
-        icon={catalogAppIcon(app)}
-        appId={app.id}
+      <WebsiteAppTile
+        symbol={app.icon}
+        color={app.color}
         className={cn("website-shelf-chip-tile size-7", rigidClass())}
       />
       <Text as="span" variant="label" className="font-semibold">

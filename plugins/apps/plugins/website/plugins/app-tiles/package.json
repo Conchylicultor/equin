@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-apps-website-app-tiles",
+  "private": true,
+  "version": "0.0.1",
+  "description": "The website's app tiles: the vivid colours an app wears on equin.ai (WebsiteTileColor — 19 hues and slate, in OKLCH) and <WebsiteAppTile>, the app's glyph on its colour as a deep-to-base diagonal gradient on a bounded squircle. The site's own look; equin's launchers draw apps-core/app-icon's tile."
+}

@@ -12,6 +12,5 @@ export const websiteApp = defineApp({
   // shared URLs, search results) are answered with a 301 to the same page.
   formerBasePaths: ["/website"],
   icon: symbol("public"),
-  iconColor: "lime",
   audience: "developer",
 });

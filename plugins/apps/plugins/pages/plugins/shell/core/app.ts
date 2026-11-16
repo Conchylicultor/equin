@@ -6,6 +6,5 @@ export const pagesApp = defineApp({
   name: "Pages",
   basePath: "/pages",
   icon: symbol("description"),
-  iconColor: "blue",
   category: "work",
 });

@@ -17,9 +17,9 @@ import { sonataApp } from "@plugins/apps/plugins/sonata/plugins/shell/core";
 import { studioApp } from "@plugins/apps/plugins/studio/plugins/shell/core";
 import { APPS } from "./catalog";
 
-// The catalog copies each app's tile colour as text (importing an app's shell
-// would pull it into the website's composition — a test may). The site draws
-// an app the way the app draws itself only while the copies agree.
+// The catalog copies each app's glyph as text (importing an app's shell would
+// pull it into the website's composition — a test may). The site draws an
+// app's icon the way the app draws it only while the copies agree.
 const DEFINITIONS: readonly AppRef[] = [
   agentManagerApp,
   browserApp,
@@ -39,18 +39,13 @@ const DEFINITIONS: readonly AppRef[] = [
 ];
 
 describe("the apps catalog", () => {
-  test("each app's colour and glyph are its definition's", () => {
+  test("each app's glyph is its definition's", () => {
     const byId = new Map(DEFINITIONS.map((app) => [app.id, app]));
     for (const app of APPS) {
       if (app.appId === null) continue;
       const def = byId.get(app.appId);
       expect(def, `no definition imported for "${app.appId}"`).toBeDefined();
-      const drawn: [string, string | undefined, string] = [
-        app.appId,
-        app.color,
-        app.icon.name,
-      ];
-      expect(drawn).toEqual([app.appId, def!.iconColor, def!.icon.name]);
+      expect([app.appId, app.icon.name]).toEqual([app.appId, def!.icon.name]);
     }
   });
 

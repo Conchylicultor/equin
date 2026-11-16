@@ -6,6 +6,5 @@ export const placesApp = defineApp({
   name: "Places",
   basePath: "/places",
   icon: symbol("location-on"),
-  iconColor: "green",
   category: "life",
 });

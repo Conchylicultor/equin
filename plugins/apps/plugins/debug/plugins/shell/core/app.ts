@@ -6,7 +6,6 @@ export const debugApp = defineApp({
   name: "Debug",
   basePath: "/debug",
   icon: symbol("bug-report"),
-  iconColor: "red",
   category: "system",
   audience: "developer",
 });

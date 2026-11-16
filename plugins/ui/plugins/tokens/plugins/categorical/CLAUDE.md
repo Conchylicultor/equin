@@ -16,16 +16,17 @@
   - Tokens used by: 33 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `debug` ×10
     - `conversations` ×7
-    - `apps` ×5
+    - `apps` ×6
     - `plugin-meta` ×4
     - `primitives` ×2
-    - `apps-core/app-icon`
     - `build/build-profiling`
     - `page/place/map-layer`
     - `review/plugin-changes/api-changes`
     - `tasks/task-graph`
   - Imported by:
+    - `apps/home/shell`
     - `apps/places/shell`
+    - `companions/panel`
     - `ui/tokens/categorical/customizer`
 - Sub-plugins:
   - **`customizer`** — Customizer section for the categorical palette token group (categorical-1…10).

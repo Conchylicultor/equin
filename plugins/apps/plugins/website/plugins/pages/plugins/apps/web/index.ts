@@ -10,7 +10,6 @@ export { appsPane } from "./panes";
 export {
   APPS,
   CATEGORIES,
-  catalogAppIcon,
   type AppCategory,
   type AppCategoryId,
   type CatalogApp,

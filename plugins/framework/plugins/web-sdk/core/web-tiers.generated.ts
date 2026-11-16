@@ -243,6 +243,7 @@ export const DEFERRED_PLUGIN_PATHS: ReadonlySet<string> = new Set([
   "apps/plugins/studio/plugins/explorer/plugins/excluded",
   "apps/plugins/studio/plugins/explorer/plugins/load-bearing",
   "apps/plugins/studio/plugins/isle-building",
+  "apps/plugins/website/plugins/app-tiles",
   "apps/plugins/website/plugins/demos/plugins/workspace",
   "apps/plugins/website/plugins/improve",
   "apps/plugins/website/plugins/landing/plugins/contact",
