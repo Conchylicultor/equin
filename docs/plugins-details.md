@@ -12718,17 +12718,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/text-editor.TextEditor`
               - `primitives/ui-context/element-picker.ElementPicker`
               - `ui/icons.Icon`
-          - Core:
-            - Uses: `primitives/ui-context.splitUiContext`
-            - Exports (types):
-              - `IssueDraft`
-              - `IssuePick`
-              - `ReadableIdea`
-            - Exports (values):
-              - `buildIssueUrl`
-              - `issueTitle`
-              - `MAX_ISSUE_URL_LENGTH`
-              - `readableIdea`
           - Cross-plugin:
             - Uses tokens:
               - `ui/tokens/color-palette --border`
@@ -32040,7 +32029,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `network/live/boot-snapshot`
     - **`product-name`** — The product's own name, as data: PRODUCT_NAME (`equin`, always lowercase — what every person and agent reads) and LEGACY_PRODUCT_NAMES (the names it went by before, never written again), enforced by the product-name:legacy check over every tracked file; and LEGACY_IDS, the identifiers built from the old name that are kept for good (stored state, cross-version contracts), the one place they are spelled — enforced by product-name:legacy-id (and its mirrors by product-name:legacy-ids-in-sync). A dependency-free leaf, so a browser bundle, a server or a script can import it.
       - Cross-plugin:
-        - Imported by: 66 plugins — full list in [`plugins/framework/plugins/product-name/REFERENCE.md`](../plugins/framework/plugins/product-name/REFERENCE.md)
+        - Imported by: 67 plugins — full list in [`plugins/framework/plugins/product-name/REFERENCE.md`](../plugins/framework/plugins/product-name/REFERENCE.md)
           - `infra` ×16
           - `framework` ×11
           - `apps` ×10
@@ -32059,6 +32048,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `stats/commits`
           - `tasks/tasks-core`
           - `upstream`
+          - `wish/github-issue`
       - Exemptions:
         - Exempts itself from:
           - `product-name:legacy` — `core/internal/product-name.ts` (sanctioned)
@@ -40231,6 +40221,22 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 
 - **`integrations`** — Umbrella for third-party service integrations that consume an auth connection (Gmail, …).
   - Plugins:
+    - **`github-issues`** — GitHub new-issue links: buildIssueUrl turns a written request (its <ui-context> picks made readable, each raw tag kept in a collapsed block), the page it is about and the host's own note lines into a prefilled issues/new link held under GitHub's length cap.
+      - Core:
+        - Uses: `primitives/ui-context.splitUiContext`
+        - Exports (types):
+          - `IssueDraft`
+          - `IssuePick`
+          - `ReadableIdea`
+        - Exports (values):
+          - `buildIssueUrl`
+          - `issueTitle`
+          - `MAX_ISSUE_URL_LENGTH`
+          - `readableIdea`
+      - Cross-plugin:
+        - Imported by:
+          - `apps/website/improve`
+          - `wish/github-issue`
     - **`gmail`** — Gmail access toggle, Google scope requirement, and the shared 'fix my Gmail connection' affordance (and the empty state around it) consumers render in place of routing the user to Settings. Surfaces the Gmail access toggle in Settings.
       - Web:
         - Contributes:
@@ -49126,7 +49132,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `Clip`
               - `clipClasses`
           - Cross-plugin:
-            - Imported by: 64 plugins — full list in [`plugins/primitives/plugins/css/plugins/clip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/clip/REFERENCE.md)
+            - Imported by: 65 plugins — full list in [`plugins/primitives/plugins/css/plugins/clip/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/clip/REFERENCE.md)
               - `apps` ×20
               - `primitives` ×11
               - `conversations` ×8
@@ -49143,6 +49149,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `integrations/google-maps`
               - `plugin-meta/plugin-view/file-tree`
               - `screenshot`
+              - `wish/github-issue`
         - **`cluster`** — Wrap-friendly chip group layout primitive: <Cluster> lays out a wrapping row of rigid identity chips that never individually shrink, delegating to Stack.
           - Web:
             - Uses:
@@ -50624,7 +50631,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/chart` ×5
               - `ui/tokens/font-family` ×4
               - `ui/tokens/scrollbar --scrollbar-color`
-            - Imported by: 474 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
+            - Imported by: 475 plugins — full list in [`plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/ui-kit/REFERENCE.md)
               - `primitives` ×113
               - `apps` ×110
               - `conversations` ×55
@@ -50650,6 +50657,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `hints` ×2
               - `layouts` ×2
               - `screenshot` ×2
+              - `wish` ×2
               - `audience/developer-mark`
               - `code-explorer/commit-detail`
               - `history/dialog`
@@ -50661,7 +50669,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `search/quick-find`
               - `stats/commits`
               - `tag-tree/picker`
-              - `wish`
           - Exemptions:
             - Exempts itself from:
               - `surface/no-adhoc-surface` — `web/components/ui` (sanctioned)
@@ -50757,7 +50764,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `conversations/conversation-view/pending-turn`
         - **`yield`** — Yielding-cell layout primitive: yieldClass(axis) is the flex child that falls below its own content width (min-w-0) but never takes slack. The half of <Fill> that gives, without the half that grows.
           - Cross-plugin:
-            - Imported by: 39 plugins — full list in [`plugins/primitives/plugins/css/plugins/yield/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/yield/REFERENCE.md)
+            - Imported by: 40 plugins — full list in [`plugins/primitives/plugins/css/plugins/yield/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/yield/REFERENCE.md)
               - `apps` ×11
               - `primitives` ×9
               - `conversations` ×8
@@ -50767,6 +50774,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/claude-cli`
               - `page/page-reference`
               - `search/quick-find`
+              - `wish/github-issue`
           - Web:
             - Exports (types): `YieldAxis`
             - Exports (values): `yieldClass`
@@ -54769,12 +54777,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ui/tokens/type-scale --font-size-2xs`
               - `ui/tokens/type-scale --font-weight-medium`
               - `ui/tokens/type-scale --line-height-2xs`
-            - Imported by: 26 plugins — full list in [`plugins/primitives/plugins/overlay/plugins/tooltip/REFERENCE.md`](../plugins/primitives/plugins/overlay/plugins/tooltip/REFERENCE.md)
+            - Imported by: 27 plugins — full list in [`plugins/primitives/plugins/overlay/plugins/tooltip/REFERENCE.md`](../plugins/primitives/plugins/overlay/plugins/tooltip/REFERENCE.md)
               - `primitives` ×11
               - `page` ×6
               - `apps` ×5
               - `tasks` ×3
               - `media/player`
+              - `wish/github-issue`
     - **`pane`** — Unified pane primitive: Pane.define and chrome components.
       - Web:
         - Slots: `Pane.Register`
@@ -56845,6 +56854,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `active-data/show-me`
           - `apps/website/improve`
           - `hints/ask`
+          - `integrations/github-issues`
           - `layouts/full-pane`
           - `layouts/miller`
           - `primitives/adaptive-bar`
@@ -63726,7 +63736,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `useWantedSprites`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
-        - Imported by: 603 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
+        - Imported by: 604 plugins — full list in [`plugins/ui/plugins/icons/REFERENCE.md`](../plugins/ui/plugins/icons/REFERENCE.md)
           - `apps` ×157
           - `conversations` ×123
           - `primitives` ×54
@@ -63749,13 +63759,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `audience` ×3
           - `hints` ×3
           - `reorder` ×3
+          - `wish` ×3
           - `backup` ×2
           - `code-explorer` ×2
           - `framework` ×2
           - `integrations` ×2
           - `map` ×2
           - `screenshot` ×2
-          - `wish` ×2
           - `fullscreen`
           - `layouts/miller`
           - `media/player`
@@ -65212,7 +65222,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (values): `densityGroup`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/shape --radius`
-            - Tokens used by: 358 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
+            - Tokens used by: 359 plugins — full list in [`plugins/ui/plugins/tokens/plugins/density/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/density/REFERENCE.md)
               - `primitives` ×73
               - `apps` ×72
               - `conversations` ×51
@@ -65245,6 +65255,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `reports/launch-fix`
               - `search/quick-find`
               - `tag-tree/picker`
+              - `wish/github-issue`
             - Imported by:
               - `apps-core/chrome-theme`
               - `apps/agent-manager/shell`
@@ -66189,14 +66200,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
   - Cross-plugin:
     - Imported by: `framework/cli/upstream`
 
-- **`wish`** — The Wish toolbar button: the entry point for anything the user wants done — a fix, a change, a new app. Files a task under "Wishes" with the current URL. Companion actions join it as segments of one split pill via WishSlots.Segment; WishSlots.HeaderAction adds actions to its popover header (Ask equin). WishField is the same wish as a companion’s section — the task composer with its own ↑, filing one task under Wishes about the page the DraftPage around it names, confirming inline (“Filed — an agent is on …”). On a phone the same field is the Wish sheet of the phone action button (PhoneActions.Action “wish”). Task category of the Wish toolbar button. Files tasks stamped "Wishes" via the shared task-draft-form primitive.
+- **`wish`** — The Wish toolbar button: the entry point for anything the user wants done — a fix, a change, a new app. Files a task under "Wishes" with the current URL. Companion actions join it as segments of one split pill via WishSlots.Segment; WishSlots.HeaderAction adds actions to its popover header (Ask equin), WishSlots.FooterAction to its footer beside Launch (File on GitHub). WishField is the same wish as a companion’s section — the task composer with its own ↑, filing one task under Wishes about the page the DraftPage around it names, confirming inline (“Filed — an agent is on …”). On a phone the same field is the Wish sheet of the phone action button (PhoneActions.Action “wish”). Task category of the Wish toolbar button. Files tasks stamped "Wishes" via the shared task-draft-form primitive.
   - Web:
     - Slots:
       - `WishSlots.Segment`
       - `WishSlots.HeaderAction`
+      - `WishSlots.FooterAction`
     - Slot contributors:
       - `WishSlots.Segment` ← `wish.element-picker`
       - `WishSlots.HeaderAction` ← `hints.ask`
+      - `WishSlots.FooterAction` ← `wish.github-issue`
     - Contributes:
       - `ActionBar.Item` → `WishButton`
       - `PhoneActions.Action` "Wish" → `WishSheet`
@@ -66215,6 +66228,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `shell/action-bar.ActionBar`
       - `ui/icons.Icon`
     - Exports (types):
+      - `WishFooterActionContribution`
+      - `WishFooterActionProps`
       - `WishHeaderActionContribution`
       - `WishHeaderActionProps`
       - `WishSegmentContribution`
@@ -66265,6 +66280,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `hints/ask`
       - `screenshot/draw-on-app`
       - `wish/element-picker`
+      - `wish/github-issue`
   - Plugins:
     - **`element-picker`** — The element picker wired into equin's Improve flow: a 'Pick UI element' segment of the Improve pill that opens the Improve popover with the picked element as a <ui-context/> chip, and an 'Attach UI element' button in the task-draft form. The picker, its overlay and the chip are primitives/ui-context/element-picker.
       - Web:
@@ -66282,5 +66298,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Core:
         - Uses: `framework/tooling/collected-dir.defineCollectedDir`
         - Exports (values): `viteCollectedDir`
+    - **`github-issue`** — File on GitHub: a button in the Wish popover's footer, beside Launch, that opens GitHub's new-issue form on the product's repository prefilled with the drafted wish and the page it is about, then clears the draft.
+      - Web:
+        - Contributes: `WishSlots.FooterAction` "github-issue" → `FileOnGithubButton`
+        - Uses:
+          - `primitives/css/clip.Clip`
+          - `primitives/css/ui-kit.Button`
+          - `primitives/css/yield.yieldClass`
+          - `primitives/overlay/tooltip.TooltipDoc`
+          - `ui/icons.Icon`
+          - `wish.WishSlots`
+      - Cross-plugin:
+        - Uses tokens: `ui/tokens/density --space-xs`
 
 <!-- AUTOGENERATED:END -->

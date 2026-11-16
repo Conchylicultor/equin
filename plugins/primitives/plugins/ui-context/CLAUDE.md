@@ -307,6 +307,7 @@ marker is *additive* alongside it; nothing here reads or writes it.
     - `active-data/show-me`
     - `apps/website/improve`
     - `hints/ask`
+    - `integrations/github-issues`
     - `layouts/full-pane`
     - `layouts/miller`
     - `primitives/adaptive-bar`

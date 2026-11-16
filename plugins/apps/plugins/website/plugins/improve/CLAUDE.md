@@ -50,26 +50,11 @@ replay (`replay-steps.css`). Under `prefers-reduced-motion` (read once, when the
 replay starts) every step renders done and no animation mounts. A `setTimeout`
 chain beside it would put the pacing in two places.
 
-**The issue reads as prose; the picks ride below it.** `readableIdea` (`core/`)
-turns each `<ui-context>` tag in the text into `` `<label>` [n] ``, and the title,
-the body and the replay's "Task filed" line are all built from that, never from a
-raw tag. It splits with `splitUiContext` because the website may not name the
-token's pattern (`no-token-identity-outside-owner`). Under the body's rule, each
-pick gets a `<details>` block holding its raw tag for an agent. The tag sits in a
-code fence, or GitHub strips it as HTML, and the blank lines around the fence are
-what make GitHub render it inside `<details>`.
-
-**`buildIssueUrl` keeps the link under 7,500 characters** (GitHub rejects longer
-ones). A tag runs to several hundred characters, so the tags go before any word
-the visitor wrote. When the whole issue is too long, it gives up, in order:
-
-1. the raw tags, last pick first (that pick keeps a plain `[n] <label>` line);
-2. the end of the visitor's text, which is then ended with "…";
-3. the trailing `[n]` lines, counted instead as "+N more".
-
-It never cuts the title, the page or the auto-deploy line, and throws only when
-the page URL alone is over the cap. `labels=idea` only applies for visitors with
-triage rights on the repository; everyone else files unlabelled.
+**The issue link is built by `integrations/github-issues`** (`buildIssueUrl`:
+picks made readable, raw tags in collapsed blocks, held under GitHub's length
+cap). This panel adds only its own note lines — the auto-deploy choice and
+"Filed from the Wish button on equin.ai" — and the `idea` label. The replay's
+"Task filed" line reads the same `issueTitle` / `readableIdea`, never a raw tag.
 
 **The draft lives in the header item, not the panel.** The popover unmounts the
 panel on close, so a visitor who clicks away mid-sentence gets their words back.
@@ -103,17 +88,6 @@ Verify with `e2e/improve-verify.ts` after `./equin build`.
     - `primitives/text-editor.TextEditor`
     - `primitives/ui-context/element-picker.ElementPicker`
     - `ui/icons.Icon`
-- Core:
-  - Uses: `primitives/ui-context.splitUiContext`
-  - Exports (types):
-    - `IssueDraft`
-    - `IssuePick`
-    - `ReadableIdea`
-  - Exports (values):
-    - `buildIssueUrl`
-    - `issueTitle`
-    - `MAX_ISSUE_URL_LENGTH`
-    - `readableIdea`
 - Cross-plugin:
   - Uses tokens:
     - `ui/tokens/color-palette --border`

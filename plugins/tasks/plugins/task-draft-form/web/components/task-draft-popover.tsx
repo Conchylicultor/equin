@@ -31,7 +31,7 @@ import {
   TaskDraftForm,
   makeCard,
   type CardDraft,
-  type TaskDraftHeaderDraft,
+  type TaskDraftActionDraft,
   type TaskDraftHintAnchors,
 } from "./task-draft-form";
 import { describeOutcome, submitChain } from "../internal/submit";
@@ -159,7 +159,13 @@ export interface TaskDraftPopoverProps {
    * what the user came for (Wish's Ask equin), handed the words drafted so far
    * so they can carry them over.
    */
-  headerActions?: (draft: TaskDraftHeaderDraft) => ReactNode;
+  headerActions?: (draft: TaskDraftActionDraft) => ReactNode;
+  /**
+   * Actions drawn in the footer, before Launch — another place to
+   * send the drafted request (Wish's File on GitHub). Handed the draft and the
+   * page it is about, and `discard` to clear and close once they have sent it.
+   */
+  footerActions?: (draft: TaskDraftActionDraft) => ReactNode;
   /** The head card's placeholder — what this surface asks the user for. */
   placeholder?: string;
   onSuccess?: (taskIds: string[]) => void;
@@ -194,6 +200,7 @@ function TaskDraftFormContent({
   filedFrom,
   heading,
   headerActions,
+  footerActions,
   placeholder,
   onSuccess,
   headInsertRef,
@@ -219,6 +226,7 @@ function TaskDraftFormContent({
   filedFrom: PluginId;
   heading: string | undefined;
   headerActions: TaskDraftPopoverProps["headerActions"];
+  footerActions: TaskDraftPopoverProps["footerActions"];
   placeholder: string | undefined;
   onSuccess: ((taskIds: string[]) => void) | undefined;
   headInsertRef: React.MutableRefObject<((snippet: string) => void) | null>;
@@ -352,6 +360,12 @@ function TaskDraftFormContent({
       showStandalone={relateTaskHasDeps}
       heading={heading}
       headerActions={headerActions}
+      footerActions={footerActions}
+      pageUrl={url}
+      onDiscard={() => {
+        resetForm();
+        setOpen(false);
+      }}
       placeholder={placeholder}
       headInsertRef={headInsertRef}
       hintAnchors={hintAnchors}
@@ -382,6 +396,7 @@ export function TaskDraftPopover({
   onOpenChange,
   heading,
   headerActions,
+  footerActions,
   placeholder,
   onSuccess,
   hintAnchors,
@@ -554,6 +569,7 @@ export function TaskDraftPopover({
             filedFrom={filedFrom}
             heading={heading}
             headerActions={headerActions}
+            footerActions={footerActions}
             placeholder={placeholder}
             onSuccess={onSuccess}
             headInsertRef={headInsertRef}

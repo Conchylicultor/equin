@@ -91,8 +91,12 @@ no connector, so the form header's × covers it: with 2+ tasks it removes task 1
 left it closes the popover. Every task therefore has exactly one ×, and its
 label says which action a click will take.
 
-The footer holds "+ Follow-up task" (appends a card) on the left, then Cancel and
-"Launch" / "Launch N tasks" with its ⌘↵ hint.
+The footer holds "+ Follow-up task" (appends a card) on the left, then the
+host's `footerActions`, then "Launch" / "Launch N tasks" with its ⌘↵ hint. There
+is no Cancel: the header's ×, Esc and a click outside already close it. Header and footer actions are both handed a `TaskDraftActionDraft`: the
+drafted text, the page URL the draft is about, and `discard` (clear the draft
+and close) for an action that sent the request elsewhere (Wish's File on
+GitHub).
 
 The composer alone is what the plugin exhibits (`exhibits/`, an `appExhibit`
 in the `plugin-meta/exhibits` catalog, id `task-draft/composer` — app, not

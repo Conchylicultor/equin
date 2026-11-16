@@ -13,7 +13,7 @@ import {
  * pill on, as when Improve is opened from a task.
  *
  * An exhibit, not a working copy: adding, reordering, linking and removing
- * tasks all work, but Create and Cancel do nothing — nothing is ever filed.
+ * tasks all work, but Launch does nothing — nothing is ever filed.
  * There is no real related task behind the Dependency pill, so its follow-up
  * "Insert before" group never appears here.
  */

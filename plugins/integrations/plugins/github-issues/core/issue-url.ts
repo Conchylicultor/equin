@@ -4,26 +4,32 @@ import { splitUiContext } from "@plugins/primitives/plugins/ui-context/core";
  * GitHub rejects a new-issue link much past 8,000 characters, and the text is
  * the only part of the link a visitor controls. So the whole URL is held under
  * this, with room to spare, by giving up the picks' raw tags and then the text
- * — never the title, the page or the auto-deploy line, which are what make the
- * issue actionable.
+ * — never the title, the page or the host's note lines, which are what make
+ * the issue actionable.
  */
 export const MAX_ISSUE_URL_LENGTH = 7_500;
 
 /** The longest title GitHub's list shows without clipping it itself. */
 const MAX_TITLE_LENGTH = 72;
 
-/** GitHub applies it only for a visitor with triage rights; others file unlabelled. */
-const LABEL = "idea";
-
 export interface IssueDraft {
   /** The repository's home URL — `https://github.com/<owner>/<repo>`. */
   repoUrl: string;
   /** What the visitor wrote, as typed — `<ui-context>` tags for their picks included. */
   text: string;
-  /** The page they were on when they wrote it. */
-  pageUrl: string;
-  /** Whether they asked for the change to ship without a review. */
-  autoDeploy: boolean;
+  /** The page the request is about, when it is about one. */
+  pageUrl?: string;
+  /**
+   * The host's own lines, closing the body after the page — what the filing
+   * surface adds about the request (a choice the user made, where it was filed
+   * from). Never cut.
+   */
+  notes: readonly string[];
+  /**
+   * Labels to apply. GitHub applies them only for a filer with triage rights
+   * on the repository; everyone else files unlabelled.
+   */
+  labels?: readonly string[];
 }
 
 /** One part of the page the visitor pointed at, as its tag sits in their text. */
@@ -183,7 +189,7 @@ function picksSection(picks: IssuePick[], shape: BodyShape): string {
 function issueBody(
   picks: IssuePick[],
   shape: BodyShape,
-  { pageUrl, autoDeploy }: IssueDraft,
+  { pageUrl, notes }: IssueDraft,
 ): string {
   const section = picksSection(picks, shape);
   return [
@@ -191,9 +197,8 @@ function issueBody(
     "",
     "---",
     ...(section === "" ? [] : [section, ""]),
-    `Page: ${pageUrl}`,
-    `Auto-deploy: ${autoDeploy ? "yes" : "no (review first)"}`,
-    "Filed from the Wish button on equin.ai",
+    ...(pageUrl === undefined ? [] : [`Page: ${pageUrl}`]),
+    ...notes,
   ].join("\n");
 }
 
@@ -206,8 +211,9 @@ function urlFor(
   const query = new URLSearchParams({
     title,
     body: issueBody(picks, shape, draft),
-    labels: LABEL,
   });
+  if (draft.labels && draft.labels.length > 0)
+    query.set("labels", draft.labels.join(","));
   return `${draft.repoUrl.replace(/\/+$/, "")}/issues/new?${query.toString()}`;
 }
 
@@ -233,7 +239,7 @@ function largestFitting(max: number, build: (n: number) => string): string {
  * A link to GitHub's new-issue form, prefilled with the visitor's idea: the
  * title from its first line, and a body holding the whole text made readable
  * ({@link readableIdea}), then a rule, a collapsed block per pick with its raw
- * tag, the page it was written on and the auto-deploy choice.
+ * tag, the page it is about and the host's note lines.
  *
  * The link is always under {@link MAX_ISSUE_URL_LENGTH}. A tag runs to several
  * hundred characters (more once encoded), so when the whole does not fit the
@@ -249,7 +255,7 @@ function largestFitting(max: number, build: (n: number) => string): string {
  * bisection rather than estimated.
  *
  * Throws if even that does not fit: that means the page URL alone is over the
- * cap, and a link GitHub would reject is not one to hand a visitor.
+ * cap (or the notes are), and a link GitHub would reject is not one to hand a visitor.
  */
 export function buildIssueUrl(draft: IssueDraft): string {
   const idea = readableIdea(draft.text);
@@ -274,6 +280,6 @@ export function buildIssueUrl(draft: IssueDraft): string {
   if (fits(listing(0))) return largestFitting(all, listing);
 
   throw new Error(
-    `buildIssueUrl: the issue link is over ${MAX_ISSUE_URL_LENGTH} characters with no text at all (page URL is ${draft.pageUrl.length} characters)`,
+    `buildIssueUrl: the issue link is over ${MAX_ISSUE_URL_LENGTH} characters with no text at all (page URL is ${draft.pageUrl?.length ?? 0} characters, notes ${draft.notes.join("\n").length})`,
   );
 }

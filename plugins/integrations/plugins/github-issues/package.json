@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-integrations-github-issues",
+  "description": "GitHub new-issue links: buildIssueUrl turns a written request (its <ui-context> picks made readable, each raw tag kept in a collapsed block), the page it is about and the host's own note lines into a prefilled issues/new link held under GitHub's length cap.",
+  "private": true,
+  "version": "0.0.1"
+}

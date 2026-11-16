@@ -30,6 +30,25 @@ export interface WishHeaderActionContribution {
   component: ComponentType<WishHeaderActionProps>;
 }
 
+export interface WishFooterActionProps {
+  /** The words drafted in the popover so far ("" when none). */
+  draft: string;
+  /** The URL of the page the wish is about; `null` when it is about no page. */
+  pageUrl: string | null;
+  /** Clear the draft and close the popover — the wish was sent another way. */
+  discard: () => void;
+}
+
+export interface WishFooterActionContribution {
+  id: string;
+  /**
+   * An action in the Wish popover's footer, before Launch —
+   * another place to send the drafted wish (File on GitHub). Renders one
+   * ghost `Button`.
+   */
+  component: ComponentType<WishFooterActionProps>;
+}
+
 /**
  * Improve's own extension point: segments joined to the Improve button as one
  * split pill (`[✦ Wish | ⌖]`). A plain slot rendered with `renderIsolated`
@@ -41,6 +60,9 @@ export const WishSlots = {
     docLabel: (p) => p.id,
   }),
   HeaderAction: defineSlot<WishHeaderActionContribution>({
+    docLabel: (p) => p.id,
+  }),
+  FooterAction: defineSlot<WishFooterActionContribution>({
     docLabel: (p) => p.id,
   }),
 };

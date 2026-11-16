@@ -5036,6 +5036,10 @@
       "name": "@equin/plugin-integrations",
       "version": "0.0.1",
     },
+    "plugins/integrations/plugins/github-issues": {
+      "name": "@equin/plugin-integrations-github-issues",
+      "version": "0.0.1",
+    },
     "plugins/integrations/plugins/gmail": {
       "name": "@equin/plugin-integrations-gmail",
       "version": "0.0.1",
@@ -7980,6 +7984,10 @@
       "name": "@equin/plugin-wish-element-picker",
       "version": "0.0.1",
     },
+    "plugins/wish/plugins/github-issue": {
+      "name": "@equin/plugin-wish-github-issue",
+      "version": "0.0.1",
+    },
   },
   "patchedDependencies": {
     "@parcel/watcher@2.6.0": "patches/@parcel%2Fwatcher@2.6.0.patch",
@@ -10539,6 +10547,8 @@
 
     "@equin/plugin-integrations": ["@equin/plugin-integrations@workspace:plugins/integrations"],
 
+    "@equin/plugin-integrations-github-issues": ["@equin/plugin-integrations-github-issues@workspace:plugins/integrations/plugins/github-issues"],
+
     "@equin/plugin-integrations-gmail": ["@equin/plugin-integrations-gmail@workspace:plugins/integrations/plugins/gmail"],
 
     "@equin/plugin-integrations-google-maps": ["@equin/plugin-integrations-google-maps@workspace:plugins/integrations/plugins/google-maps"],
@@ -11922,6 +11932,8 @@
     "@equin/plugin-wish": ["@equin/plugin-wish@workspace:plugins/wish"],
 
     "@equin/plugin-wish-element-picker": ["@equin/plugin-wish-element-picker@workspace:plugins/wish/plugins/element-picker"],
+
+    "@equin/plugin-wish-github-issue": ["@equin/plugin-wish-github-issue@workspace:plugins/wish/plugins/github-issue"],
 
     "@equin/web": ["@equin/web@workspace:plugins/framework/plugins/web-core"],
 

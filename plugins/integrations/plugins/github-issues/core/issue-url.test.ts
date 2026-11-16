@@ -11,6 +11,15 @@ import {
 } from "./issue-url";
 
 const REPO = "https://github.com/owner/repo";
+
+/** The website Wish's notes and label — a real host's, so the expected bodies read as filed. */
+const website = (autoDeploy: boolean) => ({
+  notes: [
+    `Auto-deploy: ${autoDeploy ? "yes" : "no (review first)"}`,
+    "Filed from the Wish button on equin.ai",
+  ],
+  labels: ["idea"],
+});
 const PAGE = "https://equin.ai/about/harness";
 
 const HEADLINE: UiContextMeta = {
@@ -109,7 +118,7 @@ describe("buildIssueUrl", () => {
       repoUrl: REPO,
       text: "Show a 20-second demo\nunder the headline",
       pageUrl: PAGE,
-      autoDeploy: false,
+      ...website(false),
     });
     const { path, title, body, labels } = parse(url);
     expect(path).toBe(`${REPO}/issues/new`);
@@ -133,7 +142,7 @@ describe("buildIssueUrl", () => {
         repoUrl: REPO,
         text: "x",
         pageUrl: PAGE,
-        autoDeploy: true,
+        ...website(true),
       }),
     );
     expect(body).toContain("\nAuto-deploy: yes\n");
@@ -144,7 +153,7 @@ describe("buildIssueUrl", () => {
       repoUrl: `${REPO}/`,
       text: "x",
       pageUrl: PAGE,
-      autoDeploy: false,
+      ...website(false),
     });
     expect(parse(url).path).toBe(`${REPO}/issues/new`);
   });
@@ -156,7 +165,7 @@ describe("buildIssueUrl", () => {
       repoUrl: REPO,
       text,
       pageUrl,
-      autoDeploy: false,
+      ...website(false),
     });
     // One query string, no fragment: every reserved character in the text and
     // the page URL is escaped, so nothing ends a parameter early.
@@ -177,7 +186,7 @@ describe("buildIssueUrl", () => {
       repoUrl: REPO,
       text,
       pageUrl: PAGE,
-      autoDeploy: true,
+      ...website(true),
     });
     expect(url.length).toBeLessThanOrEqual(MAX_ISSUE_URL_LENGTH);
     const { title, body } = parse(url);
@@ -199,7 +208,7 @@ describe("buildIssueUrl", () => {
       repoUrl: REPO,
       text,
       pageUrl: PAGE,
-      autoDeploy: false,
+      ...website(false),
     });
     expect(url.length).toBeLessThanOrEqual(MAX_ISSUE_URL_LENGTH);
     expect(parse(url).body).not.toContain("�");
@@ -211,7 +220,7 @@ describe("buildIssueUrl", () => {
         repoUrl: REPO,
         text: `${tag(BUTTON)} should be blue`,
         pageUrl: PAGE,
-        autoDeploy: false,
+        ...website(false),
       }),
     );
     expect(title).toBe("`button — Show me` [1] should be blue");
@@ -225,7 +234,7 @@ describe("buildIssueUrl", () => {
       repoUrl: REPO,
       text: `Make ${tag(HEADLINE)} bigger,\nand ${tag(BUTTON)} blue.`,
       pageUrl: PAGE,
-      autoDeploy: false,
+      ...website(false),
     });
     expect(parse(url).body).toBe(
       [
@@ -265,7 +274,7 @@ describe("buildIssueUrl", () => {
         repoUrl: REPO,
         text: picked,
         pageUrl: PAGE,
-        autoDeploy: false,
+        ...website(false),
       }),
     );
     expect(body).toContain(`\n\`\`\`\`html\n${picked}\n\`\`\`\`\n`);
@@ -277,7 +286,7 @@ describe("buildIssueUrl", () => {
         repoUrl: REPO,
         text: tag({ url: "u", element: "a — Q&A > FAQ" }),
         pageUrl: PAGE,
-        autoDeploy: false,
+        ...website(false),
       }),
     );
     expect(body).toContain("<summary>[1] a — Q&amp;A &gt; FAQ</summary>");
@@ -294,7 +303,7 @@ describe("buildIssueUrl", () => {
       repoUrl: REPO,
       text,
       pageUrl: PAGE,
-      autoDeploy: false,
+      ...website(false),
     });
     expect(url.length).toBeLessThanOrEqual(MAX_ISSUE_URL_LENGTH);
     const { body } = parse(url);
@@ -314,7 +323,7 @@ describe("buildIssueUrl", () => {
     // Every tag is over the cap on its own, so all of them go, and nothing else.
     const text = `Swap ${bulkyPick("h1 — One", 8_000)} for ${bulkyPick("h2 — Two", 8_000)}`;
     const { body } = parse(
-      buildIssueUrl({ repoUrl: REPO, text, pageUrl: PAGE, autoDeploy: false }),
+      buildIssueUrl({ repoUrl: REPO, text, pageUrl: PAGE, ...website(false) }),
     );
     expect(body).toBe(
       [
@@ -337,7 +346,7 @@ describe("buildIssueUrl", () => {
       repoUrl: REPO,
       text,
       pageUrl: PAGE,
-      autoDeploy: true,
+      ...website(true),
     });
     expect(url.length).toBeLessThanOrEqual(MAX_ISSUE_URL_LENGTH);
     expect(url.length).toBeGreaterThan(MAX_ISSUE_URL_LENGTH - 20);
@@ -365,7 +374,7 @@ describe("buildIssueUrl", () => {
       repoUrl: REPO,
       text: picks.join(" "),
       pageUrl: PAGE,
-      autoDeploy: false,
+      ...website(false),
     });
     expect(url.length).toBeLessThanOrEqual(MAX_ISSUE_URL_LENGTH);
     const { body } = parse(url);
@@ -388,8 +397,24 @@ describe("buildIssueUrl", () => {
         repoUrl: REPO,
         text: "x".repeat(10_000),
         pageUrl: `${PAGE}?q=${"z".repeat(MAX_ISSUE_URL_LENGTH)}`,
-        autoDeploy: false,
+        ...website(false),
       }),
     ).toThrow(/no text at all/);
+  });
+});
+
+describe("buildIssueUrl's host-given parts", () => {
+  test("no page, no labels: the body ends on the notes", () => {
+    const url = buildIssueUrl({
+      repoUrl: REPO,
+      text: "the cancel button is useless\nplease remove it",
+      notes: ["Filed from the app"],
+    });
+    const { title, body, labels } = parse(url);
+    expect(title).toBe("the cancel button is useless");
+    expect(labels).toBeNull();
+    expect(body).toBe(
+      "the cancel button is useless\nplease remove it\n\n---\nFiled from the app",
+    );
   });
 });

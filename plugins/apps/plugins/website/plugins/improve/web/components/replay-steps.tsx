@@ -15,7 +15,10 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Spinner } from "@plugins/primitives/plugins/css/plugins/spinner/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { issueTitle, readableIdea } from "../../core";
+import {
+  issueTitle,
+  readableIdea,
+} from "@plugins/integrations/plugins/github-issues/core";
 import "./replay-steps.css";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";

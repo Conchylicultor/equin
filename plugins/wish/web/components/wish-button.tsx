@@ -45,6 +45,7 @@ export function WishButton() {
   const { open, insert } = useWishOpenState();
   const segments = WishSlots.Segment.useContributions();
   const headerActions = WishSlots.HeaderAction.useContributions();
+  const footerActions = WishSlots.FooterAction.useContributions();
   const anchorRef = useHintAnchor(wishButtonAnchor);
 
   return (
@@ -73,6 +74,17 @@ export function WishButton() {
                 WishSlots.HeaderAction,
                 action as unknown as Contribution,
                 { close: closeWish, draft: text },
+              )}
+            </Fragment>
+          ))
+        }
+        footerActions={({ text, pageUrl, discard }) =>
+          footerActions.map((action) => (
+            <Fragment key={action.id}>
+              {renderIsolated(
+                WishSlots.FooterAction,
+                action as unknown as Contribution,
+                { draft: text, pageUrl, discard },
               )}
             </Fragment>
           ))

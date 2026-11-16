@@ -69,7 +69,17 @@ export interface TaskDraftFormProps {
   showStandalone?: boolean;
   heading?: string;
   /** See `TaskDraftPopoverProps.headerActions`. */
-  headerActions?: (draft: TaskDraftHeaderDraft) => React.ReactNode;
+  headerActions?: (draft: TaskDraftActionDraft) => React.ReactNode;
+  /** See `TaskDraftPopoverProps.footerActions`. */
+  footerActions?: (draft: TaskDraftActionDraft) => React.ReactNode;
+  /** The URL of the page the draft is about (`null`: about no page) — handed to the actions. */
+  pageUrl?: string | null;
+  /**
+   * Clears the draft and closes the form — what an action calls once it has
+   * handled the request another way (filed it elsewhere). Defaults to
+   * `onCancel` (close, draft kept) where there is no draft to clear.
+   */
+  onDiscard?: () => void;
   /** The head card's placeholder; defaults to "Describe the task…". */
   placeholder?: string;
   /**
@@ -104,10 +114,17 @@ export function makeCard(
   };
 }
 
-/** What a header action is handed of the draft (`TaskDraftPopoverProps.headerActions`). */
-export interface TaskDraftHeaderDraft {
+/**
+ * What a header or footer action is handed of the draft
+ * (`TaskDraftPopoverProps.headerActions` / `footerActions`).
+ */
+export interface TaskDraftActionDraft {
   /** The words drafted so far: every non-empty card, in chain order, a blank line apart. */
   text: string;
+  /** The URL of the page the draft is about; `null` when it is about no page. */
+  pageUrl: string | null;
+  /** Clear the draft and close the form — the request was handled another way. */
+  discard: () => void;
 }
 
 function draftText(cards: readonly CardDraft[]): string {
@@ -136,6 +153,9 @@ export function TaskDraftForm({
   showStandalone,
   heading,
   headerActions,
+  footerActions,
+  pageUrl = null,
+  onDiscard,
   placeholder,
   headInsertRef,
   hintAnchors,
@@ -156,6 +176,11 @@ export function TaskDraftForm({
   const hasEmpty = cards.some((c) => !c.text.trim());
   const disabled = hasEmpty || submitting;
   const captureUrlDefault = useCaptureUrlDefault();
+  const actionDraft: TaskDraftActionDraft = {
+    text: draftText(cards),
+    pageUrl,
+    discard: onDiscard ?? onCancel,
+  };
 
   const updateCard = (idx: number, patch: Partial<CardDraft>) => {
     const next = cards.slice();
@@ -253,7 +278,7 @@ export function TaskDraftForm({
             {heading ?? "Draft tasks"}
           </Text>
         </Fill>
-        {headerActions?.({ text: draftText(cards) })}
+        {headerActions?.(actionDraft)}
         {/* The first card has no connector to carry its ×, so the header's
             stands in: with a chain it drops task 1 (task 2 becomes the head);
             with one task left there is nothing to drop, so it closes. */}
@@ -338,11 +363,11 @@ export function TaskDraftForm({
           <Icon icon={addIcon} className="size-3.5" />
           Follow-up task
         </Button>
-        {/* Empty grow cell: it absorbs the slack so Cancel/Launch sit flush-right. */}
+        {/* Empty grow cell: it absorbs the slack so the actions and Launch sit
+            flush-right. No Cancel: the header's ×, Esc and a click outside
+            all close the popover. */}
         <Fill />
-        <Button variant="ghost" onClick={onCancel} loading={submitting}>
-          Cancel
-        </Button>
+        {footerActions?.(actionDraft)}
         <Button
           ref={sendAnchorRef}
           onClick={onSubmit}

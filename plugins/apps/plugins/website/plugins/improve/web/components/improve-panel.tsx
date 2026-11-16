@@ -21,7 +21,7 @@ import {
 import { ElementPicker } from "@plugins/primitives/plugins/ui-context/plugins/element-picker/web";
 import { SOURCE_REPO_URL } from "@plugins/framework/plugins/product-name/core";
 import { track } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/web";
-import { buildIssueUrl } from "../../core";
+import { buildIssueUrl } from "@plugins/integrations/plugins/github-issues/core";
 import { ReplaySteps, type ReplayRun } from "./replay-steps";
 import { brand, symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
@@ -297,7 +297,11 @@ function ReplayView({
     repoUrl: SOURCE_REPO_URL,
     text: replay.text,
     pageUrl: replay.pageUrl,
-    autoDeploy: replay.autoDeploy,
+    notes: [
+      `Auto-deploy: ${replay.autoDeploy ? "yes" : "no (review first)"}`,
+      "Filed from the Wish button on equin.ai",
+    ],
+    labels: ["idea"],
   });
 
   return (
