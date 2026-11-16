@@ -47,8 +47,13 @@ export function shelfSvg(glyph: GlyphBody): string {
   <defs><linearGradient id="shelf-t${i}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${oklchCss(deep)}"/><stop offset="1" stop-color="${oklchCss(base)}"/></linearGradient></defs>
   <rect x="${f1(x)}" y="${y}" width="${S}" height="${S}" rx="15" fill="url(#shelf-t${i})"/>
   <g transform="translate(${f1(cx - 14)} ${y + S / 2 - 14}) scale(${g.toFixed(4)})" fill="#fff">${glyph(app.icon.name).replace(/fill="currentColor"/g, "")}</g>
-  <text x="${f1(cx)}" y="${y + S + 24}" text-anchor="middle" class="n">${label(app.name)
-    .map((line, k) => `<tspan x="${f1(cx)}" dy="${k ? 15 : 0}">${esc(line)}</tspan>`)
+  <text x="${f1(cx)}" y="${y + S + 24}" text-anchor="middle" class="n">${label(
+    app.name,
+  )
+    .map(
+      (line, k) =>
+        `<tspan x="${f1(cx)}" dy="${k ? 15 : 0}">${esc(line)}</tspan>`,
+    )
     .join("")}</text>
 </g>`;
   });
