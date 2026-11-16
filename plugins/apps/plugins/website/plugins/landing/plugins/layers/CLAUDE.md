@@ -14,8 +14,11 @@ hover alone — a touch screen never shows it.
 A layer's link is a full-bleed button BEHIND its content
 (`.website-layer-hit`): the content lets presses through, except on its own
 buttons, so the shelf's apps are links of their own above the layer's — a
-picture opens the live demo on its app (`tryLivePath`), a tile the gallery
-scrolled to that app's card (`appsPane` `{ app }`), "All N apps" the gallery. Never nest a link inside a layer that is itself a button.
+picture and a tile open the gallery scrolled to that app's card (`appsPane`
+`{ app }`), only a picture's "Try it live" opens the live demo on its app
+(`tryLivePath`), "All N apps" the gallery. A picture uses the same pattern
+inside itself: its link is a full-bleed button behind it, "Try it live" a
+button of its own above. Never nest a link inside a layer that is itself a button.
 
 The apps are the gallery's catalog (`pages/apps`: `APPS`, `catalogAppIcon`),
 not a copy: the homepage and the gallery cannot list different apps. Each tile

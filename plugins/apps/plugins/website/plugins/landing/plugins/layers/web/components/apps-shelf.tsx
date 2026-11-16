@@ -38,7 +38,8 @@ function catalogApp(id: string): CatalogApp {
  * (`AppIconTile`: its glyph on its colour, the tile the app itself draws).
  *
  * Every entry is a link of its own, above the layer's full-bleed link: a
- * picture opens the live demo on that app, a tile and "All N apps" the gallery.
+ * picture and a tile open the app's card in the gallery (the picture's "Try
+ * it live" the live demo on that app), "All N apps" the gallery.
  */
 export function AppsShelf() {
   const featured = FEATURED_IDS.map(catalogApp);
@@ -63,8 +64,17 @@ export function AppsShelf() {
   );
 }
 
-/** One app as a picture: its screenshot with "Try it live" on it, then its tile, name and one line. */
+/**
+ * One app as a picture: its screenshot with "Try it live" on it, then its
+ * tile, name and one line. The card opens the app's own card in the gallery
+ * (`;app=`, like a tile); only "Try it live" starts the live demo on it.
+ *
+ * Both are buttons, so neither can hold the other: the card's link is a
+ * full-bleed button BEHIND the picture and caption (the layer's own pattern,
+ * `website-layer-hit`), and "Try it live" a button of its own above them.
+ */
 function FeaturedApp({ app }: { app: CatalogApp }) {
+  const openPane = useOpenPane();
   const appLinkProps = useAppLinkProps();
   const livePath = tryLivePath(app);
   if (livePath === undefined || app.shot === undefined) {
@@ -73,45 +83,53 @@ function FeaturedApp({ app }: { app: CatalogApp }) {
     );
   }
   return (
-    <button
-      type="button"
-      className="website-shelf-feat"
-      aria-label={`Try ${app.name} live`}
-      {...appLinkProps(livePath)}
-      onClickCapture={() => track("landing_try_live", { app: app.id })}
-    >
-      <span className="website-shelf-shot">
-        <img
-          src={app.shot.src}
-          width={app.shot.width}
-          height={app.shot.height}
-          alt=""
-          loading="lazy"
-          decoding="async"
-        />
-        <span className="website-shelf-try">
-          <Icon icon={playIcon} active />
-          <Text as="span" variant="caption" className="font-semibold">
-            Try it live
-          </Text>
-        </span>
-      </span>
-      <span className="website-shelf-cap">
-        <span className="website-shelf-head">
-          <AppIconTile
-            icon={catalogAppIcon(app)}
-            appId={app.id}
-            className={cn("size-6", rigidClass())}
+    <div className="website-shelf-feat">
+      <button
+        type="button"
+        className="website-shelf-feat-hit"
+        aria-label={app.name}
+        {...openPane.link(appsPane, { app: app.id }, { mode: "root" })}
+      />
+      <span className="website-shelf-feat-body">
+        <span className="website-shelf-shot">
+          <img
+            src={app.shot.src}
+            width={app.shot.width}
+            height={app.shot.height}
+            alt=""
+            loading="lazy"
+            decoding="async"
           />
-          <Text as="span" variant="label" className="font-semibold">
-            {app.name}
+          <button
+            type="button"
+            className="website-shelf-try"
+            aria-label={`Try ${app.name} live`}
+            {...appLinkProps(livePath)}
+            onClickCapture={() => track("landing_try_live", { app: app.id })}
+          >
+            <Icon icon={playIcon} active />
+            <Text as="span" variant="caption" className="font-semibold">
+              Try it live
+            </Text>
+          </button>
+        </span>
+        <span className="website-shelf-cap">
+          <span className="website-shelf-head">
+            <AppIconTile
+              icon={catalogAppIcon(app)}
+              appId={app.id}
+              className={cn("size-6", rigidClass())}
+            />
+            <Text as="span" variant="label" className="font-semibold">
+              {app.name}
+            </Text>
+          </span>
+          <Text as="span" variant="caption" tone="muted" className="block">
+            {app.summary ?? app.description}
           </Text>
         </span>
-        <Text as="span" variant="caption" tone="muted" className="block">
-          {app.summary ?? app.description}
-        </Text>
       </span>
-    </button>
+    </div>
   );
 }
 
