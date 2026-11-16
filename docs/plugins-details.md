@@ -24768,6 +24768,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exempted by:
           - `database/migrations` (0 debt)
           - `database/table-mirror/replica` (0 debt)
+          - `framework/cli/migrations` (0 debt)
           - `framework/tooling/checks` (0 debt)
           - `packages/source-digest` (0 debt)
           - `plugin-meta/plugin-records` (0 debt)
@@ -31625,7 +31626,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/cli/build`
               - `framework/cli/regen-migrations`
           - Exemptions:
-            - Exempts itself from: `spawn-safety/no-raw-bun-spawn` — `cli/migrations-interactive.ts` (sanctioned)
+            - Exempts itself from:
+              - `spawn-safety/no-raw-bun-spawn` — `cli/migrations-interactive.ts` (sanctioned)
+              - `imperative-create-table-allowlisted` — `cli/branch-answers.ts`, `cli/branch-answers.test.ts` (sanctioned)
           - Cli:
             - Exports (types):
               - `DetectedPrompt`

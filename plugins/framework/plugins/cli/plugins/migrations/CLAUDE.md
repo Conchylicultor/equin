@@ -87,7 +87,9 @@ through `./equin build`.
     - `framework/cli/build`
     - `framework/cli/regen-migrations`
 - Exemptions:
-  - Exempts itself from: `spawn-safety/no-raw-bun-spawn` — `cli/migrations-interactive.ts` (sanctioned)
+  - Exempts itself from:
+    - `spawn-safety/no-raw-bun-spawn` — `cli/migrations-interactive.ts` (sanctioned)
+    - `imperative-create-table-allowlisted` — `cli/branch-answers.ts`, `cli/branch-answers.test.ts` (sanctioned)
 - Cli:
   - Exports (types):
     - `DetectedPrompt`
