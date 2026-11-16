@@ -51,7 +51,7 @@ export function DemoResident({ children }: { children: ReactNode }): ReactNode {
  * page never ends it. Nothing mounts until a page first asks for the demo
  * (a `DemoTarget`) — another site page starts no worker — and from then on
  * one `<DemoScope>` stays (`resume` while the demo page shows, whose URL
- * says the visitor is in: the gate is only ever the homepage frame's). Its boot screen and the running demo
+ * says the visitor is in; the homepage frame shows the gate on every load). Its boot screen and the running demo
  * are drawn into whichever box the current page claimed, through a portal;
  * on a page without one, nothing is drawn and the server keeps running.
  */
@@ -74,8 +74,12 @@ function DemoServer(): ReactNode {
       scenario={workspaceDemo}
       onEnter={demo.entered}
       // The demo page's URL names a place in the demo: the visitor is in,
-      // whichever page mounted the scope first — the gate is the frame's.
-      resume={target?.kind === "page" ? true : undefined}
+      // whichever page mounted the scope first. The homepage's URL names no
+      // place: its frame shows the gate on every load, even while the
+      // visitor is in the demo in another tab — the gate is only a doorway
+      // (Enter connects to the same shared host, already started behind it
+      // when this browser holds the data), so a reload starts from it.
+      resume={target?.kind === "page"}
       boot={(state) =>
         target === null
           ? null
