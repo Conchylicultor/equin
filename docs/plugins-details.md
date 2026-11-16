@@ -14823,7 +14823,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `backup/sources/attachments`
       - `backup/sources/claude-settings`
       - `backup/sources/config`
-      - `backup/sources/cost-history`
       - `backup/sources/databases`
       - `backup/sources/platform`
       - `backup/sources/project-memory`
@@ -14940,20 +14939,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/worktree.NamespaceKind`
           - Exemptions:
             - Exempts itself from: `boundaries/no-platform-api` — `server/internal/assemble-config.ts` (debt)
-        - **`cost-history`** — Config UI for the cost-history backup source. Backs up the permanent cost-history archive (year-sharded session records and the merged price table) into the backup archive.
-          - Web:
-            - Contributes: `ConfigV2.WebRegister` "config"
-            - Uses: `config_v2.ConfigV2`
-          - Server:
-            - Contributes:
-              - `ConfigV2.Register` "config"
-              - `backup.source` "Cost History"
-            - Uses:
-              - `backup.BackupSource`
-              - `config_v2.ConfigV2`
-              - `config_v2.getConfig`
-          - Exemptions:
-            - Exempts itself from: `boundaries/no-platform-api` — `server/internal/assemble-cost-history.ts` (debt)
         - **`databases`** — Config UI for the databases backup source. Backs up worktree databases into the backup archive.
           - Web:
             - Contributes: `ConfigV2.WebRegister` "config"
@@ -16383,8 +16368,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 - **`config_v2`** — Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins: the registry over the user-layer store (the ConfigStore host service) and the committed layer (ConfigGitLayer), its live values and the scope routes.
   - Web:
     - Slots: `ConfigV2.WebRegister`
-    - Slot contributors: 102 contributors — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
-      - `ConfigV2.WebRegister` ×102
+    - Slot contributors: 101 contributors — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
+      - `ConfigV2.WebRegister` ×101
     - Uses:
       - `infra/endpoints.useEndpointMutation`
       - `network/live.useLive`
@@ -16583,11 +16568,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `validationIssues`
       - `withOverrideLegend`
   - Cross-plugin:
-    - Imported by: 151 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
+    - Imported by: 150 plugins — full list in [`plugins/config_v2/REFERENCE.md`](../plugins/config_v2/REFERENCE.md)
       - `apps` ×43
       - `debug` ×15
       - `conversations` ×14
-      - `backup` ×13
+      - `backup` ×12
       - `ui` ×11
       - `config_v2` ×8
       - `tasks` ×8
@@ -23712,24 +23697,31 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/task-title`
       - Exemptions:
         - Exempts itself from: `ids:pk-declared` — `server/internal/tables-user-turn-sent-event.ts` (debt)
-    - **`usage`** — Cost, Tokens and Agents fields on every conversation list whose rows are conversations (the usage extension's exposed fields), sorting and filtering server-side. Per-conversation usage — cost, tokens and launched sub-agents — stored in conversations_ext_usage and exposed to every conversation list (LiveColumns.Expose) and read by id through the lookup-only conversations.usage collection; and what each Claude account spent per UTC day (the claude-cli spend ledger's hours, summed per day), served as conversations.usage.account-spend. Counting it from the transcripts is the machine half's.
+    - **`usage`** — Cost, Tokens and Agents fields on every conversation list whose rows are conversations (the usage extension's exposed fields), sorting and filtering server-side. Per-conversation usage — cost, tokens and launched sub-agents — stored in conversations_ext_usage (cost and tokens derived by database triggers from the priced token ledger, claude_spend_hours_v, for the conversation's conv: source; repaired by a warm-up once per change of that derivation) and exposed to every conversation list (LiveColumns.Expose) and read by id through the lookup-only conversations.usage collection; and what each Claude account spent per UTC day (the priced ledger's hours plus the carried-over legacy unattributed days, summed per day), served as conversations.usage.account-spend. Counting it from the transcripts is the machine half's.
       - Web:
         - Contributes: `FieldPresentation.Register` "exposure:conversations_ext_usage"
         - Uses: `network/live.FieldPresentation`
       - Server:
         - Contributes:
           - `live.columns.expose` "conversations ← conversations_ext_usage"
+          - `db-trigger` "conversations.usage.cost"
           - `resource.declare` "conversations.usage.account-spend"
           - `resource.declare` "conversations.usage:rows"
+          - `change-feed-exclusion` "claude_transcript_scans"
           - `change-feed-exclusion` "conversation_usage_files"
         - Uses:
           - `database.db`
           - `database.DbExecutor`
+          - `database/db-triggers.DbTrigger`
+          - `database/db-triggers.defineDbTriggers`
           - `database/sql-column.parsedJson`
           - `database/sql-column.parsedText`
-          - `database/sql-projection.parsed`
-          - `infra/claude-cli/spend-ledger._claudeSpendHours`
+          - `infra/claude-cli/usage-ledger._claudeUsageHours`
+          - `infra/claude-cli/usage-ledger/pricing._claudeModelRates`
+          - `infra/claude-cli/usage-ledger/pricing._claudePriceVersions`
+          - `infra/claude-cli/usage-ledger/pricing.claudeSpendHoursView`
           - `infra/entity-extensions.defineExtension`
+          - `infra/warmup.defineWarmup`
           - `network/live.LiveColumns`
           - `network/live.serveCollection`
           - `network/live.serveValue`
@@ -23737,8 +23729,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - DB schema: `plugins/conversations/plugins/usage/server/internal/tables.ts`
         - Entity extension of: `tasks/tasks-core` (table `conversations_ext_usage`)
         - Exports (values):
+          - `_claudeTranscriptScans`
           - `_conversationUsageExt`
           - `_conversationUsageFiles`
+        - Register: `defineWarmup('conversations.usage.cost-reconcile')`
         - Resources:
           - `conversations.usage:rows` (keyed, point)
           - `conversations.usage.account-spend` (push, capped: 31)
@@ -23749,7 +23743,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Register:
           - `defineJob('conversations.usage.sync')`
           - `defineJob('conversations.usage.backfill')`
-          - `defineJob('conversations.usage.reprice')`
+          - `defineJob('conversations.usage.session-sync')`
+          - `defineJob('conversations.usage.session-backfill')`
+          - `defineJob('conversations.usage.history-import')`
           - `defineWarmup('conversations.usage.backfill')`
       - Core:
         - Uses:
@@ -23991,6 +23987,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `DatabaseDriverImpl`
       - `Db`
       - `DbExecutor`
+      - `DeferredContractSettlement`
       - `ListenHandlers`
       - `ListenSession`
       - `ListenSessionName`
@@ -24000,6 +23997,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `DatabaseDriver`
       - `db`
       - `dbLog`
+      - `deferredContractSettled`
       - `isTransientDbError`
       - `loadKnownRelations`
       - `quotedRelationsIn`
@@ -24026,11 +24024,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `loadedDatabaseConfig`
       - `readDatabaseConfigSync`
   - Cross-plugin:
-    - Imported by: 176 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
+    - Imported by: 177 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
       - `apps` ×48
       - `conversations` ×21
       - `tasks` ×20
-      - `infra` ×17
+      - `infra` ×18
       - `page` ×14
       - `debug` ×10
       - `active-data` ×8
@@ -24274,6 +24272,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `installDbTriggers`
       - Cross-plugin:
         - Imported by:
+          - `conversations/usage`
           - `database`
           - `database/derived-tables`
           - `database/derived-updated-at`
@@ -24282,6 +24281,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/jobs`
           - `network/live/change-feed`
           - `shell/notifications`
+          - `stats/cost`
           - `tasks/tasks-core`
     - **`derived-tables`** — Trigger-maintained materialized rollup tables as data: defineRollup generates a rollup's table, a maintain function and triggers per source (diffing the columns it reads, advisory-locked per key) and a diff-first reconcile; each rollup's functions and triggers a db-triggers set (rollup.<table>) the one trigger installer installs; the boot schema layer prepares the tables, installs every trigger set at once, reconciles, and reports what each reconcile healed (reconciledRollups). rollupSources() maps each rollup to the tables whose writes move it.
       - Server:
@@ -24412,6 +24412,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `database/derived-tables`
           - `database/migrations`
           - `database/query`
+          - `infra/claude-cli/usage-ledger/pricing`
           - `infra/paths/root-migration`
           - `network/live/change-feed`
           - `network/live/live-state-snapshot`
@@ -24913,10 +24914,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Uses tokens: `ui/tokens/color-palette --muted-foreground`
     - **`sql-column`** — Decoded columns: `parsedText` / `parsedJson` derive a column's type from a zod schema that really decodes it — on every read and every write — so a column can no longer declare a string-literal union, or a jsonb shape, that nothing verifies. `withWire` declares a column type's JSON wire form (a codec applied in JS by whatever projects the column onto the wire), carried on the built column's type so a row schema must match it.
       - Cross-plugin:
-        - Imported by: 28 plugins — full list in [`plugins/database/plugins/sql-column/REFERENCE.md`](../plugins/database/plugins/sql-column/REFERENCE.md)
+        - Imported by: 30 plugins — full list in [`plugins/database/plugins/sql-column/REFERENCE.md`](../plugins/database/plugins/sql-column/REFERENCE.md)
           - `apps` ×7
+          - `infra` ×6
           - `fields` ×5
-          - `infra` ×4
           - `conversations` ×3
           - `debug` ×2
           - `network` ×2
@@ -24959,7 +24960,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `conversations/agents`
           - `conversations/conversation-preprompt`
           - `conversations/session-chain`
-          - `conversations/usage`
           - `infra/claude-cli`
           - `infra/events`
           - `infra/jobs`
@@ -24987,16 +24987,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `toMapper`
     - **`sql-rows`** — Parsed raw-SQL row reads: queryRows / executeRows parse every row against a zod schema and throw a SqlRowError naming the column, the value and its Postgres type OID — closing the pool.query<T>() assertion hole.
       - Cross-plugin:
-        - Imported by: 56 plugins — full list in [`plugins/database/plugins/sql-rows/REFERENCE.md`](../plugins/database/plugins/sql-rows/REFERENCE.md)
+        - Imported by: 59 plugins — full list in [`plugins/database/plugins/sql-rows/REFERENCE.md`](../plugins/database/plugins/sql-rows/REFERENCE.md)
           - `database` ×16
           - `apps` ×9
           - `debug` ×6
           - `tasks` ×6
-          - `infra` ×4
+          - `infra` ×5
+          - `conversations` ×3
           - `network` ×3
           - `page` ×3
-          - `conversations` ×2
-          - `stats` ×2
+          - `stats` ×3
           - `build/run-ledger`
           - `primitives/metrics`
           - `reports/engine`
@@ -29072,10 +29072,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `boolField`
               - `boolSample`
           - Cross-plugin:
-            - Imported by: 86 plugins — full list in [`plugins/fields/plugins/bool/plugins/config/REFERENCE.md`](../plugins/fields/plugins/bool/plugins/config/REFERENCE.md)
+            - Imported by: 85 plugins — full list in [`plugins/fields/plugins/bool/plugins/config/REFERENCE.md`](../plugins/fields/plugins/bool/plugins/config/REFERENCE.md)
               - `apps` ×29
               - `debug` ×13
-              - `backup` ×12
+              - `backup` ×11
               - `conversations` ×7
               - `tasks` ×5
               - `infra` ×3
@@ -32470,7 +32470,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `backup/sources/attachments` (1 debt)
               - `backup/sources/claude-settings` (1 debt)
               - `backup/sources/config` (1 debt)
-              - `backup/sources/cost-history` (1 debt)
               - `backup/sources/databases` (1 debt)
               - `backup/sources/platform` (1 debt)
               - `backup/sources/project-memory` (1 debt)
@@ -32535,6 +32534,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `framework/tooling/web-artifacts` (22 debt)
               - `framework/web-core` (1 debt)
               - `infra/asset-mirror/bundle` (1 debt)
+              - `infra/claude-cli/usage-ledger/pricing/price-table` (1 debt)
               - `infra/corpus-index` (3 debt)
               - `infra/deps/download/github-release-updater` (1 debt)
               - `infra/deps/mise` (2 debt)
@@ -32606,7 +32606,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `reports/outbox` (1 debt)
               - `reports/outbox/file` (1 debt)
               - `review/plugin-changes` (1 debt)
-              - `stats/cost` (3 debt)
               - `toolchain` (1 debt)
               - `ui/icons/icon-sets` (1 debt)
           - Plugins:
@@ -34608,8 +34607,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - Slots:
       - `IdKinds.Kind`
       - `IdKinds.Presenter`
-    - Slot contributors: 45 contributors — full list in [`plugins/ids/REFERENCE.md`](../plugins/ids/REFERENCE.md)
-      - `IdKinds.Kind` ×35
+    - Slot contributors: 46 contributors — full list in [`plugins/ids/REFERENCE.md`](../plugins/ids/REFERENCE.md)
+      - `IdKinds.Kind` ×36
       - `IdKinds.Presenter` ×10
     - Exports (types):
       - `IdPresenter`
@@ -34664,11 +34663,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `parseKindLabel`
       - `storedIdSchema`
   - Cross-plugin:
-    - Imported by: 50 plugins — full list in [`plugins/ids/REFERENCE.md`](../plugins/ids/REFERENCE.md)
+    - Imported by: 51 plugins — full list in [`plugins/ids/REFERENCE.md`](../plugins/ids/REFERENCE.md)
       - `apps` ×15
       - `conversations` ×8
       - `tasks` ×5
-      - `infra` ×3
+      - `infra` ×4
       - `primitives` ×3
       - `active-data` ×2
       - `build` ×2
@@ -35057,17 +35056,18 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `resource.declare` "claude-cli.calls-for"
           - `fork-data-exclusion` "claude_cli_call_horizon"
           - `fork-data-exclusion` "claude_cli_calls"
-        - Uses: 21 symbols — full list in [`plugins/infra/plugins/claude-cli/REFERENCE.md`](../plugins/infra/plugins/claude-cli/REFERENCE.md)
+        - Uses: 23 symbols — full list in [`plugins/infra/plugins/claude-cli/REFERENCE.md`](../plugins/infra/plugins/claude-cli/REFERENCE.md)
           - `infra/claude-cli/sdk` ×5
           - `database` ×4
           - `infra/entities` ×3
           - `database/sql-projection` ×2
+          - `infra/claude-cli/usage-ledger` ×2
           - `network/live` ×2
           - `conversations/model-provider/catalog.getModelCatalog`
           - `database/admin.ExcludeFromFork`
           - `infra/claude-cli/accounts.activeClaudeAccountId`
           - `infra/claude-cli/availability.noteClaudeCodeFailure`
-          - `infra/claude-cli/spend-ledger.spendLedgerUpsert`
+          - `infra/claude-cli/usage-ledger/pricing.ensureModelRates`
         - DB schema: `plugins/infra/plugins/claude-cli/server/internal/tables.ts`
         - Exports (types):
           - `RecordCallInput`
@@ -35249,6 +35249,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `conversations/model-provider/catalog`
               - `conversations/runtime-sdk`
+              - `conversations/usage`
               - `infra/claude-cli`
               - `infra/claude-cli/availability`
               - `infra/claude-cli/sdk`
@@ -35429,26 +35430,140 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `claude-sdk/no-claude-bin-spawn` — `machine/internal/run.ts` (sanctioned)
               - `spawn-safety/no-raw-bun-spawn` — `machine/internal/run.ts` (sanctioned)
               - `page-hosts-on-demand` — `web/index.ts` (sanctioned)
-        - **`spend-ledger`** — The Claude spend ledger: claude_spend_hours (account, UTC hour, source — conv:<conversationId> | cli:<sourceName> | unattributed — cost at API prices) and spendLedgerUpsert, the accumulating write its two writers (the conversations usage sync, the claude-cli call recorder) add to it with, inside the write that counted the cost.
+        - **`usage-ledger`** — The Claude usage ledger: claude_usage_hours (account, UTC hour, source — conv:<conversationId> | cli:<sourceName> | session:<claudeSessionId> — model, speed: tokens per kind split at the 200k tier, never dollars) with usageLedgerUpsert, the additive delta write (negative deltas take tokens back) its writers call inside the write that counted them, and claude_usage_sources (each source's project dir, repo flag, title). Its pricing child prices it as the claude_spend_hours_v view.
+          - Server:
+            - Uses: `database/sql-column.parsedText`
+            - DB schema: `plugins/infra/plugins/claude-cli/plugins/usage-ledger/server/internal/tables.ts`
+            - Exports (types):
+              - `UsageLedgerRow`
+              - `UsageSourceRow`
+            - Exports (values):
+              - `_claudeUsageHours`
+              - `_claudeUsageSources`
+              - `negateUsage`
+              - `usageLedgerDropSources`
+              - `usageLedgerImport`
+              - `usageLedgerRowsOf`
+              - `usageLedgerUpsert`
+              - `usageSourcesUpsert`
           - Cross-plugin:
             - Imported by:
               - `conversations/usage`
               - `infra/claude-cli`
+              - `infra/claude-cli/usage-ledger/pricing`
+              - `stats/cost`
               - `tasks/supervisor-roles/spend`
-          - Server:
-            - DB schema: `plugins/infra/plugins/claude-cli/plugins/spend-ledger/server/internal/tables.ts`
-            - Exports (types): `SpendLedgerRow`
-            - Exports (values):
-              - `_claudeSpendHours`
-              - `spendLedgerUpsert`
           - Core:
-            - Exports (types): `SpendSource`
+            - Exports (types):
+              - `CountedUsage`
+              - `DayBucket`
+              - `SeenEntry`
+              - `SpendSource`
+              - `TieredTokens`
+              - `TokenKind`
+              - `TokenTier`
+              - `UsageBuckets`
+              - `UsageOrigin`
+              - `UsageSpeed`
+              - `UsageTokens`
             - Exports (values):
               - `cliSpendSource`
               - `conversationSpendSource`
+              - `emptyUsageBuckets`
+              - `foldUsageEntry`
+              - `isRepoProjectDir`
+              - `resumeUsageBuckets`
+              - `resumeUsageDelta`
+              - `sessionSpendSource`
               - `SPEND_SOURCE_PREFIX`
               - `spendHourOf`
-              - `UNATTRIBUTED_SPEND_SOURCE`
+              - `TIER_THRESHOLD`
+              - `TOKEN_KINDS`
+              - `TOKEN_TIERS`
+              - `UNKNOWN_ACCOUNT`
+          - Plugins:
+            - **`pricing`** — Claude pricing, web half: registers the price version id kind (pricev), so its ids are recognised in the browser as on the server. Claude pricing as dated data: claude_price_versions (each table in force from effective_from — the first from -infinity, a refresh that changes a rate from now, a correction from a past instant) with claude_model_rates (per version, observed model and speed, materialized per-token rates below/above the 200k tier, resolved once with resolveModel), and the claude_spend_hours_v view — every usage-ledger hour priced with the newest version in force at that hour, cost_usd NULL (never 0) when unpriced.
+              - Web:
+                - Contributes: `IdKinds.Kind` "pricev"
+                - Uses: `ids.IdKinds`
+              - Server:
+                - Contributes:
+                  - `derived-view` "claude_spend_hours_v"
+                  - `ids.kind` "pricev"
+                - Uses:
+                  - `database/derived-views.View`
+                  - `database/sql-column.parsedJson`
+                  - `database/sql-column.parsedText`
+                  - `ids.idColumn`
+                  - `ids.IdKinds`
+                  - `infra/claude-cli/usage-ledger._claudeUsageHours`
+                - DB schema:
+                  - `plugins/infra/plugins/claude-cli/plugins/usage-ledger/plugins/pricing/server/internal/tables.ts`
+                  - `plugins/infra/plugins/claude-cli/plugins/usage-ledger/plugins/pricing/server/internal/views.ts`
+                - Exports (types): `RecordedPriceVersion`
+                - Exports (values):
+                  - `_claudeModelRates`
+                  - `_claudePriceVersions`
+                  - `claudeSpendHoursView`
+                  - `ensureModelRates`
+                  - `recordPriceVersion`
+              - Core:
+                - Uses:
+                  - `ids.defineIdKind`
+                  - `ids.IdOf`
+                - Exports (types):
+                  - `ModelPrice`
+                  - `PricedBucket`
+                  - `PriceTable`
+                  - `PriceVersionId`
+                  - `PriceVersionSource`
+                - Exports (values):
+                  - `ModelPriceSchema`
+                  - `PRICE_VERSION_SOURCES`
+                  - `priceBucket`
+                  - `priceVersionIdKind`
+                  - `PriceVersionSourceSchema`
+                  - `resolveModel`
+              - Cross-plugin:
+                - Imported by:
+                  - `conversations/usage`
+                  - `infra/claude-cli`
+                  - `infra/claude-cli/usage-ledger/pricing/price-table`
+                  - `stats/cost`
+                  - `tasks/supervisor-roles/spend`
+              - Test helpers:
+                - Server: `@plugins/infra/plugins/claude-cli/plugins/usage-ledger/plugins/pricing/server/testing`
+                  - `installSpendHoursView` — Create the priced view (`claude_spend_hours_v`) on a throwaway test database, after `runMigrations` — a derived view is rebuilt by the boot layer, which a test database never runs.
+              - Plugins:
+                - **`price-table`** — The Claude price table as a file and a fetch, and what keeps the dated price history current: our merge-only copy of LiteLLM's model_prices_and_context_window.json (parseLiteLlmTable — the Anthropic-relevant slice; mergePriceTable — never drops a key) persisted in the host's cost-usage data dir (loadPriceTable / savePriceTable, the vendored litellm-fallback.json floor), the daily claude-cli.pricing.refresh job on main (fetch, merge, save, record a new price version when a rate moved, file cost-unpriced-model for every model the priced view leaves unpriced) and the boot warm-up recording the held table as the first version. Not portable (file persistence); the price history itself (versions, rates, the priced view) is its portable parent's.
+                  - Server:
+                    - Contributes: `report-kind` "cost-unpriced-model"
+                    - Uses:
+                      - `database.db`
+                      - `infra/claude-cli/usage-ledger/pricing.claudeSpendHoursView`
+                      - `infra/claude-cli/usage-ledger/pricing.recordPriceVersion`
+                      - `infra/jobs.defineJob`
+                      - `infra/safe-fetch.safeFetch`
+                      - `infra/warmup.defineWarmup`
+                      - `primitives/log-channels.Log`
+                      - `reports.ReportKind`
+                      - `reports.ReportRow`
+                      - `reports/engine.recordReport`
+                    - DB schema: `plugins/infra/plugins/claude-cli/plugins/usage-ledger/plugins/pricing/plugins/price-table/server/internal/price-table.ts`
+                    - Exports (values):
+                      - `fetchPriceTable`
+                      - `loadFallbackPriceTable`
+                      - `loadPriceTable`
+                      - `mergePriceTable`
+                      - `parseLiteLlmTable`
+                      - `savePriceTable`
+                    - Register:
+                      - `defineJob('claude-cli.pricing.refresh')`
+                      - `defineWarmup('claude-cli.pricing.record')`
+                  - Cross-plugin:
+                    - Imported by: `conversations/usage`
+                  - Exemptions:
+                    - Exempts itself from: `boundaries/no-platform-api` — `server/internal/price-table.ts` (debt)
     - **`codesign`** — Stable code signing for the binaries this machine builds (the gateway): signBinary signs with a configured keychain identity (/usr/bin/codesign) or the machine's own self-signed one (PEM under state/codesign, via the pinned rcodesign dependency), so macOS permission grants survive rebuilds.
       - Deps:
         - Uses:
@@ -35525,9 +35640,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LineFold`
         - Exports (values): `corpusFormat`
       - Cross-plugin:
-        - Imported by:
-          - `apps/sonata/sources/midi/folders`
-          - `stats/cost`
+        - Imported by: `apps/sonata/sources/midi/folders`
       - Exemptions:
         - Exempts itself from:
           - `boundaries/no-platform-api` — `server/internal/corpus-index.ts`, `server/internal/store.ts`, `server/internal/checkpoints.ts` (debt)
@@ -36583,7 +36696,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Register: `file-sink-exit-flush`
     - **`file-watcher`** — defineFileWatcher: the one declared in-process file watcher — a named, described declaration (static policy: extensions, ignore, debounce, ceiling, writesWhileOpen, depth, mainOnly) whose start({dirs, label, onChange, onLost}) — start({files, …}) for a writesWhileOpen one, which follows writes to the named files only (kqueue on darwin, one descriptor per file; every follow of a directory shares one subscription) — opens instances over one @parcel/watcher engine (debounce + ceiling flush; no timer — a dropped event is reported to onLost, the one backstop). Records per declaration its open instances, last change batch and a ring of handler runs for the Background activity catalog (onWatcherActivity / listFileWatchers / fileWatcherRecentRuns). The cli barrel's watchForCommand is the same engine for a foreground command, with no registry. acquireDirWatch({dir, scope, onChange}) is the shared directory-watch hub: refcounted native watches, a dir under a watched root riding its watch (a watcher never moved off a live root: a root opening above leaves it where it is), with subtree or children (depth-1 listing) scope — a children request with no root above it opening only a single-directory watch (depth children), never a recursive one. On macOS a children watch is kqueue's (a descriptor on the dir and each entry, budgeted — a dir past the budget rides FSEvents), so watching / or ~ puts nothing on fseventsd; every other FSEvents watch with no ignore rides the process's stream pool — one stream per watched root, a dir under an open recursive stream riding it, whatever declaration asks (fsEventsStreams reads it).
       - Cross-plugin:
-        - Imported by: 44 plugins — full list in [`plugins/infra/plugins/file-watcher/REFERENCE.md`](../plugins/infra/plugins/file-watcher/REFERENCE.md)
+        - Imported by: 43 plugins — full list in [`plugins/infra/plugins/file-watcher/REFERENCE.md`](../plugins/infra/plugins/file-watcher/REFERENCE.md)
           - `infra` ×15
           - `debug` ×10
           - `build` ×5
@@ -36596,7 +36709,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `plugin-meta/plugin-tree`
           - `release`
           - `reports/outbox`
-          - `stats/cost`
       - Exemptions:
         - Exempts itself from:
           - `watcher-safety/no-direct-parcel-watcher` — `shared` (sanctioned)
@@ -37828,7 +37940,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by: 90 plugins — full list in [`plugins/infra/plugins/jobs/REFERENCE.md`](../plugins/infra/plugins/jobs/REFERENCE.md)
           - `apps` ×21
           - `conversations` ×18
-          - `infra` ×15
+          - `infra` ×16
           - `debug` ×12
           - `tasks` ×10
           - `database` ×4
@@ -37837,7 +37949,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `integrations/youtube/audio-fetch`
           - `network/live/live-state-snapshot`
           - `shell/notifications`
-          - `stats/cost`
           - `upstream`
           - `wish`
       - Exemptions:
@@ -38770,7 +38881,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `worktreesDir`
       - Cross-plugin:
         - Imported by: 134 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
-          - `infra` ×32
+          - `infra` ×33
           - `framework` ×20
           - `apps` ×18
           - `debug` ×15
@@ -38786,12 +38897,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `companions` ×2
           - `database` ×2
           - `integrations` ×2
-          - `stats` ×2
           - `tasks` ×2
           - `apps-core/app-preload`
           - `config_v2`
           - `review/plugin-changes`
           - `shell/document-head`
+          - `stats/commits`
       - Exemptions:
         - Exempts itself from:
           - `paths:no-hardcoded-paths` — `check/index.ts` (sanctioned)
@@ -39462,9 +39573,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/events/sources/url-extract`
           - `apps/mail/remote-images`
           - `apps/sonata/sources/ultimate-guitar`
+          - `infra/claude-cli/usage-ledger/pricing/price-table`
           - `infra/safe-fetch/browser-fetch`
           - `page/bookmark`
-          - `stats/cost`
       - Exemptions:
         - Exempts itself from:
           - `namespace:no-hand-built-url` — `server/internal/ssrf.ts` (sanctioned)
@@ -39889,10 +40000,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `WarmupHost`
           - `warmupRunOf`
       - Cross-plugin:
-        - Imported by: 26 plugins — full list in [`plugins/infra/plugins/warmup/REFERENCE.md`](../plugins/infra/plugins/warmup/REFERENCE.md)
+        - Imported by: 27 plugins — full list in [`plugins/infra/plugins/warmup/REFERENCE.md`](../plugins/infra/plugins/warmup/REFERENCE.md)
           - `tasks` ×7
           - `apps` ×6
-          - `infra` ×4
+          - `infra` ×5
           - `conversations` ×2
           - `database/lock-watch`
           - `debug/config-orphans`
@@ -39992,17 +40103,17 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by: 39 plugins — full list in [`plugins/infra/plugins/worktree/REFERENCE.md`](../plugins/infra/plugins/worktree/REFERENCE.md)
           - `debug` ×9
           - `infra` ×8
+          - `conversations` ×4
           - `framework` ×4
           - `tasks` ×4
-          - `conversations` ×3
           - `backup` ×2
           - `build` ×2
-          - `stats` ×2
           - `apps/website/promo-film/seed`
           - `code-explorer`
           - `plugin-meta/plugin-health`
           - `release/source-checkout`
           - `review/plugin-changes`
+          - `stats/commits`
       - Exemptions:
         - Exempts itself from:
           - `worktree/no-raw-worktree-git` — `.` (sanctioned)
@@ -42636,9 +42747,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/orchestration/mandate`
     - **`keyed-mutex`** — Keyed FIFO mutex: createKeyedMutex().run(key, fn) runs fn once every earlier run for the same key has settled, in arrival order, while different keys run concurrently; a key's entry is dropped the moment its queue drains.
       - Cross-plugin:
-        - Imported by: 21 plugins — full list in [`plugins/packages/plugins/keyed-mutex/REFERENCE.md`](../plugins/packages/plugins/keyed-mutex/REFERENCE.md)
+        - Imported by: 22 plugins — full list in [`plugins/packages/plugins/keyed-mutex/REFERENCE.md`](../plugins/packages/plugins/keyed-mutex/REFERENCE.md)
           - `infra` ×11
-          - `conversations` ×4
+          - `conversations` ×5
           - `apps` ×2
           - `config_v2`
           - `debug/sentinel/status-file`
@@ -43025,6 +43136,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/pages/content-search`
           - `build/central-build-id`
           - `build/restart-skip`
+          - `conversations/usage`
           - `infra/corpus-index`
           - `infra/warmup`
           - `network/live`
@@ -43033,6 +43145,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `page/links`
           - `reports/engine`
           - `stats/commits`
+          - `stats/cost`
           - `ui/icons/saved-sources`
       - Exemptions:
         - Exempts itself from:
@@ -43233,13 +43346,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TIMED_FS_CALLS`
           - `withFsCallTally`
       - Cross-plugin:
-        - Imported by: 179 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
-          - `infra` ×52
+        - Imported by: 178 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
+          - `infra` ×53
           - `framework` ×26
           - `apps` ×16
           - `debug` ×15
           - `conversations` ×13
-          - `backup` ×12
+          - `backup` ×11
           - `build` ×7
           - `packages` ×6
           - `database` ×5
@@ -43249,11 +43362,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `release` ×3
           - `integrations` ×2
           - `primitives` ×2
-          - `stats` ×2
           - `apps-core/app-preload`
           - `code-explorer`
           - `companions/browser-extension`
           - `hints/ask`
+          - `stats/commits`
           - `toolchain`
           - `ui/icons/icon-sets`
       - Exemptions:
@@ -53514,7 +53627,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by: 79 plugins — full list in [`plugins/primitives/plugins/log-channels/REFERENCE.md`](../plugins/primitives/plugins/log-channels/REFERENCE.md)
           - `apps` ×14
           - `debug` ×14
-          - `infra` ×10
+          - `infra` ×11
           - `conversations` ×6
           - `database` ×6
           - `framework` ×6
@@ -53530,7 +53643,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `integrations/youtube/audio-fetch`
           - `primitives/log-channels/memory-persistence`
           - `release`
-          - `stats/cost`
           - `upstream`
         - Endpoint callers: `log-files`
       - Exemptions:
@@ -57587,9 +57699,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `reports` ×33
       - `debug` ×20
       - `conversations` ×7
+      - `infra` ×5
       - `build` ×4
       - `database` ×4
-      - `infra` ×4
       - `apps` ×3
       - `framework` ×3
       - `tasks` ×2
@@ -57599,7 +57711,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `network/live/boot-snapshot`
       - `page/place/google`
       - `plugin-meta/plugin-records/write-lost`
-      - `stats/cost`
       - `upstream`
   - Exemptions:
     - Exempts itself from:
@@ -57854,15 +57965,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Imported by: 35 plugins — full list in [`plugins/reports/plugins/engine/REFERENCE.md`](../plugins/reports/plugins/engine/REFERENCE.md)
           - `debug` ×13
           - `conversations` ×5
+          - `infra` ×4
           - `database` ×3
-          - `infra` ×3
           - `reports` ×3
           - `apps/deploy/site-reports/import`
           - `backup`
           - `build/failure-report`
           - `framework/cli/push`
           - `page/place/google`
-          - `stats/cost`
           - `tasks/reports-investigation`
           - `upstream`
       - Exemptions:
@@ -59721,7 +59831,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `commitsCountsByCategory`
           - `commitsLines`
           - `commitsLinesByExt`
-    - **`cost`** — Token usage and dollar cost across Claude Code sessions, with per-conversation breakdown. Token usage and dollar cost across Claude Code sessions, priced from our own merge-only LiteLLM table and banked into a permanent year-sharded token archive so deleted transcripts stop rewriting the past.
+    - **`cost`** — Token usage and dollar cost across Claude Code sessions, with per-conversation breakdown. Stats → Cost: token usage and dollar cost of every Claude Code session, conversation and one-shot call, read from the priced token ledger (claude_spend_hours_v — each hour at the price in force then) through two database-maintained rollups (claude_spend_days per UTC day, model and repo flag; claude_spend_sources per source), served as the stats.cost.* live values.
       - Web:
         - Contributes:
           - `ConfigV2.WebRegister` "config"
@@ -59746,44 +59856,35 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Server:
         - Contributes:
           - `ConfigV2.Register` "config"
-          - `report-kind` "cost-archive-shrink"
-          - `report-kind` "cost-unpriced-model"
+          - `db-trigger` "stats.cost.rollups"
+          - `resource.declare` "stats.cost.conversations:rows"
           - `resource.declare` "stats.cost.daily"
           - `resource.declare` "stats.cost.distribution"
-          - `resource.declare` "stats.cost.session-conversations:rows"
           - `resource.declare` "stats.cost.sessions-daily"
           - `resource.declare` "stats.cost.top-sessions"
         - Uses:
           - `config_v2.ConfigV2`
           - `database.db`
-          - `infra/corpus-index.defineCorpusIndex`
-          - `infra/file-watcher.acquireDirWatch`
-          - `infra/jobs.defineJob`
-          - `infra/paths.CLAUDE_PROJECTS_DIR`
-          - `infra/paths.isHostSingleton`
-          - `infra/safe-fetch.safeFetch`
+          - `database.DbExecutor`
+          - `database/db-triggers.DbTrigger`
+          - `database/db-triggers.defineDbTriggers`
+          - `infra/claude-cli/usage-ledger._claudeUsageHours`
+          - `infra/claude-cli/usage-ledger._claudeUsageSources`
+          - `infra/claude-cli/usage-ledger/pricing._claudeModelRates`
+          - `infra/claude-cli/usage-ledger/pricing._claudePriceVersions`
+          - `infra/claude-cli/usage-ledger/pricing.claudeSpendHoursView`
           - `infra/warmup.defineWarmup`
-          - `infra/worktree.ensureMainWorktreeRoot`
           - `network/live.serveCollection`
           - `network/live.serveValue`
-          - `primitives/log-channels.Log`
-          - `reports.ReportKind`
-          - `reports/engine.recordReport`
           - `tasks/tasks-core._conversations`
-        - DB schema: `plugins/stats/plugins/cost/server/internal/price-table.ts`
-        - Exports (values):
-          - `currentPriceTable`
-          - `onPriceTableUpdated`
-        - Register:
-          - `defineWarmup('stats.cost.usage')`
-          - `defineFileWatcher('corpus-index.stats.cost.usage')`
-          - `defineJob('stats.cost.refresh')`
+        - DB schema: `plugins/stats/plugins/cost/server/internal/tables.ts`
+        - Register: `defineWarmup('stats.cost.rollups-reconcile')`
         - Resources:
-          - `stats.cost.daily` (push, notified, whole: one key per model (or model family) used — the handful of Claude models, never one per session, capped: COST_DAYS_MAX)
-          - `stats.cost.distribution` (push, notified, whole: a 1-2-5 ladder over the sessions' cost spread (about 16 buckets for $0.01 – $1k), whatever the number of sessions)
-          - `stats.cost.session-conversations:rows` (keyed, point)
-          - `stats.cost.sessions-daily` (push, notified, whole: one key per model (or model family) used — the handful of Claude models, never one per session, capped: COST_DAYS_MAX)
-          - `stats.cost.top-sessions` (push, notified, capped: TOP_SESSIONS, whole: one key per model (or model family) used — the handful of Claude models, never one per session)
+          - `stats.cost.conversations:rows` (keyed, point)
+          - `stats.cost.daily` (push, whole: one key per model (or model family) used — the handful of Claude models, never one per session, capped: COST_DAYS_MAX)
+          - `stats.cost.distribution` (push, whole: a 1-2-5 ladder over the sessions' cost spread (about 16 buckets for $0.01 – $1k), whatever the number of sessions)
+          - `stats.cost.sessions-daily` (push, whole: one key per model (or model family) used — the handful of Claude models, never one per session, capped: COST_DAYS_MAX)
+          - `stats.cost.top-sessions` (push, capped: TOP_SESSIONS, whole: one key per model (or model family) used — the handful of Claude models, never one per session)
       - Cross-plugin:
         - Uses tokens:
           - `ui/tokens/color-palette --background`
@@ -59799,26 +59900,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ui/tokens/type-scale --font-weight-medium`
           - `ui/tokens/type-scale --font-weight-normal`
           - `ui/tokens/type-scale --line-height-caption`
-        - Imported by:
-          - `backup/sources/cost-history`
-          - `conversations/usage`
-      - Exemptions:
-        - Exempts itself from: `boundaries/no-platform-api` — `server/internal/archive.ts`, `server/internal/price-table.ts`, `server/internal/usage-index.ts` (debt)
-      - Core:
-        - Exports (types):
-          - `CountedUsage`
-          - `DayBucket`
-          - `ModelPrice`
-          - `PriceTable`
-          - `SeenEntry`
-          - `TieredTokens`
-          - `UsageBuckets`
-          - `UsageGranularity`
-        - Exports (values):
-          - `emptyUsageBuckets`
-          - `foldUsageEntry`
-          - `priceBucket`
-          - `resumeUsageBuckets`
       - Shared:
         - Exports (types):
           - `CostDay`
@@ -59828,11 +59909,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `COST_SCOPES`
           - `costConfig`
+          - `costConversations`
           - `costDaily`
           - `costDistribution`
           - `costSessionsDaily`
           - `costTopSessions`
-          - `sessionConversations`
           - `TOP_SESSIONS`
       - Plugins:
         - **`format`** — How token counts and dollar amounts read: formatTokens (1,284,512), formatTokensCompact (1.3M) and formatUsdCompact ($12K). A core-only leaf, so a surface showing a token count (the conversation lists' Tokens column) does not bundle the cost dashboard.
@@ -61833,7 +61914,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Contributes: `resource.declare` "supervisors.spend"
             - Uses:
               - `database.db`
-              - `infra/claude-cli/spend-ledger._claudeSpendHours`
+              - `infra/claude-cli/usage-ledger/pricing.claudeSpendHoursView`
               - `network/live.serveValue`
               - `tasks/automations.tasksOrigin`
               - `tasks/supervisor-roles._supervisorRoles`

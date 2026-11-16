@@ -489,6 +489,7 @@ export const browserHost = {
     "infra.background.catalog",
     "infra.claude-cli.availability",
     "infra.claude-cli.sign-in",
+    "infra.claude-cli.usage-ledger.pricing",
     "infra.deps",
     "infra.endpoints",
     "infra.health",

@@ -221,9 +221,9 @@ before it) beside the total, worded by `formatReportActivity`
     - `reports` ×33
     - `debug` ×20
     - `conversations` ×7
+    - `infra` ×5
     - `build` ×4
     - `database` ×4
-    - `infra` ×4
     - `apps` ×3
     - `framework` ×3
     - `tasks` ×2
@@ -233,7 +233,6 @@ before it) beside the total, worded by `formatReportActivity`
     - `network/live/boot-snapshot`
     - `page/place/google`
     - `plugin-meta/plugin-records/write-lost`
-    - `stats/cost`
     - `upstream`
 - Exemptions:
   - Exempts itself from:

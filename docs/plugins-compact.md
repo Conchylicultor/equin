@@ -75,7 +75,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 
 - **`auth`** [load-bearing] [exempt] [8 sub-plugins] — Shared authentication infrastructure (OAuth 2.0, API keys, password sign-in). Exposes the Accounts pane — a DataView of every provider (Auth.Provider) and non-provider setup surface…
 
-- **`backup`** [exempt] [15 sub-plugins] — Backup orchestrator UI: run backups, view history, and open one run's detail pane — whose sections (what went into the archive, where it was dispatched to, and the Grant access repair for a target…
+- **`backup`** [exempt] [14 sub-plugins] — Backup orchestrator UI: run backups, view history, and open one run's detail pane — whose sections (what went into the archive, where it was dispatched to, and the Grant access repair for a target…
 
 - **`build`** [exempt] [18 sub-plugins] — Trigger `./equin build` from the toolbar. Build, portable half: the build-run id kind, the build config, the Build task category and the build.history collection over build_runs — what a host…
 
@@ -218,7 +218,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 
 - **`ids`** — The id-kind registry, web half: IdKinds.Kind registers a declared kind and IdKinds.Presenter how its ids render and open (icon, useReferent, usePane); useIdKinds() / useIdPresenters() read them at…
 
-- **`infra`** [test helpers] [exempt] [118 sub-plugins] — Umbrella for cross-cutting server-side primitives used by feature plugins: jobs, events, secrets, mcp, attachments.
+- **`infra`** [test helpers] [exempt] [120 sub-plugins] — Umbrella for cross-cutting server-side primitives used by feature plugins: jobs, events, secrets, mcp, attachments.
 
 - **`integrations`** — Umbrella for third-party service integrations that consume an auth connection (Gmail, …).
   - Plugins:
@@ -409,7 +409,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
         - **`native`** — Native OS notifications from the menu-bar panel: the Notifications switch (MenuBar.Section 'notifications', a config_v2 bool, off by default), shown only when the helper can notify, and a…
     - **`toast`** — Global toast notifications: a plain showToast() (text toasts: data only) backed by sonner's global API, and useShowCustomToast() — a toast whose content the caller draws, rendered in the caller's…
 
-- **`stats`** [exempt] [6 sub-plugins] — Root plugin hosting stacked chart contributions from child plugins.
+- **`stats`** [6 sub-plugins] — Root plugin hosting stacked chart contributions from child plugins.
 
 - **`tag-tree`** — Umbrella for nested tag trees: one per-plugin table of tags (name, parent, colour, icon, fractional rank) declared in three lines, served through one endpoint set, and picked, created, renamed…
   - Plugins:

@@ -541,6 +541,7 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./equin build`. The bui
     - `DatabaseDriverImpl`
     - `Db`
     - `DbExecutor`
+    - `DeferredContractSettlement`
     - `ListenHandlers`
     - `ListenSession`
     - `ListenSessionName`
@@ -550,6 +551,7 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./equin build`. The bui
     - `DatabaseDriver`
     - `db`
     - `dbLog`
+    - `deferredContractSettled`
     - `isTransientDbError`
     - `loadKnownRelations`
     - `quotedRelationsIn`
@@ -576,11 +578,11 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./equin build`. The bui
     - `loadedDatabaseConfig`
     - `readDatabaseConfigSync`
 - Cross-plugin:
-  - Imported by: 176 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 177 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×48
     - `conversations` ×21
     - `tasks` ×20
-    - `infra` ×17
+    - `infra` ×18
     - `page` ×14
     - `debug` ×10
     - `active-data` ×8

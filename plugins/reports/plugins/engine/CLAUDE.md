@@ -323,15 +323,14 @@ so out-of-date code does not file reports. See that plugin's CLAUDE.md.
   - Imported by: 35 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `debug` ×13
     - `conversations` ×5
+    - `infra` ×4
     - `database` ×3
-    - `infra` ×3
     - `reports` ×3
     - `apps/deploy/site-reports/import`
     - `backup`
     - `build/failure-report`
     - `framework/cli/push`
     - `page/place/google`
-    - `stats/cost`
     - `tasks/reports-investigation`
     - `upstream`
 - Exemptions:

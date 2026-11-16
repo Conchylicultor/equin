@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "answers": [
+    {
+      "key": "table:claude_account_spend_carryover",
+      "entityType": "table",
+      "entityName": "claude_account_spend_carryover",
+      "action": "create"
+    },
+    {
+      "key": "table:claude_transcript_scans",
+      "entityType": "table",
+      "entityName": "claude_transcript_scans",
+      "action": "create"
+    },
+    {
+      "key": "table:claude_usage_history_imports",
+      "entityType": "table",
+      "entityName": "claude_usage_history_imports",
+      "action": "create"
+    },
+    {
+      "key": "table:claude_usage_import_accounts",
+      "entityType": "table",
+      "entityName": "claude_usage_import_accounts",
+      "action": "create"
+    },
+    {
+      "key": "table:claude_model_rates",
+      "entityType": "table",
+      "entityName": "claude_model_rates",
+      "action": "create"
+    },
+    {
+      "key": "table:claude_price_versions",
+      "entityType": "table",
+      "entityName": "claude_price_versions",
+      "action": "create"
+    },
+    {
+      "key": "table:claude_usage_hours",
+      "entityType": "table",
+      "entityName": "claude_usage_hours",
+      "action": "create"
+    },
+    {
+      "key": "table:claude_usage_sources",
+      "entityType": "table",
+      "entityName": "claude_usage_sources",
+      "action": "create"
+    },
+    {
+      "key": "table:claude_spend_days",
+      "entityType": "table",
+      "entityName": "claude_spend_days",
+      "action": "create"
+    },
+    {
+      "key": "table:claude_spend_sources",
+      "entityType": "table",
+      "entityName": "claude_spend_sources",
+      "action": "create"
+    }
+  ]
+}
