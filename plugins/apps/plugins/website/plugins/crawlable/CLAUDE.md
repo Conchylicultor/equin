@@ -121,13 +121,19 @@ alt (a figure caption, or a link's text), so a fragment is the page's words,
 not its pixels.
 
 **Cache.** One store entry per address (`<composition>.crawl-snapshot.<hash>`,
-shared by every checkout): the take's, its render half's and the
-composition's web code (module graph Merkle keys), the data they read (every glob root those modules declare
+shared by every checkout): the take's, its render half's and the web code it
+renders with (its listing's `webPlugins`; module graph Merkle keys), the data they read (every glob root those modules declare
 — the swapped providers' migrations and config), npm resolutions, patches, the
 Bun version and the cluster. An unchanged tree is a cache hit: no process
 runs. Compose links the entry into the dist (`artifacts/<dir>`, a prune root)
 and its `snapshot/` at the dist root, where the gateway reads
 `<web>/snapshot/manifest.json`.
+
+**`crawlable:static-take`** (check) runs the same take on every check pass
+(`takeCrawlSnapshot`: the tree's address, a store hit when unchanged, ~2 s
+cold), so a page that cannot render statically fails the push, not the
+composition's next deploy. A pass publishes the entry, so the next build of
+the tree is a cache hit.
 
 Run the take by hand (any initialized cluster file from the store):
 

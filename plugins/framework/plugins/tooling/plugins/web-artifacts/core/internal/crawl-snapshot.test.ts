@@ -38,6 +38,9 @@ const BASE: Record<string, string> = {
     `  () => import("@plugins/config/plugins/bundled-layer/server"),`,
     `  () => import("@plugins/migrations/plugins/bundled/server"),`,
     "];",
+    // The web plugins the take renders each composition with: what the
+    // address keys as the composition's web code.
+    `export const staticHosts = { site: { webPlugins: ["site"] } };`,
   ].join("\n"),
   // The bundled providers: their globs are the roots the disk swaps read.
   [CONFIG_LAYER]: `export const files = () => import.meta.glob("/config/**/*.jsonc");`,
@@ -97,11 +100,12 @@ function memoryGlobs(): GlobPatternMemo {
 }
 
 async function address(dirty: Record<string, string> = {}): Promise<string> {
-  const snapshot = await loadRepoSnapshot(asAppPath(checkout(dirty)));
+  const root = asAppPath(checkout(dirty));
+  const snapshot = await loadRepoSnapshot(root);
   const { dirName } = await crawlSnapshotDirName({
+    root,
     sources: { snapshot, globs: memoryGlobs() },
     composition: "site",
-    webPlugins: ["site"],
     clusterDirName: "pglite.pglite-cluster.x",
   });
   return dirName;
@@ -147,7 +151,20 @@ describe("a crawl snapshot's address", () => {
     ).not.toBe(await address());
   });
 
-  test("moves with the composition's web code, not with a plugin outside it", async () => {
+  test("refuses a composition the take's listing does not hold", async () => {
+    const root = asAppPath(checkout());
+    const snapshot = await loadRepoSnapshot(root);
+    expect(
+      crawlSnapshotDirName({
+        root,
+        sources: { snapshot, globs: memoryGlobs() },
+        composition: "elsewhere",
+        clusterDirName: "pglite.pglite-cluster.x",
+      }),
+    ).rejects.toThrow(/lists no static host for it \(it lists: site\)/);
+  });
+
+  test("moves with the web code the take renders with, not with a plugin outside it", async () => {
     const before = await address();
     expect(
       await address({ [FLEET_WEB]: `export default { changed: true };` }),

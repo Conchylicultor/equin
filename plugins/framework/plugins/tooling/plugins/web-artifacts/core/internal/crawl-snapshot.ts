@@ -20,7 +20,10 @@
 //   - the code: the Merkle keys, in the plugin-records module graph (static
 //     AND dynamic edges), of the take script — its generated listing's
 //     `import()` thunks reach every server barrel it boots — of every web
-//     barrel of the composition's fleet, which it renders with, and of every
+//     barrel the take renders with (its listing's `webPlugins` for the
+//     composition: read from the listing itself, so the address keys exactly
+//     what the take loads, and the build and `crawlable:static-take` compute
+//     the same one), and of every
 //     web barrel in the take's own plugin subtree: the render half
 //     (`crawlable/snapshot-render`), build-only and so in no composition.
 //     Both are loaded through barrel-import, an edge no graph sees;
@@ -59,15 +62,22 @@ import {
   artifactDirName,
   artifactStorePath,
   artifactTmpDir,
+  ensureStoreDirs,
   hasArtifact,
+  loadGlobPatternMemo,
   publishArtifact,
   touchArtifact,
   type ArtifactMeta,
 } from "./store";
 import { globFilesOfModules, type OwnSources } from "./own-files";
+import { openBuildLease } from "./lease";
+import { ensurePgliteCluster, pgliteClusterDirName } from "./host-snapshots";
 
 /** Where the one static-host take sits inside its plugin. */
 export const STATIC_HOST_ENTRY_REL = "bin/static-host.ts";
+
+/** The take's generated listing (codegen's static-host-gen), beside it. */
+const STATIC_HOST_LISTING = "static-host.generated.ts";
 
 const TAKE_RE = /^plugins\/((?:[^/]+\/plugins\/)*[^/]+)\/bin\/static-host\.ts$/;
 
@@ -108,10 +118,9 @@ const PATCHES_DIR = "patches";
  * over everything that can change its bytes (see the header).
  */
 export async function crawlSnapshotDirName(opts: {
+  root: AppPath;
   sources: OwnSources;
   composition: string;
-  /** The composition's web plugins, by path — its fleet's web entries. */
-  webPlugins: readonly string[];
   clusterDirName: string;
 }): Promise<{ dirName: string; take: string }> {
   const repo: RepoSnapshot = opts.sources.snapshot;
@@ -121,9 +130,12 @@ export async function crawlSnapshotDirName(opts: {
       `crawl snapshot "${opts.composition}": the composition is crawlable, but the tree has no ${STATIC_HOST_ENTRY_REL} to take it with`,
     );
   }
-  const webBarrels = opts.webPlugins
-    .map((p) => `plugins/${p}/web/index.ts`)
-    .sort();
+  const webPlugins = await takeWebPlugins(
+    opts.root,
+    take.entry,
+    opts.composition,
+  );
+  const webBarrels = webPlugins.map((p) => `plugins/${p}/web/index.ts`).sort();
   for (const b of webBarrels)
     if (!repo.has(b))
       throw new Error(`crawl snapshot "${opts.composition}": no ${b}`);
@@ -175,6 +187,83 @@ export async function crawlSnapshotDirName(opts: {
     ),
     take: take.entry,
   };
+}
+
+/**
+ * The web plugins the take renders `composition` with: its generated listing's
+ * `staticHosts[composition].webPlugins` — the one list the take itself loads.
+ * A composition the listing does not hold throws (it is not crawlable, or the
+ * listing is stale: `plugins-registry-in-sync` guards that).
+ */
+async function takeWebPlugins(
+  root: AppPath,
+  take: string,
+  composition: string,
+): Promise<readonly string[]> {
+  const listing = joinAppPath(
+    root,
+    take.slice(0, take.length - "static-host.ts".length) + STATIC_HOST_LISTING,
+  );
+  const { staticHosts } = (await import(listing)) as {
+    staticHosts: Record<string, { webPlugins: readonly string[] } | undefined>;
+  };
+  const host = staticHosts[composition];
+  if (host === undefined) {
+    throw new Error(
+      `crawl snapshot "${composition}": ${listing} lists no static host for it (it lists: ${Object.keys(staticHosts).join(", ") || "none"})`,
+    );
+  }
+  return host.webPlugins;
+}
+
+/**
+ * Take `composition`'s crawl snapshot from this checkout's working tree, on its
+ * own — no build around it: the snapshot at the tree's address, taken unless
+ * the store has it, then published, so a build of the same tree reuses it. What
+ * `crawlable:static-take` runs; the build's crawl stage is the same two calls
+ * inside its pipeline (its snapshot, its lease).
+ */
+export async function takeCrawlSnapshot(opts: {
+  root: AppPath;
+  /** The caller's snapshot of the tree at `root` (a check's `ctx.repo()`). */
+  snapshot: RepoSnapshot;
+  composition: string;
+  log: (line: string) => void;
+}): Promise<{ dirName: string; took: boolean }> {
+  const { root, composition, log } = opts;
+  ensureStoreDirs();
+  const sources: OwnSources = {
+    snapshot: opts.snapshot,
+    globs: loadGlobPatternMemo(),
+  };
+  const clusterDirName = await pgliteClusterDirName(sources.snapshot);
+  const { dirName, take } = await crawlSnapshotDirName({
+    root,
+    sources,
+    composition,
+    clusterDirName,
+  });
+  const lease = openBuildLease();
+  try {
+    const took = await ensureCrawlSnapshot({
+      root,
+      composition,
+      dirName,
+      take,
+      cluster: () =>
+        ensurePgliteCluster({
+          root,
+          dirName: clusterDirName,
+          log,
+          pin: (paths) => lease.pin(paths),
+        }),
+      log,
+      pin: (paths) => lease.pin(paths),
+    });
+    return { dirName, took };
+  } finally {
+    await lease.release();
+  }
 }
 
 /**

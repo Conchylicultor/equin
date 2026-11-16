@@ -38,19 +38,40 @@ Once per process: the render mode and the page's pipeline are process-wide.
 
 `render({ path, pane? })` resolves the path's app — the registered app
 (`Pane.Register`'s panes' `AppRef`s) with the longest base path holding it, or
-`pane`'s own app when given — and mounts the provider stack the app mounts —
+`pane`'s own app when given — and renders it **through the app's own surface**:
 `TransportProvider` → `NotificationsProvider` → `PluginProvider({ plugins,
-composition })` → `PaneSurfaceProvider` over a background pane store
-(`createPaneStore({ live: false })`) seeded with `path` — and paints the
-matched pane with the real full-surface renderer (`layouts/full-pane`), through
+composition })` → `SurfaceCore` (`apps-core/tab-surface`, the subtree a browser
+tab mounts) over a background pane store (`createPaneStore({ live: false })`)
+seeded with `path`. `SurfaceCore` renders the app's `Apps.App` layout, which
+paints the pane — so whatever the layout wraps the pages in (a
+`Website.Resident`'s store, a provider) wraps them here too. The pane check and
+title report ride `SurfaceCore`'s `reporters`, beside the app. Rendered through
 react-dom's `prerender` (`react-dom/static`: it waits for every `lazy` /
 Suspense to settle, where `renderToStaticMarkup` would print the fallback).
+
+Only the host's inputs differ from the browser's — a static transport, no
+socket, a standalone `PluginProvider`; the tab shell around a surface
+(`Core.Root`: tabs, rail, tab bar) is browser-only. Never rebuild the
+surface's provider stack here: a copy drifts the day a layout gains a wrapper
+(`build-1794814782-2rkiu7`: the website's `/about` read a resident's store
+this renderer did not mount).
+
+### What the document is
+
+The app's surface as rendered, minus what floats over it. Anything drawn
+over the page goes through a floating primitive — `SurfaceOverlay`,
+`ViewportOverlay`, `FloatingSurface` (popovers), toasts — and those render
+nothing in a static render (each checks `renderMode()`). In-flow positioning
+(`Pin`, `Layer`) is part of its parent's box and is rendered. So a layer
+leaves the crawl because of what it is, never because of where it is mounted.
 
 **Fails loudly**, as a `StaticRenderError` naming the pane, the path and the
 component path (React's component stack):
 
 - `path` held by no registered app, outside the given pane's app, resolving
   to no registered pane, or (with `pane`) to another pane;
+- an app with no `Apps.App` layout (`SurfaceCore`: no app is registered) — a
+  page is rendered the way the browser renders it, or not at all;
 - any error thrown while rendering — inside a Suspense boundary too (React
   would otherwise render the boundary's fallback and carry on);
 - any request or socket the render reaches for: the transport throws, and
@@ -71,7 +92,8 @@ Nothing is faked: every provider is the app's own. What made that possible
 was fixed in the building blocks (step 1 of the plan, plus the pane store's
 server snapshot below), each with a test that statically renders it:
 `useSyncExternalStore` server snapshots, a `NotificationsClient` that opens no
-socket until `connect()`, portals rendered in place, no DOM globals in render.
+socket until `connect()`, in-flow portals (a `DemoTarget`'s) rendered in place,
+no DOM globals in render.
 
 - **The pane store is the route's truth on the server too.** `useRoute` /
   `useRouteState` / `useIndexMatch` pass the store's own snapshot as
@@ -158,7 +180,7 @@ The real website end to end: its crawl snapshot take
 - Excluded: yes
 - Web:
   - Uses:
-    - `layouts/full-pane.FullPane`
+    - `apps-core/tab-surface.SurfaceCore`
     - `network/live/boot-snapshot.BootSnapshotValues`
     - `network/live/boot-snapshot.hydrateBootSnapshot`
     - `network/live/live-state.ensureNotificationsClient`
@@ -168,7 +190,6 @@ The real website end to end: its crawl snapshot take
     - `primitives/pane.createPaneStore`
     - `primitives/pane.MatchEntry`
     - `primitives/pane.Pane`
-    - `primitives/pane.PaneSurfaceProvider`
     - `primitives/pane.stripBasePath`
     - `primitives/pane.usePaneMatch`
     - `primitives/pane.usePaneTitle`

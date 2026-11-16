@@ -3,6 +3,9 @@
 
 /* ---- the prompt: the prototype's card, 400px wide 24px off the corner ---- */
 .consent-prompt {
+  /* In the site's layer overlay, which lets clicks through: the card takes
+     its own. */
+  pointer-events: auto;
   position: absolute;
   right: 24px;
   bottom: 24px;

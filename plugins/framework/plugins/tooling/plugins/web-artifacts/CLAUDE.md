@@ -644,6 +644,7 @@ Key invariants:
     - `sha256Hex`
     - `SHARED_ROOT`
     - `STATIC_HOST_ENTRY_REL`
+    - `takeCrawlSnapshot`
     - `WORKER_ASSETS_DIR`
 - Cli:
   - Uses: `packages/thread-pool.createThreadPool`

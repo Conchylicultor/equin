@@ -41,8 +41,11 @@ export const Website = {
   /**
    * What floats over every page of the site, above the page that scrolls
    * under it — the consent prompt. Rendered once by the app's surface
-   * (`WebsiteLayout`), so it stays put while the visitor moves between pages;
-   * each contribution places itself (a `Pin` in the surface's corner).
+   * (`WebsiteLayout`), so it stays put while the visitor moves between pages,
+   * inside a `SurfaceOverlay`: never part of the page's document (a static
+   * render draws no overlay). Each contribution places itself in the
+   * overlay's box (absolute, in a corner) and takes its own clicks
+   * (`pointer-events: auto` — the overlay lets the rest through to the page).
    */
   Layer: defineRenderSlot<{ label: string; component: ComponentType }>({
     docLabel: (p) => p.label,

@@ -40,6 +40,7 @@ export { runWebArtifactsPipeline } from "./internal/pipeline";
 export {
   discoverStaticHostTake,
   STATIC_HOST_ENTRY_REL,
+  takeCrawlSnapshot,
 } from "./internal/crawl-snapshot";
 export type {
   WebArtifactsPipelineOptions,

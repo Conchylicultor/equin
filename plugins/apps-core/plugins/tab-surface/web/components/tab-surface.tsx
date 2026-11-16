@@ -104,9 +104,10 @@ function useResidency(resident: boolean): SurfaceResidency {
  * host around the app render. A tab adds its title reporter (`reporters`,
  * rendered right inside the pane provider, so it keeps running while the tab
  * is unloaded) and its `mod+z` bindings (`beside`, rendered inside the undo
- * provider); an in-process app embed adds neither — it is not a tab, and a
- * second same-id `mod+z` registration would race the host's in the page-global
- * `ShortcutManager`. `residency="unloaded"` renders only the pane provider and
+ * provider). A static render (`primitives/dom/static-render`) mounts it too —
+ * so a page renders inside the same layout as in a tab — with its pane check
+ * as `reporters` and no `beside`: it is not a tab, and has no keyboard.
+ * `residency="unloaded"` renders only the pane provider and
  * `reporters`. Throws for an app id no `Apps.App` registers (a tab filters
  * those first).
  */

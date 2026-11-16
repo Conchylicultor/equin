@@ -19,14 +19,13 @@ import {
 import {
   createPaneStore,
   Pane,
-  PaneSurfaceProvider,
   stripBasePath,
   usePaneMatch,
   usePaneTitle,
   type AnyPane,
   type MatchEntry,
 } from "@plugins/primitives/plugins/pane/web";
-import { FullPane } from "@plugins/layouts/plugins/full-pane/web";
+import { SurfaceCore } from "@plugins/apps-core/plugins/tab-surface/web";
 import {
   createStaticTransport,
   type StaticRenderNetworkError,
@@ -248,17 +247,22 @@ async function renderPage(args: {
     rendered = { title, paneId };
   };
   const violationsBefore = args.violations.length;
+  // The app's own surface — `SurfaceCore`, the one a browser tab mounts, and
+  // inside it the app's `Apps.App` layout — so whatever wraps the pages live
+  // (a resident's store, a provider) wraps them here too. The pane check
+  // rides its `reporters`, beside the app, inside its pane provider.
   const tree = (
     <TransportProvider transport={args.transport}>
       <NotificationsProvider>
         <PluginProvider plugins={args.plugins} composition={args.composition}>
-          <PaneSurfaceProvider
-            store={store}
-            basePath={app.basePath}
+          <SurfaceCore
             appId={app.id}
-          >
-            <StaticPane expected={args.expected} report={report} />
-          </PaneSurfaceProvider>
+            store={store}
+            surfaceId="static"
+            reporters={
+              <StaticPaneCheck expected={args.expected} report={report} />
+            }
+          />
         </PluginProvider>
       </NotificationsProvider>
     </TransportProvider>
@@ -303,11 +307,12 @@ function messageOf(err: unknown): string {
 }
 
 /**
- * The surface's body: the pane the path resolved to, painted by the real
- * full-surface layout renderer — after checking it is the expected one, so a
- * stale path or an unregistered pane fails instead of rendering a fallback.
+ * Beside the app's surface: checks the path resolved to a registered pane — the
+ * expected one, when given — and reports its title. Draws nothing: the app's
+ * own layout paints the pane, so a stale path or an unregistered pane fails
+ * instead of rendering a fallback.
  */
-function StaticPane({
+function StaticPaneCheck({
   expected,
   report,
 }: {
@@ -325,10 +330,10 @@ function StaticPane({
       `the path resolves to pane "${active.pane.id}", not "${expected.id}"`,
     );
   }
-  return <StaticPaneBody entry={active} report={report} />;
+  return <StaticPaneTitle entry={active} report={report} />;
 }
 
-function StaticPaneBody({
+function StaticPaneTitle({
   entry,
   report,
 }: {
@@ -339,5 +344,5 @@ function StaticPaneBody({
     entry.pane.id,
     usePaneTitle(entry.pane, entry.fullParams, entry.hint, entry.options),
   );
-  return <FullPane />;
+  return null;
 }

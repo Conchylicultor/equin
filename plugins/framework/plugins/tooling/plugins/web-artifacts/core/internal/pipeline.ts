@@ -600,9 +600,9 @@ async function runPipeline(
       const { composition } = opts.crawl;
       const clusterDirName = await pgliteClusterDirName(sources.snapshot);
       const { dirName, take } = await crawlSnapshotDirName({
+        root,
         sources,
         composition,
-        webPlugins: plan.webTargets.map((t) => t.pluginPath!),
         clusterDirName,
       });
       const took = await ensureCrawlSnapshot({

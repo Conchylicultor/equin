@@ -13454,7 +13454,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ThemeEngine.Theme` "equin"
               - `ThemeEngine.SubTheme` "equin document"
               - `ThemeEngine.SubTheme` "equin page heading"
-            - Uses: 29 symbols — full list in [`plugins/apps/plugins/website/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/website/plugins/shell/REFERENCE.md)
+            - Uses: 30 symbols — full list in [`plugins/apps/plugins/website/plugins/shell/REFERENCE.md`](../plugins/apps/plugins/website/plugins/shell/REFERENCE.md)
               - `primitives/pane` ×7
               - `primitives/css/spacing` ×3
               - `apps/deploy/analytics/collect` ×2
@@ -13470,6 +13470,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/css/theme-boundary.Theme`
               - `primitives/icon-button.IconButton`
               - `primitives/lazy-component.lazyComponent`
+              - `primitives/overlay/surface-overlay.SurfaceOverlay`
               - `ui/icons.Icon`
               - `ui/theme-engine.ThemeEngine`
             - Exports (types): `WebsiteBandRhythm`
@@ -14164,6 +14165,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps-core/app-embed`
           - `apps-core/layout`
           - `apps-core/surface`
+          - `primitives/dom/static-render`
     - **`tabs`** — Tab manager for the app switcher: the open-tab set, focus model, cross-app navigate(), the focused-placement module store, which tabs stay mounted (useResidentTabs: those on screen plus the most recently focused hidden ones; the rest are unloaded), the focused tab's title as a module signal (useFocusedTabTitle, readable outside TabsProvider), and the surface-written placement-capabilities registry — one per tab set: the page's own, or an embedded one (TabsProvider embedded={{ at, onLeave, onLocationChange?, browserTabUrl? }}, an AppEmbed's: seeded, never live, persisting nothing, publishing no page-global signal, behind its own navigation boundary), found from outside React by peekFocusedTabSet().
       - Web:
         - Uses: 50 symbols — full list in [`plugins/apps-core/plugins/tabs/REFERENCE.md`](../plugins/apps-core/plugins/tabs/REFERENCE.md)
@@ -33872,6 +33874,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `sha256Hex`
               - `SHARED_ROOT`
               - `STATIC_HOST_ENTRY_REL`
+              - `takeCrawlSnapshot`
               - `WORKER_ASSETS_DIR`
           - Cli:
             - Uses: `packages/thread-pool.createThreadPool`
@@ -40606,7 +40609,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/sonata/shell`
           - `apps/website/shell`
           - `layouts/host`
-          - `primitives/dom/static-render`
     - **`host`** — Mixing host that dispatches each active pane to Full-pane or Miller per the app's own full-surface pane list. Reads the surface's already-resolved match.
       - Web:
         - Uses:
@@ -52271,7 +52273,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - **`static-render`** (excluded) — One static render of a pane to HTML for robots (never hydrated): createStaticRenderer declares the process a static render, loads the composition's plugins, hydrates a boot snapshot through the boot task's own hydrate path, and renders a path through the real provider stack and a static pane store, failing loudly with the pane and the component path.
           - Web:
             - Uses:
-              - `layouts/full-pane.FullPane`
+              - `apps-core/tab-surface.SurfaceCore`
               - `network/live/boot-snapshot.BootSnapshotValues`
               - `network/live/boot-snapshot.hydrateBootSnapshot`
               - `network/live/live-state.ensureNotificationsClient`
@@ -52281,7 +52283,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `primitives/pane.createPaneStore`
               - `primitives/pane.MatchEntry`
               - `primitives/pane.Pane`
-              - `primitives/pane.PaneSurfaceProvider`
               - `primitives/pane.stripBasePath`
               - `primitives/pane.usePaneMatch`
               - `primitives/pane.usePaneTitle`
@@ -54534,6 +54535,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Imported by:
               - `apps-core/tab-surface`
+              - `apps/website/shell`
               - `plugin-meta/exhibits`
           - Exemptions:
             - Exempts itself from: `layout/no-adhoc-layout` — `web/internal/surface-overlay.tsx` (sanctioned)

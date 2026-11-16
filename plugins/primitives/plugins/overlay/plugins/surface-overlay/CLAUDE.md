@@ -103,6 +103,7 @@ had been rendered there. The same idiom — and the same reason — as
 - Cross-plugin:
   - Imported by:
     - `apps-core/tab-surface`
+    - `apps/website/shell`
     - `plugin-meta/exhibits`
 - Exemptions:
   - Exempts itself from: `layout/no-adhoc-layout` — `web/internal/surface-overlay.tsx` (sanctioned)

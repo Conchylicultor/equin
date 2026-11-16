@@ -1,4 +1,5 @@
 import { FullPane } from "@plugins/layouts/plugins/full-pane/web";
+import { SurfaceOverlay } from "@plugins/primitives/plugins/overlay/plugins/surface-overlay/web";
 import { AnalyticsTracker } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/web";
 import { websiteApp } from "../../core";
 import { Website } from "../slots";
@@ -17,17 +18,23 @@ import { Website } from "../slots";
  * is replaced with the pane it wraps. The same holds for what floats over the
  * pages (`Website.Layer`: the consent prompt) and for what must outlive a
  * page switch (`Website.Resident`: the live demo's server).
+ *
+ * The layers float over the page, so they are drawn in a `SurfaceOverlay`:
+ * the surface's box in the browser, and nothing in a static render (the
+ * crawlable snapshot renders this layout too, through `SurfaceCore`) — a
+ * layer is never part of the page's document. The overlay lets clicks through
+ * to the page; a layer's own box takes them back (`pointer-events: auto`).
  */
 export function WebsiteLayout() {
   return (
-    // `relative`: the box a `Website.Layer` contribution pins itself in — the
-    // app's surface, so it floats over whichever page scrolls under it.
-    <div className="relative h-full min-h-0">
+    <div className="h-full min-h-0">
       <AnalyticsTracker app={websiteApp} />
       <Website.Resident.Wrap>
         <FullPane />
       </Website.Resident.Wrap>
-      <Website.Layer.Render />
+      <SurfaceOverlay className="pointer-events-none">
+        <Website.Layer.Render />
+      </SurfaceOverlay>
     </div>
   );
 }

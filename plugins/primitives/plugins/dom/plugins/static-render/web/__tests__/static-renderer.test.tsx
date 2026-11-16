@@ -1,6 +1,9 @@
 /**
- * The static renderer end to end, on a two-pane fixture app: the path resolves
- * through the static pane store (index and a segment), a navigating control
+ * The static renderer end to end, on a fixture app rendered through its own
+ * layout (`Apps.App`, mounted by `SurfaceCore` as a browser tab mounts it): the
+ * path resolves through the static pane store (index and a segment), what the
+ * layout wraps the pages in reaches them, a surface overlay leaves the
+ * document, a navigating control
  * carries its destination as `data-link`, the pane's title comes back, and
  * every failure — the wrong pane, an unknown path, a throwing component, a
  * network read — throws naming the pane and the path.
@@ -8,6 +11,7 @@
  * One renderer per process, so one suite: vitest gives this file its own
  * module registry, and nothing else in it reads the render mode.
  */
+import { createContext, useContext, type ReactNode } from "react";
 import { beforeAll, describe, expect, it } from "vitest";
 import type {
   LoadedPlugin,
@@ -23,6 +27,10 @@ import { defineApp } from "@plugins/primitives/plugins/pane/core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { useTransport } from "@plugins/primitives/plugins/networking/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { Apps } from "@plugins/apps-core/web";
+import { ErrorBoundary } from "@plugins/primitives/plugins/error-boundary/web";
+import { FullPane } from "@plugins/layouts/plugins/full-pane/web";
+import { SurfaceOverlay } from "@plugins/primitives/plugins/overlay/plugins/surface-overlay/web";
 import {
   createStaticRenderer,
   StaticRenderError,
@@ -69,6 +77,51 @@ const pendingPane: AnyPane = Pane.define({
   component: Pending,
 });
 
+const scopedPane: AnyPane = Pane.define({
+  route: defineRoute({ id: "sr-scoped", segment: "scoped" }),
+  app,
+  component: Scoped,
+});
+
+/** An app with a registered pane but no layout (`Apps.App`). */
+const bareApp = defineApp({
+  id: "sr-bare",
+  name: "No layout",
+  basePath: "/bare",
+  icon: symbol("science"),
+});
+
+const barePane: AnyPane = Pane.define({
+  route: defineRoute({ id: "sr-bare-home", segment: "" }),
+  app: bareApp,
+  appIndex: true,
+  component: About,
+});
+
+/** State the app's layout holds for every page (a resident's store). */
+const SiteScope = createContext<string | null>(null);
+
+/**
+ * The app's layout: the pages inside a provider it owns, and a layer floating
+ * over them through the surface overlay.
+ */
+function SiteLayout(): ReactNode {
+  return (
+    <SiteScope.Provider value="from the layout">
+      <FullPane />
+      <SurfaceOverlay>
+        <p>A floating prompt</p>
+      </SurfaceOverlay>
+    </SiteScope.Provider>
+  );
+}
+
+function Scoped() {
+  const scope = useContext(SiteScope);
+  if (scope === null) throw new Error("rendered outside the layout's scope");
+  return <p>{`Scoped: ${scope}`}</p>;
+}
+
 function Home() {
   const openPane = useOpenPane();
   return (
@@ -107,15 +160,31 @@ function Fetching() {
 const plugin = {
   description: "static-render test fixture",
   contributions: [
-    aboutPane,
-    homePane,
-    brokenPane,
-    fetchingPane,
-    pendingPane,
-  ].map((pane) => Pane.Register({ pane })),
+    Apps.App({ app, component: SiteLayout }),
+    ...[
+      aboutPane,
+      homePane,
+      brokenPane,
+      fetchingPane,
+      pendingPane,
+      scopedPane,
+      barePane,
+    ].map((pane) => Pane.Register({ pane })),
+  ],
+} as unknown as LoadedPlugin;
+
+// The slots the app's surface reads, declared as their owners declare them.
+const slotsPlugin = {
+  description: "the apps-core and error-boundary slots",
+  slots: { ...Apps, ...ErrorBoundary },
 } as unknown as LoadedPlugin;
 
 const entries: PluginEntry[] = [
+  {
+    pluginPath: "fixtures/plugins/static-render-slots",
+    id: "fixtures.static-render-slots",
+    loader: async () => ({ default: slotsPlugin }),
+  },
   {
     pluginPath: "fixtures/plugins/static-render-site",
     id: "fixtures.static-render-site",
@@ -169,6 +238,29 @@ describe("createStaticRenderer", () => {
     expect(page.title).toBe("About us");
     expect(page.paneId).toBe("sr-about");
     expect(page.app.name).toBe("Static render site");
+  });
+
+  it("renders a page inside what the app's layout wraps it in", async () => {
+    const page = await renderer.render({
+      pane: scopedPane,
+      path: "/site/scoped",
+    });
+    expect(page.html).toContain("Scoped: from the layout");
+  });
+
+  it("leaves what floats over the page out of the document", async () => {
+    const page = await renderer.render({
+      pane: aboutPane,
+      path: "/site/about",
+    });
+    expect(page.html).toContain("<p>We make things.</p>");
+    expect(page.html).not.toContain("A floating prompt");
+  });
+
+  it("refuses a page whose app registers no layout", async () => {
+    await expect(
+      renderer.render({ pane: barePane, path: "/bare" }),
+    ).rejects.toThrow(/no app "sr-bare" is registered/);
   });
 
   it("refuses a bare path no registered app holds", async () => {

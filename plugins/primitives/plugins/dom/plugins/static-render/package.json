@@ -1,6 +1,6 @@
 {
   "name": "@equin/plugin-primitives-dom-static-render",
-  "description": "One static render of a pane to HTML for robots (never hydrated): createStaticRenderer declares the process a static render, loads the plugins, hydrates a boot snapshot through the real hydrate path, and renders a path through the real provider stack and a static pane store (react-dom/static), failing loudly with the pane and component path; semanticHtml filters the markup down to its semantic document (headings, prose, lists, links — data-link controls become <a href> — tables, figures, images with alt).",
+  "description": "One static render of a pane to HTML for robots (never hydrated): createStaticRenderer declares the process a static render, loads the plugins, hydrates a boot snapshot through the real hydrate path, and renders a path through the app's own surface (SurfaceCore and its Apps.App layout, as a browser tab mounts it) over a static pane store (react-dom/static), floating UI left out of the document, failing loudly with the pane and component path; semanticHtml filters the markup down to its semantic document (headings, prose, lists, links — data-link controls become <a href> — tables, figures, images with alt).",
   "private": true,
   "version": "0.0.1",
   "dependencies": {
