@@ -23,6 +23,7 @@ draw `apps-core/app-icon`'s `AppIconTile`, in its calmer palette. The catalog
   - Imported by:
     - `apps/website/landing/layers`
     - `apps/website/pages/apps`
+    - `apps/website/readme`
 - Core:
   - Exports (types):
     - `OklchColor`

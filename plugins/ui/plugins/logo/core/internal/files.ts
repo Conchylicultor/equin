@@ -22,6 +22,18 @@ export const LOGO_FILES: readonly LogoFile[] = [
     kind: "svg",
     svg: { master: "full", paint: "gradient", size: 120 },
   },
+  // The logo drawing itself in: for a page or an image outside the app (the
+  // repo README, a slide), served by the app at /icon-draw.svg.
+  {
+    path: `${WEB}/icon-draw.svg`,
+    kind: "svg",
+    svg: {
+      master: "full",
+      paint: "gradient",
+      size: 120,
+      draw: { delayS: 0.2 },
+    },
+  },
   {
     path: `${WEB}/icon-small.svg`,
     kind: "svg",

@@ -7,13 +7,7 @@ import { AppsNavItem } from "./components/apps-nav-item";
 import { equinClosingTheme, equinGalleryTheme } from "./internal/theme";
 
 export { appsPane } from "./panes";
-export {
-  APPS,
-  CATEGORIES,
-  type AppCategory,
-  type AppCategoryId,
-  type CatalogApp,
-} from "./internal/catalog";
+export { APPS, type CatalogApp } from "./internal/catalog";
 export { tryLivePath } from "./internal/try-live";
 
 export default {

@@ -19,6 +19,7 @@ export const checkEntries: CollectedEntry[] = [
   { pluginPath: "apps/plugins/website/plugins/crawlable", id: "apps.website.crawlable", loader: () => import("@plugins/apps/plugins/website/plugins/crawlable/check"), dependsOn: ["framework/plugins/tooling/plugins/codegen", "framework/plugins/tooling/plugins/web-artifacts"] },
   { pluginPath: "apps/plugins/website/plugins/demos/plugins/workspace", id: "apps.website.demos.workspace", loader: () => import("@plugins/apps/plugins/website/plugins/demos/plugins/workspace/check"), dependsOn: [] },
   { pluginPath: "apps/plugins/website/plugins/promo-film/plugins/seed", id: "apps.website.promo-film.seed", loader: () => import("@plugins/apps/plugins/website/plugins/promo-film/plugins/seed/check"), dependsOn: [] },
+  { pluginPath: "apps/plugins/website/plugins/readme", id: "apps.website.readme", loader: () => import("@plugins/apps/plugins/website/plugins/readme/check"), dependsOn: [] },
   { pluginPath: "config_v2", id: "config_v2", loader: () => import("@plugins/config_v2/check"), dependsOn: ["framework/plugins/tooling/plugins/boundaries", "framework/plugins/tooling/plugins/codegen"] },
   { pluginPath: "conversations/plugins/model-provider", id: "conversations.model-provider", loader: () => import("@plugins/conversations/plugins/model-provider/check"), dependsOn: [] },
   { pluginPath: "database/plugins/derived-updated-at", id: "database.derived-updated-at", loader: () => import("@plugins/database/plugins/derived-updated-at/check"), dependsOn: [] },

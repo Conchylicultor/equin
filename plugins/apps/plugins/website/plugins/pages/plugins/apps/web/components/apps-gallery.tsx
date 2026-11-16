@@ -4,12 +4,8 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Theme } from "@plugins/primitives/plugins/css/plugins/theme-boundary/web";
 import { subThemeScope } from "@plugins/primitives/plugins/css/plugins/ui-kit/core";
-import {
-  APPS,
-  CATEGORIES,
-  type AppCategoryId,
-  type CatalogApp,
-} from "../internal/catalog";
+import { CATEGORIES, type AppCategoryId } from "../../core";
+import { APPS, type CatalogApp } from "../internal/catalog";
 import { equinGalleryTheme } from "../internal/theme";
 import { AppCard } from "./app-card";
 import "./apps-gallery.css";

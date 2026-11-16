@@ -13,6 +13,14 @@ small-master breakpoint, the gradient); nothing else in the repo spells a path.
   `web-core/web/index.html`) and the native helper's icons
   (`menu-bar/rust/icons/{app,tray,tray-attention}.svg`, rasterized by its
   `build.rs`). `LOGO_FILES` lists them, as data.
+- **Its motion** — the logo has one: it draws itself in, the line traced from
+  the top of the outer arc to the last bowl (`LOGO.draw`: duration and
+  easing). `logoSvg({ draw })` renders it (CSS only, so it plays inside an
+  `<img>`; whole under reduced motion or without CSS); `icon-draw.svg` is the
+  standalone file. To place the logo inside a bigger SVG (a banner), use
+  `logoMarkSvg({ idPrefix })` — a `<g>` in the 100 × 100 box with its own defs.
+- **No dot.** The mark is the line alone. The tray's attention dot is a status
+  badge set beside it (`attention`), never part of the brand.
 
 ## Changing the logo
 
@@ -39,6 +47,7 @@ the check does not depend on the rasterizer's version.
   - Exports (types):
     - `Dot`
     - `LogoFile`
+    - `LogoMarkOptions`
     - `LogoMaster`
     - `LogoSvgOptions`
   - Exports (values):
@@ -48,6 +57,7 @@ the check does not depend on the rasterizer's version.
     - `LOGO_FILES`
     - `LOGO_PNG_SOURCE_KEY`
     - `logoFileSvg`
+    - `logoMarkSvg`
     - `logoPath`
     - `logoPngSourceDigest`
     - `logoStroke`
@@ -59,6 +69,7 @@ the check does not depend on the rasterizer's version.
     - `apps-core/tab-bar`
     - `apps/agent-manager/shell`
     - `apps/website/landing/screenshot/chrome`
+    - `apps/website/readme`
     - `companions/browser-extension`
     - `companions/panel`
 

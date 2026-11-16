@@ -1,39 +1,77 @@
-# equin
+<div align="center">
 
-A personal self-evolving operating system for the agentic era.
+<a href="https://equin.ai">
+<img alt="equin — a self-evolving, personal operating system for the agentic era" src="docs/readme/hero.svg" width="100%" />
+</a>
 
-<a href="https://equin.ai/about"><img width="1920" height="1080" alt="equin, the showcase film — watch it on equin.ai" src="https://github.com/Conchylicultor/equin/releases/download/website-media/equin-readme-thumbnail.jpg" /></a>
+<p>
+<a href="https://equin.ai"><b>equin.ai</b></a> &nbsp;·&nbsp;
+<a href="https://equin.ai/about">▶ Watch the film</a> &nbsp;·&nbsp;
+<a href="https://equin.ai/about/vision">Vision</a> &nbsp;·&nbsp;
+<a href="https://equin.ai/about/apps">Apps</a> &nbsp;·&nbsp;
+<a href="#-install">Install</a>
+</p>
 
-https://equin.ai/
+<a href="https://equin.ai/about/apps">
+<img alt="The apps equin ships" src="docs/readme/apps.svg" width="100%" />
+</a>
 
-## What is equin?
+</div>
 
-### The platform / harness
+## ✦ What is equin?
 
-equin is a platform meant to design applications at scale:
-to develop, deploy and maintain complex apps with hundreds of features,
-apps that are meant to be used years from now.
+equin is an agentic platform for building large apps at scale: hundreds of features,
+maintained for years autonomously.
+It adds [hundreds of improvements](https://equin.ai/about/foundations) on top of raw Claude:
 
-How? equin brings [hundreds of innovations and improvements](https://equin.ai/about/foundations) on top of raw Claude, including:
+- an **agent manager** designed to monitor dozens of sessions in parallel
+- **background agents** that fix, push and update the app on their own
+- a **plugin system** where every feature is a self-contained block that every app can reuse
 
-- An agent manager designed to manage dozens of agentic sessions in parallel
-- A fast iteration workflow, launching agents in the background that fix, push, and update the app without any human intervention
-- A plugin system that helps agents design self-contained, reusable pieces which can be used across any app
+## ◎ What people build with it
 
-(If you're designing simple, one-shot applications, equin is mostly overkill. Raw agents work just as well.)
+<table>
+<tr>
+<td width="50%" valign="top">
 
-### The personal operating system
+### Apps for a team or an organization
 
-I use the platform to re-implement highly customized versions of all the applications I use in my daily life. The result is a monolithic application where all applications are integrated with each other. This includes:
+Real apps with many workflows, grown one request at a time.
+Users ask for a change, agents build it.
+Each app ships on its own.
 
-- My custom agent manager
-- My custom Notion
-- My custom design tool
-- My custom map app
-- My custom piano learning app
-- My custom file explorer
-- ...
+</td>
+<td width="50%" valign="top">
 
-Thanks to the plugin system, where all apps share the same building blocks, an improvement to one app is reflected in all the others.
+### A personal operating system
 
-(While equin is a monolithic application, each app can be released standalone through the plugin/composition system.)
+The author's showcase: custom versions of every app they use daily, connected
+to each other in one app:
+
+agent manager · notes · mail · maps · piano · files · …
+
+</td>
+</tr>
+</table>
+
+## ▶ Try it
+
+<a href="https://equin.ai/about/demo">
+<img alt="Try the demo online — equin, running entirely in your browser" src="docs/readme/demo.svg" width="100%" />
+</a>
+
+## ⚡ Install
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Conchylicultor/equin/main/install.sh | bash
+```
+
+Or prompt your agent:
+
+```
+Install equin (https://github.com/Conchylicultor/equin) on this Mac with its installer:
+curl -fsSL https://raw.githubusercontent.com/Conchylicultor/equin/main/install.sh | bash
+If a step fails, fix it and run the installer again. When it is done, give me the link to the app.
+```
+
+Then open **<http://equin.localhost:9000>**. And start your first wish.

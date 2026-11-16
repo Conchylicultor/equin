@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-apps-website-readme",
+  "private": true,
+  "version": "0.0.1",
+  "description": "The repo README's images: the animated hero (the logo drawing itself in, beside a living plugin network), the app shelf and the Try the demo card, rendered as SVG from the logo, the apps catalog and the website's tile colours, and held in sync by a check."
+}

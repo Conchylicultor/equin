@@ -23,6 +23,11 @@ export const LOGO = {
   smallBelowPx: 28,
   /** Runs from the top-right (blue) to the bottom-left (violet), in view-box units. */
   gradient: { from: "#3b82f6", to: "#8b5cf6", x1: 88, y1: 12, x2: 12, y2: 88 },
+  /**
+   * The logo's one motion: the line traced from its start (the top of the outer
+   * arc) to its end (the last bowl), as a pen would — slow out, slow in.
+   */
+  draw: { durationS: 2.4, easing: "cubic-bezier(.65,0,.35,1)" },
 } as const;
 
 export type LogoMaster = keyof typeof LOGO.masters;

@@ -21,21 +21,73 @@ export type LogoSvgOptions = {
   tile?: { fill: `#${string}`; inset: number; radius: number; scale: number };
   /** A dot in the outer arc's open (top-left) quarter, the logo left whole. */
   attention?: { dot: Dot; fill: `#${string}` };
+  /**
+   * The logo draws itself in (`LOGO.draw`), starting `delayS` seconds after the
+   * document loads. CSS only, so it plays wherever the SVG is shown — an
+   * `<img>` included — and a renderer without CSS (a rasterizer) draws the
+   * logo whole. Under `prefers-reduced-motion` it is whole from the start.
+   */
+  draw?: { delayS: number };
 };
 
-/** The logo as a standalone SVG document — what every generated file holds. */
-export function logoSvg(o: LogoSvgOptions): string {
+/** What {@link logoMarkSvg} takes: the drawn mark alone, no document around it. */
+export type LogoMarkOptions = Pick<
+  LogoSvgOptions,
+  "master" | "paint" | "draw"
+> & {
+  /**
+   * Prefixes the ids and class names the mark defines, so several marks (or a
+   * mark and the document around it) never collide.
+   */
+  idPrefix: string;
+};
+
+type Parts = { defs: string[]; mark: string };
+
+function markParts(o: LogoMarkOptions): Parts {
   const defs: string[] = [];
-  const body: string[] = [];
   let stroke: string = o.paint;
   if (o.paint === "gradient") {
     const g = LOGO.gradient;
+    const id = `${o.idPrefix}gradient`;
     defs.push(
-      `<linearGradient id="logo-gradient" gradientUnits="userSpaceOnUse" x1="${g.x1}" y1="${g.y1}" x2="${g.x2}" y2="${g.y2}"><stop offset="0" stop-color="${g.from}"/><stop offset="1" stop-color="${g.to}"/></linearGradient>`,
+      `<linearGradient id="${id}" gradientUnits="userSpaceOnUse" x1="${g.x1}" y1="${g.y1}" x2="${g.x2}" y2="${g.y2}"><stop offset="0" stop-color="${g.from}"/><stop offset="1" stop-color="${g.to}"/></linearGradient>`,
     );
-    stroke = "url(#logo-gradient)";
+    stroke = `url(#${id})`;
   }
-  let mark = `<path d="${logoPath(o.master)}" stroke="${stroke}" stroke-width="${fmt(logoStroke(o.master))}" stroke-linecap="round" stroke-linejoin="round"/>`;
+  let drawAttrs = "";
+  if (o.draw) {
+    const d = LOGO.draw;
+    const cls = `${o.idPrefix}draw`;
+    // pathLength="1" makes the dash one line-length, whatever the master.
+    defs.push(
+      `<style>.${cls}{stroke-dasharray:1;stroke-dashoffset:1;animation:${cls} ${d.durationS}s ${d.easing} ${o.draw.delayS}s forwards}` +
+        `@keyframes ${cls}{to{stroke-dashoffset:0}}` +
+        `@media (prefers-reduced-motion: reduce){.${cls}{animation:none;stroke-dashoffset:0}}</style>`,
+    );
+    drawAttrs = ` pathLength="1" class="${cls}"`;
+  }
+  return {
+    defs,
+    mark: `<path d="${logoPath(o.master)}"${drawAttrs} stroke="${stroke}" stroke-width="${fmt(logoStroke(o.master))}" stroke-linecap="round" stroke-linejoin="round"/>`,
+  };
+}
+
+/**
+ * The logo as a fragment to place inside another SVG (a banner, a card): a
+ * `<g>` in the 100 × 100 logo box, carrying its own defs. Position it with a
+ * transform on a group around it.
+ */
+export function logoMarkSvg(o: LogoMarkOptions): string {
+  const { defs, mark } = markParts(o);
+  return `<g fill="none">${defs.length ? `<defs>${defs.join("")}</defs>` : ""}${mark}</g>`;
+}
+
+/** The logo as a standalone SVG document — what every generated file holds. */
+export function logoSvg(o: LogoSvgOptions): string {
+  const { defs, mark: line } = markParts({ ...o, idPrefix: "logo-" });
+  const body: string[] = [];
+  let mark = line;
   if (o.tile) {
     const t = o.tile;
     body.push(

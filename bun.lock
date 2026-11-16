@@ -1663,6 +1663,10 @@
         "@tonejs/midi": "^2.0.28",
       },
     },
+    "plugins/apps/plugins/website/plugins/readme": {
+      "name": "@equin/plugin-apps-website-readme",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/website/plugins/shell": {
       "name": "@equin/plugin-apps-website-shell",
       "version": "0.0.1",
@@ -8924,6 +8928,8 @@
     "@equin/plugin-apps-website-promo-film-circle": ["@equin/plugin-apps-website-promo-film-circle@workspace:plugins/apps/plugins/website/plugins/promo-film/plugins/circle"],
 
     "@equin/plugin-apps-website-promo-film-seed": ["@equin/plugin-apps-website-promo-film-seed@workspace:plugins/apps/plugins/website/plugins/promo-film/plugins/seed"],
+
+    "@equin/plugin-apps-website-readme": ["@equin/plugin-apps-website-readme@workspace:plugins/apps/plugins/website/plugins/readme"],
 
     "@equin/plugin-apps-website-shell": ["@equin/plugin-apps-website-shell@workspace:plugins/apps/plugins/website/plugins/shell"],
 

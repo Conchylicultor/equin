@@ -5,8 +5,8 @@ export {
   logoStroke,
 } from "./internal/geometry";
 export type { Dot, LogoMaster } from "./internal/geometry";
-export { logoSvg } from "./internal/svg";
-export type { LogoSvgOptions } from "./internal/svg";
+export { logoMarkSvg, logoSvg } from "./internal/svg";
+export type { LogoMarkOptions, LogoSvgOptions } from "./internal/svg";
 export {
   LOGO_FILES,
   LOGO_PNG_SOURCE_KEY,

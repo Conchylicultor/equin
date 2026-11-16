@@ -15,6 +15,7 @@ run. Seed it from a string with `fnv1a32` (`packages/string-hash`).
     - `apps/isle/buildings`
     - `apps/isle/renderer`
     - `apps/isle/world`
+    - `apps/website/readme`
     - `music/ambient`
 - Core:
   - Exports (values): `mulberry32`

@@ -12565,6 +12565,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `apps/website/landing/layers`
               - `apps/website/pages/apps`
+              - `apps/website/readme`
           - Core:
             - Exports (types):
               - `OklchColor`
@@ -12990,23 +12991,28 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `primitives/shortcuts.useSurfaceShortcuts`
                   - `ui/icons.Icon`
                   - `ui/theme-engine.ThemeEngine`
-                - Exports (types):
-                  - `AppCategory`
-                  - `AppCategoryId`
-                  - `CatalogApp`
+                - Exports (types): `CatalogApp`
                 - Exports (values):
                   - `APPS`
                   - `appsPane`
-                  - `CATEGORIES`
                   - `tryLivePath`
               - Server:
                 - Contributes: `apps.website.crawlable.page` "/about/apps"
                 - Uses: `apps/website/crawlable.WebsitePages`
               - Core:
-                - Uses: `apps/website/crawlable.defineWebsitePage`
+                - Uses:
+                  - `apps/website/crawlable.defineWebsitePage`
+                  - `ui/icons.symbol`
+                  - `ui/icons.SymbolRef`
+                - Exports (types):
+                  - `AppCategory`
+                  - `AppCategoryId`
+                  - `CatalogEntry`
                 - Exports (values):
                   - `APP_DEMO_PLACES`
+                  - `APPS`
                   - `appsPage`
+                  - `CATEGORIES`
               - Cross-plugin:
                 - Uses tokens:
                   - `ui/tokens/color-palette --background`
@@ -13024,6 +13030,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Imported by:
                   - `apps/website`
                   - `apps/website/landing/layers`
+                  - `apps/website/readme`
             - **`download`** — The download page of the equin website: the /about/download pane with the one install command (or, for an agent, a prompt with deep links into Claude Code and the Claude app), what to do once it runs, a closing card opening the homepage's live demo full screen for a reader not ready to install (agents off there), and its Download nav link. The download page of the equin website on the server: its sitemap entry (WebsitePages.Page).
               - Web:
                 - Contributes:
@@ -13409,6 +13416,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                 - Imported by: `apps/website/promo-film`
               - Structure:
                 - Non-standard folders: `data/`
+        - **`readme`** — The repo README's images: the animated hero (the logo drawing itself in, beside a living plugin network), the app shelf and the Try the demo card, rendered as SVG from the logo, the apps catalog and the website's tile colours, and held in sync by a check.
+          - Core:
+            - Uses:
+              - `apps/website/app-tiles.oklchCss`
+              - `apps/website/app-tiles.websiteTileStops`
+              - `apps/website/pages/apps.APPS`
+              - `packages/seeded-random.mulberry32`
+              - `ui/logo.LOGO`
+              - `ui/logo.logoMarkSvg`
+            - Exports (types): `GlyphBody`
+            - Exports (values):
+              - `glyphsFrom`
+              - `README_ASSET_DIR`
+              - `README_FILES`
         - **`shell`** — App shell for the Website (equin public site). Registers the /about app entry, owns the shared site header (wordmark + nav) and the band/page/footer chrome every page wears, defines the Website.Section landing slot, the Website.Layer slot for what floats over every page and the Website.Resident slot for what must outlive a page switch (both rendered by the app's surface) and the Website.FooterLink slot for the footer's small print, and contributes the site's own theme (equin: palette, chart ramp, font), which the website app selects, plus the equin-document sub-theme (type scale, density, shape) every page wears and the equin-page-hero sub-theme an inner page's heading wears. The website's landing page on the server: its sitemap entry (WebsitePages.Page).
           - Web:
             - Slots:
@@ -43015,6 +43036,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/isle/buildings`
           - `apps/isle/renderer`
           - `apps/isle/world`
+          - `apps/website/readme`
           - `music/ambient`
       - Core:
         - Exports (values): `mulberry32`
@@ -64163,6 +64185,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (types):
           - `Dot`
           - `LogoFile`
+          - `LogoMarkOptions`
           - `LogoMaster`
           - `LogoSvgOptions`
         - Exports (values):
@@ -64172,6 +64195,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LOGO_FILES`
           - `LOGO_PNG_SOURCE_KEY`
           - `logoFileSvg`
+          - `logoMarkSvg`
           - `logoPath`
           - `logoPngSourceDigest`
           - `logoStroke`
@@ -64183,6 +64207,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps-core/tab-bar`
           - `apps/agent-manager/shell`
           - `apps/website/landing/screenshot/chrome`
+          - `apps/website/readme`
           - `companions/browser-extension`
           - `companions/panel`
     - **`segmented-progress-bar`** — Pluggable segmented progress bar with switchable visual variants.

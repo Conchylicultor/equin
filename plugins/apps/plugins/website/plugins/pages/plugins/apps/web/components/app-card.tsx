@@ -19,7 +19,8 @@ import { symbol } from "@plugins/ui/plugins/icons/core";
 import { track } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/web";
 import { downloadPane } from "@plugins/apps/plugins/website/plugins/pages/plugins/download/web";
 import { tryLivePath } from "../internal/try-live";
-import type { AppCategory, CatalogApp } from "../internal/catalog";
+import type { AppCategory } from "../../core";
+import type { CatalogApp } from "../internal/catalog";
 
 /**
  * One app of the gallery: its picture, its tile and name, what it does, and
