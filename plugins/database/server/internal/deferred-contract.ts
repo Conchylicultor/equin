@@ -50,6 +50,38 @@ export function takeDeferredContract(): DeferredContract | null {
   return file;
 }
 
+// How this process's boot left the schema's deferred contract, for work that
+// must not run while code older than the schema may still write (the usage
+// history import: the previous backend moves rows it reads). Push-based: one
+// promise, settled once by the boot hooks — never a ledger poll.
+export type DeferredContractSettlement =
+  /** Nothing is deferred any more: this boot deferred none, or ran it. */
+  | { kind: "settled" }
+  /** The deferred contract (or the boot step before it) failed: still pending. */
+  | { kind: "failed"; error: unknown }
+  /** An `exec` child: the serving backend owns the schema and its contract. */
+  | { kind: "not-owner" };
+
+const settlement = Promise.withResolvers<DeferredContractSettlement>();
+
+/** Settle {@link deferredContractSettled} (the first call wins). */
+export function settleDeferredContract(
+  outcome: DeferredContractSettlement,
+): void {
+  settlement.resolve(outcome);
+}
+
+/**
+ * Resolves once this process's boot has no contract left deferred: at once
+ * when it deferred none, else when `onReady`'s run of it — which waits until
+ * no process running older code is connected — has committed. A failed run
+ * stays pending (the next boot retries) and resolves `failed`; an `exec` child
+ * resolves `not-owner`. Only a serving backend can answer `settled`.
+ */
+export function deferredContractSettled(): Promise<DeferredContractSettlement> {
+  return settlement.promise;
+}
+
 // The deferred contract: wait until no process running code older than its
 // group is connected (`awaitGenerationsGone` — in a hot-swap, the previous
 // backend draining, and any child it spawned), then run it. Its failure is

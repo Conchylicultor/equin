@@ -1,4 +1,4 @@
-import { basename, dirname, relative, sep } from "node:path";
+import { basename, dirname, join, relative, sep } from "node:path";
 import type { FileChangeEvent } from "@plugins/infra/plugins/file-watcher/server";
 
 // "A session's transcript was written" as a broadcast, fed by the one projects-
@@ -8,7 +8,8 @@ import type { FileChangeEvent } from "@plugins/infra/plugins/file-watcher/server
 // that id's transcript exists, and the CLI creates the file a moment AFTER the
 // sessions-file write that woke it — so it waits for this.
 
-type Listener = (sessionIds: ReadonlySet<string>) => void;
+/** The owning sessions a batch wrote: session id → its top-level session file. */
+type Listener = (sessions: ReadonlyMap<string, string>) => void;
 /** The written session transcripts: session id → its file. */
 type SessionListener = (written: ReadonlyMap<string, string>) => void;
 
@@ -43,30 +44,33 @@ export function writtenSessions(
 }
 
 /**
- * The session ids that OWN a transcript a batch created or appended to: the
- * session itself for a top-level `<dir>/<uuid>.jsonl`, and the parent session
- * for a sub-agent's `<dir>/<uuid>/subagents/…/agent-<id>.jsonl` (workflow
- * agents included, one level deeper under `workflows/wf_<run>/`).
+ * The sessions that OWN a transcript a batch created or appended to, each with
+ * its top-level session file: the session itself for a `<dir>/<uuid>.jsonl`,
+ * and the parent session for a sub-agent's
+ * `<dir>/<uuid>/subagents/…/agent-<id>.jsonl` (workflow agents included, one
+ * level deeper under `workflows/wf_<run>/`) — `<dir>/<uuid>.jsonl` either way,
+ * whether or not it exists yet. Whose the session is (an equin conversation's,
+ * or none) is the listener's question.
  */
-export function writtenOwnerSessionIds(
+export function writtenOwnerSessions(
   events: readonly FileChangeEvent[],
   projectsDir: string,
-): Set<string> {
-  const ids = new Set<string>();
+): Map<string, string> {
+  const ids = new Map<string, string>();
   for (const event of events) {
     if (event.type === "delete") continue;
     const parts = relative(projectsDir, event.path).split(sep);
     if (parts[0] === "..") continue; // outside the projects dir
     if (parts.length === 2) {
       const match = SESSION_FILE_RE.exec(parts[1]!);
-      if (match) ids.add(match[1]!);
+      if (match) ids.set(match[1]!, event.path);
     } else if (
       parts.length >= 4 &&
       parts[2] === "subagents" &&
       SESSION_ID_RE.test(parts[1]!) &&
       parts.at(-1)!.startsWith("agent-")
     ) {
-      ids.add(parts[1]!);
+      ids.set(parts[1]!, join(projectsDir, parts[0]!, `${parts[1]!}.jsonl`));
     }
   }
   return ids;
@@ -87,8 +91,8 @@ export function onSessionTranscriptWritten(
 
 /**
  * Hear about every write to a session's transcript OR to one of its sub-agents'
- * transcripts, as the set of OWNING session ids each watcher batch touched
- * ({@link writtenOwnerSessionIds}). Same contract as
+ * transcripts, as the OWNING sessions each watcher batch touched, each with its
+ * session file ({@link writtenOwnerSessions}). Same contract as
  * {@link onSessionTranscriptWritten}: cheap, must not throw. Returns the
  * unsubscribe.
  */
@@ -107,7 +111,7 @@ export function notifySessionTranscriptWrites(
     if (written.size > 0) for (const listener of listeners) listener(written);
   }
   if (ownerListeners.size > 0) {
-    const ids = writtenOwnerSessionIds(events, projectsDir);
+    const ids = writtenOwnerSessions(events, projectsDir);
     if (ids.size > 0) for (const listener of ownerListeners) listener(ids);
   }
 }

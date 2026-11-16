@@ -3,17 +3,19 @@
 //   ./equin run plugins/stats/plugins/cost/scripts/verify-vs-ccusage.ts [--fetch] [--top N]
 //
 // This script is the ONLY reason `ccusage` is still a dependency of this plugin
-// (a dev one). Nothing on the serving path imports it: `price-table.ts` owns the
-// LiteLLM rates and `usage-index.ts` owns the parse. That independence is exactly
-// what needs a witness — so this runs ccusage over the same corpus and compares,
-// side by side:
+// (a dev one). Nothing on the serving path imports it: price-table owns the
+// LiteLLM rates and the usage ledger's `foldUsageEntry` owns the parse. That
+// independence is exactly what needs a witness — so this runs ccusage over the
+// same corpus and compares, side by side:
 //
 //   1. **ccusage** — `ccusage claude session --json --mode auto`, its
 //      `costUSD ?? computed` figure (`costUSD` is absent from every transcript
 //      entry we have sampled, so in practice this is pure arithmetic over its
 //      own copy of the upstream rates, 1h cache writes at their own rate).
-//   2. **ours** — the SHIPPED pricing: `parseTranscript` → `rollup` →
-//      `priceBucket`.
+//   2. **ours** — the SHIPPED counting and pricing: each transcript folded
+//      whole by `foldUsageEntry` (what the usage scanner files into the token
+//      ledger, per-file dedup), every bucket priced by `priceBucket` with the
+//      held table (the rates the price history is recorded from).
 //
 // A dollar delta alone conflates rates and counting, so the totals are also
 // broken down by token kind (input / output / cache create / cache read): a
@@ -47,19 +49,20 @@ import { fileURLToPath } from "node:url";
 import { z } from "zod";
 import { CLAUDE_PROJECTS_DIR } from "@plugins/infra/plugins/paths/core";
 import { spawnExpectOk } from "@plugins/infra/plugins/spawn/core";
-import { costUsageDir } from "../data-dirs";
-import { loadFallbackPriceTable } from "../server/internal/litellm-fallback";
-import type { PriceTable } from "../core";
+import { costUsageDir } from "@plugins/infra/plugins/claude-cli/plugins/usage-ledger/plugins/pricing/plugins/price-table/data-dirs";
+import {
+  emptyUsageBuckets,
+  foldUsageEntry,
+  type DayBucket,
+} from "@plugins/infra/plugins/claude-cli/plugins/usage-ledger/core";
+import { priceBucket } from "@plugins/infra/plugins/claude-cli/plugins/usage-ledger/plugins/pricing/core";
+import type { PriceTable } from "@plugins/infra/plugins/claude-cli/plugins/usage-ledger/plugins/pricing/core";
 import {
   fetchPriceTable,
+  loadFallbackPriceTable,
   loadPriceTable,
   mergePriceTable,
-} from "../server/internal/price-table";
-import {
-  parseTranscript,
-  rollup,
-  type FilePartial,
-} from "../server/internal/usage-index";
+} from "@plugins/infra/plugins/claude-cli/plugins/usage-ledger/plugins/pricing/plugins/price-table/server";
 
 const PARSE_CONCURRENCY = 8;
 /** ccusage's whole-corpus run takes ~12 s today; 10 min is a wedge, not a slow run. */
@@ -137,7 +140,7 @@ function topProjectDir(relativePath: string): string {
 
 // ─── ours ────────────────────────────────────────────────────────────────────
 
-/** Every `*.jsonl` under `~/.claude/projects`, the same set the corpus index enumerates. */
+/** Every `*.jsonl` under `~/.claude/projects`, the set the usage scanner reads. */
 async function listTranscripts(dir: string): Promise<string[]> {
   const out: string[] = [];
   for (const entry of await readdir(dir, { withFileTypes: true })) {
@@ -148,32 +151,52 @@ async function listTranscripts(dir: string): Promise<string[]> {
   return out;
 }
 
+/** One transcript's buckets, folded whole (every complete line, the last one included). */
+async function foldTranscript(path: string): Promise<DayBucket[]> {
+  const fold = emptyUsageBuckets();
+  for (const line of (await readFile(path, "utf8")).split("\n")) {
+    if (!line) continue;
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(line);
+    } catch (err) {
+      // A torn last line (a transcript being written): the scanner waits for
+      // its newline too.
+      if (err instanceof SyntaxError) continue;
+      throw err;
+    }
+    foldUsageEntry(fold, parsed);
+  }
+  return [...fold.buckets.values()];
+}
+
 /**
- * Parse every transcript with `parseTranscript`, bounded so this does not eat
- * the box, re-keyed to its top-level project dir.
+ * Fold every transcript, bounded so this does not eat the box, keyed by its
+ * top-level project dir.
  */
-async function parseAll(paths: string[]): Promise<Map<string, FilePartial>> {
-  const partials = new Map<string, FilePartial>();
+async function foldAll(
+  paths: string[],
+): Promise<{ projectDir: string; buckets: DayBucket[] }[]> {
+  const out: { projectDir: string; buckets: DayBucket[] }[] = [];
   let next = 0;
   const worker = async (): Promise<void> => {
     for (;;) {
       const i = next++;
       const path = paths[i];
       if (path === undefined) return;
-      const partial = await parseTranscript(path);
-      partials.set(path, {
-        ...partial,
+      out.push({
         projectDir: topProjectDir(relative(CLAUDE_PROJECTS_DIR, path)),
+        buckets: await foldTranscript(path),
       });
     }
   };
   await Promise.all(Array.from({ length: PARSE_CONCURRENCY }, worker));
-  return partials;
+  return out;
 }
 
 /**
  * The table the SERVER would use: the persisted one, falling back to the vendored
- * snapshot exactly as `load-usage.ts` does. `--fetch` layers a live LiteLLM fetch
+ * snapshot exactly as price-table's refresh does. `--fetch` layers a live LiteLLM fetch
  * on top through the real `mergePriceTable`.
  */
 async function resolveTable(): Promise<{ table: PriceTable; source: string }> {
@@ -188,17 +211,38 @@ async function resolveTable(): Promise<{ table: PriceTable; source: string }> {
   return { table: merged, source: `${baseSource} + live LiteLLM fetch` };
 }
 
+const tiered = (t: { below: number; above: number }): number =>
+  t.below + t.above;
+
 function ourTotalsByProject(
-  partials: Map<string, FilePartial>,
+  files: { projectDir: string; buckets: DayBucket[] }[],
   table: PriceTable,
 ): {
   byProject: Map<string, Totals>;
   unpriced: { model: string; tokens: number }[];
 } {
-  const { sessions, unpriced } = rollup(partials, table);
   const byProject = new Map<string, Totals>();
-  for (const s of sessions) addInto(byProject, s.projectDir, s);
-  return { byProject, unpriced };
+  const unpriced = new Map<string, number>();
+  for (const { projectDir, buckets } of files) {
+    for (const b of buckets) {
+      const priced = priceBucket(b, table);
+      if (!priced.ok)
+        unpriced.set(b.model, (unpriced.get(b.model) ?? 0) + priced.tokens);
+      addInto(byProject, projectDir, {
+        cost: priced.ok ? priced.cost : 0,
+        inputTokens: tiered(b.input),
+        outputTokens: tiered(b.output),
+        cacheCreationTokens: tiered(b.cacheCreate5m) + tiered(b.cacheCreate1h),
+        cacheReadTokens: tiered(b.cacheRead),
+      });
+    }
+  }
+  return {
+    byProject,
+    unpriced: [...unpriced]
+      .map(([model, tokens]) => ({ model, tokens }))
+      .sort((a, b) => a.model.localeCompare(b.model)),
+  };
 }
 
 // ─── ccusage ─────────────────────────────────────────────────────────────────
@@ -340,7 +384,7 @@ console.log(
   `corpus:      ${paths.length} transcripts under ${CLAUDE_PROJECTS_DIR}`,
 );
 
-const ours = ourTotalsByProject(await parseAll(paths), table);
+const ours = ourTotalsByProject(await foldAll(paths), table);
 
 // Last, and deliberately: ccusage's whole-corpus parse is the slow, memory-hungry
 // half (~12 s / ~1.2 GB), so a failure in OUR half surfaces before paying for it.

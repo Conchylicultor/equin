@@ -11,12 +11,13 @@ import { conversationsEntityRef } from "@plugins/tasks/plugins/tasks-core/core";
 // metrics-primitive.md) rewrites cost as a metric source and deletes every
 // value below; until then each chart reads one of them through `useLive`.
 //
-// Every value is served external `"notified"` over ONE shared, memoized
-// bundle (`server/internal/load-usage.ts`): the transcripts under
-// `~/.claude/projects` (a directory watch while a tuple is subscribed), the
-// price table (`onPriceTableUpdated`) and the permanent archive. None reads
-// Postgres: a session's conversation (title, status, link) is read on the
-// web from `sessionConversations` below.
+// Every value is served `"db"` with SQL over the priced token ledger
+// (`claude_spend_hours_v` joined to `claude_usage_sources`,
+// `server/internal/answers.ts`), recomputed on every ledger, price or source
+// write. A "session" is a `conv:` or `session:` ledger source (a conversation's
+// whole chain and its sub-agents are one); `cli:` spend counts in the per-day
+// cost and tokens only. A top session's live conversation (title, status) is
+// read on the web from `costConversations` below.
 
 /** Which sessions a chart counts (the `repoOnly` config toggle). */
 export const COST_SCOPES = ["all", "repo"] as const;
@@ -133,8 +134,11 @@ export const costDistribution = liveValue("stats.cost.distribution", {
 });
 
 const TopSessionSchema = z.object({
+  /** The source's own id: a conversation id (`conv:`), or a Claude session id (`session:`). */
   sessionId: z.string(),
+  /** The conversation the source is, for a `conv:` source; null otherwise. */
   conversationId: z.string().nullable(),
+  /** The source's recorded title (`claude_usage_sources`); the live conversation's wins. */
   title: z.string().nullable(),
   totalCost: z.number(),
   inputTokens: z.number(),
@@ -147,10 +151,9 @@ const TopSessionSchema = z.object({
 export type CostTopSession = z.infer<typeof TopSessionSchema>;
 
 /**
- * The `TOP_SESSIONS` dearest sessions, dearest first. `conversationId` /
- * `title` are the archive's snapshot (taken at capture, kept after the
- * conversation is deleted); the live conversation, when there is one, comes
- * from `sessionConversations` and wins.
+ * The `TOP_SESSIONS` dearest sessions, dearest first. `title` is the source's
+ * recorded one (kept after a conversation is deleted); the live conversation,
+ * when there is one, comes from `costConversations` and wins.
  *
  * BOUND: at most `TOP_SESSIONS` (50) rows.
  */
@@ -162,19 +165,13 @@ export const costTopSessions = liveValue("stats.cost.top-sessions", {
 });
 
 /**
- * A conversation by the Claude session it ran — the one key a transcript
- * carries. Lookup-only (`:rows`, read `useLive(c, { ids: sessionIds })`): the
- * top-sessions table reads its at most `TOP_SESSIONS` rows' conversations, so
- * a rename or a status change reaches the row live. Keyed by
- * `claudeSessionId` (unique per conversation), which no conversations
- * collection is keyed or filterable by.
+ * A conversation by id — lookup-only (`:rows`, read `useLive(c, { ids })`):
+ * the top-sessions table reads its at most `TOP_SESSIONS` rows'
+ * conversations, so a rename or a status change reaches the row live.
  */
-export const sessionConversations = liveCollection(
-  "stats.cost.session-conversations",
-  {
-    from: conversationsEntityRef,
-    carry: { pick: ["claudeSessionId", "id", "title", "status"] },
-    baseExposures: false,
-    id: "claudeSessionId",
-  },
-);
+export const costConversations = liveCollection("stats.cost.conversations", {
+  from: conversationsEntityRef,
+  carry: { pick: ["id", "title", "status"] },
+  baseExposures: false,
+  id: "id",
+});

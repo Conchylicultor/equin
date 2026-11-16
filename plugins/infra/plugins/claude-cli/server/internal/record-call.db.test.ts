@@ -15,7 +15,8 @@ import { runMigrations } from "@plugins/database/plugins/migrations/server/testi
 import { trimToNewest } from "@plugins/database/server";
 import { FALLBACK_MODEL } from "@plugins/conversations/plugins/model-provider/core";
 import { CLAUDE_CLI_RING_ID } from "../../core/resources";
-import { _claudeSpendHours } from "@plugins/infra/plugins/claude-cli/plugins/spend-ledger/server";
+import { _claudeUsageHours } from "@plugins/infra/plugins/claude-cli/plugins/usage-ledger/server";
+import { callModelTokens } from "./call-tokens";
 import {
   writeClaudeCliCall,
   writeRingHorizon,
@@ -106,10 +107,24 @@ describe("claude-cli call ring", () => {
   });
 });
 
-describe("a recorded call's spend", () => {
+describe("a recorded call's tokens", () => {
+  const usage = (input: number, output: number) =>
+    callModelTokens({
+      "model-c": {
+        inputTokens: input,
+        outputTokens: output,
+        cacheReadInputTokens: 0,
+        cacheCreationInputTokens: 300,
+        cacheCreationEphemeral1hInputTokens: 100,
+        webSearchRequests: 0,
+        costUSD: 0,
+        contextWindow: 200_000,
+        maxOutputTokens: 8_000,
+      },
+    });
   const call = (over: Partial<RecordCallInput>): RecordCallInput => ({
     model: FALLBACK_MODEL,
-    sourceName: "task-title",
+    sourceName: "tokens-test",
     sourceContext: null,
     prompt: "p",
     system: null,
@@ -118,63 +133,64 @@ describe("a recorded call's spend", () => {
     durationMs: 1,
     correlationId: null,
     accountId: "max",
-    costUsd: 0.25,
+    costUsd: 0.01,
+    tokens: usage(1_000, 50),
     at: new Date("2026-11-15T10:42:13Z"),
     ...over,
   });
   const ledger = () =>
     t.db
       .select()
-      .from(_claudeSpendHours)
-      .orderBy(asc(_claudeSpendHours.source), asc(_claudeSpendHours.hour));
+      .from(_claudeUsageHours)
+      .where(eq(_claudeUsageHours.source, "cli:tokens-test"));
 
-  test("lands in the ledger under cli:<source>, in the call's hour, beside the log row", async () => {
+  test("land in the token ledger under cli:<source>, per model, in the call's hour, added up", async () => {
     await writeClaudeCliCall(t.db, call({}));
-    // An error result that reports a cost counts too; another hour starts a row.
-    await writeClaudeCliCall(
-      t.db,
-      call({ output: null, error: "usage limit", costUsd: 0.5 }),
-    );
-    await writeClaudeCliCall(
-      t.db,
-      call({ costUsd: 1, at: new Date("2026-11-15T11:00:00Z") }),
-    );
-    // No result, or a free one: nothing to file.
-    await writeClaudeCliCall(t.db, call({ costUsd: null }));
-    await writeClaudeCliCall(t.db, call({ costUsd: 0 }));
-    await writeClaudeCliCall(
-      t.db,
-      call({ sourceName: "turn-summary", costUsd: 2 }),
-    );
+    await writeClaudeCliCall(t.db, call({ tokens: usage(2_000, 5) }));
+    // No account: the call never ran, so it used nothing.
+    await writeClaudeCliCall(t.db, call({ accountId: null }));
     expect(await ledger()).toEqual([
       {
         accountId: "max",
         hour: new Date("2026-11-15T10:00:00Z"),
-        source: "cli:task-title",
-        costUsd: 0.75,
-      },
-      {
-        accountId: "max",
-        hour: new Date("2026-11-15T11:00:00Z"),
-        source: "cli:task-title",
-        costUsd: 1,
-      },
-      {
-        accountId: "max",
-        hour: new Date("2026-11-15T10:00:00Z"),
-        source: "cli:turn-summary",
-        costUsd: 2,
+        source: "cli:tokens-test",
+        model: "model-c",
+        speed: "standard",
+        origin: "counted",
+        inputBelow: 3_000,
+        inputAbove: 0,
+        outputBelow: 55,
+        outputAbove: 0,
+        cacheReadBelow: 0,
+        cacheReadAbove: 0,
+        cacheCreate5mBelow: 400,
+        cacheCreate5mAbove: 0,
+        cacheCreate1hBelow: 200,
+        cacheCreate1hAbove: 0,
       },
     ]);
-    const costs = await t.db
-      .select({ costUsd: _claudeCliCalls.costUsd })
-      .from(_claudeCliCalls)
-      .where(eq(_claudeCliCalls.sourceName, "turn-summary"));
-    expect(costs).toEqual([{ costUsd: 2 }]);
+    const sources = await t.db.execute<{
+      source: string;
+      project_dir: string | null;
+      is_repo: boolean;
+      title: string | null;
+    }>(
+      sql`SELECT source, project_dir, is_repo, title FROM claude_usage_sources WHERE source = 'cli:tokens-test'`,
+    );
+    expect(sources.rows).toEqual([
+      {
+        source: "cli:tokens-test",
+        project_dir: null,
+        is_repo: true,
+        title: null,
+      },
+    ]);
   });
 
   test("a trim of the log leaves the ledger as it was", async () => {
+    await writeClaudeCliCall(t.db, call({}));
     const before = await ledger();
+    expect(before).not.toEqual([]);
     await trimToNewest(t.db, _claudeCliCalls, {
       key: _claudeCliCalls.id,
       newestFirst: _claudeCliCalls.createdAt,
@@ -182,5 +198,18 @@ describe("a recorded call's spend", () => {
     });
     expect(await t.db.select().from(_claudeCliCalls)).toEqual([]);
     expect(await ledger()).toEqual(before);
+  });
+
+  test("a call that used no token files no ledger row", async () => {
+    await writeClaudeCliCall(
+      t.db,
+      call({ sourceName: "tokens-none", tokens: [] }),
+    );
+    expect(
+      await t.db
+        .select()
+        .from(_claudeUsageHours)
+        .where(eq(_claudeUsageHours.source, "cli:tokens-none")),
+    ).toEqual([]);
   });
 });

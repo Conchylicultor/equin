@@ -1,7 +1,7 @@
 /**
  * The breakdown's read over a real Postgres (db-test-fixture, the real
- * migration chain): each account cut at its own window, `unattributed`
- * history left out, and a `conv:` source joined through attempt → task →
+ * migration chain, the priced view): each account cut at its own window,
+ * usage under `UNKNOWN_ACCOUNT` left out, and a `conv:` source joined through attempt → task →
  * mandate root → role / automation so it lands in its category.
  */
 import {
@@ -18,6 +18,9 @@ import {
   type TestDb,
 } from "@plugins/database/plugins/db-test-fixture/server/testing";
 import { runMigrations } from "@plugins/database/plugins/migrations/server/testing";
+import { UNKNOWN_ACCOUNT } from "@plugins/infra/plugins/claude-cli/plugins/usage-ledger/core";
+import { recordPriceVersion } from "@plugins/infra/plugins/claude-cli/plugins/usage-ledger/plugins/pricing/server";
+import { installSpendHoursView } from "@plugins/infra/plugins/claude-cli/plugins/usage-ledger/plugins/pricing/server/testing";
 import type { SpendNode } from "../../core";
 import { readSpendBreakdown } from "./spend-query";
 
@@ -55,6 +58,7 @@ async function mandate(taskId: string, mandateId: string, source: string) {
     ON CONFLICT (parent_id) DO UPDATE SET mandate_id = excluded.mandate_id, source_task_id = excluded.source_task_id`);
 }
 
+/** `cost` dollars of input tokens at $1 per million (the one price version, below). */
 async function spend(
   account: string,
   hour: string,
@@ -62,13 +66,14 @@ async function spend(
   cost: number,
 ) {
   await t.db.execute(sql`
-    INSERT INTO claude_spend_hours (account_id, hour, source, cost_usd)
-    VALUES (${account}, ${hour}::timestamptz, ${source}, ${cost})`);
+    INSERT INTO claude_usage_hours (account_id, hour, source, model, speed, input_below)
+    VALUES (${account}, ${hour}::timestamptz, ${source}, 'm-a', 'standard', ${cost * 1e6})`);
 }
 
 beforeAll(async () => {
   t = await createTestDb({ prefix: "supervisors_spend_test" });
   await runMigrations(t.db);
+  await installSpendHoursView(t.db);
   // A role with two sessions; the second has a worker.
   await t.db.execute(
     sql`INSERT INTO supervisor_roles (id, name) VALUES ('srole-h', 'Harness')`,
@@ -111,11 +116,28 @@ beforeAll(async () => {
   await spend("max", "2026-11-12T11:00:00Z", "conv:conv-a", 14);
   await spend("max", "2026-11-12T11:00:00Z", "conv:conv-auto", 18);
   await spend("max", "2026-11-12T12:00:00Z", "cli:task-title", 11);
-  await spend("max", "2026-11-13T00:00:00Z", "unattributed", 500); // history: left out
+  await spend(UNKNOWN_ACCOUNT, "2026-11-13T00:00:00Z", "conv:conv-you", 500); // unattributed: left out
   await spend("max", "2026-11-12T12:00:00Z", "conv:conv-gone", 2); // its conversation is gone
   await spend("api", "2026-11-09T00:00:00Z", "conv:conv-you", 6);
   await spend("api", "2026-11-07T00:00:00Z", "conv:conv-you", 2000); // before its window
   await spend("other", "2026-11-12T12:00:00Z", "conv:conv-you", 3000); // no window asked
+  // One price version, from -infinity: $1 per million tokens of every kind.
+  await recordPriceVersion(
+    t.db,
+    {
+      fetchedAt: 0,
+      models: {
+        "m-a": {
+          input: 1e-6,
+          output: 1e-6,
+          cacheCreate5m: 1e-6,
+          cacheCreate1h: 1e-6,
+          cacheRead: 1e-6,
+        },
+      },
+    },
+    "fallback",
+  );
 });
 
 afterAll(async () => {

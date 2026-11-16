@@ -1,11 +1,12 @@
 import { db } from "@plugins/database/server";
 import { serveValue } from "@plugins/network/plugins/live/server";
-import { _claudeSpendHours } from "@plugins/infra/plugins/claude-cli/plugins/spend-ledger/server";
+import { claudeSpendHoursView } from "@plugins/infra/plugins/claude-cli/plugins/usage-ledger/plugins/pricing/server";
 import { supervisorsSpend } from "../../core";
 import { readSpendBreakdown, SPEND_JOINED_RELATIONS } from "./spend-query";
 
-// The breakdown recomputes on every write to the spend ledger (the change
-// feed on `claude_spend_hours`): one aggregate over at most a week of hourly
+// The breakdown recomputes on every write to the priced ledger (the change
+// feed on the bases of `claude_spend_hours_v`: the token ledger, the rates,
+// the price versions): one aggregate over at most a week of hourly
 // rows per account, joined to what spent them. The joined task, conversation,
 // role and automation rows are read again on each of those recomputes — never
 // a recompute of their own, which would re-run the aggregate on every task or
@@ -14,9 +15,9 @@ export const supervisorsSpendServed = serveValue(supervisorsSpend, {
   source: "external",
   changes: "notified",
   reads: {
-    tables: [_claudeSpendHours],
+    tables: [claudeSpendHoursView],
     reason:
-      "each account's spend per hour and source, summed over its window — a write adds cost to the tree",
+      "each account's priced usage per hour and source, summed over its window — a ledger write adds cost to the tree, a price correction re-prices it",
     notified: {
       relations: SPEND_JOINED_RELATIONS,
       reason:

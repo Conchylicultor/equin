@@ -4,9 +4,9 @@ import type { DbExecutor } from "@plugins/database/server";
 import { executeRows } from "@plugins/database/plugins/sql-rows/core";
 import {
   SPEND_SOURCE_PREFIX,
-  UNATTRIBUTED_SPEND_SOURCE,
-} from "@plugins/infra/plugins/claude-cli/plugins/spend-ledger/core";
-import { _claudeSpendHours } from "@plugins/infra/plugins/claude-cli/plugins/spend-ledger/server";
+  UNKNOWN_ACCOUNT,
+} from "@plugins/infra/plugins/claude-cli/plugins/usage-ledger/core";
+import { claudeSpendHoursView } from "@plugins/infra/plugins/claude-cli/plugins/usage-ledger/plugins/pricing/server";
 import {
   _attempts,
   _conversations,
@@ -95,7 +95,9 @@ function sourceRow(r: SourceRowRaw): SpendSourceRow {
 
 /**
  * Each source's spend over the windows (every account from its own `since`;
- * the `unattributed` history left out), joined to what spent it: a `conv:`
+ * usage no pass could attribute — `UNKNOWN_ACCOUNT` — left out), priced by
+ * `claude_spend_hours_v` (an hour it cannot price adds nothing; the
+ * `cost-unpriced-model` report names it), joined to what spent it: a `conv:`
  * source's conversation → attempt → task → the task's effective mandate and
  * the root stating it → the root's owning role and filing automation.
  */
@@ -104,7 +106,7 @@ export async function readSpendSources(
   windows: readonly SpendWindow[],
 ): Promise<SpendSourceRow[]> {
   if (windows.length === 0) return [];
-  const h = _claudeSpendHours;
+  const h = claudeSpendHoursView;
   const conv = SPEND_SOURCE_PREFIX.conversation;
   const rows = await executeRows(exec, {
     label: "supervisors spend sources",
@@ -114,11 +116,11 @@ export async function readSpendSources(
           AS w("accountId" text, "since" timestamptz, "metered" boolean)
       ), spend AS (
         SELECT h.source,
-               sum(h.cost_usd)::float8 AS cost_usd,
+               coalesce(sum(h.cost_usd), 0)::float8 AS cost_usd,
                coalesce(sum(h.cost_usd) FILTER (WHERE w.metered), 0)::float8 AS billed_usd
           FROM ${h} h
           JOIN w ON w."accountId" = h.account_id AND h.hour >= w.since
-         WHERE h.source <> ${UNATTRIBUTED_SPEND_SOURCE}
+         WHERE h.account_id <> ${UNKNOWN_ACCOUNT}
          GROUP BY h.source
       )
       SELECT s.source, s.cost_usd, s.billed_usd,
@@ -161,20 +163,23 @@ export async function readSpendSources(
   return rows.map(sourceRow);
 }
 
-/** The first attributed hour on any of `accountIds`, or `null`. */
+/**
+ * The first hour of usage filed under any of `accountIds` (attributed: never
+ * `UNKNOWN_ACCOUNT`, which no window names), or `null`.
+ */
 async function readAttributedSince(
   exec: DbExecutor,
   accountIds: readonly string[],
 ): Promise<string | null> {
   if (accountIds.length === 0) return null;
-  const h = _claudeSpendHours;
+  const h = claudeSpendHoursView;
   const [row] = await executeRows(exec, {
     label: "supervisors spend attributed since",
     query: sql`
       SELECT to_char(min(h.hour) AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS first
         FROM ${h} h
        WHERE h.account_id IN (SELECT jsonb_array_elements_text(${JSON.stringify(accountIds)}::jsonb))
-         AND h.source <> ${UNATTRIBUTED_SPEND_SOURCE}`,
+         AND h.account_id <> ${UNKNOWN_ACCOUNT}`,
     row: FirstRowSchema,
   });
   return row?.first ?? null;

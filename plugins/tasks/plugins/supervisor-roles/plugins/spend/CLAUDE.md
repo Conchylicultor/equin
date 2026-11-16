@@ -41,7 +41,7 @@
   - Contributes: `resource.declare` "supervisors.spend"
   - Uses:
     - `database.db`
-    - `infra/claude-cli/spend-ledger._claudeSpendHours`
+    - `infra/claude-cli/usage-ledger/pricing.claudeSpendHoursView`
     - `network/live.serveValue`
     - `tasks/automations.tasksOrigin`
     - `tasks/supervisor-roles._supervisorRoles`

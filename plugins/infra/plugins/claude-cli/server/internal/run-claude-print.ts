@@ -15,6 +15,7 @@ import {
   type ModelTier,
 } from "@plugins/conversations/plugins/model-provider/core";
 import { getModelCatalog } from "@plugins/conversations/plugins/model-provider/plugins/catalog/server";
+import { callModelTokens, type CallModelTokens } from "./call-tokens";
 import { recordClaudeCliCall } from "./record-call";
 
 // A one-shot generation is one Agent SDK turn (infra/claude-cli/sdk) on the
@@ -103,6 +104,7 @@ export async function invokeClaude<T>({
   const startedAt = performance.now();
   let output: string | undefined;
   let costUsd: number | null = null;
+  let tokens: CallModelTokens[] = [];
   let caughtError: Error | undefined;
   // Resolved once: the account the turn runs on is the one its cost is filed
   // under, even if the active account switches mid-call.
@@ -144,6 +146,9 @@ export async function invokeClaude<T>({
     // What the turn cost, at API prices — an error result's too: the tokens
     // it spent were drawn from the account all the same.
     costUsd = result.total_cost_usd;
+    // The tokens it used, per model — what the usage ledger files and prices
+    // (`total_cost_usd` stays the call log's display value only).
+    tokens = callModelTokens(result.modelUsage);
     if (result.subtype !== "success" || result.is_error) {
       const detail =
         result.subtype === "success"
@@ -179,6 +184,7 @@ export async function invokeClaude<T>({
       correlationId: input.source.correlationId ?? null,
       accountId,
       costUsd,
+      tokens,
       at: new Date(),
     });
   }

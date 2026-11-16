@@ -27,9 +27,9 @@ import {
   _tasks,
 } from "@plugins/tasks/plugins/tasks-core/server";
 import { FALLBACK_MODEL } from "@plugins/conversations/plugins/model-provider/core";
-import type { FilePricing, FileScan, UsageTotals } from "./scan";
+import type { FileScan } from "./scan";
 import { writeUsage } from "./write";
-import { _claudeSpendHours } from "@plugins/infra/plugins/claude-cli/plugins/spend-ledger/server";
+import { _claudeUsageHours } from "@plugins/infra/plugins/claude-cli/plugins/usage-ledger/server";
 import {
   _conversationUsageExt,
   _conversationUsageFiles,
@@ -82,11 +82,7 @@ afterAll(async () => {
 });
 
 const tiers = (below: number) => ({ below, above: 0 });
-function fileRow(
-  path: string,
-  offset: number,
-  costUsd: number,
-): FileScan & FilePricing {
+function fileRow(path: string, offset: number): FileScan {
   return {
     path,
     kind: "session",
@@ -104,17 +100,8 @@ function fileRow(
       },
     ],
     tailHashes: [{ hash: `h${offset}`, bucket: "b", output: 1 }],
-    costUsd,
-    unpricedModels: [],
   };
 }
-const totals = (costUsd: number, tokens: number): UsageTotals => ({
-  costUsd,
-  tokens,
-  cacheReadTokens: 2,
-  agentCount: 0,
-});
-
 const filesOf = () =>
   t.db
     .select()
@@ -129,36 +116,23 @@ async function usageOf() {
 }
 
 describe("writeUsage", () => {
-  test("files and totals land in one statement, then update in place", async () => {
-    await writeUsage(
-      t.db,
-      "conv-w",
-      [fileRow("/a.jsonl", 10, 0.5)],
-      totals(0.5, 13),
-    );
-    expect(await filesOf()).toMatchObject([
-      { path: "/a.jsonl", offset: 10, costUsd: 0.5 },
-    ]);
+  test("files and the agent count land in one statement, then update in place", async () => {
+    await writeUsage(t.db, "conv-w", [fileRow("/a.jsonl", 10)], 1);
+    expect(await filesOf()).toMatchObject([{ path: "/a.jsonl", offset: 10 }]);
     const first = await usageOf();
-    expect(first).toMatchObject({ costUsd: 0.5, tokens: 13 });
+    expect(first).toMatchObject({ agentCount: 1, costUsd: 0, tokens: 0 });
 
     // Both arms take their conflict branch; the totals' derived updatedAt
     // trigger still fires inside the CTE.
-    await writeUsage(
-      t.db,
-      "conv-w",
-      [fileRow("/a.jsonl", 20, 0.9)],
-      totals(0.9, 23),
-    );
+    await writeUsage(t.db, "conv-w", [fileRow("/a.jsonl", 20)], 2);
     const files = await filesOf();
     expect(files).toHaveLength(1);
     expect(files[0]).toMatchObject({
       offset: 20,
-      costUsd: 0.9,
       tailHashes: [{ hash: "h20", bucket: "b", output: 1 }],
     });
     const second = await usageOf();
-    expect(second).toMatchObject({ costUsd: 0.9, tokens: 23 });
+    expect(second).toMatchObject({ agentCount: 2, costUsd: 0, tokens: 0 });
     expect(second?.updatedAt.getTime()).toBeGreaterThan(
       first?.updatedAt.getTime() ?? Infinity,
     );
@@ -166,75 +140,112 @@ describe("writeUsage", () => {
 
   test("files alone leave the totals untouched; totals alone leave the files", async () => {
     const before = await usageOf();
-    await writeUsage(t.db, "conv-w", [fileRow("/b.jsonl", 5, 0.1)], null);
+    await writeUsage(t.db, "conv-w", [fileRow("/b.jsonl", 5)], null);
     expect((await filesOf()).map((f) => f.path).sort()).toEqual([
       "/a.jsonl",
       "/b.jsonl",
     ]);
     expect(await usageOf()).toEqual(before);
 
-    await writeUsage(t.db, "conv-w", [], totals(1, 31));
-    expect(await usageOf()).toMatchObject({ costUsd: 1, tokens: 31 });
+    await writeUsage(t.db, "conv-w", [], 3);
+    expect(await usageOf()).toMatchObject({ agentCount: 3 });
     expect(await filesOf()).toHaveLength(2);
   });
 
-  test("spend adds to each account's hour under the conversation's source, in the same statement as the files", async () => {
-    const spendOf = () =>
+  test("tokens add to each account's hour under the conversation's source, in the same statement as the files", async () => {
+    const ledgerOf = () =>
       t.db
-        .select()
-        .from(_claudeSpendHours)
-        .orderBy(asc(_claudeSpendHours.accountId), asc(_claudeSpendHours.hour));
+        .select({
+          accountId: _claudeUsageHours.accountId,
+          hour: _claudeUsageHours.hour,
+          source: _claudeUsageHours.source,
+          input: _claudeUsageHours.inputBelow,
+        })
+        .from(_claudeUsageHours)
+        .orderBy(asc(_claudeUsageHours.accountId), asc(_claudeUsageHours.hour));
     const h = (iso: string) => new Date(iso);
-    await writeUsage(
-      t.db,
-      "conv-w",
-      [fileRow("/c.jsonl", 7, 0.25)],
-      totals(1.25, 38),
-      [
-        { accountId: "api", hour: h("2026-11-04T10:00:00Z"), costUsd: 0.25 },
-        { accountId: "max", hour: h("2026-11-04T10:00:00Z"), costUsd: 1 },
-      ],
-    );
-    // A later pass adds to the hour it already holds, and starts the next.
-    await writeUsage(t.db, "conv-w", [fileRow("/c.jsonl", 9, 0.75)], null, [
-      { accountId: "api", hour: h("2026-11-04T10:00:00Z"), costUsd: 0.5 },
-      { accountId: "api", hour: h("2026-11-04T11:00:00Z"), costUsd: 2 },
+    const row = (accountId: string, hour: string, input: number) => ({
+      accountId,
+      hour: h(hour),
+      model: "test-model",
+      speed: "standard" as const,
+      tokens: {
+        input: tiers(input),
+        output: tiers(0),
+        cacheRead: tiers(0),
+        cacheCreate5m: tiers(0),
+        cacheCreate1h: tiers(0),
+      },
+    });
+    await writeUsage(t.db, "conv-w", [fileRow("/c.jsonl", 7)], 4, [
+      row("api", "2026-11-04T10:00:00Z", 25),
+      row("max", "2026-11-04T10:00:00Z", 100),
     ]);
-    expect(await spendOf()).toEqual([
+    // A later pass adds to the hour it already holds, and starts the next.
+    await writeUsage(t.db, "conv-w", [fileRow("/c.jsonl", 9)], null, [
+      row("api", "2026-11-04T10:00:00Z", 50),
+      row("api", "2026-11-04T11:00:00Z", 200),
+    ]);
+    expect(await ledgerOf()).toEqual([
       {
         accountId: "api",
         hour: h("2026-11-04T10:00:00Z"),
         source: "conv:conv-w",
-        costUsd: 0.75,
+        input: 75,
       },
       {
         accountId: "api",
         hour: h("2026-11-04T11:00:00Z"),
         source: "conv:conv-w",
-        costUsd: 2,
+        input: 200,
       },
       {
         accountId: "max",
         hour: h("2026-11-04T10:00:00Z"),
         source: "conv:conv-w",
-        costUsd: 1,
+        input: 100,
       },
     ]);
-    expect(await usageOf()).toMatchObject({ costUsd: 1.25, tokens: 38 });
+    expect(await usageOf()).toMatchObject({ agentCount: 4 });
   });
 
-  test("a failed write files no spend", async () => {
-    const before = await t.db.select().from(_claudeSpendHours);
+  test("a failed write files no tokens", async () => {
+    const before = await t.db.select().from(_claudeUsageHours);
     // The conversation does not exist: the file rows' FK fails the statement.
     expect(
-      writeUsage(t.db, "conv-missing", [fileRow("/x.jsonl", 1, 1)], null, [
+      writeUsage(t.db, "conv-missing", [fileRow("/x.jsonl", 1)], null, [
         {
           accountId: "api",
           hour: new Date("2026-11-04T12:00:00Z"),
-          costUsd: 1,
+          model: "test-model",
+          speed: "standard",
+          tokens: {
+            input: tiers(1),
+            output: tiers(0),
+            cacheRead: tiers(0),
+            cacheCreate5m: tiers(0),
+            cacheCreate1h: tiers(0),
+          },
         },
       ]),
     ).rejects.toThrow();
-    expect(await t.db.select().from(_claudeSpendHours)).toEqual(before);
+    expect(await t.db.select().from(_claudeUsageHours)).toEqual(before);
+  });
+
+  test("a row under an old spelling moves to the new path in the same statement", async () => {
+    await writeUsage(t.db, "conv-w", [fileRow("/old/c.jsonl", 7)], null);
+    await writeUsage(
+      t.db,
+      "conv-w",
+      [fileRow("/new/c.jsonl", 7)],
+      null,
+      [],
+      null,
+      [],
+      ["/old/c.jsonl"],
+    );
+    const paths = (await filesOf()).map((f) => f.path);
+    expect(paths).toContain("/new/c.jsonl");
+    expect(paths).not.toContain("/old/c.jsonl");
   });
 });

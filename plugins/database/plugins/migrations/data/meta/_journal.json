@@ -3109,6 +3109,55 @@
       "tag": "20261115_232411_a52fb6b4__merged_20261115_2324",
       "hash": "a52fb6b4",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1794787822000,
+      "tag": "20261116_001022_ca675cb0__claude_usage_ledger_and_pricing",
+      "hash": "ca675cb0",
+      "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1794788911000,
+      "tag": "20261116_002831_90d12878__claude_transcript_scans",
+      "hash": "90d12878",
+      "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1794789859000,
+      "tag": "20261116_004419_ad4ee8c8__claude_usage_history_import",
+      "hash": "ad4ee8c8",
+      "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1794791685000,
+      "tag": "20261116_011445_c11b65a1__claude_account_spend_carryover",
+      "hash": "c11b65a1",
+      "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1794793196000,
+      "tag": "20261116_013956_93ba287c__usage_ledger_legacy_carryover",
+      "hash": "93ba287c",
+      "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1794793266000,
+      "tag": "20261116_014106_398b1e16__usage_ledger_drop_dollars",
+      "hash": "398b1e16",
+      "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1794794610000,
+      "tag": "20261116_020330_5e011d71__usage_files_one_row_per_transcript",
+      "hash": "5e011d71",
+      "breakpoints": true
     }
   ]
 }

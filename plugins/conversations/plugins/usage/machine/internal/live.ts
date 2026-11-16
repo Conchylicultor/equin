@@ -5,10 +5,9 @@ import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
 import { isHostSingleton } from "@plugins/infra/plugins/paths/server";
 import { onTranscriptWritten } from "@plugins/conversations/plugins/transcript-watcher/server";
 import { _conversationSessions } from "@plugins/conversations/plugins/session-chain/server";
-import { onPriceTableUpdated } from "@plugins/stats/plugins/cost/server";
 import { _conversations } from "@plugins/tasks/plugins/tasks-core/server";
 import { requestUsageSync } from "./sync";
-import { usageRepriceJob } from "./jobs";
+import { requestSessionSync } from "./session-sync";
 
 /**
  * The existing conversations a batch of written session ids belongs to, each
@@ -50,20 +49,32 @@ async function conversationsFor(
   return out;
 }
 
-async function syncWritten(sessionIds: string[]): Promise<void> {
-  const owners = await conversationsFor(sessionIds);
-  await Promise.all(
-    [...owners].map(([id, written]) => requestUsageSync(id, written)),
-  );
+/**
+ * Sync what a batch of transcript writes touched: each conversation owning a
+ * written session (its own sync), and every written session no existing
+ * conversation owns (the ledger-only path, `session-sync.ts` — which also
+ * skips a session a deleted conversation once ran, from its chain rows).
+ */
+async function syncWritten(
+  written: ReadonlyMap<string, string>,
+): Promise<void> {
+  const owners = await conversationsFor([...written.keys()]);
+  const owned = new Set([...owners.values()].flatMap((ids) => [...ids]));
+  await Promise.all([
+    ...[...owners].map(([id, ids]) => requestUsageSync(id, ids)),
+    ...[...written]
+      .filter(([sessionId]) => !owned.has(sessionId))
+      .map(([sessionId, path]) => requestSessionSync(sessionId, path, "live")),
+  ]);
 }
 
 let stop: (() => void) | null = null;
 
 /**
  * Keep usage live: every write to a session or sub-agent transcript re-syncs
- * the conversation it belongs to (an append read of the new bytes), and a
- * price-table change prices what an older table could not (never re-pricing
- * what was already priced).
+ * the conversation it belongs to (an append read of the new bytes) — or, for a
+ * session no conversation owns, its ledger-only count. A price change needs
+ * nothing here: the ledger holds tokens, priced at read.
  *
  * On the host singleton only (main in dev, the one backend in a release):
  * every backend hears every transcript write, and N worktree backends
@@ -73,18 +84,10 @@ let stop: (() => void) | null = null;
  */
 export function startLiveUsage(): void {
   if (!isHostSingleton() || stop !== null) return;
-  const offWrites = onTranscriptWritten((sessionIds) => {
-    void runTracked("conversations.usage:sync", () =>
-      syncWritten([...sessionIds]),
-    );
+  const offWrites = onTranscriptWritten((written) => {
+    void runTracked("conversations.usage:sync", () => syncWritten(written));
   });
-  const offPrices = onPriceTableUpdated(() => {
-    void usageRepriceJob.enqueue({});
-  });
-  stop = () => {
-    offWrites();
-    offPrices();
-  };
+  stop = offWrites;
 }
 
 export function stopLiveUsage(): void {

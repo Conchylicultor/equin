@@ -1,8 +1,8 @@
 /**
- * The account month read over the real spend ledger (db-test-fixture, the
- * real migration chain): hours summed per UTC day, every source — the
- * `unattributed` history migrated from the old day table included — and only
- * the asked account and month.
+ * The account month read over the real priced ledger (db-test-fixture, the
+ * real migration chain, `claude_spend_hours_v`): the account's priced hours
+ * summed per UTC day, every source, plus its carried-over legacy days — and
+ * only the asked account and month. An unpriced hour adds nothing.
  */
 import {
   afterAll,
@@ -17,62 +17,81 @@ import {
   type TestDb,
 } from "@plugins/database/plugins/db-test-fixture/server/testing";
 import { runMigrations } from "@plugins/database/plugins/migrations/server/testing";
-import { _claudeSpendHours } from "@plugins/infra/plugins/claude-cli/plugins/spend-ledger/server";
+import { writeAtomically } from "@plugins/database/server";
+import { usageLedgerUpsert } from "@plugins/infra/plugins/claude-cli/plugins/usage-ledger/server";
+import type { SpendSource } from "@plugins/infra/plugins/claude-cli/plugins/usage-ledger/core";
+import { recordPriceVersion } from "@plugins/infra/plugins/claude-cli/plugins/usage-ledger/plugins/pricing/server";
+import { installSpendHoursView } from "@plugins/infra/plugins/claude-cli/plugins/usage-ledger/plugins/pricing/server/testing";
 import { accountSpendDays } from "./served";
+import { _claudeAccountSpendCarryover } from "./tables";
 
 setDefaultTimeout(120_000);
 
 let t: TestDb;
 
+const none = { below: 0, above: 0 };
+/** `dollars` worth of input at $1 per million tokens. */
+const use = (
+  accountId: string,
+  hour: string,
+  source: SpendSource,
+  dollars: number,
+  model = "m-a",
+) => ({
+  accountId,
+  hour: new Date(hour),
+  source,
+  model,
+  speed: "standard" as const,
+  tokens: {
+    input: { below: dollars * 1e6, above: 0 },
+    output: none,
+    cacheRead: none,
+    cacheCreate5m: none,
+    cacheCreate1h: none,
+  },
+});
+
 beforeAll(async () => {
   t = await createTestDb({ prefix: "usage_account_spend_test" });
   await runMigrations(t.db);
-  const h = (iso: string) => new Date(iso);
-  await t.db.insert(_claudeSpendHours).values([
-    // Migrated history: a whole day at 00:00 UTC.
+  await installSpendHoursView(t.db);
+  await writeAtomically(t.db, [
+    usageLedgerUpsert(t.db, [
+      use("max", "2026-11-03T09:00:00Z", "conv:conv-a", 1),
+      use("max", "2026-11-03T23:00:00Z", "cli:task-title", 0.5),
+      use("max", "2026-11-04T00:00:00Z", "conv:conv-a", 2),
+      // An unpriced model: its tokens add nothing.
+      use("max", "2026-11-04T01:00:00Z", "conv:conv-a", 64, "m-unknown"),
+      // Another month, another account: not in the read.
+      use("max", "2026-10-31T23:00:00Z", "conv:conv-a", 8),
+      use("max", "2026-12-01T00:00:00Z", "conv:conv-a", 16),
+      use("api", "2026-11-03T09:00:00Z", "conv:conv-b", 32),
+    ]),
+  ]);
+  // Recorded after the ledger rows, so it prices every model they name.
+  await recordPriceVersion(
+    t.db,
     {
-      accountId: "max",
-      hour: h("2026-11-03T00:00:00Z"),
-      source: "unattributed",
-      costUsd: 4,
+      fetchedAt: 0,
+      models: {
+        "m-a": {
+          input: 1e-6,
+          output: 1e-6,
+          cacheCreate5m: 1e-6,
+          cacheCreate1h: 1e-6,
+          cacheRead: 1e-6,
+        },
+      },
     },
-    {
-      accountId: "max",
-      hour: h("2026-11-03T09:00:00Z"),
-      source: "conv:conv-a",
-      costUsd: 1,
-    },
-    {
-      accountId: "max",
-      hour: h("2026-11-03T23:00:00Z"),
-      source: "cli:task-title",
-      costUsd: 0.5,
-    },
-    {
-      accountId: "max",
-      hour: h("2026-11-04T00:00:00Z"),
-      source: "conv:conv-a",
-      costUsd: 2,
-    },
-    // Another month, another account: not in the read.
-    {
-      accountId: "max",
-      hour: h("2026-10-31T23:00:00Z"),
-      source: "conv:conv-a",
-      costUsd: 8,
-    },
-    {
-      accountId: "max",
-      hour: h("2026-12-01T00:00:00Z"),
-      source: "conv:conv-a",
-      costUsd: 16,
-    },
-    {
-      accountId: "api",
-      hour: h("2026-11-03T09:00:00Z"),
-      source: "conv:conv-b",
-      costUsd: 32,
-    },
+    "fallback",
+  );
+  await t.db.insert(_claudeAccountSpendCarryover).values([
+    // The legacy unattributed history, carried over in dollars.
+    { accountId: "max", day: "2026-11-02", costUsd: 4 },
+    { accountId: "max", day: "2026-11-03", costUsd: 0.25 },
+    { accountId: "max", day: "2026-10-30", costUsd: 100 },
+    { accountId: "api", day: "2026-11-02", costUsd: 100 },
   ]);
 });
 
@@ -80,10 +99,21 @@ afterAll(async () => {
   await t.drop();
 });
 
+const close = (
+  days: { date: string; costUsd: number }[],
+  want: { date: string; costUsd: number }[],
+) => {
+  expect(days.map((d) => d.date)).toEqual(want.map((d) => d.date));
+  days.forEach((d, i) =>
+    expect(Math.abs(d.costUsd - want[i]!.costUsd)).toBeLessThan(1e-9),
+  );
+};
+
 describe("accountSpendDays", () => {
-  test("sums the account's hours per UTC day of the month, every source", async () => {
-    expect(await accountSpendDays(t.db, "max", "2026-11")).toEqual([
-      { date: "2026-11-03", costUsd: 5.5 },
+  test("sums the account's priced hours and carried days per UTC day of the month", async () => {
+    close(await accountSpendDays(t.db, "max", "2026-11"), [
+      { date: "2026-11-02", costUsd: 4 },
+      { date: "2026-11-03", costUsd: 1.75 },
       { date: "2026-11-04", costUsd: 2 },
     ]);
   });

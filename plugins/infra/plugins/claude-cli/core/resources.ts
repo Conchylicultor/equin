@@ -78,10 +78,10 @@ export const claudeCliCallFields = {
   correlationId: nullable(textField()),
   // What the call cost at API prices — the SDK result's `total_cost_usd`, an
   // error result's included; `null` when the call never got a result (a CLI
-  // that died, a timeout) or was recorded before costs were kept. The same
-  // amount is added to the spend ledger under `cli:<sourceName>`
-  // (`plugins/spend-ledger`) — the ledger, not this trimmed log, is what spend
-  // is read from.
+  // that died, a timeout) or was recorded before costs were kept. Display only:
+  // the call's tokens go to the usage ledger under `cli:<sourceName>`
+  // (`plugins/usage-ledger`), priced at read — the ledger, not this trimmed
+  // log, is what spend is read from.
   costUsd: nullable(moneyField({ label: "Cost" })),
 } satisfies FieldsRecord;
 

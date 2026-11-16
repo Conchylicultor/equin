@@ -232,7 +232,7 @@ count accumulates across drops.
   - Imported by: 79 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `apps` ×14
     - `debug` ×14
-    - `infra` ×10
+    - `infra` ×11
     - `conversations` ×6
     - `database` ×6
     - `framework` ×6
@@ -248,7 +248,6 @@ count accumulates across drops.
     - `integrations/youtube/audio-fetch`
     - `primitives/log-channels/memory-persistence`
     - `release`
-    - `stats/cost`
     - `upstream`
   - Endpoint callers: `log-files`
 - Exemptions:

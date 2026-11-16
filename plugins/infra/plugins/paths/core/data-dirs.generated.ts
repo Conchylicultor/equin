@@ -50,6 +50,7 @@ export const dataDirsEntries: CollectedEntry[] = [
   { pluginPath: "infra/plugins/audio-analysis", id: "infra.audio-analysis", loader: () => import("@plugins/infra/plugins/audio-analysis/data-dirs"), dependsOn: [] },
   { pluginPath: "infra/plugins/claude-cli/plugins/accounts", id: "infra.claude-cli.accounts", loader: () => import("@plugins/infra/plugins/claude-cli/plugins/accounts/data-dirs"), dependsOn: [] },
   { pluginPath: "infra/plugins/claude-cli/plugins/sign-in", id: "infra.claude-cli.sign-in", loader: () => import("@plugins/infra/plugins/claude-cli/plugins/sign-in/data-dirs"), dependsOn: [] },
+  { pluginPath: "infra/plugins/claude-cli/plugins/usage-ledger/plugins/pricing/plugins/price-table", id: "infra.claude-cli.usage-ledger.pricing.price-table", loader: () => import("@plugins/infra/plugins/claude-cli/plugins/usage-ledger/plugins/pricing/plugins/price-table/data-dirs"), dependsOn: [] },
   { pluginPath: "infra/plugins/codesign", id: "infra.codesign", loader: () => import("@plugins/infra/plugins/codesign/data-dirs"), dependsOn: [] },
   { pluginPath: "infra/plugins/deps", id: "infra.deps", loader: () => import("@plugins/infra/plugins/deps/data-dirs"), dependsOn: [] },
   { pluginPath: "infra/plugins/deps/plugins/python", id: "infra.deps.python", loader: () => import("@plugins/infra/plugins/deps/plugins/python/data-dirs"), dependsOn: [] },
@@ -79,7 +80,6 @@ export const dataDirsEntries: CollectedEntry[] = [
   { pluginPath: "reports/plugins/interaction-budget", id: "reports.interaction-budget", loader: () => import("@plugins/reports/plugins/interaction-budget/data-dirs"), dependsOn: [] },
   { pluginPath: "reports/plugins/outbox/plugins/file", id: "reports.outbox.file", loader: () => import("@plugins/reports/plugins/outbox/plugins/file/data-dirs"), dependsOn: [] },
   { pluginPath: "stats/plugins/commits", id: "stats.commits", loader: () => import("@plugins/stats/plugins/commits/data-dirs"), dependsOn: [] },
-  { pluginPath: "stats/plugins/cost", id: "stats.cost", loader: () => import("@plugins/stats/plugins/cost/data-dirs"), dependsOn: [] },
 ];
 
 export interface CompositionIdentity {

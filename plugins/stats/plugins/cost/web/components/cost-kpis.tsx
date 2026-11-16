@@ -18,8 +18,8 @@ export function CostKpis() {
     <Stack gap="lg">
       <Stack direction="row" align="center" justify="between" gap="none">
         <Text as="p" variant="caption" className="text-muted-foreground">
-          Parsed from <code>~/.claude/projects</code> and the permanent archive;
-          updates as transcripts are written.
+          Every Claude Code session and background call, priced with the prices
+          in force at the time; updates as usage is counted.
         </Text>
         <ScopeToggle />
       </Stack>

@@ -426,17 +426,17 @@ pid liveness.
   - Imported by: 39 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `debug` ×9
     - `infra` ×8
+    - `conversations` ×4
     - `framework` ×4
     - `tasks` ×4
-    - `conversations` ×3
     - `backup` ×2
     - `build` ×2
-    - `stats` ×2
     - `apps/website/promo-film/seed`
     - `code-explorer`
     - `plugin-meta/plugin-health`
     - `release/source-checkout`
     - `review/plugin-changes`
+    - `stats/commits`
 - Exemptions:
   - Exempts itself from:
     - `worktree/no-raw-worktree-git` — `.` (sanctioned)

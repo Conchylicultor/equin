@@ -1,36 +1,28 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { ConfigV2 } from "@plugins/config_v2/server";
+import { DbTrigger } from "@plugins/database/plugins/db-triggers/server";
 import { costConfig } from "../shared/config";
 import {
   costDailyServed,
   costDistributionServed,
   costSessionsDailyServed,
   costTopSessionsServed,
-  sessionConversationsServed,
+  costConversationsServed,
 } from "./internal/served";
-import { costUsageWarmup, costUsageWatcher } from "./internal/load-usage";
-
-// The price table, for a plugin that prices token buckets (`priceBucket`,
-// `foldUsageEntry` in `../core`) itself and stores the result.
-export { currentPriceTable, onPriceTableUpdated } from "./internal/load-usage";
-import {
-  archiveShrinkKind,
-  unpricedModelKind,
-} from "./internal/cost-report-kinds";
-import { costRefreshJob } from "./internal/refresh-job";
+import { costRollupTriggers, costRollupWarmup } from "./internal/rollups";
 
 export default {
   description:
-    "Token usage and dollar cost across Claude Code sessions, priced from our own merge-only LiteLLM table and banked into a permanent year-sharded token archive so deleted transcripts stop rewriting the past.",
+    "Stats → Cost: token usage and dollar cost of every Claude Code session, conversation and one-shot call, read from the priced token ledger (claude_spend_hours_v — each hour at the price in force then) through two database-maintained rollups (claude_spend_days per UTC day, model and repo flag; claude_spend_sources per source), served as the stats.cost.* live values.",
   contributions: [
     ConfigV2.Register({ descriptor: costConfig }),
-    unpricedModelKind,
-    archiveShrinkKind,
+    // The two rollups, derived from the priced ledger by the database itself.
+    DbTrigger(costRollupTriggers),
     ...costDailyServed.declare,
     ...costSessionsDailyServed.declare,
     ...costDistributionServed.declare,
     ...costTopSessionsServed.declare,
-    ...sessionConversationsServed.declare,
+    ...costConversationsServed.declare,
   ],
-  register: [costUsageWarmup, costUsageWatcher, costRefreshJob],
+  register: [costRollupWarmup],
 } satisfies ServerPluginDefinition;

@@ -221,6 +221,7 @@ async function writeFixtureRow(
         // No result, so no cost: a fixture call files nothing in the ledger.
         accountId: null,
         costUsd: null,
+        tokens: [],
         at: new Date(),
       });
       return;

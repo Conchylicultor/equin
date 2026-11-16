@@ -8,11 +8,16 @@ import {
 } from "@plugins/database/server";
 import { nullable } from "@plugins/database/plugins/sql-projection/server";
 import type { ConversationModel } from "@plugins/conversations/plugins/model-provider/core";
-import { spendLedgerUpsert } from "@plugins/infra/plugins/claude-cli/plugins/spend-ledger/server";
+import {
+  usageLedgerUpsert,
+  usageSourcesUpsert,
+} from "@plugins/infra/plugins/claude-cli/plugins/usage-ledger/server";
 import {
   cliSpendSource,
   spendHourOf,
-} from "@plugins/infra/plugins/claude-cli/plugins/spend-ledger/core";
+} from "@plugins/infra/plugins/claude-cli/plugins/usage-ledger/core";
+import { ensureModelRates } from "@plugins/infra/plugins/claude-cli/plugins/usage-ledger/plugins/pricing/server";
+import type { CallModelTokens } from "./call-tokens";
 import { _claudeCliCallHorizon, _claudeCliCalls } from "./tables";
 import { CLAUDE_CLI_RING_ID, RECENT_CALLS_LIMIT } from "../../core/resources";
 
@@ -27,13 +32,19 @@ export interface RecordCallInput {
   durationMs: number;
   correlationId: string | null;
   /**
-   * The account the call ran on — the one its cost is filed under (`null`:
+   * The account the call ran on — the one its tokens are filed under (`null`:
    * reading the active account failed, so the call never ran).
    */
   accountId: string | null;
-  /** The result's `total_cost_usd` (`null`: the call got no result). */
+  /**
+   * The result's `total_cost_usd` (`null`: the call got no result) — the
+   * call log's display value only: what the call cost is a read of its tokens
+   * through the priced ledger (`claude_spend_hours_v`), like every other spend.
+   */
   costUsd: number | null;
-  /** When the call was recorded — the ledger hour its cost lands in. */
+  /** The tokens the result reports, per model (`[]`: no result, or none used). */
+  tokens: readonly CallModelTokens[];
+  /** When the call was recorded — the ledger hour its tokens land in. */
   at: Date;
 }
 
@@ -53,28 +64,35 @@ export async function recordClaudeCliCall(
 /**
  * The call's record, in one transaction: its log row, the trim to the most
  * recent N rows (cheap with the createdAt index), the ring horizon (so a
- * reader following it sees the ring as the call left it) — and its cost added
- * to the spend ledger under `cli:<sourceName>`, so the spend lands exactly
- * when the call is recorded. The ledger is written explicitly, never rolled up
- * from the log: the trim deletes log rows, and must not take their spend.
+ * reader following it sees the ring as the call left it) — and what it used
+ * filed under `cli:<sourceName>`: its tokens per model in the token ledger
+ * (`claude_usage_hours`, priced by `claude_spend_hours_v`) with the source's
+ * row. They land exactly when the call is recorded, written explicitly, never
+ * rolled up from the log: the trim deletes log rows, and must not take their
+ * usage. Then any model first seen is priced (`ensureModelRates`).
  */
 export async function writeClaudeCliCall(
   exec: DbExecutor,
   input: RecordCallInput,
 ): Promise<void> {
-  const spend =
-    input.accountId === null || input.costUsd === null || input.costUsd === 0
+  const { accountId } = input;
+  const source = cliSpendSource(input.sourceName);
+  const hour = spendHourOf(input.at);
+  // No account: reading the active one failed, so the call never ran.
+  const usage =
+    accountId === null
       ? []
-      : [
-          {
-            accountId: input.accountId,
-            hour: spendHourOf(input.at),
-            source: cliSpendSource(input.sourceName),
-            costUsd: input.costUsd,
-          },
-        ];
+      : input.tokens.map((t) => ({
+          accountId,
+          hour,
+          source,
+          model: t.model,
+          // `modelUsage` names no speed; a one-shot call is never fast mode.
+          speed: "standard" as const,
+          tokens: t.tokens,
+        }));
   await exec.transaction(async (tx) => {
-    // The log row and its spend: one statement, so neither lands alone.
+    // The log row and its tokens: one statement, so neither lands alone.
     await writeAtomically(tx, [
       tx.insert(_claudeCliCalls).values({
         model: input.model,
@@ -88,7 +106,14 @@ export async function writeClaudeCliCall(
         correlationId: input.correlationId,
         costUsd: input.costUsd,
       }),
-      spendLedgerUpsert(tx, spend),
+      usageLedgerUpsert(tx, usage),
+      // A one-shot call is equin's own generation, run outside any project.
+      usageSourcesUpsert(
+        tx,
+        usage.length === 0
+          ? []
+          : [{ source, projectDir: null, isRepo: true, title: null }],
+      ),
     ]);
     await trimToNewest(tx, _claudeCliCalls, {
       key: _claudeCliCalls.id,
@@ -97,6 +122,10 @@ export async function writeClaudeCliCall(
     });
     await writeRingHorizon(tx);
   });
+  await ensureModelRates(
+    exec,
+    usage.map((row) => row.model),
+  );
 }
 
 type Executor = Pick<NodePgDatabase, "insert" | "select">;

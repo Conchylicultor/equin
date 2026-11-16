@@ -211,7 +211,6 @@ row with a rising count and a new source starting to fail mints its own.
     - `backup/sources/attachments`
     - `backup/sources/claude-settings`
     - `backup/sources/config`
-    - `backup/sources/cost-history`
     - `backup/sources/databases`
     - `backup/sources/platform`
     - `backup/sources/project-memory`
@@ -233,7 +232,6 @@ row with a rising count and a new source starting to fail mints its own.
       - **`attachments`** [exempt] — Config UI for the attachments backup source. Backs up file attachments into the backup archive.
       - **`claude-settings`** [exempt] — Config UI for the Claude settings backup source. Backs up Claude CLI settings and history into the backup archive.
       - **`config`** [exempt] — Config UI for the config backup source. Backs up equin config files into the backup archive.
-      - **`cost-history`** [exempt] — Config UI for the cost-history backup source. Backs up the permanent cost-history archive (year-sharded session records and the merged price table) into the backup archive.
       - **`databases`** [exempt] — Config UI for the databases backup source. Backs up worktree databases into the backup archive.
       - **`platform`** [exempt] — Config UI for the equin platform backup source. Backs up equin platform files (auth, database config) into the backup archive.
       - **`project-memory`** [exempt] — Config UI for the project memory backup source. Backs up Claude Code project memory files into the backup archive.

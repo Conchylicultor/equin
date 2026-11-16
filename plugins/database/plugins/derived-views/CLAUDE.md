@@ -199,6 +199,7 @@ and re-export it from `core/index.ts`. See
     - `database/derived-tables`
     - `database/migrations`
     - `database/query`
+    - `infra/claude-cli/usage-ledger/pricing`
     - `infra/paths/root-migration`
     - `network/live/change-feed`
     - `network/live/live-state-snapshot`

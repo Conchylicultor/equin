@@ -9,10 +9,11 @@ import { conversationsEntityRef } from "@plugins/tasks/plugins/tasks-core/core";
  * One conversation's usage totals — the conversation's own transcripts (every
  * session of its resolved chain) plus every sub-agent's, workflow agents
  * included. Stored in the `conversations_ext_usage` extension table
- * (`server/internal/tables.ts`), recomputed from the per-file scan state by
- * `syncConversationUsage`.
+ * (`server/internal/tables.ts`): cost and tokens derived by the database from
+ * the conversation's `conv:` rows of the priced token ledger
+ * (`claude_spend_hours_v`), the agent count written by the sync.
  *
- * - `costUsd` — priced with stats/cost's own price table (`priceBucket`).
+ * - `costUsd` — each hour at the price in force then (the price history).
  * - `tokens` — input + output + cache creation. Cache READS are kept apart
  *   (`cacheReadTokens`): they dwarf the rest and mostly measure context × turns.
  * - `agentCount` — the sub-agents the conversation launched.

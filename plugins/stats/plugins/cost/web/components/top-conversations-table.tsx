@@ -14,7 +14,7 @@ import { formatUsd } from "@plugins/fields/plugins/money/core";
 import { formatTokensCompact } from "@plugins/stats/plugins/cost/plugins/format/core";
 import {
   costTopSessions,
-  sessionConversations,
+  costConversations,
   type CostTopSession,
 } from "../../shared/values";
 import { useScope } from "./use-scope";
@@ -24,7 +24,7 @@ const TOP_SESSIONS_VIEW = defineDataView("stats.cost.top-sessions");
 /**
  * One of the dearest sessions, joined to its live conversation where it still
  * exists (a rename or a status change reaches the row); a session whose
- * conversation is gone keeps the archive's snapshot.
+ * conversation is gone keeps its recorded title.
  */
 interface TopRow {
   sessionId: string;
@@ -119,8 +119,10 @@ export function TopConversationsTable() {
 
 function TopSessions({ sessions }: { sessions: readonly CostTopSession[] }) {
   const openPane = useOpenPane();
-  const conversations = useLive(sessionConversations, {
-    ids: sessions.map((s) => s.sessionId),
+  const conversations = useLive(costConversations, {
+    ids: sessions.flatMap((s) =>
+      s.conversationId === null ? [] : [s.conversationId],
+    ),
   });
   // The rows are joined above the DataView, which gates on the lookup's own
   // state (`readiness`): they fold every state, only the ready arm renders.
@@ -130,15 +132,14 @@ function TopSessions({ sessions }: { sessions: readonly CostTopSession[] }) {
     ready: (d) => d,
   });
   const rows = useMemo<TopRow[]>(() => {
-    const bySession = new Map<
+    const byId = new Map<
       string,
       { id: string; title: string | null; status: string }
     >();
-    for (const c of found ?? []) {
-      if (c.claudeSessionId !== null) bySession.set(c.claudeSessionId, c);
-    }
+    for (const c of found ?? []) byId.set(c.id, c);
     return sessions.map((s): TopRow => {
-      const live = bySession.get(s.sessionId) ?? null;
+      const live =
+        s.conversationId === null ? null : (byId.get(s.conversationId) ?? null);
       return {
         sessionId: s.sessionId,
         conversationId: live?.id ?? s.conversationId,

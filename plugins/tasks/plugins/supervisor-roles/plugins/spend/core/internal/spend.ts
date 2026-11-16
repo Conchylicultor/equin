@@ -4,8 +4,8 @@ import { cappedList } from "@plugins/packages/plugins/list-bound/core";
 
 // Where this week's Claude spend went, as one drill tree: the four categories
 // (Supervisors, Ad hoc, Background, You), each opening into the next level.
-// Amounts are API-equivalent dollars, read off the spend ledger
-// (`claude_spend_hours`, infra/claude-cli/spend-ledger).
+// Amounts are API-equivalent dollars, read off the priced usage ledger
+// (`claude_spend_hours_v`, infra/claude-cli/usage-ledger/pricing).
 
 /** The tree's root id — the first part of every drill path. */
 export const SPEND_ROOT_ID = "week";

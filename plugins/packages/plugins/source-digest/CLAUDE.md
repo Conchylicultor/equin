@@ -111,6 +111,7 @@ backfill runs once per change of its derivation code: `page/links`,
     - `apps/pages/content-search`
     - `build/central-build-id`
     - `build/restart-skip`
+    - `conversations/usage`
     - `infra/corpus-index`
     - `infra/warmup`
     - `network/live`
@@ -119,6 +120,7 @@ backfill runs once per change of its derivation code: `page/links`,
     - `page/links`
     - `reports/engine`
     - `stats/commits`
+    - `stats/cost`
     - `ui/icons/saved-sources`
 - Exemptions:
   - Exempts itself from:

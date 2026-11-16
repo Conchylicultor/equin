@@ -1,27 +1,101 @@
 import { stat } from "@plugins/packages/plugins/timed-fs/core";
 import {
+  TOKEN_KINDS,
+  TOKEN_TIERS,
   emptyUsageBuckets,
   foldUsageEntry,
-  priceBucket,
   resumeUsageBuckets,
+  resumeUsageDelta,
   type DayBucket,
-  type PriceTable,
   type SeenEntry,
-} from "@plugins/stats/plugins/cost/core";
+  type UsageBuckets,
+} from "@plugins/infra/plugins/claude-cli/plugins/usage-ledger/core";
 import type {
   UsageFileKind,
   UsageTailEntry,
 } from "../../server/internal/tables";
 
 // The pure half of the usage sync: advance ONE file's scan state over the bytes
-// appended to it, price what it counted (once — see `priceFile`), and sum a
-// conversation's file rows into totals. No database, so the reading, counting
-// and pricing rules are tested on their own.
+// appended to it, and take the token-ledger delta of its move (`tokenDelta`).
+// No database, so the reading and counting rules are tested on their own. No
+// pricing: a cost is a read of the ledger (`claude_spend_hours_v`).
 
 /** How many counted entries a file row keeps (see `tailHashes` in `tables.ts`). */
 const TAIL_HASHES = 64;
 const NEWLINE = 0x0a;
+/**
+ * How many bytes one read takes: a first read of a transcript (the backfill
+ * reads every one on the host, some over 100 MB) holds one chunk and the line
+ * it ends inside, never the whole file.
+ */
+const READ_CHUNK = 8 * 1024 * 1024;
 const decoder = new TextDecoder();
+
+/**
+ * Fold the complete lines of `path` between `start` (a line start) and `size`
+ * into `fold`, a chunk at a time. A trailing line with no newline yet is torn
+ * (Claude is mid-append) and left for the next read. Returns the offset of the
+ * first line not folded, and the hashes of the entries counted, oldest first.
+ */
+async function foldAppended(
+  path: string,
+  start: number,
+  size: number,
+  fold: UsageBuckets,
+): Promise<{ offset: number; hashes: string[] }> {
+  const hashes: string[] = [];
+  const file = Bun.file(path);
+  let offset = start;
+  let carry: Uint8Array = new Uint8Array(0);
+  for (let at = start; at < size;) {
+    const to = Math.min(size, at + READ_CHUNK);
+    const read = await file.slice(at, to).bytes();
+    at = to;
+    const bytes = carry.length === 0 ? read : concat(carry, read);
+    const end = bytes.lastIndexOf(NEWLINE);
+    if (end < 0) {
+      carry = bytes;
+      continue;
+    }
+    for (const raw of decoder.decode(bytes.subarray(0, end)).split("\n")) {
+      if (raw === "") continue;
+      let line: unknown;
+      try {
+        line = JSON.parse(raw);
+      } catch (err) {
+        // A complete line that is not JSON carries no usage this total can
+        // count; it is the transcript reader's to report, not this one's.
+        if (!(err instanceof SyntaxError)) throw err;
+        continue;
+      }
+      const counted = foldUsageEntry(fold, line);
+      if (counted?.kind === "entry" && counted.hash) hashes.push(counted.hash);
+    }
+    offset += end + 1;
+    carry = bytes.subarray(end + 1);
+  }
+  return { offset, hashes };
+}
+
+function concat(a: Uint8Array, b: Uint8Array): Uint8Array {
+  const out = new Uint8Array(a.length + b.length);
+  out.set(a);
+  out.set(b, a.length);
+  return out;
+}
+
+/** The tail a scan row keeps: its last counted entries, as the fold now holds them. */
+function tailOf(
+  hashes: readonly string[],
+  fold: UsageBuckets,
+): UsageTailEntry[] {
+  return hashes.slice(-TAIL_HASHES).map((hash) => {
+    const entry = fold.seen.get(hash);
+    if (entry === undefined)
+      throw new Error(`counted hash ${hash} missing from the fold`);
+    return { hash, ...entry };
+  });
+}
 
 /** One file's scan state, as stored in `conversation_usage_files`. */
 export interface FileScan {
@@ -91,77 +165,83 @@ export async function advanceFile(
   const resumed = restart ? [] : prev.tailHashes.filter(isTailEntry);
   const start = restart ? 0 : prev.offset;
   const fold = restart
-    ? {
-        ...emptyUsageBuckets("hour"),
-        ...(chainSeen ? { seen: chainSeen } : {}),
-      }
+    ? { ...emptyUsageBuckets(), ...(chainSeen ? { seen: chainSeen } : {}) }
     : resumeUsageBuckets(
         prev.buckets,
         resumed.map(({ hash, ...entry }) => [hash, entry] as const),
-        "hour",
       );
-  // This file's counted hashes, oldest first; the fold's `seen` holds each
-  // one's current output (a top-up updates it in place).
-  const tail = resumed.map((entry) => entry.hash);
-
-  const bytes = await Bun.file(path).slice(start, size).bytes();
-  const end = bytes.lastIndexOf(NEWLINE);
-  if (end >= 0) {
-    for (const raw of decoder.decode(bytes.subarray(0, end)).split("\n")) {
-      if (raw === "") continue;
-      let line: unknown;
-      try {
-        line = JSON.parse(raw);
-      } catch (err) {
-        // A complete line that is not JSON carries no usage this total can
-        // count; it is the transcript reader's to report, not this one's.
-        if (!(err instanceof SyntaxError)) throw err;
-        continue;
-      }
-      const counted = foldUsageEntry(fold, line);
-      if (counted?.kind === "entry" && counted.hash) tail.push(counted.hash);
-    }
-  }
+  const read = await foldAppended(path, start, size, fold);
   return {
     path,
     kind,
-    offset: start + (end >= 0 ? end + 1 : 0),
+    offset: read.offset,
     buckets: [...fold.buckets.values()],
-    tailHashes: tail.slice(-TAIL_HASHES).map((hash) => {
-      const entry = fold.seen.get(hash);
-      if (entry === undefined)
-        throw new Error(`counted hash ${hash} missing from the fold`);
-      return { hash, ...entry };
-    }),
+    // This file's counted hashes, oldest first; the fold's `seen` holds each
+    // one's current output (a top-up updates it in place).
+    tailHashes: tailOf([...resumed.map((e) => e.hash), ...read.hashes], fold),
   };
 }
 
+// ─── The ledger-only scan (every transcript no conversation owns) ─────────────
+
 /**
- * A file row's frozen pricing (see `costUsd` / `unpricedModels` in
- * `tables.ts`): what its counted tokens cost when they were counted, and the
- * models the table could not price then.
+ * One transcript's scan state as `claude_transcript_scans` holds it: how far
+ * it was read and its last counted entries — no buckets, no dollars. What it
+ * counted lives in the token ledger, filed as each read's delta.
  */
-export interface FilePricing {
-  costUsd: number;
-  unpricedModels: string[];
+export interface TranscriptScan {
+  path: string;
+  kind: UsageFileKind;
+  /** Byte offset of the first line not yet folded — always a line start. */
+  offset: number;
+  tailHashes: UsageTailEntry[];
 }
 
 /**
- * A pricing pass's result: the row's frozen pricing, and what this pass ADDED
- * to its cost, per UTC hour of the priced bucket (`spendHourKey`, an ISO
- * instant; negative for tokens a chain re-read took back). Not stored on the
- * row: the sync files it under the account that spent it
- * (infra/claude-cli/spend-ledger's `claude_spend_hours`). Its values sum to the
- * move of `costUsd`.
+ * What one ledger-only read of a transcript found: nothing new, the file gone
+ * (its scan state stays — its tokens are in the ledger for good), the file
+ * SHRUNK below what was read (replaced, not appended to: what the ledger holds
+ * for it can no longer be told apart, so the caller recounts its whole source),
+ * or the read — the new scan state and the buckets it COUNTED (only what this
+ * read added, a top-up of an entry counted before included).
  */
-export interface PricingPass extends FilePricing {
-  addedByHour: Map<string, number>;
-}
+export type TranscriptRead =
+  | { status: "unchanged" | "gone" | "shrunk" }
+  | { status: "read"; scan: TranscriptScan; counted: DayBucket[] };
 
-/** A file row as stored: its scan state and its pricing (`null`: never priced). */
-export interface PricedFile extends FileScan {
-  costUsd: number | null;
-  unpricedModels: string[];
+/**
+ * Advance `prev` over the complete lines `path` now holds, or read it from the
+ * start when there is no `prev`. Per-file dedup: the entries this file counted
+ * before (its tail) and those it counts now, never another file's — the reading
+ * Stats → Cost has always applied to every transcript (and ccusage's, near enough).
+ */
+export async function scanTranscript(
+  path: string,
+  kind: UsageFileKind,
+  prev: TranscriptScan | undefined,
+): Promise<TranscriptRead> {
+  const size = await sizeOf(path);
+  if (size === null) return { status: "gone" };
+  if (prev !== undefined && size < prev.offset) return { status: "shrunk" };
+  if (prev !== undefined && size === prev.offset)
+    return { status: "unchanged" };
+  const resumed = prev?.tailHashes ?? [];
+  const fold = resumeUsageDelta(
+    resumed.map(({ hash, ...entry }) => [hash, entry] as const),
+  );
+  const read = await foldAppended(path, prev?.offset ?? 0, size, fold);
+  if (prev !== undefined && read.offset === prev.offset)
+    return { status: "unchanged" };
+  return {
+    status: "read",
+    scan: {
+      path,
+      kind,
+      offset: read.offset,
+      tailHashes: tailOf([...resumed.map((e) => e.hash), ...read.hashes], fold),
+    },
+    counted: tokenDelta(undefined, [...fold.buckets.values()]),
+  };
 }
 
 /** A bucket's `(date, model, speed)` — the day it counts toward. */
@@ -169,22 +249,12 @@ const dayKey = (b: DayBucket): string => `${b.date}\0${b.model}\0${b.speed}`;
 /** A bucket's full key: its day, and its hour (none on a legacy bucket). */
 const bucketKey = (b: DayBucket): string => `${dayKey(b)}\0${b.hour ?? ""}`;
 
-/** The ten token counts of a bucket, by kind and tier. */
-const TOKEN_KINDS = [
-  "input",
-  "output",
-  "cacheRead",
-  "cacheCreate5m",
-  "cacheCreate1h",
-] as const;
-const TIERS = ["below", "above"] as const;
-
 type Tokens = Pick<DayBucket, (typeof TOKEN_KINDS)[number]>;
 
 function mapTokens(
   f: (
     kind: (typeof TOKEN_KINDS)[number],
-    tier: (typeof TIERS)[number],
+    tier: (typeof TOKEN_TIERS)[number],
   ) => number,
 ): Tokens {
   const tiered = (kind: (typeof TOKEN_KINDS)[number]) => ({
@@ -203,8 +273,8 @@ function mapTokens(
 /**
  * `next`'s buckets minus `prev`'s, per `(date, hour, model, speed)`: the tokens
  * counted since `prev`. Usually only additions; a chain re-read can also take
- * tokens back (a bucket shrinks or goes), and pricing is linear, so the
- * negative delta un-prices them at the rate they are taken back at.
+ * tokens back (a bucket shrinks or goes) — a negative delta, which the ledger
+ * adds like any other.
  *
  * A row counted before the fold kept hours holds hourless (day) buckets. An
  * append leaves them as they are (new tokens go to hour buckets beside them);
@@ -239,7 +309,7 @@ function bucketDelta(prev: DayBucket[], next: DayBucket[]): DayBucket[] {
     if (p.hour === undefined) {
       for (const d of hoursOfDay.get(dayKey(p)) ?? []) {
         for (const kind of TOKEN_KINDS) {
-          for (const tier of TIERS) {
+          for (const tier of TOKEN_TIERS) {
             const take = Math.min(left[kind][tier], Math.max(0, d[kind][tier]));
             d[kind][tier] -= take;
             left[kind][tier] -= take;
@@ -256,97 +326,39 @@ function bucketDelta(prev: DayBucket[], next: DayBucket[]): DayBucket[] {
   return delta;
 }
 
+/** `b` with every count rounded to a whole token, as the token ledger stores them. */
+function rounded(b: DayBucket): DayBucket {
+  return { ...b, ...mapTokens((kind, tier) => Math.round(b[kind][tier])) };
+}
+
 /**
- * The ledger hour a priced bucket's cost is filed under, as an ISO instant: its
+ * The token-ledger delta of a file row's move from `prev` to `next`
+ * (`claude_usage_hours`, the usage-ledger): {@link bucketDelta} over whole
+ * tokens — each side rounded first, never the difference, so a row's deltas
+ * add up to exactly its rounded buckets however many passes moved it — with
+ * the buckets that did not move dropped. Negative where a chain re-read took
+ * tokens back.
+ */
+export function tokenDelta(
+  prev: readonly DayBucket[] | undefined,
+  next: readonly DayBucket[],
+): DayBucket[] {
+  return bucketDelta((prev ?? []).map(rounded), next.map(rounded)).filter((d) =>
+    TOKEN_KINDS.some((kind) => TOKEN_TIERS.some((tier) => d[kind][tier] !== 0)),
+  );
+}
+
+/**
+ * The ledger hour a bucket's tokens are filed under, as an ISO instant: its
  * UTC hour, or 00:00 of its day for a legacy (hourless) bucket.
  */
 export function spendHourKey(b: Pick<DayBucket, "date" | "hour">): string {
   return `${b.date}T${String(b.hour ?? 0).padStart(2, "0")}:00:00.000Z`;
 }
 
-/**
- * Price a file row's move from `prev` to `nextBuckets`, freezing what was
- * already priced: `prev`'s cost stands as it is, a model `prev` could not price
- * that `table` now knows is priced once (its whole buckets), and only the tokens
- * counted since `prev` are priced with `table`. A bucket whose model `table`
- * cannot price adds no cost — its model is kept in `unpricedModels`, and
- * stats/cost's `cost-unpriced-model` report already names it.
- *
- * A `prev` never priced (`costUsd === null`, counted before costs were frozen)
- * is priced whole with `table`.
- */
-export function priceFile(
-  prev: Pick<PricedFile, "buckets" | "costUsd" | "unpricedModels"> | undefined,
-  nextBuckets: DayBucket[],
-  table: PriceTable,
-): PricingPass {
-  const base: { buckets: DayBucket[] } & FilePricing =
-    prev === undefined || prev.costUsd === null
-      ? { buckets: [], costUsd: 0, unpricedModels: [] }
-      : { ...prev, costUsd: prev.costUsd };
-  let costUsd = base.costUsd;
-  const addedByHour = new Map<string, number>();
-  const add = (b: DayBucket, cost: number): void => {
-    if (cost === 0) return;
-    costUsd += cost;
-    const hour = spendHourKey(b);
-    addedByHour.set(hour, (addedByHour.get(hour) ?? 0) + cost);
-  };
-  const unpriced = new Set<string>();
-  const wasUnpriced = new Set(base.unpricedModels);
-  for (const b of base.buckets) {
-    if (!wasUnpriced.has(b.model)) continue;
-    const priced = priceBucket(b, table);
-    if (priced.ok) add(b, priced.cost);
-    else if (priced.tokens !== 0) unpriced.add(b.model);
-  }
-  for (const b of bucketDelta(base.buckets, nextBuckets)) {
-    const priced = priceBucket(b, table);
-    if (priced.ok) add(b, priced.cost);
-    // No tokens cost nothing, priced or not (here and above): Claude Code's
-    // `<synthetic>` pseudo-model only ever carries zeros, and no table will
-    // ever price it.
-    else if (priced.tokens !== 0) unpriced.add(b.model);
-  }
-  return { costUsd, unpricedModels: [...unpriced].sort(), addedByHour };
-}
-
-/** The totals a conversation's file rows add up to. */
-export interface UsageTotals {
-  costUsd: number;
-  tokens: number;
-  cacheReadTokens: number;
-  agentCount: number;
-}
-
-const tiered = (t: { below: number; above: number }): number =>
-  t.below + t.above;
-
-/** Sum the file rows — their tokens, and the cost each was priced at. */
-export function totalsOf(
-  files: Iterable<Pick<FileScan, "kind" | "buckets"> & FilePricing>,
-): UsageTotals {
-  const totals: UsageTotals = {
-    costUsd: 0,
-    tokens: 0,
-    cacheReadTokens: 0,
-    agentCount: 0,
-  };
-  for (const file of files) {
-    if (file.kind === "subagent") totals.agentCount += 1;
-    totals.costUsd += file.costUsd;
-    for (const b of file.buckets) {
-      totals.tokens +=
-        tiered(b.input) +
-        tiered(b.output) +
-        tiered(b.cacheCreate5m) +
-        tiered(b.cacheCreate1h);
-      totals.cacheReadTokens += tiered(b.cacheRead);
-    }
-  }
-  // Token counts are whole; the 5m / 1h cache-creation apportioning splits them
-  // fractionally (see stats/cost's `buckets.ts`), so the sum carries float noise.
-  totals.tokens = Math.round(totals.tokens);
-  totals.cacheReadTokens = Math.round(totals.cacheReadTokens);
-  return totals;
+/** How many sub-agents a conversation's file rows say it launched (`agent_count`). */
+export function agentCountOf(files: Iterable<Pick<FileScan, "kind">>): number {
+  let count = 0;
+  for (const file of files) if (file.kind === "subagent") count += 1;
+  return count;
 }

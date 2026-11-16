@@ -6,7 +6,7 @@ export {
   costDistribution,
   costSessionsDaily,
   costTopSessions,
-  sessionConversations,
+  costConversations,
 } from "./values";
 export type {
   CostDay,

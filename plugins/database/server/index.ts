@@ -23,6 +23,7 @@ import {
   derivedInputs,
   runDeferredContract,
   setDeferredContract,
+  settleDeferredContract,
   takeDeferredContract,
 } from "./internal/deferred-contract";
 import { publishReconciledRollups } from "@plugins/database/plugins/derived-tables/server";
@@ -33,6 +34,12 @@ export { snapshotWatermark } from "./internal/snapshot-watermark";
 // Whether this boot applied a migration or deferred a contract — read after
 // the boot schema layer committed (the epoch handoff refuses across one).
 export { schemaChangedAtBoot } from "./internal/boot-schema";
+// Whether this boot still has the schema's contract deferred — for work that
+// must not run while older code may still write (see the module).
+export {
+  deferredContractSettled,
+  type DeferredContractSettlement,
+} from "./internal/deferred-contract";
 export {
   afterCommit,
   db,
@@ -117,6 +124,7 @@ export default {
       // This process reconciled, applied and deferred nothing.
       publishReconciledRollups([]);
       setDeferredContract(null);
+      settleDeferredContract({ kind: "not-owner" });
       setSchemaChangedAtBoot(false);
       await step("known-relations", () => loadKnownRelations(db));
       return;
@@ -175,6 +183,8 @@ export default {
             ? null
             : { owner, file: layer.deferredContract },
         );
+        if (layer.deferredContract === null)
+          settleDeferredContract({ kind: "settled" });
         setBootStamp(owner, layer.stamp);
         setSchemaChangedAtBoot(
           layer.pending > 0 || layer.deferredContract !== null,
@@ -214,6 +224,8 @@ export default {
         await recordSchemaLayerStamp(db, stamped.owner, stamped.stamp);
       }
     } catch (err) {
+      // The deferred contract (if any) does not run in this boot.
+      settleDeferredContract({ kind: "failed", error: err });
       await driver.settleOwnerBoot({
         kind: "stamp-failed",
         error: err instanceof Error ? err.message : String(err),
@@ -223,8 +235,14 @@ export default {
     await driver.settleOwnerBoot({ kind: "recorded" });
     const deferred = takeDeferredContract();
     if (deferred === null) return;
-    void runTracked("database:deferred-contract", () =>
-      runDeferredContract(deferred.owner, deferred.file),
-    );
+    void runTracked("database:deferred-contract", async () => {
+      try {
+        await runDeferredContract(deferred.owner, deferred.file);
+      } catch (err) {
+        settleDeferredContract({ kind: "failed", error: err });
+        throw err;
+      }
+      settleDeferredContract({ kind: "settled" });
+    });
   },
 } satisfies ServerPluginDefinition;

@@ -256,7 +256,6 @@ takes a `debt` exemption on the check's id.
     - `backup/sources/attachments` (1 debt)
     - `backup/sources/claude-settings` (1 debt)
     - `backup/sources/config` (1 debt)
-    - `backup/sources/cost-history` (1 debt)
     - `backup/sources/databases` (1 debt)
     - `backup/sources/platform` (1 debt)
     - `backup/sources/project-memory` (1 debt)
@@ -321,6 +320,7 @@ takes a `debt` exemption on the check's id.
     - `framework/tooling/web-artifacts` (22 debt)
     - `framework/web-core` (1 debt)
     - `infra/asset-mirror/bundle` (1 debt)
+    - `infra/claude-cli/usage-ledger/pricing/price-table` (1 debt)
     - `infra/corpus-index` (3 debt)
     - `infra/deps/download/github-release-updater` (1 debt)
     - `infra/deps/mise` (2 debt)
@@ -392,7 +392,6 @@ takes a `debt` exemption on the check's id.
     - `reports/outbox` (1 debt)
     - `reports/outbox/file` (1 debt)
     - `review/plugin-changes` (1 debt)
-    - `stats/cost` (3 debt)
     - `toolchain` (1 debt)
     - `ui/icons/icon-sets` (1 debt)
 - Sub-plugins:

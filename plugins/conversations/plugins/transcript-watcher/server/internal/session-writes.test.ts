@@ -4,7 +4,7 @@ import {
   notifySessionTranscriptWrites,
   onSessionTranscriptWritten,
   onTranscriptWritten,
-  writtenOwnerSessionIds,
+  writtenOwnerSessions,
   writtenSessions,
 } from "./session-writes";
 
@@ -70,9 +70,9 @@ describe("onSessionTranscriptWritten", () => {
   });
 });
 
-describe("writtenOwnerSessionIds", () => {
-  test("names the owning session of session and sub-agent transcripts", () => {
-    const ids = writtenOwnerSessionIds(
+describe("writtenOwnerSessions", () => {
+  test("names the owning session of session and sub-agent transcripts, with its session file", () => {
+    const ids = writtenOwnerSessions(
       [
         ev("update", `${PROJECTS}/-wt-a/${A}.jsonl`),
         ev("create", `${PROJECTS}/-wt-b/${B}/subagents/agent-1.jsonl`),
@@ -83,11 +83,16 @@ describe("writtenOwnerSessionIds", () => {
       ],
       PROJECTS,
     );
-    expect([...ids].sort()).toEqual([A, B].sort());
+    expect(ids).toEqual(
+      new Map([
+        [A, `${PROJECTS}/-wt-a/${A}.jsonl`],
+        [B, `${PROJECTS}/-wt-b/${B}.jsonl`],
+      ]),
+    );
   });
 
   test("ignores deletions, foreign roots and non-agent files", () => {
-    const ids = writtenOwnerSessionIds(
+    const ids = writtenOwnerSessions(
       [
         ev("delete", `${PROJECTS}/-wt-a/${A}/subagents/agent-1.jsonl`),
         ev("create", `${PROJECTS}/-wt-a/${A}/subagents/notes.jsonl`),
@@ -101,7 +106,7 @@ describe("writtenOwnerSessionIds", () => {
 
   test("onTranscriptWritten hears sub-agent writes", () => {
     const heard: string[][] = [];
-    const off = onTranscriptWritten((ids) => heard.push([...ids]));
+    const off = onTranscriptWritten((ids) => heard.push([...ids.keys()]));
     notifySessionTranscriptWrites(
       [ev("update", `${PROJECTS}/-wt-a/${A}/subagents/agent-1.jsonl`)],
       PROJECTS,

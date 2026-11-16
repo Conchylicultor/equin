@@ -15,9 +15,9 @@
     - `apps/events/sources/url-extract`
     - `apps/mail/remote-images`
     - `apps/sonata/sources/ultimate-guitar`
+    - `infra/claude-cli/usage-ledger/pricing/price-table`
     - `infra/safe-fetch/browser-fetch`
     - `page/bookmark`
-    - `stats/cost`
 - Exemptions:
   - Exempts itself from:
     - `namespace:no-hand-built-url` — `server/internal/ssrf.ts` (sanctioned)

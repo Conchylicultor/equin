@@ -113,5 +113,10 @@
     "at": "2026-11-15T13:34:07.000Z",
     "from": "apps.demo.chrome",
     "to": "apps.website.landing.screenshot.chrome"
+  },
+  {
+    "at": "2026-11-16T00:00:26.509Z",
+    "from": "infra.claude-cli.spend-ledger",
+    "to": "infra.claude-cli.usage-ledger"
   }
 ]

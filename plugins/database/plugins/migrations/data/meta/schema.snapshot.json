@@ -1,6 +1,6 @@
 {
-  "id": "51609897-0580-4619-b10f-7352f385f768",
-  "prevId": "16dd63e5-05bc-47b9-b1c8-7de6ed74f439",
+  "id": "a872fe72-7c6f-42db-aae7-37e8c160070d",
+  "prevId": "99f10212-27e0-448e-b553-160e6769014e",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -8379,6 +8379,175 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.claude_account_spend_carryover": {
+      "name": "claude_account_spend_carryover",
+      "schema": "",
+      "columns": {
+        "account_id": {
+          "name": "account_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "day": {
+          "name": "day",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "cost_usd": {
+          "name": "cost_usd",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "claude_account_spend_carryover_account_id_day_pk": {
+          "name": "claude_account_spend_carryover_account_id_day_pk",
+          "columns": [
+            "account_id",
+            "day"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.claude_transcript_scans": {
+      "name": "claude_transcript_scans",
+      "schema": "",
+      "columns": {
+        "path": {
+          "name": "path",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "source": {
+          "name": "source",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "kind": {
+          "name": "kind",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "offset": {
+          "name": "offset",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tail_hashes": {
+          "name": "tail_hashes",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "claude_transcript_scans_source_idx": {
+          "name": "claude_transcript_scans_source_idx",
+          "columns": [
+            {
+              "expression": "source",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.claude_usage_history_imports": {
+      "name": "claude_usage_history_imports",
+      "schema": "",
+      "columns": {
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "imported_at": {
+          "name": "imported_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "summary": {
+          "name": "summary",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.claude_usage_import_accounts": {
+      "name": "claude_usage_import_accounts",
+      "schema": "",
+      "columns": {
+        "source": {
+          "name": "source",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "hour": {
+          "name": "hour",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "account_id": {
+          "name": "account_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "claude_usage_import_accounts_source_hour_pk": {
+          "name": "claude_usage_import_accounts_source_hour_pk",
+          "columns": [
+            "source",
+            "hour"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.conversations_ext_usage": {
       "name": "conversations_ext_usage",
       "schema": "",
@@ -8493,19 +8662,6 @@
           "type": "jsonb",
           "primaryKey": false,
           "notNull": true
-        },
-        "cost_usd": {
-          "name": "cost_usd",
-          "type": "double precision",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "unpriced_models": {
-          "name": "unpriced_models",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'[]'::jsonb"
         }
       },
       "indexes": {
@@ -10956,8 +11112,166 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.claude_spend_hours": {
-      "name": "claude_spend_hours",
+    "public.claude_model_rates": {
+      "name": "claude_model_rates",
+      "schema": "",
+      "columns": {
+        "version_id": {
+          "name": "version_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "model": {
+          "name": "model",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "speed": {
+          "name": "speed",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "input_below": {
+          "name": "input_below",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "input_above": {
+          "name": "input_above",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "output_below": {
+          "name": "output_below",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "output_above": {
+          "name": "output_above",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "cache_read_below": {
+          "name": "cache_read_below",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "cache_read_above": {
+          "name": "cache_read_above",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "cache_create_5m_below": {
+          "name": "cache_create_5m_below",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "cache_create_5m_above": {
+          "name": "cache_create_5m_above",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "cache_create_1h_below": {
+          "name": "cache_create_1h_below",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "cache_create_1h_above": {
+          "name": "cache_create_1h_above",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "claude_model_rates_version_id_claude_price_versions_id_fk": {
+          "name": "claude_model_rates_version_id_claude_price_versions_id_fk",
+          "tableFrom": "claude_model_rates",
+          "tableTo": "claude_price_versions",
+          "columnsFrom": [
+            "version_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "claude_model_rates_version_id_model_speed_pk": {
+          "name": "claude_model_rates_version_id_model_speed_pk",
+          "columns": [
+            "version_id",
+            "model",
+            "speed"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.claude_price_versions": {
+      "name": "claude_price_versions",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "effective_from": {
+          "name": "effective_from",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "source": {
+          "name": "source",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "models": {
+          "name": "models",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "recorded_at": {
+          "name": "recorded_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.claude_usage_hours": {
+      "name": "claude_usage_hours",
       "schema": "",
       "columns": {
         "account_id": {
@@ -10978,25 +11292,180 @@
           "primaryKey": false,
           "notNull": true
         },
-        "cost_usd": {
-          "name": "cost_usd",
-          "type": "double precision",
+        "model": {
+          "name": "model",
+          "type": "text",
           "primaryKey": false,
           "notNull": true
+        },
+        "speed": {
+          "name": "speed",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "origin": {
+          "name": "origin",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'counted'"
+        },
+        "input_below": {
+          "name": "input_below",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "input_above": {
+          "name": "input_above",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "output_below": {
+          "name": "output_below",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "output_above": {
+          "name": "output_above",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "cache_read_below": {
+          "name": "cache_read_below",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "cache_read_above": {
+          "name": "cache_read_above",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "cache_create_5m_below": {
+          "name": "cache_create_5m_below",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "cache_create_5m_above": {
+          "name": "cache_create_5m_above",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "cache_create_1h_below": {
+          "name": "cache_create_1h_below",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "cache_create_1h_above": {
+          "name": "cache_create_1h_above",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        }
+      },
+      "indexes": {
+        "claude_usage_hours_hour_idx": {
+          "name": "claude_usage_hours_hour_idx",
+          "columns": [
+            {
+              "expression": "hour",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "claude_usage_hours_source_idx": {
+          "name": "claude_usage_hours_source_idx",
+          "columns": [
+            {
+              "expression": "source",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "claude_usage_hours_account_id_hour_source_model_speed_origin_pk": {
+          "name": "claude_usage_hours_account_id_hour_source_model_speed_origin_pk",
+          "columns": [
+            "account_id",
+            "hour",
+            "source",
+            "model",
+            "speed",
+            "origin"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.claude_usage_sources": {
+      "name": "claude_usage_sources",
+      "schema": "",
+      "columns": {
+        "source": {
+          "name": "source",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "project_dir": {
+          "name": "project_dir",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_repo": {
+          "name": "is_repo",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {},
       "foreignKeys": {},
-      "compositePrimaryKeys": {
-        "claude_spend_hours_account_id_hour_source_pk": {
-          "name": "claude_spend_hours_account_id_hour_source_pk",
-          "columns": [
-            "account_id",
-            "hour",
-            "source"
-          ]
-        }
-      },
+      "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
@@ -14450,6 +14919,163 @@
           ],
           "isUnique": false,
           "where": "\"notifications\".\"dismissed\" = false AND \"notifications\".\"read\" = false AND \"notifications\".\"muted\" = false",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.claude_spend_days": {
+      "name": "claude_spend_days",
+      "schema": "",
+      "columns": {
+        "day": {
+          "name": "day",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "model": {
+          "name": "model",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "is_repo": {
+          "name": "is_repo",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "cost_usd": {
+          "name": "cost_usd",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "input": {
+          "name": "input",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "output": {
+          "name": "output",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "cache_creation": {
+          "name": "cache_creation",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "cache_read": {
+          "name": "cache_read",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "claude_spend_days_day_model_is_repo_pk": {
+          "name": "claude_spend_days_day_model_is_repo_pk",
+          "columns": [
+            "day",
+            "model",
+            "is_repo"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.claude_spend_sources": {
+      "name": "claude_spend_sources",
+      "schema": "",
+      "columns": {
+        "source": {
+          "name": "source",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "cost_usd": {
+          "name": "cost_usd",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "input": {
+          "name": "input",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "output": {
+          "name": "output",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "cache_creation": {
+          "name": "cache_creation",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "cache_read": {
+          "name": "cache_read",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "last_hour": {
+          "name": "last_hour",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "models": {
+          "name": "models",
+          "type": "text[]",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "claude_spend_sources_cost_idx": {
+          "name": "claude_spend_sources_cost_idx",
+          "columns": [
+            {
+              "expression": "cost_usd",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
           "concurrently": false,
           "method": "btree",
           "with": {}

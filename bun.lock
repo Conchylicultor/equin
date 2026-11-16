@@ -1739,10 +1739,6 @@
       "name": "@equin/plugin-backup-sources-config",
       "version": "0.0.1",
     },
-    "plugins/backup/plugins/sources/plugins/cost-history": {
-      "name": "@equin/plugin-backup-sources-cost-history",
-      "version": "0.0.1",
-    },
     "plugins/backup/plugins/sources/plugins/databases": {
       "name": "@equin/plugin-backup-sources-databases",
       "version": "0.0.1",
@@ -4576,8 +4572,16 @@
         "@xterm/headless": "^6.0.0",
       },
     },
-    "plugins/infra/plugins/claude-cli/plugins/spend-ledger": {
-      "name": "@equin/plugin-infra-claude-cli-spend-ledger",
+    "plugins/infra/plugins/claude-cli/plugins/usage-ledger": {
+      "name": "@equin/plugin-infra-claude-cli-usage-ledger",
+      "version": "0.0.1",
+    },
+    "plugins/infra/plugins/claude-cli/plugins/usage-ledger/plugins/pricing": {
+      "name": "@equin/plugin-infra-claude-cli-usage-ledger-pricing",
+      "version": "0.0.1",
+    },
+    "plugins/infra/plugins/claude-cli/plugins/usage-ledger/plugins/pricing/plugins/price-table": {
+      "name": "@equin/plugin-infra-claude-cli-usage-ledger-pricing-price-table",
       "version": "0.0.1",
     },
     "plugins/infra/plugins/codesign": {
@@ -8943,8 +8947,6 @@
 
     "@equin/plugin-backup-sources-config": ["@equin/plugin-backup-sources-config@workspace:plugins/backup/plugins/sources/plugins/config"],
 
-    "@equin/plugin-backup-sources-cost-history": ["@equin/plugin-backup-sources-cost-history@workspace:plugins/backup/plugins/sources/plugins/cost-history"],
-
     "@equin/plugin-backup-sources-databases": ["@equin/plugin-backup-sources-databases@workspace:plugins/backup/plugins/sources/plugins/databases"],
 
     "@equin/plugin-backup-sources-platform": ["@equin/plugin-backup-sources-platform@workspace:plugins/backup/plugins/sources/plugins/platform"],
@@ -10309,7 +10311,11 @@
 
     "@equin/plugin-infra-claude-cli-sign-in": ["@equin/plugin-infra-claude-cli-sign-in@workspace:plugins/infra/plugins/claude-cli/plugins/sign-in"],
 
-    "@equin/plugin-infra-claude-cli-spend-ledger": ["@equin/plugin-infra-claude-cli-spend-ledger@workspace:plugins/infra/plugins/claude-cli/plugins/spend-ledger"],
+    "@equin/plugin-infra-claude-cli-usage-ledger": ["@equin/plugin-infra-claude-cli-usage-ledger@workspace:plugins/infra/plugins/claude-cli/plugins/usage-ledger"],
+
+    "@equin/plugin-infra-claude-cli-usage-ledger-pricing": ["@equin/plugin-infra-claude-cli-usage-ledger-pricing@workspace:plugins/infra/plugins/claude-cli/plugins/usage-ledger/plugins/pricing"],
+
+    "@equin/plugin-infra-claude-cli-usage-ledger-pricing-price-table": ["@equin/plugin-infra-claude-cli-usage-ledger-pricing-price-table@workspace:plugins/infra/plugins/claude-cli/plugins/usage-ledger/plugins/pricing/plugins/price-table"],
 
     "@equin/plugin-infra-codesign": ["@equin/plugin-infra-codesign@workspace:plugins/infra/plugins/codesign"],
 

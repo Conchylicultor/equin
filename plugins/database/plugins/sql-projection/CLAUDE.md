@@ -227,7 +227,6 @@ Design: `research/2026-08-25-database-mapped-sql-projections.md`.
     - `conversations/agents`
     - `conversations/conversation-preprompt`
     - `conversations/session-chain`
-    - `conversations/usage`
     - `infra/claude-cli`
     - `infra/events`
     - `infra/jobs`
