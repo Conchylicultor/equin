@@ -93,6 +93,11 @@
   gap: 10px;
   padding: 8px 12px 8px 8px;
   border-radius: 999px 0 0 999px;
+  transition: background 0.2s;
+}
+.isle-radio-main:hover,
+.isle-radio-main[aria-expanded="true"] {
+  background: rgb(255 255 255 / 0.08);
 }
 .isle-radio-more {
   padding: 0 12px 0 10px;
@@ -102,8 +107,7 @@
   opacity: 0.75;
   transition: opacity 0.2s, background 0.2s;
 }
-.isle-radio-more:hover,
-.isle-radio-more[aria-expanded="true"] {
+.isle-radio-more:hover {
   opacity: 1;
   background: rgb(255 255 255 / 0.08);
 }

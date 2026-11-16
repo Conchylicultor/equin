@@ -66,7 +66,7 @@ import "./isle.css";
 const playIcon = symbol("play-arrow");
 const placeIcon = symbol("landscape");
 const natureIcon = symbol("park");
-const stationsIcon = symbol("queue-music");
+const pauseIcon = symbol("pause");
 
 /** The radio's stations, in the order N steps through them. */
 const STATIONS: readonly IsleStation[] = ["auto", ...AMBIENT_MOODS];
@@ -453,9 +453,10 @@ export function IsleView() {
             <button
               type="button"
               className="isle-radio-main"
-              title="Music (M)"
-              aria-pressed={ambient.status === "playing"}
-              onClick={toggleMusic}
+              title="Stations (N for the next one)"
+              aria-haspopup="menu"
+              aria-expanded={stationsOpen}
+              onClick={() => setStationsOpen((o) => !o)}
             >
               <span className="isle-radio-disc" />
               <span className="isle-radio-eq" aria-hidden>
@@ -464,23 +465,22 @@ export function IsleView() {
                 <i />
                 <i />
               </span>
-              <span className="isle-radio-track">
-                {ambient.status === "playing"
-                  ? AMBIENT_TRACKS[mood]
-                  : world.music && ambient.status === "locked"
-                    ? "music"
-                    : "muted"}
-              </span>
+              <span className="isle-radio-track">{AMBIENT_TRACKS[mood]}</span>
             </button>
             <button
               type="button"
               className="isle-radio-more"
-              title="Stations (N for the next one)"
-              aria-haspopup="menu"
-              aria-expanded={stationsOpen}
-              onClick={() => setStationsOpen((o) => !o)}
+              title={
+                ambient.status === "playing"
+                  ? "Pause music (M)"
+                  : "Play music (M)"
+              }
+              aria-pressed={ambient.status === "playing"}
+              onClick={toggleMusic}
             >
-              <Icon icon={stationsIcon} />
+              <Icon
+                icon={ambient.status === "playing" ? pauseIcon : playIcon}
+              />
             </button>
           </div>
         </div>
