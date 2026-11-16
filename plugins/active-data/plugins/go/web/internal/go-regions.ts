@@ -1,4 +1,6 @@
 import {
+  $createTextNode,
+  $getEditor,
   $getNodeByKey,
   $getRoot,
   $isElementNode,
@@ -76,6 +78,38 @@ export function $scan(): Scan {
     });
   if (open) out.orphans.push((open as { open: string }).open);
   return out;
+}
+
+/**
+ * Settle every marker left without a partner, as a root transform — inside the
+ * very update that orphaned it, so the edit and its repair are ONE history
+ * entry and a single ⌘Z restores both (a repair in its own later update was a
+ * history entry of its own: undoing it re-created the orphan, which was
+ * repaired again, so ⌘Z never got past it).
+ *
+ * A marker that was one edge of a region before this update lost its partner
+ * to the user's edit — a selection that took the whole region but the
+ * zero-width open marker it could not reach, a Backspace over the ✕: the region
+ * is gone, so the marker goes too and the words stay. A marker that arrives
+ * unpaired (a paste of a lone `<go>`) is the user's own text, kept as literal
+ * characters.
+ */
+export function $repairOrphans(): void {
+  const { orphans } = $scan();
+  if (orphans.length === 0) return;
+  // The editor's committed state is the one before this update.
+  const paired = new Set(
+    $getEditor()
+      .getEditorState()
+      .read(() => $scan().regions.flatMap((r) => [r.open, r.close])),
+  );
+  for (const key of orphans) {
+    const node = $getNodeByKey(key);
+    const token = node ? markerToken(node) : null;
+    if (!node || token === null) continue;
+    if (paired.has(key)) node.remove();
+    else node.replace($createTextNode(token));
+  }
 }
 
 /**

@@ -116,8 +116,10 @@ the checked box the agent's checklist rows use (`pick-node.tsx`). `GoRegionPlugi
 place, several as a rounded box — a background layer on the editor root,
 measured from the markers, since the root scrolls its content and Lexical owns
 its children (an insert puts line breaks inside ONE paragraph, so there is no
-line element to box). It also turns a marker whose partner was deleted back
-into literal text, so a region never leaves an invisible half behind. A box's
+line element to box). A marker whose partner was deleted goes with
+it (`$repairOrphans`, a root transform, so the edit and its repair are one undo
+step), so a region never leaves an invisible half behind — a lone `<go>` that
+arrives unpaired (a paste) stays literal text. A box's
 open marker draws nothing, so its line looks empty and outside the box: text
 that lands there (typed, pasted, joined up by Backspace) is moved in front of
 the marker (`$liftOffOpenLine`), becoming the prose above the card. Only the

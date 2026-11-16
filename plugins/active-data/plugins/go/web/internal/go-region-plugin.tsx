@@ -1,16 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useResizeObserver } from "@plugins/primitives/plugins/dom/plugins/element-size/web";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
-import {
-  $createTextNode,
-  $getNodeByKey,
-  TextNode,
-  type LexicalEditor,
-} from "lexical";
+import { RootNode, TextNode, type LexicalEditor } from "lexical";
 import {
   $liftOffOpenLine,
+  $repairOrphans,
   $scan,
-  markerToken,
   type Region,
 } from "./go-regions";
 import { GO_INLINE_BOX } from "../components/go-cap";
@@ -96,8 +91,8 @@ function paintBoxes(
 /**
  * Paints each `<go>` region of a draft — the text between its two marker
  * tokens — in the suggestion highlight: a one-line region tinted in the line,
- * a multi-line one as a box. A marker whose partner was deleted turns back into
- * its literal text, so a region never leaves an invisible half behind, and text
+ * a multi-line one as a box. A marker whose partner was deleted goes with it
+ * (`$repairOrphans`), so a region never leaves an invisible half behind, and text
  * typed on a box's open-marker line goes above the box (`$liftOffOpenLine`).
  */
 export function GoRegionPlugin() {
@@ -133,21 +128,17 @@ export function GoRegionPlugin() {
     [editor],
   );
 
+  // A marker whose partner is gone is settled in the same update (one undo
+  // step); the root transform runs last, after every other transform.
+  useEffect(
+    () => editor.registerNodeTransform(RootNode, $repairOrphans),
+    [editor],
+  );
+
   useEffect(
     () =>
       editor.registerUpdateListener(({ editorState }) => {
-        const scan = editorState.read($scan);
-        if (scan.orphans.length > 0) {
-          editor.update(() => {
-            for (const key of scan.orphans) {
-              const node = $getNodeByKey(key);
-              const token = node ? markerToken(node) : null;
-              if (node && token !== null) node.replace($createTextNode(token));
-            }
-          });
-          return;
-        }
-        regions.current = scan.regions;
+        regions.current = editorState.read($scan).regions;
         repaint();
       }),
     [editor, repaint],
