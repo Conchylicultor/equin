@@ -214,6 +214,32 @@ export async function readVisitGroups<F extends VisitFilterable>(
   });
 }
 
+/**
+ * The paths the site's visits hit, each with how many visits hit it — the
+ * values the list's `pages` column takes (a visit's page memberships: every
+ * distinct path of its hits, `visitMembershipValues`), most visited first,
+ * then by path. At most `limit` come back: a caller that must have them all
+ * asks one more than it can show and refuses when it gets it.
+ */
+export async function readVisitPages(
+  dbx: VisitReads,
+  q: { limit: number },
+): Promise<{ path: string; visits: number }[]> {
+  return executeRows(dbx, {
+    label: "analytics.visitPages",
+    row: z.object({
+      path: z.string(),
+      visits: z.coerce.number().int(),
+    }),
+    query: sql`SELECT h.path AS path, count(DISTINCT h.visit_id)::int AS visits
+      FROM analytics_hits h
+      JOIN analytics_visits v ON v.id = h.visit_id
+      GROUP BY 1
+      ORDER BY 2 DESC, h.path COLLATE "C"
+      LIMIT ${q.limit}`,
+  });
+}
+
 /** How many visits match `where`. */
 export async function countVisits<F extends VisitFilterable>(
   dbx: VisitReads,

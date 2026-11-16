@@ -1,6 +1,6 @@
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
 import { useState, type ReactNode } from "react";
-import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { ControlPanel } from "@plugins/primitives/plugins/css/plugins/control-panel/web";
 import { InlinePopover } from "@plugins/primitives/plugins/overlay/plugins/popover/web";
 import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -16,7 +16,6 @@ import { selectChoices } from "../../internal/select-choices";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
 
-const keyboardArrowDownIcon = symbol("keyboard-arrow-down");
 const helpIcon = symbol("help");
 
 /**
@@ -108,14 +107,9 @@ export function ChipSelectFilterInput(
       onOpenChange={setOpen}
       width="md"
       trigger={
-        <Button variant="outline" aria-label="Select filter values">
-          {summary === null ? (
-            <span className="text-muted-foreground">Select…</span>
-          ) : (
-            <span className="truncate">{summary}</span>
-          )}
-          <Icon icon={keyboardArrowDownIcon} />
-        </Button>
+        // The rule row's control shape: it fills its cell and truncates, so a
+        // long pick (a page path) shortens in place instead of widening the row.
+        <ControlPanel.Field aria-label="Select filter values" label={summary} />
       }
     >
       {state.status === "loading" ? (

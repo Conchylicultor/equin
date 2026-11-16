@@ -357,6 +357,7 @@ after new visits, a rollup and a retention sweep arrive as deltas.
     - `analyticsMirrorTables`
     - `countVisits`
     - `readVisitGroups`
+    - `readVisitPages`
     - `readVisitsById`
     - `readVisitWindow`
     - `recordCollect`

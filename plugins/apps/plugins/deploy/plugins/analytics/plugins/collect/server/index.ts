@@ -30,6 +30,7 @@ export { runAnalyticsQuery } from "./internal/report";
 export {
   countVisits,
   readVisitGroups,
+  readVisitPages,
   readVisitsById,
   readVisitWindow,
 } from "./internal/sessions";

@@ -2055,7 +2055,8 @@ export type DataViewRowsCollection = Pick<
 
 /**
  * What a list may change of one derived field (`DataViewBaseProps.overrides`)
- * — its presentation and which controls offer it, never its value or type.
+ * — its presentation, which controls offer it and the options it offers,
+ * never its value or type.
  * `cell` is a method so an override built against the collection's row type
  * applies to a list whose rows extend it (the Queue's): a cell reads the row
  * the list hands it.
@@ -2086,6 +2087,13 @@ export type FieldOverride<TRow> = Partial<
    * `cell`.
    */
   onEdit?(row: TRow, next: FieldValue): void | Promise<void>;
+  /**
+   * The field's option set as the list READS it (`FieldOptionsResult`) — the
+   * values a column takes within the list's own scope (one site's visited
+   * pages), which only the list knows how to read. Replaces any declared
+   * `options`; the filter input renders its loading and error arms.
+   */
+  optionsResult?: FieldOptionsResult;
 };
 
 /**

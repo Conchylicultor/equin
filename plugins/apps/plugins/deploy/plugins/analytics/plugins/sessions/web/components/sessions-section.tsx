@@ -28,6 +28,7 @@ import {
   type DataViewSourceProps,
 } from "@plugins/primitives/plugins/data-view/web";
 import type {
+  FieldOptionsResult,
   QuickFilter,
   QuickFilterOption,
 } from "@plugins/primitives/plugins/data-view/core";
@@ -36,7 +37,13 @@ import {
   Stack,
 } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { deploymentSessions, sessionOf, type SessionRow } from "../../core";
+import {
+  deploymentPages,
+  deploymentSessions,
+  sessionOf,
+  type SessionRow,
+  type SitePage,
+} from "../../core";
 import { axisMaxS } from "../internal/axis";
 import { sourceOf } from "../internal/facts";
 import { countryName, median } from "../internal/format";
@@ -174,17 +181,55 @@ export function VisitsSource(
   return props.hostProps.kind === "site" ? (
     <SiteVisits {...props} deploymentId={props.hostProps.deploymentId} />
   ) : (
-    <VisitsBundle
-      deploymentId={null}
-      render={props.render}
-      rows={props.hostProps.rows}
-      readiness={READY}
-      paging={undefined}
-    />
+    <ExhibitVisits rows={props.hostProps.rows} render={props.render} />
   );
 }
 
 const READY: ResourceReadiness = { status: "ready" };
+
+/** The made-up visits (the exhibit): every row is loaded, so its pages are the rows'. */
+function ExhibitVisits({
+  rows,
+  render,
+}: {
+  rows: readonly SessionRow[];
+  render: DataViewSourceProps<SessionsHostProps>["render"];
+}): ReactElement {
+  const pageOptions = useMemo<FieldOptionsResult>(() => {
+    const visits = new Map<string, number>();
+    for (const row of rows)
+      for (const path of row.pages)
+        visits.set(path, (visits.get(path) ?? 0) + 1);
+    return pageOptionsOf([...visits].map(([path, n]) => ({ path, visits: n })));
+  }, [rows]);
+  return (
+    <VisitsBundle
+      deploymentId={null}
+      render={render}
+      rows={rows}
+      readiness={READY}
+      paging={undefined}
+      pageOptions={pageOptions}
+    />
+  );
+}
+
+/**
+ * A site's visited paths as the Pages filter's options, most visited first
+ * (a list read whole, so the order is the one the picker shows).
+ */
+function pageOptionsOf(pages: readonly SitePage[]): FieldOptionsResult {
+  return {
+    status: "ready",
+    options: [...pages]
+      .sort((a, b) => b.visits - a.visits || (a.path < b.path ? -1 : 1))
+      .map((p) => ({
+        value: p.path,
+        label: p.path,
+        hint: `${p.visits} ${p.visits === 1 ? "visit" : "visits"}`,
+      })),
+  };
+}
 const rowKeyOf = (row: SessionRow): string => row.key;
 const NO_ROWS: readonly SessionRow[] = [];
 
@@ -210,6 +255,18 @@ function SiteVisits({
     narrowBy: view,
     total: true,
   });
+  // The Pages filter offers every path the site's visits hit, not just the
+  // loaded window's: the list pages through time, the filter runs on the copy.
+  const sitePages = useLive(deploymentPages, { deploymentId });
+  const pageOptions = useMemo((): FieldOptionsResult => {
+    switch (sitePages.status) {
+      case "loading":
+      case "error":
+        return sitePages;
+      case "ready":
+        return pageOptionsOf(sitePages.data);
+    }
+  }, [sitePages]);
   return (
     <VisitsBundle
       deploymentId={deploymentId}
@@ -217,14 +274,21 @@ function SiteVisits({
       rows={pages.status === "ready" ? pages.rows : NO_ROWS}
       readiness={pages.status === "ready" ? READY : pages}
       paging={paging === null ? undefined : paging}
+      pageOptions={pageOptions}
     />
   );
 }
 
-// Every field but the site, which every read is scoped by.
-const OVERRIDES = fieldOverrides(deploymentSessions, {
-  deploymentId: { visible: false, filterable: false },
-});
+/**
+ * Every field but the site, which every read is scoped by; the Pages filter
+ * offers the site's visited paths (`pageOptions`).
+ */
+function overridesOf(pageOptions: FieldOptionsResult) {
+  return fieldOverrides(deploymentSessions, {
+    deploymentId: { visible: false, filterable: false },
+    pages: { optionsResult: pageOptions },
+  });
+}
 
 /** Each row's collect visit, kept per row object (rows keep identity across reads). */
 const SESSIONS = new WeakMap<SessionRow, Session>();
@@ -304,13 +368,16 @@ function VisitsBundle({
   rows,
   readiness,
   paging,
+  pageOptions,
 }: {
   deploymentId: string | null;
   render: DataViewSourceProps<SessionsHostProps>["render"];
   rows: readonly SessionRow[];
   readiness: ResourceReadiness;
   paging: Omit<DataViewPaging<SessionRow>, "isPaged"> | undefined;
+  pageOptions: FieldOptionsResult;
 }): ReactElement {
+  const overrides = useMemo(() => overridesOf(pageOptions), [pageOptions]);
   const laneWindow = useLaneWindow(
     deploymentId,
     rows,
@@ -323,7 +390,7 @@ function VisitsBundle({
         rows,
         rowKey: rowKeyOf,
         collection: deploymentSessions,
-        overrides: OVERRIDES,
+        overrides,
         readiness,
         ...(paging !== undefined ? { paging } : {}),
         searchAccessor: searchText,

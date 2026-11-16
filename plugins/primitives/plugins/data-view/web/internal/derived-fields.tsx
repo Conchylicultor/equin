@@ -695,9 +695,14 @@ export function listSchema(input: {
     }
     base = base.map((f) => {
       const override = overrides.byId[f.id];
-      return override === undefined
-        ? f
-        : ({ ...f, ...override } as FieldDef<unknown>);
+      if (override === undefined) return f;
+      // A read option set replaces the declared one: `options` xor `optionsResult`.
+      const { options: _declared, ...rest } = f;
+      return (
+        override.optionsResult === undefined
+          ? { ...f, ...override }
+          : { ...rest, ...override }
+      ) as FieldDef<unknown>;
     });
   }
   const all = [...base, ...(extraFields ?? [])];

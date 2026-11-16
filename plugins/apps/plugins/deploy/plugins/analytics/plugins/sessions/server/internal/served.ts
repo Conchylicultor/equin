@@ -1,5 +1,8 @@
 import type { LiveCutKey } from "@plugins/network/plugins/live/core";
-import { serveCollection } from "@plugins/network/plugins/live/server";
+import {
+  serveCollection,
+  serveValue,
+} from "@plugins/network/plugins/live/server";
 import type { Filter } from "@plugins/network/plugins/live/plugins/filter/core";
 import { tableMirrorReplicas } from "@plugins/database/plugins/table-mirror/plugins/replica/server";
 import {
@@ -14,12 +17,15 @@ import {
   analyticsMirrorTables,
   countVisits,
   readVisitGroups,
+  readVisitPages,
   readVisitsById,
   readVisitWindow,
   type VisitReads,
 } from "@plugins/apps/plugins/deploy/plugins/analytics/plugins/collect/server";
 import {
+  deploymentPages,
   deploymentSessions,
+  MAX_SITE_PAGES,
   parseSessionKey,
   sessionRowOf,
   startedAtKeyText,
@@ -200,4 +206,38 @@ export const deploymentSessionsServed = serveCollection(deploymentSessions, {
       countVisits(tx, { where, filterable: VISIT_FILTERABLE }),
     );
   },
+});
+
+/**
+ * The paths a site's visits hit (the Pages filter's options), on the same copy
+ * and pushed the same way as the list. Complete or loud: a site past
+ * {@link MAX_SITE_PAGES} paths fails the read rather than offer some of them.
+ */
+export const deploymentPagesServed = serveValue(deploymentPages, {
+  source: "external",
+  changes: "notified",
+  throttleMs: 1000,
+  reads: {
+    tables: [],
+    reason: "a site's copy of its analytics, read through its replica",
+    notified: {
+      relations: [tableMirrorReplicas, ...analyticsMirrorTables],
+      reason:
+        "the copy (and whether it is whole) moves only when a pull applies a page, which the replica announces (onReplicaApplied)",
+    },
+  },
+  loader: async ({ deploymentId }) => {
+    const pages = await onCopy(deploymentId, (tx) =>
+      readVisitPages(tx, { limit: MAX_SITE_PAGES + 1 }),
+    );
+    if (pages.length > MAX_SITE_PAGES)
+      throw new Error(
+        `deploy-analytics.pages: ${deploymentId}'s visits hit more than ${MAX_SITE_PAGES} paths — more than the page list holds, so it would offer only some of them`,
+      );
+    return pages;
+  },
+  whileSubscribed: ({ deploymentId }, notify) =>
+    onSiteMirrorApplied({ setId: ANALYTICS_MIRROR_SET_ID, deploymentId }, () =>
+      notify(),
+    ),
 });
