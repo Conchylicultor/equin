@@ -25,6 +25,7 @@ import {
   type Axis,
   type BounceSurface,
 } from "./bounce-surface";
+import { createPullRefresh, type PullRefreshHost } from "./pull-refresh";
 import { createRubberBand, type RubberBand } from "./rubber-band";
 import { touchMayPan } from "./touch-action";
 
@@ -56,7 +57,10 @@ interface Bounce {
  * removes every listener, cancels the frame loop, and puts back any surface
  * left mid-bounce.
  */
-export function installOverscrollHint(): () => void {
+export function installOverscrollHint(
+  refreshHost: PullRefreshHost,
+): () => void {
+  const refresh = createPullRefresh(refreshHost);
   let batch: Batch | null = null;
   let bounce: Bounce | null = null;
   let frameId: number | null = null;
@@ -96,6 +100,13 @@ export function installOverscrollHint(): () => void {
    * when nothing was. Locks the bounce onto its surface on the first one.
    */
   function wastedDelta(b: Batch): number {
+    // A pull to refresh owns its touch until it is let go: every move feeds
+    // it, back up included (the content may scroll under that — it is not
+    // wasted, and still un-pulls the disc).
+    if (refresh.active) {
+      if (b.touch) refresh.pull(-b.deltaY);
+      return 0;
+    }
     if (b.scrolled) return 0;
     const axis: Axis = Math.abs(b.deltaX) > Math.abs(b.deltaY) ? "x" : "y";
     const delta = axis === "x" ? b.deltaX : b.deltaY;
@@ -103,8 +114,16 @@ export function installOverscrollHint(): () => void {
     // A touch the page claimed (a dial, a slider: `touch-action` forbids the
     // pan) never scrolls by design — the touch twin of `defaultPrevented`.
     if (b.touch && !touchMayPan(b.target, axis)) return 0;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return 0;
     if (hasRoomToScroll(b.target, axis, delta)) return 0;
+    // A finger pulling down past the top is the phone's pull to refresh,
+    // never a bounce: the browser's own when the page scrolls as a
+    // document, else ours (the app's panes scroll their own boxes, so the
+    // browser's never sees the pull).
+    if (b.touch && axis === "y" && delta < 0) {
+      if (!browserOwnsPull()) refresh.pull(-delta);
+      return 0;
+    }
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return 0;
 
     const el = pickSurface(b.target, axis);
     if (!(el instanceof HTMLElement)) return 0;
@@ -182,6 +201,8 @@ export function installOverscrollHint(): () => void {
 
   function onTouchEnd(event: TouchEvent): void {
     if (event.touches.length > 0) return;
+    // A cancelled touch (the browser took it) never refreshes.
+    refresh.release(event.type === "touchend");
     touching = false; // released → the band springs back from where it was held
     if (bounce) schedule();
   }
@@ -204,7 +225,23 @@ export function installOverscrollHint(): () => void {
     frameId = null;
     batch = null;
     endBounce();
+    refresh.dispose();
   };
+}
+
+/**
+ * Whether the browser runs its own pull to refresh for a pull past the top:
+ * it does when the page scrolls as a document, never when the root clips
+ * (the app's panes scroll their own boxes) nor in an installed app's window,
+ * which has no browser chrome to refresh with.
+ */
+function browserOwnsPull(): boolean {
+  if (window.matchMedia("(display-mode: standalone)").matches) return false;
+  for (const el of [document.documentElement, document.body]) {
+    const overflowY = getComputedStyle(el).overflowY;
+    if (overflowY === "hidden" || overflowY === "clip") return false;
+  }
+  return true;
 }
 
 /**

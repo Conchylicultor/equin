@@ -49099,9 +49099,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `CenterProps`
             - Exports (values): `Center`
           - Cross-plugin:
-            - Imported by: 146 plugins — full list in [`plugins/primitives/plugins/css/plugins/center/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/center/REFERENCE.md)
+            - Imported by: 147 plugins — full list in [`plugins/primitives/plugins/css/plugins/center/REFERENCE.md`](../plugins/primitives/plugins/css/plugins/center/REFERENCE.md)
               - `apps` ×47
-              - `primitives` ×29
+              - `primitives` ×30
               - `page` ×18
               - `conversations` ×12
               - `debug` ×6
@@ -52414,10 +52414,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `hints/ask`
               - `page/prototype`
               - `shell/global-action-bar`
-        - **`overscroll-hint`** — Wasted-scroll hint: a single invisible global controller (mounted via Core.Root) that plays a small native-feeling rubber-band bounce on a surface when a wheel/trackpad/touch gesture scrolls nothing (not scrollable, or already at the edge). Gestures are batched per frame and a batch is wasted when no scroller on its chain scrolled or has room left; a two-stage physics (a saturating pull, drawn through a critically damped spring) turns bursty trackpad input into one smooth out-and-back. A touch the page claimed with touch-action (a dial, a slider) is never a wasted scroll; and the touch-claim guard enforces the claim — a setPointerCapture on a touch whose touch-action still lets the browser pan both ways is reported (UnclaimedTouchDragError), since the browser would take that drag.
+        - **`overscroll-hint`** — Wasted-scroll hint: a single invisible global controller (mounted via Core.Root) that plays a small native-feeling rubber-band bounce on a surface when a wheel/trackpad/touch gesture scrolls nothing (not scrollable, or already at the edge). Gestures are batched per frame and a batch is wasted when no scroller on its chain scrolled or has room left; a two-stage physics (a saturating pull, drawn through a critically damped spring) turns bursty trackpad input into one smooth out-and-back. A touch pulling down past the top is the phone's pull to refresh instead: the page stays put, a disc drops in from the top edge and letting go once it is armed reloads the page (left to the browser when the page scrolls as a document). A touch the page claimed with touch-action (a dial, a slider) is never a wasted scroll; and the touch-claim guard enforces the claim — a setPointerCapture on a touch whose touch-action still lets the browser pan both ways is reported (UnclaimedTouchDragError), since the browser would take that drag.
           - Web:
             - Contributes: `Core.Root` → `OverscrollHintController`
-            - Uses: `primitives/css/viewport-overlay.describeElement`
+            - Uses:
+              - `primitives/css/center.Center`
+              - `primitives/css/viewport-overlay.describeElement`
+              - `primitives/css/viewport-overlay.ViewportOverlay`
+          - Cross-plugin:
+            - Uses tokens:
+              - `ui/tokens/color-palette --popover`
+              - `ui/tokens/color-palette --primary`
+              - `ui/tokens/color-palette --primary-foreground`
+              - `ui/tokens/color-palette --primary-text`
+              - `ui/tokens/shadow --shadow-md`
         - **`render-mode`** — Reading the browser while rendering, safely in both modes: useBrowserValue({ name, read, subscribe?, staticValue? }) (live: useSyncExternalStore, re-read on every change; static: staticValue, or a loud NoStaticValueError), useMediaQuery(query, staticValue), useViewportSize(staticValue), and useOwnedElement(name, create) — a DOM node a component mints once, which has no static form. The one place a render-time read of window / document / navigator / matchMedia happens (dom-access-safety/no-render-time-dom).
           - Cross-plugin:
             - Imported by: 24 plugins — full list in [`plugins/primitives/plugins/dom/plugins/render-mode/REFERENCE.md`](../plugins/primitives/plugins/dom/plugins/render-mode/REFERENCE.md)
@@ -65077,10 +65087,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Exports (types): `ColorPaletteTokenValues`
             - Exports (values): `colorPaletteGroup`
           - Cross-plugin:
-            - Tokens used by: 555 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
+            - Tokens used by: 556 plugins — full list in [`plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/color-palette/REFERENCE.md)
               - `apps` ×123
               - `conversations` ×97
-              - `primitives` ×76
+              - `primitives` ×77
               - `debug` ×42
               - `page` ×34
               - `plugin-meta` ×28
@@ -65619,9 +65629,9 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `ShadowParamsSchema`
           - Cross-plugin:
             - Uses tokens: `ui/tokens/color-palette --popover`
-            - Tokens used by: 59 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md)
+            - Tokens used by: 60 plugins — full list in [`plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md`](../plugins/ui/plugins/tokens/plugins/shadow/REFERENCE.md)
               - `apps` ×22
-              - `primitives` ×12
+              - `primitives` ×13
               - `ui` ×6
               - `framework` ×4
               - `page` ×3
