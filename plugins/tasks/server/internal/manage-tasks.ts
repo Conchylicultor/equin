@@ -1,35 +1,38 @@
 /**
- * The `edit_task` / `drop_task` policy, granted by `tasks.manage`: which tasks
- * a caller may touch — the tasks of ITS mandate's tree, below the root — and
- * the edit or drop itself through ports, so a test drives it over an
+ * The `edit_task` / `drop_task` policy: which tasks a caller may touch, and
+ * how. The edit or drop itself goes through ports, so a test drives it over an
  * in-memory store (`manage-tasks.test.ts`).
  *
- * "Its tree" is every task whose nearest mandate is the caller's: a task
- * elsewhere, or a nested subtree that names a mandate of its own, is refused.
- * The mandate's own root (the caller's task) is never the task edited or
- * dropped, but it may be the other end of a dependency: removing the root
- * from a child's `after` edits only the child (`add_task` once wired a child
- * after the root by default, and the root stays in progress all session, so
- * the child could never launch). Every id an edit names — the task and both
- * ends of each dependency — is checked before anything is written, and the
- * write is one transaction, so a refused edit changes nothing.
+ * **Ownership is the scope** (`task-ownership.ts`): a caller manages only the
+ * tasks it OWNS — the tasks its own task filed, or, for a supervisor, the
+ * tasks of its tree (and a role session's backlog and earlier sessions, which
+ * its role owns). A task a person filed, or another agent, is refused, naming
+ * its owner. The caller's own task is never the task edited or dropped, but it
+ * may be the other end of a dependency: removing it from a task's `after`
+ * edits only that task (a task once wired after the caller could otherwise
+ * never launch while the caller stays in progress). Every id an edit names —
+ * the task and each other end — is checked before anything is written, and
+ * the write is one transaction, so a refused edit changes nothing.
  *
- * A mandate may REACH further than its tree (`MandateReach`, orchestration's
- * generic predicate on tasks — a supervisor role's backlog and earlier session
- * trees): a task outside the tree that a reach covers may be edited and
- * dropped as if it were in it, but never ARMED (that launches an agent outside
- * the caller's tree, unwatched). The caller's own root stays out of reach
- * whatever a predicate says.
+ * **What an owner may change** depends on `tasks.manage` (a supervisor's
+ * root): with it, everything — title, description, dependencies, track, how
+ * it starts; without it (an agent managing what it filed) the content and
+ * dependencies, the drop, and the hand-off, never `start` or `track`: a filer
+ * launches nothing its filing grant would not (an interactive agent's
+ * sidequests stay for a person to start).
  *
- * `start` decides how the task launches: `armed` queues it for auto-start
- * (it launches once nothing it runs after is unresolved), whatever its track
- * — a sidequest is never armed when filed, but its supervisor may start it
- * here; `manual` disarms it, leaving the launch to a person.
+ * `start: "armed"` queues the task for auto-start, whatever its track, but
+ * only within the caller's OWN tree: a task owned beyond it (a role's backlog
+ * task, an earlier session's tree) is edited or dropped, never armed — it
+ * would launch unwatched. `manual` disarms it. `track` moves the task between
+ * the main track and the sidequests; arming never changes it (when both are
+ * given, the default model of an arm is the NEW track's).
  *
- * `track` moves the task between the main track and the sidequests. Arming
- * never changes it: a sidequest repurposed into critical-path work stays a
- * sidequest until an edit says `track: "main"`. When both are given, the
- * default model of an arm is the NEW track's.
+ * **Hand-off** (`supervisor`, needs the `tasks.file` grant's `backlog`):
+ * passes the task to a listed supervisor role's backlog, in the same
+ * transaction as the rest of the edit (so new context and the hand-off are one
+ * call) — ending as an `add_task` backlog filing would: a root depending on
+ * nothing, never armed, the role's. The caller owns it no more.
  */
 
 import {
@@ -55,6 +58,8 @@ export interface EditTaskInput {
   model?: ModelChoice;
   /** Move the task to this track; absent = its track is unchanged. */
   track?: TaskTrack;
+  /** Hand the task to this listed supervisor role's backlog. */
+  supervisor?: string;
 }
 
 export interface DropTaskInput {
@@ -72,16 +77,28 @@ export interface TaskEdit {
   start?: { kind: "armed"; model: ModelChoice } | { kind: "manual" };
   /** The track to set; absent = unchanged. */
   track?: TaskTrack;
+  /** Hand the task to this role's backlog, last in the transaction; `from`
+   * is the handing caller (its conversation and task). */
+  handOff?: { supervisor: string; conversationId: string; fromTaskId: string };
 }
 
 export type ManageRefusal =
-  | "no-tree"
+  | "no-task"
   | "not-found"
+  | "not-owner"
   | "not-in-tree"
+  | "not-permitted"
   | "root"
   | "empty"
   | "conflict"
   | "not-armable";
+
+/** Whether the caller owns a task (`task-ownership.ts`), read through a port:
+ * `owner` is its owner in words ("filed by a person"). */
+export type OwnerAnswer =
+  | { kind: "not-found" }
+  | { kind: "owned" }
+  | { kind: "not-owned"; owner: string };
 
 export type ManageOutcome =
   | { kind: "edited"; taskId: string; changed: string[] }
@@ -89,6 +106,15 @@ export type ManageOutcome =
   | { kind: "refused"; reason: ManageRefusal; message: string };
 
 export interface ManageTasksPorts {
+  /** The caller's own task, or `null` when its conversation has none. */
+  callerTask: (conversationId: string) => Promise<string | null>;
+  /** Whether the caller owns `taskId`. */
+  ownerOf: (conversationId: string, taskId: string) => Promise<OwnerAnswer>;
+  /** Whether the caller's mandate grants `tasks.manage` (arm, disarm,
+   * retrack what it owns). */
+  canManage: (conversationId: string) => Promise<boolean>;
+  /** Whether the caller's filing grant has `backlog` (hand-off). */
+  canHandOff: (conversationId: string) => Promise<boolean>;
   /** The root task of the caller's mandate tree, or `null` when its
    * conversation has no task or no mandate. */
   callerRoot: (conversationId: string) => Promise<string | null>;
@@ -101,9 +127,6 @@ export interface ManageTasksPorts {
     | { kind: "none" }
     | { kind: "not-found" }
   >;
-  /** Whether the caller's mandate reaches `taskId` although it is outside
-   * its tree (`MandateReach`). */
-  reaches: (conversationId: string, taskId: string) => Promise<boolean>;
   /** Why `taskId` cannot be armed (dropped, or an open attempt already IS
    * its launch), or `null` when it can. */
   unarmable: (taskId: string) => Promise<string | null>;
@@ -118,8 +141,8 @@ export interface ManageTasksPorts {
   /** The live model catalog a `model` is checked against. */
   modelCatalog: () => ModelCatalog;
   /** Writes the whole edit at once (the start last, so a launch sees the new
-   * dependencies); `{ ok: false }` when the graph refuses it (a dependency
-   * cycle) — nothing written. */
+   * dependencies); `{ ok: false }` when the graph or the backlog refuses it
+   * (a dependency cycle, a hand-off the role cannot take) — nothing written. */
   apply: (
     edit: TaskEdit,
   ) => Promise<{ ok: true } | { ok: false; message: string }>;
@@ -130,36 +153,40 @@ function refused(reason: ManageRefusal, message: string): ManageOutcome {
   return { kind: "refused", reason, message };
 }
 
-/** Every id must be a task of the caller's tree: each of `targets` (the task
- * written) below its root, each of `refs` (the other end of a dependency) the
- * root included. */
-async function checkInTree(
+/** Every id must be a task the caller owns: each of `targets` (the task
+ * written), and each of `refs` (the other end of a dependency) unless it is
+ * the caller's own task. Returns the caller's task. */
+async function checkOwned(
   conversationId: string,
   targets: string[],
   refs: string[],
   ports: ManageTasksPorts,
-): Promise<ManageOutcome | null> {
-  const root = await ports.callerRoot(conversationId);
-  if (root === null)
-    return refused("no-tree", "Your conversation has no task tree.");
+): Promise<{ refused: ManageOutcome } | { callerTask: string }> {
+  const own = await ports.callerTask(conversationId);
+  if (own === null)
+    return { refused: refused("no-task", "Your conversation has no task.") };
   for (const id of targets)
-    if (id === root)
-      return refused(
-        "root",
-        `${id} is your tree's root (your own task) — only the tasks below it can be edited or dropped (naming it in another task's add_after / remove_after is fine).`,
-      );
+    if (id === own)
+      return {
+        refused: refused(
+          "root",
+          `${id} is your own task — only the tasks you filed (or, as a supervisor, the tasks of your tree) can be edited or dropped (naming it in another task's add_after / remove_after is fine).`,
+        ),
+      };
   for (const id of new Set([...targets, ...refs])) {
-    if (id === root) continue;
-    const of = await ports.rootOf(id);
-    if (of.kind === "not-found") return refused("not-found", `No task ${id}.`);
-    if (of.kind === "found" && of.rootTaskId === root) continue;
-    if (await ports.reaches(conversationId, id)) continue;
-    return refused(
-      "not-in-tree",
-      `${id} is not in your task tree (root ${root}) — you may only edit or drop the tasks of your own tree.`,
-    );
+    if (id === own) continue;
+    const of = await ports.ownerOf(conversationId, id);
+    if (of.kind === "not-found")
+      return { refused: refused("not-found", `No task ${id}.`) };
+    if (of.kind === "not-owned")
+      return {
+        refused: refused(
+          "not-owner",
+          `${id} is not yours (${of.owner}) — you may only edit or drop the tasks you filed (a supervisor: the tasks of its tree).`,
+        ),
+      };
   }
-  return null;
+  return { callerTask: own };
 }
 
 export async function editTask(
@@ -179,6 +206,9 @@ export async function editTask(
     ...(removeAfter.length > 0 ? ["remove_after"] : []),
     ...(input.track !== undefined ? [`track ${input.track}`] : []),
     ...(input.start !== undefined ? [`start ${input.start}`] : []),
+    ...(input.supervisor !== undefined
+      ? [`handed to ${input.supervisor}`]
+      : []),
   ];
   if (input.model !== undefined && input.start !== "armed")
     return refused(
@@ -188,7 +218,7 @@ export async function editTask(
   if (changed.length === 0)
     return refused(
       "empty",
-      "Nothing to change: pass title, description, add_after, remove_after, track or start.",
+      "Nothing to change: pass title, description, add_after, remove_after, track, start or supervisor.",
     );
   const both = addAfter.filter((id) => removeAfter.includes(id));
   if (both.length > 0)
@@ -198,18 +228,41 @@ export async function editTask(
     );
   if (addAfter.includes(taskId))
     return refused("conflict", "A task cannot run after itself.");
+  if (input.supervisor !== undefined) {
+    if (input.start === "armed" || addAfter.length > 0)
+      return refused(
+        "conflict",
+        'A task handed to a supervisor waits in its backlog, depending on nothing and never armed: `supervisor` goes with no `start: "armed"` and no `add_after`.',
+      );
+    if (!(await ports.canHandOff(conversationId)))
+      return refused(
+        "not-permitted",
+        "Your mandate does not let you file into a supervisor's backlog.",
+      );
+  }
 
-  const scope = await checkInTree(
+  const scope = await checkOwned(
     conversationId,
     [taskId],
     [...addAfter, ...removeAfter],
     ports,
   );
-  if (scope) return scope;
+  if ("refused" in scope) return scope.refused;
+
+  // Launching and retracking stay a supervisor's (`tasks.manage`): an agent
+  // managing what it filed changes its content, dependencies and owner only.
+  if (
+    (input.start !== undefined || input.track !== undefined) &&
+    !(await ports.canManage(conversationId))
+  )
+    return refused(
+      "not-permitted",
+      "`start` and `track` are a supervisor's to change: a sidequest you filed waits for a person (or a supervisor, once handed off) to start it.",
+    );
 
   let start: TaskEdit["start"];
   // Arming launches an agent, so it stays a power over the caller's OWN tree:
-  // a task only reached (a role's backlog task, an earlier session's root)
+  // a task owned beyond it (a role's backlog task, an earlier session's tree)
   // is edited or dropped, never armed from here — a backlog task joins the
   // tree first (a role session's `adopt_task`), so it runs watched, under the
   // session's mandate.
@@ -247,6 +300,15 @@ export async function editTask(
     removeAfter,
     ...(start ? { start } : {}),
     ...(input.track !== undefined ? { track: input.track } : {}),
+    ...(input.supervisor !== undefined
+      ? {
+          handOff: {
+            supervisor: input.supervisor,
+            conversationId,
+            fromTaskId: scope.callerTask,
+          },
+        }
+      : {}),
   });
   if (!out.ok) return refused("conflict", out.message);
   return { kind: "edited", taskId, changed };
@@ -258,8 +320,8 @@ export async function dropTask(
   ports: ManageTasksPorts,
 ): Promise<ManageOutcome> {
   const taskId = input.task_id.trim();
-  const scope = await checkInTree(conversationId, [taskId], [], ports);
-  if (scope) return scope;
+  const scope = await checkOwned(conversationId, [taskId], [], ports);
+  if ("refused" in scope) return scope.refused;
   await ports.drop(taskId);
   return { kind: "dropped", taskId };
 }

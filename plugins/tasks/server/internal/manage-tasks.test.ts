@@ -11,12 +11,17 @@ import {
   type TaskEdit,
 } from "./manage-tasks";
 
-// The `edit_task` / `drop_task` scope policy over an in-memory store: only the
-// tasks of the caller's own mandate tree, below its root.
+// The `edit_task` / `drop_task` policy over an in-memory store: a caller
+// manages only the tasks it owns — a supervisor its tree (and what its role
+// owns beyond it), any other agent what it filed.
 
 const SUP = "conv-sup";
-// R (root, the supervisor's task) ⊃ A, B ⊃ N (names a mandate of its own) ⊃ M.
-// X is another tree's root, Y under it.
+const AGENT = "conv-agent";
+// SUP's task is R, a supervisor root: it owns A and B (its tree) and Z
+// (another tree's root its role owns). N names a mandate of its own (M below
+// it, not SUP's); X is another tree's root, Y under it.
+// AGENT's task is I (interactive): it filed S and T; a person filed H beside
+// them; another agent filed O.
 const roots: Record<string, string> = {
   R: "R",
   A: "R",
@@ -26,15 +31,43 @@ const roots: Record<string, string> = {
   X: "X",
   Y: "X",
   Z: "Z",
+  I: "I",
+  S: "I",
+  T: "I",
+  H: "I",
+  O: "I",
+};
+const callerTasks: Record<string, string> = { [SUP]: "R", [AGENT]: "I" };
+/** Who owns each task: the conversation acting as its owner, else its owner
+ * in words. */
+const owners: Record<string, { by: string } | { label: string }> = {
+  A: { by: SUP },
+  B: { by: SUP },
+  Z: { by: SUP },
+  M: { label: "owned by the supervisor of task N" },
+  N: { label: "filed by a person" },
+  X: { label: "filed by a person" },
+  Y: { label: "filed by a person" },
+  S: { by: AGENT },
+  T: { by: AGENT },
+  H: { label: "filed by a person" },
+  O: { label: "filed by the agent of task Q" },
+  R: { label: "filed by a person" },
+  I: { label: "filed by a person" },
 };
 
 const DEFAULT = ModelChoiceSchema.parse("opus");
 // The caller's filing default for a sidequest (a grant per track).
 const SIDEQUEST_DEFAULT = ModelChoiceSchema.parse("sonnet");
-// A is a sidequest; every other task is main.
-const tracks: Record<string, "main" | "sidequest"> = { A: "sidequest" };
+// A and S are sidequests; every other task is main.
+const tracks: Record<string, "main" | "sidequest"> = {
+  A: "sidequest",
+  S: "sidequest",
+};
 
-function store(callerRoot: string | null = "R") {
+function store(
+  opts: { callerTask?: string | null; handOffRefused?: string } = {},
+) {
   const applied: TaskEdit[] = [];
   // B cannot be armed (an open attempt).
   const unarmable: Record<string, string> = {
@@ -43,13 +76,27 @@ function store(callerRoot: string | null = "R") {
   const dropped: string[] = [];
   let cycle = false;
   const ports: ManageTasksPorts = {
-    callerRoot: async (id) => (id === SUP ? callerRoot : null),
+    callerTask: async (conv) =>
+      opts.callerTask !== undefined
+        ? opts.callerTask
+        : (callerTasks[conv] ?? null),
+    ownerOf: async (conv, id) => {
+      const owner = owners[id];
+      if (owner === undefined) return { kind: "not-found" };
+      if ("by" in owner)
+        return owner.by === conv
+          ? { kind: "owned" }
+          : { kind: "not-owned", owner: "filed by another agent" };
+      return { kind: "not-owned", owner: owner.label };
+    },
+    // Only the supervisor holds tasks.manage; both may hand off.
+    canManage: async (conv) => conv === SUP,
+    canHandOff: async () => true,
+    callerRoot: async (conv) => callerTasks[conv] ?? null,
     rootOf: async (id) =>
       id in roots
         ? { kind: "found", rootTaskId: roots[id]! }
         : { kind: "not-found" },
-    // The caller's mandate reaches Z (another tree's root) beyond its tree.
-    reaches: async (conv, id) => conv === SUP && id === "Z",
     unarmable: async (id) => unarmable[id] ?? null,
     trackOf: async (id) => tracks[id] ?? "main",
     defaultModel: async (_conv, track) =>
@@ -58,6 +105,8 @@ function store(callerRoot: string | null = "R") {
     apply: async (edit) => {
       if (cycle)
         return { ok: false, message: "Cycle detected in dependencies" };
+      if (edit.handOff && opts.handOffRefused)
+        return { ok: false, message: opts.handOffRefused };
       applied.push(edit);
       return { ok: true };
     },
@@ -104,7 +153,7 @@ describe("edit_task", () => {
     ]);
   });
 
-  test("refused outside the tree, on the root, in a nested mandate, unknown id — nothing written", async () => {
+  test("refused when not its own, on its own task, in a nested mandate, unknown id — nothing written", async () => {
     const s = store();
     const cases = await Promise.all([
       editTask({ task_id: "Y", title: "x" }, SUP, s.ports),
@@ -115,10 +164,10 @@ describe("edit_task", () => {
       editTask({ task_id: "nope", title: "x" }, SUP, s.ports),
     ]);
     expect(cases.map((c) => c.kind === "refused" && c.reason)).toEqual([
-      "not-in-tree",
+      "not-owner",
       "root",
-      "not-in-tree",
-      "not-in-tree",
+      "not-owner",
+      "not-owner",
       "root",
       "not-found",
     ]);
@@ -141,12 +190,12 @@ describe("edit_task", () => {
     ]);
   });
 
-  test("no tree, nothing to change, self-dependency, add+remove the same id, a cycle", async () => {
-    const s = store(null);
+  test("no task, nothing to change, self-dependency, add+remove the same id, a cycle", async () => {
+    const s = store({ callerTask: null });
     expect(
       await editTask({ task_id: "A", title: "x" }, SUP, s.ports),
     ).toMatchObject({
-      reason: "no-tree",
+      reason: "no-task",
     });
     const t = store();
     expect(await editTask({ task_id: "A" }, SUP, t.ports)).toMatchObject({
@@ -249,7 +298,7 @@ describe("edit_task start", () => {
     ).toMatchObject({ reason: "conflict" });
     expect(
       await editTask({ task_id: "Y", start: "armed" }, SUP, s.ports),
-    ).toMatchObject({ reason: "not-in-tree" });
+    ).toMatchObject({ reason: "not-owner" });
     expect(
       editTask(
         {
@@ -266,7 +315,7 @@ describe("edit_task start", () => {
 });
 
 describe("drop_task", () => {
-  test("drops a task of its tree; refuses the root and another tree's task", async () => {
+  test("drops a task of its tree; refuses its own task and another tree's task", async () => {
     const s = store();
     expect(await dropTask({ task_id: "B" }, SUP, s.ports)).toEqual({
       kind: "dropped",
@@ -276,14 +325,14 @@ describe("drop_task", () => {
       reason: "root",
     });
     expect(await dropTask({ task_id: "Y" }, SUP, s.ports)).toMatchObject({
-      reason: "not-in-tree",
+      reason: "not-owner",
     });
     expect(s.dropped).toEqual(["B"]);
   });
 });
 
-describe("a mandate's reach beyond its tree", () => {
-  test("a task outside the tree that a reach covers is managed; others are still refused", async () => {
+describe("a supervisor's tasks beyond its tree (its role owns them)", () => {
+  test("a task outside the tree it owns is managed; others are still refused", async () => {
     const s = store();
     expect(await dropTask({ task_id: "Z" }, SUP, s.ports)).toEqual({
       kind: "dropped",
@@ -293,15 +342,155 @@ describe("a mandate's reach beyond its tree", () => {
       await editTask({ task_id: "A", add_after: ["Z"] }, SUP, s.ports),
     ).toMatchObject({ kind: "edited" });
     expect(await dropTask({ task_id: "X" }, SUP, s.ports)).toMatchObject({
-      reason: "not-in-tree",
+      reason: "not-owner",
     });
   });
 
-  test("a reached task is never armed: that would launch it outside the tree", async () => {
+  test("an owned task beyond the tree is never armed: that would launch it outside the tree", async () => {
     const s = store();
     expect(
       await editTask({ task_id: "Z", start: "armed" }, SUP, s.ports),
     ).toMatchObject({ kind: "refused", reason: "not-in-tree" });
     expect(s.applied).toEqual([]);
+  });
+});
+
+describe("an agent manages what it filed", () => {
+  test("edits and drops its own sidequests, and frees one from waiting on its task", async () => {
+    const s = store();
+    expect(
+      await editTask(
+        { task_id: "S", title: "Sharper", description: "More context" },
+        AGENT,
+        s.ports,
+      ),
+    ).toEqual({
+      kind: "edited",
+      taskId: "S",
+      changed: ["title", "description"],
+    });
+    expect(
+      await editTask(
+        { task_id: "S", add_after: ["T"], remove_after: ["I"] },
+        AGENT,
+        s.ports,
+      ),
+    ).toMatchObject({ kind: "edited" });
+    expect(await dropTask({ task_id: "T" }, AGENT, s.ports)).toEqual({
+      kind: "dropped",
+      taskId: "T",
+    });
+    expect(s.dropped).toEqual(["T"]);
+  });
+
+  test("never a task a person or another agent filed — the refusal names the owner", async () => {
+    const s = store();
+    const person = await editTask({ task_id: "H", title: "x" }, AGENT, s.ports);
+    expect(person).toMatchObject({
+      reason: "not-owner",
+      message: expect.stringContaining("filed by a person"),
+    });
+    expect(await dropTask({ task_id: "O" }, AGENT, s.ports)).toMatchObject({
+      reason: "not-owner",
+      message: expect.stringContaining("filed by the agent of task Q"),
+    });
+    // Nor a supervisor's, nor wiring its own task after a task not its own.
+    expect(await dropTask({ task_id: "A" }, AGENT, s.ports)).toMatchObject({
+      reason: "not-owner",
+    });
+    expect(
+      await editTask({ task_id: "S", add_after: ["H"] }, AGENT, s.ports),
+    ).toMatchObject({ reason: "not-owner" });
+    expect(s.applied).toEqual([]);
+    expect(s.dropped).toEqual([]);
+  });
+
+  test("start and track stay a supervisor's", async () => {
+    const s = store();
+    for (const input of [
+      { task_id: "S", start: "armed" as const },
+      { task_id: "S", start: "manual" as const },
+      { task_id: "S", track: "main" as const, title: "x" },
+    ])
+      expect(await editTask(input, AGENT, s.ports)).toMatchObject({
+        reason: "not-permitted",
+      });
+    expect(s.applied).toEqual([]);
+  });
+});
+
+describe("edit_task supervisor: the hand-off", () => {
+  test("hands a task to a role with new context, in one edit", async () => {
+    const s = store();
+    expect(
+      await editTask(
+        {
+          task_id: "S",
+          description: "What I learned",
+          supervisor: "srole-follow-ups",
+        },
+        AGENT,
+        s.ports,
+      ),
+    ).toEqual({
+      kind: "edited",
+      taskId: "S",
+      changed: ["description", "handed to srole-follow-ups"],
+    });
+    expect(s.applied).toEqual([
+      {
+        taskId: "S",
+        description: "What I learned",
+        addAfter: [],
+        removeAfter: [],
+        handOff: {
+          supervisor: "srole-follow-ups",
+          conversationId: AGENT,
+          fromTaskId: "I",
+        },
+      },
+    ]);
+  });
+
+  test("refused: not its own, armed or wired after something, the backlog refusing, no grant", async () => {
+    const s = store();
+    expect(
+      await editTask({ task_id: "H", supervisor: "srole-x" }, AGENT, s.ports),
+    ).toMatchObject({ reason: "not-owner" });
+    expect(
+      await editTask(
+        { task_id: "S", supervisor: "srole-x", add_after: ["T"] },
+        AGENT,
+        s.ports,
+      ),
+    ).toMatchObject({ reason: "conflict" });
+    expect(
+      await editTask(
+        { task_id: "A", supervisor: "srole-x", start: "armed" },
+        SUP,
+        s.ports,
+      ),
+    ).toMatchObject({ reason: "conflict" });
+    const refusing = store({ handOffRefused: "No listed supervisor role" });
+    expect(
+      await editTask(
+        { task_id: "S", supervisor: "srole-x" },
+        AGENT,
+        refusing.ports,
+      ),
+    ).toMatchObject({
+      reason: "conflict",
+      message: "No listed supervisor role",
+    });
+    const noGrant = store();
+    noGrant.ports.canHandOff = async () => false;
+    expect(
+      await editTask(
+        { task_id: "S", supervisor: "srole-x" },
+        AGENT,
+        noGrant.ports,
+      ),
+    ).toMatchObject({ reason: "not-permitted" });
+    expect([...s.applied, ...refusing.applied, ...noGrant.applied]).toEqual([]);
   });
 });

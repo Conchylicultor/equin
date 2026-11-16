@@ -30,6 +30,7 @@
 - Cross-plugin:
   - Imported by:
     - `conversations/conversation-view/supervisor-done-count`
+    - `tasks`
     - `tasks/automations`
     - `tasks/mandate-presets`
     - `tasks/orchestration/mandate`

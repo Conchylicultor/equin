@@ -19,9 +19,13 @@ import {
 import {
   _tasks,
   createTask,
+  getTaskDependencyIds,
+  listDependentIds,
   nearestMandate,
+  removeTaskDependency,
   setMandate,
   tasksView,
+  updateTask,
 } from "@plugins/tasks/plugins/tasks-core/server";
 import type {
   TaskAuthor,
@@ -396,6 +400,69 @@ async function insertBacklogTask(
     exec,
   );
   return task.id;
+}
+
+/**
+ * Hand an existing task to a listed role's backlog — the task an agent filed
+ * earlier, now passed on rather than filed anew. It ends exactly as a
+ * {@link fileToBacklog} filing does: a ROOT stating the interactive mandate,
+ * depending on nothing, owned by the role (the handing agent's task kept as
+ * `filedFromTaskId`), and the role hears it arrive. Refused (nothing written)
+ * when the role is not listed, the task cannot change owner
+ * (`routeRefusal`: it ran, or a session owns it), or other tasks run after it
+ * (they would wait on a backlog — their owners detach them first). The
+ * caller disarms an armed task on the same `exec` first: a backlog task is
+ * never armed. Run on the caller's transaction.
+ */
+export async function handOffToBacklog(
+  handOff: {
+    taskId: string;
+    /** A listed role's id. */
+    supervisor: string;
+    /** The handing agent's conversation and task. */
+    conversationId: string;
+    fromTaskId: string;
+  },
+  exec: DbExecutor,
+): Promise<
+  { ok: true; role: SupervisorRole } | { ok: false; message: string }
+> {
+  const { taskId } = handOff;
+  const listed = (await listSupervisorRoles(exec)).filter((r) => r.listed);
+  const role = listed.find((r) => r.id === handOff.supervisor);
+  if (!role)
+    return {
+      ok: false,
+      message: `No listed supervisor role "${handOff.supervisor}". Name one of: ${describeRoles(listed)}.`,
+    };
+  const refusal = await routeRefusal(taskId, exec);
+  if (refusal !== null)
+    return {
+      ok: false,
+      message:
+        refusal.kind === "not-found"
+          ? `No task ${taskId}.`
+          : refusal.kind === "has-run"
+            ? `${taskId} has already run (${refusal.status}) — only a task no agent has run can enter a backlog.`
+            : `${taskId} belongs to a supervisor session — it cannot be handed to another role.`,
+    };
+  const dependents = await listDependentIds(taskId, exec);
+  if (dependents.length > 0)
+    return {
+      ok: false,
+      message: `${dependents.join(", ")} run${dependents.length === 1 ? "s" : ""} after ${taskId}: a backlog task depends on nothing and nothing waits on it. Detach ${dependents.length === 1 ? "it" : "them"} first (\`edit_task\` \`remove_after\` on ${dependents.length === 1 ? "it" : "each"}), or drop ${taskId} instead.`,
+    };
+  for (const dep of await getTaskDependencyIds(taskId, exec))
+    await removeTaskDependency(taskId, dep, exec);
+  await updateTask(taskId, { folderId: null }, exec);
+  await setMandate(taskId, interactiveMandate, exec);
+  await tasksSupervisor.upsert(
+    taskId,
+    { supervisor: role.id, filedFromTaskId: handOff.fromTaskId },
+    exec,
+  );
+  await emitBacklogArrived(taskId, role.id, handOff.conversationId, exec);
+  return { ok: true, role };
 }
 
 /** Whether `taskId` waits in role `roleId`'s backlog now: a task it owns (at

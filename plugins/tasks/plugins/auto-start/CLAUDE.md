@@ -41,6 +41,7 @@
   - Exports (values):
     - `_taskAutoStartArmedTriggers`
     - `claimAutoStart`
+    - `disarmTaskAutoStart`
     - `getTaskAutoStart`
     - `listArmedTaskIds`
     - `listLaunchableArmedIn`

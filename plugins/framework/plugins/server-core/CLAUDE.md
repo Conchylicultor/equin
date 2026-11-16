@@ -717,10 +717,10 @@ The server itself is spawned and supervised by the gateway; never start it manua
     - `withNotifyBatch`
 - Cross-plugin:
   - Uses tokens: `ui/tokens/shadow --shadow`
-  - Imported by: 121 plugins — full list in [REFERENCE.md](./REFERENCE.md)
+  - Imported by: 122 plugins — full list in [REFERENCE.md](./REFERENCE.md)
     - `infra` ×29
+    - `conversations` ×14
     - `debug` ×14
-    - `conversations` ×13
     - `tasks` ×13
     - `database` ×10
     - `apps` ×8

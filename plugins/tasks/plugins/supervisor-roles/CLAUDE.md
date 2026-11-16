@@ -66,12 +66,22 @@ tools — are `plugins/sessions`.
   (`isSessionRoot` — any task stating the mandate, nested or not). WHICH role a session works for is its root task's `supervisor`
   field (`roleOfConversation`), never encoded in the mandate id — two sources
   of truth that could disagree. The role powers (`supervisorRole`, root only):
-  the session tools (`plugins/sessions`) and a `MandateReach` — a role session
-  manages (edit_task / drop_task) every task its role owns, or whose tree
-  root its role owns: its backlog and its earlier session trees, never another role's — edit and
-  drop only: `edit_task` never ARMS a task outside the caller's tree (a
+  the session tools (`plugins/sessions`) and a `TaskOwnerClaim`
+  (`server/internal/owner-claim.ts`) — the role OWNS every task it owns
+  itself or whose tree root it owns (its backlog and its session trees), so
+  its live session's root manages them (edit_task / drop_task) and nobody
+  else does — not the agent that filed a backlog task, never another role.
+  Outside its own tree, edit and drop only: `edit_task` never ARMS a task outside the caller's tree (a
   backlog task is adopted, so it runs in the session's tree; an ended session
   is relaunched only through the launch endpoint).
+- **Hand-off** — `edit_task` with `supervisor: "<role id>"` passes a task
+  the caller owns to a listed role (`handOffToBacklog`, on the edit's
+  transaction, the task disarmed first): it ends as a filing would — a root
+  stating the interactive mandate, its dependencies removed, owned by the
+  role, `filedFromTaskId` the caller's task, the arrival emitted. Refused
+  (nothing written) for an unlisted role, a task `routeRefusal` keeps, or one
+  other tasks run after. This is how an agent clears the sidequests it filed
+  before `exit_clean` (tasks' open-sidequests exit gate).
 - **Filing** — `add_task` with `supervisor: "<role id>"` (tasks'
   `machine/`) calls `fileToBacklog`: needs the `tasks.file` grant's
   `backlog` (granted by the interactive and supervisor presets), `start:
@@ -108,7 +118,7 @@ tools — are `plugins/sessions`.
 
 ## Plugin reference
 
-- Description: Supervisor roles, web half: registers the srole id kind, the shared supervisor prompt config (Settings → Config) and the exposed `supervisor` field of every task list, its options the live roles by name. Supervisor roles, data half: the supervisor_roles table (name, Haiku-picked icon with a person's override, listed, description, prompt, the queue section its sessions land in — contributed as Queue.LaunchSection) served whole as supervisor-roles.all with its create / edit / delete endpoints; the per-task owner (tasks_ext_supervisor, a role id, exposed as the `supervisor` field of every task list, routed by PUT /api/tasks/:taskId/supervisor); filing into a role's backlog (fileToBacklog — a root task owned by the role, never armed); the supervisor-role mandate (the supervisor preset plus the role powers on the root) and its reach (a role session manages every task its role owns); the system-prompt sections listing the listed roles to agents that may file into a backlog, and the shared supervisor prompt (a config) for every supervisor root.
+- Description: Supervisor roles, web half: registers the srole id kind, the shared supervisor prompt config (Settings → Config) and the exposed `supervisor` field of every task list, its options the live roles by name. Supervisor roles, data half: the supervisor_roles table (name, Haiku-picked icon with a person's override, listed, description, prompt, the queue section its sessions land in — contributed as Queue.LaunchSection) served whole as supervisor-roles.all with its create / edit / delete endpoints; the per-task owner (tasks_ext_supervisor, a role id, exposed as the `supervisor` field of every task list, routed by PUT /api/tasks/:taskId/supervisor); filing into a role's backlog (fileToBacklog — a root task owned by the role, never armed) and handing an existing task to one (handOffToBacklog — the same end state); the supervisor-role mandate (the supervisor preset plus the role powers on the root) and its ownership claim (a role owns its backlog and session trees, so its session manages them); the system-prompt sections listing the listed roles to agents that may file into a backlog, and the shared supervisor prompt (a config) for every supervisor root.
 - Web:
   - Contributes:
     - `IdKinds.Kind` "srole"
@@ -133,14 +143,14 @@ tools — are `plugins/sessions`.
     - `mandateDefinition` "supervisor-role"
     - `conversations.conversations-view.queue.launch-section` "supervisor-role-session"
     - `mandateCapability` "supervisor-roles.role"
-    - `mandateReach` "supervisor-roles"
+    - `taskOwnerClaim` "supervisor-roles"
     - `conversations.system-prompt.section` "supervisor-prompt"
     - `conversations.system-prompt.section` "supervisor-roles"
     - `watchSource` "supervisor-roles.backlog"
     - `trigger` "supervisor-roles.icon"
     - `trigger` "watch.ingest"
-  - Uses: 31 symbols — full list in [REFERENCE.md](./REFERENCE.md)
-    - `tasks/tasks-core` ×5
+  - Uses: 35 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+    - `tasks/tasks-core` ×9
     - `tasks/orchestration/mandate` ×4
     - `config_v2` ×2
     - `conversations/conversations-view/queue` ×2
@@ -173,6 +183,7 @@ tools — are `plugins/sessions`.
     - `fileSystemBacklogTask`
     - `fileToBacklog`
     - `getSupervisorRole`
+    - `handOffToBacklog`
     - `isInRoleBacklog`
     - `isSessionRoot`
     - `liveSessionOf`

@@ -55,33 +55,52 @@ export function capabilityEntries(): Map<
 }
 
 /**
- * A mandate's reach beyond its own tree: whether the conversation may manage
- * (edit, drop, depend on) `taskId` although the task is not under its
- * mandate's root. Contributed by the plugin whose workflow widens the scope
- * (a predicate on tasks it owns); the mandate plugin names none, and the
- * caller's own root stays out of reach whatever a predicate says.
+ * A claim on who owns a task, made by a plugin whose workflow gives tasks an
+ * owner the folder tree does not show (a supervisor role owns its backlog and
+ * its session trees). Ownership decides who may manage a task (`edit_task` /
+ * `drop_task`) and whose leftovers block an exit: the tasks plugin resolves a
+ * task's owner from these claims first, then from the tree and the task's
+ * filer. The mandate plugin names no claimant.
  */
-export interface MandateReachEntry {
+export interface TaskOwnerClaimEntry {
   /** Unique (diagnostics). */
   id: string;
-  reaches: (conversationId: string, taskId: string) => Promise<boolean>;
+  /** The owner `taskId` has under this claim, or `null` when the claim says
+   * nothing about it. */
+  claim: (taskId: string) => Promise<ClaimedOwner | null>;
 }
 
-const ReachToken = defineServerContribution<MandateReachEntry>("mandateReach", {
-  docLabel: (r) => r.id,
-});
+/** An owner a claim names: who it is in words (a refusal names it), and
+ * whether a conversation acts as it. */
+export interface ClaimedOwner {
+  /** "supervisor role Follow ups". */
+  label: string;
+  owns: (conversationId: string) => Promise<boolean>;
+}
 
-/** Registers a reach predicate — `MandateReach({ id, reaches })`. */
-export const MandateReach = ReachToken;
+const OwnerClaimToken = defineServerContribution<TaskOwnerClaimEntry>(
+  "taskOwnerClaim",
+  { docLabel: (c) => c.id },
+);
 
-/** Whether any contributed reach lets `conversationId` manage `taskId`
- * outside its own tree. */
-export async function reachesBeyondTree(
-  conversationId: string,
+/** Registers an ownership claim — `TaskOwnerClaim({ id, claim })`. */
+export const TaskOwnerClaim = OwnerClaimToken;
+
+/** The owner the first contributed claim names for `taskId`; `null` when no
+ * claim speaks for it. Two claims naming an owner for one task is a broken
+ * invariant (two workflows think they own it) and throws. */
+export async function claimedOwnerOf(
   taskId: string,
-): Promise<boolean> {
-  for (const entry of ReachToken.getContributions()) {
-    if (await entry.reaches(conversationId, taskId)) return true;
+): Promise<ClaimedOwner | null> {
+  let found: { id: string; owner: ClaimedOwner } | null = null;
+  for (const entry of OwnerClaimToken.getContributions()) {
+    const owner = await entry.claim(taskId);
+    if (owner === null) continue;
+    if (found !== null)
+      throw new Error(
+        `Task ${taskId} is claimed by both "${found.id}" and "${entry.id}" (TaskOwnerClaim)`,
+      );
+    found = { id: entry.id, owner };
   }
-  return false;
+  return found?.owner ?? null;
 }

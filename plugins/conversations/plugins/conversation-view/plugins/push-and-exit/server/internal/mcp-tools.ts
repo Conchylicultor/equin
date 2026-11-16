@@ -9,6 +9,7 @@ import {
 import { granted } from "@plugins/tasks/plugins/orchestration/plugins/mandate/server";
 import { flagRaise } from "@plugins/conversations/plugins/conversation-view/plugins/push-and-exit/plugins/capabilities/core";
 import { exitCleanFinalizeJob } from "./exit-clean-finalize-job";
+import { exitCleanRefusals } from "@plugins/conversations/plugins/conversation-view/plugins/push-and-exit/plugins/exit-precondition/server";
 import { _conversationFlags } from "./tables";
 import {
   conversationFlagIdKind,
@@ -46,9 +47,21 @@ export const exitCleanTool = Mcp.tool({
   name: "exit_clean",
   description: `Close this conversation cleanly: your work is finished (the branch landed, or there was nothing to land) and there's nothing the user needs to know about. The conversation will close automatically after this turn ends.
 
-Call it when the user asks you to wrap up (the push-and-exit prompt or an explicit "Exit") — never on your own, unless your Mandate says to close once your work is done. If anything went wrong or there's something worth surfacing, call \`flag_raise\` instead.`,
+Call it when the user asks you to wrap up (the push-and-exit prompt or an explicit "Exit") — never on your own, unless your Mandate says to close once your work is done. If anything went wrong or there's something worth surfacing, call \`flag_raise\` instead.
+
+It is refused — nothing changes, the conversation stays open — while something must be settled first (sidequests you filed still waiting, for one); the refusal says what to do, then call it again.`,
   inputSchema: {},
   async handler(_args, { conversationId }) {
+    const refusals = await exitCleanRefusals(conversationId);
+    if (refusals.length > 0)
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Refused: settle this first, then call exit_clean again.\n\n${refusals.join("\n\n")}`,
+          },
+        ],
+      };
     await updateConversation(conversationId, { closeRequested: true });
     await exitCleanFinalizeJob.enqueue({ conversationId });
     return {

@@ -8,6 +8,7 @@ import { autoStartDisarmSweepWarmup } from "./internal/disarm-sweep";
 
 export {
   setTaskAutoStart,
+  disarmTaskAutoStart,
   claimAutoStart,
   getTaskAutoStart,
   listArmedTaskIds,

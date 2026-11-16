@@ -1,0 +1,6 @@
+{
+  "name": "@equin/plugin-conversations-conversation-view-push-and-exit-exit-precondition",
+  "private": true,
+  "version": "0.0.1",
+  "description": "What must hold before an agent may close with exit_clean, as a server collection: ExitClean.Precondition (a check per owning plugin — the tasks plugin's: no sidequest the agent filed left waiting) and exitCleanRefusals, which exit_clean runs first. A leaf, so a contributor can declare its precondition without importing push-and-exit (which imports conversations, and which a composition without the computer leaves out)."
+}

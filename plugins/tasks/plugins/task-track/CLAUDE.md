@@ -91,6 +91,8 @@ sidequest's ops at low host-admission priority, behind the main track.
     - `infra/events.defineTriggerEvent`
     - `network/live.LiveColumns`
     - `network/live.serveCollection`
+    - `tasks/tasks-core._attempts`
+    - `tasks/tasks-core._conversations`
     - `tasks/tasks-core._tasks`
     - `tasks/tasks-core.TaskStatus`
     - `tasks/tasks-core.tasksView`

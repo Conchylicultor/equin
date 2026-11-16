@@ -1,5 +1,8 @@
 import { and, asc, eq, inArray } from "drizzle-orm";
 import {
+  _attempts,
+  _conversations,
+  _tasks,
   tasksView,
   type TaskStatus,
 } from "@plugins/tasks/plugins/tasks-core/server";
@@ -71,29 +74,55 @@ export interface SidequestTask {
  * The sidequests whose derived status is one of `statuses`, OLDEST first, at
  * most `limit` — e.g. the ones ready to start (`new`: no attempt, and not
  * held, dropped or blocked). One `tasks_v` read, bounded by `limit` whatever
- * the backlog's size.
+ * the backlog's size. `filedByTask` keeps only the sidequests an agent filed
+ * from one of that task's conversations (its author conversation's task).
  */
 export async function listSidequestTasks(opts: {
   statuses: readonly TaskStatus[];
   limit: number;
+  filedByTask?: string;
 }): Promise<SidequestTask[]> {
   if (opts.statuses.length === 0) return [];
   const t = tasksTrack.table;
+  const select = {
+    id: tasksView.id,
+    title: tasksView.title,
+    description: tasksView.description,
+    createdAt: tasksView.createdAt,
+  };
+  const onTrack = and(
+    eq(t.track, "sidequest"),
+    inArray(tasksView.status, [...opts.statuses]),
+  );
+  const order = [asc(tasksView.createdAt), asc(tasksView.id)] as const;
+  if (opts.filedByTask === undefined)
+    return db
+      .select(select)
+      .from(t)
+      .innerJoin(tasksView, eq(tasksView.id, t.taskId))
+      .where(onTrack)
+      .orderBy(...order)
+      .limit(opts.limit);
   return db
-    .select({
-      id: tasksView.id,
-      title: tasksView.title,
-      description: tasksView.description,
-      createdAt: tasksView.createdAt,
-    })
+    .select(select)
     .from(t)
     .innerJoin(tasksView, eq(tasksView.id, t.taskId))
+    .innerJoin(_tasks, eq(_tasks.id, t.taskId))
     .where(
       and(
-        eq(t.track, "sidequest"),
-        inArray(tasksView.status, [...opts.statuses]),
+        onTrack,
+        // A subquery, not a join: tasks_v's columns render unqualified, and
+        // conversations has a `status` of its own.
+        inArray(
+          _tasks.authorConversationId,
+          db
+            .select({ id: _conversations.id })
+            .from(_conversations)
+            .innerJoin(_attempts, eq(_attempts.id, _conversations.attemptId))
+            .where(eq(_attempts.taskId, opts.filedByTask)),
+        ),
       ),
     )
-    .orderBy(asc(tasksView.createdAt), asc(tasksView.id))
+    .orderBy(...order)
     .limit(opts.limit);
 }

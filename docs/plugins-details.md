@@ -21730,7 +21730,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `mandateCapability` "push.policy"
               - `watchSource` "flag"
               - `trigger` "watch.ingest"
-            - Uses: 23 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/push-and-exit/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/push-and-exit/REFERENCE.md)
+            - Uses: 24 symbols — full list in [`plugins/conversations/plugins/conversation-view/plugins/push-and-exit/REFERENCE.md`](../plugins/conversations/plugins/conversation-view/plugins/push-and-exit/REFERENCE.md)
               - `tasks/tasks-core` ×5
               - `conversations` ×3
               - `config_v2` ×2
@@ -21738,6 +21738,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `infra/endpoints` ×2
               - `tasks/orchestration/mandate` ×2
               - `conversations/conversation-view/drop-and-exit.dropTaskOnExit`
+              - `conversations/conversation-view/push-and-exit/exit-precondition.exitCleanRefusals`
               - `database/sql-column.parsedJson`
               - `database.db`
               - `infra/events.defineTriggerEvent`
@@ -21822,6 +21823,16 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
                   - `tasks/reports-investigation`
                   - `tasks/sidequest-autopilot`
                   - `upstream`
+            - **`exit-precondition`** — What must hold before an agent may close with exit_clean: the ExitClean.Precondition collection (each owning plugin contributes its check) and exitCleanRefusals, which exit_clean runs before closing. A leaf, so contributors need not import push-and-exit.
+              - Cross-plugin:
+                - Imported by:
+                  - `conversations/conversation-view/push-and-exit`
+                  - `tasks`
+              - Server:
+                - Exports (types): `ExitCleanPreconditionEntry`
+                - Exports (values):
+                  - `ExitClean`
+                  - `exitCleanRefusals`
             - **`flag-categories`** — What a raised flag's item asks of the user, as plain data: the closed category set (broken | decide | fyi | other), each with its chip's label and colour and the line the agent reads when choosing it. A leaf, so the transcript's flag card can draw the chip in a composition without push-and-exit.
               - Cross-plugin:
                 - Imported by:
@@ -32231,10 +32242,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `withNotifyBatch`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
-        - Imported by: 121 plugins — full list in [`plugins/framework/plugins/server-core/REFERENCE.md`](../plugins/framework/plugins/server-core/REFERENCE.md)
+        - Imported by: 122 plugins — full list in [`plugins/framework/plugins/server-core/REFERENCE.md`](../plugins/framework/plugins/server-core/REFERENCE.md)
           - `infra` ×29
+          - `conversations` ×14
           - `debug` ×14
-          - `conversations` ×13
           - `tasks` ×13
           - `database` ×10
           - `apps` ×8
@@ -60131,11 +60142,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/places/places-map`
           - `apps/prototypes/gallery`
 
-- **`tasks`** — Nested tasks with attempts linking to conversations. Nested tasks with attempts linking to conversations: the task CRUD, chain, dependency and auto-start routes, and the edit_task / drop_task MCP tools (gated on the tasks.manage grant, scoped to the caller's mandate tree), portable (arming a task wakes the launcher through the tasks.autoStartArmed trigger event). Launching, the repo info, the add_task MCP tool and the auto-start catch-up are the machine half's.
+- **`tasks`** — Nested tasks with attempts linking to conversations. Nested tasks with attempts linking to conversations: the task CRUD, chain, dependency and auto-start routes, and the edit_task / drop_task MCP tools (scoped to the tasks the caller OWNS — what it filed, a supervisor's tree; starting and retracking need the tasks.manage grant; edit_task hands a task to a supervisor's backlog), the open-sidequests exit gate (exit_clean refused while a sidequest the caller filed still waits), portable (arming a task wakes the launcher through the tasks.autoStartArmed trigger event). Launching, the repo info, the add_task MCP tool and the auto-start catch-up are the machine half's.
   - Server:
     - Contributes:
       - `mandateCapability` "tasks.file"
       - `mandateCapability` "tasks.manage"
+      - `exitCleanPrecondition` "tasks.open-sidequests"
       - `resource.declare` "tasks.repo-info"
       - `treeDigestAnnotation` "tasks"
       - `conversations.compaction-context` "task-tree (fit)"
@@ -60148,18 +60160,21 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `trigger` "watch.ingest"
       - `trigger` "watch.ingest"
       - `trigger` "watch.ingest"
-    - Uses: 41 symbols — full list in [`plugins/tasks/REFERENCE.md`](../plugins/tasks/REFERENCE.md)
+    - Uses: 46 symbols — full list in [`plugins/tasks/REFERENCE.md`](../plugins/tasks/REFERENCE.md)
       - `tasks/tasks-core` ×20
       - `tasks/orchestration/mandate` ×4
-      - `tasks/task-track` ×3
+      - `tasks/task-track` ×4
+      - `tasks/auto-start` ×3
       - `infra/endpoints` ×2
       - `primitives/rank` ×2
-      - `tasks/auto-start` ×2
+      - `conversations/conversation-view/push-and-exit/exit-precondition.ExitClean`
       - `conversations/model-provider/catalog.getModelCatalog`
       - `database.db`
       - `infra/attachments.getAttachment`
       - `infra/mcp.Mcp`
       - `tasks/launch-options.resolveLaunchOptions`
+      - `tasks/orchestration/mandate/definitions.mandateIsKindOf`
+      - `tasks/supervisor-roles.handOffToBacklog`
       - `tasks/task-category.setTaskCategory`
       - `tasks/task-source-url.setTaskSourceUrl`
       - `tasks/task-title.scheduleTaskTitleUpdate`
@@ -60432,6 +60447,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values):
           - `_taskAutoStartArmedTriggers`
           - `claimAutoStart`
+          - `disarmTaskAutoStart`
           - `getTaskAutoStart`
           - `listArmedTaskIds`
           - `listLaunchableArmedIn`
@@ -60840,7 +60856,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/task-triage`
     - **`orchestration`** — Umbrella for the workflow-agnostic building blocks agents are orchestrated by inside a task subtree: the mandate (what an agent may do, resolved nearest-wins up the folder tree), the tree digest and watchers. Names no workflow, automation or track.
       - Plugins:
-        - **`mandate`** — The mandate's server half: the Mandate.Capability registry (each owner contributes how its granted value reads), mandateOf (the named mandate nearest-wins up the folder tree, resolved to its definition's current policy through mandate/definitions) and grantOf (per conversation, collapsed per request burst), granted(cap) for Mcp.tool.when, the `## Mandate` system-prompt section (only the lines no tool already says), the mandate.capabilities catalog value, and MandateReach (a predicate on tasks widening what a mandate may manage beyond its own tree — reachesBeyondTree).
+        - **`mandate`** — The mandate's server half: the Mandate.Capability registry (each owner contributes how its granted value reads), mandateOf (the named mandate nearest-wins up the folder tree, resolved to its definition's current policy through mandate/definitions) and grantOf (per conversation, collapsed per request burst), granted(cap) for Mcp.tool.when, the `## Mandate` system-prompt section (only the lines no tool already says), the mandate.capabilities catalog value, and TaskOwnerClaim (a plugin's claim on who owns a task — a supervisor role its backlog and session trees — read first by the tasks plugin's ownership rule through claimedOwnerOf).
           - Server:
             - Contributes:
               - `resource.declare` "mandate.capabilities"
@@ -60853,19 +60869,20 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `tasks/tasks-core.getConversation`
               - `tasks/tasks-core.nearestMandate`
             - Exports (types):
+              - `ClaimedOwner`
               - `ConversationMandate`
               - `EffectiveMandate`
               - `MandateCapabilityEntry`
-              - `MandateReachEntry`
+              - `TaskOwnerClaimEntry`
             - Exports (values):
+              - `claimedOwnerOf`
               - `conversationMandate`
               - `granted`
               - `grantOf`
               - `Mandate`
               - `mandateOf`
-              - `MandateReach`
-              - `reachesBeyondTree`
               - `renderMandateInstructions`
+              - `TaskOwnerClaim`
             - Resources: `mandate.capabilities` (push, fixed, whole: every capability the code contributes — fixed for the process, a handful)
           - Core:
             - Uses:
@@ -60927,6 +60944,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - Cross-plugin:
                 - Imported by:
                   - `conversations/conversation-view/supervisor-done-count`
+                  - `tasks`
                   - `tasks/automations`
                   - `tasks/mandate-presets`
                   - `tasks/orchestration/mandate`
@@ -61342,7 +61360,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defineJob('sidequest-autopilot.triage-on-task')`
           - `defineJob('sidequest-autopilot.triage-backfill')`
           - `defineWarmup('sidequest-autopilot.triage-backfill')`
-    - **`supervisor-roles`** — Supervisor roles, web half: registers the srole id kind, the shared supervisor prompt config (Settings → Config) and the exposed `supervisor` field of every task list, its options the live roles by name. Supervisor roles, data half: the supervisor_roles table (name, Haiku-picked icon with a person's override, listed, description, prompt, the queue section its sessions land in — contributed as Queue.LaunchSection) served whole as supervisor-roles.all with its create / edit / delete endpoints; the per-task owner (tasks_ext_supervisor, a role id, exposed as the `supervisor` field of every task list, routed by PUT /api/tasks/:taskId/supervisor); filing into a role's backlog (fileToBacklog — a root task owned by the role, never armed); the supervisor-role mandate (the supervisor preset plus the role powers on the root) and its reach (a role session manages every task its role owns); the system-prompt sections listing the listed roles to agents that may file into a backlog, and the shared supervisor prompt (a config) for every supervisor root.
+    - **`supervisor-roles`** — Supervisor roles, web half: registers the srole id kind, the shared supervisor prompt config (Settings → Config) and the exposed `supervisor` field of every task list, its options the live roles by name. Supervisor roles, data half: the supervisor_roles table (name, Haiku-picked icon with a person's override, listed, description, prompt, the queue section its sessions land in — contributed as Queue.LaunchSection) served whole as supervisor-roles.all with its create / edit / delete endpoints; the per-task owner (tasks_ext_supervisor, a role id, exposed as the `supervisor` field of every task list, routed by PUT /api/tasks/:taskId/supervisor); filing into a role's backlog (fileToBacklog — a root task owned by the role, never armed) and handing an existing task to one (handOffToBacklog — the same end state); the supervisor-role mandate (the supervisor preset plus the role powers on the root) and its ownership claim (a role owns its backlog and session trees, so its session manages them); the system-prompt sections listing the listed roles to agents that may file into a backlog, and the shared supervisor prompt (a config) for every supervisor root.
       - Web:
         - Contributes:
           - `IdKinds.Kind` "srole"
@@ -61367,14 +61385,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `mandateDefinition` "supervisor-role"
           - `conversations.conversations-view.queue.launch-section` "supervisor-role-session"
           - `mandateCapability` "supervisor-roles.role"
-          - `mandateReach` "supervisor-roles"
+          - `taskOwnerClaim` "supervisor-roles"
           - `conversations.system-prompt.section` "supervisor-prompt"
           - `conversations.system-prompt.section` "supervisor-roles"
           - `watchSource` "supervisor-roles.backlog"
           - `trigger` "supervisor-roles.icon"
           - `trigger` "watch.ingest"
-        - Uses: 31 symbols — full list in [`plugins/tasks/plugins/supervisor-roles/REFERENCE.md`](../plugins/tasks/plugins/supervisor-roles/REFERENCE.md)
-          - `tasks/tasks-core` ×5
+        - Uses: 35 symbols — full list in [`plugins/tasks/plugins/supervisor-roles/REFERENCE.md`](../plugins/tasks/plugins/supervisor-roles/REFERENCE.md)
+          - `tasks/tasks-core` ×9
           - `tasks/orchestration/mandate` ×4
           - `config_v2` ×2
           - `conversations/conversations-view/queue` ×2
@@ -61407,6 +61425,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `fileSystemBacklogTask`
           - `fileToBacklog`
           - `getSupervisorRole`
+          - `handOffToBacklog`
           - `isInRoleBacklog`
           - `isSessionRoot`
           - `liveSessionOf`
@@ -62742,6 +62761,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/events.defineTriggerEvent`
           - `network/live.LiveColumns`
           - `network/live.serveCollection`
+          - `tasks/tasks-core._attempts`
+          - `tasks/tasks-core._conversations`
           - `tasks/tasks-core._tasks`
           - `tasks/tasks-core.TaskStatus`
           - `tasks/tasks-core.tasksView`

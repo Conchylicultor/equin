@@ -75,6 +75,16 @@ export async function setTaskAutoStart(
   return true;
 }
 
+// Disarm on `exec`'s transaction: for a write that must not leave a moment in
+// which the task is armed and launchable (a hand-off to a backlog drops the
+// task's dependencies in the same transaction).
+export async function disarmTaskAutoStart(
+  id: string,
+  exec: DbExecutor,
+): Promise<void> {
+  await tasksAutoStart.delete(id, exec);
+}
+
 // Atomic CAS: delete the ext-table row and return true iff this caller
 // won the race. Collapses at-least-once trigger delivery into exactly-one
 // launch in maybeLaunchTaskJob.

@@ -64,7 +64,7 @@ automations define theirs through `defineAutomation({ mandate })`.
 
 ## Plugin reference
 
-- Description: The mandate's server half: the Mandate.Capability registry (each owner contributes how its granted value reads), mandateOf (the named mandate nearest-wins up the folder tree, resolved to its definition's current policy through mandate/definitions) and grantOf (per conversation, collapsed per request burst), granted(cap) for Mcp.tool.when, the `## Mandate` system-prompt section (only the lines no tool already says), the mandate.capabilities catalog value, and MandateReach (a predicate on tasks widening what a mandate may manage beyond its own tree — reachesBeyondTree).
+- Description: The mandate's server half: the Mandate.Capability registry (each owner contributes how its granted value reads), mandateOf (the named mandate nearest-wins up the folder tree, resolved to its definition's current policy through mandate/definitions) and grantOf (per conversation, collapsed per request burst), granted(cap) for Mcp.tool.when, the `## Mandate` system-prompt section (only the lines no tool already says), the mandate.capabilities catalog value, and TaskOwnerClaim (a plugin's claim on who owns a task — a supervisor role its backlog and session trees — read first by the tasks plugin's ownership rule through claimedOwnerOf).
 - Server:
   - Contributes:
     - `resource.declare` "mandate.capabilities"
@@ -77,19 +77,20 @@ automations define theirs through `defineAutomation({ mandate })`.
     - `tasks/tasks-core.getConversation`
     - `tasks/tasks-core.nearestMandate`
   - Exports (types):
+    - `ClaimedOwner`
     - `ConversationMandate`
     - `EffectiveMandate`
     - `MandateCapabilityEntry`
-    - `MandateReachEntry`
+    - `TaskOwnerClaimEntry`
   - Exports (values):
+    - `claimedOwnerOf`
     - `conversationMandate`
     - `granted`
     - `grantOf`
     - `Mandate`
     - `mandateOf`
-    - `MandateReach`
-    - `reachesBeyondTree`
     - `renderMandateInstructions`
+    - `TaskOwnerClaim`
   - Resources: `mandate.capabilities` (push, fixed, whole: every capability the code contributes — fixed for the process, a handful)
 - Core:
   - Uses:

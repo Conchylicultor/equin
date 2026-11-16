@@ -9,7 +9,11 @@ import {
   ModelChoiceSchema,
 } from "@plugins/conversations/plugins/model-provider/core";
 import { getModelCatalog } from "@plugins/conversations/plugins/model-provider/plugins/catalog/server";
-import { setTaskAutoStart } from "@plugins/tasks/plugins/auto-start/server";
+import {
+  disarmTaskAutoStart,
+  setTaskAutoStart,
+} from "@plugins/tasks/plugins/auto-start/server";
+import { handOffToBacklog } from "@plugins/tasks/plugins/supervisor-roles/server";
 import {
   getTaskTrack,
   setTaskTrack,
@@ -32,9 +36,9 @@ import {
   granted,
   grantOf,
   Mandate,
-  reachesBeyondTree,
 } from "@plugins/tasks/plugins/orchestration/plugins/mandate/server";
 import { armTaskAutoStart } from "./arm-auto-start";
+import { actsAsOwner, describeOwner, taskOwnership } from "./task-ownership";
 import {
   dropTask,
   EDIT_STARTS,
@@ -43,9 +47,27 @@ import {
   type ManageTasksPorts,
 } from "./manage-tasks";
 
+/** A hand-off the backlog refused, thrown inside the edit's transaction so the
+ * whole edit rolls back, and answered as a refusal. */
+class HandOffRefused extends Error {}
+
 // The real reads and writes behind `edit_task` / `drop_task`. The scope
 // policy lives in manage-tasks.ts, which a test drives over an in-memory store.
 const ports: ManageTasksPorts = {
+  async callerTask(conversationId) {
+    return (await getConversation(conversationId))?.taskId ?? null;
+  },
+  async ownerOf(conversationId, taskId) {
+    const owner = await taskOwnership(taskId);
+    if (owner === null) return { kind: "not-found" };
+    return (await actsAsOwner(conversationId, owner))
+      ? { kind: "owned" }
+      : { kind: "not-owned", owner: describeOwner(owner) };
+  },
+  canManage: async (conversationId) =>
+    (await grantOf(tasksManage, conversationId)) !== null,
+  canHandOff: async (conversationId) =>
+    (await grantOf(tasksFile, conversationId))?.backlog === true,
   async callerRoot(conversationId) {
     const conversation = await getConversation(conversationId);
     if (!conversation?.taskId) return null;
@@ -59,7 +81,6 @@ const ports: ManageTasksPorts = {
       ? { kind: "found", rootTaskId: nearest.rootTaskId }
       : { kind: "none" };
   },
-  reaches: reachesBeyondTree,
   async unarmable(taskId) {
     const task = await getTask(taskId);
     if (task?.droppedAt) return `${taskId} is dropped — it will not run.`;
@@ -99,10 +120,20 @@ const ports: ManageTasksPorts = {
             await addTaskDependency(edit.taskId, id, tx);
           if (edit.track !== undefined)
             await setTaskTrack(edit.taskId, edit.track, tx);
+          if (edit.handOff !== undefined) {
+            // Disarmed first, on the same transaction: the hand-off drops the
+            // task's dependencies, and an armed task with none would launch.
+            await disarmTaskAutoStart(edit.taskId, tx);
+            const out = await handOffToBacklog(
+              { taskId: edit.taskId, ...edit.handOff },
+              tx,
+            );
+            if (!out.ok) throw new HandOffRefused(out.message);
+          }
         }),
       );
     } catch (err) {
-      if (err instanceof DependencyCycleError)
+      if (err instanceof DependencyCycleError || err instanceof HandOffRefused)
         return { ok: false, message: err.message };
       throw err;
     }
@@ -130,19 +161,27 @@ const ports: ManageTasksPorts = {
   },
 };
 
-const SCOPE = `Only the tasks of your own task tree (those under your mandate's root, as \`task_tree\` lists them), plus any your mandate reaches beyond it (a supervisor role's backlog and its earlier sessions) — never a task elsewhere, nor your tree's root (your own task) itself; anything else is refused.`;
+const SCOPE = `Only the tasks you OWN: the tasks you filed (\`add_task\`, from this task's conversations) — or, as a supervisor, every task of your tree, plus your role's backlog and earlier sessions. Never a task a person or another agent filed, nor your own task itself; anything else is refused, naming its owner. A task you handed to a supervisor is the supervisor's.`;
+
+const EXIT = `**Before you exit**, every sidequest you filed that is still waiting must be resolved — \`exit_clean\` is refused until it is: drop it (\`drop_task\`) when it is not worth doing — ask yourself what it actually gains — or hand it to a supervisor (\`edit_task\` with \`supervisor\`), adding what you learned since filing it.`;
+
+/** Whoever may file tasks manages what it filed; a supervisor (`tasks.manage`)
+ * its tree. */
+const canFileOrManage = async (ctx: { conversationId: string }) =>
+  (await granted(tasksFile)(ctx)) || (await granted(tasksManage)(ctx));
 
 export const editTaskTool = Mcp.tool({
   name: "edit_task",
-  // Only an agent whose mandate lets it manage its tree sees the tool.
-  when: granted(tasksManage),
-  description: `Edit a task of your tree: its title, its description (the problem it states — the prompt its agent launches with), the tasks it runs after, its track, and how it starts.
+  when: canFileOrManage,
+  description: `Edit a task you own: its title, its description (the problem it states — the prompt its agent launches with), the tasks it runs after, who owns it — and, as a supervisor, its track and how it starts.
 
-\`start: "armed"\` queues it to launch on its own once every task it runs after is done (at once when none is pending) — on any track: a sidequest is never armed when filed, but you may start it here. \`start: "manual"\` disarms it: a person starts it. Arming a dropped task, or one whose agent already launched and is still open, is refused.
+\`supervisor: "<role id>"\` hands the task to a listed supervisor role's backlog (your system prompt's Supervisor roles): it leaves your tree for the backlog — depending on nothing, never armed — and is the role's from then on. Pass a new \`description\` in the same call to give the role what you learned since filing it. Refused for a task that already ran, or that other tasks run after.
 
-Arming does not change the track: when you turn a sidequest into work on the critical path, also pass \`track: "main"\` (and \`track: "sidequest"\` for the reverse).
+\`start\` and \`track\` are a supervisor's (granted \`tasks.manage\`); anyone else is refused. \`start: "armed"\` queues it to launch on its own once every task it runs after is done (at once when none is pending) — on any track, but only a task of your own tree. \`start: "manual"\` disarms it: a person starts it. Arming a dropped task, or one whose agent already launched and is still open, is refused. Arming does not change the track: when you turn a sidequest into work on the critical path, also pass \`track: "main"\` (and \`track: "sidequest"\` for the reverse).
 
-${SCOPE} Every id named (the task and each \`add_after\` / \`remove_after\` id) must be in your tree — the root may be an \`add_after\` / \`remove_after\` id (\`remove_after: [<your task>]\` frees a task wired to wait on yours); a refused edit (or one closing a dependency cycle) changes nothing.
+${SCOPE} Every id named (the task and each \`add_after\` / \`remove_after\` id) must be yours — your own task may be an \`add_after\` / \`remove_after\` id (\`remove_after: [<your task>]\` frees a task wired to wait on yours); a refused edit (or one closing a dependency cycle) changes nothing.
+
+${EXIT}
 
 Editing a task whose agent already launched does not reach that agent — message it with \`message_agent\`.`,
   inputSchema: {
@@ -178,6 +217,13 @@ Editing a task whose agent already launched does not reach that agent — messag
       .describe(
         '"main": on the critical path. "sidequest": off it. Absent = unchanged.',
       ),
+    supervisor: z
+      .string()
+      .min(1)
+      .optional()
+      .describe(
+        "Hand the task to this listed supervisor role's backlog (a role id from your system prompt's Supervisor roles). No `start: \"armed\"` / `add_after` with it.",
+      ),
   },
   async handler(input, { conversationId }) {
     const out = await editTask(input, conversationId, ports);
@@ -187,10 +233,12 @@ Editing a task whose agent already launched does not reach that agent — messag
 
 export const dropTaskTool = Mcp.tool({
   name: "drop_task",
-  when: granted(tasksManage),
-  description: `Drop a task of your tree — it will not run (its dependents stop waiting on it), as the Drop button does. A person can restore it.
+  when: canFileOrManage,
+  description: `Drop a task you own — it will not run (its dependents stop waiting on it), as the Drop button does. A person can restore it.
 
-${SCOPE}`,
+${SCOPE}
+
+${EXIT}`,
   inputSchema: {
     task_id: z.string().min(1).describe("The task to drop."),
   },
@@ -201,7 +249,7 @@ ${SCOPE}`,
 });
 
 /** A `tasks.manage` grant adds no Mandate line: `edit_task` / `drop_task`
- * appear only when granted, and their descriptions state the tree scope. */
+ * state what it adds (start and track) in their descriptions. */
 export const tasksManageCapability = Mandate.Capability({
   cap: tasksManage,
   describe: () => null,

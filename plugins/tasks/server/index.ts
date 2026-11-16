@@ -18,6 +18,7 @@ import {
   editTaskTool,
   tasksManageCapability,
 } from "./internal/manage-tools";
+import { openSidequestsGate } from "./internal/open-sidequests-gate";
 import {
   listTasks,
   createTask,
@@ -39,8 +40,8 @@ export { armTaskAutoStart } from "./internal/arm-auto-start";
 
 export default {
   description:
-    "Nested tasks with attempts linking to conversations: the task CRUD, chain, dependency and auto-start routes, and the edit_task / drop_task MCP tools (gated on the tasks.manage grant, scoped to the caller's mandate tree), portable (arming a task wakes the launcher through the tasks.autoStartArmed trigger event). Launching, the repo info, the add_task MCP tool and the auto-start catch-up are the machine half's.",
-  contributions: [tasksManageCapability],
+    "Nested tasks with attempts linking to conversations: the task CRUD, chain, dependency and auto-start routes, and the edit_task / drop_task MCP tools (scoped to the tasks the caller OWNS — what it filed, a supervisor's tree; starting and retracking need the tasks.manage grant; edit_task hands a task to a supervisor's backlog), the open-sidequests exit gate (exit_clean refused while a sidequest the caller filed still waits), portable (arming a task wakes the launcher through the tasks.autoStartArmed trigger event). Launching, the repo info, the add_task MCP tool and the auto-start catch-up are the machine half's.",
+  contributions: [tasksManageCapability, openSidequestsGate],
   register: [editTaskTool, dropTaskTool],
   httpRoutes: {
     [listTasks.route]: handleList,

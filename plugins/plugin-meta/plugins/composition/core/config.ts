@@ -617,6 +617,10 @@ export const compositionsConfig = defineConfig({
               // …and the flag categories, which the transcript's flag card
               // draws its chips from.
               "conversations.conversation-view.push-and-exit.flag-categories",
+              // …and the exit-precondition collection, which the tasks
+              // plugin contributes its open-sidequests check to (no
+              // exit_clean runs here to read it).
+              "conversations.conversation-view.push-and-exit.exit-precondition",
               "tasks.outcome-report.capability",
               // Files, whole: it browses the browser's own file system — its
               // Home, which the seed fills (Documents, Music, Pictures, a few

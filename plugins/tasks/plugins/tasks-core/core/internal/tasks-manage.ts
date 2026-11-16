@@ -2,12 +2,13 @@ import { z } from "zod";
 import { defineCapability } from "@plugins/tasks/plugins/orchestration/plugins/mandate/plugins/policy/core";
 
 /**
- * May edit (title, description, dependencies, arm / disarm) and drop the tasks of its
- * mandate's tree (`edit_task`, `drop_task`) — never a task outside it, nor
- * the mandate's own root. `true` only — no grant, no tool.
+ * A supervisor's power over the tasks it owns (`edit_task`): arming /
+ * disarming them and changing their track. Editing and dropping need no grant
+ * beyond ownership — any agent that files tasks manages the ones it filed —
+ * so this adds only what launches work. `true` only.
  */
 export const tasksManage = defineCapability<true>({
   id: "tasks.manage",
   schema: z.literal(true),
-  label: "Edit and drop the tasks of its tree",
+  label: "Start and retrack the tasks it owns",
 });

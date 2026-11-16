@@ -4,11 +4,12 @@
 
 ## Plugin reference
 
-- Description: Nested tasks with attempts linking to conversations. Nested tasks with attempts linking to conversations: the task CRUD, chain, dependency and auto-start routes, and the edit_task / drop_task MCP tools (gated on the tasks.manage grant, scoped to the caller's mandate tree), portable (arming a task wakes the launcher through the tasks.autoStartArmed trigger event). Launching, the repo info, the add_task MCP tool and the auto-start catch-up are the machine half's.
+- Description: Nested tasks with attempts linking to conversations. Nested tasks with attempts linking to conversations: the task CRUD, chain, dependency and auto-start routes, and the edit_task / drop_task MCP tools (scoped to the tasks the caller OWNS — what it filed, a supervisor's tree; starting and retracking need the tasks.manage grant; edit_task hands a task to a supervisor's backlog), the open-sidequests exit gate (exit_clean refused while a sidequest the caller filed still waits), portable (arming a task wakes the launcher through the tasks.autoStartArmed trigger event). Launching, the repo info, the add_task MCP tool and the auto-start catch-up are the machine half's.
 - Server:
   - Contributes:
     - `mandateCapability` "tasks.file"
     - `mandateCapability` "tasks.manage"
+    - `exitCleanPrecondition` "tasks.open-sidequests"
     - `resource.declare` "tasks.repo-info"
     - `treeDigestAnnotation` "tasks"
     - `conversations.compaction-context` "task-tree (fit)"
@@ -21,18 +22,21 @@
     - `trigger` "watch.ingest"
     - `trigger` "watch.ingest"
     - `trigger` "watch.ingest"
-  - Uses: 41 symbols — full list in [REFERENCE.md](./REFERENCE.md)
+  - Uses: 46 symbols — full list in [REFERENCE.md](./REFERENCE.md)
     - `tasks/tasks-core` ×20
     - `tasks/orchestration/mandate` ×4
-    - `tasks/task-track` ×3
+    - `tasks/task-track` ×4
+    - `tasks/auto-start` ×3
     - `infra/endpoints` ×2
     - `primitives/rank` ×2
-    - `tasks/auto-start` ×2
+    - `conversations/conversation-view/push-and-exit/exit-precondition.ExitClean`
     - `conversations/model-provider/catalog.getModelCatalog`
     - `database.db`
     - `infra/attachments.getAttachment`
     - `infra/mcp.Mcp`
     - `tasks/launch-options.resolveLaunchOptions`
+    - `tasks/orchestration/mandate/definitions.mandateIsKindOf`
+    - `tasks/supervisor-roles.handOffToBacklog`
     - `tasks/task-category.setTaskCategory`
     - `tasks/task-source-url.setTaskSourceUrl`
     - `tasks/task-title.scheduleTaskTitleUpdate`

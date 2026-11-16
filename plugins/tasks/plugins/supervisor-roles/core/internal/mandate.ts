@@ -23,7 +23,8 @@ export const supervisorRoleMandate = defineMandate({
  * The role powers, the same for every role: list the role's backlog, adopt a
  * backlog task into the live session, route a task to another role, and
  * manage (edit, drop) every task the role owns — its backlog and its earlier
- * session trees (a `MandateReach`). Granted to a role session's root only.
+ * session trees (a `TaskOwnerClaim`: the role owns them). Granted to a role
+ * session's root only.
  */
 export const supervisorRole = defineCapability<true>({
   id: "supervisor-roles.role",
