@@ -21,7 +21,7 @@
 ## ✦ What is equin?
 
 equin is an agentic platform for building large apps at scale: hundreds of features,
-maintained for years autonomously.
+maintained autonomously, built to last for years.
 It adds [hundreds of improvements](https://equin.ai/about/foundations) on top of raw Claude:
 
 - an **agent manager** designed to monitor dozens of sessions in parallel
