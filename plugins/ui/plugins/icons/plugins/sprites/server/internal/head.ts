@@ -13,6 +13,7 @@ import {
 } from "../../shared/head-request";
 import { SpriteDrawer } from "./sprite-drawer";
 import { pageIssuerHeaders } from "@plugins/primitives/plugins/networking/core";
+import { headRequestScript } from "@plugins/primitives/plugins/networking/plugins/request-guard/core";
 
 /** Placeholders the head script swaps for a remembered batch's address. */
 const HASH = "__hash__";
@@ -26,7 +27,8 @@ const NAMES = "__names__";
  * entry for the page, in localStorage — content-addressed assets, read from the browser's cache on a
  * warm load). An inline async module importing nothing, so it runs as soon as
  * the parser reaches it, while the modulepreloads download — the same shape
- * as the boot snapshot's head request. Each `.catch` only marks a promise
+ * as the boot snapshot's head request. Written through `headRequestScript`:
+ * run after the app entry, it issues nothing and the boot task finds no head. Each `.catch` only marks a promise
  * handled; the boot task awaits the same promises and sees a failure.
  *
  * A first visit remembers nothing: its first frame asks for its glyphs once
@@ -50,8 +52,7 @@ export function spritesHeadScript(): string {
     key: KEY,
     names: NAMES,
   });
-  return (
-    `<script type="module" async>` +
+  return headRequestScript(
     // Stamped as the page's own requests, as the page transport stamps its
     // (`networking`'s request issuer).
     `const get = (p) => { const r = fetch(p, { headers: ${JSON.stringify(pageIssuerHeaders())} }); r.catch(() => undefined); return r; };` +
@@ -71,8 +72,7 @@ export function spritesHeadScript(): string {
     `const batches = (Array.isArray(memory?.v) ? memory.v : []).filter((b) => [b?.hash, b?.key, b?.names].every((x) => typeof x === "string" && /^[a-z0-9,-]+$/.test(x)));` +
     `parked.glyphs = batches.map((b) => ({ hash: b.hash, key: b.key, names: b.names, response: get(${JSON.stringify(glyphPath)}` +
     `.replace(${JSON.stringify(HASH)}, b.hash).replace(${JSON.stringify(KEY)}, b.key).replace(${JSON.stringify(NAMES)}, b.names)) }));` +
-    `} catch (err) { parked.memoryError = String(err); }` +
-    `</script>`
+      `} catch (err) { parked.memoryError = String(err); }`,
   );
 }
 

@@ -2,6 +2,7 @@ import {
   defineReportSink,
   type ReportSink,
 } from "@plugins/primitives/plugins/report-sink/core";
+import { REQUEST_GUARD_INSTALLED_GLOBAL } from "../core";
 
 /**
  * The page request guard: the runtime half (rung 4) of "the browser reads the
@@ -191,6 +192,9 @@ export function installRequestGuard(): () => void {
         : undefined,
   };
   natives = kept;
+  // Closes the head's pre-entry window: a head request script that runs from
+  // now on issues nothing (`headRequestScript`).
+  Reflect.set(g, REQUEST_GUARD_INSTALLED_GLOBAL, true);
 
   if (kept.fetch) {
     const nativeFn = kept.fetch;
@@ -258,6 +262,7 @@ export function installRequestGuard(): () => void {
     if (kept.EventSource) g.EventSource = kept.EventSource;
     if (kept.xhrOpen) g.XMLHttpRequest.prototype.open = kept.xhrOpen;
     if (kept.sendBeacon) g.navigator.sendBeacon = kept.sendBeacon;
+    Reflect.deleteProperty(g, REQUEST_GUARD_INSTALLED_GLOBAL);
     natives = null;
   };
 }

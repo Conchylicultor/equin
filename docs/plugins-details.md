@@ -54273,9 +54273,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `framework/web-core`
               - `infra/endpoints`
+              - `network/live/boot-snapshot`
               - `primitives/networking`
               - `primitives/networking/page-transport`
               - `reports/crash`
+              - `ui/icons/sprites`
           - Exemptions:
             - Exempts itself from:
               - `no-raw-event-source` — `web/__tests__/request-guard.test.ts` (sanctioned)
@@ -54289,6 +54291,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
               - `nativeWebSocket`
               - `RawApiRequestError`
               - `requestGuardReportSink`
+          - Core:
+            - Exports (values):
+              - `headRequestScript`
+              - `REQUEST_GUARD_INSTALLED_GLOBAL`
     - **`outline`** — Umbrella for the outline primitive: the scroll-spy position half and the rail chrome half.
       - Plugins:
         - **`rail`** — Notion-style outline rail: a dash per section pinned to the surface's right edge, the current one bright and wide (position from outline/scroll-spy), expanding on hover / focus / tap into the depth-indented outline with click-to-jump. Windows its dashes to the height it has while the panel always lists every entry, so a long document's indicator can never lie.
