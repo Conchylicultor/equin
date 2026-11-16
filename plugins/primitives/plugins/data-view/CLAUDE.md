@@ -1182,11 +1182,21 @@ interface ToolbarParts {
 
 ### Quick filters (`quickFilters`)
 
-One-click toggles over the active view's filter — "whose visits:
-Visitors / You / All". `DataViewBaseProps.quickFilters?: QuickFilter[]`
-(core: `{ id, fieldId, label, options: { id, label, rule: { operatorId,
-value? } | null }[] }`), declared with the rows (a `DataViewSwitcher` source
-declares its own, over its own fields).
+One-click controls over the active view's filter, declared with the rows
+(a `DataViewSwitcher` source declares its own, over its own fields):
+`DataViewBaseProps.quickFilters?: QuickFilter[]`, a union (core):
+
+- `kind: "segmented"` — "whose visits: Visitors / You / All":
+  `{ id, fieldId, label, options: { id, label, rule: { operatorId, value? }
+  | null }[] }`, one `SegmentedControl`.
+- `kind: "operand"` — "Pages: any of /a, /b": `{ id, fieldId, operatorId,
+  label, placeholder }`, the label then the operator's OWN `ValueInput` (the
+  Filter panel's editor — a searchable multi-pick for `contains-any-of`,
+  handed `placeholder`). Its operand is the field's one top-level rule with
+  that operator (`activeQuickOperand`); an edit writes it, clearing it takes
+  the rule off (`applyQuickOperand`); anything else on the field reads as
+  "Custom (see Filter)" and an edit replaces it. A field that is not
+  filterable, or an operator without a value, throws.
 
 - **A view onto the filter, never a second filter**
   (`web/internal/quick-filter.ts`): the selected option is DERIVED
@@ -1201,7 +1211,7 @@ declares its own, over its own fields).
 - **Custom state**: a rule no option names (hand-edited, nested, under `or`)
   selects no segment (`SegmentedControl value={null}`).
 - **Rendered by the host** (`web/components/toolbar/quick-filters.tsx`, one
-  `SegmentedControl` each, read from `useDataViewControls()`), placed by the
+  control each, read from `useDataViewControls()`), placed by the
   arrangement as `ToolbarParts.quickFilters`: `PillsToolbar` in its own pill
   (`dv.quick-filters`) on a row of its own UNDER the views and tools pills
   (they narrow the view the row above picked — never squeezed between them),
@@ -2798,6 +2808,7 @@ restyled 20.6k elements before, 10.4k after (`fullscreen-budget` cases unchanged
     - `LiveTreeSpec`
     - `ManualOrderConfig`
     - `Nesting`
+    - `OperandQuickFilter`
     - `PlacementMatch`
     - `PlacementSpec`
     - `PresetId`
@@ -2817,6 +2828,7 @@ restyled 20.6k elements before, 10.4k after (`fullscreen-budget` cases unchanged
     - `SectionMove`
     - `SectionsToolbar`
     - `SectionsToolbarForms`
+    - `SegmentedQuickFilter`
     - `SelectionConfig`
     - `Slot`
     - `SlotForm`

@@ -109,7 +109,13 @@ export function ChipSelectFilterInput(
       trigger={
         // The rule row's control shape: it fills its cell and truncates, so a
         // long pick (a page path) shortens in place instead of widening the row.
-        <ControlPanel.Field aria-label="Select filter values" label={summary} />
+        <ControlPanel.Field
+          aria-label="Select filter values"
+          label={summary}
+          {...(props.placeholder === undefined
+            ? {}
+            : { placeholder: props.placeholder })}
+        />
       }
     >
       {state.status === "loading" ? (

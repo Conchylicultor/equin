@@ -51380,6 +51380,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `LiveTreeSpec`
           - `ManualOrderConfig`
           - `Nesting`
+          - `OperandQuickFilter`
           - `PlacementMatch`
           - `PlacementSpec`
           - `PresetId`
@@ -51399,6 +51400,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `SectionMove`
           - `SectionsToolbar`
           - `SectionsToolbarForms`
+          - `SegmentedQuickFilter`
           - `SelectionConfig`
           - `Slot`
           - `SlotForm`

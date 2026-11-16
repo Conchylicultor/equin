@@ -48,7 +48,7 @@ const BREAK_PX = 7;
  * per action. Every piece names itself on hover.
  */
 export function JourneyBar({ journey }: { journey: Journey }): ReactNode {
-  const { axisMaxS, sections } = useLaneWindow();
+  const { axisMaxS, sections, focusPages } = useLaneWindow();
   // A truncated visit's unknown tail takes its share of the bar, undrawn.
   const durations = journey.pages.map((p) => p.activeDurationS);
   const shown = durations.reduce((a, d) => a + d, 0);
@@ -87,6 +87,7 @@ export function JourneyBar({ journey }: { journey: Journey }): ReactNode {
               share={shares[i]!}
               first={i === 0}
               read={pageRead(page, sections)}
+              dimmed={focusPages !== null && !focusPages.has(page.path)}
             />
           );
         })}
@@ -126,6 +127,9 @@ function pageFrac(page: JourneyPage, s: number): number {
     : 0;
 }
 
+/** A page the view's Pages filter did not ask for, stepped back (full on hover). */
+export const DIMMED_PAGE = "opacity-40 hover:opacity-100";
+
 export function pageTitle(path: string): string {
   if (path === "/") return "Home";
   const last = path.split("/").filter(Boolean).at(-1) ?? path;
@@ -138,12 +142,15 @@ function PageSegment({
   share,
   first,
   read,
+  dimmed,
 }: {
   page: JourneyPage;
   start: number;
   share: number;
   first: boolean;
   read: PageRead;
+  /** Not one of the pages the view asks for: drawn stepped back. */
+  dimmed: boolean;
 }): ReactNode {
   const knownSections = read.sections;
   const label = readLabel(read);
@@ -157,7 +164,8 @@ function PageSegment({
             className={cn(
               placedClasses(),
               clipClasses({ axis: "both", fill: false }),
-              "rounded-md bg-muted shadow-[inset_0_0_0_1px_var(--border)] transition-colors hover:bg-accent",
+              "rounded-md bg-muted shadow-[inset_0_0_0_1px_var(--border)] transition-[background-color,opacity] hover:bg-accent",
+              dimmed && DIMMED_PAGE,
             )}
             style={placedStyle(
               {

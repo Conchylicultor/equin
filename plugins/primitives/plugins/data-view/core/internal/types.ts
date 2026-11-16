@@ -1735,6 +1735,9 @@ export interface FilterValueInputProps {
   value: unknown;
   onChange: (value: unknown) => void;
   field: FieldDef<unknown>;
+  /** What the editor shows with no operand (an operand quick filter's
+   *  "All pages"); absent → the editor's own. */
+  placeholder?: string;
 }
 
 /**
@@ -2314,19 +2317,42 @@ export interface QuickFilterOption {
 }
 
 /**
- * A one-field segmented control in the toolbar — see
- * {@link DataViewBaseProps.quickFilters}. Each option IS a top-level rule of
- * the active view's filter: the selected one is read off the filter, and
- * picking one rewrites the filter, so the control and the Filter panel can
- * never disagree.
+ * A one-field control in the toolbar — see
+ * {@link DataViewBaseProps.quickFilters}. Either way it IS a top-level rule of
+ * the active view's filter: what it shows is read off the filter, and using
+ * it rewrites the filter, so the control and the Filter panel can never
+ * disagree.
  */
-export interface QuickFilter {
+export type QuickFilter = SegmentedQuickFilter | OperandQuickFilter;
+
+/** A segmented control: each option one rule on the field (or none). */
+export interface SegmentedQuickFilter {
+  kind: "segmented";
   id: string;
   /** The field every option's rule is on (a field of the source's schema). */
   fieldId: string;
   /** The segmented control's accessible name ("Whose visits"). */
   label: string;
   options: readonly QuickFilterOption[];
+}
+
+/**
+ * One operator of the field's type, its operand edited in the toolbar by the
+ * operator's own `ValueInput` (the Filter panel's editor — a multi-pick over
+ * the field's options for `contains-any-of`): an operand puts the rule on
+ * the field, clearing it takes the rule off.
+ */
+export interface OperandQuickFilter {
+  kind: "operand";
+  id: string;
+  /** The field the rule is on (a filterable field of the source's schema). */
+  fieldId: string;
+  /** An operator of the field's type that takes a value. */
+  operatorId: string;
+  /** The control's name, shown before it ("Pages"). */
+  label: string;
+  /** What the editor shows with no operand ("All pages"). */
+  placeholder: string;
 }
 
 /** A controlled search query — see {@link DataViewBaseProps.search}. */
@@ -2485,8 +2511,9 @@ export interface DataViewBaseProps<TRow> extends PlacementSpec {
    */
   search?: DataViewSearch;
   /**
-   * One-click toggles over the active view's filter: per field, a segmented
-   * control whose options are each a top-level rule on that field (or none).
+   * One-click controls over the active view's filter: per field, a segmented
+   * control whose options are each a top-level rule on that field (or none),
+   * or one operator's operand editor (an "any of these pages" pick).
    * Not a second filter — the selected option is derived from the active
    * view's filter (none selected when it holds something no option names: a
    * hand-edited rule), and a pick rewrites that filter, as the Filter panel

@@ -81,7 +81,14 @@ Served `source: "external"` (`server/internal/served.ts`) on this computer's
   top-level rule of the active view's filter, so the saved views
   (`r-visitors`) read as Visitors + Any device, and a pick is a draft carried
   in the URL; a hand-edited rule
-  selects no segment.
+  selects no segment. A third, **Pages** (an operand quick filter: `pages
+  contains-any-of [paths]`, the site's visited paths as its options), keeps
+  the visits that went through any of the picked pages.
+- **Focused pages**: the pages the view's filter asks for (the Pages quick
+  filter's operand, or a top-level `pages contains` rule — `focusPagesOf`)
+  ride the window as `LaneWindow.focusPages`; each row's journey bar and the
+  expanded timeline draw those pages at full strength and dim the others
+  (`DIMMED_PAGE`, full again on hover).
 - **Rows**: the list view's `renderRow` (`SessionLane`) and `detail`
   (`SessionTimeline`), with `detailOnActivate` and `frame: "card"`; a row is
   handed to them as collect's `Session` (`sessionOf`, kept per row object).

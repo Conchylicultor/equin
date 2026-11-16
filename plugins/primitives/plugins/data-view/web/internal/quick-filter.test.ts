@@ -1,9 +1,20 @@
 import { describe, expect, it } from "bun:test";
-import type { FilterGroup, FilterNode, QuickFilter } from "../../core";
-import { activeQuickOption, applyQuickOption } from "./quick-filter";
+import type {
+  FilterGroup,
+  FilterNode,
+  OperandQuickFilter,
+  SegmentedQuickFilter,
+} from "../../core";
+import {
+  activeQuickOperand,
+  activeQuickOption,
+  applyQuickOperand,
+  applyQuickOption,
+} from "./quick-filter";
 
-const OWNER: QuickFilter = {
+const OWNER: SegmentedQuickFilter = {
   id: "owner",
+  kind: "segmented",
   fieldId: "owner",
   label: "Whose visits",
   options: [
@@ -17,8 +28,9 @@ const OWNER: QuickFilter = {
   ],
 };
 
-const RANGE: QuickFilter = {
+const RANGE: SegmentedQuickFilter = {
   id: "range",
+  kind: "segmented",
   fieldId: "startedAt",
   label: "Since",
   options: [
@@ -133,5 +145,69 @@ describe("applyQuickOption", () => {
     expect(next?.conjunction).toBe("and");
     expect(next?.children[0]).toEqual(or);
     expect(activeQuickOption(next, OWNER)).toBe("visitors");
+  });
+});
+
+const PAGES: OperandQuickFilter = {
+  kind: "operand",
+  id: "pages",
+  fieldId: "pages",
+  operatorId: "contains-any-of",
+  label: "Pages",
+  placeholder: "All pages",
+};
+const pagesRule: FilterNode = {
+  kind: "rule",
+  id: "r-pages",
+  fieldId: "pages",
+  operatorId: "contains-any-of",
+  value: ["/a", "/b"],
+};
+
+describe("activeQuickOperand", () => {
+  it("reads the operand of the field's one rule with the operator", () => {
+    expect(activeQuickOperand(and(visitors, pagesRule), PAGES)).toEqual({
+      kind: "value",
+      value: ["/a", "/b"],
+    });
+  });
+
+  it("no rule on the field is none", () => {
+    expect(activeQuickOperand(null, PAGES)).toEqual({ kind: "none" });
+    expect(activeQuickOperand(and(visitors), PAGES)).toEqual({ kind: "none" });
+  });
+
+  it("another operator, two rules or a nested one read as other", () => {
+    const other = { ...pagesRule, operatorId: "contains-all-of" };
+    expect(activeQuickOperand(and(other), PAGES)).toEqual({ kind: "other" });
+    expect(
+      activeQuickOperand(and(pagesRule, { ...pagesRule, id: "x" }), PAGES),
+    ).toEqual({ kind: "other" });
+    expect(activeQuickOperand(and(and(pagesRule)), PAGES)).toEqual({
+      kind: "other",
+    });
+  });
+});
+
+describe("applyQuickOperand", () => {
+  it("puts the operator's rule on the field, keeping its id", () => {
+    const next = applyQuickOperand(and(visitors, pagesRule), PAGES, ["/c"]);
+    expect(next).toEqual(and(visitors, { ...pagesRule, value: ["/c"] }));
+  });
+
+  it("appends to a tree without the field", () => {
+    const next = applyQuickOperand(and(visitors), PAGES, ["/a"]);
+    expect(next?.children[1]).toMatchObject({
+      fieldId: "pages",
+      operatorId: "contains-any-of",
+      value: ["/a"],
+    });
+  });
+
+  it("no operand takes the rule off; an empty tree is null", () => {
+    expect(
+      applyQuickOperand(and(visitors, pagesRule), PAGES, undefined),
+    ).toEqual(and(visitors));
+    expect(applyQuickOperand(and(pagesRule), PAGES, undefined)).toBeNull();
   });
 });

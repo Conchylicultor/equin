@@ -149,6 +149,7 @@ describe("DataViewToolbar arrangements", () => {
   it("places the quick filters on a row under the views and tools, reading and writing the filter", () => {
     const owner: QuickFilter = {
       id: "whose",
+      kind: "segmented",
       fieldId: "owner",
       label: "Whose visits",
       options: [

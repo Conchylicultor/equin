@@ -38,7 +38,7 @@ import {
   type LoadPhase,
 } from "../internal/load";
 import { GAP_LABEL, GapSwatch } from "./gap-look";
-import { pageTitle } from "./journey-bar";
+import { DIMMED_PAGE, pageTitle } from "./journey-bar";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
@@ -91,7 +91,7 @@ function PastRail({ children }: { children: ReactNode }): ReactNode {
  * away in order — and where the visitor left.
  */
 export function SessionTimeline({ session }: { session: Session }): ReactNode {
-  const { journeys, sections } = useLaneWindow();
+  const { journeys, sections, focusPages } = useLaneWindow();
   const journey = journeys.get(session.id);
   if (!journey)
     throw new Error(`[sessions] no journey derived for visit ${session.id}`);
@@ -146,6 +146,7 @@ export function SessionTimeline({ session }: { session: Session }): ReactNode {
               entry={i === 0}
               exit={i === journey.pages.length - 1}
               read={pageRead(page, sections)}
+              dimmed={focusPages !== null && !focusPages.has(page.path)}
               onReplay={openReplay === null ? null : () => openReplay(i)}
             />
           </Step>
@@ -286,12 +287,15 @@ function PageCard({
   entry,
   exit,
   read,
+  dimmed,
   onReplay,
 }: {
   page: JourneyPage;
   entry: boolean;
   exit: boolean;
   read: PageRead;
+  /** Not one of the pages the view asks for: drawn stepped back. */
+  dimmed: boolean;
   /** Replays the visit from this page; `null` when there is no site to play it on. */
   onReplay: (() => void) | null;
 }): ReactNode {
@@ -311,6 +315,7 @@ function PageCard({
         level="raised"
         className={cn(
           "shadow-none",
+          dimmed && DIMMED_PAGE,
           onReplay !== null &&
             "cursor-pointer transition-shadow hover:shadow-[0_0_0_1px_var(--primary)]",
         )}

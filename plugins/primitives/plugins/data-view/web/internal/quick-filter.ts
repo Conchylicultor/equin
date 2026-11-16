@@ -3,8 +3,9 @@ import type {
   FilterGroup,
   FilterNode,
   FilterRule,
-  QuickFilter,
+  OperandQuickFilter,
   QuickFilterOption,
+  SegmentedQuickFilter,
 } from "../../core";
 import { countRules, emptyGroup, newNodeId } from "./filter-tree-ops";
 
@@ -37,6 +38,47 @@ function sameOperand(a: unknown, b: unknown): boolean {
 }
 
 /**
+ * The field's place in the filter, as a quick filter reads it: no rule on it,
+ * exactly one top-level rule under an `and` root, or something else — two
+ * rules, one in a nested group, one under an `or` root — which no quick
+ * filter names.
+ */
+export type FieldRuleState =
+  { kind: "none" } | { kind: "one"; rule: FilterRule } | { kind: "other" };
+
+export function fieldRuleOf(
+  filter: FilterGroup | null,
+  fieldId: string,
+): FieldRuleState {
+  if (filter === null || !holdsField(filter, fieldId)) return { kind: "none" };
+  if (filter.conjunction !== "and") return { kind: "other" };
+  const nested = filter.children.some(
+    (c) => c.kind === "group" && holdsField(c, fieldId),
+  );
+  if (nested) return { kind: "other" };
+  const rules = topLevelRules(filter, fieldId);
+  if (rules.length !== 1) return { kind: "other" };
+  return { kind: "one", rule: rules[0]! };
+}
+
+/**
+ * The operand an operand quick filter shows: `undefined` with no rule on the
+ * field, the rule's value when the field's one top-level rule is the quick
+ * filter's operator, `"other"` when the filter holds anything else on the
+ * field (the control then says so, and an edit replaces it).
+ */
+export function activeQuickOperand(
+  filter: FilterGroup | null,
+  qf: OperandQuickFilter,
+): { kind: "none" } | { kind: "value"; value: unknown } | { kind: "other" } {
+  const held = fieldRuleOf(filter, qf.fieldId);
+  if (held.kind !== "one") return held;
+  return held.rule.operatorId === qf.operatorId && held.rule.value !== undefined
+    ? { kind: "value", value: held.rule.value }
+    : { kind: "other" };
+}
+
+/**
  * The option of `qf` the filter currently IS, or `null` when it holds
  * something no option names — a hand-edited rule, two rules on the field, a
  * rule on it inside a nested group, or one under an `or` root. Matches when
@@ -45,18 +87,13 @@ function sameOperand(a: unknown, b: unknown): boolean {
  */
 export function activeQuickOption(
   filter: FilterGroup | null,
-  qf: QuickFilter,
+  qf: SegmentedQuickFilter,
 ): string | null {
   const noRule = qf.options.find((o) => o.rule === null)?.id ?? null;
-  if (filter === null || !holdsField(filter, qf.fieldId)) return noRule;
-  if (filter.conjunction !== "and") return null;
-  const nested = filter.children.some(
-    (c) => c.kind === "group" && holdsField(c, qf.fieldId),
-  );
-  if (nested) return null;
-  const rules = topLevelRules(filter, qf.fieldId);
-  if (rules.length !== 1) return null;
-  const [rule] = rules as [FilterRule];
+  const held = fieldRuleOf(filter, qf.fieldId);
+  if (held.kind === "none") return noRule;
+  if (held.kind === "other") return null;
+  const { rule } = held;
   return (
     qf.options.find(
       (o) =>
@@ -76,8 +113,33 @@ export function activeQuickOption(
  */
 export function applyQuickOption(
   filter: FilterGroup | null,
-  qf: QuickFilter,
+  qf: SegmentedQuickFilter,
   option: QuickFilterOption,
+): FilterGroup | null {
+  return applyQuickRule(filter, qf.fieldId, option.rule);
+}
+
+/**
+ * The filter with an operand quick filter's operand set: its operator's rule
+ * on the field with `value`, or — `undefined`, nothing picked — no rule on it.
+ */
+export function applyQuickOperand(
+  filter: FilterGroup | null,
+  qf: OperandQuickFilter,
+  value: unknown,
+): FilterGroup | null {
+  return applyQuickRule(
+    filter,
+    qf.fieldId,
+    value === undefined ? null : { operatorId: qf.operatorId, value },
+  );
+}
+
+/** {@link applyQuickOption}'s rewrite, for one rule (or none) on `fieldId`. */
+function applyQuickRule(
+  filter: FilterGroup | null,
+  fieldId: string,
+  quickRule: QuickFilterOption["rule"],
 ): FilterGroup | null {
   const root: FilterGroup =
     filter === null
@@ -90,23 +152,21 @@ export function applyQuickOption(
             conjunction: "and",
             children: [filter],
           };
-  const dropped = topLevelRules(root, qf.fieldId);
+  const dropped = topLevelRules(root, fieldId);
   const rule: FilterRule | null =
-    option.rule === null
+    quickRule === null
       ? null
       : {
           kind: "rule",
           id: dropped[0]?.id ?? newNodeId(),
-          fieldId: qf.fieldId,
-          operatorId: option.rule.operatorId,
-          ...(option.rule.value === undefined
-            ? {}
-            : { value: option.rule.value }),
+          fieldId: fieldId,
+          operatorId: quickRule.operatorId,
+          ...(quickRule.value === undefined ? {} : { value: quickRule.value }),
         };
   const children: FilterNode[] = [];
   let placed = false;
   for (const child of root.children) {
-    if (child.kind === "rule" && child.fieldId === qf.fieldId) {
+    if (child.kind === "rule" && child.fieldId === fieldId) {
       if (!placed && rule !== null) children.push(rule);
       placed = true;
       continue;

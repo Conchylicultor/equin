@@ -12,6 +12,12 @@ import type { Journey } from "./journey";
 export interface LaneWindow {
   /** The site the visits are of — what a replay opens on; `null` for made-up visits (the exhibit), which have none. */
   deploymentId: string | null;
+  /**
+   * The pages the view's filter asks for (the Pages quick filter): each row
+   * draws them at full strength and dims its other pages; `null` — no page
+   * asked for, every page drawn alike.
+   */
+  focusPages: ReadonlySet<string> | null;
   axisMaxS: number;
   sections: ReadonlyMap<string, readonly string[]>;
   journeys: ReadonlyMap<string, Journey>;

@@ -29,6 +29,7 @@ import {
 } from "@plugins/primitives/plugins/data-view/web";
 import type {
   FieldOptionsResult,
+  FilterGroup,
   QuickFilter,
   QuickFilterOption,
 } from "@plugins/primitives/plugins/data-view/core";
@@ -181,7 +182,11 @@ export function VisitsSource(
   return props.hostProps.kind === "site" ? (
     <SiteVisits {...props} deploymentId={props.hostProps.deploymentId} />
   ) : (
-    <ExhibitVisits rows={props.hostProps.rows} render={props.render} />
+    <ExhibitVisits
+      rows={props.hostProps.rows}
+      render={props.render}
+      filter={props.view.filter}
+    />
   );
 }
 
@@ -191,9 +196,11 @@ const READY: ResourceReadiness = { status: "ready" };
 function ExhibitVisits({
   rows,
   render,
+  filter,
 }: {
   rows: readonly SessionRow[];
   render: DataViewSourceProps<SessionsHostProps>["render"];
+  filter: FilterGroup | null;
 }): ReactElement {
   const pageOptions = useMemo<FieldOptionsResult>(() => {
     const visits = new Map<string, number>();
@@ -210,6 +217,7 @@ function ExhibitVisits({
       readiness={READY}
       paging={undefined}
       pageOptions={pageOptions}
+      filter={filter}
     />
   );
 }
@@ -275,6 +283,7 @@ function SiteVisits({
       readiness={pages.status === "ready" ? READY : pages}
       paging={paging === null ? undefined : paging}
       pageOptions={pageOptions}
+      filter={view.filter}
     />
   );
 }
@@ -314,6 +323,31 @@ function searchText(row: SessionRow): string {
   ].join(" ");
 }
 
+/** The Pages quick filter's operator: a visit that hit any of the picked paths. */
+const PAGES_OPERATOR = "contains-any-of";
+
+/**
+ * The paths the view's filter asks for — the Pages quick filter's (or a
+ * hand-written top-level `pages contains` rule's) operand — which each row
+ * then draws at full strength while its other pages step back; `null` when
+ * the filter names no page.
+ */
+function focusPagesOf(filter: FilterGroup | null): ReadonlySet<string> | null {
+  if (filter === null || filter.conjunction !== "and") return null;
+  const paths = filter.children.flatMap((c) => {
+    if (c.kind !== "rule" || c.fieldId !== "pages") return [];
+    if (c.operatorId !== PAGES_OPERATOR && c.operatorId !== "contains")
+      return [];
+    const v: unknown = c.value;
+    return typeof v === "string"
+      ? [v]
+      : Array.isArray(v)
+        ? v.filter((x): x is string => typeof x === "string")
+        : [];
+  });
+  return paths.length === 0 ? null : new Set(paths);
+}
+
 /**
  * One click to narrow whose visits and on which kind of device — each option a
  * top-level rule of the active view's filter (every saved view starts on
@@ -322,6 +356,7 @@ function searchText(row: SessionRow): string {
  */
 const QUICK_FILTERS: readonly QuickFilter[] = [
   {
+    kind: "segmented",
     id: "whose",
     fieldId: "owner",
     label: "Whose visits",
@@ -336,6 +371,7 @@ const QUICK_FILTERS: readonly QuickFilter[] = [
     ],
   },
   {
+    kind: "segmented",
     id: "device",
     fieldId: "device",
     label: "Device",
@@ -347,6 +383,16 @@ const QUICK_FILTERS: readonly QuickFilter[] = [
         rule: { operatorId: "is", value: d },
       })),
     ],
+  },
+  {
+    // Visits that went through ANY of the picked pages; the pages are then
+    // the ones each row brings forward (`focusPagesOf`).
+    kind: "operand",
+    id: "pages",
+    fieldId: "pages",
+    operatorId: PAGES_OPERATOR,
+    label: "Pages",
+    placeholder: "Any page",
   },
 ];
 
@@ -369,6 +415,7 @@ function VisitsBundle({
   readiness,
   paging,
   pageOptions,
+  filter,
 }: {
   deploymentId: string | null;
   render: DataViewSourceProps<SessionsHostProps>["render"];
@@ -376,6 +423,8 @@ function VisitsBundle({
   readiness: ResourceReadiness;
   paging: Omit<DataViewPaging<SessionRow>, "isPaged"> | undefined;
   pageOptions: FieldOptionsResult;
+  /** The active view's filter — which pages it asks for. */
+  filter: FilterGroup | null;
 }): ReactElement {
   const overrides = useMemo(() => overridesOf(pageOptions), [pageOptions]);
   const laneWindow = useLaneWindow(
@@ -383,6 +432,7 @@ function VisitsBundle({
     rows,
     readiness.status === "ready",
     paging?.total?.count ?? null,
+    filter,
   );
   return (
     <LaneWindowContext.Provider value={laneWindow}>
@@ -408,7 +458,9 @@ function useLaneWindow(
   rows: readonly SessionRow[],
   known: boolean,
   total: number | null,
+  filter: FilterGroup | null,
 ): LaneWindow {
+  const focusPages = useMemo(() => focusPagesOf(filter), [filter]);
   return useMemo<LaneWindow>(() => {
     const sessions = rows.map(sessionOfRow);
     const journeys = new Map<string, Journey>(
@@ -417,6 +469,7 @@ function useLaneWindow(
     const all = [...journeys.values()];
     return {
       deploymentId,
+      focusPages,
       journeys,
       sections: sectionsByPath(all),
       axisMaxS: axisMaxS(Math.max(0, ...all.map((j) => j.barS))),
@@ -438,5 +491,5 @@ function useLaneWindow(
             withActions: all.filter((j) => j.actionCount > 0).length,
           },
     };
-  }, [deploymentId, rows, known, total]);
+  }, [deploymentId, rows, known, total, focusPages]);
 }

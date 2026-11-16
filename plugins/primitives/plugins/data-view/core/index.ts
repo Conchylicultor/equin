@@ -166,6 +166,8 @@ export type {
   DataViewSearchSuggestions,
   QuickFilter,
   QuickFilterOption,
+  SegmentedQuickFilter,
+  OperandQuickFilter,
   DataViewDataOrigin,
   DataViewInMemoryOrigin,
   DataViewRowsCollection,
