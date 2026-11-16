@@ -14,6 +14,7 @@ import {
 } from "@plugins/plugin-meta/plugins/composition/core";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { NewTabButton } from "@plugins/primitives/plugins/link-gesture/plugins/new-tab/web";
+import { testLocally } from "../internal/test-locally";
 
 const boltIcon = symbol("bolt");
 
@@ -23,10 +24,11 @@ const boltIcon = symbol("bolt");
  * is not.
  *
  * One button rather than two, because from the row there is exactly one thing
- * anyone wants — *look at this app locally* — and whether that costs a build is
- * a fact the row already knows. It never links to a namespace that is not
- * actually served: the state comes from the `composition.json` marker, not from
- * the `serve` mode, which is intent.
+ * anyone wants — *look at this app locally, as Deploy would ship it* — and
+ * whether that costs a build is a fact the row already knows. It never links to
+ * a namespace that is not actually served, nor to one served from a commit
+ * other than HEAD: the state is the serve status, not the `serve` mode, which
+ * is intent.
  */
 export function ServeAction({
   row,
@@ -81,15 +83,13 @@ function ServeRowAction({
     );
   }
 
-  if (status.live.served) {
-    // The url is a property of the STATUS, not of the liveness arm: the server
-    // resolves it from its own checkout whether anything is served there or not.
-    const { url } = status;
+  const action = testLocally(item.name, status);
+  if (action.kind === "open") {
     return (
       <NewTabButton
-        href={url}
+        href={action.url}
         label="Open the local serve"
-        tooltip={`Open ${url}`}
+        tooltip={action.tooltip}
       />
     );
   }
@@ -105,9 +105,7 @@ function ServeRowAction({
       label="Serve locally"
       tooltip={
         canServe
-          ? // `status.url` is server-resolved: a composition served from a
-            // worktree lives at `<id>.<checkout>.localhost:9000`.
-            `Build & serve ${item.name} at ${status.url}`
+          ? action.tooltip
           : "The main app is built by ./equin build — it is not served as a composition."
       }
       disabled={!canServe}
@@ -116,9 +114,10 @@ function ServeRowAction({
         // Two ways to reach the same wanted end state — the app live locally —
         // and which one applies is whether the serve mode is already on. Off:
         // `setMode` records the intent and runs the build that claims the
-        // namespace. Already on with nothing served (the enabling build failed,
-        // or its namespace was reclaimed): the mode is already what it should
-        // be, so writing it again would build nothing — this is exactly the
+        // namespace. Already on with nothing current served (the enabling build
+        // failed, its namespace was reclaimed, or a push left it behind): the
+        // mode is already what it should be, so writing it again would build
+        // nothing — this is exactly the
         // case `rebuildNow` exists for. Both toast the running build, so the row
         // adds no toast of its own.
         if (isServed(item.serve)) rebuildNow(item.id);

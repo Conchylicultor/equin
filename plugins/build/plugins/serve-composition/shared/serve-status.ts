@@ -7,8 +7,8 @@ const SERVE_STATUS_REFUSALS = ["invalid-composition"] as const;
  * Where is a composition served from the answering backend's checkout, and is
  * anything actually there right now? The same answer as `serveStatusEndpoint`
  * (kept for the local-serve e2e script), read live: the backend watches the
- * namespace's `composition.json` marker for as long as a tuple is read, so a
- * serve build landing its marker — or a reclaim removing the namespace — is
+ * namespace's `composition.json` marker and `spec.json` for as long as a tuple is read, so a
+ * serve build landing — or a reclaim removing the namespace — is
  * pushed rather than refetched on a guess.
  *
  * `composition` is the manifest item's **id**, one LABEL of a namespace; an id

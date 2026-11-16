@@ -1,7 +1,11 @@
 import { isMain } from "@plugins/infra/plugins/runtime-identity/core";
 import { checkoutRef } from "@plugins/infra/plugins/paths/server";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/plugins/repo-root/core";
-import { loadCompositionMarker } from "@plugins/infra/plugins/worktree/server";
+import { runGit } from "@plugins/primitives/plugins/commit-list/server";
+import {
+  hasWorktreeSpec,
+  loadCompositionMarker,
+} from "@plugins/infra/plugins/worktree/server";
 import {
   namespaceFor,
   namespaceUrl,
@@ -30,14 +34,21 @@ export async function serveNamespaceOf(
  * The one reading behind both the `build.serve-status` live value and the
  * `GET /api/build/serve/status` endpoint.
  *
- * The marker is the only honest answer to the second question: a serve build
- * writes `composition.json` into the namespace dir before it composes anything,
- * so its presence is what distinguishes a live URL from a config flag nothing
- * has acted on yet. `loadCompositionMarker` reads the shared
- * `~/.equin/worktrees/` tree, so a backend can answer for a namespace it
- * does not itself serve.
+ * Live means the marker AND the namespace's `spec.json`. The marker alone is
+ * not enough: a serve build stamps `composition.json` as its CLAIM, before it
+ * composes anything, so a first build that fails leaves a marker over a
+ * namespace the gateway never registered — and a link to it answers "unknown
+ * worktree". The spec is written only at the build's commit point, after the
+ * dist is published, so the pair is "this composition's build landed here".
+ * (A failed REBUILD keeps both: the previous build is still served.) Both are
+ * read off the shared `~/.equin/worktrees/` tree, so a backend can answer for
+ * a namespace it does not itself serve.
  *
- * The third answer is about this BACKEND rather than the composition:
+ * `head` is this checkout's HEAD: what a serve build started now would compose
+ * (and what Deploy builds from), so a surface can tell a served build that is
+ * current from one a push has since left behind.
+ *
+ * The last answer is about this BACKEND rather than the composition:
  * `autoTriggersHere` says whether the automatic serve modes are acted on here at
  * all. They run on main only — the gateway runs main's convergence run alone
  * (`build/converge`), and a per-worktree trigger would have every live agent
@@ -58,12 +69,16 @@ export async function readServeStatus(
   composition: string,
 ): Promise<ServeStatusResponse> {
   const ns = await serveNamespaceOf(composition);
-  const marker = await loadCompositionMarker(ns);
+  const [marker, registered, head] = await Promise.all([
+    loadCompositionMarker(ns),
+    hasWorktreeSpec(ns),
+    runGit(["rev-parse", "HEAD"], REPO_ROOT),
+  ]);
   return {
     namespace: ns,
     url: namespaceUrl(ns),
     liveness:
-      marker === null
+      marker === null || !registered
         ? ({ served: false } as const)
         : ({
             served: true,
@@ -72,6 +87,7 @@ export async function readServeStatus(
             commit: marker.commit ?? null,
             builtAt: marker.builtAt,
           } as const),
+    head: head.trim(),
     autoTriggersHere: isMain(),
   };
 }

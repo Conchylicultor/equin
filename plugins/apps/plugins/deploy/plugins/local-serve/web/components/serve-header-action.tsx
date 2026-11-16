@@ -13,13 +13,15 @@ import {
 import type { SiteProps } from "@plugins/apps/plugins/deploy/plugins/deployments/web";
 import { symbol } from "@plugins/ui/plugins/icons/core";
 import { Icon } from "@plugins/ui/plugins/icons/web";
+import { testLocally } from "../internal/test-locally";
 
 const laptopIcon = symbol("laptop-mac");
 const LABEL = "Test locally";
 
 /**
  * **Test locally** in the site page's header: the composition served on this
- * checkout's gateway — opened when it is live, built and served when it is not.
+ * checkout's gateway — opened when it is live AND built from HEAD (what Deploy
+ * would ship), built and served otherwise.
  * The same decision as the list row's {@link ServeAction}, worded for a page.
  */
 export function ServeHeaderAction({ deployment }: SiteProps): ReactElement {
@@ -64,13 +66,14 @@ function ServeHeaderButton({
       </Button>
     );
   }
-  if (status.live.served) {
+  const action = testLocally(item.name, status);
+  if (action.kind === "open") {
     return (
       <Button
         variant="ghost"
-        tooltip={`Open ${status.url}`}
+        tooltip={action.tooltip}
         render={
-          <a href={status.url} target="_blank" rel="noopener noreferrer" />
+          <a href={action.url} target="_blank" rel="noopener noreferrer" />
         }
       >
         <Icon icon={laptopIcon} />
@@ -87,12 +90,13 @@ function ServeHeaderButton({
       disabled={!canServe}
       tooltip={
         canServe
-          ? `Build & serve ${item.name} at ${status.url}`
+          ? action.tooltip
           : "The main app is built by ./equin build — it is not served as a composition."
       }
       onClick={() => {
-        // Already on with nothing served (the enabling build failed, or its
-        // namespace was reclaimed): rebuild; off: record the intent and build.
+        // Already on (nothing served — the enabling build failed, or its
+        // namespace was reclaimed — or served from an older commit): rebuild;
+        // off: record the intent and build.
         if (isServed(item.serve)) rebuildNow(item.id);
         else setMode(item.id, "manual");
       }}

@@ -68,6 +68,8 @@ export {
   writeWorktreeSpec,
   removeWorktreeSpec,
   unpublishWorktreeSpec,
+  hasWorktreeSpec,
+  isWorktreeSpecPath,
 } from "./internal/spec";
 export {
   type CompositionMarker,

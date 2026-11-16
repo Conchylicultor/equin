@@ -15739,6 +15739,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/paths.checkoutRef`
           - `infra/worktree.ensureMainWorktreeRoot`
           - `infra/worktree.hasCompositionMarker`
+          - `infra/worktree.hasWorktreeSpec`
           - `infra/worktree.loadCompositionMarker`
           - `infra/worktree.namespaceCollision`
           - `infra/worktree.probeNamespace`
@@ -15748,6 +15749,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `infra/worktree/reclaim.namespacesOwnedByComposition`
           - `infra/worktree/reclaim.OwnedNamespace`
           - `infra/worktree/reclaim.reclaimNamespace`
+          - `primitives/commit-list.runGit`
         - Exports (values): `resetServedComposition`
         - Resources:
           - `build.serve-owned` (invalidate, snapshot, whole: one per checkout that has served this composition — the delete confirmation names every one it will erase)
@@ -36936,6 +36938,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
             - Imported by:
               - `apps/deploy/remote-deploy`
               - `build/deployment`
+              - `build/serve-composition`
               - `conversations/conversation-view/commits-graph`
               - `debug/tests`
               - `infra/launcher/gateway-drift`
@@ -40136,11 +40139,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `ensureMainWorktreeRoot`
           - `gitWorktreesDir`
           - `hasCompositionMarker`
+          - `hasWorktreeSpec`
           - `isCanonicalWorktreeName`
           - `isCanonicalWorktreePath`
           - `isCompositionMarkerPath`
           - `isPersistentNamespace`
           - `isWorktreeOpActive`
+          - `isWorktreeSpecPath`
           - `listActiveWorktreeOps`
           - `listWorktreeEntries`
           - `listWorktreeOps`
@@ -48963,6 +48968,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `apps/file-explorer/git`
           - `build/build-commits`
           - `build/deployment`
+          - `build/serve-composition`
           - `code-explorer`
           - `code-explorer/code-api`
           - `code-explorer/commit-detail`

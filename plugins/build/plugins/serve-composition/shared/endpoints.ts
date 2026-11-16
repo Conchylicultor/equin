@@ -51,6 +51,13 @@ export const ServeStatusResponseSchema = z.object({
   url: z.string(),
   liveness: ServeLivenessSchema,
   /**
+   * The commit this backend's checkout is at (`git rev-parse HEAD`) — what a
+   * serve build started now would compose, and what Deploy builds its bundle
+   * from. A served build whose `commit` is not this is out of date: Test
+   * locally must not open it as "what Deploy would ship".
+   */
+  head: z.string(),
+  /**
    * Whether the automatic serve modes (`push` and the cadences) are actually
    * acted on by the backend that answered. A fact about THIS BACKEND, like
    * `namespace` and unlike `liveness`: the composition arm of the build

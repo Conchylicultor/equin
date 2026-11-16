@@ -71,6 +71,7 @@
     - `apps/file-explorer/git`
     - `build/build-commits`
     - `build/deployment`
+    - `build/serve-composition`
     - `code-explorer`
     - `code-explorer/code-api`
     - `code-explorer/commit-detail`

@@ -89,6 +89,7 @@ Measure: `scripts/measure-ref-delivery.ts`; in the app, the
   - Imported by:
     - `apps/deploy/remote-deploy`
     - `build/deployment`
+    - `build/serve-composition`
     - `conversations/conversation-view/commits-graph`
     - `debug/tests`
     - `infra/launcher/gateway-drift`

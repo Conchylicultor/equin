@@ -69,21 +69,31 @@ shape this UI:
 ## Intent is not liveness
 
 The `serve` mode is a **declared intent** stored in the `compositions` config.
-The truth is the `composition.json` **marker** a serve build writes into the
-namespace dir before it composes anything. The two disagree routinely — the
-enabling build has not run yet, or it failed — and a surface that reads the mode
-as liveness offers a link to a namespace that 502s.
+The truth is the namespace dir itself: the `composition.json` **marker** a
+serve build writes before it composes anything (its claim), AND the `spec.json`
+it writes only at its commit point, once the dist is published (its gateway
+registration). The mode and the truth disagree routinely — the enabling build
+has not run yet, or it failed — and a surface that reads the mode as liveness
+offers a link to a namespace that 502s. The marker alone is not liveness either:
+a first serve build that fails after the claim leaves a marker over a namespace
+the gateway never registered, whose URL answers "unknown worktree".
 
 So the `build.serve-status` live value (`{ composition: <id> }`, desktop-only —
 served from `machine/`; `GET /api/build/serve/status?composition=<id>` gives the
-same answer for the local-serve e2e script) answers three questions at once:
+same answer for the local-serve e2e script) answers four questions at once:
 
 - `namespace` + `url` — WHERE this composition is (or would be) served from the
   backend that answered: `namespaceFor(id, <that backend's checkout>)`. Server
   truth, and it has to be — see the section below.
-- `liveness` — `{ served: false }` or `{ served: true, commit, builtAt }`. A
-  discriminated union, so a missing commit cannot be read as a live serve. The
-  marker is on the shared filesystem, so **any** backend can answer this.
+- `liveness` — `{ served: false }` or `{ served: true, commit, builtAt }`
+  (served = marker and spec both present). A discriminated union, so a missing
+  commit cannot be read as a live serve. Both files are on the shared
+  filesystem, so **any** backend can answer this.
+- `head` — this checkout's HEAD: what a serve build started now would compose,
+  and what Deploy builds from. `useServeStatus` derives `live.current`
+  (served from exactly `head`), so a host can tell a current serve from one a
+  push has left behind. A ref advance recomputes it (`recomputeOn:
+  [refHeadServed]`).
 - `autoTriggersHere` — whether the automatic modes are acted on by the backend
   that answered. Like `namespace`, a fact about THIS BACKEND rather than about
   the composition.
@@ -101,7 +111,7 @@ surface, so no round-trip is needed to know whether a control can succeed.
 absence that reads as "not served" (a host without the computer behind it reads
 `error` too). Freshness is push-based: while a tuple is read the backend watches
 the worktrees home for the namespace dir and, while it exists, the namespace dir
-for the marker, so a serve build landing it or a reclaim removing it is pushed.
+for the marker and the spec, so a serve build landing it or a reclaim removing it is pushed.
 A malformed id is refused `invalid-composition`. Nothing polls.
 
 `commit` comes from the marker, stamped with the commit the build took the lock
@@ -275,6 +285,7 @@ code, that is the bug this section exists to prevent.
     - `infra/paths.checkoutRef`
     - `infra/worktree.ensureMainWorktreeRoot`
     - `infra/worktree.hasCompositionMarker`
+    - `infra/worktree.hasWorktreeSpec`
     - `infra/worktree.loadCompositionMarker`
     - `infra/worktree.namespaceCollision`
     - `infra/worktree.probeNamespace`
@@ -284,6 +295,7 @@ code, that is the bug this section exists to prevent.
     - `infra/worktree/reclaim.namespacesOwnedByComposition`
     - `infra/worktree/reclaim.OwnedNamespace`
     - `infra/worktree/reclaim.reclaimNamespace`
+    - `primitives/commit-list.runGit`
   - Exports (values): `resetServedComposition`
   - Resources:
     - `build.serve-owned` (invalidate, snapshot, whole: one per checkout that has served this composition — the delete confirmation names every one it will erase)

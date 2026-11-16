@@ -31,7 +31,20 @@ export type ServeStatus =
       url: string;
       live:
         | { served: false }
-        | { served: true; commit: string | null; builtAt: string };
+        | {
+            served: true;
+            commit: string | null;
+            builtAt: string;
+            /**
+             * Built from `head` — what this checkout would serve (and Deploy
+             * would ship) now. False for a build a commit has since left
+             * behind, and for a marker that recorded no commit (unknown is
+             * not current).
+             */
+            current: boolean;
+          };
+      /** This checkout's HEAD, as the server read it. */
+      head: string;
       /**
        * Whether the automatic serve modes are acted on by the backend that
        * answered — a fact about THAT BACKEND, not about this composition. They
@@ -63,7 +76,7 @@ export function useServeStatus(composition: string): ServeStatus {
       return { kind: "error", message: result.message };
     if (result.status === "error")
       return { kind: "error", message: result.error.message };
-    const { namespace, url, liveness, autoTriggersHere } = result.data;
+    const { namespace, url, liveness, head, autoTriggersHere } = result.data;
     return {
       kind: "ready",
       namespace,
@@ -73,11 +86,13 @@ export function useServeStatus(composition: string): ServeStatus {
       host: namespaceHost(asNamespace(namespace)),
       url,
       autoTriggersHere,
+      head,
       live: liveness.served
         ? {
             served: true,
             commit: liveness.commit,
             builtAt: liveness.builtAt,
+            current: liveness.commit === head,
           }
         : { served: false },
     };

@@ -398,11 +398,13 @@ pid liveness.
     - `ensureMainWorktreeRoot`
     - `gitWorktreesDir`
     - `hasCompositionMarker`
+    - `hasWorktreeSpec`
     - `isCanonicalWorktreeName`
     - `isCanonicalWorktreePath`
     - `isCompositionMarkerPath`
     - `isPersistentNamespace`
     - `isWorktreeOpActive`
+    - `isWorktreeSpecPath`
     - `listActiveWorktreeOps`
     - `listWorktreeEntries`
     - `listWorktreeOps`

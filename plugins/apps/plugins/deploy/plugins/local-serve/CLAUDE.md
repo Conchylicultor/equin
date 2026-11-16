@@ -19,6 +19,16 @@ It owns no serve logic. `ServeTargetPanel` / `useServeComposition` /
 which is where the capability lives now precisely so this plugin could consume it
 without an `apps/deploy → apps/studio` edge.
 
+## Open only what Deploy would ship
+
+Test locally is the rehearsal of Deploy, which builds from this checkout's
+HEAD. So both surfaces OPEN the local serve only when it is live and was built
+from HEAD (`live.current` of the serve status), and BUILD in every other case —
+nothing served, or a build a push has since left behind. Opening a stale serve
+would show an old version beside a Deploy button that ships a newer one. The
+decision is one pure function, `web/internal/test-locally.ts`, so the header
+and the row cannot disagree.
+
 ## Name in, id out
 
 `deployment.compositionId` is a composition **name** — it is what

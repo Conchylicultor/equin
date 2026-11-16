@@ -2,10 +2,14 @@ import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { NAMESPACE_LABEL_RE } from "@plugins/infra/plugins/namespace/core";
 import { worktreesDir } from "@plugins/infra/plugins/paths/server";
-import { isCompositionMarkerPath } from "@plugins/infra/plugins/worktree/server";
+import {
+  isCompositionMarkerPath,
+  isWorktreeSpecPath,
+} from "@plugins/infra/plugins/worktree/server";
 import type { DirWatchRelease } from "@plugins/infra/plugins/file-watcher/server";
 import { acquireEventualDirWatch } from "@plugins/infra/plugins/file-watcher/machine";
 import { serveValue } from "@plugins/network/plugins/live/machine";
+import { refHeadServed } from "@plugins/infra/plugins/git/plugins/git-watcher/server";
 import { serveStatus } from "../../shared/serve-status";
 import {
   readServeStatus,
@@ -18,13 +22,14 @@ import {
  * Two watches, both children-scope through the shared dir hub: one of the
  * worktrees home, filtered to the namespace dir itself (a first serve build
  * creates it, a reclaim removes it), and — while the namespace dir exists —
- * one of the namespace dir, where the serve build lands `composition.json`.
+ * one of the namespace dir, where the serve build lands `composition.json`
+ * (its claim) and `spec.json` (its registration — liveness needs both).
  * The namespace dir is never created here: an empty dir for a composition
  * nothing has served would read, to every other scanner of the worktrees home,
  * as a namespace that exists.
  *
- * The inner watch hears the marker alone (`isCompositionMarkerPath`, from its
- * owner `infra/worktree`): a served namespace dir is a whole worktree data dir
+ * The inner watch hears those two files alone (`isCompositionMarkerPath` and
+ * `isWorktreeSpecPath`, from their owner `infra/worktree`): a served namespace dir is a whole worktree data dir
  * whose op markers, logs and status files change several times a minute, none
  * of which moves this answer.
  */
@@ -43,7 +48,12 @@ async function watchServeMarker(
     scope: "children",
     onChange: (events) => {
       if (
-        events.some((e) => e.path === nsDir || isCompositionMarkerPath(e.path))
+        events.some(
+          (e) =>
+            e.path === nsDir ||
+            isCompositionMarkerPath(e.path) ||
+            isWorktreeSpecPath(e.path),
+        )
       )
         notify();
     },
@@ -51,14 +61,16 @@ async function watchServeMarker(
 }
 
 /**
- * `notified`, by a watch on the namespace's marker for as long as a tuple is
- * read. The marker is the whole truth of liveness; `namespace`, `url` and
+ * `notified`, by a watch on the namespace's marker and spec for as long as a
+ * tuple is read — the two are the whole truth of liveness — and by a tracked
+ * ref advancing (`recomputeOn: [refHeadServed]`), which moves `head`; `namespace`, `url` and
  * `autoTriggersHere` are facts about this backend's checkout, fixed for its
  * lifetime.
  */
 export const serveStatusServed = serveValue(serveStatus, {
   source: "external",
   changes: "notified",
+  recomputeOn: [refHeadServed],
   loader: ({ composition }) => {
     if (!NAMESPACE_LABEL_RE.test(composition)) {
       throw serveStatus.refuse(

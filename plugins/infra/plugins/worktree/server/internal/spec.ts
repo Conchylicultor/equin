@@ -1,6 +1,11 @@
 import { mkdir, rename, rm, writeFile } from "node:fs/promises";
-import { dirname, join } from "node:path";
-import { asNamespace } from "@plugins/infra/plugins/namespace/core";
+import { access } from "@plugins/packages/plugins/timed-fs/core";
+import { basename, dirname, join } from "node:path";
+import {
+  asNamespace,
+  type Namespace,
+} from "@plugins/infra/plugins/namespace/core";
+import { WORKTREE_SPEC_FILE } from "@plugins/infra/plugins/paths/core";
 import {
   worktreeArtifacts,
   worktreesDir,
@@ -139,4 +144,28 @@ export async function removeWorktreeSpec(name: string): Promise<void> {
  */
 export async function unpublishWorktreeSpec(name: string): Promise<void> {
   await rm(worktreeArtifacts.spec(asNamespace(name)), { force: true });
+}
+
+/**
+ * Whether `ns` is registered — its `spec.json` is on disk, so the gateway
+ * routes it. A build writes the spec only at its commit point, after the dist
+ * is published; a namespace dir without one (a first build that failed after
+ * claiming the dir) answers "unknown worktree" at its URL.
+ */
+export async function hasWorktreeSpec(ns: Namespace): Promise<boolean> {
+  try {
+    await access(worktreeArtifacts.spec(ns));
+    return true;
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return false;
+    throw err;
+  }
+}
+
+/**
+ * Whether a path inside a namespace dir is its registration record — so a
+ * watcher of that dir can hear registration alone without restating its name.
+ */
+export function isWorktreeSpecPath(path: string): boolean {
+  return basename(path) === WORKTREE_SPEC_FILE;
 }
