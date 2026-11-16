@@ -44016,22 +44016,21 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
     - **`code-block`** — Code block type: editable with live syntax highlighting, language picker, and copy button. Code block type: registers its `data` schema (code + language) at the server write boundary.
       - Web:
         - Contributes: `Editor.Block` "code-block" → `CodeBlock`
-        - Uses: 36 symbols — full list in [`plugins/page/plugins/code-block/REFERENCE.md`](../plugins/page/plugins/code-block/REFERENCE.md)
+        - Uses: 34 symbols — full list in [`plugins/page/plugins/code-block/REFERENCE.md`](../plugins/page/plugins/code-block/REFERENCE.md)
           - `primitives/css/ui-kit` ×7
           - `page/editor` ×5
           - `primitives/syntax-highlight` ×4
-          - `primitives/collapsible` ×2
           - `primitives/css/clip` ×2
           - `primitives/css/spacing` ×2
           - `primitives/hover-reveal` ×2
           - `primitives/syntax-highlight/code-preview` ×2
+          - `primitives/collapsible.FoldMotion`
           - `primitives/copy-to-clipboard.CopyButton`
           - `primitives/css/fill.fillClasses`
           - `primitives/css/layer.layerClasses`
           - `primitives/css/pin.Pin`
           - `primitives/css/rigid.rigidClass`
           - `primitives/css/text.textVariantClass`
-          - `primitives/icon-button.IconButton`
           - `primitives/latest-ref.useLatestRef`
           - `primitives/view-switcher.ViewSwitcher`
           - `ui/icons.Icon`
@@ -53012,12 +53011,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
         - Exports (values): `IconButton`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shape --spacing`
-        - Imported by: 140 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
+        - Imported by: 139 plugins — full list in [`plugins/primitives/plugins/icon-button/REFERENCE.md`](../plugins/primitives/plugins/icon-button/REFERENCE.md)
           - `apps` ×46
           - `conversations` ×23
           - `primitives` ×23
           - `tasks` ×9
-          - `page` ×8
+          - `page` ×7
           - `debug` ×5
           - `config_v2` ×4
           - `infra` ×3

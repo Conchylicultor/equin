@@ -48,14 +48,9 @@ import {
   useCodePreviewRenderer,
 } from "@plugins/primitives/plugins/syntax-highlight/plugins/code-preview/web";
 import { ViewSwitcher } from "@plugins/primitives/plugins/view-switcher/web";
-import {
-  CollapsibleChevron,
-  FoldMotion,
-} from "@plugins/primitives/plugins/collapsible/web";
-import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
+import { FoldMotion } from "@plugins/primitives/plugins/collapsible/web";
 
 const autoAwesomeIcon = symbol("auto-awesome");
-const collapseIcon = symbol("unfold-less");
 
 const VIEW_OPTIONS: ReadonlyArray<{
   id: CodeBlockView;
@@ -136,9 +131,9 @@ export function CodeBlock({ block, isFocused, editor }: BlockRendererProps) {
   // diagram). Persisted alongside the language, the same way.
   const [view, setView] = useState<CodeBlockView | undefined>(parsed.view);
   const viewRef = useLatestRef(view);
-  // Folded to its one-line summary. Persisted the same way as the view.
-  const [collapsed, setCollapsed] = useState(parsed.collapsed === true);
-  const collapsedRef = useLatestRef(collapsed);
+  // Folded to its one-line summary: the row's own `expanded` flag, which the
+  // editor's gutter chevron toggles (the block declares `collapsible`).
+  const collapsed = !block.expanded;
 
   // The block's own plain-text surface. `useBlockPlainText` owns the draft, the
   // SYNCHRONOUS undo entry per keystroke, the debounced row write, the void-caret
@@ -153,7 +148,6 @@ export function CodeBlock({ block, isFocused, editor }: BlockRendererProps) {
       code,
       language: languageRef.current,
       view: viewRef.current,
-      collapsed: collapsedRef.current || undefined,
     }),
     label: "code",
     onKeyDown: (e, ctl) => {
@@ -187,19 +181,12 @@ export function CodeBlock({ block, isFocused, editor }: BlockRendererProps) {
     // AUTO maps back to undefined; "text" (PLAIN) and concrete langs persist as-is.
     const lang = !value || value === AUTO ? undefined : value;
     setLanguage(lang);
-    editor.update({ code, language: lang, view, collapsed: stored });
+    editor.update({ code, language: lang, view });
   }
 
   function onViewChange(next: CodeBlockView) {
     setView(next);
-    editor.update({ code, language, view: next, collapsed: stored });
-  }
-
-  // `collapsed: false` is never written: a shown block carries no key.
-  const stored = collapsed || undefined;
-  function onCollapsedChange(next: boolean) {
-    setCollapsed(next);
-    editor.update({ code, language, view, collapsed: next || undefined });
+    editor.update({ code, language, view: next });
   }
 
   // Only an explicitly chosen language previews — never an auto-detected guess.
@@ -234,21 +221,22 @@ export function CodeBlock({ block, isFocused, editor }: BlockRendererProps) {
       <Clip
         className={cn(hoverRevealGroup, "group relative rounded-md bg-muted")}
       >
-        {/* Folded: one summary row — click it to unfold. */}
+        {/* Folded: one summary row, laid out as a one-line code block (the
+            same padding and code line) so the editor's gutter chevron — the
+            one fold control every block shares — seats on it. */}
         <FoldMotion open={collapsed} kind="state">
           <Stack direction="row" align="center" gap="xs" className="pr-xs">
             <button
               type="button"
               aria-expanded={false}
               aria-label={`Expand ${summaryLabel} code`}
-              onClick={() => onCollapsedChange(false)}
+              onClick={() => editor.setExpanded(true)}
               className={cn(
                 fillClasses("x"),
-                "py-xs pl-md text-left text-caption text-muted-foreground outline-none hover:text-foreground focus-visible:text-foreground",
+                "py-md pl-md text-left text-caption text-muted-foreground outline-none hover:text-foreground focus-visible:text-foreground",
               )}
             >
               <Stack as="span" direction="row" align="center" gap="sm">
-                <CollapsibleChevron open={false} />
                 <span className={cn(rigidClass(), "text-foreground")}>
                   {summaryLabel}
                 </span>
@@ -256,7 +244,13 @@ export function CodeBlock({ block, isFocused, editor }: BlockRendererProps) {
                   · {summary.lines} {summary.lines === 1 ? "line" : "lines"}
                 </span>
                 {summary.first ? (
-                  <span className={cn(fillClasses("x"), "truncate font-mono")}>
+                  <span
+                    className={cn(
+                      fillClasses("x"),
+                      textVariantClass("code"),
+                      "truncate",
+                    )}
+                  >
                     {summary.first}
                   </span>
                 ) : null}
@@ -271,7 +265,7 @@ export function CodeBlock({ block, isFocused, editor }: BlockRendererProps) {
         </FoldMotion>
 
         <FoldMotion open={!collapsed}>
-          {/* Hover/focus toolbar: language picker + copy + collapse. */}
+          {/* Hover/focus toolbar: language picker + copy. */}
           <Pin to="top-right" offset="xs" layer="raised">
             <Stack
               direction="row"
@@ -345,15 +339,6 @@ export function CodeBlock({ block, isFocused, editor }: BlockRendererProps) {
                 tooltip="Copy code"
                 className="bg-background/80 backdrop-blur"
               />
-              <ControlSizeProvider size="xs">
-                <IconButton
-                  icon={collapseIcon}
-                  label="Collapse code"
-                  aria-expanded
-                  onClick={() => onCollapsedChange(true)}
-                  className="bg-background/80 backdrop-blur"
-                />
-              </ControlSizeProvider>
             </Stack>
           </Pin>
 

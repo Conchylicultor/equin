@@ -17,11 +17,13 @@ export const codeBlock = defineBlock({
     // its preview, or both. Display state only — not part of the markdown fence.
     // undefined ⇒ split. Ignored for a language with no preview.
     view: z.enum(CODE_BLOCK_VIEWS).optional(),
-    // Folded to its one-line summary (language, line count, first line).
-    // Display state only — not part of the markdown fence. undefined ⇒ shown.
-    collapsed: z.boolean().optional(),
   }),
-  displayOnly: ["view", "collapsed"],
+  displayOnly: ["view"],
+  // Folds like every other block: the row's own `expanded` flag, toggled by
+  // the editor's gutter chevron. With no children to hide, the fold is the
+  // block's body — collapsed, it shows one summary line (language, line count,
+  // first line).
+  collapsible: "always",
   label: "Code",
   icon: codeIcon,
   aliases: ["snippet", "syntax", "monospace", "pre"],
