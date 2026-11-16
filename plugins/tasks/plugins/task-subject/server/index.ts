@@ -2,6 +2,8 @@ import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-c
 import { subjectLinksServed, subjectTaskServed } from "./internal/resource";
 
 export { tasksSubject } from "./internal/tables";
+export { TaskSubjectLinked } from "./internal/linked-signal";
+export type { TaskSubjectLinkedListener } from "./internal/linked-signal";
 export {
   findSubjectTask,
   setTaskSubject,

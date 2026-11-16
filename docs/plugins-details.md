@@ -15155,6 +15155,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `resource.declare` "build.history"
       - `resource.declare` "build.history:groups"
       - `resource.declare` "build.history:rows"
+      - `task-subject-linked` "run:build → build.failure-report-owner"
     - Uses:
       - `build/run-ledger._buildRuns`
       - `config_v2.ConfigV2`
@@ -15168,6 +15169,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
   - Machine:
     - Uses:
       - `build/deployment.deploymentServed`
+      - `build/failure-report.fileBuildFailureReport`
       - `build/run-ledger.settleDeadInflightRun`
       - `infra/endpoints.implementMachine`
     - Exports (values): `onRunTerminal`
@@ -15561,6 +15563,36 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `build/converge`
       - Cli:
         - Exports (values): `readServedDeployment`
+    - **`failure-report`** — Build-failed report kind's Debug → Reports summary view: one line naming the step main's build failed in and its failing checks or error line. The build-failed report kind: a failed build of main, deduped on what failed (the failing step, and its failing checks or normalized error line — not the run), category error so the Error reports supervisor stream carries it, with the fix ledger of every report. linkRunReport makes a task the owner of the report a run fell into (build/machine calls it when an Investigate task is filed about a build run).
+      - Web:
+        - Contributes: `Reports.KindView` → `BuildFailedSummary`
+        - Uses: `reports.Reports`
+      - Server:
+        - Contributes: `report-kind` "build-failed"
+        - Uses:
+          - `database.db`
+          - `reports._reports`
+          - `reports.ReportKind`
+          - `reports.ReportRow`
+          - `reports/engine.linkReportsToTask`
+        - Exports (values):
+          - `linkRunReport`
+          - `runReportIds`
+      - Cross-plugin:
+        - Imported by: `build`
+      - Machine:
+        - Exports (types): `FailedBuildRun`
+        - Exports (values): `fileBuildFailureReport`
+      - Core:
+        - Exports (types):
+          - `BuildFailedPayload`
+          - `BuildFailure`
+        - Exports (values):
+          - `BUILD_FAILED_KIND`
+          - `buildFailedMessage`
+          - `BuildFailedPayloadSchema`
+          - `buildFailureOf`
+          - `buildFailureSignature`
     - **`restart-skip`** — The restart-skip-cannot-judge report kind — filed by `./equin build` through the report outbox when the backend or central it asked to adopt a deploy could not measure its own code (the closure walk refused it): the deploy restarts all the same, but restart-skip is off until the cause is fixed, so it is reported rather than left as one more 'restart needed' log line. Restart-skip, central's half: POST /api/restart-skip/central/adopt — main's deploy asks central before restarting it, and central answers adopted only when a process spawned now would run exactly its code (the same judgement as a backend's: same Bun and entry, nothing it loaded or could still load changed since it started).
       - Server:
         - Contributes: `report-kind` "restart-skip-cannot-judge"
@@ -15641,6 +15673,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `build/build-commits`
           - `build/build-fix`
           - `build/build-logs`
+          - `build/failure-report`
           - `build/runs-arm`
           - `framework/cli/build`
       - Exemptions:
@@ -23982,7 +24015,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `loadedDatabaseConfig`
       - `readDatabaseConfigSync`
   - Cross-plugin:
-    - Imported by: 175 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
+    - Imported by: 176 plugins — full list in [`plugins/database/REFERENCE.md`](../plugins/database/REFERENCE.md)
       - `apps` ×48
       - `conversations` ×21
       - `tasks` ×20
@@ -23992,10 +24025,10 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `active-data` ×8
       - `database` ×7
       - `primitives` ×4
+      - `build` ×3
       - `network` ×3
       - `stats` ×3
       - `backup` ×2
-      - `build` ×2
       - `framework` ×2
       - `reports` ×2
       - `apps-core/app-usage`
@@ -31654,6 +31687,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Cross-plugin:
             - Imported by:
               - `build/build-logs`
+              - `build/failure-report`
               - `database`
               - `framework/cli/await`
               - `framework/cli/build`
@@ -32197,11 +32231,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `withNotifyBatch`
       - Cross-plugin:
         - Uses tokens: `ui/tokens/shadow --shadow`
-        - Imported by: 120 plugins — full list in [`plugins/framework/plugins/server-core/REFERENCE.md`](../plugins/framework/plugins/server-core/REFERENCE.md)
+        - Imported by: 121 plugins — full list in [`plugins/framework/plugins/server-core/REFERENCE.md`](../plugins/framework/plugins/server-core/REFERENCE.md)
           - `infra` ×29
           - `debug` ×14
           - `conversations` ×13
-          - `tasks` ×12
+          - `tasks` ×13
           - `database` ×10
           - `apps` ×8
           - `network` ×5
@@ -38724,13 +38758,13 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `worktreeDataDir`
           - `worktreesDir`
       - Cross-plugin:
-        - Imported by: 133 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
+        - Imported by: 134 plugins — full list in [`plugins/infra/plugins/paths/REFERENCE.md`](../plugins/infra/plugins/paths/REFERENCE.md)
           - `infra` ×32
           - `framework` ×20
           - `apps` ×18
           - `debug` ×15
+          - `build` ×7
           - `conversations` ×7
-          - `build` ×6
           - `backup` ×4
           - `packages` ×3
           - `plugin-meta` ×3
@@ -39290,11 +39324,11 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `runtimeNamespace`
           - `servingSocketPath`
       - Cross-plugin:
-        - Imported by: 73 plugins — full list in [`plugins/infra/plugins/runtime-identity/REFERENCE.md`](../plugins/infra/plugins/runtime-identity/REFERENCE.md)
+        - Imported by: 74 plugins — full list in [`plugins/infra/plugins/runtime-identity/REFERENCE.md`](../plugins/infra/plugins/runtime-identity/REFERENCE.md)
           - `infra` ×16
           - `debug` ×14
+          - `build` ×9
           - `conversations` ×9
-          - `build` ×8
           - `apps` ×5
           - `database` ×4
           - `tasks` ×4
@@ -43188,14 +43222,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `TIMED_FS_CALLS`
           - `withFsCallTally`
       - Cross-plugin:
-        - Imported by: 178 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
+        - Imported by: 179 plugins — full list in [`plugins/packages/plugins/timed-fs/REFERENCE.md`](../plugins/packages/plugins/timed-fs/REFERENCE.md)
           - `infra` ×52
           - `framework` ×26
           - `apps` ×16
           - `debug` ×15
           - `conversations` ×13
           - `backup` ×12
-          - `build` ×6
+          - `build` ×7
           - `packages` ×6
           - `database` ×5
           - `plugin-meta` ×5
@@ -57394,8 +57428,8 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
 - **`reports`** — Reports uncaught browser errors to the server, and registers the reports engine's fan-out ceiling config (per-window distinct-fingerprint budget, window, storm roster cap) for Settings → Config. The reports table and its live read (reports.list), the ReportKind / ReportNoiseRule slots every kind and rule contributes to, and the fan-out ceiling config; recording is the engine's (reports/plugins/engine).
   - Web:
     - Slots: `Reports.KindView`
-    - Slot contributors: 47 contributors — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
-      - `Reports.KindView` ×47
+    - Slot contributors: 48 contributors — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
+      - `Reports.KindView` ×48
     - Contributes:
       - `IdKinds.Kind` "report|crash"
       - `ConfigV2.WebRegister` "reports"
@@ -57538,14 +57572,14 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - `versionSkewCode`
       - `versionSkewExplains`
   - Cross-plugin:
-    - Imported by: 87 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
+    - Imported by: 88 plugins — full list in [`plugins/reports/REFERENCE.md`](../plugins/reports/REFERENCE.md)
       - `reports` ×33
       - `debug` ×20
       - `conversations` ×7
+      - `build` ×4
       - `database` ×4
       - `infra` ×4
       - `apps` ×3
-      - `build` ×3
       - `framework` ×3
       - `tasks` ×2
       - `active-data/report`
@@ -57806,7 +57840,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
       - Machine:
         - Uses: `infra/endpoints.implementMachine`
       - Cross-plugin:
-        - Imported by: 34 plugins — full list in [`plugins/reports/plugins/engine/REFERENCE.md`](../plugins/reports/plugins/engine/REFERENCE.md)
+        - Imported by: 35 plugins — full list in [`plugins/reports/plugins/engine/REFERENCE.md`](../plugins/reports/plugins/engine/REFERENCE.md)
           - `debug` ×13
           - `conversations` ×5
           - `database` ×3
@@ -57814,6 +57848,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `reports` ×3
           - `apps/deploy/site-reports/import`
           - `backup`
+          - `build/failure-report`
           - `framework/cli/push`
           - `page/place/google`
           - `stats/cost`
@@ -62589,10 +62624,12 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `tasks/tasks-core.taskDroppedStatesServed`
         - DB schema: `plugins/tasks/plugins/task-subject/server/internal/tables.ts`
         - Entity extension of: `tasks/tasks-core` (table `tasks_ext_subject`)
+        - Exports (types): `TaskSubjectLinkedListener`
         - Exports (values):
           - `findSubjectTask`
           - `setTaskSubject`
           - `tasksSubject`
+          - `TaskSubjectLinked`
           - `withSubjectLock`
         - Resources:
           - `task-subject-links` (keyed)
@@ -62617,6 +62654,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `taskSubjectShape`
       - Cross-plugin:
         - Imported by:
+          - `build`
           - `debug/read-set`
           - `primitives/launch/investigate`
           - `tasks`

@@ -1823,6 +1823,10 @@
       "name": "@equin/plugin-build-deployment",
       "version": "0.0.1",
     },
+    "plugins/build/plugins/failure-report": {
+      "name": "@equin/plugin-build-failure-report",
+      "version": "0.0.1",
+    },
     "plugins/build/plugins/restart-skip": {
       "name": "@equin/plugin-build-restart-skip",
       "version": "0.0.1",
@@ -8976,6 +8980,8 @@
     "@equin/plugin-build-converge": ["@equin/plugin-build-converge@workspace:plugins/build/plugins/converge"],
 
     "@equin/plugin-build-deployment": ["@equin/plugin-build-deployment@workspace:plugins/build/plugins/deployment"],
+
+    "@equin/plugin-build-failure-report": ["@equin/plugin-build-failure-report@workspace:plugins/build/plugins/failure-report"],
 
     "@equin/plugin-build-restart-skip": ["@equin/plugin-build-restart-skip@workspace:plugins/build/plugins/restart-skip"],
 

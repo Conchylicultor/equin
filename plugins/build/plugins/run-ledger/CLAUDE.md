@@ -193,6 +193,7 @@ from `build`, so both sides of an otherwise-cyclic edge can reach them.
     - `build/build-commits`
     - `build/build-fix`
     - `build/build-logs`
+    - `build/failure-report`
     - `build/runs-arm`
     - `framework/cli/build`
 - Exemptions:

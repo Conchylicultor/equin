@@ -54,10 +54,14 @@ export const reportEventJob = defineJob({
         id: _reports.id,
         kind: _reports.kind,
         message: _reports.message,
+        taskId: _reports.taskId,
       })
       .from(_reports)
       .where(eq(_reports.id, reportIdKind.key(input.reportId)));
     if (!row) return; // deleted since (retention): nothing to tell
+    // Owned since it was recorded (a task about its subject took it in the
+    // meantime — a failed build's Investigate): someone is on it, not news.
+    if (row.taskId !== null) return;
     const spec = ReportKind.getContributions().find((k) => k.kind === row.kind);
     if (!spec) throw new Error(`No report kind "${row.kind}" is registered.`);
     await publishSupervisorEvent({

@@ -3,6 +3,7 @@ import { db } from "@plugins/database/server";
 import { _tasks } from "@plugins/tasks/plugins/tasks-core/server";
 import type { TaskSubject } from "../../core";
 import { tasksSubject } from "./tables";
+import { TaskSubjectLinked } from "./linked-signal";
 
 /** The live (not dropped) task about `subject`, or `null` when there is none. */
 export async function findSubjectTask(
@@ -25,7 +26,10 @@ export async function findSubjectTask(
   return row?.taskId ?? null;
 }
 
-/** Record that `taskId` is about `subject`. */
+/**
+ * Record that `taskId` is about `subject`, then tell the subject's owner
+ * ({@link TaskSubjectLinked} listeners of its kind) which task now owns it.
+ */
 export async function setTaskSubject(
   taskId: string,
   subject: TaskSubject,
@@ -34,6 +38,9 @@ export async function setTaskSubject(
     subjectKind: subject.kind,
     subjectId: subject.id,
   });
+  for (const l of TaskSubjectLinked.getContributions()) {
+    if (l.subjectKind === subject.kind) await l.onLinked(taskId, subject);
+  }
 }
 
 // Per-subject in-process mutex (the reports investigate pattern): two launches

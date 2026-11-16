@@ -253,6 +253,7 @@ the shared Playwright harness.
 - Cross-plugin:
   - Imported by:
     - `build/build-logs`
+    - `build/failure-report`
     - `database`
     - `framework/cli/await`
     - `framework/cli/build`

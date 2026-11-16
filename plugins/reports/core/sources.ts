@@ -63,6 +63,10 @@ export const SERVER_REPORT_SOURCES = [
   // of the user's Chrome sat past its memory bar, or kept climbing. A scheduled
   // observation of the user's browser, not an error anyone caught.
   "server-tab-memory-monitor",
+  // A build of main ended `failed` (build/failure-report): told by main's
+  // backend from the run's ledger row and transcript. Not an error anyone
+  // caught in this process — the build is another process's verdict.
+  "server-build",
   // A report a backend filed synchronously on its way out of a DELIBERATE
   // `process.exit()` — not a crash (nothing threw) and not a caught error
   // (nobody is still running to catch it). Its own source because that

@@ -37,6 +37,10 @@ marker lands (`onRunTerminal`) and, at boot, for each one that ended in the last
 day — a build that ended while main had no backend is told once main is back,
 at most once per run.
 
+A failed build of main is also a `build-failed` report (`plugins/failure-report`),
+filed beside that bell: deduped on what failed, on the Error reports supervisor
+stream and the fix ledger, owned by the run's Investigate task.
+
 The decision is NOT here — it is the pure `wantsBuild` in
 `plugins/deployment/core` and the pure `compositionWantsRebuild` in
 `plugins/converge`, bound to durable state by `decideConvergence`. Read
@@ -357,6 +361,7 @@ fills to navy and oxblood — see `apps-core/chrome-theme`.
     - `resource.declare` "build.history"
     - `resource.declare` "build.history:groups"
     - `resource.declare` "build.history:rows"
+    - `task-subject-linked` "run:build → build.failure-report-owner"
   - Uses:
     - `build/run-ledger._buildRuns`
     - `config_v2.ConfigV2`
@@ -370,6 +375,7 @@ fills to navy and oxblood — see `apps-core/chrome-theme`.
 - Machine:
   - Uses:
     - `build/deployment.deploymentServed`
+    - `build/failure-report.fileBuildFailureReport`
     - `build/run-ledger.settleDeadInflightRun`
     - `infra/endpoints.implementMachine`
   - Exports (values): `onRunTerminal`
@@ -443,6 +449,7 @@ fills to navy and oxblood — see `apps-core/chrome-theme`.
   - **`central-build-id`** — Central's code build, central's half: at register, starts the source digest of the entry central runs and, once it lands, names it as the central live-resource runtime's build…
   - **`converge`** — Main-deploy-failed report renderer: a one-line Debug → Reports summary for the main-deploy-failed kind (how main's convergence run ended, what started it). The main-deploy-failed report kind — filed…
   - **`deployment`** — The client half of the deployment description: `useDeployment()` composes THIS tab's own baked pin in beside the server's two deployable carriers, and `<DeploymentChain/>` renders the four arms…
+  - **`failure-report`** — Build-failed report kind's Debug → Reports summary view: one line naming the step main's build failed in and its failing checks or error line. The build-failed report kind: a failed build of main…
   - **`restart-skip`** [exempt] — The restart-skip-cannot-judge report kind — filed by `./equin build` through the report outbox when the backend or central it asked to adopt a deploy could not measure its own code (the closure walk…
     - Plugins:
       - **`hooks`** — Restart-skip's contribution kinds, a leaf every contributor imports (so contributing never pulls in the judgement and its imports): RestartSkip.BootInput (files a backend reads once and holds — a…

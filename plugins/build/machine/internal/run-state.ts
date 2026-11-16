@@ -7,18 +7,19 @@ import {
   _notifications,
   recordNotification,
 } from "@plugins/shell/plugins/notifications/server";
-import { buildDetailRoute } from "@plugins/build/core";
 import {
   buildStatusOf,
   killedSignalName,
 } from "@plugins/build/plugins/build-status/core";
 import { _buildRuns } from "@plugins/build/plugins/run-ledger/server";
 import { settleDeadInflightRun } from "@plugins/build/plugins/run-ledger/machine";
-import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 import { deploymentServed } from "@plugins/build/plugins/deployment/machine";
 import { announceRunTerminal } from "./run-terminal";
 import { requestConvergence } from "./request-convergence";
 import { symbol } from "@plugins/ui/plugins/icons/core";
+import { runTracked } from "@plugins/infra/plugins/runtime-profiler/core";
+import { fileBuildFailureReport } from "@plugins/build/plugins/failure-report/machine";
+import { buildRunLink, buildRunTask } from "./failure-report-owner";
 
 const updatedIcon = symbol("update");
 import {
@@ -197,6 +198,8 @@ export async function onBuildEnded(buildId: string): Promise<void> {
       finishedAt: _buildRuns.finishedAt,
       exitCode: _buildRuns.exitCode,
       commitHash: _buildRuns.commitHash,
+      trigger: _buildRuns.trigger,
+      targets: _buildRuns.targets,
     })
     .from(_buildRuns)
     .where(eq(_buildRuns.id, buildRunIdKind.key(buildId)));
@@ -217,6 +220,40 @@ export async function onBuildEnded(buildId: string): Promise<void> {
   // slot taken — the gateway's convergence run then stops rather than queue —
   // so ask for one now that the slot is free.
   await requestConvergence("a build ended");
+  // Last, so a failure to file it skips none of the above (the job retries it,
+  // and the filing is once per run).
+  if (row !== undefined) await fileFailureReport(buildId, row);
+}
+
+/**
+ * A failed build of MAIN is also a `build-failed` report (main only, decided
+ * there): what failed, deduped across runs, on the Error reports stream and the
+ * fix ledger, owned by the run's Investigate task. Filed after the bell and
+ * never inside its transaction, so it cannot take the bell down with it; the
+ * bell stays its alert, the report rings none of its own.
+ */
+async function fileFailureReport(
+  buildId: string,
+  row: {
+    startedAt: Date;
+    finishedAt: Date | null;
+    exitCode: number | null;
+    commitHash: string | null;
+    trigger: string;
+    targets: string[];
+  },
+): Promise<void> {
+  if (buildStatusOf(row) !== "failed" || row.exitCode === null) return;
+  await fileBuildFailureReport({
+    runId: buildId,
+    url: buildRunLink(buildId),
+    findTask: () => buildRunTask(buildId),
+    commitHash: row.commitHash,
+    exitCode: row.exitCode,
+    trigger: row.trigger,
+    targets: row.targets,
+    finishedAt: row.finishedAt ?? new Date(),
+  });
 }
 
 /**
@@ -244,6 +281,7 @@ export async function onAutoBuildTerminal(buildId: BuildRunId): Promise<void> {
           finishedAt: _buildRuns.finishedAt,
           exitCode: _buildRuns.exitCode,
           commitHash: _buildRuns.commitHash,
+          targets: _buildRuns.targets,
         })
         .from(_buildRuns)
         .where(eq(_buildRuns.id, buildRunIdKind.key(buildId)))
@@ -266,7 +304,7 @@ export async function onAutoBuildTerminal(buildId: BuildRunId): Promise<void> {
   // restart. Both saw "not told" and both rang (measured: count 2 on the
   // end-to-end run). The bell is written in the same transaction, so the next
   // holder of the lock reads it.
-  await db.transaction(async (tx) => {
+  const rang = await db.transaction(async (tx) => {
     await tx.execute(
       sql`SELECT pg_advisory_xact_lock(hashtext('build.auto-bell'), hashtext(${buildId}))`,
     );
@@ -275,9 +313,19 @@ export async function onAutoBuildTerminal(buildId: BuildRunId): Promise<void> {
       .from(_notifications)
       .where(eq(_notifications.dedupKey, finishDedupeKey(buildId)))
       .limit(1);
-    if (rung === undefined) await notifyBuildFinished(buildId, finished, tx);
+    if (rung !== undefined) return false;
+    await notifyBuildFinished(buildId, finished, tx);
+    return true;
   });
   deploymentServed.notify();
+  // Told once, by whoever rang the bell — after its transaction committed.
+  // Detached: this also runs in the boot catch-up, which a report write must
+  // not hold up or fail; a throw is an unhandled rejection, filed as a crash.
+  if (rang) {
+    void runTracked("build:failure-report", () =>
+      fileFailureReport(buildId, finished),
+    );
+  }
 }
 
 /**
@@ -366,7 +414,7 @@ async function notifyBuildFinished(
   },
   conn: Parameters<typeof recordNotification>[1] = db,
 ): Promise<void> {
-  const linkTo = buildDetailRoute.link(agentManagerApp, { runId: buildId });
+  const linkTo = buildRunLink(buildId);
   const seconds = Math.round(
     ((row.finishedAt ?? new Date()).getTime() - row.startedAt.getTime()) / 1000,
   );

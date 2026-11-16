@@ -11,6 +11,7 @@ import {
   onAutoBuildTerminal,
   unrungRecentAutoBuilds,
 } from "./internal/run-state";
+import { buildRunTaskOwnsReport } from "./internal/failure-report-owner";
 import {
   buildRunTerminalWatcher,
   onRunTerminal,
@@ -33,6 +34,8 @@ export default {
   // supervised-run kind — and both must be registered: the primitive's own
   // `onReady` reconciler loops the registered set of kinds, so a kind that never
   // lands here would start runs nothing ever closes.
+  // A task filed about a build run owns the build-failed report it fell into.
+  contributions: [buildRunTaskOwnsReport],
   register: [compositionTickJob, buildJob, buildRunTerminalWatcher],
   onReady: async () => {
     // Main's auto-build is no longer decided or run here. Every edge of the old

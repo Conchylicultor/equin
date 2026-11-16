@@ -19,10 +19,12 @@
     - `tasks/tasks-core.taskDroppedStatesServed`
   - DB schema: `plugins/tasks/plugins/task-subject/server/internal/tables.ts`
   - Entity extension of: `tasks/tasks-core` (table `tasks_ext_subject`)
+  - Exports (types): `TaskSubjectLinkedListener`
   - Exports (values):
     - `findSubjectTask`
     - `setTaskSubject`
     - `tasksSubject`
+    - `TaskSubjectLinked`
     - `withSubjectLock`
   - Resources:
     - `task-subject-links` (keyed)
@@ -47,6 +49,7 @@
     - `taskSubjectShape`
 - Cross-plugin:
   - Imported by:
+    - `build`
     - `debug/read-set`
     - `primitives/launch/investigate`
     - `tasks`
