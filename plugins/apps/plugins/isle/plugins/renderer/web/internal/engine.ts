@@ -4,7 +4,7 @@
 // meanwhile), the animated water between them, the people (each cut out by
 // what stands in front of it), the hovered building's glow, the sky, the time
 // of day's tint and lights, the signposts and the map labels. Input: drag with
-// inertia, wheel and pinch zoom at the cursor, double-click zoom, click to
+// inertia, wheel and pinch zoom at the cursor, double-click to teleport, click to
 // open or walk (A*), arrows / WASD to walk, drag a building to move it (a
 // finger holds on it first).
 // React only mounts it (`IsleCanvas`); everything here is imperative.
@@ -90,6 +90,14 @@ import {
 import { PBOX, People, type Hero, type Villager, type Walker } from "./people";
 import { drawBats, Werewolf, WOLF_BOX } from "./easter-eggs";
 import { realizeScene, TILE, type Scene, type Static } from "./scene";
+import {
+  paintTeleportFx,
+  TELEPORT_BOX,
+  TELEPORT_OUT,
+  teleportDone,
+  teleportPose,
+  type Teleport,
+} from "./teleport";
 import { DOCK_LEN, makeSprites, type SpriteSet } from "./sprites";
 
 export type TimeOfDay = "day" | "dusk" | "night";
@@ -406,6 +414,8 @@ export class IsleEngine {
   }[];
   private marker: { x: number; y: number; t0: number } | null = null;
   private dust: { x: number; y: number; t0: number } | null = null;
+  /** The hero vanishing here and landing there (a double-click on the ground). */
+  private teleport: Teleport | null = null;
   private nearDoor: SceneBuilding | null = null;
   private nearLot: string | null = null;
   /** The empty lot under the resting mouse (null over a building or anywhere else). */
@@ -1563,8 +1573,8 @@ export class IsleEngine {
       { passive: false },
     );
     this.on<MouseEvent>(c, "dblclick", (e) => {
-      if (this.started && !this.moving)
-        this.zoomAt(e.offsetX, e.offsetY, 2, true);
+      if (this.started && !this.moving && !this.settling)
+        this.teleportTo(e.offsetX, e.offsetY);
     });
     this.on<PointerEvent>(c, "pointerdown", (e) => this.pointerDown(e));
     this.on<PointerEvent>(c, "pointermove", (e) => this.pointerMove(e));
@@ -1809,6 +1819,42 @@ export class IsleEngine {
     this.walkTo(p.x, p.y);
   }
 
+  /**
+   * A double-click on the ground: the hero vanishes where it stands and lands
+   * there (the nearest walkable spot), the camera gliding along. The first
+   * click of the pair already set a walk going, which this replaces; on a
+   * building or a lot the first click has done what it does, so nothing more.
+   */
+  private teleportTo(sx: number, sy: number): void {
+    if (!this.grid || !this.hero.placed || this.teleport) return;
+    const p = this.toWorld(sx, sy);
+    if (this.hitBuilding(p, performance.now() / 1000) || this.lotAt(p.x, p.y))
+      return;
+    const path = findPath(this.grid, this.hero.x, this.hero.y, p.x, p.y);
+    if (!path) return;
+    const [x, y] = path[path.length - 1]!;
+    const hero = this.hero;
+    hero.path = null;
+    hero.walking = false;
+    hero.speed = 0;
+    this.marker = null;
+    this.held.clear();
+    this.kbCam = false;
+    this.inertia = false;
+    this.follow = { x, y: y - 40 };
+    if (this.opts.reducedMotion) {
+      hero.x = x;
+      hero.y = y;
+      return;
+    }
+    this.teleport = {
+      from: { x: hero.x, y: hero.y },
+      to: { x, y },
+      t0: performance.now() / 1000,
+      landed: false,
+    };
+  }
+
   /** The empty lot covering world point (x, y), if any. */
   private lotAt(x: number, y: number): string | null {
     const lots = this.layout?.lots ?? [];
@@ -1821,7 +1867,7 @@ export class IsleEngine {
   }
 
   private walkTo(x: number, y: number): void {
-    if (!this.grid) return;
+    if (!this.grid || this.teleport) return;
     const path = findPath(this.grid, this.hero.x, this.hero.y, x, y);
     if (!path) return;
     this.hero.path = path.slice(1);
@@ -2033,7 +2079,7 @@ export class IsleEngine {
         [cam.x - hw0, cam.y - hh0, cam.x + hw0, cam.y + hh0, cam.x, cam.y],
       );
     }
-    this.walk(dt);
+    this.walk(dt, t);
     this.moveCamera(dt, t);
     // hover: re-resolved under the resting mouse every frame, eased in and out (~150 ms)
     if (this.started) {
@@ -2485,7 +2531,23 @@ export class IsleEngine {
     this.walkVillagers(dt, t, night);
     for (const v of this.villagers)
       if ((v.route || v.linger) && vis(v.x, v.y)) dyn.push(person(v));
-    dyn.push(person(this.hero));
+    const tp = this.teleport;
+    if (tp) {
+      const hero = this.hero;
+      const pose = teleportPose(tp, t);
+      if (pose.alpha > 0.01)
+        dyn.push(
+          figure(hero, TELEPORT_BOX, (c) => {
+            c.save();
+            c.globalAlpha *= pose.alpha;
+            c.translate(hero.x, hero.y);
+            c.scale(pose.sx, pose.sy);
+            c.translate(-hero.x, -hero.y);
+            this.people.draw(c, hero, t);
+            c.restore();
+          }),
+        );
+    } else dyn.push(person(this.hero));
     // the werewolf, out only at night
     const wolf = this.wolf;
     if (night && this.hero.placed) wolf.step(dt, t, this.hero);
@@ -2508,6 +2570,7 @@ export class IsleEngine {
       }
     }
     dyn.sort((a, b) => a.y - b.y).forEach((o) => o.d());
+    if (tp) paintTeleportFx(g, tp, t);
     if (this.dust) {
       const k = (t - this.dust.t0) / 0.5;
       if (k > 1 || k < 0) this.dust = null;
@@ -2742,9 +2805,19 @@ export class IsleEngine {
     g.fillRect(0, 0, vw, vh);
   }
 
-  private walk(dt: number): void {
+  private walk(dt: number, t: number): void {
     const hero = this.hero;
-    const keyed = this.started && !this.moving && this.keyWalk(dt);
+    const tp = this.teleport;
+    if (tp) {
+      if (!tp.landed && t - tp.t0 >= TELEPORT_OUT) {
+        tp.landed = true;
+        hero.x = tp.to.x;
+        hero.y = tp.to.y;
+      }
+      if (teleportDone(tp, t)) this.teleport = null;
+    }
+    const keyed =
+      this.started && !this.moving && !this.teleport && this.keyWalk(dt);
     if (!keyed && hero.walking && !hero.path) {
       hero.walking = false;
       hero.speed = 0;
