@@ -4,7 +4,7 @@
   "version": "0.0.1",
   "description": "The PGlite database driver: provides the DatabaseDriver host service with Postgres compiled to WASM (in memory, or in IndexedDB when the host declared a persistent storage), for a host without the computer's Postgres cluster — the browser composition and the portable boot test. Never booted by the desktop.",
   "dependencies": {
-    "@electric-sql/pglite": "^0.5.11"
+    "@electric-sql/pglite": "^0.5.12"
   },
   "dependencyPolicy": {
     "holds": [

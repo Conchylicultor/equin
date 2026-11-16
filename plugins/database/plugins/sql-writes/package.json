@@ -4,6 +4,6 @@
   "private": true,
   "version": "0.0.1",
   "dependencies": {
-    "libpg-query": "^18.2.2"
+    "libpg-query": "^18.2.4"
   }
 }
