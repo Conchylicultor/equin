@@ -36,7 +36,7 @@ It adds [hundreds of improvements](https://equin.ai/about/foundations) on top of
 
 ### Apps for a team or an organization
 
-Production grade apps which can be deployed as standalone.
+Production-grade apps that can be deployed standalone. Use the platform to develop the app from within. equin provides the harness, agent-friendly primitives, an automated reporting system for bugs and performance issues, and [much more](https://equin.ai/about/foundations).
 
 </td>
 <td width="50%" valign="top">
