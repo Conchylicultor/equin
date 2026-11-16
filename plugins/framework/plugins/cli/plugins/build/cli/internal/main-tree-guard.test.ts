@@ -1,8 +1,14 @@
 import { describe, expect, test } from "bun:test";
+import { spawnSync } from "node:child_process";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import {
   diffSnapshots,
   parsePorcelainZ,
   planRestore,
+  restoringMainTreeOnThrow,
+  snapshotTree,
   type TreeEntry,
 } from "./main-tree-guard";
 
@@ -131,6 +137,68 @@ describe("planRestore", () => {
     expect(planRestore(created)).toEqual({
       restore: [],
       kept: created.map((c) => ({ ...c, reason: "not-restorable" })),
+    });
+  });
+});
+
+describe("restoringMainTreeOnThrow", () => {
+  const git = (cwd: string, ...args: string[]) => {
+    const r = spawnSync("git", args, { cwd, encoding: "utf8" });
+    if (r.status !== 0) throw new Error(`git ${args.join(" ")}: ${r.stderr}`);
+  };
+  const withRepo = async (fn: (root: string) => Promise<void>) => {
+    const root = mkdtempSync(join(tmpdir(), "main-tree-guard-"));
+    try {
+      git(root, "init", "-q");
+      writeFileSync(join(root, "doc.md"), "committed\n");
+      writeFileSync(join(root, "edited.md"), "committed\n");
+      git(root, "add", ".");
+      git(
+        root,
+        "-c",
+        "user.name=t",
+        "-c",
+        "user.email=t@t",
+        "commit",
+        "-qm",
+        "init",
+      );
+      await fn(root);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  };
+
+  test("a writer that throws has its writes restored, and its error rethrown", async () => {
+    await withRepo(async (root) => {
+      // Dirty before the build: someone's edit, never touched.
+      writeFileSync(join(root, "edited.md"), "someone's edit\n");
+      const before = await snapshotTree(root);
+      const crash = new Error("codegen crashed mid-write");
+      const thrown = await restoringMainTreeOnThrow(root, before, async () => {
+        writeFileSync(join(root, "doc.md"), "half-written\n");
+        throw crash;
+      }).then(
+        () => "resolved",
+        (err: unknown) => err,
+      );
+      expect(thrown).toBe(crash);
+      expect(readFileSync(join(root, "doc.md"), "utf8")).toBe("committed\n");
+      expect(readFileSync(join(root, "edited.md"), "utf8")).toBe(
+        "someone's edit\n",
+      );
+    });
+  });
+
+  test("a writer that succeeds is returned untouched — the guard judges it", async () => {
+    await withRepo(async (root) => {
+      const before = await snapshotTree(root);
+      const out = await restoringMainTreeOnThrow(root, before, async () => {
+        writeFileSync(join(root, "doc.md"), "written\n");
+        return 42;
+      });
+      expect(out).toBe(42);
+      expect(readFileSync(join(root, "doc.md"), "utf8")).toBe("written\n");
     });
   });
 });

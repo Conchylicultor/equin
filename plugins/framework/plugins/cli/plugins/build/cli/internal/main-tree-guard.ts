@@ -182,18 +182,23 @@ export function planRestore(written: TreeDrift["written"]): RestorePlan {
 }
 
 /**
- * Compare main's tree after the build's last writer against `before`. Returns
- * normally when the build wrote nothing git sees. Otherwise restores every
- * restorable write (planRestore; see the file comment), prints the full account and exits 1 — the
- * build's exit hooks close its receipt and ledger row as failed, and the backend
- * keeps serving the previous deploy.
+ * Compare main's tree against `before` and restore every restorable write
+ * (planRestore; see the file comment). Returns `null` when the build wrote
+ * nothing git sees, else the full account to print. Never exits: the success
+ * path fails the build on a non-null account (assertMainTreeUntouched), and the
+ * crash path prints it and rethrows — a build that throws between its first
+ * writer and the guard must still put main back, or its half-written files are
+ * "dirty before" to the NEXT build, which then refuses to restore them and
+ * fails too (2026-11-16: build-1794818863-qp2oev crashed on a tree a push
+ * fast-forwarded mid-codegen, and build-1794818895-qrn55q failed on its
+ * leftovers).
  */
-export async function assertMainTreeUntouched(
+export async function restoreMainTreeWrites(
   root: string,
   before: TreeSnapshot,
-): Promise<void> {
+): Promise<string[] | null> {
   const drift = diffSnapshots(before, await snapshotTree(root));
-  if (drift.written.length === 0) return;
+  if (drift.written.length === 0) return null;
 
   const { restore, kept } = planRestore(drift.written);
   if (restore.length > 0) {
@@ -252,6 +257,51 @@ export async function assertMainTreeUntouched(
     );
     for (const p of drift.untracked) lines.push(`  ${p}`);
   }
-  console.error(lines.join("\n"));
+  return lines;
+}
+
+/**
+ * The success-path guard, after the build's last writer: restore what can be
+ * (restoreMainTreeWrites), print the full account and exit 1 when the build
+ * wrote anything git sees — the build's exit hooks close its receipt and ledger
+ * row as failed, and the backend keeps serving the previous deploy.
+ */
+export async function assertMainTreeUntouched(
+  root: string,
+  before: TreeSnapshot,
+): Promise<void> {
+  const account = await restoreMainTreeWrites(root, before);
+  if (account === null) return;
+  console.error(account.join("\n"));
   process.exit(1);
+}
+
+/**
+ * Run the build's repo-tree writers; if they THROW, restore what they wrote on
+ * main (restoreMainTreeWrites), print the account, and rethrow the original
+ * error — so a crashed build's verdict stays its own and main's checkout is
+ * left as HEAD has it for the next build. `before === null` (not main) runs
+ * `writers` unwrapped.
+ */
+export async function restoringMainTreeOnThrow<T>(
+  root: string,
+  before: TreeSnapshot | null,
+  writers: () => Promise<T>,
+): Promise<T> {
+  if (before === null) return await writers();
+  try {
+    return await writers();
+  } catch (err) {
+    const account = await restoreMainTreeWrites(root, before).catch(
+      (restoreErr: unknown) => {
+        // Both failures are the story; neither may hide the other.
+        throw new AggregateError(
+          [err, restoreErr],
+          "build crashed, and restoring main's tree after it failed too",
+        );
+      },
+    );
+    if (account !== null) console.error(account.join("\n"));
+    throw err;
+  }
 }

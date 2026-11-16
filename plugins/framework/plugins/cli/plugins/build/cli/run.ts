@@ -40,6 +40,7 @@ import {
 import { reapLegacyCheckoutDist } from "./internal/legacy-dist-reap";
 import {
   assertMainTreeUntouched,
+  restoringMainTreeOnThrow,
   snapshotTree,
 } from "./internal/main-tree-guard";
 import { assertNoMoveLeftovers } from "./internal/moved-plugin-leftovers";
@@ -1265,160 +1266,170 @@ const run: CliAction<[], BuildOptions> = async (opts) => {
       const mainTreeBefore =
         checkout.kind === "main" ? await snapshotTree(root) : null;
 
-      // Stage 1 — dependencies + registry-level codegen + every target's
-      // filtered registry. Runs before central is spawned below (its
-      // plugins.generated.ts must be in sync). See ./internal/app-artifacts.ts.
-      //
-      // The manifest handed over is THIS CHECKOUT's resolved `compositions`
-      // config, already read by `resolveBuildTargets` — the same document the
-      // targets came from, so `extends` resolves against what this checkout
-      // declares. Deliberately different from the hermetic posture, which reads
-      // the code seed; see `readCheckoutCompositions`.
-      //
-      // A plain build passes the main composition's id, which emits NO filtered
-      // registry: the main composition's registry IS the committed
-      // `<dir>.generated.ts`, so stage 1 has nothing to write and skips the
-      // plugin-tree walk entirely.
-      const { pass } = await prepareCompositionSources({
+      // Every writer to the repo tree below runs inside this wrapper: a build that
+      // THROWS before the guard (4b''') still puts main back — see
+      // restoreMainTreeWrites. The success path is checked by the guard itself.
+      const { pass, mainRoot, centralDir } = await restoringMainTreeOnThrow(
         root,
-        manifest,
-        compositions: targets.map((t) => t.composition),
-        grant,
-        hooks,
-      });
+        mainTreeBefore,
+        async () => {
+          // Stage 1 — dependencies + registry-level codegen + every target's
+          // filtered registry. Runs before central is spawned below (its
+          // plugins.generated.ts must be in sync). See ./internal/app-artifacts.ts.
+          //
+          // The manifest handed over is THIS CHECKOUT's resolved `compositions`
+          // config, already read by `resolveBuildTargets` — the same document the
+          // targets came from, so `extends` resolves against what this checkout
+          // declares. Deliberately different from the hermetic posture, which reads
+          // the code seed; see `readCheckoutCompositions`.
+          //
+          // A plain build passes the main composition's id, which emits NO filtered
+          // registry: the main composition's registry IS the committed
+          // `<dir>.generated.ts`, so stage 1 has nothing to write and skips the
+          // plugin-tree walk entirely.
+          const { pass } = await prepareCompositionSources({
+            root,
+            manifest,
+            compositions: targets.map((t) => t.composition),
+            grant,
+            hooks,
+          });
 
-      // 1c. Contributed build steps of the `dependencies` phase: stage 1 made
-      // `node_modules` and every registry current, and the backend this build
-      // restarts has not started yet. See build/build-steps.
-      await runBuildSteps("dependencies", { root, log: hooks.log });
+          // 1c. Contributed build steps of the `dependencies` phase: stage 1 made
+          // `node_modules` and every registry current, and the backend this build
+          // restarts has not started yet. See build/build-steps.
+          await runBuildSteps("dependencies", { root, log: hooks.log });
 
-      // 2b'. Write the central spec early too — otherwise the gateway has no
-      // way to spawn central. (Repeated at end of build for idempotency.)
-      // central.json always points at *main's* central-core/, not the current
-      // worktree's: central is a singleton serving every worktree, so the
-      // canonical source is main. The file is idempotent across worktree
-      // builds — same content every time.
-      endSpan = buildProfilerStart(
-        "centralJson",
-        "build:codegen",
-        "central.json",
-      );
-      const mainRoot = await getMainRepoRoot();
-      const centralDir = resolve(
-        mainRoot,
-        "plugins/framework/plugins/central-core",
-      );
-      if (existsSync(join(centralDir, "bin", "index.ts"))) {
-        // No `composition`: central is not an app. It is a singleton API
-        // runtime with its own registry (`central.generated.ts`), which no
-        // composition filters, so there is nothing for one to select.
-        await writeWorktreeSpec({
-          name: "central",
-          server: centralDir,
-          // Main's Bun (central runs main's code), never this checkout's.
-          command: await namedBackendCommand(
-            "central",
-            await checkoutBun(mainRoot),
-            "bin/index.ts",
-          ),
-        });
-      }
-      endSpan();
-
-      // Mint THIS INVOCATION's single build_runs row for a manual terminal
-      // build: a UI/auto build's backend already minted it (uiTriggered) and
-      // stamped its own `targets` there. Deferred to here — NOT right after the
-      // build lock — on purpose: the recorder writes to a database, so the mint
-      // must land after waitForPg above, or a cold manual build would race
-      // Postgres startup. The row is closed once every target has deployed,
-      // which is what keeps the UI's "Building…" spinner honest.
-      if (!uiTriggered) {
-        const claim = await recorder.insertRun({
-          id: buildId,
-          targets: targets.map((t) => t.composition),
-          trigger: "manual",
-          // `headAtStart`, the full sha: the same one stamped into the dist as
-          // `.build-commit` and onto the receipt, so the ledger row and the
-          // pin name the same commit in the same spelling by construction —
-          // which is what lets the convergence decision compare them at all.
-          commitHash: headAtStart,
-          pid: process.pid,
-        });
-        if (claim === "lost") {
-          // "lost" now means a LIVE build holds the slot: a holder whose build
-          // already ended was settled from its run's exit marker and the claim
-          // retried inside `insertRun`.
-          softNotes.push(
-            `build-runs: a live build of ${name} holds the slot — no ledger row minted`,
+          // 2b'. Write the central spec early too — otherwise the gateway has no
+          // way to spawn central. (Repeated at end of build for idempotency.)
+          // central.json always points at *main's* central-core/, not the current
+          // worktree's: central is a singleton serving every worktree, so the
+          // canonical source is main. The file is idempotent across worktree
+          // builds — same content every time.
+          endSpan = buildProfilerStart(
+            "centralJson",
+            "build:codegen",
+            "central.json",
           );
-        } else if (claim === "unavailable") {
-          // No ledger to write to — either no database at all (a checkout that has
-          // never been deployed, which a composition-only build legitimately
-          // reaches), or a database whose `build_runs` table this build has not
-          // created yet (the machine's very first build). Either way it is a note,
-          // never a failure: nothing about the deploy depends on it.
-          softNotes.push(
-            `build-runs: no ledger in ${name} yet — this build is not recorded`,
+          const mainRoot = await getMainRepoRoot();
+          const centralDir = resolve(
+            mainRoot,
+            "plugins/framework/plugins/central-core",
           );
-        }
-      }
+          if (existsSync(join(centralDir, "bin", "index.ts"))) {
+            // No `composition`: central is not an app. It is a singleton API
+            // runtime with its own registry (`central.generated.ts`), which no
+            // composition filters, so there is nothing for one to select.
+            await writeWorktreeSpec({
+              name: "central",
+              server: centralDir,
+              // Main's Bun (central runs main's code), never this checkout's.
+              command: await namedBackendCommand(
+                "central",
+                await checkoutBun(mainRoot),
+                "bin/index.ts",
+              ),
+            });
+          }
+          endSpan();
 
-      // Stage 2 — DB migrations + manifest-level codegen + the mandatory
-      // config-override seed. Runs AFTER the DB interlude above (drizzle's
-      // generate is stateful) and BEFORE propagation below, which reads the
-      // freshly-seeded git layer. May terminate the process on a migration
-      // prompt (exit 2) — unchanged. See ./internal/app-artifacts.ts.
-      await generateAppSources({
-        root,
-        pass,
-        migration: {
-          name: opts.migrationName,
-          reset: opts.resetMigration,
-          custom: opts.customMigration,
-          answers: opts.migrationAnswers
-            ? parseMigrationAnswers(opts.migrationAnswers)
-            : undefined,
+          // Mint THIS INVOCATION's single build_runs row for a manual terminal
+          // build: a UI/auto build's backend already minted it (uiTriggered) and
+          // stamped its own `targets` there. Deferred to here — NOT right after the
+          // build lock — on purpose: the recorder writes to a database, so the mint
+          // must land after waitForPg above, or a cold manual build would race
+          // Postgres startup. The row is closed once every target has deployed,
+          // which is what keeps the UI's "Building…" spinner honest.
+          if (!uiTriggered) {
+            const claim = await recorder.insertRun({
+              id: buildId,
+              targets: targets.map((t) => t.composition),
+              trigger: "manual",
+              // `headAtStart`, the full sha: the same one stamped into the dist as
+              // `.build-commit` and onto the receipt, so the ledger row and the
+              // pin name the same commit in the same spelling by construction —
+              // which is what lets the convergence decision compare them at all.
+              commitHash: headAtStart,
+              pid: process.pid,
+            });
+            if (claim === "lost") {
+              // "lost" now means a LIVE build holds the slot: a holder whose build
+              // already ended was settled from its run's exit marker and the claim
+              // retried inside `insertRun`.
+              softNotes.push(
+                `build-runs: a live build of ${name} holds the slot — no ledger row minted`,
+              );
+            } else if (claim === "unavailable") {
+              // No ledger to write to — either no database at all (a checkout that has
+              // never been deployed, which a composition-only build legitimately
+              // reaches), or a database whose `build_runs` table this build has not
+              // created yet (the machine's very first build). Either way it is a note,
+              // never a failure: nothing about the deploy depends on it.
+              softNotes.push(
+                `build-runs: no ledger in ${name} yet — this build is not recorded`,
+              );
+            }
+          }
+
+          // Stage 2 — DB migrations + manifest-level codegen + the mandatory
+          // config-override seed. Runs AFTER the DB interlude above (drizzle's
+          // generate is stateful) and BEFORE propagation below, which reads the
+          // freshly-seeded git layer. May terminate the process on a migration
+          // prompt (exit 2) — unchanged. See ./internal/app-artifacts.ts.
+          await generateAppSources({
+            root,
+            pass,
+            migration: {
+              name: opts.migrationName,
+              reset: opts.resetMigration,
+              custom: opts.customMigration,
+              answers: opts.migrationAnswers
+                ? parseMigrationAnswers(opts.migrationAnswers)
+                : undefined,
+            },
+            hooks,
+          });
+
+          // 4b'. Every generated artifact has now been re-derived from this tree's
+          //      sources, so any merge marker a rebase left behind is answered — a
+          //      build normalizes by construction rather than by marker. Consuming
+          //      them here (and never earlier: a build that dies mid-codegen must
+          //      leave the signal intact) is what keeps the
+          //      `generated-artifacts-normalized` check from firing after a build
+          //      has already done the repair.
+          clearMergeMarkers(root);
+
+          // 4b''. THE LAST WRITER TO THE REPO TREE. Every generated artifact above
+          //       is already in its final byte form (writeGenerated), so this pass
+          //       covers hand-written source, scoped to this branch's diff vs main.
+          //
+          //       The position is load-bearing, not incidental: it must run after
+          //       ALL codegen writes and before anything hashes the tree. The check
+          //       cache keys a PASS on the whole working-tree hash (see
+          //       `checks/core/read-set.ts` — "ONE changed byte anywhere re-runs all
+          //       ~62 checks") and web-artifact store keys are the plugin's own
+          //       source bytes (`web-artifacts/core/hash.ts`, fingerprinted on
+          //       `(mtimeMs, size)`). A formatter running after either would
+          //       invalidate both on the NEXT build, every build.
+          //
+          //       Runs regardless of `--skip-checks`: it is not validation.
+          endSpan = buildProfilerStart(
+            "formatSources",
+            "build:codegen",
+            "format changed sources",
+          );
+          const formatPass = await formatChangedSources({
+            root,
+            log: (l) => console.log(l),
+          });
+          if (formatPass.formatted.length > 0) {
+            console.log(`Formatted ${formatPass.formatted.length} file(s):`);
+            for (const f of formatPass.formatted) console.log(`  ${f}`);
+          }
+          endSpan();
+          return { pass, mainRoot, centralDir };
         },
-        hooks,
-      });
-
-      // 4b'. Every generated artifact has now been re-derived from this tree's
-      //      sources, so any merge marker a rebase left behind is answered — a
-      //      build normalizes by construction rather than by marker. Consuming
-      //      them here (and never earlier: a build that dies mid-codegen must
-      //      leave the signal intact) is what keeps the
-      //      `generated-artifacts-normalized` check from firing after a build
-      //      has already done the repair.
-      clearMergeMarkers(root);
-
-      // 4b''. THE LAST WRITER TO THE REPO TREE. Every generated artifact above
-      //       is already in its final byte form (writeGenerated), so this pass
-      //       covers hand-written source, scoped to this branch's diff vs main.
-      //
-      //       The position is load-bearing, not incidental: it must run after
-      //       ALL codegen writes and before anything hashes the tree. The check
-      //       cache keys a PASS on the whole working-tree hash (see
-      //       `checks/core/read-set.ts` — "ONE changed byte anywhere re-runs all
-      //       ~62 checks") and web-artifact store keys are the plugin's own
-      //       source bytes (`web-artifacts/core/hash.ts`, fingerprinted on
-      //       `(mtimeMs, size)`). A formatter running after either would
-      //       invalidate both on the NEXT build, every build.
-      //
-      //       Runs regardless of `--skip-checks`: it is not validation.
-      endSpan = buildProfilerStart(
-        "formatSources",
-        "build:codegen",
-        "format changed sources",
       );
-      const formatPass = await formatChangedSources({
-        root,
-        log: (l) => console.log(l),
-      });
-      if (formatPass.formatted.length > 0) {
-        console.log(`Formatted ${formatPass.formatted.length} file(s):`);
-        for (const f of formatPass.formatted) console.log(`  ${f}`);
-      }
-      endSpan();
 
       // 4b'''. Every writer to the repo tree has run. On main none of them may
       //        have changed a path git sees — ./internal/main-tree-guard.ts.
