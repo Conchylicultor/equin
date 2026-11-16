@@ -40,4 +40,7 @@ export {
   SlowInteractionPayloadSchema,
   slowInteractionSummary,
 } from "./slow-interaction-kind";
-export type { SlowInteractionPayload } from "./slow-interaction-kind";
+export type {
+  SlowInteractionDraft,
+  SlowInteractionPayload,
+} from "./slow-interaction-kind";

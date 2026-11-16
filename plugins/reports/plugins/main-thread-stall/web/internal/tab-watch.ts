@@ -269,6 +269,7 @@ export function installStallWatch(readTab: () => StallTab): StallWatch {
   const interactions = installInteractionWatch(
     readTab,
     useWorker ? onInteraction : () => {},
+    profiler,
   );
 
   let observer: PerformanceObserver | null = null;

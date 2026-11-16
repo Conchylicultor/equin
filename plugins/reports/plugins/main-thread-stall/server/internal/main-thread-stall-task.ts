@@ -8,6 +8,7 @@ import {
   type StallFrame,
   type TaskMark,
 } from "../../core";
+import { stacksSection } from "./stacks-section";
 
 // A recurring freeze on the same screen is a standing bug, not news each time:
 // re-alert the bell at most every 30 min (as the server event-loop stall does).
@@ -49,39 +50,6 @@ function markLine(k: TaskMark, stallStartedAt: number): string {
   const offset = (k.at - stallStartedAt) / 1000;
   const at = `${offset < 0 ? "−" : "+"}${Math.abs(offset).toFixed(1)} s`;
   return `${at} — \`${k.source}\` \`${k.what}\` (${k.detail})`;
-}
-
-/** What the tab's sampling profiler caught underneath the entry point. */
-function stacksSection(d: MainThreadStallPayload): string[] {
-  const st = d.stacks;
-  const lines = ["**Sampled stacks (JS Self-Profiling, inside the stall)**"];
-  if (st.kind === "unavailable") {
-    lines.push(`Not available: ${st.reason}.`);
-    return lines;
-  }
-  const secs = (ms: number): string => (ms / 1000).toFixed(1);
-  lines.push(
-    `The stalled tab's own profiler sampled every ~${st.sampleIntervalMs} ms through the freeze: **${secs(st.sampledMs)} s** sampled of ${secs(d.durationMs)} s, ${secs(st.noJsMs)} s of it with no JS on the stack (style, layout, paint, GC, native work — or JS from a script the profiler may not show: cross-origin without CORS, an extension, eval'd code).${st.sampledMs < d.durationMs * 0.8 ? ` The sampler itself missed ${secs(d.durationMs - st.sampledMs)} s (gaps of several intervals): the whole renderer was short of CPU or memory, not only the main thread.` : ""}${st.truncated ? " **Truncated**: the profiler's buffer filled before the stall ended; the stacks cover its start only." : ""}`,
-  );
-  if (st.topSelf.length > 0) {
-    lines.push("");
-    lines.push("Heaviest functions (self time — the innermost frame):");
-    for (const f of st.topSelf) lines.push(`- ${f.ms} ms — \`${f.frame}\``);
-  }
-  st.stacks.forEach((s, i) => {
-    lines.push("");
-    lines.push(
-      `Stack ${i + 1} — ${s.ms} ms (${s.samples} samples), innermost first:`,
-    );
-    lines.push("```");
-    lines.push(...s.frames);
-    lines.push("```");
-  });
-  if (st.stacks.length === 0 && st.sampledMs > 0)
-    lines.push(
-      "No visible JS in any sample: the freeze was the browser's own work (style, layout, paint, GC), the thread starved of CPU, or JS the profiler may not show — the heap below tells a collection apart.",
-    );
-  return lines;
 }
 
 /** The stalled tab's JS heap just before and right after the freeze. */
@@ -184,7 +152,7 @@ function renderDescription(row: ReportRow, d: MainThreadStallPayload): string {
     }
   }
   lines.push("");
-  lines.push(...stacksSection(d));
+  lines.push(...stacksSection(d.stacks, d.durationMs, "stall"));
   lines.push("");
   lines.push(...memorySection(d));
   lines.push("");

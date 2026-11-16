@@ -221,6 +221,12 @@ the tab was never frozen long enough to need one):
   fingerprinted by the target alone (never app, route or url). ≥ 5 s (or a
   ≥ 5 s long frame inside it) is the stall's report, which names it; the
   interaction is then only recorded.
+- **Stacks**: a REPORTED slow interaction carries `stacks` — the tab's
+  rolling profile (above) reduced over its own time (handlers → paint), via
+  the profiler's `stacksIn(window)`: LoAF alone names only the React root's
+  `onclick`, and a slowness that does not reproduce elsewhere is only
+  explained by what ran in THAT tab. Never identity: the fingerprint and summary take `SlowInteractionDraft`
+  (the payload minus `stacks`). Recorded-only slow-ops carry none.
 - **One cause, one op**: a 1–5 s long frame overlapping a slow interaction is
   the interaction's — `deferSlowFrame` waits the same grace and files the app +
   route `main-thread` slow-op only when no interaction claimed it.
@@ -315,6 +321,7 @@ renderer forever — so the script kills it with CDP `Page.crash`.
     - `InteractionTarget`
     - `MainThreadStallDraft`
     - `MainThreadStallPayload`
+    - `SlowInteractionDraft`
     - `SlowInteractionPayload`
     - `StallClient`
     - `StallFrame`

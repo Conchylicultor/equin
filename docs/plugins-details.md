@@ -58012,6 +58012,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `InteractionTarget`
           - `MainThreadStallDraft`
           - `MainThreadStallPayload`
+          - `SlowInteractionDraft`
           - `SlowInteractionPayload`
           - `StallClient`
           - `StallFrame`

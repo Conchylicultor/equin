@@ -57,6 +57,14 @@ export interface StallProfiler {
     draft: MainThreadStallDraft,
     ownTabId: string,
   ): Promise<StallStacks>;
+  /**
+   * The stacks this tab's own thread ran in `[startedAt, endedAt)` (epoch
+   * ms) — a window it was alive through (a slow interaction it measured).
+   */
+  stacksIn(window: {
+    startedAt: number;
+    endedAt: number;
+  }): Promise<StallStacks>;
   dispose(): void;
 }
 
@@ -158,6 +166,31 @@ export function installStallProfiler(): StallProfiler {
   };
   document.addEventListener("visibilitychange", onVisibility);
 
+  const stacksIn = async (window: {
+    startedAt: number;
+    endedAt: number;
+  }): Promise<StallStacks> => {
+    if (unavailable) return { kind: "unavailable", reason: unavailable };
+    // The running profile may hold the window: finalize it (a fresh one
+    // takes over).
+    if (running) rotate();
+    const errors = (await Promise.all([...pending])).filter(
+      (e): e is Error => e !== null,
+    );
+    const failed = errors[0];
+    if (failed)
+      return {
+        kind: "unavailable",
+        reason: `the profiler's trace could not be read: ${failed.message}`,
+      };
+    return reduceStallStacks({
+      traces: kept,
+      startedAt: window.startedAt,
+      endedAt: window.endedAt,
+      sampleIntervalMs: PROFILE.SAMPLE_INTERVAL_MS,
+    });
+  };
+
   return {
     pulse() {
       if (!running) start();
@@ -175,26 +208,9 @@ export function installStallProfiler(): StallProfiler {
           reason:
             "filed by another tab: only the stalled tab holds the profile of its own thread",
         };
-      if (unavailable) return { kind: "unavailable", reason: unavailable };
-      // The running profile may hold the stall: finalize it (a fresh one
-      // takes over).
-      if (running) rotate();
-      const errors = (await Promise.all([...pending])).filter(
-        (e): e is Error => e !== null,
-      );
-      const failed = errors[0];
-      if (failed)
-        return {
-          kind: "unavailable",
-          reason: `the profiler's trace could not be read: ${failed.message}`,
-        };
-      return reduceStallStacks({
-        traces: kept,
-        startedAt: draft.startedAt,
-        endedAt: draft.endedAt,
-        sampleIntervalMs: PROFILE.SAMPLE_INTERVAL_MS,
-      });
+      return stacksIn(draft);
     },
+    stacksIn,
     dispose() {
       disposed = true;
       document.removeEventListener("visibilitychange", onVisibility);

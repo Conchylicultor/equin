@@ -4,7 +4,8 @@ import {
   dominantLayer,
   interactionTargetLabel,
   slowInteractionSummary,
-  type SlowInteractionPayload,
+  type SlowInteractionDraft,
+  type StallStacks,
 } from "../../core";
 import { INTERACTION, type InteractionVerdict } from "./interaction-judge";
 
@@ -16,16 +17,22 @@ import { INTERACTION, type InteractionVerdict } from "./interaction-judge";
 const OPERATION_KIND = "interaction";
 const REPORT_KIND = "slow-interaction";
 
-function variantOf(d: SlowInteractionPayload): string {
+function variantOf(d: SlowInteractionDraft): string {
   if (d.forcedBy && dominantLayer(d.breakdown).layer === "forced style/layout")
     return `forced by ${d.forcedBy}`;
   return d.topFunction ?? "unattributed";
 }
 
-/** Record one slow interaction, and report it when the verdict says so. */
+/**
+ * Record one slow interaction, and report it when the verdict says so — with
+ * the JS stacks the tab sampled inside it, which name what ran beneath the
+ * long frames' entry points.
+ */
 export async function fileSlowInteraction(
-  d: SlowInteractionPayload,
+  d: SlowInteractionDraft,
   verdict: InteractionVerdict,
+  /** What the tab's profiler sampled inside it — read only when reported. */
+  stacks: () => Promise<StallStacks>,
 ): Promise<void> {
   clientSlowOpSink.emit({
     operationKind: OPERATION_KIND,
@@ -49,7 +56,7 @@ export async function fileSlowInteraction(
   await report({
     kind: REPORT_KIND,
     source: "client-slow-interaction",
-    data: d,
+    data: { ...d, stacks: await stacks() },
     message: slowInteractionSummary(d),
     url: d.url,
   });

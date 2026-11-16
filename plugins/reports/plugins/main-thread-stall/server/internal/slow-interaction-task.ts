@@ -6,6 +6,7 @@ import {
   slowInteractionSummary,
   type SlowInteractionPayload,
 } from "../../core";
+import { stacksSection } from "./stacks-section";
 
 // A slow control is a standing bug, not news each time it is clicked.
 export const SLOW_INTERACTION_NOTIF_COOLDOWN_MS = 30 * 60 * 1000;
@@ -96,6 +97,14 @@ function renderDescription(row: ReportRow, d: SlowInteractionPayload): string {
       "No long animation frame (≥ 50 ms) overlapped it: the time was spread over short tasks, or spent in paint and compositing.",
     );
   }
+  lines.push("");
+  lines.push(
+    ...stacksSection(
+      d.stacks,
+      Math.max(0, d.durationMs - d.inputDelayMs),
+      "interaction",
+    ),
+  );
   lines.push("");
   lines.push("**Where (context — not the identity)**");
   lines.push(

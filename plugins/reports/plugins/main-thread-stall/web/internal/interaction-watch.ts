@@ -1,7 +1,7 @@
 import { clientLog } from "@plugins/primitives/plugins/log-channels/web";
 import type {
   InteractionTarget,
-  SlowInteractionPayload,
+  SlowInteractionDraft,
   StallFrame,
   StallTab,
 } from "../../core";
@@ -23,6 +23,7 @@ import {
 import { interactionTarget, keyClass } from "./interaction-target";
 import { toStallFrame, type LoafEntry } from "./loaf";
 import { LOG_CHANNEL } from "./log-channel";
+import type { StallProfiler } from "./stall-profiler";
 
 // Event Timing (Chrome 76+, interactionId 96+), not complete in TS's DOM lib.
 interface EventTimingEntry extends PerformanceEntry, EventTimingLike {
@@ -129,6 +130,8 @@ export function installInteractionWatch(
    * so the stall watchdog already knows what was clicked if it freezes.
    */
   onBegin: (begin: InteractionBegin) => void,
+  /** The tab's sampling profiler: a reported interaction's stacks. */
+  profiler: StallProfiler,
 ): InteractionWatch {
   const frames: RawFrame[] = [];
   const dispatched: Dispatched[] = [];
@@ -235,7 +238,7 @@ export function installInteractionWatch(
     );
     const verdict = judgeInteraction(ownMs, count, frozen);
     const a = attribute(w, frames);
-    const payload: SlowInteractionPayload = {
+    const payload: SlowInteractionDraft = {
       target,
       eventType: e.name,
       startedAt: Math.round(performance.timeOrigin + e.startTime),
@@ -263,7 +266,13 @@ export function installInteractionWatch(
         forcedBy: a.forcedBy,
       }),
     );
-    void fileSlowInteraction(payload, verdict);
+    // Its own time (handlers → paint), on the wall clock: the input delay is
+    // whatever held the thread before, never this interaction's stacks.
+    const own = {
+      startedAt: performance.timeOrigin + e.processingStart,
+      endedAt: performance.timeOrigin + w.end,
+    };
+    void fileSlowInteraction(payload, verdict, () => profiler.stacksIn(own));
   };
 
   let eventObserver: PerformanceObserver | null = null;
