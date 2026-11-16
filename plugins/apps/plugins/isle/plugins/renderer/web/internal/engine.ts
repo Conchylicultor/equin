@@ -1821,7 +1821,7 @@ export class IsleEngine {
 
   /**
    * A double-click on the ground: the hero vanishes where it stands and lands
-   * there (the nearest walkable spot), the camera gliding along. The first
+   * there (the nearest walkable spot); the camera stays put. The first
    * click of the pair already set a walk going, which this replaces; on a
    * building or a lot the first click has done what it does, so nothing more.
    */
@@ -1841,7 +1841,7 @@ export class IsleEngine {
     this.held.clear();
     this.kbCam = false;
     this.inertia = false;
-    this.follow = { x, y: y - 40 };
+    this.follow = null;
     if (this.opts.reducedMotion) {
       hero.x = x;
       hero.y = y;
