@@ -105,6 +105,7 @@ froze). Pinned by `server/internal/pool.test.ts`. See
 - Server:
   - Uses: `infra/host/host-admission.defineHostPool`
   - Exports (values):
+    - `heavyReadLocalSlotCount`
     - `heavyReadQueueDepth`
     - `heavyReadSlotCount`
     - `withHeavyReadSlot`

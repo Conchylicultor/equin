@@ -19,6 +19,16 @@ export interface WarmupHostImpl {
   /** Run one warm-up body under the host's admission. */
   withSlot<T>(fn: () => Promise<T>): Promise<T>;
   /**
+   * How many warm-ups may run at once on this host. Warm-ups drain while the
+   * host is already serving — on the desktop, right when every open tab
+   * resubscribes after a restart — so where `withSlot` takes a slot of a gate
+   * interactive reads share, this must leave that gate room: a drain holding
+   * every slot makes a live read (edited-files' git pass) queue for whole
+   * warm-up bodies, and its tabs see the update seconds late. Read at drain
+   * time (a host may size it from the environment).
+   */
+  concurrency(): number;
+  /**
    * The digest of the code these source sets load (a warm-up's
    * `derivedFrom`), or `null` when this host cannot digest code — then such a
    * warm-up runs on every boot. Throws when the digest cannot vouch for the

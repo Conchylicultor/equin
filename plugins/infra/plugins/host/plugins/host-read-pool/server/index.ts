@@ -4,6 +4,7 @@ export {
   withHeavyReadSlot,
   heavyReadQueueDepth,
   heavyReadSlotCount,
+  heavyReadLocalSlotCount,
 } from "./internal/pool";
 
 export default {

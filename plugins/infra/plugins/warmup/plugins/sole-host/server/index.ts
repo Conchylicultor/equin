@@ -8,6 +8,9 @@ export default {
     WarmupHost.provide({
       runs: () => true,
       withSlot: (fn) => fn(),
+      // No gate shared with interactive reads: a small cap keeps the drain
+      // from crowding the first requests.
+      concurrency: () => 2,
       // No source tree to digest: a derivedFrom warm-up runs on every boot.
       // A browser host's corpus is its own seed (derived by the seed's own
       // writes) or what its storage kept, never main's, so that pass is small.

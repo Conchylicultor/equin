@@ -13,13 +13,6 @@ import { readCodeStamp, writeCodeStamp } from "./code-stamps";
 import type { SourceSet } from "@plugins/packages/plugins/source-digest/core";
 
 /**
- * How many warm-ups may run at once. Kept deliberately small: warm-ups drain
- * *while the server is already serving requests*, so the cap (plus the heavy-read
- * slot and macrotask yield) keeps the drain from competing with first requests.
- */
-export const WARMUP_CONCURRENCY = 2;
-
-/**
  * Injectable dependencies for {@link drainWarmupsWith} — the real wiring lives in
  * {@link drainWarmups}, the seam exists so tests can drive the executor with
  * stubbed scope gate / slot / yield / registry (mirroring `usage-index.ts`'s
@@ -195,7 +188,9 @@ export async function drainWarmups(): Promise<void> {
     runs: (scope) => host.runs(scope),
     withSlot: (fn) => host.withSlot(fn),
     yieldMacrotask,
-    concurrency: WARMUP_CONCURRENCY,
+    // The host's answer: kept below the slots of the gate `withSlot` shares
+    // with interactive reads, so the drain never holds all of them.
+    concurrency: host.concurrency(),
     codeDigest: (sets) => host.codeDigest(sets),
     stamps: { read: readCodeStamp, write: writeCodeStamp },
     onRun: recordWarmupRun,

@@ -3,7 +3,6 @@ import { drainWarmups } from "./internal/executor";
 
 export { defineWarmup, listRegisteredWarmups } from "./internal/registry";
 export type { RegisteredWarmup, WarmupSpec } from "./internal/registry";
-export { WARMUP_CONCURRENCY } from "./internal/executor";
 export type { WarmupRun } from "./internal/executor";
 export { onWarmupRun, warmupRunOf } from "./internal/runs";
 export { WarmupHost } from "./internal/host";

@@ -21,7 +21,7 @@ like `defineJob`.
   - Sole host (the browser composition, portable boot tests):
     `warmup/plugins/sole-host` — every scope, no slot. A host provider, which
     no composition bundles.
-- **Executor.** A bounded concurrency gate (`WARMUP_CONCURRENCY`), a macrotask
+- **Executor.** A bounded concurrency gate (`WarmupHost.concurrency()` — on the desktop one fewer than the backend's heavy-read slots, so interactive git reads keep one while the drain runs), a macrotask
   yield before each body, the host's slot around it; a throw is logged and the
   drain continues (a warm-up is an optimization, never a correctness
   dependency). Each run is recorded in memory (`warmupRunOf` / `onWarmupRun`) —
@@ -64,7 +64,6 @@ like `defineJob`.
     - `defineWarmup`
     - `listRegisteredWarmups`
     - `onWarmupRun`
-    - `WARMUP_CONCURRENCY`
     - `WarmupHost`
     - `warmupRunOf`
 - Cross-plugin:

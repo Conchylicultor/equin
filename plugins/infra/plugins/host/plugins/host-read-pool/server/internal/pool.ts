@@ -134,8 +134,10 @@ export function heavyReadSlotCount(): number {
   return heavyReadSize;
 }
 
-// The local (per-worktree) tier's slot count (`localSize()`). Exposed so the
-// reentrancy regression test can saturate the local gate deterministically.
+// The local (per-worktree) tier's slot count (`localSize()`). Exposed so a
+// background holder can stay below it (the warm-up drain leaves interactive
+// reads a slot), and so the reentrancy regression test can saturate the local
+// gate deterministically.
 export function heavyReadLocalSlotCount(): number {
   return localSize();
 }

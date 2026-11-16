@@ -37310,6 +37310,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - Server:
             - Uses: `infra/host/host-admission.defineHostPool`
             - Exports (values):
+              - `heavyReadLocalSlotCount`
               - `heavyReadQueueDepth`
               - `heavyReadSlotCount`
               - `withHeavyReadSlot`
@@ -40057,7 +40058,6 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defineWarmup`
           - `listRegisteredWarmups`
           - `onWarmupRun`
-          - `WARMUP_CONCURRENCY`
           - `WarmupHost`
           - `warmupRunOf`
       - Cross-plugin:
