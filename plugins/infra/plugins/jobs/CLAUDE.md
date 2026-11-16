@@ -47,6 +47,18 @@ spec — never restate them. `defineRetention` derives its own sentence from the
 table and TTL; `defineWarmup` and `defineCorpusIndex` require one too. An empty
 string is refused at define time.
 
+## A job runs only if a plugin registers it
+
+A runner resolves a row's handler by name from its registry, filled from every
+plugin's `register: [...]`. A job no plugin lists is an "unknown job" on every
+runner, so `job.enqueue` throws unless THIS factory is the one registered under
+its name — the mistake fails at the enqueue site, not as a dead row per run. A
+test that enqueues a job it defines calls `job.register()`.
+
+A runner's unknown-job path (`dispatch()`, `machine/internal/worker.ts`) stays
+fail-loud: a row whose job was removed from the code is reported once and
+dead-lettered, never retried.
+
 ## Liveness: shared fate, not a lease
 
 **"Is this job's worker alive" is answered by Postgres, never by a clock.** For a

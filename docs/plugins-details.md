@@ -23750,6 +23750,7 @@ A list longer than 20 values (importers, uses, contributions) is summarized here
           - `defineJob('conversations.usage.session-sync')`
           - `defineJob('conversations.usage.session-backfill')`
           - `defineJob('conversations.usage.history-import')`
+          - `defineJob('conversations.usage.scan-keys')`
           - `defineWarmup('conversations.usage.backfill')`
       - Core:
         - Uses:

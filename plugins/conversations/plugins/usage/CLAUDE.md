@@ -208,6 +208,7 @@ in force then. Design:
     - `defineJob('conversations.usage.session-sync')`
     - `defineJob('conversations.usage.session-backfill')`
     - `defineJob('conversations.usage.history-import')`
+    - `defineJob('conversations.usage.scan-keys')`
     - `defineWarmup('conversations.usage.backfill')`
 - Core:
   - Uses:

@@ -59,6 +59,8 @@ const job = defineJob({
     );
   },
 });
+// Registered as a plugin would: `enqueue` refuses a job no plugin registered.
+await job.register();
 
 const COUNT = 24;
 

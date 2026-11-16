@@ -8,6 +8,7 @@ import {
   usageBackfillJob,
   usageBackfillWarmup,
   usageHistoryImportJob,
+  usageScanKeysJob,
   usageSessionBackfillJob,
   usageSessionSyncJob,
   usageSyncJob,
@@ -23,6 +24,7 @@ export default {
     usageSessionSyncJob,
     usageSessionBackfillJob,
     usageHistoryImportJob,
+    usageScanKeysJob,
     usageBackfillWarmup,
   ],
   contributions: [

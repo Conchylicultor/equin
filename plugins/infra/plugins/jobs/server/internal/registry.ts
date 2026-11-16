@@ -605,15 +605,26 @@ export function defineJob<
     );
   }
 
-  // Registry write moved into `register()` (the framework calls it during
-  // the plugin register phase). `enqueue` doesn't read `jobRegistry` —
-  // graphile-worker resolves the handler at job-pickup time, which only
-  // starts in `onReady`. So enqueueing pre-register is safe.
+  // Registry write lives in `register()` (the framework calls it during the
+  // plugin register phase, before any hook that enqueues). A runner resolves
+  // the handler by name at pickup, from ITS registry — so a row this backend
+  // queues for a job no plugin registered has no runner anywhere: every one
+  // that fetches it finds an "unknown job" and dead-letters it. `enqueue`
+  // therefore refuses a job that is not registered here, at the caller —
+  // a factory defined and enqueued but missing from its plugin's `register`
+  // list fails on the first enqueue instead of on every run.
 
   async function enqueue(
     input: unknown,
     opts?: EnqueueOpts,
   ): Promise<{ jobId: string }> {
+    if (jobRegistry.get(spec.name)?.enqueue !== enqueue) {
+      throw new Error(
+        `[jobs] ${spec.name} is enqueued but not registered in this backend — ` +
+          `add it to its plugin's \`register\` list. No runner can run a job ` +
+          `no plugin registered: the row would be dead-lettered as an unknown job.`,
+      );
+    }
     // Parse once at enqueue time so the serialized payload is already in
     // the post-transform shape; the worker re-parses as a safety check.
     const parsed = spec.input.parse(input);

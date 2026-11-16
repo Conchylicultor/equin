@@ -69,6 +69,8 @@ const job = defineJob({
     );
   },
 });
+// Registered as a plugin would: `enqueue` refuses a job no plugin registered.
+await job.register();
 
 describe("installQueueSchema", () => {
   test("without it, a transactional enqueue fails as QueueSchemaMissingError", async () => {

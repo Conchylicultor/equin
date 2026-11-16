@@ -51,6 +51,8 @@ const job = defineJob({
     );
   },
 });
+// Registered as a plugin would: `enqueue` refuses a job no plugin registered.
+await job.register();
 
 /** Resolves once some backend of the test database waits on a row lock. */
 async function untilSomeoneWaitsOnALock(): Promise<void> {

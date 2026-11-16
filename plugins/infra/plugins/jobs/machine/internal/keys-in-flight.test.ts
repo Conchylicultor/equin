@@ -51,6 +51,8 @@ const job = defineJob({
     );
   },
 });
+// Registered as a plugin would: `enqueue` refuses a job no plugin registered.
+await job.register();
 
 const keyOf = (k: string): string => `${NAME}:${k}`;
 
@@ -79,6 +81,8 @@ const racer = defineJob({
     throw new Error("[jobs] racer dispatched; this suite starts no worker");
   },
 });
+// Registered as a plugin would: `enqueue` refuses a job no plugin registered.
+await racer.register();
 const racerKeyOf = (k: string): string => `jobs.keys-in-flight-test-racer:${k}`;
 
 async function lockRow(jobId: string, attempts: number): Promise<void> {

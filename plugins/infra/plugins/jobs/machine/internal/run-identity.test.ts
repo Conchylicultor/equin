@@ -137,6 +137,8 @@ describe("against a real queue", () => {
     t = await createTestDb({ prefix: "run_identity_test" });
     await runMigrations(t.db);
     await installQueueSchema(t.connectionString);
+    // Registered as a plugin would: `enqueue` refuses a job no plugin registered.
+    for (const job of [singletonJob, noneJob, keyedJob]) await job.register();
   });
 
   afterAll(async () => {

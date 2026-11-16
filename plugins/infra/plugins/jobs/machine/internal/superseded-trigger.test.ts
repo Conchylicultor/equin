@@ -71,6 +71,8 @@ const job = defineJob({
     );
   },
 });
+// Registered as a plugin would: `enqueue` refuses a job no plugin registered.
+await job.register();
 
 /** The graphile `job_key` `enqueue()` derives for a keyed dedup. */
 function graphileKey(key: string): string {

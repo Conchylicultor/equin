@@ -61,6 +61,8 @@ const racer = defineJob({
   dedup: { key: (input) => input.key },
   run: noWorker,
 });
+// Registered as a plugin would: `enqueue` refuses a job no plugin registered.
+await racer.register();
 
 const runId = `${SPAWN}:conv-1`;
 const racerKey = `${RACER}:conv-1`;
